@@ -57,7 +57,7 @@ export function fresh() {
     reports: [],
     serial: 0,
     seed: 1,
-    settings: { sound: false, motion: true, speed: 'normal', haptics: true, tips: true, seen: {} }, // seen: first-time tips already shown
+    settings: { sound: true, motion: true, speed: 'relaxed', haptics: true, tips: true, seen: {} }, // seen: first-time tips already shown
     tutorialCompleted: false,
     harvesters: [], // packaged harvesters waiting to go on an outpost
     harvKinds: [], // harvester kinds you can compile
