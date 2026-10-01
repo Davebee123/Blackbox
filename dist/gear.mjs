@@ -183,8 +183,8 @@ export const lootOdds = (kph = LOOT.killsPerHour) => Object.fromEntries(Object.e
 export const magicFind = (scavenge) => { const x = Math.max(0, scavenge) / 100; return 1 + x / (1 + x); };
 // Compiling at home: a blue with the stat you chose. A Zero-day needs its source first.
 export const COMPILE = {
-  cost: (level) => ({ credits: 40 + 12 * level, salvage: 4 }),
-  zeroDayCost: (level) => ({ credits: 200 + 20 * level, salvage: 8 }),
+  cost: (level) => ({ credits: 60 + 15 * level, salvage: 8 }),
+  zeroDayCost: (level) => ({ credits: 400 + 30 * level, salvage: 16 }),
 };
 export const STASH_CAP = 40;
 export const CRIT = { multiplier: 1.5 };
@@ -301,11 +301,12 @@ export const vaultCode = (level) => 12 + Math.floor(Math.max(1, level) / 2);
 // Ports: 6 to start, one more every 8 server levels, 12 at level 41+.
 export const ports = (serverLevel) => Math.min(12, 6 + Math.floor((Math.max(1, serverLevel) - 1) / 8));
 // What each version costs and takes (real time: 15 minutes, an hour, four hours). v2 needs
-// server level 10, v3 level 25.
+// server level 10, v3 level 25. Salvage is any salvage (what deconstructing items gives).
+// Economy pass: a v1 is about 10 minutes of income at level 5, a v2 about half an hour at 15.
 export const VERSIONS = [
-  { v: 1, code: 8, exploit: 0, credits: 60, minutes: 15, needs: 1 },
-  { v: 2, code: 25, exploit: 1, credits: 250, minutes: 60, needs: 10 },
-  { v: 3, code: 70, exploit: 3, credits: 800, minutes: 240, needs: 25 },
+  { v: 1, code: 12, exploit: 0, credits: 120, salvage: 6, minutes: 15, needs: 1 },
+  { v: 2, code: 40, exploit: 1, credits: 600, salvage: 15, minutes: 60, needs: 10 },
+  { v: 3, code: 100, exploit: 3, credits: 2000, salvage: 40, minutes: 240, needs: 25 },
 ];
 // One rule per service. `stat`/`values`: what it adds per version (see serviceValue).
 // `code`: which code it's built from. `special`: needs its source (found in vaults) first.
@@ -335,7 +336,8 @@ export function serviceCost(id, v) {
   for (const c of codes) cost[c] = Math.ceil(x.code / codes.length) + (codes.length > 1 ? Math.ceil(x.code / 4) : 0);
   return cost;
 }
-export const costLine = (cost) => Object.entries(cost).filter(([, n]) => n).map(([k, n]) => (k === 'credits' ? `${n}c` : `${n} ${MATERIALS[k].short}`)).join(' + ');
+export const costLine = (cost) => Object.entries(cost).filter(([, n]) => n).map(([k, n]) => (k === 'credits' ? `${n}c` : k === 'salvage' ? `${n} salvage` : `${n} ${MATERIALS[k].short}`)).join(' + ');
+export const serviceSalvage = (v) => VERSIONS[v - 1].salvage || 0;
 
 // ---------- blueprints ----------
 // Nothing is buildable at the start. Every regular service, and every protocol recipe (compile a

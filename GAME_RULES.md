@@ -14,7 +14,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 
 1. `connect sprawl`: **SPRAWL-00**, a rogue server, is where you go to fight from the start. A virus sits in each of its six folders at your level, but never above level 3: it's a starter area, and past that the fights worth having are on the servers you trace (`ls` shows it as `name.exe`); SPRAWL-00 only ever has the plain families, never strains or bigger grades; `attack` it when you're ready. A kill pays like a home kill, straight away (XP, code, a possible drop, a lead), and the folder fills again 90 seconds later.
 2. Every neutralized virus gives a lead toward its family's origin: +25% for the kill plus three quarters of your backtrace (each class traces its own way, at home and on the rogue server; see Backtrace). At 100% the origin is located. A full backtrace locates it in one fight; four plain kills of the same family also get there.
-3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (5% of max every 5 seconds, full in under two minutes); you need a quarter of it to connect. **Signal boosters** refill it on a run: craft one at home from 4 salvage (`craft booster`, or the Craft page), carry up to 5, and type `boost` on a run for half your Signal back (not mid-fight).
+3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter, or type `top up`, to pay for the rest now (see The economy). **Signal boosters** refill it on a run: craft one at home from 4 salvage (`craft booster`, or the Craft page), carry up to 5, and type `boost` on a run for half your Signal back (not mid-fight).
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
 5. Some files lead deeper: a trace record locates a node one layer down.
 6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invader gets through.
@@ -132,11 +132,35 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 
 **Deconstruct** (`deconstruct <id>`, or `scrap`): grey 1–2 salvage, white 2–3, blue 3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits; +1 salvage per 10 item levels. The code is the family the item dropped from. A drop into a full stash (40) is deconstructed.
 
-**Compile** at home with a recipe: `compile <stat>` gives a **blue** at your level with that stat as one of its affixes (40 + 12×level credits and 4 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
+**Compile** at home with a recipe: `compile <stat>` gives a **blue** at your level with that stat as one of its affixes (60 + 15×level credits and 8 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
 
 **Blueprints.** Nothing is buildable at the start. Every regular service (11) and every protocol recipe (16) is a blueprint you find once. Every vault holds a `blueprint.bp`; a home kill drops one 2% of the time and a guard 5% (into your pack). Your first blueprint is always the Firewall; after that you get one you don't have yet, at random. One you already know is 2 salvage.
 
 **The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×1.9 damage (`CONFIG.runHp`, `runDamage`), tuned with `node friction.mjs` against the gear you're likely to have. Health a same-level fight costs (scripted planner, levels 5–10): nothing equipped ~60%, whites ~37%, blues ~25–29%, yellows ~15–18%; level 1 is gentler. Home fights on your server are unchanged. The Infiltrator comes out weakest under the new curve.
+
+## The economy
+
+**Where credits come from** (bot, levels 5–15, taking contracts): about 1,000–1,500 credits an hour; 400 an hour at levels 1–4. Run caches are a bit over half of it, contracts about a third, the Halcyon retainer the rest. No credits come from kills. Measure it with `node econ.mjs <class> [level] [seed]`.
+
+**Where they go.**
+- **Health (the everyday sink).** Signal rests back at 20% a minute and the server at 2% a minute, offline too. Or pay to top up now: a full Signal bar costs 8 + 3×(class level) credits, a full server 10 + 4×(server level); less missing costs less (at least 1). Click the meter, or type `top up` / `repair [n]`. On a run it's a booster or the store's Signal patch instead. A bot that always pays spends about a quarter to a third of its income on it and reaches level 10 two to three times sooner than one that always waits; the Bastion barely needs it.
+- **Building (the big goals).** Services, outpost modules, harvesters and configs cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
+- **Gear.** Compiling a blue costs 60 + 15×level credits and 8 salvage, cheaper than the store's sealed item (180 + 14×level).
+
+| Sink | Credits | Code | Salvage | Other |
+|---|---|---|---|---|
+| Signal top-up (full) | 8 + 3L | | | |
+| Server repair (full) | 10 + 4 × server level | | | |
+| Service v1 / v2 / v3 | 120 / 600 / 2,000 | 12 / 40 / 100 | 6 / 15 / 40 | Exploits 0 / 1 / 3 |
+| Compile a blue | 60 + 15L | | 8 | its recipe |
+| Compile a Zero-day | 400 + 30L | | 16 (2 guard parts) | its source |
+| Harvester | 200 | 15 | 5 | its seed |
+| Outpost module | 150 | 8 | 5 | |
+| Outpost repair | 40 + 8L | 4 + L/5 | | |
+| Config | 250 | 15 | 6 | its source |
+| Architecture switch | 1,000 | | | |
+| Signal booster | | | 4 (1 Pulse Kernel) | |
+
 
 **Commands** (at home, between fights): `protocols`, `load <id>` (swaps a full slot), `unload <id|slot#>`, `deconstruct <id>`, `compile [stat]`, `compile <zero-day>`.
 
@@ -146,13 +170,13 @@ The server has no items. It runs **services** on **ports**, Master of Orion styl
 
 **Ports.** 6 to start, one more every 8 server levels (7 at 9, 8 at 17 … 12 at 41). A running service uses one port whatever its version.
 
-**The install queue.** One install at a time, in real time, and it keeps going while you fight, run or close the game. You can queue one from anywhere except mid-fight (on a run too: it's your server doing the work). `cancel install` refunds everything. `uninstall <service>` frees the port and gives back half the code it cost (credits don't come back).
+**The install queue.** One install at a time, in real time, and it keeps going while you fight, run or close the game. You can queue one from anywhere except mid-fight (on a run too: it's your server doing the work). `cancel install` refunds everything. `uninstall <service>` frees the port and gives back half the code it cost (credits and salvage don't come back).
 
 | Version | Cost | Time | Needs |
 |---|---|---|---|
-| v1 | 8 code + 60 credits | 15 min | its blueprint |
-| v2 | 25 code + 1 Exploit + 250 credits | 1 hour | server level 10 |
-| v3 | 70 code + 3 Exploits + 800 credits | 4 hours | server level 25 |
+| v1 | 12 code + 120 credits + 6 salvage | 15 min | its blueprint |
+| v2 | 40 code + 1 Exploit + 600 credits + 15 salvage | 1 hour | server level 10 |
+| v3 | 100 code + 3 Exploits + 2,000 credits + 40 salvage | 4 hours | server level 25 |
 
 | Service | Code | v1 / v2 / v3 |
 |---|---|---|
@@ -267,7 +291,7 @@ Salvage works like mana in Magic: most costs take **any** salvage, and a few als
 
 A server you've taken over can run a **harvester**: a packaged virus that works for you there.
 
-- **Getting one.** Mostly you craft them on the Craft page, one per kind (80 credits and 10 code: Siphon uses Worm code, Scraper Cipher, Tap Kernel). Compiled harvesters are Stock, at your server level. Rarely (12% of vaults, twice that on Legacy sites) a vault holds a packaged native (`<family>.vx`): pull it and jack out. Only these can carry traits. The rack holds 6.
+- **Getting one.** Mostly you craft them on the Craft page, one per kind (200 credits, 15 code and 5 salvage, plus its seed: Siphon uses Worm code, Scraper Cipher, Tap Kernel). Compiled harvesters are Stock, at your server level. Rarely (12% of vaults, twice that on Legacy sites) a vault holds a packaged native (`<family>.vx`): pull it and jack out. Only these can carry traits. The rack holds 6.
 - **A harvester is a kind, a level and 0–2 traits** (Stock none, Tuned one, Custom two).
   - Siphon: a steady flow of the server's code (1 + level/10 an hour, storage 6 + level/2).
   - Scraper: a loot roll every 90 minutes, 4 stored. Rolls are credits, code, salvage or, rarely, a protocol.
@@ -281,9 +305,9 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   - the outpost **falls**: its stockpile is lost and the harvester goes dark;
   - servers past it (that hang off it, any number of layers down) can't be reached;
   - invaders from past it still travel through it to you.
-- **Retake and repair.** Beat the natives there (**Retake**), then **Repair** it for 30 + 5×level credits and 4 + level/5 of its code. Harvesting and the route past it come back.
+- **Retake and repair.** Beat the natives there (**Retake**), then **Repair** it for 40 + 8×level credits and 4 + level/5 of its code. Harvesting and the route past it come back.
 
-- **Modules.** Each outpost has ports, like your server: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is lost). A module costs 60 credits and 6 of the server's code; removing one gives half the code back.
+- **Modules.** Each outpost has ports, like your server: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is lost). A module costs 150 credits, 8 of the server's code and 5 salvage; removing one gives half the code back.
 
   | Module | What it does |
   |---|---|
@@ -293,7 +317,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   | IDS | Natives notice it half as often; swarms heading here are seen 50% sooner |
 
 - **Home services for outposts:** Edge Router (+1 / 2 / 3 bandwidth, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
-- **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 300 credits, between fights.
+- **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 1,000 credits, between fights.
 
   | Architecture | Trade |
   |---|---|
@@ -322,7 +346,7 @@ Every service can run one **config**: a side-grade that changes how it works, no
 | Honeypot | Sting | A part whose attack misses you takes a hit back |
 | Hot-patcher | Triage | Double repair below half Integrity, half above |
 
-**Getting one.** 30% of vaults hold a config source (`<config>.cfg`). Bank it and you know it; craft it on the Craft page for 120 credits, 12 of the service's code and 3 salvage. A source you already know is 2 salvage.
+**Getting one.** 30% of vaults hold a config source (`<config>.cfg`). Bank it and you know it; craft it on the Craft page for 250 credits, 15 of the service's code and 6 salvage. A source you already know is 2 salvage.
 
 ## Swarms
 
@@ -619,7 +643,7 @@ Mutations are always visible and each changes a decision:
 
 A win writes everything it gave you into the fight log: damage taken (or *Nothing got through*), XP and any level-up, server XP, any protocol drop, code, salvage, blueprints, lead progress and located origins. There's no Victory screen. Enter on an empty line takes you back to the map (home) or the run.
 
-A loss crashes the server: it reboots at half Integrity in Degraded mode (see Invasions). Between fights the server **rests**: it repairs 1% of its max every 10 seconds while the game is open (a full repair takes about 17 minutes), stopping while an invader sieges or breaches your wall. `repair [n]` (1 credit per point) is the fast way. Leads and located origins appear on the Map, salvage and protocols on the Loadout page (Protocols tab), code on the Server page. Testing only: `developer reboot`, `developer location <ransomware|worm|ghostroot>`.
+A loss crashes the server: it reboots at half Integrity in Degraded mode (see Invasions). Between fights the server **rests**: it repairs 2% of its max a minute (empty to full in about 50 minutes, offline too), stopping while an invader sieges or breaches your wall. `repair [n]`, or a click on the Integrity meter, pays for it now (see The economy). Leads and located origins appear on the Map, salvage and protocols on the Loadout page (Protocols tab), code on the Server page. Testing only: `developer reboot`, `developer location <ransomware|worm|ghostroot>`.
 
 ## Balance targets (checked by `node playtest.mjs` and `node balance.mjs`)
 

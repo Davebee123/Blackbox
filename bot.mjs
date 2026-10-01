@@ -3,14 +3,15 @@
 // each level takes, and where it runs dry. A policy, not a person: it plays the planner from
 // balance.mjs, explores every room, takes every file but bait, and opens every vault.
 // node bot.mjs [class] [targetLevel] [seed]
-import { fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
-import { RARITY_ORDER, SLOT_KINDS, groupOf } from './dist/gear.mjs';
+import { topUpCost, installBlock, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
+import { RARITY_ORDER, SLOT_KINDS, groupOf, SERVICES } from './dist/gear.mjs';
 import { play, layoutOf, currentLocation, signalNow } from './dist/run.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
+import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
 import { CONFIG, STRAINS, FAMILIES, GUARDS } from './dist/data.mjs';
 
-export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6, cmdSec = 3, log = false } = {}) {
+export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6, cmdSec = 3, log = false, contracts = true, spend = 'none' } = {}) {
   let t = 1_700_000_000_000;
   hooks.now = () => t;
   const s = fresh();
@@ -18,16 +19,20 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   s.tutorialCompleted = true;
   s.loadout.archetype = cls;
   const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];
-  const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
+  const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
   const seen = new Set(), losses = {};
-  const wait = (sec) => { for (let left = sec; left > 0; left -= 30) { const d = Math.min(30, left) * 1000; t += d; idleRegen(s, d); for (const e of tickNetwork(s, t)) note(e); } };
+  // The ledger: what came in, by where it came from (positive changes only; the bot spends nothing but code on contracts).
+  const purse = () => ({ credits: s.server.credits, code: ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0), exploit: s.materials?.exploit || 0, salvage: (s.salvage || []).length });
+  const ledger = (stats.ledger = {}), byLevel = (stats.byLevel = {});
+  const book = (why, fn) => { const a = purse(); const r = fn(); const b = purse(); for (const k in a) if (b[k] > a[k]) { const row = (ledger[why] ||= {}); row[k] = (row[k] || 0) + b[k] - a[k]; } return r; };
+  const wait = (sec) => book('idle', () => { for (let left = sec; left > 0; left -= 30) { const d = Math.min(30, left) * 1000; t += d; idleRegen(s, d); for (const e of [...tickNetwork(s, t), ...tickServices(s, t)]) note(e); } });
   const note = (e) => {
     stats.events[e.type] = (stats.events[e.type] || 0) + 1;
     if (e.type === 'drop' && (e.item || e.rarity)) { const r = e.rarity || e.item.rarity; stats.drops[r] = (stats.drops[r] || 0) + 1; stats.firstAt[r] ??= Math.round((t - 1_700_000_000_000) / 60000); }
     if (e.type === 'xp') { const why = (e.message.split('·')[1] || 'other').trim().replace(/[0-9]+/g, '#').replace(/ on .*/, '').replace(/\.$/, ''); stats.xp[why] = (stats.xp[why] || 0) + e.amount; }
   };
   const say = (text) => { const ev = play(s, text) || []; ev.forEach(note); t += cmdSec * 1000; return ev; };
-  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
+  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
   const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family]).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
   const fight = () => {
     if (!s.encounter) return;
@@ -43,12 +48,19 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     }
     if (active(s)) finish(s, 'defeat');
     const r = s.reports.at(-1);
-    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where] = (losses[where] || 0) + 1; if (log) console.log('lost to', key); }
+    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where] = (losses[where] || 0) + 1; if (/-\d{4}$/.test(s.encounter?.virus?.name || '') && s.zone?.spawns?.[s.encounter.room]?.bounty) stats.bountyLosses++; if (log) console.log('lost to', key); }
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };
-  const restUp = () => { // rest until Signal is full and the server mostly repaired
-    let n = 0; while ((signalNow(s) < maxSignal(s) || s.server.integrity < s.server.max * 0.8) && n++ < 200) wait(10);
+  const restUp = () => { // rest until Signal is full and the server mostly repaired (or pay for it)
+    if (spend !== 'none' && !s.run && !active(s)) {
+      const before = s.server.credits;
+      if (topUpCost(s, 'signal') && s.server.credits >= topUpCost(s, 'signal') + 50) command(s, 'top up');
+      if (s.server.integrity > 0 && s.server.integrity < s.server.max * 0.8 && s.server.credits >= topUpCost(s, 'server') + 50) command(s, 'repair');
+      (stats.spent ||= {}).topup = (stats.spent.topup || 0) + before - s.server.credits;
+    }
+    let n = 0; const t0 = t; while ((signalNow(s) < maxSignal(s) || s.server.integrity < s.server.max * 0.3) && n++ < 400) wait(10);
+    stats.restMins = (stats.restMins || 0) + (t - t0) / 60000;
     if (s.server.integrity <= 0) { stats.crashes++; command(s, 'reboot'); }
   };
   // Gear like a player: the best item in each slot (rarity, then level); deconstruct the rest.
@@ -97,17 +109,38 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
     if (s.run) say('jack out');
   };
+  const taken = {};
+  const mailWork = () => book('contracts', () => {
+    if (!contracts || s.run || active(s)) return;
+    // The bot can't trace hidden servers, so it can't finish a storyline item job; a player would. Open the board after an hour on it.
+    const stuck = openContracts(s).find((c) => c.story !== undefined && c.type === 'item');
+    if (stuck) { taken[stuck.id] ??= t; if (t - taken[stuck.id] > 60 * 60000) s.mail.boardOpen = true; }
+    for (const c of openContracts(s)) {
+      if (ready(s, c)) say('mail deliver ' + c.id);
+      else if (c.story === undefined && t - (taken[c.id] ?? t) > 90 * 60000) say('mail drop ' + c.id);
+    }
+    for (const o of [...offers(s)].filter((o) => !o.offBooks && (['kill', 'materials'].includes(o.type) || o.loc || (o.type === 'bounty' && stats.bountyLosses < 2)))) {
+      if (heldCount(s) >= MAIL.take) break;
+      say('mail accept ' + o.id); taken[o.id] = t;
+    }
+  });
   let guard = 0;
   while (hackerLevel(s) < target && guard++ < 4000) {
-    homeFight();
-    gearUp();
+    book('home', homeFight);
+    mailWork();
+    if (spend === 'all' && !s.run && !active(s) && !s.install) { // build: the cheapest service you can install
+      for (const id of Object.keys(SERVICES)) if (!installBlock(s, id)) { const c = s.server.credits; command(s, 'install ' + id); (stats.spent ||= {}).services = (stats.spent.services || 0) + c - s.server.credits; break; }
+    }
+    book('deconstruct', gearUp);
     restUp();
     const L = hackerLevel(s);
     const todo = s.locations.filter((l) => !seen.has(l.id) && !l.rogue && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
     const rogue = s.locations.filter((l) => l.rogue && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id] || 0) < 2).sort((a, b) => b.level - a.level)[0];
-    if (todo) { runLoc(todo); stats.did.run++; }
-    else if (rogue) { runLoc(rogue); stats.did.rogue++; }
-    else { sprawl(); stats.did.sprawl++; if (L > CONFIG.zone.maxLevel + 1) stats.did.sprawlOverLevel++; }
+    const hunt = contracts && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
+    if (hunt) { book('sprawl', sprawl); stats.did.sprawl++; }
+    else if (todo) { book('runs', () => runLoc(todo)); stats.did.run++; }
+    else if (rogue) { book('rogue', () => runLoc(rogue)); stats.did.rogue++; }
+    else { book('sprawl', sprawl); stats.did.sprawl++; if (L > CONFIG.zone.maxLevel + 1) stats.did.sprawlOverLevel++; }
     lvlCheck();
   }
   stats.mins = Math.round((t - 1_700_000_000_000) / 60000);

@@ -143,10 +143,13 @@ test('compiling a Stock harvester costs credits and that kind\'s code', () => {
   s.server.credits = 500;
   command(s, 'outpost compile tap');
   assert.equal(harvesters(s).length, 0, 'no kernel code');
-  s.materials.kernel = 10;
+  s.materials.kernel = OUTPOST.compile.code;
   command(s, 'outpost compile tap');
   assert.equal(harvesters(s).length, 0, 'no Signal Key');
   s.salvage.push({ name: 'Signal Key' });
+  command(s, 'outpost compile tap');
+  assert.equal(harvesters(s).length, 0, 'and some salvage');
+  command(s, 'developer salvage 5');
   command(s, 'outpost compile tap');
   assert.equal(harvesters(s).length, 1);
   assert.equal(harvesters(s)[0].traits.length, 0);

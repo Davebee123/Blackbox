@@ -1431,3 +1431,7 @@ p.loadout-protocols { padding: 0 4px; }
 .mnode.rogue path.rx { fill: none; stroke: var(--hot); stroke-width: 1.4; opacity: 0.8; }
 .mnode.rogue.here path { stroke: var(--you); fill: rgba(127, 209, 199, 0.15); }
 .tag-rogue { border-color: var(--hot); color: var(--hot); }
+
+/* A meter that isn't full: click to pay for the rest (top up Signal, repair the server). */
+.meter[data-command] { cursor: pointer; border-radius: 4px; padding: 2px 6px; margin: -2px -6px; }
+.meter[data-command]:hover, .meter[data-command]:focus-visible { background: var(--panel-2); outline: 1px solid var(--line-strong); }

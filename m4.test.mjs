@@ -42,7 +42,7 @@ test('config source waits in some vaults; bank it, craft it, set it', () => {
   s.services[CONFIGS[id].service] = 1;
   command(s, `config ${CONFIGS[id].service} ${id}`);
   assert.equal(configOn(s, CONFIGS[id].service), null, 'known is not owned: craft it first');
-  s.server.credits = 1000; s.materials = { cipher: 50, worm: 50, kernel: 50, exploit: 0 }; s.salvage = [1, 2, 3].map(() => ({ name: 'Scrap' }));
+  s.server.credits = 1000; s.materials = { cipher: 50, worm: 50, kernel: 50, exploit: 0 }; s.salvage = Array.from({ length: 6 }, () => ({ name: 'Scrap' }));
   command(s, `craft config ${id}`);
   assert.ok(s.configsOwned.includes(id));
   command(s, `config ${CONFIGS[id].service} ${id}`);
@@ -132,6 +132,7 @@ test('outpost modules: ports, Pipeline, Storage Array, Firewall Node, IDS', asyn
   command(s, `outpost install ${a.id}`, T0);
   const cap = capOf(a), rate = perHour(a, a.outpost.h, s);
   s.server.credits = 1000; s.materials.worm = 100;
+  command(s, 'developer salvage 30');
   command(s, `outpost mod ${a.id} pipeline`);
   command(s, `outpost mod ${a.id} storage`);
   assert.equal(capOf(a), cap * 2);
@@ -177,10 +178,11 @@ test('architecture: picked at server level 20; Fortress walls, Hub bandwidth, La
   const base = ratioOf(s, inv), bw = bandwidth(s), cc = compileCost(s).credits;
   command(s, 'architecture fortress');
   assert.ok(Math.abs(ratioOf(s, inv) / base - 1.25) < 1e-9);
-  s.server.credits = 1000;
+  s.server.credits = 1500;
   command(s, 'architecture hub');
-  assert.equal(s.server.credits, 700, 'switching costs 300');
+  assert.equal(s.server.credits, 500, 'switching costs 1000');
   assert.equal(bandwidth(s), bw + 2);
+  s.server.credits = 1000;
   command(s, 'architecture lab');
   assert.equal(compileCost(s).credits, Math.round(cc * 0.7));
 });

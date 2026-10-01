@@ -6,6 +6,7 @@
 // pulse-kernel:1,scrap:3` on the command line); otherwise autoPay spends plain scrap first, then
 // pieces no recipe asks for, then the most plentiful, and keeps what a recipe needs.
 import { CONFIG } from './data.mjs';
+const CONFIG_SALVAGE = 6; // configs.mjs CONFIG_COST.salvage
 
 // Guard components: what the guards on runs leave behind.
 export const GUARD_PARTS = ['Sentry Lens', 'Tracker Core', 'Sentinel Lens', 'Lockout Relay', 'Crawler Maw', 'Brood Seed', 'Shredder Blade', 'Grinder Core'];
@@ -15,10 +16,12 @@ export const SALVAGE_COSTS = {
   protocol: (n) => ({ any: n, need: [] }),
   zeroday: (n) => ({ any: Math.max(0, n - 2), need: [{ label: 'guard component', names: GUARD_PARTS, n: 2 }] }),
   booster: () => ({ any: CONFIG.booster.salvage - 1, need: [{ label: 'Pulse Kernel', names: ['Pulse Kernel'], n: 1 }] }),
-  config: () => ({ any: 3, need: [] }),
-  'harvester-siphon': () => ({ any: 0, need: [{ label: 'Replication Seed', names: ['Replication Seed'], n: 1 }] }),
-  'harvester-scraper': () => ({ any: 0, need: [{ label: 'Cipher Seed', names: ['Cipher Seed'], n: 1 }] }),
-  'harvester-tap': () => ({ any: 0, need: [{ label: 'Signal Key', names: ['Signal Key'], n: 1 }] }),
+  config: () => ({ any: CONFIG_SALVAGE, need: [] }),
+  service: (n) => ({ any: n, need: [] }),
+  module: () => ({ any: 5, need: [] }),
+  'harvester-siphon': () => ({ any: 5, need: [{ label: 'Replication Seed', names: ['Replication Seed'], n: 1 }] }),
+  'harvester-scraper': () => ({ any: 5, need: [{ label: 'Cipher Seed', names: ['Cipher Seed'], n: 1 }] }),
+  'harvester-tap': () => ({ any: 5, need: [{ label: 'Signal Key', names: ['Signal Key'], n: 1 }] }),
 };
 const WANTED = new Set(Object.values(SALVAGE_COSTS).flatMap((f) => f(4).need.flatMap((x) => x.names)));
 export const isComponent = (name) => WANTED.has(name);

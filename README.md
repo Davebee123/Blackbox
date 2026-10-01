@@ -2,8 +2,6 @@
 
 A virus breaks into your server; you fight it, trace where it came from, then make a run on that location: explore its file system with `ls`, `cd`, `cat` and `pull`, beat what guards it, and jack out to bank what you found. This build is **solo**; co-op comes later (see the design review in the Hacker MUD project).
 
-**Play it in your browser: https://davebee123.github.io/Blackbox/** (your save stays in that browser). Every push to `main` republishes it.
-
 **Rules live in [`GAME_RULES.md`](GAME_RULES.md).** That file is the single source of truth; this README only explains how to run and work on the code.
 
 ## Run
@@ -81,6 +79,7 @@ Red is used only for "lands this cycle" and critical server health.
 | `dist/music/` | Drop CC0 tracks here as `home`, `run`, `fight` (`.ogg` or `.mp3`); `CREDITS.md` lists the recommended ones |
 | `strains.test.mjs` | The strains (wave 1: Keylogger, Hashrat, Floodgate, Leech, Sleeper; wave 1b: Patchwork, Flicker, Extortion, Echo, Bricker, Overrun) and the ICE guards (Bouncer, Tracer): data in `STRAINS` / `GUARDS` (`dist/data.mjs`), rules in `dist/combat.mjs`, ICE swaps in `layoutOf` (`dist/run.mjs`). |
 | `bot.mjs` | A scripted player from a fresh save to a target level through the real commands, on a simulated clock: `node bot.mjs <class> <level> <seed>` prints what it fought, where XP came from and when each level landed. |
+| `econ.mjs` | The economy check: the bot climbs to a level never paying for health, always topping up, and topping up plus building services, and prints earned, spent, rest time and time to level. `node econ.mjs <class> <level> <seed>`. |
 | `dist/forensics.mjs` | Log sweep: an incident file on about half the found servers (who broke in, what was stolen, which process is hiding), built from the server's seed, harder by layer. `sweep <answer>` answers; a right answer pushes the lead toward the next server. |
 | `dist/lore.mjs` | Skill library text: a plain sentence of what each skill does (numbers scale with level) and a line of flavour. The fight's ability bar keeps the terse `short` from `data.mjs`. |
 | `dist/window.mjs` | The window behind the monitor (casing on, screens 1700px and wider): a canvas slum skyline with lit windows, flickering neon, blinds and grimy glass, and weather that changes every five minutes (clear, fog, drizzle, rain, storm with lightning). Rain and thunder play through `soundtrack.mjs`. Commands: `window on\|off`, `weather <clear\|fog\|drizzle\|rain\|storm\|auto>`. |
@@ -106,8 +105,3 @@ The playtest script runs 7 scripted strategies against each fixture and 30 rando
 These files are no longer used and can be deleted: `dist/blackbox.js`, `dist/blackbox.css`, `dist/combat-layout.css`, `dist/combat-feedback.mjs`, `dist/combat-view.mjs`, `dist/encounter-view.mjs`, `docs/variant-results.json`, `docs/exploit-results.json`. The old specs and phase reviews under `design/` describe the previous combat model; treat them as history, not instructions.
 
 Saves from before the level system keep their server, credits and locations, but every class restarts at level 1 with a fresh loadout. A fight saved under the old armor rules is dropped on load (the next intrusion arrives as usual). Older ones (`blackbox-v4` / `v5`) start a fresh server.
-
-
-## Credits and licence
-
-The code and writing are © Dave (Davebee123), all rights reserved unless a licence file says otherwise. Music and sound effects are third-party CC0 (public domain) assets; their sources are listed in [`dist/music/CREDITS.md`](dist/music/CREDITS.md) and [`dist/sfx/CREDITS.md`](dist/sfx/CREDITS.md).

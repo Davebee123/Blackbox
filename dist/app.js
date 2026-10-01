@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, defender, maxSignal, inSync } from './combat.mjs';
+import { keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { createArt } from './virus-art.mjs';
 import { createFeel } from './feel.mjs';
@@ -590,6 +590,17 @@ function renderMeters() {
   $('meter-integrity').classList.toggle('noted', !!note);
   $('integrity-note').textContent = note;
   $('integrity-note').className = 'meter-note ' + (campaign.degraded ? 'degraded' : inv?.state || '');
+  // Click a meter that isn't full to pay for the rest (topUp in data.mjs); the hover says what it costs.
+  const meterBuy = (el, cmd, cost, base) => {
+    const can = !!cost && !active(campaign);
+    if (can) { el.dataset.command = cmd; el.setAttribute('role', 'button'); el.tabIndex = 0; } else { delete el.dataset.command; el.removeAttribute('role'); el.removeAttribute('tabindex'); }
+    el.title = base + (can ? ` Click to fill it now: ${cost} credits.` : '');
+  };
+  {
+    const missing = srv.max - srv.integrity, mins = Math.ceil(missing / (CONFIG.restRegen * srv.max));
+    meterBuy($('meter-integrity'), 'repair', srv.integrity > 0 ? topUpCost(campaign, 'server') : 0,
+      `Server Integrity ${srv.integrity}/${srv.max}. At 0 the server crashes and reboots at half, degraded for 10 minutes.${missing > 0 && srv.integrity > 0 ? ` Rests back to full in about ${mins} min.` : ''}`);
+  }
   $('vault-value').textContent = srv.credits;
   // Signal: your health out on the net. At home it rests back; on a run the run's own header shows it.
   {
@@ -602,7 +613,9 @@ function renderMeters() {
     m.querySelectorAll('.sig-bars i').forEach((b, i) => b.classList.toggle('on', i < lit));
     m.classList.toggle('weak', f < need);
     m.classList.toggle('resting', !campaign.run && !active(campaign) && sig < max);
-    m.title = `Signal ${sig}/${max}: your health out on the net. ${sig < max ? `It rests back 5% every 5 seconds at home.${f < need ? ` You need ${Math.ceil(max * need)} to connect.` : ''}` : 'Full.'}`;
+    const mins = Math.ceil((max - sig) / (CONFIG.signalRest * max));
+    meterBuy(m, 'top up', campaign.run ? 0 : topUpCost(campaign, 'signal'),
+      `Signal ${sig}/${max}: your health out on the net. ${sig < max ? `Rests back to full in about ${mins} min at home.${f < need ? ` You need ${Math.ceil(max * need)} to connect.` : ''}` : 'Full.'}`);
   }
   const s = shown();
   // On a run, Signal lives in the prompt, the net header and the combat HUD.
@@ -930,10 +943,18 @@ let lastSecond = 0;
 function frame(now) {
   const delta = Math.min(1000, now - last);
   last = now;
+  const wall = Date.now();
   if (active(campaign)) {
+    campaign.restAt = wall;
     const events = advance(campaign, delta);
     if (events.length) { react(events); save(); }
-  } else if (idleRegen(campaign, delta)) { dirty = true; save(); } // resting between fights, plus any Hot-patcher
+  } else {
+    // Resting between fights, plus any Hot-patcher, by the wall clock: a hidden tab or a closed
+    // game (up to 8 hours) catches up.
+    const away = Math.min(8 * 3600000, Math.max(0, wall - (campaign.restAt ?? wall)));
+    campaign.restAt = wall;
+    if (idleRegen(campaign, away)) { dirty = true; save(); }
+  }
   if (dirty) render();
   else tickUi();
   feel.flush();
@@ -1197,4 +1218,9 @@ document.querySelector('.brand')?.addEventListener('click', (ev) => {
   if (ev.button !== 0 || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return; // new tab/window still works
   ev.preventDefault();
   go('map');
+});
+// The meters that take a click (top up, repair) take Enter and Space too.
+document.addEventListener('keydown', (e) => {
+  const m = e.target.closest?.('.meter[data-command]');
+  if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); m.click(); }
 });

@@ -6,7 +6,10 @@ export const CONFIG = {
   // Server
   maxIntegrity: 100,
   startingCredits: 160,
-  repairCost: 1, // credits per Integrity point
+  // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
+  // full now. The price is for a full bar at your level; less missing costs less (at least 1).
+  // Signal goes by your class level, Integrity by your server level.
+  topUp: { signal: [8, 3], server: [10, 4] }, // [base, per level]
   // Crits: your hits crit at baseCrit% (+ Crit from protocols) for ×1.5. Enemy damage attacks
   // crit at enemyCrit (from enemy level 3; a brand-new server never sees one).
   baseCrit: 5,
@@ -84,10 +87,11 @@ export const CONFIG = {
     grind: [4, 20], // % of the invader a siege wears down per minute, from the breach line to the block line
     blockedXp: 0.25, // share of a kill's XP when the wall stops one (plus one salvage)
   },
-  // Resting: between fights the server repairs itself, 1% of its max every 10 seconds (6% a
-  // minute), while the game is open. It stops while an invader is sieging or breaching your wall.
-  restRegen: 0.06,
-  signalRest: 0.6, // Signal back per minute at home, out of a fight (5% every 5 seconds)
+  // Resting: between fights the server repairs itself, 2% of its max a minute (empty to full in
+  // about 50 minutes), offline too. It stops while an invader is sieging or breaching your wall.
+  // Or pay to top up (topUp above).
+  restRegen: 0.02,
+  signalRest: 0.2, // Signal back per minute at home, out of a fight: empty to full in 5 minutes, offline too
   booster: { salvage: 4, restore: 0.5, carry: 5 }, // Signal booster: crafted from salvage, used on a run
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections

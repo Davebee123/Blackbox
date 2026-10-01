@@ -5,14 +5,14 @@ import { BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, D
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
-import { SALVAGE_COSTS, settle, spend, splitPay } from './salvage.mjs';
+import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
 import { has as hasConfig, configCommand } from './configs.mjs';
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, infestWon, siteTrait } from './outpost.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
@@ -876,7 +876,7 @@ export function installBlock(s, id) {
   if (serverLevel(s) < VERSIONS[v - 1].needs) return `${d.name} v${v} needs server level ${VERSIONS[v - 1].needs}.`;
   const cost = serviceCost(id, v), m = materialsOf(s);
   const short = Object.entries(cost).filter(([k, n]) => n > (k === 'credits' ? s.server.credits : m[k] || 0));
-  if (short.length) return `${d.name} v${v} needs ${costLine(cost)}.`;
+  if (short.length || !canAfford(s, SALVAGE_COSTS.service(serviceSalvage(v)))) return `${d.name} v${v} needs ${costLine({ ...cost, salvage: serviceSalvage(v) })}.`;
   return null;
 }
 function serviceCommand(s, text, now) {
@@ -893,6 +893,7 @@ function serviceCommand(s, text, now) {
     s.install = null;
     const cost = serviceCost(job.id, job.v), m = materialsOf(s);
     for (const [k, n] of Object.entries(cost)) if (k === 'credits') s.server.credits += n; else m[k] = (m[k] || 0) + n;
+    for (const [name, n] of Object.entries(job.pay || {})) for (let i = 0; i < n; i++) s.salvage.push({ name, virus: 'refund', seed: 0 });
     return emit(s, 'service', `${SERVICES[job.id].name} v${job.v} cancelled. Everything refunded.`, { service: job.id });
   }
   const id = serviceId(arg);
@@ -901,9 +902,12 @@ function serviceCommand(s, text, now) {
     const why = installBlock(s, id);
     if (why) return warn(s, why);
     const v = serviceVersion(s, id) + 1, cost = serviceCost(id, v), m = materialsOf(s);
+    const pay = settle(s, SALVAGE_COSTS.service(serviceSalvage(v)), null);
+    if (typeof pay === 'string') return warn(s, `${SERVICES[id].name} v${v}: ${pay}`);
+    spend(s, pay);
     for (const [k, n] of Object.entries(cost)) if (k === 'credits') s.server.credits -= n; else m[k] -= n;
     const mins = VERSIONS[v - 1].minutes;
-    s.install = { id, v, startedAt: now, doneAt: now + mins * 60000 };
+    s.install = { id, v, startedAt: now, doneAt: now + mins * 60000, pay };
     return emit(s, 'service', `${v > 1 ? 'Upgrading' : 'Installing'} ${SERVICES[id].name} to v${v}: ${mins} minute${mins === 1 ? '' : 's'}.`, { service: id, v });
   }
   if (word === 'uninstall') {
@@ -1005,9 +1009,11 @@ export function finish(s, result) {
     const now = hooks.now?.() ?? Date.now();
     const wild = e.wild && s.locations.find((l) => l.id === e.wild); // a rogue server's folder, or SPRAWL-00's
     const spawn = wild ? null : s.zone?.spawns?.[e.room];
-    if (spawn) { spawn.alive = false; spawn.respawnAt = now + CONFIG.zone.respawnMs; }
-    const named = spawn?.bounty ? spawn.name : null;
-    if (spawn) delete spawn.bounty;
+    // A named contract target you lost to stays put, so the contract can still be finished.
+    const keep = spawn?.bounty && result !== 'victory';
+    if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = now + CONFIG.zone.respawnMs; }
+    const named = spawn?.bounty && !keep ? spawn.name : null;
+    if (named) delete spawn.bounty;
     if (result === 'victory') {
       emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: true, bounty: named });
@@ -1208,7 +1214,10 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
     addLead(s, text.split(' ')[2], 100, 'Developer: ');
   } else if (/^repair( \d+)?$/.test(text)) {
-    repair(s, text);
+    topUp(s, 'server', text.split(' ')[1] ? Number(text.split(' ')[1]) : null);
+  } else if (/^top ?up( signal)?( \d+)?$/.test(text)) {
+    const n = text.match(/(\d+)$/);
+    topUp(s, 'signal', n ? Number(n[1]) : null);
   } else if (/^encounter [a-z]+( \d+)?$/.test(text) && (FIXTURES[text.split(' ')[1]] || STRAINS[text.split(' ')[1]] || text.split(' ')[1] === 'random')) {
     const [, key, seed] = text.split(' ');
     selectEncounter(s, key, seed ? Number(seed) >>> 0 : (s.seed + 1) >>> 0);
@@ -1224,6 +1233,10 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (text === 'developer blueprints') {
     s.recipes = [...new Set([...(s.recipes || []), ...BLUEPRINTS, ...SERVICE_SOURCES])];
     emit(s, 'info', 'Developer: every blueprint and service source learned.');
+  } else if (/^developer salvage \d+$/.test(text)) {
+    const n = Number(text.split(' ')[2]);
+    for (let i = 0; i < n; i++) s.salvage.push({ name: 'Scrap', virus: 'developer', seed: 0 });
+    emit(s, 'info', `Developer: +${n} salvage.`);
   } else if (/^developer code \d+$/.test(text)) {
     const n = Number(text.split(' ')[2]);
     gainCode(s, { cipher: n, worm: n, kernel: n, exploit: Math.ceil(n / 10) }, 'Developer: ');
@@ -1317,15 +1330,35 @@ export function toIntent(s, text, checkNow = true) {
   return { ...intent, text: text2 };
 }
 
-function repair(s, text) {
-  if (active(s)) return warn(s, 'Repair after the fight.');
-  if (s.server.integrity <= 0) return warn(s, 'The server crashed. Type developer reboot.');
-  const wanted = Number(text.split(' ')[1] || s.server.max);
-  const amount = Math.min(wanted, s.server.max - s.server.integrity, Math.floor(s.server.credits / CONFIG.repairCost));
-  if (amount <= 0) return warn(s, s.server.integrity === s.server.max ? 'Server is already at full Integrity.' : 'Not enough credits.');
-  s.server.integrity += amount;
-  s.server.credits -= amount * CONFIG.repairCost;
-  emit(s, 'repair', `Repaired ${amount} Integrity for ${amount * CONFIG.repairCost} credits. Server ${s.server.integrity}/${s.server.max}.`);
+const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s)); // as run.mjs
+// Topping up: pay to have Signal or server Integrity full now (CONFIG.topUp), instead of resting.
+export function topUpPrice(s, what) {
+  const [base, per] = CONFIG.topUp[what];
+  return base + per * (what === 'signal' ? hackerLevel(s) : serverLevel(s));
+}
+// What it costs to fill `points` of the bar (all that's missing by default).
+export function topUpCost(s, what, points = null) {
+  const max = what === 'signal' ? maxSignal(s) : s.server.max;
+  const missing = what === 'signal' ? max - signalNow(s) : s.server.max - s.server.integrity;
+  const n = Math.min(missing, points ?? missing);
+  return n > 0 ? Math.max(1, Math.ceil((topUpPrice(s, what) * n) / max)) : 0;
+}
+function topUp(s, what, wanted = null) {
+  if (active(s)) return warn(s, 'Finish the fight first.');
+  const signal = what === 'signal';
+  if (signal && s.run) return warn(s, 'Top up at home. On a run: a Signal booster, or a Signal patch from the store.');
+  if (!signal && s.server.integrity <= 0) return warn(s, 'The server crashed. Type developer reboot.');
+  const max = signal ? maxSignal(s) : s.server.max;
+  const now = signal ? signalNow(s) : s.server.integrity;
+  let n = Math.min(max - now, wanted ?? max);
+  if (n <= 0) return warn(s, signal ? 'Signal is already full.' : 'Server is already at full Integrity.');
+  while (n > 0 && topUpCost(s, what, n) > s.server.credits) n--; // as much as you can afford
+  if (n <= 0) return warn(s, `Not enough credits (${topUpCost(s, what)} to fill it).`);
+  const cost = topUpCost(s, what, n);
+  s.server.credits -= cost;
+  if (signal) { s.signal = now + n >= max ? null : now + n; s.signalAcc = 0; }
+  else s.server.integrity += n;
+  emit(s, 'repair', signal ? `Signal topped up: +${n} for ${cost} credits. Signal ${now + n}/${max}.` : `Repaired ${n} Integrity for ${cost} credits. Server ${s.server.integrity}/${s.server.max}.`, { what, credits: cost });
 }
 
 // ---------- resolution ----------
@@ -2395,7 +2428,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s), 'hold', 'pause', 'resume', 'cancel', 'status']
-    : ['engage', 'jack in', 'mail', 'outpost', 'craft booster', 'repair', 'protocols', 'services', 'compile', 'install', 'uninstall', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'jack in', 'mail', 'outpost', 'craft booster', 'repair', 'top up', 'protocols', 'services', 'compile', 'install', 'uninstall', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 

@@ -227,9 +227,9 @@ test('Signal carries between connections and rests back up; too weak and you can
   const s = fresh();
   s.signal = 10;
   assert.match(say(s, 'connect sprawl').at(-1).message, /too weak/);
-  for (let i = 0; i < 5; i++) idleRegen(s, 1000);
-  assert.ok(s.signal - 10 >= Math.floor(maxSignal(s) * 0.05) - 1, '5% every 5 seconds at home');
-  for (let i = 0; i < 25; i++) idleRegen(s, 1000);
+  for (let i = 0; i < 30; i++) idleRegen(s, 1000);
+  assert.ok(s.signal - 10 >= Math.floor(maxSignal(s) * CONFIG.signalRest / 2) - 1, 'rests back at home');
+  idleRegen(s, 2 * 60000);
   assert.ok(s.signal >= Math.ceil(maxSignal(s) * CONFIG.zone.minSignal));
   say(s, 'connect sprawl');
   assert.equal(s.run.integrity, s.signal ?? maxSignal(s));
@@ -551,4 +551,32 @@ test('Signal boosters: crafted from salvage at home, used on a run for half your
   say(s, 'boost');
   assert.equal(s.run.integrity, Math.min(s.run.max, 5 + Math.ceil(s.run.max * CONFIG.booster.restore)));
   assert.equal(s.items.booster, 0);
+});
+
+test('top up: pay to fill Signal or the server now; less missing costs less; not on a run', async () => {
+  const { topUpCost, topUpPrice, maxSignal } = await import('./dist/combat.mjs');
+  const s = fresh();
+  s.signal = Math.floor(maxSignal(s) / 2);
+  const half = topUpCost(s, 'signal');
+  assert.ok(half >= 1 && half <= topUpPrice(s, 'signal'));
+  s.signal = 0;
+  assert.equal(topUpCost(s, 'signal'), topUpPrice(s, 'signal'));
+  const credits = s.server.credits;
+  say(s, 'top up');
+  assert.equal(s.signal, null, 'full again');
+  assert.equal(s.server.credits, credits - topUpPrice(s, 'signal'));
+  s.server.integrity = s.server.max - 10;
+  const c2 = s.server.credits;
+  say(s, 'repair');
+  assert.equal(s.server.integrity, s.server.max);
+  assert.ok(c2 - s.server.credits >= 1 && c2 - s.server.credits < topUpPrice(s, 'server'));
+  // Can't afford it all: you get what you can pay for.
+  s.signal = 0; s.server.credits = 2;
+  say(s, 'top up');
+  assert.ok(s.signal > 0 && s.signal < maxSignal(s) && s.server.credits <= 2);
+  // On a run it's a booster or a store patch instead.
+  s.signal = null;
+  say(s, 'connect sprawl');
+  s.run.integrity = 10;
+  assert.match(say(s, 'top up').at(-1).message, /Top up at home/);
 });

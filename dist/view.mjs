@@ -16,7 +16,7 @@ import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items 
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, blocked, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills,  cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, previewDamage, part } from './combat.mjs';
+import { topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, blocked, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills,  cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, previewDamage, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -348,7 +348,7 @@ export function homeMarkup(s) {
   }
   const srv = s.server;
   const upkeep = [];
-  if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair to full (${Math.min(srv.max - srv.integrity, srv.credits) * CONFIG.repairCost}c)`));
+  if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair to full (${topUpCost(s, 'server')}c)`));
   if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Developer reboot', true));
   const side = `<section class="card"><h2>Your server</h2>
     <div class="stats">${stat('Integrity', `${srv.integrity}/${srv.max}`)}${stat('Credits', `${srv.credits}c`)}${stat('Origins found', s.locations.length)}${stat('Salvage', s.salvage.length)}</div>
@@ -586,7 +586,7 @@ function archMarkup(s) {
 export function serverMarkup(s, now = Date.now()) {
   const srv = s.server, m = materialsOf(s), busy = active(s);
   const used = portsUsed(s), total = portCount(s);
-  const mats = Object.keys(MATERIALS).map((k) => `<div class="stat"><span>${glyph(k)}${esc(MATERIALS[k].name)}</span><strong>${m[k] || 0}</strong></div>`).join('');
+  const mats = Object.keys(MATERIALS).map((k) => `<div class="stat"><span>${glyph(k)}${esc(MATERIALS[k].name)}</span><strong>${m[k] || 0}</strong></div>`).join('') + `<div class="stat" title="Any salvage: deconstruct items for more."><span>Salvage</span><strong>${s.salvage.length}</strong></div>`;
   const job = s.install;
   const queue = job
     ? `<div class="install"><div class="install-top"><b>${esc(SERVICES[job.id].name)} v${job.v}</b><span>${fmtTime(job.doneAt - now)} left</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((now - job.startedAt) / (job.doneAt - job.startedAt)) * 100))}%"></span></div>
@@ -597,7 +597,7 @@ export function serverMarkup(s, now = Date.now()) {
     if (v > VERSIONS.length) return '<small>max</small>';
     const why = installBlock(s, id);
     const x = VERSIONS[v - 1];
-    return `<small>v${v}: ${esc(serviceEffect(s, id, v))} · ${esc(costLine(serviceCost(id, v)))} · ${x.minutes} min${x.needs > 1 ? ` · server Lv ${x.needs}` : ''}</small>
+    return `<small>v${v}: ${esc(serviceEffect(s, id, v))} · ${esc(costLine({ ...serviceCost(id, v), salvage: x.salvage }))} · ${x.minutes} min${x.needs > 1 ? ` · server Lv ${x.needs}` : ''}</small>
       <button type="button" class="btn ${why ? '' : 'primary'} small" data-command="install ${id}" ${why || busy ? 'disabled' : ''} title="${esc(why || (v > 1 ? 'Upgrade' : 'Install'))}">${v > 1 ? `Upgrade to v${v}` : 'Install'}</button>`;
   };
   const running = Object.keys(s.services || {}).map((id) => `<li class="svc on"><div class="svc-main"><div class="gitem-head"><b class="svc-name">${glyph(id, 'badge')}${esc(SERVICES[id].name)}</b><span class="tag you">v${serviceVersion(s, id)}</span></div>
@@ -1123,7 +1123,8 @@ function mapSide(s, sel, node) {
   if (!node || node.kind === 'server') {
     const r = s.reports.findLast((x) => x.mode !== 'run');
     const upkeep = [];
-    if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair (${Math.min(srv.max - srv.integrity, srv.credits) * CONFIG.repairCost}c)`));
+    if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair (${topUpCost(s, 'server')}c)`));
+    if (!s.run && !busy && topUpCost(s, 'signal')) upkeep.push(btn('top up', `Top up Signal (${topUpCost(s, 'signal')}c)`));
     if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Reboot (testing)', true));
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     return `${runCard}${alertCard()}
@@ -1204,9 +1205,9 @@ function fleetCard(s) {
 // Outpost modules: the server's ports on this outpost, and what fits them.
 function modsMarkup(s, l) {
   const mine = modsOf(l), ports = outpostPorts(s), busy = active(s) || s.run;
-  const credits = archCredits(s, OUTPOST.modCost.credits), code = OUTPOST.modCost.code, k = codeOf(l.family), have = materialsOf(s)[k] || 0;
+  const credits = archCredits(s, OUTPOST.modCost.credits), code = OUTPOST.modCost.code, k = codeOf(l.family), have = materialsOf(s)[k] || 0, scrap = canAfford(s, SALVAGE_COSTS.module());
   const on = mine.map((id) => `<span class="mod on" title="${esc(OUTPOST.mods[id].rule)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}<button type="button" class="mod-x" data-command="outpost unmod ${esc(l.id)} ${id}" ${busy ? 'disabled' : ''} title="Remove it: half its code comes back" aria-label="Remove ${esc(OUTPOST.mods[id].name)}">×</button></span>`).join('');
-  const free = mine.length < ports ? Object.keys(OUTPOST.mods).filter((id) => !mine.includes(id)).map((id) => `<button type="button" class="mod add" data-command="outpost mod ${esc(l.id)} ${id}" ${busy || s.server.credits < credits || have < code ? 'disabled' : ''} title="${esc(`${OUTPOST.mods[id].rule} ${credits} credits and ${code} ${MATERIALS[k].name}.`)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}</button>`).join('') : '';
+  const free = mine.length < ports ? Object.keys(OUTPOST.mods).filter((id) => !mine.includes(id)).map((id) => `<button type="button" class="mod add" data-command="outpost mod ${esc(l.id)} ${id}" ${busy || s.server.credits < credits || have < code || !scrap ? 'disabled' : ''} title="${esc(`${OUTPOST.mods[id].rule} ${credits} credits, ${code} ${MATERIALS[k].name} and ${OUTPOST.modCost.salvage} salvage.`)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}</button>`).join('') : '';
   return `<div class="mods"><span class="cfg-label">Ports ${mine.length}/${ports}</span>${on}${free}</div>`;
 }
 

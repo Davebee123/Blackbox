@@ -47,8 +47,8 @@ export const OUTPOST = {
   resetMs: 30 * 60000, // after a pull-out, the port resets before a new one fits
   stashCap: 6,
   vaultChance: 0.12, // share of vaults holding a packaged native (Legacy sites: double)
-  compile: { credits: 80, code: 10, material: { siphon: 'worm', scraper: 'cipher', tap: 'kernel' } },
-  repair: { credits: (L) => 30 + 5 * L, code: (L) => 4 + Math.floor(L / 5) },
+  compile: { credits: 200, code: 15, material: { siphon: 'worm', scraper: 'cipher', tap: 'kernel' } },
+  repair: { credits: (L) => 40 + 8 * L, code: (L) => 4 + Math.floor(L / 5) },
   // Outpost ports and the modules that go in them. The ports belong to the server, so modules
   // stay put when you swap or pull the harvester, and sleep while the outpost is lost.
   ports: (serverLv) => 2 + (serverLv >= 20 ? 1 : 0) + (serverLv >= 35 ? 1 : 0),
@@ -58,7 +58,7 @@ export const OUTPOST = {
     node: { name: 'Firewall Node', rule: 'Sieges and swarms here take twice as long to take it.' },
     ids: { name: 'IDS', rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
   },
-  modCost: { credits: 60, code: 6 },
+  modCost: { credits: 150, code: 8, salvage: 5 },
   bandwidth: (serverLv) => Math.min(5, 1 + Math.floor(serverLv / 10)),
 };
 const RARITY = ['Stock', 'Tuned', 'Custom'];
@@ -273,7 +273,9 @@ function installMod(s, loc, id) {
   if (hasMod(loc, id)) return warn(s, `${loc.name} already runs a ${m.name}.`);
   if (modsOf(loc).length >= outpostPorts(s)) return warn(s, `${loc.name}'s ports are full (${outpostPorts(s)}). Remove a module first.`);
   const credits = archCredits(s, OUTPOST.modCost.credits), code = OUTPOST.modCost.code, k = codeOf(loc.family), have = materialsOf(s);
-  if (s.server.credits < credits || (have[k] || 0) < code) return warn(s, `A ${m.name} costs ${credits} credits and ${code} ${MATERIALS[k].name}.`);
+  const pay = s.server.credits >= credits && (have[k] || 0) >= code && settle(s, SALVAGE_COSTS.module(), null);
+  if (!pay || typeof pay === 'string') return warn(s, `A ${m.name} costs ${credits} credits, ${code} ${MATERIALS[k].name} and ${OUTPOST.modCost.salvage} salvage.`);
+  spend(s, pay);
   s.server.credits -= credits;
   have[k] -= code;
   modsOf(loc).push(id);

@@ -9,7 +9,7 @@ export const ARCHITECTURES = {
   lab: { name: 'Lab', rule: 'Crafting costs 30% fewer credits. Outposts are noticed a quarter more often.' },
 };
 export const ARCH_LEVEL = 20;
-export const ARCH_SWITCH = 300; // credits to change once you've picked
+export const ARCH_SWITCH = 1000; // credits to change once you've picked
 
 export const archOf = (s) => (ARCHITECTURES[s.architecture] ? s.architecture : null);
 export const isArch = (s, id) => archOf(s) === id;

@@ -25,7 +25,7 @@ export const CONFIGS = {
   // Hot-patcher
   triage: { service: 'hotpatch', name: 'Triage', rule: 'Double repair below half Integrity, half repair above it.' },
 };
-export const CONFIG_COST = { credits: 120, code: 12, salvage: 3 };
+export const CONFIG_COST = { credits: 250, code: 15, salvage: 6 };
 export const CONFIG_VAULT_CHANCE = 0.3;
 
 export const known = (s) => (s.configsKnown ||= []);

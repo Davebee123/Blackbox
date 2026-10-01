@@ -217,6 +217,8 @@ test('crash: a breach chips you to zero, the server reboots at half and runs deg
 test('Degraded mode pauses the install queue', () => {
   const s = world();
   s.materials.worm = 20;
+  s.server.credits = 500;
+  command(s, 'developer salvage 10');
   s.recipes.push('raid');
   command(s, 'install raid', 0);
   assert.equal(s.install.doneAt, 15 * MIN);
