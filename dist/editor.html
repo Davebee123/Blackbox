@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BLACKBOX · Content editor</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body class="ed">
+  <header class="ed-top">
+    <a class="brand" href="./" title="Open the game"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">BLACKBOX</span></a>
+    <span class="ed-title">Content editor</span>
+    <span class="ed-status" id="status">Loading…</span>
+    <button type="button" class="btn" id="issues-btn" title="Mistakes in the draft">Checks</button>
+    <button type="button" class="btn primary" id="save" title="Save (Ctrl+S): writes dist/content/">Save</button>
+  </header>
+  <div class="ed-main">
+    <nav class="ed-nav" id="nav" aria-label="Content"></nav>
+    <main class="ed-form" id="form"></main>
+    <aside class="ed-side" id="side" aria-label="Preview"></aside>
+  </div>
+  <script type="module" src="editor.mjs"></script>
+</body>
+</html>

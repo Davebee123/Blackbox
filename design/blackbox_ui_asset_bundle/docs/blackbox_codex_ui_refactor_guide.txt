@@ -1,0 +1,329 @@
+BLACKBOX Combat UI Refactor — Step-by-Step Codex Guide
+
+1. Freeze the current combat logic before touching layout.
+Do not change combat rules, damage formulas, enemy behavior, cycle timing, or command parsing yet. The first pass is purely a UI/UX refactor. Preserve the existing working systems and move/re-present their state.
+
+2. Use the new mockup as the north-star reference.
+Treat the current screenshot as the “before” state and the mockup as the target direction. Do not simply restyle the existing panels. Rebuild the combat information hierarchy to resemble the mockup: large combat workspace, obvious telegraph, readable component bars, small contextual sidebars, compact events, and a prominent command area.
+
+3. Reduce the top-level combat screen to four visual priorities.
+During combat, the player should primarily see:
+- enemy / virus
+- incoming action
+- targetable components
+- command abilities
+
+Server Integrity and Trace should remain visible, but secondary. Logs, ticker, general Files information, and flavor text should visually recede.
+
+4. Rebuild the central combat panel first.
+The center panel should contain the virus name, family/threat, large rotating ASCII/dot-art model, Core health, current hostile action, subsystem health bars, and current cycle. Do not put descriptive paragraphs in this area.
+
+Conceptually:
+
+CRYPTJACK // THREAT 16
+
+          [ LARGE VIRUS MODEL ]
+
+CORE
+███████████████░░ 108 / 120
+
+INCOMING ACTION
+ENCRYPT FILES
+████████████░░░░   1 CYCLE
+
+SUBSYSTEMS
+Shell       ████████████ 60/60
+Encryptor   ████████████ 55/55
+Spreader    █████████░░░ 42/50
+
+5. Make hostile actions function like MMORPG cast bars.
+Every active enemy action should have a clear cast/telegraph bar. It should show:
+- action name
+- affected target
+- progress
+- remaining cycles
+
+Example:
+
+ENCRYPT FILES
+Target: Files
+
+███████████████░░░
+1 CYCLE
+
+The bar should visibly fill during the five-second cycle. When interrupted, immediately change it to:
+
+INTERRUPTED
+
+and briefly animate the cancellation.
+
+6. Associate casts with the subsystem creating them.
+If Encryptor is casting Encrypt Files, highlight the Encryptor row while its cast is active. If Replicator is preparing replication, highlight Replicator. This lets players visually connect “this part of the virus is causing that problem.”
+
+7. Make subsystem rows extremely compact.
+Each row should show only:
+- icon or small marker
+- subsystem name
+- health bar
+- current HP
+- one or two short status tags
+
+Example:
+
+Encryptor    ███████████░ 48/55
+EXPOSED · WEAK
+
+Do not include explanatory prose next to every subsystem.
+
+8. Build a dedicated persistent INTEL panel.
+Scan results must no longer disappear into the combat log. Replace much of the current right-side prose with an INTEL section.
+
+Before scanning:
+
+INTEL
+
+Mutation    ???
+Weakness    ???
+Behavior    Encrypt Files
+
+After scanning:
+
+INTEL                NEW
+
+Mutation
+ARMORED
+
+Weakness
+Encryptor // Exploit
+
+Behavior
+Encrypt Files every 3 cycles
+
+Keep discoveries visible for the entire encounter.
+
+9. Mirror critical scan information onto the subsystem bars.
+The INTEL panel contains the detailed record, but the player should not need to constantly look there.
+
+After Scan, the subsystem might display:
+
+Encryptor     55/55
+WEAK: EXPLOIT
+
+or:
+
+Shell         60/60
+ARMORED
+
+10. Add a brief Scan discovery animation.
+When scan resolves, show a short message near the virus rather than only in the log:
+
+SCAN COMPLETE
+ENCRYPTOR VULNERABILITY FOUND
+
+Briefly highlight the relevant subsystem and add the discovery to INTEL. Then remove the temporary message.
+
+11. Shrink the event log dramatically.
+Replace the current large scrolling text area with roughly 3–4 recent event cards or rows.
+
+Example:
+
+RECENT
+
+-42 Encryptor
+Encrypt Files interrupted
+Server -4 Integrity
+Trace +25%
+
+Full history can remain under Logs, but combat should not depend on reading it.
+
+12. Simplify the left rail.
+Keep only information that matters during the encounter:
+
+SERVER
+Integrity 74%
+
+TRACE
+25%
+
+FILES
+Secure
+
+ALERT
+High-value target
+
+Remove paragraphs and unnecessary operational details from the default combat view. If something becomes important, surface it through a just-in-time notification.
+
+13. Make the command prompt visually dominant.
+The command field should be one of the easiest things to locate on screen.
+
+Example:
+
+rookie@blackbox:~$ exploit encryptor_
+
+The player should always know where to type.
+
+14. Add autocomplete rather than requiring command memorization.
+Typing:
+
+exp
+
+suggests:
+
+exploit
+
+Then:
+
+exploit 
+
+suggests valid targets:
+
+core   shell   encryptor
+
+Tab should complete the highlighted suggestion.
+
+15. Put the ability reference immediately below the command prompt.
+Use a compact visual tray, but keep typing as the actual input method.
+
+Example:
+
+[1] Spike      damage
+[2] Exploit    expose target
+[3] Overload   heavy damage
+[4] Interrupt  stop action
+[5] Scan       reveal intel
+[6] Trace      origin progress
+
+Show cooldown/readiness directly on these cards.
+
+16. Allow clicking an ability only as help, not as the primary fantasy.
+If the existing UI supports clicking, clicking an ability can populate the command field instead of executing it immediately.
+
+Example: clicking Exploit produces:
+
+> exploit _
+
+Then target suggestions appear. This preserves typing while improving onboarding.
+
+17. Create a separate abilities/help window.
+Add a ? Abilities control. It should open a small pin-able reference window with:
+- ability name
+- syntax
+- one-line description
+
+This window should be optional and should not permanently consume combat space.
+
+18. Implement contextual tutorial hints.
+Use just-in-time hints only when new mechanics appear.
+
+Example for the first cast:
+
+TIP
+Interrupt stops an incoming action,
+but damaging its subsystem can disable it permanently.
+
+Do not tell the player exactly what to press.
+
+19. Preserve the large rotating virus art.
+This is one of the strongest parts of the new design. Keep it large enough to establish enemy identity. It should rotate slowly and should not compete with the cast bar.
+
+20. Connect subsystem damage to the virus model.
+When the Encryptor is damaged, briefly highlight the region of the 3D ASCII model associated with it. When destroyed, that region should dim, fragment, or disappear. This makes targeted damage feel physical.
+
+21. Reduce persistent prose everywhere.
+Apply a strict rule: if information can be communicated as a label, status tag, icon, health bar, tooltip, or short notification, do not use a paragraph.
+
+Replace:
+
+Reinforced special component:
++10 Integrity.
+
+with:
+
+ARMORED
++10 Integrity
+
+22. Use tooltips for explanation instead of permanent text.
+Hovering or focusing ARMORED, EXPOSED, Encryptor, etc. can show the longer explanation. Default screen stays minimal.
+
+23. Make new information visually louder than old information.
+Newly discovered information can briefly:
+- pulse cyan
+- show NEW
+- animate into INTEL
+- highlight the affected component
+
+After a few seconds it becomes visually normal.
+
+The player should never wonder, “What just changed?”
+
+24. Make danger visually louder than flavor.
+A nearly completed enemy cast should outrank the ticker, news, logs, mutations, and flavor text visually.
+
+If Encrypt Files has one second left, that should be the strongest element on screen other than perhaps critically low Server Integrity.
+
+25. Dim tertiary UI during combat.
+Do not necessarily hide the ticker, clock, navigation, or other BLACKBOX modules. Reduce their contrast/brightness while combat is active.
+
+26. Use the following combat glance test.
+Stop periodically during implementation and ask whether a first-time player can answer these questions within roughly two seconds:
+
+What enemy am I fighting?
+What is it doing?
+How soon will that happen?
+What parts can I attack?
+What did I learn from Scan?
+What abilities are ready?
+Where do I type?
+
+If any answer requires reading a log or paragraph, continue simplifying.
+
+27. Do not redesign other BLACKBOX modules yet.
+Finish the combat view first. Leave Home, Files, Trace, and Logs mostly intact unless shared components require adjustment. Validate this hierarchy before propagating it throughout the application.
+
+28. Add responsive states after the desktop version is correct.
+First match the reference layout at the target desktop resolution. Then define sensible collapse rules for narrower screens. Do not compromise the desktop combat hierarchy prematurely.
+
+29. Playtest with the three existing virus encounters.
+Test Cryptjack, Splinter, and Ghostroot and verify that the UI successfully communicates:
+- Encryptor cast
+- replication telegraph
+- component destruction
+- Scan discovery
+- mutation discovery
+- Trace gain
+- Core Corruption
+- File Lock
+- server critical state
+
+30. Do a final deletion pass.
+Once everything works, inspect every visible piece of text in combat and ask:
+
+Does the player need this visible right now?
+
+If the answer is no, move it to a tooltip, Logs, INTEL detail, Help, or remove it.
+
+KEY IMPLEMENTATION INSTRUCTION
+
+Do not optimize the current combat UI. Replace its information hierarchy.
+
+The attached mockup is the north star.
+
+The player should primarily watch:
+1. the virus,
+2. its cast bar,
+3. its component health,
+4. the command interface.
+
+Everything else supports those four elements.
+
+RECOMMENDED REVIEW CHECKPOINT
+
+Implement steps 1–10 first and stop for visual review before proceeding.
+
+Those steps contain the biggest structural changes:
+- center combat panel
+- enemy cast bar
+- subsystem bars
+- persistent Scan / INTEL system
+
+If those feel right, the rest is refinement.

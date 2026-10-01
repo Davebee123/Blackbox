@@ -1,0 +1,78 @@
+// First-time tips: the only tutorial. One at a time, once each, only where their thing is on screen.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { fresh, command, restore } from './dist/combat.mjs';
+import { TIPS, nextTip, markSeen } from './dist/tips.mjs';
+import { mapMarkup, serverMarkup, protocolsMarkup, craftMarkup, loadoutMarkup, daemonsMarkup, systemMarkup, boardMarkup, hudMarkup } from './dist/view.mjs';
+
+// A stand-in for "is it on screen": the selector's last class/attribute appears in the markup.
+const onPage = (html) => (sel) => {
+  const last = sel.trim().split(/\s+/).at(-1);
+  const bits = [...last.matchAll(/\.([\w-]+)|\[([\w-]+)="([^"]+)"\]|#([\w-]+)/g)];
+  return bits.length > 0 && bits.every(([, cls, attr, val, id]) => (cls ? new RegExp(`class="[^"]*\\b${cls}\\b`).test(html) : attr ? html.includes(`${attr}="${val}"`) : html.includes(`id="${id}"`)));
+};
+
+test('every tip has an id, a page, a selector and one or two short sentences', () => {
+  const ids = new Set();
+  for (const t of TIPS) {
+    assert.ok(t.id && !ids.has(t.id), `unique id ${t.id}`);
+    ids.add(t.id);
+    assert.ok(t.page && t.at && t.text, t.id);
+    assert.ok(t.text.length <= 200, `${t.id} is short`);
+  }
+});
+
+test('one tip at a time, in order, only on its page and only once', () => {
+  const s = fresh();
+  command(s, 'encounter cryptjack');
+  const map = mapMarkup(s, 'server');
+  const first = nextTip(s, 'map', onPage(map));
+  assert.equal(first.id, 'map-server');
+  markSeen(s, first.id);
+  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-zone');
+  markSeen(s, 'map-zone');
+  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-intrusion');
+  markSeen(s, 'map-intrusion');
+  assert.equal(nextTip(s, 'map', onPage(map)), null, 'nothing else on this map yet');
+  assert.equal(nextTip(s, 'server', onPage(map)), null, 'map tips stay on the map');
+  command(s, 'developer location worm');
+  assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, 'server'))).id, 'map-origin', 'a new thing brings its tip');
+});
+
+test('fight tips pause the fight and wait for what they explain', () => {
+  const s = fresh();
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  const html = hudMarkup(s) + boardMarkup(s) + '<div id="tray"></div>';
+  const t = nextTip(s, 'combat', onPage(html));
+  assert.equal(t.id, 'fight-timeline');
+  assert.ok(t.pause);
+  markSeen(s, t.id);
+  assert.equal(nextTip(s, 'combat', onPage(html)).id, 'fight-keys');
+  markSeen(s, 'fight-keys');
+  assert.equal(nextTip(s, 'combat', onPage(html)).id, 'fight-armor');
+  markSeen(s, 'fight-armor');
+  assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-quiet', 'no Trace tip before you have Trace');
+});
+
+test('tips off means none; seen tips survive a save and a new game keeps settings', () => {
+  const s = fresh();
+  s.settings.tips = false;
+  assert.equal(nextTip(s, 'map', () => true), null);
+  const t = fresh();
+  markSeen(t, 'map-server');
+  const back = restore(JSON.parse(JSON.stringify(t)));
+  assert.equal(back.settings.seen['map-server'], 1);
+  assert.equal(back.settings.tips, true);
+});
+
+test('the screens carry names, numbers and state, not explanations', () => {
+  const s = fresh();
+  command(s, 'developer location worm');
+  command(s, 'encounter cryptjack');
+  const pages = [mapMarkup(s, 'server'), mapMarkup(s, s.locations[0].id), serverMarkup(s), protocolsMarkup(s), craftMarkup(s), loadoutMarkup(s, 'breaker'), daemonsMarkup(s), systemMarkup(s)].join('\n');
+  for (const phrase of [/Neutralize intrusions to trace/, /Services run on ports/, /Any protocol goes in any slot/, /Daemons act for you in cycles/, /Each class levels on its own/, /numbers are layers/, /click to target/, /Speed changes seconds per cycle/, /its guards, its vault/]) {
+    assert.doesNotMatch(pages, phrase);
+  }
+  for (const t of TIPS) if (/^(map|server|protocols|loadout|daemons)-/.test(t.id)) assert.ok(t.text.length > 20);
+});

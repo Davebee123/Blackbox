@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+<rect width="640" height="360" fill="#090603"/>
+<g fill="#F1B92F" font-family="monospace">
+<text x="30" y="40" font-size="20">SIGNATURE // CRJ-0716</text>
+<text x="30" y="82" font-size="15">FAMILY</text><text x="200" y="82" fill="#F0E2B6">RANSOMWARE</text>
+<text x="30" y="116" font-size="15">MUTATION</text><text x="200" y="116" fill="#F0E2B6">ARMORED</text>
+<text x="30" y="150" font-size="15">WEAKNESS</text><text x="200" y="150" fill="#F0E2B6">PULSE NODE // EXPLOIT</text>
+<text x="30" y="184" font-size="15">BEHAVIOR</text><text x="200" y="184" fill="#F0E2B6">ADAPTIVE / HIGH THREAT</text>
+<text x="30" y="218" font-size="15">ORIGIN TRACE</text><text x="200" y="218" fill="#F0E2B6">42%</text>
+<text x="30" y="252" font-size="15">UNKNOWN</text><text x="200" y="252" fill="#B99D61">???</text>
+</g>
+<rect x="30" y="285" width="560" height="16" fill="#171006" stroke="#F1B92F" stroke-opacity=".45"/>
+<rect x="30" y="285" width="235" height="16" fill="#F1B92F"/>
+</svg>

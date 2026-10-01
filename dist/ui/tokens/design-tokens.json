@@ -1,0 +1,59 @@
+{
+  "name": "BLACKBOX Retro Terminal Grime",
+  "colors": {
+    "bgMain": "#090603",
+    "bgPanel": "#100B05",
+    "bgPanelRaised": "#171006",
+    "bgInset": "#070503",
+    "textMain": "#F0E2B6",
+    "textBright": "#FFF2C8",
+    "textMuted": "#B99D61",
+    "textDim": "#6F5B35",
+    "amberMain": "#F1B92F",
+    "amberBright": "#FFD85C",
+    "amberSoft": "#D69A22",
+    "amberDeep": "#7E5311",
+    "hostileMain": "#FF5B3D",
+    "hostileBright": "#FF7A5E",
+    "hostileDark": "#A82F20",
+    "borderDim": "rgba(241,185,47,0.20)",
+    "borderMain": "rgba(241,185,47,0.45)",
+    "borderHot": "rgba(255,91,61,0.60)",
+    "shadowBlack": "rgba(0,0,0,0.65)"
+  },
+  "glow": {
+    "panel": "0 0 14px rgba(241,185,47,.10)",
+    "selected": "0 0 18px rgba(255,216,92,.22)",
+    "hostile": "0 0 14px rgba(255,91,61,.18)",
+    "textAmber": "0 0 6px rgba(255,216,92,.18)"
+  },
+  "spacing": {
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 20,
+    "xxl": 28
+  },
+  "radius": {
+    "sm": 2,
+    "md": 4,
+    "lg": 6
+  },
+  "borders": {
+    "thin": "1px",
+    "active": "1px"
+  },
+  "typography": {
+    "uiStack": "\"Inter Tight\",\"Rajdhani\",\"IBM Plex Sans\",system-ui,sans-serif",
+    "monoStack": "\"IBM Plex Mono\",\"JetBrains Mono\",\"Cascadia Mono\",monospace",
+    "displayWeight": 700,
+    "labelWeight": 600
+  },
+  "motion": {
+    "fastMs": 120,
+    "normalMs": 180,
+    "slowMs": 350,
+    "virusRotationMs": 9000
+  }
+}

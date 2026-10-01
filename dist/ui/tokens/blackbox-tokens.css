@@ -1,0 +1,43 @@
+/* BLACKBOX Retro Terminal Grime design tokens */
+:root {
+  --bb-bg-main: #090603;
+  --bb-bg-panel: #100B05;
+  --bb-bg-panel-raised: #171006;
+  --bb-bg-inset: #070503;
+
+  --bb-text-main: #F0E2B6;
+  --bb-text-bright: #FFF2C8;
+  --bb-text-muted: #B99D61;
+  --bb-text-dim: #6F5B35;
+
+  --bb-amber: #F1B92F;
+  --bb-amber-bright: #FFD85C;
+  --bb-amber-soft: #D69A22;
+  --bb-amber-deep: #7E5311;
+
+  --bb-hostile: #FF5B3D;
+  --bb-hostile-bright: #FF7A5E;
+  --bb-hostile-dark: #A82F20;
+
+  --bb-border-dim: rgba(241,185,47,0.20);
+  --bb-border-main: rgba(241,185,47,0.45);
+  --bb-border-hot: rgba(255,91,61,0.60);
+
+  --bb-glow-panel: 0 0 14px rgba(241,185,47,.10);
+  --bb-glow-selected: 0 0 18px rgba(255,216,92,.22);
+  --bb-glow-hostile: 0 0 14px rgba(255,91,61,.18);
+
+  --bb-font-ui: "Inter Tight","Rajdhani","IBM Plex Sans",system-ui,sans-serif;
+  --bb-font-mono: "IBM Plex Mono","JetBrains Mono","Cascadia Mono",monospace;
+
+  --bb-space-xs: 4px;
+  --bb-space-sm: 8px;
+  --bb-space-md: 12px;
+  --bb-space-lg: 16px;
+  --bb-space-xl: 20px;
+  --bb-space-xxl: 28px;
+
+  --bb-radius-sm: 2px;
+  --bb-radius-md: 4px;
+  --bb-radius-lg: 6px;
+}

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+<rect width="640" height="360" fill="#090603"/>
+<g stroke="#5d461c" opacity=".35"><path d="M0 40h640M0 80h640M0 120h640M0 160h640M0 200h640M0 240h640M0 280h640M0 320h640"/><path d="M80 0v360M160 0v360M240 0v360M320 0v360M400 0v360M480 0v360M560 0v360"/></g>
+<g fill="none" stroke="#F1B92F" stroke-width="2">
+<rect x="250" y="28" width="140" height="54"/><rect x="80" y="145" width="140" height="54"/><rect x="250" y="145" width="140" height="54"/><rect x="420" y="145" width="140" height="54"/>
+<path d="M320 82v34M320 116H150v29M320 116v29M320 116h170v29"/>
+</g>
+<g fill="#F0E2B6" font-family="monospace" font-size="18" text-anchor="middle">
+<text x="320" y="61">SHELL</text><text x="150" y="178">PULSE NODE</text><text x="320" y="178">INJECTOR</text><text x="490" y="178">ENCRYPTOR</text>
+</g>
+<g fill="#B99D61" font-family="monospace" font-size="14" text-anchor="middle">
+<text x="320" y="104">PROTECTS</text><text x="150" y="230">SERVER -12</text><text x="320" y="230">SERVER -8</text><text x="490" y="230">LOCK DATA</text>
+</g>
+</svg>

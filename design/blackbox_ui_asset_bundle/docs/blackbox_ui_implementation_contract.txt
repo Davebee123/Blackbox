@@ -1,0 +1,734 @@
+BLACKBOX UI IMPLEMENTATION CONTRACT
+Primary combat UI source of truth: RETRO TERMINAL GRIME reference
+Package type: Implementation contract + style guide
+Fidelity target: Match the approved reference as closely as possible
+
+==================================================
+0. PRIMARY REFERENCE AND DESIGN INTENT
+==================================================
+
+MASTER REFERENCE IMAGE
+- Approved master visual reference: the screenshot the user selected as “This is the one I liked”
+- Treat this exact screenshot as the PRIMARY SOURCE OF TRUTH for combat UI layout, spacing feel, hierarchy, glow balance, grime level, iconography style, panel framing, and content density.
+- Do not reinterpret it loosely.
+- Match as closely as possible within the existing app tech stack.
+
+SECONDARY SUPPORTING REFERENCES
+- Use earlier generated BLACKBOX images only as supporting references for alternates, assets, or details.
+- If the approved master reference conflicts with an older image, the approved master reference wins.
+
+DESIGN GOAL
+Implement BLACKBOX as a retro-terminal-grime underground cyber-ops application.
+The experience should feel:
+- illicit
+- lived-in
+- gritty but not broken
+- readable under pressure
+- highly functional in combat
+- visually faithful to the approved reference
+
+PLAYER EYE FLOW
+The player’s eyes should naturally move in this order:
+1. Virus identity
+2. Virus subsystem timers / attacks
+3. Player current action
+4. Command input / abilities
+5. Intel
+6. Events (only if needed)
+
+==================================================
+1. IMPLEMENTATION BOUNDARY
+==================================================
+
+PRESERVE
+- combat logic
+- virus/system state
+- command parser
+- pause/resume
+- ability logic
+- trace logic
+- file-lock logic
+- scan logic
+- existing gameplay data model unless needed for the revised subsystem model
+
+REFACTOR / IMPLEMENT
+- combat layout
+- component placement
+- subsystem combat model UI
+- virus-integrity presentation
+- per-subsystem attack timers
+- player action panel
+- bottom ability tray cast and cooldown visuals
+- event panel toggle behavior
+- tab functionality for 3D / Schematic / Signature
+- style fidelity to the approved reference
+- top shell chrome for BLACKBOX
+- consistent assets/iconography
+- no-deviation rules and fidelity checks
+
+==================================================
+2. NO-DEVIATION RULES
+==================================================
+
+DO NOT:
+- move Trace away from the virus encounter area
+- reintroduce a large always-visible left rail
+- make Recent Events permanently required or dominant
+- bury Scan discoveries in logs
+- use long prose paragraphs during combat
+- let ticker/news compete visually with combat
+- flatten all panels to equal visual priority
+- remove the retro terminal grime character
+- use heavy flicker or annoying glitch effects
+- enlarge the virus visual beyond the approved reference proportion
+- make the command input visually weak
+- make the system depend on combat scrolling at normal desktop resolution
+- change tab names away from 3D / Schematic / Signature
+- implement alternative combat layouts without approval
+- replace the amber/yellow retro grime theme with another color theme
+
+DO:
+- match the approved screenshot closely
+- keep the combat view dense but controlled
+- make subsystem timers and player action immediately readable
+- keep events optional
+- keep intel persistent
+- keep the theme gritty, warm, yellow/amber, and readable
+
+==================================================
+3. MASTER LAYOUT CONTRACT
+==================================================
+
+Implement BLACKBOX shell chrome plus combat workspace.
+
+TOP CHROME
+- BLACKBOX logo and wordmark on left
+- subtitle: OFFENSIVE CYBER OPS
+- navigation tabs: Home / Combat / Trace / Files / Logs / Tutorial
+- server HP block in top chrome
+- time
+- Sound toggle
+- Motion toggle
+- Chat
+- right-side small terminal flavor text block
+- thin top ticker / market news strip integrated into header area
+
+COMBAT WORKSPACE LAYOUT
+Use a 3-column composition:
+
+LEFT COLUMN
+- encounter header block
+- view tabs: 3D / Schematic / Signature
+- virus visual pane
+- Intel pane
+
+CENTER COLUMN
+- Virus Integrity bar
+- Origin Trace bar
+- top-right encounter metadata panel
+- Subsystems block
+- Player Action block
+
+RIGHT COLUMN
+- Events toggle/header
+- Recent Events drawer or panel (toggleable)
+
+BOTTOM BAND
+- command row
+- ability tray
+- bottom-right flavor vertical text
+
+At normal desktop resolution, the entire combat layout must fit on one screen without required scrolling.
+
+==================================================
+4. COLUMN-BY-COLUMN REQUIREMENTS
+==================================================
+
+4A. LEFT COLUMN
+Must contain:
+
+A. ENCOUNTER HEADER
+- COMBAT ENGAGED label
+- virus name (e.g. CRYPTJACK)
+- virus family
+- threat
+- sector
+
+B. VIEW TABS
+Exactly these three tabs:
+- 3D
+- Schematic
+- Signature
+
+C. VIRUS VISUAL PANE
+- retro-terminal framed panel
+- 3D rotating virus shown in approved style
+- supporting labels on the right side of the visual area:
+  - ROTATING
+  - SIG
+  - CLASS
+  - THREAT
+- subtle grid / terminal background
+- yellow/amber point-cloud or dot-art render
+- frame corners and minimal target-box treatment as shown in reference
+- label under visual: NETWORK ENTITY PREVIEW
+
+D. INTEL PANE
+Persistent encounter intelligence pane.
+Must include:
+- Intel header
+- discovery count
+- Mutation
+- Weakness
+- Behavior
+- Potential Loot
+- icons for each category
+- concise entries only
+- no long paragraph text
+
+4B. CENTER COLUMN
+Must contain:
+
+A. VIRUS INTEGRITY
+- large red hostile bar
+- current value and max value
+- top billing among combat-state bars
+
+B. ORIGIN TRACE
+- yellow/amber trace bar directly under Virus Integrity
+- current percent value
+- visually tied to the virus encounter, not the server shell
+
+C. ENCOUNTER META PANEL
+Top-right metadata panel inside center top block:
+- connection status
+- sector
+- small quote/flavor text
+
+D. SUBSYSTEMS PANEL
+Each subsystem row must include:
+- row icon
+- subsystem name
+- optional condition tag
+- short behavior line
+- health bar
+- HP numbers
+- timer box at far right if active
+- active hostile systems highlighted appropriately
+
+Subsystem examples:
+- Shell
+- Pulse Node
+- Injector
+- Encryptor
+
+E. PLAYER ACTION PANEL
+Must appear below subsystems.
+Must include:
+- header: YOUR ACTION
+- large icon on left
+- ability name and target
+- concise description line
+- current cast/progress bar
+- remaining time on right
+- cancel button on right
+
+4C. RIGHT COLUMN
+Must be a toggleable Events utility area.
+Must include:
+- Events header with count
+- expand/collapse control
+- RECENT EVENTS block
+- Clear button
+- chronological event list with timestamps and icons
+- sticky footer flavor line/logline
+
+Behavior:
+- Events panel can be expanded, collapsed, or hidden/minimized
+- The player must not need this panel open to understand combat
+- Events should not consume more space than the approved reference by default
+
+4D. BOTTOM BAND
+Must include:
+
+A. COMMAND ROW
+- label: COMMAND
+- prompt field with current user string, matching tone of approved reference
+- short command helper row on the right (tab/autocomplete/history/enter)
+
+B. ABILITY TRAY
+Six ability cards:
+- [1] Spike
+- [2] Exploit
+- [3] Overload
+- [4] Interrupt
+- [5] Scan
+- [6] Trace
+
+Each ability card must include:
+- numeric hotkey
+- icon
+- ability name
+- one short description
+- readiness / cooldown / casting state
+
+C. BOTTOM-RIGHT FLAVOR TEXT
+Vertical short phrases:
+- ACCESS
+- EXPLOIT
+- PERSIST
+- REPEAT
+
+==================================================
+5. EXACT TAB FUNCTIONALITY
+==================================================
+
+Implement functional value for all three view tabs.
+
+TAB 1: 3D
+Purpose:
+- default combat view
+- best for target recognition
+- best for visual identity
+- best for seeing damage feedback and highlighted systems
+
+Must show:
+- rotating virus render
+- highlighted active/selected system regions if applicable
+- component damage feedback
+- intact retro point-cloud / dot-matrix vibe
+
+TAB 2: SCHEMATIC
+Purpose:
+- explain subsystem relationships
+- explain protection / shell gating
+- show dependency links and targeting structure
+
+Must show:
+- node-link or terminal schematic version of the virus
+- shell protection links
+- which systems are protected/accessible
+- subsystem relationships if applicable
+- same panel frame, same overall footprint as 3D view
+
+TAB 3: SIGNATURE
+Purpose:
+- forensic/intelligence dossier view
+- show scan-discovered information cleanly
+
+Must show:
+- family
+- mutation
+- known weakness
+- behavior patterns
+- signal signature / origin details
+- trace-related or forensic details
+- any locked/unknown intel as ??? until discovered
+
+RULE
+- The alternate views must add tactical value.
+- They are not purely cosmetic.
+- The player should not be forced to swap views constantly during immediate timing windows.
+- Critical moment-to-moment combat information still remains elsewhere in the main UI.
+
+==================================================
+6. REVISED COMBAT MODEL UI CONTRACT
+==================================================
+
+The user has updated the underlying conceptual combat model.
+
+Implement the UI around this logic:
+
+- Viruses are composed of subsystems.
+- There is no abstract separate Core target as the main gameplay focus.
+- Virus Integrity represents total denaturation progress.
+- Damaging subsystems reduces Virus Integrity.
+- Destroying specific subsystems removes their behaviors.
+- Specific loot is associated with breaking specific subsystems.
+- Shell(s) can gate access to other systems.
+- AoE attacks can denature the virus broadly but may reduce targeted subsystem-break opportunities.
+- Precision attacks can break chosen systems and secure targeted loot.
+
+UI CONSEQUENCES
+- Virus Integrity remains visible as an aggregate “boss life” bar.
+- The subsystem list is the actual functional anatomy.
+- Active attack timing must be shown on subsystem rows.
+- The player must be able to understand:
+  - which subsystem is attacking
+  - when it will attack
+  - what it will affect
+  - which subsystem is currently protected
+  - which subsystem would yield loot if destroyed
+
+==================================================
+7. TIMING / TELEGRAPHING CONTRACT
+==================================================
+
+Remove dependence on a single distant cycle indicator.
+
+The UI must communicate timing locally where it matters.
+
+REQUIREMENTS
+- Each active hostile subsystem shows its own timing information.
+- Hostile action time remaining should live on the subsystem row in a right-side timer box.
+- The active hostile subsystem row should be visually emphasized.
+- The player’s currently cast/queued action must be shown in the dedicated YOUR ACTION panel.
+- The player should not need to look in three different places to know:
+  - what is attacking
+  - how long until it lands
+  - how long until their own action lands
+
+SUBSYSTEM TIMER BOX
+For each active hostile subsystem, show:
+- remaining time, e.g. 0.8s / 2.1s / 4.7s
+- timer box on far right of row
+- red for hostile urgency when dangerous
+- yellow/amber or neutral when not urgent
+
+ABILITY CARDS
+Bottom abilities should show:
+- active cast progress if the selected/current action is being cast
+- cooldown progress via darkened overlay / receding progress bar
+- ready state clearly visible
+- selected state highlighted
+
+PLAYER ACTION PANEL
+This is the primary place to watch the player’s own action progress.
+
+==================================================
+8. EVENTS PANEL CONTRACT
+==================================================
+
+Recent Events should be optional and toggleable.
+
+STATES
+- expanded
+- collapsed
+- hidden/minimized
+
+DEFAULT
+- Match approved reference: visible on right
+- Support toggling because player does not always need to see it
+
+RULE
+- The player must never be required to read the Events panel to understand immediate combat
+- Damage, scan discoveries, interrupts, subsystem destruction, and critical warnings should also be shown inline or reflected directly in the relevant combat region
+
+==================================================
+9. SCAN / INTEL CONTRACT
+==================================================
+
+SCAN behavior:
+- Scan discoveries must persist in the Intel panel
+- Discoveries should also be reflected where relevant on subsystem rows and/or Signature view
+- Do not bury scan output only in events or logs
+
+INTEL PANE CONTENT
+- Mutation
+- Weakness
+- Behavior
+- Potential Loot
+- discovered count
+
+Unknown entries may show ??? or incomplete lists until found.
+
+==================================================
+10. ABILITY TRAY CONTRACT
+==================================================
+
+All six cards must exist at all times in combat.
+
+Each card should support the following visual states:
+- ready
+- selected
+- casting
+- cooldown
+- unavailable/disabled (if needed later)
+
+READY
+- bright/normal
+- readable label
+- “Ready” text
+
+SELECTED
+- clear accent border/glow
+- command or target focus state if applicable
+
+CASTING
+- visible progress bar inside the card
+- may mirror the current cast shown in YOUR ACTION panel
+
+COOLDOWN
+- darkened overlay
+- receding or filling cooldown bar
+- time remaining text if useful
+
+TRACE CARD
+Should visually indicate trace-related timing or cooldown if applicable.
+
+==================================================
+11. STYLE GUIDE AND TOKENS
+==================================================
+
+VISUAL STYLE
+Retro terminal grime.
+Warm amber/yellow dominant theme with red hostile accents and restrained helper neutrals.
+
+COLOR TOKEN RECOMMENDATIONS
+Use or approximate:
+
+Backgrounds
+- --bg-main: #0b0704
+- --bg-panel: #120c06
+- --bg-panel-2: #171006
+
+Lines / Borders
+- --border-dim: rgba(255, 196, 79, 0.18)
+- --border-main: rgba(255, 196, 79, 0.40)
+- --border-hot: rgba(255, 98, 79, 0.55)
+
+Text
+- --text-main: #f2e3b0
+- --text-bright: #fff2c8
+- --text-muted: #b89b5a
+- --text-dim: #7a6338
+
+Primary amber/yellow
+- --amber-main: #f6c54b
+- --amber-bright: #ffd86b
+- --amber-deep: #b07c17
+
+Hostile red/orange
+- --hostile-main: #ff5b3d
+- --hostile-bright: #ff7a5e
+- --hostile-dark: #b63a26
+
+Accent helper
+- --accent-offwhite: #f1ead5
+- --accent-charcoal: #0a0907
+
+GLOW RULES
+- subtle amber panel glow only on active framed areas
+- hostile systems receive restrained red emphasis
+- selected states use controlled amber glow
+- avoid overbloom
+- no heavy neon cyan glow
+- no full-screen haze
+
+Suggested values:
+- active amber glow: 0 0 14px rgba(246,197,75,.14)
+- strong selected amber glow: 0 0 18px rgba(246,197,75,.22)
+- hostile glow: 0 0 14px rgba(255,91,61,.18)
+
+TYPOGRAPHY
+Use:
+- primary UI font: clean sans-serif with slightly condensed or technical feel
+- command/ASCII/log font: monospace
+
+Recommended implementation-friendly stack:
+Primary:
+- "Inter Tight", "Rajdhani", "IBM Plex Sans", system-ui, sans-serif
+Monospace:
+- "IBM Plex Mono", "JetBrains Mono", "Cascadia Mono", monospace
+
+Typography use:
+- Titles: bold/sans
+- Labels: uppercase/sans
+- Command prompt: mono
+- Timer values: mono or bold sans
+- Virus visual labels: mono acceptable
+- Event list: sans for body, mono for timestamp optional
+
+GRIME
+- subtle scratches/noise texture
+- worn panel edges
+- distressed but legible
+- terminal grit
+- not broken
+- not high-noise CRT
+
+==================================================
+12. COMPONENT-BY-COMPONENT INVENTORY
+==================================================
+
+Implement the following reusable components:
+
+APP CHROME
+- blackbox logo mark
+- wordmark
+- subtitle lockup
+- nav tab
+- active nav tab underline
+- server HP chrome block
+- top ticker strip
+- utility nav item (Sound/Motion/Chat)
+- top-right flavor callout frame
+
+PANEL ASSETS
+- primary framed panel
+- secondary framed panel
+- compact card frame
+- inset terminal box
+- timer box
+- button frame
+- icon badge frame
+- header line treatment
+- tiny corner bracket treatment
+- grid background layer
+
+ENCOUNTER COMPONENTS
+- encounter title block
+- virus visual frame
+- view tabs
+- integrity bar
+- trace bar
+- subsystem container
+- subsystem row
+- hostile active subsystem row
+- shell/protected subsystem row
+- player action panel
+- cancel button
+- intel panel
+- events panel
+- event list row
+- command prompt row
+- ability card
+- ability state overlays
+- tooltip / hover help
+- optional mini badge tags (Ready, Casting, Armed, Protected, etc.)
+
+ICONOGRAPHY
+Need a consistent icon set in the approved style for at least:
+- shell / shield
+- pulse / attack
+- injector / node
+- encryptor / lock/data
+- mutation
+- weakness
+- behavior
+- loot
+- events
+- command
+- scan
+- trace
+- interrupt
+- exploit
+- overload
+- spike
+- cancel
+- clear / collapse chevron
+
+==================================================
+13. INTERACTION DETAILS
+==================================================
+
+COMMAND PROMPT
+- should remain a strong focal area
+- should support autocomplete
+- should support history
+- should support enter-to-execute
+- clicking an ability can populate command input, not instantly execute, if helpful
+
+TOOLTIPS
+Use tooltips instead of paragraphs for:
+- extra subsystem explanation
+- mutation explanation
+- loot explanation
+- tab explanation
+- ability explanation if needed
+
+INLINE FEEDBACK
+When important things happen, they should be visible in relevant UI areas, not only in events:
+- subsystem damage
+- scan complete
+- weakness found
+- interrupt success
+- server hit
+- subsystem destroyed
+- loot secured
+- trace gained
+
+==================================================
+14. ACCEPTANCE CRITERIA
+==================================================
+
+This implementation is only complete if:
+
+VISUAL FIDELITY
+- The resulting UI strongly resembles the approved screenshot
+- The amber retro terminal grime theme is preserved
+- The layout, positioning, and density are close to the reference
+- Glow, frames, and iconography reflect the approved reference
+
+USABILITY
+- The player can identify the virus and its dangerous subsystem attacks immediately
+- The player can identify their own current action and its timing easily
+- Events are optional rather than mandatory
+- Trace is visibly tied to the virus encounter
+- Scan discoveries are persistent and easy to find
+- No major required information is hidden behind scrolling
+- The UI is readable under time pressure
+
+FEATURE FIDELITY
+- 3D / Schematic / Signature all exist and provide distinct value
+- bottom abilities show casting / cooldown state
+- player action panel exists
+- events are toggleable
+- all components in the approved design are implemented
+- shell chrome is included, not just combat
+
+==================================================
+15. IMPLEMENTATION PROCESS REQUIREMENT
+==================================================
+
+Implement in reviewable phases and stop after each phase with screenshots.
+
+PHASE 1
+- shell chrome
+- global layout
+- panel proportions
+- no styling shortcuts
+
+PHASE 2
+- left/center/right combat regions
+- bottom band
+- exact placement
+
+PHASE 3
+- virus visual
+- view tabs
+- integrity/trace
+- subsystem rows
+- player action panel
+
+PHASE 4
+- intel panel
+- events toggle
+- command row
+- ability tray
+
+PHASE 5
+- icons
+- glow
+- grime textures
+- timer boxes
+- event styling
+- final polish
+
+PHASE 6
+- tab functionality
+- interaction validation
+- anti-regression pass
+
+At each phase:
+- provide screenshot
+- describe what changed
+- identify mismatches vs approved reference
+- fix before proceeding
+
+==================================================
+16. FINAL DIRECTIVE TO CODEX
+==================================================
+
+Use the approved retro-terminal-grime BLACKBOX screenshot as the exact combat UI target. Match it as closely as possible. Implement the BLACKBOX shell chrome, combat layout, subsystem-centric combat presentation, distinct 3D/Schematic/Signature views, persistent Intel, toggleable Events, and bottom ability tray states. Do not drift back toward a dashboard-heavy or prose-heavy layout. Do not improvise an alternate design. This implementation should feel like the approved image brought to life inside the game.
+

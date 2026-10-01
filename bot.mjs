@@ -1,0 +1,128 @@
+// A scripted player from a fresh save to a target level, through the real commands (play/command),
+// on a simulated clock. It checks the loop holds together: what you fight, how XP arrives, how long
+// each level takes, and where it runs dry. A policy, not a person: it plays the planner from
+// balance.mjs, explores every room, takes every file but bait, and opens every vault.
+// node bot.mjs [class] [targetLevel] [seed]
+import { fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
+import { RARITY_ORDER, SLOT_KINDS, groupOf } from './dist/gear.mjs';
+import { play, layoutOf, currentLocation, signalNow } from './dist/run.mjs';
+import { tickNetwork } from './dist/invasion.mjs';
+import { POLICIES } from './balance.mjs';
+import { CONFIG, STRAINS, FAMILIES, GUARDS } from './dist/data.mjs';
+
+export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6, cmdSec = 3, log = false } = {}) {
+  let t = 1_700_000_000_000;
+  hooks.now = () => t;
+  const s = fresh();
+  s.seed = seed; s.rng = seed * 2654435761 >>> 0;
+  s.tutorialCompleted = true;
+  s.loadout.archetype = cls;
+  const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];
+  const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
+  const seen = new Set(), losses = {};
+  const wait = (sec) => { for (let left = sec; left > 0; left -= 30) { const d = Math.min(30, left) * 1000; t += d; idleRegen(s, d); for (const e of tickNetwork(s, t)) note(e); } };
+  const note = (e) => {
+    stats.events[e.type] = (stats.events[e.type] || 0) + 1;
+    if (e.type === 'drop' && (e.item || e.rarity)) { const r = e.rarity || e.item.rarity; stats.drops[r] = (stats.drops[r] || 0) + 1; stats.firstAt[r] ??= Math.round((t - 1_700_000_000_000) / 60000); }
+    if (e.type === 'xp') { const why = (e.message.split('·')[1] || 'other').trim().replace(/[0-9]+/g, '#').replace(/ on .*/, '').replace(/\.$/, ''); stats.xp[why] = (stats.xp[why] || 0) + e.amount; }
+  };
+  const say = (text) => { const ev = play(s, text) || []; ev.forEach(note); t += cmdSec * 1000; return ev; };
+  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
+  const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family]).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
+  const fight = () => {
+    if (!s.encounter) return;
+    if (s.encounter.phase === 'alert') command(s, 'engage');
+    const key = fightKey(), where = s.run?.loc;
+    stats.fights[key] = (stats.fights[key] || 0) + 1;
+    for (let n = 0; n < 80 && active(s); n++) {
+      const text = policy(s) || 'hold';
+      if (s.encounter.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
+      (command(s, text) || []).forEach(note);
+      (resolveCycle(s) || []).forEach(note);
+      t += cycleSec * 1000;
+    }
+    if (active(s)) finish(s, 'defeat');
+    const r = s.reports.at(-1);
+    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where] = (losses[where] || 0) + 1; if (log) console.log('lost to', key); }
+    if (s.encounter && !active(s)) command(s, '');
+    lvlCheck();
+  };
+  const restUp = () => { // rest until Signal is full and the server mostly repaired
+    let n = 0; while ((signalNow(s) < maxSignal(s) || s.server.integrity < s.server.max * 0.8) && n++ < 200) wait(10);
+    if (s.server.integrity <= 0) { stats.crashes++; command(s, 'reboot'); }
+  };
+  // Gear like a player: the best item in each slot (rarity, then level); deconstruct the rest.
+  const value = (it) => RARITY_ORDER.indexOf(it.rarity) * 100 + it.level;
+  const gearUp = () => {
+    if (s.run || active(s)) return;
+    for (const it of [...(s.stash || [])].sort((a, b) => value(b) - value(a))) {
+      if (loadedOn(s, it.id)) continue;
+      const kind = groupOf(it);
+      const slots = SLOT_KINDS.slice(0, slotCount(s)).map((k, i) => (k === kind ? i : -1)).filter((i) => i >= 0);
+      if (!slots.length) { command(s, 'deconstruct ' + it.id); continue; }
+      const worst = slots.map((i) => [i, rigOf(s)[i] && stashItem(s, rigOf(s)[i])]).sort((a, b) => (a[1] ? value(a[1]) : -1) - (b[1] ? value(b[1]) : -1))[0];
+      if (!worst[1]) command(s, 'load ' + it.id);
+      else if (value(it) > value(worst[1])) { command(s, 'unload ' + worst[1].id); command(s, 'load ' + it.id); }
+      else command(s, 'deconstruct ' + it.id);
+    }
+    for (const it of [...(s.stash || [])]) if (!loadedOn(s, it.id)) command(s, 'deconstruct ' + it.id);
+  };
+  const homeFight = () => { if (!s.run && s.encounter && s.encounter.mode !== 'run') fight(); };
+  const runLoc = (loc) => {
+    say(`connect ${loc.id}`);
+    if (!s.run) return false;
+    stats.runs++;
+    if (loc.rogue) {
+      for (const room of Object.keys(layoutOf(loc)).filter((p) => p !== '/')) { if (!s.run) break; say(`cd ${room}`); say('attack'); fight(); if (s.run) say('cd /'); }
+    } else {
+      const L = layoutOf(loc), dirs = Object.keys(L).sort((a, b) => a.split('/').length - b.split('/').length);
+      for (const d of dirs) {
+        if (!s.run) break;
+        if (L[d].locked && !loc.state.unlocked[d]) { say(`cd ${d.slice(0, d.lastIndexOf('/')) || '/'}`); say(`unlock ${d.split('/').pop()} ${loc.password}`); }
+        say(`cd ${d}`);
+        if (s.encounter?.mode === 'run') fight();
+        if (!s.run || s.run.cwd !== d) continue;
+        for (const f of L[d].files || []) if (!/bait/.test(f) && !loc.state.taken[(d === '/' ? '' : d) + '/' + f]) say(`pull ${f}`);
+        if (L[d].locked) stats.vaults++;
+      }
+    }
+    if (s.run) say('jack out');
+    seen.add(loc.id);
+    return true;
+  };
+  const sprawl = () => {
+    say('connect sprawl');
+    if (!s.run) return;
+    const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/');
+    for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
+    if (s.run) say('jack out');
+  };
+  let guard = 0;
+  while (hackerLevel(s) < target && guard++ < 4000) {
+    homeFight();
+    gearUp();
+    restUp();
+    const L = hackerLevel(s);
+    const todo = s.locations.filter((l) => !seen.has(l.id) && !l.rogue && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
+    const rogue = s.locations.filter((l) => l.rogue && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id] || 0) < 2).sort((a, b) => b.level - a.level)[0];
+    if (todo) { runLoc(todo); stats.did.run++; }
+    else if (rogue) { runLoc(rogue); stats.did.rogue++; }
+    else { sprawl(); stats.did.sprawl++; if (L > CONFIG.zone.maxLevel + 1) stats.did.sprawlOverLevel++; }
+    lvlCheck();
+  }
+  stats.mins = Math.round((t - 1_700_000_000_000) / 60000);
+  stats.killsPerHour = Math.round(stats.wins / (stats.mins / 60));
+  stats.gear = loaded(s).map((it) => `${it.rarity}:${it.name} v${it.level}`);
+  stats.level = hackerLevel(s);
+  stats.locations = s.locations.map((l) => `${l.name} L${l.depth} lv${l.level}${l.rogue ? ' rogue ' + l.rogue.kind : ''}`);
+  stats.mail = (s.mail || []).length;
+  stats.credits = s.server.credits;
+  delete hooks.now;
+  return { s, stats };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const [cls = 'breaker', target = '10', seed = '7', cycleSec = '6', cmdSec = '3'] = process.argv.slice(2);
+  const { stats } = simulate({ cls, target: +target, seed: +seed, cycleSec: +cycleSec, cmdSec: +cmdSec, log: true });
+  console.log(JSON.stringify(stats, null, 1));
+}

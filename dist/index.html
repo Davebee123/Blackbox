@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090603">
+  <meta name="description" content="BLACKBOX: a command-driven hacker MUD prototype. Defend your server from hostile software.">
+  <title>BLACKBOX</title>
+  <link rel="icon" type="image/svg+xml" href="ui/blackbox-favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <a href="./" class="brand" aria-label="BLACKBOX home"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">BLACKBOX</span></a>
+    <nav class="modules" aria-label="Modules">
+      <button data-module="map">Map</button>
+      <button data-module="mail">Mail<span id="mail-count" class="count" hidden></span></button>
+      <button data-module="combat" id="tab-combat" class="ctx" hidden>Fight<span id="combat-dot" class="dot" hidden></span></button>
+      <button data-module="net" id="tab-net" class="ctx" hidden>Run</button>
+      <button data-module="store" id="tab-store" hidden>Store</button>
+      <button data-module="server">Server</button>
+      <button data-module="craft">Craft</button>
+      <button data-module="loadout">Loadout</button>
+      <button data-module="daemons">Daemons</button>
+      <button data-module="system">System</button>
+    </nav>
+    <button type="button" class="pager" id="pager" aria-label="Pager: open comms" aria-expanded="false" aria-controls="comms"><span class="led" id="pager-led"></span><span class="lcd" id="pager-lcd"><span id="pager-text">NO MESSAGES</span></span><span class="cnt" id="pager-count"></span></button>
+    <section class="meters" aria-label="Server">
+      <div class="meter meter-level" id="meter-level" title="Your class level. Each class levels on its own.">
+        <span class="meter-label" id="level-label">Breaker</span>
+        <strong id="level-value">1</strong>
+        <span class="meter-bar"><span id="level-fill"></span></span>
+      </div>
+      <div class="meter meter-integrity" id="meter-integrity" title="Server Integrity. At 0 the server crashes and reboots at half, degraded for 10 minutes.">
+        <span class="meter-label">Integrity</span>
+        <span class="meter-bar"><span id="integrity-fill"></span></span>
+        <strong id="integrity-value">100</strong>
+        <small id="integrity-note" class="meter-note" hidden></small>
+      </div>
+      <div class="meter meter-signal" id="meter-signal">
+        <span class="meter-label">Signal</span>
+        <span class="sig-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <strong id="signal-value">100</strong>
+      </div>
+      <div class="meter" title="Credits: for compiling protocols, installing services and repairs.">
+        <span class="meter-label">Credits</span>
+        <strong id="vault-value">160</strong>
+      </div>
+      <div class="meter" title="Uplink trace for the current fight. 100% before the kill locates the virus origin.">
+        <span class="meter-label" id="uplink-label">Uplink</span>
+        <strong id="uplink-value">—</strong>
+      </div>
+    </section>
+    <div class="toggles">
+      <button id="speed" title="Seconds per cycle. Rules count cycles, so speed never changes balance.">Speed</button>
+      <button id="sound" aria-pressed="false">Sound off</button>
+      <button id="motion" aria-pressed="true">Motion on</button>
+      <button id="haptics" aria-pressed="true" hidden title="Vibration on phones that support it">Vibrate</button>
+    </div>
+  </header>
+  <div class="comms" id="comms" hidden></div>
+
+  <main id="workspace" class="workspace">
+    <!-- Combat view is permanent so the virus canvas survives re-renders. -->
+    <section id="combat-view" class="combat" hidden aria-label="Combat">
+      <!-- Top: what you're fighting and the two health bars that decide it. -->
+      <header class="hud panel" id="hud" data-pane="proc/intrusion"></header>
+      <!-- One table: each part's health and exactly when it attacks. -->
+      <section class="board panel" id="board" aria-label="Virus parts and when they attack. Click a part to target it."></section>
+      <aside class="stage panel" data-pane="render">
+        <div class="virus-stage" aria-hidden="true">
+          <canvas id="virus-canvas"></canvas>
+          <div id="stage-flash" class="stage-flash" aria-live="polite"></div>
+          <div id="spoils" class="spoils" hidden></div>
+        </div>
+      </aside>
+      <section class="log panel" aria-label="Combat log" data-pane="var/log/fight">
+        <ol class="log-lines" id="log" role="log" aria-live="polite"></ol>
+      </section>
+    </section>
+    <section id="page-view" class="page" hidden></section>
+  </main>
+
+  <footer class="command-dock">
+    <div class="prompt-row">
+      <div id="suggestions" class="suggestions" role="listbox" aria-label="Suggestions" hidden></div>
+      <form id="command-form" autocomplete="off">
+        <label for="command-input" class="prompt"><span>rookie@blackbox:~$</span></label>
+        <span class="input-wrap"><input id="command-input" aria-label="Command" autocapitalize="off" spellcheck="false" maxlength="160"><span class="caret" id="caret" aria-hidden="true"><span id="caret-pad"></span><i></i></span></span>
+      </form>
+      <p id="notice" class="notice" role="status" hidden></p>
+    </div>
+    <div class="tray" id="tray" aria-label="Abilities"></div>
+  </footer>
+  <div class="statusline" id="statusline" aria-hidden="true" hidden></div>
+</div>
+<!-- Immersive shell: the CRT and the boot screen (see shell.mjs). -->
+<div id="crt" aria-hidden="true"><div id="crt-sweep"></div><div id="crt-bezel"></div></div>
+<div id="boot" class="boot" aria-hidden="true" hidden></div>
+<!-- The monitor casing around the screen (desktop, immersive shell). Its lamps show real state. -->
+<div id="casing">
+  <div class="knobs"><button type="button" class="knob" id="knob-sound" title="Sound"><i></i></button><button type="button" class="knob" id="knob-speed" title="Speed"><i></i></button></div>
+  <div class="badge" aria-hidden="true">BLACKBOX · MODEL 7</div>
+  <div class="lamps" aria-label="Status lamps">
+    <span class="lamp" id="lamp-pwr"><i></i>PWR</span><span class="lamp" id="lamp-gate"><i></i>GATE</span><span class="lamp" id="lamp-wall"><i></i>WALL</span><span class="lamp" id="lamp-net"><i></i>NET</span><span class="lamp" id="lamp-inst"><i></i>INST</span><span class="lamp" id="lamp-dmn"><i></i>DMN</span>
+  </div>
+</div>
+<div id="fx-edge" aria-hidden="true"></div>
+<div id="levelup" class="levelup" role="status" aria-live="polite" hidden><b id="levelup-title"></b><span id="levelup-text"></span></div>
+<div id="tip" class="tip" role="dialog" aria-live="polite" hidden><p id="tip-text"></p><div class="tip-row"><button type="button" class="btn small primary" id="tip-ok">Got it</button><button type="button" class="tip-off" id="tip-off">Turn tips off</button></div></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,709 @@
+# BLACKBOX — game rules
+
+This is the single source of truth for how combat works. If code, README or an old spec disagrees with this file, this file wins. Numbers live in `dist/data.mjs`.
+
+## The Craft page
+
+Everything you build is on one page, **Craft** (at home only): protocols (compile from your recipes, Zero-days from source), the field kit (Signal boosters) and harvesters, with your credits, code and salvage stacks beside them. Protocols you *run* live on the **Loadout** page's Protocols tab (slots, stats, stash: load, unload, scrap).
+
+## First launch
+
+A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16 letters, numbers, dots, dashes or underscores) and a password (4+ characters; never stored). Then an encrypted transmission from Halcyon Mutual's Office of Loss Prevention explains that the terminal was set up for you and that wick of LOWLIGHT will write. Your handle is your name on the prompt from then on.
+
+## The loop
+
+1. `connect sprawl`: **SPRAWL-00**, a rogue server, is where you go to fight from the start. A virus sits in each of its six folders at your level, but never above level 3: it's a starter area, and past that the fights worth having are on the servers you trace (`ls` shows it as `name.exe`); SPRAWL-00 only ever has the plain families, never strains or bigger grades; `attack` it when you're ready. A kill pays like a home kill, straight away (XP, code, a possible drop, a lead), and the folder fills again 90 seconds later.
+2. Every neutralized virus gives a lead toward its family's origin: +25% for the kill plus three quarters of your backtrace (each class traces its own way, at home and on the rogue server; see Backtrace). At 100% the origin is located. A full backtrace locates it in one fight; four plain kills of the same family also get there.
+3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (5% of max every 5 seconds, full in under two minutes); you need a quarter of it to connect. **Signal boosters** refill it on a run: craft one at home from 4 salvage (`craft booster`, or the Craft page), carry up to 5, and type `boost` on a run for half your Signal back (not mid-fight).
+4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
+5. Some files lead deeper: a trace record locates a node one layer down.
+6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invader gets through.
+7. Meanwhile, locations you've found send **invaders** home along the network. Your wall (the Firewall service) meets them; `jack in` to fight one yourself.
+8. **Mail** gives it all a reason: contracts from your crew and from Halcyon Mutual, which pays a retainer every 30 minutes while your standing holds, plus Indemnity to spend at its store (see Mail and contracts, The hidden network, The Halcyon store).
+
+## Runs
+
+| Rule | Detail |
+|---|---|
+| Signal | 50 at the start of each run. Moving (`cd`) costs 1. Guards hit it. A wrong password costs 3. |
+| Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. |
+| Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal, and Trace doesn't apply. |
+| Locked | A locked directory needs `unlock <dir> <password>`. The password is written in a file somewhere in the location. |
+| Pack | Pulled files are unbanked until you jack out. Credits go to your credits, items to salvage, protocols to your stash, code to your server, source (Zero-day or special service) and blueprints to your recipes; trace records locate a deeper node. |
+| Home while out | Intrusions wait. A waiting intrusion is parked when you connect and returns when you're back. |
+
+### Run commands
+
+| Command | What it does |
+|---|---|
+| `ls` | List this directory: subdirectories (with [guarded] / [locked]), files (with [pull] if takeable). `ls -a` also shows hidden dotfiles. |
+| `cd <dir>` | Move. Unix paths work: `cd ..`, `cd ../logs`, `cd /relay/vault` |
+| `cat <file>` | Read a file (paths work too) |
+| `pull <file>` | Copy a file from this directory into your pack |
+| `unlock <dir> <password>` | Open a locked directory |
+| `jack out` | Go home and bank your pack |
+| `pwd` | Show where you are |
+| `tree` | Map of the directories you've seen |
+| `pack` | What you're carrying (unbanked) |
+| `help` | List these commands |
+
+`look` and `go` are accepted as aliases. Entering a directory lists it automatically, like arriving in a MUD room.
+
+### Locations
+
+Every location uses one of five layouts, rotating so consecutive locations play differently. Each has one guard, one locked directory, a password to find, credits, a salvage item and a trace record. Each layout has one idea:
+
+| Layout | Idea | Map |
+|---|---|---|
+| relay | The basics: password in a log | /readme.txt · /logs (access.log) · /relay [WATCHDOG] cache.dat · /relay/vault [locked] |
+| mailhub | Split key: half in mail, half behind the guard | /motd.txt · /mail (ops.eml) · /spool [SENTINEL] queue.log, queue.dat · /spool/vault [locked] |
+| mirror | Deep tree, password past the guard | /index.txt · /public · /private [WATCHDOG] ledger.dat · /private/admin todo.txt · /private/admin/vault [locked] |
+| archive | Three month logs, three keys; readme.md says which month is current | /readme.md · /backups jan/feb/mar.log, old.dat · /srv [SHREDDER] stock.dat · /srv/vault [locked] |
+| lab | Honeypot: /tmp/bait.dat looks like loot; pulling it costs 10 Signal. notice.txt warns you, cat reveals it | /notice.txt · /bin login.sh (password) · /tmp bait.dat · /lab [CRAWLER] samples.dat · /lab/vault [locked] |
+
+### Rogue servers
+
+About 1 in 6 servers you trace is **rogue** (never your first two, and never more than five tame ones in a row). A rogue server is a farm: 4–8 folders with one virus each, at the server's level and grade (strains from layer 2), each coming back 3–5 minutes after you kill it. No vault, no password, nothing to take over or harvest, no log sweep, and it never sends invaders. It shows on the map as a hexagon. Kinds:
+
+| Kind | Rule |
+|---|---|
+| Nest | One family only, and strains twice as often |
+| Pit | Mixed families, 2 levels above the server, a second roll for drops |
+| Gauntlet | Mixed families; clear every folder in one run for a bonus cache (60 + 12×level credits, code, XP) |
+
+### Guards
+
+Every enemy is built the same way: one basic attacker and one signature part that is the whole idea of that enemy, each with armor chits (◆).
+
+| Guard | Attacker | Signature |
+|---|---|---|
+| WATCHDOG | Sentry (bare): Sweep −6 every 3 | Tracker ◆: one big Trace-back −16 every 5. Delay it if your class can, or strip and break it first. |
+| SENTINEL | Lens ◆, veiled: Glare −10 every 4 | Lockout ◆, veiled: −7 every 3. Timers hidden until you strip or Tag them. |
+| CRAWLER | Maw (bare): Bite −7 every 3 | Brood ◆: spawns a fragment every 4 that gnaws Signal every cycle |
+| SHREDDER | Grinder ◆: Grind −9 every 4 | Shredder ◆: Shred −14 every 5. One slow, heavy strike to plan around. |
+
+### Quirks
+
+Every location has its family's quirk: one visible rule, shown on the map card, the run header and when you connect.
+
+| Family | Quirk | Rule |
+|---|---|---|
+| Ransomware | Hoard | Caches pay 50% more, but the guards are Armored. |
+| Worm | Nest | An extra /nest room with a CRAWLER and a brood sample (salvage). Optional. |
+| Ghostroot | Hidden | A hidden /.ghost directory with a credit stash and the vault key. Only `ls -a` shows it; the root file hints at it. |
+
+### Going deeper
+
+A trace record (`signal.trc`) you pull and bank locates a new node **one layer deeper**, of the family named in the file. On the Map it branches off the node it came from. Each layer adds +3 guard levels (about +12% health and damage) and +20 credits per cache. Layer 3 guards call for good play or a Signal booster.
+
+## Protocols, services and code
+
+Two sides, two ways to get stronger. **You** run protocols: loot with rolled stats. **Your server** runs services: things you build from code. Neither is fiddly: a protocol goes in any slot, and a service is one rule.
+
+### Items (you): loot, Diablo 2 style
+
+Everything you equip is software: code, tools and access, never hardware. The Loadout page's Protocols tab (type `protocols`) shows your slots, your stat sheet and the stash. Design: the items design doc ("BLACKBOX: loot and 50 items").
+
+**Slots.** Exploit (weapon: Damage), Proxy (chest: Signal + Block), Shell (helm: Signal + Regen), Script (ring: Damage + Signal); an **Implant** slot opens at level 15 and another at 30 (Implants are uniques only for now). `load` puts an item in its slot; if the slot is full it **swaps** (the old one goes back to the stash). Each class loads its own; one place at a time; one of each unique and each Zero-day per loadout.
+
+**An item = a base + affixes (+ a unique's effect).**
+- **Base items** (20, five per slot) give the **primary stats**, the feel-good numbers: Damage on every hit, Signal, Block, Regen. A new tier unlocks every few levels (Exploit: Proof of Concept 1, Weaponized Exploit 5, Exploit Chain 11, Zero-click 18, Wormable 26; the other slots likewise). Primaries scale +4% per item level from the tier's own level, ×0.6 overall (the monster pass, below).
+- **Affixes** are the **secondary stats**, small on purpose (2–10%): a prefix adds offense (Weaponized +Damage, Precise Crit, Calibrated Accuracy, Loaded Payload, Multithreaded Clock Speed, Brutal Crit Damage, Recursive Echo), a suffix defense or utility (of the Bunker +Signal, of Mending Regen, of the Scavenger Scavenge, of the Ghost Evasion, of Leeching Leech, of Silence Stealth, of the Beat Sync, of Scrubbing Sanitize). Each needs a minimum item level. Names read like D2: *Precise Proof of Concept of the Bunker*.
+
+| Rarity | Colour | What it has |
+|---|---|---|
+| Scrap | Grey | Base ×0.8; 40% roll a junk affix (Buggy −Damage, that Leaks −Evasion) |
+| Stock | White | Base |
+| Tuned | Blue | Base ×1.1 + 1–2 affixes (one prefix, one suffix) |
+| Custom | Yellow | Base ×1.2 + 3–5 affixes (up to three each), a random two-word name |
+| Zero-day | Gold | A **unique** (30, written in the editor) or a found Zero-day (Rootkit, Race Condition, Buffer Overflow) |
+| Indemnified | Orange | Halcyon's store only |
+
+**Uniques** have a fixed name, stats, flavour line and usually one **effect**, sometimes a downside. Found at a higher level, their stats grow; their downside doesn't. They can drop again. Effects are blocks (when · if · does · limits), so new ones are written in the editor without code: e.g. Logger Spool (+25% damage in a Sync Window, Keylogger trophy), Gate Bypass (start each fight with an armor chit, Bouncer ICE), Deadman's Switch (at 0 Signal on a run you jack out with your pack; rearms 90 real minutes later). Hover an item for its flavour.
+
+**Drops: slow on purpose.** Targets in play time: a blue every 10–15 minutes, a yellow about an hour, a gold every 5–6 hours. Per kill (at the assumed pace of 60 kills an hour, `LOOT` in gear.mjs): a third drop a grey or white; blue 1 in 18 kills, yellow 1 in 90, gold 1 in 450, then vaults and double rolls make up the rest.
+- **Guards, rogue-server Pits and bounties** roll twice and keep the best. Deeper layers add 10% a layer to the blue and yellow odds.
+- **Vaults** always hold one item, white or better: white 68 · blue 25 · yellow 6 · gold 1 (a unique that drops from vaults that deep).
+- **A strain's trophy:** 1 in 200 kills of that strain drops its own unique (Keylogger → Logger Spool, Hashrat → Cryptominer…).
+- **Scavenge is magic find** with diminishing returns: +50% Scavenge = +33% better odds.
+- **Rewards:** a story beat or contract can give a unique (wick's first job gives wick's Old Toolkit).
+- **Pace:** the System page shows your kills an hour of active play (the game open, used in the last 2 minutes). The odds assume 60; the scripted player measures 40–55 at a careful pace and about 90 fast.
+- A good drop shows as a notice; greys and whites drop quietly.
+
+**Deconstruct** (`deconstruct <id>`, or `scrap`): grey 1–2 salvage, white 2–3, blue 3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits; +1 salvage per 10 item levels. The code is the family the item dropped from. A drop into a full stash (40) is deconstructed.
+
+**Compile** at home with a recipe: `compile <stat>` gives a **blue** at your level with that stat as one of its affixes (40 + 12×level credits and 4 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
+
+**Blueprints.** Nothing is buildable at the start. Every regular service (11) and every protocol recipe (16) is a blueprint you find once. Every vault holds a `blueprint.bp`; a home kill drops one 2% of the time and a guard 5% (into your pack). Your first blueprint is always the Firewall; after that you get one you don't have yet, at random. One you already know is 2 salvage.
+
+**The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×1.9 damage (`CONFIG.runHp`, `runDamage`), tuned with `node friction.mjs` against the gear you're likely to have. Health a same-level fight costs (scripted planner, levels 5–10): nothing equipped ~60%, whites ~37%, blues ~25–29%, yellows ~15–18%; level 1 is gentler. Home fights on your server are unchanged. The Infiltrator comes out weakest under the new curve.
+
+**Commands** (at home, between fights): `protocols`, `load <id>` (swaps a full slot), `unload <id|slot#>`, `deconstruct <id>`, `compile [stat]`, `compile <zero-day>`.
+
+### Services (your server)
+
+The server has no items. It runs **services** on **ports**, Master of Orion style: each service is one rule, built from code, and upgraded **v1 → v2 → v3**. The Server page (type `server` or `services`) shows ports, code, the install queue, what's running and what you can build.
+
+**Ports.** 6 to start, one more every 8 server levels (7 at 9, 8 at 17 … 12 at 41). A running service uses one port whatever its version.
+
+**The install queue.** One install at a time, in real time, and it keeps going while you fight, run or close the game. You can queue one from anywhere except mid-fight (on a run too: it's your server doing the work). `cancel install` refunds everything. `uninstall <service>` frees the port and gives back half the code it cost (credits don't come back).
+
+| Version | Cost | Time | Needs |
+|---|---|---|---|
+| v1 | 8 code + 60 credits | 15 min | its blueprint |
+| v2 | 25 code + 1 Exploit + 250 credits | 1 hour | server level 10 |
+| v3 | 70 code + 3 Exploits + 800 credits | 4 hours | server level 25 |
+
+| Service | Code | v1 / v2 / v3 |
+|---|---|---|
+| Firewall | Cipher | your wall's rating ×1 / 1.2 / 1.45 (×0.75 with none); see Invasions |
+| Tarpit | Worm | invaders travel 50 / 100 / 150% slower |
+| RAID Array | Worm | +5 / 10 / 15% max Integrity |
+| Hardened Kernel | Kernel | 2 / 4 / 6 Block on hits at home (× server power) |
+| Scrubber | Cipher | every home fight starts with a shield of 4 / 7 / 10% of max Integrity |
+| Hot-patcher | Worm | Regen 0.3 / 0.6 / 1 (×your server's power): per cycle in home fights, per real minute between them |
+| Counter-intrusion | Worm | whatever hits your server takes 2 / 4 / 6 (×power) back; on armor it breaks a chit |
+| Honeypot | Kernel | 3 / 5 / 8% Evasion at home |
+| Sandbox | Cipher | 15 / 30 / 45% Sanitize at home |
+| Uplink Array | Cipher | +10 / 20 / 30% Trace |
+| Build Farm | Kernel | compiling costs 15 / 25 / 35% less |
+| **Cron Job** (special) | Worm + Kernel | every 3rd cycle of a home fight, hits the soonest attacker for 8 × power × 0.4 / 0.6 / 0.8 (shown on the *You* row) |
+| **Snapshot** (special) | Cipher + Kernel | once per home fight, when a hit drops you below half, restores 8 / 12 / 16% |
+
+Special services need their **source** first (`cron.src`, `snapshot.src`, found in vaults from layer 2) and cost both kinds of code, a bit more in total (v1: 6 + 6). Flat values grow with the server's level (+4% a level), like everything else.
+
+### Code
+
+Services are built from **code**, one kind per virus family, plus rare **Exploits** (v3 needs 2).
+
+| Code | Family | From |
+|---|---|---|
+| Cipher code | Ransomware | kills, guards and vaults of that family |
+| Worm code | Worm | 〃 |
+| Kernel code | Ghostroot | 〃 |
+| Exploits | any | 4% of home kills, 8% of guard kills |
+
+A kill drops 1 code at level 1 (+1 every 10 levels); a guard drops half again, into your pack. Every vault's `payload.bin` is a cache of 12 + half the location's level. Scavenge adds to all of it. Salvage stays generic: it's for compiling protocols.
+
+**Old saves.** Server gear that was installed comes back as v1 of the matching service, free (as ports allow); the rest turns into code. Rig items become protocols, and Cron Job and Snapshot source becomes service source. The older Upgrades list came back the same way (Hardening as RAID Array, Amplifier as Uplink Array, the Signal booster as a loaded Stock Relay). Daemon slots come from server level (+1 at 10 and 20).
+
+## Mail and contracts
+
+**The story.** Halcyon Mutual insures half the servers on the net. Rival crews keep hitting its clients, so Halcyon pays third-party crews to fight a turf war against them, and never asks how. You're an initiate of one of those crews, **LOWLIGHT** (your handler is `wick`). The rival crews are named for the viruses they run: **TOLLGATE** (ransomware), **SWARMLINE** (worms) and **PALEMASK** (ghostroot). **GLASSJAW** is a broker that works against Halcyon.
+
+**Standing** with Halcyon runs from 0 to 100 and starts at 10. It sets the retainer, paid every 30 real minutes, offline too (up to 8 hours of it builds up while you're away), and what the store will sell you. L is your server level.
+
+| Standing | Tier | Retainer every 30 min |
+|---|---|---|
+| 0 | Suspended | nothing |
+| 1–24 | Probation | 5 + L |
+| 25–49 | Contractor | 10 + 2L |
+| 50–74 | Trusted | 15 + 3L |
+| 75–100 | Preferred | 20 + 4L |
+
+Delivering a contract raises standing. A crash on your own server costs 10, but never takes you below 1: a breach alone never suspends you. GLASSJAW's work costs 8 per job, and only that can get you suspended. Declining or dropping a contract never costs anything.
+
+**Contracts** pay credits and **Indemnity** (Halcyon's scrip, spent only at its store; GLASSJAW pays no Indemnity, but 1.6× the credits). They track themselves once taken; you hand them in from the Mail tab (`mail deliver <n>`).
+
+| Type | Done when | Hand-in |
+|---|---|---|
+| Kill | N kills of a family, anywhere (or anything in SPRAWL-00) | — |
+| Named process | You kill the named process the contract puts in a SPRAWL-00 folder (two levels above you) | — |
+| Takeover | You open the server's vault. That server is then **taken over** (yours, teal on the map) | — |
+| Materials | You have the code in stock | the code is handed over |
+| Recover a file | The contract's file sits in a server's vault; pull it and jack out to bank it | the file is handed over |
+
+A takeover or recovery contract points at a server you've found and haven't taken over, or at an **unknown server** one hop past one you've found. Halcyon never tells you where an unknown one is: see The hidden network.
+
+**The board** opens when the storyline ends. Up to five offers sit on it; a new one arrives somewhere between 2 and 9 minutes after the last (5 on average, sometimes two at once), and an offer nobody takes is gone after 18–45 minutes. You can hold three at a time (`mail accept <n>`, `mail drop <n>`); only a contract you've taken counts. Rewards scale with your level (L): kill 30 + 5L credits, named process 40 + 6L, materials 35 + 6L, recovery 50 + 8L, takeover 60 + 10L, plus 1–4 Indemnity (+1 per 12 levels), XP and +5 standing (+6 recovery, +8 takeover). A fifth of offers (once your standing is 10 or more) come off the books from GLASSJAW.
+
+**The initiate storyline** (LOWLIGHT's jobs, in order; they can't be dropped and don't count toward your three): kill three processes in SPRAWL-00 (60 credits, 1 Indemnity); hand over two Worm code (80, 1); kill the named process `claimjack` in /var/log (100, 2); take over any server you've traced (150, 3, a blueprint and your first **relay**); recover Halcyon's stolen claims ledger, `claims.db`, from an unknown server next to the one you took (150, 4, a daemon): put the relay up, then trace the flagged server. Each pays standing (+3, +3, +3, +4, +4), so you finish at Contractor, and the board and the store open.
+
+## The hidden network
+
+Every server you find is wired to two you haven't found yet, one layer deeper. They aren't on the map until you hear of them; then they show as **?** beside the server they hang off.
+
+- **Invaders** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". Jack in and beat one: its server is 40% traced (plus three quarters of your backtrace). If your wall stops one: +10%.
+- **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its map card). A relay pings that server's unknown neighbours, and flags the one carrying the signal of a contract you've taken.
+- **Hunting a flagged server:** every kill of its family traces it 12% more (plus a quarter of your backtrace); the relay leaves a route file on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store) adds 30%.
+- At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
+- A vault's trace record (`signal.trc`) locates one of its server's unknown neighbours outright (a flagged one first).
+
+## The Halcyon store
+
+Opens with the Contractor letter. Two shelves:
+
+**Halcyon's own line**, always there:
+
+| Item | Price | Needs |
+|---|---|---|
+| Relay | 120 + 8L credits | Probation |
+| Deductible (survival protocol): the first attack that lands on you each fight does nothing | 30 Indemnity | Contractor |
+| Subrogation (offense protocol): when a part hits you, your next skill hit on it deals double | 45 Indemnity | Trusted |
+| Actuarial Model (utility protocol): veils and blinds can't hide attack timers from you | 45 Indemnity | Trusted |
+| Total Loss (offense protocol, the top weapon): when you break a part, every other part takes a quarter of its max Integrity (armor soaks it as usual); breaks it causes do it again | 80 Indemnity | Preferred |
+
+The four chase protocols are **Indemnified**: rolled at your level with bigger stats than Custom (×1.45 main, two secondaries at ×0.85) and a signature effect nothing else has. One of each loaded at a time, like Zero-days.
+
+**Agency stock**, resold through Halcyon from other agencies (Kestrel Underwriting, Norrland Re, Blue Ledger Security, Mimir Actuarial, Quayside Claims, Vesper Risk): four slots, each turning over on its own clock (40–150 minutes), each with a supplier, a price that drifts up to 25% either way from its usual (▲ above, ▼ below) and a small quantity. Possible stock: refurbished relays, key crackers (reveal a found server's vault key, from its map card), trace injectors, Signal patches, hot-swap kits (full Integrity), code lots, Exploits, salvage, sealed Custom protocols, and from Contractor, sealed blueprints and daemon images.
+
+## Salvage
+
+Salvage works like mana in Magic: most costs take **any** salvage, and a few also need a **specific** piece.
+- Breaking a part can drop its piece (Pulse Kernel, Cipher Seed, Signal Key, a guard's Sentry Lens…). Scrapping protocols, spare blueprints and daemons, and store lots give plain Scrap, which only ever pays the generic part.
+- Your salvage shows as stacks on the Craft page; pieces some recipe asks for by name are marked.
+- Costs:
+
+  | Build | Salvage |
+  |---|---|
+  | Protocol (compile) | 4 salvage |
+  | Zero-day (compile) | 6 salvage + 2 guard components (Sentry Lens, Tracker Core, Sentinel Lens, Lockout Relay, Crawler Maw, Brood Seed, Shredder Blade, Grinder Core) |
+  | Signal booster | 3 salvage + 1 Pulse Kernel |
+  | Siphon / Scraper / Tap harvester | + 1 Replication Seed / Cipher Seed / Signal Key (on top of credits and code) |
+
+- **Choosing what pays.** Every build button opens a picker with the stacks and a − / + for each. It starts filled with a sensible default (plain Scrap first, then pieces no recipe asks for, then the most plentiful), and Build lights up once the payment covers the cost. On the command line: `compile crit pay scrap:2,pulse-kernel:2` (without `pay`, the default is used).
+
+## Outposts
+
+A server you've taken over can run a **harvester**: a packaged virus that works for you there.
+
+- **Getting one.** Mostly you craft them on the Craft page, one per kind (80 credits and 10 code: Siphon uses Worm code, Scraper Cipher, Tap Kernel). Compiled harvesters are Stock, at your server level. Rarely (12% of vaults, twice that on Legacy sites) a vault holds a packaged native (`<family>.vx`): pull it and jack out. Only these can carry traits. The rack holds 6.
+- **A harvester is a kind, a level and 0–2 traits** (Stock none, Tuned one, Custom two).
+  - Siphon: a steady flow of the server's code (1 + level/10 an hour, storage 6 + level/2).
+  - Scraper: a loot roll every 90 minutes, 4 stored. Rolls are credits, code, salvage or, rarely, a protocol.
+  - Tap: a small trickle (0.5 + level/20 an hour), noticed a quarter as often.
+  - Traits: Rich (+50% yield), Deep (double storage), Quiet (noticed half as often), Sturdy (half the time a siege gives up on its own), Lucky (better loot rolls).
+- **Site traits** are fixed when a server is found (45% have one): Rich (+50% yield), Legacy (better loot rolls; its vault more often holds a package, and a better one), Backbone (no bandwidth), Hostile (twice the sieges, +50% yield), Hardened (its natives are Armored).
+- **Bandwidth** limits how many outposts run at once: 1, plus 1 every 10 server levels (5 at most).
+- **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
+- **Pulling out** gives the harvester back with what it holds; the port then resets for 30 minutes.
+- **Sieges.** Natives notice an outpost about every 4 logged-on hours (by kind, traits and site). You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level). If you don't:
+  - the outpost **falls**: its stockpile is lost and the harvester goes dark;
+  - servers past it (that hang off it, any number of layers down) can't be reached;
+  - invaders from past it still travel through it to you.
+- **Retake and repair.** Beat the natives there (**Retake**), then **Repair** it for 30 + 5×level credits and 4 + level/5 of its code. Harvesting and the route past it come back.
+
+- **Modules.** Each outpost has ports, like your server: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is lost). A module costs 60 credits and 6 of the server's code; removing one gives half the code back.
+
+  | Module | What it does |
+  |---|---|
+  | Pipeline | +50% yield |
+  | Storage Array | Double storage |
+  | Firewall Node | Sieges and swarms here take twice as long to take it |
+  | IDS | Natives notice it half as often; swarms heading here are seen 50% sooner |
+
+- **Home services for outposts:** Edge Router (+1 / 2 / 3 bandwidth, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
+- **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 300 credits, between fights.
+
+  | Architecture | Trade |
+  |---|---|
+  | Fortress | Wall rating +25%; harvesters yield 25% less |
+  | Hub | +2 outpost bandwidth; wall rating −15% |
+  | Lab | Crafting costs 30% fewer credits; outposts are noticed a quarter more often |
+
+- **Infestations.** Every so often (an hour, divided by how many outposts you run, never under 15 minutes) a pack of 2–3 wild viruses moves into one outpost, at its level and one layer deeper. They stay 20 minutes. **Clear** them one fight at a time (`outpost clear <server>`) and the stockpile gets an hour's worth of yield on top, plus XP. Ignore them and they leave; nothing is lost.
+
+Commands: `outpost install <server> [n]`, `outpost mod|unmod <server> <module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake|repair <server>`, `outpost compile siphon|scraper|tap`.
+
+## Configs
+
+Every service can run one **config**: a side-grade that changes how it works, not how big it is. Swapping is instant and free, but only between fights (the Server page shows a Config row on each running service that has them).
+
+| Service | Config | What it does |
+|---|---|---|
+| Firewall | Stateful | Wall rating +20%; invaders it stops leave nothing behind |
+| Firewall | Reflective | Invaders it stops drop their family's code as well |
+| Firewall | Deep Inspection | Invaders it stops add lead progress toward where they came from |
+| Firewall | Adaptive | +40% against the family that hits you most, −10% against the rest |
+| Tarpit | Sticky | Invaders crawl half again as slowly |
+| Tarpit | Toll | Invaders reach your wall worn down to 80% |
+| Tarpit | Beacon | Invaders from unknown servers add 15% lead as they pass; swarms are seen coming 50% sooner |
+| Honeypot | Tar | A part whose attack misses you fires its next one a cycle later |
+| Honeypot | Sting | A part whose attack misses you takes a hit back |
+| Hot-patcher | Triage | Double repair below half Integrity, half above |
+
+**Getting one.** 30% of vaults hold a config source (`<config>.cfg`). Bank it and you know it; craft it on the Craft page for 120 credits, 12 of the service's code and 3 salvage. A source you already know is 2 salvage.
+
+## Swarms
+
+Once you run an outpost, the network organises against it.
+- The first swarm gathers about 25 logged-on minutes after your first outpost goes up; after that, one every 45–75 logged-on minutes. One swarm at a time.
+- A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
+- You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes; 15 with a Tarpit Beacon).
+- **Intercept** on the way or **Defend** once it lands (`swarm engage`): each fight kills one process, and the clock waits while you fight.
+- Landed, it gives you 8 minutes. Processes still there when that runs out take the outpost (Sturdy doesn't save it): retake and repair it as usual.
+- Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
+- Degraded mode pauses swarms like everything else on the network.
+
+## Invasions and the wall
+
+The idle layer. While you're logged on, the locations you've found send viruses back along the network to your server, **one at a time**. On the Map an invader moves in from its location; the Server page's **Wall** card and the top bar say what it's doing.
+
+- **When.** The first sets out 3 minutes after you find your first location; the next 6–10 minutes after the last one is dealt with. Only logged-on time counts: a closed game, hidden tab or sleeping laptop doesn't advance the network (a long gap counts as 5 seconds).
+- **Who.** A virus of the location's family (CRYPTJACK, SPLINTER or GHOSTROOT) at the location's level; from level 3, sometimes mutated (10% stronger).
+- **Travel.** 2 minutes from a layer-1 location, a minute more per layer. A Tarpit slows it.
+- **The wall.** Your wall's rating (100 × the server's power × the Firewall's version) against the invader's strength (100 × its power):
+
+| Rating vs invader | Result |
+|---|---|
+| 20% or more stronger | **Blocked** at the wall: 25% of a kill's XP and 1 salvage |
+| Within ±20% | **Siege**: the wall wears the invader down (4–20% of it a minute) while it chips your server (0–1% of max Integrity a minute); the stronger your wall, the faster it grinds and the less it chips. Ground to nothing counts as blocked. |
+| 20% or more weaker | **Breach**: it chips 1% of your max Integrity a minute until you deal with it |
+
+- The Wall card says it in levels: *"Your wall blocks invaders up to level 12 and holds level 13–22 at a siege; above level 22, they breach."* A new Firewall (or version, or server level) takes effect at once, even on an invader already at the wall.
+- **Jack in** (`jack in`, or the button): fight the invader at the wall yourself. It's as worn down as the siege left it, its armor is intact, and it's a full home kill (XP, code, drops, lead). You can't jack in from a run: jack out first. A waiting gate intrusion steps aside and comes back when you next `engage`. There's no daemon that jacks in for you.
+- A chip never ends a home fight you're in (it stops at 1), and nothing chips while you fight the invader.
+
+### Crash and Degraded mode
+
+At 0 Integrity (a lost home fight, or a breach chipping you out) the server **crashes and reboots at half its max**, then runs **Degraded** for 10 real minutes (it keeps counting with the game closed):
+
+- your wall is down: an invader at the wall waits, and no new one sets out;
+- installs pause (the queue picks up where it was);
+- the server earns no XP.
+
+You can still fight, explore and level. Crashing again restarts the 10 minutes. The top bar, the Map and the Server page show the time left.
+
+Testing: `developer invade` (an invader arrives now), `developer crash`, `developer reboot` (ends Degraded mode).
+
+## The fight in one paragraph
+
+A virus is its parts: a basic attacker and a signature part. Each part wears **armor chits**, and a hit on armor does no damage, however big: it breaks one chit. Strip a part with small hits, then finish it with a big one. Every part owns one heavy, telegraphed attack, and your command always resolves first, so a part you break on the cycle it would fire never fires. There's no drain: only attacks cost you anything, so a well-planned takedown costs nothing. Leave a part bare too long, though, and it patches a chit back.
+
+## Rules, one per layer
+
+| Layer | Rule |
+|---|---|
+| Win | Reduce Virus Integrity (the sum of all parts) to zero. |
+| Parts | Two per virus, each with one attack shown on the timeline (rare and heavy: every 3–5 cycles). Breaking a part stops its attack; 35% of the time it leaves its loot as salvage. |
+| Armor | Chits on a part (◆, usually 0–2). A hit on an armored part does no damage and breaks one chit. Burn ticks, helper hits and each target of a spread hit count one chit each. Armor-piercing hits (Backdoor, Bypass) go straight through, at a longer cooldown. |
+| Patch | Two cycles after a part loses its last chit, it patches one chit back, unless you've broken it. The timeline shows the patch (◆ patch) in the column where it happens. |
+| Veiled | Ghostroot and the Sentinel hide a part's attack timers while it still has armor. Strip it, or Tag it, to see them. |
+| Stakes | Damage is the only threat: your server's Integrity at home (0 = crash: reboot at half, Degraded mode), your Signal on a run. Nothing takes your credits, files or trace. Each family hurts you its own way: Ransomware encrypts (damage every cycle that stacks until you break the Encryptor), Worm spawns fragments that gnaw every cycle, Ghostroot blinds you (every timer hidden for a couple of cycles). |
+| Time | One command per cycle, and entering it turns the cycle at once (so the pace is yours). If you don't, a cycle lasts 8 seconds by default (speed setting: relaxed 12s, normal 8s, fast 5s; `speed <name>` or the button in the top bar). Press Enter on an empty line, or type `now`, to resolve the cycle now. Rules count cycles, so speed never changes balance. Order: your command, then burns and helpers, then encryption, then attacks due that cycle, then patches. No attack lands on cycle 1. |
+| Crits | Every hit you land that does damage can crit for ×1.5 (5% base, plus Crit and Crit Damage from protocols). Enemy damage attacks crit too, 10% of the time, from enemy level 3. Timeline numbers show the normal hit, after your Block. |
+| Misses | Your damaging skills miss 5% of the time against a same-level enemy, +1% per level it's above you, −1% per level below, less your Accuracy; the HUD shows *you miss N%*. A miss does nothing, and the skill's cooldown is still spent. Enemy damage attacks miss you the same way from their side, plus your Evasion. Burns, helpers and utility skills never miss. |
+| Clean | A fight where nothing got through (no damage, encryption included) says so. That's the reward: nothing to repair. |
+| Idle | If you type nothing, you Spike the last part you hit. It stops when that part breaks. Type `hold` to do nothing. |
+| Delays | Only Bastion (Suspend, Quarantine) and Operator (Jam) can push an attack back. Breakers answer with Brace and faster kills, Infiltrators with Null Route. |
+| Weak point | Found with Scan (Infiltrator, level 11). It takes +50% damage. When it breaks, a new one forms on another part. |
+| Backtrace | Each class traces its own way, from level 7, at home and on SPRAWL-00: Breaker +15% Uplink per part it breaks, Bastion +10% per attack that reaches it and does nothing (a shield soaks it all, a chit, a dodge), Operator +2% per helper hit, Infiltrator Traceroute (+25% a use, cooldown 2). Passive gains land as one line at the end of the cycle. Trace protocols start each of those fights partly traced. 100% before the kill locates the origin; less saves a partial lead. |
+| Encryption | Each Encrypt adds its amount to a stack; the stack hits you every cycle (after your command and helpers, before attacks). Breaking the Encryptor recovers the key and clears it. Your armor chits and Lockdown stop an Encrypt; shields soak the per-cycle damage; Rollback wipes the stack. |
+| Blind | Every attack timer is hidden for a couple of cycles. Tagged parts still show theirs. Chits and Lockdown stop it. |
+
+## Levels
+
+Two kinds, so a new player never faces everything at once.
+
+- **Hacker level (yours, per class, 1–50).** A long, WoW-style climb. Every class starts at level 1 with Spike and one skill, and levels on its own. **Every level adds 4% power**: your damage, heals, shields and Signal grow (Spike hits 25 at level 1, 44 at 20, 74 at 50), and skill text shows your current numbers. Skills unlock one at a time: level 1 your first skill, 3 your second, 5 your third, 7 your class's Backtrace (a passive), 10/14/18/22 skills four to seven (the bar is full at 22), then one more every 4 levels from 26 to 38. Past seven you choose which seven to equip.
+- **XP (WoW-style):** a kill is worth 20 + 10 × the enemy's level: a home defense 1×, a guard 0.8×, cracking a vault 1.5× and your first run on a location 0.7× (at the location's level). Enemies above you give up to 25% more; each level below you takes 10% off, so ten levels below give nothing. Level L to L+1 takes about 5 + 1.2×L kills of your own level (6 at level 1, 27 at 18, 64 at 49): an MMO-length climb of about 1,700 fights to 50.
+- **Talent points:** one every other level from 10 (21 by level 50, a full tree).
+- **Server level (shared, 1–50).** It gets every point of XP any of your classes earns, plus 10 per banked item and 1 per 10 credits banked, on the same curve, so it keeps pace with your best class (and pulls ahead with alts). Its level sets its base Integrity (100, +4% a level), opens daemon slots (+1 at 10 and 20), adds a service port every 8 levels, and opens service v2 (10) and v3 (25).
+- **Enemies have a level (1–60).** Home intrusions come in at your level (random ones sometimes one higher). A location keeps the level it was found at (your level then, +3 per layer down): its guards, vault protocols and code caches are that level, so old locations get easier as you outlevel them. Their size and damage grow 4% a level like yours (a level-1 virus is gentler: 80% of a level-1 match, ramping to 100% by level 6). Mutations and enemy crits from level 3; more armor chits at 3, 7 and 10. Enemy levels are colored WoW-style: red (5+ above you), orange (3–4 above), yellow (about even), green (below), grey (10+ below, no XP).
+- **Misses (Classic WoW):** 5% of your damaging hits miss a same-level enemy, +1% per level it's above you, −1% per level below (never under 0); your Accuracy takes some off. It misses you the same way the other direction, plus your Evasion.
+- The top bar shows your level; the Map shows the server's. The tray shows the next unlock as a ghost key. Testing: `developer level <n>`, `developer server <n>`. Saves from the 1–25 scale keep what they'd unlocked: a class's level roughly doubles, and the server matches your best class.
+
+## Classes and loadout
+
+Pick a class on the Loadout page (`archetype <id>`). Your bar has up to 8 keys, shown only once you've unlocked them:
+
+- **Key 1 (everyone):** Spike, the free hit that repeats when you give no order.
+- **Keys 2–8:** your seven equipped class skills (`equip`, `unequip`). Run skills (Spoof, Tap) take a slot too and are used on runs. There's no shared Interrupt or Trace: delaying attacks belongs to Bastion and Operator, and each class traces its own way (Backtrace).
+- **Each skill is simple, with one twist**, WoW style: a **burn** (damage every cycle: Inject stacks, Thermal Runaway grows, Purge heals you as it ticks), a **proc** that lights a key for a cycle or two (Shatter after you strip a part, Overload resetting on a crit), a **reactive** skill (Retaliate after you're hit, Opening after an attack misses you), or an **execute** (Segfault ×3 under 30%). Combos: Exploit then Overload for crits, Firewall then Retaliate, Inject ×3 then Detonate, Deploy then Barrier or Jam.
+- **Passives** are always on: Breaker Momentum (+10% damage per part you break), Bastion Hardened (you start each fight with an armor chit of your own: the first attack on you does nothing), Infiltrator Light footprint (return trips on runs are free), Operator Extra thread (+1 daemon slot).
+- **Statuses** anyone's hits cash in: Exposed (+25% crit chance, 2 cycles, Breaker), Tagged (burns tick +50% and its timer shows even if veiled, Infiltrator), Throttled (its attacks deal half) and Quarantined (+25% damage while its attack is held, Bastion), Hooked (+6 on every hit, helpers and burns too, Operator). Operators run at most 6 helpers at once.
+- **Talents:** each class's tree has six rows. Three **choice tiers** (pick one of two) with a **ranked row** before each (two nodes, up to 3 ranks each: small bonuses). A row opens once you've spent enough points in the rows above it: ranks 0, tier 1 needs 3, ranks 4, tier 2 needs 8, ranks 9, tier 3 needs 14. Changing picks and ranks is free at home. Commands: `talent <1-3> <a|b>`, `talent add|remove <node>`, `talent reset`.
+- Loadouts change at home only.
+
+## The Sync Window
+
+On **25% of cycles**, a narrow window (6% of the cycle, about half a second at normal speed) opens early on the Now column's cycle bar, always inside the first third, at a new spot each time. The **Sync** protocol stat (a Utility stat; Phaselock protocols lead with it) adds to that chance, up to +50%. It lights up while the bar is inside it. Fire your command then (Enter, or a key) and it **syncs**: +10% damage, plus your class's sync bonus:
+
+| Class | Sync bonus |
+|---|---|
+| Breaker | An extra armor chit cracks on the part you hit |
+| Bastion | +8 shield |
+| Infiltrator | +10% Uplink trace |
+| Operator | Your helpers each hit once more |
+
+Auto-repeat (the cycle running out) and later steps of a `;` plan never sync. The window's spot comes from the fight and the cycle, not the game's dice, so it never changes other rolls.
+
+## Planning ahead
+
+Separate commands with `;` to plan up to 3 cycles: `exploit encryptor; overload encryptor; spike pulse`. The plan shows across the *You* row (dashed = later cycles). A new command always replaces the whole plan; `cancel` clears it. Later steps check cooldowns when they fire, and a step that can't fire is skipped with a warning.
+
+Who acts in a cycle, in order: **your queued command (or, with nothing typed, a Spike on the last part you hit) → your daemons that are ready → burns and helpers → the virus.**
+
+## Daemons
+
+Daemons are programs you **find**: a `daemon.exe` waits in 40% of vaults (fixed per location), guards drop one 4% of the time (into your pack) and home kills 1%. Finding one you already have **upgrades** it (v1 → v2 → v3: its numbers ×1, ×1.5, ×2, and they grow with your power); past v3 it's 3 salvage. A first daemon goes straight into a free slot.
+
+A **slotted daemon acts on its own cooldown, in addition to your order**, right after you act. Its chip sits on the *You* row in the cycle it acts next. The once-per-fight daemons wait for their moment. **Slots:** 1, +1 at server level 10 and 20, Operators +1. Commands (between fights): `daemon list`, `daemon slot <name>`, `daemon unslot <name>`, or the Daemons page. No daemon jacks you in or out.
+
+| Daemon | What it does (v1) | Cooldown |
+|---|---|---:|
+| Sweeper | Hits the part whose attack lands soonest for 10. | 4 |
+| Fuzzer | Breaks an armor chit on an armored part. | 5 |
+| Tracer | +10% Uplink if the cycle stays quiet (home fights). | 3 |
+| Mender | Heals you 8. | 5 |
+| Spider | A burn of 4 for 3 cycles on the part you last hit. | 5 |
+| Mirror | Hits the part you last hit for 12. | 3 |
+| Watchman | Once per fight: delays an attack of 20 or more by a cycle. | once per fight |
+| Canary | Once per fight: a 15 shield the first time you drop below half. | once per fight |
+
+`jack out` during a guard fight is an emergency escape: it resolves on your turn, you keep your pack, and the guard stays.
+
+## Feedback language
+
+Every kind of event has one signature: a flash on the thing it happened to, a floating number, an optional sound, and a vibration on phones that support it (Android browsers). Settings: speed, sound (off by default), motion, vibration.
+
+**Sound** is recorded CC0 samples (Kenney impact, interface and UI packs; mechanical keyboard takes; credits in `dist/sfx/CREDITS.md`) layered with a little synthesis, in a tactile old-hardware palette: punches and metal for hits, relays for the clock, mechanical keys on the prompt, a modem for daemons and connecting, all through one small room reverb. Each play picks a different take and nudges its pitch, so repeats never sound identical. With Sound on, a quiet room tone runs underneath (a CRT's mains hum, a fan, and a hard drive seeking now and then), and it goes silent when the tab is hidden. Until the samples finish loading (or if they can't load), synthesized stand-ins play.
+
+| Event | Signature |
+|---|---|
+| You hit a part | its row flashes gold, damage floats up, a punch with a sub thump (heavier for bigger hits), 10ms tap |
+| You break an armor chit | its row flashes gold, −◆ floats up, a light clink of plate, short tap; once its last chit is gone the row shows faint cracks until it patches |
+| A part patches a chit back | its row pulses red, +◆, the cracks disappear, a rising two-note re-lock and a tin clack |
+| A part breaks | bright flash, BROKEN, metal giving way, glass scattering, a sub drop, triple pulse |
+| You get hit | your bar shakes red, the screen edge glows red, a heavy dull body blow, 80ms buzz |
+| A delay (Suspend, Quarantine, Jam) | the row glows teal, DELAYED, a swing and a glancing clang, short tap |
+| Time passing | the Now column is a faint band down the whole board with a thin playhead line that sweeps across it as the cycle runs; the header shows the cycle number and seconds left |
+| About to land (1.5s left) | the playhead and band edges turn red; this cycle's attacks blink red, soft beep, one buzz |
+| A cycle ends | the timeline turns over: every chip slides one column left from where it was; an attack that landed flies at your bar, your command flies at its target, and new attacks drift in from the right; the Now band flashes and the cycle number ticks; a quiet clock-relay tick (all off when Motion is off, except the tick) |
+| A siege or breach bites | the Integrity meter flashes red with the amount, 8ms tap |
+| Jack in at the wall, or connect to a server | a teal flash, a short glitch, a modem handshake and a relay, a double tap |
+| Jack out | a relay lets go and the line dies away |
+| Typing | a mechanical key per keystroke, a heavier Enter; buttons click like hardware |
+| Something happens out in the world (a letter, an offer, a contract ready, the retainer, a flag, a location, an invader) | the **pager** on the top bar logs it: its screen scrolls the line, its lamp blinks until you open it (red for a breach), it rattles and chirps (quiet ones only light up; mid-fight only a breach chirps), and a short vibration |
+| A daemon acts | your row glows violet, soft tick |
+| A skill lights up | its key glows gold and pulses; a soft chime |
+| Command refused | the prompt shakes, buzz |
+| Win / crash | big flash / red screen edge, long buzz |
+
+Leaving the combat screen pauses a live fight; coming back resumes it.
+
+## No explanations on screen: first-time tips
+
+The screens carry names, numbers and state, never how-to text. Rules live in two places, the way RPGs and strategy games keep them:
+
+- **Hover** for reference: a stat, a status tag, a mutation or quirk, a service's "special" tag, a skill in the library, a talent, a wall band. Each shows its rule on hover.
+- **First-time tips** for learning: the first time something is on screen (your server, an intrusion, the timeline, armor chits, an invader, the wall, a protocol drop, code, a mutation, a quirk…), a small tip points at it and says how it works, once. One tip at a time. Tips in a fight pause it until you close them (Got it, Enter on an empty line, Esc, or clicking the thing it points at). "Turn tips off" on any tip, or on the System page, stops them; **Replay tips** there shows them again. Seen tips are kept with your settings, so a new game doesn't repeat them.
+
+The log and the terminal still speak (that's the MUD's voice): what happened, in a line. They don't teach.
+
+## The pager
+
+The pager sits on the top bar, between the tabs and your meters (on narrower screens just its lamp and count). It keeps the last 40 world events on your save, so what happened while you were away is still there when you come back.
+
+- Its little screen scrolls the latest line; the lamp blinks amber while anything is unread, red if it's a breach; the number is how many you haven't seen.
+- Click it for **Comms**: the list, newest first, filtered by All, Contracts (offers, contracts ready), Mail, Network (flags, relays, locations, invaders, sieges, breaches) or Money (retainer, pay, standing, the store). Each line has its sender, its age and a link to where it happened: the letter or contract in Mail, the server on the map, the Store, or Jack in for a breach. Opening it marks everything read.
+- It chirps for letters, offers, contracts ready, the retainer, flags, locations, invaders and dropped standing; pay for a delivery, rising standing, restocks and takeovers only light it up. While you're in a fight, only a breach chirps.
+
+## The monitor casing
+
+With the immersive shell on a desktop-sized window, the screen sits in a dark monitor (BLACKBOX · MODEL 7). The bottom bezel has two knobs (sound, speed) and labelled lamps that show real state, steady, never blinking:
+
+| Lamp | Lit |
+|---|---|
+| PWR | amber; red while Degraded |
+| GATE | amber with an intrusion waiting, red while you fight one |
+| WALL | dim while an invader travels, amber at a siege, red on a breach |
+| NET | teal on a run |
+| INST | amber while an install runs (dim while Degraded) |
+| DMN | teal with a daemon slotted |
+
+System → Casing turns it off; phones and small windows never show it.
+
+## Abilities
+
+Type the name or press its key. Targets accept prefixes: `spike enc`.
+
+| Who | Skill | What it does | Cooldown |
+|---|---|---|---:|
+| everyone (level 1) | `spike <part>` | 25 damage | — |
+
+Class skills, in the order they unlock. **Lit** skills only work in the cycle or two after their event: Shatter after you break a part's last armor chit, Retaliate after an attack reaches you, Opening after an attack misses you or is delayed. Their key glows while they're lit.
+
+| Who | Level | Skill | What it does | Cooldown |
+|---|---:|---|---|---:|
+| Breaker | 1 | `overload <part>` | 40 damage. If it crits, its cooldown resets. | 3 |
+| Breaker | 3 | `exploit <part>` | Exposed this cycle and next: every hit on it from anyone has +25% crit chance. | 2 |
+| Breaker | 5 | `smash <part>` | 20 damage, double on a part with no armor left. | 2 |
+| Breaker | 10 | `crack <part>` | Breaks 2 armor chits on it at once. | 4 |
+| Breaker | 14 | `brace` | For 2 cycles: +5 Block, and whatever hits you loses an armor chit (or takes 10 if it has none). | 5 |
+| Breaker | 18 | `shatter <part>` | Lights up for 2 cycles when you break a part's last armor chit. 55 damage. | lit |
+| Breaker | 22 | `segfault <part>` | 30 damage, three times that on a part under 30%. | 3 |
+| Breaker | 26 | `fork-bomb` | 15 damage to every part, 30 to an Exposed one. | 3 |
+| Breaker | 30 | `thermal-runaway <part>` | A burn that grows: 6, 10, 14, 18. | 4 |
+| Breaker | 34 | `sudo` | This cycle and next, every hit you land crits. | 6 |
+| Breaker | 38 | `zero-day <part>` | 80 damage straight through armor. Once per fight. | once |
+| Bastion | 1 | `kill-process <part>` | 30 damage, +15 if its attack is due this cycle. | 2 |
+| Bastion | 3 | `firewall` | A shield that absorbs the next 20 damage. If it soaks a whole hit, Retaliate lights up. | 4 |
+| Bastion | 5 | `suspend [part]` | SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest. | 4 |
+| Bastion | 10 | `retaliate <part>` | The cycle after an attack reaches you (or your shield): hit back for twice its size, up to 60. | lit |
+| Bastion | 14 | `patch` | Heal 10 now, then 5 a cycle for 3 cycles. | 4 |
+| Bastion | 18 | `throttle [part]` | Its attacks deal half for 3 cycles. | 4 |
+| Bastion | 22 | `purge <part>` | A burn of 6 for 4 cycles; each tick heals you 2. It also clears your encryption. | 4 |
+| Bastion | 26 | `harden` | Gain an armor chit: the next attack on you does nothing, however big. | 6 |
+| Bastion | 30 | `reclaim <part>` | 35 damage, and you heal half of what it does. | 3 |
+| Bastion | 34 | `quarantine [part]` | Push its attack back 3 cycles; while it waits, it takes +25% damage. | 6 |
+| Bastion | 38 | `failover` | Hit every part for a quarter of your missing health (at least 20). | 5 |
+| Infiltrator | 1 | `inject <part>` | 8 damage every cycle for 3 cycles. Up to 3 on one part. | 1 |
+| Infiltrator | 3 | `tag <part>` | For 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled. | 3 |
+| Infiltrator | 5 | `traceroute` | +25% Uplink trace now (at home and on SPRAWL-00). 100% before the kill finds where the virus came from. | 2 |
+| Infiltrator | 10 | `backdoor <part>` | 30 damage straight through armor, +10 for each burn on it. | 3 |
+| Infiltrator | 14 | `null-route` | Every attack this cycle misses you, and your next skill crits. | 5 |
+| Infiltrator | 18 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. | 4 |
+| Infiltrator | 22 | `opening <part>` | The cycle after an attack misses you or is delayed: 50 damage. | lit |
+| Infiltrator | 26 | `propagate <part>` | Copy your burns on it to every other part. | 5 |
+| Infiltrator | 30 | `spoof` (runs) | On runs: once per run, the next guarded folder doesn't start a fight. Read and pull one file there. | once/run |
+| Infiltrator | 34 | `tap` (runs) | On runs: once per run, print the whole folder tree, its guards, and which file holds the key. | once/run |
+| Infiltrator | 38 | `implant <part>` | A burn of 10 every cycle until the part breaks. Once per fight. | once |
+| Operator | 1 | `deploy <part>` | A helper hits it for 12 every cycle for 4 cycles (it moves on if the part breaks). | 4 |
+| Operator | 3 | `hook <part>` | Hooked for 4 cycles: every hit on it from anyone (helpers and burns too) gets +6. | 3 |
+| Operator | 5 | `spawn <part>` | A small helper hits it for 5 every cycle for 3 cycles. | 1 |
+| Operator | 10 | `botnet <part>` | Three small helpers hit it for 4 each every cycle for 3 cycles. | 5 |
+| Operator | 14 | `barrier <part>` | Pull one of your helpers off it: a shield worth all the damage it had left. | 3 |
+| Operator | 18 | `jam [part]` | Pull one of your helpers off it to push its attack back a cycle. | 2 |
+| Operator | 22 | `kill-switch` | Your helpers deal all their remaining damage now. | 3 |
+| Operator | 26 | `garbage-collect` | 10 damage to every part, and your helpers last a cycle longer. | 3 |
+| Operator | 30 | `fork` | For 4 cycles, each helper hit has a 15% chance to start another helper (up to your helper cap). | 6 |
+| Operator | 34 | `reroute <part>` | Every helper moves to this part and hits it once on arrival. | 4 |
+| Operator | 38 | `cron-storm` | Every helper hits twice this cycle. | 6 |
+
+### Talent ranks (up to 3 each)
+
+| Class | First ranks | Second ranks | Third ranks |
+|---|---|---|---|
+| Breaker | Overclocked Core: +3% damage per rank · Chain Exploit: Momentum +2% per break per rank | Exploit Kit: Exposed gives +5% more crit chance per rank · Heat Sink: Overload +4 damage per rank | Armor Cracker: Parts you strip take 1 cycle longer to patch per rank · Failsafe: Take 3% less damage from attacks per rank |
+| Bastion | Patch Notes: Patch heals +3 per rank · Stateful Firewall: Firewall absorbs +5 per rank | kill -9: Kill Process +4 damage per rank · Redundancy: +4 max Signal on runs per rank | Hardened Kernel: Take 3% less damage from attacks per rank · Reverse Shell: Retaliate hits +5 per rank |
+| Infiltrator | Heap Spray: Inject +2 per tick per rank · Recon: Opening +5 damage per rank | Backchannel: Backdoor +4 damage per rank · Onion Routing: +3 max Signal on runs per rank | Persistent Tag: Tagged burns tick +10% more per rank · Low Profile: Take 3% less damage from attacks per rank |
+| Operator | Thread Pool: Deploy helpers deal +1 per rank · Kernel Hook: Hooked parts take +1 more per hit per rank | Node Pool: Botnet helpers deal +1 per rank · Dead Man’s Switch: Kill Switch cashes in +5% per rank | Load Balancer: Take 3% less damage from attacks per rank · Extra Memory: +3 max Signal on runs per rank |
+
+All numbers are per rank.
+
+### Talent choices
+
+| Class | Tier 1 (3 points above) | Tier 2 (8 above) | Tier 3 (14 above) |
+|---|---|---|---|
+| Breaker | Sharp Exploit: Exploit also deals 20 damage · or · Hair Trigger: Overload has cooldown 2 but deals 35 | Core Dump: Segfault's execute starts under 40% · or · Piercing: Overload goes straight through armor | Cascade Failure: Your first break each fight resets your cooldowns · or · Unsafe Mode: +30% damage dealt, +20% damage taken |
+| Bastion | Deep Packet Inspection: Firewall absorbs 40 · or · Service Pack: Patch heals 20 up front | Rate Limit: Throttle cuts attacks by 75% · or · Active Defense: Retaliate stays lit for 2 cycles | Uptime: Once per fight, a hit that would drop you to 0 leaves you at 1 · or · Preemption: Suspend has cooldown 2 |
+| Infiltrator | Fast Hands: Opening stays lit for 2 cycles · or · Supercookie: Tag lasts 6 cycles | Polymorphic: Inject lasts 5 cycles · or · Rotating Proxies: Spoof twice per run | Leaked Creds: Once per run, `brute <dir>` opens a locked folder without its password · or · Perfect Trace: A full backtrace also reveals the new location’s vault key |
+| Operator | Big Process: Deploy helpers deal 14 · or · Long-running: Deploy helpers last 6 cycles | Extra Nodes: Botnet sends 4 helpers · or · Hive: Your helper cap is 9 | Parallel Deploy: Deploy starts two helpers at half damage: same total, twice the hits for Hook · or · Supervisor: Each time a daemon acts, Deploy’s cooldown drops by 1 |
+
+Order within a cycle: your command → burns → helpers → heals over time → enemy attacks → patches.
+
+## Families and mutations
+
+Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integrity and damage scale 4% per level (a level-1 Pulse Node has 27 Integrity and hits for 11).
+
+| Family | Threatens | Basic part | Signature part |
+|---|---|---|---|
+| Ransomware (CRYPTJACK) | Integrity | Pulse Node: 34, ◆, Surge 14 every 4 (first cycle 3) | Encryptor: 38, ◆ (◆◆ from level 3), Encrypt every 5 (first cycle 4): +4 damage per cycle, stacking, until it breaks |
+| Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 3), spawns a fragment every 4 (first cycle 3). Fragments: 18 Integrity, no armor, gnaw 3 every cycle, max 3 |
+| Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 14 every 4 (first cycle 3) | Scrambler: 34, ◆ (◆◆ from level 3), veiled, Blind every 4 (first cycle 4): all timers hidden for 2 cycles |
+
+Guards on runs are lighter (you have 50 Signal): Watchdog (Sentry 24 bare, Sweep 6 every 3; Tracker 28 ◆, Trace-back 16 every 5), Sentinel (Lens and Lockout, 24 ◆ each, both veiled), Crawler (Maw 24 bare; Brood 28 ◆ spawns fragments), Shredder (Grinder 26 ◆, Grind 9 every 4; Shredder 26 ◆, Shred 14 every 5).
+
+**Enemy level** is set by the server level (home) or the server level plus the layer (guards). Beyond size, the signature part gains a chit at level 3 and again at 7, the basic part gains one at 10, and from level 9 first attacks come a cycle sooner (never on cycle 1). Test fights and the tables above use level 6.
+
+Mutations are always visible and each changes a decision:
+
+- **Armored** — every part has one more armor chit.
+- **Regenerative** — a stripped part patches after 1 cycle instead of 2. Strip it only when you can finish it.
+- **Hasty** — every attack starts a cycle sooner, but all parts have 15% less Integrity. Race it.
+
+(Reactive and Redundant were cut: they added rules without adding decisions.)
+
+## After a fight
+
+A win writes everything it gave you into the fight log: damage taken (or *Nothing got through*), XP and any level-up, server XP, any protocol drop, code, salvage, blueprints, lead progress and located origins. There's no Victory screen. Enter on an empty line takes you back to the map (home) or the run.
+
+A loss crashes the server: it reboots at half Integrity in Degraded mode (see Invasions). Between fights the server **rests**: it repairs 1% of its max every 10 seconds while the game is open (a full repair takes about 17 minutes), stopping while an invader sieges or breaches your wall. `repair [n]` (1 credit per point) is the fast way. Leads and located origins appear on the Map, salvage and protocols on the Loadout page (Protocols tab), code on the Server page. Testing only: `developer reboot`, `developer location <ransomware|worm|ghostroot>`.
+
+## Balance targets (checked by `node playtest.mjs` and `node balance.mjs`)
+
+- Every fixture is winnable by at least two different plans, and the plans trade different things. On CRYPTJACK, breaking the Pulse Node first lets the Encryptor start its stack; breaking the Encryptor first costs a 14-damage Surge. A class that can delay (Bastion, Operator) can avoid both.
+- Class balance (`node balance.mjs` → docs/BALANCE.md, guarded by `balance.test.mjs`): one scripted planner plays every class's own kit at five points on the level curve, loading a Tuned protocol in every open slot at the bracket's level and running a bracket's worth of defensive services (the first column has neither, to show what they're worth). Every class wins every fight, loses less than plain Spiking, and gets at least as many clean kills. Current result (wins · clean kills · health lost · cycles):
+
+| Bracket | Spike, no gear | Spike only | Breaker | Bastion | Infiltrator | Operator |
+|---|---:|---:|---:|---:|---:|---:|
+| Lv 1 | 24/24 · 2 clean · 26% · 10.4c | 24/24 · 2 clean · 16% · 9.4c | 24/24 · 12 clean · 5% · 6.0c | 24/24 · 15 clean · 6% · 8.7c | 24/24 · 1 clean · 14% · 7.9c | 24/24 · 11 clean · 5% · 5.8c |
+| Lv 10 | 18/24 · 0 clean · 52% · 12.0c | 20/24 · 2 clean · 43% · 11.4c | 24/24 · 4 clean · 19% · 7.6c | 24/24 · 7 clean · 11% · 13.8c | 24/24 · 1 clean · 18% · 7.3c | 24/24 · 6 clean · 13% · 6.1c |
+| Lv 18 | 15/24 · 0 clean · 66% · 11.3c | 16/24 · 0 clean · 57% · 11.8c | 24/24 · 7 clean · 22% · 7.3c | 24/24 · 10 clean · 9% · 14.8c | 24/24 · 1 clean · 20% · 7.9c | 24/24 · 0 clean · 30% · 8.0c |
+| Lv 30 | 12/24 · 0 clean · 72% · 10.2c | 17/24 · 0 clean · 62% · 10.8c | 24/24 · 10 clean · 16% · 6.4c | 24/24 · 23 clean · 2% · 11.9c | 24/24 · 13 clean · 9% · 5.9c | 24/24 · 7 clean · 21% · 5.9c |
+| Lv 50 | 13/24 · 0 clean · 73% · 9.3c | 22/24 · 0 clean · 54% · 9.6c | 24/24 · 8 clean · 18% · 6.0c | 24/24 · 19 clean · 3% · 9.8c | 24/24 · 15 clean · 6% · 5.7c | 24/24 · 13 clean · 8% · 4.5c |
+
+- Difficulty (September 2026): enemy parts have 1.7× their base Integrity, enemy hits grow 3% a level faster than your power, and a level-1 virus matches a level-1 player. Targets: a skilled, geared player loses about 10–25% of their health a fight; no gear roughly doubles that; plain Spiking without gear loses fights from level 10. Gear stats roughly doubled so a full rig halves the damage you take by level 18. Brackets assume few services (services are rare now).
+- Known gaps: the Bastion is the safe, slow tank (2–11% a fight, 10–15 cycles) and the other three are fast and riskier (6–30%, 4–8 cycles), easing as they gear up and get their level-14 defensive skill (Brace, Null Route, Barrier). Level 18 is the hardest stretch for Operator and Infiltrator. Tune after people play it.
+
+These are scripted policies. Only people can tell us whether it's fun and readable in five seconds.
+
+## Not built yet (see the design review)
+
+The server as directories, roles and loadouts, drop-in co-op, crew chat, the tutorial (parked).
+
+## Log sweep (forensics.mjs)
+
+About half the servers you find (fixed per server) keep an incident file at the root, of one of three kinds. `cat` it for a one-screen log, a question and three suspects. Click a line to light up every line that shares its source (address, peer or parent pid; up to three colours); two filters hide the rest. Answer with `sweep <answer>` or by clicking a suspect.
+
+| File | Question | Layer 1 | Layer 2 | Layer 3+ (a note at the top gives the clue) |
+|---|---|---|---|---|
+| `breach.log` | Which address broke in? | Fails over and over, then gets in | A loud scanner never gets in; a quiet address fails twice, then logs in as a service account | Logs in as the admin at night; the badge log puts the admin on site only by day |
+| `transfer.log` | Which file was stolen? | The biggest thing out, at night, to an unknown peer | A huge nightly backup to the known backup target is the decoy; the theft is mid-sized, to an unknown peer | The file leaves in numbered chunks so no single transfer stands out |
+| `ps.snapshot` | Which pid is hiding? | A miner eating 90%+ CPU | `sshd` started by the web server instead of init | A fake kernel thread: `[kworker]` in brackets but started by init and running from /tmp |
+
+- The log comes from the server's seed: the same every visit, different everywhere.
+- A right answer: lead toward the next server +40% on the first try, then +25%, +15%, +10%, and 30% of a kill's XP. Once per server.
+- A wrong answer costs nothing. Skipping it changes nothing.
+
+## Strains (waves 1 and 1b)
+
+Strains are variants of a home family built around one rule. They share their family's art, code drops and leads. SPRAWL-00 is the starter area and never has them: strains come from layer 2 and deeper. What a server sends (invaders, outpost natives, swarms) is a strain about half the time once both its layer and its level allow it (fixed by the seed). The fight header shows the strain; its rule is on hover, and a first-time tip explains it.
+
+### Grades
+
+Deeper servers also send bigger versions of the same viruses, named v2 and v3. Only the stats change, on top of the extra levels a deeper server already has:
+
+| Grade | Sent by | Integrity | Attack damage | Armor |
+|---|---|---|---|---|
+| v1 | SPRAWL-00 and layer 1 | ×1 | ×1 | as normal |
+| v2 | layer 2 | ×1.15 | ×1.1 | as normal |
+| v3 | layer 3 and deeper | ×1.35 | ×1.25 | as normal |
+
+(Softened 2026-10-01: a deeper server is already 3 levels higher per layer, and the old numbers made same-level v3 fights on rogue servers unwinnable for some classes.)
+
+Strains are graded too. A swarm counts one layer deeper than the outpost it targets. Against your wall, an invader's strength is multiplied by its grade's Integrity factor.
+
+| Strain | Family | From (level, layer) | Parts | Rule |
+|---|---|---|---|---|
+| Keylogger | Ghostroot | 4, layer 2 | Pulse Node, Logger | A Sync Window (0.10 wide) opens every cycle. The Logger only takes damage from commands fired inside it, and from burns and helpers started inside one. Every command fired outside it (auto-repeat and planned steps included) is logged; at 3, the Logger's Dump (18) lands next cycle and the log clears. |
+| Hashrat | Ransomware | 5, layer 2 | Pulse Node, Miner (no armor, no attack) | While the Miner lives, every other cycle your cooldowns don't tick. |
+| Floodgate | Worm | 6, layer 2 | Pulse Node, Flooder (no armor) | Flood hits every cycle from cycle 2 for 2, +1 (scaled) each time; any delay resets it. |
+| Leech | Worm | 8, layer 2 | Pulse Node, Tap (28) | Siphon (8, every 3) heals the virus's most damaged part by what it deals and clears one burn on it. Shields and throttling starve it. |
+| Sleeper | Ghostroot | 10, layer 2 | Pulse Node, Cell | Dormant (attacks off the timeline) until any hit lands or cycle 6. On waking, the Cell's Alarm (14) lands that cycle, then every 5; the Pulse Node attacks every 3. |
+| Patchwork | Worm | 3, layer 2 | Pulse Node, Patcher (28) | Patch (every 3, from cycle 3) heals the most damaged part by 12 (scaled with its size). A heal on its own side: your chits, Null Route and misses don't stop it; delays do. |
+| Flicker | Ghostroot | 4, layer 2 | Pulse Node, Shade (22) | The Shade is out of phase on odd cycles: every hit on it passes through (no damage, no chit), burns and helpers too. Its Fade (5) lands every even cycle. A stripped Shade patches a cycle later than normal. |
+| Extortion | Ransomware | 6, layer 2 | Pulse Node, Demand (40, no armor) | Deadline (26, every 5, from cycle 4). Damage dealt to the Demand in the 2 cycles before Deadline lands adds up; at 18 (scaled) the Deadline is called off and starts over. |
+| Echo | Ghostroot | 8, layer 2 | Pulse Node, Echo (no attack) | While the Echo lives, every damage attack that gets through repeats next cycle at half (shown on the timeline). Echoes don't echo. |
+| Bricker | Ransomware | 9, layer 2 | Pulse Node, Locker | Each part's attacks deal ×1.5 while it's below half Integrity (the timeline shows it). |
+| Overrun | Worm | 11, layer 2 | Pulse Node, Hive | Swarm spawns a fragment every 4 cycles (from cycle 2). Its fragments bite +1 (scaled) every cycle they live. |
+
+The balance sim plays Keylogger on the beat and hits a Flicker's Shade only when it's in phase (as a skilled player would).
+
+### ICE
+
+On layer 2 and deeper, about half the servers (fixed by the seed) swap their Watchdog for **Tracer** ICE and their Sentinel for **Bouncer** ICE. The fight header shows it as a tag with the rule on hover, and a first-time tip explains it.
+
+| ICE | Replaces | Parts | Rule |
+|---|---|---|---|
+| Bouncer | Sentinel | Gate (3 armor, Ram 10 every 3), Keyring (no attack) | At the end of every 4th cycle the Keyring re-arms the Gate to full armor. |
+| Tracer | Watchdog | Probe (Ping 4 every 2), Tracker | The Tracker's Trace-back (6, every 3) grows by 2 (scaled) every cycle the fight lasts. |
+
+### Testing a strain
+
+`?playtest=<name>` opens a fight against any strain or fixture (`?playtest=flicker`, `?playtest=bouncer`), and `encounter <name>` starts one from the prompt.
+
+## Volume
+
+The System page has three sliders (0–100, default 80, the level the game was mixed at): **Music** (the soundtrack), **Ambience** (radio chatter, rain, thunder, the street ten floors down with its odd horn and passing siren, the room tone) and **Effects** (hits, keys, alerts and every other game sound). Dragging is heard live; letting go saves it. All of them sit under the Sound switch.
