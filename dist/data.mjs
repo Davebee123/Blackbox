@@ -54,6 +54,12 @@ export const CONFIG = {
   // inside it for +10% damage and your class's sync bonus (SYNC). About half a second at the
   // normal speed. Auto-repeat and planned steps never sync.
   sync: { width: 0.06, from: 0.05, to: 0.33, bonus: 0.1, chance: 0.25 },
+  // Infiltrator Surprise: the first cycle of every fight always opens a (blue, wider) window.
+  // Fired in it: Inject lands an extra stack, Tag lasts 6 cycles and burns tick +75%,
+  // Traceroute adds 50%.
+  surprise: { width: 0.1, injectStacks: 2, tagCycles: 6, tagged: 1.75, trace: 50 },
+  // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
+  slip: { perRun: 1, leakedCreds: 3 },
   daemonSlots: 1, // +1 at server levels 10 and 20; Operators +1
   // Runs
   depthThreat: 3, // guard threat added per depth below the first
@@ -191,7 +197,6 @@ export const SKILLS = {
   momentum: 0.1, // Breaker passive: +10% per part you break
   hardened: 1, // Bastion passive: armor chits you start a fight with
   siphonSignalShare: 1, // Siphon heals Signal on runs, Integrity at home
-  bruteLoginSignal: 8,
   fixedCounter: 12,
 };
 
@@ -625,7 +630,6 @@ const card = (id) => ({ id, name: ABILITIES[id]?.name || id, rule: sentence(ABIL
 const RUN_SKILLS = {
   spoof: { id: 'spoof', name: 'Spoof', rule: 'On runs: once per run, the next guarded folder doesn\'t start a fight. Read and pull one file there.', verb: 'run' },
   tap: { id: 'tap', name: 'Tap', rule: 'On runs: once per run, print the whole folder tree, its guards, and which file holds the key.', verb: 'run' },
-  'brute-login': { id: 'brute-login', name: 'Brute Force Login', rule: 'On runs: `brute <dir>` opens a locked folder without the password for 8 Signal. Once per run.', verb: 'run' },
 };
 const skillsOf = (ids) => ids.map((id) => RUN_SKILLS[id] || card(id));
 export const ARCHETYPES = {
@@ -664,7 +668,7 @@ export const ARCHETYPES = {
   infiltrator: {
     name: 'Infiltrator', idea: 'Know where to hit, and slip through runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
-    passive: { name: 'Light footprint', rule: 'Moving back into a folder you’ve visited costs no Signal.' },
+    passive: { name: 'Ghost', rule: 'Slip past one guard a run without a fight. Every fight opens with a blue Surprise window: Inject, Tag and Traceroute fired in it hit harder. Return trips on runs are free.' },
     skills: skillsOf(['inject', 'tag', 'traceroute', 'backdoor', 'null-route', 'detonate', 'opening', 'propagate', 'spoof', 'tap', 'implant']),
     fillers: [
       [f('heap-spray', 'Heap Spray', 'Inject +2 per tick per rank.', 2), f('recon', 'Recon', 'Opening +5 damage per rank.', 5)],
@@ -674,7 +678,7 @@ export const ARCHETYPES = {
     talents: [
       [t('fast-hands', 'Fast Hands', 'Opening stays lit for 2 cycles.'), t('supercookie', 'Supercookie', 'Tag lasts 6 cycles.')],
       [t('polymorphic', 'Polymorphic', 'Inject lasts 5 cycles.'), t('rotating-proxies', 'Rotating Proxies', 'Spoof twice per run.')],
-      [t('leaked-creds', 'Leaked Creds', 'Once per run, `brute <dir>` opens a locked folder without its password.'), t('perfect-trace', 'Perfect Trace', 'A full backtrace also reveals the new location’s vault key.')],
+      [t('leaked-creds', 'Leaked Creds', 'Slip past 3 guards a run instead of 1.'), t('perfect-trace', 'Perfect Trace', 'A full backtrace also reveals the new location’s vault key.')],
     ],
   },
   operator: {

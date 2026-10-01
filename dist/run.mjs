@@ -274,11 +274,28 @@ export function join(path, name) {
 export const currentLocation = (s) => (s.run?.loc === CONFIG.zone.id ? zoneOf(s) : s.locations.find((l) => l.id === s.run?.loc));
 const inPack = (s, full) => s.run.pack.some((p) => p.path === full);
 const guarded = (loc, path) => !!layoutOf(loc)[path]?.guard && !loc.state.cleared[path];
+// A guard the Infiltrator slipped past this run doesn't stop you there (it's back next run).
+const watching = (s, loc, path) => guarded(loc, path) && !s.run?.slipped?.includes(path);
+// Infiltrator Ghost: slip past a guard without a fight (1 a run, 3 with Leaked Creds).
+export const slipsLeft = (s) => (s.run && classOf(s) === 'infiltrator' ? (hasTalent(s, 'leaked-creds') ? CONFIG.slip.leakedCreds : CONFIG.slip.perRun) - (s.run.slips || 0) : 0);
+function slip(s) {
+  const e = s.encounter;
+  if (classOf(s) !== 'infiltrator') return err(s, 'slip is the Infiltrator\'s: only they get past a guard unseen.');
+  if (!(e?.mode === 'run' && e.phase === 'alert' && !e.zone)) return err(s, 'Nothing to slip past. Walk into a guarded folder first.');
+  if (slipsLeft(s) <= 0) return err(s, 'No slips left this run.');
+  const dir = e.room;
+  s.encounter = null;
+  s.run.slips = (s.run.slips || 0) + 1;
+  (s.run.slipped ||= []).push(dir);
+  const n = slipsLeft(s);
+  emit(s, 'net-good', `SLIPPED past the ${e.virus.name}. It never saw you. ${n ? `${n} slip${n === 1 ? '' : 's'} left this run.` : 'No slips left this run.'}`);
+  ls(s);
+}
 const locked = (loc, path) => !!layoutOf(loc)[path]?.locked && !loc.state.unlocked[path];
 
 // ---------- commands ----------
 
-export const RUN_COMMANDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'brute', 'tap', 'attack', 'boost', 'sweep'];
+export const RUN_COMMANDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
 const equipped = (s, id) => equippedSkills(s, classOf(s)).includes(id);
 const onceUsed = (s, id) => (s.run.used ||= {})[id];
 
@@ -372,7 +389,7 @@ function cd(s, arg) {
   const up = (s.run.cwd + '/').startsWith(target === '/' ? '/' : target + '/');
   // Every directory on the way down must be passable.
   for (let p = target; p !== '/' && !up; p = p.slice(0, p.lastIndexOf('/')) || '/') {
-    if (p !== target && guarded(loc, p)) return err(s, `${p} is guarded. Clear it before going deeper.`);
+    if (p !== target && watching(s, loc, p)) return err(s, `${p} is guarded. Clear it before going deeper.`);
     if (p !== target && locked(loc, p)) return err(s, `${p} is locked.`);
   }
   // Leaving a guarded directory before engaging backs you off the guard.
@@ -393,11 +410,11 @@ function cd(s, arg) {
   if (!s.run.visited.includes(target)) s.run.visited.push(target);
   if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
   // Like a MUD room: arriving shows what's here.
-  if (guarded(loc, target) && s.run.cloak === 'armed') {
+  if (watching(s, loc, target) && s.run.cloak === 'armed') {
     s.run.cloak = target;
     emit(s, 'net-good', `CLOAKED. The ${guardName(loc, target)} doesn't see you. Read what you like and pull one file, then get out.`);
     ls(s);
-  } else if (guarded(loc, target)) selectEncounter(s, layoutOf(loc)[target].guard, loc.seed + target.length, { mode: 'run', room: target, level: levelOf(loc), ...(loc.quirk === 'hoard' ? { mutation: 'armored' } : {}) });
+  } else if (watching(s, loc, target)) selectEncounter(s, layoutOf(loc)[target].guard, loc.seed + target.length, { mode: 'run', room: target, level: levelOf(loc), ...(loc.quirk === 'hoard' ? { mutation: 'armored' } : {}) });
   else ls(s);
 }
 
@@ -408,7 +425,7 @@ function cat(s, arg) {
   const dir = full.slice(0, full.lastIndexOf('/')) || '/';
   const name = full.split('/').pop();
   if (!layoutOf(loc)[dir]?.files.includes(name)) return err(s, `cat: ${arg}: no such file here`);
-  if (guarded(loc, dir) && !cloakedIn(s, dir)) return err(s, `The ${guardName(loc, dir)} is watching. Deal with it first.`);
+  if (watching(s, loc, dir) && !cloakedIn(s, dir)) return err(s, `The ${guardName(loc, dir)} is watching. Deal with it first.`);
   s.run.read ||= [];
   if (!s.run.read.includes(full)) s.run.read.push(full);
   if (fileInfo(loc, dir, name).kind === 'sweep') return showSweep(s, loc);
@@ -423,7 +440,7 @@ function pull(s, arg) {
   const name = full.split('/').pop();
   if (!layoutOf(loc)[dir]?.files.includes(name)) return err(s, `pull: ${arg}: no such file here`);
   if (dir !== s.run.cwd) return err(s, `pull: be in ${dir} to pull ${name}.`);
-  if (guarded(loc, dir) && !cloakedIn(s, dir)) return err(s, `The ${guardName(loc, dir)} is watching. Deal with it first.`);
+  if (watching(s, loc, dir) && !cloakedIn(s, dir)) return err(s, `The ${guardName(loc, dir)} is watching. Deal with it first.`);
   if (cloakedIn(s, dir) && s.run.cloakPulled) return err(s, `The ${guardName(loc, dir)} stirs. One file is all the spoof covers: leave.`);
   const info = fileInfo(loc, dir, name);
   if (info.kind === 'text') return err(s, `${arg} is just text. cat it to read it.`);
@@ -554,14 +571,14 @@ export function play(s, input) {
     else if (!canCloak(s)) err(s, s.run.cloak === 'armed' ? 'Your spoof is already armed.' : 'No spoof left this run.');
     else { s.run.cloaks = (s.run.cloaks || 0) + 1; s.run.cloakPulled = false; s.run.cloak = 'armed'; out(s, 'spoof armed: the next guarded folder you enter won\'t start a fight.', 'net-good'); }
   }
-  else if (word === 'brute') bruteLogin(s, rest);
+  else if (word === 'slip') slip(s);
   else if (word === 'attack') attack(s, rest);
   else if (word === 'tap') tap(s);
   else if (word === 'boost') boost(s);
   else if (word === 'sweep') sweepCommand(s, currentLocation(s), rest);
   else if (word === 'pack') out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'source' ? sourceName(f.zeroDay) + ' source' : f.kind === 'blueprint' ? 'blueprint' : f.kind === 'daemon' ? 'daemon' : 'trace record (deeper node)'}`).concat('unbanked until you jack out.') : 'pack is empty.');
   else if (word === 'help') out(s, ['ls            what is here (ls -a shows hidden files)', 'cd <dir>      move (cd .. goes up)', 'cat <file>    read',
-  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'pack          what you are carrying', 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(hasTalent(s, 'leaked-creds') ? ['brute <dir>   open a locked folder without the password (once per run)'] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
+  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'pack          what you are carrying', 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
   return since(s, first);
 }
 
@@ -575,26 +592,6 @@ function attack(s, arg) {
   selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade } : {}) });
   if (sp.bounty && s.encounter?.virus) s.encounter.virus.name = sp.name; // a named contract target
   command(s, 'engage');
-}
-
-// Infiltrator Brute Force Login: open a locked folder without the password (once per run).
-function bruteLogin(s, arg) {
-  const loc = currentLocation(s);
-  if (!hasTalent(s, 'leaked-creds')) return err(s, 'brute comes from the Infiltrator talent Leaked Creds.');
-  if (onceUsed(s, 'brute')) return err(s, 'Brute Force Login is used up for this run.');
-  if (!arg) return err(s, 'usage: brute <locked directory>');
-  const target = join(s.run.cwd, arg);
-  if (!layoutOf(loc)[target]) return err(s, `brute: no such directory: ${arg}`);
-  if (!locked(loc, target)) return out(s, `${arg}/ isn't locked.`);
-  if (guarded(loc, s.run.cwd)) return err(s, `The ${guardName(loc, s.run.cwd)} is watching. Deal with it first.`);
-  const cost = 0;
-  s.run.used.brute = true;
-  s.run.integrity = Math.max(0, s.run.integrity - cost);
-  loc.state.unlocked[target] = true;
-  gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked');
-  out(s, `brute-forced ${arg}/ open${cost ? ` for ${cost} Signal (${s.run.integrity}/${s.run.max})` : ''}.`, 'net-good');
-  contractTakeover(s, loc);
-  if (s.run.integrity <= 0) disconnect(s, 'Signal ran out');
 }
 
 // Infiltrator Tap: the whole map at once (once per run).
@@ -631,7 +628,7 @@ export function nextActions(s) {
   const loc = currentLocation(s);
   const here = layoutOf(loc)[s.run.cwd];
   if (s.encounter?.mode === 'run' && s.encounter.phase === 'alert') {
-    return [{ label: `engage ${s.encounter.virus.name}`, cmd: 'engage', hot: true }, { label: 'cd ..', cmd: 'cd ..', note: 'back off' }];
+    return [{ label: `engage ${s.encounter.virus.name}`, cmd: 'engage', hot: true }, ...(slipsLeft(s) > 0 && !s.encounter.zone ? [{ label: 'slip past', cmd: 'slip', note: `${slipsLeft(s)} left` }] : []), { label: 'cd ..', cmd: 'cd ..', note: 'back off' }];
   }
   const acts = [];
   const show = (n) => s.run.showHidden || !hiddenName(n);
@@ -651,7 +648,6 @@ export function nextActions(s) {
     if (guarded(loc, full) && canCloak(s)) acts.push({ label: 'spoof', cmd: 'spoof', note: 'sneak past once' });
   }
   if (equipped(s, 'tap') && !onceUsed(s, 'tap')) acts.push({ label: 'tap', cmd: 'tap', note: 'map it all' });
-  for (const d of here.dirs) if (locked(loc, join(s.run.cwd, d)) && hasTalent(s, 'leaked-creds') && !onceUsed(s, 'brute')) acts.push({ label: `brute ${d}`, cmd: `brute ${d}`, note: 'once' });
   if (s.run.cwd !== '/') acts.push({ label: 'cd ..', cmd: 'cd ..' });
   if (s.items?.booster && s.run.integrity < s.run.max) acts.push({ label: 'boost', cmd: 'boost', note: `+Signal · ${s.items.booster}`, hot: s.run.integrity < s.run.max * 0.3 });
   acts.push({ label: 'jack out', cmd: 'jack out', note: s.run.pack.length ? `bank ${s.run.pack.length}` : '' });
@@ -671,7 +667,7 @@ export function runSuggestions(s, input) {
     if (word === 'unlock') return here.dirs.filter((d) => locked(loc, join(s.run.cwd, d)) && d.startsWith(arg)).map((d) => `unlock ${d} `);
     return [];
   }
-  return ['ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(hasTalent(s, 'leaked-creds') ? ['brute '] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
+  return ['ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
 }
 
 export { guarded, locked };

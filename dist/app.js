@@ -56,6 +56,7 @@ function load() {
   }
   if (playtest) {
     const s = fresh();
+    if (['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('cls'))) s.loadout.archetype = params.get('cls'); // ?playtest=cryptjack&cls=infiltrator
     command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
     command(s, 'engage');
@@ -362,7 +363,7 @@ function react(events) {
       case 'bought': feel.add('pickup', null); notice(e.message); break;
       case 'relay': feel.add('jackin', null); notice(e.message); break;
 
-      case 'synced': feel.add('sync', row(e.target) || '.bnow', 'SYNCED'); if (fx) feel.add(() => juice.punch(0.5)); break;
+      case 'synced': feel.add(e.surprise ? 'surprise' : 'sync', row(e.target) || '.bnow', e.surprise ? 'SURPRISE' : 'SYNCED'); if (fx) feel.add(() => juice.punch(0.5)); break;
       case 'boost': feel.add('unlock', '.net-signal', `+${e.amount}`); break;
       case 'crafted': feel.add('pickup', null); notice(e.message); break;
       case 'fleet': case 'fleet-siege': feel.add('prewarn', null); break;

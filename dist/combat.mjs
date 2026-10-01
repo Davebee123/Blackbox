@@ -155,7 +155,7 @@ const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
 export function damageMultiplier(s, p, opts = {}) {
   const e = s.encounter;
   let m = 1;
-  if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + 0.1 * rank(s, 'persistent-tag');
+  if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + (p.tagBoost || 0) + 0.1 * rank(s, 'persistent-tag');
   if (on(s, p, 'quarantined')) m *= SKILLS.quarantined;
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   if (opts.mine) {
@@ -1548,15 +1548,18 @@ function useAbility(s, intent, auto = false) {
   if (a.status && alive(target)) {
     let n = a.cycles;
     if (id === 'tag' && hasTalent(s, 'supercookie')) n = 6;
+    if (id === 'tag') { target.tagBoost = e.surprise ? CONFIG.surprise.tagged - SKILLS.tagged : 0; if (e.surprise) n = Math.max(n, CONFIG.surprise.tagCycles); }
     target[a.status + 'Until'] = e.cycle + n;
-    emit(s, 'status', `${target.name} ${STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id });
+    emit(s, 'status', `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id });
   }
   if (a.tick && a.verb === 'burn') {
     let ticks = id === 'inject' && hasTalent(s, 'polymorphic') ? 5 : a.ticks;
     const tick = scaled(s, a.tick + (id === 'inject' ? 2 * rank(s, 'heap-spray') : 0));
     // Inject stacks up to 3 on one part; a fourth replaces the oldest.
-    if (a.stacks) { const mine = e.burns.filter((b) => b.target === target.id && b.id === id); if (mine.length >= a.stacks) e.burns.splice(e.burns.indexOf(mine[0]), 1); }
-    e.burns.push({ id, target: target.id, damage: tick, grow: a.grow ? scaled(s, a.grow) : 0, left: ticks, name: a.name, drain: a.drain ? scaled(s, a.drain) : 0, synced: !!e.synced });
+    for (let k = 0; k < (id === 'inject' && e.surprise ? CONFIG.surprise.injectStacks : 1); k++) {
+      if (a.stacks) { const mine = e.burns.filter((b) => b.target === target.id && b.id === id); if (mine.length >= a.stacks) e.burns.splice(e.burns.indexOf(mine[0]), 1); }
+      e.burns.push({ id, target: target.id, damage: tick, grow: a.grow ? scaled(s, a.grow) : 0, left: ticks, name: a.name, drain: a.drain ? scaled(s, a.drain) : 0, synced: !!e.synced });
+    }
     const stack = a.stacks ? e.burns.filter((b) => b.target === target.id && b.id === id).length : 0;
     emit(s, 'status', `${target.name} burning: ${tick}${a.grow ? ', growing' : ''} per cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}${stack > 1 ? ` (${stack} stacks)` : ''}.`, { target: target.id });
   }
@@ -1633,7 +1636,7 @@ function useAbility(s, intent, auto = false) {
       if (t) hit(s, t, Math.round(h.damage * h.left * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true });
     }
   }
-  if (id === 'traceroute') addTrace(s, a.trace, 'Traceroute');
+  if (id === 'traceroute') addTrace(s, e.surprise ? CONFIG.surprise.trace : a.trace, 'Traceroute');
 }
 const STATUS_WORD = { exposed: 'Exposed (+25% crit chance)', tagged: 'Tagged (burns +50%, timer visible)', hooked: 'Hooked (+6 per hit)', throttled: 'Throttled (attacks deal half)', quarantined: 'Quarantined (+25% damage)' };
 
@@ -1840,8 +1843,10 @@ export function resolveCycle(s) {
   // 1. The player acts first, so breaking a part on its last cycle stops its attack.
   if (e.queue) {
     const q = e.queue;
+    e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
     useAbility(s, q);
     if (e.synced && active(s) && q.ability !== 'hold') syncBonus(s, q);
+    e.surprise = false;
   }
   else if (e.lastAttack) {
     const intent = parse(s, e.lastAttack);
@@ -2034,9 +2039,10 @@ export function rollSync(s) {
   // Its own hash of the fight and the cycle, so it never shifts the game's dice.
   const hash = (k) => { const x = Math.sin((e.seed || 1) * 12.9898 + e.cycle * 78.233 + k) * 43758.5453; return x - Math.floor(x); };
   const keylogger = livingParts(s).some((x) => x.syncOnly);
-  const width = (keylogger ? 0.1 : c.width) * (fxHas(s, 'sync-wide') ? 1.5 : 1);
-  if (!keylogger && hash(311.7) >= syncChance(s)) { e.sync = null; return; }
-  e.sync = { at: c.from + hash(0) * (c.to - width - c.from), width };
+  const surprise = classOf(s) === 'infiltrator' && e.cycle === 1;
+  const width = (surprise ? CONFIG.surprise.width : keylogger ? 0.1 : c.width) * (fxHas(s, 'sync-wide') ? 1.5 : 1);
+  if (!keylogger && !surprise && hash(311.7) >= syncChance(s)) { e.sync = null; return; }
+  e.sync = { at: c.from + hash(0) * (c.to - width - c.from), width, ...(surprise ? { surprise: true } : {}) };
 }
 // Chance a cycle opens a window: 25%, plus the Sync stat on your protocols.
 export const syncChance = (s) => Math.min(1, CONFIG.sync.chance + gearStat(s, 'sync', 'hacker') / 100);
@@ -2057,7 +2063,8 @@ function syncBonus(s, intent) {
     for (const h of [...e.helpers]) { const ht = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (ht) hit(s, ht, h.damage, { by: 'Helper', dot: true }); if (virusIntegrity(s).current === 0) break; }
     what = 'helpers strike again';
   }
-  emit(s, 'synced', `SYNCED: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}.`, { target: intent?.target || null });
+  const surprise = e.surprise && ['inject', 'tag', 'traceroute'].includes(intent?.ability);
+  emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${surprise ? `, ${{ inject: 'an extra Inject stack', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, traceroute: `+${CONFIG.surprise.trace}% trace` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise });
 }
 
 // ---------- daemons ----------

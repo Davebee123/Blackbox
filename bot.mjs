@@ -42,6 +42,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     for (let n = 0; n < 80 && active(s); n++) {
       const text = policy(s) || 'hold';
       if (s.encounter.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
+      // Infiltrator Surprise: a player fires into the first cycle's blue window.
+      if (s.encounter?.sync?.surprise) s.encounter.synced = text !== 'hold';
       (command(s, text) || []).forEach(note);
       (resolveCycle(s) || []).forEach(note);
       t += cycleSec * 1000;

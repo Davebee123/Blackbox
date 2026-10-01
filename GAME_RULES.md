@@ -434,7 +434,7 @@ Pick a class on the Loadout page (`archetype <id>`). Your bar has up to 8 keys, 
 - **Key 1 (everyone):** Spike, the free hit that repeats when you give no order.
 - **Keys 2–8:** your seven equipped class skills (`equip`, `unequip`). Run skills (Spoof, Tap) take a slot too and are used on runs. There's no shared Interrupt or Trace: delaying attacks belongs to Bastion and Operator, and each class traces its own way (Backtrace).
 - **Each skill is simple, with one twist**, WoW style: a **burn** (damage every cycle: Inject stacks, Thermal Runaway grows, Purge heals you as it ticks), a **proc** that lights a key for a cycle or two (Shatter after you strip a part, Overload resetting on a crit), a **reactive** skill (Retaliate after you're hit, Opening after an attack misses you), or an **execute** (Segfault ×3 under 30%). Combos: Exploit then Overload for crits, Firewall then Retaliate, Inject ×3 then Detonate, Deploy then Barrier or Jam.
-- **Passives** are always on: Breaker Momentum (+10% damage per part you break), Bastion Hardened (you start each fight with an armor chit of your own: the first attack on you does nothing), Infiltrator Light footprint (return trips on runs are free), Operator Extra thread (+1 daemon slot).
+- **Passives** are always on: Breaker Momentum (+10% damage per part you break), Bastion Hardened (you start each fight with an armor chit of your own: the first attack on you does nothing), Infiltrator Ghost (on a run, `slip` walks past one guard without a fight: no XP or drop, and it's back on guard next run; every fight opens with a Surprise window, see The Sync Window; return trips on runs are free), Operator Extra thread (+1 daemon slot).
 - **Statuses** anyone's hits cash in: Exposed (+25% crit chance, 2 cycles, Breaker), Tagged (burns tick +50% and its timer shows even if veiled, Infiltrator), Throttled (its attacks deal half) and Quarantined (+25% damage while its attack is held, Bastion), Hooked (+6 on every hit, helpers and burns too, Operator). Operators run at most 6 helpers at once.
 - **Talents:** each class's tree has six rows. Three **choice tiers** (pick one of two) with a **ranked row** before each (two nodes, up to 3 ranks each: small bonuses). A row opens once you've spent enough points in the rows above it: ranks 0, tier 1 needs 3, ranks 4, tier 2 needs 8, ranks 9, tier 3 needs 14. Changing picks and ranks is free at home. Commands: `talent <1-3> <a|b>`, `talent add|remove <node>`, `talent reset`.
 - Loadouts change at home only.
@@ -449,6 +449,8 @@ On **25% of cycles**, a narrow window (6% of the cycle, about half a second at n
 | Bastion | +8 shield |
 | Infiltrator | +10% Uplink trace |
 | Operator | Your helpers each hit once more |
+
+**Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (10%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject lands an extra stack, Tag lasts 6 cycles and its burns tick +75% (not +50%), and Traceroute adds 50% trace (not 25%).
 
 Auto-repeat (the cycle running out) and later steps of a `;` plan never sync. The window's spot comes from the fight and the cycle, not the game's dice, so it never changes other rolls.
 
@@ -612,7 +614,7 @@ All numbers are per rank.
 |---|---|---|---|
 | Breaker | Sharp Exploit: Exploit also deals 20 damage · or · Hair Trigger: Overload has cooldown 2 but deals 35 | Core Dump: Segfault's execute starts under 40% · or · Piercing: Overload goes straight through armor | Cascade Failure: Your first break each fight resets your cooldowns · or · Unsafe Mode: +30% damage dealt, +20% damage taken |
 | Bastion | Deep Packet Inspection: Firewall absorbs 40 · or · Service Pack: Patch heals 20 up front | Rate Limit: Throttle cuts attacks by 75% · or · Active Defense: Retaliate stays lit for 2 cycles | Uptime: Once per fight, a hit that would drop you to 0 leaves you at 1 · or · Preemption: Suspend has cooldown 2 |
-| Infiltrator | Fast Hands: Opening stays lit for 2 cycles · or · Supercookie: Tag lasts 6 cycles | Polymorphic: Inject lasts 5 cycles · or · Rotating Proxies: Spoof twice per run | Leaked Creds: Once per run, `brute <dir>` opens a locked folder without its password · or · Perfect Trace: A full backtrace also reveals the new location’s vault key |
+| Infiltrator | Fast Hands: Opening stays lit for 2 cycles · or · Supercookie: Tag lasts 6 cycles | Polymorphic: Inject lasts 5 cycles · or · Rotating Proxies: Spoof twice per run | Leaked Creds: Slip past 3 guards a run instead of 1 · or · Perfect Trace: A full backtrace also reveals the new location’s vault key |
 | Operator | Big Process: Deploy helpers deal 14 · or · Long-running: Deploy helpers last 6 cycles | Extra Nodes: Botnet sends 4 helpers · or · Hive: Your helper cap is 9 | Parallel Deploy: Deploy starts two helpers at half damage: same total, twice the hits for Hook · or · Supervisor: Each time a daemon acts, Deploy’s cooldown drops by 1 |
 
 Order within a cycle: your command → burns → helpers → heals over time → enemy attacks → patches.

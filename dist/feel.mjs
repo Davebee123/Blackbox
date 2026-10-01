@@ -14,6 +14,7 @@ const SIGNS = {
   hit: { flash: 'fx-hit', float: 'amber', voice: 'hit', buzz: 10 },
   // You fired inside the Sync Window.
   sync: { flash: 'fx-sync', float: 'sync', voice: 'sync', buzz: [8, 18, 8] },
+  surprise: { flash: 'fx-surprise', float: 'surprise', voice: 'sync', buzz: [8, 18, 8, 18, 8] },
   // A part broke.
   break: { flash: 'fx-break', float: 'bright', voice: 'break', buzz: [20, 40, 60] },
   // Your skill missed: the cooldown is gone and nothing happened.

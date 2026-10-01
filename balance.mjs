@@ -155,6 +155,8 @@ export function fight(policy, key, b, opts = {}) {
     command(s, text);
     // Against a Keylogger a player has to fire on the beat; the sim always does (its window opens every cycle).
     if (s.encounter?.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
+    // Infiltrator Surprise: a player fires into the first cycle's blue window.
+    if (s.encounter?.sync?.surprise) s.encounter.synced = text !== 'hold';
     resolveCycle(s);
   }
   // A fight still going after 80 cycles is a stalemate: count it as a loss.

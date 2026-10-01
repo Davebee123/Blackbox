@@ -202,8 +202,8 @@ test('filler ranks change the numbers they say', () => {
   assert.equal(lost(r, 'pulse'), 60, 'Recon: Opening +10');
 });
 
-test('run skills: Tap maps everything, Brute Force Login opens a vault, Rotating Proxies cloaks twice', async () => {
-  const { play, connect, currentLocation } = await import('./dist/run.mjs');
+test('run skills: Tap maps everything, Rotating Proxies cloaks twice, Leaked Creds slips past 3 guards', async () => {
+  const { play, connect, slipsLeft } = await import('./dist/run.mjs');
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
   s.hackers = { infiltrator: { level: 50, xp: 0 } };
@@ -221,10 +221,74 @@ test('run skills: Tap maps everything, Brute Force Login opens a vault, Rotating
   play(s, 'cd ..');
   play(s, 'spoof');
   assert.equal(s.run.cloak, 'armed', 'second spoof with Rotating Proxies');
+  assert.equal(slipsLeft(s), 3, 'Leaked Creds: three slips a run');
+});
+
+test('Infiltrator Ghost: slip past one guard a run, no fight, no reward; it is back next run', async () => {
+  const { play, connect, slipsLeft } = await import('./dist/run.mjs');
+  const s = fresh();
+  s.loadout.archetype = 'infiltrator';
+  command(s, 'developer location worm');
+  const loc = s.locations[0];
+  Object.assign(loc, { template: 'relay', quirk: null });
+  connect(s, loc.id);
+  assert.equal(slipsLeft(s), 1);
   play(s, 'cd relay');
-  const sig = s.run.integrity;
-  s.locations[0].state.cleared['/relay'] = true;
-  play(s, 'brute vault');
-  assert.equal(s.run.integrity, sig, 'Leaked Creds costs nothing');
-  assert.ok(currentLocation(s).state.unlocked['/relay/vault']);
+  assert.equal(s.encounter?.phase, 'alert', 'the guard sees you walk in');
+  const xp = JSON.stringify(s.hackers);
+  play(s, 'slip');
+  assert.equal(s.encounter, null, 'no fight');
+  assert.equal(JSON.stringify(s.hackers), xp, 'and no XP');
+  assert.equal(slipsLeft(s), 0);
+  assert.ok(!play(s, 'cat access.log').some((e) => /watching/.test(e.message || '')), 'you can work the folder');
+  play(s, 'cd ..'); play(s, 'cd relay');
+  assert.equal(s.encounter, null, 'it stays slipped for the run');
+  play(s, 'jack out');
+  connect(s, loc.id);
+  play(s, 'cd relay');
+  assert.equal(s.encounter?.phase, 'alert', 'back on guard next run');
+  play(s, 'cd ..');
+  // Other classes can't.
+  const b = fresh();
+  command(b, 'developer location worm');
+  Object.assign(b.locations[0], { template: 'relay', quirk: null });
+  connect(b, b.locations[0].id);
+  play(b, 'cd relay');
+  assert.match(play(b, 'slip').at(-1).message, /Infiltrator/);
+});
+
+test('Infiltrator Surprise: a blue window on cycle 1; Inject, Tag and Traceroute fired in it do more', async () => {
+  const { CONFIG } = await import('./dist/data.mjs');
+  const { resolveCycle } = await import('./dist/combat.mjs');
+  const start = () => {
+    const s = fresh();
+    s.loadout.archetype = 'infiltrator';
+    s.hackers = { infiltrator: { level: 10, xp: 0 } };
+    command(s, 'encounter cryptjack'); command(s, 'engage');
+    return s;
+  };
+  const s = start();
+  assert.ok(s.encounter.sync?.surprise, 'cycle 1 always opens a surprise window');
+  assert.equal(s.encounter.sync.width, CONFIG.surprise.width);
+  const p = s.encounter.virus.parts[0];
+  command(s, 'inject ' + p.id);
+  s.encounter.synced = true;
+  const ev = resolveCycle(s);
+  assert.equal(s.encounter.burns.filter((b) => b.target === p.id).length, 2, 'an extra Inject stack');
+  assert.ok(ev.some((e) => e.type === 'synced' && e.surprise && /SURPRISE/.test(e.message)));
+  assert.ok(!s.encounter.sync?.surprise, 'only the first cycle');
+  // Tag in the window: 6 cycles, burns +75%.
+  const t = start();
+  const q = t.encounter.virus.parts[0];
+  command(t, 'tag ' + q.id); t.encounter.synced = true; resolveCycle(t);
+  assert.equal(q.taggedUntil, 1 + CONFIG.surprise.tagCycles);
+  assert.ok(Math.abs(q.tagBoost - 0.25) < 1e-9);
+  // Missing the window: the normal effect.
+  const m = start();
+  const r = m.encounter.virus.parts[0];
+  command(m, 'inject ' + r.id); resolveCycle(m);
+  assert.equal(m.encounter.burns.filter((b) => b.target === r.id).length, 1);
+  // Other classes get no surprise window.
+  const b = fresh(); command(b, 'encounter cryptjack'); command(b, 'engage');
+  assert.ok(!b.encounter.sync?.surprise);
 });
