@@ -917,11 +917,15 @@ function placeTip() {
   const box = $('tip'), r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
   // Under a container (the board): the thing it explains stays in view; the arrow still points at it.
   const u = (tip.t.under && document.querySelector(tip.t.under)?.getBoundingClientRect()) || r;
-  const below = u.bottom + 14 + h < innerHeight - 8;
+  // Keep it on the screen: inside the monitor's picture when it sits in its casing, else the window.
+  const scr = document.body.classList.contains('cased') ? document.querySelector('.app')?.getBoundingClientRect() : null;
+  const pad = scr ? 28 : 12; // clear of the tube's darker edges
+  const L = (scr ? scr.left : 0) + pad - 12, R = (scr ? scr.right : innerWidth) - pad + 12, T = (scr ? scr.top : 0) + pad - 12, B = scr ? scr.bottom : innerHeight;
+  const below = u.bottom + 14 + h < B - 8;
   const cx = r.left + Math.min(r.width, 240) / 2;
-  const left = Math.max(12, Math.min(innerWidth - w - 12, cx - w / 2));
+  const left = Math.max(L + 12, Math.min(R - w - 12, cx - w / 2));
   box.style.left = left + 'px';
-  box.style.top = (below ? u.bottom + 14 : Math.max(12, u.top - h - 14)) + 'px';
+  box.style.top = (below ? u.bottom + 14 : Math.max(T + 12, u.top - h - 14)) + 'px';
   box.classList.toggle('above', !below);
   box.style.setProperty('--arrow', Math.max(16, Math.min(w - 16, cx - left)) + 'px');
 }
