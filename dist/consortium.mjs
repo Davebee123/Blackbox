@@ -31,9 +31,16 @@ export const CONSORTIUM = {
   inviteEveryMs: [5 * 60000, 12 * 60000], // simulated: how often someone invites you, while you're in none
   inviteMs: 10 * 60000, // how long an invite stays open
   bounty: (L) => ({ credits: 30 + 8 * L, code: 2 + Math.floor(L / 6) }),
+  // The dividend: every member's outpost pays each member a share, real time (offline too), into a
+  // pool you collect. Per outpost per hour, by its harvester; nothing while it's under siege.
+  dividend: {
+    credits: (L) => 3 + L / 3,
+    kinds: { siphon: { credits: 1, code: 0.4 }, scraper: { credits: 1.25, code: 0 }, tap: { credits: 0.6, code: 0.2 } },
+    capHours: 12, // the pool stops filling at this many hours' worth
+  },
   // The bigger the network (home servers merged), the better for everyone.
   tiers: [
-    { at: 3, name: 'Linked', rule: '+10% outpost yield', yield: 0.1 },
+    { at: 3, name: 'Linked', rule: '+10% outpost yield and dividend', yield: 0.1 },
     { at: 5, name: 'Mesh', rule: 'Siege bounties doubled', bounty: 2 },
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
     { at: 12, name: 'Grid', rule: '+1 bandwidth', bandwidth: 1 },
@@ -116,10 +123,52 @@ export function arrive(s, loc, now = hooks.now?.() ?? Date.now()) {
   loc.lastRun = now;
 }
 
-// The network clock (logged-on time): sieges on members' outposts, and (simulated) invites.
-export function tickConsortium(s, dt) {
+// The dividend: what one member outpost pays you an hour ({ credits, code }, code in its family's).
+export function dividendOf(s, loc) {
+  const d = CONSORTIUM.dividend, k = d.kinds[loc.held?.kind];
+  if (!k || loc.held.siege) return { credits: 0, code: 0 };
+  const m = consortiumYield(s);
+  return { credits: d.credits(loc.level || 1) * k.credits * m, code: k.code * m };
+}
+export const dividendPerHour = (s) => memberServers(s).reduce((n, l) => n + dividendOf(s, l).credits, 0);
+export const shareOf = (s) => consortiumOf(s)?.share || null;
+const shareFull = (s) => (shareOf(s)?.credits || 0) >= dividendPerHour(s) * CONSORTIUM.dividend.capHours;
+// Fill the pool for the time since the last tick (real time: closed game included).
+function accrue(s, now) {
+  const c = consortiumOf(s), sh = (c.share ||= { credits: 0, code: {}, at: now });
+  const hours = Math.max(0, now - (sh.at ?? now)) / 3600000;
+  sh.at = now;
+  if (!hours) return;
+  const room = Math.max(0, dividendPerHour(s) * CONSORTIUM.dividend.capHours - sh.credits);
+  const want = dividendPerHour(s) * hours, k = want ? Math.min(1, room / want) : 0;
+  for (const loc of memberServers(s)) {
+    const d = dividendOf(s, loc);
+    sh.credits += d.credits * hours * k;
+    if (d.code) sh.code[codeOf(loc.family)] = (sh.code[codeOf(loc.family)] || 0) + d.code * hours * k;
+  }
+}
+// Take the pool: whole credits and whole code; the fractions stay to keep filling.
+export function collectShare(s) {
+  const sh = shareOf(s), c = consortiumOf(s);
+  const credits = Math.floor(sh?.credits || 0), code = Object.fromEntries(Object.entries(sh?.code || {}).map(([m, n]) => [m, Math.floor(n)]).filter(([, n]) => n > 0));
+  if (!credits && !Object.keys(code).length) return warn(s, 'Nothing in the dividend yet.');
+  sh.credits -= credits;
+  for (const [m, n] of Object.entries(code)) sh.code[m] -= n;
+  s.server.credits += credits;
+  if (Object.keys(code).length) gainCode(s, code, '');
+  emit(s, 'harvest', `${c.name} dividend: +${credits} credits${Object.keys(code).length ? ', ' + Object.entries(code).map(([m, n]) => `+${n} ${MATERIALS[m].name}`).join(', ') : ''}.`);
+}
+
+// The network clock (logged-on time): sieges on members' outposts, and (simulated) invites. now:
+// the real time, for the dividend.
+export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
   const first = s.serial;
   const c = consortiumOf(s), net = (s.consortiumNet ||= {});
+  if (c) {
+    const was = shareFull(s);
+    accrue(s, now);
+    if (!was && shareFull(s) && dividendPerHour(s)) emit(s, 'info', `${c.name}'s dividend is full: collect it from the people panel.`);
+  }
   if (!c) {
     const inv = s.consortiumInvite;
     if (inv) { inv.left -= dt; if (inv.left <= 0) { s.consortiumInvite = null; emit(s, 'info', `${inv.from}'s invite to ${inv.name} lapsed.`); } }
@@ -191,7 +240,7 @@ export function consortiumWon(s, e) {
   emit(s, 'outpost-held', `Siege broken on ${loc.member}'s ${loc.name}. Bounty: +${credits} credits, +${code} ${MATERIALS[m].name}.`, { location: loc.id });
 }
 
-const USAGE = 'consortium, consortium create <name>, consortium invite <handle>, consortium kick <handle>, consortium leave, consortium accept, consortium decline, consortium defend <server>';
+const USAGE = 'consortium, consortium collect, consortium create <name>, consortium invite <handle>, consortium kick <handle>, consortium leave, consortium accept, consortium decline, consortium defend <server>';
 // `consortium` and its verbs. raw: as typed (a name keeps its capitals).
 export function consortiumCommand(s, raw) {
   const first = s.serial;
@@ -203,7 +252,7 @@ export function consortiumCommand(s, raw) {
     if (!c) emit(s, 'info', s.consortiumInvite ? `No consortium. ${s.consortiumInvite.from} invited you to ${s.consortiumInvite.name}: consortium accept.` : 'No consortium. consortium create <name>, or wait for an invite.');
     else {
       const t = tiersOf(s), nx = nextTier(s);
-      emit(s, 'info', `${c.name}: ${sizeOf(s)} servers merged (${['you', ...c.members].join(', ')}). ${t.length ? 'Bonuses: ' + t.map((x) => x.rule).join(', ') + '.' : 'No bonuses yet.'}${nx ? ` At ${nx.at}: ${nx.rule.toLowerCase()}.` : ''}`);
+      emit(s, 'info', `${c.name}: ${sizeOf(s)} servers merged (${['you', ...c.members].join(', ')}). Dividend: ${Math.round(dividendPerHour(s))} credits an hour from ${memberServers(s).filter((l) => l.held).length} member outposts, ${Math.floor(shareOf(s)?.credits || 0)} waiting (consortium collect). ${t.length ? 'Bonuses: ' + t.map((x) => x.rule).join(', ') + '.' : 'No bonuses yet.'}${nx ? ` At ${nx.at}: ${nx.rule.toLowerCase()}.` : ''}`);
     }
     return done();
   }
@@ -211,7 +260,7 @@ export function consortiumCommand(s, raw) {
     if (c) return warn(s, `You're already in ${c.name}. consortium leave first.`), done();
     const name = arg.trim().slice(0, CONSORTIUM.nameMax);
     if (!name) return warn(s, 'consortium create <name>'), done();
-    s.consortium = { name, founder: 'you', members: [], servers: [] };
+    s.consortium = { name, founder: 'you', members: [], servers: [], share: { credits: 0, code: {}, at: hooks.now?.() ?? Date.now() } };
     s.consortiumInvite = null;
     emit(s, 'info', `Consortium ${name} founded. Invite people from the people panel to merge their servers with yours.`);
     return done();
@@ -222,7 +271,7 @@ export function consortiumCommand(s, raw) {
     if (c) return warn(s, `You're already in ${c.name}.`), done();
     s.consortiumInvite = null;
     if (verb === 'decline') return emit(s, 'info', `You turned down ${inv.name}.`), done();
-    s.consortium = { name: inv.name, founder: inv.from, members: inv.members, servers: [] };
+    s.consortium = { name: inv.name, founder: inv.from, members: inv.members, servers: [], share: { credits: 0, code: {}, at: hooks.now?.() ?? Date.now() } };
     buildNets(s);
     emit(s, 'consortium-merged', `MERGED with ${inv.name}. A trunk line runs from your home server to ${inv.members.length} others: ${memberServers(s).length} servers to reach. See the Map.`);
     return done();
@@ -253,6 +302,7 @@ export function consortiumCommand(s, raw) {
     emit(s, 'info', `${arg} is out of ${c.name}. Their trunk line is cut.`);
     return done();
   }
+  if (verb === 'collect') { accrue(s, hooks.now?.() ?? Date.now()); collectShare(s); return done(); }
   if (verb === 'defend') {
     const loc = memberServers(s).find((l) => l.id === arg || l.name.toLowerCase() === arg);
     if (!loc?.held) return warn(s, `No member outpost called "${arg}".`), done();

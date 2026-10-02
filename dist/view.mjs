@@ -12,7 +12,7 @@ import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
-import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM } from './consortium.mjs';
+import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, dividendOf, dividendPerHour, shareOf } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
@@ -921,7 +921,8 @@ export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
     const nx = nextConTier(s);
     return `<li class="con-head"><b>${esc(c.name)}</b><small>${sizeOf(s)} servers merged · founded by ${esc(c.founder)} · ${memberServers(s).length} servers on the network</small>
       <span class="con-tiers">${CONSORTIUM.tiers.map((t) => `<span class="tag${sizeOf(s) >= t.at ? ' tag-con' : ' dim'}" title="${esc(t.rule)}">${t.at} · ${esc(t.name)}</span>`).join('')}</span>
-      ${nx ? `<small>${nx.at - sizeOf(s)} more for ${esc(nx.name)}: ${esc(nx.rule.toLowerCase())}</small>` : ''}</li>`;
+      ${nx ? `<small>${nx.at - sizeOf(s)} more for ${esc(nx.name)}: ${esc(nx.rule.toLowerCase())}</small>` : ''}
+      <span class="con-div"><small title="Every member outpost pays you a share, offline too. Up to ${CONSORTIUM.dividend.capHours} hours' worth waits.">Dividend · ${Math.round(dividendPerHour(s))}c/h from ${memberServers(s).filter((l) => l.held).length} outposts · <b>${Math.floor(shareOf(s)?.credits || 0)}c</b> waiting${Object.entries(shareOf(s)?.code || {}).filter(([, n]) => n >= 1).map(([m, n]) => ` · ${Math.floor(n)} ${esc(MATERIALS[m].name)}`).join('')}</small><button type="button" class="act" data-run="consortium collect" ${Math.floor(shareOf(s)?.credits || 0) ? '' : 'disabled'}>Collect</button></span></li>`;
   };
   const list = tab === 'friends'
     ? all.filter((x) => x.friend).map(row).join('') + offline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="friend remove ${esc(h)}">Remove</button></span></li>`).join('')
@@ -1294,7 +1295,7 @@ function consortiumLine(s, l) {
   if (l.trunk) return `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> trunk server: the consortium's own</p>`;
   if (l.member) {
     const sg = l.held?.siege, busy = active(s) || s.run;
-    return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span>${l.held ? ` ${esc(l.held.kind)} outpost` : ''}${sg ? ` <span class="tag hot">siege · ${fmtLeft(sg.left)}</span>` : ''}</p>${sg ? `<div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend for a bounty</button></div>` : ''}`;
+    return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span>${l.held ? ` ${esc(l.held.kind)} outpost · ${l.held.siege ? 'pays nothing while besieged' : `pays you ${dividendOf(s, l).credits.toFixed(1)}c/h`}` : ''}${sg ? ` <span class="tag hot">siege · ${fmtLeft(sg.left)}</span>` : ''}</p>${sg ? `<div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend for a bounty</button></div>` : ''}`;
   }
   return isGround(s, l) ? `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> shared with the consortium</p>` : '';
 }
@@ -1343,7 +1344,7 @@ function mapSide(s, sel, node) {
     const h = node.handle, p = profileOf(h), c = consortiumOf(s), mine = serversOf(s, h);
     return `<section class="card"><h2>Home server · ${esc(c.name)}</h2><h1>${esc(h)}</h1>
       <p>${esc(ARCHETYPES[p.cls].name)} · ${node.online ? '<span class="tag tag-con">online</span>' : '<span class="tag dim">offline</span>'}${c.founder === h ? ' <span class="tag">founder</span>' : ''}</p>
-      <div class="stats">${stat('Servers', mine.length)}${stat('Outposts', mine.filter((l) => l.held).length)}${stat('Rogue', mine.filter((l) => l.rogue).length)}</div>
+      <div class="stats">${stat('Servers', mine.length)}${stat('Outposts', mine.filter((l) => l.held).length)}${stat('Rogue', mine.filter((l) => l.rogue).length)}${stat('Pays you', `${mine.reduce((n, l) => n + dividendOf(s, l).credits, 0).toFixed(1)}c/h`)}</div>
       ${mine.map((l) => `<p class="svc-line"><button type="button" class="act" data-select="${esc(l.id)}">${esc(l.name)}</button> ${l.rogue ? 'rogue' : l.held ? esc(l.held.kind) + ' outpost' : 'traced'} · lv ${l.level}${l.held?.siege ? ' <span class="tag hot">siege</span>' : ''}</p>`).join('')}
       <p class="svc-line">Their home server is theirs alone.</p></section>`;
   }

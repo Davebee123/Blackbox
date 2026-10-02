@@ -4,7 +4,7 @@ import { fresh, command, hooks, active, resolveCycle } from './dist/combat.mjs';
 import { play, crewWander, layoutOf, currentLocation } from './dist/run.mjs';
 import { online, PRESENCE } from './dist/presence.mjs';
 import { matesOf } from './dist/crew.mjs';
-import { CONSORTIUM, memberServers, serversOf, sizeOf, tiersOf, tickConsortium, isGround, consortiumOf } from './dist/consortium.mjs';
+import { dividendPerHour, dividendOf, CONSORTIUM, memberServers, serversOf, sizeOf, tiersOf, tickConsortium, isGround, consortiumOf } from './dist/consortium.mjs';
 import { bandwidth } from './dist/outpost.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 
@@ -100,6 +100,28 @@ test('a siege on a member outpost: defend it for a bounty; missing it costs noth
   tickConsortium(s, CONSORTIUM.siegeMs + 1);
   assert.equal(loc.held.siege, null, 'a member deals with it');
   assert.equal(s.server.credits, before);
+});
+
+test("the dividend: members' outposts pay you, offline too, up to a cap; nothing from one under siege", () => {
+  const s = world();
+  const t0 = 1_800_000_000_000;
+  hooks.now = () => t0;
+  try {
+    play(s, 'consortium create LOWLIGHT');
+    play(s, 'consortium invite nyx'); play(s, 'consortium invite ash');
+    const rate = dividendPerHour(s);
+    assert.ok(rate > 0, 'member outposts pay');
+    tickConsortium(s, 1000, t0 + 3 * 3600000); // three hours away
+    assert.ok(Math.abs(s.consortium.share.credits - rate * 3) < 0.01);
+    const credits = s.server.credits;
+    play(s, 'consortium collect');
+    assert.equal(s.server.credits, credits + Math.floor(rate * 3));
+    tickConsortium(s, 1000, t0 + 100 * 3600000); // a long time away: it stops at the cap
+    assert.ok(s.consortium.share.credits <= rate * CONSORTIUM.dividend.capHours + 1);
+    const loc = serversOf(s, 'nyx')[0];
+    loc.held.siege = { left: CONSORTIUM.siegeMs, seed: 1 };
+    assert.equal(dividendOf(s, loc).credits, 0, 'a besieged outpost pays nothing');
+  } finally { hooks.now = null; }
 });
 
 test('size tiers: yield, doubled bounties, the trunk rogue server, bandwidth', () => {

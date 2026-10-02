@@ -271,12 +271,13 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 - **The map.** With a consortium, the Map has two views: *Your network* and the consortium's. The consortium's view has your home server in the middle, a trunk line out to each member's home server (their card lists their servers), and each member's servers branching off theirs: their outposts, servers they've traced and rogue servers (1–4 each, at the member's level, kept within 3 levels of yours while it's simulated).
 - **Members' servers.** Connect to any of them like your own. Fights, files and drops are yours. Opening a member's vault doesn't take the server over: it stays theirs. Their natives come back 20 minutes after your last run there. Their home servers are theirs alone (home intrusions stay solo).
 - **Shared ground.** Every member's server, plus your own outposts and rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with full credit and their own loot. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
+- **The dividend.** Every member's outpost pays you a share, in real time (offline too), into a pool on the people panel's Consortium tab: *Collect* or `consortium collect`. Per outpost per hour: (3 + level ÷ 3) credits × its harvester (Siphon ×1, Scraper ×1.25, Tap ×0.6), plus a little of its family's code from Siphons (0.4) and Taps (0.2). An outpost under siege pays nothing until the siege is broken. The pool stops filling at 12 hours' worth. Each member outpost's card shows what it pays you. (Your own outposts pay the other members the same way, at no cost to you.)
 - **Sieges.** Now and then (every 10–18 minutes of logged-on time) natives lay siege to a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win the fight for credits (30 + 8 × level), its family's code and XP. Miss it and a member deals with it: it costs you nothing.
 - **Size.** The more servers merged (yours included), the better for everyone:
 
 | Servers | Tier | Bonus |
 |---|---|---|
-| 3 | Linked | +10% outpost yield |
+| 3 | Linked | +10% outpost yield and dividend |
 | 5 | Mesh | Siege bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
 | 12 | Grid | +1 bandwidth |

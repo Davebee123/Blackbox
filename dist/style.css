@@ -1594,6 +1594,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .people-list .con-head { list-style: none; padding: 10px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 4px; }
 .people-list .con-head b { color: var(--next); font: 600 14px var(--sans); } .people-list .con-head small { color: var(--muted); font-size: 12px; }
 .people-list .con-head.invite { border: 1px solid rgba(255, 216, 92, 0.4); background: rgba(255, 216, 92, 0.05); }
+.con-div { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .con-div b { color: var(--text); }
 .con-tiers { display: flex; flex-wrap: wrap; gap: 4px; }
 .tag-con { color: var(--next); border-color: rgba(255, 216, 92, 0.5); }
 /* The consortium's map: trunk lines out to members' home servers. */
