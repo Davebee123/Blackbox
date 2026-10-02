@@ -15,6 +15,7 @@ import { createRain } from './rain.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
+import { relockLeft } from './rogue.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -322,6 +323,7 @@ function react(events) {
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
       case 'jacked-out': feel.add('hangup', null); break;
+      case 'station': feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); break;
       case 'invasion-cleared': if (!won) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
@@ -965,7 +967,11 @@ function frame(now) {
   feel.flush();
   checkTips(now);
   shell.caret();
-  if (now - lastSecond >= 1000) { lastSecond = now; shell.second(module); services(); }
+  if (now - lastSecond >= 1000) {
+    lastSecond = now; shell.second(module); services();
+    // A wild server's reconnect countdown (rogue.mjs relockMs) ticks on its card.
+    if ([campaign.zone, ...(campaign.locations || [])].some((l) => l && relockLeft(l, wall - 1000))) dirty = true; // one more render as it ends
+  }
   requestAnimationFrame(frame);
 }
 

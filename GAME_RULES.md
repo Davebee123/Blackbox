@@ -14,7 +14,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 
 1. `connect sprawl`: **SPRAWL-00**, a rogue server, is where you go to fight from the start. A virus sits in each of its six folders at your level, but never above level 3: it's a starter area, and past that the fights worth having are on the servers you trace (`ls` shows it as `name.exe`); SPRAWL-00 only ever has the plain families, never strains or bigger grades; `attack` it when you're ready. A kill pays like a home kill, straight away (XP, code, a possible drop, a lead), and the folder fills again 90 seconds later.
 2. Every neutralized virus gives a lead toward its family's origin: +25% for the kill plus three quarters of your backtrace (each class traces its own way, at home and on the rogue server; see Backtrace). At 100% the origin is located. A full backtrace locates it in one fight; four plain kills of the same family also get there.
-3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter, or type `top up`, to pay for the rest now (see The economy). **Signal boosters** refill it on a run: craft one at home from 4 salvage (`craft booster`, or the Craft page), carry up to 5, and type `boost` on a run for half your Signal back (not mid-fight).
+3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter (a **+** chip sits beside it whenever it isn't full, and a first-time tip points at it), or type `top up`, to pay for the rest now (see The economy). The Integrity meter has the same **+** for `repair`. **Signal boosters** refill it on a run: craft one at home from 4 salvage (`craft booster`, or the Craft page), carry up to 5, and type `boost` on a run for half your Signal back (not mid-fight).
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
 5. Some files lead deeper: a trace record locates a node one layer down.
 6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invader gets through.
@@ -63,7 +63,7 @@ Every location uses one of five layouts, rotating so consecutive locations play 
 
 ### Rogue servers
 
-About 1 in 6 servers you trace is **rogue** (never your first two, and never more than five tame ones in a row). A rogue server is a farm: 4–8 folders with one virus each, at the server's level and grade (strains from layer 2), each coming back 3–5 minutes after you kill it. No vault, no password, nothing to take over or harvest, no log sweep, and it never sends invaders. It shows on the map as a hexagon. Kinds:
+About 1 in 6 servers you trace is **rogue** (never your first two, and never more than five tame ones in a row). A rogue server is a farm: 4–8 folders with one virus each, at the server's level and grade (strains from layer 2), each coming back 3–5 minutes after you kill it. No vault, no password, nothing to take over or harvest, no log sweep, and it never sends invaders. It shows on the map as a hexagon. **Reconnect wait:** once you leave a wild server (SPRAWL-00 or a rogue one), by jacking out or being thrown out, it won't take you back for a minute (`CONFIG.relockMs`; its card counts down). That stops the jack out, top up, go straight back loop. Kinds:
 
 | Kind | Rule |
 |---|---|
@@ -136,7 +136,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 
 **Blueprints.** Nothing is buildable at the start. Every regular service (11) and every protocol recipe (16) is a blueprint you find once. Every vault holds a `blueprint.bp`; a home kill drops one 2% of the time and a guard 5% (into your pack). Your first blueprint is always the Firewall; after that you get one you don't have yet, at random. One you already know is 2 salvage.
 
-**The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×1.9 damage (`CONFIG.runHp`, `runDamage`), tuned with `node friction.mjs` against the gear you're likely to have. Health a same-level fight costs (scripted planner, levels 5–10): nothing equipped ~60%, whites ~37%, blues ~25–29%, yellows ~15–18%; level 1 is gentler. Home fights on your server are unchanged. The Infiltrator comes out weakest under the new curve.
+**The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×1.9 damage (`CONFIG.runHp`, `runDamage`), tuned with `node friction.mjs` against the gear you're likely to have. Health a same-level fight costs (scripted planner, levels 5–10, after the Ghostroot fix): nothing equipped ~70%, whites ~42%, blues ~28–33%, yellows ~19–22%; level 1 sits on target (53 / 31 / 25 / 16). Home fights on your server are unchanged. The Infiltrator is weakest before Backdoor (level 10) and mid-pack after it.
 
 ## The economy
 
@@ -252,6 +252,14 @@ Every server you find is wired to two you haven't found yet, one layer deeper. T
 - **Hunting a flagged server:** every kill of its family traces it 12% more (plus a quarter of your backtrace); the relay leaves a route file on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store) adds 30%.
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
 - A vault's trace record (`signal.trc`) locates one of its server's unknown neighbours outright (a flagged one first).
+
+## The numbers station (station.mjs)
+
+From class level 3, a numbers station, **LANTERN**, breaks into the radio now and then: the first time 4–8 minutes of logged-on time after you reach level 3, then every 20–35 minutes. The broadcast goes to the pager (and plays as a numbers transmission with Sound on):
+
+`LANTERN LANTERN · VANTA-SINK-36 · 05 13 02 05 18 · 47`
+
+It names a server in clear and spells a word in numbers, two digits a letter (01 = A … 26 = Z), then two digits. The word plus the digits (`ember47`) is the password to a **dead drop**: a locked `/drop` folder at that server's root, up for 15 minutes of logged-on time (it waits while you're inside it). It holds `cache.dat` (40 + 12×level credits) and `kit.bin` (a protocol at that level: 85% Tuned, 15% Custom). A wrong password costs 3 Signal like a vault. The drop goes on a traced server you can reach (never a rogue one), or on SPRAWL-00 if you haven't traced any; one drop at a time. Missing one costs nothing. On the map the server gets an antenna mark, and its card shows the numbers and the minutes left. `developer station` broadcasts one now.
 
 ## The Halcyon store
 
@@ -403,7 +411,7 @@ A virus is its parts: a basic attacker and a signature part. Each part wears **a
 | Armor | Chits on a part (◆, usually 0–2). A hit on an armored part does no damage and breaks one chit. Burn ticks, helper hits and each target of a spread hit count one chit each. Armor-piercing hits (Backdoor, Bypass) go straight through, at a longer cooldown. |
 | Patch | Two cycles after a part loses its last chit, it patches one chit back, unless you've broken it. The timeline shows the patch (◆ patch) in the column where it happens. |
 | Veiled | Ghostroot and the Sentinel hide a part's attack timers while it still has armor. Strip it, or Tag it, to see them. |
-| Stakes | Damage is the only threat: your server's Integrity at home (0 = crash: reboot at half, Degraded mode), your Signal on a run. Nothing takes your credits, files or trace. Each family hurts you its own way: Ransomware encrypts (damage every cycle that stacks until you break the Encryptor), Worm spawns fragments that gnaw every cycle, Ghostroot blinds you (every timer hidden for a couple of cycles). |
+| Stakes | Damage is the only threat: your server's Integrity at home (0 = crash: reboot at half, Degraded mode), your Signal on a run. Nothing takes your credits, files or trace. Each family hurts you its own way: Ransomware encrypts (damage every cycle that stacks until you break the Encryptor), Worm spawns fragments that gnaw every cycle, Ghostroot blinds you (every timer hidden for a couple of cycles, and hits that land while you're blind deal +25%). |
 | Time | One command per cycle, and entering it turns the cycle at once (so the pace is yours). If you don't, a cycle lasts 12 seconds by default (speed setting: relaxed 12s, the default; normal 8s; fast 5s; `speed <name>` or the button in the top bar). Press Enter on an empty line, or type `now`, to resolve the cycle now. Rules count cycles, so speed never changes balance. Order: your command, then burns and helpers, then encryption, then attacks due that cycle, then patches. No attack lands on cycle 1. |
 | Crits | Every hit you land that does damage can crit for ×1.5 (5% base, plus Crit and Crit Damage from protocols). Enemy damage attacks crit too, 10% of the time, from enemy level 3. Timeline numbers show the normal hit, after your Block. |
 | Misses | Your damaging skills miss 5% of the time against a same-level enemy, +1% per level it's above you, −1% per level below, less your Accuracy; the HUD shows *you miss N%*. A miss does nothing, and the skill's cooldown is still spent. Enemy damage attacks miss you the same way from their side, plus your Evasion. Burns, helpers and utility skills never miss. |
@@ -413,7 +421,7 @@ A virus is its parts: a basic attacker and a signature part. Each part wears **a
 | Weak point | Found with Scan (Infiltrator, level 11). It takes +50% damage. When it breaks, a new one forms on another part. |
 | Backtrace | Each class traces its own way, from level 7, at home and on SPRAWL-00: Breaker +15% Uplink per part it breaks, Bastion +10% per attack that reaches it and does nothing (a shield soaks it all, a chit, a dodge), Operator +2% per helper hit, Infiltrator Traceroute (+25% a use, cooldown 2). Passive gains land as one line at the end of the cycle. Trace protocols start each of those fights partly traced. 100% before the kill locates the origin; less saves a partial lead. |
 | Encryption | Each Encrypt adds its amount to a stack; the stack hits you every cycle (after your command and helpers, before attacks). Breaking the Encryptor recovers the key and clears it. Your armor chits and Lockdown stop an Encrypt; shields soak the per-cycle damage; Rollback wipes the stack. |
-| Blind | Every attack timer is hidden for a couple of cycles. Tagged parts still show theirs. Chits and Lockdown stop it. |
+| Blind | Every attack timer is hidden for a couple of cycles, and damage that lands on you meanwhile deals +25% (Blindside). Tagged parts still show theirs. Chits and Lockdown stop it. |
 
 ## Levels
 
@@ -577,7 +585,7 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Infiltrator | 1 | `inject <part>` | 8 damage every cycle for 3 cycles. Up to 3 on one part. | 1 |
 | Infiltrator | 3 | `tag <part>` | For 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled. | 3 |
 | Infiltrator | 5 | `traceroute` | +25% Uplink trace now (at home and on SPRAWL-00). 100% before the kill finds where the virus came from. | 2 |
-| Infiltrator | 10 | `backdoor <part>` | 30 damage straight through armor, +10 for each burn on it. | 3 |
+| Infiltrator | 10 | `backdoor <part>` | 24 damage straight through armor, +6 for each burn on it. | 4 |
 | Infiltrator | 14 | `null-route` | Every attack this cycle misses you, and your next skill crits. | 5 |
 | Infiltrator | 18 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. | 4 |
 | Infiltrator | 22 | `opening <part>` | The cycle after an attack misses you or is delayed: 50 damage. | lit |
@@ -627,7 +635,7 @@ Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integri
 |---|---|---|---|
 | Ransomware (CRYPTJACK) | Integrity | Pulse Node: 34, ◆, Surge 14 every 4 (first cycle 3) | Encryptor: 38, ◆ (◆◆ from level 3), Encrypt every 5 (first cycle 4): +4 damage per cycle, stacking, until it breaks |
 | Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 3), spawns a fragment every 4 (first cycle 3). Fragments: 18 Integrity, no armor, gnaw 3 every cycle, max 3 |
-| Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 14 every 4 (first cycle 3) | Scrambler: 34, ◆ (◆◆ from level 3), veiled, Blind every 4 (first cycle 4): all timers hidden for 2 cycles |
+| Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 14 every 4 (first cycle 3) | Scrambler: 38, ◆ (◆◆ from level 3), veiled, Blind every 4 (first cycle 2): all timers hidden for 2 cycles, timed so the Surge lands inside it (+25%) |
 
 Guards on runs are lighter (you have 50 Signal): Watchdog (Sentry 24 bare, Sweep 6 every 3; Tracker 28 ◆, Trace-back 16 every 5), Sentinel (Lens and Lockout, 24 ◆ each, both veiled), Crawler (Maw 24 bare; Brood 28 ◆ spawns fragments), Shredder (Grinder 26 ◆, Grind 9 every 4; Shredder 26 ◆, Shred 14 every 5).
 

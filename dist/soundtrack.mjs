@@ -359,5 +359,7 @@ export function createSoundtrack(getCtx) {
     thunder,
     volumes(v = {}) { if (v.music != null) vol.music = v.music; if (v.ambience != null) vol.ambience = v.ambience; applyVol(); },
     test() { if (setup()) transmission(ctx, out, { level: 0.08 }); },
+    // The numbers station's real broadcast (station.mjs): a numbers transmission, a little louder.
+    numbers() { if (want.on && setup()) transmission(ctx, out, { level: 0.09, kind: 'numbers' }); },
   };
 }

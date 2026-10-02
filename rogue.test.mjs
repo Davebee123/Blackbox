@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, finish, addLocation, hooks } from './dist/combat.mjs';
 import { play, layoutOf, takeable } from './dist/run.mjs';
-import { ROGUE, rogueRooms, rogueSpawns } from './dist/rogue.mjs';
+import { ROGUE, rogueRooms, rogueSpawns, relockLeft } from './dist/rogue.mjs';
 import { pickOrigin } from './dist/hidden.mjs';
 import { sweepKind } from './dist/forensics.mjs';
 import { tickOutposts, INFEST } from './dist/outpost.mjs';
@@ -102,4 +102,28 @@ test('infestations: they come to your outposts, pay a bonus when cleared, and le
   loc.outpost.infest.left = 1;
   tickOutposts(s, 3, 2);
   assert.equal(loc.outpost.infest, null);
+});
+
+test('jack out of a wild server and it will not take you back for a minute (no jack out, top up, return)', () => {
+  let t = 5_000_000;
+  hooks.now = () => t;
+  try {
+    const s = world();
+    addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
+    const loc = rogueOf(s);
+    play(s, 'connect ' + loc.id);
+    assert.ok(s.run);
+    play(s, 'jack out');
+    play(s, 'connect ' + loc.id);
+    assert.ok(!s.run, 'locked right after jacking out');
+    assert.equal(relockLeft(loc), ROGUE.relockMs / 1000);
+    play(s, 'connect sprawl');
+    assert.ok(s.run, 'other servers are not affected');
+    play(s, 'jack out');
+    play(s, 'connect sprawl');
+    assert.ok(!s.run, 'SPRAWL-00 locks too');
+    t += ROGUE.relockMs;
+    play(s, 'connect ' + loc.id);
+    assert.ok(s.run, 'open again after a minute');
+  } finally { hooks.now = null; }
 });

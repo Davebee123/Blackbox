@@ -4,13 +4,14 @@ import { vaultConfig, bankConfig, CONFIGS } from './configs.mjs';
 import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, cutOffBy, collect } from './outpost.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
-import { isWild, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE } from './rogue.mjs';
+import { isWild, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock } from './rogue.mjs';
 import { command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork } from './invasion.mjs';
 import { contractTakeover, bankCargo } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
+import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -88,8 +89,9 @@ export function layoutOf(loc) {
   const extra = QUIRK_ROOMS[loc?.quirk];
   let out = iced(loc, base);
   if (extra) out = Object.assign({ ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, ...Object.keys(extra).map((k) => k.slice(1))] } }, extra);
+  out = withDrop(loc, out);
   // Every vault holds a protocol, a blueprint and a code cache; from layer 2 it also holds source (a Zero-day or a special service).
-  const vault = Object.keys(out).find((k) => out[k].locked);
+  const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
   if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, 'kit.bin', 'blueprint.bp', ...(hasDaemon(loc) ? ['daemon.exe'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(hasVx(loc) ? [vxName(loc)] : []), ...(vaultConfig(loc) ? [vaultConfig(loc) + '.cfg'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
@@ -101,6 +103,12 @@ export function layoutOf(loc) {
     if (out[dir] && !out[dir].files.includes(f.name)) out = { ...out, [dir]: { ...out[dir], files: [...out[dir].files, f.name] } };
   }
   return out;
+}
+// A numbers-station dead drop (station.mjs): a locked /drop at the root while it's up.
+function withDrop(loc, out) {
+  if (!dropOf(loc) || !out['/']) return out;
+  const name = STATION.dir.slice(1);
+  return { ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, name] }, [STATION.dir]: { dirs: [], files: [...STATION.files], locked: true, drop: true } };
 }
 // ICE: on layer 2 and deeper, about half the servers swap their Watchdog or Sentinel for ICE
 // (fixed by the seed): a Watchdog becomes a Tracer, a Sentinel a Bouncer.
@@ -218,13 +226,14 @@ export function fileInfo(loc, path, name) {
     '/.ghost/.key': { kind: 'text', size: '1k', text: [`vault key, kept where plain ls won't show it: ${loc.password}`] },
   };
   const full = join(path, name);
+  if (path === STATION.dir && dropOf(loc)) return dropFile(loc, name);
   if (loc.rogue) return full === '/motd.txt' ? { kind: 'text', size: '1k', text: rogueMotd(loc) } : null;
   if (sweepFile(loc) && full === '/' + sweepFile(loc)) return { kind: 'sweep', size: '9k', text: ['an incident log. cat it to sweep it.'] };
   if (name === 'kit.bin' && layoutOf(loc)[path]?.locked) {
     const item = vaultItem(loc);
     return { kind: 'gear', size: '32k', item, text: [`binary: ${itemLabel(item)}, ${item.unique ? 'a Zero-day' : `a ${RARITIES[item.rarity].name.toLowerCase()} ${item.group || 'item'}`}.`, `${statLine(item.stats)}.${item.zeroDay ? ' ' + ZERO_DAYS[item.zeroDay].effect : ''}${item.unique ? ' ' + effectLine(item) : ''}`, 'pull it to take it. load it at home.'] };
   }
-  const vaultPath = Object.keys(layoutOf(loc)).find((k) => layoutOf(loc)[k].locked);
+  const vaultPath = Object.keys(layoutOf(loc)).find((k) => layoutOf(loc)[k].locked && !layoutOf(loc)[k].drop);
   const planted = loc.extraFiles?.find((f) => f.name === name && (f.dir || vaultPath) === path);
   if (planted) return { kind: planted.kind || 'contract', size: planted.kind === 'route' ? '6k' : '40k', label: planted.label, hidden: planted.hidden, text: planted.text };
   if (name.endsWith('.cfg') && vaultConfig(loc) + '.cfg' === name && layoutOf(loc)[path]?.locked) {
@@ -257,7 +266,7 @@ function decoy(loc, k) {
 
 export function takeable(loc) {
   const out = [];
-  for (const [dir, d] of Object.entries(layoutOf(loc))) for (const f of d.files) if (!['text', 'trap', 'sweep'].includes(fileInfo(loc, dir, f).kind)) out.push(join(dir, f));
+  for (const [dir, d] of Object.entries(layoutOf(loc))) if (!d.drop) for (const f of d.files) if (!['text', 'trap', 'sweep'].includes(fileInfo(loc, dir, f).kind)) out.push(join(dir, f));
   return out;
 }
 
@@ -325,6 +334,7 @@ export function connect(s, id) {
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
   else if (!loc) warn(s, `No located origin called "${id}". Check Trace.`);
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
+  else if (isWild(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
   else if (!zone && cutOffBy(s, loc)) warn(s, `The route to ${loc.name} runs through ${cutOffBy(s, loc).name}, and natives hold it. Retake and repair that outpost first.`);
   else {
     // A waiting home intrusion is parked for the run and comes back afterwards.
@@ -468,13 +478,15 @@ function unlock(s, rest) {
   if (!layoutOf(loc)[target]) return err(s, `unlock: no such directory: ${dir}`);
   if (!locked(loc, target)) return out(s, `${dir}/ isn't locked.`);
   if (guarded(loc, s.run.cwd)) return err(s, `The ${guardName(loc, s.run.cwd)} is watching. Deal with it first.`);
-  if (pass !== loc.password) {
+  const drop = layoutOf(loc)[target].drop;
+  if (pass !== (drop ? dropOf(loc).pass : loc.password)) {
     s.run.integrity = Math.max(0, s.run.integrity - 3);
     err(s, `access denied. The failed attempt cost 3 Signal (${s.run.integrity}/${s.run.max}).`);
     if (s.run.integrity <= 0) disconnect(s, 'Signal ran out');
     return;
   }
   loc.state.unlocked[target] = true;
+  if (drop) return out(s, `${dir}/ unlocked. The dead drop is yours.`, 'net-good');
   out(s, `${dir}/ unlocked.`, 'net-good');
   gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked');
   contractTakeover(s, loc);
@@ -514,6 +526,7 @@ export function jackOut(s) {
   const bankXp = Math.floor(credits / SERVER.xp.creditsPer) + SERVER.xp.item * (items.length + gear.length + sources.length + blueprints.length);
   s.signal = s.run.integrity;
   s.run = null;
+  if (isWild(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
   if (s.encounter?.mode === 'run') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
@@ -548,6 +561,7 @@ export function play(s, input) {
   if (word === 'connect') return connect(s, rest);
   if (text === 'jack in' || text === 'defend') return jackIn(s);
   if (text === 'developer invade' || text === 'developer crash') return developerNetwork(s, text);
+  if (text === 'developer station') { const first = s.serial; broadcast(s); return since(s, first); } // a numbers-station dead drop now
   const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out');
   if (!s.run || !isRun) return command(s, input);
   const first = s.serial;

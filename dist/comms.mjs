@@ -33,6 +33,7 @@ const MAP = {
   'fleet-broken': (e) => ({ kind: 'net', label: 'Broken', from: 'Swarm', text: e.message.replace(/^SWARM BROKEN\. /, ''), go: e.location ? `map:${e.location}` : 'map', beep: false }),
   infest: (e) => ({ kind: 'net', label: 'Infested', from: 'Outpost', text: e.message.replace(/^INFESTED: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   harvest: (e) => ({ kind: 'paid', label: 'Harvest', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
+  station: (e) => ({ kind: 'net', label: 'Station', from: 'LANTERN', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'wall-breach': (e) => ({ kind: 'alert', label: 'Breach', from: 'Wall', text: e.message, go: 'jack', beep: true, alert: true }),
 };
 

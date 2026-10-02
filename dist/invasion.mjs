@@ -9,6 +9,7 @@
 // A crash puts the server in Degraded mode (see crashServer in combat.mjs); the network waits.
 import { tickOutposts } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
+import { tickStation } from './station.mjs';
 import { has as hasConfig } from './configs.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
@@ -78,6 +79,7 @@ export function tickNetwork(s, now = Date.now()) {
   const dt = Math.min(Math.max(0, now - prev), I().maxTickMs);
   tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
   tickFleet(s, dt, !!s.degraded);
+  tickStation(s, dt); // the numbers station keeps broadcasting, degraded or not
   if (s.degraded) {
     const d = s.degraded;
     if (d.until == null) { d.since = now; d.until = now + CONFIG.degradedMs; }

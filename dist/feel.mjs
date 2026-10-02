@@ -126,6 +126,8 @@ export function createFeel({ settings, reducedMotion }) {
     soundtrack(opts) { track.set(opts); },
     // One radio transmission now (the System page's test).
     radioTest() { track.test(); },
+    // LANTERN read out a dead drop (only with Sound on).
+    numbers() { if (settings().sound) track.numbers(); },
     // Weather outside the window: rain level and thunder (only with Sound on).
     rain(level) { track.rain(settings().sound ? level : 0); },
     thunder(delay) { if (settings().sound) track.thunder(delay); },

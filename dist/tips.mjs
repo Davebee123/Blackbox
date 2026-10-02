@@ -17,6 +17,8 @@ export const TIPS = [
   { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, installs are paused and the server earns no XP.' },
   { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'You picked up code. Your server uses it to build services, which you can do on the Server page.' },
   { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && (s.stash || []).length > 0, text: 'A protocol dropped. You can load it into a slot on the Loadout page.' },
+  { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'Your Signal rests back on its own at home, slowly. Click + to pay credits and fill it now.' },
+  { id: 'repair', page: '*', at: '#meter-integrity .meter-buy', text: 'Your server rests back on its own, slowly. Click + to pay credits and repair it now.' },
   { id: 'level', page: '*', at: '#meter-level', when: (s) => hackerLevel(s) >= 2, text: 'This is your class level. Each level makes you 4% stronger, and some levels unlock new skills.' },
 
   // ---------- map ----------
@@ -43,6 +45,7 @@ export const TIPS = [
   { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'This is Halcyon\'s board. Offers come and go on their own, and you can take up to three at a time. Only a contract you have taken counts.' },
   { id: 'store', page: '*', at: '.modules [data-module="store"]', when: (s, m) => m !== 'store', text: 'Halcyon\'s store is open. Its own line is always there, and other agencies\' stock changes through the day.' },
   { id: 'store-chase', page: 'store', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
+  { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'A numbers station read out a dead drop here. Each pair of digits is a letter (01 = A). The word plus the last two digits unlocks /drop. It closes soon.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: wild, never taken over. Viruses sit in its folders and come back a few minutes after you kill them.' },
   { id: 'map-infest', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.infest), at: '.outpost .tag.warn', text: 'Viruses moved into this outpost. Clear them for a bonus to its stockpile, or ignore them: they move on and cost you nothing.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },

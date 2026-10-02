@@ -134,7 +134,7 @@ test('Bastion: Firewall absorbs 25 and lights Retaliate (twice the hit, next cyc
 });
 
 // ---------- Infiltrator ----------
-test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a veiled timer; Backdoor +10 per burn, through armor; Detonate', () => {
+test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a veiled timer; Backdoor +6 per burn, through armor; Detonate', () => {
   const s = noArmor(quiet(start('infiltrator')));
   big(s, 'pulse');
   act(s, 'inject pulse');
@@ -155,7 +155,7 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   big(b, 'pulse');
   b.encounter.burns.push({ id: 'inject', target: 'pulse', damage: 0, grow: 0, left: 5, name: 'Inject', drain: 0 });
   act(b, 'backdoor pulse');
-  assert.equal(lost(b, 'pulse'), 40, '30 + 10 for one burn');
+  assert.equal(lost(b, 'pulse'), 30, '24 + 6 for one burn');
   const d = noArmor(quiet(start('infiltrator')));
   big(d, 'pulse');
   act(d, 'inject pulse');

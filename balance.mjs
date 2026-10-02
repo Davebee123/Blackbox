@@ -146,7 +146,7 @@ export function fight(policy, key, b, opts = {}) {
   const guard = opts.mode === 'run';
   if (guard) s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
   const startHp = guard ? s.run.max : s.server.max; // health lost is a share of your own max
-  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level, zone: true } : guard ? { mode: 'run', room: '/sim', level: SERVER.locationLevel(b.level, opts.depth || 1) } : {});
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level, zone: true, family: opts.family } : guard ? { mode: 'run', room: '/sim', level: SERVER.locationLevel(b.level, opts.depth || 1) } : {});
   command(s, 'engage');
   const uses = {};
   for (let n = 0; n < 80 && active(s); n++) {

@@ -32,7 +32,7 @@ export const SKILL_TEXT = {
   // Infiltrator: know where to hit, and slip through runs.
   inject: { desc: 'Inject a payload into a module, dealing 8 damage per cycle for 3 cycles. Stacks up to 3 times.', lore: 'By the time it notices, it’s already inside.' },
   tag: { desc: 'Tag a module for 4 cycles. Burns on it deal 50% more damage, and its attack timer is always visible.', lore: 'Once you’re tagged, there is nowhere dark enough.' },
-  backdoor: { desc: 'Enter through a backdoor, dealing 30 damage that ignores armor. Deals 10 extra damage per burn on the module.', lore: 'Why knock when you left yourself a way in?' },
+  backdoor: { desc: 'Enter through a backdoor, dealing 24 damage that ignores armor. Deals 6 extra damage per burn on the module.', lore: 'Why knock when you left yourself a way in?' },
   traceroute: { desc: 'Trace the virus, increasing Uplink trace by 25%. Reach 100% before the kill to find its origin.', lore: 'Follow the hops back. Every one of them talks.' },
   detonate: { desc: 'Detonate every burn on a module, dealing all their remaining damage at once, increased by 50%.', lore: 'All that patient poison, cashed in at once.' },
   opening: { desc: 'Exploit an opening, dealing 50 damage. Usable the cycle after an attack misses you or is delayed.', lore: 'It swung and missed. Now it’s wide open.' },

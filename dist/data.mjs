@@ -5,6 +5,7 @@ export const CONFIG = {
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server
   maxIntegrity: 100,
+  blindside: 1.25, // Ghostroot: damage that lands while you're blind deals +25%
   startingCredits: 160,
   // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
   // full now. The price is for a full bar at your level; less missing costs less (at least 1).
@@ -103,6 +104,7 @@ export const CONFIG = {
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
   zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 3 },
+  relockMs: 60000, // a wild server (SPRAWL-00, rogue servers) won't take you back for a minute after you leave: no jack out, top up, return
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
   degradedMs: 10 * 60000,
@@ -148,7 +150,7 @@ export const ABILITIES = {
   // Infiltrator: burns and precision
   inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 8, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 8×3, stacks', help: 'inject <part> — 8 damage every cycle for 3 cycles. Up to 3 on one part.' },
   tag: { cls: 'infiltrator', verb: 'debuff', name: 'Tag', target: 'part', damage: 0, status: 'tagged', cycles: 4, cooldown: 3, icon: 'weakness', short: 'Burns +50%, timer', help: 'tag <part> — for 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled.' },
-  backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 30, pierce: true, perBurn: 10, cooldown: 3, icon: 'injector', short: 'Hit 30 thru armor, +10/burn', help: 'backdoor <part> — 30 damage straight through armor, +10 for each burn on it.' },
+  backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 6, cooldown: 4, icon: 'injector', short: 'Hit 24 thru armor, +6/burn', help: 'backdoor <part> — 24 damage straight through armor, +6 for each burn on it.' },
   traceroute: { cls: 'infiltrator', verb: 'util', name: 'Traceroute', target: 'none', damage: 0, trace: 25, cooldown: 2, icon: 'trace', short: '+25% trace', help: 'traceroute — +25% Uplink trace now (at home and on SPRAWL-00). 100% before the kill finds where the virus came from.' },
   detonate: { cls: 'infiltrator', verb: 'hit', name: 'Detonate', target: 'part', damage: 0, cooldown: 4, icon: 'event-warning', short: 'Burns now ×1.5', help: 'detonate <part> — every burn on it deals all its remaining damage now, ×1.5.' },
   opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: 'Hit 50 (after a miss)', help: 'opening <part> — the cycle after an attack misses you or is delayed: 50 damage.' },
@@ -230,10 +232,10 @@ export const FAMILIES = {
   ghostroot: {
     name: 'Ghostroot',
     threatens: 'Integrity',
-    summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler blinds you: your whole timeline goes dark for 2 cycles.',
+    summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler blinds you: your whole timeline goes dark for 2 cycles, and hits that land while you are blind deal +25%.',
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
-      { id: 'scrambler', name: 'Scrambler', integrity: 34, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Blind', effect: 'blind', amount: 2, interval: 4, first: 4 } },
+      { id: 'scrambler', name: 'Scrambler', integrity: 38, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Blind', effect: 'blind', amount: 2, interval: 4, first: 2 } },
     ],
   },
 };

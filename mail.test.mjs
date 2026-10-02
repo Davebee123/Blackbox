@@ -21,7 +21,7 @@ const win = (s) => {
   for (let i = 0; i < 6 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); }
 };
 const killInSprawl = (s, room) => {
-  if (!s.run) play(s, 'connect sprawl');
+  if (!s.run) { if (s.zone) s.zone.lockUntil = 0; play(s, 'connect sprawl'); } // skip the reconnect wait (rogue.mjs relockMs)
   play(s, 'cd ' + room);
   play(s, 'attack');
   win(s);

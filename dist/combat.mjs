@@ -941,6 +941,7 @@ export function disconnect(s, reason) {
   const lost = run.pack.length;
   s.signal = Math.max(0, run.integrity);
   s.run = null;
+  if (loc && (loc.zone || loc.rogue)) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // see rogue.mjs relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
@@ -1784,7 +1785,9 @@ function landAttack(s, p) {
     if (crit && fxFire(s, 'struck', { do: 'crit-normal' }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have crit. It lands as a normal hit.`, { source: p.id }); }
     const half = fxFire(s, 'struck', { do: 'halve' })[0];
     if (half) emit(s, 'blocked', `${half.it.name}: ${atk.name} deals half.`, { source: p.id });
-    const dealt = takeDamage(s, Math.round(power * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1)), p.id, atk.name);
+    // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
+    const unseen = e.blindUntil >= e.cycle;
+    const dealt = takeDamage(s, Math.round(power * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1) * (unseen ? CONFIG.blindside : 1)), p.id, atk.name);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
     if (dealt) e.undo = { type: 'damage', amount: dealt };
     // Echo: while the Echo lives, the hit repeats next cycle at half.
@@ -1805,7 +1808,7 @@ function landAttack(s, p) {
     }
     if (dealt && zeroDay(s, 'subrogation')) e.subro = p.id;
     if (!dealt && classOf(s) === 'bastion') backtrace(s);
-    const verb = crit ? 'CRITS' : 'hits';
+    const verb = (crit ? 'CRITS' : 'hits') + (unseen ? ' blind' : '');
     if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
     const cm = e.mode === 'home' && gearStat(s, 'countermeasures', 'server');

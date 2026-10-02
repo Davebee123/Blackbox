@@ -6,8 +6,8 @@
 //   Nest      one family, strains twice as often
 //   Pit       mixed families, 2 levels above the server, a second roll for drops
 //   Gauntlet  mixed families; clear every folder in one run for a bonus cache
-import { emit, rand, gainCode, gainXp, xpFor } from './combat.mjs';
-import { FAMILIES, variantFor, STRAINS } from './data.mjs';
+import { emit, rand, gainCode, gainXp, xpFor, hooks } from './combat.mjs';
+import { FAMILIES, variantFor, STRAINS, CONFIG } from './data.mjs';
 import { seeded, codeOf } from './gear.mjs';
 
 export const ROGUE = {
@@ -18,9 +18,13 @@ export const ROGUE = {
   rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,
+  relockMs: CONFIG.relockMs, // after you leave a wild server it won't take you back for a minute
 };
 export const isRogue = (loc) => !!loc?.rogue;
 export const isWild = (loc) => !!(loc?.zone || loc?.rogue);
+// Seconds until a wild server lets you reconnect (0 = now).
+export const clock = () => hooks.now?.() ?? Date.now();
+export const relockLeft = (loc, now = clock()) => Math.max(0, Math.ceil(((loc?.lockUntil || 0) - now) / 1000));
 
 // Decide, when a server is traced, whether it's rogue (fixed by its seed, with the pity rule).
 export function rollRogue(s, loc) {

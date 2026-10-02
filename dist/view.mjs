@@ -8,7 +8,8 @@ import { outpostPorts, modsOf, hasMod, schedulerEvery } from './outpost.mjs';
 import { OUTPOST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, cutOffBy, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
 import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
-import { ROGUE, rogueSpawns, rogueRooms } from './rogue.mjs';
+import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
+import { dropOf, dropMinutes, spell } from './station.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
@@ -1056,7 +1057,7 @@ export function mapMarkup(s, sel = 'server') {
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
-      return `<g class="mnode zone${here ? ' here' : ''}${on}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${pick}${label(n, 10, CONFIG.zone.name, here ? 'you are here' : live ? `rogue server · ${live} hostile` : 'rogue server · quiet')}</g>`;
+      return `<g class="mnode zone${here ? ' here' : ''}${dropOf(s.zone) ? ' drop' : ''}${on}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${dropMark(s.zone)}${pick}${label(n, 10, CONFIG.zone.name, here ? 'you are here' : live ? `rogue server · ${live} hostile` : 'rogue server · quiet')}</g>`;
     }
     if (n.kind === 'intrusion') {
       return `<g class="mnode intrusion${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;
@@ -1089,7 +1090,7 @@ export function mapMarkup(s, sel = 'server') {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${label(n, 12, l.name, `rogue · ${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${cut}${job ? ' job' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${pick}${label(n, 12, l.name, sub)}</g>`;
+    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${cut}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${label(n, 12, l.name, sub)}</g>`;
   }).join('');
   const svg = `<svg class="map-svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   return `<div class="map-page"><section class="panel map-canvas">${svg}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
@@ -1102,12 +1103,21 @@ function serverCard(s) {
   return `<div class="lvl-row" title="The server gets every point of XP your classes earn"><span class="lvl-badge">Server Lv ${p.level}</span>${p.next ? `<span class="lvl-bar"><span style="width:${(p.xp / p.next) * 100}%"></span></span><small>${p.xp}/${p.next} XP</small>` : '<small>max level</small>'}</div>`;
 }
 
+// A numbers-station dead drop (station.mjs): a mark on the map node, and the broadcast on its card.
+const dropMark = (l) => (dropOf(l) ? '<g class="dropmark" transform="translate(12 -12) scale(1.4)"><path d="M0 4 L0 -3 M-3 -5 Q0 -8 3 -5 M-5 -7 Q0 -12 5 -7"/></g>' : '');
+function dropLine(s, l) {
+  const d = dropOf(l);
+  if (!d) return '';
+  return `<p class="svc-line drop-line"><span class="tag tag-drop" title="Closes in ${dropMinutes(l)} min">Dead drop · ${dropMinutes(l)} min</span> <code>${spell(d.pass.replace(/\d+$/, ''))} · ${d.pass.slice(-2)}</code></p>`;
+}
+
 // The rogue server's card: the main thing to do, so it also leads the server card.
 function zoneCard(s) {
   const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : sig < need ? `Signal too weak: rest to ${need}` : '';
+  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Signal too weak: rest to ${need}` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
     <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}</div>
+    ${dropLine(s, s.zone)}
     <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}</div></section>`;
 }
 function mapSide(s, sel, node) {
@@ -1172,7 +1182,7 @@ function mapSide(s, sel, node) {
       <p>${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}</p>
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line">Wild: it can't be taken over, and it never sends invaders.</p>
-      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : ''}>Connect</button>`}</div></section>`;
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
@@ -1185,6 +1195,7 @@ function mapSide(s, sel, node) {
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}
     ${l.relay ? '<p class="svc-line"><span class="tag you">Relay up</span></p>' : ''}
+    ${dropLine(s, l)}
     ${outpostCard(s, l)}
     <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : ''}>Connect</button>`}</div></section>`;
 }
