@@ -593,3 +593,41 @@ test('typos during a guard fight stay on the fight screen, out of the run termin
   const term = netTranscript(s);
   assert.doesNotMatch(term, /spikefrag2/);
 });
+
+test('the run terminal shows one folder at a time; history shows the whole run', async () => {
+  const { netTranscript } = await import('./dist/view.mjs');
+  const s = fresh();
+  say(s, 'connect sprawl');
+  say(s, 'cat motd.txt');
+  assert.match(netTranscript(s), /SPRAWL-00\. nobody runs this box/);
+  const room = Object.keys(s.zone.spawns)[0].slice(1);
+  say(s, 'cd ' + room);
+  let term = netTranscript(s);
+  assert.doesNotMatch(term, /nobody runs this box/, 'the last folder is gone');
+  assert.match(term, /data-run="history">earlier</, 'one click brings it back');
+  say(s, 'history');
+  term = netTranscript(s);
+  assert.match(term, /nobody runs this box/);
+  assert.doesNotMatch(term, /earlier</);
+  say(s, 'cd ..');
+  assert.doesNotMatch(netTranscript(s), /nobody runs this box/, 'a new folder starts over');
+});
+
+test('did you mean: typos in a fight and on a run suggest the likely command', async () => {
+  const { parse } = await import('./dist/combat.mjs');
+  const { netTranscript } = await import('./dist/view.mjs');
+  const s = fresh();
+  (await import('./dist/combat.mjs')).selectEncounter(s, 'splinter', 3, { level: 3 });
+  command(s, 'engage');
+  assert.equal(parse(s, 'spike pusle').suggest, 'spike pulse');
+  assert.equal(parse(s, 'spikepulse').suggest, 'spike pulse');
+  assert.equal(parse(s, 'pusle').suggest, 'spike pulse', 'just a part: Spike it');
+  assert.equal(parse(s, 'xyzzy').suggest, null, 'no wild guesses');
+  command(s, 'spike pusle');
+  assert.equal(s.logs.at(-1).suggest, 'spike pulse');
+  const t = fresh();
+  say(t, 'connect sprawl');
+  say(t, 'cat mtod.txt');
+  assert.equal(t.logs.at(-1).suggest, 'cat motd.txt');
+  assert.match(netTranscript(t), /data-prefill="cat motd.txt"/);
+});

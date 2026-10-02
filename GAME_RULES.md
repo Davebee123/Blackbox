@@ -39,6 +39,9 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 | `ls` | List this directory: subdirectories (with [guarded] / [locked]), files (with [pull] if takeable). `ls -a` also shows hidden dotfiles. |
 | `cd <dir>` | Move. Unix paths work: `cd ..`, `cd ../logs`, `cd /relay/vault` |
 | `cat <file>` | Read a file (paths work too) |
+| `history` | The whole run so far. The terminal otherwise starts over in each folder you `cd` into (the *earlier* link at the top does the same). |
+
+A typo'd folder, file or fight command gets "Did you mean …?" with the guess as a button (`cd vra` → `cd var`, `spike pusle` → `spike pulse`, `spikefrag2` → `spike frag2`). Warnings from a fight stay on the fight screen and out of the run terminal.
 | `pull <file>` | Copy a file from this directory into your pack |
 | `unlock <dir> <password>` | Open a locked directory |
 | `jack out` | Go home and bank your pack |

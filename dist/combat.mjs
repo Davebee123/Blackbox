@@ -528,9 +528,9 @@ export function emit(s, type, message, detail = {}) {
   return event;
 }
 
-export function warn(s, text) {
+export function warn(s, text, detail = {}) {
   if (active(s)) s.encounter.metrics.invalid++;
-  emit(s, 'warning', text, active(s) ? { fight: true } : {}); // fight typos stay on the fight screen, out of the run terminal
+  emit(s, 'warning', text, { ...detail, ...(active(s) ? { fight: true } : {}) }); // fight typos stay on the fight screen, out of the run terminal
 }
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -1122,6 +1122,35 @@ function findPart(s, text) {
   return matches.length === 1 ? matches[0] : null;
 }
 
+// Typos: edit distance, for "did you mean". Small words only, so it's cheap.
+function distance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1), i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1] ? d[i - 2][j - 2] + 1 : Infinity);
+  return d[a.length][b.length];
+}
+// The closest of `options` to `word`, if it's close enough to be a typo (or `word` starts it).
+export function closest(word, options) {
+  const q = squash(word);
+  if (!q) return null;
+  let best = null, bd = Infinity;
+  for (const o of options) { const d = squash(o).startsWith(q) ? 0.5 : distance(q, squash(o)); if (d < bd) { bd = d; best = o; } }
+  return bd <= Math.max(1, Math.min(2, Math.floor(q.length / 3))) ? best : null;
+}
+// What the player probably meant by a command that didn't parse (null: no good guess).
+function suggestFor(s, words) {
+  const bar = Object.values(keyMap(s)).filter((id) => usable(s).includes(id));
+  const parts = livingParts(s);
+  const target = (rest) => { if (!rest) return ''; const p = findPart(s, rest) || parts.find((x) => x.id === closest(rest, parts.map((y) => y.id)) || x.name === closest(rest, parts.map((y) => y.name))); return p ? ' ' + p.id : null; };
+  // "spikefrag2": a skill and a part with the space missing.
+  for (const id of bar) if (words[0].startsWith(id) && words[0].length > id.length) { const t = target(words[0].slice(id.length) + words.slice(1).join('')); if (t) return id + t; }
+  const id = closest(words[0], bar);
+  if (!id) { const t = words.length === 1 ? target(words[0]) : null; return t ? 'spike' + t : null; } // just a part: Spike it
+  if (ABILITIES[id]?.target === 'none' || ABILITIES[id]?.target === 'attack') return id;
+  const t = target(words.slice(1).join(' '));
+  return t === null ? id + ' ' : id + t;
+}
+
 // Accepts ids ("kill-process"), two words ("kill process"), or a key number ("4").
 function abilityFrom(s, words) {
   const keys = keyMap(s);
@@ -1136,7 +1165,7 @@ export function parse(s, input) {
   const words = text.split(' ');
   const found = abilityFrom(s, words);
   const bar = Object.entries(keyMap(s)).map(([k, id]) => `${k} ${id}`).join(' · ');
-  if (!found) return { error: `Unknown command "${words[0]}". Your keys: ${bar}.` };
+  if (!found) { const suggest = suggestFor(s, words); return { error: `Unknown command "${words[0]}".${suggest ? ` Did you mean ${suggest.trim()}?` : ` Your keys: ${bar}.`}`, suggest }; }
   const ability = found.id;
   const a = ABILITIES[ability];
   if (!usable(s).includes(ability)) return { error: `${a.name} isn't on your bar. Your keys: ${bar}.` };
@@ -1149,7 +1178,11 @@ export function parse(s, input) {
   }
   if (!arg) return { error: `${a.name} needs a target: ${livingParts(s).map((p) => p.id).join(', ')}.` };
   const target = findPart(s, arg);
-  if (!target) return { error: `No single living part matches "${arg}". Targets: ${livingParts(s).map((p) => p.id).join(', ')}.` };
+  if (!target) {
+    const near = closest(arg, livingParts(s).map((p) => p.id)) || livingParts(s).find((p) => p.name === closest(arg, livingParts(s).map((x) => x.name)))?.id;
+    const suggest = near ? `${words.slice(0, found.used).join(' ')} ${near}` : null;
+    return { error: `No part called "${arg}".${suggest ? ` Did you mean ${suggest}?` : ` Targets: ${livingParts(s).map((p) => p.id).join(', ')}.`}`, suggest };
+  }
   return { ability, target: target.id };
 }
 
@@ -1294,7 +1327,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     if (steps.length > CONFIG.planLength) warn(s, `You can plan ${CONFIG.planLength} cycles ahead. Extra steps were dropped.`);
     const intents = steps.slice(0, CONFIG.planLength).map((x, i) => toIntent(s, x, i === 0));
     const bad = intents.find((x) => x.error);
-    if (bad) warn(s, bad.error);
+    if (bad) warn(s, bad.error, bad.suggest && steps.length === 1 ? { suggest: bad.suggest } : {});
     else {
       e.queue = intents[0];
       e.plan = intents.slice(1);

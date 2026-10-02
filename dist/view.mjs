@@ -687,12 +687,19 @@ function sweepMarkup(s, e, live) {
   return `<div class="sweep${solved ? ' solved' : ''}"><div class="sw-head"><b>${glyph('ids')}${esc(p.file)}</b><span class="sw-q">${esc(p.question)}</span><span class="sw-filters">${filt('all', 'All')}${filt('a', p.filters[0])}${filt('b', p.filters[1])}</span></div>${p.note ? `<div class="sw-note">${esc(p.note)}</div>` : ''}<div class="sw-cols sw-line" ${grid}>${p.cols.map((c) => `<span>${esc(c)}</span>`).join('')}</div><div class="sw-log">${shown.map(row).join('') || '<div class="sw-line quiet">nothing matches</div>'}</div><div class="sw-foot"><span class="sw-label">${solved ? 'Swept' : 'Your answer'}</span>${suspects}${!solved && tries ? `<small class="sw-tries">${tries} wrong</small>` : ''}</div></div>`;
 }
 
+// "Did you mean …?": the guess as a button (a guess ending in a space prefills the prompt instead).
+export const suggestButton = (e) => (e.suggest ? ` <button type="button" class="tok act suggest" data-prefill="${esc(e.suggest)}">${esc(e.suggest.trim())}</button>` : '');
+
 export function netTranscript(s, limit = 80) {
-  const start = s.logs.findLastIndex((e) => e.type === 'run-start');
+  const runStart = s.logs.findLastIndex((e) => e.type === 'run-start');
+  // One folder at a time: from the cd that brought you here, unless you asked for the history.
+  const room = s.run && !s.run.history && s.run.roomFrom ? s.logs.findIndex((e) => e.id === s.run.roomFrom) : -1;
+  const start = room > runStart ? room : runStart;
+  const earlier = start > runStart ? '<li class="note earlier"><button type="button" class="tok act" data-run="history">earlier</button></li>' : '';
   // Warnings from a fight (typos, bad targets) belong to the fight: the terminal skips them.
   const lines = s.logs.slice(Math.max(0, start)).filter((e) => NET_CLASS[e.type] !== undefined && !(e.type === 'warning' && e.fight)).slice(-limit);
   const lastSweep = lines.findLastIndex((e) => e.type === 'net-sweep');
-  return lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : esc(e.message)}</li>`).join('');
+  return earlier + lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : esc(e.message) + suggestButton(e)}</li>`).join('');
 }
 
 export const signalLevel = (run) => (run.integrity / run.max <= 0.3 ? 'low' : run.integrity / run.max <= 0.6 ? 'mid' : 'ok');

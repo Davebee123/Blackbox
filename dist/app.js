@@ -418,9 +418,11 @@ function levelUp(title, text) {
   clearTimeout(levelUp.t);
   levelUp.t = setTimeout(() => { el.hidden = true; }, 3200);
 }
-function notice(text, bad = false) {
+function notice(text, bad = false, suggest = null) {
   const el = $('notice');
   el.textContent = text;
+  // A typo's best guess: click it to run it (or, ending in a space, to fill the prompt).
+  if (suggest) { const b = document.createElement('button'); b.type = 'button'; b.className = 'tok act suggest'; b.dataset.prefill = suggest; b.textContent = suggest.trim(); el.append(' ', b); }
   el.classList.toggle('bad', bad);
   el.hidden = !text;
   clearTimeout(noticeTimer);
@@ -466,7 +468,7 @@ function run(raw) {
   // In a fight, an order you enter goes now: the cycle turns without waiting out the bar.
   const e = campaign.encounter;
   if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore) { const more = command(campaign, 'now'); react(more); events = [...events, ...more]; }
-  if (warning) notice(warning.message, true);
+  if (warning) notice(warning.message, true, warning.suggest);
   else {
     const info = events.find((e) => e.type === 'contract-done') || events.findLast((e) => ['info', 'repair', 'daemon-set', 'gear', 'drop', 'service', 'service-done', 'code'].includes(e.type));
     if (info) notice(info.message);

@@ -5,7 +5,7 @@ import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, cutOffBy, 
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock } from './rogue.mjs';
-import { command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
+import { closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork } from './invasion.mjs';
 import { contractTakeover, bankCargo } from './mail.mjs';
@@ -304,7 +304,7 @@ const locked = (loc, path) => !!layoutOf(loc)[path]?.locked && !loc.state.unlock
 
 // ---------- commands ----------
 
-export const RUN_COMMANDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
+export const RUN_COMMANDS = ['history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
 const equipped = (s, id) => equippedSkills(s, classOf(s)).includes(id);
 const onceUsed = (s, id) => (s.run.used ||= {})[id];
 
@@ -319,10 +319,12 @@ function prompt(s) {
 }
 
 function echo(s, text) {
-  emit(s, 'net-cmd', `[${s.run.integrity}] ${prompt(s)} ${text}`);
+  s.run.lastEcho = emit(s, 'net-cmd', `[${s.run.integrity}] ${prompt(s)} ${text}`).id;
 }
 const out = (s, lines, type = 'net-out') => emit(s, type, Array.isArray(lines) ? lines.join('\n') : lines);
-const err = (s, text) => emit(s, 'net-err', text);
+const err = (s, text, detail = {}) => emit(s, 'net-err', text, detail);
+// A typo'd name: the error plus "did you mean" (clickable in the terminal).
+const near = (s, text, word, names, cmd) => { const n = closest(word, names); return err(s, n ? `${text} Did you mean ${n}?` : text, n ? { suggest: `${cmd} ${n}` } : {}); };
 
 export function connect(s, id) {
   const first = s.serial;
@@ -394,7 +396,7 @@ function cd(s, arg) {
   const loc = currentLocation(s);
   if (!arg) return err(s, 'cd where? Try cd .. or one of the directories from ls.');
   const target = join(s.run.cwd, arg);
-  if (!layoutOf(loc)[target]) return err(s, `cd: no such directory: ${arg}`);
+  if (!layoutOf(loc)[target]) return near(s, `cd: no such directory: ${arg}.`, arg, ['..', ...(layoutOf(loc)[s.run.cwd]?.dirs || [])], 'cd');
   if (target === s.run.cwd) return out(s, 'already here.');
   const up = (s.run.cwd + '/').startsWith(target === '/' ? '/' : target + '/');
   // Every directory on the way down must be passable.
@@ -417,6 +419,9 @@ function cd(s, arg) {
   }
   if (s.run.cloak && s.run.cloak !== 'armed' && s.run.cloak !== 'spent' && s.run.cloak !== target) s.run.cloak = 'spent';
   s.run.cwd = target;
+  // The terminal starts over in each folder (from the cd that got you here); `history` shows the whole run.
+  s.run.roomFrom = s.run.lastEcho;
+  s.run.history = false;
   if (!s.run.visited.includes(target)) s.run.visited.push(target);
   if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
   // Like a MUD room: arriving shows what's here.
@@ -434,7 +439,7 @@ function cat(s, arg) {
   const full = join(s.run.cwd, arg);
   const dir = full.slice(0, full.lastIndexOf('/')) || '/';
   const name = full.split('/').pop();
-  if (!layoutOf(loc)[dir]?.files.includes(name)) return err(s, `cat: ${arg}: no such file here`);
+  if (!layoutOf(loc)[dir]?.files.includes(name)) return near(s, `cat: ${arg}: no such file here.`, arg, layoutOf(loc)[s.run.cwd]?.files || [], 'cat');
   if (watching(s, loc, dir) && !cloakedIn(s, dir)) return err(s, `The ${guardName(loc, dir)} is watching. Deal with it first.`);
   s.run.read ||= [];
   if (!s.run.read.includes(full)) s.run.read.push(full);
@@ -448,7 +453,7 @@ function pull(s, arg) {
   const full = join(s.run.cwd, arg);
   const dir = full.slice(0, full.lastIndexOf('/')) || '/';
   const name = full.split('/').pop();
-  if (!layoutOf(loc)[dir]?.files.includes(name)) return err(s, `pull: ${arg}: no such file here`);
+  if (!layoutOf(loc)[dir]?.files.includes(name)) return near(s, `pull: ${arg}: no such file here.`, arg, layoutOf(loc)[s.run.cwd]?.files || [], 'pull');
   if (dir !== s.run.cwd) return err(s, `pull: be in ${dir} to pull ${name}.`);
   if (watching(s, loc, dir) && !cloakedIn(s, dir)) return err(s, `The ${guardName(loc, dir)} is watching. Deal with it first.`);
   if (cloakedIn(s, dir) && s.run.cloakPulled) return err(s, `The ${guardName(loc, dir)} stirs. One file is all the spoof covers: leave.`);
@@ -574,6 +579,7 @@ export function play(s, input) {
   echo(s, text);
   if (word === 'ls' || word === 'look') ls(s, /(^| )-\w*a/.test(rest));
   else if (word === 'pwd') out(s, s.run.cwd);
+  else if (word === 'history') s.run.history = true;
   else if (word === 'cd' || word === 'go') cd(s, rest);
   else if (word === 'cat') cat(s, rest);
   else if (word === 'pull') pull(s, rest);
@@ -592,7 +598,7 @@ export function play(s, input) {
   else if (word === 'sweep') sweepCommand(s, currentLocation(s), rest);
   else if (word === 'pack') out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'source' ? sourceName(f.zeroDay) + ' source' : f.kind === 'blueprint' ? 'blueprint' : f.kind === 'daemon' ? 'daemon' : 'trace record (deeper node)'}`).concat('unbanked until you jack out.') : 'pack is empty.');
   else if (word === 'help') out(s, ['ls            what is here (ls -a shows hidden files)', 'cd <dir>      move (cd .. goes up)', 'cat <file>    read',
-  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'pack          what you are carrying', 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
+  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
   return since(s, first);
 }
 
@@ -681,7 +687,7 @@ export function runSuggestions(s, input) {
     if (word === 'unlock') return here.dirs.filter((d) => locked(loc, join(s.run.cwd, d)) && d.startsWith(arg)).map((d) => `unlock ${d} `);
     return [];
   }
-  return ['ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
+  return ['history', 'ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
 }
 
 export { guarded, locked };
