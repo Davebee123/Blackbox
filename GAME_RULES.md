@@ -4,7 +4,7 @@ This is the single source of truth for how combat works. If code, README or an o
 
 ## The Craft page
 
-Everything you build is on one page, **Craft** (at home only): protocols (compile from your recipes, Zero-days from source), configs and harvesters, with your credits, code and salvage stacks beside them. Protocols you *run* live on the **Loadout** page, beside your skills (slots, stats, stash: load, unload, scrap).
+Everything you build is on one page, **Craft** (at home only): protocols (compile from your recipes, Zero-days from source), configs and harvesters, with your credits, code and salvage stacks beside them. Protocols you *run* live on the **Loadout** page's first tab, Protocols (stash on the left, slots and stats on the right) (slots, stats, stash: load, unload, scrap).
 
 ## First launch
 

@@ -838,7 +838,7 @@ const TAG_INFO = { status: 'Makes this class’s shared status', payoff: 'Strong
 export const className = (id) => ARCHETYPES[id]?.name || id;
 export const xpNeeded = (level) => xpToNext(level);
 
-export function loadoutMarkup(s, view, tab = 'skills') {
+export function loadoutMarkup(s, view, tab = 'protocols') {
   const equippedArch = s.loadout?.archetype || 'breaker';
   const id = ARCHETYPES[view] ? view : equippedArch;
   const a = ARCHETYPES[id];
@@ -910,7 +910,7 @@ export function loadoutMarkup(s, view, tab = 'skills') {
 
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['skills', `Skills and protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['talents', `Talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
+    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', `Protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['skills', 'Skills'], ['talents', `Talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
     ${tab === 'talents' ? `
     <div class="loadout-talents">
       <section class="card ttree-card"><div class="thead"><div><h2>Talent tree</h2><h1>${esc(a.name)}</h1></div>
@@ -922,8 +922,8 @@ export function loadoutMarkup(s, view, tab = 'skills') {
         </ol>
         ${spent && !busy ? `<p class="tfoot">${btn(`talent reset ${id}`, 'Clear picks')}</p>` : ''}
       </section>
-    </div>` : `
-    <div class="loadout-grid">
+    </div>` : tab === 'skills' ? `
+    <div class="loadout-skills">
       <section class="card skills-card">
         <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>` : '<span>max level</span>'}</div></div>
           ${id === equippedArch ? '<span class="tag you">in use</span>' : busy ? '' : btn(`archetype ${id}`, `Use ${a.name}`, true)}</div>
@@ -932,8 +932,9 @@ export function loadoutMarkup(s, view, tab = 'skills') {
         <div class="lib-head"><h2>Library · ${known.length}/${a.skills.length}</h2></div>
         <ul class="library">${lib}</ul>
       </section>
-      <div class="loadout-protocols">${id === equippedArch ? `${protocolSlotsCard(s)}${protocolStashCard(s)}` : `<section class="card"><h2>Protocols</h2><p class="svc-line">Protocols belong to the class in use. Switch to ${esc(a.name)} to change its protocols.</p></section>`}</div>
-    </div>`}
+    </div>` : id === equippedArch ? `
+    <div class="loadout-protocols">${protocolStashCard(s)}${protocolSlotsCard(s)}</div>` : `
+    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line">Protocols belong to the class in use. Switch to ${esc(a.name)} to change its protocols.</p></section></div>`}
     </div>`;
 }
 
