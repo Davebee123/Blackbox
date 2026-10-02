@@ -139,18 +139,24 @@ export function collect(s, loc, why = 'Outpost: ') {
   const h = o.h;
   if (h.kind !== 'scraper') return gainCode(s, { [codeOf(loc.family)]: n }, `${why}${loc.name}: `);
   const lucky = (h.traits.includes('lucky') ? 0.05 : 0) + (loc.trait === 'legacy' ? 0.05 : 0);
+  const got = scrape(s, loc, n, h.level, lucky, `${why}${loc.name}: `);
+  emit(s, 'harvest', `${why}${loc.name}'s Scraper turned up ${got || 'a protocol'}.`, { location: loc.id });
+}
+// n Scraper rolls on a server: mostly credits, some code, salvage, now and then a protocol. Returns
+// what turned up, as text ('' if only protocols, which announce themselves). consortium.mjs uses it too.
+export function scrape(s, loc, n, level, lucky = 0, why = '') {
   let credits = 0, code = 0, salvage = 0;
   for (let i = 0; i < n; i++) {
     const x = rand(s);
-    if (x < 0.05 + lucky) { const item = rollDrop(s, 'guard', h.level); if (item) addItem(s, item, `${why}${loc.name}: `); else credits += 20 + 3 * h.level; }
+    if (x < 0.05 + lucky) { const item = rollDrop(s, 'guard', level); if (item) addItem(s, item, why); else credits += 20 + 3 * level; }
     else if (x < 0.15 + lucky * 2) salvage++;
-    else if (x < 0.4 + lucky * 2) code += 2 + Math.floor(h.level / 10);
-    else credits += 20 + 3 * h.level;
+    else if (x < 0.4 + lucky * 2) code += 2 + Math.floor(level / 10);
+    else credits += 20 + 3 * level;
   }
   if (credits) s.server.credits += credits;
   for (let i = 0; i < salvage; i++) s.salvage.push({ name: `${loc.name} scrap`, virus: loc.name, seed: loc.seed + i });
   if (code) gainCode(s, { [codeOf(loc.family)]: code }, '');
-  emit(s, 'harvest', `${why}${loc.name}'s Scraper turned up ${[credits ? credits + ' credits' : '', code ? `${code} ${MATERIALS[codeOf(loc.family)].name}` : '', salvage ? `${salvage} salvage` : ''].filter(Boolean).join(', ') || 'a protocol'}.`, { location: loc.id });
+  return [credits ? credits + ' credits' : '', code ? `${code} ${MATERIALS[codeOf(loc.family)].name}` : '', salvage ? `${salvage} salvage` : ''].filter(Boolean).join(', ');
 }
 
 // The clock ------------------------------------------------------------------------------------
