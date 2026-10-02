@@ -18,7 +18,7 @@ import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items 
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, blocked, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills,  cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, previewDamage, part } from './combat.mjs';
+import { previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -159,6 +159,49 @@ export function timelineMarkup(s) {
 // ---------- combat HUD and board ----------
 
 // The fight at a glance: the virus's health against yours.
+// What this cycle is about to cost, before it resolves: the damage your command and each
+// crewmate's will do to each part (a hit on an armored part only breaks a chit), and the damage
+// the virus's visible attacks will do to you and the crew (after chits, shields and Block).
+// Crits and misses aren't guessed. Shown as a blinking white slice at the end of each bar.
+export function forecast(s) {
+  const e = s.encounter, out = { parts: {}, total: 0, you: 0, mates: {} };
+  if (!active(s)) return out;
+  const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter && mateUp(m)) : [];
+  const armor = Object.fromEntries(e.virus.parts.map((p) => [p.id, p.armor]));
+  const shoot = (st, q) => {
+    if (!q?.target || !ABILITIES[q.ability]) return;
+    const p = part(st, q.target);
+    if (!alive(p)) return;
+    if (armor[p.id] > 0 && !ignoresArmor(st, q.ability)) { armor[p.id]--; return; }
+    const was = p.armor; p.armor = 0;
+    const dmg = previewDamage(st, q.ability, p);
+    p.armor = was;
+    out.parts[p.id] = Math.min(p.integrity, (out.parts[p.id] || 0) + dmg);
+  };
+  const auto = !e.queue && e.lastAttack ? { ability: e.lastAttack.split(' ')[0], target: e.lastAttack.split(' ')[1] } : null;
+  shoot(s, e.queue || auto);
+  for (const m of crew) shoot(m, m.encounter.queue);
+  out.total = Object.values(out.parts).reduce((a, b) => a + b, 0);
+  // Incoming: this cycle's visible damage attacks, plus encryption on you.
+  const hits = intents(s, 1).filter((i) => i.col === 0 && !i.hidden && i.effect === 'damage').map((i) => i.amount);
+  const take = (st, raw) => {
+    let chits = st.encounter.chits || 0, shield = st.encounter.shield || 0, lost = 0;
+    for (const a of raw) {
+      if (chits > 0) { chits--; continue; }
+      let n = blocked(st, a);
+      const soak = Math.min(shield, n); shield -= soak; n -= soak;
+      lost += n;
+    }
+    return lost;
+  };
+  const tank = crew.length ? (drawingFire(s) ? s : crew.find((m) => drawingFire(m))) : null;
+  out.you = Math.min(defender(s).integrity, (tank && tank !== s ? 0 : take(s, hits)) + (e.encrypt || 0));
+  for (const m of crew) out.mates[m.who] = Math.min(m.run.integrity, tank && tank !== m ? 0 : take(m, hits));
+  return out;
+}
+// The blinking slice on a bar: from what's left after the hit up to where the bar is now.
+const lossMark = (now, max, loss) => (loss > 0 && max > 0 ? `<i class="loss" style="left:${((now - loss) / max) * 100}%;width:${(loss / max) * 100}%" title="−${loss} this cycle"></i>` : '');
+
 export function hudMarkup(s) {
   const e = s.encounter, v = e.virus;
   runMode = e.mode === 'run';
@@ -173,10 +216,11 @@ export function hudMarkup(s) {
   const armor = armorLeft(s);
   const crypt = e.encrypt > 0 ? `<span class="hud-extra hot">encrypted −${e.encrypt}/cycle</span> · ` : '';
   const extras = runMode ? crypt : `${crypt}<span class="hud-extra">Uplink ${e.trace}%</span>`;
+  const fc = forecast(s);
   return `<div class="hud-id"><h1>${esc(v.name)}</h1><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span>
       ${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><strong>Virus</strong><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span></div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}</p></div>
-    <div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span></div><p class="clock-line">${extras}</p></div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><strong>Virus</strong><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}</p></div>
+    <div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>`;
 }
 
 function attackChip(i, c, k = '', to = null) {
@@ -233,6 +277,7 @@ export function boardMarkup(s, selected) {
   const e = s.encounter;
   runMode = e.mode === 'run';
   const fighting = active(s);
+  const fc = forecast(s);
   // Damage on the timeline is what you'll actually take after your Reduction.
   const list = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i)) : [];
   const hidden = fighting && timersHidden(s);
@@ -264,7 +309,7 @@ export function boardMarkup(s, selected) {
   const acted = e.steps ? crew.filter(mateUp)[e.steps.next - 1] : null;
   const mates = crew.map((m) => {
     const up = mateUp(m), q = m.encounter.queue, pct = (m.run.integrity / m.run.max) * 100;
-    return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span></span></div>
+    return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span></div>
       <div class="bcell">${up ? (q ? `<div class="intent mine mate">${esc(q.text)}</div>` : '<small class="quiet">thinking</small>') : '<small class="quiet">down</small>'}</div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>`;
   }).join('');
   const spans = fighting ? statusSpans(s) : [];
@@ -287,7 +332,7 @@ export function boardMarkup(s, selected) {
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;
     return `<button type="button" class="brow bpart ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname"><span class="part-top"><span class="part-name">${esc(p.name)}</span>${chitsMarkup(p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span></span><span class="part-tags">${partTags(s, p)}</span></div>
+      <div class="bcell bname"><span class="part-top"><span class="part-name">${esc(p.name)}</span>${chitsMarkup(p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';

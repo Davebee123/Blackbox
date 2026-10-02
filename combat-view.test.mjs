@@ -168,3 +168,26 @@ test('the Status row: timed effects on you as bars over the cycles they last (Mo
   assert.equal(spans[0].value, '+20% ×2');
   assert.match(boardMarkup(s, null), /class="sbar you" style="grid-column: 1 \/ span 2"/);
 });
+
+test('the forecast: what your command will cost a part, and what the virus will cost you, before the cycle resolves', async () => {
+  const { forecast, boardMarkup, hudMarkup } = await import('./dist/view.mjs');
+  const { previewDamage } = await import('./dist/combat.mjs');
+  const s = fresh();
+  selectEncounter(s, 'cryptjack', 7, { level: 3 });
+  command(s, 'engage');
+  const e = s.encounter;
+  const [a, b] = e.virus.parts;
+  a.armor = 1;
+  command(s, 'spike ' + a.id);
+  assert.equal(forecast(s).parts[a.id] || 0, 0, 'an armored part: the hit only breaks a chit');
+  a.armor = 0;
+  assert.equal(forecast(s).parts[a.id], previewDamage(s, 'spike', a));
+  assert.match(boardMarkup(s, null), /class="loss"/);
+  for (const p of e.virus.parts) if (p.attack) p.attack.due = 999;
+  b.attack.due = e.cycle; b.attack.effect = 'damage';
+  e.chits = 0; e.shield = 0;
+  assert.ok(forecast(s).you > 0, 'an attack landing this cycle costs you');
+  assert.match(hudMarkup(s), /hud-bar mine[^]*class="loss"/);
+  e.chits = 1;
+  assert.equal(forecast(s).you, e.encrypt || 0, 'an armor chit takes the hit');
+});
