@@ -109,13 +109,7 @@ export const VOICES = {
     const dirt = crusher(ctx, 14), g = ctx.createGain(); g.gain.value = 0.4; dirt.connect(g).connect(out);
     osc(ctx, dirt, t + 0.02, { type: 'sawtooth', f0: 60, f1: 30, glide: 0.35, a: 0.004, peak: 0.6, d: 0.42 });
   },
-  // A part broke: a crunchy collapse with a glassy scatter on top.
-  break(ctx, out, t) {
-    osc(ctx, out, t, { type: 'sine', f0: 140, f1: 38, glide: 0.35, a: 0.003, peak: 0.7, d: 0.42 });
-    const dirt = crusher(ctx, 6); const g = ctx.createGain(); g.gain.value = 0.5; dirt.connect(g).connect(out);
-    noise(ctx, dirt, t, { type: 'lowpass', f0: 7000, f1: 300, q: 2, glide: 0.35, a: 0.002, peak: 0.5, d: 0.4 });
-    [0.03, 0.07, 0.12].forEach((dt, i) => osc(ctx, out, t + dt, { type: 'sine', f0: NOTE(96 - i * 5 + Math.floor(Math.random() * 3)), a: 0.001, peak: 0.07, d: 0.18 }));
-  },
+  break(ctx, out, t) { partBreak(ctx, lifted(ctx, out, 1.2), t); }, // the same as RECIPES.break: it needs no samples
   // Something hit YOU: a dull, distorted impact. It should feel bad, not shrill.
   hurt(ctx, out, t) {
     const dirt = crusher(ctx, 9), lp = ctx.createBiquadFilter(), g = ctx.createGain();
@@ -143,24 +137,9 @@ export const VOICES = {
     noise(ctx, dirt, t, { type: 'bandpass', f0: 5000, f1: 400, q: 1.5, glide: 0.3, a: 0.01, peak: 0.5, d: 0.32 });
     osc(ctx, out, t, { type: 'square', f0: 1400, f1: 300, glide: 0.25, a: 0.003, peak: 0.05, d: 0.25 });
   },
-  // An armor chit broke: a bright metallic clink, lighter than a hit.
-  chit(ctx, out, t) {
-    osc(ctx, out, t, { type: 'triangle', f0: 2200, f1: 1500, glide: 0.05, a: 0.001, peak: 0.22, d: 0.12 });
-    osc(ctx, out, t, { type: 'sine', f0: 3300, a: 0.001, peak: 0.1, d: 0.09, detune: 12 });
-    noise(ctx, out, t, { type: 'bandpass', f0: 5000, q: 3, a: 0.001, peak: 0.18, d: 0.03 });
-  },
-  // A bare part patched itself: a quick rising re-lock, a little ominous.
-  patch(ctx, out, t) {
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800; lp.connect(out);
-    osc(ctx, lp, t, { type: 'square', f0: 220, a: 0.004, peak: 0.12, d: 0.07 });
-    osc(ctx, lp, t + 0.07, { type: 'square', f0: 330, a: 0.004, peak: 0.12, d: 0.1 });
-    noise(ctx, out, t + 0.07, { type: 'bandpass', f0: 1600, q: 5, a: 0.001, peak: 0.1, d: 0.03 });
-  },
-  // You pushed an attack back: a quick upward swipe and a pop.
-  interrupt(ctx, out, t) {
-    noise(ctx, out, t, { type: 'bandpass', f0: 500, f1: 4000, q: 2.5, glide: 0.12, a: 0.02, peak: 0.4, d: 0.12 });
-    osc(ctx, out, t + 0.1, { type: 'sine', f0: 1200, f1: 700, glide: 0.05, a: 0.002, peak: 0.28, d: 0.08 });
-  },
+  chit(ctx, out, t) { chitShatter(ctx, lifted(ctx, out, 2.4), t); }, // the same as RECIPES.chit: it needs no samples
+  patch(ctx, out, t) { patchLock(ctx, lifted(ctx, out, 1.2), t); }, // the same as RECIPES.patch: it needs no samples
+  interrupt(ctx, out, t) { deflect(ctx, lifted(ctx, out, 2.4), t); }, // the same as RECIPES.interrupt: it needs no samples
   // The virus adapted: a low growl that swells.
   escalate(ctx, out, t) {
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 6;
@@ -297,6 +276,8 @@ function modem(ctx, out, t, { dur = 0.1, lo = 1070, hi = 1270, baud = 90, peak =
 // room: how much of the voice goes to the reverb. Each play(ctx, out, t, opts, S) layers samples
 // (S(name, at, opts)) and synth building blocks into `out`.
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
+// A gain stage in front of `out` (the synthesized voices run quieter than the samples).
+const lifted = (ctx, out, k) => { const g = ctx.createGain(); g.gain.value = k; g.connect(out); return g; };
 export const RECIPES = {
   // Fired inside the Sync Window: a tight, bright lock-on over the hit.
   sync: { room: 0.14, play(ctx, out, t, o, S) {
@@ -312,22 +293,10 @@ export const RECIPES = {
     digitalHit(ctx, out, t, clamp01(Math.log(Math.max(1, amount) / 4) / Math.log(12)), false);
   } },
   crit: { room: 0.1, play(ctx, out, t) { digitalHit(ctx, out, t, 1, true); } },
-  // An armor chit broke: a plate cracks and glass shatters off it, with a bright snap on top.
-  chit: { room: 0.16, play(ctx, out, t, o, S) {
-    S('plate-h', 0, { gain: 0.9, rate: 1.15 });
-    S('glass-l', 0.008, { gain: 0.6, rate: 1.25 });
-    S('tin', 0.02, { gain: 0.3, rate: 1.4, lp: 9000 });
-    S('metal-l', 0.004, { gain: 0.35, rate: 1.5 });
-    osc(ctx, out, t, { type: 'square', f0: 2400, f1: 900, glide: 0.05, a: 0.001, peak: 0.08, d: 0.06 });
-  } },
-  // A part broke: metal gives, glass scatters, the floor drops out, a burst of bad data.
-  break: { room: 0.26, play(ctx, out, t, o, S) {
-    S('metal-h', 0, { gain: 0.85, rate: 0.8 });
-    S('glass-h', 0.012, { gain: 0.6 });
-    S('mining', 0.02, { gain: 0.4, rate: 0.9 });
-    S('subdrop', 0, { gain: 0.65 });
-    S('glitch', 0.06, { gain: 0.35 }); S('glitch', 0.1, { gain: 0.25, rate: 0.8 });
-  } },
+  // An armor chit broke: a crushed snap, a spray of glassy data shards, a ringing ping.
+  chit: { room: 0.12, play(ctx, out, t) { chitShatter(ctx, lifted(ctx, out, 2.4), t); } },
+  // A part broke: the digital hit at full size, a long cascade into a falling FM drop, shards flying, a crushed sub.
+  break: { room: 0.12, play(ctx, out, t) { partBreak(ctx, lifted(ctx, out, 1.2), t); } },
   // Something hit YOU: a heavy, dull body blow. It should feel bad, and worse the bigger it is.
   hurt: { room: 0.1, play(ctx, out, t, { frac = 0.08 } = {}, S) {
     const k = clamp01(frac * 5);
@@ -369,19 +338,10 @@ export const RECIPES = {
     const dirt = crusher(ctx, 4), g = ctx.createGain(); g.gain.value = 0.3; dirt.connect(g).connect(out);
     noise(ctx, dirt, t, { type: 'bandpass', f0: 5000, f1: 400, q: 1.5, glide: 0.3, a: 0.01, peak: 0.5, d: 0.32 });
   } },
-  // A bare part patched itself: a rising re-lock and a tin clack. A little ominous.
-  patch: { room: 0.12, play(ctx, out, t, o, S) {
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800; lp.connect(out);
-    osc(ctx, lp, t, { type: 'square', f0: 220, a: 0.004, peak: 0.09, d: 0.07 });
-    osc(ctx, lp, t + 0.07, { type: 'square', f0: 330, a: 0.004, peak: 0.09, d: 0.1 });
-    S('tin', 0.07, { gain: 0.75, rate: 1.1 });
-  } },
-  // You pushed an attack back (or blocked it): a swing and a clang as it glances off.
-  interrupt: { room: 0.16, play(ctx, out, t, o, S) {
-    S('whoosh', 0, { gain: 0.3, rate: 1.5, lp: 6000 });
-    S('metal-l', 0.07, { gain: 0.5, rate: 0.95 });
-    S('relay', 0.07, { gain: 0.25 });
-  } },
+  // A bare part patched itself: static swells and snaps into a lock over a rising FM tone.
+  patch: { room: 0.12, play(ctx, out, t) { patchLock(ctx, lifted(ctx, out, 1.2), t); } },
+  // You pushed an attack back: a rising zap, a ringing metallic clang, bouncing echoes.
+  interrupt: { room: 0.12, play(ctx, out, t) { deflect(ctx, lifted(ctx, out, 2.4), t); } },
   // The virus adapted: a low growl that swells, and something heavy shifting.
   escalate: { room: 0.22, play(ctx, out, t, o, S) {
     VOICES.escalate(ctx, out, t);
@@ -586,133 +546,43 @@ function digitalHit(ctx, out, t, k, c) {
 function shards(ctx, out, t, { n = 7, hi = 7000, lo = 2200, peak = 0.09, span = 0.12 } = {}) {
   for (let i = 0; i < n; i++) { const f = lo + Math.random() * (hi - lo); osc(ctx, out, t + Math.random() * span * (i / n + 0.15), { type: 'square', f0: f, f1: f * 0.85, glide: 0.02, a: 0.0005, peak: peak * (1 - i / (n * 1.4)), d: 0.012 + Math.random() * 0.02 }); }
 }
-export const CANDIDATES = {
-  // Chit A: a crushed snap and a spray of glassy data shards, with a ringing ping.
-  'chit-a'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.06, fb: 0.35, wet: 0.35, lp: 5000 }), b = crushBus(ctx, fx, 10, 2.4);
-    noise(ctx, b, t, { type: 'highpass', f0: 6000, a: 0.0005, peak: 0.4, d: 0.01 });
-    zap(ctx, b, t, { dur: 0.035, peak: 0.35, f0: 8000, f1: 2500 });
-    shards(ctx, b, t + 0.006, { n: 9 });
-    ringmod(ctx, fx, t + 0.02, { fc: 3200, fmod: 230, dur: 0.12, peak: 0.07, type: 'sine' });
-  },
-  // Chit B: a bit flipping off: a click, then a two-step falling ping, crushed, with a tiny static puff.
-  'chit-b'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.07, fb: 0.3, wet: 0.3 }), b = crushBus(ctx, fx, 8, 2.2);
-    noise(ctx, b, t, { type: 'highpass', f0: 5000, a: 0.0005, peak: 0.35, d: 0.008 });
-    osc(ctx, b, t, { type: 'square', f0: 2637, a: 0.001, peak: 0.16, d: 0.035 });
-    osc(ctx, b, t + 0.035, { type: 'square', f0: 1760, f1: 1700, glide: 0.05, a: 0.001, peak: 0.13, d: 0.07 });
-    stat(ctx, b, t, { hold: 3, dur: 0.05, peak: 0.12, hp: 3000 });
-  },
-  // Break A: the big digital hit's impact, a long cascade into a falling FM drop, shards flying, a crushed sub.
-  'break-a'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.11, fb: 0.55, wet: 0.55, lp: 2200 }), b = crushBus(ctx, fx, 10, 3);
-    impact(ctx, b, t, 1, true);
-    const w = cascade(ctx, b, t + 0.01, 30, 6000);
-    fm(ctx, b, t + 0.02 + w, { fc: 90, f1: 28, ratio: 1.41, i0: 10, i1: 0.3, dur: 0.45, peak: 0.42 });
-    shards(ctx, fx, t + 0.04, { n: 12, hi: 6000, lo: 900, peak: 0.07, span: 0.3 });
-    osc(ctx, b, t + 0.02, { type: 'sine', f0: 70, f1: 30, glide: 0.4, a: 0.002, peak: 0.5, d: 0.5 });
-  },
-  // Break B: a power-down: impact, a falling CRT whine through the crusher, a static burst that fades, a final thunk.
-  'break-b'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.09, fb: 0.45, wet: 0.4 }), b = crushBus(ctx, fx, 12, 2.8);
-    impact(ctx, b, t, 0.8, false);
-    osc(ctx, b, t + 0.01, { type: 'sawtooth', f0: 2400, f1: 60, glide: 0.55, a: 0.002, peak: 0.22, d: 0.6 });
-    ringmod(ctx, b, t + 0.01, { fc: 600, fmod: 47, dur: 0.5, peak: 0.12 });
-    stat(ctx, b, t + 0.02, { hold: 8, dur: 0.45, peak: 0.22, hp: 400 });
-    osc(ctx, b, t + 0.55, { type: 'square', f0: 80, f1: 40, glide: 0.05, a: 0.001, peak: 0.35, d: 0.12 });
-    noise(ctx, b, t + 0.55, { type: 'lowpass', f0: 900, a: 0.001, peak: 0.25, d: 0.05 });
-  },
-  // Patch A: three rising crushed notes in a minor key, then a latch clicks shut and hums.
-  'patch-a'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.08, fb: 0.35, wet: 0.35, lp: 1800 }), b = crushBus(ctx, fx, 8, 2.2);
-    [220, 262, 330].forEach((f, i) => osc(ctx, b, t + i * 0.06, { type: 'square', f0: f, a: 0.002, peak: 0.13, d: 0.055 }));
-    noise(ctx, b, t + 0.19, { type: 'highpass', f0: 3000, a: 0.0005, peak: 0.3, d: 0.01 });
-    osc(ctx, b, t + 0.19, { type: 'square', f0: 110, f1: 70, glide: 0.04, a: 0.001, peak: 0.25, d: 0.07 });
-    ringmod(ctx, fx, t + 0.2, { fc: 330, fmod: 60, dur: 0.3, peak: 0.07, type: 'sawtooth' });
-  },
-  // Patch B: static swells in reverse and snaps into a lock; an FM tone rises under it.
-  'patch-b'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.07, fb: 0.3, wet: 0.3, lp: 2400 }), b = crushBus(ctx, fx, 10, 2.4);
-    const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
-    src.buffer = sahBuf(ctx, 6); f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3500, t + 0.22);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.28, t + 0.22); g.gain.setValueAtTime(0.0001, t + 0.225);
-    src.connect(f).connect(g).connect(b); src.start(t); src.stop(t + 0.3);
-    fm(ctx, b, t, { fc: 110, f1: 220, ratio: 2, i0: 2, i1: 6, dur: 0.23, peak: 0.16 });
-    noise(ctx, b, t + 0.225, { type: 'highpass', f0: 4000, a: 0.0005, peak: 0.35, d: 0.012 });
-    osc(ctx, b, t + 0.225, { type: 'square', f0: 165, f1: 120, glide: 0.03, a: 0.001, peak: 0.22, d: 0.06 });
-  },
-  // Interrupt A: a deflection: a rising zap, a ringing metallic clang, bouncing echoes.
-  'interrupt-a'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.1, fb: 0.45, wet: 0.5, lp: 3500 }), b = crushBus(ctx, fx, 12, 2.4);
-    zap(ctx, b, t, { dur: 0.07, peak: 0.3, f0: 900, f1: 5000 });
-    ringmod(ctx, fx, t + 0.05, { fc: 1400, fmod: 333, dur: 0.25, peak: 0.12, type: 'triangle' });
-    ringmod(ctx, fx, t + 0.05, { fc: 2100, fmod: 177, dur: 0.18, peak: 0.07, type: 'square' });
-    noise(ctx, b, t + 0.05, { type: 'highpass', f0: 5000, a: 0.0005, peak: 0.3, d: 0.01 });
-  },
-  // Interrupt B: a packet rejected: a hard double click, a pitched-down blip-bloop, a puff of static.
-  'interrupt-b'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.06, fb: 0.3, wet: 0.3 }), b = crushBus(ctx, fx, 8, 2.4);
-    noise(ctx, b, t, { type: 'highpass', f0: 4500, a: 0.0005, peak: 0.4, d: 0.008 });
-    noise(ctx, b, t + 0.03, { type: 'highpass', f0: 4500, a: 0.0005, peak: 0.35, d: 0.008 });
-    osc(ctx, b, t + 0.03, { type: 'square', f0: 1320, f1: 990, glide: 0.04, a: 0.001, peak: 0.14, d: 0.05 });
-    osc(ctx, b, t + 0.09, { type: 'square', f0: 660, f1: 330, glide: 0.08, a: 0.001, peak: 0.16, d: 0.1 });
-    stat(ctx, b, t + 0.03, { hold: 4, dur: 0.07, peak: 0.12, hp: 1500 });
-  },
-  // Chit C: a shield cracking: a hard crushed thunk, an inharmonic FM clang (struck digital plate), electric crackle.
-  'chit-c'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.07, fb: 0.4, wet: 0.4, lp: 4200 }), b = crushBus(ctx, fx, 10, 3);
-    noise(ctx, b, t, { type: 'highpass', f0: 3500, a: 0.0005, peak: 0.5, d: 0.014 });
-    osc(ctx, b, t, { type: 'square', f0: 140, f1: 55, glide: 0.05, a: 0.001, peak: 0.45, d: 0.09 });
-    fm(ctx, b, t + 0.004, { fc: 620, f1: 540, ratio: 3.71, i0: 6, i1: 1, dur: 0.22, peak: 0.3 });
-    zap(ctx, b, t + 0.01, { dur: 0.12, peak: 0.35, f0: 5000, f1: 1200 });
-    stat(ctx, b, t + 0.03, { hold: 2, dur: 0.1, peak: 0.18, hp: 4000 });
-  },
-  // Chit D: a forcefield breached: a buzzing field hum, cut by a hard crack, then sparks fizzing off.
-  'chit-d'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.06, fb: 0.35, wet: 0.35, lp: 5000 }), b = crushBus(ctx, fx, 9, 3);
-    ringmod(ctx, b, t, { fc: 240, fmod: 60, dur: 0.06, peak: 0.25, type: 'sawtooth' });
-    noise(ctx, b, t + 0.05, { type: 'highpass', f0: 2500, a: 0.0005, peak: 0.6, d: 0.02 });
-    osc(ctx, b, t + 0.05, { type: 'square', f0: 180, f1: 45, glide: 0.06, a: 0.001, peak: 0.45, d: 0.1 });
-    for (let i = 0; i < 7; i++) zap(ctx, b, t + 0.07 + i * 0.025 + Math.random() * 0.015, { dur: 0.02, peak: 0.25 * (1 - i / 9), f0: 7000, f1: 3000 });
-  },
-  // Break C: a system crash: the part's tone stutters faster and faster (a stuck buffer), cuts out, then a deep boom.
-  'break-c'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.13, fb: 0.5, wet: 0.45, lp: 1800 }), b = crushBus(ctx, fx, 8, 3);
-    let at = t, gap = 0.07;
-    for (let i = 0; i < 9; i++) { osc(ctx, b, at, { type: 'sawtooth', f0: 330 - i * 18, a: 0.001, peak: 0.2, d: Math.min(0.05, gap * 0.8) }); stat(ctx, b, at, { hold: 4, dur: Math.min(0.04, gap * 0.7), peak: 0.1, hp: 1200 }); at += gap; gap *= 0.78; }
-    const boom = at + 0.06;
-    noise(ctx, b, boom, { type: 'lowpass', f0: 1200, f1: 200, glide: 0.3, a: 0.002, peak: 0.6, d: 0.35 });
-    osc(ctx, b, boom, { type: 'sine', f0: 65, f1: 28, glide: 0.5, a: 0.002, peak: 0.7, d: 0.6 });
-    osc(ctx, b, boom, { type: 'square', f0: 98, f1: 33, glide: 0.25, a: 0.001, peak: 0.3, d: 0.25 });
-  },
-  // Break D: deleted: a wide burst of crushed noise whose grain coarsens as it falls, a sub boom, a dead-line tone.
-  'break-d'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.12, fb: 0.45, wet: 0.45, lp: 2000 });
-    [2, 5, 11, 24].forEach((h, i) => stat(ctx, crushBus(ctx, fx, 12 - i * 2, 2.6), t + i * 0.08, { hold: h, dur: 0.12, peak: 0.32 - i * 0.04, hp: 150 }));
-    const b = crushBus(ctx, fx, 10, 2.6);
-    osc(ctx, b, t, { type: 'sine', f0: 80, f1: 26, glide: 0.6, a: 0.002, peak: 0.75, d: 0.7 });
-    noise(ctx, b, t, { type: 'highpass', f0: 3000, a: 0.0005, peak: 0.45, d: 0.015 });
-    osc(ctx, fx, t + 0.42, { type: 'square', f0: 480, a: 0.004, peak: 0.07, d: 0.35 });
-  },
-  // Interrupt C: a block: a heavy low thunk, a loud inharmonic clang, a shove of filtered static.
-  'interrupt-c'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.09, fb: 0.4, wet: 0.4, lp: 3000 }), b = crushBus(ctx, fx, 10, 3);
-    osc(ctx, b, t, { type: 'square', f0: 120, f1: 60, glide: 0.06, a: 0.001, peak: 0.55, d: 0.12 });
-    noise(ctx, b, t, { type: 'highpass', f0: 3000, a: 0.0005, peak: 0.5, d: 0.012 });
-    fm(ctx, b, t + 0.005, { fc: 440, f1: 400, ratio: 2.76, i0: 7, i1: 1.5, dur: 0.3, peak: 0.32 });
-    noise(ctx, b, t + 0.02, { type: 'bandpass', f0: 600, f1: 2400, q: 1.2, glide: 0.15, a: 0.01, peak: 0.3, d: 0.16 });
-  },
-  // Interrupt D: a counter-surge: power ramps up fast and slams into a thick buzzing wall; the attack is thrown back.
-  'interrupt-d'(ctx, out, t) {
-    const fx = echoBus(ctx, out, { time: 0.1, fb: 0.4, wet: 0.4, lp: 3000 }), b = crushBus(ctx, fx, 10, 3);
-    osc(ctx, b, t, { type: 'sawtooth', f0: 150, f1: 1200, glide: 0.09, a: 0.003, peak: 0.22, d: 0.09 });
-    const hit = t + 0.09;
-    noise(ctx, b, hit, { type: 'highpass', f0: 2500, a: 0.0005, peak: 0.55, d: 0.015 });
-    osc(ctx, b, hit, { type: 'square', f0: 100, f1: 50, glide: 0.08, a: 0.001, peak: 0.5, d: 0.14 });
-    ringmod(ctx, b, hit, { fc: 300, fmod: 90, dur: 0.22, peak: 0.25, type: 'sawtooth' });
-    zap(ctx, b, hit + 0.01, { dur: 0.1, peak: 0.3, f0: 4000, f1: 700 });
-  },
-};
+// ---- chit, break, patch and interrupt (picked by Dave from synthesized candidates, 2026-10-02) ----
+// Chit A: a crushed snap and a spray of glassy data shards, with a ringing ping.
+function chitShatter(ctx, out, t) {
+  const fx = echoBus(ctx, out, { time: 0.06, fb: 0.35, wet: 0.35, lp: 5000 }), b = crushBus(ctx, fx, 10, 2.4);
+  noise(ctx, b, t, { type: 'highpass', f0: 6000, a: 0.0005, peak: 0.4, d: 0.01 });
+  zap(ctx, b, t, { dur: 0.035, peak: 0.35, f0: 8000, f1: 2500 });
+  shards(ctx, b, t + 0.006, { n: 9 });
+  ringmod(ctx, fx, t + 0.02, { fc: 3200, fmod: 230, dur: 0.12, peak: 0.07, type: 'sine' });
+}
+// Break A: the big digital hit's impact, a long cascade into a falling FM drop, shards flying, a crushed sub.
+function partBreak(ctx, out, t) {
+  const fx = echoBus(ctx, out, { time: 0.11, fb: 0.55, wet: 0.55, lp: 2200 }), b = crushBus(ctx, fx, 10, 3);
+  impact(ctx, b, t, 1, true);
+  const w = cascade(ctx, b, t + 0.01, 30, 6000);
+  fm(ctx, b, t + 0.02 + w, { fc: 90, f1: 28, ratio: 1.41, i0: 10, i1: 0.3, dur: 0.45, peak: 0.42 });
+  shards(ctx, fx, t + 0.04, { n: 12, hi: 6000, lo: 900, peak: 0.07, span: 0.3 });
+  osc(ctx, b, t + 0.02, { type: 'sine', f0: 70, f1: 30, glide: 0.4, a: 0.002, peak: 0.5, d: 0.5 });
+}
+// Patch B: static swells in reverse and snaps into a lock; an FM tone rises under it.
+function patchLock(ctx, out, t) {
+  const fx = echoBus(ctx, out, { time: 0.07, fb: 0.3, wet: 0.3, lp: 2400 }), b = crushBus(ctx, fx, 10, 2.4);
+  const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+  src.buffer = sahBuf(ctx, 6); f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3500, t + 0.22);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.28, t + 0.22); g.gain.setValueAtTime(0.0001, t + 0.225);
+  src.connect(f).connect(g).connect(b); src.start(t); src.stop(t + 0.3);
+  fm(ctx, b, t, { fc: 110, f1: 220, ratio: 2, i0: 2, i1: 6, dur: 0.23, peak: 0.16 });
+  noise(ctx, b, t + 0.225, { type: 'highpass', f0: 4000, a: 0.0005, peak: 0.35, d: 0.012 });
+  osc(ctx, b, t + 0.225, { type: 'square', f0: 165, f1: 120, glide: 0.03, a: 0.001, peak: 0.22, d: 0.06 });
+}
+// Interrupt A: a deflection: a rising zap, a ringing metallic clang, bouncing echoes.
+function deflect(ctx, out, t) {
+  const fx = echoBus(ctx, out, { time: 0.1, fb: 0.45, wet: 0.5, lp: 3500 }), b = crushBus(ctx, fx, 12, 2.4);
+  zap(ctx, b, t, { dur: 0.07, peak: 0.3, f0: 900, f1: 5000 });
+  ringmod(ctx, fx, t + 0.05, { fc: 1400, fmod: 333, dur: 0.25, peak: 0.12, type: 'triangle' });
+  ringmod(ctx, fx, t + 0.05, { fc: 2100, fmod: 177, dur: 0.18, peak: 0.07, type: 'square' });
+  noise(ctx, b, t + 0.05, { type: 'highpass', f0: 5000, a: 0.0005, peak: 0.3, d: 0.01 });
+}
 
 // The chain everything plays into: a little headroom and a gentle compressor, with the room beside it.
 function chain(ctx) {
@@ -731,8 +601,7 @@ function voiceAt(ctx, ch, name, t, opts = {}) {
   const r = RECIPES[name], ready = banks.get(ctx)?.ready;
   const v = ctx.createGain();
   v.connect(ch.master);
-  if (CANDIDATES[name]) { const send = ctx.createGain(), lift = ctx.createGain(); send.gain.value = 0.12; lift.gain.value = /^(chit|interrupt)-[ab]/.test(name) ? 2.4 : 1.2; lift.connect(v); v.connect(send).connect(ch.room); CANDIDATES[name](ctx, lift, t, opts); }
-  else if (r && ready) {
+  if (r && ready) {
     const send = ctx.createGain(); send.gain.value = r.room; v.connect(send).connect(ch.room);
     r.play(ctx, v, t, opts, (n, at, o) => sample(ctx, v, t, n, { ...o, at }));
   } else if (VOICES[name]) VOICES[name](ctx, v, t, opts);
