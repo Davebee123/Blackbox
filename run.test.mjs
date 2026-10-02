@@ -578,3 +578,18 @@ test('top up: pay to fill Signal or the server now; less missing costs less; not
   s.run.integrity = 10;
   assert.match(say(s, 'top up').at(-1).message, /Top up at home/);
 });
+
+test('typos during a guard fight stay on the fight screen, out of the run terminal', async () => {
+  const { netTranscript } = await import('./dist/view.mjs');
+  const s = fresh();
+  say(s, 'connect sprawl');
+  say(s, 'cd ' + Object.keys(s.zone.spawns)[0].slice(1));
+  say(s, 'attack');
+  command(s, 'engage');
+  command(s, 'spikefrag2');
+  assert.ok(s.logs.some((e) => e.type === 'warning' && e.fight), 'the fight still gets its warning');
+  say(s, 'jack out');
+  say(s, 'pusle');
+  const term = netTranscript(s);
+  assert.doesNotMatch(term, /spikefrag2/);
+});

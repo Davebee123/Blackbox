@@ -689,7 +689,8 @@ function sweepMarkup(s, e, live) {
 
 export function netTranscript(s, limit = 80) {
   const start = s.logs.findLastIndex((e) => e.type === 'run-start');
-  const lines = s.logs.slice(Math.max(0, start)).filter((e) => NET_CLASS[e.type] !== undefined).slice(-limit);
+  // Warnings from a fight (typos, bad targets) belong to the fight: the terminal skips them.
+  const lines = s.logs.slice(Math.max(0, start)).filter((e) => NET_CLASS[e.type] !== undefined && !(e.type === 'warning' && e.fight)).slice(-limit);
   const lastSweep = lines.findLastIndex((e) => e.type === 'net-sweep');
   return lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : esc(e.message)}</li>`).join('');
 }

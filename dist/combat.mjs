@@ -530,7 +530,7 @@ export function emit(s, type, message, detail = {}) {
 
 export function warn(s, text) {
   if (active(s)) s.encounter.metrics.invalid++;
-  emit(s, 'warning', text);
+  emit(s, 'warning', text, active(s) ? { fight: true } : {}); // fight typos stay on the fight screen, out of the run terminal
 }
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
