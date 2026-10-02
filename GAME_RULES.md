@@ -257,7 +257,7 @@ Every server you find is wired to two you haven't found yet, one layer deeper. T
 
 ## Cables (cables.mjs)
 
-On the fight board, everything that lands this cycle is wired to its target: a fiber-optic line arcs from the pill's right edge, over the +1 column, into the target's row. Your command (teal) and each crewmate's (violet) go to the part they're aimed at; the virus's attacks (red, yellow for encryption or a blind) go to you, to every crewmate as well when a hit lands on everyone, or only to whoever is drawing fire. Veiled or blinded attacks get no cable (you can't see them). When something fires, a pulse of light runs down its line and sparks where it lands. `cables off` / `cables on` switches them.
+On the fight board, every player's command this cycle is wired to its target: a fiber-optic line arcs from the pill's right edge, over the +1 column, into the target's row. Your command (teal) and each crewmate's (violet) go to the part they're aimed at. The virus's attacks have no cables (for now). When something fires, a pulse of light runs down its line and sparks where it lands. `cables off` / `cables on` switches them.
 
 ## Co-op, simulated (crew.mjs)
 

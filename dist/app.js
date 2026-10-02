@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { drawingFire, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { createArt } from './virus-art.mjs';
 import { createFeel } from './feel.mjs';
@@ -92,7 +92,7 @@ const shown = () => campaign;
 // ---------- art ----------
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const canMove = () => campaign.settings.motion && !reducedMotion.matches;
-// Cables (cables.mjs): who each command and attack this cycle is aimed at, and a pulse when it fires.
+// Cables (cables.mjs): which part each player's command this cycle is aimed at, and a pulse when it fires.
 const cables = createCables(document.getElementById('board'), { canMove: () => canMove() });
 const nowPill = (row) => row?.querySelector(':scope > .bcell:nth-child(2) .intent:not(.hidden):not(.crypt):not(.patch):not(.daemon)');
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
@@ -107,15 +107,6 @@ function cableSpecs(s) {
   if (mine && partRow(mine)) out.push({ from: nowPill(youRow()), to: partRow(mine), kind: 'you' });
   const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter && mateUp(m)) : [];
   for (const m of crew) { const t = aim(m.encounter); if (t && partRow(t)) out.push({ from: nowPill(mateRow(m.who)), to: partRow(t), kind: 'crew' }); }
-  // The virus's attacks landing this cycle → you, the crew, or whoever draws fire.
-  const tank = drawingFire(s) ? youRow() : (() => { const m = crew.find((x) => drawingFire(x)); return m ? mateRow(m.who) : null; })();
-  for (const i of intents(s, 1).filter((x) => x.col === 0 && !x.hidden && ['damage', 'encrypt', 'blind'].includes(x.effect))) {
-    const pill = nowPill(partRow(i.source));
-    if (!pill) continue;
-    if (i.effect !== 'damage') out.push({ from: pill, to: youRow(), kind: 'hot' });
-    else if (tank) out.push({ from: pill, to: tank, kind: 'virus' });
-    else for (const row of [youRow(), ...crew.map((m) => mateRow(m.who))]) out.push({ from: pill, to: row, kind: 'virus' });
-  }
   return out.filter((x) => x.from && x.to);
 }
 function drawCables() {
@@ -134,9 +125,6 @@ function firePulses(events) {
       if (seen.has(key) || !row) continue;
       seen.add(key);
       cables.pulse(nowPill(row) || row.querySelector('.bname'), partRow(e.target), e.who ? 'crew' : 'you');
-    } else if (e.type === 'server-hit' && e.source) {
-      const from = nowPill(partRow(e.source)) || partRow(e.source)?.querySelector('.bname');
-      cables.pulse(from, e.who ? mateRow(e.who) : youRow(), 'virus');
     }
   }
 }
