@@ -96,7 +96,7 @@ test('stepped cycles (the browser): you, then each crewmate, then the virus, one
     assert.equal(resolveCycle(s).length, 0, 'nothing else resolves meanwhile');
     stepCycle(s); assert.equal(s.encounter.steps.next, 1);
     stepCycle(s); assert.equal(s.encounter.steps.next, 2);
-    stepCycle(s);
+    for (let i = 0; i < 6 && s.encounter.steps; i++) stepCycle(s); // the virus: one step per attack due
     assert.equal(s.encounter.steps, null);
     assert.equal(s.encounter.cycle, c + 1, 'the virus went, and the cycle turned');
   } finally { hooks.stepped = false; }

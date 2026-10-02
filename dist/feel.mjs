@@ -145,9 +145,9 @@ export function createFeel({ settings, reducedMotion }) {
         const shake = !reducedMotion();
         for (const el of els) flash(el, shake || !sign.flash?.match(/nope|hurt/) ? sign.flash : 'fx-still');
         if (label) float(els[0], label, sign.float || 'amber', detail?.size);
-        if (sign.edge) edge();
-        voice(sign.voice, detail);
-        buzz(sign.buzz);
+        // detail.silent: the look without the sound or buzz (a crewmate's hit when yours already sounds).
+        if (sign.edge && !detail?.silent && !detail?.noEdge) edge();
+        if (!detail?.silent) { voice(sign.voice, detail); buzz(sign.buzz); }
       }
     },
     canBuzz: () => typeof navigator !== 'undefined' && 'vibrate' in navigator,

@@ -264,7 +264,7 @@ export function boardMarkup(s, selected) {
   const acted = e.steps ? crew.filter(mateUp)[e.steps.next - 1] : null;
   const mates = crew.map((m) => {
     const up = mateUp(m), q = m.encounter.queue, pct = (m.run.integrity / m.run.max) * 100;
-    return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span></span></div>
+    return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span></span></div>
       <div class="bcell">${up ? (q ? `<div class="intent mine mate">${esc(q.text)}</div>` : '<small class="quiet">thinking</small>') : '<small class="quiet">down</small>'}</div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>`;
   }).join('');
   const spans = fighting ? statusSpans(s) : [];

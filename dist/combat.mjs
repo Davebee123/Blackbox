@@ -1978,17 +1978,34 @@ export function stepCycle(s) {
   if (!active(s) || !e.steps || e.paused) return [];
   const first = s.serial;
   if (virusIntegrity(s).current > 0 && e.steps.next < e.steps.of) { hooks.crewActOne?.(s, e.steps.next++); return since(s, first); }
+  // The virus's turn: each attack due lands as its own step.
+  if (!e.steps.due) {
+    if (cycleStart(s)) { e.steps = null; return since(s, first); }
+    e.steps.due = dueNow(s).map((p) => p.id);
+    e.steps.landed = 0;
+  }
+  while (e.steps.due.length) {
+    const p = part(s, e.steps.due.shift());
+    if (!p || !alive(p) || !p.attack || p.attack.due > e.cycle) continue;
+    e.steps.landed++;
+    if (strike(s, p)) { e.steps = null; return since(s, first); }
+    if (e.steps.due.length) return since(s, first);
+  }
+  const landed = e.steps.landed;
   e.steps = null;
-  return endCycle(s, first);
+  cycleClose(s, landed);
+  return since(s, first);
 }
 
-// The rest of a cycle once everyone has acted: the kill check, encryption, the virus's attacks,
-// trace, patches, cooldown effects, and the cycle turns over.
-function endCycle(s, first) {
+// The rest of a cycle once everyone has acted (the virus's part), in three pieces so a stepped
+// cycle can land its attacks one at a time.
+// The start of the virus's part of a cycle: the kill check, encryption, a Sleeper waking,
+// echoes. True if the fight ended.
+function cycleStart(s) {
   const e = s.encounter;
   if (virusIntegrity(s).current === 0) {
     finish(s, 'victory');
-    return since(s, first);
+    return true;
   }
 
   // 1c. Encryption eats your server every cycle until the Encryptor breaks.
@@ -1999,7 +2016,7 @@ function endCycle(s, first) {
     if (dealt) emit(s, 'encrypted', `Encrypted: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: src?.id, amount: dealt });
     if (defender(s).integrity <= 0) {
       finish(s, 'crashed');
-      return since(s, first);
+      return true;
     }
   }
 
@@ -2024,36 +2041,35 @@ function endCycle(s, first) {
       if (!src) break;
       const dealt = takeDamage(s, x.amount, src.id, x.name + ' echo');
       if (dealt) emit(s, 'server-hit', `${x.name} echoes: −${dealt}.`, { source: src.id, amount: dealt });
-      if (defender(s).integrity <= 0) { finish(s, 'crashed'); return since(s, first); }
+      if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
     }
   }
 
-  // 2. Enemy attacks due this cycle.
-  let landed = 0;
-  for (const p of attackers(s).sort((a, b) => a.attack.due - b.attack.due)) {
-    if (p.attack.due <= e.cycle) {
-      // Co-op: a damage attack lands on everyone in the fight, each taking it in full (crew.mjs),
-      // unless someone is drawing fire (Bastion Firewall): then it all goes at them.
-      const crew = p.attack.effect === 'damage' ? hooks.crewAll?.(s) || [] : [];
-      const sink = crew.length ? drawingFire(s) || crew.find(drawingFire) : null;
-      if (sink) landAttack(sink, p);
-      else {
-        for (const m of crew) landAttack(m, { ...p, attack: { ...p.attack } }); // a copy each, so its timer and ramp move once
-        landAttack(s, p);
-      }
-      hooks.crewHurt?.(s);
-      landed++;
-      if (defender(s).integrity <= 0) {
-        finish(s, 'crashed');
-        return since(s, first);
-      }
-      if (virusIntegrity(s).current === 0) {
-        finish(s, 'victory');
-        return since(s, first);
-      }
-    }
+  return false;
+}
+// Attacks due now, soonest first.
+const dueNow = (s) => attackers(s).sort((a, b) => a.attack.due - b.attack.due).filter((p) => p.attack.due <= s.encounter.cycle);
+// One part's attack lands. True if the fight ended.
+function strike(s, p) {
+  const e = s.encounter;
+  if (!alive(p) || !p.attack || p.attack.due > e.cycle) return false;
+  // Co-op: a damage attack lands on everyone in the fight, each taking it in full (crew.mjs),
+  // unless someone is drawing fire (Bastion Firewall): then it all goes at them.
+  const crew = p.attack.effect === 'damage' ? hooks.crewAll?.(s) || [] : [];
+  const sink = crew.length ? drawingFire(s) || crew.find(drawingFire) : null;
+  if (sink) landAttack(sink, p);
+  else {
+    for (const m of crew) landAttack(m, { ...p, attack: { ...p.attack } }); // a copy each, so its timer and ramp move once
+    landAttack(s, p);
   }
-
+  hooks.crewHurt?.(s);
+  if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
+  if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
+  return false;
+}
+// The end of a cycle once the attacks are in: trace, patches, cooldown effects, the turn over.
+function cycleClose(s, landed) {
+  const e = s.encounter;
   // Your class's backtrace this cycle, in one line.
   if (e.passiveTrace) {
     e.trace = Math.min(100, e.trace + e.passiveTrace);
@@ -2110,6 +2126,17 @@ function endCycle(s, first) {
   e.cycle++;
   e.elapsedMs = 0;
   rollSync(s);
+}
+function endCycle(s, first) {
+  if (cycleStart(s)) return since(s, first);
+  // 2. Enemy attacks due this cycle.
+  let landed = 0;
+  for (const p of dueNow(s)) {
+    if (p.attack?.due > s.encounter.cycle) continue;
+    landed++;
+    if (strike(s, p)) return since(s, first);
+  }
+  cycleClose(s, landed);
   return since(s, first);
 }
 

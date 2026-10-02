@@ -292,13 +292,20 @@ function react(events) {
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
   if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && e.type === 'loot'), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
-  // Crewmates' events (crew.mjs) show on the board but stay quiet: one voice per cycle is yours.
-  const youBroke = events.some((e) => e.type === 'broken' && !e.who);
+  // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
+  // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
+  let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   for (const e of events) {
     if (e.who) {
-      if (e.type === 'damage') art.hit(e.target, 'hit');
-      if (e.type === 'broken') { art.hit(e.target, 'break'); flash(e.message); if (!youBroke) feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; }
-      continue;
+      const mate = `.bmate[data-mate="${e.who}"]`;
+      if (e.type === 'server-hit') {
+        art.hit(e.source, 'attack');
+        feel.add(e.crit ? 'hurtcrit' : 'hurt', mate, `${e.crit ? 'CRIT ' : ''}−${e.amount}`, { amount: e.amount, silent: hurtVoiced, noEdge: true });
+        hurtVoiced = true;
+        continue;
+      }
+      if (e.type === 'evaded' || e.type === 'blocked') { feel.add('evade', mate, e.type === 'evaded' ? 'EVADED' : 'BLOCKED', { silent: true }); continue; }
+      if (!['damage', 'broken', 'miss'].includes(e.type)) continue; // the rest is theirs: the log has it
     }
     switch (e.type) {
       case 'damage': {
@@ -956,7 +963,7 @@ addEventListener('resize', () => placeTip());
 // With a crew, a cycle plays out in turns: you, then each crewmate, then the virus, a beat apart
 // (stepCycle in combat.mjs), so you can follow who did what.
 hooks.stepped = true;
-const STEP_MS = { relaxed: 650, normal: 500, fast: 350 };
+const STEP_MS = { relaxed: 380, normal: 330, fast: 260 };
 let stepTimer = null;
 function stepLoop() {
   const e = campaign.encounter;
