@@ -66,3 +66,38 @@ test('crew off: back to solo; home intrusions stay solo', () => {
   play(s, 'crew off');
   assert.deepEqual(s.crewSim, []);
 });
+
+test('a Bastion drawing fire (Firewall) takes every attack; nobody else is hit', () => {
+  const s = start('bastion infiltrator');
+  const e = s.encounter;
+  const p = e.virus.parts.find((x) => x.attack?.effect === 'damage');
+  for (const x of e.virus.parts) if (x !== p && x.attack) x.attack.due = 999;
+  p.attack.due = e.cycle;
+  const [nyx, kilo] = matesOf(s);
+  for (const m of [s, nyx, kilo]) { m.encounter.chits = 0; m.encounter.shield = 0; }
+  nyx.encounter.buffs.sinkhole = e.cycle + 1;
+  const before = [s.run.integrity, nyx.run.integrity, kilo.run.integrity];
+  command(s, 'hold'); nyx.encounter.queue = kilo.encounter.queue = { ability: 'hold', text: 'hold' };
+  resolveCycle(s);
+  assert.ok(nyx.run.integrity < before[0 + 1], 'the Bastion took it');
+  assert.equal(s.run.integrity, before[0], 'you took nothing');
+  assert.equal(kilo.run.integrity, before[2], 'kilo took nothing');
+});
+
+test('stepped cycles (the browser): you, then each crewmate, then the virus, one step at a time', async () => {
+  const { hooks, stepCycle } = await import('./dist/combat.mjs');
+  const s = start('bastion infiltrator');
+  hooks.stepped = true;
+  try {
+    const c = s.encounter.cycle;
+    command(s, 'spike ' + s.encounter.virus.parts[0].id);
+    resolveCycle(s);
+    assert.deepEqual(s.encounter.steps, { next: 0, of: 2 }, 'you acted; the crew waits');
+    assert.equal(resolveCycle(s).length, 0, 'nothing else resolves meanwhile');
+    stepCycle(s); assert.equal(s.encounter.steps.next, 1);
+    stepCycle(s); assert.equal(s.encounter.steps.next, 2);
+    stepCycle(s);
+    assert.equal(s.encounter.steps, null);
+    assert.equal(s.encounter.cycle, c + 1, 'the virus went, and the cycle turned');
+  } finally { hooks.stepped = false; }
+});

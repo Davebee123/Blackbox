@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { createArt } from './virus-art.mjs';
 import { createFeel } from './feel.mjs';
@@ -952,6 +952,23 @@ $('tip-ok').addEventListener('click', () => { hideTip(true); $('command-input').
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
 addEventListener('resize', () => placeTip());
 
+// ---------- co-op steps ----------
+// With a crew, a cycle plays out in turns: you, then each crewmate, then the virus, a beat apart
+// (stepCycle in combat.mjs), so you can follow who did what.
+hooks.stepped = true;
+const STEP_MS = { relaxed: 650, normal: 500, fast: 350 };
+let stepTimer = null;
+function stepLoop() {
+  const e = campaign.encounter;
+  if (stepTimer || !active(campaign) || !e?.steps || e.paused) return;
+  stepTimer = setTimeout(() => {
+    stepTimer = null;
+    const events = stepCycle(campaign);
+    if (events.length) { react(events); save(); }
+    dirty = true;
+  }, STEP_MS[campaign.settings?.speed] || STEP_MS.normal);
+}
+
 // ---------- clock ----------
 let last = performance.now();
 let lastSecond = 0;
@@ -970,6 +987,7 @@ function frame(now) {
     campaign.restAt = wall;
     if (idleRegen(campaign, away)) { dirty = true; save(); }
   }
+  stepLoop();
   if (dirty) render();
   else tickUi();
   feel.flush();

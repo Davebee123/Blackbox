@@ -20,7 +20,7 @@ import { fxText } from './content.mjs';
 export const SAVE_VERSION = 27;
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
-export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewAll, crewHurt, crewEngage, crewEnd.
+export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; the browser sets stepped.
 
 export function fresh() {
   const s = {
@@ -1627,6 +1627,11 @@ function useAbility(s, intent, auto = false) {
     e.shield = Math.max(e.shield || 0, amount);
     emit(s, 'status', `Shield up: absorbs the next ${amount} damage.`);
   }
+  // Taunt (Bastion Firewall), in a crew only: every damage attack comes at you for a.taunt cycles.
+  if (a.taunt && (s.who || hooks.crewTurns?.(s))) {
+    e.buffs.sinkhole = e.cycle + a.taunt - 1;
+    emit(s, 'status', `Drawing fire: every attack comes at ${s.who || 'you'} for ${a.taunt} cycles.`);
+  }
   if (id === 'patch') {
     heal(s, scaled(s, (hasTalent(s, 'service-pack') ? 20 : a.heal) + 3 * rank(s, 'patch-notes')), a.name);
     e.regen = { amount: scaled(s, a.tick), left: a.ticks, from: e.cycle + 1, name: a.name };
@@ -1750,6 +1755,9 @@ export function attackAmount(p) {
   if (p.enrage && p.integrity < p.max / 2) n *= 1.5;
   return Math.round(n);
 }
+
+// A player drawing fire this cycle (Bastion Firewall in a crew): the one every attack goes at.
+export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.cycle ? s : null);
 
 function landAttack(s, p) {
   const e = s.encounter;
@@ -1951,11 +1959,33 @@ export function resolveCycle(s) {
   if (!active(s) || s.encounter.paused) return [];
   const first = s.serial;
   const e = s.encounter;
+  if (e.steps) return []; // a stepped cycle is still playing out (stepCycle)
   e.pendingTrace = 0;
 
   // 1. The players act first (you, then any crew), so breaking a part on its last cycle stops its attack.
   if (!playerPhase(s)) return since(s, first); // fled mid-fight
+  // Stepped co-op (the browser sets hooks.stepped): each crewmate's turn, then the virus's, comes
+  // as its own step (stepCycle), so the screen can show them one after another.
+  const turns = virusIntegrity(s).current > 0 ? hooks.crewTurns?.(s) || 0 : 0;
+  if (turns && hooks.stepped) { e.steps = { next: 0, of: turns }; return since(s, first); }
   if (hooks.crewAct) hooks.crewAct(s); // crew.mjs: simulated crewmates take their turns
+  return endCycle(s, first);
+}
+
+// The next step of a stepped cycle: one crewmate's turn, or (after the last) the virus's part.
+export function stepCycle(s) {
+  const e = s.encounter;
+  if (!active(s) || !e.steps || e.paused) return [];
+  const first = s.serial;
+  if (virusIntegrity(s).current > 0 && e.steps.next < e.steps.of) { hooks.crewActOne?.(s, e.steps.next++); return since(s, first); }
+  e.steps = null;
+  return endCycle(s, first);
+}
+
+// The rest of a cycle once everyone has acted: the kill check, encryption, the virus's attacks,
+// trace, patches, cooldown effects, and the cycle turns over.
+function endCycle(s, first) {
+  const e = s.encounter;
   if (virusIntegrity(s).current === 0) {
     finish(s, 'victory');
     return since(s, first);
@@ -2002,10 +2032,15 @@ export function resolveCycle(s) {
   let landed = 0;
   for (const p of attackers(s).sort((a, b) => a.attack.due - b.attack.due)) {
     if (p.attack.due <= e.cycle) {
-      // Co-op: a damage attack lands on everyone in the fight, each taking it in full (crew.mjs).
-      // Each crewmate gets a copy of the part, so the attack's timer and ramp move once.
-      if (p.attack.effect === 'damage') for (const m of hooks.crewAll?.(s) || []) landAttack(m, { ...p, attack: { ...p.attack } });
-      landAttack(s, p);
+      // Co-op: a damage attack lands on everyone in the fight, each taking it in full (crew.mjs),
+      // unless someone is drawing fire (Bastion Firewall): then it all goes at them.
+      const crew = p.attack.effect === 'damage' ? hooks.crewAll?.(s) || [] : [];
+      const sink = crew.length ? drawingFire(s) || crew.find(drawingFire) : null;
+      if (sink) landAttack(sink, p);
+      else {
+        for (const m of crew) landAttack(m, { ...p, attack: { ...p.attack } }); // a copy each, so its timer and ramp move once
+        landAttack(s, p);
+      }
       hooks.crewHurt?.(s);
       landed++;
       if (defender(s).integrity <= 0) {
@@ -2191,7 +2226,7 @@ function daemonCommand(s, text) {
 
 export function advance(s, deltaMs) {
   const first = s.serial;
-  if (active(s) && !s.encounter.paused) {
+  if (active(s) && !s.encounter.paused && !s.encounter.steps) { // the clock waits while a stepped cycle plays out
     s.encounter.elapsedMs += Math.max(0, deltaMs);
     while (active(s) && s.encounter.elapsedMs >= cycleLength(s)) {
       const remaining = s.encounter.elapsedMs - cycleLength(s);

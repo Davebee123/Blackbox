@@ -18,7 +18,7 @@ import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items 
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, blocked, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills,  cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, previewDamage, part } from './combat.mjs';
+import { drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, blocked, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills,  cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, previewDamage, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -222,7 +222,7 @@ export function statusSpans(s) {
   const add = (name, until, kind, title, value = '') => { if (until >= e.cycle) out.push({ name, value, cycles: until - e.cycle + 1, kind, title }); };
   const st = momentumStacks(s);
   if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${SKILLS.momentumMax} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
-  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(ABILITIES[k]?.name || k, until, 'you', ABILITIES[k]?.help || '');
+  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall, with a crew).' : ABILITIES[k]?.help || '');
   add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill crits.");
   add('Blinded', e.blindUntil, 'hot', hiddenNote(s), CONFIG.blindside > 1 ? `hits +${Math.round((CONFIG.blindside - 1) * 100)}%` : '');
   return out;
@@ -255,13 +255,16 @@ export function boardMarkup(s, selected) {
   const daemonCell = (c) => dmn.filter((id) => daemonNext(s, id) === e.cycle + c).map((id) => `<div class="intent daemon" data-k="daemon:${id}@${e.cycle + c}" title="${esc(DAEMONS[id].name)} v${daemonVersion(s, id)}: ${esc(daemonRule(s, id))}">${esc(DAEMONS[id].name.toLowerCase())}</div>`).join('');
   const cronCell = (c) => daemonCell(c) + (cron && cronDue(e.cycle + c) ? `<div class="intent daemon cron" data-k="cron@${e.cycle + c}" title="Cron Job (service): your server hits the soonest attacker for ${cronDamage(s)}">cron ${cronDamage(s)}</div>` : '');
   const you = fighting
-    ? `<div class="brow byou"><div class="bcell bname"><b>You</b><span class="part-tags">${youTags(s)}</span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
+    ? `<div class="brow byou${e.steps && e.steps.next === 0 ? ' acting' : ''}"><div class="bcell bname"><b>You</b><span class="part-tags">${youTags(s)}</span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
   // Simulated crewmates (crew.mjs): a row each, with Signal and what they'll do this cycle.
   const crew = fighting && e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
+  const sink = crew.length ? (drawingFire(s) ? 'you' : crew.find((m) => mateUp(m) && drawingFire(m))?.who || null) : null;
+  // Whose turn just played in a stepped cycle (crew.mjs): their row lights up.
+  const acted = e.steps ? crew.filter(mateUp)[e.steps.next - 1] : null;
   const mates = crew.map((m) => {
     const up = mateUp(m), q = m.encounter.queue, pct = (m.run.integrity / m.run.max) * 100;
-    return `<div class="brow bmate${up ? '' : ' down'}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span><span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span></span></div>
+    return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span></span></div>
       <div class="bcell">${up ? (q ? `<div class="intent mine mate">${esc(q.text)}</div>` : '<small class="quiet">thinking</small>') : '<small class="quiet">down</small>'}</div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>`;
   }).join('');
   const spans = fighting ? statusSpans(s) : [];
@@ -278,8 +281,8 @@ export function boardMarkup(s, selected) {
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one armor chit back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}<div class="intent hidden">?</div>${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c);
-      // With a crew, a damage attack lands on everyone.
-      const to = crew.length && hit?.effect === 'damage' ? 'all' : null;
+      // With a crew, a damage attack lands on everyone, or on whoever is drawing fire.
+      const to = crew.length && hit?.effect === 'damage' ? sink || 'all' : null;
       return `<div class="bcell">${cryptChip}${hit ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${patchChip}</div>`;
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;

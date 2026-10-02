@@ -84,16 +84,19 @@ hooks.crewEngage = (s) => {
   emit(s, 'status', `Crew in: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);
 };
 
-hooks.crewAct = (s) => {
-  for (const m of inFight(s)) {
-    if (!mateUp(m) || !livingParts(m).length) continue;
-    m.encounter.cycle = s.encounter.cycle;
-    const q = m.encounter.queue;
-    if (q?.target && !alive(part(m, q.target))) decide(m); // its target broke this cycle: pick again
-    playerPhase(m);
-    decide(m);
-  }
-};
+// One crewmate's turn (the i-th still standing).
+function turn(s, m) {
+  if (!m || !mateUp(m) || !livingParts(m).length) return;
+  m.encounter.cycle = s.encounter.cycle;
+  const q = m.encounter.queue;
+  if (q?.target && !alive(part(m, q.target))) decide(m); // its target broke this cycle: pick again
+  playerPhase(m);
+  decide(m);
+}
+const standing = (s) => inFight(s).filter(mateUp);
+hooks.crewAct = (s) => { for (const m of standing(s)) turn(s, m); };
+hooks.crewTurns = (s) => standing(s).length;
+hooks.crewActOne = (s, i) => turn(s, standing(s)[i]);
 
 // Everyone still standing in the fight besides you: a damage attack lands on each of them too.
 hooks.crewAll = (s) => inFight(s).filter(mateUp).map((m) => { m.encounter.cycle = s.encounter.cycle; return m; });

@@ -1513,5 +1513,8 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .bmate .part-name { color: var(--daemon); }
 .bmate.down { opacity: 0.45; }
 .intent.mine.mate { border-color: rgba(195, 166, 255, 0.5); color: var(--daemon); }
-.intent .at { display: block; color: var(--bright); font-weight: 600; }
+.intent { position: relative; }
+.intent .at { position: absolute; top: -8px; right: 4px; padding: 0 4px; font: 600 9px var(--mono); letter-spacing: 0.5px; color: var(--bright); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 2px; }
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
+.bmate.acting { background: rgba(195, 166, 255, 0.1); box-shadow: inset 3px 0 0 var(--daemon); }
+.byou.acting { background: rgba(127, 209, 199, 0.08); box-shadow: inset 3px 0 0 var(--you); }

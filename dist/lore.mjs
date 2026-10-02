@@ -18,7 +18,7 @@ export const SKILL_TEXT = {
 
   // Bastion: nothing lands unless you allow it.
   'kill-process': { desc: 'Terminate a module, dealing 30 damage. Deals 15 extra damage if its attack is due this cycle.', lore: 'kill -9. No appeal, no cleanup, no last words.' },
-  firewall: { desc: 'Raise a firewall that absorbs 20 damage. Absorbing a full hit enables Retaliate.', lore: 'Default deny. Everything else asks permission.' },
+  firewall: { desc: 'Raise a firewall that absorbs 20 damage. Absorbing a full hit enables Retaliate. With a crew, every attack comes at you for 2 cycles.', lore: 'Default deny. Everything else asks permission.' },
   retaliate: { desc: 'Strike back at a module, dealing double the damage you just took (up to 60). Usable the cycle after you are hit.', lore: 'Every packet it sent you, it gets back with interest.' },
   suspend: { desc: 'Suspend a module, delaying its attack by 2 cycles. With no target, delays the next attack to land.', lore: 'Freeze the process mid-thought. Let it wonder.' },
   patch: { desc: 'Patch yourself, restoring 10 Integrity, then 5 per cycle for 3 cycles.', lore: 'Hot-fix the wound while the fight is still live.' },
