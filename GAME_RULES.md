@@ -261,8 +261,10 @@ Online co-op comes later (a hosted server with logins). To try how it plays firs
 
 - Each crewmate is a player of its own: its class at your level, a Tuned protocol in every slot, its own Signal (full again at each fight), played by the same planner the balance scripts use.
 - Each cycle everyone acts (you, then the crew), then the virus. Statuses are shared: anyone's hits benefit from Exposed, Tagged, Throttled and Hooked.
-- A damage attack goes at whoever hit that part last (you, if nobody has); its chip on the timeline says who (→ nyx). Encryption, blinds and fragments stay on you.
-- The virus gets +120% Integrity and +100% damage per extra player. Simulated (planner bots, Tuned gear): a party of 2 loses about 20–27% Signal each per fight (the worst-hit player 40–50%), against about 45–55% solo; a party of 4 sometimes focuses one player hard.
+- A damage attack lands on everyone in the fight, each taking it in full, as if they fought it alone (its chip on the timeline says → all). Encryption, blinds and fragments stay on you.
+- The virus gets +150% Integrity per extra player (`CREW.hpPer`); its hits stay their solo size. Simulated (planner bots, Tuned gear): about 25–30% Signal lost per player per fight in a party of 2 or 4 (the worst-hit player 35–50%), against 35–57% solo. More hands means more answers (armor chits, Throttle, interrupts), so a party takes less than a lone player.
+- If your target breaks before your turn (a crewmate got it), your command goes at the next threat instead.
+- Crewmates' hits and breaks show on the board but stay quiet: the sounds are yours.
 - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it. Rewards are yours (the bots keep nothing).
 - On the fight screen each crewmate has a row (Signal, this cycle's command), and their lines in the log carry their name.
 

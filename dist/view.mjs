@@ -10,7 +10,7 @@ import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAIN
 import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
-import { matesOf, mateUp, targetOf } from './crew.mjs';
+import { matesOf, mateUp } from './crew.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
@@ -278,8 +278,8 @@ export function boardMarkup(s, selected) {
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one armor chit back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}<div class="intent hidden">?</div>${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c);
-      // With a crew, each damage attack says who it's going at (whoever hit that part last).
-      const to = crew.length && hit?.effect === 'damage' ? targetOf(s, p) || 'you' : null;
+      // With a crew, a damage attack lands on everyone.
+      const to = crew.length && hit?.effect === 'damage' ? 'all' : null;
       return `<div class="bcell">${cryptChip}${hit ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${patchChip}</div>`;
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;

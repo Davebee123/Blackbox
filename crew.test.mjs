@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, part } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
-import { CREW, matesOf, targetOf } from './dist/crew.mjs';
+import { CREW, matesOf } from './dist/crew.mjs';
 import { planner } from './dist/planner.mjs';
 
 const start = (crew) => {
@@ -31,16 +31,30 @@ test('crewmates act every cycle against the same virus, and the crew wins togeth
   assert.ok(matesOf(s).every((m) => m.encounter === null), 'the fight ends for everyone');
 });
 
-test('an attack goes at whoever hit that part last', () => {
+test('a damage attack lands on everyone in the fight, each in full', () => {
+  const s = start('bastion infiltrator');
+  const e = s.encounter;
+  const p = e.virus.parts.find((x) => x.attack?.effect === 'damage');
+  for (const x of e.virus.parts) if (x !== p && x.attack) x.attack.due = 999;
+  p.attack.due = e.cycle;
+  const mates = matesOf(s);
+  for (const m of [s, ...mates]) m.encounter.chits = 0;
+  const before = [s.run.integrity, ...mates.map((m) => m.run.integrity)];
+  command(s, 'hold'); for (const m of mates) { m.encounter.queue = { ability: 'hold', text: 'hold' }; }
+  resolveCycle(s);
+  const after = [s.run.integrity, ...mates.map((m) => m.run.integrity)];
+  assert.ok(after.every((v, i) => v < before[i]), `everyone took it: ${before} → ${after}`);
+  assert.equal(p.attack.due, e.cycle - 1 + p.attack.interval, 'its timer moved once');
+});
+
+test('your target broke before your turn: the command goes at the next part', () => {
   const s = start('bastion');
-  const p = s.encounter.virus.parts[0];
-  p.lastBy = 'nyx';
-  assert.equal(targetOf(s, p), 'nyx');
-  p.lastBy = null;
-  assert.equal(targetOf(s, p), null, 'nobody (or you): it comes at you');
-  const m = matesOf(s)[0];
-  p.lastBy = 'nyx'; m.run.integrity = 0;
-  assert.equal(targetOf(s, p), null, 'a downed crewmate draws nothing');
+  const [a, b] = s.encounter.virus.parts;
+  command(s, 'spike ' + a.id);
+  a.integrity = 0;
+  resolveCycle(s);
+  assert.ok(s.logs.some((e) => e.type === 'info' && /already broken: Spike goes at/.test(e.message)));
+  assert.ok(b.integrity < b.max || b.armor < b.maxArmor, 'it hit the other part');
 });
 
 test('crew off: back to solo; home intrusions stay solo', () => {

@@ -20,7 +20,7 @@ import { fxText } from './content.mjs';
 export const SAVE_VERSION = 27;
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
-export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewTarget, crewEngage, crewEnd.
+export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewAll, crewHurt, crewEngage, crewEnd.
 
 export function fresh() {
   const s = {
@@ -1393,7 +1393,6 @@ function topUp(s, what, wanted = null) {
 function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
-  if (base > 0 && !opts.server) p.lastBy = s.who || null; // co-op: a part goes after whoever hit it last (crew.mjs)
   // Sleeper: any hit wakes it.
   if (e.virus.dormant && base > 0) e.virus.woke = true;
   // Keylogger: the Logger only feels commands fired in a Sync Window (and the burns and helpers
@@ -1869,6 +1868,11 @@ function landAttack(s, p) {
 // on their own state against the shared virus (crew.mjs).
 export function playerPhase(s) {
   const e = s.encounter;
+  // Your target broke before your turn (a crewmate got it): the same command goes at the next threat.
+  if (e.queue?.target && !alive(part(s, e.queue.target))) {
+    const next = soonestAttacker(s) || livingParts(s)[0];
+    if (next) { emit(s, 'info', `${part(s, e.queue.target)?.name || 'Your target'} is already broken: ${ABILITIES[e.queue.ability]?.name || e.queue.ability} goes at ${next.name}.`); e.queue = { ...e.queue, target: next.id, text: `${e.queue.ability} ${next.id}` }; }
+  }
   if (e.queue) {
     const q = e.queue;
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
@@ -1998,10 +2002,11 @@ export function resolveCycle(s) {
   let landed = 0;
   for (const p of attackers(s).sort((a, b) => a.attack.due - b.attack.due)) {
     if (p.attack.due <= e.cycle) {
-      // Co-op: a damage attack goes at whoever hit this part last (crew.mjs); everything else stays on you.
-      const who = (p.attack.effect === 'damage' && hooks.crewTarget?.(s, p)) || s;
-      landAttack(who, p);
-      if (who !== s) hooks.crewHurt?.(s);
+      // Co-op: a damage attack lands on everyone in the fight, each taking it in full (crew.mjs).
+      // Each crewmate gets a copy of the part, so the attack's timer and ramp move once.
+      if (p.attack.effect === 'damage') for (const m of hooks.crewAll?.(s) || []) landAttack(m, { ...p, attack: { ...p.attack } });
+      landAttack(s, p);
+      hooks.crewHurt?.(s);
       landed++;
       if (defender(s).integrity <= 0) {
         finish(s, 'crashed');

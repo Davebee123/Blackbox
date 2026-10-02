@@ -5,9 +5,9 @@
 //
 // Rules being tried out:
 // - Everyone acts first each cycle (you, then the crew), then the virus.
-// - A damage attack goes at whoever hit that part last (you if nobody has). Encryption, blinds
-//   and fragments stay on you.
-// - Enemies get CREW.hpPer more Integrity and CREW.dmgPer more damage per extra player.
+// - A damage attack lands on everyone in the fight, each taking it in full (as if they fought it
+//   alone). Encryption, blinds and fragments stay on you.
+// - Enemies get CREW.hpPer more Integrity per extra player (CREW.dmgPer more damage, if set).
 // - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it.
 // - Only run fights (SPRAWL-00, rogue servers, guards); home intrusions stay solo.
 // Crewmates live beside the save (not in it): s.crewSim holds who's in the crew.
@@ -18,8 +18,8 @@ import { planner } from './planner.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
-  hpPer: 1.2, // enemy Integrity: +120% per extra player
-  dmgPer: 1, // enemy damage: +100% per extra player (it lands on one player: whoever hit that part last)
+  hpPer: 1.5, // enemy Integrity: +150% per extra player
+  dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   names: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill'],
 };
 
@@ -95,17 +95,8 @@ hooks.crewAct = (s) => {
   }
 };
 
-// Who a damage attack from part p goes at: whoever hit it last, if they're still standing.
-hooks.crewTarget = (s, p) => {
-  const m = p.lastBy && inFight(s).find((x) => x.who === p.lastBy);
-  if (!m || !mateUp(m)) return null;
-  m.encounter.cycle = s.encounter.cycle;
-  return m;
-};
-export const targetOf = (s, p) => {
-  const m = p.lastBy && inFight(s).find((x) => x.who === p.lastBy);
-  return m && mateUp(m) ? m.who : null;
-};
+// Everyone still standing in the fight besides you: a damage attack lands on each of them too.
+hooks.crewAll = (s) => inFight(s).filter(mateUp).map((m) => { m.encounter.cycle = s.encounter.cycle; return m; });
 
 // After an attack on a crewmate: at 0 Signal they're down for the rest of the fight.
 export function checkDown(s) {

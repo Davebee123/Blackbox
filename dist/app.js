@@ -292,7 +292,14 @@ function react(events) {
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
   if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && e.type === 'loot'), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
+  // Crewmates' events (crew.mjs) show on the board but stay quiet: one voice per cycle is yours.
+  const youBroke = events.some((e) => e.type === 'broken' && !e.who);
   for (const e of events) {
+    if (e.who) {
+      if (e.type === 'damage') art.hit(e.target, 'hit');
+      if (e.type === 'broken') { art.hit(e.target, 'break'); flash(e.message); if (!youBroke) feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; }
+      continue;
+    }
     switch (e.type) {
       case 'damage': {
         art.hit(e.target, e.crit ? 'crit' : 'hit'); impact(e.target, e.crit);
