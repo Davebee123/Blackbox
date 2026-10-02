@@ -8,6 +8,7 @@ import { createFeel } from './feel.mjs';
 import { createShell } from './shell.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
+import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt } from './mail.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll } from './comms.mjs';
 import { nextTip, markSeen } from './tips.mjs';
@@ -696,6 +697,10 @@ function renderMeters() {
   $('mail-count').hidden = !unreadMail;
   $('mail-count').textContent = unreadMail;
   $('tab-store').hidden = !boardOpen(campaign);
+  $('tab-consortium').hidden = !consortiumOf(campaign) && !campaign.consortiumInvite;
+  const need = alertsOf(campaign).length + (campaign.consortiumInvite && !consortiumOf(campaign) ? 1 : 0);
+  $('con-count').hidden = !need;
+  $('con-count').textContent = need;
   $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
   feel.ambience(!!campaign.settings.sound);
@@ -753,7 +758,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     put('page-view', (pages[module] || pages.map)(campaign));
   }
   if (module === 'net' && campaign.run) {
@@ -1049,6 +1054,7 @@ function frame(now) {
   if (now - lastSecond >= 1000) {
     lastSecond = now; shell.second(module); services();
     if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
+    if (module === 'consortium') dirty = true; // its timers count down
     // Crewmates off on their own move every few seconds (run.mjs crewWander).
     if (campaign.run && ++wanderTick % 4 === 0 && Object.values(campaign.run.crew || {}).some((c) => c.link !== 'you')) { const ev = crewWander(campaign); if (ev.length) react(ev); save(); dirty = true; }
     // A wild server's reconnect countdown (rogue.mjs relockMs) ticks on its card.
@@ -1278,14 +1284,19 @@ $('comms').addEventListener('click', (e) => {
   if (e.target.closest('[data-comms-close]')) { setComms(false); return; }
   const g = e.target.closest('[data-go]');
   if (!g) return;
-  const [where, what] = g.dataset.go.split(':');
   setComms(false);
+  goTo(g.dataset.go);
+});
+// "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
+function goTo(target) {
+  const [where, what] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what) mapSel = what; go('map'); }
-  else if (where === 'people') { peopleTab = what || 'friends'; peopleOpen = true; peopleUi(); }
+  else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
-});
+}
+document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && commsOpen) { setComms(false); } });
 

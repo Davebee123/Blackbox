@@ -217,10 +217,13 @@ function tidy(s) {
   if (c) c.servers = c.servers.filter((l) => !l.home || here === l.id || (!l.occupied.cleared && l.occupied.left > 0));
 }
 
-// A bounty: credits and the family's code, times k.
-function pay(s, L, k, family, text) {
+// A bounty: credits and the family's code, times k (and Mesh's doubling).
+export function bountyOf(s, L, k = 1) {
   const b = CONSORTIUM.bounty(L), mk = perk(s, 'bounty', 1);
-  const credits = Math.round(b.credits * k * mk), code = Math.round(b.code * k * mk), m = codeOf(family);
+  return { credits: Math.round(b.credits * k * mk), code: Math.round(b.code * k * mk) };
+}
+function pay(s, L, k, family, text) {
+  const { credits, code } = bountyOf(s, L, k), m = codeOf(family);
   s.server.credits += credits;
   gainCode(s, { [m]: code }, '');
   gainXp(s, xpFor(s, L, 1), 'consortium bounty');
@@ -345,6 +348,25 @@ export function invite(s, from) {
   const name = CONSORTIUM.names[Math.floor(r() * CONSORTIUM.names.length)];
   s.consortiumInvite = { from: h, name, members: [h, ...others], left: CONSORTIUM.inviteMs };
   emit(s, 'consortium-invite', `${h} invites you to merge servers with ${name} (${others.length + 2} servers). consortium accept, or consortium decline.`);
+}
+
+// Everything that needs someone right now, most urgent first: { kind, title, detail, left, total,
+// level, family, cmd, label, bounty, mine }. The Consortium page shows them as cards.
+export function alertsOf(s) {
+  const c = consortiumOf(s), out = [];
+  if (!c) return out;
+  const own = s.occupation && !s.occupation.occupied.cleared ? s.occupation : null;
+  if (own) out.push({ kind: 'crash', title: 'Your server is occupied', detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back now.`, left: s.degraded?.until ? Math.max(0, s.degraded.until - (hooks.now?.() ?? Date.now())) : CONSORTIUM.rebootMs, total: CONSORTIUM.rebootMs, level: own.level, family: own.family, cmd: 'connect home', label: 'Connect', mine: true });
+  for (const l of s.locations || []) if (l.outpost?.siege) out.push({ kind: 'siege', title: `Siege on your ${l.name}`, detail: 'Your outpost. Lose it and it goes into lockdown.', left: l.outpost.siege.left, total: OUTPOST.siegeMs, level: l.level || 1, family: l.family, cmd: `outpost defend ${l.id}`, label: 'Defend', mine: true });
+  if (c.raid) out.push({ kind: 'raid', title: `Invader at ${c.raid.member}'s wall`, detail: `${c.raid.name}. They're away: stop it or their server crashes.`, left: c.raid.left, total: CONSORTIUM.raidMs, level: c.raid.level, family: c.raid.family, cmd: `consortium defend ${c.raid.member}`, label: 'Defend', bounty: bountyOf(s, c.raid.level) });
+  if (c.roamer) { const r = c.roamer; out.push({ kind: 'roam', title: `${r.name} on the trunk line`, detail: `Hop ${r.hop} of ${CONSORTIUM.roam.hops}, from ${r.fromName}. It lands as a new siege.`, left: r.left, total: r.total, level: r.level, family: r.family, cmd: 'consortium intercept', label: 'Intercept', bounty: bountyOf(s, r.level, 1 + CONSORTIUM.roam.bounty * r.hop) }); }
+  for (const l of memberServers(s)) {
+    if (l.held?.siege) { const hop = l.held.siege.hop || 0; out.push({ kind: 'siege', title: `Siege on ${l.member}'s ${l.name}`, detail: `${OUTPOST.kinds[l.held.kind].name} outpost. Lose it and it goes into lockdown.`, left: l.held.siege.left, total: CONSORTIUM.siegeMs, level: (l.level || 1) + hop, family: l.family, cmd: `consortium defend ${l.id}`, label: 'Defend', bounty: bountyOf(s, (l.level || 1) + hop, 1 + CONSORTIUM.roam.bounty * hop) }); }
+    else if (l.held?.lockdown) out.push({ kind: 'lockdown', title: `${l.member}'s ${l.name} in lockdown`, detail: 'It pays no dividend until it ends. Retake it from the natives.', left: l.held.lockdown.left, total: CONSORTIUM.lockdownMs, level: l.level || 1, family: l.family, cmd: `consortium defend ${l.id}`, label: 'Retake', bounty: bountyOf(s, l.level || 1) });
+    else if (l.home && !l.occupied.cleared) out.push({ kind: 'crash', title: `${l.member}'s server is occupied`, detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back.`, left: l.occupied.left, total: CONSORTIUM.rebootMs, level: l.level || 1, family: l.family, cmd: `connect ${l.id}`, label: 'Connect', bounty: bountyOf(s, l.level || 1) });
+  }
+  const urgency = { raid: 0, siege: 1, roam: 2, crash: 3, lockdown: 4 };
+  return out.sort((a, b) => (b.mine || 0) - (a.mine || 0) || urgency[a.kind] - urgency[b.kind] || a.left - b.left);
 }
 
 // Fights for the consortium: a siege or lockdown on a member's outpost (e.member), an invader at an
