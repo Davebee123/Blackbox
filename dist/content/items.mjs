@@ -8,15 +8,15 @@ export default {
       "level": 1,
       "primary": {
         "damage": [
-          9,
-          11
+          5,
+          6
         ],
-        "signal": 15
+        "signal": 10
       },
       "sources": [
         {
           "kind": "story",
-          "id": "welcome"
+          "id": "claimjack"
         }
       ],
       "flavour": "Comments in three languages. None of them polite."

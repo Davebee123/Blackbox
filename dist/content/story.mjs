@@ -24,7 +24,6 @@ export default {
         "count": 3
       },
       "reward": {
-        "item": "wicks-old-toolkit",
         "credits": 60,
         "indemnity": 1,
         "standing": 3,
@@ -63,9 +62,11 @@ export default {
         "type": "bounty",
         "family": "ransomware",
         "name": "claimjack-0412",
-        "room": "/var/log"
+        "room": "/var/log",
+        "grade": 2
       },
       "reward": {
+        "item": "wicks-old-toolkit",
         "credits": 100,
         "indemnity": 2,
         "standing": 3,
@@ -92,7 +93,8 @@ export default {
         "xp": 3,
         "blueprint": true,
         "relay": 1
-      }
+      },
+      "opensBoard": true
     },
     {
       "id": "ledger",

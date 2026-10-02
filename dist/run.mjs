@@ -609,7 +609,7 @@ function attack(s, arg) {
   const sp = (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
   if (!sp?.alive) return err(s, 'Nothing running in this folder. ls to look, cd to move.');
   if (arg && !sp.name.startsWith(arg.replace(/\.exe$/, ''))) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
-  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade } : {}) });
+  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade } : sp.grade ? { grade: sp.grade } : {}) });
   if (sp.bounty && s.encounter?.virus) s.encounter.virus.name = sp.name; // a named contract target
   command(s, 'engage');
 }

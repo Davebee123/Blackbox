@@ -4,7 +4,7 @@ import { fresh, command, resolveCycle, active, hooks, restore, tickServices } fr
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
-import { MAIL, STORY_LENGTH, standing, tierOf, openContracts, offers, heldCount, ready, tickMail, retainer, offer, indemnity } from './dist/mail.mjs';
+import { boardOpen, MAIL, STORY_LENGTH, standing, tierOf, openContracts, offers, heldCount, ready, tickMail, retainer, offer, indemnity } from './dist/mail.mjs';
 import { HIDDEN, hiddenNodes, flagged, items } from './dist/hidden.mjs';
 import { storeOf, LINE } from './dist/store.mjs';
 CONFIG.baseCrit = 0;
@@ -74,6 +74,7 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   assert.equal(s.server.credits, credits + 60);
   assert.equal(indemnity(s), 1, 'contracts pay Indemnity too');
   assert.equal(standing(s), MAIL.startStanding + 3);
+  assert.ok(!(s.stash || []).some((it) => it.unique === 'wicks-old-toolkit'), "wick's toolkit waits for claimjack");
   // code
   let j = job(s);
   assert.equal(j.type, 'materials');
@@ -86,10 +87,14 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   j = job(s);
   assert.equal(j.type, 'bounty');
   assert.equal(s.zone.spawns['/var/log'].name, j.name);
+  assert.equal(s.zone.spawns['/var/log'].grade, 2, 'claimjack is an elite');
+  assert.ok(!boardOpen(s), 'no board yet');
   killInSprawl(s, '/var/log');
   deliver(s);
+  assert.ok((s.stash || []).some((it) => it.unique === 'wicks-old-toolkit'), "claimjack pays wick's toolkit");
   // take over any server you've traced (Halcyon doesn't point one out)
   j = job(s);
+  assert.ok(boardOpen(s) && offers(s).length >= 3, 'the board opens with the turf letter');
   assert.equal(j.type, 'takeover');
   assert.equal(s.locations.length, 0, 'no server was handed to you');
   play(s, 'jack out');

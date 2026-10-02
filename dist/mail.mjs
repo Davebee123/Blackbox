@@ -226,7 +226,7 @@ function arm(s, j) {
     const room = j.room && rooms.includes(j.room) ? j.room : rooms[Math.floor(rand(s) * rooms.length)] || zoneRooms()[0];
     j.room = room;
     j.level ||= hackerLevel(s) + 2;
-    z.spawns[room] = { alive: true, family: j.family, level: j.level, seed: (z.seed * 97 + j.id * 977) >>> 0, name: j.name, bounty: true };
+    z.spawns[room] = { alive: true, family: j.family, level: j.level, seed: (z.seed * 97 + j.id * 977) >>> 0, name: j.name, bounty: true, ...(j.grade ? { grade: j.grade } : {}) }; // a story bounty can be an elite (grade 2+)
   }
   if (j.type === 'item' && j.loc) plant(s, j);
   syncFlags(s);

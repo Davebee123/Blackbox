@@ -20,7 +20,7 @@ To skip straight to a run in your real save, type `developer location ransomware
 
 ## Screens
 
-The top bar shows **Map, Mail, Server, Craft, Loadout, Daemons, System** always, **Store** once the storyline is done, plus **Fight** and **Run** only while a fight or run is live.
+The top bar shows **Map, Mail, Server, Craft, Loadout, Daemons, System** always, **Store** once the board opens (the fourth story letter), plus **Fight** and **Run** only while a fight or run is live.
 
 - **Map:** your server at the centre (its card shows the server level and what the next one opens); traced locations radiate out by family (ransomware, worm, ghostroot), deeper layers branch off the node that led to them, and half-traced leads show as dashed ghosts with their %. A waiting intrusion pulses at the server's gate. An invader moves in from its location to your wall (amber at a siege, red on a breach). Click any node for its card (server stats and repair, Engage, Connect, Jack in).
 - **The pager** (top bar): the latest world event scrolling on its screen, a lamp and an unread count; click it for Comms, the filtered list with links to where each thing happened.
