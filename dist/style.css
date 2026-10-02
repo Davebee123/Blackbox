@@ -1543,3 +1543,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .bigbar .loss, .part-bar .loss { position: absolute; top: 0; bottom: 0; display: block; background: #fff8e6; box-shadow: 0 0 6px rgba(255, 248, 230, 0.8); animation: loss-blink 0.9s ease-in-out infinite; }
 @keyframes loss-blink { 50% { opacity: 0.25; } }
 .no-motion .bigbar .loss, .no-motion .part-bar .loss { animation: none; opacity: 0.7; }
+/* A chit about to break this cycle (the forecast): it blinks white like the slices on the bars. */
+.chits .going { font-weight: inherit; color: #fff8e6; text-shadow: 0 0 6px rgba(255, 248, 230, 0.8); animation: loss-blink 0.9s ease-in-out infinite; }
+.no-motion .chits .going { animation: none; opacity: 0.7; }

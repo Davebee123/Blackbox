@@ -60,9 +60,11 @@ let runMode = false;
 const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
 
 // Armor chits on a part: filled = still there, hollow = broken.
-export function chitsMarkup(p) {
+// breaking: chits this cycle's hits will break (the forecast); they blink, like the white slices.
+export function chitsMarkup(p, breaking = 0) {
   if (!p.maxArmor) return '';
-  return `<span class="chits" title="Armor: ${p.armor} of ${p.maxArmor}. A hit on armor does no damage and breaks one chit; armor-piercing hits go through.">${'◆'.repeat(p.armor)}<i>${'◇'.repeat(p.maxArmor - p.armor)}</i></span>`;
+  const going = Math.min(breaking, p.armor);
+  return `<span class="chits" title="Armor: ${p.armor} of ${p.maxArmor}.${going ? ` ${going} breaks this cycle.` : ''} A hit on armor does no damage and breaks one chit; armor-piercing hits go through.">${'◆'.repeat(p.armor - going)}${going ? `<b class="going">${'◆'.repeat(going)}</b>` : ''}<i>${'◇'.repeat(p.maxArmor - p.armor)}</i></span>`;
 }
 const VEIL_NOTE = 'Veiled: timers stay hidden while its parts are armored. Strip the armor, or Tag a part to see its timer.';
 const hiddenNote = (s) => {
@@ -164,18 +166,22 @@ export function timelineMarkup(s) {
 // the virus's visible attacks will do to you and the crew (after chits, shields and Block).
 // Crits and misses aren't guessed. Shown as a blinking white slice at the end of each bar.
 export function forecast(s) {
-  const e = s.encounter, out = { parts: {}, total: 0, you: 0, mates: {} };
+  const e = s.encounter, out = { parts: {}, chits: {}, total: 0, you: 0, mates: {} };
   if (!active(s)) return out;
   const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter && mateUp(m)) : [];
   const armor = Object.fromEntries(e.virus.parts.map((p) => [p.id, p.armor]));
   const shoot = (st, q) => {
-    if (!q?.target || !ABILITIES[q.ability]) return;
+    const a = ABILITIES[q?.ability];
+    if (!q?.target || !a) return;
     const p = part(st, q.target);
     if (!alive(p)) return;
-    if (armor[p.id] > 0 && !ignoresArmor(st, q.ability)) { armor[p.id]--; return; }
     const was = p.armor; p.armor = 0;
     const dmg = previewDamage(st, q.ability, p);
     p.armor = was;
+    const breaks = (n) => { const k = Math.min(n, armor[p.id]); armor[p.id] -= k; if (k) out.chits[p.id] = (out.chits[p.id] || 0) + k; };
+    if (a.strip) return breaks(a.strip); // Crack: chits, no damage
+    if (!dmg && !a.tick) return; // Tag and the like: no hit, no chit
+    if (armor[p.id] > 0 && !ignoresArmor(st, q.ability)) return breaks(1); // a hit (or a burn's first tick) on armor breaks one chit
     out.parts[p.id] = Math.min(p.integrity, (out.parts[p.id] || 0) + dmg);
   };
   const auto = !e.queue && e.lastAttack ? { ability: e.lastAttack.split(' ')[0], target: e.lastAttack.split(' ')[1] } : null;
@@ -332,7 +338,7 @@ export function boardMarkup(s, selected) {
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;
     return `<button type="button" class="brow bpart ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname"><span class="part-top"><span class="part-name">${esc(p.name)}</span>${chitsMarkup(p)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
+      <div class="bcell bname"><span class="part-top"><span class="part-name">${esc(p.name)}</span>${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';

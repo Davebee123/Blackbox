@@ -180,6 +180,16 @@ test('the forecast: what your command will cost a part, and what the virus will 
   a.armor = 1;
   command(s, 'spike ' + a.id);
   assert.equal(forecast(s).parts[a.id] || 0, 0, 'an armored part: the hit only breaks a chit');
+  assert.equal(forecast(s).chits[a.id], 1, 'and that chit blinks');
+  assert.match(boardMarkup(s, null), /<b class="going">◆<\/b>/);
+  s.loadout.archetype = 'infiltrator'; s.hackers = { infiltrator: { level: 3, xp: 0 } };
+  e.queue = { ability: 'tag', target: a.id, text: 'tag ' + a.id };
+  assert.equal(forecast(s).chits[a.id] || 0, 0, 'Tag doesn\'t hit: no chit breaks');
+  e.queue = { ability: 'crack', target: a.id, text: 'crack ' + a.id };
+  a.armor = 2; a.maxArmor = 2;
+  assert.equal(forecast(s).chits[a.id], 2, 'Crack strips two');
+  e.queue = { ability: 'spike', target: a.id, text: 'spike ' + a.id };
+  a.armor = 1;
   a.armor = 0;
   assert.equal(forecast(s).parts[a.id], previewDamage(s, 'spike', a));
   assert.match(boardMarkup(s, null), /class="loss"/);
