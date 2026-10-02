@@ -400,6 +400,15 @@ const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemT
 const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : it.unique && effectLine(it) ? `<small class="zd">${esc(effectLine(it))}</small>` : '');
 const statsHtml = (it) => `<small>${Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}">${esc(statLine({ [k]: v }))}</span>`).join(' · ')}</small>`;
 
+// The stash's filter (screen state only).
+export const stashUi = { filter: 'all' };
+// One item as an inventory row: rarity edge (CSS), slot glyph, name and level, then its stats in one line.
+const invStats = (it) => Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}"><b>${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
+function invBody(it, extra = '') {
+  const fx = it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique ? effectLine(it) : '';
+  return `<span class="inv-icon" aria-hidden="true">${glyph(leadStat(it))}</span><span class="inv-main" title="${esc(itemTitle(it))}"><span class="inv-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${extra}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}</span>`;
+}
+
 // A character sheet for one side: every stat it can have, grouped, with totals (bases included).
 function statSheet(s, side) {
   const total = (k) => {
@@ -427,25 +436,31 @@ function protocolsParts(s, focus = null) {
   const cls = ARCHETYPES[classOf(s)].name;
   const n = slotCount(s), on = loaded(s), stash = s.stash || [];
   const slotList = Array.from({ length: PROTOCOL_SLOTS.at(-1).slots }, (_, i) => {
-    const kind = `${i + 1} · ${SLOTS[SLOT_KINDS[i]]?.name || SLOT_KINDS[i]}`;
-    if (i >= n) return `<li class="ptile locked"><span class="ptile-slot">${kind}</span><span class="ptile-empty">Lv ${PROTOCOL_SLOTS.find((x) => x.slots > i).level}</span></li>`;
+    const kind = SLOTS[SLOT_KINDS[i]]?.name || SLOT_KINDS[i];
+    const label = `<span class="inv-slot"><b>${i + 1}</b>${esc(kind)}</span>`;
+    if (i >= n) return `<li class="inv-row locked">${label}<span class="inv-empty">opens at Lv ${PROTOCOL_SLOTS.find((x) => x.slots > i).level}</span></li>`;
     const it = rigOf(s)[i] && stashItem(s, rigOf(s)[i]);
     return it
-      ? `<li class="ptile ${rarityClass(it)}"><span class="ptile-slot">${kind}</span>${itemName(it)}${statsHtml(it)}${itemEffect(it)}<button type="button" class="ptile-x" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button></li>`
-      : `<li class="ptile empty"><span class="ptile-slot">${kind}</span><span class="ptile-empty">empty</span></li>`;
+      ? `<li class="inv-row ${rarityClass(it)}">${label}${invBody(it)}<span class="inv-acts"><button type="button" class="inv-btn" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button></span></li>`
+      : `<li class="inv-row empty">${label}<span class="inv-empty">empty</span></li>`;
   }).join('');
   const sort = (a, b) => (loadedOn(s, b.id) === classOf(s)) - (loadedOn(s, a.id) === classOf(s)) || RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || b.level - a.level;
-  const rows = stash.slice().sort(sort).map((it) => {
+  // The stash lists what isn't in your slots (loaded items live in the slots above it).
+  const spare = stash.filter((it) => loadedOn(s, it.id) !== classOf(s));
+  const shown = spare.filter((it) => stashUi.filter === 'all' || groupOf(it) === stashUi.filter);
+  const rows = shown.sort(sort).map((it) => {
     const where = loadedOn(s, it.id);
-    const here = where === classOf(s);
-    const whereTag = where ? `<span class="tag ${here ? 'you' : 'dim'}">${here ? 'loaded' : 'on ' + esc(ARCHETYPES[where].name)}</span>` : '';
-    const dupe = (it.zeroDay && !here && zeroDay(s, it.zeroDay)) || (it.unique && !here && loaded(s).some((x) => x.unique === it.unique));
+    const whereTag = where ? `<span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : '';
+    const dupe = (it.zeroDay && zeroDay(s, it.zeroDay)) || (it.unique && loaded(s).some((x) => x.unique === it.unique));
     const full = !SLOT_KINDS.slice(0, slotCount(s)).includes(groupOf(it)); // a full slot swaps
     const confirm = ['custom', 'zeroday', 'indemnified'].includes(it.rarity) ? ' data-confirm="Sure? Deconstruct"' : '';
-    const loadBtn = here ? '' : `<button type="button" class="btn primary small" data-command="load ${it.id}" ${busy || full || dupe ? 'disabled' : ''} title="${full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : freeSlot(s, groupOf(it)) < 0 ? 'Swap it in for what you run now' : 'Load'}">${freeSlot(s, groupOf(it)) < 0 && !full ? 'Swap in' : 'Load'}</button>`;
-    return `<li class="ptile stash ${rarityClass(it)}"><span class="ptile-slot">${esc(SLOTS[groupOf(it)]?.name || groupOf(it))}</span>${itemName(it)}${whereTag}${statsHtml(it)}${itemEffect(it)}
-      <div class="ptile-acts">${loadBtn}${where ? '' : `<button type="button" class="btn small" data-command="deconstruct ${it.id}"${confirm} ${busy ? 'disabled' : ''} title="Break it down into salvage, code and Exploits">Deconstruct</button>`}</div></li>`;
+    const swap = freeSlot(s, groupOf(it)) < 0 && !full;
+    const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" ${busy || full || dupe ? 'disabled' : ''} title="${full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
+    const scrap = where ? '' : `<button type="button" class="inv-btn" data-command="deconstruct ${it.id}"${confirm} ${busy ? 'disabled' : ''} title="Deconstruct: salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}</button>`;
+    return `<li class="inv-row ${rarityClass(it)}">${invBody(it, whereTag)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
   }).join('');
+  const counts = Object.fromEntries(SLOT_KINDS.filter((k, i, a) => a.indexOf(k) === i).map((k) => [k, spare.filter((it) => groupOf(it) === k).length]));
+  const filters = `<div class="inv-filters" role="group" aria-label="Show">${[['all', 'All', spare.length], ...Object.entries(counts).map(([k, c]) => [k, SLOTS[k]?.name || k, c])].map(([k, l, c]) => `<button type="button" data-stash-filter="${k}" aria-pressed="${stashUi.filter === k}" ${c || k === 'all' ? '' : 'disabled'}>${esc(l)} <span>${c}</span></button>`).join('')}</div>`;
   const c = compileCost(s), zc = compileCost(s, true);
   const ccost = SALVAGE_COSTS.protocol(c.salvage), zcost = SALVAGE_COSTS.zeroday(zc.salvage);
   const can = (x) => !busy && srv.credits >= x.credits && canAfford(s, x === zc ? zcost : ccost);
@@ -456,17 +471,17 @@ function protocolsParts(s, focus = null) {
   const group = (g, title) => { const ks = mine.filter((k) => STATS[k].group === g); return ks.length ? `<optgroup label="${esc(title)}">${ks.map(opt).join('')}</optgroup>` : ''; };
   const picker = `<label class="fpick"><span>Recipe</span><select data-focus-select>${mine.length > 1 ? '<option value="">Any of mine</option>' : ''}${group('offense', 'Offense')}${group('survival', 'Defense')}${group('utility', 'Utility')}</select></label>`;
   const recipes = (s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday">${esc(ZERO_DAYS[z].name)}</b><br><small>${esc(ZERO_DAYS[z].effect)} · ${zc.credits}c + ${esc(salvageLabel(zcost))}</small></span><button type="button" class="btn primary small" data-command="compile ${z}" data-pay="zeroday:${zc.salvage}" data-pay-title="${esc(ZERO_DAYS[z].name)}" ${can(zc) ? '' : 'disabled'}>Compile</button></li>`).join('');
-  return { slotList, rows, stash, cls, lvl, busy, c, zc, ccost, zcost, can, picker, mine, recipes, focus };
+  return { slotList, rows, filters, spare, stash, cls, lvl, busy, c, zc, ccost, zcost, can, picker, mine, recipes, focus };
 }
 
 // Protocols you run (slots, stats, stash): part of the Loadout page, for the class in use.
 export function protocolSlotsCard(s) {
   const p = protocolsParts(s);
-  return `<section class="card"><h2>Protocols · ${esc(p.cls)} Lv ${p.lvl}</h2><ul class="ptiles">${p.slotList}</ul>${statSheet(s, 'hacker')}</section>`;
+  return `<section class="card"><h2>Protocols · ${esc(p.cls)} Lv ${p.lvl}</h2><ul class="inv slots">${p.slotList}</ul>${statSheet(s, 'hacker')}</section>`;
 }
 export function protocolStashCard(s) {
   const p = protocolsParts(s);
-  return `<section class="card"><h2>Stash · ${p.stash.length}/${STASH_CAP}</h2>${p.rows ? `<ul class="ptiles stash">${p.rows}</ul>` : '<p class="svc-line">empty</p>'}</section>`;
+  return `<section class="card stash-card"><h2>Stash · ${p.stash.length}/${STASH_CAP}</h2>${p.spare.length ? `${p.filters}<ul class="inv">${p.rows || '<li class="inv-row empty"><span class="inv-empty">none of these</span></li>'}</ul>` : '<p class="svc-line">empty</p>'}</section>`;
 }
 export const protocolGearMarkup = (s) => protocolSlotsCard(s) + protocolStashCard(s);
 export const protocolsMarkup = (s) => `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protocolGearMarkup(s)}</div></div>`;
@@ -910,9 +925,17 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', `Protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['skills', 'Skills'], ['talents', `Talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
-    ${tab === 'talents' ? `
-    <div class="loadout-talents">
+    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', `Protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['skills', `Skills and talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
+    ${tab === 'skills' ? `
+    <div class="loadout-grid">
+      <section class="card skills-card">
+        <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>` : '<span>max level</span>'}</div></div>
+          ${id === equippedArch ? '<span class="tag you">in use</span>' : busy ? '' : btn(`archetype ${id}`, `Use ${a.name}`, true)}</div>
+        <p class="status-line" title="${esc(st.rule)}"><span class="status-label">Applies</span> <span class="tag stag status">${esc(st.name)}</span></p>
+        <ol class="keybar" aria-label="Your bar">${bar}</ol>
+        <div class="lib-head"><h2>Library · ${known.length}/${a.skills.length}</h2></div>
+        <ul class="library">${lib}</ul>
+      </section>
       <section class="card ttree-card"><div class="thead"><div><h2>Talent tree</h2><h1>${esc(a.name)}</h1></div>
         <div class="tpoints" title="A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}."><span class="tbar"><span style="width:${Math.min(100, (spent / TREE_MAX) * 100)}%"></span></span><span><b>${Math.max(0, points - spent)} free</b> · ${spent}/${TREE_MAX} spent · ${points} earned</span></div></div>
         <ol class="ttree">
@@ -921,16 +944,6 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
           ${tiers}
         </ol>
         ${spent && !busy ? `<p class="tfoot">${btn(`talent reset ${id}`, 'Clear picks')}</p>` : ''}
-      </section>
-    </div>` : tab === 'skills' ? `
-    <div class="loadout-skills">
-      <section class="card skills-card">
-        <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>` : '<span>max level</span>'}</div></div>
-          ${id === equippedArch ? '<span class="tag you">in use</span>' : busy ? '' : btn(`archetype ${id}`, `Use ${a.name}`, true)}</div>
-        <p class="status-line" title="${esc(st.rule)}"><span class="status-label">Applies</span> <span class="tag stag status">${esc(st.name)}</span></p>
-        <ol class="keybar" aria-label="Your bar">${bar}</ol>
-        <div class="lib-head"><h2>Library · ${known.length}/${a.skills.length}</h2></div>
-        <ul class="library">${lib}</ul>
       </section>
     </div>` : id === equippedArch ? `
     <div class="loadout-protocols">${protocolStashCard(s)}${protocolSlotsCard(s)}</div>` : `

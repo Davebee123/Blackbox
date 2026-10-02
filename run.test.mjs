@@ -440,25 +440,24 @@ test('talent tree: points come from levels, ranks open the tiers, swapping is fr
   assert.match(command(s, 'talent add overclocked').at(-1).message, /at home/);
 });
 
-test('the loadout page: Protocols (stash left, slots right), Skills and Talents tabs, picks locked during a fight', async () => {
+test('the loadout page: Protocols (stash left, slots right), then Skills and talents, picks locked during a fight', async () => {
   const { loadoutMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   let html = loadoutMarkup(s, 'breaker');
-  assert.match(html, /data-ltab="protocols" aria-selected="true">Protocols<.*data-ltab="skills".*data-ltab="talents"/s, 'Protocols first');
-  assert.match(html, /class="loadout-protocols"><section class="card"><h2>Stash · .*<h2>Protocols · Breaker/s, 'the stash, then the slots and stats');
+  assert.match(html, /data-ltab="protocols" aria-selected="true">Protocols<.*data-ltab="skills"[^>]*>Skills and talents/s, 'Protocols first, then skills and talents together');
+  assert.match(html, /class="loadout-protocols"><section class="card stash-card"><h2>Stash · .*<h2>Protocols · Breaker/s, 'the stash, then the slots and stats');
   assert.match(loadoutMarkup(s, 'operator'), /Protocols belong to the class in use/, 'another class: no protocol slots to change');
   html = loadoutMarkup(s, 'operator', 'skills');
   assert.match(html, /<h1>Operator<\/h1><div class="class-xp"><b>Lv 1<\/b>/, 'level and XP under the class name');
   assert.match(html, /Level 22/, 'later skills show the level they unlock at');
-  assert.doesNotMatch(html, /class="ttree"/, 'the tree is on the Talents tab');
-  html = loadoutMarkup(s, 'operator', 'talents');
+  assert.match(html, /class="ttree"/, 'the tree sits beside the skills');
   assert.match(html, /0 free<\/b> · 0\/\d+ spent · 0 earned/, 'the tree shows its points, no explanation');
   command(s, 'archetype operator');
   command(s, 'developer level 18');
-  assert.match(loadoutMarkup(s, 'operator', 'talents'), /data-command="talent operator add thread-pool"/);
+  assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="talent operator add thread-pool"/);
   assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="unequip operator deploy"/);
   command(s, 'encounter cryptjack'); command(s, 'engage');
-  html = loadoutMarkup(s, 'operator', 'talents');
+  html = loadoutMarkup(s, 'operator', 'skills');
   assert.doesNotMatch(html, /data-command="talent/);
   assert.match(html, /At home/);
 });

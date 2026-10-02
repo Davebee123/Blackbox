@@ -5,6 +5,8 @@
 // glyph(name, cls?) → an inline <svg>. Unknown names fall back to a plain square chip.
 
 const P = {
+  // Deconstruct: a bin.
+  scrap: '<path d="M2.5 4.5h11M6.5 4.5V2.5h3v2M4 4.5l.8 9h6.4l.8-9M6.8 7v4.5M9.2 7v4.5"/>',
   // ---------- protocol stats ----------
   damage: '<path d="M9.5 1.5 3.5 9h4l-1 5.5 6-7.5h-4z"/>',
   crit: '<circle cx="8" cy="8" r="2"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3M3.4 3.4l2 2M10.6 10.6l2 2M12.6 3.4l-2 2M5.4 10.6l-2 2"/>',

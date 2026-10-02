@@ -643,7 +643,7 @@ export const ARCHETYPES = {
     passive: { name: 'Momentum', rule: 'Each part you break: +10% damage for 2 cycles, up to 3 stacks. Another break refreshes it.' },
     skills: skillsOf(['overload', 'exploit', 'smash', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
     fillers: [
-      [f('overclocked', 'Overclocked Core', '+3% damage per rank.', 0.03), f('chain-exploit', 'Chain Exploit', 'Momentum +2% per break per rank.', 0.02)],
+      [f('overclocked', 'Overclocked Core', '+3% damage per rank.', 0.03), f('chain-exploit', 'Chain Exploit', 'Momentum +2% per stack per rank.', 0.02)],
       [f('exploit-kit', 'Exploit Kit', 'Exposed gives +5% more crit chance per rank.', 5), f('heat-sink', 'Heat Sink', 'Overload +4 damage per rank.', 4)],
       [f('armor-cracker', 'Armor Cracker', 'Parts you strip take 1 cycle longer to patch per rank.', 1), f('failsafe', 'Failsafe', 'Take 3% less damage from attacks per rank.', 0.03)],
     ],

@@ -35,7 +35,7 @@ let suggestionIndex = -1;
 let noticeTimer = 0;
 let dirty = true;
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
-let loadoutTab = 'protocols'; // Loadout page: 'protocols', 'skills' or 'talents'
+let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
 let compileFocus = null; // the recipe picked on the Craft page's Protocols card (null: any)
 
 function load() {
@@ -442,7 +442,7 @@ function run(raw) {
   // Ability names win over page names during a fight ("trace" is both).
   const fighting = active(shown());
   const page = ALIAS[text] || text;
-  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' ? 'talents' : text === 'skills' ? 'skills' : 'protocols'; return go(page); }
+  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; return go(page); }
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
@@ -1033,6 +1033,8 @@ document.addEventListener('click', (e) => {
     if (f.has(a)) f.delete(a); else f.set(a, [0, 1, 2].find((c) => ![...f.values()].includes(c)) ?? f.size % 3);
     feel.key('click'); dirty = true; return;
   }
+  const stf = e.target.closest('[data-stash-filter]');
+  if (stf) { V.stashUi.filter = stf.dataset.stashFilter; feel.key('click'); dirty = true; return; }
   const sf = e.target.closest('[data-sweep-filter]');
   if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
   const direct = e.target.closest('[data-run]');
