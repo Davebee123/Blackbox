@@ -698,6 +698,7 @@ function renderMeters() {
   $('mail-count').textContent = unreadMail;
   $('tab-store').hidden = !boardOpen(campaign);
   $('tab-consortium').hidden = !consortiumOf(campaign) && !campaign.consortiumInvite;
+  fitTopbar();
   const need = alertsOf(campaign).length + (campaign.consortiumInvite && !consortiumOf(campaign) ? 1 : 0);
   $('con-count').hidden = !need;
   $('con-count').textContent = need;
@@ -1287,6 +1288,24 @@ $('comms').addEventListener('click', (e) => {
   setComms(false);
   goTo(g.dataset.go);
 });
+// The top bar stays on one line: when it would wrap (more tabs, a narrow screen, the monitor
+// casing), it tightens a step at a time (style.css .fit-1 … .fit-4). Only re-measured when the
+// tabs shown or the bar's width change.
+let fitKey = '';
+function fitTopbar() {
+  const bar = document.querySelector('.topbar');
+  if (!bar.clientWidth) return; // not laid out yet (the casing boots)
+  const key = [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth;
+  if (key === fitKey) return;
+  fitKey = key;
+  // Wrapped: something starts below where something else ends.
+  const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
+  for (let i = 1; i <= 4; i++) bar.classList.remove('fit-' + i);
+  for (let i = 1; i <= 4 && wraps(); i++) bar.classList.add('fit-' + i);
+}
+addEventListener('resize', () => { fitKey = ''; fitTopbar(); });
+document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
+
 // "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
 function goTo(target) {
   const [where, what] = target.split(':');

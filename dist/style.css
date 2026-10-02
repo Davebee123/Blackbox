@@ -407,8 +407,8 @@ details summary { font-size: 13px; }
   .modules button { padding: 6px 8px; }
   .virus-head h1 { font-size: 22px; }
 }
-@media (max-width: 1600px) and (min-width: 901px) {
-  .brand-name { display: none; } /* the mark stays: room for the contextual tabs */
+@media (max-width: 1240px) and (min-width: 901px) {
+  .brand-name { display: none; }
 }
 @media (max-width: 1440px) and (min-width: 901px) {
   .meter-integrity.noted .meter-label { display: none; }
@@ -1640,3 +1640,9 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .con-leave { justify-content: flex-end; }
 .people-list .con-head .btn { justify-self: start; margin-top: 4px; } .people-list .con-head .hot { color: var(--hot); }
 @media (max-width: 900px) { .con-page { grid-template-columns: 1fr; } }
+
+/* The top bar keeps to one line: app.js fitTopbar() steps these on while it would wrap. */
+.topbar.fit-1 .brand-name { display: none; }
+.topbar.fit-2 { gap: 6px 10px; } .topbar.fit-2 .meters { gap: 10px; } .topbar.fit-2 .meter-bar { width: 56px; } .topbar.fit-2 .modules button { padding: 6px 6px; }
+.topbar.fit-3 .meter-bar { display: none; }
+.topbar.fit-4 .meter-label { display: none; }
