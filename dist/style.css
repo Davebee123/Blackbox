@@ -437,6 +437,7 @@ details summary { font-size: 13px; }
   .hud { grid-template-columns: 1fr 1fr; gap: 12px; }
   .hud-id { grid-column: 1 / -1; }
   .brow { grid-template-columns: minmax(96px, 1.2fr) repeat(4, minmax(0, 1fr)); padding: 0 6px; }
+  #board .brow { padding-left: 32px; }
   .bname small { display: none; }
   .intent b { display: none; }
   .intent.mine small { display: none; }
@@ -1647,13 +1648,15 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .topbar.fit-3 .meter-bar { display: none; }
 .topbar.fit-4 .meter-label { display: none; }
 
-/* Who's aiming at a part this cycle: initials as tabs on its top-left corner (you teal, crew violet). */
+/* Who's aiming at a part this cycle: round initials stacked in a rail down the row's left edge
+   (you teal, crew violet). Every board row keeps the rail's width, so names line up. */
+#board .brow { padding-left: 38px; }
 .bpart .bname { position: relative; }
-.aim-pips { position: absolute; top: -1px; left: 0; display: flex; gap: 3px; pointer-events: none; }
-.aim-pips .aim { border-top: 0; border-radius: 0 0 3px 3px; line-height: 13px; }
-.aim { font: 700 10px/14px var(--mono); letter-spacing: 0.5px; min-width: 18px; padding: 0 3px; text-align: center; border-radius: 3px; border: 1px solid; }
-.aim.you { color: var(--you); border-color: rgba(127, 209, 199, 0.6); background: rgba(127, 209, 199, 0.12); }
-.aim.crew { color: var(--daemon); border-color: rgba(195, 166, 255, 0.6); background: rgba(195, 166, 255, 0.1); }
-.aim.fire { animation: aimfire 0.45s ease-out; }
-@keyframes aimfire { 0% { transform: scale(1.5); filter: brightness(2); box-shadow: 0 0 10px currentColor; } 100% { transform: scale(1); filter: none; box-shadow: none; } }
+.aim-pips { position: absolute; left: -32px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; pointer-events: none; }
+.aim { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); font: 700 9px/20px var(--mono); letter-spacing: 0.3px; text-align: center; }
+.aim + .aim { margin-top: -7px; }
+.aim.you { color: var(--you); background: #1d3532; box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.55); }
+.aim.crew { color: var(--daemon); background: #2c2440; box-shadow: inset 0 0 0 1px rgba(195, 166, 255, 0.5); }
+.aim.fire { animation: aimfire 0.45s ease-out; position: relative; z-index: 1; }
+@keyframes aimfire { 0% { transform: scale(1.45); filter: brightness(1.9); } 100% { transform: scale(1); filter: none; } }
 .no-motion .aim.fire { animation: none; }

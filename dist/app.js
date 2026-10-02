@@ -95,7 +95,9 @@ const shown = () => campaign;
 // ---------- art ----------
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const canMove = () => campaign.settings.motion && !reducedMotion.matches;
-// Cables (cables.mjs): which part each player's command this cycle is aimed at, and a pulse when it fires.
+// Cables (cables.mjs): a tracer from the shooter to the part when a hit fires (the default), or
+// with `cables lines` a standing line too. Who's aiming where at rest: the initials on each part (view.mjs).
+const cableMode = () => (campaign.settings.cables === true ? 'lines' : campaign.settings.cables === false ? 'off' : 'tracers');
 const cables = createCables(document.getElementById('board'), { canMove: () => canMove() });
 const nowPill = (row) => row?.querySelector(':scope > .bcell:nth-child(2) .intent:not(.hidden):not(.crypt):not(.patch):not(.daemon)');
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
@@ -114,15 +116,15 @@ function cableSpecs(s) {
 }
 function drawCables() {
   const s = shown();
-  if (module !== 'combat' || !s.encounter || campaign.settings.cables !== true) return cables.clear(); // off unless asked for: the initials on each part show the aim
+  if (module !== 'combat' || !s.encounter || cableMode() !== 'lines') return cables.clear();
   cables.draw(cableSpecs(s));
 }
-// A hit: the shooter's initials on the part flash (and, with `cables on`, a pulse runs from the
-// shooter's pill to its target, measured before the board redraws).
+// A hit: the shooter's initials on the part flash, and a tracer runs from the shooter's pill to
+// its target (measured before the board redraws).
 // Burns, helpers and other ticks ("Inject: …") don't send one: only the command itself.
 function firePulses(events) {
   if (module !== 'combat') return;
-  const wired = campaign.settings.cables === true;
+  const wired = cableMode() !== 'off';
   const seen = new Set();
   for (const e of events) {
     if (e.type === 'damage' && e.target && !/^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message)) {
@@ -516,7 +518,7 @@ function run(raw) {
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();
-  if (text === 'cables on' || text === 'cables off') { campaign.settings.cables = text === 'cables on'; save(); dirty = true; return notice(`Cables ${text.slice(7)}.`); }
+  if (['cables lines', 'cables on', 'cables tracers', 'cables off'].includes(text)) { const m = text.slice(7); campaign.settings.cables = m === 'off' ? false : m === 'tracers' ? undefined : true; save(); dirty = true; return notice(m === 'off' ? 'No cables or tracers.' : m === 'tracers' ? 'Tracers: a streak when a hit fires.' : 'Cables: a standing line from each command to its part.'); }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();

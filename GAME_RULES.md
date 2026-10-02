@@ -296,9 +296,9 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 
 ## Who's aiming where
 
-On the fight board, each part shows who's aiming at it this cycle: small tabs on its top-left corner with each player's initials (yours teal, from your handle; each crewmate's violet). Hover one for the command. When a hit lands, the shooter's tab flashes. Nothing is drawn over the board.
+On the fight board, each part shows who's aiming at it this cycle: round initials stacked in a rail down the row's left edge (yours teal, from your handle; each crewmate's violet). Hover one for the command. Every row keeps the rail's width, so names line up whether anyone's aiming there or not.
 
-`cables on` brings back the older fiber-optic lines (cables.mjs: each command wired to its target, a pulse running down it when it fires); `cables off` turns them off again (the default).
+When a hit fires, the shooter's avatar flashes and a **tracer** (cables.mjs) streaks from their command to the part and sparks where it lands, then it's gone: nothing stays drawn over the board. `cables lines` adds a standing line from each command to its part as well; `cables tracers` goes back to the default; `cables off` turns tracers off too.
 
 ## Co-op, simulated (crew.mjs)
 
