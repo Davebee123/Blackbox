@@ -20,7 +20,7 @@ import { fxText } from './content.mjs';
 export const SAVE_VERSION = 27;
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
-export const hooks = { flee: null, now: null }; // now: the clock (tests set it)
+export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewTarget, crewEngage, crewEnd.
 
 export function fresh() {
   const s = {
@@ -522,7 +522,7 @@ export function tickServices(s, now = Date.now()) {
 }
 
 export function emit(s, type, message, detail = {}) {
-  const event = { id: ++s.serial, cycle: s.encounter?.cycle || 0, type, message, ...detail };
+  const event = { id: ++s.serial, cycle: s.encounter?.cycle || 0, type, message, ...(s.who ? { who: s.who } : {}), ...detail }; // who: a crewmate's name (crew.mjs)
   s.logs.push(event);
   if (s.logs.length > 600) s.logs.shift();
   return event;
@@ -976,11 +976,13 @@ function engage(s) {
     if (late.length) emit(s, 'status', `Stealth: ${late.map((p) => p.name).join(' and ')} ${late.length === 1 ? 'attacks' : 'attack'} a cycle later.`);
   }
   emit(s, 'engage', `Engaged ${e.virus.name}.`);
+  hooks.crewEngage?.(s); // crew.mjs: crewmates join (run fights only)
 }
 
 export function finish(s, result) {
   const e = s.encounter;
   if (!active(s)) return;
+  hooks.crewEnd?.(s, result);
   e.phase = result;
   e.queue = null;
   e.plan = [];
@@ -1391,6 +1393,7 @@ function topUp(s, what, wanted = null) {
 function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
+  if (base > 0 && !opts.server) p.lastBy = s.who || null; // co-op: a part goes after whoever hit it last (crew.mjs)
   // Sleeper: any hit wakes it.
   if (e.virus.dormant && base > 0) e.virus.woke = true;
   // Keylogger: the Logger only feels commands fired in a Sync Window (and the burns and helpers
@@ -1861,13 +1864,11 @@ function landAttack(s, p) {
   }
 }
 
-export function resolveCycle(s) {
-  if (!active(s) || s.encounter.paused) return [];
-  const first = s.serial;
+// One player's part of a cycle: their command (or auto-repeat), their daemons, then their burns,
+// helpers, regen and the server's Cron Job. Returns false if they fled. Each crewmate runs this
+// on their own state against the shared virus (crew.mjs).
+export function playerPhase(s) {
   const e = s.encounter;
-  e.pendingTrace = 0;
-
-  // 1. The player acts first, so breaking a part on its last cycle stops its attack.
   if (e.queue) {
     const q = e.queue;
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
@@ -1896,7 +1897,7 @@ export function resolveCycle(s) {
   e.synced = false;
   // 1a. Slotted daemons act too, each on its own cooldown.
   if (active(s)) runDaemons(s);
-  if (!active(s)) return since(s, first); // fled mid-fight
+  if (!active(s)) return false; // fled mid-fight
   e.queue = e.plan.shift() || null;
 
   // 1b. Burns and helpers tick after you. Every tick is a hit (Hook adds to it).
@@ -1939,6 +1940,18 @@ export function resolveCycle(s) {
     if (t) hit(s, t, cronDamage(s), { by: 'Cron Job', server: true });
   }
 
+  return true;
+}
+
+export function resolveCycle(s) {
+  if (!active(s) || s.encounter.paused) return [];
+  const first = s.serial;
+  const e = s.encounter;
+  e.pendingTrace = 0;
+
+  // 1. The players act first (you, then any crew), so breaking a part on its last cycle stops its attack.
+  if (!playerPhase(s)) return since(s, first); // fled mid-fight
+  if (hooks.crewAct) hooks.crewAct(s); // crew.mjs: simulated crewmates take their turns
   if (virusIntegrity(s).current === 0) {
     finish(s, 'victory');
     return since(s, first);
@@ -1985,7 +1998,10 @@ export function resolveCycle(s) {
   let landed = 0;
   for (const p of attackers(s).sort((a, b) => a.attack.due - b.attack.due)) {
     if (p.attack.due <= e.cycle) {
-      landAttack(s, p);
+      // Co-op: a damage attack goes at whoever hit this part last (crew.mjs); everything else stays on you.
+      const who = (p.attack.effect === 'damage' && hooks.crewTarget?.(s, p)) || s;
+      landAttack(who, p);
+      if (who !== s) hooks.crewHurt?.(s);
       landed++;
       if (defender(s).integrity <= 0) {
         finish(s, 'crashed');

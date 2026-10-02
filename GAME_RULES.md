@@ -255,6 +255,17 @@ Every server you find is wired to two you haven't found yet, one layer deeper. T
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
 - A vault's trace record (`signal.trc`) locates one of its server's unknown neighbours outright (a flagged one first).
 
+## Co-op, simulated (crew.mjs)
+
+Online co-op comes later (a hosted server with logins). To try how it plays first, `crew sim bastion infiltrator` (up to three classes; `crew sim` alone takes the three you aren't) adds bot crewmates to your run fights (SPRAWL-00, rogue servers, guards). `crew` lists them, `crew off` sends them home. Home intrusions stay solo.
+
+- Each crewmate is a player of its own: its class at your level, a Tuned protocol in every slot, its own Signal (full again at each fight), played by the same planner the balance scripts use.
+- Each cycle everyone acts (you, then the crew), then the virus. Statuses are shared: anyone's hits benefit from Exposed, Tagged, Throttled and Hooked.
+- A damage attack goes at whoever hit that part last (you, if nobody has); its chip on the timeline says who (→ nyx). Encryption, blinds and fragments stay on you.
+- The virus gets +120% Integrity and +100% damage per extra player. Simulated (planner bots, Tuned gear): a party of 2 loses about 20–27% Signal each per fight (the worst-hit player 40–50%), against about 45–55% solo; a party of 4 sometimes focuses one player hard.
+- A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it. Rewards are yours (the bots keep nothing).
+- On the fight screen each crewmate has a row (Signal, this cycle's command), and their lines in the log carry their name.
+
 ## The numbers station (station.mjs)
 
 From class level 3, a numbers station, **LANTERN**, breaks into the radio now and then: the first time 4–8 minutes of logged-on time after you reach level 3, then every 20–35 minutes. The broadcast goes to the pager (and plays as a numbers transmission with Sound on):

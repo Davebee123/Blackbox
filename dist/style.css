@@ -1507,3 +1507,11 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .inv-filters button span { color: var(--dim); margin-left: 4px; }
 .inv-filters button[aria-pressed='true'] { color: var(--amber); border-color: var(--amber); }
 .inv-filters button:disabled { opacity: 0.35; cursor: default; }
+
+/* Simulated crew (crew.mjs): their rows under yours, who an attack is going at, names in the log. */
+.bmate .part-bar.mate span { background: var(--daemon); }
+.bmate .part-name { color: var(--daemon); }
+.bmate.down { opacity: 0.45; }
+.intent.mine.mate { border-color: rgba(195, 166, 255, 0.5); color: var(--daemon); }
+.intent .at { display: block; color: var(--bright); font-weight: 600; }
+#log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }

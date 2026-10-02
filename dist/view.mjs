@@ -10,6 +10,7 @@ import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAIN
 import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
+import { matesOf, mateUp, targetOf } from './crew.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
@@ -178,8 +179,8 @@ export function hudMarkup(s) {
     <div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span></div><p class="clock-line">${extras}</p></div>`;
 }
 
-function attackChip(i, c, k = '') {
-  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b>${esc(i.name)}</b><small>${effectLabel(i)}</small></div>`;
+function attackChip(i, c, k = '', to = null) {
+  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b>${esc(i.name)}</b><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 
 function partTags(s, p) {
@@ -256,6 +257,13 @@ export function boardMarkup(s, selected) {
   const you = fighting
     ? `<div class="brow byou"><div class="bcell bname"><b>You</b><span class="part-tags">${youTags(s)}</span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
+  // Simulated crewmates (crew.mjs): a row each, with Signal and what they'll do this cycle.
+  const crew = fighting && e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
+  const mates = crew.map((m) => {
+    const up = mateUp(m), q = m.encounter.queue, pct = (m.run.integrity / m.run.max) * 100;
+    return `<div class="brow bmate${up ? '' : ' down'}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span><span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span></span></div>
+      <div class="bcell">${up ? (q ? `<div class="intent mine mate">${esc(q.text)}</div>` : '<small class="quiet">thinking</small>') : '<small class="quiet">down</small>'}</div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>`;
+  }).join('');
   const spans = fighting ? statusSpans(s) : [];
   const status = spans.length ? `<div class="brow bstatus"><div class="bcell bname"><b>Status</b></div><div class="bcell span4 sgrid">${spans.map((x) => `<div class="sbar ${x.kind}" style="grid-column: 1 / span ${Math.min(4, x.cycles)}" title="${esc(x.title)}"><b>${esc(x.name)}</b>${x.value ? ` <span>${esc(x.value)}</span>` : ''}${x.cycles > 4 ? ' <small>…</small>' : ''}</div>`).join('')}</div></div>` : '';
   const living = e.virus.parts.filter(alive), broken = e.virus.parts.filter((p) => !alive(p));
@@ -270,7 +278,9 @@ export function boardMarkup(s, selected) {
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one armor chit back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}<div class="intent hidden">?</div>${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c);
-      return `<div class="bcell">${cryptChip}${hit ? attackChip(hit, c, `${p.id}@${e.cycle + c}`) : ''}${patchChip}</div>`;
+      // With a crew, each damage attack says who it's going at (whoever hit that part last).
+      const to = crew.length && hit?.effect === 'damage' ? targetOf(s, p) || 'you' : null;
+      return `<div class="bcell">${cryptChip}${hit ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${patchChip}</div>`;
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;
     return `<button type="button" class="brow bpart ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
@@ -278,7 +288,7 @@ export function boardMarkup(s, selected) {
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
-  return head + you + status + rows + gone;
+  return head + you + mates + status + rows + gone;
 }
 
 const LOG_CLASS = { miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
@@ -286,7 +296,7 @@ const LOG_CLASS = { miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad
 export function logMarkup(s, limit = 60) {
   const start = s.logs.findLastIndex((e) => e.type === 'intrusion');
   const lines = s.logs.slice(Math.max(0, start)).filter((e) => e.type !== 'queued').slice(-limit);
-  return lines.map((e) => `<li><span class="c">c${e.cycle}</span><span class="${e.auto === 'daemon' ? 'daemon' : LOG_CLASS[e.type] ?? ''}">${esc(e.message)}</span></li>`).join('');
+  return lines.map((e) => `<li${e.who ? ' class="crew"' : ''}><span class="c">c${e.cycle}</span><span class="${e.auto === 'daemon' ? 'daemon' : LOG_CLASS[e.type] ?? ''}">${e.who ? `<b class="who">${esc(e.who)}</b> ` : ''}${esc(e.message)}</span></li>`).join('');
 }
 
 export function trayMarkup(s) {

@@ -12,6 +12,7 @@ import { contractTakeover, bankCargo } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
+import { crewCommand } from './crew.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -564,6 +565,7 @@ export function play(s, input) {
   const [word, ...restWords] = text.split(' ');
   const rest = restWords.join(' ');
   if (word === 'connect') return connect(s, rest);
+  if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
   if (text === 'jack in' || text === 'defend') return jackIn(s);
   if (text === 'developer invade' || text === 'developer crash') return developerNetwork(s, text);
   if (text === 'developer station') { const first = s.serial; broadcast(s); return since(s, first); } // a numbers-station dead drop now
