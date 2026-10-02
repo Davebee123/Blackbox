@@ -255,6 +255,10 @@ Every server you find is wired to two you haven't found yet, one layer deeper. T
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
 - A vault's trace record (`signal.trc`) locates one of its server's unknown neighbours outright (a flagged one first).
 
+## Cables (cables.mjs)
+
+On the fight board, everything that lands this cycle is wired to its target: a fiber-optic line arcs from the pill's right edge, over the +1 column, into the target's row. Your command (teal) and each crewmate's (violet) go to the part they're aimed at; the virus's attacks (red, yellow for encryption or a blind) go to you, to every crewmate as well when a hit lands on everyone, or only to whoever is drawing fire. Veiled or blinded attacks get no cable (you can't see them). When something fires, a pulse of light runs down its line and sparks where it lands. `cables off` / `cables on` switches them.
+
 ## Co-op, simulated (crew.mjs)
 
 Online co-op comes later (a hosted server with logins). To try how it plays first, `crew sim bastion infiltrator` (up to three classes; `crew sim` alone takes the three you aren't) adds bot crewmates to your run fights (SPRAWL-00, rogue servers, guards). `crew` lists them, `crew off` sends them home. Home intrusions stay solo.

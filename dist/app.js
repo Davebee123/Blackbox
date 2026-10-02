@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { drawingFire, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { createArt } from './virus-art.mjs';
 import { createFeel } from './feel.mjs';
@@ -16,6 +16,8 @@ import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
+import { createCables } from './cables.mjs';
+import { matesOf, mateUp } from './crew.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -90,6 +92,55 @@ const shown = () => campaign;
 // ---------- art ----------
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const canMove = () => campaign.settings.motion && !reducedMotion.matches;
+// Cables (cables.mjs): who each command and attack this cycle is aimed at, and a pulse when it fires.
+const cables = createCables(document.getElementById('board'), { canMove: () => canMove() });
+const nowPill = (row) => row?.querySelector(':scope > .bcell:nth-child(2) .intent:not(.hidden):not(.crypt):not(.patch):not(.daemon)');
+const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
+const youRow = () => document.querySelector('#board .byou');
+const mateRow = (who) => document.querySelector(`#board .bmate[data-mate="${CSS.escape(who)}"]`);
+function cableSpecs(s) {
+  const e = s.encounter, out = [];
+  if (!active(s)) return out;
+  const aim = (enc) => enc.queue?.target || (enc === e && !enc.queue && enc.lastAttack ? enc.lastAttack.split(' ')[1] : null);
+  // Yours and each crewmate's command → the part it's aimed at.
+  const mine = aim(e);
+  if (mine && partRow(mine)) out.push({ from: nowPill(youRow()), to: partRow(mine), kind: 'you' });
+  const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter && mateUp(m)) : [];
+  for (const m of crew) { const t = aim(m.encounter); if (t && partRow(t)) out.push({ from: nowPill(mateRow(m.who)), to: partRow(t), kind: 'crew' }); }
+  // The virus's attacks landing this cycle → you, the crew, or whoever draws fire.
+  const tank = drawingFire(s) ? youRow() : (() => { const m = crew.find((x) => drawingFire(x)); return m ? mateRow(m.who) : null; })();
+  for (const i of intents(s, 1).filter((x) => x.col === 0 && !x.hidden && ['damage', 'encrypt', 'blind'].includes(x.effect))) {
+    const pill = nowPill(partRow(i.source));
+    if (!pill) continue;
+    if (i.effect !== 'damage') out.push({ from: pill, to: youRow(), kind: 'hot' });
+    else if (tank) out.push({ from: pill, to: tank, kind: 'virus' });
+    else for (const row of [youRow(), ...crew.map((m) => mateRow(m.who))]) out.push({ from: pill, to: row, kind: 'virus' });
+  }
+  return out.filter((x) => x.from && x.to);
+}
+function drawCables() {
+  const s = shown();
+  if (module !== 'combat' || !s.encounter || campaign.settings.cables === false) return cables.clear();
+  cables.draw(cableSpecs(s));
+}
+// A hit: the pulse runs from the shooter's pill to its target (measured before the board redraws).
+// Burns, helpers and other ticks ("Inject: …") don't send one: only the command itself.
+function firePulses(events) {
+  if (module !== 'combat' || campaign.settings.cables === false) return;
+  const seen = new Set();
+  for (const e of events) {
+    if (e.type === 'damage' && e.target && !/^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message)) {
+      const row = e.who ? mateRow(e.who) : youRow(), key = (e.who || 'you') + '>' + e.target;
+      if (seen.has(key) || !row) continue;
+      seen.add(key);
+      cables.pulse(nowPill(row) || row.querySelector('.bname'), partRow(e.target), e.who ? 'crew' : 'you');
+    } else if (e.type === 'server-hit' && e.source) {
+      const from = nowPill(partRow(e.source)) || partRow(e.source)?.querySelector('.bname');
+      cables.pulse(from, e.who ? mateRow(e.who) : youRow(), 'virus');
+    }
+  }
+}
+
 const art = createArt({
   getState: shown,
   canMove: () => canMove(),
@@ -294,6 +345,7 @@ function react(events) {
   if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && e.type === 'loot'), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
+  firePulses(events);
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   for (const e of events) {
     if (e.who) {
@@ -468,6 +520,7 @@ function run(raw) {
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();
+  if (text === 'cables on' || text === 'cables off') { campaign.settings.cables = text === 'cables on'; save(); dirty = true; return notice(`Cables ${text.slice(7)}.`); }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
@@ -678,6 +731,7 @@ function render(force = false) {
   const s = shown();
   const hasFight = !!s.encounter;
   $('combat-view').hidden = !(combatLike && hasFight);
+  if (!(combatLike && hasFight)) cables.clear();
   $('page-view').hidden = combatLike && hasFight;
   if (combatLike && hasFight) {
     put('hud', V.hudMarkup(s));
@@ -687,6 +741,7 @@ function render(force = false) {
     const before = turned ? chipSnapshot() : null;
     put('board', V.boardMarkup(s, selected));
     if (before) turnTimeline(before);
+    drawCables(); setTimeout(drawCables, 320); // again once chips have slid into place
     cycleChanged(s);
     setBand(s);
     const logBefore = cache.get('log');

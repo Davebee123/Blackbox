@@ -1518,3 +1518,21 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
 .bmate.acting { background: rgba(195, 166, 255, 0.1); box-shadow: inset 3px 0 0 var(--daemon); }
 .byou.acting { background: rgba(127, 209, 199, 0.08); box-shadow: inset 3px 0 0 var(--you); }
+
+/* Cables (cables.mjs): fiber-optic lines from each command and attack this cycle to its target,
+   a pulse of light down the line when it fires. Teal yours, violet the crew's, red the virus's. */
+.combat { position: relative; }
+#cables { position: absolute; pointer-events: none; z-index: 4; overflow: hidden; }
+#cables .cable { fill: none; stroke-width: 6; stroke-linecap: round; opacity: 0.14; }
+#cables .cable-core { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 2 4; opacity: 0.85; animation: cable-flow 0.9s linear infinite; }
+#cables .you { stroke: var(--you); fill: var(--you); } #cables .crew { stroke: var(--daemon); fill: var(--daemon); }
+#cables .virus { stroke: var(--hot); fill: var(--hot); } #cables .hot { stroke: var(--next); fill: var(--next); }
+#cables .cable.you, #cables .cable.crew, #cables .cable.virus, #cables .cable.hot { fill: none; }
+#cables .cable-core.you, #cables .cable-core.crew, #cables .cable-core.virus, #cables .cable-core.hot { fill: none; }
+#cables .pulse-path { fill: none !important; stroke-width: 2; opacity: 0.55; animation: pulse-fade 0.6s ease-out forwards; }
+#cables .pulse-dot { stroke: none; }
+#cables .pulse-spark { stroke: none; animation: spark 0.38s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes cable-flow { to { stroke-dashoffset: -12; } }
+@keyframes pulse-fade { to { opacity: 0; } }
+@keyframes spark { from { transform: scale(1); opacity: 1; } to { transform: scale(4); opacity: 0; } }
+.no-motion #cables .cable-core { animation: none; }
