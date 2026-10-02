@@ -4,7 +4,7 @@
 // outposts, usually one you haven't found, and sets out for it. You see it coming: its size, its
 // family, where it's headed and when it lands. Intercept it on the way or defend when it
 // arrives: each fight kills one process. Break the whole swarm for a haul. If it's still there
-// when its siege runs out, the outpost falls (see outpost.mjs: retake, then repair).
+// when its siege runs out, the outpost goes into lockdown (see outpost.mjs: retake it to end it sooner).
 import { CONFIG, SERVER, MUTATIONS, FAMILIES, variantFor } from './data.mjs';
 import { emit, warn, rand, active, selectEncounter, command, gainXp, xpFor, gainCode } from './combat.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
@@ -33,7 +33,7 @@ function origin(s, target) {
 }
 
 export function launch(s) {
-  const targets = outposts(s).filter((l) => !l.outpost.fallen && !l.outpost.siege);
+  const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege);
   if (!targets.length) return null;
   const target = targets[Math.floor(rand(s) * targets.length)];
   const o = origin(s, target);
@@ -57,7 +57,7 @@ export function tickFleet(s, dt, paused = false) {
   if (paused || dt <= 0) return;
   const f = s.fleet;
   if (!f) {
-    if (!outposts(s).some((l) => !l.outpost.fallen)) return;
+    if (!outposts(s).some((l) => !l.outpost.lockdown)) return;
     const net = (s.net ||= {});
     if (net.fleetNext == null) schedule(s, true);
     net.fleetNext -= dt;
@@ -65,7 +65,7 @@ export function tickFleet(s, dt, paused = false) {
     return;
   }
   const target = locOf(s, f.target);
-  if (!target?.outpost?.h || target.outpost.fallen) return disband(s, 'Its target is already lost: the swarm scatters.');
+  if (!target?.outpost?.h || target.outpost.lockdown) return disband(s, 'Its target is already in lockdown: the swarm scatters.');
   if (fighting(s, f)) return; // you're on it: the clock waits for the fight
   if (f.state === 'travel') {
     f.left -= dt;

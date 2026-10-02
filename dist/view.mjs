@@ -5,18 +5,19 @@ import { glyph } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
 import { outpostPorts, modsOf, hasMod, schedulerEvery } from './outpost.mjs';
-import { OUTPOST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, cutOffBy, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
+import { OUTPOST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
 import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
-import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, dividendOf, dividendRate, dividendWaiting, dividendText } from './consortium.mjs';
+import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, dividendOf, dividendRate, dividendWaiting, dividendText, rebooting, consortiumWall } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
+import { archWall } from './architecture.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
@@ -924,10 +925,22 @@ export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
       ${nx ? `<small>${nx.at - sizeOf(s)} more for ${esc(nx.name)}: ${esc(nx.rule.toLowerCase())}</small>` : ''}
       ${(() => { const w = dividendText(dividendWaiting(s)), r = dividendText(dividendRate(s), 1); return `<span class="con-div"><small title="Each member outpost pays you ${Math.round(CONSORTIUM.dividend.share * 100)}% of what it produces, offline too, on top of what its owner gets. Up to ${CONSORTIUM.dividend.capHours} hours' worth waits.">Dividend · ${r ? esc(r) + ' an hour' : 'no member outposts yet'}<br><b>${w ? esc(w) : 'nothing'}</b> waiting</small><button type="button" class="act" data-run="consortium collect" ${w ? '' : 'disabled'}>Collect</button></span>`; })()}</li>`;
   };
+  // What needs someone right now.
+  const alerts = () => {
+    const out = [], b = (cmd, label) => `<button type="button" class="act" data-run="${esc(cmd)}">${esc(label)}</button>`;
+    if (c.raid) out.push(`<li class="con-alert"><span><b>${esc(c.raid.name)}</b> lv ${c.raid.level} at ${esc(c.raid.member)}'s wall · ${fmtLeft(c.raid.left)}</span>${b('consortium defend ' + c.raid.member, 'Defend')}</li>`);
+    if (c.roamer) out.push(`<li class="con-alert"><span><b>${esc(c.roamer.name)}</b> lv ${c.roamer.level} on the trunk line · lands in ${fmtLeft(c.roamer.left)}</span>${b('consortium intercept', 'Intercept')}</li>`);
+    for (const l of memberServers(s)) {
+      if (l.held?.siege) out.push(`<li class="con-alert"><span>Siege on ${esc(l.member)}'s <b>${esc(l.name)}</b> · ${fmtLeft(l.held.siege.left)}</span>${b('consortium defend ' + l.id, 'Defend')}</li>`);
+      else if (l.held?.lockdown) out.push(`<li class="con-alert"><span>${esc(l.member)}'s <b>${esc(l.name)}</b> in lockdown · ${fmtTime(l.held.lockdown.left)}</span>${b('consortium defend ' + l.id, 'Retake')}</li>`);
+      else if (l.home && !l.occupied.cleared) out.push(`<li class="con-alert"><span>${esc(l.member)}'s server rebooting, occupied · ${fmtTime(l.occupied.left)}</span>${b('connect ' + l.id, 'Clear it')}</li>`);
+    }
+    return out.join('');
+  };
   const list = tab === 'friends'
     ? all.filter((x) => x.friend).map(row).join('') + offline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="friend remove ${esc(h)}">Remove</button></span></li>`).join('')
     : tab === 'consortium'
-    ? (c ? head() + all.filter((x) => x.member).map(row).join('') + memberOffline.map((h) => `<li class="person off member"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts">${c.founder === 'you' ? `<button type="button" class="act dim" data-run="consortium kick ${esc(h)}">Kick</button>` : ''}</span></li>`).join('') : invCard || '<li class="quiet">No consortium. Type: consortium create &lt;name&gt;</li>')
+    ? (c ? head() + alerts() + all.filter((x) => x.member).map(row).join('') + memberOffline.map((h) => `<li class="person off member"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts">${c.founder === 'you' ? `<button type="button" class="act dim" data-run="consortium kick ${esc(h)}">Kick</button>` : ''}</span></li>`).join('') : invCard || '<li class="quiet">No consortium. Type: consortium create &lt;name&gt;</li>')
     : invCard + all.map(row).join('');
   return `<div class="comms-head"><span>People${simOn(s) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
     <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends · ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['consortium', c ? `Consortium · ${all.filter((x) => x.member).length}/${c.members.length}` : inv ? 'Consortium · invite' : 'Consortium'], ['online', `Online · ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
@@ -1176,6 +1189,13 @@ export function consortiumLayout(s) {
   });
   const trunk = memberServers(s).find((l) => l.trunk);
   if (trunk) { nodes.push({ id: trunk.id, kind: 'location', loc: trunk, ...at(-90 + step / 2, 105) }); links.push({ from: 'server', to: trunk.id, trunk: true }); }
+  // The travelling virus, on its way between two outposts (yours sit at your home node here).
+  const r = c.roamer, end = (id) => nodes.find((x) => x.id === id) || nodes[0];
+  if (r) {
+    const a = end(r.from), b = end(r.to), p = Math.round((1 - r.left / r.total) * 50) / 50;
+    nodes.push({ id: 'roamer', kind: 'roamer', roamer: r, x: Math.round(a.x + (b.x - a.x) * p), y: Math.round(a.y + (b.y - a.y) * p), tx: b.x, ty: b.y });
+    links.push({ from: 'roamer', to: b.id, ghost: true });
+  }
   return { nodes, links };
 }
 
@@ -1204,7 +1224,7 @@ const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="$
 
 export function mapMarkup(s, sel = 'server', view = 'mine') {
   // A member's server (or home) shows on the consortium's map, whichever view was asked for.
-  const con = !!consortiumOf(s) && (view === 'consortium' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
+  const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
   const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s);
   const find = (id) => nodes.find((n) => n.id === id);
   if (!find(sel)) sel = 'server';
@@ -1231,9 +1251,14 @@ export function mapMarkup(s, sel = 'server', view = 'mine') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
       return `<g class="mnode zone${here ? ' here' : ''}${dropOf(s.zone) ? ' drop' : ''}${on}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${dropMark(s.zone)}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} hostile` : 'rogue server · quiet') + (simOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
     }
+    if (n.kind === 'roamer') {
+      const r = n.roamer, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
+      return `<g class="mnode invader travel${on}" data-select="roamer" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Travelling virus ${esc(r.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, r.name, `lv ${r.level} · hop ${r.hop} · ${fmtLeft(r.left)}`, 'hot')}</g>`;
+    }
     if (n.kind === 'member') {
-      const sieges = serversOf(s, n.handle).filter((l) => l.held?.siege).length;
-      return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `lv ${memberLevel(s, n.handle)} · ${serversOf(s, n.handle).length} ${serversOf(s, n.handle).length === 1 ? 'server' : 'servers'}${sieges ? ' · siege' : ''}`)}</g>`;
+      const raid = consortiumOf(s).raid?.member === n.handle, down = rebooting(s, n.handle);
+      const sieges = serversOf(s, n.handle).filter((l) => l.held?.siege).length + (raid ? 1 : 0);
+      return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `lv ${memberLevel(s, n.handle)} · ${serversOf(s, n.handle).length} ${serversOf(s, n.handle).length === 1 ? 'server' : 'servers'}${raid ? ' · invader at wall' : down ? ' · rebooting' : sieges ? ' · siege' : ''}`)}</g>`;
     }
     if (n.kind === 'intrusion') {
       return `<g class="mnode intrusion${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;
@@ -1259,14 +1284,13 @@ export function mapMarkup(s, sel = 'server', view = 'mine') {
     const l = n.loc, st = nodeState(s, l);
     const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
-    const sub = `lv ${l.level || 1}${l.depth > 1 ? ` · layer ${l.depth}` : ''}${st === 'here' ? ' · here' : l.held?.siege ? ' · siege' : l.held ? ` · ${l.held.kind}` : job ? ' · contract' : l.outpost?.fallen ? ' · lost' : l.outpost?.siege ? ' · siege' : l.outpost?.h ? ` · ${stockOf(l)}/${capOf(l)}` : cutOffBy(s, l) ? ' · cut off' : l.takenOver ? ' · yours' : st === 'done' ? ' · clean' : ''}`;
-    const op = l.outpost?.h ? (l.outpost.fallen ? ' fallen' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : ' outpost') : '';
-    const cut = cutOffBy(s, l) ? ' cutoff' : '';
+    const sub = `lv ${l.level || 1}${l.depth > 1 ? ` · layer ${l.depth}` : ''}${st === 'here' ? ' · here' : l.held?.siege ? ' · siege' : l.held?.lockdown ? ' · lockdown' : l.held ? ` · ${l.held.kind}` : job ? ' · contract' : l.outpost?.lockdown ? ' · lockdown' : l.outpost?.siege ? ' · siege' : l.outpost?.h ? ` · ${stockOf(l)}/${capOf(l)}` : l.takenOver ? ' · yours' : st === 'done' ? ' · clean' : ''}`;
+    const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
-      return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${label(n, 12, l.name, `rogue · ${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
+      return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${label(n, 12, l.name, l.occupied ? `rebooting · ${live} ${live === 1 ? 'process' : 'processes'}` : `rogue · ${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${cut}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${label(n, 12, l.name, sub)}</g>`;
+    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${label(n, 12, l.name, sub)}</g>`;
   }).join('');
   const svg = `<svg class="map-svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   const tabs = consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : '';
@@ -1288,13 +1312,24 @@ function dropLine(s, l) {
   return `<p class="svc-line drop-line"><span class="tag tag-drop" title="Closes in ${dropMinutes(l)} min">Dead drop · ${dropMinutes(l)} min</span> <code>${spell(d.pass.replace(/\d+$/, ''))} · ${d.pass.slice(-2)}</code></p>`;
 }
 
+// In a consortium, your wall meets invaders while you're logged off: what it stops.
+function awayLine(s) {
+  if (!consortiumOf(s)) return '';
+  if (s.degraded) return '<p class="svc-line"><span class="tag warn">Away</span> Rebooting: no wall until it\'s back up.</p>';
+  const b = wallBands(s, wallRating(s) * archWall(s) * consortiumWall(s));
+  const top = Math.max(0, ...(s.locations || []).filter((l) => !l.rogue).map((l) => l.level || 1));
+  const safe = top && b.blocks >= top;
+  return `<p class="svc-line" title="While you're logged off, invaders keep coming at half pace and your wall meets them. A crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours. Raise it with the Firewall."><span class="tag ${safe ? 'tag-con' : 'warn'}">Away</span> blocks to lv ${b.blocks} · holds to lv ${b.holds}${top ? ` · your servers send up to lv ${top}` : ''}</p>`;
+}
+
 // The consortium (consortium.mjs) on a server card: whose it is, a siege to break, or shared ground.
 function consortiumLine(s, l) {
   const c = consortiumOf(s);
   if (!c) return '';
   if (l.trunk) return `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> trunk server: the consortium's own</p>`;
   if (l.member) {
-    const sg = l.held?.siege, busy = active(s) || s.run;
+    const sg = l.held?.siege, ld = l.held?.lockdown, busy = active(s) || s.run;
+    if (ld) return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span> ${esc(l.held.kind)} outpost <span class="tag hot">lockdown · ${fmtTime(ld.left)}</span> pays nothing</p><div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Retake for a bounty</button></div>`;
     return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span>${l.held ? ` ${esc(l.held.kind)} outpost · ${l.held.siege ? 'pays nothing while besieged' : `pays you ${dividendOf(s, l).toFixed(2)} ${l.held.kind === 'scraper' ? 'finds' : esc(MATERIALS[codeOf(l.family)].name)}/h · ${Math.floor(l.held.share || 0)} waiting`}` : ''}${sg ? ` <span class="tag hot">siege · ${fmtLeft(sg.left)}</span>` : ''}</p>${sg ? `<div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend for a bounty</button></div>` : ''}`;
   }
   return isGround(s, l) ? `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> shared with the consortium</p>` : '';
@@ -1326,11 +1361,13 @@ function mapSide(s, sel, node) {
     if (!s.run && !busy && topUpCost(s, 'signal')) upkeep.push(btn('top up', `Top up Signal (${topUpCost(s, 'signal')}c)`));
     if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Reboot (testing)', true));
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
-    return `${runCard}${alertCard()}
+    const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
+    return `${runCard}${alertCard()}${occ}
       <section class="card"><h2>Your server</h2>
         ${serverCard(s)}
         <div class="stats">${stat('Integrity', `${srv.integrity}/${srv.max}`)}${stat('Credits', srv.credits)}${stat('Salvage', s.salvage.length)}${stat('Origins', s.locations.length)}</div>
         ${degradedMarkup(s)}
+        ${awayLine(s)}
         <div class="stats">${stat('Wall', wallShort(s))}${stat('Ports', `${portsUsed(s)}/${portCount(s)}`)}${s.install ? stat('Installing', `${esc(SERVICES[s.install.id].name)} v${s.install.v} · ${fmtTime(s.install.doneAt - Date.now())}`) : ''}</div>
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
         ${rackMarkup(s)}
@@ -1340,13 +1377,21 @@ function mapSide(s, sel, node) {
       </section>`;
   }
   if (node.kind === 'zone') return zoneCard(s) + alertCard();
+  if (node.kind === 'roamer') {
+    const r = node.roamer;
+    return `<section class="card alert"><h2>Travelling virus · hop ${r.hop} of ${CONSORTIUM.roam.hops}</h2><h1>${esc(r.name)}</h1>
+      <p>${levelTag(s, r.level)} ${esc(FAMILIES[r.family].name)} · from ${esc(r.fromName)}</p>
+      <div class="stats">${stat('Lands in', fmtLeft(r.left))}${stat('Bounty', `×${1 + CONSORTIUM.roam.bounty * r.hop}`)}</div>
+      <div class="row"><button type="button" class="btn primary" data-command="consortium intercept" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Intercept</button></div></section>`;
+  }
   if (node.kind === 'member') {
     const h = node.handle, p = profileOf(h), c = consortiumOf(s), mine = serversOf(s, h);
     return `<section class="card"><h2>Home server · ${esc(c.name)}</h2><h1>${esc(h)}</h1>
       <p>${esc(ARCHETYPES[p.cls].name)} · ${node.online ? '<span class="tag tag-con">online</span>' : '<span class="tag dim">offline</span>'}${c.founder === h ? ' <span class="tag">founder</span>' : ''}</p>
       <div class="stats">${stat('Servers', mine.length)}${stat('Outposts', mine.filter((l) => l.held).length)}${stat('Rogue', mine.filter((l) => l.rogue).length)}${stat('Outposts pay you', `${Math.round(CONSORTIUM.dividend.share * 100)}%`)}</div>
       ${mine.map((l) => `<p class="svc-line"><button type="button" class="act" data-select="${esc(l.id)}">${esc(l.name)}</button> ${l.rogue ? 'rogue' : l.held ? esc(l.held.kind) + ' outpost' : 'traced'} · lv ${l.level}${l.held?.siege ? ' <span class="tag hot">siege</span>' : ''}</p>`).join('')}
-      <p class="svc-line">Their home server is theirs alone.</p></section>`;
+      ${consortiumOf(s).raid?.member === h ? `<p class="svc-line"><span class="tag hot">Invader</span> ${esc(consortiumOf(s).raid.name)} lv ${consortiumOf(s).raid.level} at their wall · ${fmtLeft(consortiumOf(s).raid.left)}</p><div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(h)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend their wall</button></div>` : ''}
+      ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn">Rebooting</span> occupied: their server is on the map below them. Their outposts pay nothing meanwhile.</p>' : ''}</section>`;
   }
   if (node.kind === 'intrusion') return alertCard();
   if (false) {
@@ -1373,6 +1418,14 @@ function mapSide(s, sel, node) {
     return `<section class="card"><h2>Lead</h2><h1>${esc(f.name)} · ${node.progress}%</h1><div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.min(100, node.progress)}%"></span></span></div></section>`;
   }
   const l = node.loc, st = nodeState(s, l);
+  if (l.occupied) {
+    const live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
+    return `<section class="card alert"><h2>${l.member ? `${esc(l.member)}'s server` : 'Your server'} · rebooting</h2><h1>${esc(l.name)}</h1>
+      <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)} · occupied</p>
+      <div class="stats">${stat('Processes', `${live}/${rogueRooms(l).length}`)}${stat('Back up in', fmtTime(l.member ? l.occupied.left : degradedLeft(s)))}</div>
+      <p class="svc-line">Clear every folder to bring it back up now.${l.member ? ' A bounty for it.' : ''}</p>
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>Connect</button>`}</div></section>`;
+  }
   if (l.rogue) {
     const k = ROGUE.kinds[l.rogue.kind], live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
     return `<section class="card"><h2>${l.trunk ? 'Trunk server' : l.member ? `${esc(l.member)}'s rogue server` : 'Rogue server'}${l.depth > 1 ? ` · layer ${l.depth}` : ''}</h2><h1>${esc(l.name)}</h1>
@@ -1380,7 +1433,7 @@ function mapSide(s, sel, node) {
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line">Wild: it can't be taken over, and it never sends invaders.</p>
       ${consortiumLine(s, l)}
-      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
@@ -1396,7 +1449,7 @@ function mapSide(s, sel, node) {
     ${consortiumLine(s, l)}
     ${dropLine(s, l)}
     ${outpostCard(s, l)}
-    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : ''}>Connect</button>`}</div></section>`;
+    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Connect</button>`}</div></section>`;
 }
 
 // The swarm: what's coming, where, when, and the button to meet it.
@@ -1439,11 +1492,7 @@ function outpostCore(s, l) {
   const h = o.h, m = MATERIALS[codeOf(l.family)];
   const traits = h.traits.map((t) => `<span class="tag" title="${esc(OUTPOST.traits[t].rule)}">${esc(OUTPOST.traits[t].name)}</span>`).join(' ');
   const head = `<p class="svc-line"><span class="tag you">Outpost</span> <span title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}${esc(OUTPOST.kinds[h.kind].name)} lv${h.level}</span> ${traits}</p>`;
-  if (o.fallen === 'held') return `<div class="outpost lost">${head}<p class="svc-line"><span class="tag hot">Lost</span> Natives hold it. The harvester is dark.</p><div class="row"><button type="button" class="btn primary" data-command="outpost retake ${esc(l.id)}" ${why}>Retake</button></div></div>`;
-  if (o.fallen === 'damaged') {
-    const L = l.level || 1, cr = OUTPOST.repair.credits(L), code = OUTPOST.repair.code(L), ok = s.server.credits >= cr && (materialsOf(s)[codeOf(l.family)] || 0) >= code;
-    return `<div class="outpost lost">${head}<p class="svc-line"><span class="tag warn">Wrecked</span> Yours again, but not harvesting.</p><div class="row"><button type="button" class="btn primary" data-command="outpost repair ${esc(l.id)}" ${ok ? '' : `disabled title="${esc(`Repair needs ${cr} credits and ${code} ${m.name}`)}"`}>Repair (${cr}c, ${code} ${esc(m.name)})</button></div></div>`;
-  }
+  if (o.lockdown) return `<div class="outpost lost">${head}<p class="svc-line"><span class="tag hot" title="No harvesting until it ends. The stockpile is kept, and the server stays open.">Lockdown</span> ${fmtTime(o.lockdown.left)} left · ${stockOf(l)}/${capOf(l)} kept</p><div class="row"><button type="button" class="btn primary" data-command="outpost retake ${esc(l.id)}" ${why}>Retake</button></div></div>`;
   const fl = s.fleet && s.fleet.target === l.id ? `<p class="svc-line"><span class="tag hot">Swarm</span> ${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} processes · ${s.fleet.state === 'travel' ? `land in ${fmtLeft(s.fleet.left)}` : `siege, falls in ${fmtLeft(s.fleet.siegeLeft)}`}</p><div class="row"><button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button></div>` : '';
   const fill = `<div class="lvl-row" title="${h.kind === 'scraper' ? 'Loot rolls waiting' : esc(m.name) + ' waiting'}. Connect to collect."><span class="lvl-bar"><span style="width:${(100 * (o.stock || 0)) / capOf(l)}%"></span></span><small>${stockOf(l)}/${capOf(l)} · ${Math.round(perHour(l, l.outpost.h, s) * 10) / 10}/h</small></div>`;
   const siege = o.siege ? `<p class="svc-line"><span class="tag hot">Siege</span> Falls in ${fmtTime(o.siege.left)} of play.</p><div class="row"><button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button></div>` : '';

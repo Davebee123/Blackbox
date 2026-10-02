@@ -94,11 +94,11 @@ test('a fleet sets out for an outpost, sieges it, and breaks when every ship is 
   const n = s.fleet.ships;
   for (let i = 0; i < n; i++) { command(s, 'swarm engage'); win(s); }
   assert.equal(s.fleet, null);
-  assert.equal(a.outpost.fallen, false);
+  assert.equal(a.outpost.lockdown, null);
   assert.ok(s.salvage.length >= n);
 });
 
-test('an undefended fleet takes the outpost', () => {
+test('an undefended fleet puts the outpost in lockdown', () => {
   const s = fresh();
   command(s, 'developer location worm');
   const a = s.locations[0];
@@ -110,7 +110,7 @@ test('an undefended fleet takes the outpost', () => {
   let t = T0; s.net.wall = t;
   for (let i = 0; i < (FLEET.travelMs + FLEET.siegeMs) / 1000 + 10; i++) tickNetwork(s, (t += 1000));
   assert.equal(s.fleet, null);
-  assert.equal(a.outpost.fallen, 'held', 'Sturdy does not save it from a fleet');
+  assert.ok(a.outpost.lockdown, 'Sturdy does not save it from a fleet');
 });
 
 test('a v24 save loads with configs and no fleet', () => {

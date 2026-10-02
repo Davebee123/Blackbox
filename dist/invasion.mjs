@@ -10,7 +10,7 @@
 import { tickOutposts } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
 import { tickStation } from './station.mjs';
-import { tickConsortium } from './consortium.mjs';
+import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
@@ -40,7 +40,7 @@ export function configRating(s, family) {
   if (hasConfig(s, 'adaptive')) return family && family === topFamily(s) ? 1.4 : 0.9;
   return 1;
 }
-export const ratioOf = (s, inv) => (wallRating(s) * configRating(s, inv.family) * archWall(s)) / strength(inv.level, inv.mutation, inv.grade);
+export const ratioOf = (s, inv) => (wallRating(s) * configRating(s, inv.family) * archWall(s) * consortiumWall(s)) / strength(inv.level, inv.mutation, inv.grade);
 export const outcome = (ratio) => (ratio >= I().block ? 'blocked' : ratio > I().breach ? 'siege' : 'breach');
 // 0 at the breach line, 1 at the block line.
 const along = (ratio) => Math.min(1, Math.max(0, (ratio - I().breach) / (I().block - I().breach)));
@@ -72,19 +72,24 @@ const pct = (x) => `${Math.round(x * 10) / 10}%`;
 // ---------- the network clock ----------
 // Call about once a second with the real time. Only logged-on time counts for invasions: a gap
 // (closed game, sleeping laptop) counts as a few seconds. Degraded mode runs on the real clock.
+// In a consortium, the gap is played out too (away): invaders keep coming, at AWAY.pace, and your
+// wall meets them; members sometimes stop one. A crash while away reboots for CONSORTIUM.rebootMs,
+// occupied (consortium.mjs): clear it to come back sooner.
+export const AWAY = { pace: 0.5, stepMs: 60000, maxMs: 24 * 3600000, helpMs: 3 * 60000 };
 export function tickNetwork(s, now = Date.now()) {
   const first = s.serial;
   const net = (s.net ||= { wall: null, next: null });
   const prev = net.wall ?? now;
   net.wall = now;
-  const dt = Math.min(Math.max(0, now - prev), I().maxTickMs);
+  const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
+  if (gap > dt && consortiumOf(s)) away(s, prev, now - dt);
   tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
   tickFleet(s, dt, !!s.degraded);
   tickStation(s, dt); // the numbers station keeps broadcasting, degraded or not
-  tickConsortium(s, dt, now); // the dividend, sieges on members' outposts, invites (consortium.mjs)
+  tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
   if (s.degraded) {
     const d = s.degraded;
-    if (d.until == null) { d.since = now; d.until = now + CONFIG.degradedMs; }
+    if (d.until == null) { d.since = now; d.until = now + (d.ms ?? CONFIG.degradedMs); }
     // Installs don't progress while degraded: push the job back by the time spent degraded.
     const paused = Math.max(0, Math.min(now, d.until) - Math.max(prev, d.since));
     if (s.install && paused) { s.install.startedAt += paused; s.install.doneAt += paused; }
@@ -92,31 +97,57 @@ export function tickNetwork(s, now = Date.now()) {
     s.degraded = null;
     emit(s, 'rebooted', 'BACK ONLINE.');
   }
-  const inv = s.invasion;
+  stepInvasion(s, dt);
+  return since(s, first);
+}
+
+// The time you were logged off, a minute at a time (up to a day).
+function away(s, from, to) {
+  for (let t = Math.max(from, to - AWAY.maxMs) + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
+    tickOutposts(s, t, AWAY.stepMs, !!s.degraded, true);
+    const d = s.degraded;
+    if (d) {
+      if (d.until == null) { d.since = t; d.until = t + (d.ms ?? CONFIG.degradedMs); }
+      if (t < d.until) continue;
+      s.degraded = null;
+      emit(s, 'rebooted', 'Your server came back online while you were away.');
+    }
+    stepInvasion(s, AWAY.stepMs, t);
+  }
+}
+
+// The invader: setting out, on its way, then at the wall. at: the time, while away.
+function stepInvasion(s, dt, at = null) {
+  const net = s.net, inv = s.invasion;
   if (!inv) {
-    if (!s.locations?.length) return since(s, first);
+    if (!s.locations?.length) return;
     if (net.next == null) net.next = I().firstMs;
-    net.next -= dt;
+    net.next -= at == null ? dt : dt * AWAY.pace;
     if (net.next <= 0) depart(s);
-    return since(s, first);
+    return;
   }
   if (inv.state === 'travel') {
     inv.left -= dt;
     if (inv.left <= 0) arrive(s);
-    return since(s, first);
+    return;
   }
-  if (fighting(s, inv)) return since(s, first); // you're on it: the wall stands back
+  if (fighting(s, inv)) return; // you're on it: the wall stands back
   const r = ratioOf(s, inv);
   const o = outcome(r);
   // The wall got stronger since it arrived (a Firewall, a new version, a server level).
-  if (o === 'blocked') { stopped(s, inv, false); return since(s, first); }
+  if (o === 'blocked') return stopped(s, inv, false);
   if (o !== inv.state) {
     inv.state = o;
     emit(s, o === 'siege' ? 'wall-siege' : 'wall-breach', o === 'siege' ? `Your wall now holds ${inv.name} at a siege.` : `${inv.name} broke through to a breach.`, { invader: inv.id });
   }
   if (o === 'siege') {
     inv.hp -= (grindRate(r) / 100) * (dt / 60000);
-    if (inv.hp <= 0) { stopped(s, inv, true); return since(s, first); }
+    if (inv.hp <= 0) return stopped(s, inv, true);
+  }
+  // Away, a member may come and deal with it.
+  if (at != null) {
+    if (inv.helper === undefined) { inv.helper = memberHelp(s); inv.helpLeft = AWAY.helpMs; }
+    if (inv.helper && (inv.helpLeft -= dt) <= 0) return endInvasion(s, `${inv.helper} stopped ${inv.name} at your wall while you were away.`);
   }
   inv.chipAcc = (inv.chipAcc || 0) + ((s.server.max * chipRate(r)) / 100) * (dt / 60000);
   const n = Math.floor(inv.chipAcc + 1e-9);
@@ -125,11 +156,15 @@ export function tickNetwork(s, now = Date.now()) {
     const floor = active(s) && s.encounter.mode === 'home' ? 1 : 0; // never ends a home fight you're in
     s.server.integrity = Math.max(floor, s.server.integrity - n);
     if (s.server.integrity <= 0) {
-      emit(s, 'crashed', `${inv.name} chipped your server to zero. SERVER CRASHED.`, { invader: inv.id, mode: 'home' });
-      crashServer(s);
+      emit(s, 'crashed', `${inv.name} chipped your server to zero${at != null ? ' while you were away' : ''}. SERVER CRASHED.`, { invader: inv.id, mode: 'home' });
+      if (at == null) return crashServer(s);
+      // Away: a long reboot, occupied by the invader's processes, and the virus moves on.
+      crashServer(s, CONSORTIUM.rebootMs, at);
+      s.occupation = occupy(s, { id: 'home', name: 'HOME', family: inv.family, level: inv.level, seed: inv.seed });
+      endInvasion(s, `${inv.name} moved into your server. Connect to HOME and clear it to come back online sooner.`);
+      roam(s, s.occupation, 0);
     }
   }
-  return since(s, first);
 }
 
 // One invader sets out from a location you've found, at that location's level.

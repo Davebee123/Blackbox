@@ -159,7 +159,6 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Compile a Zero-day | 400 + 30L | | 16 (2 guard parts) | its source |
 | Harvester | 200 | 15 | 5 | its seed |
 | Outpost module | 150 | 8 | 5 | |
-| Outpost repair | 40 + 8L | 4 + L/5 | | |
 | Config | 250 | 15 | 6 | its source |
 | Architecture switch | 1,000 | | | |
 
@@ -272,7 +271,10 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 - **Members' servers.** Connect to any of them like your own. Fights, files and drops are yours. Opening a member's vault doesn't take the server over: it stays theirs. Their natives come back 20 minutes after your last run there. Their home servers are theirs alone (home intrusions stay solo).
 - **Shared ground.** Every member's server, plus your own outposts and rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with full credit and their own loot. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
 - **Owner and dividend.** An outpost's owner keeps its whole stockpile, as always. On top of that, every member's outpost pays each other member a **dividend**: 25% of what it produces, in kind (a Siphon's or Tap's code of its family, a Scraper's finds: credits, code, salvage, now and then a protocol). It fills in real time (offline too), a small stock per outpost of up to 12 hours' worth. An outpost under siege pays nothing until the siege is broken. The people panel's Consortium tab shows what comes in an hour and what's waiting: *Collect*, or `consortium collect`. Each member outpost's card shows its rate and what's waiting. (Your outposts pay the other members the same way, at no cost to you.)
-- **Sieges.** Now and then (every 10–18 minutes of logged-on time) natives lay siege to a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win the fight for credits (30 + 8 × level), its family's code and XP. Miss it and a member deals with it: it costs you nothing.
+- **Sieges and lockdowns.** Now and then (every 10–18 minutes of logged-on time) natives lay siege to a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win for credits (30 + 8 × level), its family's code and XP. Nobody defends it: half the time a member deals with it; otherwise it goes into **lockdown** (pays no dividend for 2 hours). *Retake for a bounty* ends it.
+- **Members' walls.** Every 15–25 minutes an invader reaches an away member's wall (`consortium defend <handle>`, 8 minutes). Nobody stops it, and half the time a member does anyway; otherwise their server **crashes and reboots** for 2 hours, **occupied**: it shows under them on the map (`<HANDLE>-HOME`), open to anyone. Clear every folder for a bounty and it's back up. Their outposts pay no dividend while it reboots.
+- **The travelling virus.** A lockdown or a crash (theirs or yours) sends the virus on along the trunk line toward another outpost, a member's or yours, a level stronger, landing in 10 minutes as a fresh siege. It's on the consortium map, and in the alerts: *Intercept* (`consortium intercept`) for a bounty that grows +50% a hop. One at a time; it burns out after 3 hops.
+- **Alerts.** The Consortium tab lists what needs someone right now (an invader at a wall, the travelling virus, sieges, lockdowns, occupied servers) with a button each.
 - **Size.** The more servers merged (yours included), the better for everyone:
 
 | Servers | Tier | Bonus |
@@ -280,7 +282,7 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 | 3 | Linked | +10% outpost yield and dividend |
 | 5 | Mesh | Siege bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
-| 12 | Grid | +1 bandwidth |
+| 12 | Grid | +1 bandwidth and +10% wall |
 
 Up to 20 servers. Crews of up to three are drawn from consortium members and friends (*Invite to crew*, `crew invite <name>`).
 
@@ -367,12 +369,11 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
 - **Pulling out** gives the harvester back with what it holds; the port then resets for 30 minutes.
 - **Sieges.** Natives notice an outpost about every 4 logged-on hours (by kind, traits and site). You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level). If you don't:
-  - the outpost **falls**: its stockpile is lost and the harvester goes dark;
-  - servers past it (that hang off it, any number of layers down) can't be reached;
-  - invaders from past it still travel through it to you.
-- **Retake and repair.** Beat the natives there (**Retake**), then **Repair** it for 40 + 8×level credits and 4 + level/5 of its code. Harvesting and the route past it come back.
+  - the outpost goes into **lockdown** for 2 real hours: no harvesting, but its stockpile is kept;
+  - the server and everything past it stay open (nothing is ever cut off).
+- **Retake** it (beat the natives there) to end a lockdown sooner. In a consortium, the virus that won moves on along the trunk line (see Consortium).
 
-- **Modules.** Each outpost has ports, like your server: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is lost). A module costs 150 credits, 8 of the server's code and 5 salvage; removing one gives half the code back.
+- **Modules.** Each outpost has ports, like your server: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is in lockdown). A module costs 150 credits, 8 of the server's code and 5 salvage; removing one gives half the code back.
 
   | Module | What it does |
   |---|---|
@@ -392,7 +393,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
 
 - **Infestations.** Every so often (an hour, divided by how many outposts you run, never under 15 minutes) a pack of 2–3 wild viruses moves into one outpost, at its level and one layer deeper. They stay 20 minutes. **Clear** them one fight at a time (`outpost clear <server>`) and the stockpile gets an hour's worth of yield on top, plus XP. Ignore them and they leave; nothing is lost.
 
-Commands: `outpost install <server> [n]`, `outpost mod|unmod <server> <module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake|repair <server>`, `outpost compile siphon|scraper|tap`.
+Commands: `outpost install <server> [n]`, `outpost mod|unmod <server> <module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake <server>`, `outpost compile siphon|scraper|tap`.
 
 ## Configs
 
@@ -420,7 +421,7 @@ Once you run an outpost, the network organises against it.
 - A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
 - You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes; 15 with a Tarpit Beacon).
 - **Intercept** on the way or **Defend** once it lands (`swarm engage`): each fight kills one process, and the clock waits while you fight.
-- Landed, it gives you 8 minutes. Processes still there when that runs out take the outpost (Sturdy doesn't save it): retake and repair it as usual.
+- Landed, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown (Sturdy doesn't save it): retake it to end it sooner.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
 
@@ -452,6 +453,13 @@ At 0 Integrity (a lost home fight, or a breach chipping you out) the server **cr
 - the server earns no XP.
 
 You can still fight, explore and level. Crashing again restarts the 10 minutes. The top bar, the Map and the Server page show the time left.
+
+**In a consortium, while you're logged off** (played out a minute at a time when you come back, up to a day):
+- invaders keep coming, at half the pace, and your wall meets them as usual: blocked, siege or breach. The server card's **Away** line says what your wall blocks and holds, next to the highest level your servers send; a Firewall is how you raise it;
+- now and then a member steps in and stops one at your wall;
+- a crash while away reboots the server for **2 hours** (Degraded, same rules), and the invader **occupies** it: HOME shows on your server card with *Connect*. Its processes sit in six folders (services, daemons, vault, logs, cache, wall) and don't come back; clear them all to be back online at once. The virus then moves on along the trunk line;
+- your outposts can be sieged while you're away too (half as often); members sometimes break those sieges, otherwise it's a lockdown.
+Solo, nothing happens while you're logged off.
 
 Testing: `developer invade` (an invader arrives now), `developer crash`, `developer reboot` (ends Degraded mode).
 

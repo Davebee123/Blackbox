@@ -582,7 +582,7 @@ export function addLead(s, family, amount, why = '') {
 }
 
 // A server by id: one you've traced, or a consortium member's (consortium.mjs).
-export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id);
+export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id) || (s.occupation?.id === id ? s.occupation : null);
 
 // Templates rotate so consecutive locations play differently.
 export function addLocation(s, family, depth = 1, parent = null) {
@@ -1077,7 +1077,7 @@ export function finish(s, result) {
     if (inv) endInvasion(s, `${inv.name} is gone from your wall.`);
     if (e.outpost) outpostWon(s, e);
     if (e.infest) infestWon(s, e);
-    if (e.member) consortiumWon(s, e); // a member's outpost defended (consortium.mjs)
+    if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
   } else {
     // The invader stays at the wall, as worn down as you left it.
@@ -1100,11 +1100,12 @@ export function finish(s, result) {
 // A crash reboots the server at half Integrity and puts it in Degraded mode for 10 real
 // minutes: the wall is down (invaders wait, none set out), installs pause, and the server earns
 // no XP. You can still fight, explore and level. The clock starts at the next network tick.
-export function crashServer(s) {
+// ms, since: a longer reboot that started at a known time (a crash while you were away).
+export function crashServer(s, ms = CONFIG.degradedMs, since = null) {
   s.server.integrity = Math.max(1, Math.round(s.server.max * CONFIG.reboot));
-  s.degraded = { since: null, until: null };
+  s.degraded = { since, until: since == null ? null : since + ms, ms };
   standingCrash(s);
-  emit(s, 'degraded', `REBOOTED at ${s.server.integrity}/${s.server.max}. Degraded for ${CONFIG.degradedMs / 60000} minutes.`);
+  emit(s, 'degraded', `REBOOTED at ${s.server.integrity}/${s.server.max}. Degraded for ${ms >= 3600000 ? `${ms / 3600000} hours` : `${ms / 60000} minutes`}.`);
 }
 // When the next invader sets out: some logged-on minutes from now.
 export function scheduleInvasion(s) {

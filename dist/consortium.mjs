@@ -9,8 +9,16 @@
 //   Nobody outside the consortium is there, so nobody can take your kills.
 // - Personal: credits, items, harvesters, stockpiles, your home server. Home intrusions stay solo.
 //   What you find on a member's server is yours; their natives come back after a while.
-// - Sieges: natives lay siege to members' outposts now and then. Anyone can defend one for a
-//   bounty. Miss it and a member deals with it: it costs you nothing.
+// - Sieges: natives lay siege to members' outposts now and then, and invaders reach members' walls
+//   while they're away. Anyone can defend for a bounty. Nobody does, and a member may still deal
+//   with it; if not, the outpost goes into lockdown (no harvesting for a while) or the member's
+//   server crashes and reboots, occupied by the invader's processes: anyone can connect and clear
+//   them to end it sooner. Nothing is ever lost, only time.
+// - The travelling virus: a lost siege or a crash sends the virus on along the trunk line to
+//   another outpost (a member's or yours), a level stronger each hop, at most CONSORTIUM.roam.hops.
+//   Intercept it for a growing bounty.
+// - Away: in a consortium, your own wall and outposts keep being tested while you're logged off
+//   (invasion.mjs, outpost.mjs). Your wall decides; members sometimes help.
 // - Size: each merged server makes the network bigger and the consortium better (CONSORTIUM.tiers).
 // - Leaving (or being kicked) cuts the trunk line. You lose nothing of your own.
 // Pure: state in, events out. run.mjs routes the `consortium` command (and `guild`, the old name).
@@ -18,7 +26,7 @@ import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCod
 import { createLocation, SERVER, FAMILIES, variantFor } from './data.mjs';
 import { seeded, codeOf, MATERIALS } from './gear.mjs';
 import { profileOf, PRESENCE, online, simOn } from './presence.mjs';
-import { ROGUE } from './rogue.mjs';
+import { ROGUE, rogueSpawns } from './rogue.mjs';
 import { OUTPOST, scrape } from './outpost.mjs';
 
 export const CONSORTIUM = {
@@ -32,6 +40,13 @@ export const CONSORTIUM = {
   inviteEveryMs: [5 * 60000, 12 * 60000], // simulated: how often someone invites you, while you're in none
   inviteMs: 10 * 60000, // how long an invite stays open
   bounty: (L) => ({ credits: 30 + 8 * L, code: 2 + Math.floor(L / 6) }),
+  lockdownMs: 2 * 3600000, // a member's outpost after a lost siege (logged-on time while simulated)
+  raidEveryMs: [15 * 60000, 25 * 60000], // simulated: an invader at an away member's wall
+  raidMs: 8 * 60000, // how long you have to stop it
+  rebootMs: 2 * 3600000, // a crashed server (yours while away: real time) reboots this long, unless cleared
+  help: 0.5, // chance a member deals with a siege or invader nobody defended
+  roam: { travelMs: 10 * 60000, hops: 3, bounty: 0.5 }, // the travelling virus: +50% bounty a hop
+  homeRooms: ['services', 'daemons', 'vault', 'logs', 'cache', 'wall'], // a crashed home server's folders
   // The dividend: every member's outpost pays each other member a share of what it produces, in
   // kind (a Siphon's or Tap's code, a Scraper's finds), real time and offline too. The owner keeps
   // their whole stockpile: the share comes on top. It fills a small stock per outpost, up to
@@ -42,7 +57,7 @@ export const CONSORTIUM = {
     { at: 3, name: 'Linked', rule: '+10% outpost yield and dividend', yield: 0.1 },
     { at: 5, name: 'Mesh', rule: 'Siege bounties doubled', bounty: 2 },
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
-    { at: 12, name: 'Grid', rule: '+1 bandwidth', bandwidth: 1 },
+    { at: 12, name: 'Grid', rule: '+1 bandwidth and +10% wall', bandwidth: 1, wall: 0.1 },
   ],
   names: ['Halyard', 'Null Choir', 'Black Lattice', 'Copperline', 'Saltmarsh Ring', 'Dead Channel', 'Quiet Meridian', 'Glasshouse', 'Low Orbit', 'Tinroof'],
 };
@@ -67,6 +82,13 @@ export const nextTier = (s) => (consortiumOf(s) ? CONSORTIUM.tiers.find((t) => s
 const perk = (s, key, none) => tiersOf(s).reduce((v, t) => t[key] ?? v, none);
 export const consortiumYield = (s) => 1 + perk(s, 'yield', 0);
 export const consortiumBandwidth = (s) => perk(s, 'bandwidth', 0);
+export const consortiumWall = (s) => 1 + perk(s, 'wall', 0);
+// Nobody defended it: maybe a member dealt with it anyway (simulated). A handle, or null.
+export function memberHelp(s) {
+  const c = consortiumOf(s);
+  if (!c?.members.length || rand(s) >= CONSORTIUM.help) return null;
+  return c.members[Math.floor(rand(s) * c.members.length)];
+}
 // Members' servers (and the trunk rogue server), and the servers that are anyone's.
 export const memberServers = (s) => consortiumOf(s)?.servers || [];
 export const serversOf = (s, h) => memberServers(s).filter((l) => l.member === h);
@@ -125,7 +147,7 @@ export function arrive(s, loc, now = hooks.now?.() ?? Date.now()) {
 // The dividend: what one member outpost pays you an hour (code for a Siphon or Tap, rolls for a Scraper).
 export function dividendOf(s, loc) {
   const k = OUTPOST.kinds[loc.held?.kind];
-  if (!k || loc.held.siege) return 0;
+  if (!k || loc.held.siege || loc.held.lockdown || rebooting(s, loc.member)) return 0;
   return k.rate(loc.level || 1) * CONSORTIUM.dividend.share * consortiumYield(s);
 }
 const dividendCap = (s, loc) => dividendOf(s, { ...loc, held: { kind: loc.held.kind } }) * CONSORTIUM.dividend.capHours;
@@ -167,11 +189,76 @@ export function collectShare(s) {
   emit(s, 'harvest', `${c.name} dividend: ${got || 'a protocol'}.`);
 }
 
+// Occupation: a crashed home server, rebooting. It stays open: the invader's processes sit in its
+// folders (no respawns, like a rogue server's), and clearing them all ends the reboot early.
+export function occupy(s, { id, name, member = null, family, level, seed }) {
+  const loc = createLocation(family, seed % 100000, 1);
+  Object.assign(loc, { id, name, member, home: true, level, trait: null, quirk: null, template: 'rogue', rogue: { kind: 'nest' }, rooms: CONSORTIUM.homeRooms, spawns: {}, serial: 0, occupied: { left: CONSORTIUM.rebootMs } });
+  rogueSpawns(s, loc); // the invader's processes move in
+  return loc;
+}
+export const rebooting = (s, h) => !!h && memberServers(s).some((l) => l.home && l.member === h && !l.occupied.cleared);
+// Every process in an occupied server is down (rogue.mjs rogueKill).
+export function occupationCleared(s, loc) {
+  if (loc.occupied.cleared) return;
+  loc.occupied.cleared = true;
+  gainXp(s, xpFor(s, loc.level || 1, 2), `${loc.name} cleared`);
+  if (!loc.member) {
+    s.degraded = null;
+    return emit(s, 'rebooted', 'OCCUPATION CLEARED: your server is back online.');
+  }
+  pay(s, loc.level || 1, 1, loc.family, `${loc.member}'s server is back online thanks to you.`);
+}
+// Occupations that are over (cleared or rebooted), once you're not standing in them.
+function tidy(s) {
+  const here = s.run?.loc;
+  if (s.occupation && (s.occupation.occupied.cleared || !s.degraded) && here !== s.occupation.id) s.occupation = null;
+  const c = consortiumOf(s);
+  if (c) c.servers = c.servers.filter((l) => !l.home || here === l.id || (!l.occupied.cleared && l.occupied.left > 0));
+}
+
+// A bounty: credits and the family's code, times k.
+function pay(s, L, k, family, text) {
+  const b = CONSORTIUM.bounty(L), mk = perk(s, 'bounty', 1);
+  const credits = Math.round(b.credits * k * mk), code = Math.round(b.code * k * mk), m = codeOf(family);
+  s.server.credits += credits;
+  gainCode(s, { [m]: code }, '');
+  gainXp(s, xpFor(s, L, 1), 'consortium bounty');
+  emit(s, 'outpost-held', `${text} Bounty: +${credits} credits, +${code} ${MATERIALS[m].name}.`);
+}
+
+// The travelling virus: from a lost siege or a crash, on along the trunk line to another outpost.
+// prev: hops it has already made.
+const outpostsOnNet = (s) => [...memberServers(s).filter((l) => l.held && !l.held.siege && !l.held.lockdown && !rebooting(s, l.member)), ...(s.locations || []).filter((l) => l.outpost?.h && !l.outpost.siege && !l.outpost.lockdown)];
+export function roam(s, from, prev = 0) {
+  const c = consortiumOf(s);
+  if (!c || c.roamer) return;
+  const hop = prev + 1;
+  if (hop > CONSORTIUM.roam.hops) return emit(s, 'info', `The virus that took ${from.name} burns out on the trunk line.`);
+  const targets = outpostsOnNet(s).filter((l) => l.id !== from.id);
+  if (!targets.length) return;
+  const to = targets[Math.floor(rand(s) * targets.length)];
+  const level = Math.max(from.level || 1, to.level || 1) + 1;
+  c.roamer = { name: NATIVE[from.family].toUpperCase(), family: from.family, level, hop, from: from.id, fromName: from.name, to: to.id, left: CONSORTIUM.roam.travelMs, total: CONSORTIUM.roam.travelMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
+  emit(s, 'consortium-roam', `${c.roamer.name} (lv ${level}) left ${from.name} along the trunk line, heading for ${to.member ? `${to.member}'s` : 'your'} ${to.name}. Intercept it for a bounty.`, { location: to.id });
+}
+function roamerArrives(s) {
+  const c = consortiumOf(s), r = c.roamer;
+  c.roamer = null;
+  let to = [...memberServers(s), ...(s.locations || [])].find((l) => l.id === r.to);
+  if (!to || !outpostsOnNet(s).includes(to)) to = outpostsOnNet(s).find((l) => l.id !== r.from); // its target is busy: the next one
+  if (!to) return emit(s, 'info', `${r.name} finds nowhere to land and burns out.`);
+  const siege = { left: to.held ? CONSORTIUM.siegeMs : OUTPOST.siegeMs, seed: r.seed, hop: r.hop };
+  if (to.held) { to.held.siege = siege; emit(s, 'consortium-siege', `${r.name} landed on ${to.member}'s ${to.name}: a siege, a level stronger. Defend it within ${CONSORTIUM.siegeMs / 60000} minutes for a bounty.`, { location: to.id }); }
+  else { to.outpost.siege = siege; emit(s, 'outpost-siege', `${r.name} came down the trunk line onto your ${to.name}: a siege. Defend it within ${OUTPOST.siegeMs / 60000} minutes of play.`, { location: to.id }); }
+}
+
 // The network clock (logged-on time): sieges on members' outposts, and (simulated) invites. now:
 // the real time, for the dividend.
 export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
   const first = s.serial;
   const c = consortiumOf(s), net = (s.consortiumNet ||= {});
+  tidy(s);
   if (c) {
     const was = shareFull(s);
     accrue(s, now);
@@ -188,17 +275,46 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
     return s.logs.filter((e) => e.id > first);
   }
   for (const loc of memberServers(s)) {
+    if (loc.home) { loc.occupied.left -= dt; if (loc.occupied.left <= 0 && !loc.occupied.cleared) { loc.occupied.cleared = true; emit(s, 'info', `${loc.member}'s server finished rebooting.`); } continue; }
+    const ld = loc.held?.lockdown;
+    if (ld && !(s.encounter?.member === loc.id && active(s))) { ld.left -= dt; if (ld.left <= 0) { loc.held.lockdown = null; emit(s, 'info', `The lockdown on ${loc.member}'s ${loc.name} is over.`, { location: loc.id }); } }
     const sg = loc.held?.siege;
     if (!sg) continue;
     if (s.encounter?.member === loc.id && active(s)) continue; // the clock waits while you fight for it
     sg.left -= dt;
     if (sg.left > 0) continue;
     loc.held.siege = null;
-    const others = c.members.filter((x) => x !== loc.member);
-    const who = others.length && rand(s) < 0.6 ? others[Math.floor(rand(s) * others.length)] : null;
-    emit(s, 'info', who ? `${who} broke the siege on ${loc.member}'s ${loc.name}.` : `${loc.member} drove the natives off ${loc.name} alone.`, { location: loc.id });
+    const who = memberHelp(s);
+    if (who) { emit(s, 'info', `${who} broke the siege on ${loc.member}'s ${loc.name}.`, { location: loc.id }); continue; }
+    loc.held.lockdown = { left: CONSORTIUM.lockdownMs, seed: sg.seed, hop: sg.hop || 0 };
+    emit(s, 'consortium-lockdown', `LOCKDOWN: natives took ${loc.member}'s ${loc.name}. It pays nothing for a while. Retake it for a bounty.`, { location: loc.id });
+    roam(s, loc, sg.hop || 0);
   }
-  const open = memberServers(s).filter((l) => l.held && !l.held.siege);
+  // An invader at an away member's wall (simulated).
+  const raid = c.raid;
+  if (raid && !(s.encounter?.raid && active(s))) {
+    raid.left -= dt;
+    if (raid.left <= 0) {
+      c.raid = null;
+      const who = memberHelp(s);
+      if (who && who !== raid.member) emit(s, 'info', `${who} stopped ${raid.name} at ${raid.member}'s wall.`);
+      else crashMember(s, raid);
+    }
+  } else if (!raid && c.members.length) {
+    if (net.raidNext == null) net.raidNext = between(s, CONSORTIUM.raidEveryMs);
+    net.raidNext -= dt;
+    if (net.raidNext <= 0) {
+      net.raidNext = null;
+      const away = c.members.filter((h) => !rebooting(s, h));
+      if (away.length) {
+        const h = away[Math.floor(rand(s) * away.length)], fams = Object.keys(FAMILIES), family = fams[Math.floor(rand(s) * fams.length)];
+        c.raid = { member: h, family, name: NATIVE[family].toUpperCase(), level: memberLevel(s, h) + 1, left: CONSORTIUM.raidMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
+        emit(s, 'consortium-raid', `${c.raid.name} (lv ${c.raid.level}) is at ${h}'s wall while they're away. Defend it within ${CONSORTIUM.raidMs / 60000} minutes for a bounty.`);
+      }
+    }
+  }
+  if (c.roamer) { c.roamer.left -= dt; if (c.roamer.left <= 0) roamerArrives(s); }
+  const open = memberServers(s).filter((l) => l.held && !l.held.siege && !l.held.lockdown);
   if (!open.length) return s.logs.filter((e) => e.id > first);
   if (net.siegeNext == null) net.siegeNext = between(s, CONSORTIUM.siegeEveryMs);
   net.siegeNext -= dt;
@@ -209,6 +325,15 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'consortium-siege', `Natives are sieging ${loc.member}'s outpost on ${loc.name}. Defend it within ${CONSORTIUM.siegeMs / 60000} minutes for a bounty.`, { location: loc.id });
   }
   return s.logs.filter((e) => e.id > first);
+}
+// A member's server crashed: it reboots, occupied, and the virus moves on.
+function crashMember(s, raid) {
+  const c = consortiumOf(s), h = raid.member;
+  const loc = occupy(s, { id: `${h}-home`, name: `${h.toUpperCase()}-HOME`, member: h, family: raid.family, level: raid.level, seed: raid.seed });
+  c.servers = c.servers.filter((l) => l.id !== loc.id);
+  c.servers.push(loc);
+  emit(s, 'consortium-crash', `${raid.name} crashed ${h}'s server. It's rebooting for ${CONSORTIUM.rebootMs / 3600000} hours, occupied: connect and clear it to bring it back sooner. Their outposts pay nothing meanwhile.`, { location: loc.id });
+  roam(s, loc, 0);
 }
 
 // Simulated: someone online invites you to merge with their consortium.
@@ -222,33 +347,31 @@ export function invite(s, from) {
   emit(s, 'consortium-invite', `${h} invites you to merge servers with ${name} (${others.length + 2} servers). consortium accept, or consortium decline.`);
 }
 
-// A siege fight on a member's outpost: their server's natives, at its level.
+// Fights for the consortium: a siege or lockdown on a member's outpost (e.member), an invader at an
+// away member's wall (e.raid), the travelling virus (e.roamer).
 const NATIVE = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
-function defend(s, loc) {
-  const sg = loc.held.siege;
+function fight(s, { family, level, seed }, tag, text, location) {
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  const { strain, grade } = variantFor(loc.family, loc.level || 1, 1, sg.seed);
-  selectEncounter(s, NATIVE[loc.family], sg.seed, { level: loc.level || 1, strain, grade, quiet: true });
+  const { strain, grade } = variantFor(family, level, 1, seed);
+  selectEncounter(s, NATIVE[family], seed, { level, strain, grade, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   s.gate = gate && gate !== s.encounter ? gate : null;
-  s.encounter.member = loc.id;
-  emit(s, 'jack-in', `Defending ${loc.member}'s ${loc.name}: ${s.encounter.virus.name}.`, { location: loc.id });
+  Object.assign(s.encounter, tag);
+  emit(s, 'jack-in', `${text}: ${s.encounter.virus.name}.`, { location });
   command(s, 'engage');
 }
-// Called from finish() when a fight with e.member ends in a win.
+// Called from finish() when a consortium fight ends in a win.
 export function consortiumWon(s, e) {
+  const c = consortiumOf(s);
+  if (!c) return;
+  if (e.raid && c.raid) { const r = c.raid; c.raid = null; return pay(s, r.level, 1, r.family, `${r.name} stopped at ${r.member}'s wall.`); }
+  if (e.roamer && c.roamer) { const r = c.roamer; c.roamer = null; return pay(s, r.level, 1 + CONSORTIUM.roam.bounty * r.hop, r.family, `${r.name} intercepted on the trunk line.`); }
   const loc = memberServers(s).find((l) => l.id === e.member);
-  if (!loc?.held?.siege) return;
-  loc.held.siege = null;
-  const L = loc.level || 1, b = CONSORTIUM.bounty(L), k = perk(s, 'bounty', 1);
-  const credits = b.credits * k, code = b.code * k, m = codeOf(loc.family);
-  s.server.credits += credits;
-  gainCode(s, { [m]: code }, '');
-  gainXp(s, xpFor(s, L, 1), `${loc.name} defended`);
-  emit(s, 'outpost-held', `Siege broken on ${loc.member}'s ${loc.name}. Bounty: +${credits} credits, +${code} ${MATERIALS[m].name}.`, { location: loc.id });
+  if (loc?.held?.siege) { const hop = loc.held.siege.hop || 0; loc.held.siege = null; return pay(s, (loc.level || 1) + hop, 1 + CONSORTIUM.roam.bounty * hop, loc.family, `Siege broken on ${loc.member}'s ${loc.name}.`); }
+  if (loc?.held?.lockdown) { loc.held.lockdown = null; return pay(s, loc.level || 1, 1, loc.family, `${loc.member}'s ${loc.name} retaken: its lockdown is over.`); }
 }
 
-const USAGE = 'consortium, consortium collect, consortium create <name>, consortium invite <handle>, consortium kick <handle>, consortium leave, consortium accept, consortium decline, consortium defend <server>';
+const USAGE = 'consortium, consortium collect, consortium create <name>, consortium invite <handle>, consortium kick <handle>, consortium leave, consortium accept, consortium decline, consortium defend <server|handle>, consortium intercept';
 // `consortium` and its verbs. raw: as typed (a name keeps its capitals).
 export function consortiumCommand(s, raw) {
   const first = s.serial;
@@ -311,13 +434,20 @@ export function consortiumCommand(s, raw) {
     return done();
   }
   if (verb === 'collect') { accrue(s, hooks.now?.() ?? Date.now()); collectShare(s); return done(); }
-  if (verb === 'defend') {
-    const loc = memberServers(s).find((l) => l.id === arg || l.name.toLowerCase() === arg);
-    if (!loc?.held) return warn(s, `No member outpost called "${arg}".`), done();
-    if (!loc.held.siege) return warn(s, `${loc.name} isn't under siege.`), done();
+  if (verb === 'defend' || verb === 'intercept') {
     if (s.run) return warn(s, 'Jack out first.'), done();
     if (active(s)) return warn(s, 'Finish the fight first.'), done();
-    defend(s, loc);
+    if (verb === 'intercept') {
+      const r = c.roamer;
+      if (!r) return warn(s, 'Nothing on the trunk line.'), done();
+      return fight(s, r, { roamer: true }, `Intercepting ${r.name} on the trunk line`, r.to), done();
+    }
+    if (c.raid && c.raid.member === arg) return fight(s, c.raid, { raid: true }, `Defending ${arg}'s wall`), done();
+    const loc = memberServers(s).find((l) => l.id === arg || l.name.toLowerCase() === arg);
+    if (!loc?.held) return warn(s, `Nothing to defend called "${arg}".`), done();
+    const sg = loc.held.siege, ld = loc.held.lockdown;
+    if (!sg && !ld) return warn(s, `${loc.name} isn't under siege or in lockdown.`), done();
+    fight(s, { family: loc.family, level: (loc.level || 1) + (sg?.hop || 0), seed: (sg || ld).seed || loc.seed }, { member: loc.id }, `${sg ? 'Defending' : 'Retaking'} ${loc.member}'s ${loc.name}`, loc.id);
     return done();
   }
   warn(s, USAGE);

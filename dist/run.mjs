@@ -1,7 +1,7 @@
 // Runs: exploring a traced location as a small file system with Unix commands.
 // Pure like the combat engine: state in, events out.
 import { vaultConfig, bankConfig, CONFIGS } from './configs.mjs';
-import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, cutOffBy, collect } from './outpost.mjs';
+import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, collect } from './outpost.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock } from './rogue.mjs';
@@ -340,7 +340,6 @@ export function connect(s, id) {
   else if (!loc) warn(s, `No located origin called "${id}". Check Trace.`);
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (isWild(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
-  else if (!zone && cutOffBy(s, loc)) warn(s, `The route to ${loc.name} runs through ${cutOffBy(s, loc).name}, and natives hold it. Retake and repair that outpost first.`);
   else {
     // A waiting home intrusion is parked for the run and comes back afterwards.
     if (s.encounter?.phase === 'alert' && s.encounter.mode !== 'run') s.parked = s.encounter;
@@ -355,6 +354,7 @@ export function connect(s, id) {
     s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: '/', link: 'you' }]));
     const q = QUIRKS[loc.quirk];
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} hostile ${liveSpawns(s) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
+    else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied: ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'process' : 'processes'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} hostile ${liveRogue(loc) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     ls(s);

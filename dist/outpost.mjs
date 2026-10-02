@@ -9,15 +9,15 @@
 // once.
 //
 // Natives notice outposts (logged-on time only) and lay siege: defend it in time or it falls.
-// A fallen outpost loses its stockpile and goes dark. Retake it by beating the natives there,
-// then repair it. While it's down, servers past it can't be reached, but invaders from past it
-// still come through to you.
+// A lost siege puts the outpost in lockdown for a while (real time): it stops harvesting, but
+// keeps its stockpile, and the server stays open. Retake it from the natives to end it sooner.
+// In a consortium, sieges come while you're away too (consortium.mjs), and members may break them.
 import { MUTATIONS, variantFor } from './data.mjs';
 import { emit, warn, rand, active, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
-import { consortiumYield, consortiumBandwidth } from './consortium.mjs';
+import { consortiumYield, consortiumBandwidth, memberHelp, roam } from './consortium.mjs';
 
 export const OUTPOST = {
   kinds: {
@@ -49,9 +49,9 @@ export const OUTPOST = {
   stashCap: 6,
   vaultChance: 0.12, // share of vaults holding a packaged native (Legacy sites: double)
   compile: { credits: 200, code: 15, material: { siphon: 'worm', scraper: 'cipher', tap: 'kernel' } },
-  repair: { credits: (L) => 40 + 8 * L, code: (L) => 4 + Math.floor(L / 5) },
+  lockdownMs: 2 * 3600000, // real time an outpost stays in lockdown after a lost siege
   // Outpost ports and the modules that go in them. The ports belong to the server, so modules
-  // stay put when you swap or pull the harvester, and sleep while the outpost is lost.
+  // stay put when you swap or pull the harvester, and sleep while the outpost is in lockdown.
   ports: (serverLv) => 2 + (serverLv >= 20 ? 1 : 0) + (serverLv >= 35 ? 1 : 0),
   mods: {
     pipeline: { name: 'Pipeline', rule: '+50% yield.' },
@@ -112,11 +112,6 @@ export const outpostPorts = (s) => OUTPOST.ports(serverLevel(s));
 export const outposts = (s) => (s.locations || []).filter((l) => l.outpost?.h);
 export const bandwidthUsed = (s) => outposts(s).filter((l) => l.trait !== 'backbone').length;
 
-// Is this server cut off? Any server it hangs off (all the way up) is a fallen outpost.
-export function cutOffBy(s, loc) {
-  for (let p = loc?.parent && locOf(s, loc.parent), seen = 0; p && seen < 50; p = p.parent && locOf(s, p.parent), seen++) if (p.outpost?.fallen) return p;
-  return null;
-}
 
 // Yield ----------------------------------------------------------------------------------------
 const yieldMult = (loc, h, s) => (1 + (h.traits.includes('rich') ? 0.5 : 0) + (hasMod(loc, 'pipeline') ? 0.5 : 0)) * (loc.trait === 'rich' || loc.trait === 'hostile' ? 1.5 : 1) * (s ? archYield(s) * consortiumYield(s) : 1);
@@ -126,7 +121,7 @@ export const stockOf = (loc) => Math.floor(loc.outpost?.stock || 0);
 
 function produce(s, loc, ms) {
   const o = loc.outpost;
-  if (!o?.h || o.fallen || ms <= 0) return;
+  if (!o?.h || o.lockdown || ms <= 0) return;
   o.stock = Math.min(capOf(loc), (o.stock || 0) + perHour(loc, o.h, s) * (ms / 3600000));
 }
 
@@ -161,9 +156,9 @@ export function scrape(s, loc, n, level, lucky = 0, why = '') {
 
 // The clock ------------------------------------------------------------------------------------
 // Production runs on real time (offline too). Sieges run on logged-on time (dt), like invasions.
-export function tickOutposts(s, now, dt, paused = false) {
-  tickSites(s, now, dt, paused);
-  if (!paused) { tickScheduler(s, now); tickInfest(s, dt); }
+export function tickOutposts(s, now, dt, paused = false, away = false) {
+  tickSites(s, now, dt, paused, away);
+  if (!paused) { tickScheduler(s, now); if (!away) tickInfest(s, dt); }
 }
 
 // Infestations ----------------------------------------------------------------------------------
@@ -183,7 +178,7 @@ function tickInfest(s, dt) {
     inf.left -= dt;
     if (inf.left <= 0) { loc.outpost.infest = null; emit(s, 'info', `The infestation on ${loc.name} moved on.`, { location: loc.id }); }
   }
-  const ok = outposts(s).filter((l) => !l.outpost.fallen && !l.outpost.siege && !l.outpost.infest);
+  const ok = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege && !l.outpost.infest);
   if (!ok.length) return;
   if (net.infestNext == null) net.infestNext = infestEvery(outposts(s).length);
   net.infestNext -= dt;
@@ -222,20 +217,29 @@ export function infestWon(s, e) {
   gainXp(s, xpFor(s, loc.level || 1, 1), `${loc.name} cleared`);
   emit(s, 'outpost-held', `${loc.name} CLEARED. The outpost runs hot for a while: +${got} to its stockpile${got ? '' : ' (it was already full)'}.`, { location: loc.id });
 }
-function tickSites(s, now, dt, paused) {
+function tickSites(s, now, dt, paused, away) {
   for (const loc of outposts(s)) {
     const o = loc.outpost;
+    if (o.fallen) { o.fallen = false; o.lockdown = { left: OUTPOST.lockdownMs }; } // saves from before lockdowns
     const since = o.at ?? now;
     o.at = now;
+    if (o.lockdown) {
+      o.lockdown.left -= now - since;
+      if (o.lockdown.left > 0) continue;
+      o.lockdown = null;
+      emit(s, 'outpost-up', `${loc.name}'s lockdown is over: harvesting again.`, { location: loc.id });
+      continue;
+    }
     if (paused) continue;
     produce(s, loc, now - since);
-    if (o.fallen) continue;
     if (o.siege) {
       o.siege.left -= dt;
+      if (away && o.siege.helper === undefined) o.siege.helper = memberHelp(s); // in a consortium, a member may break it
+      if (away && o.siege.helper && o.siege.left <= OUTPOST.siegeMs / 2) { emit(s, 'outpost-held', `${o.siege.helper} broke the siege on ${loc.name} while you were away.`, { location: loc.id }); o.siege = null; continue; }
       if (o.siege.left <= 0 && !(s.encounter?.outpost === loc.id && active(s))) fall(s, loc);
       continue;
     }
-    const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * archNotice(s);
+    const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * archNotice(s) * (away ? 0.5 : 1);
     if (dt > 0 && rand(s) < (dt / OUTPOST.noticeMs) * mult) startSiege(s, loc);
   }
 }
@@ -253,11 +257,11 @@ export function fall(s, loc, force = false) {
     o.siege = null;
     return emit(s, 'outpost-held', `${loc.name} held on its own: the Sturdy harvester outlasted the siege.`, { location: loc.id });
   }
+  const hop = o.siege?.hop || 0;
   o.siege = null;
-  o.stock = 0;
-  o.fallen = 'held'; // natives hold it: retake it, then repair it
-  const cut = s.locations.filter((l) => cutOffBy(s, l) === loc).length;
-  emit(s, 'outpost-fell', `OUTPOST LOST: natives retook ${loc.name}. Its stockpile is gone and the harvester is dark.${cut ? ` ${cut} ${cut === 1 ? 'server' : 'servers'} past it can't be reached until you retake and repair it.` : ''}`, { location: loc.id });
+  o.lockdown = { left: OUTPOST.lockdownMs }; // the stockpile stays; the server stays open
+  emit(s, 'outpost-fell', `LOCKDOWN: natives took ${loc.name}. It stops harvesting for ${OUTPOST.lockdownMs / 3600000} hours; its stockpile is kept. Retake it to end it sooner.`, { location: loc.id });
+  roam(s, loc, hop); // in a consortium, the virus moves on along the trunk line
 }
 
 // The Scheduler (a home service) collects every outpost on a timer, real time, offline too.
@@ -269,7 +273,7 @@ function tickScheduler(s, now) {
   if (net.schedAt == null) { net.schedAt = now + every; return; }
   if (now < net.schedAt) return;
   net.schedAt = now + every;
-  for (const loc of outposts(s)) if (!loc.outpost.fallen && stockOf(loc)) collect(s, loc, 'Scheduler: ');
+  for (const loc of outposts(s)) if (!loc.outpost.lockdown && stockOf(loc)) collect(s, loc, 'Scheduler: ');
 }
 
 // Modules ---------------------------------------------------------------------------------------
@@ -316,9 +320,9 @@ export function outpostWon(s, e) {
   const loc = locOf(s, e.outpost);
   const o = loc?.outpost;
   if (!o) return;
-  if (o.fallen === 'held') {
-    o.fallen = 'damaged';
-    emit(s, 'outpost-held', `${loc.name} is yours again, but the outpost is wrecked. Repair it to start harvesting.`, { location: loc.id });
+  if (o.lockdown) {
+    o.lockdown = null;
+    emit(s, 'outpost-held', `${loc.name} retaken: the lockdown is over and it's harvesting again.`, { location: loc.id });
   } else if (o.siege) {
     o.siege = null;
     emit(s, 'outpost-held', `Siege broken: ${loc.name} is safe.`, { location: loc.id });
@@ -327,13 +331,13 @@ export function outpostWon(s, e) {
 
 // Commands -------------------------------------------------------------------------------------
 // outpost install <server> <n> · outpost pull <server> · outpost defend <server>
-// outpost retake <server> · outpost repair <server> · outpost compile <kind>
+// outpost retake <server> (ends a lockdown) · outpost compile <kind>
 export function outpostCommand(s, full, now) {
   const [text, payText] = splitPay(full);
   const [, verb, a, b] = text.split(' ');
   if (verb === 'compile') return compile(s, a, payText);
   const loc = a && locOf(s, a);
-  if (!loc) return warn(s, 'usage: outpost install|pull|defend|clear|retake|repair|mod|unmod <server>, or outpost compile <kind>');
+  if (!loc) return warn(s, 'usage: outpost install|pull|defend|clear|retake|mod|unmod <server>, or outpost compile <kind>');
   if (verb === 'mod') return installMod(s, loc, b);
   if (verb === 'unmod') return removeMod(s, loc, b);
   const o = loc.outpost;
@@ -341,18 +345,17 @@ export function outpostCommand(s, full, now) {
     if (!loc.takenOver) return warn(s, `Take ${loc.name} over first: open its vault.`);
     if (o?.h) return warn(s, `${loc.name} already runs a harvester.`);
     if (o?.readyAt && now < o.readyAt) return warn(s, `${loc.name}'s port is still resetting (${Math.ceil((o.readyAt - now) / 60000)} min).`);
-    if (cutOffBy(s, loc)) return warn(s, `${loc.name} is cut off. Retake ${cutOffBy(s, loc).name} first.`);
     const i = Math.max(1, Number(b) || 1) - 1;
     const h = harvesters(s)[i];
     if (!h) return warn(s, 'You have no harvester. Compile one on the Map\'s server card.');
     if (loc.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s)) return warn(s, `No bandwidth left (${bandwidthUsed(s)}/${bandwidth(s)}). Pull a harvester out, or level your server.`);
     harvesters(s).splice(i, 1);
-    loc.outpost = { h, at: now, stock: 0, siege: null, fallen: false };
+    loc.outpost = { h, at: now, stock: 0, siege: null, lockdown: null };
     return emit(s, 'outpost-up', `Outpost up on ${loc.name}: ${harvesterName(h)}. It fills while you're away; connect to collect.`, { location: loc.id });
   }
   if (!o?.h) return warn(s, `${loc.name} has no outpost.`);
   if (verb === 'pull') {
-    if (o.fallen || o.siege) return warn(s, o.siege ? 'Not while it\'s under siege.' : 'Retake and repair it first.');
+    if (o.siege) return warn(s, 'Not while it\'s under siege.');
     collect(s, loc);
     if (harvesters(s).length >= OUTPOST.stashCap) return warn(s, `Your harvester rack is full (${OUTPOST.stashCap}).`);
     harvesters(s).push(o.h);
@@ -363,18 +366,8 @@ export function outpostCommand(s, full, now) {
   if (active(s)) return warn(s, 'Finish the fight first.');
   if (verb === 'defend') return o.siege ? fightNatives(s, loc, 'Defending') : warn(s, `${loc.name} isn't under siege.`);
   if (verb === 'clear') return clearInfest(s, loc);
-  if (verb === 'retake') return o.fallen === 'held' ? fightNatives(s, loc, 'Retaking') : warn(s, `${loc.name} isn't held by natives.`);
-  if (verb === 'repair') {
-    if (o.fallen !== 'damaged') return warn(s, o.fallen ? 'Retake it first.' : `${loc.name} doesn't need repair.`);
-    const L = loc.level || 1, cr = OUTPOST.repair.credits(L), code = OUTPOST.repair.code(L), m = codeOf(loc.family), have = materialsOf(s);
-    if (s.server.credits < cr || (have[m] || 0) < code) return warn(s, `Repair needs ${cr} credits and ${code} ${MATERIALS[m].name}.`);
-    s.server.credits -= cr;
-    have[m] -= code;
-    o.fallen = false;
-    o.at = now;
-    return emit(s, 'outpost-up', `${loc.name} repaired (−${cr} credits, −${code} ${MATERIALS[m].name}). Harvesting again, and the route past it is open.`, { location: loc.id });
-  }
-  warn(s, 'usage: outpost install|pull|defend|retake|repair <server>');
+  if (verb === 'retake') return o.lockdown ? fightNatives(s, loc, 'Retaking') : warn(s, `${loc.name} isn't in lockdown.`);
+  warn(s, 'usage: outpost install|pull|defend|clear|retake <server>');
 }
 
 function compile(s, kind, payText = null) {

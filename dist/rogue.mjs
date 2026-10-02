@@ -9,6 +9,7 @@
 import { emit, rand, gainCode, gainXp, xpFor, hooks } from './combat.mjs';
 import { FAMILIES, variantFor, STRAINS, CONFIG } from './data.mjs';
 import { seeded, codeOf } from './gear.mjs';
+import { occupationCleared } from './consortium.mjs';
 
 export const ROGUE = {
   share: 1 / 6, // of servers you trace
@@ -44,10 +45,11 @@ export function rollRogue(s, loc) {
 }
 
 // Its folders: 4–8 of them, one level deep, chosen by its seed.
+// An occupied server (consortium.mjs) has its own folders.
 export function rogueLayout(loc) {
   const r = seeded((loc.seed || 1) * 67 + 3);
   const n = 4 + Math.floor(r() * 5);
-  const rooms = ROGUE.rooms.map((x) => [r(), x]).sort((a, b) => a[0] - b[0]).slice(0, n).map((x) => x[1]);
+  const rooms = loc.rooms || ROGUE.rooms.map((x) => [r(), x]).sort((a, b) => a[0] - b[0]).slice(0, n).map((x) => x[1]);
   const out = { '/': { dirs: rooms, files: ['motd.txt'] } };
   for (const room of rooms) out['/' + room] = { dirs: [], files: [] };
   return out;
@@ -55,6 +57,7 @@ export function rogueLayout(loc) {
 export const rogueRooms = (loc) => Object.keys(rogueLayout(loc)).filter((p) => p !== '/');
 
 export function rogueMotd(loc) {
+  if (loc.occupied) return [`${loc.name}. rebooting. something moved in while it was down.`, 'clear every folder and it comes back up.'];
   const k = ROGUE.kinds[loc.rogue.kind];
   const fam = FAMILIES[loc.family].name.toLowerCase();
   return {
@@ -71,7 +74,7 @@ export function rogueSpawns(s, loc, now = Date.now()) {
   const fams = Object.keys(FAMILIES);
   for (const room of rogueRooms(loc)) {
     const sp = loc.spawns[room];
-    if (sp?.alive || (sp && sp.respawnAt > now)) continue;
+    if (sp?.alive || (sp && (sp.respawnAt > now || loc.occupied))) continue; // an occupation doesn't come back
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     const r = seeded(seed);
@@ -92,6 +95,7 @@ export const rogueRespawn = (s) => ROGUE.respawnMs[0] + Math.floor(rand(s) * (RO
 export function rogueKill(s, loc, room, now, extraDrop) {
   const sp = loc.spawns?.[room];
   if (sp) { sp.alive = false; sp.respawnAt = now + rogueRespawn(s); }
+  if (loc.occupied && !liveRogue(loc)) occupationCleared(s, loc);
   if (loc.rogue.kind === 'pit') extraDrop();
   if (loc.rogue.kind === 'gauntlet' && s.run) {
     const done = (s.run.gauntlet ||= []);

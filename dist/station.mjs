@@ -6,7 +6,6 @@
 import { emit, rand, hackerLevel } from './combat.mjs';
 import { rollItem, seeded, itemLabel, statLine } from './gear.mjs';
 import { CONFIG } from './data.mjs';
-import { cutOffBy } from './outpost.mjs';
 
 export const STATION = {
   name: 'LANTERN',
@@ -29,7 +28,7 @@ const places = (s) => [s.zone, ...(s.locations || [])].filter(Boolean);
 
 // Where the next drop can go: a traced server you can reach (never a rogue one), else SPRAWL-00.
 function spot(s) {
-  const open = (s.locations || []).filter((l) => !l.rogue && !cutOffBy(s, l));
+  const open = (s.locations || []).filter((l) => !l.rogue);
   return open.length ? open[Math.floor(rand(s) * open.length)] : s.zone;
 }
 

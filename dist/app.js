@@ -433,7 +433,7 @@ function react(events) {
       case 'outpost-up': feel.add('unlock', null); notice(e.message); break;
       case 'harvester': feel.add('pickup', null); notice(e.message); break;
       case 'harvest': feel.add('pickup', null); break;
-      case 'outpost-siege': case 'consortium-siege': feel.add('prewarn', null); break;
+      case 'outpost-siege': case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
       case 'outpost-fell': flash('OUTPOST LOST'); feel.add('lose', null); break;
       case 'outpost-held': feel.add('good', null); notice(e.message); break;
       case 'takeover': flash('TAKEN OVER'); feel.add('win', null); notice(e.message); break;

@@ -4,7 +4,7 @@ import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION } fr
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
-import { OUTPOST, harvesters, hasVx, bandwidth, cutOffBy, stockOf, capOf, vxName, vaultHarvester, siteTrait } from './dist/outpost.mjs';
+import { OUTPOST, harvesters, hasVx, bandwidth, stockOf, capOf, vxName, vaultHarvester, siteTrait } from './dist/outpost.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -80,7 +80,7 @@ test('Rich and Deep traits change yield and storage', () => {
   assert.equal(capOf(a), OUTPOST.kinds.siphon.cap(10) * 2);
 });
 
-test('an undefended siege takes the outpost; servers past it are cut off until retaken and repaired', () => {
+test('an undefended siege puts the outpost in lockdown: no harvesting, stockpile kept, servers past it still open; retaking ends it', () => {
   const s = fresh();
   const a = found(s);
   a.takenOver = true;
@@ -95,20 +95,30 @@ test('an undefended siege takes the outpost; servers past it are cut off until r
   s.net.next = 1e12; // no invaders in this test
   let t = T0;
   for (let i = 0; i < 620; i++) tickNetwork(s, (t += 1000));
-  assert.equal(a.outpost.fallen, 'held');
-  assert.equal(a.outpost.stock, 0);
-  assert.equal(cutOffBy(s, deep), a);
+  assert.ok(a.outpost.lockdown, 'in lockdown');
+  assert.equal(stockOf(a), 3, 'the stockpile is kept');
+  for (let i = 0; i < 600; i++) tickNetwork(s, (t += 1000));
+  assert.equal(stockOf(a), 3, 'no harvesting meanwhile');
   play(s, 'connect ' + deep.id);
-  assert.equal(s.run, null, 'cut off');
+  assert.equal(s.run?.loc, deep.id, 'servers past it stay open');
+  play(s, 'jack out');
   command(s, `outpost retake ${a.id}`, t);
   assert.ok(s.encounter?.outpost === a.id);
   win(s);
-  assert.equal(a.outpost.fallen, 'damaged');
-  s.server.credits = 1000;
-  s.materials.worm = 50;
-  command(s, `outpost repair ${a.id}`, t);
-  assert.equal(a.outpost.fallen, false);
-  assert.equal(cutOffBy(s, deep), null);
+  assert.equal(a.outpost.lockdown, null);
+});
+
+test('a lockdown ends on its own', () => {
+  const s = fresh();
+  const a = found(s);
+  a.takenOver = true;
+  s.harvesters = [siphon()];
+  command(s, `outpost install ${a.id}`, T0);
+  a.outpost.lockdown = { left: 5000 };
+  s.net.wall = T0; s.net.next = 1e12;
+  let t = T0;
+  for (let i = 0; i < 6; i++) tickNetwork(s, (t += 1000));
+  assert.equal(a.outpost.lockdown, null);
 });
 
 test('defending in time breaks the siege', () => {
@@ -121,7 +131,7 @@ test('defending in time breaks the siege', () => {
   command(s, `outpost defend ${a.id}`, T0);
   win(s);
   assert.equal(a.outpost.siege, null);
-  assert.equal(a.outpost.fallen, false);
+  assert.equal(a.outpost.lockdown, null);
 });
 
 test('pulling out returns the harvester and the port resets', () => {
