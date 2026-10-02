@@ -4,7 +4,7 @@ This is the single source of truth for how combat works. If code, README or an o
 
 ## The Craft page
 
-Everything you build is on one page, **Craft** (at home only): protocols (compile from your recipes, Zero-days from source), the field kit (Signal boosters) and harvesters, with your credits, code and salvage stacks beside them. Protocols you *run* live on the **Loadout** page's Protocols tab (slots, stats, stash: load, unload, scrap).
+Everything you build is on one page, **Craft** (at home only): protocols (compile from your recipes, Zero-days from source), configs and harvesters, with your credits, code and salvage stacks beside them. Protocols you *run* live on the **Loadout** page, beside your skills (slots, stats, stash: load, unload, scrap).
 
 ## First launch
 
@@ -14,7 +14,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 
 1. `connect sprawl`: **SPRAWL-00**, a rogue server, is where you go to fight from the start. A virus sits in each of its six folders at your level, but never above level 3: it's a starter area, and past that the fights worth having are on the servers you trace (`ls` shows it as `name.exe`); SPRAWL-00 only ever has the plain families, never strains or bigger grades; `attack` it when you're ready. A kill pays like a home kill, straight away (XP, code, a possible drop, a lead), and the folder fills again 90 seconds later.
 2. Every neutralized virus gives a lead toward its family's origin: +25% for the kill plus three quarters of your backtrace (each class traces its own way, at home and on the rogue server; see Backtrace). At 100% the origin is located. A full backtrace locates it in one fight; four plain kills of the same family also get there.
-3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter (a **+** chip sits beside it whenever it isn't full, and a first-time tip points at it), or type `top up`, to pay for the rest now (see The economy). The Integrity meter has the same **+** for `repair`. **Signal boosters** refill it on a run: craft one at home from 4 salvage (`craft booster`, or the Craft page), carry up to 5, and type `boost` on a run for half your Signal back (not mid-fight).
+3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter (a **+** chip sits beside it whenever it isn't full, and a first-time tip points at it), or type `top up`, to pay for the rest now (see The economy). The Integrity meter has the same **+** for `repair`. On a run, the store's **Signal patch** fills it. (Signal boosters are retired: they can't be crafted any more, and ones you still carry work with `boost`.)
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
 5. Some files lead deeper: a trace record locates a node one layer down.
 6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invader gets through.
@@ -143,7 +143,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 **Where credits come from** (bot, levels 5–15, taking contracts): about 1,000–1,500 credits an hour; 400 an hour at levels 1–4. Run caches are a bit over half of it, contracts about a third, the Halcyon retainer the rest. No credits come from kills. Measure it with `node econ.mjs <class> [level] [seed]`.
 
 **Where they go.**
-- **Health (the everyday sink).** Signal rests back at 20% a minute and the server at 2% a minute, offline too. Or pay to top up now: a full Signal bar costs 8 + 3×(class level) credits, a full server 10 + 4×(server level); less missing costs less (at least 1). Click the meter, or type `top up` / `repair [n]`. On a run it's a booster or the store's Signal patch instead. A bot that always pays spends about a quarter to a third of its income on it and reaches level 10 two to three times sooner than one that always waits; the Bastion barely needs it.
+- **Health (the everyday sink).** Signal rests back at 20% a minute and the server at 2% a minute, offline too. Or pay to top up now: a full Signal bar costs 8 + 3×(class level) credits, a full server 10 + 4×(server level); less missing costs less (at least 1). Click the meter, or type `top up` / `repair [n]`. On a run it's the store's Signal patch instead. A bot that always pays spends about a quarter to a third of its income on it and reaches level 10 two to three times sooner than one that always waits; the Bastion barely needs it.
 - **Building (the big goals).** Services, outpost modules, harvesters and configs cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
 - **Gear.** Compiling a blue costs 60 + 15×level credits and 8 salvage, cheaper than the store's sealed item (180 + 14×level).
 
@@ -159,7 +159,6 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Outpost repair | 40 + 8L | 4 + L/5 | | |
 | Config | 250 | 15 | 6 | its source |
 | Architecture switch | 1,000 | | | |
-| Signal booster | | | 4 (1 Pulse Kernel) | |
 
 
 **Commands** (at home, between fights): `protocols`, `load <id>` (swaps a full slot), `unload <id|slot#>`, `deconstruct <id>`, `compile [stat]`, `compile <zero-day>`.
@@ -290,7 +289,6 @@ Salvage works like mana in Magic: most costs take **any** salvage, and a few als
   |---|---|
   | Protocol (compile) | 4 salvage |
   | Zero-day (compile) | 6 salvage + 2 guard components (Sentry Lens, Tracker Core, Sentinel Lens, Lockout Relay, Crawler Maw, Brood Seed, Shredder Blade, Grinder Core) |
-  | Signal booster | 3 salvage + 1 Pulse Kernel |
   | Siphon / Scraper / Tap harvester | + 1 Replication Seed / Cipher Seed / Signal Key (on top of credits and code) |
 
 - **Choosing what pays.** Every build button opens a picker with the stacks and a − / + for each. It starts filled with a sensible default (plain Scrap first, then pieces no recipe asks for, then the most plentiful), and Build lights up once the payment covers the cost. On the command line: `compile crit pay scrap:2,pulse-kernel:2` (without `pay`, the default is used).

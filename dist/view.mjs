@@ -470,10 +470,6 @@ export function craftMarkup(s, focus = null) {
       ${p.mine.length ? `${p.picker}
       <div class="row"><button type="button" class="btn primary" data-command="compile${p.focus ? ' ' + p.focus : ''}" data-pay="protocol:${p.c.salvage}" data-pay-title="${esc(p.focus && STATS[p.focus] ? PROTOCOL_NAMES[p.focus] : 'Protocol')}" ${p.can(p.c) ? '' : 'disabled'} ${why ? `title="${esc(why)}"` : ''}>Compile${p.focus && STATS[p.focus] ? ' · ' + esc(PROTOCOL_NAMES[p.focus]) : ''}</button><span class="cost">${p.c.credits}c + ${esc(salvageLabel(p.ccost))}${serviceVersion(s, 'buildfarm') ? ` <span class="tag you">−${serviceValue(s, 'buildfarm')}%</span>` : ''}</span></div>` : '<p class="svc-line">no recipes</p>'}
       ${p.recipes ? `<h2 style="margin-top:12px">Zero-day source</h2><ul class="list">${p.recipes}</ul>` : ''}</section>`;
-  // Field kit: Signal boosters
-  const b = CONFIG.booster, have = s.items?.booster || 0, bcost = SALVAGE_COSTS.booster(), bcan = !busy && canAfford(s, bcost) && have < b.carry;
-  const kitCard = `<section class="card craft-card"><h2>Field kit</h2>
-      <ul class="craft-list"><li><span><b class="iname">${glyph('booster', 'badge')}Signal booster</b><small>Half your Signal back on a run: type boost. You carry ${have}/${b.carry}.</small><small class="cost">${esc(salvageLabel(bcost))}</small></span><button type="button" class="btn primary small" data-command="craft booster" data-pay="booster" data-pay-title="Signal booster" ${bcan ? '' : 'disabled'} ${why ? `title="${esc(why)}"` : have >= b.carry ? 'title="You carry as many as you can"' : ''}>Craft</button></li></ul></section>`;
   // Harvesters
   const anyOwned = s.locations.some((l) => l.takenOver) || harvesters(s).length;
   const harvCard = anyOwned ? `<section class="card craft-card"><h2>Harvesters · rack ${harvesters(s).length}/${OUTPOST.stashCap}</h2>
@@ -487,7 +483,7 @@ export function craftMarkup(s, focus = null) {
   const stock = `<section class="card"><h2>Materials</h2><h1>${srv.credits} credits · ${s.salvage.length} salvage</h1>
       <p class="svc-line">${Object.entries(mats).filter(([, n]) => n).map(([m, n]) => `${n} ${esc(MATERIALS[m]?.name || m)}`).join(' · ') || 'no code yet'}</p>
       ${salvageStacksMarkup(s)}</section>`;
-  return `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protoCard}${kitCard}${cfgCard}${harvCard}</div><div style="display:grid;gap:12px;align-content:start">${stock}</div></div>`;
+  return `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protoCard}${cfgCard}${harvCard}</div><div style="display:grid;gap:12px;align-content:start">${stock}</div></div>`;
 }
 export const vaultMarkup = protocolsMarkup;
 export const gearMarkup = protocolsMarkup;
@@ -896,8 +892,19 @@ export function loadoutMarkup(s, view, tab = 'skills') {
 
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['skills', 'Skills and talents'], ['protocols', `Protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
-    ${tab === 'protocols' ? (id === equippedArch ? `<div class="loadout-protocols page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protocolSlotsCard(s)}</div><div style="display:grid;gap:12px;align-content:start">${protocolStashCard(s)}</div></div>` : `<p class="svc-line loadout-protocols">Protocols belong to the class in use. Switch to ${esc(a.name)} to change its protocols.</p>`) : `
+    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['skills', `Skills and protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['talents', `Talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
+    ${tab === 'talents' ? `
+    <div class="loadout-talents">
+      <section class="card ttree-card"><div class="thead"><div><h2>Talent tree</h2><h1>${esc(a.name)}</h1></div>
+        <div class="tpoints" title="A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}."><span class="tbar"><span style="width:${Math.min(100, (spent / TREE_MAX) * 100)}%"></span></span><span><b>${Math.max(0, points - spent)} free</b> · ${spent}/${TREE_MAX} spent · ${points} earned</span></div></div>
+        <ol class="ttree">
+          <li class="troot"><span class="tag">passive</span><b>${esc(a.passive.name)}</b><span class="trule">${esc(a.passive.rule)}</span></li>
+          <li class="troot${lvl < unlockLevel(id, 'backtrace') ? ' locked' : ''}"><span class="tag">${lvl < unlockLevel(id, 'backtrace') ? `Lv ${unlockLevel(id, 'backtrace')}` : 'trace'}</span><b>Backtrace</b><span class="trule">${esc(BACKTRACE[id].rule)}</span></li>
+          ${tiers}
+        </ol>
+        ${spent && !busy ? `<p class="tfoot">${btn(`talent reset ${id}`, 'Clear picks')}</p>` : ''}
+      </section>
+    </div>` : `
     <div class="loadout-grid">
       <section class="card skills-card">
         <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1></div>
@@ -908,15 +915,7 @@ export function loadoutMarkup(s, view, tab = 'skills') {
         <div class="lib-head"><h2>Library · ${known.length}/${a.skills.length}</h2></div>
         <ul class="library">${lib}</ul>
       </section>
-      <section class="card ttree-card"><div class="thead"><div><h2>Talent tree</h2><h1>${esc(a.name)}</h1></div>
-        <div class="tpoints" title="A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}."><span class="tbar"><span style="width:${Math.min(100, (spent / TREE_MAX) * 100)}%"></span></span><span><b>${Math.max(0, points - spent)} free</b> · ${spent}/${TREE_MAX} spent · ${points} earned</span></div></div>
-        <ol class="ttree">
-          <li class="troot"><span class="tag">passive</span><b>${esc(a.passive.name)}</b><span class="trule">${esc(a.passive.rule)}</span></li>
-          <li class="troot${lvl < unlockLevel(id, 'backtrace') ? ' locked' : ''}"><span class="tag">${lvl < unlockLevel(id, 'backtrace') ? `Lv ${unlockLevel(id, 'backtrace')}` : 'trace'}</span><b>Backtrace</b><span class="trule">${esc(BACKTRACE[id].rule)}</span></li>
-          ${tiers}
-        </ol>
-        ${spent && !busy ? `<p class="tfoot">${btn(`talent reset ${id}`, 'Clear picks')}</p>` : ''}
-      </section>
+      <div class="loadout-protocols">${id === equippedArch ? `${protocolSlotsCard(s)}${protocolStashCard(s)}` : `<section class="card"><h2>Protocols</h2><p class="svc-line">Protocols belong to the class in use. Switch to ${esc(a.name)} to change its protocols.</p></section>`}</div>
     </div>`}
     </div>`;
 }

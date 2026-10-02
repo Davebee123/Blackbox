@@ -622,15 +622,12 @@ test('resting: between fights the server repairs 1% of its max every 10 seconds,
 test('salvage pays like mana: generic pieces for the rest, a chosen payment is honoured', async () => {
   const { SALVAGE_COSTS, autoPay, payProblem, parsePay } = await import('./dist/salvage.mjs');
   const s = fresh();
-  s.salvage = [{ name: 'Scrap' }, { name: 'Scrap' }, { name: 'Pulse Kernel' }, { name: 'Pulse Kernel' }, { name: 'Mask Shard' }];
-  const cost = SALVAGE_COSTS.booster();
-  assert.deepEqual(autoPay(s, cost), { 'Pulse Kernel': 1, Scrap: 2, 'Mask Shard': 1 }, 'plain scrap first, and it keeps the spare component');
-  assert.equal(payProblem(s, cost, { Scrap: 2, 'Mask Shard': 2 }), "You don't have 2 Mask Shard.");
-  assert.match(payProblem(s, cost, { Scrap: 2, 'Mask Shard': 1 }), /Pulse Kernel/);
-  const mine = parsePay(s, 'pulse-kernel:2,scrap:2,mask-shard:0');
+  s.salvage = [{ name: 'Scrap' }, { name: 'Scrap' }, { name: 'Signal Key' }, { name: 'Signal Key' }, { name: 'Mask Shard' }];
+  const cost = SALVAGE_COSTS['harvester-tap'](); // 5 any + a Signal Key
+  s.salvage.push({ name: 'Scrap' }, { name: 'Scrap' });
+  assert.deepEqual(autoPay(s, cost), { 'Signal Key': 1, Scrap: 4, 'Mask Shard': 1 }, 'plain scrap first, and it keeps the spare component');
+  assert.equal(payProblem(s, cost, { Scrap: 4, 'Mask Shard': 2 }), "You don't have 2 Mask Shard.");
+  assert.match(payProblem(s, cost, { Scrap: 4, 'Mask Shard': 1 }), /Signal Key/);
+  const mine = parsePay(s, 'signal-key:2,scrap:4,mask-shard:0');
   assert.equal(payProblem(s, cost, mine), null);
-  s.items = {}; s.run = null;
-  command(s, 'craft booster pay pulse-kernel:2,scrap:2');
-  assert.equal(s.items.booster, 1);
-  assert.deepEqual(s.salvage.map((p) => p.name), ['Mask Shard']);
 });

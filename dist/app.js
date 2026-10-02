@@ -35,7 +35,7 @@ let suggestionIndex = -1;
 let noticeTimer = 0;
 let dirty = true;
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
-let loadoutTab = 'skills'; // Loadout page: 'skills' or 'protocols'
+let loadoutTab = 'skills'; // Loadout page: 'skills' (skills and protocols) or 'talents'
 let compileFocus = null; // the recipe picked on the Craft page's Protocols card (null: any)
 
 function load() {
@@ -429,7 +429,6 @@ function notice(text, bad = false) {
 
 // ---------- commands ----------
 const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 'system'];
-const PROTOCOL_WORDS = ['vault', 'gear', 'protocols', 'stash', 'inventory'];
 const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', crafting: 'craft', workbench: 'craft', build: 'craft', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', fight: 'combat', run: 'net' };
 
 function run(raw) {
@@ -441,7 +440,7 @@ function run(raw) {
   // Ability names win over page names during a fight ("trace" is both).
   const fighting = active(shown());
   const page = ALIAS[text] || text;
-  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (PROTOCOL_WORDS.includes(text)) loadoutTab = 'protocols'; else if (page === 'loadout') loadoutTab = 'skills'; return go(page); }
+  if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' ? 'talents' : 'skills'; return go(page); }
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {

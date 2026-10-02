@@ -15,7 +15,6 @@ export const GUARD_PARTS = ['Sentry Lens', 'Tracker Core', 'Sentinel Lens', 'Loc
 export const SALVAGE_COSTS = {
   protocol: (n) => ({ any: n, need: [] }),
   zeroday: (n) => ({ any: Math.max(0, n - 2), need: [{ label: 'guard component', names: GUARD_PARTS, n: 2 }] }),
-  booster: () => ({ any: CONFIG.booster.salvage - 1, need: [{ label: 'Pulse Kernel', names: ['Pulse Kernel'], n: 1 }] }),
   config: () => ({ any: CONFIG_SALVAGE, need: [] }),
   service: (n) => ({ any: n, need: [] }),
   module: () => ({ any: 5, need: [] }),

@@ -95,7 +95,7 @@ export const TIPS = [
   { id: 'server-blueprints', page: 'server', at: '.blueprint-card', text: 'You can only build a service once you have its blueprint. Blueprints wait in vaults, and a kill drops one now and then.' },
 
   // ---------- protocols ----------
-  { id: 'protocols-slots', page: 'loadout', at: '.gslots', text: 'Each slot takes one kind of protocol: offense, defense or utility. The stats of everything you load add up.' },
+  { id: 'protocols-slots', page: 'loadout', at: '.loadout-protocols .ptiles', text: 'Each slot takes one kind of protocol: Exploit, Proxy, Shell, Script or Implant. The stats of everything you load add up.' },
   { id: 'protocols-compile', page: 'craft', at: '.compile-card.open', text: 'You found a recipe, so you can compile protocols. Pick one of your recipes and the protocol comes out at your level.' },
   { id: 'protocols-zeroday', page: 'loadout', at: '.gitem.r-zeroday', text: 'This is a Zero-day. It has a special effect on top of its stats, and you can run one of each kind.' },
 

@@ -517,21 +517,6 @@ export function tickServices(s, now = Date.now()) {
   return since(s, first);
 }
 
-const payLine = (pay) => Object.entries(pay).filter(([, n]) => n).map(([k, n]) => `${n} ${k}`).join(', ');
-// Signal booster: crafted at home from salvage (what broken viruses leave), used on a run.
-export const boosters = (s) => (s.items ||= { relay: 0, cracker: 0, injector: 0 }).booster || 0;
-function craftBooster(s, payText = null) {
-  const b = CONFIG.booster;
-  if (s.run) return warn(s, 'Craft at home. Jack out first.');
-  if (active(s)) return warn(s, 'Finish the fight first.');
-  if (boosters(s) >= b.carry) return warn(s, `You can carry ${b.carry} Signal boosters.`);
-  const pay = settle(s, SALVAGE_COSTS.booster(), payText);
-  if (typeof pay === 'string') return warn(s, `Signal booster: ${pay}`);
-  spend(s, pay);
-  s.items.booster = boosters(s) + 1;
-  emit(s, 'crafted', `Crafted a Signal booster (−${payLine(pay)}). You have ${s.items.booster}. Use it on a run: boost.`);
-}
-
 export function emit(s, type, message, detail = {}) {
   const event = { id: ++s.serial, cycle: s.encounter?.cycle || 0, type, message, ...detail };
   s.logs.push(event);
@@ -1265,7 +1250,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (text.startsWith('outpost ')) {
     outpostCommand(s, text, now);
   } else if (/^craft( booster)?( pay .*)?$/.test(text)) {
-    craftBooster(s, splitPay(text)[1]);
+    warn(s, 'Signal boosters are gone. Top up your Signal with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
     installRelay(s, text.split(' ')[1]);
   } else if (/^use /.test(text)) {
@@ -1347,7 +1332,7 @@ export function topUpCost(s, what, points = null) {
 function topUp(s, what, wanted = null) {
   if (active(s)) return warn(s, 'Finish the fight first.');
   const signal = what === 'signal';
-  if (signal && s.run) return warn(s, 'Top up at home. On a run: a Signal booster, or a Signal patch from the store.');
+  if (signal && s.run) return warn(s, 'Top up at home. On a run: a Signal patch from the store.');
   if (!signal && s.server.integrity <= 0) return warn(s, 'The server crashed. Type developer reboot.');
   const max = signal ? maxSignal(s) : s.server.max;
   const now = signal ? signalNow(s) : s.server.integrity;
@@ -2438,7 +2423,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s), 'hold', 'pause', 'resume', 'cancel', 'status']
-    : ['engage', 'jack in', 'mail', 'outpost', 'craft booster', 'repair', 'top up', 'protocols', 'services', 'compile', 'install', 'uninstall', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'jack in', 'mail', 'outpost', 'repair', 'top up', 'protocols', 'services', 'compile', 'install', 'uninstall', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 

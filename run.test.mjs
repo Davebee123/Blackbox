@@ -440,20 +440,23 @@ test('talent tree: points come from levels, ranks open the tiers, swapping is fr
   assert.match(command(s, 'talent add overclocked').at(-1).message, /at home/);
 });
 
-test('the loadout page shows levels, locked skills and the tree, and locks picks during a fight', async () => {
+test('the loadout page: skills beside protocols, the talent tree on its own tab, picks locked during a fight', async () => {
   const { loadoutMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   let html = loadoutMarkup(s, 'operator');
   assert.match(html, /Operator Lv 1/);
   assert.match(html, /Level 22/, 'later skills show the level they unlock at');
+  assert.doesNotMatch(html, /class="ttree"/, 'the tree is on the Talents tab');
+  assert.match(html, /Protocols belong to the class in use/, 'another class: no protocol slots to change');
+  assert.match(loadoutMarkup(s, 'breaker'), /class="loadout-protocols">.*Protocols · Breaker/s, 'the class in use: its protocols beside its skills');
+  html = loadoutMarkup(s, 'operator', 'talents');
   assert.match(html, /0 free<\/b> · 0\/\d+ spent · 0 earned/, 'the tree shows its points, no explanation');
   command(s, 'archetype operator');
   command(s, 'developer level 18');
-  html = loadoutMarkup(s, 'operator');
-  assert.match(html, /data-command="talent operator add thread-pool"/);
-  assert.match(html, /data-command="unequip operator deploy"/);
+  assert.match(loadoutMarkup(s, 'operator', 'talents'), /data-command="talent operator add thread-pool"/);
+  assert.match(loadoutMarkup(s, 'operator'), /data-command="unequip operator deploy"/);
   command(s, 'encounter cryptjack'); command(s, 'engage');
-  html = loadoutMarkup(s, 'operator');
+  html = loadoutMarkup(s, 'operator', 'talents');
   assert.doesNotMatch(html, /data-command="talent/);
   assert.match(html, /At home/);
 });
@@ -534,18 +537,13 @@ test('saves from before the skill rework start each class on the new kit, and ol
   assert.deepEqual(r.daemonsOwned, {});
 });
 
-test('Signal boosters: crafted from salvage at home, used on a run for half your Signal', () => {
+test('Signal boosters are retired: no crafting (top up instead); one you still carry works on a run', () => {
   const s = fresh();
-  s.salvage = Array.from({ length: CONFIG.booster.salvage }, () => ({ name: 'Scrap' }));
+  s.salvage = Array.from({ length: 4 }, () => ({ name: 'Pulse Kernel' }));
   say(s, 'craft booster');
-  assert.equal(s.items?.booster || 0, 0, 'needs a Pulse Kernel');
-  s.salvage.pop();
-  s.salvage.push({ name: 'Pulse Kernel' });
-  say(s, 'craft booster');
-  assert.equal(s.items.booster, 1);
-  assert.equal(s.salvage.length, 0);
-  say(s, 'craft booster');
-  assert.equal(s.items.booster, 1, 'no salvage left');
+  assert.equal(s.items?.booster || 0, 0, 'nothing crafted');
+  assert.equal(s.salvage.length, 4, 'nothing spent');
+  s.items = { ...(s.items || {}), booster: 1 };
   say(s, 'connect sprawl');
   s.run.integrity = 5;
   say(s, 'boost');

@@ -99,7 +99,7 @@ export const CONFIG = {
   // Or pay to top up (topUp above).
   restRegen: 0.02,
   signalRest: 0.2, // Signal back per minute at home, out of a fight: empty to full in 5 minutes, offline too
-  booster: { salvage: 4, restore: 0.5, carry: 5 }, // Signal booster: crafted from salvage, used on a run
+  booster: { restore: 0.5 }, // Signal booster (retired: no longer crafted; ones already carried still work on a run)
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.

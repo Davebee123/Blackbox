@@ -495,7 +495,7 @@ function unlock(s, rest) {
 // A Signal booster: half your Signal back, on the spot.
 function boost(s) {
   const n = s.items?.booster || 0;
-  if (!n) return err(s, 'boost: no Signal boosters. Craft them at home from salvage.');
+  if (!n) return err(s, 'boost: no Signal boosters left. Top up with credits at home.');
   if (s.run.integrity >= s.run.max) return out(s, 'Signal is already full.');
   s.items.booster = n - 1;
   const gain = Math.min(s.run.max - s.run.integrity, Math.ceil(s.run.max * CONFIG.booster.restore));
