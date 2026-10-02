@@ -1589,8 +1589,20 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .cs-state { font: 10px var(--mono); letter-spacing: 0.5px; } .cs-link { color: var(--daemon); } .cs-link.lead { color: var(--you); } .cs-off { color: var(--dim); }
 .cs-acts { display: flex; gap: 10px; }
 .ls-people .who.crew { color: var(--daemon); border-color: rgba(195, 166, 255, 0.6); background: rgba(195, 166, 255, 0.08); }
-.ls-people .who.guild { color: var(--next); border-color: rgba(255, 216, 92, 0.4); }
-.people-list .person.guildie b { color: var(--next); }
-.people-list .guild-head { list-style: none; padding: 10px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
-.people-list .guild-head b { color: var(--next); font: 600 14px var(--sans); } .people-list .guild-head small { color: var(--muted); font-size: 12px; }
-.tag-guild { color: var(--next); border-color: rgba(255, 216, 92, 0.5); }
+.ls-people .who.member { color: var(--next); border-color: rgba(255, 216, 92, 0.4); }
+.people-list .person.member b { color: var(--next); }
+.people-list .con-head { list-style: none; padding: 10px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 4px; }
+.people-list .con-head b { color: var(--next); font: 600 14px var(--sans); } .people-list .con-head small { color: var(--muted); font-size: 12px; }
+.people-list .con-head.invite { border: 1px solid rgba(255, 216, 92, 0.4); background: rgba(255, 216, 92, 0.05); }
+.con-tiers { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag-con { color: var(--next); border-color: rgba(255, 216, 92, 0.5); }
+/* The consortium's map: trunk lines out to members' home servers. */
+.map-canvas { position: relative; }
+.map-tabs { position: absolute; top: 8px; left: 8px; z-index: 2; }
+.mscope .mring-range.trunk { stroke: rgba(255, 216, 92, 0.14); stroke-dasharray: 4 6; }
+.mlink.trunk { stroke: rgba(255, 216, 92, 0.55); stroke-width: 1.6; stroke-dasharray: 6 4; animation: mflow 2.4s linear infinite; }
+.no-motion .mlink.trunk { animation: none; }
+.mnode.member rect { fill: rgba(255, 216, 92, 0.06); stroke: rgba(255, 216, 92, 0.7); stroke-width: 1.3; }
+.mnode.member.online rect { fill: rgba(255, 216, 92, 0.16); }
+.mnode.member .zdot { fill: var(--next); }
+.mnode.member.besieged rect { stroke: var(--hot); }

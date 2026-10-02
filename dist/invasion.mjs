@@ -10,6 +10,7 @@
 import { tickOutposts } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
 import { tickStation } from './station.mjs';
+import { tickConsortium } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
@@ -80,6 +81,7 @@ export function tickNetwork(s, now = Date.now()) {
   tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
   tickFleet(s, dt, !!s.degraded);
   tickStation(s, dt); // the numbers station keeps broadcasting, degraded or not
+  tickConsortium(s, dt); // sieges on members' outposts, invites (consortium.mjs)
   if (s.degraded) {
     const d = s.degraded;
     if (d.until == null) { d.since = now; d.until = now + CONFIG.degradedMs; }

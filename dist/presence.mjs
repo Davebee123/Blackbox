@@ -5,10 +5,11 @@
 //
 // SPRAWL-00 is the shared space: anyone online can be in one of its folders, and you see them
 // there. Every other server is private (a run, a rogue server, someone's own box), so all you see
-// is "on a run", except guild territory (guild.mjs), which guildmates share. When the server exists, `online()` reads it instead; nothing else changes.
+// is "on a run", except the consortium's ground (consortium.mjs), which its members share. When the server exists, `online()` reads it instead; nothing else changes.
 import { hooks } from './combat.mjs';
 import { ARCHETYPES } from './data.mjs';
 import { zoneRooms } from './zone.mjs';
+import { groundOf, isMember } from './consortium.mjs';
 
 export const PRESENCE = {
   pool: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill', 'rook', 'byte', 'ash', 'lumen', 'cipher_', 'zer0', 'echo9', 'grim', 'static', 'wren', 'halt', 'fen', 'oxide', 'marrow'],
@@ -47,36 +48,38 @@ function placeOf(h, now) {
   return { kind: 'home' };
 }
 
-// A guildmate online spends part of their time on the guild's territory (guild.mjs), in one of
-// its folders, moving on like everyone else.
-function guildPlace(s, h, now, place) {
-  const land = s.guild?.territory || [];
-  if (!place || !land.length || !s.guild.members.includes(h)) return place;
+// A consortium member online spends part of their time on its ground (consortium.mjs: members'
+// servers, your outposts and rogue servers), in one of its folders, moving on like everyone else.
+function groundPlace(s, h, now, place) {
+  const land = groundOf(s);
+  if (!place || !land.length || !isMember(s, h)) return place;
   const step = Math.floor((now + offset(h)) / PRESENCE.moveMs);
   if (hash(h, step * 23 + 1) >= 0.45) return place;
-  const t = land[Math.floor(hash(h, step * 29 + 7) * land.length)];
-  return { kind: 'guild', loc: t.id, locName: t.name, folder: t.folders[Math.floor(hash(h, step * 31 + 3) * t.folders.length)] || '/', fighting: false };
+  const own = land.filter((l) => l.member === h), pick = own.length && hash(h, step * 37 + 2) < 0.5 ? own : land; // often on their own servers
+  const t = pick[Math.floor(hash(h, step * 29 + 7) * pick.length)];
+  const folders = hooks.foldersOf?.(t) || [];
+  return { kind: 'consortium', loc: t.id, locName: t.name, folder: folders[Math.floor(hash(h, step * 31 + 3) * folders.length)] || '/', fighting: false };
 }
 
-// Everyone online now: friends and guildmates first, then by handle.
+// Everyone online now: friends and consortium members first, then by handle.
 export function online(s, now = clock()) {
   if (!simOn(s)) return [];
-  const mates = s.guild?.members || [], crew = (s.crewSim || []).map((x) => x.name);
+  const crew = (s.crewSim || []).map((x) => x.name);
   // Your crew is with you (on your run, or waiting for one), wherever they'd otherwise be.
-  const where = (h) => (crew.includes(h) ? { kind: 'crew', folder: s.run?.crew?.[h]?.cwd || null } : guildPlace(s, h, now, placeOf(h, now)));
+  const where = (h) => (crew.includes(h) ? { kind: 'crew', folder: s.run?.crew?.[h]?.cwd || null } : groundPlace(s, h, now, placeOf(h, now)));
   const crewCls = (h) => (s.crewSim || []).find((x) => x.name === h)?.cls;
-  return PRESENCE.pool.map((h) => ({ ...profileOf(h), ...(crewCls(h) ? { cls: crewCls(h) } : {}), place: where(h), friend: isFriend(s, h), guild: mates.includes(h) }))
+  return PRESENCE.pool.map((h) => ({ ...profileOf(h), ...(crewCls(h) ? { cls: crewCls(h) } : {}), place: where(h), friend: isFriend(s, h), member: isMember(s, h) }))
     .filter((x) => x.place)
-    .sort((a, b) => b.friend - a.friend || b.guild - a.guild || a.handle.localeCompare(b.handle));
+    .sort((a, b) => b.friend - a.friend || b.member - a.member || a.handle.localeCompare(b.handle));
 }
-// The shared places: SPRAWL-00 (key 'sprawl') and guild territory (key: the server's id).
-const placeKey = (p) => (p.kind === 'sprawl' ? 'sprawl' : p.kind === 'guild' ? p.loc : null);
+// The shared places: SPRAWL-00 (key 'sprawl') and the consortium's ground (key: the server's id).
+const placeKey = (p) => (p.kind === 'sprawl' ? 'sprawl' : p.kind === 'consortium' ? p.loc : null);
 // Who's in a folder of a shared place (deep: or anywhere inside it, as ls shows next to a folder).
 export const at = (s, key, folder, deep = false, now = clock()) => online(s, now).filter((x) => placeKey(x.place) === key && (x.place.folder === folder || (deep && x.place.folder.startsWith(folder + '/'))));
 export const inFolder = (s, folder, now = clock()) => at(s, 'sprawl', folder, false, now);
 export const under = (s, folder, now = clock()) => at(s, 'sprawl', folder, true, now);
 export const inSprawl = (s, now = clock()) => online(s, now).filter((x) => x.place.kind === 'sprawl');
-export const whereText = (p) => (p.kind === 'sprawl' ? `SPRAWL-00 ${p.folder}${p.fighting ? ' · fighting' : ''}` : p.kind === 'guild' ? `${p.locName} ${p.folder} (guild)` : p.kind === 'crew' ? `in your crew${p.folder ? ' · ' + p.folder : ''}` : p.kind === 'run' ? 'on a run' : p.kind === 'rogue' ? 'on a rogue server' : 'at home');
+export const whereText = (p) => (p.kind === 'sprawl' ? `SPRAWL-00 ${p.folder}${p.fighting ? ' · fighting' : ''}` : p.kind === 'consortium' ? `${p.locName} ${p.folder}` : p.kind === 'crew' ? `in your crew${p.folder ? ' · ' + p.folder : ''}` : p.kind === 'run' ? 'on a run' : p.kind === 'rogue' ? 'on a rogue server' : 'at home');
 
 // `online sim`, `online off`, `who`, `friends`, `friend add <handle>`, `friend remove <handle>`.
 export function presenceCommand(s, word, rest, emit, warn) {

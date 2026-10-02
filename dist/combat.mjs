@@ -10,6 +10,7 @@ import { has as hasConfig, configCommand } from './configs.mjs';
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, infestWon, siteTrait } from './outpost.mjs';
+import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
@@ -20,7 +21,7 @@ import { fxText } from './content.mjs';
 export const SAVE_VERSION = 27;
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
-export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; the browser sets stepped.
+export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; run.mjs crewGuests, foldersOf; the browser sets stepped.
 
 export function fresh() {
   const s = {
@@ -580,6 +581,9 @@ export function addLead(s, family, amount, why = '') {
   }
 }
 
+// A server by id: one you've traced, or a consortium member's (consortium.mjs).
+export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id);
+
 // Templates rotate so consecutive locations play differently.
 export function addLocation(s, family, depth = 1, parent = null) {
   let seed = s.seed * 31 + s.locations.length * 7 + 5;
@@ -926,7 +930,7 @@ export function disconnect(s, reason) {
     if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
     return hooks.jackOut(s);
   }
-  const loc = run.loc === CONFIG.zone.id ? s.zone : s.locations.find((l) => l.id === run.loc);
+  const loc = run.loc === CONFIG.zone.id ? s.zone : findLocation(s, run.loc);
   const lost = run.pack.length;
   s.signal = Math.max(0, run.integrity);
   s.run = null;
@@ -999,7 +1003,7 @@ export function finish(s, result) {
   // and the folder fills again a while later.
   if (e.zone) {
     const now = hooks.now?.() ?? Date.now();
-    const wild = e.wild && s.locations.find((l) => l.id === e.wild); // a rogue server's folder, or SPRAWL-00's
+    const wild = e.wild && findLocation(s, e.wild); // a rogue server's folder, or SPRAWL-00's
     const spawn = wild ? null : s.zone?.spawns?.[e.room];
     // A named contract target you lost to stays put, so the contract can still be finished.
     const keep = spawn?.bounty && result !== 'victory';
@@ -1027,7 +1031,7 @@ export function finish(s, result) {
   }
   if (e.mode === 'run') {
     if (result === 'victory') {
-      const loc = s.locations.find((l) => l.id === s.run?.loc);
+      const loc = findLocation(s, s.run?.loc);
       if (loc) loc.state.cleared[e.room] = true;
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: false });
@@ -1073,6 +1077,7 @@ export function finish(s, result) {
     if (inv) endInvasion(s, `${inv.name} is gone from your wall.`);
     if (e.outpost) outpostWon(s, e);
     if (e.infest) infestWon(s, e);
+    if (e.member) consortiumWon(s, e); // a member's outpost defended (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
   } else {
     // The invader stays at the wall, as worn down as you left it.

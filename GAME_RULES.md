@@ -264,11 +264,24 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 - **Crew:** an online friend can be **invited** (`crew invite <friend>`) and joins your run fights as a crewmate in their class (a bot for now). `crew kick <name>` lets them go. Three at most.
 - **SPRAWL-00 is shared.** In its terminal, each folder shows who's in it or below it (a chip each, friends in violet, a red dot if they're fighting); arriving in a folder starts with *here* and who's there. The map's SPRAWL-00 node says how many are online there. Every other server is private.
 
-## Guild, territory and the crew strip (guild.mjs, run.mjs)
+## Consortium and the crew strip (consortium.mjs, run.mjs)
 
-**The guild** is the lasting group (simulated members for now): `guild create <name>`, then invite people from the people panel (*Invite to guild*) or `guild invite <handle>`; `guild kick <handle>`, `guild leave`. The people panel's **Guild** tab lists members (online first, with where they are), the guild's name and its territory. Crews of up to three are drawn from guildmates and friends (*Invite to crew*, `crew invite <name>`).
+**A consortium** is hackers who merged their servers (simulated members for now). Everyone keeps their own home server and everything on it; merging runs a **trunk line** between home servers, so every member can reach every other member's servers.
+- **Joining.** `consortium create <name>` founds one; invite people from the people panel (*Invite to consortium*) or `consortium invite <handle>`, and their server merges in. While you're in none, someone online now and then invites you (a pager entry, and a card on the people panel's **Consortium** tab): *Merge* / `consortium accept`, or `consortium decline`. Invites lapse after 10 minutes. Anyone can invite; only the founder can kick (`consortium kick <handle>`). `consortium leave` cuts the trunk line. You lose nothing of your own either way. `consortium` alone sums it up. (`guild` still works as the old name, and an old guild becomes a consortium.)
+- **The map.** With a consortium, the Map has two views: *Your network* and the consortium's. The consortium's view has your home server in the middle, a trunk line out to each member's home server (their card lists their servers), and each member's servers branching off theirs: their outposts, servers they've traced and rogue servers (1–4 each, at the member's level, kept within 3 levels of yours while it's simulated).
+- **Members' servers.** Connect to any of them like your own. Fights, files and drops are yours. Opening a member's vault doesn't take the server over: it stays theirs. Their natives come back 20 minutes after your last run there. Their home servers are theirs alone (home intrusions stay solo).
+- **Shared ground.** Every member's server, plus your own outposts and rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with full credit and their own loot. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
+- **Sieges.** Now and then (every 10–18 minutes of logged-on time) natives lay siege to a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win the fight for credits (30 + 8 × level), its family's code and XP. Miss it and a member deals with it: it costs you nothing.
+- **Size.** The more servers merged (yours included), the better for everyone:
 
-**Territory.** A server you've taken over, or a rogue server, can be claimed for the guild (*Claim for <guild>* on its map card, `guild claim <server>`, or bare `guild claim` on a run there; `guild unclaim` gives it back). Territory is shared ground: guildmates who are online spend part of their time in its folders (they show in `ls`, yellow), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew). Everyone who fights gets full credit and their own loot. Nobody outside the guild is ever there, so nobody can take your kills. Everywhere else stays private (SPRAWL-00 is shared to see and talk, not to fight together).
+| Servers | Tier | Bonus |
+|---|---|---|
+| 3 | Linked | +10% outpost yield |
+| 5 | Mesh | Siege bounties doubled |
+| 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
+| 12 | Grid | +1 bandwidth |
+
+Up to 20 servers. Crews of up to three are drawn from consortium members and friends (*Invite to crew*, `crew invite <name>`).
 
 **The crew strip** sits under the run header when you have a crew: a card for you and each crewmate with their Signal and the folder they're in.
 - Crewmates start **linked to you** (⛓ with you): they follow wherever you go.

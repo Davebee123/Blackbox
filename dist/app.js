@@ -30,6 +30,7 @@ let campaign = load();
 let module = playtest === 'story' ? 'mail' : 'map';
 let selected = null;
 let mapSel = 'server';
+let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
 let history = [];
 let historyIndex = -1;
@@ -432,7 +433,7 @@ function react(events) {
       case 'outpost-up': feel.add('unlock', null); notice(e.message); break;
       case 'harvester': feel.add('pickup', null); notice(e.message); break;
       case 'harvest': feel.add('pickup', null); break;
-      case 'outpost-siege': feel.add('prewarn', null); break;
+      case 'outpost-siege': case 'consortium-siege': feel.add('prewarn', null); break;
       case 'outpost-fell': flash('OUTPOST LOST'); feel.add('lose', null); break;
       case 'outpost-held': feel.add('good', null); notice(e.message); break;
       case 'takeover': flash('TAKEN OVER'); feel.add('win', null); notice(e.message); break;
@@ -518,7 +519,7 @@ function run(raw) {
 
   const wasAlert = campaign.encounter?.phase === 'alert';
   const queuedBefore = campaign.encounter?.queue;
-  let events = play(campaign, text.startsWith('guild create') ? raw.trim() : text); // a guild's name keeps its capitals
+  let events = play(campaign, /^(consortium|guild)\b/.test(text) ? raw.trim() : text); // a consortium's name keeps its capitals
   react(events);
   const warning = events.findLast((e) => e.type === 'warning');
   // In a fight, an order you enter goes now: the cycle turns without waiting out the bar.
@@ -742,7 +743,7 @@ function render(force = false) {
     }
     render.logLen = s.logs.length;
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView));
   } else if (module === 'net') {
     const before = cache.get('page-view');
     const lines = $('term')?.children.length;
@@ -752,7 +753,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     put('page-view', (pages[module] || pages.map)(campaign));
   }
   if (module === 'net' && campaign.run) {
@@ -1100,6 +1101,8 @@ document.addEventListener('click', (e) => {
     if (cmd.classList.contains('ability')) { $('command-input').value = cmd.dataset.command; $('command-input').focus(); return; }
     return run(cmd.dataset.command);
   }
+  const mv = e.target.closest('[data-mapview]');
+  if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
   const lt = e.target.closest('[data-ltab]');
   if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); dirty = true; return; }
   const snd = e.target.closest('[data-sound]');
@@ -1279,7 +1282,8 @@ $('comms').addEventListener('click', (e) => {
   setComms(false);
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
-  else if (where === 'map') { if (what) mapSel = what; go('map'); }
+  else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what) mapSel = what; go('map'); }
+  else if (where === 'people') { peopleTab = what || 'friends'; peopleOpen = true; peopleUi(); }
   else if (where === 'jack') run('jack in');
 });
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });

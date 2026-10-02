@@ -16,7 +16,7 @@ import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './gear.mjs';
 import { ARCHETYPES } from './data.mjs';
 import { planner } from './planner.mjs';
 import { online, isFriend } from './presence.mjs';
-import { isGuildmate } from './guild.mjs';
+import { isMember } from './consortium.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
@@ -27,7 +27,7 @@ export const CREW = {
 
 // The crewmates' states, rebuilt from s.crewSim when needed. Kept off the save (not enumerable).
 export function matesOf(s) {
-  const want = [...(s.crewSim || []), ...(s.guests || [])]; // guests: guildmates who joined a fight on guild territory
+  const want = [...(s.crewSim || []), ...(s.guests || [])]; // guests: consortium members who joined a fight on the consortium's ground
   let m = s._mates;
   const key = want.map((x) => x.cls + ':' + x.name).join(',') + '@' + hackerLevel(s);
   if (!m || m.key !== key) {
@@ -72,7 +72,7 @@ export const crewAt = (s, name) => s.run?.crew?.[name]?.cwd ?? s.run?.cwd ?? nul
 hooks.crewEngage = (s) => {
   const e = s.encounter;
   if (e.mode !== 'run') return;
-  // Guildmates in this folder of guild territory join as guests (run.mjs: hooks.crewGuests).
+  // Consortium members in this folder of its ground join as guests (run.mjs: hooks.crewGuests).
   const guests = (hooks.crewGuests?.(s, e.room) || []).filter((g) => !(s.crewSim || []).some((x) => x.name === g.name));
   s.guests = guests.slice(0, Math.max(0, CREW.max - (s.crewSim || []).length)).map((g) => ({ ...g, guest: true }));
   // Only the crew in the fight's folder fights it; the rest are elsewhere on the server.
@@ -93,7 +93,7 @@ hooks.crewEngage = (s) => {
       chits: classOf(m) === 'bastion' ? 1 : 0, metrics: structuredClone(e.metrics), down: false };
     decide(m);
   }
-  emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and guild in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', guild' : ''})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);
+  emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and consortium in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', consortium' : ''})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);
 };
 
 // One crewmate's turn (the i-th still standing).
@@ -149,7 +149,7 @@ export function crewCommand(s, rest) {
     // A friend who's online joins as a crewmate (still a bot until there's a server), in their class.
     const h = words[1], who = online(s).find((x) => x.handle === h);
     if (active(s)) warn(s, 'Finish the fight first.');
-    else if (!isFriend(s, h) && !isGuildmate(s, h)) warn(s, `${h} isn't a friend or a guildmate.`);
+    else if (!isFriend(s, h) && !isMember(s, h)) warn(s, `${h} isn't a friend or in your consortium.`);
     else if (!who) warn(s, `${h} isn't online.`);
     else if ((s.crewSim || []).some((x) => x.name === h)) warn(s, `${h} is already in your crew.`);
     else if ((s.crewSim || []).length >= CREW.max) warn(s, `Your crew is full (${CREW.max}). crew kick <name> first.`);

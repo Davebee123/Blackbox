@@ -5,7 +5,7 @@ import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, cutOffBy, 
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock } from './rogue.mjs';
-import { closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork } from './invasion.mjs';
 import { contractTakeover, bankCargo } from './mail.mjs';
@@ -14,7 +14,7 @@ import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
-import { guildCommand, isTerritory } from './guild.mjs';
+import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -283,7 +283,7 @@ export function join(path, name) {
   return '/' + parts.join('/');
 }
 
-export const currentLocation = (s) => (s.run?.loc === CONFIG.zone.id ? zoneOf(s) : s.locations.find((l) => l.id === s.run?.loc));
+export const currentLocation = (s) => (s.run?.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run?.loc));
 const inPack = (s, full) => s.run.pack.some((p) => p.path === full);
 const guarded = (loc, path) => !!layoutOf(loc)[path]?.guard && !loc.state.cleared[path];
 // A guard the Infiltrator slipped past this run doesn't stop you there (it's back next run).
@@ -332,7 +332,7 @@ const near = (s, text, word, names, cmd) => { const n = closest(word, names); re
 export function connect(s, id) {
   const first = s.serial;
   const zone = id === CONFIG.zone.id || id === CONFIG.zone.name.toLowerCase();
-  const loc = zone ? zoneOf(s) : s.locations.find((l) => l.id === id || l.name.toLowerCase() === id);
+  const loc = zone ? zoneOf(s) : findLocation(s, id) || [...s.locations, ...memberServers(s)].find((l) => l.name.toLowerCase() === id);
   const signal = signalNow(s);
   if (active(s)) warn(s, 'Finish the fight first.');
   else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Signal ${signal}/${maxSignal(s)}: too weak to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
@@ -345,6 +345,7 @@ export function connect(s, id) {
     // A waiting home intrusion is parked for the run and comes back afterwards.
     if (s.encounter?.phase === 'alert' && s.encounter.mode !== 'run') s.parked = s.encounter;
     if (s.encounter && s.encounter.phase !== 'active') s.encounter = null;
+    arrive(s, loc); // a member's server: its natives come back after a while (consortium.mjs)
     const firstVisit = !loc.runs && !zone;
     loc.runs++;
     if (zone) zoneSpawns(s);
@@ -355,9 +356,9 @@ export function connect(s, id) {
     const q = QUIRKS[loc.quirk];
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} hostile ${liveSpawns(s) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} hostile ${liveRogue(loc) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
-    else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
+    else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     ls(s);
-    if (!zone) collect(s, loc, 'Collected from ');
+    if (!zone && !loc.member) collect(s, loc, 'Collected from ');
     if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`);
   }
   return since(s, first);
@@ -400,13 +401,13 @@ function ls(s, all = false) {
   emit(s, 'net-ls', herePeople.length ? `${text}\nhere: ${herePeople.map((x) => x.handle).join(', ')}` : text, { entries, here: herePeople });
 }
 
-// Who's in a folder: your crew (always), plus anyone online in a shared place (SPRAWL-00, guild
-// territory). deep: or anywhere inside it, as ls shows next to a folder.
+// Who's in a folder: your crew (always), plus anyone online in a shared place (SPRAWL-00, the
+// consortium's ground). deep: or anywhere inside it, as ls shows next to a folder.
 function peopleIn(s, loc, folder, deep) {
   const inside = (p) => p === folder || (deep && p.startsWith(folder === '/' ? '/' : folder + '/'));
   const crew = Object.entries(s.run?.crew || {}).filter(([, c]) => inside(c.cwd)).map(([handle, c]) => ({ handle, crew: true, linked: c.link === 'you' }));
-  const key = loc.zone ? 'sprawl' : isTerritory(s, loc) ? loc.id : null;
-  const others = key && simOn(s) ? at(s, key, folder, deep).filter((x) => !s.run?.crew?.[x.handle]).map((x) => ({ handle: x.handle, friend: x.friend, guild: x.guild, fighting: x.place.fighting })) : [];
+  const key = loc.zone ? 'sprawl' : isGround(s, loc) ? loc.id : null;
+  const others = key && simOn(s) ? at(s, key, folder, deep).filter((x) => !s.run?.crew?.[x.handle]).map((x) => ({ handle: x.handle, friend: x.friend, member: x.member, fighting: x.place.fighting })) : [];
   return [...crew, ...others];
 }
 
@@ -515,6 +516,7 @@ function unlock(s, rest) {
   if (drop) return out(s, `${dir}/ unlocked. The dead drop is yours.`, 'net-good');
   out(s, `${dir}/ unlocked.`, 'net-good');
   gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked');
+  if (loc.member) return out(s, `The vault is open, but ${loc.name} stays ${loc.member}'s.`); // a consortium member's: no takeover
   contractTakeover(s, loc);
 }
 
@@ -586,16 +588,7 @@ export function play(s, input) {
   const rest = restWords.join(' ');
   if (word === 'connect') return connect(s, rest);
   if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
-  if (word === 'guild') { // guild.mjs
-    const first = s.serial;
-    const raw = input.trim().replace(/^\S+\s*/, ''); // as typed: a guild's name keeps its capitals
-    guildCommand(s, rest.trim() === 'claim' && s.run ? `claim ${s.run.loc}` : raw, { // on a run, bare `guild claim` claims this server
-      emit, warn, pool: PRESENCE.pool,
-      findLoc: (q) => (q ? s.locations.find((l) => l.id === q || l.name.toLowerCase() === q.toLowerCase()) : null),
-      folders: (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !layoutOf(l)[p].locked),
-    });
-    return since(s, first);
-  }
+  if (word === 'consortium' || word === 'guild') return consortiumCommand(s, input.trim().replace(/^\S+\s*/, '')); // consortium.mjs (as typed: a name keeps its capitals)
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
   if (text === 'jack in' || text === 'defend') return jackIn(s);
   if (text === 'developer invade' || text === 'developer crash') return developerNetwork(s, text);
@@ -681,10 +674,10 @@ export function crewWander(s) {
   }
   return since(s, first);
 }
-// Guildmates in this folder of guild territory join a fight there (crew.mjs).
+// Consortium members in this folder of the consortium's ground join a fight there (crew.mjs).
 hooks.crewGuests = (s, room) => {
   const loc = currentLocation(s);
-  if (!loc || !isTerritory(s, loc) || !simOn(s)) return [];
+  if (!loc || !isGround(s, loc) || !simOn(s)) return [];
   return at(s, loc.id, room).map((x) => ({ cls: x.cls, name: x.handle }));
 };
 
@@ -779,6 +772,8 @@ export function runSuggestions(s, input) {
 export { guarded, locked };
 
 // Emergency jack out from inside a guard fight (typed, or the wimpy daemon).
+// A server's open folders, for who's where on the consortium's ground (presence.mjs).
+hooks.foldersOf = (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !layoutOf(l)[p].locked);
 hooks.jackOut = (s) => jackOut(s); // Deadman's Switch (combat.mjs)
 hooks.flee = (s) => {
   if (!s.run) return;

@@ -12,7 +12,7 @@ import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
-import { guildOf, isTerritory, isGuildmate } from './guild.mjs';
+import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
@@ -735,7 +735,7 @@ export function lessonMarkup(t, lessons) {
 const NET_CLASS = { 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
 
 // Who's in a SPRAWL-00 folder (presence.mjs): a dot each, friends lit, a name on hover.
-const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.crew ? ' crew' : x.friend ? ' friend' : x.guild ? ' guild' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
+const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.crew ? ' crew' : x.friend ? ' friend' : x.member ? ' member' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
 function lsMarkup(e) {
   return `${e.here?.length ? `<div class="ls-here">here ${peopleChips(e.here)}</div>` : ''}<div class="ls">${e.entries.map((x) => {
     const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'hostile' ? 'hot' : 'dim'}">${esc(t)}</span>`).join('');
@@ -911,18 +911,25 @@ export function commsMarkup(s, filter = 'all', now = Date.now()) {
 // ---------- people (presence.mjs): friends and who's online ----------
 export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
   const all = online(s, now), crew = (s.crewSim || []).map((x) => x.name);
-  const row = (x) => `<li class="person${x.friend ? ' friend' : ''}${x.guild ? ' guildie' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b>${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
-    <span class="p-acts">${guildOf(s) && !x.guild ? `<button type="button" class="act" data-run="guild invite ${esc(x.handle)}">Invite to guild</button>` : ''}${x.friend || x.guild ? `${crew.includes(x.handle) ? '<span class="tag you">crew</span>' : `<button type="button" class="act" data-run="crew invite ${esc(x.handle)}" ${crew.length >= 3 ? 'disabled title="Your crew is full"' : ''}>Invite to crew</button>`}${x.friend ? `<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : ''}` : ''}${x.friend ? '' : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
+  const c = consortiumOf(s), inv = s.consortiumInvite;
+  const row = (x) => `<li class="person${x.friend ? ' friend' : ''}${x.member ? ' member' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b>${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
+    <span class="p-acts">${c && !x.member && c.founder !== x.handle ? `<button type="button" class="act" data-run="consortium invite ${esc(x.handle)}" title="Merge their server with the consortium">Invite to consortium</button>` : ''}${x.friend || x.member ? `${crew.includes(x.handle) ? '<span class="tag you">crew</span>' : `<button type="button" class="act" data-run="crew invite ${esc(x.handle)}" ${crew.length >= 3 ? 'disabled title="Your crew is full"' : ''}>Invite to crew</button>`}${x.friend ? `<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : ''}` : ''}${x.friend ? '' : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
   const offline = friends(s).filter((h) => !all.some((x) => x.handle === h));
-  const g = guildOf(s);
-  const guildOffline = (g?.members || []).filter((h) => !all.some((x) => x.handle === h));
+  const memberOffline = (c?.members || []).filter((h) => !all.some((x) => x.handle === h));
+  const invCard = inv && !c ? `<li class="con-head invite"><b>${esc(inv.from)} invites you to ${esc(inv.name)}</b><small>Merge your server with ${inv.members.length} others: reach their outposts and servers, keep everything of yours.</small><span class="p-acts"><button type="button" class="act" data-run="consortium accept">Merge</button><button type="button" class="act dim" data-run="consortium decline">Decline</button></span></li>` : '';
+  const head = () => {
+    const nx = nextConTier(s);
+    return `<li class="con-head"><b>${esc(c.name)}</b><small>${sizeOf(s)} servers merged · founded by ${esc(c.founder)} · ${memberServers(s).length} servers on the network</small>
+      <span class="con-tiers">${CONSORTIUM.tiers.map((t) => `<span class="tag${sizeOf(s) >= t.at ? ' tag-con' : ' dim'}" title="${esc(t.rule)}">${t.at} · ${esc(t.name)}</span>`).join('')}</span>
+      ${nx ? `<small>${nx.at - sizeOf(s)} more for ${esc(nx.name)}: ${esc(nx.rule.toLowerCase())}</small>` : ''}</li>`;
+  };
   const list = tab === 'friends'
     ? all.filter((x) => x.friend).map(row).join('') + offline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="friend remove ${esc(h)}">Remove</button></span></li>`).join('')
-    : tab === 'guild'
-    ? (g ? `<li class="guild-head"><b>${esc(g.name)}</b><small>${g.members.length + 1} members · ${g.territory.length ? 'territory: ' + g.territory.map((t) => esc(t.name)).join(', ') : 'no territory yet'}</small></li>` + all.filter((x) => x.guild).map(row).join('') + guildOffline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="guild kick ${esc(h)}">Kick</button></span></li>`).join('') : '<li class="quiet">No guild yet. Type: guild create &lt;name&gt;</li>')
-    : all.map(row).join('');
+    : tab === 'consortium'
+    ? (c ? head() + all.filter((x) => x.member).map(row).join('') + memberOffline.map((h) => `<li class="person off member"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts">${c.founder === 'you' ? `<button type="button" class="act dim" data-run="consortium kick ${esc(h)}">Kick</button>` : ''}</span></li>`).join('') : invCard || '<li class="quiet">No consortium. Type: consortium create &lt;name&gt;</li>')
+    : invCard + all.map(row).join('');
   return `<div class="comms-head"><span>People${simOn(s) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
-    <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends · ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['guild', g ? `Guild · ${all.filter((x) => x.guild).length}/${g.members.length}` : 'Guild'], ['online', `Online · ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
+    <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends · ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['consortium', c ? `Consortium · ${all.filter((x) => x.member).length}/${c.members.length}` : inv ? 'Consortium · invite' : 'Consortium'], ['online', `Online · ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
     <ul class="comms-list people-list">${list || `<li class="quiet">${!simOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends yet: add some from Online.' : 'Nobody else is online.'}</li>`}</ul>`;
 }
 
@@ -1149,6 +1156,28 @@ export function mapLayout(s) {
   return { nodes, links };
 }
 
+// The consortium's network: your home server in the middle, a trunk line out to each member's
+// home server on a ring, and each member's servers branching off theirs (consortium.mjs).
+const RM = 210, RS = 130;
+export function consortiumLayout(s) {
+  const c = consortiumOf(s);
+  const nodes = [{ id: 'server', kind: 'server', ...at(0, 0) }], links = [];
+  const n = Math.max(1, c.members.length), step = 360 / n, on = new Set(online(s).map((x) => x.handle));
+  c.members.forEach((h, i) => {
+    const angle = -90 + i * step;
+    nodes.push({ id: 'member-' + h, kind: 'member', handle: h, online: on.has(h), ...at(angle, RM) });
+    links.push({ from: 'server', to: 'member-' + h, trunk: true });
+    const mine = serversOf(s, h), spread = Math.min(26, step / Math.max(1, mine.length));
+    mine.forEach((l, k) => {
+      nodes.push({ id: l.id, kind: 'location', loc: l, flip: k % 2 === 1, ...at(angle + (k - (mine.length - 1) / 2) * spread, RM + RS + (k % 2) * 60) }); // staggered, so close neighbours' labels don't collide
+      links.push({ from: 'member-' + h, to: l.id });
+    });
+  });
+  const trunk = memberServers(s).find((l) => l.trunk);
+  if (trunk) { nodes.push({ id: trunk.id, kind: 'location', loc: trunk, ...at(-90 + step / 2, 105) }); links.push({ from: 'server', to: trunk.id, trunk: true }); }
+  return { nodes, links };
+}
+
 function nodeState(s, l) {
   const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
   if (s.run?.loc === l.id) return 'here';
@@ -1172,20 +1201,23 @@ const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r); return `
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
-export function mapMarkup(s, sel = 'server') {
-  const { nodes, links } = mapLayout(s);
+export function mapMarkup(s, sel = 'server', view = 'mine') {
+  // A member's server (or home) shows on the consortium's map, whichever view was asked for.
+  const con = !!consortiumOf(s) && (view === 'consortium' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
+  const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s);
   const find = (id) => nodes.find((n) => n.id === id);
   if (!find(sel)) sel = 'server';
   // A steady scale: the scope is at least this big, so a young network isn't blown up huge.
   const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
-  const minX = Math.min(...xs, -250) - 130, maxX = Math.max(...xs, 250) + 130, minY = Math.min(...ys, -240) - 36, maxY = Math.max(...ys, 240) + 40;
+  const mx = con ? 190 : 130, my = con ? 56 : 36; // the consortium's outer ring carries long labels
+  const minX = Math.min(...xs, -250) - mx, maxX = Math.max(...xs, 250) + mx, minY = Math.min(...ys, -240) - my, maxY = Math.max(...ys, 240) + my + 4;
   const deepest = Math.max(1, ...s.locations.map((l) => l.depth || 1));
-  const rings = [{ r: 120, t: 'wall', cls: 'wall' }, ...Array.from({ length: deepest }, (_, i) => ({ r: R1 + i * R2, t: `L${i + 1}` }))];
+  const rings = con ? [{ r: RM, t: 'trunk', cls: 'trunk' }] : [{ r: 120, t: 'wall', cls: 'wall' }, ...Array.from({ length: deepest }, (_, i) => ({ r: R1 + i * R2, t: `L${i + 1}` }))];
   const scope = `<g class="mscope">${rings.map((g) => `<circle r="${g.r}" class="mring-range ${g.cls || ''}"/><text text-anchor="start" x="${Math.round(g.r * 0.72) + 4}" y="${-Math.round(g.r * 0.69) - 4}" class="mring-label">${g.t}</text>`).join('')}
     <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>`;
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
-    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''}"/>`;
+    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''}"/>`;
   }).join('');
   const draw = nodes.map((n) => {
     const on = n.id === sel ? ' selected' : '';
@@ -1197,6 +1229,10 @@ export function mapMarkup(s, sel = 'server') {
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
       return `<g class="mnode zone${here ? ' here' : ''}${dropOf(s.zone) ? ' drop' : ''}${on}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${dropMark(s.zone)}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} hostile` : 'rogue server · quiet') + (simOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
+    }
+    if (n.kind === 'member') {
+      const sieges = serversOf(s, n.handle).filter((l) => l.held?.siege).length;
+      return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `lv ${memberLevel(s, n.handle)} · ${serversOf(s, n.handle).length} ${serversOf(s, n.handle).length === 1 ? 'server' : 'servers'}${sieges ? ' · siege' : ''}`)}</g>`;
     }
     if (n.kind === 'intrusion') {
       return `<g class="mnode intrusion${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;
@@ -1222,8 +1258,8 @@ export function mapMarkup(s, sel = 'server') {
     const l = n.loc, st = nodeState(s, l);
     const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
-    const sub = `lv ${l.level || 1}${l.depth > 1 ? ` · layer ${l.depth}` : ''}${st === 'here' ? ' · here' : job ? ' · contract' : l.outpost?.fallen ? ' · lost' : l.outpost?.siege ? ' · siege' : l.outpost?.h ? ` · ${stockOf(l)}/${capOf(l)}` : cutOffBy(s, l) ? ' · cut off' : l.takenOver ? ' · yours' : st === 'done' ? ' · clean' : ''}`;
-    const op = l.outpost?.h ? (l.outpost.fallen ? ' fallen' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : '';
+    const sub = `lv ${l.level || 1}${l.depth > 1 ? ` · layer ${l.depth}` : ''}${st === 'here' ? ' · here' : l.held?.siege ? ' · siege' : l.held ? ` · ${l.held.kind}` : job ? ' · contract' : l.outpost?.fallen ? ' · lost' : l.outpost?.siege ? ' · siege' : l.outpost?.h ? ` · ${stockOf(l)}/${capOf(l)}` : cutOffBy(s, l) ? ' · cut off' : l.takenOver ? ' · yours' : st === 'done' ? ' · clean' : ''}`;
+    const op = l.outpost?.h ? (l.outpost.fallen ? ' fallen' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : ' outpost') : '';
     const cut = cutOffBy(s, l) ? ' cutoff' : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
@@ -1232,7 +1268,8 @@ export function mapMarkup(s, sel = 'server') {
     return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${cut}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${label(n, 12, l.name, sub)}</g>`;
   }).join('');
   const svg = `<svg class="map-svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
-  return `<div class="map-page"><section class="panel map-canvas">${svg}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
+  const tabs = consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : '';
+  return `<div class="map-page"><section class="panel map-canvas">${tabs}${svg}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
 }
 
 // Server level: shared by everyone on the server. Defending it and banking loot raise it.
@@ -1250,12 +1287,16 @@ function dropLine(s, l) {
   return `<p class="svc-line drop-line"><span class="tag tag-drop" title="Closes in ${dropMinutes(l)} min">Dead drop · ${dropMinutes(l)} min</span> <code>${spell(d.pass.replace(/\d+$/, ''))} · ${d.pass.slice(-2)}</code></p>`;
 }
 
-// Guild territory (guild.mjs) on a server card: the tag, or the button to claim it.
-function guildLine(s, l) {
-  const g = guildOf(s);
-  if (!g) return '';
-  if (isTerritory(s, l)) return `<p class="svc-line"><span class="tag tag-guild">${esc(g.name)}</span> guild territory <button type="button" class="act dim" data-command="guild unclaim ${esc(l.id)}">Unclaim</button></p>`;
-  return l.takenOver || l.rogue ? `<p class="svc-line"><button type="button" class="act" data-command="guild claim ${esc(l.id)}">Claim for ${esc(g.name)}</button></p>` : '';
+// The consortium (consortium.mjs) on a server card: whose it is, a siege to break, or shared ground.
+function consortiumLine(s, l) {
+  const c = consortiumOf(s);
+  if (!c) return '';
+  if (l.trunk) return `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> trunk server: the consortium's own</p>`;
+  if (l.member) {
+    const sg = l.held?.siege, busy = active(s) || s.run;
+    return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span>${l.held ? ` ${esc(l.held.kind)} outpost` : ''}${sg ? ` <span class="tag hot">siege · ${fmtLeft(sg.left)}</span>` : ''}</p>${sg ? `<div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend for a bounty</button></div>` : ''}`;
+  }
+  return isGround(s, l) ? `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> shared with the consortium</p>` : '';
 }
 
 // The rogue server's card: the main thing to do, so it also leads the server card.
@@ -1298,6 +1339,14 @@ function mapSide(s, sel, node) {
       </section>`;
   }
   if (node.kind === 'zone') return zoneCard(s) + alertCard();
+  if (node.kind === 'member') {
+    const h = node.handle, p = profileOf(h), c = consortiumOf(s), mine = serversOf(s, h);
+    return `<section class="card"><h2>Home server · ${esc(c.name)}</h2><h1>${esc(h)}</h1>
+      <p>${esc(ARCHETYPES[p.cls].name)} · ${node.online ? '<span class="tag tag-con">online</span>' : '<span class="tag dim">offline</span>'}${c.founder === h ? ' <span class="tag">founder</span>' : ''}</p>
+      <div class="stats">${stat('Servers', mine.length)}${stat('Outposts', mine.filter((l) => l.held).length)}${stat('Rogue', mine.filter((l) => l.rogue).length)}</div>
+      ${mine.map((l) => `<p class="svc-line"><button type="button" class="act" data-select="${esc(l.id)}">${esc(l.name)}</button> ${l.rogue ? 'rogue' : l.held ? esc(l.held.kind) + ' outpost' : 'traced'} · lv ${l.level}${l.held?.siege ? ' <span class="tag hot">siege</span>' : ''}</p>`).join('')}
+      <p class="svc-line">Their home server is theirs alone.</p></section>`;
+  }
   if (node.kind === 'intrusion') return alertCard();
   if (false) {
     const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
@@ -1325,28 +1374,28 @@ function mapSide(s, sel, node) {
   const l = node.loc, st = nodeState(s, l);
   if (l.rogue) {
     const k = ROGUE.kinds[l.rogue.kind], live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
-    return `<section class="card"><h2>Rogue server${l.depth > 1 ? ` · layer ${l.depth}` : ''}</h2><h1>${esc(l.name)}</h1>
+    return `<section class="card"><h2>${l.trunk ? 'Trunk server' : l.member ? `${esc(l.member)}'s rogue server` : 'Rogue server'}${l.depth > 1 ? ` · layer ${l.depth}` : ''}</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}</p>
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line">Wild: it can't be taken over, and it never sends invaders.</p>
-      ${guildLine(s, l)}
+      ${consortiumLine(s, l)}
       <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
   const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
-  return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
+  return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     <p>${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
     <div class="stats">${stat('Files', `${taken}/${total}`)}${l.takenOver ? stat('Server', 'Yours') : stat('Guard', Object.keys(l.state.cleared).length ? 'beaten' : 'up')}${stat('Runs', l.runs || 0)}</div>
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))}</p>`).join('')}
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}
     ${l.relay ? '<p class="svc-line"><span class="tag you">Relay up</span></p>' : ''}
-    ${guildLine(s, l)}
+    ${consortiumLine(s, l)}
     ${dropLine(s, l)}
     ${outpostCard(s, l)}
-    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : ''}>Connect</button>`}</div></section>`;
+    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : ''}>Connect</button>`}</div></section>`;
 }
 
 // The swarm: what's coming, where, when, and the button to meet it.

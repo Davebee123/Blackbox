@@ -17,6 +17,7 @@ import { emit, warn, rand, active, gainCode, serverLevel, selectEncounter, comma
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
+import { consortiumYield, consortiumBandwidth } from './consortium.mjs';
 
 export const OUTPOST = {
   kinds: {
@@ -104,7 +105,7 @@ export function bankHarvester(s, h, why = 'Banked: ') {
 }
 
 // Bandwidth -----------------------------------------------------------------------------------
-export const bandwidth = (s) => OUTPOST.bandwidth(serverLevel(s)) + serviceValue(s, 'router') + archBandwidth(s);
+export const bandwidth = (s) => OUTPOST.bandwidth(serverLevel(s)) + serviceValue(s, 'router') + archBandwidth(s) + consortiumBandwidth(s);
 export const modsOf = (loc) => (loc ? (loc.mods ||= []) : []);
 export const hasMod = (loc, id) => !!loc?.mods?.includes(id);
 export const outpostPorts = (s) => OUTPOST.ports(serverLevel(s));
@@ -118,7 +119,7 @@ export function cutOffBy(s, loc) {
 }
 
 // Yield ----------------------------------------------------------------------------------------
-const yieldMult = (loc, h, s) => (1 + (h.traits.includes('rich') ? 0.5 : 0) + (hasMod(loc, 'pipeline') ? 0.5 : 0)) * (loc.trait === 'rich' || loc.trait === 'hostile' ? 1.5 : 1) * (s ? archYield(s) : 1);
+const yieldMult = (loc, h, s) => (1 + (h.traits.includes('rich') ? 0.5 : 0) + (hasMod(loc, 'pipeline') ? 0.5 : 0)) * (loc.trait === 'rich' || loc.trait === 'hostile' ? 1.5 : 1) * (s ? archYield(s) * consortiumYield(s) : 1);
 export const capOf = (loc, h = loc.outpost.h) => OUTPOST.kinds[h.kind].cap(h.level) * (h.traits.includes('deep') ? 2 : 1) * (hasMod(loc, 'storage') ? 2 : 1);
 export const perHour = (loc, h = loc.outpost.h, s = null) => OUTPOST.kinds[h.kind].rate(h.level) * yieldMult(loc, h, s);
 export const stockOf = (loc) => Math.floor(loc.outpost?.stock || 0);
