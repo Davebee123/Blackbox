@@ -13,6 +13,7 @@ import { hiddenNodes, locate, flagged, bankRoute } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 import { crewCommand } from './crew.mjs';
+import { presenceCommand, inFolder, under, simOn } from './presence.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -380,7 +381,9 @@ function ls(s, all = false) {
     const full = join(s.run.cwd, d);
     const tags = [guarded(loc, full) ? 'guarded' : '', locked(loc, full) ? 'locked' : ''].filter(Boolean);
     const hostile = isWild(loc) && loc.spawns?.[full]?.alive;
-    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile'] : tags });
+    // SPRAWL-00 is shared: who's in each folder (presence.mjs).
+    const people = loc.zone && simOn(s) ? under(s, full).map((x) => ({ handle: x.handle, friend: x.friend, fighting: x.place.fighting })) : [];
+    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile'] : tags, people });
   }
   for (const f of here.files.filter(show)) {
     const info = fileInfo(loc, s.run.cwd, f);
@@ -390,7 +393,8 @@ function ls(s, all = false) {
     entries.push({ kind: 'file', name: f, size: info.size, cmd: `cat ${f}`, pull: state === 'pull' ? `pull ${f}` : null, tags: state ? [state] : [] });
   }
   const text = entries.map((e) => (e.kind === 'virus' ? `!  ${e.name.padEnd(14)}${e.size.padStart(4)}` : e.kind === 'dir' ? `d  ${e.name === '..' ? '..' : e.name + '/'}` : `-  ${e.name.padEnd(14)}${e.size.padStart(4)}`) + (e.tags.length ? '   [' + e.tags.join('] [') + ']' : '')).join('\n');
-  emit(s, 'net-ls', text, { entries });
+  const herePeople = loc.zone && simOn(s) ? inFolder(s, s.run.cwd).map((x) => ({ handle: x.handle, friend: x.friend, fighting: x.place.fighting })) : [];
+  emit(s, 'net-ls', herePeople.length ? `${text}\nhere: ${herePeople.map((x) => x.handle).join(', ')}` : text, { entries, here: herePeople });
 }
 
 function cd(s, arg) {
@@ -566,6 +570,7 @@ export function play(s, input) {
   const rest = restWords.join(' ');
   if (word === 'connect') return connect(s, rest);
   if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
+  if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
   if (text === 'jack in' || text === 'defend') return jackIn(s);
   if (text === 'developer invade' || text === 'developer crash') return developerNetwork(s, text);
   if (text === 'developer station') { const first = s.serial; broadcast(s); return since(s, first); } // a numbers-station dead drop now

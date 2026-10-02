@@ -26,6 +26,7 @@
       <button data-module="system">System</button>
     </nav>
     <button type="button" class="pager" id="pager" aria-label="Pager: open comms" aria-expanded="false" aria-controls="comms"><span class="led" id="pager-led"></span><span class="lcd" id="pager-lcd"><span id="pager-text">NO MESSAGES</span></span><span class="cnt" id="pager-count"></span></button>
+    <button type="button" class="people-btn" id="people" aria-label="People: friends and who's online" aria-expanded="false" aria-controls="people-panel" hidden><span class="p-dot"></span><span id="people-count">0</span></button>
     <section class="meters" aria-label="Server">
       <div class="meter meter-level" id="meter-level" title="Your class level. Each class levels on its own.">
         <span class="meter-label" id="level-label">Breaker</span>
@@ -62,6 +63,7 @@
     </div>
   </header>
   <div class="comms" id="comms" hidden></div>
+  <div class="comms people" id="people-panel" hidden></div>
 
   <main id="workspace" class="workspace">
     <!-- Combat view is permanent so the virus canvas survives re-renders. -->

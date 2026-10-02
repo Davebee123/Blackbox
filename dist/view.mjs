@@ -11,6 +11,7 @@ import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
+import { online, inSprawl, whereText, simOn, friends } from './presence.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
@@ -732,12 +733,14 @@ export function lessonMarkup(t, lessons) {
 
 const NET_CLASS = { 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
 
+// Who's in a SPRAWL-00 folder (presence.mjs): a dot each, friends lit, a name on hover.
+const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.friend ? ' friend' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
 function lsMarkup(e) {
-  return `<div class="ls">${e.entries.map((x) => {
+  return `${e.here?.length ? `<div class="ls-here">here ${peopleChips(e.here)}</div>` : ''}<div class="ls">${e.entries.map((x) => {
     const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'hostile' ? 'hot' : 'dim'}">${esc(t)}</span>`).join('');
     const name = x.kind === 'dir' ? (x.name === '..' ? '..' : x.name + '/') : x.name;
     const main = x.cmd.endsWith(' ') ? `data-prefill="${esc(x.cmd)}"` : `data-run="${esc(x.cmd)}"`;
-    return `<div class="ls-row"><span class="ls-kind">${x.kind === 'dir' ? 'd' : x.kind === 'virus' ? '!' : '-'}</span><button type="button" class="tok ${x.kind}" ${main} title="${esc(x.cmd.trim())}">${esc(name)}</button><span class="ls-size">${esc(x.size || '')}</span>${tags}${x.pull ? `<button type="button" class="tok act" data-run="${esc(x.pull)}">pull</button>` : ''}</div>`;
+    return `<div class="ls-row"><span class="ls-kind">${x.kind === 'dir' ? 'd' : x.kind === 'virus' ? '!' : '-'}</span><button type="button" class="tok ${x.kind}" ${main} title="${esc(x.cmd.trim())}">${esc(name)}</button><span class="ls-size">${esc(x.size || '')}</span>${tags}${peopleChips(x.people)}${x.pull ? `<button type="button" class="tok act" data-run="${esc(x.pull)}">pull</button>` : ''}</div>`;
   }).join('')}</div>`;
 }
 
@@ -879,6 +882,20 @@ export function commsMarkup(s, filter = 'all', now = Date.now()) {
   return `<div class="comms-head"><span>Comms</span><button type="button" class="act" data-comms-close>Close</button></div>
     <div class="comms-filters" role="group" aria-label="Show">${['all', ...Object.keys(COMMS_GROUPS)].map((f) => `<button type="button" data-cfilter="${f}" aria-pressed="${filter === f}">${f === 'all' ? 'All' : f}</button>`).join('')}</div>
     <ul class="comms-list">${rows || '<li class="quiet">Quiet.</li>'}</ul>`;
+}
+
+// ---------- people (presence.mjs): friends and who's online ----------
+export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
+  const all = online(s, now), crew = (s.crewSim || []).map((x) => x.name);
+  const row = (x) => `<li class="person${x.friend ? ' friend' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b>${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
+    <span class="p-acts">${x.friend ? `${crew.includes(x.handle) ? '<span class="tag you">crew</span>' : `<button type="button" class="act" data-run="crew invite ${esc(x.handle)}" ${crew.length >= 3 ? 'disabled title="Your crew is full"' : ''}>Invite</button>`}<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
+  const offline = friends(s).filter((h) => !all.some((x) => x.handle === h));
+  const list = tab === 'friends'
+    ? all.filter((x) => x.friend).map(row).join('') + offline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="friend remove ${esc(h)}">Remove</button></span></li>`).join('')
+    : all.map(row).join('');
+  return `<div class="comms-head"><span>People${simOn(s) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
+    <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends · ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['online', `Online · ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
+    <ul class="comms-list people-list">${list || `<li class="quiet">${!simOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends yet: add some from Online.' : 'Nobody else is online.'}</li>`}</ul>`;
 }
 
 // ---------- the Halcyon store ----------
@@ -1151,7 +1168,7 @@ export function mapMarkup(s, sel = 'server') {
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
-      return `<g class="mnode zone${here ? ' here' : ''}${dropOf(s.zone) ? ' drop' : ''}${on}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${dropMark(s.zone)}${pick}${label(n, 10, CONFIG.zone.name, here ? 'you are here' : live ? `rogue server · ${live} hostile` : 'rogue server · quiet')}</g>`;
+      return `<g class="mnode zone${here ? ' here' : ''}${dropOf(s.zone) ? ' drop' : ''}${on}" data-select="${CONFIG.zone.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${CONFIG.zone.name}, rogue server"><circle r="18" class="mhit"/><path d="M0 -9 L8 -4.5 L8 4.5 L0 9 L-8 4.5 L-8 -4.5 Z"/>${live ? `<circle r="2.5" class="zdot"/>` : ''}${dropMark(s.zone)}${pick}${label(n, 10, CONFIG.zone.name, (here ? 'you are here' : live ? `rogue server · ${live} hostile` : 'rogue server · quiet') + (simOn(s) && inSprawl(s).length ? ` · ${inSprawl(s).length} online` : ''))}</g>`;
     }
     if (n.kind === 'intrusion') {
       return `<g class="mnode intrusion${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;

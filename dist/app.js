@@ -18,6 +18,7 @@ import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createCables } from './cables.mjs';
 import { matesOf, mateUp } from './crew.mjs';
+import { online, simOn } from './presence.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -706,6 +707,7 @@ function renderMeters() {
   $('haptics').hidden = !feel.canBuzz();
   casing();
   pagerUi();
+  peopleUi();
   $('haptics').setAttribute('aria-pressed', String(!!campaign.settings.haptics));
   $('motion').setAttribute('aria-pressed', String(campaign.settings.motion));
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
@@ -1045,6 +1047,7 @@ function frame(now) {
   shell.caret();
   if (now - lastSecond >= 1000) {
     lastSecond = now; shell.second(module); services();
+    if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
     // A wild server's reconnect countdown (rogue.mjs relockMs) ticks on its card.
     if ([campaign.zone, ...(campaign.locations || [])].some((l) => l && relockLeft(l, wall - 1000))) dirty = true; // one more render as it ends
   }
@@ -1236,6 +1239,27 @@ function pagerUi() {
   $('comms').hidden = !commsOpen;
   if (commsOpen) put('comms', V.commsMarkup(campaign, commsFilter, Date.now()));
 }
+// People (presence.mjs): a button on the top bar with how many are online, and its panel.
+let peopleOpen = false, peopleTab = 'friends';
+function peopleUi() {
+  const on = simOn(campaign);
+  $('people').hidden = !on;
+  if (!on) { peopleOpen = false; $('people-panel').hidden = true; return; }
+  const list = online(campaign);
+  $('people-count').textContent = String(list.length);
+  $('people').classList.toggle('friends-on', list.some((x) => x.friend));
+  $('people').setAttribute('aria-expanded', String(peopleOpen));
+  $('people-panel').hidden = !peopleOpen;
+  if (peopleOpen) put('people-panel', V.peopleMarkup(campaign, peopleTab));
+}
+$('people').addEventListener('click', (e) => { e.stopPropagation(); peopleOpen = !peopleOpen; if (peopleOpen) setComms(false); dirty = true; });
+$('people-panel').addEventListener('click', (e) => {
+  const t = e.target.closest('[data-ptab]');
+  if (t) { e.stopPropagation(); peopleTab = t.dataset.ptab; dirty = true; return; }
+  if (e.target.closest('[data-people-close]')) { e.stopPropagation(); peopleOpen = false; dirty = true; }
+});
+document.addEventListener('click', (e) => { if (peopleOpen && !e.target.closest('#people-panel, #people')) { peopleOpen = false; dirty = true; } });
+
 function setComms(open) {
   commsOpen = open;
   if (open) { seeAll(campaign); save(); }

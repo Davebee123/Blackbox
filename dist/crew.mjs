@@ -15,6 +15,7 @@ import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerL
 import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './gear.mjs';
 import { ARCHETYPES } from './data.mjs';
 import { planner } from './planner.mjs';
+import { online, isFriend } from './presence.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
@@ -111,7 +112,7 @@ hooks.crewEnd = (s) => {
   for (const m of matesOf(s)) m.encounter = null;
 };
 
-// `crew`, `crew sim <class> [<class>…]`, `crew off`.
+// `crew`, `crew sim <class> [<class>…]`, `crew invite <friend>`, `crew kick <name>`, `crew off`.
 export function crewCommand(s, rest) {
   const first = s.serial;
   const words = rest.split(' ').filter(Boolean);
@@ -132,6 +133,19 @@ export function crewCommand(s, rest) {
       s.crewSim = want.map((cls, i) => ({ cls, name: CREW.names[i] }));
       emit(s, 'info', `Crew (simulated): ${s.crewSim.map((x) => `${x.name}, ${ARCHETYPES[x.cls].name}`).join(' · ')}. They join your run fights.`);
     }
-  } else warn(s, 'crew, crew sim <class> [<class>…], crew off');
+  } else if (words[0] === 'invite' && words[1]) {
+    // A friend who's online joins as a crewmate (still a bot until there's a server), in their class.
+    const h = words[1], who = online(s).find((x) => x.handle === h);
+    if (active(s)) warn(s, 'Finish the fight first.');
+    else if (!isFriend(s, h)) warn(s, `${h} isn't on your friends list.`);
+    else if (!who) warn(s, `${h} isn't online.`);
+    else if ((s.crewSim || []).some((x) => x.name === h)) warn(s, `${h} is already in your crew.`);
+    else if ((s.crewSim || []).length >= CREW.max) warn(s, `Your crew is full (${CREW.max}). crew kick <name> first.`);
+    else { (s.crewSim ||= []).push({ cls: who.cls, name: h }); emit(s, 'info', `${h} (${ARCHETYPES[who.cls].name}) joins your crew.`); }
+  } else if (words[0] === 'kick' && words[1]) {
+    if (active(s)) warn(s, 'Finish the fight first.');
+    else if (!(s.crewSim || []).some((x) => x.name === words[1])) warn(s, `${words[1]} isn't in your crew.`);
+    else { s.crewSim = s.crewSim.filter((x) => x.name !== words[1]); emit(s, 'info', `${words[1]} leaves your crew.`); }
+  } else warn(s, 'crew, crew sim <class> [<class>…], crew invite <friend>, crew kick <name>, crew off');
   return s.logs.filter((e) => e.id > first);
 }

@@ -1546,3 +1546,31 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 /* A chit about to break this cycle (the forecast): it blinks white like the slices on the bars. */
 .chits .going { font-weight: inherit; color: #fff8e6; text-shadow: 0 0 6px rgba(255, 248, 230, 0.8); animation: loss-blink 0.9s ease-in-out infinite; }
 .no-motion .chits .going { animation: none; opacity: 0.7; }
+
+/* People (presence.mjs): the top-bar button, its panel, and who's in a SPRAWL-00 folder. */
+.people-btn { display: flex; align-items: center; gap: 6px; background: #1b1409; border: 1px solid #3a2c14; border-radius: 6px; padding: 4px 9px; color: var(--muted); font: 600 12px var(--mono); cursor: pointer; }
+.people-btn[hidden] { display: none; }
+.people-btn:hover, .people-btn[aria-expanded='true'] { border-color: var(--amber); color: var(--text); }
+.p-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--you); box-shadow: 0 0 5px var(--you); flex: none; }
+.p-dot.fighting { background: var(--hot); box-shadow: 0 0 5px var(--hot); }
+.p-dot.off { background: var(--dim); box-shadow: none; }
+.people-btn.friends-on .p-dot { background: var(--daemon); box-shadow: 0 0 6px var(--daemon); }
+.comms.people { right: 150px; width: 380px; }
+.people-list .person { display: grid; grid-template-columns: auto auto 1fr; grid-template-areas: 'dot name class' 'dot where where' 'dot acts acts'; align-items: center; gap: 2px 8px; padding: 8px 12px; border-bottom: 1px solid rgba(241, 185, 47, 0.08); list-style: none; }
+.people-list .person .p-dot { grid-area: dot; align-self: start; margin-top: 5px; }
+.people-list .person b { grid-area: name; color: var(--bright); font: 600 13px var(--mono); }
+.people-list .person.friend b { color: var(--daemon); }
+.people-list .person small { grid-area: class; color: var(--dim); font: 11px var(--mono); }
+.people-list .person .p-where { grid-area: where; color: var(--muted); font-size: 12px; }
+.people-list .person .p-acts { grid-area: acts; display: flex; gap: 10px; align-items: center; }
+.people-list .person.off { opacity: 0.55; }
+.act.dim { color: var(--dim); }
+.ls-people { display: inline-flex; gap: 4px; margin-left: 8px; }
+.ls-people .who { font: 11px var(--mono); color: var(--you); border: 1px solid rgba(127, 209, 199, 0.35); border-radius: 8px; padding: 0 6px; }
+.ls-people .who::before { content: '● '; font-size: 8px; vertical-align: 1px; }
+.ls-people .who.friend { color: var(--daemon); border-color: rgba(195, 166, 255, 0.5); }
+.ls-people .who.fighting::before { color: var(--hot); }
+.ls-people .who.more { color: var(--muted); border-color: var(--line); }
+.ls-people .who.more::before { content: none; }
+.ls-here { display: flex; align-items: center; gap: 4px; margin: 0 0 4px; font: 11px var(--mono); color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
+.ls-here .ls-people { margin-left: 4px; }

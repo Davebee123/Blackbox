@@ -255,6 +255,15 @@ Every server you find is wired to two you haven't found yet, one layer deeper. T
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
 - A vault's trace record (`signal.trc`) locates one of its server's unknown neighbours outright (a flagged one first).
 
+## People: friends and who's online (presence.mjs)
+
+Simulated until the server exists: `online sim` turns on a pool of 20 hackers who log on and off (about half are on at any time) and move every minute or so; `online off` turns them off. Everything else here is how it will work online.
+
+- **The people button** on the top bar (a dot and how many are online; violet when a friend is on) opens two tabs: **Friends** (online ones first, with where they are; offline ones dimmed) and **Online** (everyone). Each line: handle, class and level, where they are (SPRAWL-00 and the folder, fighting or not; or just *on a run*, *on a rogue server*, *at home*: those are private).
+- **Friends:** Add friend / Remove on any line, or `friend add <handle>`, `friend remove <handle>`, `friends`. `who` lists everyone online.
+- **Crew:** an online friend can be **invited** (`crew invite <friend>`) and joins your run fights as a crewmate in their class (a bot for now). `crew kick <name>` lets them go. Three at most.
+- **SPRAWL-00 is shared.** In its terminal, each folder shows who's in it or below it (a chip each, friends in violet, a red dot if they're fighting); arriving in a folder starts with *here* and who's there. The map's SPRAWL-00 node says how many are online there. Every other server is private.
+
 ## Cables (cables.mjs)
 
 On the fight board, every player's command this cycle is wired to its target: a fiber-optic line arcs from the pill's right edge, over the +1 column, into the target's row. Your command (teal) and each crewmate's (violet) go to the part they're aimed at. The virus's attacks have no cables (for now). When something fires, a pulse of light runs down its line and sparks where it lands. `cables off` / `cables on` switches them.
