@@ -264,6 +264,20 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 - **Crew:** an online friend can be **invited** (`crew invite <friend>`) and joins your run fights as a crewmate in their class (a bot for now). `crew kick <name>` lets them go. Three at most.
 - **SPRAWL-00 is shared.** In its terminal, each folder shows who's in it or below it (a chip each, friends in violet, a red dot if they're fighting); arriving in a folder starts with *here* and who's there. The map's SPRAWL-00 node says how many are online there. Every other server is private.
 
+## Guild, territory and the crew strip (guild.mjs, run.mjs)
+
+**The guild** is the lasting group (simulated members for now): `guild create <name>`, then invite people from the people panel (*Invite to guild*) or `guild invite <handle>`; `guild kick <handle>`, `guild leave`. The people panel's **Guild** tab lists members (online first, with where they are), the guild's name and its territory. Crews of up to three are drawn from guildmates and friends (*Invite to crew*, `crew invite <name>`).
+
+**Territory.** A server you've taken over, or a rogue server, can be claimed for the guild (*Claim for <guild>* on its map card, `guild claim <server>`, or bare `guild claim` on a run there; `guild unclaim` gives it back). Territory is shared ground: guildmates who are online spend part of their time in its folders (they show in `ls`, yellow), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew). Everyone who fights gets full credit and their own loot. Nobody outside the guild is ever there, so nobody can take your kills. Everywhere else stays private (SPRAWL-00 is shared to see and talk, not to fight together).
+
+**The crew strip** sits under the run header when you have a crew: a card for you and each crewmate with their Signal and the folder they're in.
+- Crewmates start **linked to you** (⛓ with you): they follow wherever you go.
+- **Split** sends one off to look around on their own (they move every few seconds, never into a guard or a locked folder by themselves); *Split all* sends everyone.
+- **Go to** takes you to them once. **Link** makes you follow them: when they move, you're pulled along ("kilo pulls you to /var/log"); any move of your own drops the link. **Unlink** drops it too.
+- **Regroup** brings everyone back to you, linked.
+- Only the crewmates in the fight's folder fight it. In `ls`, crewmates show as violet chips in their folder; arriving says who's here.
+- The same as commands: `split <name|all>`, `goto <name>`, `link <name>`, `unlink`, `regroup`.
+
 ## Cables (cables.mjs)
 
 On the fight board, every player's command this cycle is wired to its target: a fiber-optic line arcs from the pill's right edge, over the +1 column, into the target's row. Your command (teal) and each crewmate's (violet) go to the part they're aimed at. The virus's attacks have no cables (for now). When something fires, a pulse of light runs down its line and sparks where it lands. `cables off` / `cables on` switches them.

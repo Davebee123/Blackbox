@@ -11,7 +11,8 @@ import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
-import { online, inSprawl, whereText, simOn, friends } from './presence.mjs';
+import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
+import { guildOf, isTerritory, isGuildmate } from './guild.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout } from './store.mjs';
@@ -734,7 +735,7 @@ export function lessonMarkup(t, lessons) {
 const NET_CLASS = { 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
 
 // Who's in a SPRAWL-00 folder (presence.mjs): a dot each, friends lit, a name on hover.
-const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.friend ? ' friend' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
+const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.crew ? ' crew' : x.friend ? ' friend' : x.guild ? ' guild' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
 function lsMarkup(e) {
   return `${e.here?.length ? `<div class="ls-here">here ${peopleChips(e.here)}</div>` : ''}<div class="ls">${e.entries.map((x) => {
     const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'hostile' ? 'hot' : 'dim'}">${esc(t)}</span>`).join('');
@@ -784,6 +785,28 @@ export function netTranscript(s, limit = 80) {
   return earlier + lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : esc(e.message) + suggestButton(e)}</li>`).join('');
 }
 
+// The crew strip (run.mjs crewMove / crewWander): where each crewmate is on this server, linked
+// to you or off on their own, with Go to / Link / Split, and Regroup when anyone's apart.
+function crewStrip(s, loc) {
+  const crew = Object.entries(s.run.crew || {});
+  if (!crew.length) return '';
+  const mates = Object.fromEntries(matesOf(s).map((m) => [m.who, m]));
+  const card = ([name, c]) => {
+    const m = mates[name], cls = (s.crewSim || []).find((x) => x.name === name)?.cls, sig = m?.run ? Math.round((m.run.integrity / m.run.max) * 100) : 100;
+    const linkedYou = c.link === 'you', youFollow = s.run.linkedTo === name, here = c.cwd === s.run.cwd;
+    const state = linkedYou ? '<span class="cs-link">⛓ with you</span>' : youFollow ? '<span class="cs-link lead">⛓ you follow</span>' : '<span class="cs-off">on their own</span>';
+    const acts = [
+      linkedYou ? `<button type="button" class="act" data-run="split ${esc(name)}">Split</button>` : '',
+      !linkedYou && !here ? `<button type="button" class="act" data-run="goto ${esc(name)}">Go to</button>` : '',
+      !linkedYou && !youFollow ? `<button type="button" class="act" data-run="link ${esc(name)}">Link</button>` : '',
+      youFollow ? '<button type="button" class="act" data-run="unlink">Unlink</button>' : '',
+    ].join('');
+    return `<div class="cs-card${linkedYou || youFollow ? ' linked' : ''}${here ? ' here' : ''}"><div class="cs-top"><b>${esc(name)}</b><small>${cls ? esc(ARCHETYPES[cls].name) : ''}</small></div><span class="cs-sig"><span style="width:${sig}%"></span></span><div class="cs-where">${esc(c.cwd)}</div><div class="cs-state">${state}</div><div class="cs-acts">${acts}</div></div>`;
+  };
+  const apart = crew.some(([, c]) => c.link !== 'you');
+  return `<div class="crew-strip"><div class="cs-card you"><div class="cs-top"><b>you</b><small>${esc(ARCHETYPES[classOf(s)].name)}</small></div><span class="cs-sig"><span style="width:${(s.run.integrity / s.run.max) * 100}%"></span></span><div class="cs-where">${esc(s.run.cwd)}</div>${apart ? '<div class="cs-acts"><button type="button" class="act" data-run="regroup">Regroup</button></div>' : `<div class="cs-acts"><button type="button" class="act dim" data-run="split all">Split all</button></div>`}</div>${crew.map(card).join('')}</div>`;
+}
+
 export const signalLevel = (run) => (run.integrity / run.max <= 0.3 ? 'low' : run.integrity / run.max <= 0.6 ? 'mid' : 'ok');
 
 export function netMarkup(s) {
@@ -799,6 +822,7 @@ export function netMarkup(s) {
       <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${CONFIG.cdCost}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small></div>
       <button type="button" class="net-pack" data-run="pack" title="What you're carrying (unbanked)">pack <b>${s.run.pack.length}</b></button>
     </header>
+    ${crewStrip(s, loc)}
     <ol class="term" id="term">${netTranscript(s)}</ol>
   </section>`;
 }
@@ -887,14 +911,18 @@ export function commsMarkup(s, filter = 'all', now = Date.now()) {
 // ---------- people (presence.mjs): friends and who's online ----------
 export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
   const all = online(s, now), crew = (s.crewSim || []).map((x) => x.name);
-  const row = (x) => `<li class="person${x.friend ? ' friend' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b>${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
-    <span class="p-acts">${x.friend ? `${crew.includes(x.handle) ? '<span class="tag you">crew</span>' : `<button type="button" class="act" data-run="crew invite ${esc(x.handle)}" ${crew.length >= 3 ? 'disabled title="Your crew is full"' : ''}>Invite</button>`}<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
+  const row = (x) => `<li class="person${x.friend ? ' friend' : ''}${x.guild ? ' guildie' : ''}"><span class="p-dot${x.place.fighting ? ' fighting' : ''}"></span><b>${esc(x.handle)}</b><small>${esc(ARCHETYPES[x.cls].name)} ${x.level}</small><span class="p-where">${esc(whereText(x.place))}</span>
+    <span class="p-acts">${guildOf(s) && !x.guild ? `<button type="button" class="act" data-run="guild invite ${esc(x.handle)}">Invite to guild</button>` : ''}${x.friend || x.guild ? `${crew.includes(x.handle) ? '<span class="tag you">crew</span>' : `<button type="button" class="act" data-run="crew invite ${esc(x.handle)}" ${crew.length >= 3 ? 'disabled title="Your crew is full"' : ''}>Invite to crew</button>`}${x.friend ? `<button type="button" class="act dim" data-run="friend remove ${esc(x.handle)}">Remove</button>` : ''}` : ''}${x.friend ? '' : `<button type="button" class="act" data-run="friend add ${esc(x.handle)}">Add friend</button>`}</span></li>`;
   const offline = friends(s).filter((h) => !all.some((x) => x.handle === h));
+  const g = guildOf(s);
+  const guildOffline = (g?.members || []).filter((h) => !all.some((x) => x.handle === h));
   const list = tab === 'friends'
     ? all.filter((x) => x.friend).map(row).join('') + offline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="friend remove ${esc(h)}">Remove</button></span></li>`).join('')
+    : tab === 'guild'
+    ? (g ? `<li class="guild-head"><b>${esc(g.name)}</b><small>${g.members.length + 1} members · ${g.territory.length ? 'territory: ' + g.territory.map((t) => esc(t.name)).join(', ') : 'no territory yet'}</small></li>` + all.filter((x) => x.guild).map(row).join('') + guildOffline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="guild kick ${esc(h)}">Kick</button></span></li>`).join('') : '<li class="quiet">No guild yet. Type: guild create &lt;name&gt;</li>')
     : all.map(row).join('');
   return `<div class="comms-head"><span>People${simOn(s) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
-    <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends · ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['online', `Online · ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
+    <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends · ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['guild', g ? `Guild · ${all.filter((x) => x.guild).length}/${g.members.length}` : 'Guild'], ['online', `Online · ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
     <ul class="comms-list people-list">${list || `<li class="quiet">${!simOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends yet: add some from Online.' : 'Nobody else is online.'}</li>`}</ul>`;
 }
 
@@ -1222,6 +1250,14 @@ function dropLine(s, l) {
   return `<p class="svc-line drop-line"><span class="tag tag-drop" title="Closes in ${dropMinutes(l)} min">Dead drop · ${dropMinutes(l)} min</span> <code>${spell(d.pass.replace(/\d+$/, ''))} · ${d.pass.slice(-2)}</code></p>`;
 }
 
+// Guild territory (guild.mjs) on a server card: the tag, or the button to claim it.
+function guildLine(s, l) {
+  const g = guildOf(s);
+  if (!g) return '';
+  if (isTerritory(s, l)) return `<p class="svc-line"><span class="tag tag-guild">${esc(g.name)}</span> guild territory <button type="button" class="act dim" data-command="guild unclaim ${esc(l.id)}">Unclaim</button></p>`;
+  return l.takenOver || l.rogue ? `<p class="svc-line"><button type="button" class="act" data-command="guild claim ${esc(l.id)}">Claim for ${esc(g.name)}</button></p>` : '';
+}
+
 // The rogue server's card: the main thing to do, so it also leads the server card.
 function zoneCard(s) {
   const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
@@ -1293,6 +1329,7 @@ function mapSide(s, sel, node) {
       <p>${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}</p>
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line">Wild: it can't be taken over, and it never sends invaders.</p>
+      ${guildLine(s, l)}
       <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
   const layout = layoutName(l);
@@ -1306,6 +1343,7 @@ function mapSide(s, sel, node) {
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}
     ${l.relay ? '<p class="svc-line"><span class="tag you">Relay up</span></p>' : ''}
+    ${guildLine(s, l)}
     ${dropLine(s, l)}
     ${outpostCard(s, l)}
     <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : cutOffBy(s, l) ? `disabled title="${esc(`The route runs through ${cutOffBy(s, l).name}, and natives hold it`)}"` : ''}>Connect</button>`}</div></section>`;

@@ -16,6 +16,7 @@ import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './gear.mjs';
 import { ARCHETYPES } from './data.mjs';
 import { planner } from './planner.mjs';
 import { online, isFriend } from './presence.mjs';
+import { isGuildmate } from './guild.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
@@ -26,7 +27,7 @@ export const CREW = {
 
 // The crewmates' states, rebuilt from s.crewSim when needed. Kept off the save (not enumerable).
 export function matesOf(s) {
-  const want = s.crewSim || [];
+  const want = [...(s.crewSim || []), ...(s.guests || [])]; // guests: guildmates who joined a fight on guild territory
   let m = s._mates;
   const key = want.map((x) => x.cls + ':' + x.name).join(',') + '@' + hackerLevel(s);
   if (!m || m.key !== key) {
@@ -39,8 +40,9 @@ export function matesOf(s) {
 const inFight = (s) => matesOf(s).filter((m) => m.encounter && active(m));
 export const mateUp = (m) => m.encounter && active(m) && m.run.integrity > 0;
 
-function makeMate(host, { cls, name }, i) {
+function makeMate(host, { cls, name, guest }, i) {
   const m = fresh();
+  if (guest) m.guest = true;
   m.who = name;
   m.loadout.archetype = cls;
   const level = hackerLevel(host);
@@ -65,10 +67,19 @@ function decide(m) {
   command(m, text);
 }
 
+// Where a crewmate is on this run (run.mjs keeps s.run.crew); with no positions, they're with you.
+export const crewAt = (s, name) => s.run?.crew?.[name]?.cwd ?? s.run?.cwd ?? null;
 hooks.crewEngage = (s) => {
   const e = s.encounter;
-  if (e.mode !== 'run' || !(s.crewSim || []).length) return;
-  const mates = matesOf(s);
+  if (e.mode !== 'run') return;
+  // Guildmates in this folder of guild territory join as guests (run.mjs: hooks.crewGuests).
+  const guests = (hooks.crewGuests?.(s, e.room) || []).filter((g) => !(s.crewSim || []).some((x) => x.name === g.name));
+  s.guests = guests.slice(0, Math.max(0, CREW.max - (s.crewSim || []).length)).map((g) => ({ ...g, guest: true }));
+  // Only the crew in the fight's folder fights it; the rest are elsewhere on the server.
+  const all = matesOf(s);
+  for (const m of all) m.encounter = null;
+  const mates = all.filter((m) => m.guest || !s.run?.crew || crewAt(s, m.who) === e.room);
+  if (!mates.length) return;
   // A bigger party: tougher parts.
   const k = 1 + CREW.hpPer * mates.length;
   const kd = 1 + CREW.dmgPer * mates.length;
@@ -82,7 +93,7 @@ hooks.crewEngage = (s) => {
       chits: classOf(m) === 'bastion' ? 1 : 0, metrics: structuredClone(e.metrics), down: false };
     decide(m);
   }
-  emit(s, 'status', `Crew in: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);
+  emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and guild in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', guild' : ''})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);
 };
 
 // One crewmate's turn (the i-th still standing).
@@ -110,6 +121,7 @@ hooks.crewHurt = checkDown;
 
 hooks.crewEnd = (s) => {
   for (const m of matesOf(s)) m.encounter = null;
+  s.guests = []; // guests go back to what they were doing
 };
 
 // `crew`, `crew sim <class> [<class>…]`, `crew invite <friend>`, `crew kick <name>`, `crew off`.
@@ -137,11 +149,11 @@ export function crewCommand(s, rest) {
     // A friend who's online joins as a crewmate (still a bot until there's a server), in their class.
     const h = words[1], who = online(s).find((x) => x.handle === h);
     if (active(s)) warn(s, 'Finish the fight first.');
-    else if (!isFriend(s, h)) warn(s, `${h} isn't on your friends list.`);
+    else if (!isFriend(s, h) && !isGuildmate(s, h)) warn(s, `${h} isn't a friend or a guildmate.`);
     else if (!who) warn(s, `${h} isn't online.`);
     else if ((s.crewSim || []).some((x) => x.name === h)) warn(s, `${h} is already in your crew.`);
     else if ((s.crewSim || []).length >= CREW.max) warn(s, `Your crew is full (${CREW.max}). crew kick <name> first.`);
-    else { (s.crewSim ||= []).push({ cls: who.cls, name: h }); emit(s, 'info', `${h} (${ARCHETYPES[who.cls].name}) joins your crew.`); }
+    else { (s.crewSim ||= []).push({ cls: who.cls, name: h }); if (s.run) (s.run.crew ||= {})[h] = { cwd: s.run.cwd, link: 'you' }; emit(s, 'info', `${h} (${ARCHETYPES[who.cls].name}) joins your crew.`); }
   } else if (words[0] === 'kick' && words[1]) {
     if (active(s)) warn(s, 'Finish the fight first.');
     else if (!(s.crewSim || []).some((x) => x.name === words[1])) warn(s, `${words[1]} isn't in your crew.`);

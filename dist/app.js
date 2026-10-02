@@ -6,7 +6,7 @@ import * as V from './view.mjs';
 import { createArt } from './virus-art.mjs';
 import { createFeel } from './feel.mjs';
 import { createShell } from './shell.mjs';
-import { play, runSuggestions, nextActions, currentLocation, signalNow } from './run.mjs';
+import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { nextPayIn, boardOpen, storyAt } from './mail.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll } from './comms.mjs';
@@ -518,7 +518,7 @@ function run(raw) {
 
   const wasAlert = campaign.encounter?.phase === 'alert';
   const queuedBefore = campaign.encounter?.queue;
-  let events = play(campaign, text);
+  let events = play(campaign, text.startsWith('guild create') ? raw.trim() : text); // a guild's name keeps its capitals
   react(events);
   const warning = events.findLast((e) => e.type === 'warning');
   // In a fight, an order you enter goes now: the cycle turns without waiting out the bar.
@@ -1023,7 +1023,7 @@ function stepLoop() {
 
 // ---------- clock ----------
 let last = performance.now();
-let lastSecond = 0;
+let lastSecond = 0, wanderTick = 0;
 function frame(now) {
   const delta = Math.min(1000, now - last);
   last = now;
@@ -1048,6 +1048,8 @@ function frame(now) {
   if (now - lastSecond >= 1000) {
     lastSecond = now; shell.second(module); services();
     if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
+    // Crewmates off on their own move every few seconds (run.mjs crewWander).
+    if (campaign.run && ++wanderTick % 4 === 0 && Object.values(campaign.run.crew || {}).some((c) => c.link !== 'you')) { const ev = crewWander(campaign); if (ev.length) react(ev); save(); dirty = true; }
     // A wild server's reconnect countdown (rogue.mjs relockMs) ticks on its card.
     if ([campaign.zone, ...(campaign.locations || [])].some((l) => l && relockLeft(l, wall - 1000))) dirty = true; // one more render as it ends
   }

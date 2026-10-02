@@ -1574,3 +1574,23 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .ls-people .who.more::before { content: none; }
 .ls-here { display: flex; align-items: center; gap: 4px; margin: 0 0 4px; font: 11px var(--mono); color: var(--dim); letter-spacing: 1px; text-transform: uppercase; }
 .ls-here .ls-people { margin-left: 4px; }
+
+/* The crew strip (run screen): you and each crewmate, where they are, linked or not. */
+.crew-strip { display: flex; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.cs-card { flex: 0 0 168px; display: grid; gap: 3px; padding: 7px 9px; background: var(--inset); border: 1px solid var(--line); border-left: 3px solid var(--daemon); border-radius: 3px; }
+.cs-card.you { border-left-color: var(--you); }
+.cs-card.linked { box-shadow: inset 0 0 0 1px rgba(195, 166, 255, 0.25); }
+.cs-card.here:not(.you) { background: rgba(195, 166, 255, 0.06); }
+.cs-top { display: flex; align-items: baseline; gap: 6px; } .cs-top b { font: 600 13px var(--mono); color: var(--bright); } .cs-top small { font: 10px var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+.cs-card:not(.you) .cs-top b { color: var(--daemon); }
+.cs-sig { display: block; height: 3px; background: rgba(255, 255, 255, 0.06); } .cs-sig span { display: block; height: 100%; background: var(--you); }
+.cs-card:not(.you) .cs-sig span { background: var(--daemon); }
+.cs-where { font: 12px var(--mono); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cs-state { font: 10px var(--mono); letter-spacing: 0.5px; } .cs-link { color: var(--daemon); } .cs-link.lead { color: var(--you); } .cs-off { color: var(--dim); }
+.cs-acts { display: flex; gap: 10px; }
+.ls-people .who.crew { color: var(--daemon); border-color: rgba(195, 166, 255, 0.6); background: rgba(195, 166, 255, 0.08); }
+.ls-people .who.guild { color: var(--next); border-color: rgba(255, 216, 92, 0.4); }
+.people-list .person.guildie b { color: var(--next); }
+.people-list .guild-head { list-style: none; padding: 10px 12px; border-bottom: 1px solid var(--line); display: grid; gap: 2px; }
+.people-list .guild-head b { color: var(--next); font: 600 14px var(--sans); } .people-list .guild-head small { color: var(--muted); font-size: 12px; }
+.tag-guild { color: var(--next); border-color: rgba(255, 216, 92, 0.5); }

@@ -13,7 +13,8 @@ import { hiddenNodes, locate, flagged, bankRoute } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 import { crewCommand } from './crew.mjs';
-import { presenceCommand, inFolder, under, simOn } from './presence.mjs';
+import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
+import { guildCommand, isTerritory } from './guild.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -306,7 +307,7 @@ const locked = (loc, path) => !!layoutOf(loc)[path]?.locked && !loc.state.unlock
 
 // ---------- commands ----------
 
-export const RUN_COMMANDS = ['history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
+export const RUN_COMMANDS = ['split', 'link', 'goto', 'regroup', 'unlink', 'history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
 const equipped = (s, id) => equippedSkills(s, classOf(s)).includes(id);
 const onceUsed = (s, id) => (s.run.used ||= {})[id];
 
@@ -349,6 +350,8 @@ export function connect(s, id) {
     if (zone) zoneSpawns(s);
     if (loc.rogue) rogueSpawns(s, loc);
     s.run = { loc: loc.id, cwd: '/', integrity: signal, max: maxSignal(s), pack: [], visited: ['/'] };
+    // Your crew comes along, linked to you (they follow where you go). See the crew strip.
+    s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: '/', link: 'you' }]));
     const q = QUIRKS[loc.quirk];
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} hostile ${liveSpawns(s) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} hostile ${liveRogue(loc) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
@@ -382,7 +385,7 @@ function ls(s, all = false) {
     const tags = [guarded(loc, full) ? 'guarded' : '', locked(loc, full) ? 'locked' : ''].filter(Boolean);
     const hostile = isWild(loc) && loc.spawns?.[full]?.alive;
     // SPRAWL-00 is shared: who's in each folder (presence.mjs).
-    const people = loc.zone && simOn(s) ? under(s, full).map((x) => ({ handle: x.handle, friend: x.friend, fighting: x.place.fighting })) : [];
+    const people = peopleIn(s, loc, full, true);
     entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile'] : tags, people });
   }
   for (const f of here.files.filter(show)) {
@@ -393,11 +396,21 @@ function ls(s, all = false) {
     entries.push({ kind: 'file', name: f, size: info.size, cmd: `cat ${f}`, pull: state === 'pull' ? `pull ${f}` : null, tags: state ? [state] : [] });
   }
   const text = entries.map((e) => (e.kind === 'virus' ? `!  ${e.name.padEnd(14)}${e.size.padStart(4)}` : e.kind === 'dir' ? `d  ${e.name === '..' ? '..' : e.name + '/'}` : `-  ${e.name.padEnd(14)}${e.size.padStart(4)}`) + (e.tags.length ? '   [' + e.tags.join('] [') + ']' : '')).join('\n');
-  const herePeople = loc.zone && simOn(s) ? inFolder(s, s.run.cwd).map((x) => ({ handle: x.handle, friend: x.friend, fighting: x.place.fighting })) : [];
+  const herePeople = peopleIn(s, loc, s.run.cwd, false);
   emit(s, 'net-ls', herePeople.length ? `${text}\nhere: ${herePeople.map((x) => x.handle).join(', ')}` : text, { entries, here: herePeople });
 }
 
-function cd(s, arg) {
+// Who's in a folder: your crew (always), plus anyone online in a shared place (SPRAWL-00, guild
+// territory). deep: or anywhere inside it, as ls shows next to a folder.
+function peopleIn(s, loc, folder, deep) {
+  const inside = (p) => p === folder || (deep && p.startsWith(folder === '/' ? '/' : folder + '/'));
+  const crew = Object.entries(s.run?.crew || {}).filter(([, c]) => inside(c.cwd)).map(([handle, c]) => ({ handle, crew: true, linked: c.link === 'you' }));
+  const key = loc.zone ? 'sprawl' : isTerritory(s, loc) ? loc.id : null;
+  const others = key && simOn(s) ? at(s, key, folder, deep).filter((x) => !s.run?.crew?.[x.handle]).map((x) => ({ handle: x.handle, friend: x.friend, guild: x.guild, fighting: x.place.fighting })) : [];
+  return [...crew, ...others];
+}
+
+function cd(s, arg, pulled = null) {
   const loc = currentLocation(s);
   if (!arg) return err(s, 'cd where? Try cd .. or one of the directories from ls.');
   const target = join(s.run.cwd, arg);
@@ -424,6 +437,9 @@ function cd(s, arg) {
   }
   if (s.run.cloak && s.run.cloak !== 'armed' && s.run.cloak !== 'spent' && s.run.cloak !== target) s.run.cloak = 'spent';
   s.run.cwd = target;
+  // Crew linked to you come along; a move of your own breaks a link you had to someone.
+  for (const c of Object.values(s.run.crew || {})) if (c.link === 'you') c.cwd = target;
+  if (s.run.linkedTo && !pulled) { emit(s, 'net-out', `Link to ${s.run.linkedTo} dropped.`); s.run.linkedTo = null; }
   // The terminal starts over in each folder (from the cd that got you here); `history` shows the whole run.
   s.run.roomFrom = s.run.lastEcho;
   s.run.history = false;
@@ -570,6 +586,16 @@ export function play(s, input) {
   const rest = restWords.join(' ');
   if (word === 'connect') return connect(s, rest);
   if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
+  if (word === 'guild') { // guild.mjs
+    const first = s.serial;
+    const raw = input.trim().replace(/^\S+\s*/, ''); // as typed: a guild's name keeps its capitals
+    guildCommand(s, rest.trim() === 'claim' && s.run ? `claim ${s.run.loc}` : raw, { // on a run, bare `guild claim` claims this server
+      emit, warn, pool: PRESENCE.pool,
+      findLoc: (q) => (q ? s.locations.find((l) => l.id === q || l.name.toLowerCase() === q.toLowerCase()) : null),
+      folders: (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !layoutOf(l)[p].locked),
+    });
+    return since(s, first);
+  }
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
   if (text === 'jack in' || text === 'defend') return jackIn(s);
   if (text === 'developer invade' || text === 'developer crash') return developerNetwork(s, text);
@@ -587,6 +613,7 @@ export function play(s, input) {
   if (word === 'ls' || word === 'look') ls(s, /(^| )-\w*a/.test(rest));
   else if (word === 'pwd') out(s, s.run.cwd);
   else if (word === 'history') s.run.history = true;
+  else if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) crewMove(s, word, rest);
   else if (word === 'cd' || word === 'go') cd(s, rest);
   else if (word === 'cat') cat(s, rest);
   else if (word === 'pull') pull(s, rest);
@@ -608,6 +635,58 @@ export function play(s, input) {
   'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
   return since(s, first);
 }
+
+// ---------- the crew on a run (the crew strip) ----------
+// Each crewmate has a folder. Linked to you, they follow you. Split, they look around on their own
+// (crewWander). You can go to one, or link to one and follow them; regroup brings everyone back.
+const crewList = (s) => Object.entries(s.run?.crew || {});
+function crewMove(s, word, rest) {
+  const crew = s.run.crew || {};
+  const name = rest.trim();
+  if (word === 'regroup') {
+    if (!crewList(s).length) return err(s, 'No crew with you.');
+    for (const c of Object.values(crew)) { c.cwd = s.run.cwd; c.link = 'you'; }
+    s.run.linkedTo = null;
+    return out(s, `${crewList(s).map(([n]) => n).join(' and ')} regroup${crewList(s).length === 1 ? 's' : ''} on you.`, 'net-good');
+  }
+  if (word === 'unlink') { if (s.run.linkedTo) { out(s, `Link to ${s.run.linkedTo} dropped.`); s.run.linkedTo = null; } return; }
+  const all = name === 'all' && word === 'split';
+  if (!all && !crew[name]) return err(s, `${name || '?'} isn't in your crew on this run.`);
+  if (word === 'split') {
+    for (const [n, c] of crewList(s)) if (all || n === name) c.link = null;
+    return out(s, `${all ? 'The crew splits up' : `${name} splits off`} to look around.`);
+  }
+  if (word === 'goto') return crew[name].cwd === s.run.cwd ? out(s, `${name} is right here.`) : cd(s, crew[name].cwd);
+  if (word === 'link') {
+    s.run.linkedTo = name;
+    crew[name].link = null; // they lead
+    out(s, `Linked to ${name}: you follow where they go.`, 'net-good');
+    if (crew[name].cwd !== s.run.cwd) cd(s, crew[name].cwd, name);
+  }
+}
+// Split crewmates move on now and then (the app calls this every few seconds). One you're linked
+// to pulls you along. They don't walk into a guard or a locked folder on their own.
+export function crewWander(s) {
+  if (!s.run || active(s) || s.encounter?.phase === 'alert') return [];
+  const first = s.serial, loc = currentLocation(s), lay = layoutOf(loc);
+  for (const [name, c] of crewList(s)) {
+    if (c.link === 'you' || Math.random() < 0.4) continue;
+    const here = lay[c.cwd] || lay['/'];
+    const up = c.cwd === '/' ? [] : [c.cwd.slice(0, c.cwd.lastIndexOf('/')) || '/'];
+    const down = (here.dirs || []).map((d) => join(c.cwd, d)).filter((p) => !guarded(loc, p) && !locked(loc, p) && !hiddenName(p.split('/').pop()));
+    const options = [...down, ...down, ...up]; // a bias to go deeper
+    if (!options.length) continue;
+    c.cwd = options[Math.floor(Math.random() * options.length)];
+    if (s.run.linkedTo === name) { out(s, `${name} pulls you to ${c.cwd}.`); cd(s, c.cwd, name); }
+  }
+  return since(s, first);
+}
+// Guildmates in this folder of guild territory join a fight there (crew.mjs).
+hooks.crewGuests = (s, room) => {
+  const loc = currentLocation(s);
+  if (!loc || !isTerritory(s, loc) || !simOn(s)) return [];
+  return at(s, loc.id, room).map((x) => ({ cls: x.cls, name: x.handle }));
+};
 
 // The rogue server: attack the virus in this folder.
 function attack(s, arg) {
