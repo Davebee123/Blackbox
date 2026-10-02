@@ -444,7 +444,7 @@ test('the loadout page: skills beside protocols, the talent tree on its own tab,
   const { loadoutMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   let html = loadoutMarkup(s, 'operator');
-  assert.match(html, /Operator Lv 1/);
+  assert.match(html, /<h1>Operator<\/h1><div class="class-xp"><b>Lv 1<\/b>/, 'level and XP under the class name');
   assert.match(html, /Level 22/, 'later skills show the level they unlock at');
   assert.doesNotMatch(html, /class="ttree"/, 'the tree is on the Talents tab');
   assert.match(html, /Protocols belong to the class in use/, 'another class: no protocol slots to change');

@@ -152,6 +152,10 @@ const on = (s, p, k) => p[k + 'Until'] >= s.encounter.cycle;
 const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
 
 // opts.mine: your own hit (your buffs apply). Armor isn't a multiplier: see hit().
+// Breaker Momentum: stacks still running, and the damage they add (Chain Exploit +2% a stack per rank).
+export const momentumStacks = (s) => { const m = s.encounter?.momentum; return m && m.until >= s.encounter.cycle ? m.stacks : 0; };
+export const momentumBonus = (s) => (SKILLS.momentum + 0.02 * rank(s, 'chain-exploit')) * momentumStacks(s);
+
 export function damageMultiplier(s, p, opts = {}) {
   const e = s.encounter;
   let m = 1;
@@ -160,7 +164,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
-    if (classOf(s) === 'breaker') m *= 1 + (SKILLS.momentum + 0.02 * rank(s, 'chain-exploit')) * (e.breaks || 0);
+    if (classOf(s) === 'breaker') m *= 1 + momentumBonus(s);
     if (hasTalent(s, 'unsafe-mode')) m *= 1.3;
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%' })) m *= 1 + x.value / 100;
@@ -1429,6 +1433,8 @@ function breakPart(s, p) {
   if (classOf(s) === 'breaker') backtrace(s);
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
+  // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
+  if (p.kind !== 'fragment' && classOf(s) === 'breaker') e.momentum = { stacks: Math.min(SKILLS.momentumMax, momentumStacks(s) + 1), until: e.cycle + SKILLS.momentumCycles };
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
   if (hasTalent(s, 'cascade-failure') && !e.once.rampage) { e.once.rampage = true; e.readyAt = {}; emit(s, 'status', 'Cascade Failure: cooldowns reset.'); }
   // Uniques that fire on a break (Cryptominer, Zero Cool).

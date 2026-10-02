@@ -196,7 +196,9 @@ export const SKILLS = {
   helperCap: 6, // Operator: most helpers out at once
   hooked: 6, // Hooked: +6 per hit (Operator)
   throttled: 0.5, // Throttled: attacks deal half (Bastion)
-  momentum: 0.1, // Breaker passive: +10% per part you break
+  momentum: 0.1, // Breaker passive: +10% per part you break...
+  momentumMax: 3, // ...up to 3 stacks (+30%)...
+  momentumCycles: 2, // ...lasting 2 cycles after your last break (each break refreshes it)
   hardened: 1, // Bastion passive: armor chits you start a fight with
   siphonSignalShare: 1, // Siphon heals Signal on runs, Integrity at home
   fixedCounter: 12,
@@ -638,7 +640,7 @@ export const ARCHETYPES = {
   breaker: {
     name: 'Breaker', idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
     status: 'exposed',
-    passive: { name: 'Momentum', rule: '+10% damage for each part you break this fight.' },
+    passive: { name: 'Momentum', rule: 'Each part you break: +10% damage for 2 cycles, up to 3 stacks. Another break refreshes it.' },
     skills: skillsOf(['overload', 'exploit', 'smash', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
     fillers: [
       [f('overclocked', 'Overclocked Core', '+3% damage per rank.', 0.03), f('chain-exploit', 'Chain Exploit', 'Momentum +2% per break per rank.', 0.02)],

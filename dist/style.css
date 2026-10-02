@@ -543,7 +543,8 @@ details summary { font-size: 13px; }
 .loadout-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 .roles { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; }
 .roles b { color: var(--bright); font-weight: 600; margin-right: 4px; }
-.status-line { font-size: 13px; }
+.status-line { font-size: 13px; cursor: help; }
+.status-label { color: var(--muted); font: 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; }
 .keybar { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
 .slot { display: grid; gap: 2px; justify-items: center; text-align: center; border: 1px solid var(--line-strong); border-radius: 4px; padding: 8px 4px; background: var(--inset); min-width: 0; }
 .slot b { font-size: 12px; line-height: 1.2; color: var(--bright); overflow-wrap: anywhere; hyphens: auto; max-width: 100%; }
@@ -691,12 +692,12 @@ details summary { font-size: 13px; }
 .delta .up { color: var(--r-tuned); } .delta .down { color: var(--hot); }
 .btn.small { padding: 4px 9px; font-size: 12px; }
 /* Stat sheet: every stat a side can have, grouped; zeros dimmed. */
-.sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 16px; margin-top: 10px; }
-.sheet-group h3 { margin: 0 0 4px; font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-.sheet dl { margin: 0; display: grid; gap: 2px; }
-.sheet dl > div { display: flex; justify-content: space-between; gap: 8px; font: 12px var(--mono); cursor: help; }
-.sheet dt { color: var(--text); } .sheet dd { margin: 0; color: var(--you); }
-.sheet dl > div.zero dt, .sheet dl > div.zero dd { color: var(--dim); }
+.sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px 22px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.sheet-group h3 { margin: 0 0 6px; font: 600 12px var(--sans); letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); }
+.sheet dl { margin: 0; display: grid; gap: 0; }
+.sheet dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 4px 2px; font: 14px var(--sans); border-bottom: 1px dotted rgba(241, 185, 47, 0.12); cursor: help; }
+.sheet dt { color: var(--bright); display: flex; align-items: center; gap: 6px; } .sheet dd { margin: 0; color: var(--you); font: 600 14px var(--mono); }
+.sheet dl > div.zero dt, .sheet dl > div.zero dd { color: var(--muted); opacity: 0.7; }
 .fpick { display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
 .fpick select { font: 13px var(--mono); color: var(--bright); background: var(--inset); border: 1px solid var(--line-strong); border-radius: 4px; padding: 5px 8px; text-transform: none; letter-spacing: 0; }
 .fchips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 6px; }
@@ -1455,3 +1456,16 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 @keyframes drop-ping { 50% { opacity: 0.35; } }
 .tag-drop { color: var(--daemon, #c3a6ff); border-color: currentColor; }
 .drop-line code { color: var(--daemon, #c3a6ff); letter-spacing: 1px; }
+
+/* Loadout: the class's level and XP sit under its name. */
+.class-xp { display: flex; align-items: center; gap: 8px; margin-top: 4px; font: 12px var(--mono); color: var(--muted); }
+.class-xp .lvl-bar { width: 120px; }
+.class-xp b { color: var(--you); font-weight: 600; }
+
+/* Status row under You: each timed effect is a bar over the cycles it lasts (Now first). */
+.bstatus .bcell { padding-top: 4px; padding-bottom: 4px; }
+.sgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px 0; align-content: center; }
+.sbar { display: flex; align-items: baseline; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; padding: 2px 8px; margin-right: 6px; border-radius: 2px; font: 12px var(--mono); cursor: help; }
+.sbar b { font-weight: 600; } .sbar span { opacity: 0.85; }
+.sbar.you { color: var(--you); background: rgba(127, 209, 199, 0.12); border: 1px solid rgba(127, 209, 199, 0.45); }
+.sbar.hot { color: var(--hot); background: rgba(255, 91, 61, 0.1); border: 1px solid rgba(255, 91, 61, 0.45); }

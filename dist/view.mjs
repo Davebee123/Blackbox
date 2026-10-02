@@ -17,7 +17,7 @@ import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items 
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, blocked, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills,  cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, previewDamage, part } from './combat.mjs';
+import { momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, blocked, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills,  cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, previewDamage, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -206,16 +206,25 @@ function partTags(s, p) {
 function youTags(s) {
   const e = s.encounter, tags = [];
   if (e.encrypt > 0) tags.push(`<span class="tag hot" title="Encrypted: you lose ${e.encrypt} every cycle until the Encryptor breaks. Rollback wipes it; Lockdown stops more.">encrypted −${e.encrypt}</span>`);
-  if (e.blindUntil >= e.cycle) tags.push(`<span class="tag hot" title="${esc(hiddenNote(s))}">blinded ${e.blindUntil - e.cycle + 1}</span>`);
   if (gearStat(s, 'clock')) tags.push(`<span class="tag you" title="Clock Speed: when this reaches 100%, every cooldown ticks one extra cycle">clock ${Math.floor(e.clock || 0)}%</span>`);
   if (rootkitReady(s)) tags.push('<span class="tag you" title="Rootkit: your first hit this fight goes through armor">rootkit ready</span>');
   if (e.mode === 'home' && serviceVersion(s, 'snapshot') && !e.once?.snapshot) tags.push(`<span class="tag you" title="Snapshot (service): once this fight, dropping below half restores ${serviceValue(s, 'snapshot')}%">snapshot</span>`);
   if (e.chits > 0) tags.push(`<span class="tag you" title="Your armor: the next attack on you does nothing, however big">armor ${'◆'.repeat(e.chits)}</span>`);
   if (e.shield > 0) tags.push(`<span class="tag you" title="Absorbs damage from attacks">shield ${e.shield}</span>`);
-  for (const [k, until] of Object.entries(e.buffs || {})) if (until >= e.cycle && k !== 'null-route') tags.push(`<span class="tag you" title="${esc(ABILITIES[k]?.help || '')}">${esc(ABILITIES[k]?.name || k)} ${until - e.cycle + 1}</span>`);
-  if (e.buffs?.['null-route'] >= e.cycle) tags.push('<span class="tag you">null-routed</span>');
   if (e.helpers?.length) tags.push(`<span class="tag daemon" title="Helpers hit after you each cycle">${e.helpers.length} helper${e.helpers.length === 1 ? '' : 's'}</span>`);
   return tags.join('');
+}
+
+// Timed effects on you, as bars across the cycle columns they cover (Now = this cycle).
+export function statusSpans(s) {
+  const e = s.encounter, out = [];
+  const add = (name, until, kind, title, value = '') => { if (until >= e.cycle) out.push({ name, value, cycles: until - e.cycle + 1, kind, title }); };
+  const st = momentumStacks(s);
+  if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${SKILLS.momentumMax} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
+  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(ABILITIES[k]?.name || k, until, 'you', ABILITIES[k]?.help || '');
+  add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill crits.");
+  add('Blinded', e.blindUntil, 'hot', hiddenNote(s), CONFIG.blindside > 1 ? `hits +${Math.round((CONFIG.blindside - 1) * 100)}%` : '');
+  return out;
 }
 
 // Rows = parts, columns = cycles. Health and timing on the same line.
@@ -247,6 +256,8 @@ export function boardMarkup(s, selected) {
   const you = fighting
     ? `<div class="brow byou"><div class="bcell bname"><b>You</b><span class="part-tags">${youTags(s)}</span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
+  const spans = fighting ? statusSpans(s) : [];
+  const status = spans.length ? `<div class="brow bstatus"><div class="bcell bname"><b>Status</b></div><div class="bcell span4 sgrid">${spans.map((x) => `<div class="sbar ${x.kind}" style="grid-column: 1 / span ${Math.min(4, x.cycles)}" title="${esc(x.title)}"><b>${esc(x.name)}</b>${x.value ? ` <span>${esc(x.value)}</span>` : ''}${x.cycles > 4 ? ' <small>…</small>' : ''}</div>`).join('')}</div></div>` : '';
   const living = e.virus.parts.filter(alive), broken = e.virus.parts.filter((p) => !alive(p));
   const patchList = fighting ? patches(s, 4) : [];
   const rows = living.map((p) => {
@@ -267,7 +278,7 @@ export function boardMarkup(s, selected) {
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
-  return head + you + rows + gone;
+  return head + you + status + rows + gone;
 }
 
 const LOG_CLASS = { miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
@@ -403,10 +414,9 @@ function statSheet(s, side) {
     const ks = sideStats(side).filter((k) => STATS[k].group === g);
     if (!ks.length) return '';
     const label = side === 'hacker' && g === 'survival' ? 'Defense · runs' : side === 'server' && g === 'survival' ? 'Defense · home' : GROUPS[g];
-    // Only what you have: a stat at zero isn't listed (hover the name for what it does).
-    const rows = ks.map((k) => [k, total(k)]).filter(([, t]) => t.v || t.base);
-    if (!rows.length) return '';
-    return `<div class="sheet-group"><h3>${esc(label)}</h3><dl>${rows.map(([k, t]) => `<div title="${esc(STATS[k].about)}"><dt>${glyph(k)}${esc(STATS[k].name)}</dt><dd>${esc(t.text)}</dd></div>`).join('')}</dl></div>`;
+    // Every stat, zeros included (dimmed), so you can see what there is to find. Hover a row for what it does.
+    const rows = ks.map((k) => [k, total(k)]);
+    return `<div class="sheet-group"><h3>${esc(label)}</h3><dl>${rows.map(([k, t]) => `<div class="${t.v || t.base ? '' : 'zero'}" title="${esc(STATS[k].about)}"><dt>${glyph(k)}${esc(STATS[k].name)}</dt><dd>${esc(t.text)}</dd></div>`).join('')}</dl></div>`;
   }).join('');
   return `<div class="sheet">${groups}</div>`;
 }
@@ -907,11 +917,10 @@ export function loadoutMarkup(s, view, tab = 'skills') {
     </div>` : `
     <div class="loadout-grid">
       <section class="card skills-card">
-        <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1></div>
+        <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>` : '<span>max level</span>'}</div></div>
           ${id === equippedArch ? '<span class="tag you">in use</span>' : busy ? '' : btn(`archetype ${id}`, `Use ${a.name}`, true)}</div>
-        <p class="status-line"><span class="tag stag status" title="${esc(st.rule)}">${esc(st.name)}</span></p>
+        <p class="status-line" title="${esc(st.rule)}"><span class="status-label">Applies</span> <span class="tag stag status">${esc(st.name)}</span></p>
         <ol class="keybar" aria-label="Your bar">${bar}</ol>
-        <div class="lvl-row"><span class="lvl-badge">${esc(a.name)} Lv ${lvl}</span>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><small>${hk.xp}/${xpToNext(lvl)} XP</small>` : '<small>max level</small>'}</div>
         <div class="lib-head"><h2>Library · ${known.length}/${a.skills.length}</h2></div>
         <ul class="library">${lib}</ul>
       </section>

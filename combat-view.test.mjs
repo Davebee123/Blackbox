@@ -150,3 +150,21 @@ test('the spoils card lists what a won fight gave you', async () => {
   assert.match(html, /\+30/);
   assert.deepEqual(lines, ['2 salvage', '+30 XP', '+2 Cipher code', 'Blueprint (pack)', 'Level 4']);
 });
+
+test('the Status row: timed effects on you as bars over the cycles they last (Momentum, buffs, blind)', async () => {
+  const { statusSpans, boardMarkup } = await import('./dist/view.mjs');
+  const { fresh, selectEncounter, command } = await import('./dist/combat.mjs');
+  const s = fresh();
+  s.loadout.archetype = 'breaker';
+  selectEncounter(s, 'cryptjack', 7, { level: 3 });
+  command(s, 'engage');
+  assert.deepEqual(statusSpans(s), [], 'nothing running: no row');
+  assert.doesNotMatch(boardMarkup(s, null), /bstatus/);
+  const e = s.encounter;
+  e.momentum = { stacks: 2, until: e.cycle + 1 };
+  e.blindUntil = e.cycle + 2;
+  const spans = statusSpans(s);
+  assert.deepEqual(spans.map((x) => [x.name, x.cycles, x.kind]), [['Momentum', 2, 'you'], ['Blinded', 3, 'hot']]);
+  assert.equal(spans[0].value, '+20% ×2');
+  assert.match(boardMarkup(s, null), /class="sbar you" style="grid-column: 1 \/ span 2"/);
+});

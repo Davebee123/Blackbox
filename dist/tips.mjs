@@ -100,6 +100,7 @@ export const TIPS = [
   { id: 'protocols-zeroday', page: 'loadout', at: '.gitem.r-zeroday', text: 'This is a Zero-day. It has a special effect on top of its stats, and you can run one of each kind.' },
 
   // ---------- loadout ----------
+  { id: 'loadout-status', page: 'loadout', at: '.status-line .status', text: 'This is the status this class puts on parts with its skills. Hover it to see what it does. Any class benefits from it.' },
   { id: 'loadout-bar', page: 'loadout', at: '.keybar', text: 'This is your skill bar. Everyone has the first three, and you choose up to five class skills as they unlock.' },
   { id: 'loadout-classes', page: 'loadout', at: '.arch-tabs', text: 'There are four classes, and each one levels on its own. You can switch between them at home.' },
   { id: 'loadout-talents', page: 'loadout', at: '.ttree', when: (s) => hackerLevel(s) >= 10, text: 'From level 10 you earn a talent point every other level. Ranks add small bonuses, and each tier asks you to pick one of two. You can change picks at home for free.' },

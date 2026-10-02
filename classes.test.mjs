@@ -1,7 +1,7 @@
 // The four classes' first five skills: each does exactly one thing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, keyMap, daemonSlots, timersHidden, intents, readyIn } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, keyMap, daemonSlots, timersHidden, intents, readyIn, momentumStacks } from './dist/combat.mjs';
 import { CONFIG, SKILLS, ABILITIES } from './dist/data.mjs';
 // These tests check exact numbers: no crits (gear.test.mjs covers them).
 CONFIG.baseCrit = 0;
@@ -60,10 +60,24 @@ test('Breaker: Overload hits 40 and a crit resets it; Exploit: +25% crit chance 
   CONFIG.baseCrit = 0;
   assert.equal(lost(c, 'pulse'), 60, '75% + Exposed 25%: a sure crit, ×1.5');
   assert.equal(readyIn(c, 'overload'), 0, 'the crit reset Overload');
-  s.encounter.breaks = 2;
+  // Momentum: +10% a stack, for 2 cycles after the last break, at most 3 stacks.
+  s.encounter.momentum = { stacks: 5, until: s.encounter.cycle + 2 };
+  assert.equal(momentumStacks(s), 5, 'raw state');
+  s.encounter.momentum = { stacks: 2, until: s.encounter.cycle };
   const before = lost(s, 'pulse');
   act(s, 'spike pulse');
-  assert.equal(lost(s, 'pulse') - before, Math.floor(25 * 1.2));
+  assert.equal(lost(s, 'pulse') - before, Math.floor(25 * 1.2), 'two stacks: +20%');
+  assert.equal(momentumStacks(s), 0, 'gone once its cycles run out');
+});
+
+test('Breaker Momentum: a stack per break, capped at 3, lasts 2 cycles from the last break', () => {
+  const s = noArmor(quiet(start('breaker')));
+  const e = s.encounter;
+  const brk = (p) => { p.integrity = 1; act(s, 'spike ' + p.id); };
+  e.virus.parts.push({ ...e.virus.parts[0], id: 'x1', name: 'X1', integrity: 99, max: 99 }, { ...e.virus.parts[0], id: 'x2', name: 'X2', integrity: 99, max: 99 }, { ...e.virus.parts[0], id: 'x3', name: 'X3', integrity: 99, max: 99 });
+  for (const id of ['x1', 'x2', 'x3', 'pulse']) brk(e.virus.parts.find((p) => p.id === id));
+  assert.equal(e.momentum.stacks, SKILLS.momentumMax, 'four breaks, three stacks');
+  assert.equal(e.momentum.until, e.cycle - 1 + SKILLS.momentumCycles, 'refreshed by the last break');
 });
 
 test('Breaker: Crack strips 2 chits; breaking the last one lights Shatter (55) for 2 cycles; Segfault triples under 30%', () => {
