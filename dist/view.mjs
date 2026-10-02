@@ -316,6 +316,16 @@ export function boardMarkup(s, selected) {
   const sink = crew.length ? (drawingFire(s) ? 'you' : crew.find((m) => mateUp(m) && drawingFire(m))?.who || null) : null;
   // Whose turn just played in a stepped cycle (crew.mjs): their row lights up.
   const acted = e.steps ? crew.filter(mateUp)[e.steps.next - 1] : null;
+  // Who's aiming at which part this cycle: their initials sit on the part's top-left corner.
+  const initials = (h) => h.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO';
+  const aimOf = (enc) => enc.queue?.target || (!enc.queue && enc.lastAttack ? enc.lastAttack.split(' ')[1] : null);
+  const aims = {};
+  if (fighting) {
+    const add = (t, who, kind, text) => { if (t) (aims[t] ||= []).push({ who, kind, text }); };
+    add(aimOf(e), s.profile?.handle || 'you', 'you', e.queue?.text || e.lastAttack);
+    for (const m of crew.filter(mateUp)) add(aimOf(m.encounter), m.who, 'crew', m.encounter.queue?.text);
+  }
+  const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind === 'you' ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
   const mates = crew.map((m) => {
     const up = mateUp(m), q = m.encounter.queue, pct = (m.run.integrity / m.run.max) * 100;
     return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span></div>
@@ -341,7 +351,7 @@ export function boardMarkup(s, selected) {
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;
     return `<button type="button" class="brow bpart ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname"><span class="part-top"><span class="part-name">${esc(p.name)}</span>${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
+      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}</span>${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';

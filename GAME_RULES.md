@@ -294,9 +294,11 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 - Only the crewmates in the fight's folder fight it. In `ls`, crewmates show as violet chips in their folder; arriving says who's here.
 - The same as commands: `split <name|all>`, `goto <name>`, `link <name>`, `unlink`, `regroup`.
 
-## Cables (cables.mjs)
+## Who's aiming where
 
-On the fight board, every player's command this cycle is wired to its target: a fiber-optic line arcs from the pill's right edge, over the +1 column, into the target's row. Your command (teal) and each crewmate's (violet) go to the part they're aimed at. The virus's attacks have no cables (for now). When something fires, a pulse of light runs down its line and sparks where it lands. `cables off` / `cables on` switches them.
+On the fight board, each part shows who's aiming at it this cycle: small tabs on its top-left corner with each player's initials (yours teal, from your handle; each crewmate's violet). Hover one for the command. When a hit lands, the shooter's tab flashes. Nothing is drawn over the board.
+
+`cables on` brings back the older fiber-optic lines (cables.mjs: each command wired to its target, a pulse running down it when it fires); `cables off` turns them off again (the default).
 
 ## Co-op, simulated (crew.mjs)
 

@@ -114,20 +114,25 @@ function cableSpecs(s) {
 }
 function drawCables() {
   const s = shown();
-  if (module !== 'combat' || !s.encounter || campaign.settings.cables === false) return cables.clear();
+  if (module !== 'combat' || !s.encounter || campaign.settings.cables !== true) return cables.clear(); // off unless asked for: the initials on each part show the aim
   cables.draw(cableSpecs(s));
 }
-// A hit: the pulse runs from the shooter's pill to its target (measured before the board redraws).
+// A hit: the shooter's initials on the part flash (and, with `cables on`, a pulse runs from the
+// shooter's pill to its target, measured before the board redraws).
 // Burns, helpers and other ticks ("Inject: …") don't send one: only the command itself.
 function firePulses(events) {
-  if (module !== 'combat' || campaign.settings.cables === false) return;
+  if (module !== 'combat') return;
+  const wired = campaign.settings.cables === true;
   const seen = new Set();
   for (const e of events) {
     if (e.type === 'damage' && e.target && !/^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message)) {
       const row = e.who ? mateRow(e.who) : youRow(), key = (e.who || 'you') + '>' + e.target;
       if (seen.has(key) || !row) continue;
       seen.add(key);
-      cables.pulse(nowPill(row) || row.querySelector('.bname'), partRow(e.target), e.who ? 'crew' : 'you');
+      if (wired) cables.pulse(nowPill(row) || row.querySelector('.bname'), partRow(e.target), e.who ? 'crew' : 'you');
+      // The shooter's initials on the part flash as it lands.
+      const pip = partRow(e.target)?.querySelector(`.aim[data-who="${CSS.escape(e.who || 'you')}"]`);
+      if (pip) { pip.classList.remove('fire'); void pip.offsetWidth; pip.classList.add('fire'); }
     }
   }
 }

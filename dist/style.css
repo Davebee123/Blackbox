@@ -1646,3 +1646,14 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .topbar.fit-2 { gap: 6px 10px; } .topbar.fit-2 .meters { gap: 10px; } .topbar.fit-2 .meter-bar { width: 56px; } .topbar.fit-2 .modules button { padding: 6px 6px; }
 .topbar.fit-3 .meter-bar { display: none; }
 .topbar.fit-4 .meter-label { display: none; }
+
+/* Who's aiming at a part this cycle: initials as tabs on its top-left corner (you teal, crew violet). */
+.bpart .bname { position: relative; }
+.aim-pips { position: absolute; top: -1px; left: 0; display: flex; gap: 3px; pointer-events: none; }
+.aim-pips .aim { border-top: 0; border-radius: 0 0 3px 3px; line-height: 13px; }
+.aim { font: 700 10px/14px var(--mono); letter-spacing: 0.5px; min-width: 18px; padding: 0 3px; text-align: center; border-radius: 3px; border: 1px solid; }
+.aim.you { color: var(--you); border-color: rgba(127, 209, 199, 0.6); background: rgba(127, 209, 199, 0.12); }
+.aim.crew { color: var(--daemon); border-color: rgba(195, 166, 255, 0.6); background: rgba(195, 166, 255, 0.1); }
+.aim.fire { animation: aimfire 0.45s ease-out; }
+@keyframes aimfire { 0% { transform: scale(1.5); filter: brightness(2); box-shadow: 0 0 10px currentColor; } 100% { transform: scale(1); filter: none; box-shadow: none; } }
+.no-motion .aim.fire { animation: none; }
