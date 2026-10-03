@@ -343,7 +343,10 @@ export function boardMarkup(s, selected, preview = null) {
     const pct = (p.integrity / p.max) * 100;
     const patch = patchList.find((x) => x.source === p.id);
     const cells = [0, 1, 2, 3].map((c) => {
-      const cryptChip = e.encrypt > 0 && p.attack?.effect === 'encrypt' ? `<div class="intent crypt" title="Encrypted: you lose ${e.encrypt} this cycle. Break ${esc(p.name)} to stop it.">−${e.encrypt} <small>encrypted</small></div>` : '';
+      // Encryption is one ongoing drain: the full chip in Now, then a thin striped line through the
+      // later cycles (it keeps going), so the one-off events in those cells stay readable.
+      const crypting = e.encrypt > 0 && p.attack?.effect === 'encrypt';
+      const cryptChip = !crypting ? '' : c === 0 ? `<div class="intent crypt" title="Encrypted: you lose ${e.encrypt} this cycle. Break ${esc(p.name)} to stop it.">−${e.encrypt} <small>encrypted</small></div>` : `<div class="crypt-line" title="Encrypted: −${e.encrypt} every cycle until ${esc(p.name)} breaks"></div>`;
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one armor chit back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}<div class="intent hidden">?</div>${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c);
