@@ -308,8 +308,9 @@ export function boardMarkup(s, selected, preview = null) {
   const dmn = fighting ? slottedDaemons(s).filter((id) => !DAEMONS[id].once) : [];
   const daemonCell = (c) => dmn.filter((id) => daemonNext(s, id) === e.cycle + c).map((id) => `<div class="intent daemon" data-k="daemon:${id}@${e.cycle + c}" title="${esc(DAEMONS[id].name)} v${daemonVersion(s, id)}: ${esc(daemonRule(s, id))}">${esc(DAEMONS[id].name.toLowerCase())}</div>`).join('');
   const cronCell = (c) => daemonCell(c) + (cron && cronDue(e.cycle + c) ? `<div class="intent daemon cron" data-k="cron@${e.cycle + c}" title="Cron Job (service): your server hits the soonest attacker for ${cronDamage(s)}">cron ${cronDamage(s)}</div>` : '');
-  const you = fighting
-    ? `<div class="brow byou${e.steps && e.steps.next === 0 ? ' acting' : ''}"><div class="bcell bname"><b>You</b><span class="part-tags">${youTags(s)}</span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
+  // crewChips: your crew's avatars and Signal, sharing your row (filled in below).
+  const you = (crewChips = '') => fighting
+    ? `<div class="brow byou${e.steps && e.steps.next === 0 ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b>${crewChips}</span><span class="part-tags">${youTags(s)}</span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
   // Simulated crewmates (crew.mjs): a row each, with Signal and what they'll do this cycle.
   const crew = fighting && e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
@@ -328,19 +329,14 @@ export function boardMarkup(s, selected, preview = null) {
     for (const m of crew.filter(mateUp)) add(aimOf(m.encounter), m.who, 'crew', m.encounter.queue?.text);
   }
   const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind.startsWith('you') ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
-  // The crew in one row (not a row each): an avatar per crewmate with their Signal under it, and
-  // in Now what each is about to do. Where it's aimed is their avatar on the part's rail.
+  // The crew shares your row: an avatar per crewmate with their Signal under it. Where they aim is
+  // their avatar on the part's rail; what they did floats up when it goes off (app.js).
   const mateChip = (m) => {
     const up = mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = m.encounter.queue;
     const tip = `${m.who} · ${ARCHETYPES[m.loadout.archetype].name} · ${m.run.integrity}/${m.run.max}${up ? (q ? ` · ${q.text}` : ' · thinking') : ' · down'}${up && drawingFire(m) ? ' · drawing fire' : ''}`;
     return `<span class="cmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}" title="${esc(tip)}"><span class="aim crew">${esc(initials(m.who))}${up && drawingFire(m) ? '<i class="cm-fire" title="Drawing fire">◆</i>' : ''}</span><span class="part-bar mate"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span></span>`;
   };
-  const mateCmd = (m) => {
-    const up = mateUp(m), q = m.encounter.queue;
-    return `<span class="ccmd${m === acted ? ' acting' : ''}" title="${esc(m.who)}: ${esc(up ? q?.text || 'thinking' : 'down')}"><b>${esc(initials(m.who))}</b> ${esc(up ? (q ? q.text.split(' ')[0] : '…') : 'down')}</span>`;
-  };
-  const mates = crew.length ? `<div class="brow bcrew"><div class="bcell bname"><span class="crew-label">Crew</span><span class="cmates">${crew.map(mateChip).join('')}</span></div>
-      <div class="bcell"><div class="ccmds">${crew.map(mateCmd).join('')}</div></div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>` : '';
+  const mates = crew.length ? `<span class="cmates">${crew.map(mateChip).join('')}</span>` : '';
   const spans = fighting ? statusSpans(s) : [];
   const status = spans.length ? `<div class="brow bstatus"><div class="bcell bname"><b>Status</b></div><div class="bcell span4 sgrid">${spans.map((x) => `<div class="sbar ${x.kind}" style="grid-column: 1 / span ${Math.min(4, x.cycles)}" title="${esc(x.title)}"><b>${esc(x.name)}</b>${x.value ? ` <span>${esc(x.value)}</span>` : ''}${x.cycles > 4 ? ' <small>…</small>' : ''}</div>`).join('')}</div></div>` : '';
   const living = e.virus.parts.filter(alive), broken = e.virus.parts.filter((p) => !alive(p));
@@ -368,7 +364,7 @@ export function boardMarkup(s, selected, preview = null) {
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
-  return head + you + mates + status + rows + gone;
+  return head + you(mates) + status + rows + gone;
 }
 
 const LOG_CLASS = { miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };

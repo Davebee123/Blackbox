@@ -1534,21 +1534,21 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .intent { position: relative; }
 .intent .at { position: absolute; top: -8px; right: 4px; padding: 0 4px; font: 600 9px var(--mono); letter-spacing: 0.5px; color: var(--bright); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 2px; }
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
-/* The Crew row: one row for the whole crew (view.mjs boardMarkup). */
-.bcrew .bname { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; }
-.crew-label { font-weight: 600; color: var(--daemon); }
-.cmates { display: flex; gap: 10px; }
-.cmate { display: grid; justify-items: center; gap: 4px; width: 40px; }
+/* Your crew shares your row (view.mjs boardMarkup): an avatar each, their Signal under it. */
+.you-top { display: flex; align-items: center; gap: 14px; }
+.cmates { display: flex; gap: 8px; }
+.cmate { display: grid; justify-items: center; gap: 3px; width: 32px; }
 .cmate .aim { position: relative; }
-.cmate .part-bar { width: 40px; height: 4px; }
+.cmate .part-bar { width: 32px; height: 3px; }
 .cmate .part-bar.mate span { background: var(--daemon); }
 .cmate.down { opacity: 0.4; filter: grayscale(1); }
 .cmate.acting .aim { box-shadow: inset 0 0 0 1px var(--daemon), 0 0 10px rgba(195, 166, 255, 0.8); }
 .cm-fire { position: absolute; right: -5px; top: -5px; font-style: normal; font-size: 9px; color: var(--hot); }
-.ccmds { display: flex; flex-direction: column; gap: 3px; }
-.ccmd { font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ccmd b { color: var(--daemon); margin-right: 4px; }
-.ccmd.acting { color: var(--bright); }
+/* What a crewmate just did, floating up from their avatar (hitfx.mjs say). */
+.fx-say { position: absolute; font: 600 11px var(--mono); white-space: nowrap; pointer-events: none; animation: fx-say 1.2s ease-out forwards; text-shadow: 0 1px 2px #000; }
+.fx-say.crew { color: var(--daemon); }
+@keyframes fx-say { 0% { transform: translateY(4px); opacity: 0; } 15% { transform: translateY(0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+.no-motion .fx-say { animation: none; opacity: 1; }
 .byou.acting { background: rgba(127, 209, 199, 0.08); box-shadow: inset 3px 0 0 var(--you); }
 
 /* The hit effects layer (hitfx.mjs) sits over the board, positioned against this. */

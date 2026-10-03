@@ -325,7 +325,7 @@ Online co-op comes later (a hosted server with logins). To try how it plays firs
 - If your target breaks before your turn (a crewmate got it), your command goes at the next threat instead.
 - Crewmates' hits and breaks show on the board but stay quiet: the sounds are yours.
 - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it. Rewards are yours (the bots keep nothing).
-- On the fight screen the whole crew shares one **Crew** row: an avatar per crewmate with their Signal under it (a blinking white slice for what they're about to lose; greyed when down; a red ◆ while drawing fire), and in Now a short word each for what they're about to do (`NY spike`). Where it's aimed is their avatar on the part's rail; hover a chip for the full command. Their lines in the log carry their name.
+- On the fight screen there's no row per crewmate. Your crew sits in your own row: an avatar each, with their Signal under it (a blinking white slice for what they're about to lose; greyed when down; a red ◆ while drawing fire; lit while it's their turn). Where they aim is their avatar on the part's rail. When a crewmate's command goes off, the move floats up in that part's Now cell (`NY spike`, `KI inject`, stacked when several land at once), or above their avatar if it has no target. Hover an avatar for the full command. Their lines in the log carry their name.
 
 ## The numbers station (station.mjs)
 
