@@ -221,8 +221,20 @@ code { font-family: var(--mono); color: var(--amber); }
 .ability .name { font-weight: 600; color: var(--bright); }
 .ability .name kbd { font: 11px var(--mono); color: var(--dim); margin-right: 6px; }
 .ability .state { font-size: 12px; color: var(--muted); }
-.ability.cooling { opacity: 0.55; }
-.ability.cooling .ico { background: var(--gray); }
+/* Ready or recharging, at a glance: a charge bar along the bottom (full amber = ready), and while it
+   recharges a big count of cycles to go, the name and icon dimmed (not the whole card). */
+.ability { position: relative; overflow: hidden; }
+.ability .charge { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--amber); transition: width 0.4s ease; }
+.ability.cooling { background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 6px, transparent 6px 12px), var(--inset); border-color: var(--line); }
+.ability.cooling .ico { background: var(--gray); opacity: 0.6; }
+.ability.cooling .name { color: var(--muted); }
+.ability.cooling .charge { background: var(--gray); opacity: 0.8; }
+.ability .cd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 700 22px/1 var(--mono); color: var(--muted); }
+.ability.cooling .state { padding-right: 24px; }
+.ability.ready .ico { filter: drop-shadow(0 0 4px rgba(241, 185, 47, 0.45)); }
+.ability.just-ready { animation: just-ready 0.7s ease-out; }
+@keyframes just-ready { 0% { box-shadow: 0 0 0 2px var(--amber), 0 0 18px rgba(241, 185, 47, 0.6); } 100% { box-shadow: none; } }
+.no-motion .ability.just-ready { animation: none; }
 .ability.queued { border-color: var(--you); box-shadow: 0 0 0 1px var(--you) inset; }
 .ability.queued .state { color: var(--you); }
 .pips { letter-spacing: 2px; color: var(--amber); font-family: var(--mono); }
@@ -1520,23 +1532,8 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .bmate.acting { background: rgba(195, 166, 255, 0.1); box-shadow: inset 3px 0 0 var(--daemon); }
 .byou.acting { background: rgba(127, 209, 199, 0.08); box-shadow: inset 3px 0 0 var(--you); }
 
-/* Cables (cables.mjs): fiber-optic lines from each command and attack this cycle to its target,
-   a pulse of light down the line when it fires. Teal yours, violet the crew's, red the virus's. */
+/* The hit effects layer (hitfx.mjs) sits over the board, positioned against this. */
 .combat { position: relative; }
-#cables { position: absolute; pointer-events: none; z-index: 4; overflow: hidden; }
-#cables .cable { fill: none; stroke-width: 6; stroke-linecap: round; opacity: 0.14; }
-#cables .cable-core { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 2 4; opacity: 0.85; animation: cable-flow 0.9s linear infinite; }
-#cables .you { stroke: var(--you); fill: var(--you); } #cables .crew { stroke: var(--daemon); fill: var(--daemon); }
-#cables .virus { stroke: var(--hot); fill: var(--hot); } #cables .hot { stroke: var(--next); fill: var(--next); }
-#cables .cable.you, #cables .cable.crew, #cables .cable.virus, #cables .cable.hot { fill: none; }
-#cables .cable-core.you, #cables .cable-core.crew, #cables .cable-core.virus, #cables .cable-core.hot { fill: none; }
-#cables .pulse-path { fill: none !important; stroke-width: 2; opacity: 0.55; animation: pulse-fade 0.6s ease-out forwards; }
-#cables .pulse-dot { stroke: none; }
-#cables .pulse-spark { stroke: none; animation: spark 0.38s ease-out forwards; transform-box: fill-box; transform-origin: center; }
-@keyframes cable-flow { to { stroke-dashoffset: -12; } }
-@keyframes pulse-fade { to { opacity: 0; } }
-@keyframes spark { from { transform: scale(1); opacity: 1; } to { transform: scale(4); opacity: 0; } }
-.no-motion #cables .cable-core { animation: none; }
 
 /* The forecast (view.mjs forecast): what this cycle is about to cost, as a blinking white slice
    at the end of each bar (parts, the virus, you, the crew). */
@@ -1657,6 +1654,21 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .aim + .aim { margin-top: -7px; }
 .aim.you { color: var(--you); background: #1d3532; box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.55); }
 .aim.crew { color: var(--daemon); background: #2c2440; box-shadow: inset 0 0 0 1px rgba(195, 166, 255, 0.5); }
-.aim.fire { animation: aimfire 0.45s ease-out; position: relative; z-index: 1; }
-@keyframes aimfire { 0% { transform: scale(1.45); filter: brightness(1.9); } 100% { transform: scale(1); filter: none; } }
-.no-motion .aim.fire { animation: none; }
+/* Hit effects (hitfx.mjs), on a layer over the board: the shooter's avatar lunges at the part, a
+   band of their colour sweeps its bar; a miss shakes; a broken chit flashes white; a crit pops. */
+#hitfx { position: absolute; pointer-events: none; z-index: 3; overflow: visible; }
+.fx-av { position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); font: 700 9px/20px var(--mono); text-align: center; animation: fx-lunge 0.6s ease-out forwards; }
+.fx-av.you { color: var(--you); background: #1d3532; box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.8), 0 0 12px rgba(127, 209, 199, 0.6); }
+.fx-av.crew { color: var(--daemon); background: #2c2440; box-shadow: inset 0 0 0 1px rgba(195, 166, 255, 0.8), 0 0 12px rgba(195, 166, 255, 0.55); }
+.fx-av.crit { animation-name: fx-crit; }
+.fx-av.chit { animation-name: fx-chit; }
+.fx-av.miss { animation-name: fx-miss; filter: saturate(0.4); }
+@keyframes fx-lunge { 0% { transform: translateX(0) scale(1); opacity: 1; } 30% { transform: translateX(14px) scale(1.2); filter: brightness(1.8); } 70% { transform: translateX(0) scale(1); opacity: 1; } 100% { opacity: 0; } }
+@keyframes fx-crit { 0% { transform: translateX(0) scale(1); opacity: 1; } 30% { transform: translateX(16px) scale(1.5); filter: brightness(2.2); } 70% { transform: translateX(0) scale(1.05); opacity: 1; } 100% { opacity: 0; } }
+@keyframes fx-chit { 0% { transform: translateX(0); opacity: 1; } 30% { transform: translateX(12px) scale(1.2); box-shadow: 0 0 0 3px #fff, 0 0 16px #fff; } 70% { transform: translateX(0); opacity: 1; } 100% { opacity: 0; } }
+@keyframes fx-miss { 0%, 100% { transform: translateX(0); } 15% { transform: translateX(-5px); } 35% { transform: translateX(5px); } 55% { transform: translateX(-4px); } 75% { transform: translateX(3px); opacity: 1; } 100% { opacity: 0; } }
+.fx-sweep { position: absolute; border-radius: 2px; background-repeat: no-repeat; background-size: 45% 100%; animation: fx-sweep 0.5s ease-out forwards; }
+.fx-sweep.you { background-image: linear-gradient(90deg, transparent, rgba(127, 209, 199, 0.95), transparent); }
+.fx-sweep.crew { background-image: linear-gradient(90deg, transparent, rgba(195, 166, 255, 0.95), transparent); }
+.fx-sweep.crit { background-size: 70% 100%; filter: brightness(1.4); }
+@keyframes fx-sweep { 0% { background-position: -60% 0; opacity: 1; } 80% { opacity: 1; } 100% { background-position: 160% 0; opacity: 0; } }

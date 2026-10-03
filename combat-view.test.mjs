@@ -53,9 +53,9 @@ test('veiled parts hide their timers until their armor is gone; a part with brok
 test('tray shows cooldown and queued states', () => {
   const s = start();
   command(s, 'overload pulse');
-  assert.match(trayMarkup(s), /ability\s+queued/);
+  assert.match(trayMarkup(s), /class="ability[^"]*queued"/);
   resolveCycle(s);
-  assert.match(trayMarkup(s), /cooling\s+[^"]*" data-ability="overload"[^]*?2 cycles/);
+  assert.match(trayMarkup(s), /cooling\s+[^"]*" data-ability="overload"[^]*?ready in 2 cycles[^]*?class="cd"[^>]*>2</);
 });
 
 test('a mutation is a tag, its rule on hover (and in a first-time tip); the gate card is just the virus and Engage', async () => {

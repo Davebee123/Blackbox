@@ -17,8 +17,7 @@ import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
 import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
-import { createCables } from './cables.mjs';
-import { matesOf, mateUp } from './crew.mjs';
+import { createHitFx } from './hitfx.mjs';
 import { online, simOn } from './presence.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
@@ -31,6 +30,7 @@ let campaign = load();
 let module = playtest === 'story' ? 'mail' : 'map';
 let selected = null;
 let mapSel = 'server';
+let wasCooling = new Set(); // abilities on cooldown at the last render (the tray flashes the ones that come back)
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
 let history = [];
@@ -95,49 +95,27 @@ const shown = () => campaign;
 // ---------- art ----------
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const canMove = () => campaign.settings.motion && !reducedMotion.matches;
-// Cables (cables.mjs): a tracer from the shooter to the part when a hit fires (the default), or
-// with `cables lines` a standing line too. Who's aiming where at rest: the initials on each part (view.mjs).
-const cableMode = () => (campaign.settings.cables === true ? 'lines' : campaign.settings.cables === false ? 'off' : 'tracers');
-const cables = createCables(document.getElementById('board'), { canMove: () => canMove() });
-const nowPill = (row) => row?.querySelector(':scope > .bcell:nth-child(2) .intent:not(.hidden):not(.crypt):not(.patch):not(.daemon)');
+// Hit effects (hitfx.mjs): when a command lands, the shooter's avatar lunges at the part and a
+// band of their colour sweeps its bar; a miss shakes it; a broken chit flashes it white.
+const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove() });
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
-const youRow = () => document.querySelector('#board .byou');
-const mateRow = (who) => document.querySelector(`#board .bmate[data-mate="${CSS.escape(who)}"]`);
-function cableSpecs(s) {
-  const e = s.encounter, out = [];
-  if (!active(s)) return out;
-  const aim = (enc) => enc.queue?.target || (enc === e && !enc.queue && enc.lastAttack ? enc.lastAttack.split(' ')[1] : null);
-  // Yours and each crewmate's command → the part it's aimed at.
-  const mine = aim(e);
-  if (mine && partRow(mine)) out.push({ from: nowPill(youRow()), to: partRow(mine), kind: 'you' });
-  const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter && mateUp(m)) : [];
-  for (const m of crew) { const t = aim(m.encounter); if (t && partRow(t)) out.push({ from: nowPill(mateRow(m.who)), to: partRow(t), kind: 'crew' }); }
-  return out.filter((x) => x.from && x.to);
-}
-function drawCables() {
-  const s = shown();
-  if (module !== 'combat' || !s.encounter || cableMode() !== 'lines') return cables.clear();
-  cables.draw(cableSpecs(s));
-}
-// A hit: the shooter's initials on the part flash, and a tracer runs from the shooter's pill to
-// its target (measured before the board redraws).
-// Burns, helpers and other ticks ("Inject: …") don't send one: only the command itself.
-function firePulses(events) {
+const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
+// Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
+const ticked = (e) => /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message) && !e.message.startsWith('Crack: ');
+function strikes(events) {
   if (module !== 'combat') return;
-  const wired = cableMode() !== 'off';
-  const seen = new Set();
+  const hits = new Map(); // who>part → the strongest result this batch
+  const rank = { miss: 0, hit: 1, crit: 2, chit: 3 };
   for (const e of events) {
-    if (e.type === 'damage' && e.target && !/^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message)) {
-      const row = e.who ? mateRow(e.who) : youRow(), key = (e.who || 'you') + '>' + e.target;
-      if (seen.has(key) || !row) continue;
-      seen.add(key);
-      if (wired) cables.pulse(nowPill(row) || row.querySelector('.bname'), partRow(e.target), e.who ? 'crew' : 'you');
-      // The shooter's initials on the part flash as it lands.
-      const pip = partRow(e.target)?.querySelector(`.aim[data-who="${CSS.escape(e.who || 'you')}"]`);
-      if (pip) { pip.classList.remove('fire'); void pip.offsetWidth; pip.classList.add('fire'); }
-    }
+    const result = e.type === 'damage' ? (e.crit ? 'crit' : 'hit') : e.type === 'miss' ? 'miss' : e.type === 'armor' ? 'chit' : null;
+    if (!result || !e.target || ticked(e)) continue;
+    const key = (e.who || 'you') + '>' + e.target, was = hits.get(key);
+    if (!was || rank[result] > rank[was.result]) hits.set(key, { e, result });
   }
+  // Played once the board has redrawn (rows can shift as commands change), from render().
+  for (const { e, result } of hits.values()) pendingStrikes.push(() => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result }));
 }
+let pendingStrikes = [];
 
 const art = createArt({
   getState: shown,
@@ -343,7 +321,7 @@ function react(events) {
   if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && e.type === 'loot'), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
-  firePulses(events);
+  strikes(events);
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   for (const e of events) {
     if (e.who) {
@@ -518,7 +496,6 @@ function run(raw) {
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();
-  if (['cables lines', 'cables on', 'cables tracers', 'cables off'].includes(text)) { const m = text.slice(7); campaign.settings.cables = m === 'off' ? false : m === 'tracers' ? undefined : true; save(); dirty = true; return notice(m === 'off' ? 'No cables or tracers.' : m === 'tracers' ? 'Tracers: a streak when a hit fires.' : 'Cables: a standing line from each command to its part.'); }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
@@ -735,7 +712,6 @@ function render(force = false) {
   const s = shown();
   const hasFight = !!s.encounter;
   $('combat-view').hidden = !(combatLike && hasFight);
-  if (!(combatLike && hasFight)) cables.clear();
   $('page-view').hidden = combatLike && hasFight;
   if (combatLike && hasFight) {
     put('hud', V.hudMarkup(s));
@@ -744,8 +720,8 @@ function render(force = false) {
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
     put('board', V.boardMarkup(s, selected));
+    for (const f of pendingStrikes.splice(0)) f();
     if (before) turnTimeline(before);
-    drawCables(); setTimeout(drawCables, 320); // again once chips have slid into place
     cycleChanged(s);
     setBand(s);
     const logBefore = cache.get('log');
@@ -777,6 +753,10 @@ function render(force = false) {
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
   put('tray', netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s));
+  // An ability that just came off cooldown flashes once.
+  const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
+  for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
+  wasCooling = cooling;
   renderPrompt();
   placeTip();
   dirty = false;

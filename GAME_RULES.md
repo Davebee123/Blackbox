@@ -298,7 +298,9 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 
 On the fight board, each part shows who's aiming at it this cycle: round initials stacked in a rail down the row's left edge (yours teal, from your handle; each crewmate's violet). Hover one for the command. Every row keeps the rail's width, so names line up whether anyone's aiming there or not.
 
-When a hit fires, the shooter's avatar flashes and a **tracer** (cables.mjs) streaks from their command to the part and sparks where it lands, then it's gone: nothing stays drawn over the board. `cables lines` adds a standing line from each command to its part as well; `cables tracers` goes back to the default; `cables off` turns tracers off too.
+When a command lands (hitfx.mjs), the shooter's avatar lunges at the part and a band of their colour sweeps along its Integrity bar; a crit lunges harder, breaking an armor chit flashes the avatar white, and a miss shakes it. Nothing is drawn over the board between hits.
+
+**The ability tray** says what's ready: every key has a charge bar along its bottom, full amber when it's ready. On cooldown the key is striped and dimmed, its bar refills cycle by cycle, a big number counts the cycles to go and the line under the name reads *ready next cycle* / *ready in 3 cycles*. A key that comes off cooldown flashes once. A key waiting for its moment (a lit key's window, like Shatter's) has no bar until it lights.
 
 ## Co-op, simulated (crew.mjs)
 
