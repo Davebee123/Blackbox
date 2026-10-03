@@ -167,7 +167,7 @@ test('Status in the HUD: timed effects on you with the cycles they have left (Mo
   const spans = statusSpans(s);
   assert.deepEqual(spans.map((x) => [x.name, x.cycles, x.kind]), [['Momentum', 2, 'you'], ['Blinded', 3, 'hot']]);
   assert.equal(spans[0].value, '+20% ×2');
-  assert.match(hudMarkup(s), /class="st you"[^>]*><b>Momentum<\/b><span>\+20% ×2<\/span><small class="st-left" title="2 cycles left">2c<\/small>/);
+  assert.match(hudMarkup(s), /class="st you" data-tip="\+20% ×2 · 2 cycles left[^"]*"[^>]*>Momentum<\/span>/, 'the name, the rest in the tooltip');
 });
 
 test('the forecast: what your command will cost a part, and what the virus will cost you, before the cycle resolves', async () => {

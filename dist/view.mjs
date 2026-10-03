@@ -238,12 +238,12 @@ export function hudMarkup(s) {
 // they have left) and standing ones (encryption, shield, armor, Clock Speed, …). Was a row on the
 // board and tags in your row; here it sits by your health.
 function statusPanel(s) {
-  const e = s.encounter;
   if (!active(s)) return '<div class="hud-status"></div>';
-  const timed = statusSpans(s).map((x) => `<span class="st ${x.kind}" title="${esc(x.title)}"><b>${esc(x.name)}</b>${x.value ? `<span>${esc(x.value)}</span>` : ''}<small class="st-left" title="${x.cycles} ${x.cycles === 1 ? 'cycle' : 'cycles'} left">${x.cycles}c</small></span>`);
-  const standing = youTags(s);
-  const all = timed.join('') + standing;
-  return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${all || '<small class="quiet">nothing on you</small>'}</div></div>`;
+  // Just the names, in their colours; the numbers, how long and the rule in a quick tooltip.
+  const timed = statusSpans(s).map((x) => ({ name: x.name, kind: x.kind, tip: `${x.value ? x.value + ' · ' : ''}${x.cycles} ${x.cycles === 1 ? 'cycle' : 'cycles'} left${x.title ? `\n${x.title}` : ''}` }));
+  const all = [...timed, ...youStanding(s)];
+  const chips = all.map((x) => `<span class="st ${x.kind}" data-tip="${esc(x.tip)}" tabindex="0">${esc(x.name)}</span>`).join('');
+  return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${chips || '<small class="quiet">nothing on you</small>'}</div></div>`;
 }
 
 // Your crew's health (party frames): a little window under your Signal, side by side. Where they aim is
@@ -284,16 +284,18 @@ function partTags(s, p) {
 }
 
 // Your own effects: shields up, helpers running.
-function youTags(s) {
-  const e = s.encounter, tags = [];
-  if (e.encrypt > 0) tags.push(`<span class="tag hot" title="Encrypted: you lose ${e.encrypt} every cycle until the Encryptor breaks. Rollback wipes it; Lockdown stops more.">encrypted −${e.encrypt}</span>`);
-  if (gearStat(s, 'clock')) tags.push(`<span class="tag you" title="Clock Speed: when this reaches 100%, every cooldown ticks one extra cycle">clock ${Math.floor(e.clock || 0)}%</span>`);
-  if (rootkitReady(s)) tags.push('<span class="tag you" title="Rootkit: your first hit this fight goes through armor">rootkit ready</span>');
-  if (e.mode === 'home' && serviceVersion(s, 'snapshot') && !e.once?.snapshot) tags.push(`<span class="tag you" title="Snapshot (service): once this fight, dropping below half restores ${serviceValue(s, 'snapshot')}%">snapshot</span>`);
-  if (e.chits > 0) tags.push(`<span class="tag you" title="Your armor: the next attack on you does nothing, however big">armor ${'◆'.repeat(e.chits)}</span>`);
-  if (e.shield > 0) tags.push(`<span class="tag you" title="Absorbs damage from attacks">shield ${e.shield}</span>`);
-  if (e.helpers?.length) tags.push(`<span class="tag daemon" title="Helpers hit after you each cycle">${e.helpers.length} helper${e.helpers.length === 1 ? '' : 's'}</span>`);
-  return tags.join('');
+// Standing effects on you (no timer): { name, kind, tip }.
+function youStanding(s) {
+  const e = s.encounter, out = [];
+  const add = (name, kind, tip) => out.push({ name, kind, tip });
+  if (e.encrypt > 0) add('Encrypted', 'hot', `−${e.encrypt} every cycle until the Encryptor breaks. Rollback wipes it; Lockdown stops more.`);
+  if (gearStat(s, 'clock')) add('Clock Speed', 'you', `${Math.floor(e.clock || 0)}%. At 100%, every cooldown ticks one extra cycle.`);
+  if (rootkitReady(s)) add('Rootkit', 'you', 'Ready: your first hit this fight goes through armor.');
+  if (e.mode === 'home' && serviceVersion(s, 'snapshot') && !e.once?.snapshot) add('Snapshot', 'you', `Once this fight, dropping below half restores ${serviceValue(s, 'snapshot')}%.`);
+  if (e.chits > 0) add('Armor', 'you', `${'◆'.repeat(e.chits)} The next attack on you does nothing, however big.`);
+  if (e.shield > 0) add('Shield', 'you', `${e.shield}. Absorbs damage from attacks.`);
+  if (e.helpers?.length) add('Helpers', 'daemon', `${e.helpers.length} running. They hit after you each cycle.`);
+  return out;
 }
 
 // Timed effects on you, as bars across the cycle columns they cover (Now = this cycle).

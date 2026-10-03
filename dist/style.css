@@ -1545,12 +1545,13 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .hud-status { min-width: 0; }
 .hud-status .bar-top strong { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .st-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-.st { display: inline-flex; align-items: baseline; gap: 5px; padding: 2px 7px; border: 1px solid var(--line); border-radius: 3px; font-size: 11px; line-height: 16px; background: var(--inset); white-space: nowrap; }
-.st b { font-weight: 600; } .st span { color: var(--text); } .st-left { color: var(--muted); font-size: 11px; }
-.st.you { border-color: rgba(127, 209, 199, 0.5); } .st.you b { color: var(--you); }
-.st.hot { border-color: rgba(255, 91, 61, 0.55); } .st.hot b { color: var(--hot); }
-/* Standing effects (encrypted, shield, armor…) look like the timed ones. */
-.hud-status .tag { font: 600 11px/16px var(--sans); text-transform: none; letter-spacing: 0; padding: 2px 7px; border-radius: 3px; background: var(--inset); white-space: nowrap; }
+.st { position: relative; display: inline-block; padding: 2px 8px; border: 1px solid var(--line); border-radius: 3px; font: 600 11px/16px var(--sans); background: var(--inset); white-space: nowrap; cursor: help; }
+.st.you { color: var(--you); border-color: rgba(127, 209, 199, 0.5); }
+.st.hot { color: var(--hot); border-color: rgba(255, 91, 61, 0.55); }
+.st.daemon { color: var(--daemon); border-color: rgba(195, 166, 255, 0.5); }
+/* The quick tooltip: shows almost at once (the browser's own takes a second). */
+.st[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: max-content; max-width: 260px; padding: 6px 9px; border: 1px solid var(--line-strong, rgba(241, 185, 47, 0.35)); border-radius: 4px; background: var(--panel); color: var(--text); font: 400 12px/1.4 var(--sans); white-space: pre-line; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transform: translateY(-2px); transition: opacity 0.08s ease-out, transform 0.08s ease-out, visibility 0s linear 0.08s; pointer-events: none; }
+.st[data-tip]:hover::after, .st[data-tip]:focus::after { opacity: 1; visibility: visible; transform: none; transition-delay: 0.05s, 0.05s, 0s; }
 
 /* The virus's name on its bar (no separate title). */
 .hud-bar.enemy .bar-top { align-items: baseline; }

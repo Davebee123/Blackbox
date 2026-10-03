@@ -298,7 +298,7 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 
 ## The fight HUD
 
-Left to right: **your Signal** (or your server at home), with your crew's bars under it in a small window, dividers between them; **Status**, everything on you right now as chips: timed effects with the cycles they have left (Momentum +20% ×2 2c, Brace 2c, Blinded 3c, Null-routed, drawing fire…) and standing ones (encrypted −8, shield 12, armor ◆, Clock Speed, Rootkit ready, Snapshot, helpers), hover for the rule; and **the virus**, its name and level labelling its bar, its armor and tags under it, lined up over its picture. The board below is just you, the parts and the timeline.
+Left to right: **your Signal** (or your server at home), with your crew's bars under it in a small window, dividers between them; **Status**, everything on you right now, just the names in their colours (teal for yours, red for what's against you, violet for helpers): timed effects (Momentum, Brace, Blinded, Null-routed, Drawing fire…) and standing ones (Encrypted, Shield, Armor, Clock Speed, Rootkit, Snapshot, Helpers). Hover (or focus) one and a tooltip shows at once: how much, how many cycles left, and the rule; and **the virus**, its name and level labelling its bar, its armor and tags under it, lined up over its picture. The board below is just you, the parts and the timeline.
 
 ## Who's aiming where
 
