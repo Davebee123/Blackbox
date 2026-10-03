@@ -947,13 +947,28 @@ export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
   const offline = friends(s).filter((h) => !all.some((x) => x.handle === h));
   const memberOffline = (c?.members || []).filter((h) => !all.some((x) => x.handle === h));
   const invCard = inv && !c ? `<li class="con-head invite"><b>${esc(inv.from)} invites you to ${esc(inv.name)}</b><small>Merge your server with ${inv.members.length} others: reach their outposts and servers, keep everything of yours.</small><span class="p-acts"><button type="button" class="act" data-run="consortium accept">Merge</button><button type="button" class="act dim" data-run="consortium decline">Decline</button></span></li>` : '';
+  // Your crew: who's in it (up to CREW.max), where they are, and the open slots.
+  const crewTab = () => {
+    const members = s.crewSim || [];
+    const rows = members.map((x) => {
+      const p = all.find((y) => y.handle === x.name), onRun = s.run?.crew?.[x.name];
+      const where = onRun ? `with you on ${esc(s.run.loc === 'sprawl' ? 'SPRAWL-00' : s.run.loc)} · ${esc(onRun.cwd)}${onRun.link === 'you' ? ' · linked' : ''}` : p ? esc(whereText(p.place)) : 'waiting for your next run';
+      return `<li class="person crewmate"><span class="p-dot${p || onRun ? '' : ' off'}"></span><b>${esc(x.name)}</b><small>${esc(ARCHETYPES[x.cls].name)}${p ? ` ${p.level}` : ''}</small><span class="p-where">${where}</span>
+        <span class="p-acts"><button type="button" class="act dim" data-run="crew kick ${esc(x.name)}">Remove from crew</button></span></li>`;
+    }).join('');
+    const open = Math.max(0, 3 - members.length);
+    const slots = Array.from({ length: open }, () => '<li class="person crew-slot"><span class="p-dot off"></span><b>Open slot</b><span class="p-where">Invite a friend or a consortium member who\'s online (Friends, Consortium or Online).</span></li>').join('');
+    return `<li class="con-head"><b>Your crew · ${members.length}/3</b><small>They join your run fights and follow you on runs.</small>${members.length ? '<span class="p-acts"><button type="button" class="act dim" data-run="crew off">Disband</button></span>' : ''}</li>${rows}${slots}`;
+  };
   const list = tab === 'friends'
     ? all.filter((x) => x.friend).map(row).join('') + offline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="friend remove ${esc(h)}">Remove</button></span></li>`).join('')
+    : tab === 'crew'
+    ? crewTab()
     : tab === 'consortium'
     ? (c ? `<li class="con-head"><b>${esc(c.name)}</b><small>${sizeOf(s)} servers merged${alertsOf(s).length ? ` · <b class="hot">${alertsOf(s).length} need${alertsOf(s).length === 1 ? 's' : ''} you</b>` : ''}</small><button type="button" class="btn primary small" data-go="consortium">Open the Consortium page</button></li>` + all.filter((x) => x.member).map(row).join('') + memberOffline.map((h) => `<li class="person off member"><span class="p-dot off"></span><b>${esc(h)}</b><small>away</small></li>`).join('') : invCard || '<li class="quiet">No consortium. Type: consortium create &lt;name&gt;</li>')
     : invCard + all.map(row).join('');
   return `<div class="comms-head"><span>People${simOn(s) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
-    <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends · ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['consortium', c ? `Consortium · ${all.filter((x) => x.member).length}/${c.members.length}` : inv ? 'Consortium · invite' : 'Consortium'], ['online', `Online · ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
+    <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['crew', `Crew ${(s.crewSim || []).length}/3`], ['consortium', c ? `Consortium ${all.filter((x) => x.member).length}/${c.members.length}` : inv ? 'Consortium •' : 'Consortium'], ['online', `Online ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
     <ul class="comms-list people-list">${list || `<li class="quiet">${!simOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends yet: add some from Online.' : 'Nobody else is online.'}</li>`}</ul>`;
 }
 

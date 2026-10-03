@@ -1705,3 +1705,8 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 
 /* A crewmate's number: smaller and dimmer than yours (Effects: calm). */
 .fx-float.quiet { opacity: 0.7; filter: saturate(0.6); }
+
+/* The people panel's Crew tab. */
+.people-list .crewmate b { color: var(--daemon); }
+.people-list .crew-slot { opacity: 0.55; border-style: dashed; }
+.people-list .crew-slot b { color: var(--muted); font-weight: 500; }

@@ -293,6 +293,7 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 - **Regroup** brings everyone back to you, linked.
 - Only the crewmates in the fight's folder fight it. In `ls`, crewmates show as violet chips in their folder; arriving says who's here.
 - The same as commands: `split <name|all>`, `goto <name>`, `link <name>`, `unlink`, `regroup`.
+- The people panel's **Crew** tab lists your crew (up to 3): each crewmate's class and where they are (with you on the run, which folder, linked or not), *Remove from crew* for each, *Disband* for all, and the open slots.
 - **Remove** takes someone out of your crew (and off the run): on their card in the crew strip, *Remove from crew* in the people panel or on the Consortium page, or `crew kick <name>`. Not mid-fight.
 
 ## Who's aiming where
