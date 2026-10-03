@@ -282,7 +282,7 @@ export function statusSpans(s) {
 }
 
 // Rows = parts, columns = cycles. Health and timing on the same line.
-export function boardMarkup(s, selected) {
+export function boardMarkup(s, selected, preview = null) {
   const e = s.encounter;
   runMode = e.mode === 'run';
   const fighting = active(s);
@@ -322,10 +322,12 @@ export function boardMarkup(s, selected) {
   const aims = {};
   if (fighting) {
     const add = (t, who, kind, text) => { if (t) (aims[t] ||= []).push({ who, kind, text }); };
-    add(aimOf(e), s.profile?.handle || 'you', 'you', e.queue?.text || e.lastAttack);
+    // While you type a command naming a part, your avatar previews it there (app.js previewAim).
+    if (preview?.target) add(preview.target, s.profile?.handle || 'you', `you preview${preview.ok ? '' : ' bad'}`, preview.ok ? `${preview.text} (Enter to queue)` : preview.why);
+    else add(aimOf(e), s.profile?.handle || 'you', 'you', e.queue?.text || e.lastAttack);
     for (const m of crew.filter(mateUp)) add(aimOf(m.encounter), m.who, 'crew', m.encounter.queue?.text);
   }
-  const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind === 'you' ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
+  const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind.startsWith('you') ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
   const mates = crew.map((m) => {
     const up = mateUp(m), q = m.encounter.queue, pct = (m.run.integrity / m.run.max) * 100;
     return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span></div>

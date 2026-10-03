@@ -1649,11 +1649,17 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
    (you teal, crew violet). Every board row keeps the rail's width, so names line up. */
 #board .brow { padding-left: 38px; }
 .bpart .bname { position: relative; }
-.aim-pips { position: absolute; left: -32px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; pointer-events: none; }
+.aim-pips { position: absolute; left: -32px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column;  }
+.aim { cursor: help; } /* hover: the command (a click still goes to the part's row) */
 .aim { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); font: 700 9px/20px var(--mono); letter-spacing: 0.3px; text-align: center; }
 .aim + .aim { margin-top: -7px; }
 .aim.you { color: var(--you); background: #1d3532; box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.55); }
 .aim.crew { color: var(--daemon); background: #2c2440; box-shadow: inset 0 0 0 1px rgba(195, 166, 255, 0.5); }
+/* Your avatar previewing the command you're typing: dashed, breathing; red if it wouldn't go through. */
+.aim.you.preview { box-shadow: 0 0 0 1px var(--you), 0 0 10px rgba(127, 209, 199, 0.5); outline: 1px dashed var(--you); outline-offset: 2px; animation: aim-preview 1.1s ease-in-out infinite; }
+.aim.you.preview.bad { color: var(--hot); background: rgba(255, 91, 61, 0.12); box-shadow: 0 0 0 1px var(--hot); outline-color: var(--hot); animation: none; }
+@keyframes aim-preview { 50% { box-shadow: 0 0 0 1px var(--you), 0 0 16px rgba(127, 209, 199, 0.8); } }
+.no-motion .aim.you.preview { animation: none; }
 /* Hit effects (hitfx.mjs), on a layer over the board: the shooter's avatar lunges at the part, a
    a miss shakes; a broken chit flashes white; a crit pops. */
 #hitfx { position: absolute; pointer-events: none; z-index: 3; overflow: visible; }

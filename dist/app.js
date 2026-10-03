@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { createArt } from './virus-art.mjs';
 import { createFeel } from './feel.mjs';
@@ -489,6 +489,7 @@ const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 
 
 function run(raw) {
   const text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+  aimPreview = null; // the command is going in: the board shows the real aim again
   if (!text) return;
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
@@ -573,6 +574,7 @@ function shellCommand(arg) {
 }
 
 function go(name, quiet = false) {
+  aimPreview = null;
   // Contextual tabs only exist while there is something there.
   if (name === 'combat' && !active(campaign) && !(campaign.encounter && campaign.encounter.mode === 'run')) name = 'map';
   if (name === 'net' && !campaign.run) name = 'map';
@@ -612,12 +614,27 @@ function updateSuggestions() {
   const input = $('command-input');
   const s = shown();
   const text = input.value;
+  previewAim(s, text);
   const exploring = s === campaign && campaign.run && !active(campaign);
   suggestionList = text.trim() ? (exploring ? runSuggestions(s, text) : suggestions(s, text)).filter((x) => x !== text.trim()).slice(0, 8) : [];
   suggestionIndex = -1;
   const box = $('suggestions');
   box.hidden = !suggestionList.length;
   box.innerHTML = suggestionList.map((x, i) => `<button type="button" role="option" data-suggestion="${V.esc(x)}" aria-selected="${i === suggestionIndex}">${V.esc(x)}</button>`).join('');
+}
+
+// As you type a command that names a part, your avatar moves to that part before you press Enter
+// (view.mjs boardMarkup). Parsed the way Enter would; one that wouldn't go through (on cooldown,
+// not lit, …) shows as a warning instead, the reason on hover.
+let aimPreview = null;
+function previewAim(s, text) {
+  const was = aimPreview && aimPreview.target + aimPreview.ok;
+  aimPreview = null;
+  if (module === 'combat' && active(s) && text.trim()) {
+    const intent = parse(s, text);
+    if (intent?.target) { const why = validate(s, intent); aimPreview = { target: intent.target, ok: !why, why: why || '', text: text.trim() }; }
+  }
+  if ((aimPreview && aimPreview.target + aimPreview.ok) !== was) dirty = true;
 }
 
 // ---------- rendering ----------
@@ -732,7 +749,7 @@ function render(force = false) {
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
-    put('board', V.boardMarkup(s, selected));
+    put('board', V.boardMarkup(s, selected, aimPreview));
     for (const f of pendingStrikes.splice(0)) f();
     if (before) turnTimeline(before);
     cycleChanged(s);

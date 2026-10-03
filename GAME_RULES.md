@@ -298,6 +298,8 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 
 On the fight board, each part shows who's aiming at it this cycle: round initials stacked in a rail down the row's left edge (yours teal, from your handle; each crewmate's violet). Hover one for the command. Every row keeps the rail's width, so names line up whether anyone's aiming there or not.
 
+**While you type** a command that names a part (`spike scr`, `overload pul`), your avatar moves to that part before you press Enter: dashed and breathing if it would go through, red if it wouldn't (on cooldown, not lit, no armor to crack…; hover it for why). It's read exactly as Enter would read it. Clear the line and it goes back to your real aim.
+
 When a command lands (hitfx.mjs), the shooter's avatar lunges at the part (that's who did it): a crit lunges harder, breaking an armor chit flashes it white, a miss shakes it.
 
 **Effects** (System; `effects calm|full|minimal`) keep the board readable: one visual per event, on the thing it's about.
