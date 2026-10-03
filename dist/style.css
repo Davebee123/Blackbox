@@ -1539,7 +1539,18 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 /* Your side (Signal, crew under it) over the board, the virus's bar over its picture: the same columns
    as the page below. The gap makes up for the HUD's own padding, so the virus bar starts where the picture does. */
 .hud { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); column-gap: 21px; }
-.hud-you { display: grid; gap: 8px; min-width: 0; width: calc(100% / 1.55); } /* as wide as the virus's bar (its column is 1 to this one's 1.55), left-justified */
+.hud-left { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.55fr); gap: 20px; min-width: 0; } /* your side (as wide as the virus's bar), then your statuses */
+.hud-you { display: grid; gap: 8px; min-width: 0; }
+/* Your statuses (view.mjs statusPanel): a chip each, timed ones say how long. */
+.hud-status { min-width: 0; }
+.hud-status .bar-top strong { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.st-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.st { display: inline-flex; align-items: baseline; gap: 5px; padding: 2px 7px; border: 1px solid var(--line); border-radius: 3px; font-size: 11px; line-height: 16px; background: var(--inset); white-space: nowrap; }
+.st b { font-weight: 600; } .st span { color: var(--text); } .st-left { color: var(--muted); font-size: 11px; }
+.st.you { border-color: rgba(127, 209, 199, 0.5); } .st.you b { color: var(--you); }
+.st.hot { border-color: rgba(255, 91, 61, 0.55); } .st.hot b { color: var(--hot); }
+/* Standing effects (encrypted, shield, armor…) look like the timed ones. */
+.hud-status .tag { font: 600 11px/16px var(--sans); text-transform: none; letter-spacing: 0; padding: 2px 7px; border-radius: 3px; background: var(--inset); white-space: nowrap; }
 
 /* The virus's name on its bar (no separate title). */
 .hud-bar.enemy .bar-top { align-items: baseline; }

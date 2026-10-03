@@ -296,6 +296,10 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 - The people panel's **Crew** tab lists your crew (up to 3): each crewmate's class and where they are (with you on the run, which folder, linked or not), *Remove from crew* for each, *Disband* for all, and the open slots.
 - **Remove** takes someone out of your crew (and off the run): on their card in the crew strip, *Remove from crew* in the people panel or on the Consortium page, or `crew kick <name>`. Not mid-fight.
 
+## The fight HUD
+
+Left to right: **your Signal** (or your server at home), with your crew's bars under it in a small window, dividers between them; **Status**, everything on you right now as chips: timed effects with the cycles they have left (Momentum +20% ×2 2c, Brace 2c, Blinded 3c, Null-routed, drawing fire…) and standing ones (encrypted −8, shield 12, armor ◆, Clock Speed, Rootkit ready, Snapshot, helpers), hover for the rule; and **the virus**, its name and level labelling its bar, its armor and tags under it, lined up over its picture. The board below is just you, the parts and the timeline.
+
 ## Who's aiming where
 
 On the fight board, each part shows who's aiming at it this cycle: round initials stacked in a rail down the row's left edge (yours teal, from your handle; each crewmate's violet). Hover one for the command. Every row keeps the rail's width, so names line up whether anyone's aiming there or not.

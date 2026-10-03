@@ -223,16 +223,27 @@ export function hudMarkup(s) {
   const m = v.mutation ? MUTATIONS[v.mutation] : null;
   const weak = v.weakKnown ? part(s, v.weakPoint) : null;
   const armor = armorLeft(s);
-  const crypt = e.encrypt > 0 ? `<span class="hud-extra hot">encrypted −${e.encrypt}/cycle</span> · ` : '';
-  const extras = runMode ? crypt : `${crypt}<span class="hud-extra">Uplink ${e.trace}%</span>`;
+  const extras = runMode ? '' : `<span class="hud-extra">Uplink ${e.trace}%</span>`; // encryption shows in Status
   const fc = forecast(s);
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
   const tags = `${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
-  return `<div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${partyMarkup(s, fc)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${partyMarkup(s, fc)}</div>${statusPanel(s)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}</p></div>`;
+}
+
+// Everything on you right now, between your bar and the virus's: timed effects (with the cycles
+// they have left) and standing ones (encryption, shield, armor, Clock Speed, …). Was a row on the
+// board and tags in your row; here it sits by your health.
+function statusPanel(s) {
+  const e = s.encounter;
+  if (!active(s)) return '<div class="hud-status"></div>';
+  const timed = statusSpans(s).map((x) => `<span class="st ${x.kind}" title="${esc(x.title)}"><b>${esc(x.name)}</b>${x.value ? `<span>${esc(x.value)}</span>` : ''}<small class="st-left" title="${x.cycles} ${x.cycles === 1 ? 'cycle' : 'cycles'} left">${x.cycles}c</small></span>`);
+  const standing = youTags(s);
+  const all = timed.join('') + standing;
+  return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${all || '<small class="quiet">nothing on you</small>'}</div></div>`;
 }
 
 // Your crew's health (party frames): a little window under your Signal, side by side. Where they aim is
@@ -325,7 +336,7 @@ export function boardMarkup(s, selected, preview = null) {
   const daemonCell = (c) => dmn.filter((id) => daemonNext(s, id) === e.cycle + c).map((id) => `<div class="intent daemon" data-k="daemon:${id}@${e.cycle + c}" title="${esc(DAEMONS[id].name)} v${daemonVersion(s, id)}: ${esc(daemonRule(s, id))}">${esc(DAEMONS[id].name.toLowerCase())}</div>`).join('');
   const cronCell = (c) => daemonCell(c) + (cron && cronDue(e.cycle + c) ? `<div class="intent daemon cron" data-k="cron@${e.cycle + c}" title="Cron Job (service): your server hits the soonest attacker for ${cronDamage(s)}">cron ${cronDamage(s)}</div>` : '');
   const you = () => fighting
-    ? `<div class="brow byou${e.steps && e.steps.next === 0 ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span><span class="part-tags">${youTags(s)}</span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
+    ? `<div class="brow byou${e.steps && e.steps.next === 0 ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
   // Simulated crewmates (crew.mjs): a row each, with Signal and what they'll do this cycle.
   const crew = fighting && e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
@@ -345,8 +356,6 @@ export function boardMarkup(s, selected, preview = null) {
   }
   const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind.startsWith('you') ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
 
-  const spans = fighting ? statusSpans(s) : [];
-  const status = spans.length ? `<div class="brow bstatus"><div class="bcell bname"><b>Status</b></div><div class="bcell span4 sgrid">${spans.map((x) => `<div class="sbar ${x.kind}" style="grid-column: 1 / span ${Math.min(4, x.cycles)}" title="${esc(x.title)}"><b>${esc(x.name)}</b>${x.value ? ` <span>${esc(x.value)}</span>` : ''}${x.cycles > 4 ? ' <small>…</small>' : ''}</div>`).join('')}</div></div>` : '';
   const living = e.virus.parts.filter(alive), broken = e.virus.parts.filter((p) => !alive(p));
   const patchList = fighting ? patches(s, 4) : [];
   const rows = living.map((p) => {
@@ -372,7 +381,7 @@ export function boardMarkup(s, selected, preview = null) {
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
-  return head + you() + status + rows + gone;
+  return head + you() + rows + gone;
 }
 
 const LOG_CLASS = { miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
