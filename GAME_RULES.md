@@ -298,7 +298,12 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 
 On the fight board, each part shows who's aiming at it this cycle: round initials stacked in a rail down the row's left edge (yours teal, from your handle; each crewmate's violet). Hover one for the command. Every row keeps the rail's width, so names line up whether anyone's aiming there or not.
 
-When a command lands (hitfx.mjs), the shooter's avatar lunges at the part and a band of their colour sweeps along its Integrity bar from the right, the way it drains, back toward their avatar, which pulses with a ring as it arrives (that chunk was theirs); a crit lunges harder, breaking an armor chit flashes the avatar white, and a miss shakes it. Nothing is drawn over the board between hits.
+When a command lands (hitfx.mjs), the shooter's avatar lunges at the part (that's who did it): a crit lunges harder, breaking an armor chit flashes it white, a miss shakes it.
+
+**Effects** (System; `effects calm|full|minimal`) keep the board readable: one visual per event, on the thing it's about.
+- **Calm** (the default): the number rises in the part's Now cell, the bar drops, the part's name line flashes, the avatar lunges. A crewmate's hit is quieter than yours (a smaller, dimmer number and no flash). A crit of yours also punches the virus picture. Breaking a part, winning, and a hit on you keep their big effects. The forecast's white slices still blink.
+- **Full**: also the impact burst in the Now cell, sparks, the whole row flashing and a punch on every hit.
+- **Minimal**: numbers and bars only (no flashes, no lunges, no shards).
 
 **The ability tray** says what's ready: every key has a charge bar along its bottom, full amber when it's ready. On cooldown the key is striped and dimmed, its bar refills cycle by cycle, a big number counts the cycles to go and the line under the name reads *ready next cycle* / *ready in 3 cycles*. A key that comes off cooldown flashes once. A key waiting for its moment (a lit key's window, like Shatter's) has no bar until it lights.
 

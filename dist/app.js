@@ -95,6 +95,12 @@ const shown = () => campaign;
 // ---------- art ----------
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const canMove = () => campaign.settings.motion && !reducedMotion.matches;
+// How much moves on the fight board (System: Effects). One visual per event, on the thing it's about:
+//   calm (default): the number and the bar say how much, the shooter's avatar lunge says who, the
+//     part's name flashes; crew hits are quieter than yours. Breaks, wins and big hurts stay big.
+//   full: also the impact burst in the Now cell, sparks, the whole row flashing, a punch on the virus.
+//   minimal: numbers and bars only.
+const fxLevel = () => (['full', 'minimal'].includes(campaign.settings.effects) ? campaign.settings.effects : 'calm');
 // Hit effects (hitfx.mjs): when a command lands, the shooter's avatar lunges at the part and a
 // band of their colour sweeps its bar; a miss shakes it; a broken chit flashes it white.
 const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove() });
@@ -103,7 +109,7 @@ const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpper
 // Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
 const ticked = (e) => /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message) && !e.message.startsWith('Crack: ');
 function strikes(events) {
-  if (module !== 'combat') return;
+  if (module !== 'combat' || fxLevel() === 'minimal') return;
   const hits = new Map(); // who>part → the strongest result this batch
   const rank = { miss: 0, hit: 1, crit: 2, chit: 3 };
   for (const e of events) {
@@ -337,11 +343,17 @@ function react(events) {
     }
     switch (e.type) {
       case 'damage': {
-        art.hit(e.target, e.crit ? 'crit' : 'hit'); impact(e.target, e.crit);
+        const lvl = fxLevel(), full = lvl === 'full', mate = !!e.who;
+        art.hit(e.target, e.crit ? 'crit' : 'hit');
+        if (full) impact(e.target, e.crit);
         const pm = part(campaign, e.target)?.max || 50, big = Math.min(1, e.amount / pm);
-        const size = 1 + big * 0.9 + (e.crit ? 0.35 : 0);
-        if (e.crit) feel.add('crit', row(e.target), `CRIT −${e.amount}`, { amount: e.amount, size }); else feel.add('hit', row(e.target), `−${e.amount}`, { amount: e.amount, size });
-        if (fx) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
+        const size = (1 + big * 0.9 + (e.crit ? 0.35 : 0)) * (mate ? 0.8 : 1);
+        // Calm: the part's name line flashes (yours only) and the number rises in its Now cell; full: the whole row.
+        const at = full ? row(e.target) : `${row(e.target)} .part-top`;
+        const look = { amount: e.amount, size, noFlash: lvl === 'minimal' || (mate && !full), quiet: mate && !full, floatAt: full ? null : `${row(e.target)} > .bcell:nth-child(2)` };
+        if (e.crit) feel.add('crit', at, `CRIT −${e.amount}`, look); else feel.add('hit', at, `−${e.amount}`, look);
+        if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
+        else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
         break;
       }
       case 'broken': art.hit(e.target, 'break'); flash(e.message); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
@@ -374,7 +386,7 @@ function react(events) {
       case 'encrypted': feel.add('drain', MINE, `−${e.amount}`); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('BLINDED'); feel.add('blind', '.board', null); break;
-      case 'armor': art.hit(e.target, 'chit'); impact(e.target, false, true); feel.add('chit', row(e.target), 'CRACKED', { size: 1.1 }); if (fx) feel.add(() => { juice.shatter(e.target); juice.punch(0.35); }); break;
+      case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); if (lvl === 'full') impact(e.target, false, true); feel.add('chit', lvl === 'full' ? row(e.target) : `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: lvl === 'full' ? null : `${row(e.target)} > .bcell:nth-child(2)` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); break; }
       case 'patch': feel.add('patch', row(e.target), '+◆'); break;
       case 'xp': feel.add('cycle', '#meter-level', `+${e.amount} XP`); break;
       case 'level-up': case 'server-level': {
@@ -493,6 +505,7 @@ function run(raw) {
     hideTip(false); save(); dirty = true;
     return notice(text === 'tips replay' ? 'Tips will show again as you meet things.' : `Tips ${campaign.settings.tips ? 'on' : 'off'}.`);
   }
+  if (/^effects( (full|calm|minimal|next))?$/.test(text)) { const order = ['calm', 'full', 'minimal'], w = text.split(' ')[1]; campaign.settings.effects = !w || w === 'next' ? order[(order.indexOf(fxLevel()) + 1) % 3] : w; save(); dirty = true; return notice(`Effects: ${fxLevel()}.`); }
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();

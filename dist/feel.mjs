@@ -143,8 +143,11 @@ export function createFeel({ settings, reducedMotion }) {
         if (!sign) continue;
         const els = typeof target === 'string' ? [...document.querySelectorAll(target)] : target ? [target] : [];
         const shake = !reducedMotion();
-        for (const el of els) flash(el, shake || !sign.flash?.match(/nope|hurt/) ? sign.flash : 'fx-still');
-        if (label) float(els[0], label, sign.float || 'amber', detail?.size);
+        // detail.noFlash: the number only; detail.quiet: a smaller, dimmer number (a crewmate's).
+        if (!detail?.noFlash) for (const el of els) flash(el, shake || !sign.flash?.match(/nope|hurt/) ? sign.flash : 'fx-still');
+        // detail.floatAt: where the number rises, if not off the flashing element.
+        const fl = detail?.floatAt ? document.querySelector(detail.floatAt) || els[0] : els[0];
+        if (label) float(fl, label, (sign.float || 'amber') + (detail?.quiet ? ' quiet' : ''), detail?.size);
         // detail.silent: the look without the sound or buzz (a crewmate's hit when yours already sounds).
         if (sign.edge && !detail?.silent && !detail?.noEdge) edge();
         if (!detail?.silent) { voice(sign.voice, detail); buzz(sign.buzz); }

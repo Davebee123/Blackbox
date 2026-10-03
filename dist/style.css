@@ -1655,7 +1655,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .aim.you { color: var(--you); background: #1d3532; box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.55); }
 .aim.crew { color: var(--daemon); background: #2c2440; box-shadow: inset 0 0 0 1px rgba(195, 166, 255, 0.5); }
 /* Hit effects (hitfx.mjs), on a layer over the board: the shooter's avatar lunges at the part, a
-   band of their colour sweeps its bar from the right, the way it drains; a miss shakes; a broken chit flashes white; a crit pops. */
+   a miss shakes; a broken chit flashes white; a crit pops. */
 #hitfx { position: absolute; pointer-events: none; z-index: 3; overflow: visible; }
 .fx-av { position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); font: 700 9px/20px var(--mono); text-align: center; animation: fx-lunge 0.6s ease-out forwards; }
 .fx-av.you { color: var(--you); background: #1d3532; box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.8), 0 0 12px rgba(127, 209, 199, 0.6); }
@@ -1663,16 +1663,10 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .fx-av.crit { animation-name: fx-crit; }
 .fx-av.chit { animation-name: fx-chit; }
 .fx-av.miss { animation-name: fx-miss; filter: saturate(0.4); }
-.fx-av.catch { animation: fx-catch 0.5s ease-out forwards; }
-.fx-av.catch::after { content: ''; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid currentColor; animation: fx-ring 0.5s ease-out forwards; }
-@keyframes fx-catch { 0% { transform: scale(1); opacity: 1; } 35% { transform: scale(1.3); filter: brightness(2); } 100% { transform: scale(1); opacity: 0; } }
-@keyframes fx-ring { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(2.2); opacity: 0; } }
 @keyframes fx-lunge { 0% { transform: translateX(0) scale(1); opacity: 1; } 30% { transform: translateX(14px) scale(1.2); filter: brightness(1.8); } 70% { transform: translateX(0) scale(1); opacity: 1; } 100% { opacity: 0; } }
 @keyframes fx-crit { 0% { transform: translateX(0) scale(1); opacity: 1; } 30% { transform: translateX(16px) scale(1.5); filter: brightness(2.2); } 70% { transform: translateX(0) scale(1.05); opacity: 1; } 100% { opacity: 0; } }
 @keyframes fx-chit { 0% { transform: translateX(0); opacity: 1; } 30% { transform: translateX(12px) scale(1.2); box-shadow: 0 0 0 3px #fff, 0 0 16px #fff; } 70% { transform: translateX(0); opacity: 1; } 100% { opacity: 0; } }
 @keyframes fx-miss { 0%, 100% { transform: translateX(0); } 15% { transform: translateX(-5px); } 35% { transform: translateX(5px); } 55% { transform: translateX(-4px); } 75% { transform: translateX(3px); opacity: 1; } 100% { opacity: 0; } }
-.fx-sweep { position: absolute; border-radius: 2px; background-repeat: no-repeat; background-size: 45% 100%; animation: fx-sweep 0.5s ease-out forwards; }
-.fx-sweep.you { background-image: linear-gradient(90deg, transparent, rgba(127, 209, 199, 0.95), transparent); }
-.fx-sweep.crew { background-image: linear-gradient(90deg, transparent, rgba(195, 166, 255, 0.95), transparent); }
-.fx-sweep.crit { background-size: 70% 100%; filter: brightness(1.4); }
-@keyframes fx-sweep { 0% { background-position: 160% 0; opacity: 1; } 80% { opacity: 1; } 100% { background-position: -60% 0; opacity: 0; } } /* right to left: the way the bar drains */
+
+/* A crewmate's number: smaller and dimmer than yours (Effects: calm). */
+.fx-float.quiet { opacity: 0.7; filter: saturate(0.6); }
