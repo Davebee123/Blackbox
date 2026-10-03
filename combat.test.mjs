@@ -421,10 +421,10 @@ test('Sync Window: fire inside it for +10% and your class bonus; outside, auto-r
   // Outside the window: plain Spike.
   let s = setup('breaker');
   const w = s.encounter.sync;
-  assert.ok(w.at >= 0.05 && w.at + w.width <= 1 / 3 + 1e-9, 'the window sits in the first third');
+  assert.ok(w.at >= 0.05 && w.at + w.width <= 0.5 + 1e-9, 'the window sits in the first half');
   const id = s.encounter.virus.parts[0].id;
   const before = s.encounter.virus.parts[0].integrity;
-  let ev = fireAt(s, w.at + w.width + 0.03, 'spike ' + id);
+  let ev = fireAt(s, w.at + w.width + CONFIG.sync.grace + 0.03, 'spike ' + id); // past the window and its grace
   const plain = before - s.encounter.virus.parts[0].integrity;
   assert.ok(!ev.some((x) => x.type === 'synced'));
   // Inside: 10% more.
@@ -450,10 +450,12 @@ test('Sync Window: fire inside it for +10% and your class bonus; outside, auto-r
   fireAt(s, wb.at + 0.01, 'spike ' + p.id);
   assert.equal(p.armor, 1, 'the hit breaks one chit, sync cracks another');
   assert.ok(inSync(s, s.encounter.sync.at + 0.001));
+  assert.ok(inSync(s, s.encounter.sync.at - CONFIG.sync.grace / 2), 'a little early still counts');
+  assert.ok(!inSync(s, s.encounter.sync.at - CONFIG.sync.grace - 0.01), 'too early does not');
   CONFIG.sync.chance = was;
 });
 
-test('the Sync Window always sits in the first third of a cycle, and it is narrow', async () => {
+test('the Sync Window always sits in the first half of a cycle, about a tenth of it wide', async () => {
   const { rollSync } = await import('./dist/combat.mjs');
   const s = fresh();
   command(s, 'encounter cryptjack');
@@ -464,8 +466,8 @@ test('the Sync Window always sits in the first third of a cycle, and it is narro
     const w = s.encounter.sync;
     if (!w) continue;
     opened++;
-    assert.ok(w.at >= 0.05 && w.at + w.width <= 1 / 3 + 1e-9, `cycle ${c}: ${w.at}`);
-    assert.ok(w.width <= 0.06);
+    assert.ok(w.at >= 0.05 && w.at + w.width <= 0.5 + 1e-9, `cycle ${c}: ${w.at}`);
+    assert.ok(w.width <= 0.1);
   }
   assert.ok(opened > 60 && opened < 150, `about a quarter of cycles open one (${opened}/399)`);
 });

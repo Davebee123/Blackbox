@@ -328,11 +328,19 @@ export function boardMarkup(s, selected, preview = null) {
     for (const m of crew.filter(mateUp)) add(aimOf(m.encounter), m.who, 'crew', m.encounter.queue?.text);
   }
   const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind.startsWith('you') ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
-  const mates = crew.map((m) => {
-    const up = mateUp(m), q = m.encounter.queue, pct = (m.run.integrity / m.run.max) * 100;
-    return `<div class="brow bmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}"><div class="bcell bname"><span class="part-top"><span class="part-name">${esc(m.who)}</span><span class="tag dim">${esc(ARCHETYPES[m.loadout.archetype].name)}</span>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="part-hp">${m.run.integrity}/${m.run.max}</span></span><span class="part-bar mate"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span></div>
-      <div class="bcell">${up ? (q ? `<div class="intent mine mate">${esc(q.text)}</div>` : '<small class="quiet">thinking</small>') : '<small class="quiet">down</small>'}</div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>`;
-  }).join('');
+  // The crew in one row (not a row each): an avatar per crewmate with their Signal under it, and
+  // in Now what each is about to do. Where it's aimed is their avatar on the part's rail.
+  const mateChip = (m) => {
+    const up = mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = m.encounter.queue;
+    const tip = `${m.who} · ${ARCHETYPES[m.loadout.archetype].name} · ${m.run.integrity}/${m.run.max}${up ? (q ? ` · ${q.text}` : ' · thinking') : ' · down'}${up && drawingFire(m) ? ' · drawing fire' : ''}`;
+    return `<span class="cmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}" title="${esc(tip)}"><span class="aim crew">${esc(initials(m.who))}${up && drawingFire(m) ? '<i class="cm-fire" title="Drawing fire">◆</i>' : ''}</span><span class="part-bar mate"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span></span>`;
+  };
+  const mateCmd = (m) => {
+    const up = mateUp(m), q = m.encounter.queue;
+    return `<span class="ccmd${m === acted ? ' acting' : ''}" title="${esc(m.who)}: ${esc(up ? q?.text || 'thinking' : 'down')}"><b>${esc(initials(m.who))}</b> ${esc(up ? (q ? q.text.split(' ')[0] : '…') : 'down')}</span>`;
+  };
+  const mates = crew.length ? `<div class="brow bcrew"><div class="bcell bname"><span class="crew-label">Crew</span><span class="cmates">${crew.map(mateChip).join('')}</span></div>
+      <div class="bcell"><div class="ccmds">${crew.map(mateCmd).join('')}</div></div><div class="bcell"></div><div class="bcell"></div><div class="bcell"></div></div>` : '';
   const spans = fighting ? statusSpans(s) : [];
   const status = spans.length ? `<div class="brow bstatus"><div class="bcell bname"><b>Status</b></div><div class="bcell span4 sgrid">${spans.map((x) => `<div class="sbar ${x.kind}" style="grid-column: 1 / span ${Math.min(4, x.cycles)}" title="${esc(x.title)}"><b>${esc(x.name)}</b>${x.value ? ` <span>${esc(x.value)}</span>` : ''}${x.cycles > 4 ? ' <small>…</small>' : ''}</div>`).join('')}</div></div>` : '';
   const living = e.virus.parts.filter(alive), broken = e.virus.parts.filter((p) => !alive(p));
@@ -344,9 +352,9 @@ export function boardMarkup(s, selected, preview = null) {
     const patch = patchList.find((x) => x.source === p.id);
     const cells = [0, 1, 2, 3].map((c) => {
       // Encryption is one ongoing drain: the full chip in Now, then a thin striped line through the
-      // later cycles (it keeps going), so the one-off events in those cells stay readable.
+      // later cycles (it keeps going; hover it and it opens up to say so), so the one-off events in those cells stay readable.
       const crypting = e.encrypt > 0 && p.attack?.effect === 'encrypt';
-      const cryptChip = !crypting ? '' : c === 0 ? `<div class="intent crypt" title="Encrypted: you lose ${e.encrypt} this cycle. Break ${esc(p.name)} to stop it.">−${e.encrypt} <small>encrypted</small></div>` : `<div class="crypt-line" title="Encrypted: −${e.encrypt} every cycle until ${esc(p.name)} breaks"></div>`;
+      const cryptChip = !crypting ? '' : c === 0 ? `<div class="intent crypt" title="Encrypted: you lose ${e.encrypt} this cycle. Break ${esc(p.name)} to stop it.">−${e.encrypt} <small>encrypted</small></div>` : `<div class="crypt-line" data-label="−${e.encrypt} encrypted"></div>`;
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one armor chit back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}<div class="intent hidden">?</div>${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c);

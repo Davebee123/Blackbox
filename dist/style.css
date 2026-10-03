@@ -173,7 +173,11 @@ code { font-family: var(--mono); color: var(--amber); }
 /* Encryption: the damage you take every cycle until the Encryptor breaks. On the Encryptor's row, in every column. */
 .intent.crypt { margin-bottom: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; border-color: var(--hot); color: var(--hot); background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px); }
 .intent.crypt small { color: var(--hot); opacity: 0.8; }
-.crypt-line { height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; }
+.crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
+/* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
+.crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }
+.crypt-line:hover { opacity: 1; }
+.crypt-line:hover::after { transform: translateY(-50%) scaleY(1); opacity: 1; }
 .hud-extra.hot { color: var(--hot); font-weight: 600; }
 /* armor chits: filled = there, hollow = broken */
 .chits { font: 15px/1 var(--mono); color: var(--amber); letter-spacing: 2px; text-shadow: 0 0 6px rgba(241, 185, 47, 0.45); margin-left: 6px; margin-right: auto; white-space: nowrap; }
@@ -1526,14 +1530,25 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .inv-filters button:disabled { opacity: 0.35; cursor: default; }
 
 /* Simulated crew (crew.mjs): their rows under yours, who an attack is going at, names in the log. */
-.bmate .part-bar.mate span { background: var(--daemon); }
-.bmate .part-name { color: var(--daemon); }
-.bmate.down { opacity: 0.45; }
 .intent.mine.mate { border-color: rgba(195, 166, 255, 0.5); color: var(--daemon); }
 .intent { position: relative; }
 .intent .at { position: absolute; top: -8px; right: 4px; padding: 0 4px; font: 600 9px var(--mono); letter-spacing: 0.5px; color: var(--bright); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 2px; }
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
-.bmate.acting { background: rgba(195, 166, 255, 0.1); box-shadow: inset 3px 0 0 var(--daemon); }
+/* The Crew row: one row for the whole crew (view.mjs boardMarkup). */
+.bcrew .bname { flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; }
+.crew-label { font-weight: 600; color: var(--daemon); }
+.cmates { display: flex; gap: 10px; }
+.cmate { display: grid; justify-items: center; gap: 4px; width: 40px; }
+.cmate .aim { position: relative; }
+.cmate .part-bar { width: 40px; height: 4px; }
+.cmate .part-bar.mate span { background: var(--daemon); }
+.cmate.down { opacity: 0.4; filter: grayscale(1); }
+.cmate.acting .aim { box-shadow: inset 0 0 0 1px var(--daemon), 0 0 10px rgba(195, 166, 255, 0.8); }
+.cm-fire { position: absolute; right: -5px; top: -5px; font-style: normal; font-size: 9px; color: var(--hot); }
+.ccmds { display: flex; flex-direction: column; gap: 3px; }
+.ccmd { font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ccmd b { color: var(--daemon); margin-right: 4px; }
+.ccmd.acting { color: var(--bright); }
 .byou.acting { background: rgba(127, 209, 199, 0.08); box-shadow: inset 3px 0 0 var(--you); }
 
 /* The hit effects layer (hitfx.mjs) sits over the board, positioned against this. */

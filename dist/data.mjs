@@ -50,15 +50,16 @@ export const CONFIG = {
   reactiveBonus: 1.5, // unused since Reactive was cut; kept so old saves don't break
   // Planning and daemons
   planLength: 3, // cycles you can queue ahead with ';'
-  // Sync Window: a narrow slice early in a cycle (always inside the first third), at a new spot
-  // each time. It opens on 25% of cycles; the Sync protocol stat adds to that. Fire your command
-  // inside it for +10% damage and your class's sync bonus (SYNC). About half a second at the
-  // normal speed. Auto-repeat and planned steps never sync.
-  sync: { width: 0.06, from: 0.05, to: 0.33, bonus: 0.1, chance: 0.25 },
+  // Sync Window: a slice early in a cycle (always inside the first half), at a new spot each time.
+  // It opens on 25% of cycles; the Sync protocol stat adds to that. Fire your command inside it
+  // for +10% damage and your class's sync bonus (SYNC). About a second at the normal speed, and
+  // forgiving: a press up to `grace` (of the cycle) either side of it still counts.
+  // Auto-repeat and planned steps never sync.
+  sync: { width: 0.1, grace: 0.03, from: 0.05, to: 0.5, bonus: 0.1, chance: 0.25 },
   // Infiltrator Surprise: the first cycle of every fight always opens a (blue, wider) window.
   // Fired in it: Inject lands an extra stack, Tag lasts 6 cycles and burns tick +75%,
   // Traceroute adds 50%.
-  surprise: { width: 0.1, injectStacks: 2, tagCycles: 6, tagged: 1.75, trace: 50 },
+  surprise: { width: 0.15, injectStacks: 2, tagCycles: 6, tagged: 1.75, trace: 50 },
   // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
   slip: { perRun: 1, leakedCreds: 3 },
   daemonSlots: 1, // +1 at server levels 10 and 20; Operators +1

@@ -53,7 +53,7 @@ test('grades: deeper servers send the same virus with bigger numbers', () => {
 test('Keylogger: the Logger only feels synced commands, and three unsynced ones come back as a Dump', () => {
   const s = bare(start('keylogger'));
   const logger = part(s, 'logger');
-  assert.ok(s.encounter.sync && s.encounter.sync.width === 0.1, 'a wide window opens every cycle');
+  assert.ok(s.encounter.sync && s.encounter.sync.width === 0.14, 'a wide window opens every cycle');
   const hp = logger.integrity;
   fire(s, 'spike logger');
   assert.equal(logger.integrity, hp, 'out of sync: nothing');

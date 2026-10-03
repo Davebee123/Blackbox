@@ -320,12 +320,12 @@ Online co-op comes later (a hosted server with logins). To try how it plays firs
 - Each cycle everyone acts (you, then the crew), then the virus. Statuses are shared: anyone's hits benefit from Exposed, Tagged, Throttled and Hooked.
 - A damage attack lands on everyone in the fight, each taking it in full, as if they fought it alone (its chip on the timeline says → all). Encryption, blinds and fragments stay on you.
 - **Threat:** a Bastion's Firewall, in a crew, also draws fire for 2 cycles: every damage attack goes at that Bastion alone (one hit, at its solo size), and nobody else is hit. The chip says → nyx (or → you), the Bastion's row says *drawing fire*. Solo, Firewall is just its shield.
-- **Turns play out one at a time** on screen: you, then each crewmate, then each of the virus's attacks due, a beat apart (0.38 / 0.33 / 0.26 s at relaxed / normal / fast). The row whose turn just played lights up, the bars move with each turn, and every hit has its effect (a crewmate's on their row). When one attack hits everyone, only one hit sounds. The cycle timer waits meanwhile. (Scripts and tests still resolve a cycle at once.)
+- **Turns play out one at a time** on screen: you, then each crewmate, then each of the virus's attacks due, a beat apart (0.38 / 0.33 / 0.26 s at relaxed / normal / fast). The row (or crew avatar) whose turn just played lights up, the bars move with each turn, and every hit has its effect (a crewmate's on their row). When one attack hits everyone, only one hit sounds. The cycle timer waits meanwhile. (Scripts and tests still resolve a cycle at once.)
 - The virus gets +150% Integrity per extra player (`CREW.hpPer`); its hits stay their solo size. Simulated (planner bots, Tuned gear): about 25–30% Signal lost per player per fight in a party of 2 or 4 (the worst-hit player 35–50%), against 35–57% solo. More hands means more answers (armor chits, Throttle, interrupts), so a party takes less than a lone player.
 - If your target breaks before your turn (a crewmate got it), your command goes at the next threat instead.
 - Crewmates' hits and breaks show on the board but stay quiet: the sounds are yours.
 - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it. Rewards are yours (the bots keep nothing).
-- On the fight screen each crewmate has a row (Signal, this cycle's command), and their lines in the log carry their name.
+- On the fight screen the whole crew shares one **Crew** row: an avatar per crewmate with their Signal under it (a blinking white slice for what they're about to lose; greyed when down; a red ◆ while drawing fire), and in Now a short word each for what they're about to do (`NY spike`). Where it's aimed is their avatar on the part's rail; hover a chip for the full command. Their lines in the log carry their name.
 
 ## The numbers station (station.mjs)
 
@@ -528,7 +528,7 @@ Pick a class on the Loadout page (`archetype <id>`). Your bar has up to 8 keys, 
 
 ## The Sync Window
 
-On **25% of cycles**, a narrow window (6% of the cycle, about half a second at normal speed) opens early on the Now column's cycle bar, always inside the first third, at a new spot each time. The **Sync** protocol stat (a Utility stat; Phaselock protocols lead with it) adds to that chance, up to +50%. It lights up while the bar is inside it. Fire your command then (Enter, or a key) and it **syncs**: +10% damage, plus your class's sync bonus:
+On **25% of cycles**, a window (10% of the cycle, about a second at normal speed) opens early on the Now column's cycle bar, always inside the first half, at a new spot each time. It's forgiving: a press a little early or late (up to 3% of the cycle either side) still counts. The **Sync** protocol stat (a Utility stat; Phaselock protocols lead with it) adds to that chance, up to +50%. It lights up while the bar is inside it. Fire your command then (Enter, or a key) and it **syncs**: +10% damage, plus your class's sync bonus:
 
 | Class | Sync bonus |
 |---|---|
@@ -537,7 +537,7 @@ On **25% of cycles**, a narrow window (6% of the cycle, about half a second at n
 | Infiltrator | +10% Uplink trace |
 | Operator | Your helpers each hit once more |
 
-**Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (10%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject lands an extra stack, Tag lasts 6 cycles and its burns tick +75% (not +50%), and Traceroute adds 50% trace (not 25%).
+**Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (15%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject lands an extra stack, Tag lasts 6 cycles and its burns tick +75% (not +50%), and Traceroute adds 50% trace (not 25%).
 
 Auto-repeat (the cycle running out) and later steps of a `;` plan never sync. The window's spot comes from the fight and the cycle, not the game's dice, so it never changes other rolls.
 
@@ -790,7 +790,7 @@ Strains are graded too. A swarm counts one layer deeper than the outpost it targ
 
 | Strain | Family | From (level, layer) | Parts | Rule |
 |---|---|---|---|---|
-| Keylogger | Ghostroot | 4, layer 2 | Pulse Node, Logger | A Sync Window (0.10 wide) opens every cycle. The Logger only takes damage from commands fired inside it, and from burns and helpers started inside one. Every command fired outside it (auto-repeat and planned steps included) is logged; at 3, the Logger's Dump (18) lands next cycle and the log clears. |
+| Keylogger | Ghostroot | 4, layer 2 | Pulse Node, Logger | A Sync Window (0.14 wide) opens every cycle. The Logger only takes damage from commands fired inside it, and from burns and helpers started inside one. Every command fired outside it (auto-repeat and planned steps included) is logged; at 3, the Logger's Dump (18) lands next cycle and the log clears. |
 | Hashrat | Ransomware | 5, layer 2 | Pulse Node, Miner (no armor, no attack) | While the Miner lives, every other cycle your cooldowns don't tick. |
 | Floodgate | Worm | 6, layer 2 | Pulse Node, Flooder (no armor) | Flood hits every cycle from cycle 2 for 2, +1 (scaled) each time; any delay resets it. |
 | Leech | Worm | 8, layer 2 | Pulse Node, Tap (28) | Siphon (8, every 3) heals the virus's most damaged part by what it deals and clears one burn on it. Shields and throttling starve it. |

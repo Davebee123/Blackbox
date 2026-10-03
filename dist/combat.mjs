@@ -2156,13 +2156,14 @@ export function rollSync(s) {
   const hash = (k) => { const x = Math.sin((e.seed || 1) * 12.9898 + e.cycle * 78.233 + k) * 43758.5453; return x - Math.floor(x); };
   const keylogger = livingParts(s).some((x) => x.syncOnly);
   const surprise = classOf(s) === 'infiltrator' && e.cycle === 1;
-  const width = (surprise ? CONFIG.surprise.width : keylogger ? 0.1 : c.width) * (fxHas(s, 'sync-wide') ? 1.5 : 1);
+  const width = (surprise ? CONFIG.surprise.width : keylogger ? 0.14 : c.width) * (fxHas(s, 'sync-wide') ? 1.5 : 1);
   if (!keylogger && !surprise && hash(311.7) >= syncChance(s)) { e.sync = null; return; }
   e.sync = { at: c.from + hash(0) * (c.to - width - c.from), width, ...(surprise ? { surprise: true } : {}) };
 }
 // Chance a cycle opens a window: 25%, plus the Sync stat on your protocols.
 export const syncChance = (s) => Math.min(1, CONFIG.sync.chance + gearStat(s, 'sync', 'hacker') / 100);
-export const inSync = (s, frac) => { const w = s.encounter?.sync; return !!w && frac >= w.at && frac <= w.at + w.width; };
+// A little either side of the window still counts (CONFIG.sync.grace): it's about rhythm, not pixels.
+export const inSync = (s, frac) => { const w = s.encounter?.sync, g = CONFIG.sync.grace || 0; return !!w && frac >= w.at - g && frac <= w.at + w.width + g; };
 function syncBonus(s, intent) {
   const e = s.encounter, cls = classOf(s), b = SYNC[cls];
   if (!b) return;

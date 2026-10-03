@@ -339,7 +339,7 @@ function react(events) {
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   for (const e of events) {
     if (e.who) {
-      const mate = `.bmate[data-mate="${e.who}"]`;
+      const mate = `.cmate[data-mate="${e.who}"]`; // their chip in the Crew row
       if (e.type === 'server-hit') {
         art.hit(e.source, 'attack');
         feel.add(e.crit ? 'hurtcrit' : 'hurt', mate, `${e.crit ? 'CRIT ' : ''}−${e.amount}`, { amount: e.amount, silent: hurtVoiced, noEdge: true });
