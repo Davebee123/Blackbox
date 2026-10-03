@@ -109,6 +109,8 @@ const standing = (s) => inFight(s).filter(mateUp);
 hooks.crewAct = (s) => { for (const m of standing(s)) turn(s, m); };
 hooks.crewTurns = (s) => standing(s).length;
 hooks.crewActOne = (s, i) => turn(s, standing(s)[i]);
+hooks.crewActNamed = (s, who) => turn(s, standing(s).find((m) => m.who === who));
+hooks.crewStanding = (s) => standing(s); // for the turn order (combat.mjs turnOrder)
 
 // Everyone still standing in the fight besides you: a damage attack lands on each of them too.
 hooks.crewAll = (s) => inFight(s).filter(mateUp).map((m) => { m.encounter.cycle = s.encounter.cycle; return m; });

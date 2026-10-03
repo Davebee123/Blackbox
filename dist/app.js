@@ -640,7 +640,7 @@ function previewAim(s, text) {
   const was = aimPreview && aimPreview.target + aimPreview.ok;
   aimPreview = null;
   if (module === 'combat' && active(s) && text.trim()) {
-    const intent = parse(s, text);
+    const intent = parse(s, text.trim().replace(/\s(last|late)$/, '')); // "… last" only changes when it goes
     if (intent?.target) { const why = validate(s, intent); aimPreview = { target: intent.target, ok: !why, why: why || '', text: text.trim() }; }
   }
   if ((aimPreview && aimPreview.target + aimPreview.ok) !== was) dirty = true;

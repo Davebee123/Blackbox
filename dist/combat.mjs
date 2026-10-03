@@ -21,7 +21,7 @@ import { fxText } from './content.mjs';
 export const SAVE_VERSION = 27;
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
-export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; run.mjs crewGuests, foldersOf; the browser sets stepped.
+export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewActNamed, crewStanding, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; run.mjs crewGuests, foldersOf; the browser sets stepped.
 
 export function fresh() {
   const s = {
@@ -1349,6 +1349,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
 // Later plan steps skip the cooldown check; it's re-checked when they fire.
 export function toIntent(s, text, checkNow = true) {
   const e = s.encounter;
+  // "… last" (or "late"): this command goes at the back of the cycle, after everyone else's.
+  const last = /\s(last|late)$/.test(text);
+  if (last) text = text.replace(/\s(last|late)$/, '');
   if (text === 'hold' || text === 'wait') return { ability: 'hold', text: 'hold' };
   if (text === 'jack out') return e.mode === 'run' ? { ability: 'flee', text: 'jack out' } : { error: 'You are home. Nothing to jack out of.' };
   const intent = parse(s, text);
@@ -1357,8 +1360,32 @@ export function toIntent(s, text, checkNow = true) {
     const error = validate(s, intent);
     if (error) return { error };
   }
-  const text2 = intent.target ? `${intent.ability} ${intent.target}` : intent.ability;
-  return { ...intent, text: text2 };
+  const text2 = (intent.target ? `${intent.ability} ${intent.target}` : intent.ability) + (last ? ' last' : '');
+  return { ...intent, text: text2, ...(last ? { last: true } : {}) };
+}
+
+// Turn order in a crew cycle: everyone's command by what it does, so a big hit isn't wasted on
+// armor someone was about to strip. 0 armor strippers (Spike, Crack), 1 debuffs and the rest,
+// 2 damage skills, 3 anything marked "last". Ties keep their order (you, then the crew).
+export const STRIPPERS = ['spike', 'crack'];
+export function turnPriority(enc) {
+  const q = enc?.queue || (enc?.lastAttack ? { ability: enc.lastAttack.split(' ')[0] } : null);
+  if (!q || q.ability === 'hold') return 1;
+  if (q.last) return 3;
+  const a = ABILITIES[q.ability];
+  return STRIPPERS.includes(q.ability) || a?.strip ? 0 : a?.verb === 'hit' ? 2 : 1;
+}
+// This cycle's turns: 'you' and crewmates' names, in priority order.
+export function turnOrder(s) {
+  const crew = hooks.crewStanding?.(s) || [];
+  const actors = [{ who: 'you', p: turnPriority(s.encounter) }, ...crew.map((m) => ({ who: m.who, p: turnPriority(m.encounter) }))];
+  return actors.map((x, i) => ({ ...x, i })).sort((a, b) => a.p - b.p || a.i - b.i).map((x) => x.who);
+}
+// One actor's turn in a crew cycle. False if the fight ended (you fled).
+function actorTurn(s, who) {
+  if (who === 'you') return playerPhase(s, 'command');
+  hooks.crewActNamed?.(s, who);
+  return active(s);
 }
 
 const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s)); // as run.mjs
@@ -1880,8 +1907,11 @@ function landAttack(s, p) {
 // One player's part of a cycle: their command (or auto-repeat), their daemons, then their burns,
 // helpers, regen and the server's Cron Job. Returns false if they fled. Each crewmate runs this
 // on their own state against the shared virus (crew.mjs).
-export function playerPhase(s) {
+// phase: 'all' (solo), or 'command' (your turn in a crew cycle) and 'after' (once everyone has gone:
+// daemons, burns, helpers, regen).
+export function playerPhase(s, phase = 'all') {
   const e = s.encounter;
+  if (phase !== 'after') {
   // Your target broke before your turn (a crewmate got it): the same command goes at the next threat.
   if (e.queue?.target && !alive(part(s, e.queue.target))) {
     const next = soonestAttacker(s) || livingParts(s)[0];
@@ -1913,6 +1943,8 @@ export function playerPhase(s) {
     else if (e.keylog < 3) emit(s, 'status', `${logger.name}: keystroke logged (${e.keylog}/3).`, { target: logger.id });
   }
   e.synced = false;
+  }
+  if (phase === 'command') return active(s);
   // 1a. Slotted daemons act too, each on its own cooldown.
   if (active(s)) runDaemons(s);
   if (!active(s)) return false; // fled mid-fight
@@ -1968,13 +2000,20 @@ export function resolveCycle(s) {
   if (e.steps) return []; // a stepped cycle is still playing out (stepCycle)
   e.pendingTrace = 0;
 
-  // 1. The players act first (you, then any crew), so breaking a part on its last cycle stops its attack.
-  if (!playerPhase(s)) return since(s, first); // fled mid-fight
-  // Stepped co-op (the browser sets hooks.stepped): each crewmate's turn, then the virus's, comes
-  // as its own step (stepCycle), so the screen can show them one after another.
+  // 1. The players act first, so breaking a part on its last cycle stops its attack.
   const turns = virusIntegrity(s).current > 0 ? hooks.crewTurns?.(s) || 0 : 0;
-  if (turns && hooks.stepped) { e.steps = { next: 0, of: turns }; return since(s, first); }
-  if (hooks.crewAct) hooks.crewAct(s); // crew.mjs: simulated crewmates take their turns
+  if (!turns) { if (!playerPhase(s)) return since(s, first); return endCycle(s, first); } // solo
+  // With a crew, everyone's command goes in priority order (turnOrder: strippers first).
+  const order = turnOrder(s);
+  // Stepped co-op (the browser sets hooks.stepped): the first turn now, each of the rest, then the
+  // virus's, as its own step (stepCycle), so the screen can show them one after another.
+  if (hooks.stepped) {
+    e.steps = { order, next: 1, of: order.length };
+    if (!actorTurn(s, order[0])) { e.steps = null; return since(s, first); }
+    return since(s, first);
+  }
+  for (const who of order) { if (virusIntegrity(s).current === 0) break; if (!actorTurn(s, who)) return since(s, first); }
+  if (!playerPhase(s, 'after')) return since(s, first);
   return endCycle(s, first);
 }
 
@@ -1983,7 +2022,12 @@ export function stepCycle(s) {
   const e = s.encounter;
   if (!active(s) || !e.steps || e.paused) return [];
   const first = s.serial;
-  if (virusIntegrity(s).current > 0 && e.steps.next < e.steps.of) { hooks.crewActOne?.(s, e.steps.next++); return since(s, first); }
+  if (virusIntegrity(s).current > 0 && e.steps.next < e.steps.of) {
+    if (!actorTurn(s, e.steps.order[e.steps.next++])) { e.steps = null; }
+    return since(s, first);
+  }
+  // Everyone has gone: your daemons, burns and helpers.
+  if (!e.steps.after) { e.steps.after = true; if (!playerPhase(s, 'after')) { e.steps = null; return since(s, first); } if (e.steps && virusIntegrity(s).current > 0) return since(s, first); }
   // The virus's turn: each attack due lands as its own step.
   if (!e.steps.due) {
     if (cycleStart(s)) { e.steps = null; return since(s, first); }

@@ -84,7 +84,7 @@ test('a Bastion drawing fire (Firewall) takes every attack; nobody else is hit',
   assert.equal(kilo.run.integrity, before[2], 'kilo took nothing');
 });
 
-test('stepped cycles (the browser): you, then each crewmate, then the virus, one step at a time', async () => {
+test('stepped cycles (the browser): each turn in order, then the virus, one step at a time', async () => {
   const { hooks, stepCycle } = await import('./dist/combat.mjs');
   const s = start('bastion infiltrator');
   hooks.stepped = true;
@@ -92,12 +92,33 @@ test('stepped cycles (the browser): you, then each crewmate, then the virus, one
     const c = s.encounter.cycle;
     command(s, 'spike ' + s.encounter.virus.parts[0].id);
     resolveCycle(s);
-    assert.deepEqual(s.encounter.steps, { next: 0, of: 2 }, 'you acted; the crew waits');
+    assert.equal(s.encounter.steps.order[0], 'you', 'a Spike strips: you go first');
+    assert.equal(s.encounter.steps.next, 1, 'you acted; the crew waits');
+    assert.equal(s.encounter.steps.of, 3);
     assert.equal(resolveCycle(s).length, 0, 'nothing else resolves meanwhile');
-    stepCycle(s); assert.equal(s.encounter.steps.next, 1);
     stepCycle(s); assert.equal(s.encounter.steps.next, 2);
+    stepCycle(s); assert.equal(s.encounter.steps.next, 3);
     for (let i = 0; i < 6 && s.encounter.steps; i++) stepCycle(s); // the virus: one step per attack due
     assert.equal(s.encounter.steps, null);
     assert.equal(s.encounter.cycle, c + 1, 'the virus went, and the cycle turned');
   } finally { hooks.stepped = false; }
+});
+
+test('turn order: armor strippers first, damage skills after; "last" puts your command at the back', async () => {
+  const { turnOrder, turnPriority } = await import('./dist/combat.mjs');
+  const s = start('bastion infiltrator');
+  const [a, b] = matesOf(s);
+  const p = s.encounter.virus.parts[0].id;
+  a.encounter.queue = { ability: 'spike', target: p, text: 'spike ' + p };
+  b.encounter.queue = { ability: 'inject', target: p, text: 'inject ' + p };
+  command(s, 'overload ' + p);
+  assert.equal(turnPriority(s.encounter), 2, 'Overload is a damage skill');
+  assert.deepEqual(turnOrder(s), [a.who, b.who, 'you'], 'the Spike strips first; your Overload lands after');
+  command(s, 'spike ' + p);
+  assert.deepEqual(turnOrder(s), ['you', a.who, b.who], 'two strippers: you, then the crew');
+  command(s, 'spike ' + p + ' last');
+  assert.equal(s.encounter.queue.text, `spike ${p} last`);
+  assert.deepEqual(turnOrder(s), [a.who, b.who, 'you'], 'last: after everyone');
+  for (let n = 0; n < 3 && active(s); n++) resolveCycle(s);
+  assert.ok(s.logs.some((e) => e.type === 'resolved' && !e.who), 'your command still went off');
 });

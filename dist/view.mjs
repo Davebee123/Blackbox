@@ -252,7 +252,7 @@ function partyMarkup(s, fc) {
   const e = s.encounter;
   const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
   if (!crew.length) return '';
-  const acted = e.steps ? crew.filter(mateUp)[e.steps.next - 1] : null;
+  const actedWho = e.steps?.order?.[e.steps.next - 1], acted = actedWho ? crew.find((m) => m.who === actedWho) : null; // whose turn just played
   return `<div class="hud-bar hud-crew"><div class="bar-top"><strong>Crew</strong></div><div class="party">${crew.map((m) => {
     const up = mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = m.encounter.queue;
     return `<div class="pmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}" title="${esc(`${m.who} · ${ARCHETYPES[m.loadout.archetype].name}${up ? (q ? ` · ${q.text}` : '') : ' · down'}`)}"><b>${esc(m.who)}</b>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small></div>`;
@@ -338,13 +338,13 @@ export function boardMarkup(s, selected, preview = null) {
   const daemonCell = (c) => dmn.filter((id) => daemonNext(s, id) === e.cycle + c).map((id) => `<div class="intent daemon" data-k="daemon:${id}@${e.cycle + c}" title="${esc(DAEMONS[id].name)} v${daemonVersion(s, id)}: ${esc(daemonRule(s, id))}">${esc(DAEMONS[id].name.toLowerCase())}</div>`).join('');
   const cronCell = (c) => daemonCell(c) + (cron && cronDue(e.cycle + c) ? `<div class="intent daemon cron" data-k="cron@${e.cycle + c}" title="Cron Job (service): your server hits the soonest attacker for ${cronDamage(s)}">cron ${cronDamage(s)}</div>` : '');
   const you = () => fighting
-    ? `<div class="brow byou${e.steps && e.steps.next === 0 ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
+    ? `<div class="brow byou${e.steps?.order?.[e.steps.next - 1] === 'you' ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
   // Simulated crewmates (crew.mjs): a row each, with Signal and what they'll do this cycle.
   const crew = fighting && e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
   const sink = crew.length ? (drawingFire(s) ? 'you' : crew.find((m) => mateUp(m) && drawingFire(m))?.who || null) : null;
   // Whose turn just played in a stepped cycle (crew.mjs): their row lights up.
-  const acted = e.steps ? crew.filter(mateUp)[e.steps.next - 1] : null;
+  const actedWho = e.steps?.order?.[e.steps.next - 1], acted = actedWho ? crew.find((m) => m.who === actedWho) : null; // whose turn just played
   // Who's aiming at which part this cycle: their initials sit on the part's top-left corner.
   const initials = (h) => h.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO';
   const aimOf = (enc) => enc.queue?.target || (!enc.queue && enc.lastAttack ? enc.lastAttack.split(' ')[1] : null);
