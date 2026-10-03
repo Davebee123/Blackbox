@@ -1536,7 +1536,19 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
 .you-top { display: flex; align-items: center; gap: 14px; }
 /* Your crew under your Signal in the HUD (view.mjs partyMarkup): name, bar, number, a line each. */
-.hud:has(> .hud-crew) { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.8fr); gap: 20px; }
+.hud { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+.hud:has(> .hud-crew) { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(220px, 0.55fr); }
+/* The virus's name on its bar (no separate title). */
+.hud-bar.enemy .bar-top { align-items: baseline; }
+.hud-bar .bar-top .vname { display: flex; align-items: baseline; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap; font: inherit; line-height: 1.2; color: inherit; }
+.hud-bar .bar-top .vname strong { font: 700 16px var(--sans); letter-spacing: 1.5px; text-transform: none; color: var(--bright); }
+.hud-bar .bar-top .vname .meta { font: 12px var(--sans); color: var(--muted); letter-spacing: 0; line-height: 1.2; }
+.hud-bar .bar-top .vname .meta * { font: inherit; } /* the level keeps its colour (how it compares to yours) */
+.hud-bar .bar-top .vname .meta .lvl, .hud-bar .bar-top .vname .meta b { font-weight: 600; }
+.hud-bar.enemy .clock-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* The crew: a little window on the right. */
+.hud-crew { border: 1px solid var(--line); border-radius: 4px; background: var(--inset); padding: 8px 10px; align-self: stretch; }
+.hud-crew .bar-top strong { font-size: 11px; }
 .party { display: grid; gap: 4px; margin-top: 2px; }
 .pmate { display: grid; grid-template-columns: 56px auto 1fr 58px; align-items: center; gap: 8px; font-size: 12px; }
 .pmate b { color: var(--daemon); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }

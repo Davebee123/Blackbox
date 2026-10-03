@@ -26,7 +26,7 @@ test('each part row shows its attack in the column where it lands', () => {
 test('the HUD shows the virus and your health side by side', () => {
   const s = start();
   assert.match(hudMarkup(s), /Your server/);
-  assert.match(hudMarkup(s), /Virus/);
+  assert.match(hudMarkup(s), new RegExp(`class="vname"><strong>${s.encounter.virus.name}</strong>`), 'the virus\'s name labels its bar');
 });
 
 test('the attack landing now is marked red on the timeline and its part', () => {
