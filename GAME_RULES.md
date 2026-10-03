@@ -307,6 +307,8 @@ When a command lands (hitfx.mjs), the shooter's avatar lunges at the part (that'
 - **Full**: also the impact burst in the Now cell, sparks, the whole row flashing and a punch on every hit.
 - **Minimal**: numbers and bars only (no flashes, no lunges, no shards).
 
+At every Effects level, your own hits give the screen a small, quick shake (bigger for bigger hits and crits, a light one for a broken armor chit). Crewmates' hits don't. Motion off turns it off, like every other movement.
+
 **The ability tray** says what's ready: every key has a charge bar along its bottom, full amber when it's ready. On cooldown the key is striped and dimmed, its bar refills cycle by cycle, a big number counts the cycles to go and the line under the name reads *ready next cycle* / *ready in 3 cycles*. A key that comes off cooldown flashes once. A key waiting for its moment (a lit key's window, like Shatter's) has no bar until it lights.
 
 ## Co-op, simulated (crew.mjs)

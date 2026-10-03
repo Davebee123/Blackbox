@@ -253,6 +253,14 @@ const juice = {
     rowEl.classList.remove('fx-crack'); void rowEl.offsetWidth; rowEl.classList.add('fx-crack');
     setTimeout(() => rowEl.classList.remove('fx-crack'), 500);
   },
+  // Your hit landed: a small, quick shake of the screen (px), bigger for bigger hits and crits.
+  nudge(px) {
+    const ws = $('workspace');
+    if (!ws || ws.classList.contains('fx-quake')) return; // a hurt's jolt wins
+    ws.style.setProperty('--nudge', px.toFixed(1) + 'px');
+    ws.classList.remove('fx-nudge'); void ws.offsetWidth; ws.classList.add('fx-nudge');
+    setTimeout(() => ws.classList.remove('fx-nudge'), 220);
+  },
   // You got hit: the whole screen jolts, harder the bigger the bite, with a split-colour glitch.
   quake(frac, crit) {
     const ws = $('workspace');
@@ -354,6 +362,7 @@ function react(events) {
         if (e.crit) feel.add('crit', at, `CRIT −${e.amount}`, look); else feel.add('hit', at, `−${e.amount}`, look);
         if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
+        if (fx && !mate) feel.add(() => juice.nudge(e.crit ? 4.5 : 1.5 + big * 2.5)); // your hits shake the screen a little, at every Effects level
         break;
       }
       case 'broken': art.hit(e.target, 'break'); flash(e.message); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
@@ -386,7 +395,7 @@ function react(events) {
       case 'encrypted': feel.add('drain', MINE, `−${e.amount}`); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('BLINDED'); feel.add('blind', '.board', null); break;
-      case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); if (lvl === 'full') impact(e.target, false, true); feel.add('chit', lvl === 'full' ? row(e.target) : `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: lvl === 'full' ? null : `${row(e.target)} > .bcell:nth-child(2)` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); break; }
+      case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); if (lvl === 'full') impact(e.target, false, true); feel.add('chit', lvl === 'full' ? row(e.target) : `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: lvl === 'full' ? null : `${row(e.target)} > .bcell:nth-child(2)` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), '+◆'); break;
       case 'xp': feel.add('cycle', '#meter-level', `+${e.amount} XP`); break;
       case 'level-up': case 'server-level': {

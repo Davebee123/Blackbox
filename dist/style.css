@@ -1178,6 +1178,9 @@ body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-
 @keyframes fx-crack { from { background-position: 120% 0; opacity: 1; } to { background-position: -40% 0; opacity: 0; } }
 /* You got hit: the screen jolts and the colours split for a moment. */
 #workspace.fx-quake { animation: fx-quake 0.42s cubic-bezier(.36, .07, .19, .97); }
+/* Your hit landing: a short, small shake (every Effects setting; Motion off: none). */
+#workspace.fx-nudge { animation: fx-nudge 0.2s ease-out; }
+@keyframes fx-nudge { 25% { transform: translate(var(--nudge), calc(var(--nudge) * -0.5)); } 55% { transform: translate(calc(var(--nudge) * -0.7), calc(var(--nudge) * 0.35)); } 80% { transform: translate(calc(var(--nudge) * 0.3), 0); } 100% { transform: none; } }
 @keyframes fx-quake { 10% { transform: translate(calc(var(--quake) * -1), calc(var(--quake) * 0.4)); } 25% { transform: translate(var(--quake), calc(var(--quake) * -0.5)); } 40% { transform: translate(calc(var(--quake) * -0.6), calc(var(--quake) * 0.3)); } 60% { transform: translate(calc(var(--quake) * 0.35), 0); } 80% { transform: translate(calc(var(--quake) * -0.15), 0); } 100% { transform: none; } }
 .hud-bar.mine.fx-split .bar-top span, .hud-bar.mine.fx-split .bigbar { animation: fx-split 0.4s steps(4) forwards; }
 @keyframes fx-split { 0% { text-shadow: -4px 0 rgba(255, 91, 61, 0.9), 4px 0 rgba(127, 209, 199, 0.9); filter: brightness(1.8); } 50% { text-shadow: 3px 0 rgba(255, 91, 61, 0.8), -3px 0 rgba(127, 209, 199, 0.8); } 100% { text-shadow: none; filter: none; } }
