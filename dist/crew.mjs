@@ -157,7 +157,12 @@ export function crewCommand(s, rest) {
   } else if (words[0] === 'kick' && words[1]) {
     if (active(s)) warn(s, 'Finish the fight first.');
     else if (!(s.crewSim || []).some((x) => x.name === words[1])) warn(s, `${words[1]} isn't in your crew.`);
-    else { s.crewSim = s.crewSim.filter((x) => x.name !== words[1]); emit(s, 'info', `${words[1]} leaves your crew.`); }
+    else {
+      s.crewSim = s.crewSim.filter((x) => x.name !== words[1]);
+      if (s.run?.crew) delete s.run.crew[words[1]]; // off the run too
+      if (s.run?.linkedTo === words[1]) s.run.linkedTo = null;
+      emit(s, 'info', `${words[1]} leaves your crew.`);
+    }
   } else warn(s, 'crew, crew sim <class> [<class>…], crew invite <friend>, crew kick <name>, crew off');
   return s.logs.filter((e) => e.id > first);
 }

@@ -191,6 +191,12 @@ test('the crew strip: linked crew follow you, split crew wander, link follows th
   assert.ok(active(s));
   const fighting = matesOf(s).filter((m) => m.encounter).map((m) => m.who);
   assert.deepEqual(fighting, ['nyx'], 'kilo is elsewhere');
+  while (active(s)) { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null }); const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); }
+  play(s, 'link kilo');
+  play(s, 'crew kick kilo');
+  assert.ok(!s.crewSim.some((x) => x.name === 'kilo'), 'out of the crew');
+  assert.ok(!s.run.crew.kilo, 'and off the run');
+  assert.equal(s.run.linkedTo, null, 'no longer following them');
 });
 
 // Helpers: always / never does a member step in.

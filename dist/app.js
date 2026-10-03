@@ -1214,6 +1214,7 @@ $('command-input').addEventListener('keydown', (e) => {
     suggestionIndex = -1;
     suggestionList = pick;
     suggestionIndex = keep;
+    previewAim(shown(), input.value); // a completed command previews too
     return;
   }
   if (suggestionIndex >= 0 && e.key !== 'Enter') suggestionIndex = -1;
@@ -1223,6 +1224,7 @@ $('command-input').addEventListener('keydown', (e) => {
     historyIndex = Math.max(-1, Math.min(history.length - 1, historyIndex + (e.key === 'ArrowUp' ? 1 : -1)));
     input.value = historyIndex < 0 ? '' : history[historyIndex];
     $('suggestions').hidden = true;
+    previewAim(shown(), input.value);
     return;
   }
   if (e.key === 'Escape') { if (tip && !input.value) { hideTip(true); return; } input.value = ''; $('suggestions').hidden = true; return; }
