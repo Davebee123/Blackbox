@@ -87,9 +87,7 @@ code { font-family: var(--mono); color: var(--amber); }
    Eye path: HUD (virus vs you) -> board (parts x cycles) -> prompt.
    The art and log sit to the side and below; nothing needed is there. */
 .combat { height: 100%; display: grid; gap: 12px; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'board stage' 'log stage'; }
-.hud { grid-area: hud; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 24px; padding: 12px 16px; align-items: end; }
-/* The virus: name on top, its bar under it (one column). */
-.hud-virus { display: grid; gap: 8px; min-width: 0; }
+.hud { grid-area: hud; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 12px 16px; align-items: start; }
 .board { grid-area: board; padding: 4px 0 8px; overflow-y: auto; }
 .stage { grid-area: stage; display: flex; flex-direction: column; gap: 8px; padding: 8px; min-height: 0; }
 .lesson-slot:empty { display: none; }
@@ -454,7 +452,7 @@ details summary { font-size: 13px; }
   .combat { display: flex; flex-direction: column; height: auto; }
   .combat > * { min-width: 0; }
   .hud { grid-template-columns: 1fr 1fr; gap: 12px; }
-  .hud-virus { grid-column: 1 / -1; }
+  .hud-id { grid-column: 1 / -1; }
   .brow { grid-template-columns: minmax(96px, 1.2fr) repeat(4, minmax(0, 1fr)); padding: 0 6px; }
   #board .brow { padding-left: 32px; }
   .bname small { display: none; }
@@ -1538,7 +1536,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
 .you-top { display: flex; align-items: center; gap: 14px; }
 /* Your crew under your Signal in the HUD (view.mjs partyMarkup): name, bar, number, a line each. */
-.hud:has(> .hud-crew) { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 0.8fr); }
+.hud:has(> .hud-crew) { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.8fr); gap: 20px; }
 .party { display: grid; gap: 4px; margin-top: 2px; }
 .pmate { display: grid; grid-template-columns: 56px auto 1fr 58px; align-items: center; gap: 8px; font-size: 12px; }
 .pmate b { color: var(--daemon); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
@@ -1695,4 +1693,3 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 
 /* A crewmate's number: smaller and dimmer than yours (Effects: calm). */
 .fx-float.quiet { opacity: 0.7; filter: saturate(0.6); }
-.hud .clock-line { min-height: 16px; } /* the bars line up whether or not there's a line under them */
