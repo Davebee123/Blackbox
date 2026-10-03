@@ -227,13 +227,14 @@ export function hudMarkup(s) {
   const extras = runMode ? crypt : `${crypt}<span class="hud-extra">Uplink ${e.trace}%</span>`;
   const fc = forecast(s);
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
-  // its armor; then your bar; then the crew in a little window on the right.
+  // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
   const tags = `${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
-  return `<div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}</p></div>
-    <div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${partyMarkup(s, fc)}`;
+  // Yours first (what you watch): your Signal, then the crew; the virus's total at the right.
+  return `<div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${partyMarkup(s, fc)}
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}</p></div>`;
 }
 
-// Your crew's health (party frames): its own column in the HUD, a line each. Where they aim is
+// Your crew's health (party frames): a little window beside your Signal, a line each. Where they aim is
 // their avatar on the part's rail; what they did is the number on the part and the log.
 function partyMarkup(s, fc) {
   const e = s.encounter;
