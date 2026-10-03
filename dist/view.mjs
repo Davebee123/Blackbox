@@ -229,20 +229,20 @@ export function hudMarkup(s) {
   return `<div class="hud-id"><h1>${esc(v.name)}</h1><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span>
       ${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}</div>
     <div class="hud-bar enemy"><div class="bar-top"><strong>Virus</strong><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}</p></div>
-    <div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p>${partyMarkup(s, fc)}</div>`;
+    <div class="hud-bar mine ${level}"><div class="bar-top"><strong>${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${partyMarkup(s, fc)}`;
 }
 
-// Your crew's health, with yours (party frames): a line each under your Signal. Where they aim is
+// Your crew's health (party frames): its own column in the HUD, a line each. Where they aim is
 // their avatar on the part's rail; what they did is the number on the part and the log.
 function partyMarkup(s, fc) {
   const e = s.encounter;
   const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
   if (!crew.length) return '';
   const acted = e.steps ? crew.filter(mateUp)[e.steps.next - 1] : null;
-  return `<div class="party">${crew.map((m) => {
+  return `<div class="hud-bar hud-crew"><div class="bar-top"><strong>Crew</strong></div><div class="party">${crew.map((m) => {
     const up = mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = m.encounter.queue;
     return `<div class="pmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}" title="${esc(`${m.who} · ${ARCHETYPES[m.loadout.archetype].name}${up ? (q ? ` · ${q.text}` : '') : ' · down'}`)}"><b>${esc(m.who)}</b>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small></div>`;
-  }).join('')}</div>`;
+  }).join('')}</div></div>`;
 }
 
 function attackChip(i, c, k = '', to = null) {

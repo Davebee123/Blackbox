@@ -325,7 +325,7 @@ Online co-op comes later (a hosted server with logins). To try how it plays firs
 - If your target breaks before your turn (a crewmate got it), your command goes at the next threat instead.
 - Crewmates' hits and breaks show on the board but stay quiet: the sounds are yours.
 - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it. Rewards are yours (the bots keep nothing).
-- On the fight screen each kind of crew information has one home. **Health**: a line per crewmate under your Signal in the HUD (name, bar with the blinking forecast slice, number; struck through when down; a *drawing fire* tag; lit on their turn; hover for their command). **Where they aim**: their avatar on the part's rail. **What happened**: the damage number on the part, their avatar's lunge, and the log, where their lines carry their name.
+- On the fight screen each kind of crew information has one home. **Health**: a Crew column in the HUD, beside your Signal, a line per crewmate (name, bar with the blinking forecast slice, number; struck through when down; a *drawing fire* tag; lit on their turn; hover for their command). **Where they aim**: their avatar on the part's rail. **What happened**: the damage number on the part, their avatar's lunge, and the log, where their lines carry their name.
 
 ## The numbers station (station.mjs)
 

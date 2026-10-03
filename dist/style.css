@@ -1536,11 +1536,12 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
 .you-top { display: flex; align-items: center; gap: 14px; }
 /* Your crew under your Signal in the HUD (view.mjs partyMarkup): name, bar, number, a line each. */
-.party { display: grid; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-.pmate { display: grid; grid-template-columns: 70px auto 1fr 64px; align-items: center; gap: 8px; font-size: 12px; }
+.hud:has(> .hud-crew) { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.8fr); gap: 20px; }
+.party { display: grid; gap: 4px; margin-top: 2px; }
+.pmate { display: grid; grid-template-columns: 56px auto 1fr 58px; align-items: center; gap: 8px; font-size: 12px; }
 .pmate b { color: var(--daemon); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .pmate .tag { font-size: 9px; padding: 0 4px; }
-.pmate:not(:has(.tag)) { grid-template-columns: 70px 1fr 64px; }
+.pmate:not(:has(.tag)) { grid-template-columns: 56px 1fr 58px; }
 .pmate small { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .pbar { position: relative; height: 5px; background: var(--inset); border: 1px solid var(--line); overflow: hidden; }
 .pbar > span:first-child { display: block; height: 100%; background: var(--daemon); }
