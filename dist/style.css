@@ -1539,7 +1539,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 /* Your side (Signal, crew under it) over the board, the virus's bar over its picture: the same columns
    as the page below. The gap makes up for the HUD's own padding, so the virus bar starts where the picture does. */
 .hud { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); column-gap: 21px; }
-.hud-you { display: grid; gap: 8px; min-width: 0; }
+.hud-you { display: grid; gap: 8px; min-width: 0; width: calc(100% / 1.55); } /* as wide as the virus's bar (its column is 1 to this one's 1.55), left-justified */
 
 /* The virus's name on its bar (no separate title). */
 .hud-bar.enemy .bar-top { align-items: baseline; }
@@ -1553,11 +1553,13 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .hud-crew { border: 1px solid var(--line); border-radius: 4px; background: var(--inset); padding: 6px 10px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; }
 .hud-crew .bar-top { display: block; }
 .hud-crew .bar-top strong { font-size: 11px; }
-.party { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px 16px; margin-top: 2px; }
-.pmate { display: grid; grid-template-columns: 44px auto 1fr 52px; align-items: center; gap: 8px; font-size: 12px; }
+.party { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 4px 0; margin-top: 2px; }
+/* A divider between crewmates, so it's clear whose bar is whose. */
+.party .pmate { padding: 0 10px; } .party .pmate:first-child { padding-left: 0; } .party .pmate + .pmate { border-left: 1px solid var(--line-strong, rgba(241, 185, 47, 0.25)); }
+.pmate { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; font-size: 12px; }
 .pmate b { color: var(--daemon); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .pmate .tag { font-size: 9px; padding: 0 4px; }
-.pmate:not(:has(.tag)) { grid-template-columns: 44px 1fr 52px; }
+.pmate:not(:has(.tag)) { grid-template-columns: auto 1fr auto; }
 .pmate small { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .pbar { position: relative; height: 5px; background: var(--inset); border: 1px solid var(--line); overflow: hidden; }
 .pbar > span:first-child { display: block; height: 100%; background: var(--daemon); }
