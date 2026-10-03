@@ -118,17 +118,6 @@ function strikes(events) {
     const key = (e.who || 'you') + '>' + e.target, was = hits.get(key);
     if (!was || rank[result] > rank[was.result]) hits.set(key, { e, result });
   }
-  // A crewmate's command going off: the move floats up in the Now cell of the part they aimed at
-  // (or above their chip in your row), in place of a row of their own.
-  for (const e of events) {
-    if (e.type !== 'resolved' || !e.who || e.auto) continue;
-    const by = initials(e.who), verb = e.message.replace(/\.$/, '').split(' ')[0];
-    pendingStrikes.push(() => {
-      const cell = e.target && partRow(e.target)?.children[1];
-      if (cell) hitfx.say(cell, `${by} ${verb}`); // on the part's row: just the move
-      else hitfx.say(document.querySelector(`#board .cmate[data-mate="${CSS.escape(e.who)}"]`), `${by} ${verb}`, 'crew', 'above');
-    });
-  }
   // Played once the board has redrawn (rows can shift as commands change), from render().
   for (const { e, result } of hits.values()) pendingStrikes.push(() => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result }));
 }
@@ -350,7 +339,7 @@ function react(events) {
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   for (const e of events) {
     if (e.who) {
-      const mate = `.cmate[data-mate="${e.who}"]`; // their chip in the Crew row
+      const mate = `.pmate[data-mate="${e.who}"]`; // their line under your Signal (HUD)
       if (e.type === 'server-hit') {
         art.hit(e.source, 'attack');
         feel.add(e.crit ? 'hurtcrit' : 'hurt', mate, `${e.crit ? 'CRIT ' : ''}−${e.amount}`, { amount: e.amount, silent: hurtVoiced, noEdge: true });

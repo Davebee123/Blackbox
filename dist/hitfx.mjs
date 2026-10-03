@@ -1,7 +1,6 @@
 // Hit effects on the fight board: when a command lands, the shooter's avatar (the initials on the
 // part's left rail, view.mjs) lunges at the part: that's who did it. A crit lunges harder, a broken
 // armor chit flashes it white, a miss shakes it. (How much is the number and the bar: app.js.)
-// say(): a crewmate's command floating up from their avatar as it goes off.
 //
 // The effects live on a layer beside #board, not in it: the board redraws every step of a cycle,
 // which would cut them short. Points are measured from the DOM and divided by the screen's scale,
@@ -39,20 +38,5 @@ export function createHitFx(board, { canMove = () => true } = {}) {
     const at = a ? { left: a.l + 'px', top: a.t + 'px' } : { left: n.l - 32 + 'px', top: n.t + n.h / 2 - 12 + 'px' };
     add(`fx-av ${kind} ${result}`, at, initials);
   }
-  // A few words floating up (what a crewmate just did): inside a part's Now cell at its left edge
-  // (the damage number rises at the right), or above an element (place: 'above').
-  function say(el, text, kind = 'crew', place = 'cell') {
-    if (!el?.isConnected) return;
-    const f = frame(), r = local(f, el.getBoundingClientRect());
-    const node = document.createElement('span');
-    node.className = `fx-say ${kind}`;
-    node.textContent = text;
-    // Several at one spot in quick succession stack, one line under the other.
-    const key = `${Math.round(r.l)}:${Math.round(r.t)}`, n = [...layer.querySelectorAll('.fx-say')].filter((x) => x.dataset.k === key).length;
-    node.dataset.k = key;
-    Object.assign(node.style, place === 'above' ? { left: r.l + 'px', top: r.t - 16 - n * 14 + 'px' } : { left: r.l + 8 + 'px', top: r.t + 6 + n * 15 + 'px' });
-    layer.appendChild(node);
-    setTimeout(() => node.remove(), 1300);
-  }
-  return { strike, say };
+  return { strike };
 }

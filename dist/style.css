@@ -1534,21 +1534,18 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .intent { position: relative; }
 .intent .at { position: absolute; top: -8px; right: 4px; padding: 0 4px; font: 600 9px var(--mono); letter-spacing: 0.5px; color: var(--bright); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 2px; }
 #log li.crew .who, .log li.crew .who { color: var(--daemon); font-weight: 600; }
-/* Your crew shares your row (view.mjs boardMarkup): an avatar each, their Signal under it. */
 .you-top { display: flex; align-items: center; gap: 14px; }
-.cmates { display: flex; gap: 8px; }
-.cmate { display: grid; justify-items: center; gap: 3px; width: 32px; }
-.cmate .aim { position: relative; }
-.cmate .part-bar { width: 32px; height: 3px; }
-.cmate .part-bar.mate span { background: var(--daemon); }
-.cmate.down { opacity: 0.4; filter: grayscale(1); }
-.cmate.acting .aim { box-shadow: inset 0 0 0 1px var(--daemon), 0 0 10px rgba(195, 166, 255, 0.8); }
-.cm-fire { position: absolute; right: -5px; top: -5px; font-style: normal; font-size: 9px; color: var(--hot); }
-/* What a crewmate just did, floating up from their avatar (hitfx.mjs say). */
-.fx-say { position: absolute; font: 600 11px var(--mono); white-space: nowrap; pointer-events: none; animation: fx-say 1.2s ease-out forwards; text-shadow: 0 1px 2px #000; }
-.fx-say.crew { color: var(--daemon); }
-@keyframes fx-say { 0% { transform: translateY(4px); opacity: 0; } 15% { transform: translateY(0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
-.no-motion .fx-say { animation: none; opacity: 1; }
+/* Your crew under your Signal in the HUD (view.mjs partyMarkup): name, bar, number, a line each. */
+.party { display: grid; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.pmate { display: grid; grid-template-columns: 70px auto 1fr 64px; align-items: center; gap: 8px; font-size: 12px; }
+.pmate b { color: var(--daemon); font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.pmate .tag { font-size: 9px; padding: 0 4px; }
+.pmate:not(:has(.tag)) { grid-template-columns: 70px 1fr 64px; }
+.pmate small { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.pbar { position: relative; height: 5px; background: var(--inset); border: 1px solid var(--line); overflow: hidden; }
+.pbar > span:first-child { display: block; height: 100%; background: var(--daemon); }
+.pmate.down { opacity: 0.4; } .pmate.down b { text-decoration: line-through; }
+.pmate.acting b { color: var(--bright); }
 .byou.acting { background: rgba(127, 209, 199, 0.08); box-shadow: inset 3px 0 0 var(--you); }
 
 /* The hit effects layer (hitfx.mjs) sits over the board, positioned against this. */
