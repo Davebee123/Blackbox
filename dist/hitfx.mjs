@@ -1,6 +1,7 @@
 // Hit effects on the fight board: when a command lands, the shooter's avatar (the initials on the
-// part's left rail, view.mjs) lunges at the part, and a band of their colour sweeps along its bar from the right (the way it drains) back toward them
-// Integrity bar. A miss shakes the avatar; breaking an armor chit flashes it white.
+// part's left rail, view.mjs) lunges at the part, and a band of their colour sweeps along its
+// Integrity bar from the right (the way it drains) back toward them. A miss shakes the avatar;
+// breaking an armor chit flashes it white.
 //
 // The effects live on a layer beside #board, not in it: the board redraws every step of a cycle,
 // which would cut them short. Points are measured from the DOM and divided by the screen's scale,
