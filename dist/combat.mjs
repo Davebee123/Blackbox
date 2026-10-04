@@ -872,7 +872,7 @@ export function installBlock(s, id) {
   if (s.install) return `Installing ${SERVICES[s.install.id].name} v${s.install.v}. One install at a time.`;
   if (d.special && !knows(s, id)) return `${d.name} needs its source: find ${id}.src in a vault on a deeper run.`;
   if (!d.special && !knows(s, id)) return `You don't have the ${d.name} blueprint yet.`;
-  if (v === 1 && portsUsed(s) >= portCount(s)) return `All ${portCount(s)} ports are in use. Uninstall a service first.`;
+  if (v === 1 && portsUsed(s) >= portCount(s)) return `All ${portCount(s)} service slots are in use. Uninstall a service first.`;
   if (serverLevel(s) < VERSIONS[v - 1].needs) return `${d.name} v${v} needs server level ${VERSIONS[v - 1].needs}.`;
   const cost = serviceCost(id, v), m = materialsOf(s);
   const short = Object.entries(cost).filter(([k, n]) => n > (k === 'credits' ? s.server.credits : m[k] || 0));

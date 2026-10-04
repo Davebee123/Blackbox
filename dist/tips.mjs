@@ -89,7 +89,7 @@ export const TIPS = [
   { id: 'net-pack', page: 'net', at: '.net-pack', when: (s) => (s.run?.pack.length || 0) > 0, text: 'Files you pull wait in your pack. Jack out to bank them and keep them.' },
 
   // ---------- server ----------
-  { id: 'server-ports', page: 'server', at: '.server-head', text: 'Your server runs services on its ports. Each one costs code from the viruses you kill, and takes real time to install.' },
+  { id: 'server-ports', page: 'server', at: '.server-head', text: 'Your server runs services in its service slots. Each one costs code from the viruses you kill, and takes real time to install.' },
   { id: 'server-wall', page: 'server', at: '.wall-card', text: 'Your wall meets invaders sent from the places you found. A Firewall service makes it hold more.' },
   { id: 'server-queue', page: 'server', at: '.install', text: 'Installs run one at a time in real time. They keep going while you fight, go on runs, or close the game.' },
   { id: 'server-blueprints', page: 'server', at: '.blueprint-card', text: 'You can only build a service once you have its blueprint. Blueprints wait in vaults, and a kill drops one now and then.' },
@@ -108,7 +108,7 @@ export const TIPS = [
   // ---------- daemons ----------
   { id: 'daemons', page: 'daemons', at: '.daemon-slots', text: 'Daemons are programs you find on runs. A slotted daemon fights beside you on its own cooldown, and finding the same one again upgrades it.' },
   { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade: pick the one that fits how you play. You can rebuild later for credits.' },
-  { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'An outpost has ports for modules, like your server. Each one bends how the outpost works, and it stays put when you swap the harvester.' },
+  { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'An outpost has module slots, like the service slots on your server. Each one bends how the outpost works, and it stays put when you swap the harvester.' },
   { id: 'server-config', page: 'server', when: (s) => (s.configsOwned || []).length > 0, at: '.cfg-row', text: 'You crafted a config. Configs change how a service works rather than how strong it is, and you can swap them freely between fights.' },
 ];
 

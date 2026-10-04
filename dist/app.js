@@ -1404,7 +1404,7 @@ function goTo(target) {
   const [where, what] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
-  else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what) mapSel = what; go('map'); }
+  else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) mapSel = what; go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
 }
@@ -1412,6 +1412,15 @@ document.addEventListener('click', (e) => { const g = !e.target.closest('#comms'
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && commsOpen) { setComms(false); } });
 
+// Craft sections you fold stay folded.
+document.addEventListener('toggle', (e) => {
+  const sec = e.target.closest?.('details[data-sec]');
+  if (!sec) return;
+  const shut = new Set(campaign.settings.craftShut || []);
+  if (sec.open) shut.delete(sec.dataset.sec); else shut.add(sec.dataset.sec);
+  campaign.settings.craftShut = [...shut];
+  save();
+}, true);
 // The Craft page's protocol recipe picker.
 document.addEventListener('change', (e) => {
   if (e.target.matches?.('[data-focus-select]')) { compileFocus = e.target.value || null; dirty = true; }

@@ -512,7 +512,7 @@ test('the install queue: code and credits, one at a time, in real time; versions
   full.server.credits = 9999;
   svc(full, { raid: 1, kernel: 1, scrubber: 1, hotpatch: 1, counter: 1, honeypot: 1 });
   assert.equal(portsUsed(full), 6);
-  assert.match(installBlock(full, 'sandbox'), /ports are in use/);
+  assert.match(installBlock(full, 'sandbox'), /service slots are in use/);
   command(full, 'developer server 25');
   assert.equal(portCount(full), 9);
   command(full, 'install raid', 0);

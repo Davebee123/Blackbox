@@ -57,7 +57,7 @@ export const CONSORTIUM = {
     { at: 3, name: 'Linked', rule: '+10% outpost yield and dividend', yield: 0.1 },
     { at: 5, name: 'Mesh', rule: 'Siege bounties doubled', bounty: 2 },
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
-    { at: 12, name: 'Grid', rule: '+1 bandwidth and +10% wall', bandwidth: 1, wall: 0.1 },
+    { at: 12, name: 'Grid', rule: '+1 harvester slot and +10% wall', bandwidth: 1, wall: 0.1 },
   ],
   names: ['Halyard', 'Null Choir', 'Black Lattice', 'Copperline', 'Saltmarsh Ring', 'Dead Channel', 'Quiet Meridian', 'Glasshouse', 'Low Orbit', 'Tinroof'],
 };
@@ -162,6 +162,8 @@ function tally(s, f) {
   return out;
 }
 export const dividendRate = (s) => tally(s, (l) => dividendOf(s, l));
+// Each member outpost's part of the dividend, for the table on the Consortium page.
+export const dividendSources = (s) => memberServers(s).filter((l) => l.held).map((l) => ({ id: l.id, name: l.name, member: l.member, kind: l.held.kind, material: l.held.kind === 'scraper' ? null : codeOf(l.family), rate: dividendOf(s, l), waiting: l.held.share || 0, cap: dividendCap(s, l), stopped: !dividendOf(s, l) }));
 export const dividendWaiting = (s) => tally(s, (l) => Math.floor(l.held.share || 0));
 export const dividendText = (t, digits = 0) => [...Object.entries(t.code).filter(([, n]) => n >= (digits ? 0.05 : 1)).map(([m, n]) => `${digits ? n.toFixed(digits) : n} ${MATERIALS[m].name}`), ...(t.rolls >= (digits ? 0.05 : 1) ? [`${digits ? t.rolls.toFixed(digits) : t.rolls} ${t.rolls === 1 ? 'find' : 'finds'}`] : [])].join(', ');
 const shareFull = (s) => memberServers(s).some((l) => l.held && dividendCap(s, l) && (l.held.share || 0) >= dividendCap(s, l));

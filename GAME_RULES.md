@@ -167,9 +167,9 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 
 ### Services (your server)
 
-The server has no items. It runs **services** on **ports**, Master of Orion style: each service is one rule, built from code, and upgraded **v1 → v2 → v3**. The Server page (type `server` or `services`) shows ports, code, the install queue, what's running and what you can build.
+The server has no items. It runs **services** in **service slots**, Master of Orion style: each service is one rule, built from code, and upgraded **v1 → v2 → v3**. The Server page (type `server` or `services`) shows ports, code, the install queue, what's running and what you can build.
 
-**Ports.** 6 to start, one more every 8 server levels (7 at 9, 8 at 17 … 12 at 41). A running service uses one port whatever its version.
+**Service slots** (shown as pips, filled for used). 6 to start, one more every 8 server levels (7 at 9, 8 at 17 … 12 at 41). A running service uses one slot whatever its version.
 
 **The install queue.** One install at a time, in real time, and it keeps going while you fight, run or close the game. You can queue one from anywhere except mid-fight (on a run too: it's your server doing the work). `cancel install` refunds everything. `uninstall <service>` frees the port and gives back half the code it cost (credits and salvage don't come back).
 
@@ -210,7 +210,7 @@ Services are built from **code**, one kind per virus family, plus rare **Exploit
 
 A kill drops 1 code at level 1 (+1 every 10 levels); a guard drops half again, into your pack. Every vault's `payload.bin` is a cache of 12 + half the location's level. Scavenge adds to all of it. Salvage stays generic: it's for compiling protocols.
 
-**Old saves.** Server gear that was installed comes back as v1 of the matching service, free (as ports allow); the rest turns into code. Rig items become protocols, and Cron Job and Snapshot source becomes service source. The older Upgrades list came back the same way (Hardening as RAID Array, Amplifier as Uplink Array, the Signal booster as a loaded Stock Relay). Daemon slots come from server level (+1 at 10 and 20).
+**Old saves.** Server gear that was installed comes back as v1 of the matching service, free (as service slots allow); the rest turns into code. Rig items become protocols, and Cron Job and Snapshot source becomes service source. The older Upgrades list came back the same way (Hardening as RAID Array, Amplifier as Uplink Array, the Signal booster as a loaded Stock Relay). Daemon slots come from server level (+1 at 10 and 20).
 
 ## Mail and contracts
 
@@ -282,7 +282,7 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 | 3 | Linked | +10% outpost yield and dividend |
 | 5 | Mesh | Siege bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
-| 12 | Grid | +1 bandwidth and +10% wall |
+| 12 | Grid | +1 harvester slot and +10% wall |
 
 Up to 20 servers. Crews of up to three are drawn from consortium members and friends (*Invite to crew*, `crew invite <name>`).
 
@@ -388,15 +388,15 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   - Tap: a small trickle (0.5 + level/20 an hour), noticed a quarter as often.
   - Traits: Rich (+50% yield), Deep (double storage), Quiet (noticed half as often), Sturdy (half the time a siege gives up on its own), Lucky (better loot rolls).
 - **Site traits** are fixed when a server is found (45% have one): Rich (+50% yield), Legacy (better loot rolls; its vault more often holds a package, and a better one), Backbone (no bandwidth), Hostile (twice the sieges, +50% yield), Hardened (its natives are Armored).
-- **Bandwidth** limits how many outposts run at once: 1, plus 1 every 10 server levels (5 at most).
+- **Harvester slots** (pips on the server card and the outpost) limit how many outposts run at once: 1, plus 1 every 10 server levels (5 at most).
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
-- **Pulling out** gives the harvester back with what it holds; the port then resets for 30 minutes.
+- **Pulling out** gives the harvester back with what it holds; the slot then resets for 30 minutes.
 - **Sieges.** Natives notice an outpost about every 6 logged-on hours (by kind, traits and site). You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level). If you don't:
   - the outpost goes into **lockdown** for 2 real hours: no harvesting, but its stockpile is kept;
   - the server and everything past it stay open (nothing is ever cut off).
 - **Retake** it (beat the natives there) to end a lockdown sooner. In a consortium, the virus that won moves on along the trunk line (see Consortium).
 
-- **Modules.** Each outpost has ports, like your server: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is in lockdown). A module costs 150 credits, 8 of the server's code and 5 salvage; removing one gives half the code back.
+- **Modules.** Each outpost has **module slots** (pips), like your server's service slots: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is in lockdown). A module costs 150 credits, 8 of the server's code and 5 salvage; removing one gives half the code back.
 
   | Module | What it does |
   |---|---|
@@ -406,13 +406,13 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   | IDS | Natives notice it half as often; swarms heading here are seen 50% sooner |
   | Honeytoken | Draws trouble, for when you want more fights: noticed twice as often, swarms come twice as often and pick it first, infestations come sooner and pick it first. Beating them here pays double (a broken siege: an hour's harvest and a kill's XP; an infestation: two hours instead of one; a swarm: double code and XP) |
 
-- **Home services for outposts:** Edge Router (+1 / 2 / 3 bandwidth, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
+- **Home services for outposts:** Edge Router (+1 / 2 / 3 harvester slots, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
 - **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 1,000 credits, between fights.
 
   | Architecture | Trade |
   |---|---|
   | Fortress | Wall rating +25%; harvesters yield 25% less |
-  | Hub | +2 outpost bandwidth; wall rating −15% |
+  | Hub | +2 harvester slots; wall rating −15% |
   | Lab | Crafting costs 30% fewer credits; outposts are noticed a quarter more often |
 
 - **Infestations.** Every so often (two hours, divided by how many outposts you run, a Honeytoken counting three; never under 40 minutes, 20 with a Honeytoken) a pack of 2–3 wild viruses moves into one outpost, at its level and one layer deeper. They stay 20 minutes. **Clear** them one fight at a time (`outpost clear <server>`) and the stockpile gets an hour's worth of yield on top, plus XP. Ignore them and they leave; nothing is lost.
@@ -519,7 +519,7 @@ Two kinds, so a new player never faces everything at once.
 - **Hacker level (yours, per class, 1–50).** A long, WoW-style climb. Every class starts at level 1 with Spike and one skill, and levels on its own. **Every level adds 4% power**: your damage, heals, shields and Signal grow (Spike hits 25 at level 1, 44 at 20, 74 at 50), and skill text shows your current numbers. Skills unlock one at a time: level 1 your first skill, 3 your second, 5 your third, 7 your class's Backtrace (a passive), 10/14/18/22 skills four to seven (the bar is full at 22), then one more every 4 levels from 26 to 38. Past seven you choose which seven to equip.
 - **XP (WoW-style):** a kill is worth 20 + 10 × the enemy's level: a home defense 1×, a guard 0.8×, cracking a vault 1.5× and your first run on a location 0.7× (at the location's level). Enemies above you give up to 25% more; each level below you takes 10% off, so ten levels below give nothing. Level L to L+1 takes about 5 + 1.2×L kills of your own level (6 at level 1, 27 at 18, 64 at 49): an MMO-length climb of about 1,700 fights to 50.
 - **Talent points:** one every other level from 10 (21 by level 50, a full tree).
-- **Server level (shared, 1–50).** It gets every point of XP any of your classes earns, plus 10 per banked item and 1 per 10 credits banked, on the same curve, so it keeps pace with your best class (and pulls ahead with alts). Its level sets its base Integrity (100, +4% a level), opens daemon slots (+1 at 10 and 20), adds a service port every 8 levels, and opens service v2 (10) and v3 (25).
+- **Server level (shared, 1–50).** It gets every point of XP any of your classes earns, plus 10 per banked item and 1 per 10 credits banked, on the same curve, so it keeps pace with your best class (and pulls ahead with alts). Its level sets its base Integrity (100, +4% a level), opens daemon slots (+1 at 10 and 20), adds a service slot every 8 levels, and opens service v2 (10) and v3 (25).
 - **Enemies have a level (1–60).** Home intrusions come in at your level (random ones sometimes one higher). A location keeps the level it was found at (your level then, +2 per layer down): its guards, vault protocols and code caches are that level, so old locations get easier as you outlevel them. Their size and damage grow 4% a level like yours (a level-1 virus is gentler: 80% of a level-1 match, ramping to 100% by level 6). Mutations and enemy crits from level 3; more armor chits at 3, 7 and 10. Enemy levels are colored WoW-style: red (5+ above you), orange (3–4 above), yellow (about even), green (below), grey (10+ below, no XP).
 - **Level gap (WoW-style):** one level up is about even. Past that, each level an enemy has over you takes 7% off everything you deal it (never under 40%) and adds 10% to everything it deals you (`CONFIG.gap`), so orange (3–4 up) is a real fight and red (5+) a gamble: simulated, a geared level-5 player beats a level-9 virus about half the time, and a level-11 one almost never. Below you it goes a little the other way (3% a level, up to +15% dealt and −30% taken).
 - **Misses (Classic WoW):** 5% of your damaging hits miss a same-level enemy, +1% per level it's above you, −1% per level below (never under 0); your Accuracy takes some off. It misses you the same way the other direction, plus your Evasion.
@@ -614,6 +614,15 @@ The screens carry names, numbers and state, never how-to text. Rules live in two
 - **First-time tips** for learning: the first time something is on screen (your server, an intrusion, the timeline, armor chits, an invader, the wall, a protocol drop, code, a mutation, a quirk…), a small tip points at it and says how it works, once. One tip at a time. Tips in a fight pause it until you close them (Got it, Enter on an empty line, Esc, or clicking the thing it points at). "Turn tips off" on any tip, or on the System page, stops them; **Replay tips** there shows them again. Seen tips are kept with your settings, so a new game doesn't repeat them.
 
 The log and the terminal still speak (that's the MUD's voice): what happened, in a line. They don't teach.
+
+## The pages, at a glance
+
+Pages show instead of explaining; the words are in the hover.
+
+- **Wall: a level ruler.** Teal for invader levels your wall stops, amber for the ones it holds at a siege, red hatching for the ones that break through, with your level marked on it and the incoming invader too. The Server page has the full ruler with its numbers; the map's server card has a thin one, and in a consortium a second thin one for while you're away.
+- **The map's server card:** the server's level bar, an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, and service and harvester slots as pips. An install in progress shows as a small bar.
+- **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols, Configs and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid).
+- **Consortium:** members sit on one grid: online dot, name (a teal edge and a runner icon if they're in your crew, ★ for the founder), class and level, outposts, servers, and where they are (click it to see that server on the map). The dividend is a table, one row per member outpost: whose, which server, what it yields, how much an hour, and how full its share is.
 
 ## The pager
 

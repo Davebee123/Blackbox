@@ -203,3 +203,19 @@ test('the forecast: what your command will cost a part, and what the virus will 
   e.chits = 1;
   assert.equal(forecast(s).you, e.encrypt || 0, 'an armor chit takes the hit');
 });
+
+test('an outpost card renders with its stockpile, module slots and an infestation box', async () => {
+  const { mapMarkup } = await import('./dist/view.mjs');
+  const { play } = await import('./dist/run.mjs');
+  const s = fresh();
+  command(s, 'developer location worm');
+  const l = s.locations[0];
+  l.takenOver = true;
+  s.harvesters = [{ kind: 'siphon', level: 5, traits: [] }];
+  play(s, `outpost install ${l.id} 1`);
+  l.outpost.infest = { total: 3, count: 2, left: 600000, seed: 3 };
+  const html = mapMarkup(s, l.id);
+  assert.match(html, /class="lvl-bar"/);
+  assert.match(html, /Module slots/);
+  assert.match(html, /op-box infest/);
+});

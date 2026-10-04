@@ -353,11 +353,11 @@ export function outpostCommand(s, full, now) {
   if (verb === 'install') {
     if (!loc.takenOver) return warn(s, `Take ${loc.name} over first: open its vault.`);
     if (o?.h) return warn(s, `${loc.name} already runs a harvester.`);
-    if (o?.readyAt && now < o.readyAt) return warn(s, `${loc.name}'s port is still resetting (${Math.ceil((o.readyAt - now) / 60000)} min).`);
+    if (o?.readyAt && now < o.readyAt) return warn(s, `${loc.name}'s harvester slot is still resetting (${Math.ceil((o.readyAt - now) / 60000)} min).`);
     const i = Math.max(1, Number(b) || 1) - 1;
     const h = harvesters(s)[i];
     if (!h) return warn(s, 'You have no harvester. Compile one on the Map\'s server card.');
-    if (loc.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s)) return warn(s, `No bandwidth left (${bandwidthUsed(s)}/${bandwidth(s)}). Pull a harvester out, or level your server.`);
+    if (loc.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s)) return warn(s, `No harvester slot free (${bandwidthUsed(s)}/${bandwidth(s)}). Pull a harvester out, or level your server.`);
     harvesters(s).splice(i, 1);
     loc.outpost = { h, at: now, stock: 0, siege: null, lockdown: null };
     return emit(s, 'outpost-up', `Outpost up on ${loc.name}: ${harvesterName(h)}. It fills while you're away; connect to collect.`, { location: loc.id });
@@ -369,7 +369,7 @@ export function outpostCommand(s, full, now) {
     if (harvesters(s).length >= OUTPOST.stashCap) return warn(s, `Your harvester rack is full (${OUTPOST.stashCap}).`);
     harvesters(s).push(o.h);
     loc.outpost = { readyAt: now + OUTPOST.resetMs };
-    return emit(s, 'info', `Pulled the harvester out of ${loc.name}. Its port resets for ${OUTPOST.resetMs / 60000} minutes.`);
+    return emit(s, 'info', `Pulled the harvester out of ${loc.name}. Its slot resets for ${OUTPOST.resetMs / 60000} minutes.`);
   }
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
