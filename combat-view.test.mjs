@@ -219,3 +219,28 @@ test('an outpost card renders with its stockpile, module slots and an infestatio
   assert.match(html, /Module slots/);
   assert.match(html, /op-box infest/);
 });
+
+test('what you type changes the expected damage on the board before you press Enter', async () => {
+  const { forecast } = await import('./dist/view.mjs');
+  const s = fresh();
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  for (const p of s.encounter.virus.parts) p.armor = 0;
+  const p = s.encounter.virus.parts[0];
+  command(s, `spike ${p.id}`);
+  const queued = forecast(s).parts[p.id];
+  const typed = forecast(s, { ability: 'overload', target: p.id, ok: true }).parts[p.id];
+  assert.ok(typed > queued, `${typed} vs ${queued}`);
+  assert.equal(forecast(s, { ability: 'overload', target: p.id, ok: false }).parts[p.id], queued, 'one that would not go through changes nothing');
+});
+
+test('the chit forecast knows a heavy hit breaks two', async () => {
+  const { forecast } = await import('./dist/view.mjs');
+  const s = fresh();
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  const p = s.encounter.virus.parts.find((x) => x.armor > 0);
+  p.armor = 3;
+  assert.equal(forecast(s, { ability: 'spike', target: p.id, ok: true }).chits[p.id], 1);
+  assert.equal(forecast(s, { ability: 'overload', target: p.id, ok: true }).chits[p.id], 2);
+});

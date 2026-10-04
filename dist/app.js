@@ -683,13 +683,14 @@ function updateSuggestions() {
 // not lit, …) shows as a warning instead, the reason on hover.
 let aimPreview = null;
 function previewAim(s, text) {
-  const was = aimPreview && aimPreview.target + aimPreview.ok;
+  const key = () => aimPreview && aimPreview.target + aimPreview.ok + aimPreview.ability;
+  const was = key();
   aimPreview = null;
   if (module === 'combat' && active(s) && text.trim()) {
     const intent = parse(s, text.trim().replace(/\s(last|late)$/, '')); // "… last" only changes when it goes
-    if (intent?.target) { const why = validate(s, intent); aimPreview = { target: intent.target, ok: !why, why: why || '', text: text.trim() }; }
+    if (intent?.target) { const why = validate(s, intent); aimPreview = { target: intent.target, ability: intent.ability, ok: !why, why: why || '', text: text.trim() }; }
   }
-  if ((aimPreview && aimPreview.target + aimPreview.ok) !== was) dirty = true;
+  if (key() !== was) dirty = true; // a different ability changes what the board expects it to do
 }
 
 // ---------- map zoom ----------
@@ -862,9 +863,9 @@ function render(force = false) {
   const side = sidebarOn();
   document.body.classList.toggle('with-sidebar', side);
   $('sidebar').hidden = !side;
-  if (side) put('sidebar', V.sidebarMarkup(s, { module: combatLike && hasFight ? 'combat' : module, mapSel, mapView }));
+  if (side) put('sidebar', V.sidebarMarkup(s, { module: combatLike && hasFight ? 'combat' : module, mapSel, mapView, preview: aimPreview }));
   if (combatLike && hasFight) {
-    put('hud', V.hudMarkup(s, { party: !side }));
+    put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }));
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();

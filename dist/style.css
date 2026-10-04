@@ -1285,6 +1285,13 @@ body.with-sidebar .workspace > .combat, body.with-sidebar .workspace > .page { g
 .sb-crew .pmate:first-child { border-top: 0; padding-top: 0; }
 .sb-crew .pmate .pbar { grid-column: 1 / -1; }
 .sb-crew .pm-cls { color: var(--muted); font-size: 11px; }
+.sb-crew .pm-tag { grid-column: 1 / -1; justify-self: start; }
+.pm-intent { grid-column: 1 / -1; display: flex; align-items: center; gap: 5px; margin-top: 2px; padding: 4px 6px; border: 1px dashed var(--line); font: 500 12px var(--mono); color: var(--amber); }
+.pm-intent .glyph { margin: 0; width: 13px; height: 13px; }
+.pm-intent b { font-weight: 600; } .pm-intent .pm-at { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .pm-intent small { margin-left: auto; color: var(--dim); }
+.pm-intent.verb-burn { color: #ff8c3d; } .pm-intent.verb-debuff, .pm-intent.verb-stun { color: var(--you); } .pm-intent.verb-heal, .pm-intent.verb-shield, .pm-intent.verb-buff { color: var(--next); } .pm-intent.verb-util { color: var(--daemon); }
+.pm-intent.dim { color: var(--dim); }
+.sb-crew .pmate.acting .pm-intent { border-style: solid; border-color: currentColor; background: rgba(241, 185, 47, 0.08); }
 .sb-crew.solo button { justify-self: start; }
 .sb-note { color: var(--muted); font: 11px var(--mono); }
 .sb-select { display: grid; gap: 10px; }

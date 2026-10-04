@@ -22,7 +22,7 @@ import { archWall } from './architecture.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { cooldownOf, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
+import { cooldownOf, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -169,7 +169,8 @@ export function timelineMarkup(s) {
 // crewmate's will do to each part (a hit on an armored part only breaks a chit), and the damage
 // the virus's visible attacks will do to you and the crew (after chits, shields and Block).
 // Crits and misses aren't guessed. Shown as a blinking white slice at the end of each bar.
-export function forecast(s) {
+// preview: what you're typing (app.js), counted instead of your queued command while it would go through.
+export function forecast(s, preview = null) {
   const e = s.encounter, out = { parts: {}, chits: {}, total: 0, you: 0, mates: {} };
   if (!active(s)) return out;
   const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter && mateUp(m)) : [];
@@ -185,11 +186,12 @@ export function forecast(s) {
     const breaks = (n) => { const k = Math.min(n, armor[p.id]); armor[p.id] -= k; if (k) out.chits[p.id] = (out.chits[p.id] || 0) + k; };
     if (a.strip) return breaks(a.strip); // Crack: chits, no damage
     if (!dmg && !a.tick) return; // Tag and the like: no hit, no chit
-    if (armor[p.id] > 0 && !ignoresArmor(st, q.ability)) return breaks(1); // a hit (or a burn's first tick) on armor breaks one chit
+    // A hit (or a burn's first tick) on armor breaks one chit; a heavy hit (CONFIG.heavyHit) or Kill Process two.
+    if (armor[p.id] > 0 && !ignoresArmor(st, q.ability)) return breaks(a.chits > 1 || (!a.tick && skillBase(st, q.ability, p) >= CONFIG.heavyHit * powerOf(st) - 1e-9) ? 2 : 1);
     out.parts[p.id] = Math.min(p.integrity, (out.parts[p.id] || 0) + dmg);
   };
   const auto = !e.queue && e.lastAttack ? { ability: e.lastAttack.split(' ')[0], target: e.lastAttack.split(' ')[1] } : null;
-  shoot(s, e.queue || auto);
+  shoot(s, preview?.ok && preview.ability ? preview : e.queue || auto);
   for (const m of crew) shoot(m, m.encounter.queue);
   out.total = Object.values(out.parts).reduce((a, b) => a + b, 0);
   // Incoming: this cycle's visible damage attacks, plus encryption on you.
@@ -212,7 +214,7 @@ export function forecast(s) {
 // The blinking slice on a bar: from what's left after the hit up to where the bar is now.
 const lossMark = (now, max, loss) => (loss > 0 && max > 0 ? `<i class="loss" style="left:${((now - loss) / max) * 100}%;width:${(loss / max) * 100}%" title="−${loss} this cycle"></i>` : '');
 
-export function hudMarkup(s, { party = true } = {}) {
+export function hudMarkup(s, { party = true, preview = null } = {}) {
   const e = s.encounter, v = e.virus;
   runMode = e.mode === 'run';
   const hp = virusIntegrity(s);
@@ -225,7 +227,7 @@ export function hudMarkup(s, { party = true } = {}) {
   const weak = v.weakKnown ? part(s, v.weakPoint) : null;
   const armor = armorLeft(s);
   const extras = runMode ? '' : `<span class="hud-extra">Uplink ${e.trace}%</span>`; // encryption shows in Status
-  const fc = forecast(s);
+  const fc = forecast(s, preview);
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
   const tags = `${v.elite ? '<span class="tag hot tag-elite" title="Elite: built for a crew. Much tougher; three times the XP and drop rolls.">elite</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
@@ -357,7 +359,7 @@ export function boardMarkup(s, selected, preview = null) {
   const e = s.encounter;
   runMode = e.mode === 'run';
   const fighting = active(s);
-  const fc = forecast(s);
+  const fc = forecast(s, preview);
   // Damage on the timeline is what you'll actually take after your Reduction.
   const list = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i)) : [];
   const hidden = fighting && timersHidden(s);
@@ -1902,7 +1904,7 @@ export function sawTab(s, tab) {
 // ---------- the sidebar: on every page, fights included ----------
 // You (your health), your crew (live bars in a fight), then what this page is about: the map's
 // selection, the virus you're fighting, or what needs you. Narrow screens and `sidebar off` hide it.
-export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 'mine' } = {}) {
+export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 'mine', preview = null } = {}) {
   const fighting = active(s), e = s.encounter, d = defender(s);
   const bar = (cls, cur, max, label, icon) => `<div class="sb-bar ${cls} ${cur / max <= 0.3 ? 'low' : cur / max <= 0.6 ? 'mid' : ''}" title="${esc(label)}">${glyph(icon)}<span class="sb-track"><span style="width:${Math.max(0, (cur / max) * 100)}%"></span></span><b>${cur}</b><small>/${max}</small></div>`;
   const h = hackerOf(s);
@@ -1910,11 +1912,15 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
     ${bar('srv', s.server.integrity, s.server.max, 'Server Integrity', 'integrity')}${bar('sig', s.run ? s.run.integrity : signalNow(s), s.run ? s.run.max : maxSignal(s), 'Signal', 'signal')}</section>`;
   // The crew: live in a run fight, else as they'll join you.
   const mates = matesOf(s), inFight = fighting && e.mode === 'run';
-  const fc = inFight ? forecast(s) : null;
+  const fc = inFight ? forecast(s, preview) : null;
+  const actedWho = inFight ? e.steps?.order?.[e.steps.next - 1] : null; // whose turn just played
   const crew = mates.length
-    ? `<section class="sb-block sb-crew"><div class="sb-head"><b>Crew</b><small>${mates.length}/3</small></div><div class="party">${mates.map((m) => {
+    ? `<section class="sb-block sb-crew"><div class="sb-head"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small></div><div class="party">${mates.map((m) => {
         const live = inFight && m.encounter, up = !live || mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = live ? m.encounter.queue : null;
-        return `<div class="pmate${up ? '' : ' down'}" data-mate="${esc(m.who)}" title="${esc(`${m.who} · ${ARCHETYPES[m.loadout.archetype].name}${q ? ` · ${q.text}` : ''}`)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)}</small>${live && up && drawingFire(m) ? '<span class="tag hot">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small></div>`;
+        // What they mean to do this cycle: the skill (its verb's colour and icon) and the part.
+        const a = q && ABILITIES[q.ability], tgt = q?.target && part(s, q.target);
+        const intent = !live ? '' : !up ? '<div class="pm-intent dim">down</div>' : a ? `<div class="pm-intent verb-${a.verb}" title="${esc(a.help || a.short || '')}">${glyph(a.verb)}<b>${esc(a.name)}</b>${tgt ? `<span class="pm-at">→ ${esc(tgt.name)}</span>` : ''}${q.last ? '<small>last</small>' : ''}</div>` : '<div class="pm-intent dim">holding</div>';
+        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)}</small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small>${intent}</div>`;
       }).join('')}</div></section>`
     : `<section class="sb-block sb-crew solo"><div class="sb-head"><b>Crew</b><small>solo</small></div><button type="button" class="act dim" data-people-open title="Friends, consortium members and who's online">${glyph('run')}Find a crew</button></section>`;
   // What this page is about.
@@ -1927,5 +1933,6 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
     const al = commsOf(s).filter((c) => !c.done && c.go).slice(0, 4);
     ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${esc(c.label)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
   }
-  return `${you}${crew}${ctx}`;
+  // In a fight it's just the party: your own health and aim are on the HUD and the board.
+  return fighting && module === 'combat' ? crew : `${you}${crew}${ctx}`;
 }
