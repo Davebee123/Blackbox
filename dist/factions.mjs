@@ -114,6 +114,7 @@ export function buyFrom(s, f, id, at = now()) {
   if (!FACTIONS[f] || f === 'halcyon') return warn(s, 'Halcyon sells through its store.');
   if (!hubOf(s, f)) return warn(s, 'Faction hubs open with the contract board.');
   if (hostile(s, f)) return warn(s, `${FACTIONS[f].short} won’t trade with you (${repTier(s, f).name}).`);
+  if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
   const item = shopOf(s, f, at).find((x) => x.id === id);
   if (!item) return warn(s, `${FACTIONS[f].short} doesn’t sell that.`);
   if (item.locked) return warn(s, `${item.name} is for ${FACTIONS[f].tiers[item.need]} and up.`);

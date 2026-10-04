@@ -1963,3 +1963,5 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .mk-tags { gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap; }
 .mk-tags .tag { cursor: help; }
 .craft-list li > span.mk-btns { display: flex; gap: 0.3em; flex-wrap: nowrap; align-items: center; }
+.mnode.hub.offline .hub-frame { stroke-dasharray: 3 3; opacity: 0.5; }
+.mnode.hub.offline .hub-mark { opacity: 0.4; }

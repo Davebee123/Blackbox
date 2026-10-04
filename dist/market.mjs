@@ -49,6 +49,7 @@ export const MARKET = {
   travelMin: { halcyon: 5, kestrel: 8, lantern: 10, glassjaw: 12, nullchoir: 15 }, // file transfer, minutes
   relayCut: 0.1, // each relay you've installed: 10% faster, up to 40%
   maxLots: 99,
+  wiperBoost: 1.25, // while a hub is wiped offline, the others pay 25% more for what it was buying
 };
 
 const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, event: 'calm', eventUntil: 0, at: null });
@@ -59,7 +60,8 @@ export function priceOf(s, f, w) {
   const m = marketOf(s);
   const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
   const p = m.pressure[f]?.[w] || 0;
-  return WARES[w].base * cond * ev * Math.max(0.35, 1 - MARKET.pressure * p);
+  const t = now(), gap = Object.entries(s.hubs || {}).some(([g, h]) => g !== f && (h.offlineUntil || 0) > t && (CONDITIONS[HUB_CONDITION[g]]?.mult[w] || 0) > 1) ? MARKET.wiperBoost : 1;
+  return WARES[w].base * cond * ev * gap * Math.max(0.35, 1 - MARKET.pressure * p);
 }
 // What you'd get selling one, and pay buying one (whole credits). Better rep trades a little better.
 export function quote(s, f, w) {
@@ -77,6 +79,7 @@ export function trade(s, side, f, w, n, at = now()) {
   if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Markets open with the faction hubs.');
   if (!WARES[w]) return warn(s, `Wares: ${WARE_IDS.join(', ')}.`);
   if (hostile(s, f)) return warn(s, `${FACTIONS[f].short} won’t trade with you.`);
+  if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
   if (n < 1 || n > MARKET.maxLots) return warn(s, `How many? 1–${MARKET.maxLots}.`);
   const m = marketOf(s), q = quote(s, f, w);
   ((m.pressure[f] ||= {})[w] ||= 0);

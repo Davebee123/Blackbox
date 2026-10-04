@@ -664,6 +664,20 @@ Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 cr
 - **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better per rep tier above Probation's). Each unit you sell somewhere takes 4% off its price there (each one you buy adds 4%, floor 35% of normal); the pressure eases 12% an hour, offline too.
 - **File transfers:** a sale leaves your stock now and its credits land when the transfer does; a purchase is paid now and lands later. Travel: Halcyon 5 min, Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay on your servers cuts 10% (up to 40%). Transfers in flight show on the hub's Market card and can't be lost. Hostile factions won't trade.
 - `market sell|buy <faction> <ware> <n>` (1–99).
+- While a hub is wiped offline (see Payloads), the other hubs pay 25% more for whatever its condition was buying.
+
+### Payloads
+
+Viruses you write to hit a faction hub (`payload.mjs`), compiled and launched from the hub page's Payloads card. They auto-resolve when they land.
+
+- **Compile:** 60 + 10×level credits, 10 code and 3 salvage. An **Exfil** takes Cipher code and pulls credits plus the code the hub hoards. A **Wiper** takes Worm code and knocks the hub offline. Power is 10 + 2×your level; spending an Exploit arms it (×1.5). You hold three at most.
+- **Launch:** it travels like a file transfer (same times, relays help). You can't hit a hub that's already offline.
+- **Landing:** power × a roll of ±20% against the hub's defence (12 + 2×hub level, +25% for each recent strike; one step eases every 6 hours). Under 70%, it's **Blocked**. From 70% to 100%, a **Partial** breach does half the job. At 100% and over, it's a **Breach**. Each payload you hold shows its likely band against that hub before you launch.
+- **Results:**
+  - An Exfil on a breach pays 50 + 12×hub level credits and 6 + hub level/2 of the code its condition wants.
+  - A Wiper on a breach takes the hub offline for 4 hours (2 on a partial): its shop and market shut and its map node goes dim.
+  - The owner's rep drops 3 when blocked, 6 on a partial and 10 on a breach. The rep ripple warms its rivals.
+- `payload compile exfil|wiper [exploit]`, `payload launch <n> <faction>`.
 
 
 ## Server memory
