@@ -474,3 +474,24 @@ test('the Sync Window always sits in the first half of a cycle, about a tenth of
   }
   assert.ok(opened > 60 && opened < 150, `about a quarter of cycles open one (${opened}/399)`);
 });
+
+test('stepped (the browser): solo, the virus answers as its own step after yours', async () => {
+  const { hooks, stepCycle } = await import('./dist/combat.mjs');
+  const s = fresh();
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = s.encounter.cycle; // everything due now
+  const was = s.encounter.cycle;
+  hooks.stepped = true;
+  try {
+    command(s, 'spike ' + s.encounter.virus.parts.find((p) => p.integrity > 0).id);
+    const mine = resolveCycle(s);
+    assert.ok(mine.some((e) => e.type === 'hit' || e.type === 'armor' || e.type === 'miss'));
+    assert.ok(!mine.some((e) => e.type === 'server-hit' || e.type === 'evaded'), 'the virus waits');
+    assert.ok(s.encounter.steps);
+    let rest = [];
+    for (let i = 0; i < 10 && s.encounter.steps; i++) rest = [...rest, ...stepCycle(s)];
+    assert.ok(rest.some((e) => e.type === 'server-hit' || e.type === 'evaded' || e.type === 'blocked'));
+    assert.equal(s.encounter.cycle, was + 1);
+  } finally { hooks.stepped = false; }
+});

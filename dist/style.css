@@ -105,6 +105,9 @@ code { font-family: var(--mono); color: var(--amber); }
 .hud-bar .bar-top strong { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .hud-bar .bar-top span { font: 600 24px var(--mono); color: var(--bright); line-height: 1; }
 .hud-bar .bar-top small { font-size: 13px; color: var(--muted); }
+.hud-bar .bar-top .bar-ico { width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; color: var(--you); }
+.hud-bar.mine.mid .bar-ico { color: var(--next); } .hud-bar.mine.low .bar-ico { color: var(--hot); }
+.meter-ico { width: 14px; height: 14px; margin-right: -2px; color: var(--amber); }
 .bigbar { height: 14px; background: var(--inset); border: 1px solid var(--hot); margin-top: 6px; }
 .bigbar span { display: block; height: 100%; background: linear-gradient(90deg, #a82f20, var(--hot)); transition: width 0.25s; }
 .hud-bar.mine .bigbar { border-color: var(--you); }
@@ -405,6 +408,29 @@ details summary { font-size: 13px; }
 .fx-urgent { animation: fx-urgent 0.5s ease-in-out 3; }
 @keyframes fx-urgent { 50% { background: rgba(255, 91, 61, 0.35); color: var(--bright); } }
 .fx-cycle .cyclebar { animation: fx-tick 0.25s ease-out; }
+.fx-strike { animation: fx-strike 0.5s ease-out; }
+@keyframes fx-strike { 0% { box-shadow: inset 3px 0 0 var(--hot), inset 0 0 26px rgba(255, 91, 61, 0.35); transform: translateX(0); } 22% { transform: translateX(-7px); } 55% { transform: translateX(1px); } 100% { box-shadow: inset 0 0 0 transparent, inset 0 0 0 transparent; transform: none; } }
+.fx-float.atk { color: var(--hot); font-size: calc(12px * var(--size)); letter-spacing: 2px; opacity: 0.9; }
+.fx-mark { animation: fx-mark 0.55s ease-out; }
+@keyframes fx-mark { 0% { background: rgba(127, 209, 199, 0.3); box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.8); } 100% { background: transparent; box-shadow: inset 0 0 0 1px transparent; } }
+.fx-burn { animation: fx-burn 0.55s ease-out; }
+@keyframes fx-burn { 0% { background: rgba(255, 140, 61, 0.3); } 100% { background: transparent; } }
+.fx-float.mark { color: var(--you); font-size: calc(14px * var(--size)); letter-spacing: 2px; }
+.fx-float.burn { color: #ff8c3d; font-size: calc(14px * var(--size)); letter-spacing: 2px; }
+.fx-float.helper { color: var(--daemon); font-size: calc(14px * var(--size)); letter-spacing: 2px; }
+/* Marks on a part: an icon each by its name; Exposed hatches the bar (it's open). */
+.pmarks { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.pmark { display: inline-grid; place-items: center; width: 16px; height: 16px; border: 1px solid rgba(127, 209, 199, 0.55); border-radius: 3px; color: var(--you); background: rgba(127, 209, 199, 0.1); animation: pmark-in 0.35s ease-out; }
+.pmark .glyph { width: 11px; height: 11px; margin: 0; }
+.pmark.m-burn { color: #ff8c3d; border-color: rgba(255, 140, 61, 0.55); background: rgba(255, 140, 61, 0.1); }
+.pmark.m-helper { color: var(--daemon); border-color: rgba(195, 166, 255, 0.5); background: rgba(195, 166, 255, 0.1); }
+.pmark.m-exposed { animation: pmark-in 0.35s ease-out, pmark-pulse 1.6s ease-in-out 0.35s infinite; }
+@keyframes pmark-in { from { transform: scale(1.8); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pmark-pulse { 50% { box-shadow: 0 0 6px rgba(127, 209, 199, 0.7); } }
+.bpart.m-exposed .part-bar > span:first-child { background-image: repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px); }
+.bpart.m-exposed .part-bar { box-shadow: 0 0 0 1px rgba(127, 209, 199, 0.6); }
+@media (prefers-reduced-motion: reduce) { .pmark, .pmark.m-exposed { animation: none; } }
+body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .fx-daemon { animation: fx-daemon 0.5s ease-out; }
 @keyframes fx-daemon { 0% { background: rgba(195, 166, 255, 0.22); } 100% { background: transparent; } }
 .fx-good { animation: fx-good 0.6s ease-out; }

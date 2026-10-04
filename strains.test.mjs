@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, attackAmount, intents as intentsOf } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, attackAmount, defender, intents as intentsOf } from './dist/combat.mjs';
 import { STRAINS, strainsFor, createVirus, SERVER, variantFor, gradeFor } from './dist/data.mjs';
 
 const veteran = (arch = 'breaker', level = 14) => {
@@ -151,8 +151,10 @@ test('Flicker: hits on the Shade pass through on odd cycles and land on even one
   const shade = part(s, 'shade'), hp = shade.integrity;
   if (s.encounter.cycle % 2 === 0) fire(s, 'hold');
   assert.equal(s.encounter.cycle % 2, 1);
+  const mine = defender(s).integrity;
   fire(s, 'spike shade');
   assert.equal(shade.integrity, hp, 'out of phase: through it');
+  assert.ok(defender(s).integrity < mine, 'and the static bounces back at you');
   fire(s, 'spike shade');
   assert.ok(shade.integrity < hp, 'in phase: it lands');
   assert.ok(part(s, 'pulse').integrity > 0);

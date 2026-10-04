@@ -10,6 +10,15 @@ import { createSoundtrack } from './soundtrack.mjs';
 // they land on the fresh elements.
 
 const SIGNS = {
+  // You put something on a part: a mark (Exposed, Tagged, Hooked, Throttled, Quarantined), a burn, a helper.
+  mark: { flash: 'fx-mark', float: 'mark', voice: 'mark', buzz: [6, 20, 6] },
+  burn: { flash: 'fx-burn', float: 'burn', voice: 'burn', buzz: 10 },
+  helper: { flash: 'fx-daemon', float: 'helper', voice: 'helper', buzz: [5, 15, 5] },
+  // Something on you: a shield, or a buff.
+  shield: { flash: 'fx-good', float: 'you', voice: 'shield', buzz: 12 },
+  buff: { flash: 'fx-good', float: 'you', voice: 'buff', buzz: 8 },
+  // A virus part attacks: its row lunges (the hit on you has its own sound).
+  strike: { flash: 'fx-strike', float: 'atk' },
   // You damaged a part.
   hit: { flash: 'fx-hit', float: 'amber', voice: 'hit', buzz: 10 },
   // You fired inside the Sync Window.
@@ -144,7 +153,7 @@ export function createFeel({ settings, reducedMotion }) {
         const els = typeof target === 'string' ? [...document.querySelectorAll(target)] : target ? [target] : [];
         const shake = !reducedMotion();
         // detail.noFlash: the number only; detail.quiet: a smaller, dimmer number (a crewmate's).
-        if (!detail?.noFlash) for (const el of els) flash(el, shake || !sign.flash?.match(/nope|hurt/) ? sign.flash : 'fx-still');
+        if (!detail?.noFlash) for (const el of els) flash(el, shake || !sign.flash?.match(/nope|hurt|strike/) ? sign.flash : 'fx-still');
         // detail.floatAt: where the number rises, if not off the flashing element.
         const fl = detail?.floatAt ? document.querySelector(detail.floatAt) || els[0] : els[0];
         if (label) float(fl, label, (sign.float || 'amber') + (detail?.quiet ? ' quiet' : ''), detail?.size);

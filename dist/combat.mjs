@@ -1455,9 +1455,13 @@ function hit(s, p, base, opts = {}) {
     emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}${p.name} logs it and shrugs it off. Out of sync.`, { target: p.id });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
-  // Flicker: the Shade is only there on even cycles; on odd ones everything passes through it.
+  // Flicker: the Shade is only there on even cycles; on odd ones everything passes through it, and
+  // your own command's static bounces back at you (a quarter of the hit; never your last point).
   if (p.phase && e.cycle % 2 === 1 && base > 0) {
+    const back = opts.mine && !opts.dot ? Math.min(Math.max(1, Math.round(base * CONFIG.phaseBounce)), defender(s).integrity - 1) : 0;
+    const took = back > 0 ? takeDamage(s, back, p.id, `${p.name} static`) : 0;
     emit(s, 'status', `${opts.by ? opts.by + ': ' : ''}passes through the ${p.name}. Out of phase: it's back next cycle.`, { target: p.id });
+    if (took) emit(s, 'server-hit', `The static bounces back off the ${p.name}: −${took}.`, { source: p.id, amount: took, bounce: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
   // Armor chits: a hit on an armored part does no damage and breaks one chit.
@@ -1631,7 +1635,7 @@ function useAbility(s, intent, auto = false) {
     if (id === 'tag' && hasTalent(s, 'supercookie')) n = 6;
     if (id === 'tag') { target.tagBoost = e.surprise ? CONFIG.surprise.tagged - SKILLS.tagged : 0; if (e.surprise) n = Math.max(n, CONFIG.surprise.tagCycles); }
     target[a.status + 'Until'] = e.cycle + n;
-    emit(s, 'status', `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id });
+    emit(s, 'status', `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id, mark: a.status, ability: id });
   }
   if (a.tick && a.verb === 'burn') {
     let ticks = id === 'inject' && hasTalent(s, 'polymorphic') ? 5 : a.ticks;
@@ -1642,7 +1646,7 @@ function useAbility(s, intent, auto = false) {
       e.burns.push({ id, target: target.id, damage: tick, grow: a.grow ? scaled(s, a.grow) : 0, left: ticks, name: a.name, drain: a.drain ? scaled(s, a.drain) : 0, synced: !!e.synced });
     }
     const stack = a.stacks ? e.burns.filter((b) => b.target === target.id && b.id === id).length : 0;
-    emit(s, 'status', `${target.name} burning: ${tick}${a.grow ? ', growing' : ''} per cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}${stack > 1 ? ` (${stack} stacks)` : ''}.`, { target: target.id });
+    emit(s, 'status', `${target.name} burning: ${tick}${a.grow ? ', growing' : ''} per cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}${stack > 1 ? ` (${stack} stacks)` : ''}.`, { target: target.id, mark: 'burn', ability: id });
   }
   if (id === 'purge' && e.encrypt) { e.encrypt = 0; emit(s, 'decrypted', 'Purge: your encryption is cleared.'); }
   if (a.helper) {
@@ -1657,13 +1661,13 @@ function useAbility(s, intent, auto = false) {
     dmg = scaled(s, dmg);
     count = Math.min(count, helperCap(s) - e.helpers.length);
     for (let k = 0; k < count; k++) e.helpers.push({ target: target.id, damage: dmg, left: n, synced: !!e.synced });
-    emit(s, 'status', count > 0 ? `${count === 1 ? 'Helper' : count + ' helpers'} on ${target.name}: ${dmg} per cycle for ${n} cycles.` : `Helper cap reached (${helperCap(s)}).`, { target: target.id });
+    emit(s, 'status', count > 0 ? `${count === 1 ? 'Helper' : count + ' helpers'} on ${target.name}: ${dmg} per cycle for ${n} cycles.` : `Helper cap reached (${helperCap(s)}).`, { target: target.id, mark: count > 0 ? 'helper' : null, ability: id });
   }
   // Jam and Barrier spend one of your helpers on that part.
   if (a.recall) {
     const h = helpersOn(s, target)[0];
     e.helpers.splice(e.helpers.indexOf(h), 1);
-    if (id === 'barrier') { const amount = h.damage * h.left; e.shield = (e.shield || 0) + amount; emit(s, 'status', `Barrier: a helper becomes a ${amount} shield (${e.shield}).`); }
+    if (id === 'barrier') { const amount = h.damage * h.left; e.shield = (e.shield || 0) + amount; emit(s, 'status', `Barrier: a helper becomes a ${amount} shield (${e.shield}).`, { mark: 'shield', ability: id }); }
   }
   if (a.delay && target) {
     target.attack.due += a.delay;
@@ -1674,30 +1678,30 @@ function useAbility(s, intent, auto = false) {
   }
   if (['brace', 'sudo', 'fork'].includes(id)) {
     e.buffs[id] = e.cycle + a.cycles - 1;
-    emit(s, 'status', `${a.name} for ${a.cycles} cycles.`);
+    emit(s, 'status', `${a.name} for ${a.cycles} cycles.`, { mark: 'buff', ability: id });
   }
   if (a.shield) {
     const amount = scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 40 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield);
     e.shield = Math.max(e.shield || 0, amount);
-    emit(s, 'status', `Shield up: absorbs the next ${amount} damage.`);
+    emit(s, 'status', `Shield up: absorbs the next ${amount} damage.`, { mark: 'shield', ability: id });
   }
   // Taunt (Bastion Firewall), in a crew only: every damage attack comes at you for a.taunt cycles.
   if (a.taunt && (s.who || hooks.crewTurns?.(s))) {
     e.buffs.sinkhole = e.cycle + a.taunt - 1;
-    emit(s, 'status', `Drawing fire: every attack comes at ${s.who || 'you'} for ${a.taunt} cycles.`);
+    emit(s, 'status', `Drawing fire: every attack comes at ${s.who || 'you'} for ${a.taunt} cycles.`, { mark: 'buff', ability: id });
   }
   if (id === 'patch') {
     heal(s, scaled(s, (hasTalent(s, 'service-pack') ? 20 : a.heal) + 3 * rank(s, 'patch-notes')), a.name);
     e.regen = { amount: scaled(s, a.tick), left: a.ticks, from: e.cycle + 1, name: a.name };
   }
-  if (id === 'null-route') { e.buffs['null-route'] = e.cycle; e.nextCrit = true; emit(s, 'status', 'Null-routed: this cycle\'s attacks miss you, and your next skill crits.'); }
+  if (id === 'null-route') { e.buffs['null-route'] = e.cycle; e.nextCrit = true; emit(s, 'status', 'Null-routed: this cycle\'s attacks miss you, and your next skill crits.', { mark: 'buff', ability: id }); }
   if (id === 'crack') {
     const n = Math.min(a.strip, target.armor);
     target.armor -= n;
     emit(s, 'armor', `Crack: ${target.name} loses ${n} ${n === 1 ? 'chit' : 'chits'}${target.armor ? ` (${target.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: target.id, left: target.armor });
     if (!target.armor) { target.patchAt = e.cycle + patchDelay(s); openProc(s, 'stripped'); }
   }
-  if (id === 'harden') { e.chits = (e.chits || 0) + 1; emit(s, 'status', `Hardened: the next attack on you does nothing${e.chits > 1 ? ` (${e.chits} chits)` : ''}.`); }
+  if (id === 'harden') { e.chits = (e.chits || 0) + 1; emit(s, 'status', `Hardened: the next attack on you does nothing${e.chits > 1 ? ` (${e.chits} chits)` : ''}.`, { mark: 'shield', ability: id }); }
   if (id === 'detonate') {
     const mine = burnsOn(s, target);
     let total = 0;
@@ -1708,7 +1712,7 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target);
     let n = 0;
     for (const p of livingParts(s)) if (p.id !== target.id) for (const b of mine) { e.burns.push({ ...b, target: p.id }); n++; }
-    emit(s, 'status', `Propagate: ${n} ${n === 1 ? 'burn' : 'burns'} copied to the other parts.`);
+    emit(s, 'status', `Propagate: ${n} ${n === 1 ? 'burn' : 'burns'} copied to the other parts.`, { mark: 'burn', ability: id });
   }
   if (id === 'reroute') {
     for (const h of e.helpers) { h.target = target.id; hit(s, target, h.damage, { by: 'Helper', dot: true }); if (!alive(target)) break; }
@@ -2023,7 +2027,12 @@ export function resolveCycle(s) {
 
   // 1. The players act first, so breaking a part on its last cycle stops its attack.
   const turns = virusIntegrity(s).current > 0 ? hooks.crewTurns?.(s) || 0 : 0;
-  if (!turns) { if (!playerPhase(s)) return since(s, first); return endCycle(s, first); } // solo
+  if (!turns) { // solo
+    if (!playerPhase(s)) return since(s, first);
+    // Stepped (the browser): the virus answers a beat later, as its own step, when it has an attack due.
+    if (hooks.stepped && virusIntegrity(s).current > 0 && dueNow(s).length) { e.steps = { order: [], next: 0, of: 0, after: true }; return since(s, first); }
+    return endCycle(s, first);
+  }
   // With a crew, everyone's command goes in priority order (turnOrder: strippers first).
   const order = turnOrder(s);
   // Stepped co-op (the browser sets hooks.stepped): the first turn now, each of the rest, then the

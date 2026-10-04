@@ -70,7 +70,42 @@ function chime(ctx, out, t, midi, { d = 0.5, peak = 0.32 } = {}) {
 }
 
 // ---------- the voices ----------
+// ---- skill effects: a mark on a part, a burn, a helper, a shield, a buff (all synthesized) ----
+// A mark (Exposed, Tagged, Hooked…): a targeting lock, two rising blips and a thin ping.
+function markLock(ctx, out, t) {
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 2; bp.connect(out);
+  osc(ctx, bp, t, { type: 'square', f0: 1320, a: 0.002, peak: 0.12, d: 0.04 });
+  osc(ctx, bp, t + 0.06, { type: 'square', f0: 1760, a: 0.002, peak: 0.12, d: 0.04 });
+  osc(ctx, out, t + 0.12, { type: 'sine', f0: 2640, f1: 2500, glide: 0.2, a: 0.002, peak: 0.08, d: 0.22 });
+}
+// A burn: a fizz that catches and crackles upward.
+function burnCatch(ctx, out, t) {
+  const dirt = crusher(ctx, 6), g = ctx.createGain(); g.gain.value = 0.35; dirt.connect(g).connect(out);
+  noise(ctx, dirt, t, { type: 'bandpass', f0: 600, f1: 3800, q: 2, glide: 0.22, a: 0.01, peak: 0.45, d: 0.26 });
+  [0.05, 0.11, 0.16].forEach((dt, i) => noise(ctx, out, t + dt, { type: 'highpass', f0: 4000 + i * 900, a: 0.001, peak: 0.12, d: 0.025 }));
+}
+// A helper spawned: three quick rising blips, a little process starting up.
+function spawnBlips(ctx, out, t) {
+  [523, 784, 1047].forEach((f, i) => osc(ctx, out, t + i * 0.055, { type: 'triangle', f0: f, a: 0.002, peak: 0.14, d: 0.06 }));
+}
+// A shield: a warm swell that settles into a shimmer.
+function shieldUp(ctx, out, t) {
+  osc(ctx, out, t, { type: 'sine', f0: 220, f1: 440, glide: 0.18, a: 0.03, peak: 0.25, d: 0.32 });
+  osc(ctx, out, t + 0.05, { type: 'triangle', f0: 880, a: 0.04, peak: 0.06, d: 0.3, detune: 7 });
+  osc(ctx, out, t + 0.05, { type: 'triangle', f0: 880, a: 0.04, peak: 0.06, d: 0.3, detune: -7 });
+}
+// A buff: one bright rising sweep.
+function buffRise(ctx, out, t) {
+  osc(ctx, out, t, { type: 'triangle', f0: 440, f1: 1320, glide: 0.16, a: 0.005, peak: 0.14, d: 0.2 });
+  noise(ctx, out, t + 0.02, { type: 'highpass', f0: 6000, a: 0.01, peak: 0.05, d: 0.12 });
+}
+
 export const VOICES = {
+  mark(ctx, out, t) { markLock(ctx, out, t); },
+  burn(ctx, out, t) { burnCatch(ctx, out, t); },
+  helper(ctx, out, t) { spawnBlips(ctx, out, t); },
+  shield(ctx, out, t) { shieldUp(ctx, out, t); },
+  buff(ctx, out, t) { buffRise(ctx, out, t); },
   // Fired inside the Sync Window: a quick bright lock-on chirp.
   sync(ctx, out, t) {
     osc(ctx, out, t, { type: 'triangle', f0: 1320, f1: 1760, glide: 0.05, a: 0.002, peak: 0.16, d: 0.1 });
@@ -279,6 +314,12 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
 // A gain stage in front of `out` (the synthesized voices run quieter than the samples).
 const lifted = (ctx, out, k) => { const g = ctx.createGain(); g.gain.value = k; g.connect(out); return g; };
 export const RECIPES = {
+  // Skill effects: synthesized, no samples (see markLock and the rest above).
+  mark: { room: 0.1, play(ctx, out, t) { markLock(ctx, out, t); } },
+  burn: { room: 0.08, play(ctx, out, t) { burnCatch(ctx, out, t); } },
+  helper: { room: 0.08, play(ctx, out, t) { spawnBlips(ctx, out, t); } },
+  shield: { room: 0.14, play(ctx, out, t) { shieldUp(ctx, out, t); } },
+  buff: { room: 0.1, play(ctx, out, t) { buffRise(ctx, out, t); } },
   // Fired inside the Sync Window: a tight, bright lock-on over the hit.
   sync: { room: 0.14, play(ctx, out, t, o, S) {
     S('glassui', 0, { gain: 0.5, rate: 1.3 });

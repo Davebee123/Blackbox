@@ -6,6 +6,7 @@ export const CONFIG = {
   // Server
   maxIntegrity: 100,
   blindside: 1.25, // Ghostroot: damage that lands while you're blind deals +25%
+  phaseBounce: 0.25, // Flicker: a quarter of your command's hit on an out-of-phase part bounces back at you
   startingCredits: 160,
   // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
   // full now. The price is for a full bar at your level; less missing costs less (at least 1).
@@ -282,7 +283,7 @@ export const STRAINS = {
   },
   flicker: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker',
-    rule: 'The Shade is only there on even cycles. On odd cycles your hits pass straight through it. It strikes when it is there.',
+    rule: 'The Shade is only there on even cycles. On odd cycles your hits pass straight through it, and a quarter of the hit bounces back at you. It strikes when it is there.',
     parts: [PULSE(13, 3), { id: 'shade', name: 'Shade', integrity: 22, armor: 1, loot: 'Shade Lens', special: true, phase: true, attack: { name: 'Fade', effect: 'damage', amount: 5, interval: 2, first: 2 } }],
   },
   extortion: {

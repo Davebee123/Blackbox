@@ -349,6 +349,16 @@ const gainOpen = () => { const el = $('gain'); return el && !el.hidden && !el.cl
 function hideSpoils() {
   document.body.classList.remove('fight-over'); const el = $('spoils'); if (el) { el.hidden = true; el.innerHTML = ''; } }
 
+// A skill's effect landing: the word on the part (or on you), its own flash and sound.
+const MARK_WORD = { exposed: 'EXPOSED', tagged: 'TAGGED', hooked: 'HOOKED', throttled: 'THROTTLED', quarantined: 'QUARANTINED', burn: 'BURNING', helper: 'HELPER', shield: 'SHIELD' };
+function markFx(e, mate) {
+  const sign = ['burn', 'helper', 'shield', 'buff'].includes(e.mark) ? e.mark : 'mark';
+  const word = MARK_WORD[e.mark] || (ABILITIES[e.ability]?.name || 'BUFF').toUpperCase();
+  const lvl = fxLevel();
+  if (e.target) feel.add(sign, `${row(e.target)} .part-top`, word, { noFlash: lvl === 'minimal', quiet: mate, silent: mate, floatAt: `${row(e.target)} > .bcell:nth-child(2)` });
+  else feel.add(sign, MINE, word, { noFlash: lvl === 'minimal' });
+}
+
 function react(events) {
   const won = events.find((e) => e.type === 'victory');
   const fx = canMove();
@@ -358,6 +368,14 @@ function react(events) {
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
   strikes(events);
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
+  // A part's attack: its row lunges and the attack's name comes off it, once per part per batch.
+  const lunged = new Set();
+  for (const e of events) {
+    if (!e.source || lunged.has(e.source) || !['server-hit', 'evaded', 'blocked', 'encrypt', 'blind'].includes(e.type) || !active(campaign)) continue;
+    lunged.add(e.source);
+    const p = part(campaign, e.source);
+    if (p && fxLevel() !== 'minimal') feel.add('strike', row(e.source), p.attack?.name ? p.attack.name.toUpperCase() : null, { floatAt: `${row(e.source)} > .bcell:nth-child(2)` });
+  }
   for (const e of events) {
     if (e.who) {
       const mate = `.pmate[data-mate="${e.who}"]`; // their line under your Signal (HUD)
@@ -368,6 +386,7 @@ function react(events) {
         continue;
       }
       if (e.type === 'evaded' || e.type === 'blocked') { feel.add('evade', mate, e.type === 'evaded' ? 'EVADED' : 'BLOCKED', { silent: true }); continue; }
+      if (e.type === 'status' && e.mark && e.target) { markFx(e, true); continue; } // what they put on a part shows, quietly
       if (!['damage', 'broken', 'miss'].includes(e.type)) continue; // the rest is theirs: the log has it
     }
     switch (e.type) {
@@ -419,6 +438,7 @@ function react(events) {
       case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); if (lvl === 'full') impact(e.target, false, true); feel.add('chit', lvl === 'full' ? row(e.target) : `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: lvl === 'full' ? null : `${row(e.target)} > .bcell:nth-child(2)` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), '+◆'); break;
       case 'xp': feel.add('cycle', '#meter-level', `+${e.amount} XP`); break;
+      case 'status': if (e.mark) markFx(e, false); break;
       case 'fast-kill': feel.add('good', null); break;
       case 'level-up': case 'server-level': {
         if (won) break;
@@ -1068,11 +1088,12 @@ $('tip-ok').addEventListener('click', () => { hideTip(true); $('command-input').
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
 addEventListener('resize', () => placeTip());
 
-// ---------- co-op steps ----------
-// With a crew, a cycle plays out in turns: you, then each crewmate, then the virus, a beat apart
-// (stepCycle in combat.mjs), so you can follow who did what.
+// ---------- steps ----------
+// A cycle plays out in turns: you (then each crewmate), then the virus, a beat apart (stepCycle in
+// combat.mjs), so you can follow who did what. The virus's answer waits a little longer.
 hooks.stepped = true;
 const STEP_MS = { relaxed: 380, normal: 330, fast: 260 };
+const VIRUS_BEAT = 1.6; // × a step, before the virus's turn
 let stepTimer = null;
 function stepLoop() {
   const e = campaign.encounter;
@@ -1082,7 +1103,7 @@ function stepLoop() {
     const events = stepCycle(campaign);
     if (events.length) { react(events); save(); }
     dirty = true;
-  }, STEP_MS[campaign.settings?.speed] || STEP_MS.normal);
+  }, (STEP_MS[campaign.settings?.speed] || STEP_MS.normal) * (e.steps.after && !e.steps.due ? VIRUS_BEAT : 1));
 }
 
 // ---------- clock ----------
