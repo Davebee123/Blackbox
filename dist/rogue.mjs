@@ -7,7 +7,7 @@
 //   Pit       mixed families, 2 levels above the server, a second roll for drops
 //   Gauntlet  mixed families; clear every folder in one run for a bonus cache
 import { emit, rand, gainCode, gainXp, xpFor, hooks } from './combat.mjs';
-import { FAMILIES, variantFor, STRAINS, CONFIG } from './data.mjs';
+import { FAMILIES, variantFor, STRAINS, CONFIG, ELITE } from './data.mjs';
 import { seeded, codeOf } from './gear.mjs';
 import { occupationCleared } from './consortium.mjs';
 
@@ -83,7 +83,8 @@ export function rogueSpawns(s, loc, now = Date.now()) {
     let { grade, strain } = variantFor(family, level, loc.depth || 1, seed);
     if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37).strain; // twice the chances
     const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].name.toLowerCase();
-    loc.spawns[room] = { alive: true, family, level, seed, strain, grade, name: `${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+    const elite = loc.rogue.kind === 'pit' && seeded(seed ^ 0x51ed)() < ELITE.share; // group content
+    loc.spawns[room] = { alive: true, family, level, seed, strain, grade, ...(elite ? { elite: true } : {}), name: `${elite ? 'elite ' : ''}${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
 }

@@ -8,7 +8,7 @@ export const SKILL_TEXT = {
   exploit: { desc: 'For 2 cycles, open a hole in a module\'s defenses, increasing the chance to crit on that module by 25%.', lore: 'Every system has a door somebody forgot to lock.' },
   crack: { desc: 'Crack a module\'s encryption, removing 2 armor.', lore: 'Hardened code is only hard until it isn’t.' },
   shatter: { desc: 'Shatter a module, dealing 55 damage. Usable for 2 cycles after you strip a module\'s last armor.', lore: 'Once the shell is gone, there’s nothing left to catch you.' },
-  smash: { desc: 'Smash a module, dealing 20 damage. Deals double damage to modules with no armor.', lore: 'Brute force is a strategy. An honest one.' },
+  flood: { desc: 'Flood a module with garbage traffic, dealing 30 damage. Deals double damage to modules with no armor.', lore: 'Brute force is a strategy. An honest one.' },
   segfault: { desc: 'Crash a module, dealing 30 damage. Deals triple damage to modules below 30% health.', lore: 'Read past the end of the buffer and watch it fall over.' },
   'fork-bomb': { desc: 'Flood every module, dealing 15 damage to each. Exposed modules take 30.', lore: ':(){ :|:& };: — the oldest joke on the net.' },
   'thermal-runaway': { desc: 'Overheat a module, burning it for 6 damage per cycle. The burn grows by 4 each cycle.', lore: 'Disable the fans. Let the heat do the rest.' },

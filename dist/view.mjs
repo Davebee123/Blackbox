@@ -227,7 +227,7 @@ export function hudMarkup(s) {
   const fc = forecast(s);
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
-  const tags = `${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
+  const tags = `${v.elite ? '<span class="tag hot tag-elite" title="Elite: built for a crew. Much tougher; three times the XP and drop rolls.">elite</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${partyMarkup(s, fc)}</div>${statusPanel(s)}</div>

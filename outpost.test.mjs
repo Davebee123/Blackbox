@@ -177,3 +177,32 @@ test('a v23 save gets site traits and an empty harvester rack', () => {
   assert.deepEqual(back.harvesters, []);
   assert.equal(back.locations[0].trait, siteTrait(a));
 });
+
+test('a Honeytoken draws trouble to its outpost (sooner and first) and pays double for beating it', async () => {
+  const { launch } = await import('./dist/fleet.mjs');
+  const { infestWon } = await import('./dist/outpost.mjs');
+  const s = fresh();
+  s.server.level = 20; s.serverXp = 1e9;
+  const a = found(s), b = found(s);
+  a.takenOver = b.takenOver = true;
+  s.harvesters = [siphon(), siphon()];
+  command(s, `outpost install ${a.id}`, T0);
+  command(s, `outpost install ${b.id}`, T0);
+  b.mods = ['lure'];
+  for (let i = 0; i < 6; i++) { s.fleet = null; assert.equal(launch(s).target, b.id, 'swarms pick the Honeytoken'); }
+  // Infestations: sooner with a lure out there, and on it.
+  s.fleet = null;
+  s.net = {};
+  const { tickOutposts } = await import('./dist/outpost.mjs');
+  for (let m = 1; m <= 50 && !b.outpost.infest; m++) tickOutposts(s, T0 + m * 60000, 60000); // logged on, a minute at a time
+  assert.ok(b.outpost.infest && !a.outpost.infest, 'an infestation within 50 minutes, on the Honeytoken');
+  // Clearing it pays double: two hours of harvest instead of one.
+  b.outpost.stock = 0;
+  b.outpost.infest.count = 1;
+  infestWon(s, { infest: b.id });
+  const lured = b.outpost.stock;
+  a.outpost.stock = 0;
+  a.outpost.infest = { total: 1, count: 1, left: 1e6, seed: 1 };
+  infestWon(s, { infest: a.id });
+  assert.ok(lured > a.outpost.stock, `${lured} vs ${a.outpost.stock}`);
+});

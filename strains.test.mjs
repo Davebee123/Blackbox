@@ -174,7 +174,7 @@ test('Extortion: enough damage while the Demand winds up calls the Deadline off'
   d2.attack.due = t.encounter.cycle;
   const before = t.server.integrity;
   fire(t, 'hold');
-  assert.ok(t.server.integrity <= before - d2.attack.amount + 1, 'ignored, the Deadline lands');
+  assert.ok(before - t.server.integrity >= d2.attack.amount * 0.85, 'ignored, the Deadline lands'); // (a little under: it's two levels below you)
 });
 
 test('Echo: while the Echo lives, each hit repeats next cycle at half', () => {

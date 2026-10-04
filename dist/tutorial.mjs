@@ -12,7 +12,7 @@ export const LESSONS = [
   {
     title: 'Crack the armor',
     command: 'crack encryptor',
-    explain: 'Crack breaks every chit left on a part at once. A part with no armor takes full hits, but it patches a chit back two cycles later unless you break it first: watch for ◆ patch on its row. Type crack encryptor.',
+    explain: 'Crack breaks every chit left on a part at once. A part with no armor takes full hits, but it patches a chit back five cycles later unless you break it first: watch for ◆ patch on its row. Type crack encryptor.',
     result: 'Encryptor\'s armor is broken: its row shows the cracks. The patch marker on its row is your deadline.',
   },
   {

@@ -43,7 +43,7 @@ export const OUTPOST = {
   siteChance: 0.45,
   kindOdds: [['siphon', 0.5], ['scraper', 0.3], ['tap', 0.2]],
   rarityOdds: [[0, 0.55], [1, 0.35], [2, 0.1]], // number of traits
-  noticeMs: 4 * 3600000, // mean logged-on time before natives notice an outpost
+  noticeMs: 6 * 3600000, // mean logged-on time before natives notice an outpost (a Honeytoken: twice as often)
   siegeMs: 10 * 60000, // logged-on time to defend it before it falls
   resetMs: 30 * 60000, // after a pull-out, the port resets before a new one fits
   stashCap: 6,
@@ -58,6 +58,7 @@ export const OUTPOST = {
     storage: { name: 'Storage Array', rule: 'Double storage.' },
     node: { name: 'Firewall Node', rule: 'Sieges and swarms here take twice as long to take it.' },
     ids: { name: 'IDS', rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
+    lure: { name: 'Honeytoken', rule: 'Draws trouble: noticed twice as often, swarms and infestations come sooner and pick it first, and beating them here pays double.' },
   },
   modCost: { credits: 150, code: 8, salvage: 5 },
   bandwidth: (serverLv) => Math.min(5, 1 + Math.floor(serverLv / 10)),
@@ -166,8 +167,10 @@ export function tickOutposts(s, now, dt, paused = false, away = false) {
 // clear <server>, one fight each) for a bonus to that outpost's stockpile and XP; ignore them and
 // they move on, costing nothing. The more outposts you hold, the more often it happens, so the
 // fighting grows with your network. Logged-on time, like sieges; Degraded mode pauses it.
-export const INFEST = { everyMs: 60 * 60000, minMs: 15 * 60000, stayMs: 20 * 60000, size: [2, 3], bonusMs: 60 * 60000 };
-const infestEvery = (n) => Math.max(INFEST.minMs, INFEST.everyMs / Math.max(1, n));
+export const INFEST = { everyMs: 120 * 60000, minMs: 40 * 60000, stayMs: 20 * 60000, size: [2, 3], bonusMs: 60 * 60000 };
+// More outposts, more often; a Honeytoken counts three times (and halves the floor).
+export const lured = (s) => outposts(s).filter((l) => hasMod(l, 'lure'));
+const infestEvery = (s) => Math.max(INFEST.minMs / (lured(s).length ? 2 : 1), INFEST.everyMs / Math.max(1, outposts(s).length + 2 * lured(s).length));
 function tickInfest(s, dt) {
   if (dt <= 0) return;
   const net = (s.net ||= {});
@@ -180,11 +183,12 @@ function tickInfest(s, dt) {
   }
   const ok = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege && !l.outpost.infest);
   if (!ok.length) return;
-  if (net.infestNext == null) net.infestNext = infestEvery(outposts(s).length);
+  if (net.infestNext == null) net.infestNext = infestEvery(s);
   net.infestNext -= dt;
   if (net.infestNext > 0) return;
-  net.infestNext = infestEvery(outposts(s).length);
-  const loc = ok[Math.floor(rand(s) * ok.length)];
+  net.infestNext = infestEvery(s);
+  const pool = ok.filter((l) => hasMod(l, 'lure')).length ? ok.filter((l) => hasMod(l, 'lure')) : ok; // a Honeytoken first
+  const loc = pool[Math.floor(rand(s) * pool.length)];
   const [lo, hi] = INFEST.size, n = lo + Math.floor(rand(s) * (hi - lo + 1));
   loc.outpost.infest = { total: n, count: n, left: INFEST.stayMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
   emit(s, 'infest', `INFESTED: ${n} viruses moved into your outpost on ${loc.name}. Clear them within ${INFEST.stayMs / 60000} minutes for a bonus.`, { location: loc.id });
@@ -212,9 +216,10 @@ export function infestWon(s, e) {
   if (inf.count > 0) return emit(s, 'info', `${inf.count} left on ${loc.name}.`, { location: loc.id });
   loc.outpost.infest = null;
   const before = loc.outpost.stock || 0;
-  produce(s, loc, INFEST.bonusMs);
+  const lure = hasMod(loc, 'lure') ? 2 : 1; // a Honeytoken pays double
+  produce(s, loc, INFEST.bonusMs * lure);
   const got = Math.floor(loc.outpost.stock || 0) - Math.floor(before);
-  gainXp(s, xpFor(s, loc.level || 1, 1), `${loc.name} cleared`);
+  gainXp(s, xpFor(s, loc.level || 1, lure), `${loc.name} cleared`);
   emit(s, 'outpost-held', `${loc.name} CLEARED. The outpost runs hot for a while: +${got} to its stockpile${got ? '' : ' (it was already full)'}.`, { location: loc.id });
 }
 function tickSites(s, now, dt, paused, away) {
@@ -239,7 +244,7 @@ function tickSites(s, now, dt, paused, away) {
       if (o.siege.left <= 0 && !(s.encounter?.outpost === loc.id && active(s))) fall(s, loc);
       continue;
     }
-    const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * archNotice(s) * (away ? 0.5 : 1);
+    const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * (hasMod(loc, 'lure') ? 2 : 1) * archNotice(s) * (away ? 0.5 : 1);
     if (dt > 0 && rand(s) < (dt / OUTPOST.noticeMs) * mult) startSiege(s, loc);
   }
 }
@@ -325,7 +330,9 @@ export function outpostWon(s, e) {
     emit(s, 'outpost-held', `${loc.name} retaken: the lockdown is over and it's harvesting again.`, { location: loc.id });
   } else if (o.siege) {
     o.siege = null;
-    emit(s, 'outpost-held', `Siege broken: ${loc.name} is safe.`, { location: loc.id });
+    // A Honeytoken pays for the trouble it draws: an hour's harvest and a kill's worth of XP.
+    if (hasMod(loc, 'lure')) { produce(s, loc, 60 * 60000); gainXp(s, xpFor(s, loc.level || 1, 1), `${loc.name} held`); }
+    emit(s, 'outpost-held', `Siege broken: ${loc.name} is safe.${hasMod(loc, 'lure') ? ' The Honeytoken pays out.' : ''}`, { location: loc.id });
   }
 }
 

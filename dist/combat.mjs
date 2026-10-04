@@ -1,7 +1,7 @@
 // BLACKBOX combat engine. Pure and deterministic: commands in, events out.
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
-import { BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
@@ -157,9 +157,14 @@ const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
 export const momentumStacks = (s) => { const m = s.encounter?.momentum; return m && m.until >= s.encounter.cycle ? m.stacks : 0; };
 export const momentumBonus = (s) => (SKILLS.momentum + 0.02 * rank(s, 'chain-exploit')) * momentumStacks(s);
 
+// Level gap (CONFIG.gap): what you deal to something above you, and what it deals you.
+// One level up is still about even; it counts from the second.
+const over = (g) => Math.max(0, g - 1);
+export const gapDealt = (g) => (g > 0 ? Math.max(CONFIG.gap.floor, 1 - CONFIG.gap.dealt * over(g)) : 1 + Math.min(0.15, CONFIG.gap.below * -g));
+export const gapTaken = (g) => (g > 0 ? 1 + CONFIG.gap.taken * over(g) : Math.max(0.7, 1 - CONFIG.gap.below * -g));
 export function damageMultiplier(s, p, opts = {}) {
   const e = s.encounter;
-  let m = 1;
+  let m = opts.server ? 1 : gapDealt(levelGap(s));
   if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + (p.tagBoost || 0) + 0.1 * rank(s, 'persistent-tag');
   if (on(s, p, 'quarantined')) m *= SKILLS.quarantined;
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
@@ -183,7 +188,7 @@ export function skillBase(s, id, p) {
   if (id === 'kill-process') base += 4 * rank(s, 'kill-9') + (p?.attack && p.attack.due <= e?.cycle ? a.due : 0);
   if (id === 'backdoor') base += 4 * rank(s, 'backchannel') + a.perBurn * burnsOn(s, p).length;
   if (id === 'opening') base += 5 * rank(s, 'recon');
-  if (id === 'smash' && p && !(p.armor > 0)) base *= 2;
+  if (id === 'flood' && p && !(p.armor > 0)) base *= 2;
   if (id === 'exploit' && hasTalent(s, 'sharp-exploit')) base = 20;
   if (id === 'segfault' && p && p.integrity < p.max * (hasTalent(s, 'core-dump') ? 0.4 : 0.3)) base *= a.execute;
   // Retaliate: twice the attack that reached you (it's already your size: no power scaling).
@@ -560,6 +565,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (opts.family) over.family = opts.family;
   if (opts.strain) over.strain = opts.strain;
   if (opts.grade) over.grade = opts.grade;
+  if (opts.elite) over.elite = true;
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
   const virus = createVirus(key, seed, over);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
@@ -998,7 +1004,7 @@ function fastKill(s, e) {
   return fast;
 }
 function payKill(s, e, base, why) {
-  const xp = xpFor(s, e.virus.level, base);
+  const xp = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1);
   const bonus = e.fast ? Math.max(1, Math.round(xp * FAST.bonus)) : 0;
   if (bonus) emit(s, 'fast-kill', `Fast kill: ${e.cycle} cycles. +${bonus} XP.`, { amount: bonus, cycles: e.cycle });
   gainXp(s, xp + bonus, why);
@@ -1037,7 +1043,7 @@ export function finish(s, result) {
       huntKill(s, e.virus.family, e.trace);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-      const ctx = { kind: wild ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || 1, family: e.virus.family, strain: e.virus.strain, rolls: named ? LOOT.rolls.bounty : undefined };
+      const ctx = { kind: wild ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || 1, family: e.virus.family, strain: e.virus.strain, rolls: e.virus.elite ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
@@ -1467,10 +1473,12 @@ function hit(s, p, base, opts = {}) {
   // Armor chits: a hit on an armored part does no damage and breaks one chit.
   // Burn ticks, helpers and every target of a spread hit count, one chit each.
   if (p.armor > 0 && !opts.pierce) {
-    p.armor--;
+    // A heavy hit from your own command cracks two.
+    const heavy = (opts.chits > 1 || (opts.mine && !opts.dot && !opts.by && base >= CONFIG.heavyHit * powerOf(s) - 1e-9)) && p.armor > 1; // (base is already your size)
+    p.armor -= heavy ? 2 : 1;
     p.lastDamaged = e.cycle;
     if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); if (!opts.server) openProc(s, 'stripped'); }
-    emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} armor chit broken${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
+    emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two armor chits broken' : 'armor chit broken'}${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
   // Flat gear: Damage on your skill hits, Payload on burn ticks and helper hits.
@@ -1488,6 +1496,7 @@ function hit(s, p, base, opts = {}) {
   if (crit) raw = Math.floor(raw * critMultiplier(s)) + (opts.server ? 0 : gearStat(s, 'critDamage'));
   const dealt = Math.min(p.integrity, raw);
   if (raw > 0 && classOf(s) === 'operator' && ['Helper', 'Cron Storm', 'Kill Switch'].includes(opts.by)) backtrace(s);
+  if (crit && opts.mine && !opts.dot && classOf(s) === 'breaker') backtrace(s); // Breaker: a crit traces
   const notes = [];
   if (crit) notes.push('CRIT');
   if (opts.pierce && p.armor > 0) notes.push('through armor');
@@ -1523,7 +1532,6 @@ function soonestAttacker(s, except = null) {
 
 function breakPart(s, p) {
   const e = s.encounter;
-  if (classOf(s) === 'breaker') backtrace(s);
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
@@ -1616,7 +1624,7 @@ function useAbility(s, intent, auto = false) {
   if (rootkit) e.once.rootkit = true;
   // Null Route: your next skill crits.
   const crit = base > 0 && e.nextCrit ? ((e.nextCrit = false), true) : false;
-  const res = base ? hit(s, target, base, { mine: true, crit, pierce: ignoresArmor(s, id) || rootkit, by: rootkit && target.armor > 0 ? 'Rootkit' : undefined }) : null;
+  const res = base ? hit(s, target, base, { mine: true, crit, chits: a.chits, pierce: ignoresArmor(s, id) || rootkit, by: rootkit && target.armor > 0 ? 'Rootkit' : undefined }) : null;
   // Echo: the hit may repeat for half (on armor, it breaks another chit).
   if (base && alive(target) && gearStat(s, 'echo') && rand(s) * 100 < gearStat(s, 'echo')) hit(s, target, Math.max(1, Math.round(base * (fxHas(s, 'echo-full') ? 1 : ECHO.share))), { mine: true, by: 'Echo' });
   // Overload: a crit resets its cooldown.
@@ -1820,7 +1828,7 @@ export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
-  const power = attackAmount(p) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'rate-limit') ? 0.25 : SKILLS.throttled) : 1);
+  const power = attackAmount(p) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'rate-limit') ? 0.25 : SKILLS.throttled) : 1);
   p.boosted = false;
   if (atk.windup) atk.wound = 0;
   // Patchwork: the Patcher's attack is a heal on its own side. Nothing of yours stops it.
@@ -2494,6 +2502,8 @@ export function restore(raw) {
     const s = structuredClone(raw);
     const was = s.version;
     // v23: the Sysadmin is the Bastion now. Its level, tree and bar come along.
+    // Smash is Flood now: on the bar and anything keyed by it.
+    for (const bar of Object.values(s.loadout?.equipped || {})) if (Array.isArray(bar)) bar.forEach((id, i) => { if (id === 'smash') bar[i] = 'flood'; });
     if (was < 23) {
       const mv = (o) => { if (o && o.sysadmin !== undefined) { o.bastion = o.sysadmin; delete o.sysadmin; } };
       mv(s.hackers); mv(s.loadout?.picks); mv(s.loadout?.ranks); mv(s.loadout?.equipped); mv(s.gear?.rigs);

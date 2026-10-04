@@ -16,6 +16,7 @@ CONFIG.restRegen = 0; // resting has its own test
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const item = (stats, extra = {}) => ({ kind: 'protocol', side: 'hacker', rarity: 'stock', level: 5, stats, zeroDay: null, name: 'Test protocol', ...extra });
 const give = (s, stats, extra) => { const it = addItem(s, item(stats, extra)); command(s, 'load ' + it.id); return it; };
@@ -245,7 +246,7 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
   const s = fresh();
   give(s, { echo: 100 });
   quiet(fight(s));
-  const enc = part(s, 'encryptor');
+  const enc = Object.assign(part(s, 'encryptor'), { armor: 2, maxArmor: 2 });
   command(s, 'spike encryptor'); resolveCycle(s);
   assert.equal(enc.armor, 0, 'two chits from one Spike');
   STATS.echo.cap = cap;

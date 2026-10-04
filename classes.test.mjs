@@ -11,6 +11,7 @@ CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 // A class at a level (default 9: bar full with its first five).
 export const start = (cls, level = 22, id = 'cryptjack', seed = 7) => {
@@ -80,9 +81,9 @@ test('Breaker Momentum: a stack per break, capped at 3, lasts 2 cycles from the 
   assert.equal(e.momentum.until, e.cycle - 1 + SKILLS.momentumCycles, 'refreshed by the last break');
 });
 
-test('Breaker: Crack strips 2 chits; breaking the last one lights Shatter (55) for 2 cycles; Segfault triples under 30%', () => {
+test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (55) for 2 cycles; Segfault triples under 30%', () => {
   const s = quiet(start('breaker'));
-  const enc = Object.assign(part(s, 'encryptor'), { armor: 3, maxArmor: 3, integrity: 500, max: 500 });
+  const enc = Object.assign(part(s, 'encryptor'), { armor: 4, maxArmor: 4, integrity: 500, max: 500 });
   assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't lit/);
   act(s, 'crack encryptor');
   assert.equal(enc.armor, 1);
@@ -186,7 +187,7 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
 
 test('burns and helpers break a chit per tick: small hits are how you strip armor', () => {
   const s = quiet(start('operator'));
-  const enc = part(s, 'encryptor');
+  const enc = Object.assign(part(s, 'encryptor'), { armor: 2, maxArmor: 2 });
   act(s, 'botnet encryptor');
   assert.equal(enc.armor, 0, 'three helpers, two chits: the third hit lands');
   assert.equal(lost(s, 'encryptor'), 4);
@@ -259,11 +260,11 @@ test('Spoof slips past one guard for one file; Light footprint makes return trip
   assert.equal(s.encounter.virus.name, 'WATCHDOG', 'the spoof is spent; the guard is still there');
 });
 
-test('the level-5 kit skills: Smash, Suspend, Traceroute, Spawn', () => {
+test('the level-5 kit skills: Flood, Suspend, Traceroute, Spawn', () => {
   const b = noArmor(quiet(start('breaker')));
   big(b, 'pulse');
-  act(b, 'smash pulse');
-  assert.equal(lost(b, 'pulse'), 40, 'Smash: 40 on a bare part');
+  act(b, 'flood pulse');
+  assert.equal(lost(b, 'pulse'), 60, 'Flood: 60 on a bare part');
   const a = start('bastion');
   const due = part(a, 'pulse').attack.due;
   act(a, 'suspend pulse');
@@ -280,11 +281,17 @@ test('the level-5 kit skills: Smash, Suspend, Traceroute, Spawn', () => {
 
 test('backtrace: every class traces its own way from level 7', () => {
   const b = noArmor(quiet(start('breaker')));
-  part(b, 'pulse').integrity = 1;
+  big(b, 'pulse');
+  b.encounter.forceCrit = true;
   act(b, 'spike pulse');
-  assert.equal(b.encounter.trace, 15, 'Breaker: +15% a break');
+  assert.equal(b.encounter.trace, 6, 'Breaker: +6% a crit');
+  const plain = noArmor(quiet(start('breaker')));
+  part(plain, 'pulse').integrity = 1;
+  act(plain, 'spike pulse');
+  assert.equal(plain.encounter.trace, 0, 'a break alone traces nothing now');
   const young = noArmor(quiet(start('breaker', 6)));
-  part(young, 'pulse').integrity = 1;
+  big(young, 'pulse');
+  young.encounter.forceCrit = true;
   act(young, 'spike pulse');
   assert.equal(young.encounter.trace, 0, 'not before level 7');
   const a = start('bastion');

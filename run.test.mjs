@@ -10,6 +10,7 @@ CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const say = (s, t) => play(s, t);
 const located = (family = 'ransomware') => {
@@ -34,14 +35,14 @@ const winFight = (s) => {
   finishOff(s, s.encounter.virus.parts[0].id);
 };
 
-test('every home victory gives a lead; four plain kills of one family locate it', () => {
+test('every home victory gives a lead; seven plain kills of one family locate it', () => {
   const s = fresh();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 6; i++) {
     command(s, 'encounter cryptjack');
     command(s, 'engage');
     finishOff(s, 'pulse');
   }
-  assert.equal(s.locations.length, 0, 'not after three');
+  assert.equal(s.locations.length, 0, 'not after six');
   for (let i = 0; i < 1; i++) {
     command(s, 'encounter cryptjack');
     command(s, 'engage');
@@ -51,12 +52,15 @@ test('every home victory gives a lead; four plain kills of one family locate it'
   assert.equal(s.locations[0].family, 'ransomware');
 });
 
-test('a full backtrace locates the origin in one fight', () => {
+test('two full backtraces locate the origin', () => {
   const s = fresh();
-  command(s, 'encounter ghostroot');
-  command(s, 'engage');
-  s.encounter.trace = 100;
-  finishOff(s, 'pulse');
+  for (let i = 0; i < 2; i++) {
+    assert.equal(s.locations.length, 0);
+    command(s, 'encounter ghostroot');
+    command(s, 'engage');
+    s.encounter.trace = 100;
+    finishOff(s, 'pulse');
+  }
   assert.equal(s.locations.length, 1);
 });
 
@@ -470,7 +474,7 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   command(s, 'developer level 3');
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'exploit']);
   command(s, 'developer level 7');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'exploit', 'smash']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'exploit', 'flood']);
   command(s, 'developer level 10');
   assert.ok(Object.values(keyMap(s)).includes('crack'), 'Crack, the armor stripper, waits for level 10');
   command(s, 'developer level 22');
@@ -533,7 +537,7 @@ test('saves from before the skill rework start each class on the new kit, and ol
   s.loadout.equipped = { breaker: ['overload', 'sudo', 'pass-the-hash', 'memory-leak', 'bypass'] };
   s.daemons = [{ name: 'warden', trigger: { type: 'attack', part: 'any' }, command: 'interrupt $', on: true }];
   const r = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(r, 'breaker'), ['overload', 'exploit', 'smash', 'crack', 'brace', 'shatter', 'segfault']);
+  assert.deepEqual(equippedSkills(r, 'breaker'), ['overload', 'exploit', 'flood', 'crack', 'brace', 'shatter', 'segfault']);
   assert.deepEqual(r.daemons, []);
   assert.deepEqual(r.daemonsOwned, {});
 });

@@ -13,8 +13,8 @@ import { hiddenNodes } from './hidden.mjs';
 import { has as hasConfig } from './configs.mjs';
 
 export const FLEET = {
-  firstMs: 25 * 60000, // logged-on time after your first outpost before the first fleet
-  everyMs: [45 * 60000, 75 * 60000], // between fleets
+  firstMs: 45 * 60000, // logged-on time after your first outpost before the first fleet
+  everyMs: [90 * 60000, 150 * 60000], // between fleets (half that with a Honeytoken out there)
   travelMs: 10 * 60000, // warning time (Tarpit Beacon: half again)
   siegeMs: 8 * 60000, // at the outpost, before it falls
   levelUp: 2, // processes come in a little above the outpost's level
@@ -35,7 +35,8 @@ function origin(s, target) {
 export function launch(s) {
   const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege);
   if (!targets.length) return null;
-  const target = targets[Math.floor(rand(s) * targets.length)];
+  const pool = targets.some((l) => hasMod(l, 'lure')) ? targets.filter((l) => hasMod(l, 'lure')) : targets; // a Honeytoken first
+  const target = pool[Math.floor(rand(s) * pool.length)];
   const o = origin(s, target);
   const ships = Math.min(4, 2 + Math.floor(outposts(s).length / 2) + (rand(s) < 0.3 ? 1 : 0));
   const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + FLEET.levelUp);
@@ -49,7 +50,7 @@ export function launch(s) {
 function schedule(s, first = false) {
   const net = (s.net ||= {});
   const [lo, hi] = FLEET.everyMs;
-  net.fleetNext = first ? FLEET.firstMs : Math.round(lo + rand(s) * (hi - lo));
+  net.fleetNext = first ? FLEET.firstMs : Math.round((lo + rand(s) * (hi - lo)) * (outposts(s).some((l) => hasMod(l, 'lure')) ? 0.5 : 1));
 }
 
 // Called from tickNetwork with logged-on time (dt). Degraded mode pauses it.
@@ -118,8 +119,9 @@ export function fleetWon(s, e) {
   s.fleet = null;
   // The haul: code from every process, salvage, and a bonus kill's worth of XP.
   const k = codeOf(f.family);
-  if (k) gainCode(s, { [k]: f.total * codeDrop(f.level) * 2 }, 'Swarm broken: ');
+  if (k) gainCode(s, { [k]: f.total * codeDrop(f.level) * 2 * (hasMod(locOf(s, f.target), 'lure') ? 2 : 1) }, 'Swarm broken: ');
   for (let i = 0; i < f.total; i++) s.salvage.push({ name: `${FAMILIES[f.family].name} core`, virus: 'fleet', seed: f.seed + i });
-  gainXp(s, xpFor(s, f.level, f.total * 0.5), 'swarm broken');
+  const lure = hasMod(locOf(s, f.target), 'lure') ? 2 : 1; // a Honeytoken pays double
+  gainXp(s, xpFor(s, f.level, f.total * 0.5 * lure), 'swarm broken');
   emit(s, 'fleet-broken', `SWARM BROKEN. ${f.total} processes killed: +${f.total} salvage.`, { location: f.target });
 }

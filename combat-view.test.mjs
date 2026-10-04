@@ -10,6 +10,7 @@ CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 const start = (id = 'cryptjack') => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 } }; selectEncounter(s, id, 7, { level: 6 }); command(s, 'engage'); return s; };
 
@@ -61,9 +62,9 @@ test('tray shows cooldown and queued states', () => {
 test('a mutation is a tag, its rule on hover (and in a first-time tip); the gate card is just the virus and Engage', async () => {
   const { TIPS } = await import('./dist/tips.mjs');
   const s = start('splinter');
-  assert.match(hudMarkup(s), /data-mut="regenerative" title="[^"]*patches its armor after 1 cycle/);
+  assert.match(hudMarkup(s), /data-mut="regenerative" title="[^"]*patches its armor a cycle sooner/);
   assert.doesNotMatch(hudMarkup(s), /<p class="mutation-rule"/);
-  assert.ok(TIPS.some((t) => t.id === 'mut-regenerative' && /after 1 cycle/.test(t.text)));
+  assert.ok(TIPS.some((t) => t.id === 'mut-regenerative' && /a cycle sooner/.test(t.text)));
   const h = fresh();
   selectEncounter(h, 'splinter', 1);
   assert.match(mapMarkup(h, 'intrusion'), /At the gate/);

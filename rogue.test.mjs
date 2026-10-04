@@ -127,3 +127,23 @@ test('jack out of a wild server and it will not take you back for a minute (no j
     assert.ok(s.run, 'open again after a minute');
   } finally { hooks.now = null; }
 });
+
+test('elites: a third of a Pit\'s folders, built for a crew, three times the XP', async () => {
+  const { createVirus, ELITE } = await import('./dist/data.mjs');
+  const plain = createVirus('random', 9, { level: 10 }), elite = createVirus('random', 9, { level: 10, elite: true });
+  assert.ok(elite.elite && /^ELITE /.test(elite.name));
+  elite.parts.forEach((p, i) => {
+    assert.equal(p.max, Math.round(plain.parts[i].max * ELITE.hp));
+    assert.equal(p.maxArmor, plain.parts[i].maxArmor + ELITE.armor);
+  });
+  // Across many Pit spawns, about a third are elite; never in a Nest or a Gauntlet.
+  const s = world();
+  let n = 0, el = 0;
+  for (let i = 0; i < 30; i++) {
+    const loc = { seed: 100 + i, level: 10, rogue: { kind: 'pit' }, spawns: {}, serial: 0 };
+    for (const sp of Object.values(rogueSpawns(s, loc))) { n++; if (sp.elite) { el++; assert.match(sp.name, /^elite /); } }
+    const nest = { seed: 100 + i, level: 10, family: 'worm', rogue: { kind: 'nest' }, spawns: {}, serial: 0 };
+    assert.ok(Object.values(rogueSpawns(s, nest)).every((sp) => !sp.elite));
+  }
+  assert.ok(Math.abs(el / n - ELITE.share) < 0.1, `${el}/${n}`);
+});

@@ -6,6 +6,11 @@ export const CONFIG = {
   // Server
   maxIntegrity: 100,
   blindside: 1.25, // Ghostroot: damage that lands while you're blind deals +25%
+  // Level gap, WoW-style: something above you takes less from you (−7% a level past the first,
+  // never under 40%) and hits you harder (+10% a level past the first), so orange (3–4 up) is a
+  // real fight and red a gamble.
+  // Below you, a little the other way (3% a level, up to +15% dealt / −30% taken).
+  gap: { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 },
   phaseBounce: 0.25, // Flicker: a quarter of your command's hit on an out-of-phase part bounces back at you
   startingCredits: 160,
   // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
@@ -37,9 +42,12 @@ export const CONFIG = {
   // A broken part leaves salvage behind only sometimes.
   salvageChance: 0.35,
   maxMobLevel: 60,
-  // Armor: a hit on an armored part does no damage and breaks one chit; this many cycles after
-  // its last chit breaks, a part patches one chit back (unless you've broken it)
-  patchDelay: 2,
+  // Armor: a hit on an armored part does no damage and breaks one chit (a heavy hit from your
+  // command, heavyHit or more, breaks two); this many cycles after its last chit breaks, a part
+  // patches one chit back (unless you've broken it). Parts with 2+ chits wear half again as many.
+  patchDelay: 5,
+  heavyHit: 40,
+  armorScale: 1.5,
   // Status
   exposedMultiplier: 1.5,
   exposedCycles: 2,
@@ -69,8 +77,8 @@ export const CONFIG = {
   depthLoot: 20, // extra credits in caches per depth
   maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
   cdCost: 1, // Signal spent per move between directories
-  leadBase: 25, // lead progress every neutralized virus gives (four kills, or fewer with Trace)
-  leadTraceShare: 0.75, // plus three quarters of the Uplink trace reached (a full backtrace finds it)
+  leadBase: 15, // lead progress every neutralized virus gives (seven kills, or fewer with Trace)
+  leadTraceShare: 0.5, // plus half the Uplink trace reached (a full backtrace gets you most of the way)
   cacheCredits: 30,
   hoardBonus: 0.5, // Hoard quirk: caches pay 50% more
   trapSignal: 10, // pulling honeypot bait
@@ -128,9 +136,9 @@ export const ABILITIES = {
   // Breaker: burst, crits, breaking armor
   overload: { cls: 'breaker', verb: 'hit', name: 'Overload', target: 'part', damage: 40, cooldown: 3, icon: 'overload', short: 'Hit 40, crit resets', help: 'overload <part> — 40 damage. If it crits, its cooldown resets.' },
   exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 0, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Exposed: +25% crit', help: 'exploit <part> — Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
-  crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 2, cooldown: 4, icon: 'shell-shield', short: 'Strip 2 chits', help: 'crack <part> — breaks 2 armor chits on it at once.' },
+  crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 4, icon: 'shell-shield', short: 'Strip 3 chits', help: 'crack <part> — breaks 3 armor chits on it at once.' },
   shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 55, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 55 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last armor chit. 55 damage.' },
-  smash: { cls: 'breaker', verb: 'hit', name: 'Smash', target: 'part', damage: 20, cooldown: 2, icon: 'overload', short: 'Hit 20, ×2 if bare', help: 'smash <part> — 20 damage, double on a part with no armor left.' },
+  flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 30, cooldown: 4, icon: 'overload', short: 'Hit 30, ×2 if bare', help: 'flood <part> — 30 damage, double on a part with no armor left.' },
   segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 below 30%', help: 'segfault <part> — 30 damage, three times that on a part under 30%.' },
   'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 15, cooldown: 3, icon: 'overload', short: 'Hit 15 all', help: 'fork-bomb — 15 damage to every part, 30 to an Exposed one.' },
   'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 6, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 6→18', help: 'thermal-runaway <part> — a burn that grows: 6, 10, 14, 18.' },
@@ -138,7 +146,7 @@ export const ABILITIES = {
   sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 80, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 80 through armor, once', help: 'zero-day <part> — 80 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
-  'kill-process': { cls: 'bastion', verb: 'hit', name: 'Kill Process', target: 'part', damage: 30, due: 15, cooldown: 2, icon: 'spike', short: 'Hit 30, +15 if due', help: 'kill-process <part> — 30 damage, +15 if its attack is due this cycle.' },
+  'kill-process': { cls: 'bastion', verb: 'hit', name: 'Kill Process', target: 'part', damage: 30, due: 15, chits: 2, cooldown: 2, icon: 'spike', short: 'Hit 30, +15 if due', help: 'kill-process <part> — 30 damage, +15 if its attack is due this cycle. On armor it breaks 2 chits.' },
   firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — a shield that absorbs the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — the cycle after an attack reaches you (or your shield): hit back for twice its size, up to 60.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
@@ -239,7 +247,7 @@ export const FAMILIES = {
     summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler blinds you: your whole timeline goes dark for 2 cycles, and hits that land while you are blind deal +25%.',
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
-      { id: 'scrambler', name: 'Scrambler', integrity: 38, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Blind', effect: 'blind', amount: 2, interval: 4, first: 2 } },
+      { id: 'scrambler', name: 'Scrambler', integrity: 46, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Blind', effect: 'blind', amount: 2, interval: 4, first: 2 } },
     ],
   },
 };
@@ -408,7 +416,7 @@ export const GUARDS = {
 // Every mutation is visible from the start and changes a decision.
 export const MUTATIONS = {
   armored: { name: 'Armored', rule: 'Every part has one more armor chit.' },
-  regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor after 1 cycle instead of 2, so strip it only when you can finish it.' },
+  regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor a cycle sooner, so strip it only when you can finish it.' },
   hasty: { name: 'Hasty', rule: 'Every attack starts a cycle sooner, but all its parts have 15% less Integrity, so kill it fast.' },
 };
 
@@ -437,7 +445,8 @@ function rng(seed) {
 
 function makePart(spec, kind, scale, extraArmor = 0) {
   const max = Math.max(1, Math.round(spec.integrity * scale * (kind === 'fragment' ? 1 : CONFIG.partToughness)));
-  const armor = (spec.armor || 0) + extraArmor;
+  const worn = (spec.armor || 0) + extraArmor;
+  const armor = worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6
   return {
     id: spec.id,
     name: spec.name,
@@ -472,6 +481,10 @@ export const THREAT_STEPS = { armor: [{ threat: 12, part: 'special' }, { threat:
 export const power = (level) => 1 + CONFIG.powerPerLevel * (Math.max(1, level) - 1);
 // Enemies match you level for level (no soft start: the first fights should cost something).
 export const mobPower = (level) => power(level) * 1;
+
+// Elites: group content (a third of a Pit's folders, the trunk server's too). Much bigger, harder
+// hitting and better armored; they pay three times the XP and roll for drops three times.
+export const ELITE = { hp: 2.5, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3 };
 
 // Build a virus from a named fixture or a seeded random variant.
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
@@ -509,12 +522,18 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // A dormant strain's attacks wait off the timeline until it wakes.
   if (strain?.dormant) for (const p of parts) if (p.attack) { p.attack.wake = Math.max(1, p.attack.due - 1); p.attack.due = 999; }
 
+  if (overrides.elite) for (const p of parts) {
+    p.max = p.integrity = Math.round(p.max * ELITE.hp);
+    p.armor = p.maxArmor = p.maxArmor + ELITE.armor;
+    if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * ELITE.dmg));
+    if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * ELITE.dmg));
+  }
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
   const tagNo = String(seed >>> 0).slice(-4).padStart(4, '0');
-  const name = (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
+  const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false };
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}) };
 }
 
 // ---------- locations ----------
@@ -566,8 +585,8 @@ export const SERVER = {
   xpToNext: (level) => xpToNext(level),
   xp: { item: 10, creditsPer: 10 }, // banking: 10 per item, 1 per 10 credits
   // Enemies have a level. Home intrusions come in at your level; a location keeps the level
-  // it was found at (your level + 3 per layer down). Mutations and enemy crits from level 3.
-  locationLevel: (hackerLevel, depth) => hackerLevel + 3 * (depth - 1),
+  // it was found at (your level + 2 per layer down). Mutations and enemy crits from level 3.
+  locationLevel: (hackerLevel, depth) => hackerLevel + 2 * (depth - 1),
   guardLevel: (level, depth) => level + 3 * (depth - 1), // (old saves without a location level)
   mutationsFrom: 3,
   daemonSlotsAt: [10, 20], // +1 daemon slot at each of these server levels
@@ -611,7 +630,7 @@ export const CANTRIPS = [
 // Backtrace: each class traces its own way, a passive from level 7 (at home and on SPRAWL-00).
 // Uplink at 100% before the kill locates where the virus came from.
 export const BACKTRACE = {
-  breaker: { per: 15, rule: '+15% Uplink trace for each part you break.' },
+  breaker: { per: 6, rule: '+6% Uplink trace for each crit you land (Exploit sets them up).' },
   bastion: { per: 10, rule: '+10% Uplink trace for each attack that reaches you and does nothing (a shield, a chit, Harden, a dodge).' },
   infiltrator: { per: 0, rule: 'Traceroute: +25% Uplink trace a use, the strongest trace in the game.' },
   operator: { per: 2, rule: '+2% Uplink trace for each helper hit.' },
@@ -643,7 +662,7 @@ export const ARCHETYPES = {
     name: 'Breaker', idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
     status: 'exposed',
     passive: { name: 'Momentum', rule: 'Each part you break: +10% damage for 2 cycles, up to 3 stacks. Another break refreshes it.' },
-    skills: skillsOf(['overload', 'exploit', 'smash', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
+    skills: skillsOf(['overload', 'exploit', 'flood', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
     fillers: [
       [f('overclocked', 'Overclocked Core', '+3% damage per rank.', 0.03), f('chain-exploit', 'Chain Exploit', 'Momentum +2% per stack per rank.', 0.02)],
       [f('exploit-kit', 'Exploit Kit', 'Exposed gives +5% more crit chance per rank.', 5), f('heat-sink', 'Heat Sink', 'Overload +4 damage per rank.', 4)],

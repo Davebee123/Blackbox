@@ -10,6 +10,7 @@ CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
 // A level-25 Breaker, so every Breaker skill is on the bar.
 const veteran = () => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 }, infiltrator: { level: 50, xp: 0 } }; return s; };
@@ -41,13 +42,13 @@ test('Virus Integrity is the sum of every part', () => {
   assert.equal(part(s, 'core'), undefined);
 });
 
-test('armor is chits on a part: a hit on armor breaks one chit and does no damage', () => {
+test('armor is chits on a part: a hit on armor breaks one chit (a heavy one two) and does no damage', () => {
   const s = quiet(start());
   const enc = part(s, 'encryptor');
-  assert.equal(enc.armor, 2);
+  assert.equal(enc.armor, 3, 'two chits, worn half again');
   act(s, 'overload encryptor');
-  assert.equal(enc.integrity, enc.max, 'even a big hit only breaks a chit');
-  assert.equal(enc.armor, 1);
+  assert.equal(enc.integrity, enc.max, 'even a big hit only breaks chits');
+  assert.equal(enc.armor, 1, 'a heavy hit (40+) breaks two');
   assert.equal(previewDamage(s, 'spike', enc), 0, 'the preview knows armor absorbs it');
   act(s, 'spike encryptor');
   assert.equal(enc.armor, 0);
@@ -55,24 +56,25 @@ test('armor is chits on a part: a hit on armor breaks one chit and does no damag
   assert.equal(enc.max - enc.integrity, 25, 'bare: the full hit lands');
 });
 
-test('a bare part patches one chit back two cycles later, unless you break it first', () => {
+test('a bare part patches one chit back five cycles later, unless you break it first', () => {
   const s = quiet(start());
   const p = part(s, 'pulse');
   act(s, 'spike pulse'); // cycle 1: its only chit breaks
   assert.equal(p.armor, 0);
-  assert.deepEqual(patches(s), [{ source: 'pulse', col: 1 }], 'shown on the timeline: end of next cycle');
-  act(s, 'hold'); // cycle 2
+  assert.deepEqual(patches(s, 6), [{ source: 'pulse', col: 4 }], 'shown on the timeline');
+  for (let i = 0; i < 4; i++) act(s, 'hold'); // cycles 2–5
   assert.equal(p.armor, 0);
-  act(s, 'hold'); // cycle 3: patched at the end of it
+  act(s, 'hold'); // cycle 6: patched at the end of it
   assert.equal(p.armor, 1);
   assert.ok(s.logs.some((e) => e.type === 'patch'));
-  const r = quiet(start('splinter')); // Regenerative: one cycle
+  const r = quiet(start('splinter')); // Regenerative: a cycle sooner
+  const rep = Object.assign(part(r, 'replicator'), { armor: 1, maxArmor: 1 });
   act(r, 'spike replicator');
-  act(r, 'hold');
-  assert.equal(part(r, 'replicator').armor, 1);
+  for (let i = 0; i < 4; i++) act(r, 'hold');
+  assert.equal(rep.armor, 1);
 });
 
-test('armor-piercing hits go straight through chits; Crack strips two', () => {
+test('armor-piercing hits go straight through chits; Crack strips three', () => {
   const s = quiet(start());
   s.hackers.breaker.level = 50;
   s.loadout.equipped.breaker = ['zero-day', 'crack'];
@@ -81,14 +83,14 @@ test('armor-piercing hits go straight through chits; Crack strips two', () => {
   assert.equal(enc.max - enc.integrity, 80);
   assert.equal(enc.armor, 3, 'chits untouched');
   act(s, 'crack encryptor');
-  assert.equal(enc.armor, 1);
+  assert.equal(enc.armor, 0);
   assert.match(command(s, 'crack encryptor').at(-1).message, /ready in/);
 });
 
 test('the Armored mutation adds a chit to every part', () => {
   const plain = createVirus('cryptjack', 1, { mutation: null });
   const armored = createVirus('cryptjack', 1, { mutation: 'armored' });
-  plain.parts.forEach((p, i) => assert.equal(armored.parts[i].armor, p.armor + 1));
+  plain.parts.forEach((p, i) => assert.ok(armored.parts[i].armor > p.armor)); // one more worn (then half again from 2)
 });
 
 test('the alert is safe until engage', () => {
@@ -384,8 +386,8 @@ test('enemies have a level: home intrusions come in at your level, and grow with
   selectEncounter(t, 'cryptjack', 1);
   assert.equal(t.encounter.virus.level, 7);
   assert.ok(t.encounter.virus.parts.every((p, i) => p.max > low[i]), 'bigger');
-  assert.deepEqual(t.encounter.virus.parts.map((p) => p.armor), [1, 3], 'the Encryptor gained chits at levels 3 and 7');
-  assert.equal(SERVER.locationLevel(1, 3), 7, 'locations are 3 levels tougher per layer down');
+  assert.deepEqual(t.encounter.virus.parts.map((p) => p.armor), [1, 5], 'the Encryptor gained chits at levels 3 and 7 (3, worn half again: 5)');
+  assert.equal(SERVER.locationLevel(1, 3), 5, 'locations are 2 levels tougher per layer down');
   assert.ok(mobPower(1) === power(1) && mobPower(6) === power(6), 'viruses match you level for level');
   assert.ok(Math.abs(power(50) - 2.96) < 1e-9, '+4% per level');
   CONFIG.powerPerLevel = 0;
@@ -494,4 +496,26 @@ test('stepped (the browser): solo, the virus answers as its own step after yours
     assert.ok(rest.some((e) => e.type === 'server-hit' || e.type === 'evaded' || e.type === 'blocked'));
     assert.equal(s.encounter.cycle, was + 1);
   } finally { hooks.stepped = false; }
+});
+
+test('level gap, WoW-style: one level up is about even; past that, it takes less and hits harder', async () => {
+  const { gapDealt, gapTaken } = await import('./dist/combat.mjs');
+  const saved = CONFIG.gap;
+  CONFIG.gap = { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 };
+  try {
+    assert.equal(gapDealt(0), 1); assert.equal(gapTaken(0), 1);
+    assert.equal(gapDealt(1), 1); assert.equal(gapTaken(1), 1);
+    assert.ok(Math.abs(gapDealt(4) - 0.79) < 1e-9 && Math.abs(gapTaken(4) - 1.3) < 1e-9, 'orange: a real fight');
+    assert.equal(gapDealt(20), 0.4, 'never under 40%');
+    assert.ok(gapDealt(-3) > 1 && gapTaken(-3) < 1, 'below you, a little easier');
+    const s = fresh();
+    command(s, 'encounter cryptjack');
+    command(s, 'engage');
+    s.encounter.virus.level = s.hackers[s.loadout.archetype].level + 5;
+    const p = s.encounter.virus.parts.find((x) => x.attack);
+    Object.assign(p, { armor: 0 });
+    const before = p.integrity;
+    command(s, 'spike ' + p.id); resolveCycle(s);
+    assert.ok(before - p.integrity > 0 && before - p.integrity < 25, 'spike (25) lands for less on something five levels up');
+  } finally { CONFIG.gap = saved; }
 });

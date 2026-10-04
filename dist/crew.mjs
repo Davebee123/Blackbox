@@ -20,7 +20,7 @@ import { isMember } from './consortium.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
-  hpPer: 1.5, // enemy Integrity: +150% per extra player
+  hpPer: 0.8, // enemy Integrity: +80% per extra player (a party makes a normal fight easier; elites are what need one)
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   names: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill'],
 };

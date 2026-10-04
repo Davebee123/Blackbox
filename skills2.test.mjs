@@ -10,6 +10,7 @@ CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
+CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 import { start as startAt, act, quiet, noArmor, big, lost } from './classes.test.mjs';
 
 // A level-25 class with exactly these skills on the bar, these talent picks (0 = a, 1 = b) and ranks.
@@ -190,7 +191,7 @@ test('filler ranks change the numbers they say', () => {
   assert.equal(100 - i.server.integrity, Math.round(amount * 0.91));
   const ac = quiet(start('breaker', [], [], 'cryptjack', { 'armor-cracker': 2 }));
   act(ac, 'spike pulse');
-  assert.deepEqual(patches(ac, 6), [{ source: 'pulse', col: 3 }], 'Armor Cracker: 2 more cycles before it patches');
+  assert.deepEqual(patches(ac, 9), [{ source: 'pulse', col: 6 }], 'Armor Cracker: 2 more cycles before it patches');
   const o = noArmor(quiet(start('operator', ['deploy'], [], 'cryptjack', { 'thread-pool': 3 })));
   big(o, 'pulse');
   act(o, 'deploy pulse');
