@@ -99,6 +99,12 @@ const P = {
   node: '<rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="M1.5 6.3h13M1.5 9.7h13M5.5 3v3.3M10.5 3v3.3M8 6.3v3.4"/>',
   ids: '<path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>',
   spike: '<path d="M8 1.5 10 8l-2 6.5L6 8z"/><path d="M3 8h10"/>',
+  // Faction marks: Halcyon's shield, GLASSJAW's cracked jaw, Kestrel's wings, LANTERN's lamp, NULL CHOIR's null.
+  'f-halcyon': '<path d="M8 1.8 13 3.8v4c0 3.2-2.3 5.3-5 6.4-2.7-1.1-5-3.2-5-6.4v-4z"/><path d="M5 8.5h6"/>',
+  'f-glassjaw': '<path d="M2.5 6c2 4.5 9 4.5 11 0"/><path d="M4.5 6.6v1.6M7 7.2v2M9.5 7.2v2M12 6.6v1.6"/><path d="M8.5 1.5 7 4l2 1-1.5 2"/>',
+  'f-kestrel': '<path d="M1.5 9.5c3-3.5 4.5-3.5 6.5 0 2-3.5 3.5-3.5 6.5 0"/><path d="M8 9.5v3.5"/>',
+  'f-lantern': '<path d="M6 2.5h4M5.5 4h5l1 7h-7z"/><path d="M6.5 11v2.5h3V11M8 6.2v2.6"/>',
+  'f-nullchoir': '<circle cx="8" cy="8" r="5.8"/><path d="M3.9 12.1 12.1 3.9"/>',
   // Memory: a chip with pins.
   memory: '<rect x="4" y="4" width="8" height="8" rx="1"/><path d="M6 2v2M8 2v2M10 2v2M6 12v2M8 12v2M10 12v2M2 6h2M2 10h2M12 6h2M12 10h2"/>',
   // Honeytoken: a jar with a drip, bait for trouble.

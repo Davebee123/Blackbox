@@ -6,6 +6,7 @@ import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERS
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
+import { buyFrom, claimServer } from './factions.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
 import { has as hasConfig, configCommand } from './configs.mjs';
 import { fleetCommand, fleetWon } from './fleet.mjs';
@@ -610,6 +611,7 @@ export function addLocation(s, family, depth = 1, parent = null) {
   if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and the Firewall blueprint
   loc.trait = siteTrait(loc);
   rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken
+  claimServer(s, loc); // about a third belong to a faction (factions.mjs)
   s.locations.push(loc);
   spawnHidden(s, loc);
   onFound(s, loc); // memory full: it arrives detached (memory.mjs)
@@ -1337,6 +1339,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     let xp = 0; for (let l = 1; l < want; l++) xp += SERVER.xpToNext(l);
     s.serverXp = xp;
     emit(s, 'info', `Developer: server level ${serverLevel(s)}.`);
+  } else if (/^buy \S+ \S+$/.test(text)) {
+    const [, f, id] = text.split(' ');
+    buyFrom(s, f, id, now);
   } else if (/^buy \S+$/.test(text)) {
     buy(s, text.split(' ')[1]);
   } else if (/^architecture( |$)/.test(text)) {

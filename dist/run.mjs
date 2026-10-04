@@ -16,6 +16,7 @@ import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
 import { isLive } from './memory.mjs';
+import { strikeServer } from './factions.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -542,6 +543,7 @@ function unlock(s, rest) {
   out(s, `${dir}/ unlocked.`, 'net-good');
   gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked');
   if (loc.member) return out(s, `The vault is open, but ${loc.name} stays ${loc.member}'s.`); // a consortium member's: no takeover
+  strikeServer(s, loc, 'takeover'); // a faction's server: a blow to it (factions.mjs)
   contractTakeover(s, loc);
 }
 

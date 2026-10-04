@@ -23,6 +23,7 @@ import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from 
 import STORY_TEXT from './content/story.mjs';
 import CONTRACT_TEXT from './content/contracts.mjs';
 import { fill } from './content.mjs';
+import { FACTIONS, changeRep, rippleRep, hostile, rivalServers, hubsOf } from './factions.mjs';
 
 export const MAIL = {
   periodMs: 30 * 60 * 1000, // the retainer pays every 30 minutes, offline too
@@ -36,14 +37,12 @@ export const MAIL = {
   offBooksHit: 8, // standing lost for doing GLASSJAW's work
   offBooksPay: 1.6,
   offBooksChance: 0.2,
+  factionShare: 0.5, // of the rest of the board, once the hubs are up: other factions' work
+  factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Indemnity)
   startStanding: 10,
 };
 
-export const FACTIONS = {
-  halcyon: { name: 'Halcyon Mutual', short: 'Halcyon' },
-  lowlight: { name: 'LOWLIGHT', short: 'LOWLIGHT' },
-  glassjaw: { name: 'GLASSJAW', short: 'GLASSJAW' },
-};
+export { FACTIONS }; // the factions live in factions.mjs now (Halcyon is the first of them)
 // Standing with Halcyon sets the retainer (L = server level) and what its store will sell you.
 export const TIERS = [
   { min: 0, name: 'Suspended', pay: () => 0 },
@@ -250,30 +249,36 @@ const CODES = ['cipher', 'worm', 'kernel'];
 export function offer(s, at = now()) {
   const L = hackerLevel(s);
   const off = standing(s) >= 10 && rand(s) < MAIL.offBooksChance;
-  const target = pickTarget(s);
+  // Once the hubs are up, about half the board is other factions' work (not ones that hate you).
+  const others = hubsOf(s).length ? ['kestrel', 'lantern', 'nullchoir'].filter((f) => !hostile(s, f)) : [];
+  const faction = off ? 'glassjaw' : others.length && rand(s) < MAIL.factionShare ? pick(s, others) : 'halcyon';
+  const theirs = faction !== 'halcyon' && faction !== 'glassjaw';
+  const rivals = theirs ? rivalServers(s, faction).filter((l) => !targeted(s).has(l.id)) : [];
+  const target = rivals.length && rand(s) < 0.6 ? { loc: pick(s, rivals).id } : pickTarget(s);
   const kinds = (off ? ['materials', 'item', 'kill'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item']).filter((k) => target || !['takeover', 'item'].includes(k));
   const type = pick(s, kinds);
   const fam = pick(s, Object.keys(CREWS));
-  const pay = (base, per) => Math.round((base + per * L) * (off ? MAIL.offBooksPay : 1));
-  const ind = (n) => (off ? 0 : n + Math.floor(L / 12));
+  const pay = (base, per) => Math.round((base + per * L) * (off ? MAIL.offBooksPay : theirs ? MAIL.factionPay : 1));
+  const ind = (n) => (off || theirs ? 0 : n + Math.floor(L / 12));
   const hit = off ? { standing: -MAIL.offBooksHit } : {};
+  const repFor = (n) => (theirs ? { standing: 0, rep: n } : {}); // other factions pay in their own rep
   const T = CONTRACT_TEXT;
   let j;
   if (type === 'kill') {
     const count = 3 + (L >= 10 ? 1 : 0) + (L >= 30 ? 1 : 0);
-    j = { type, family: fam, count, reward: { credits: pay(30, 5), indemnity: ind(1), standing: 5, xp: 1.5, ...hit } };
+    j = { type, family: fam, count, reward: { credits: pay(30, 5), indemnity: ind(1), standing: 5, xp: 1.5, ...hit, ...repFor(5) } };
   } else if (type === 'bounty') {
     const name = `${pick(s, T.bountyNames?.length ? T.bountyNames : ['lapsejack'])}-${String(1000 + Math.floor(rand(s) * 9000))}`;
-    j = { type, family: fam, name, reward: { credits: pay(40, 6), indemnity: ind(2), standing: 5, xp: 2 } };
+    j = { type, family: fam, name, reward: { credits: pay(40, 6), indemnity: ind(2), standing: 5, xp: 2, ...repFor(5) } };
   } else if (type === 'materials') {
     const m = pick(s, CODES), amount = 2 + Math.floor(L / 8);
-    j = { type, material: m, amount, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 1, ...hit } };
+    j = { type, material: m, amount, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 1, ...hit, ...repFor(5) } };
   } else if (type === 'takeover') {
-    j = { type, ...target, reward: { credits: pay(60, 10), indemnity: ind(4), standing: 8, xp: 3 } };
+    j = { type, ...target, reward: { credits: pay(60, 10), indemnity: ind(4), standing: 8, xp: 3, ...repFor(8) } };
   } else {
     const f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
     j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW wants it. Halcyon wants it more.' : 'pull it and bank it, then deliver it from Mail.'],
-      reward: { credits: pay(50, 8), indemnity: ind(3), standing: 6, xp: 2.5, ...hit } };
+      reward: { credits: pay(50, 8), indemnity: ind(3), standing: 6, xp: 2.5, ...hit, ...repFor(6) } };
   }
   // The words: a variant from content/contracts.mjs, for this kind and side.
   const kind = ['takeover', 'item'].includes(type) && !j.loc ? type + '-unknown' : type;
@@ -281,10 +286,11 @@ export function offer(s, at = now()) {
   const variants = T[kind]?.[side]?.length ? T[kind][side] : T[kind]?.halcyon || [{ subject: kind, body: [''] }];
   const v = pick(s, variants);
   const vars = jobVars(s, j);
-  const from = v.from ? SENDERS[v.from] : off ? SENDERS.glassjaw : pick(s, [SENDERS.claims, SENDERS.claims, SENDERS.wick]);
+  const from = theirs ? FACTIONS[faction].name : v.from ? SENDERS[v.from] : off ? SENDERS.glassjaw : pick(s, [SENDERS.claims, SENDERS.claims, SENDERS.wick]);
   j = { subject: fill(v.subject, vars), body: (v.body || []).map((p) => fill(p, vars)).filter(Boolean), ...j };
   const o = { id: s.mail.next++, from, got: 0, at, expiresAt: at + between(s, MAIL.offerLife), ...j };
   if (off) o.offBooks = true;
+  o.faction = faction;
   s.mail.offers.push(o);
   return o;
 }
@@ -337,6 +343,7 @@ function changeStanding(s, f, delta, why) {
   if (f !== 'halcyon') return;
   const after = tierOf(s).name;
   emit(s, delta < 0 ? 'standing-down' : 'standing-up', `${why}: Halcyon standing ${delta > 0 ? '+' : ''}${delta} (${standing(s)}, ${after}).${after !== before ? ` ${delta > 0 ? 'Promoted' : 'Dropped'} to ${after}.` : ''}`, { standing: standing(s) });
+  rippleRep(s, 'halcyon', delta); // Halcyon's friends and enemies notice (factions.mjs)
 }
 
 export function ready(s, c) {
@@ -389,6 +396,7 @@ export const rewardLine = (s, c) => [
   c.reward.indemnity ? `${c.reward.indemnity} Indemnity` : '',
   c.reward.xp ? `${xpFor(s, hackerLevel(s), c.reward.xp)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
+  c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
   c.reward.relay ? 'a relay' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.daemon ? 'a daemon' : '',
 ].filter(Boolean).join(' · ');
 
@@ -428,7 +436,8 @@ export function mailCommand(s, text, at = now()) {
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits });
   if (c.reward.xp) gainXp(s, xpFor(s, hackerLevel(s), c.reward.xp), 'contract');
   if (c.reward.standing) changeStanding(s, 'halcyon', c.reward.standing, c.offBooks ? 'Halcyon heard about the GLASSJAW job' : 'Contract delivered');
-  if (c.offBooks) s.standing.glassjaw = Math.min(100, standing(s, 'glassjaw') + 5);
+  if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
+  if (c.reward.rep && c.faction) changeRep(s, c.faction, c.reward.rep, 'Contract delivered');
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
   if (c.reward.daemon) learnDaemon(s, 'LOWLIGHT bonus: ');

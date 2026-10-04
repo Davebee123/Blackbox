@@ -105,7 +105,7 @@ export function buy(s, what) {
   deliverGoods(s, slot.id, L);
 }
 
-function deliverGoods(s, id, L) {
+export function deliverGoods(s, id, L) {
   const g = GOODS[id];
   if (['relay', 'cracker', 'injector'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
   if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');

@@ -682,6 +682,7 @@ function updateSuggestions() {
 // (view.mjs boardMarkup). Parsed the way Enter would; one that wouldn't go through (on cooldown,
 // not lit, …) shows as a warning instead, the reason on hover.
 let aimPreview = null;
+let hubSel = 'halcyon'; // the faction hub page you docked at
 function previewAim(s, text) {
   const key = () => aimPreview && aimPreview.target + aimPreview.ok + aimPreview.ability;
   const was = key();
@@ -894,7 +895,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: !sidebarOn() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: !sidebarOn() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubMarkup(x, hubSel, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     put('page-view', (pages[module] || pages.map)(campaign));
     if (module === 'map' || !pages[module]) applyMapZoom();
   }
@@ -1468,6 +1469,7 @@ function goTo(target) {
   const [where, what] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
+  else if (where === 'hub') { hubSel = what; go('hub'); }
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) mapSel = what; go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
