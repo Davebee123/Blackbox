@@ -561,6 +561,7 @@ function run(raw) {
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();
+  if (text === 'map names hover' || text === 'map names on') { campaign.settings.mapNames = text.endsWith('hover') ? 'hover' : 'on'; save(); dirty = true; return notice(text.endsWith('hover') ? 'Map names show on hover.' : 'Map names always show.'); }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
@@ -688,6 +689,55 @@ function previewAim(s, text) {
   }
   if ((aimPreview && aimPreview.target + aimPreview.ok) !== was) dirty = true;
 }
+
+// ---------- map zoom ----------
+// The wheel zooms around the cursor (up to 5×), a drag pans, a double-click (or ⤢) zooms out.
+// Kept here, not on the save: it's a view. Re-applied after every map render.
+const mapZoom = { k: 1, cx: 0, cy: 0 };
+const mapSvg = () => $('page-view')?.querySelector('.map-svg');
+const baseVb = (svg) => svg.dataset.vb.split(' ').map(Number);
+function applyMapZoom() {
+  const svg = mapSvg();
+  if (!svg) return;
+  const [x, y, w, h] = baseVb(svg);
+  svg.style.setProperty('--z', Math.max(1, mapZoom.k) ** 0.75); // text grows a little, not 5×
+  if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return; }
+  const zw = w / mapZoom.k, zh = h / mapZoom.k;
+  mapZoom.cx = Math.max(x + zw / 2, Math.min(x + w - zw / 2, mapZoom.cx));
+  mapZoom.cy = Math.max(y + zh / 2, Math.min(y + h - zh / 2, mapZoom.cy));
+  svg.setAttribute('viewBox', `${mapZoom.cx - zw / 2} ${mapZoom.cy - zh / 2} ${zw} ${zh}`);
+  svg.classList.add('zoomed');
+}
+const svgPoint = (svg, e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
+document.addEventListener('wheel', (e) => {
+  const svg = e.target.closest?.('.map-svg');
+  if (!svg) return;
+  e.preventDefault();
+  const [x, y, w, h] = baseVb(svg);
+  if (mapZoom.k <= 1) { mapZoom.cx = x + w / 2; mapZoom.cy = y + h / 2; }
+  const p = svgPoint(svg, e), k0 = mapZoom.k, k = Math.max(1, Math.min(5, k0 * (e.deltaY < 0 ? 1.25 : 1 / 1.25)));
+  mapZoom.cx = p.x + (mapZoom.cx - p.x) * (k0 / k);
+  mapZoom.cy = p.y + (mapZoom.cy - p.y) * (k0 / k);
+  mapZoom.k = k;
+  applyMapZoom();
+}, { passive: false });
+let mapDrag = null;
+document.addEventListener('pointerdown', (e) => {
+  const svg = e.target.closest?.('.map-svg');
+  if (svg && mapZoom.k > 1 && e.button === 0) mapDrag = { x: e.clientX, y: e.clientY, cx: mapZoom.cx, cy: mapZoom.cy, moved: false, scale: svg.getScreenCTM().a };
+});
+document.addEventListener('pointermove', (e) => {
+  if (!mapDrag) return;
+  const dx = e.clientX - mapDrag.x, dy = e.clientY - mapDrag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) mapDrag.moved = true;
+  if (!mapDrag.moved) return;
+  mapZoom.cx = mapDrag.cx - dx / mapDrag.scale;
+  mapZoom.cy = mapDrag.cy - dy / mapDrag.scale;
+  applyMapZoom();
+});
+document.addEventListener('pointerup', () => { if (mapDrag?.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 0); } mapDrag = null; });
+document.addEventListener('dblclick', (e) => { if (e.target.closest?.('.map-svg')) { mapZoom.k = 1; applyMapZoom(); } });
+document.addEventListener('click', (e) => { if (e.target.closest?.('[data-map-zoom]')) { mapZoom.k = 1; applyMapZoom(); } });
 
 // ---------- rendering ----------
 const cache = new Map();
@@ -823,6 +873,7 @@ function render(force = false) {
     render.logLen = s.logs.length;
   } else if (combatLike) {
     put('page-view', V.mapMarkup(campaign, mapSel, mapView));
+    applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
     const lines = $('term')?.children.length;

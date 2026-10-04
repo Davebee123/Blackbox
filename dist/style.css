@@ -339,17 +339,17 @@ pre { font: 12px var(--mono); color: var(--muted); white-space: pre-wrap; max-he
 .mscope .mring-range { fill: none; stroke: rgba(241, 185, 47, 0.09); stroke-width: 1; }
 .mscope .mring-range.wall { stroke: rgba(127, 209, 199, 0.16); stroke-dasharray: 2 5; }
 .mscope .maxis { stroke: rgba(241, 185, 47, 0.05); stroke-width: 1; }
-.mring-label { fill: rgba(241, 185, 47, 0.4); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+.mring-label { fill: rgba(241, 185, 47, 0.4); font-size: calc(10px / var(--z, 1)); letter-spacing: 2px; text-transform: uppercase; }
 .mlink { stroke: rgba(241, 185, 47, 0.26); stroke-width: 1; }
 .mlink.hot { stroke: rgba(255, 91, 61, 0.75); stroke-dasharray: 3 5; animation: mflow 1.2s linear infinite; }
 .mlink.ghost { stroke: rgba(241, 185, 47, 0.2); stroke-dasharray: 1 5; }
 @keyframes mflow { to { stroke-dashoffset: -16; } }
 .mnode { cursor: pointer; outline: none; }
-.mlabel { fill: #e6dcc4; font-size: 13px; font-weight: 600; letter-spacing: 1.2px; transition: fill 0.15s; }
+.mlabel { fill: #e6dcc4; font-size: calc(13px / var(--z, 1)); font-weight: 600; letter-spacing: 1.2px; transition: fill 0.15s; }
 .mlabel.home { fill: var(--you); letter-spacing: 2.5px; }
 .mlabel.hot { fill: var(--hot); }
 .mlabel.dim { fill: var(--muted); }
-.msub { fill: var(--muted); font-size: 11px; letter-spacing: 0.5px; }
+.msub { fill: var(--muted); font-size: calc(11px / var(--z, 1)); letter-spacing: 0.5px; }
 .mnode:hover .mlabel, .mnode.selected .mlabel { fill: var(--bright); }
 .mnode:hover .mlabel.hot, .mnode.selected .mlabel.hot { fill: #ff8a70; }
 .mreticle { fill: none; stroke: var(--bright); stroke-width: 1.2; opacity: 0.85; }
@@ -494,8 +494,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .page-grid { grid-template-columns: 1fr; }
   .map-page { display: flex; flex-direction: column; height: auto; }
   .map-canvas { height: 440px; }
-  .mlabel { font-size: 15px; }
-  .msub { font-size: 13px; }
+  .mlabel { font-size: calc(15px / var(--z, 1)); }
+  .msub { font-size: calc(13px / var(--z, 1)); }
   .map-legend { font-size: 11px; }
   .net-head { flex-wrap: wrap; gap: 8px 14px; padding: 10px 12px; }
   .net-signal { margin-left: 0; }
@@ -1761,7 +1761,16 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .tag-con { color: var(--next); border-color: rgba(255, 216, 92, 0.5); }
 /* The consortium's map: trunk lines out to members' home servers. */
 .map-canvas { position: relative; }
-.map-tabs { position: absolute; top: 8px; left: 8px; z-index: 2; }
+.map-tools { position: absolute; top: 8px; left: 8px; right: 8px; z-index: 2; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.map-tools > * { pointer-events: auto; }
+.map-ctl { margin-left: auto; }
+.map-svg.zoomed { cursor: grab; } .map-svg.zoomed:active { cursor: grabbing; }
+/* Levels first: the level big, in WoW colours; the layer a small tag; names can hide until hover. */
+.msub .mlv { font-size: calc(14px / var(--z, 1)); font-weight: 700; }
+.mlv.con-red { fill: #ff5b3d; } .mlv.con-orange { fill: #ff9a3d; } .mlv.con-yellow { fill: #f1d02f; } .mlv.con-green { fill: #7fd67a; } .mlv.con-gray { fill: #8a8174; }
+.msub .mlayer { fill: var(--you); font-weight: 600; letter-spacing: 1px; }
+.names-hover .mnode:not(.server):not(:hover):not(:focus-visible):not(.selected) .mlabel { opacity: 0; }
+.names-hover .mnode .mlabel { transition: opacity 0.15s; }
 .mscope .mring-range.trunk { stroke: rgba(255, 216, 92, 0.14); stroke-dasharray: 4 6; }
 .mlink.trunk { stroke: rgba(255, 216, 92, 0.55); stroke-width: 1.6; stroke-dasharray: 6 4; animation: mflow 2.4s linear infinite; }
 .no-motion .mlink.trunk { animation: none; }

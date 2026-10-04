@@ -1386,6 +1386,12 @@ function labelAt(n, r) {
   return si > 0 ? { x: 0, y: r + 17, a: 'middle' } : { x: 0, y: -r - 22, a: 'middle' };
 }
 const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r); return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text>${sub ? `<text x="${p.x}" y="${p.y + 15}" class="msub" text-anchor="${p.a}">${esc(sub)}</text>` : ''}`; };
+// A server's label with its level up front: the level big and coloured by how hard it is for you
+// (WoW colours), the layer as a tag, then whatever else (outpost, siege…). The name can hide.
+const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
+  const p = labelAt(n, r), gap = level - hackerLevel(s);
+  return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text><text x="${p.x}" y="${p.y + 16}" class="msub" text-anchor="${p.a}"><tspan class="mlv ${conClass(gap)}">${level}</tspan>${depth > 1 ? `<tspan class="mlayer" dx="6">L${depth}</tspan>` : ''}${rest ? `<tspan dx="6">${esc(rest)}</tspan>` : ''}</text>`;
+};
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
@@ -1451,16 +1457,18 @@ export function mapMarkup(s, sel = 'server', view = 'mine') {
     const l = n.loc, st = nodeState(s, l);
     const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
-    const sub = `lv ${l.level || 1}${l.depth > 1 ? ` · layer ${l.depth}` : ''}${st === 'here' ? ' · here' : l.held?.siege ? ' · siege' : l.held?.lockdown ? ' · lockdown' : l.held ? ` · ${l.held.kind}` : job ? ' · contract' : l.outpost?.lockdown ? ' · lockdown' : l.outpost?.siege ? ' · siege' : l.outpost?.h ? ` · ${gauge(stockOf(l), capOf(l))}` : l.takenOver ? ' · yours' : st === 'done' ? ' · clean' : ''}`;
+    const rest = st === 'here' ? 'here' : l.held?.siege ? 'siege' : l.held?.lockdown ? 'lockdown' : l.held ? l.held.kind : job ? 'contract' : l.outpost?.lockdown ? 'lockdown' : l.outpost?.siege ? 'siege' : l.outpost?.h ? gauge(stockOf(l), capOf(l)) : l.takenOver ? 'yours' : st === 'done' ? 'clean' : '';
     const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
-      return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${label(n, 12, l.name, l.occupied ? `rebooting · ${live} ${live === 1 ? 'process' : 'processes'}` : `rogue · ${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
+      return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${label(n, 12, l.name, sub)}</g>`;
+    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
-  const svg = `<svg class="map-svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
-  const tabs = consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : '';
+  const hoverNames = s.settings?.mapNames === 'hover';
+  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
+  // Top corner: which map, and the map's own controls (names on hover, zoom back out).
+  const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   return `<div class="map-page"><section class="panel map-canvas">${tabs}${svg}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
 }
 
@@ -1677,8 +1685,8 @@ function outpostCore(s, l) {
 function rackMarkup(s) {
   const rack = harvesters(s), used = bandwidthUsed(s), bw = bandwidth(s);
   if (!rack.length && !used && !s.locations.some((l) => l.takenOver)) return '';
-  return `<div class="rack"><div class="stats">${stat('Bandwidth', `${used}/${bw}`)}${stat('Harvesters', `${rack.length}/${OUTPOST.stashCap}`)}</div>
-    ${rack.length ? `<p class="svc-line">${rack.map((h) => esc(harvesterName(h))).join(' · ')}</p>` : ''}</div>`;
+  // Harvester slots are pips just above; this is the rack: what's packed and waiting to go out.
+  return rack.length ? `<div class="rack"><p class="svc-line" title="Harvester rack: ${rack.length} of ${OUTPOST.stashCap}">${glyph('crate')}${rack.map((h) => `<span class="tag">${glyph(h.kind)}${esc(harvesterName(h))}</span>`).join(' ')}</p></div>` : '';
 }
 
 const layoutName = (l) => ({ relay: 'Relay node', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab' })[l.template] || 'Node';
