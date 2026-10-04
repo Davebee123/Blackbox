@@ -95,7 +95,7 @@ Red is used only for "lands this cycle" and critical server health.
 | `dist/rain.mjs` | The run backdrop: faint amber binary falling behind the terminal, faster and brighter as Signal drops, red while a guard has you. Motion off: none. |
 | `dist/feel.mjs` | The feedback language: one flash / float / sound voice / vibration signature per event kind |
 | `dist/tutorial.mjs` | Parked: guided lessons, not wired into the UI right now |
-| `dist/virus-art.mjs` | Point-cloud virus renderer; parts light up, turn red, and scatter when broken |
+| `dist/virus-art.mjs` | The viruses as ASCII art: 3D point clouds with surface normals, drawn as terminal characters shaded by light (`.:-=+*#%@`, with 0/1 grain). 16 shapes picked by strain, guard or family (`shapeOf`: crab, padlock, serpent, wraith, hound, eye, spider, tick, blades, block, dish, cube, fountain, cocoon, rings, hive), each varied by the virus's seed (legs, size, spikes, antennae, halos). Parts animate (undulate, sway, orbit, spin, breathe, bob); hits flash and jolt, a hit tears rows sideways, parts about to attack throb red, badly hurt parts corrupt, broken parts burst into falling characters, Flicker's Shade fades on odd cycles; a faint data rain behind. Reads state only. |
 | `dist/style.css` | All styling; colour meanings are listed at the top |
 
 ## Checks
