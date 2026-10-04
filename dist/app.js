@@ -440,6 +440,7 @@ function react(events) {
       case 'xp': feel.add('cycle', '#meter-level', `+${e.amount} XP`); break;
       case 'status': if (e.mark) markFx(e, false); break;
       case 'fast-kill': feel.add('good', null); break;
+      case 'codex': feel.add('mark', '.hud-bar.enemy', 'DECODED', { noFlash: true }); break;
       case 'level-up': case 'server-level': {
         if (won) break;
         const [t, ...rest] = e.message.split('. ');

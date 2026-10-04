@@ -2,9 +2,10 @@
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { CONFIGS, forService, known as configsKnown, owned as configsOwned, configOn, codeFor as configCode, CONFIG_COST } from './configs.mjs';
 import { glyph } from './glyphs.mjs';
+import { isLive, liveCount, memoryCap, memoryCost } from './memory.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
-import { outpostPorts, modsOf, hasMod, schedulerEvery } from './outpost.mjs';
+import { outpostPorts, modsOf, hasMod, schedulerEvery, outpostBuyout } from './outpost.mjs';
 import { OUTPOST, INFEST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
 import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
@@ -21,7 +22,7 @@ import { archWall } from './architecture.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { cooldownOf, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
+import { cooldownOf, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -276,6 +277,33 @@ export function partMarks(s, p) {
 }
 const marksMarkup = (marks) => (marks.length ? `<span class="pmarks">${marks.map((k) => `<span class="pmark m-${k}" title="${k}">${glyph(MARKS[k])}</span>`).join('')}</span>` : '');
 
+// The codex page card: every component, by virus; the ones you've broken say what they do.
+export function codexMarkup(s) {
+  const groups = [...Object.entries(FAMILIES).map(([k, f]) => [k, f.name, f.parts]), ...Object.entries(STRAINS).map(([k, st]) => [k, st.name, st.parts]), ...Object.entries(GUARDS).map(([k, g]) => [k, g.name, g.parts])];
+  const all = groups.flatMap(([k, , parts]) => parts.map((p) => `${k}:${p.id}`));
+  const known = all.filter((k) => s.codex?.[k]).length;
+  return `<section class="card codex-card"><h2>Codex · ${known}/${all.length}</h2><div class="codex">${groups.map(([k, name, parts]) => `<div class="cx-group"><b>${esc(name)}</b><ul>${parts.map((p) => { const on = !!s.codex?.[`${k}:${p.id}`]; return `<li class="${on ? 'on' : ''}"><span>${esc(p.name)}</span><small>${on ? esc(partAbout(p)) : '???'}</small></li>`; }).join('')}</ul></div>`).join('')}</div></section>`;
+}
+// What a component does, in a line (the codex). ??? until you've broken one.
+export function partAbout(p) {
+  const a = p.attack, out = [];
+  if (a) {
+    const every = a.interval && a.interval < 900 ? ` every ${a.interval} ${a.interval === 1 ? 'cycle' : 'cycles'}` : '';
+    if (a.effect === 'damage') out.push(a.dump ? `${a.name}: a big hit once it has logged 3 keystrokes` : a.alarm ? `${a.name}: raises the alarm, then hits ${a.amount}${every}` : `${a.name}: hits you for ${a.amount}${every}${a.ramp ? ', more each time' : ''}${a.siphon ? ', and heals itself' : ''}${a.grow ? ', growing as the fight goes on' : ''}${a.windup ? `; enough damage while it winds up calls it off` : ''}`);
+    else if (a.effect === 'encrypt') out.push(`${a.name}: locks part of you, ${a.amount} more each time, until it breaks`);
+    else if (a.effect === 'blind') out.push(`${a.name}: hides every attack timer for ${a.amount} cycles${every}`);
+    else if (a.effect === 'heal') out.push(`${a.name}: repairs the most damaged part by ${a.amount}${every}`);
+    else if (a.effect === 'replicate') out.push(`${a.name}: spawns fragments that gnaw you${every}`);
+  }
+  if (p.veiled) out.push('hides its timers while it has armor');
+  if (p.phase) out.push('only there on even cycles');
+  if (p.syncOnly) out.push('only commands in a Sync Window hurt it');
+  if (p.tax) out.push('slows your cooldowns while it lives');
+  if (p.echo) out.push('every hit you take repeats at half');
+  if (p.rearm) out.push(`re-arms another part every ${p.rearm} cycles`);
+  if (p.overrun) out.push('its fragments overrun you');
+  return out.join('; ') || 'no attack of its own';
+}
 function partTags(s, p) {
   const e = s.encounter, tags = [];
   if (p.veiled && p.armor > 0) tags.push(`<span class="tag" title="${VEIL_NOTE}">veiled</span>`);
@@ -393,8 +421,8 @@ export function boardMarkup(s, selected, preview = null) {
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;
     const marks = partMarks(s, p);
-    return `<button type="button" class="brow bpart ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
+    return `<button type="button" class="brow bpart ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}${knowsPart(s, e.virus, p) ? '' : ' · what it does: ???'}">
+      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p) : '??? Break one to find out what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
@@ -719,6 +747,8 @@ export function invaderStatus(s) {
 function jackInButton(st) {
   return `<button type="button" class="btn ${st.can ? 'primary' : ''}" data-command="jack in" ${st.can ? '' : 'disabled'} title="${esc(st.can ? 'Fight it at the wall: worn down, armor intact, a full kill' : st.why)}">Jack in</button>`;
 }
+// Finish a timed build now (credit buyout): the price on the button, off if you can't pay.
+export const buyoutBtn = (s, cmd, price) => (price ? `<button type="button" class="btn small buyout" data-command="${esc(cmd)}" ${s.server.credits < price ? 'disabled' : ''} title="Finish it now. The price drops as the time runs down.">${glyph('credits')}Finish now · ${price}</button>` : '');
 // Slots as pips: filled for used, hollow for free, with an icon and the name on hover.
 export function slotPips(icon, used, total, name) {
   return `<span class="slots" title="${esc(name)}: ${used} of ${total} in use">${glyph(icon)}${Array.from({ length: total }, (_, i) => `<i class="${i < used ? 'on' : ''}"></i>`).join('')}<small>${used}/${total}</small></span>`;
@@ -771,7 +801,7 @@ export function serverMarkup(s, now = Date.now()) {
   const job = s.install;
   const queue = job
     ? `<div class="install"><div class="install-top"><b>${esc(SERVICES[job.id].name)} v${job.v}</b><span>${fmtTime(job.doneAt - now)} left</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((now - job.startedAt) / (job.doneAt - job.startedAt)) * 100))}%"></span></div>
-       <div class="row">${btn('cancel install', 'Cancel (full refund)')}</div></div>`
+       <div class="row">${buyoutBtn(s, 'buyout', installBuyout(s, now))}${btn('cancel install', 'Cancel (full refund)')}</div></div>`
     : '<p class="svc-line">idle</p>';
   const next = (id) => {
     const v = serviceVersion(s, id) + 1;
@@ -1461,9 +1491,9 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}
     const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
-      return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
+      return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
@@ -1552,8 +1582,8 @@ function mapSide(s, sel, node) {
         ${degradedMarkup(s)}
         <div class="srv-wall"><span class="srv-k" title="Your wall: which invader levels it stops">${glyph('firewall')}Wall</span>${wallRuler(s, true)}</div>
         ${awayLine(s)}
-        <div class="srv-slots">${slotPips('node', portsUsed(s), portCount(s), 'Service slots')}${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Harvester slots')}</div>
-        ${s.install ? `<div class="install mini"><div class="install-top"><b>${glyph(s.install.id)}${esc(SERVICES[s.install.id].name)} v${s.install.v}</b><span>${fmtTime(s.install.doneAt - Date.now())}</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((Date.now() - s.install.startedAt) / (s.install.doneAt - s.install.startedAt)) * 100))}%"></span></div></div>` : ''}
+        <div class="srv-slots">${slotPips('memory', liveCount(s), memoryCap(s), 'Memory: servers on your network')}${slotPips('node', portsUsed(s), portCount(s), 'Service slots')}${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Harvester slots')}</div>
+        ${s.install ? `<div class="install mini"><div class="install-top"><b>${glyph(s.install.id)}${esc(SERVICES[s.install.id].name)} v${s.install.v}</b><span>${fmtTime(s.install.doneAt - Date.now())}</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((Date.now() - s.install.startedAt) / (s.install.doneAt - s.install.startedAt)) * 100))}%"></span></div>${buyoutBtn(s, 'buyout', installBuyout(s))}</div>` : ''}
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
         ${rackMarkup(s)}
         <div class="row">${btn('server', 'Services')}${upkeep.join('')}</div>
@@ -1602,6 +1632,14 @@ function mapSide(s, sel, node) {
     return `<section class="card"><h2>Lead</h2><h1>${esc(f.name)} · ${node.progress}%</h1><div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.min(100, node.progress)}%"></span></span></div></section>`;
   }
   const l = node.loc, st = nodeState(s, l);
+  // Memory (memory.mjs): a detached server is frozen; its card is just that and Attach.
+  if (s.locations.includes(l) && !isLive(s, l)) {
+    const up = l.detached ? null : (() => { let p = l; while (p && !p.detached) p = s.locations.find((x) => x.id === p.parent); return p; })();
+    return `<section class="card mem-card"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · detached</h2><h1>${esc(l.name)}</h1>
+      <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.outpost?.h ? ` · ${glyph(l.outpost.h.kind)}outpost frozen at ${stockOf(l)}/${capOf(l)}` : ''}</p>
+      <div class="srv-slots">${slotPips('memory', liveCount(s), memoryCap(s), 'Memory: servers on your network')}</div>
+      <div class="row">${up ? `<button type="button" class="btn" data-select="${esc(up.id)}">${esc(up.name)} is detached</button>` : `<button type="button" class="btn primary" data-command="attach ${esc(l.id)}" ${busy || s.server.credits < memoryCost(l) || liveCount(s) >= memoryCap(s) ? 'disabled' : ''} title="${liveCount(s) >= memoryCap(s) ? 'Memory is full: detach another server first' : 'Back on your network, as it was'}">${glyph('credits')}Attach · ${memoryCost(l)}</button>`}</div></section>`;
+  }
   if (l.occupied) {
     const live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
     return `<section class="card alert"><h2>${l.member ? `${esc(l.member)}'s server` : 'Your server'} · rebooting</h2><h1>${esc(l.name)}</h1>
@@ -1617,7 +1655,7 @@ function mapSide(s, sel, node) {
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line">Wild: it can't be taken over, and it never sends invaders.</p>
       ${consortiumLine(s, l)}
-      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Detach ${esc(l.name)}? It freezes as it is (and what you found through it) until you attach it again." ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
@@ -1633,7 +1671,7 @@ function mapSide(s, sel, node) {
     ${consortiumLine(s, l)}
     ${dropLine(s, l)}
     ${outpostCard(s, l)}
-    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Connect</button>`}</div></section>`;
+    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Detach ${esc(l.name)}? It freezes as it is (and what you found through it) until you attach it again." ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}</div></section>`;
 }
 
 // The swarm: what's coming, where, when, and the button to meet it.
@@ -1668,7 +1706,7 @@ function outpostCore(s, l) {
   const why = busy ? 'disabled title="Finish what you are doing first"' : '';
   if (!o.h) {
     const rack = harvesters(s);
-    if (o.readyAt && Date.now() < o.readyAt) return `<p class="svc-line">Harvester slot resetting · ${fmtTime(o.readyAt - Date.now())}</p>`;
+    if (o.readyAt && Date.now() < o.readyAt) return `<p class="svc-line">Harvester slot resetting · ${fmtTime(o.readyAt - Date.now())} ${buyoutBtn(s, `outpost buyout ${l.id}`, outpostBuyout(l)?.price)}</p>`;
     if (!rack.length) return '';
     const full = l.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s);
     return `<div class="outpost"><p class="svc-line">${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Harvester slots')}</p><div class="row">${rack.map((h, i) => `<button type="button" class="btn" data-command="outpost install ${esc(l.id)} ${i + 1}" ${full ? 'disabled title="No harvester slot free. Pull a harvester out, or level your server."' : `title="${esc(OUTPOST.kinds[h.kind].about)}"`}>Install ${esc(harvesterName(h))}</button>`).join('')}</div></div>`;
@@ -1676,7 +1714,7 @@ function outpostCore(s, l) {
   const h = o.h, m = MATERIALS[codeOf(l.family)];
   const traits = h.traits.map((t) => `<span class="tag" title="${esc(OUTPOST.traits[t].rule)}">${esc(OUTPOST.traits[t].name)}</span>`).join(' ');
   const head = `<p class="svc-line"><span class="tag you">Outpost</span> <span title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}${esc(OUTPOST.kinds[h.kind].name)} lv${h.level}</span> ${traits}</p>`;
-  if (o.lockdown) return `<div class="outpost lost">${head}<p class="svc-line"><span class="tag hot" title="No harvesting until it ends. The stockpile is kept, and the server stays open.">Lockdown</span> ${fmtTime(o.lockdown.left)} left · ${stockOf(l)}/${capOf(l)} kept</p><div class="row"><button type="button" class="btn primary" data-command="outpost retake ${esc(l.id)}" ${why}>Retake</button></div></div>`;
+  if (o.lockdown) return `<div class="outpost lost">${head}<p class="svc-line"><span class="tag hot" title="No harvesting until it ends. The stockpile is kept, and the server stays open.">Lockdown</span> ${fmtTime(o.lockdown.left)} left · ${stockOf(l)}/${capOf(l)} kept</p><div class="row"><button type="button" class="btn primary" data-command="outpost retake ${esc(l.id)}" ${why}>Retake</button>${buyoutBtn(s, `outpost buyout ${l.id}`, outpostBuyout(l)?.price)}</div></div>`;
   // The stockpile: how full, how much, how fast. Connect to collect.
   const fill = `<div class="lvl-row" title="${h.kind === 'scraper' ? 'Loot rolls waiting' : esc(m.name) + ' waiting'}. Connect to collect."><span class="lvl-bar"><span style="width:${(100 * (o.stock || 0)) / capOf(l)}%"></span></span><small>${stockOf(l)}/${capOf(l)} · ${Math.round(perHour(l, l.outpost.h, s) * 10) / 10}/h</small></div>`;
   // Threats on the outpost, each in its own box: what, how many/long (a bar), one button.
@@ -1732,6 +1770,7 @@ export function systemMarkup(s) {
       <button type="button" class="btn" data-run="tips replay">Replay tips</button>
     </div>
     <div class="row sound-test"><span class="next-label">Sound test</span>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win / level'], ['chit', 'Armor chit'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
+    ${codexMarkup(s)}
     <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section>
     <section class="card"><h2>Wire</h2><div class="ticker"><span>${(TICKER.map(esc).join('  //  ') + '  //  ').repeat(2)}</span></div></section>
     <section class="card"><h2>Fight reports</h2>${s.reports.length ? `<details><summary>${s.reports.length} report(s)</summary><pre>${esc(JSON.stringify(s.reports.slice(-5), null, 1))}</pre></details>` : '<p>None yet.</p>'}</section></div>

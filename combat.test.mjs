@@ -519,3 +519,24 @@ test('level gap, WoW-style: one level up is about even; past that, it takes less
     assert.ok(before - p.integrity > 0 && before - p.integrity < 25, 'spike (25) lands for less on something five levels up');
   } finally { CONFIG.gap = saved; }
 });
+
+test('codex: a component says ??? until you break one, then what it does', async () => {
+  const { knowsPart, codexKey } = await import('./dist/combat.mjs');
+  const { boardMarkup, codexMarkup } = await import('./dist/view.mjs');
+  const s = fresh();
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  const v = s.encounter.virus, p = v.parts.find((x) => x.id === 'pulse');
+  assert.ok(!knowsPart(s, v, p));
+  assert.match(boardMarkup(s, null), /\?\?\? Break one/);
+  Object.assign(p, { armor: 0, integrity: 1 });
+  command(s, 'spike pulse');
+  const ev = resolveCycle(s);
+  assert.ok(ev.some((e) => e.type === 'codex'));
+  assert.ok(s.codex[codexKey(v, p)]);
+  assert.match(codexMarkup(s), /Surge: hits you for/);
+  // The next CRYPTJACK's Pulse Node is known on sight.
+  const t = fresh(); t.codex = s.codex;
+  command(t, 'encounter cryptjack'); command(t, 'engage');
+  assert.ok(knowsPart(t, t.encounter.virus, t.encounter.virus.parts.find((x) => x.id === 'pulse')));
+});

@@ -1251,6 +1251,20 @@ body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-
 .sp-go kbd { font: 500 9px var(--mono); letter-spacing: 0; padding: 0 4px; color: var(--dim); border: 1px solid var(--line); border-radius: 2px; }
 @media (prefers-reduced-motion: reduce) { .sp-go { animation: none; opacity: 1; } }
 body.no-motion .sp-go { animation: none; opacity: 1; }
+.btn.buyout { color: var(--amber); border-color: rgba(241, 185, 47, 0.5); } .btn.buyout .glyph { margin-right: 4px; }
+.install.mini .btn.buyout { margin-top: 6px; }
+.mnode.detached { opacity: 0.38; } .mnode.detached .core, .mnode.detached .marc { stroke-dasharray: 2 2; }
+.btn.mem-x { margin-left: auto; color: var(--muted); }
+/* The codex: ??? until broken */
+.part-name { position: relative; }
+.part-name[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: max-content; max-width: 280px; padding: 6px 9px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--text); font: 400 12px/1.4 var(--sans); letter-spacing: 0; text-transform: none; white-space: normal; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transition: opacity 0.08s, visibility 0s linear 0.08s; pointer-events: none; }
+.bpart:hover .part-name[data-tip]::after { opacity: 1; visibility: visible; transition-delay: 0.15s, 0s; }
+.part-name .unk { margin-left: 3px; font-size: 10px; color: var(--dim); }
+.codex { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.cx-group b { display: block; font: 600 12px var(--mono); letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
+.cx-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.cx-group li { display: grid; font-size: 12px; } .cx-group li span { color: var(--dim); } .cx-group li small { color: var(--dim); }
+.cx-group li.on span { color: var(--bright); } .cx-group li.on small { color: var(--muted); }
 /* The sidebar: on every page, fights included */
 body.with-sidebar .workspace { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 12px; }
 body.with-sidebar .workspace > .combat, body.with-sidebar .workspace > .page { grid-column: 2; grid-row: 1; min-height: 0; }

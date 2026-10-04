@@ -15,6 +15,7 @@ import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
+import { isLive } from './memory.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -342,6 +343,7 @@ export function connect(s, id) {
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
   else if (!loc) warn(s, `No located origin called "${id}". Check Trace.`);
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
+  else if (loc.detached || (s.locations.includes(loc) && !isLive(s, loc))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (isWild(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
   else {
     // A waiting home intrusion is parked for the run and comes back afterwards.

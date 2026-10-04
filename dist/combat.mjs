@@ -1,6 +1,7 @@
 // BLACKBOX combat engine. Pure and deterministic: commands in, events out.
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
+import { onFound, memoryCommand, isLive } from './memory.mjs';
 import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
@@ -511,6 +512,14 @@ function codeFrom(s, family, level, source) {
   return out;
 }
 
+// ---------- buyout ----------
+// Master of Orion style: finish a timed build now for credits. 3× its credit cost when it starts,
+// falling with the time left (never under 20). Installs and upgrades here; outposts (a slot
+// resetting, a lockdown) in outpost.mjs.
+export const BUYOUT = { mult: 3, min: 20, lockdown: 250, reset: 80 };
+export const buyoutPrice = (base, left, total) => (left <= 0 ? 0 : Math.max(BUYOUT.min, Math.ceil(BUYOUT.mult * base * Math.min(1, left / total))));
+export const installBuyout = (s, now = Date.now()) => (s.install ? buyoutPrice(VERSIONS[s.install.v - 1].credits, s.install.doneAt - now, s.install.doneAt - s.install.startedAt) : 0);
+
 // ---------- the install queue ----------
 // One install at a time, in real time. `now` comes from the caller (the engine keeps no clock).
 export function tickServices(s, now = Date.now()) {
@@ -603,6 +612,7 @@ export function addLocation(s, family, depth = 1, parent = null) {
   rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken
   s.locations.push(loc);
   spawnHidden(s, loc);
+  onFound(s, loc); // memory full: it arrives detached (memory.mjs)
   emit(s, 'located', `${depth > 1 ? `DEEPER NODE (layer ${depth})` : 'ORIGIN LOCATED'}: ${loc.name}.`, { location: loc.id });
   return loc;
 }
@@ -887,6 +897,16 @@ function serviceCommand(s, text, now) {
     return emit(s, 'info', `Ports ${portsUsed(s)}/${portCount(s)}: ${on.join(', ') || 'nothing running'}.${s.install ? ` Installing ${SERVICES[s.install.id].name} v${s.install.v}.` : ''}`);
   }
   if (active(s)) return warn(s, 'Change services between fights.');
+  if (text === 'buyout' || text === 'buyout install') {
+    if (!s.install) return warn(s, 'Nothing is installing.');
+    if (s.degraded) return warn(s, 'Installs wait while the server is degraded.');
+    const price = installBuyout(s, now);
+    if (s.server.credits < price) return warn(s, `Finishing it now costs ${price} credits; you have ${s.server.credits}.`);
+    s.server.credits -= price;
+    s.install.doneAt = now;
+    emit(s, 'bought', `Bought out: ${SERVICES[s.install.id].name} v${s.install.v} for ${price} credits.`, { amount: price });
+    return tickServices(s, now);
+  }
   if (text === 'cancel install') {
     const job = s.install;
     if (!job) return warn(s, 'Nothing is installing.');
@@ -1283,8 +1303,11 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     engage(s);
   } else if (/^(gear|protocols|load|unload|scrap|deconstruct|compile)( |$)/.test(text)) {
     protocolCommand(s, text);
-  } else if (/^(services|install|uninstall)( |$)/.test(text) || text === 'cancel install') {
+  } else if (/^(services|install|uninstall)( |$)/.test(text) || text === 'cancel install' || text === 'buyout' || text === 'buyout install') {
     serviceCommand(s, text, now);
+  } else if (/^(attach|detach) \S+$/.test(text)) {
+    const [verb, id] = text.split(' ');
+    memoryCommand(s, verb, id, now);
   } else if (text === 'developer finish') {
     if (!s.install) warn(s, 'Nothing is installing.');
     else { s.install.doneAt = now; tickServices(s, now); }
@@ -1530,8 +1553,13 @@ function soonestAttacker(s, except = null) {
   return attackers(s).filter((p) => p.id !== except).sort((a, b) => a.attack.due - b.attack.due || b.attack.amount - a.attack.amount)[0] || livingParts(s).find((p) => p.id !== except) || null;
 }
 
+// The codex: what a virus component does stays ??? until you've broken one (its name always shows,
+// so you can target it). Keyed by strain or family, and the part.
+export const codexKey = (v, p) => `${v.strain || v.family}:${p.id}`;
+export const knowsPart = (s, v, p) => p.kind === 'fragment' || !!s.codex?.[codexKey(v, p)];
 function breakPart(s, p) {
   const e = s.encounter;
+  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `Codex: ${p.name} decoded.`, { target: p.id }); }
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.

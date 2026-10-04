@@ -632,3 +632,24 @@ test('salvage pays like mana: generic pieces for the rest, a chosen payment is h
   const mine = parsePay(s, 'signal-key:2,scrap:4,mask-shard:0');
   assert.equal(payProblem(s, cost, mine), null);
 });
+
+test('buyout: finish an install now for credits, 3x its cost at the start and less as time runs down', async () => {
+  const { installBuyout, BUYOUT } = await import('./dist/combat.mjs');
+  const { outpostBuyout, OUTPOST } = await import('./dist/outpost.mjs');
+  const { VERSIONS } = await import('./dist/gear.mjs');
+  const s = fresh();
+  s.install = { id: 'firewall', v: 1, startedAt: 0, doneAt: 600000, pay: {} };
+  const full = installBuyout(s, 0), half = installBuyout(s, 300000);
+  assert.equal(full, Math.max(BUYOUT.min, 3 * VERSIONS[0].credits));
+  assert.ok(half <= full && half >= BUYOUT.min);
+  s.server.credits = full + 5;
+  command(s, 'buyout', 0);
+  assert.equal(s.install, null);
+  assert.equal(s.services.firewall, 1);
+  assert.equal(s.server.credits, 5);
+  // Outposts: a lockdown ends, a slot reset is skipped.
+  const loc = { id: 'x', name: 'X', outpost: { lockdown: { left: OUTPOST.lockdownMs / 2 } } };
+  assert.equal(outpostBuyout(loc, 0).what, 'lockdown');
+  assert.equal(outpostBuyout({ outpost: { readyAt: 1000 } }, 0).what, 'reset');
+  assert.equal(outpostBuyout({ outpost: {} }, 0), null);
+});

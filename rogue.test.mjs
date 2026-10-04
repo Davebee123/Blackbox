@@ -6,6 +6,8 @@ import { ROGUE, rogueRooms, rogueSpawns, relockLeft } from './dist/rogue.mjs';
 import { pickOrigin } from './dist/hidden.mjs';
 import { sweepKind } from './dist/forensics.mjs';
 import { tickOutposts, INFEST } from './dist/outpost.mjs';
+import { MEMORY } from './dist/memory.mjs';
+MEMORY.base = 99; // these tests trace dozens of servers to find each kind
 
 const world = () => { const s = fresh(); s.tutorialCompleted = true; s.hackers = { breaker: { level: 12, xp: 0 } }; return s; };
 const rogueOf = (s, kind = null) => {

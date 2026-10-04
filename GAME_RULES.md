@@ -626,6 +626,26 @@ Pages show instead of explaining; the words are in the hover.
 - **Map:** a server's level is the big number under it in WoW colours (how hard it is for you), its layer a small teal tag (L2, L3); names can show only on hover (**Aa**, or `map names hover|on`). Scroll zooms around the cursor (up to 5×; labels stay readable), drag pans, double-click or ⤢ zooms out.
 - **Consortium:** members sit on one grid: online dot, name (a teal edge and a runner icon if they're in your crew, ★ for the founder), class and level, outposts, servers, and where they are (click it to see that server on the map). The dividend is a table, one row per member outpost: whose, which server, what it yields, how much an hour, and how full its share is.
 
+## Server memory
+
+Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 4 at server level 1, one more every 5 server levels. Every server you've found and kept attached takes a slot, rogue ones too; SPRAWL-00 and consortium servers don't. It shows as chip pips on the map's server card.
+
+- **Full memory:** a new find still lands on the map, but **detached** (dimmed). You can't connect to it until you attach it.
+- **Attach / detach** from a server's map card (or `attach <server>`, `detach <server>`): 25 + 5 × its level credits, either way, the same every time. Swapping back and forth costs no more than that.
+- **Detaching freezes** the server and everything found through it: no runs, its outpost makes nothing, no sieges or infestations, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
+- Harvester slots still decide how many outposts run; memory decides how many servers you hold.
+
+## The codex
+
+A virus component's name always shows (so you can target it), but what it does reads **???** (a small ? by its name, ??? on hover) until you've broken one of it yourself. Then hovering its name says what it does, on every virus that has it. The System page lists every component by virus: the ones you've decoded with what they do, the rest as ???. Keyed by strain or family and part (a Ransomware Pulse Node and a Worm one are separate). Breaking a new one flashes DECODED.
+
+## Buyout
+
+Timed builds can be finished now for credits, Master of Orion style (`BUYOUT` in combat.mjs): 3× the credit cost when the timer starts, falling with the time left, never under 20. *Finish now · N* sits by the timer.
+
+- **Installs and upgrades** (`buyout`): the service runs at once. Not while the server is degraded.
+- **Outposts** (`outpost buyout <server>`): a lockdown ends (base 250 credits), or a harvester slot that's resetting is ready (base 80).
+
 ## The pager
 
 The pager sits on the top bar, between the tabs and your meters (on narrower screens just its lamp and count). It keeps the last 40 world events on your save, so what happened while you were away is still there when you come back.

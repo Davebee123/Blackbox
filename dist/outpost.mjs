@@ -13,7 +13,8 @@
 // keeps its stockpile, and the server stays open. Retake it from the natives to end it sooner.
 // In a consortium, sieges come while you're away too (consortium.mjs), and members may break them.
 import { MUTATIONS, variantFor } from './data.mjs';
-import { emit, warn, rand, active, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor } from './combat.mjs';
+import { isLive } from './memory.mjs';
+import { emit, warn, rand, active, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
@@ -110,7 +111,7 @@ export const bandwidth = (s) => OUTPOST.bandwidth(serverLevel(s)) + serviceValue
 export const modsOf = (loc) => (loc ? (loc.mods ||= []) : []);
 export const hasMod = (loc, id) => !!loc?.mods?.includes(id);
 export const outpostPorts = (s) => OUTPOST.ports(serverLevel(s));
-export const outposts = (s) => (s.locations || []).filter((l) => l.outpost?.h);
+export const outposts = (s) => (s.locations || []).filter((l) => l.outpost?.h && isLive(s, l)); // a detached server's outpost is frozen (memory.mjs)
 export const bandwidthUsed = (s) => outposts(s).filter((l) => l.trait !== 'backbone').length;
 
 
@@ -339,6 +340,21 @@ export function outpostWon(s, e) {
 // Commands -------------------------------------------------------------------------------------
 // outpost install <server> <n> · outpost pull <server> · outpost defend <server>
 // outpost retake <server> (ends a lockdown) · outpost compile <kind>
+// Buyout (combat.mjs BUYOUT): end a lockdown, or a harvester slot's reset, now, for credits.
+export function outpostBuyout(loc, now = Date.now()) {
+  const o = loc?.outpost;
+  if (o?.lockdown) return { what: 'lockdown', price: buyoutPrice(BUYOUT.lockdown, o.lockdown.left, OUTPOST.lockdownMs) };
+  if (o && !o.h && o.readyAt && now < o.readyAt) return { what: 'reset', price: buyoutPrice(BUYOUT.reset, o.readyAt - now, OUTPOST.resetMs) };
+  return null;
+}
+function buyout(s, loc, now) {
+  const b = outpostBuyout(loc, now);
+  if (!b) return warn(s, `Nothing to finish on ${loc.name}.`);
+  if (s.server.credits < b.price) return warn(s, `That costs ${b.price} credits; you have ${s.server.credits}.`);
+  s.server.credits -= b.price;
+  if (b.what === 'lockdown') { loc.outpost.lockdown = null; emit(s, 'outpost-held', `Bought out: ${loc.name}'s lockdown is over for ${b.price} credits.`, { location: loc.id }); }
+  else { loc.outpost.readyAt = null; emit(s, 'bought', `Bought out: ${loc.name}'s harvester slot is ready for ${b.price} credits.`, { location: loc.id, amount: b.price }); }
+}
 export function outpostCommand(s, full, now) {
   const [text, payText] = splitPay(full);
   const [, verb, a, b] = text.split(' ');
@@ -347,6 +363,7 @@ export function outpostCommand(s, full, now) {
   const theirs = !loc && a && memberServers(s).find((l) => l.id === a || l.name.toLowerCase() === a);
   if (theirs) return warn(s, `${theirs.name} is ${theirs.member}'s: only they build there.`);
   if (!loc) return warn(s, 'usage: outpost install|pull|defend|clear|retake|mod|unmod <server>, or outpost compile <kind>');
+  if (verb === 'buyout') return buyout(s, loc, now);
   if (verb === 'mod') return installMod(s, loc, b);
   if (verb === 'unmod') return removeMod(s, loc, b);
   const o = loc.outpost;
