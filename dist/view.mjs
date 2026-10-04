@@ -1905,11 +1905,7 @@ export function sawTab(s, tab) {
 // You (your health), your crew (live bars in a fight), then what this page is about: the map's
 // selection, the virus you're fighting, or what needs you. Narrow screens and `sidebar off` hide it.
 export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 'mine', preview = null } = {}) {
-  const fighting = active(s), e = s.encounter, d = defender(s);
-  const bar = (cls, cur, max, label, icon) => `<div class="sb-bar ${cls} ${cur / max <= 0.3 ? 'low' : cur / max <= 0.6 ? 'mid' : ''}" title="${esc(label)}">${glyph(icon)}<span class="sb-track"><span style="width:${Math.max(0, (cur / max) * 100)}%"></span></span><b>${cur}</b><small>/${max}</small></div>`;
-  const h = hackerOf(s);
-  const you = `<section class="sb-block sb-you"><div class="sb-head"><b>${esc(s.profile?.handle || 'you')}</b><small>${esc(ARCHETYPES[classOf(s)].name)} ${h.level}</small></div>
-    ${bar('srv', s.server.integrity, s.server.max, 'Server Integrity', 'integrity')}${bar('sig', s.run ? s.run.integrity : signalNow(s), s.run ? s.run.max : maxSignal(s), 'Signal', 'signal')}</section>`;
+  const fighting = active(s), e = s.encounter;
   // The crew: live in a run fight, else as they'll join you.
   const mates = matesOf(s), inFight = fighting && e.mode === 'run';
   const fc = inFight ? forecast(s, preview) : null;
@@ -1933,6 +1929,6 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
     const al = commsOf(s).filter((c) => !c.done && c.go).slice(0, 4);
     ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${esc(c.label)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
   }
-  // In a fight it's just the party: your own health and aim are on the HUD and the board.
-  return fighting && module === 'combat' ? crew : `${you}${crew}${ctx}`;
+  // No health block: Integrity and Signal live on the top bar (and the HUD in a fight).
+  return fighting && module === 'combat' ? crew : `${crew}${ctx}`;
 }
