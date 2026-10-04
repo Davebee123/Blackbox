@@ -17,7 +17,7 @@ import { emit, warn, rand, active, gainCode, serverLevel, selectEncounter, comma
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
-import { consortiumYield, consortiumBandwidth, memberHelp, roam } from './consortium.mjs';
+import { consortiumYield, consortiumBandwidth, memberHelp, roam, memberServers } from './consortium.mjs';
 
 export const OUTPOST = {
   kinds: {
@@ -337,6 +337,8 @@ export function outpostCommand(s, full, now) {
   const [, verb, a, b] = text.split(' ');
   if (verb === 'compile') return compile(s, a, payText);
   const loc = a && locOf(s, a);
+  const theirs = !loc && a && memberServers(s).find((l) => l.id === a || l.name.toLowerCase() === a);
+  if (theirs) return warn(s, `${theirs.name} is ${theirs.member}'s: only they build there.`);
   if (!loc) return warn(s, 'usage: outpost install|pull|defend|clear|retake|mod|unmod <server>, or outpost compile <kind>');
   if (verb === 'mod') return installMod(s, loc, b);
   if (verb === 'unmod') return removeMod(s, loc, b);

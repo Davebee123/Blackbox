@@ -1728,3 +1728,34 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .people-list .crewmate b { color: var(--daemon); }
 .people-list .crew-slot { opacity: 0.55; border-style: dashed; }
 .people-list .crew-slot b { color: var(--muted); font-weight: 500; }
+
+/* Comms: handled entries grey out (and clear after 5 minutes). */
+.citem.done { opacity: 0.45; filter: grayscale(0.8); }
+.citem .cdone { margin-left: 6px; }
+.comms-head .p-acts { display: flex; gap: 10px; }
+
+/* A breach: the Integrity meter flashes red and its BREACH badge pulses (app.js pings every 15 s). */
+.meter-integrity.breaching { outline: 2px solid var(--hot); outline-offset: 3px; border-radius: 3px; animation: breach-flash 1s ease-in-out infinite; }
+.meter-integrity.breaching .meter-note { background: var(--hot); color: #fff; font-weight: 700; animation: breach-badge 1s steps(1) infinite; }
+@keyframes breach-flash { 50% { outline-color: rgba(255, 91, 61, 0.25); box-shadow: 0 0 14px rgba(255, 91, 61, 0.5); } }
+@keyframes breach-badge { 50% { opacity: 0.55; } }
+.no-motion .meter-integrity.breaching, .no-motion .meter-integrity.breaching .meter-note { animation: none; }
+
+/* A skill's cooldown badge (Skills & Talents). */
+.stag.cd { color: var(--text); border-color: var(--line-strong, rgba(241, 185, 47, 0.3)); font-variant-numeric: tabular-nums; }
+.stag.cd.none { color: var(--muted); }
+
+/* A bounty on the kill card: gold, with a sheen running across it. */
+.sp-row.k-bounty { position: relative; overflow: hidden; border: 1px solid rgba(255, 216, 92, 0.6); border-radius: 3px; background: linear-gradient(90deg, rgba(255, 216, 92, 0.14), rgba(255, 216, 92, 0.04)); }
+.sp-row.k-bounty .sp-t, .sp-row.k-bounty .sp-qty, .sp-row.k-bounty .sp-ico { color: var(--next); stroke: var(--next); }
+.sp-row.k-bounty::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.18) 50%, transparent 70%); transform: translateX(-100%); animation: bounty-sheen 2.4s ease-in-out 0.6s infinite; pointer-events: none; }
+@keyframes bounty-sheen { 0% { transform: translateX(-100%); } 45%, 100% { transform: translateX(100%); } }
+.no-motion .sp-row.k-bounty::after { animation: none; }
+
+/* Threats on an outpost (swarm, siege, infestation): a box each, with a bar for time left. */
+.op-box { border: 1px solid var(--line); border-left: 3px solid var(--hot); border-radius: 3px; background: var(--inset); padding: 8px 10px; display: grid; gap: 6px; margin: 6px 0; }
+.op-box.infest { border-left-color: var(--next); }
+.op-top { display: flex; align-items: baseline; gap: 8px; } .op-top small { color: var(--muted); }
+.op-bar { height: 3px; background: rgba(255, 255, 255, 0.07); border-radius: 2px; overflow: hidden; }
+.op-bar span { display: block; height: 100%; background: var(--hot); } .op-box.infest .op-bar span { background: var(--next); }
+.op-box .row { margin: 0; }

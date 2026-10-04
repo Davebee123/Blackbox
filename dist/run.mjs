@@ -392,6 +392,7 @@ function ls(s, all = false) {
   for (const f of here.files.filter(show)) {
     const info = fileInfo(loc, s.run.cwd, f);
     const full = join(s.run.cwd, f);
+    if (loc.state.taken[full] || inPack(s, full)) continue; // pulled: it's gone from here (your pack has it)
     const read = s.run.read?.includes(full);
     const state = info.kind === 'sweep' ? (loc.state.sweep?.solved ? 'swept' : 'log') : loc.state.sprung?.[full] ? 'sprung' : info.kind === 'trap' ? (read ? 'canary' : 'pull') : loc.state.taken[full] ? 'banked' : inPack(s, full) ? 'in pack' : info.kind !== 'text' ? 'pull' : read ? 'read' : '';
     entries.push({ kind: 'file', name: f, size: info.size, cmd: `cat ${f}`, pull: state === 'pull' ? `pull ${f}` : null, tags: state ? [state] : [] });

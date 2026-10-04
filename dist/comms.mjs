@@ -3,7 +3,7 @@
 // Pure: events in, entries out. The pager itself (the top-bar widget and its list) lives in
 // view.mjs and app.js.
 
-export const COMMS = { keep: 40 };
+export const COMMS = { keep: 40, doneMs: 5 * 60000 };
 
 // Filters on the list, and which kinds sit under each.
 export const GROUPS = { Contracts: ['offer', 'ready'], Mail: ['mail'], Network: ['net', 'alert'], Money: ['paid', 'standing', 'store'] };
@@ -66,4 +66,13 @@ export function logComms(s, events, now = Date.now()) {
   if (list.length > COMMS.keep) list.length = COMMS.keep;
   return added;
 }
-export function seeAll(s) { for (const c of commsOf(s)) c.seen = true; }
+export function seeAll(s, now = Date.now()) { for (const c of commsOf(s)) { c.seen = true; if (!c.go && !c.done) c.done = now; } } // nothing to do about it: seen is handled
+// Handled (you opened what it pointed at, or ticked it off): greyed out, and gone after COMMS.doneMs.
+export function markDone(s, id, now = Date.now()) { const c = commsOf(s).find((x) => x.id === id); if (c && !c.done) { c.done = now; c.seen = true; } }
+export function pruneComms(s, now = Date.now()) {
+  const list = commsOf(s), keep = list.filter((c) => !c.done || now - c.done < COMMS.doneMs);
+  if (keep.length !== list.length) { s.comms = keep; return true; }
+  return false;
+}
+// Clear: everything you've seen goes; what you haven't looked at yet stays.
+export function clearComms(s) { s.comms = commsOf(s).filter((c) => !c.seen); }

@@ -5,7 +5,7 @@ import { glyph } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
 import { outpostPorts, modsOf, hasMod, schedulerEvery } from './outpost.mjs';
-import { OUTPOST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
+import { OUTPOST, INFEST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
 import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
@@ -945,8 +945,8 @@ const GO_LABEL = { mail: 'Open', store: 'Store', map: 'Map', jack: 'Jack in' };
 export function commsMarkup(s, filter = 'all', now = Date.now()) {
   const all = commsOf(s);
   const shown = all.filter((c) => filter === 'all' || commsGroup(c.kind) === filter);
-  const rows = shown.map((c) => `<li class="citem ${c.kind}${c.seen ? '' : ' unseen'}"><span class="k ${c.kind}">${esc(c.label)}</span><span class="cfrom">${esc(c.from)}</span><span class="cage">${agoShort(now - c.t)}</span><p>${esc(c.text)}</p>${c.go ? `<button type="button" class="act" data-go="${esc(c.go)}">${GO_LABEL[c.go.split(':')[0]] || 'Open'}</button>` : ''}</li>`).join('');
-  return `<div class="comms-head"><span>Comms</span><button type="button" class="act" data-comms-close>Close</button></div>
+  const rows = shown.map((c) => `<li class="citem ${c.kind}${c.seen ? '' : ' unseen'}${c.done ? ' done' : ''}"><span class="k ${c.kind}">${esc(c.label)}</span><span class="cfrom">${esc(c.from)}</span><span class="cage">${agoShort(now - c.t)}</span><p>${esc(c.text)}</p>${c.go ? `<button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}">${GO_LABEL[c.go.split(':')[0]] || 'Open'}</button>` : ''}${c.done ? '' : `<button type="button" class="act dim cdone" data-cdone="${c.id}" title="Handled">✓</button>`}</li>`).join('');
+  return `<div class="comms-head"><span>Comms</span><span class="p-acts"><button type="button" class="act dim" data-comms-clear title="Clear everything you've seen">Clear</button><button type="button" class="act" data-comms-close>Close</button></span></div>
     <div class="comms-filters" role="group" aria-label="Show">${['all', ...Object.keys(COMMS_GROUPS)].map((f) => `<button type="button" data-cfilter="${f}" aria-pressed="${filter === f}">${f === 'all' ? 'All' : f}</button>`).join('')}</div>
     <ul class="comms-list">${rows || '<li class="quiet">Quiet.</li>'}</ul>`;
 }
@@ -1102,7 +1102,15 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
   ].join('');
 
   const VERB = { hit: 'hit', burn: 'burn', stun: 'stun', debuff: 'debuff', shield: 'shield', heal: 'heal', buff: 'buff', util: 'utility', run: 'run' };
-  const tagHtml = (x) => `<span class="tag stag verb-${x.verb}" title="What it does">${VERB[x.verb] || x.verb}</span>`;
+  // Its cooldown, as a little clock badge: cycles before you can use it again.
+  const cdHtml = (x) => {
+    const ab = ABILITIES[x.id];
+    if (!ab) return '';
+    if (ab.once) return '<span class="tag stag cd" title="Once per fight">1/fight</span>';
+    const n = id === classOf(s) ? cooldownOf(s, x.id) : ab.cooldown || 0;
+    return `<span class="tag stag cd${n ? '' : ' none'}" title="${n ? `Cooldown: ${n} ${n === 1 ? 'cycle' : 'cycles'} before you can use it again` : 'No cooldown'}">⟳ ${n || '—'}</span>`;
+  };
+  const tagHtml = (x) => `${cdHtml(x)}<span class="tag stag verb-${x.verb}" title="What it does">${VERB[x.verb] || x.verb}</span>`;
   const lib = a.skills.map((x) => {
     const isEq = equipped.includes(x.id), isKnown = known.includes(x.id);
     const state = isEq ? 'equipped' : isKnown ? 'known' : 'locked';
@@ -1291,6 +1299,9 @@ export function consortiumLayout(s) {
   return { nodes, links };
 }
 
+// A tiny fill gauge for a map label (an outpost's stockpile): ▮▮▯▯.
+const gauge = (n, of, cells = 4) => { const k = Math.max(0, Math.min(cells, Math.round((n / Math.max(1, of)) * cells))); return '▮'.repeat(k) + '▯'.repeat(cells - k); };
+
 function nodeState(s, l) {
   const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
   if (s.run?.loc === l.id) return 'here';
@@ -1376,13 +1387,13 @@ export function mapMarkup(s, sel = 'server', view = 'mine') {
     const l = n.loc, st = nodeState(s, l);
     const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
-    const sub = `lv ${l.level || 1}${l.depth > 1 ? ` · layer ${l.depth}` : ''}${st === 'here' ? ' · here' : l.held?.siege ? ' · siege' : l.held?.lockdown ? ' · lockdown' : l.held ? ` · ${l.held.kind}` : job ? ' · contract' : l.outpost?.lockdown ? ' · lockdown' : l.outpost?.siege ? ' · siege' : l.outpost?.h ? ` · ${stockOf(l)}/${capOf(l)}` : l.takenOver ? ' · yours' : st === 'done' ? ' · clean' : ''}`;
+    const sub = `lv ${l.level || 1}${l.depth > 1 ? ` · layer ${l.depth}` : ''}${st === 'here' ? ' · here' : l.held?.siege ? ' · siege' : l.held?.lockdown ? ' · lockdown' : l.held ? ` · ${l.held.kind}` : job ? ' · contract' : l.outpost?.lockdown ? ' · lockdown' : l.outpost?.siege ? ' · siege' : l.outpost?.h ? ` · ${gauge(stockOf(l), capOf(l))}` : l.takenOver ? ' · yours' : st === 'done' ? ' · clean' : ''}`;
     const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${label(n, 12, l.name, l.occupied ? `rebooting · ${live} ${live === 1 ? 'process' : 'processes'}` : `rogue · ${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${label(n, 12, l.name, sub)}</g>`;
+    return `<g class="mnode loc ${st}${l.takenOver ? ' owned' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${dropMark(l)}${pick}${label(n, 12, l.name, sub)}</g>`;
   }).join('');
   const svg = `<svg class="map-svg" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   const tabs = consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : '';
@@ -1585,10 +1596,11 @@ function outpostCore(s, l) {
   const traits = h.traits.map((t) => `<span class="tag" title="${esc(OUTPOST.traits[t].rule)}">${esc(OUTPOST.traits[t].name)}</span>`).join(' ');
   const head = `<p class="svc-line"><span class="tag you">Outpost</span> <span title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}${esc(OUTPOST.kinds[h.kind].name)} lv${h.level}</span> ${traits}</p>`;
   if (o.lockdown) return `<div class="outpost lost">${head}<p class="svc-line"><span class="tag hot" title="No harvesting until it ends. The stockpile is kept, and the server stays open.">Lockdown</span> ${fmtTime(o.lockdown.left)} left · ${stockOf(l)}/${capOf(l)} kept</p><div class="row"><button type="button" class="btn primary" data-command="outpost retake ${esc(l.id)}" ${why}>Retake</button></div></div>`;
-  const fl = s.fleet && s.fleet.target === l.id ? `<p class="svc-line"><span class="tag hot">Swarm</span> ${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} processes · ${s.fleet.state === 'travel' ? `land in ${fmtLeft(s.fleet.left)}` : `siege, falls in ${fmtLeft(s.fleet.siegeLeft)}`}</p><div class="row"><button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button></div>` : '';
-  const fill = `<div class="lvl-row" title="${h.kind === 'scraper' ? 'Loot rolls waiting' : esc(m.name) + ' waiting'}. Connect to collect."><span class="lvl-bar"><span style="width:${(100 * (o.stock || 0)) / capOf(l)}%"></span></span><small>${stockOf(l)}/${capOf(l)} · ${Math.round(perHour(l, l.outpost.h, s) * 10) / 10}/h</small></div>`;
-  const siege = o.siege ? `<p class="svc-line"><span class="tag hot">Siege</span> Falls in ${fmtTime(o.siege.left)} of play.</p><div class="row"><button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button></div>` : '';
-  const inf = o.infest ? `<p class="svc-line"><span class="tag warn" title="Clear them for a bonus to this outpost's stockpile. Ignore them and they move on, costing nothing.">Infested</span> ${o.infest.count} of ${o.infest.total} left · moves on in ${fmtTime(o.infest.left)} of play</p><div class="row"><button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why}>Clear</button></div>` : '';
+  // Threats on the outpost, each in its own box: what, how many/long (a bar), one button.
+  const opBox = (kind, title, info, pct, btnHtml) => `<div class="op-box ${kind}"><div class="op-top"><span class="tag ${kind === 'infest' ? 'warn' : 'hot'}">${title}</span><small>${info}</small></div>${pct == null ? '' : `<div class="op-bar"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>`}<div class="row">${btnHtml}</div></div>`;
+  const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `lands in ${fmtLeft(s.fleet.left)}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
+  const siege = o.siege ? opBox('siege', 'Siege', `falls in ${fmtTime(o.siege.left)} of play`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
+  const inf = o.infest ? opBox('infest', 'Infested', `${o.infest.count}/${o.infest.total} left · ${fmtTime(o.infest.left)}`, (o.infest.left / INFEST.stayMs) * 100, `<button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why} title="Clear them for an hour of production at once. Ignore them and they move on.">Clear</button>`) : '';
   return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fl}${siege}${inf}${o.siege ? '' : `<div class="row"><button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The port then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
 }
 
@@ -1662,8 +1674,13 @@ export function spoilsOf(events) {
       add(what, '', kind, { pack: !!e.pack, rarity: e.item?.rarity, sub: e.item ? statLine(e.item.stats) : '' });
     } else if (e.type === 'lead') { const m = e.message.match(/(\w+) lead \+(\d+)% \((\d+)%\)/); add(m ? `${m[1]} lead` : 'Lead', m ? `+${m[2]}%` : '', 'lead', { text: m ? `${m[1]} lead +${m[2]}%` : 'Lead', pct: m ? Math.min(100, +m[3]) : null, from: m ? Math.max(0, +m[3] - +m[2]) : null }); }
     else if (e.type === 'located') add(e.message.replace(/^[^:]*: /, 'Found ').replace(/\.$/, ''), '', 'found');
-    else if (e.type === 'contract-ready') add('Contract ready', '', 'found');
-    else if (e.type === 'outpost-held') add('Outpost secured', '', 'found');
+    else if (e.type === 'contract-ready') { if (/is down\. Contract ready/.test(e.message || '')) add('Bounty target down', '', 'bounty', { sub: 'Deliver it from Mail' }); else add('Contract ready', '', 'found'); }
+    else if (e.type === 'outpost-held') {
+      // A consortium bounty: its own row, with the flair it deserves.
+      const b = String(e.message || '').match(/Bounty: \+(\d+) credits(?:, \+(\d+) ([^.]+))?/);
+      if (b) add('Bounty', `+${b[1]}c`, 'bounty', { text: `Bounty +${b[1]} credits`, sub: b[2] ? `+${b[2]} ${b[3]}` : '' });
+      else add('Outpost secured', '', 'found');
+    }
   }
   return out;
 }
@@ -1678,6 +1695,7 @@ const SPOIL_ICON = {
   daemon: '<circle cx="8" cy="8" r="5"/><circle cx="8" cy="8" r="1.5"/>',
   lead: '<circle cx="8" cy="8" r="5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/>',
   found: '<path d="M3 8.5l3 3 7-7"/>',
+  bounty: '<path d="M8 1.5l2 4.2 4.5.6-3.3 3.1.8 4.5L8 11.7l-4 2.2.8-4.5L1.5 6.3 6 5.7z"/><circle cx="8" cy="8" r="1.6"/>',
   level: '<path d="M8 1.5l1.9 4 4.4.5-3.3 3 .9 4.4L8 11.2 4.1 13.4l.9-4.4-3.3-3 4.4-.5z"/>',
 };
 

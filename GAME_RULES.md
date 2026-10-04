@@ -555,7 +555,7 @@ Who acts in a cycle, in order: **your queued command (or, with nothing typed, a 
 
 ## Daemons
 
-Daemons are programs you **find**: a `daemon.exe` waits in 40% of vaults (fixed per location), guards drop one 4% of the time (into your pack) and home kills 1%. Finding one you already have **upgrades** it (v1 → v2 → v3: its numbers ×1, ×1.5, ×2, and they grow with your power); past v3 it's 3 salvage. A first daemon goes straight into a free slot.
+Daemons are programs you **find**: a `daemon.exe` waits in 40% of vaults (fixed per location), guards drop one 4% of the time (into your pack) and home kills 1%. Finding one you already have **upgrades** it (v1 → v2 → v3: its numbers ×1, ×1.5, ×2, and they grow with your power); past v3 it's 3 salvage. A daemon you find isn't slotted for you: you choose on the Daemons page.
 
 A **slotted daemon acts on its own cooldown, in addition to your order**, right after you act. Its chip sits on the *You* row in the cycle it acts next. The once-per-fight daemons wait for their moment. **Slots:** 1, +1 at server level 10 and 20, Operators +1. Commands (between fights): `daemon list`, `daemon slot <name>`, `daemon unslot <name>`, or the Daemons page. No daemon jacks you in or out.
 
@@ -616,6 +616,8 @@ The pager sits on the top bar, between the tabs and your meters (on narrower scr
 
 - Its little screen scrolls the latest line; the lamp blinks amber while anything is unread, red if it's a breach; the number is how many you haven't seen.
 - Click it for **Comms**: the list, newest first, filtered by All, Contracts (offers, contracts ready), Mail, Network (flags, relays, locations, invaders, sieges, breaches) or Money (retainer, pay, standing, the store). Each line has its sender, its age and a link to where it happened: the letter or contract in Mail, the server on the map, the Store, or Jack in for a breach. Opening it marks everything read.
+- **Handled** lines grey out and clear after 5 minutes: you handled one when you opened what it points at, or ticked it (✓). Lines with nothing to act on count as handled once seen. **Clear** removes everything you've seen.
+- An unanswered alert shakes the pager every 10 seconds until you open Comms. A **breach** makes the Integrity meter flash red with a pulsing BREACH badge, and pings every 15 seconds until it's dealt with.
 - It chirps for letters, offers, contracts ready, the retainer, flags, locations, invaders and dropped standing; pay for a delivery, rising standing, restocks and takeovers only light it up. While you're in a fight, only a breach chirps.
 
 ## The monitor casing

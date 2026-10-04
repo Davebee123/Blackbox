@@ -10,7 +10,7 @@ import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWand
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt } from './mail.mjs';
-import { logComms, commsOf, unseen, unseenAlert, seeAll } from './comms.mjs';
+import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms } from './comms.mjs';
 import { nextTip, markSeen } from './tips.mjs';
 import { createRain } from './rain.mjs';
 import { createWindow } from './window.mjs';
@@ -30,6 +30,7 @@ let campaign = load();
 let module = playtest === 'story' ? 'mail' : 'map';
 let selected = null;
 let mapSel = 'server';
+let nag = {}; // when the pager last shook for an alert, and the breach last pinged
 let wasCooling = new Set(); // abilities on cooldown at the last render (the tray flashes the ones that come back)
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
@@ -675,6 +676,7 @@ function renderMeters() {
   $('meter-integrity').classList.toggle('noted', !!note);
   $('integrity-note').textContent = note;
   $('integrity-note').className = 'meter-note ' + (campaign.degraded ? 'degraded' : inv?.state || '');
+  $('meter-integrity').classList.toggle('breaching', !campaign.degraded && !onIt && inv?.state === 'breach'); // a breach: the meter itself flashes
   // Click a meter that isn't full to pay for the rest (topUp in data.mjs); the hover says what it costs.
   const meterBuy = (el, cmd, cost, base) => {
     const can = !!cost && !active(campaign);
@@ -1081,6 +1083,13 @@ function frame(now) {
   if (now - lastSecond >= 1000) {
     lastSecond = now; shell.second(module); services();
     if (simOn(campaign)) peopleUi(); // people move about (presence.mjs)
+    if (pruneComms(campaign)) { save(); dirty = true; } // handled comms clear out after 5 minutes
+    // Unanswered alerts shake the pager every 10 s; a breach pings every 15 s.
+    const tickNow = Date.now();
+    if (unseenAlert(campaign) && !commsOpen && tickNow - (nag.pager || 0) >= 10000) { nag.pager = tickNow; const p = $('pager'); p.classList.remove('fx-pager'); void p.offsetWidth; p.classList.add('fx-pager'); }
+    const inv = campaign.invasion, breached = inv?.state === 'breach' && !campaign.degraded && !(active(campaign) && campaign.encounter.invader === inv.id);
+    if (breached && tickNow - (nag.breach || 0) >= 15000) { nag.breach = tickNow; feel.add('prewarn', '#meter-integrity'); feel.flush(); }
+    if (!breached) nag.breach = 0;
     if (module === 'consortium') dirty = true; // its timers count down
     // Crewmates off on their own move every few seconds (run.mjs crewWander).
     if (campaign.run && ++wanderTick % 4 === 0 && Object.values(campaign.run.crew || {}).some((c) => c.link !== 'you')) { const ev = crewWander(campaign); if (ev.length) react(ev); save(); dirty = true; }
@@ -1311,7 +1320,11 @@ $('comms').addEventListener('click', (e) => {
   const f = e.target.closest('[data-cfilter]');
   if (f) { commsFilter = f.dataset.cfilter; dirty = true; return; }
   if (e.target.closest('[data-comms-close]')) { setComms(false); return; }
+  if (e.target.closest('[data-comms-clear]')) { clearComms(campaign); save(); dirty = true; return; }
+  const dn = e.target.closest('[data-cdone]');
+  if (dn) { markDone(campaign, Number(dn.dataset.cdone)); save(); dirty = true; return; }
   const g = e.target.closest('[data-go]');
+  if (g?.dataset.cid) { markDone(campaign, Number(g.dataset.cid)); save(); } // opening it is handling it
   if (!g) return;
   setComms(false);
   goTo(g.dataset.go);

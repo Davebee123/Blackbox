@@ -338,7 +338,8 @@ test('daemons are found; a slotted one acts on its own cooldown, on top of your 
   const { learnDaemon, daemonSlots } = await import('./dist/combat.mjs');
   const s = start();
   learnDaemon(s, '', 'sweeper');
-  assert.deepEqual(s.daemons, ['sweeper'], 'a first daemon goes straight into a free slot');
+  assert.deepEqual(s.daemons, [], 'found, not slotted: you choose');
+  s.encounter.paused = true; s.daemons = ['sweeper']; s.encounter.paused = false;
   const pulse = part(s, 'pulse');
   for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null, integrity: 500, max: 500 });
   part(s, 'encryptor').attack = null;
@@ -358,6 +359,8 @@ test('daemon slots: slot and unslot between fights; the slot count is the limit'
   const s = fresh();
   learnDaemon(s, '', 'mender');
   learnDaemon(s, '', 'fuzzer');
+  assert.deepEqual(s.daemons, [], 'nothing slots itself');
+  command(s, 'daemon slot mender');
   assert.deepEqual(s.daemons, ['mender'], 'one slot to start');
   assert.match(command(s, 'daemon slot fuzzer').at(-1).message, /slots are full/);
   command(s, 'daemon unslot mender');

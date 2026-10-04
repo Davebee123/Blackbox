@@ -2282,8 +2282,7 @@ export function learnDaemon(s, why = '', id = null) {
   const v = daemonVersion(s, id);
   if (v >= DAEMON_VERSIONS.length) { for (let i = 0; i < 3; i++) s.salvage.push({ name: 'Daemon scraps', virus: 'daemon', seed: 0 }); return emit(s, 'info', `${why}${DAEMONS[id].name} v3 again: +3 salvage.`); }
   s.daemonsOwned[id] = v + 1;
-  // A first daemon goes straight into a free slot.
-  if (!v && slottedDaemons(s).length < daemonSlots(s)) (s.daemons ||= []).push(id);
+  // Not slotted for you: you choose (Daemons page).
   return emit(s, 'drop', `${why}${DAEMONS[id].name} ${v ? `v${v + 1}` : 'daemon'}. ${DAEMONS[id].rule}`, { daemon: id });
 }
 function daemonCommand(s, text) {
