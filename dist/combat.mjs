@@ -1012,6 +1012,7 @@ function engage(s) {
 
 // Fast kills: beat your own usual pace (cycles per 100 Integrity of virus, kept per class) by a
 // quarter and the kill pays a quarter more XP. Measured against you, so every class can earn it.
+const PARTY_XP = 0.1; // a party splits the kill's XP, plus 10% per extra player
 export const FAST = { share: 0.75, bonus: 0.25, after: 5, weight: 0.2 };
 function fastKill(s, e) {
   const total = e.virus.parts.reduce((n, p) => n + p.max, 0);
@@ -1024,7 +1025,9 @@ function fastKill(s, e) {
   return fast;
 }
 function payKill(s, e, base, why) {
-  const xp = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1);
+  // A party splits the kill's XP, with a small bonus per extra player (PARTY_XP).
+  const n = e.party || 1;
+  const xp = Math.max(1, Math.round((xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1))) / n));
   const bonus = e.fast ? Math.max(1, Math.round(xp * FAST.bonus)) : 0;
   if (bonus) emit(s, 'fast-kill', `Fast kill: ${e.cycle} cycles. +${bonus} XP.`, { amount: bonus, cycles: e.cycle });
   gainXp(s, xp + bonus, why);

@@ -122,3 +122,16 @@ test('turn order: armor strippers first, damage skills after; "last" puts your c
   for (let n = 0; n < 3 && active(s); n++) resolveCycle(s);
   assert.ok(s.logs.some((e) => e.type === 'resolved' && !e.who), 'your command still went off');
 });
+
+test('a party splits kill XP, with 10% more per extra player; elites don\'t grow with the party', async () => {
+  const { hackerOf } = await import('./dist/combat.mjs');
+  const xpOf = (crew) => {
+    const s = start(crew);
+    for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1 });
+    for (let n = 0; n < 10 && active(s); n++) { command(s, 'spike ' + s.encounter.virus.parts.find((p) => p.integrity > 0).id); resolveCycle(s); }
+    return s.logs.filter((e) => e.type === 'xp' && /neutralized|down/.test(e.message)).reduce((n, e) => n + e.amount, 0);
+  };
+  const solo = xpOf(null), trio = xpOf('bastion infiltrator');
+  assert.ok(Math.abs(trio - Math.round((solo * 1.2) / 3)) <= 1, `${trio} vs ${solo}`);
+  assert.equal(CREW.elitePer, 0);
+});

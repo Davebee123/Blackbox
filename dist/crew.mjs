@@ -20,8 +20,8 @@ import { isMember } from './consortium.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
-  hpPer: 1.0, // enemy Integrity: +100% per extra player
-  elitePer: 0.35, // an elite's: +35% per extra player (it's built for a crew already) (a party makes a normal fight easier; elites are what need one)
+  hpPer: 0.25, // enemy Integrity: +25% per extra player: a party makes normal fights easy (MMO-style), just not over before they start
+  elitePer: 0, // elites are built for a crew: they don't scale
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   names: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill'],
 };
@@ -82,7 +82,8 @@ hooks.crewEngage = (s) => {
   const mates = all.filter((m) => m.guest || !s.run?.crew || crewAt(s, m.who) === e.room);
   if (!mates.length) return;
   // A bigger party: tougher parts.
-  // An elite is already sized for a crew, so it grows much less with each player.
+  e.party = 1 + mates.length; // for the XP split (combat.mjs payKill)
+  // An elite is already sized for a crew, so it doesn't grow with it.
   const k = 1 + (e.virus.elite ? CREW.elitePer : CREW.hpPer) * mates.length;
   const kd = 1 + CREW.dmgPer * mates.length;
   for (const p of e.virus.parts) {

@@ -484,7 +484,7 @@ export const mobPower = (level) => power(level) * 1;
 
 // Elites: group content (a third of a Pit's folders, the trunk server's too). Much bigger, harder
 // hitting and better armored; they pay three times the XP and roll for drops three times.
-export const ELITE = { hp: 3.6, dmg: 1.15, armor: 1, xp: 3, rolls: 3, share: 1 / 3 };
+export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3 };
 
 // Build a virus from a named fixture or a seeded random variant.
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
