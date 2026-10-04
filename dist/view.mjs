@@ -211,7 +211,7 @@ export function forecast(s) {
 // The blinking slice on a bar: from what's left after the hit up to where the bar is now.
 const lossMark = (now, max, loss) => (loss > 0 && max > 0 ? `<i class="loss" style="left:${((now - loss) / max) * 100}%;width:${(loss / max) * 100}%" title="−${loss} this cycle"></i>` : '');
 
-export function hudMarkup(s) {
+export function hudMarkup(s, { party = true } = {}) {
   const e = s.encounter, v = e.virus;
   runMode = e.mode === 'run';
   const hp = virusIntegrity(s);
@@ -230,7 +230,7 @@ export function hudMarkup(s) {
   const tags = `${v.elite ? '<span class="tag hot tag-elite" title="Elite: built for a crew. Much tougher; three times the XP and drop rolls.">elite</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
-  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${partyMarkup(s, fc)}</div>${statusPanel(s)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${party ? partyMarkup(s, fc) : ''}</div>${statusPanel(s)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}</p></div>`;
 }
 
@@ -1395,7 +1395,7 @@ const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
-export function mapMarkup(s, sel = 'server', view = 'mine') {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}) {
   // A member's server (or home) shows on the consortium's map, whichever view was asked for.
   const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
   const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s);
@@ -1469,7 +1469,14 @@ export function mapMarkup(s, sel = 'server', view = 'mine') {
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
-  return `<div class="map-page"><section class="panel map-canvas">${tabs}${svg}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${svg}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+}
+// The map's selection card on its own (the sidebar carries it when it's on).
+export function mapSelection(s, sel = 'server', view = 'mine') {
+  const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
+  const { nodes } = con ? consortiumLayout(s) : mapLayout(s);
+  const node = nodes.find((n) => n.id === sel) || nodes.find((n) => n.id === 'server');
+  return mapSide(s, node?.id || 'server', node);
 }
 
 // Server level: shared by everyone on the server. Defending it and banking loot raise it.
@@ -1850,4 +1857,36 @@ export function sawTab(s, tab) {
   if (!NEW_TABS[tab]) return;
   newOn(s, tab);
   s.seen[tab] = NEW_TABS[tab](s);
+}
+
+
+// ---------- the sidebar: on every page, fights included ----------
+// You (your health), your crew (live bars in a fight), then what this page is about: the map's
+// selection, the virus you're fighting, or what needs you. Narrow screens and `sidebar off` hide it.
+export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 'mine' } = {}) {
+  const fighting = active(s), e = s.encounter, d = defender(s);
+  const bar = (cls, cur, max, label, icon) => `<div class="sb-bar ${cls} ${cur / max <= 0.3 ? 'low' : cur / max <= 0.6 ? 'mid' : ''}" title="${esc(label)}">${glyph(icon)}<span class="sb-track"><span style="width:${Math.max(0, (cur / max) * 100)}%"></span></span><b>${cur}</b><small>/${max}</small></div>`;
+  const h = hackerOf(s);
+  const you = `<section class="sb-block sb-you"><div class="sb-head"><b>${esc(s.profile?.handle || 'you')}</b><small>${esc(ARCHETYPES[classOf(s)].name)} ${h.level}</small></div>
+    ${bar('srv', s.server.integrity, s.server.max, 'Server Integrity', 'integrity')}${bar('sig', s.run ? s.run.integrity : signalNow(s), s.run ? s.run.max : maxSignal(s), 'Signal', 'signal')}</section>`;
+  // The crew: live in a run fight, else as they'll join you.
+  const mates = matesOf(s), inFight = fighting && e.mode === 'run';
+  const fc = inFight ? forecast(s) : null;
+  const crew = mates.length
+    ? `<section class="sb-block sb-crew"><div class="sb-head"><b>Crew</b><small>${mates.length}/3</small></div><div class="party">${mates.map((m) => {
+        const live = inFight && m.encounter, up = !live || mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = live ? m.encounter.queue : null;
+        return `<div class="pmate${up ? '' : ' down'}" data-mate="${esc(m.who)}" title="${esc(`${m.who} · ${ARCHETYPES[m.loadout.archetype].name}${q ? ` · ${q.text}` : ''}`)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)}</small>${live && up && drawingFire(m) ? '<span class="tag hot">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small></div>`;
+      }).join('')}</div></section>`
+    : `<section class="sb-block sb-crew solo"><div class="sb-head"><b>Crew</b><small>solo</small></div><button type="button" class="act dim" data-people-open title="Friends, consortium members and who's online">${glyph('run')}Find a crew</button></section>`;
+  // What this page is about.
+  let ctx = '';
+  if (fighting && module === 'combat') {
+    ctx = ''; // the HUD has the virus and your status
+  } else if (module === 'map') {
+    ctx = `<div class="sb-select">${mapSelection(s, mapSel, mapView)}</div>`;
+  } else {
+    const al = commsOf(s).filter((c) => !c.done && c.go).slice(0, 4);
+    ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${esc(c.label)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
+  }
+  return `${you}${crew}${ctx}`;
 }

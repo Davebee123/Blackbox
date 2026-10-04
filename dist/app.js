@@ -561,6 +561,7 @@ function run(raw) {
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();
+  if (text === 'sidebar on' || text === 'sidebar off') { campaign.settings.sidebar = text === 'sidebar on'; save(); dirty = true; return notice(`Sidebar ${text.slice(8)}.`); }
   if (text === 'map names hover' || text === 'map names on') { campaign.settings.mapNames = text.endsWith('hover') ? 'hover' : 'on'; save(); dirty = true; return notice(text.endsWith('hover') ? 'Map names show on hover.' : 'Map names always show.'); }
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
@@ -700,13 +701,14 @@ function applyMapZoom() {
   const svg = mapSvg();
   if (!svg) return;
   const [x, y, w, h] = baseVb(svg);
-  svg.style.setProperty('--z', Math.max(1, mapZoom.k) ** 0.75); // text grows a little, not 5×
-  if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return; }
+  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) svg.style.setProperty('--z', a); }; // text keeps its size on screen, at any width or zoom
+  if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return fix(); }
   const zw = w / mapZoom.k, zh = h / mapZoom.k;
   mapZoom.cx = Math.max(x + zw / 2, Math.min(x + w - zw / 2, mapZoom.cx));
   mapZoom.cy = Math.max(y + zh / 2, Math.min(y + h - zh / 2, mapZoom.cy));
   svg.setAttribute('viewBox', `${mapZoom.cx - zw / 2} ${mapZoom.cy - zh / 2} ${zw} ${zh}`);
   svg.classList.add('zoomed');
+  fix();
 }
 const svgPoint = (svg, e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
 document.addEventListener('wheel', (e) => {
@@ -844,6 +846,8 @@ function renderMeters() {
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
 }
 
+const sidebarOn = () => campaign.settings.sidebar !== false && innerWidth >= 1100;
+addEventListener('resize', () => { dirty = true; applyMapZoom(); });
 function render(force = false) {
   if (force) cache.clear();
   renderMeters();
@@ -853,8 +857,13 @@ function render(force = false) {
   const hasFight = !!s.encounter;
   $('combat-view').hidden = !(combatLike && hasFight);
   $('page-view').hidden = combatLike && hasFight;
+  // The sidebar: every page, fights too (wide screens; `sidebar off` hides it).
+  const side = sidebarOn();
+  document.body.classList.toggle('with-sidebar', side);
+  $('sidebar').hidden = !side;
+  if (side) put('sidebar', V.sidebarMarkup(s, { module: combatLike && hasFight ? 'combat' : module, mapSel, mapView }));
   if (combatLike && hasFight) {
-    put('hud', V.hudMarkup(s));
+    put('hud', V.hudMarkup(s, { party: !side }));
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
@@ -872,7 +881,7 @@ function render(force = false) {
     }
     render.logLen = s.logs.length;
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: !sidebarOn() }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -883,8 +892,9 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: !sidebarOn() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     put('page-view', (pages[module] || pages.map)(campaign));
+    if (module === 'map' || !pages[module]) applyMapZoom();
   }
   if (module === 'net' && campaign.run) {
     rain.mount($('page-view'));
@@ -1410,6 +1420,7 @@ $('people-panel').addEventListener('click', (e) => {
   if (t) { e.stopPropagation(); peopleTab = t.dataset.ptab; dirty = true; return; }
   if (e.target.closest('[data-people-close]')) { e.stopPropagation(); peopleOpen = false; dirty = true; }
 });
+document.addEventListener('click', (e) => { if (e.target.closest('[data-people-open]')) { e.stopPropagation(); peopleOpen = true; peopleTab = 'online'; setComms(false); dirty = true; } }, true);
 document.addEventListener('click', (e) => { if (peopleOpen && !e.target.closest('#people-panel, #people')) { peopleOpen = false; dirty = true; } });
 
 function setComms(open) {

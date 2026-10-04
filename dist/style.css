@@ -1251,6 +1251,37 @@ body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-
 .sp-go kbd { font: 500 9px var(--mono); letter-spacing: 0; padding: 0 4px; color: var(--dim); border: 1px solid var(--line); border-radius: 2px; }
 @media (prefers-reduced-motion: reduce) { .sp-go { animation: none; opacity: 1; } }
 body.no-motion .sp-go { animation: none; opacity: 1; }
+/* The sidebar: on every page, fights included */
+body.with-sidebar .workspace { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 12px; }
+body.with-sidebar .workspace > .combat, body.with-sidebar .workspace > .page { grid-column: 2; grid-row: 1; min-height: 0; }
+.sidebar { grid-column: 1; grid-row: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.sb-block { padding: 12px 14px; border: 1px solid var(--line); background: var(--panel); display: grid; gap: 8px; }
+.sb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sb-head b { font: 600 13px var(--mono); letter-spacing: 1px; color: var(--bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-head small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.sb-bar { display: flex; align-items: center; gap: 6px; color: var(--you); font-variant-numeric: tabular-nums; }
+.sb-bar .glyph { margin: 0; width: 14px; height: 14px; }
+.sb-track { flex: 1; height: 7px; border: 1px solid currentColor; background: rgba(0, 0, 0, 0.3); } .sb-track span { display: block; height: 100%; background: currentColor; }
+.sb-bar b { font: 600 13px var(--mono); } .sb-bar small { color: var(--muted); font-size: 11px; }
+.sb-bar.mid { color: var(--next); } .sb-bar.low { color: var(--hot); }
+.sb-bar.vir { color: var(--hot); }
+.sidebar .sb-crew .party { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.sidebar .sb-crew .pmate { border-left: 0; padding-left: 0; margin: 0; }
+.sb-crew .pmate { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 0 0; border-top: 1px solid var(--line); }
+.sb-crew .pmate:first-child { border-top: 0; padding-top: 0; }
+.sb-crew .pmate .pbar { grid-column: 1 / -1; }
+.sb-crew .pm-cls { color: var(--muted); font-size: 11px; }
+.sb-crew.solo button { justify-self: start; }
+.sb-note { color: var(--muted); font: 11px var(--mono); }
+.sb-select { display: grid; gap: 10px; }
+.sb-select .card { margin: 0; }
+.sb-select .card h1 { font-size: 18px; overflow-wrap: anywhere; }
+.sb-select .stats { grid-template-columns: 1fr 1fr; }
+.sb-alerts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.sb-alerts button { display: block; width: 100%; text-align: left; white-space: normal; font-size: 12px; line-height: 1.35; }
+.sb-alerts .k { margin-right: 6px; }
+.map-page.no-side { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 1099px) { .sidebar { display: none; } }
 /* Slots as pips; the wall as a level ruler; the map's server card */
 .slots { display: inline-flex; align-items: center; gap: 3px; font: 500 11px var(--mono); color: var(--muted); vertical-align: middle; }
 .slots .glyph { width: 14px; height: 14px; margin-right: 4px; color: var(--amber); }
