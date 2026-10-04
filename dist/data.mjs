@@ -154,11 +154,11 @@ export const ABILITIES = {
   throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, cooldown: 4, icon: 'interrupt', short: 'Weaken −50%', help: 'throttle [part] — its attacks deal half for 3 cycles.' },
   purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, decrypt', help: 'purge <part> — a burn of 6 for 4 cycles; each tick heals you 2. It also clears your encryption.' },
   harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain an armor chit: the next attack on you does nothing, however big.' },
-  reclaim: { cls: 'bastion', verb: 'hit', name: 'Reclaim', target: 'part', damage: 35, lifesteal: 0.5, cooldown: 3, icon: 'server', short: 'Hit 35, heal half', help: 'reclaim <part> — 35 damage, and you heal half of what it does.' },
+  reclaim: { cls: 'bastion', verb: 'hit', name: 'Reclaim', target: 'part', damage: 35, lifesteal: 0.5, chits: 2, cooldown: 3, icon: 'server', short: 'Hit 35, heal half', help: 'reclaim <part> — 35 damage, and you heal half of what it does. On armor it breaks 2 chits.' },
   quarantine: { cls: 'bastion', verb: 'stun', name: 'Quarantine', target: 'attack', damage: 0, delay: 3, status: 'quarantined', cycles: 3, cooldown: 6, icon: 'event-lock', short: 'Delay 3, +25% dmg', help: 'quarantine [part] — push its attack back 3 cycles; while it waits, it takes +25% damage.' },
   failover: { cls: 'bastion', verb: 'hit', name: 'Failover', target: 'none', damage: 0, cooldown: 5, icon: 'event-warning', short: 'Hit all for missing/4', help: 'failover — hit every part for a quarter of your missing health (at least 20).' },
   // Infiltrator: burns and precision
-  inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 8, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 8×3, stacks', help: 'inject <part> — 8 damage every cycle for 3 cycles. Up to 3 on one part.' },
+  inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 10, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 10×3, stacks', help: 'inject <part> — 10 damage every cycle for 3 cycles. Up to 3 on one part.' },
   tag: { cls: 'infiltrator', verb: 'debuff', name: 'Tag', target: 'part', damage: 0, status: 'tagged', cycles: 4, cooldown: 3, icon: 'weakness', short: 'Burns +50%, timer', help: 'tag <part> — for 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled.' },
   backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 6, cooldown: 4, icon: 'injector', short: 'Hit 24 thru armor, +6/burn', help: 'backdoor <part> — 24 damage straight through armor, +6 for each burn on it.' },
   traceroute: { cls: 'infiltrator', verb: 'util', name: 'Traceroute', target: 'none', damage: 0, trace: 25, cooldown: 2, icon: 'trace', short: '+25% trace', help: 'traceroute — +25% Uplink trace now (at home and on SPRAWL-00). 100% before the kill finds where the virus came from.' },
@@ -484,7 +484,7 @@ export const mobPower = (level) => power(level) * 1;
 
 // Elites: group content (a third of a Pit's folders, the trunk server's too). Much bigger, harder
 // hitting and better armored; they pay three times the XP and roll for drops three times.
-export const ELITE = { hp: 2.5, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3 };
+export const ELITE = { hp: 3.6, dmg: 1.15, armor: 1, xp: 3, rolls: 3, share: 1 / 3 };
 
 // Build a virus from a named fixture or a seeded random variant.
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
@@ -602,7 +602,8 @@ export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEver
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
-  { level: 7, what: 'backtrace' }, { level: 10, what: 3 }, { level: 14, what: 4 }, { level: 18, what: 5 },
+  // Your 4th skill (Crack, Retaliate, Backdoor, Botnet) comes before Backtrace: armor needs an answer early.
+  { level: 7, what: 3 }, { level: 10, what: 'backtrace' }, { level: 14, what: 4 }, { level: 18, what: 5 },
   { level: 22, what: 6 }, { level: 26, what: 7 }, { level: 30, what: 8 }, { level: 34, what: 9 }, { level: 38, what: 10 },
 ];
 // XP: a kill is worth 20 + 10 per enemy level. Level L to L+1 takes about 5 + 1.2×L kills of

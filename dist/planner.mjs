@@ -11,7 +11,7 @@ const landingNow = (s) => intents(s).filter((i) => i.col === 0 && !i.hidden);
 const dueOf = (s, p) => (intents(s).find((i) => i.source === p.id && !i.hidden)?.col ?? (p.attack ? 2 : 9));
 export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s)[0];
 const bare = (p) => alive(p) && !p.armor;
-const HITS = ['zero-day', 'shatter', 'retaliate', 'opening', 'segfault', 'overload', 'backdoor', 'reclaim', 'kill-process', 'spike'];
+const HITS = ['zero-day', 'shatter', 'retaliate', 'opening', 'segfault', 'overload', 'flood', 'backdoor', 'reclaim', 'kill-process', 'spike'];
 // A command that breaks this part right now, if there is one.
 // Flicker: the Shade is out of phase on odd cycles; a player hits something else then.
 const phasedOut = (s, p) => p.phase && s.encounter.cycle % 2 === 1;
@@ -89,7 +89,7 @@ export function planner(s) {
     burnsOn(s, t) >= 2 && 'detonate ' + t.id,
     t.integrity > 30 && 'tag ' + t.id,
     burnsOn(s, t) < 3 && 'inject ' + t.id,
-    'segfault ' + t.id, 'overload ' + t.id, 'backdoor ' + t.id, 'reclaim ' + t.id, 'kill-process ' + t.id,
+    'segfault ' + t.id, 'overload ' + t.id, 'flood ' + t.id, 'backdoor ' + t.id, 'reclaim ' + t.id, 'kill-process ' + t.id,
     'deploy ' + t.id, 'thermal-runaway ' + t.id, 'sudo', 'spike ' + t.id,
   ]);
 }

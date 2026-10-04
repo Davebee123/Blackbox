@@ -473,10 +473,10 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload']);
   command(s, 'developer level 3');
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'exploit']);
-  command(s, 'developer level 7');
+  command(s, 'developer level 5');
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'exploit', 'flood']);
-  command(s, 'developer level 10');
-  assert.ok(Object.values(keyMap(s)).includes('crack'), 'Crack, the armor stripper, waits for level 10');
+  command(s, 'developer level 7');
+  assert.ok(Object.values(keyMap(s)).includes('crack'), 'Crack, the armor stripper, at level 7');
   command(s, 'developer level 22');
   assert.equal(equippedSkills(s, 'breaker').length, 7, 'bar full by level 22');
   command(s, 'developer level 26');

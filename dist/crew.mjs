@@ -20,7 +20,8 @@ import { isMember } from './consortium.mjs';
 
 export const CREW = {
   max: 3, // crewmates besides you
-  hpPer: 0.8, // enemy Integrity: +80% per extra player (a party makes a normal fight easier; elites are what need one)
+  hpPer: 1.0, // enemy Integrity: +100% per extra player
+  elitePer: 0.35, // an elite's: +35% per extra player (it's built for a crew already) (a party makes a normal fight easier; elites are what need one)
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   names: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill'],
 };
@@ -81,7 +82,8 @@ hooks.crewEngage = (s) => {
   const mates = all.filter((m) => m.guest || !s.run?.crew || crewAt(s, m.who) === e.room);
   if (!mates.length) return;
   // A bigger party: tougher parts.
-  const k = 1 + CREW.hpPer * mates.length;
+  // An elite is already sized for a crew, so it grows much less with each player.
+  const k = 1 + (e.virus.elite ? CREW.elitePer : CREW.hpPer) * mates.length;
   const kd = 1 + CREW.dmgPer * mates.length;
   for (const p of e.virus.parts) {
     p.max = Math.round(p.max * k); p.integrity = Math.round(p.integrity * k);

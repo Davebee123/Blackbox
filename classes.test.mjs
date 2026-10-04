@@ -153,9 +153,9 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   const s = noArmor(quiet(start('infiltrator')));
   big(s, 'pulse');
   act(s, 'inject pulse');
-  assert.equal(lost(s, 'pulse'), 8);
+  assert.equal(lost(s, 'pulse'), 10);
   act(s, 'inject pulse');
-  assert.equal(lost(s, 'pulse'), 8 + 16, 'two stacks tick');
+  assert.equal(lost(s, 'pulse'), 10 + 20, 'two stacks tick');
   s.encounter.burns = [1, 2, 3].map((n) => ({ id: 'inject', target: 'pulse', damage: 1, grow: 0, left: 5, name: 'Inject', drain: 0, n }));
   s.encounter.readyAt = {};
   act(s, 'inject pulse');
@@ -165,7 +165,7 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   big(t, 'pulse');
   act(t, 'tag pulse');
   act(t, 'inject pulse');
-  assert.equal(lost(t, 'pulse'), 12, '8 × 1.5');
+  assert.equal(lost(t, 'pulse'), 15, '10 × 1.5');
   const b = quiet(start('infiltrator'));
   big(b, 'pulse');
   b.encounter.burns.push({ id: 'inject', target: 'pulse', damage: 0, grow: 0, left: 5, name: 'Inject', drain: 0 });
@@ -176,7 +176,7 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   act(d, 'inject pulse');
   const before = lost(d, 'pulse');
   act(d, 'detonate pulse');
-  assert.equal(lost(d, 'pulse') - before, Math.round(2 * 8 * 1.5), 'the two ticks left, now, ×1.5');
+  assert.equal(lost(d, 'pulse') - before, Math.round(2 * 10 * 1.5), 'the two ticks left, now, ×1.5');
   assert.equal(d.encounter.burns.length, 0);
   const g = start('infiltrator', 18, 'ghostroot');
   assert.equal(timersHidden(g, part(g, 'pulse')), true);
