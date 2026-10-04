@@ -646,6 +646,26 @@ Five PvE factions, companies and hacker crews, each with a colour, a mark and a 
 - **Work:** once the hubs are up, about half the board (beyond GLASSJAW's off-the-books jobs) is Kestrel's, LANTERN's or NULL CHOIR's: the same kinds of contracts, paying 20% more credits and their own rep instead of Indemnity and Halcyon standing. Their takeover and recovery jobs often point at their rivals' servers. Each offer on the Mail board shows its faction's mark; Mail also shows your tier with each faction.
 - **Faction servers:** about a third of the servers you trace (never your first two, never rogue ones) belong to Kestrel, GLASSJAW, LANTERN or NULL CHOIR: their colour on the map node, their mark beside it. Opening one's vault takes the server from them: their rep −15, their rivals warm to you (+7).
 
+### Markets
+
+Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 credits), Exploits (140) and salvage (7) (`market.mjs`). The Market card on each hub page shows what it pays and asks for each ware, with an arrow for how far off normal it is (hover it for why).
+
+- **Prices move on things you can't change.** Each hub has its own fixed condition, and one world event at a time touches every hub:
+
+  | Hub | Condition | Effect |
+  |---|---|---|
+  | Halcyon | Claims backlog | Cipher ×1.35 |
+  | GLASSJAW | Black budget | Exploits ×1.5 |
+  | Kestrel | Overheating racks | Kernel ×1.8, salvage ×1.25 |
+  | LANTERN | Thin bandwidth | Worm ×1.45 |
+  | NULL CHOIR | Scrap economy | salvage ×0.6, Cipher ×1.15 |
+
+  World events turn over every 4 hours, never the same twice running: Ransomware outbreak (Cipher ×1.5), Worm season (Worm ×1.5), Patch Tuesday (all code ×0.8), Zero-day rush (Exploits ×1.6), Grid blackout (salvage ×1.5, Kernel ×1.25), Quiet market.
+- **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better per rep tier above Probation's). Each unit you sell somewhere takes 4% off its price there (each one you buy adds 4%, floor 35% of normal); the pressure eases 12% an hour, offline too.
+- **File transfers:** a sale leaves your stock now and its credits land when the transfer does; a purchase is paid now and lands later. Travel: Halcyon 5 min, Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay on your servers cuts 10% (up to 40%). Transfers in flight show on the hub's Market card and can't be lost. Hostile factions won't trade.
+- `market sell|buy <faction> <ware> <n>` (1–99).
+
+
 ## Server memory
 
 Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 4 at server level 1, one more every 5 server levels. Every server you've found and kept attached takes a slot, rogue ones too; SPRAWL-00 and consortium servers don't. It shows as chip pips on the map's server card.

@@ -3,6 +3,7 @@ import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvage
 import { CONFIGS, forService, known as configsKnown, owned as configsOwned, configOn, codeFor as configCode, CONFIG_COST } from './configs.mjs';
 import { glyph } from './glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost } from './memory.mjs';
+import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf } from './market.mjs';
 import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
@@ -1980,9 +1981,27 @@ export function hubMarkup(s, f, now = Date.now()) {
   return `<div class="page-grid hub-page" style="--fc:${F.color}"><div class="con-col">
     <section class="card fcard"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · ${esc(h.name)} · lv ${h.level}</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1><p>${esc(F.about)}</p>${repBar(s, f)}${relations(f)}</section>
     <section class="card"><h2>Work · ${offers.length} posted</h2>${work}</section>
+    <section class="card"><h2>Market</h2>${marketMarkup(s, f, now)}</section>
   </div><div class="con-col">
     <section class="card"><h2>Shop</h2>${shop}</section>
     <section class="card"><h2>Their servers on your map · ${theirs.length}</h2>${servers}</section>
   </div></div>`;
+}
+// The hub's market: what it pays and asks for each ware, why (hover the arrow), and your transfers.
+function marketMarkup(s, f, now) {
+  if (hostile(s, f)) return '<p class="quiet">Shut to you.</p>';
+  const cond = CONDITIONS[HUB_CONDITION[f]], ev = eventOf(s), mats = materialsOf(s);
+  const haveOf = (w) => (w === 'salvage' ? (s.salvage || []).length : mats[w] || 0);
+  const min = Math.round(travelMs(s, f) / 60000);
+  const rows = WARE_IDS.map((w) => {
+    const q = quote(s, f, w), n = haveOf(w), lot = Math.min(10, n), why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : ''].filter(Boolean).join(' · ') || 'Normal price';
+    const arrow = q.mult > 1.05 ? `<span class="mk-up" title="${esc(why)}">▲${Math.round((q.mult - 1) * 100)}%</span>` : q.mult < 0.95 ? `<span class="mk-down" title="${esc(why)}">▼${Math.round((1 - q.mult) * 100)}%</span>` : `<span class="mk-flat" title="${esc(why)}">—</span>`;
+    const sellBtn = (k) => `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k && k ? '' : 'disabled'} title="Sell ${k}: about ${q.sell * k} credits, lands in ${min} min">Sell ${k}</button>`;
+    const buyBtn = `<button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="Buy 1: lands in ${min} min">${glyph('credits')}${q.buy}</button>`;
+    return `<li><span><b class="iname">${glyph(GLYPH_OF_GOOD[w], 'badge')}${esc(WARES[w].name)} ${arrow}</b><small class="cost">pays ${q.sell} · you have ${n}</small></span><span class="mk-btns">${sellBtn(1)}${lot > 1 ? sellBtn(lot) : ''}${buyBtn}</span></li>`;
+  }).join('');
+  const mine = transfersOf(s).filter((x) => x.f === f);
+  const flying = mine.length ? `<h3 class="craft-sub">In transfer</h3><ul class="craft-list">${mine.map((x) => `<li><span><b>${x.side === 'sell' ? '→' : '←'} ${x.n} ${esc(WARES[x.w].name)}</b><small>${x.side === 'sell' ? `+${x.credits} credits` : `paid ${x.credits}`} · ${Math.max(1, Math.ceil((x.landsAt - now) / 60000))} min</small></span></li>`).join('')}</ul>` : '';
+  return `<div class="row mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer time">${min} min</span></div><ul class="craft-list">${rows}</ul>${flying}`;
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint', daemon: 'daemon' };

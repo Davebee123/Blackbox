@@ -7,6 +7,7 @@ import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERS
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
 import { buyFrom, claimServer } from './factions.mjs';
+import { tickMarket, marketCommand } from './market.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
 import { has as hasConfig, configCommand } from './configs.mjs';
 import { fleetCommand, fleetWon } from './fleet.mjs';
@@ -534,6 +535,7 @@ export function tickServices(s, now = Date.now()) {
   }
   tickMail(s, now);
   tickStore(s, now);
+  tickMarket(s, now);
   return since(s, first);
 }
 
@@ -1339,6 +1341,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     let xp = 0; for (let l = 1; l < want; l++) xp += SERVER.xpToNext(l);
     s.serverXp = xp;
     emit(s, 'info', `Developer: server level ${serverLevel(s)}.`);
+  } else if (/^market( |$)/.test(text)) {
+    marketCommand(s, text, now);
   } else if (/^buy \S+ \S+$/.test(text)) {
     const [, f, id] = text.split(' ');
     buyFrom(s, f, id, now);

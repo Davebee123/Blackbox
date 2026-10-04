@@ -1957,3 +1957,9 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .op-bar { height: 3px; background: rgba(255, 255, 255, 0.07); border-radius: 2px; overflow: hidden; }
 .op-bar span { display: block; height: 100%; background: var(--hot); } .op-box.infest .op-bar span { background: var(--next); }
 .op-box .row { margin: 0; }
+.mk-up { color: #8fd46b; font-size: 0.8em; margin-left: 0.4em; cursor: help; }
+.mk-down { color: #ff6f91; font-size: 0.8em; margin-left: 0.4em; cursor: help; }
+.mk-flat { color: var(--dim, #777); font-size: 0.8em; margin-left: 0.4em; cursor: help; }
+.mk-tags { gap: 0.4em; margin-bottom: 0.5em; flex-wrap: wrap; }
+.mk-tags .tag { cursor: help; }
+.craft-list li > span.mk-btns { display: flex; gap: 0.3em; flex-wrap: nowrap; align-items: center; }
