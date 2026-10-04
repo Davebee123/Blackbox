@@ -29,7 +29,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 | Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. |
 | Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal, and Trace doesn't apply. |
 | Locked | A locked directory needs `unlock <dir> <password>`. The password is written in a file somewhere in the location. |
-| Pack | Pulled files are unbanked until you jack out. Credits go to your credits, items to salvage, protocols to your stash, code to your server, source (Zero-day or special service) and blueprints to your recipes; trace records locate a deeper node. |
+| Pack | Pulled files are unbanked until you jack out. A pull pops a small card with what it was (a blueprint or daemon shows ??? until it's banked); jacking out shows a **Banked** card with everything you brought home (Enter, a click or your next command closes it). Credits go to your credits, items to salvage, protocols to your stash, code to your server, source (Zero-day or special service) and blueprints to your recipes; trace records locate a deeper node. |
 | Home while out | Intrusions wait. A waiting intrusion is parked when you connect and returns when you're back. |
 
 ### Run commands
@@ -124,9 +124,9 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 
 **Uniques** have a fixed name, stats, flavour line and usually one **effect**, sometimes a downside. Found at a higher level, their stats grow; their downside doesn't. They can drop again. Effects are blocks (when · if · does · limits), so new ones are written in the editor without code: e.g. Logger Spool (+25% damage in a Sync Window, Keylogger trophy), Gate Bypass (start each fight with an armor chit, Bouncer ICE), Deadman's Switch (at 0 Signal on a run you jack out with your pack; rearms 90 real minutes later). Hover an item for its flavour.
 
-**Drops: slow on purpose.** Targets in play time: a blue every 10–15 minutes, a yellow about an hour, a gold every 5–6 hours. Per kill (at the assumed pace of 60 kills an hour, `LOOT` in gear.mjs): a third drop a grey or white; blue 1 in 18 kills, yellow 1 in 90, gold 1 in 450, then vaults and double rolls make up the rest.
+**Drops: a grind, on purpose.** Targets in play time: a blue every 20–30 minutes, a yellow about every two hours, a gold every 10–12 hours. Per kill (at the assumed pace of 60 kills an hour, `LOOT` in gear.mjs): one in six drops a grey or white; blue 1 in 36 kills, yellow 1 in 180, gold 1 in 900, then vaults and double rolls make up the rest. Most kills drop nothing.
 - **Guards, rogue-server Pits and bounties** roll twice and keep the best. Deeper layers add 10% a layer to the blue and yellow odds.
-- **Vaults** always hold one item, white or better: white 68 · blue 25 · yellow 6 · gold 1 (a unique that drops from vaults that deep).
+- **Vaults:** half hold a protocol (`kit.bin`, fixed per server; your first server's always does), white or better: white 80 · blue 16 · yellow 3.5 · gold 0.5 (a unique that drops from vaults that deep).
 - **A strain's trophy:** 1 in 200 kills of that strain drops its own unique (Keylogger → Logger Spool, Hashrat → Cryptominer…).
 - **Scavenge is magic find** with diminishing returns: +50% Scavenge = +33% better odds.
 - **Rewards:** a story beat or contract can give a unique (killing claimjack gives wick's Old Toolkit: 5–6 Damage, +10 Signal, about a good blue at level 1).
@@ -137,7 +137,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 
 **Compile** at home with a recipe: `compile <stat>` gives a **blue** at your level with that stat as one of its affixes (60 + 15×level credits and 8 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
 
-**Blueprints.** Nothing is buildable at the start. Every regular service (11) and every protocol recipe (16) is a blueprint you find once. Every vault holds a `blueprint.bp`; a home kill drops one 2% of the time and a guard 5% (into your pack). Your first blueprint is always the Firewall; after that you get one you don't have yet, at random. One you already know is 2 salvage.
+**Blueprints.** Nothing is buildable at the start. Every regular service (11) and every protocol recipe (16) is a blueprint you find once. A quarter of vaults hold a `blueprint.bp` (your first server's always does); a home kill drops one 0.5% of the time and a guard 1.25% (into your pack). Your first blueprint is always the Firewall; after that you get one you don't have yet, at random. One you already know is 2 salvage.
 
 **The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×1.9 damage (`CONFIG.runHp`, `runDamage`), tuned with `node friction.mjs` against the gear you're likely to have. Health a same-level fight costs (scripted planner, levels 5–10, after the Ghostroot fix): nothing equipped ~70%, whites ~42%, blues ~28–33%, yellows ~19–22%; level 1 sits on target (53 / 31 / 25 / 16). Home fights on your server are unchanged. The Infiltrator is weakest before Backdoor (level 10) and mid-pack after it.
 
@@ -195,7 +195,7 @@ The server has no items. It runs **services** on **ports**, Master of Orion styl
 | **Cron Job** (special) | Worm + Kernel | every 3rd cycle of a home fight, hits the soonest attacker for 8 × power × 0.4 / 0.6 / 0.8 (shown on the *You* row) |
 | **Snapshot** (special) | Cipher + Kernel | once per home fight, when a hit drops you below half, restores 8 / 12 / 16% |
 
-Special services need their **source** first (`cron.src`, `snapshot.src`, found in vaults from layer 2) and cost both kinds of code, a bit more in total (v1: 6 + 6). Flat values grow with the server's level (+4% a level), like everything else.
+Special services need their **source** first (`cron.src`, `snapshot.src`, found in a quarter of vaults from layer 2) and cost both kinds of code, a bit more in total (v1: 6 + 6). Flat values grow with the server's level (+4% a level), like everything else.
 
 ### Code
 
@@ -432,7 +432,7 @@ Every service can run one **config**: a side-grade that changes how it works, no
 | Honeypot | Sting | A part whose attack misses you takes a hit back |
 | Hot-patcher | Triage | Double repair below half Integrity, half above |
 
-**Getting one.** 30% of vaults hold a config source (`<config>.cfg`). Bank it and you know it; craft it on the Craft page for 250 credits, 15 of the service's code and 6 salvage. A source you already know is 2 salvage.
+**Getting one.** 8% of vaults hold a config source (`<config>.cfg`). Bank it and you know it; craft it on the Craft page for 250 credits, 15 of the service's code and 6 salvage. A source you already know is 2 salvage.
 
 ## Swarms
 
@@ -555,7 +555,7 @@ Who acts in a cycle, in order: **your queued command (or, with nothing typed, a 
 
 ## Daemons
 
-Daemons are programs you **find**: a `daemon.exe` waits in 40% of vaults (fixed per location), guards drop one 4% of the time (into your pack) and home kills 1%. Finding one you already have **upgrades** it (v1 → v2 → v3: its numbers ×1, ×1.5, ×2, and they grow with your power); past v3 it's 3 salvage. A daemon you find isn't slotted for you: you choose on the Daemons page.
+Daemons are programs you **find**: a `daemon.exe` waits in 10% of vaults (fixed per location), guards drop one 1% of the time (into your pack) and home kills 0.25%. Finding one you already have **upgrades** it (v1 → v2 → v3: its numbers ×1, ×1.5, ×2, and they grow with your power); past v3 it's 3 salvage. A daemon you find isn't slotted for you: you choose on the Daemons page.
 
 A **slotted daemon acts on its own cooldown, in addition to your order**, right after you act. Its chip sits on the *You* row in the cycle it acts next. The once-per-fight daemons wait for their moment. **Slots:** 1, +1 at server level 10 and 20, Operators +1. Commands (between fights): `daemon list`, `daemon slot <name>`, `daemon unslot <name>`, or the Daemons page. No daemon jacks you in or out.
 
@@ -738,7 +738,11 @@ Mutations are always visible and each changes a decision:
 
 ## After a fight
 
-A win writes everything it gave you into the fight log: damage taken (or *Nothing got through*), XP and any level-up, server XP, any protocol drop, code, salvage, blueprints, lead progress and located origins. There's no Victory screen. Enter on an empty line takes you back to the map (home) or the run.
+A win shows a card over the virus with what it gave you: XP (one bar, any level-up), drops, code, salvage, leads, located origins and bounties; the fight log has the same in words. Enter on an empty line takes you back to the map (home) or the run.
+
+**Fast kills.** Each class keeps your usual pace (cycles per 100 Integrity of virus, a running average). From your sixth kill with a class, a win at least a quarter faster than that pays **+25% XP**, shown as a gold *Fast kill* row. It's measured against you, so a slow, tanky class earns it as often as a burst one.
+
+**New on the tabs.** Loadout, Craft and Daemons carry a teal count of what's arrived since you last opened them (protocols; blueprints, source and configs; daemons and daemon upgrades).
 
 A loss crashes the server: it reboots at half Integrity in Degraded mode (see Invasions). Between fights the server **rests**: it repairs 2% of its max a minute (empty to full in about 50 minutes, offline too), stopping while an invader sieges or breaches your wall. `repair [n]`, or a click on the Integrity meter, pays for it now (see The economy). Leads and located origins appear on the Map, salvage and protocols on the Loadout page (Protocols tab), code on the Server page. Testing only: `developer reboot`, `developer location <ransomware|worm|ghostroot>`.
 

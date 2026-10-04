@@ -592,6 +592,7 @@ export function addLocation(s, family, depth = 1, parent = null) {
   loc.template = TEMPLATES[s.locations.filter((l) => !l.rogue).length % TEMPLATES.length]; // rogue servers don't take a turn
   loc.level = SERVER.locationLevel(hackerLevel(s), depth); // fixed when found: its guards' level, and its vault gear's
   if (parent) loc.parent = parent;
+  if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and the Firewall blueprint
   loc.trait = siteTrait(loc);
   rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken
   s.locations.push(loc);
@@ -983,6 +984,26 @@ function engage(s) {
   hooks.crewEngage?.(s); // crew.mjs: crewmates join (run fights only)
 }
 
+// Fast kills: beat your own usual pace (cycles per 100 Integrity of virus, kept per class) by a
+// quarter and the kill pays a quarter more XP. Measured against you, so every class can earn it.
+export const FAST = { share: 0.75, bonus: 0.25, after: 5, weight: 0.2 };
+function fastKill(s, e) {
+  const total = e.virus.parts.reduce((n, p) => n + p.max, 0);
+  if (!total || !e.cycle) return false;
+  const rate = (e.cycle / total) * 100;
+  const p = ((s.par ||= {})[classOf(s)] ||= { n: 0, rate });
+  const fast = p.n >= FAST.after && rate <= p.rate * FAST.share;
+  p.rate = p.n ? p.rate + (rate - p.rate) * FAST.weight : rate;
+  p.n++;
+  return fast;
+}
+function payKill(s, e, base, why) {
+  const xp = xpFor(s, e.virus.level, base);
+  const bonus = e.fast ? Math.max(1, Math.round(xp * FAST.bonus)) : 0;
+  if (bonus) emit(s, 'fast-kill', `Fast kill: ${e.cycle} cycles. +${bonus} XP.`, { amount: bonus, cycles: e.cycle });
+  gainXp(s, xp + bonus, why);
+}
+
 export function finish(s, result) {
   const e = s.encounter;
   if (!active(s)) return;
@@ -995,7 +1016,7 @@ export function finish(s, result) {
   let lead = 0;
   if ((e.mode === 'home' || e.zone) && result === 'victory') lead = CONFIG.leadBase + Math.floor(e.trace * CONFIG.leadTraceShare);
 
-  if (result === 'victory') (s.pace ||= { kills: 0, ms: 0 }).kills++; // for kills an hour (System page)
+  if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, trace: e.trace, lead, result });
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
@@ -1014,7 +1035,7 @@ export function finish(s, result) {
       emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: true, bounty: named });
       huntKill(s, e.virus.family, e.trace);
-      gainXp(s, xpFor(s, e.virus.level, XP.home), `${e.virus.name} neutralized`);
+      payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
       const ctx = { kind: wild ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || 1, family: e.virus.family, strain: e.virus.strain, rolls: named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
@@ -1035,7 +1056,7 @@ export function finish(s, result) {
       if (loc) loc.state.cleared[e.room] = true;
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: false });
-      gainXp(s, xpFor(s, e.virus.level, XP.guard), `${e.virus.name} down`);
+      payKill(s, e, XP.guard, `${e.virus.name} down`);
       // A guard's drop goes in your pack: it's yours once you jack out.
       const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: loc?.depth || 1, family: loc?.family }, e.virus.level);
       if (item) {
@@ -1068,7 +1089,7 @@ export function finish(s, result) {
   if (result === 'victory') {
     contractKill(s, { family: e.virus.family, zone: false });
     if (!hid) huntKill(s, e.virus.family, e.trace);
-    gainXp(s, xpFor(s, e.virus.level, XP.home), `${e.virus.name} neutralized`);
+    payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1 }, e.virus.level);
     if (item) addItem(s, item);

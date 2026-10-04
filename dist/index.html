@@ -21,9 +21,9 @@
       <button data-module="store" id="tab-store" hidden>Store</button>
       <button data-module="consortium" id="tab-consortium" hidden>Consortium<span id="con-count" class="count" hidden></span></button>
       <button data-module="server">Server</button>
-      <button data-module="craft">Craft</button>
-      <button data-module="loadout">Loadout</button>
-      <button data-module="daemons">Daemons</button>
+      <button data-module="craft">Craft<span id="new-craft" class="count new" hidden></span></button>
+      <button data-module="loadout">Loadout<span id="new-loadout" class="count new" hidden></span></button>
+      <button data-module="daemons">Daemons<span id="new-daemons" class="count new" hidden></span></button>
       <button data-module="system">System</button>
     </nav>
     <button type="button" class="pager" id="pager" aria-label="Pager: open comms" aria-expanded="false" aria-controls="comms"><span class="led" id="pager-led"></span><span class="lcd" id="pager-lcd"><span id="pager-text">NO MESSAGES</span></span><span class="cnt" id="pager-count"></span></button>
@@ -86,6 +86,7 @@
     </section>
     <section id="page-view" class="page" hidden></section>
   </main>
+  <div id="gain" class="gain" hidden></div>
 
   <footer class="command-dock">
     <div class="prompt-row">

@@ -163,17 +163,20 @@ export const ZERO_DAYS = {
 export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 
 // Drops: set in play time, then turned into odds per kill with the measured pace (kills an
-// hour). A blue every 12 minutes, a yellow an hour, a gold about every 5.5 hours; most kills
-// drop nothing or a grey/white. See the items design doc.
+// hour). A blue about every 25 minutes, a yellow every two hours, a gold about every 11 hours;
+// most kills drop nothing. Grindy on purpose. See the items design doc.
 export const LOOT = {
   killsPerHour: 60, // measured: what the scripted player averages (bot.mjs); the System page shows yours
-  // Per kill (vaults and double rolls on guards add the rest, to land near the doc's targets:
-  // a blue every 10–15 min, a yellow about an hour, a gold every 5–6 hours).
-  minutes: { tuned: 18, custom: 90, zeroday: 450 },
-  common: 1 / 3, // share of kills that drop a grey or white
+  // Per kill (vaults and double rolls on guards add the rest, to land near the targets:
+  // a blue every 20–30 min, a yellow about two hours, a gold every 10–12 hours).
+  minutes: { tuned: 36, custom: 180, zeroday: 900 },
+  common: 1 / 6, // share of kills that drop a grey or white
   greyShare: 0.35, // of those, greys
   trophy: 200, // a strain's own unique: 1 in this many kills of that strain
-  vault: { stock: 68, tuned: 25, custom: 6, zeroday: 1 }, // a vault always holds one, white or better
+  vault: { stock: 80, tuned: 16, custom: 3.5, zeroday: 0.5 }, // a vault's protocol (kit.bin), white or better
+  vaultKit: 0.5, // share of vaults holding a protocol (kit.bin)
+  vaultBlueprint: 0.25, // share holding a blueprint (blueprint.bp)
+  vaultSource: 0.25, // share of layer-2+ vaults holding source (.src)
   rolls: { home: 1, guard: 2, pit: 2, bounty: 2 },
   depthBonus: 0.1, // per layer past the first, on blue and yellow odds
 };
@@ -341,11 +344,12 @@ export const serviceSalvage = (v) => VERSIONS[v - 1].salvage || 0;
 
 // ---------- blueprints ----------
 // Nothing is buildable at the start. Every regular service, and every protocol recipe (compile a
-// protocol built around one stat), is a blueprint you find once: one waits in every vault
-// (blueprint.bp), and kills drop one now and then. The first you find is always the Firewall.
+// protocol built around one stat), is a blueprint you find once: one waits in a quarter of the
+// vaults (blueprint.bp, always in your first server's), and kills drop one rarely. The first you
+// find is always the Firewall.
 // Special services and Zero-days still come from source (.src) in deeper vaults.
 export const recipeId = (stat) => 'recipe:' + stat;
 export const recipeStat = (id) => (id?.startsWith('recipe:') ? id.slice(7) : null);
 export const BLUEPRINTS = [...Object.keys(SERVICES).filter((k) => !SERVICES[k].special), ...PROTOCOL_STATS.map(recipeId)];
-export const BLUEPRINT_CHANCE = { home: 0.02, guard: 0.05 };
+export const BLUEPRINT_CHANCE = { home: 0.005, guard: 0.0125 };
 export const blueprintName = (id) => (recipeStat(id) ? `${PROTOCOL_NAMES[recipeStat(id)]} recipe` : `${SERVICES[id]?.name || id} blueprint`);

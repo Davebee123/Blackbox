@@ -1663,8 +1663,10 @@ export function spoilsOf(events) {
   const add = (label, qty, kind, extra = {}) => out.push({ label, qty, kind, pack: false, ...extra, text: extra.text || (qty ? `${qty} ${label}` : label) });
   const loot = events.filter((e) => e.type === 'loot');
   if (loot.length) add('Salvage', String(loot.length), 'loot', { text: `${loot.length} salvage`, sub: [...new Set(loot.map((e) => String(e.message || '').replace(/ recovered\.$/, '')))].filter(Boolean).join(', ') });
+  const xp = events.filter((e) => e.type === 'xp').reduce((n, e) => n + e.amount, 0);
+  if (xp) add('XP', `+${xp}`, 'xp', { text: `+${xp} XP` });
   for (const e of events) {
-    if (e.type === 'xp') add('XP', `+${e.amount}`, 'xp', { text: `+${e.amount} XP` });
+    if (e.type === 'fast-kill') add('Fast kill', `+${e.amount} XP`, 'fast', { text: `Fast kill +${e.amount} XP`, sub: `${e.cycles} cycles` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });
     else if (e.type === 'server-level') add(`Server level ${e.level}`, '', 'level');
     else if (e.type === 'code' && e.gains) for (const [m, n] of Object.entries(e.gains)) add(MATERIALS[m]?.name || m, `+${n}`, m === 'exploit' ? 'exploit' : 'code', { pack: !!e.pack, text: `+${n} ${MATERIALS[m]?.name || m}` });
@@ -1697,11 +1699,15 @@ const SPOIL_ICON = {
   found: '<path d="M3 8.5l3 3 7-7"/>',
   bounty: '<path d="M8 1.5l2 4.2 4.5.6-3.3 3.1.8 4.5L8 11.7l-4 2.2.8-4.5L1.5 6.3 6 5.7z"/><circle cx="8" cy="8" r="1.6"/>',
   level: '<path d="M8 1.5l1.9 4 4.4.5-3.3 3 .9 4.4L8 11.2 4.1 13.4l.9-4.4-3.3-3 4.4-.5z"/>',
+  credits: '<ellipse cx="8" cy="5" rx="5" ry="2"/><path d="M3 5v6c0 1.1 2.2 2 5 2s5-.9 5-2V5M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>',
+  fast: '<path d="M9 1.5L3.5 9H8l-1 5.5L12.5 7H8z"/>',
 };
+const spIcon = (k) => `<svg class="sp-ico" viewBox="0 0 16 16" aria-hidden="true">${SPOIL_ICON[k] || SPOIL_ICON.item}</svg>`;
+const spRow = (r, i) => `<li class="sp-row k-${r.kind}${r.rarity ? ' r-' + r.rarity : ''}" style="--i:${i}">${spIcon(r.kind)}<span class="sp-lbl"><span class="sp-t" data-decode="${esc(r.label)}">${esc(r.label)}</span>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}${r.pct != null ? `<span class="sp-bar lead"><span class="sp-was" style="width:${r.from}%"></span><span class="sp-now" style="--from:${r.from}%;--to:${r.pct}%"></span></span>` : ''}</span>${r.pack ? '<span class="sp-pack">pack</span>' : ''}<b class="sp-qty">${esc(r.qty)}</b></li>`;
 
 // The card itself. head: { name, level, family, cycles, damage, clean }. xp: { level, from, to } (0–1) or null.
 export function spoilsMarkup(head, rows, xp, goLabel = 'Continue') {
-  const icon = (k) => `<svg class="sp-ico" viewBox="0 0 16 16" aria-hidden="true">${SPOIL_ICON[k] || SPOIL_ICON.item}</svg>`;
+  const icon = spIcon;
   const bar = (from, to, cls = '') => `<span class="sp-bar ${cls}"><span class="sp-was" style="width:${from * 100}%"></span><span class="sp-now" style="--from:${from * 100}%;--to:${to * 100}%"></span></span>`;
   const main = rows.filter((r) => r.kind !== 'xp' && r.kind !== 'level');
   const xpRow = rows.find((r) => r.kind === 'xp');
@@ -1712,8 +1718,18 @@ export function spoilsMarkup(head, rows, xp, goLabel = 'Continue') {
       <span class="sp-meta">Lv ${head.level} ${esc(head.family)} · ${head.cycles} cycles · ${head.clean ? '<em class="sp-clean">clean</em>' : `−${head.damage}`}</span></header>
     ${xpRow || levels.length ? `<div class="sp-xp" style="--i:0">${icon('xp')}<span class="sp-lbl">Lv ${xp?.level ?? ''}</span>${xp ? bar(xp.from, xp.to, levels.length ? 'up' : '') : ''}<b class="sp-qty">${xpRow ? esc(xpRow.qty) : ''} XP</b></div>` : ''}
     ${levels.map((r, i) => `<div class="sp-level" style="--i:${i + 1}">${icon('level')}<span>${esc(r.label)}</span>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}</div>`).join('')}
-    <ul class="sp-rows">${main.map((r, i) => `<li class="sp-row k-${r.kind}${r.rarity ? ' r-' + r.rarity : ''}" style="--i:${i + 1 + levels.length}">${icon(r.kind)}<span class="sp-lbl"><span class="sp-t" data-decode="${esc(r.label)}">${esc(r.label)}</span>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}${r.pct != null ? bar(r.from / 100, r.pct / 100, 'lead') : ''}</span>${r.pack ? '<span class="sp-pack">pack</span>' : ''}<b class="sp-qty">${esc(r.qty)}</b></li>`).join('')}</ul>
+    <ul class="sp-rows">${main.map((r, i) => spRow(r, i + 1 + levels.length)).join('')}</ul>
     <button type="button" class="sp-go" data-spoils-go style="--i:${main.length + levels.length + 1}">${esc(goLabel)} <kbd>Enter</kbd></button></div>`;
+}
+
+// What a pull or a jack-out gave you, in the same card. kicker: 'Pulled' | 'Banked'.
+// A pull is one row and goes away on its own; Banked waits for Enter.
+export function gainMarkup(kicker, name, rows, go = true) {
+  return `<div class="sp-card gain-card" role="status" aria-label="${esc(kicker)}: ${esc(rows.map((r) => r.text).join(', ') || 'nothing')}">
+    <i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
+    <header class="sp-head"><span class="sp-kicker">${esc(kicker)}</span>${name ? `<strong class="sp-name">${esc(name)}</strong>` : ''}</header>
+    <ul class="sp-rows">${rows.length ? rows.map((r, i) => spRow(r, i)).join('') : '<li class="sp-row k-none" style="--i:0"><span class="sp-lbl">—</span></li>'}</ul>
+    ${go ? `<button type="button" class="sp-go" data-gain-go style="--i:${rows.length + 1}">Continue <kbd>Enter</kbd></button>` : ''}</div>`;
 }
 
 // Salvage as stacks: components (what specific recipes ask for) marked.
@@ -1740,3 +1756,22 @@ export function payMarkup(s, key, pay, title) {
     <footer><span class="pay-why ${problem ? '' : 'ok'}">${esc(problem || 'Ready.')}</span><button type="button" class="btn" data-pay-cancel>Cancel</button><button type="button" class="btn primary" data-pay-go ${problem ? 'disabled' : ''}>Build</button></footer></div>`;
 }
 export const paySlugs = (pay) => Object.entries(pay).filter(([, n]) => n).map(([k, n]) => `${slug(k)}:${n}`).join(',');
+
+// "New" counts on the Loadout, Craft and Daemons tabs: what arrived since you last opened each.
+// s.seen keeps what you've seen; a save from before badges starts with everything seen.
+const NEW_TABS = {
+  loadout: (s) => (s.stash || []).map((it) => it.id),
+  craft: (s) => [...(s.recipes || []), ...(s.configsKnown || []).map((c) => 'cfg:' + c)],
+  daemons: (s) => Object.entries(s.daemonsOwned || {}).map(([id, v]) => `${id}:${v}`),
+};
+export function newOn(s, tab) {
+  if (!NEW_TABS[tab]) return 0;
+  if (!s.seen) { s.seen = {}; for (const t of Object.keys(NEW_TABS)) s.seen[t] = NEW_TABS[t](s); }
+  const seen = new Set(s.seen[tab] || []);
+  return NEW_TABS[tab](s).filter((x) => !seen.has(x)).length;
+}
+export function sawTab(s, tab) {
+  if (!NEW_TABS[tab]) return;
+  newOn(s, tab);
+  s.seen[tab] = NEW_TABS[tab](s);
+}

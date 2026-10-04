@@ -326,6 +326,26 @@ function decode(node) {
 }
 // After a won fight: back where you came from (the run, or the map).
 function leaveFight() { const to = ended === 'run' && campaign.run ? 'net' : 'map'; ended = null; go(to); }
+// The gain card: a pull pops a one-row card that fades on its own; a jack-out shows everything
+// banked and waits for Enter (or a click, or the next command).
+let gainTimer = 0;
+function showGain(kicker, name, rows, toast) {
+  const el = $('gain');
+  if (!el) return;
+  clearTimeout(gainTimer);
+  el.className = `gain${toast ? ' toast' : ''}`;
+  el.innerHTML = V.gainMarkup(kicker, name, rows, !toast);
+  el.hidden = false;
+  const motion = campaign.settings.motion !== false;
+  el.querySelectorAll('.sp-row').forEach((node, i) => setTimeout(() => {
+    if (el.hidden) return;
+    if (!toast) feel.add(/k-item|k-daemon|k-blueprint/.test(node.className) ? 'pickup' : 'cycle', null);
+    if (motion) node.querySelectorAll('[data-decode]').forEach(decode);
+  }, 260 + i * 110));
+  if (toast) gainTimer = setTimeout(() => { el.classList.add('out'); gainTimer = setTimeout(hideGain, 400); }, 2600);
+}
+function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } }
+const gainOpen = () => { const el = $('gain'); return el && !el.hidden && !el.classList.contains('toast'); };
 function hideSpoils() {
   document.body.classList.remove('fight-over'); const el = $('spoils'); if (el) { el.hidden = true; el.innerHTML = ''; } }
 
@@ -386,7 +406,7 @@ function react(events) {
       case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
-      case 'jacked-out': feel.add('hangup', null); break;
+      case 'jacked-out': feel.add('hangup', null); if (e.gains) { const name = e.message.match(/^JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
       case 'station': feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); break;
       case 'invasion-cleared': if (!won) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
@@ -399,6 +419,7 @@ function react(events) {
       case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); if (lvl === 'full') impact(e.target, false, true); feel.add('chit', lvl === 'full' ? row(e.target) : `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: lvl === 'full' ? null : `${row(e.target)} > .bcell:nth-child(2)` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), '+◆'); break;
       case 'xp': feel.add('cycle', '#meter-level', `+${e.amount} XP`); break;
+      case 'fast-kill': feel.add('good', null); break;
       case 'level-up': case 'server-level': {
         if (won) break;
         const [t, ...rest] = e.message.split('. ');
@@ -417,7 +438,7 @@ function react(events) {
       case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); break;
       case 'hold': feel.add('cycle', '.bnow'); break;
       case 'loot': break; // the break already said it
-      case 'net-good': feel.add(/unlocked|forced/.test(e.message) ? 'unlock' : /^pulled/.test(e.message) ? 'pickup' : 'good', null); break;
+      case 'net-good': feel.add(/unlocked|forced/.test(e.message) ? 'unlock' : /^pulled/.test(e.message) ? 'pickup' : 'good', null); if (e.gain) showGain('Pulled', '', [e.gain], true); break;
       case 'located': case 'upgrade': feel.add('unlock', null); break;
       case 'lead': case 'loadout': feel.add('good', null); break;
       case 'intrusion': feel.add('hurt', null); break;
@@ -594,6 +615,7 @@ function go(name, quiet = false) {
   if (name === 'combat' && active(campaign) && campaign.encounter.autoPaused) { campaign.encounter.paused = false; campaign.encounter.autoPaused = false; }
   if (name !== module && !quiet) feel.add('channel', null);
   if (name !== 'combat') hideSpoils();
+  if (gainOpen()) hideGain();
   module = name;
   selected = null;
   document.querySelectorAll('.modules button').forEach((b) => b.setAttribute('aria-current', b.dataset.module === name ? 'page' : 'false'));
@@ -727,6 +749,13 @@ function renderMeters() {
   const need = alertsOf(campaign).length + (campaign.consortiumInvite && !consortiumOf(campaign) ? 1 : 0);
   $('con-count').hidden = !need;
   $('con-count').textContent = need;
+  for (const t of ['loadout', 'craft', 'daemons']) {
+    if (module === t) V.sawTab(campaign, t); // you're looking at it
+    const n = V.newOn(campaign, t), el = $('new-' + t);
+    el.hidden = !n;
+    el.textContent = n;
+    el.title = `${n} new`;
+  }
   $('sound').textContent = 'Sound';
   $('sound').setAttribute('aria-pressed', String(campaign.settings.sound));
   feel.ambience(!!campaign.settings.sound);
@@ -1134,6 +1163,7 @@ document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape'
 document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && e.target.closest(tip.t.at)) hideTip(true);
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
+  if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
   const payBtn = e.target.closest('[data-pay]');
   if (payBtn && !payBtn.disabled && !e.target.closest('#pay')) { payOpen(payBtn); return; }
   const cmd = e.target.closest('[data-command]');
@@ -1198,6 +1228,7 @@ $('command-form').addEventListener('submit', (e) => {
   const value = suggestionIndex >= 0 ? suggestionList[suggestionIndex] : input.value;
   input.value = '';
   $('suggestions').hidden = true;
+  if (gainOpen()) hideGain(); // the Banked card goes with the next Enter, whatever it carries
   if (!value.trim()) {
     if (tip) { hideTip(true); return; } // Enter closes a tip first
     // Empty Enter in a fight: stop waiting and resolve this cycle now.

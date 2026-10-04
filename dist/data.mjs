@@ -187,7 +187,7 @@ export const DAEMONS = {
   canary: { name: 'Canary', once: true, amount: 15, rule: 'Once per fight: a 15 shield the first time you drop below half.' },
 };
 export const DAEMON_VERSIONS = [1, 1.5, 2];
-export const DAEMON_DROPS = { vault: 0.4, guard: 0.04, home: 0.01 };
+export const DAEMON_DROPS = { vault: 0.1, guard: 0.01, home: 0.0025 };
 
 // Shared numbers for statuses and passives.
 export const SKILLS = {

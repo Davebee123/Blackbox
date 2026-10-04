@@ -1027,6 +1027,7 @@ details summary { font-size: 13px; }
 .contract .lvl-row small { color: var(--muted); font-size: 12px; }
 .contract.ready .lvl-bar span { background: var(--you); }
 @media (max-width: 900px) { .mail-page { grid-template-columns: 1fr; } }
+.modules .count.new { background: var(--you); }
 .modules .count { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: var(--amber); color: var(--bg); font: 600 10px/16px var(--mono); text-align: center; vertical-align: middle; }
 .mnode.hidden .qmark { fill: var(--muted); font: 600 11px var(--mono); }
 .mnode.hidden .mhit + * { opacity: 0.7; }
@@ -1224,6 +1225,16 @@ body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-
 .sp-go kbd { font: 500 9px var(--mono); letter-spacing: 0; padding: 0 4px; color: var(--dim); border: 1px solid var(--line); border-radius: 2px; }
 @media (prefers-reduced-motion: reduce) { .sp-go { animation: none; opacity: 1; } }
 body.no-motion .sp-go { animation: none; opacity: 1; }
+/* Gain card: Pulled (a toast that fades) and Banked (waits for Enter), the spoils card's look */
+.gain { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; padding: 14px; background: radial-gradient(ellipse at center, rgba(9, 6, 3, 0.5), rgba(9, 6, 3, 0.85)); animation: sp-fade 0.3s ease-out both; }
+.gain .sp-card { width: min(320px, 100%); max-height: calc(100% - 28px); overflow: auto; }
+.gain.toast { inset: 64px 20px auto auto; padding: 0; background: none; pointer-events: none; transition: opacity 0.4s, transform 0.4s; }
+.gain.toast .sp-card { width: 250px; max-height: none; overflow: hidden; padding: 10px 12px 8px; }
+.gain.toast .sp-head { padding-bottom: 6px; margin-bottom: 6px; }
+.gain.toast.out { opacity: 0; transform: translateY(-6px); }
+.sp-row.k-fast { border-left-color: var(--bright); background: linear-gradient(90deg, rgba(255, 216, 92, 0.14), rgba(255, 216, 92, 0.02)); } .sp-row.k-fast .sp-ico, .sp-row.k-fast .sp-t { color: var(--bright); }
+.sp-row.k-credits .sp-ico { color: var(--amber); } .sp-row.k-credits .sp-qty { color: var(--amber); }
+@media (max-width: 640px) { .gain.toast { inset: 56px 16px auto 16px; } .gain.toast .sp-card { width: 100%; } }
 
 /* The fight is won: the timeline and the ability bar step aside for the spoils. */
 body.fight-over #board, body.fight-over #tray { display: none; }

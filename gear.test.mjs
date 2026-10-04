@@ -380,7 +380,7 @@ test('a full stash deconstructs new items instead', () => {
   assert.equal(s.salvage.length, DECONSTRUCT.tuned.salvage[0]);
 });
 
-test('runs: every vault holds a protocol kit and a code cache; deeper vaults hold source you bank', () => {
+test('runs: your first vault holds a protocol kit and a code cache; deeper vaults can hold source you bank', () => {
   const s = fresh();
   command(s, 'developer location worm');
   const loc = s.locations[0];
