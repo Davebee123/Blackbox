@@ -441,7 +441,7 @@ function react(events) {
       case 'blind': flash('BLINDED'); feel.add('blind', '.board', null); break;
       case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); if (lvl === 'full') impact(e.target, false, true); feel.add('chit', lvl === 'full' ? row(e.target) : `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: lvl === 'full' ? null : `${row(e.target)} > .bcell:nth-child(2)` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), '+◆'); break;
-      case 'xp': feel.add('cycle', '#meter-level', `+${e.amount} XP`); break;
+      case 'xp': feel.add('cycle', null, `+${e.amount} XP`); break;
       case 'status': if (e.mark) markFx(e, false); break;
       case 'fast-kill': feel.add('good', null); break;
       case 'codex': feel.add('mark', '.hud-bar.enemy', 'DECODED', { noFlash: true }); break;
@@ -449,7 +449,7 @@ function react(events) {
         if (won) break;
         const [t, ...rest] = e.message.split('. ');
         levelUp(t.replace(/\.$/, ''), rest.join('. '));
-        feel.add('win', e.type === 'level-up' ? '#meter-level' : null);
+        feel.add('win', null);
         break;
       }
       case 'heal': feel.add('good', MINE, e.amount ? `+${e.amount}` : null); break;

@@ -2135,3 +2135,15 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 .citem .cclear { margin-left: 6px; width: 26px; padding: 0; display: inline-grid; place-items: center; font-size: 14px; line-height: 1; }
 .p-ico { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--you); stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--you) 60%, transparent)); }
 .people-btn.friends-on .p-ico { stroke: var(--daemon); }
+/* Top bar meters: the class level lives on the Loadout page now; every meter the same box. */
+#meter-level { display: none !important; }
+.meters > .meter, .meters > .meter[data-command] { padding: 4px 14px; margin: 0; min-height: 28px; align-items: center; border-radius: 0; }
+.meter[data-command]:hover, .meter[data-command]:focus-visible { outline: 1px solid var(--line-strong); outline-offset: -2px; border-radius: 4px; }
+.meters > .meter:not([hidden]) ~ .meter:not([hidden]) { border-left: 1px solid var(--line-strong, var(--line)); }
+.meter-integrity .meter-bar, .topbar.fit-2 .meter-integrity .meter-bar { width: 60px; }
+@media (max-width: 1700px) and (min-width: 901px) { .meter-integrity .meter-bar { width: 60px; } }
+@media (max-width: 1440px) and (min-width: 901px) { .meter-integrity .meter-bar { width: 48px; } }
+.meter strong { font-variant-numeric: tabular-nums; }
+/* Your server on the map: the server glyph (two racks), not a square. */
+.mnode.server .srv-glyph rect { fill: rgba(127, 209, 199, 0.12); stroke: var(--you); stroke-width: 1; }
+.mnode.server .srv-glyph path { stroke: var(--you); stroke-width: 1.6; stroke-linecap: round; }

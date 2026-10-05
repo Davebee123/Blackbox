@@ -1388,7 +1388,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
     if (n.kind === 'server') {
       const srv = s.server;
-      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><rect x="-10" y="-10" width="20" height="20" rx="2"/><rect x="-3" y="-3" width="6" height="6" class="inner"/>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME · LV ${serverLevel(s)}</text><text y="53" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
+      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME · LV ${serverLevel(s)}</text><text y="53" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
