@@ -589,6 +589,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
   const virus = createVirus(key, seed, over);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
+  if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
   s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, trace: 0, pendingTrace: 0, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, blindUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
     ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.`
@@ -1087,6 +1088,7 @@ export function finish(s, result) {
       if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
       if (lead) addLead(s, e.virus.family, lead, e.trace ? `Backtrace ${e.trace}%. ` : '');
       if (wild) rogueKill(s, wild, e.room, now, () => { const more = rollDrop(s, { ...ctx, strain: null }, e.virus.level); if (more) addItem(s, more, 'The Pit gives up more: '); });
+      hooks.runWon?.(s);
     } else {
       emit(s, 'crashed', `${e.virus.name} burned your Signal to zero.`, { mode: 'run' });
       disconnect(s, 'Signal lost');
@@ -1119,6 +1121,7 @@ export function finish(s, result) {
       const gains = s.run && codeFrom(s, loc?.family, e.virus.level, 'guard');
       for (const [m, n] of Object.entries(gains || {})) s.run.pack.push({ path: `${e.room}/#code-${m}-${e.seed}-${s.serial}`, name: `${m}.code`, kind: 'code', size: '8k', material: m, amount: n });
       if (gains && Object.keys(gains).length) emit(s, 'code', `${e.virus.name} dropped ${Object.entries(gains).map(([m, n]) => `${n} ${MATERIALS[m].name}`).join(' and ')}. In your pack until you jack out.`, { gains, pack: true });
+      hooks.runWon?.(s);
     } else {
       emit(s, 'crashed', `${e.virus.name} burned your Signal to zero.`, { mode: 'run' });
       disconnect(s, 'Signal lost');

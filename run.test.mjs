@@ -638,3 +638,21 @@ test('did you mean: typos in a fight and on a run suggest the likely command', a
   assert.equal(t.logs.at(-1).suggest, 'cat motd.txt');
   assert.match(netTranscript(t), /data-prefill="cat motd.txt"/);
 });
+
+test('a fight you win on a run lists the folder again, and the fight carries the file’s name', async () => {
+  const { hooks } = await import('./dist/combat.mjs');
+  const s = fresh();
+  hooks.now = () => 1000;
+  say(s, 'connect sprawl');
+  say(s, 'cd tmp');
+  const file = say(s, 'ls').find((e) => e.type === 'net-ls').entries.find((x) => x.kind === 'virus').name.replace(/\.exe$/, '');
+  say(s, 'attack ' + file);
+  assert.equal(s.encounter.virus.name, file.toUpperCase());
+  for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });
+  command(s, 'spike ' + s.encounter.virus.parts[0].id); resolveCycle(s);
+  const events = (command(s, 'spike ' + s.encounter.virus.parts[1].id), resolveCycle(s));
+  const list = events.filter((e) => e.type === 'net-ls').at(-1);
+  assert.ok(list, 'the folder is listed again');
+  assert.ok(!list.entries.some((x) => x.kind === 'virus'), 'without the virus you just beat');
+  hooks.now = null;
+});

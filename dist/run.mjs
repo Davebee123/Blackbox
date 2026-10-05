@@ -68,7 +68,7 @@ LAYOUTS.sprawl = SPRAWL;
 const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // Fill empty folders whose timer is up. Each spawn is a plain virus of a home family at your level,
 // up to level 3: past that, the fights worth having are on the servers you trace.
-export function zoneSpawns(s, now = Date.now()) {
+export function zoneSpawns(s, now = clock()) {
   const z = zoneOf(s);
   for (const room of zoneRooms()) {
     const sp = z.spawns[room];
@@ -619,6 +619,9 @@ export function jackOut(s) {
 }
 
 // One entry point for everything the player types on the campaign.
+// After a fight you win on a run: the folder you're in, listed again (what's left, one click away).
+hooks.runWon = (s) => { if (s.run) ls(s); };
+
 export function play(s, input) {
   const text = normalize(input);
   const [word, ...restWords] = text.split(' ');
@@ -725,8 +728,7 @@ function attack(s, arg) {
   const sp = (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
   if (!sp?.alive) return err(s, 'Nothing running in this folder. ls to look, cd to move.');
   if (arg && !sp.name.startsWith(arg.replace(/\.exe$/, ''))) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
-  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite } : sp.grade ? { grade: sp.grade } : {}) });
-  if (sp.bounty && s.encounter?.virus) s.encounter.virus.name = sp.name; // a named contract target
+  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, name: sp.bounty ? sp.name : sp.name.toUpperCase(), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite } : sp.grade ? { grade: sp.grade } : {}) });
   command(s, 'engage');
 }
 

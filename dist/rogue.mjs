@@ -68,7 +68,7 @@ export function rogueMotd(loc) {
 }
 
 // Fill empty folders whose timer is up. Same as SPRAWL-00, but at the server's level and grade.
-export function rogueSpawns(s, loc, now = Date.now()) {
+export function rogueSpawns(s, loc, now = clock()) {
   if (!loc.rogue) return {};
   loc.spawns ||= {};
   const fams = Object.keys(FAMILIES);
