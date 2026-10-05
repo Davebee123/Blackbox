@@ -19,6 +19,7 @@ import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { online, simOn } from './presence.mjs';
+import { matesOf } from './crew.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -735,9 +736,22 @@ function previewAim(s, text) {
 const mapZoom = { k: 1, cx: 0, cy: 0 };
 const mapSvg = () => $('page-view')?.querySelector('.map-svg');
 const baseVb = (svg) => svg.dataset.vb.split(' ').map(Number);
+// Put the card beside the selected node: to its right, or its left when there's no room.
+function placeMapPop() {
+  const pop = $('map-pop'), canvas = pop?.closest('.map-canvas'), node = canvas?.querySelector('.mnode.selected');
+  if (!pop) return;
+  if (!node) { pop.style.visibility = 'hidden'; return; }
+  const c = canvas.getBoundingClientRect(), n = node.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, gap = 14;
+  let left = n.right - c.left + gap;
+  if (left + w > c.width - 8) left = n.left - c.left - gap - w;
+  left = Math.max(8, Math.min(c.width - w - 8, left));
+  const top = Math.max(8, Math.min(c.height - h - 8, n.top - c.top + n.height / 2 - 40));
+  pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
+}
 function applyMapZoom() {
   const svg = mapSvg();
   if (!svg) return;
+  requestAnimationFrame(placeMapPop);
   const [x, y, w, h] = baseVb(svg);
   const fix = () => { const a = svg.getScreenCTM()?.a; if (a) svg.style.setProperty('--z', a); }; // text keeps its size on screen, at any width or zoom
   if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return fix(); }
@@ -884,7 +898,10 @@ function renderMeters() {
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
 }
 
-const sidebarOn = () => campaign.settings.sidebar !== false && innerWidth >= 1100;
+// The side panel is the party, in a fight with a crew. Everywhere else the screen is the page's own.
+const sidebarOn = () => campaign.settings.sidebar !== false && innerWidth >= 1100 && active(campaign) && module === 'combat' && matesOf(campaign).length > 0;
+// The map's selection card pops up beside the node you clicked.
+let mapPop = false;
 addEventListener('resize', () => { dirty = true; applyMapZoom(); });
 function render(force = false) {
   if (force) cache.clear();
@@ -919,7 +936,7 @@ function render(force = false) {
     }
     render.logLen = s.logs.length;
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: !sidebarOn() }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -930,7 +947,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: !sidebarOn() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     put('page-view', (pages[module] || pages.map)(campaign));
     if (module === 'hub' && $('hubterm')) {
       const grew = hubLines.length - (render.hubLen ?? 0);
@@ -1346,7 +1363,8 @@ document.addEventListener('click', (e) => {
   const arch = e.target.closest('[data-arch]');
   if (arch) { archView = arch.dataset.arch; dirty = true; return; }
   const node = e.target.closest('[data-select]');
-  if (node) { mapSel = node.dataset.select; dirty = true; return; }
+  if (node) { mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
+  if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop) { mapPop = false; dirty = true; } }
   const mail = e.target.closest('[data-mail]');
   if (mail) { mailSel = mail.dataset.mail; if (mailSel[0] === 'l') { command(campaign, 'mail read ' + mailSel.slice(1)); save(); } dirty = true; }
 });
@@ -1514,7 +1532,7 @@ function goTo(target) {
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
   else if (where === 'hub') openHub(what);
-  else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) mapSel = what; go('map'); }
+  else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
 }
@@ -1543,7 +1561,8 @@ document.addEventListener('change', (e) => {
 
 document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');
-  if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; dirty = true; }
+  if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; mapPop = true; dirty = true; }
+  if (e.key === 'Escape' && mapPop && module === 'map') { mapPop = false; dirty = true; }
 });
 
 // Typing anywhere goes to the prompt.

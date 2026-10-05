@@ -1377,7 +1377,7 @@ const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false } = {}) {
   // A member's server (or home) shows on the consortium's map, whichever view was asked for.
   const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
   const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s);
@@ -1455,7 +1455,9 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${svg}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
+  const card = pop ? `<div class="map-pop" id="map-pop" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 // The map's selection card on its own (the sidebar carries it when it's on).
 export function mapSelection(s, sel = 'server', view = 'mine') {
@@ -1512,6 +1514,16 @@ function zoneCard(s) {
     ${dropLine(s, s.zone)}
     <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}</div></section>`;
 }
+// The server card's lines: icon and name, then what it is (a bar or pips), then its number.
+const srvLine = (icon, name, body, value, tip = '') => `<div class="srv-line"${tip ? ` title="${esc(tip)}"` : ''}><span class="srv-k">${glyph(icon)}${esc(name)}</span><span class="srv-v">${body}</span><b class="srv-n">${value}</b></div>`;
+const pipRow = (used, total) => `<span class="pip-row">${Array.from({ length: total }, (_, i) => `<i class="${i < used ? 'on' : ''}"></i>`).join('')}</span>`;
+// The service slots, left to right: what runs in each (icon and version), what's installing, then free slots.
+function svcStrip(s) {
+  const running = Object.entries(s.services || {}).map(([id, v]) => `<span class="svc-tile on" title="${esc(SERVICES[id].name)} v${v}">${glyph(id)}<small>v${v}</small></span>`);
+  const inst = s.install && !serviceVersion(s, s.install.id) ? [`<span class="svc-tile busy" title="${esc(SERVICES[s.install.id].name)}: installing">${glyph(s.install.id)}<small>…</small></span>`] : [];
+  const free = Array.from({ length: Math.max(0, portCount(s) - running.length - inst.length) }, () => '<span class="svc-tile free" title="Free slot"></span>');
+  return [...running, ...inst, ...free].join('');
+}
 function mapSide(s, sel, node) {
   const e = gateOf(s), srv = s.server;
   const busy = active(s) || s.run;
@@ -1531,14 +1543,15 @@ function mapSide(s, sel, node) {
     const runCard = s.run ? `<section class="card lesson"><h2>On a run</h2><h1>${esc(currentLocation(s).name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked.</p><div class="row">${btn('net', 'Back to the run', true)}</div></section>` : '';
     const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
     return `${runCard}${alertCard()}${occ}
-      <section class="card srv-card"><h2>Your server</h2>
-        ${serverCard(s)}
-        <div class="srv-hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}" title="Integrity">${glyph('integrity')}<span class="srv-bar"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span><b>${srv.integrity}</b><small>/${srv.max}</small></div>
-        <div class="srv-chips"><span title="Credits">${glyph('credits')}<b>${srv.credits}</b></span><span title="Salvage">${glyph('salvage')}<b>${s.salvage.length}</b></span><span title="Servers you've found">${glyph('trace')}<b>${s.locations.length}</b></span></div>
-        ${degradedMarkup(s)}
-        <div class="srv-wall"><span class="srv-k" title="Your wall: which invasion levels it stops">${glyph('firewall')}Wall</span>${wallRuler(s, true)}</div>
-        ${awayLine(s)}
-        <div class="srv-slots">${slotPips('memory', liveCount(s), memoryCap(s), 'Memory: servers on your network')}${slotPips('node', portsUsed(s), portCount(s), 'Service slots')}${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Harvester slots')}</div>
+      <section class="card srv-card"><h2>Your server <span class="tag dim">Lv ${serverProgress(s).level}</span></h2>
+        ${srvLine('xp', 'Level', serverProgress(s).next ? `<span class="srv-bar xp"><span style="width:${(serverProgress(s).xp / serverProgress(s).next) * 100}%"></span></span>` : '', serverProgress(s).next ? `${serverProgress(s).xp}<small>/${serverProgress(s).next}</small>` : '<small>max</small>', 'The server gets every point of XP your classes earn')}
+        ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
+        ${srvLine('firewall', 'Wall', wallRuler(s, true), '', 'Which invasion levels your wall stops')}
+        ${degradedMarkup(s)}${awayLine(s)}
+        <div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${portsUsed(s)}/${portCount(s)}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>
+        ${srvLine('memory', 'Memory', pipRow(liveCount(s), memoryCap(s)), `${liveCount(s)}<small>/${memoryCap(s)}</small>`, 'Servers on your network')}
+        ${srvLine('harvester', 'Harvesters', pipRow(bandwidthUsed(s), bandwidth(s)), `${bandwidthUsed(s)}<small>/${bandwidth(s)}</small>`, 'Harvester slots')}
+        ${srvLine('salvage', 'Salvage', '', `${s.salvage.length}`)}
         ${s.install ? `<div class="install mini"><div class="install-top"><b>${glyph(s.install.id)}${esc(SERVICES[s.install.id].name)} v${s.install.v}</b><span>${fmtTime(s.install.doneAt - Date.now())}</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((Date.now() - s.install.startedAt) / (s.install.doneAt - s.install.startedAt)) * 100))}%"></span></div>${buyoutBtn(s, 'buyout', installBuyout(s))}</div>` : ''}
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
         ${rackMarkup(s)}

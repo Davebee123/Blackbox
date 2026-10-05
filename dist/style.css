@@ -2044,3 +2044,47 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .mk-dir { color: var(--muted); font-family: var(--mono); }
 .mk-tr .xfer-bar { width: 100%; }
 .mk-d { display: inline-block; min-width: 50px; text-align: center; }
+/* The map's pop-up card, beside the node you clicked. */
+.map-canvas { position: relative; }
+.map-pop { position: absolute; z-index: 5; width: 330px; max-height: calc(100% - 16px); overflow: auto; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.65)); }
+.map-pop > .card { margin: 0; background: var(--panel, #120f0a); }
+.map-pop > .card + .card { margin-top: 8px; }
+.map-pop-x { position: absolute; top: 10px; right: 10px; z-index: 1; }
+/* The server card: one line per thing, label | bar | number. */
+.srv-card h2 { display: flex; align-items: center; gap: 8px; padding-right: 36px; }
+.srv-line { display: grid; grid-template-columns: 104px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.srv-k { display: flex; align-items: center; gap: 7px; font: 12px var(--mono); letter-spacing: 0.04em; color: var(--muted); }
+.srv-v { min-width: 0; }
+.srv-n { font: 600 14px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; text-align: right; min-width: 52px; }
+.srv-n small { font-weight: 400; color: var(--muted); font-size: 11px; }
+.srv-line .srv-bar { display: block; height: 7px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.3); }
+.srv-line .srv-bar > span { display: block; height: 100%; background: var(--you); }
+.srv-line .srv-bar.xp > span { background: var(--amber); }
+.srv-line .srv-bar.hp.mid > span { background: var(--amber); }
+.srv-line .srv-bar.hp.low > span { background: var(--hot); }
+.srv-line .wall-ruler { margin: 0; }
+.pip-row { display: flex; gap: 3px; }
+.pip-row i { width: 10px; height: 10px; border: 1px solid var(--line-strong, var(--muted)); }
+.pip-row i.on { background: var(--you); border-color: var(--you); }
+.srv-svc { padding: 10px 0 10px; border-bottom: 1px solid var(--line); }
+.srv-svc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.srv-svc-head span { display: flex; align-items: center; gap: 7px; font: 600 12px var(--mono); letter-spacing: 0.06em; color: var(--text); text-transform: uppercase; }
+.srv-svc-head small { font: 600 13px var(--mono); color: var(--bright); }
+.svc-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+.svc-tile { aspect-ratio: 1; display: grid; place-items: center; align-content: center; gap: 1px; border: 1px solid var(--line-strong, var(--line)); border-radius: 3px; color: var(--you); }
+.svc-tile small { font: 10px var(--mono); color: var(--muted); }
+.svc-tile.on { background: color-mix(in srgb, var(--you) 10%, transparent); border-color: color-mix(in srgb, var(--you) 55%, transparent); }
+.svc-tile.busy { border-style: dashed; color: var(--amber); }
+.svc-tile.free { border-style: dashed; opacity: 0.45; }
+/* Combat: the timeline is the main event; the log is a short strip under it. */
+.combat { grid-template-rows: auto minmax(0, 1fr) minmax(88px, 20%); }
+.combat .board { min-height: 0; }
+.combat .brow:not(.bhead) > .bcell { padding-top: 11px; padding-bottom: 11px; }
+.combat .intent { padding: 7px 9px; font-size: 14px; }
+.combat .intent .ico { width: 16px; height: 16px; }
+.combat .log { font-size: 12px; }
+body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); }
+/* The side panel (only the party, in a fight with a crew): its own surface, so it always reads as the side. */
+#sidebar { background: color-mix(in srgb, var(--inset) 80%, #000); border-right: 1px solid var(--line-strong, var(--line)); box-shadow: inset -12px 0 18px -14px rgba(0, 0, 0, 0.8); padding: 10px; }
+#sidebar .sb-block { background: transparent; border-color: var(--line); }
+.combat .brow:not(.bhead) { min-height: 68px; }
