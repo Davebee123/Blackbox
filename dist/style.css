@@ -2133,3 +2133,5 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 #sidebar .crewwin.docked .cw-head { padding-left: 6px; }
 #sidebar .crewwin.docked .cw-body { padding: 8px 6px 10px; }
 .citem .cclear { margin-left: 6px; width: 26px; padding: 0; display: inline-grid; place-items: center; font-size: 14px; line-height: 1; }
+.p-ico { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--you); stroke-width: 1.5; stroke-linecap: round; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--you) 60%, transparent)); }
+.people-btn.friends-on .p-ico { stroke: var(--daemon); }
