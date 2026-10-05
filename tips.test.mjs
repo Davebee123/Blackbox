@@ -76,3 +76,20 @@ test('the screens carry names, numbers and state, not explanations', () => {
   }
   for (const t of TIPS) if (/^(map|server|protocols|loadout|daemons)-/.test(t.id)) assert.ok(t.text.length > 20);
 });
+
+test('the newer systems have their tips: a found server’s memory, plans on Craft, and your harvester rack', async () => {
+  const { addLocation } = await import('./dist/combat.mjs');
+  const s = fresh();
+  s.tutorialCompleted = true;
+  const loc = addLocation(s, 'worm', 1); // found: not on your network yet
+  for (const id of ['map-server', 'map-zone']) markSeen(s, id);
+  assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id))).id, 'map-origin');
+  markSeen(s, 'map-origin');
+  assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-memory', 'its card: what joining costs');
+  command(s, 'attach ' + loc.id);
+  loc.takenOver = true;
+  assert.equal(nextTip(s, 'craft', onPage(craftMarkup(s))).id, 'craft-plans');
+  s.harvesters = [{ kind: 'siphon', level: 1, traits: [] }];
+  markSeen(s, 'map-memory'); markSeen(s, 'map-owned');
+  assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-install');
+});

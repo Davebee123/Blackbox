@@ -19,7 +19,7 @@ export const TIPS = [
   { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && (s.stash || []).length > 0, text: 'A protocol dropped. You can load it into a slot on the Loadout page.' },
   { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'Your Signal rests back on its own at home, slowly. Click + to pay credits and fill it now.' },
   { id: 'repair', page: '*', at: '#meter-integrity .meter-buy', text: 'Your server rests back on its own, slowly. Click + to pay credits and repair it now.' },
-  { id: 'level', page: '*', at: '#meter-level', when: (s) => hackerLevel(s) >= 2, text: 'This is your class level. Each level makes you 4% stronger, and some levels unlock new skills.' },
+  { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'This is you: your handle, the class you play and its level. Each level makes you 4% stronger, and some unlock new skills.' },
 
   // ---------- map ----------
   { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. Intrusions arrive at its gate, and the places they came from appear around it once you trace them.' },
@@ -28,7 +28,8 @@ export const TIPS = [
   { id: 'net-hostile', page: 'net', at: '.term .tok.virus', text: 'A virus is running in this folder. Click it, or type attack, when you are ready. It comes back a while after you kill it.' },
   { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready; nothing happens until you do.' },
   { id: 'map-lead', page: 'map', at: '.mnode.lead', text: 'This is a lead. Each kill of this family adds 25%, and your class\'s backtrace adds more. At 100% you find where they came from.' },
-  { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You traced an origin. Connect to it to make a run. Its ring fills as you explore it, and the number shows how many layers deep it sits.' },
+  { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You traced a server. Select it and press Connect: first it shows the memory it takes to join your network, then you jack in. Its ring fills as you explore it.' },
+  { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your memory: how many servers your network holds. The pulsing one is what this server would take. Detach a server you are done with to free one.' },
   { id: 'map-invader', page: 'map', at: '.mnode.invader', text: 'An invasion is heading for your wall. How strong your Firewall is decides whether it is blocked, contested, or breaks through.' },
   { id: 'map-outpost', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.h), at: '.outpost .lvl-bar', text: 'This outpost fills while you are away, up to its cap. Connect to the server to collect what it has gathered.' },
   { id: 'map-besieged', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.siege), at: '.mnode.besieged', text: 'Natives are sieging this outpost. Defend it before the timer runs out, or they take it back and the servers past it are cut off.' },
@@ -44,12 +45,14 @@ export const TIPS = [
   { id: 'mail-contract', page: 'mail', at: '.contract', text: 'A contract keeps track of itself while you play. When it is ready, deliver it here to get paid.' },
   { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'This is Halcyon\'s board. Offers come and go on their own, and you can take up to three at a time. Only a contract you have taken counts.' },
   { id: 'store', page: '*', at: '.modules [data-module="store"]', when: (s, m) => m !== 'store', text: 'Halcyon\'s store is open. Its own line is always there, and other agencies\' stock changes through the day.' },
+  { id: 'store-plans', page: 'store', at: '.plan-shelf', text: 'Plans for harvesters and outpost modules. Buy one once and you can craft that kind on the Craft page for good.' },
   { id: 'store-chase', page: 'store', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'LANTERN read out a dead drop on this server. It closes soon.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: wild, never taken over. Viruses sit in its folders and come back a few minutes after you kill them.' },
   { id: 'map-infest', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.infest), at: '.outpost .tag.warn', text: 'Viruses moved into this outpost. Clear them for a bonus to its stockpile, or ignore them: they move on and cost you nothing.' },
+  { id: 'map-install', page: 'map', at: '.op-rack', text: 'These are the harvesters in your rack. Install one and this server becomes an outpost. How many outposts run at once is the Outposts count on your server card.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },
-  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'This is a server you haven\'t found yet. Beating what it sends at you traces it, and once a relay flags it for a contract, so do kills of its family and the relay\'s route file.' },
+  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'An unknown server. Beating what it sends at you traces it, and so does a vault\'s trace record. Once a relay flags it, kills of its family and the route file count too.' },
 
   // ---------- fight ----------
   { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'This is the timeline. Each attack sits in the column of the cycle where it lands. When you enter a command it runs first, and the cycle turns.' },
@@ -59,6 +62,7 @@ export const TIPS = [
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no armor left patches one chit back five cycles later, unless you break it first.' },
   { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will hit. Strip its armor or Tag it to see its timer.' },
   { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
+  { id: 'fight-status', page: 'combat', at: '#hud .hud-status .st', when: (s) => s.encounter?.phase === 'active', text: 'Everything on you right now lands here, in the Status column. Hover one to see what it does and how many cycles it has left.' },
   { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'You missed. A miss does no damage but still uses the cooldown, and enemies above your level make you miss more often.' },
   { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'That is your daemon. It acts on its own cooldown, in the cycle where its chip sits, on top of whatever you do.' },
   { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'A skill lit up. It only works for a cycle or two after something happens, so use it while it glows.' },
@@ -99,6 +103,10 @@ export const TIPS = [
   { id: 'protocols-compile', page: 'craft', at: '.compile-card.open', text: 'You found a recipe, so you can compile protocols. Pick one of your recipes and the protocol comes out at your level.' },
   { id: 'protocols-zeroday', page: 'loadout', at: '.gitem.r-zeroday', text: 'This is a Zero-day. It has a special effect on top of its stats, and you can run one of each kind.' },
 
+  // ---------- craft ----------
+  { id: 'craft-plans', page: 'craft', at: '.plan-lock', text: 'A dimmed row needs its plan first. Your first vault holds the Siphon plan; Halcyon sells the rest, and some vaults hold one.' },
+  { id: 'craft-modules', page: 'craft', at: '.craft-sec[data-sec="modules"]', when: (s) => (s.plans || []).some((id) => ['pipeline', 'storage', 'node', 'ids', 'lure'].includes(id)), text: 'Modules you craft go into your stock (×n on the row). Install them from an outpost\'s card on the map.' },
+
   // ---------- loadout ----------
   { id: 'loadout-status', page: 'loadout', at: '.status-line .status', text: 'This is the status this class puts on parts with its skills. Hover it to see what it does. Any class benefits from it.' },
   { id: 'loadout-bar', page: 'loadout', at: '.keybar', text: 'This is your skill bar. Everyone has the first three, and you choose up to five class skills as they unlock.' },
@@ -108,7 +116,7 @@ export const TIPS = [
   // ---------- daemons ----------
   { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons are programs you find on runs. A slotted daemon fights beside you on its own cooldown, and finding the same one again upgrades it.' },
   { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade: pick the one that fits how you play. You can rebuild later for credits.' },
-  { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'An outpost has module slots, like the service slots on your server. Each one bends how the outpost works, and it stays put when you swap the harvester.' },
+  { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'A module you crafted, ready for this outpost\'s ports. It bends how the outpost works; take it out and it goes back to your stock for another outpost.' },
   { id: 'server-config', page: 'server', when: (s) => (s.configsOwned || []).length > 0, at: '.cfg-row', text: 'You crafted a config. Configs change how a service works rather than how strong it is, and you can swap them freely between fights.' },
 ];
 
