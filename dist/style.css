@@ -2088,3 +2088,6 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); }
 #sidebar { background: color-mix(in srgb, var(--inset) 80%, #000); border-right: 1px solid var(--line-strong, var(--line)); box-shadow: inset -12px 0 18px -14px rgba(0, 0, 0, 0.8); padding: 10px; }
 #sidebar .sb-block { background: transparent; border-color: var(--line); }
 .combat .brow:not(.bhead) { min-height: 68px; }
+/* Pop-up cards never show scrollbars: nothing scrolls sideways, and a tall one scrolls without a bar. */
+.gain .sp-card, .map-pop, .hub-session .hub-win { overflow-x: hidden; overflow-y: auto; scrollbar-width: none; }
+.gain .sp-card::-webkit-scrollbar, .map-pop::-webkit-scrollbar, .hub-session .hub-win::-webkit-scrollbar { display: none; }
