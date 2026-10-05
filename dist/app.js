@@ -682,7 +682,7 @@ function updateSuggestions() {
 // (view.mjs boardMarkup). Parsed the way Enter would; one that wouldn't go through (on cooldown,
 // not lit, …) shows as a warning instead, the reason on hover.
 let aimPreview = null;
-let hubSel = 'halcyon'; // the faction hub page you docked at
+let hubSel = 'halcyon'; // the faction hub page you're connected to
 function previewAim(s, text) {
   const key = () => aimPreview && aimPreview.target + aimPreview.ok + aimPreview.ability;
   const was = key();
