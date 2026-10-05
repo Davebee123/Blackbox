@@ -2253,3 +2253,6 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 }
 .fx-bit.dissolve { opacity: 0; animation-fill-mode: both; color: var(--amber); font-size: 14px; text-shadow: 0 0 6px rgba(241, 185, 47, 0.8); }
 @media (prefers-reduced-motion: reduce) { .brow.dying { animation: none; opacity: 0.3; } }
+/* The server card's two levels: the server's (amber), your class's under it (your colour). */
+.srv-line .srv-bar.xp.you > span { background: var(--you); }
+.srv-line .srv-n small { color: var(--dim); font-weight: 500; margin-right: 2px; }
