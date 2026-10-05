@@ -9,6 +9,7 @@ import { tickStore, buy } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
+import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
 import { has as hasConfig, configCommand } from './configs.mjs';
 import { fleetCommand, fleetWon } from './fleet.mjs';
@@ -538,6 +539,7 @@ export function tickServices(s, now = Date.now()) {
   tickStore(s, now);
   tickMarket(s, now);
   tickPayloads(s, now);
+  tickHubs(s, now);
   return since(s, first);
 }
 
@@ -1135,6 +1137,7 @@ export function finish(s, result) {
     if (e.infest) infestWon(s, e);
     if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
+    if (e.retake || e.hubClear) hubWon(s, e);
   } else {
     // The invader stays at the wall, as worn down as you left it.
     if (inv) { const v = virusIntegrity(s); inv.hp = Math.max(0.05, v.max ? v.current / v.max : 1); }
@@ -1343,6 +1346,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     let xp = 0; for (let l = 1; l < want; l++) xp += SERVER.xpToNext(l);
     s.serverXp = xp;
     emit(s, 'info', `Developer: server level ${serverLevel(s)}.`);
+  } else if (/^hub( |$)/.test(text)) {
+    hubCommand(s, text);
   } else if (/^payload( |$)/.test(text)) {
     payloadCommand(s, text, now);
   } else if (/^market( |$)/.test(text)) {

@@ -8,8 +8,10 @@
 // shop and market shut, and the other hubs pay more for what it was buying. Either way its
 // owner's rep drops (its rivals warm to you), and every strike puts the hub on alert: its
 // defence climbs, then eases back over the hours.
+// Backdoor takes a hub for you, but only one that's offline when it executes: Wiper first, then
+// get a Backdoor in before it comes back up. A hub you hold: see hubs.mjs.
 import { emit, warn, materialsOf, hackerLevel, hooks } from './combat.mjs';
-import { FACTIONS, hubsOf, changeRep } from './factions.mjs';
+import { FACTIONS, hubsOf, changeRep, captured } from './factions.mjs';
 import { HUB_CONDITION, CONDITIONS, travelMs } from './market.mjs';
 import { seeded } from './gear.mjs';
 
@@ -18,6 +20,7 @@ const now = () => hooks.now?.() ?? Date.now();
 export const PAYLOADS = {
   exfil: { name: 'Exfil', about: 'Pulls credits and the code a hub hoards.', code: 'cipher' },
   wiper: { name: 'Wiper', about: 'Knocks a hub offline: its shop and market shut, the other hubs pay more for what it buys.', code: 'worm' },
+  backdoor: { name: 'Backdoor', about: 'Takes an offline hub for you.', code: 'kernel' },
 };
 export const PAYLOAD = {
   credits: (L) => 60 + 10 * L, code: 10, salvage: 3, // to compile
@@ -29,7 +32,10 @@ export const PAYLOAD = {
   exfil: { credits: (hubLevel) => 50 + 12 * hubLevel, code: (hubLevel) => 6 + Math.floor(hubLevel / 2) },
   wiperMs: 4 * 3600000, // breach: offline 4 hours (siege: half that); the market's wiperBoost is what the others pay meanwhile
   maxBuilt: 3,
+  captureHit: -40, // what taking its hub costs you with its owner
+  maxHeld: 2, // hubs you can hold at once (never Halcyon's)
 };
+export const heldHubs = (s) => Object.keys(s.hubs || {}).filter((f) => captured(s, f));
 
 const payOf = (s) => (s.payloads ||= { built: [], flying: [], serial: 0, last: null });
 const hubState = (s, f) => (s.hubs ||= {})[f];
@@ -45,6 +51,7 @@ export const flyingOf = (s) => payOf(s).flying;
 export const lastStrike = (s) => payOf(s).last;
 // What a payload would most likely do against a hub right now (before the run's roll).
 export function forecastStrike(s, p, f, at = now()) {
+  if (p.kind === 'backdoor' && !offline(s, f, at)) return 'blocked';
   const r = p.power / defenceOf(s, f, at);
   return r >= PAYLOAD.bands.breach ? 'breach' : r >= PAYLOAD.bands.siege ? 'siege' : 'blocked';
 }
@@ -70,7 +77,10 @@ export function deployPayload(s, id, f, at = now()) {
   const m = payOf(s), p = m.built.find((x) => x.id === Number(id));
   if (!p) return warn(s, 'No payload by that number.');
   if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Deploy it at a faction hub.');
-  if (offline(s, f, at)) return warn(s, `${FACTIONS[f].hub.name} is already offline.`);
+  if (captured(s, f)) return warn(s, `${FACTIONS[f].hub.name} is yours.`);
+  if (p.kind === 'backdoor' && f === 'halcyon') return warn(s, 'Halcyon’s clearing house can’t be taken.');
+  if (p.kind === 'backdoor' && heldHubs(s).length >= PAYLOAD.maxHeld) return warn(s, `You can hold ${PAYLOAD.maxHeld} hubs.`);
+  if (p.kind !== 'backdoor' && offline(s, f, at)) return warn(s, `${FACTIONS[f].hub.name} is already offline.`);
   m.built.splice(m.built.indexOf(p), 1);
   const t = { ...p, f, sentAt: at, landsAt: at + travelMs(s, f) };
   m.flying.push(t);
@@ -81,11 +91,11 @@ export function deployPayload(s, id, f, at = now()) {
 export function resolveStrike(s, t, at = t.landsAt) {
   const f = t.f, F = FACTIONS[f], def = defenceOf(s, f, at);
   const roll = 1 + PAYLOAD.swing * (2 * seeded((t.id * 977 + t.sentAt) >>> 0)() - 1);
-  const ratio = (t.power * roll) / def;
-  const band = ratio >= PAYLOAD.bands.breach ? 'breach' : ratio >= PAYLOAD.bands.siege ? 'siege' : 'blocked';
+  const ratio = (t.power * roll) / def, locked = t.kind === 'backdoor' && (!offline(s, f, at) || captured(s, f) || heldHubs(s).length >= PAYLOAD.maxHeld);
+  const band = locked ? 'blocked' : ratio >= PAYLOAD.bands.breach ? 'breach' : ratio >= PAYLOAD.bands.siege ? 'siege' : 'blocked';
   const share = band === 'breach' ? 1 : band === 'siege' ? 0.5 : 0;
   const h = hubState(s, f);
-  h.alert = alertOf(s, f, at) + 1; h.alertAt = at;
+  h.alert = alertOf(s, f, at) + 1; h.alertAt = at; h.grudgeAt = at; // a hostile owner answers strikes (hubs.mjs)
   const got = [];
   if (share && t.kind === 'exfil') {
     const credits = Math.round(PAYLOAD.exfil.credits(F.hub.level) * share);
@@ -98,10 +108,12 @@ export function resolveStrike(s, t, at = t.landsAt) {
     h.offlineUntil = at + PAYLOAD.wiperMs * share;
     got.push(`offline ${Math.round((PAYLOAD.wiperMs * share) / 3600000)} h`);
   }
+  const taken = t.kind === 'backdoor' && band === 'breach';
+  if (taken) { h.captured = { at, bank: 0, bankAt: at }; h.offlineUntil = 0; h.alert = 0; got.push('the hub is yours'); }
   const word = { blocked: 'Blocked', siege: 'Partial breach', breach: 'Breach' }[band];
   payOf(s).last = { id: t.id, kind: t.kind, f, band, got, at };
   emit(s, 'payload-' + band, `${PAYLOADS[t.kind].name} #${t.id} on ${F.hub.name}: ${word}.${got.length ? ' ' + got.join(', ') + '.' : ''}`, { faction: f, band });
-  changeRep(s, f, PAYLOAD.rep[band], `Your ${PAYLOADS[t.kind].name} hit ${F.short}`);
+  changeRep(s, f, taken ? PAYLOAD.captureHit : PAYLOAD.rep[band], taken ? `You took ${F.hub.name}` : `Your ${PAYLOADS[t.kind].name} hit ${F.short}`);
   return band;
 }
 
@@ -114,5 +126,5 @@ export function payloadCommand(s, text, at = now()) {
   const [, verb, a, b] = text.split(' ');
   if (verb === 'compile') return compilePayload(s, a, b === 'exploit' || b === 'armed');
   if (verb === 'deploy' || verb === 'launch') return deployPayload(s, a, b, at);
-  return warn(s, 'payload compile exfil|wiper [exploit] · payload deploy <n> <faction>');
+  return warn(s, 'payload compile exfil|wiper|backdoor [exploit] · payload deploy <n> <faction>');
 }

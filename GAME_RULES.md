@@ -639,7 +639,7 @@ Five PvE factions, companies and hacker crews, each with a colour, a mark and a 
 | LANTERN | hacker crew | orange | LANTERN-RELAY-88 (6) | NULL CHOIR | GLASSJAW | trace injectors, key crackers, broadcast schedules (a dead drop now), Kernel code |
 | NULL CHOIR | hacker crew | rose | NULLCHOIR-SQUAT-13 (12) | LANTERN | Halcyon, Kestrel | Cipher and Worm code, Exploits, daemon images |
 
-- **Rep** runs 0–100 with five tiers at 1/25/50/75 (each faction names its own: Kestrel's are Blacklisted, Prospect, Client, Account, Key account). Below 1 a faction is Hostile: its shop is shut and it posts you no work. Everyone starts at 10 (GLASSJAW at 5).
+- **Rep** runs −100 to 100 with five tiers at 1/25/50/75 (each faction names its own: Kestrel's are Blacklisted, Prospect, Client, Account, Key account). Below 1 a faction is Hostile: its shop and market are shut and it posts you no work. Hostility has depth: rep keeps falling under zero, down to −100, shown as a red segment before the tiers (Halcyon's standing stops at 0). Rep never comes back on its own: win a faction back by hitting its rivals (the ripple), working for its allies, or donating. Everyone starts at 10 (GLASSJAW at 5).
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter the same way. Halcyon's standing ripples too.
 - **Hubs** appear on your map when the contract board opens, on a ring of their own between the first two layers (a diamond in the faction's colour with its mark; its rep tier under the name). Its card shows your rep as a five-step bar and its allies and rivals; **Connect** opens the hub page: who they are, their work on the board, their shop, and their servers on your map.
 - **Shops:** a few of each good, refilled every hour; better tiers buy 5% cheaper per tier from the third, and some goods wait for a tier. Priced at the hub's level or yours, whichever's higher. `buy <faction> <good>`.
@@ -677,7 +677,19 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
   - An Exfil on a breach pays 50 + 12×hub level credits and 6 + hub level/2 of the code its condition wants.
   - A Wiper on a breach takes the hub offline for 4 hours (2 on a partial): its shop and market shut and its map node goes dim.
   - The owner's rep drops 3 when blocked, 6 on a partial and 10 on a breach. The rep ripple warms its rivals.
-- `payload compile exfil|wiper [exploit]`, `payload deploy <n> <faction>`.
+- **Backdoor** (Kernel code) takes the hub for you, but only if it's offline when the Backdoor executes: Wiper it first, then get a Backdoor in before it comes back up. It shows Blocked until then. A breach captures the hub, costing −40 rep with its owner (the ripple spreads it). Never Halcyon's; two hubs at most.
+- `payload compile exfil|wiper|backdoor [exploit]`, `payload deploy <n> <faction>`.
+
+### Hubs you hold
+
+- **Perks:** its market trades at the true price (no spread), its shop sells at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
+- **Retake swarms:** while the old owner is Hostile, it comes for the hub: 30 minutes of logged-on time after the capture, then every 2–4 hours, one at a time. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then an 8-minute siege; Intercept or Defend one process a fight (`hub defend <faction>`), and the clock waits while you fight. Break it for code, salvage and XP. The hub's map node flashes red with the timer.
+- **Lockdown:** if the siege runs out, the hub earns nothing until you clear it (one fight, `hub clear <faction>`). You never lose it for good.
+- **Striking a Hostile faction** (without holding its hub) gets one answer: a swarm in its colours at one of your outposts.
+
+### Donations
+
+While your rep with a faction is under 24, its hub page offers **Donate**: credits (80 + 10×hub level) and 5 of the code it wants (Halcyon and NULL CHOIR Cipher, Kestrel Kernel, LANTERN Worm; GLASSJAW takes Exploits), all × (1 + depth/10), where depth is how far under 1 you are. +5 rep each, never past 24: trust you earn. `hub donate <faction>`.
 
 
 ## Server memory

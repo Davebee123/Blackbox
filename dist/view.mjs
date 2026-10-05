@@ -3,9 +3,10 @@ import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvage
 import { CONFIGS, forService, known as configsKnown, owned as configsOwned, configOn, codeFor as configCode, CONFIG_COST } from './configs.mjs';
 import { glyph } from './glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost } from './memory.mjs';
+import { HUBS, retakeOf, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf } from './market.mjs';
-import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED } from './factions.mjs';
+import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED, captured, donationOf } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
@@ -1488,11 +1489,11 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}
       const f = n.fleet, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
       const sub = f.state === 'travel' ? `${fmtLeft(f.left)} out` : `siege ${fmtLeft(f.siegeLeft)}`;
       const ships = Array.from({ length: f.total }, (_, i) => `<path d="M5 0 L-4 -3.5 L-2 0 L-4 3.5 Z" class="${i < f.ships ? '' : 'gone'}" transform="translate(${(i % 2) * -7 - Math.floor(i / 2) * 3} ${(i - (f.total - 1) / 2) * 6})"/>`).join('');
-      return `<g class="mnode fleet ${f.state}${on}" data-select="fleet" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Swarm of ${f.ships}"><circle r="18" class="mhit"/><g transform="rotate(${Math.round(ang)})">${ships}</g>${pick}${label(n, 10, `Swarm ×${f.ships}`, sub, f.state === 'siege' ? 'hot' : '')}</g>`;
+      return `<g class="mnode fleet ${f.state}${on}"${f.faction ? ` style="--fc:${FX[f.faction].color}" data-faction="${f.faction}"` : ''} data-select="fleet" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Swarm of ${f.ships}"><circle r="18" class="mhit"/><g transform="rotate(${Math.round(ang)})">${ships}</g>${pick}${label(n, 10, `Swarm ×${f.ships}`, sub, f.state === 'siege' ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'hub') {
       const f = n.hub.faction, F = FX[f], t = repTier(s, f);
-      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${on}" style="--fc:${F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, offline(s, f) ? 'hub · offline' : `hub · ${t.name}`)}</g>`;
+      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat' : ''}${on}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, captured(s, f) ? `${F.short} · yours` : F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `retake · ${fmtLeft(retakeOf(s).state === 'travel' ? retakeOf(s).left : retakeOf(s).siegeLeft)}` : offline(s, f) ? 'hub · offline' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'hidden') {
       const h = n.hidden, flag = hiddenFlagged(s, h);
@@ -1957,14 +1958,15 @@ const fIcon = (f, cls = '') => `<span class="fmark-i ${cls}" style="--fc:${FX[f]
 export function repBar(s, f) {
   const r = rep(s, f), t = repTier(s, f);
   const segs = REP_TIERS.map((min, i) => { const max = REP_TIERS[i + 1] ?? 101, fill = Math.max(0, Math.min(1, (r - min) / (max - min))); return `<span class="rb-seg${i === t.i ? ' on' : ''}" title="${esc(FX[f].tiers[i])} (${min}+)"><i style="width:${fill * 100}%"></i></span>`; }).join('');
-  return `<div class="repbar" style="--fc:${FX[f].color}" title="${esc(FX[f].short)}: ${r} · ${esc(t.name)}${t.next != null ? ` · next at ${t.next}` : ''}">${segs}<b>${esc(t.name)}</b></div>`;
+  const neg = f === 'halcyon' ? '' : `<span class="rb-seg rb-neg${r < 0 ? ' on' : ''}" title="How deep: ${r < 0 ? r : 0} of −100"><i style="width:${Math.min(100, Math.max(0, -r))}%"></i></span>`;
+  return `<div class="repbar" style="--fc:${FX[f].color}" title="${esc(FX[f].short)}: ${r} · ${esc(t.name)}${t.next != null ? ` · next at ${t.next}` : ''}">${neg}${segs}<b>${esc(captured(s, f) ? 'Yours' : t.name)}${r < 0 ? ` ${r}` : ''}</b></div>`;
 }
 const relations = (f) => `<div class="frel">${FX[f].allies.length ? `<span class="frel-k">allies</span>${FX[f].allies.map((x) => fIcon(x)).join('')}` : ''}${FX[f].rivals.length ? `<span class="frel-k">rivals</span>${FX[f].rivals.map((x) => fIcon(x)).join('')}` : ''}</div>`;
 function hubCard(s, f) {
   const F = FX[f], h = hubOf(s, f);
   return `<section class="card fcard" style="--fc:${F.color}"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · hub</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1>
     <p class="svc-line">${esc(h.name)} · lv ${h.level}</p>${repBar(s, f)}${relations(f)}
-    <div class="row"><button type="button" class="btn primary" data-go="hub:${f}" ${hostile(s, f) ? 'disabled title="They won’t deal with you"' : ''}>Connect</button></div></section>`;
+    <div class="row"><button type="button" class="btn primary" data-go="hub:${f}">Connect</button></div></section>`;
 }
 // The hub page: who they are, your rep, their shop, their work, their servers on your map.
 export function hubMarkup(s, f, now = Date.now()) {
@@ -1982,19 +1984,34 @@ export function hubMarkup(s, f, now = Date.now()) {
   return `<div class="page-grid hub-page" style="--fc:${F.color}"><div class="con-col">
     <section class="card fcard"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · ${esc(h.name)} · lv ${h.level}</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1><p>${esc(F.about)}</p>${repBar(s, f)}${relations(f)}</section>
     <section class="card"><h2>Work · ${offers.length} posted</h2>${work}</section>
+    ${captured(s, f) ? `<section class="card fcard" style="--fc:var(--you)"><h2>Yours</h2>${holdMarkup(s, f, now)}</section>` : donationOf(s, f).open && f !== 'halcyon' ? `<section class="card"><h2>Donate</h2>${donateMarkup(s, f)}</section>` : ''}
     <section class="card"><h2>Market</h2>${marketMarkup(s, f, now)}</section>
-    <section class="card"><h2>Payloads</h2>${payloadMarkup(s, f, now)}</section>
+    ${captured(s, f) ? '' : `<section class="card"><h2>Payloads</h2>${payloadMarkup(s, f, now)}</section>`}
   </div><div class="con-col">
     <section class="card"><h2>Shop</h2>${shop}</section>
     <section class="card"><h2>Their servers on your map · ${theirs.length}</h2>${servers}</section>
   </div></div>`;
+}
+// A hub you hold: what it has earned, what it earns, and anyone coming to take it back.
+function holdMarkup(s, f, now) {
+  const r = retakeOf(s), mine = r && r.f === f, lock = s.hubs[f].captured.lockdown, bank = bankOf(s, f), inc = incomeOf(s, f), d = demandOf(s, f);
+  const earn = `<ul class="craft-list"><li><span><b class="iname">${glyph('credits', 'badge')}${bank} credits</b><small class="cost" title="Its cut of the trade: more while what it deals in is in demand (×${d.toFixed(2)} now). Holds ${HUBS.bankHours} h.">${lock ? 'locked down: earning nothing' : `+${inc} an hour`}</small></span><button type="button" class="btn small ${bank ? 'primary' : ''}" data-command="hub collect ${f}" ${bank ? '' : 'disabled'}>Collect</button></li></ul>`;
+  const threat = lock
+    ? `<ul class="craft-list"><li><span><b class="hot">Lockdown</b><small>${esc(FX[f].short)} holds it · lv ${lock.level}</small></span><button type="button" class="btn small primary" data-command="hub clear ${f}">Clear</button></li></ul>`
+    : mine ? `<ul class="craft-list"><li><span><b class="hot">Retake · ${r.ships} of ${r.total}</b><small>lv ${r.level} · ${r.state === 'travel' ? `arrives in ${fmtLeft(r.left)}` : `falls in ${fmtLeft(r.siegeLeft)}`}</small></span><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></li></ul>` : '';
+  return earn + threat;
+}
+// Buying your way back toward Neutral: dearer the deeper you are.
+function donateMarkup(s, f) {
+  const d = donationOf(s, f), mats = materialsOf(s), ok = s.server.credits >= d.credits && (mats[d.ware] || 0) >= d.code;
+  return `<ul class="craft-list"><li><span><b class="iname">${glyph(d.ware, 'badge')}+5 rep</b><small class="cost"${d.x > 1 ? ` title="×${d.x.toFixed(1)}: how deep you are with them"` : ''}>${d.credits} credits · ${d.code} ${esc(d.ware)}${d.x > 1 ? ` <span class="hot">×${d.x.toFixed(1)}</span>` : ''}</small></span><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="hub donate ${f}" ${ok ? '' : 'disabled'}>Donate</button></li></ul>`;
 }
 // Payloads against this hub: its defence, what you hold (with how each would land), compile, in flight.
 const BAND = { breach: ['Breach', 'you'], siege: ['Partial', ''], blocked: ['Blocked', 'dim'] };
 function payloadMarkup(s, f, now) {
   const def = defenceOf(s, f, now), alert = alertOf(s, f, now), off = offline(s, f, now), mats = materialsOf(s), L = hackerLevel(s);
   const head = `<div class="row mk-tags"><span class="tag" title="Its defence${alert ? `, raised by ${alert} recent strike${alert > 1 ? 's' : ''}` : ''}">defence ${def}${alert ? ' ' + '▲'.repeat(alert) : ''}</span>${off ? `<span class="tag hot" title="Wiped: shop and market shut">offline ${Math.max(1, Math.ceil((s.hubs[f].offlineUntil - now) / 60000))} min</span>` : ''}</div>`;
-  const held = builtOf(s).map((p) => { const b = BAND[forecastStrike(s, p, f, now)]; return `<li><span><b class="iname">${glyph(p.kind === 'exfil' ? 'cipher' : 'worm', 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b><small class="cost">power ${p.power}${p.armed ? ' · armed' : ''}</small></span><span class="mk-btns"><span class="tag ${b[1]}" title="Most likely, against defence ${def} (each run swings ±${PAYLOAD.swing * 100}%)">${b[0]}</span><button type="button" class="btn small primary" data-command="payload deploy ${p.id} ${f}" ${off ? 'disabled' : ''}>Deploy</button></span></li>`; }).join('');
+  const held = builtOf(s).map((p) => { const b = BAND[forecastStrike(s, p, f, now)], gone = p.kind === 'backdoor' ? f === 'halcyon' : off; return `<li><span><b class="iname">${glyph(PAYLOADS[p.kind].code, 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b><small class="cost">power ${p.power}${p.armed ? ' · armed' : ''}</small></span><span class="mk-btns"><span class="tag ${b[1]}" title="Most likely, against defence ${def} (each run swings ±${PAYLOAD.swing * 100}%)">${b[0]}</span><button type="button" class="btn small primary" data-command="payload deploy ${p.id} ${f}" ${gone ? 'disabled' : ''}>Deploy</button></span></li>`; }).join('');
   const credits = PAYLOAD.credits(L), full = builtOf(s).length >= PAYLOAD.maxBuilt;
   const make = Object.entries(PAYLOADS).map(([k, P]) => {
     const ok = !full && s.server.credits >= credits && (mats[P.code] || 0) >= PAYLOAD.code && (s.salvage || []).length >= PAYLOAD.salvage;

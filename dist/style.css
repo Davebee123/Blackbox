@@ -1965,3 +1965,9 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .craft-list li > span.mk-btns { display: flex; gap: 0.3em; flex-wrap: nowrap; align-items: center; }
 .mnode.hub.offline .hub-frame { stroke-dasharray: 3 3; opacity: 0.5; }
 .mnode.hub.offline .hub-mark { opacity: 0.4; }
+.mnode.hub.yours .hub-frame { stroke-width: 2; }
+.mnode.hub.threat .hub-frame { stroke: var(--hot); animation: hubthreat 1.2s ease-in-out infinite; }
+@keyframes hubthreat { 50% { opacity: 0.45; } }
+.repbar .rb-neg { flex: 0.8; border-color: color-mix(in srgb, var(--hot) 50%, transparent); }
+.repbar .rb-neg i { background: var(--hot); margin-left: auto; float: right; }
+.mnode.fleet[data-faction] path { fill: var(--fc); stroke: var(--fc); }

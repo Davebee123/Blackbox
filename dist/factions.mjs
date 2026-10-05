@@ -3,9 +3,12 @@
 // enemies among the others: helping one costs you with its rivals and warms its allies. Some of the servers you trace belong to a faction: opening one's vault is a
 // blow against its owner (and a favour to its rivals).
 //
-// Rep shares the scale and the store of Halcyon's old standing (s.standing, 0–100, tiers at
-// 1/25/50/75): Halcyon is just the first faction, its retainer and store as before.
-import { emit, warn, rand, hackerLevel, hooks } from './combat.mjs';
+// Rep shares the scale and the store of Halcyon's old standing (s.standing, tiers at 1/25/50/75):
+// Halcyon is just the first faction, its retainer and store as before. Below 1 a faction is
+// Hostile, and hostility has depth: rep runs down to −100 (Halcyon's floor stays 0). Rep never
+// comes back on its own: you earn it back by hitting a faction's rivals, working for its allies,
+// or donating (dearer the deeper you are, and only as far as Neutral).
+import { emit, warn, rand, hackerLevel, materialsOf, hooks } from './combat.mjs';
 import { GOODS, codeAmount, deliverGoods } from './store.mjs';
 import { broadcast } from './station.mjs';
 import { seeded } from './gear.mjs';
@@ -65,7 +68,9 @@ export const FACTION_GOODS = {
 // ---------- rep ----------
 export const rep = (s, f) => { const st = (s.standing ||= { halcyon: FACTIONS.halcyon.start }); if (st[f] == null) st[f] = FACTIONS[f]?.start ?? 10; return st[f]; };
 export const repTier = (s, f) => { const r = rep(s, f); let i = 0; REP_TIERS.forEach((m, k) => { if (r >= m) i = k; }); return { i, name: FACTIONS[f].tiers[i], next: REP_TIERS[i + 1] ?? null, min: REP_TIERS[i] }; };
-export const hostile = (s, f) => rep(s, f) < REP_TIERS[1];
+export const hostile = (s, f) => rep(s, f) < REP_TIERS[1] && !captured(s, f);
+export const REP_FLOOR = (f) => (f === 'halcyon' ? 0 : -100);
+export const captured = (s, f) => !!s.hubs?.[f]?.captured;
 // How rep moves through the web: a rival loses half of what you gave, an ally gains a quarter.
 export const RIPPLE = { rival: 0.5, ally: 0.25 };
 // Just the ripple (Halcyon's own change is applied and announced by mail.mjs).
@@ -76,7 +81,7 @@ export function rippleRep(s, f, delta) {
 export function changeRep(s, f, delta, why, { ripple = true, quiet = false } = {}) {
   if (!delta || !FACTIONS[f]) return;
   const before = repTier(s, f).name;
-  s.standing[f] = Math.max(0, Math.min(100, rep(s, f) + delta));
+  s.standing[f] = Math.max(REP_FLOOR(f), Math.min(100, rep(s, f) + delta));
   const after = repTier(s, f);
   if (!quiet) emit(s, delta < 0 ? 'rep-down' : 'rep-up', `${why}: ${FACTIONS[f].short} ${delta > 0 ? '+' : ''}${delta} (${rep(s, f)}, ${after.name}).${after.name !== before ? ` ${delta > 0 ? 'Up' : 'Down'} to ${after.name}.` : ''}`, { faction: f, rep: rep(s, f) });
   if (ripple) rippleRep(s, f, delta);
@@ -93,19 +98,41 @@ export function hubsOf(s) {
 }
 export const hubOf = (s, id) => hubsOf(s).find((h) => h.id === id || h.faction === id) || null;
 
+// ---------- donations ----------
+// Buying your way back: credits plus the code the hub's condition wants. +5 rep each, up to the
+// top of Neutral (never into trust: that you earn). Inflated by how deep in the hole you are:
+// base × (1 + depth/10), where depth is how far under 1 your rep sits.
+export const DONATE = { rep: 5, cap: REP_TIERS[2] - 1, credits: (hubLevel) => 80 + 10 * hubLevel, code: 5, ware: { halcyon: 'cipher', glassjaw: 'exploit', kestrel: 'kernel', lantern: 'worm', nullchoir: 'cipher' } };
+export function donationOf(s, f) {
+  const depth = Math.max(0, REP_TIERS[1] - rep(s, f)), x = 1 + depth / 10;
+  const w = DONATE.ware[f], code = w === 'exploit' ? Math.max(1, Math.round(x)) : Math.round(DONATE.code * x);
+  return { credits: Math.round(DONATE.credits(FACTIONS[f].hub.level) * x), ware: w, code, x, open: rep(s, f) < DONATE.cap && !captured(s, f) };
+}
+export function donate(s, f) {
+  if (!FACTIONS[f] || !hubOf(s, f)) return warn(s, 'Donate to a faction hub.');
+  const d = donationOf(s, f);
+  if (captured(s, f)) return warn(s, 'That hub is yours.');
+  if (!d.open) return warn(s, `${FACTIONS[f].short} doesn’t take donations from friends. Earn the rest.`);
+  const mats = materialsOf(s);
+  if (s.server.credits < d.credits) return warn(s, `A donation to ${FACTIONS[f].short} is ${d.credits} credits and ${d.code} ${d.ware}.`);
+  if ((mats[d.ware] || 0) < d.code) return warn(s, `A donation to ${FACTIONS[f].short} takes ${d.code} ${d.ware}.`);
+  s.server.credits -= d.credits; mats[d.ware] -= d.code;
+  changeRep(s, f, Math.min(DONATE.rep, DONATE.cap - rep(s, f)), `You donated to ${FACTIONS[f].short}`, { ripple: false });
+}
+
 // ---------- faction shops ----------
 // A faction's shelf: its goods, each a few in stock, refilled every hour. Better tiers buy
 // cheaper (−5% a tier from Neutral) and open the rarer goods; Hostile, the shop is shut.
-export const SHOP = { restockMs: 60 * 60000, qty: 3, discount: 0.05 };
+export const SHOP = { restockMs: 60 * 60000, qty: 3, discount: 0.05, atCost: 0.6 }; // a hub you hold sells at cost
 const goodOf = (id) => GOODS[id] || FACTION_GOODS[id];
 export function shopOf(s, f, at = now()) {
   const h = (s.hubs ||= {})[f] ||= { id: 'hub-' + f, faction: f, stock: {}, restockAt: 0 };
   if (at >= (h.restockAt || 0)) { h.stock = Object.fromEntries(FACTIONS[f].shop.map((id) => [id, SHOP.qty])); h.restockAt = at + SHOP.restockMs; }
-  const L = Math.max(hackerLevel(s), FACTIONS[f].hub.level), t = repTier(s, f);
+  const L = Math.max(hackerLevel(s), FACTIONS[f].hub.level), t = repTier(s, f), mine = captured(s, f);
   return FACTIONS[f].shop.map((id) => {
     const g = goodOf(id), need = g.tier || 0;
-    const price = Math.round(g.credits(L) * (1 - SHOP.discount * Math.max(0, t.i - 1)));
-    return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: h.stock[id] || 0, locked: t.i < Math.max(1, need), need: Math.max(1, need) };
+    const price = Math.round(g.credits(L) * (mine ? SHOP.atCost : 1 - SHOP.discount * Math.max(0, t.i - 1)));
+    return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: h.stock[id] || 0, locked: !mine && t.i < Math.max(1, need), need: Math.max(1, need) };
   });
 }
 // deliver: store.mjs's delivery for shared goods; faction goods handled here.

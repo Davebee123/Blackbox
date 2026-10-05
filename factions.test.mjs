@@ -50,7 +50,7 @@ test('faction servers: some traced servers belong to a faction; opening the vaul
   assert.ok(target.faction && target.faction !== 'halcyon');
   const f = target.faction, r0 = rep(s, f);
   strikeServer(s, target, 'takeover');
-  assert.equal(rep(s, f), Math.max(0, r0 - OWNED.takeoverHit));
+  assert.equal(rep(s, f), r0 - OWNED.takeoverHit, 'hostility has depth: rep goes under zero');
   assert.equal(target.faction, undefined, 'it isn’t theirs any more');
   assert.ok(loc);
 });

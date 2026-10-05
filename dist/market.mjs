@@ -65,7 +65,7 @@ export function priceOf(s, f, w) {
 }
 // What you'd get selling one, and pay buying one (whole credits). Better rep trades a little better.
 export function quote(s, f, w) {
-  const t = repTier(s, f).i, edge = Math.max(0, t - 1) * 0.02;
+  const t = repTier(s, f).i, mine = !!s.hubs?.[f]?.captured, edge = mine ? MARKET.spread : Math.max(0, t - 1) * 0.02; // a hub you hold trades at its true price
   const p = priceOf(s, f, w);
   return { sell: Math.max(1, Math.floor(p * (1 - MARKET.spread + edge))), buy: Math.max(1, Math.ceil(p * (1 + MARKET.spread - edge))), mult: p / WARES[w].base };
 }

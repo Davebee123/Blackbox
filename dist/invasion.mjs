@@ -9,6 +9,7 @@
 // A crash puts the server in Degraded mode (see crashServer in combat.mjs); the network waits.
 import { tickOutposts } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
+import { tickRetake } from './hubs.mjs';
 import { tickStation } from './station.mjs';
 import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
@@ -85,6 +86,7 @@ export function tickNetwork(s, now = Date.now()) {
   if (gap > dt && consortiumOf(s)) away(s, prev, now - dt);
   tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
   tickFleet(s, dt, !!s.degraded);
+  tickRetake(s, dt, !!s.degraded, now); // hubs you hold, and the factions that want them back
   tickStation(s, dt); // the numbers station keeps broadcasting, degraded or not
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
   if (s.degraded) {
