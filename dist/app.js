@@ -548,6 +548,16 @@ function run(raw) {
   if (!text) return;
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
+  // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
+  const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir)$/);
+  if (dial && V.hubOptions(campaign, dial[1]).length) return openHub(dial[1]);
+  if (hubShown() && !active(campaign)) {
+    const opts = V.hubOptions(campaign, hubSel);
+    if (/^\d$/.test(text)) { const n = Number(text); if (n === 0) closeHub(); else if (opts[n - 1]) pickHub(opts[n - 1].key); return; }
+    if (['disconnect', 'exit', 'bye', 'logout', 'quit'].includes(text)) return closeHub();
+    const o = opts.find((x) => x.key === text || x.label.toLowerCase() === text);
+    if (o) return pickHub(o.key);
+  }
   // Developer commands are for tests and ?dev / playtest pages, not the real game (a crashed
   // server's reboot excepted: the engine points you to it).
   if (/^developer( |$)/.test(text) && !params.has('dev') && !playtest && !(text === 'developer reboot' && shown().server.integrity <= 0)) text = 'developer-off'; // the engine answers it as an unknown command
@@ -645,6 +655,7 @@ function go(name, quiet = false) {
   if (name !== module && !quiet) feel.add('channel', null);
   if (name !== 'combat') hideSpoils();
   if (gainOpen()) hideGain();
+  if (name !== 'map' && name !== 'hub') { hubOpen = false; hubWin = null; }
   module = name;
   selected = null;
   document.querySelectorAll('.modules button').forEach((b) => b.setAttribute('aria-current', b.dataset.module === name ? 'page' : 'false'));
@@ -688,7 +699,14 @@ function updateSuggestions() {
 // (view.mjs boardMarkup). Parsed the way Enter would; one that wouldn't go through (on cooldown,
 // not lit, …) shows as a warning instead, the reason on hover.
 let aimPreview = null;
-let hubSel = 'halcyon'; // the faction hub page you're connected to
+let hubSel = 'halcyon'; // the faction hub you're connected to
+// A hub session: open or not, which window, and where it sits (over the map, or the whole panel).
+let hubOpen = false, hubWin = null, hubLayout = 'overlay';
+try { hubLayout = localStorage.getItem('bb-hub-layout') === 'page' ? 'page' : 'overlay'; } catch { /* storage unavailable */ }
+function openHub(f) { hubSel = f; hubWin = null; hubOpen = true; go(hubLayout === 'overlay' ? 'map' : 'hub'); }
+function closeHub() { hubOpen = false; hubWin = null; if (module === 'hub') go('map'); else dirty = true; }
+function pickHub(key) { if (key === 'store') return go('store'); hubWin = key || null; feel.key('click'); dirty = true; }
+const hubShown = () => hubOpen && (module === 'hub' || (module === 'map' && hubLayout === 'overlay'));
 function previewAim(s, text) {
   const key = () => aimPreview && aimPreview.target + aimPreview.ok + aimPreview.ability;
   const was = key();
@@ -901,7 +919,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: !sidebarOn() }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubMarkup(x, hubSel, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: !sidebarOn() }) + (hubOpen && hubLayout === 'overlay' ? V.hubSessionMarkup(x, hubSel, hubWin, Date.now(), 'overlay') : ''), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubSessionMarkup(x, hubSel, hubWin, Date.now(), 'page'), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     put('page-view', (pages[module] || pages.map)(campaign));
     if (module === 'map' || !pages[module]) applyMapZoom();
   }
@@ -1475,13 +1493,19 @@ function goTo(target) {
   const [where, what] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
-  else if (where === 'hub') { hubSel = what; go('hub'); }
+  else if (where === 'hub') openHub(what);
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) mapSel = what; go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');
 }
 document.addEventListener('click', (e) => { const g = !e.target.closest('#comms') && e.target.closest('[data-go]'); if (g) { peopleOpen = false; goTo(g.dataset.go); } });
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
+document.addEventListener('click', (e) => {
+  const o = e.target.closest('[data-hub-opt]'), c = e.target.closest('[data-hub-close]'), l = e.target.closest('[data-hub-layout]');
+  if (o) pickHub(o.dataset.hubOpt);
+  else if (c) closeHub();
+  else if (l) { hubLayout = hubLayout === 'overlay' ? 'page' : 'overlay'; try { localStorage.setItem('bb-hub-layout', hubLayout); } catch { /* storage unavailable */ } go(hubLayout === 'overlay' ? 'map' : 'hub'); }
+});
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && commsOpen) { setComms(false); } });
 
 // Craft sections you fold stay folded.

@@ -1993,3 +1993,22 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .xfer-bar.hot i { background: var(--hot); }
 .pips { font-size: 11px; letter-spacing: 1px; color: var(--hot); }
 .mk-ware .iname { white-space: nowrap; }
+/* Hub sessions: who answers, one line, a menu; each choice its own window. */
+.hub-session.page { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 16px; align-items: start; }
+.hub-session.overlay { position: absolute; inset: 14px; z-index: 6; display: grid; grid-template-columns: 360px minmax(0, 640px); gap: 14px; align-items: start; justify-content: start; pointer-events: none; }
+.hub-session.overlay > * { pointer-events: auto; max-height: calc(100% - 4px); overflow: auto; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); background: var(--panel, #120f0a); }
+.hub-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hub-name { display: flex; align-items: center; gap: 8px; color: var(--fc); }
+.hub-name b { font: 600 13px var(--mono); letter-spacing: 0.08em; }
+.hub-ctl { display: flex; gap: 4px; }
+.hub-who { display: flex; gap: 12px; align-items: center; margin: 10px 0 12px; }
+.hub-ascii { margin: 0; font: 11px/1.15 var(--mono); color: var(--fc); opacity: 0.9; flex: none; }
+.hub-greet { margin: 0; font: 13px/1.45 var(--mono); }
+.hub-greet b { display: block; color: var(--fc); font-weight: 600; margin-bottom: 2px; }
+.hub-opts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.hub-opt { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 10px; background: var(--inset); border: 1px solid var(--line); color: var(--ink, inherit); font: 13px var(--mono); text-align: left; cursor: pointer; border-radius: 3px; }
+.hub-opt:hover, .hub-opt.on { border-color: var(--fc); color: var(--fc); }
+.hub-opt .n { width: 18px; height: 18px; display: inline-grid; place-items: center; border: 1px solid currentColor; border-radius: 2px; font-size: 11px; flex: none; }
+.hub-opt small { margin-left: auto; opacity: 0.7; display: flex; align-items: center; gap: 3px; }
+.hub-win h2 { display: flex; justify-content: space-between; align-items: center; }
+.hub-win h2 .x { margin-left: auto; }
