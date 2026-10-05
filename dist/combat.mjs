@@ -6,7 +6,7 @@ import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERS
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
-import { buyFrom, claimServer } from './factions.mjs';
+import { buyFrom, claimServer, reclaimCheck } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
@@ -615,7 +615,7 @@ export function addLocation(s, family, depth = 1, parent = null) {
   if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and the Firewall blueprint
   loc.trait = siteTrait(loc);
   rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken
-  claimServer(s, loc); // about a third belong to a faction (factions.mjs)
+  claimServer(s, loc); // about one in eight belongs to a faction (factions.mjs)
   s.locations.push(loc);
   spawnHidden(s, loc);
   onFound(s, loc); // memory full: it arrives detached (memory.mjs)
@@ -2655,7 +2655,7 @@ export function restore(raw) {
     materialsOf(s);
     if (!Number.isFinite(s.rng)) s.rng = 0x2545f491;
     s.loadout.equipped ||= {};
-    for (const l of s.locations || []) { l.template ||= 'relay'; l.depth ||= 1; }
+    for (const l of s.locations || []) { l.template ||= 'relay'; l.depth ||= 1; reclaimCheck(l); }
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) s.encounter.paused = true;
     return s;

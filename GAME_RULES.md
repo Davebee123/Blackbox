@@ -273,7 +273,7 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 - **Owner and dividend.** An outpost's owner keeps its whole stockpile, as always. On top of that, every member's outpost pays each other member a **dividend**: 25% of what it produces, in kind (a Siphon's or Tap's code of its family, a Scraper's finds: credits, code, salvage, now and then a protocol). It fills in real time (offline too), a small stock per outpost of up to 12 hours' worth. An outpost under siege pays nothing until the siege is broken. The Consortium page shows what comes in an hour and what's waiting: *Collect*, or `consortium collect`. Each member outpost's card shows its rate and what's waiting. (Your outposts pay the other members the same way, at no cost to you.)
 - **Sieges and lockdowns.** Now and then (every 10–18 minutes of logged-on time) natives lay siege to a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win for credits (30 + 8 × level), its family's code and XP. Nobody defends it: half the time a member deals with it; otherwise it goes into **lockdown** (pays no dividend for 2 hours). *Retake for a bounty* ends it.
 - **Members' walls.** Every 15–25 minutes an invader reaches an away member's wall (`consortium defend <handle>`, 8 minutes). Nobody stops it, and half the time a member does anyway; otherwise their server **crashes and reboots** for 2 hours, **occupied**: it shows under them on the map (`<HANDLE>-HOME`), open to anyone. Clear every folder for a bounty and it's back up. Their outposts pay no dividend while it reboots.
-- **The travelling virus.** A lockdown or a crash (theirs or yours) sends the virus on along the trunk line toward another outpost, a member's or yours, a level stronger, landing in 10 minutes as a fresh siege. It's on the consortium map, and in the alerts: *Intercept* (`consortium intercept`) for a bounty that grows +50% a hop. One at a time; it burns out after 3 hops.
+- **The travelling virus.** A lockdown or a crash (theirs or yours) sends the virus on along the trunk line toward another outpost, a member's or yours, a level stronger, arriving in 10 minutes as a fresh siege. It's on the consortium map, and in the alerts: *Intercept* (`consortium intercept`) for a bounty that grows +50% a hop. One at a time; it burns out after 3 hops.
 - **The Consortium page** (a top tab, there while you're in a consortium or have an invite; its badge counts what needs you). Left: **Needs you**, a card per alert (an invader at a wall, the travelling virus, sieges, lockdowns, occupied servers; yours first), each with what it is, a timer bar, the level and what it pays, and one button (Defend, Intercept, Connect, Retake); then the members (status, outposts, where they are; Map, Invite to crew, Kick). Right: the consortium and its size ladder, the dividend (*Collect*), and how your wall fares while you're away. The people panel's Consortium tab is a short summary that links to it.
 - **Size.** The more servers merged (yours included), the better for everyone:
 
@@ -444,8 +444,8 @@ Once you run an outpost, the network organises against it.
 - The first swarm gathers about 45 logged-on minutes after your first outpost goes up; after that, one every 90–150 logged-on minutes (half that with a Honeytoken out). One swarm at a time.
 - A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
 - You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes; 15 with a Tarpit Beacon).
-- **Intercept** on the way or **Defend** once it lands (`swarm engage`): each fight kills one process, and the clock waits while you fight.
-- Landed, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown (Sturdy doesn't save it): retake it to end it sooner.
+- **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the clock waits while you fight.
+- Once it arrives, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown (Sturdy doesn't save it): retake it to end it sooner.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
 
@@ -641,10 +641,10 @@ Five PvE factions, companies and hacker crews, each with a colour, a mark and a 
 
 - **Rep** runs 0–100 with five tiers at 1/25/50/75 (each faction names its own: Kestrel's are Blacklisted, Prospect, Client, Account, Key account). Below 1 a faction is Hostile: its shop is shut and it posts you no work. Everyone starts at 10 (GLASSJAW at 5).
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter the same way. Halcyon's standing ripples too.
-- **Hubs** appear on your map when the contract board opens, on a ring of their own between the first two layers (a diamond in the faction's colour with its mark; its rep tier under the name). Its card shows your rep as a five-step bar and its allies and rivals; **Dock** opens the hub page: who they are, their work on the board, their shop, and their servers on your map.
+- **Hubs** appear on your map when the contract board opens, on a ring of their own between the first two layers (a diamond in the faction's colour with its mark; its rep tier under the name). Its card shows your rep as a five-step bar and its allies and rivals; **Connect** opens the hub page: who they are, their work on the board, their shop, and their servers on your map.
 - **Shops:** a few of each good, refilled every hour; better tiers buy 5% cheaper per tier from the third, and some goods wait for a tier. Priced at the hub's level or yours, whichever's higher. `buy <faction> <good>`.
 - **Work:** once the hubs are up, about half the board (beyond GLASSJAW's off-the-books jobs) is Kestrel's, LANTERN's or NULL CHOIR's: the same kinds of contracts, paying 20% more credits and their own rep instead of Indemnity and Halcyon standing. Their takeover and recovery jobs often point at their rivals' servers. Each offer on the Mail board shows its faction's mark; Mail also shows your tier with each faction.
-- **Faction servers:** about a third of the servers you trace (never your first two, never rogue ones) belong to Kestrel, GLASSJAW, LANTERN or NULL CHOIR: their colour on the map node, their mark beside it. Opening one's vault takes the server from them: their rep −15, their rivals warm to you (+7).
+- **Faction servers:** about one in eight of the servers you trace (never your first two, never rogue ones) belong to Kestrel, GLASSJAW, LANTERN or NULL CHOIR: their colour on the map node, their mark beside it. Opening one's vault takes the server from them: their rep −15, their rivals warm to you (+7).
 
 ### Markets
 
@@ -662,22 +662,22 @@ Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 cr
 
   World events turn over every 4 hours, never the same twice running: Ransomware outbreak (Cipher ×1.5), Worm season (Worm ×1.5), Patch Tuesday (all code ×0.8), Zero-day rush (Exploits ×1.6), Grid blackout (salvage ×1.5, Kernel ×1.25), Quiet market.
 - **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better per rep tier above Probation's). Each unit you sell somewhere takes 4% off its price there (each one you buy adds 4%, floor 35% of normal); the pressure eases 12% an hour, offline too.
-- **File transfers:** a sale leaves your stock now and its credits land when the transfer does; a purchase is paid now and lands later. Travel: Halcyon 5 min, Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay on your servers cuts 10% (up to 40%). Transfers in flight show on the hub's Market card and can't be lost. Hostile factions won't trade.
+- **File transfers:** a sale leaves your stock now and its credits arrive when the transfer completes; a purchase is paid now and arrives later. Transfer time: Halcyon 5 min, Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay on your servers cuts 10% (up to 40%). Transfers in progress show on the hub's Market card and can't be lost. Hostile factions won't trade.
 - `market sell|buy <faction> <ware> <n>` (1–99).
 - While a hub is wiped offline (see Payloads), the other hubs pay 25% more for whatever its condition was buying.
 
 ### Payloads
 
-Viruses you write to hit a faction hub (`payload.mjs`), compiled and launched from the hub page's Payloads card. They auto-resolve when they land.
+Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed from the hub page's Payloads card. They execute on their own when they arrive.
 
 - **Compile:** 60 + 10×level credits, 10 code and 3 salvage. An **Exfil** takes Cipher code and pulls credits plus the code the hub hoards. A **Wiper** takes Worm code and knocks the hub offline. Power is 10 + 2×your level; spending an Exploit arms it (×1.5). You hold three at most.
-- **Launch:** it travels like a file transfer (same times, relays help). You can't hit a hub that's already offline.
-- **Landing:** power × a roll of ±20% against the hub's defence (12 + 2×hub level, +25% for each recent strike; one step eases every 6 hours). Under 70%, it's **Blocked**. From 70% to 100%, a **Partial** breach does half the job. At 100% and over, it's a **Breach**. Each payload you hold shows its likely band against that hub before you launch.
+- **Deploy:** it uploads like a file transfer (same times, relays help). You can't hit a hub that's already offline.
+- **Execution:** power × a roll of ±20% against the hub's defence (12 + 2×hub level, +25% for each recent strike; one step eases every 6 hours). Under 70%, it's **Blocked**. From 70% to 100%, a **Partial** breach does half the job. At 100% and over, it's a **Breach**. Each payload you hold shows its likely band against that hub before you deploy it.
 - **Results:**
   - An Exfil on a breach pays 50 + 12×hub level credits and 6 + hub level/2 of the code its condition wants.
   - A Wiper on a breach takes the hub offline for 4 hours (2 on a partial): its shop and market shut and its map node goes dim.
   - The owner's rep drops 3 when blocked, 6 on a partial and 10 on a breach. The rep ripple warms its rivals.
-- `payload compile exfil|wiper [exploit]`, `payload launch <n> <faction>`.
+- `payload compile exfil|wiper [exploit]`, `payload deploy <n> <faction>`.
 
 
 ## Server memory

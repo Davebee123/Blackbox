@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, materialsOf } from './dist/combat.mjs';
-import { compilePayload, launchPayload, tickPayloads, resolveStrike, builtOf, flyingOf, defenceOf, alertOf, offline, forecastStrike, PAYLOAD } from './dist/payload.mjs';
+import { compilePayload, deployPayload, tickPayloads, resolveStrike, builtOf, flyingOf, defenceOf, alertOf, offline, forecastStrike, PAYLOAD } from './dist/payload.mjs';
 import { trade, priceOf, travelMs } from './dist/market.mjs';
 import { rep, buyFrom } from './dist/factions.mjs';
 
@@ -32,7 +32,7 @@ test('a payload travels, then lands on its own: breach pays out, the hub goes on
   const p = builtOf(s)[0];
   p.power = 999; // sure to breach
   const c0 = s.server.credits, k0 = materialsOf(s).kernel || 0, r0 = rep(s, 'kestrel'), d0 = defenceOf(s, 'kestrel', T0);
-  launchPayload(s, p.id, 'kestrel', T0);
+  deployPayload(s, p.id, 'kestrel', T0);
   assert.equal(flyingOf(s).length, 1);
   tickPayloads(s, T0 + travelMs(s, 'kestrel') - 1);
   assert.equal(s.server.credits, c0, 'still in flight');
@@ -53,7 +53,7 @@ test('weak payloads are blocked; forecasts read the band', () => {
   p.power = 1;
   assert.equal(forecastStrike(s, p, 'nullchoir', T0), 'blocked');
   const c0 = s.server.credits;
-  launchPayload(s, p.id, 'nullchoir', T0);
+  deployPayload(s, p.id, 'nullchoir', T0);
   assert.equal(resolveStrike(s, flyingOf(s)[0], T0 + 1), 'blocked');
   assert.equal(s.server.credits, c0);
   p.power = 999;
@@ -65,7 +65,7 @@ test('a Wiper knocks a hub offline: its shop and market shut, the others pay mor
   compilePayload(s, 'wiper');
   const p = builtOf(s)[0]; p.power = 999;
   const before = priceOf(s, 'halcyon', 'kernel');
-  launchPayload(s, p.id, 'kestrel', T0);
+  deployPayload(s, p.id, 'kestrel', T0);
   resolveStrike(s, flyingOf(s)[0], Date.now());
   assert.ok(offline(s, 'kestrel'));
   const c0 = s.server.credits;
@@ -75,7 +75,7 @@ test('a Wiper knocks a hub offline: its shop and market shut, the others pay mor
   assert.equal(materialsOf(s).cipher, 50, 'market shut');
   assert.ok(priceOf(s, 'halcyon', 'kernel') > before, 'Kestrel’s Kernel demand moves elsewhere');
   compilePayload(s, 'wiper');
-  launchPayload(s, builtOf(s)[0].id, 'kestrel');
+  deployPayload(s, builtOf(s)[0].id, 'kestrel');
   assert.equal(builtOf(s).length, 1, 'can’t hit a hub that’s already down');
 });
 
@@ -83,6 +83,6 @@ test('commands route', () => {
   const s = open();
   command(s, 'payload compile exfil');
   assert.equal(builtOf(s).length, 1);
-  command(s, `payload launch ${builtOf(s)[0].id} lantern`);
+  command(s, `payload deploy ${builtOf(s)[0].id} lantern`);
   assert.equal(flyingOf(s).length, 1);
 });

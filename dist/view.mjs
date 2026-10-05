@@ -1613,7 +1613,7 @@ function mapSide(s, sel, node) {
     const r = node.roamer;
     return `<section class="card alert"><h2>Travelling virus · hop ${r.hop} of ${CONSORTIUM.roam.hops}</h2><h1>${esc(r.name)}</h1>
       <p>${levelTag(s, r.level)} ${esc(FAMILIES[r.family].name)} · from ${esc(r.fromName)}</p>
-      <div class="stats">${stat('Lands in', fmtLeft(r.left))}${stat('Bounty', `×${1 + CONSORTIUM.roam.bounty * r.hop}`)}</div>
+      <div class="stats">${stat('Arrives in', fmtLeft(r.left))}${stat('Bounty', `×${1 + CONSORTIUM.roam.bounty * r.hop}`)}</div>
       <div class="row"><button type="button" class="btn primary" data-command="consortium intercept" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Intercept</button></div></section>`;
   }
   if (node.kind === 'member') {
@@ -1701,7 +1701,7 @@ function fleetCard(s) {
   const fam = FAMILIES[f.family], m = MUTATIONS[f.mutation];
   return `<section class="card alert"><h2>Swarm · ${f.state === 'travel' ? 'inbound' : 'at the outpost'}</h2><h1>${f.ships} of ${f.total} ${esc(fam.name)}</h1>
     <p>${levelTag(s, f.level)} ${esc(fam.name)}${m ? ` <span class="tag tag-mut" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}</p>
-    <div class="stats">${stat('Target', esc(t?.name || '?'))}${stat(f.state === 'travel' ? 'Lands in' : 'Falls in', fmtLeft(f.state === 'travel' ? f.left : f.siegeLeft))}</div>
+    <div class="stats">${stat('Target', esc(t?.name || '?'))}${stat(f.state === 'travel' ? 'Arrives in' : 'Falls in', fmtLeft(f.state === 'travel' ? f.left : f.siegeLeft))}</div>
     <p class="svc-line">from ${esc(f.fromName)}</p>
     <div class="row"><button type="button" class="btn primary" data-command="swarm engage" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>${f.state === 'travel' ? 'Intercept' : 'Defend'}</button></div></section>`;
 }
@@ -1738,7 +1738,7 @@ function outpostCore(s, l) {
   const fill = `<div class="lvl-row" title="${h.kind === 'scraper' ? 'Loot rolls waiting' : esc(m.name) + ' waiting'}. Connect to collect."><span class="lvl-bar"><span style="width:${(100 * (o.stock || 0)) / capOf(l)}%"></span></span><small>${stockOf(l)}/${capOf(l)} · ${Math.round(perHour(l, l.outpost.h, s) * 10) / 10}/h</small></div>`;
   // Threats on the outpost, each in its own box: what, how many/long (a bar), one button.
   const opBox = (kind, title, info, pct, btnHtml) => `<div class="op-box ${kind}"><div class="op-top"><span class="tag ${kind === 'infest' ? 'warn' : 'hot'}">${title}</span><small>${info}</small></div>${pct == null ? '' : `<div class="op-bar"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>`}<div class="row">${btnHtml}</div></div>`;
-  const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `lands in ${fmtLeft(s.fleet.left)}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
+  const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `arrives in ${fmtLeft(s.fleet.left)}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
   const siege = o.siege ? opBox('siege', 'Siege', `falls in ${fmtTime(o.siege.left)} of play`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
   const inf = o.infest ? opBox('infest', 'Infested', `${o.infest.count}/${o.infest.total} left · ${fmtTime(o.infest.left)}`, (o.infest.left / INFEST.stayMs) * 100, `<button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why} title="Clear them for an hour of production at once. Ignore them and they move on.">Clear</button>`) : '';
   return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fl}${siege}${inf}${o.siege ? '' : `<div class="row"><button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
@@ -1964,7 +1964,7 @@ function hubCard(s, f) {
   const F = FX[f], h = hubOf(s, f);
   return `<section class="card fcard" style="--fc:${F.color}"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · hub</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1>
     <p class="svc-line">${esc(h.name)} · lv ${h.level}</p>${repBar(s, f)}${relations(f)}
-    <div class="row"><button type="button" class="btn primary" data-go="hub:${f}" ${hostile(s, f) ? 'disabled title="They won’t deal with you"' : ''}>Dock</button></div></section>`;
+    <div class="row"><button type="button" class="btn primary" data-go="hub:${f}" ${hostile(s, f) ? 'disabled title="They won’t deal with you"' : ''}>Connect</button></div></section>`;
 }
 // The hub page: who they are, your rep, their shop, their work, their servers on your map.
 export function hubMarkup(s, f, now = Date.now()) {
@@ -1994,7 +1994,7 @@ const BAND = { breach: ['Breach', 'you'], siege: ['Partial', ''], blocked: ['Blo
 function payloadMarkup(s, f, now) {
   const def = defenceOf(s, f, now), alert = alertOf(s, f, now), off = offline(s, f, now), mats = materialsOf(s), L = hackerLevel(s);
   const head = `<div class="row mk-tags"><span class="tag" title="Its defence${alert ? `, raised by ${alert} recent strike${alert > 1 ? 's' : ''}` : ''}">defence ${def}${alert ? ' ' + '▲'.repeat(alert) : ''}</span>${off ? `<span class="tag hot" title="Wiped: shop and market shut">offline ${Math.max(1, Math.ceil((s.hubs[f].offlineUntil - now) / 60000))} min</span>` : ''}</div>`;
-  const held = builtOf(s).map((p) => { const b = BAND[forecastStrike(s, p, f, now)]; return `<li><span><b class="iname">${glyph(p.kind === 'exfil' ? 'cipher' : 'worm', 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b><small class="cost">power ${p.power}${p.armed ? ' · armed' : ''}</small></span><span class="mk-btns"><span class="tag ${b[1]}" title="Most likely, against defence ${def} (a landing swings ±${PAYLOAD.swing * 100}%)">${b[0]}</span><button type="button" class="btn small primary" data-command="payload launch ${p.id} ${f}" ${off ? 'disabled' : ''}>Launch</button></span></li>`; }).join('');
+  const held = builtOf(s).map((p) => { const b = BAND[forecastStrike(s, p, f, now)]; return `<li><span><b class="iname">${glyph(p.kind === 'exfil' ? 'cipher' : 'worm', 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b><small class="cost">power ${p.power}${p.armed ? ' · armed' : ''}</small></span><span class="mk-btns"><span class="tag ${b[1]}" title="Most likely, against defence ${def} (each run swings ±${PAYLOAD.swing * 100}%)">${b[0]}</span><button type="button" class="btn small primary" data-command="payload deploy ${p.id} ${f}" ${off ? 'disabled' : ''}>Deploy</button></span></li>`; }).join('');
   const credits = PAYLOAD.credits(L), full = builtOf(s).length >= PAYLOAD.maxBuilt;
   const make = Object.entries(PAYLOADS).map(([k, P]) => {
     const ok = !full && s.server.credits >= credits && (mats[P.code] || 0) >= PAYLOAD.code && (s.salvage || []).length >= PAYLOAD.salvage;
@@ -2002,7 +2002,7 @@ function payloadMarkup(s, f, now) {
     return `<li><span><b class="iname">${glyph(P.code, 'badge')}${esc(P.name)}</b><small>${esc(P.about)}</small><small class="cost">${cost} · power ${PAYLOAD.power(L)}</small></span><span class="mk-btns"><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="payload compile ${k}" ${ok ? '' : 'disabled'}>Compile</button>${(mats.exploit || 0) >= 1 ? `<button type="button" class="btn small" data-command="payload compile ${k} exploit" ${ok ? '' : 'disabled'} title="Spend an Exploit: power ${Math.round(PAYLOAD.power(L) * PAYLOAD.armed)}">${glyph('exploit')}Arm</button>` : ''}</span></li>`;
   }).join('');
   const going = flyingOf(s).filter((x) => x.f === f);
-  const fly = going.length ? `<h3 class="craft-sub">In flight</h3><ul class="craft-list">${going.map((x) => `<li><span><b>→ ${esc(PAYLOADS[x.kind].name)} #${x.id}</b><small>${Math.max(1, Math.ceil((x.landsAt - now) / 60000))} min</small></span></li>`).join('')}</ul>` : '';
+  const fly = going.length ? `<h3 class="craft-sub">Uploading</h3><ul class="craft-list">${going.map((x) => `<li><span><b>→ ${esc(PAYLOADS[x.kind].name)} #${x.id}</b><small>${Math.max(1, Math.ceil((x.landsAt - now) / 60000))} min</small></span></li>`).join('')}</ul>` : '';
   const last = lastStrike(s), lastLine = last && last.f === f ? `<p class="svc-line">Last: ${esc(PAYLOADS[last.kind].name)} #${last.id}, ${BAND[last.band][0].toLowerCase()}${last.got.length ? ': ' + esc(last.got.join(', ')) : ''}.</p>` : '';
   return `${head}${held ? `<ul class="craft-list">${held}</ul>` : ''}${fly}${lastLine}<h3 class="craft-sub">Compile${full ? ' · hold full' : ''}</h3><ul class="craft-list">${make}</ul>`;
 }

@@ -5,7 +5,7 @@
 // recovers over real time). What you can do is read them and trade where the prices are good.
 //
 // Trades are file transfers: what you sell leaves your stock now and its credits arrive when the
-// transfer lands; what you buy is paid now and lands later. Travel time depends on the hub, and
+// transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
 import { emit, warn, materialsOf, hooks } from './combat.mjs';
 import { FACTIONS, hubsOf, hostile, repTier } from './factions.mjs';
@@ -85,13 +85,13 @@ export function trade(s, side, f, w, n, at = now()) {
   ((m.pressure[f] ||= {})[w] ||= 0);
   if (side === 'sell') {
     if (have(s, w) < n) return warn(s, `You have ${have(s, w)} ${WARES[w].name}.`);
-    // The price slides as the lot lands: average over the lot.
+    // The price slides over the lot: average over the lot.
     let credits = 0;
     for (let i = 0; i < n; i++) { credits += quote(s, f, w).sell; m.pressure[f][w] += 1; }
     if (w === 'salvage') s.salvage.splice(0, n); else materialsOf(s)[w] -= n;
     const t = { id: ++m.serial, side, f, w, n, credits, sentAt: at, landsAt: at + travelMs(s, f) };
     m.transfers.push(t);
-    return emit(s, 'transfer-out', `Sending ${n} ${WARES[w].name} to ${FACTIONS[f].short}: ${credits} credits when it lands (${Math.round((t.landsAt - at) / 60000)} min).`, { faction: f });
+    return emit(s, 'transfer-out', `Sending ${n} ${WARES[w].name} to ${FACTIONS[f].short}: ${credits} credits when it completes (${Math.round((t.landsAt - at) / 60000)} min).`, { faction: f });
   }
   let cost = 0;
   for (let i = 0; i < n; i++) { cost += quote(s, f, w).buy; m.pressure[f][w] -= 1; }
@@ -99,9 +99,9 @@ export function trade(s, side, f, w, n, at = now()) {
   s.server.credits -= cost;
   const t = { id: ++m.serial, side, f, w, n, credits: cost, sentAt: at, landsAt: at + travelMs(s, f) };
   m.transfers.push(t);
-  emit(s, 'transfer-out', `Ordered ${n} ${WARES[w].name} from ${FACTIONS[f].short} for ${cost} credits: it lands in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
+  emit(s, 'transfer-out', `Ordered ${n} ${WARES[w].name} from ${FACTIONS[f].short} for ${cost} credits: it arrives in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
 }
-// The clock (real time, offline too): transfers land, pressure eases, the world event turns over.
+// The clock (real time, offline too): transfers complete, pressure eases, the world event turns over.
 export function tickMarket(s, at = now()) {
   if (!hubsOf(s).length) return;
   const m = marketOf(s);
@@ -118,11 +118,11 @@ export function tickMarket(s, at = now()) {
   s.salvage ||= [];
   for (const t of m.transfers.filter((x) => at >= x.landsAt)) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
-    if (t.side === 'sell') { s.server.credits += t.credits; emit(s, 'transfer-in', `Transfer landed at ${FACTIONS[t.f].short}: +${t.credits} credits for ${t.n} ${WARES[t.w].name}.`, { faction: t.f }); }
+    if (t.side === 'sell') { s.server.credits += t.credits; emit(s, 'transfer-in', `Transfer complete to ${FACTIONS[t.f].short}: +${t.credits} credits for ${t.n} ${WARES[t.w].name}.`, { faction: t.f }); }
     else {
       if (t.w === 'salvage') for (let i = 0; i < t.n; i++) s.salvage.push({ name: `${FACTIONS[t.f].short} salvage`, virus: 'market', seed: 0 });
       else materialsOf(s)[t.w] = (materialsOf(s)[t.w] || 0) + t.n;
-      emit(s, 'transfer-in', `Transfer landed from ${FACTIONS[t.f].short}: +${t.n} ${WARES[t.w].name}.`, { faction: t.f });
+      emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: +${t.n} ${WARES[t.w].name}.`, { faction: t.f });
     }
   }
 }

@@ -43,7 +43,7 @@ export function launch(s) {
   const total = Math.round(FLEET.travelMs * (hasConfig(s, 'beacon') ? 1.5 : 1) * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
   s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', left: total, travel: total, siegeLeft: FLEET.siegeMs * (hasMod(target, 'node') ? 2 : 1), seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: level >= SERVER.mutationsFrom && rand(s) < 0.3 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
-  emit(s, 'fleet', `SWARM: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}) left ${o.name}, headed for your outpost on ${target.name}. They land in ${Math.round(total / 60000)} minutes.`, { location: target.id });
+  emit(s, 'fleet', `SWARM: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}) left ${o.name}, headed for your outpost on ${target.name}. They arrive in ${Math.round(total / 60000)} minutes.`, { location: target.id });
   return s.fleet;
 }
 

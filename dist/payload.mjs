@@ -1,6 +1,6 @@
-// Payloads: viruses you write to hit a faction hub, the Starsector raid. You compile one (code,
-// salvage, credits; an Exploit arms it), launch it at a hub, and it travels like a file transfer.
-// When it lands it resolves on its own against the hub's defence:
+// Payloads: viruses you write to hit a faction hub. You compile one (code, salvage, credits; an
+// Exploit arms it), deploy it at a hub, and it uploads like a file transfer. When it arrives it
+// executes on its own against the hub's defence:
 //   blocked  (under 70% of the defence): nothing gets through, the hub notices;
 //   siege    (70–100%): half a job;
 //   breach   (100% and up): the whole job.
@@ -23,7 +23,7 @@ export const PAYLOAD = {
   credits: (L) => 60 + 10 * L, code: 10, salvage: 3, // to compile
   power: (L) => 10 + 2 * L, armed: 1.5, // an Exploit makes it half again as strong
   defence: (hubLevel) => 12 + 2 * hubLevel, alertStep: 0.25, alertEaseMs: 6 * 3600000, // each strike +25% defence; one step eases every 6 hours
-  swing: 0.2, // a landing rolls ±20%
+  swing: 0.2, // each run rolls ±20%
   bands: { siege: 0.7, breach: 1 },
   rep: { blocked: -3, siege: -6, breach: -10 },
   exfil: { credits: (hubLevel) => 50 + 12 * hubLevel, code: (hubLevel) => 6 + Math.floor(hubLevel / 2) },
@@ -43,7 +43,7 @@ export const defenceOf = (s, f, at = now()) => Math.round(PAYLOAD.defence(FACTIO
 export const builtOf = (s) => payOf(s).built;
 export const flyingOf = (s) => payOf(s).flying;
 export const lastStrike = (s) => payOf(s).last;
-// What a payload would most likely do against a hub right now (before the landing's roll).
+// What a payload would most likely do against a hub right now (before the run's roll).
 export function forecastStrike(s, p, f, at = now()) {
   const r = p.power / defenceOf(s, f, at);
   return r >= PAYLOAD.bands.breach ? 'breach' : r >= PAYLOAD.bands.siege ? 'siege' : 'blocked';
@@ -54,7 +54,7 @@ export function compilePayload(s, kind, armed = false) {
   if (!P) return warn(s, `Payloads: ${Object.keys(PAYLOADS).join(', ')}.`);
   if (!hubsOf(s).length) return warn(s, 'Payloads need a target: faction hubs open with the contract board.');
   const m = payOf(s), mats = materialsOf(s), L = hackerLevel(s), credits = PAYLOAD.credits(L);
-  if (m.built.length >= PAYLOAD.maxBuilt) return warn(s, `You can hold ${PAYLOAD.maxBuilt} payloads. Launch one first.`);
+  if (m.built.length >= PAYLOAD.maxBuilt) return warn(s, `You can hold ${PAYLOAD.maxBuilt} payloads. Deploy one first.`);
   if (s.server.credits < credits) return warn(s, `A ${P.name} costs ${credits} credits.`);
   if ((mats[P.code] || 0) < PAYLOAD.code) return warn(s, `A ${P.name} takes ${PAYLOAD.code} ${P.code} code.`);
   if ((s.salvage || []).length < PAYLOAD.salvage) return warn(s, `A ${P.name} takes ${PAYLOAD.salvage} salvage.`);
@@ -66,18 +66,18 @@ export function compilePayload(s, kind, armed = false) {
   emit(s, 'payload-built', `Compiled ${P.name} #${p.id}: power ${p.power}${armed ? ', armed' : ''}.`, { payload: p.id });
 }
 
-export function launchPayload(s, id, f, at = now()) {
+export function deployPayload(s, id, f, at = now()) {
   const m = payOf(s), p = m.built.find((x) => x.id === Number(id));
   if (!p) return warn(s, 'No payload by that number.');
-  if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Launch at a faction hub.');
+  if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Deploy it at a faction hub.');
   if (offline(s, f, at)) return warn(s, `${FACTIONS[f].hub.name} is already offline.`);
   m.built.splice(m.built.indexOf(p), 1);
   const t = { ...p, f, sentAt: at, landsAt: at + travelMs(s, f) };
   m.flying.push(t);
-  emit(s, 'payload-out', `${PAYLOADS[p.kind].name} #${p.id} away to ${FACTIONS[f].hub.name}: lands in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
+  emit(s, 'payload-out', `${PAYLOADS[p.kind].name} #${p.id} uploading to ${FACTIONS[f].hub.name}: executes in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
 }
 
-// The landing: power × a roll against the hub's defence (seeded by the payload: it doesn't move the game's dice).
+// The run: power × a roll against the hub's defence (seeded by the payload: it doesn't move the game's dice).
 export function resolveStrike(s, t, at = t.landsAt) {
   const f = t.f, F = FACTIONS[f], def = defenceOf(s, f, at);
   const roll = 1 + PAYLOAD.swing * (2 * seeded((t.id * 977 + t.sentAt) >>> 0)() - 1);
@@ -113,6 +113,6 @@ export function tickPayloads(s, at = now()) {
 export function payloadCommand(s, text, at = now()) {
   const [, verb, a, b] = text.split(' ');
   if (verb === 'compile') return compilePayload(s, a, b === 'exploit' || b === 'armed');
-  if (verb === 'launch') return launchPayload(s, a, b, at);
-  return warn(s, 'payload compile exfil|wiper [exploit] · payload launch <n> <faction>');
+  if (verb === 'deploy' || verb === 'launch') return deployPayload(s, a, b, at);
+  return warn(s, 'payload compile exfil|wiper [exploit] · payload deploy <n> <faction>');
 }

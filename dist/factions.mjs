@@ -1,7 +1,6 @@
 // Factions (PvE): companies and hacker crews with servers of their own on your map. Each has a
 // hub (a shop, its contracts on the board, later a market), rep with you, and friends and
-// enemies among the others: helping one costs you with its rivals and warms its allies, the
-// Starsector way. Some of the servers you trace belong to a faction: opening one's vault is a
+// enemies among the others: helping one costs you with its rivals and warms its allies. Some of the servers you trace belong to a faction: opening one's vault is a
 // blow against its owner (and a favour to its rivals).
 //
 // Rep shares the scale and the store of Halcyon's old standing (s.standing, 0–100, tiers at
@@ -128,13 +127,17 @@ export function buyFrom(s, f, id, at = now()) {
 }
 
 // ---------- faction servers ----------
-// About a third of the servers you trace (not your first two, not rogue ones) belong to a faction.
-export const OWNED = { share: 0.32, vaultHit: 6, takeoverHit: 15 };
-export function claimServer(s, loc, r = seeded(((loc.seed || 1) * 73 + 29) >>> 0)()) { // fixed by the server's seed: it doesn't move the game's dice
+// A few of the servers you trace (about one in eight; never your first two, never rogue ones) belong
+// to a faction. Most of the net stays neutral and unclaimed.
+export const OWNED = { share: 0.12, vaultHit: 6, takeoverHit: 15 };
+const ownedRoll = (loc) => seeded(((loc.seed || 1) * 73 + 29) >>> 0)(); // fixed by the server's seed: it doesn't move the game's dice
+export function claimServer(s, loc, r = ownedRoll(loc)) {
   if (loc.rogue || loc.starter || (s.locations || []).filter((l) => !l.rogue).length <= 2 || r >= OWNED.share) return;
   const pool = FACTION_IDS.filter((f) => f !== 'halcyon'); // Halcyon insures servers; it doesn't run them out here
   loc.faction = pool[Math.floor((r / OWNED.share) * pool.length) % pool.length];
 }
+// Old saves claimed a third: let go of the servers that wouldn't be claimed now.
+export function reclaimCheck(loc) { if (loc.faction && ownedRoll(loc) >= OWNED.share) delete loc.faction; }
 // Opening a faction's vault, or taking its server over: a blow to it, a favour to its rivals.
 export function strikeServer(s, loc, how) {
   if (!loc?.faction) return;
