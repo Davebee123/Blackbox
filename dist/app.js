@@ -10,7 +10,7 @@ import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWand
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt } from './mail.mjs';
-import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms } from './comms.mjs';
+import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
 import { nextTip, markSeen } from './tips.mjs';
 import { createRain } from './rain.mjs';
 import { createWindow } from './window.mjs';
@@ -737,21 +737,25 @@ const mapZoom = { k: 1, cx: 0, cy: 0 };
 const mapSvg = () => $('page-view')?.querySelector('.map-svg');
 const baseVb = (svg) => svg.dataset.vb.split(' ').map(Number);
 // Put the card beside the selected node: to its right, or its left when there's no room.
-function placeMapPop() {
+let popAt = null; // the last spot: a redraw puts the card straight back there, so it never blinks
+function placeMapPop(measure = true) {
   const pop = $('map-pop'), canvas = pop?.closest('.map-canvas'), node = canvas?.querySelector('.mnode.selected');
   if (!pop) return;
   if (!node) { pop.style.visibility = 'hidden'; return; }
+  if (popAt && popAt.sel === mapSel) { pop.style.left = popAt.left; pop.style.top = popAt.top; pop.style.visibility = 'visible'; if (!measure) return; }
   const c = canvas.getBoundingClientRect(), n = node.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, gap = 14;
   let left = n.right - c.left + gap;
   if (left + w > c.width - 8) left = n.left - c.left - gap - w;
   left = Math.max(8, Math.min(c.width - w - 8, left));
   const top = Math.max(8, Math.min(c.height - h - 8, n.top - c.top + n.height / 2 - 40));
   pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
+  popAt = { sel: mapSel, left: pop.style.left, top: pop.style.top };
 }
 function applyMapZoom() {
   const svg = mapSvg();
   if (!svg) return;
-  requestAnimationFrame(placeMapPop);
+  placeMapPop(false); // same pass as the redraw: back where it was, no blank frame
+  requestAnimationFrame(() => placeMapPop());
   const [x, y, w, h] = baseVb(svg);
   const fix = () => { const a = svg.getScreenCTM()?.a; if (a) svg.style.setProperty('--z', a); }; // text keeps its size on screen, at any width or zoom
   if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return fix(); }
@@ -901,7 +905,7 @@ function renderMeters() {
 // The crew: a narrow side column on every page while you have a crew (none when solo).
 // (`sidebar off` hides it.)
 const crewOn = () => campaign.settings.sidebar !== false && matesOf(campaign).length > 0;
-const sidebarOn = () => crewOn() && innerWidth >= 1100;
+const sidebarOn = () => crewOn();
 let crewWin = { x: null, y: 96, collapsed: false };
 try { crewWin = { ...crewWin, ...JSON.parse(localStorage.getItem('bb-crewwin') || '{}') }; } catch { /* storage unavailable */ }
 const saveCrewWin = () => { try { localStorage.setItem('bb-crewwin', JSON.stringify(crewWin)); } catch { /* storage unavailable */ } };
@@ -1523,6 +1527,8 @@ $('comms').addEventListener('click', (e) => {
   if (f) { commsFilter = f.dataset.cfilter; dirty = true; return; }
   if (e.target.closest('[data-comms-close]')) { setComms(false); return; }
   if (e.target.closest('[data-comms-clear]')) { clearComms(campaign); save(); dirty = true; return; }
+  const cl = e.target.closest('[data-cclear]');
+  if (cl) { clearOne(campaign, Number(cl.dataset.cclear)); save(); dirty = true; return; }
   const dn = e.target.closest('[data-cdone]');
   if (dn) { markDone(campaign, Number(dn.dataset.cdone)); save(); dirty = true; return; }
   const g = e.target.closest('[data-go]');

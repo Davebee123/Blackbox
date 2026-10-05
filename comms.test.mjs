@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh } from './dist/combat.mjs';
-import { logComms, commsOf, unseen, unseenAlert, seeAll, groupOf, COMMS } from './dist/comms.mjs';
+import { logComms, commsOf, unseen, unseenAlert, seeAll, groupOf, COMMS, clearOne } from './dist/comms.mjs';
 
 test('world events go to the pager; fight chatter doesn’t', () => {
   const s = fresh();
@@ -30,4 +30,15 @@ test('a breach is an alert; restocks fold together; the list keeps the last 40',
   assert.equal(commsOf(s).filter((c) => c.kind === 'store').length, 1);
   for (let i = 0; i < 60; i++) logComms(s, [{ type: 'retainer', message: 'Halcyon retainer: +1 credits.' }]);
   assert.equal(commsOf(s).length, COMMS.keep);
+});
+
+test('each pager entry clears on its own', () => {
+  const s = fresh();
+  logComms(s, [
+    { type: 'mail', message: 'New mail from wick: hi.', letter: 1, from: 'wick', subject: 'hi' },
+    { type: 'retainer', message: 'Halcyon retainer: +38 credits.', credits: 38 },
+  ]);
+  const [a, b] = commsOf(s);
+  clearOne(s, a.id);
+  assert.deepEqual(commsOf(s).map((c) => c.id), [b.id]);
 });

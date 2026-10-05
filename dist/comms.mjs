@@ -82,5 +82,7 @@ export function pruneComms(s, now = Date.now()) {
   if (keep.length !== list.length) { s.comms = keep; return true; }
   return false;
 }
+// Clear one: that entry goes, now.
+export function clearOne(s, id) { s.comms = commsOf(s).filter((c) => c.id !== id); }
 // Clear: everything you've seen goes; what you haven't looked at yet stays.
 export function clearComms(s) { s.comms = commsOf(s).filter((c) => !c.seen); }

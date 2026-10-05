@@ -1325,7 +1325,7 @@ body.with-sidebar .workspace > .combat, body.with-sidebar .workspace > .page { g
 .sb-alerts button { display: block; width: 100%; text-align: left; white-space: normal; font-size: 12px; line-height: 1.35; }
 .sb-alerts .k { margin-right: 6px; }
 .map-page.no-side { grid-template-columns: minmax(0, 1fr); }
-@media (max-width: 1099px) { .sidebar { display: none; } }
+/* the crew column shows at every width */
 /* Slots as pips; the wall as a level ruler; the map's server card */
 .slots { display: inline-flex; align-items: center; gap: 3px; font: 500 11px var(--mono); color: var(--muted); vertical-align: middle; }
 .slots .glyph { width: 14px; height: 14px; margin-right: 4px; color: var(--amber); }
@@ -2132,3 +2132,4 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 #sidebar { padding: 8px 8px 8px 4px; }
 #sidebar .crewwin.docked .cw-head { padding-left: 6px; }
 #sidebar .crewwin.docked .cw-body { padding: 8px 6px 10px; }
+.citem .cclear { margin-left: 6px; width: 26px; padding: 0; display: inline-grid; place-items: center; font-size: 14px; line-height: 1; }
