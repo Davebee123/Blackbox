@@ -263,7 +263,7 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 - **Crew:** an online friend can be **invited** (`crew invite <friend>`) and joins your run fights as a crewmate in their class (a bot for now). `crew kick <name>` lets them go. Three at most.
 - **SPRAWL-00 is shared.** In its terminal, each folder shows who's in it or below it (a chip each, friends in violet, a red dot if they're fighting); arriving in a folder starts with *here* and who's there. The map's SPRAWL-00 node says how many are online there. Every other server is private.
 
-## Consortium and the crew strip (consortium.mjs, run.mjs)
+## Consortium and the crew on a run (consortium.mjs, run.mjs)
 
 **A consortium** is hackers who merged their servers (simulated members for now). Everyone keeps their own home server and everything on it; merging runs a **trunk line** between home servers, so every member can reach every other member's servers.
 - **Joining.** `consortium create <name>` founds one; invite people from the people panel (*Invite to consortium*) or `consortium invite <handle>`, and their server merges in. While you're in none, someone online now and then invites you (a pager entry, and a card on the people panel's **Consortium** tab): *Merge* / `consortium accept`, or `consortium decline`. Invites lapse after 10 minutes. Anyone can invite; only the founder can kick (`consortium kick <handle>`). `consortium leave` cuts the trunk line. You lose nothing of your own either way. `consortium` alone sums it up. (`guild` still works as the old name, and an old guild becomes a consortium.)
@@ -286,7 +286,7 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 
 Up to 20 servers. Crews of up to three are drawn from consortium members and friends (*Invite to crew*, `crew invite <name>`).
 
-**The crew strip** sits under the run header when you have a crew: a card for you and each crewmate with their Signal and the folder they're in.
+**On a run, the crew column** shows each crewmate's Signal, the folder they're in (⛓ when they're linked to you, ○ when they're on their own) and their controls: Split, Go to, Link, Unlink, and × to take them out of your crew; Regroup (or Split all) sits at the bottom.
 - Crewmates start **linked to you** (⛓ with you): they follow wherever you go.
 - **Split** sends one off to look around on their own (they move every few seconds, never into a guard or a locked folder by themselves); *Split all* sends everyone.
 - **Go to** takes you to them once. **Link** makes you follow them: when they move, you're pulled along ("kilo pulls you to /var/log"); any move of your own drops the link. **Unlink** drops it too.
@@ -294,7 +294,7 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 - Only the crewmates in the fight's folder fight it. In `ls`, crewmates show as violet chips in their folder; arriving says who's here.
 - The same as commands: `split <name|all>`, `goto <name>`, `link <name>`, `unlink`, `regroup`.
 - The people panel's **Crew** tab lists your crew (up to 3): each crewmate's class and where they are (with you on the run, which folder, linked or not), *Remove from crew* for each, *Disband* for all, and the open slots.
-- **Remove** takes someone out of your crew (and off the run): on their card in the crew strip, *Remove from crew* in the people panel or on the Consortium page, or `crew kick <name>`. Not mid-fight.
+- **Remove** takes someone out of your crew (and off the run): × on their row in the crew column, *Remove from crew* in the people panel or on the Consortium page, or `crew kick <name>`. Not mid-fight.
 
 ## The fight HUD
 

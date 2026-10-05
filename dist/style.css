@@ -2147,3 +2147,12 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 /* Your server on the map: the server glyph (two racks), not a square. */
 .mnode.server .srv-glyph rect { fill: rgba(127, 209, 199, 0.12); stroke: var(--you); stroke-width: 1; }
 .mnode.server .srv-glyph path { stroke: var(--you); stroke-width: 1.6; stroke-linecap: round; }
+/* Run controls in the crew column. */
+.crewwin .pmate .pm-run { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 2px; }
+.pm-where { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 11px; color: var(--muted); }
+.pm-where code { font: 11px var(--mono); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-where .cs-link { color: var(--daemon); }
+.pm-acts { display: flex; gap: 2px; flex: none; }
+.pm-acts .act { padding: 2px 5px; font-size: 11px; }
+.cw-foot { display: flex; justify-content: flex-end; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+.cw-foot .act { font-size: 11px; }

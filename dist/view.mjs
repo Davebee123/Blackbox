@@ -842,28 +842,6 @@ export function netTranscript(s, limit = 80) {
   return earlier + lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : esc(e.message) + suggestButton(e)}</li>`).join('');
 }
 
-// The crew strip (run.mjs crewMove / crewWander): where each crewmate is on this server, linked
-// to you or off on their own, with Go to / Link / Split, and Regroup when anyone's apart.
-function crewStrip(s, loc) {
-  const crew = Object.entries(s.run.crew || {});
-  if (!crew.length) return '';
-  const mates = Object.fromEntries(matesOf(s).map((m) => [m.who, m]));
-  const card = ([name, c]) => {
-    const m = mates[name], cls = (s.crewSim || []).find((x) => x.name === name)?.cls, sig = m?.run ? Math.round((m.run.integrity / m.run.max) * 100) : 100;
-    const linkedYou = c.link === 'you', youFollow = s.run.linkedTo === name, here = c.cwd === s.run.cwd;
-    const state = linkedYou ? '<span class="cs-link">⛓ with you</span>' : youFollow ? '<span class="cs-link lead">⛓ you follow</span>' : '<span class="cs-off">on their own</span>';
-    const acts = [
-      linkedYou ? `<button type="button" class="act" data-run="split ${esc(name)}">Split</button>` : '',
-      !linkedYou && !here ? `<button type="button" class="act" data-run="goto ${esc(name)}">Go to</button>` : '',
-      !linkedYou && !youFollow ? `<button type="button" class="act" data-run="link ${esc(name)}">Link</button>` : '',
-      youFollow ? '<button type="button" class="act" data-run="unlink">Unlink</button>' : '',
-      `<button type="button" class="act dim" data-run="crew kick ${esc(name)}" title="Take ${esc(name)} out of your crew">Remove</button>`,
-    ].join('');
-    return `<div class="cs-card${linkedYou || youFollow ? ' linked' : ''}${here ? ' here' : ''}"><div class="cs-top"><b>${esc(name)}</b><small>${cls ? esc(ARCHETYPES[cls].name) : ''}</small></div><span class="cs-sig"><span style="width:${sig}%"></span></span><div class="cs-where">${esc(c.cwd)}</div><div class="cs-state">${state}</div><div class="cs-acts">${acts}</div></div>`;
-  };
-  const apart = crew.some(([, c]) => c.link !== 'you');
-  return `<div class="crew-strip"><div class="cs-card you"><div class="cs-top"><b>you</b><small>${esc(ARCHETYPES[classOf(s)].name)}</small></div><span class="cs-sig"><span style="width:${(s.run.integrity / s.run.max) * 100}%"></span></span><div class="cs-where">${esc(s.run.cwd)}</div>${apart ? '<div class="cs-acts"><button type="button" class="act" data-run="regroup">Regroup</button></div>' : `<div class="cs-acts"><button type="button" class="act dim" data-run="split all">Split all</button></div>`}</div>${crew.map(card).join('')}</div>`;
-}
 
 export const signalLevel = (run) => (run.integrity / run.max <= 0.3 ? 'low' : run.integrity / run.max <= 0.6 ? 'mid' : 'ok');
 
@@ -880,7 +858,6 @@ export function netMarkup(s) {
       <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${CONFIG.cdCost}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small></div>
       <button type="button" class="net-pack" data-run="pack" title="What you're carrying (unbanked)">pack <b>${s.run.pack.length}</b></button>
     </header>
-    ${crewStrip(s, loc)}
     <ol class="term" id="term">${netTranscript(s)}</ol>
   </section>`;
 }
@@ -1861,12 +1838,27 @@ export function sawTab(s, tab) {
 // ---------- the sidebar: on every page, fights included ----------
 // You (your health), your crew (live bars in a fight), then what this page is about: the map's
 // selection, the virus you're fighting, or what needs you. Narrow screens and `sidebar off` hide it.
+// On a run (out of a fight): where a crewmate is, whether they're linked to you, and what you can do.
+function runMate(s, name) {
+  const c = s.run?.crew?.[name];
+  if (!c) return '';
+  const linkedYou = c.link === 'you', youFollow = s.run.linkedTo === name, here = c.cwd === s.run.cwd;
+  const state = linkedYou ? '<span class="cs-link" title="Linked: they move with you">⛓</span>' : youFollow ? '<span class="cs-link lead" title="You follow them">⛓ ←</span>' : '<span class="cs-off" title="On their own">○</span>';
+  const acts = [
+    linkedYou ? `<button type="button" class="act" data-run="split ${esc(name)}">Split</button>` : '',
+    !linkedYou && !here ? `<button type="button" class="act" data-run="goto ${esc(name)}">Go to</button>` : '',
+    !linkedYou && !youFollow ? `<button type="button" class="act" data-run="link ${esc(name)}">Link</button>` : '',
+    youFollow ? '<button type="button" class="act" data-run="unlink">Unlink</button>' : '',
+    `<button type="button" class="act dim" data-run="crew kick ${esc(name)}" title="Take ${esc(name)} out of your crew">×</button>`,
+  ].join('');
+  return `<div class="pm-run"><span class="pm-where">${state}<code>${esc(c.cwd)}</code></span><span class="pm-acts">${acts}</span></div>`;
+}
 const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${mates.map((m) => {
         const live = inFight && m.encounter, up = !live || mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = live ? m.encounter.queue : null;
         // What they mean to do this cycle: the skill (its verb's colour and icon) and the part.
         const a = q && ABILITIES[q.ability], tgt = q?.target && part(s, q.target);
         const intent = !live ? '' : !up ? '<div class="pm-intent dim">down</div>' : a ? `<div class="pm-intent verb-${a.verb}" title="${esc(a.help || a.short || '')}">${glyph(a.verb)}<b>${esc(a.name)}</b>${tgt ? `<span class="pm-at">→ ${esc(tgt.name)}</span>` : ''}${q.last ? '<small>last</small>' : ''}</div>` : '<div class="pm-intent dim">holding</div>';
-        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)} <span class="pm-lv">Lv ${hackerLevel(m)}</span></small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small>${intent}</div>`;
+        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)} <span class="pm-lv">Lv ${hackerLevel(m)}</span></small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small>${intent}${!inFight ? runMate(s, m.who) : ''}</div>`;
       }).join('')}</div>`;
 // The crew window (app.js floats it, draggable): the crew as they'll join you, live in a run fight
 // (bars, who's down, what each means to do this cycle). Only there when you have a crew.
@@ -1874,7 +1866,9 @@ export function crewWindowMarkup(s, { preview = null, collapsed = false } = {}) 
   const mates = matesOf(s);
   if (!mates.length) return '';
   const inFight = active(s) && s.encounter.mode === 'run';
-  return `<header class="cw-head"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small><button type="button" class="cw-btn" data-cw-toggle title="${collapsed ? 'Expand' : 'Collapse'}">${collapsed ? '▸' : '▾'}</button></header>${collapsed ? '' : `<div class="cw-body sb-crew">${crewParty(s, preview)}</div>`}`;
+  const apart = s.run && Object.values(s.run.crew || {}).some((c) => c.link !== 'you');
+  const foot = s.run && !inFight && Object.keys(s.run.crew || {}).length ? `<div class="cw-foot">${apart ? '<button type="button" class="act" data-run="regroup">Regroup</button>' : '<button type="button" class="act dim" data-run="split all">Split all</button>'}</div>` : '';
+  return `<header class="cw-head"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small><button type="button" class="cw-btn" data-cw-toggle title="${collapsed ? 'Expand' : 'Collapse'}">${collapsed ? '▸' : '▾'}</button></header>${collapsed ? '' : `<div class="cw-body sb-crew">${crewParty(s, preview)}${foot}</div>`}`;
 }
 function crewParty(s, preview) {
   const fighting = active(s), e = s.encounter;
