@@ -449,6 +449,32 @@ Once you run an outpost, the network organises against it.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
 
+## Threats at a glance
+
+Everything that comes at you, in one place. *Logged-on* clocks only run while you're playing; *real* clocks run offline too.
+
+| Threat | Hits | Comes from | How often | Its clock | You | Ignored | Beat it |
+|---|---|---|---|---|---|---|---|
+| **Invader** | Your home server's wall | A location you've found | First 3 min after your first find, then 6–10 min after the last (logged-on) | Travels 2 min + 1 a layer, then **Blocked**, **Siege** or **Breach** at the wall | **Jack in** (`jack in`) | Siege and breach chip your Integrity; at 0 the server crashes (Degraded mode) | A home kill |
+| **Outpost siege** | One of your outposts | That server's natives | About every 6 h (real) | 10 min to defend (logged-on); makes nothing meanwhile | **Defend** (outpost card) | Lockdown | Kill XP (Honeytoken: + an hour's harvest) |
+| **Infestation** | One of your outposts | 2–3 wild viruses | Every 2 h ÷ outposts, never under 40 min (logged-on) | Stays 20 min | **Clear**, a fight each (`outpost clear`) | They leave; nothing lost | +1 h of yield, XP |
+| **Swarm** | One of your outposts | 2–4 processes from past it | First 45 min after your first outpost, then 90–150 min (real) | Travels 10 min (real), then an 8-min siege (logged-on); makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
+| **Faction swarm** | One of your outposts | A Hostile faction you just struck | Once a strike | As a swarm, in the faction's colours | As a swarm | As a swarm | As a swarm |
+| **Retake** | A hub you hold | Its old owner, while Hostile | 30 min after the capture, then 2–4 h (real) | Travels 10 min (real), then an 8-min siege (logged-on); hub earns nothing meanwhile | **Intercept** / **Defend**, a fight a process (`hub defend`) | Hub lockdown | Code, salvage, XP |
+| **Member siege** | A consortium member's outpost | Its natives | Every 10–18 min (logged-on) | 8 min | **Defend for a bounty** (`consortium defend <server>`) | Half the time a member stops it; else lockdown (no dividend) | Bounty: credits, code, XP |
+| **Raid** | An away member's wall | An invader | Every 15–25 min (logged-on) | 8 min | **Defend** (`consortium defend <handle>`) | Half the time a member stops it; else their server crashes and is **occupied** | Bounty |
+| **Travelling virus** | Another outpost, a member's or yours | The winner of a lockdown or crash, a level stronger | After a lockdown or crash; up to 3 hops | Arrives in 10 min as a new siege | **Intercept** (`consortium intercept`) | It sieges where it arrives | Bounty, +50% a hop |
+
+What they leave behind, if nobody stops them:
+
+| State | On | Lasts | Means | End it sooner |
+|---|---|---|---|---|
+| **Lockdown** (outpost) | Your outpost | 2 h (real) | No harvesting; stockpile kept; nothing past it is cut off | **Retake** (`outpost retake`) |
+| **Lockdown** (member outpost) | A member's outpost | 2 h | No dividend | **Retake for a bounty** |
+| **Hub lockdown** | A hub you hold | Until cleared | No income; still yours | **Clear**, one fight (`hub clear`) |
+| **Degraded** | Your home server | A reboot | Wall down, installs paused, no server XP | Wait it out |
+| **Occupied** | A member's crashed server (yours, if it crashes while you're away in a consortium) | 2 h reboot | Its outposts pay no dividend | Clear every folder for a bounty |
+
 ## Invasions and the wall
 
 The idle layer. While you're logged on, the locations you've found send viruses back along the network to your server, **one at a time**. On the Map an invader moves in from its location; the Server page's **Wall** card and the top bar say what it's doing.
