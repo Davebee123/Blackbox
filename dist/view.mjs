@@ -1874,7 +1874,7 @@ export function crewWindowMarkup(s, { preview = null, collapsed = false } = {}) 
   const mates = matesOf(s);
   if (!mates.length) return '';
   const inFight = active(s) && s.encounter.mode === 'run';
-  return `<header class="cw-head" data-cw-drag title="Drag to move"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small><button type="button" class="cw-btn" data-cw-toggle title="${collapsed ? 'Expand' : 'Collapse'}">${collapsed ? '▸' : '▾'}</button></header>${collapsed ? '' : `<div class="cw-body sb-crew">${crewParty(s, preview)}</div>`}`;
+  return `<header class="cw-head"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small><button type="button" class="cw-btn" data-cw-toggle title="${collapsed ? 'Expand' : 'Collapse'}">${collapsed ? '▸' : '▾'}</button></header>${collapsed ? '' : `<div class="cw-body sb-crew">${crewParty(s, preview)}</div>`}`;
 }
 function crewParty(s, preview) {
   const fighting = active(s), e = s.encounter;

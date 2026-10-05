@@ -898,39 +898,28 @@ function renderMeters() {
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
 }
 
-// No side panel: the crew floats in its own window (below), so every page keeps its full width.
-const sidebarOn = () => false;
-// The crew window: there whenever you have a crew, on every page; drag it by its title bar,
-// collapse it to the bar. Where it sits is remembered. (`sidebar off` hides it.)
+// The crew: pinned at the top left of every page; in a fight, a small side column holds it instead
+// so it never covers the board. (`sidebar off` hides it.)
+const crewOn = () => campaign.settings.sidebar !== false && matesOf(campaign).length > 0;
+const sidebarOn = () => crewOn() && innerWidth >= 1100 && module === 'combat' && active(campaign);
 let crewWin = { x: null, y: 96, collapsed: false };
 try { crewWin = { ...crewWin, ...JSON.parse(localStorage.getItem('bb-crewwin') || '{}') }; } catch { /* storage unavailable */ }
 const saveCrewWin = () => { try { localStorage.setItem('bb-crewwin', JSON.stringify(crewWin)); } catch { /* storage unavailable */ } };
+// Pinned at the top left of the page area, just inside it.
 function placeCrewWin() {
-  const el = $('crewwin');
-  if (!el || el.hidden) return;
-  const w = el.offsetWidth, h = el.offsetHeight;
-  const x = crewWin.x ?? innerWidth - w - 24;
-  el.style.left = Math.max(4, Math.min(innerWidth - w - 4, x)) + 'px';
-  el.style.top = Math.max(4, Math.min(innerHeight - Math.min(h, 40) - 4, crewWin.y)) + 'px';
+  const el = $('crewwin'), area = $('page-view');
+  if (!el || el.hidden || !area) return;
+  const r = area.getBoundingClientRect();
+  el.style.left = r.left + 12 + 'px';
+  el.style.top = r.top + 12 + 'px';
 }
-function renderCrewWin(s) {
-  const on = campaign.settings.sidebar !== false && matesOf(s).length > 0;
+function renderCrewWin(s, docked) {
+  const on = crewOn() && !docked && module !== 'net'; // a run shows its crew itself
   $('crewwin').hidden = !on;
   if (!on) return;
   put('crewwin', V.crewWindowMarkup(s, { preview: aimPreview, collapsed: crewWin.collapsed }));
   placeCrewWin();
 }
-let crewDrag = null;
-document.addEventListener('pointerdown', (e) => {
-  const h = e.target.closest('[data-cw-drag]');
-  if (!h || e.target.closest('button')) return;
-  const r = $('crewwin').getBoundingClientRect();
-  crewDrag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
-  h.setPointerCapture?.(e.pointerId);
-  e.preventDefault();
-});
-document.addEventListener('pointermove', (e) => { if (!crewDrag) return; crewWin.x = e.clientX - crewDrag.dx; crewWin.y = e.clientY - crewDrag.dy; placeCrewWin(); });
-document.addEventListener('pointerup', () => { if (crewDrag) { crewDrag = null; saveCrewWin(); } });
 document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggle]')) { crewWin.collapsed = !crewWin.collapsed; saveCrewWin(); dirty = true; } });
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
@@ -949,8 +938,8 @@ function render(force = false) {
   const side = sidebarOn();
   document.body.classList.toggle('with-sidebar', side);
   $('sidebar').hidden = !side;
-  if (side) put('sidebar', V.sidebarMarkup(s, { module: combatLike && hasFight ? 'combat' : module, mapSel, mapView, preview: aimPreview }));
-  renderCrewWin(s);
+  if (side) put('sidebar', `<section class="crewwin docked">${V.crewWindowMarkup(s, { preview: aimPreview })}</section>`);
+  renderCrewWin(s, side);
   if (combatLike && hasFight) {
     put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }));
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
