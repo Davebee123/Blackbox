@@ -2256,3 +2256,12 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 /* The server card's two levels: the server's (amber), your class's under it (your colour). */
 .srv-line .srv-bar.xp.you > span { background: var(--you); }
 .srv-line .srv-n small { color: var(--dim); font-weight: 500; margin-right: 2px; }
+/* HOME's two level bars on the map: the server's (amber), your class's under it (your colour). */
+.mbars { transform: scale(calc(1 / var(--z, 1))); }
+.mnode.server .mbars rect { stroke-width: 0.6; }
+.mnode.server .mbars .srv .hb-track { fill: rgba(241, 185, 47, 0.1); stroke: rgba(241, 185, 47, 0.35); }
+.mnode.server .mbars .srv .hb-fill { fill: var(--amber); stroke: none; }
+.mnode.server .mbars .you .hb-track { fill: rgba(127, 209, 199, 0.08); stroke: rgba(127, 209, 199, 0.35); }
+.mnode.server .mbars .you .hb-fill { fill: var(--you); stroke: none; }
+.mbars .hb-n { font: 600 9px var(--mono); }
+.mbars .srv .hb-n { fill: var(--amber); } .mbars .you .hb-n { fill: var(--you); }

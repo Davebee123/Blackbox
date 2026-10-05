@@ -1214,6 +1214,12 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 }
 
 // ---------- the map ----------
+// Under HOME on the map: the server's level as a bar, your class's under it (the level at the left).
+function homeBars(s) {
+  const sp = serverProgress(s), hk = hackerOf(s), hn = hk.level < LOADOUT.maxLevel ? xpToNext(hk.level) : 0;
+  const row = (y, cls, lv, frac, tip) => `<g class="hb ${cls}" transform="translate(0 ${y})"><title>${esc(tip)}</title><text x="-32" y="3" class="hb-n" text-anchor="end">${lv}</text><rect x="-28" y="-2" width="56" height="4" rx="1" class="hb-track"/><rect x="-28" y="-2" width="${(56 * Math.min(1, frac)).toFixed(1)}" height="4" rx="1" class="hb-fill"/></g>`;
+  return `<g transform="translate(0 50)"><g class="mbars">${row(0, 'srv', sp.level, sp.next ? sp.xp / sp.next : 1, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ''}`)}${row(10, 'you', hk.level, hn ? hk.xp / hn : 1, `${ARCHETYPES[classOf(s)].name} level ${hk.level}${hn ? `: ${hk.xp}/${hn} XP` : ''}`)}</g></g>`;
+}
 // Your server sits at the centre. Each virus family owns a direction; its
 // origins sit on the first ring, and deeper layers branch outward from the
 // node that pointed to them. Leads in progress are ghost nodes.
@@ -1392,7 +1398,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
     if (n.kind === 'server') {
       const srv = s.server;
-      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME · LV ${serverLevel(s)}</text><text y="53" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
+      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME</text>${homeBars(s)}<text y="76" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
