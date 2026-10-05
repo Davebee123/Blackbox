@@ -619,9 +619,9 @@ Who acts in a cycle, in order: **your queued command (or, with nothing typed, a 
 
 ## Daemons
 
-Daemons are programs you **find**: a `daemon.exe` waits in 10% of vaults (fixed per location), guards drop one 1% of the time (into your pack) and home kills 0.25%. Finding one you already have **upgrades** it (v1 → v2 → v3: its numbers ×1, ×1.5, ×2, and they grow with your power); past v3 it's 3 salvage. A daemon you find isn't slotted for you: you choose on the Daemons page.
+Daemons are programs you **find**: a `daemon.exe` waits in 10% of vaults (fixed per location), guards drop one 1% of the time (into your pack) and home kills 0.25%. Finding one you already have **upgrades** it (v1 → v2 → v3: its numbers ×1, ×1.5, ×2, and they grow with your power); past v3 it's 3 salvage. A daemon you find isn't slotted for you: you choose on the Loadout page's **Daemons** tab (between Protocols and Skills and talents; `daemons` opens it).
 
-A **slotted daemon acts on its own cooldown, in addition to your order**, right after you act. Its chip sits on the *You* row in the cycle it acts next. The once-per-fight daemons wait for their moment. **Slots:** 1, +1 at server level 10 and 20, Operators +1. Commands (between fights): `daemon list`, `daemon slot <name>`, `daemon unslot <name>`, or the Daemons page. No daemon jacks you in or out.
+A **slotted daemon acts on its own cooldown, in addition to your order**, right after you act. Its chip sits on the *You* row in the cycle it acts next. The once-per-fight daemons wait for their moment. **Slots:** 1, +1 at server level 10 and 20, Operators +1. Commands (between fights): `daemon list`, `daemon slot <name>`, `daemon unslot <name>`, or the Loadout page's Daemons tab. No daemon jacks you in or out.
 
 | Daemon | What it does (v1) | Cooldown |
 |---|---|---:|
@@ -679,6 +679,7 @@ The log and the terminal still speak (that's the MUD's voice): what happened, in
 Pages show instead of explaining; the words are in the hover.
 
 - **Wall: a level ruler.** Teal for invasion levels your wall stops, amber for the ones it contests, red hatching for the ones that break through, with your server marked on it (`server N`) and the incoming invasion too (`GHOSTROOT N`); each level is a cell, and the marks and the scale's numbers sit on the middle of theirs (a number a mark already shows isn't repeated). The Server page has the full ruler with its numbers; the map's server card has a thin one, and in a consortium a second thin one for while you're away.
+- **The top bar:** the pages on the left; in the middle who you are (handle · class · level, the class's XP as a thin bar under it); on the right the people button, the pager, then Integrity, Signal and credits.
 - **HOME on the map:** its name, then two thin bars, the server's level (amber) and your class's under it (your colour), each with its level at the left (hover for XP), then Integrity.
 - **The map's server card:** two level bars at the top, the server's (amber) and your class's under it (named for the class, in your colour), each with its level at the end (hover for XP), an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, service slots as a strip of tiles, and Memory, Outposts (running / slots) and Salvage as counts. Your packed harvesters are on the Craft page, not the server card. An install in progress shows as a small bar.
 - **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols, Configs and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid).

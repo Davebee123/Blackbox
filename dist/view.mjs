@@ -1187,8 +1187,8 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', `Protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['skills', `Skills and talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
-    ${tab === 'skills' ? `
+    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', `Protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['skills', `Skills and talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
+    ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'skills' ? `
     <div class="loadout-grid">
       <section class="card skills-card">
         <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>` : '<span>max level</span>'}</div></div>
@@ -1214,11 +1214,11 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 }
 
 // ---------- the map ----------
-// Under HOME on the map: the server's level as a bar, your class's under it (the level at the left).
+// Under HOME on the map: the server's level as a bar (the level at the left).
 function homeBars(s) {
-  const sp = serverProgress(s), hk = hackerOf(s), hn = hk.level < LOADOUT.maxLevel ? xpToNext(hk.level) : 0;
+  const sp = serverProgress(s);
   const row = (y, cls, lv, frac, tip) => `<g class="hb ${cls}" transform="translate(0 ${y})"><title>${esc(tip)}</title><text x="-32" y="3" class="hb-n" text-anchor="end">${lv}</text><rect x="-28" y="-2" width="56" height="4" rx="1" class="hb-track"/><rect x="-28" y="-2" width="${(56 * Math.min(1, frac)).toFixed(1)}" height="4" rx="1" class="hb-fill"/></g>`;
-  return `<g transform="translate(0 50)"><g class="mbars">${row(0, 'srv', sp.level, sp.next ? sp.xp / sp.next : 1, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ''}`)}${row(10, 'you', hk.level, hn ? hk.xp / hn : 1, `${ARCHETYPES[classOf(s)].name} level ${hk.level}${hn ? `: ${hk.xp}/${hn} XP` : ''}`)}</g></g>`;
+  return `<g transform="translate(0 50)"><g class="mbars">${row(0, 'srv', sp.level, sp.next ? sp.xp / sp.next : 1, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ''}`)}</g></g>`;
 }
 // Your server sits at the centre. Each virus family owns a direction; its
 // origins sit on the first ring, and deeper layers branch outward from the
@@ -1398,7 +1398,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
     if (n.kind === 'server') {
       const srv = s.server;
-      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME</text>${homeBars(s)}<text y="76" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
+      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME</text>${homeBars(s)}<text y="68" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
@@ -1541,9 +1541,8 @@ function mapSide(s, sel, node) {
     const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
     return `${runCard}${alertCard()}${occ}
       <section class="card srv-card"><h2>Your server</h2>
-        ${(() => { const sp = serverProgress(s), hk = hackerOf(s), hl = hk.level, hn = hl < LOADOUT.maxLevel ? xpToNext(hl) : 0;
-          return srvLine('integrity', 'Server', `<span class="srv-bar xp"><span style="width:${sp.next ? (sp.xp / sp.next) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${sp.level}`, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ' (max)'}`)
-            + srvLine('xp', ARCHETYPES[classOf(s)].name, `<span class="srv-bar xp you"><span style="width:${hn ? (hk.xp / hn) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${hl}`, `${ARCHETYPES[classOf(s)].name} level ${hl}${hn ? `: ${hk.xp}/${hn} XP` : ' (max)'}`); })()}
+        ${(() => { const sp = serverProgress(s);
+          return srvLine('integrity', 'Server', `<span class="srv-bar xp"><span style="width:${sp.next ? (sp.xp / sp.next) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${sp.level}`, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ' (max)'}`); })()}
         ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
         ${srvLine('firewall', 'Wall', wallRuler(s, true), '', 'Which invasion levels your wall stops')}
         ${degradedMarkup(s)}${awayLine(s)}

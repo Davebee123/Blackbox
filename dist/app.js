@@ -565,6 +565,8 @@ function run(raw) {
   // Ability names win over page names during a fight ("trace" is both).
   const fighting = active(shown());
   const page = ALIAS[text] || text;
+  // Daemons live on the Loadout page now (a tab beside Protocols).
+  if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
   if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; return go(page); }
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
@@ -645,6 +647,7 @@ function shellCommand(arg) {
 
 function go(name, quiet = false) {
   aimPreview = null;
+  if (name === 'daemons') { loadoutTab = 'daemons'; name = 'loadout'; } // a Loadout tab now
   // Contextual tabs only exist while there is something there.
   if (name === 'combat' && !active(campaign) && !(campaign.encounter && campaign.encounter.mode === 'run')) name = 'map';
   if (name === 'net' && !campaign.run) name = 'map';
@@ -817,6 +820,12 @@ function renderMeters() {
   $('level-value').textContent = 'Lv ' + h.level;
   $('level-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
   $('meter-level').title = `${V.className(cls)} level ${h.level} of 50${h.level < 50 ? ` · ${h.xp}/${V.xpNeeded(h.level)} XP to level ${h.level + 1}` : ' (max)'}. Each class levels on its own; every level adds 4% power.`;
+  // Top centre: who you are (handle · class · level), the class's XP as a thin bar under it.
+  $('who-handle').textContent = campaign.profile?.handle || 'rookie';
+  $('who-class').textContent = V.className(cls);
+  $('who-lv').textContent = h.level;
+  $('who-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
+  $('whoami').title = `${h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`}`;
   const pct = (srv.integrity / srv.max) * 100;
   $('integrity-fill').style.width = pct + '%';
   $('integrity-value').textContent = srv.integrity;
@@ -879,9 +888,10 @@ function renderMeters() {
   const need = alertsOf(campaign).length + (campaign.consortiumInvite && !consortiumOf(campaign) ? 1 : 0);
   $('con-count').hidden = !need;
   $('con-count').textContent = need;
-  for (const t of ['loadout', 'craft', 'daemons']) {
-    if (module === t) V.sawTab(campaign, t); // you're looking at it
-    const n = V.newOn(campaign, t), el = $('new-' + t);
+  if (module === 'loadout' && loadoutTab === 'daemons') V.sawTab(campaign, 'daemons'); // daemons are a Loadout tab
+  for (const t of ['loadout', 'craft']) {
+    if (module === t && !(t === 'loadout' && loadoutTab === 'daemons')) V.sawTab(campaign, t); // you're looking at it
+    const n = V.newOn(campaign, t) + (t === 'loadout' ? V.newOn(campaign, 'daemons') : 0), el = $('new-' + t);
     el.hidden = !n;
     el.textContent = n;
     el.title = `${n} new`;

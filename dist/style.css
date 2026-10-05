@@ -2265,3 +2265,14 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mnode.server .mbars .you .hb-fill { fill: var(--you); stroke: none; }
 .mbars .hb-n { font: 600 9px var(--mono); }
 .mbars .srv .hb-n { fill: var(--amber); } .mbars .you .hb-n { fill: var(--you); }
+/* Top centre: who you are. Handle · class · level, the class's XP as a thin bar under it. */
+.whoami { margin: 0 auto; display: grid; grid-template-columns: auto auto auto auto auto; align-items: baseline; column-gap: 7px; row-gap: 3px; font: 600 12px var(--mono); letter-spacing: 0.06em; color: var(--muted); }
+.whoami #who-handle { color: var(--bright); letter-spacing: 0.08em; }
+.whoami #who-class { color: var(--you); text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em; }
+.whoami .who-lv { color: var(--muted); font-size: 11px; } .whoami .who-lv b { color: var(--bright); font-size: 13px; }
+.whoami .who-dot { color: var(--dim); }
+.whoami .who-bar { grid-column: 1 / -1; height: 3px; background: rgba(127, 209, 199, 0.12); border-radius: 2px; overflow: hidden; }
+.whoami .who-bar span { display: block; height: 100%; background: var(--you); }
+/* The pager sits by the server's meters now, just left of Integrity. */
+.topbar .pager { margin-left: 0; }
+@media (max-width: 900px) { .whoami { display: none; } }
