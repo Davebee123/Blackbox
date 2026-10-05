@@ -1344,7 +1344,7 @@ h1 .slots { font-size: 13px; } h1 .slots i { width: 13px; height: 13px; } h1 .sl
 .wall-ruler.compact .wr-mark small { display: none; }
 .wr-mark.inv i { background: var(--hot); box-shadow: 0 0 6px var(--hot); } .wr-mark.inv small { color: var(--hot); top: calc(100% + 14px); }
 .wr-scale { position: absolute; left: 0; right: 0; top: 24px; height: 12px; font: 10px var(--mono); color: var(--dim); }
-.wr-scale span { position: absolute; transform: translateX(-50%); } .wr-scale span:first-child { transform: none; } .wr-scale span:last-child { transform: translateX(-100%); }
+.wr-scale span { position: absolute; transform: translateX(-50%); }
 .wall-ruler.down { padding: 6px 10px; border: 1px dashed var(--hot); color: var(--hot); font: 11px var(--mono); }
 .srv-card .lvl-row { margin-bottom: 10px; }
 .srv-hp { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--you); }
@@ -2242,3 +2242,14 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .craft-list .plan-lock { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; white-space: nowrap; padding: 2px 7px; line-height: 16px; }
 .craft-list .plan-lock .glyph { margin: 0; }
 .craft-list .iname .tag.you { margin-left: 8px; font-size: 10px; line-height: 16px; padding: 0 5px; }
+/* A broken part's last moment: its row flickers and dissolves while bits rise off it (hitfx.mjs). */
+.brow.dying { pointer-events: none; animation: part-dissolve 1s steps(10, end) forwards; }
+.brow.dying .bname { color: var(--amber); }
+@keyframes part-dissolve {
+  0% { opacity: 1; filter: none; clip-path: inset(0 0 0 0); background: rgba(255, 236, 190, 0.25); }
+  20% { opacity: 1; filter: brightness(1.6); }
+  50% { opacity: 0.7; filter: blur(0.5px) brightness(1.2); clip-path: inset(0 0 0 0); }
+  100% { opacity: 0; filter: blur(2px); clip-path: inset(0 0 0 100%); background: transparent; }
+}
+.fx-bit.dissolve { opacity: 0; animation-fill-mode: both; color: var(--amber); font-size: 14px; text-shadow: 0 0 6px rgba(241, 185, 47, 0.8); }
+@media (prefers-reduced-motion: reduce) { .brow.dying { animation: none; opacity: 0.3; } }

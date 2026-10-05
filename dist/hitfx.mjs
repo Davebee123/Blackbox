@@ -53,5 +53,19 @@ export function createHitFx(board, { canMove = () => true } = {}) {
     name.classList.add('fx-jolt'); if (result === 'crit' || result === 'miss') name.classList.add(result);
     setTimeout(() => name.classList.remove('fx-jolt', 'crit', 'miss'), 500);
   }
-  return { strike };
+  // A part broken: its row dissolves (style.css .dying) while 1s and 0s rise off it and scatter.
+  function dissolve(row) {
+    if (!row?.isConnected || !canMove()) return;
+    const f = frame(), r = local(f, row.getBoundingClientRect());
+    for (let i = 0; i < 46; i++) {
+      const x = r.l + Math.random() * r.w * 0.55, y = r.t + r.h * (0.2 + Math.random() * 0.6);
+      add('fx-bit dissolve', {
+        left: x + 'px', top: y + 'px',
+        '--tx': (Math.random() - 0.3) * 70 + 'px', '--ty': -(20 + Math.random() * 60) + 'px',
+        '--r': '0deg', '--s': (0.6 + Math.random() * 0.5).toFixed(2),
+        '--d': (0.6 + Math.random() * 0.5).toFixed(2) + 's', animationDelay: (Math.random() * 0.45).toFixed(2) + 's',
+      }, Math.random() < 0.5 ? '0' : '1', 1700);
+    }
+  }
+  return { strike, dissolve };
 }

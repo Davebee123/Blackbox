@@ -128,6 +128,7 @@ function strikes(events) {
   for (const { e, result } of hits.values()) pendingStrikes.push(() => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result }));
 }
 let pendingStrikes = [];
+const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
 const art = createArt({
   getState: shown,
@@ -395,7 +396,12 @@ function react(events) {
         if (!mate) { sideFx('.brow.byou', row(e.target), 'you'); holdYou(); }
         break;
       }
-      case 'broken': art.hit(e.target, 'break'); flash(e.message); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
+      case 'broken': {
+        // It stays on the board a moment and dissolves into bits before it joins the broken list.
+        const bp = part(campaign, e.target);
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, DISSOLVE_MS + 50); pendingStrikes.push(() => hitfx.dissolve(partRow(e.target))); }
+      }
+        art.hit(e.target, 'break'); flash(e.message); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
         art.hit(e.source, 'attack');
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
@@ -417,7 +423,7 @@ function react(events) {
       case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
-      case 'jacked-out': feel.add('hangup', null); if (e.gains) { const name = e.message.match(/^JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
+      case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/^JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
       case 'station': feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); break;
       case 'invasion-cleared': if (!won) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
@@ -1246,7 +1252,7 @@ addEventListener('resize', () => placeTip());
 // Who did it, to what: the actor's row lights in its side's colour and the target takes the mark.
 // Your half of the cycle resolves the instant you press Enter: keep it lit long enough to see.
 const hold = (key, ms) => { const e = campaign.encounter; if (e) Object.defineProperty(e, key, { value: Date.now() + ms, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, ms + 50); };
-const holdYou = () => hold('_youUntil', 550), holdThem = () => hold('_themUntil', 1500); // the virus's half lingers 1.5 s: plain whose turn it was
+const holdYou = () => hold('_youUntil', 550), holdThem = () => hold('_themUntil', 300); // just long enough to see the hit land: then it's your move, and the board says so
 // Marks outlive a board redraw: they're re-applied after each render until they expire.
 let sideMarks = [];
 function sideFx(from, to, side) {
@@ -1266,7 +1272,7 @@ function applySideMarks() {
 // combat.mjs), so you can follow who did what. The virus's answer waits a little longer.
 hooks.stepped = true;
 const STEP_MS = { relaxed: 380, normal: 330, fast: 260 };
-const VIRUS_BEAT = 2.5; // × a step, before the virus's turn
+const VIRUS_BEAT = 4; // × a step: the virus's half (red) plays about 1.3 s before its first hit, not after it
 let stepTimer = null;
 function stepLoop() {
   const e = campaign.encounter;

@@ -399,7 +399,9 @@ export function boardMarkup(s, selected, preview = null) {
   }
   const pips = (id) => (aims[id] ? `<span class="aim-pips">${aims[id].map((a) => `<span class="aim ${a.kind}" data-who="${esc(a.kind.startsWith('you') ? 'you' : a.who)}" title="${esc(a.who)}${a.text ? ': ' + esc(a.text) : ''}">${esc(initials(a.who))}</span>`).join('')}</span>` : '');
 
-  const living = e.virus.parts.filter(alive), broken = e.virus.parts.filter((p) => !alive(p));
+  // A part just broken stays a moment, dissolving (app.js sets _dyingUntil), before it joins the broken list.
+  const dying = (p) => !alive(p) && p._dyingUntil > Date.now();
+  const living = e.virus.parts.filter((p) => alive(p) || dying(p)), broken = e.virus.parts.filter((p) => !alive(p) && !dying(p));
   const patchList = fighting ? patches(s, 4) : [];
   const rows = living.map((p) => {
     const mine = list.filter((i) => i.source === p.id);
@@ -420,7 +422,9 @@ export function boardMarkup(s, selected, preview = null) {
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks an armor chit' : `spike deals ${previewDamage(s, 'spike', p)}`;
     const marks = partMarks(s, p);
-    return `<button type="button" class="brow bpart ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}${knowsPart(s, e.virus, p) ? '' : ' · what it does: ???'}">
+    // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
+    const fade = dying(p) ? ` style="animation-delay:-${Math.max(0, 1000 - (p._dyingUntil - Date.now()))}ms"` : '';
+    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}${knowsPart(s, e.virus, p) ? '' : ' · what it does: ???'}">
       <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p) : '??? Break one to find out what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
@@ -709,7 +713,8 @@ export function slotPips(icon, used, total, name) {
   return `<span class="slots" title="${esc(name)}: ${used} of ${total} in use">${glyph(icon)}${Array.from({ length: total }, (_, i) => `<i class="${i < used ? 'on' : ''}"></i>`).join('')}<small>${used}/${total}</small></span>`;
 }
 // The wall as a level ruler: blocked (teal), held at a siege (amber), breaks through (red),
-// with your level and an incoming invader marked on it.
+// with your server's level and an incoming invader marked on it. Each level is a cell; marks and
+// scale numbers sit on the middle of theirs, and a number a mark already shows isn't repeated.
 export function wallRuler(s, compact = false, bands = wallBands(s)) {
   if (s.degraded) return '<div class="wall-ruler down" title="Your wall is down while the server is degraded"><span>wall down</span></div>';
   const { blocks, holds } = bands, you = hackerLevel(s), inv = s.invasion;
@@ -719,7 +724,7 @@ export function wallRuler(s, compact = false, bands = wallBands(s)) {
   return `<div class="wall-ruler${compact ? ' compact' : ''}" title="${esc(bandsText(s))}">
     <div class="wr-track">${seg('blocked', 0, blocks, 'firewall', blocks ? `Stopped at the wall: up to level ${blocks}` : '')}${seg('siege', blocks, holds, 'tarpit', `Contested: level ${blocks + 1}–${holds}`)}${seg('breach', holds, hi, 'kill', `Breaks through: level ${holds + 1} and up`)}</div>
     <div class="wr-marks">${mark(you, 'you', `server ${you}`)}${inv ? mark(inv.level, 'inv ' + inv.state, `${inv.name} ${inv.level}`) : ''}</div>
-    ${compact ? '' : `<div class="wr-scale"><span>1</span>${blocks ? `<span style="left:${pct(blocks)}">${blocks}</span>` : ''}${holds > blocks ? `<span style="left:${pct(holds)}">${holds}</span>` : ''}<span style="left:100%">${hi}</span></div>`}
+    ${compact ? '' : `<div class="wr-scale">${[...new Set([1, blocks, holds, hi])].filter((lv) => lv >= 1 && lv !== you && lv !== inv?.level).map((lv) => `<span style="left:${pct(lv - 0.5)}">${lv}</span>`).join('')}</div>`}
   </div>`;
 }
 export function wallMarkup(s, now = Date.now()) {
