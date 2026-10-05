@@ -407,7 +407,7 @@ function react(events) {
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
         const big = e.crit || frac >= 0.15; // only a big hit shakes the screen and flashes its edge
         if (e.crit) { flash('CRITICAL HIT'); feel.add('hurtcrit', MINE, `CRIT −${e.amount}`, { amount: e.amount, frac, size: size + 0.3 }); } else feel.add('hurt', MINE, `−${e.amount}`, { amount: e.amount, frac, size, noEdge: !big });
-        sideFx(row(e.source), MINE, 'them'); holdThem();
+        holdThem(); sideFx(row(e.source), MINE, 'them');
         if (fx && big) feel.add(() => juice.quake(frac, e.crit));
         break;
       }
@@ -1263,7 +1263,9 @@ function sideFx(from, to, side) {
 }
 function applySideMarks() {
   const now = performance.now();
-  sideMarks = sideMarks.filter((m) => m.until > now);
+  // The virus's marks go with its half: once it's your move, nothing of its stays lit.
+  const theirs = active(campaign) && V.phaseOf(campaign) === 'them';
+  sideMarks = sideMarks.filter((m) => m.until > now && (m.side !== 'them' || theirs));
   for (const el of document.querySelectorAll('.side-you:not(li), .side-them:not(li)')) if (!sideMarks.some((m) => el.matches(m.sel))) el.classList.remove('side-you', 'side-them');
   for (const m of sideMarks) document.querySelector(m.sel)?.classList.add('side-' + m.side);
 }

@@ -147,6 +147,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 
 **Where they go.**
 - **Health (the everyday sink).** Signal rests back at 20% a minute and the server at 2% a minute, offline too. Or pay to top up now: a full Signal bar costs 8 + 3×(class level) credits, a full server 10 + 4×(server level); less missing costs less (at least 1). Click the meter, or type `top up` / `repair [n]`. On a run it's the store's Signal patch instead. A bot that always pays spends about a quarter to a third of its income on it and reaches level 10 two to three times sooner than one that always waits; the Bastion barely needs it.
+- **You start with 0 credits.** Caches, kills and contracts pay; topping up Signal or repairing costs credits from the first one you earn.
 - **Building (the big goals).** Services, outpost modules, harvesters and configs cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
 - **Gear.** Compiling a blue costs 60 + 15×level credits and 8 salvage, cheaper than the store's sealed item (180 + 14×level).
 

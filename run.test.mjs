@@ -560,6 +560,7 @@ test('Signal boosters are retired: no crafting (top up instead); one you still c
 test('top up: pay to fill Signal or the server now; less missing costs less; not on a run', async () => {
   const { topUpCost, topUpPrice, maxSignal } = await import('./dist/combat.mjs');
   const s = fresh();
+  s.server.credits = 200; // you start with none
   s.signal = Math.floor(maxSignal(s) / 2);
   const half = topUpCost(s, 'signal');
   assert.ok(half >= 1 && half <= topUpPrice(s, 'signal'));

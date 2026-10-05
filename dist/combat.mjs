@@ -1303,7 +1303,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     else {
       if (s.run) disconnect(s, 'developer reboot');
       s.server.integrity = s.server.max;
-      s.server.credits = Math.max(s.server.credits, CONFIG.startingCredits);
+      s.server.credits = Math.max(s.server.credits, 160);
       s.degraded = null;
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }

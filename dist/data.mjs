@@ -12,7 +12,7 @@ export const CONFIG = {
   // Below you, a little the other way (3% a level, up to +15% dealt / −30% taken).
   gap: { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 },
   phaseBounce: 0.25, // Flicker: a quarter of your command's hit on an out-of-phase part bounces back at you
-  startingCredits: 160,
+  startingCredits: 0, // you start broke: caches, kills and contracts pay
   // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
   // full now. The price is for a full bar at your level; less missing costs less (at least 1).
   // Signal goes by your class level, Integrity by your server level.
