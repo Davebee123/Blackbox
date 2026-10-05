@@ -9,9 +9,9 @@
 // comes back on its own: you earn it back by hitting a faction's rivals, working for its allies,
 // or donating (dearer the deeper you are, and only as far as Neutral).
 import { emit, warn, rand, hackerLevel, materialsOf, hooks } from './combat.mjs';
-import { GOODS, codeAmount, deliverGoods, priceNow } from './store.mjs';
-import { broadcast } from './station.mjs';
+import { GOODS, codeAmount, priceNow } from './store.mjs';
 import { seeded } from './gear.mjs';
+import { sendGood } from './market.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -24,7 +24,7 @@ export const FACTIONS = {
     tiers: ['Suspended', 'Probation', 'Contractor', 'Trusted', 'Preferred'],
     allies: ['kestrel'], rivals: ['glassjaw', 'nullchoir'],
     hub: { name: 'HALCYON-CLEARING-01', level: 1 },
-    shop: [], // Halcyon's shelf is the store (store.mjs)
+    shop: [], // Halcyon's goods are its store (store.mjs): instant, unlike every other hub's
   },
   glassjaw: {
     name: 'GLASSJAW', short: 'GLASSJAW', kind: 'corp', color: '#e07bd0', start: 5,
@@ -32,7 +32,7 @@ export const FACTIONS = {
     tiers: ['Burned', 'Unknown', 'Asset', 'Partner', 'Inner circle'],
     allies: [], rivals: ['halcyon', 'lantern'],
     hub: { name: 'GLASSJAW-ANNEX-07', level: 8 },
-    shop: ['cracker', 'exploit', 'crate', 'blueprint'],
+    shop: ['cracker', 'crate', 'blueprint'],
   },
   kestrel: {
     name: 'Kestrel Underwriting', short: 'Kestrel', kind: 'corp', color: '#8fd46b', start: 10,
@@ -40,7 +40,7 @@ export const FACTIONS = {
     tiers: ['Blacklisted', 'Prospect', 'Client', 'Account', 'Key account'],
     allies: ['halcyon'], rivals: ['nullchoir'],
     hub: { name: 'KESTREL-DC-NORTH', level: 4 },
-    shop: ['relay', 'signal', 'repair', 'salvage', 'daemon'],
+    shop: ['relay', 'injector', 'daemon'],
   },
   lantern: {
     name: 'LANTERN', short: 'LANTERN', kind: 'crew', color: '#ffb347', start: 10,
@@ -48,7 +48,7 @@ export const FACTIONS = {
     tiers: ['Tuned out', 'Listener', 'Regular', 'Confidant', 'Signal'],
     allies: ['nullchoir'], rivals: ['glassjaw'],
     hub: { name: 'LANTERN-RELAY-88', level: 6 },
-    shop: ['injector', 'cracker', 'tip', 'kernel'],
+    shop: ['tip', 'cracker', 'injector'],
   },
   nullchoir: {
     name: 'NULL CHOIR', short: 'NULL CHOIR', kind: 'crew', color: '#ff6f91', start: 10,
@@ -56,7 +56,7 @@ export const FACTIONS = {
     tiers: ['Marked', 'Outsider', 'Fellow', 'Choir', 'Cantor'],
     allies: ['lantern'], rivals: ['halcyon', 'kestrel'],
     hub: { name: 'NULLCHOIR-SQUAT-13', level: 12 },
-    shop: ['cipher', 'worm', 'exploit', 'daemon'],
+    shop: ['daemon', 'crate', 'cracker'],
   },
 };
 export const FACTION_IDS = Object.keys(FACTIONS);
@@ -120,9 +120,11 @@ export function donate(s, f) {
   changeRep(s, f, Math.min(DONATE.rep, DONATE.cap - rep(s, f)), `You donated to ${FACTIONS[f].short}`, { ripple: false });
 }
 
-// ---------- faction shops ----------
-// A faction's shelf: its goods, each a few in stock, refilled every hour. Better tiers buy
-// cheaper (−5% a tier from Neutral) and open the rarer goods; Hostile, the shop is shut.
+// ---------- a hub's goods ----------
+// Part of its market (market.mjs): the specialty goods only it sells, a few of each in stock,
+// refilled every hour. Buy-only, and they come by file transfer like everything bought at a hub.
+// Better tiers buy cheaper (−5% a tier from Neutral) and open the rarer goods; Hostile, shut.
+// (Code, Exploits and salvage aren't goods: they're the market's wares, bought and sold.)
 export const SHOP = { restockMs: 60 * 60000, qty: 3, discount: 0.05, atCost: 0.6 }; // a hub you hold sells at cost
 const goodOf = (id) => GOODS[id] || FACTION_GOODS[id];
 export function shopOf(s, f, at = now()) {
@@ -148,9 +150,7 @@ export function buyFrom(s, f, id, at = now()) {
   if (s.server.credits < item.price) return warn(s, `${item.name} costs ${item.price} credits.`);
   s.server.credits -= item.price;
   s.hubs[f].stock[id]--;
-  emit(s, 'bought', `Bought ${item.name} from ${FACTIONS[f].short} for ${item.price} credits.`, { item: id, faction: f });
-  if (id === 'tip') return broadcast(s);
-  deliverGoods(s, id, Math.max(hackerLevel(s), FACTIONS[f].hub.level));
+  sendGood(s, f, id, item.name, item.price, Math.max(hackerLevel(s), FACTIONS[f].hub.level), at);
 }
 
 // ---------- faction servers ----------

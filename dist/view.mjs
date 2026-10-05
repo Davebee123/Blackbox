@@ -1973,9 +1973,9 @@ function hubCard(s, f) {
 export function hubMarkup(s, f, now = Date.now()) {
   const F = FX[f], h = hubOf(s, f);
   if (!F || !h) return '<div class="page-grid"><section class="card"><h2>Hub</h2><p class="quiet">Faction hubs open with the contract board.</p></section></div>';
-  const shop = f === 'halcyon'
-    ? `<p class="svc-line">Halcyon sells through its store: relays, its chase protocols and other agencies' stock.</p><div class="row"><button type="button" class="btn primary" data-go="store">Open the store</button></div>`
-    : hostile(s, f) ? '<p class="quiet">Shut to you.</p>' : offline(s, f, now) ? '<p class="quiet">Offline.</p>' : `<ul class="craft-list">${shopOf(s, f, now).map((g) => `<li class="${g.locked ? 'locked' : ''}"><span><b class="iname">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small><small class="cost">${g.left} left</small></span>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn ${s.server.credits >= g.price && g.left ? 'primary' : ''} small" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>${glyph('credits')}${g.price}</button>`}</li>`).join('')}</ul>`;
+  const goods = f === 'halcyon'
+    ? `<p class="svc-line">Halcyon's goods are its store: relays, heals, its chase protocols and other agencies' stock, delivered at once.</p><div class="row"><button type="button" class="btn primary" data-go="store">Open the store</button></div>`
+    : hostile(s, f) || offline(s, f, now) ? '' : `<ul class="craft-list">${shopOf(s, f, now).map((g) => `<li class="${g.locked ? 'locked' : ''}"><span><b class="iname">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small><small class="cost">${g.left} left</small></span>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn ${s.server.credits >= g.price && g.left ? 'primary' : ''} small" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>${glyph('credits')}${g.price}</button>`}</li>`).join('')}</ul>`;
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
   const held = (s.mail?.jobs || []).filter((j) => !j.done && (j.faction || 'halcyon') === f && j.story === undefined);
   const work = `${offers.length ? `<ul class="craft-list">${offers.map((o) => `<li><span><b>${esc(o.subject)}</b><small>${esc(contractTitle(s, o))}</small><small class="cost">${esc(rewardLine(s, o))}</small></span><button type="button" class="btn primary small" data-command="mail accept ${o.id}">Take</button></li>`).join('')}</ul>` : '<p class="quiet">Nothing posted right now. New work turns up on the board.</p>'}
@@ -1986,10 +1986,9 @@ export function hubMarkup(s, f, now = Date.now()) {
     <section class="card fcard"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · ${esc(h.name)} · lv ${h.level}</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1><p>${esc(F.about)}</p>${repBar(s, f)}${relations(f)}</section>
     <section class="card"><h2>Work · ${offers.length} posted</h2>${work}</section>
     ${captured(s, f) ? `<section class="card fcard" style="--fc:var(--you)"><h2>Your hub</h2>${holdMarkup(s, f, now)}</section>` : donationOf(s, f).open && f !== 'halcyon' ? `<section class="card"><h2>Donate</h2>${donateMarkup(s, f)}</section>` : ''}
-    <section class="card"><h2>Market</h2>${marketMarkup(s, f, now)}</section>
     ${captured(s, f) ? '' : `<section class="card"><h2>Payloads</h2>${payloadMarkup(s, f, now)}</section>`}
   </div><div class="con-col">
-    <section class="card"><h2>Shop</h2>${shop}</section>
+    <section class="card"><h2>Market</h2>${marketMarkup(s, f, now)}${goods ? `<h3 class="craft-sub">Goods</h3>${goods}` : ''}</section>
     <section class="card"><h2>Their servers on your map · ${theirs.length}</h2>${servers}</section>
   </div></div>`;
 }
@@ -2039,7 +2038,7 @@ function marketMarkup(s, f, now) {
     return `<li><span><b class="iname">${glyph(GLYPH_OF_GOOD[w], 'badge')}${esc(WARES[w].name)} ${arrow}</b><small class="cost">pays ${q.sell} · you have ${n}</small></span><span class="mk-btns">${sellBtn(1)}${lot > 1 ? sellBtn(lot) : ''}${buyBtn}</span></li>`;
   }).join('');
   const mine = transfersOf(s).filter((x) => x.f === f);
-  const flying = mine.length ? `<h3 class="craft-sub">In transfer</h3><ul class="craft-list">${mine.map((x) => `<li><span><b>${x.side === 'sell' ? '→' : '←'} ${x.n} ${esc(WARES[x.w].name)}</b><small>${x.side === 'sell' ? `+${x.credits} credits` : `paid ${x.credits}`} · ${Math.max(1, Math.ceil((x.landsAt - now) / 60000))} min</small></span></li>`).join('')}</ul>` : '';
+  const flying = mine.length ? `<h3 class="craft-sub">In transfer</h3><ul class="craft-list">${mine.map((x) => `<li><span><b>${x.side === 'sell' ? '→' : '←'} ${x.side === 'good' ? esc(x.name) : `${x.n} ${esc(WARES[x.w].name)}`}</b><small>${x.side === 'sell' ? `+${x.credits} credits` : `paid ${x.credits}`} · ${Math.max(1, Math.ceil((x.landsAt - now) / 60000))} min</small></span></li>`).join('')}</ul>` : '';
   return `<div class="row mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer time">${min} min</span></div><ul class="craft-list">${rows}</ul>${flying}`;
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint', daemon: 'daemon' };

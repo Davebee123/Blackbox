@@ -1971,3 +1971,4 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .repbar .rb-neg { flex: 0.8; border-color: color-mix(in srgb, var(--hot) 50%, transparent); }
 .repbar .rb-neg i { background: var(--hot); margin-left: auto; float: right; }
 .mnode.fleet[data-faction] path { fill: var(--fc); stroke: var(--fc); }
+.craft-list .btn { white-space: nowrap; }

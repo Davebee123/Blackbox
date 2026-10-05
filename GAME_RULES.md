@@ -686,18 +686,18 @@ Pages show instead of explaining; the words are in the hover.
 
 Five PvE factions, companies and hacker crews, each with a colour, a mark and a hub on your map (`factions.mjs`). Halcyon is the first of them: its standing is its rep, its retainer and store work as before.
 
-| Faction | Kind | Colour | Hub (level) | Allies | Rivals | Sells |
+| Faction | Kind | Colour | Hub (level) | Allies | Rivals | Goods (on top of the wares) |
 |---|---|---|---|---|---|---|
-| Halcyon Mutual | company | blue | HALCYON-CLEARING-01 (1) | Kestrel | GLASSJAW, NULL CHOIR | its store |
-| GLASSJAW | company | magenta | GLASSJAW-ANNEX-07 (8) | — | Halcyon, LANTERN | key crackers, Exploits, sealed items, blueprints |
-| Kestrel Underwriting | company | green | KESTREL-DC-NORTH (4) | Halcyon | NULL CHOIR | relays, Signal patches, hot-swap kits, salvage, daemon images |
-| LANTERN | hacker crew | orange | LANTERN-RELAY-88 (6) | NULL CHOIR | GLASSJAW | trace injectors, key crackers, broadcast schedules (a dead drop now), Kernel code |
-| NULL CHOIR | hacker crew | rose | NULLCHOIR-SQUAT-13 (12) | LANTERN | Halcyon, Kestrel | Cipher and Worm code, Exploits, daemon images |
+| Halcyon Mutual | company | blue | HALCYON-CLEARING-01 (1) | Kestrel | GLASSJAW, NULL CHOIR | its store (instant, and the only place for heals) |
+| GLASSJAW | company | magenta | GLASSJAW-ANNEX-07 (8) | — | Halcyon, LANTERN | key crackers, sealed items, blueprints |
+| Kestrel Underwriting | company | green | KESTREL-DC-NORTH (4) | Halcyon | NULL CHOIR | relays, trace injectors, daemon images |
+| LANTERN | hacker crew | orange | LANTERN-RELAY-88 (6) | NULL CHOIR | GLASSJAW | broadcast schedules (a dead drop now), key crackers, trace injectors |
+| NULL CHOIR | hacker crew | rose | NULLCHOIR-SQUAT-13 (12) | LANTERN | Halcyon, Kestrel | daemon images, sealed items, key crackers |
 
-- **Rep** runs −100 to 100 with five tiers at 1/25/50/75 (each faction names its own: Kestrel's are Blacklisted, Prospect, Client, Account, Key account). Below 1 a faction is Hostile: its shop and market are shut and it posts you no work. Hostility has depth: rep keeps falling under zero, down to −100, shown as a red segment before the tiers (Halcyon's standing stops at 0). Rep never comes back on its own: win a faction back by hitting its rivals (the ripple), working for its allies, or donating. Everyone starts at 10 (GLASSJAW at 5).
+- **Rep** runs −100 to 100 with five tiers at 1/25/50/75 (each faction names its own: Kestrel's are Blacklisted, Prospect, Client, Account, Key account). Below 1 a faction is Hostile: its market is shut and it posts you no work. Hostility has depth: rep keeps falling under zero, down to −100, shown as a red segment before the tiers (Halcyon's standing stops at 0). Rep never comes back on its own: win a faction back by hitting its rivals (the ripple), working for its allies, or donating. Everyone starts at 10 (GLASSJAW at 5).
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter the same way. Halcyon's standing ripples too.
-- **Hubs** appear on your map when the contract board opens, on a ring of their own between the first two layers (a diamond in the faction's colour with its mark; its rep tier under the name). Its card shows your rep as a five-step bar and its allies and rivals; **Connect** opens the hub page: who they are, their work on the board, their shop, and their servers on your map.
-- **Shops:** a few of each good, refilled every hour; better tiers buy 5% cheaper per tier from the third, and some goods wait for a tier. Priced at the hub's level or yours, whichever's higher. `buy <faction> <good>`.
+- **Hubs** appear on your map when the contract board opens, on a ring of their own between the first two layers (a diamond in the faction's colour with its mark; its rep tier under the name). Its card shows your rep as a five-step bar and its allies and rivals; **Connect** opens the hub page: who they are, their work on the board, their market, and their servers on your map.
+- **One market per hub.** Its **wares** (code, Exploits, salvage) are bought and sold at moving prices (see Markets). Its **goods** are the specialty things only that hub sells: buy-only, a few of each, refilled every hour; better tiers buy 5% cheaper per tier from the third, and some goods wait for a tier. Priced at the hub's level or yours, whichever's higher. Everything bought at a hub comes by file transfer, goods included. `buy <faction> <good>` or `market buy <faction> <good>`. Halcyon is the exception: its goods are its store, delivered at once.
 - **Work:** once the hubs are up, about half the board (beyond GLASSJAW's off-the-books jobs) is Kestrel's, LANTERN's or NULL CHOIR's: the same kinds of contracts, paying 20% more credits and their own rep instead of Indemnity and Halcyon standing. Their takeover and recovery jobs often point at their rivals' servers. Each offer on the Mail board shows its faction's mark; Mail also shows your tier with each faction.
 - **Faction servers:** about one in eight of the servers you trace (never your first two, never rogue ones) belong to Kestrel, GLASSJAW, LANTERN or NULL CHOIR: their colour on the map node, their mark beside it. Opening one's vault takes the server from them: their rep −15, their rivals warm to you (+7).
 
@@ -730,14 +730,14 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
 - **Execution:** power × a roll of ±20% against the hub's defence (12 + 2×hub level, +25% for each recent strike; one step eases every 6 hours). Under 70%, it's **Blocked**. From 70% to 100%, a **Partial** breach does half the job. At 100% and over, it's a **Breach**. Each payload you hold shows its likely band against that hub before you deploy it.
 - **Results:**
   - An Exfil on a breach pays 50 + 12×hub level credits and 6 + hub level/2 of the code its condition wants.
-  - A Wiper on a breach takes the hub offline for 4 hours (2 on a partial): its shop and market shut and its map node goes dim.
+  - A Wiper on a breach takes the hub offline for 4 hours (2 on a partial): its market shuts and its map node goes dim.
   - The owner's rep drops 3 when blocked, 6 on a partial and 10 on a breach. The rep ripple warms its rivals.
 - **Backdoor** (Kernel code) takes the hub for you, but only if it's offline when the Backdoor executes: Wiper it first, then get a Backdoor in before it comes back up. It shows Blocked until then. A breach captures the hub, costing −40 rep with its owner (the ripple spreads it). Never Halcyon's; two hubs at most.
 - `payload compile exfil|wiper|backdoor [exploit]`, `payload deploy <n> <faction>`.
 
 ### Hubs you hold
 
-- **Perks:** its market trades at the true price (no spread), its shop sells at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
+- **Perks:** its market trades at the true price (no spread), its goods sell at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
 - **Swarms from the old owner:** while it's Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. These gather and travel on real time, so logging off doesn't dodge them, but the timer at the hub only counts down while you're logged on (you're never locked down while away). The hub earns nothing while its swarm is out. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then 8 minutes to defend; Intercept or Defend one process a fight (`hub defend <faction>`), and the timer waits while you fight (not while the fight is paused). Break it for code, salvage and XP. The hub's map node flashes red with the timer.
 - **Lockdown:** if the timer runs out, the hub earns nothing until you retake it (one fight, `hub retake <faction>`). You never lose it for good.
 - **Striking a Hostile faction** (without holding its hub) gets one answer: a swarm in its colours at one of your outposts.
@@ -997,7 +997,7 @@ Rules that keep timing, reloads and loops from paying:
 - **A paused fight holds no clock.** The timers on invasions and swarms (and on members' lockdowns) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
 - **In a consortium, the away rules still stand.** While you're logged off, the gap is played out a minute at a time as before: invasions at half pace, outposts noticed half as often, and invasions at outposts that can end in lockdown, with a member sometimes stopping one. An invaded outpost makes nothing (as it pays no dividend). Swarms still wait for you to log on.
 - **Threats run on real time; their timers wait for you.** Invasions at outposts and swarms gather and travel whether you're logged on or not. Their timers only count down while you're logged on, so nothing falls while you're away. Production stops while one sits at an outpost or hub.
-- **No shop-to-market loop.** A shop or the Halcyon store never sells code, Exploits or salvage for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
+- **No store-to-market loop.** Hubs sell code, Exploits and salvage only as market wares. The Halcyon store never sells them for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
 - **Hub income reads outside factors only.** A held hub earns by its condition, the world event and wiped hubs elsewhere, not by your own trading there.
 - **What you compile breaks down without Exploits.**
 - **Detached servers make nothing.** Reattaching starts their outposts fresh.

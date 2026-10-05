@@ -8,8 +8,10 @@
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
 import { emit, warn, materialsOf, hooks } from './combat.mjs';
-import { FACTIONS, hubsOf, hostile, repTier } from './factions.mjs';
+import { FACTIONS, hubsOf, hostile, repTier, buyFrom } from './factions.mjs';
 import { seeded } from './gear.mjs';
+import { deliverGoods } from './store.mjs';
+import { broadcast } from './station.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -123,6 +125,11 @@ export function tickMarket(s, at = now()) {
   s.salvage ||= [];
   for (const t of m.transfers.filter((x) => at >= x.landsAt)) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
+    if (t.side === 'good') {
+      emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: ${t.name}.`, { faction: t.f });
+      if (t.good === 'tip') broadcast(s); else deliverGoods(s, t.good, t.L);
+      continue;
+    }
     if (t.side === 'sell') { s.server.credits += t.credits; emit(s, 'transfer-in', `Transfer complete to ${FACTIONS[t.f].short}: +${t.credits} credits for ${t.n} ${WARES[t.w].name}.`, { faction: t.f }); }
     else {
       if (t.w === 'salvage') for (let i = 0; i < t.n; i++) s.salvage.push({ name: `${FACTIONS[t.f].short} salvage`, virus: 'market', seed: 0 });
@@ -132,11 +139,19 @@ export function tickMarket(s, at = now()) {
   }
 }
 export const transfersOf = (s) => marketOf(s).transfers;
+// A hub's specialty good, bought (factions.mjs buyFrom): paid now, it lands like any transfer.
+export function sendGood(s, f, id, name, credits, L, at = now()) {
+  const m = marketOf(s);
+  const t = { id: ++m.serial, side: 'good', f, good: id, name, n: 1, L, credits, sentAt: at, landsAt: at + travelMs(s, f) };
+  m.transfers.push(t);
+  emit(s, 'transfer-out', `Bought ${name} from ${FACTIONS[f].short} for ${credits} credits: it lands in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f, item: id });
+}
 // The most any hub would pay you for one right now: shops never sell below it (store.mjs), so
 // there's no buying from a shelf to sell straight to a market.
 export const bestSell = (s, w) => (hubsOf(s).length && WARES[w] ? Math.max(...Object.keys(FACTIONS).map((f) => quote(s, f, w).sell)) : 0);
 export function marketCommand(s, text, at = now()) {
   const [, side, f, w, n] = text.split(' ');
+  if (side === 'buy' && FACTIONS[f]?.shop.includes(w)) return buyFrom(s, f, w, at); // a hub's specialty good (factions.mjs)
   if (side === 'sell' || side === 'buy') return trade(s, side, f, w, n, at);
-  return warn(s, 'market sell|buy <faction> <ware> <n>');
+  return warn(s, 'market sell|buy <faction> <ware> <n> · market buy <faction> <good>');
 }

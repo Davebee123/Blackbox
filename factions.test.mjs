@@ -28,17 +28,27 @@ test('rep ripples: helping one costs you with its rivals and warms its allies', 
   assert.equal(repTier(s, 'kestrel').name, 'Client');
 });
 
-test('faction shops: tier-gated, priced by tier, limited stock; shut when hostile', () => {
+test('a hub’s goods: tier-gated, limited stock, delivered by file transfer; shut when hostile', async () => {
+  const { transfersOf, tickMarket } = await import('./dist/market.mjs');
+  const { items } = await import('./dist/hidden.mjs');
   const s = open();
   const daemon = shopOf(s, 'kestrel').find((g) => g.id === 'daemon');
   assert.ok(daemon.locked, 'a daemon image takes Client');
-  const c0 = s.server.credits;
-  buyFrom(s, 'kestrel', 'signal');
+  assert.ok(!shopOf(s, 'kestrel').some((g) => ['cipher', 'worm', 'kernel', 'exploit', 'salvage', 'signal', 'repair'].includes(g.id)), 'wares trade on the market; heals are Halcyon’s');
+  const c0 = s.server.credits, r0 = items(s).relay || 0;
+  buyFrom(s, 'kestrel', 'relay');
   assert.ok(s.server.credits < c0);
-  assert.equal(shopOf(s, 'kestrel').find((g) => g.id === 'signal').left, 2);
+  assert.equal(shopOf(s, 'kestrel').find((g) => g.id === 'relay').left, 2);
+  assert.equal(items(s).relay || 0, r0, 'not yet: it’s in transfer');
+  const t = transfersOf(s).at(-1);
+  assert.equal(t.side, 'good');
+  tickMarket(s, t.landsAt);
+  assert.equal(items(s).relay, r0 + 1, 'landed');
+  command(s, 'market buy kestrel injector');
+  assert.equal(transfersOf(s).at(-1).good, 'injector', 'market buy takes goods too');
   s.standing.kestrel = 0;
   const c1 = s.server.credits;
-  assert.match(command(s, 'buy kestrel signal').at(-1).message, /won’t trade/);
+  assert.match(command(s, 'buy kestrel relay').at(-1).message, /won’t trade/);
   assert.equal(s.server.credits, c1);
 });
 
