@@ -1536,8 +1536,8 @@ function mapSide(s, sel, node) {
     return `${runCard}${alertCard()}${occ}
       <section class="card srv-card"><h2>Your server</h2>
         ${(() => { const sp = serverProgress(s), hk = hackerOf(s), hl = hk.level, hn = hl < LOADOUT.maxLevel ? xpToNext(hl) : 0;
-          return srvLine('integrity', 'Server', `<span class="srv-bar xp"><span style="width:${sp.next ? (sp.xp / sp.next) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${sp.level}`, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ' (max)'}. It gets every point of XP your classes earn.`)
-            + srvLine('xp', ARCHETYPES[classOf(s)].name, `<span class="srv-bar xp you"><span style="width:${hn ? (hk.xp / hn) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${hl}`, `${ARCHETYPES[classOf(s)].name} level ${hl}${hn ? `: ${hk.xp}/${hn} XP` : ' (max)'}. Each class levels on its own.`); })()}
+          return srvLine('integrity', 'Server', `<span class="srv-bar xp"><span style="width:${sp.next ? (sp.xp / sp.next) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${sp.level}`, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ' (max)'}`)
+            + srvLine('xp', ARCHETYPES[classOf(s)].name, `<span class="srv-bar xp you"><span style="width:${hn ? (hk.xp / hn) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${hl}`, `${ARCHETYPES[classOf(s)].name} level ${hl}${hn ? `: ${hk.xp}/${hn} XP` : ' (max)'}`); })()}
         ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
         ${srvLine('firewall', 'Wall', wallRuler(s, true), '', 'Which invasion levels your wall stops')}
         ${degradedMarkup(s)}${awayLine(s)}
