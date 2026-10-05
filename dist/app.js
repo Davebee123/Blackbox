@@ -898,10 +898,10 @@ function renderMeters() {
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
 }
 
-// The crew: pinned at the top left of every page; in a fight, a small side column holds it instead
-// so it never covers the board. (`sidebar off` hides it.)
+// The crew: a narrow side column on every page while you have a crew (none when solo).
+// (`sidebar off` hides it.)
 const crewOn = () => campaign.settings.sidebar !== false && matesOf(campaign).length > 0;
-const sidebarOn = () => crewOn() && innerWidth >= 1100 && module === 'combat' && active(campaign);
+const sidebarOn = () => crewOn() && innerWidth >= 1100;
 let crewWin = { x: null, y: 96, collapsed: false };
 try { crewWin = { ...crewWin, ...JSON.parse(localStorage.getItem('bb-crewwin') || '{}') }; } catch { /* storage unavailable */ }
 const saveCrewWin = () => { try { localStorage.setItem('bb-crewwin', JSON.stringify(crewWin)); } catch { /* storage unavailable */ } };
@@ -914,7 +914,7 @@ function placeCrewWin() {
   el.style.top = r.top + 12 + 'px';
 }
 function renderCrewWin(s, docked) {
-  const on = crewOn() && !docked && module !== 'net'; // a run shows its crew itself
+  const on = false; // the crew lives in the side column now (kept for narrow screens later)
   $('crewwin').hidden = !on;
   if (!on) return;
   put('crewwin', V.crewWindowMarkup(s, { preview: aimPreview, collapsed: crewWin.collapsed }));

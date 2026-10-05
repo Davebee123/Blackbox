@@ -132,17 +132,33 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
       for (let k = 1; k <= 3; k++) orb(20 + k * 6, 0, 0, 7, 6, 6, 'frag' + k, orbit([0, 0, 0], 0.5 + k * 0.15, 0.4 * k), 0.5);
       for (let k = 1; k <= 3; k++) points.filter((p) => p.region === 'frag' + k).forEach((p) => { p.x += 22 + k * 6; p.y += 26; });
     } else if (shape === 'wraith') {
-      // Ghostroot: a floating mask with deep eyes, hood, and tendrils that sway beneath.
-      const bob = anim({ k: 'bob', amp: 5, speed: 1.3 });
-      orb(0, -24, 0, jit(32), jit(40), 20, 'body', bob);
-      orb(-12, -30, -18, 7, 9, 4, B, bob); orb(12, -30, -18, 7, 9, 4, B, bob);
-      orb(0, -10, -19, 10, 4, 3, B, bob);
-      const n = 4 + Math.floor(r() * 3);
-      for (const side of [-1, 1]) for (let i = 0; i < n; i++) {
-        const x = side * (6 + i * 9), a = sway([x, 10, 0], 0.35, 1.1 + i * 0.2, i * 1.3 + side);
-        tube([x, 10, i * 2], [x + side * 8, 40 + i * 2, -4], 3, 2, S(side), a);
-        tube([x + side * 8, 40 + i * 2, -4], [x + side * 16, 64 + i * 3, -10], 2, 0.3, S(side), a);
+      // Ghostroot: no face. A tall, crooked shard of a core hanging in the dark, a faint node deep
+      // inside it, and a root system branching down out of it, forking and thinning like something
+      // grown into the machine. A little debris drifts around the core.
+      const bob = anim({ k: 'bob', amp: 3, speed: 0.9 });
+      const lean = (r() - 0.5) * 10, ch = jit(26);
+      orb(lean * 0.3, -22, 0, jit(20), ch, 13, 'body', bob);
+      orb(lean * 0.3 + 8, -30, 5, 10, 12, 8, 'body', bob); // a second facet, off-axis
+      // Threads it hangs from, up into the dark.
+      for (let i = 0; i < 3; i++) { const x = lean * 0.3 + (i - 1) * 9 + (r() - 0.5) * 6; tube([x, -40, 0], [x + (r() - 0.5) * 14, -96, (r() - 0.5) * 10], 0.9, 0.4, 'body', sway([x, -96, 0], 0.05, 0.5, i)); }
+      orb(lean * 0.2, -22, -2, 5, 6, 4, B, bob);
+      // Roots: a few main ones from the base of the core, each forking twice, every fork thinner and
+      // a little more crooked. Left-side roots are one special part, right-side the other.
+      const grow = (from, ang, len, thick, depth, side, a) => {
+        const to = [from[0] + Math.sin(ang) * len, from[1] + Math.cos(ang) * len, from[2] + (r() - 0.5) * 10];
+        tube(from, to, thick, Math.max(0.3, thick * 0.6), S(side), a);
+        if (depth <= 0) return;
+        const forks = 1 + (r() < 0.65 ? 1 : 0);
+        for (let k = 0; k < forks; k++) grow(to, ang + (k ? 1 : -1) * (0.25 + r() * 0.45) * (forks > 1 ? 1 : (r() < 0.5 ? -1 : 1)), len * (0.62 + r() * 0.18), thick * 0.62, depth - 1, side, a);
+      };
+      const n = 5 + Math.floor(r() * 3);
+      for (let i = 0; i < n; i++) {
+        const f = i / (n - 1) - 0.5, side = f < 0 ? -1 : 1, x = lean * 0.3 + f * 26;
+        const a = sway([x, 2, 0], 0.1, 0.6 + r() * 0.5, i * 1.7);
+        grow([x, 2, (r() - 0.5) * 8], f * 2.3 + (r() - 0.5) * 0.25, jit(26), 2.8, 2, side, a);
       }
+      // Debris: splinters off the core, slowly circling.
+      for (let i = 0; i < 6; i++) { const th = r() * Math.PI * 2, rad = 26 + r() * 16; orb(Math.cos(th) * rad, -34 + Math.sin(th) * 22, (r() - 0.5) * 20, 2, 3, 2, 'frag' + (1 + (i % 3)), orbit([0, -30, 0], 0.18 + r() * 0.12, 0.4), 0.6); }
     } else if (shape === 'hound') {
       orb(0, -6, 6, 30, 20, 34, 'body');
       ring(0, -14, 0, 44, 2, 'body', orbit([0, -14, 0], 0.8, 0.25));

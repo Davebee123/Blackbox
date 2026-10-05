@@ -2127,3 +2127,8 @@ body.with-sidebar .workspace { grid-template-columns: 230px minmax(0, 1fr); }
 #sidebar .crewwin.docked .cw-btn { display: none; }
 /* Costs: one component per line. */
 .needs { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 4px; }
+/* The crew column: narrow, on every page while you have a crew. */
+body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
+#sidebar { padding: 8px 8px 8px 4px; }
+#sidebar .crewwin.docked .cw-head { padding-left: 6px; }
+#sidebar .crewwin.docked .cw-body { padding: 8px 6px 10px; }
