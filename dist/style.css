@@ -2164,3 +2164,25 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 .citem .act.cclear { position: absolute; top: 7px; right: 8px; grid-column: auto; margin: 0; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--text); border: 1px solid var(--line-strong, var(--line)); border-radius: 3px; background: var(--inset); opacity: 1; }
 .citem .act.cclear:hover { color: var(--hot); border-color: var(--hot); }
 .citem .act.cclear { text-decoration: none; }
+/* Whose half of the cycle: a YOU ▸ THEM marker in the Now cell; the half playing lights up. */
+.bnow .phase { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font: 600 9px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
+.bnow .phase b { padding: 1px 4px; border: 1px solid var(--line); border-radius: 2px; color: var(--dim); font-weight: 600; }
+.bnow .phase i { color: var(--dim); font-style: normal; }
+.bnow .phase.ph-you .ph-you, .bnow .phase.ph-wait .ph-you { color: var(--bg); background: var(--you); border-color: var(--you); }
+.bnow .phase.ph-them .ph-them { color: var(--bg); background: var(--hot); border-color: var(--hot); }
+/* The board takes the colour of the half that's playing. */
+body.phase-them .board { --band-line: var(--hot); --band-edge: rgba(255, 91, 61, 0.55); }
+body.phase-them .brow.byou { opacity: 0.55; transition: opacity 0.2s; }
+body.phase-you .brow:not(.bhead):not(.byou) { opacity: 0.8; transition: opacity 0.2s; }
+/* The prompt: lit when it's your move, dim while the virus acts. */
+.prompt.acting { color: var(--hot); opacity: 0.85; }
+body.phase-them #command-input { opacity: 0.5; }
+body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px color-mix(in srgb, var(--you) 40%, transparent); }
+/* Who did it to what: the actor's row and the target light in the side's colour. */
+.brow.side-you { box-shadow: inset 3px 0 0 var(--you), inset 0 0 0 1px color-mix(in srgb, var(--you) 50%, transparent); background: color-mix(in srgb, var(--you) 9%, transparent); }
+.brow.side-them { box-shadow: inset 3px 0 0 var(--hot), inset 0 0 0 1px color-mix(in srgb, var(--hot) 55%, transparent); background: color-mix(in srgb, var(--hot) 10%, transparent); }
+.hud-bar.side-them { box-shadow: 0 0 0 1px var(--hot), 0 0 14px color-mix(in srgb, var(--hot) 45%, transparent); }
+.hud-bar.side-you { box-shadow: 0 0 0 1px var(--you); }
+/* The log by side. */
+#log li.side-you, .log li.side-you { border-left: 2px solid var(--you); padding-left: 6px; }
+#log li.side-them, .log li.side-them { border-left: 2px solid var(--hot); padding-left: 6px; }

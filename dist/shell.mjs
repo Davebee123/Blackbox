@@ -90,7 +90,9 @@ export function createShell({ getState, isOn, canMove, tick }) {
 
   function react(events) {
     for (const e of events) {
-      if (['server-hit', 'encrypt', 'blind', 'trap', 'intrusion'].includes(e.type)) { glitch(false); energy += 0.6; }
+      // A screen-wide glitch only for the big moments; an ordinary hit lands on your bar (app.js).
+      if ((e.type === 'server-hit' && e.crit) || ['trap', 'intrusion'].includes(e.type)) { glitch(false); energy += 0.6; }
+      else if (['server-hit', 'encrypt', 'blind'].includes(e.type)) energy += 0.4;
       else if (['crashed', 'disconnected'].includes(e.type)) { glitch(true); energy += 1.5; }
       else if (['damage', 'broken', 'resolved', 'net', 'net-good', 'loot'].includes(e.type)) energy += 0.15;
     }

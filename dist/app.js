@@ -28,6 +28,7 @@ const playtest = params.get('playtest');
 
 // ---------- state ----------
 let campaign = load();
+if (params.has('dev')) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
 let module = playtest === 'story' ? 'mail' : 'map';
 let selected = null;
 let mapSel = 'server';
@@ -406,15 +407,18 @@ function react(events) {
         if (e.crit) feel.add('crit', at, `CRIT −${e.amount}`, look); else feel.add('hit', at, `−${e.amount}`, look);
         if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
-        if (fx && !mate) feel.add(() => juice.nudge(e.crit ? 4.5 : 1.5 + big * 2.5)); // your hits shake the screen a little, at every Effects level
+        if (fx && !mate && e.crit) feel.add(() => juice.nudge(4.5)); // only a crit nudges the screen
+        if (!mate) { sideFx('.brow.byou', row(e.target), 'you'); holdYou(); }
         break;
       }
       case 'broken': art.hit(e.target, 'break'); flash(e.message); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
         art.hit(e.source, 'attack');
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
-        if (e.crit) { flash('CRITICAL HIT'); feel.add('hurtcrit', MINE, `CRIT −${e.amount}`, { amount: e.amount, frac, size: size + 0.3 }); } else feel.add('hurt', MINE, `−${e.amount}`, { amount: e.amount, frac, size });
-        if (fx) feel.add(() => juice.quake(frac, e.crit));
+        const big = e.crit || frac >= 0.15; // only a big hit shakes the screen and flashes its edge
+        if (e.crit) { flash('CRITICAL HIT'); feel.add('hurtcrit', MINE, `CRIT −${e.amount}`, { amount: e.amount, frac, size: size + 0.3 }); } else feel.add('hurt', MINE, `−${e.amount}`, { amount: e.amount, frac, size, noEdge: !big });
+        sideFx(row(e.source), MINE, 'them'); holdThem();
+        if (fx && big) feel.add(() => juice.quake(frac, e.crit));
         break;
       }
       case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity)) notice(e.message); break;
@@ -941,6 +945,8 @@ function render(force = false) {
   // The sidebar: every page, fights too (wide screens; `sidebar off` hides it).
   const side = sidebarOn();
   document.body.classList.toggle('with-sidebar', side);
+  const ph = active(campaign) ? V.phaseOf(campaign) : null;
+  for (const k of ['you', 'them', 'wait']) document.body.classList.toggle('phase-' + k, ph === k);
   $('sidebar').hidden = !side;
   if (side) put('sidebar', `<section class="crewwin docked">${V.crewWindowMarkup(s, { preview: aimPreview })}</section>`);
   renderCrewWin(s, side);
@@ -996,6 +1002,7 @@ function render(force = false) {
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
   wasCooling = cooling;
+  applySideMarks();
   renderPrompt();
   placeTip();
   dirty = false;
@@ -1005,7 +1012,10 @@ function render(force = false) {
 function renderPrompt() {
   const el = document.querySelector('.prompt');
   const r = campaign.run;
-  if (r) {
+  if (active(campaign) && V.phaseOf(campaign) === 'them') {
+    el.className = 'prompt acting';
+    el.innerHTML = `<span>${V.esc(campaign.encounter.virus.name)} acts…</span>`;
+  } else if (r) {
     el.className = 'prompt run ' + V.signalLevel(r);
     el.innerHTML = `<span class="p-sig">[${r.integrity}/${r.max}]</span> <span class="p-loc">${V.esc(currentLocation(campaign).id)}:</span><span class="p-cwd">${V.esc(r.cwd)}$</span>`;
     $('command-input').placeholder = '';
@@ -1240,6 +1250,24 @@ $('tip-ok').addEventListener('click', () => { hideTip(true); $('command-input').
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
 addEventListener('resize', () => placeTip());
 
+// Who did it, to what: the actor's row lights in its side's colour and the target takes the mark.
+// Your half of the cycle resolves the instant you press Enter: keep it lit long enough to see.
+const hold = (key, ms) => { const e = campaign.encounter; if (e) Object.defineProperty(e, key, { value: Date.now() + ms, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, ms + 50); };
+const holdYou = () => hold('_youUntil', 550), holdThem = () => hold('_themUntil', 600);
+// Marks outlive a board redraw: they're re-applied after each render until they expire.
+let sideMarks = [];
+function sideFx(from, to, side) {
+  const until = performance.now() + 700;
+  sideMarks = sideMarks.filter((m) => m.sel !== from && m.sel !== to);
+  for (const sel of [from, to]) if (sel) sideMarks.push({ sel, side, until });
+  applySideMarks();
+}
+function applySideMarks() {
+  const now = performance.now();
+  sideMarks = sideMarks.filter((m) => m.until > now);
+  for (const el of document.querySelectorAll('.side-you:not(li), .side-them:not(li)')) if (!sideMarks.some((m) => el.matches(m.sel))) el.classList.remove('side-you', 'side-them');
+  for (const m of sideMarks) document.querySelector(m.sel)?.classList.add('side-' + m.side);
+}
 // ---------- steps ----------
 // A cycle plays out in turns: you (then each crewmate), then the virus, a beat apart (stepCycle in
 // combat.mjs), so you can follow who did what. The virus's answer waits a little longer.

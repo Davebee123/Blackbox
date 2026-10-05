@@ -360,7 +360,7 @@ export function boardMarkup(s, selected, preview = null) {
   const remaining = Math.max(0, (cycleLength(s) - e.elapsedMs) / 1000);
   const quietCol = (c) => fighting && !hidden && !list.some((i) => i.col === c);
   const head = `<div class="brow bhead"><div class="bcell bname">Part</div>
-    <div class="bcell bnow"><span>Now <small class="cyc">cycle ${e.cycle}</small></span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject lands an extra stack, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Traceroute adds ${CONFIG.surprise.trace}%.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
+    <div class="bcell bnow"><span>Now <small class="cyc">cycle ${e.cycle}</small></span>${fighting ? `<span class="phase ph-${phaseOf(s)}" title="Each cycle: you act, then the virus"><b class="ph-you">You</b><i>▸</i><b class="ph-them">${esc(e.virus.name.split('-')[0])}</b></span>` : ''}<span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject lands an extra stack, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Traceroute adds ${CONFIG.surprise.trace}%.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
     ${[1, 2, 3].map((c) => `<div class="bcell">+${c}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
   // Your row mirrors the parts: what you'll do in each upcoming cycle.
   const nowChip = e.queue
@@ -427,10 +427,21 @@ export function boardMarkup(s, selected, preview = null) {
 
 const LOG_CLASS = { miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
 
+// Whose half of the cycle is playing: 'you' (you and your crew), 'them' (the virus), or 'wait' (your move).
+export function phaseOf(s) {
+  const e = s.encounter, st = e?.steps, now = Date.now();
+  // Each half stays lit a moment (app.js holds it), and yours always shows before theirs.
+  if (e?._youUntil > now) return 'you';
+  if (st?.after || e?._themUntil > now) return 'them';
+  return st ? 'you' : 'wait';
+}
+// Which side a log line belongs to: yours teal, the virus's red.
+const THEIRS = new Set(['server-hit', 'encrypt', 'encrypted', 'blind', 'spawn', 'patch', 'evaded', 'blocked', 'intrusion']);
+const MINE_LOG = new Set(['damage', 'broken', 'miss', 'resolved', 'status', 'armor', 'interrupt', 'hold']);
 export function logMarkup(s, limit = 60) {
   const start = s.logs.findLastIndex((e) => e.type === 'intrusion');
   const lines = s.logs.slice(Math.max(0, start)).filter((e) => e.type !== 'queued').slice(-limit);
-  return lines.map((e) => `<li${e.who ? ' class="crew"' : ''}><span class="c">c${e.cycle}</span><span class="${e.auto === 'daemon' ? 'daemon' : LOG_CLASS[e.type] ?? ''}">${e.who ? `<b class="who">${esc(e.who)}</b> ` : ''}${esc(e.message)}</span></li>`).join('');
+  return lines.map((e) => `<li class="${e.who ? 'crew ' : ''}${THEIRS.has(e.type) && !e.who ? 'side-them' : MINE_LOG.has(e.type) || e.who ? 'side-you' : ''}"><span class="c">c${e.cycle}</span><span class="${e.auto === 'daemon' ? 'daemon' : LOG_CLASS[e.type] ?? ''}">${e.who ? `<b class="who">${esc(e.who)}</b> ` : ''}${esc(e.message)}</span></li>`).join('');
 }
 
 export function trayMarkup(s) {
@@ -1481,7 +1492,6 @@ function zoneCard(s) {
 }
 // The server card's lines: icon and name, then what it is (a bar or pips), then its number.
 const srvLine = (icon, name, body, value, tip = '') => `<div class="srv-line"${tip ? ` title="${esc(tip)}"` : ''}><span class="srv-k">${glyph(icon)}${esc(name)}</span><span class="srv-v">${body}</span><b class="srv-n">${value}</b></div>`;
-const pipRow = (used, total) => `<span class="pip-row">${Array.from({ length: total }, (_, i) => `<i class="${i < used ? 'on' : ''}"></i>`).join('')}</span>`;
 // The service slots, left to right: what runs in each (icon and version), what's installing, then free slots.
 function svcStrip(s) {
   const running = Object.entries(s.services || {}).map(([id, v]) => `<span class="svc-tile on" title="${esc(SERVICES[id].name)} v${v}">${glyph(id)}<small>v${v}</small></span>`);
@@ -1514,8 +1524,8 @@ function mapSide(s, sel, node) {
         ${srvLine('firewall', 'Wall', wallRuler(s, true), '', 'Which invasion levels your wall stops')}
         ${degradedMarkup(s)}${awayLine(s)}
         <div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${portsUsed(s)}/${portCount(s)}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>
-        ${srvLine('memory', 'Memory', pipRow(liveCount(s), memoryCap(s)), `${liveCount(s)}<small>/${memoryCap(s)}</small>`, 'Servers on your network')}
-        ${srvLine('harvester', 'Harvesters', pipRow(bandwidthUsed(s), bandwidth(s)), `${bandwidthUsed(s)}<small>/${bandwidth(s)}</small>`, 'Harvester slots')}
+        ${srvLine('memory', 'Memory', '', `${liveCount(s)}<small>/${memoryCap(s)}</small>`, 'Servers on your network')}
+        ${srvLine('harvester', 'Harvesters', '', `${bandwidthUsed(s)}<small>/${bandwidth(s)}</small>`, 'Harvester slots')}
         ${srvLine('salvage', 'Salvage', '', `${s.salvage.length}`)}
         ${s.install ? `<div class="install mini"><div class="install-top"><b>${glyph(s.install.id)}${esc(SERVICES[s.install.id].name)} v${s.install.v}</b><span>${fmtTime(s.install.doneAt - Date.now())}</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((Date.now() - s.install.startedAt) / (s.install.doneAt - s.install.startedAt)) * 100))}%"></span></div>${buyoutBtn(s, 'buyout', installBuyout(s))}</div>` : ''}
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
