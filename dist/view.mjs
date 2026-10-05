@@ -239,7 +239,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const tags = `${v.elite ? '<span class="tag hot tag-elite" title="Elite: built for a crew. Much tougher; three times the XP and drop rolls.">elite</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
-  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${party ? partyMarkup(s, fc) : ''}</div>${statusPanel(s)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div></div>${statusPanel(s)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}</p></div>`;
 }
 
@@ -255,18 +255,6 @@ function statusPanel(s) {
   return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${chips || '<small class="quiet">nothing on you</small>'}</div></div>`;
 }
 
-// Your crew's health (party frames): a little window under your Signal, side by side. Where they aim is
-// their avatar on the part's rail; what they did is the number on the part and the log.
-function partyMarkup(s, fc) {
-  const e = s.encounter;
-  const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter) : [];
-  if (!crew.length) return '';
-  const actedWho = e.steps?.order?.[e.steps.next - 1], acted = actedWho ? crew.find((m) => m.who === actedWho) : null; // whose turn just played
-  return `<div class="hud-bar hud-crew"><div class="bar-top"><strong>Crew</strong></div><div class="party">${crew.map((m) => {
-    const up = mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = m.encounter.queue;
-    return `<div class="pmate${up ? '' : ' down'}${m === acted ? ' acting' : ''}" data-mate="${esc(m.who)}" title="${esc(`${m.who} · ${ARCHETYPES[m.loadout.archetype].name}${up ? (q ? ` · ${q.text}` : '') : ' · down'}`)}"><b>${esc(m.who)}</b>${up && drawingFire(m) ? '<span class="tag hot" title="Every attack comes at them (Firewall)">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0)}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small></div>`;
-  }).join('')}</div></div>`;
-}
 
 function attackChip(i, c, k = '', to = null) {
   return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b>${esc(i.name)}</b><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
@@ -1878,7 +1866,7 @@ const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${ma
         // What they mean to do this cycle: the skill (its verb's colour and icon) and the part.
         const a = q && ABILITIES[q.ability], tgt = q?.target && part(s, q.target);
         const intent = !live ? '' : !up ? '<div class="pm-intent dim">down</div>' : a ? `<div class="pm-intent verb-${a.verb}" title="${esc(a.help || a.short || '')}">${glyph(a.verb)}<b>${esc(a.name)}</b>${tgt ? `<span class="pm-at">→ ${esc(tgt.name)}</span>` : ''}${q.last ? '<small>last</small>' : ''}</div>` : '<div class="pm-intent dim">holding</div>';
-        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)}</small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small>${intent}</div>`;
+        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)} <span class="pm-lv">Lv ${hackerLevel(m)}</span></small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small>${intent}</div>`;
       }).join('')}</div>`;
 // The crew window (app.js floats it, draggable): the crew as they'll join you, live in a run fight
 // (bars, who's down, what each means to do this cycle). Only there when you have a crew.

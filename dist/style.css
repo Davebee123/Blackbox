@@ -2109,3 +2109,14 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); }
 .crewwin:has(.cw-body) .cw-head { border-bottom-color: var(--line); }
 .crewwin:not(:has(.cw-body)) .cw-head { border-bottom: 0; }
 .crewwin .party .pmate, .crewwin .party .pmate + .pmate { border-left: 0; padding-left: 0; margin: 0; }
+/* Crew window rows: name left, class + level right, flush with the bar's right end; nothing moves. */
+.crewwin .party .pmate { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; row-gap: 3px; padding: 6px 0; border-top: 1px solid var(--line); }
+.crewwin .party .pmate:first-child { border-top: 0; padding-top: 0; }
+.crewwin .pmate > b { font-size: 13px; }
+.crewwin .pmate .pm-cls { justify-self: end; text-align: right; color: var(--muted); font-size: 11px; }
+.crewwin .pmate .pm-lv { color: var(--text); margin-left: 4px; }
+.crewwin .pmate .pbar, .crewwin .pmate .pm-intent, .crewwin .pmate .pm-tag { grid-column: 1 / -1; }
+.crewwin .pmate > small:not(.pm-cls) { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
+.crewwin .pmate, .crewwin .pmate * { animation: none !important; transform: none !important; }
+.crewwin .pmate.fx-hurt, .crewwin .pmate.hurt { outline: 1px solid var(--hot); }
+.cw-btn { display: grid; place-items: center; padding: 0; line-height: 1; font-size: 11px; }
