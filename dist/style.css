@@ -1902,20 +1902,19 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 /* Hit effects (hitfx.mjs), on a layer over the board: the strike lands on the part's own cell in
    the shooter's colour (flash, slash, jolt); a crit slashes twice; a chit flashes white; a miss shakes. */
 #hitfx { position: absolute; pointer-events: none; z-index: 3; overflow: visible; }
-.fx-smash { position: absolute; overflow: hidden; border-radius: 3px; --c: 127, 209, 199; animation: fx-smash 0.5s ease-out forwards; }
-.fx-smash.crew { --c: 195, 166, 255; }
-.fx-smash b { position: absolute; left: -20%; top: 50%; width: 140%; height: 3px; margin-top: -1.5px; background: linear-gradient(90deg, transparent, #fff 35%, rgb(var(--c)) 70%, transparent); box-shadow: 0 0 10px rgba(var(--c), 0.95); transform: rotate(-12deg) scaleX(0); transform-origin: 0 50%; animation: fx-slash 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.fx-smash.crit { animation: fx-smash-crit 0.72s ease-out forwards; }
-.fx-smash.crit b { height: 5px; margin-top: -2.5px; background: linear-gradient(90deg, transparent, #fff 30%, #ffe8a0 70%, transparent); box-shadow: 0 0 16px rgba(255, 216, 92, 1); animation-name: fx-slash-crit; }
-.fx-smash.crit b.x2 { transform-origin: 100% 50%; animation-name: fx-slash-crit2; animation-delay: 0.09s; }
-.fx-smash.chit { animation: fx-smash-chit 0.35s ease-out forwards; }
+.fx-smash { position: absolute; overflow: hidden; border-radius: 3px; animation: fx-smash 0.35s ease-out forwards; }
+.fx-smash.crit { animation: fx-smash-crit 0.5s ease-out forwards; }
+.fx-smash.chit { animation: fx-smash-chit 0.3s ease-out forwards; }
 .fx-smash.miss { animation: none; }
-@keyframes fx-smash { 0% { background: rgba(255, 255, 255, 0.55); box-shadow: inset 0 0 0 2px rgba(var(--c), 0.9); } 25% { background: rgba(var(--c), 0.35); } 100% { background: rgba(var(--c), 0); box-shadow: inset 0 0 0 0 transparent; } }
-@keyframes fx-smash-crit { 0% { background: rgba(255, 255, 255, 0.9); box-shadow: inset 0 0 0 2px #fff2c8, 0 0 22px rgba(255, 216, 92, 0.9); } 30% { background: rgba(255, 196, 60, 0.5); } 100% { background: rgba(241, 185, 47, 0); box-shadow: none; } }
-@keyframes fx-smash-chit { 0% { background: rgba(255, 255, 255, 0.6); box-shadow: inset 0 0 0 2px #fff; } 100% { background: rgba(255, 255, 255, 0); box-shadow: none; } }
-@keyframes fx-slash { 0% { transform: rotate(-12deg) scaleX(0); opacity: 1; } 55% { transform: rotate(-12deg) scaleX(1); opacity: 1; } 100% { transform: rotate(-12deg) scaleX(1); opacity: 0; } }
-@keyframes fx-slash-crit { 0% { transform: rotate(-18deg) scaleX(0); opacity: 1; } 55% { transform: rotate(-18deg) scaleX(1); opacity: 1; } 100% { transform: rotate(-18deg) scaleX(1); opacity: 0; } }
-@keyframes fx-slash-crit2 { 0% { transform: rotate(18deg) scaleX(0); opacity: 1; } 55% { transform: rotate(18deg) scaleX(1); opacity: 1; } 100% { transform: rotate(18deg) scaleX(1); opacity: 0; } }
+@keyframes fx-smash { 0% { background: rgba(255, 236, 190, 0.32); } 100% { background: rgba(255, 236, 190, 0); } }
+@keyframes fx-smash-crit { 0% { background: rgba(255, 240, 200, 0.6); box-shadow: inset 0 0 0 2px #fff2c8, 0 0 22px rgba(255, 216, 92, 0.8); } 100% { background: rgba(241, 185, 47, 0); box-shadow: none; } }
+@keyframes fx-smash-chit { 0% { background: rgba(255, 255, 255, 0.45); } 100% { background: rgba(255, 255, 255, 0); } }
+/* The burst: 1s and 0s fly out of the part's centre and fade (crit: more, bigger, gold-white). */
+.fx-bit { position: absolute; z-index: 2; font: 700 16px/1 var(--mono); color: var(--amber); text-shadow: 0 0 6px rgba(241, 185, 47, 0.9); transform: translate(-50%, -50%); animation: fx-bit var(--d, 0.6s) cubic-bezier(0.15, 0.7, 0.3, 1) forwards; }
+.fx-bit.crew { color: var(--daemon); text-shadow: 0 0 6px rgba(195, 166, 255, 0.85); }
+.fx-bit.crit { color: #fff2c8; font-size: 20px; text-shadow: 0 0 8px rgba(255, 216, 92, 1); }
+.fx-bit.chit { color: #fff; font-size: 13px; text-shadow: 0 0 5px rgba(255, 255, 255, 0.8); }
+@keyframes fx-bit { 0% { transform: translate(-50%, -50%) scale(0.6); opacity: 1; } 60% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(var(--s, 1)) rotate(var(--r, 0deg)); opacity: 0; } }
 .bname.fx-jolt { animation: fx-jolt 0.32s ease-out; }
 .bname.fx-jolt.crit { animation: fx-jolt-crit 0.45s ease-out; }
 .bname.fx-jolt.miss { animation: fx-jolt-miss 0.4s ease-out; }
@@ -2168,7 +2167,7 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 .citem .act.cclear { position: absolute; top: 7px; right: 8px; grid-column: auto; margin: 0; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--text); border: 1px solid var(--line-strong, var(--line)); border-radius: 3px; background: var(--inset); opacity: 1; }
 .citem .act.cclear:hover { color: var(--hot); border-color: var(--hot); }
 .citem .act.cclear { text-decoration: none; }
-/* Whose half of the cycle: a strip across the top of the board names it, and the whole board takes its colour. */
+/* Whose half of the cycle: a strip across the top of the board names it; only the virus's half turns the board red. */
 .phase-strip { display: flex; align-items: center; gap: 10px; padding: 6px 14px; margin: -4px 0 4px; font: 600 11px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--line); }
 .phase-strip i { font-style: normal; opacity: 0.6; }
 .phase-strip span { padding: 2px 8px; border-radius: 2px; border: 1px solid transparent; }
@@ -2176,7 +2175,6 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 .phase-strip.ph-you .ps-you { color: var(--bg); background: var(--you); }
 .phase-strip.ph-them .ps-them { color: var(--bg); background: var(--hot); }
 #board { transition: background-color 0.2s, box-shadow 0.2s; }
-body.phase-you #board { background-color: color-mix(in srgb, var(--you) 5%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--you) 45%, transparent); }
 body.phase-them #board { background-color: color-mix(in srgb, var(--hot) 7%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hot) 55%, transparent); }
 body.phase-them .board { --band-line: var(--hot); --band-edge: rgba(255, 91, 61, 0.55); }
 body.phase-them .brow.byou { opacity: 0.6; transition: opacity 0.2s; }
@@ -2188,7 +2186,6 @@ body.phase-them .brow.byou { opacity: 0.6; transition: opacity 0.2s; }
 body.phase-them #command-input { opacity: 0.5; }
 body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px color-mix(in srgb, var(--you) 40%, transparent); }
 /* Who did it to what: the actor's row and the target light in the side's colour. */
-.brow.side-you { box-shadow: inset 3px 0 0 var(--you), inset 0 0 0 1px color-mix(in srgb, var(--you) 50%, transparent); background: color-mix(in srgb, var(--you) 9%, transparent); }
 .brow.side-them { box-shadow: inset 3px 0 0 var(--hot), inset 0 0 0 1px color-mix(in srgb, var(--hot) 55%, transparent); background: color-mix(in srgb, var(--hot) 10%, transparent); }
 .hud-bar.side-them { box-shadow: 0 0 0 1px var(--hot), 0 0 14px color-mix(in srgb, var(--hot) 45%, transparent); }
 .hud-bar.side-you { box-shadow: 0 0 0 1px var(--you); }

@@ -1,6 +1,6 @@
-// Hit effects on the fight board: when a command lands, it lands on the part itself, in the
-// shooter's colour (yours teal, a crewmate's violet): a flash, a slash across it, a jolt. A crit
-// slashes twice, harder; a broken armor chit flashes it white; a miss shakes it. (How much is the
+// Hit effects on the fight board: when a command lands, it lands on the part itself: its cell
+// flashes and jolts, and a burst of 1s and 0s flies out (amber, a crewmate's violet). A crit bursts
+// bigger in gold-white; a broken armor chit throws white bits; a miss shakes it. (How much is the
 // number and the bar: app.js.)
 //
 // The effects live on a layer beside #board, not in it: the board redraws every step of a cycle,
@@ -21,7 +21,7 @@ export function createHitFx(board, { canMove = () => true } = {}) {
   const add = (cls, style, html = '', ms = 700) => {
     const el = document.createElement('span');
     el.className = cls;
-    Object.assign(el.style, style);
+    for (const [k, v] of Object.entries(style)) if (k.startsWith('--')) el.style.setProperty(k, v); else el.style[k] = v;
     el.innerHTML = html;
     layer.appendChild(el);
     setTimeout(() => el.remove(), ms);
@@ -29,16 +29,26 @@ export function createHitFx(board, { canMove = () => true } = {}) {
 
   // row: the part's board row. who: 'you' or a crewmate's handle. kind: 'you' | 'crew'.
   // result: 'hit' | 'crit' | 'chit' | 'miss'.
-  // The strike lands on the part itself: its cell flashes in the shooter's colour, a slash cuts
-  // across it (a crit: two, crossing, harder), and the cell jolts. A broken chit flashes it white;
-  // a miss only shakes it.
+  // The strike lands on the part itself: its cell flashes and jolts, and a burst of 1s and 0s
+  // flies out of it (in your colour, a crewmate's in violet; a crit: more, bigger, gold-white).
+  // A broken chit throws a few white bits; a miss only shakes it.
+  const BITS = { hit: 16, crit: 28, chit: 8, miss: 0 };
   function strike(row, { kind, result }) {
     if (!row?.isConnected || !canMove()) return;
     const f = frame(), name = row.querySelector('.bname');
     if (!name) return;
     const n = local(f, name.getBoundingClientRect());
-    const slashes = result === 'crit' ? '<b></b><b class="x2"></b>' : result === 'hit' ? '<b></b>' : '';
-    add(`fx-smash ${kind} ${result}`, { left: n.l + 'px', top: n.t + 'px', width: n.w + 'px', height: n.h + 'px' }, slashes, result === 'crit' ? 750 : 560);
+    add(`fx-smash ${kind} ${result}`, { left: n.l + 'px', top: n.t + 'px', width: n.w + 'px', height: n.h + 'px' }, '', 600);
+    const cx = n.l + n.w * 0.4, cy = n.t + n.h / 2, reach = result === 'crit' ? 120 : 85;
+    for (let i = 0; i < BITS[result]; i++) {
+      const a = Math.random() * Math.PI * 2, d = reach * (0.35 + Math.random() * 0.65);
+      add(`fx-bit ${kind} ${result}`, {
+        left: cx + (Math.random() - 0.5) * n.w * 0.3 + 'px', top: cy + 'px',
+        '--tx': Math.cos(a) * d + 'px', '--ty': Math.sin(a) * d * 0.7 + 'px',
+        '--r': (Math.random() - 0.5) * 120 + 'deg', '--s': (0.7 + Math.random() * 0.6).toFixed(2),
+        '--d': (0.45 + Math.random() * 0.35).toFixed(2) + 's',
+      }, Math.random() < 0.5 ? '0' : '1', 900);
+    }
     name.classList.remove('fx-jolt', 'crit', 'miss'); void name.offsetWidth;
     name.classList.add('fx-jolt'); if (result === 'crit' || result === 'miss') name.classList.add(result);
     setTimeout(() => name.classList.remove('fx-jolt', 'crit', 'miss'), 500);
