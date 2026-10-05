@@ -2156,3 +2156,11 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 .pm-acts .act { padding: 2px 5px; font-size: 11px; }
 .cw-foot { display: flex; justify-content: flex-end; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
 .cw-foot .act { font-size: 11px; }
+/* Pager entries: label, sender, then how long ago, all on the first line; a clear × pinned top right. */
+.citem { position: relative; grid-template-columns: auto auto auto minmax(0, 1fr); padding-right: 42px; }
+.citem .cfrom { font-size: 11px; color: var(--muted); }
+.citem .cage { font-size: 10px; color: var(--dim); }
+.citem .cage::before { content: '·'; margin-right: 6px; opacity: 0.6; }
+.citem .act.cclear { position: absolute; top: 7px; right: 8px; grid-column: auto; margin: 0; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; font-size: 16px; line-height: 1; color: var(--text); border: 1px solid var(--line-strong, var(--line)); border-radius: 3px; background: var(--inset); opacity: 1; }
+.citem .act.cclear:hover { color: var(--hot); border-color: var(--hot); }
+.citem .act.cclear { text-decoration: none; }
