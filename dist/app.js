@@ -605,7 +605,7 @@ function run(raw) {
   if ((wasAlert || events.some((e) => e.type === 'jack-in' || e.type === 'engage')) && active(campaign)) go('combat', events.some((e) => e.type === 'jack-in'));
   else if (events.some((e) => e.type === 'run-start')) go('net', true);
   else if (events.some((e) => e.type === 'jacked-out')) go('map', true);
-  else if (campaign.run && module !== 'net' && events.some((e) => e.type.startsWith('net'))) go('net');
+  else if (campaign.run && module !== 'net' && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('net'))) go('net'); // a win stays on its kill screen (the folder listing waits in the terminal)
   else if (text.startsWith('encounter ') && campaign.encounter?.phase === 'alert') { mapSel = 'intrusion'; go('map'); }
   save();
   dirty = true;
@@ -961,6 +961,7 @@ function render(force = false) {
   renderCrewWin(s, side);
   if (combatLike && hasFight) {
     put('hud', V.hudMarkup(s, { party: !side, preview: aimPreview }));
+    flyStatuses(s);
     // A new cycle: remember where every chip was, so the board can move them instead of jumping.
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
@@ -1258,6 +1259,40 @@ function hideTip(seen) {
 $('tip-ok').addEventListener('click', () => { hideTip(true); $('command-input').focus(); });
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
 addEventListener('resize', () => placeTip());
+
+// A status lands: its chip shows big over the board, then flies into its place in the Status
+// column (centre of the HUD). Only chips that weren't there a moment ago; same fight only.
+let statusSeen = { fight: null, names: new Set() };
+const statusFlying = new Set();
+function flyStatuses(s) {
+  const fight = s.encounter?.virus?.id;
+  const chips = [...document.querySelectorAll('#hud .hud-status .st')];
+  for (const c of chips) if (statusFlying.has(c.textContent)) c.style.visibility = 'hidden'; // still on its way
+  const names = new Set(chips.map((c) => c.textContent));
+  const fresh = statusSeen.fight === fight ? chips.filter((c) => !statusSeen.names.has(c.textContent)) : [];
+  statusSeen = { fight, names };
+  if (!fresh.length || !canMove()) return;
+  const board = $('board')?.getBoundingClientRect();
+  if (!board) return;
+  fresh.forEach((chip, i) => {
+    const to = chip.getBoundingClientRect();
+    const fly = chip.cloneNode(true);
+    fly.removeAttribute('tabindex'); fly.removeAttribute('data-tip');
+    fly.classList.add('st-fly');
+    Object.assign(fly.style, { left: to.left + 'px', top: to.top + 'px', width: to.width + 'px' });
+    document.body.appendChild(fly);
+    chip.style.visibility = 'hidden';
+    statusFlying.add(chip.textContent);
+    const dx = board.left + board.width / 2 - (to.left + to.width / 2), dy = board.top + board.height * 0.42 - (to.top + to.height / 2);
+    const anim = fly.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(0.6)`, opacity: 0 },
+      { transform: `translate(${dx}px, ${dy}px) scale(2.4)`, opacity: 1, offset: 0.18 },
+      { transform: `translate(${dx}px, ${dy}px) scale(2.2)`, opacity: 1, offset: 0.5 },
+      { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+    ], { duration: 950, delay: i * 140, easing: 'cubic-bezier(0.5, 0, 0.2, 1)', fill: 'both' });
+    anim.onfinish = () => { fly.remove(); statusFlying.delete(chip.textContent); const now = [...document.querySelectorAll('#hud .hud-status .st')].find((c) => c.textContent === chip.textContent); if (now) { now.style.visibility = ''; now.classList.add('st-land'); setTimeout(() => now.classList.remove('st-land'), 500); } };
+  });
+}
 
 // Who did it, to what: the actor's row lights in its side's colour and the target takes the mark.
 // Your half of the cycle resolves the instant you press Enter: keep it lit long enough to see.
