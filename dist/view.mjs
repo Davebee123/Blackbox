@@ -2,7 +2,10 @@
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { CONFIGS, forService, known as configsKnown, owned as configsOwned, configOn, codeFor as configCode, CONFIG_COST } from './configs.mjs';
 import { glyph } from './glyphs.mjs';
-import { isLive, liveCount, memoryCap, memoryCost } from './memory.mjs';
+import { isLive, liveCount, memoryCap, memoryCost, joinCost } from './memory.mjs';
+// The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
+let memAsk = null;
+export const setMemAsk = (id) => { memAsk = id; };
 import { fleetLeft } from './fleet.mjs';
 import { HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
@@ -711,7 +714,7 @@ export function wallRuler(s, compact = false, bands = wallBands(s)) {
   const mark = (lv, cls, label) => `<span class="wr-mark ${cls}" style="left:${pct(lv - 0.5)}" title="${esc(label)}"><i></i><small>${esc(label)}</small></span>`;
   return `<div class="wall-ruler${compact ? ' compact' : ''}" title="${esc(bandsText(s))}">
     <div class="wr-track">${seg('blocked', 0, blocks, 'firewall', blocks ? `Stopped at the wall: up to level ${blocks}` : '')}${seg('siege', blocks, holds, 'tarpit', `Contested: level ${blocks + 1}–${holds}`)}${seg('breach', holds, hi, 'kill', `Breaks through: level ${holds + 1} and up`)}</div>
-    <div class="wr-marks">${mark(you, 'you', `you ${you}`)}${inv ? mark(inv.level, 'inv ' + inv.state, `${inv.name} ${inv.level}`) : ''}</div>
+    <div class="wr-marks">${mark(you, 'you', `server ${you}`)}${inv ? mark(inv.level, 'inv ' + inv.state, `${inv.name} ${inv.level}`) : ''}</div>
     ${compact ? '' : `<div class="wr-scale"><span>1</span>${blocks ? `<span style="left:${pct(blocks)}">${blocks}</span>` : ''}${holds > blocks ? `<span style="left:${pct(holds)}">${holds}</span>` : ''}<span style="left:100%">${hi}</span></div>`}
   </div>`;
 }
@@ -1580,6 +1583,18 @@ function mapSide(s, sel, node) {
     return `<section class="card"><h2>Lead</h2><h1>${esc(f.name)} · ${node.progress}%</h1><div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.min(100, node.progress)}%"></span></span></div></section>`;
   }
   const l = node.loc, st = nodeState(s, l);
+  // A server you found but never connected: Connect asks first, showing the memory it takes.
+  if (l.fresh && l.detached && s.locations.includes(l)) {
+    const j = joinCost(s, l), asking = memAsk === l.id, after = j.used + j.add;
+    const pips = `<span class="slots mem-join${j.fits ? '' : ' over'}" title="Memory: ${j.used}/${j.cap} → ${after}/${j.cap}">${glyph('memory')}${Array.from({ length: Math.max(j.cap, after) }, (_, i) => `<i class="${i < j.used ? 'on' : i < after ? 'add' : ''}${i >= j.cap ? ' x' : ''}"></i>`).join('')}<small>${j.used}<span class="mj-to">→</span><b>${after}</b>/${j.cap}</small></span>`;
+    const why = busy ? 'Finish what you are doing first' : relockLeft(l) ? 'Still tracing your last connection' : !j.fits ? 'Not enough memory: detach another server first' : '';
+    return `<section class="card mem-card${asking ? ' asking' : ''}"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · found</h2><h1>${esc(l.name)}</h1>
+      <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.faction ? ` · <span class="tag" style="--fc:${FX[l.faction].color}">${esc(FX[l.faction].short)}</span>` : ''}${l.rogue ? ' · <span class="tag hot">rogue</span>' : ''}</p>
+      <div class="srv-slots">${pips}</div>
+      ${asking
+        ? `<div class="mem-ask"><div class="row"><button type="button" class="btn primary" data-mem-yes="${esc(l.id)}" ${why ? `disabled title="${esc(why)}"` : ''}>${glyph('memory')}Connect · +${j.add}</button><button type="button" class="btn" data-mem-no>Cancel</button></div></div>`
+        : `<div class="row"><button type="button" class="btn primary" data-mem-ask="${esc(l.id)}" ${why && why !== 'Not enough memory: detach another server first' ? `disabled title="${esc(why)}"` : `title="Uses ${j.add} memory"`}>Connect</button></div>`}</section>`;
+  }
   // Memory (memory.mjs): a detached server is frozen; its card is just that and Attach.
   if (s.locations.includes(l) && !isLive(s, l)) {
     const up = l.detached ? null : (() => { let p = l; while (p && !p.detached) p = s.locations.find((x) => x.id === p.parent); return p; })();
@@ -1856,15 +1871,14 @@ function runMate(s, name) {
   const c = s.run?.crew?.[name];
   if (!c) return '';
   const linkedYou = c.link === 'you', youFollow = s.run.linkedTo === name, here = c.cwd === s.run.cwd;
-  const state = linkedYou ? '<span class="cs-link" title="Linked: they move with you">⛓</span>' : youFollow ? '<span class="cs-link lead" title="You follow them">⛓ ←</span>' : '<span class="cs-off" title="On their own">○</span>';
+  const state = linkedYou ? '<span class="tag good pm-st" title="Linked: they move with you">with you</span>' : youFollow ? '<span class="tag you pm-st" title="You follow them">leading</span>' : '<span class="tag dim pm-st" title="On their own">solo</span>';
   const acts = [
-    linkedYou ? `<button type="button" class="act" data-run="split ${esc(name)}">Split</button>` : '',
+    linkedYou ? `<button type="button" class="act" data-run="split ${esc(name)}" title="Let ${esc(name)} go their own way">Unlink</button>` : '',
     !linkedYou && !here ? `<button type="button" class="act" data-run="goto ${esc(name)}">Go to</button>` : '',
     !linkedYou && !youFollow ? `<button type="button" class="act" data-run="link ${esc(name)}">Link</button>` : '',
-    youFollow ? '<button type="button" class="act" data-run="unlink">Unlink</button>' : '',
-    `<button type="button" class="act dim" data-run="crew kick ${esc(name)}" title="Take ${esc(name)} out of your crew">×</button>`,
+    youFollow ? `<button type="button" class="act" data-run="unlink" title="Stop following ${esc(name)}">Unlink</button>` : '',
   ].join('');
-  return `<div class="pm-run"><span class="pm-where">${state}<code>${esc(c.cwd)}</code></span><span class="pm-acts">${acts}</span></div>`;
+  return `<div class="pm-run"><span class="pm-where">${state}<code title="Where ${esc(name)} is">${esc(c.cwd)}</code></span><span class="pm-acts">${acts}</span></div><button type="button" class="pm-kick" data-run="crew kick ${esc(name)}" title="Take ${esc(name)} out of your crew" aria-label="Remove ${esc(name)}">×</button>`;
 }
 const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${mates.map((m) => {
         const live = inFight && m.encounter, up = !live || mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = live ? m.encounter.queue : null;

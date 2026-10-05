@@ -15,7 +15,7 @@ import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
-import { isLive } from './memory.mjs';
+import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
 import { strikeServer } from './factions.mjs';
 export { zoneOf, zoneRooms };
 
@@ -344,9 +344,12 @@ export function connect(s, id) {
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
   else if (!loc) warn(s, `No located origin called "${id}". Check Trace.`);
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
-  else if (loc.detached || (s.locations.includes(loc) && !isLive(s, loc))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
+  else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
+  else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (isWild(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
   else {
+    // A found server joins your network as you connect (the game asks first: app.js).
+    if (loc.fresh && loc.detached) memoryCommand(s, 'attach', loc.id);
     // A waiting home intrusion is parked for the run and comes back afterwards.
     if (s.encounter?.phase === 'alert' && s.encounter.mode !== 'run') s.parked = s.encounter;
     if (s.encounter && s.encounter.phase !== 'active') s.encounter = null;

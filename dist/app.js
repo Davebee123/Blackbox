@@ -107,8 +107,8 @@ const canMove = () => campaign.settings.motion && !reducedMotion.matches;
 //   full: also the impact burst in the Now cell, sparks, the whole row flashing, a punch on the virus.
 //   minimal: numbers and bars only.
 const fxLevel = () => (['full', 'minimal'].includes(campaign.settings.effects) ? campaign.settings.effects : 'calm');
-// Hit effects (hitfx.mjs): when a command lands, the shooter's avatar lunges at the part and a
-// band of their colour sweeps its bar; a miss shakes it; a broken chit flashes it white.
+// Hit effects (hitfx.mjs): when a command lands, it lands on the part's own cell in the shooter's
+// colour (flash, slash, jolt); a crit slashes twice; a miss shakes it; a broken chit flashes it white.
 const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove() });
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
@@ -174,21 +174,6 @@ function firstLogin() {
 const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: () => canMove(), tick: () => feel.key('char') });
 shell.mount();
 const row = (id) => `.board [data-target="${id}"]`;
-// A hit lands on the timeline too: a burst in the part's Now cell (gold, bigger on a crit;
-// a small white one when it only breaks a chit).
-function impact(id, crit = false, chit = false) {
-  if (!canMove()) return;
-  const cell = document.querySelector(row(id))?.children[1];
-  if (!cell) return;
-  // Fixed on the page, so the board re-rendering this cycle doesn't cut it short.
-  const r = cell.getBoundingClientRect();
-  const b = document.createElement('i');
-  b.className = 'fx-impact' + (crit ? ' crit' : chit ? ' chit' : '');
-  b.style.left = r.left + r.width / 2 + 'px';
-  b.style.top = r.top + r.height / 2 + 'px';
-  document.body.appendChild(b);
-  setTimeout(() => b.remove(), 600);
-}
 const MINE = '.hud-bar.mine';
 
 // ---------- juice: how hits, broken shields and hurts land ----------
@@ -217,7 +202,7 @@ const juice = {
   },
   // Sparks off the hit part's row, flying away from the impact.
   sparks(id, n, cls = '') {
-    const cell = document.querySelector(row(id))?.children[1];
+    const cell = document.querySelector(row(id))?.children[0];
     if (!cell) return;
     const r = cell.getBoundingClientRect();
     for (let i = 0; i < n; i++) {
@@ -398,12 +383,11 @@ function react(events) {
       case 'damage': {
         const lvl = fxLevel(), full = lvl === 'full', mate = !!e.who;
         art.hit(e.target, e.crit ? 'crit' : 'hit');
-        if (full) impact(e.target, e.crit);
         const pm = part(campaign, e.target)?.max || 50, big = Math.min(1, e.amount / pm);
         const size = (1 + big * 0.9 + (e.crit ? 0.35 : 0)) * (mate ? 0.8 : 1);
-        // Calm: the part's name line flashes (yours only) and the number rises in its Now cell; full: the whole row.
-        const at = full ? row(e.target) : `${row(e.target)} .part-top`;
-        const look = { amount: e.amount, size, noFlash: lvl === 'minimal' || (mate && !full), quiet: mate && !full, floatAt: full ? null : `${row(e.target)} > .bcell:nth-child(2)` };
+        // On the part itself: calm flashes its name line; full, its whole cell (with the strike). The number rises off it.
+        const at = full ? `${row(e.target)} > .bcell:first-child` : `${row(e.target)} .part-top`;
+        const look = { amount: e.amount, size, noFlash: lvl === 'minimal' || (mate && !full), quiet: mate && !full, floatAt: `${row(e.target)} > .bcell:first-child` };
         if (e.crit) feel.add('crit', at, `CRIT −${e.amount}`, look); else feel.add('hit', at, `−${e.amount}`, look);
         if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
@@ -443,7 +427,7 @@ function react(events) {
       case 'encrypted': feel.add('drain', MINE, `−${e.amount}`); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('BLINDED'); feel.add('blind', '.board', null); break;
-      case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); if (lvl === 'full') impact(e.target, false, true); feel.add('chit', lvl === 'full' ? row(e.target) : `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: lvl === 'full' ? null : `${row(e.target)} > .bcell:nth-child(2)` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
+      case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), '+◆'); break;
       case 'xp': feel.add('cycle', null, `+${e.amount} XP`); break;
       case 'status': if (e.mark) markFx(e, false); break;
@@ -553,6 +537,10 @@ function run(raw) {
   if (!text) return;
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
+  // A server you found but never connected: typing connect asks first, on its map card.
+  const join = text.match(/^connect (\S+)$/);
+  const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
+  if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
   const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir)$/);
   if (dial && V.hubOptions(campaign, dial[1]).length) return openHub(dial[1]);
@@ -741,27 +729,31 @@ const mapZoom = { k: 1, cx: 0, cy: 0 };
 const mapSvg = () => $('page-view')?.querySelector('.map-svg');
 const baseVb = (svg) => svg.dataset.vb.split(' ').map(Number);
 // Put the card beside the selected node: to its right, or its left when there's no room.
-let popAt = null; // the last spot: a redraw puts the card straight back there, so it never blinks
-function placeMapPop(measure = true) {
-  const pop = $('map-pop'), canvas = pop?.closest('.map-canvas'), node = canvas?.querySelector('.mnode.selected');
+let popAt = null; // the last spot: a redraw puts the card straight back there, so it never moves
+// Anchored to the node's hit circle (its rings and labels change size), and measured again only
+// when the selection, the zoom or the canvas changes.
+function placeMapPop() {
+  const pop = $('map-pop'), canvas = pop?.closest('.map-canvas'), node = canvas?.querySelector('.mnode.selected .mhit');
   if (!pop) return;
   if (!node) { pop.style.visibility = 'hidden'; return; }
-  if (popAt && popAt.sel === mapSel) { pop.style.left = popAt.left; pop.style.top = popAt.top; pop.style.visibility = 'visible'; if (!measure) return; }
-  const c = canvas.getBoundingClientRect(), n = node.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, gap = 14;
-  let left = n.right - c.left + gap;
-  if (left + w > c.width - 8) left = n.left - c.left - gap - w;
+  const c = canvas.getBoundingClientRect();
+  const key = [mapSel, mapZoom.k, mapZoom.cx, mapZoom.cy, Math.round(c.width), Math.round(c.height)].join('|');
+  if (popAt?.key === key) { pop.style.left = popAt.left; pop.style.top = popAt.top; pop.style.visibility = 'visible'; return; }
+  const n = node.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight, gap = 14;
+  if (!n.width) return;
+  const cx = n.left + n.width / 2 - c.left, cy = n.top + n.height / 2 - c.top, r = n.width / 2;
+  let left = cx + r + gap;
+  if (left + w > c.width - 8) left = cx - r - gap - w;
   left = Math.max(8, Math.min(c.width - w - 8, left));
-  const top = Math.max(8, Math.min(c.height - h - 8, n.top - c.top + n.height / 2 - 40));
-  pop.style.left = left + 'px'; pop.style.top = top + 'px'; pop.style.visibility = 'visible';
-  popAt = { sel: mapSel, left: pop.style.left, top: pop.style.top };
+  const top = Math.max(8, Math.min(c.height - h - 8, cy - 40));
+  pop.style.left = Math.round(left) + 'px'; pop.style.top = Math.round(top) + 'px'; pop.style.visibility = 'visible';
+  popAt = { key, left: pop.style.left, top: pop.style.top };
 }
 function applyMapZoom() {
   const svg = mapSvg();
   if (!svg) return;
-  placeMapPop(false); // same pass as the redraw: back where it was, no blank frame
-  requestAnimationFrame(() => placeMapPop());
   const [x, y, w, h] = baseVb(svg);
-  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) svg.style.setProperty('--z', a); }; // text keeps its size on screen, at any width or zoom
+  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) svg.style.setProperty('--z', a); placeMapPop(); }; // text keeps its size on screen, at any width or zoom
   if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return fix(); }
   const zw = w / mapZoom.k, zh = h / mapZoom.k;
   mapZoom.cx = Math.max(x + zw / 2, Math.min(x + w - zw / 2, mapZoom.cx));
@@ -932,6 +924,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggl
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
+let memYes = null; // the found server you just said yes to (its connect goes through)
 addEventListener('resize', () => { dirty = true; applyMapZoom(); });
 function render(force = false) {
   if (force) cache.clear();
@@ -1253,11 +1246,11 @@ addEventListener('resize', () => placeTip());
 // Who did it, to what: the actor's row lights in its side's colour and the target takes the mark.
 // Your half of the cycle resolves the instant you press Enter: keep it lit long enough to see.
 const hold = (key, ms) => { const e = campaign.encounter; if (e) Object.defineProperty(e, key, { value: Date.now() + ms, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, ms + 50); };
-const holdYou = () => hold('_youUntil', 550), holdThem = () => hold('_themUntil', 600);
+const holdYou = () => hold('_youUntil', 550), holdThem = () => hold('_themUntil', 1500); // the virus's half lingers 1.5 s: plain whose turn it was
 // Marks outlive a board redraw: they're re-applied after each render until they expire.
 let sideMarks = [];
 function sideFx(from, to, side) {
-  const until = performance.now() + 700;
+  const until = performance.now() + (side === 'them' ? 1500 : 700);
   sideMarks = sideMarks.filter((m) => m.sel !== from && m.sel !== to);
   for (const sel of [from, to]) if (sel) sideMarks.push({ sel, side, until });
   applySideMarks();
@@ -1273,7 +1266,7 @@ function applySideMarks() {
 // combat.mjs), so you can follow who did what. The virus's answer waits a little longer.
 hooks.stepped = true;
 const STEP_MS = { relaxed: 380, normal: 330, fast: 260 };
-const VIRUS_BEAT = 1.6; // × a step, before the virus's turn
+const VIRUS_BEAT = 2.5; // × a step, before the virus's turn
 let stepTimer = null;
 function stepLoop() {
   const e = campaign.encounter;
@@ -1417,8 +1410,14 @@ document.addEventListener('click', (e) => {
   if (sug) { $('command-input').value = sug.dataset.suggestion + (ABILITIES[sug.dataset.suggestion]?.target === 'part' ? ' ' : ''); updateSuggestions(); $('command-input').focus(); return; }
   const arch = e.target.closest('[data-arch]');
   if (arch) { archView = arch.dataset.arch; dirty = true; return; }
+  // A found server's Connect: ask (its card shows the memory it takes), then yes or cancel.
+  const ask = e.target.closest('[data-mem-ask]');
+  if (ask) { V.setMemAsk(ask.dataset.memAsk); dirty = true; return; }
+  const yes = e.target.closest('[data-mem-yes]');
+  if (yes) { const id = yes.dataset.memYes; V.setMemAsk(null); memYes = id; run('connect ' + id); memYes = null; dirty = true; return; }
+  if (e.target.closest('[data-mem-no]')) { V.setMemAsk(null); dirty = true; return; }
   const node = e.target.closest('[data-select]');
-  if (node) { mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
+  if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
   if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop) { mapPop = false; dirty = true; } }
   const mail = e.target.closest('[data-mail]');
   if (mail) { mailSel = mail.dataset.mail; if (mailSel[0] === 'l') { command(campaign, 'mail read ' + mailSel.slice(1)); save(); } dirty = true; }

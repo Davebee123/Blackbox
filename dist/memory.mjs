@@ -35,13 +35,14 @@ function wouldAdd(s, loc) {
   return n;
 }
 
-// When a server is found: if memory is full, it arrives detached.
+// When a server is found it's on the map, not on your network: you choose to connect it, and that
+// takes memory (no credits the first time: Connect on its card, or connect <server>, asks first).
 export function onFound(s, loc) {
-  if (liveCount(s) > memoryCap(s)) {
-    loc.detached = true;
-    emit(s, 'info', `Memory full (${memoryCap(s)}): ${loc.name} is on the map, detached. Detach another server to make room, or level your server.`, { location: loc.id });
-  }
+  loc.detached = true;
+  loc.fresh = true;
 }
+// What connecting a found server would take: memory slots (it and anything frozen past it), now and after.
+export const joinCost = (s, loc) => { const add = wouldAdd(s, loc); return { add, used: liveCount(s), cap: memoryCap(s), fits: liveCount(s) + add <= memoryCap(s) }; };
 
 export function memoryCommand(s, verb, id, now = Date.now()) {
   const loc = byId(s, id) || (s.locations || []).find((l) => l.name.toLowerCase() === id);
@@ -60,10 +61,13 @@ export function memoryCommand(s, verb, id, now = Date.now()) {
   if (!isLive(s, byId(s, loc.parent) || {})) { let up = byId(s, loc.parent); while (up && !up.detached) up = byId(s, up.parent); return warn(s, `${loc.name} is frozen with the server it hangs off: attach ${up?.name || 'that one'} first.`); }
   const add = wouldAdd(s, loc);
   if (liveCount(s) + add > memoryCap(s)) return warn(s, `Not enough memory: ${loc.name} needs ${add}, ${memoryCap(s) - liveCount(s)} free. Detach something first.`);
-  if (s.server.credits < price) return warn(s, `Attaching ${loc.name} costs ${price} credits; you have ${s.server.credits}.`);
-  s.server.credits -= price;
+  const fee = loc.fresh ? 0 : price; // a first connection costs only memory
+  if (s.server.credits < fee) return warn(s, `Attaching ${loc.name} costs ${fee} credits; you have ${s.server.credits}.`);
+  s.server.credits -= fee;
   loc.detached = false;
+  const first = loc.fresh;
+  delete loc.fresh;
   // Unfreeze: its outposts' clocks start again from now (nothing is made while frozen).
   for (const l of branchOf(s, loc)) if (l.outpost && isLive(s, l)) l.outpost.at = now;
-  emit(s, 'info', `${loc.name} attached for ${price} credits. Memory ${liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
+  emit(s, 'info', first ? `${loc.name} is on your network. Memory ${liveCount(s)}/${memoryCap(s)}.` : `${loc.name} attached for ${fee} credits. Memory ${liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
 }

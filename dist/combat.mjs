@@ -1,7 +1,7 @@
 // BLACKBOX combat engine. Pure and deterministic: commands in, events out.
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
-import { onFound, memoryCommand, isLive } from './memory.mjs';
+import { onFound, memoryCommand, isLive, joinCost } from './memory.mjs';
 import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
@@ -1308,7 +1308,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
+    const had = new Set(s.locations.map((l) => l.id));
     addLead(s, text.split(' ')[2], 100, 'Developer: ');
+    for (const l of s.locations) if (!had.has(l.id) && l.fresh && joinCost(s, l).fits) memoryCommand(s, 'attach', l.id); // developer finds join your network
   } else if (/^repair( \d+)?$/.test(text)) {
     topUp(s, 'server', text.split(' ')[1] ? Number(text.split(' ')[1]) : null);
   } else if (/^top ?up( signal)?( \d+)?$/.test(text)) {

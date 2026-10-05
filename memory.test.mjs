@@ -2,10 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, addLocation } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
-import { MEMORY, memoryCap, liveCount, isLive, memoryCost, branchOf } from './dist/memory.mjs';
+import { MEMORY, memoryCap, liveCount, isLive, memoryCost, branchOf, joinCost } from './dist/memory.mjs';
 import { outposts } from './dist/outpost.mjs';
 
-const world = (n) => { const s = fresh(); s.tutorialCompleted = true; for (let i = 0; i < n; i++) addLocation(s, 'worm', 1); return s; };
+const world = (n) => { const s = fresh(); s.tutorialCompleted = true; for (let i = 0; i < n; i++) { const l = addLocation(s, 'worm', 1); command(s, `attach ${l.id}`); } return s; };
+
+test('memory: a find arrives off your network; connecting asks for memory, not credits, the first time', () => {
+  const s = world(0);
+  const loc = addLocation(s, 'worm', 1);
+  assert.ok(loc.detached && loc.fresh && !isLive(s, loc));
+  assert.deepEqual(joinCost(s, loc), { add: 1, used: 0, cap: memoryCap(s), fits: true });
+  const c0 = s.server.credits;
+  command(s, `attach ${loc.id}`);
+  assert.ok(isLive(s, loc) && !loc.fresh);
+  assert.equal(s.server.credits, c0, 'the first connection is free of credits');
+  assert.equal(liveCount(s), 1);
+});
 
 test('memory: past the cap, a new find arrives detached; you can\'t connect to it', () => {
   const s = world(MEMORY.base + 1);
@@ -15,7 +27,7 @@ test('memory: past the cap, a new find arrives detached; you can\'t connect to i
   assert.ok(last.detached);
   s.signal = 999;
   const out = play(s, `connect ${last.id}`);
-  assert.ok(!s.run && out.some((e) => /detached/.test(e.message)));
+  assert.ok(!s.run && out.some((e) => /memory/i.test(e.message)));
 });
 
 test('memory: detach to make room, attach for the same price every time; a frozen outpost makes nothing', () => {
@@ -45,6 +57,7 @@ test('memory: detaching a server freezes everything found through it, and frees 
   s.server.credits = 10000;
   const root = s.locations[0];
   const child = addLocation(s, 'worm', 2, root.id);
+  command(s, `attach ${child.id}`);
   assert.deepEqual(branchOf(s, root).map((l) => l.id), [root.id, child.id]);
   const n = liveCount(s);
   command(s, `detach ${root.id}`);

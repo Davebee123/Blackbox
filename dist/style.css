@@ -980,12 +980,6 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .bhead .bnow .cyc { margin-left: 0; }
 .bhead .bnow .countdown { white-space: nowrap; align-self: center; }
 /* A hit's burst in the part's Now cell. */
-.fx-impact { position: fixed; z-index: 54; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; pointer-events: none; border: 2px solid var(--amber); box-shadow: 0 0 12px rgba(241, 185, 47, 0.8); animation: fx-impact 0.55s ease-out forwards; }
-.fx-impact.crit { border-color: #fff2c8; box-shadow: 0 0 18px rgba(255, 216, 92, 1); animation-duration: 0.6s; }
-.fx-impact.chit { border-color: #fff2c8; border-style: dashed; box-shadow: none; }
-@keyframes fx-impact { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(7); opacity: 0; } }
-.fx-impact.crit { animation-name: fx-impact-crit; }
-@keyframes fx-impact-crit { 0% { transform: scale(0.4); opacity: 1; } 100% { transform: scale(11); opacity: 0; } }
 /* Protocols as compact tiles: slots in a grid, the stash in a grid, no full-width bars. */
 .ptiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
 .ptiles.stash { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
@@ -1905,19 +1899,29 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .aim.you.preview.bad { color: var(--hot); background: rgba(255, 91, 61, 0.12); box-shadow: 0 0 0 1px var(--hot); outline-color: var(--hot); animation: none; }
 @keyframes aim-preview { 50% { box-shadow: 0 0 0 1px var(--you), 0 0 16px rgba(127, 209, 199, 0.8); } }
 .no-motion .aim.you.preview { animation: none; }
-/* Hit effects (hitfx.mjs), on a layer over the board: the shooter's avatar lunges at the part, a
-   a miss shakes; a broken chit flashes white; a crit pops. */
+/* Hit effects (hitfx.mjs), on a layer over the board: the strike lands on the part's own cell in
+   the shooter's colour (flash, slash, jolt); a crit slashes twice; a chit flashes white; a miss shakes. */
 #hitfx { position: absolute; pointer-events: none; z-index: 3; overflow: visible; }
-.fx-av { position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); font: 700 9px/20px var(--mono); text-align: center; animation: fx-lunge 0.6s ease-out forwards; }
-.fx-av.you { color: var(--you); background: #1d3532; box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.8), 0 0 12px rgba(127, 209, 199, 0.6); }
-.fx-av.crew { color: var(--daemon); background: #2c2440; box-shadow: inset 0 0 0 1px rgba(195, 166, 255, 0.8), 0 0 12px rgba(195, 166, 255, 0.55); }
-.fx-av.crit { animation-name: fx-crit; }
-.fx-av.chit { animation-name: fx-chit; }
-.fx-av.miss { animation-name: fx-miss; filter: saturate(0.4); }
-@keyframes fx-lunge { 0% { transform: translateX(0) scale(1); opacity: 1; } 30% { transform: translateX(14px) scale(1.2); filter: brightness(1.8); } 70% { transform: translateX(0) scale(1); opacity: 1; } 100% { opacity: 0; } }
-@keyframes fx-crit { 0% { transform: translateX(0) scale(1); opacity: 1; } 30% { transform: translateX(16px) scale(1.5); filter: brightness(2.2); } 70% { transform: translateX(0) scale(1.05); opacity: 1; } 100% { opacity: 0; } }
-@keyframes fx-chit { 0% { transform: translateX(0); opacity: 1; } 30% { transform: translateX(12px) scale(1.2); box-shadow: 0 0 0 3px #fff, 0 0 16px #fff; } 70% { transform: translateX(0); opacity: 1; } 100% { opacity: 0; } }
-@keyframes fx-miss { 0%, 100% { transform: translateX(0); } 15% { transform: translateX(-5px); } 35% { transform: translateX(5px); } 55% { transform: translateX(-4px); } 75% { transform: translateX(3px); opacity: 1; } 100% { opacity: 0; } }
+.fx-smash { position: absolute; overflow: hidden; border-radius: 3px; --c: 127, 209, 199; animation: fx-smash 0.5s ease-out forwards; }
+.fx-smash.crew { --c: 195, 166, 255; }
+.fx-smash b { position: absolute; left: -20%; top: 50%; width: 140%; height: 3px; margin-top: -1.5px; background: linear-gradient(90deg, transparent, #fff 35%, rgb(var(--c)) 70%, transparent); box-shadow: 0 0 10px rgba(var(--c), 0.95); transform: rotate(-12deg) scaleX(0); transform-origin: 0 50%; animation: fx-slash 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.fx-smash.crit { animation: fx-smash-crit 0.72s ease-out forwards; }
+.fx-smash.crit b { height: 5px; margin-top: -2.5px; background: linear-gradient(90deg, transparent, #fff 30%, #ffe8a0 70%, transparent); box-shadow: 0 0 16px rgba(255, 216, 92, 1); animation-name: fx-slash-crit; }
+.fx-smash.crit b.x2 { transform-origin: 100% 50%; animation-name: fx-slash-crit2; animation-delay: 0.09s; }
+.fx-smash.chit { animation: fx-smash-chit 0.35s ease-out forwards; }
+.fx-smash.miss { animation: none; }
+@keyframes fx-smash { 0% { background: rgba(255, 255, 255, 0.55); box-shadow: inset 0 0 0 2px rgba(var(--c), 0.9); } 25% { background: rgba(var(--c), 0.35); } 100% { background: rgba(var(--c), 0); box-shadow: inset 0 0 0 0 transparent; } }
+@keyframes fx-smash-crit { 0% { background: rgba(255, 255, 255, 0.9); box-shadow: inset 0 0 0 2px #fff2c8, 0 0 22px rgba(255, 216, 92, 0.9); } 30% { background: rgba(255, 196, 60, 0.5); } 100% { background: rgba(241, 185, 47, 0); box-shadow: none; } }
+@keyframes fx-smash-chit { 0% { background: rgba(255, 255, 255, 0.6); box-shadow: inset 0 0 0 2px #fff; } 100% { background: rgba(255, 255, 255, 0); box-shadow: none; } }
+@keyframes fx-slash { 0% { transform: rotate(-12deg) scaleX(0); opacity: 1; } 55% { transform: rotate(-12deg) scaleX(1); opacity: 1; } 100% { transform: rotate(-12deg) scaleX(1); opacity: 0; } }
+@keyframes fx-slash-crit { 0% { transform: rotate(-18deg) scaleX(0); opacity: 1; } 55% { transform: rotate(-18deg) scaleX(1); opacity: 1; } 100% { transform: rotate(-18deg) scaleX(1); opacity: 0; } }
+@keyframes fx-slash-crit2 { 0% { transform: rotate(18deg) scaleX(0); opacity: 1; } 55% { transform: rotate(18deg) scaleX(1); opacity: 1; } 100% { transform: rotate(18deg) scaleX(1); opacity: 0; } }
+.bname.fx-jolt { animation: fx-jolt 0.32s ease-out; }
+.bname.fx-jolt.crit { animation: fx-jolt-crit 0.45s ease-out; }
+.bname.fx-jolt.miss { animation: fx-jolt-miss 0.4s ease-out; }
+@keyframes fx-jolt { 0% { transform: none; } 20% { transform: translateX(-5px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } 100% { transform: none; } }
+@keyframes fx-jolt-crit { 0% { transform: none; } 15% { transform: translateX(-9px) scale(1.03); } 35% { transform: translateX(7px); } 55% { transform: translateX(-4px); } 75% { transform: translateX(2px); } 100% { transform: none; } }
+@keyframes fx-jolt-miss { 0%, 100% { transform: none; opacity: 1; } 25% { transform: translateX(3px); opacity: 0.6; } 50% { transform: translateX(-3px); } 75% { transform: translateX(2px); } }
 
 /* A crewmate's number: smaller and dimmer than yours (Effects: calm). */
 .fx-float.quiet { opacity: 0.7; filter: saturate(0.6); }
@@ -2191,3 +2195,16 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 /* The log by side. */
 #log li.side-you, .log li.side-you { border-left: 2px solid var(--you); padding-left: 6px; }
 #log li.side-them, .log li.side-them { border-left: 2px solid var(--hot); padding-left: 6px; }
+/* Crew on a run: state chip, where they are, actions; remove sits top right. */
+.crewwin .pmate, .sidebar .pmate { position: relative; }
+.pm-st { font-size: 10px; padding: 0 5px; line-height: 16px; flex: none; }
+.pm-kick { position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; display: grid; place-items: center; padding: 0; border: 0; background: none; color: var(--dim); font-size: 14px; line-height: 1; cursor: pointer; border-radius: 3px; }
+.pm-kick:hover { color: var(--bad, #e66); background: rgba(255,255,255,0.06); }
+/* A found server's Connect: memory now → after (new slots outlined bright; past the cap, red). */
+.mem-join i.add { border-color: var(--amber); background: rgba(241, 185, 47, 0.25); animation: memadd 1.2s ease-in-out infinite; }
+.mem-join i.x { border-color: var(--bad, #e66); background: rgba(230, 102, 102, 0.35); }
+.mem-join.over small b { color: var(--bad, #e66); }
+.mem-join small { margin-left: 4px; } .mem-join .mj-to { margin: 0 3px; color: var(--dim); } .mem-join small b { color: var(--text); }
+.mem-card.asking .srv-slots { outline: 1px solid rgba(241, 185, 47, 0.35); border-radius: 4px; padding: 4px 6px; }
+@keyframes memadd { 50% { background: rgba(241, 185, 47, 0.6); } }
+@media (prefers-reduced-motion: reduce) { .mem-join i.add { animation: none; } }

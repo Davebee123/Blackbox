@@ -87,6 +87,7 @@ test('a kill empties the folder for 3–5 minutes; a Gauntlet cleared in one run
 test('infestations: they come to your outposts, pay a bonus when cleared, and leave if ignored', () => {
   const s = world();
   const loc = addLocation(s, 'worm', 1);
+  command(s, `attach ${loc.id}`);
   loc.takenOver = true;
   loc.outpost = { h: { kind: 'siphon', level: 5, traits: [] }, at: 0, stock: 0, siege: null, fallen: false };
   (s.net ||= {}).infestNext = 1; // due now (a long jump would also roll a siege)
