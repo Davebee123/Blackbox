@@ -12,6 +12,7 @@ import { ZERO_DAYS, rollItem, MATERIALS } from './gear.mjs';
 import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, learnDaemon, materialsOf, gainCode, maxSignal, hooks } from './combat.mjs';
 import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
 import { items } from './hidden.mjs';
+import { bestSell } from './market.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 export const STORE = {
@@ -50,6 +51,12 @@ export const GOODS = {
 };
 const WEIGHTS = { relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 1, blueprint: 1, daemon: 1 };
 export const codeAmount = (L) => 3 + Math.floor(L / 5);
+// What a lot of tradeable goods (code, an Exploit, salvage) costs now: its shelf price, but never
+// less than 10% over what the best hub market would pay for its contents.
+export function priceNow(s, id, price, L = hackerLevel(s)) {
+  const units = id === 'salvage' ? 5 : id === 'exploit' ? 1 : GOODS[id]?.code ? codeAmount(L) : 0;
+  return units ? Math.max(price, Math.ceil(bestSell(s, id) * units * 1.1)) : price;
+}
 export const goodsAbout = (g, L) => g.about || `${codeAmount(L)} ${MATERIALS[g.code].name}.`;
 
 export const storeOf = (s) => (s.store ||= { slots: [], serial: 0 });
@@ -97,11 +104,12 @@ export function buy(s, what) {
   }
   const slot = storeOf(s).slots.find((x) => x.key === what);
   if (!slot) return warn(s, 'That’s not on the shelf any more.');
-  if (s.server.credits < slot.price) return warn(s, `That costs ${slot.price} credits.`);
+  const price = priceNow(s, slot.id, slot.price, L);
+  if (s.server.credits < price) return warn(s, `That costs ${price} credits.`);
   const g = GOODS[slot.id];
-  s.server.credits -= slot.price;
+  s.server.credits -= price;
   slot.qty--;
-  emit(s, 'bought', `Bought ${g.name} from ${slot.agency} for ${slot.price} credits.`, { item: slot.id });
+  emit(s, 'bought', `Bought ${g.name} from ${slot.agency} for ${price} credits.`, { item: slot.id });
   deliverGoods(s, slot.id, L);
 }
 

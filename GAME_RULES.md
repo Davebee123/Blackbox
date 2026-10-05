@@ -391,7 +391,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
 - **Harvester slots** (pips on the server card and the outpost) limit how many outposts run at once: 1, plus 1 every 10 server levels (5 at most).
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
 - **Pulling out** gives the harvester back with what it holds; the slot then resets for 30 minutes.
-- **Sieges.** Natives notice an outpost about every 6 logged-on hours (by kind, traits and site). You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level). If you don't:
+- **Sieges.** Natives notice an outpost about every 6 hours (by kind, traits and site), real time, so logging off doesn't dodge them. You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level): the siege only counts down while you're logged on, so one that starts while you're away waits for you. An outpost produces nothing while it's sieged. If you don't:
   - the outpost goes into **lockdown** for 2 real hours: no harvesting, but its stockpile is kept;
   - the server and everything past it stay open (nothing is ever cut off).
 - **Retake** it (beat the natives there) to end a lockdown sooner. In a consortium, the virus that won moves on along the trunk line (see Consortium).
@@ -441,10 +441,10 @@ Every service can run one **config**: a side-grade that changes how it works, no
 ## Swarms
 
 Once you run an outpost, the network organises against it.
-- The first swarm gathers about 45 logged-on minutes after your first outpost goes up; after that, one every 90–150 logged-on minutes (half that with a Honeytoken out). One swarm at a time.
+- The first swarm gathers about 45 minutes after your first outpost goes up; after that, one every 90–150 minutes (half that with a Honeytoken out). One swarm at a time. Swarms gather and travel on real time (logging off doesn't dodge them); the siege only counts down while you're logged on, and the outpost produces nothing while a swarm sits at it.
 - A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
 - You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes; 15 with a Tarpit Beacon).
-- **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the clock waits while you fight.
+- **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the siege clock waits while you fight (a paused fight, or one left open over a reload, holds nothing).
 - Once it arrives, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown (Sturdy doesn't save it): retake it to end it sooner.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
@@ -683,7 +683,7 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
 ### Hubs you hold
 
 - **Perks:** its market trades at the true price (no spread), its shop sells at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
-- **Retake swarms:** while the old owner is Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. These gather and travel on real time, so logging off doesn't dodge them, but the siege only counts down while you're logged on (you're never locked down while away). The hub earns nothing while a retake is out for it. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then an 8-minute siege; Intercept or Defend one process a fight (`hub defend <faction>`), and the clock waits while you fight. Break it for code, salvage and XP. The hub's map node flashes red with the timer.
+- **Retake swarms:** while the old owner is Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. These gather and travel on real time, so logging off doesn't dodge them, but the siege only counts down while you're logged on (you're never locked down while away). The hub earns nothing while a retake is out for it. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then an 8-minute siege; Intercept or Defend one process a fight (`hub defend <faction>`), and the siege clock waits while you fight (not while the fight is paused). Break it for code, salvage and XP. The hub's map node flashes red with the timer.
 - **Lockdown:** if the siege runs out, the hub earns nothing until you clear it (one fight, `hub clear <faction>`). You never lose it for good.
 - **Striking a Hostile faction** (without holding its hub) gets one answer: a swarm in its colours at one of your outposts.
 
@@ -934,3 +934,17 @@ On layer 2 and deeper, about half the servers (fixed by the seed) swap their Wat
 ## Volume
 
 The System page has three sliders (0–100, default 80, the level the game was mixed at): **Music** (the soundtrack), **Ambience** (radio chatter, rain, thunder, the street ten floors down with its odd horn and passing siren, the room tone) and **Effects** (hits, keys, alerts and every other game sound). Dragging is heard live; letting go saves it. All of them sit under the Sound switch.
+
+## Fair play
+
+Rules that keep timing, reloads and loops from paying:
+
+- **A paused fight holds no clock.** Sieges (wall, outpost, swarm, retake, consortium) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
+- **Threats run on real time; sieges wait for you.** Outpost notice, swarms and retakes gather and travel whether you're logged on or not. Their sieges only count down while you're logged on, so nothing falls while you're away. Production stops while one sits at an outpost or hub.
+- **No shop-to-market loop.** A shop or the Halcyon store never sells code, Exploits or salvage for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
+- **Hub income reads outside factors only.** A held hub earns by its condition, the world event and wiped hubs elsewhere, not by your own trading there.
+- **What you compile breaks down without Exploits.**
+- **Detached servers make nothing.** Reattaching starts their outposts fresh.
+- **Developer commands** only work in tests, playtest pages and with `?dev` in the address.
+- **The game saves when the tab closes**, and every roll comes from the save's seed: reloading replays the same result.
+

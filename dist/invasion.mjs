@@ -17,7 +17,7 @@ import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
-import { emit, warn, rand, active, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead } from './combat.mjs';
+import { emit, warn, rand, active, holding, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead } from './combat.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -85,7 +85,7 @@ export function tickNetwork(s, now = Date.now()) {
   const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
   if (gap > dt && consortiumOf(s)) away(s, prev, now - dt);
   tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
-  tickFleet(s, dt, !!s.degraded);
+  tickFleet(s, dt, !!s.degraded, now);
   tickRetake(s, dt, !!s.degraded, now); // hubs you hold, and the factions that want them back
   tickStation(s, dt); // the numbers station keeps broadcasting, degraded or not
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
@@ -133,7 +133,7 @@ function stepInvasion(s, dt, at = null) {
     if (inv.left <= 0) arrive(s);
     return;
   }
-  if (fighting(s, inv)) return; // you're on it: the wall stands back
+  if (holding(s, 'invader', inv.id)) return; // you're on it: the wall stands back (not while the fight is paused)
   const r = ratioOf(s, inv);
   const o = outcome(r);
   // The wall got stronger since it arrived (a Firewall, a new version, a server level).

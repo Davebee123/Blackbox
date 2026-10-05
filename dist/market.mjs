@@ -55,13 +55,17 @@ export const MARKET = {
 const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, event: 'calm', eventUntil: 0, at: null });
 export const eventOf = (s) => EVENTS[marketOf(s).event] || EVENTS.calm;
 
-// The price at a hub for one unit, before the spread: base × its condition × the event × pressure.
-export function priceOf(s, f, w) {
-  const m = marketOf(s);
+// What moves a hub's price that you can't: its condition × the world event × a wiped hub elsewhere.
+export function outsideMult(s, f, w) {
   const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
-  const p = m.pressure[f]?.[w] || 0;
   const t = now(), gap = Object.entries(s.hubs || {}).some(([g, h]) => g !== f && (h.offlineUntil || 0) > t && (CONDITIONS[HUB_CONDITION[g]]?.mult[w] || 0) > 1) ? MARKET.wiperBoost : 1;
-  return WARES[w].base * cond * ev * gap * Math.max(0.35, 1 - MARKET.pressure * p);
+  return cond * ev * gap;
+}
+// The price at a hub for one unit, before the spread: base × outside factors × your own pressure
+// (selling pushes it down to 35% at most, buying up to 160%).
+export function priceOf(s, f, w) {
+  const p = marketOf(s).pressure[f]?.[w] || 0;
+  return WARES[w].base * outsideMult(s, f, w) * Math.min(1.6, Math.max(0.35, 1 - MARKET.pressure * p));
 }
 // What you'd get selling one, and pay buying one (whole credits). Better rep trades a little better.
 export function quote(s, f, w) {
@@ -128,6 +132,9 @@ export function tickMarket(s, at = now()) {
   }
 }
 export const transfersOf = (s) => marketOf(s).transfers;
+// The most any hub would pay you for one right now: shops never sell below it (store.mjs), so
+// there's no buying from a shelf to sell straight to a market.
+export const bestSell = (s, w) => (hubsOf(s).length && WARES[w] ? Math.max(...Object.keys(FACTIONS).map((f) => quote(s, f, w).sell)) : 0);
 export function marketCommand(s, text, at = now()) {
   const [, side, f, w, n] = text.split(' ');
   if (side === 'sell' || side === 'buy') return trade(s, side, f, w, n, at);

@@ -9,7 +9,7 @@
 // comes back on its own: you earn it back by hitting a faction's rivals, working for its allies,
 // or donating (dearer the deeper you are, and only as far as Neutral).
 import { emit, warn, rand, hackerLevel, materialsOf, hooks } from './combat.mjs';
-import { GOODS, codeAmount, deliverGoods } from './store.mjs';
+import { GOODS, codeAmount, deliverGoods, priceNow } from './store.mjs';
 import { broadcast } from './station.mjs';
 import { seeded } from './gear.mjs';
 
@@ -131,7 +131,7 @@ export function shopOf(s, f, at = now()) {
   const L = Math.max(hackerLevel(s), FACTIONS[f].hub.level), t = repTier(s, f), mine = captured(s, f);
   return FACTIONS[f].shop.map((id) => {
     const g = goodOf(id), need = g.tier || 0;
-    const price = Math.round(g.credits(L) * (mine ? SHOP.atCost : 1 - SHOP.discount * Math.max(0, t.i - 1)));
+    const price = priceNow(s, id, Math.round(g.credits(L) * (mine ? SHOP.atCost : 1 - SHOP.discount * Math.max(0, t.i - 1))), L);
     return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: h.stock[id] || 0, locked: !mine && t.i < Math.max(1, need), need: Math.max(1, need) };
   });
 }

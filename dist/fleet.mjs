@@ -1,12 +1,14 @@
 // Swarms (internally "fleets"): once you run outposts, the network organises against them.
 //
-// Every so often (logged-on time) a swarm of 2–4 processes gathers on a server past one of your
+// Every so often (real time: logging off doesn't dodge it) a swarm of 2–4 processes gathers on a server past one of your
 // outposts, usually one you haven't found, and sets out for it. You see it coming: its size, its
 // family, where it's headed and when it lands. Intercept it on the way or defend when it
 // arrives: each fight kills one process. Break the whole swarm for a haul. If it's still there
 // when its siege runs out, the outpost goes into lockdown (see outpost.mjs: retake it to end it sooner).
+// It travels on real time; the siege only runs while you're logged on (one that arrives while
+// you're away waits for you), and the outpost produces nothing while the swarm sits at it.
 import { CONFIG, SERVER, MUTATIONS, FAMILIES, variantFor } from './data.mjs';
-import { emit, warn, rand, active, selectEncounter, command, gainXp, xpFor, gainCode } from './combat.mjs';
+import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hooks } from './combat.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
 import { outposts, fall, hasMod } from './outpost.mjs';
 import { hiddenNodes } from './hidden.mjs';
@@ -32,7 +34,8 @@ function origin(s, target) {
   return { family: l.family, name: l.name, from: l.id };
 }
 
-export function launch(s) {
+const clock = () => hooks.now?.() ?? Date.now();
+export function launch(s, at = clock()) {
   const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege);
   if (!targets.length) return null;
   const pool = targets.some((l) => hasMod(l, 'lure')) ? targets.filter((l) => hasMod(l, 'lure')) : targets; // a Honeytoken first
@@ -42,40 +45,42 @@ export function launch(s) {
   const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + FLEET.levelUp);
   const total = Math.round(FLEET.travelMs * (hasConfig(s, 'beacon') ? 1.5 : 1) * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
-  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', left: total, travel: total, siegeLeft: FLEET.siegeMs * (hasMod(target, 'node') ? 2 : 1), seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: level >= SERVER.mutationsFrom && rand(s) < 0.3 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
+  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs * (hasMod(target, 'node') ? 2 : 1), seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: level >= SERVER.mutationsFrom && rand(s) < 0.3 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
   emit(s, 'fleet', `SWARM: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}) left ${o.name}, headed for your outpost on ${target.name}. They arrive in ${Math.round(total / 60000)} minutes.`, { location: target.id });
   return s.fleet;
 }
 
-function schedule(s, first = false) {
+function schedule(s, at, first = false) {
   const net = (s.net ||= {});
   const [lo, hi] = FLEET.everyMs;
-  net.fleetNext = first ? FLEET.firstMs : Math.round((lo + rand(s) * (hi - lo)) * (outposts(s).some((l) => hasMod(l, 'lure')) ? 0.5 : 1));
+  net.fleetAt = at + (first ? FLEET.firstMs : Math.round((lo + rand(s) * (hi - lo)) * (outposts(s).some((l) => hasMod(l, 'lure')) ? 0.5 : 1)));
 }
+export const fleetLeft = (s, at = clock()) => { const f = s.fleet; return !f ? 0 : f.state === 'travel' ? Math.max(0, (f.arriveAt ?? at + (f.left || 0)) - at) : f.siegeLeft; };
 
-// Called from tickNetwork with logged-on time (dt). Degraded mode pauses it.
-export function tickFleet(s, dt, paused = false) {
-  if (paused || dt <= 0) return;
+// Called from tickNetwork: real time (at) to gather and travel, logged-on time (dt) for the
+// siege. Degraded mode pauses it.
+export function tickFleet(s, dt, paused = false, at = clock()) {
+  if (paused) return;
   const f = s.fleet;
   if (!f) {
     if (!outposts(s).some((l) => !l.outpost.lockdown)) return;
     const net = (s.net ||= {});
-    if (net.fleetNext == null) schedule(s, true);
-    net.fleetNext -= dt;
-    if (net.fleetNext <= 0) { launch(s); schedule(s); }
+    if (net.fleetNext != null && net.fleetAt == null) { net.fleetAt = at + net.fleetNext; delete net.fleetNext; } // saves from before real-time swarms
+    if (net.fleetAt == null) schedule(s, at, true);
+    if (at >= net.fleetAt) { launch(s, at); schedule(s, at); }
     return;
   }
   const target = locOf(s, f.target);
   if (!target?.outpost?.h || target.outpost.lockdown) return disband(s, 'Its target is already in lockdown: the swarm scatters.');
-  if (fighting(s, f)) return; // you're on it: the clock waits for the fight
   if (f.state === 'travel') {
-    f.left -= dt;
-    if (f.left <= 0) {
+    if (f.arriveAt == null) f.arriveAt = at + (f.left || 0); // saves from before real-time swarms
+    if (at >= f.arriveAt) {
       f.state = 'siege';
       emit(s, 'fleet-siege', `SWARM AT ${target.name.toUpperCase()}: ${f.ships} left. Defend within ${Math.round(FLEET.siegeMs / 60000)} minutes or the outpost falls.`, { location: target.id });
     }
     return;
   }
+  if (dt <= 0 || holding(s, 'fleet', f.id)) return; // the siege waits while you fight (not while the fight is paused)
   f.siegeLeft -= dt;
   if (f.siegeLeft <= 0) {
     s.fleet = null;

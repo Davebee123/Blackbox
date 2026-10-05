@@ -80,6 +80,9 @@ export function fresh() {
 // ---------- helpers ----------
 
 export const active = (s) => s.encounter?.phase === 'active';
+// A fight that holds a clock (a siege waits while you fight it): only while it's actually running.
+// A paused fight (or one left open over a reload, which comes back paused) holds nothing.
+export const holding = (s, key, id) => active(s) && !s.encounter.paused && s.encounter[key] === id;
 export const alive = (p) => !!p && p.integrity > 0;
 export const parts = (s) => s.encounter?.virus.parts || [];
 export const part = (s, id) => parts(s).find((p) => p.id === id);
@@ -371,8 +374,9 @@ export function deconstruct(s, item) {
   const code = item.from && codeOf(item.from) ? codeOf(item.from) : ['cipher', 'worm', 'kernel'][Math.floor(rand(s) * 3)];
   const mats = materialsOf(s);
   if (d.code) mats[code] = (mats[code] || 0) + d.code;
-  if (d.exploit) mats.exploit = (mats.exploit || 0) + d.exploit;
-  return [`${n} salvage`, d.code && `${d.code} ${MATERIALS[code].name}`, d.exploit && `${d.exploit} Exploit${d.exploit > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+  const ex = item.compiled ? 0 : d.exploit; // what you compiled yourself gives no Exploits back
+  if (ex) mats.exploit = (mats.exploit || 0) + ex;
+  return [`${n} salvage`, d.code && `${d.code} ${MATERIALS[code].name}`, ex && `${ex} Exploit${ex > 1 ? 's' : ''}`].filter(Boolean).join(', ');
 }
 // ---------- drops ----------
 // Uniques written in content/items.mjs (the editor's Uniques page).
@@ -875,7 +879,9 @@ function protocolCommand(s, full) {
     s.server.credits -= c.credits;
     spend(s, pay);
     const lvl = hackerLevel(s); // you compile protocols at your own level
-    return addItem(s, rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile' }), 'Compiled: ');
+    const made = rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile' });
+    made.compiled = true; // breaks down for salvage and code, never Exploits (no compile-to-sell loop)
+    return addItem(s, made, 'Compiled: ');
   }
 }
 

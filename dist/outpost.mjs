@@ -14,7 +14,7 @@
 // In a consortium, sieges come while you're away too (consortium.mjs), and members may break them.
 import { MUTATIONS, variantFor } from './data.mjs';
 import { isLive } from './memory.mjs';
-import { emit, warn, rand, active, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT } from './combat.mjs';
+import { emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
@@ -157,7 +157,10 @@ export function scrape(s, loc, n, level, lucky = 0, why = '') {
 }
 
 // The clock ------------------------------------------------------------------------------------
-// Production runs on real time (offline too). Sieges run on logged-on time (dt), like invasions.
+// Production runs on real time (offline too). Natives notice an outpost on real time too, so
+// logging off doesn't dodge them, but a siege only counts down while you're logged on: one that
+// starts while you're away waits for you. An outpost produces nothing while a siege (or a swarm)
+// sits at it.
 export function tickOutposts(s, now, dt, paused = false, away = false) {
   tickSites(s, now, dt, paused, away);
   if (!paused) { tickScheduler(s, now); if (!away) tickInfest(s, dt); }
@@ -178,7 +181,7 @@ function tickInfest(s, dt) {
   for (const loc of outposts(s)) {
     const inf = loc.outpost.infest;
     if (!inf) continue;
-    if (s.encounter?.infest === loc.id && active(s)) continue; // the clock waits while you clear it
+    if (holding(s, 'infest', loc.id)) continue; // the clock waits while you clear it (not while paused)
     inf.left -= dt;
     if (inf.left <= 0) { loc.outpost.infest = null; emit(s, 'info', `The infestation on ${loc.name} moved on.`, { location: loc.id }); }
   }
@@ -237,16 +240,17 @@ function tickSites(s, now, dt, paused, away) {
       continue;
     }
     if (paused) continue;
-    produce(s, loc, now - since);
+    const elapsed = Math.max(0, now - since), swarmed = s.fleet?.target === loc.id && s.fleet.state === 'siege';
+    if (!o.siege && !swarmed) produce(s, loc, elapsed);
     if (o.siege) {
       o.siege.left -= dt;
       if (away && o.siege.helper === undefined) o.siege.helper = memberHelp(s); // in a consortium, a member may break it
       if (away && o.siege.helper && o.siege.left <= OUTPOST.siegeMs / 2) { emit(s, 'outpost-held', `${o.siege.helper} broke the siege on ${loc.name} while you were away.`, { location: loc.id }); o.siege = null; continue; }
-      if (o.siege.left <= 0 && !(s.encounter?.outpost === loc.id && active(s))) fall(s, loc);
+      if (o.siege.left <= 0 && !holding(s, 'outpost', loc.id)) fall(s, loc);
       continue;
     }
     const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * (hasMod(loc, 'lure') ? 2 : 1) * archNotice(s) * (away ? 0.5 : 1);
-    if (dt > 0 && rand(s) < (dt / OUTPOST.noticeMs) * mult) startSiege(s, loc);
+    if (elapsed > 0 && rand(s) < Math.min(1, elapsed / OUTPOST.noticeMs) * mult) startSiege(s, loc);
   }
 }
 

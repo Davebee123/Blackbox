@@ -91,6 +91,9 @@ function save() {
   }, 250);
 }
 
+// Closing the tab saves at once: nothing in flight is lost (or undone) with the page.
+addEventListener('pagehide', () => { if (playtest) return; clearTimeout(saveTimer); try { localStorage.setItem(SAVE_KEY, JSON.stringify(campaign)); } catch { /* storage unavailable */ } });
+
 const shown = () => campaign;
 
 // ---------- art ----------
@@ -540,11 +543,14 @@ const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 's
 const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', crafting: 'craft', workbench: 'craft', build: 'craft', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', fight: 'combat', run: 'net' };
 
 function run(raw) {
-  const text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+  let text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
   aimPreview = null; // the command is going in: the board shows the real aim again
   if (!text) return;
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
+  // Developer commands are for tests and ?dev / playtest pages, not the real game (a crashed
+  // server's reboot excepted: the engine points you to it).
+  if (/^developer( |$)/.test(text) && !params.has('dev') && !playtest && !(text === 'developer reboot' && shown().server.integrity <= 0)) text = 'developer-off'; // the engine answers it as an unknown command
 
   // Ability names win over page names during a fight ("trace" is both).
   const fighting = active(shown());

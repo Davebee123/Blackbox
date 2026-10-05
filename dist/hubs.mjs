@@ -12,9 +12,9 @@
 // until you clear it. You never lose it for good. A Hostile faction you strike without losing a hub answers once with a swarm at one
 // of your outposts.
 import { CONFIG, variantFor } from './data.mjs';
-import { emit, warn, rand, active, selectEncounter, command, gainXp, xpFor, gainCode, hackerLevel, hooks } from './combat.mjs';
+import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hackerLevel, hooks } from './combat.mjs';
 import { FACTIONS, rep, REP_TIERS, captured, donate } from './factions.mjs';
-import { CONDITIONS, HUB_CONDITION, WARES, priceOf } from './market.mjs';
+import { CONDITIONS, HUB_CONDITION, outsideMult } from './market.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
 import { launch, fleetOf } from './fleet.mjs';
 import { outposts } from './outpost.mjs';
@@ -40,9 +40,10 @@ export const lockedDown = (s, f) => !!hub(s, f)?.captured?.lockdown;
 export const retakeOf = (s) => s.retake || null;
 
 // What the hub's market is doing for you: how hot what it deals in is right now (1 = normal).
+// Outside factors only: your own trading there doesn't move its income.
 export function demandOf(s, f) {
   const wants = Object.entries(CONDITIONS[HUB_CONDITION[f]].mult).filter(([, x]) => x > 1).map(([w]) => w);
-  return wants.length ? Math.max(...wants.map((w) => priceOf(s, f, w) / WARES[w].base)) : 1;
+  return wants.length ? Math.max(...wants.map((w) => outsideMult(s, f, w))) : 1;
 }
 export const incomeOf = (s, f) => Math.round(HUBS.income(FACTIONS[f].hub.level) * demandOf(s, f));
 export function bankOf(s, f) {
@@ -106,7 +107,7 @@ export function tickRetake(s, dt, paused = false, at = now()) {
     return;
   }
   // The siege: logged-on time only, and it waits while you fight.
-  if (paused || dt <= 0 || (active(s) && s.encounter?.retake === r.id)) return;
+  if (paused || dt <= 0 || holding(s, 'retake', r.id)) return;
   r.siegeLeft -= dt;
   if (r.siegeLeft <= 0) {
     s.retake = null;

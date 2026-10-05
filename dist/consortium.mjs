@@ -22,7 +22,7 @@
 // - Size: each merged server makes the network bigger and the consortium better (CONSORTIUM.tiers).
 // - Leaving (or being kicked) cuts the trunk line. You lose nothing of your own.
 // Pure: state in, events out. run.mjs routes the `consortium` command (and `guild`, the old name).
-import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active } from './combat.mjs';
+import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active, holding } from './combat.mjs';
 import { createLocation, SERVER, FAMILIES, variantFor } from './data.mjs';
 import { seeded, codeOf, MATERIALS } from './gear.mjs';
 import { profileOf, PRESENCE, online, simOn } from './presence.mjs';
@@ -285,7 +285,7 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
     if (ld && !(s.encounter?.member === loc.id && active(s))) { ld.left -= dt; if (ld.left <= 0) { loc.held.lockdown = null; emit(s, 'info', `The lockdown on ${loc.member}'s ${loc.name} is over.`, { location: loc.id }); } }
     const sg = loc.held?.siege;
     if (!sg) continue;
-    if (s.encounter?.member === loc.id && active(s)) continue; // the clock waits while you fight for it
+    if (holding(s, 'member', loc.id)) continue; // the clock waits while you fight for it (not while paused)
     sg.left -= dt;
     if (sg.left > 0) continue;
     loc.held.siege = null;
