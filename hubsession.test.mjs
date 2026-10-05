@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command } from './dist/combat.mjs';
-import { hubOptions, hubSessionMarkup } from './dist/view.mjs';
+import { hubOptions, hubBanner, hubTerminalMarkup } from './dist/view.mjs';
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; return s; };
 const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
@@ -18,14 +18,20 @@ test('a hub session offers a short menu that fits the situation', () => {
   assert.deepEqual(keys(s, 'lantern'), ['hold', 'market'], 'yours: the hub and its market');
 });
 
-test('the session shows who answers and opens one window at a time', () => {
+test('connecting reads like jacking into a server: handshake, banner, who answers, the menu', () => {
   const s = open();
-  const menu = hubSessionMarkup(s, 'kestrel', null);
-  assert.match(menu, /helpdesk@kestrel/);
-  assert.doesNotMatch(menu, /hub-win/, 'no window until you pick');
-  const market = hubSessionMarkup(s, 'kestrel', 'market', Date.now(), 'overlay');
-  assert.match(market, /hub-session overlay/);
+  s.profile = { handle: 'zer0' };
+  const lines = hubBanner(s, 'kestrel');
+  assert.match(lines[0].html, /ssh zer0@kestrel-dc-north/);
+  assert.ok(lines.some((l) => /helpdesk@kestrel/.test(l.html)));
+  assert.match(lines.at(-1).html, /\[1\] market/);
+  const page = hubTerminalMarkup(s, 'kestrel', lines, null);
+  assert.match(page, /id="hubterm"/);
+  assert.doesNotMatch(page, /hub-win/, 'no window until you pick');
+  const market = hubTerminalMarkup(s, 'kestrel', lines, 'market');
   assert.match(market, /hub-win/);
   assert.match(market, /market sell kestrel/);
   assert.doesNotMatch(market, /payload compile/, 'only the window you picked');
+  s.standing.nullchoir = -30;
+  assert.match(hubBanner(s, 'nullchoir')[2].html, /Filtered/);
 });

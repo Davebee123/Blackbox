@@ -1972,24 +1972,42 @@ const WINDOWS = {
   hold: { title: 'Your hub', body: (s, f, now) => holdMarkup(s, f, now) },
   servers: { title: 'Their servers', body: (s, f) => serversMarkup(s, f), tip: (f) => `Open a vault: ${FX[f].short} −${OWNED.takeoverHit}, its rivals +${Math.round(OWNED.takeoverHit * 0.5)}` },
 };
-// The session: layout 'overlay' (over the map) or 'page' (the whole panel).
-export function hubSessionMarkup(s, f, win, now = Date.now(), layout = 'page') {
+// The session is a terminal, like jacking into any server: an ssh handshake, the hub's banner,
+// whoever answers, and its menu as tokens you can type or click. A choice opens its window beside.
+export const hubHost = (s, f) => hubOf(s, f)?.name.toLowerCase() || f;
+export function hubMenuLine(s, f, now = Date.now()) {
+  const opts = hubOptions(s, f, now);
+  const tok = (o, i) => o.key === 'store'
+    ? `<button type="button" class="tok act" data-go="store">[${i + 1}] ${esc(o.label.toLowerCase())}</button>`
+    : `<button type="button" class="tok act" data-hub-opt="${o.key}">[${i + 1}] ${esc(o.label.toLowerCase())}${o.meta ? ` <small>${o.meta}</small>` : ''}</button>`;
+  return { cls: 'hub-menu', html: `${opts.map(tok).join(' ')} <button type="button" class="tok act" data-hub-close>[0] disconnect</button>` };
+}
+// The lines a connection prints, in order: handshake, banner, who answers, the menu.
+export function hubBanner(s, f, now = Date.now()) {
+  const F = FX[f], h = hubOf(s, f), g = greeting(s, f, now), t = repTier(s, f);
+  const handle = esc(s.profile?.handle || 'rookie');
+  return [
+    { cls: 'you', html: `ssh ${handle}@${esc(hubHost(s, f))}` },
+    { cls: 'note', html: `Connecting to ${esc(h.name)} … ⇄ ${Math.round(travelMs(s, f) / 60000)} min` },
+    { cls: offline(s, f, now) ? 'bad' : hostile(s, f) && !captured(s, f) ? 'warn' : 'good', html: offline(s, f, now) ? 'NO CARRIER' : hostile(s, f) && !captured(s, f) ? 'Connected. Filtered.' : 'Connected.' },
+    { cls: 'hub-banner', html: `<pre class="hub-ascii" aria-hidden="true">${MARK[f].map(esc).join('\n')}</pre><span class="hub-motd"><b>${esc(F.name)}</b><span class="tag dim">lv ${h.level}</span>${captured(s, f) ? '<span class="tag you">yours</span>' : `<span class="tag" title="Rep ${rep(s, f)}">${esc(t.name)}</span>`}</span>` },
+    { cls: 'hub-say', html: `<b>${esc(g.who)}:</b> ${esc(g.line)}` },
+    hubMenuLine(s, f, now),
+  ];
+}
+// lines: the session's transcript so far (app.js keeps it). win: the open window, if any.
+export function hubTerminalMarkup(s, f, lines, win, now = Date.now()) {
   const F = FX[f], h = hubOf(s, f);
   if (!F || !h) return '<div class="page-grid"><section class="card"><h2>Hub</h2><p class="quiet" title="Hubs open with the contract board">Locked</p></section></div>';
-  const g = greeting(s, f, now), opts = hubOptions(s, f, now), W = win && opts.some((o) => o.key === win) ? WINDOWS[win] : null;
-  const opt = (o, i) => o.key === 'store'
-    ? `<li><button type="button" class="hub-opt" data-go="store"><span class="n">${i + 1}</span>${esc(o.label)}<small>${esc(o.meta)}</small></button></li>`
-    : `<li><button type="button" class="hub-opt${win === o.key ? ' on' : ''}" data-hub-opt="${o.key}"><span class="n">${i + 1}</span>${esc(o.label)}<small>${o.meta}</small></button></li>`;
-  const dlg = `<section class="card hub-dlg fcard">
-      <header class="hub-head"><span class="hub-name">${fIcon(f)}<b>${esc(h.name)}</b><span class="tag dim">lv ${h.level}</span></span><span class="hub-ctl"><button type="button" class="btn small" data-hub-layout title="${layout === 'overlay' ? 'Full panel' : 'Over the map'}">${layout === 'overlay' ? '▣' : '◱'}</button><button type="button" class="btn small" data-hub-close title="Disconnect">×</button></span></header>
-      ${repBar(s, f)}
-      <div class="hub-who"><pre class="hub-ascii" aria-hidden="true">${MARK[f].map(esc).join('\n')}</pre><p class="hub-greet"><b>${esc(g.who)}</b> ${esc(g.line)}</p></div>
-      <ol class="hub-opts">${opts.map(opt).join('')}<li><button type="button" class="hub-opt" data-hub-close><span class="n">0</span>Disconnect</button></li></ol>
-    </section>`;
+  const opts = hubOptions(s, f, now), W = win && opts.some((o) => o.key === win) ? WINDOWS[win] : null;
+  const term = `<section class="panel net-one hub-term" data-pane="ssh ${esc(s.profile?.handle || 'rookie')}@${esc(hubHost(s, f))}">
+    <header class="net-head"><div class="net-where">${fIcon(f)}<b>${esc(h.name)}</b></div>${repBar(s, f)}<button type="button" class="btn small" data-hub-close title="Disconnect">×</button></header>
+    <ol class="term" id="hubterm">${lines.map((l) => `<li class="${l.cls}">${l.menu ? hubMenuLine(s, f, now).html : l.html}</li>`).join('')}</ol>
+  </section>`;
   const w = W ? `<section class="card hub-win"><h2${W.tip ? ` title="${esc(W.tip(f))}"` : ''}>${esc(W.title)}<button type="button" class="btn small x" data-hub-opt="" title="Close">×</button></h2>${W.body(s, f, now)}</section>` : '';
-  return `<div class="hub-session ${layout}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}">${dlg}${w}</div>`;
+  return `<div class="hub-session${W ? ' with-win' : ''}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}">${term}${w}</div>`;
 }
-export const hubMarkup = (s, f, now = Date.now()) => hubSessionMarkup(s, f, null, now, 'page');
+export const hubMarkup = (s, f, now = Date.now()) => hubTerminalMarkup(s, f, hubBanner(s, f, now), null, now);
 // A hub you hold: what it has earned, what it earns, and anyone coming to take it back.
 function holdMarkup(s, f, now) {
   const r = retakeOf(s), mine = r && r.f === f, lock = s.hubs[f].captured.lockdown, bank = bankOf(s, f), inc = incomeOf(s, f), d = demandOf(s, f), cap = HUBS.bankHours * inc;
