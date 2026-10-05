@@ -57,7 +57,7 @@ export const CONSORTIUM = {
     { at: 3, name: 'Linked', rule: '+10% outpost yield and dividend', yield: 0.1 },
     { at: 5, name: 'Mesh', rule: 'Invasion bounties doubled', bounty: 2 },
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
-    { at: 12, name: 'Grid', rule: '+1 harvester slot and +10% wall', bandwidth: 1, wall: 0.1 },
+    { at: 12, name: 'Grid', rule: '+1 outpost slot and +10% wall', bandwidth: 1, wall: 0.1 },
   ],
   names: ['Halyard', 'Null Choir', 'Black Lattice', 'Copperline', 'Saltmarsh Ring', 'Dead Channel', 'Quiet Meridian', 'Glasshouse', 'Low Signal', 'Tinroof'],
 };

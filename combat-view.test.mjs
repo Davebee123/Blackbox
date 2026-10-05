@@ -216,7 +216,7 @@ test('an outpost card renders with its stockpile, module slots and an infestatio
   l.outpost.infest = { total: 3, count: 2, left: 600000, seed: 3 };
   const html = mapMarkup(s, l.id);
   assert.match(html, /class="lvl-bar"/);
-  assert.match(html, /Module slots/);
+  assert.match(html, /Module ports/);
   assert.match(html, /op-box infest/);
 });
 

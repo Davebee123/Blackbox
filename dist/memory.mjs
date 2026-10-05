@@ -3,7 +3,7 @@
 // network. Attaching or detaching a server costs credits, more for a higher-level one, the same
 // every time (no penalty for swapping back). Detaching freezes that server and everything found
 // through it: no runs, no harvesting, no sieges, timers stopped. Attach it again and it picks up
-// where it was. Harvester slots (bandwidth) still decide how many outposts run.
+// where it was. Outpost slots (bandwidth) still decide how many outposts run.
 import { emit, warn, serverLevel, active } from './combat.mjs';
 
 export const MEMORY = {

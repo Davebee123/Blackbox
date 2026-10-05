@@ -1,7 +1,7 @@
 // Runs: exploring a traced location as a small file system with Unix commands.
 // Pure like the combat engine: state in, events out.
 import { vaultConfig, bankConfig, CONFIGS } from './configs.mjs';
-import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, collect } from './outpost.mjs';
+import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock } from './rogue.mjs';
@@ -9,7 +9,7 @@ import { findLocation, closest, command, selectEncounter, active, emit, warn, ha
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork } from './invasion.mjs';
 import { contractTakeover, bankCargo } from './mail.mjs';
-import { hiddenNodes, locate, flagged, bankRoute } from './hidden.mjs';
+import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 import { crewCommand } from './crew.mjs';
@@ -99,7 +99,7 @@ export function layoutOf(loc) {
   // harvester or a config: fixed by its seed (LOOT.vault*). Your first server's has a protocol and a blueprint.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
-  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasDaemon(loc) ? ['daemon.exe'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(hasVx(loc) ? [vxName(loc)] : []), ...(vaultConfig(loc) ? [vaultConfig(loc) + '.cfg'] : [])] } };
+  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasDaemon(loc) ? ['daemon.exe'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(hasVx(loc) ? [vxName(loc)] : []), ...(vaultPlan(loc) ? ['plan.pln'] : []), ...(vaultConfig(loc) ? [vaultConfig(loc) + '.cfg'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
@@ -174,7 +174,7 @@ export function fileInfo(loc, path, name) {
   // The vault's payload: a cache of the family's code (materials for your server's services).
   const code = codeOf(loc.family);
   const payload = { kind: 'code', size: '48k', material: code, amount: vaultCode(levelOf(loc)), text: [`binary: ${vaultCode(levelOf(loc))} ${MATERIALS[code].name.toLowerCase()}, lifted from the ${fam.toLowerCase()} that hit you.`, 'pull it and bank it: services on your server are built from code.'] };
-  const signal = { kind: 'deeper', size: '3k', family: loc.deeper, text: [`trace record: this node forwards to a ${deeper.toLowerCase()} node one layer deeper.`, 'pull it and bank it to locate that node.'] };
+  const signal = { kind: 'deeper', size: '3k', family: loc.deeper, text: [`trace record: this node forwards to a ${deeper.toLowerCase()} node one layer deeper.`, 'pull it and bank it: part of the trace to that node.'] };
   const files = {
     sprawl: {
       '/motd.txt': { kind: 'text', size: '1k', text: ['SPRAWL-00. nobody runs this box and everybody uses it.', 'stray processes gather in the folders. they come back after you kill them.', 'what you trace from them leads to the servers that sent them.'] },
@@ -252,6 +252,7 @@ export function fileInfo(loc, path, name) {
     const h = vaultHarvester(loc);
     return { kind: 'harvester', size: '220k', harvester: h, text: [`package: a native ${fam.toLowerCase()} process, sealed for transport.`, `${harvesterName(h)}. Installed on a server you own, it harvests while you're away.`, 'pull it and bank it.'] };
   }
+  if (name === 'plan.pln' && vaultPlan(loc) && layoutOf(loc)[path]?.locked) return { kind: 'plan', size: '48k', plan: vaultPlan(loc), text: [`plan: ${planName(vaultPlan(loc))}.`, 'bank it to learn it, then craft it at home (Craft page).'] };
   if (name === 'daemon.exe' && layoutOf(loc)[path]?.locked) return { kind: 'daemon', size: '96k', text: ['binary: a daemon, a small program that fights beside you.', 'bank it to keep it.'] };
   if (name === 'blueprint.bp' && layoutOf(loc)[path]?.locked) return { kind: 'blueprint', size: '64k', text: ['blueprint: plans for a service or a protocol recipe.', 'bank it to learn it.'] };
   if (name.endsWith('.src') && sourceOf(loc) + '.src' === name) {
@@ -522,6 +523,7 @@ export function packGain(f, credits = null) {
     case 'deeper': return row('Trace record', '', 'found');
     case 'harvester': return row(harvesterName(f.harvester), '', 'item', { rarity: 'custom' });
     case 'config': return row(`${CONFIGS[f.config]?.name || f.config} config`, '', 'blueprint', { rarity: 'custom' });
+    case 'plan': return row(planName(f.plan), '', 'blueprint', { rarity: 'tuned' });
     default: return row(f.label || f.name, '', 'found');
   }
 }
@@ -590,7 +592,7 @@ export function jackOut(s) {
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
-  emit(s, 'jacked-out', `JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'config').map((f) => CONFIGS[f.config].name + ' config source'), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
+  emit(s, 'jacked-out', `JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'config').map((f) => CONFIGS[f.config].name + ' config source'), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
   for (const f of sources) {
@@ -600,15 +602,18 @@ export function jackOut(s) {
   }
   for (const f of pack.filter((x) => x.kind === 'harvester')) bankHarvester(s, f.harvester);
   for (const f of pack.filter((x) => x.kind === 'config')) bankConfig(s, f.config);
+  for (const f of pack.filter((x) => x.kind === 'plan')) learnPlan(s, f.plan, 'Plan banked: ');
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
   for (const f of daemons) learnDaemon(s, 'Daemon banked: ');
   for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: loc.id });
   gainServerXp(s, bankXp, 'loot banked');
-  // A trace record locates one of this server's hidden neighbours (a flagged one first).
+  // A trace record moves the trace on one of this server's hidden neighbours (a flagged one
+  // first, else the one it names): part of the way, not the server itself.
   for (const f of pack.filter((x) => x.kind === 'deeper')) {
+    spawnHidden(s, loc);
     const near = hiddenNodes(s).filter((n) => n.via === loc.id);
     const n = near.find((x) => flagged(s, x)) || near.find((x) => x.family === f.family) || near[0];
-    if (n) locate(s, n); else addLocation(s, f.family, (loc.depth || 1) + 1, loc.id);
+    if (n) hiddenLead(s, n, HIDDEN.recordLead, 'Trace record: ');
   }
   for (const f of pack.filter((x) => x.kind === 'route')) { bankRoute(s, f); if (loc.extraFiles) loc.extraFiles = loc.extraFiles.filter((x) => x.name !== f.name); }
 }

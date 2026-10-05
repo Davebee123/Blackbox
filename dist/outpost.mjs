@@ -61,12 +61,37 @@ export const OUTPOST = {
     ids: { name: 'IDS', rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
     lure: { name: 'Honeytoken', rule: 'Draws trouble: noticed twice as often, swarms and infestations come sooner and pick it first, and beating them here pays double.' },
   },
-  modCost: { credits: 150, code: 8, salvage: 5 },
+  modCost: { credits: 150, code: 8, salvage: 5 }, // to craft one (Craft page); it goes in your module stock
+  modCode: { pipeline: 'worm', storage: 'kernel', node: 'cipher', ids: 'cipher', lure: 'kernel' },
+  // Plans: what you need to know before you can craft a harvester or a module. Your first vault
+  // holds the Siphon's; the rest are Halcyon's (store.mjs) or turn up in vaults.
+  plans: { siphon: 120, scraper: 220, tap: 220, pipeline: 260, storage: 220, node: 260, ids: 220, lure: 180 }, // credits at Halcyon, plus 8 a level
+  planChance: 0.15, // share of vaults holding a plan you don't know yet
   bandwidth: (serverLv) => Math.min(5, 1 + Math.floor(serverLv / 10)),
 };
 const RARITY = ['Stock', 'Tuned', 'Custom'];
 
 export const harvesters = (s) => (s.harvesters ||= []);
+export const plansOf = (s) => (s.plans ||= []);
+export const knowsPlan = (s, id) => plansOf(s).includes(id);
+export const planName = (id) => `${OUTPOST.kinds[id]?.name || OUTPOST.mods[id]?.name} plan`;
+export const planPrice = (id, L) => OUTPOST.plans[id] + 8 * L;
+export const modStock = (s) => (s.modStock ||= {});
+export function learnPlan(s, id, why = '') {
+  if (!OUTPOST.plans[id]) return;
+  if (knowsPlan(s, id)) { for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Plan scraps', virus: 'plan', seed: 0 }); return emit(s, 'info', `${why}${planName(id)}, already known: +2 salvage.`); }
+  plansOf(s).push(id);
+  emit(s, 'drop', `${why}${planName(id)}. You can craft ${OUTPOST.kinds[id] ? `${OUTPOST.kinds[id].name} harvesters` : `${OUTPOST.mods[id].name} modules`} (Craft page).`, { plan: id });
+}
+// The plan a vault holds, if any (fixed by its seed): your first vault, the Siphon's.
+export function vaultPlan(loc) {
+  if (loc.zone || loc.rogue) return null;
+  if (loc.starter) return 'siphon';
+  const r = seeded(loc.seed * 37 + 13);
+  if (r() >= OUTPOST.planChance) return null;
+  const ids = Object.keys(OUTPOST.plans).filter((id) => id !== 'siphon');
+  return ids[Math.floor(r() * ids.length)];
+}
 const locOf = (s, id) => s.locations.find((l) => l.id === id || l.name.toLowerCase() === id);
 const pick = (r, odds) => { let x = r(); for (const [k, p] of odds) { if ((x -= p) < 0) return k; } return odds[0][0]; };
 
@@ -94,7 +119,7 @@ export function vaultHarvester(loc) {
 export const vxName = (loc) => `${loc.family}.vx`;
 export const hasVx = (loc) => !loc.zone && seeded(loc.seed * 19 + 11)() < OUTPOST.vaultChance * (loc.trait === 'legacy' ? 2 : 1);
 export const compileCost = (kind, s = null) => ({ credits: s ? archCredits(s, OUTPOST.compile.credits) : OUTPOST.compile.credits, code: OUTPOST.compile.code, material: OUTPOST.compile.material[kind], salvage: SALVAGE_COSTS['harvester-' + kind]() });
-export const canCompile = (s, kind) => { const c = compileCost(kind, s); return s.server.credits >= c.credits && (materialsOf(s)[c.material] || 0) >= c.code && harvesters(s).length < OUTPOST.stashCap && canAfford(s, c.salvage); };
+export const canCompile = (s, kind) => { const c = compileCost(kind, s); return knowsPlan(s, kind) && s.server.credits >= c.credits && (materialsOf(s)[c.material] || 0) >= c.code && harvesters(s).length < OUTPOST.stashCap && canAfford(s, c.salvage); };
 
 // Banked on jack-out.
 export function bankHarvester(s, h, why = 'Banked: ') {
@@ -287,27 +312,39 @@ function tickScheduler(s, now) {
 }
 
 // Modules ---------------------------------------------------------------------------------------
+export const modCost = (s, id) => ({ credits: archCredits(s, OUTPOST.modCost.credits), code: { [OUTPOST.modCode[id]]: OUTPOST.modCost.code }, salvage: SALVAGE_COSTS.module() });
+export const canBuildMod = (s, id) => { const c = modCost(s, id), k = OUTPOST.modCode[id]; return knowsPlan(s, id) && s.server.credits >= c.credits && (materialsOf(s)[k] || 0) >= OUTPOST.modCost.code && canAfford(s, c.salvage); };
+// Craft a module into your stock (it goes on an outpost later).
+function buildMod(s, id, payText = null) {
+  const m = OUTPOST.mods[id];
+  if (!m) return warn(s, `Modules: ${Object.keys(OUTPOST.mods).join(', ')}.`);
+  if (!knowsPlan(s, id)) return warn(s, `You don't have the ${planName(id)}.`);
+  const c = modCost(s, id), k = OUTPOST.modCode[id], have = materialsOf(s);
+  if (s.server.credits < c.credits || (have[k] || 0) < OUTPOST.modCost.code) return warn(s, `A ${m.name} costs ${c.credits} credits, ${OUTPOST.modCost.code} ${MATERIALS[k].name} and ${OUTPOST.modCost.salvage} salvage.`);
+  const pay = settle(s, c.salvage, payText);
+  if (typeof pay === 'string') return warn(s, `${m.name}: ${pay}`);
+  spend(s, pay);
+  s.server.credits -= c.credits;
+  have[k] -= OUTPOST.modCost.code;
+  modStock(s)[id] = (modStock(s)[id] || 0) + 1;
+  emit(s, 'harvester', `Crafted: ${m.name} module (${modStock(s)[id]} in stock).`, { module: id });
+}
 function installMod(s, loc, id) {
   const m = OUTPOST.mods[id];
   if (!m) return warn(s, `Modules: ${Object.keys(OUTPOST.mods).join(', ')}.`);
   if (!loc.takenOver) return warn(s, `Take ${loc.name} over first.`);
   if (hasMod(loc, id)) return warn(s, `${loc.name} already runs a ${m.name}.`);
   if (modsOf(loc).length >= outpostPorts(s)) return warn(s, `${loc.name}'s ports are full (${outpostPorts(s)}). Remove a module first.`);
-  const credits = archCredits(s, OUTPOST.modCost.credits), code = OUTPOST.modCost.code, k = codeOf(loc.family), have = materialsOf(s);
-  const pay = s.server.credits >= credits && (have[k] || 0) >= code && settle(s, SALVAGE_COSTS.module(), null);
-  if (!pay || typeof pay === 'string') return warn(s, `A ${m.name} costs ${credits} credits, ${code} ${MATERIALS[k].name} and ${OUTPOST.modCost.salvage} salvage.`);
-  spend(s, pay);
-  s.server.credits -= credits;
-  have[k] -= code;
+  if (!modStock(s)[id]) return warn(s, `You have no ${m.name} module. Craft one first (Craft page).`);
+  modStock(s)[id]--;
   modsOf(loc).push(id);
   emit(s, 'outpost-up', `${m.name} installed on ${loc.name}: ${m.rule}`, { location: loc.id });
 }
 function removeMod(s, loc, id) {
   if (!hasMod(loc, id)) return warn(s, `${loc.name} has no ${OUTPOST.mods[id]?.name || id}.`);
   loc.mods = modsOf(loc).filter((x) => x !== id);
-  const k = codeOf(loc.family);
-  materialsOf(s)[k] = (materialsOf(s)[k] || 0) + Math.floor(OUTPOST.modCost.code / 2);
-  emit(s, 'info', `${OUTPOST.mods[id].name} removed from ${loc.name}: +${Math.floor(OUTPOST.modCost.code / 2)} ${MATERIALS[k].name} back.`);
+  modStock(s)[id] = (modStock(s)[id] || 0) + 1;
+  emit(s, 'info', `${OUTPOST.mods[id].name} removed from ${loc.name}: back in your stock.`);
 }
 
 // Fights ---------------------------------------------------------------------------------------
@@ -363,10 +400,11 @@ export function outpostCommand(s, full, now) {
   const [text, payText] = splitPay(full);
   const [, verb, a, b] = text.split(' ');
   if (verb === 'compile') return compile(s, a, payText);
+  if (verb === 'build') return buildMod(s, a, payText);
   const loc = a && locOf(s, a);
   const theirs = !loc && a && memberServers(s).find((l) => l.id === a || l.name.toLowerCase() === a);
   if (theirs) return warn(s, `${theirs.name} is ${theirs.member}'s: only they build there.`);
-  if (!loc) return warn(s, 'usage: outpost install|pull|defend|clear|retake|mod|unmod <server>, or outpost compile <kind>');
+  if (!loc) return warn(s, 'usage: outpost install|pull|defend|clear|retake|mod|unmod <server>, outpost compile <kind>, or outpost build <module>');
   if (verb === 'buyout') return buyout(s, loc, now);
   if (verb === 'mod') return installMod(s, loc, b);
   if (verb === 'unmod') return removeMod(s, loc, b);
@@ -378,7 +416,7 @@ export function outpostCommand(s, full, now) {
     const i = Math.max(1, Number(b) || 1) - 1;
     const h = harvesters(s)[i];
     if (!h) return warn(s, 'You have no harvester. Compile one on the Map\'s server card.');
-    if (loc.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s)) return warn(s, `No harvester slot free (${bandwidthUsed(s)}/${bandwidth(s)}). Pull a harvester out, or level your server.`);
+    if (loc.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s)) return warn(s, `No outpost slot free (${bandwidthUsed(s)}/${bandwidth(s)}). Pull a harvester out, or level your server.`);
     harvesters(s).splice(i, 1);
     loc.outpost = { h, at: now, stock: 0, siege: null, lockdown: null };
     return emit(s, 'outpost-up', `Outpost up on ${loc.name}: ${harvesterName(h)}. It fills while you're away; connect to collect.`, { location: loc.id });
@@ -402,6 +440,7 @@ export function outpostCommand(s, full, now) {
 
 function compile(s, kind, payText = null) {
   if (!OUTPOST.kinds[kind]) return warn(s, `Compile which? ${Object.keys(OUTPOST.kinds).join(', ')}.`);
+  if (!knowsPlan(s, kind)) return warn(s, `You don't have the ${planName(kind)}.`);
   const c = compileCost(kind, s), have = materialsOf(s);
   if (harvesters(s).length >= OUTPOST.stashCap) return warn(s, `Your harvester rack is full (${OUTPOST.stashCap}).`);
   if (s.server.credits < c.credits || (have[c.material] || 0) < c.code) return warn(s, `A ${OUTPOST.kinds[kind].name} costs ${c.credits} credits, ${c.code} ${MATERIALS[c.material].name} and ${costLabel(c.salvage)}.`);

@@ -23,6 +23,7 @@ export const HIDDEN = {
   blockLead: 10, // your wall stops one
   killLead: 12, // a kill of a flagged node's family
   routeLead: 50, // the relay's route file, banked
+  recordLead: 35, // a vault's trace record, banked: part of a trace, not the server
 };
 
 export const hiddenNodes = (s) => (s.hidden ||= []);

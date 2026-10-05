@@ -13,6 +13,7 @@ import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, learnDaemon, ma
 import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
+import { OUTPOST, knowsPlan, learnPlan, planName, planPrice } from './outpost.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 export const STORE = {
@@ -101,6 +102,17 @@ export function buy(s, what) {
     s.server.credits -= price;
     items(s)[line.id] = (items(s)[line.id] || 0) + 1;
     return emit(s, 'bought', `Bought a ${lineName(line).toLowerCase()} for ${price} credits. You have ${items(s)[line.id]}.`, { item: line.id });
+  }
+  // Plans: a harvester's or a module's, once each (outpost.mjs).
+  if (what?.startsWith('plan-')) {
+    const id = what.slice(5);
+    if (!OUTPOST.plans[id]) return warn(s, 'Halcyon has no such plan.');
+    if (knowsPlan(s, id)) return warn(s, `You already have the ${planName(id)}.`);
+    const price = planPrice(id, L);
+    if (s.server.credits < price) return warn(s, `The ${planName(id)} costs ${price} credits.`);
+    s.server.credits -= price;
+    emit(s, 'bought', `Bought the ${planName(id)} for ${price} credits.`, { plan: id });
+    return learnPlan(s, id);
   }
   const slot = storeOf(s).slots.find((x) => x.key === what);
   if (!slot) return warn(s, 'That’s not on the shelf any more.');

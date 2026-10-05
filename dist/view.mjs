@@ -14,7 +14,7 @@ import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, sh
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
-import { outpostPorts, modsOf, hasMod, schedulerEvery, outpostBuyout } from './outpost.mjs';
+import { outpostPorts, modsOf, hasMod, schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, modStock, modCost, canBuildMod } from './outpost.mjs';
 import { OUTPOST, INFEST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
 import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
@@ -625,11 +625,15 @@ export function craftMarkup(s, focus = null) {
   const cfgCard = cfgs.length ? craftSection(s, 'configs', `Configs · ${configsOwned(s).length}/${Object.keys(CONFIGS).length}`, 'Change how one of your services behaves. Crafted once, kept.', `<ul class="craft-list">${cfgs.map((id) => { const c = CONFIGS[id], got = configsOwned(s).includes(id), code = configCode(id), okc = !busy && srv.credits >= CONFIG_COST.credits && (materialsOf(s)[code] || 0) >= CONFIG_COST.code && canAfford(s, SALVAGE_COSTS.config()); return `<li><span><b class="iname" title="${esc(c.rule)}">${glyph(c.service, 'badge')}${esc(c.name)} <span class="tag dim">${esc(SERVICES[c.service].name)}</span></b>${got ? '' : needChips(s, { credits: CONFIG_COST.credits, code: { [code]: CONFIG_COST.code }, salvage: SALVAGE_COSTS.config() })}</span>${got ? '<span class="tag you">owned</span>' : `<button type="button" class="btn primary small" data-command="craft config ${id}" data-pay="config" data-pay-title="${esc(c.name)}" ${okc ? '' : 'disabled'} ${t()}>Craft</button>`}</li>`; }).join('')}</ul>`) : '';
   // Harvesters
   const anyOwned = s.locations.some((l) => l.takenOver) || harvesters(s).length;
-  const harvCard = anyOwned ? craftSection(s, 'harvesters', `Harvesters · rack ${harvesters(s).length}/${OUTPOST.stashCap}`, 'Goes on a server you took over and makes code while you play or sleep.', `<ul class="craft-list">${Object.keys(OUTPOST.kinds).map((k) => { const c = harvCost(k, s); return `<li><span><b class="iname">${glyph(k, 'badge')}${esc(OUTPOST.kinds[k].name)}</b><small>${esc(OUTPOST.kinds[k].about)}</small>${needChips(s, { credits: c.credits, code: { [c.material]: c.code }, salvage: c.salvage })}</span><button type="button" class="btn primary small" data-command="outpost compile ${k}" data-pay="harvester-${k}" data-pay-title="${esc(OUTPOST.kinds[k].name)}" ${!busy && canCompile(s, k) ? '' : 'disabled'} ${t()}>Craft</button></li>`; }).join('')}</ul>`) : '';
+  // No plan yet: a locked row, the plan named on hover (Halcyon sells them; vaults hold them).
+  const noPlan = (id) => `<span class="tag dim plan-lock" title="${esc(planName(id))}: Halcyon sells it, and vaults hold them">${glyph('blueprint')}plan</span>`;
+  const harvCard = anyOwned ? craftSection(s, 'harvesters', `Harvesters · rack ${harvesters(s).length}/${OUTPOST.stashCap}`, 'Goes on a server you took over and makes code while you play or sleep.', `<ul class="craft-list">${Object.keys(OUTPOST.kinds).map((k) => { const c = harvCost(k, s), known = knowsPlan(s, k); return `<li class="${known ? '' : 'locked'}"><span><b class="iname">${glyph(k, 'badge')}${esc(OUTPOST.kinds[k].name)}</b><small>${esc(OUTPOST.kinds[k].about)}</small>${known ? needChips(s, { credits: c.credits, code: { [c.material]: c.code }, salvage: c.salvage }) : ''}</span>${known ? `<button type="button" class="btn primary small" data-command="outpost compile ${k}" data-pay="harvester-${k}" data-pay-title="${esc(OUTPOST.kinds[k].name)}" ${!busy && canCompile(s, k) ? '' : 'disabled'} ${t()}>Craft</button>` : noPlan(k)}</li>`; }).join('')}</ul>`) : '';
+  // Outpost modules: crafted into your stock, then installed on an outpost's ports.
+  const modCard = anyOwned ? craftSection(s, 'modules', 'Outpost modules', 'Goes in an outpost’s port. Crafted once, moved between outposts as you like.', `<ul class="craft-list">${Object.keys(OUTPOST.mods).map((id) => { const known = knowsPlan(s, id), c = modCost(s, id), n = modStock(s)[id] || 0; return `<li class="${known ? '' : 'locked'}"><span><b class="iname">${glyph(id, 'badge')}${esc(OUTPOST.mods[id].name)}${n ? ` <span class="tag you" title="In stock">×${n}</span>` : ''}</b><small>${esc(OUTPOST.mods[id].rule)}</small>${known ? needChips(s, c) : ''}</span>${known ? `<button type="button" class="btn primary small" data-command="outpost build ${id}" data-pay="module" data-pay-title="${esc(OUTPOST.mods[id].name)}" ${!busy && canBuildMod(s, id) ? '' : 'disabled'} ${t()}>Craft</button>` : noPlan(id)}</li>`; }).join('')}</ul>`) : '';
   // What you have to build with: a grid of counts.
   const stock = `<section class="card"><h2>Materials</h2>${matGrid(s)}
       ${salvageStacksMarkup(s)}</section>`;
-  return `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protoCard}${cfgCard}${harvCard}</div><div style="display:grid;gap:12px;align-content:start">${stock}</div></div>`;
+  return `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protoCard}${cfgCard}${harvCard}${modCard}</div><div style="display:grid;gap:12px;align-content:start">${stock}</div></div>`;
 }
 export const vaultMarkup = protocolsMarkup;
 export const gearMarkup = protocolsMarkup;
@@ -1082,6 +1086,7 @@ export function storeMarkup(s, now = Date.now()) {
   return `<div class="page-grid store-page"><div class="stack"><section class="card"><h2>Halcyon Mutual</h2>
       <div class="stats">${stat('Credits', credits)}${stat('Indemnity', ind)}${stat('Standing', `${standing(s)} · ${tierOf(s).name}`)}</div>
       <ul class="ptiles">${line}</ul></section>
+    <section class="card"><h2>Plans</h2><ul class="plan-shelf">${Object.keys(OUTPOST.plans).map((id) => { const known = knowsPlan(s, id), price = planPrice(id, L); return `<li class="${known ? 'known' : ''}"><span class="iname" title="${esc(OUTPOST.kinds[id]?.about || OUTPOST.mods[id]?.rule || '')}">${glyph(id)}${esc(OUTPOST.kinds[id]?.name || OUTPOST.mods[id].name)}</span><span class="tag dim">${OUTPOST.kinds[id] ? 'harvester' : 'module'}</span>${known ? '<span class="tag you">known</span>' : `<span class="price">${price}</span><button type="button" class="btn small ${credits >= price ? 'primary' : ''}" data-command="buy plan-${id}" ${credits >= price ? '' : 'disabled'}>Buy</button>`}</li>`; }).join('')}</ul></section>
     <section class="card"><h2>Your kit</h2><div class="stats">${kit}</div></section></div>
     <section class="card"><h2>Agency stock</h2><ul class="ptiles stash">${shelf || '<li class="quiet">The shelves are empty.</li>'}</ul></section></div>`;
 }
@@ -1531,11 +1536,10 @@ function mapSide(s, sel, node) {
         ${degradedMarkup(s)}${awayLine(s)}
         <div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${portsUsed(s)}/${portCount(s)}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>
         ${srvLine('memory', 'Memory', '', `${liveCount(s)}<small>/${memoryCap(s)}</small>`, 'Servers on your network')}
-        ${srvLine('harvester', 'Harvesters', '', `${bandwidthUsed(s)}<small>/${bandwidth(s)}</small>`, 'Harvester slots')}
+        ${srvLine('harvester', 'Outposts', '', `${bandwidthUsed(s)}<small>/${bandwidth(s)}</small>`, 'Outposts running on servers you took over, of how many your bandwidth runs')}
         ${srvLine('salvage', 'Salvage', '', `${s.salvage.length}`)}
         ${s.install ? `<div class="install mini"><div class="install-top"><b>${glyph(s.install.id)}${esc(SERVICES[s.install.id].name)} v${s.install.v}</b><span>${fmtTime(s.install.doneAt - Date.now())}</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((Date.now() - s.install.startedAt) / (s.install.doneAt - s.install.startedAt)) * 100))}%"></span></div>${buyoutBtn(s, 'buyout', installBuyout(s))}</div>` : ''}
         ${s.invasion ? `<div class="invader-line ${s.invasion.state}"><b>${esc(s.invasion.name)}</b>${levelTag(s, s.invasion.level)}<span>${esc(invaderShort(s))}</span></div>${s.invasion.state !== 'travel' ? `<div class="row">${jackInButton(invaderStatus(s))}</div>` : ''}` : ''}
-        ${rackMarkup(s)}
         <div class="row">${btn('server', 'Services')}${upkeep.join('')}</div>
         ${globalThis.location?.search?.includes('dev') ? `<details><summary>Test intrusions</summary><div class="row" style="margin-top:8px">${btn('encounter cryptjack', 'CRYPTJACK')}${btn('encounter splinter', 'SPLINTER')}${btn('encounter ghostroot', 'GHOSTROOT')}</div></details>` : ''}
       </section>`;
@@ -1653,11 +1657,11 @@ function fleetCard(s) {
 
 // Outpost modules: the server's ports on this outpost, and what fits them.
 function modsMarkup(s, l) {
-  const mine = modsOf(l), ports = outpostPorts(s), busy = active(s) || s.run;
-  const credits = archCredits(s, OUTPOST.modCost.credits), code = OUTPOST.modCost.code, k = codeOf(l.family), have = materialsOf(s)[k] || 0, scrap = canAfford(s, SALVAGE_COSTS.module());
-  const on = mine.map((id) => `<span class="mod on" title="${esc(OUTPOST.mods[id].rule)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}<button type="button" class="mod-x" data-command="outpost unmod ${esc(l.id)} ${id}" ${busy ? 'disabled' : ''} title="Remove it: half its code comes back" aria-label="Remove ${esc(OUTPOST.mods[id].name)}">×</button></span>`).join('');
-  const free = mine.length < ports ? Object.keys(OUTPOST.mods).filter((id) => !mine.includes(id)).map((id) => `<button type="button" class="mod add" data-command="outpost mod ${esc(l.id)} ${id}" ${busy || s.server.credits < credits || have < code || !scrap ? 'disabled' : ''} title="${esc(`${OUTPOST.mods[id].rule} ${credits} credits, ${code} ${MATERIALS[k].name} and ${OUTPOST.modCost.salvage} salvage.`)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}</button>`).join('') : '';
-  return `<div class="mods">${slotPips('module', mine.length, ports, 'Module slots')}${on}${free}</div>`;
+  const mine = modsOf(l), ports = outpostPorts(s), busy = active(s) || s.run, stock = modStock(s);
+  const on = mine.map((id) => `<span class="mod on" title="${esc(OUTPOST.mods[id].rule)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}<button type="button" class="mod-x" data-command="outpost unmod ${esc(l.id)} ${id}" ${busy ? 'disabled' : ''} title="Take it out: back to your stock" aria-label="Remove ${esc(OUTPOST.mods[id].name)}">×</button></span>`).join('');
+  // Only modules you've crafted and have in stock can go in.
+  const free = mine.length < ports ? Object.keys(OUTPOST.mods).filter((id) => !mine.includes(id) && stock[id]).map((id) => `<button type="button" class="mod add" data-command="outpost mod ${esc(l.id)} ${id}" ${busy ? 'disabled' : ''} title="${esc(OUTPOST.mods[id].rule)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}<small>×${stock[id]}</small></button>`).join('') : '';
+  return `<div class="mods">${slotPips('module', mine.length, ports, 'Module ports')}${on}${free}</div>`;
 }
 
 // The outpost part of a location card: install, stockpile, siege, retake and repair.
@@ -1673,7 +1677,7 @@ function outpostCore(s, l) {
     if (o.readyAt && Date.now() < o.readyAt) return `<p class="svc-line">Harvester slot resetting · ${fmtTime(o.readyAt - Date.now())} ${buyoutBtn(s, `outpost buyout ${l.id}`, outpostBuyout(l)?.price)}</p>`;
     if (!rack.length) return '';
     const full = l.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s);
-    return `<div class="outpost"><p class="svc-line">${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Harvester slots')}</p><div class="row">${rack.map((h, i) => `<button type="button" class="btn" data-command="outpost install ${esc(l.id)} ${i + 1}" ${full ? 'disabled title="No harvester slot free. Pull a harvester out, or level your server."' : `title="${esc(OUTPOST.kinds[h.kind].about)}"`}>Install ${esc(harvesterName(h))}</button>`).join('')}</div></div>`;
+    return `<div class="outpost op-pick"><div class="op-pick-head">${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Outposts you can run')}</div><ul class="op-rack">${rack.map((h, i) => `<li><span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.traits.map((x) => `<span class="tag" title="${esc(OUTPOST.traits[x].rule)}">${esc(OUTPOST.traits[x].name)}</span>`).join('')}</span><button type="button" class="btn small primary" data-command="outpost install ${esc(l.id)} ${i + 1}" ${full ? 'disabled title="No outpost slot free. Pull a harvester out, or level your server."' : ''}>Install</button></li>`).join('')}</ul></div>`;
   }
   const h = o.h, m = MATERIALS[codeOf(l.family)];
   const traits = h.traits.map((t) => `<span class="tag" title="${esc(OUTPOST.traits[t].rule)}">${esc(OUTPOST.traits[t].name)}</span>`).join(' ');
@@ -1690,13 +1694,6 @@ function outpostCore(s, l) {
 }
 
 
-// The harvester rack on the server card.
-function rackMarkup(s) {
-  const rack = harvesters(s), used = bandwidthUsed(s), bw = bandwidth(s);
-  if (!rack.length && !used && !s.locations.some((l) => l.takenOver)) return '';
-  // Harvester slots are pips just above; this is the rack: what's packed and waiting to go out.
-  return rack.length ? `<div class="rack"><p class="svc-line" title="Harvester rack: ${rack.length} of ${OUTPOST.stashCap}">${glyph('crate')}${rack.map((h) => `<span class="tag">${glyph(h.kind)}${esc(harvesterName(h))}</span>`).join(' ')}</p></div>` : '';
-}
 
 const layoutName = (l) => ({ relay: 'Relay node', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab' })[l.template] || 'Node';
 
@@ -1822,7 +1819,7 @@ export function gainMarkup(kicker, name, rows, go = true) {
 export function salvageStacksMarkup(s) {
   const st = salvageStacks(s);
   if (!st.length) return '';
-  return `<ul class="salvage-stacks">${st.map((x) => `<li class="${x.component ? 'comp' : ''}" title="${esc(x.component ? `${x.name}: counts as any salvage, and some recipes ask for it by name.` : `${x.name}: counts as any salvage.`)}">${glyph('salvage')}<b>${x.n}</b>${esc(x.name)}</li>`).join('')}</ul>`;
+  return `<h3 class="sv-head">${glyph('salvage')}Salvage</h3><ul class="sv-rows">${st.map((x) => `<li class="${x.component ? 'comp' : ''}" title="${esc(x.component ? `${x.name}: counts as any salvage, and some recipes ask for it by name.` : `${x.name}: counts as any salvage.`)}"><span class="sv-name">${esc(x.name)}</span>${x.component ? '<span class="tag sv-tag">component</span>' : '<span></span>'}<b>${x.n}</b></li>`).join('')}</ul>`;
 }
 
 // The payment picker: which salvage pays for this. key: a SALVAGE_COSTS key with an optional

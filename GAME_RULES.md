@@ -4,7 +4,7 @@ This is the single source of truth for how combat works. If code, README or an o
 
 ## The Craft page
 
-Everything you build is on one page, **Craft** (at home only): protocols (compile from your recipes, Zero-days from source), configs and harvesters, with your credits, code and salvage stacks beside them. Protocols you *run* live on the **Loadout** page's first tab, Protocols (the stash as one row per item on the left, slots and stats on the right); skills and talents share the second tab (slots, stats, stash: load, unload, scrap).
+Everything you build is on one page, **Craft** (at home only): protocols (compile from your recipes, Zero-days from source), configs, harvesters and outpost modules, with your credits and code as tiles and your salvage one row per kind beside them. Protocols you *run* live on the **Loadout** page's first tab, Protocols (the stash as one row per item on the left, slots and stats on the right); skills and talents share the second tab (slots, stats, stash: load, unload, scrap).
 
 ## First launch
 
@@ -16,7 +16,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 2. Every neutralized virus gives a lead toward its family's origin: +15% for the kill plus half your backtrace (about seven plain kills, or two full backtraces) (each class traces its own way, at home and on the rogue server; see Backtrace). At 100% the origin is located. A full backtrace locates it in one fight; four plain kills of the same family also get there.
 3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter (a **+** chip sits beside it whenever it isn't full, and a first-time tip points at it), or type `top up`, to pay for the rest now (see The economy). The Integrity meter has the same **+** for `repair`. On a run, the store's **Signal patch** fills it. (Signal boosters are retired: they can't be crafted any more, and ones you still carry work with `boost`.)
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
-5. Some files lead deeper: a trace record locates a node one layer down.
+5. Some files lead deeper: a trace record puts 35% on the trace to a node one layer down.
 6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invasion gets through.
 7. Meanwhile, locations you've found send **invasions** home along the network. Your wall (the Firewall service) meets them; `jack in` to fight one yourself.
 8. **Mail** gives it all a reason: contracts from your crew and from Halcyon Mutual, which pays a retainer every 30 minutes while your standing holds, plus Indemnity to spend at its store (see Mail and contracts, The hidden network, The Halcyon store).
@@ -29,7 +29,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 | Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. |
 | Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal, and Trace doesn't apply. |
 | Locked | A locked directory needs `unlock <dir> <password>`. The password is written in a file somewhere in the location. |
-| Pack | Pulled files are unbanked until you jack out. A pull pops a small card with what it was (a blueprint or daemon shows ??? until it's banked); jacking out shows a **Banked** card with everything you brought home (Enter, a click or your next command closes it). Credits go to your credits, items to salvage, protocols to your stash, code to your server, source (Zero-day or special service) and blueprints to your recipes; trace records locate a deeper node. |
+| Pack | Pulled files are unbanked until you jack out. A pull pops a small card with what it was (a blueprint or daemon shows ??? until it's banked); jacking out shows a **Banked** card with everything you brought home (Enter, a click or your next command closes it). Credits go to your credits, items to salvage, protocols to your stash, code to your server, source (Zero-day or special service) and blueprints to your recipes; trace records add 35% to the trace on a deeper node. |
 | Home while out | Intrusions wait. A waiting intrusion is parked when you connect and returns when you're back. |
 
 ### Run commands
@@ -97,7 +97,7 @@ Every location has its family's quirk: one visible rule, shown on the map card, 
 
 ### Going deeper
 
-A trace record (`signal.trc`) you pull and bank locates a new node **one layer deeper**, of the family named in the file. On the Map it branches off the node it came from. Each layer adds +3 guard levels (about +12% health and damage) and +20 credits per cache. Layer 3 guards call for good play or a Signal booster.
+A trace record (`signal.trc`) you pull and bank puts **35%** on the trace to an unknown node **one layer deeper** (the one it names, or a flagged one first); kills, your relay's pings and trace injectors do the rest. On the Map it branches off the node it came from. Each layer adds +3 guard levels (about +12% health and damage) and +20 credits per cache. Layer 3 guards call for good play or a Signal booster.
 
 ## Protocols, services and code
 
@@ -158,7 +158,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Compile a blue | 60 + 15L | | 8 | its recipe |
 | Compile a Zero-day | 400 + 30L | | 16 (2 guard parts) | its source |
 | Harvester | 200 | 15 | 5 | its seed |
-| Outpost module | 150 | 8 | 5 | |
+| Outpost module (into your stock; needs its plan) | 150 | 8 | 5 | |
 | Config | 250 | 15 | 6 | its source |
 | Architecture switch | 1,000 | | | |
 
@@ -252,7 +252,7 @@ Every server you find is wired to two you haven't found yet, one layer deeper. T
 - **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its map card). A relay pings that server's unknown neighbours, and flags the one carrying the signal of a contract you've taken.
 - **Hunting a flagged server:** every kill of its family traces it 12% more (plus a quarter of your backtrace); the relay leaves a route file on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store) adds 30%.
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
-- A vault's trace record (`signal.trc`) locates one of its server's unknown neighbours outright (a flagged one first).
+- A vault's trace record (`signal.trc`) adds 35% to the trace on one of its server's unknown neighbours (a flagged one first). It never locates one outright.
 
 ## People: friends and who's online (presence.mjs)
 
@@ -282,7 +282,7 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 | 3 | Linked | +10% outpost yield and dividend |
 | 5 | Mesh | Invasion bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
-| 12 | Grid | +1 harvester slot and +10% wall |
+| 12 | Grid | +1 outpost slot and +10% wall |
 
 Up to 20 servers. Crews of up to three are drawn from consortium members and friends (*Invite to crew*, `crew invite <name>`).
 
@@ -383,6 +383,7 @@ Salvage works like mana in Magic: most costs take **any** salvage, and a few als
 
 A server you've taken over can run a **harvester**: a packaged virus that works for you there.
 
+- **Plans.** You can only craft a harvester or a module whose **plan** you know. Your first vault holds the Siphon plan (`plan.pln`); about 15% of other vaults hold one you may not have (banking a known plan gives 2 salvage); Halcyon's store sells every plan once (Siphon 120, Scraper and Tap 220, modules 180–260 credits, plus 8 a level). On the Craft page a row without its plan is dimmed with a *plan* tag.
 - **Getting one.** Mostly you craft them on the Craft page, one per kind (200 credits, 15 code and 5 salvage, plus its seed: Siphon uses Worm code, Scraper Cipher, Tap Kernel). Compiled harvesters are Stock, at your server level. Rarely (12% of vaults, twice that on Legacy sites) a vault holds a packaged native (`<family>.vx`): pull it and jack out. Only these can carry traits. The rack holds 6.
 - **A harvester is a kind, a level and 0–2 traits** (Stock none, Tuned one, Custom two).
   - Siphon: a steady flow of the server's code (1 + level/10 an hour, storage 6 + level/2).
@@ -390,7 +391,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   - Tap: a small trickle (0.5 + level/20 an hour), noticed a quarter as often.
   - Traits: Rich (+50% yield), Deep (double storage), Quiet (noticed half as often), Sturdy (half the time an invasion gives up on its own), Lucky (better loot rolls).
 - **Site traits** are fixed when a server is found (45% have one): Rich (+50% yield), Legacy (better loot rolls; its vault more often holds a package, and a better one), Backbone (no bandwidth), Hostile (twice the invasions, +50% yield), Hardened (its natives are Armored).
-- **Harvester slots** (pips on the server card and the outpost) limit how many outposts run at once: 1, plus 1 every 10 server levels (5 at most).
+- **Outpost slots** (*Outposts n/m* on the server card, pips on the outpost) limit how many outposts run at once. Harvesters never run on your own server: they go out to servers you've taken over. Installing one from an outpost's card lists your rack one row per harvester (kind, level, traits) with its own Install button: 1, plus 1 every 10 server levels (5 at most).
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
 - **Pulling out** gives the harvester back with what it holds; the slot then resets for 30 minutes.
 - **Invasions.** Natives notice an outpost about every 6 hours (by kind, traits and site), real time, so logging off doesn't dodge them. You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level): its timer only counts down while you're logged on, so one that starts while you're away waits for you. An outpost produces nothing while it's invaded. If you don't:
@@ -398,7 +399,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   - the server and everything past it stay open (nothing is ever cut off).
 - **Retake** it (beat the natives there) to end a lockdown sooner. In a consortium, the virus that won moves on along the trunk line (see Consortium).
 
-- **Modules.** Each outpost has **module slots** (pips), like your server's service slots: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is in lockdown). A module costs 150 credits, 8 of the server's code and 5 salvage; removing one gives half the code back.
+- **Modules.** Each outpost has **module slots** (pips), like your server's service slots: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is in lockdown). Modules are things you own: craft one on the Craft page (its plan known; 150 credits, 8 code and 5 salvage: Pipeline Worm, Storage Array and Honeytoken Kernel, Firewall Node and IDS Cipher) and it goes in your **module stock** (×n on its row). An outpost's card offers only modules you have in stock; taking one out puts it back in your stock, to use on another outpost.
 
   | Module | What it does |
   |---|---|
@@ -408,18 +409,18 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   | IDS | Natives notice it half as often; swarms heading here are seen 50% sooner |
   | Honeytoken | Draws trouble, for when you want more fights: noticed twice as often, swarms come twice as often and pick it first, infestations come sooner and pick it first. Beating them here pays double (a stopped invasion: an hour's harvest and a kill's XP; an infestation: two hours instead of one; a swarm: double code and XP) |
 
-- **Home services for outposts:** Edge Router (+1 / 2 / 3 harvester slots, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
+- **Home services for outposts:** Edge Router (+1 / 2 / 3 outpost slots, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
 - **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 1,000 credits, between fights.
 
   | Architecture | Trade |
   |---|---|
   | Fortress | Wall rating +25%; harvesters yield 25% less |
-  | Hub | +2 harvester slots; wall rating −15% |
+  | Hub | +2 outpost slots; wall rating −15% |
   | Lab | Crafting costs 30% fewer credits; outposts are noticed a quarter more often |
 
 - **Infestations.** Every so often (two hours, divided by how many outposts you run, a Honeytoken counting three; never under 40 minutes, 20 with a Honeytoken) a pack of 2–3 wild viruses moves into one outpost, at its level and one layer deeper. They stay 20 minutes. **Clear** them one fight at a time (`outpost clear <server>`) and the stockpile gets an hour's worth of yield on top, plus XP. Ignore them and they leave; nothing is lost.
 
-Commands: `outpost install <server> [n]`, `outpost mod|unmod <server> <module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake <server>`, `outpost compile siphon|scraper|tap`.
+Commands: `outpost install <server> [n]`, `outpost build <module>`, `outpost mod|unmod <server> <module>`, `buy plan-<kind|module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake <server>`, `outpost compile siphon|scraper|tap`.
 
 ## Configs
 
@@ -677,7 +678,7 @@ The log and the terminal still speak (that's the MUD's voice): what happened, in
 Pages show instead of explaining; the words are in the hover.
 
 - **Wall: a level ruler.** Teal for invasion levels your wall stops, amber for the ones it contests, red hatching for the ones that break through, with your server marked on it (`server N`) and the incoming invasion too (`GHOSTROOT N`). The Server page has the full ruler with its numbers; the map's server card has a thin one, and in a consortium a second thin one for while you're away.
-- **The map's server card:** the server's level bar, an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, and service and harvester slots as pips. An install in progress shows as a small bar.
+- **The map's server card:** the server's level bar, an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, service slots as a strip of tiles, and Memory, Outposts (running / slots) and Salvage as counts. Your packed harvesters are on the Craft page, not the server card. An install in progress shows as a small bar.
 - **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols, Configs and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid).
 - **The crew column**: a narrow column on the left of every page while you have a crew (none when solo; `sidebar off|on` hides or shows it). Each row: name, then class and level flush with the right end of the Signal bar; it never shakes when they're hit, it outlines red. In a run fight it's the live party: bars, who's down, what each means to do this cycle. The combat log is a short strip under the timeline.
 - **Map cards pop up** beside the node you click (to its right, or its left when there's no room): the server card (Level, Integrity and the Wall as one line each; the service slots as a strip of tiles, each showing what runs in it; Memory, Harvesters and Salvage), a location, a hub, an invasion. `×`, Escape or a click on empty map closes it.
@@ -757,7 +758,7 @@ Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 
 - **A find arrives off your network.** A server you trace lands on the map dimmed, marked *found*. Nothing is decided for you: its card shows Memory as pips (used → after, the new slot pulsing amber; red past the cap) and a **Connect** button. Connect (or typing `connect <server>`) opens that prompt on its card first; **Connect · +N** commits it (N: it and anything found past it), **Cancel** backs out. The first connection costs memory only, no credits. With memory full, the pips show red and Connect waits until you detach something.
 - **Attach / detach** (a server that was already on your network) from its map card (or `attach <server>`, `detach <server>`): 25 + 5 × its level credits, either way, the same every time. Swapping back and forth costs no more than that.
 - **Detaching freezes** the server and everything found through it: no runs, its outpost makes nothing, no invasions, swarms or infestations, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
-- Harvester slots still decide how many outposts run; memory decides how many servers you hold.
+- Outpost slots still decide how many outposts run; memory decides how many servers you hold.
 
 ## The codex
 

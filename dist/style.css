@@ -2208,3 +2208,40 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mem-card.asking .srv-slots { outline: 1px solid rgba(241, 185, 47, 0.35); border-radius: 4px; padding: 4px 6px; }
 @keyframes memadd { 50% { background: rgba(241, 185, 47, 0.6); } }
 @media (prefers-reduced-motion: reduce) { .mem-join i.add { animation: none; } }
+/* Salvage stacks: one row each (name, component tag, count), apart from the material tiles. */
+.sv-head { display: flex; align-items: center; gap: 6px; margin: 18px 0 6px; font: 600 11px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.sv-head .glyph { width: 14px; height: 14px; }
+.sv-rows { list-style: none; margin: 0; padding: 0; max-width: 420px; }
+.sv-rows li { display: grid; grid-template-columns: 1fr auto 40px; align-items: center; gap: 10px; padding: 6px 4px; border-top: 1px solid var(--line); font-size: 13px; }
+.sv-rows li:last-child { border-bottom: 1px solid var(--line); }
+.sv-rows .sv-name { color: var(--text); }
+.sv-rows li.comp .sv-name { color: var(--you); }
+.sv-rows b { font: 600 13px var(--mono); text-align: right; color: var(--bright, #fff); }
+.sv-tag { font-size: 10px; padding: 0 5px; line-height: 16px; color: var(--you); border-color: rgba(127, 209, 199, 0.4); }
+/* Craft rows without a plan: dimmed, a plan tag where the button would be. */
+.craft-list li.locked > span { opacity: 0.55; }
+.plan-lock { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.plan-lock .glyph { width: 12px; height: 12px; }
+/* Installing a harvester on an outpost: slots, then one row per harvester in the rack. */
+.op-pick { display: grid; gap: 8px; margin-top: 8px; }
+.op-rack { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.op-rack li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--inset); }
+.op-h { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; font-size: 13px; }
+.op-h b { color: var(--text); font-weight: 600; }
+.op-h .glyph { width: 15px; height: 15px; color: var(--amber); }
+.op-h .tag { font-size: 10px; line-height: 16px; padding: 0 5px; }
+.op-rack .btn { flex: none; padding: 5px 12px; }
+.mod.add small { margin-left: 4px; color: var(--muted); font: 10px var(--mono); }
+/* Halcyon's plans: one row each. */
+.plan-shelf { list-style: none; margin: 0; padding: 0; }
+.plan-shelf li { display: grid; grid-template-columns: 1fr auto 56px 52px; align-items: center; gap: 10px; padding: 7px 2px; border-top: 1px solid var(--line); font-size: 13px; }
+.plan-shelf li:last-child { border-bottom: 1px solid var(--line); }
+.plan-shelf .iname { display: flex; align-items: center; gap: 6px; }
+.plan-shelf .iname .glyph { width: 15px; height: 15px; color: var(--amber); }
+.plan-shelf .price { font: 600 12px var(--mono); text-align: right; color: var(--text); }
+.plan-shelf li.known { opacity: 0.6; }
+.plan-shelf li.known .tag.you { grid-column: 3 / 5; justify-self: end; }
+.plan-shelf .tag { font-size: 10px; line-height: 16px; padding: 0 5px; }
+.craft-list .plan-lock { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; white-space: nowrap; padding: 2px 7px; line-height: 16px; }
+.craft-list .plan-lock .glyph { margin: 0; }
+.craft-list .iname .tag.you { margin-left: 8px; font-size: 10px; line-height: 16px; padding: 0 5px; }

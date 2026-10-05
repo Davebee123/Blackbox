@@ -123,7 +123,7 @@ test('a v24 save loads with configs and no fleet', () => {
 });
 
 test('outpost modules: ports, Pipeline, Storage Array, Firewall Node, IDS', async () => {
-  const { capOf, perHour, OUTPOST, outpostPorts } = await import('./dist/outpost.mjs');
+  const { capOf, perHour, OUTPOST, outpostPorts, modsOf, modStock, learnPlan } = await import('./dist/outpost.mjs');
   const s = fresh();
   command(s, 'developer location worm');
   const a = s.locations[0];
@@ -131,8 +131,14 @@ test('outpost modules: ports, Pipeline, Storage Array, Firewall Node, IDS', asyn
   s.harvesters = [{ kind: 'siphon', level: 5, traits: [] }];
   command(s, `outpost install ${a.id}`, T0);
   const cap = capOf(a), rate = perHour(a, a.outpost.h, s);
-  s.server.credits = 1000; s.materials.worm = 100;
+  s.server.credits = 2000; s.materials.worm = 100; s.materials.kernel = 100; s.materials.cipher = 100;
   command(s, 'developer salvage 30');
+  command(s, `outpost mod ${a.id} pipeline`);
+  assert.equal(modsOf(a).length, 0, 'no module in stock');
+  command(s, 'outpost build pipeline');
+  assert.equal(modStock(s).pipeline || 0, 0, 'no plan, no module');
+  for (const id of ['pipeline', 'storage', 'node']) { learnPlan(s, id); command(s, `outpost build ${id}`); }
+  assert.deepEqual(modStock(s), { pipeline: 1, storage: 1, node: 1 });
   command(s, `outpost mod ${a.id} pipeline`);
   command(s, `outpost mod ${a.id} storage`);
   assert.equal(capOf(a), cap * 2);
@@ -141,6 +147,7 @@ test('outpost modules: ports, Pipeline, Storage Array, Firewall Node, IDS', asyn
   command(s, `outpost mod ${a.id} node`);
   assert.equal(a.mods.length, 2, 'two ports at the start');
   command(s, `outpost unmod ${a.id} storage`);
+  assert.equal(modStock(s).storage, 1, 'a removed module goes back to your stock');
   command(s, `outpost mod ${a.id} node`);
   assert.ok(a.mods.includes('node'));
   launch(s);

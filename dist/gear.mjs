@@ -325,7 +325,7 @@ export const SERVICES = {
   uplink: { name: 'Uplink Array', code: 'cipher', stat: 'trace', values: [10, 20, 30], unit: '% Trace', about: 'Backtraces land harder, so leads fill faster.' },
   buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
   tarpit: { name: 'Tarpit', code: 'worm', stat: 'tarpit', values: [50, 100, 150], unit: '% slower invasions', about: 'Invasions crawl toward you: fewer of them, and more warning.' },
-  router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' harvester slots', about: 'Run more outposts at once.' },
+  router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' outpost slots', about: 'Run more outposts at once.' },
   scheduler: { name: 'Scheduler', code: 'kernel', stat: 'scheduler', values: [60, 30, 15], unit: '-minute collection', about: 'Collects every outpost on a timer, so you don\'t have to visit.' },
   cron: { name: 'Cron Job', code: ['worm', 'kernel'], special: true, stat: 'cron', values: [0.4, 0.6, 0.8], unit: '× cron hits', about: 'Home fights: every 3rd cycle your server hits the soonest attacker.' },
   snapshot: { name: 'Snapshot', code: ['cipher', 'kernel'], special: true, stat: 'snapshot', values: [8, 12, 16], unit: '% restore', about: 'Once per home fight, when a hit drops you below half, restore some Integrity.' },

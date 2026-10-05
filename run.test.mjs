@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { HIDDEN, hiddenNodes } from './dist/hidden.mjs';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, part } from './dist/combat.mjs';
 import { play, connect, currentLocation } from './dist/run.mjs';
@@ -156,9 +157,9 @@ test('jack out banks the pack; a pulled signal file leads deeper', () => {
   assert.equal(s.run, null);
   assert.equal(s.server.credits, credits + Math.round(CONFIG.cacheCredits * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1)));
   assert.equal(s.materials[code], packed, 'banked on jack-out');
-  const deeper = s.locations.find((l) => l.depth === 2);
-  assert.ok(deeper, 'a layer-2 location appears');
-  assert.equal(deeper.family, loc.deeper);
+  const deeper = hiddenNodes(s).find((n) => n.via === loc.id && n.family === loc.deeper);
+  assert.ok(deeper && deeper.lead >= HIDDEN.recordLead, 'the trace to a layer-2 node moves on');
+  assert.ok(!s.locations.some((l) => l.depth === 2), 'not located outright');
   assert.ok(loc.state.taken['/relay/cache.dat']);
 });
 

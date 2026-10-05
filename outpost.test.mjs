@@ -4,7 +4,7 @@ import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION } fr
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
-import { OUTPOST, harvesters, hasVx, bandwidth, stockOf, capOf, vxName, vaultHarvester, siteTrait } from './dist/outpost.mjs';
+import { learnPlan, knowsPlan, OUTPOST, harvesters, hasVx, bandwidth, stockOf, capOf, vxName, vaultHarvester, siteTrait } from './dist/outpost.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -151,6 +151,12 @@ test('pulling out returns the harvester and the port resets', () => {
 test('compiling a Stock harvester costs credits and that kind\'s code', () => {
   const s = fresh();
   s.server.credits = 500;
+  s.materials.kernel = OUTPOST.compile.code; s.salvage.push({ name: 'Signal Key' }); command(s, 'developer salvage 5');
+  command(s, 'outpost compile tap');
+  assert.equal(harvesters(s).length, 0, 'no plan');
+  s.materials.kernel = 0; s.salvage = [];
+  learnPlan(s, 'tap');
+  assert.ok(knowsPlan(s, 'tap'));
   command(s, 'outpost compile tap');
   assert.equal(harvesters(s).length, 0, 'no kernel code');
   s.materials.kernel = OUTPOST.compile.code;
@@ -205,4 +211,18 @@ test('a Honeytoken draws trouble to its outpost (sooner and first) and pays doub
   a.outpost.infest = { total: 1, count: 1, left: 1e6, seed: 1 };
   infestWon(s, { infest: a.id });
   assert.ok(lured > a.outpost.stock, `${lured} vs ${a.outpost.stock}`);
+});
+
+test('plans: your first vault holds the Siphon plan; a known plan banked again is salvage', async () => {
+  const { vaultPlan, learnPlan, knowsPlan, plansOf } = await import('./dist/outpost.mjs');
+  assert.equal(vaultPlan({ starter: true, seed: 1 }), 'siphon');
+  assert.equal(vaultPlan({ rogue: {}, seed: 1 }), null);
+  const s = fresh();
+  assert.ok(!knowsPlan(s, 'siphon'));
+  learnPlan(s, 'siphon');
+  assert.ok(knowsPlan(s, 'siphon'));
+  const n = s.salvage.length;
+  learnPlan(s, 'siphon');
+  assert.equal(plansOf(s).length, 1);
+  assert.equal(s.salvage.length, n + 2);
 });

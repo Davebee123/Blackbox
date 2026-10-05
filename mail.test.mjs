@@ -245,7 +245,7 @@ test('the hidden network: invaders from servers you haven’t found, traced back
   assert.equal(s.invasion, null);
 });
 
-test('a vault’s trace record locates one of the server’s hidden neighbours', () => {
+test('a vault’s trace record puts part of a trace on one of the server’s hidden neighbours', () => {
   const s = fresh();
   command(s, 'developer location ransomware');
   const loc = s.locations[0];
@@ -254,8 +254,8 @@ test('a vault’s trace record locates one of the server’s hidden neighbours',
   play(s, 'cd ' + vault);
   play(s, 'pull signal.trc');
   play(s, 'jack out');
-  assert.equal(s.locations.length, 2);
-  assert.equal(hiddenNodes(s).filter((n) => before.includes(n.id)).length, before.length - 1);
+  assert.equal(s.locations.length, 1, 'no server located outright');
+  assert.deepEqual(hiddenNodes(s).filter((n) => before.includes(n.id)).map((n) => n.lead).sort((a, b) => b - a)[0], HIDDEN.recordLead);
 });
 
 test('the store: Halcyon’s line, chase protocols for Indemnity by tier, and agency stock that turns over', () => {
