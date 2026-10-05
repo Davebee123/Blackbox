@@ -24,7 +24,7 @@ test('connecting reads like jacking into a server: handshake, banner, who answer
   const lines = hubBanner(s, 'kestrel');
   assert.match(lines[0].html, /ssh zer0@kestrel-dc-north/);
   assert.ok(lines.some((l) => /helpdesk@kestrel/.test(l.html)));
-  assert.match(lines.at(-1).html, /\[1\] market/);
+  assert.match(lines.at(-1).html, /class="hn">1<\/span><span class="hl">market</);
   const page = hubTerminalMarkup(s, 'kestrel', lines, null);
   assert.match(page, /id="hubterm"/);
   assert.doesNotMatch(page, /hub-win/, 'no window until you pick');

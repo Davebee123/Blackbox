@@ -2007,8 +2007,13 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .hub-motd b { color: var(--fc); letter-spacing: 0.08em; }
 .term li.hub-say { margin: 6px 0 10px; }
 .term li.hub-say b { color: var(--fc); }
-.term li.hub-menu { display: flex; flex-wrap: wrap; gap: 6px 14px; }
-.term li.hub-menu .tok small { opacity: 0.7; margin-left: 2px; display: inline-flex; align-items: center; gap: 2px; }
+.term li.hub-menu { display: grid; gap: 2px; margin: 4px 0 6px; max-width: 420px; }
+.hub-row { display: grid; grid-template-columns: 2.4em 1fr auto; align-items: center; gap: 10px; padding: 5px 10px; background: none; border: 1px solid transparent; border-radius: 3px; color: var(--text); font: 15px var(--mono); text-align: left; cursor: pointer; }
+.hub-row:hover, .hub-row:focus-visible, .hub-row.on { border-color: var(--fc); background: color-mix(in srgb, var(--fc) 10%, transparent); color: var(--bright); }
+.hub-row .hn { color: var(--fc); }
+.hub-row .hn::before { content: '['; opacity: 0.6; }
+.hub-row .hn::after { content: ']'; opacity: 0.6; }
+.hub-row .hm { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 3px; }
 .hub-win h2 { display: flex; justify-content: space-between; align-items: center; }
 .hub-win h2 .x { margin-left: auto; }
 .hub-term .net-head .net-where { flex-direction: row; }
