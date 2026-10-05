@@ -1217,11 +1217,10 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 }
 
 // ---------- the map ----------
-// Under HOME on the map: the server's level as a bar (the level at the left).
 function homeBars(s) {
-  const sp = serverProgress(s);
-  const row = (y, cls, lv, frac, tip) => `<g class="hb ${cls}" transform="translate(0 ${y})"><title>${esc(tip)}</title><text x="-32" y="3" class="hb-n" text-anchor="end">${lv}</text><rect x="-28" y="-2" width="56" height="4" rx="1" class="hb-track"/><rect x="-28" y="-2" width="${(56 * Math.min(1, frac)).toFixed(1)}" height="4" rx="1" class="hb-fill"/></g>`;
-  return `<g transform="translate(0 50)"><g class="mbars">${row(0, 'srv', sp.level, sp.next ? sp.xp / sp.next : 1, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ''}`)}</g></g>`;
+  // Under HOME on the map: the server's Integrity as a bar (teal, amber below 60%, red below 30%).
+  const srv = s.server, f = Math.max(0, Math.min(1, srv.integrity / srv.max)), hue = f <= 0.3 ? 'low' : f <= 0.6 ? 'mid' : '';
+  return `<g transform="translate(0 50)"><g class="mbars"><g class="hb hp ${hue}"><title>Integrity ${srv.integrity}/${srv.max}</title><rect x="-28" y="-2" width="56" height="4" rx="1" class="hb-track"/><rect x="-28" y="-2" width="${(56 * f).toFixed(1)}" height="4" rx="1" class="hb-fill"/></g></g></g>`;
 }
 // Your server sits at the centre. Each virus family owns a direction; its
 // origins sit on the first ring, and deeper layers branch outward from the

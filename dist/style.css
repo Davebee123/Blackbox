@@ -2280,3 +2280,8 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mdone-head { color: var(--dim); }
 .mlist.mdone .mrow { opacity: 0.5; filter: grayscale(0.85); }
 .mlist.mdone .mrow:hover, .mlist.mdone .mrow.open { opacity: 0.8; }
+/* HOME's Integrity bar on the map. */
+.mnode.server .mbars .hp .hb-track { fill: rgba(127, 209, 199, 0.08); stroke: rgba(127, 209, 199, 0.35); }
+.mnode.server .mbars .hp .hb-fill { fill: var(--you); stroke: none; }
+.mnode.server .mbars .hp.mid .hb-fill { fill: var(--amber); }
+.mnode.server .mbars .hp.low .hb-fill { fill: var(--hot); }
