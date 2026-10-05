@@ -1995,7 +1995,7 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .mk-ware .iname { white-space: nowrap; }
 /* Hub sessions: a terminal like any server's; a menu choice opens its window beside it. */
 .hub-session { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; height: 100%; }
-.hub-session.with-win { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+.hub-session.with-win { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
 .hub-session .hub-term { height: 100%; min-height: 420px; }
 .hub-session .hub-win { max-height: 100%; overflow: auto; }
 .hub-term .net-head { display: flex; align-items: center; gap: 12px; }
@@ -2018,3 +2018,29 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .hub-win h2 .x { margin-left: auto; }
 .hub-term .net-head .net-where { flex-direction: row; }
 .hub-term .net-where b { color: var(--fc); }
+/* The Market window: aligned tables. Price is the loudest thing on a row, then the name; the rest is muted. */
+.mk-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 14px; }
+.mk-sec { margin: 18px 0 6px; font: 600 11px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.mk-table { display: grid; font-variant-numeric: tabular-nums; }
+.mk-tr { display: grid; align-items: center; column-gap: 10px; padding: 7px 8px; border-bottom: 1px solid var(--line); min-height: 40px; }
+.mk-tr:not(.mk-th):hover { background: color-mix(in srgb, var(--fc, var(--line)) 7%, transparent); }
+.mk-wares .mk-tr { grid-template-columns: minmax(90px, 1fr) 36px 44px 58px 44px 44px 52px; }
+.mk-goods .mk-tr { grid-template-columns: minmax(0, 1fr) 52px 74px; }
+.mk-xfers .mk-tr { grid-template-columns: minmax(90px, 1fr) 58px 140px; }
+.mk-th { min-height: 0; padding-top: 0; padding-bottom: 6px; font: 600 10px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-bottom-color: var(--line-strong, var(--line)); }
+.mk-th .mk-span2 { grid-column: span 2; text-align: center; }
+.mk-th span:last-child { text-align: center; }
+.mk-name { display: flex; align-items: center; gap: 9px; min-width: 0; color: var(--muted); }
+.mk-name b { font: 600 14px var(--sans, inherit); color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mk-name .mk-sub { font: 12px var(--mono); color: var(--muted); }
+.mk-num { text-align: right; font-family: var(--mono); }
+.mk-held { font-size: 13px; color: var(--text); }
+.mk-held.zero { color: var(--muted); opacity: 0.5; }
+.mk-price { font-size: 16px; font-weight: 700; color: var(--bright); }
+.mk-price.in { color: #8fd46b; }
+.mk-tr .btn.small { width: 100%; justify-content: center; padding-left: 0; padding-right: 0; font-variant-numeric: tabular-nums; }
+.mk-tr .mk-lock { justify-self: stretch; text-align: center; }
+.mk-tr.locked .mk-name b { color: var(--muted); }
+.mk-dir { color: var(--muted); font-family: var(--mono); }
+.mk-tr .xfer-bar { width: 100%; }
+.mk-d { display: inline-block; min-width: 50px; text-align: center; }

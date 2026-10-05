@@ -1952,7 +1952,11 @@ export function hubOptions(s, f, now = Date.now()) {
 function goodsMarkup(s, f, now) {
   const F = FX[f];
   if (f === 'halcyon' || hostile(s, f) || offline(s, f, now)) return '';
-  return `<h3 class="craft-sub">Goods</h3><ul class="craft-list">${shopOf(s, f, now).map((g) => `<li class="${g.locked ? 'locked' : ''}"><span class="mk-ware"><b class="iname" title="${esc(g.about)}">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><span class="mk-have${g.left ? '' : ' zero'}" title="In stock">×${g.left}</span></span>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn ${s.server.credits >= g.price && g.left ? 'primary' : ''} small" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>${glyph('credits')}${g.price}</button>`}</li>`).join('')}</ul>`;
+  return `<h3 class="mk-sec">Goods</h3><div class="mk-table mk-goods"><div class="mk-tr mk-th"><span>Good</span><span class="mk-num">Stock</span><span>Buy</span></div>${shopOf(s, f, now).map((g) => `<div class="mk-tr${g.locked ? ' locked' : ''}">
+      <span class="mk-name" title="${esc(g.about)}">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate')}<b>${esc(g.name)}</b></span>
+      <span class="mk-num mk-held${g.left ? '' : ' zero'}">${g.left}</span>
+      ${g.locked ? `<span class="tag dim mk-lock">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small ${s.server.credits >= g.price && g.left ? 'primary' : ''}" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>${g.price}</button>`}
+    </div>`).join('')}</div>`;
 }
 function workMarkup(s, f) {
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
@@ -2056,13 +2060,25 @@ function marketMarkup(s, f, now) {
     // Its value here against the average across every hub: the one number that says where to sell.
     const avg = FACTION_IDS.reduce((a, g) => a + quote(s, g, w).sell, 0) / FACTION_IDS.length, d = Math.round((q.sell / avg - 1) * 100);
     const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : ''].filter(Boolean).join(' · ');
-    const chip = `<span class="mk-d ${d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat'}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${d >= 3 ? '▲' : d <= -3 ? '▼' : '='}${Math.abs(d)}%</span>`;
-    const sellBtn = (k) => `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k && k ? '' : 'disabled'} title="+${q.sell * k} · ${min} min">Sell ${k}</button>`;
-    const buyBtn = `<button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="Buy 1 · ${min} min">Buy ${glyph('credits')}${q.buy}</button>`;
-    return `<li class="mk-row"><span class="mk-ware"><b class="iname">${glyph(GLYPH_OF_GOOD[w], 'badge')}${esc(WARES[w].name)}</b><span class="mk-have${n ? '' : ' zero'}" title="You have ${n}">×${n}</span></span><span class="mk-val" title="What it pays here, each">${glyph('credits')}<b>${q.sell}</b>${chip}</span><span class="mk-btns">${sellBtn(1)}${lot > 1 ? sellBtn(lot) : ''}${buyBtn}</span></li>`;
+    const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
+    const sell = (k) => (k ? `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k ? '' : 'disabled'} title="+${q.sell * k} · ${min} min">${k}</button>` : '<span></span>');
+    return `<div class="mk-tr">
+      <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b></span>
+      <span class="mk-num mk-held${n ? '' : ' zero'}">${n}</span>
+      <span class="mk-num mk-price" title="What it pays here, each">${q.sell}</span>
+      <span class="mk-num"><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
+      ${sell(1)}${sell(lot > 1 ? lot : 0)}
+      <button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="Buy 1 · ${min} min">${q.buy}</button>
+    </div>`;
   }).join('');
+  const head = `<div class="mk-tr mk-th"><span>Ware</span><span class="mk-num">Held</span><span class="mk-num">Pays</span><span class="mk-num">vs avg</span><span class="mk-span2">Sell</span><span>Buy</span></div>`;
   const mine = transfersOf(s).filter((x) => x.f === f);
-  const flying = mine.length ? `<h3 class="craft-sub">In transfer</h3><ul class="craft-list">${mine.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<li class="mk-xfer"><span class="mk-ware"><b class="iname">${x.side === 'sell' ? '→' : '←'} ${x.side === 'good' ? `${glyph(GLYPH_OF_GOOD[x.good] || 'crate', 'badge')}${esc(x.name)}` : `${glyph(GLYPH_OF_GOOD[x.w], 'badge')}×${x.n}`}</b></span><span class="mk-val ${x.side === 'sell' ? 'in' : 'out'}">${glyph('credits')}<b>${x.side === 'sell' ? '+' : '−'}${x.credits}</b></span><span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span></li>`; }).join('')}</ul>` : '';
-  return `<div class="row mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer">⇄ ${min} min</span></div><ul class="craft-list">${rows}</ul>${flying}`;
+  const flying = mine.length ? `<h3 class="mk-sec">In transfer</h3><div class="mk-table mk-xfers">${mine.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<div class="mk-tr">
+      <span class="mk-name">${glyph(x.side === 'good' ? GLYPH_OF_GOOD[x.good] || 'crate' : GLYPH_OF_GOOD[x.w])}<b>${x.side === 'good' ? esc(x.name) : esc(WARES[x.w].name.replace(/ code$/, ''))}</b><span class="mk-dir" title="${x.side === 'sell' ? 'Outgoing' : 'Incoming'}">${x.side === 'sell' ? '→' : '←'}</span>${x.side === 'good' ? '' : `<span class="mk-sub">×${x.n}</span>`}</span>
+      <span class="mk-num mk-price ${x.side === 'sell' ? 'in' : ''}">${x.side === 'sell' ? '+' : '−'}${x.credits}</span>
+      <span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span>
+    </div>`; }).join('')}</div>` : '';
+  return `<div class="mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer">⇄ ${min} min</span></div>
+    <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint', daemon: 'daemon' };
