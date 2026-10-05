@@ -23,7 +23,7 @@ import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, dividendOf, dividendRate, dividendSources, dividendWaiting, dividendText, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
-import { FACTIONS, MAIL, TIERS, openContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
+import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
@@ -940,6 +940,8 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls); }).join('');
   const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? 'Off books' : '', c.offBooks ? 'hot' : '', `${fIcon(c.faction || 'halcyon')}<small class="mexp">${fmtTime(c.expiresAt - now)}</small>`)).join('');
   const letterRows = letters.map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
+  const done = doneContracts(s);
+  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? 'LOWLIGHT' : '', 'dim')).join('');
   const st = standing(s), tier = tierOf(s), next = nextTier(s);
   const head = `<div class="standing" title="Standing ${st}/100${next ? `. ${next.name} at ${next.min}` : ''}. Contracts raise it; a crash on your server lowers it, and so does work for GLASSJAW.">
       <span class="st-name">${esc(FACTIONS.halcyon.name)}</span><span class="tag ${st ? 'you' : 'hot'}">${esc(tier.name)}</span>
@@ -955,7 +957,8 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   return `<div class="page-grid mail-page"><section class="card inbox">${head}
     <h2>Contracts · ${heldCount(s)}/${MAIL.take}</h2>${heldRows ? `<ul class="mlist">${heldRows}</ul>` : '<p class="quiet">None taken.</p>'}
     ${boardOpen(s) ? `<h2>Board · ${board.length}</h2>${boardRows ? `<ul class="mlist mboard">${boardRows}</ul>` : '<p class="quiet">Nothing on offer right now.</p>'}` : ''}
-    <h2>Letters${unread(s) ? ` · ${unread(s)} unread` : ''}</h2><ul class="mlist">${letterRows}</ul></section>${reader}</div>`;
+    <h2>Letters${unread(s) ? ` · ${unread(s)} unread` : ''}</h2><ul class="mlist">${letterRows}</ul>
+    ${done.length ? `<h2 class="mdone-head">Completed · ${done.length}</h2><ul class="mlist mdone">${doneRows}</ul>` : ''}</section>${reader}</div>`;
 }
 
 // ---------- the pager's list (Comms) ----------

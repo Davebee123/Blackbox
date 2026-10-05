@@ -68,6 +68,7 @@ export const indemnity = (s) => s.indemnity || 0;
 export const jobs = (s) => s.mail?.jobs || [];
 export const offers = (s) => s.mail?.offers || [];
 export const openContracts = (s) => jobs(s).filter((j) => !j.done);
+export const doneContracts = (s) => jobs(s).filter((j) => j.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)); // newest first
 export const heldCount = (s) => openContracts(s).filter((j) => j.story === undefined).length;
 export const findJob = (s, id) => [...jobs(s), ...offers(s)].find((j) => j.id === id) || null;
 export const boardOpen = (s) => !!s.mail?.boardOpen || (s.mail?.story || 0) >= STORY.length;
@@ -430,7 +431,10 @@ export function mailCommand(s, text, at = now()) {
   if (c.type === 'materials') materialsOf(s)[c.material] -= c.amount;
   if (c.type === 'item') { cargo(s).splice(cargo(s).findIndex((x) => x.contract === c.id), 1); disarm(s, c); }
   c.done = true;
-  s.mail.jobs = s.mail.jobs.filter((x) => !x.done || x.story !== undefined || x === c).slice(-30);
+  c.doneAt = at;
+  // Delivered ones stay for the Completed list: every LOWLIGHT job, and the last 15 others.
+  const keep = new Set(s.mail.jobs.filter((x) => x.done && x.story === undefined).slice(-15));
+  s.mail.jobs = s.mail.jobs.filter((x) => !x.done || x.story !== undefined || keep.has(x));
   s.server.credits += c.reward.credits;
   s.indemnity = indemnity(s) + (c.reward.indemnity || 0);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits });

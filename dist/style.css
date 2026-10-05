@@ -2276,3 +2276,7 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 /* The pager sits by the server's meters now, just left of Integrity. */
 .topbar .pager { margin-left: 0; }
 @media (max-width: 900px) { .whoami { display: none; } }
+/* Mail: delivered contracts and LOWLIGHT jobs, greyed, under Completed (newest first). */
+.mdone-head { color: var(--dim); }
+.mlist.mdone .mrow { opacity: 0.5; filter: grayscale(0.85); }
+.mlist.mdone .mrow:hover, .mlist.mdone .mrow.open { opacity: 0.8; }

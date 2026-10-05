@@ -229,7 +229,7 @@ A kill drops 1 code at level 1 (+1 every 10 levels); a guard drops half again, i
 
 Delivering a contract raises standing. A crash on your own server costs 10, but never takes you below 1: a breach alone never suspends you. GLASSJAW's work costs 8 per job, and only that can get you suspended. Declining or dropping a contract never costs anything.
 
-**Contracts** pay credits and **Indemnity** (Halcyon's scrip, spent only at its store; GLASSJAW pays no Indemnity, but 1.6× the credits). They track themselves once taken; you hand them in from the Mail tab (`mail deliver <n>`).
+**Contracts** pay credits and **Indemnity** (Halcyon's scrip, spent only at its store; GLASSJAW pays no Indemnity, but 1.6× the credits). They track themselves once taken; you hand them in from the Mail tab (`mail deliver <n>`). Delivered ones move to **Completed** at the bottom of the inbox, greyed out, newest first (every LOWLIGHT job, and your last 15 contracts); click one to read it again.
 
 | Type | Done when | Hand-in |
 |---|---|---|

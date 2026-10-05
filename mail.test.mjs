@@ -334,3 +334,15 @@ test('Total Loss, the Preferred weapon: breaking a part hits every other part fo
   command(s, 'spike ' + a.id); resolveCycle(s);
   assert.equal(b.integrity, b.max - Math.round(a.max * 0.25));
 });
+
+test('Mail lists delivered contracts and LOWLIGHT jobs under Completed, newest first', async () => {
+  const { mailMarkup } = await import('./dist/view.mjs');
+  const { doneContracts } = await import('./dist/mail.mjs');
+  const s = fresh();
+  const base = { from: 'Halcyon Mutual', subject: 'x', type: 'kill', family: 'worm', count: 1, reward: { credits: 1 } };
+  s.mail = { ...(s.mail || {}), list: [], offers: [], jobs: [{ ...base, id: 1, done: true, doneAt: 10 }, { ...base, id: 2, done: true, doneAt: 20, story: 0 }, { ...base, id: 3 }] };
+  assert.deepEqual(doneContracts(s).map((j) => j.id), [2, 1]);
+  const html = mailMarkup(s);
+  assert.match(html, /Completed · 2/);
+  assert.match(html, /class="mlist mdone"/);
+});
