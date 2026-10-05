@@ -10,6 +10,7 @@
 import { CONFIG, SERVER, MUTATIONS, FAMILIES, variantFor } from './data.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hooks } from './combat.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
+import { FACTIONS } from './factions.mjs';
 import { outposts, fall, hasMod } from './outpost.mjs';
 import { hiddenNodes } from './hidden.mjs';
 import { has as hasConfig } from './configs.mjs';
@@ -35,7 +36,7 @@ function origin(s, target) {
 }
 
 const clock = () => hooks.now?.() ?? Date.now();
-export function launch(s, at = clock()) {
+export function launch(s, at = clock(), faction = null) {
   const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege);
   if (!targets.length) return null;
   const pool = targets.some((l) => hasMod(l, 'lure')) ? targets.filter((l) => hasMod(l, 'lure')) : targets; // a Honeytoken first
@@ -46,7 +47,9 @@ export function launch(s, at = clock()) {
   const total = Math.round(FLEET.travelMs * (hasConfig(s, 'beacon') ? 1.5 : 1) * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
   s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs * (hasMod(target, 'node') ? 2 : 1), seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: level >= SERVER.mutationsFrom && rand(s) < 0.3 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
-  emit(s, 'fleet', `SWARM: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}) left ${o.name}, headed for your outpost on ${target.name}. They arrive in ${Math.round(total / 60000)} minutes.`, { location: target.id });
+  if (faction) s.fleet.faction = faction;
+  const who = faction ? ` from ${FACTIONS[faction].short}` : '';
+  emit(s, 'fleet', `SWARM: Swarm${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });
   return s.fleet;
 }
 
@@ -76,7 +79,7 @@ export function tickFleet(s, dt, paused = false, at = clock()) {
     if (f.arriveAt == null) f.arriveAt = at + (f.left || 0); // saves from before real-time swarms
     if (at >= f.arriveAt) {
       f.state = 'siege';
-      emit(s, 'fleet-siege', `SWARM AT ${target.name.toUpperCase()}: ${f.ships} left. Defend within ${Math.round(FLEET.siegeMs / 60000)} minutes or the outpost falls.`, { location: target.id });
+      emit(s, 'fleet-siege', `Swarm${f.faction ? ` from ${FACTIONS[f.faction].short}` : ''} at your outpost on ${target.name}: ${f.ships} left. Defend within ${Math.round(FLEET.siegeMs / 60000)} minutes of play or it goes into lockdown.`, { location: target.id });
     }
     return;
   }
@@ -85,7 +88,7 @@ export function tickFleet(s, dt, paused = false, at = clock()) {
   if (f.siegeLeft <= 0) {
     s.fleet = null;
     target.outpost.siege = null;
-    emit(s, 'info', `The swarm overran ${target.name}.`);
+    emit(s, 'info', `The swarm took ${target.name}.`);
     fall(s, target, true);
   }
 }
@@ -120,7 +123,7 @@ export function fleetWon(s, e) {
   const f = s.fleet;
   if (!f || e.fleet !== f.id) return;
   f.ships--;
-  if (f.ships > 0) return emit(s, 'fleet-hit', `Process killed. ${f.ships} left in the swarm${f.state === 'siege' ? ` (${Math.ceil(f.siegeLeft / 60000)} min on the siege)` : ''}.`, { location: f.target });
+  if (f.ships > 0) return emit(s, 'fleet-hit', `Process killed. ${f.ships} left in the swarm${f.state === 'siege' ? ` (${Math.ceil(f.siegeLeft / 60000)} min left to defend)` : ''}.`, { location: f.target });
   s.fleet = null;
   // The haul: code from every process, salvage, and a bonus kill's worth of XP.
   const k = codeOf(f.family);

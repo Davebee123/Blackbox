@@ -55,7 +55,7 @@ export const CONSORTIUM = {
   // The bigger the network (home servers merged), the better for everyone.
   tiers: [
     { at: 3, name: 'Linked', rule: '+10% outpost yield and dividend', yield: 0.1 },
-    { at: 5, name: 'Mesh', rule: 'Siege bounties doubled', bounty: 2 },
+    { at: 5, name: 'Mesh', rule: 'Invasion bounties doubled', bounty: 2 },
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
     { at: 12, name: 'Grid', rule: '+1 harvester slot and +10% wall', bandwidth: 1, wall: 0.1 },
   ],
@@ -245,7 +245,7 @@ export function roam(s, from, prev = 0) {
   const to = targets[Math.floor(rand(s) * targets.length)];
   const level = Math.max(from.level || 1, to.level || 1) + 1;
   c.roamer = { name: NATIVE[from.family].toUpperCase(), family: from.family, level, hop, from: from.id, fromName: from.name, to: to.id, left: CONSORTIUM.roam.travelMs, total: CONSORTIUM.roam.travelMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
-  emit(s, 'consortium-roam', `${c.roamer.name} (lv ${level}) left ${from.name} along the trunk line, heading for ${to.member ? `${to.member}'s` : 'your'} ${to.name}. Intercept it for a bounty.`, { location: to.id });
+  emit(s, 'consortium-roam', `Invasion on the trunk line: ${c.roamer.name} (lv ${level}) left ${from.name} for ${to.member ? `${to.member}'s` : 'your'} outpost on ${to.name}. Intercept it for a bounty.`, { location: to.id });
 }
 function roamerArrives(s) {
   const c = consortiumOf(s), r = c.roamer;
@@ -254,8 +254,8 @@ function roamerArrives(s) {
   if (!to || !outpostsOnNet(s).includes(to)) to = outpostsOnNet(s).find((l) => l.id !== r.from); // its target is busy: the next one
   if (!to) return emit(s, 'info', `${r.name} finds nowhere to land and burns out.`);
   const siege = { left: to.held ? CONSORTIUM.siegeMs : OUTPOST.siegeMs, seed: r.seed, hop: r.hop };
-  if (to.held) { to.held.siege = siege; emit(s, 'consortium-siege', `${r.name} reached ${to.member}'s ${to.name}: a siege, a level stronger. Defend it within ${CONSORTIUM.siegeMs / 60000} minutes for a bounty.`, { location: to.id }); }
-  else { to.outpost.siege = siege; emit(s, 'outpost-siege', `${r.name} came down the trunk line onto your ${to.name}: a siege. Defend it within ${OUTPOST.siegeMs / 60000} minutes of play.`, { location: to.id }); }
+  if (to.held) { to.held.siege = siege; emit(s, 'consortium-siege', `Invasion at ${to.member}'s outpost on ${to.name}: ${r.name}, a level stronger. Defend it within ${CONSORTIUM.siegeMs / 60000} minutes for a bounty.`, { location: to.id }); }
+  else { to.outpost.siege = siege; emit(s, 'outpost-siege', `Invasion at your outpost on ${to.name}: ${r.name}, down the trunk line. Defend it within ${OUTPOST.siegeMs / 60000} minutes of play.`, { location: to.id }); }
 }
 
 // The network clock (logged-on time): sieges on members' outposts, and (simulated) invites. now:
@@ -290,7 +290,7 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
     if (sg.left > 0) continue;
     loc.held.siege = null;
     const who = memberHelp(s);
-    if (who) { emit(s, 'info', `${who} broke the siege on ${loc.member}'s ${loc.name}.`, { location: loc.id }); continue; }
+    if (who) { emit(s, 'info', `${who} stopped the invasion at ${loc.member}'s ${loc.name}.`, { location: loc.id }); continue; }
     loc.held.lockdown = { left: CONSORTIUM.lockdownMs, seed: sg.seed, hop: sg.hop || 0 };
     emit(s, 'consortium-lockdown', `LOCKDOWN: natives took ${loc.member}'s ${loc.name}. It pays nothing for a while. Retake it for a bounty.`, { location: loc.id });
     roam(s, loc, sg.hop || 0);
@@ -314,7 +314,7 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
       if (away.length) {
         const h = away[Math.floor(rand(s) * away.length)], fams = Object.keys(FAMILIES), family = fams[Math.floor(rand(s) * fams.length)];
         c.raid = { member: h, family, name: NATIVE[family].toUpperCase(), level: memberLevel(s, h) + 1, left: CONSORTIUM.raidMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
-        emit(s, 'consortium-raid', `${c.raid.name} (lv ${c.raid.level}) is at ${h}'s wall while they're away. Defend it within ${CONSORTIUM.raidMs / 60000} minutes for a bounty.`);
+        emit(s, 'consortium-raid', `Invasion at ${h}'s wall: ${c.raid.name} (lv ${c.raid.level}), while they're away. Defend it within ${CONSORTIUM.raidMs / 60000} minutes for a bounty.`);
       }
     }
   }
@@ -327,7 +327,7 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
     net.siegeNext = between(s, CONSORTIUM.siegeEveryMs);
     const loc = open[Math.floor(rand(s) * open.length)];
     loc.held.siege = { left: CONSORTIUM.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
-    emit(s, 'consortium-siege', `Natives are sieging ${loc.member}'s outpost on ${loc.name}. Defend it within ${CONSORTIUM.siegeMs / 60000} minutes for a bounty.`, { location: loc.id });
+    emit(s, 'consortium-siege', `Invasion at ${loc.member}'s outpost on ${loc.name}: its natives. Defend it within ${CONSORTIUM.siegeMs / 60000} minutes for a bounty.`, { location: loc.id });
   }
   return s.logs.filter((e) => e.id > first);
 }
@@ -358,14 +358,14 @@ export function alertsOf(s) {
   const c = consortiumOf(s), out = [];
   if (!c) return out;
   const own = s.occupation && !s.occupation.occupied.cleared ? s.occupation : null;
-  if (own) out.push({ kind: 'crash', title: 'Your server is occupied', detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back now.`, left: s.degraded?.until ? Math.max(0, s.degraded.until - (hooks.now?.() ?? Date.now())) : CONSORTIUM.rebootMs, total: CONSORTIUM.rebootMs, level: own.level, family: own.family, cmd: 'connect home', label: 'Connect', mine: true });
-  for (const l of s.locations || []) if (l.outpost?.siege) out.push({ kind: 'siege', title: `Siege on your ${l.name}`, detail: 'Your outpost. Lose it and it goes into lockdown.', left: l.outpost.siege.left, total: OUTPOST.siegeMs, level: l.level || 1, family: l.family, cmd: `outpost defend ${l.id}`, label: 'Defend', mine: true });
-  if (c.raid) out.push({ kind: 'raid', title: `Invader at ${c.raid.member}'s wall`, detail: `${c.raid.name}. They're away: stop it or their server crashes.`, left: c.raid.left, total: CONSORTIUM.raidMs, level: c.raid.level, family: c.raid.family, cmd: `consortium defend ${c.raid.member}`, label: 'Defend', bounty: bountyOf(s, c.raid.level) });
-  if (c.roamer) { const r = c.roamer; out.push({ kind: 'roam', title: `${r.name} on the trunk line`, detail: `Hop ${r.hop} of ${CONSORTIUM.roam.hops}, from ${r.fromName}. It arrives as a new siege.`, left: r.left, total: r.total, level: r.level, family: r.family, cmd: 'consortium intercept', label: 'Intercept', bounty: bountyOf(s, r.level, 1 + CONSORTIUM.roam.bounty * r.hop) }); }
+  if (own) out.push({ kind: 'crash', title: 'Your server crashed', detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back now.`, left: s.degraded?.until ? Math.max(0, s.degraded.until - (hooks.now?.() ?? Date.now())) : CONSORTIUM.rebootMs, total: CONSORTIUM.rebootMs, level: own.level, family: own.family, cmd: 'connect home', label: 'Connect', mine: true });
+  for (const l of s.locations || []) if (l.outpost?.siege) out.push({ kind: 'siege', title: `Invasion at your outpost on ${l.name}`, detail: 'Your outpost. Lose it and it goes into lockdown.', left: l.outpost.siege.left, total: OUTPOST.siegeMs, level: l.level || 1, family: l.family, cmd: `outpost defend ${l.id}`, label: 'Defend', mine: true });
+  if (c.raid) out.push({ kind: 'raid', title: `Invasion at ${c.raid.member}'s wall`, detail: `${c.raid.name}. They're away: stop it or their server crashes.`, left: c.raid.left, total: CONSORTIUM.raidMs, level: c.raid.level, family: c.raid.family, cmd: `consortium defend ${c.raid.member}`, label: 'Defend', bounty: bountyOf(s, c.raid.level) });
+  if (c.roamer) { const r = c.roamer; out.push({ kind: 'roam', title: `Invasion on the trunk line: ${r.name}`, detail: `Hop ${r.hop} of ${CONSORTIUM.roam.hops}, from ${r.fromName}. It arrives as an invasion.`, left: r.left, total: r.total, level: r.level, family: r.family, cmd: 'consortium intercept', label: 'Intercept', bounty: bountyOf(s, r.level, 1 + CONSORTIUM.roam.bounty * r.hop) }); }
   for (const l of memberServers(s)) {
-    if (l.held?.siege) { const hop = l.held.siege.hop || 0; out.push({ kind: 'siege', title: `Siege on ${l.member}'s ${l.name}`, detail: `${OUTPOST.kinds[l.held.kind].name} outpost. Lose it and it goes into lockdown.`, left: l.held.siege.left, total: CONSORTIUM.siegeMs, level: (l.level || 1) + hop, family: l.family, cmd: `consortium defend ${l.id}`, label: 'Defend', bounty: bountyOf(s, (l.level || 1) + hop, 1 + CONSORTIUM.roam.bounty * hop) }); }
+    if (l.held?.siege) { const hop = l.held.siege.hop || 0; out.push({ kind: 'siege', title: `Invasion at ${l.member}'s outpost on ${l.name}`, detail: `${OUTPOST.kinds[l.held.kind].name} outpost. Lose it and it goes into lockdown.`, left: l.held.siege.left, total: CONSORTIUM.siegeMs, level: (l.level || 1) + hop, family: l.family, cmd: `consortium defend ${l.id}`, label: 'Defend', bounty: bountyOf(s, (l.level || 1) + hop, 1 + CONSORTIUM.roam.bounty * hop) }); }
     else if (l.held?.lockdown) out.push({ kind: 'lockdown', title: `${l.member}'s ${l.name} in lockdown`, detail: 'It pays no dividend until it ends. Retake it from the natives.', left: l.held.lockdown.left, total: CONSORTIUM.lockdownMs, level: l.level || 1, family: l.family, cmd: `consortium defend ${l.id}`, label: 'Retake', bounty: bountyOf(s, l.level || 1) });
-    else if (l.home && !l.occupied.cleared) out.push({ kind: 'crash', title: `${l.member}'s server is occupied`, detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back.`, left: l.occupied.left, total: CONSORTIUM.rebootMs, level: l.level || 1, family: l.family, cmd: `connect ${l.id}`, label: 'Connect', bounty: bountyOf(s, l.level || 1) });
+    else if (l.home && !l.occupied.cleared) out.push({ kind: 'crash', title: `${l.member}'s server crashed`, detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back.`, left: l.occupied.left, total: CONSORTIUM.rebootMs, level: l.level || 1, family: l.family, cmd: `connect ${l.id}`, label: 'Connect', bounty: bountyOf(s, l.level || 1) });
   }
   const urgency = { raid: 0, siege: 1, roam: 2, crash: 3, lockdown: 4 };
   return out.sort((a, b) => (b.mine || 0) - (a.mine || 0) || urgency[a.kind] - urgency[b.kind] || a.left - b.left);
@@ -391,7 +391,7 @@ export function consortiumWon(s, e) {
   if (e.raid && c.raid) { const r = c.raid; c.raid = null; return pay(s, r.level, 1, r.family, `${r.name} stopped at ${r.member}'s wall.`); }
   if (e.roamer && c.roamer) { const r = c.roamer; c.roamer = null; return pay(s, r.level, 1 + CONSORTIUM.roam.bounty * r.hop, r.family, `${r.name} intercepted on the trunk line.`); }
   const loc = memberServers(s).find((l) => l.id === e.member);
-  if (loc?.held?.siege) { const hop = loc.held.siege.hop || 0; loc.held.siege = null; return pay(s, (loc.level || 1) + hop, 1 + CONSORTIUM.roam.bounty * hop, loc.family, `Siege broken on ${loc.member}'s ${loc.name}.`); }
+  if (loc?.held?.siege) { const hop = loc.held.siege.hop || 0; loc.held.siege = null; return pay(s, (loc.level || 1) + hop, 1 + CONSORTIUM.roam.bounty * hop, loc.family, `Invasion stopped at ${loc.member}'s ${loc.name}.`); }
   if (loc?.held?.lockdown) { loc.held.lockdown = null; return pay(s, loc.level || 1, 1, loc.family, `${loc.member}'s ${loc.name} retaken: its lockdown is over.`); }
 }
 
@@ -470,7 +470,7 @@ export function consortiumCommand(s, raw) {
     const loc = memberServers(s).find((l) => l.id === arg || l.name.toLowerCase() === arg);
     if (!loc?.held) return warn(s, `Nothing to defend called "${arg}".`), done();
     const sg = loc.held.siege, ld = loc.held.lockdown;
-    if (!sg && !ld) return warn(s, `${loc.name} isn't under siege or in lockdown.`), done();
+    if (!sg && !ld) return warn(s, `${loc.name} has no invasion and isn't in lockdown.`), done();
     fight(s, { family: loc.family, level: (loc.level || 1) + (sg?.hop || 0), seed: (sg || ld).seed || loc.seed }, { member: loc.id }, `${sg ? 'Defending' : 'Retaking'} ${loc.member}'s ${loc.name}`, loc.id);
     return done();
   }

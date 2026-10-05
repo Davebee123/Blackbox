@@ -29,7 +29,7 @@ export const TIPS = [
   { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready; nothing happens until you do.' },
   { id: 'map-lead', page: 'map', at: '.mnode.lead', text: 'This is a lead. Each kill of this family adds 25%, and your class\'s backtrace adds more. At 100% you find where they came from.' },
   { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You traced an origin. Connect to it to make a run. Its ring fills as you explore it, and the number shows how many layers deep it sits.' },
-  { id: 'map-invader', page: 'map', at: '.mnode.invader', text: 'An invader is heading for your wall. How strong your Firewall is decides whether it is blocked, held in a siege, or breaks through.' },
+  { id: 'map-invader', page: 'map', at: '.mnode.invader', text: 'An invasion is heading for your wall. How strong your Firewall is decides whether it is blocked, contested, or breaks through.' },
   { id: 'map-outpost', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.h), at: '.outpost .lvl-bar', text: 'This outpost fills while you are away, up to its cap. Connect to the server to collect what it has gathered.' },
   { id: 'map-besieged', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.siege), at: '.mnode.besieged', text: 'Natives are sieging this outpost. Defend it before the timer runs out, or they take it back and the servers past it are cut off.' },
   { id: 'map-lockdown', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.lockdown), at: '.mnode.locked', text: 'This outpost is in lockdown: no harvesting for a while, but its stockpile is safe. Retake it with a fight to end it sooner.' },
@@ -90,7 +90,7 @@ export const TIPS = [
 
   // ---------- server ----------
   { id: 'server-ports', page: 'server', at: '.server-head', text: 'Your server runs services in its service slots. Each one costs code from the viruses you kill, and takes real time to install.' },
-  { id: 'server-wall', page: 'server', at: '.wall-card', text: 'Your wall meets invaders sent from the places you found. A Firewall service makes it hold more.' },
+  { id: 'server-wall', page: 'server', at: '.wall-card', text: 'Your wall meets invasions sent from the places you found. A Firewall service makes it hold more.' },
   { id: 'server-queue', page: 'server', at: '.install', text: 'Installs run one at a time in real time. They keep going while you fight, go on runs, or close the game.' },
   { id: 'server-blueprints', page: 'server', at: '.blueprint-card', text: 'You can only build a service once you have its blueprint. Blueprints wait in vaults, and a kill drops one now and then.' },
 

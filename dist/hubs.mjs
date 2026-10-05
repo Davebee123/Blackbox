@@ -76,7 +76,7 @@ function sendRetake(s, f, at) {
   const L = Math.min(CONFIG.maxMobLevel, Math.max(FACTIONS[f].hub.level, hackerLevel(s)) + HUBS.levelUp), family = FACTION_FAMILY[f];
   s.retakeSeq = (s.retakeSeq || 0) + 1;
   s.retake = { id: 'rt' + s.retakeSeq, f, family, key: KEY[family], level: L, ships: HUBS.ships, total: HUBS.ships, state: 'travel', arriveAt: at + HUBS.travelMs, travel: HUBS.travelMs, siegeLeft: HUBS.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
-  emit(s, 'hub-retake', `${FACTIONS[f].short} is coming for ${FACTIONS[f].hub.name}: ${HUBS.ships} processes (level ${L}), arriving in ${Math.round(HUBS.travelMs / 60000)} minutes.`, { faction: f });
+  emit(s, 'hub-retake', `Swarm from ${FACTIONS[f].short} at ${FACTIONS[f].hub.name}: ${HUBS.ships} processes (level ${L}), arriving in ${Math.round(HUBS.travelMs / 60000)} minutes.`, { faction: f });
 }
 export function tickRetake(s, dt, paused = false, at = now()) {
   const net = (s.net ||= {});
@@ -87,8 +87,7 @@ export function tickRetake(s, dt, paused = false, at = now()) {
     if (!angry(s, f) || at - h.grudgeAt > HUBS.grudgeMs) { h.grudgeSent = h.grudgeAt; continue; }
     if (paused || fleetOf(s) || !outposts(s).some((l) => !l.outpost.lockdown)) continue;
     h.grudgeSent = h.grudgeAt;
-    const fl = launch(s);
-    if (fl) fl.faction = f;
+    launch(s, at, f);
   }
   const r = s.retake;
   if (!r) {
@@ -103,7 +102,7 @@ export function tickRetake(s, dt, paused = false, at = now()) {
   if (!captured(s, r.f) || lockedDown(s, r.f)) { s.retake = null; return; }
   if (r.state === 'travel') {
     if (r.arriveAt == null) r.arriveAt = at + (r.left || 0); // a save from before real-time retakes
-    if (at >= r.arriveAt) { r.state = 'siege'; emit(s, 'hub-siege', `${FACTIONS[r.f].short} AT ${FACTIONS[r.f].hub.name}: ${r.ships} left. Defend within ${Math.round(HUBS.siegeMs / 60000)} minutes.`, { faction: r.f }); }
+    if (at >= r.arriveAt) { r.state = 'siege'; emit(s, 'hub-siege', `Swarm from ${FACTIONS[r.f].short} at ${FACTIONS[r.f].hub.name}: ${r.ships} left. Defend within ${Math.round(HUBS.siegeMs / 60000)} minutes of play or it goes into lockdown.`, { faction: r.f }); }
     return;
   }
   // The siege: logged-on time only, and it waits while you fight.
@@ -112,7 +111,7 @@ export function tickRetake(s, dt, paused = false, at = now()) {
   if (r.siegeLeft <= 0) {
     s.retake = null;
     hub(s, r.f).captured.lockdown = { level: r.level, family: r.family, seed: r.seed };
-    emit(s, 'hub-lockdown', `LOCKDOWN: ${FACTIONS[r.f].short} locked ${FACTIONS[r.f].hub.name} down. It earns nothing until you clear it.`, { faction: r.f });
+    emit(s, 'hub-lockdown', `LOCKDOWN: ${FACTIONS[r.f].short} locked ${FACTIONS[r.f].hub.name} down. It earns nothing until you retake it.`, { faction: r.f });
   }
 }
 
@@ -138,7 +137,7 @@ export function defend(s, f) {
 export function clear(s, f) {
   const d = hub(s, f)?.captured?.lockdown;
   if (!d) return warn(s, 'That hub isn’t in lockdown.');
-  fight(s, f, d, { hubClear: f }, 'Clearing the lockdown');
+  fight(s, f, d, { hubClear: f }, 'Retaking it');
 }
 // From finish() when a hub fight is won.
 export function hubWon(s, e) {
@@ -151,21 +150,21 @@ export function hubWon(s, e) {
   const r = s.retake;
   if (!r || e.retake !== r.id) return;
   r.ships--;
-  if (r.ships > 0) return emit(s, 'hub-hit', `Process killed. ${r.ships} left${r.state === 'siege' ? ` (${Math.ceil(r.siegeLeft / 60000)} min on the siege)` : ''}.`, { faction: r.f });
+  if (r.ships > 0) return emit(s, 'hub-hit', `Process killed. ${r.ships} left${r.state === 'siege' ? ` (${Math.ceil(r.siegeLeft / 60000)} min left to defend)` : ''}.`, { faction: r.f });
   s.retake = null;
   const k = codeOf(r.family);
-  if (k) gainCode(s, { [k]: r.total * codeDrop(r.level) * 2 }, 'Retake broken: ');
+  if (k) gainCode(s, { [k]: r.total * codeDrop(r.level) * 2 }, 'Swarm broken: ');
   for (let i = 0; i < r.total; i++) s.salvage.push({ name: `${FACTIONS[r.f].short} process`, virus: 'retake', seed: r.seed + i });
-  gainXp(s, xpFor(s, r.level, r.total * 0.5), 'retake broken');
-  emit(s, 'hub-held', `RETAKE BROKEN. ${FACTIONS[r.f].hub.name} holds: +${r.total} salvage.`, { faction: r.f });
+  gainXp(s, xpFor(s, r.level, r.total * 0.5), 'swarm broken');
+  emit(s, 'hub-held', `SWARM BROKEN. ${FACTIONS[r.f].hub.name} holds: +${r.total} salvage.`, { faction: r.f });
 }
 
 export function hubCommand(s, text) {
   const [, verb, f] = text.split(' ');
-  if (!FACTIONS[f]) return warn(s, 'hub collect|defend|clear|donate <faction>');
+  if (!FACTIONS[f]) return warn(s, 'hub collect|defend|retake|donate <faction>');
   if (verb === 'collect') return collect(s, f);
   if (verb === 'defend') return defend(s, f);
-  if (verb === 'clear') return clear(s, f);
+  if (verb === 'retake' || verb === 'clear') return clear(s, f);
   if (verb === 'donate') return donate(s, f);
-  return warn(s, 'hub collect|defend|clear|donate <faction>');
+  return warn(s, 'hub collect|defend|retake|donate <faction>');
 }

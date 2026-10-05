@@ -17,8 +17,8 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter (a **+** chip sits beside it whenever it isn't full, and a first-time tip points at it), or type `top up`, to pay for the rest now (see The economy). The Integrity meter has the same **+** for `repair`. On a run, the store's **Signal patch** fills it. (Signal boosters are retired: they can't be crafted any more, and ones you still carry work with `boost`.)
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
 5. Some files lead deeper: a trace record locates a node one layer down.
-6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invader gets through.
-7. Meanwhile, locations you've found send **invaders** home along the network. Your wall (the Firewall service) meets them; `jack in` to fight one yourself.
+6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invasion gets through.
+7. Meanwhile, locations you've found send **invasions** home along the network. Your wall (the Firewall service) meets them; `jack in` to fight one yourself.
 8. **Mail** gives it all a reason: contracts from your crew and from Halcyon Mutual, which pays a retainer every 30 minutes while your standing holds, plus Indemnity to spend at its store (see Mail and contracts, The hidden network, The Halcyon store).
 
 ## Runs
@@ -66,7 +66,7 @@ Every location uses one of five layouts, rotating so consecutive locations play 
 
 ### Rogue servers
 
-About 1 in 6 servers you trace is **rogue** (never your first two, and never more than five tame ones in a row). A rogue server is a farm: 4–8 folders with one virus each, at the server's level and grade (strains from layer 2), each coming back 3–5 minutes after you kill it. No vault, no password, nothing to take over or harvest, no log sweep, and it never sends invaders. It shows on the map as a hexagon. **Reconnect wait:** once you leave a wild server (SPRAWL-00 or a rogue one), by jacking out or being thrown out, it won't take you back for a minute (`CONFIG.relockMs`; its card counts down). That stops the jack out, top up, go straight back loop. Kinds:
+About 1 in 6 servers you trace is **rogue** (never your first two, and never more than five tame ones in a row). A rogue server is a farm: 4–8 folders with one virus each, at the server's level and grade (strains from layer 2), each coming back 3–5 minutes after you kill it. No vault, no password, nothing to take over or harvest, no log sweep, and it never sends invasions. It shows on the map as a hexagon. **Reconnect wait:** once you leave a wild server (SPRAWL-00 or a rogue one), by jacking out or being thrown out, it won't take you back for a minute (`CONFIG.relockMs`; its card counts down). That stops the jack out, top up, go straight back loop. Kinds:
 
 | Kind | Rule |
 |---|---|
@@ -182,7 +182,7 @@ The server has no items. It runs **services** in **service slots**, Master of Or
 | Service | Code | v1 / v2 / v3 |
 |---|---|---|
 | Firewall | Cipher | your wall's rating ×1 / 1.2 / 1.45 (×0.75 with none); see Invasions |
-| Tarpit | Worm | invaders travel 50 / 100 / 150% slower |
+| Tarpit | Worm | invasions travel 50 / 100 / 150% slower |
 | RAID Array | Worm | +5 / 10 / 15% max Integrity |
 | Hardened Kernel | Kernel | 2 / 4 / 6 Block on hits at home (× server power) |
 | Scrubber | Cipher | every home fight starts with a shield of 4 / 7 / 10% of max Integrity |
@@ -248,7 +248,7 @@ A takeover or recovery contract points at a server you've found and haven't take
 
 Every server you find is wired to two you haven't found yet, one layer deeper. They aren't on the map until you hear of them; then they show as **?** beside the server they hang off.
 
-- **Invaders** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". Jack in and beat one: its server is 40% traced (plus three quarters of your backtrace). If your wall stops one: +10%.
+- **Invasions** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". Jack in and beat one: its server is 40% traced (plus three quarters of your backtrace). If your wall stops one: +10%.
 - **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its map card). A relay pings that server's unknown neighbours, and flags the one carrying the signal of a contract you've taken.
 - **Hunting a flagged server:** every kill of its family traces it 12% more (plus a quarter of your backtrace); the relay leaves a route file on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store) adds 30%.
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
@@ -270,17 +270,17 @@ Simulated until the server exists: `online sim` turns on a pool of 20 hackers wh
 - **The map.** With a consortium, the Map has two views: *Your network* and the consortium's. The consortium's view has your home server in the middle, a trunk line out to each member's home server (their card lists their servers), and each member's servers branching off theirs: their outposts, servers they've traced and rogue servers (1–4 each, at the member's level, kept within 3 levels of yours while it's simulated).
 - **Members' servers.** Connect to any of them like your own. Fights, files and drops are yours. Opening a member's vault doesn't take the server over: it stays theirs. Their natives come back 20 minutes after your last run there. Their home servers are theirs alone (home intrusions stay solo).
 - **Shared ground.** Every member's server, plus your own outposts and rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with full credit and their own loot. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
-- **Owner and dividend.** An outpost's owner keeps its whole stockpile, as always. On top of that, every member's outpost pays each other member a **dividend**: 25% of what it produces, in kind (a Siphon's or Tap's code of its family, a Scraper's finds: credits, code, salvage, now and then a protocol). It fills in real time (offline too), a small stock per outpost of up to 12 hours' worth. An outpost under siege pays nothing until the siege is broken. The Consortium page shows what comes in an hour and what's waiting: *Collect*, or `consortium collect`. Each member outpost's card shows its rate and what's waiting. (Your outposts pay the other members the same way, at no cost to you.)
-- **Sieges and lockdowns.** Now and then (every 10–18 minutes of logged-on time) natives lay siege to a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win for credits (30 + 8 × level), its family's code and XP. Nobody defends it: half the time a member deals with it; otherwise it goes into **lockdown** (pays no dividend for 2 hours). *Retake for a bounty* ends it.
-- **Members' walls.** Every 15–25 minutes an invader reaches an away member's wall (`consortium defend <handle>`, 8 minutes). Nobody stops it, and half the time a member does anyway; otherwise their server **crashes and reboots** for 2 hours, **occupied**: it shows under them on the map (`<HANDLE>-HOME`), open to anyone. Clear every folder for a bounty and it's back up. Their outposts pay no dividend while it reboots.
-- **The travelling virus.** A lockdown or a crash (theirs or yours) sends the virus on along the trunk line toward another outpost, a member's or yours, a level stronger, arriving in 10 minutes as a fresh siege. It's on the consortium map, and in the alerts: *Intercept* (`consortium intercept`) for a bounty that grows +50% a hop. One at a time; it burns out after 3 hops.
-- **The Consortium page** (a top tab, there while you're in a consortium or have an invite; its badge counts what needs you). Left: **Needs you**, a card per alert (an invader at a wall, the travelling virus, sieges, lockdowns, occupied servers; yours first), each with what it is, a timer bar, the level and what it pays, and one button (Defend, Intercept, Connect, Retake); then the members (status, outposts, where they are; Map, Invite to crew, Kick). Right: the consortium and its size ladder, the dividend (*Collect*), and how your wall fares while you're away. The people panel's Consortium tab is a short summary that links to it.
+- **Owner and dividend.** An outpost's owner keeps its whole stockpile, as always. On top of that, every member's outpost pays each other member a **dividend**: 25% of what it produces, in kind (a Siphon's or Tap's code of its family, a Scraper's finds: credits, code, salvage, now and then a protocol). It fills in real time (offline too), a small stock per outpost of up to 12 hours' worth. An invaded outpost pays nothing until the invasion is stopped. The Consortium page shows what comes in an hour and what's waiting: *Collect*, or `consortium collect`. Each member outpost's card shows its rate and what's waiting. (Your outposts pay the other members the same way, at no cost to you.)
+- **Invasions at members' outposts, and lockdowns.** Now and then (every 10–18 minutes of logged-on time) natives invade a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win for credits (30 + 8 × level), its family's code and XP. Nobody defends it: half the time a member deals with it; otherwise it goes into **lockdown** (pays no dividend for 2 hours). *Retake for a bounty* ends it.
+- **Invasions at members' walls.** Every 15–25 minutes an invasion reaches an away member's wall (`consortium defend <handle>`, 8 minutes). Nobody stops it, and half the time a member does anyway; otherwise their server **crashes and reboots** for 2 hours, **occupied**: it shows under them on the map (`<HANDLE>-HOME`), open to anyone. Clear every folder for a bounty and it's back up. Their outposts pay no dividend while it reboots.
+- **Invasions on the trunk line.** A lockdown or a crash (theirs or yours) sends the virus on along the trunk line toward another outpost, a member's or yours, a level stronger, arriving in 10 minutes as a fresh invasion. It's on the consortium map, and in the alerts: *Intercept* (`consortium intercept`) for a bounty that grows +50% a hop. One at a time; it burns out after 3 hops.
+- **The Consortium page** (a top tab, there while you're in a consortium or have an invite; its badge counts what needs you). Left: **Needs you**, a card per alert (invasions at walls, at outposts and on the trunk line, lockdowns, crashed servers; yours first), each with what it is, a timer bar, the level and what it pays, and one button (Defend, Intercept, Connect, Retake); then the members (status, outposts, where they are; Map, Invite to crew, Kick). Right: the consortium and its size ladder, the dividend (*Collect*), and how your wall fares while you're away. The people panel's Consortium tab is a short summary that links to it.
 - **Size.** The more servers merged (yours included), the better for everyone:
 
 | Servers | Tier | Bonus |
 |---|---|---|
 | 3 | Linked | +10% outpost yield and dividend |
-| 5 | Mesh | Siege bounties doubled |
+| 5 | Mesh | Invasion bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
 | 12 | Grid | +1 harvester slot and +10% wall |
 
@@ -386,12 +386,12 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   - Siphon: a steady flow of the server's code (1 + level/10 an hour, storage 6 + level/2).
   - Scraper: a loot roll every 90 minutes, 4 stored. Rolls are credits, code, salvage or, rarely, a protocol.
   - Tap: a small trickle (0.5 + level/20 an hour), noticed a quarter as often.
-  - Traits: Rich (+50% yield), Deep (double storage), Quiet (noticed half as often), Sturdy (half the time a siege gives up on its own), Lucky (better loot rolls).
-- **Site traits** are fixed when a server is found (45% have one): Rich (+50% yield), Legacy (better loot rolls; its vault more often holds a package, and a better one), Backbone (no bandwidth), Hostile (twice the sieges, +50% yield), Hardened (its natives are Armored).
+  - Traits: Rich (+50% yield), Deep (double storage), Quiet (noticed half as often), Sturdy (half the time an invasion gives up on its own), Lucky (better loot rolls).
+- **Site traits** are fixed when a server is found (45% have one): Rich (+50% yield), Legacy (better loot rolls; its vault more often holds a package, and a better one), Backbone (no bandwidth), Hostile (twice the invasions, +50% yield), Hardened (its natives are Armored).
 - **Harvester slots** (pips on the server card and the outpost) limit how many outposts run at once: 1, plus 1 every 10 server levels (5 at most).
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
 - **Pulling out** gives the harvester back with what it holds; the slot then resets for 30 minutes.
-- **Sieges.** Natives notice an outpost about every 6 hours (by kind, traits and site), real time, so logging off doesn't dodge them. You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level): the siege only counts down while you're logged on, so one that starts while you're away waits for you. An outpost produces nothing while it's sieged. If you don't:
+- **Invasions.** Natives notice an outpost about every 6 hours (by kind, traits and site), real time, so logging off doesn't dodge them. You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level): its timer only counts down while you're logged on, so one that starts while you're away waits for you. An outpost produces nothing while it's invaded. If you don't:
   - the outpost goes into **lockdown** for 2 real hours: no harvesting, but its stockpile is kept;
   - the server and everything past it stay open (nothing is ever cut off).
 - **Retake** it (beat the natives there) to end a lockdown sooner. In a consortium, the virus that won moves on along the trunk line (see Consortium).
@@ -402,9 +402,9 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   |---|---|
   | Pipeline | +50% yield |
   | Storage Array | Double storage |
-  | Firewall Node | Sieges and swarms here take twice as long to take it |
+  | Firewall Node | Invasions and swarms here take twice as long to take it |
   | IDS | Natives notice it half as often; swarms heading here are seen 50% sooner |
-  | Honeytoken | Draws trouble, for when you want more fights: noticed twice as often, swarms come twice as often and pick it first, infestations come sooner and pick it first. Beating them here pays double (a broken siege: an hour's harvest and a kill's XP; an infestation: two hours instead of one; a swarm: double code and XP) |
+  | Honeytoken | Draws trouble, for when you want more fights: noticed twice as often, swarms come twice as often and pick it first, infestations come sooner and pick it first. Beating them here pays double (a stopped invasion: an hour's harvest and a kill's XP; an infestation: two hours instead of one; a swarm: double code and XP) |
 
 - **Home services for outposts:** Edge Router (+1 / 2 / 3 harvester slots, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
 - **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 1,000 credits, between fights.
@@ -425,13 +425,13 @@ Every service can run one **config**: a side-grade that changes how it works, no
 
 | Service | Config | What it does |
 |---|---|---|
-| Firewall | Stateful | Wall rating +20%; invaders it stops leave nothing behind |
-| Firewall | Reflective | Invaders it stops drop their family's code as well |
-| Firewall | Deep Inspection | Invaders it stops add lead progress toward where they came from |
+| Firewall | Stateful | Wall rating +20%; invasions it stops leave nothing behind |
+| Firewall | Reflective | Invasions it stops drop their family's code as well |
+| Firewall | Deep Inspection | Invasions it stops add lead progress toward where they came from |
 | Firewall | Adaptive | +40% against the family that hits you most, −10% against the rest |
-| Tarpit | Sticky | Invaders crawl half again as slowly |
-| Tarpit | Toll | Invaders reach your wall worn down to 80% |
-| Tarpit | Beacon | Invaders from unknown servers add 15% lead as they pass; swarms are seen coming 50% sooner |
+| Tarpit | Sticky | Invasions crawl half again as slowly |
+| Tarpit | Toll | Invasions reach your wall worn down to 80% |
+| Tarpit | Beacon | Invasions from unknown servers add 15% lead as they pass; swarms are seen coming 50% sooner |
 | Honeypot | Tar | A part whose attack misses you fires its next one a cycle later |
 | Honeypot | Sting | A part whose attack misses you takes a hit back |
 | Hot-patcher | Triage | Double repair below half Integrity, half above |
@@ -441,93 +441,106 @@ Every service can run one **config**: a side-grade that changes how it works, no
 ## Swarms
 
 Once you run an outpost, the network organises against it.
-- The first swarm gathers about 45 minutes after your first outpost goes up; after that, one every 90–150 minutes (half that with a Honeytoken out). One swarm at a time. Swarms gather and travel on real time (logging off doesn't dodge them); the siege only counts down while you're logged on, and the outpost produces nothing while a swarm sits at it.
+- The first swarm gathers about 45 minutes after your first outpost goes up; after that, one every 90–150 minutes (half that with a Honeytoken out). One swarm at a time. Swarms gather and travel on real time (logging off doesn't dodge them); its timer at the outpost only counts down while you're logged on, and the outpost produces nothing while a swarm sits at it.
 - A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
 - You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes; 15 with a Tarpit Beacon).
-- **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the siege clock waits while you fight (a paused fight, or one left open over a reload, holds nothing).
+- **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the timer waits while you fight (a paused fight, or one left open over a reload, holds nothing).
 - Once it arrives, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown (Sturdy doesn't save it): retake it to end it sooner.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
 
 ## Threats at a glance
 
-Everything that comes at you, grouped by what it hits. *Logged-on* clocks only run while you're playing; *real* clocks run offline too.
+Three kinds of threat, two things they leave behind, four things you do. The specifics go in the name: *Invasion at your wall*, *Invasion at nyx's outpost on VANTA-RELAY-80*, *Swarm from LANTERN at your outpost on …*, *Swarm from Kestrel at KESTREL-DC-NORTH*.
+
+| Word | Means |
+|---|---|
+| **Invasion** | One attacker comes for a wall or an outpost (yours, or a consortium member's). It travels, then sits at its target on a timer. |
+| **Swarm** | Several processes come for an outpost or a hub you hold, one fight each. It travels, then sits at its target on a timer. Natives send them, and so does a Hostile faction. |
+| **Infestation** | A pack of wild viruses settles into one of your outposts for a while, then leaves. Optional: clearing it pays. |
+| **Lockdown** | What an outpost or hub goes into when an invasion or swarm runs out its timer: it makes nothing until it ends. Never lost for good. |
+| **Crash** | What a server suffers when its wall falls: yours goes Degraded (rebooting); a member's is rebooting and open to clear. |
+| **Intercept** / **Defend** | Fight it on the way / at its target. |
+| **Retake** | End a lockdown sooner (one fight). |
+| **Clear** | Fight out an infestation, or a crashed member's server. |
+
+At a wall, an invasion is **Blocked**, **Contested** (the wall grinds it while it chips you) or a **Breach**, by your wall's strength.
+
+*Logged-on* clocks only run while you're playing; *real* clocks run offline too.
 
 ### Your home server
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Invader** | A location you've found | First 3 min after your first find, then 6–10 min after the last (logged-on) | Travels 2 min + 1 a layer, then **Blocked**, **Siege** or **Breach** at the wall | **Jack in** (`jack in`) | Siege and breach chip your Integrity; at 0, Degraded | A home kill |
-
-If nobody stops it: **Degraded** (a reboot: wall down, installs paused, no server XP). In a consortium, a crash while you're away leaves your server **occupied** too.
+| **Invasion at your wall** | A location you've found | First 3 min after your first find, then 6–10 min after the last (logged-on) | Travels 2 min + 1 a layer, then Blocked, Contested or Breach | **Jack in** (`jack in`) | Contested and Breach chip your Integrity; at 0, a crash | A home kill |
 
 ### Your outposts
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Outpost siege** | That server's natives | About every 6 h (real) | 10 min to defend (logged-on); makes nothing meanwhile | **Defend** (outpost card) | Lockdown | Kill XP (Honeytoken: + an hour's harvest) |
-| **Swarm** | 2–4 processes from past it | First 45 min after your first outpost, then 90–150 min (real) | Travels 10 min (real), then an 8-min siege (logged-on); makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
-| **Faction swarm** | A Hostile faction you just struck | Once a strike | As a swarm, in the faction's colours | As a swarm | Lockdown | As a swarm |
+| **Invasion at your outpost** | That server's natives | About every 6 h (real) | 10 min to defend (logged-on); makes nothing meanwhile | **Defend** (outpost card) | Lockdown | Kill XP (Honeytoken: + an hour's harvest) |
+| **Swarm at your outpost** | 2–4 processes from past it | First 45 min after your first outpost, then 90–150 min (real) | Travels 10 min (real), then 8 min to defend (logged-on); makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
+| **Swarm from a faction at your outpost** | A Hostile faction you just struck | Once a strike | As a swarm, in the faction's colours | As a swarm | Lockdown | As a swarm |
 | **Infestation** | 2–3 wild viruses | Every 2 h ÷ outposts, never under 40 min (logged-on) | Stays 20 min | **Clear**, a fight each (`outpost clear`) | They leave; nothing lost | +1 h of yield, XP |
-| **Travelling virus** (consortium) | The winner of a lockdown or crash, a level stronger | After a lockdown or crash; up to 3 hops | Arrives in 10 min as a new siege | **Intercept** (`consortium intercept`) | It sieges the outpost | Bounty, +50% a hop |
+| **Invasion on the trunk line** (consortium) | The winner of a lockdown or crash, a level stronger | After a lockdown or crash; up to 3 hops | Arrives in 10 min as an invasion at an outpost | **Intercept** (`consortium intercept`) | An invasion at that outpost | Bounty, +50% a hop |
 
-If nobody stops it: **Lockdown**, 2 h (real). No harvesting, the stockpile is kept, nothing past it is cut off. **Retake** (`outpost retake`) ends it sooner.
+Lockdown here: 2 h (real), no harvesting, the stockpile kept, nothing past it cut off. **Retake** (`outpost retake`) ends it sooner.
 
 ### Hubs you hold
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Retake** | Its old owner, while Hostile | 30 min after the capture, then 2–4 h (real) | Travels 10 min (real), then an 8-min siege (logged-on); earns nothing meanwhile | **Intercept** / **Defend**, a fight a process (`hub defend`) | Hub lockdown | Code, salvage, XP |
+| **Swarm from its old owner** | The faction, while Hostile | 30 min after the capture, then 2–4 h (real) | Travels 10 min (real), then 8 min to defend (logged-on); earns nothing meanwhile | **Intercept** / **Defend**, a fight a process (`hub defend`) | Lockdown | Code, salvage, XP |
 
-If nobody stops it: **Hub lockdown**, until cleared. No income; the hub is still yours. **Clear** it in one fight (`hub clear`).
+Lockdown here: until you **Retake** it (one fight, `hub retake`). No income; the hub is still yours.
 
 ### Consortium members' servers
 
-| Threat | Hits | How often | Its clock | You | Ignored | Beat it |
+| Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Member siege** | A member's outpost (its natives) | Every 10–18 min (logged-on) | 8 min | **Defend for a bounty** (`consortium defend <server>`) | Half the time a member stops it; else lockdown | Bounty: credits, code, XP |
-| **Raid** | An away member's wall (an invader) | Every 15–25 min (logged-on) | 8 min | **Defend** (`consortium defend <handle>`) | Half the time a member stops it; else their server crashes | Bounty |
-| **Travelling virus** | Another member's outpost | After a lockdown or crash; up to 3 hops | Arrives in 10 min as a new siege | **Intercept** (`consortium intercept`) | It sieges the outpost | Bounty, +50% a hop |
+| **Invasion at a member's outpost** | Its natives | Every 10–18 min (logged-on) | 8 min | **Defend for a bounty** (`consortium defend <server>`) | Half the time a member stops it; else lockdown (no dividend, 2 h) | Bounty: credits, code, XP |
+| **Invasion at a member's wall** | A virus at it, while they're away | Every 15–25 min (logged-on) | 8 min | **Defend** (`consortium defend <handle>`) | Half the time a member stops it; else a crash (rebooting 2 h, its outposts pay no dividend) | Bounty |
+| **Invasion on the trunk line** | The winner of a lockdown or crash | After a lockdown or crash; up to 3 hops | Arrives in 10 min as an invasion at an outpost | **Intercept** (`consortium intercept`) | An invasion at that outpost | Bounty, +50% a hop |
 
-If nobody stops it: a member outpost goes into **lockdown** (2 h, no dividend; *Retake for a bounty*), or a member's server is **occupied** (a 2-h reboot, its outposts pay no dividend; clear every folder for a bounty).
+A member's lockdown: **Retake for a bounty**. A member's crash: **Clear** every folder for a bounty.
 
 ## Invasions and the wall
 
-The idle layer. While you're logged on, the locations you've found send viruses back along the network to your server, **one at a time**. On the Map an invader moves in from its location; the Server page's **Wall** card and the top bar say what it's doing.
+The idle layer. While you're logged on, the locations you've found send viruses back along the network to your server, **one at a time**. On the Map an invasion moves in from its location; the Server page's **Wall** card and the top bar say what it's doing.
 
 - **When.** The first sets out 3 minutes after you find your first location; the next 6–10 minutes after the last one is dealt with. Only logged-on time counts: a closed game, hidden tab or sleeping laptop doesn't advance the network (a long gap counts as 5 seconds).
 - **Who.** A virus of the location's family (CRYPTJACK, SPLINTER or GHOSTROOT) at the location's level; from level 3, sometimes mutated (10% stronger).
 - **Travel.** 2 minutes from a layer-1 location, a minute more per layer. A Tarpit slows it.
-- **The wall.** Your wall's rating (100 × the server's power × the Firewall's version) against the invader's strength (100 × its power):
+- **The wall.** Your wall's rating (100 × the server's power × the Firewall's version) against the invasion's strength (100 × its power):
 
-| Rating vs invader | Result |
+| Rating vs invasion | Result |
 |---|---|
 | 20% or more stronger | **Blocked** at the wall: 25% of a kill's XP and 1 salvage |
-| Within ±20% | **Siege**: the wall wears the invader down (4–20% of it a minute) while it chips your server (0–1% of max Integrity a minute); the stronger your wall, the faster it grinds and the less it chips. Ground to nothing counts as blocked. |
+| Within ±20% | **Contested**: the wall wears the invasion down (4–20% of it a minute) while it chips your server (0–1% of max Integrity a minute); the stronger your wall, the faster it grinds and the less it chips. Ground to nothing counts as blocked. |
 | 20% or more weaker | **Breach**: it chips 1% of your max Integrity a minute until you deal with it |
 
-- The Wall card says it in levels: *"Your wall blocks invaders up to level 12 and holds level 13–22 at a siege; above level 22, they breach."* A new Firewall (or version, or server level) takes effect at once, even on an invader already at the wall.
-- **Jack in** (`jack in`, or the button): fight the invader at the wall yourself. It's as worn down as the siege left it, its armor is intact, and it's a full home kill (XP, code, drops, lead). You can't jack in from a run: jack out first. A waiting gate intrusion steps aside and comes back when you next `engage`. There's no daemon that jacks in for you.
-- A chip never ends a home fight you're in (it stops at 1), and nothing chips while you fight the invader.
+- The Wall card says it in levels: *"Your wall blocks invasions up to level 12 and contests level 13–22; above level 22, they breach."* A new Firewall (or version, or server level) takes effect at once, even on an invasion already at the wall.
+- **Jack in** (`jack in`, or the button): fight the invasion at the wall yourself. It's as worn down as the wall left it, its armor is intact, and it's a full home kill (XP, code, drops, lead). You can't jack in from a run: jack out first. A waiting gate intrusion steps aside and comes back when you next `engage`. There's no daemon that jacks in for you.
+- A chip never ends a home fight you're in (it stops at 1), and nothing chips while you fight the invasion.
 
 ### Crash and Degraded mode
 
 At 0 Integrity (a lost home fight, or a breach chipping you out) the server **crashes and reboots at half its max**, then runs **Degraded** for 10 real minutes (it keeps counting with the game closed):
 
-- your wall is down: an invader at the wall waits, and no new one sets out;
+- your wall is down: an invasion at the wall waits, and no new one sets out;
 - installs pause (the queue picks up where it was);
 - the server earns no XP.
 
 You can still fight, explore and level. Crashing again restarts the 10 minutes. The top bar, the Map and the Server page show the time left.
 
 **In a consortium, while you're logged off** (played out a minute at a time when you come back, up to a day):
-- invaders keep coming, at half the pace, and your wall meets them as usual: blocked, siege or breach. The server card's **Away** line says what your wall blocks and holds, next to the highest level your servers send; a Firewall is how you raise it;
+- invasions keep coming, at half the pace, and your wall meets them as usual: blocked, contested or breach. The server card's **Away** line says what your wall blocks and holds, next to the highest level your servers send; a Firewall is how you raise it;
 - now and then a member steps in and stops one at your wall;
-- a crash while away reboots the server for **2 hours** (Degraded, same rules), and the invader **occupies** it: HOME shows on your server card with *Connect*. Its processes sit in six folders (services, daemons, vault, logs, cache, wall) and don't come back; clear them all to be back online at once. The virus then moves on along the trunk line;
-- your outposts can be sieged while you're away too (half as often); members sometimes break those sieges, otherwise it's a lockdown.
+- a crash while away reboots the server for **2 hours** (Degraded, same rules), and the invasion **occupies** it: HOME shows on your server card with *Connect*. Its processes sit in six folders (services, daemons, vault, logs, cache, wall) and don't come back; clear them all to be back online at once. The virus then moves on along the trunk line;
+- your outposts can be invaded while you're away too (half as often); members sometimes stop those invasions, otherwise it's a lockdown.
 Solo, nothing happens while you're logged off.
 
-Testing: `developer invade` (an invader arrives now), `developer crash`, `developer reboot` (ends Degraded mode).
+Testing: `developer invade` (an invasion arrives now), `developer crash`, `developer reboot` (ends Degraded mode).
 
 ## The fight in one paragraph
 
@@ -636,11 +649,11 @@ Every kind of event has one signature: a flash on the thing it happened to, a fl
 | Time passing | the Now column is a faint band down the whole board with a thin playhead line that sweeps across it as the cycle runs; the header shows the cycle number and seconds left |
 | About to land (1.5s left) | the playhead and band edges turn red; this cycle's attacks blink red, soft beep, one buzz |
 | A cycle ends | the timeline turns over: every chip slides one column left from where it was; an attack that landed flies at your bar, your command flies at its target, and new attacks drift in from the right; the Now band flashes and the cycle number ticks; a quiet clock-relay tick (all off when Motion is off, except the tick) |
-| A siege or breach bites | the Integrity meter flashes red with the amount, 8ms tap |
+| A contested or breached wall bites | the Integrity meter flashes red with the amount, 8ms tap |
 | Jack in at the wall, or connect to a server | a teal flash, a short glitch, a modem handshake and a relay, a double tap |
 | Jack out | a relay lets go and the line dies away |
 | Typing | a mechanical key per keystroke, a heavier Enter; buttons click like hardware |
-| Something happens out in the world (a letter, an offer, a contract ready, the retainer, a flag, a location, an invader) | the **pager** on the top bar logs it: its screen scrolls the line, its lamp blinks until you open it (red for a breach), it rattles and chirps (quiet ones only light up; mid-fight only a breach chirps), and a short vibration |
+| Something happens out in the world (a letter, an offer, a contract ready, the retainer, a flag, a location, an invasion) | the **pager** on the top bar logs it: its screen scrolls the line, its lamp blinks until you open it (red for a breach), it rattles and chirps (quiet ones only light up; mid-fight only a breach chirps), and a short vibration |
 | A daemon acts | your row glows violet, soft tick |
 | A skill lights up | its key glows gold and pulses; a soft chime |
 | Command refused | the prompt shakes, buzz |
@@ -653,7 +666,7 @@ Leaving the combat screen pauses a live fight; coming back resumes it.
 The screens carry names, numbers and state, never how-to text. Rules live in two places, the way RPGs and strategy games keep them:
 
 - **Hover** for reference: a stat, a status tag, a mutation or quirk, a service's "special" tag, a skill in the library, a talent, a wall band. Each shows its rule on hover.
-- **First-time tips** for learning: the first time something is on screen (your server, an intrusion, the timeline, armor chits, an invader, the wall, a protocol drop, code, a mutation, a quirk…), a small tip points at it and says how it works, once. One tip at a time. Tips in a fight pause it until you close them (Got it, Enter on an empty line, Esc, or clicking the thing it points at). "Turn tips off" on any tip, or on the System page, stops them; **Replay tips** there shows them again. Seen tips are kept with your settings, so a new game doesn't repeat them.
+- **First-time tips** for learning: the first time something is on screen (your server, an intrusion, the timeline, armor chits, an invasion, the wall, a protocol drop, code, a mutation, a quirk…), a small tip points at it and says how it works, once. One tip at a time. Tips in a fight pause it until you close them (Got it, Enter on an empty line, Esc, or clicking the thing it points at). "Turn tips off" on any tip, or on the System page, stops them; **Replay tips** there shows them again. Seen tips are kept with your settings, so a new game doesn't repeat them.
 
 The log and the terminal still speak (that's the MUD's voice): what happened, in a line. They don't teach.
 
@@ -661,7 +674,7 @@ The log and the terminal still speak (that's the MUD's voice): what happened, in
 
 Pages show instead of explaining; the words are in the hover.
 
-- **Wall: a level ruler.** Teal for invader levels your wall stops, amber for the ones it holds at a siege, red hatching for the ones that break through, with your level marked on it and the incoming invader too. The Server page has the full ruler with its numbers; the map's server card has a thin one, and in a consortium a second thin one for while you're away.
+- **Wall: a level ruler.** Teal for invasion levels your wall stops, amber for the ones it contests, red hatching for the ones that break through, with your level marked on it and the incoming invasion too. The Server page has the full ruler with its numbers; the map's server card has a thin one, and in a consortium a second thin one for while you're away.
 - **The map's server card:** the server's level bar, an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, and service and harvester slots as pips. An install in progress shows as a small bar.
 - **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols, Configs and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid).
 - **The sidebar** (left, on every page, fights included; screens 1100px and wider; `sidebar off|on`): your crew (class, a Signal bar each, live in a fight, the same rows that flash when they're hit; *Find a crew* when you're solo), then what the page is about: on the Map, the selected node's card (the map gets the full width); elsewhere, what needs you (unhandled comms with their buttons). In a fight the sidebar is just the **Party**: each crewmate's Signal bar (with what this cycle's hits will take off it) and what they mean to cast this cycle, the skill in its verb's colour and the part it's aimed at (*last* if they sent it to the back; it lights up when their turn plays). Your own bar, Status and the virus stay on the HUD.
@@ -725,8 +738,8 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
 ### Hubs you hold
 
 - **Perks:** its market trades at the true price (no spread), its shop sells at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
-- **Retake swarms:** while the old owner is Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. These gather and travel on real time, so logging off doesn't dodge them, but the siege only counts down while you're logged on (you're never locked down while away). The hub earns nothing while a retake is out for it. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then an 8-minute siege; Intercept or Defend one process a fight (`hub defend <faction>`), and the siege clock waits while you fight (not while the fight is paused). Break it for code, salvage and XP. The hub's map node flashes red with the timer.
-- **Lockdown:** if the siege runs out, the hub earns nothing until you clear it (one fight, `hub clear <faction>`). You never lose it for good.
+- **Swarms from the old owner:** while it's Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. These gather and travel on real time, so logging off doesn't dodge them, but the timer at the hub only counts down while you're logged on (you're never locked down while away). The hub earns nothing while its swarm is out. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then 8 minutes to defend; Intercept or Defend one process a fight (`hub defend <faction>`), and the timer waits while you fight (not while the fight is paused). Break it for code, salvage and XP. The hub's map node flashes red with the timer.
+- **Lockdown:** if the timer runs out, the hub earns nothing until you retake it (one fight, `hub retake <faction>`). You never lose it for good.
 - **Striking a Hostile faction** (without holding its hub) gets one answer: a swarm in its colours at one of your outposts.
 
 ### Donations
@@ -740,7 +753,7 @@ Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 
 
 - **Full memory:** a new find still lands on the map, but **detached** (dimmed). You can't connect to it until you attach it.
 - **Attach / detach** from a server's map card (or `attach <server>`, `detach <server>`): 25 + 5 × its level credits, either way, the same every time. Swapping back and forth costs no more than that.
-- **Detaching freezes** the server and everything found through it: no runs, its outpost makes nothing, no sieges or infestations, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
+- **Detaching freezes** the server and everything found through it: no runs, its outpost makes nothing, no invasions, swarms or infestations, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
 - Harvester slots still decide how many outposts run; memory decides how many servers you hold.
 
 ## The codex
@@ -759,10 +772,10 @@ Timed builds can be finished now for credits, Master of Orion style (`BUYOUT` in
 The pager sits on the top bar, between the tabs and your meters (on narrower screens just its lamp and count). It keeps the last 40 world events on your save, so what happened while you were away is still there when you come back.
 
 - Its little screen scrolls the latest line; the lamp blinks amber while anything is unread, red if it's a breach; the number is how many you haven't seen.
-- Click it for **Comms**: the list, newest first, filtered by All, Contracts (offers, contracts ready), Mail, Network (flags, relays, locations, invaders, sieges, breaches) or Money (retainer, pay, standing, the store). Each line has its sender, its age and a link to where it happened: the letter or contract in Mail, the server on the map, the Store, or Jack in for a breach. Opening it marks everything read.
+- Click it for **Comms**: the list, newest first, filtered by All, Contracts (offers, contracts ready), Mail, Network (flags, relays, locations, invasions, swarms, breaches) or Money (retainer, pay, standing, the store). Each line has its sender, its age and a link to where it happened: the letter or contract in Mail, the server on the map, the Store, or Jack in for a breach. Opening it marks everything read.
 - **Handled** lines grey out and clear after 5 minutes: you handled one when you opened what it points at, or ticked it (✓). Lines with nothing to act on count as handled once seen. **Clear** removes everything you've seen.
 - An unanswered alert shakes the pager every 10 seconds until you open Comms. A **breach** makes the Integrity meter flash red with a pulsing BREACH badge, and pings every 15 seconds until it's dealt with.
-- It chirps for letters, offers, contracts ready, the retainer, flags, locations, invaders and dropped standing; pay for a delivery, rising standing, restocks and takeovers only light it up. While you're in a fight, only a breach chirps.
+- It chirps for letters, offers, contracts ready, the retainer, flags, locations, invasions and dropped standing; pay for a delivery, rising standing, restocks and takeovers only light it up. While you're in a fight, only a breach chirps.
 
 ## The monitor casing
 
@@ -772,7 +785,7 @@ With the immersive shell on a desktop-sized window, the screen sits in a dark mo
 |---|---|
 | PWR | amber; red while Degraded |
 | GATE | amber with an intrusion waiting, red while you fight one |
-| WALL | dim while an invader travels, amber at a siege, red on a breach |
+| WALL | dim while an invasion travels, amber when contested, red on a breach |
 | NET | teal on a run |
 | INST | amber while an install runs (dim while Degraded) |
 | DMN | teal with a daemon slotted |
@@ -888,7 +901,7 @@ A win shows a card over the virus with what it gave you: XP (one bar, any level-
 
 **New on the tabs.** Loadout, Craft and Daemons carry a teal count of what's arrived since you last opened them (protocols; blueprints, source and configs; daemons and daemon upgrades).
 
-A loss crashes the server: it reboots at half Integrity in Degraded mode (see Invasions). Between fights the server **rests**: it repairs 2% of its max a minute (empty to full in about 50 minutes, offline too), stopping while an invader sieges or breaches your wall. `repair [n]`, or a click on the Integrity meter, pays for it now (see The economy). Leads and located origins appear on the Map, salvage and protocols on the Loadout page (Protocols tab), code on the Server page. Testing only: `developer reboot`, `developer location <ransomware|worm|ghostroot>`.
+A loss crashes the server: it reboots at half Integrity in Degraded mode (see Invasions). Between fights the server **rests**: it repairs 2% of its max a minute (empty to full in about 50 minutes, offline too), stopping while an invasion is contested at or breaches your wall. `repair [n]`, or a click on the Integrity meter, pays for it now (see The economy). Leads and located origins appear on the Map, salvage and protocols on the Loadout page (Protocols tab), code on the Server page. Testing only: `developer reboot`, `developer location <ransomware|worm|ghostroot>`.
 
 ## Balance targets (checked by `node playtest.mjs` and `node balance.mjs`)
 
@@ -928,7 +941,7 @@ About half the servers you find (fixed per server) keep an incident file at the 
 
 ## Strains (waves 1 and 1b)
 
-Strains are variants of a home family built around one rule. They share their family's art, code drops and leads. SPRAWL-00 is the starter area and never has them: strains come from layer 2 and deeper. What a server sends (invaders, outpost natives, swarms) is a strain about half the time once both its layer and its level allow it (fixed by the seed). The fight header shows the strain; its rule is on hover, and a first-time tip explains it.
+Strains are variants of a home family built around one rule. They share their family's art, code drops and leads. SPRAWL-00 is the starter area and never has them: strains come from layer 2 and deeper. What a server sends (invasions, swarms) is a strain about half the time once both its layer and its level allow it (fixed by the seed). The fight header shows the strain; its rule is on hover, and a first-time tip explains it.
 
 ### Grades
 
@@ -942,7 +955,7 @@ Deeper servers also send bigger versions of the same viruses, named v2 and v3. O
 
 (Softened 2026-10-01: a deeper server is already 3 levels higher per layer, and the old numbers made same-level v3 fights on rogue servers unwinnable for some classes.)
 
-Strains are graded too. A swarm counts one layer deeper than the outpost it targets. Against your wall, an invader's strength is multiplied by its grade's Integrity factor.
+Strains are graded too. A swarm counts one layer deeper than the outpost it targets. Against your wall, an invasion's strength is multiplied by its grade's Integrity factor.
 
 | Strain | Family | From (level, layer) | Parts | Rule |
 |---|---|---|---|---|
@@ -981,9 +994,9 @@ The System page has three sliders (0–100, default 80, the level the game was m
 
 Rules that keep timing, reloads and loops from paying:
 
-- **A paused fight holds no clock.** Sieges (wall, outpost, swarm, retake, consortium sieges, lockdowns and raids on members' walls) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
-- **In a consortium, the away rules still stand.** While you're logged off, the gap is played out a minute at a time as before: invaders at half pace, outposts noticed half as often, and sieges that can fall, with a member sometimes breaking one. An outpost under siege makes nothing (as it pays no dividend). Swarms and retakes still wait for you to log on.
-- **Threats run on real time; sieges wait for you.** Outpost notice, swarms and retakes gather and travel whether you're logged on or not. Their sieges only count down while you're logged on, so nothing falls while you're away. Production stops while one sits at an outpost or hub.
+- **A paused fight holds no clock.** The timers on invasions and swarms (and on members' lockdowns) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
+- **In a consortium, the away rules still stand.** While you're logged off, the gap is played out a minute at a time as before: invasions at half pace, outposts noticed half as often, and invasions at outposts that can end in lockdown, with a member sometimes stopping one. An invaded outpost makes nothing (as it pays no dividend). Swarms still wait for you to log on.
+- **Threats run on real time; their timers wait for you.** Invasions at outposts and swarms gather and travel whether you're logged on or not. Their timers only count down while you're logged on, so nothing falls while you're away. Production stops while one sits at an outpost or hub.
 - **No shop-to-market loop.** A shop or the Halcyon store never sells code, Exploits or salvage for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
 - **Hub income reads outside factors only.** A held hub earns by its condition, the world event and wiped hubs elsewhere, not by your own trading there.
 - **What you compile breaks down without Exploits.**

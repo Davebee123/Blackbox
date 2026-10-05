@@ -140,7 +140,7 @@ function stepInvasion(s, dt, at = null) {
   if (o === 'blocked') return stopped(s, inv, false);
   if (o !== inv.state) {
     inv.state = o;
-    emit(s, o === 'siege' ? 'wall-siege' : 'wall-breach', o === 'siege' ? `Your wall now holds ${inv.name} at a siege.` : `${inv.name} broke through to a breach.`, { invader: inv.id });
+    emit(s, o === 'siege' ? 'wall-siege' : 'wall-breach', o === 'siege' ? `Your wall now contests ${inv.name}.` : `${inv.name} broke through to a breach.`, { invader: inv.id });
   }
   if (o === 'siege') {
     inv.hp -= (grindRate(r) / 100) * (dt / 60000);
@@ -188,7 +188,7 @@ function depart(s, from = null) {
   s.net.seq = (s.net.seq || 0) + 1;
   (s.net.seen ||= {})[loc.family] = (s.net.seen[loc.family] || 0) + 1;
   s.invasion = { id: 'inv' + s.net.seq, from: loc.id, fromName: h ? `an unknown server past ${via?.name}` : loc.name, hidden: h?.id || null, family: loc.family, key, seed, level, mutation, strain, grade, name: virus.name, state: 'travel', left: total, total, hp: 1, chipAcc: 0 };
-  emit(s, 'invader', `${virus.name} (level ${level}${mutation ? ', ' + MUTATIONS[mutation].name : ''}) left ${s.invasion.fromName}. At your wall in ${fmtLeft(total)}.`, { invader: s.invasion.id });
+  emit(s, 'invader', `${virus.name} (level ${level}${mutation ? ', ' + MUTATIONS[mutation].name : ''}) left ${s.invasion.fromName}: an invasion, at your wall in ${fmtLeft(total)}.`, { invader: s.invasion.id });
   return s.invasion;
 }
 
@@ -202,7 +202,7 @@ function arrive(s) {
   const o = outcome(r);
   if (o === 'blocked') return stopped(s, inv, false);
   inv.state = o;
-  if (o === 'siege') emit(s, 'wall-siege', `${inv.name} is at your wall: a siege. −${pct(chipRate(r))} Integrity a minute.`, { invader: inv.id });
+  if (o === 'siege') emit(s, 'wall-siege', `Invasion at your wall: ${inv.name}, contested. −${pct(chipRate(r))} Integrity a minute.`, { invader: inv.id });
   else emit(s, 'wall-breach', `${inv.name} BREACHED your wall. −${pct(chipRate(r))} Integrity a minute.`, { invader: inv.id });
 }
 
@@ -223,7 +223,7 @@ function stopped(s, inv, ground) {
 export function jackIn(s) {
   const first = s.serial;
   const inv = s.invasion;
-  if (!inv) warn(s, s.locations?.length ? 'Nothing at your wall right now.' : 'Nothing at your wall. Invaders come from locations you have found.');
+  if (!inv) warn(s, s.locations?.length ? 'Nothing at your wall right now.' : 'Nothing at your wall. Invasions come from locations you have found.');
   else if (inv.state === 'travel') warn(s, `${inv.name} is still on its way (about ${fmtLeft(inv.left)}). Meet it at the wall.`);
   else if (s.run) warn(s, `You're out on a run. Jack out first, then jack in at the wall.`);
   else if (active(s)) warn(s, fighting(s, inv) ? 'You are already fighting it.' : 'Finish this fight first.');

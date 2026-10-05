@@ -314,7 +314,7 @@ export const VERSIONS = [
 // One rule per service. `stat`/`values`: what it adds per version (see serviceValue).
 // `code`: which code it's built from. `special`: needs its source (found in vaults) first.
 export const SERVICES = {
-  firewall: { name: 'Firewall', code: 'cipher', stat: 'firewall', values: [1, 1.2, 1.45], unit: '× wall rating', about: 'Holds invaders at the wall: blocks weaker ones outright, grinds down close ones.' },
+  firewall: { name: 'Firewall', code: 'cipher', stat: 'firewall', values: [1, 1.2, 1.45], unit: '× wall rating', about: 'Holds invasions at the wall: blocks weaker ones outright, contests close ones.' },
   raid: { name: 'RAID Array', code: 'worm', stat: 'integrity', values: [5, 10, 15], unit: '% max Integrity', about: 'More server Integrity.' },
   kernel: { name: 'Hardened Kernel', code: 'kernel', stat: 'reduction', values: [2, 4, 6], unit: ' Block', flat: true, about: 'Hits on your server do less.' },
   scrubber: { name: 'Scrubber', code: 'cipher', stat: 'shield', values: [4, 7, 10], unit: '% shield at the start of each home fight', about: 'Every home fight starts with a shield.' },
@@ -324,7 +324,7 @@ export const SERVICES = {
   sandbox: { name: 'Sandbox', code: 'cipher', stat: 'sanitize', values: [15, 30, 45], unit: '% Sanitize', about: 'Encrypts, Blinds and spawns may fail on your server.' },
   uplink: { name: 'Uplink Array', code: 'cipher', stat: 'trace', values: [10, 20, 30], unit: '% Trace', about: 'Backtraces land harder, so leads fill faster.' },
   buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
-  tarpit: { name: 'Tarpit', code: 'worm', stat: 'tarpit', values: [50, 100, 150], unit: '% slower invaders', about: 'Invaders crawl toward you: fewer of them, and more warning.' },
+  tarpit: { name: 'Tarpit', code: 'worm', stat: 'tarpit', values: [50, 100, 150], unit: '% slower invasions', about: 'Invasions crawl toward you: fewer of them, and more warning.' },
   router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' harvester slots', about: 'Run more outposts at once.' },
   scheduler: { name: 'Scheduler', code: 'kernel', stat: 'scheduler', values: [60, 30, 15], unit: '-minute collection', about: 'Collects every outpost on a timer, so you don\'t have to visit.' },
   cron: { name: 'Cron Job', code: ['worm', 'kernel'], special: true, stat: 'cron', values: [0.4, 0.6, 0.8], unit: '× cron hits', about: 'Home fights: every 3rd cycle your server hits the soonest attacker.' },

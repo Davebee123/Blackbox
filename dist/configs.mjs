@@ -11,14 +11,14 @@ import { archCredits } from './architecture.mjs';
 
 export const CONFIGS = {
   // Firewall
-  stateful: { service: 'firewall', name: 'Stateful', rule: 'Wall rating +20%. Invaders it stops leave nothing behind.' },
-  reflective: { service: 'firewall', name: 'Reflective', rule: 'Invaders it stops drop their family\'s code as well.' },
-  inspection: { service: 'firewall', name: 'Deep Inspection', rule: 'Invaders it stops add lead progress toward where they came from.' },
+  stateful: { service: 'firewall', name: 'Stateful', rule: 'Wall rating +20%. Invasions it stops leave nothing behind.' },
+  reflective: { service: 'firewall', name: 'Reflective', rule: 'Invasions it stops drop their family\'s code as well.' },
+  inspection: { service: 'firewall', name: 'Deep Inspection', rule: 'Invasions it stops add lead progress toward where they came from.' },
   adaptive: { service: 'firewall', name: 'Adaptive', rule: 'Wall rating +40% against the family that hits you most, −10% against the rest.' },
   // Tarpit
-  sticky: { service: 'tarpit', name: 'Sticky', rule: 'Invaders crawl half again as slowly.' },
-  toll: { service: 'tarpit', name: 'Toll', rule: 'Invaders reach your wall worn down to 80%.' },
-  beacon: { service: 'tarpit', name: 'Beacon', rule: 'Invaders from unknown servers add lead as they pass. Swarms are seen coming sooner.' },
+  sticky: { service: 'tarpit', name: 'Sticky', rule: 'Invasions crawl half again as slowly.' },
+  toll: { service: 'tarpit', name: 'Toll', rule: 'Invasions reach your wall worn down to 80%.' },
+  beacon: { service: 'tarpit', name: 'Beacon', rule: 'Invasions from unknown servers add lead as they pass. Swarms are seen coming sooner.' },
   // Honeypot
   tar: { service: 'honeypot', name: 'Tar', rule: 'A part whose attack misses you fires its next one a cycle later.' },
   sting: { service: 'honeypot', name: 'Sting', rule: 'A part whose attack misses you takes a hit back.' },

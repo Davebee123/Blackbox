@@ -30,7 +30,7 @@ export const OUTPOST = {
     rich: { name: 'Rich', rule: '+50% yield.' },
     deep: { name: 'Deep', rule: 'Double storage.' },
     quiet: { name: 'Quiet', rule: 'Natives notice it half as often.' },
-    sturdy: { name: 'Sturdy', rule: 'Half the time, a siege gives up on its own.' },
+    sturdy: { name: 'Sturdy', rule: 'Half the time, an invasion gives up on its own.' },
     lucky: { name: 'Lucky', rule: 'Better loot rolls.' },
   },
   // Location traits, fixed when a server is found.
@@ -38,7 +38,7 @@ export const OUTPOST = {
     rich: { name: 'Rich', rule: 'Harvesters here yield +50%.' },
     legacy: { name: 'Legacy', rule: 'Better loot rolls here.' },
     backbone: { name: 'Backbone', rule: 'An outpost here uses no bandwidth.' },
-    hostile: { name: 'Hostile', rule: 'Twice the sieges, +50% yield.' },
+    hostile: { name: 'Hostile', rule: 'Twice the invasions, +50% yield.' },
     hardened: { name: 'Hardened', rule: 'Its natives are Armored.' },
   },
   siteChance: 0.45,
@@ -57,7 +57,7 @@ export const OUTPOST = {
   mods: {
     pipeline: { name: 'Pipeline', rule: '+50% yield.' },
     storage: { name: 'Storage Array', rule: 'Double storage.' },
-    node: { name: 'Firewall Node', rule: 'Sieges and swarms here take twice as long to take it.' },
+    node: { name: 'Firewall Node', rule: 'Invasions and swarms here take twice as long to take it.' },
     ids: { name: 'IDS', rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
     lure: { name: 'Honeytoken', rule: 'Draws trouble: noticed twice as often, swarms and infestations come sooner and pick it first, and beating them here pays double.' },
   },
@@ -245,7 +245,7 @@ function tickSites(s, now, dt, paused, away) {
     if (o.siege) {
       o.siege.left -= dt;
       if (away && o.siege.helper === undefined) o.siege.helper = memberHelp(s); // in a consortium, a member may break it
-      if (away && o.siege.helper && o.siege.left <= OUTPOST.siegeMs / 2) { emit(s, 'outpost-held', `${o.siege.helper} broke the siege on ${loc.name} while you were away.`, { location: loc.id }); o.siege = null; continue; }
+      if (away && o.siege.helper && o.siege.left <= OUTPOST.siegeMs / 2) { emit(s, 'outpost-held', `${o.siege.helper} stopped the invasion at ${loc.name} while you were away.`, { location: loc.id }); o.siege = null; continue; }
       if (o.siege.left <= 0 && !holding(s, 'outpost', loc.id)) fall(s, loc);
       continue;
     }
@@ -258,14 +258,14 @@ function startSiege(s, loc) {
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1;
   const left = OUTPOST.siegeMs * (hasMod(loc, 'node') ? 2 : 1);
   loc.outpost.siege = { left, seed };
-  emit(s, 'outpost-siege', `${loc.name}'s natives are sieging your outpost. Defend it within ${left / 60000} minutes or it falls.`, { location: loc.id });
+  emit(s, 'outpost-siege', `Invasion at your outpost on ${loc.name}: its natives. Defend it within ${left / 60000} minutes of play or it goes into lockdown.`, { location: loc.id });
 }
 
 export function fall(s, loc, force = false) {
   const o = loc.outpost;
   if (!force && o.h.traits.includes('sturdy') && rand(s) < 0.5) {
     o.siege = null;
-    return emit(s, 'outpost-held', `${loc.name} held on its own: the Sturdy harvester outlasted the siege.`, { location: loc.id });
+    return emit(s, 'outpost-held', `${loc.name} held on its own: the Sturdy harvester outlasted the invasion.`, { location: loc.id });
   }
   const hop = o.siege?.hop || 0;
   o.siege = null;
@@ -337,7 +337,7 @@ export function outpostWon(s, e) {
     o.siege = null;
     // A Honeytoken pays for the trouble it draws: an hour's harvest and a kill's worth of XP.
     if (hasMod(loc, 'lure')) { produce(s, loc, 60 * 60000); gainXp(s, xpFor(s, loc.level || 1, 1), `${loc.name} held`); }
-    emit(s, 'outpost-held', `Siege broken: ${loc.name} is safe.${hasMod(loc, 'lure') ? ' The Honeytoken pays out.' : ''}`, { location: loc.id });
+    emit(s, 'outpost-held', `Invasion stopped: ${loc.name} is safe.${hasMod(loc, 'lure') ? ' The Honeytoken pays out.' : ''}`, { location: loc.id });
   }
 }
 

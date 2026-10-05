@@ -236,7 +236,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const fc = forecast(s, preview);
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
-  const tags = `${v.elite ? '<span class="tag hot tag-elite" title="Elite: built for a crew. Much tougher; three times the XP and drop rolls.">elite</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invader · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
+  const tags = `${v.elite ? '<span class="tag hot tag-elite" title="Elite: built for a crew. Much tougher; three times the XP and drop rolls.">elite</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div><p class="clock-line">${extras}</p></div>${party ? partyMarkup(s, fc) : ''}</div>${statusPanel(s)}</div>
@@ -704,8 +704,8 @@ export function serviceEffect(s, id, v) {
     case 'cron': return `every 3rd cycle, hits the soonest attacker for ${Math.round(8 * power(serverLevel(s)) * x)}`;
     case 'snapshot': return `once per home fight, below half: restores ${x}%`;
     case 'compileDiscount': return `compiling costs ${x}% less`;
-    case 'firewall': { const b = wallBands(s, 100 * power(serverLevel(s)) * x); return `your wall ${b.blocks ? `blocks up to level ${b.blocks}` : 'blocks none outright'}, holds up to level ${b.holds} at a siege`; }
-    case 'tarpit': return `invaders travel ${x}% slower`;
+    case 'firewall': { const b = wallBands(s, 100 * power(serverLevel(s)) * x); return `your wall ${b.blocks ? `blocks up to level ${b.blocks}` : 'blocks none outright'}, contests up to level ${b.holds}`; }
+    case 'tarpit': return `invasions travel ${x}% slower`;
     case 'bandwidth': return `+${x} harvester ${x === 1 ? 'slot' : 'slots'}`;
     case 'scheduler': return `collects every outpost each ${x} minutes`;
     default: return `+${x}% ${STATS[d.stat].name}`;
@@ -715,18 +715,18 @@ export function serviceEffect(s, id, v) {
 export function bandsText(s) {
   if (s.degraded) return 'Your wall is down while the server is degraded.';
   const { blocks, holds } = wallBands(s);
-  if (!holds) return 'Your wall holds nothing yet: every invader breaches.';
-  const held = holds > blocks ? ` and holds ${blocks ? `level ${blocks + 1}–${holds}` : `up to level ${holds}`} at a siege` : '';
-  return `Your wall ${blocks ? `blocks invaders up to level ${blocks}` : 'blocks none outright'}${held}; above level ${holds}, they breach.`;
+  if (!holds) return 'Your wall holds nothing yet: every invasion breaches.';
+  const held = holds > blocks ? ` and holds ${blocks ? `level ${blocks + 1}–${holds}` : `up to level ${holds}`} contested` : '';
+  return `Your wall ${blocks ? `blocks invasions up to level ${blocks}` : 'blocks none outright'}${held}; above level ${holds}, they breach.`;
 }
 export function degradedMarkup(s, now = Date.now()) {
   return s.degraded ? `<div class="degraded" title="Wall down · installs paused · no server XP"><b>DEGRADED</b><span>${fmtLeft(degradedLeft(s, now))}</span></div>` : '';
 }
-// "≤12 · siege ≤22": what your wall stops outright, and what it holds.
+// "≤12 · contested ≤22": what your wall stops outright, and what it holds.
 export function wallShort(s) {
   if (s.degraded) return 'down';
   const { blocks, holds } = wallBands(s);
-  return !holds ? 'none' : `${blocks ? `Lv ≤${blocks}` : '—'} · siege ≤${holds}`;
+  return !holds ? 'none' : `${blocks ? `Lv ≤${blocks}` : '—'} · contested ≤${holds}`;
 }
 export function invaderShort(s) {
   const inv = s.invasion;
@@ -734,7 +734,7 @@ export function invaderShort(s) {
   if (s.degraded && inv.state !== 'travel') return 'waiting';
   const r = ratioOf(s, inv), pct1 = (x) => `${Math.round(x * 10) / 10}%`;
   if (inv.state === 'travel') return `${fmtLeft(inv.left)} out`;
-  return inv.state === 'siege' ? `siege · ${Math.round(inv.hp * 100)}% · −${pct1(chipRate(r))}/min` : `breach · −${pct1(chipRate(r))}/min`;
+  return inv.state === 'siege' ? `contested · ${Math.round(inv.hp * 100)}% · −${pct1(chipRate(r))}/min` : `breach · −${pct1(chipRate(r))}/min`;
 }
 // One line on what the invader is doing, and whether jacking in is possible.
 export function invaderStatus(s) {
@@ -745,11 +745,11 @@ export function invaderStatus(s) {
   const pct1 = (x) => `${Math.round(x * 10) / 10}%`;
   if (s.degraded && inv.state !== 'travel') return { text: `${inv.name} waits at the gate while your server is degraded.`, can: false, why: 'Your server is degraded' };
   if (inv.state === 'travel') {
-    const verdict = { blocked: 'your wall will stop it', siege: 'your wall will hold it at a siege', breach: "your wall won't hold it: a breach" }[outcome(r)];
+    const verdict = { blocked: 'your wall will stop it', siege: 'your wall will contest it', breach: "your wall won't hold it: a breach" }[outcome(r)];
     return { text: `${inv.name} reaches your wall in about ${fmtLeft(inv.left)}; ${verdict}.`, can: false, why: 'Still on its way' };
   }
   const why = fighting(s, inv) ? 'You are fighting it' : s.run ? 'Jack out of your run first' : active(s) ? 'Finish this fight first' : '';
-  if (inv.state === 'siege') return { text: `Siege: your wall wears ${inv.name} down (${pct1(grindRate(r))} a minute, ${hp}% left) while it chips ${pct1(chipRate(r))} of your Integrity a minute. Jack in to finish it for a full kill.`, can: !why, why, hp };
+  if (inv.state === 'siege') return { text: `Contested: your wall wears ${inv.name} down (${pct1(grindRate(r))} a minute, ${hp}% left) while it chips ${pct1(chipRate(r))} of your Integrity a minute. Jack in to finish it for a full kill.`, can: !why, why, hp };
   return { text: `Breach: ${inv.name} chips ${pct1(chipRate(r))} of your Integrity a minute until you jack in and fight it.`, can: !why, why, hp };
 }
 function jackInButton(st) {
@@ -770,7 +770,7 @@ export function wallRuler(s, compact = false, bands = wallBands(s)) {
   const seg = (cls, from, to, icon, tip) => (to > from ? `<span class="wr-seg ${cls}" style="left:${pct(from)};width:calc(${pct(to)} - ${pct(from)})" title="${esc(tip)}">${compact ? '' : glyph(icon)}</span>` : '');
   const mark = (lv, cls, label) => `<span class="wr-mark ${cls}" style="left:${pct(lv - 0.5)}" title="${esc(label)}"><i></i><small>${esc(label)}</small></span>`;
   return `<div class="wall-ruler${compact ? ' compact' : ''}" title="${esc(bandsText(s))}">
-    <div class="wr-track">${seg('blocked', 0, blocks, 'firewall', blocks ? `Stopped at the wall: up to level ${blocks}` : '')}${seg('siege', blocks, holds, 'tarpit', `Held at a siege: level ${blocks + 1}–${holds}`)}${seg('breach', holds, hi, 'kill', `Breaks through: level ${holds + 1} and up`)}</div>
+    <div class="wr-track">${seg('blocked', 0, blocks, 'firewall', blocks ? `Stopped at the wall: up to level ${blocks}` : '')}${seg('siege', blocks, holds, 'tarpit', `Contested: level ${blocks + 1}–${holds}`)}${seg('breach', holds, hi, 'kill', `Breaks through: level ${holds + 1} and up`)}</div>
     <div class="wr-marks">${mark(you, 'you', `you ${you}`)}${inv ? mark(inv.level, 'inv ' + inv.state, `${inv.name} ${inv.level}`) : ''}</div>
     ${compact ? '' : `<div class="wr-scale"><span>1</span>${blocks ? `<span style="left:${pct(blocks)}">${blocks}</span>` : ''}${holds > blocks ? `<span style="left:${pct(holds)}">${holds}</span>` : ''}<span style="left:100%">${hi}</span></div>`}
   </div>`;
@@ -1078,7 +1078,7 @@ export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
 // ---------- the Consortium page (consortium.mjs) ----------
 // Left: what needs someone now (a card each: what, how long, what it pays, one button), then the
 // members. Right: the consortium and its size, the dividend, and how your server fares while away.
-const ALARM = { raid: 'Invader', siege: 'Siege', roam: 'Trunk line', crash: 'Occupied', lockdown: 'Lockdown' };
+const ALARM = { raid: 'Invasion', siege: 'Invasion', roam: 'Invasion', crash: 'Crash', lockdown: 'Lockdown' };
 function alarmCard(s, a, busy) {
   const pct = Math.max(0, Math.min(100, (a.left / a.total) * 100));
   const pays = a.bounty ? `${a.bounty.credits}c + ${a.bounty.code} ${esc(MATERIALS[codeOf(a.family)].name)}` : a.mine ? 'yours' : '';
@@ -1095,7 +1095,7 @@ function dividendTable(s) {
   const rows = dividendSources(s);
   if (!rows.length) return '<p class="quiet">No member outposts yet.</p>';
   const what = (x) => (x.material ? MATERIALS[x.material].name : 'finds');
-  return `<table class="div-table"><thead><tr><th>Member</th><th>Outpost</th><th>Yields</th><th class="num">/h</th><th>Waiting</th></tr></thead><tbody>${rows.map((x) => `<tr class="${x.stopped ? 'stopped' : ''}"><td>${esc(x.member)}</td><td><button type="button" class="act dim" data-go="map:con=${esc(x.id)}">${esc(x.name)}</button></td><td>${glyph(x.material || 'item')}${esc(what(x))}</td><td class="num">${x.stopped ? '<span class="tag hot" title="Siege, lockdown or rebooting">0</span>' : x.rate.toFixed(1)}</td><td><span class="div-fill" title="${Math.floor(x.waiting)} of ${Math.floor(x.cap)}"><span style="width:${x.cap ? Math.min(100, (x.waiting / x.cap) * 100) : 0}%"></span></span><b>${Math.floor(x.waiting)}</b></td></tr>`).join('')}</tbody></table>`;
+  return `<table class="div-table"><thead><tr><th>Member</th><th>Outpost</th><th>Yields</th><th class="num">/h</th><th>Waiting</th></tr></thead><tbody>${rows.map((x) => `<tr class="${x.stopped ? 'stopped' : ''}"><td>${esc(x.member)}</td><td><button type="button" class="act dim" data-go="map:con=${esc(x.id)}">${esc(x.name)}</button></td><td>${glyph(x.material || 'item')}${esc(what(x))}</td><td class="num">${x.stopped ? '<span class="tag hot" title="Invasion, lockdown or crash">0</span>' : x.rate.toFixed(1)}</td><td><span class="div-fill" title="${Math.floor(x.waiting)} of ${Math.floor(x.cap)}"><span style="width:${x.cap ? Math.min(100, (x.waiting / x.cap) * 100) : 0}%"></span></span><b>${Math.floor(x.waiting)}</b></td></tr>`).join('')}</tbody></table>`;
 }
 export function consortiumMarkup(s, now = Date.now()) {
   const c = consortiumOf(s), inv = s.consortiumInvite, busy = active(s) || !!s.run;
@@ -1112,7 +1112,7 @@ export function consortiumMarkup(s, now = Date.now()) {
   const member = (h) => {
     const p = on.find((x) => x.handle === h) || { ...profileOf(h), place: null };
     const mine = serversOf(s, h), raid = c.raid?.member === h, down = rebooting(s, h);
-    const state = raid ? '<span class="tag hot">invader at wall</span>' : down ? '<span class="tag warn">rebooting</span>' : onSet.has(h) ? '<span class="tag tag-con">online</span>' : '<span class="tag dim">away</span>';
+    const state = raid ? '<span class="tag hot">invasion at the wall</span>' : down ? '<span class="tag warn">rebooting</span>' : onSet.has(h) ? '<span class="tag tag-con">online</span>' : '<span class="tag dim">away</span>';
     // One aligned row: who, class and level, outposts, servers, where they are, state, actions.
     const there = p.place?.loc ? `map:con=${p.place.loc}` : `map:member-${h}`;
     return `<li class="con-member${onSet.has(h) ? '' : ' off'}${crew.includes(h) ? ' crew' : ''}"><span class="cm-dot${onSet.has(h) ? ' on' : ''}"></span><span class="cm-name"><b>${esc(h)}</b>${crew.includes(h) ? `<span class="cm-crew" title="In your crew">${glyph('run')}</span>` : ''}${c.founder === h ? '<small title="Founder">★</small>' : ''}</span>
@@ -1471,30 +1471,30 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}
     }
     if (n.kind === 'roamer') {
       const r = n.roamer, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
-      return `<g class="mnode invader travel${on}" data-select="roamer" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Travelling virus ${esc(r.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, r.name, `lv ${r.level} · hop ${r.hop} · ${fmtLeft(r.left)}`, 'hot')}</g>`;
+      return `<g class="mnode invader travel${on}" data-select="roamer" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion on the trunk line: ${esc(r.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, r.name, `lv ${r.level} · hop ${r.hop} · ${fmtLeft(r.left)}`, 'hot')}</g>`;
     }
     if (n.kind === 'member') {
       const raid = consortiumOf(s).raid?.member === n.handle, down = rebooting(s, n.handle);
       const sieges = serversOf(s, n.handle).filter((l) => l.held?.siege).length + (raid ? 1 : 0);
-      return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `lv ${memberLevel(s, n.handle)} · ${serversOf(s, n.handle).length} ${serversOf(s, n.handle).length === 1 ? 'server' : 'servers'}${raid ? ' · invader at wall' : down ? ' · rebooting' : sieges ? ' · siege' : ''}`)}</g>`;
+      return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `lv ${memberLevel(s, n.handle)} · ${serversOf(s, n.handle).length} ${serversOf(s, n.handle).length === 1 ? 'server' : 'servers'}${raid ? ' · invasion at the wall' : down ? ' · crashed' : sieges ? ' · invasion' : ''}`)}</g>`;
     }
     if (n.kind === 'intrusion') {
       return `<g class="mnode intrusion${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;
     }
     if (n.kind === 'invader') {
-      const inv = n.inv, sub = s.degraded && inv.state !== 'travel' ? 'waiting' : inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : inv.state === 'siege' ? `siege ${Math.round(inv.hp * 100)}%` : 'breach';
+      const inv = n.inv, sub = s.degraded && inv.state !== 'travel' ? 'waiting' : inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : inv.state === 'siege' ? `contested ${Math.round(inv.hp * 100)}%` : 'breach';
       const ang = Math.atan2(-n.y, -n.x) * 180 / Math.PI; // it points at home
-      return `<g class="mnode invader ${inv.state}${on}" data-select="invader" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invader ${esc(inv.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, inv.name, sub, inv.state === 'breach' ? 'hot' : '')}</g>`;
+      return `<g class="mnode invader ${inv.state}${on}" data-select="invader" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion: ${esc(inv.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, inv.name, sub, inv.state === 'breach' ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'fleet') {
       const f = n.fleet, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
-      const sub = f.state === 'travel' ? `${fmtLeft(fleetLeft(s))} out` : `siege ${fmtLeft(f.siegeLeft)}`;
+      const sub = f.state === 'travel' ? `${fmtLeft(fleetLeft(s))} out` : `at it · ${fmtLeft(f.siegeLeft)}`;
       const ships = Array.from({ length: f.total }, (_, i) => `<path d="M5 0 L-4 -3.5 L-2 0 L-4 3.5 Z" class="${i < f.ships ? '' : 'gone'}" transform="translate(${(i % 2) * -7 - Math.floor(i / 2) * 3} ${(i - (f.total - 1) / 2) * 6})"/>`).join('');
-      return `<g class="mnode fleet ${f.state}${on}"${f.faction ? ` style="--fc:${FX[f.faction].color}" data-faction="${f.faction}"` : ''} data-select="fleet" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Swarm of ${f.ships}"><circle r="18" class="mhit"/><g transform="rotate(${Math.round(ang)})">${ships}</g>${pick}${label(n, 10, `Swarm ×${f.ships}`, sub, f.state === 'siege' ? 'hot' : '')}</g>`;
+      return `<g class="mnode fleet ${f.state}${on}"${f.faction ? ` style="--fc:${FX[f.faction].color}" data-faction="${f.faction}"` : ''} data-select="fleet" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Swarm of ${f.ships}"><circle r="18" class="mhit"/><g transform="rotate(${Math.round(ang)})">${ships}</g>${pick}${label(n, 10, `Swarm ×${f.ships}`, f.faction ? `${FX[f.faction].short} · ${sub}` : sub, f.state === 'siege' ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'hub') {
       const f = n.hub.faction, F = FX[f], t = repTier(s, f);
-      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat' : ''}${on}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `retake · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
+      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat' : ''}${on}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `swarm · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'hidden') {
       const h = n.hidden, flag = hiddenFlagged(s, h);
@@ -1506,7 +1506,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}
     const l = n.loc, st = nodeState(s, l);
     const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
-    const rest = st === 'here' ? 'here' : l.held?.siege ? 'siege' : l.held?.lockdown ? 'lockdown' : l.held ? l.held.kind : job ? 'contract' : l.outpost?.lockdown ? 'lockdown' : l.outpost?.siege ? 'siege' : l.outpost?.h ? gauge(stockOf(l), capOf(l)) : l.takenOver ? 'yours' : st === 'done' ? 'clean' : '';
+    const rest = st === 'here' ? 'here' : l.held?.siege ? 'invasion' : l.held?.lockdown ? 'lockdown' : l.held ? l.held.kind : job ? 'contract' : l.outpost?.lockdown ? 'lockdown' : l.outpost?.siege ? 'invasion' : l.outpost?.h ? gauge(stockOf(l), capOf(l)) : l.takenOver ? 'yours' : st === 'done' ? 'clean' : '';
     const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
@@ -1550,7 +1550,7 @@ function awayLine(s) {
   const b = wallBands(s, wallRating(s) * archWall(s) * consortiumWall(s));
   const top = Math.max(0, ...(s.locations || []).filter((l) => !l.rogue).map((l) => l.level || 1));
   const safe = top && b.blocks >= top;
-  return `<div class="srv-wall" title="While you're logged off, invaders keep coming at half pace and your wall meets them (consortium bonus included). A crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours.${top ? ` Your servers send up to level ${top}.` : ''}"><span class="srv-k ${safe ? '' : 'warn'}">${glyph('clock')}Away</span>${wallRuler(s, true, b)}</div>`;
+  return `<div class="srv-wall" title="While you're logged off, invasions keep coming at half pace and your wall meets them (consortium bonus included). A crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours.${top ? ` Your servers send up to level ${top}.` : ''}"><span class="srv-k ${safe ? '' : 'warn'}">${glyph('clock')}Away</span>${wallRuler(s, true, b)}</div>`;
 }
 
 // The consortium (consortium.mjs) on a server card: whose it is, a siege to break, or shared ground.
@@ -1561,7 +1561,7 @@ function consortiumLine(s, l) {
   if (l.member) {
     const sg = l.held?.siege, ld = l.held?.lockdown, busy = active(s) || s.run;
     if (ld) return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span> ${esc(l.held.kind)} outpost <span class="tag hot">lockdown · ${fmtTime(ld.left)}</span> pays nothing</p><div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Retake for a bounty</button></div>`;
-    return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span>${l.held ? ` ${esc(l.held.kind)} outpost · ${l.held.siege ? 'pays nothing while besieged' : `pays you ${dividendOf(s, l).toFixed(2)} ${l.held.kind === 'scraper' ? 'finds' : esc(MATERIALS[codeOf(l.family)].name)}/h · ${Math.floor(l.held.share || 0)} waiting`}` : ''}${sg ? ` <span class="tag hot">siege · ${fmtLeft(sg.left)}</span>` : ''}</p>${sg ? `<div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend for a bounty</button></div>` : ''}`;
+    return `<p class="svc-line"><span class="tag tag-con">${esc(l.member)}'s</span>${l.held ? ` ${esc(l.held.kind)} outpost · ${l.held.siege ? 'pays nothing during the invasion' : `pays you ${dividendOf(s, l).toFixed(2)} ${l.held.kind === 'scraper' ? 'finds' : esc(MATERIALS[codeOf(l.family)].name)}/h · ${Math.floor(l.held.share || 0)} waiting`}` : ''}${sg ? ` <span class="tag hot">invasion · ${fmtLeft(sg.left)}</span>` : ''}</p>${sg ? `<div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend for a bounty</button></div>` : ''}`;
   }
   return isGround(s, l) ? `<p class="svc-line"><span class="tag tag-con">${esc(c.name)}</span> shared with the consortium</p>` : '';
 }
@@ -1599,7 +1599,7 @@ function mapSide(s, sel, node) {
         <div class="srv-hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}" title="Integrity">${glyph('integrity')}<span class="srv-bar"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span><b>${srv.integrity}</b><small>/${srv.max}</small></div>
         <div class="srv-chips"><span title="Credits">${glyph('credits')}<b>${srv.credits}</b></span><span title="Salvage">${glyph('salvage')}<b>${s.salvage.length}</b></span><span title="Servers you've found">${glyph('trace')}<b>${s.locations.length}</b></span></div>
         ${degradedMarkup(s)}
-        <div class="srv-wall"><span class="srv-k" title="Your wall: which invader levels it stops">${glyph('firewall')}Wall</span>${wallRuler(s, true)}</div>
+        <div class="srv-wall"><span class="srv-k" title="Your wall: which invasion levels it stops">${glyph('firewall')}Wall</span>${wallRuler(s, true)}</div>
         ${awayLine(s)}
         <div class="srv-slots">${slotPips('memory', liveCount(s), memoryCap(s), 'Memory: servers on your network')}${slotPips('node', portsUsed(s), portCount(s), 'Service slots')}${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Harvester slots')}</div>
         ${s.install ? `<div class="install mini"><div class="install-top"><b>${glyph(s.install.id)}${esc(SERVICES[s.install.id].name)} v${s.install.v}</b><span>${fmtTime(s.install.doneAt - Date.now())}</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((Date.now() - s.install.startedAt) / (s.install.doneAt - s.install.startedAt)) * 100))}%"></span></div>${buyoutBtn(s, 'buyout', installBuyout(s))}</div>` : ''}
@@ -1613,7 +1613,7 @@ function mapSide(s, sel, node) {
   if (node.kind === 'hub') return hubCard(s, node.hub.faction);
   if (node.kind === 'roamer') {
     const r = node.roamer;
-    return `<section class="card alert"><h2>Travelling virus · hop ${r.hop} of ${CONSORTIUM.roam.hops}</h2><h1>${esc(r.name)}</h1>
+    return `<section class="card alert"><h2>Invasion on the trunk line · hop ${r.hop} of ${CONSORTIUM.roam.hops}</h2><h1>${esc(r.name)}</h1>
       <p>${levelTag(s, r.level)} ${esc(FAMILIES[r.family].name)} · from ${esc(r.fromName)}</p>
       <div class="stats">${stat('Arrives in', fmtLeft(r.left))}${stat('Bounty', `×${1 + CONSORTIUM.roam.bounty * r.hop}`)}</div>
       <div class="row"><button type="button" class="btn primary" data-command="consortium intercept" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Intercept</button></div></section>`;
@@ -1623,7 +1623,7 @@ function mapSide(s, sel, node) {
     return `<section class="card"><h2>Home server · ${esc(c.name)}</h2><h1>${esc(h)}</h1>
       <p>${esc(ARCHETYPES[p.cls].name)} · ${node.online ? '<span class="tag tag-con">online</span>' : '<span class="tag dim">offline</span>'}${c.founder === h ? ' <span class="tag">founder</span>' : ''}</p>
       <div class="stats">${stat('Servers', mine.length)}${stat('Outposts', mine.filter((l) => l.held).length)}${stat('Rogue', mine.filter((l) => l.rogue).length)}${stat('Outposts pay you', `${Math.round(CONSORTIUM.dividend.share * 100)}%`)}</div>
-      ${mine.map((l) => `<p class="svc-line"><button type="button" class="act" data-select="${esc(l.id)}">${esc(l.name)}</button> ${l.rogue ? 'rogue' : l.held ? esc(l.held.kind) + ' outpost' : 'traced'} · lv ${l.level}${l.held?.siege ? ' <span class="tag hot">siege</span>' : ''}</p>`).join('')}
+      ${mine.map((l) => `<p class="svc-line"><button type="button" class="act" data-select="${esc(l.id)}">${esc(l.name)}</button> ${l.rogue ? 'rogue' : l.held ? esc(l.held.kind) + ' outpost' : 'traced'} · lv ${l.level}${l.held?.siege ? ' <span class="tag hot">invasion</span>' : ''}</p>`).join('')}
       ${consortiumOf(s).raid?.member === h ? `<p class="svc-line"><span class="tag hot">Invader</span> ${esc(consortiumOf(s).raid.name)} lv ${consortiumOf(s).raid.level} at their wall · ${fmtLeft(consortiumOf(s).raid.left)}</p><div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(h)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend their wall</button></div>` : ''}
       ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn">Rebooting</span> occupied: their server is on the map below them. Their outposts pay nothing meanwhile.</p>' : ''}</section>`;
   }
@@ -1673,7 +1673,7 @@ function mapSide(s, sel, node) {
     return `<section class="card"><h2>${l.trunk ? 'Trunk server' : l.member ? `${esc(l.member)}'s rogue server` : 'Rogue server'}${l.depth > 1 ? ` · layer ${l.depth}` : ''}</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}</p>
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
-      <p class="svc-line">Wild: it can't be taken over, and it never sends invaders.</p>
+      <p class="svc-line">Wild: it can't be taken over, and it never sends invasions.</p>
       ${consortiumLine(s, l)}
       <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Detach ${esc(l.name)}? It freezes as it is (and what you found through it) until you attach it again." ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
@@ -1701,7 +1701,7 @@ function fleetCard(s) {
   if (!f) return '';
   const t = s.locations.find((l) => l.id === f.target), busy = active(s) || s.run;
   const fam = FAMILIES[f.family], m = MUTATIONS[f.mutation];
-  return `<section class="card alert"><h2>Swarm · ${f.state === 'travel' ? 'inbound' : 'at the outpost'}</h2><h1>${f.ships} of ${f.total} ${esc(fam.name)}</h1>
+  return `<section class="card alert"><h2>Swarm${f.faction ? ` from ${esc(FX[f.faction].short)}` : ''} · ${f.state === 'travel' ? 'on its way' : 'at the outpost'}</h2><h1>${f.ships} of ${f.total} ${esc(fam.name)}</h1>
     <p>${levelTag(s, f.level)} ${esc(fam.name)}${m ? ` <span class="tag tag-mut" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}</p>
     <div class="stats">${stat('Target', esc(t?.name || '?'))}${stat(f.state === 'travel' ? 'Arrives in' : 'Falls in', fmtLeft(fleetLeft(s)))}</div>
     <p class="svc-line">from ${esc(f.fromName)}</p>
@@ -1740,8 +1740,8 @@ function outpostCore(s, l) {
   const fill = `<div class="lvl-row" title="${h.kind === 'scraper' ? 'Loot rolls waiting' : esc(m.name) + ' waiting'}. Connect to collect."><span class="lvl-bar"><span style="width:${(100 * (o.stock || 0)) / capOf(l)}%"></span></span><small>${stockOf(l)}/${capOf(l)} · ${Math.round(perHour(l, l.outpost.h, s) * 10) / 10}/h</small></div>`;
   // Threats on the outpost, each in its own box: what, how many/long (a bar), one button.
   const opBox = (kind, title, info, pct, btnHtml) => `<div class="op-box ${kind}"><div class="op-top"><span class="tag ${kind === 'infest' ? 'warn' : 'hot'}">${title}</span><small>${info}</small></div>${pct == null ? '' : `<div class="op-bar"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>`}<div class="row">${btnHtml}</div></div>`;
-  const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `arrives in ${fmtLeft(fleetLeft(s))}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
-  const siege = o.siege ? opBox('siege', 'Siege', `falls in ${fmtTime(o.siege.left)} of play`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
+  const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', s.fleet.faction ? `Swarm from ${esc(FX[s.fleet.faction].short)}` : 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `arrives in ${fmtLeft(fleetLeft(s))}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
+  const siege = o.siege ? opBox('siege', 'Invasion', `falls in ${fmtTime(o.siege.left)} of play`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
   const inf = o.infest ? opBox('infest', 'Infested', `${o.infest.count}/${o.infest.total} left · ${fmtTime(o.infest.left)}`, (o.infest.left / INFEST.stayMs) * 100, `<button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why} title="Clear them for an hour of production at once. Ignore them and they move on.">Clear</button>`) : '';
   return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fl}${siege}${inf}${o.siege ? '' : `<div class="row"><button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
 }
@@ -1998,8 +1998,8 @@ function holdMarkup(s, f, now) {
   const r = retakeOf(s), mine = r && r.f === f, lock = s.hubs[f].captured.lockdown, bank = bankOf(s, f), inc = incomeOf(s, f), d = demandOf(s, f);
   const earn = `<ul class="craft-list"><li><span><b class="iname">${glyph('credits', 'badge')}${bank} credits</b><small class="cost" title="Its cut of the trade: more while what it deals in is in demand (×${d.toFixed(2)} now). Holds ${HUBS.bankHours} h.">${lock ? 'locked down: earning nothing' : `+${inc} an hour`}</small></span><button type="button" class="btn small ${bank ? 'primary' : ''}" data-command="hub collect ${f}" ${bank ? '' : 'disabled'}>Collect</button></li></ul>`;
   const threat = lock
-    ? `<ul class="craft-list"><li><span><b class="hot">Lockdown</b><small>${esc(FX[f].short)} holds it · lv ${lock.level}</small></span><button type="button" class="btn small primary" data-command="hub clear ${f}">Clear</button></li></ul>`
-    : mine ? `<ul class="craft-list"><li><span><b class="hot">Retake · ${r.ships} of ${r.total}</b><small>lv ${r.level} · ${r.state === 'travel' ? `arrives in ${fmtLeft(retakeLeft(s, now))}` : `falls in ${fmtLeft(r.siegeLeft)}`}</small></span><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></li></ul>` : '';
+    ? `<ul class="craft-list"><li><span><b class="hot">Lockdown</b><small>${esc(FX[f].short)} holds it · lv ${lock.level}</small></span><button type="button" class="btn small primary" data-command="hub retake ${f}">Retake</button></li></ul>`
+    : mine ? `<ul class="craft-list"><li><span><b class="hot">Swarm from ${esc(FX[f].short)} · ${r.ships} of ${r.total}</b><small>lv ${r.level} · ${r.state === 'travel' ? `arrives in ${fmtLeft(retakeLeft(s, now))}` : `falls in ${fmtLeft(r.siegeLeft)}`}</small></span><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></li></ul>` : '';
   return earn + threat;
 }
 // Buying your way back toward Neutral: dearer the deeper you are.

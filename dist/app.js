@@ -573,7 +573,7 @@ function run(raw) {
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
-  if (text === 'help') return notice('Fight: spike and your class\'s skills (keys 1–8), hold, now. Runs: ls, cd, cat, pull, unlock, jack out. Protocols: load, unload, scrap, compile. Services: install, uninstall, cancel install. Wall: jack in (fight the invader at your wall). Pages: map, server, protocols, loadout, daemons, system. Screen: shell immersive|plain|boot. Start over: reset game.');
+  if (text === 'help') return notice('Fight: spike and your class\'s skills (keys 1–8), hold, now. Runs: ls, cd, cat, pull, unlock, jack out. Protocols: load, unload, scrap, compile. Services: install, uninstall, cancel install. Wall: jack in (fight the invasion at your wall). Pages: map, server, protocols, loadout, daemons, system. Screen: shell immersive|plain|boot. Start over: reset game.');
   if (text.startsWith("'") || text.startsWith('say ')) return notice('Chat arrives with co-op. For now it is just you and the virus.');
 
   const wasAlert = campaign.encounter?.phase === 'alert';
