@@ -1873,6 +1873,28 @@ export function sawTab(s, tab) {
 // ---------- the sidebar: on every page, fights included ----------
 // You (your health), your crew (live bars in a fight), then what this page is about: the map's
 // selection, the virus you're fighting, or what needs you. Narrow screens and `sidebar off` hide it.
+const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${mates.map((m) => {
+        const live = inFight && m.encounter, up = !live || mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = live ? m.encounter.queue : null;
+        // What they mean to do this cycle: the skill (its verb's colour and icon) and the part.
+        const a = q && ABILITIES[q.ability], tgt = q?.target && part(s, q.target);
+        const intent = !live ? '' : !up ? '<div class="pm-intent dim">down</div>' : a ? `<div class="pm-intent verb-${a.verb}" title="${esc(a.help || a.short || '')}">${glyph(a.verb)}<b>${esc(a.name)}</b>${tgt ? `<span class="pm-at">→ ${esc(tgt.name)}</span>` : ''}${q.last ? '<small>last</small>' : ''}</div>` : '<div class="pm-intent dim">holding</div>';
+        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)}</small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small>${intent}</div>`;
+      }).join('')}</div>`;
+// The crew window (app.js floats it, draggable): the crew as they'll join you, live in a run fight
+// (bars, who's down, what each means to do this cycle). Only there when you have a crew.
+export function crewWindowMarkup(s, { preview = null, collapsed = false } = {}) {
+  const mates = matesOf(s);
+  if (!mates.length) return '';
+  const inFight = active(s) && s.encounter.mode === 'run';
+  return `<header class="cw-head" data-cw-drag title="Drag to move"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small><button type="button" class="cw-btn" data-cw-toggle title="${collapsed ? 'Expand' : 'Collapse'}">${collapsed ? '▸' : '▾'}</button></header>${collapsed ? '' : `<div class="cw-body sb-crew">${crewParty(s, preview)}</div>`}`;
+}
+function crewParty(s, preview) {
+  const fighting = active(s), e = s.encounter;
+  const mates = matesOf(s), inFight = fighting && e.mode === 'run';
+  const fc = inFight ? forecast(s, preview) : null;
+  const actedWho = inFight ? e.steps?.order?.[e.steps.next - 1] : null;
+  return CREW_PARTY(s, mates, inFight, fc, actedWho);
+}
 export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 'mine', preview = null } = {}) {
   const fighting = active(s), e = s.encounter;
   // The crew: live in a run fight, else as they'll join you.
@@ -1880,13 +1902,7 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
   const fc = inFight ? forecast(s, preview) : null;
   const actedWho = inFight ? e.steps?.order?.[e.steps.next - 1] : null; // whose turn just played
   const crew = mates.length
-    ? `<section class="sb-block sb-crew"><div class="sb-head"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small></div><div class="party">${mates.map((m) => {
-        const live = inFight && m.encounter, up = !live || mateUp(m), pct = (m.run.integrity / m.run.max) * 100, q = live ? m.encounter.queue : null;
-        // What they mean to do this cycle: the skill (its verb's colour and icon) and the part.
-        const a = q && ABILITIES[q.ability], tgt = q?.target && part(s, q.target);
-        const intent = !live ? '' : !up ? '<div class="pm-intent dim">down</div>' : a ? `<div class="pm-intent verb-${a.verb}" title="${esc(a.help || a.short || '')}">${glyph(a.verb)}<b>${esc(a.name)}</b>${tgt ? `<span class="pm-at">→ ${esc(tgt.name)}</span>` : ''}${q.last ? '<small>last</small>' : ''}</div>` : '<div class="pm-intent dim">holding</div>';
-        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)}</small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${m.run.integrity}/${m.run.max}` : 'down'}</small>${intent}</div>`;
-      }).join('')}</div></section>`
+    ? `<section class="sb-block sb-crew"><div class="sb-head"><b>${inFight ? 'Party' : 'Crew'}</b><small>${mates.length}/3</small></div>${CREW_PARTY(s, mates, inFight, fc, actedWho)}</section>`
     : `<section class="sb-block sb-crew solo"><div class="sb-head"><b>Crew</b><small>solo</small></div><button type="button" class="act dim" data-people-open title="Friends, consortium members and who's online">${glyph('run')}Find a crew</button></section>`;
   // What this page is about.
   let ctx = '';
