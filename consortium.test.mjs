@@ -330,3 +330,16 @@ test('Grid: +10% wall', () => {
   for (const h of PRESENCE.pool.slice(0, 11)) play(s, 'consortium invite ' + h);
   assert.ok(Math.abs(ratioOf(s, inv) / base - 1.1) < 1e-9);
 });
+
+test('a raid fight left paused holds nothing: the member still crashes', () => {
+  helping(0, () => {
+    const s = world();
+    play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
+    for (let i = 0; i < 40 && !s.consortium.raid; i++) tickConsortium(s, 60000);
+    play(s, 'consortium defend nyx');
+    if (s.encounter.phase === 'alert') command(s, 'engage');
+    s.encounter.paused = true;
+    tickConsortium(s, CONSORTIUM.raidMs + 1);
+    assert.ok(rebooting(s, 'nyx'), 'a paused fight doesn’t stop the clock');
+  });
+});

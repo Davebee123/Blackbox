@@ -282,7 +282,7 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
   for (const loc of memberServers(s)) {
     if (loc.home) { loc.occupied.left -= dt; if (loc.occupied.left <= 0 && !loc.occupied.cleared) { loc.occupied.cleared = true; emit(s, 'info', `${loc.member}'s server finished rebooting.`); } continue; }
     const ld = loc.held?.lockdown;
-    if (ld && !(s.encounter?.member === loc.id && active(s))) { ld.left -= dt; if (ld.left <= 0) { loc.held.lockdown = null; emit(s, 'info', `The lockdown on ${loc.member}'s ${loc.name} is over.`, { location: loc.id }); } }
+    if (ld && !holding(s, 'member', loc.id)) { ld.left -= dt; if (ld.left <= 0) { loc.held.lockdown = null; emit(s, 'info', `The lockdown on ${loc.member}'s ${loc.name} is over.`, { location: loc.id }); } }
     const sg = loc.held?.siege;
     if (!sg) continue;
     if (holding(s, 'member', loc.id)) continue; // the clock waits while you fight for it (not while paused)
@@ -297,7 +297,7 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
   }
   // An invader at an away member's wall (simulated).
   const raid = c.raid;
-  if (raid && !(s.encounter?.raid && active(s))) {
+  if (raid && !holding(s, 'raid', true)) { // the raid waits while you fight it (not while the fight is paused)
     raid.left -= dt;
     if (raid.left <= 0) {
       c.raid = null;

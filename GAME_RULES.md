@@ -939,7 +939,8 @@ The System page has three sliders (0–100, default 80, the level the game was m
 
 Rules that keep timing, reloads and loops from paying:
 
-- **A paused fight holds no clock.** Sieges (wall, outpost, swarm, retake, consortium) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
+- **A paused fight holds no clock.** Sieges (wall, outpost, swarm, retake, consortium sieges, lockdowns and raids on members' walls) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
+- **In a consortium, the away rules still stand.** While you're logged off, the gap is played out a minute at a time as before: invaders at half pace, outposts noticed half as often, and sieges that can fall, with a member sometimes breaking one. An outpost under siege makes nothing (as it pays no dividend). Swarms and retakes still wait for you to log on.
 - **Threats run on real time; sieges wait for you.** Outpost notice, swarms and retakes gather and travel whether you're logged on or not. Their sieges only count down while you're logged on, so nothing falls while you're away. Production stops while one sits at an outpost or hub.
 - **No shop-to-market loop.** A shop or the Halcyon store never sells code, Exploits or salvage for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
 - **Hub income reads outside factors only.** A held hub earns by its condition, the world event and wiped hubs elsewhere, not by your own trading there.
