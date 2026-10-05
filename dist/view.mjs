@@ -481,73 +481,11 @@ export function trayMarkup(s) {
 const btn = (cmd, label, primary = false) => `<button type="button" class="btn ${primary ? 'primary' : ''}" data-command="${esc(cmd)}">${esc(label)}</button>`;
 const stat = (label, value) => `<div class="stat"><span>${esc(label)}</span><strong>${value}</strong></div>`;
 
-function afterAction(r) {
-  if (!r) return '';
-  const lost = r.startIntegrity - r.endIntegrity;
-  return `<section class="card"><h2>Last fight · ${esc(r.enemy)}</h2>
-    <h1>${r.result === 'victory' ? 'Neutralized' : 'Server crashed'}</h1>
-    <div class="stats">${stat('Cycles', r.cycles)}${stat('Integrity lost', lost)}${stat('Backtrace', r.trace + '%')}${stat('Delays', r.interrupts)}${stat('Auto-repeats', r.auto)}</div>
-    <p>Break order: ${r.breakOrder.length ? esc(r.breakOrder.join(' → ')) : 'none'}.${r.lead ? ` Lead +${r.lead}%.` : ''}</p></section>`;
-}
-
-export function homeMarkup(s) {
-  const e = s.encounter;
-  let main = '';
-  if (!s.tutorialCompleted) main += `<section class="card lesson"><h2>New here?</h2><p>Six short lessons on a training virus teach the whole loop in about two minutes. Your real server is never touched.</p><div class="row">${btn('tutorial', 'Start the tutorial', true)}</div></section>`;
-  if (s.run) {
-    const loc = currentLocation(s);
-    main += `<section class="card lesson"><h2>On a run</h2><h1>${esc(loc.name)}</h1><p>Signal ${s.run.integrity}/${s.run.max} · ${s.run.pack.length} unbanked in your pack. Intrusions wait until you jack out.</p><div class="row">${btn('net', 'Back to the net', true)}</div></section>`;
-  }
-  if (!s.run && s.locations.length) {
-    main += `<section class="card"><h2>Origins found</h2><p>Places the viruses came from. Make a run: explore with ls, cd, cat and pull, then jack out to keep what you found.</p>${locationList(s)}</section>`;
-  }
-  if (e?.phase === 'alert' && e.mode !== 'run') {
-    const v = e.virus, f = FAMILIES[v.family], m = MUTATIONS[v.mutation];
-    main += `<section class="card alert"><h2>Intrusion detected</h2><h1>${esc(v.name)}</h1>
-      <p>${levelTag(s, v.level)} ${esc(f.name)} · threatens your <b>${esc(v.threatens)}</b>. ${esc(f.summary)}</p>
-      ${m ? `<p><span class="tag">${esc(m.name)}</span> ${esc(m.rule)}</p>` : ''}
-      <p>Parts: ${v.parts.map((p) => esc(p.name)).join(', ')}. Nothing happens until you engage.</p>
-      <div class="row">${btn('engage', 'Engage', true)}</div></section>`;
-  } else if (active(s) && e.mode !== 'run') {
-    main += `<section class="card alert"><h2>Fight in progress</h2><h1>${esc(e.virus.name)}</h1><div class="row">${btn('combat', 'Back to combat', true)}</div></section>`;
-  } else {
-    main += afterAction(s.reports.findLast((r) => r.mode !== 'run'));
-  }
-  if (!active(s) && !s.run) {
-    main += `<section class="card"><h2>Pick a fight</h2><p>Each family goes after something different. Random variants mix families and mutations.</p>
-      <div class="row">${btn('encounter cryptjack', 'CRYPTJACK · encrypts')}${btn('encounter splinter', 'SPLINTER · replicates')}${btn('encounter ghostroot', 'GHOSTROOT · blinds')}${btn('encounter random', 'Random variant')}</div></section>`;
-  }
-  const srv = s.server;
-  const upkeep = [];
-  if (srv.integrity > 0 && srv.integrity < srv.max) upkeep.push(btn('repair', `Repair to full (${topUpCost(s, 'server')}c)`));
-  if (srv.integrity <= 0) upkeep.push(btn('developer reboot', 'Developer reboot', true));
-  const side = `<section class="card"><h2>Your server</h2>
-    <div class="stats">${stat('Integrity', `${srv.integrity}/${srv.max}`)}${stat('Credits', `${srv.credits}c`)}${stat('Origins found', s.locations.length)}${stat('Salvage', s.salvage.length)}</div>
-    ${upkeep.length ? `<div class="row">${upkeep.join('')}</div>` : ''}
-    <p>Solo for now. Crew play and server upgrades come in later builds.</p></section>
-    <section class="card"><h2>Settings</h2><div class="row">
-      <button type="button" class="btn" data-toggle="speed">Speed: ${esc(s.settings.speed || 'normal')} (${cycleLength(s) / 1000}s)</button>
-      <button type="button" class="btn" data-toggle="sound" aria-pressed="${!!s.settings.sound}">Sound ${s.settings.sound ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-toggle="motion" aria-pressed="${!!s.settings.motion}">Motion ${s.settings.motion ? 'on' : 'off'}</button>
-      <button type="button" class="btn" data-toggle="haptics" aria-pressed="${!!s.settings.haptics}" title="Vibration works on Android phones">Vibrate ${s.settings.haptics ? 'on' : 'off'}</button>
-    </div></section>
-    <section class="card"><h2>Wire</h2><div class="ticker"><span>${(TICKER.map(esc).join('  //  ') + '  //  ').repeat(2)}</span></div></section>`;
-  return `<div class="page-grid"><div style="display:grid;gap:12px">${main}</div><div style="display:grid;gap:12px">${side}</div></div>`;
-}
-
 function locationList(s) {
   return `<ul class="list">${s.locations.map((l) => {
     const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
     return `<li><span><b style="color:var(--bright)">${esc(l.name)}</b> · ${levelTag(s, l.level || 1, `Lv ${l.level || 1}`)} · ${esc(FAMILIES[l.family].name)} ${l.depth > 1 ? `· layer ${l.depth}` : 'origin'} · ${taken >= total ? 'cleaned out' : taken ? `${taken} of ${total} files banked` : l.runs ? 'partly explored' : 'unexplored'}</span>${s.run ? '' : btn('connect ' + l.id, 'Connect', !l.runs)}</li>`;
   }).join('')}</ul>`;
-}
-
-export function traceMarkup(s) {
-  const bars = Object.keys(FAMILIES).map((f) => `<li><span><b style="color:var(--bright)">${esc(FAMILIES[f].name)}</b></span><span style="flex:1;margin:0 12px;align-self:center" class="meter-bar"><span style="width:${Math.min(100, s.leadProgress[f] || 0)}%"></span></span><span>${s.leadProgress[f] || 0}%</span></li>`).join('');
-  return `<div class="page-grid"><section class="card"><h2>Trace</h2><h1>Leads</h1>
-    <p>Every virus you neutralize moves you toward where its family came from: +${CONFIG.leadBase}% for the kill, plus half your backtrace. At 100% the origin is located. Trace records you pull and bank on a run point one layer deeper.</p>
-    <ul class="list">${bars}</ul></section>
-    <section class="card"><h2>Origins found</h2>${s.locations.length ? locationList(s) : '<p>None yet. Neutralize viruses; your class&rsquo;s backtrace speeds it up.</p>'}</section></div>`;
 }
 
 // ---------- protocols (you) ----------
