@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, materialsOf } from './dist/combat.mjs';
 import { compilePayload, deployPayload, resolveStrike, builtOf, flyingOf, PAYLOAD, forecastStrike } from './dist/payload.mjs';
 import { rep, captured, donationOf, donate, hostile, shopOf } from './dist/factions.mjs';
-import { quote } from './dist/market.mjs';
+import { quote, trade, tickMarket } from './dist/market.mjs';
+import { tickPayloads } from './dist/payload.mjs';
 import { HUBS, tickHubs, tickRetake, collect, bankOf, retakeOf, lockedDown, heldOf } from './dist/hubs.mjs';
 
 const T0 = 1_000_000_000_000;
@@ -75,7 +76,7 @@ test('a held hub: no spread, shop at cost and unlocked, earns over time, collect
 test('retaliation: a retake swarm comes; break it and the hub holds', () => {
   const s = open();
   take(s, 'kestrel');
-  tickRetake(s, HUBS.firstMs + 1);
+  tickRetake(s, 1000, false, T0); tickRetake(s, 1000, false, T0 + HUBS.firstMs);
   const r = retakeOf(s);
   assert.ok(r && r.f === 'kestrel');
   for (let i = 0; i < r.total; i++) { command(s, 'hub defend kestrel'); win(s); }
@@ -86,9 +87,9 @@ test('retaliation: a retake swarm comes; break it and the hub holds', () => {
 test('a lost retake locks the hub down: no income until you clear it, never lost', () => {
   const s = open();
   take(s, 'kestrel');
-  tickRetake(s, HUBS.firstMs + 1);
-  tickRetake(s, HUBS.travelMs + 1);
-  tickRetake(s, HUBS.siegeMs + 1);
+  tickRetake(s, 1000, false, T0); tickRetake(s, 1000, false, T0 + HUBS.firstMs);
+  tickRetake(s, 1000, false, T0 + HUBS.firstMs + HUBS.travelMs);
+  tickRetake(s, HUBS.siegeMs + 1, false, T0 + HUBS.firstMs + HUBS.travelMs + 1);
   assert.ok(lockedDown(s, 'kestrel'));
   assert.ok(captured(s, 'kestrel'), 'still yours');
   s.hubs.kestrel.captured.bank = 0; s.hubs.kestrel.captured.bankAt = T0;
@@ -114,7 +115,7 @@ test('donations: inflated by how deep you are, +5 each, never past Neutral; no d
   donate(s, 'nullchoir');
   assert.equal(rep(s, 'nullchoir'), 24);
   s.standing.lantern = -20;
-  tickHubs(s, T0); tickHubs(s, T0 + 48 * 3600000); tickRetake(s, 48 * 3600000);
+  tickHubs(s, T0); tickHubs(s, T0 + 48 * 3600000); tickRetake(s, 1000, false, T0 + 48 * 3600000);
   assert.equal(rep(s, 'lantern'), -20, 'rep never comes back on its own');
 });
 
@@ -123,4 +124,61 @@ test('hitting a faction’s rival wins it back', () => {
   s.standing.kestrel = -20;
   strike(s, 'exfil', 'nullchoir', Date.now()); // NULL CHOIR is Kestrel's rival
   assert.equal(rep(s, 'kestrel'), -20 + Math.round(-PAYLOAD.rep.breach * 0.5));
+});
+
+test('no dodging by logging off: retakes gather and travel on real time, and stop the income; the siege waits for you', () => {
+  const s = open();
+  take(s, 'kestrel');
+  s.hubs.kestrel.captured.bankAt = T0;
+  tickRetake(s, 1000, false, T0);
+  // Away for a day: one long gap, as on reload (dt is capped; the clock isn't).
+  tickRetake(s, 1000, false, T0 + 24 * 3600000);
+  assert.ok(retakeOf(s), 'it came while you were away');
+  tickRetake(s, 1000, false, T0 + 24 * 3600000 + HUBS.travelMs);
+  assert.equal(retakeOf(s).state, 'siege');
+  assert.ok(!lockedDown(s, 'kestrel'), 'never locked down while away');
+  tickHubs(s, T0 + 30 * 3600000);
+  const b = bankOf(s, 'kestrel');
+  tickHubs(s, T0 + 40 * 3600000);
+  assert.equal(bankOf(s, 'kestrel'), b, 'nothing earned while it sits at the hub');
+});
+
+test('a fight against a retake left open freezes nothing in your favour', () => {
+  const s = open();
+  take(s, 'kestrel');
+  tickRetake(s, 1000, false, T0); tickRetake(s, 1000, false, T0 + HUBS.firstMs);
+  command(s, 'hub defend kestrel');
+  s.hubs.kestrel.captured.bank = 0; s.hubs.kestrel.captured.bankAt = T0;
+  tickRetake(s, 1000, false, T0 + 10 * 3600000);
+  tickHubs(s, T0 + 10 * 3600000);
+  assert.equal(bankOf(s, 'kestrel'), 0, 'no income with a retake out');
+  assert.equal(retakeOf(s).state, 'siege', 'it still arrives');
+});
+
+test('no round-trip profit at a held hub (no spread)', () => {
+  const s = open();
+  take(s, 'kestrel');
+  tickMarket(s, T0); s.market.event = 'calm';
+  for (const w of ['kernel', 'cipher', 'exploit', 'salvage']) {
+    const c0 = s.server.credits;
+    trade(s, 'buy', 'kestrel', w, 40, T0);
+    const spent = c0 - s.server.credits;
+    const n0 = materialsOf(s)[w] ?? s.salvage.length;
+    materialsOf(s)[w] = (materialsOf(s)[w] || 0) + 40; if (w === 'salvage') for (let i = 0; i < 40; i++) s.salvage.push({ name: 'x' });
+    trade(s, 'sell', 'kestrel', w, 40, T0);
+    const t = s.market.transfers.at(-1);
+    assert.ok(t.credits <= spent, `${w}: sold for ${t.credits}, bought for ${spent}`);
+    assert.ok(n0 >= 0);
+  }
+});
+
+test('a payload that reaches a hub you took meanwhile stands down', () => {
+  const s = open();
+  compilePayload(s, 'exfil');
+  deployPayload(s, builtOf(s)[0].id, 'kestrel', T0);
+  take(s, 'kestrel');
+  const r0 = rep(s, 'kestrel'), n = builtOf(s).length;
+  tickPayloads(s, T0 + 3600000);
+  assert.equal(rep(s, 'kestrel'), r0);
+  assert.equal(builtOf(s).length, n + 1, 'back in your hold');
 });

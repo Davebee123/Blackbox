@@ -119,7 +119,12 @@ export function resolveStrike(s, t, at = t.landsAt) {
 
 export function tickPayloads(s, at = now()) {
   const m = s.payloads; if (!m?.flying.length) return;
-  for (const t of m.flying.filter((x) => at >= x.landsAt)) { m.flying.splice(m.flying.indexOf(t), 1); resolveStrike(s, t); }
+  for (const t of m.flying.filter((x) => at >= x.landsAt)) {
+    m.flying.splice(m.flying.indexOf(t), 1);
+    // You took the hub while it was on its way: it stands down and comes back to you.
+    if (captured(s, t.f)) { const { f, sentAt, landsAt, ...p } = t; m.built.push(p); emit(s, 'info', `${PAYLOADS[t.kind].name} #${t.id} reached your own hub and stood down.`); continue; }
+    resolveStrike(s, t);
+  }
 }
 
 export function payloadCommand(s, text, at = now()) {

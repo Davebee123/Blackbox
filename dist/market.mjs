@@ -85,9 +85,10 @@ export function trade(s, side, f, w, n, at = now()) {
   ((m.pressure[f] ||= {})[w] ||= 0);
   if (side === 'sell') {
     if (have(s, w) < n) return warn(s, `You have ${have(s, w)} ${WARES[w].name}.`);
-    // The price slides over the lot: average over the lot.
+    // The price slides over the lot. Each unit is priced after its own push, so selling a lot
+    // exactly undoes buying it (never a profit on the round trip, even with no spread).
     let credits = 0;
-    for (let i = 0; i < n; i++) { credits += quote(s, f, w).sell; m.pressure[f][w] += 1; }
+    for (let i = 0; i < n; i++) { m.pressure[f][w] += 1; credits += quote(s, f, w).sell; }
     if (w === 'salvage') s.salvage.splice(0, n); else materialsOf(s)[w] -= n;
     const t = { id: ++m.serial, side, f, w, n, credits, sentAt: at, landsAt: at + travelMs(s, f) };
     m.transfers.push(t);

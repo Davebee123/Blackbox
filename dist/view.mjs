@@ -3,7 +3,7 @@ import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvage
 import { CONFIGS, forService, known as configsKnown, owned as configsOwned, configOn, codeFor as configCode, CONFIG_COST } from './configs.mjs';
 import { glyph } from './glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost } from './memory.mjs';
-import { HUBS, retakeOf, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
+import { HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf } from './market.mjs';
 import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED, captured, donationOf } from './factions.mjs';
@@ -1493,7 +1493,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true } = {}
     }
     if (n.kind === 'hub') {
       const f = n.hub.faction, F = FX[f], t = repTier(s, f);
-      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat' : ''}${on}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `retake · ${fmtLeft(retakeOf(s).state === 'travel' ? retakeOf(s).left : retakeOf(s).siegeLeft)}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
+      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat' : ''}${on}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `retake · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'hidden') {
       const h = n.hidden, flag = hiddenFlagged(s, h);
@@ -1998,7 +1998,7 @@ function holdMarkup(s, f, now) {
   const earn = `<ul class="craft-list"><li><span><b class="iname">${glyph('credits', 'badge')}${bank} credits</b><small class="cost" title="Its cut of the trade: more while what it deals in is in demand (×${d.toFixed(2)} now). Holds ${HUBS.bankHours} h.">${lock ? 'locked down: earning nothing' : `+${inc} an hour`}</small></span><button type="button" class="btn small ${bank ? 'primary' : ''}" data-command="hub collect ${f}" ${bank ? '' : 'disabled'}>Collect</button></li></ul>`;
   const threat = lock
     ? `<ul class="craft-list"><li><span><b class="hot">Lockdown</b><small>${esc(FX[f].short)} holds it · lv ${lock.level}</small></span><button type="button" class="btn small primary" data-command="hub clear ${f}">Clear</button></li></ul>`
-    : mine ? `<ul class="craft-list"><li><span><b class="hot">Retake · ${r.ships} of ${r.total}</b><small>lv ${r.level} · ${r.state === 'travel' ? `arrives in ${fmtLeft(r.left)}` : `falls in ${fmtLeft(r.siegeLeft)}`}</small></span><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></li></ul>` : '';
+    : mine ? `<ul class="craft-list"><li><span><b class="hot">Retake · ${r.ships} of ${r.total}</b><small>lv ${r.level} · ${r.state === 'travel' ? `arrives in ${fmtLeft(retakeLeft(s, now))}` : `falls in ${fmtLeft(r.siegeLeft)}`}</small></span><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></li></ul>` : '';
   return earn + threat;
 }
 // Buying your way back toward Neutral: dearer the deeper you are.

@@ -4,10 +4,12 @@
 // no tier locks, and it earns you a cut of its trade over real time (offline too), more while
 // what it deals in is in demand. Collect it from the hub page. Never Halcyon's; two at most.
 //
-// Retaliation: while its owner is Hostile, it sends retake swarms at the hub (logged-on time,
-// one at a time). Intercept them on the way or defend when they arrive, a process a fight. If the
-// siege runs out, the hub goes into lockdown: its income stops until you clear it. You never lose
-// it for good. A Hostile faction you strike without losing a hub answers once with a swarm at one
+// Retaliation: while its owner is Hostile, it sends retake swarms at the hub, one at a time. They
+// gather and travel on real time (logging off doesn't dodge them), but the siege only runs while
+// you're logged on: you're never locked down while away. A hub earns nothing while a retake is
+// out for it (on the way, waiting at the hub, or a fight against it left open). Intercept or
+// defend, a process a fight. If the siege runs out, the hub goes into lockdown: its income stops
+// until you clear it. You never lose it for good. A Hostile faction you strike without losing a hub answers once with a swarm at one
 // of your outposts.
 import { CONFIG, variantFor } from './data.mjs';
 import { emit, warn, rand, active, selectEncounter, command, gainXp, xpFor, gainCode, hackerLevel, hooks } from './combat.mjs';
@@ -54,7 +56,7 @@ export function tickHubs(s, at = now()) {
     const c = hub(s, f).captured;
     const hours = Math.max(0, at - (c.bankAt ?? at)) / 3600000;
     c.bankAt = at;
-    if (c.lockdown || !hours) continue;
+    if (c.lockdown || s.retake?.f === f || !hours) continue; // nothing while it's locked down or under attack
     c.bank = Math.min(HUBS.bankHours * incomeOf(s, f), (c.bank || 0) + incomeOf(s, f) * hours);
   }
 }
@@ -68,21 +70,21 @@ export function collect(s, f) {
 }
 
 // ---------- retaliation (logged-on time, from tickNetwork) ----------
-function sendRetake(s, f) {
+export const retakeLeft = (s, at = now()) => { const r = s.retake; return !r ? 0 : r.state === 'travel' ? Math.max(0, r.arriveAt - at) : r.siegeLeft; };
+function sendRetake(s, f, at) {
   const L = Math.min(CONFIG.maxMobLevel, Math.max(FACTIONS[f].hub.level, hackerLevel(s)) + HUBS.levelUp), family = FACTION_FAMILY[f];
   s.retakeSeq = (s.retakeSeq || 0) + 1;
-  s.retake = { id: 'rt' + s.retakeSeq, f, family, key: KEY[family], level: L, ships: HUBS.ships, total: HUBS.ships, state: 'travel', left: HUBS.travelMs, travel: HUBS.travelMs, siegeLeft: HUBS.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
+  s.retake = { id: 'rt' + s.retakeSeq, f, family, key: KEY[family], level: L, ships: HUBS.ships, total: HUBS.ships, state: 'travel', arriveAt: at + HUBS.travelMs, travel: HUBS.travelMs, siegeLeft: HUBS.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
   emit(s, 'hub-retake', `${FACTIONS[f].short} is coming for ${FACTIONS[f].hub.name}: ${HUBS.ships} processes (level ${L}), arriving in ${Math.round(HUBS.travelMs / 60000)} minutes.`, { faction: f });
 }
 export function tickRetake(s, dt, paused = false, at = now()) {
-  if (paused || dt <= 0) return;
   const net = (s.net ||= {});
   // A Hostile faction answers a fresh strike once, at one of your outposts (as an ordinary swarm, in its colours).
   for (const f of Object.keys(s.hubs || {})) {
     const h = s.hubs[f];
     if (!h.grudgeAt || h.grudgeAt <= (h.grudgeSent || 0) || captured(s, f) || heldOf(s).length) continue;
     if (!angry(s, f) || at - h.grudgeAt > HUBS.grudgeMs) { h.grudgeSent = h.grudgeAt; continue; }
-    if (fleetOf(s) || !outposts(s).some((l) => !l.outpost.lockdown)) continue;
+    if (paused || fleetOf(s) || !outposts(s).some((l) => !l.outpost.lockdown)) continue;
     h.grudgeSent = h.grudgeAt;
     const fl = launch(s);
     if (fl) fl.faction = f;
@@ -90,21 +92,21 @@ export function tickRetake(s, dt, paused = false, at = now()) {
   const r = s.retake;
   if (!r) {
     const targets = heldOf(s).filter((f) => angry(s, f) && !lockedDown(s, f));
-    if (!targets.length) { net.retakeNext = null; return; }
-    if (net.retakeNext == null) net.retakeNext = HUBS.firstMs;
-    net.retakeNext -= dt;
-    if (net.retakeNext > 0) return;
-    const [lo, hi] = HUBS.everyMs;
-    net.retakeNext = Math.round(lo + rand(s) * (hi - lo));
-    return sendRetake(s, targets[Math.floor(rand(s) * targets.length)]);
+    if (!targets.length) { net.retakeAt = null; return; }
+    // Real time: the next one gathers whether you're logged on or not.
+    if (net.retakeAt == null) { const [lo, hi] = HUBS.everyMs; net.retakeAt = at + (net.retakeSent ? Math.round(lo + rand(s) * (hi - lo)) : HUBS.firstMs); }
+    if (at < net.retakeAt) return;
+    net.retakeAt = null; net.retakeSent = true;
+    return sendRetake(s, targets[Math.floor(rand(s) * targets.length)], at);
   }
   if (!captured(s, r.f) || lockedDown(s, r.f)) { s.retake = null; return; }
-  if (active(s) && s.encounter?.retake === r.id) return; // the clock waits while you fight
   if (r.state === 'travel') {
-    r.left -= dt;
-    if (r.left <= 0) { r.state = 'siege'; emit(s, 'hub-siege', `${FACTIONS[r.f].short} AT ${FACTIONS[r.f].hub.name}: ${r.ships} left. Defend within ${Math.round(HUBS.siegeMs / 60000)} minutes.`, { faction: r.f }); }
+    if (r.arriveAt == null) r.arriveAt = at + (r.left || 0); // a save from before real-time retakes
+    if (at >= r.arriveAt) { r.state = 'siege'; emit(s, 'hub-siege', `${FACTIONS[r.f].short} AT ${FACTIONS[r.f].hub.name}: ${r.ships} left. Defend within ${Math.round(HUBS.siegeMs / 60000)} minutes.`, { faction: r.f }); }
     return;
   }
+  // The siege: logged-on time only, and it waits while you fight.
+  if (paused || dt <= 0 || (active(s) && s.encounter?.retake === r.id)) return;
   r.siegeLeft -= dt;
   if (r.siegeLeft <= 0) {
     s.retake = null;

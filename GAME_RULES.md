@@ -661,7 +661,7 @@ Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 cr
   | NULL CHOIR | Scrap economy | salvage ×0.6, Cipher ×1.15 |
 
   World events turn over every 4 hours, never the same twice running: Ransomware outbreak (Cipher ×1.5), Worm season (Worm ×1.5), Patch Tuesday (all code ×0.8), Zero-day rush (Exploits ×1.6), Grid blackout (salvage ×1.5, Kernel ×1.25), Quiet market.
-- **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better per rep tier above Probation's). Each unit you sell somewhere takes 4% off its price there (each one you buy adds 4%, floor 35% of normal); the pressure eases 12% an hour, offline too.
+- **Spread and pressure:** a hub asks 15% over its price and pays 15% under (2% better per rep tier above Probation's). Each unit of a lot is priced after its own push, so selling a lot exactly undoes buying it: no round trip ever turns a profit, not even at a hub you hold. Each unit you sell somewhere takes 4% off its price there (each one you buy adds 4%, floor 35% of normal); the pressure eases 12% an hour, offline too.
 - **File transfers:** a sale leaves your stock now and its credits arrive when the transfer completes; a purchase is paid now and arrives later. Transfer time: Halcyon 5 min, Kestrel 8, LANTERN 10, GLASSJAW 12, NULL CHOIR 15; each relay on your servers cuts 10% (up to 40%). Transfers in progress show on the hub's Market card and can't be lost. Hostile factions won't trade.
 - `market sell|buy <faction> <ware> <n>` (1–99).
 - While a hub is wiped offline (see Payloads), the other hubs pay 25% more for whatever its condition was buying.
@@ -671,7 +671,7 @@ Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 cr
 Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed from the hub page's Payloads card. They execute on their own when they arrive.
 
 - **Compile:** 60 + 10×level credits, 10 code and 3 salvage. An **Exfil** takes Cipher code and pulls credits plus the code the hub hoards. A **Wiper** takes Worm code and knocks the hub offline. Power is 10 + 2×your level; spending an Exploit arms it (×1.5). You hold three at most.
-- **Deploy:** it uploads like a file transfer (same times, relays help). You can't hit a hub that's already offline.
+- **Deploy:** it uploads like a file transfer (same times, relays help). You can't hit a hub that's already offline. A payload that reaches a hub you've taken in the meantime stands down and returns to you.
 - **Execution:** power × a roll of ±20% against the hub's defence (12 + 2×hub level, +25% for each recent strike; one step eases every 6 hours). Under 70%, it's **Blocked**. From 70% to 100%, a **Partial** breach does half the job. At 100% and over, it's a **Breach**. Each payload you hold shows its likely band against that hub before you deploy it.
 - **Results:**
   - An Exfil on a breach pays 50 + 12×hub level credits and 6 + hub level/2 of the code its condition wants.
@@ -683,7 +683,7 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
 ### Hubs you hold
 
 - **Perks:** its market trades at the true price (no spread), its shop sells at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
-- **Retake swarms:** while the old owner is Hostile, it comes for the hub: 30 minutes of logged-on time after the capture, then every 2–4 hours, one at a time. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then an 8-minute siege; Intercept or Defend one process a fight (`hub defend <faction>`), and the clock waits while you fight. Break it for code, salvage and XP. The hub's map node flashes red with the timer.
+- **Retake swarms:** while the old owner is Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. These gather and travel on real time, so logging off doesn't dodge them, but the siege only counts down while you're logged on (you're never locked down while away). The hub earns nothing while a retake is out for it. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then an 8-minute siege; Intercept or Defend one process a fight (`hub defend <faction>`), and the clock waits while you fight. Break it for code, salvage and XP. The hub's map node flashes red with the timer.
 - **Lockdown:** if the siege runs out, the hub earns nothing until you clear it (one fight, `hub clear <faction>`). You never lose it for good.
 - **Striking a Hostile faction** (without holding its hub) gets one answer: a swarm in its colours at one of your outposts.
 
