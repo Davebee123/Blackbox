@@ -1959,7 +1959,7 @@ export function repBar(s, f) {
   const r = rep(s, f), t = repTier(s, f);
   const segs = REP_TIERS.map((min, i) => { const max = REP_TIERS[i + 1] ?? 101, fill = Math.max(0, Math.min(1, (r - min) / (max - min))); return `<span class="rb-seg${i === t.i ? ' on' : ''}" title="${esc(FX[f].tiers[i])} (${min}+)"><i style="width:${fill * 100}%"></i></span>`; }).join('');
   const neg = f === 'halcyon' ? '' : `<span class="rb-seg rb-neg${r < 0 ? ' on' : ''}" title="How deep: ${r < 0 ? r : 0} of −100"><i style="width:${Math.min(100, Math.max(0, -r))}%"></i></span>`;
-  return `<div class="repbar" style="--fc:${FX[f].color}" title="${esc(FX[f].short)}: ${r} · ${esc(t.name)}${t.next != null ? ` · next at ${t.next}` : ''}">${neg}${segs}<b>${esc(captured(s, f) ? 'Yours' : t.name)}${r < 0 ? ` ${r}` : ''}</b></div>`;
+  return `<div class="repbar" style="--fc:${FX[f].color}" title="${esc(FX[f].short)}: ${r} · ${esc(t.name)}${t.next != null ? ` · next at ${t.next}` : ''}">${neg}${segs}<b>${esc(t.name)}${r < 0 ? ` ${r}` : ''}</b></div>`;
 }
 const relations = (f) => `<div class="frel">${FX[f].allies.length ? `<span class="frel-k">allies</span>${FX[f].allies.map((x) => fIcon(x)).join('')}` : ''}${FX[f].rivals.length ? `<span class="frel-k">rivals</span>${FX[f].rivals.map((x) => fIcon(x)).join('')}` : ''}</div>`;
 function hubCard(s, f) {
@@ -1984,7 +1984,7 @@ export function hubMarkup(s, f, now = Date.now()) {
   return `<div class="page-grid hub-page" style="--fc:${F.color}"><div class="con-col">
     <section class="card fcard"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · ${esc(h.name)} · lv ${h.level}</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1><p>${esc(F.about)}</p>${repBar(s, f)}${relations(f)}</section>
     <section class="card"><h2>Work · ${offers.length} posted</h2>${work}</section>
-    ${captured(s, f) ? `<section class="card fcard" style="--fc:var(--you)"><h2>Yours</h2>${holdMarkup(s, f, now)}</section>` : donationOf(s, f).open && f !== 'halcyon' ? `<section class="card"><h2>Donate</h2>${donateMarkup(s, f)}</section>` : ''}
+    ${captured(s, f) ? `<section class="card fcard" style="--fc:var(--you)"><h2>Your hub</h2>${holdMarkup(s, f, now)}</section>` : donationOf(s, f).open && f !== 'halcyon' ? `<section class="card"><h2>Donate</h2>${donateMarkup(s, f)}</section>` : ''}
     <section class="card"><h2>Market</h2>${marketMarkup(s, f, now)}</section>
     ${captured(s, f) ? '' : `<section class="card"><h2>Payloads</h2>${payloadMarkup(s, f, now)}</section>`}
   </div><div class="con-col">
