@@ -703,7 +703,7 @@ Five PvE factions, companies and hacker crews, each with a colour, a mark and a 
 
 ### Markets
 
-Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 credits), Exploits (140) and salvage (7) (`market.mjs`). The Market card on each hub page shows what it pays and asks for each ware, with an arrow for how far off normal it is (hover it for why).
+Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 credits), Exploits (140) and salvage (7) (`market.mjs`). The Market card on each hub page shows, for each ware, what you hold (×N), what it pays here, and a chip for how that compares with the average across every hub (▲ green above, ▼ red below; hover it for the average and why), with Sell and Buy buttons. Transfers in progress show as bars that fill until they land.
 
 - **Prices move on things you can't change.** Each hub has its own fixed condition, and one world event at a time touches every hub:
 

@@ -20,6 +20,8 @@ To skip straight to a run in your real save, type `developer location ransomware
 
 ## Screens
 
+**Show, don't tell.** The screen shows state with numbers, bars, chips, pips and icons; explanations live in hover tooltips (`title`), never in sentences on the page. A count is `×N`, a comparison is a coloured `▲/▼ %` chip, progress is a bar, a cost is have/need chips, a state is a tag. Empty states are a word or two. New UI follows this; text that explains goes into a tooltip.
+
 The top bar shows **Map, Mail, Server, Craft, Loadout, Daemons, System** always, **Store** once the board opens (the fourth story letter), plus **Fight** and **Run** only while a fight or run is live.
 
 - **Sidebar:** on the left of every page (fights too, 1100px+; `sidebar off|on`): your crew's bars and the page's context (the map selection, or what needs you).

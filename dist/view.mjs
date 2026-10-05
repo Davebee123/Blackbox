@@ -163,7 +163,7 @@ export function timelineMarkup(s) {
     return `<div class="tcol">${head}${chips}${quiet}</div>`;
   });
   const hiddenRow = hidden
-    ? `<div class="hidden-row"><span class="tag">${e.blindUntil >= e.cycle ? 'Blinded' : 'Veiled'}</span> ${hiddenNote(s)} Known attacks: ${[...new Set(list.map((i) => i.name))].map(esc).join(', ')}.</div>`
+    ? `<div class="hidden-row"><span class="tag" title="${esc(hiddenNote(s))}">${e.blindUntil >= e.cycle ? 'Blinded' : 'Veiled'}</span> ${[...new Set(list.map((i) => i.name))].map((n) => `<span class="tag dim">${esc(n)}</span>`).join(' ')}</div>`
     : '';
   return cols.join('') + hiddenRow;
 }
@@ -667,19 +667,19 @@ export function matGrid(s) {
 }
 // A craft section: collapsible, its purpose in one line under the title.
 // Which ones you folded stay folded (s.settings.craftShut).
-const craftSection = (s, key, title, purpose, body, open = !(s.settings?.craftShut || []).includes(key)) => `<details class="card craft-sec" data-sec="${key}" ${open ? 'open' : ''}><summary><h2>${title}</h2><small>${esc(purpose)}</small></summary>${body}</details>`;
+const craftSection = (s, key, title, purpose, body, open = !(s.settings?.craftShut || []).includes(key)) => `<details class="card craft-sec" data-sec="${key}" ${open ? 'open' : ''}><summary><h2 title="${esc(purpose)}">${title}</h2></summary>${body}</details>`;
 
 export function craftMarkup(s, focus = null) {
   const p = protocolsParts(s, focus), srv = s.server, busy = p.busy;
   const why = s.run ? 'Craft at home: jack out first' : active(s) ? 'Finish the fight first' : '';
   const t = (x) => (why ? `title="${esc(why)}"` : '');
   // Protocols
-  const protoBody = `${p.mine.length ? `<div class="craft-row">${p.picker}${needChips(s, { credits: p.c.credits, salvage: p.ccost })}<button type="button" class="btn primary" data-command="compile${p.focus ? ' ' + p.focus : ''}" data-pay="protocol:${p.c.salvage}" data-pay-title="${esc(p.focus && STATS[p.focus] ? PROTOCOL_NAMES[p.focus] : 'Protocol')}" ${p.can(p.c) ? '' : 'disabled'} ${t()}>Compile${p.focus && STATS[p.focus] ? ' · ' + esc(PROTOCOL_NAMES[p.focus]) : ''}</button>${serviceVersion(s, 'buildfarm') ? ` <span class="tag you">−${serviceValue(s, 'buildfarm')}%</span>` : ''}</div>` : '<p class="quiet">No recipes yet: blueprints teach them.</p>'}
-      ${(s.recipes || []).some((z) => ZERO_DAYS[z]) ? `<h3 class="craft-sub">Zero-day source</h3><ul class="craft-list">${(s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday">${esc(ZERO_DAYS[z].name)}</b><small>${esc(ZERO_DAYS[z].effect)}</small>${needChips(s, { credits: p.zc.credits, salvage: p.zcost })}</span><button type="button" class="btn primary small" data-command="compile ${z}" data-pay="zeroday:${p.zc.salvage}" data-pay-title="${esc(ZERO_DAYS[z].name)}" ${p.can(p.zc) ? '' : 'disabled'} ${t()}>Compile</button></li>`).join('')}</ul>` : ''}`;
+  const protoBody = `${p.mine.length ? `<div class="craft-row">${p.picker}${needChips(s, { credits: p.c.credits, salvage: p.ccost })}<button type="button" class="btn primary" data-command="compile${p.focus ? ' ' + p.focus : ''}" data-pay="protocol:${p.c.salvage}" data-pay-title="${esc(p.focus && STATS[p.focus] ? PROTOCOL_NAMES[p.focus] : 'Protocol')}" ${p.can(p.c) ? '' : 'disabled'} ${t()}>Compile${p.focus && STATS[p.focus] ? ' · ' + esc(PROTOCOL_NAMES[p.focus]) : ''}</button>${serviceVersion(s, 'buildfarm') ? ` <span class="tag you">−${serviceValue(s, 'buildfarm')}%</span>` : ''}</div>` : '<p class="quiet" title="Blueprints teach them">No recipes</p>'}
+      ${(s.recipes || []).some((z) => ZERO_DAYS[z]) ? `<h3 class="craft-sub">Zero-day source</h3><ul class="craft-list">${(s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday" title="${esc(ZERO_DAYS[z].effect)}">${esc(ZERO_DAYS[z].name)}</b>${needChips(s, { credits: p.zc.credits, salvage: p.zcost })}</span><button type="button" class="btn primary small" data-command="compile ${z}" data-pay="zeroday:${p.zc.salvage}" data-pay-title="${esc(ZERO_DAYS[z].name)}" ${p.can(p.zc) ? '' : 'disabled'} ${t()}>Compile</button></li>`).join('')}</ul>` : ''}`;
   const protoCard = craftSection(s, 'protocols', `Protocols · Lv ${p.lvl} · ${p.mine.length}/${PROTOCOL_STATS.length} recipes`, 'A blue protocol at your level, built around the stat you pick.', protoBody);
   // Configs: sources you've banked, crafted once each
   const cfgs = configsKnown(s);
-  const cfgCard = cfgs.length ? craftSection(s, 'configs', `Configs · ${configsOwned(s).length}/${Object.keys(CONFIGS).length}`, 'Change how one of your services behaves. Crafted once, kept.', `<ul class="craft-list">${cfgs.map((id) => { const c = CONFIGS[id], got = configsOwned(s).includes(id), code = configCode(id), okc = !busy && srv.credits >= CONFIG_COST.credits && (materialsOf(s)[code] || 0) >= CONFIG_COST.code && canAfford(s, SALVAGE_COSTS.config()); return `<li><span><b class="iname">${glyph(c.service, 'badge')}${esc(c.name)} <span class="tag dim">${esc(SERVICES[c.service].name)}</span></b><small>${esc(c.rule)}</small>${got ? '' : needChips(s, { credits: CONFIG_COST.credits, code: { [code]: CONFIG_COST.code }, salvage: SALVAGE_COSTS.config() })}</span>${got ? '<span class="tag you">owned</span>' : `<button type="button" class="btn primary small" data-command="craft config ${id}" data-pay="config" data-pay-title="${esc(c.name)}" ${okc ? '' : 'disabled'} ${t()}>Craft</button>`}</li>`; }).join('')}</ul>`) : '';
+  const cfgCard = cfgs.length ? craftSection(s, 'configs', `Configs · ${configsOwned(s).length}/${Object.keys(CONFIGS).length}`, 'Change how one of your services behaves. Crafted once, kept.', `<ul class="craft-list">${cfgs.map((id) => { const c = CONFIGS[id], got = configsOwned(s).includes(id), code = configCode(id), okc = !busy && srv.credits >= CONFIG_COST.credits && (materialsOf(s)[code] || 0) >= CONFIG_COST.code && canAfford(s, SALVAGE_COSTS.config()); return `<li><span><b class="iname" title="${esc(c.rule)}">${glyph(c.service, 'badge')}${esc(c.name)} <span class="tag dim">${esc(SERVICES[c.service].name)}</span></b>${got ? '' : needChips(s, { credits: CONFIG_COST.credits, code: { [code]: CONFIG_COST.code }, salvage: SALVAGE_COSTS.config() })}</span>${got ? '<span class="tag you">owned</span>' : `<button type="button" class="btn primary small" data-command="craft config ${id}" data-pay="config" data-pay-title="${esc(c.name)}" ${okc ? '' : 'disabled'} ${t()}>Craft</button>`}</li>`; }).join('')}</ul>`) : '';
   // Harvesters
   const anyOwned = s.locations.some((l) => l.takenOver) || harvesters(s).length;
   const harvCard = anyOwned ? craftSection(s, 'harvesters', `Harvesters · rack ${harvesters(s).length}/${OUTPOST.stashCap}`, 'Goes on a server you took over and makes code while you play or sleep.', `<ul class="craft-list">${Object.keys(OUTPOST.kinds).map((k) => { const c = harvCost(k, s); return `<li><span><b class="iname">${glyph(k, 'badge')}${esc(OUTPOST.kinds[k].name)}</b><small>${esc(OUTPOST.kinds[k].about)}</small>${needChips(s, { credits: c.credits, code: { [c.material]: c.code }, salvage: c.salvage })}</span><button type="button" class="btn primary small" data-command="outpost compile ${k}" data-pay="harvester-${k}" data-pay-title="${esc(OUTPOST.kinds[k].name)}" ${!busy && canCompile(s, k) ? '' : 'disabled'} ${t()}>Craft</button></li>`; }).join('')}</ul>`) : '';
@@ -798,8 +798,8 @@ function configRow(s, id, busy) {
 // Server architecture: picked at server level 20, a trade each way.
 function archMarkup(s) {
   const lvl = serverLevel(s), cur = archOf(s), busy = active(s);
-  if (lvl < ARCH_LEVEL) return `<section class="card arch-card locked"><h2>Architecture</h2><p class="svc-line">Opens at server level ${ARCH_LEVEL}.</p></section>`;
-  const opts = Object.entries(ARCHITECTURES).map(([id, a]) => `<li class="${cur === id ? 'on' : ''}"><span><b class="iname">${glyph({ fortress: 'firewall', hub: 'router', lab: 'buildfarm' }[id], 'badge')}${esc(a.name)}</b><small>${esc(a.rule)}</small></span>${cur === id ? '<span class="tag you">running</span>' : `<button type="button" class="btn ${cur ? '' : 'primary'} small" data-command="architecture ${id}" ${busy || (cur && s.server.credits < ARCH_SWITCH) ? 'disabled' : ''} title="${cur ? `Rebuild as a ${esc(a.name)}: ${ARCH_SWITCH} credits` : 'Build around this'}">${cur ? `Switch (${ARCH_SWITCH}c)` : 'Choose'}</button>`}</li>`).join('');
+  if (lvl < ARCH_LEVEL) return `<section class="card arch-card locked"><h2>Architecture</h2><p class="svc-line"><span class="tag dim" title="Opens at server level ${ARCH_LEVEL}">server lv ${ARCH_LEVEL}</span></p></section>`;
+  const opts = Object.entries(ARCHITECTURES).map(([id, a]) => `<li class="${cur === id ? 'on' : ''}"><span><b class="iname" title="${esc(a.rule)}">${glyph({ fortress: 'firewall', hub: 'router', lab: 'buildfarm' }[id], 'badge')}${esc(a.name)}</b></span>${cur === id ? '<span class="tag you">running</span>' : `<button type="button" class="btn ${cur ? '' : 'primary'} small" data-command="architecture ${id}" ${busy || (cur && s.server.credits < ARCH_SWITCH) ? 'disabled' : ''} title="${cur ? `Rebuild as a ${esc(a.name)}: ${ARCH_SWITCH} credits` : 'Build around this'}">${cur ? `Switch (${ARCH_SWITCH}c)` : 'Choose'}</button>`}</li>`).join('');
   return `<section class="card arch-card"><h2>Architecture${cur ? ` · ${esc(ARCHITECTURES[cur].name)}` : ''}</h2><ul class="craft-list">${opts}</ul></section>`;
 }
 export function serverMarkup(s, now = Date.now()) {
@@ -1060,19 +1060,19 @@ export function peopleMarkup(s, tab = 'friends', now = Date.now()) {
         <span class="p-acts"><button type="button" class="act dim" data-run="crew kick ${esc(x.name)}">Remove from crew</button></span></li>`;
     }).join('');
     const open = Math.max(0, 3 - members.length);
-    const slots = Array.from({ length: open }, () => '<li class="person crew-slot"><span class="p-dot off"></span><b>Open slot</b><span class="p-where">Invite a friend or a consortium member who\'s online (Friends, Consortium or Online).</span></li>').join('');
-    return `<li class="con-head"><b>Your crew · ${members.length}/3</b><small>They join your run fights and follow you on runs.</small>${members.length ? '<span class="p-acts"><button type="button" class="act dim" data-run="crew off">Disband</button></span>' : ''}</li>${rows}${slots}`;
+    const slots = Array.from({ length: open }, () => '<li class="person crew-slot"><span class="p-dot off"></span><b>Open slot</b><span class="p-where" title="Invite a friend or a consortium member who\'s online">—</span></li>').join('');
+    return `<li class="con-head"><b title="They join your run fights and follow you on runs">Your crew · ${members.length}/3</b>${members.length ? '<span class="p-acts"><button type="button" class="act dim" data-run="crew off">Disband</button></span>' : ''}</li>${rows}${slots}`;
   };
   const list = tab === 'friends'
     ? all.filter((x) => x.friend).map(row).join('') + offline.map((h) => `<li class="person off"><span class="p-dot off"></span><b>${esc(h)}</b><small>offline</small><span class="p-acts"><button type="button" class="act dim" data-run="friend remove ${esc(h)}">Remove</button></span></li>`).join('')
     : tab === 'crew'
     ? crewTab()
     : tab === 'consortium'
-    ? (c ? `<li class="con-head"><b>${esc(c.name)}</b><small>${sizeOf(s)} servers merged${alertsOf(s).length ? ` · <b class="hot">${alertsOf(s).length} need${alertsOf(s).length === 1 ? 's' : ''} you</b>` : ''}</small><button type="button" class="btn primary small" data-go="consortium">Open the Consortium page</button></li>` + all.filter((x) => x.member).map(row).join('') + memberOffline.map((h) => `<li class="person off member"><span class="p-dot off"></span><b>${esc(h)}</b><small>away</small></li>`).join('') : invCard || '<li class="quiet">No consortium. Type: consortium create &lt;name&gt;</li>')
+    ? (c ? `<li class="con-head"><b>${esc(c.name)}</b><small>${sizeOf(s)} servers merged${alertsOf(s).length ? ` · <b class="hot">${alertsOf(s).length} need${alertsOf(s).length === 1 ? 's' : ''} you</b>` : ''}</small><button type="button" class="btn primary small" data-go="consortium">Open the Consortium page</button></li>` + all.filter((x) => x.member).map(row).join('') + memberOffline.map((h) => `<li class="person off member"><span class="p-dot off"></span><b>${esc(h)}</b><small>away</small></li>`).join('') : invCard || '<li class="quiet">No consortium</li>')
     : invCard + all.map(row).join('');
   return `<div class="comms-head"><span>People${simOn(s) ? ' · simulated' : ''}</span><button type="button" class="act" data-people-close>Close</button></div>
     <div class="comms-filters" role="group" aria-label="Show">${[['friends', `Friends ${all.filter((x) => x.friend).length}/${friends(s).length}`], ['crew', `Crew ${(s.crewSim || []).length}/3`], ['consortium', c ? `Consortium ${all.filter((x) => x.member).length}/${c.members.length}` : inv ? 'Consortium •' : 'Consortium'], ['online', `Online ${all.length}`]].map(([k, l]) => `<button type="button" data-ptab="${k}" aria-pressed="${tab === k}">${esc(l)}</button>`).join('')}</div>
-    <ul class="comms-list people-list">${list || `<li class="quiet">${!simOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends yet: add some from Online.' : 'Nobody else is online.'}</li>`}</ul>`;
+    <ul class="comms-list people-list">${list || `<li class="quiet">${!simOn(s) ? 'Nobody online. (online sim)' : tab === 'friends' ? 'No friends' : 'Nobody else is online.'}</li>`}</ul>`;
 }
 
 // ---------- the Consortium page (consortium.mjs) ----------
@@ -1101,10 +1101,9 @@ export function consortiumMarkup(s, now = Date.now()) {
   const c = consortiumOf(s), inv = s.consortiumInvite, busy = active(s) || !!s.run;
   if (!c) {
     const invite = inv ? `<section class="card alert"><h2>Invite · ${fmtTime(inv.left)} left</h2><h1>${esc(inv.name)}</h1>
-      <p>${esc(inv.from)} invites you to merge your server with ${inv.members.length} others. You'd reach their outposts and servers, share their dividend, and keep everything of yours.</p>
+      <p class="svc-line" title="Merge: reach their outposts and servers, share their dividend, keep everything of yours">${glyph('router')} ${esc(inv.from)} · ${inv.members.length + 1} members</p>
       <div class="row">${btn('consortium accept', 'Merge', true)}${btn('consortium decline', 'Decline')}</div></section>` : '';
-    return `<div class="page-grid"><div class="con-col">${invite}<section class="card"><h2>Consortium</h2><h1>None</h1>
-      <p>Merge servers with other hackers: reach each other's outposts and servers, earn a share of what their outposts make, and defend each other while you're away.</p>
+    return `<div class="page-grid"><div class="con-col">${invite}<section class="card"><h2>Consortium</h2><h1 title="Merge servers with other hackers: reach each other's outposts and servers, share what their outposts make, defend each other while away">None</h1>
       <div class="row"><button type="button" class="btn ${inv ? '' : 'primary'}" data-prefill="consortium create ">Found one</button></div></section></div></div>`;
   }
   const alerts = alertsOf(s), on = online(s, now), onSet = new Set(on.map((x) => x.handle));
@@ -1129,7 +1128,7 @@ export function consortiumMarkup(s, now = Date.now()) {
     <section class="card"><h2>Needs you${alerts.length ? ` · ${alerts.length}` : ''}</h2>
       ${alerts.length ? `<div class="con-alarms">${alerts.map((a) => alarmCard(s, a, busy)).join('')}</div>` : '<p class="quiet">All quiet on the trunk line.</p>'}</section>
     <section class="card"><h2>Members · ${c.members.filter((h) => onSet.has(h)).length} online of ${c.members.length}</h2>
-      ${c.members.length ? `<ul class="con-members">${c.members.map(member).join('')}</ul>` : '<p class="quiet">Just you. Invite people from the people panel (Online).</p>'}</section>
+      ${c.members.length ? `<ul class="con-members">${c.members.map(member).join('')}</ul>` : '<p class="quiet">Just you</p>'}</section>
   </div><div class="con-col">
     <section class="card"><h2>Consortium</h2><h1>${esc(c.name)}</h1>
       <p>${size} servers merged · founded by ${esc(c.founder)} · ${memberServers(s).length} servers on the network</p>
@@ -1280,7 +1279,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
       </section>
     </div>` : id === equippedArch ? `
     <div class="loadout-protocols">${protocolStashCard(s)}${protocolSlotsCard(s)}</div>` : `
-    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line">Protocols belong to the class in use. Switch to ${esc(a.name)} to change its protocols.</p></section></div>`}
+    <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}
     </div>`;
 }
 
@@ -1546,7 +1545,7 @@ function dropLine(s, l) {
 // In a consortium, your wall meets invaders while you're logged off: what it stops.
 function awayLine(s) {
   if (!consortiumOf(s)) return '';
-  if (s.degraded) return '<p class="svc-line"><span class="tag warn">Away</span> Rebooting: no wall until it\'s back up.</p>';
+  if (s.degraded) return '<p class="svc-line"><span class="tag warn" title="No wall until it\'s back up">Rebooting</span></p>';
   const b = wallBands(s, wallRating(s) * archWall(s) * consortiumWall(s));
   const top = Math.max(0, ...(s.locations || []).filter((l) => !l.rogue).map((l) => l.level || 1));
   const safe = top && b.blocks >= top;
@@ -1624,8 +1623,8 @@ function mapSide(s, sel, node) {
       <p>${esc(ARCHETYPES[p.cls].name)} · ${node.online ? '<span class="tag tag-con">online</span>' : '<span class="tag dim">offline</span>'}${c.founder === h ? ' <span class="tag">founder</span>' : ''}</p>
       <div class="stats">${stat('Servers', mine.length)}${stat('Outposts', mine.filter((l) => l.held).length)}${stat('Rogue', mine.filter((l) => l.rogue).length)}${stat('Outposts pay you', `${Math.round(CONSORTIUM.dividend.share * 100)}%`)}</div>
       ${mine.map((l) => `<p class="svc-line"><button type="button" class="act" data-select="${esc(l.id)}">${esc(l.name)}</button> ${l.rogue ? 'rogue' : l.held ? esc(l.held.kind) + ' outpost' : 'traced'} · lv ${l.level}${l.held?.siege ? ' <span class="tag hot">invasion</span>' : ''}</p>`).join('')}
-      ${consortiumOf(s).raid?.member === h ? `<p class="svc-line"><span class="tag hot">Invader</span> ${esc(consortiumOf(s).raid.name)} lv ${consortiumOf(s).raid.level} at their wall · ${fmtLeft(consortiumOf(s).raid.left)}</p><div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(h)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend their wall</button></div>` : ''}
-      ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn">Rebooting</span> occupied: their server is on the map below them. Their outposts pay nothing meanwhile.</p>' : ''}</section>`;
+      ${consortiumOf(s).raid?.member === h ? `<p class="svc-line"><span class="tag hot">Invasion</span> ${esc(consortiumOf(s).raid.name)} lv ${consortiumOf(s).raid.level} at their wall · ${fmtLeft(consortiumOf(s).raid.left)}</p><div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(h)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend their wall</button></div>` : ''}
+      ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn" title="Crashed: their server is on the map below them, open to clear. Their outposts pay nothing meanwhile.">Crashed</span></p>' : ''}</section>`;
   }
   if (node.kind === 'intrusion') return alertCard();
   if (false) {
@@ -1665,7 +1664,7 @@ function mapSide(s, sel, node) {
     return `<section class="card alert"><h2>${l.member ? `${esc(l.member)}'s server` : 'Your server'} · rebooting</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)} · occupied</p>
       <div class="stats">${stat('Processes', `${live}/${rogueRooms(l).length}`)}${stat('Back up in', fmtTime(l.member ? l.occupied.left : degradedLeft(s)))}</div>
-      <p class="svc-line">Clear every folder to bring it back up now.${l.member ? ' A bounty for it.' : ''}</p>
+      <p class="svc-line"><span class="tag warn" title="Clear every folder to bring it back up${l.member ? ' (a bounty)' : ''}">Crashed</span></p>
       <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>Connect</button>`}</div></section>`;
   }
   if (l.rogue) {
@@ -1673,7 +1672,7 @@ function mapSide(s, sel, node) {
     return `<section class="card"><h2>${l.trunk ? 'Trunk server' : l.member ? `${esc(l.member)}'s rogue server` : 'Rogue server'}${l.depth > 1 ? ` · layer ${l.depth}` : ''}</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}</p>
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
-      <p class="svc-line">Wild: it can't be taken over, and it never sends invasions.</p>
+      <p class="svc-line"><span class="tag dim" title="Can't be taken over; never sends invasions">wild</span></p>
       ${consortiumLine(s, l)}
       <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Detach ${esc(l.name)}? It freezes as it is (and what you found through it) until you attach it again." ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
@@ -1972,56 +1971,63 @@ function hubCard(s, f) {
 // The hub page: who they are, your rep, their shop, their work, their servers on your map.
 export function hubMarkup(s, f, now = Date.now()) {
   const F = FX[f], h = hubOf(s, f);
-  if (!F || !h) return '<div class="page-grid"><section class="card"><h2>Hub</h2><p class="quiet">Faction hubs open with the contract board.</p></section></div>';
+  if (!F || !h) return '<div class="page-grid"><section class="card"><h2>Hub</h2><p class="quiet" title="Hubs open with the contract board">Locked</p></section></div>';
   const goods = f === 'halcyon'
-    ? `<p class="svc-line">Halcyon's goods are its store: relays, heals, its chase protocols and other agencies' stock, delivered at once.</p><div class="row"><button type="button" class="btn primary" data-go="store">Open the store</button></div>`
-    : hostile(s, f) || offline(s, f, now) ? '' : `<ul class="craft-list">${shopOf(s, f, now).map((g) => `<li class="${g.locked ? 'locked' : ''}"><span><b class="iname">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small><small class="cost">${g.left} left</small></span>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn ${s.server.credits >= g.price && g.left ? 'primary' : ''} small" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>${glyph('credits')}${g.price}</button>`}</li>`).join('')}</ul>`;
+    ? `<div class="row"><button type="button" class="btn primary" data-go="store" title="Relays, heals, chase protocols, agencies' stock: delivered at once">Open the store</button></div>`
+    : hostile(s, f) || offline(s, f, now) ? '' : `<ul class="craft-list">${shopOf(s, f, now).map((g) => `<li class="${g.locked ? 'locked' : ''}"><span class="mk-ware"><b class="iname" title="${esc(g.about)}">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><span class="mk-have${g.left ? '' : ' zero'}" title="In stock">×${g.left}</span></span>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn ${s.server.credits >= g.price && g.left ? 'primary' : ''} small" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>${glyph('credits')}${g.price}</button>`}</li>`).join('')}</ul>`;
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
   const held = (s.mail?.jobs || []).filter((j) => !j.done && (j.faction || 'halcyon') === f && j.story === undefined);
-  const work = `${offers.length ? `<ul class="craft-list">${offers.map((o) => `<li><span><b>${esc(o.subject)}</b><small>${esc(contractTitle(s, o))}</small><small class="cost">${esc(rewardLine(s, o))}</small></span><button type="button" class="btn primary small" data-command="mail accept ${o.id}">Take</button></li>`).join('')}</ul>` : '<p class="quiet">Nothing posted right now. New work turns up on the board.</p>'}
+  const work = `${offers.length ? `<ul class="craft-list">${offers.map((o) => `<li><span><b>${esc(o.subject)}</b><small>${esc(contractTitle(s, o))}</small><small class="cost">${esc(rewardLine(s, o))}</small></span><button type="button" class="btn primary small" data-command="mail accept ${o.id}">Take</button></li>`).join('')}</ul>` : '<p class="quiet">Nothing posted.</p>'}
     ${held.length ? `<h3 class="craft-sub">Yours</h3><ul class="craft-list">${held.map((j) => `<li><span><b>${esc(contractTitle(s, j))}</b><small>${esc(contractProgress(s, j).text)}</small></span><button type="button" class="btn small" data-go="mail:${j.id}">Mail</button></li>`).join('')}</ul>` : ''}`;
   const theirs = s.locations.filter((l) => l.faction === f);
-  const servers = theirs.length ? `<ul class="craft-list">${theirs.map((l) => `<li><span><b>${esc(l.name)}</b><small>lv ${l.level} · layer ${l.depth || 1}</small></span><button type="button" class="btn small" data-go="map:${esc(l.id)}">Map</button></li>`).join('')}</ul><p class="svc-line">Opening one of their vaults takes the server from them: ${F.short} −${OWNED.takeoverHit}, its rivals warm to you.</p>` : '<p class="quiet">None of theirs on your map yet.</p>';
+  const servers = theirs.length ? `<ul class="craft-list">${theirs.map((l) => `<li><span><b>${esc(l.name)}</b><small>lv ${l.level} · layer ${l.depth || 1}</small></span><button type="button" class="btn small" data-go="map:${esc(l.id)}">Map</button></li>`).join('')}</ul>` : '<p class="quiet">None on your map.</p>';
   return `<div class="page-grid hub-page" style="--fc:${F.color}"><div class="con-col">
     <section class="card fcard"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · ${esc(h.name)} · lv ${h.level}</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1><p>${esc(F.about)}</p>${repBar(s, f)}${relations(f)}</section>
     <section class="card"><h2>Work · ${offers.length} posted</h2>${work}</section>
     ${captured(s, f) ? `<section class="card fcard" style="--fc:var(--you)"><h2>Your hub</h2>${holdMarkup(s, f, now)}</section>` : donationOf(s, f).open && f !== 'halcyon' ? `<section class="card"><h2>Donate</h2>${donateMarkup(s, f)}</section>` : ''}
-    ${captured(s, f) ? '' : `<section class="card"><h2>Payloads</h2>${payloadMarkup(s, f, now)}</section>`}
-  </div><div class="con-col">
     <section class="card"><h2>Market</h2>${marketMarkup(s, f, now)}${goods ? `<h3 class="craft-sub">Goods</h3>${goods}` : ''}</section>
-    <section class="card"><h2>Their servers on your map · ${theirs.length}</h2>${servers}</section>
+  </div><div class="con-col">
+    ${captured(s, f) ? '' : `<section class="card"><h2>Payloads</h2>${payloadMarkup(s, f, now)}</section>`}
+    <section class="card"><h2 title="Open a vault: ${esc(F.short)} −${OWNED.takeoverHit}, its rivals +${Math.round(OWNED.takeoverHit * 0.5)}">Their servers · ${theirs.length}</h2>${servers}</section>
   </div></div>`;
 }
 // A hub you hold: what it has earned, what it earns, and anyone coming to take it back.
 function holdMarkup(s, f, now) {
-  const r = retakeOf(s), mine = r && r.f === f, lock = s.hubs[f].captured.lockdown, bank = bankOf(s, f), inc = incomeOf(s, f), d = demandOf(s, f);
-  const earn = `<ul class="craft-list"><li><span><b class="iname">${glyph('credits', 'badge')}${bank} credits</b><small class="cost" title="Its cut of the trade: more while what it deals in is in demand (×${d.toFixed(2)} now). Holds ${HUBS.bankHours} h.">${lock ? 'locked down: earning nothing' : `+${inc} an hour`}</small></span><button type="button" class="btn small ${bank ? 'primary' : ''}" data-command="hub collect ${f}" ${bank ? '' : 'disabled'}>Collect</button></li></ul>`;
+  const r = retakeOf(s), mine = r && r.f === f, lock = s.hubs[f].captured.lockdown, bank = bankOf(s, f), inc = incomeOf(s, f), d = demandOf(s, f), cap = HUBS.bankHours * inc;
+  const earn = `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><b class="iname">${glyph('credits', 'badge')}${bank}</b><span class="div-fill" title="${bank} of ${cap}"><span style="width:${cap ? Math.min(100, (bank / cap) * 100) : 0}%"></span></span></span><span class="mk-val">${lock || mine ? '<span class="tag hot">+0/h</span>' : `<span class="tag you" title="×${d.toFixed(2)} demand">+${inc}/h</span>`}</span><span class="mk-btns"><button type="button" class="btn small ${bank ? 'primary' : ''}" data-command="hub collect ${f}" ${bank ? '' : 'disabled'}>Collect</button></span></li></ul>`;
+  const pips = (n, of) => `<span class="pips" title="${n} of ${of} left">${'◆'.repeat(n)}${'◇'.repeat(of - n)}</span>`;
   const threat = lock
-    ? `<ul class="craft-list"><li><span><b class="hot">Lockdown</b><small>${esc(FX[f].short)} holds it · lv ${lock.level}</small></span><button type="button" class="btn small primary" data-command="hub retake ${f}">Retake</button></li></ul>`
-    : mine ? `<ul class="craft-list"><li><span><b class="hot">Swarm from ${esc(FX[f].short)} · ${r.ships} of ${r.total}</b><small>lv ${r.level} · ${r.state === 'travel' ? `arrives in ${fmtLeft(retakeLeft(s, now))}` : `falls in ${fmtLeft(r.siegeLeft)}`}</small></span><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></li></ul>` : '';
+    ? `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><span class="tag hot">Lockdown</span>${fIcon(f)}<span class="mk-have">lv ${lock.level}</span></span><span></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="hub retake ${f}">Retake</button></span></li></ul>`
+    : mine ? (() => { const left = retakeLeft(s, now), total = r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs; return `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><b class="hot">Swarm from ${esc(FX[f].short)}</b>${pips(r.ships, r.total)}<span class="mk-have">lv ${r.level}</span></span><span class="xfer-bar hot" title="${r.state === 'travel' ? 'Arrives' : 'Falls'} in ${fmtLeft(left)}"><i style="width:${Math.round((1 - left / total) * 100)}%"></i></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></span></li></ul>`; })() : '';
   return earn + threat;
 }
 // Buying your way back toward Neutral: dearer the deeper you are.
 function donateMarkup(s, f) {
   const d = donationOf(s, f), mats = materialsOf(s), ok = s.server.credits >= d.credits && (mats[d.ware] || 0) >= d.code;
-  return `<ul class="craft-list"><li><span><b class="iname">${glyph(d.ware, 'badge')}+5 rep</b><small class="cost"${d.x > 1 ? ` title="×${d.x.toFixed(1)}: how deep you are with them"` : ''}>${d.credits} credits · ${d.code} ${esc(d.ware)}${d.x > 1 ? ` <span class="hot">×${d.x.toFixed(1)}</span>` : ''}</small></span><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="hub donate ${f}" ${ok ? '' : 'disabled'}>Donate</button></li></ul>`;
+  return `<ul class="craft-list"><li><span><b class="iname">${fIcon(f)}Donation</b>${needChips(s, { credits: d.credits, code: { [d.ware]: d.code } })}${d.x > 1 ? `<span class="mk-d down" title="Inflated by how deep you are">×${d.x.toFixed(1)}</span>` : ''}</span><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="hub donate ${f}" ${ok ? '' : 'disabled'}>+5 rep</button></li></ul>`;
 }
 // Payloads against this hub: its defence, what you hold (with how each would land), compile, in flight.
 const BAND = { breach: ['Breach', 'you'], siege: ['Partial', ''], blocked: ['Blocked', 'dim'] };
+// A payload's power against a hub's defence: the fill, with notches where Partial and Breach begin.
+const PW_SPAN = 1.5;
+function powerBar(power, def, band) {
+  const at = (r) => `${Math.round((r / PW_SPAN) * 100)}%`;
+  return `<span class="pw-bar ${band}" title="Power ${power} · defence ${def} (±${PAYLOAD.swing * 100}% a run)"><i style="width:${at(Math.min(PW_SPAN, power / def))}"></i><u style="left:${at(PAYLOAD.bands.siege)}"></u><u style="left:${at(PAYLOAD.bands.breach)}"></u></span>`;
+}
 function payloadMarkup(s, f, now) {
   const def = defenceOf(s, f, now), alert = alertOf(s, f, now), off = offline(s, f, now), mats = materialsOf(s), L = hackerLevel(s);
-  const head = `<div class="row mk-tags"><span class="tag" title="Its defence${alert ? `, raised by ${alert} recent strike${alert > 1 ? 's' : ''}` : ''}">defence ${def}${alert ? ' ' + '▲'.repeat(alert) : ''}</span>${off ? `<span class="tag hot" title="Wiped: shop and market shut">offline ${Math.max(1, Math.ceil((s.hubs[f].offlineUntil - now) / 60000))} min</span>` : ''}</div>`;
-  const held = builtOf(s).map((p) => { const b = BAND[forecastStrike(s, p, f, now)], gone = p.kind === 'backdoor' ? f === 'halcyon' : off; return `<li><span><b class="iname">${glyph(PAYLOADS[p.kind].code, 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b><small class="cost">power ${p.power}${p.armed ? ' · armed' : ''}</small></span><span class="mk-btns"><span class="tag ${b[1]}" title="Most likely, against defence ${def} (each run swings ±${PAYLOAD.swing * 100}%)">${b[0]}</span><button type="button" class="btn small primary" data-command="payload deploy ${p.id} ${f}" ${gone ? 'disabled' : ''}>Deploy</button></span></li>`; }).join('');
-  const credits = PAYLOAD.credits(L), full = builtOf(s).length >= PAYLOAD.maxBuilt;
+  const head = `<div class="row mk-tags"><span class="tag" title="Defence${alert ? ` · +${alert * PAYLOAD.alertStep * 100}% from recent strikes` : ''}">${glyph('firewall')} ${def}${alert ? ' ' + '▲'.repeat(alert) : ''}</span>${off ? `<span class="tag hot" title="Offline">offline ${Math.max(1, Math.ceil((s.hubs[f].offlineUntil - now) / 60000))} min</span>` : ''}</div>`;
+  const held = builtOf(s).map((p) => { const band = forecastStrike(s, p, f, now), b = BAND[band], gone = p.kind === 'backdoor' ? f === 'halcyon' : off; return `<li class="mk-row"><span class="mk-ware"><b class="iname" title="${esc(PAYLOADS[p.kind].about)}">${glyph(PAYLOADS[p.kind].code, 'badge')}${esc(PAYLOADS[p.kind].name)} #${p.id}</b>${p.armed ? `<span class="mk-have" title="Armed">${glyph('exploit')}</span>` : ''}</span><span class="mk-val">${powerBar(p.power, def, band)}<span class="tag ${b[1]}">${b[0]}</span></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="payload deploy ${p.id} ${f}" ${gone ? 'disabled' : ''}>Deploy</button></span></li>`; }).join('');
+  const credits = PAYLOAD.credits(L), full = builtOf(s).length >= PAYLOAD.maxBuilt, pw = PAYLOAD.power(L);
   const make = Object.entries(PAYLOADS).map(([k, P]) => {
     const ok = !full && s.server.credits >= credits && (mats[P.code] || 0) >= PAYLOAD.code && (s.salvage || []).length >= PAYLOAD.salvage;
-    const cost = `${credits} credits · ${PAYLOAD.code} ${P.code} · ${PAYLOAD.salvage} salvage`;
-    return `<li><span><b class="iname">${glyph(P.code, 'badge')}${esc(P.name)}</b><small>${esc(P.about)}</small><small class="cost">${cost} · power ${PAYLOAD.power(L)}</small></span><span class="mk-btns"><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="payload compile ${k}" ${ok ? '' : 'disabled'}>Compile</button>${(mats.exploit || 0) >= 1 ? `<button type="button" class="btn small" data-command="payload compile ${k} exploit" ${ok ? '' : 'disabled'} title="Spend an Exploit: power ${Math.round(PAYLOAD.power(L) * PAYLOAD.armed)}">${glyph('exploit')}Arm</button>` : ''}</span></li>`;
+    const band = k === 'backdoor' && !off ? 'blocked' : forecastStrike(s, { kind: k, power: pw }, f, now);
+    return `<li><span><b class="iname" title="${esc(P.about)}">${glyph(P.code, 'badge')}${esc(P.name)}</b>${needChips(s, { credits, code: { [P.code]: PAYLOAD.code }, salvage: { any: PAYLOAD.salvage, need: [] } })}${powerBar(pw, def, band)}</span><span class="mk-btns"><button type="button" class="btn small ${ok ? 'primary' : ''}" data-command="payload compile ${k}" ${ok ? '' : 'disabled'}>Compile</button>${(mats.exploit || 0) >= 1 ? `<button type="button" class="btn small" data-command="payload compile ${k} exploit" ${ok ? '' : 'disabled'} title="Power ${Math.round(pw * PAYLOAD.armed)}">${glyph('exploit')}Arm</button>` : ''}</span></li>`;
   }).join('');
   const going = flyingOf(s).filter((x) => x.f === f);
-  const fly = going.length ? `<h3 class="craft-sub">Uploading</h3><ul class="craft-list">${going.map((x) => `<li><span><b>→ ${esc(PAYLOADS[x.kind].name)} #${x.id}</b><small>${Math.max(1, Math.ceil((x.landsAt - now) / 60000))} min</small></span></li>`).join('')}</ul>` : '';
-  const last = lastStrike(s), lastLine = last && last.f === f ? `<p class="svc-line">Last: ${esc(PAYLOADS[last.kind].name)} #${last.id}, ${BAND[last.band][0].toLowerCase()}${last.got.length ? ': ' + esc(last.got.join(', ')) : ''}.</p>` : '';
-  return `${head}${held ? `<ul class="craft-list">${held}</ul>` : ''}${fly}${lastLine}<h3 class="craft-sub">Compile${full ? ' · hold full' : ''}</h3><ul class="craft-list">${make}</ul>`;
+  const fly = going.length ? `<h3 class="craft-sub">Uploading</h3><ul class="craft-list">${going.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<li class="mk-xfer"><span class="mk-ware"><b class="iname">→ ${glyph(PAYLOADS[x.kind].code, 'badge')}${esc(PAYLOADS[x.kind].name)} #${x.id}</b></span><span></span><span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span></li>`; }).join('')}</ul>` : '';
+  const last = lastStrike(s), lastLine = last && last.f === f ? `<div class="row mk-tags"><span class="tag dim">Last · ${esc(PAYLOADS[last.kind].name)} #${last.id}</span><span class="tag ${BAND[last.band][1]}">${BAND[last.band][0]}</span>${last.got.map((g) => `<span class="tag you">${esc(g)}</span>`).join('')}</div>` : '';
+  return `${head}${held ? `<ul class="craft-list">${held}</ul>` : ''}${fly}${lastLine}<h3 class="craft-sub">Compile${full ? ` · ${PAYLOAD.maxBuilt}/${PAYLOAD.maxBuilt}` : ''}</h3><ul class="craft-list">${make}</ul>`;
 }
 // The hub's market: what it pays and asks for each ware, why (hover the arrow), and your transfers.
 function marketMarkup(s, f, now) {
@@ -2031,14 +2037,17 @@ function marketMarkup(s, f, now) {
   const haveOf = (w) => (w === 'salvage' ? (s.salvage || []).length : mats[w] || 0);
   const min = Math.round(travelMs(s, f) / 60000);
   const rows = WARE_IDS.map((w) => {
-    const q = quote(s, f, w), n = haveOf(w), lot = Math.min(10, n), why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : ''].filter(Boolean).join(' · ') || 'Normal price';
-    const arrow = q.mult > 1.05 ? `<span class="mk-up" title="${esc(why)}">▲${Math.round((q.mult - 1) * 100)}%</span>` : q.mult < 0.95 ? `<span class="mk-down" title="${esc(why)}">▼${Math.round((1 - q.mult) * 100)}%</span>` : `<span class="mk-flat" title="${esc(why)}">—</span>`;
-    const sellBtn = (k) => `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k && k ? '' : 'disabled'} title="Sell ${k}: about ${q.sell * k} credits, lands in ${min} min">Sell ${k}</button>`;
-    const buyBtn = `<button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="Buy 1: lands in ${min} min">${glyph('credits')}${q.buy}</button>`;
-    return `<li><span><b class="iname">${glyph(GLYPH_OF_GOOD[w], 'badge')}${esc(WARES[w].name)} ${arrow}</b><small class="cost">pays ${q.sell} · you have ${n}</small></span><span class="mk-btns">${sellBtn(1)}${lot > 1 ? sellBtn(lot) : ''}${buyBtn}</span></li>`;
+    const q = quote(s, f, w), n = haveOf(w), lot = Math.min(10, n);
+    // Its value here against the average across every hub: the one number that says where to sell.
+    const avg = FACTION_IDS.reduce((a, g) => a + quote(s, g, w).sell, 0) / FACTION_IDS.length, d = Math.round((q.sell / avg - 1) * 100);
+    const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : ''].filter(Boolean).join(' · ');
+    const chip = `<span class="mk-d ${d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat'}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${d >= 3 ? '▲' : d <= -3 ? '▼' : '='}${Math.abs(d)}%</span>`;
+    const sellBtn = (k) => `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k && k ? '' : 'disabled'} title="+${q.sell * k} · ${min} min">Sell ${k}</button>`;
+    const buyBtn = `<button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="Buy 1 · ${min} min">Buy ${glyph('credits')}${q.buy}</button>`;
+    return `<li class="mk-row"><span class="mk-ware"><b class="iname">${glyph(GLYPH_OF_GOOD[w], 'badge')}${esc(WARES[w].name)}</b><span class="mk-have${n ? '' : ' zero'}" title="You have ${n}">×${n}</span></span><span class="mk-val" title="What it pays here, each">${glyph('credits')}<b>${q.sell}</b>${chip}</span><span class="mk-btns">${sellBtn(1)}${lot > 1 ? sellBtn(lot) : ''}${buyBtn}</span></li>`;
   }).join('');
   const mine = transfersOf(s).filter((x) => x.f === f);
-  const flying = mine.length ? `<h3 class="craft-sub">In transfer</h3><ul class="craft-list">${mine.map((x) => `<li><span><b>${x.side === 'sell' ? '→' : '←'} ${x.side === 'good' ? esc(x.name) : `${x.n} ${esc(WARES[x.w].name)}`}</b><small>${x.side === 'sell' ? `+${x.credits} credits` : `paid ${x.credits}`} · ${Math.max(1, Math.ceil((x.landsAt - now) / 60000))} min</small></span></li>`).join('')}</ul>` : '';
-  return `<div class="row mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer time">${min} min</span></div><ul class="craft-list">${rows}</ul>${flying}`;
+  const flying = mine.length ? `<h3 class="craft-sub">In transfer</h3><ul class="craft-list">${mine.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<li class="mk-xfer"><span class="mk-ware"><b class="iname">${x.side === 'sell' ? '→' : '←'} ${x.side === 'good' ? `${glyph(GLYPH_OF_GOOD[x.good] || 'crate', 'badge')}${esc(x.name)}` : `${glyph(GLYPH_OF_GOOD[x.w], 'badge')}×${x.n}`}</b></span><span class="mk-val ${x.side === 'sell' ? 'in' : 'out'}">${glyph('credits')}<b>${x.side === 'sell' ? '+' : '−'}${x.credits}</b></span><span class="xfer-bar" title="${Math.max(1, Math.ceil(left / 60000))} min"><i style="width:${pct}%"></i></span></li>`; }).join('')}</ul>` : '';
+  return `<div class="row mk-tags"><span class="tag" title="${esc(cond.about)}">${esc(cond.name)}</span><span class="tag dim" title="${esc(ev.about)}">${esc(ev.name)}</span><span class="tag dim" title="File transfer">⇄ ${min} min</span></div><ul class="craft-list">${rows}</ul>${flying}`;
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint', daemon: 'daemon' };
