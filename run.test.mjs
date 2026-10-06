@@ -689,3 +689,16 @@ test('a server’s file count only counts its own files: dead drops and route fi
   for (const f of files) loc.state.taken[f] = true;
   assert.equal(runMod.takenOf(loc), files.length);
 });
+
+test('a relay’s pinged neighbours get route files and count kills of their family, contract or not', async () => {
+  const { installRelay, items, hiddenNodes, huntKill } = await import('./dist/hidden.mjs');
+  const s = located('worm');
+  const loc = s.locations[0]; loc.takenOver = true; items(s).relay = 1;
+  installRelay(s, loc.id);
+  const near = hiddenNodes(s).filter((n) => n.via === loc.id);
+  assert.ok(near.length && near.every((n) => n.pinged));
+  assert.deepEqual((loc.extraFiles || []).filter((f) => f.kind === 'route').map((f) => f.hidden).sort(), near.map((n) => n.id).sort());
+  const n = near[0], was = n.lead;
+  huntKill(s, n.family);
+  assert.equal(n.lead, was + 12);
+});

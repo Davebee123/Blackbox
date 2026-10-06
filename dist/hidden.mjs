@@ -64,7 +64,7 @@ export function hiddenLead(s, n, amount, why = '') {
 
 // A kill of a family: flagged nodes of that family get closer (you're reading their traffic).
 export function huntKill(s, family) {
-  for (const n of hiddenNodes(s).filter((x) => x.family === family && flagged(s, x))) hiddenLead(s, n, HIDDEN.killLead, 'Signal: ');
+  for (const n of hiddenNodes(s).filter((x) => x.family === family && x.pinged)) hiddenLead(s, n, HIDDEN.killLead, 'Signal: '); // a relay next to it hears every kill of its family
 }
 
 // Relays -------------------------------------------------------------------------------------
@@ -91,10 +91,12 @@ export function syncFlags(s) {
   for (const n of hiddenNodes(s)) {
     const via = locOf(s, n.via);
     if (via?.relay) n.pinged = true;
-    if (!flagged(s, n) || n.routed) continue;
+    // Every server a relay pings leaves a route file on the relay's server; a contract's target is flagged too.
+    if (!n.pinged || n.routed || !via) continue;
     n.routed = true;
-    (via.extraFiles ||= []).push({ dir: '/', name: `ping-${n.id}.trc`, label: 'a relay route file', kind: 'route', hidden: n.id, text: ['relay log: a signal that matches the contract, one hop out.', 'pull it and bank it to trace most of the route.'] });
-    emit(s, 'flagged', `Relay on ${via.name}: one unknown server carries the contract's signal. It's flagged on the map.`, { hidden: n.id });
+    const wanted = flagged(s, n);
+    (via.extraFiles ||= []).push({ dir: '/', name: `ping-${n.id}.trc`, label: 'a relay route file', kind: 'route', hidden: n.id, text: [wanted ? 'relay log: a signal that matches the contract, one hop out.' : 'relay log: a signal one hop out.', 'pull it and bank it to trace most of the route.'] });
+    emit(s, 'flagged', wanted ? `Relay on ${via.name}: one unknown server carries the contract's signal. It's flagged on the map.` : `Relay on ${via.name}: a route file to an unknown server (ping-${n.id}.trc in /).`, { hidden: n.id });
   }
 }
 

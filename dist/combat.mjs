@@ -20,7 +20,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
 import { portsCommand } from './invasion.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter } from './filters.mjs';
-import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
+import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
@@ -2700,6 +2700,7 @@ export function restore(raw) {
     if (s.daemons) s.daemons = s.daemons.map((d) => (d === 'tracer' ? 'stall' : d));
     if (s.encounter) { delete s.encounter.trace; delete s.encounter.pendingTrace; }
     initMail(s);
+    syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;
     materialsOf(s);
     if (!Number.isFinite(s.rng)) s.rng = 0x2545f491;

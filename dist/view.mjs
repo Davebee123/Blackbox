@@ -29,7 +29,7 @@ import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serve
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
-import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
+import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf, HIDDEN } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
@@ -890,6 +890,19 @@ function filterChips(s, f, on) {
     const tip = k === 'strength' ? `+${v} firewall levels${on ? '' : `: lv ${lv} → ${lv + v} with it in`}` : `${v}${x.name}${fam ? '' : ''}`;
     return `<span class="fchip" title="${esc(tip)}">${glyph(FILTER_ICON[k] || 'item')}<b>${esc(label)}</b><small>${esc(k === 'strength' ? '' : what)}</small></span>`;
   }).join('');
+}
+// How to trace an unknown server: each way, what it adds, and whether it's open to you yet.
+const FAM_GLYPH = { worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel' };
+function traceWays(s, h, via, kit) {
+  const relay = !!h.pinged, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route];
+  const row = (ic, label, gain, state, tip) => `<li class="tw ${state}" title="${esc(tip)}">${glyph(ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
+  const needRelay = `Needs a relay on ${via?.name || 'the server next to it'}`;
+  return `<ul class="trace-ways">
+    ${row('spike', 'Beat its invader', `+${HIDDEN.winLead}%`, 'on', `When it sends an invasion, jack in and win: +${HIDDEN.winLead}%. Your wall stopping it: +${HIDDEN.blockLead}%.`)}
+    ${row(FAM_GLYPH[h.family] || 'kill', relay ? `Kill ${FAMILIES[h.family]?.name || 'its family'}` : 'Kill its family', `+${HIDDEN.killLead}%`, relay ? 'on' : 'off', relay ? `Every ${FAMILIES[h.family]?.name || ''} you kill, at home or in SPRAWL-00` : needRelay)}
+    ${row('relay', route, `+${HIDDEN.routeLead}%`, banked ? 'done' : relay ? 'on' : 'off', banked ? 'Banked' : relay ? `In / on ${via?.name || '?'}: pull it and bank it` : needRelay)}
+    ${row('injector', 'Trace injector', '+30%', kit.injector ? 'on' : 'off', kit.injector ? 'Use it below' : 'Halcyon’s store, Kestrel and LANTERN sell them')}
+  </ul>`;
 }
 // The firewall's filters: its slots (from the Filter Bay service), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
@@ -1991,7 +2004,8 @@ function mapSide(s, sel, node) {
       <p class="svc-line">past ${esc(via?.name || '?')} · signal <span class="sigbars">${'▮'.repeat(h.signal)}${'▯'.repeat(5 - h.signal)}</span></p>
       ${flag && job ? `<p class="svc-line"><span class="tag">Contract</span> ${esc(contractTitle(s, job))}</p>` : ''}
       <div class="lvl-row"><span class="lvl-bar"><span style="width:${h.lead}%"></span></span><small>${h.lead}% traced</small></div>
-      ${kit.injector ? `<div class="row"><button type="button" class="btn" data-command="use injector ${h.id}">Trace injector (${kit.injector})</button></div>` : ''}</section>`;
+      ${traceWays(s, h, via, kit)}
+      ${kit.injector ? `<div class="row"><button type="button" class="btn" data-command="use injector ${h.id}">${glyph('injector')}Trace injector · ${kit.injector}</button></div>` : ''}</section>`;
   }
   if (node.kind === 'lead') {
     const f = FAMILIES[node.family];

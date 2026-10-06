@@ -2679,3 +2679,11 @@ details.map-pick.on summary { color: var(--amber); border-color: var(--amber); }
 /* The open Show menu sits above the threat rail. */
 .map-tools:has(details.map-pick[open]) { z-index: 5; }
 details.map-pick { pointer-events: auto; }
+/* An unknown server's card: the ways to trace it, each with its gain; dim when it isn't open to you. */
+.trace-ways { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 3px; }
+.trace-ways .tw { display: grid; grid-template-columns: 16px 1fr auto; align-items: center; gap: 8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); font-size: 12px; }
+.trace-ways .tw .glyph { width: 14px; height: 14px; color: var(--you); }
+.trace-ways .tw span { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trace-ways .tw b { font: 700 12px var(--mono); color: var(--r-tuned); }
+.trace-ways .tw.off { opacity: 0.45; } .trace-ways .tw.off .glyph { color: var(--muted); } .trace-ways .tw.off b { color: var(--muted); }
+.trace-ways .tw.done span { text-decoration: line-through; color: var(--muted); } .trace-ways .tw.done b::after { content: ' ✓'; }
