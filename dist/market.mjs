@@ -8,7 +8,7 @@
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
 import { emit, warn, materialsOf, hooks } from './combat.mjs';
-import { FACTIONS, hubsOf, hostile, repTier, buyFrom } from './factions.mjs';
+import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
 import { broadcast } from './station.mjs';
@@ -83,6 +83,7 @@ export const travelMs = (s, f) => Math.round(MARKET.travelMin[f] * 60000 * (1 - 
 export function trade(s, side, f, w, n, at = now()) {
   n = Math.floor(Number(n) || 0);
   if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Markets open with the faction hubs.');
+  if (!hubFound(s, f)) return warn(s, `You haven't located ${FACTIONS[f].short}'s hub yet.`);
   if (!WARES[w]) return warn(s, `Wares: ${WARE_IDS.join(', ')}.`);
   if (hostile(s, f)) return warn(s, `${FACTIONS[f].short} won’t trade with you.`);
   if ((s.hubs?.[f]?.offlineUntil || 0) > at) return warn(s, `${FACTIONS[f].hub.name} is offline.`);
@@ -148,7 +149,7 @@ export function sendGood(s, f, id, name, credits, L, at = now()) {
 }
 // The most any hub would pay you for one right now: shops never sell below it (store.mjs), so
 // there's no buying from a shelf to sell straight to a market.
-export const bestSell = (s, w) => (hubsOf(s).length && WARES[w] ? Math.max(...Object.keys(FACTIONS).map((f) => quote(s, f, w).sell)) : 0);
+export const bestSell = (s, w) => (hubsOf(s).length && WARES[w] ? Math.max(...hubsOf(s).map((h) => quote(s, h.faction, w).sell)) : 0); // the hubs you can reach
 export function marketCommand(s, text, at = now()) {
   const [, side, f, w, n] = text.split(' ');
   if (side === 'buy' && FACTIONS[f]?.shop.includes(w)) return buyFrom(s, f, w, at); // a hub's specialty good (factions.mjs)

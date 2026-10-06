@@ -11,7 +11,7 @@
 // Backdoor takes a hub for you, but only one that's offline when it executes: Wiper first, then
 // get a Backdoor in before it comes back up. A hub you hold: see hubs.mjs.
 import { emit, warn, materialsOf, hackerLevel, hooks } from './combat.mjs';
-import { FACTIONS, hubsOf, changeRep, captured } from './factions.mjs';
+import { FACTIONS, hubsOf, changeRep, captured, hubFound } from './factions.mjs';
 import { HUB_CONDITION, CONDITIONS, travelMs } from './market.mjs';
 import { seeded } from './gear.mjs';
 
@@ -77,6 +77,7 @@ export function deployPayload(s, id, f, at = now()) {
   const m = payOf(s), p = m.built.find((x) => x.id === Number(id));
   if (!p) return warn(s, 'No payload by that number.');
   if (!FACTIONS[f] || !hubsOf(s).length) return warn(s, 'Deploy it at a faction hub.');
+  if (!hubFound(s, f)) return warn(s, `You haven't located ${FACTIONS[f].short}'s hub yet.`);
   if (captured(s, f)) return warn(s, `${FACTIONS[f].hub.name} is yours.`);
   if (p.kind === 'backdoor' && f === 'halcyon') return warn(s, 'Halcyon’s clearing house can’t be taken.');
   if (p.kind === 'backdoor' && heldHubs(s).length >= PAYLOAD.maxHeld) return warn(s, `You can hold ${PAYLOAD.maxHeld} hubs.`);

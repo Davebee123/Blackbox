@@ -88,13 +88,25 @@ export function changeRep(s, f, delta, why, { ripple = true, quiet = false } = {
 }
 
 // ---------- hubs ----------
-// One hub per faction on your map, once the board opens (the end of LOWLIGHT's jobs): not
-// fights, places to trade. Fixed levels: their shops sell at that level or yours, whichever's higher.
+// One hub per faction, once the board opens (the end of LOWLIGHT's jobs): not fights, places to
+// trade. Halcyon's is known (it's your employer); every other faction's you find. Its trace grows
+// when you locate a server it owns, and when you clear the viruses off one (they like that). At 100%
+// the hub is located: it's on your map, and connect <faction> reaches it.
+export const HUB_TRACE = { server: 40, cleared: 20, rep: 2 };
+export const hubFound = (s, f) => f === 'halcyon' || !!s.hubFound?.[f];
+export const hubTraceOf = (s, f) => (hubFound(s, f) ? 100 : Math.min(99, s.hubLead?.[f] || 0));
+export function hubTrace(s, f, amount, why = '') {
+  if (!FACTIONS[f] || hubFound(s, f) || amount <= 0) return;
+  const n = Math.min(100, (s.hubLead ||= {})[f] = (s.hubLead[f] || 0) + amount);
+  if (n < 100) return emit(s, 'lead', `${why}${FACTIONS[f].short} hub trace ${n}%.`, { faction: f });
+  (s.hubFound ||= {})[f] = true;
+  emit(s, 'located', `HUB LOCATED: ${FACTIONS[f].hub.name}. ${FACTIONS[f].short} is on your map.`, { faction: f, hub: true });
+}
 export function hubsOf(s) {
   if (!(s.mail?.boardOpen || (s.mail?.story || 0) >= 99)) return [];
   s.hubs ||= {};
   for (const f of FACTION_IDS) s.hubs[f] ||= { id: 'hub-' + f, faction: f, stock: {}, restockAt: 0 };
-  return FACTION_IDS.map((f) => ({ ...s.hubs[f], ...FACTIONS[f].hub, faction: f }));
+  return FACTION_IDS.filter((f) => hubFound(s, f)).map((f) => ({ ...s.hubs[f], ...FACTIONS[f].hub, faction: f }));
 }
 export const hubOf = (s, id) => hubsOf(s).find((h) => h.id === id || h.faction === id) || null;
 
@@ -162,6 +174,13 @@ export function claimServer(s, loc, r = ownedRoll(loc)) {
   if (loc.rogue || loc.starter || (s.locations || []).filter((l) => !l.rogue).length <= 2 || r >= OWNED.share) return;
   const pool = FACTION_IDS.filter((f) => f !== 'halcyon'); // Halcyon insures servers; it doesn't run them out here
   loc.faction = pool[Math.floor((r / OWNED.share) * pool.length) % pool.length];
+  hubTrace(s, loc.faction, HUB_TRACE.server, `${loc.name} is ${FACTIONS[loc.faction].short}'s: `); // a server of theirs points toward their hub
+}
+// A guard or virus cleared off a faction's server: a favour (a little rep), and their hub's trace moves.
+export function clearedFor(s, loc) {
+  if (!loc?.faction) return;
+  changeRep(s, loc.faction, HUB_TRACE.rep, `You cleared ${loc.name}`, { ripple: false });
+  hubTrace(s, loc.faction, HUB_TRACE.cleared, `${FACTIONS[loc.faction].short} noticed: `);
 }
 // Old saves claimed a third: let go of the servers that wouldn't be claimed now.
 export function reclaimCheck(loc) { if (loc.faction && ownedRoll(loc) >= OWNED.share) delete loc.faction; }
@@ -174,3 +193,4 @@ export function strikeServer(s, loc, how) {
 }
 // Rivals of a faction: who it wants you to hit (for its contracts).
 export const rivalServers = (s, f) => (s.locations || []).filter((l) => l.faction && FACTIONS[f].rivals.includes(l.faction) && !l.takenOver);
+

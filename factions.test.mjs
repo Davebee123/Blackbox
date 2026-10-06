@@ -4,7 +4,7 @@ import { fresh, command, addLocation } from './dist/combat.mjs';
 import { offer, mailCommand } from './dist/mail.mjs';
 import { FACTIONS, FACTION_IDS, rep, repTier, changeRep, hubsOf, shopOf, buyFrom, claimServer, strikeServer, OWNED } from './dist/factions.mjs';
 
-const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.server.credits = 5000; return s; };
+const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 5000; return s; };
 
 test('five factions, each with a colour, an icon, tiers, allies and rivals; hubs open with the board', async () => {
   const { GLYPHS } = await import('./dist/glyphs.mjs');
@@ -79,4 +79,26 @@ test('faction contracts: posted by the faction, paid in its rep (no Indemnity)',
     mailCommand(s, `mail deliver ${o.id}`);
     assert.equal(rep(s, o.faction), r0 + o.reward.rep);
   }
+});
+
+test('faction hubs are found: Halcyon’s is known; another’s trace grows from its servers (located, cleared) to 100%', async () => {
+  const { hubsOf, hubFound, hubTraceOf, hubTrace, clearedFor, HUB_TRACE, rep } = await import('./dist/factions.mjs');
+  const { restore } = await import('./dist/combat.mjs');
+  const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.server.credits = 5000;
+  assert.deepEqual(hubsOf(s).map((h) => h.faction), ['halcyon'], 'only your employer’s at first');
+  assert.match(command(s, 'market sell lantern worm 1').at(-1).message, /haven't located/);
+  const loc = { name: 'LANTERN-BOX', faction: 'lantern', state: { cleared: {} } };
+  hubTrace(s, 'lantern', HUB_TRACE.server, 'located: ');
+  assert.equal(hubTraceOf(s, 'lantern'), HUB_TRACE.server);
+  const r0 = rep(s, 'lantern');
+  clearedFor(s, loc);
+  assert.equal(rep(s, 'lantern'), r0 + HUB_TRACE.rep, 'they like that');
+  assert.equal(hubTraceOf(s, 'lantern'), HUB_TRACE.server + HUB_TRACE.cleared);
+  for (let i = 0; i < 3 && !hubFound(s, 'lantern'); i++) clearedFor(s, loc);
+  assert.ok(hubFound(s, 'lantern'));
+  assert.deepEqual(hubsOf(s).map((h) => h.faction), ['halcyon', 'lantern']);
+  // An older save that had every hub on its map keeps them.
+  const old = fresh(); old.mail = { boardOpen: true, list: [], jobs: [], offers: [] }; old.hubs = { halcyon: {}, glassjaw: {}, kestrel: {}, lantern: {}, nullchoir: {} };
+  const r = restore(JSON.parse(JSON.stringify(old)));
+  assert.equal(hubsOf(r).length, 5);
 });

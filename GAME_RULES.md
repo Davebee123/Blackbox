@@ -697,6 +697,8 @@ Pages show instead of explaining; the words are in the hover.
 
 Five PvE factions, companies and hacker crews, each with a colour, a mark and a hub on your map (`factions.mjs`). Halcyon is the first of them: its standing is its rep, its retainer and store work as before.
 
+**Finding the hubs.** When the board opens, only Halcyon's hub is on your map (it's your employer). Every other hub you find: its trace starts at 0% and grows when you **locate a server that faction owns** (+40%) and when you **clear a guard or virus off one of its servers** (+20% each, and +2 rep with them: they like that). At 100% the hub is located: a pager alert, it appears on the map, and `connect <faction>` reaches it (before that, connect tells you how far along its trace is). The Leads panel on a run lists each hub you haven't found with its trace. Until a hub is found you can't trade there, deploy payloads at it, or take its work. (A save that already had the hubs on its map keeps them.)
+
 | Faction | Kind | Colour | Hub (level) | Allies | Rivals | Goods (on top of the wares) |
 |---|---|---|---|---|---|---|
 | Halcyon Mutual | company | blue | HALCYON-CLEARING-01 (1) | Kestrel | GLASSJAW, NULL CHOIR | its store (instant, and the only place for heals) |

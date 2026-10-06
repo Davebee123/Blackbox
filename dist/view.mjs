@@ -10,7 +10,7 @@ import { fleetLeft } from './fleet.mjs';
 import { HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf } from './market.mjs';
-import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED, captured, donationOf } from './factions.mjs';
+import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED, captured, donationOf, hubFound, hubTraceOf } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
@@ -885,7 +885,9 @@ function leadsPanel(s) {
   const bar = (n) => `<span class="ld-bar"><span style="width:${Math.min(100, n)}%"></span></span><b class="ld-n">${Math.floor(n)}%</b>`;
   const famRows = fams.map(([f, n]) => `<li class="ld-row" data-go="map:lead-${esc(f)}" title="${esc(FAMILIES[f].name)} lead">${glyph(f)}<span class="ld-name">${esc(FAMILIES[f].name)}</span>${bar(n)}</li>`).join('');
   const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${esc(FAMILIES[n.family].name.toLowerCase())} server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('bounty')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
-  return `<aside class="net-leads"><h3>${glyph('trace')}Leads</h3>${famRows || nodeRows ? `${famRows ? `<ul class="ld-list">${famRows}</ul>` : ''}${nodeRows ? `<h4>Unknown servers</h4><ul class="ld-list">${nodeRows}</ul>` : ''}` : '<p class="quiet">none</p>'}</aside>`;
+  // Faction hubs you haven't located (once the board is open): their trace, from their servers.
+  const hubRows = (hubsOf(s).length ? FACTION_IDS.filter((f) => !hubFound(s, f)) : []).map((f) => `<li class="ld-row" style="--fc:${FX[f].color}" title="${esc(FX[f].hub.name)}">${fIcon(f)}<span class="ld-name">${esc(FX[f].short)} <small>hub</small></span>${bar(hubTraceOf(s, f))}</li>`).join('');
+  return `<aside class="net-leads"><h3>${glyph('trace')}Leads</h3>${famRows || nodeRows || hubRows ? `${famRows ? `<ul class="ld-list">${famRows}</ul>` : ''}${nodeRows ? `<h4>Unknown servers</h4><ul class="ld-list">${nodeRows}</ul>` : ''}${hubRows ? `<h4>Faction hubs</h4><ul class="ld-list">${hubRows}</ul>` : ''}` : '<p class="quiet">none</p>'}</aside>`;
 }
 
 export function netMarkup(s, { leads = false } = {}) {

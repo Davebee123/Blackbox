@@ -9,7 +9,7 @@ import { HUBS, tickHubs, tickRetake, collect, bankOf, retakeOf, lockedDown, held
 
 const T0 = 1_000_000_000_000;
 const open = () => {
-  const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.server.credits = 50000;
+  const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 50000;
   Object.assign(materialsOf(s), { cipher: 200, worm: 200, kernel: 200, exploit: 20 });
   s.salvage = Array.from({ length: 60 }, () => ({ name: 'Scrap', virus: 't', seed: 0 }));
   return s;

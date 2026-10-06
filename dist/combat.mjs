@@ -6,7 +6,7 @@ import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERS
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
-import { buyFrom, claimServer, reclaimCheck } from './factions.mjs';
+import { buyFrom, claimServer, reclaimCheck, clearedFor } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
@@ -1098,7 +1098,7 @@ export function finish(s, result) {
   if (e.mode === 'run') {
     if (result === 'victory') {
       const loc = findLocation(s, s.run?.loc);
-      if (loc) loc.state.cleared[e.room] = true;
+      if (loc) { loc.state.cleared[e.room] = true; clearedFor(s, loc); } // a faction's server: they like that (factions.mjs)
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: false });
       payKill(s, e, XP.guard, `${e.virus.name} down`);
@@ -2582,6 +2582,8 @@ export function restore(raw) {
     // v23: the Sysadmin is the Bastion now. Its level, tree and bar come along.
     // Smash is Flood now: on the bar and anything keyed by it.
     for (const bar of Object.values(s.loadout?.equipped || {})) if (Array.isArray(bar)) bar.forEach((id, i) => { if (id === 'smash') bar[i] = 'flood'; if (id === 'kill-process') bar[i] = 'rate-limit'; });
+    // Faction hubs are found now: the ones an older save already had on its map stay found.
+    if (s.hubs && !s.hubFound) s.hubFound = Object.fromEntries(Object.keys(s.hubs).map((f) => [f, true]));
     // Bastion's first skill became Rate Limit: kill -9's ranks carry over to Token Bucket.
     for (const r of Object.values(s.loadout?.ranks || {})) if (r && r['kill-9'] !== undefined) { r['token-bucket'] = (r['token-bucket'] || 0) + r['kill-9']; delete r['kill-9']; }
     if (was < 23) {

@@ -7,7 +7,7 @@ import { rep, buyFrom } from './dist/factions.mjs';
 
 const T0 = 1_000_000_000_000;
 const open = () => {
-  const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.server.credits = 5000;
+  const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 5000;
   Object.assign(materialsOf(s), { cipher: 50, worm: 50, exploit: 2 });
   s.salvage = Array.from({ length: 20 }, () => ({ name: 'Scrap', virus: 't', seed: 0 }));
   return s;

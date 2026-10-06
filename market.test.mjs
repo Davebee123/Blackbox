@@ -4,7 +4,7 @@ import { fresh, command, materialsOf, tickServices } from './dist/combat.mjs';
 import { WARE_IDS, HUB_CONDITION, CONDITIONS, quote, priceOf, trade, tickMarket, transfersOf, travelMs, MARKET } from './dist/market.mjs';
 import { hubsOf } from './dist/factions.mjs';
 
-const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.server.credits = 5000; return s; };
+const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; s.server.credits = 5000; return s; };
 const T0 = 1_000_000_000_000;
 
 test('every hub has a condition; Kestrel’s hot racks pay well for Kernel code', () => {

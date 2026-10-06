@@ -23,7 +23,7 @@ import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from 
 import STORY_TEXT from './content/story.mjs';
 import CONTRACT_TEXT from './content/contracts.mjs';
 import { fill } from './content.mjs';
-import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf } from './factions.mjs';
+import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf, hubFound } from './factions.mjs';
 
 export const MAIL = {
   periodMs: 30 * 60 * 1000, // the retainer pays every 30 minutes, offline too
@@ -251,7 +251,7 @@ export function offer(s, at = now()) {
   const L = hackerLevel(s);
   const off = standing(s) >= 10 && rand(s) < MAIL.offBooksChance;
   // Once the hubs are up, about half the board is other factions' work (not ones that hate you).
-  const others = hubsOf(s).length ? ['kestrel', 'lantern', 'nullchoir'].filter((f) => !hostile(s, f) && !captured(s, f)) : [];
+  const others = hubsOf(s).length ? ['kestrel', 'lantern', 'nullchoir'].filter((f) => hubFound(s, f) && !hostile(s, f) && !captured(s, f)) : []; // only factions whose hub you've found send work
   const faction = off ? 'glassjaw' : others.length && rand(s) < MAIL.factionShare ? pick(s, others) : 'halcyon';
   const theirs = faction !== 'halcyon' && faction !== 'glassjaw';
   const rivals = theirs ? rivalServers(s, faction).filter((l) => !targeted(s).has(l.id)) : [];

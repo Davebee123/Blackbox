@@ -10,6 +10,7 @@ import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWand
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt } from './mail.mjs';
+import { hubsOf, hubFound, hubTraceOf } from './factions.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
 import { nextTip, markSeen } from './tips.mjs';
 import { createRain } from './rain.mjs';
@@ -551,6 +552,7 @@ function run(raw) {
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
   const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir)$/);
   if (dial && V.hubOptions(campaign, dial[1]).length) return openHub(dial[1]);
+  if (dial && hubsOf(campaign).length && !hubFound(campaign, dial[1])) { notice(`${dial[1].toUpperCase()}: hub not located yet (${hubTraceOf(campaign, dial[1])}%).`, true); return; }
   if (hubShown() && !active(campaign)) {
     const opts = V.hubOptions(campaign, hubSel);
     if (/^\d$/.test(text)) { const n = Number(text); if (n === 0) return closeHub(); if (opts[n - 1]) return pickHub(opts[n - 1].key, text); hubEcho(text); hubLines.push({ cls: 'warn', html: `${text}: no such option` }, menuLine); dirty = true; return; }

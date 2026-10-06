@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fresh, command } from './dist/combat.mjs';
 import { hubOptions, hubBanner, hubTerminalMarkup } from './dist/view.mjs';
 
-const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; return s; };
+const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; return s; };
 const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
 
 test('a hub session offers a short menu that fits the situation', () => {
