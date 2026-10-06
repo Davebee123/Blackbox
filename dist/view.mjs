@@ -513,13 +513,26 @@ const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemT
 const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : it.unique && effectLine(it) ? `<small class="zd">${esc(effectLine(it))}</small>` : '');
 const statsHtml = (it) => `<small>${Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}">${esc(statLine({ [k]: v }))}</span>`).join(' · ')}</small>`;
 
+// The hover card for an item (app.js shows it, and spins its model): a rotating ASCII wireframe
+// for its kind, in its rarity colour, over its name, rarity, kind, level, stats and effect.
+export function itemTipMarkup(s, ref) {
+  const f = ref?.startsWith('f:') ? filtersOf(s)[Number(ref.slice(2))] : null;
+  const it = f || stashItem(s, ref);
+  if (!it) return '';
+  const kind = f ? 'filter' : groupOf(it), r = it.rarity;
+  const stats = f ? `<span>${esc(filterLine(f))}</span>` : invStats(it);
+  const where = !f && loadedOn(s, it.id) ? `<span class="tag dim">on ${esc(ARCHETYPES[loadedOn(s, it.id)].name)}</span>` : '';
+  const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
+  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}</div></div>`;
+}
+
 // The stash's filter (screen state only).
 export const stashUi = { filter: 'all' };
 // One item as an inventory row: rarity edge (CSS), slot glyph, name and level, then its stats in one line.
 const invStats = (it) => Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}"><b>${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
 function invBody(it, extra = '') {
   const fx = it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique ? effectLine(it) : '';
-  return `<span class="inv-icon" aria-hidden="true">${glyph(leadStat(it))}</span><span class="inv-main" title="${esc(itemTitle(it))}"><span class="inv-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${extra}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}</span>`;
+  return `<span class="inv-icon" aria-hidden="true">${glyph(leadStat(it))}</span><span class="inv-main" data-ptip="${esc(it.id || '')}"><span class="inv-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${extra}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}</span>`;
 }
 
 // A character sheet for one side: every stat it can have, grouped, with totals (bases included).
@@ -843,7 +856,7 @@ function firewallPanel(s, now) {
 function filterPanel(s) {
   const held = filtersOf(s), on = (s.filters?.on || []), n = filterSlots(s), busy = active(s) || !!s.run;
   if (!n && !held.length) return '';
-  const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ''}"><b class="iname r-${f.rarity}" title="lv ${f.level}">${esc(f.name)}</b><small>${esc(filterLine(f))}</small>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? (n ? 'Every slot is full' : 'Install the Firewall service for slots') : 'Put it in'}">In</button><button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
+  const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ''}" data-ptip="f:${i}"><b class="iname r-${f.rarity}">${esc(f.name)}</b><small>${esc(filterLine(f))}</small>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? (n ? 'Every slot is full' : 'Install the Firewall service for slots') : 'Put it in'}">In</button><button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
   const slots = Array.from({ length: n }, (_, k) => { const i = on[k]; return i != null && held[i] ? '' : '<li class="flt empty"><small>empty slot</small></li>'; }).join('');
   const rows = held.map(tile);
   return `<div class="flt-panel"><h3 class="craft-sub">Filters <small>${on.length}/${n}</small></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;

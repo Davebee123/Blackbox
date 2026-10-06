@@ -3,6 +3,7 @@ import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
+import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { createArt } from './virus-art.mjs';
 import { createFeel } from './feel.mjs';
 import { createShell } from './shell.mjs';
@@ -1820,4 +1821,45 @@ document.querySelector('.brand')?.addEventListener('click', (ev) => {
 document.addEventListener('keydown', (e) => {
   const m = e.target.closest?.('.meter[data-command]');
   if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); m.click(); }
+});
+
+// Item hover cards (view.mjs itemTipMarkup): a protocol or filter's card beside it, its ASCII model
+// spinning while it's up. Follows the row through redraws; goes when the pointer leaves it.
+let ptip = null; // { ref, anchor, el, raf }
+function showPtip(anchor) {
+  hidePtip();
+  const ref = anchor.dataset.ptip, html = V.itemTipMarkup(campaign, ref);
+  if (!html) return;
+  const el = document.createElement('div');
+  el.className = 'ptip';
+  el.innerHTML = html;
+  document.body.appendChild(el);
+  ptip = { ref, anchor, el, raf: 0 };
+  placePtip();
+  const pre = el.querySelector('.ptip-art'), shape = SHAPES[pre?.dataset.shape] || SHAPES.shell;
+  const still = campaign.settings.motion === false;
+  const step = (t) => {
+    if (!ptip || ptip.el !== el) return;
+    if (!ptip.anchor.isConnected) { const n = document.querySelector(`[data-ptip="${CSS.escape(ref)}"]`); if (n && n.matches(':hover')) { ptip.anchor = n; placePtip(); } else return hidePtip(); }
+    if (pre) pre.textContent = ascii3d(shape, still ? 900 : t);
+    if (!still) ptip.raf = requestAnimationFrame(step);
+  };
+  step(performance.now());
+}
+function placePtip() {
+  const { anchor, el } = ptip, r = anchor.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  const left = r.right + 12 + w < innerWidth ? r.right + 12 : Math.max(8, r.left - w - 12);
+  el.style.left = left + 'px';
+  el.style.top = Math.max(8, Math.min(innerHeight - h - 8, r.top + r.height / 2 - h / 2)) + 'px';
+}
+function hidePtip() { if (!ptip) return; cancelAnimationFrame(ptip.raf); ptip.el.remove(); ptip = null; }
+document.addEventListener('mouseover', (e) => {
+  const a = e.target.closest?.('[data-ptip]');
+  if (!a || !a.dataset.ptip) return;
+  if (ptip?.ref === a.dataset.ptip) { ptip.anchor = a; return; }
+  showPtip(a);
+});
+document.addEventListener('mouseout', (e) => {
+  const a = e.target.closest?.('[data-ptip]');
+  if (a && ptip && !a.contains(e.relatedTarget) && !e.relatedTarget?.closest?.(`[data-ptip="${CSS.escape(ptip.ref)}"]`)) hidePtip();
 });
