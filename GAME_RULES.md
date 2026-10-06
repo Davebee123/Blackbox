@@ -253,7 +253,7 @@ A takeover or recovery contract points at a server you've found and haven't take
 
 Every server you find is wired to two you haven't found yet, one layer deeper. They aren't on the map until you hear of them; then they show as **?** beside the server they hang off.
 
-- **Invasions** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". Jack in and beat one: its server is 40% traced (plus the Route Logger's bonus). If your wall stops one: +10%.
+- **Invasions** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". They come at that server's level and layer, never above it (an unknown server is 3 levels up and a layer deeper, but what you've connected to sets what comes at you); the road is longer, so they take longer to arrive. Jack in and beat one: its server is 40% traced (plus the Route Logger's bonus). If your wall stops one: +10%.
 - **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its map card). A relay pings that server's unknown neighbours, and flags the one carrying the signal of a contract you've taken.
 - **Hunting a flagged server:** every kill of its family traces it 12% more; the relay leaves a route file on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store) adds 30%.
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.

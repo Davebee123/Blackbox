@@ -232,10 +232,13 @@ test('the hidden network: invaders from servers you haven’t found, traced back
   assert.ok(near.every((n) => n.depth === 2 && n.lead === 0 && !n.pinged));
   const share = HIDDEN.invaderShare;
   HIDDEN.invaderShare = 1;
+  s.firewall = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing blocks it at the wall
   play(s, 'developer invade');
   HIDDEN.invaderShare = share;
   const inv = s.invasion;
   assert.ok(inv.hidden);
+  assert.equal(inv.level, found.level, 'it comes at the level of the server it routes through');
+  assert.equal(inv.grade || 1, 1, 'and that server\'s layer');
   assert.match(inv.fromName, /unknown server past/);
   const n = hiddenNodes(s).find((x) => x.id === inv.hidden);
   play(s, 'jack in');

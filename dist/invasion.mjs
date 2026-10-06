@@ -196,9 +196,11 @@ function stepInvasion(s, dt, at = null) {
 function depart(s, from = null) {
   const o = from ? { loc: from } : pickOrigin(s);
   const h = o.hidden || null;
-  const loc = h ? { id: h.via, name: 'an unknown server', family: h.family, level: h.level, depth: h.depth } : o.loc;
-  if (!loc) return null;
   const via = h && s.locations.find((l) => l.id === h.via);
+  // From a server you haven't found, it comes through one you're attached to: at that server's
+  // level and layer (what you've connected to sets what comes at you), on the longer road.
+  const loc = h ? { id: h.via, name: 'an unknown server', family: h.family, level: Math.min(h.level, via?.level || h.level), depth: via?.depth || 1, road: h.depth } : o.loc;
+  if (!loc) return null;
   const level = Math.min(CONFIG.maxMobLevel, loc.level || 1);
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1;
   const ids = Object.keys(MUTATIONS);
@@ -206,7 +208,7 @@ function depart(s, from = null) {
   const key = INVADER[loc.family];
   const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed); // deeper servers send bigger viruses, and strains
   const virus = createVirus(key, seed, { threat: SERVER.threat(level), mutation, strain, grade });
-  const total = travelMs(s, loc.depth);
+  const total = travelMs(s, loc.road || loc.depth);
   s.net.seq = (s.net.seq || 0) + 1;
   (s.net.seen ||= {})[loc.family] = (s.net.seen[loc.family] || 0) + 1;
   s.invasion = { id: 'inv' + s.net.seq, from: loc.id, fromName: h ? `an unknown server past ${via?.name}` : loc.name, hidden: h?.id || null, family: loc.family, key, seed, level, mutation, strain, grade, name: virus.name, state: 'travel', left: total, total, hp: 1, chipAcc: 0 };
