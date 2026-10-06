@@ -14,7 +14,7 @@ import { tickStation } from './station.mjs';
 import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
 import { isLive } from './memory.mjs';
-import { effLevel, fragment, tickFirewall } from './firewall.mjs';
+import { effLevel, fragment, tickFirewall, paySquelch } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
@@ -225,17 +225,20 @@ function stopped(s, inv, ground) {
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
 }
 
-// ---------- bait ----------
+// ---------- squelch ----------
 // Pull the next invasion in now, straight to the wall, so you meet it on your terms. Once it's
-// dealt with (stopped, worn down or killed), nothing sets out for CONFIG.invasion.safeMs.
-export function baitInvasion(s) {
+// dealt with (stopped, worn down or killed), nothing sets out for CONFIG.invasion.safeMs. It
+// costs Kernel code, by the level of the strongest server you have attached (firewall.mjs).
+export function squelchInvasion(s) {
   if (s.invasion) return warn(s, `${s.invasion.name} is already ${s.invasion.state === 'travel' ? 'on its way' : 'at your wall'}.`);
   if (s.degraded) return warn(s, 'Not while your server is degraded.');
-  if (!(s.locations || []).some((l) => !l.rogue && isLive(s, l))) return warn(s, 'Nothing attached to bait: invasions come from servers on your network.');
+  const live = (s.locations || []).filter((l) => !l.rogue && isLive(s, l));
+  if (!live.length) return warn(s, 'Nothing attached to squelch: invasions come from servers on your network.');
+  if (!paySquelch(s, Math.max(...live.map((l) => l.level || 1)))) return;
   const inv = depart(s);
-  if (!inv) return warn(s, 'Nothing took the bait.');
+  if (!inv) return warn(s, 'Nothing answered.');
   inv.baited = true;
-  emit(s, 'invader', `Bait: ${inv.name} (lv ${inv.level}) took it, and is at your wall now.`, { invader: inv.id });
+  emit(s, 'invader', `Squelch: ${inv.name} (lv ${inv.level}) is pulled to your wall now. Quiet after it.`, { invader: inv.id });
   arrive(s);
 }
 

@@ -31,7 +31,7 @@ import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
-import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs } from './firewall.mjs';
+import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, squelchCost } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
@@ -766,18 +766,20 @@ function fwRow(s, holder, arg, top, now = Date.now()) {
     <div class="fw-grid small${def ? ' defrag' : ''}${hard ? ' hard' : ''}" title="${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>
     ${fwActs(s, f, arg, can, c, busy, def, now)}</div>`;
 }
-// Bait: pull the next invasion in now; and the time until the next one sets out otherwise.
+// Squelch: pull the next invasion in now (Kernel code); and the time until the next one sets out.
 function baitHome(s) {
-  const next = s.net?.next;
-  if (s.invasion || !threatTop(s)) return '';
-  return `<button type="button" class="btn small" data-command="bait" ${active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now. Once it's dealt with, nothing sets out for ${CONFIG.invasion.safeMs / 60000} minutes.">Bait${next > 0 ? ` · next ${fmtTime(next)}` : ''}</button>`;
+  const next = s.net?.next, top = threatTop(s);
+  if (s.invasion || !top) return '';
+  const k = squelchCost(top), ok = (s.materials?.kernel || 0) >= k;
+  return `<button type="button" class="btn small fw-up" data-command="squelch" ${!ok || active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now. Once it's dealt with, nothing sets out for ${CONFIG.invasion.safeMs / 60000} minutes.">Squelch${next > 0 ? ` · next ${fmtTime(next)}` : ''}<small>${k} Kernel</small></button>`;
 }
 // The firewall's buttons, each only once it means something: Upgrade when you can pay for the next
 // level, Defrag when it's fragmented (or running), harden.sh when you hold one.
 function fwActs(s, f, arg, can, c, busy, def, now, extra = '') {
   const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`, n = kitOf(s).harden || 0;
   const up = can ? `<button type="button" class="btn small primary fw-up" data-command="${cmd('upgrade')}" ${busy ? 'disabled' : ''} title="Blocks one level more">Upgrade to lv ${f.level + 1}<small>${c.credits} credits · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</small></button>` : '';
-  const dfr = f.frag || def ? `<button type="button" class="btn small" data-command="${cmd('defrag')}" ${def || busy ? 'disabled' : ''} title="${FIREWALL.defragLoss} levels down while it runs">${def ? `Defragmenting · ${fmtLeft(f.defragUntil - now)}` : 'Defrag'}</button>` : '';
+  const dc = defragCost(f);
+  const dfr = f.frag || def ? `<button type="button" class="btn small fw-up" data-command="${cmd('defrag')}" ${def || busy || (!def && s.server.credits < dc) ? 'disabled' : ''} title="${FIREWALL.defragLoss} levels down while it runs">${def ? `Defragmenting · ${fmtLeft(f.defragUntil - now)}` : `Defrag<small>${dc} credits</small>`}</button>` : '';
   const hd = n ? `<button type="button" class="btn small" data-command="${cmd('harden')}" ${busy ? 'disabled' : ''} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${n}</button>` : '';
   const all = up + dfr + hd + extra;
   return all ? `<div class="row fw-acts">${all}</div>` : '';
@@ -1933,7 +1935,8 @@ function outpostCore(s, l) {
   const siege = o.siege ? opBox('siege', 'Invasion', `lv ${o.siege.level || l.level || 1} · ${o.siege.hp != null && o.siege.hp < 1 ? `${Math.round(o.siege.hp * 100)}% · ` : ''}falls in ${fmtTime(o.siege.left)}`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
   const inf = o.infest ? opBox('infest', 'Infested', `${o.infest.count}/${o.infest.total} left · ${fmtTime(o.infest.left)}`, (o.infest.left / INFEST.stayMs) * 100, `<button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why} title="Clear them for an hour of production at once. Ignore them and they move on.">Clear</button>`) : '';
   const quiet = (o.quietUntil || 0) > Date.now();
-  const baitBtn = o.siege ? '' : `<button type="button" class="btn" data-command="bait ${esc(l.id)}" ${why || (quiet ? 'disabled' : '')} title="${quiet ? `Safe for ${fmtTime(o.quietUntil - Date.now())}` : 'Pull its natives in now, then a safe period'}">${quiet ? `Safe · ${fmtTime(o.quietUntil - Date.now())}` : 'Bait'}</button>`;
+  const sk = squelchCost(l.level || 1), skOk = (s.materials?.kernel || 0) >= sk;
+  const baitBtn = o.siege ? '' : `<button type="button" class="btn fw-up" data-command="squelch ${esc(l.id)}" ${why || (quiet || !skOk ? 'disabled' : '')} title="${quiet ? `Quiet for ${fmtTime(o.quietUntil - Date.now())}` : 'Pull its natives in now, then quiet'}">${quiet ? `Quiet · ${fmtTime(o.quietUntil - Date.now())}` : `Squelch<small>${sk} Kernel</small>`}</button>`;
   return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fwRow(s, l, l.id, (l.level || 1) + 2)}${fl}${siege}${inf}${o.siege ? '' : `<div class="row">${baitBtn}<button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
 }
 

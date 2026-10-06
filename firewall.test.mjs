@@ -32,13 +32,21 @@ test('an old save starts the firewall where its wall blocked', () => {
   assert.equal(fwOf(s).level, 17, 'a v3 Firewall on a level-10 server blocked up to level 17');
 });
 
-test('threats fragment it, a level per 4 blocks; a defrag runs weaker, then restores it', () => {
+test('threats fragment it, a level per 4 blocks; a defrag costs credits, runs weaker, then restores it', async () => {
+  const { defragCost } = await import('./dist/firewall.mjs');
   const s = fresh(); at(0);
   fwOf(s).level = 10;
   fragment(s, 'breach'); fragment(s, 'siege');
   assert.equal(fwOf(s).frag, 5);
   assert.equal(effLevel(s, 0), 9);
+  s.server.credits = 0;
   command(s, 'defrag', 0);
+  assert.equal(fwOf(s).defragUntil, 0, 'not without the credits');
+  const price = defragCost(fwOf(s));
+  assert.equal(price, 5 * 13, '(3 + level) a fragmented block');
+  s.server.credits = price;
+  command(s, 'defrag', 0);
+  assert.equal(s.server.credits, 0);
   assert.equal(effLevel(s, 1000), 9 - FIREWALL.defragLoss, 'weaker while it runs');
   at(FIREWALL.defragMs);
   tickFirewall(s, FIREWALL.defragMs);
@@ -109,37 +117,44 @@ test('a filter pulled from a vault is banked when you jack out', async () => {
   assert.equal(filtersOf(s)[0].name, 'Packet Filter');
 });
 
-test('bait: the next invasion comes now, and once it is dealt with a safe period follows', async () => {
+test('squelch: the next invasion comes now for Kernel code, and once it is dealt with a quiet period follows', async () => {
   const { tickNetwork } = await import('./dist/invasion.mjs');
   const { CONFIG } = await import('./dist/data.mjs');
   const s = fresh();
   command(s, 'developer location worm');
   fwOf(s).level = 20; // it will be blocked on the spot
   s.clock = 0; tickNetwork(s, 0);
-  command(s, 'bait');
+  s.materials = { kernel: 0 };
+  command(s, 'squelch');
+  assert.ok(!s.logs.some((e) => /Squelch:/.test(e.message)), 'not without Kernel code');
+  s.materials.kernel = 2;
+  command(s, 'squelch');
+  assert.equal(s.materials.kernel, 0, '2 Kernel at level 1');
   assert.equal(s.invasion, null, 'met at the wall at once, and stopped');
-  assert.ok(s.logs.some((e) => /Bait:/.test(e.message)));
+  assert.ok(s.logs.some((e) => /Squelch:/.test(e.message)));
   assert.equal(s.net.next, CONFIG.invasion.safeMs, 'then a safe period');
 });
 
 test('every outpost has its own firewall at its server\'s level; natives it blocks bounce, ones it contests are worn down', async () => {
   const { fwAt } = await import('./dist/firewall.mjs');
-  const { tickOutposts, OUTPOST, baitOutpost } = await import('./dist/outpost.mjs');
+  const { tickOutposts, OUTPOST, squelchOutpost: baitOutpost } = await import('./dist/outpost.mjs');
   const s = fresh();
   command(s, 'developer location worm');
   const a = s.locations[0];
   a.level = 8; a.takenOver = true;
   s.harvesters = [{ kind: 'siphon', level: 8, traits: [] }];
   command(s, `outpost install ${a.id}`, 0);
+  s.materials = { kernel: 20 };
   assert.equal(fwAt(s, a).level, 8, 'it comes with the server');
   baitOutpost(s, a, 0);
   assert.equal(a.outpost.siege, null, 'natives at its level bounce');
-  assert.ok(a.outpost.quietUntil > 0, 'and a safe period follows the bait');
+  assert.ok(a.outpost.quietUntil > 0, 'and a quiet period follows the squelch');
+  assert.equal(s.materials.kernel, 20 - 3, 'Kernel code by its level (lv 8: 3)');
   fwAt(s, a).level = 3; a.outpost.quietUntil = 0;
   baitOutpost(s, a, 0);
   assert.ok(a.outpost.siege && a.outpost.siege.hp === 1, 'a weaker firewall lets them in');
   command(s, `firewall upgrade ${a.id}`);
-  s.server.credits = 9999; s.materials = { cipher: 999 };
+  s.server.credits = 9999; s.materials = { cipher: 999, kernel: 0 };
   for (let i = 0; i < 4; i++) command(s, `firewall upgrade ${a.id}`);
   assert.equal(fwAt(s, a).level, 7);
   a.outpost.at = 0;
