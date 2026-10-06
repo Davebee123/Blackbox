@@ -751,6 +751,15 @@ document.addEventListener('pointerdown', (e) => { if (e.target.matches?.('[data-
 addEventListener('pointerup', () => { if (mkDrag) { mkDrag = false; dirty = true; } });
 document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mk-n]')) { mkDrag = false; dirty = true; } });
 // The map's Show picker (All · Mine · Targets · Threats).
+// The map's Show picker: its own listener, ahead of the map's, so opening and closing always work.
+// The summary toggles it; Show all clears; a click anywhere else (or Esc) closes it.
+document.addEventListener('click', (e) => {
+  const pick = e.target.closest?.('details.map-pick');
+  if (e.target.closest?.('[data-mapfilter-toggle]')) { e.preventDefault(); mapPickOpen = !pick?.open; if (pick) pick.open = mapPickOpen; dirty = true; return; }
+  if (e.target.closest?.('[data-mapfilter-clear]')) { mapFilter = []; mapPickOpen = false; dirty = true; return; }
+  if (!pick && (mapPickOpen || document.querySelector('details.map-pick[open]'))) { mapPickOpen = false; document.querySelectorAll('details.map-pick[open]').forEach((d) => (d.open = false)); dirty = true; }
+}, true);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.querySelector('details.map-pick[open]')) { mapPickOpen = false; document.querySelectorAll('details.map-pick[open]').forEach((d) => (d.open = false)); dirty = true; } });
 document.addEventListener('change', (e) => {
   const k = e.target.dataset?.mapfilterCheck;
   if (k) { mapFilter = e.target.checked ? [...new Set([...mapFilter, k])] : mapFilter.filter((x) => x !== k); mapPickOpen = true; dirty = true; }
@@ -1543,9 +1552,6 @@ document.addEventListener('click', (e) => {
   if (ms) { mapSort = ms.dataset.msort; dirty = true; return; }
   const mf = e.target.closest('[data-mapfilter]');
   if (mf) { mapFilter = mf.dataset.mapfilter === 'all' ? [] : [mf.dataset.mapfilter]; dirty = true; return; }
-  if (e.target.closest('[data-mapfilter-toggle]')) { e.preventDefault(); mapPickOpen = !mapPickOpen; dirty = true; return; }
-  if (e.target.closest('[data-mapfilter-clear]')) { mapFilter = []; dirty = true; return; }
-  if (mapPickOpen && !e.target.closest('.map-pick')) { mapPickOpen = false; dirty = true; }
   const mv = e.target.closest('[data-mapview]');
   if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
