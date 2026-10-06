@@ -715,9 +715,9 @@ function openHub(f) {
 }
 function closeHub() { hubOpen = false; hubWin = null; if (module === 'hub') go('map'); else dirty = true; }
 function hubEcho(text) { hubLines.push({ cls: 'you', html: V.esc(text) }); }
-function pickHub(key, typed = null) {
+// A menu pick opens its window; it isn't echoed into the session (the menu already says what it is).
+function pickHub(key) {
   if (key === 'store') return go('store');
-  if (typed !== null) hubEcho(typed);
   hubWin = key || null; feel.key('click'); dirty = true;
 }
 const hubShown = () => hubOpen && module === 'hub';
@@ -1660,7 +1660,7 @@ document.addEventListener('click', (e) => { const g = !e.target.closest('#comms'
 document.addEventListener('click', (e) => { if (commsOpen && !e.target.closest('#comms, #pager')) setComms(false); });
 document.addEventListener('click', (e) => {
   const o = e.target.closest('[data-hub-opt]'), c = e.target.closest('[data-hub-close]');
-  if (o) pickHub(o.dataset.hubOpt, o.dataset.hubOpt && o.closest('#hubterm') ? o.dataset.hubOpt : null);
+  if (o) pickHub(o.dataset.hubOpt);
   else if (c) closeHub();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && commsOpen) { setComms(false); } });
