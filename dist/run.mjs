@@ -275,6 +275,8 @@ function decoy(loc, k) {
   return passWord(loc) + String(10 + ((d - 10 + k * 17) % 89));
 }
 
+// How many of those you've banked (dead drops, route and contract files don't count toward it).
+export const takenOf = (loc) => takeable(loc).filter((f) => loc.state.taken[f]).length;
 export function takeable(loc) {
   const out = [];
   for (const [dir, d] of Object.entries(layoutOf(loc))) if (!d.drop) for (const f of d.files) if (!['text', 'trap', 'sweep'].includes(fileInfo(loc, dir, f).kind)) out.push(join(dir, f));

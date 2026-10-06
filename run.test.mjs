@@ -678,3 +678,14 @@ test('pull all: every file waiting in the folder goes into your pack in one go',
   assert.ok(!say(s, 'ls').find((e) => e.type === 'net-ls').entries.some((x) => x.pull), 'nothing left to pull');
   assert.match(say(s, 'pull all').at(-1).message, /Nothing here to pull/);
 });
+
+test('a server’s file count only counts its own files: dead drops and route files don’t push it past the total', () => {
+  const s = located();
+  const loc = s.locations[0], files = runMod.takeable(loc);
+  loc.state.taken[files[0]] = true;
+  loc.state.taken['/var/spool/drop/a.enc'] = true; // a dead drop's file
+  loc.state.taken['/ping-h1.trc'] = true; // a relay's route file
+  assert.equal(runMod.takenOf(loc), 1);
+  for (const f of files) loc.state.taken[f] = true;
+  assert.equal(runMod.takenOf(loc), files.length);
+});

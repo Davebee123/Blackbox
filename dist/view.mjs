@@ -20,7 +20,7 @@ import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './a
 import { outpostPorts, modsOf, hasMod, schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, modStock, modCost, canBuildMod } from './outpost.mjs';
 import { OUTPOST, INFEST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
-import { currentLocation, takeable, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
+import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
@@ -497,7 +497,7 @@ const stat = (label, value) => `<div class="stat"><span>${esc(label)}</span><str
 
 function locationList(s) {
   return `<ul class="list">${s.locations.map((l) => {
-    const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
+    const taken = takenOf(l), total = takeable(l).length;
     return `<li><span><b style="color:var(--bright)">${esc(l.name)}</b> · ${levelTag(s, l.level || 1, `Lv ${l.level || 1}`)} · ${esc(FAMILIES[l.family].name)} ${l.depth > 1 ? `· layer ${l.depth}` : 'origin'} · ${taken >= total ? 'cleaned out' : taken ? `${taken} of ${total} files banked` : l.runs ? 'partly explored' : 'unexplored'}</span>${s.run ? '' : btn('connect ' + l.id, 'Connect', !l.runs)}</li>`;
   }).join('')}</ul>`;
 }
@@ -1564,7 +1564,7 @@ export function consortiumLayout(s) {
 const gauge = (n, of, cells = 4) => { const k = Math.max(0, Math.min(cells, Math.round((n / Math.max(1, of)) * cells))); return '▮'.repeat(k) + '▯'.repeat(cells - k); };
 
 function nodeState(s, l) {
-  const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
+  const taken = takenOf(l), total = takeable(l).length;
   if (s.run?.loc === l.id) return 'here';
   if (taken >= total) return 'done';
   if (taken || l.runs) return 'partial';
@@ -1782,7 +1782,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       return `<g class="mnode lead f-target${on}" data-select="${n.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(FAMILIES[n.family].name)} lead"><circle r="18" class="mhit"/>${arc(8, n.progress / 100, 'lead')}${pick}${label(n, 9, `${FAMILIES[n.family].name} lead`, `${Math.min(99, n.progress)}%`, 'dim')}</g>`;
     }
     const l = n.loc, st = nodeState(s, l);
-    const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
+    const taken = takenOf(l), total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
     const rest = st === 'here' ? 'here' : l.held?.siege ? 'invasion' : l.held?.lockdown ? 'lockdown' : l.held ? l.held.kind : job ? 'contract' : l.outpost?.lockdown ? 'lockdown' : l.outpost?.siege ? 'invasion' : l.outpost?.h ? gauge(stockOf(l), capOf(l)) : l.takenOver ? '' : st === 'done' ? 'clean' : '';
     const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
@@ -1808,7 +1808,7 @@ function serverList(s, sel, filter, sort) {
   const [key, dir] = sort.startsWith('-') ? [sort.slice(1), -1] : [sort, 1];
   const rows = (s.locations || []).map((l) => {
     const st = nodeState(s, l), job = openContracts(s).some((c) => c.loc === l.id), tags = mapTags(s, l, st, job);
-    const taken = Object.keys(l.state.taken).length, total = takeable(l).length || 1, o = l.outpost || {};
+    const taken = takenOf(l), total = takeable(l).length || 1, o = l.outpost || {};
     const chips = [
       st === 'here' ? '<span class="tag you">here</span>' : '',
       o.siege ? '<span class="tag hot">invasion</span>' : '', o.lockdown ? '<span class="tag hot">lockdown</span>' : '', o.infest ? '<span class="tag warn">infested</span>' : '',
@@ -2037,7 +2037,7 @@ function mapSide(s, sel, node) {
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
-  const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
+  const taken = takenOf(l), total = takeable(l).length;
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     <p>${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
