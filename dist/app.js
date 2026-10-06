@@ -1633,13 +1633,15 @@ let fitKey = '';
 function fitTopbar() {
   const bar = document.querySelector('.topbar');
   if (!bar.clientWidth) return; // not laid out yet (the casing boots)
-  const key = [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth;
-  if (key === fitKey) return;
-  fitKey = key;
+  // Refit when the tabs, the width, or what the bar holds changes (a breach adds a chip, the pager an alert):
+  // the bar's height after the last fit is part of the key, so growing onto a second row refits it.
+  const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden;
+  if (sig() === fitKey) return;
   // Wrapped: something starts below where something else ends.
   const wraps = () => { const kids = [...bar.children].filter((x) => !x.hidden && x.offsetHeight); return kids.some((a) => kids.some((b) => a.offsetTop >= b.offsetTop + b.offsetHeight)); };
   for (let i = 1; i <= 4; i++) bar.classList.remove('fit-' + i);
   for (let i = 1; i <= 4 && wraps(); i++) bar.classList.add('fit-' + i);
+  fitKey = sig();
 }
 addEventListener('resize', () => { fitKey = ''; fitTopbar(); });
 document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });

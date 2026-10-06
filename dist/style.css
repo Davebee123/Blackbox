@@ -2329,3 +2329,8 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .mk-th .mk-buy-h { grid-column: 6 / 8; text-align: left; padding-left: 12px; border-left: 1px solid var(--line-strong, var(--line)); color: var(--amber); }
 .mk-th span:last-child { text-align: left; }
 .mk-tr .btn.small { white-space: nowrap; }
+/* Tight top bar (a breach's chip, a long pager line): the pager's screen and who-you-are give way first. */
+.topbar.fit-2 .pager .lcd { width: 110px; }
+.topbar.fit-3 .pager .lcd { width: 72px; }
+.topbar.fit-3 .whoami .who-dot, .topbar.fit-3 .whoami #who-class { display: none; }
+.topbar.fit-4 .pager .lcd { display: none; }
