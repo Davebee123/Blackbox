@@ -870,6 +870,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
    speed) and labelled lamps that show real state: power, the gate, the wall, a run, an install,
    daemons. Lamps glow steady; nothing blinks. */
 #casing { display: none; }
+/* The window behind the monitor (window.mjs): always out of the page flow; only shown when the monitor is. */
+.window-out { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: -1; pointer-events: none; display: none; }
 @media (min-width: 1100px) and (min-height: 720px) {
   /* The monitor is as wide as the screen inside it (at most 1800px of picture) and sits centered on
      the desk, so on a wide display the frame hugs the picture instead of the window edges. */
@@ -883,7 +885,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   /* The knobs are the sound and speed controls here; the header keeps only what the casing lacks. */
   body.cased .toggles #sound, body.cased .toggles #speed { display: none; }
   /* The window: the monitor sits a little further in so the slum shows either side (window.mjs). */
-  .window-out { position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: -1; pointer-events: none; }
+  .window-out { display: block; }
 }
 #casing .badge { position: absolute; left: 50%; transform: translateX(-50%); font: 700 11px var(--mono); letter-spacing: 6px; color: #6b655c; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 -1px 0 rgba(0, 0, 0, 0.8); pointer-events: none; }
 #casing .knobs { display: flex; gap: 10px; }
@@ -2692,3 +2694,7 @@ details.map-pick { pointer-events: auto; }
 .bcost.req.short { color: var(--hot); opacity: 1; }
 .op-pick-t { display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--sans, inherit); color: var(--text); }
 .op-pick-t .glyph { width: 14px; height: 14px; }
+/* A paused fight: the board dims under a banner. Any order (or the Fight tab) resumes it. */
+#board.is-paused { position: relative; }
+#board.is-paused > * { opacity: 0.45; }
+#board.is-paused::after { content: 'PAUSED · ANY ORDER RESUMES'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border: 1px solid var(--amber); background: rgba(9, 6, 3, 0.92); color: var(--amber); font: 700 12px var(--mono); letter-spacing: 3px; pointer-events: none; white-space: nowrap; }

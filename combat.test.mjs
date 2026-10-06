@@ -545,3 +545,20 @@ test('codex: a component says ??? until you break one, then what it does', async
   command(t, 'encounter cryptjack'); command(t, 'engage');
   assert.ok(knowsPart(t, t.encounter.virus, t.encounter.virus.parts.find((x) => x.id === 'pulse')));
 });
+
+test('a paused fight resumes on any order, and typos at home get a did-you-mean', async () => {
+  const { fresh, command, restore } = await import('./dist/combat.mjs');
+  const s = fresh();
+  command(s, 'encounter cryptjack'); command(s, 'engage');
+  const r = restore(JSON.parse(JSON.stringify(s)));
+  assert.ok(r.encounter.paused, 'a reload pauses the fight');
+  const ev = command(r, 'spike pulse');
+  assert.ok(ev.some((e) => e.message === 'Resumed.'));
+  assert.ok(!r.encounter.paused);
+  assert.ok(!ev.some((e) => e.type === 'warning'), 'the order goes through');
+  const h = fresh();
+  const w = command(h, 'conect sprawl').at(-1);
+  assert.match(w.message, /Did you mean connect sprawl\?/);
+  assert.equal(w.suggest, 'connect sprawl');
+  assert.match(command(h, 'ls').at(-1).message, /works on a run/);
+});

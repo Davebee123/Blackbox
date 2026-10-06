@@ -1219,6 +1219,18 @@ function distance(a, b) {
   for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1), i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1] ? d[i - 2][j - 2] + 1 : Infinity);
   return d[a.length][b.length];
 }
+// A command that isn't one, with no fight running: a fight order says so; a run command says where it
+// works; anything else gets a "did you mean" (clickable in the notice).
+const HOME_WORDS = ['connect', 'jack', 'mail', 'outpost', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'compile', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'architecture', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
+const RUN_WORDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'attack', 'engage', 'slip', 'spoof', 'tap', 'sweep'];
+function unknownAtHome(s, text) {
+  const [w, ...rest] = text.split(' ');
+  if (ABILITIES[w] || ['spike', 'hold', 'cancel'].includes(w)) return warn(s, 'No fight running.');
+  if (RUN_WORDS.includes(w)) return warn(s, `${w} works on a run: connect to a server first.`);
+  const near = closest(w, [...new Set(HOME_WORDS)]);
+  if (near) { const fix = [near, ...rest].join(' '); return warn(s, `Unknown command "${w}". Did you mean ${fix}?`, { suggest: fix }); }
+  return warn(s, `Unknown command "${w}". Type help for the list.`);
+}
 // The closest of `options` to `word`, if it's close enough to be a typo (or `word` starts it).
 export function closest(word, options) {
   const q = squash(word);
@@ -1409,8 +1421,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'info', `Speed: ${s.settings.speed}, ${cycleLength(s) / 1000} seconds per cycle.`);
   } else if (text === 'go' || text === 'now') {
     if (!active(s)) warn(s, 'No fight running.');
-    else if (s.encounter.paused) warn(s, 'Paused. Type resume first.');
     else {
+      if (s.encounter.paused) { s.encounter.paused = false; s.encounter.autoPaused = false; emit(s, 'info', 'Resumed.'); } // any order resumes a paused fight
       const q = s.encounter.queue;
       s.encounter.synced = !!q && q.ability !== 'hold' && inSync(s, s.encounter.elapsedMs / cycleLength(s));
       resolveCycle(s);
@@ -1422,9 +1434,13 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       emit(s, 'info', e.paused ? 'Paused. Type resume.' : 'Resumed.');
     }
   } else if (!active(s)) {
-    warn(s, 'No fight running.');
+    unknownAtHome(s, text);
   } else if (e.paused) {
-    warn(s, 'Paused. Type resume first.');
+    // A paused fight resumes on any order (a reload or a tab switch pauses it): then the order goes through.
+    e.paused = false; e.autoPaused = false;
+    emit(s, 'info', 'Resumed.');
+    command(s, input, now);
+    return since(s, first);
   } else if (text === 'cancel') {
     e.queue = null;
     e.plan = [];
@@ -2720,7 +2736,7 @@ export function restore(raw) {
     s.loadout.equipped ||= {};
     for (const l of s.locations || []) { l.template ||= 'relay'; l.depth ||= 1; reclaimCheck(l); }
     if (s.encounter) s.encounter.plan ||= [];
-    if (active(s)) s.encounter.paused = true;
+    if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;
   } catch {
     return fresh();

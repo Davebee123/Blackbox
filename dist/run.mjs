@@ -347,7 +347,7 @@ export function connect(s, id) {
   if (active(s)) warn(s, 'Finish the fight first.');
   else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Signal ${signal}/${maxSignal(s)}: too weak to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
-  else if (!loc) warn(s, `No located origin called "${id}". Check Trace.`);
+  else if (!loc) warn(s, `No server called "${id}" on your map.`);
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);

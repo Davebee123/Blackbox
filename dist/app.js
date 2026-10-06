@@ -501,7 +501,7 @@ function react(events) {
         flash('NEUTRALIZED');
         feel.add('win', '.hud');
         // Let the last break land, then show what the fight gave you.
-        ending = true; hideTip(false); ended = e.mode || 'home';
+        ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
         setTimeout(() => { ending = false; }, 900);
         break;
       case 'crashed': flash(e.mode === 'run' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); break;
@@ -521,6 +521,7 @@ function react(events) {
 // No Victory screen: the log carries what the fight gave you. Enter on an empty line (or any
 // page button) moves on: back to the run, or the map.
 let ended = null; // 'home' | 'run' once a fight is over and you're still looking at it
+let endedAt = 0; // when it ended: an Enter typed in the moment after a win doesn't skip its spoils card
 let ending = false; // the last break is landing
 
 // ---------- notices ----------
@@ -534,7 +535,7 @@ function levelUp(title, text) {
   clearTimeout(levelUp.t);
   levelUp.t = setTimeout(() => { el.hidden = true; }, 3200);
 }
-function notice(text, bad = false, suggest = null) {
+function notice(text, bad = false, suggest = null, sticky = false) {
   const el = $('notice');
   el.textContent = text;
   // A typo's best guess: click it to run it (or, ending in a space, to fill the prompt).
@@ -542,7 +543,7 @@ function notice(text, bad = false, suggest = null) {
   el.classList.toggle('bad', bad);
   el.hidden = !text;
   clearTimeout(noticeTimer);
-  if (text) noticeTimer = setTimeout(() => (el.hidden = true), 4000);
+  if (text && !sticky) noticeTimer = setTimeout(() => (el.hidden = true), 4000); // sticky (help): stays until the next notice or command
 }
 
 // ---------- commands ----------
@@ -553,6 +554,7 @@ function run(raw) {
   let text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
   aimPreview = null; // the command is going in: the board shows the real aim again
   if (!text) return;
+  if (!$('notice').hidden) notice(''); // a sticky notice (help) goes with the next command
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
   // A server you found but never connected: typing connect asks first, on its map card.
@@ -598,7 +600,7 @@ function run(raw) {
   if (text === 'window on' || text === 'window off') { campaign.settings.window = text === 'window on'; save(); dirty = true; return notice(`Window ${text.slice(7)}.`); }
   if (text.startsWith('weather')) { const w = text.split(' ')[1]; outside.force(w === 'auto' ? null : w); return notice(`Weather: ${w && w !== 'auto' ? w : 'follows the clock'}.`); }
   if (text === 'reset game' || text === 'new game') return resetGame();
-  if (text === 'help') return notice('Fight: spike and your class\'s skills (keys 1–8), hold, now. Runs: ls, cd, cat, pull, unlock, jack out. Protocols: load, unload, scrap, compile. Services: install, uninstall, cancel install. Wall: jack in (fight the invasion at your wall). Pages: map, server, protocols, loadout, daemons, system. Screen: shell immersive|plain|boot. Start over: reset game.');
+  if (text === 'help') return notice('Fight: spike and your skills (keys 1–8), hold, now. Runs: ls, cd, cat, pull, unlock, attack, jack out. Gear: load, unload, compile, deconstruct, craft. Server: install, uninstall, firewall upgrade|defrag|harden, filter equip. Net: connect, relay, detach, mail. Pages: map, mail, server, craft, loadout, system. Screen: shell immersive|plain|boot. Start over: reset game.', false, null, true);
   if (text.startsWith("'") || text.startsWith('say ')) return notice('Chat arrives with co-op. For now it is just you and the virus.');
 
   const wasAlert = campaign.encounter?.phase === 'alert';
@@ -674,11 +676,13 @@ function go(name, quiet = false) {
   if (name !== 'combat') hideSpoils();
   if (gainOpen()) hideGain();
   if (name !== 'hub') { hubOpen = false; hubWin = null; }
+  const moved = name !== module;
   module = name;
   selected = null;
   document.querySelectorAll('.modules button').forEach((b) => b.setAttribute('aria-current', b.dataset.module === name ? 'page' : 'false'));
   dirty = true;
   render(true);
+  if (moved) $('page-view').scrollTop = 0; // a new page opens at its top
   shell.onModule(name);
   $('command-input').focus();
 }
@@ -1009,6 +1013,7 @@ function render(force = false) {
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
     put('board', V.boardMarkup(s, selected, aimPreview));
+    $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
     for (const f of pendingStrikes.splice(0)) f();
     if (before) turnTimeline(before);
     cycleChanged(s);
@@ -1034,6 +1039,8 @@ function render(force = false) {
   } else {
     const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     if (!(module === 'hub' && mkDrag)) put('page-view', (pages[module] || pages.map)(campaign)); // not while you drag a ticket's slider
+    // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
+    if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {
       const grew = hubLines.length - (render.hubLen ?? 0);
       if (grew > 0) shell.typeIn($('hubterm'), grew);
@@ -1166,7 +1173,9 @@ function fire(b) {
 // ---------- the monitor casing ----------
 // Desktop, immersive shell: the screen sits in a monitor whose bezel lamps show real state.
 function casing() {
-  const cased = shellOn() && campaign.settings.casing !== false, win = cased && campaign.settings.window !== false;
+  // The monitor and its window only fit a desktop-sized screen (style.css, the casing media query).
+  const roomy = matchMedia('(min-width: 1100px) and (min-height: 720px)').matches;
+  const cased = shellOn() && campaign.settings.casing !== false, win = cased && roomy && campaign.settings.window !== false;
   const moved = document.body.classList.contains('cased') !== cased || document.body.classList.contains('window-on') !== win;
   document.body.classList.toggle('cased', cased);
   document.body.classList.toggle('window-on', win);
@@ -1627,7 +1636,7 @@ $('command-form').addEventListener('submit', (e) => {
     if (tip) { hideTip(true); return; } // Enter closes a tip first
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); dirty = true; }
-    else if (module === 'combat' && ended) leaveFight();
+    else if (module === 'combat' && ended && !$('spoils').hidden && performance.now() - endedAt > 1200) leaveFight();
     return;
   }
   run(value);
@@ -1681,6 +1690,7 @@ $('motion').addEventListener('click', () => { campaign.settings.motion = !campai
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && active(campaign) && !campaign.encounter.paused) {
     command(campaign, 'pause');
+    campaign.encounter.autoPaused = true; // coming back to the Fight tab (or any order) resumes it
     save();
     dirty = true;
   }
