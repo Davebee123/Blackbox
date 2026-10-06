@@ -961,7 +961,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggl
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
-let mapList = false, mapSort = 'status'; // the map's List mode (MOO2's planets list) and its sort column
+let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = 'all'; // the map's filter chips: all · mine · targets · threats (the rest dims)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
 let memYes = null; // the found server you just said yes to (its connect goes through)
@@ -1022,7 +1022,13 @@ function render(force = false) {
       render.hubLen = hubLines.length;
       $('hubterm').scrollTop = $('hubterm').scrollHeight;
     } else render.hubLen = 0;
-    if (module === 'map' || !pages[module]) applyMapZoom();
+    if (module === 'map' || !pages[module]) {
+      // Locate: centre on the node and zoom in (3×), then draw as usual.
+      const node = pendingLocate && $('page-view').querySelector(`.mnode[data-select="${CSS.escape(pendingLocate)}"]`);
+      if (node) { const m = node.getAttribute('transform')?.match(/translate\(([-\d.]+)[ ,]+([-\d.]+)\)/); if (m) { mapZoom.k = 3; mapZoom.cx = Number(m[1]); mapZoom.cy = Number(m[2]); } }
+      if (pendingLocate && (node || module === 'map')) pendingLocate = null;
+      applyMapZoom();
+    }
   }
   if (module === 'net' && campaign.run) {
     rain.mount($('page-view'));
@@ -1464,6 +1470,8 @@ document.addEventListener('click', (e) => {
     if (cmd.classList.contains('ability')) { $('command-input').value = cmd.dataset.command; $('command-input').focus(); return; }
     return run(cmd.dataset.command);
   }
+  const loc = e.target.closest('[data-locate]');
+  if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); dirty = true; return; }
   const ml = e.target.closest('[data-maplist]');
   if (ml) { mapList = ml.dataset.maplist === '1'; dirty = true; return; }
   const ms = e.target.closest('[data-msort]');

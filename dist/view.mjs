@@ -1517,7 +1517,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter !== 'all' ? ' mf-' + filter : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
-  const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><div class="map-ctl comms-filters map-filters" role="group" aria-label="Show">${[['all', 'All'], ['mine', 'Mine'], ['targets', 'Targets'], ['threats', 'Threats']].map(([k, l]) => `<button type="button" data-mapfilter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
+  const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><div class="map-ctl comms-filters map-filters" role="group" aria-label="Show">${[['all', 'All'], ['mine', 'Mine'], ['targets', 'Targets'], ['threats', 'Threats']].map(([k, l]) => `<button type="button" data-mapfilter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
   const card = pop ? `<div class="map-pop" id="map-pop" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
@@ -1552,8 +1552,26 @@ function serverList(s, sel, filter, sort) {
       <span class="sl-lv ${conClass(gap)}">${l.level || 1}</span>
       <span class="sl-num">${l.depth || 1}</span>
       <span class="sl-exp"><span class="ld-bar"><span style="width:${Math.round(r.explored * 100)}%"></span></span><small>${r.taken}/${r.total}</small></span>
-      <span class="sl-status">${r.chips}</span></button>`; }).join('');
-  return `<div class="server-list"><div class="sl-head">${head}</div><div class="sl-body">${body || '<p class="quiet">None.</p>'}</div></div>`;
+      <span class="sl-status">${r.chips}${locBtn(l.id)}</span></button>`; }).join('');
+  return `<div class="server-list"><div class="sl-head">${head}</div><div class="sl-body">${body || '<p class="quiet">None.</p>'}${listHubs(s, sel, filter)}${listLeads(s, sel, filter)}</div></div>`;
+}
+// Locate: back to the map, centred and zoomed on it (app.js).
+const locBtn = (id) => `<span class="sl-loc" role="button" tabindex="0" data-locate="${esc(id)}" title="Show it on the map">${glyph('trace')}</span>`;
+// The hubs you've found, as rows: the faction, its level, how it stands with you.
+function listHubs(s, sel, filter) {
+  const hubs = hubsOf(s).filter((h) => filter === 'all' || (filter === 'mine' && captured(s, h.faction)) || (filter === 'threats' && (lockedDown(s, h.faction) || retakeOf(s)?.f === h.faction)));
+  if (!hubs.length) return '';
+  return `<h4 class="sl-sec">Hubs</h4>${hubs.map((h) => { const f = h.faction, chips = [captured(s, f) ? '<span class="tag you">yours</span>' : '', hostile(s, f) ? '<span class="tag hot">hostile</span>' : '', offline(s, f) ? '<span class="tag dim">offline</span>' : '', lockedDown(s, f) ? '<span class="tag hot">lockdown</span>' : '', retakeOf(s)?.f === f ? '<span class="tag hot">swarm</span>' : ''].join('');
+    return `<button type="button" class="sl-row${h.id === sel ? ' on' : ''}" data-select="${esc(h.id)}"><span class="sl-name">${fIcon(f)}<b>${esc(h.name)}</b></span><span class="sl-fam">${esc(FX[f].short)}</span><span class="sl-lv">${h.level}</span><span class="sl-num">—</span><span class="sl-exp"><small>${esc(repTier(s, f).name)}</small></span><span class="sl-status">${chips}${locBtn(h.id)}</span></button>`; }).join('')}`;
+}
+// Traces in progress: a family's lead, and the unknown servers you can see.
+function listLeads(s, sel, filter) {
+  if (filter !== 'all' && filter !== 'targets') return '';
+  const fams = Object.entries(s.leadProgress || {}).filter(([f, n]) => FAMILIES[f] && n > 0).map(([f, n]) => ({ id: 'lead-' + f, name: `${FAMILIES[f].name} lead`, fam: f, pct: n, depth: '1', flag: false }));
+  const nodes = hiddenNodes(s).filter(hiddenVisible).map((n) => ({ id: n.id, name: `? past ${s.locations.find((l) => l.id === n.via)?.name || '?'}`, fam: n.family, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
+  const rows = [...fams, ...nodes].sort((a, b) => b.pct - a.pct);
+  if (!rows.length) return '';
+  return `<h4 class="sl-sec">Leads and unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${glyph(r.fam)}${esc(FAMILIES[r.fam]?.name || '')}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('bounty')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
 }
 // The map's selection card on its own (the sidebar carries it when it's on).
 export function mapSelection(s, sel = 'server', view = 'mine') {
