@@ -873,7 +873,19 @@ export function netTranscript(s, limit = 80) {
 
 export const signalLevel = (run) => (run.integrity / run.max <= 0.3 ? 'low' : run.integrity / run.max <= 0.6 ? 'mid' : 'ok');
 
-export function netMarkup(s) {
+// On a run, the Leads panel (toggled from the run's header): every trace in progress. A family's
+// lead (kills of it), and each unknown server you can see (where it hangs off, its layer), with its
+// percent; a contract's marker on the flagged ones. Click one to see it on the map.
+function leadsPanel(s) {
+  const fams = Object.entries(s.leadProgress || {}).filter(([f, n]) => FAMILIES[f] && n > 0).sort((a, b) => b[1] - a[1]);
+  const nodes = hiddenNodes(s).filter(hiddenVisible).sort((a, b) => b.lead - a.lead);
+  const bar = (n) => `<span class="ld-bar"><span style="width:${Math.min(100, n)}%"></span></span><b class="ld-n">${Math.floor(n)}%</b>`;
+  const famRows = fams.map(([f, n]) => `<li class="ld-row" data-go="map:lead-${esc(f)}" title="${esc(FAMILIES[f].name)} lead">${glyph(f)}<span class="ld-name">${esc(FAMILIES[f].name)}</span>${bar(n)}</li>`).join('');
+  const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${esc(FAMILIES[n.family].name.toLowerCase())} server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('bounty')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
+  return `<aside class="net-leads"><h3>${glyph('trace')}Leads</h3>${famRows || nodeRows ? `${famRows ? `<ul class="ld-list">${famRows}</ul>` : ''}${nodeRows ? `<h4>Unknown servers</h4><ul class="ld-list">${nodeRows}</ul>` : ''}` : '<p class="quiet">none</p>'}</aside>`;
+}
+
+export function netMarkup(s, { leads = false } = {}) {
   if (!s.run) {
     return `<div class="page-grid"><section class="card"><h2>The net</h2><h1>Not connected</h1><div class="row">${btn('connect ' + CONFIG.zone.id, 'Connect to ' + CONFIG.zone.name, true)}</div>${s.locations.length ? locationList(s) : ''}</section></div>`;
   }
@@ -885,8 +897,9 @@ export function netMarkup(s) {
       <div class="net-where"><b>${esc(loc.name)}${loc.depth > 1 ? ` <span class="tag">layer ${loc.depth}</span>` : ''}${QUIRKS[loc.quirk] ? ` <span class="tag tag-quirk" data-quirk="${loc.quirk}" title="${esc(QUIRKS[loc.quirk].rule)}">${esc(QUIRKS[loc.quirk].name)}</span>` : ''}</b><span>${esc(s.run.cwd)}</span></div>
       <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${CONFIG.cdCost}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small></div>
       <button type="button" class="net-pack" data-run="pack" title="What you're carrying (unbanked)">pack <b>${s.run.pack.length}</b></button>
+      <button type="button" class="net-pack net-leads-btn" data-leads aria-pressed="${leads}" title="Leads">${glyph('trace')}leads</button>
     </header>
-    <ol class="term" id="term">${netTranscript(s)}</ol>
+    <div class="net-body${leads ? ' with-leads' : ''}"><ol class="term" id="term">${netTranscript(s)}</ol>${leads ? leadsPanel(s) : ''}</div>
   </section>`;
 }
 

@@ -940,6 +940,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggl
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
+let leadsOpen = false; // a run's Leads panel (the run header's toggle)
 let memYes = null; // the found server you just said yes to (its connect goes through)
 addEventListener('resize', () => { dirty = true; applyMapZoom(); });
 function render(force = false) {
@@ -984,7 +985,7 @@ function render(force = false) {
   } else if (module === 'net') {
     const before = cache.get('page-view');
     const lines = $('term')?.children.length;
-    put('page-view', V.netMarkup(campaign));
+    put('page-view', V.netMarkup(campaign, { leads: leadsOpen }));
     if (cache.get('page-view') !== before && $('term')) {
       if (lines !== undefined && before !== undefined) shell.typeIn($('term'), $('term').children.length - lines);
       $('term').scrollTop = $('term').scrollHeight;
@@ -1422,6 +1423,7 @@ document.addEventListener('click', (e) => {
   }
   const mv = e.target.closest('[data-mapview]');
   if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
+  if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
   const lt = e.target.closest('[data-ltab]');
   if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); dirty = true; return; }
   const snd = e.target.closest('[data-sound]');
