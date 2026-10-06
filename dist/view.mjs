@@ -823,7 +823,8 @@ const NET_CLASS = { 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'ne
 // Who's in a SPRAWL-00 folder (presence.mjs): a dot each, friends lit, a name on hover.
 const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.crew ? ' crew' : x.friend ? ' friend' : x.member ? ' member' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
 function lsMarkup(e) {
-  return `${e.here?.length ? `<div class="ls-here">here ${peopleChips(e.here)}</div>` : ''}<div class="ls">${e.entries.map((x) => {
+  const pulls = e.entries.filter((x) => x.pull).length;
+  return `${e.here?.length ? `<div class="ls-here">here ${peopleChips(e.here)}</div>` : ''}<div class="ls">${pulls >= 2 ? `<div class="ls-all"><button type="button" class="tok act" data-run="pull all" title="Every file here into your pack">pull all · ${pulls}</button></div>` : ''}${e.entries.map((x) => {
     const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'hostile' ? 'hot' : 'dim'}">${esc(t)}</span>`).join('');
     const name = x.kind === 'dir' ? (x.name === '..' ? '..' : x.name + '/') : x.name;
     const main = x.cmd.endsWith(' ') ? `data-prefill="${esc(x.cmd)}"` : `data-run="${esc(x.cmd)}"`;

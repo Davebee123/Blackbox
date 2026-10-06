@@ -484,6 +484,28 @@ function cat(s, arg) {
   out(s, fileInfo(loc, dir, name).text, 'net-file');
 }
 
+// Every file still waiting in this folder, into your pack: the same checks as one pull each (a
+// watching guard stops it, a spoof covers one file, a canary you've read is left where it is).
+function pullable(s, loc) {
+  const dir = s.run.cwd;
+  return (layoutOf(loc)[dir]?.files || []).filter((f) => {
+    const full = join(dir, f), info = fileInfo(loc, dir, f);
+    if (!info || info.kind === 'text' || info.kind === 'sweep' || loc.state.taken[full] || inPack(s, full) || loc.state.sprung?.[full]) return false;
+    return !(info.kind === 'trap' && s.run.read?.includes(full));
+  });
+}
+export const pullableCount = (s) => (s.run ? pullable(s, currentLocation(s)).length : 0);
+function pullAll(s) {
+  const loc = currentLocation(s), files = pullable(s, loc);
+  if (!files.length) return err(s, 'Nothing here to pull.');
+  for (const f of files) {
+    if (!s.run || s.run.cwd === undefined) break; // thrown out (a canary took the last of your Signal)
+    const before = s.run.pack.length;
+    pull(s, f);
+    if (s.run && s.run.pack.length === before && !loc.state.sprung?.[join(s.run.cwd, f)]) break; // stopped (a guard, a spoof's one file)
+  }
+}
+
 function pull(s, arg) {
   if (!arg) return err(s, 'pull what? Try a file marked [pull].');
   const loc = currentLocation(s);
@@ -653,7 +675,7 @@ export function play(s, input) {
   else if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) crewMove(s, word, rest);
   else if (word === 'cd' || word === 'go') cd(s, rest);
   else if (word === 'cat') cat(s, rest);
-  else if (word === 'pull') pull(s, rest);
+  else if (word === 'pull') (rest === 'all' || rest === '*' ? pullAll(s) : pull(s, rest));
   else if (word === 'unlock') unlock(s, rest);
   else if (word === 'jack') jackOut(s);
   else if (word === 'tree') tree(s);
@@ -783,6 +805,9 @@ export function nextActions(s) {
     else if (info.kind !== 'text' && !loc.state.taken[full] && !inPack(s, full)) acts.push({ label: `pull ${f}`, cmd: `pull ${f}`, hot: true });
     else if (info.kind === 'text' && !read) acts.push({ label: `cat ${f}`, cmd: `cat ${f}` });
   }
+  // Two or more files to take: one button for all of them, first.
+  if (acts.filter((a) => a.cmd?.startsWith('pull ')).length >= 2) acts.unshift({ label: 'pull all', cmd: 'pull all', hot: true, note: `${acts.filter((a) => a.cmd?.startsWith('pull ')).length} files` });
+
   for (const d of here.dirs.filter(show)) {
     const full = join(s.run.cwd, d);
     if (locked(loc, full)) acts.push({ label: `unlock ${d} …`, prefill: `unlock ${d} `, note: 'needs a password' });
@@ -804,7 +829,7 @@ export function runSuggestions(s, input) {
   if (text.includes(' ')) {
     if (word === 'cd') return ['..', ...here.dirs].filter((d) => d.startsWith(arg)).map((d) => 'cd ' + d);
     if (word === 'cat') return here.files.filter((f) => f.startsWith(arg)).map((f) => 'cat ' + f);
-    if (word === 'pull') return here.files.filter((f) => fileInfo(loc, s.run.cwd, f).kind !== 'text' && f.startsWith(arg)).map((f) => 'pull ' + f);
+    if (word === 'pull') return [...('all'.startsWith(arg) && pullable(s, loc).length >= 2 ? ['pull all'] : []), ...here.files.filter((f) => fileInfo(loc, s.run.cwd, f).kind !== 'text' && f.startsWith(arg)).map((f) => 'pull ' + f)];
     if (word === 'ls') return ['-a'].filter((f) => f.startsWith(arg)).map((f) => 'ls ' + f);
     if (word === 'unlock') return here.dirs.filter((d) => locked(loc, join(s.run.cwd, d)) && d.startsWith(arg)).map((d) => `unlock ${d} `);
     return [];

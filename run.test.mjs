@@ -676,3 +676,19 @@ test('a virus that counts for a contract is marked in the listing; others are no
   assert.equal(v().jobs.length, 0, 'another family does not count');
   hooks.now = null;
 });
+
+test('pull all: every file waiting in the folder goes into your pack in one go', () => {
+  const s = onRun();
+  const loc = currentLocation(s);
+  say(s, 'cd relay');
+  winFight(s);
+  say(s, `unlock vault ${loc.password}`);
+  say(s, 'cd vault');
+  const waiting = s.run.cwd && say(s, 'ls').find((e) => e.type === 'net-ls').entries.filter((x) => x.pull).length;
+  assert.ok(waiting >= 2, 'a vault has several files');
+  const before = s.run.pack.length;
+  say(s, 'pull all');
+  assert.equal(s.run.pack.length - before, waiting);
+  assert.ok(!say(s, 'ls').find((e) => e.type === 'net-ls').entries.some((x) => x.pull), 'nothing left to pull');
+  assert.match(say(s, 'pull all').at(-1).message, /Nothing here to pull/);
+});

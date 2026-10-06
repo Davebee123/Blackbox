@@ -2334,3 +2334,6 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .topbar.fit-3 .pager .lcd { width: 72px; }
 .topbar.fit-3 .whoami .who-dot, .topbar.fit-3 .whoami #who-class { display: none; }
 .topbar.fit-4 .pager .lcd { display: none; }
+/* A listing with several files to pull: one button takes them all. */
+.ls-all { margin: 2px 0 4px; }
+.ls-all .tok.act { font-weight: 600; }
