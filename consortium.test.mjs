@@ -230,15 +230,22 @@ test('away, in a consortium: a weak wall gets crashed; the server reboots for ho
   });
 });
 
-test('away, solo: nothing happens', () => {
-  const s = world();
-  command(s, 'developer location ransomware');
+test('away, solo too: the network plays on, and your firewall decides', () => {
   const T0 = 1_800_000_000_000;
-  tickNetwork(s, T0);
-  s.server.integrity = 5;
-  tickNetwork(s, T0 + 8 * 3600000);
-  assert.equal(s.server.integrity, 5);
-  assert.ok(!s.logs.some((e) => e.type === 'invader'));
+  const weak = world();
+  command(weak, 'developer location ransomware');
+  weak.firewall = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  tickNetwork(weak, T0);
+  tickNetwork(weak, T0 + 8 * 3600000);
+  assert.ok(weak.logs.some((e) => e.type === 'invader'), 'invaders came while you were away');
+  assert.ok(weak.logs.some((e) => e.type === 'crashed'), 'nothing stopped them');
+  const strong = world();
+  command(strong, 'developer location ransomware');
+  strong.firewall = { level: 30, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  tickNetwork(strong, T0);
+  tickNetwork(strong, T0 + 8 * 3600000);
+  assert.ok(strong.logs.some((e) => e.type === 'invasion-cleared'), 'the firewall stopped them');
+  assert.ok(!strong.logs.some((e) => e.type === 'crashed'));
 });
 
 test('away, a strong wall holds: invaders are stopped and nothing crashes', () => {

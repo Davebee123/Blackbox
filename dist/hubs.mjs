@@ -18,6 +18,8 @@ import { CONDITIONS, HUB_CONDITION, outsideMult } from './market.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
 import { launch, fleetOf } from './fleet.mjs';
 import { outposts } from './outpost.mjs';
+import { ratingAt, fragment } from './firewall.mjs';
+import { strength, outcome, grindRate } from './invasion.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -72,8 +74,10 @@ export function collect(s, f) {
 
 // ---------- retaliation (logged-on time, from tickNetwork) ----------
 export const retakeLeft = (s, at = now()) => { const r = s.retake; return !r ? 0 : r.state === 'travel' ? Math.max(0, r.arriveAt - at) : r.siegeLeft; };
+// A hub you hold has its own firewall (firewall.mjs), at the hub's level to start.
+export const hubWall = (s, f) => (hub(s, f).captured.wall ||= { level: FACTIONS[f].hub.level });
 function sendRetake(s, f, at) {
-  const L = Math.min(CONFIG.maxMobLevel, Math.max(FACTIONS[f].hub.level, hackerLevel(s)) + HUBS.levelUp), family = FACTION_FAMILY[f];
+  const L = Math.min(CONFIG.maxMobLevel, FACTIONS[f].hub.level + HUBS.levelUp), family = FACTION_FAMILY[f]; // the hub's level, never yours
   s.retakeSeq = (s.retakeSeq || 0) + 1;
   s.retake = { id: 'rt' + s.retakeSeq, f, family, key: KEY[family], level: L, ships: HUBS.ships, total: HUBS.ships, state: 'travel', arriveAt: at + HUBS.travelMs, travel: HUBS.travelMs, siegeLeft: HUBS.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
   emit(s, 'hub-retake', `Swarm from ${FACTIONS[f].short} at ${FACTIONS[f].hub.name}: ${HUBS.ships} processes (level ${L}), arriving in ${Math.round(HUBS.travelMs / 60000)} minutes.`, { faction: f });
@@ -105,8 +109,16 @@ export function tickRetake(s, dt, paused = false, at = now()) {
     if (at >= r.arriveAt) { r.state = 'siege'; emit(s, 'hub-siege', `Swarm from ${FACTIONS[r.f].short} at ${FACTIONS[r.f].hub.name}: ${r.ships} left. Defend within ${Math.round(HUBS.siegeMs / 60000)} minutes of play or it goes into lockdown.`, { faction: r.f }); }
     return;
   }
-  // The siege: logged-on time only, and it waits while you fight.
+  // The siege: real time, online or off, and it waits while you fight. The hub's firewall meets it.
   if (paused || dt <= 0 || holding(s, 'retake', r.id)) return;
+  const wall = hubWall(s, r.f), ratio = ratingAt(s, wall, r.family) / strength(r.level), oc = outcome(ratio);
+  if (!r.met) { r.met = true; fragment(s, oc, wall); }
+  if (oc === 'blocked') { s.retake = null; return emit(s, 'hub-held', `${FACTIONS[r.f].hub.name}'s firewall turned ${FACTIONS[r.f].short}'s swarm back.`, { faction: r.f }); }
+  if (oc === 'siege') {
+    r.grind = (r.grind || 0) + (grindRate(ratio) / 100) * (dt / 60000);
+    while (r.grind >= 1 && r.ships > 0) { r.grind -= 1; r.ships--; emit(s, 'hub-hit', `${FACTIONS[r.f].hub.name}'s firewall killed a process. ${r.ships} left.`, { faction: r.f }); }
+    if (r.ships <= 0) { s.retake = null; return emit(s, 'hub-held', `${FACTIONS[r.f].hub.name}'s firewall wore ${FACTIONS[r.f].short}'s swarm down.`, { faction: r.f }); }
+  }
   r.siegeLeft -= dt;
   if (r.siegeLeft <= 0) {
     s.retake = null;

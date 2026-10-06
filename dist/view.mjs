@@ -7,7 +7,7 @@ import { isLive, liveCount, memoryCap, memoryCost, joinCost } from './memory.mjs
 let memAsk = null;
 export const setMemAsk = (id) => { memAsk = id; };
 import { fleetLeft } from './fleet.mjs';
-import { HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
+import { hubWall, HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
 // The market's open order ticket (app.js): { f, w, side, n }.
@@ -31,7 +31,7 @@ import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
-import { FIREWALL, fwOf, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs } from './firewall.mjs';
+import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
@@ -754,13 +754,32 @@ export function fwGrid(s, now = Date.now()) {
   return `<div class="fw-grid${defragging(s, now) ? ' defrag' : ''}${hardenLeft(s, now) ? ' hard' : ''}" title="${esc(tip)}">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>`;
 }
 const filterStatSum = (s) => filtersOn(s).reduce((a, x) => a + (x.stats.strength || 0), 0);
+// A holding's firewall in one compact block (an outpost, a hub you hold): its level, the line on
+// what it's vulnerable to against what comes for it (top: the highest level that does), its blocks,
+// and Upgrade, Defrag and harden.sh. arg: what the firewall commands take for it.
+function fwRow(s, holder, arg, top, now = Date.now()) {
+  const f = fwAt(s, holder), b = wallBands(s, ratingAt(s, holder, null, now)), c = upgradeCost(f.level), busy = active(s) || !!s.run;
+  const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher;
+  const state = b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low', frag = fragLevels(s, holder), def = defragging(s, now, holder), hard = hardenLeft(s, now, holder);
+  const line = state === 'ok' ? `<span class="vuln ok" title="Up to level ${top} comes for it">Not vulnerable</span>` : `<span class="vuln ${state}" title="Blocks up to level ${b.blocks}; contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
+  const bad = new Set(SCATTER.slice(0, Math.floor(f.frag)));
+  return `<div class="fw-mini"><div class="fw-head"><span class="fw-tag">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${frag || def ? `<span class="tag warn">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : ''}${hard ? `<span class="tag you">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''}${line}</div>
+    <div class="fw-grid small${def ? ' defrag' : ''}${hard ? ' hard' : ''}" title="${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>
+    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade ${esc(arg)}" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}: ${c.credits} credits, ${c.cipher} Cipher">lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag ${esc(arg)}" ${f.frag && !def && !busy ? '' : 'disabled'}>${def ? `Defrag · ${fmtLeft(f.defragUntil - now)}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden ${esc(arg)}" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button></div></div>`;
+}
+// Bait: pull the next invasion in now; and the time until the next one sets out otherwise.
+function baitHome(s) {
+  const next = s.net?.next;
+  if (s.invasion || !threatTop(s)) return '';
+  return `<button type="button" class="btn small" data-command="bait" ${active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now. Once it's dealt with, nothing sets out for ${CONFIG.invasion.safeMs / 60000} minutes.">Bait${next > 0 ? ` · next ${fmtTime(next)}` : ''}</button>`;
+}
 function firewallPanel(s, now) {
   const f = fwOf(s), c = upgradeCost(f.level), eff = effLevel(s, now), busy = active(s);
   const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher;
   const mods = [fragLevels(s) ? `<span class="tag warn" title="Fragmented">−${fragLevels(s) + (defragging(s, now) ? FIREWALL.defragLoss : 0)}</span>` : defragging(s, now) ? `<span class="tag warn" title="Defragmenting">−${FIREWALL.defragLoss}</span>` : '', hardenLeft(s, now) ? `<span class="tag you" title="harden.sh · ${fmtTime(hardenLeft(s, now))} left">+${FIREWALL.harden.plus} · ${fmtTime(hardenLeft(s, now))}</span>` : ''].join('');
   const left = defragging(s, now) ? fmtLeft(f.defragUntil - now) : '';
   return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
-    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}">${glyph('firewall')}lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag" ${f.frag && !defragging(s, now) && !busy ? '' : 'disabled'} title="${Math.round(defragMs(s) / 6000) / 10} min, −${FIREWALL.defragLoss} levels meanwhile">${defragging(s, now) ? `Defrag · ${left}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button></div></div>`;
+    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}">${glyph('firewall')}lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag" ${f.frag && !defragging(s, now) && !busy ? '' : 'disabled'} title="${Math.round(defragMs(s) / 6000) / 10} min, −${FIREWALL.defragLoss} levels meanwhile">${defragging(s, now) ? `Defrag · ${left}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button>${baitHome(s)}</div></div>`;
 }
 // The firewall's filters: its slots (from the Firewall service), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
@@ -1901,9 +1920,11 @@ function outpostCore(s, l) {
   // Threats on the outpost, each in its own box: what, how many/long (a bar), one button.
   const opBox = (kind, title, info, pct, btnHtml) => `<div class="op-box ${kind}"><div class="op-top"><span class="tag ${kind === 'infest' ? 'warn' : 'hot'}">${title}</span><small>${info}</small></div>${pct == null ? '' : `<div class="op-bar"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>`}<div class="row">${btnHtml}</div></div>`;
   const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', s.fleet.faction ? `Swarm from ${esc(FX[s.fleet.faction].short)}` : 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `arrives in ${fmtLeft(fleetLeft(s))}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
-  const siege = o.siege ? opBox('siege', 'Invasion', `falls in ${fmtTime(o.siege.left)} of play`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
+  const siege = o.siege ? opBox('siege', 'Invasion', `lv ${o.siege.level || l.level || 1} · ${o.siege.hp != null && o.siege.hp < 1 ? `${Math.round(o.siege.hp * 100)}% · ` : ''}falls in ${fmtTime(o.siege.left)}`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
   const inf = o.infest ? opBox('infest', 'Infested', `${o.infest.count}/${o.infest.total} left · ${fmtTime(o.infest.left)}`, (o.infest.left / INFEST.stayMs) * 100, `<button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why} title="Clear them for an hour of production at once. Ignore them and they move on.">Clear</button>`) : '';
-  return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fl}${siege}${inf}${o.siege ? '' : `<div class="row"><button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
+  const quiet = (o.quietUntil || 0) > Date.now();
+  const baitBtn = o.siege ? '' : `<button type="button" class="btn" data-command="bait ${esc(l.id)}" ${why || (quiet ? 'disabled' : '')} title="${quiet ? `Safe for ${fmtTime(o.quietUntil - Date.now())}` : 'Pull its natives in now, then a safe period'}">${quiet ? `Safe · ${fmtTime(o.quietUntil - Date.now())}` : 'Bait'}</button>`;
+  return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fwRow(s, l, l.id, (l.level || 1) + 2)}${fl}${siege}${inf}${o.siege ? '' : `<div class="row">${baitBtn}<button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
 }
 
 
@@ -2269,7 +2290,7 @@ function holdMarkup(s, f, now) {
   const threat = lock
     ? `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><span class="tag hot">Lockdown</span>${fIcon(f)}<span class="mk-have">lv ${lock.level}</span></span><span></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="hub retake ${f}">Retake</button></span></li></ul>`
     : mine ? (() => { const left = retakeLeft(s, now), total = r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs; return `<ul class="craft-list"><li class="mk-row"><span class="mk-ware"><b class="hot">Swarm from ${esc(FX[f].short)}</b>${pips(r.ships, r.total)}<span class="mk-have">lv ${r.level}</span></span><span class="xfer-bar hot" title="${r.state === 'travel' ? 'Arrives' : 'Falls'} in ${fmtLeft(left)}"><i style="width:${Math.round((1 - left / total) * 100)}%"></i></span><span class="mk-btns"><button type="button" class="btn small primary" data-command="hub defend ${f}">${r.state === 'travel' ? 'Intercept' : 'Defend'}</button></span></li></ul>`; })() : '';
-  return earn + threat;
+  return earn + fwRow(s, hubWall(s, f), f, FX[f].hub.level + HUBS.levelUp, now) + threat;
 }
 // Buying your way back toward Neutral: dearer the deeper you are.
 function donateMarkup(s, f) {

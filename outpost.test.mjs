@@ -61,7 +61,8 @@ test('an outpost needs a taken-over server and bandwidth, and fills offline up t
   assert.equal(bandwidth(s), 1);
   command(s, `outpost install ${b.id}`, T0);
   assert.ok(!b.outpost?.h, 'no bandwidth left');
-  // Offline for a day: capped.
+  // Offline for a day, behind a firewall nothing gets past: capped.
+  a.outpost.fw = { level: 40, frag: 0, defragUntil: 0, hardenUntil: 0 };
   tickNetwork(s, T0);
   tickNetwork(s, T0 + 24 * H);
   assert.equal(stockOf(a), capOf(a));
@@ -89,6 +90,7 @@ test('an undefended siege puts the outpost in lockdown: no harvesting, stockpile
   deep.parent = a.id;
   s.harvesters = [siphon()];
   command(s, `outpost install ${a.id}`, T0);
+  a.outpost.fw = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing to stop them
   a.outpost.siege = { left: OUTPOST.siegeMs, seed: 7 };
   a.outpost.stock = 3;
   s.net.wall = T0;

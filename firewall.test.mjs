@@ -108,3 +108,57 @@ test('a filter pulled from a vault is banked when you jack out', async () => {
   assert.equal(filtersOf(s).length, 1);
   assert.equal(filtersOf(s)[0].name, 'Packet Filter');
 });
+
+test('bait: the next invasion comes now, and once it is dealt with a safe period follows', async () => {
+  const { tickNetwork } = await import('./dist/invasion.mjs');
+  const { CONFIG } = await import('./dist/data.mjs');
+  const s = fresh();
+  command(s, 'developer location worm');
+  fwOf(s).level = 20; // it will be blocked on the spot
+  s.clock = 0; tickNetwork(s, 0);
+  command(s, 'bait');
+  assert.equal(s.invasion, null, 'met at the wall at once, and stopped');
+  assert.ok(s.logs.some((e) => /Bait:/.test(e.message)));
+  assert.equal(s.net.next, CONFIG.invasion.safeMs, 'then a safe period');
+});
+
+test('every outpost has its own firewall at its server\'s level; natives it blocks bounce, ones it contests are worn down', async () => {
+  const { fwAt } = await import('./dist/firewall.mjs');
+  const { tickOutposts, OUTPOST, baitOutpost } = await import('./dist/outpost.mjs');
+  const s = fresh();
+  command(s, 'developer location worm');
+  const a = s.locations[0];
+  a.level = 8; a.takenOver = true;
+  s.harvesters = [{ kind: 'siphon', level: 8, traits: [] }];
+  command(s, `outpost install ${a.id}`, 0);
+  assert.equal(fwAt(s, a).level, 8, 'it comes with the server');
+  baitOutpost(s, a, 0);
+  assert.equal(a.outpost.siege, null, 'natives at its level bounce');
+  assert.ok(a.outpost.quietUntil > 0, 'and a safe period follows the bait');
+  fwAt(s, a).level = 3; a.outpost.quietUntil = 0;
+  baitOutpost(s, a, 0);
+  assert.ok(a.outpost.siege && a.outpost.siege.hp === 1, 'a weaker firewall lets them in');
+  command(s, `firewall upgrade ${a.id}`);
+  s.server.credits = 9999; s.materials = { cipher: 999 };
+  for (let i = 0; i < 4; i++) command(s, `firewall upgrade ${a.id}`);
+  assert.equal(fwAt(s, a).level, 7);
+  a.outpost.at = 0;
+  tickOutposts(s, 60000, 60000);
+  assert.ok(!a.outpost.siege || a.outpost.siege.hp < 1, 'contested: worn down');
+  for (let t = 2; t < 10 && a.outpost.siege; t++) tickOutposts(s, t * 60000, 60000);
+  assert.equal(a.outpost.siege, null);
+  assert.ok(!a.outpost.lockdown, 'the firewall wore them down before the timer ran out');
+});
+
+test('a hub you hold: its swarm comes at the hub\'s level, never yours', async () => {
+  const { tickRetake, HUBS } = await import('./dist/hubs.mjs');
+  const { FACTIONS } = await import('./dist/factions.mjs');
+  const s = fresh();
+  command(s, 'developer level 40');
+  s.hubs = { kestrel: { id: 'hub-kestrel', faction: 'kestrel', stock: {}, captured: { at: 0 } } };
+  s.standing = { halcyon: 10, kestrel: -100 }; // Hostile: it wants its hub back
+  s.net = { retakeAt: 0 };
+  tickRetake(s, 1000, false, 1);
+  assert.ok(s.retake, 'a swarm sets out');
+  assert.equal(s.retake.level, FACTIONS.kestrel.hub.level + HUBS.levelUp);
+});

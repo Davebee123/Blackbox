@@ -18,6 +18,8 @@ import { outpostCommand, outpostWon, infestWon, siteTrait } from './outpost.mjs'
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { firewallCommand } from './firewall.mjs';
+import { baitInvasion } from './invasion.mjs';
+import { baitOutpost } from './outpost.mjs';
 import { filterCommand } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
@@ -1186,6 +1188,7 @@ export function endInvasion(s, message, detail = {}) {
   const inv = s.invasion;
   s.invasion = null;
   scheduleInvasion(s);
+  if (inv?.baited) s.net.next = CONFIG.invasion.safeMs; // you pulled it in early: a safe period after
   if (message) emit(s, 'invasion-cleared', message, { invader: inv?.id, ...detail });
 }
 
@@ -1361,8 +1364,14 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     emit(s, 'info', `Developer: server level ${serverLevel(s)}.`);
   } else if (/^filter (equip|unequip|scrap) \d+$/.test(text)) {
     filterCommand(s, text);
-  } else if (/^firewall (upgrade|defrag|harden)$/.test(text) || text === 'defrag') {
+  } else if (/^firewall (upgrade|defrag|harden)( \S+)?$/.test(text) || text === 'defrag') {
     firewallCommand(s, text, now);
+  } else if (text === 'bait' || text === 'firewall bait') {
+    baitInvasion(s);
+  } else if (/^bait \S+$/.test(text)) {
+    const loc = s.locations.find((l) => l.id === text.split(' ')[1] && l.outpost?.h);
+    if (!loc) warn(s, 'bait: your server (no name), or one of your outposts.');
+    else baitOutpost(s, loc, now);
   } else if (/^hub( |$)/.test(text)) {
     hubCommand(s, text);
   } else if (/^payload( |$)/.test(text)) {

@@ -13,6 +13,7 @@ import { tickRetake } from './hubs.mjs';
 import { tickStation } from './station.mjs';
 import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
+import { isLive } from './memory.mjs';
 import { effLevel, fragment, tickFirewall } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
 import { archWall } from './architecture.mjs';
@@ -85,7 +86,7 @@ export function tickNetwork(s, now = Date.now()) {
   const prev = net.wall ?? now;
   net.wall = now;
   const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
-  if (gap > dt && consortiumOf(s)) away(s, prev, now - dt);
+  if (gap > dt) away(s, prev, now - dt); // logged off: the network plays on (firewall.mjs is the guard)
   tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
   tickFleet(s, dt, !!s.degraded, now);
   tickRetake(s, dt, !!s.degraded, now); // hubs you hold, and the factions that want them back
@@ -117,6 +118,8 @@ function away(s, from, to) {
       s.degraded = null;
       emit(s, 'rebooted', 'Your server came back online while you were away.');
     }
+    tickFleet(s, AWAY.stepMs, false, t);
+    tickRetake(s, AWAY.stepMs, false, t);
     stepInvasion(s, AWAY.stepMs, t);
   }
 }
@@ -220,6 +223,20 @@ function stopped(s, inv, ground) {
   endInvasion(s, `${ground ? `Your wall wore ${inv.name} down to nothing` : `Your wall stopped ${inv.name} (level ${inv.level}) from ${inv.fromName}`}${quiet ? '.' : ': +1 salvage.'}`, { blocked: true });
   gainXp(s, xpFor(s, inv.level, I().blockedXp), `${inv.name} stopped at the wall`);
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
+}
+
+// ---------- bait ----------
+// Pull the next invasion in now, straight to the wall, so you meet it on your terms. Once it's
+// dealt with (stopped, worn down or killed), nothing sets out for CONFIG.invasion.safeMs.
+export function baitInvasion(s) {
+  if (s.invasion) return warn(s, `${s.invasion.name} is already ${s.invasion.state === 'travel' ? 'on its way' : 'at your wall'}.`);
+  if (s.degraded) return warn(s, 'Not while your server is degraded.');
+  if (!(s.locations || []).some((l) => !l.rogue && isLive(s, l))) return warn(s, 'Nothing attached to bait: invasions come from servers on your network.');
+  const inv = depart(s);
+  if (!inv) return warn(s, 'Nothing took the bait.');
+  inv.baited = true;
+  emit(s, 'invader', `Bait: ${inv.name} (lv ${inv.level}) took it, and is at your wall now.`, { invader: inv.id });
+  arrive(s);
 }
 
 // ---------- jacking in ----------

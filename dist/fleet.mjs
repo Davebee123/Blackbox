@@ -5,8 +5,9 @@
 // family, where it's headed and when it lands. Intercept it on the way or defend when it
 // arrives: each fight kills one process. Break the whole swarm for a haul. If it's still there
 // when its siege runs out, the outpost goes into lockdown (see outpost.mjs: retake it to end it sooner).
-// It travels on real time; the siege only runs while you're logged on (one that arrives while
-// you're away waits for you), and the outpost produces nothing while the swarm sits at it.
+// Everything runs on real time, online or off. At the outpost it meets its firewall (firewall.mjs):
+// blocked, it bounces; contested, the firewall kills a process now and then; a breach just runs
+// the timer. The outpost produces nothing while the swarm sits at it.
 import { CONFIG, SERVER, MUTATIONS, FAMILIES, variantFor } from './data.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hooks } from './combat.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
@@ -14,6 +15,8 @@ import { FACTIONS } from './factions.mjs';
 import { outposts, fall, hasMod } from './outpost.mjs';
 import { hiddenNodes } from './hidden.mjs';
 import { has as hasConfig } from './configs.mjs';
+import { ratingAt, fragment } from './firewall.mjs';
+import { strength, outcome, grindRate } from './invasion.mjs';
 
 export const FLEET = {
   firstMs: 45 * 60000, // logged-on time after your first outpost before the first fleet
@@ -36,6 +39,8 @@ function origin(s, target) {
 }
 
 const clock = () => hooks.now?.() ?? Date.now();
+// The outpost's firewall against the swarm (each process at the swarm's level).
+const swarmRatio = (s, target, f) => ratingAt(s, target, f.family) / strength(f.level, f.mutation);
 export function launch(s, at = clock(), faction = null) {
   const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege);
   if (!targets.length) return null;
@@ -46,7 +51,7 @@ export function launch(s, at = clock(), faction = null) {
   const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + FLEET.levelUp);
   const total = Math.round(FLEET.travelMs * (hasConfig(s, 'beacon') ? 1.5 : 1) * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
-  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs * (hasMod(target, 'node') ? 2 : 1), seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: level >= SERVER.mutationsFrom && rand(s) < 0.3 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
+  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: level >= SERVER.mutationsFrom && rand(s) < 0.3 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
   if (faction) s.fleet.faction = faction;
   const who = faction ? ` from ${FACTIONS[faction].short}` : '';
   emit(s, 'fleet', `SWARM: Swarm${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });
@@ -78,12 +83,23 @@ export function tickFleet(s, dt, paused = false, at = clock()) {
   if (f.state === 'travel') {
     if (f.arriveAt == null) f.arriveAt = at + (f.left || 0); // saves from before real-time swarms
     if (at >= f.arriveAt) {
+      const o = outcome(swarmRatio(s, target, f));
+      fragment(s, o, target);
+      if (o === 'blocked') return disband(s, `The swarm bounced off ${target.name}'s firewall.`);
       f.state = 'siege';
-      emit(s, 'fleet-siege', `Swarm${f.faction ? ` from ${FACTIONS[f.faction].short}` : ''} at your outpost on ${target.name}: ${f.ships} left. Defend within ${Math.round(FLEET.siegeMs / 60000)} minutes of play or it goes into lockdown.`, { location: target.id });
+      emit(s, 'fleet-siege', `Swarm${f.faction ? ` from ${FACTIONS[f.faction].short}` : ''} at your outpost on ${target.name}: ${f.ships} left, ${o === 'siege' ? 'contested by its firewall' : 'BREACHING its firewall'}. Defend within ${Math.round(FLEET.siegeMs / 60000)} minutes or it goes into lockdown.`, { location: target.id });
     }
     return;
   }
   if (dt <= 0 || holding(s, 'fleet', f.id)) return; // the siege waits while you fight (not while the fight is paused)
+  // The outpost's firewall at work: contested, it wears down a process at a time.
+  const r = swarmRatio(s, target, f), oc = outcome(r);
+  if (oc === 'blocked') return disband(s, `${target.name}'s firewall turned the swarm back.`);
+  if (oc === 'siege') {
+    f.grind = (f.grind || 0) + (grindRate(r) / 100) * (dt / 60000);
+    while (f.grind >= 1 && f.ships > 0) { f.grind -= 1; f.ships--; emit(s, 'fleet-hit', `${target.name}'s firewall killed a process. ${f.ships} left in the swarm.`, { location: target.id }); }
+    if (f.ships <= 0) return disband(s, `${target.name}'s firewall wore the swarm down.`);
+  }
   f.siegeLeft -= dt;
   if (f.siegeLeft <= 0) {
     s.fleet = null;

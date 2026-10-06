@@ -14,6 +14,7 @@
 // neighbours; the one carrying a contract's signal is flagged.
 import { FAMILIES, SERVER } from './data.mjs';
 import { emit, warn, rand, addLocation } from './combat.mjs';
+import { isLive } from './memory.mjs';
 import { targetedHidden, contractLocated } from './mail.mjs';
 
 export const HIDDEN = {
@@ -123,10 +124,11 @@ export function useItem(s, text) {
 }
 
 // Pick an invader's origin: a found server, or (sometimes) a hidden one behind it.
+// Only servers attached to your network send them (memory.mjs): detach one and it can't find you.
 export function pickOrigin(s) {
-  const hid = hiddenNodes(s).filter((n) => locOf(s, n.via));
+  const hid = hiddenNodes(s).filter((n) => locOf(s, n.via) && isLive(s, locOf(s, n.via)));
   if (hid.length && rand(s) < HIDDEN.invaderShare) return { hidden: hid[Math.floor(rand(s) * hid.length)] };
-  const tame = s.locations.filter((l) => !l.rogue); // rogue servers never send invaders
+  const tame = s.locations.filter((l) => !l.rogue && isLive(s, l)); // rogue servers never send invaders
   if (!tame.length) return hid.length ? { hidden: hid[Math.floor(rand(s) * hid.length)] } : {};
   return { loc: tame[Math.floor(rand(s) * tame.length)] };
 }

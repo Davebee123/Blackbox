@@ -150,8 +150,10 @@ test('outpost modules: ports, Pipeline, Storage Array, Firewall Node, IDS', asyn
   assert.equal(modStock(s).storage, 1, 'a removed module goes back to your stock');
   command(s, `outpost mod ${a.id} node`);
   assert.ok(a.mods.includes('node'));
-  launch(s);
-  assert.equal(s.fleet.siegeLeft, FLEET.siegeMs * 2, 'a Firewall Node doubles a swarm siege');
+  const { effLevel, NODE_PLUS } = await import('./dist/firewall.mjs');
+  const base = effLevel(s, undefined, null, a);
+  command(s, `outpost unmod ${a.id} node`);
+  assert.equal(effLevel(s, undefined, null, a), base - NODE_PLUS, 'a Firewall Node adds levels to the outpost\'s firewall');
 });
 
 test('Edge Router adds bandwidth; the Scheduler collects outposts on its own', async () => {

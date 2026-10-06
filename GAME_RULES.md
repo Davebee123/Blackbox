@@ -399,7 +399,8 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
 - **Outpost slots** (*Outposts n/m* on the server card, pips on the outpost) limit how many outposts run at once. Harvesters never run on your own server: they go out to servers you've taken over. Installing one from an outpost's card lists your rack one row per harvester (kind, level, traits) with its own Install button: 1, plus 1 every 10 server levels (5 at most).
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
 - **Pulling out** gives the harvester back with what it holds; the slot then resets for 30 minutes.
-- **Invasions.** Natives notice an outpost about every 6 hours (by kind, traits and site), real time, so logging off doesn't dodge them. You then have 10 minutes of play to **Defend** it (a home-style fight at the server's level): its timer only counts down while you're logged on, so one that starts while you're away waits for you. An outpost produces nothing while it's invaded. If you don't:
+- **Its firewall.** Every outpost has its own (`firewall.mjs`): it comes with the server, at the server's level, and you build it like your home one: `firewall upgrade|defrag|harden <server>`, or the outpost card's row (its level, *Vulnerable to lv N+* against the swarms that come for it, its blocks, Upgrade, Defrag, harden.sh). It fragments as threats meet it. No filters out here; a **Firewall Node** module adds 3 levels.
+- **Invasions.** Natives (at the server's level) notice an outpost about every 6 hours (by kind, traits and site), real time, online or off. They meet its firewall first: **blocked**, they bounce; **contested**, the firewall wears them down while a 10-minute timer runs (worn to nothing, they're gone); a **breach** just runs the timer. **Defend** it yourself (a home-style fight at the server's level) before the timer runs out. An outpost produces nothing while it's invaded. **Bait** (`bait <server>`, the card's button) pulls its natives in now, while you're there; after it, they leave it alone for the timer plus 90 minutes. If the timer runs out:
   - the outpost goes into **lockdown** for 2 real hours: no harvesting, but its stockpile is kept;
   - the server and everything past it stay open (nothing is ever cut off).
 - **Retake** it (beat the natives there) to end a lockdown sooner. In a consortium, the virus that won moves on along the trunk line (see Consortium).
@@ -410,7 +411,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   |---|---|
   | Pipeline | +50% yield |
   | Storage Array | Double storage |
-  | Firewall Node | Invasions and swarms here take twice as long to take it |
+  | Firewall Node | Its firewall +3 levels |
   | IDS | Natives notice it half as often; swarms heading here are seen 50% sooner |
   | Honeytoken | Draws trouble, for when you want more fights: noticed twice as often, swarms come twice as often and pick it first, infestations come sooner and pick it first. Beating them here pays double (a stopped invasion: an hour's harvest and a kill's XP; an infestation: two hours instead of one; a swarm: double code and XP) |
 
@@ -449,7 +450,7 @@ Every service can run one **config**: a side-grade that changes how it works, no
 ## Swarms
 
 Once you run an outpost, the network organises against it.
-- The first swarm gathers about 45 minutes after your first outpost goes up; after that, one every 90–150 minutes (half that with a Honeytoken out). One swarm at a time. Swarms gather and travel on real time (logging off doesn't dodge them); its timer at the outpost only counts down while you're logged on, and the outpost produces nothing while a swarm sits at it.
+- The first swarm gathers about 45 minutes after your first outpost goes up; after that, one every 90–150 minutes (half that with a Honeytoken out). One swarm at a time. Everything runs on real time, online or off. At the outpost it meets the outpost's firewall: **blocked**, it bounces off; **contested**, the firewall kills a process now and then (each time its grind adds up to a whole one); a **breach** just runs the timer. The outpost produces nothing while a swarm sits at it.
 - A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
 - You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes; 15 with a Tarpit Beacon).
 - **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the timer waits while you fight (a paused fight, or one left open over a reload, holds nothing).
@@ -461,7 +462,7 @@ Once you run an outpost, the network organises against it.
 
 The plan the next changes build to; each part moves into the sections above as it lands.
 
-**One rule, online or off.** All PvE runs on real time. Whatever comes for something you hold meets that holding's **firewall**: **Blocked** (it bounces), **Contested** (the firewall and the threat wear each other down, each on its clock) or **Breach** (it gets through and the holding falls when its timer runs out: a crash at home, a lockdown at an outpost or a hub you hold, a silo lost). Being online only means you can jack in and fight it. No logged-on clocks, no "never while away" exceptions: the firewall is the guardrail, and you can see it.
+**One rule, online or off.** *(Done for home, outposts and hubs you hold; silos next.)* All PvE runs on real time. Whatever comes for something you hold meets that holding's **firewall**: **Blocked** (it bounces), **Contested** (the firewall and the threat wear each other down, each on its clock) or **Breach** (it gets through and the holding falls when its timer runs out: a crash at home, a lockdown at an outpost or a hub you hold, a silo lost). Being online only means you can jack in and fight it. No logged-on clocks, no "never while away" exceptions: the firewall is the guardrail, and you can see it.
 
 **Threats come from what you've attached.** A threat's level comes from the server that sends it (or the holding it targets), never from your own level. Attach a level-20 server and level-20 things can find you; detach it and they can't. Your own power levels off; defence is what you build per holding.
 
@@ -493,31 +494,31 @@ Three kinds of threat, two things they leave behind, four things you do. The spe
 
 At a wall, an invasion is **Blocked**, **Contested** (the wall grinds it while it chips you) or a **Breach**, by your wall's strength.
 
-*Logged-on* clocks only run while you're playing; *real* clocks run offline too.
+Everything runs on real time, online or off: whatever comes meets that holding's **firewall** first (Blocked, Contested, Breach), and being online means you can step in and fight it. Threats come only from servers attached to your network, at their levels (or the holding's), never yours.
 
 ### Your home server
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Invasion at your wall** | A location you've found | First 3 min after your first find, then 6–10 min after the last (logged-on) | Travels 2 min + 1 a layer, then Blocked, Contested or Breach | **Jack in** (`jack in`) | Contested and Breach chip your Integrity; at 0, a crash | A home kill |
+| **Invasion at your wall** | A server attached to your network | First 3 min after your first find, then 6–10 min after the last (half that pace while you're away); **Bait** pulls one in now, then 90 min of quiet | Travels 2 min + 1 a layer, then Blocked, Contested or Breach | **Jack in** (`jack in`) | Contested and Breach chip your Integrity; at 0, a crash | A home kill |
 
 ### Your outposts
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Invasion at your outpost** | That server's natives | About every 6 h (real) | 10 min to defend (logged-on); makes nothing meanwhile | **Defend** (outpost card) | Lockdown | Kill XP (Honeytoken: + an hour's harvest) |
-| **Swarm at your outpost** | 2–4 processes from past it | First 45 min after your first outpost, then 90–150 min (real) | Travels 10 min (real), then 8 min to defend (logged-on); makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
+| **Invasion at your outpost** | That server's natives | About every 6 h; **Bait** pulls them in now, then 90 min of quiet | Meets its firewall, then 10 min to defend; makes nothing meanwhile | **Defend** (outpost card) | Lockdown | Kill XP (Honeytoken: + an hour's harvest) |
+| **Swarm at your outpost** | 2–4 processes from past it, 2 levels above it | First 45 min after your first outpost, then 90–150 min | Travels 10 min, meets the outpost's firewall, then 8 min to defend; makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
 | **Swarm from a faction at your outpost** | A Hostile faction you just struck | Once a strike | As a swarm, in the faction's colours | As a swarm | Lockdown | As a swarm |
-| **Infestation** | 2–3 wild viruses | Every 2 h ÷ outposts, never under 40 min (logged-on) | Stays 20 min | **Clear**, a fight each (`outpost clear`) | They leave; nothing lost | +1 h of yield, XP |
+| **Infestation** | 2–3 wild viruses | Every 2 h ÷ outposts, never under 40 min (while you play: it's an opportunity, not a threat) | Stays 20 min | **Clear**, a fight each (`outpost clear`) | They leave; nothing lost | +1 h of yield, XP |
 | **Invasion on the trunk line** (consortium) | The winner of a lockdown or crash, a level stronger | After a lockdown or crash; up to 3 hops | Arrives in 10 min as an invasion at an outpost | **Intercept** (`consortium intercept`) | An invasion at that outpost | Bounty, +50% a hop |
 
-Lockdown here: 2 h (real), no harvesting, the stockpile kept, nothing past it cut off. **Retake** (`outpost retake`) ends it sooner.
+Lockdown here: 2 h, no harvesting, the stockpile kept, nothing past it cut off. **Retake** (`outpost retake`) ends it sooner.
 
 ### Hubs you hold
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Swarm from its old owner** | The faction, while Hostile | 30 min after the capture, then 2–4 h (real) | Travels 10 min (real), then 8 min to defend (logged-on); earns nothing meanwhile | **Intercept** / **Defend**, a fight a process (`hub defend`) | Lockdown | Code, salvage, XP |
+| **Swarm from its old owner** | The faction, while Hostile, at the hub's level + 1 | 30 min after the capture, then 2–4 h | Travels 10 min, meets the hub's firewall, then 8 min to defend; earns nothing meanwhile | **Intercept** / **Defend**, a fight a process (`hub defend`) | Lockdown | Code, salvage, XP |
 
 Lockdown here: until you **Retake** it (one fight, `hub retake`). No income; the hub is still yours.
 
@@ -533,9 +534,9 @@ A member's lockdown: **Retake for a bounty**. A member's crash: **Clear** every 
 
 ## Invasions and the wall
 
-The idle layer. While you're logged on, the locations you've found send viruses back along the network to your server, **one at a time**. On the Map an invasion moves in from its location; the Server page's **Firewall** card and the top bar say what it's doing.
+The idle layer. The servers attached to your network send viruses back along it to your server, **one at a time**, online or off. On the Map an invasion moves in from its location; the Server page's **Firewall** card and the top bar say what it's doing.
 
-- **When.** The first sets out 3 minutes after you find your first location; the next 6–10 minutes after the last one is dealt with. Only logged-on time counts: a closed game, hidden tab or sleeping laptop doesn't advance the network (a long gap counts as 5 seconds).
+- **When.** The first sets out 3 minutes after you find your first location; the next 6–10 minutes after the last one is dealt with. While you're logged off it plays out at half that pace (see below). Only servers attached to your network send them (Memory): detach one and its invasions stop. **Bait** (`bait`, the Firewall card's button, which also shows when the next sets out) pulls the next one to your wall now; once it's dealt with, nothing sets out for 90 minutes.
 - **Who.** A virus of the location's family (CRYPTJACK, SPLINTER or GHOSTROOT) at the location's level; from level 3, sometimes mutated (10% stronger).
 - **Travel.** 2 minutes from a layer-1 location, a minute more per layer. A Tarpit slows it.
 - **The firewall** (`firewall.mjs`) is your wall. It has a **level** you build, and it never grows by itself: neither your level nor your server's raises it.
@@ -567,12 +568,11 @@ At 0 Integrity (a lost home fight, or a breach chipping you out) the server **cr
 
 You can still fight, explore and level. Crashing again restarts the 10 minutes. The top bar, the Map and the Server page show the time left.
 
-**In a consortium, while you're logged off** (played out a minute at a time when you come back, up to a day):
-- invasions keep coming, at half the pace, and your wall meets them as usual: blocked, contested or breach. The server card's **Away** line says what your wall blocks and holds, next to the highest level your servers send; upgrading and hardening the firewall is how you raise it;
-- now and then a member steps in and stops one at your wall;
-- a crash while away reboots the server for **2 hours** (Degraded, same rules), and the invasion **occupies** it: HOME shows on your server card with *Connect*. Its processes sit in six folders (services, daemons, vault, logs, cache, wall) and don't come back; clear them all to be back online at once. The virus then moves on along the trunk line;
-- your outposts can be invaded while you're away too (half as often); members sometimes stop those invasions, otherwise it's a lockdown.
-Solo, nothing happens while you're logged off.
+**While you're logged off** (played out a minute at a time when you come back, up to a day), solo or in a consortium:
+- invasions keep coming, at half the pace, and your firewall meets them as usual: blocked, contested or breach. The Firewall card's *Vulnerable to lv N+* is the check before you go: upgrade, defrag, harden or bait;
+- swarms, your outposts' natives and your hubs' old owners keep coming too, and each meets that holding's firewall;
+- in a consortium, now and then a member steps in and stops one at your wall or outpost;
+- a crash while away reboots the server for **2 hours** (Degraded, same rules), and the invasion **occupies** it: HOME shows on your server card with *Connect*. Its processes sit in six folders (services, daemons, vault, logs, cache, wall) and don't come back; clear them all to be back online at once. In a consortium, the virus then moves on along the trunk line.
 
 Testing: `developer invade` (an invasion arrives now), `developer crash`, `developer reboot` (ends Degraded mode).
 
@@ -784,7 +784,7 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
 ### Hubs you hold
 
 - **Perks:** its market trades at the true price (no spread), its goods sell at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
-- **Swarms from the old owner:** while it's Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. These gather and travel on real time, so logging off doesn't dodge them, but the timer at the hub only counts down while you're logged on (you're never locked down while away). The hub earns nothing while its swarm is out. 3 processes at the hub's level or yours (whichever's higher) +1, in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then 8 minutes to defend; Intercept or Defend one process a fight (`hub defend <faction>`), and the timer waits while you fight (not while the fight is paused). Break it for code, salvage and XP. The hub's map node flashes red with the timer.
+- **Swarms from the old owner:** while it's Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. Real time, online or off. The hub has its own firewall (at the hub's level to start; the Your hub window shows it, with Upgrade, Defrag and harden.sh, or `firewall upgrade|defrag|harden <faction>`), and the swarm meets it on arrival: blocked, it bounces; contested, the firewall kills a process now and then; a breach just runs the timer. The hub earns nothing while its swarm is out. 3 processes at the hub's level +1 (never yours), in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then 8 minutes to defend; Intercept or Defend one process a fight (`hub defend <faction>`), and the timer waits while you fight (not while the fight is paused). Break it for code, salvage and XP. The hub's map node flashes red with the timer.
 - **Lockdown:** if the timer runs out, the hub earns nothing until you retake it (one fight, `hub retake <faction>`). You never lose it for good.
 - **Striking a Hostile faction** (without holding its hub) gets one answer: a swarm in its colours at one of your outposts.
 
@@ -1043,8 +1043,8 @@ The System page has three sliders (0–100, default 80, the level the game was m
 Rules that keep timing, reloads and loops from paying:
 
 - **A paused fight holds no clock.** The timers on invasions and swarms (and on members' lockdowns) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
-- **In a consortium, the away rules still stand.** While you're logged off, the gap is played out a minute at a time as before: invasions at half pace, outposts noticed half as often, and invasions at outposts that can end in lockdown, with a member sometimes stopping one. An invaded outpost makes nothing (as it pays no dividend). Swarms still wait for you to log on.
-- **Threats run on real time; their timers wait for you.** Invasions at outposts and swarms gather and travel whether you're logged on or not. Their timers only count down while you're logged on, so nothing falls while you're away. Production stops while one sits at an outpost or hub.
+- **Away is played out, solo or not.** While you're logged off, the gap is played out a minute at a time: invasions at half pace, outposts noticed half as often, swarms and hubs' old owners as usual, each meeting that holding's firewall. In a consortium a member sometimes stops one. An invaded outpost makes nothing (as it pays no dividend).
+- **Threats run on real time, and your firewalls are the guard.** Invasions, swarms and hubs' old owners come whether you're logged on or not, and meet that holding's firewall; their timers run either way. What protects you while you're away is what you built: firewall levels, defrags, harden.sh, filters, and a bait before you go. Production stops while one sits at an outpost or hub.
 - **No store-to-market loop.** Hubs sell code, Exploits and salvage only as market wares. The Halcyon store never sells them for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
 - **Hub income reads outside factors only.** A held hub earns by its condition, the world event and wiped hubs elsewhere, not by your own trading there.
 - **What you compile breaks down without Exploits.**

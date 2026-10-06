@@ -44,7 +44,7 @@ function atWall(s) {
 }
 const types = (events) => events.map((e) => e.type);
 
-test('invaders only come from locations you have found, only while you are logged on', () => {
+test('invaders only come from locations you have found; the network plays on while you are away', () => {
   const s = fresh();
   s.clock = 0;
   tickNetwork(s, 0);
@@ -57,10 +57,9 @@ test('invaders only come from locations you have found, only while you are logge
   const ev = wait(s, 5000);
   assert.ok(types(ev).includes('invader'), 'the first one sets out 3 logged-on minutes after the first find');
   assert.equal(s.invasion.state, 'travel');
-  const left = s.invasion.left;
   s.clock += 60 * MIN; // the game was closed for an hour
   tickNetwork(s, s.clock);
-  assert.equal(s.invasion.left, left - I.maxTickMs, 'a long gap counts as one tick');
+  assert.ok(s.logs.some((e) => e.type === 'wall-breach' || e.type === 'wall-siege' || e.type === 'invasion-cleared'), 'it reached your wall while you were away');
 });
 
 test('travel: 2 minutes from layer 1, a minute more per layer, slower behind a Tarpit', () => {
@@ -209,13 +208,15 @@ test('crash: a breach chips you to zero, the server reboots at half and runs deg
   play(s, 'developer level 3');
   assert.equal(s.serverXp, sxp, 'the rebooting server earns nothing');
   assert.equal(s.hackers.breaker.level, 3);
-  // The real clock runs out even with the game closed.
+  // The real clock runs out even with the game closed, and the breach resumes once it's back up.
   s.clock += 10 * MIN;
   const back = tickNetwork(s, s.clock);
   assert.ok(types(back).includes('rebooted'));
   assert.equal(s.degraded, null);
+  const hp = s.server.integrity;
+  assert.ok(hp < 50, 'it chipped again after the reboot, while you were still away');
   wait(s, MIN);
-  assert.equal(s.server.integrity, 49, 'the breach resumes');
+  assert.equal(s.server.integrity, hp - 1, 'and keeps on');
 });
 
 test('Degraded mode pauses the install queue', () => {

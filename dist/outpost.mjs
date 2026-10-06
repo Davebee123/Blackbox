@@ -12,8 +12,10 @@
 // A lost siege puts the outpost in lockdown for a while (real time): it stops harvesting, but
 // keeps its stockpile, and the server stays open. Retake it from the natives to end it sooner.
 // In a consortium, sieges come while you're away too (consortium.mjs), and members may break them.
-import { MUTATIONS, variantFor } from './data.mjs';
+import { MUTATIONS, variantFor, CONFIG } from './data.mjs';
 import { isLive } from './memory.mjs';
+import { ratingAt, fragment, effLevel } from './firewall.mjs';
+import { strength, outcome, grindRate } from './invasion.mjs';
 import { emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
@@ -268,22 +270,42 @@ function tickSites(s, now, dt, paused, away) {
     const elapsed = Math.max(0, now - since), swarmed = s.fleet?.target === loc.id && s.fleet.state === 'siege';
     if (!o.siege && !swarmed) produce(s, loc, elapsed);
     if (o.siege) {
-      o.siege.left -= dt;
+      if (!holding(s, 'outpost', loc.id)) {
+        // Its firewall at work: a contested siege is worn down, and one it now blocks is over.
+        const r = nativeRatio(s, loc, o.siege.level), oc = outcome(r);
+        if (oc === 'siege') o.siege.hp = (o.siege.hp ?? 1) - (grindRate(r) / 100) * (dt / 60000);
+        if (oc === 'blocked' || (o.siege.hp ?? 1) <= 0) { o.siege = null; emit(s, 'outpost-held', `${loc.name}'s firewall ${oc === 'blocked' ? 'turned the natives back' : 'wore the natives down'}.`, { location: loc.id }); continue; }
+        o.siege.left -= dt;
+      }
       if (away && o.siege.helper === undefined) o.siege.helper = memberHelp(s); // in a consortium, a member may break it
       if (away && o.siege.helper && o.siege.left <= OUTPOST.siegeMs / 2) { emit(s, 'outpost-held', `${o.siege.helper} stopped the invasion at ${loc.name} while you were away.`, { location: loc.id }); o.siege = null; continue; }
       if (o.siege.left <= 0 && !holding(s, 'outpost', loc.id)) fall(s, loc);
       continue;
     }
+    if ((o.quietUntil || 0) > now) continue; // baited: a safe period
     const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * (hasMod(loc, 'lure') ? 2 : 1) * archNotice(s) * (away ? 0.5 : 1);
     if (elapsed > 0 && rand(s) < Math.min(1, elapsed / OUTPOST.noticeMs) * mult) startSiege(s, loc);
   }
 }
 
+// Natives come for it: they meet the outpost's own firewall first (firewall.mjs). Blocked, they
+// bounce; contested, the firewall wears them down while the timer runs; a breach just runs it.
+export const nativeRatio = (s, loc, level = loc.level || 1) => ratingAt(s, loc, loc.family) / strength(level);
+// bait <server>: pull its natives in now, while you're here to meet them; then a safe period.
+export function baitOutpost(s, loc, now) {
+  const o = loc.outpost;
+  if (o.siege || o.lockdown) return warn(s, `${loc.name} already has natives on it.`);
+  startSiege(s, loc);
+  o.quietUntil = now + OUTPOST.siegeMs + CONFIG.invasion.safeMs;
+}
 function startSiege(s, loc) {
-  const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1;
-  const left = OUTPOST.siegeMs * (hasMod(loc, 'node') ? 2 : 1);
-  loc.outpost.siege = { left, seed };
-  emit(s, 'outpost-siege', `Invasion at your outpost on ${loc.name}: its natives. Defend it within ${left / 60000} minutes of play or it goes into lockdown.`, { location: loc.id });
+  const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, level = loc.level || 1;
+  const o = outcome(nativeRatio(s, loc, level));
+  fragment(s, o, loc);
+  if (o === 'blocked') return emit(s, 'outpost-held', `Natives came for ${loc.name}: its firewall (lv ${effLevel(s, undefined, null, loc)}) stopped them.`, { location: loc.id });
+  const left = OUTPOST.siegeMs;
+  loc.outpost.siege = { left, seed, hp: 1, level };
+  emit(s, 'outpost-siege', `Invasion at your outpost on ${loc.name}: its natives (lv ${level}), ${o === 'siege' ? 'contested by its firewall' : 'BREACHING its firewall'}. Defend it within ${left / 60000} minutes or it goes into lockdown.`, { location: loc.id });
 }
 
 export function fall(s, loc, force = false) {
