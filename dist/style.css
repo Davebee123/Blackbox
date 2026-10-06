@@ -2413,8 +2413,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .map-svg .mnode.minor:hover, .map-svg .mnode.minor.selected { opacity: 1; }
 .map-svg .mnode.minor:hover text, .map-svg .mnode.minor.selected text, .map-svg.zoomed .mnode.minor text { display: block; }
 .map-svg.zoomed .mnode.minor { opacity: 0.7; }
-.map-svg[class*="mf-"] .mnode:not(.server):not(.selected) { opacity: 0.12; transition: opacity 0.2s; }
-.map-svg[class*="mf-"] .mnode:not(.server):not(.selected) text { display: none; }
+.map-svg.mf .mnode:not(.server):not(.selected) { opacity: 0.12; transition: opacity 0.2s; }
+.map-svg.mf .mnode:not(.server):not(.selected) text { display: none; }
 .map-svg.mf-mine .mnode.f-mine, .map-svg.mf-targets .mnode.f-target, .map-svg.mf-threats .mnode.f-threat { opacity: 1; }
 .map-svg.mf-mine .mnode.f-mine text, .map-svg.mf-targets .mnode.f-target text, .map-svg.mf-threats .mnode.f-threat text { display: block; }
 .map-filters { margin-right: 6px; }
@@ -2472,7 +2472,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mpkt.you .pk-dir { fill: var(--you); }
 .mpkt.pay .pk-icon { fill: rgba(255, 91, 61, 0.25); stroke: var(--hot); stroke-width: 1; stroke-linejoin: round; filter: drop-shadow(0 0 3px var(--hot)); }
 .mpkt.pay .pk-dir { fill: var(--hot); }
-.map-svg[class*="mf-"] .mbone, .map-svg[class*="mf-"] .mpkt.amb, .map-svg[class*="mf-"]:not(.mf-mine) .mpkt { opacity: 0.12; }
+.map-svg.mf .mbone, .map-svg.mf .mpkt.amb, .map-svg.mf:not(.mf-mine) .mpkt { opacity: 0.12; }
 
 /* The firewall: its level, what it's vulnerable to, and its blocks (firewall.mjs). */
 .fw-panel { display: grid; gap: 8px; margin: 6px 0 10px; }
@@ -2664,3 +2664,18 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .pkt-row .glyph { width: 13px; height: 13px; color: var(--muted); }
 .pkt-row b { font: 700 13px var(--mono); color: var(--bright); } .pkt-row b.up { color: var(--r-tuned); }
 .pkt-row small { color: var(--r-tuned); font: 11px var(--mono); }
+
+/* The map's Show picker: a dropdown of checkboxes (any mix; none checked = all). */
+details.map-pick { position: relative; }
+details.map-pick summary { list-style: none; font: 11px var(--mono); color: var(--dim); background: var(--panel, #120f0a); border: 1px solid var(--line); border-radius: 2px; padding: 1px 20px 1px 7px; cursor: pointer; position: relative; white-space: nowrap; }
+details.map-pick summary::-webkit-details-marker { display: none; }
+details.map-pick summary::after { content: '▾'; position: absolute; right: 6px; top: 0; }
+details.map-pick.on summary { color: var(--amber); border-color: var(--amber); }
+.map-pick-menu { position: absolute; z-index: 30; top: calc(100% + 3px); left: 0; min-width: 140px; display: grid; gap: 2px; padding: 6px; background: #120f0a; border: 1px solid var(--line-strong); border-radius: 3px; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); }
+.map-pick-menu label { display: flex; align-items: center; gap: 8px; padding: 3px 4px; font: 12px var(--mono); color: var(--text); cursor: pointer; border-radius: 2px; }
+.map-pick-menu label:hover { background: var(--inset); }
+.map-pick-menu input { accent-color: var(--amber); margin: 0; }
+.map-pick-menu button { margin-top: 4px; font: 11px var(--mono); color: var(--muted); background: none; border: 1px dashed var(--line); border-radius: 2px; padding: 2px 4px; cursor: pointer; }
+/* The open Show menu sits above the threat rail. */
+.map-tools:has(details.map-pick[open]) { z-index: 5; }
+details.map-pick { pointer-events: auto; }

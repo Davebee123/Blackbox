@@ -751,7 +751,10 @@ document.addEventListener('pointerdown', (e) => { if (e.target.matches?.('[data-
 addEventListener('pointerup', () => { if (mkDrag) { mkDrag = false; dirty = true; } });
 document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mk-n]')) { mkDrag = false; dirty = true; } });
 // The map's Show picker (All · Mine · Targets · Threats).
-document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mapfilter-pick]')) { mapFilter = e.target.value; dirty = true; } });
+document.addEventListener('change', (e) => {
+  const k = e.target.dataset?.mapfilterCheck;
+  if (k) { mapFilter = e.target.checked ? [...new Set([...mapFilter, k])] : mapFilter.filter((x) => x !== k); mapPickOpen = true; dirty = true; }
+});
 const hubShown = () => hubOpen && module === 'hub';
 function previewAim(s, text) {
   const key = () => aimPreview && aimPreview.target + aimPreview.ok + aimPreview.ability;
@@ -967,7 +970,8 @@ addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
-let mapFilter = 'all'; // the map's filter chips: all · mine · targets · threats (the rest dims)
+let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
+let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
 let memYes = null; // the found server you just said yes to (its connect goes through)
 addEventListener('resize', () => { dirty = true; applyMapZoom(); });
@@ -1008,7 +1012,7 @@ function render(force = false) {
     }
     render.logLen = s.logs.length;
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -1019,7 +1023,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     if (!(module === 'hub' && mkDrag)) put('page-view', (pages[module] || pages.map)(campaign)); // not while you drag a ticket's slider
     if (module === 'hub' && $('hubterm')) {
       const grew = hubLines.length - (render.hubLen ?? 0);
@@ -1538,7 +1542,10 @@ document.addEventListener('click', (e) => {
   const ms = e.target.closest('[data-msort]');
   if (ms) { mapSort = ms.dataset.msort; dirty = true; return; }
   const mf = e.target.closest('[data-mapfilter]');
-  if (mf) { mapFilter = mf.dataset.mapfilter; dirty = true; return; }
+  if (mf) { mapFilter = mf.dataset.mapfilter === 'all' ? [] : [mf.dataset.mapfilter]; dirty = true; return; }
+  if (e.target.closest('[data-mapfilter-toggle]')) { e.preventDefault(); mapPickOpen = !mapPickOpen; dirty = true; return; }
+  if (e.target.closest('[data-mapfilter-clear]')) { mapFilter = []; dirty = true; return; }
+  if (mapPickOpen && !e.target.closest('.map-pick')) { mapPickOpen = false; dirty = true; }
   const mv = e.target.closest('[data-mapview]');
   if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
