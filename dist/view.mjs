@@ -2090,6 +2090,17 @@ function modsMarkup(s, l) {
   return `<div class="mods">${slotPips('module', mine.length, ports, 'Module ports')}${on}${free}</div>`;
 }
 
+// A server you've taken over, before it has a harvester: server + harvester → outpost, and what an
+// outpost gets you, as icons (hover each for the rule).
+function opConvert(s, l) {
+  const m = codeOf(l.family), gets = [
+    [m || 'salvage', `${MATERIALS[m]?.short || 'Code'} stockpile`, `It harvests ${MATERIALS[m]?.name || 'code'} while you're away; connect (or a Scheduler) to collect`],
+    ['module', 'module ports', 'Modules go in its ports: a firewall node, more storage, and so on'],
+    ['relay', 'no reconnect wait', 'You can jack straight back in (other servers make you wait a minute)'],
+  ];
+  return `<div class="op-convert"><span class="opc-node" title="A server you've taken over">${glyph('integrity')}<small>Server</small></span><span class="opc-plus" title="Install a harvester">+${glyph('harvester')}</span><span class="opc-arrow">→</span><span class="opc-node out" title="An outpost">${glyph('storage')}<small>Outpost</small></span></div>
+    <ul class="opc-gets">${gets.map(([ic, txt, tip]) => `<li title="${esc(tip)}">${glyph(ic)}${esc(txt)}</li>`).join('')}</ul>`;
+}
 // The outpost part of a location card: install, stockpile, siege, retake and repair.
 function outpostCard(s, l) {
   if (!l.takenOver) return '';
@@ -2102,9 +2113,9 @@ function outpostCore(s, l) {
     const rack = harvesters(s);
     if (o.readyAt && Date.now() < o.readyAt) return `<p class="svc-line">Harvester slot resetting · ${fmtTime(o.readyAt - Date.now())} ${buyoutBtn(s, `outpost buyout ${l.id}`, outpostBuyout(l)?.price)}</p>`;
     // Nothing in the rack: where one comes from. Craft it (its plan known), or find one packaged in a vault.
-    if (!rack.length) return `<div class="outpost op-pick"><p class="svc-line"><span class="tag dim">${glyph('harvester')}no harvester</span></p><div class="row">${Object.keys(OUTPOST.kinds).some((k) => knowsPlan(s, k)) ? `<button type="button" class="btn" data-go="craft:harvesters">${glyph('harvester')}Craft a harvester</button>` : `<span class="tag dim" title="Your first vault holds the Siphon plan (plan.pln); vaults also hold packaged harvesters (.vx)">${glyph('blueprint')}needs a plan</span>`}</div></div>`;
+    if (!rack.length) return `<div class="outpost op-pick">${opConvert(s, l)}<div class="row">${Object.keys(OUTPOST.kinds).some((k) => knowsPlan(s, k)) ? `<button type="button" class="btn" data-go="craft:harvesters">${glyph('harvester')}Craft a harvester</button>` : `<span class="tag dim" title="Your first vault holds the Siphon plan (plan.pln); vaults also hold packaged harvesters (.vx)">${glyph('blueprint')}needs a plan</span>`}</div></div>`;
     const full = l.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s);
-    return `<div class="outpost op-pick"><div class="op-pick-head">${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Outposts you can run')}</div><ul class="op-rack">${rack.map((h, i) => `<li><span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.from ? `<span class="tag ${h.from === 'found' ? 'you' : 'dim'}" title="${h.from === 'found' ? 'A packaged native from a vault' : 'Crafted on the Craft page'}">${h.from}</span>` : ''}${h.traits.map((x) => `<span class="tag" title="${esc(OUTPOST.traits[x].rule)}">${esc(OUTPOST.traits[x].name)}</span>`).join('')}</span><button type="button" class="btn small primary" data-command="outpost install ${esc(l.id)} ${i + 1}" ${full ? 'disabled title="No outpost slot free. Pull a harvester out, or level your server."' : ''}>Install</button></li>`).join('')}</ul></div>`;
+    return `<div class="outpost op-pick">${opConvert(s, l)}<div class="op-pick-head">${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Outposts you can run')}</div><ul class="op-rack">${rack.map((h, i) => `<li><span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.from ? `<span class="tag ${h.from === 'found' ? 'you' : 'dim'}" title="${h.from === 'found' ? 'A packaged native from a vault' : 'Crafted on the Craft page'}">${h.from}</span>` : ''}${h.traits.map((x) => `<span class="tag" title="${esc(OUTPOST.traits[x].rule)}">${esc(OUTPOST.traits[x].name)}</span>`).join('')}</span><button type="button" class="btn small primary" data-command="outpost install ${esc(l.id)} ${i + 1}" ${full ? 'disabled title="No outpost slot free. Pull a harvester out, or level your server."' : ''}>Install</button></li>`).join('')}</ul></div>`;
   }
   const h = o.h, m = MATERIALS[codeOf(l.family)];
   const traits = h.traits.map((t) => `<span class="tag" title="${esc(OUTPOST.traits[t].rule)}">${esc(OUTPOST.traits[t].name)}</span>`).join(' ');
