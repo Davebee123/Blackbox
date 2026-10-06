@@ -107,3 +107,20 @@ test('your first protocol: Loadout, then Load at home; on a run the tip says it 
   assert.equal(nextTip(s, 'loadout', visible).id, 'protocol-home');
   assert.match(TIPS.find((t) => t.id === 'protocol').text, /only equip at home/);
 });
+
+test('the market teaches itself in order: rows, ▲/▼, the news, then the ticket and transfers', () => {
+  const s = fresh();
+  const chain = ['hub-menu', 'hub-market', 'hub-compare', 'hub-news', 'hub-slider', 'hub-preview', 'hub-go', 'hub-xfers'];
+  const all = (sel) => /hub-row|mk-/.test(sel); // the menu and an open market with a ticket
+  for (const id of chain) { assert.equal(nextTip(s, 'hub', all)?.id, id); markSeen(s, id); }
+  // The ticket's tips wait for the ticket.
+  const t = fresh();
+  ['hub-menu', 'hub-market', 'hub-compare', 'hub-news'].forEach((id) => markSeen(t, id));
+  assert.equal(nextTip(t, 'hub', (sel) => !sel.includes('mk-ticket') && !sel.includes('mk-xfers') && sel.includes('mk-')), null);
+});
+
+test('every threat on the map has a tip, and none says a lost outpost is gone for good', () => {
+  const has = (sel) => TIPS.some((t) => t.page === 'map' && t.at === sel);
+  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.besieged', '.mnode.locked', '.mnode.fleet', '.mnode.hub.yours.threat', '.mnode.invader[data-select="roamer"]', '.mnode.member.besieged', '.mnode.member.down']) assert.ok(has(sel), sel);
+  for (const t of TIPS) assert.doesNotMatch(t.text, /take (it|the outpost) back|take the outpost|cut off/, t.id);
+});
