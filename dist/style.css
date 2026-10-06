@@ -2356,3 +2356,12 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .btn.armed { border-color: var(--hot); color: var(--hot); white-space: normal; text-align: left; max-width: 100%; }
 .mk-wares .mk-th > span { align-self: center; }
 .mk-th .mk-buy-h { border-left: 0; padding-left: 12px; }
+/* Wall and Away rows: the same bar as Integrity. */
+.srv-line .srv-bar.wall > span { background: var(--you); }
+.srv-line .srv-bar.wall.mid > span { background: var(--amber); }
+.srv-line .srv-bar.wall.low > span { background: var(--hot); }
+.srv-line .srv-n small { font-weight: 500; }
+/* Every server-card row: the same label column, the same bar length, the same number column. */
+.srv-line { grid-template-columns: 104px minmax(0, 1fr) 96px; }
+.srv-line .srv-n { text-align: right; white-space: nowrap; }
+.srv-line .srv-v:empty { display: block; }

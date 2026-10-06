@@ -1511,13 +1511,18 @@ function dropLine(s, l) {
 }
 
 // In a consortium, your wall meets invaders while you're logged off: what it stops.
+// The wall as a server-card row: a bar of how well it covers the highest level your traced servers
+// send (teal: it stops them; amber: they'd be contested; red: they'd break through), and the level it stops.
+function wallRow(s, icon, label, b, tipExtra = '') {
+  const top = Math.max(0, ...(s.locations || []).filter((l) => !l.rogue).map((l) => l.level || 1));
+  const cover = top ? Math.min(1, b.blocks / top) : 1, state = !top || b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low';
+  const tip = `Stops invasions up to level ${b.blocks}${b.holds > b.blocks ? `, contests ${b.blocks + 1}–${b.holds}` : ''}${top ? `. Your servers send up to level ${top}` : ''}.${tipExtra}`;
+  return srvLine(icon, label, `<span class="srv-bar wall ${state}"><span style="width:${(cover * 100).toFixed(0)}%"></span></span>`, `<small>stops lv</small> ${b.blocks}`, tip);
+}
 function awayLine(s) {
   if (!consortiumOf(s)) return '';
-  if (s.degraded) return '<p class="svc-line"><span class="tag warn" title="No wall until it\'s back up">Rebooting</span></p>';
-  const b = wallBands(s, wallRating(s) * archWall(s) * consortiumWall(s));
-  const top = Math.max(0, ...(s.locations || []).filter((l) => !l.rogue).map((l) => l.level || 1));
-  const safe = top && b.blocks >= top;
-  return `<div class="srv-wall" title="While you're logged off, invasions keep coming at half pace and your wall meets them (consortium bonus included). A crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours.${top ? ` Your servers send up to level ${top}.` : ''}"><span class="srv-k ${safe ? '' : 'warn'}">${glyph('clock')}Away</span>${wallRuler(s, true, b)}</div>`;
+  if (s.degraded) return srvLine('clock', 'Away', '<span class="tag warn">Rebooting</span>', '', 'No wall until it is back up');
+  return wallRow(s, 'clock', 'Away', wallBands(s, wallRating(s) * archWall(s) * consortiumWall(s)), ` While you're logged off (consortium bonus included); a crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours.`);
 }
 
 // The consortium (consortium.mjs) on a server card: whose it is, a siege to break, or shared ground.
@@ -1574,7 +1579,7 @@ function mapSide(s, sel, node) {
         ${(() => { const sp = serverProgress(s);
           return srvLine('integrity', 'Server', `<span class="srv-bar xp"><span style="width:${sp.next ? (sp.xp / sp.next) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${sp.level}`, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ' (max)'}`); })()}
         ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
-        ${srvLine('firewall', 'Wall', wallRuler(s, true), '', 'Which invasion levels your wall stops')}
+        ${s.degraded ? srvLine('firewall', 'Wall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Wall', wallBands(s))}
         ${degradedMarkup(s)}${awayLine(s)}
         <div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${portsUsed(s)}/${portCount(s)}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>
         ${srvLine('memory', 'Memory', '', `${liveCount(s)}<small>/${memoryCap(s)}</small>`, 'Servers on your network')}
