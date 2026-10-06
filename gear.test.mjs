@@ -566,7 +566,7 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   assert.equal(daemonSlots(t), CONFIG.daemonSlots + 2);
 });
 
-test('blueprints: nothing is buildable at first; the Firewall comes first; every vault holds one', async () => {
+test('blueprints: nothing is buildable at first; each teaches something new; every vault holds one', async () => {
   const { learnBlueprint, knows, knownRecipes } = await import('./dist/combat.mjs');
   const { layoutOf } = await import('./dist/run.mjs');
   const { BLUEPRINTS } = await import('./dist/gear.mjs');
@@ -574,7 +574,6 @@ test('blueprints: nothing is buildable at first; the Firewall comes first; every
   assert.match(installBlock(s, 'firewall'), /blueprint/);
   assert.equal(knownRecipes(s).length, 0);
   learnBlueprint(s);
-  assert.ok(knows(s, 'firewall'), 'the first blueprint is always the Firewall');
   // The pool is every kind of recipe: protocol recipes and services, filter recipes, plans, configs.
   const { CRAFTABLE, knowsFilter } = await import('./dist/filters.mjs');
   const { OUTPOST, knowsPlan } = await import('./dist/outpost.mjs');

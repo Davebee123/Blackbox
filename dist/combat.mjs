@@ -508,8 +508,9 @@ export function learnBlueprint(s, why = '') {
     for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Blueprint scraps', virus: 'blueprint', seed: 0 });
     return emit(s, 'info', `${why}a blueprint you already know: +2 salvage.`);
   }
-  if (!left.includes('firewall')) { const k = Math.floor(rand(s) * (left.length + others.length)); if (k >= left.length) return others[k - left.length](); }
-  const id = left.includes('firewall') ? 'firewall' : left[Math.floor(rand(s) * left.length)];
+  const k = Math.floor(rand(s) * (left.length + others.length));
+  if (k >= left.length) return others[k - left.length]();
+  const id = left[k];
   s.recipes.push(id);
   const stat = recipeStat(id);
   return emit(s, 'drop', stat ? `${why}${blueprintName(id)}. You can compile ${STATS[stat].name} protocols.` : `${why}${blueprintName(id)}. You can install ${SERVICES[id].name}.`, { recipe: id });
@@ -632,7 +633,7 @@ export function addLocation(s, family, depth = 1, parent = null) {
   loc.template = TEMPLATES[s.locations.filter((l) => !l.rogue).length % TEMPLATES.length]; // rogue servers don't take a turn
   loc.level = SERVER.locationLevel(hackerLevel(s), depth); // fixed when found: its guards' level, and its vault gear's
   if (parent) loc.parent = parent;
-  if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and the Firewall blueprint
+  if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and a blueprint
   loc.trait = siteTrait(loc);
   rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken
   claimServer(s, loc); // about one in eight belongs to a faction (factions.mjs)

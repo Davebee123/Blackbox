@@ -1,5 +1,5 @@
 // Invasions: the idle layer. While you're logged on, locations you've found send viruses back
-// along the network to your server, one at a time. Your wall (the Firewall service) meets each
+// along the network to your server, one at a time. Your wall (the Filter Bay service) meets each
 // one, comparing its rating with the invader's strength:
 //   20% or more stronger: blocked at the wall (a trickle of XP and salvage)
 //   within 20%: a siege. The wall wears the invader down while it chips your server.

@@ -39,7 +39,7 @@ export const upgradeCost = (L) => { const major = (L + 1) % VERSION_EVERY === 0,
 export const defragCost = (f) => Math.max(5, Math.round(f.frag * (3 + f.level)));
 
 const clock = () => hooks.now?.() ?? Date.now();
-// Old saves had a wall from the server's level and the Firewall service's version: start the
+// Old saves had a wall from the server's level and the Filter Bay service's version: start the
 // firewall where that wall blocked, so nobody loses ground.
 function startLevel(s) {
   const v = s.services?.firewall || 0, k = v ? [1, 1.2, 1.45][v - 1] : 0.75, rating = power(serverLevel(s)) * k;

@@ -52,7 +52,7 @@ Red is used only for "lands this cycle" and critical server health.
 |---|---|
 | `dist/data.mjs` | Every tunable number, abilities, families, mutations, fixtures, virus generation |
 | `dist/firewall.mjs` | The firewall: its level (`firewall upgrade`), fragmentation and `defrag`, `harden.sh` (`firewall harden`), and its effective level, which is what the wall blocks. Tested in `firewall.test.mjs`. |
-| `dist/filters.mjs` | Filters: firewall gear (`rollFilter`, `vaultFilter` for `filter.flt` in vaults), the slots from the Firewall service, `filterStat`, `filter equip\|unequip\|scrap <n>`. Tested in `firewall.test.mjs`. |
+| `dist/filters.mjs` | Filters: firewall gear (`rollFilter`, `vaultFilter` for `filter.flt` in vaults), the slots from the Filter Bay, `filterStat`, `filter equip\|unequip\|scrap <n>`. Tested in `firewall.test.mjs`. |
 | `dist/ascii3d.mjs` | Spinning ASCII wireframes for item hover cards: a shape per protocol kind (and filters), rotated and drawn into a character grid. |
 | `dist/invasion.mjs` | Invasions: invasions from servers attached to your network, the wall (blocked / contested / breach against the firewall), `jack in`, `open ports`, the network clock (`tickNetwork`; time away is played out a minute at a time, solo or not) and the end of Degraded mode |
 | `dist/gear.mjs` | Items: slots (Exploit, Proxy, Shell, Script, Implant), the 20 base items, affixes, rarities, `rollItem` and `uniqueItem`, drop odds (`LOOT`, time targets → odds per kill), deconstruct yields; services (ports, versions, costs), code materials. Pure data and functions. Unique effects run in combat.mjs (`fxFire`). |

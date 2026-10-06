@@ -851,12 +851,12 @@ function firewallPanel(s, now) {
   return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${fwVersion(f)}${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
     ${fwActs(s, f, '', can, c, busy, defragging(s, now), now)}</div>`;
 }
-// The firewall's filters: its slots (from the Firewall service), then what you hold. Equip and
+// The firewall's filters: its slots (from the Filter Bay service), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
 function filterPanel(s) {
   const held = filtersOf(s), on = (s.filters?.on || []), n = filterSlots(s), busy = active(s) || !!s.run;
   if (!n && !held.length) return '';
-  const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ''}" data-ptip="f:${i}"><b class="iname r-${f.rarity}">${esc(f.name)}</b><small>${esc(filterLine(f))}</small>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? (n ? 'Every slot is full' : 'Install the Firewall service for slots') : 'Put it in'}">In</button><button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
+  const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ''}" data-ptip="f:${i}"><b class="iname r-${f.rarity}">${esc(f.name)}</b><small>${esc(filterLine(f))}</small>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? (n ? 'Every slot is full' : 'Install the Filter Bay service for slots') : 'Put it in'}">In</button><button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
   const slots = Array.from({ length: n }, (_, k) => { const i = on[k]; return i != null && held[i] ? '' : '<li class="flt empty"><small>empty slot</small></li>'; }).join('');
   const rows = held.map(tile);
   return `<div class="flt-panel"><h3 class="craft-sub">Filters <small>${on.length}/${n}</small></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;

@@ -1,5 +1,5 @@
 // Filters: gear for your firewall, rolled like protocols (a rarity, an item level, stats). They sit
-// in the firewall's slots (the Firewall service: 1, 2, 3 by version) and change what it does, never
+// in the firewall's slots (the Filter Bay service: 1, 2, 3 by version) and change what it does, never
 // what it targets: more levels, more against one family, slower fragmentation, a faster defrag,
 // more grind and less chip while contested, and on rarer ones a tar pit or a sting.
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it). Equip at home.
@@ -63,7 +63,7 @@ export function vaultFilter(loc) {
 
 const own = (s) => (s.filters ||= { held: [], on: [] }); // on: indexes into held
 export const filtersOf = (s) => own(s).held;
-// Slots: the Firewall service's (1–3 by version), plus your firewall's major versions (v3, v5).
+// Slots: the Filter Bay service's (1–3 by version), plus your firewall's major versions (v3, v5).
 export const slotsOf = (s) => (serviceVersion(s, 'firewall') || 0) + versionSlots(s);
 export const equipped = (s) => own(s).on.slice(0, slotsOf(s)).map((i) => own(s).held[i]).filter(Boolean);
 // The sum of a stat over what's equipped.
@@ -118,7 +118,7 @@ function filterAction(s, text) {
   if (s.run || active(s)) return warn(s, 'Filters go in and out at home, not on a run or mid-fight.');
   if (verb === 'equip') {
     if (o.on.includes(i)) return warn(s, `${f.name} is already in.`);
-    if (o.on.length >= slotsOf(s)) return warn(s, slotsOf(s) ? `Every filter slot is full (${slotsOf(s)}). Take one out first.` : 'No filter slots: install the Firewall service, or take your firewall to v3.');
+    if (o.on.length >= slotsOf(s)) return warn(s, slotsOf(s) ? `Every filter slot is full (${slotsOf(s)}). Take one out first.` : 'No filter slots: install the Filter Bay, or take your firewall to v3.');
     o.on.push(i);
     return emit(s, 'firewall', `${f.name} in: ${filterLine(f)}.`);
   }
