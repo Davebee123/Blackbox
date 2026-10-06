@@ -521,7 +521,20 @@ export function itemTipMarkup(s, ref) {
   const stats = f ? `<span>${esc(filterLine(f))}</span>` : invStats(it);
   const where = !f && loadedOn(s, it.id) ? `<span class="tag dim">on ${esc(ARCHETYPES[loadedOn(s, it.id)].name)}</span>` : '';
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
-  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}</div></div>`;
+  const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
+  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
+}
+// Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
+function swapCompare(s, it) {
+  const kind = groupOf(it), same = SLOT_KINDS.slice(0, slotCount(s)).indexOf(kind);
+  if (same < 0) return '';
+  const out = freeSlot(s, kind) < 0 ? stashItem(s, rigOf(s)[same]) : null;
+  const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
+  const rows = keys.map((k) => [k, (it.stats[k] || 0) - (out?.stats?.[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
+    .map(([k, d]) => `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmtStat(k, Math.abs(d))} ${esc(STATS[k].name)}</span>`);
+  const fx = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : '');
+  if (fx(out) && fx(out) !== fx(it)) rows.push(`<span class="down">▼ ${esc(fx(out))}</span>`);
+  return `<div class="ptip-vs"><small>${out ? `vs ${esc(itemLabel(out))}` : 'into an empty slot'}</small>${rows.length ? rows.join('') : '<span class="dim">no change</span>'}</div>`;
 }
 
 // The stash's filter (screen state only).
@@ -579,7 +592,7 @@ function protocolsParts(s, focus = null) {
     const full = !SLOT_KINDS.slice(0, slotCount(s)).includes(groupOf(it)); // a full slot swaps
     const confirm = ['custom', 'zeroday', 'indemnified'].includes(it.rarity) ? ' data-confirm="Sure? Deconstruct"' : '';
     const swap = freeSlot(s, groupOf(it)) < 0 && !full;
-    const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" ${busy || full || dupe ? 'disabled' : ''} title="${busy ? 'At home only' : full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
+    const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" data-ptip="${esc(it.id)}" ${busy || full || dupe ? 'disabled' : ''} title="${busy ? 'At home only' : full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
     const scrap = where ? '' : `<button type="button" class="inv-btn" data-command="deconstruct ${it.id}"${confirm} ${busy ? 'disabled' : ''} title="Deconstruct: salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}</button>`;
     return `<li class="inv-row ${rarityClass(it)}">${invBody(it, whereTag)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
   }).join('');

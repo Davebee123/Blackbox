@@ -474,7 +474,7 @@ function react(events) {
       case 'intrusion': feel.add('hurt', null); break;
       // Mail: contracts and the Halcyon retainer.
       // Mail, the board, contracts ready, the retainer and flags go to the pager (see pagerReact).
-      case 'contract-done': feel.add('unlock', null); notice(e.message); break;
+      case 'contract-done': feel.add('unlock', null); showGain('Contract delivered', e.name || '', e.gains || [], false); break;
       case 'standing-down': feel.add('nope', null); break;
       case 'contract-taken': feel.add('good', null); notice(e.message); break;
       case 'bought': feel.add('pickup', null); notice(e.message); break;
@@ -610,7 +610,7 @@ function run(raw) {
   if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore) { const more = command(campaign, 'now'); react(more); events = [...events, ...more]; }
   if (warning) notice(warning.message, true, warning.suggest);
   else {
-    const info = events.find((e) => e.type === 'contract-done') || events.findLast((e) => ['info', 'repair', 'daemon-set', 'gear', 'drop', 'service', 'service-done', 'code'].includes(e.type));
+    const info = events.some((e) => e.type === 'contract-done') ? null : events.findLast((e) => ['info', 'repair', 'daemon-set', 'gear', 'drop', 'service', 'service-done', 'code'].includes(e.type));
     if (info) notice(info.message);
   }
   // (a connect or hang-up has its own sound, so the channel change stays quiet)

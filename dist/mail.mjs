@@ -442,8 +442,22 @@ export function mailCommand(s, text, at = now()) {
   s.mail.jobs = s.mail.jobs.filter((x) => !x.done || x.story !== undefined || keep.has(x));
   s.server.credits += c.reward.credits;
   s.indemnity = indemnity(s) + (c.reward.indemnity || 0);
-  emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits });
-  if (c.reward.xp) gainXp(s, xpFor(s, hackerLevel(s), c.reward.xp), 'contract');
+  // What it paid, for the delivered card (app.js shows it in the middle of the screen).
+  const xp = c.reward.xp ? xpFor(s, hackerLevel(s), c.reward.xp) : 0, fname = (f) => FACTIONS[f]?.short || f;
+  const gains = [
+    c.reward.credits && { label: 'Credits', qty: `+${c.reward.credits}`, kind: 'credits', text: `${c.reward.credits} credits` },
+    c.reward.indemnity && { label: 'Indemnity', qty: `+${c.reward.indemnity}`, kind: 'loot', text: `${c.reward.indemnity} Indemnity` },
+    xp && { label: 'XP', qty: `+${xp}`, kind: 'xp', text: `${xp} XP` },
+    c.reward.standing && { label: `${fname('halcyon')} standing`, qty: `+${c.reward.standing}`, kind: 'found', text: `${c.reward.standing} standing` },
+    c.offBooks && { label: `${fname('glassjaw')} rep`, qty: '+5', kind: 'found', text: '5 rep' },
+    c.reward.rep && c.faction && { label: `${fname(c.faction)} rep`, qty: `+${c.reward.rep}`, kind: 'found', text: `${c.reward.rep} rep` },
+    c.reward.relay && { label: 'Relay', qty: `×${c.reward.relay}`, kind: 'item', text: 'a relay' },
+    c.reward.blueprint && { label: 'Blueprint', qty: '', kind: 'blueprint', text: 'a blueprint' },
+    c.reward.daemon && { label: 'Daemon', qty: '', kind: 'daemon', text: 'a daemon' },
+    c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
+  ].filter(Boolean);
+  emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
+  if (xp) gainXp(s, xp, 'contract');
   if (c.reward.standing) changeStanding(s, 'halcyon', c.reward.standing, c.offBooks ? 'Halcyon heard about the GLASSJAW job' : 'Contract delivered');
   if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
   if (c.reward.rep && c.faction) changeRep(s, c.faction, c.reward.rep, 'Contract delivered');
