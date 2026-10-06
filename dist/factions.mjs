@@ -48,7 +48,7 @@ export const FACTIONS = {
     tiers: ['Tuned out', 'Listener', 'Regular', 'Confidant', 'Signal'],
     allies: ['nullchoir'], rivals: ['glassjaw'],
     hub: { name: 'LANTERN-RELAY-88', level: 6 },
-    shop: ['tip', 'cracker', 'injector'],
+    shop: ['bootleg', 'cracker', 'injector'],
   },
   nullchoir: {
     name: 'NULL CHOIR', short: 'NULL CHOIR', kind: 'crew', color: '#ff6f91', start: 10,
@@ -62,7 +62,7 @@ export const FACTIONS = {
 export const FACTION_IDS = Object.keys(FACTIONS);
 // Goods only factions sell (the rest are store.mjs GOODS).
 export const FACTION_GOODS = {
-  tip: { name: 'Broadcast schedule', about: 'LANTERN tells you when the next dead drop goes out: one goes out now.', credits: (L) => 70 + 5 * L },
+  bootleg: { name: 'Bootleg filter', about: 'A sealed firewall filter at your level: Stock or better.', credits: (L) => 90 + 8 * L },
 };
 
 // ---------- rep ----------

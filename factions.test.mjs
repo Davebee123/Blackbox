@@ -97,8 +97,12 @@ test('faction hubs are found: Halcyon’s is known; another’s trace grows from
   for (let i = 0; i < 3 && !hubFound(s, 'lantern'); i++) clearedFor(s, loc);
   assert.ok(hubFound(s, 'lantern'));
   assert.deepEqual(hubsOf(s).map((h) => h.faction), ['halcyon', 'lantern']);
-  // An older save that had every hub on its map keeps them.
-  const old = fresh(); old.mail = { boardOpen: true, list: [], jobs: [], offers: [] }; old.hubs = { halcyon: {}, glassjaw: {}, kestrel: {}, lantern: {}, nullchoir: {} };
+  // A save the old load step marked all-found keeps only the hubs it actually traced.
+  const old = fresh(); old.version = 27; old.mail = { boardOpen: true, list: [], jobs: [], offers: [] }; old.hubs = { halcyon: {}, glassjaw: {}, kestrel: {}, lantern: {}, nullchoir: {} };
+  old.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; old.hubLead = { lantern: 100, kestrel: 40 };
   const r = restore(JSON.parse(JSON.stringify(old)));
-  assert.equal(hubsOf(r).length, 5);
+  assert.deepEqual(hubsOf(r).map((h) => h.faction), ['halcyon', 'lantern']);
+  // And loading again never finds hubs on its own.
+  const again = restore(JSON.parse(JSON.stringify(r)));
+  assert.deepEqual(hubsOf(again).map((h) => h.faction), ['halcyon', 'lantern']);
 });

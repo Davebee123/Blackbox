@@ -24,8 +24,8 @@ export const FILTER_STATS = {
   ghostroot: { name: ' lv vs Ghostroot', range: [2, 4], kind: 'suffix', label: 'of Exorcism', family: true },
   frag: { name: '% less fragmentation', range: [15, 40], kind: 'prefix', label: 'Compacted' },
   defrag: { name: '% faster defrag', range: [20, 50], kind: 'prefix', label: 'Indexed' },
-  grind: { name: '% more grind', range: [15, 35], kind: 'prefix', label: 'Abrasive' },
-  chip: { name: '% less chip', range: [15, 35], kind: 'prefix', label: 'Buffered' },
+  grind: { name: '% more wear on invaders', range: [15, 35], kind: 'prefix', label: 'Abrasive' },
+  chip: { name: '% less chip damage', range: [15, 35], kind: 'prefix', label: 'Buffered' },
   tarpit: { name: '% slower invasions', range: [15, 30], kind: 'suffix', label: 'of Tar', rare: true },
   sting: { name: '% worn on arrival', range: [10, 25], kind: 'suffix', label: 'of the Hive', rare: true },
 };

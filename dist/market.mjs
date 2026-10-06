@@ -7,7 +7,8 @@
 // Trades are file transfers: what you sell leaves your stock now and its credits arrive when the
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
-import { emit, warn, materialsOf, hooks } from './combat.mjs';
+import { emit, warn, materialsOf, hooks, rand } from './combat.mjs';
+import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
@@ -159,7 +160,9 @@ export function tickMarket(s, at = now()) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
     if (t.side === 'good') {
       emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: ${t.name}.`, { faction: t.f });
-      if (t.good === 'tip') broadcast(s); else deliverGoods(s, t.good, t.L);
+      if (t.good === 'tip') broadcast(s); // a broadcast schedule bought before LANTERN dropped it
+      else if (t.good === 'bootleg') addFilter(s, rollFilter(() => rand(s), { level: t.L, rarity: rand(s) < 0.7 ? 'stock' : 'tuned' }), 'Unsealed: ');
+      else deliverGoods(s, t.good, t.L);
       continue;
     }
     if (t.side === 'sell') { s.server.credits += t.credits; emit(s, 'transfer-in', `Transfer complete to ${FACTIONS[t.f].short}: +${t.credits} credits for ${t.n} ${WARES[t.w].name}.`, { faction: t.f }); }

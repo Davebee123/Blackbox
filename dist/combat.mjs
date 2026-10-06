@@ -26,7 +26,7 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 
-export const SAVE_VERSION = 27;
+export const SAVE_VERSION = 28;
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewActNamed, crewStanding, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; run.mjs crewGuests, foldersOf; the browser sets stepped.
@@ -2580,15 +2580,16 @@ function migrateToProtocols(s) {
 }
 
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
     // v23: the Sysadmin is the Bastion now. Its level, tree and bar come along.
     // Smash is Flood now: on the bar and anything keyed by it.
     for (const bar of Object.values(s.loadout?.equipped || {})) if (Array.isArray(bar)) bar.forEach((id, i) => { if (id === 'smash') bar[i] = 'flood'; if (id === 'kill-process') bar[i] = 'rate-limit'; });
-    // Faction hubs are found now: the ones an older save already had on its map stay found.
-    if (s.hubs && !s.hubFound) s.hubFound = Object.fromEntries(Object.keys(s.hubs).map((f) => [f, true]));
+    // v28: hubs are found by tracing them. An earlier load step wrongly marked every hub found;
+    // keep only the ones traced to 100% (or held).
+    if (was < 28 && s.hubs) s.hubFound = Object.fromEntries(Object.keys(s.hubs).filter((f) => (s.hubLead?.[f] || 0) >= 100 || s.hubs[f]?.captured).map((f) => [f, true]));
     // Bastion's first skill became Rate Limit: kill -9's ranks carry over to Token Bucket.
     for (const r of Object.values(s.loadout?.ranks || {})) if (r && r['kill-9'] !== undefined) { r['token-bucket'] = (r['token-bucket'] || 0) + r['kill-9']; delete r['kill-9']; }
     if (was < 23) {

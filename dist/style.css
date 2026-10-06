@@ -2630,3 +2630,19 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .cd-stats li .glyph { width: 15px; height: 15px; color: var(--you); }
 .cd-stats li b { font: 700 14px var(--mono); color: var(--bright); }
 .cd-out > .glyph { grid-row: 1 / 3; align-self: start; }
+/* Filter tiles: stats as icon chips; a filter out of its slot runs dim. */
+.flt-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.flt-head .tag .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
+.fchips { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.fchip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+.fchip .glyph { width: 13px; height: 13px; color: var(--you); }
+.fchip b { font: 700 13px var(--mono); color: var(--bright); }
+.flt.off .fchip .glyph { color: var(--dim); } .flt.off .fchip b { color: var(--muted); }
+/* A contract's pay: icon chips. */
+.rw-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.rw { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); }
+.rw .glyph { width: 14px; height: 14px; color: var(--amber); }
+.rw b { font: 700 13px var(--mono); color: var(--bright); }
+.rw.neg b { color: var(--hot); }
+.flt-list .flt .fchips { grid-column: 1; grid-row: 2; }
+.flt-list .flt .fchip small { grid-column: auto; grid-row: auto; font: 12px var(--sans, inherit); }

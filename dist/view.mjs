@@ -36,7 +36,7 @@ import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, F
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { cooldownOf, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
+import { xpFor, cooldownOf, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -871,15 +871,35 @@ function firewallPanel(s, now) {
   return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${fwVersion(f)}${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
     ${fwActs(s, f, '', can, c, busy, defragging(s, now), now)}</div>`;
 }
+// A contract's pay as icon chips: credits, Indemnity, XP, standing and rep, anything extra.
+function rewardChips(s, c) {
+  const r = c.reward, chip = (ic, v, tip, cls = '') => `<span class="rw ${cls}" title="${esc(tip)}">${glyph(ic)}<b>${esc(String(v))}</b></span>`;
+  return [r.credits && chip('credits', r.credits, 'Credits'), r.indemnity && chip('indemnity', r.indemnity, 'Indemnity: Halcyon scrip'),
+    r.xp && chip('xp', xpFor(s, hackerLevel(s), r.xp), 'XP'),
+    r.standing && chip('f-halcyon', `${r.standing > 0 ? '+' : ''}${r.standing}`, 'Halcyon standing', r.standing < 0 ? 'neg' : ''),
+    c.offBooks && chip('f-glassjaw', '+5', 'GLASSJAW rep'), r.rep && c.faction && chip('f-' + c.faction, `+${r.rep}`, `${FACTIONS[c.faction].short} rep`),
+    r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), r.daemon && chip('daemon', '+1', 'A daemon'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
+}
+// A filter's stats as chips (an icon and a number each); dim while it isn't in a slot.
+const FILTER_ICON = { strength: 'firewall', worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel', frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike' };
+function filterChips(s, f, on) {
+  const lv = fwOf(s).level;
+  return Object.entries(f.stats).map(([k, v]) => {
+    const x = FILTER_STATS[k], fam = x?.family;
+    const label = k === 'strength' ? `+${v} lv` : fam ? `+${v} lv` : `${v}%`, what = k === 'strength' ? 'firewall levels' : x.name.replace(/^ lv /, 'levels ').replace(/^% /, '');
+    const tip = k === 'strength' ? `+${v} firewall levels${on ? '' : `: lv ${lv} → ${lv + v} with it in`}` : `${v}${x.name}${fam ? '' : ''}`;
+    return `<span class="fchip" title="${esc(tip)}">${glyph(FILTER_ICON[k] || 'item')}<b>${esc(label)}</b><small>${esc(k === 'strength' ? '' : what)}</small></span>`;
+  }).join('');
+}
 // The firewall's filters: its slots (from the Filter Bay service), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
 function filterPanel(s) {
   const held = filtersOf(s), on = (s.filters?.on || []), n = filterSlots(s), busy = active(s) || !!s.run;
   if (!n && !held.length) return '';
-  const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ''}" data-ptip="f:${i}"><b class="iname r-${f.rarity}">${esc(f.name)}</b><small>${esc(filterLine(f))}</small>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? (n ? 'Every slot is full' : 'Install the Filter Bay service for slots') : 'Put it in'}">In</button><button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
+  const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ' off'}" data-ptip="f:${i}"><b class="iname r-${f.rarity}">${esc(f.name)}</b><span class="fchips">${filterChips(s, f, on.includes(i))}</span>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `${n ? `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? 'Every slot is full' : 'Put it in'}">In</button>` : ''}<button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
   const slots = Array.from({ length: n }, (_, k) => { const i = on[k]; return i != null && held[i] ? '' : '<li class="flt empty"><small>empty slot</small></li>'; }).join('');
   const rows = held.map(tile);
-  return `<div class="flt-panel"><h3 class="craft-sub">Filters <small>${on.length}/${n}</small></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;
+  return `<div class="flt-panel"><h3 class="craft-sub flt-head">Filters ${n ? slotPips('firewall', on.filter((i) => held[i]).length, n, 'Filter slots') : `<span class="tag hot" title="No filter slots: install the Filter Bay (Server page), or take your firewall to v3">${glyph('firewall')}no slot</span>`}<span class="tag dim" title="Filters you hold">${glyph('item')}${held.length}/${FILTER_CAP}</span></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;
 }
 // The invasion's own card on the map: the virus, where it's from, what it's doing (with a timer
 // bar), one line on how your firewall meets it, and Jack in once it's at your wall.
@@ -1106,7 +1126,7 @@ function jobBox(s, c, now) {
   return `<div class="contract${ok ? ' ready' : ''}${c.done ? ' done' : ''}${isOffer ? ' offer' : ''}">
     <div class="c-head"><b>${glyph({ kill: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item' }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : ''}</div>
     ${isOffer ? '' : `<div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.round(pr.part * 100)}%"></span></span><small>${esc(pr.text)}</small></div>`}
-    <p class="svc-line">${c.done ? 'Paid' : 'Pays'}: ${esc(rewardLine(s, c))}</p>
+    <div class="rw-chips" title="${c.done ? 'Paid' : 'Pays'}: ${esc(rewardLine(s, c))}">${rewardChips(s, c)}</div>
     ${acts ? `<div class="row">${acts}</div>` : ''}
   </div>`;
 }
@@ -2366,7 +2386,7 @@ function shopMarkup(s, f, now) {
   if (hostile(s, f) || offline(s, f, now)) return '<p class="quiet">Shut to you.</p>';
   const tiles = shopOf(s, f, now).map((g) => {
     const can = !g.locked && g.left > 0 && s.server.credits >= g.price;
-    return `<li class="ptile stash${g.locked ? ' locked' : ''}"><b class="iname">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small>
+    return `<li class="ptile stash${g.locked ? ' locked' : ''}"><b class="iname">${glyph(g.id === 'bootleg' ? 'firewall' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small>
       <div class="ptile-acts"><span class="price">${g.price} credits</span><small class="qty">×${g.left}</small>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small ${can ? 'primary' : ''}" data-command="buy ${f} ${g.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
   }).join('');
   return `<ul class="ptiles stash">${tiles || '<li class="quiet">Nothing on the shelf.</li>'}</ul>`;
