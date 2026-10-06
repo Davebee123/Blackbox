@@ -2523,3 +2523,44 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .fw-up.on { border-color: var(--hot); color: var(--hot); box-shadow: 0 0 8px rgba(255, 91, 61, 0.3); }
 .tag.fw-ver { color: var(--you); border-color: var(--you); cursor: help; }
 .fw-up.major { border-color: var(--you); box-shadow: 0 0 8px rgba(127, 209, 199, 0.35); }
+
+/* The Craft page: categories · recipes · the one you picked (output, what it takes, Craft). */
+.craft-ui { display: grid; grid-template-columns: 170px minmax(220px, 1fr) minmax(280px, 1.25fr); gap: 12px; align-items: start; margin-bottom: 12px; }
+.craft-cats { display: grid; gap: 4px; position: sticky; top: 0; }
+.craft-cat { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font: 600 13px var(--sans, inherit); text-align: left; cursor: pointer; }
+.craft-cat .glyph { width: 16px; height: 16px; flex: none; }
+.craft-cat span { flex: 1; }
+.craft-cat:hover { color: var(--text); border-color: var(--line-strong); }
+.craft-cat.on { color: var(--amber); border-color: var(--amber); background: rgba(241, 185, 47, 0.08); }
+.cc-n { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--you); color: #071512; font: 700 11px var(--mono); text-align: center; }
+.craft-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.craft-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 4px; color: var(--text); text-align: left; cursor: pointer; }
+.craft-item .glyph { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.craft-item .ci-txt { flex: 1; display: grid; min-width: 0; }
+.craft-item .ci-txt b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.craft-item .ci-txt small { color: var(--muted); font: 11px var(--mono); }
+.craft-item:hover { border-color: var(--line-strong); }
+.craft-item.on { border-color: var(--amber); box-shadow: inset 3px 0 0 var(--amber); }
+.craft-item.ready .glyph { color: var(--you); }
+.craft-item.locked { opacity: 0.55; }
+.ci-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--you); box-shadow: 0 0 6px var(--you); flex: none; }
+.craft-empty { padding: 14px; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; }
+.craft-detail { position: sticky; top: 0; display: grid; gap: 10px; }
+.cd-out { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; padding: 12px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--inset); }
+.cd-out > .glyph { grid-row: 1 / 3; width: 34px; height: 34px; }
+.cd-out .cd-name { margin: 0; font-size: 20px; }
+.cd-out.r-tuned { border-color: rgba(111, 182, 255, 0.6); }
+.cd-out.r-zeroday { border-color: rgba(241, 185, 47, 0.7); }
+.cd-lines { grid-column: 2; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; display: grid; gap: 2px; }
+.cd-cost .needs { display: flex; flex-wrap: wrap; gap: 6px; }
+.cd-go { justify-self: start; min-width: 140px; }
+.cd-lock { margin: 0; color: var(--muted); }
+@media (max-width: 1100px) { .craft-ui { grid-template-columns: 1fr; } .craft-cats { grid-auto-flow: column; overflow-x: auto; position: static; } .craft-detail { position: static; } }
+.cd-cost { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.cd-cost li { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--inset); }
+.cd-cost li .glyph { width: 15px; height: 15px; color: var(--muted); }
+.cd-cost li b { font: 700 14px var(--mono); color: var(--you); }
+.cd-cost li b small { color: var(--muted); font-weight: 400; }
+.cd-cost li.short { border-color: rgba(255, 91, 61, 0.5); }
+.cd-cost li.short b { color: var(--hot); }
+.cd-name.r-tuned { color: var(--r-tuned); } .cd-name.r-zeroday { color: var(--r-zeroday); } .cd-name.r-custom { color: var(--r-custom); }

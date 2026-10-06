@@ -45,7 +45,8 @@ let noticeTimer = 0;
 let dirty = true;
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
-let compileFocus = null; // the recipe picked on the Craft page's Protocols card (null: any)
+let compileFocus = null; // (old) the recipe picked on the Craft page's Protocols card
+let craftUi = { cat: null, pick: null }; // the Craft page: the category, and the recipe in it
 
 function load() {
   if (playtest === 'run') {
@@ -1024,7 +1025,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     if (!(module === 'hub' && mkDrag)) put('page-view', (pages[module] || pages.map)(campaign)); // not while you drag a ticket's slider
     if (module === 'hub' && $('hubterm')) {
       const grew = hubLines.length - (render.hubLen ?? 0);
@@ -1503,6 +1504,10 @@ document.addEventListener('click', (e) => {
   }
   const loc = e.target.closest('[data-locate]');
   if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); dirty = true; return; }
+  const cc = e.target.closest('[data-craft-cat]');
+  if (cc) { craftUi = { cat: cc.dataset.craftCat, pick: null }; dirty = true; return; }
+  const cp = e.target.closest('[data-craft-pick]');
+  if (cp) { craftUi = { ...craftUi, pick: cp.dataset.craftPick }; dirty = true; return; }
   const ml = e.target.closest('[data-maplist]');
   if (ml) { mapList = ml.dataset.maplist === '1'; dirty = true; return; }
   const ms = e.target.closest('[data-msort]');

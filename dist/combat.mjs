@@ -1356,7 +1356,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     let xp = 0; for (let l = 1; l < want; l++) xp += SERVER.xpToNext(l);
     s.serverXp = xp;
     emit(s, 'info', `Developer: server level ${serverLevel(s)}.`);
-  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text)) {
+  } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?( pay .*)?$/.test(text)) {
     filterCommand(s, text);
   } else if (/^firewall (upgrade|defrag|harden)( \S+)?$/.test(text) || text === 'defrag') {
     firewallCommand(s, text, now);

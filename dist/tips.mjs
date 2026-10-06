@@ -130,7 +130,7 @@ export const TIPS = [
 
   // ---------- craft ----------
   { id: 'craft-plans', page: 'craft', at: '.plan-lock', text: 'A dimmed row needs its plan first. Your first vault holds the Siphon plan; Halcyon sells the rest, and some vaults hold one.' },
-  { id: 'craft-modules', page: 'craft', at: '.craft-sec[data-sec="modules"]', when: (s) => (s.plans || []).some((id) => ['pipeline', 'storage', 'node', 'ids', 'lure'].includes(id)), text: 'Modules you craft go into your stock (×n on the row). Install them from an outpost\'s card on the map.' },
+  { id: 'craft-modules', page: 'craft', at: '.craft-cat[data-craft-cat="modules"]', when: (s) => (s.plans || []).some((id) => ['pipeline', 'storage', 'node', 'ids', 'lure'].includes(id)), text: 'Modules you craft go into your stock (×n on the row). Install them from an outpost\'s card on the map.' },
 
   // ---------- loadout ----------
   { id: 'loadout-status', page: 'loadout', at: '.status-line .status', text: 'This is the status this class puts on parts with its skills. Hover it to see what it does. Any class benefits from it.' },

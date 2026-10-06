@@ -32,7 +32,7 @@ import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from 
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
-import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS } from './filters.mjs';
+import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
@@ -623,28 +623,63 @@ export function matGrid(s) {
 // Which ones you folded stay folded (s.settings.craftShut).
 const craftSection = (s, key, title, purpose, body, open = !(s.settings?.craftShut || []).includes(key)) => `<details class="card craft-sec" data-sec="${key}" ${open ? 'open' : ''}><summary><h2 title="${esc(purpose)}">${title}</h2></summary>${body}</details>`;
 
-export function craftMarkup(s, focus = null) {
-  const p = protocolsParts(s, focus), srv = s.server, busy = p.busy;
-  const why = s.run ? 'Craft at home: jack out first' : active(s) ? 'Finish the fight first' : '';
-  const t = (x) => (why ? `title="${esc(why)}"` : '');
-  // Protocols
-  const protoBody = `${p.mine.length ? `<div class="craft-row">${p.picker}${needChips(s, { credits: p.c.credits, salvage: p.ccost })}<button type="button" class="btn primary" data-command="compile${p.focus ? ' ' + p.focus : ''}" data-pay="protocol:${p.c.salvage}" data-pay-title="${esc(p.focus && STATS[p.focus] ? PROTOCOL_NAMES[p.focus] : 'Protocol')}" ${p.can(p.c) ? '' : 'disabled'} ${t()}>Compile${p.focus && STATS[p.focus] ? ' · ' + esc(PROTOCOL_NAMES[p.focus]) : ''}</button>${serviceVersion(s, 'buildfarm') ? ` <span class="tag you">−${serviceValue(s, 'buildfarm')}%</span>` : ''}</div>` : '<p class="quiet" title="Blueprints teach them">No recipes</p>'}
-      ${(s.recipes || []).some((z) => ZERO_DAYS[z]) ? `<h3 class="craft-sub">Zero-day source</h3><ul class="craft-list">${(s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday" title="${esc(ZERO_DAYS[z].effect)}">${esc(ZERO_DAYS[z].name)}</b>${needChips(s, { credits: p.zc.credits, salvage: p.zcost })}</span><button type="button" class="btn primary small" data-command="compile ${z}" data-pay="zeroday:${p.zc.salvage}" data-pay-title="${esc(ZERO_DAYS[z].name)}" ${p.can(p.zc) ? '' : 'disabled'} ${t()}>Compile</button></li>`).join('')}</ul>` : ''}`;
-  const protoCard = craftSection(s, 'protocols', `Protocols · Lv ${p.lvl} · ${p.mine.length}/${PROTOCOL_STATS.length} recipes`, 'A blue protocol at your level, built around the stat you pick.', protoBody);
-  // Configs: sources you've banked, crafted once each
-  const cfgs = configsKnown(s);
-  const cfgCard = cfgs.length ? craftSection(s, 'configs', `Configs · ${configsOwned(s).length}/${Object.keys(CONFIGS).length}`, 'Change how one of your services behaves. Crafted once, kept.', `<ul class="craft-list">${cfgs.map((id) => { const c = CONFIGS[id], got = configsOwned(s).includes(id), code = configCode(id), okc = !busy && srv.credits >= CONFIG_COST.credits && (materialsOf(s)[code] || 0) >= CONFIG_COST.code && canAfford(s, SALVAGE_COSTS.config()); return `<li><span><b class="iname" title="${esc(c.rule)}">${glyph(c.service, 'badge')}${esc(c.name)} <span class="tag dim">${esc(SERVICES[c.service].name)}</span></b>${got ? '' : needChips(s, { credits: CONFIG_COST.credits, code: { [code]: CONFIG_COST.code }, salvage: SALVAGE_COSTS.config() })}</span>${got ? '<span class="tag you">owned</span>' : `<button type="button" class="btn primary small" data-command="craft config ${id}" data-pay="config" data-pay-title="${esc(c.name)}" ${okc ? '' : 'disabled'} ${t()}>Craft</button>`}</li>`; }).join('')}</ul>`) : '';
-  // Harvesters
+// The Craft page: categories down the side, the recipes in the one you pick, and the one you pick
+// on the right: what comes out, what it takes (have/need), and the button. ui: { cat, pick }.
+export function craftCats(s) {
+  const p = protocolsParts(s), srv = s.server, busy = p.busy, L = hackerLevel(s);
   const anyOwned = s.locations.some((l) => l.takenOver) || harvesters(s).length;
-  // No plan yet: a locked row, the plan named on hover (Halcyon sells them; vaults hold them).
-  const noPlan = (id) => `<span class="tag dim plan-lock" title="${esc(planName(id))}: Halcyon sells it, and vaults hold them">${glyph('blueprint')}plan</span>`;
-  const harvCard = anyOwned ? craftSection(s, 'harvesters', `Harvesters · rack ${harvesters(s).length}/${OUTPOST.stashCap}`, 'Goes on a server you took over and makes code while you play or sleep.', `<ul class="craft-list">${Object.keys(OUTPOST.kinds).map((k) => { const c = harvCost(k, s), known = knowsPlan(s, k); return `<li class="${known ? '' : 'locked'}"><span><b class="iname">${glyph(k, 'badge')}${esc(OUTPOST.kinds[k].name)}</b><small>${esc(OUTPOST.kinds[k].about)}</small>${known ? needChips(s, { credits: c.credits, code: { [c.material]: c.code }, salvage: c.salvage }) : ''}</span>${known ? `<button type="button" class="btn primary small" data-command="outpost compile ${k}" data-pay="harvester-${k}" data-pay-title="${esc(OUTPOST.kinds[k].name)}" ${!busy && canCompile(s, k) ? '' : 'disabled'} ${t()}>Craft</button>` : noPlan(k)}</li>`; }).join('')}</ul>`) : '';
-  // Outpost modules: crafted into your stock, then installed on an outpost's ports.
-  const modCard = anyOwned ? craftSection(s, 'modules', 'Outpost modules', 'Goes in an outpost’s port. Crafted once, moved between outposts as you like.', `<ul class="craft-list">${Object.keys(OUTPOST.mods).map((id) => { const known = knowsPlan(s, id), c = modCost(s, id), n = modStock(s)[id] || 0; return `<li class="${known ? '' : 'locked'}"><span><b class="iname">${glyph(id, 'badge')}${esc(OUTPOST.mods[id].name)}${n ? ` <span class="tag you" title="In stock">×${n}</span>` : ''}</b><small>${esc(OUTPOST.mods[id].rule)}</small>${known ? needChips(s, c) : ''}</span>${known ? `<button type="button" class="btn primary small" data-command="outpost build ${id}" data-pay="module" data-pay-title="${esc(OUTPOST.mods[id].name)}" ${!busy && canBuildMod(s, id) ? '' : 'disabled'} ${t()}>Craft</button>` : noPlan(id)}</li>`; }).join('')}</ul>`) : '';
-  // What you have to build with: a grid of counts.
-  const stock = `<section class="card"><h2>Materials</h2>${matGrid(s)}
-      ${salvageStacksMarkup(s)}</section>`;
-  return `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protoCard}${cfgCard}${harvCard}${modCard}</div><div style="display:grid;gap:12px;align-content:start">${stock}</div></div>`;
+  const zds = (s.recipes || []).filter((z) => ZERO_DAYS[z]), cfgs = configsKnown(s);
+  const fc = filterCost(L), fOk = !busy && srv.credits >= fc.credits && (materialsOf(s).cipher || 0) >= fc.code.cipher && canAfford(s, SALVAGE_COSTS.filter()) && filtersOf(s).length < FILTER_CAP;
+  const cats = [];
+  // Protocols: one recipe per stat you know, or any of them.
+  cats.push({ id: 'protocols', name: 'Protocols', icon: 'protocol', items: p.mine.length ? [...(p.mine.length > 1 ? [null] : []), ...p.mine].map((k) => ({
+    id: k || 'any', name: k ? PROTOCOL_NAMES[k] : 'Any of your recipes', sub: k ? STATS[k].name : `${p.mine.length} recipes`, icon: k ? 'protocol' : 'item', ready: p.can(p.c),
+    out: { title: k ? `${PROTOCOL_NAMES[k]} protocol` : 'A protocol', rarity: 'tuned', lines: [`Tuned (blue), item level ${L}`, k ? `Built around ${STATS[k].name}${STATS[k].group === 'survival' ? ' (runs)' : ''}` : 'Built around one of your recipes, at random'] },
+    cost: { credits: p.c.credits, salvage: p.ccost }, cmd: `compile${k ? ' ' + k : ''}`, pay: `protocol:${p.c.salvage}`, extra: serviceVersion(s, 'buildfarm') ? `<span class="tag you">Build farm −${serviceValue(s, 'buildfarm')}%</span>` : '' })) : [], empty: 'No recipes yet: blueprints teach them.' });
+  if (zds.length) cats.push({ id: 'zeroday', name: 'Zero-days', icon: 'source', items: zds.map((z) => ({ id: z, name: ZERO_DAYS[z].name, sub: 'source', icon: 'source', ready: p.can(p.zc), out: { title: ZERO_DAYS[z].name, rarity: 'zeroday', lines: [ZERO_DAYS[z].effect] }, cost: { credits: p.zc.credits, salvage: p.zcost }, cmd: `compile ${z}`, pay: `zeroday:${p.zc.salvage}` })) });
+  // Filters: always craftable; a stat to build around, or any.
+  cats.push({ id: 'filters', name: 'Filters', icon: 'firewall', items: [null, ...CRAFTABLE].map((k) => ({
+    id: k || 'any', name: k ? FILTER_STATS[k].label.replace(/^of /, '') : 'Any filter', sub: k ? `+${FILTER_STATS[k].range.join('–')}${FILTER_STATS[k].name}` : 'a random stat', icon: 'firewall', ready: fOk,
+    out: { title: k ? `${FILTER_STATS[k].kind === 'prefix' ? FILTER_STATS[k].label + ' ' : ''}${filterBase(L)}${FILTER_STATS[k].kind === 'suffix' ? ' ' + FILTER_STATS[k].label : ''}` : `A ${filterBase(L)}`, rarity: 'tuned', lines: [`Tuned (blue), item level ${L}`, `+${Math.max(1, Math.round((1 + L / 10) * 1.1))} firewall levels`, k ? `${FILTER_STATS[k].range.join('–')}${FILTER_STATS[k].name}` : 'and one or two stats at random', `${filtersOf(s).length}/${FILTER_CAP} held · ${filterSlots(s)} ${filterSlots(s) === 1 ? 'slot' : 'slots'}`] },
+    cost: { credits: fc.credits, code: fc.code, salvage: SALVAGE_COSTS.filter() }, cmd: `filter craft ${k || 'any'}`, pay: 'filter' })) });
+  if (cfgs.length) cats.push({ id: 'configs', name: 'Configs', icon: 'config', items: cfgs.map((id) => { const c = CONFIGS[id], got = configsOwned(s).includes(id), code = configCode(id); return {
+    id, name: c.name, sub: SERVICES[c.service].name, icon: c.service, ready: !got && !busy && srv.credits >= CONFIG_COST.credits && (materialsOf(s)[code] || 0) >= CONFIG_COST.code && canAfford(s, SALVAGE_COSTS.config()), done: got,
+    out: { title: `${c.name} config`, lines: [`For your ${SERVICES[c.service].name}`, c.rule, 'Crafted once, kept'] }, cost: got ? null : { credits: CONFIG_COST.credits, code: { [code]: CONFIG_COST.code }, salvage: SALVAGE_COSTS.config() }, cmd: `craft config ${id}`, pay: 'config' }; }) });
+  if (anyOwned) {
+    cats.push({ id: 'harvesters', name: 'Harvesters', icon: 'harvester', items: Object.keys(OUTPOST.kinds).map((k) => { const c = harvCost(k, s), known = knowsPlan(s, k); return {
+      id: k, name: OUTPOST.kinds[k].name, sub: known ? `rack ${harvesters(s).length}/${OUTPOST.stashCap}` : 'needs its plan', icon: k, ready: known && !busy && canCompile(s, k), locked: !known,
+      out: { title: OUTPOST.kinds[k].name, lines: [OUTPOST.kinds[k].about, 'Stock, at your server level'] }, cost: known ? { credits: c.credits, code: { [c.material]: c.code }, salvage: SALVAGE_COSTS[`harvester-${k}`]() } : null, cmd: `outpost compile ${k}`, pay: `harvester-${k}`, lock: `${planName(k)}: Halcyon sells it, and vaults hold them` }; }) });
+    cats.push({ id: 'modules', name: 'Modules', icon: 'module', items: Object.keys(OUTPOST.mods).map((id) => { const known = knowsPlan(s, id), c = modCost(s, id), n = modStock(s)[id] || 0; return {
+      id, name: OUTPOST.mods[id].name, sub: known ? (n ? `×${n} in stock` : 'none in stock') : 'needs its plan', icon: id, ready: known && !busy && canBuildMod(s, id), locked: !known,
+      out: { title: OUTPOST.mods[id].name, lines: [OUTPOST.mods[id].rule, 'Goes in an outpost’s port; move it between outposts as you like'] }, cost: known ? { ...c, salvage: SALVAGE_COSTS.module() } : null, cmd: `outpost build ${id}`, pay: 'module', lock: `${planName(id)}: Halcyon sells it, and vaults hold them` }; }) });
+  }
+  return cats;
+}
+// What a recipe takes, a row each: the icon, the name, what you have / what it takes (red when short).
+function costRows(s, cost) {
+  const mats = materialsOf(s), st = Object.fromEntries(salvageStacks(s).map((x) => [x.name, x.n])), rows = [];
+  const row = (icon, name, have, need) => rows.push(`<li class="${have >= need ? 'ok' : 'short'}">${glyph(icon)}<span>${esc(name)}</span><b>${have}<small>/${need}</small></b></li>`);
+  if (cost.credits) row('credits', 'Credits', s.server.credits, cost.credits);
+  for (const [m, n] of Object.entries(cost.code || {})) if (n) row(m, MATERIALS[m].name, mats[m] || 0, n);
+  if (cost.salvage) {
+    if (salvageTotal(cost.salvage)) row('salvage', 'Salvage (any)', s.salvage.length, salvageTotal(cost.salvage));
+    for (const x of cost.salvage.need) row('crate', x.label, x.names.reduce((n, k) => n + (st[k] || 0), 0), x.n);
+  }
+  return `<ul class="cd-cost">${rows.join('')}</ul>`;
+}
+export function craftMarkup(s, ui = {}) {
+  const cats = craftCats(s), busy = active(s) || !!s.run;
+  const why = s.run ? 'Craft at home: jack out first' : active(s) ? 'Finish the fight first' : '';
+  const cat = cats.find((c) => c.id === ui.cat) || cats[0];
+  const item = cat.items.find((x) => x.id === ui.pick) || cat.items.find((x) => x.ready) || cat.items.find((x) => !x.locked) || cat.items[0];
+  const nav = `<nav class="craft-cats" aria-label="What to craft">${cats.map((c) => { const n = c.items.filter((x) => x.ready).length; return `<button type="button" class="craft-cat${c === cat ? ' on' : ''}" data-craft-cat="${c.id}" aria-pressed="${c === cat}">${glyph(c.icon)}<span>${esc(c.name)}</span>${n ? `<b class="cc-n" title="${n} you can craft now">${n}</b>` : ''}</button>`; }).join('')}</nav>`;
+  const list = `<ul class="craft-items">${cat.items.length ? cat.items.map((x) => `<li><button type="button" class="craft-item${x === item ? ' on' : ''}${x.locked ? ' locked' : ''}${x.ready ? ' ready' : ''}" data-craft-pick="${esc(x.id)}">${glyph(x.icon)}<span class="ci-txt"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span>${x.locked ? `<span class="tag dim plan-lock" title="${esc(x.lock || '')}">${glyph('blueprint')}plan</span>` : x.done ? '<span class="tag you">owned</span>' : x.ready ? '<i class="ci-dot" title="You can craft it"></i>' : ''}</button></li>`).join('') : `<li class="craft-empty">${esc(cat.empty || 'Nothing here yet.')}</li>`}</ul>`;
+  const detail = !item ? `<section class="craft-detail card"><p class="quiet">${esc(cat.empty || '')}</p></section>`
+    : `<section class="craft-detail card"><h2>${esc(cat.name)}</h2><div class="cd-out${item.out.rarity ? ' r-' + item.out.rarity : ''}">${glyph(item.icon, 'badge')}<h1 class="cd-name${item.out.rarity ? ' r-' + item.out.rarity : ''}">${esc(item.out.title)}</h1><ul class="cd-lines">${item.out.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div>
+      ${item.locked ? `<p class="cd-lock"><span class="tag dim plan-lock">${glyph('blueprint')}plan</span> ${esc(item.lock || '')}</p>` : item.done ? '<p class="cd-lock"><span class="tag you">owned</span></p>' : `<h3 class="craft-sub">Takes</h3>${costRows(s, item.cost)}${item.extra || ''}
+      <button type="button" class="btn primary cd-go" data-command="${esc(item.cmd)}"${item.pay ? ` data-pay="${esc(item.pay)}" data-pay-title="${esc(item.out.title)}"` : ''} ${item.ready ? '' : 'disabled'} ${why ? `title="${esc(why)}"` : item.ready ? '' : 'title="Not enough of something above"'}>Craft</button>`}</section>`;
+  const stock = `<section class="card craft-mats"><h2>Materials</h2>${matGrid(s)}${salvageStacksMarkup(s)}</section>`;
+  return `<div class="craft-ui${busy ? ' busy' : ''}">${nav}${list}${detail}</div>${stock}`;
 }
 export const vaultMarkup = protocolsMarkup;
 export const gearMarkup = protocolsMarkup;

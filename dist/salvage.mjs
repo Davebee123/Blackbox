@@ -18,6 +18,7 @@ export const SALVAGE_COSTS = {
   config: () => ({ any: CONFIG_SALVAGE, need: [] }),
   service: (n) => ({ any: n, need: [] }),
   module: () => ({ any: 5, need: [] }),
+  filter: () => ({ any: 4, need: [] }),
   'harvester-siphon': () => ({ any: 5, need: [{ label: 'Replication Seed', names: ['Replication Seed'], n: 1 }] }),
   'harvester-scraper': () => ({ any: 5, need: [{ label: 'Cipher Seed', names: ['Cipher Seed'], n: 1 }] }),
   'harvester-tap': () => ({ any: 5, need: [{ label: 'Signal Key', names: ['Signal Key'], n: 1 }] }),

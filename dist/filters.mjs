@@ -3,7 +3,8 @@
 // what it targets: more levels, more against one family, slower fragmentation, a faster defrag,
 // more grind and less chip while contested, and on rarer ones a tar pit or a sting.
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it). Equip at home.
-import { emit, warn, active, serviceVersion } from './combat.mjs';
+import { emit, warn, active, serviceVersion, hackerLevel, materialsOf, rand } from './combat.mjs';
+import { SALVAGE_COSTS, settle, spend, splitPay } from './salvage.mjs';
 import { RARITIES, seeded } from './gear.mjs';
 import { versionSlots } from './firewall.mjs';
 
@@ -32,14 +33,17 @@ const AFFIXES = { scrap: [0, 0], stock: [0, 0], tuned: [1, 2], custom: [3, 3] };
 const MULT = { scrap: 0.8, stock: 1, tuned: 1.1, custom: 1.25 };
 
 const pick = (r, xs) => xs[Math.floor(r() * xs.length)];
-export function rollFilter(r, { level = 1, rarity = null } = {}) {
+export const baseName = (L) => [...BASES].reverse().find((b) => Math.max(1, L) >= b.from).name;
+export function rollFilter(r, { level = 1, rarity = null, stat = null } = {}) {
   const L = Math.max(1, level);
   rarity ||= ((x) => (x < 0.15 ? 'scrap' : x < 0.6 ? 'stock' : x < 0.92 ? 'tuned' : 'custom'))(r());
   const base = [...BASES].reverse().find((b) => L >= b.from);
   const stats = { strength: Math.max(1, Math.round((1 + L / 10) * base.k * MULT[rarity])) };
-  const [lo, hi] = AFFIXES[rarity], n = lo + Math.floor(r() * (hi - lo + 1));
+  const [lo, hi] = AFFIXES[rarity], n = Math.max(stat ? 1 : 0, lo + Math.floor(r() * (hi - lo + 1)));
   const taken = [];
-  for (let i = 0; i < n; i++) {
+  // A crafted filter is built around the stat you pick.
+  if (stat && FILTER_STATS[stat]) { const [a, b] = FILTER_STATS[stat].range; stats[stat] = Math.round(a + (b - a) * r() + (FILTER_STATS[stat].family ? Math.floor(L / 20) : 0)); taken.push(stat); }
+  while (taken.length < n) {
     const ok = Object.keys(FILTER_STATS).filter((k) => !taken.includes(k) && (!FILTER_STATS[k].rare || rarity === 'custom') && !(FILTER_STATS[k].family && taken.some((t) => FILTER_STATS[t].family)));
     if (!ok.length) break;
     const k = pick(r, ok), [a, b] = FILTER_STATS[k].range;
@@ -74,7 +78,29 @@ export function addFilter(s, f, why = '') {
 // A stat line: "+3 lv · +3 lv vs Worm · 25% less fragmentation".
 export const filterLine = (f) => [`+${f.stats.strength} lv`, ...Object.entries(f.stats).filter(([k]) => k !== 'strength').map(([k, v]) => `${FILTER_STATS[k].family ? '+' : ''}${v}${FILTER_STATS[k].name}`)].join(' · ');
 
-export function filterCommand(s, text) {
+// Crafting one (the Craft page): a Tuned filter at your level, built around the stat you pick
+// (or any). Credits, Cipher code and salvage.
+export const CRAFTABLE = Object.keys(FILTER_STATS).filter((k) => !FILTER_STATS[k].rare);
+export const filterCost = (L) => ({ credits: 60 + 8 * L, code: { cipher: 6 + Math.floor(L / 2) }, salvage: 4 });
+function craftFilter(s, stat, payText) {
+  if (s.run || active(s)) return warn(s, 'Craft at home, between fights.');
+  if (stat && !CRAFTABLE.includes(stat)) return warn(s, `Filters: ${CRAFTABLE.join(', ')}, or any.`);
+  if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters: scrap one first.`);
+  const L = hackerLevel(s), c = filterCost(L), mats = materialsOf(s);
+  if (s.server.credits < c.credits || (mats.cipher || 0) < c.code.cipher) return warn(s, `A filter takes ${c.credits} credits and ${c.code.cipher} Cipher code.`);
+  const pay = settle(s, SALVAGE_COSTS.filter(), payText);
+  if (typeof pay === 'string') return warn(s, pay);
+  spend(s, pay);
+  s.server.credits -= c.credits; mats.cipher -= c.code.cipher;
+  addFilter(s, rollFilter(() => rand(s), { level: L, rarity: 'tuned', stat }), 'Crafted: ');
+}
+export function filterCommand(s, full) {
+  const [text, payText] = splitPay(full);
+  const m = text.match(/^filter craft(?: (\w+))?$/);
+  if (m) return craftFilter(s, m[1] && m[1] !== 'any' ? m[1] : null, payText);
+  return filterAction(s, text);
+}
+function filterAction(s, text) {
   const [, verb, n] = text.split(' '), i = Number(n) - 1, o = own(s), f = o.held[i];
   if (!['equip', 'unequip', 'scrap'].includes(verb) || !f) return warn(s, 'filter equip|unequip|scrap <n>');
   if (s.run || active(s)) return warn(s, 'Filters go in and out at home, not on a run or mid-fight.');

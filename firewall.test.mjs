@@ -216,3 +216,19 @@ test('major versions every 10 levels: the upgrade into one takes an Exploit, and
   s.services = { firewall: 2 };
   assert.equal(slotsOf(s), 3, 'on top of the service\'s');
 });
+
+test('crafting a filter: a Tuned one at your level, built around the stat you pick', async () => {
+  const { filtersOf, filterCost } = await import('./dist/filters.mjs');
+  const s = fresh();
+  command(s, 'developer level 10');
+  const c = filterCost(10);
+  s.server.credits = c.credits; s.materials = { cipher: c.code.cipher };
+  command(s, 'filter craft grind');
+  assert.equal(filtersOf(s).length, 0, 'not without salvage');
+  command(s, 'developer salvage 4');
+  command(s, 'filter craft grind');
+  const f = filtersOf(s)[0];
+  assert.equal(f.rarity, 'tuned'); assert.equal(f.level, 10);
+  assert.ok(f.stats.grind > 0, 'built around the stat you picked');
+  assert.equal(s.server.credits, 0); assert.equal(s.materials.cipher, 0); assert.equal(s.salvage.length, 0);
+});

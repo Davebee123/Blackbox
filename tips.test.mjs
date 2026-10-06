@@ -88,7 +88,7 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-memory', 'its card: what joining costs');
   command(s, 'attach ' + loc.id);
   loc.takenOver = true;
-  assert.equal(nextTip(s, 'craft', onPage(craftMarkup(s))).id, 'craft-plans');
+  assert.equal(nextTip(s, 'craft', onPage(craftMarkup(s, { cat: 'harvesters' }))).id, 'craft-plans', 'in the Harvesters category');
   s.harvesters = [{ kind: 'siphon', level: 1, traits: [] }];
   markSeen(s, 'map-memory'); markSeen(s, 'map-owned');
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-install');
