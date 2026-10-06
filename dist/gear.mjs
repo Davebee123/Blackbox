@@ -158,7 +158,7 @@ export const ZERO_DAYS = {
   deductible: { name: 'Deductible', effect: 'The first attack that lands on you each fight does nothing.', chase: true, group: 'survival' },
   subrogation: { name: 'Subrogation', effect: 'When a part hits you, your next skill hit on it deals double.', chase: true, group: 'offense' },
   'total-loss': { name: 'Total Loss', effect: 'When you break a part, every other part takes a quarter of its max Integrity (armor soaks it as usual). Breaks it causes do it again.', chase: true, group: 'offense' },
-  actuarial: { name: 'Actuarial Model', effect: 'Veils and blinds can\'t hide attack timers from you.', chase: true, group: 'utility' },
+  actuarial: { name: 'Actuarial Model', effect: 'Veils can\'t hide attack timers from you.', chase: true, group: 'utility' },
 };
 export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 

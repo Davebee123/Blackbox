@@ -415,7 +415,7 @@ function react(events) {
       case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity)) notice(e.message); break;
       case 'miss': feel.add('miss', e.target ? row(e.target) : '.bnow', 'MISS'); break;
       case 'evaded': feel.add('evade', MINE, 'EVADED'); break;
-      case 'gear': feel.add('good', null); break;
+      case 'gear': feel.add('good', null); if (e.gains?.length) showGain('Deconstructed', e.name || '', e.gains, false); break;
       case 'code': if (!won) feel.add('pickup', null); break;
       case 'service': feel.add('good', null); break;
       case 'service-done': feel.add('unlock', null); notice(e.message); break;
@@ -433,7 +433,8 @@ function react(events) {
       case 'encrypt': art.hit(e.source, 'attack'); flash('ENCRYPTED'); feel.add('encrypt', MINE, `+${e.amount}/cycle`); break;
       case 'encrypted': feel.add('drain', MINE, `−${e.amount}`); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
-      case 'blind': flash('BLINDED'); feel.add('blind', '.board', null); break;
+      case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
+      case 'scrambled': flash('SCRAMBLED'); feel.add('hurt', MINE, `−${e.amount}`, { amount: e.amount, frac: e.amount / (defender(campaign).max || 100), size: 1.3 }); break;
       case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`); if (e.from) art.hit(e.target, 'attack'); break;

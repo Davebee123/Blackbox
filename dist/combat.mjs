@@ -150,9 +150,8 @@ export const familyInfo = (id) => FAMILIES[id] || GUARDS[id];
 // few cycles. A Tagged part's timer always shows.
 export function timersHidden(s, p = null) {
   const c = s.encounter.cycle;
-  const blind = s.encounter.blindUntil >= c;
   // Actuarial Model (Halcyon): nothing hides its timers from you.
-  const hides = (x) => alive(x) && !(x.taggedUntil >= c) && (blind || (x.veiled && x.armor > 0)) && !zeroDay(s, 'actuarial');
+  const hides = (x) => alive(x) && !(x.taggedUntil >= c) && x.veiled && x.armor > 0 && !zeroDay(s, 'actuarial');
   return p ? hides(p) : livingParts(s).some(hides);
 }
 
@@ -371,7 +370,8 @@ export function addItem(s, item, why = 'Loot: ') {
   return it;
 }
 // Break an item down: salvage, code (the family it dropped from) and Exploits. Returns a summary.
-export function deconstruct(s, item) {
+// out (optional): rows for the gain card (app.js), { label, qty, kind, text }.
+export function deconstruct(s, item, out = null) {
   const d = DECONSTRUCT[item.rarity] || DECONSTRUCT.stock;
   const n = d.salvage[0] + Math.floor(rand(s) * (d.salvage[1] - d.salvage[0] + 1)) + Math.floor((item.level || 1) / 10);
   for (let i = 0; i < n; i++) s.salvage.push({ name: 'Scrap', virus: itemLabel(item), seed: 0 });
@@ -380,6 +380,7 @@ export function deconstruct(s, item) {
   if (d.code) mats[code] = (mats[code] || 0) + d.code;
   const ex = item.compiled ? 0 : d.exploit; // what you compiled yourself gives no Exploits back
   if (ex) mats.exploit = (mats.exploit || 0) + ex;
+  if (out) out.push({ label: 'Salvage', qty: `+${n}`, kind: 'loot', text: `${n} salvage` }, ...(d.code ? [{ label: MATERIALS[code].name, qty: `+${d.code}`, kind: 'code', text: `${d.code} ${MATERIALS[code].name}` }] : []), ...(ex ? [{ label: 'Exploit', qty: `+${ex}`, kind: 'exploit', text: `${ex} Exploit` }] : []));
   return [`${n} salvage`, d.code && `${d.code} ${MATERIALS[code].name}`, ex && `${ex} Exploit${ex > 1 ? 's' : ''}`].filter(Boolean).join(', ');
 }
 // ---------- drops ----------
@@ -594,7 +595,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   const virus = createVirus(key, seed, over);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
-  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, trace: 0, pendingTrace: 0, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, blindUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
+  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, trace: 0, pendingTrace: 0, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
     ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.`
     : mode === 'run'
@@ -864,7 +865,8 @@ function protocolCommand(s, full) {
     if (!it) return warn(s, arg ? `No item ${arg} in your stash.` : 'deconstruct <item>.');
     unslot(s, it.id);
     s.stash = s.stash.filter((x) => x.id !== it.id);
-    return emit(s, 'gear', `${itemLabel(it)} deconstructed: ${deconstruct(s, it)}.`, { item: it.id });
+    const gains = [];
+    return emit(s, 'gear', `${itemLabel(it)} deconstructed: ${deconstruct(s, it, gains)}.`, { item: it.id, gains, name: itemLabel(it) });
   }
   if (word === 'compile') {
     const zd = ZERO_DAYS[arg] && !ZERO_DAYS[arg].chase ? arg : Object.keys(ZERO_DAYS).find((z) => !ZERO_DAYS[z].chase && ZERO_DAYS[z].name.toLowerCase() === arg);
@@ -1706,6 +1708,13 @@ function useAbility(s, intent, auto = false) {
     if (zeroDay(s, 'race-condition') && !e.once.race) { e.once.race = true; delete e.readyAt[id]; emit(s, 'status', `Race Condition: ${a.name} is ready again.`); }
     return;
   }
+  // Scrambled (Ghostroot's Scrambler): the attack may turn on you, at half strength. The cooldown is spent.
+  if ((base || a.all) && e.scrambleUntil >= e.cycle && rand(s) < CONFIG.scramble.chance) {
+    const amount = Math.max(1, Math.round((base || a.all * powerOf(s)) * CONFIG.scramble.self));
+    const dealt = takeDamage(s, amount, null, a.name);
+    emit(s, 'scrambled', `SCRAMBLED: ${a.name} hits YOU for ${dealt}.`, { ability: id, amount: dealt });
+    return;
+  }
   const rootkit = base && rootkitReady(s);
   if (rootkit) e.once.rootkit = true;
   // Null Route: your next skill crits.
@@ -1876,7 +1885,7 @@ export const blockOf = (s) => defense(s, 'reduction') + (s.encounter?.buffs?.bra
 export const blocked = (s, amount) => (blockOf(s) ? Math.max(Math.ceil(amount / 2), amount - blockOf(s)) : amount);
 
 // Special attacks: the ones Lockdown shuts off.
-const SPECIALS = ['encrypt', 'blind', 'replicate'];
+const SPECIALS = ['encrypt', 'scramble', 'replicate'];
 
 // Damage from an attack or from encryption: your shield soaks it first.
 function takeDamage(s, amount, source, label) {
@@ -1974,8 +1983,7 @@ function landAttack(s, p) {
     const half = fxFire(s, 'struck', { do: 'halve' })[0];
     if (half) emit(s, 'blocked', `${half.it.name}: ${atk.name} deals half.`, { source: p.id });
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const unseen = e.blindUntil >= e.cycle;
-    const dealt = takeDamage(s, Math.round(power * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1) * (unseen ? CONFIG.blindside : 1)), p.id, atk.name);
+    const dealt = takeDamage(s, Math.round(power * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1)), p.id, atk.name);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
     if (dealt) e.undo = { type: 'damage', amount: dealt };
     // Echo: while the Echo lives, the hit repeats next cycle at half.
@@ -1996,7 +2004,7 @@ function landAttack(s, p) {
     }
     if (dealt && zeroDay(s, 'subrogation')) e.subro = p.id;
     if (!dealt && classOf(s) === 'bastion') backtrace(s);
-    const verb = (crit ? 'CRITS' : 'hits') + (unseen ? ' blind' : '');
+    const verb = crit ? 'CRITS' : 'hits';
     if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
     const cm = e.mode === 'home' && gearStat(s, 'countermeasures', 'server');
@@ -2006,9 +2014,11 @@ function landAttack(s, p) {
     const add = Math.max(1, Math.round(power * (fxHas(s, 'encrypt-half') ? 0.5 : 1)));
     e.encrypt = (e.encrypt || 0) + add;
     emit(s, 'encrypt', `${atk.name}: your ${e.mode === 'run' ? 'Signal' : 'server'} is encrypted. −${e.encrypt} every cycle until you break the ${p.name}.`, { source: p.id, amount: add, total: e.encrypt });
-  } else if (atk.effect === 'blind') {
-    e.blindUntil = e.cycle + Math.max(1, Math.round(power)) - (fxHas(s, 'blind-short') ? 1 : 0);
-    emit(s, 'blind', `${atk.name}: your sensors are scrambled. Attack timers hidden for ${e.blindUntil - e.cycle} cycles.`, { source: p.id });
+  } else if (atk.effect === 'scramble') {
+    // Scrambled: for a few cycles, each of your attacks may hit you instead (useAbility).
+    const n = Math.max(1, Math.round(power) - (fxHas(s, 'blind-short') ? 1 : 0));
+    e.scrambleUntil = e.cycle + n;
+    emit(s, 'blind', `${atk.name}: you're SCRAMBLED for ${n} ${n === 1 ? 'cycle' : 'cycles'}. Each attack has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead.`, { source: p.id });
   } else if (atk.effect === 'replicate') {
     const living = livingParts(s).filter((x) => x.kind === 'fragment').length;
     if (living >= CONFIG.fragmentCap) emit(s, 'info', `${atk.name} fizzles: fragment limit reached.`, { source: p.id });

@@ -6,7 +6,7 @@
 // Rules being tried out:
 // - Everyone acts first each cycle (you, then the crew), then the virus.
 // - A damage attack lands on everyone in the fight, each taking it in full (as if they fought it
-//   alone). Encryption, blinds and fragments stay on you.
+//   alone). Encryption, scrambles and fragments stay on you.
 // - Enemies get CREW.hpPer more Integrity per extra player (CREW.dmgPer more damage, if set).
 // - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it.
 // - Only run fights (SPRAWL-00, rogue servers, guards); home intrusions stay solo.
@@ -94,7 +94,7 @@ hooks.crewEngage = (s) => {
   }
   for (const m of mates) {
     m.run.integrity = m.run.max = maxSignal(m); // crewmates rest up between fights
-    m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, blindUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null,
+    m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null,
       chits: classOf(m) === 'bastion' ? 1 : 0, metrics: structuredClone(e.metrics), down: false };
     decide(m);
   }

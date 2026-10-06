@@ -152,7 +152,7 @@ test('the spoils card lists what a won fight gave you', async () => {
   assert.deepEqual(lines, ['2 salvage', '+30 XP', '+2 Cipher code', 'Blueprint (pack)', 'Level 4']);
 });
 
-test('Status in the HUD: timed effects on you with the cycles they have left (Momentum, buffs, blind)', async () => {
+test('Status in the HUD: timed effects on you with the cycles they have left (Momentum, buffs, Scrambled)', async () => {
   const { statusSpans, boardMarkup, hudMarkup } = await import('./dist/view.mjs');
   const { fresh, selectEncounter, command } = await import('./dist/combat.mjs');
   const s = fresh();
@@ -164,9 +164,9 @@ test('Status in the HUD: timed effects on you with the cycles they have left (Mo
   assert.doesNotMatch(boardMarkup(s, null), /bstatus/, 'no Status row on the board');
   const e = s.encounter;
   e.momentum = { stacks: 2, until: e.cycle + 1 };
-  e.blindUntil = e.cycle + 2;
+  e.scrambleUntil = e.cycle + 2;
   const spans = statusSpans(s);
-  assert.deepEqual(spans.map((x) => [x.name, x.cycles, x.kind]), [['Momentum', 2, 'you'], ['Blinded', 3, 'hot']]);
+  assert.deepEqual(spans.map((x) => [x.name, x.cycles, x.kind]), [['Momentum', 2, 'you'], ['Scrambled', 3, 'hot']]);
   assert.equal(spans[0].value, '+20% ×2');
   assert.match(hudMarkup(s), /class="st you" data-tip="\+20% ×2 · 2 cycles left[^"]*"[^>]*>Momentum<\/span>/, 'the name, the rest in the tooltip');
 });

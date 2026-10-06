@@ -70,10 +70,10 @@ function strainTags(s, v) {
 }
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-const ICON = { damage: 'server', encrypt: 'event-lock', blind: 'scan', replicate: 'mutation', heal: 'shell-shield' };
+const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield' };
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
-const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'blind' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : '+frag');
-const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', blind: 'with every timer hidden', replicate: 'spawns a fragment', heal: 'to its most damaged part' };
+const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : '+frag');
+const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part' };
 let runMode = false;
 const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
 
@@ -87,7 +87,6 @@ export function chitsMarkup(p, breaking = 0) {
 const VEIL_NOTE = 'Veiled: timers stay hidden while its parts are armored. Strip the armor, or Tag a part to see its timer.';
 const hiddenNote = (s) => {
   const e = s.encounter;
-  if (e.blindUntil >= e.cycle) { const n = e.blindUntil - e.cycle + 1; return `Blinded: every attack timer is hidden for ${n} more ${n === 1 ? 'cycle' : 'cycles'}. Tag a part to see its timer anyway.`; }
   return VEIL_NOTE;
 };
 
@@ -171,7 +170,7 @@ export function timelineMarkup(s) {
     return `<div class="tcol">${head}${chips}${quiet}</div>`;
   });
   const hiddenRow = hidden
-    ? `<div class="hidden-row"><span class="tag" title="${esc(hiddenNote(s))}">${e.blindUntil >= e.cycle ? 'Blinded' : 'Veiled'}</span> ${[...new Set(list.map((i) => i.name))].map((n) => `<span class="tag dim">${esc(n)}</span>`).join(' ')}</div>`
+    ? `<div class="hidden-row"><span class="tag" title="${esc(hiddenNote(s))}">Veiled</span> ${[...new Set(list.map((i) => i.name))].map((n) => `<span class="tag dim">${esc(n)}</span>`).join(' ')}</div>`
     : '';
   return cols.join('') + hiddenRow;
 }
@@ -295,7 +294,7 @@ export function partAbout(p) {
     const every = a.interval && a.interval < 900 ? ` every ${a.interval} ${a.interval === 1 ? 'cycle' : 'cycles'}` : '';
     if (a.effect === 'damage') out.push(a.dump ? `${a.name}: a big hit once it has logged 3 keystrokes` : a.alarm ? `${a.name}: raises the alarm, then hits ${a.amount}${every}` : `${a.name}: hits you for ${a.amount}${every}${a.ramp ? ', more each time' : ''}${a.siphon ? ', and heals itself' : ''}${a.grow ? ', growing as the fight goes on' : ''}${a.windup ? `; enough damage while it winds up calls it off` : ''}`);
     else if (a.effect === 'encrypt') out.push(`${a.name}: locks part of you, ${a.amount} more each time, until it breaks`);
-    else if (a.effect === 'blind') out.push(`${a.name}: hides every attack timer for ${a.amount} cycles${every}`);
+    else if (a.effect === 'scramble') out.push(`${a.name}: scrambles you for ${a.amount} cycles: each of your attacks may hit you instead, at half${every}`);
     else if (a.effect === 'heal') out.push(`${a.name}: repairs the most damaged part by ${a.amount}${every}`);
     else if (a.effect === 'replicate') out.push(`${a.name}: spawns fragments that gnaw you${every}`);
   }
@@ -355,7 +354,7 @@ export function statusSpans(s) {
   if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${SKILLS.momentumMax} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
   for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall, with a crew).' : ABILITIES[k]?.help || '');
   add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill crits.");
-  add('Blinded', e.blindUntil, 'hot', hiddenNote(s), CONFIG.blindside > 1 ? `hits +${Math.round((CONFIG.blindside - 1) * 100)}%` : '');
+  add('Scrambled', e.scrambleUntil ?? -1, 'hot', `Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead, at ${Math.round(CONFIG.scramble.self * 100)}%.`, `${Math.round(CONFIG.scramble.chance * 100)}% self-hit`);
   return out;
 }
 

@@ -2500,3 +2500,9 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .map-pick.on select { color: var(--amber); border-color: var(--amber); }
 .map-pick select option { background: #120f0a; color: var(--text); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* A missed attack (hitfx.mjs): MISS stamped across the part, struck through, then gone. */
+.fx-miss { position: absolute; transform: translate(-50%, -50%) scale(1.8) rotate(-8deg); font: 800 30px var(--mono); letter-spacing: 0.18em; color: #cfc6b4; text-shadow: 0 0 10px rgba(0, 0, 0, 0.9), 0 0 2px #000; pointer-events: none; z-index: 30; opacity: 0; animation: fx-miss 1.05s cubic-bezier(.2,.8,.3,1) forwards; }
+.fx-miss::after { content: ''; position: absolute; left: -6%; right: -6%; top: 52%; height: 3px; background: var(--amber); box-shadow: 0 0 6px var(--amber); transform: scaleX(0); transform-origin: left; animation: fx-miss-line 0.25s 0.18s ease-out forwards; }
+.fx-miss.crew { color: #c9b8ff; }
+@keyframes fx-miss { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.8) rotate(-8deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-8deg); } 70% { opacity: 1; transform: translate(-50%, -55%) scale(1) rotate(-8deg); } 100% { opacity: 0; transform: translate(-50%, -75%) scale(0.95) rotate(-8deg); } }
+@keyframes fx-miss-line { to { transform: scaleX(1); } }

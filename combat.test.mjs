@@ -211,18 +211,23 @@ test('armor chits and shields stop encryption too', () => {
   assert.equal(s.server.integrity, 98, 'the shield soaked 4 of the 6');
 });
 
-test('Blind hides every attack timer for a few cycles; a Tagged part still shows', () => {
+test('Scramble: for a few cycles, each of your attacks may hit you instead, at half', () => {
   const s = bare(start('ghostroot'));
   const sc = part(s, 'scrambler');
   s.encounter.cycle = sc.attack.due;
   act(s, 'hold');
-  assert.equal(timersHidden(s, part(s, 'pulse')), true, 'not veiled any more, but blinded');
-  assert.ok(intents(s).every((i) => i.hidden));
-  part(s, 'pulse').taggedUntil = s.encounter.cycle + 3;
-  assert.equal(timersHidden(s, part(s, 'pulse')), false, 'Tagged shows through');
-  act(s, 'hold');
-  act(s, 'hold');
-  assert.equal(timersHidden(s, sc), false, 'the blind wore off');
+  assert.ok(s.encounter.scrambleUntil >= s.encounter.cycle, 'Scrambled');
+  assert.equal(timersHidden(s, part(s, 'pulse')), false, 'nothing is hidden: the armor is gone');
+  CONFIG.scramble.chance = 1; // every attack turns
+  const hp = s.server.integrity, pulse = part(s, 'pulse').integrity;
+  const ev = command(s, 'spike pulse');
+  resolveCycle(s);
+  assert.equal(part(s, 'pulse').integrity, pulse, 'the virus is untouched');
+  assert.ok(s.server.integrity < hp, 'you took it');
+  assert.ok(s.logs.some((e) => e.type === 'scrambled'));
+  CONFIG.scramble.chance = 0.25;
+  s.encounter.cycle = s.encounter.scrambleUntil + 1;
+  assert.deepEqual(ev.filter((e) => e.type === 'warning'), []);
 });
 
 test('replicator spawns fragments that count toward Virus Integrity', () => {

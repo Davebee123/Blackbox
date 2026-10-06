@@ -137,7 +137,7 @@ export const FX_DO = {
   'echo-full': { when: ['custom'], label: 'your Echoes hit for full damage' },
   'encrypt-half': { when: ['custom'], label: 'Encryption on you stacks half as fast' },
   'sync-wide': { when: ['custom'], label: 'Sync Windows are 50% wider' },
-  'blind-short': { when: ['custom'], label: 'Blinds on you last one cycle less' },
+  'blind-short': { when: ['custom'], label: 'Scrambles on you last one cycle less' },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'per cycle the fight has lasted', contracts: 'per contract you hold', broken: 'per part broken this fight' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };

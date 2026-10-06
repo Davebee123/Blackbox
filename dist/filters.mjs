@@ -92,5 +92,5 @@ export function filterCommand(s, text) {
   o.on = o.on.filter((x) => x !== i).map((x) => (x > i ? x - 1 : x));
   const back = { scrap: 1, stock: 1, tuned: 2, custom: 3 }[f.rarity] || 1;
   for (let k = 0; k < back; k++) s.salvage.push({ name: 'Filter scraps', virus: 'filter', seed: 0 });
-  emit(s, 'info', `Scrapped ${f.name}: +${back} salvage.`);
+  emit(s, 'gear', `Scrapped ${f.name}: +${back} salvage.`, { gains: [{ label: 'Salvage', qty: `+${back}`, kind: 'loot', text: `${back} salvage` }], name: f.name });
 }

@@ -5,7 +5,7 @@ export const CONFIG = {
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server
   maxIntegrity: 100,
-  blindside: 1.25, // Ghostroot: damage that lands while you're blind deals +25%
+  scramble: { chance: 0.25, self: 0.5 }, // Ghostroot's Scrambler: while you're Scrambled, each attack may hit you instead, at half
   // Level gap, WoW-style: something above you takes less from you (−7% a level past the first,
   // never under 40%) and hits you harder (+10% a level past the first), so orange (3–4 up) is a
   // real fight and red a gamble.
@@ -245,10 +245,10 @@ export const FAMILIES = {
   ghostroot: {
     name: 'Ghostroot',
     threatens: 'Integrity',
-    summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler blinds you: your whole timeline goes dark for 2 cycles, and hits that land while you are blind deal +25%.',
+    summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler scrambles you for 2 cycles: each of your attacks has a 25% chance to hit you instead, at half strength.',
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
-      { id: 'scrambler', name: 'Scrambler', integrity: 46, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Blind', effect: 'blind', amount: 2, interval: 4, first: 2 } },
+      { id: 'scrambler', name: 'Scrambler', integrity: 46, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, interval: 4, first: 2 } },
     ],
   },
 };

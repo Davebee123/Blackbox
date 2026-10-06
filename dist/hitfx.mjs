@@ -49,6 +49,8 @@ export function createHitFx(board, { canMove = () => true } = {}) {
         '--d': (0.45 + Math.random() * 0.35).toFixed(2) + 's',
       }, Math.random() < 0.5 ? '0' : '1', 900);
     }
+    // A miss: a big MISS stamped across the part, so you can't overlook it.
+    if (result === 'miss') add(`fx-miss ${kind}`, { left: n.l + n.w * 0.5 + 'px', top: n.t + n.h / 2 + 'px' }, 'MISS', 1100);
     name.classList.remove('fx-jolt', 'crit', 'miss'); void name.offsetWidth;
     name.classList.add('fx-jolt'); if (result === 'crit' || result === 'miss') name.classList.add(result);
     setTimeout(() => name.classList.remove('fx-jolt', 'crit', 'miss'), 500);
