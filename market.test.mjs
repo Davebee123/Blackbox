@@ -105,5 +105,8 @@ test('traffic on the map: the hubs trade along their backbone, and your orders r
   assert.doesNotMatch(html, /mpkt you/, 'nothing of yours in flight yet');
   s.market ||= {}; s.market.transfers = [{ id: 1, side: 'sell', f: 'kestrel', w: 'kernel', n: 4, credits: 60, sentAt: at, landsAt: at + 60000 }];
   html = mapMarkup(s, 'server');
-  assert.match(html, /class="mpkt you" data-route="hr-kestrel" data-t0="\d+" data-t1="\d+">/, 'a sale runs out to the hub');
+  assert.match(html, /class="mpkt you" data-route="hr-kestrel" data-t0="\d+" data-t1="\d+" data-tip="[^"]*Kernel code/, 'a sale runs out to the hub, and says what it carries');
+  // Hub trade is real: each arc carries the wares with the biggest price gaps, cheap end to dear end.
+  const ships = JSON.parse(html.match(/data-ships="([^"]+)"/)[1].replace(/&quot;/g, '"'));
+  assert.ok(ships.length && ships.every((x) => x.hi >= x.lo && x.gap >= 1));
 });

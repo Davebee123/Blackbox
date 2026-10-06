@@ -2464,7 +2464,9 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mroute { fill: none; stroke: none; }
 .mpkt { pointer-events: none; }
 .mpkt .pk-hit { fill: transparent; }
-.mpkt.amb .pk-dir { opacity: 0.9; }
+.mpkt.amb { pointer-events: auto; cursor: help; }
+.mpkt.amb .pk-dir { opacity: 0.9; fill: currentColor; }
+.mpkt.amb .pk-icon { fill: rgba(0, 0, 0, 0.35); stroke: currentColor; stroke-width: 1; stroke-linejoin: round; }
 .mpkt.you, .mpkt.pay { pointer-events: auto; }
 .mpkt.you .pk-icon { fill: rgba(127, 209, 199, 0.18); stroke: var(--you); stroke-width: 1; stroke-linejoin: round; filter: drop-shadow(0 0 3px var(--you)); }
 .mpkt.you .pk-dir { fill: var(--you); }
@@ -2646,3 +2648,19 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .rw.neg b { color: var(--hot); }
 .flt-list .flt .fchips { grid-column: 1; grid-row: 2; }
 .flt-list .flt .fchip small { grid-column: auto; grid-row: auto; font: 12px var(--sans, inherit); }
+
+/* Hover card for a file moving on the map. */
+.pkt-tip { position: fixed; z-index: 80; pointer-events: none; }
+.pkt-card { min-width: 190px; display: grid; gap: 6px; padding: 10px 12px; background: rgba(10, 8, 5, 0.97); border: 1px solid var(--line-strong); border-top: 2px solid var(--you); border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); font-size: 12px; }
+.pkt-card.pay { border-top-color: var(--hot); }
+.pkt-top { display: flex; gap: 8px; align-items: center; }
+.pkt-top .glyph { width: 22px; height: 22px; color: var(--amber); }
+.pkt-top span { display: grid; }
+.pkt-top b { color: var(--bright); font-size: 13px; } .pkt-top b small { color: var(--muted); font: 12px var(--mono); }
+.pkt-top code { color: var(--muted); font: 11px var(--mono); }
+.pkt-route { display: flex; gap: 6px; font: 11px var(--mono); color: var(--text); text-transform: uppercase; letter-spacing: 0.06em; }
+.pkt-route i, .pkt-row i { color: var(--muted); font-style: normal; }
+.pkt-row { display: flex; gap: 6px; align-items: center; }
+.pkt-row .glyph { width: 13px; height: 13px; color: var(--muted); }
+.pkt-row b { font: 700 13px var(--mono); color: var(--bright); } .pkt-row b.up { color: var(--r-tuned); }
+.pkt-row small { color: var(--r-tuned); font: 11px var(--mono); }

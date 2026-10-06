@@ -11,7 +11,8 @@ import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWand
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
 import { nextPayIn, boardOpen, storyAt } from './mail.mjs';
-import { hubsOf, hubFound, hubTraceOf } from './factions.mjs';
+import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
+import { WARES } from './market.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
 import { nextTip, markSeen } from './tips.mjs';
 import { createRain } from './rain.mjs';
@@ -1385,9 +1386,12 @@ function movePackets(at) {
     if (!path) continue;
     let p, back = !!d.dataset.rev;
     if (d.dataset.period) {
+      // Hub-to-hub: each lap carries one of the route's shipments, from where it's cheap to where it pays.
       const k = at / +d.dataset.period + +d.dataset.phase, lap = Math.floor(k);
-      p = k - lap; back = lap % 2 === 1;
-      d.style.fill = back ? d.dataset.cb : d.dataset.ca;
+      const ships = d._ships ||= JSON.parse(d.dataset.ships || '[]'), sh = ships.length ? ships[lap % ships.length] : null;
+      p = k - lap; back = sh ? !!sh.back : lap % 2 === 1;
+      d._ship = sh && { ...sh, n: 4 + ((lap * 7 + ships.indexOf(sh) * 13) % 17) };
+      d.style.color = back ? d.dataset.cb : d.dataset.ca;
     } else p = Math.max(0, Math.min(1, (at - +d.dataset.t0) / Math.max(1, +d.dataset.t1 - +d.dataset.t0)));
     const len = path.getTotalLength(), at0 = (back ? 1 - p : p) * len, pt = path.getPointAtLength(at0);
     // Which way it's heading: a step further along the route, in its direction of travel.
@@ -1396,7 +1400,35 @@ function movePackets(at) {
     d.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
     d.querySelector('.pk-dir')?.setAttribute('transform', `rotate(${ang.toFixed(0)})`);
   }
+  if (pktHover) placePktTip();
 }
+// Hovering a moving file: a card with what it is, following it along its route.
+let pktHover = null;
+function pktTipData(d) {
+  if (d.dataset.tip) return JSON.parse(d.dataset.tip);
+  const sh = d._ship; if (!sh) return null;
+  const fa = FACTIONS[d.dataset.fa]?.short, fb = FACTIONS[d.dataset.fb]?.short;
+  return { icon: sh.w, what: WARES[sh.w].name, n: sh.n, from: sh.back ? fb : fa, to: sh.back ? fa : fb, lo: sh.lo, hi: sh.hi };
+}
+function placePktTip() {
+  const { d, el } = pktHover;
+  if (!d.isConnected) return hidePktTip();
+  const data = pktTipData(d), key = JSON.stringify(data);
+  if (key !== el.dataset.key) { el.innerHTML = V.packetTipMarkup(data); el.dataset.key = key; }
+  const r = d.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  el.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.right + 10))}px`;
+  el.style.top = `${Math.max(8, Math.min(innerHeight - h - 8, r.top - h / 2))}px`;
+}
+function hidePktTip() { if (!pktHover) return; pktHover.el.remove(); pktHover = null; }
+document.addEventListener('mouseover', (e) => {
+  const d = e.target.closest?.('.map-svg .mpkt');
+  if (!d) return;
+  if (pktHover?.d === d) return;
+  hidePktTip();
+  const el = document.createElement('div'); el.className = 'pkt-tip'; document.body.append(el);
+  pktHover = { d, el }; placePktTip();
+});
+document.addEventListener('mouseout', (e) => { if (pktHover && e.target.closest?.('.mpkt') === pktHover.d && !pktHover.d.contains(e.relatedTarget)) hidePktTip(); });
 function frame(now) {
   if (module === 'map') movePackets(Date.now());
   const delta = Math.min(1000, now - last);

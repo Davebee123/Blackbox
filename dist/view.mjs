@@ -9,7 +9,7 @@ export const setMemAsk = (id) => { memAsk = id; };
 import { fleetLeft, FLEET } from './fleet.mjs';
 import { hubWall, HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
-import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
+import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, priceOf, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
 // The market's open order ticket (app.js): { f, w, side, n }.
 let order = null;
 export const setOrder = (o) => { order = o; };
@@ -1662,21 +1662,35 @@ export function trafficMarkup(s, nodes) {
       routes.push(`<path class="mbone" data-rid="${id}" d="M${a.x} ${a.y} A${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${b.x} ${b.y}"/>`);
       const h = hash(id), period = 26000 + (h % 5) * 5000;
       const fa = FX[a.hub.faction].color, fb = FX[b.hub.faction].color;
-      dots.push(`<g class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}"><path class="pk-dir" d="M5.5 0 L-4 -4 L-2 0 L-4 4 Z"/></g>`);
+      // What actually moves: each ware goes from the hub where it's cheap to the one that pays more
+      // for it, the biggest gaps first. Each lap carries the next of them (app.js picks by lap).
+      const ships = WARE_IDS.map((w) => { const pa = priceOf(s, a.hub.faction, w), pb = priceOf(s, b.hub.faction, w); return { w, back: pa > pb ? 1 : 0, gap: Math.max(pa, pb) / Math.max(0.01, Math.min(pa, pb)), lo: Math.round(Math.min(pa, pb)), hi: Math.round(Math.max(pa, pb)) }; }).sort((x, y) => y.gap - x.gap).slice(0, 3);
+      dots.push(`<g class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}" data-fa="${a.hub.faction}" data-fb="${b.hub.faction}" data-ships="${esc(JSON.stringify(ships))}"><circle r="12" class="pk-hit"/><g class="pk-file">${PKT_ICON.you}</g><path class="pk-dir" d="M13 0 L8 -4 L9.5 0 L8 4 Z"/></g>`);
     });
   }
   // Yours: market orders and payloads in flight, home ↔ the hub. Outgoing runs out, incoming runs home.
   const mine = (f, id, t0, t1, out, cls, tip) => {
     const n = byF[f]; if (!n || !home) return;
     if (!routes.some((r) => r.includes(`data-rid="hr-${f}"`))) routes.push(`<path class="mroute" data-rid="hr-${f}" d="M${home.x} ${home.y} L${n.x} ${n.y}"/>`);
-    dots.push(`<g class="mpkt ${cls}" data-route="hr-${f}" data-t0="${t0}" data-t1="${t1}"${out ? '' : ' data-rev="1"'}><title>${esc(tip)}</title><circle r="14" class="pk-hit"/><g transform="scale(1.5)">${PKT_ICON[cls]}</g><path class="pk-dir" d="M20 0 L12 -6 L14.5 0 L12 6 Z"/></g>`);
+    dots.push(`<g class="mpkt ${cls}" data-route="hr-${f}" data-t0="${t0}" data-t1="${t1}"${out ? '' : ' data-rev="1"'} data-tip="${esc(JSON.stringify(tip))}"><circle r="14" class="pk-hit"/><g transform="scale(1.5)">${PKT_ICON[cls]}</g><path class="pk-dir" d="M20 0 L12 -6 L14.5 0 L12 6 Z"/></g>`);
   };
   for (const x of transfersOf(s)) {
-    const what = x.side === 'good' ? x.name : `${WARES[x.w].name.replace(/ code$/, '')} ×${x.n}`;
-    mine(x.f, x.id, x.sentAt, x.landsAt, x.side === 'sell', 'you', x.side === 'sell' ? `${what} → ${FX[x.f].short} · +${x.credits}` : `${what} ← ${FX[x.f].short}`);
+    const sell = x.side === 'sell';
+    mine(x.f, x.id, x.sentAt, x.landsAt, sell, 'you', { mine: 1, icon: x.side === 'good' ? 'crate' : x.w, what: x.side === 'good' ? x.name : WARES[x.w].name, n: x.side === 'good' ? 1 : x.n, from: sell ? 'You' : FX[x.f].short, to: sell ? FX[x.f].short : 'You', credits: sell ? x.credits : -x.credits, lands: x.landsAt });
   }
-  for (const p of flyingOf(s)) mine(p.f, p.id, p.sentAt, p.landsAt, true, 'pay', `${PAYLOADS[p.kind].name} #${p.id} → ${FX[p.f].short}`);
+  for (const p of flyingOf(s)) mine(p.f, p.id, p.sentAt, p.landsAt, true, 'pay', { mine: 1, pay: 1, icon: 'spike', what: PAYLOADS[p.kind].name, n: 1, from: 'You', to: FX[p.f].short, lands: p.landsAt });
   return routes.length ? `<g class="mtraffic">${routes.join('')}${dots.join('')}</g>` : '';
+}
+
+// The hover card for a file moving on the map: what it is, how many, where from and to, and for
+// hub-to-hub traffic the price gap it's chasing. t: { icon, what, n, from, to, credits?, lands?, lo?, hi? }.
+export function packetTipMarkup(t, now = Date.now()) {
+  const ware = WARES[t.icon] ? t.icon : null, file = t.pay ? `${(t.what || '').toLowerCase().replace(/\W+/g, '_')}.bin` : `${ware || 'goods'}${t.n > 1 ? '_x' + t.n : ''}.dat`;
+  return `<div class="pkt-card${t.pay ? ' pay' : ''}"><div class="pkt-top">${glyph(t.icon || 'item', 'badge')}<span><b>${esc(t.what)}${t.n > 1 ? ` <small>×${t.n}</small>` : ''}</b><code>${esc(file)}</code></span></div>
+    <div class="pkt-route"><span>${esc(t.from)}</span><i>→</i><span>${esc(t.to)}</span></div>
+    ${t.lo != null ? `<div class="pkt-row" title="Price a unit: where it's cheap → where it pays">${glyph('credits')}<b>${t.lo}</b><i>→</i><b class="up">${t.hi}</b><small>▲${Math.round((t.hi / Math.max(1, t.lo) - 1) * 100)}%</small></div>` : ''}
+    ${t.credits ? `<div class="pkt-row">${glyph('credits')}<b class="${t.credits > 0 ? 'up' : ''}">${t.credits > 0 ? '+' : '−'}${Math.abs(t.credits)}</b></div>` : ''}
+    ${t.lands ? `<div class="pkt-row">${glyph('clock')}<b>${fmtTime(Math.max(0, t.lands - now))}</b></div>` : ''}</div>`;
 }
 
 // Screen pixels per map unit (app.js sets it from the drawn map): label sizes in map units follow it.
