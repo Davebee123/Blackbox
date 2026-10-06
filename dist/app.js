@@ -715,13 +715,30 @@ function openHub(f) {
   hubLines = [...V.hubBanner(campaign, f).slice(0, -1), menuLine];
   go('hub');
 }
-function closeHub() { hubOpen = false; hubWin = null; if (module === 'hub') go('map'); else dirty = true; }
+function closeHub() { hubOpen = false; hubWin = null; V.setOrder(null); if (module === 'hub') go('map'); else dirty = true; }
 function hubEcho(text) { hubLines.push({ cls: 'you', html: V.esc(text) }); }
 // A menu pick opens its window; it isn't echoed into the session (the menu already says what it is).
 function pickHub(key) {
   if (key === 'store') return go('store');
-  hubWin = key || null; feel.key('click'); dirty = true;
+  hubWin = key || null; V.setOrder(null); feel.key('click'); dirty = true;
 }
+// The market's order ticket: which ware, Sell or Buy, how many (the slider). Dragging updates the
+// ticket's numbers in place, and the page doesn't redraw under your pointer until you let go.
+let mkOrder = null, mkDrag = false;
+function setMkOrder(o) { mkOrder = o; V.setOrder(o); dirty = true; }
+function ticketLive() {
+  if (!mkOrder) return;
+  const k = V.ticketNumbers(campaign, mkOrder.f, mkOrder.w, mkOrder.side, mkOrder.n);
+  if (!k.max) return;
+  const set = (key, v) => { const el = document.querySelector(`[data-mk-out="${key}"]`); if (el) el.textContent = v; };
+  set('n', k.n); set('n2', k.n); set('total', k.total); set('each', k.each); set('vs', k.vs); set('after', k.after);
+  document.querySelector('[data-mk-out="vs"]')?.classList.toggle('up', k.vsUp);
+  const go = document.querySelector('.mk-go'); if (go) go.dataset.command = k.cmd;
+}
+document.addEventListener('input', (e) => { if (e.target.matches?.('[data-mk-n]') && mkOrder) { mkOrder.n = Number(e.target.value) || 1; ticketLive(); } });
+document.addEventListener('pointerdown', (e) => { if (e.target.matches?.('[data-mk-n]')) mkDrag = true; });
+addEventListener('pointerup', () => { if (mkDrag) { mkDrag = false; dirty = true; } });
+document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mk-n]')) { mkDrag = false; dirty = true; } });
 const hubShown = () => hubOpen && module === 'hub';
 function previewAim(s, text) {
   const key = () => aimPreview && aimPreview.target + aimPreview.ok + aimPreview.ability;
@@ -995,7 +1012,7 @@ function render(force = false) {
     }
   } else {
     const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
-    put('page-view', (pages[module] || pages.map)(campaign));
+    if (!(module === 'hub' && mkDrag)) put('page-view', (pages[module] || pages.map)(campaign)); // not while you drag a ticket's slider
     if (module === 'hub' && $('hubterm')) {
       const grew = hubLines.length - (render.hubLen ?? 0);
       if (grew > 0) shell.typeIn($('hubterm'), grew);
@@ -1423,6 +1440,11 @@ document.addEventListener('click', (e) => {
   if (tip && !e.target.closest('#tip') && e.target.closest(tip.t.at)) hideTip(true);
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
+  const pick = e.target.closest('[data-mk-pick]');
+  if (pick) { const w = pick.dataset.mkPick; setMkOrder(mkOrder?.w === w && mkOrder.f === hubSel ? null : { f: hubSel, w, side: (w === 'salvage' ? campaign.salvage.length : campaign.materials?.[w] || 0) > 0 ? 'sell' : 'buy', n: 1 }); return; }
+  const side = e.target.closest('[data-mk-side]');
+  if (side && mkOrder) { setMkOrder({ ...mkOrder, side: side.dataset.mkSide, n: 1 }); return; }
+  if (e.target.closest('.mk-go') && mkOrder) { const c = e.target.closest('.mk-go').dataset.command; setMkOrder({ ...mkOrder, n: 1 }); return run(c); }
   const payBtn = e.target.closest('[data-pay]');
   if (payBtn && !payBtn.disabled && !e.target.closest('#pay')) { payOpen(payBtn); return; }
   const cmd = e.target.closest('[data-command]');

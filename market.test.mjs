@@ -73,3 +73,20 @@ test('relays on your servers shorten transfers', () => {
   s.locations.push({ id: 'x', relay: true }, { id: 'y', relay: true });
   assert.equal(travelMs(s, 'nullchoir'), Math.round(t0 * 0.8));
 });
+
+test('an order’s preview is what the trade does: the same total, and it moves nothing until you confirm', async () => {
+  const { orderQuote, orderMax, transfersOf } = await import('./dist/market.mjs');
+  const s = open();
+  s.materials.cipher = 12;
+  s.market = { ...(s.market || {}), event: 'calm', eventAt: 9e15, pressure: {}, transfers: [], serial: 0 };
+  const q = orderQuote(s, 'sell', 'kestrel', 'cipher', 7);
+  const again = orderQuote(s, 'sell', 'kestrel', 'cipher', 7);
+  assert.deepEqual(q, again, 'previewing moves no prices');
+  assert.ok(q.first >= q.last, 'each unit sells for a little less');
+  trade(s, 'sell', 'kestrel', 'cipher', 7);
+  assert.equal(transfersOf(s).at(-1).credits, q.total);
+  assert.equal(orderMax(s, 'sell', 'kestrel', 'cipher'), 5, 'what you still hold');
+  const b = orderQuote(s, 'buy', 'kestrel', 'worm', 3);
+  assert.ok(b.credits < 0 && b.after === s.server.credits + b.credits);
+  assert.ok(orderMax(s, 'buy', 'kestrel', 'worm') >= 3);
+});

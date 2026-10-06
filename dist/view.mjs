@@ -9,7 +9,10 @@ export const setMemAsk = (id) => { memAsk = id; };
 import { fleetLeft } from './fleet.mjs';
 import { HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
-import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf } from './market.mjs';
+import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
+// The market's open order ticket (app.js): { f, w, side, n }.
+let order = null;
+export const setOrder = (o) => { order = o; };
 import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED, captured, donationOf, hubFound, hubTraceOf } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
@@ -2132,6 +2135,29 @@ function payloadMarkup(s, f, now) {
   return `${head}${held ? `<ul class="craft-list">${held}</ul>` : ''}${fly}${lastLine}<h3 class="craft-sub">Compile${full ? ` · ${PAYLOAD.maxBuilt}/${PAYLOAD.maxBuilt}` : ''}</h3><ul class="craft-list pay-compile">${make}</ul>`;
 }
 // The hub's market: what it pays and asks for each ware, why (hover the arrow), and your transfers.
+// The order ticket: Sell or Buy, a slider for how many, and what it comes to (app.js updates the
+// numbers live while you drag, through ticketNumbers).
+export function ticketNumbers(s, f, w, side, n) {
+  const max = orderMax(s, side, f, w);
+  if (!max) return { max: 0 };
+  const q = orderQuote(s, side, f, w, Math.min(Math.max(1, n), max));
+  return { max, n: q.n, total: `${q.credits >= 0 ? '+' : '−'}${Math.abs(q.credits)}`, after: q.after, each: q.first === q.last ? `${q.first}` : `${q.first} → ${q.last}`, vs: `${q.vs >= 0 ? '+' : '−'}${Math.abs(q.vs)}`, vsUp: q.vs > 0, cmd: `market ${side} ${f} ${w} ${q.n}`, minutes: q.minutes };
+}
+function orderTicket(s, f, w) {
+  const side = order.side || 'sell', k = ticketNumbers(s, f, w, side, order.n || 1);
+  const tab = (x, label) => `<button type="button" class="mk-side${side === x ? ' on' : ''}" data-mk-side="${x}" aria-pressed="${side === x}">${label}</button>`;
+  const body = !k.max
+    ? `<p class="mk-none">${side === 'sell' ? 'None to sell' : 'Not enough credits'}</p>`
+    : `<div class="mk-slide"><input type="range" min="1" max="${k.max}" value="${k.n}" data-mk-n aria-label="How many"><b class="mk-qty" data-mk-out="n">${k.n}</b><small>/ ${k.max}</small></div>
+      <div class="mk-prev">
+        <span><small>${side === 'sell' ? 'You get' : 'You pay'}</small><b class="${side === 'sell' ? 'mk-plus' : ''}" data-mk-out="total">${k.total}</b></span>
+        <span><small>Each</small><b data-mk-out="each">${k.each}</b></span>
+        <span title="Against the same order at the other hubs you can reach (on average)"><small>vs elsewhere</small><b class="${k.vsUp ? 'up' : ''}" data-mk-out="vs">${k.vs}</b></span>
+        <span><small>Credits after</small><b data-mk-out="after">${k.after}</b></span>
+      </div>
+      <button type="button" class="btn primary mk-go" data-command="${k.cmd}" data-mk-out="cmd" title="Arrives in ${k.minutes} min">${side === 'sell' ? 'Sell' : 'Buy'} <span data-mk-out="n2">${k.n}</span></button>`;
+  return `<div class="mk-ticket"><div class="mk-sides">${tab('sell', 'Sell')}${tab('buy', 'Buy')}</div>${body}</div>`;
+}
 function marketMarkup(s, f, now) {
   if (hostile(s, f)) return '<p class="quiet">Shut to you.</p>';
   if (offline(s, f, now)) return '<p class="quiet">Offline.</p>';
@@ -2144,16 +2170,15 @@ function marketMarkup(s, f, now) {
     const avg = FACTION_IDS.reduce((a, g) => a + quote(s, g, w).sell, 0) / FACTION_IDS.length, d = Math.round((q.sell / avg - 1) * 100);
     const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : ''].filter(Boolean).join(' · ');
     const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
-    // Two halves: what it pays you here (and how that compares across hubs), then what it charges.
-    const sell = (k) => (k ? `<button type="button" class="btn small" data-command="market sell ${f} ${w} ${k}" ${n >= k ? '' : 'disabled'} title="+${q.sell * k} credits · ${min} min">Sell ${k}</button>` : '<span></span>');
-    return `<div class="mk-tr">
+    // A read-only row (click it for an order ticket): held, what it pays here (and against other
+    // hubs), what it charges. The ticket opens under the row you picked.
+    const open = order && order.f === f && order.w === w;
+    return `<button type="button" class="mk-tr mk-row${open ? ' open' : ''}" data-mk-pick="${w}" aria-expanded="${open}">
       <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b></span>
-      <span class="mk-num mk-held${n ? '' : ' zero'}" title="You have ${n}">${n}</span>
-      <span class="mk-sellp"><b class="mk-price" title="Pays you ${q.sell} each">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
-      ${sell(1)}${sell(lot > 1 ? lot : 0)}
-      <span class="mk-buyp" title="Charges you ${q.buy} each">${q.buy}</span>
-      <button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="−${q.buy} credits · ${min} min">Buy 1</button>
-    </div>`;
+      <span class="mk-num mk-held${n ? '' : ' zero'}">${n}</span>
+      <span class="mk-sellp"><b class="mk-price">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
+      <span class="mk-buyp">${q.buy}</span>
+    </button>${open ? orderTicket(s, f, w) : ''}`;
   }).join('');
   const head = `<div class="mk-tr mk-th"><span>Ware</span><span class="mk-num">Held</span><span class="mk-sell-h">Sell here</span><span class="mk-buy-h">Buy here</span></div>`;
   const mine = transfersOf(s).filter((x) => x.f === f);

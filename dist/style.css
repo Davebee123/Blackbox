@@ -2365,3 +2365,29 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .srv-line { grid-template-columns: 104px minmax(0, 1fr) 96px; }
 .srv-line .srv-n { text-align: right; white-space: nowrap; }
 .srv-line .srv-v:empty { display: block; }
+/* The market: read-only rows you pick (ware · held · sell here · buy here), and one order ticket under the picked row. */
+.mk-wares .mk-tr { grid-template-columns: minmax(110px, 1fr) 56px 110px 84px; }
+.mk-th .mk-sell-h { grid-column: auto; padding-left: 0; text-align: right; }
+.mk-th .mk-buy-h { grid-column: auto; padding-left: 0; text-align: right; border-left: 0; }
+.mk-wares .mk-buyp { border-left: 0; padding-left: 0; }
+button.mk-row { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--line); text-align: left; cursor: pointer; color: inherit; font: inherit; }
+button.mk-row:hover { background: rgba(241, 185, 47, 0.05); }
+button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: transparent; }
+.mk-ticket { display: grid; gap: 12px; padding: 12px 14px 14px; margin: 0 0 6px; border: 1px solid rgba(241, 185, 47, 0.35); border-top: 0; background: rgba(241, 185, 47, 0.04); }
+.mk-sides { display: inline-flex; gap: 0; border: 1px solid var(--line-strong, var(--line)); border-radius: 4px; overflow: hidden; justify-self: start; }
+.mk-side { padding: 5px 16px; background: none; border: 0; color: var(--muted); font: 600 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+.mk-side.on { background: var(--amber); color: var(--bg); }
+.mk-slide { display: flex; align-items: center; gap: 10px; }
+.mk-slide input[type=range] { flex: 1; accent-color: var(--amber); }
+.mk-slide .mk-qty { font: 700 18px var(--mono); color: var(--bright); min-width: 2ch; text-align: right; }
+.mk-slide small { color: var(--dim); font: 12px var(--mono); }
+.mk-prev { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mk-prev span { display: grid; gap: 2px; }
+.mk-prev small { font: 600 10px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.mk-prev b { font: 700 15px var(--mono); color: var(--bright); }
+.mk-prev b.up { color: var(--amber); }
+.mk-go { justify-self: end; min-width: 120px; }
+.mk-none { margin: 0; color: var(--dim); font: 13px var(--mono); }
+@media (max-width: 700px) { .mk-prev { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mk-prev b.mk-plus { color: var(--bright); }
+.mk-wares .mk-tr { grid-template-columns: minmax(110px, 1fr) 56px 120px 100px; }

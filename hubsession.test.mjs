@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command } from './dist/combat.mjs';
-import { hubOptions, hubBanner, hubTerminalMarkup } from './dist/view.mjs';
+import { hubOptions, hubBanner, hubTerminalMarkup, setOrder } from './dist/view.mjs';
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; return s; };
 const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
@@ -30,7 +30,15 @@ test('connecting reads like jacking into a server: handshake, banner, who answer
   assert.doesNotMatch(page, /hub-win/, 'no window until you pick');
   const market = hubTerminalMarkup(s, 'kestrel', lines, 'market');
   assert.match(market, /hub-win/);
-  assert.match(market, /market sell kestrel/);
+  assert.match(market, /data-mk-pick="cipher"/, 'wares are rows you pick');
+  assert.doesNotMatch(market, /market sell kestrel/, 'no order until you pick one');
+  s.materials.cipher = 5;
+  setOrder({ f: 'kestrel', w: 'cipher', side: 'sell', n: 3 });
+  const ticket = hubTerminalMarkup(s, 'kestrel', lines, 'market');
+  assert.match(ticket, /data-mk-n/, 'a slider');
+  assert.match(ticket, /market sell kestrel cipher 3/, 'its order, for the slider’s amount');
+  assert.match(ticket, /You get/);
+  setOrder(null);
   assert.doesNotMatch(market, /payload compile/, 'only the window you picked');
   s.standing.nullchoir = -30;
   assert.match(hubBanner(s, 'nullchoir')[2].html, /Filtered/);

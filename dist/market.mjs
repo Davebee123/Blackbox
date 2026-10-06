@@ -109,6 +109,37 @@ export function trade(s, side, f, w, n, at = now()) {
   m.transfers.push(t);
   emit(s, 'transfer-out', `Ordered ${n} ${WARES[w].name} from ${FACTIONS[f].short} for ${cost} credits: it arrives in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
 }
+// What an order would do, without doing it: the lot's total at its sliding prices, the first and last
+// unit's price, and the same lot priced at the average of the other hubs you can reach (the honest
+// "profit or loss": selling here beats or trails selling elsewhere; buying here costs more or less).
+function lotTotal(s, side, f, w, n) {
+  const m = marketOf(s), was = (m.pressure[f] ||= {})[w] || 0;
+  let total = 0, first = 0, last = 0;
+  for (let i = 0; i < n; i++) {
+    if (side === 'sell') { m.pressure[f][w] = was + i + 1; last = quote(s, f, w).sell; }
+    else { m.pressure[f][w] = was - i; last = quote(s, f, w).buy; }
+    if (!i) first = last;
+    total += last;
+  }
+  m.pressure[f][w] = was;
+  return { total, first, last };
+}
+export function orderQuote(s, side, f, w, n) {
+  n = Math.max(1, Math.floor(n));
+  const here = lotTotal(s, side, f, w, n);
+  const others = hubsOf(s).map((h) => h.faction).filter((g) => g !== f && !hostile(s, g));
+  const avg = others.length ? Math.round(others.reduce((a, g) => a + lotTotal(s, side, g, w, n).total, 0) / others.length) : here.total;
+  const vs = side === 'sell' ? here.total - avg : avg - here.total; // positive: better than the average elsewhere
+  return { n, side, ...here, credits: side === 'sell' ? here.total : -here.total, after: s.server.credits + (side === 'sell' ? here.total : -here.total), vs, minutes: Math.round(travelMs(s, f) / 60000) };
+}
+// The most of a ware you can trade here at once: what you hold (sell), or what you can afford (buy).
+export function orderMax(s, side, f, w) {
+  if (side === 'sell') return Math.min(MARKET.maxLots, have(s, w));
+  let n = 0;
+  while (n < MARKET.maxLots && lotTotal(s, 'buy', f, w, n + 1).total <= s.server.credits) n++;
+  return n;
+}
+
 // The clock (real time, offline too): transfers complete, pressure eases, the world event turns over.
 export function tickMarket(s, at = now()) {
   if (!hubsOf(s).length) return;
