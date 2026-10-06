@@ -862,7 +862,7 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Breaker | 30 | `thermal-runaway <part>` | A burn that grows: 6, 10, 14, 18. | 4 |
 | Breaker | 34 | `sudo` | This cycle and next, every hit you land crits. | 6 |
 | Breaker | 38 | `zero-day <part>` | 80 damage straight through armor. Once per fight. | once |
-| Bastion | 1 | `rate-limit <part>` | 30 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits. | 2 |
+| Bastion | 1 | `rate-limit <part>` | 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits. | 3 |
 | Bastion | 3 | `firewall` | A shield that absorbs the next 20 damage. If it soaks a whole hit, Retaliate lights up. | 4 |
 | Bastion | 5 | `suspend [part]` | SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest. | 4 |
 | Bastion | 10 | `retaliate <part>` | The cycle after an attack reaches you (or your shield): hit back for twice its size, up to 60. | lit |

@@ -105,7 +105,7 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (55) f
 });
 
 // ---------- Bastion ----------
-test('Bastion: Hardened blocks the first attack; Rate Limit hits 30 (+15 if its attack is due) and halves its next attack; Patch heals 10 then 5 a cycle', () => {
+test('Bastion: Hardened blocks the first attack; Rate Limit hits 40 (+15 if its attack is due), cooldown 3, and halves its next attack; Patch heals 10 then 5 a cycle', () => {
   const s = start('bastion');
   assert.equal(s.encounter.chits, 1);
   s.encounter.cycle = part(s, 'pulse').attack.due;
@@ -115,7 +115,8 @@ test('Bastion: Hardened blocks the first attack; Rate Limit hits 30 (+15 if its 
   const t = noArmor(quiet(start('bastion')));
   big(t, 'pulse');
   act(t, 'rate-limit pulse');
-  assert.equal(lost(t, 'pulse'), 30);
+  assert.equal(lost(t, 'pulse'), 40);
+  assert.equal(t.encounter.readyAt['rate-limit'] - t.encounter.cycle, 2, 'cooldown 3: ready again in 3 cycles');
   // Its next attack, whenever it lands, deals half.
   const d = noArmor(start('bastion'));
   big(d, 'pulse');
