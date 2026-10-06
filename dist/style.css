@@ -2408,3 +2408,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .map-filters { margin-right: 6px; }
 .map-svg.mf-mine .mnode.f-mine:not(.server), .map-svg.mf-targets .mnode.f-target:not(.server), .map-svg.mf-threats .mnode.f-threat:not(.server) { opacity: 1; }
 .map-svg.mf-mine .mnode.f-mine:not(.server) text, .map-svg.mf-targets .mnode.f-target:not(.server) text, .map-svg.mf-threats .mnode.f-threat:not(.server) text { display: block; }
+/* Map labels, smaller; a label that would overlap a more important one waits for hover/zoom. */
+.mlabel { font-size: calc(11px / var(--z, 1)); letter-spacing: 1px; }
+.msub { font-size: calc(9.5px / var(--z, 1)); }
+.map-svg .mnode.crowded text { display: none; }
+.map-svg .mnode.crowded:hover text, .map-svg .mnode.crowded.selected text, .map-svg.zoomed .mnode.crowded text { display: block; }

@@ -783,7 +783,7 @@ function applyMapZoom() {
   const svg = mapSvg();
   if (!svg) return;
   const [x, y, w, h] = baseVb(svg);
-  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) svg.style.setProperty('--z', a); placeMapPop(); }; // text keeps its size on screen, at any width or zoom
+  const fix = () => { const a = svg.getScreenCTM()?.a; if (a) { svg.style.setProperty('--z', a); if (V.setMapScale(a)) dirty = true; } placeMapPop(); }; // a new scale: labels re-sort who fits // text keeps its size on screen, at any width or zoom
   if (mapZoom.k <= 1) { mapZoom.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); return fix(); }
   const zw = w / mapZoom.k, zh = h / mapZoom.k;
   mapZoom.cx = Math.max(x + zw / 2, Math.min(x + w - zw / 2, mapZoom.cx));

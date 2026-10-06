@@ -1422,6 +1422,9 @@ const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
+// Screen pixels per map unit (app.js sets it from the drawn map): label sizes in map units follow it.
+let mapScale = 1;
+export const setMapScale = (z) => { const was = mapScale; mapScale = z; return Math.abs(was - z) / was > 0.08; };
 export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all' } = {}) {
   // A member's server (or home) shows on the consortium's map, whichever view was asked for.
   const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
@@ -1440,6 +1443,21 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const a2 = find(k.from), b2 = find(k.to);
     return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''}"/>`;
   }).join('');
+  // Labels that would overlap: the more important one keeps its label, the other's comes back on
+  // hover, selection or zoom. Importance: selected, under threat, a contract or fresh find, an
+  // outpost or where you are, then the rest (quiet servers have no label to begin with).
+  const crowded = new Set();
+  {
+    const z = mapScale || 1, CH = (11 * 0.62 + 1) / z, H = 30 / z, boxes = []; // text keeps its on-screen size: its width in map units grows as the map shrinks
+    const rank = (n) => { if (n.id === sel) return 0; const tags = mapTags(s, n.loc, nodeState(s, n.loc), openContracts(s).some((c) => c.loc === n.loc.id)); return tags.includes('minor') ? 9 : tags.includes('f-threat') ? 1 : tags.includes('f-target') && !tags.includes(' f-mine') ? 3 : n.loc.outpost?.h || s.run?.loc === n.loc.id ? 2 : 4; };
+    const cands = nodes.filter((n) => n.kind === 'location' && n.loc).map((n) => ({ n, r: rank(n) })).filter((c) => c.r < 9).sort((a, b) => a.r - b.r);
+    for (const { n } of cands) {
+      const p = labelAt(n, 12), w = Math.max(n.loc.name.length, 10) * CH;
+      const x0 = n.x + p.x - (p.a === 'end' ? w : p.a === 'middle' ? w / 2 : 0), y0 = n.y + p.y - 11 / z;
+      const box = [x0, y0, x0 + w, y0 + H];
+      if (boxes.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) crowded.add(n.id); else boxes.push(box);
+    }
+  }
   const draw = nodes.map((n) => {
     const on = n.id === sel ? ' selected' : '';
     const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
@@ -1492,9 +1510,9 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
-      return `<g class="mnode rogue${mapTags(s, l, st, job)}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
+      return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter !== 'all' ? ' mf-' + filter : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
