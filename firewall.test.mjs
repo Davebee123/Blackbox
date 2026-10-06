@@ -177,3 +177,50 @@ test('a hub you hold: its swarm comes at the hub\'s level, never yours', async (
   assert.ok(s.retake, 'a swarm sets out');
   assert.equal(s.retake.level, FACTIONS.kestrel.hub.level + HUBS.levelUp);
 });
+
+test('the server losing Integrity wears its firewall: a block for every 5% of max lost', async () => {
+  const { wear } = await import('./dist/firewall.mjs');
+  const s = fresh();
+  fwOf(s).level = 5;
+  s.server.max = 100;
+  wear(s, 4);
+  assert.equal(fwOf(s).frag, 0, 'under 5%: nothing yet');
+  wear(s, 1);
+  assert.equal(fwOf(s).frag, 1);
+  wear(s, 20);
+  assert.equal(fwOf(s).frag, 5);
+});
+
+test('away: a long passive clock (one invasion every 2-4 hours), quiet for a night after a squelch; open ports speeds them up online', async () => {
+  const { tickNetwork, AWAY } = await import('./dist/invasion.mjs');
+  const T0 = 1_800_000_000_000;
+  const s = fresh();
+  command(s, 'developer location worm');
+  fwOf(s).level = 30;
+  tickNetwork(s, T0);
+  tickNetwork(s, T0 + 8 * 3600000);
+  const n = s.logs.filter((e) => e.type === 'invader').length;
+  assert.ok(n >= 2 && n <= 4, `2-4 in eight hours away (${n})`);
+  const q = fresh();
+  command(q, 'developer location worm');
+  fwOf(q).level = 30;
+  q.materials = { kernel: 9 };
+  tickNetwork(q, T0);
+  hooks.now = () => T0;
+  command(q, 'squelch', T0);
+  hooks.now = null;
+  const after = q.logs.filter((e) => e.type === 'invader').length;
+  tickNetwork(q, T0 + 7.5 * 3600000);
+  assert.equal(q.logs.filter((e) => e.type === 'invader').length, after, 'a quiet night');
+  // Open ports: online, the next one comes 2.5× sooner; logging off closes them.
+  const o = fresh();
+  command(o, 'developer location worm');
+  tickNetwork(o, T0);
+  o.net.next = 10 * 60000;
+  command(o, 'open ports');
+  assert.equal(o.net.open, true);
+  assert.equal(o.net.next, 4 * 60000);
+  tickNetwork(o, T0 + 3 * 3600000);
+  assert.equal(o.net.open, false, 'closed while you were away');
+  assert.ok(AWAY.everyMs[0] >= 2 * 3600000);
+});

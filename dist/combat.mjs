@@ -17,8 +17,8 @@ import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, infestWon, siteTrait } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
-import { firewallCommand } from './firewall.mjs';
-import { squelchInvasion } from './invasion.mjs';
+import { firewallCommand, wear } from './firewall.mjs';
+import { squelchInvasion, portsCommand } from './invasion.mjs';
 import { squelchOutpost } from './outpost.mjs';
 import { filterCommand } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
@@ -1143,6 +1143,7 @@ export function finish(s, result) {
     if (!hid) huntKill(s, e.virus.family, e.trace);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
+    if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports'); }
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1 }, e.virus.level);
     if (item) addItem(s, item);
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
@@ -1361,6 +1362,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     filterCommand(s, text);
   } else if (/^firewall (upgrade|defrag|harden)( \S+)?$/.test(text) || text === 'defrag') {
     firewallCommand(s, text, now);
+  } else if (text === 'open ports' || text === 'close ports') {
+    portsCommand(s, text);
   } else if (text === 'squelch' || text === 'bait') {
     squelchInvasion(s);
   } else if (/^(squelch|bait) \S+$/.test(text)) {
@@ -1897,6 +1900,7 @@ function takeDamage(s, amount, source, label) {
   }
   const dealt = survive(s, d, Math.min(d.integrity, amount));
   d.integrity -= dealt;
+  if (e.mode === 'home' && dealt) wear(s, dealt); // your server's Integrity: it wears your firewall
   e.metrics.attackDamage += dealt;
   if (dealt) canary(s);
   // Snapshot (Zero-day): once per home fight, dropping below half restores 20.

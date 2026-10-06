@@ -771,7 +771,10 @@ function baitHome(s) {
   const next = s.net?.next, top = threatTop(s);
   if (s.invasion || !top) return '';
   const k = squelchCost(top), ok = (s.materials?.kernel || 0) >= k;
-  return `<button type="button" class="btn small fw-up" data-command="squelch" ${!ok || active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now. Once it's dealt with, nothing sets out for ${CONFIG.invasion.safeMs / 60000} minutes.">Squelch${next > 0 ? ` · next ${fmtTime(next)}` : ''}<small>${k} Kernel</small></button>`;
+  const quiet = (s.net?.quietUntil || 0) > Date.now();
+  const open = !!s.net?.open;
+  const ports = `<button type="button" class="btn small fw-up${open ? ' on' : ''}" data-command="${open ? 'close ports' : 'open ports'}" aria-pressed="${open}" title="${open ? 'Close them: invasions back to their usual pace' : 'Invasions come 2.5× as often while you play, each worth +50%. They close when you log off.'}">${open ? 'Ports open' : 'Open ports'}<small>${open ? '×2.5 · +50%' : 'more, richer'}</small></button>`;
+  return `${ports}<button type="button" class="btn small fw-up" data-command="squelch" ${!ok || active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now; then nothing comes while you're away for ${CONFIG.invasion.safeMs / 3600000} hours.">${quiet ? `Quiet · ${fmtTime(s.net.quietUntil - Date.now())}` : `Squelch${next > 0 ? ` · next ${fmtTime(next)}` : ''}`}<small>${k} Kernel</small></button>`;
 }
 // The firewall's buttons, each only once it means something: Upgrade when you can pay for the next
 // level, Defrag when it's fragmented (or running), harden.sh when you hold one.

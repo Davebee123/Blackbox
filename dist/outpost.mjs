@@ -299,7 +299,7 @@ export function squelchOutpost(s, loc, now) {
   if ((o.quietUntil || 0) > now) return warn(s, `${loc.name} is already quiet.`);
   if (!paySquelch(s, loc.level || 1)) return;
   startSiege(s, loc);
-  o.quietUntil = now + OUTPOST.siegeMs + CONFIG.invasion.safeMs;
+  o.quietUntil = now + OUTPOST.siegeMs + CONFIG.invasion.safeMs; // natives and swarms leave it alone for a night
 }
 function startSiege(s, loc) {
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, level = loc.level || 1;

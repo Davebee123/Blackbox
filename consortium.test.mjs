@@ -214,6 +214,7 @@ test('away, in a consortium: a weak wall gets crashed; the server reboots for ho
     const s = world();
     command(s, 'developer location ransomware');
     play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
+    s.firewall = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // a weak wall
     const T0 = 1_800_000_000_000;
     tickNetwork(s, T0);
     s.server.integrity = 5;

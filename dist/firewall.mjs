@@ -68,6 +68,15 @@ export function fragment(s, outcome, loc = null) {
   const f = fwAt(s, loc);
   f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + (FIREWALL.frag[outcome] || 0) * (loc ? 1 : less(s, 'frag'))) * 100) / 100);
 }
+// Your server losing Integrity wears your home firewall: a block for every 5% of max lost (an
+// invasion chipping at you, hits in a home fight). Filters that slow fragmentation slow this too.
+export const WEAR_STEP = 0.05;
+export function wear(s, points) {
+  if (!(points > 0)) return;
+  const f = fwOf(s), step = Math.max(1, s.server.max * WEAR_STEP);
+  f.wear = (f.wear || 0) + points;
+  while (f.wear >= step) { f.wear -= step; f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + less(s, 'frag')) * 100) / 100); }
+}
 // The clock: a defrag that's done leaves it whole (home, and every outpost).
 export function tickFirewall(s, at = clock()) {
   for (const loc of [null, ...(s.locations || []).filter((l) => l.outpost?.h), ...Object.values(s.hubs || {}).map((h) => h.captured?.wall).filter(Boolean)]) {

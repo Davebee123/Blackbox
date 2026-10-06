@@ -14,13 +14,13 @@ import { tickStation } from './station.mjs';
 import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
 import { isLive } from './memory.mjs';
-import { effLevel, fragment, tickFirewall, paySquelch } from './firewall.mjs';
+import { effLevel, tickFirewall, paySquelch, wear } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
-import { emit, warn, rand, active, holding, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead } from './combat.mjs';
+import { hooks, emit, warn, rand, active, holding, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead } from './combat.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -79,7 +79,10 @@ const pct = (x) => `${Math.round(x * 10) / 10}%`;
 // In a consortium, the gap is played out too (away): invaders keep coming, at AWAY.pace, and your
 // wall meets them; members sometimes stop one. A crash while away reboots for CONSORTIUM.rebootMs,
 // occupied (consortium.mjs): clear it to come back sooner.
-export const AWAY = { pace: 0.5, stepMs: 60000, maxMs: 24 * 3600000, helpMs: 3 * 60000 };
+// Away: a long passive clock of its own. One invasion every 2–4 hours while you're logged off
+// (none while a Squelch keeps it quiet); swarms and hubs' old owners come at a quarter pace.
+export const AWAY = { everyMs: [2 * 3600000, 4 * 3600000], slow: 0.25, stepMs: 60000, maxMs: 24 * 3600000, helpMs: 3 * 60000 };
+const awayGap = (s) => { const [lo, hi] = AWAY.everyMs; return Math.round(lo + rand(s) * (hi - lo)); };
 export function tickNetwork(s, now = Date.now()) {
   const first = s.serial;
   const net = (s.net ||= { wall: null, next: null });
@@ -109,6 +112,7 @@ export function tickNetwork(s, now = Date.now()) {
 
 // The time you were logged off, a minute at a time (up to a day).
 function away(s, from, to) {
+  if (s.net.open) { s.net.open = false; emit(s, 'firewall', 'Ports closed while you were away.'); } // Open ports is an online thing
   for (let t = Math.max(from, to - AWAY.maxMs) + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
     tickOutposts(s, t, AWAY.stepMs, !!s.degraded, true);
     const d = s.degraded;
@@ -118,6 +122,9 @@ function away(s, from, to) {
       s.degraded = null;
       emit(s, 'rebooted', 'Your server came back online while you were away.');
     }
+    // Swarms and hubs' old owners gather at a quarter pace while you're away (their schedules slip).
+    if (s.net.fleetAt != null && !s.fleet) s.net.fleetAt += AWAY.stepMs * (1 - AWAY.slow);
+    if (s.net.retakeAt != null && !s.retake) s.net.retakeAt += AWAY.stepMs * (1 - AWAY.slow);
     tickFleet(s, AWAY.stepMs, false, t);
     tickRetake(s, AWAY.stepMs, false, t);
     stepInvasion(s, AWAY.stepMs, t);
@@ -129,9 +136,17 @@ function stepInvasion(s, dt, at = null) {
   const net = s.net, inv = s.invasion;
   if (!inv) {
     if (!s.locations?.length) return;
+    if (at != null) {
+      // Away: the long passive clock, quiet while squelched.
+      if ((net.quietUntil || 0) > at) return;
+      if (net.awayNext == null) net.awayNext = awayGap(s);
+      net.awayNext -= dt;
+      if (net.awayNext <= 0) { net.awayNext = awayGap(s); depart(s); }
+      return;
+    }
     if (net.next == null) net.next = I().firstMs;
-    net.next -= at == null ? dt : dt * AWAY.pace;
-    if (net.next <= 0) depart(s);
+    net.next -= net.open ? dt / I().open.pace : dt; // Open ports: they come 2.5× as often
+    if (net.next <= 0) { const inv = depart(s); if (inv && net.open) inv.open = true; }
     return;
   }
   if (inv.state === 'travel') {
@@ -162,7 +177,9 @@ function stepInvasion(s, dt, at = null) {
   if (n > 0) {
     inv.chipAcc -= n;
     const floor = active(s) && s.encounter.mode === 'home' ? 1 : 0; // never ends a home fight you're in
+    const was = s.server.integrity;
     s.server.integrity = Math.max(floor, s.server.integrity - n);
+    wear(s, was - s.server.integrity); // every 5% of Integrity lost breaks a firewall block
     if (s.server.integrity <= 0) {
       emit(s, 'crashed', `${inv.name} chipped your server to zero${at != null ? ' while you were away' : ''}. SERVER CRASHED.`, { invader: inv.id, mode: 'home' });
       if (at == null) return crashServer(s);
@@ -207,7 +224,6 @@ function arrive(s) {
   if (hasConfig(s, 'beacon') && inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), 15, 'Beacon: ');
   const r = ratioOf(s, inv);
   const o = outcome(r);
-  fragment(s, o); // every threat it meets wears the firewall
   if (o === 'blocked') return stopped(s, inv, false);
   inv.state = o;
   if (o === 'siege') emit(s, 'wall-siege', `Invasion at your wall: ${inv.name}, contested. −${pct(chipRate(r))} Integrity a minute.`, { invader: inv.id });
@@ -217,11 +233,11 @@ function arrive(s) {
 // The wall stopped it: outright on arrival, or worn down by a siege.
 function stopped(s, inv, ground) {
   const quiet = hasConfig(s, 'stateful'); // Stateful: dropped at the wall, nothing left behind
-  if (!quiet) s.salvage.push({ name: `${inv.name} fragment`, virus: inv.name, seed: inv.seed });
+  if (!quiet) for (let i = 0; i < (inv.open ? 2 : 1); i++) s.salvage.push({ name: `${inv.name} fragment`, virus: inv.name, seed: inv.seed });
   if (hasConfig(s, 'reflective')) { const k = codeOf(inv.family); if (k) gainCode(s, { [k]: 2 * codeDrop(inv.level) }, 'Reflective: '); }
   if (hasConfig(s, 'inspection')) { if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), 20, 'Deep Inspection: '); else addLead(s, inv.family, 15, 'Deep Inspection: '); }
   endInvasion(s, `${ground ? `Your wall wore ${inv.name} down to nothing` : `Your wall stopped ${inv.name} (level ${inv.level}) from ${inv.fromName}`}${quiet ? '.' : ': +1 salvage.'}`, { blocked: true });
-  gainXp(s, xpFor(s, inv.level, I().blockedXp), `${inv.name} stopped at the wall`);
+  gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`);
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
 }
 
@@ -238,8 +254,19 @@ export function squelchInvasion(s) {
   const inv = depart(s);
   if (!inv) return warn(s, 'Nothing answered.');
   inv.baited = true;
-  emit(s, 'invader', `Squelch: ${inv.name} (lv ${inv.level}) is pulled to your wall now. Quiet after it.`, { invader: inv.id });
+  s.net.quietUntil = (hooks.now?.() ?? Date.now()) + I().safeMs; // nothing more while you're away, for a night
+  emit(s, 'invader', `Squelch: ${inv.name} (lv ${inv.level}) is pulled to your wall now. Quiet for ${I().safeMs / 3600000} hours while you're away.`, { invader: inv.id });
   arrive(s);
+}
+
+// Open ports: online only, invasions come 2.5× as often and each is worth +50%. Closes when you log off.
+export function portsCommand(s, text) {
+  const on = text === 'open ports';
+  if (on && !(s.locations || []).some((l) => !l.rogue && isLive(s, l))) return warn(s, 'Nothing attached: invasions come from servers on your network.');
+  if (!!s.net?.open === on) return warn(s, on ? 'Your ports are already open.' : 'Your ports are closed.');
+  (s.net ||= {}).open = on;
+  if (on && s.net.next > 0) s.net.next = Math.round(s.net.next * I().open.pace);
+  emit(s, 'firewall', on ? 'Ports open: invasions come 2.5× as often, each worth +50%. They close when you log off.' : 'Ports closed.');
 }
 
 // ---------- jacking in ----------

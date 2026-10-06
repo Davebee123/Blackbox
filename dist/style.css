@@ -2520,3 +2520,4 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mem-join i.take { border-color: var(--amber); background: rgba(241, 185, 47, 0.35); animation: memtake 1.1s ease-in-out infinite; }
 @keyframes memtake { 50% { background: transparent; } }
 @media (prefers-reduced-motion: reduce) { .mem-join i.take { animation: none; background: transparent; border-style: dashed; } }
+.fw-up.on { border-color: var(--hot); color: var(--hot); box-shadow: 0 0 8px rgba(255, 91, 61, 0.3); }
