@@ -2318,3 +2318,5 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .arch-card { position: relative; display: grid; }
 .arch-card .arch { height: 100%; padding-right: 64px; }
 .arch-use { position: absolute; top: 10px; right: 10px; }
+/* A hub's Compile list: each payload's costs on one line. */
+.pay-compile .needs { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
