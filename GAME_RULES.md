@@ -70,7 +70,7 @@ Every location uses one of five layouts, rotating so consecutive locations play 
 
 ### Rogue servers
 
-About 1 in 6 servers you trace is **rogue** (never your first two, and never more than five tame ones in a row). A rogue server is a farm: 4–8 folders with one virus each, at the server's level and grade (strains from layer 2), each coming back 3–5 minutes after you kill it. No vault, no password, nothing to take over or harvest, no log sweep, and it never sends invasions. It shows on the map as a hexagon. **Reconnect wait:** once you leave a wild server (SPRAWL-00 or a rogue one), by jacking out or being thrown out, it won't take you back for a minute (`CONFIG.relockMs`; its card counts down). That stops the jack out, top up, go straight back loop. Kinds:
+About 1 in 6 servers you trace is **rogue** (never your first two, and never more than five tame ones in a row). A rogue server is a farm: 4–8 folders with one virus each, at the server's level and grade (strains from layer 2), each coming back 3–5 minutes after you kill it. No vault, no password, nothing to take over or harvest, no log sweep, and it never sends invasions. It shows on the map as a hexagon. **Reconnect wait:** once you leave any server that isn't an outpost (SPRAWL-00, a rogue server, any server you've found or taken over), by jacking out or being thrown out, it won't take you back for a minute (`CONFIG.relockMs`; its Connect button counts down). An outpost (a server running a harvester) takes you straight back. That stops the jack out, top up, go straight back loop. Kinds:
 
 | Kind | Rule |
 |---|---|

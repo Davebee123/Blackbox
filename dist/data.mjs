@@ -114,7 +114,7 @@ export const CONFIG = {
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
   zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 3 },
-  relockMs: 60000, // a wild server (SPRAWL-00, rogue servers) won't take you back for a minute after you leave: no jack out, top up, return
+  relockMs: 60000, // any server but an outpost won't take you back for a minute after you leave: no jack out, top up, return
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
   degradedMs: 10 * 60000,

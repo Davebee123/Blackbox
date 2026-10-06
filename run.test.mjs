@@ -702,3 +702,18 @@ test('a relay’s pinged neighbours get route files and count kills of their fam
   huntKill(s, n.family);
   assert.equal(n.lead, was + 12);
 });
+
+test('every server but an outpost makes you wait a minute before reconnecting', async () => {
+  const { CONFIG } = await import('./dist/data.mjs');
+  const s = located();
+  const loc = s.locations[0];
+  connect(s, loc.id); play(s, 'jack out');
+  assert.match(play(s, 'connect ' + loc.id).at(-1).message, /Reconnect in \d+s/);
+  assert.equal(s.run, null);
+  loc.lockUntil = 0;
+  loc.outpost = { h: { kind: 'siphon' } }; // an outpost: no wait
+  connect(s, loc.id); play(s, 'jack out');
+  connect(s, loc.id);
+  assert.ok(s.run, 'an outpost takes you straight back');
+  assert.ok(CONFIG.relockMs >= 60000);
+});

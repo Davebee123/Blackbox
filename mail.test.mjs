@@ -114,6 +114,7 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   command(s, `relay ${home.id}`);
   assert.ok(flagged(s, n), 'the relay flags the signal');
   // hunt it: the relay's route file, then kills of its family
+  home.lockUntil = 0; // skip the reconnect wait (rogue.mjs relocks)
   play(s, 'connect ' + home.id);
   const route = home.extraFiles.find((f) => f.kind === 'route');
   play(s, 'pull ' + route.name);

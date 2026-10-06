@@ -998,7 +998,7 @@ export function disconnect(s, reason) {
   const lost = run.pack.length;
   s.signal = Math.max(0, run.integrity);
   s.run = null;
-  if (loc && (loc.zone || loc.rogue)) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // see rogue.mjs relockLeft
+  if (loc && !loc.outpost?.h) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // any server but an outpost: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }

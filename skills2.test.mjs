@@ -246,6 +246,7 @@ test('Infiltrator Ghost: slip past one guard a run, no fight, no reward; it is b
   play(s, 'cd ..'); play(s, 'cd relay');
   assert.equal(s.encounter, null, 'it stays slipped for the run');
   play(s, 'jack out');
+  loc.lockUntil = 0; // skip the reconnect wait
   connect(s, loc.id);
   play(s, 'cd relay');
   assert.equal(s.encounter?.phase, 'alert', 'back on guard next run');
