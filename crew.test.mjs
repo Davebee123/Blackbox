@@ -135,3 +135,20 @@ test('a party splits kill XP, with 10% more per extra player; elites don\'t grow
   assert.ok(Math.abs(trio - Math.round((solo * 1.2) / 3)) <= 1, `${trio} vs ${solo}`);
   assert.equal(CREW.elitePer, 0);
 });
+
+test('a crewmate keeps its own level: switching your class does not move it', async () => {
+  const { matesOf } = await import('./dist/crew.mjs');
+  const { hackerLevel } = await import('./dist/combat.mjs');
+  const s = fresh();
+  s.hackers = { breaker: { level: 12, xp: 0 }, bastion: { level: 3, xp: 0 } };
+  command(s, 'archetype breaker');
+  play(s, 'crew sim bastion');
+  assert.equal(hackerLevel(matesOf(s)[0]), 12);
+  command(s, 'archetype bastion');
+  assert.equal(hackerLevel(s), 3);
+  assert.equal(hackerLevel(matesOf(s)[0]), 12, 'still 12');
+  s.crewSim[0].level = undefined; // a crew from an older save
+  assert.equal(hackerLevel(matesOf(s)[0]), 3, 'frozen at the level it has when first seen');
+  command(s, 'archetype breaker');
+  assert.equal(hackerLevel(matesOf(s)[0]), 3);
+});

@@ -722,7 +722,7 @@ export function crewWander(s) {
 hooks.crewGuests = (s, room) => {
   const loc = currentLocation(s);
   if (!loc || !isGround(s, loc) || !simOn(s)) return [];
-  return at(s, loc.id, room).map((x) => ({ cls: x.cls, name: x.handle }));
+  return at(s, loc.id, room).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
 };
 
 // The rogue server: attack the virus in this folder.

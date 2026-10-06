@@ -328,7 +328,7 @@ At every Effects level, your own hits give the screen a small, quick shake (bigg
 
 Online co-op comes later (a hosted server with logins). To try how it plays first, `crew sim bastion infiltrator` (up to three classes; `crew sim` alone takes the three you aren't) adds bot crewmates to your run fights (SPRAWL-00, rogue servers, guards). `crew` lists them, `crew off` sends them home. Home intrusions stay solo.
 
-- Each crewmate is a player of its own: its class at your level, a Tuned protocol in every slot, its own Signal (full again at each fight), played by the same planner the balance scripts use.
+- Each crewmate is a player of its own: its class at its own level (a friend or consortium member at theirs; a `crew sim` bot at yours when it joined), which never moves when you switch class, a Tuned protocol in every slot, its own Signal (full again at each fight), played by the same planner the balance scripts use.
 - Each cycle everyone acts (you, then the crew), then the virus. Statuses are shared: anyone's hits benefit from Exposed, Tagged, Throttled and Hooked.
 - A damage attack lands on everyone in the fight, each taking it in full, as if they fought it alone (its chip on the timeline says → all). Encryption, blinds and fragments stay on you.
 - **Threat:** a Bastion's Firewall, in a crew, also draws fire for 2 cycles: every damage attack goes at that Bastion alone (one hit, at its solo size), and nobody else is hit. The chip says → nyx (or → you), the Bastion's row says *drawing fire*. Solo, Firewall is just its shield.
