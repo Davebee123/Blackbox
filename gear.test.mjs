@@ -558,7 +558,7 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   assert.deepEqual(s.services, { raid: 1, uplink: 1 });
   assert.equal(s.server.max - Math.round(100 * power(serverLevel(s))), 5, 'RAID v1');
   assert.equal(gearStat(s, 'signal'), 10);
-  assert.equal(gearStat(s, 'trace'), 10);
+  assert.equal(gearStat(s, 'lead'), 5, 'Route Logger v1');
   assert.equal(loaded(s)[0].rarity, 'stock');
   const t = fresh();
   assert.equal(daemonSlots(t), CONFIG.daemonSlots);
@@ -659,4 +659,14 @@ test('buyout: finish an install now for credits, 3x its cost at the start and le
   assert.equal(outpostBuyout(loc, 0).what, 'lockdown');
   assert.equal(outpostBuyout({ outpost: { readyAt: 1000 } }, 0).what, 'reset');
   assert.equal(outpostBuyout({ outpost: {} }, 0), null);
+});
+
+test('Uplink trace is gone: old saves swap Traceroute for Keepalive and the Tracer daemon for Stall', () => {
+  const old = fresh();
+  old.loadout.equipped = { infiltrator: ['inject', 'tag', 'traceroute'] };
+  old.daemonsOwned = { tracer: 2 }; old.daemons = ['tracer'];
+  const s = restore(JSON.parse(JSON.stringify(old)));
+  assert.deepEqual(s.loadout.equipped.infiltrator, ['inject', 'tag', 'keepalive']);
+  assert.deepEqual(s.daemonsOwned, { stall: 2 });
+  assert.deepEqual(s.daemons, ['stall']);
 });

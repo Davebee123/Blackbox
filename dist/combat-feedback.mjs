@@ -6,7 +6,6 @@ export function abilityReadiness(s,id,targetId){
  const cycles=Math.max(0,(e.readyAt[id]||0)-e.cycle);
  if(cycles){const seconds=Math.max(0,(cycles*CONFIG.cycleMs-e.elapsedMs)/1000);return {ready:false,cycles,label:`${seconds.toFixed(1)}s · ${cycles} ${cycles===1?'cycle':'cycles'}`,reason:`${ability.name} recharges in cycle ${e.readyAt[id]}.${e.paused?' Combat is paused.':''}`};}
  if(id==='scan'&&e.virus.revealed>=e.virus.facts.length)return {ready:false,cycles:0,label:'Known',reason:'All available discoveries are recorded in INTEL.'};
- if(id==='trace'&&e.trace>=100)return {ready:false,cycles:0,label:'Complete',reason:'Origin Trace is already 100%.'};
  if(id==='lock files'&&s.server.files!=='accessible')return {ready:false,cycles:0,label:'Protected',reason:'Files are already locked or awaiting recovery.'};
  const target=part(s,targetId)||e.fragments.find(f=>f.id===targetId);
  if(id==='overload'&&targetId==='all')return {ready:true,cycles:0,label:'Ready',reason:'15 broad damage per subsystem; finishing hits burn loot.'};
@@ -20,7 +19,7 @@ export function describeIntent(s,intent){
  const a=ABILITIES[intent.ability],target=part(s,intent.target)||s.encounter.fragments.find(f=>f.id===intent.target);
  if(intent.target==='all')return '15 damage to every subsystem. Finishing hits burn loot.';
  if(a?.damage&&target){const raw=Math.floor(a.damage*(s.build.modifiers.damage||1)*(target.exposedUntil>=s.encounter.cycle?CONFIG.exposedMultiplier:1)*protection(s,target));return `Up to ${raw} damage to ${target.name}${target.shield?' before its '+target.shield+' shield':''}. Precision finishing hits secure loot.`;}
- return ({exploit:`Expose ${target?.name}: +50% damage for the next two turns.`,interrupt:'Restart this subsystem’s cast; other attacks keep running.','lock files':'Protect Files; recovery will be required afterward.',trace:'Gain 25 Trace toward an origin lead.',scan:'Reveal one unknown fact about this virus.'})[intent.ability]||'One ability resolves at the next cycle boundary.';
+ return ({exploit:`Expose ${target?.name}: +50% damage for the next two turns.`,interrupt:'Restart this subsystem’s cast; other attacks keep running.','lock files':'Protect Files; recovery will be required afterward.',scan:'Reveal one unknown fact about this virus.'})[intent.ability]||'One ability resolves at the next cycle boundary.';
 }
 export function castState(s){
  if(!active(s))return null;
@@ -39,6 +38,6 @@ export function castPresentation(action,live,paused,flash,now){
   intensity:live&&!interrupted?Math.max(0,Math.min(1,live.progress)):0};
 }
 export function resolutionSummary(events){
- const important=events.filter(e=>['damage','destroyed','cancelled','hostile','blocked','trace','scan','status','mutation','files','repair','victory','crashed','corruption','wait'].includes(e.type));
+ const important=events.filter(e=>['damage','destroyed','cancelled','hostile','blocked','scan','status','mutation','files','repair','victory','crashed','corruption','wait'].includes(e.type));
  return important.map(e=>e.type==='corruption'?`Server −${e.amount} Integrity.`:e.message).join(' ');
 }

@@ -604,7 +604,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   const virus = createVirus(key, seed, over);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
-  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, trace: 0, pendingTrace: 0, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
+  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
     ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.`
     : mode === 'run'
@@ -1006,7 +1006,7 @@ function newMetrics(s) {
     actions: Object.fromEntries(Object.keys(ABILITIES).map((k) => [k, 0])),
     auto: 0, holds: 0, invalid: 0, breakOrder: [], interrupts: 0, attacksLanded: 0,
     attackDamage: 0, encrypted: 0, loot: [], misses: 0, evaded: 0,
-    cycles: 0, result: null, endIntegrity: null, trace: 0, lead: null,
+    cycles: 0, result: null, endIntegrity: null, lead: null,
   };
 }
 
@@ -1025,8 +1025,6 @@ function engage(s) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with an armor chit.`); }
     if (x.fx.do === 'force-crit') e.forceCrit = true;
   }
-  // Trace gear: home and rogue-server fights start partly traced.
-  if ((e.mode === 'home' || e.zone) && gearStat(s, 'trace', 'server')) e.trace = Math.min(100, gearStat(s, 'trace', 'server'));
   // Server gear: a Shield stat starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = gearStat(s, 'shield', 'server');
   // Stealth: each part's first attack may come a cycle later.
@@ -1073,10 +1071,10 @@ export function finish(s, result) {
   e.paused = false;
   const d = defender(s);
   let lead = 0;
-  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = CONFIG.leadBase + Math.floor(e.trace * CONFIG.leadTraceShare);
+  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = CONFIG.leadBase + Math.round(gearStat(s, 'lead', 'server'));
 
   if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
-  Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, trace: e.trace, lead, result });
+  Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
   // The rogue server: a kill pays like a home kill, straight away (nothing to lose in a pack),
@@ -1093,7 +1091,7 @@ export function finish(s, result) {
     if (result === 'victory') {
       emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: true, bounty: named });
-      huntKill(s, e.virus.family, e.trace);
+      huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
       const ctx = { kind: wild ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || 1, family: e.virus.family, strain: e.virus.strain, rolls: e.virus.elite ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
@@ -1101,7 +1099,7 @@ export function finish(s, result) {
       if (item) addItem(s, item);
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
       if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
-      if (lead) addLead(s, e.virus.family, lead, e.trace ? `Uplink ${e.trace}%. ` : '');
+      if (lead) addLead(s, e.virus.family, lead);
       if (wild) rogueKill(s, wild, e.room, now, () => { const more = rollDrop(s, { ...ctx, strain: null }, e.virus.level); if (more) addItem(s, more, 'The Pit gives up more: '); });
       hooks.runWon?.(s);
     } else {
@@ -1149,7 +1147,7 @@ export function finish(s, result) {
   const hid = inv?.hidden ? hiddenNode(s, inv.hidden) : null; // an invader from a server you haven't found
   if (result === 'victory') {
     contractKill(s, { family: e.virus.family, zone: false });
-    if (!hid) huntKill(s, e.virus.family, e.trace);
+    if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
     if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports'); }
@@ -1169,8 +1167,8 @@ export function finish(s, result) {
     crashServer(s);
   }
   // Beating an invader from an unknown server traces most of the way back to it.
-  if (lead && hid) hiddenLead(s, hid, HIDDEN.winLead + Math.floor(e.trace * CONFIG.leadTraceShare), e.trace ? `Uplink ${e.trace}%. ` : '');
-  else if (lead) addLead(s, e.virus.family, lead, e.trace ? `Uplink ${e.trace}%. ` : '');
+  if (lead && hid) hiddenLead(s, hid, HIDDEN.winLead + (lead - CONFIG.leadBase));
+  else if (lead) addLead(s, e.virus.family, lead);
 }
 
 // ---------- crashes and invasions (engine side; the network lives in invasion.mjs) ----------
@@ -1286,13 +1284,11 @@ export function validate(s, intent) {
   if (intent.ability === 'crack' && !part(s, intent.target).armor) return `${part(s, intent.target).name} has no armor to crack.`;
   if (['suspend', 'quarantine', 'throttle', 'jam'].includes(intent.ability) && !part(s, intent.target).attack) return `${part(s, intent.target).name} has no attack.`;
   if (a.recall && !helpersOn(s, part(s, intent.target)).length) return `You have no helper on ${part(s, intent.target).name}.`;
-  if (['detonate', 'propagate'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).length) return `No burns on ${part(s, intent.target).name}.`;
+  if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).length) return `No burns on ${part(s, intent.target).name}.`;
   if (['reroute', 'cron-storm'].includes(intent.ability) && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'kill-switch' && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'patch' && defender(s).integrity >= defender(s).max) return 'Already at full health.';
   if (intent.ability === 'failover' && defender(s).integrity >= defender(s).max) return 'Failover needs missing health.';
-  if (intent.ability === 'traceroute' && e.mode === 'run' && !e.zone) return 'Nothing to backtrace out here.';
-  if (intent.ability === 'traceroute' && e.trace >= 100) return 'Trace is complete. Finish the fight to keep it.';
   return null;
 }
 
@@ -1836,19 +1832,19 @@ function useAbility(s, intent, auto = false) {
       if (t) hit(s, t, Math.round(h.damage * h.left * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true });
     }
   }
-  if (id === 'traceroute') addTrace(s, e.surprise ? CONFIG.surprise.trace : a.trace, 'Traceroute');
+  if (id === 'keepalive') stretchBurns(s, target, e.surprise ? CONFIG.surprise.keepalive : a.cycles, 'Keepalive');
 }
 const STATUS_WORD = { exposed: 'Exposed (+25% crit chance)', tagged: 'Tagged (burns +50%, timer visible)', hooked: 'Hooked (+6 per hit)', throttled: 'Throttled (attacks deal half)', quarantined: 'Quarantined (+25% damage)' };
 
-// Uplink trace (Traceroute, Sync, a Tracer daemon), at home and on the rogue server.
-const tracing = (s) => { const e = s.encounter; return !!e && (e.mode === 'home' || e.zone) && e.trace < 100; };
 // Your class's edge (EDGE in data.mjs), from its level.
 export const edge = (s, cls) => CONFIG.edges !== false && classOf(s) === cls && hackerLevel(s) >= unlockLevel(cls, 'edge'); // CONFIG.edges: tests of other numbers turn them off
-function addTrace(s, amount, label) {
-  const e = s.encounter;
-  if (!tracing(s)) return;
-  e.trace = Math.min(100, e.trace + amount);
-  emit(s, 'trace', `${label}: Uplink trace ${e.trace}%.`, { amount });
+// Keepalive and the Infiltrator's Sync: every burn on a part runs longer.
+function stretchBurns(s, t, cycles, label) {
+  const burns = alive(t) ? burnsOn(s, t) : [];
+  if (!burns.length) return false;
+  for (const b of burns) b.left += cycles;
+  emit(s, 'status', `${label}: ${burns.length} burn${burns.length === 1 ? '' : 's'} on ${t.name} +${cycles} cycle${cycles === 1 ? '' : 's'}.`, { target: t.id });
+  return true;
 }
 
 function heal(s, amount, label) {
@@ -2130,7 +2126,6 @@ export function resolveCycle(s) {
   const first = s.serial;
   const e = s.encounter;
   if (e.steps) return []; // a stepped cycle is still playing out (stepCycle)
-  e.pendingTrace = 0;
 
   // 1. The players act first, so breaking a part on its last cycle stops its attack.
   const turns = virusIntegrity(s).current > 0 ? hooks.crewTurns?.(s) || 0 : 0;
@@ -2254,19 +2249,9 @@ function strike(s, p) {
   if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
   return false;
 }
-// The end of a cycle once the attacks are in: trace, patches, cooldown effects, the turn over.
+// The end of a cycle once the attacks are in: patches, cooldown effects, the turn over.
 function cycleClose(s, landed) {
   const e = s.encounter;
-  // 3. A daemon's trace only lands on a quiet cycle.
-  if (e.pendingTrace) {
-    if (landed) emit(s, 'trace-lost', 'Trace disrupted: an attack landed this cycle.');
-    else {
-      e.trace = Math.min(100, e.trace + e.pendingTrace);
-      emit(s, 'trace', `Uplink trace ${e.trace}%.`);
-    }
-    e.pendingTrace = 0;
-  }
-
   // 4. The virus patches itself: a part left without armor too long gets one chit back.
   for (const p of livingParts(s)) {
     if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt) {
@@ -2355,13 +2340,13 @@ function syncBonus(s, intent) {
     emit(s, 'armor', `Sync: ${t.name} armor chit cracked${t.armor ? ` (${t.armor} left)` : '. Its armor is broken'}.`, { target: t.id, left: t.armor });
     what = 'a chit cracks';
   } else if (cls === 'bastion') { e.shield = (e.shield || 0) + b.amount; what = `+${b.amount} shield (${e.shield})`; }
-  else if (cls === 'infiltrator') { if (tracing(s)) { addTrace(s, b.amount, 'Sync'); what = `+${b.amount}% trace`; } }
+  else if (cls === 'infiltrator') { if (stretchBurns(s, t, b.amount, 'Sync')) what = 'burns last longer'; }
   else if (cls === 'operator' && e.helpers.length) {
     for (const h of [...e.helpers]) { const ht = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (ht) hit(s, ht, h.damage, { by: 'Helper', dot: true }); if (virusIntegrity(s).current === 0) break; }
     what = 'helpers strike again';
   }
-  const surprise = e.surprise && ['inject', 'tag', 'traceroute'].includes(intent?.ability);
-  emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${surprise ? `, ${{ inject: 'an extra Inject stack', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, traceroute: `+${CONFIG.surprise.trace}% trace` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise });
+  const surprise = e.surprise && ['inject', 'tag', 'keepalive'].includes(intent?.ability);
+  emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${surprise ? `, ${{ inject: 'an extra Inject stack', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, keepalive: `burns +${CONFIG.surprise.keepalive} cycles` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise });
 }
 
 // ---------- daemons ----------
@@ -2383,7 +2368,7 @@ function runDaemons(s) {
     let acted = true;
     if (id === 'sweeper') { const t = soonestAttacker(s); if (t) { say(`hits ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name }); } else acted = false; }
     else if (id === 'fuzzer') { const t = livingParts(s).filter((p) => p.armor > 0).sort((x, y) => y.armor - x.armor)[0]; if (t) { say(`fuzzes ${t.name}`); hit(s, t, 1, { by: d.name }); } else acted = false; }
-    else if (id === 'tracer') { if (e.mode === 'home' && e.trace < 100) { say('backtraces'); e.pendingTrace = (e.pendingTrace || 0) + Math.round((d.amount * DAEMON_VERSIONS[daemonVersion(s, id) - 1])); } else acted = false; }
+    else if (id === 'stall') { const t = soonestAttacker(s); if (t?.attack) { say(`stalls ${t.name}`); t.attack.due++; } else acted = false; }
     else if (id === 'mender') { const dd = defender(s); if (dd.integrity < dd.max) { say('patches you'); heal(s, daemonAmount(s, id), d.name); } else acted = false; }
     else if (id === 'spider') { const t = lastTarget(s) || soonestAttacker(s); if (t) { say(`bites ${t.name}`); e.burns.push({ id: 'spider', target: t.id, damage: daemonAmount(s, id), grow: 0, left: 3, name: d.name, drain: 0 }); } else acted = false; }
     else if (id === 'mirror') { const t = lastTarget(s); if (t) { say(`echoes you on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name }); } else acted = false; }
@@ -2559,7 +2544,7 @@ function migrateCategories(s) {
 // v15: gear splits into protocols (you) and services (the server). Server gear that was
 // installed becomes v1 of the matching service, free; the rest turns into code. Your rig's
 // items become protocols in generic slots.
-const OLD_SERVER_STAT = { integrity: 'raid', reduction: 'kernel', shield: 'scrubber', regen: 'hotpatch', repair: 'hotpatch', countermeasures: 'counter', evasion: 'honeypot', sanitize: 'sandbox', trace: 'uplink' };
+const OLD_SERVER_STAT = { integrity: 'raid', reduction: 'kernel', shield: 'scrubber', regen: 'hotpatch', repair: 'hotpatch', countermeasures: 'counter', evasion: 'honeypot', sanitize: 'sandbox', trace: 'uplink', lead: 'uplink' };
 function migrateToProtocols(s) {
   s.services ||= {};
   s.install = null;
@@ -2708,6 +2693,11 @@ export function restore(raw) {
       }
     }
     s.pace ||= { kills: 0, ms: 0 };
+    // Uplink trace is gone: Traceroute became Keepalive, the Tracer daemon became Stall.
+    for (const eq of Object.values(s.loadout.equipped || {})) for (let i = 0; i < eq.length; i++) if (eq[i] === 'traceroute') eq[i] = 'keepalive';
+    if (s.daemonsOwned?.tracer) { s.daemonsOwned.stall = Math.max(s.daemonsOwned.stall || 0, s.daemonsOwned.tracer); delete s.daemonsOwned.tracer; }
+    if (s.daemons) s.daemons = s.daemons.map((d) => (d === 'tracer' ? 'stall' : d));
+    if (s.encounter) { delete s.encounter.trace; delete s.encounter.pendingTrace; }
     initMail(s);
     s.version = SAVE_VERSION;
     materialsOf(s);

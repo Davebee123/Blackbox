@@ -63,8 +63,8 @@ export function hiddenLead(s, n, amount, why = '') {
 }
 
 // A kill of a family: flagged nodes of that family get closer (you're reading their traffic).
-export function huntKill(s, family, trace = 0) {
-  for (const n of hiddenNodes(s).filter((x) => x.family === family && flagged(s, x))) hiddenLead(s, n, HIDDEN.killLead + Math.floor(trace / 4), 'Signal: ');
+export function huntKill(s, family) {
+  for (const n of hiddenNodes(s).filter((x) => x.family === family && flagged(s, x))) hiddenLead(s, n, HIDDEN.killLead, 'Signal: ');
 }
 
 // Relays -------------------------------------------------------------------------------------

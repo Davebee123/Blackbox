@@ -36,33 +36,19 @@ const winFight = (s) => {
   finishOff(s, s.encounter.virus.parts[0].id);
 };
 
-test('every home victory gives a lead; seven plain kills of one family locate it', () => {
+test('every home victory gives a lead; four plain kills of one family locate it', () => {
   const s = fresh();
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     command(s, 'encounter cryptjack');
     command(s, 'engage');
     finishOff(s, 'pulse');
   }
-  assert.equal(s.locations.length, 0, 'not after six');
-  for (let i = 0; i < 1; i++) {
-    command(s, 'encounter cryptjack');
-    command(s, 'engage');
-    finishOff(s, 'pulse');
-  }
+  assert.equal(s.locations.length, 0, 'not after three');
+  command(s, 'encounter cryptjack');
+  command(s, 'engage');
+  finishOff(s, 'pulse');
   assert.equal(s.locations.length, 1);
   assert.equal(s.locations[0].family, 'ransomware');
-});
-
-test('two full backtraces locate the origin', () => {
-  const s = fresh();
-  for (let i = 0; i < 2; i++) {
-    assert.equal(s.locations.length, 0);
-    command(s, 'encounter ghostroot');
-    command(s, 'engage');
-    s.encounter.trace = 100;
-    finishOff(s, 'pulse');
-  }
-  assert.equal(s.locations.length, 1);
 });
 
 test('connect starts a run with full Signal and parks the home intrusion', () => {

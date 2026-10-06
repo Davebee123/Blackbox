@@ -34,7 +34,6 @@ export function recentCards(logs){
   if(e.type==='scan'){title='Scan complete';detail='Discovery saved in INTEL';}
   if(e.type==='cancelled'){title=e.message.split('.')[0];detail='Enemy action stopped';}
   if(e.type==='destroyed'){title=(e.target||'Subsystem')+' destroyed';detail='Component disabled';}
-  if(e.type==='trace'){title=e.message.split('.')[0].replace('ORIGIN TRACE / ','Trace ');detail='Origin signal updated';}
   if(e.type==='victory'){title='Hostile neutralized';detail='Connection secured';}
   if(e.type==='crashed'){title='Server crashed';detail='Combat stopped';}
   return {...e,title,detail};

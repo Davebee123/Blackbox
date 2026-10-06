@@ -51,7 +51,7 @@ export const STATS = {
   stealth: { side: 'hacker', group: 'utility', name: 'Stealth', unit: '%', base: 8, cap: 60, about: 'Chance each enemy part\'s first attack comes a cycle later.' },
   sync: { side: 'hacker', group: 'utility', name: 'Sync', unit: '%', base: 4, cap: 50, about: 'Added to the 25% chance that a cycle opens a Sync Window.' },
   scavenge: { side: 'hacker', group: 'utility', name: 'Scavenge', unit: '%', base: 8, about: 'Better drops (more often, better rarity) and more credits from caches you bank.' },
-  trace: { side: 'server', group: 'utility', name: 'Trace', unit: '%', base: 6, about: 'Home and rogue-server fights start with this much Uplink trace, so leads fill faster.' },
+  lead: { side: 'server', group: 'utility', name: 'Lead', unit: '', base: 5, flat: true, about: 'Every home or rogue-server kill fills its lead this much more.' },
 };
 export const GROUPS = { offense: 'Offense', survival: 'Defense', utility: 'Utility' };
 // The stats a side can have: 'hacker' = what protocols roll (rig stats + the shared survival
@@ -322,7 +322,7 @@ export const SERVICES = {
   counter: { name: 'Counter-intrusion', code: 'worm', stat: 'countermeasures', values: [2, 4, 6], unit: ' back per hit', flat: true, about: 'Whatever hits your server takes a hit back (on armor, it breaks a chit).' },
   honeypot: { name: 'Honeypot', code: 'kernel', stat: 'evasion', values: [3, 5, 8], unit: '% Evasion', about: 'Some attacks on your server hit a decoy and miss.' },
   sandbox: { name: 'Sandbox', code: 'cipher', stat: 'sanitize', values: [15, 30, 45], unit: '% Sanitize', about: 'Encrypts, Blinds and spawns may fail on your server.' },
-  uplink: { name: 'Uplink Array', code: 'cipher', stat: 'trace', values: [10, 20, 30], unit: '% Trace', about: 'Backtraces land harder, so leads fill faster.' },
+  uplink: { name: 'Route Logger', code: 'cipher', stat: 'lead', values: [5, 10, 15], unit: ' lead per kill', flat: true, about: 'Every kill fills its lead faster, so origins turn up sooner.' },
   buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
   tarpit: { name: 'Tarpit', code: 'worm', stat: 'tarpit', values: [50, 100, 150], unit: '% slower invasions', about: 'Invasions crawl toward you: fewer of them, and more warning.' },
   router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' outpost slots', about: 'Run more outposts at once.' },

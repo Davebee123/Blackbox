@@ -269,7 +269,7 @@ test('Spoof slips past one guard for one file; Light footprint makes return trip
   assert.equal(s.encounter.virus.name, 'WATCHDOG', 'the spoof is spent; the guard is still there');
 });
 
-test('the level-5 kit skills: Flood, Suspend, Traceroute, Spawn', () => {
+test('the level-5 kit skills: Flood, Suspend, Keepalive, Spawn', () => {
   const b = noArmor(quiet(start('breaker')));
   big(b, 'pulse');
   act(b, 'flood pulse');
@@ -280,8 +280,11 @@ test('the level-5 kit skills: Flood, Suspend, Traceroute, Spawn', () => {
   assert.equal(part(a, 'pulse').attack.due, due + 2);
   assert.match(command(a, 'suspend').at(-1).message, /ready in/);
   const i = start('infiltrator');
-  act(i, 'traceroute');
-  assert.equal(i.encounter.trace, 25, 'Traceroute: +25% at once, quiet or not');
+  const ip = i.encounter.virus.parts.find((p) => p.integrity > 0);
+  act(i, 'inject ' + ip.id);
+  const left = i.encounter.burns.find((b) => b.target === ip.id).left;
+  act(i, 'keepalive ' + ip.id);
+  assert.equal(i.encounter.burns.find((b) => b.target === ip.id).left, left + 1, 'Keepalive: +2 cycles (one ticks off as the cycle passes)');
   const o = noArmor(quiet(start('operator')));
   big(o, 'pulse');
   act(o, 'spawn pulse');

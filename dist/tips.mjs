@@ -32,7 +32,7 @@ export const TIPS = [
   { id: 'net-sweep', page: 'net', at: '.sweep:not(.past):not(.solved)', text: 'Click a line to light up every line it shares a source with, and filter out the noise. A right answer pushes your lead toward the next server; a wrong one only shrinks the push.' },
   { id: 'net-hostile', page: 'net', at: '.term .tok.virus', text: 'A virus is running in this folder. Click it, or type attack, when you are ready. It comes back a while after you kill it.' },
   { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready; nothing happens until you do.' },
-  { id: 'map-lead', page: 'map', at: '.mnode.lead', text: 'This is a lead. Each kill of this family adds 25%, and Uplink trace in the fight adds more. At 100% you find where they came from.' },
+  { id: 'map-lead', page: 'map', at: '.mnode.lead', text: 'This is a lead. Each kill of this family adds 25%. At 100% you find where they came from.' },
   { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You traced a server. Select it and press Connect: first it shows the memory it takes to join your network, then you jack in. Its ring fills as you explore it.' },
   { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your free memory: how many more servers your network can hold. The blinking one is what this server takes. Detach a server you are done with to get one back.' },
   { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'An invasion is heading for your wall. How strong your Firewall is decides whether it is blocked, contested, or breaks through.' },

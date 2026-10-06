@@ -13,7 +13,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 ## The loop
 
 1. `connect sprawl`: **SPRAWL-00**, a rogue server, is where you go to fight from the start. A virus sits in each of its six folders at your level, but never above level 3: it's a starter area, and past that the fights worth having are on the servers you trace (`ls` shows it as `name.exe`); SPRAWL-00 only ever has the plain families, never strains or bigger grades; `attack` it when you're ready. A kill pays like a home kill, straight away (XP, code, a possible drop, a lead), and the folder fills again 90 seconds later.
-2. Every neutralized virus gives a lead toward its family's origin: +15% for the kill plus half the fight's Uplink trace (about seven plain kills; see Uplink). At 100% the origin is located. A full Uplink trace locates it in one fight; four plain kills of the same family also get there.
+2. Every neutralized virus gives a lead toward its family's origin: +25% a kill (four kills), plus the Route Logger service's bonus. At 100% the origin is located.
 3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter (a **+** chip sits beside it whenever it isn't full, and a first-time tip points at it), or type `top up`, to pay for the rest now (see The economy). The Integrity meter has the same **+** for `repair`. On a run, the store's **Signal patch** fills it. (Signal boosters are retired: they can't be crafted any more, and ones you still carry work with `boost`.)
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
 5. Some files lead deeper: a trace record puts 35% on the trace to a node one layer down.
@@ -27,7 +27,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 |---|---|
 | Signal | 50 at the start of each run. Moving (`cd`) costs 1. Guards hit it. A wrong password costs 3. |
 | Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. |
-| Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal, and Trace doesn't apply. |
+| Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal. |
 | Locked | A locked directory needs `unlock <dir> <password>`. The password is written in a file somewhere in the location. |
 | Leads | The **leads** button in a run's header opens a panel beside the terminal with every trace in progress: each family's lead and each unknown server you can see (where it hangs off, its layer), with its percent, and the contract marker on flagged ones. Click one to see it on the map; the button closes it. |
 | Contract marker | In a run's listing, a virus (or a folder whose guard or virus waits inside) that would count for one of your open contracts gets a small amber contract mark (a page with a check) next to its name; hover it for which contract(s). It goes once the count is met. |
@@ -195,7 +195,7 @@ The server has no items. It runs **services** in **service slots**, Master of Or
 | Counter-intrusion | Worm | whatever hits your server takes 2 / 4 / 6 (×power) back; on armor it breaks a chit |
 | Honeypot | Kernel | 3 / 5 / 8% Evasion at home |
 | Sandbox | Cipher | 15 / 30 / 45% Sanitize at home |
-| Uplink Array | Cipher | +10 / 20 / 30% Trace |
+| Route Logger | Cipher | +5 / 10 / 15 lead per kill |
 | Build Farm | Kernel | compiling costs 15 / 25 / 35% less |
 | **Cron Job** (special) | Worm + Kernel | every 3rd cycle of a home fight, hits the soonest attacker for 8 × power × 0.4 / 0.6 / 0.8 (shown on the *You* row) |
 | **Snapshot** (special) | Cipher + Kernel | once per home fight, when a hit drops you below half, restores 8 / 12 / 16% |
@@ -215,7 +215,7 @@ Services are built from **code**, one kind per virus family, plus rare **Exploit
 
 A kill drops 1 code at level 1 (+1 every 10 levels); a guard drops half again, into your pack. Every vault's `payload.bin` is a cache of 12 + half the location's level. Scavenge adds to all of it. Salvage stays generic: it's for compiling protocols.
 
-**Old saves.** Server gear that was installed comes back as v1 of the matching service, free (as service slots allow); the rest turns into code. Rig items become protocols, and Cron Job and Snapshot source becomes service source. The older Upgrades list came back the same way (Hardening as RAID Array, Amplifier as Uplink Array, the Signal booster as a loaded Stock Relay). Daemon slots come from server level (+1 at 10 and 20).
+**Old saves.** Server gear that was installed comes back as v1 of the matching service, free (as service slots allow); the rest turns into code. Rig items become protocols, and Cron Job and Snapshot source becomes service source. The older Upgrades list came back the same way (Hardening as RAID Array, Amplifier as Route Logger, the Signal booster as a loaded Stock Relay). Daemon slots come from server level (+1 at 10 and 20).
 
 ## Mail and contracts
 
@@ -253,9 +253,9 @@ A takeover or recovery contract points at a server you've found and haven't take
 
 Every server you find is wired to two you haven't found yet, one layer deeper. They aren't on the map until you hear of them; then they show as **?** beside the server they hang off.
 
-- **Invasions** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". Jack in and beat one: its server is 40% traced (plus three quarters of the fight's Uplink trace). If your wall stops one: +10%.
+- **Invasions** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". Jack in and beat one: its server is 40% traced (plus the Route Logger's bonus). If your wall stops one: +10%.
 - **Relays** (Halcyon sells them; the storyline gives you one) go on a server you've taken over (`relay <server>`, or its map card). A relay pings that server's unknown neighbours, and flags the one carrying the signal of a contract you've taken.
-- **Hunting a flagged server:** every kill of its family traces it 12% more (plus a quarter of the fight's Uplink trace); the relay leaves a route file on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store) adds 30%.
+- **Hunting a flagged server:** every kill of its family traces it 12% more; the relay leaves a route file on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store) adds 30%.
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
 - A vault's trace record (`signal.trc`) adds 35% to the trace on one of its server's unknown neighbours (a flagged one first). It never locates one outright.
 
@@ -598,7 +598,6 @@ A virus is its parts: a basic attacker and a signature part. Each part wears **a
 | Idle | If you type nothing, you Spike the last part you hit. It stops when that part breaks. Type `hold` to do nothing. |
 | Delays | Only Bastion (Suspend, Quarantine) and Operator (Jam) can push an attack back. Breakers answer with Brace and faster kills, Infiltrators with Null Route. |
 | Weak point | Found with Scan (Infiltrator, level 11). It takes +50% damage. When it breaks, a new one forms on another part. |
-| Uplink | A fight's trace back to where the virus came from, at home and on SPRAWL-00: the Infiltrator's Traceroute (+25% a use, cooldown 2) and its Sync bonus, a Tracer daemon, and Trace protocols (fights start partly traced). 100% before the kill locates the origin; less saves a partial lead. |
 | Edge | Each class's signature passive, from level 10 (the root of its talent tree): **Breaker, Overkill**: when your hit breaks a part, the damage left over spills onto the next part, up to 20. **Bastion, Grudge**: the part that last hit you takes +20% from your hits. **Infiltrator, Weak Spot**: your first hit on each part crits. **Operator, Last Gasp**: each helper hits once more as it expires. |
 | Encryption | Each Encrypt adds its amount to a stack; the stack hits you every cycle (after your command and helpers, before attacks). Breaking the Encryptor recovers the key and clears it. Your armor chits and Lockdown stop an Encrypt; shields soak the per-cycle damage; Rollback wipes the stack. |
 | Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at 50% (it shows SCRAMBLED and the hit on you; the cooldown is spent). Chits and Lockdown stop it. |
@@ -621,7 +620,7 @@ Two kinds, so a new player never faces everything at once.
 Pick a class on the Loadout page (`archetype <id>`). Your bar has up to 8 keys, shown only once you've unlocked them:
 
 - **Key 1 (everyone):** Spike, the free hit that repeats when you give no order.
-- **Keys 2–8:** your seven equipped class skills (`equip`, `unequip`). Run skills (Spoof, Tap) take a slot too and are used on runs. There's no shared Interrupt or Trace: delaying attacks belongs to Bastion and Operator, and tracing to the Infiltrator's Traceroute (see Uplink). Each class has its own Edge, a passive from level 10.
+- **Keys 2–8:** your seven equipped class skills (`equip`, `unequip`). Run skills (Spoof, Tap) take a slot too and are used on runs. There's no shared Interrupt: delaying attacks belongs to Bastion and Operator. Each class has its own Edge, a passive from level 10.
 - **Each skill is simple, with one twist**, WoW style: a **burn** (damage every cycle: Inject stacks, Thermal Runaway grows, Purge heals you as it ticks), a **proc** that lights a key for a cycle or two (Shatter after you strip a part, Overload resetting on a crit), a **reactive** skill (Retaliate after you're hit, Opening after an attack misses you), or an **execute** (Segfault ×3 under 30%). Combos: Exploit then Overload for crits, Firewall then Retaliate, Inject ×3 then Detonate, Deploy then Barrier or Jam.
 - **Passives** are always on: Breaker Momentum (each part you break: +10% damage for 2 cycles, up to 3 stacks; another break adds a stack and resets the 2 cycles), Bastion Hardened (you start each fight with an armor chit of your own: the first attack on you does nothing), Infiltrator Ghost (on a run, `slip` walks past one guard without a fight: no XP or drop, and it's back on guard next run; every fight opens with a Surprise window, see The Sync Window; return trips on runs are free), Operator Extra thread (+1 daemon slot).
 - **Statuses** anyone's hits cash in: Exposed (+25% crit chance, 2 cycles, Breaker), Tagged (burns tick +50% and its timer shows even if veiled, Infiltrator), Throttled (its attacks deal half) and Quarantined (+25% damage while its attack is held, Bastion), Hooked (+6 on every hit, helpers and burns too, Operator). Operators run at most 6 helpers at once.
@@ -636,10 +635,10 @@ On **25% of cycles**, a window (10% of the cycle, about a second at normal speed
 |---|---|
 | Breaker | An extra armor chit cracks on the part you hit |
 | Bastion | +8 shield |
-| Infiltrator | +10% Uplink trace |
+| Infiltrator | Your burns on the part you hit last a cycle longer |
 | Operator | Your helpers each hit once more |
 
-**Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (15%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject lands an extra stack, Tag lasts 6 cycles and its burns tick +75% (not +50%), and Traceroute adds 50% trace (not 25%).
+**Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (15%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject lands an extra stack, Tag lasts 6 cycles and its burns tick +75% (not +50%), and Keepalive stretches burns 4 cycles (not 2).
 
 Auto-repeat (the cycle running out) and later steps of a `;` plan never sync. The window's spot comes from the fight and the cycle, not the game's dice, so it never changes other rolls.
 
@@ -659,7 +658,7 @@ A **slotted daemon acts on its own cooldown, in addition to your order**, right 
 |---|---|---:|
 | Sweeper | Hits the part whose attack lands soonest for 10. | 4 |
 | Fuzzer | Breaks an armor chit on an armored part. | 5 |
-| Tracer | +10% Uplink if the cycle stays quiet (home fights). | 3 |
+| Stall | Pushes the attack landing soonest back a cycle. | 6 |
 | Mender | Heals you 8. | 5 |
 | Spider | A burn of 4 for 3 cycles on the part you last hit. | 5 |
 | Mirror | Hits the part you last hit for 12. | 3 |
@@ -877,7 +876,7 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Bastion | 38 | `failover` | Hit every part for a quarter of your missing health (at least 20). | 5 |
 | Infiltrator | 1 | `inject <part>` | 10 damage every cycle for 3 cycles. Up to 3 on one part. | 1 |
 | Infiltrator | 3 | `tag <part>` | For 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled. | 3 |
-| Infiltrator | 5 | `traceroute` | +25% Uplink trace now (at home and on SPRAWL-00). 100% before the kill finds where the virus came from. | 2 |
+| Infiltrator | 5 | `keepalive` | Every burn on the part lasts 2 cycles longer. | 2 |
 | Infiltrator | 10 | `backdoor <part>` | 24 damage straight through armor, +6 for each burn on it. | 4 |
 | Infiltrator | 14 | `null-route` | Every attack this cycle misses you, and your next skill crits. | 5 |
 | Infiltrator | 18 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. | 4 |

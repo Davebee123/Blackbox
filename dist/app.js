@@ -464,7 +464,6 @@ function react(events) {
       case 'interrupt': feel.add('interrupt', row(e.target), 'DELAYED'); break;
       case 'warning': feel.add('nope', '#command-form'); break;
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
-      case 'trace': feel.add('good', MINE, '+trace'); break;
       case 'proc': feel.add('good', null); break;
       case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); break;
       case 'hold': feel.add('cycle', '.bnow'); break;
@@ -900,13 +899,6 @@ function renderMeters() {
   }
   const s = shown();
   // On a run, Signal lives in the prompt, the net header and the combat HUD.
-  // Uplink only means something during a home fight.
-  const tracing = !s.run && s.encounter && s.encounter.mode !== 'run' && s.encounter.phase !== 'alert';
-  $('uplink-label').parentElement.hidden = !tracing;
-  if (tracing) {
-    $('uplink-label').textContent = 'Uplink';
-    $('uplink-value').textContent = s.encounter.trace + '%';
-  }
   // Fight and Run tabs appear only while there is a fight or a run.
   $('tab-combat').hidden = !active(campaign);
   $('tab-net').hidden = !campaign.run;

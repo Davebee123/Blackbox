@@ -259,7 +259,7 @@ test('Infiltrator Ghost: slip past one guard a run, no fight, no reward; it is b
   assert.match(play(b, 'slip').at(-1).message, /Infiltrator/);
 });
 
-test('Infiltrator Surprise: a blue window on cycle 1; Inject, Tag and Traceroute fired in it do more', async () => {
+test('Infiltrator Surprise: a blue window on cycle 1; Inject, Tag and Keepalive fired in it do more', async () => {
   const { CONFIG } = await import('./dist/data.mjs');
   const { resolveCycle } = await import('./dist/combat.mjs');
   const start = () => {

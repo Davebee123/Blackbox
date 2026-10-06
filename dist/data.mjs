@@ -67,8 +67,8 @@ export const CONFIG = {
   sync: { width: 0.1, grace: 0.03, from: 0.05, to: 0.5, bonus: 0.1, chance: 0.25 },
   // Infiltrator Surprise: the first cycle of every fight always opens a (blue, wider) window.
   // Fired in it: Inject lands an extra stack, Tag lasts 6 cycles and burns tick +75%,
-  // Traceroute adds 50%.
-  surprise: { width: 0.15, injectStacks: 2, tagCycles: 6, tagged: 1.75, trace: 50 },
+  // Keepalive stretches burns 4 cycles.
+  surprise: { width: 0.15, injectStacks: 2, tagCycles: 6, tagged: 1.75, keepalive: 4 },
   // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
   slip: { perRun: 1, leakedCreds: 3 },
   daemonSlots: 1, // +1 at server levels 10 and 20; Operators +1
@@ -77,8 +77,7 @@ export const CONFIG = {
   depthLoot: 20, // extra credits in caches per depth
   maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
   cdCost: 1, // Signal spent per move between directories
-  leadBase: 15, // lead progress every neutralized virus gives (seven kills, or fewer with Trace)
-  leadTraceShare: 0.5, // plus half the Uplink trace reached (Traceroute, Sync, a Tracer daemon)
+  leadBase: 25, // lead progress every neutralized virus gives (four kills; a Route Logger adds more)
   cacheCredits: 30,
   hoardBonus: 0.5, // Hoard quirk: caches pay 50% more
   trapSignal: 10, // pulling honeypot bait
@@ -162,7 +161,7 @@ export const ABILITIES = {
   inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 10, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 10×3, stacks', help: 'inject <part> — 10 damage every cycle for 3 cycles. Up to 3 on one part.' },
   tag: { cls: 'infiltrator', verb: 'debuff', name: 'Tag', target: 'part', damage: 0, status: 'tagged', cycles: 4, cooldown: 3, icon: 'weakness', short: 'Burns +50%, timer', help: 'tag <part> — for 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled.' },
   backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 6, cooldown: 4, icon: 'injector', short: 'Hit 24 thru armor, +6/burn', help: 'backdoor <part> — 24 damage straight through armor, +6 for each burn on it.' },
-  traceroute: { cls: 'infiltrator', verb: 'util', name: 'Traceroute', target: 'none', damage: 0, trace: 25, cooldown: 2, icon: 'trace', short: '+25% trace', help: 'traceroute — +25% Uplink trace now (at home and on SPRAWL-00). 100% before the kill finds where the virus came from.' },
+  keepalive: { cls: 'infiltrator', verb: 'util', name: 'Keepalive', target: 'part', damage: 0, cycles: 2, cooldown: 2, icon: 'injector', short: 'Burns +2 cycles', help: 'keepalive <part> — every burn on it lasts 2 cycles longer.' },
   detonate: { cls: 'infiltrator', verb: 'hit', name: 'Detonate', target: 'part', damage: 0, cooldown: 4, icon: 'event-warning', short: 'Burns now ×1.5', help: 'detonate <part> — every burn on it deals all its remaining damage now, ×1.5.' },
   opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: 'Hit 50 (after a miss)', help: 'opening <part> — the cycle after an attack misses you or is delayed: 50 damage.' },
   propagate: { cls: 'infiltrator', verb: 'util', name: 'Propagate', target: 'part', damage: 0, cooldown: 5, icon: 'mutation', short: 'Copy burns to all', help: 'propagate <part> — copy your burns on it to every other part.' },
@@ -189,7 +188,7 @@ export const ABILITIES = {
 export const DAEMONS = {
   sweeper: { name: 'Sweeper', cooldown: 4, amount: 10, rule: 'Hits the part whose attack lands soonest for 10.' },
   fuzzer: { name: 'Fuzzer', cooldown: 5, rule: 'Breaks an armor chit on an armored part.' },
-  tracer: { name: 'Tracer', cooldown: 3, amount: 10, rule: '+10% Uplink if the cycle stays quiet (home fights).' },
+  stall: { name: 'Stall', cooldown: 6, rule: 'Pushes the attack landing soonest back a cycle.' },
   mender: { name: 'Mender', cooldown: 5, amount: 8, rule: 'Heals you 8.' },
   spider: { name: 'Spider', cooldown: 5, amount: 4, rule: 'A burn of 4 for 3 cycles on the part you last hit.' },
   mirror: { name: 'Mirror', cooldown: 3, amount: 12, rule: 'Hits the part you last hit for 12.' },
@@ -642,7 +641,7 @@ export const EDGE = {
 export const SYNC = {
   breaker: { amount: 1, rule: 'An extra armor chit cracks on the part you hit.' },
   bastion: { amount: 8, rule: '+8 shield.' },
-  infiltrator: { amount: 10, rule: '+10% Uplink trace.' },
+  infiltrator: { amount: 1, rule: 'Your burns on the part you hit last a cycle longer.' },
   operator: { amount: 1, rule: 'Your helpers each hit once more.' },
 };
 // Shared statuses: each class makes one; anyone's hits cash it in.
@@ -696,8 +695,8 @@ export const ARCHETYPES = {
   infiltrator: {
     name: 'Infiltrator', idea: 'Know where to hit, and slip through runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
-    passive: { name: 'Ghost', rule: 'Slip past one guard a run without a fight. Every fight opens with a blue Surprise window: Inject, Tag and Traceroute fired in it hit harder. Return trips on runs are free.' },
-    skills: skillsOf(['inject', 'tag', 'traceroute', 'backdoor', 'null-route', 'detonate', 'opening', 'propagate', 'spoof', 'tap', 'implant']),
+    passive: { name: 'Ghost', rule: 'Slip past one guard a run without a fight. Every fight opens with a blue Surprise window: Inject, Tag and Keepalive fired in it hit harder. Return trips on runs are free.' },
+    skills: skillsOf(['inject', 'tag', 'keepalive', 'backdoor', 'null-route', 'detonate', 'opening', 'propagate', 'spoof', 'tap', 'implant']),
     fillers: [
       [f('heap-spray', 'Heap Spray', 'Inject +2 per tick per rank.', 2), f('recon', 'Recon', 'Opening +5 damage per rank.', 5)],
       [f('backchannel', 'Backchannel', 'Backdoor +4 damage per rank.', 4), f('onion-routing', 'Onion Routing', '+3 max Signal on runs per rank.', 3)],
