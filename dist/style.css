@@ -367,9 +367,20 @@ pre { font: 12px var(--mono); color: var(--muted); white-space: pre-wrap; max-he
 .mnode.loc.partial .core { fill: var(--amber); }
 .mnode.loc.done .core { fill: var(--gray); stroke: var(--gray); } .mnode.loc.done .marc { stroke: var(--gray); } .mnode.loc.done .mlabel { fill: var(--muted); }
 .mnode.loc.here .core { fill: var(--you); stroke: var(--you); } .mnode.loc.here .marc { stroke: var(--you); }
-.mnode.invader path { fill: var(--amber); }
-.mnode.invader.travel path { fill: none; stroke: var(--amber); stroke-width: 1.2; }
-.mnode.invader.breach path { fill: var(--hot); }
+/* An invasion: a spiked virus. Amber on its way, red once it's at your wall; a breach pulses rings. */
+.mnode.invader .vbody { fill: var(--hot); stroke: #ffb3a3; stroke-width: 0.6; }
+.mnode.invader .vcore { fill: #1a0a06; }
+.mnode.invader.travel .vbody { fill: rgba(241, 185, 47, 0.25); stroke: var(--amber); stroke-width: 1.2; }
+.mnode.invader.travel .vcore { fill: var(--amber); }
+.mnode.invader .vring { fill: none; stroke: none; }
+.mnode.invader.breach .vring { stroke: var(--hot); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: vring 1.6s ease-out infinite; }
+.mnode.invader.breach .vbody { animation: vthrob 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes vring { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes vthrob { 50% { transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .mnode.invader.breach .vring, .mnode.invader.breach .vbody { animation: none; } .mnode.invader.breach .vring { opacity: 0.6; } }
+/* The pager's lamp on a breach: one ring fires out of it (app.js). */
+.led-ring { position: fixed; width: 12px; height: 12px; margin: -6px 0 0 -6px; border: 2px solid var(--hot); border-radius: 50%; pointer-events: none; z-index: 60; animation: led-ring 0.9s ease-out forwards; }
+@keyframes led-ring { from { transform: scale(1); opacity: 1; } to { transform: scale(5); opacity: 0; } }
 .marc-bg.lead { stroke: rgba(241, 185, 47, 0.14); stroke-dasharray: 1 3; }
 .marc.lead { stroke: var(--muted); }
 .mnode:focus-visible .core, .mnode:focus-visible rect:first-of-type { stroke: var(--bright); }

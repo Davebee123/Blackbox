@@ -143,6 +143,13 @@ const art = createArt({
 art.attach($('virus-canvas'));
 
 // ---------- events → feedback ----------
+// A breach: a ring fires out of the pager's lamp (twice, a beat apart), so you notice it.
+function ledRing() {
+  const led = $('pager-led');
+  if (!led || campaign.settings.motion === false) return;
+  const r = led.getBoundingClientRect();
+  for (const delay of [0, 280]) setTimeout(() => { const d = document.createElement('div'); d.className = 'led-ring'; d.style.left = r.left + r.width / 2 + 'px'; d.style.top = r.top + r.height / 2 + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 950); }, delay);
+}
 function flash(text) {
   const el = $('stage-flash');
   el.textContent = text;
@@ -426,7 +433,7 @@ function react(events) {
       case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
       case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/^JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
       case 'station': feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
-      case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); break;
+      case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
       case 'invasion-cleared': if (!won) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
