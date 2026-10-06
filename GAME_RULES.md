@@ -824,7 +824,7 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Breaker | 30 | `thermal-runaway <part>` | A burn that grows: 6, 10, 14, 18. | 4 |
 | Breaker | 34 | `sudo` | This cycle and next, every hit you land crits. | 6 |
 | Breaker | 38 | `zero-day <part>` | 80 damage straight through armor. Once per fight. | once |
-| Bastion | 1 | `kill-process <part>` | 30 damage, +15 if its attack is due this cycle. On armor it breaks 2 chits. | 2 |
+| Bastion | 1 | `rate-limit <part>` | 30 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits. | 2 |
 | Bastion | 3 | `firewall` | A shield that absorbs the next 20 damage. If it soaks a whole hit, Retaliate lights up. | 4 |
 | Bastion | 5 | `suspend [part]` | SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest. | 4 |
 | Bastion | 10 | `retaliate <part>` | The cycle after an attack reaches you (or your shield): hit back for twice its size, up to 60. | lit |
@@ -863,7 +863,7 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Class | First ranks | Second ranks | Third ranks |
 |---|---|---|---|
 | Breaker | Overclocked Core: +3% damage per rank · Chain Exploit: Momentum +2% per stack per rank | Exploit Kit: Exposed gives +5% more crit chance per rank · Heat Sink: Overload +4 damage per rank | Armor Cracker: Parts you strip take 1 cycle longer to patch per rank · Failsafe: Take 3% less damage from attacks per rank |
-| Bastion | Patch Notes: Patch heals +3 per rank · Stateful Firewall: Firewall absorbs +5 per rank | kill -9: Kill Process +4 damage per rank · Redundancy: +4 max Signal on runs per rank | Hardened Kernel: Take 3% less damage from attacks per rank · Reverse Shell: Retaliate hits +5 per rank |
+| Bastion | Patch Notes: Patch heals +3 per rank · Stateful Firewall: Firewall absorbs +5 per rank | Token Bucket: Rate Limit +4 damage per rank · Redundancy: +4 max Signal on runs per rank | Hardened Kernel: Take 3% less damage from attacks per rank · Reverse Shell: Retaliate hits +5 per rank |
 | Infiltrator | Heap Spray: Inject +2 per tick per rank · Recon: Opening +5 damage per rank | Backchannel: Backdoor +4 damage per rank · Onion Routing: +3 max Signal on runs per rank | Persistent Tag: Tagged burns tick +10% more per rank · Low Profile: Take 3% less damage from attacks per rank |
 | Operator | Thread Pool: Deploy helpers deal +1 per rank · Kernel Hook: Hooked parts take +1 more per hit per rank | Node Pool: Botnet helpers deal +1 per rank · Dead Man’s Switch: Kill Switch cashes in +5% per rank | Load Balancer: Take 3% less damage from attacks per rank · Extra Memory: +3 max Signal on runs per rank |
 
@@ -874,7 +874,7 @@ All numbers are per rank.
 | Class | Tier 1 (3 points above) | Tier 2 (8 above) | Tier 3 (14 above) |
 |---|---|---|---|
 | Breaker | Sharp Exploit: Exploit also deals 20 damage · or · Hair Trigger: Overload has cooldown 2 but deals 35 | Core Dump: Segfault's execute starts under 40% · or · Piercing: Overload goes straight through armor | Cascade Failure: Your first break each fight resets your cooldowns · or · Unsafe Mode: +30% damage dealt, +20% damage taken |
-| Bastion | Deep Packet Inspection: Firewall absorbs 40 · or · Service Pack: Patch heals 20 up front | Rate Limit: Throttle cuts attacks by 75% · or · Active Defense: Retaliate stays lit for 2 cycles | Uptime: Once per fight, a hit that would drop you to 0 leaves you at 1 · or · Preemption: Suspend has cooldown 2 |
+| Bastion | Deep Packet Inspection: Firewall absorbs 40 · or · Service Pack: Patch heals 20 up front | Backpressure: Throttled cuts attacks by 75% · or · Active Defense: Retaliate stays lit for 2 cycles | Uptime: Once per fight, a hit that would drop you to 0 leaves you at 1 · or · Preemption: Suspend has cooldown 2 |
 | Infiltrator | Fast Hands: Opening stays lit for 2 cycles · or · Supercookie: Tag lasts 6 cycles | Polymorphic: Inject lasts 5 cycles · or · Rotating Proxies: Spoof twice per run | Leaked Creds: Slip past 3 guards a run instead of 1 · or · Perfect Trace: A full backtrace also reveals the new location’s vault key |
 | Operator | Big Process: Deploy helpers deal 14 · or · Long-running: Deploy helpers last 6 cycles | Extra Nodes: Botnet sends 4 helpers · or · Hive: Your helper cap is 9 | Parallel Deploy: Deploy starts two helpers at half damage: same total, twice the hits for Hook · or · Supervisor: Each time a daemon acts, Deploy’s cooldown drops by 1 |
 

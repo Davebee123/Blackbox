@@ -40,7 +40,7 @@ test('every skill does one kind of thing', () => {
 
 test('keys: 1 Spike, 2–8 equipped skills; other classes\' skills are refused', () => {
   const s = start('bastion');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'kill-process', 'firewall', 'suspend', 'retaliate', 'patch', 'throttle', 'purge']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'throttle', 'purge']);
   assert.match(command(s, 'overload pulse').at(-1).message, /isn't on your bar/);
   assert.equal(command(s, '4 pulse').at(-1).type, 'queued');
 });
@@ -104,7 +104,7 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (55) f
 });
 
 // ---------- Bastion ----------
-test('Bastion: Hardened blocks the first attack; Kill Process hits 30 (+15 if it is about to attack); Patch heals 10 then 5 a cycle', () => {
+test('Bastion: Hardened blocks the first attack; Rate Limit hits 30 (+15 if its attack is due) and halves its next attack; Patch heals 10 then 5 a cycle', () => {
   const s = start('bastion');
   assert.equal(s.encounter.chits, 1);
   s.encounter.cycle = part(s, 'pulse').attack.due;
@@ -113,14 +113,21 @@ test('Bastion: Hardened blocks the first attack; Kill Process hits 30 (+15 if it
   assert.equal(s.encounter.chits, 0);
   const t = noArmor(quiet(start('bastion')));
   big(t, 'pulse');
-  act(t, 'kill-process pulse');
+  act(t, 'rate-limit pulse');
   assert.equal(lost(t, 'pulse'), 30);
+  // Its next attack, whenever it lands, deals half.
   const d = noArmor(start('bastion'));
   big(d, 'pulse');
   part(d, 'encryptor').attack = null;
-  d.encounter.cycle = part(d, 'pulse').attack.due;
-  act(d, 'kill-process pulse');
-  assert.equal(lost(d, 'pulse'), 45, 'its attack was due: +15');
+  d.encounter.chits = 0;
+  const p = part(d, 'pulse');
+  p.attack.due = d.encounter.cycle + 2;
+  act(d, 'rate-limit pulse');
+  assert.equal(p.throttledUntil, p.attack.due, 'Throttled through its next attack');
+  const before = d.server.integrity;
+  act(d, 'hold'); act(d, 'hold');
+  const took = before - d.server.integrity, full = p.attack.amount;
+  assert.ok(took > 0 && took < full, `half its Surge (${took} of ${full})`);
   t.server.integrity = 50;
   act(t, 'patch');
   assert.equal(t.server.integrity, 60);
@@ -316,6 +323,6 @@ test('the Sysadmin is the Bastion now: old saves carry its level, tree and bar a
   const r = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(r.loadout.archetype, 'bastion');
   assert.deepEqual(r.hackers.bastion, { level: 12, xp: 5 });
-  assert.deepEqual(r.loadout.equipped.bastion, ['kill-process', 'firewall']);
+  assert.deepEqual(r.loadout.equipped.bastion, ['rate-limit', 'firewall'], 'Kill Process is Rate Limit now');
   assert.equal(command(r, 'archetype sysadmin').at(-1).type, 'loadout', 'the old name still works');
 });

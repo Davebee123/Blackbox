@@ -489,7 +489,7 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   assert.match(command(s, 'equip zero-day').at(-1).message, /level 38/);
   command(s, 'archetype sysadmin');
   assert.equal(hackerLevel(s), 1, 'a new class starts at level 1');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'kill-process']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit']);
 });
 
 test('XP: fights, vaults and new locations level you up; the server gets every point, plus banked loot', async () => {

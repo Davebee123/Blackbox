@@ -195,7 +195,7 @@ export function forecast(s, preview = null) {
     const breaks = (n) => { const k = Math.min(n, armor[p.id]); armor[p.id] -= k; if (k) out.chits[p.id] = (out.chits[p.id] || 0) + k; };
     if (a.strip) return breaks(a.strip); // Crack: chits, no damage
     if (!dmg && !a.tick) return; // Tag and the like: no hit, no chit
-    // A hit (or a burn's first tick) on armor breaks one chit; a heavy hit (CONFIG.heavyHit) or Kill Process two.
+    // A hit (or a burn's first tick) on armor breaks one chit; a heavy hit (CONFIG.heavyHit) or a skill with chits: 2 (Rate Limit, Reclaim) two.
     if (armor[p.id] > 0 && !ignoresArmor(st, q.ability)) return breaks(a.chits > 1 || (!a.tick && skillBase(st, q.ability, p) >= CONFIG.heavyHit * powerOf(st) - 1e-9) ? 2 : 1);
     out.parts[p.id] = Math.min(p.integrity, (out.parts[p.id] || 0) + dmg);
   };

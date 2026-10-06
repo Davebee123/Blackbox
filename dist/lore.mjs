@@ -17,7 +17,7 @@ export const SKILL_TEXT = {
   'zero-day': { desc: 'Unleash an unpatched exploit, dealing 80 damage that ignores armor. Once per fight.', lore: 'An exploit nobody has seen. You only get to use it once.' },
 
   // Bastion: nothing lands unless you allow it.
-  'kill-process': { desc: 'Terminate a module, dealing 30 damage. Deals 15 extra damage if its attack is due this cycle.', lore: 'kill -9. No appeal, no cleanup, no last words.' },
+  'rate-limit': { desc: 'Hit a module for 30 damage (15 more if its attack is due this cycle) and Throttle its next attack to half. Breaks 2 armor chits.', lore: 'Packets per second: yours to decide. Everything over the limit waits, or drops.' },
   firewall: { desc: 'Raise a firewall that absorbs 20 damage. Absorbing a full hit enables Retaliate. With a crew, every attack comes at you for 2 cycles.', lore: 'Default deny. Everything else asks permission.' },
   retaliate: { desc: 'Strike back at a module, dealing double the damage you just took (up to 60). Usable the cycle after you are hit.', lore: 'Every packet it sent you, it gets back with interest.' },
   suspend: { desc: 'Suspend a module, delaying its attack by 2 cycles. With no target, delays the next attack to land.', lore: 'Freeze the process mid-thought. Let it wonder.' },

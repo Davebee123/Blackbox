@@ -193,7 +193,7 @@ export function skillBase(s, id, p) {
   let base = a?.damage || 0;
   if (id === 'overload') base = (hasTalent(s, 'hair-trigger') ? 35 : base) + 4 * rank(s, 'heat-sink');
   const e = s.encounter;
-  if (id === 'kill-process') base += 4 * rank(s, 'kill-9') + (p?.attack && p.attack.due <= e?.cycle ? a.due : 0);
+  if (id === 'rate-limit') base += 4 * rank(s, 'token-bucket') + (p?.attack && p.attack.due <= e?.cycle ? a.due : 0); // choke it as it sends: more if its attack is due now
   if (id === 'backdoor') base += 4 * rank(s, 'backchannel') + a.perBurn * burnsOn(s, p).length;
   if (id === 'opening') base += 5 * rank(s, 'recon');
   if (id === 'flood' && p && !(p.armor > 0)) base *= 2;
@@ -1227,7 +1227,7 @@ function suggestFor(s, words) {
   return t === null ? id + ' ' : id + t;
 }
 
-// Accepts ids ("kill-process"), two words ("kill process"), or a key number ("4").
+// Accepts ids ("rate-limit"), two words ("rate limit"), or a key number ("4").
 function abilityFrom(s, words) {
   const keys = keyMap(s);
   if (keys[words[0]]) return { id: keys[words[0]], used: 1 };
@@ -1702,8 +1702,10 @@ function useAbility(s, intent, auto = false) {
     let n = a.cycles;
     if (id === 'tag' && hasTalent(s, 'supercookie')) n = 6;
     if (id === 'tag') { target.tagBoost = e.surprise ? CONFIG.surprise.tagged - SKILLS.tagged : 0; if (e.surprise) n = Math.max(n, CONFIG.surprise.tagCycles); }
-    target[a.status + 'Until'] = e.cycle + n;
-    emit(s, 'status', `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id, mark: a.status, ability: id });
+    // Rate Limit: Throttled through its next attack (never shortening a longer Throttle).
+    if (id === 'rate-limit') n = Math.max(0, (target.attack?.due ?? e.cycle) - e.cycle);
+    target[a.status + 'Until'] = id === 'rate-limit' ? Math.max(target[a.status + 'Until'] || 0, e.cycle + n) : e.cycle + n;
+    emit(s, 'status', id === 'rate-limit' ? `${target.name} ${STATUS_WORD[a.status]} for its next attack.` : `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id, mark: a.status, ability: id });
   }
   if (a.tick && a.verb === 'burn') {
     let ticks = id === 'inject' && hasTalent(s, 'polymorphic') ? 5 : a.ticks;
@@ -1888,7 +1890,7 @@ export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
-  const power = attackAmount(p) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'rate-limit') ? 0.25 : SKILLS.throttled) : 1);
+  const power = attackAmount(p) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
   p.boosted = false;
   if (atk.windup) atk.wound = 0;
   // Patchwork: the Patcher's attack is a heal on its own side. Nothing of yours stops it.
@@ -2563,7 +2565,9 @@ export function restore(raw) {
     const was = s.version;
     // v23: the Sysadmin is the Bastion now. Its level, tree and bar come along.
     // Smash is Flood now: on the bar and anything keyed by it.
-    for (const bar of Object.values(s.loadout?.equipped || {})) if (Array.isArray(bar)) bar.forEach((id, i) => { if (id === 'smash') bar[i] = 'flood'; });
+    for (const bar of Object.values(s.loadout?.equipped || {})) if (Array.isArray(bar)) bar.forEach((id, i) => { if (id === 'smash') bar[i] = 'flood'; if (id === 'kill-process') bar[i] = 'rate-limit'; });
+    // Bastion's first skill became Rate Limit: kill -9's ranks carry over to Token Bucket.
+    for (const r of Object.values(s.loadout?.ranks || {})) if (r && r['kill-9'] !== undefined) { r['token-bucket'] = (r['token-bucket'] || 0) + r['kill-9']; delete r['kill-9']; }
     if (was < 23) {
       const mv = (o) => { if (o && o.sysadmin !== undefined) { o.bastion = o.sysadmin; delete o.sysadmin; } };
       mv(s.hackers); mv(s.loadout?.picks); mv(s.loadout?.ranks); mv(s.loadout?.equipped); mv(s.gear?.rigs);

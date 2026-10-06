@@ -146,7 +146,7 @@ export const ABILITIES = {
   sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 80, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 80 through armor, once', help: 'zero-day <part> — 80 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
-  'kill-process': { cls: 'bastion', verb: 'hit', name: 'Kill Process', target: 'part', damage: 30, due: 15, chits: 2, cooldown: 2, icon: 'spike', short: 'Hit 30, +15 if due', help: 'kill-process <part> — 30 damage, +15 if its attack is due this cycle. On armor it breaks 2 chits.' },
+  'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 30, due: 15, chits: 2, status: 'throttled', cooldown: 2, icon: 'interrupt', short: 'Hit 30 (+15 if due), throttle', help: 'rate-limit <part> — 30 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits.' },
   firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — a shield that absorbs the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — the cycle after an attack reaches you (or your shield): hit back for twice its size, up to 60.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
@@ -679,15 +679,15 @@ export const ARCHETYPES = {
     name: 'Bastion', idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
     passive: { name: 'Hardened', rule: 'You start every fight with an armor chit: the first attack on you does nothing.' },
-    skills: skillsOf(['kill-process', 'firewall', 'suspend', 'retaliate', 'patch', 'throttle', 'purge', 'harden', 'reclaim', 'quarantine', 'failover']),
+    skills: skillsOf(['rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'throttle', 'purge', 'harden', 'reclaim', 'quarantine', 'failover']),
     fillers: [
       [f('patch-notes', 'Patch Notes', 'Patch heals +3 per rank.', 3), f('stateful-firewall', 'Stateful Firewall', 'Firewall absorbs +5 per rank.', 5)],
-      [f('kill-9', 'kill -9', 'Kill Process +4 damage per rank.', 4), f('redundancy', 'Redundancy', '+4 max Signal on runs per rank.', 4)],
+      [f('token-bucket', 'Token Bucket', 'Rate Limit +4 damage per rank.', 4), f('redundancy', 'Redundancy', '+4 max Signal on runs per rank.', 4)],
       [f('hardened-kernel', 'Hardened Kernel', 'Take 3% less damage from attacks per rank.', 0.03), f('reverse-shell', 'Reverse Shell', 'Retaliate hits +5 per rank.', 5)],
     ],
     talents: [
       [t('deep-packet-inspection', 'Deep Packet Inspection', 'Firewall absorbs 40.'), t('service-pack', 'Service Pack', 'Patch heals 20 up front.')],
-      [t('rate-limit', 'Rate Limit', 'Throttle cuts attacks by 75%.'), t('active-defense', 'Active Defense', 'Retaliate stays lit for 2 cycles.')],
+      [t('backpressure', 'Backpressure', 'Throttled cuts attacks by 75%.'), t('active-defense', 'Active Defense', 'Retaliate stays lit for 2 cycles.')],
       [t('uptime', 'Uptime', 'Once per fight, a hit that would drop you to 0 leaves you at 1.'), t('preemption', 'Preemption', 'Suspend has cooldown 2.')],
     ],
   },

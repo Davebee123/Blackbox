@@ -15,7 +15,7 @@ Cells: wins · clean kills (nothing got through: no damage, encryption included)
 ## Skill use at level 50
 
 - **Breaker:** spike 29% · shatter 27% · crack 25% · brace 9% · segfault 7% · flood 2% · exploit 1%
-- **Bastion:** spike 54% · retaliate 12% · suspend 11% · firewall 9% · kill-process 9% · throttle 3% · purge 1% · patch 1%
+- **Bastion:** spike 54% · retaliate 12% · suspend 11% · firewall 9% · rate-limit 9% · throttle 3% · purge 1% · patch 1%
 - **Infiltrator:** inject 60% · backdoor 15% · opening 10% · null-route 9% · detonate 6% · tag 1%
 - **Operator:** spike 37% · botnet 23% · deploy 20% · kill-switch 7% · jam 6% · hook 4% · barrier 3%
 
