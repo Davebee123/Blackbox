@@ -2564,3 +2564,18 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .cd-cost li.short { border-color: rgba(255, 91, 61, 0.5); }
 .cd-cost li.short b { color: var(--hot); }
 .cd-name.r-tuned { color: var(--r-tuned); } .cd-name.r-zeroday { color: var(--r-zeroday); } .cd-name.r-custom { color: var(--r-custom); }
+/* Open ports: an on/off switch row under the firewall's ruler. */
+.ports-row { width: 100%; display: flex; align-items: center; gap: 10px; margin: 10px 0 4px; padding: 8px 10px; background: var(--inset); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); cursor: pointer; text-align: left; }
+.ports-row b { color: var(--text); font-size: 13px; }
+.ports-row .pr-chips { margin-left: auto; display: flex; gap: 6px; }
+.ports-row .sw { width: 34px; height: 18px; flex: none; border-radius: 9px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--line-strong); position: relative; transition: background 0.2s; }
+.ports-row .sw i { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform 0.2s, background 0.2s; }
+.ports-row.on { border-color: var(--hot); }
+.ports-row.on .sw { background: rgba(255, 91, 61, 0.25); border-color: var(--hot); }
+.ports-row.on .sw i { transform: translateX(16px); background: var(--hot); box-shadow: 0 0 6px var(--hot); }
+.ports-row:hover { border-color: var(--line-strong); }
+/* A button with a price: the label, a divider, then icon + number for each thing it takes. */
+.fw-up { flex-direction: row; align-items: center; gap: 0; }
+.bcost { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 10px; border-left: 1px solid currentColor; opacity: 0.85; font: 12px var(--mono); }
+.bcost span { display: inline-flex; align-items: center; gap: 3px; }
+.bcost .glyph { width: 12px; height: 12px; }

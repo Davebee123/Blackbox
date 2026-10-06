@@ -802,11 +802,12 @@ function fwRow(s, holder, arg, top, now = Date.now()) {
     <div class="fw-grid small${def ? ' defrag' : ''}${hard ? ' hard' : ''}" title="${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>
     ${fwActs(s, f, arg, can, c, busy, def, now)}</div>`;
 }
-// Open ports: invasions faster and richer while you play (invasion.mjs).
-function baitHome(s) {
+// Open ports: a switch under the firewall's ruler. On, invasions come faster and pay more while you
+// play (invasion.mjs); they close when you log off.
+function portsRow(s) {
   if (!threatTop(s)) return '';
   const open = !!s.net?.open;
-  return `<button type="button" class="btn small fw-up${open ? ' on' : ''}" data-command="${open ? 'close ports' : 'open ports'}" aria-pressed="${open}" title="${open ? 'Close them: invasions back to their usual pace' : 'Invasions come 2.5× as often while you play, each worth +50%. They close when you log off.'}">${open ? 'Ports open' : 'Open ports'}<small>${open ? '×2.5 · +50%' : 'more, richer'}</small></button>`;
+  return `<button type="button" class="ports-row${open ? ' on' : ''}" role="switch" aria-checked="${open}" data-command="${open ? 'close ports' : 'open ports'}" title="${open ? 'On while you play; closes when you log off' : 'Off'}"><span class="sw"><i></i></span><b>Open ports</b><span class="pr-chips"><span class="tag${open ? ' hot' : ' dim'}">Invasions ×2.5</span><span class="tag${open ? ' you' : ' dim'}">Rewards +50%</span></span></button>`;
 }
 // Its major version (every 10 levels): the tag, its perks on hover, the next one ahead.
 function fwVersion(f) {
@@ -814,14 +815,16 @@ function fwVersion(f) {
   const tip = [...got.map((p) => `v${p.v}: ${p.name}`), next ? `Next, v${next.v} at lv ${(next.v - 1) * VERSION_EVERY}: ${next.name}` : ''].filter(Boolean).join(' · ');
   return `<span class="tag fw-ver" title="${esc(tip || `Next, v2 at lv ${VERSION_EVERY}`)}">v${v}</span>`;
 }
+// A button's price, after its label: an icon and a number for each thing it takes.
+const bcost = (c) => `<span class="bcost">${Object.entries(c).filter(([, n]) => n).map(([k, n]) => `<span title="${esc(k === 'credits' ? 'Credits' : MATERIALS[k]?.name || k)}">${glyph(k)}${n}</span>`).join('')}</span>`;
 // The firewall's buttons, each only once it means something: Upgrade when you can pay for the next
 // level, Defrag when it's fragmented (or running), harden.sh when you hold one.
 function fwActs(s, f, arg, can, c, busy, def, now, extra = '') {
   const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`, n = kitOf(s).harden || 0;
   const nv = c.major ? VERSION_PERKS.find((p) => p.v === versionOf(f.level + 1)) : null;
-  const up = can ? `<button type="button" class="btn small primary fw-up${c.major ? ' major' : ''}" data-command="${cmd('upgrade')}" ${busy ? 'disabled' : ''} title="${c.major ? `A new version${nv ? `: ${esc(nv.name)}` : ''}` : 'Blocks one level more'}">${c.major ? `Upgrade to v${versionOf(f.level + 1)}` : `Upgrade to lv ${f.level + 1}`}<small>${c.credits} credits · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}${c.exploit ? ' · 1 Exploit' : ''}</small></button>` : '';
+  const up = can ? `<button type="button" class="btn small primary fw-up${c.major ? ' major' : ''}" data-command="${cmd('upgrade')}" ${busy ? 'disabled' : ''} title="${c.major ? `A new version${nv ? `: ${esc(nv.name)}` : ''}` : 'Blocks one level more'}">${c.major ? `Upgrade to v${versionOf(f.level + 1)}` : `Upgrade to lv ${f.level + 1}`}${bcost({ credits: c.credits, cipher: c.cipher, exploit: c.exploit })}</button>` : '';
   const dc = defragCost(f);
-  const dfr = f.frag || def ? `<button type="button" class="btn small fw-up" data-command="${cmd('defrag')}" ${def || busy || (!def && s.server.credits < dc) ? 'disabled' : ''} title="${FIREWALL.defragLoss} levels down while it runs">${def ? `Defragmenting · ${fmtLeft(f.defragUntil - now)}` : `Defrag<small>${dc} credits</small>`}</button>` : '';
+  const dfr = f.frag || def ? `<button type="button" class="btn small fw-up" data-command="${cmd('defrag')}" ${def || busy || (!def && s.server.credits < dc) ? 'disabled' : ''} title="${FIREWALL.defragLoss} levels down while it runs">${def ? `Defragmenting · ${fmtLeft(f.defragUntil - now)}` : `Defrag${bcost({ credits: dc })}`}</button>` : '';
   const hd = n ? `<button type="button" class="btn small" data-command="${cmd('harden')}" ${busy ? 'disabled' : ''} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${n}</button>` : '';
   const all = up + dfr + hd + extra;
   return all ? `<div class="row fw-acts">${all}</div>` : '';
@@ -831,7 +834,7 @@ function firewallPanel(s, now) {
   const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher && (s.materials?.exploit || 0) >= (c.exploit || 0);
   const mods = [fragLevels(s) ? `<span class="tag warn" title="Fragmented">−${fragLevels(s) + (defragging(s, now) ? FIREWALL.defragLoss : 0)}</span>` : defragging(s, now) ? `<span class="tag warn" title="Defragmenting">−${FIREWALL.defragLoss}</span>` : '', hardenLeft(s, now) ? `<span class="tag you" title="harden.sh · ${fmtTime(hardenLeft(s, now))} left">+${FIREWALL.harden.plus} · ${fmtTime(hardenLeft(s, now))}</span>` : ''].join('');
   return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${fwVersion(f)}${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
-    ${fwActs(s, f, '', can, c, busy, defragging(s, now), now, baitHome(s))}</div>`;
+    ${fwActs(s, f, '', can, c, busy, defragging(s, now), now)}</div>`;
 }
 // The firewall's filters: its slots (from the Firewall service), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
@@ -850,7 +853,7 @@ export function wallMarkup(s, now = Date.now()) {
   const body = inv
     ? `<div class="invader ${inv.state}"><div class="gitem-head"><b>${esc(inv.name)}</b>${levelTag(s, inv.level)}${inv.mutation ? `<span class="tag tag-mut" data-mut="${inv.mutation}" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}<span class="tag ${inv.state === 'breach' ? 'hot' : ''}">${esc(invaderShort(s))}</span></div><small>${esc(inv.fromName)}</small>${bar}${inv.state !== 'travel' ? `<div class="row">${jackInButton(st)}</div>` : ''}</div>`
     : '';
-  return `<section class="card wall-card"><h2>Firewall</h2>${degradedMarkup(s, now)}${firewallPanel(s, now)}${bands}${body}${filterPanel(s)}</section>`;
+  return `<section class="card wall-card"><h2>Firewall</h2>${degradedMarkup(s, now)}${firewallPanel(s, now)}${bands}${portsRow(s)}${body}${filterPanel(s)}</section>`;
 }
 
 // A running service's configs: stock plus the ones you own; the running one is lit.
