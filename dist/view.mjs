@@ -1425,7 +1425,7 @@ const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="$
 // Screen pixels per map unit (app.js sets it from the drawn map): label sizes in map units follow it.
 let mapScale = 1;
 export const setMapScale = (z) => { const was = mapScale; mapScale = z; return Math.abs(was - z) / was > 0.08; };
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all' } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status' } = {}) {
   // A member's server (or home) shows on the consortium's map, whichever view was asked for.
   const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
   const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s);
@@ -1517,10 +1517,43 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter !== 'all' ? ' mf-' + filter : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
-  const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-filters" role="group" aria-label="Show">${[['all', 'All'], ['mine', 'Mine'], ['targets', 'Targets'], ['threats', 'Threats']].map(([k, l]) => `<button type="button" data-mapfilter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
+  const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><div class="map-ctl comms-filters map-filters" role="group" aria-label="Show">${[['all', 'All'], ['mine', 'Mine'], ['targets', 'Targets'], ['threats', 'Threats']].map(([k, l]) => `<button type="button" data-mapfilter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
   const card = pop ? `<div class="map-pop" id="map-pop" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
+  // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
+  // selected one's card sits beside the list.
+  if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
   return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+}
+const LIST_COLS = [['name', 'Server'], ['family', 'Family'], ['level', 'Lv'], ['layer', 'Layer'], ['explored', 'Explored'], ['status', 'Status']];
+function serverList(s, sel, filter, sort) {
+  const [key, dir] = sort.startsWith('-') ? [sort.slice(1), -1] : [sort, 1];
+  const rows = (s.locations || []).map((l) => {
+    const st = nodeState(s, l), job = openContracts(s).some((c) => c.loc === l.id), tags = mapTags(s, l, st, job);
+    const taken = Object.keys(l.state.taken).length, total = takeable(l).length || 1, o = l.outpost || {};
+    const chips = [
+      st === 'here' ? '<span class="tag you">here</span>' : '',
+      o.siege ? '<span class="tag hot">invasion</span>' : '', o.lockdown ? '<span class="tag hot">lockdown</span>' : '', o.infest ? '<span class="tag warn">infested</span>' : '',
+      s.fleet?.target === l.id ? '<span class="tag hot">swarm</span>' : '',
+      job ? `<span class="ls-job" title="A contract">${glyph('bounty')}</span>` : '',
+      l.fresh && l.detached ? '<span class="tag">found</span>' : l.detached ? '<span class="tag dim">detached</span>' : '',
+      o.h ? `<span class="tag you" title="Outpost: ${esc(OUTPOST.kinds[o.h.kind].name)}">${glyph(o.h.kind)}${stockOf(l)}/${capOf(l)}</span>` : l.takenOver ? '<span class="tag dim">yours</span>' : '',
+      l.rogue ? `<span class="tag dim">${esc(ROGUE.kinds[l.rogue.kind].name.toLowerCase())}</span>` : '',
+    ].join('');
+    const rank = tags.includes('f-threat') ? 0 : st === 'here' ? 1 : job || (l.fresh && l.detached) ? 2 : o.h ? 3 : tags.includes('minor') ? 5 : 4;
+    return { l, tags, chips, rank, explored: taken / total, taken, total };
+  }).filter((r) => filter === 'all' || r.tags.includes(filter === 'mine' ? 'f-mine' : filter === 'targets' ? 'f-target' : 'f-threat'));
+  const val = { name: (r) => r.l.name, family: (r) => r.l.family, level: (r) => r.l.level || 1, layer: (r) => r.l.depth || 1, explored: (r) => r.explored, status: (r) => r.rank };
+  rows.sort((a, b) => { const x = val[key](a), y = val[key](b); return (x < y ? -1 : x > y ? 1 : a.l.name < b.l.name ? -1 : 1) * dir; });
+  const head = LIST_COLS.map(([k, label]) => `<button type="button" class="sl-h${k === key ? ' on' : ''}" data-msort="${k === key && dir === 1 ? '-' + k : k}">${label}${k === key ? (dir === 1 ? ' ▴' : ' ▾') : ''}</button>`).join('');
+  const body = rows.map((r) => { const l = r.l, gap = (l.level || 1) - hackerLevel(s); return `<button type="button" class="sl-row${l.id === sel ? ' on' : ''}${r.tags.includes('minor') ? ' minor' : ''}" data-select="${esc(l.id)}">
+      <span class="sl-name">${l.faction ? fIcon(l.faction) : ''}<b>${esc(l.name)}</b></span>
+      <span class="sl-fam">${glyph(l.family)}${esc(FAMILIES[l.family]?.name || '')}</span>
+      <span class="sl-lv ${conClass(gap)}">${l.level || 1}</span>
+      <span class="sl-num">${l.depth || 1}</span>
+      <span class="sl-exp"><span class="ld-bar"><span style="width:${Math.round(r.explored * 100)}%"></span></span><small>${r.taken}/${r.total}</small></span>
+      <span class="sl-status">${r.chips}</span></button>`; }).join('');
+  return `<div class="server-list"><div class="sl-head">${head}</div><div class="sl-body">${body || '<p class="quiet">None.</p>'}</div></div>`;
 }
 // The map's selection card on its own (the sidebar carries it when it's on).
 export function mapSelection(s, sel = 'server', view = 'mine') {
