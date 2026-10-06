@@ -81,6 +81,7 @@ const P = {
   sweeper: '<path d="M11 1.5 7 8.5M3.5 9.5l5 2.5-1.5 2.5c-2-.3-4-1.5-5-3.5z"/>',
   fuzzer: '<path d="M1.5 8h1.5l1-3 1.5 6 1.5-8 1.5 10 1.5-7 1.5 4 1-2h1.5"/>',
   tracer: '<circle cx="8" cy="8" r="6"/><path d="M8 8 12.2 3.8"/><circle cx="10.5" cy="10.5" r=".8"/>',
+  stall: '<rect x="4" y="3" width="2.5" height="10" rx=".5"/><rect x="9.5" y="3" width="2.5" height="10" rx=".5"/>',
   mender: '<path d="M6 2h4v4h4v4h-4v4H6v-4H2V6h4z"/>',
   spider: '<circle cx="8" cy="8.5" r="2.5"/><path d="M5.8 7 2 4.5M5.6 9 1.5 9.5M6 10.5 3 13.5M10.2 7 14 4.5M10.4 9l4.1.5M10 10.5l3 3M8 6V2"/>',
   mirror: '<path d="M8 1.5v13M6 3.5 1.5 12.5H6zM10 3.5l4.5 9H10z"/>',
