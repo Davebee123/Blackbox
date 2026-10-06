@@ -434,7 +434,8 @@ function react(events) {
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('BLINDED'); feel.add('blind', '.board', null); break;
       case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
-      case 'patch': feel.add('patch', row(e.target), '+◆'); break;
+      case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
+      case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`); if (e.from) art.hit(e.target, 'attack'); break;
       case 'xp': feel.add('cycle', null, `+${e.amount} XP`); break;
       case 'status': if (e.mark) markFx(e, false); break;
       case 'fast-kill': feel.add('good', null); break;

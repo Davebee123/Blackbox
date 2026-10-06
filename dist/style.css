@@ -2314,3 +2314,7 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .net-leads-btn { display: inline-flex; align-items: center; gap: 5px; }
 .net-leads-btn[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
 @media (max-width: 900px) { .net-body.with-leads { flex-direction: column; } .net-leads { width: auto; border-left: 0; border-top: 1px solid var(--line); max-height: 40%; } }
+/* Class cards: Use sits in the corner of any class you aren't playing. */
+.arch-card { position: relative; display: grid; }
+.arch-card .arch { height: 100%; padding-right: 64px; }
+.arch-use { position: absolute; top: 10px; right: 10px; }

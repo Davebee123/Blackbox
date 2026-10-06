@@ -1508,6 +1508,11 @@ function topUp(s, what, wanted = null) {
 function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
+  // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
+  if (e.virus.mutation === 'adaptive' && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
+    p.adaptRun = p.adaptAt === e.cycle - 1 ? (p.adaptRun || 0) + 1 : 1;
+    p.adaptAt = e.cycle;
+  }
   // Sleeper: any hit wakes it.
   if (e.virus.dormant && base > 0) e.virus.woke = true;
   // Keylogger: the Logger only feels commands fired in a Sync Window (and the burns and helpers
@@ -1621,6 +1626,12 @@ function breakPart(s, p) {
     e.autoStopped = true;
   }
   emit(s, 'broken', `${p.name.toUpperCase()} BROKEN${p.attack ? `. ${p.attack.name} stops` : ''}.`, { target: p.id });
+  // Rerouting (mutation): half its attack damage moves to the surviving damage attacker that lands next.
+  if (e.virus.mutation === 'rerouting' && p.attack?.effect === 'damage' && p.attack.amount > 0) {
+    const to = livingParts(s).filter((x) => x !== p && x.attack?.effect === 'damage').sort((a, b) => a.attack.due - b.attack.due)[0];
+    const add = Math.max(1, Math.round(p.attack.amount / 2));
+    if (to) { to.attack.amount += add; to.rerouted = (to.rerouted || 0) + add; emit(s, 'reroute', `${p.attack.name} reroutes to ${to.name}: its ${to.attack.name} +${add}.`, { target: to.id, from: p.id, amount: add }); }
+  }
   if (zeroDay(s, 'buffer-overflow') && !e.forceCrit) { e.forceCrit = true; emit(s, 'status', 'Buffer Overflow: your next hit crits.'); }
   // Total Loss (Halcyon, Preferred): the wreck hits everything else. Chains through what it breaks.
   if (zeroDay(s, 'total-loss')) {
@@ -2245,6 +2256,11 @@ function cycleClose(s, landed) {
     }
   }
 
+  // Adaptive (mutation): a part hit three cycles running hardens.
+  if (e.virus.mutation === 'adaptive') for (const p of livingParts(s).filter((x) => x.adaptAt === e.cycle && x.adaptRun >= 3)) {
+    p.armor += 1; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; p.adaptRun = 0;
+    emit(s, 'patch', `${p.name} adapts: +1 armor chit.`, { target: p.id, adapt: true });
+  }
   // Bouncer: the Keyring re-arms the other parts to full armor on its beat.
   for (const k of livingParts(s).filter((x) => x.rearm && e.cycle % x.rearm === 0)) {
     const re = livingParts(s).filter((x) => x !== k && x.maxArmor > x.armor);

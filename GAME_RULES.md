@@ -682,6 +682,7 @@ The log and the terminal still speak (that's the MUD's voice): what happened, in
 Pages show instead of explaining; the words are in the hover.
 
 - **Wall: a level ruler.** Teal for invasion levels your wall stops, amber for the ones it contests, red hatching for the ones that break through, with your server marked on it (`server N`) and the incoming invasion too (`GHOSTROOT N`); each level is a cell, and the marks and the scale's numbers sit on the middle of theirs (a number a mark already shows isn't repeated). The Server page has the full ruler with its numbers; the map's server card has a thin one, and in a consortium a second thin one for while you're away.
+- **Map labels:** under each server's name, its level as `lv N` (coloured by how it compares to yours) and, past the first layer, `· layer N`; the rings are labelled `layer 1`, `layer 2`….
 - **The top bar:** the pages on the left; in the middle who you are (handle · class · level, the class's XP as a thin bar under it); on the right the people button, the pager, then Integrity, Signal and credits.
 - **HOME on the map:** its name, then Integrity as a thin bar (teal, amber below 60%, red below 30%) with the number under it.
 - **The map's server card:** two level bars at the top, the server's (amber) and your class's under it (named for the class, in your colour), each with its level at the end (hover for XP), an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, service slots as a strip of tiles, and Memory, Outposts (running / slots) and Salvage as counts. Your packed harvesters are on the Craft page, not the server card. An install in progress shows as a small bar.
@@ -900,6 +901,8 @@ Mutations are always visible and each changes a decision:
 - **Armored** — every part has one more armor chit.
 - **Regenerative** — a stripped part patches after 1 cycle instead of 2. Strip it only when you can finish it.
 - **Hasty** — every attack starts a cycle sooner, but all parts have 15% less Integrity. Race it.
+- **Rerouting** — when a part breaks, half its attack damage moves to the surviving damage attacker that lands next (the timeline shows the bigger number, the part a `+N rerouted` tag). Which part you break first decides what the rest hits for.
+- **Adaptive** — a part your commands hit three cycles in a row gains an armor chit at the end of that third cycle (*ADAPTS +◆*). A part one cycle from it is tagged *adapting*. Switch for a cycle, or finish it with that hit.
 
 (Reactive and Redundant were cut: they added rules without adding decisions.)
 

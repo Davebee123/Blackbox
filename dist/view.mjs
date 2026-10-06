@@ -318,6 +318,9 @@ function partTags(s, p) {
   if (p.rearm && p.integrity > 0) { const n = (p.rearm - (e.cycle % p.rearm)) % p.rearm; tags.push(`<span class="tag hot" title="Re-arms the other part to full armor at the end of every ${p.rearm}th cycle">${n ? `re-arms in ${n}` : 're-arms now'}</span>`); }
   if (p.attack?.grow && p.integrity > 0) tags.push(`<span class="tag hot" title="Its Trace-back grows every cycle the fight lasts">+${p.attack.bonus || 0}</span>`);
   if (p.echo && p.integrity > 0) tags.push('<span class="tag hot" title="Every hit you take repeats next cycle at half while this lives">echoing</span>');
+  // Mutations: an Adaptive part one more cycle of hits from hardening; damage a Rerouting virus moved here.
+  if (e.virus.mutation === 'adaptive' && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains an armor chit at the end of the cycle">adapting</span>');
+  if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted from a broken part: its attack +${p.rerouted}">+${p.rerouted} rerouted</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
   if (burn.length) tags.push(`<span class="tag you" title="Takes damage every cycle">burning ${burn.reduce((n, b) => n + b.damage, 0)}</span>`);
   if (e.helpers?.some((h) => h.target === p.id)) tags.push(`<span class="tag daemon" title="Your helper hits it every cycle">helper</span>`);
@@ -435,7 +438,7 @@ export function boardMarkup(s, selected, preview = null) {
   return strip + head + you() + rows + gone;
 }
 
-const LOG_CLASS = { miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
+const LOG_CLASS = { reroute: 'bad', miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
 
 // Whose half of the cycle is playing: 'you' (you and your crew), 'them' (the virus), or 'wait' (your move).
 export function phaseOf(s) {
@@ -1141,8 +1144,9 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
   const known = knownSkills(s, id), equipped = equippedSkills(s, id);
   const st = STATUSES[a.status];
 
-  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}">
-      <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea">${esc(x.idea)}</span></button>`).join('');
+  // Each class card: click to look at it; Use (any class you aren't playing) switches to it, at home.
+  const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<div class="arch-card"><button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}">
+      <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea">${esc(x.idea)}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
 
   // The bar you'll fight with: Spike, then your 7 equipped skills.
   const byId = Object.fromEntries(a.skills.map((x) => [x.id, x]));
@@ -1393,7 +1397,7 @@ const label = (n, r, name, sub, cls = '') => { const p = labelAt(n, r); return `
 // (WoW colours), the layer as a tag, then whatever else (outpost, siege…). The name can hide.
 const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
   const p = labelAt(n, r), gap = level - hackerLevel(s);
-  return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text><text x="${p.x}" y="${p.y + 16}" class="msub" text-anchor="${p.a}"><tspan class="mlv ${conClass(gap)}">${level}</tspan>${depth > 1 ? `<tspan class="mlayer" dx="6">L${depth}</tspan>` : ''}${rest ? `<tspan dx="6">${esc(rest)}</tspan>` : ''}</text>`;
+  return `<text x="${p.x}" y="${p.y}" class="mlabel ${cls}" text-anchor="${p.a}">${esc(name)}</text><text x="${p.x}" y="${p.y + 16}" class="msub" text-anchor="${p.a}"><tspan class="mlv ${conClass(gap)}">lv ${level}</tspan>${depth > 1 ? `<tspan class="mlayer" dx="6">· layer ${depth}</tspan>` : ''}${rest ? `<tspan dx="6">${esc(rest)}</tspan>` : ''}</text>`;
 };
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
@@ -1409,7 +1413,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const mx = con ? 190 : 130, my = con ? 56 : 52; // the consortium's outer ring carries long labels; hubs sit near the top and bottom edges
   const minX = Math.min(...xs, -250) - mx, maxX = Math.max(...xs, 250) + mx, minY = Math.min(...ys, -240) - my, maxY = Math.max(...ys, 240) + my + 4;
   const deepest = Math.max(1, ...s.locations.map((l) => l.depth || 1));
-  const rings = con ? [{ r: RM, t: 'trunk', cls: 'trunk' }] : [{ r: 120, t: 'wall', cls: 'wall' }, ...Array.from({ length: deepest }, (_, i) => ({ r: R1 + i * R2, t: `L${i + 1}` }))];
+  const rings = con ? [{ r: RM, t: 'trunk', cls: 'trunk' }] : [{ r: 120, t: 'wall', cls: 'wall' }, ...Array.from({ length: deepest }, (_, i) => ({ r: R1 + i * R2, t: `layer ${i + 1}` }))];
   const scope = `<g class="mscope">${rings.map((g) => `<circle r="${g.r}" class="mring-range ${g.cls || ''}"/><text text-anchor="start" x="${Math.round(g.r * 0.72) + 4}" y="${-Math.round(g.r * 0.69) - 4}" class="mring-label">${g.t}</text>`).join('')}
     <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>`;
   const lines = links.map((k) => {

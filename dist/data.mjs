@@ -418,6 +418,8 @@ export const MUTATIONS = {
   armored: { name: 'Armored', rule: 'Every part has one more armor chit.' },
   regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor a cycle sooner, so strip it only when you can finish it.' },
   hasty: { name: 'Hasty', rule: 'Every attack starts a cycle sooner, but all its parts have 15% less Integrity, so kill it fast.' },
+  rerouting: { name: 'Rerouting', rule: 'When a part breaks, half its attack damage reroutes to the surviving part that attacks next.' },
+  adaptive: { name: 'Adaptive', rule: 'A part your commands hit three cycles in a row adapts: it gains an armor chit at the end of that cycle.' },
 };
 
 export const FIXTURES = {

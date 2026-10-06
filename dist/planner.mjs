@@ -35,7 +35,10 @@ export function planner(s) {
   // Encrypted: the Encryptor holds the key, so it's the next threat whatever its timer says.
   const key = (s.encounter.encrypt > 0 && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || livingParts(s).find((p) => p.rearm) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring; a Replicator that keeps spawning
   const t0 = key || soonest(s);
-  const t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
+  let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
+  // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
+  const wary = (p) => s.encounter.virus.mutation === 'adaptive' && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
+  if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
   const d = defender(s);
   // 0. A lit proc is free damage: use it.
   const lit = first(s, ['shatter ' + t.id, 'retaliate ' + t.id, 'opening ' + t.id]);
@@ -49,7 +52,7 @@ export function planner(s) {
     if (bare(p) && queued >= p.integrity && ok(s, 'kill-switch')) return 'kill-switch';
   }
   // 2. Something lands now that we can't break: answer it.
-  const big = now.filter((i) => (i.effect !== 'damage' || i.amount >= 6) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead
+  const big = now.filter((i) => (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead
   if (big) {
     const answer = first(s, [
       big.effect === 'damage' && s.encounter.chits === 0 && 'harden',
