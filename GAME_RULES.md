@@ -633,10 +633,10 @@ On **25% of cycles**, a window (10% of the cycle, about a second at normal speed
 
 | Class | Sync bonus |
 |---|---|
-| Breaker | An extra armor chit cracks on the part you hit |
-| Bastion | +8 shield |
-| Infiltrator | Your burns on the part you hit last a cycle longer |
-| Operator | Your helpers each hit once more |
+| Breaker | Cracks an extra armor chit on the part you hit |
+| Bastion | Shields you for 8 |
+| Infiltrator | Stretches your burns on the part you hit by a cycle |
+| Operator | Makes each helper hit once more |
 
 **Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (15%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject lands an extra stack, Tag lasts 6 cycles and its burns tick +75% (not +50%), and Keepalive stretches burns 4 cycles (not 2).
 
@@ -660,10 +660,10 @@ A **slotted daemon acts on its own cooldown, in addition to your order**, right 
 | Fuzzer | Breaks an armor chit on an armored part. | 5 |
 | Stall | Pushes the attack landing soonest back a cycle. | 6 |
 | Mender | Heals you 8. | 5 |
-| Spider | A burn of 4 for 3 cycles on the part you last hit. | 5 |
+| Spider | Burns the part you last hit for 4 a cycle, for 3 cycles. | 5 |
 | Mirror | Hits the part you last hit for 12. | 3 |
 | Watchman | Once per fight: delays an attack of 20 or more by a cycle. | once per fight |
-| Canary | Once per fight: a 15 shield the first time you drop below half. | once per fight |
+| Canary | Once per fight: shields you for 15 the first time you drop below half. | once per fight |
 
 `jack out` during a guard fight is an emergency escape: it resolves on your turn, you keep your pack, and the guard stays.
 
@@ -718,7 +718,7 @@ Pages show instead of explaining; the words are in the hover.
 - **The top bar:** the pages on the left; in the middle who you are (handle · class · level, the class's XP as a thin bar under it); on the right the people button, the pager, then Integrity, Signal and credits.
 - **HOME on the map:** its name, then Integrity as a thin bar (teal, amber below 60%, red below 30%) with the number under it.
 - **The map's server card:** two level bars at the top, the server's (amber) and your class's under it (named for the class, in your colour), each with its level at the end (hover for XP), an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, service slots as a strip of tiles, and Memory, Outposts (running / slots) and Salvage as counts. Your packed harvesters are on the Craft page, not the server card. An install in progress shows as a small bar.
-- **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols, Configs and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid).
+- **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols, Configs and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid). The Server page's Blueprints card and every running service's next version show their cost the same way: a row each for credits, code, Exploits, salvage and the server level it needs, *have/need*, red when short; the button carries the build time.
 - **The crew column**: a narrow column on the left of every page while you have a crew (none when solo; `sidebar off|on` hides or shows it). Each row: name, then class and level flush with the right end of the Signal bar; it never shakes when they're hit, it outlines red. In a run fight it's the live party: bars, who's down, what each means to do this cycle. The combat log is a short strip under the timeline.
 - **Map cards pop up** beside the node you click (to its right, or its left when there's no room): the server card (Level, Integrity and the Wall as one line each; the service slots as a strip of tiles, each showing what runs in it; Memory, Harvesters and Salvage), a location, a hub, an invasion (its own card: the virus, where it's from, what it's doing with a timer bar, one line on how your firewall meets it, Jack in once it's at your wall, and a link to the Firewall). `×`, Escape or a click on empty map closes it.
 - **The expected damage and chits** (the white blink on a part's bar, the chit about to go) follow what you're typing: type a different skill at a part and the board shows what that one would do, before you press Enter. A heavy hit shows two chits going.
@@ -860,16 +860,16 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Breaker | 18 | `shatter <part>` | Lights up for 2 cycles when you break a part's last armor chit. 55 damage. | lit |
 | Breaker | 22 | `segfault <part>` | 30 damage, three times that on a part under 30%. | 3 |
 | Breaker | 26 | `fork-bomb` | 15 damage to every part, 30 to an Exposed one. | 3 |
-| Breaker | 30 | `thermal-runaway <part>` | A burn that grows: 6, 10, 14, 18. | 4 |
+| Breaker | 30 | `thermal-runaway <part>` | Burns it for 6, then 10, 14 and 18. | 4 |
 | Breaker | 34 | `sudo` | This cycle and next, every hit you land crits. | 6 |
 | Breaker | 38 | `zero-day <part>` | 80 damage straight through armor. Once per fight. | once |
 | Bastion | 1 | `rate-limit <part>` | 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits. | 3 |
-| Bastion | 3 | `firewall` | A shield that absorbs the next 20 damage. If it soaks a whole hit, Retaliate lights up. | 4 |
+| Bastion | 3 | `firewall` | Shields you from the next 20 damage. If it soaks a whole hit, Retaliate lights up. | 4 |
 | Bastion | 5 | `suspend [part]` | SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest. | 4 |
-| Bastion | 10 | `retaliate <part>` | The cycle after an attack reaches you (or your shield): hit back for twice its size, up to 60. | lit |
+| Bastion | 10 | `retaliate <part>` | Hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after. | lit |
 | Bastion | 14 | `patch` | Heal 10 now, then 5 a cycle for 3 cycles. | 4 |
 | Bastion | 18 | `throttle [part]` | Its attacks deal half for 3 cycles. | 4 |
-| Bastion | 22 | `purge <part>` | A burn of 6 for 4 cycles; each tick heals you 2. It also clears your encryption. | 4 |
+| Bastion | 22 | `purge <part>` | Burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption. | 4 |
 | Bastion | 26 | `harden` | Gain an armor chit: the next attack on you does nothing, however big. | 6 |
 | Bastion | 30 | `reclaim <part>` | 35 damage, and you heal half of what it does. On armor it breaks 2 chits. | 3 |
 | Bastion | 34 | `quarantine [part]` | Push its attack back 3 cycles; while it waits, it takes +25% damage. | 6 |
@@ -880,14 +880,14 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Infiltrator | 10 | `backdoor <part>` | 24 damage straight through armor, +6 for each burn on it. | 4 |
 | Infiltrator | 14 | `null-route` | Every attack this cycle misses you, and your next skill crits. | 5 |
 | Infiltrator | 18 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. | 4 |
-| Infiltrator | 22 | `opening <part>` | The cycle after an attack misses you or is delayed: 50 damage. | lit |
+| Infiltrator | 22 | `opening <part>` | Hits it for 50 the cycle after an attack misses you or is delayed. | lit |
 | Infiltrator | 26 | `propagate <part>` | Copy your burns on it to every other part. | 5 |
 | Infiltrator | 30 | `spoof` (runs) | On runs: once per run, the next guarded folder doesn't start a fight. Read and pull one file there. | once/run |
 | Infiltrator | 34 | `tap` (runs) | On runs: once per run, print the whole folder tree, its guards, and which file holds the key. | once/run |
-| Infiltrator | 38 | `implant <part>` | A burn of 10 every cycle until the part breaks. Once per fight. | once |
-| Operator | 1 | `deploy <part>` | A helper hits it for 12 every cycle for 4 cycles (it moves on if the part breaks). | 4 |
+| Infiltrator | 38 | `implant <part>` | Burns it for 10 every cycle until the part breaks. Once per fight. | once |
+| Operator | 1 | `deploy <part>` | Sends a helper to hit it for 12 every cycle for 4 cycles (it moves on if the part breaks). | 4 |
 | Operator | 3 | `hook <part>` | Hooked for 4 cycles: every hit on it from anyone (helpers and burns too) gets +6. | 3 |
-| Operator | 5 | `spawn <part>` | A small helper hits it for 5 every cycle for 3 cycles. | 1 |
+| Operator | 5 | `spawn <part>` | Sends a small helper to hit it for 5 every cycle for 3 cycles. | 1 |
 | Operator | 10 | `botnet <part>` | Three small helpers hit it for 4 each every cycle for 3 cycles. | 5 |
 | Operator | 14 | `barrier <part>` | Pull one of your helpers off it: a shield worth all the damage it had left. | 3 |
 | Operator | 18 | `jam [part]` | Pull one of your helpers off it to push its attack back a cycle. | 2 |

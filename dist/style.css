@@ -2611,3 +2611,8 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .inv-card .inv-state { display: flex; align-items: center; gap: 8px; margin: 6px 0 4px; }
 .inv-card .inv-state b { font: 600 12px var(--mono); color: var(--text); }
 .inv-card.breach { border-color: rgba(255, 91, 61, 0.6); }
+/* Have / need rows inside a service line (Server page), a little tighter than the Craft page's. */
+.svc-next .cd-cost { flex: 1 1 100%; }
+.cd-cost.tight { gap: 3px; }
+.cd-cost.tight li { padding: 3px 8px; }
+.cd-cost.tight li b { font-size: 12px; }

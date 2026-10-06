@@ -34,7 +34,7 @@ import { archWall } from './architecture.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
-import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
+import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
 import { cooldownOf, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
@@ -671,7 +671,7 @@ export function craftCats(s) {
   return cats;
 }
 // What a recipe takes, a row each: the icon, the name, what you have / what it takes (red when short).
-function costRows(s, cost) {
+function costRows(s, cost, cls = '') {
   const mats = materialsOf(s), st = Object.fromEntries(salvageStacks(s).map((x) => [x.name, x.n])), rows = [];
   const row = (icon, name, have, need) => rows.push(`<li class="${have >= need ? 'ok' : 'short'}">${glyph(icon)}<span>${esc(name)}</span><b>${have}<small>/${need}</small></b></li>`);
   if (cost.credits) row('credits', 'Credits', s.server.credits, cost.credits);
@@ -680,7 +680,8 @@ function costRows(s, cost) {
     if (salvageTotal(cost.salvage)) row('salvage', 'Salvage (any)', s.salvage.length, salvageTotal(cost.salvage));
     for (const x of cost.salvage.need) row('crate', x.label, x.names.reduce((n, k) => n + (st[k] || 0), 0), x.n);
   }
-  return `<ul class="cd-cost">${rows.join('')}</ul>`;
+  if (cost.level > 1) row('server', 'Server level', serverLevel(s), cost.level);
+  return `<ul class="cd-cost${cls ? ' ' + cls : ''}">${rows.join('')}</ul>`;
 }
 export function craftMarkup(s, ui = {}) {
   const cats = craftCats(s), busy = active(s) || !!s.run;
@@ -913,9 +914,9 @@ export function serverMarkup(s, now = Date.now()) {
     const v = serviceVersion(s, id) + 1;
     if (v > VERSIONS.length) return '<small>max</small>';
     const why = installBlock(s, id);
-    const x = VERSIONS[v - 1];
-    return `<small>v${v}: ${esc(serviceEffect(s, id, v))} · ${esc(costLine({ ...serviceCost(id, v), salvage: x.salvage }))} · ${x.minutes} min${x.needs > 1 ? ` · server Lv ${x.needs}` : ''}</small>
-      <button type="button" class="btn ${why ? '' : 'primary'} small" data-command="install ${id}" ${why || busy ? 'disabled' : ''} title="${esc(why || (v > 1 ? 'Upgrade' : 'Install'))}">${v > 1 ? `Upgrade to v${v}` : 'Install'}</button>`;
+    const x = VERSIONS[v - 1], { credits, ...code } = serviceCost(id, v);
+    return `<small>v${v}: ${esc(serviceEffect(s, id, v))}</small>${costRows(s, { credits, code, salvage: SALVAGE_COSTS.service(x.salvage), level: x.needs }, 'tight')}
+      <button type="button" class="btn ${why ? '' : 'primary'} small" data-command="install ${id}" ${why || busy ? 'disabled' : ''} title="${esc(why || (v > 1 ? 'Upgrade' : 'Install'))}">${v > 1 ? `Upgrade to v${v}` : 'Install'} · ${x.minutes} min</button>`;
   };
   const running = Object.keys(s.services || {}).map((id) => `<li class="svc on"><div class="svc-main"><div class="gitem-head"><b class="svc-name">${glyph(id, 'badge')}${esc(SERVICES[id].name)}</b><span class="tag you">v${serviceVersion(s, id)}</span></div>
       <small>${esc(serviceEffect(s, id, serviceVersion(s, id)))}</small>${configRow(s, id, busy)}<div class="svc-next">${next(id)}</div></div>

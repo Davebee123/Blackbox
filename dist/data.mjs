@@ -141,18 +141,18 @@ export const ABILITIES = {
   flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 30, cooldown: 4, icon: 'overload', short: 'Hit 30, ×2 if bare', help: 'flood <part> — 30 damage, double on a part with no armor left.' },
   segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 below 30%', help: 'segfault <part> — 30 damage, three times that on a part under 30%.' },
   'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 15, cooldown: 3, icon: 'overload', short: 'Hit 15 all', help: 'fork-bomb — 15 damage to every part, 30 to an Exposed one.' },
-  'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 6, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 6→18', help: 'thermal-runaway <part> — a burn that grows: 6, 10, 14, 18.' },
+  'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 6, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 6→18', help: 'thermal-runaway <part> — burns it for 6, then 10, 14 and 18.' },
   brace: { cls: 'breaker', verb: 'buff', name: 'Brace', target: 'none', damage: 0, cycles: 2, block: 5, cooldown: 5, icon: 'shell-shield', short: 'Block 5, crack back', help: 'brace — for 2 cycles: +5 Block, and whatever hits you loses an armor chit (or takes 10 if it has none).' },
   sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 80, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 80 through armor, once', help: 'zero-day <part> — 80 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
   'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 40, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 40 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits.' },
-  firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — a shield that absorbs the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
-  retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — the cycle after an attack reaches you (or your shield): hit back for twice its size, up to 60.' },
+  firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — shields you from the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
+  retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
   patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 10, tick: 5, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 10 + 5×3', help: 'patch — heal 10 now, then 5 a cycle for 3 cycles.' },
   throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, cooldown: 4, icon: 'interrupt', short: 'Weaken −50%', help: 'throttle [part] — its attacks deal half for 3 cycles.' },
-  purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, decrypt', help: 'purge <part> — a burn of 6 for 4 cycles; each tick heals you 2. It also clears your encryption.' },
+  purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, decrypt', help: 'purge <part> — burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption.' },
   harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain an armor chit: the next attack on you does nothing, however big.' },
   reclaim: { cls: 'bastion', verb: 'hit', name: 'Reclaim', target: 'part', damage: 35, lifesteal: 0.5, chits: 2, cooldown: 3, icon: 'server', short: 'Hit 35, heal half', help: 'reclaim <part> — 35 damage, and you heal half of what it does. On armor it breaks 2 chits.' },
   quarantine: { cls: 'bastion', verb: 'stun', name: 'Quarantine', target: 'attack', damage: 0, delay: 3, status: 'quarantined', cycles: 3, cooldown: 6, icon: 'event-lock', short: 'Delay 3, +25% dmg', help: 'quarantine [part] — push its attack back 3 cycles; while it waits, it takes +25% damage.' },
@@ -163,15 +163,15 @@ export const ABILITIES = {
   backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 6, cooldown: 4, icon: 'injector', short: 'Hit 24 thru armor, +6/burn', help: 'backdoor <part> — 24 damage straight through armor, +6 for each burn on it.' },
   keepalive: { cls: 'infiltrator', verb: 'util', name: 'Keepalive', target: 'part', damage: 0, cycles: 2, cooldown: 2, icon: 'injector', short: 'Burns +2 cycles', help: 'keepalive <part> — every burn on it lasts 2 cycles longer.' },
   detonate: { cls: 'infiltrator', verb: 'hit', name: 'Detonate', target: 'part', damage: 0, cooldown: 4, icon: 'event-warning', short: 'Burns now ×1.5', help: 'detonate <part> — every burn on it deals all its remaining damage now, ×1.5.' },
-  opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: 'Hit 50 (after a miss)', help: 'opening <part> — the cycle after an attack misses you or is delayed: 50 damage.' },
+  opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: 'Hit 50 (after a miss)', help: 'opening <part> — hits it for 50 the cycle after an attack misses you or is delayed.' },
   propagate: { cls: 'infiltrator', verb: 'util', name: 'Propagate', target: 'part', damage: 0, cooldown: 5, icon: 'mutation', short: 'Copy burns to all', help: 'propagate <part> — copy your burns on it to every other part.' },
   'null-route': { cls: 'infiltrator', verb: 'shield', name: 'Null Route', target: 'none', damage: 0, cooldown: 5, icon: 'behavior', short: 'Dodge; next skill crits', help: 'null-route — every attack this cycle misses you, and your next skill crits.' },
-  implant: { cls: 'infiltrator', verb: 'burn', name: 'Rootkit Implant', target: 'part', damage: 0, tick: 10, ticks: 99, once: true, cooldown: 0, icon: 'injector', short: 'Burn 10 until it breaks', help: 'implant <part> — a burn of 10 every cycle until the part breaks. Once per fight.' },
+  implant: { cls: 'infiltrator', verb: 'burn', name: 'Rootkit Implant', target: 'part', damage: 0, tick: 10, ticks: 99, once: true, cooldown: 0, icon: 'injector', short: 'Burn 10 until it breaks', help: 'implant <part> — burns it for 10 every cycle until the part breaks. Once per fight.' },
   // Operator: helpers, and what you do with them
-  deploy: { cls: 'operator', verb: 'burn', name: 'Deploy', target: 'part', damage: 0, helper: 12, ticks: 4, cooldown: 4, icon: 'command', short: 'Helper 12 ×4', help: 'deploy <part> — a helper hits it for 12 every cycle for 4 cycles (it moves on if the part breaks).' },
+  deploy: { cls: 'operator', verb: 'burn', name: 'Deploy', target: 'part', damage: 0, helper: 12, ticks: 4, cooldown: 4, icon: 'command', short: 'Helper 12 ×4', help: 'deploy <part> — sends a helper to hit it for 12 every cycle for 4 cycles (it moves on if the part breaks).' },
   hook: { cls: 'operator', verb: 'debuff', name: 'Hook', target: 'part', damage: 0, status: 'hooked', cycles: 4, cooldown: 3, icon: 'injector', short: 'Hooked 4', help: 'hook <part> — Hooked for 4 cycles: every hit on it from anyone (helpers and burns too) gets +6.' },
   botnet: { cls: 'operator', verb: 'burn', name: 'Botnet', target: 'part', damage: 0, helper: 4, helpers: 3, ticks: 3, cooldown: 5, icon: 'command', short: '3 helpers 4 ×3', help: 'botnet <part> — three small helpers hit it for 4 each every cycle for 3 cycles.' },
-  spawn: { cls: 'operator', verb: 'burn', name: 'Spawn', target: 'part', damage: 0, helper: 5, ticks: 3, cooldown: 1, icon: 'command', short: 'Helper 5 ×3', help: 'spawn <part> — a small helper hits it for 5 every cycle for 3 cycles.' },
+  spawn: { cls: 'operator', verb: 'burn', name: 'Spawn', target: 'part', damage: 0, helper: 5, ticks: 3, cooldown: 1, icon: 'command', short: 'Helper 5 ×3', help: 'spawn <part> — sends a small helper to hit it for 5 every cycle for 3 cycles.' },
   jam: { cls: 'operator', verb: 'stun', name: 'Jam', target: 'attack', damage: 0, delay: 1, recall: true, cooldown: 2, icon: 'interrupt', short: 'Spend a helper: delay 1', help: 'jam <part> — pull one of your helpers off it to push its attack back a cycle.' },
   'kill-switch': { cls: 'operator', verb: 'hit', name: 'Kill Switch', target: 'none', damage: 0, cooldown: 3, icon: 'event-warning', short: 'Cash in helpers', help: 'kill-switch — your helpers deal all their remaining damage now.' },
   'garbage-collect': { cls: 'operator', verb: 'hit', name: 'Garbage Collect', target: 'none', damage: 0, all: 10, cooldown: 3, icon: 'clear', short: 'Hit 10 all, helpers +1', help: 'garbage-collect — 10 damage to every part, and your helpers last a cycle longer.' },
@@ -190,10 +190,10 @@ export const DAEMONS = {
   fuzzer: { name: 'Fuzzer', cooldown: 5, rule: 'Breaks an armor chit on an armored part.' },
   stall: { name: 'Stall', cooldown: 6, rule: 'Pushes the attack landing soonest back a cycle.' },
   mender: { name: 'Mender', cooldown: 5, amount: 8, rule: 'Heals you 8.' },
-  spider: { name: 'Spider', cooldown: 5, amount: 4, rule: 'A burn of 4 for 3 cycles on the part you last hit.' },
+  spider: { name: 'Spider', cooldown: 5, amount: 4, rule: 'Burns the part you last hit for 4 a cycle, for 3 cycles.' },
   mirror: { name: 'Mirror', cooldown: 3, amount: 12, rule: 'Hits the part you last hit for 12.' },
   watchman: { name: 'Watchman', once: true, amount: 20, rule: 'Once per fight: delays an attack of 20 or more by a cycle.' },
-  canary: { name: 'Canary', once: true, amount: 15, rule: 'Once per fight: a 15 shield the first time you drop below half.' },
+  canary: { name: 'Canary', once: true, amount: 15, rule: 'Once per fight: shields you for 15 the first time you drop below half.' },
 };
 export const DAEMON_VERSIONS = [1, 1.5, 2];
 export const DAEMON_DROPS = { vault: 0.1, guard: 0.01, home: 0.0025 };
@@ -639,10 +639,10 @@ export const EDGE = {
 };
 // Sync Window bonuses: each class syncs its own way.
 export const SYNC = {
-  breaker: { amount: 1, rule: 'An extra armor chit cracks on the part you hit.' },
-  bastion: { amount: 8, rule: '+8 shield.' },
-  infiltrator: { amount: 1, rule: 'Your burns on the part you hit last a cycle longer.' },
-  operator: { amount: 1, rule: 'Your helpers each hit once more.' },
+  breaker: { amount: 1, rule: 'Cracks an extra armor chit on the part you hit.' },
+  bastion: { amount: 8, rule: 'Shields you for 8.' },
+  infiltrator: { amount: 1, rule: 'Stretches your burns on the part you hit by a cycle.' },
+  operator: { amount: 1, rule: 'Makes each helper hit once more.' },
 };
 // Shared statuses: each class makes one; anyone's hits cash it in.
 export const STATUSES = {
