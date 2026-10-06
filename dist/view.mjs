@@ -894,12 +894,12 @@ function filterChips(s, f, on) {
 // How to trace an unknown server: each way, what it adds, and whether it's open to you yet.
 const FAM_GLYPH = { worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel' };
 function traceWays(s, h, via, kit) {
-  const relay = !!h.pinged, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route];
+  const relay = !!h.pinged, known = relay || !!h.seen, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route];
   const row = (ic, label, gain, state, tip) => `<li class="tw ${state}" title="${esc(tip)}">${glyph(ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
   const needRelay = `Needs a relay on ${via?.name || 'the server next to it'}`;
   return `<ul class="trace-ways">
     ${row('spike', 'Beat its invader', `+${HIDDEN.winLead}%`, 'on', `When it sends an invasion, jack in and win: +${HIDDEN.winLead}%. Your wall stopping it: +${HIDDEN.blockLead}%.`)}
-    ${row(FAM_GLYPH[h.family] || 'kill', relay ? `Kill ${FAMILIES[h.family]?.name || 'its family'}` : 'Kill its family', `+${HIDDEN.killLead}%`, relay ? 'on' : 'off', relay ? `Every ${FAMILIES[h.family]?.name || ''} you kill, at home or in SPRAWL-00` : needRelay)}
+    ${row(known ? FAM_GLYPH[h.family] || 'kill' : 'kill', known ? `Kill ${FAMILIES[h.family]?.name || '?'}` : 'Kill ?', `+${HIDDEN.killLead}%`, relay ? 'on' : 'off', relay ? `Every ${FAMILIES[h.family]?.name || ''} you kill, at home or in SPRAWL-00` : `${needRelay} for kills to count${known ? '' : ' (it also reads the family; so does an invader from it)'}`)}
     ${row('relay', route, `+${HIDDEN.routeLead}%`, banked ? 'done' : relay ? 'on' : 'off', banked ? 'Banked' : relay ? `In / on ${via?.name || '?'}: pull it and bank it` : needRelay)}
     ${row('injector', 'Trace injector', '+30%', kit.injector ? 'on' : 'off', kit.injector ? 'Use it below' : 'Halcyon’s store, Kestrel and LANTERN sell them')}
   </ul>`;
@@ -1083,7 +1083,7 @@ function leadsPanel(s) {
   const nodes = hiddenNodes(s).filter(hiddenVisible).sort((a, b) => b.lead - a.lead);
   const bar = (n) => `<span class="ld-bar"><span style="width:${Math.min(100, n)}%"></span></span><b class="ld-n">${Math.floor(n)}%</b>`;
   const famRows = fams.map(([f, n]) => `<li class="ld-row" data-go="map:lead-${esc(f)}" title="${esc(FAMILIES[f].name)} lead">${glyph(f)}<span class="ld-name">${esc(FAMILIES[f].name)}</span>${bar(n)}</li>`).join('');
-  const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${esc(FAMILIES[n.family].name.toLowerCase())} server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('contract')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
+  const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${n.pinged || n.seen ? esc(FAMILIES[n.family].name.toLowerCase()) + ' ' : ''}server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('contract')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
   // Faction hubs you haven't located (once the board is open): their trace, from their servers.
   const hubRows = (hubsOf(s).length ? FACTION_IDS.filter((f) => !hubFound(s, f)) : []).map((f) => `<li class="ld-row" style="--fc:${FX[f].color}" title="${esc(FX[f].hub.name)}">${fIcon(f)}<span class="ld-name">${esc(FX[f].short)} <small>hub</small></span>${bar(hubTraceOf(s, f))}</li>`).join('');
   return `<aside class="net-leads"><h3>${glyph('trace')}Leads</h3>${famRows || nodeRows || hubRows ? `${famRows ? `<ul class="ld-list">${famRows}</ul>` : ''}${nodeRows ? `<h4>Unknown servers</h4><ul class="ld-list">${nodeRows}</ul>` : ''}${hubRows ? `<h4>Faction hubs</h4><ul class="ld-list">${hubRows}</ul>` : ''}` : '<p class="quiet">none</p>'}</aside>`;
@@ -1861,10 +1861,10 @@ function listHubs(s, sel, filter) {
 function listLeads(s, sel, filter) {
   if (filter.length && !filter.includes('targets')) return '';
   const fams = Object.entries(s.leadProgress || {}).filter(([f, n]) => FAMILIES[f] && n > 0).map(([f, n]) => ({ id: 'lead-' + f, name: `${FAMILIES[f].name} lead`, fam: f, pct: n, depth: '1', flag: false }));
-  const nodes = hiddenNodes(s).filter(hiddenVisible).map((n) => ({ id: n.id, name: `? past ${s.locations.find((l) => l.id === n.via)?.name || '?'}`, fam: n.family, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
+  const nodes = hiddenNodes(s).filter(hiddenVisible).map((n) => ({ id: n.id, name: `? past ${s.locations.find((l) => l.id === n.via)?.name || '?'}`, fam: n.pinged || n.seen ? n.family : null, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
   const rows = [...fams, ...nodes].sort((a, b) => b.pct - a.pct);
   if (!rows.length) return '';
-  return `<h4 class="sl-sec">Leads and unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${glyph(r.fam)}${esc(FAMILIES[r.fam]?.name || '')}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
+  return `<h4 class="sl-sec">Leads and unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${r.fam ? glyph(r.fam) + esc(FAMILIES[r.fam]?.name || '') : '?'}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
 }
 // The map's selection card on its own (the sidebar carries it when it's on).
 export function mapSelection(s, sel = 'server', view = 'mine') {
@@ -2004,7 +2004,7 @@ function mapSide(s, sel, node) {
     const job = openContracts(s).find((c) => c.hidden === h.id && !c.loc);
     return `<section class="card${flag ? ' alert' : ''}"><h2>Unknown server · layer ${h.depth}</h2><h1>?</h1>
       <p class="svc-line">past ${esc(via?.name || '?')} · signal <span class="sigbars">${'▮'.repeat(h.signal)}${'▯'.repeat(5 - h.signal)}</span></p>
-      <p class="svc-line">${h.pinged || h.lead > 0 ? `<span class="tag fam-tag" title="Its virus family: kills of this family trace it once a relay pings it">${glyph(FAM_GLYPH[h.family] || 'kill')}${esc(FAMILIES[h.family]?.name || h.family)}</span>` : `<span class="tag dim" title="A relay on ${esc(via?.name || 'the server next to it')} reads its family (so does an invader from it)">${glyph('kill')}family ?</span>`}</p>
+      <p class="svc-line">${h.pinged || h.seen ? `<span class="tag fam-tag" title="Its virus family: kills of this family trace it once a relay pings it">${glyph(FAM_GLYPH[h.family] || 'kill')}${esc(FAMILIES[h.family]?.name || h.family)}</span>` : `<span class="tag dim" title="A relay on ${esc(via?.name || 'the server next to it')} reads its family (so does an invader from it)">${glyph('kill')}family ?</span>`}</p>
       ${flag && job ? `<p class="svc-line"><span class="tag">Contract</span> ${esc(contractTitle(s, job))}</p>` : ''}
       <div class="lvl-row"><span class="lvl-bar"><span style="width:${h.lead}%"></span></span><small>${h.lead}% traced</small></div>
       ${traceWays(s, h, via, kit)}

@@ -197,6 +197,7 @@ function depart(s, from = null) {
   const o = from ? { loc: from } : pickOrigin(s);
   const h = o.hidden || null;
   const via = h && s.locations.find((l) => l.id === h.via);
+  if (h) h.seen = true; // an invader from it shows its family
   // From a server you haven't found, it comes through one you're attached to: at that server's
   // level and layer (what you've connected to sets what comes at you), on the longer road.
   const loc = h ? { id: h.via, name: 'an unknown server', family: h.family, level: Math.min(h.level, via?.level || h.level), depth: via?.depth || 1, road: h.depth } : o.loc;
