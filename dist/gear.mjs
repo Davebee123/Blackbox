@@ -314,7 +314,7 @@ export const VERSIONS = [
 // One rule per service. `stat`/`values`: what it adds per version (see serviceValue).
 // `code`: which code it's built from. `special`: needs its source (found in vaults) first.
 export const SERVICES = {
-  firewall: { name: 'Firewall', code: 'cipher', stat: 'firewall', values: [1, 1.2, 1.45], unit: '× wall rating', about: 'Holds invasions at the wall: blocks weaker ones outright, contests close ones.' },
+  firewall: { name: 'Firewall', code: 'cipher', stat: 'firewall', values: [1, 2, 3], unit: ' filter slots', flat: true, about: 'Slots for filters on your firewall.' },
   raid: { name: 'RAID Array', code: 'worm', stat: 'integrity', values: [5, 10, 15], unit: '% max Integrity', about: 'More server Integrity.' },
   kernel: { name: 'Hardened Kernel', code: 'kernel', stat: 'reduction', values: [2, 4, 6], unit: ' Block', flat: true, about: 'Hits on your server do less.' },
   scrubber: { name: 'Scrubber', code: 'cipher', stat: 'shield', values: [4, 7, 10], unit: '% shield at the start of each home fight', about: 'Every home fight starts with a shield.' },

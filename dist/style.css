@@ -2459,3 +2459,22 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .mpkt.pay .pk-icon { fill: rgba(255, 91, 61, 0.25); stroke: var(--hot); stroke-width: 1; stroke-linejoin: round; filter: drop-shadow(0 0 3px var(--hot)); }
 .mpkt.pay .pk-dir { fill: var(--hot); }
 .map-svg[class*="mf-"] .mbone, .map-svg[class*="mf-"] .mpkt.amb, .map-svg[class*="mf-"]:not(.mf-mine) .mpkt { opacity: 0.12; }
+
+/* The firewall: its level, what it's vulnerable to, and its blocks (firewall.mjs). */
+.fw-panel { display: grid; gap: 8px; margin: 6px 0 10px; }
+.fw-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.fw-lv { font: 700 22px var(--mono); color: var(--text); }
+.fw-base { color: var(--muted); font: 11px var(--mono); }
+.vuln { margin-left: auto; font: 600 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border: 1px solid currentColor; border-radius: 3px; }
+.vuln.ok { color: var(--you); }
+.vuln.mid { color: var(--amber); }
+.vuln.low { color: var(--hot); }
+.fw-grid { display: grid; grid-template-columns: repeat(16, 1fr); gap: 3px; }
+.fw-grid i { height: 12px; background: var(--you); opacity: 0.75; border-radius: 1px; }
+.fw-grid i.frag { background: transparent; outline: 1px dashed rgba(127, 209, 199, 0.35); outline-offset: -1px; opacity: 1; transform: translateY(2px); }
+.fw-grid.defrag i { animation: fw-sweep 1.2s linear infinite; }
+.fw-grid.defrag i:nth-child(odd) { animation-delay: 0.3s; }
+.fw-grid.hard { padding: 3px; border: 1px solid var(--you); border-radius: 3px; box-shadow: 0 0 8px rgba(127, 209, 199, 0.35); }
+@keyframes fw-sweep { 50% { opacity: 0.25; } }
+.fw-acts { gap: 6px; flex-wrap: wrap; }
+.tag.warn { color: var(--amber); border-color: var(--amber); }

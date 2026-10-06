@@ -13,6 +13,7 @@ import { tickRetake } from './hubs.mjs';
 import { tickStation } from './station.mjs';
 import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
+import { effLevel, fragment, tickFirewall } from './firewall.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
@@ -26,12 +27,12 @@ export const INVADER = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: '
 
 // ---------- the wall ----------
 export const strength = (level, mutation = null, grade = 1) => 100 * power(level) * (mutation ? I().mutated : 1) * (GRADES[grade]?.hp || 1); // a v2/v3 invader is that much harder to stop
-// Your wall's rating: the server's power at its level, times the Firewall's version (a bare
-// server has a weak wall). Down while the server is Degraded.
+// Your wall's rating: your firewall's effective level (firewall.mjs), set so it blocks invaders at
+// or under that level outright. Down while the server is Degraded.
 export function wallRating(s) {
   if (s.degraded) return 0;
-  const v = serviceVersion(s, 'firewall');
-  return 100 * power(serverLevel(s)) * (v ? SERVICES.firewall.values[v - 1] : I().wall);
+  const L = effLevel(s);
+  return L < 1 ? 100 * I().wall : 100 * power(L) * I().block;
 }
 // Firewall configs bend the rating: Stateful +20%; Adaptive +40% against the family that has hit
 // you most, −10% against the rest.
@@ -87,6 +88,7 @@ export function tickNetwork(s, now = Date.now()) {
   tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
   tickFleet(s, dt, !!s.degraded, now);
   tickRetake(s, dt, !!s.degraded, now); // hubs you hold, and the factions that want them back
+  tickFirewall(s, now); // a defrag that's done
   tickStation(s, dt); // the numbers station keeps broadcasting, degraded or not
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
   if (s.degraded) {
@@ -200,6 +202,7 @@ function arrive(s) {
   if (hasConfig(s, 'beacon') && inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), 15, 'Beacon: ');
   const r = ratioOf(s, inv);
   const o = outcome(r);
+  fragment(s, o); // every threat it meets wears the firewall
   if (o === 'blocked') return stopped(s, inv, false);
   inv.state = o;
   if (o === 'siege') emit(s, 'wall-siege', `Invasion at your wall: ${inv.name}, contested. −${pct(chipRate(r))} Integrity a minute.`, { invader: inv.id });

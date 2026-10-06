@@ -14,11 +14,13 @@ const MIN = 60000;
 const I = CONFIG.invasion;
 
 // A server with one found location at a level; the network clock starts at t = 0.
-function world({ level = 1, family = 'worm', depth = 1, services = {} } = {}) {
+// fw: the firewall's level (0: none to speak of, every invasion breaches).
+function world({ level = 1, family = 'worm', depth = 1, services = {}, fw = 0 } = {}) {
   const s = fresh();
   command(s, `developer location ${family}`);
   Object.assign(s.locations[0], { level, depth });
   s.services = { ...services };
+  s.firewall = { level: fw, frag: 0, defragUntil: 0, hardenUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
   s.clock = 0;
@@ -31,11 +33,12 @@ function wait(s, ms) {
   for (let t = 0; t < ms; t += 5000) { s.clock += Math.min(5000, ms - t); out.push(...tickNetwork(s, s.clock)); }
   return out;
 }
-// The next invader, straight to the wall.
+// The next invader, straight to the wall (plain: no mutation, grade 1, so the numbers are exact).
 function atWall(s) {
   s.net.next = 0;
   wait(s, 5000);
   const inv = s.invasion;
+  Object.assign(inv, { mutation: null, grade: 1 });
   wait(s, inv.left);
   return inv;
 }
@@ -70,19 +73,19 @@ test('travel: 2 minutes from layer 1, a minute more per layer, slower behind a T
   assert.equal(travelMs(s, 1), 5 * MIN);
 });
 
-test('the wall: no Firewall means a breach; v1 holds an even-level invader at siege; v2 blocks it', () => {
+test('the wall: no firewall means a breach; a level-6 invader is contested by a level-1 firewall; a level-1 one is blocked', () => {
   const bare = world();
   atWall(bare);
   assert.equal(bare.invasion.state, 'breach');
   assert.equal(chipRate(wallRating(bare) / 100), 1, 'a breach chips 1% a minute');
 
-  const v1 = world({ services: { firewall: 1 } });
+  const v1 = world({ level: 6, fw: 1 }); // exactly between the lines
   atWall(v1);
   assert.equal(v1.invasion.state, 'siege');
   assert.equal(chipRate(1), 0.5, 'halfway between the lines: half the chip');
   assert.equal(grindRate(1), 12, 'and the wall grinds 12% a minute');
 
-  const v2 = world({ services: { firewall: 2 } });
+  const v2 = world({ fw: 1 });
   v2.net.next = 0;
   const salvage = v2.salvage.length;
   const ev = wait(v2, 5000 + travelMs(v2));
@@ -96,17 +99,18 @@ test('the wall: no Firewall means a breach; v1 holds an even-level invader at si
 test('wall bands: what your wall blocks and holds, by invader level', () => {
   const s = fresh();
   command(s, 'developer server 10');
-  assert.deepEqual(wallBands(s), { blocks: 0, holds: 7 }, 'no Firewall');
-  s.services = { firewall: 1 };
-  assert.deepEqual(wallBands(s), { blocks: 4, holds: 18 });
-  s.services = { firewall: 3 };
-  assert.deepEqual(wallBands(s), { blocks: 17, holds: 37 });
+  s.firewall = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  assert.deepEqual(wallBands(s), { blocks: 0, holds: 0 }, 'no firewall to speak of');
+  s.firewall.level = 1;
+  assert.deepEqual(wallBands(s), { blocks: 1, holds: 13 }, 'it blocks its own level; the server level adds nothing');
+  s.firewall.level = 10;
+  assert.deepEqual(wallBands(s), { blocks: 10, holds: 26 });
   assert.equal(outcome(1.2), 'blocked');
   assert.equal(outcome(0.8), 'breach');
 });
 
 test('a siege wears the invader down while it chips the server; a breach just chips', () => {
-  const s = world({ services: { firewall: 1 } });
+  const s = world({ level: 6, fw: 1 });
   const inv = atWall(s);
   wait(s, 2 * MIN);
   assert.ok(Math.abs(inv.hp - 0.76) < 0.01, '12% a minute');
@@ -122,18 +126,18 @@ test('a siege wears the invader down while it chips the server; a breach just ch
   assert.equal(b.invasion.hp, 1, 'no wall to wear it down');
 });
 
-test('a new Firewall mid-breach turns it into a siege', () => {
-  const s = world();
+test('a firewall upgrade mid-breach turns it into a siege', () => {
+  const s = world({ level: 6 });
   atWall(s);
   assert.equal(s.invasion.state, 'breach');
-  s.services = { firewall: 1 };
+  s.firewall.level = 1;
   const ev = wait(s, 5000);
   assert.equal(s.invasion.state, 'siege');
   assert.ok(types(ev).includes('wall-siege'));
 });
 
 test('jack in: fight it at the wall, worn down, armor intact, for a full kill; the gate intrusion waits', () => {
-  const s = world({ services: { firewall: 1 } });
+  const s = world({ level: 6, fw: 1 });
   command(s, 'encounter cryptjack');
   const gate = s.encounter;
   assert.match(play(s, 'jack in').at(-1).message, /on its way|Nothing/, 'nothing at the wall yet');

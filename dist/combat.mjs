@@ -17,6 +17,7 @@ import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, infestWon, siteTrait } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
+import { firewallCommand } from './firewall.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
 
@@ -1357,6 +1358,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     let xp = 0; for (let l = 1; l < want; l++) xp += SERVER.xpToNext(l);
     s.serverXp = xp;
     emit(s, 'info', `Developer: server level ${serverLevel(s)}.`);
+  } else if (/^firewall (upgrade|defrag|harden)$/.test(text) || text === 'defrag') {
+    firewallCommand(s, text, now);
   } else if (/^hub( |$)/.test(text)) {
     hubCommand(s, text);
   } else if (/^payload( |$)/.test(text)) {

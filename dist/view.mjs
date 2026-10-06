@@ -31,6 +31,7 @@ import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
+import { FIREWALL, fwOf, effLevel, fragLevels, defragging, hardenLeft, upgradeCost } from './firewall.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
@@ -661,7 +662,7 @@ export function serviceEffect(s, id, v) {
     case 'cron': return `every 3rd cycle, hits the soonest attacker for ${Math.round(8 * power(serverLevel(s)) * x)}`;
     case 'snapshot': return `once per home fight, below half: restores ${x}%`;
     case 'compileDiscount': return `compiling costs ${x}% less`;
-    case 'firewall': { const b = wallBands(s, 100 * power(serverLevel(s)) * x); return `your wall ${b.blocks ? `blocks up to level ${b.blocks}` : 'blocks none outright'}, contests up to level ${b.holds}`; }
+    case 'firewall': return `${x} filter ${x === 1 ? 'slot' : 'slots'} on your firewall`;
     case 'tarpit': return `invasions travel ${x}% slower`;
     case 'bandwidth': return `+${x} harvester ${x === 1 ? 'slot' : 'slots'}`;
     case 'scheduler': return `collects every outpost each ${x} minutes`;
@@ -723,25 +724,50 @@ export function slotPips(icon, used, total, name) {
 // scale numbers sit on the middle of theirs, and a number a mark already shows isn't repeated.
 export function wallRuler(s, compact = false, bands = wallBands(s)) {
   if (s.degraded) return '<div class="wall-ruler down" title="Your wall is down while the server is degraded"><span>wall down</span></div>';
-  const { blocks, holds } = bands, you = hackerLevel(s), inv = s.invasion;
+  const { blocks, holds } = bands, you = threatTop(s), inv = s.invasion; // the mark: the highest level your attached servers send
   const hi = Math.max(holds + 4, you + 4, (inv?.level || 0) + 2, 8), pct = (lv) => `${Math.min(100, (lv / hi) * 100)}%`;
   const seg = (cls, from, to, icon, tip) => (to > from ? `<span class="wr-seg ${cls}" style="left:${pct(from)};width:calc(${pct(to)} - ${pct(from)})" title="${esc(tip)}">${compact ? '' : glyph(icon)}</span>` : '');
   const mark = (lv, cls, label) => `<span class="wr-mark ${cls}" style="left:${pct(lv - 0.5)}" title="${esc(label)}"><i></i><small>${esc(label)}</small></span>`;
   return `<div class="wall-ruler${compact ? ' compact' : ''}" title="${esc(bandsText(s))}">
     <div class="wr-track">${seg('blocked', 0, blocks, 'firewall', blocks ? `Stopped at the wall: up to level ${blocks}` : '')}${seg('siege', blocks, holds, 'tarpit', `Contested: level ${blocks + 1}–${holds}`)}${seg('breach', holds, hi, 'kill', `Breaks through: level ${holds + 1} and up`)}</div>
-    <div class="wr-marks">${mark(you, 'you', `server ${you}`)}${inv ? mark(inv.level, 'inv ' + inv.state, `${inv.name} ${inv.level}`) : ''}</div>
+    <div class="wr-marks">${you ? mark(you, 'you', `servers ${you}`) : ''}${inv ? mark(inv.level, 'inv ' + inv.state, `${inv.name} ${inv.level}`) : ''}</div>
     ${compact ? '' : `<div class="wr-scale">${[...new Set([1, blocks, holds, hi])].filter((lv) => lv >= 1 && lv !== you && lv !== inv?.level).map((lv) => `<span style="left:${pct(lv - 0.5)}">${lv}</span>`).join('')}</div>`}
   </div>`;
 }
+// The highest level any server attached to your network sends: what your firewall is up against.
+export const threatTop = (s) => Math.max(0, ...(s.locations || []).filter((l) => !l.rogue && isLive(s, l)).map((l) => l.level || 1));
+// "Vulnerable to lv 9+" (amber if it would be contested, red if it would break through), or teal
+// "Not vulnerable" when nothing attached gets past it.
+export function vulnLine(s, b = wallBands(s)) {
+  const top = threatTop(s);
+  if (s.degraded) return '<span class="vuln low">Wall down</span>';
+  if (b.blocks >= top) return `<span class="vuln ok" title="${top ? `Your servers send up to level ${top}` : 'Nothing attached sends invasions'}">Not vulnerable</span>`;
+  return `<span class="vuln ${b.holds >= top ? 'mid' : 'low'}" title="Blocks up to level ${b.blocks}; contests up to ${b.holds}. Your servers send up to level ${top}.">Vulnerable to lv ${b.blocks + 1}+</span>`;
+}
+// The firewall's blocks: solid when whole, scattered and dim when fragmented (a fixed scatter, so
+// the same blocks go first), sweeping while it defragments, shielded while hardened.
+const SCATTER = [5, 12, 2, 9, 14, 0, 7, 11, 3, 15, 6, 1, 10, 4, 13, 8];
+export function fwGrid(s, now = Date.now()) {
+  const f = fwOf(s), bad = new Set(SCATTER.slice(0, f.frag));
+  const tip = `${f.frag}/${FIREWALL.blocks} fragmented · −${fragLevels(s)} ${fragLevels(s) === 1 ? 'level' : 'levels'}${defragging(s, now) ? ' · defragmenting' : ''}${hardenLeft(s, now) ? ` · hardened ${fmtTime(hardenLeft(s, now))}` : ''}`;
+  return `<div class="fw-grid${defragging(s, now) ? ' defrag' : ''}${hardenLeft(s, now) ? ' hard' : ''}" title="${esc(tip)}">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>`;
+}
+function firewallPanel(s, now) {
+  const f = fwOf(s), c = upgradeCost(f.level), eff = effLevel(s, now), busy = active(s);
+  const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher;
+  const mods = [fragLevels(s) ? `<span class="tag warn" title="Fragmented">−${fragLevels(s) + (defragging(s, now) ? FIREWALL.defragLoss : 0)}</span>` : defragging(s, now) ? `<span class="tag warn" title="Defragmenting">−${FIREWALL.defragLoss}</span>` : '', hardenLeft(s, now) ? `<span class="tag you" title="harden.sh · ${fmtTime(hardenLeft(s, now))} left">+${FIREWALL.harden.plus} · ${fmtTime(hardenLeft(s, now))}</span>` : ''].join('');
+  const left = defragging(s, now) ? fmtLeft(f.defragUntil - now) : '';
+  return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level">lv ${eff}</b>${eff !== f.level ? `<small class="fw-base">of ${f.level}</small>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
+    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}">${glyph('firewall')}lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag" ${f.frag && !defragging(s, now) && !busy ? '' : 'disabled'} title="${FIREWALL.defragMs / 60000} min, −${FIREWALL.defragLoss} levels meanwhile">${defragging(s, now) ? `Defrag · ${left}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button></div></div>`;
+}
 export function wallMarkup(s, now = Date.now()) {
   const inv = s.invasion, st = invaderStatus(s);
-  const v = serviceVersion(s, 'firewall');
   const bar = st && inv.state !== 'travel' ? `<div class="wall-bar ${inv.state}"><span style="width:${Math.max(0, Math.min(100, Math.round(inv.hp * 100)))}%"></span></div>` : '';
   const bands = wallRuler(s);
   const body = inv
     ? `<div class="invader ${inv.state}"><div class="gitem-head"><b>${esc(inv.name)}</b>${levelTag(s, inv.level)}${inv.mutation ? `<span class="tag tag-mut" data-mut="${inv.mutation}" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}<span class="tag ${inv.state === 'breach' ? 'hot' : ''}">${esc(invaderShort(s))}</span></div><small>${esc(inv.fromName)}</small>${bar}${inv.state !== 'travel' ? `<div class="row">${jackInButton(st)}</div>` : ''}</div>`
     : '';
-  return `<section class="card wall-card"><h2>Wall</h2><h1>${v ? `Firewall v${v}` : 'No Firewall'}</h1>${degradedMarkup(s, now)}${bands}${body}</section>`;
+  return `<section class="card wall-card"><h2>Firewall</h2>${degradedMarkup(s, now)}${firewallPanel(s, now)}${bands}${body}</section>`;
 }
 
 // A running service's configs: stock plus the ones you own; the running one is lit.
@@ -1642,10 +1668,10 @@ function dropLine(s, l) {
 // The wall as a server-card row: a bar of how well it covers the highest level your traced servers
 // send (teal: it stops them; amber: they'd be contested; red: they'd break through), and the level it stops.
 function wallRow(s, icon, label, b, tipExtra = '') {
-  const top = Math.max(0, ...(s.locations || []).filter((l) => !l.rogue).map((l) => l.level || 1));
+  const top = threatTop(s);
   const cover = top ? Math.min(1, b.blocks / top) : 1, state = !top || b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low';
-  const tip = `Stops invasions up to level ${b.blocks}${b.holds > b.blocks ? `, contests ${b.blocks + 1}–${b.holds}` : ''}${top ? `. Your servers send up to level ${top}` : ''}.${tipExtra}`;
-  return srvLine(icon, label, `<span class="srv-bar wall ${state}"><span style="width:${(cover * 100).toFixed(0)}%"></span></span>`, `<small>stops lv</small> ${b.blocks}`, tip);
+  const tip = `Firewall lv ${b.blocks}: stops invasions up to level ${b.blocks}${b.holds > b.blocks ? `, contests ${b.blocks + 1}–${b.holds}` : ''}${top ? `. Your servers send up to level ${top}` : ''}.${tipExtra}`;
+  return srvLine(icon, label, `<span class="srv-bar wall ${state}"><span style="width:${(cover * 100).toFixed(0)}%"></span></span>`, state === 'ok' ? '<small>safe</small>' : `<small>vuln lv</small> ${b.blocks + 1}+`, tip);
 }
 function awayLine(s) {
   if (!consortiumOf(s)) return '';
@@ -1707,7 +1733,7 @@ function mapSide(s, sel, node) {
         ${(() => { const sp = serverProgress(s);
           return srvLine('integrity', 'Server', `<span class="srv-bar xp"><span style="width:${sp.next ? (sp.xp / sp.next) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${sp.level}`, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ' (max)'}`); })()}
         ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
-        ${s.degraded ? srvLine('firewall', 'Wall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Wall', wallBands(s))}
+        ${s.degraded ? srvLine('firewall', 'Firewall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Firewall', wallBands(s))}
         ${degradedMarkup(s)}${awayLine(s)}
         <div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${portsUsed(s)}/${portCount(s)}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>
         ${srvLine('memory', 'Memory', '', `${liveCount(s)}<small>/${memoryCap(s)}</small>`, 'Servers on your network')}

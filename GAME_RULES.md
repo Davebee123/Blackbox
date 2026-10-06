@@ -18,7 +18,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
 5. Some files lead deeper: a trace record puts 35% on the trace to a node one layer down.
 6. `jack out` to go home and bank your pack. Nothing waits at your gate: home only sees a fight when an invasion gets through.
-7. Meanwhile, locations you've found send **invasions** home along the network. Your wall (the Firewall service) meets them; `jack in` to fight one yourself.
+7. Meanwhile, locations you've found send **invasions** home along the network. Your **firewall** meets them: a level you upgrade, that fragments as it's hit and that you defrag; `jack in` to fight one yourself.
 8. **Mail** gives it all a reason: contracts from your crew and from Halcyon Mutual, which pays a retainer every 30 minutes while your standing holds, plus Indemnity to spend at its store (see Mail and contracts, The hidden network, The Halcyon store).
 
 ## Runs
@@ -186,7 +186,7 @@ The server has no items. It runs **services** in **service slots**, Master of Or
 
 | Service | Code | v1 / v2 / v3 |
 |---|---|---|
-| Firewall | Cipher | your wall's rating ×1 / 1.2 / 1.45 (×0.75 with none); see Invasions |
+| Firewall | Cipher | 1 / 2 / 3 filter slots on your firewall; see Invasions |
 | Tarpit | Worm | invasions travel 50 / 100 / 150% slower |
 | RAID Array | Worm | +5 / 10 / 15% max Integrity |
 | Hardened Kernel | Kernel | 2 / 4 / 6 Block on hits at home (× server power) |
@@ -469,7 +469,7 @@ The plan the next changes build to; each part moves into the sections above as i
 - **Level:** linear, and it never grows by itself. You upgrade it with credits and code, one level at a time.
 - **Readout:** one line on each holding's card, *Vulnerable to lv N+* (teal *Not vulnerable* when nothing attached can get through), with a family note when a filter changes it.
 - **Fragmentation:** every threat it meets fragments it, shown as a block grid; fragmented blocks cost it levels. **Defrag** restores it, taking a few minutes at reduced strength.
-- **Hardening scripts** (`harden.sh`): one-use, +3 levels for 8 hours. Bought at hub shops.
+- **Hardening scripts** (`harden.sh`): one-use, +3 levels for 8 hours. Bought at hub shops. *(Home: done; see Invasions and the wall.)*
 - **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, and rarer Tarpit and Honeypot effects. Home has the most slots; outposts and silos one or two.
 
 **Bait.** While you're online, a honeypot pulls a holding's next threat in now, so you fight it on your terms; after it, nothing comes for that holding for a while (the card shows the safe period). Before logging off: bait, clear, defrag, harden if it still reads vulnerable.
@@ -533,12 +533,19 @@ A member's lockdown: **Retake for a bounty**. A member's crash: **Clear** every 
 
 ## Invasions and the wall
 
-The idle layer. While you're logged on, the locations you've found send viruses back along the network to your server, **one at a time**. On the Map an invasion moves in from its location; the Server page's **Wall** card and the top bar say what it's doing.
+The idle layer. While you're logged on, the locations you've found send viruses back along the network to your server, **one at a time**. On the Map an invasion moves in from its location; the Server page's **Firewall** card and the top bar say what it's doing.
 
 - **When.** The first sets out 3 minutes after you find your first location; the next 6–10 minutes after the last one is dealt with. Only logged-on time counts: a closed game, hidden tab or sleeping laptop doesn't advance the network (a long gap counts as 5 seconds).
 - **Who.** A virus of the location's family (CRYPTJACK, SPLINTER or GHOSTROOT) at the location's level; from level 3, sometimes mutated (10% stronger).
 - **Travel.** 2 minutes from a layer-1 location, a minute more per layer. A Tarpit slows it.
-- **The wall.** Your wall's rating (100 × the server's power × the Firewall's version) against the invasion's strength (100 × its power):
+- **The firewall** (`firewall.mjs`) is your wall. It has a **level** you build, and it never grows by itself: neither your level nor your server's raises it.
+  - **Upgrade** (`firewall upgrade`, or the button): a level at a time, 30 + 20 × level credits and 2 + level Cipher code. A new firewall starts at level 1 (an old save starts where its old wall blocked).
+  - **Fragmentation:** every invasion it meets fragments it: 1 block when it's blocked, 2 when contested, 3 on a breach, out of 16. Every 4 fragmented blocks cost it a level. The card shows the blocks: solid when whole, hollow when fragmented.
+  - **Defrag** (`defrag`): 3 minutes, running 2 levels weaker meanwhile, then every block is whole again.
+  - **Hardening:** `harden.sh` (Kestrel's and NULL CHOIR's shops, and Halcyon's agency stock) adds 3 levels for 8 hours (`firewall harden`); another adds 8 more hours.
+  - Its **effective level** (level − fragmentation − a running defrag + hardening) is what it blocks outright. The card reads **Vulnerable to lv N+** against the highest level your attached servers send (amber if that would be contested, red if it would break through), or **Not vulnerable**. The map's server card says the same in one line.
+  - The **Firewall service** gives it filter slots (1, 2, 3 by version), for filters (coming).
+- **The wall's rating** against the invasion's strength (100 × its power), set so the firewall blocks invasions up to its effective level:
 
 | Rating vs invasion | Result |
 |---|---|
@@ -546,7 +553,7 @@ The idle layer. While you're logged on, the locations you've found send viruses 
 | Within ±20% | **Contested**: the wall wears the invasion down (4–20% of it a minute) while it chips your server (0–1% of max Integrity a minute); the stronger your wall, the faster it grinds and the less it chips. Ground to nothing counts as blocked. |
 | 20% or more weaker | **Breach**: it chips 1% of your max Integrity a minute until you deal with it |
 
-- The Wall card says it in levels: *"Your wall blocks invasions up to level 12 and contests level 13–22; above level 22, they breach."* A new Firewall (or version, or server level) takes effect at once, even on an invasion already at the wall.
+- The Firewall card's ruler says it in levels: teal what it blocks, amber what it contests, red what breaks through, with the highest level your servers send marked on it. An upgrade, a defrag or hardening takes effect at once, even on an invasion already at the wall.
 - **Jack in** (`jack in`, or the button): fight the invasion at the wall yourself. It's as worn down as the wall left it, its armor is intact, and it's a full home kill (XP, code, drops, lead). You can't jack in from a run: jack out first. A waiting gate intrusion steps aside and comes back when you next `engage`. There's no daemon that jacks in for you.
 - A chip never ends a home fight you're in (it stops at 1), and nothing chips while you fight the invasion.
 
@@ -561,7 +568,7 @@ At 0 Integrity (a lost home fight, or a breach chipping you out) the server **cr
 You can still fight, explore and level. Crashing again restarts the 10 minutes. The top bar, the Map and the Server page show the time left.
 
 **In a consortium, while you're logged off** (played out a minute at a time when you come back, up to a day):
-- invasions keep coming, at half the pace, and your wall meets them as usual: blocked, contested or breach. The server card's **Away** line says what your wall blocks and holds, next to the highest level your servers send; a Firewall is how you raise it;
+- invasions keep coming, at half the pace, and your wall meets them as usual: blocked, contested or breach. The server card's **Away** line says what your wall blocks and holds, next to the highest level your servers send; upgrading and hardening the firewall is how you raise it;
 - now and then a member steps in and stops one at your wall;
 - a crash while away reboots the server for **2 hours** (Degraded, same rules), and the invasion **occupies** it: HOME shows on your server card with *Connect*. Its processes sit in six folders (services, daemons, vault, logs, cache, wall) and don't come back; clear them all to be back online at once. The virus then moves on along the trunk line;
 - your outposts can be invaded while you're away too (half as often); members sometimes stop those invasions, otherwise it's a lockdown.

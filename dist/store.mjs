@@ -40,6 +40,7 @@ export const GOODS = {
   cracker: { name: 'Key cracker', about: 'Reveals the vault key of a server you’ve found (use it from its map card).', credits: (L) => 60 + 6 * L, qty: [1, 3] },
   injector: { name: 'Trace injector', about: 'Adds 30% to the trace on an unknown server (use it from its map card).', credits: (L) => 80 + 6 * L, qty: [1, 2] },
   signal: { name: 'Signal patch', about: 'Your Signal back to full, now.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
+  harden: { name: 'harden.sh', about: 'Your firewall +3 levels for 8 hours.', credits: (L) => 70 + 6 * L, qty: [1, 2] },
   repair: { name: 'Hot-swap kit', about: 'Your server’s Integrity back to full, now.', credits: (L) => 40 + 5 * L, qty: [1, 3] },
   cipher: { name: 'Cipher code lot', code: 'cipher', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
@@ -50,7 +51,7 @@ export const GOODS = {
   blueprint: { name: 'Sealed blueprint', about: 'A blueprint you don’t have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
   daemon: { name: 'Daemon image', about: 'A daemon, or a version up if you have it.', credits: (L) => 300 + 20 * L, qty: [1, 1], tier: 2 },
 };
-const WEIGHTS = { relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 1, blueprint: 1, daemon: 1 };
+const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 1, blueprint: 1, daemon: 1 };
 export const codeAmount = (L) => 3 + Math.floor(L / 5);
 // What a lot of tradeable goods (code, an Exploit, salvage) costs now: its shelf price, but never
 // less than 10% over what the best hub market would pay for its contents.
@@ -127,7 +128,7 @@ export function buy(s, what) {
 
 export function deliverGoods(s, id, L) {
   const g = GOODS[id];
-  if (['relay', 'cracker', 'injector'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
+  if (['relay', 'cracker', 'injector', 'harden'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
   if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');
   if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
   if (id === 'salvage') { for (let i = 0; i < 5; i++) s.salvage.push({ name: 'Agency salvage', virus: 'store', seed: 0 }); return; }
