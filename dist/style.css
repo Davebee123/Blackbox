@@ -2394,3 +2394,17 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 /* Shops in a hub window: one column, tiles in a grid. */
 .hub-win .store-page { display: grid; grid-template-columns: 1fr; gap: 12px; }
 .hub-win .ptiles.stash { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+/* A crowded map: minor servers (nothing to do there) are small dim dots; their names come back on
+   hover, when selected, or zoomed in. Filters dim everything outside their group (home stays). */
+.map-svg .mnode.minor { opacity: 0.45; }
+.map-svg .mnode.minor text { display: none; }
+.map-svg .mnode.minor:hover, .map-svg .mnode.minor.selected { opacity: 1; }
+.map-svg .mnode.minor:hover text, .map-svg .mnode.minor.selected text, .map-svg.zoomed .mnode.minor text { display: block; }
+.map-svg.zoomed .mnode.minor { opacity: 0.7; }
+.map-svg[class*="mf-"] .mnode:not(.server):not(.selected) { opacity: 0.12; transition: opacity 0.2s; }
+.map-svg[class*="mf-"] .mnode:not(.server):not(.selected) text { display: none; }
+.map-svg.mf-mine .mnode.f-mine, .map-svg.mf-targets .mnode.f-target, .map-svg.mf-threats .mnode.f-threat { opacity: 1; }
+.map-svg.mf-mine .mnode.f-mine text, .map-svg.mf-targets .mnode.f-target text, .map-svg.mf-threats .mnode.f-threat text { display: block; }
+.map-filters { margin-right: 6px; }
+.map-svg.mf-mine .mnode.f-mine:not(.server), .map-svg.mf-targets .mnode.f-target:not(.server), .map-svg.mf-threats .mnode.f-threat:not(.server) { opacity: 1; }
+.map-svg.mf-mine .mnode.f-mine:not(.server) text, .map-svg.mf-targets .mnode.f-target:not(.server) text, .map-svg.mf-threats .mnode.f-threat:not(.server) text { display: block; }

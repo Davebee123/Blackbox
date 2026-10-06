@@ -961,6 +961,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggl
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
+let mapFilter = 'all'; // the map's filter chips: all · mine · targets · threats (the rest dims)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
 let memYes = null; // the found server you just said yes to (its connect goes through)
 addEventListener('resize', () => { dirty = true; applyMapZoom(); });
@@ -1001,7 +1002,7 @@ function render(force = false) {
     }
     render.logLen = s.logs.length;
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -1012,7 +1013,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, compileFocus), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     if (!(module === 'hub' && mkDrag)) put('page-view', (pages[module] || pages.map)(campaign)); // not while you drag a ticket's slider
     if (module === 'hub' && $('hubterm')) {
       const grew = hubLines.length - (render.hubLen ?? 0);
@@ -1462,6 +1463,8 @@ document.addEventListener('click', (e) => {
     if (cmd.classList.contains('ability')) { $('command-input').value = cmd.dataset.command; $('command-input').focus(); return; }
     return run(cmd.dataset.command);
   }
+  const mf = e.target.closest('[data-mapfilter]');
+  if (mf) { mapFilter = mf.dataset.mapfilter; dirty = true; return; }
   const mv = e.target.closest('[data-mapview]');
   if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }

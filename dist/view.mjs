@@ -1387,6 +1387,20 @@ function nodeState(s, l) {
   return 'new';
 }
 
+// How much a server asks of you right now, as classes for the map (filters dim the rest):
+// f-threat (something attacking it), f-mine (yours, or your outpost), f-target (a contract, a fresh
+// find, somewhere you haven't been), and minor (nothing to do there: finished, detached, a rogue
+// you're not in, or yours and quiet): a minor server is a dim dot, its name on hover or zoom.
+function mapTags(s, l, st, job) {
+  const o = l.outpost || {};
+  const threat = !!(o.siege || o.infest || o.lockdown || l.held?.siege || l.held?.lockdown || s.fleet?.target === l.id || dropOf(l));
+  const mine = !!(l.takenOver || o.h || l.held);
+  const fresh = !!(l.fresh && l.detached);
+  const target = job || fresh || (st === 'new' && !l.rogue && !mine);
+  const minor = st !== 'here' && !threat && !job && !fresh && (s.locations.includes(l) && !isLive(s, l) || l.rogue || st === 'done' || (mine && !o.h));
+  return `${threat ? ' f-threat' : ''}${mine ? ' f-mine' : ''}${target ? ' f-target' : ''}${minor ? ' minor' : ''}`;
+}
+
 // The map is a quiet network scope: hairline links, small nodes, range rings for the wall and
 // each layer, labels set outward from home. Selection is a reticle, not a glow.
 const reticle = (r) => { const k = 5, q = r + 4; return `<path class="mreticle" d="M${-q} ${-q + k}V${-q}H${-q + k}M${q - k} ${-q}H${q}V${-q + k}M${q} ${q - k}V${q}H${q - k}M${-q + k} ${q}H${-q}V${q - k}"/>`; };
@@ -1408,7 +1422,7 @@ const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all' } = {}) {
   // A member's server (or home) shows on the consortium's map, whichever view was asked for.
   const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
   const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s);
@@ -1439,7 +1453,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     if (n.kind === 'roamer') {
       const r = n.roamer, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
-      return `<g class="mnode invader travel${on}" data-select="roamer" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion on the trunk line: ${esc(r.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, r.name, `lv ${r.level} · hop ${r.hop} · ${fmtLeft(r.left)}`, 'hot')}</g>`;
+      return `<g class="mnode invader travel f-threat${on}" data-select="roamer" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion on the trunk line: ${esc(r.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, r.name, `lv ${r.level} · hop ${r.hop} · ${fmtLeft(r.left)}`, 'hot')}</g>`;
     }
     if (n.kind === 'member') {
       const raid = consortiumOf(s).raid?.member === n.handle, down = rebooting(s, n.handle);
@@ -1447,29 +1461,29 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `lv ${memberLevel(s, n.handle)} · ${serversOf(s, n.handle).length} ${serversOf(s, n.handle).length === 1 ? 'server' : 'servers'}${raid ? ' · invasion at the wall' : down ? ' · crashed' : sieges ? ' · invasion' : ''}`)}</g>`;
     }
     if (n.kind === 'intrusion') {
-      return `<g class="mnode intrusion${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;
+      return `<g class="mnode intrusion f-threat${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;
     }
     if (n.kind === 'invader') {
       const inv = n.inv, sub = s.degraded && inv.state !== 'travel' ? 'waiting' : inv.state === 'travel' ? `${fmtLeft(inv.left)} out` : inv.state === 'siege' ? `contested ${Math.round(inv.hp * 100)}%` : 'breach';
       const ang = Math.atan2(-n.y, -n.x) * 180 / Math.PI; // it points at home
-      return `<g class="mnode invader ${inv.state}${on}" data-select="invader" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion: ${esc(inv.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, inv.name, sub, inv.state === 'breach' ? 'hot' : '')}</g>`;
+      return `<g class="mnode invader ${inv.state} f-threat${on}" data-select="invader" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Invasion: ${esc(inv.name)}"><circle r="18" class="mhit"/><path d="M7 0 L-5 -5 L-2 0 L-5 5 Z" transform="rotate(${Math.round(ang)})"/>${pick}${label({ ...n, angle: undefined }, 7, inv.name, sub, inv.state === 'breach' ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'fleet') {
       const f = n.fleet, ang = Math.atan2(n.ty - n.y, n.tx - n.x) * 180 / Math.PI;
       const sub = f.state === 'travel' ? `${fmtLeft(fleetLeft(s))} out` : `at it · ${fmtLeft(f.siegeLeft)}`;
       const ships = Array.from({ length: f.total }, (_, i) => `<path d="M5 0 L-4 -3.5 L-2 0 L-4 3.5 Z" class="${i < f.ships ? '' : 'gone'}" transform="translate(${(i % 2) * -7 - Math.floor(i / 2) * 3} ${(i - (f.total - 1) / 2) * 6})"/>`).join('');
-      return `<g class="mnode fleet ${f.state}${on}"${f.faction ? ` style="--fc:${FX[f.faction].color}" data-faction="${f.faction}"` : ''} data-select="fleet" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Swarm of ${f.ships}"><circle r="18" class="mhit"/><g transform="rotate(${Math.round(ang)})">${ships}</g>${pick}${label(n, 10, `Swarm ×${f.ships}`, f.faction ? `${FX[f.faction].short} · ${sub}` : sub, f.state === 'siege' ? 'hot' : '')}</g>`;
+      return `<g class="mnode fleet ${f.state} f-threat${on}"${f.faction ? ` style="--fc:${FX[f.faction].color}" data-faction="${f.faction}"` : ''} data-select="fleet" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Swarm of ${f.ships}"><circle r="18" class="mhit"/><g transform="rotate(${Math.round(ang)})">${ships}</g>${pick}${label(n, 10, `Swarm ×${f.ships}`, f.faction ? `${FX[f.faction].short} · ${sub}` : sub, f.state === 'siege' ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'hub') {
       const f = n.hub.faction, F = FX[f], t = repTier(s, f);
-      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat' : ''}${on}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `swarm · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
+      return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours f-mine' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat f-threat' : ''}${on}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `swarm · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
     }
     if (n.kind === 'hidden') {
       const h = n.hidden, flag = hiddenFlagged(s, h);
-      return `<g class="mnode hidden${flag ? ' job' : ''}${on}" data-select="${h.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Unknown server"><circle r="18" class="mhit"/>${arc(8, h.lead / 100, 'lead')}<text class="qmark" text-anchor="middle" y="4">?</text>${pick}${label(n, 9, flag ? 'Flagged' : 'Unknown', `${h.lead ? h.lead + '% traced' : 'pinged'}`, 'dim')}</g>`;
+      return `<g class="mnode hidden f-target${flag ? ' job' : ''}${on}" data-select="${h.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Unknown server"><circle r="18" class="mhit"/>${arc(8, h.lead / 100, 'lead')}<text class="qmark" text-anchor="middle" y="4">?</text>${pick}${label(n, 9, flag ? 'Flagged' : 'Unknown', `${h.lead ? h.lead + '% traced' : 'pinged'}`, 'dim')}</g>`;
     }
     if (n.kind === 'lead') {
-      return `<g class="mnode lead${on}" data-select="${n.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(FAMILIES[n.family].name)} lead"><circle r="18" class="mhit"/>${arc(8, n.progress / 100, 'lead')}${pick}${label(n, 9, `${FAMILIES[n.family].name} lead`, `${Math.min(99, n.progress)}%`, 'dim')}</g>`;
+      return `<g class="mnode lead f-target${on}" data-select="${n.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(FAMILIES[n.family].name)} lead"><circle r="18" class="mhit"/>${arc(8, n.progress / 100, 'lead')}${pick}${label(n, 9, `${FAMILIES[n.family].name} lead`, `${Math.min(99, n.progress)}%`, 'dim')}</g>`;
     }
     const l = n.loc, st = nodeState(s, l);
     const taken = Object.keys(l.state.taken).length, total = takeable(l).length;
@@ -1478,14 +1492,14 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
-      return `<g class="mnode rogue${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
+      return `<g class="mnode rogue${mapTags(s, l, st, job)}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
-  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
+  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter !== 'all' ? ' mf-' + filter : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
-  const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
+  const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-filters" role="group" aria-label="Show">${[['all', 'All'], ['mine', 'Mine'], ['targets', 'Targets'], ['threats', 'Threats']].map(([k, l]) => `<button type="button" data-mapfilter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
   const card = pop ? `<div class="map-pop" id="map-pop" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
   return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
