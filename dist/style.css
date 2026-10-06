@@ -2290,8 +2290,9 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .st.st-land { animation: st-land 0.45s ease-out; }
 @keyframes st-land { 0% { transform: scale(1.25); filter: brightness(1.8); } 100% { transform: none; filter: none; } }
 /* A run listing: a virus or guarded folder that counts for a contract gets a small marker. */
-.ls-job { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 6px; border: 1px solid rgba(241, 185, 47, 0.6); border-radius: 3px; color: var(--amber); background: rgba(241, 185, 47, 0.1); vertical-align: middle; cursor: help; animation: ls-job 2.4s ease-in-out infinite; }
-.ls-job .glyph { width: 12px; height: 12px; }
+.ls-job { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 6px; color: var(--amber); vertical-align: middle; cursor: help; animation: ls-job 2.4s ease-in-out infinite; filter: drop-shadow(0 0 3px rgba(241, 185, 47, 0.5)); }
+.ls-job .glyph { width: 17px; height: 17px; }
+.ls-job .glyph * { stroke-width: 1.9; }
 @keyframes ls-job { 50% { box-shadow: 0 0 8px rgba(241, 185, 47, 0.55); } }
 @media (prefers-reduced-motion: reduce) { .ls-job { animation: none; } }
 /* A run's Leads panel: the terminal on the left, every trace in progress on the right. */

@@ -898,7 +898,7 @@ function lsMarkup(e) {
     const name = x.kind === 'dir' ? (x.name === '..' ? '..' : x.name + '/') : x.name;
     const main = x.cmd.endsWith(' ') ? `data-prefill="${esc(x.cmd)}"` : `data-run="${esc(x.cmd)}"`;
     // Counts for a contract: a small marker, the contract(s) on hover.
-    const job = x.jobs?.length ? `<span class="ls-job" title="${esc(x.jobs.join('\n'))}">${glyph('bounty')}</span>` : '';
+    const job = x.jobs?.length ? `<span class="ls-job" title="${esc(x.jobs.join('\n'))}">${glyph('contract')}</span>` : '';
     return `<div class="ls-row${job ? ' wanted' : ''}"><span class="ls-kind">${x.kind === 'dir' ? 'd' : x.kind === 'virus' ? '!' : '-'}</span><button type="button" class="tok ${x.kind}" ${main} title="${esc(x.cmd.trim())}">${esc(name)}</button>${job}<span class="ls-size">${esc(x.size || '')}</span>${tags}${peopleChips(x.people)}${x.pull ? `<button type="button" class="tok act" data-run="${esc(x.pull)}">pull</button>` : ''}</div>`;
   }).join('')}</div>`;
 }
@@ -954,7 +954,7 @@ function leadsPanel(s) {
   const nodes = hiddenNodes(s).filter(hiddenVisible).sort((a, b) => b.lead - a.lead);
   const bar = (n) => `<span class="ld-bar"><span style="width:${Math.min(100, n)}%"></span></span><b class="ld-n">${Math.floor(n)}%</b>`;
   const famRows = fams.map(([f, n]) => `<li class="ld-row" data-go="map:lead-${esc(f)}" title="${esc(FAMILIES[f].name)} lead">${glyph(f)}<span class="ld-name">${esc(FAMILIES[f].name)}</span>${bar(n)}</li>`).join('');
-  const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${esc(FAMILIES[n.family].name.toLowerCase())} server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('bounty')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
+  const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${esc(FAMILIES[n.family].name.toLowerCase())} server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('contract')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
   // Faction hubs you haven't located (once the board is open): their trace, from their servers.
   const hubRows = (hubsOf(s).length ? FACTION_IDS.filter((f) => !hubFound(s, f)) : []).map((f) => `<li class="ld-row" style="--fc:${FX[f].color}" title="${esc(FX[f].hub.name)}">${fIcon(f)}<span class="ld-name">${esc(FX[f].short)} <small>hub</small></span>${bar(hubTraceOf(s, f))}</li>`).join('');
   return `<aside class="net-leads"><h3>${glyph('trace')}Leads</h3>${famRows || nodeRows || hubRows ? `${famRows ? `<ul class="ld-list">${famRows}</ul>` : ''}${nodeRows ? `<h4>Unknown servers</h4><ul class="ld-list">${nodeRows}</ul>` : ''}${hubRows ? `<h4>Faction hubs</h4><ul class="ld-list">${hubRows}</ul>` : ''}` : '<p class="quiet">none</p>'}</aside>`;
@@ -1643,7 +1643,7 @@ function serverList(s, sel, filter, sort) {
       st === 'here' ? '<span class="tag you">here</span>' : '',
       o.siege ? '<span class="tag hot">invasion</span>' : '', o.lockdown ? '<span class="tag hot">lockdown</span>' : '', o.infest ? '<span class="tag warn">infested</span>' : '',
       s.fleet?.target === l.id ? '<span class="tag hot">swarm</span>' : '',
-      job ? `<span class="ls-job" title="A contract">${glyph('bounty')}</span>` : '',
+      job ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : '',
       l.fresh && l.detached ? '<span class="tag">found</span>' : l.detached ? '<span class="tag dim">detached</span>' : '',
       o.h ? `<span class="tag you" title="Outpost: ${esc(OUTPOST.kinds[o.h.kind].name)}">${glyph(o.h.kind)}${stockOf(l)}/${capOf(l)}</span>` : l.takenOver ? '<span class="tag dim">yours</span>' : '',
       l.rogue ? `<span class="tag dim">${esc(ROGUE.kinds[l.rogue.kind].name.toLowerCase())}</span>` : '',
@@ -1679,7 +1679,7 @@ function listLeads(s, sel, filter) {
   const nodes = hiddenNodes(s).filter(hiddenVisible).map((n) => ({ id: n.id, name: `? past ${s.locations.find((l) => l.id === n.via)?.name || '?'}`, fam: n.family, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
   const rows = [...fams, ...nodes].sort((a, b) => b.pct - a.pct);
   if (!rows.length) return '';
-  return `<h4 class="sl-sec">Leads and unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${glyph(r.fam)}${esc(FAMILIES[r.fam]?.name || '')}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('bounty')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
+  return `<h4 class="sl-sec">Leads and unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${glyph(r.fam)}${esc(FAMILIES[r.fam]?.name || '')}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
 }
 // The map's selection card on its own (the sidebar carries it when it's on).
 export function mapSelection(s, sel = 'server', view = 'mine') {
