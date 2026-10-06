@@ -740,6 +740,8 @@ document.addEventListener('input', (e) => { if (e.target.matches?.('[data-mk-n]'
 document.addEventListener('pointerdown', (e) => { if (e.target.matches?.('[data-mk-n]')) mkDrag = true; });
 addEventListener('pointerup', () => { if (mkDrag) { mkDrag = false; dirty = true; } });
 document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mk-n]')) { mkDrag = false; dirty = true; } });
+// The map's Show picker (All · Mine · Targets · Threats).
+document.addEventListener('change', (e) => { if (e.target.matches?.('[data-mapfilter-pick]')) { mapFilter = e.target.value; dirty = true; } });
 const hubShown = () => hubOpen && module === 'hub';
 function previewAim(s, text) {
   const key = () => aimPreview && aimPreview.target + aimPreview.ok + aimPreview.ability;

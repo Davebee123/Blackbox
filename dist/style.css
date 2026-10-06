@@ -2493,3 +2493,9 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .fw-grid.small i { height: 7px; }
 .fw-up { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
 .fw-up small { font: 10px var(--mono); opacity: 0.8; }
+/* The map's toolbar: view and Show picker on the left, the zoom tools on the right. */
+.map-left { display: flex; align-items: center; gap: 8px; }
+.map-pick select { font: 11px var(--mono); color: var(--dim); background: var(--panel, #120f0a); border: 1px solid var(--line); border-radius: 2px; padding: 1px 18px 1px 7px; cursor: pointer; appearance: none; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: calc(100% - 9px) 55%, calc(100% - 5px) 55%; background-size: 4px 4px; background-repeat: no-repeat; }
+.map-pick.on select { color: var(--amber); border-color: var(--amber); }
+.map-pick select option { background: #120f0a; color: var(--text); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
