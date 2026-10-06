@@ -10,6 +10,7 @@ CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers
 CONFIG.enemyRamp = 0;
 CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
+CONFIG.edges = false; // each class's edge (Overkill, Grudge, Weak Spot, Last Gasp) has its own test
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 
@@ -286,32 +287,46 @@ test('the level-5 kit skills: Flood, Suspend, Traceroute, Spawn', () => {
   assert.equal(o.encounter.helpers.length, 1);
 });
 
-test('backtrace: every class traces its own way from level 7', () => {
+test('each class has an edge from level 10: Overkill, Grudge, Weak Spot, Last Gasp', () => {
+  CONFIG.edges = true;
+  try { edges(); } finally { CONFIG.edges = false; }
+});
+function edges() {
+  // Breaker, Overkill: what's left over when a hit breaks a part spills onto the next one.
   const b = noArmor(quiet(start('breaker')));
-  big(b, 'pulse');
-  b.encounter.forceCrit = true;
+  part(b, 'pulse').integrity = 1;
+  const other = b.encounter.virus.parts.find((p) => p.id !== 'pulse'), was = other.integrity;
   act(b, 'spike pulse');
-  assert.equal(b.encounter.trace, 6, 'Breaker: +6% a crit');
-  const plain = noArmor(quiet(start('breaker')));
-  part(plain, 'pulse').integrity = 1;
-  act(plain, 'spike pulse');
-  assert.equal(plain.encounter.trace, 0, 'a break alone traces nothing now');
-  const young = noArmor(quiet(start('breaker', 6)));
-  big(young, 'pulse');
-  young.encounter.forceCrit = true;
-  act(young, 'spike pulse');
-  assert.equal(young.encounter.trace, 0, 'not before level 7');
-  const a = start('bastion');
-  a.encounter.chits = 1;
-  part(a, 'pulse').attack.due = a.encounter.cycle;
-  act(a, 'hold');
-  assert.equal(a.encounter.trace, 10, 'Bastion: +10% an attack that does nothing');
+  assert.ok(other.integrity < was && was - other.integrity <= 20, 'it spilled, up to 20');
+  // Infiltrator, Weak Spot: the first hit on each part crits; the second doesn't have to.
+  const i = noArmor(quiet(start('infiltrator')));
+  big(i, 'pulse');
+  const ev = act(i, 'spike pulse');
+  assert.ok(ev.some((e) => e.type === 'damage' && e.target === 'pulse' && e.crit), 'its first hit on the part crits');
+  // Bastion, Grudge: the part that last hit you takes +20% from your hits.
+  const a = noArmor(start('bastion'));
+  for (const p of a.encounter.virus.parts) p.attack = null;
+  a.encounter.grudge = 'pulse';
+  const hp = part(a, 'pulse').integrity;
+  act(a, 'spike pulse');
+  const g = hp - part(a, 'pulse').integrity;
+  const c = noArmor(quiet(start('bastion')));
+  const hp2 = part(c, 'pulse').integrity;
+  act(c, 'spike pulse');
+  assert.equal(g, Math.floor((hp2 - part(c, 'pulse').integrity) * 1.2), '+20%');
+  // Operator, Last Gasp: a helper hits once more as it expires.
   const o = noArmor(quiet(start('operator')));
   big(o, 'pulse');
   act(o, 'deploy pulse');
-  act(o, 'hold');
-  assert.ok(o.encounter.trace >= 2, 'Operator: +2% a helper hit');
-});
+  for (let k = 0; k < 6; k++) act(o, 'hold');
+  assert.ok(o.logs.some((e) => /^Last Gasp: /.test(e.message)));
+  // Not before level 10.
+  const young = noArmor(quiet(start('breaker', 6)));
+  part(young, 'pulse').integrity = 1;
+  const yo = young.encounter.virus.parts.find((p) => p.id !== 'pulse'), yw = yo.integrity;
+  act(young, 'spike pulse');
+  assert.equal(yo.integrity, yw, 'no edge yet');
+}
 
 test('the Sysadmin is the Bastion now: old saves carry its level, tree and bar across', async () => {
   const { restore } = await import('./dist/combat.mjs');

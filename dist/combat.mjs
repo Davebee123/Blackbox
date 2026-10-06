@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost } from './memory.mjs';
-import { ELITE, BACKTRACE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+import { ELITE, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
@@ -660,7 +660,7 @@ export function gainXp(s, amount, why) {
     // New skills go straight onto the bar while there's room.
     const eq = s.loadout.equipped[arch];
     for (const g of got) if (skillOrder(arch).includes(g) && eq.length < LOADOUT.equipSlots && !eq.includes(g)) eq.push(g);
-    const names = got.map((id) => (id === 'backtrace' ? `Backtrace (${BACKTRACE[arch].rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
+    const names = got.map((id) => (id === 'edge' ? `${EDGE[arch].name} (${EDGE[arch].rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
     const talent = gainsTalent(h.level) ? ' +1 talent point.' : '';
     emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${talent} Power +4%.`, { level: h.level, unlocked: got });
   }
@@ -676,7 +676,7 @@ export function nextUnlock(s, arch = classOf(s)) {
   const u = UNLOCKS.find((x) => x.level > lvl);
   if (!u) return null;
   const id = typeof u.what === 'number' ? skillOrder(arch)[u.what] : u.what;
-  return { level: u.level, id, name: id === 'backtrace' ? 'Backtrace' : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id };
+  return { level: u.level, id, name: id === 'edge' ? EDGE[arch].name : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id };
 }
 
 // The server levels from everyone's work: defending it and banking loot.
@@ -1092,7 +1092,7 @@ export function finish(s, result) {
       if (item) addItem(s, item);
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
       if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
-      if (lead) addLead(s, e.virus.family, lead, e.trace ? `Backtrace ${e.trace}%. ` : '');
+      if (lead) addLead(s, e.virus.family, lead, e.trace ? `Uplink ${e.trace}%. ` : '');
       if (wild) rogueKill(s, wild, e.room, now, () => { const more = rollDrop(s, { ...ctx, strain: null }, e.virus.level); if (more) addItem(s, more, 'The Pit gives up more: '); });
       hooks.runWon?.(s);
     } else {
@@ -1158,16 +1158,9 @@ export function finish(s, result) {
     if (inv) { const v = virusIntegrity(s); inv.hp = Math.max(0.05, v.max ? v.current / v.max : 1); }
     crashServer(s);
   }
-  const before = s.locations.length;
   // Beating an invader from an unknown server traces most of the way back to it.
-  if (lead && hid) hiddenLead(s, hid, HIDDEN.winLead + Math.floor(e.trace * CONFIG.leadTraceShare), e.trace ? `Backtrace ${e.trace}%. ` : '');
-  else if (lead) addLead(s, e.virus.family, lead, e.trace ? `Backtrace ${e.trace}%. ` : '');
-  // Infiltrator Perfect Trace talent: a full backtrace also reveals the new location's vault key.
-  if (e.trace >= 100 && hasTalent(s, 'perfect-trace') && s.locations.length > before) {
-    const loc = s.locations.at(-1);
-    loc.passwordKnown = true;
-    emit(s, 'info', `Perfect Trace: ${loc.name}'s vault key is ${loc.password}.`);
-  }
+  if (lead && hid) hiddenLead(s, hid, HIDDEN.winLead + Math.floor(e.trace * CONFIG.leadTraceShare), e.trace ? `Uplink ${e.trace}%. ` : '');
+  else if (lead) addLead(s, e.virus.family, lead, e.trace ? `Uplink ${e.trace}%. ` : '');
 }
 
 // ---------- crashes and invasions (engine side; the network lives in invasion.mjs) ----------
@@ -1563,17 +1556,20 @@ function hit(s, p, base, opts = {}) {
   let raw = Math.floor(base * damageMultiplier(s, p, opts) + 1e-9); // tolerance: 25 × 1.5 × 1.2 is 45, not 44.999…
   // Subrogation (Halcyon): the part that last hit you takes double from your next skill hit.
   if (raw > 0 && opts.mine && e.subro === p.id) { raw *= 2; e.subro = null; emit(s, 'status', `Subrogation: ${p.name} pays double.`, { target: p.id }); }
+  // Grudge (Bastion's edge): the part that last hit you takes more from your hits.
+  if (raw > 0 && opts.mine && !opts.server && e.grudge === p.id && edge(s, 'bastion')) raw = Math.floor(raw * (1 + EDGE.bastion.bonus));
+  // Weak Spot (Infiltrator's edge): your first damaging hit on each part crits.
+  const weak = raw > 0 && opts.mine && !opts.dot && !opts.server && edge(s, 'infiltrator') && !(e.weakHit ||= {})[p.id];
+  if (weak) e.weakHit[p.id] = true;
   // Crits: a roll on every hit that does damage.
   // Buffer Overflow (Zero-day): after you break a part, your next damaging hit crits.
-  const forced = raw > 0 && !opts.server && (e.forceCrit || opts.crit || (opts.mine && buffed(e, 'sudo')));
+  const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || (opts.mine && buffed(e, 'sudo')));
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
   const chance = critChance(s) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
   const crit = forced || (raw > 0 && chance > 0 && rand(s) * 100 < chance);
   if (crit) raw = Math.floor(raw * critMultiplier(s)) + (opts.server ? 0 : gearStat(s, 'critDamage'));
   const dealt = Math.min(p.integrity, raw);
-  if (raw > 0 && classOf(s) === 'operator' && ['Helper', 'Cron Storm', 'Kill Switch'].includes(opts.by)) backtrace(s);
-  if (crit && opts.mine && !opts.dot && classOf(s) === 'breaker') backtrace(s); // Breaker: a crit traces
   const notes = [];
   if (crit) notes.push('CRIT');
   if (opts.pierce && p.armor > 0) notes.push('through armor');
@@ -1597,8 +1593,12 @@ function hit(s, p, base, opts = {}) {
       emit(s, 'blocked', `${p.attack.name} called off: you hit the ${p.name} hard enough. It starts over.`, { source: p.id });
     }
   }
-  if (p.integrity === 0) breakPart(s, p);
-  else if (on(s, p, 'hooked') && !opts.noHook) hit(s, p, scaled(s, SKILLS.hooked + rank(s, 'kernel-hook')), { by: 'Hook', noHook: true });
+  if (p.integrity === 0) {
+    breakPart(s, p);
+    // Overkill (Breaker's edge): what was left over spills onto the next part.
+    const spill = Math.min(EDGE.breaker.cap, raw - dealt), next = spill > 0 && opts.mine && !opts.overkill && edge(s, 'breaker') ? soonestAttacker(s) : null;
+    if (next) hit(s, next, spill, { by: 'Overkill', overkill: true, pierce: true, noHook: true });
+  } else if (on(s, p, 'hooked') && !opts.noHook) hit(s, p, scaled(s, SKILLS.hooked + rank(s, 'kernel-hook')), { by: 'Hook', noHook: true });
   return { dealt, overflow: Math.max(0, raw - dealt), crit };
 }
 
@@ -1811,7 +1811,7 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target);
     let total = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round(total * 1.5), { by: 'Detonate', pierce: true });
+    hit(s, target, Math.round(total * 1.5 * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true });
   }
   if (id === 'propagate') {
     const mine = burnsOn(s, target);
@@ -1835,14 +1835,10 @@ function useAbility(s, intent, auto = false) {
 }
 const STATUS_WORD = { exposed: 'Exposed (+25% crit chance)', tagged: 'Tagged (burns +50%, timer visible)', hooked: 'Hooked (+6 per hit)', throttled: 'Throttled (attacks deal half)', quarantined: 'Quarantined (+25% damage)' };
 
-// Tracing: each class has its own way (BACKTRACE in data.mjs), from level 7, at home and on the
-// rogue server. Passive gains collect through the cycle and land as one line.
+// Uplink trace (Traceroute, Sync, a Tracer daemon), at home and on the rogue server.
 const tracing = (s) => { const e = s.encounter; return !!e && (e.mode === 'home' || e.zone) && e.trace < 100; };
-function backtrace(s) {
-  const per = BACKTRACE[classOf(s)]?.per;
-  if (!per || !tracing(s) || hackerLevel(s) < unlockLevel(classOf(s), 'backtrace')) return;
-  s.encounter.passiveTrace = (s.encounter.passiveTrace || 0) + per;
-}
+// Your class's edge (EDGE in data.mjs), from its level.
+export const edge = (s, cls) => CONFIG.edges !== false && classOf(s) === cls && hackerLevel(s) >= unlockLevel(cls, 'edge'); // CONFIG.edges: tests of other numbers turn them off
 function addTrace(s, amount, label) {
   const e = s.encounter;
   if (!tracing(s)) return;
@@ -1949,7 +1945,6 @@ function landAttack(s, p) {
   // Your armor chits (Bastion): the whole attack does nothing, however big.
   if (e.chits > 0 && atk.effect !== 'replicate') {
     e.chits--;
-    if (classOf(s) === 'bastion') backtrace(s);
     return emit(s, 'blocked', `${atk.name} hits your armor chit and does nothing${e.chits ? ` (${e.chits} left)` : ''}.`, { source: p.id });
   }
   e.metrics.attacksLanded++;
@@ -1962,7 +1957,6 @@ function landAttack(s, p) {
     // Honeypot configs, at home: Tar pushes its next attack back; Sting hits back.
     if (e.mode === 'home' && hasConfig(s, 'tar')) atk.due += 1;
     if (e.mode === 'home' && hasConfig(s, 'sting') && alive(p)) { emit(s, 'evaded', `${atk.name} misses you. Sting hits back.`, { source: p.id }); hit(s, p, Math.max(1, Math.round(6 * power(serverLevel(s)))), { by: 'Sting' }); return; }
-    if (classOf(s) === 'bastion') backtrace(s);
     return emit(s, 'evaded', `${atk.name} misses you${defense(s, 'evasion') ? ' (evaded)' : ''}.`, { source: p.id });
   }
   // Breaker Brace: whatever hits you loses an armor chit (or takes 10 if it has none).
@@ -1985,7 +1979,7 @@ function landAttack(s, p) {
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, Math.round(power * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1)), p.id, atk.name);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
-    if (dealt) e.undo = { type: 'damage', amount: dealt };
+    if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
     // Echo: while the Echo lives, the hit repeats next cycle at half.
     if (dealt && !atk.echoed && livingParts(s).some((x) => x.echo)) {
       const half = Math.max(1, Math.round(dealt / 2));
@@ -2003,7 +1997,6 @@ function landAttack(s, p) {
       }
     }
     if (dealt && zeroDay(s, 'subrogation')) e.subro = p.id;
-    if (!dealt && classOf(s) === 'bastion') backtrace(s);
     const verb = crit ? 'CRITS' : 'hits';
     if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
@@ -2101,6 +2094,8 @@ export function playerPhase(s, phase = 'all') {
     if (!alive(t)) { t = soonestAttacker(s); if (t) h.target = t.id; }
     if (t) hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced });
     h.left--;
+    // Last Gasp (Operator's edge): one more hit as it expires.
+    if (!h.left && t && alive(t) && edge(s, 'operator')) hit(s, t, h.damage, { by: 'Last Gasp', dot: true, synced: h.synced });
     // Fork: a helper hit may start another helper (up to the cap).
     if (t && buffed(e, 'fork') && e.helpers.length < helperCap(s) && rand(s) * 100 < ABILITIES.fork.chance) { e.helpers.push({ target: t.id, damage: h.damage, left: 3 }); emit(s, 'status', 'Fork: a helper splits.', { target: t.id }); }
   }
@@ -2256,12 +2251,6 @@ function strike(s, p) {
 // The end of a cycle once the attacks are in: trace, patches, cooldown effects, the turn over.
 function cycleClose(s, landed) {
   const e = s.encounter;
-  // Your class's backtrace this cycle, in one line.
-  if (e.passiveTrace) {
-    e.trace = Math.min(100, e.trace + e.passiveTrace);
-    emit(s, 'trace', `Backtrace +${e.passiveTrace}%: Uplink ${e.trace}%.`, { amount: e.passiveTrace });
-    e.passiveTrace = 0;
-  }
   // 3. A daemon's trace only lands on a quiet cycle.
   if (e.pendingTrace) {
     if (landed) emit(s, 'trace-lost', 'Trace disrupted: an attack landed this cycle.');

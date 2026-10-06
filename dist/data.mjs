@@ -78,7 +78,7 @@ export const CONFIG = {
   maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
   cdCost: 1, // Signal spent per move between directories
   leadBase: 15, // lead progress every neutralized virus gives (seven kills, or fewer with Trace)
-  leadTraceShare: 0.5, // plus half the Uplink trace reached (a full backtrace gets you most of the way)
+  leadTraceShare: 0.5, // plus half the Uplink trace reached (Traceroute, Sync, a Tracer daemon)
   cacheCredits: 30,
   hoardBonus: 0.5, // Hoard quirk: caches pay 50% more
   trapSignal: 10, // pulling honeypot bait
@@ -606,7 +606,7 @@ export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEver
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
   // Your 4th skill (Crack, Retaliate, Backdoor, Botnet) comes before Backtrace: armor needs an answer early.
-  { level: 7, what: 3 }, { level: 10, what: 'backtrace' }, { level: 14, what: 4 }, { level: 18, what: 5 },
+  { level: 7, what: 3 }, { level: 10, what: 'edge' }, { level: 14, what: 4 }, { level: 18, what: 5 },
   { level: 22, what: 6 }, { level: 26, what: 7 }, { level: 30, what: 8 }, { level: 34, what: 9 }, { level: 38, what: 10 },
 ];
 // XP: a kill is worth 20 + 10 per enemy level. Level L to L+1 takes about 5 + 1.2×L kills of
@@ -631,15 +631,14 @@ const f = (id, name, rule, per) => ({ id, name, rule, per, max: 3 });
 export const CANTRIPS = [
   { key: '1', id: 'spike', name: 'Spike', rule: 'Hit 25. If you type nothing, you Spike the last part you hit.' },
 ];
-// Backtrace: each class traces its own way, a passive from level 7 (at home and on SPRAWL-00).
-// Uplink at 100% before the kill locates where the virus came from.
-export const BACKTRACE = {
-  breaker: { per: 6, rule: '+6% Uplink trace for each crit you land (Exploit sets them up).' },
-  bastion: { per: 10, rule: '+10% Uplink trace for each attack that reaches you and does nothing (a shield, a chit, Harden, a dodge).' },
-  infiltrator: { per: 0, rule: 'Traceroute: +25% Uplink trace a use, the strongest trace in the game.' },
-  operator: { per: 2, rule: '+2% Uplink trace for each helper hit.' },
+// Edge: each class's signature passive, from level 10 (the root of its talent tree).
+export const EDGE = {
+  breaker: { name: 'Overkill', rule: 'When your hit breaks a part, the damage left over spills onto the next part (up to 20).', cap: 20 },
+  bastion: { name: 'Grudge', rule: 'The part that last hit you takes +20% from your hits.', bonus: 0.2 },
+  infiltrator: { name: 'Weak Spot', rule: 'Your first hit on each part crits.' },
+  operator: { name: 'Last Gasp', rule: 'Each helper hits once more as it expires.' },
 };
-// Sync Window bonuses: each class syncs its own way (like Backtrace).
+// Sync Window bonuses: each class syncs its own way.
 export const SYNC = {
   breaker: { amount: 1, rule: 'An extra armor chit cracks on the part you hit.' },
   bastion: { amount: 8, rule: '+8 shield.' },
@@ -707,7 +706,7 @@ export const ARCHETYPES = {
     talents: [
       [t('fast-hands', 'Fast Hands', 'Opening stays lit for 2 cycles.'), t('supercookie', 'Supercookie', 'Tag lasts 6 cycles.')],
       [t('polymorphic', 'Polymorphic', 'Inject lasts 5 cycles.'), t('rotating-proxies', 'Rotating Proxies', 'Spoof twice per run.')],
-      [t('leaked-creds', 'Leaked Creds', 'Slip past 3 guards a run instead of 1.'), t('perfect-trace', 'Perfect Trace', 'A full backtrace also reveals the new location’s vault key.')],
+      [t('leaked-creds', 'Leaked Creds', 'Slip past 3 guards a run instead of 1.'), t('assassinate', 'Assassinate', 'Detonate on a Tagged part deals double.')],
     ],
   },
   operator: {
