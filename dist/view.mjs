@@ -765,7 +765,7 @@ function fwRow(s, holder, arg, top, now = Date.now()) {
   const bad = new Set(SCATTER.slice(0, Math.floor(f.frag)));
   return `<div class="fw-mini"><div class="fw-head"><span class="fw-tag">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${frag || def ? `<span class="tag warn">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : ''}${hard ? `<span class="tag you">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''}${line}</div>
     <div class="fw-grid small${def ? ' defrag' : ''}${hard ? ' hard' : ''}" title="${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>
-    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade ${esc(arg)}" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}: ${c.credits} credits, ${c.cipher} Cipher">lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag ${esc(arg)}" ${f.frag && !def && !busy ? '' : 'disabled'}>${def ? `Defrag · ${fmtLeft(f.defragUntil - now)}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden ${esc(arg)}" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button></div></div>`;
+    ${fwActs(s, f, arg, can, c, busy, def, now)}</div>`;
 }
 // Bait: pull the next invasion in now; and the time until the next one sets out otherwise.
 function baitHome(s) {
@@ -773,13 +773,22 @@ function baitHome(s) {
   if (s.invasion || !threatTop(s)) return '';
   return `<button type="button" class="btn small" data-command="bait" ${active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now. Once it's dealt with, nothing sets out for ${CONFIG.invasion.safeMs / 60000} minutes.">Bait${next > 0 ? ` · next ${fmtTime(next)}` : ''}</button>`;
 }
+// The firewall's buttons, each only once it means something: Upgrade when you can pay for the next
+// level, Defrag when it's fragmented (or running), harden.sh when you hold one.
+function fwActs(s, f, arg, can, c, busy, def, now, extra = '') {
+  const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`, n = kitOf(s).harden || 0;
+  const up = can ? `<button type="button" class="btn small primary fw-up" data-command="${cmd('upgrade')}" ${busy ? 'disabled' : ''} title="Blocks one level more">Upgrade to lv ${f.level + 1}<small>${c.credits} credits · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</small></button>` : '';
+  const dfr = f.frag || def ? `<button type="button" class="btn small" data-command="${cmd('defrag')}" ${def || busy ? 'disabled' : ''} title="${FIREWALL.defragLoss} levels down while it runs">${def ? `Defragmenting · ${fmtLeft(f.defragUntil - now)}` : 'Defrag'}</button>` : '';
+  const hd = n ? `<button type="button" class="btn small" data-command="${cmd('harden')}" ${busy ? 'disabled' : ''} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${n}</button>` : '';
+  const all = up + dfr + hd + extra;
+  return all ? `<div class="row fw-acts">${all}</div>` : '';
+}
 function firewallPanel(s, now) {
   const f = fwOf(s), c = upgradeCost(f.level), eff = effLevel(s, now), busy = active(s);
   const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher;
   const mods = [fragLevels(s) ? `<span class="tag warn" title="Fragmented">−${fragLevels(s) + (defragging(s, now) ? FIREWALL.defragLoss : 0)}</span>` : defragging(s, now) ? `<span class="tag warn" title="Defragmenting">−${FIREWALL.defragLoss}</span>` : '', hardenLeft(s, now) ? `<span class="tag you" title="harden.sh · ${fmtTime(hardenLeft(s, now))} left">+${FIREWALL.harden.plus} · ${fmtTime(hardenLeft(s, now))}</span>` : ''].join('');
-  const left = defragging(s, now) ? fmtLeft(f.defragUntil - now) : '';
   return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
-    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}">${glyph('firewall')}lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag" ${f.frag && !defragging(s, now) && !busy ? '' : 'disabled'} title="${Math.round(defragMs(s) / 6000) / 10} min, −${FIREWALL.defragLoss} levels meanwhile">${defragging(s, now) ? `Defrag · ${left}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button>${baitHome(s)}</div></div>`;
+    ${fwActs(s, f, '', can, c, busy, defragging(s, now), now, baitHome(s))}</div>`;
 }
 // The firewall's filters: its slots (from the Firewall service), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
