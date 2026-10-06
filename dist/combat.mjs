@@ -1931,6 +1931,8 @@ function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
   const power = attackAmount(p) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
+  // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
+  const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
   if (atk.windup) atk.wound = 0;
   // Patchwork: the Patcher's attack is a heal on its own side. Nothing of yours stops it.
@@ -1950,7 +1952,7 @@ function landAttack(s, p) {
   // Null Route: this cycle's attacks miss (and Opening lights up).
   if (e.buffs['null-route'] >= e.cycle) { emit(s, 'blocked', `${atk.name} misses: you null-routed it.`, { source: p.id }); return openProc(s, 'slipped'); }
   // Retaliate lights up when a damage attack reaches you, whatever soaks it.
-  if (atk.effect === 'damage') openProc(s, 'struck', { amount: Math.round(power) });
+  if (hits) openProc(s, 'struck', { amount: Math.round(hitPower) });
   // Your armor chits (Bastion): the whole attack does nothing, however big.
   if (e.chits > 0 && atk.effect !== 'replicate') {
     e.chits--;
@@ -1960,7 +1962,7 @@ function landAttack(s, p) {
   // Sanitize: a special attack may fail outright.
   if (SPECIALS.includes(atk.effect) && defense(s, 'sanitize') && rand(s) * 100 < defense(s, 'sanitize')) return emit(s, 'blocked', `${atk.name} fails: sanitized.`, { source: p.id });
   // Misses: a damage attack can miss you (level gap, plus your Evasion).
-  if (atk.effect === 'damage' && enemyMissChance(s) > 0 && rand(s) * 100 < enemyMissChance(s)) {
+  if (hits && enemyMissChance(s) > 0 && rand(s) * 100 < enemyMissChance(s)) {
     e.metrics.evaded++;
     openProc(s, 'slipped');
     // Honeypot configs, at home: Tar pushes its next attack back; Sting hits back.
@@ -1969,16 +1971,16 @@ function landAttack(s, p) {
     return emit(s, 'evaded', `${atk.name} misses you${defense(s, 'evasion') ? ' (evaded)' : ''}.`, { source: p.id });
   }
   // Breaker Brace: whatever hits you loses an armor chit (or takes 10 if it has none).
-  if (buffed(e, 'brace') && alive(p) && atk.effect === 'damage') {
+  if (buffed(e, 'brace') && alive(p) && hits) {
     if (p.armor > 0) { p.armor--; if (!p.armor) p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); emit(s, 'armor', `Brace: ${p.name} loses a chit${p.armor ? ` (${p.armor} left)` : ''}.`, { target: p.id, left: p.armor }); if (!p.armor) openProc(s, 'stripped'); }
     else hit(s, p, scaled(s, 10), { by: 'Brace' });
   }
   // Deductible (Halcyon): the first attack that lands each fight costs you nothing.
-  if (atk.effect === 'damage' && zeroDay(s, 'deductible') && !e.once.deductible) {
+  if (hits && zeroDay(s, 'deductible') && !e.once.deductible) {
     e.once.deductible = true;
     return emit(s, 'blocked', `Deductible: ${atk.name} is covered.`, { source: p.id });
   }
-  if (atk.effect === 'damage') {
+  if (hits) {
     const tough = 1 - 0.03 * (rank(s, 'failsafe') + rank(s, 'hardened-kernel') + rank(s, 'low-profile') + rank(s, 'load-balancer'));
     // Enemy crits: a roll on every damage attack (from enemy level 3).
     let crit = (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit;
@@ -1986,7 +1988,7 @@ function landAttack(s, p) {
     const half = fxFire(s, 'struck', { do: 'halve' })[0];
     if (half) emit(s, 'blocked', `${half.it.name}: ${atk.name} deals half.`, { source: p.id });
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, Math.round(power * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1)), p.id, atk.name);
+    const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1)), p.id, atk.name);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
     // Echo: while the Echo lives, the hit repeats next cycle at half.
@@ -2016,9 +2018,10 @@ function landAttack(s, p) {
     const add = Math.max(1, Math.round(power * (fxHas(s, 'encrypt-half') ? 0.5 : 1)));
     e.encrypt = (e.encrypt || 0) + add;
     emit(s, 'encrypt', `${atk.name}: your ${e.mode === 'run' ? 'Signal' : 'server'} is encrypted. −${e.encrypt} every cycle until you break the ${p.name}.`, { source: p.id, amount: add, total: e.encrypt });
-  } else if (atk.effect === 'scramble') {
+  }
+  if (atk.effect === 'scramble') {
     // Scrambled: for a few cycles, each of your attacks may hit you instead (useAbility).
-    const n = Math.max(1, Math.round(power) - (fxHas(s, 'blind-short') ? 1 : 0));
+    const n = Math.max(1, Math.round(atk.amount) - (fxHas(s, 'blind-short') ? 1 : 0)); // cycles: not scaled by level
     e.scrambleUntil = e.cycle + n;
     emit(s, 'blind', `${atk.name}: you're SCRAMBLED for ${n} ${n === 1 ? 'cycle' : 'cycles'}. Each attack has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead.`, { source: p.id });
   } else if (atk.effect === 'replicate') {
@@ -2465,7 +2468,7 @@ export function intents(s, columns = 4) {
     while (due - e.cycle < columns) {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
-      if (col >= 0) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * (boosted ? CONFIG.reactiveBonus : 1)), col, hidden, kind: p.kind });
+      if (col >= 0) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind });
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
       due += a.interval;

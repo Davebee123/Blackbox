@@ -72,7 +72,7 @@ export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&a
 
 const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield' };
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
-const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : '+frag');
+const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? (i.hit ? `−${i.hit} · ${i.amount} cyc` : `${i.amount} cyc`) : i.effect === 'heal' ? `+${i.amount} hp` : '+frag');
 const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part' };
 let runMode = false;
 const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
@@ -208,7 +208,7 @@ export function forecast(s, preview = null) {
   for (const m of crew) shoot(m, m.encounter.queue);
   out.total = Object.values(out.parts).reduce((a, b) => a + b, 0);
   // Incoming: this cycle's visible damage attacks, plus encryption on you.
-  const hits = intents(s, 1).filter((i) => i.col === 0 && !i.hidden && i.effect === 'damage').map((i) => i.amount);
+  const hits = intents(s, 1).filter((i) => i.col === 0 && !i.hidden && (i.effect === 'damage' || i.hit)).map((i) => (i.effect === 'damage' ? i.amount : i.hit));
   const take = (st, raw) => {
     let chits = st.encounter.chits || 0, shield = st.encounter.shield || 0, lost = 0;
     for (const a of raw) {
@@ -293,7 +293,7 @@ export function partAbout(p) {
     const every = a.interval && a.interval < 900 ? ` every ${a.interval} ${a.interval === 1 ? 'cycle' : 'cycles'}` : '';
     if (a.effect === 'damage') out.push(a.dump ? `${a.name}: a big hit once it has logged 3 keystrokes` : a.alarm ? `${a.name}: raises the alarm, then hits ${a.amount}${every}` : `${a.name}: hits you for ${a.amount}${every}${a.ramp ? ', more each time' : ''}${a.siphon ? ', and heals itself' : ''}${a.grow ? ', growing as the fight goes on' : ''}${a.windup ? `; enough damage while it winds up calls it off` : ''}`);
     else if (a.effect === 'encrypt') out.push(`${a.name}: locks part of you, ${a.amount} more each time, until it breaks`);
-    else if (a.effect === 'scramble') out.push(`${a.name}: scrambles you for ${a.amount} cycles: each of your attacks may hit you instead, at half${every}`);
+    else if (a.effect === 'scramble') out.push(`${a.name}: ${a.hit ? `hits ${a.hit} and ` : ''}scrambles you for ${a.amount} cycles: each of your attacks may hit you instead, at half${every}`);
     else if (a.effect === 'heal') out.push(`${a.name}: repairs the most damaged part by ${a.amount}${every}`);
     else if (a.effect === 'replicate') out.push(`${a.name}: spawns fragments that gnaw you${every}`);
   }
@@ -364,7 +364,7 @@ export function boardMarkup(s, selected, preview = null) {
   const fighting = active(s);
   const fc = forecast(s, preview);
   // Damage on the timeline is what you'll actually take after your Reduction.
-  const list = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i)) : [];
+  const list = fighting ? intents(s, 4).map((i) => (i.effect === 'damage' ? { ...i, amount: blocked(s, i.amount) } : i.hit ? { ...i, hit: blocked(s, i.hit) } : i)) : [];
   const hidden = fighting && timersHidden(s);
   const remaining = Math.max(0, (cycleLength(s) - e.elapsedMs) / 1000);
   const quietCol = (c) => fighting && !hidden && !list.some((i) => i.col === c);

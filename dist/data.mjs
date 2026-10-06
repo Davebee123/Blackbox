@@ -244,10 +244,10 @@ export const FAMILIES = {
   ghostroot: {
     name: 'Ghostroot',
     threatens: 'Integrity',
-    summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler scrambles you for 2 cycles: each of your attacks has a 25% chance to hit you instead, at half strength.',
+    summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler hits you and scrambles you for 2 cycles: each of your attacks has a 25% chance to hit you instead, at half strength.',
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
-      { id: 'scrambler', name: 'Scrambler', integrity: 46, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, interval: 4, first: 2 } },
+      { id: 'scrambler', name: 'Scrambler', integrity: 46, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 8, interval: 4, first: 2 } },
     ],
   },
 };
@@ -515,6 +515,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage : 1);
   for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale));
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
+  for (const p of parts) if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * dmgScale)); // a special that also hits (the Scrambler)
   for (const p of parts) if (p.attack?.grow) p.attack.grow = Math.max(1, Math.round(p.attack.grow * dmgScale));
   for (const p of parts) if (p.attack?.windup) p.attack.windup = Math.max(1, Math.round(p.attack.windup * scale * g.hp));
   if (strain?.enrage) for (const p of parts) p.enrage = true;
@@ -528,6 +529,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     p.max = p.integrity = Math.round(p.max * ELITE.hp);
     p.armor = p.maxArmor = p.maxArmor + ELITE.armor;
     if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * ELITE.dmg));
+    if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * ELITE.dmg));
     if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * ELITE.dmg));
   }
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
