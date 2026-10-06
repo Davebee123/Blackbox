@@ -114,8 +114,8 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 **Slots.** Exploit (weapon: Damage), Proxy (chest: Signal + Block), Shell (helm: Signal + Regen), Script (ring: Damage + Signal); an **Implant** slot opens at level 15 and another at 30 (Implants are uniques only for now). `load` puts an item in its slot; if the slot is full it **swaps** (the old one goes back to the stash). Each class loads its own; one place at a time; one of each unique and each Zero-day per loadout.
 
 **An item = a base + affixes (+ a unique's effect).**
-- **Base items** (20, five per slot) give the **primary stats**, the feel-good numbers: Damage on every hit, Signal, Block, Regen. A new tier unlocks every few levels (Exploit: Proof of Concept 1, Weaponized Exploit 5, Exploit Chain 11, Zero-click 18, Wormable 26; the other slots likewise). Primaries scale +4% per item level from the tier's own level, ×0.6 overall (the monster pass, below).
-- **Affixes** are the **secondary stats**, small on purpose (2–10%): a prefix adds offense (Weaponized +Damage, Precise Crit, Calibrated Accuracy, Loaded Payload, Multithreaded Clock Speed, Brutal Crit Damage, Recursive Echo), a suffix defense or utility (of the Bunker +Signal, of Mending Regen, of the Scavenger Scavenge, of the Ghost Evasion, of Leeching Leech, of Silence Stealth, of the Beat Sync, of Scrubbing Sanitize). Each needs a minimum item level. Names read like D2: *Precise Proof of Concept of the Bunker*.
+- **Base items** (20, five per slot) give the **primary stats**, the feel-good numbers: Damage on every hit, Signal, Block, Regen. A new tier unlocks every few levels (Exploit: Proof of Concept 1, Weaponized Exploit 5, Exploit Chain 11, Zero-click 18, Wormable 26; the other slots likewise). Primaries scale +4% per item level from the tier's own level, ×0.42 overall (cut from ×0.6 so early gear doesn't double your health and damage). Named uniques' stats run at ×0.7 of their listed values (their downsides in full). Saves from before the cut have their protocols' Damage, Signal and Regen brought down 30%.
+- **Affixes** are the **secondary stats**, small on purpose (2–10%): a prefix adds offense (Weaponized +Damage (1–4), Precise Crit, Calibrated Accuracy, Loaded Payload, Multithreaded Clock Speed, Brutal Crit Damage, Recursive Echo), a suffix defense or utility (of the Bunker +Signal (6–20), of Mending Regen, of the Scavenger Scavenge, of the Ghost Evasion, of Leeching Leech, of Silence Stealth, of the Beat Sync, of Scrubbing Sanitize). Each needs a minimum item level. Names read like D2: *Precise Proof of Concept of the Bunker*.
 
 | Rarity | Colour | What it has |
 |---|---|---|
@@ -854,8 +854,8 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 |---|---:|---|---|---:|
 | Breaker | 1 | `overload <part>` | 40 damage. If it crits, its cooldown resets. | 3 |
 | Breaker | 3 | `exploit <part>` | Exposed this cycle and next: every hit on it from anyone has +25% crit chance. | 2 |
-| Breaker | 5 | `flood <part>` | 30 damage, double on a part with no armor left. | 4 |
-| Breaker | 10 | `crack <part>` | Breaks 3 armor chits on it at once. | 4 |
+| Breaker | 5 | `flood <part>` | 38 damage, double on a part with no armor left. | 4 |
+| Breaker | 10 | `crack <part>` | Breaks 3 armor chits on it at once. | 3 |
 | Breaker | 14 | `brace` | For 2 cycles: +5 Block, and whatever hits you loses an armor chit (or takes 10 if it has none). | 5 |
 | Breaker | 18 | `shatter <part>` | Lights up for 2 cycles when you break a part's last armor chit. 55 damage. | lit |
 | Breaker | 22 | `segfault <part>` | 30 damage, three times that on a part under 30%. | 3 |

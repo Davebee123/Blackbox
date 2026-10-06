@@ -273,7 +273,7 @@ test('the level-5 kit skills: Flood, Suspend, Keepalive, Spawn', () => {
   const b = noArmor(quiet(start('breaker')));
   big(b, 'pulse');
   act(b, 'flood pulse');
-  assert.equal(lost(b, 'pulse'), 60, 'Flood: 60 on a bare part');
+  assert.equal(lost(b, 'pulse'), 76, 'Flood: 76 on a bare part');
   const a = start('bastion');
   const due = part(a, 'pulse').attack.due;
   act(a, 'suspend pulse');

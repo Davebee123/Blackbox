@@ -94,21 +94,21 @@ export const BASES = {
 };
 export const PRIMARY_STATS = ['damage', 'signal', 'reduction', 'regen'];
 // Every base's primaries × this (tuned with the monster pass, see friction.mjs).
-export const ITEM_SCALE = { primary: 0.6 };
+export const ITEM_SCALE = { primary: 0.42, unique: 0.7 }; // unique: on a named unique's stats (not its downside)
 // The best base of a slot at an item level (the highest tier unlocked).
 export const baseFor = (slot, level) => Object.entries(BASES).filter(([, b]) => b.slot === slot && !b.uniqueOnly && b.level <= Math.max(1, level)).sort((a, b) => b[1].level - a[1].level)[0]?.[0] || null;
 
 // Affixes: secondaries. A prefix adds offense, a suffix defense or utility. Value at item level 1
 // and 20 (linear between, on past 20). `from`: the item level it can first roll at.
 export const AFFIXES = {
-  weaponized: { kind: 'prefix', name: 'Weaponized', stat: 'damage', lo: 2, hi: 5, from: 1 },
+  weaponized: { kind: 'prefix', name: 'Weaponized', stat: 'damage', lo: 1, hi: 4, from: 1 },
   precise: { kind: 'prefix', name: 'Precise', stat: 'crit', lo: 3, hi: 5, from: 1 },
   calibrated: { kind: 'prefix', name: 'Calibrated', stat: 'accuracy', lo: 3, hi: 5, from: 1 },
   loaded: { kind: 'prefix', name: 'Loaded', stat: 'payload', lo: 1, hi: 3, from: 4 },
   multithreaded: { kind: 'prefix', name: 'Multithreaded', stat: 'clock', lo: 6, hi: 10, from: 6 },
   brutal: { kind: 'prefix', name: 'Brutal', stat: 'critDamage', lo: 4, hi: 10, from: 8 },
   recursive: { kind: 'prefix', name: 'Recursive', stat: 'echo', lo: 4, hi: 8, from: 10 },
-  bunker: { kind: 'suffix', name: 'of the Bunker', stat: 'signal', lo: 10, hi: 30, from: 1 },
+  bunker: { kind: 'suffix', name: 'of the Bunker', stat: 'signal', lo: 6, hi: 20, from: 1 },
   mending: { kind: 'suffix', name: 'of Mending', stat: 'regen', lo: 0.3, hi: 1, from: 1 },
   scavenger: { kind: 'suffix', name: 'of the Scavenger', stat: 'scavenge', lo: 6, hi: 12, from: 1 },
   ghost: { kind: 'suffix', name: 'of the Ghost', stat: 'evasion', lo: 2, hi: 4, from: 3 },
@@ -274,8 +274,9 @@ export function uniqueItem(u, level, rand) {
   const L = Math.max(u.level, level || u.level);
   const k = power(L) / power(u.level);
   const stats = {};
-  for (const [stat, v] of Object.entries(u.primary || {})) stats[stat] = round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * k) || 1;
-  for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v });
+  const q = ITEM_SCALE.unique;
+  for (const [stat, v] of Object.entries(u.primary || {})) stats[stat] = round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * k * q) || 1;
+  for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Math.max(STATS[stat]?.dp ? 0.1 : 1, round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * q)) });
   addStats(stats, u.downside);
   const slot = BASES[u.base]?.slot || 'script';
   return { kind: 'protocol', side: 'hacker', group: slot, base: u.base, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name };
