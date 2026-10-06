@@ -927,11 +927,12 @@ function jobBox(s, c, now) {
   </div>`;
 }
 export function mailMarkup(s, sel = null, now = Date.now()) {
-  const letters = s.mail?.list || [], held = openContracts(s), board = [...mailOffers(s)].sort((a, b) => a.expiresAt - b.expiresAt);
+  const letters = s.mail?.list || [], jobs = new Set((s.mail?.jobs || []).map((j) => j.id)), held = openContracts(s), board = [...mailOffers(s)].sort((a, b) => a.expiresAt - b.expiresAt);
   const pickSel = () => {
     if (sel?.[0] === 'l') { const l = letters.find((m) => m.id === Number(sel.slice(1))); if (l) return { letter: l }; }
     if (sel?.[0] === 'j') { const j = findJob(s, Number(sel.slice(1))); if (j) return { job: j }; }
     const l = letters.find((m) => !m.read);
+    if (l && l.job != null && jobs.has(l.job)) { const j = findJob(s, l.job); if (j) return { job: j }; } // shown as its contract
     if (l) return { letter: l };
     if (held[0]) return { job: held[0] };
     return letters[0] ? { letter: letters[0] } : {};
@@ -939,9 +940,13 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const open = pickSel();
   const isOpen = (k) => (open.letter && k === 'l' + open.letter.id) || (open.job && k === 'j' + open.job.id);
   const row = (k, from, subject, tag, cls, extra = '', unreadRow = false) => `<li><button type="button" class="mrow${unreadRow ? ' unread' : ''}${isOpen(k) ? ' open' : ''}" data-mail="${k}"><span class="mfrom">${esc(from)}</span><span class="msubj">${esc(subject)}</span>${tag ? `<span class="tag ${cls}">${tag}</span>` : extra}</button></li>`;
-  const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls); }).join('');
+  // A letter that came with a contract you took shows once: as that contract (Contracts or Completed).
+  const taken = new Set((s.mail?.jobs || []).map((j) => j.id));
+  const unreadJob = new Set(letters.filter((m) => m.job != null && taken.has(m.job) && !m.read).map((m) => m.job));
+  const unreadLetters = letters.filter((m) => !m.read && !(m.job != null && taken.has(m.job))).length;
+  const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id)); }).join('');
   const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? 'Off books' : '', c.offBooks ? 'hot' : '', `${fIcon(c.faction || 'halcyon')}<small class="mexp">${fmtTime(c.expiresAt - now)}</small>`)).join('');
-  const letterRows = letters.map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
+  const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
   const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? 'LOWLIGHT' : '', 'dim')).join('');
   const st = standing(s), tier = tierOf(s), next = nextTier(s);
@@ -954,12 +959,13 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const item = open.letter || open.job;
   if (item) {
     const j = open.job || (open.letter.job != null ? findJob(s, open.letter.job) : null);
-    reader = `<section class="card mread"><h2>${esc(item.from)}</h2><h1>${esc(item.subject)}</h1><div class="mbody">${(item.body || []).filter(Boolean).map((l) => `<p>${esc(l)}</p>`).join('')}</div>${j ? jobBox(s, j, now) : ''}</section>`;
+    const body = item.body?.length ? item.body : letters.find((m) => m.job === item.id)?.body || []; // a contract reads as its letter
+    reader = `<section class="card mread"><h2>${esc(item.from)}</h2><h1>${esc(item.subject)}</h1><div class="mbody">${body.filter(Boolean).map((l) => `<p>${esc(l)}</p>`).join('')}</div>${j ? jobBox(s, j, now) : ''}</section>`;
   }
   return `<div class="page-grid mail-page"><section class="card inbox">${head}
     <h2>Contracts · ${heldCount(s)}/${MAIL.take}</h2>${heldRows ? `<ul class="mlist">${heldRows}</ul>` : '<p class="quiet">None taken.</p>'}
     ${boardOpen(s) ? `<h2>Board · ${board.length}</h2>${boardRows ? `<ul class="mlist mboard">${boardRows}</ul>` : '<p class="quiet">Nothing on offer right now.</p>'}` : ''}
-    <h2>Letters${unread(s) ? ` · ${unread(s)} unread` : ''}</h2><ul class="mlist">${letterRows}</ul>
+    ${letterRows ? `<h2>Letters${unreadLetters ? ` · ${unreadLetters} unread` : ''}</h2><ul class="mlist">${letterRows}</ul>` : ''}
     ${done.length ? `<h2 class="mdone-head">Completed · ${done.length}</h2><ul class="mlist mdone">${doneRows}</ul>` : ''}</section>${reader}</div>`;
 }
 

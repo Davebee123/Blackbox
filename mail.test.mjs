@@ -346,3 +346,21 @@ test('Mail lists delivered contracts and LOWLIGHT jobs under Completed, newest f
   assert.match(html, /Completed · 2/);
   assert.match(html, /class="mlist mdone"/);
 });
+
+test('a letter that came with a contract shows once: as the contract, not again under Letters', async () => {
+  const { mailMarkup } = await import('./dist/view.mjs');
+  const s = fresh();
+  const base = { from: 'Halcyon Mutual · Claims', type: 'materials', material: 'worm', amount: 2, reward: { credits: 1 } };
+  s.mail = { ...(s.mail || {}), offers: [], list: [
+    { id: 1, from: 'Halcyon Mutual · Claims', subject: 'Sample request', body: ['Send us two.'], job: 5, read: true },
+    { id: 2, from: 'wick · LOWLIGHT', subject: 'a name on the list', body: ['hi'], job: 6, read: false },
+    { id: 3, from: 'wick · LOWLIGHT', subject: 'just a letter', body: ['no job'], read: true },
+  ], jobs: [{ ...base, id: 5, subject: 'Sample request', done: true, doneAt: 5 }, { ...base, id: 6, subject: 'a name on the list' }] };
+  const html = mailMarkup(s);
+  const letters = html.slice(html.indexOf('Letters'), html.indexOf('Completed'));
+  assert.ok(!letters.includes('Sample request') && !letters.includes('a name on the list'), 'not listed twice');
+  assert.ok(letters.includes('just a letter'));
+  assert.match(html, /data-mail="j6"/);
+  assert.match(html, /class="mrow unread[^"]*" data-mail="j6"/, 'its unread dot moves to the contract');
+  assert.match(html, /Send us two\.|hi/, 'a contract reads as its letter');
+});

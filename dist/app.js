@@ -1473,7 +1473,13 @@ document.addEventListener('click', (e) => {
   if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
   if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop) { mapPop = false; dirty = true; } }
   const mail = e.target.closest('[data-mail]');
-  if (mail) { mailSel = mail.dataset.mail; if (mailSel[0] === 'l') { command(campaign, 'mail read ' + mailSel.slice(1)); save(); } dirty = true; }
+  if (mail) {
+    mailSel = mail.dataset.mail;
+    // A contract opens its letter too: reading one reads the other.
+    const letter = mailSel[0] === 'l' ? mailSel.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(mailSel.slice(1)))?.id;
+    if (letter != null) { command(campaign, 'mail read ' + letter); save(); }
+    dirty = true;
+  }
 });
 
 $('command-form').addEventListener('submit', (e) => {
