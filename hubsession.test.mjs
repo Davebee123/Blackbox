@@ -9,13 +9,13 @@ const keys = (s, f) => hubOptions(s, f).map((o) => o.key);
 test('a hub session offers a short menu that fits the situation', () => {
   const s = open();
   assert.deepEqual(keys(fresh(), 'kestrel'), [], 'no hubs before the board');
-  assert.deepEqual(keys(s, 'kestrel').slice(0, 3), ['market', 'work', 'payloads']);
-  assert.ok(keys(s, 'halcyon').includes('store'), 'Halcyon has its store');
+  assert.deepEqual(keys(s, 'kestrel').slice(0, 4), ['market', 'shop', 'work', 'payloads'], 'every hub has a Shop');
+  assert.ok(keys(s, 'halcyon').includes('shop'), 'Halcyon’s Shop is its store');
   assert.ok(!keys(s, 'halcyon').includes('donate'));
   s.standing.nullchoir = -20;
   assert.deepEqual(keys(s, 'nullchoir'), ['payloads', 'donate', 'servers'], 'hostile: no market, no work');
   s.hubs.lantern.captured = { at: 0, bank: 5, bankAt: 0 };
-  assert.deepEqual(keys(s, 'lantern'), ['hold', 'market'], 'yours: the hub and its market');
+  assert.deepEqual(keys(s, 'lantern'), ['hold', 'market', 'shop'], 'yours: the hub, its market and its shop (at cost)');
 });
 
 test('connecting reads like jacking into a server: handshake, banner, who answers, the menu', () => {
@@ -42,4 +42,16 @@ test('connecting reads like jacking into a server: handshake, banner, who answer
   assert.doesNotMatch(market, /payload compile/, 'only the window you picked');
   s.standing.nullchoir = -30;
   assert.match(hubBanner(s, 'nullchoir')[2].html, /Filtered/);
+});
+
+test('the Shop window: a faction’s own shelf as tiles; Halcyon’s is its store', () => {
+  const s = open(); s.server.credits = 5000;
+  const k = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'shop');
+  assert.match(k, /class="ptiles stash"/);
+  assert.match(k, /data-command="buy kestrel /);
+  const h = hubTerminalMarkup(s, 'halcyon', hubBanner(s, 'halcyon'), 'shop');
+  assert.match(h, /Halcyon Mutual/);
+  assert.match(h, /Agency stock/);
+  const m = hubTerminalMarkup(s, 'kestrel', hubBanner(s, 'kestrel'), 'market');
+  assert.doesNotMatch(m, /mk-goods/, 'the market is wares only');
 });

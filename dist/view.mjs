@@ -2022,27 +2022,28 @@ export function hubOptions(s, f, now = Date.now()) {
   const theirs = s.locations.filter((l) => l.faction === f).length, offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f).length;
   const servers = { key: 'servers', label: 'Their servers', meta: `${theirs}` };
   const pay = { key: 'payloads', label: 'Payloads', meta: `${glyph('firewall')}${defenceOf(s, f, now)}` };
-  if (captured(s, f)) return [{ key: 'hold', label: 'Your hub', meta: `${glyph('credits')}${bankOf(s, f)}` }, { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` }];
+  if (captured(s, f)) return [{ key: 'hold', label: 'Your hub', meta: `${glyph('credits')}${bankOf(s, f)}` }, { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` }, { key: 'shop', label: 'Shop', meta: 'at cost' }];
   if (hostile(s, f)) return [pay, ...(f !== 'halcyon' ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []), servers];
   if (offline(s, f, now)) return [pay, servers];
   return [
     { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` },
-    ...(f === 'halcyon' ? [{ key: 'store', label: 'Store', meta: 'instant' }] : []),
+    { key: 'shop', label: 'Shop', meta: f === 'halcyon' ? 'instant' : `${shopOf(s, f, now).filter((g) => !g.locked && g.left).length}` },
     { key: 'work', label: 'Work', meta: `${offers}` },
     pay,
     ...(f !== 'halcyon' && donationOf(s, f).open ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []),
     servers,
   ];
 }
-function goodsMarkup(s, f, now) {
+// A faction's Shop: its own shelf as tiles, like Halcyon's store (Halcyon's Shop is its store).
+function shopMarkup(s, f, now) {
   const F = FX[f];
-  if (f === 'halcyon' || hostile(s, f) || offline(s, f, now)) return '';
-  return `<h3 class="mk-sec">Goods</h3><div class="mk-table mk-goods"><div class="mk-tr mk-th"><span>Good</span><span class="mk-num">Stock</span><span class="mk-num">Price</span><span></span></div>${shopOf(s, f, now).map((g) => `<div class="mk-tr${g.locked ? ' locked' : ''}">
-      <span class="mk-name" title="${esc(g.about)}">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate')}<b>${esc(g.name)}</b></span>
-      <span class="mk-num mk-held${g.left ? '' : ' zero'}">${g.left}</span>
-      <span class="mk-num mk-buyp mk-gprice">${g.price}</span>
-      ${g.locked ? `<span class="tag dim mk-lock" title="Opens at ${esc(F.tiers[g.need])}">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>Buy</button>`}
-    </div>`).join('')}</div>`;
+  if (hostile(s, f) || offline(s, f, now)) return '<p class="quiet">Shut to you.</p>';
+  const tiles = shopOf(s, f, now).map((g) => {
+    const can = !g.locked && g.left > 0 && s.server.credits >= g.price;
+    return `<li class="ptile stash${g.locked ? ' locked' : ''}"><b class="iname">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate', 'badge')}${esc(g.name)}</b><small>${esc(g.about)}</small>
+      <div class="ptile-acts"><span class="price">${g.price} credits</span><small class="qty">×${g.left}</small>${g.locked ? `<span class="tag dim">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small ${can ? 'primary' : ''}" data-command="buy ${f} ${g.id}" ${can ? '' : 'disabled'}>Buy</button>`}</div></li>`;
+  }).join('');
+  return `<ul class="ptiles stash">${tiles || '<li class="quiet">Nothing on the shelf.</li>'}</ul>`;
 }
 function workMarkup(s, f) {
   const offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f);
@@ -2055,7 +2056,8 @@ function serversMarkup(s, f) {
   return theirs.length ? `<ul class="craft-list">${theirs.map((l) => `<li><span><b>${esc(l.name)}</b><small>lv ${l.level} · layer ${l.depth || 1}</small></span><button type="button" class="btn small" data-go="map:${esc(l.id)}">Map</button></li>`).join('')}</ul>` : '<p class="quiet">None on your map.</p>';
 }
 const WINDOWS = {
-  market: { title: 'Market', body: (s, f, now) => marketMarkup(s, f, now) + goodsMarkup(s, f, now) },
+  market: { title: 'Market', body: (s, f, now) => marketMarkup(s, f, now) },
+  shop: { title: 'Shop', body: (s, f, now) => (f === 'halcyon' ? storeMarkup(s, now) : shopMarkup(s, f, now)) },
   work: { title: 'Work', body: (s, f) => workMarkup(s, f) },
   payloads: { title: 'Payloads', body: (s, f, now) => payloadMarkup(s, f, now) },
   donate: { title: 'Donate', body: (s, f) => donateMarkup(s, f) },

@@ -650,6 +650,8 @@ function shellCommand(arg) {
 
 function go(name, quiet = false) {
   aimPreview = null;
+  // Halcyon's store is its hub's Shop now: anything that asks for the store opens that.
+  if (name === 'store' && boardOpen(campaign)) { hubSel = 'halcyon'; hubOpen = true; hubLines = [...V.hubBanner(campaign, 'halcyon').slice(0, -1), menuLine]; hubWin = 'shop'; V.setOrder(null); name = 'hub'; }
   if (name === 'daemons') { loadoutTab = 'daemons'; name = 'loadout'; } // a Loadout tab now
   // Contextual tabs only exist while there is something there.
   if (name === 'combat' && !active(campaign) && !(campaign.encounter && campaign.encounter.mode === 'run')) name = 'map';
@@ -719,7 +721,6 @@ function closeHub() { hubOpen = false; hubWin = null; V.setOrder(null); if (modu
 function hubEcho(text) { hubLines.push({ cls: 'you', html: V.esc(text) }); }
 // A menu pick opens its window; it isn't echoed into the session (the menu already says what it is).
 function pickHub(key) {
-  if (key === 'store') return go('store');
   hubWin = key || null; V.setOrder(null); feel.key('click'); dirty = true;
 }
 // The market's order ticket: which ware, Sell or Buy, how many (the slider). Dragging updates the
@@ -902,7 +903,7 @@ function renderMeters() {
   const unreadMail = (campaign.mail?.list || []).filter((m) => !m.read).length;
   $('mail-count').hidden = !unreadMail;
   $('mail-count').textContent = unreadMail;
-  $('tab-store').hidden = !boardOpen(campaign);
+  $('tab-store').hidden = true; // Halcyon's store lives in its hub (connect halcyon → Shop)
   $('tab-consortium').hidden = !consortiumOf(campaign) && !campaign.consortiumInvite;
   fitTopbar();
   const need = alertsOf(campaign).length + (campaign.consortiumInvite && !consortiumOf(campaign) ? 1 : 0);
