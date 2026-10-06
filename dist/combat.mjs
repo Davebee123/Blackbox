@@ -18,8 +18,7 @@ import { outpostCommand, outpostWon, infestWon, siteTrait } from './outpost.mjs'
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
-import { squelchInvasion, portsCommand } from './invasion.mjs';
-import { squelchOutpost } from './outpost.mjs';
+import { portsCommand } from './invasion.mjs';
 import { filterCommand } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
@@ -1184,7 +1183,6 @@ export function endInvasion(s, message, detail = {}) {
   const inv = s.invasion;
   s.invasion = null;
   scheduleInvasion(s);
-  if (inv?.baited) s.net.next = CONFIG.invasion.safeMs; // you pulled it in early: a safe period after
   if (message) emit(s, 'invasion-cleared', message, { invader: inv?.id, ...detail });
 }
 
@@ -1364,12 +1362,6 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     firewallCommand(s, text, now);
   } else if (text === 'open ports' || text === 'close ports') {
     portsCommand(s, text);
-  } else if (text === 'squelch' || text === 'bait') {
-    squelchInvasion(s);
-  } else if (/^(squelch|bait) \S+$/.test(text)) {
-    const loc = s.locations.find((l) => l.id === text.split(' ')[1] && l.outpost?.h);
-    if (!loc) warn(s, 'squelch: your server (no name), or one of your outposts.');
-    else squelchOutpost(s, loc, now);
   } else if (/^hub( |$)/.test(text)) {
     hubCommand(s, text);
   } else if (/^payload( |$)/.test(text)) {

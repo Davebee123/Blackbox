@@ -117,27 +117,9 @@ test('a filter pulled from a vault is banked when you jack out', async () => {
   assert.equal(filtersOf(s)[0].name, 'Packet Filter');
 });
 
-test('squelch: the next invasion comes now for Kernel code, and once it is dealt with a quiet period follows', async () => {
-  const { tickNetwork } = await import('./dist/invasion.mjs');
-  const { CONFIG } = await import('./dist/data.mjs');
-  const s = fresh();
-  command(s, 'developer location worm');
-  fwOf(s).level = 20; // it will be blocked on the spot
-  s.clock = 0; tickNetwork(s, 0);
-  s.materials = { kernel: 0 };
-  command(s, 'squelch');
-  assert.ok(!s.logs.some((e) => /Squelch:/.test(e.message)), 'not without Kernel code');
-  s.materials.kernel = 2;
-  command(s, 'squelch');
-  assert.equal(s.materials.kernel, 0, '2 Kernel at level 1');
-  assert.equal(s.invasion, null, 'met at the wall at once, and stopped');
-  assert.ok(s.logs.some((e) => /Squelch:/.test(e.message)));
-  assert.equal(s.net.next, CONFIG.invasion.safeMs, 'then a safe period');
-});
-
 test('every outpost has its own firewall at its server\'s level; natives it blocks bounce, ones it contests are worn down', async () => {
   const { fwAt } = await import('./dist/firewall.mjs');
-  const { tickOutposts, OUTPOST, squelchOutpost: baitOutpost } = await import('./dist/outpost.mjs');
+  const { tickOutposts, OUTPOST, startSiege } = await import('./dist/outpost.mjs');
   const s = fresh();
   command(s, 'developer location worm');
   const a = s.locations[0];
@@ -146,12 +128,10 @@ test('every outpost has its own firewall at its server\'s level; natives it bloc
   command(s, `outpost install ${a.id}`, 0);
   s.materials = { kernel: 20 };
   assert.equal(fwAt(s, a).level, 8, 'it comes with the server');
-  baitOutpost(s, a, 0);
+  startSiege(s, a);
   assert.equal(a.outpost.siege, null, 'natives at its level bounce');
-  assert.ok(a.outpost.quietUntil > 0, 'and a quiet period follows the squelch');
-  assert.equal(s.materials.kernel, 20 - 3, 'Kernel code by its level (lv 8: 3)');
-  fwAt(s, a).level = 3; a.outpost.quietUntil = 0; a.outpost.squelchReady = 0; // as if a day had passed
-  baitOutpost(s, a, 0);
+  fwAt(s, a).level = 3;
+  startSiege(s, a);
   assert.ok(a.outpost.siege && a.outpost.siege.hp === 1, 'a weaker firewall lets them in');
   command(s, `firewall upgrade ${a.id}`);
   s.server.credits = 9999; s.materials = { cipher: 999, kernel: 0 };
@@ -191,7 +171,7 @@ test('the server losing Integrity wears its firewall: a block for every 5% of ma
   assert.equal(fwOf(s).frag, 5);
 });
 
-test('away: a long passive clock (one invasion every 2-4 hours), quiet for a night after a squelch; open ports speeds them up online', async () => {
+test('away: a long passive clock (one invasion every 2-4 hours); open ports speeds them up online', async () => {
   const { tickNetwork, AWAY } = await import('./dist/invasion.mjs');
   const T0 = 1_800_000_000_000;
   const s = fresh();
@@ -201,22 +181,6 @@ test('away: a long passive clock (one invasion every 2-4 hours), quiet for a nig
   tickNetwork(s, T0 + 8 * 3600000);
   const n = s.logs.filter((e) => e.type === 'invader').length;
   assert.ok(n >= 2 && n <= 4, `2-4 in eight hours away (${n})`);
-  const q = fresh();
-  command(q, 'developer location worm');
-  fwOf(q).level = 30;
-  q.materials = { kernel: 9 };
-  tickNetwork(q, T0);
-  hooks.now = () => T0;
-  command(q, 'squelch', T0);
-  hooks.now = null;
-  const after = q.logs.filter((e) => e.type === 'invader').length;
-  const k = q.materials.kernel;
-  hooks.now = () => T0 + 3600000;
-  command(q, 'squelch', T0 + 3600000);
-  hooks.now = null;
-  assert.equal(q.materials.kernel, k, 'a long cooldown: not again so soon');
-  tickNetwork(q, T0 + 7.5 * 3600000);
-  assert.equal(q.logs.filter((e) => e.type === 'invader').length, after, 'a quiet night');
   // Open ports: online, the next one comes 2.5× sooner; logging off closes them.
   const o = fresh();
   command(o, 'developer location worm');

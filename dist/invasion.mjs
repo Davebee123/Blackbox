@@ -14,7 +14,7 @@ import { tickStation } from './station.mjs';
 import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
 import { isLive } from './memory.mjs';
-import { effLevel, tickFirewall, paySquelch, wear } from './firewall.mjs';
+import { effLevel, tickFirewall, wear } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
@@ -80,7 +80,7 @@ const pct = (x) => `${Math.round(x * 10) / 10}%`;
 // wall meets them; members sometimes stop one. A crash while away reboots for CONSORTIUM.rebootMs,
 // occupied (consortium.mjs): clear it to come back sooner.
 // Away: a long passive clock of its own. One invasion every 2–4 hours while you're logged off
-// (none while a Squelch keeps it quiet); swarms and hubs' old owners come at a quarter pace.
+// swarms and hubs' old owners come at a quarter pace.
 export const AWAY = { everyMs: [2 * 3600000, 4 * 3600000], slow: 0.25, stepMs: 60000, maxMs: 24 * 3600000, helpMs: 3 * 60000 };
 const awayGap = (s) => { const [lo, hi] = AWAY.everyMs; return Math.round(lo + rand(s) * (hi - lo)); };
 export function tickNetwork(s, now = Date.now()) {
@@ -137,8 +137,7 @@ function stepInvasion(s, dt, at = null) {
   if (!inv) {
     if (!s.locations?.length) return;
     if (at != null) {
-      // Away: the long passive clock, quiet while squelched.
-      if ((net.quietUntil || 0) > at) return;
+      // Away: the long passive clock.
       if (net.awayNext == null) net.awayNext = awayGap(s);
       net.awayNext -= dt;
       if (net.awayNext <= 0) { net.awayNext = awayGap(s); depart(s); }
@@ -239,27 +238,6 @@ function stopped(s, inv, ground) {
   endInvasion(s, `${ground ? `Your wall wore ${inv.name} down to nothing` : `Your wall stopped ${inv.name} (level ${inv.level}) from ${inv.fromName}`}${quiet ? '.' : ': +1 salvage.'}`, { blocked: true });
   gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`);
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
-}
-
-// ---------- squelch ----------
-// Pull the next invasion in now, straight to the wall, so you meet it on your terms. Once it's
-// dealt with (stopped, worn down or killed), nothing sets out for CONFIG.invasion.safeMs. It
-// costs Kernel code, by the level of the strongest server you have attached (firewall.mjs).
-export function squelchInvasion(s) {
-  if (s.invasion) return warn(s, `${s.invasion.name} is already ${s.invasion.state === 'travel' ? 'on its way' : 'at your wall'}.`);
-  if (s.degraded) return warn(s, 'Not while your server is degraded.');
-  const live = (s.locations || []).filter((l) => !l.rogue && isLive(s, l));
-  if (!live.length) return warn(s, 'Nothing attached to squelch: invasions come from servers on your network.');
-  const now = hooks.now?.() ?? Date.now();
-  if ((s.net.squelchReady || 0) > now) return warn(s, `Squelch is ready again in ${Math.ceil((s.net.squelchReady - now) / 3600000)} h.`);
-  if (!paySquelch(s, Math.max(...live.map((l) => l.level || 1)))) return;
-  s.net.squelchReady = now + I().squelchCd;
-  const inv = depart(s);
-  if (!inv) return warn(s, 'Nothing answered.');
-  inv.baited = true;
-  s.net.quietUntil = (hooks.now?.() ?? Date.now()) + I().safeMs; // nothing more while you're away, for a night
-  emit(s, 'invader', `Squelch: ${inv.name} (lv ${inv.level}) is pulled to your wall now. Quiet for ${I().safeMs / 3600000} hours while you're away.`, { invader: inv.id });
-  arrive(s);
 }
 
 // Open ports: online only, invasions come 2.5× as often and each is worth +50%. Closes when you log off.

@@ -23,14 +23,6 @@ export const FIREWALL = {
 export const upgradeCost = (L) => ({ credits: 30 + 20 * L, cipher: 2 + L });
 // A defrag: credits for every fragmented block, more on a bigger firewall.
 export const defragCost = (f) => Math.max(5, Math.round(f.frag * (3 + f.level)));
-// Squelch (pull the next threat in now, then quiet): Kernel code, by the threat's level.
-export const squelchCost = (level) => 2 + Math.floor(Math.max(1, level) / 5);
-export function paySquelch(s, level) {
-  const k = squelchCost(level), have = s.materials?.kernel || 0;
-  if (have < k) { warn(s, `Squelch takes ${k} Kernel code (you have ${have}).`); return false; }
-  s.materials.kernel -= k;
-  return true;
-}
 
 const clock = () => hooks.now?.() ?? Date.now();
 // Old saves had a wall from the server's level and the Firewall service's version: start the

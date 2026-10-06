@@ -42,7 +42,7 @@ const clock = () => hooks.now?.() ?? Date.now();
 // The outpost's firewall against the swarm (each process at the swarm's level).
 const swarmRatio = (s, target, f) => ratingAt(s, target, f.family) / strength(f.level, f.mutation);
 export function launch(s, at = clock(), faction = null) {
-  const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege && !((l.outpost.quietUntil || 0) > at)); // a squelched outpost is quiet
+  const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege);
   if (!targets.length) return null;
   const pool = targets.some((l) => hasMod(l, 'lure')) ? targets.filter((l) => hasMod(l, 'lure')) : targets; // a Honeytoken first
   const target = pool[Math.floor(rand(s) * pool.length)];

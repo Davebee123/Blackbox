@@ -103,8 +103,6 @@ export const CONFIG = {
     chip: 1, // % of max Integrity a breach takes per minute (a siege less, down to 0 at the block line)
     grind: [4, 20], // % of the invader a siege wears down per minute, from the breach line to the block line
     blockedXp: 0.25, // share of a kill's XP when the wall stops one (plus one salvage)
-    safeMs: 8 * 3600000, // Squelch: how long a holding stays quiet while you're away (a night)
-    squelchCd: 20 * 3600000, // and how long before that holding can be squelched again
     open: { pace: 0.4, reward: 1.5 }, // Open ports (online only): invasions 2.5× as often, each worth +50%
   },
   // Resting: between fights the server repairs itself, 2% of its max a minute (empty to full in

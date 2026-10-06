@@ -14,7 +14,7 @@
 // In a consortium, sieges come while you're away too (consortium.mjs), and members may break them.
 import { MUTATIONS, variantFor, CONFIG } from './data.mjs';
 import { isLive } from './memory.mjs';
-import { ratingAt, fragment, effLevel, paySquelch } from './firewall.mjs';
+import { ratingAt, fragment, effLevel } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
 import { emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
@@ -282,7 +282,6 @@ function tickSites(s, now, dt, paused, away) {
       if (o.siege.left <= 0 && !holding(s, 'outpost', loc.id)) fall(s, loc);
       continue;
     }
-    if ((o.quietUntil || 0) > now) continue; // squelched: a safe period
     const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * (hasMod(loc, 'lure') ? 2 : 1) * archNotice(s) * (away ? 0.5 : 1);
     if (elapsed > 0 && rand(s) < Math.min(1, elapsed / OUTPOST.noticeMs) * mult) startSiege(s, loc);
   }
@@ -291,19 +290,7 @@ function tickSites(s, now, dt, paused, away) {
 // Natives come for it: they meet the outpost's own firewall first (firewall.mjs). Blocked, they
 // bounce; contested, the firewall wears them down while the timer runs; a breach just runs it.
 export const nativeRatio = (s, loc, level = loc.level || 1) => ratingAt(s, loc, loc.family) / strength(level);
-// squelch <server>: pull its natives in now, while you're here to meet them; then a safe period.
-// Kernel code, by the server's level.
-export function squelchOutpost(s, loc, now) {
-  const o = loc.outpost;
-  if (o.siege || o.lockdown) return warn(s, `${loc.name} already has natives on it.`);
-  if ((o.quietUntil || 0) > now) return warn(s, `${loc.name} is already quiet.`);
-  if ((o.squelchReady || 0) > now) return warn(s, `${loc.name} can be squelched again in ${Math.ceil((o.squelchReady - now) / 3600000)} h.`);
-  if (!paySquelch(s, loc.level || 1)) return;
-  o.squelchReady = now + CONFIG.invasion.squelchCd;
-  startSiege(s, loc);
-  o.quietUntil = now + OUTPOST.siegeMs + CONFIG.invasion.safeMs; // natives and swarms leave it alone for a night
-}
-function startSiege(s, loc) {
+export function startSiege(s, loc) {
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, level = loc.level || 1;
   const o = outcome(nativeRatio(s, loc, level));
   fragment(s, o, loc);
