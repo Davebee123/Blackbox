@@ -5,6 +5,7 @@
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it). Equip at home.
 import { emit, warn, active, serviceVersion } from './combat.mjs';
 import { RARITIES, seeded } from './gear.mjs';
+import { versionSlots } from './firewall.mjs';
 
 export const FILTER_CAP = 12; // how many you can hold
 export const VAULT_CHANCE = 0.15;
@@ -58,7 +59,8 @@ export function vaultFilter(loc) {
 
 const own = (s) => (s.filters ||= { held: [], on: [] }); // on: indexes into held
 export const filtersOf = (s) => own(s).held;
-export const slotsOf = (s) => serviceVersion(s, 'firewall') || 0;
+// Slots: the Firewall service's (1–3 by version), plus your firewall's major versions (v3, v5).
+export const slotsOf = (s) => (serviceVersion(s, 'firewall') || 0) + versionSlots(s);
 export const equipped = (s) => own(s).on.slice(0, slotsOf(s)).map((i) => own(s).held[i]).filter(Boolean);
 // The sum of a stat over what's equipped.
 export const filterStat = (s, k) => equipped(s).reduce((a, f) => a + (f.stats[k] || 0), 0);
@@ -78,7 +80,7 @@ export function filterCommand(s, text) {
   if (s.run || active(s)) return warn(s, 'Filters go in and out at home, not on a run or mid-fight.');
   if (verb === 'equip') {
     if (o.on.includes(i)) return warn(s, `${f.name} is already in.`);
-    if (o.on.length >= slotsOf(s)) return warn(s, slotsOf(s) ? `Every filter slot is full (${slotsOf(s)}). Take one out first.` : 'No filter slots: install the Firewall service.');
+    if (o.on.length >= slotsOf(s)) return warn(s, slotsOf(s) ? `Every filter slot is full (${slotsOf(s)}). Take one out first.` : 'No filter slots: install the Firewall service, or take your firewall to v3.');
     o.on.push(i);
     return emit(s, 'firewall', `${f.name} in: ${filterLine(f)}.`);
   }

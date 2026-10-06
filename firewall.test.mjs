@@ -193,3 +193,26 @@ test('away: a long passive clock (one invasion every 2-4 hours); open ports spee
   assert.equal(o.net.open, false, 'closed while you were away');
   assert.ok(AWAY.everyMs[0] >= 2 * 3600000);
 });
+
+test('major versions every 10 levels: the upgrade into one takes an Exploit, and each brings a perk', async () => {
+  const { versionOf, upgradeCost, defragMs, FIREWALL } = await import('./dist/firewall.mjs');
+  const { slotsOf } = await import('./dist/filters.mjs');
+  assert.equal(versionOf(9), 1); assert.equal(versionOf(10), 2); assert.equal(versionOf(20), 3);
+  assert.equal(upgradeCost(8).exploit, undefined);
+  assert.deepEqual(upgradeCost(9), { credits: (30 + 180) * 3, cipher: 11 * 2, exploit: 1, major: true });
+  const s = fresh();
+  fwOf(s).level = 9;
+  s.server.credits = 9999; s.materials = { cipher: 99, exploit: 0 };
+  command(s, 'firewall upgrade');
+  assert.equal(fwOf(s).level, 9, 'a new version needs an Exploit');
+  s.materials.exploit = 1;
+  command(s, 'firewall upgrade');
+  assert.equal(fwOf(s).level, 10);
+  assert.ok(s.logs.some((e) => /version 2: Defrag 30% faster/.test(e.message)));
+  assert.equal(defragMs(s), Math.round(FIREWALL.defragMs * 0.7), 'v2: defrag 30% faster');
+  assert.equal(slotsOf(s), 0, 'no slots yet without the service');
+  fwOf(s).level = 20;
+  assert.equal(slotsOf(s), 1, 'v3: a filter slot of its own');
+  s.services = { firewall: 2 };
+  assert.equal(slotsOf(s), 3, 'on top of the service\'s');
+});

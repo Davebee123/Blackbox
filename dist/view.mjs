@@ -31,7 +31,7 @@ import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
-import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost } from './firewall.mjs';
+import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
@@ -758,11 +758,11 @@ const filterStatSum = (s) => filtersOn(s).reduce((a, x) => a + (x.stats.strength
 // and Upgrade, Defrag and harden.sh. arg: what the firewall commands take for it.
 function fwRow(s, holder, arg, top, now = Date.now()) {
   const f = fwAt(s, holder), b = wallBands(s, ratingAt(s, holder, null, now)), c = upgradeCost(f.level), busy = active(s) || !!s.run;
-  const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher;
+  const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher && (s.materials?.exploit || 0) >= (c.exploit || 0);
   const state = b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low', frag = fragLevels(s, holder), def = defragging(s, now, holder), hard = hardenLeft(s, now, holder);
   const line = state === 'ok' ? `<span class="vuln ok" title="Up to level ${top} comes for it">Not vulnerable</span>` : `<span class="vuln ${state}" title="Blocks up to level ${b.blocks}; contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
   const bad = new Set(SCATTER.slice(0, Math.floor(f.frag)));
-  return `<div class="fw-mini"><div class="fw-head"><span class="fw-tag">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${frag || def ? `<span class="tag warn">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : ''}${hard ? `<span class="tag you">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''}${line}</div>
+  return `<div class="fw-mini"><div class="fw-head"><span class="fw-tag">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${fwVersion(f)}${frag || def ? `<span class="tag warn">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : ''}${hard ? `<span class="tag you">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''}${line}</div>
     <div class="fw-grid small${def ? ' defrag' : ''}${hard ? ' hard' : ''}" title="${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>
     ${fwActs(s, f, arg, can, c, busy, def, now)}</div>`;
 }
@@ -772,11 +772,18 @@ function baitHome(s) {
   const open = !!s.net?.open;
   return `<button type="button" class="btn small fw-up${open ? ' on' : ''}" data-command="${open ? 'close ports' : 'open ports'}" aria-pressed="${open}" title="${open ? 'Close them: invasions back to their usual pace' : 'Invasions come 2.5× as often while you play, each worth +50%. They close when you log off.'}">${open ? 'Ports open' : 'Open ports'}<small>${open ? '×2.5 · +50%' : 'more, richer'}</small></button>`;
 }
+// Its major version (every 10 levels): the tag, its perks on hover, the next one ahead.
+function fwVersion(f) {
+  const v = versionOf(f.level), got = perksAt(f.level), next = VERSION_PERKS.find((p) => p.v > v);
+  const tip = [...got.map((p) => `v${p.v}: ${p.name}`), next ? `Next, v${next.v} at lv ${(next.v - 1) * VERSION_EVERY}: ${next.name}` : ''].filter(Boolean).join(' · ');
+  return `<span class="tag fw-ver" title="${esc(tip || `Next, v2 at lv ${VERSION_EVERY}`)}">v${v}</span>`;
+}
 // The firewall's buttons, each only once it means something: Upgrade when you can pay for the next
 // level, Defrag when it's fragmented (or running), harden.sh when you hold one.
 function fwActs(s, f, arg, can, c, busy, def, now, extra = '') {
   const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`, n = kitOf(s).harden || 0;
-  const up = can ? `<button type="button" class="btn small primary fw-up" data-command="${cmd('upgrade')}" ${busy ? 'disabled' : ''} title="Blocks one level more">Upgrade to lv ${f.level + 1}<small>${c.credits} credits · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</small></button>` : '';
+  const nv = c.major ? VERSION_PERKS.find((p) => p.v === versionOf(f.level + 1)) : null;
+  const up = can ? `<button type="button" class="btn small primary fw-up${c.major ? ' major' : ''}" data-command="${cmd('upgrade')}" ${busy ? 'disabled' : ''} title="${c.major ? `A new version${nv ? `: ${esc(nv.name)}` : ''}` : 'Blocks one level more'}">${c.major ? `Upgrade to v${versionOf(f.level + 1)}` : `Upgrade to lv ${f.level + 1}`}<small>${c.credits} credits · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}${c.exploit ? ' · 1 Exploit' : ''}</small></button>` : '';
   const dc = defragCost(f);
   const dfr = f.frag || def ? `<button type="button" class="btn small fw-up" data-command="${cmd('defrag')}" ${def || busy || (!def && s.server.credits < dc) ? 'disabled' : ''} title="${FIREWALL.defragLoss} levels down while it runs">${def ? `Defragmenting · ${fmtLeft(f.defragUntil - now)}` : `Defrag<small>${dc} credits</small>`}</button>` : '';
   const hd = n ? `<button type="button" class="btn small" data-command="${cmd('harden')}" ${busy ? 'disabled' : ''} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${n}</button>` : '';
@@ -785,9 +792,9 @@ function fwActs(s, f, arg, can, c, busy, def, now, extra = '') {
 }
 function firewallPanel(s, now) {
   const f = fwOf(s), c = upgradeCost(f.level), eff = effLevel(s, now), busy = active(s);
-  const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher;
+  const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher && (s.materials?.exploit || 0) >= (c.exploit || 0);
   const mods = [fragLevels(s) ? `<span class="tag warn" title="Fragmented">−${fragLevels(s) + (defragging(s, now) ? FIREWALL.defragLoss : 0)}</span>` : defragging(s, now) ? `<span class="tag warn" title="Defragmenting">−${FIREWALL.defragLoss}</span>` : '', hardenLeft(s, now) ? `<span class="tag you" title="harden.sh · ${fmtTime(hardenLeft(s, now))} left">+${FIREWALL.harden.plus} · ${fmtTime(hardenLeft(s, now))}</span>` : ''].join('');
-  return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
+  return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${fwVersion(f)}${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
     ${fwActs(s, f, '', can, c, busy, defragging(s, now), now, baitHome(s))}</div>`;
 }
 // The firewall's filters: its slots (from the Firewall service), then what you hold. Equip and

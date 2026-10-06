@@ -19,8 +19,22 @@ export const FIREWALL = {
   harden: { plus: 3, ms: 8 * 3600000 },
   maxLevel: 60,
 };
-// To go from level L to L+1.
-export const upgradeCost = (L) => ({ credits: 30 + 20 * L, cipher: 2 + L });
+// Major versions: every 10 levels (v1 is levels 1–9, v2 from 10…). The upgrade into a new
+// version costs more (and an Exploit), and each version brings a perk, for any firewall.
+export const VERSION_EVERY = 10;
+export const VERSION_PERKS = [
+  { v: 2, perk: 'defrag', name: 'Defrag 30% faster' },
+  { v: 3, perk: 'slot', name: '+1 filter slot' },
+  { v: 4, perk: 'wear', name: 'Wears 25% slower' },
+  { v: 5, perk: 'slot', name: '+1 filter slot' },
+  { v: 6, perk: 'harden', name: 'harden.sh lasts twice as long' },
+];
+export const versionOf = (level) => 1 + Math.floor(Math.max(0, level) / VERSION_EVERY);
+export const perksAt = (level) => VERSION_PERKS.filter((p) => p.v <= versionOf(level));
+const perk = (s, id, loc = null) => perksAt(fwAt(s, loc).level).filter((p) => p.perk === id).length;
+export const versionSlots = (s) => perk(s, 'slot'); // your home firewall's extra filter slots
+// To go from level L to L+1: a major version (L+1 a multiple of 10) triples the credits, doubles the Cipher and takes an Exploit.
+export const upgradeCost = (L) => { const major = (L + 1) % VERSION_EVERY === 0, base = { credits: 30 + 20 * L, cipher: 2 + L }; return major ? { credits: base.credits * 3, cipher: base.cipher * 2, exploit: 1, major: true } : base; };
 // A defrag: credits for every fragmented block, more on a bigger firewall.
 export const defragCost = (f) => Math.max(5, Math.round(f.frag * (3 + f.level)));
 
@@ -53,12 +67,12 @@ export function effLevel(s, at = clock(), family = null, loc = null) {
 }
 // Filters: slower fragmentation, a faster defrag (each capped at 80%).
 const less = (s, k) => 1 - Math.min(0.8, filterStat(s, k) / 100);
-export const defragMs = (s) => Math.round(FIREWALL.defragMs * less(s, 'defrag'));
+export const defragMs = (s, loc = null) => Math.round(FIREWALL.defragMs * (loc ? 1 : less(s, 'defrag')) * (perk(s, 'defrag', loc) ? 0.7 : 1));
 
 // A threat met it: fragment.
 export function fragment(s, outcome, loc = null) {
   const f = fwAt(s, loc);
-  f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + (FIREWALL.frag[outcome] || 0) * (loc ? 1 : less(s, 'frag'))) * 100) / 100);
+  f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + (FIREWALL.frag[outcome] || 0) * (loc ? 1 : less(s, 'frag')) * (perk(s, 'wear', loc) ? 0.75 : 1)) * 100) / 100);
 }
 // Your server losing Integrity wears your home firewall: a block for every 5% of max lost (an
 // invasion chipping at you, hits in a home fight). Filters that slow fragmentation slow this too.
@@ -67,7 +81,7 @@ export function wear(s, points) {
   if (!(points > 0)) return;
   const f = fwOf(s), step = Math.max(1, s.server.max * WEAR_STEP);
   f.wear = (f.wear || 0) + points;
-  while (f.wear >= step) { f.wear -= step; f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + less(s, 'frag')) * 100) / 100); }
+  while (f.wear >= step) { f.wear -= step; f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + less(s, 'frag') * (perk(s, 'wear') ? 0.75 : 1)) * 100) / 100); }
 }
 // The clock: a defrag that's done leaves it whole (home, and every outpost).
 export function tickFirewall(s, at = clock()) {
@@ -92,11 +106,12 @@ export function firewallCommand(s, text, at = clock()) {
   const f = fwAt(s, loc), where = hubF ? 'Your hub\'s firewall' : loc ? `${loc.name}'s firewall` : 'Firewall';
   if (verb === 'upgrade') {
     if (f.level >= FIREWALL.maxLevel) return warn(s, `${where} is at its highest level.`);
-    const c = upgradeCost(f.level), have = s.materials?.cipher || 0;
-    if (s.server.credits < c.credits || have < c.cipher) return warn(s, `Level ${f.level + 1} takes ${c.credits} credits and ${c.cipher} Cipher code.`);
-    s.server.credits -= c.credits; s.materials.cipher -= c.cipher;
+    const c = upgradeCost(f.level), have = s.materials?.cipher || 0, ex = s.materials?.exploit || 0;
+    if (s.server.credits < c.credits || have < c.cipher || ex < (c.exploit || 0)) return warn(s, `Level ${f.level + 1} takes ${c.credits} credits and ${c.cipher} Cipher code${c.exploit ? ' and an Exploit (a new version)' : ''}.`);
+    s.server.credits -= c.credits; s.materials.cipher -= c.cipher; if (c.exploit) s.materials.exploit -= c.exploit;
     f.level++;
-    return emit(s, 'firewall', `${where}: level ${f.level}.`, loc ? { location: loc.id } : {});
+    const got = c.major ? VERSION_PERKS.find((p) => p.v === versionOf(f.level)) : null;
+    return emit(s, 'firewall', `${where}: level ${f.level}${c.major ? `, version ${versionOf(f.level)}${got ? `: ${got.name}` : ''}` : ''}.`, loc ? { location: loc.id } : {});
   }
   if (verb === 'defrag') {
     if (defragging(s, at, loc)) return warn(s, 'Already defragmenting.');
@@ -104,14 +119,14 @@ export function firewallCommand(s, text, at = clock()) {
     const price = defragCost(f);
     if (s.server.credits < price) return warn(s, `A defrag costs ${price} credits.`);
     s.server.credits -= price;
-    const ms = loc ? FIREWALL.defragMs : defragMs(s);
+    const ms = defragMs(s, loc);
     f.defragUntil = at + ms;
     return emit(s, 'firewall', `${where}: defragmenting for ${price} credits, ${Math.round(ms / 6000) / 10} minutes, ${FIREWALL.defragLoss} levels down meanwhile.`, loc ? { location: loc.id } : {});
   }
   if (verb === 'harden') {
     if (!items(s).harden) return warn(s, 'You have no hardening script. Hub shops sell harden.sh.');
     items(s).harden--;
-    f.hardenUntil = Math.max(at, f.hardenUntil) + FIREWALL.harden.ms;
+    f.hardenUntil = Math.max(at, f.hardenUntil) + FIREWALL.harden.ms * (perk(s, 'harden', loc) ? 2 : 1);
     return emit(s, 'firewall', `harden.sh: ${where} +${FIREWALL.harden.plus} levels for ${Math.round(hardenLeft(s, at, loc) / 3600000)} hours.`, loc ? { location: loc.id } : {});
   }
   return warn(s, 'firewall upgrade|defrag|harden [server]');
