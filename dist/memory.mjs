@@ -55,7 +55,7 @@ export function memoryCommand(s, verb, id, now = Date.now()) {
     s.server.credits -= price;
     loc.detached = true;
     const frozen = branchOf(s, loc).length - 1;
-    return emit(s, 'info', `${loc.name} detached for ${price} credits${frozen ? `, with the ${frozen} ${frozen === 1 ? 'server' : 'servers'} found through it` : ''}. Frozen as it was. Memory ${liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
+    return emit(s, 'info', `${loc.name} detached for ${price} credits${frozen ? `, with the ${frozen} ${frozen === 1 ? 'server' : 'servers'} found through it` : ''}. Frozen as it was. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
   }
   if (!loc.detached && isLive(s, loc)) return warn(s, `${loc.name} is already attached.`);
   if (!isLive(s, byId(s, loc.parent) || {})) { let up = byId(s, loc.parent); while (up && !up.detached) up = byId(s, up.parent); return warn(s, `${loc.name} is frozen with the server it hangs off: attach ${up?.name || 'that one'} first.`); }
@@ -69,5 +69,5 @@ export function memoryCommand(s, verb, id, now = Date.now()) {
   delete loc.fresh;
   // Unfreeze: its outposts' clocks start again from now (nothing is made while frozen).
   for (const l of branchOf(s, loc)) if (l.outpost && isLive(s, l)) l.outpost.at = now;
-  emit(s, 'info', first ? `${loc.name} is on your network. Memory ${liveCount(s)}/${memoryCap(s)}.` : `${loc.name} attached for ${fee} credits. Memory ${liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
+  emit(s, 'info', first ? `${loc.name} is on your network. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.` : `${loc.name} attached for ${fee} credits. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
 }

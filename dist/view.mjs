@@ -1775,7 +1775,7 @@ function mapSide(s, sel, node) {
         ${s.degraded ? srvLine('firewall', 'Firewall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Firewall', wallBands(s))}
         ${degradedMarkup(s)}${awayLine(s)}
         <div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${portsUsed(s)}/${portCount(s)}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>
-        ${srvLine('memory', 'Memory', '', `${liveCount(s)}<small>/${memoryCap(s)}</small>`, 'Servers on your network')}
+        ${srvLine('memory', 'Memory', '', `${Math.max(0, memoryCap(s) - liveCount(s))}<small>/${memoryCap(s)} free</small>`, `${liveCount(s)} servers on your network`)}
         ${srvLine('harvester', 'Outposts', '', `${bandwidthUsed(s)}<small>/${bandwidth(s)}</small>`, 'Outposts running on servers you took over, of how many your bandwidth runs')}
         ${srvLine('salvage', 'Salvage', '', `${s.salvage.length}`)}
         ${s.install ? `<div class="install mini"><div class="install-top"><b>${glyph(s.install.id)}${esc(SERVICES[s.install.id].name)} v${s.install.v}</b><span>${fmtTime(s.install.doneAt - Date.now())}</span></div><div class="install-bar"><span style="width:${Math.min(100, Math.max(0, ((Date.now() - s.install.startedAt) / (s.install.doneAt - s.install.startedAt)) * 100))}%"></span></div>${buyoutBtn(s, 'buyout', installBuyout(s))}</div>` : ''}
@@ -1830,7 +1830,9 @@ function mapSide(s, sel, node) {
   // A server you found but never connected: Connect asks first, showing the memory it takes.
   if (l.fresh && l.detached && s.locations.includes(l)) {
     const j = joinCost(s, l), asking = memAsk === l.id, after = j.used + j.add;
-    const pips = `<span class="slots mem-join${j.fits ? '' : ' over'}" title="Memory: ${j.used}/${j.cap} → ${after}/${j.cap}">${glyph('memory')}${Array.from({ length: Math.max(j.cap, after) }, (_, i) => `<i class="${i < j.used ? 'on' : i < after ? 'add' : ''}${i >= j.cap ? ' x' : ''}"></i>`).join('')}<small>${j.used}<span class="mj-to">→</span><b>${after}</b>/${j.cap}</small></span>`;
+    // Free memory: the pips you have, and the one(s) this server would take (blinking).
+    const free = Math.max(0, j.cap - j.used), left = j.cap - after;
+    const pips = `<span class="slots mem-join${j.fits ? '' : ' over'}" title="Free memory: ${free}/${j.cap} → ${Math.max(0, left)}/${j.cap}">${glyph('memory')}${Array.from({ length: j.cap }, (_, i) => `<i class="${i < Math.max(0, left) ? 'on' : i < free ? 'take' : ''}"></i>`).join('')}<small>${free}<span class="mj-to">→</span><b>${left}</b>/${j.cap} free</small></span>`;
     const why = busy ? 'Finish what you are doing first' : relockLeft(l) ? 'Still tracing your last connection' : !j.fits ? 'Not enough memory: detach another server first' : '';
     return `<section class="card mem-card${asking ? ' asking' : ''}"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · found</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.faction ? ` · <span class="tag" style="--fc:${FX[l.faction].color}">${esc(FX[l.faction].short)}</span>` : ''}${l.rogue ? ' · <span class="tag hot">rogue</span>' : ''}</p>
@@ -1844,7 +1846,7 @@ function mapSide(s, sel, node) {
     const up = l.detached ? null : (() => { let p = l; while (p && !p.detached) p = s.locations.find((x) => x.id === p.parent); return p; })();
     return `<section class="card mem-card"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · detached</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.outpost?.h ? ` · ${glyph(l.outpost.h.kind)}outpost frozen at ${stockOf(l)}/${capOf(l)}` : ''}</p>
-      <div class="srv-slots">${slotPips('memory', liveCount(s), memoryCap(s), 'Memory: servers on your network')}</div>
+      <div class="srv-slots">${slotPips('memory', Math.max(0, memoryCap(s) - liveCount(s)), memoryCap(s), 'Free memory')}</div>
       <div class="row">${up ? `<button type="button" class="btn" data-select="${esc(up.id)}">${esc(up.name)} is detached</button>` : `<button type="button" class="btn primary" data-command="attach ${esc(l.id)}" ${busy || s.server.credits < memoryCost(l) || liveCount(s) >= memoryCap(s) ? 'disabled' : ''} title="${liveCount(s) >= memoryCap(s) ? 'Memory is full: detach another server first' : 'Back on your network, as it was'}">${glyph('credits')}Attach · ${memoryCost(l)}</button>`}</div></section>`;
   }
   if (l.occupied) {

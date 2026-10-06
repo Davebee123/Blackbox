@@ -2506,3 +2506,6 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .fx-miss.crew { color: #c9b8ff; }
 @keyframes fx-miss { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.8) rotate(-8deg); } 18% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-8deg); } 70% { opacity: 1; transform: translate(-50%, -55%) scale(1) rotate(-8deg); } 100% { opacity: 0; transform: translate(-50%, -75%) scale(0.95) rotate(-8deg); } }
 @keyframes fx-miss-line { to { transform: scaleX(1); } }
+.mem-join i.take { border-color: var(--amber); background: rgba(241, 185, 47, 0.35); animation: memtake 1.1s ease-in-out infinite; }
+@keyframes memtake { 50% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .mem-join i.take { animation: none; background: transparent; border-style: dashed; } }
