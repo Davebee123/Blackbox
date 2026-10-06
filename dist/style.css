@@ -2579,3 +2579,20 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .bcost { display: inline-flex; align-items: center; gap: 8px; margin-left: 10px; padding-left: 10px; border-left: 1px solid currentColor; opacity: 0.85; font: 12px var(--mono); }
 .bcost span { display: inline-flex; align-items: center; gap: 3px; }
 .bcost .glyph { width: 12px; height: 12px; }
+/* The threat rail: the left of the map, everything coming for you, soonest first. */
+.threat-rail { position: absolute; top: 44px; left: 10px; z-index: 3; width: 230px; max-height: calc(100% - 60px); overflow-y: auto; display: grid; gap: 5px; pointer-events: auto; }
+.tr-row { display: grid; grid-template-columns: 16px 1fr auto; grid-template-rows: auto 3px; gap: 4px 8px; align-items: center; padding: 6px 8px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-left: 3px solid var(--line-strong); border-radius: 3px; color: var(--text); text-align: left; cursor: pointer; backdrop-filter: blur(2px); }
+.tr-row:hover { border-color: var(--line-strong); }
+.tr-row > .glyph { width: 14px; height: 14px; color: var(--muted); }
+.tr-txt { display: grid; min-width: 0; }
+.tr-txt b { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-txt b small { color: var(--muted); font: 10px var(--mono); margin-left: 4px; }
+.tr-txt > small { color: var(--muted); font: 10px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr-t { font: 600 12px var(--mono); color: var(--text); }
+.tr-bar { grid-column: 1 / -1; height: 3px; background: rgba(255, 255, 255, 0.06); border-radius: 2px; overflow: hidden; }
+.tr-bar i { display: block; height: 100%; background: var(--muted); }
+.tr-row.hot { border-left-color: var(--hot); } .tr-row.hot > .glyph, .tr-row.hot .tr-t { color: var(--hot); } .tr-row.hot .tr-bar i { background: var(--hot); }
+.tr-row.warn { border-left-color: var(--amber); } .tr-row.warn > .glyph, .tr-row.warn .tr-t { color: var(--amber); } .tr-row.warn .tr-bar i { background: var(--amber); }
+.tr-row.drop { border-left-color: var(--you); } .tr-row.drop > .glyph { color: var(--you); } .tr-row.drop .tr-bar i { background: var(--you); }
+.tr-row.dim { opacity: 0.8; }
+@media (max-width: 900px) { .threat-rail { position: static; width: auto; margin: 44px 8px 0; } }

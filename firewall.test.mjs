@@ -236,3 +236,17 @@ test('crafting a filter: a Tuned one at your level, built around the stat you pi
   assert.ok(f.stats.grind > 0, 'built around the stat you picked');
   assert.equal(s.server.credits, 0); assert.equal(s.materials.cipher, 0); assert.equal(s.salvage.length, 0);
 });
+
+test('the threat rail lists what is coming, hottest and soonest first', async () => {
+  const { threatsOf } = await import('./dist/view.mjs');
+  const s = fresh();
+  command(s, 'developer location worm');
+  assert.deepEqual(threatsOf(s), [], 'nothing yet');
+  s.net.next = 5 * 60000;
+  assert.equal(threatsOf(s)[0].name, 'Next invasion');
+  s.invasion = { id: 'inv1', name: 'SPLINTER', level: 3, state: 'breach', hp: 0.6, left: 0, total: 1 };
+  const list = threatsOf(s);
+  assert.equal(list[0].name, 'SPLINTER', 'a breach first');
+  assert.equal(list[0].cls, 'hot');
+  assert.ok(!list.some((x) => x.name === 'Next invasion'), 'one at a time: the next waits for this one');
+});

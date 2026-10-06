@@ -6,7 +6,7 @@ import { isLive, liveCount, memoryCap, memoryCost, joinCost } from './memory.mjs
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
 let memAsk = null;
 export const setMemAsk = (id) => { memAsk = id; };
-import { fleetLeft } from './fleet.mjs';
+import { fleetLeft, FLEET } from './fleet.mjs';
 import { hubWall, HUBS, retakeOf, retakeLeft, lockedDown, incomeOf, bankOf, demandOf } from './hubs.mjs';
 import { PAYLOADS, PAYLOAD, builtOf, flyingOf, lastStrike, defenceOf, alertOf, offline, forecastStrike } from './payload.mjs';
 import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, travelMs, transfersOf, orderQuote, orderMax } from './market.mjs';
@@ -1534,6 +1534,37 @@ const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
+// The threat rail, down the left of the map: everything coming for you or under way, soonest first,
+// each with its timer as a bar. Click one to select it on the map.
+export function threatsOf(s, now = Date.now()) {
+  const out = [], add = (x) => out.push(x);
+  if (s.degraded) add({ cls: 'hot', icon: 'server', name: 'Rebooting', where: 'your server', left: degradedLeft(s, now), total: s.degraded.ms || 10 * 60000, sel: 'server' });
+  const inv = s.invasion;
+  if (inv) add(inv.state === 'travel'
+    ? { cls: 'warn', icon: 'kill', name: inv.name, where: 'invasion · your wall', tag: `lv ${inv.level}`, left: inv.left, total: inv.total, sel: 'invader', verb: 'arrives' }
+    : { cls: 'hot', icon: 'kill', name: inv.name, where: inv.state === 'siege' ? 'contested at your wall' : 'BREACH at your wall', tag: `lv ${inv.level}`, pct: inv.hp, sel: 'invader' });
+  else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: s.net.open ? 'ports open' : 'your wall', left: s.net.next, total: s.net.open ? CONFIG.invasion.everyMs[1] * CONFIG.invasion.open.pace : CONFIG.invasion.everyMs[1], sel: 'server' });
+  const f = s.fleet;
+  if (f) { const tgt = s.locations.find((l) => l.id === f.target); add({ cls: f.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${f.ships}`, where: `${f.state === 'siege' ? 'at' : '→'} ${tgt?.name || 'outpost'}`, tag: `lv ${f.level}`, left: fleetLeft(s, now), total: f.state === 'travel' ? f.travel : FLEET.siegeMs, sel: 'fleet', verb: f.state === 'travel' ? 'arrives' : 'falls' }); }
+  for (const l of (s.locations || []).filter((x) => x.outpost?.h)) {
+    const o = l.outpost;
+    if (o.siege) add({ cls: 'hot', icon: 'kill', name: 'Natives', where: `at ${l.name}`, tag: `lv ${o.siege.level || l.level || 1}`, left: o.siege.left, total: OUTPOST.siegeMs, sel: l.id, verb: 'falls' });
+    if (o.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: l.name, left: o.lockdown.left, total: OUTPOST.lockdownMs, sel: l.id, verb: 'ends' });
+    if (o.infest) add({ cls: 'warn', icon: 'kill', name: `Infested ×${o.infest.count}`, where: l.name, left: o.infest.left, total: INFEST.stayMs, sel: l.id, verb: 'leaves' });
+  }
+  const r = retakeOf(s);
+  if (r) add({ cls: r.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${r.ships}`, where: `${r.state === 'siege' ? 'at' : '→'} your ${FX[r.f].short} hub`, tag: `lv ${r.level}`, left: retakeLeft(s, now), total: r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs, sel: 'hub-' + r.f, verb: r.state === 'travel' ? 'arrives' : 'falls' });
+  for (const h of Object.values(s.hubs || {})) if (h.captured?.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: `your ${FX[h.faction].short} hub`, sel: h.id });
+  for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) { const d = dropOf(l); if (d) add({ cls: 'drop', icon: 'signal', name: 'Dead drop', where: l.name, left: d.left, total: 15 * 60000, sel: l.id === s.zone?.id ? CONFIG.zone.id : l.id, verb: 'closes' }); }
+  const rank = { hot: 0, warn: 1, drop: 2, dim: 3 };
+  return out.sort((a, b) => rank[a.cls] - rank[b.cls] || (a.left ?? 0) - (b.left ?? 0));
+}
+function threatRail(s) {
+  const list = threatsOf(s);
+  if (!list.length) return '';
+  return `<aside class="threat-rail" aria-label="Threats and timers">${list.map((x) => { const pct = x.pct != null ? x.pct : x.total ? Math.max(0, Math.min(1, 1 - (x.left || 0) / x.total)) : 1; return `<button type="button" class="tr-row ${x.cls}" data-select="${esc(x.sel)}">${glyph(x.icon)}<span class="tr-txt"><b>${esc(x.name)}${x.tag ? ` <small>${esc(x.tag)}</small>` : ''}</b><small>${esc(x.where)}</small></span><span class="tr-t">${x.left != null ? fmtTime(x.left) : x.pct != null ? `${Math.round(x.pct * 100)}%` : ''}</span><span class="tr-bar"><i style="width:${(pct * 100).toFixed(0)}%"></i></span></button>`; }).join('')}</aside>`;
+}
+
 // Traffic on the net: files moving between servers, as dots along the links. Your market orders
 // and payloads run home ↔ hub; the hubs trade among themselves along the backbone that joins them.
 // The markup only says where each dot runs and when (a route and its clock); app.js moves them, so
@@ -1677,7 +1708,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 const LIST_COLS = [['name', 'Server'], ['family', 'Family'], ['level', 'Lv'], ['layer', 'Layer'], ['explored', 'Explored'], ['status', 'Status']];
 function serverList(s, sel, filter, sort) {
