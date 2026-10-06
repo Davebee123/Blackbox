@@ -73,7 +73,7 @@ export const TIPS = [
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'LANTERN read out a dead drop on this server. It closes soon.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: wild, never taken over. Viruses sit in its folders and come back a few minutes after you kill them.' },
   { id: 'map-infest', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.infest), at: '.outpost .tag.warn', text: 'Viruses moved into this outpost. Clear them for a bonus to its stockpile, or ignore them: they move on and cost you nothing.' },
-  { id: 'map-install', page: 'map', at: '.op-rack', text: 'These are the harvesters in your rack. Install one and this server becomes an outpost. How many outposts run at once is the Outposts count on your server card.' },
+  { id: 'map-install', page: 'map', at: '.op-up', text: 'Upgrade to Outpost puts a harvester from your rack on this server: it stockpiles code while you\'re away. How many outposts run at once is the Outposts count on your server card.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },
   { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'An unknown server. Beating what it sends at you traces it, and so does a vault\'s trace record. Once a relay flags it, kills of its family and the route file count too.' },
 
