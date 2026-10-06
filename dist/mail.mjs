@@ -32,7 +32,7 @@ export const MAIL = {
   take: 3, // contracts you can hold at once (storyline jobs don't count)
   offerEvery: [1 * 60 * 1000, 3 * 60 * 1000], // a new offer arrives somewhere in here (2 min on average)
   burst: 0.15, // sometimes two arrive together
-  offerLife: [5 * 60 * 1000, 5 * 60 * 1000], // an offer nobody takes is gone after 5 minutes
+  offerLife: [15 * 60 * 1000, 15 * 60 * 1000], // an offer nobody takes is gone after 15 minutes
   crashHit: 10, // standing lost when your server crashes
   offBooksHit: 8, // standing lost for doing GLASSJAW's work
   offBooksPay: 1.6,
@@ -344,12 +344,13 @@ export function standingCrash(s) {
 }
 function changeStanding(s, f, delta, why) {
   if (!delta) return;
-  const before = tierOf(s).name;
-  s.standing[f] = Math.max(0, Math.min(100, standing(s, f) + delta));
-  if (f !== 'halcyon') return;
+  const before = tierOf(s).name, was = standing(s, f);
+  s.standing[f] = Math.max(0, Math.min(100, was + delta));
+  delta = s.standing[f] - was; // capped at 100: nothing ripples
+  if (f !== 'halcyon' || !delta) return;
   const after = tierOf(s).name;
   emit(s, delta < 0 ? 'standing-down' : 'standing-up', `${why}: Halcyon standing ${delta > 0 ? '+' : ''}${delta} (${standing(s)}, ${after}).${after !== before ? ` ${delta > 0 ? 'Promoted' : 'Dropped'} to ${after}.` : ''}`, { standing: standing(s) });
-  rippleRep(s, 'halcyon', delta); // Halcyon's friends and enemies notice (factions.mjs)
+  rippleRep(s, 'halcyon', delta, { soft: true }); // Halcyon's friends and enemies notice, but never turn hostile over your day job (factions.mjs)
 }
 
 export function ready(s, c) {

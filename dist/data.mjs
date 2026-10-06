@@ -82,6 +82,7 @@ export const CONFIG = {
   hoardBonus: 0.5, // Hoard quirk: caches pay 50% more
   trapSignal: 10, // pulling honeypot bait
   // Worm fragments
+  rearmMax: 3, // the Bouncer's Keyring re-arms this many times, then overheats
   fragmentIntegrity: 18, // no armor: one Spike breaks one
   fragmentDamage: 3,
   fragmentCap: 3,
@@ -192,7 +193,7 @@ export const DAEMONS = {
   mender: { name: 'Mender', cooldown: 5, amount: 8, rule: 'Heals you 8.' },
   spider: { name: 'Spider', cooldown: 5, amount: 4, rule: 'Burns the part you last hit for 4 a cycle, for 3 cycles.' },
   mirror: { name: 'Mirror', cooldown: 3, amount: 12, rule: 'Hits the part you last hit for 12.' },
-  watchman: { name: 'Watchman', once: true, amount: 20, rule: 'Once per fight: delays an attack of 20 or more by a cycle.' },
+  watchman: { name: 'Watchman', once: true, amount: 20, rule: 'Once per fight: delays an attack of 20 or more by a cycle (v2: two cycles; v3: twice a fight).' },
   canary: { name: 'Canary', once: true, amount: 15, rule: 'Once per fight: shields you for 15 the first time you drop below half.' },
 };
 export const DAEMON_VERSIONS = [1, 1.5, 2];
@@ -390,7 +391,7 @@ export const GUARDS = {
     guard: true,
     ice: true,
     art: 'ransomware',
-    rule: 'Every 4 cycles the Keyring re-arms the Gate to full armor. Break the Keyring, or kill the Gate between re-arms.',
+    rule: 'Every 4 cycles the Keyring re-arms the Gate to full armor, three times, then it overheats. Break the Keyring, or kill the Gate between re-arms.',
     summary: 'ICE on the door. The Keyring keeps re-arming the Gate.',
     parts: [
       { id: 'pulse', name: 'Gate', integrity: 30, armor: 3, loot: 'Gate Hinge', attack: { name: 'Ram', effect: 'damage', amount: 10, interval: 3, first: 2 } },
@@ -417,7 +418,7 @@ export const GUARDS = {
 export const MUTATIONS = {
   armored: { name: 'Armored', rule: 'Every part has one more armor chit.' },
   regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor a cycle sooner, so strip it only when you can finish it.' },
-  hasty: { name: 'Hasty', rule: 'Every attack starts a cycle sooner, but all its parts have 15% less Integrity, so kill it fast.' },
+  hasty: { name: 'Hasty', rule: 'Every attack comes a cycle sooner and repeats a cycle faster, but its parts have 10% less Integrity, so kill it fast.' },
   rerouting: { name: 'Rerouting', rule: 'When a part breaks, half its attack damage reroutes to the surviving part that attacks next.' },
   adaptive: { name: 'Adaptive', rule: 'A part your commands hit three cycles in a row adapts: it gains an armor chit at the end of that cycle.' },
 };
@@ -507,7 +508,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const strainId = forced || overrides.strain || null;
   const strain = strainId ? STRAINS[strainId] : null;
   const grade = GRADES[overrides.grade] ? overrides.grade : 1, g = GRADES[grade];
-  const scale = mobPower(level) * (mutation === 'hasty' ? 0.85 : 1) * (overrides.run ? CONFIG.runHp : 1);
+  const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
@@ -522,6 +523,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   for (const p of parts) if (p.attack?.ramp) { p.attack.rampBy = Math.max(1, Math.round(p.attack.ramp * dmgScale)); p.attack.step = 0; }
   const sooner = (mutation === 'hasty' ? 1 : 0) + (threat >= THREAT_STEPS.sooner ? 1 : 0);
   for (const p of parts) if (p.attack && p.attack.due < 900) p.attack.due = Math.max(2, p.attack.due - sooner); // never on cycle 1: you always get a move first
+  // Hasty also repeats faster (at least every 2 cycles), so it stays a pressure mutation at every level.
+  if (mutation === 'hasty') for (const p of parts) if (p.attack?.interval) p.attack.interval = Math.max(2, p.attack.interval - 1);
   // A dormant strain's attacks wait off the timeline until it wakes.
   if (strain?.dormant) for (const p of parts) if (p.attack) { p.attack.wake = Math.max(1, p.attack.due - 1); p.attack.due = 999; }
 
@@ -537,7 +540,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}) };
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}) };
 }
 
 // ---------- locations ----------
@@ -592,7 +595,10 @@ export const SERVER = {
   // it was found at (your level + 2 per layer down). Mutations and enemy crits from level 3.
   locationLevel: (hackerLevel, depth) => hackerLevel + 2 * (depth - 1),
   guardLevel: (level, depth) => level + 3 * (depth - 1), // (old saves without a location level)
-  mutationsFrom: 3,
+  mutationsFrom: 3, // enemy crits start here
+  // How often a virus at a level is mutated: none below 4, a quarter to level 9, then 40% (wild ones,
+  // invasions; swarms are a little under). The difficulty steps at level 3 no longer all land at once.
+  mutationChance: (level) => (level < 4 ? 0 : level < 10 ? 0.25 : 0.4),
   daemonSlotsAt: [10, 20], // +1 daemon slot at each of these server levels
   // Threat is the level on the internal scale that sizes a virus (4% per point from 15).
   threat: (mobLevel) => 9 + mobLevel,

@@ -599,7 +599,9 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (lvl !== undefined) lvl = Math.min(CONFIG.maxMobLevel, lvl);
   if (lvl !== undefined) {
     over.threat = SERVER.threat(Math.max(1, lvl));
-    if (lvl < SERVER.mutationsFrom) over.mutation = null;
+    // A wild virus is mutated only as often as SERVER.mutationChance says (fixed by its seed).
+    if (key === 'random' && opts.mutation === undefined && ((Math.imul(seed >>> 0, 2654435761) >>> 0) / 2 ** 32) >= SERVER.mutationChance(lvl)) over.mutation = null;
+    else if (lvl < 4) over.mutation = null;
   }
   if (opts.threat) over.threat = opts.threat;
   if (opts.mutation !== undefined) over.mutation = opts.mutation;
@@ -1668,10 +1670,17 @@ function breakPart(s, p) {
   }
   emit(s, 'broken', `${p.name.toUpperCase()} BROKEN${p.attack ? `. ${p.attack.name} stops` : ''}.`, { target: p.id });
   // Rerouting (mutation): half its attack damage moves to the surviving damage attacker that lands next.
-  if (e.virus.mutation === 'rerouting' && p.attack?.effect === 'damage' && p.attack.amount > 0) {
-    const to = livingParts(s).filter((x) => x !== p && x.attack?.effect === 'damage').sort((a, b) => a.attack.due - b.attack.due)[0];
-    const add = Math.max(1, Math.round(p.attack.amount / 2));
-    if (to) { to.attack.amount += add; to.rerouted = (to.rerouted || 0) + add; emit(s, 'reroute', `${p.attack.name} reroutes to ${to.name}: its ${to.attack.name} +${add}.`, { target: to.id, from: p.id, amount: add }); }
+  // Rerouting: half the broken part's hit goes to the survivor that attacks next. A survivor whose attack
+  // isn't a hit (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
+  const hitOf = (x) => (x.attack?.effect === 'damage' ? x.attack.amount : x.attack?.hit || 0);
+  if (e.virus.mutation === 'rerouting' && hitOf(p) > 0) {
+    const to = livingParts(s).filter((x) => x !== p && x.attack && x.attack.effect !== 'heal').sort((a, b) => a.attack.due - b.attack.due)[0];
+    const add = Math.max(1, Math.round(hitOf(p) / 2));
+    if (to) {
+      if (to.attack.effect === 'damage') to.attack.amount += add; else to.attack.hit = (to.attack.hit || 0) + add;
+      to.rerouted = (to.rerouted || 0) + add;
+      emit(s, 'reroute', `${p.attack.name} reroutes to ${to.name}: its ${to.attack.name} ${to.attack.effect === 'damage' ? '' : 'now hits '}+${add}.`, { target: to.id, from: p.id, amount: add });
+    }
   }
   if (zeroDay(s, 'buffer-overflow') && !e.forceCrit) { e.forceCrit = true; emit(s, 'status', 'Buffer Overflow: your next hit crits.'); }
   // Total Loss (Halcyon, Preferred): the wreck hits everything else. Chains through what it breaks.
@@ -2029,7 +2038,8 @@ function landAttack(s, p) {
     // Countermeasures (server gear): whatever hits your server takes a hit back.
     const cm = e.mode === 'home' && gearStat(s, 'countermeasures', 'server');
     if (cm && dealt && alive(p)) hit(s, p, cm, { by: 'Countermeasures', server: true });
-  } else if (atk.effect === 'encrypt') {
+  }
+  if (atk.effect === 'encrypt') {
     // Stacks: every Encrypt adds to the damage your server takes each cycle, until the Encryptor breaks.
     const add = Math.max(1, Math.round(power * (fxHas(s, 'encrypt-half') ? 0.5 : 1)));
     e.encrypt = (e.encrypt || 0) + add;
@@ -2047,7 +2057,7 @@ function landAttack(s, p) {
       const n = e.nextFragment++;
       const pw = e.virus.power || 1;
       const amount = Math.max(1, Math.round(CONFIG.fragmentDamage * pw));
-      const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * pw));
+      const hp = Math.max(1, Math.round(CONFIG.fragmentIntegrity * (e.virus.hpPower ?? pw))); // health follows the virus's health scale, not its damage
       e.virus.parts.push({ id: 'frag' + n, name: 'Fragment ' + n, kind: 'fragment', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, attack: { name: 'Gnaw', effect: 'damage', amount, interval: 1, due: e.cycle + 1 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
       if (p.overrun) { const f = e.virus.parts.at(-1); f.attack.ramp = 1; f.attack.rampBy = Math.max(1, Math.round(pw)); f.attack.step = 0; }
       e.undo = { type: 'replicate', part: 'frag' + n };
@@ -2292,11 +2302,14 @@ function cycleClose(s, landed) {
     p.armor += 1; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; p.adaptRun = 0;
     emit(s, 'patch', `${p.name} adapts: +1 armor chit.`, { target: p.id, adapt: true });
   }
-  // Bouncer: the Keyring re-arms the other parts to full armor on its beat.
-  for (const k of livingParts(s).filter((x) => x.rearm && e.cycle % x.rearm === 0)) {
+  // Bouncer: the Keyring re-arms the other parts to full armor on its beat, three times; then it
+  // overheats and stops, so the fight can't stall forever.
+  for (const k of livingParts(s).filter((x) => x.rearm && e.cycle % x.rearm === 0 && (x.rearms || 0) < CONFIG.rearmMax)) {
     const re = livingParts(s).filter((x) => x !== k && x.maxArmor > x.armor);
     for (const x of re) { x.armor = x.maxArmor; x.patchAt = null; }
-    if (re.length) emit(s, 'patch', `${k.name} re-arms ${re.map((x) => x.name).join(' and ')}: full armor.`, { target: re[0].id });
+    if (!re.length) continue;
+    k.rearms = (k.rearms || 0) + 1;
+    emit(s, 'patch', `${k.name} re-arms ${re.map((x) => x.name).join(' and ')}: full armor.${k.rearms >= CONFIG.rearmMax ? ` ${k.name} overheats: no more re-arms.` : ''}`, { target: re[0].id });
   }
   // Tracer: every cycle the fight goes on, its Trace-back hits harder.
   for (const p of attackers(s).filter((x) => x.attack.grow)) p.attack.bonus = (p.attack.bonus || 0) + p.attack.grow;
@@ -2405,12 +2418,16 @@ function runDaemons(s) {
   }
 }
 // Watchman: once per fight, a big attack about to land waits a cycle.
+// Watchman: its bar (a big attack) scales with your power, never with its version; a version buys a
+// longer delay (v2: two cycles) and a second use a fight (v3).
+export const watchmanBar = (s) => scaled(s, DAEMONS.watchman.amount);
 function watchman(s, p) {
-  const e = s.encounter;
-  if (!slottedDaemons(s).includes('watchman') || e.once.watchman || p.attack.effect !== 'damage' || p.attack.amount < daemonAmount(s, 'watchman')) return false;
-  e.once.watchman = true;
-  p.attack.due = e.cycle + 1;
-  emit(s, 'interrupt', `Watchman delays ${p.attack.name} a cycle.`, { target: p.id, auto: 'daemon' });
+  const e = s.encounter, v = daemonVersion(s, 'watchman');
+  if (!slottedDaemons(s).includes('watchman') || (e.once.watchman || 0) >= (v >= 3 ? 2 : 1) || p.attack.effect !== 'damage' || p.attack.amount < watchmanBar(s)) return false;
+  e.once.watchman = (e.once.watchman || 0) + 1;
+  const n = v >= 2 ? 2 : 1;
+  p.attack.due = e.cycle + n;
+  emit(s, 'interrupt', `Watchman delays ${p.attack.name} ${n === 1 ? 'a cycle' : `${n} cycles`}.`, { target: p.id, auto: 'daemon' });
   openProc(s, 'slipped');
   return true;
 }

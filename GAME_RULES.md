@@ -111,7 +111,7 @@ Two sides, two ways to get stronger. **You** run protocols: loot with rolled sta
 
 Everything you equip is software: code, tools and access, never hardware. The Loadout page's Protocols tab (type `protocols`) shows your slots, your stat sheet and the stash. Design: the items design doc ("BLACKBOX: loot and 50 items").
 
-**Slots.** Exploit (weapon: Damage), Proxy (chest: Signal + Block), Shell (helm: Signal + Regen), Script (ring: Damage + Signal); an **Implant** slot opens at level 15 and another at 30 (Implants are uniques only for now). `load` puts an item in its slot; if the slot is full it **swaps** (the old one goes back to the stash). Each class loads its own; one place at a time; one of each unique and each Zero-day per loadout.
+**Slots.** Exploit (weapon: Damage), Proxy (chest: Signal + Block), Shell (helm: Signal + Regen), Script (ring: Damage + Signal); an **Implant** slot opens at level 15 and another at 30 (Implants drop and compile from item level 15, about one item in five, as well as the named uniques). `load` puts an item in its slot; if the slot is full it **swaps** (the old one goes back to the stash). Each class loads its own; one place at a time; one of each unique and each Zero-day per loadout.
 
 **An item = a base + affixes (+ a unique's effect).**
 - **Base items** (20, five per slot) give the **primary stats**, the feel-good numbers: Damage on every hit, Signal, Block, Regen. A new tier unlocks every few levels (Exploit: Proof of Concept 1, Weaponized Exploit 5, Exploit Chain 11, Zero-click 18, Wormable 26; the other slots likewise). Primaries scale +4% per item level from the tier's own level, ×0.42 overall (cut from ×0.6 so early gear doesn't double your health and damage). Named uniques' stats run at ×0.7 of their listed values (their downsides in full). Saves from before the cut have their protocols' Damage, Signal and Regen brought down 30%.
@@ -538,7 +538,7 @@ A member's lockdown: **Retake for a bounty**. A member's crash: **Clear** every 
 The idle layer. The servers attached to your network send viruses back along it to your server, **one at a time**, online or off. On the Map an invasion moves in from its location; the Server page's **Firewall** card and the top bar say what it's doing.
 
 - **When.** The first sets out 3 minutes after you find your first location; the next 6–10 minutes after the last one is dealt with. While you're logged off, a long passive clock takes over: one every 2–4 hours (see below). **Open ports** (`open ports` / `close ports`, the switch under the Firewall card's ruler, with *Invasions ×2.5* and *Rewards +50%* beside it, lit while it's on) brings them 2.5× as often while you play, each worth +50% (XP, salvage when the wall stops one, code when you kill one); they close when you log off. Only servers attached to your network send them (Memory): detach one and its invasions stop.
-- **Who.** A virus of the location's family (CRYPTJACK, SPLINTER or GHOSTROOT) at the location's level; from level 3, sometimes mutated (10% stronger).
+- **Who.** A virus of the location's family (CRYPTJACK, SPLINTER or GHOSTROOT) at the location's level; from level 4, sometimes mutated (a quarter of the time to level 9, then 40%).
 - **Travel.** 2 minutes from a layer-1 location, a minute more per layer. A Tarpit slows it.
 - **The firewall** (`firewall.mjs`) is your wall. It has a **level** you build, and it never grows by itself: neither your level nor your server's raises it.
   - **Upgrade** (`firewall upgrade`, or the button): a level at a time, 30 + 20 × level credits and 2 + level Cipher code. A new firewall starts at level 1 (an old save starts where its old wall blocked).
@@ -663,7 +663,7 @@ A **slotted daemon acts on its own cooldown, in addition to your order**, right 
 | Mender | Heals you 8. | 5 |
 | Spider | Burns the part you last hit for 4 a cycle, for 3 cycles. | 5 |
 | Mirror | Hits the part you last hit for 12. | 3 |
-| Watchman | Once per fight: delays an attack of 20 or more by a cycle. | once per fight |
+| Watchman | Once per fight: delays an attack of 20 or more (scaled with your power) by a cycle. v2 delays it two cycles; v3 does it twice a fight. | once per fight |
 | Canary | Once per fight: shields you for 15 the first time you drop below half. | once per fight |
 
 `jack out` during a guard fight is an emergency escape: it resolves on your turn, you keep your pack, and the guard stays.
@@ -744,7 +744,7 @@ Five PvE factions, companies and hacker crews, each with a colour, a mark and a 
 | NULL CHOIR | hacker crew | rose | NULLCHOIR-SQUAT-13 (12) | LANTERN | Halcyon, Kestrel | daemon images, sealed items, key crackers |
 
 - **Rep** runs −100 to 100 with five tiers at 1/25/50/75 (each faction names its own: Kestrel's are Blacklisted, Prospect, Client, Account, Key account). Below 1 a faction is Hostile: its market is shut and it posts you no work. Hostility has depth: rep keeps falling under zero, down to −100, shown as a red segment before the tiers (Halcyon's standing stops at 0). Rep never comes back on its own: win a faction back by hitting its rivals (the ripple), working for its allies, or donating. Everyone starts at 10 (GLASSJAW at 5).
-- **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter the same way. Halcyon's standing ripples too.
+- **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter the same way. Only what actually changed ripples (a gain at 100 moves nobody). Halcyon's standing ripples too, but never pushes a rival below 0: doing your day job isn't picking a side.
 - **Hubs** appear on your map when the contract board opens, on a ring of their own between the first two layers (a diamond in the faction's colour with its mark; its rep tier under the name). Its card shows your rep as a five-step bar and its allies and rivals; **Connect** (or `connect <faction>`) jacks you into the hub's terminal, like any server: an ssh handshake, the hub's banner (its ASCII mark, name, level and your tier), one line from whoever answers (Halcyon's concierge, GLASSJAW's nameless broker, Kestrel's helpdesk, LANTERN's radio op, vesper of NULL CHOIR; your own root shell on a hub you hold) that changes with your rep, and its menu as tokens. Type a number or a word (or click a token): each choice opens its own window beside the terminal (Market, Work, Payloads, Donate, Their servers; Halcyon adds its Store; a hub you hold offers Your hub and Market; Hostile, only Payloads, Donate and Their servers). `menu` prints it again; `0` or `disconnect` closes it. The prompt reads `you@<hub>:~$` while you're in.
 - **One market per hub.** Its **wares** (code, Exploits, salvage) are bought and sold at moving prices (see Markets). Its **goods** are the specialty things only that hub sells: buy-only, a few of each, refilled every hour; better tiers buy 5% cheaper per tier from the third, and some goods wait for a tier. Priced at the hub's level or yours, whichever's higher. Everything bought at a hub comes by file transfer, goods included. `buy <faction> <good>` or `market buy <faction> <good>`. Halcyon is the exception: its goods are its store, delivered at once.
 - **Work:** once the hubs are up, about half the board (beyond GLASSJAW's off-the-books jobs) is Kestrel's, LANTERN's or NULL CHOIR's: the same kinds of contracts, paying 20% more credits and their own rep instead of Indemnity and Halcyon standing. Their takeover and recovery jobs often point at their rivals' servers. Each offer on the Mail board shows its faction's mark; Mail also shows your tier with each faction.
@@ -928,7 +928,7 @@ Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integri
 | Family | Threatens | Basic part | Signature part |
 |---|---|---|---|
 | Ransomware (CRYPTJACK) | Integrity | Pulse Node: 34, ◆, Surge 14 every 4 (first cycle 3) | Encryptor: 38, ◆ (◆◆ from level 3), Encrypt every 5 (first cycle 4): +4 damage per cycle, stacking, until it breaks |
-| Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 3), spawns a fragment every 4 (first cycle 3). Fragments: 18 Integrity, no armor, gnaw 3 every cycle, max 3 |
+| Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 3), spawns a fragment every 4 (first cycle 3). Fragments: 18 Integrity (scaled like the virus's health, not its damage), no armor, gnaw 3 every cycle, max 3 |
 | Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 14 every 4 (first cycle 3) | Scrambler: 38, ◆ (◆◆ from level 3), veiled, Scramble every 4 (first cycle 2): Scrambled for 2 cycles, each of your attacks 25% likely to hit you instead at half |
 
 Guards on runs are lighter (you have 50 Signal): Watchdog (Sentry 24 bare, Sweep 6 every 3; Tracker 28 ◆, Trace-back 16 every 5), Sentinel (Lens and Lockout, 24 ◆ each, both veiled), Crawler (Maw 24 bare; Brood 28 ◆ spawns fragments), Shredder (Grinder 26 ◆, Grind 9 every 4; Shredder 26 ◆, Shred 14 every 5).
@@ -939,8 +939,8 @@ Mutations are always visible and each changes a decision:
 
 - **Armored** — every part has one more armor chit.
 - **Regenerative** — a stripped part patches after 1 cycle instead of 2. Strip it only when you can finish it.
-- **Hasty** — every attack starts a cycle sooner, but all parts have 15% less Integrity. Race it.
-- **Rerouting** — when a part breaks, half its attack damage moves to the surviving damage attacker that lands next (the timeline shows the bigger number, the part a `+N rerouted` tag). Which part you break first decides what the rest hits for.
+- **Hasty** — every attack comes a cycle sooner and repeats a cycle faster (never more often than every 2 cycles), but its parts have 10% less Integrity. Race it.
+- **Rerouting** — when a part breaks, half its hit moves to the surviving part that attacks next. A survivor whose attack isn't a hit (Encrypt, Scramble, Replicate) gains a hit on top of what it does (the timeline shows `−N · …`, the part a `+N rerouted` tag). Which part you break first decides what the rest hits for.
 - **Adaptive** — a part your commands hit three cycles in a row gains an armor chit at the end of that third cycle (*ADAPTS +◆*). A part one cycle from it is tagged *adapting*. Switch for a cycle, or finish it with that hit.
 
 (Reactive and Redundant were cut: they added rules without adding decisions.)
@@ -1031,7 +1031,7 @@ On layer 2 and deeper, about half the servers (fixed by the seed) swap their Wat
 
 | ICE | Replaces | Parts | Rule |
 |---|---|---|---|
-| Bouncer | Sentinel | Gate (3 armor, Ram 10 every 3), Keyring (no attack) | At the end of every 4th cycle the Keyring re-arms the Gate to full armor. |
+| Bouncer | Sentinel | Gate (3 armor, Ram 10 every 3), Keyring (no attack) | At the end of every 4th cycle the Keyring re-arms the Gate to full armor, three times; then it overheats and stops. |
 | Tracer | Watchdog | Probe (Ping 4 every 2), Tracker | The Tracker's Trace-back (6, every 3) grows by 2 (scaled) every cycle the fight lasts. |
 
 ### Testing a strain

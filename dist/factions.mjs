@@ -74,14 +74,17 @@ export const captured = (s, f) => !!s.hubs?.[f]?.captured;
 // How rep moves through the web: a rival loses half of what you gave, an ally gains a quarter.
 export const RIPPLE = { rival: 0.5, ally: 0.25 };
 // Just the ripple (Halcyon's own change is applied and announced by mail.mjs).
-export function rippleRep(s, f, delta) {
-  for (const r of FACTIONS[f]?.rivals || []) { const d = -Math.round(delta * RIPPLE.rival); if (d) changeRep(s, r, d, `${FACTIONS[f].short}'s rival noticed`, { ripple: false }); }
+// soft: a ripple that never pushes a rival below 0 (Halcyon's standing: doing your job isn't picking a side).
+export function rippleRep(s, f, delta, { soft = false } = {}) {
+  for (const r of FACTIONS[f]?.rivals || []) { const d = -Math.round(delta * RIPPLE.rival); if (d) changeRep(s, r, d, `${FACTIONS[f].short}'s rival noticed`, { ripple: false, floor: soft ? Math.min(0, rep(s, r)) : undefined }); }
   for (const a of FACTIONS[f]?.allies || []) { const d = Math.round(delta * RIPPLE.ally); if (d) changeRep(s, a, d, `${FACTIONS[f].short}'s ally noticed`, { ripple: false }); }
 }
-export function changeRep(s, f, delta, why, { ripple = true, quiet = false } = {}) {
+export function changeRep(s, f, delta, why, { ripple = true, quiet = false, floor } = {}) {
   if (!delta || !FACTIONS[f]) return;
-  const before = repTier(s, f).name;
-  s.standing[f] = Math.max(REP_FLOOR(f), Math.min(100, rep(s, f) + delta));
+  const before = repTier(s, f).name, was = rep(s, f);
+  s.standing[f] = Math.max(floor ?? REP_FLOOR(f), Math.min(100, was + delta));
+  delta = s.standing[f] - was; // what actually changed: a capped or floored change ripples only as far as it went
+  if (!delta) return;
   const after = repTier(s, f);
   if (!quiet) emit(s, delta < 0 ? 'rep-down' : 'rep-up', `${why}: ${FACTIONS[f].short} ${delta > 0 ? '+' : ''}${delta} (${rep(s, f)}, ${after.name}).${after.name !== before ? ` ${delta > 0 ? 'Up' : 'Down'} to ${after.name}.` : ''}`, { faction: f, rep: rep(s, f) });
   if (ripple) rippleRep(s, f, delta);

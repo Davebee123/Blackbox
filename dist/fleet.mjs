@@ -51,7 +51,7 @@ export function launch(s, at = clock(), faction = null) {
   const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + FLEET.levelUp);
   const total = Math.round(FLEET.travelMs * (hasConfig(s, 'beacon') ? 1.5 : 1) * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
-  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: level >= SERVER.mutationsFrom && rand(s) < 0.3 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
+  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: rand(s) < SERVER.mutationChance(level) * 0.75 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
   if (faction) s.fleet.faction = faction;
   const who = faction ? ` from ${FACTIONS[faction].short}` : '';
   emit(s, 'fleet', `SWARM: Swarm${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });

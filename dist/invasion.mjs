@@ -205,7 +205,7 @@ function depart(s, from = null) {
   const level = Math.min(CONFIG.maxMobLevel, loc.level || 1);
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1;
   const ids = Object.keys(MUTATIONS);
-  const mutation = level >= SERVER.mutationsFrom && rand(s) < 0.4 ? ids[Math.floor(rand(s) * ids.length)] : null;
+  const mutation = rand(s) < SERVER.mutationChance(level) ? ids[Math.floor(rand(s) * ids.length)] : null;
   const key = INVADER[loc.family];
   const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed); // deeper servers send bigger viruses, and strains
   const virus = createVirus(key, seed, { threat: SERVER.threat(level), mutation, strain, grade });

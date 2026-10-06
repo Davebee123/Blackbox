@@ -90,7 +90,7 @@ export const BASES = {
   dropper: { slot: 'script', name: 'Dropper', level: 11, primary: { damage: 6, signal: 28 }, flavour: 'Small, polite, carries something worse.' },
   loader: { slot: 'script', name: 'Loader', level: 18, primary: { damage: 9, signal: 40 }, flavour: 'Unpacks in memory. Leaves nothing on disk.' },
   'polymorphic-engine': { slot: 'script', name: 'Polymorphic Engine', level: 26, primary: { damage: 13, signal: 55 }, flavour: 'Never the same twice.' },
-  implant: { slot: 'implant', name: 'Implant', level: 15, primary: { damage: 6, signal: 30 }, flavour: 'Resident. Quiet. Yours.', uniqueOnly: true },
+  implant: { slot: 'implant', name: 'Implant', level: 15, primary: { damage: 6, signal: 30 }, flavour: 'Resident. Quiet. Yours.' }, // drops and compiles from item level 15 (the first Implant slot)
 };
 export const PRIMARY_STATS = ['damage', 'signal', 'reduction', 'regen'];
 // Every base's primaries × this (tuned with the monster pass, see friction.mjs).
@@ -239,8 +239,8 @@ export function rollItem(rand, opts = {}) {
   if (zeroDay) rarity = ZERO_DAYS[zeroDay].chase ? 'indemnified' : 'zeroday';
   const r = RARITIES[rarity];
   const zSlot = zeroDay ? OLD_SLOT[ZERO_DAYS[zeroDay].group] || 'script' : null;
-  const slot = SLOTS[opts.slot] ? opts.slot : OLD_SLOT[opts.group] || (SLOTS[opts.group] ? opts.group : null) || zSlot || pick(rand, ['exploit', 'proxy', 'shell', 'script']);
-  const base = baseFor(slot === 'implant' ? 'script' : slot, level) || 'proof-of-concept';
+  const slot = SLOTS[opts.slot] ? opts.slot : OLD_SLOT[opts.group] || (SLOTS[opts.group] ? opts.group : null) || zSlot || pick(rand, ['exploit', 'proxy', 'shell', 'script', ...(level >= 15 ? ['implant'] : [])]);
+  const base = baseFor(slot, level) || baseFor(slot === 'implant' ? 'script' : slot, level) || 'proof-of-concept';
   const stats = primaries(base, level, r.mult, rand);
   // Affixes: at most one prefix and one suffix on a blue, up to three of each on a yellow.
   const affixes = [];
