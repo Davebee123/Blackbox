@@ -11,15 +11,15 @@ import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
-import { has as hasConfig, configCommand } from './configs.mjs';
+import { has as hasConfig, configCommand, CONFIGS, known as configsKnown, bankConfig } from './configs.mjs';
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
-import { outpostCommand, outpostWon, infestWon, siteTrait } from './outpost.mjs';
+import { outpostCommand, outpostWon, infestWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
 import { portsCommand } from './invasion.mjs';
-import { filterCommand } from './filters.mjs';
+import { filterCommand, CRAFTABLE, knowsFilter, learnFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
 
@@ -493,13 +493,22 @@ export const knows = (s, id) => (s.recipes || []).includes(id);
 export const knownRecipes = (s) => PROTOCOL_STATS.filter((k) => knows(s, recipeId(k)));
 // Learn a blueprint you don't have yet: the Firewall first, then any other. Every one known:
 // it's salvage instead.
+// A blueprint teaches something you don't know yet, from every kind of recipe: a protocol recipe or
+// a service source, a filter recipe, a harvester or module plan, a config source. The first is
+// always the Firewall.
 export function learnBlueprint(s, why = '') {
   s.recipes ||= [];
   const left = BLUEPRINTS.filter((id) => !knows(s, id));
-  if (!left.length) {
+  const others = [
+    ...CRAFTABLE.filter((k) => !knowsFilter(s, k)).map((k) => () => learnFilter(s, k, why)),
+    ...Object.keys(OUTPOST.plans).filter((k) => !knowsPlan(s, k)).map((k) => () => learnPlan(s, k, why)),
+    ...Object.keys(CONFIGS).filter((k) => !configsKnown(s).includes(k)).map((k) => () => bankConfig(s, k, why)),
+  ];
+  if (!left.length && !others.length) {
     for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Blueprint scraps', virus: 'blueprint', seed: 0 });
     return emit(s, 'info', `${why}a blueprint you already know: +2 salvage.`);
   }
+  if (!left.includes('firewall')) { const k = Math.floor(rand(s) * (left.length + others.length)); if (k >= left.length) return others[k - left.length](); }
   const id = left.includes('firewall') ? 'firewall' : left[Math.floor(rand(s) * left.length)];
   s.recipes.push(id);
   const stat = recipeStat(id);

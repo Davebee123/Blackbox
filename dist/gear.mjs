@@ -351,5 +351,5 @@ export const serviceSalvage = (v) => VERSIONS[v - 1].salvage || 0;
 export const recipeId = (stat) => 'recipe:' + stat;
 export const recipeStat = (id) => (id?.startsWith('recipe:') ? id.slice(7) : null);
 export const BLUEPRINTS = [...Object.keys(SERVICES).filter((k) => !SERVICES[k].special), ...PROTOCOL_STATS.map(recipeId)];
-export const BLUEPRINT_CHANCE = { home: 0.005, guard: 0.0125 };
+export const BLUEPRINT_CHANCE = { home: 0.008, guard: 0.02 }; // the pool is every kind of recipe (combat.mjs learnBlueprint)
 export const blueprintName = (id) => (recipeStat(id) ? `${PROTOCOL_NAMES[recipeStat(id)]} recipe` : `${SERVICES[id]?.name || id} blueprint`);

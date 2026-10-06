@@ -227,6 +227,10 @@ test('crafting a filter: a Tuned one at your level, built around the stat you pi
   assert.equal(filtersOf(s).length, 0, 'not without salvage');
   command(s, 'developer salvage 4');
   command(s, 'filter craft grind');
+  assert.equal(filtersOf(s).length, 0, 'not without its recipe');
+  const { learnFilter } = await import('./dist/filters.mjs');
+  learnFilter(s, 'grind');
+  command(s, 'filter craft grind');
   const f = filtersOf(s)[0];
   assert.equal(f.rarity, 'tuned'); assert.equal(f.level, 10);
   assert.ok(f.stats.grind > 0, 'built around the stat you picked');

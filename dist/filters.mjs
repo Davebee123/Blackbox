@@ -81,10 +81,22 @@ export const filterLine = (f) => [`+${f.stats.strength} lv`, ...Object.entries(f
 // Crafting one (the Craft page): a Tuned filter at your level, built around the stat you pick
 // (or any). Credits, Cipher code and salvage.
 export const CRAFTABLE = Object.keys(FILTER_STATS).filter((k) => !FILTER_STATS[k].rare);
+// Filter recipes: one per stat, taught by blueprints that viruses drop.
+export const filterRecipes = (s) => (s.filterRecipes ||= []);
+export const knowsFilter = (s, k) => filterRecipes(s).includes(k);
+export const recipeLabel = (k) => FILTER_STATS[k].label.replace(/^of (the )?/, '');
+export function learnFilter(s, k, why = '') {
+  if (knowsFilter(s, k)) return;
+  filterRecipes(s).push(k);
+  emit(s, 'drop', `${why}${recipeLabel(k)} filter recipe. You can craft filters built around ${FILTER_STATS[k].name.trim()} (Craft page).`, { filterRecipe: k });
+}
 export const filterCost = (L) => ({ credits: 60 + 8 * L, code: { cipher: 6 + Math.floor(L / 2) }, salvage: 4 });
 function craftFilter(s, stat, payText) {
   if (s.run || active(s)) return warn(s, 'Craft at home, between fights.');
   if (stat && !CRAFTABLE.includes(stat)) return warn(s, `Filters: ${CRAFTABLE.join(', ')}, or any.`);
+  if (stat && !knowsFilter(s, stat)) return warn(s, `You don't have the ${recipeLabel(stat)} recipe yet: viruses drop blueprints.`);
+  if (!stat && !filterRecipes(s).length) return warn(s, 'You know no filter recipes yet: viruses drop blueprints.');
+  if (!stat) stat = filterRecipes(s)[Math.floor(rand(s) * filterRecipes(s).length)]; // any of yours
   if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters: scrap one first.`);
   const L = hackerLevel(s), c = filterCost(L), mats = materialsOf(s);
   if (s.server.credits < c.credits || (mats.cipher || 0) < c.code.cipher) return warn(s, `A filter takes ${c.credits} credits and ${c.code.cipher} Cipher code.`);
