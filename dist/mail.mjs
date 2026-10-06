@@ -30,9 +30,9 @@ export const MAIL = {
   maxPeriods: 16, // up to 8 hours of it builds up while you're away
   offers: 5, // offers on the board at once
   take: 3, // contracts you can hold at once (storyline jobs don't count)
-  offerEvery: [2 * 60 * 1000, 9 * 60 * 1000], // a new offer arrives somewhere in here (5 min on average)
+  offerEvery: [1 * 60 * 1000, 3 * 60 * 1000], // a new offer arrives somewhere in here (2 min on average)
   burst: 0.15, // sometimes two arrive together
-  offerLife: [18 * 60 * 1000, 45 * 60 * 1000], // an offer nobody takes is gone after this long
+  offerLife: [5 * 60 * 1000, 5 * 60 * 1000], // an offer nobody takes is gone after 5 minutes
   crashHit: 10, // standing lost when your server crashes
   offBooksHit: 8, // standing lost for doing GLASSJAW's work
   offBooksPay: 1.6,
