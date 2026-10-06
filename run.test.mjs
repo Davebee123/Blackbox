@@ -656,3 +656,23 @@ test('a fight you win on a run lists the folder again, and the fight carries the
   assert.ok(!list.entries.some((x) => x.kind === 'virus'), 'without the virus you just beat');
   hooks.now = null;
 });
+
+test('a virus that counts for a contract is marked in the listing; others are not', async () => {
+  const { hooks } = await import('./dist/combat.mjs');
+  const s = fresh();
+  hooks.now = () => 1000;
+  s.mail = { ...(s.mail || {}), list: [], offers: [], jobs: [] };
+  say(s, 'connect sprawl');
+  say(s, 'cd tmp');
+  const v = () => say(s, 'ls').find((e) => e.type === 'net-ls').entries.find((x) => x.kind === 'virus');
+  assert.equal(v().jobs.length, 0, 'no contract: no marker');
+  s.mail.jobs.push({ id: 77, from: 'LOWLIGHT', subject: 'x', type: 'kill', where: 'sprawl', count: 3, got: 0, reward: { credits: 1 } });
+  assert.equal(v().jobs.length, 1, 'any SPRAWL-00 kill counts');
+  s.mail.jobs[0].got = 3;
+  assert.equal(v().jobs.length, 0, 'a finished count stops marking');
+  const fam = v().tags[0];
+  const other = ['worm', 'ransomware', 'ghostroot'].find((f) => f !== fam);
+  s.mail.jobs.push({ id: 78, from: 'Halcyon', subject: 'y', type: 'kill', family: other, count: 2, got: 0, reward: { credits: 1 } });
+  assert.equal(v().jobs.length, 0, 'another family does not count');
+  hooks.now = null;
+});

@@ -8,7 +8,7 @@ import { isWild, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLe
 import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork } from './invasion.mjs';
-import { contractTakeover, bankCargo } from './mail.mjs';
+import { contractTakeover, bankCargo, wantedBy, title as contractTitle } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
@@ -378,6 +378,7 @@ export function connect(s, id) {
 export const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s));
 
 // ls is structured so the screen can make every name clickable.
+const jobNames = (s, kill) => wantedBy(s, kill).map((c) => contractTitle(s, c));
 function ls(s, all = false) {
   const loc = currentLocation(s);
   const here = layoutOf(loc)[s.run.cwd];
@@ -389,7 +390,7 @@ function ls(s, all = false) {
   if (isWild(loc)) {
     const spawns = loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc);
     const sp = spawns[s.run.cwd];
-    if (sp?.alive) entries.push({ kind: 'virus', name: sp.name + '.exe', size: `lv${sp.level}`, cmd: `attack ${sp.name}`, tags: [FAMILIES[sp.family].name.toLowerCase()] });
+    if (sp?.alive) entries.push({ kind: 'virus', name: sp.name + '.exe', size: `lv${sp.level}`, cmd: `attack ${sp.name}`, tags: [FAMILIES[sp.family].name.toLowerCase()], jobs: jobNames(s, { family: sp.family, zone: true, name: sp.bounty ? sp.name : null }) });
   }
   for (const d of here.dirs.filter(show)) {
     const full = join(s.run.cwd, d);
@@ -397,7 +398,10 @@ function ls(s, all = false) {
     const hostile = isWild(loc) && loc.spawns?.[full]?.alive;
     // SPRAWL-00 is shared: who's in each folder (presence.mjs).
     const people = peopleIn(s, loc, full, true);
-    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile'] : tags, people });
+    // What's waiting in there counts for a contract: a guard you haven't beaten, or a rogue folder's virus.
+    const g = guarded(loc, full) && layoutOf(loc)[full]?.guard, wild = hostile && loc.spawns[full];
+    const jobs = g ? jobNames(s, { family: g, zone: false }) : wild ? jobNames(s, { family: wild.family, zone: true, name: wild.bounty ? wild.name : null }) : [];
+    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile'] : tags, people, jobs });
   }
   for (const f of here.files.filter(show)) {
     const info = fileInfo(loc, s.run.cwd, f);
@@ -407,7 +411,7 @@ function ls(s, all = false) {
     const state = info.kind === 'sweep' ? (loc.state.sweep?.solved ? 'swept' : 'log') : loc.state.sprung?.[full] ? 'sprung' : info.kind === 'trap' ? (read ? 'canary' : 'pull') : loc.state.taken[full] ? 'banked' : inPack(s, full) ? 'in pack' : info.kind !== 'text' ? 'pull' : read ? 'read' : '';
     entries.push({ kind: 'file', name: f, size: info.size, cmd: `cat ${f}`, pull: state === 'pull' ? `pull ${f}` : null, tags: state ? [state] : [] });
   }
-  const text = entries.map((e) => (e.kind === 'virus' ? `!  ${e.name.padEnd(14)}${e.size.padStart(4)}` : e.kind === 'dir' ? `d  ${e.name === '..' ? '..' : e.name + '/'}` : `-  ${e.name.padEnd(14)}${e.size.padStart(4)}`) + (e.tags.length ? '   [' + e.tags.join('] [') + ']' : '')).join('\n');
+  const text = entries.map((e) => (e.kind === 'virus' ? `!  ${e.name.padEnd(14)}${e.size.padStart(4)}` : e.kind === 'dir' ? `d  ${e.name === '..' ? '..' : e.name + '/'}` : `-  ${e.name.padEnd(14)}${e.size.padStart(4)}`) + (e.tags.length ? '   [' + e.tags.join('] [') + ']' : '') + (e.jobs?.length ? '   [contract]' : '')).join('\n');
   const herePeople = peopleIn(s, loc, s.run.cwd, false);
   emit(s, 'net-ls', herePeople.length ? `${text}\nhere: ${herePeople.map((x) => x.handle).join(', ')}` : text, { entries, here: herePeople });
 }

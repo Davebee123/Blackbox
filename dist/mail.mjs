@@ -298,6 +298,11 @@ export function offer(s, at = now()) {
 
 // ---------- progress ----------
 // A kill anywhere: { family, zone, bounty (spawn name) }.
+// The open contracts a kill would count for (the same test as contractKill): for the marker on
+// a virus or a guarded folder in a run's listing.
+export function wantedBy(s, { family, zone, name = null }) {
+  return openContracts(s).filter((c) => (c.type === 'kill' && c.got < c.count && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) || (c.type === 'bounty' && !c.got && name && name === c.name));
+}
 export function contractKill(s, { family, zone, bounty: tag }) {
   for (const c of openContracts(s)) {
     if (c.type === 'kill' && c.got < c.count && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) {
