@@ -351,3 +351,24 @@ test('a raid fight left paused holds nothing: the member still crashes', () => {
     assert.ok(rebooting(s, 'nyx'), 'a paused fight doesn’t stop the clock');
   });
 });
+
+test('a member server reset brings fights and caches back, not vault loot or vault XP', async () => {
+  const { fresh, command } = await import('./dist/combat.mjs');
+  const { arrive, CONSORTIUM } = await import('./dist/consortium.mjs');
+  const { takeable, fileInfo } = await import('./dist/run.mjs');
+  const s = fresh();
+  command(s, 'developer location worm');
+  const loc = s.locations[0];
+  loc.member = 'k1ra';
+  const files = takeable(loc);
+  const kindOf = (p) => { const i = p.lastIndexOf('/'); return fileInfo(loc, p.slice(0, i) || '/', p.slice(i + 1))?.kind; };
+  const cache = files.find((p) => ['credits', 'code'].includes(kindOf(p)));
+  const loot = files.find((p) => !['credits', 'code'].includes(kindOf(p)));
+  loc.state = { cleared: { '/x': true }, unlocked: { vault: true }, taken: { [cache]: true, [loot]: true } };
+  loc.lastRun = 1;
+  arrive(s, loc, fileInfo, 1 + CONSORTIUM.resetMs);
+  assert.deepEqual(loc.state.cleared, {}, 'the natives are back');
+  assert.ok(loc.state.unlocked.vault, 'the vault stays open: its XP was paid once');
+  assert.ok(loc.state.taken[loot], 'pulled loot stays pulled');
+  assert.ok(!loc.state.taken[cache], 'caches refill');
+});

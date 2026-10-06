@@ -138,9 +138,15 @@ const dropMember = (s, h) => { const c = consortiumOf(s); c.members = c.members.
 const onTheirs = (s, h) => { const l = memberServers(s).find((x) => x.id === s.run?.loc); return l && (h ? l.member === h : true); };
 
 // Connecting to a member's server you left a while ago: their natives are back.
-export function arrive(s, loc, now = hooks.now?.() ?? Date.now()) {
+// fileInfo: run.mjs's, passed in (importing it here would loop the modules).
+export function arrive(s, loc, fileInfo, now = hooks.now?.() ?? Date.now()) {
   if (!loc?.member || loc.rogue) return;
-  if (loc.lastRun && now - loc.lastRun >= CONSORTIUM.resetMs) loc.state = { cleared: {}, unlocked: {}, taken: {} };
+  // A reset gives the fights and the caches back, not the loot: the vault stays open (its XP was paid once),
+  // and anything but a credit or code cache you pulled stays pulled.
+  if (loc.lastRun && now - loc.lastRun >= CONSORTIUM.resetMs) {
+    const kept = Object.fromEntries(Object.entries(loc.state?.taken || {}).filter(([path]) => { const i = path.lastIndexOf('/'); return !['credits', 'code'].includes(fileInfo(loc, path.slice(0, i) || '/', path.slice(i + 1))?.kind); }));
+    loc.state = { cleared: {}, unlocked: { ...(loc.state?.unlocked || {}) }, taken: kept };
+  }
   loc.lastRun = now;
 }
 

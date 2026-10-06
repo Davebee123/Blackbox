@@ -575,7 +575,7 @@ function run(raw) {
   }
   // Developer commands are for tests and ?dev / playtest pages, not the real game (a crashed
   // server's reboot excepted: the engine points you to it).
-  if (/^developer( |$)/.test(text) && !params.has('dev') && !playtest && !(text === 'developer reboot' && shown().server.integrity <= 0)) text = 'developer-off'; // the engine answers it as an unknown command
+  if (/^(developer( |$)|online sim$|crew sim( |$))/.test(text) && !params.has('dev') && !playtest && !(text === 'developer reboot' && shown().server.integrity <= 0)) text = 'developer-off'; // dev only (the co-op sims too, until real multiplayer): the engine answers it as an unknown command
 
   // Ability names win over page names during a fight ("trace" is both).
   const fighting = active(shown());

@@ -358,7 +358,7 @@ export function connect(s, id) {
     // A waiting home intrusion is parked for the run and comes back afterwards.
     if (s.encounter?.phase === 'alert' && s.encounter.mode !== 'run') s.parked = s.encounter;
     if (s.encounter && s.encounter.phase !== 'active') s.encounter = null;
-    arrive(s, loc); // a member's server: its natives come back after a while (consortium.mjs)
+    arrive(s, loc, fileInfo); // a member's server: its natives come back after a while (consortium.mjs)
     const firstVisit = !loc.runs && !zone;
     loc.runs++;
     if (zone) zoneSpawns(s);
