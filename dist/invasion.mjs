@@ -250,7 +250,10 @@ export function squelchInvasion(s) {
   if (s.degraded) return warn(s, 'Not while your server is degraded.');
   const live = (s.locations || []).filter((l) => !l.rogue && isLive(s, l));
   if (!live.length) return warn(s, 'Nothing attached to squelch: invasions come from servers on your network.');
+  const now = hooks.now?.() ?? Date.now();
+  if ((s.net.squelchReady || 0) > now) return warn(s, `Squelch is ready again in ${Math.ceil((s.net.squelchReady - now) / 3600000)} h.`);
   if (!paySquelch(s, Math.max(...live.map((l) => l.level || 1)))) return;
+  s.net.squelchReady = now + I().squelchCd;
   const inv = depart(s);
   if (!inv) return warn(s, 'Nothing answered.');
   inv.baited = true;

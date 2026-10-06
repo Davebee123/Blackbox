@@ -150,7 +150,7 @@ test('every outpost has its own firewall at its server\'s level; natives it bloc
   assert.equal(a.outpost.siege, null, 'natives at its level bounce');
   assert.ok(a.outpost.quietUntil > 0, 'and a quiet period follows the squelch');
   assert.equal(s.materials.kernel, 20 - 3, 'Kernel code by its level (lv 8: 3)');
-  fwAt(s, a).level = 3; a.outpost.quietUntil = 0;
+  fwAt(s, a).level = 3; a.outpost.quietUntil = 0; a.outpost.squelchReady = 0; // as if a day had passed
   baitOutpost(s, a, 0);
   assert.ok(a.outpost.siege && a.outpost.siege.hp === 1, 'a weaker firewall lets them in');
   command(s, `firewall upgrade ${a.id}`);
@@ -210,6 +210,11 @@ test('away: a long passive clock (one invasion every 2-4 hours), quiet for a nig
   command(q, 'squelch', T0);
   hooks.now = null;
   const after = q.logs.filter((e) => e.type === 'invader').length;
+  const k = q.materials.kernel;
+  hooks.now = () => T0 + 3600000;
+  command(q, 'squelch', T0 + 3600000);
+  hooks.now = null;
+  assert.equal(q.materials.kernel, k, 'a long cooldown: not again so soon');
   tickNetwork(q, T0 + 7.5 * 3600000);
   assert.equal(q.logs.filter((e) => e.type === 'invader').length, after, 'a quiet night');
   // Open ports: online, the next one comes 2.5× sooner; logging off closes them.

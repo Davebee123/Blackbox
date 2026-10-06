@@ -297,7 +297,9 @@ export function squelchOutpost(s, loc, now) {
   const o = loc.outpost;
   if (o.siege || o.lockdown) return warn(s, `${loc.name} already has natives on it.`);
   if ((o.quietUntil || 0) > now) return warn(s, `${loc.name} is already quiet.`);
+  if ((o.squelchReady || 0) > now) return warn(s, `${loc.name} can be squelched again in ${Math.ceil((o.squelchReady - now) / 3600000)} h.`);
   if (!paySquelch(s, loc.level || 1)) return;
+  o.squelchReady = now + CONFIG.invasion.squelchCd;
   startSiege(s, loc);
   o.quietUntil = now + OUTPOST.siegeMs + CONFIG.invasion.safeMs; // natives and swarms leave it alone for a night
 }

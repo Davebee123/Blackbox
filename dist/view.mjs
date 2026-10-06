@@ -771,10 +771,10 @@ function baitHome(s) {
   const next = s.net?.next, top = threatTop(s);
   if (s.invasion || !top) return '';
   const k = squelchCost(top), ok = (s.materials?.kernel || 0) >= k;
-  const quiet = (s.net?.quietUntil || 0) > Date.now();
+  const quiet = (s.net?.quietUntil || 0) > Date.now(), cd = Math.max(0, (s.net?.squelchReady || 0) - Date.now());
   const open = !!s.net?.open;
   const ports = `<button type="button" class="btn small fw-up${open ? ' on' : ''}" data-command="${open ? 'close ports' : 'open ports'}" aria-pressed="${open}" title="${open ? 'Close them: invasions back to their usual pace' : 'Invasions come 2.5× as often while you play, each worth +50%. They close when you log off.'}">${open ? 'Ports open' : 'Open ports'}<small>${open ? '×2.5 · +50%' : 'more, richer'}</small></button>`;
-  return `${ports}<button type="button" class="btn small fw-up" data-command="squelch" ${!ok || active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now; then nothing comes while you're away for ${CONFIG.invasion.safeMs / 3600000} hours.">${quiet ? `Quiet · ${fmtTime(s.net.quietUntil - Date.now())}` : `Squelch${next > 0 ? ` · next ${fmtTime(next)}` : ''}`}<small>${k} Kernel</small></button>`;
+  return `${ports}<button type="button" class="btn small fw-up" data-command="squelch" ${!ok || cd || active(s) || s.run || s.degraded ? 'disabled' : ''} title="Pull the next invasion to your wall now; then nothing comes while you're away for ${CONFIG.invasion.safeMs / 3600000} hours. Once every ${CONFIG.invasion.squelchCd / 3600000} hours.">${quiet ? `Quiet · ${fmtTime(s.net.quietUntil - Date.now())}` : cd ? 'Squelch' : `Squelch${next > 0 ? ` · next ${fmtTime(next)}` : ''}`}<small>${cd ? `ready in ${fmtTime(cd)}` : `${k} Kernel`}</small></button>`;
 }
 // The firewall's buttons, each only once it means something: Upgrade when you can pay for the next
 // level, Defrag when it's fragmented (or running), harden.sh when you hold one.
@@ -1936,8 +1936,8 @@ function outpostCore(s, l) {
   const siege = o.siege ? opBox('siege', 'Invasion', `lv ${o.siege.level || l.level || 1} · ${o.siege.hp != null && o.siege.hp < 1 ? `${Math.round(o.siege.hp * 100)}% · ` : ''}falls in ${fmtTime(o.siege.left)}`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
   const inf = o.infest ? opBox('infest', 'Infested', `${o.infest.count}/${o.infest.total} left · ${fmtTime(o.infest.left)}`, (o.infest.left / INFEST.stayMs) * 100, `<button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why} title="Clear them for an hour of production at once. Ignore them and they move on.">Clear</button>`) : '';
   const quiet = (o.quietUntil || 0) > Date.now();
-  const sk = squelchCost(l.level || 1), skOk = (s.materials?.kernel || 0) >= sk;
-  const baitBtn = o.siege ? '' : `<button type="button" class="btn fw-up" data-command="squelch ${esc(l.id)}" ${why || (quiet || !skOk ? 'disabled' : '')} title="${quiet ? `Quiet for ${fmtTime(o.quietUntil - Date.now())}` : 'Pull its natives in now, then quiet'}">${quiet ? `Quiet · ${fmtTime(o.quietUntil - Date.now())}` : `Squelch<small>${sk} Kernel</small>`}</button>`;
+  const sk = squelchCost(l.level || 1), skOk = (s.materials?.kernel || 0) >= sk, skCd = Math.max(0, (o.squelchReady || 0) - Date.now());
+  const baitBtn = o.siege ? '' : `<button type="button" class="btn fw-up" data-command="squelch ${esc(l.id)}" ${why || (quiet || skCd || !skOk ? 'disabled' : '')} title="${quiet ? `Quiet for ${fmtTime(o.quietUntil - Date.now())}` : `Pull its natives in now, then quiet. Once every ${CONFIG.invasion.squelchCd / 3600000} hours.`}">${quiet ? `Quiet · ${fmtTime(o.quietUntil - Date.now())}` : `Squelch<small>${skCd ? `ready in ${fmtTime(skCd)}` : `${sk} Kernel`}</small>`}</button>`;
   return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fwRow(s, l, l.id, (l.level || 1) + 2)}${fl}${siege}${inf}${o.siege ? '' : `<div class="row">${baitBtn}<button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
 }
 
