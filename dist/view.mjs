@@ -1422,6 +1422,42 @@ const lvLabel = (s, n, r, name, level, depth, rest = '', cls = '') => {
 // A thin progress arc around a node (share 0–1).
 const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="${r}" class="marc-bg ${cls}"/><circle r="${r}" class="marc ${cls}" stroke-dasharray="${(c * Math.min(1, share)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90)"/>`; };
 
+// Traffic on the net: files moving between servers, as dots along the links. Your market orders
+// and payloads run home ↔ hub; the hubs trade among themselves along the backbone that joins them.
+// The markup only says where each dot runs and when (a route and its clock); app.js moves them, so
+// the map doesn't redraw to animate. Hostile or offline hubs carry no backbone traffic.
+const hash = (str) => [...str].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+export function trafficMarkup(s, nodes) {
+  const hubs = nodes.filter((n) => n.kind === 'hub'), home = nodes.find((n) => n.id === 'server');
+  const byF = Object.fromEntries(hubs.map((n) => [n.hub.faction, n]));
+  const routes = [], dots = [];
+  // The backbone: an arc on the hubs' ring between each found hub and the next one round.
+  const live = hubs.filter((n) => !offline(s, n.hub.faction)).sort((a, b) => ((a.angle + 360) % 360) - ((b.angle + 360) % 360));
+  if (live.length >= 2) {
+    live.forEach((a, i) => {
+      const b = live[(i + 1) % live.length];
+      if (live.length === 2 && i === 1) return; // two hubs: one arc, not a circle
+      const sweep = ((b.angle - a.angle) % 360 + 360) % 360, r = a.r, id = `bb-${a.hub.faction}-${b.hub.faction}`;
+      routes.push(`<path class="mbone" data-rid="${id}" d="M${a.x} ${a.y} A${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${b.x} ${b.y}"/>`);
+      const h = hash(id), period = 26000 + (h % 5) * 5000;
+      const fa = FX[a.hub.faction].color, fb = FX[b.hub.faction].color;
+      dots.push(`<circle r="2.8" class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}"/>`);
+    });
+  }
+  // Yours: market orders and payloads in flight, home ↔ the hub. Outgoing runs out, incoming runs home.
+  const mine = (f, id, t0, t1, out, cls, tip) => {
+    const n = byF[f]; if (!n || !home) return;
+    if (!routes.some((r) => r.includes(`data-rid="hr-${f}"`))) routes.push(`<path class="mroute" data-rid="hr-${f}" d="M${home.x} ${home.y} L${n.x} ${n.y}"/>`);
+    dots.push(`<circle r="3.4" class="mpkt ${cls}" data-route="hr-${f}" data-t0="${t0}" data-t1="${t1}"${out ? '' : ' data-rev="1"'}><title>${esc(tip)}</title></circle>`);
+  };
+  for (const x of transfersOf(s)) {
+    const what = x.side === 'good' ? x.name : `${WARES[x.w].name.replace(/ code$/, '')} ×${x.n}`;
+    mine(x.f, x.id, x.sentAt, x.landsAt, x.side === 'sell', 'you', x.side === 'sell' ? `${what} → ${FX[x.f].short} · +${x.credits}` : `${what} ← ${FX[x.f].short}`);
+  }
+  for (const p of flyingOf(s)) mine(p.f, p.id, p.sentAt, p.landsAt, true, 'pay', `${PAYLOADS[p.kind].name} #${p.id} → ${FX[p.f].short}`);
+  return routes.length ? `<g class="mtraffic">${routes.join('')}${dots.join('')}</g>` : '';
+}
+
 // Screen pixels per map unit (app.js sets it from the drawn map): label sizes in map units follow it.
 let mapScale = 1;
 export const setMapScale = (z) => { const was = mapScale; mapScale = z; return Math.abs(was - z) / was > 0.08; };
@@ -1515,7 +1551,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
-  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter !== 'all' ? ' mf-' + filter : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${draw}</svg>`;
+  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter !== 'all' ? ' mf-' + filter : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><div class="map-ctl comms-filters map-filters" role="group" aria-label="Show">${[['all', 'All'], ['mine', 'Mine'], ['targets', 'Targets'], ['threats', 'Threats']].map(([k, l]) => `<button type="button" data-mapfilter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).

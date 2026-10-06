@@ -1373,7 +1373,24 @@ function stepLoop() {
 // ---------- clock ----------
 let last = performance.now();
 let lastSecond = 0, wanderTick = 0;
+// Traffic on the map (view.mjs trafficMarkup): each dot runs its route on its own clock. A transfer
+// sits at its share of the way; backbone traffic loops, the far end's colour on the way back.
+function movePackets(at) {
+  for (const d of document.querySelectorAll('.map-svg .mpkt')) {
+    const path = d.ownerSVGElement?.querySelector(`[data-rid="${d.dataset.route}"]`);
+    if (!path) continue;
+    let p, back = !!d.dataset.rev;
+    if (d.dataset.period) {
+      const k = at / +d.dataset.period + +d.dataset.phase, lap = Math.floor(k);
+      p = k - lap; back = lap % 2 === 1;
+      d.style.fill = back ? d.dataset.cb : d.dataset.ca;
+    } else p = Math.max(0, Math.min(1, (at - +d.dataset.t0) / Math.max(1, +d.dataset.t1 - +d.dataset.t0)));
+    const len = path.getTotalLength(), pt = path.getPointAtLength((back ? 1 - p : p) * len);
+    d.setAttribute('cx', pt.x.toFixed(1)); d.setAttribute('cy', pt.y.toFixed(1));
+  }
+}
 function frame(now) {
+  if (module === 'map') movePackets(Date.now());
   const delta = Math.min(1000, now - last);
   last = now;
   const wall = Date.now();

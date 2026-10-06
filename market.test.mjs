@@ -90,3 +90,20 @@ test('an order’s preview is what the trade does: the same total, and it moves 
   assert.ok(b.credits < 0 && b.after === s.server.credits + b.credits);
   assert.ok(orderMax(s, 'buy', 'kestrel', 'worm') >= 3);
 });
+
+test('traffic on the map: the hubs trade along their backbone, and your orders run home ↔ hub', async () => {
+  const { fresh } = await import('./dist/combat.mjs');
+  const { mapMarkup } = await import('./dist/view.mjs');
+  const { initMail } = await import('./dist/mail.mjs');
+  const s = fresh(); initMail(s); s.mail.boardOpen = true; s.tutorialCompleted = true;
+  s.hubFound = { kestrel: true, lantern: true };
+  const at = Date.now();
+  let html = mapMarkup(s, 'server');
+  const arcs = html.match(/class="mbone"/g) || [];
+  assert.equal(arcs.length, (html.match(/class="mnode hub/g) || []).length, 'one arc per hub, round the ring');
+  assert.match(html, /class="mpkt amb"/);
+  assert.doesNotMatch(html, /mpkt you/, 'nothing of yours in flight yet');
+  s.market ||= {}; s.market.transfers = [{ id: 1, side: 'sell', f: 'kestrel', w: 'kernel', n: 4, credits: 60, sentAt: at, landsAt: at + 60000 }];
+  html = mapMarkup(s, 'server');
+  assert.match(html, /class="mpkt you" data-route="hr-kestrel" data-t0="\d+" data-t1="\d+">/, 'a sale runs out to the hub');
+});

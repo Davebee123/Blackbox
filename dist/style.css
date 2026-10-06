@@ -2446,3 +2446,12 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 .sl-loc:hover { border-color: var(--amber); color: var(--amber); }
 .sl-loc .glyph { width: 13px; height: 13px; }
 .sl-status { justify-content: flex-start; }
+
+/* Traffic on the map: the hubs' backbone, and files moving along it and to and from home. */
+.mbone { fill: none; stroke: rgba(241, 185, 47, 0.18); stroke-width: 1; stroke-dasharray: 1 3; }
+.mroute { fill: none; stroke: none; }
+.mpkt { pointer-events: none; }
+.mpkt.amb { opacity: 0.9; }
+.mpkt.you { fill: var(--you); pointer-events: auto; filter: drop-shadow(0 0 3px var(--you)); }
+.mpkt.pay { fill: var(--hot, #ff5b3d); pointer-events: auto; filter: drop-shadow(0 0 3px var(--hot, #ff5b3d)); }
+.map-svg[class*="mf-"] .mbone, .map-svg[class*="mf-"] .mpkt.amb, .map-svg[class*="mf-"]:not(.mf-mine) .mpkt { opacity: 0.12; }
