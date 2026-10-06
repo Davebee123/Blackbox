@@ -561,7 +561,7 @@ function protocolsParts(s, focus = null) {
     const full = !SLOT_KINDS.slice(0, slotCount(s)).includes(groupOf(it)); // a full slot swaps
     const confirm = ['custom', 'zeroday', 'indemnified'].includes(it.rarity) ? ' data-confirm="Sure? Deconstruct"' : '';
     const swap = freeSlot(s, groupOf(it)) < 0 && !full;
-    const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" ${busy || full || dupe ? 'disabled' : ''} title="${full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
+    const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" ${busy || full || dupe ? 'disabled' : ''} title="${busy ? 'At home only' : full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
     const scrap = where ? '' : `<button type="button" class="inv-btn" data-command="deconstruct ${it.id}"${confirm} ${busy ? 'disabled' : ''} title="Deconstruct: salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}</button>`;
     return `<li class="inv-row ${rarityClass(it)}">${invBody(it, whereTag)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
   }).join('');
@@ -1198,7 +1198,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', `Protocols${(s.stash || []).length ? ` · ${(s.stash || []).length}` : ''}`], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['skills', `Skills and talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
+    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['skills', `Skills and talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
     ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'skills' ? `
     <div class="loadout-grid">
       <section class="card skills-card">

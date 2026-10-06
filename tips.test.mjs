@@ -93,3 +93,17 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   markSeen(s, 'map-memory'); markSeen(s, 'map-owned');
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-install');
 });
+
+test('your first protocol: Loadout, then Load at home; on a run the tip says it waits for home', async () => {
+  const { addItem } = await import('./dist/combat.mjs');
+  const { rollItem } = await import('./dist/gear.mjs');
+  const s = fresh();
+  addItem(s, rollItem(() => 0.5, { level: 1, rarity: 'tuned' }));
+  const visible = (sel) => sel.includes('aria-selected') ? false : sel.includes(':not([disabled])') ? !s.run : sel.includes('[disabled]') ? !!s.run : onPage(loadoutMarkup(s, 'breaker', 'protocols'))(sel); // on the Protocols tab already
+  assert.equal(nextTip(s, 'map', (sel) => sel === '.modules [data-module="loadout"]').id, 'protocol');
+  markSeen(s, 'protocol');
+  assert.equal(nextTip(s, 'loadout', visible).id, 'protocol-load');
+  s.run = { loc: 'sprawl', cwd: '/', pack: [] };
+  assert.equal(nextTip(s, 'loadout', visible).id, 'protocol-home');
+  assert.match(TIPS.find((t) => t.id === 'protocol').text, /only equip at home/);
+});
