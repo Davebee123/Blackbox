@@ -1385,8 +1385,12 @@ function movePackets(at) {
       p = k - lap; back = lap % 2 === 1;
       d.style.fill = back ? d.dataset.cb : d.dataset.ca;
     } else p = Math.max(0, Math.min(1, (at - +d.dataset.t0) / Math.max(1, +d.dataset.t1 - +d.dataset.t0)));
-    const len = path.getTotalLength(), pt = path.getPointAtLength((back ? 1 - p : p) * len);
-    d.setAttribute('cx', pt.x.toFixed(1)); d.setAttribute('cy', pt.y.toFixed(1));
+    const len = path.getTotalLength(), at0 = (back ? 1 - p : p) * len, pt = path.getPointAtLength(at0);
+    // Which way it's heading: a step further along the route, in its direction of travel.
+    const q = path.getPointAtLength(Math.max(0, Math.min(len, at0 + (back ? -1 : 1))));
+    const ang = Math.atan2(q.y - pt.y, q.x - pt.x) * 180 / Math.PI;
+    d.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+    d.querySelector('.pk-dir')?.setAttribute('transform', `rotate(${ang.toFixed(0)})`);
   }
 }
 function frame(now) {

@@ -1426,6 +1426,12 @@ const arc = (r, share, cls) => { const c = 2 * Math.PI * r; return `<circle r="$
 // and payloads run home ↔ hub; the hubs trade among themselves along the backbone that joins them.
 // The markup only says where each dot runs and when (a route and its clock); app.js moves them, so
 // the map doesn't redraw to animate. Hostile or offline hubs carry no backbone traffic.
+// A file is a page with a folded corner; a payload is a spiked virus. The arrow ahead of it turns
+// with the route (app.js), so you can read which way it's going.
+const PKT_ICON = {
+  you: '<path class="pk-icon" d="M-4 -5.5 H2 L4.5 -3 V5.5 H-4.5 V-5.5 Z M2 -5.5 V-3 H4.5"/>',
+  pay: '<path class="pk-icon" d="M0 -6.5 L1.6 -2.6 L5.6 -3.2 L3 0 L5.6 3.2 L1.6 2.6 L0 6.5 L-1.6 2.6 L-5.6 3.2 L-3 0 L-5.6 -3.2 L-1.6 -2.6 Z"/>',
+};
 const hash = (str) => [...str].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 export function trafficMarkup(s, nodes) {
   const hubs = nodes.filter((n) => n.kind === 'hub'), home = nodes.find((n) => n.id === 'server');
@@ -1441,14 +1447,14 @@ export function trafficMarkup(s, nodes) {
       routes.push(`<path class="mbone" data-rid="${id}" d="M${a.x} ${a.y} A${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${b.x} ${b.y}"/>`);
       const h = hash(id), period = 26000 + (h % 5) * 5000;
       const fa = FX[a.hub.faction].color, fb = FX[b.hub.faction].color;
-      dots.push(`<circle r="2.8" class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}"/>`);
+      dots.push(`<g class="mpkt amb" data-route="${id}" data-period="${period}" data-phase="${(h % 997) / 997}" data-ca="${fa}" data-cb="${fb}"><path class="pk-dir" d="M5.5 0 L-4 -4 L-2 0 L-4 4 Z"/></g>`);
     });
   }
   // Yours: market orders and payloads in flight, home ↔ the hub. Outgoing runs out, incoming runs home.
   const mine = (f, id, t0, t1, out, cls, tip) => {
     const n = byF[f]; if (!n || !home) return;
     if (!routes.some((r) => r.includes(`data-rid="hr-${f}"`))) routes.push(`<path class="mroute" data-rid="hr-${f}" d="M${home.x} ${home.y} L${n.x} ${n.y}"/>`);
-    dots.push(`<circle r="3.4" class="mpkt ${cls}" data-route="hr-${f}" data-t0="${t0}" data-t1="${t1}"${out ? '' : ' data-rev="1"'}><title>${esc(tip)}</title></circle>`);
+    dots.push(`<g class="mpkt ${cls}" data-route="hr-${f}" data-t0="${t0}" data-t1="${t1}"${out ? '' : ' data-rev="1"'}><title>${esc(tip)}</title><circle r="14" class="pk-hit"/><g transform="scale(1.5)">${PKT_ICON[cls]}</g><path class="pk-dir" d="M20 0 L12 -6 L14.5 0 L12 6 Z"/></g>`);
   };
   for (const x of transfersOf(s)) {
     const what = x.side === 'good' ? x.name : `${WARES[x.w].name.replace(/ code$/, '')} ×${x.n}`;
