@@ -861,6 +861,21 @@ function filterPanel(s) {
   const rows = held.map(tile);
   return `<div class="flt-panel"><h3 class="craft-sub">Filters <small>${on.length}/${n}</small></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;
 }
+// The invasion's own card on the map: the virus, where it's from, what it's doing (with a timer
+// bar), one line on how your firewall meets it, and Jack in once it's at your wall.
+function invaderCard(s) {
+  const inv = s.invasion;
+  if (!inv) return '';
+  const st = invaderStatus(s), o = outcome(ratioOf(s, inv)), lv = effLevel(s, undefined, inv.family);
+  const verdict = { blocked: ['you', 'blocks it'], siege: ['warn', 'contests it'], breach: ['hot', 'won\'t hold it'] }[o];
+  const pct = inv.state === 'travel' ? (1 - inv.left / Math.max(1, inv.total)) * 100 : inv.hp * 100;
+  const tags = `${levelTag(s, inv.level)}${inv.mutation ? `<span class="tag tag-mut" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}${inv.strain && STRAINS[inv.strain] ? `<span class="tag tag-strain" title="${esc(STRAINS[inv.strain].rule || '')}">${esc(STRAINS[inv.strain].name)}</span>` : ''}`;
+  return `<section class="card inv-card ${inv.state}"><h2>Invasion</h2><h1>${esc(inv.name)}</h1><p class="svc-line">${tags}</p><p class="svc-line quiet">from ${esc(inv.fromName)}</p>
+    <div class="inv-state"><span class="tag ${inv.state === 'breach' ? 'hot' : inv.state === 'siege' ? 'warn' : ''}">${esc(inv.state === 'travel' ? 'on its way' : inv.state === 'siege' ? 'contested' : 'breach')}</span><b>${esc(invaderShort(s))}</b></div>
+    <div class="wall-bar ${inv.state}"><span style="width:${Math.max(0, Math.min(100, Math.round(pct)))}%"></span></div>
+    <p class="svc-line">${glyph('firewall')} Your firewall <b>lv ${lv}</b> <span class="tag ${verdict[0]}">${verdict[1]}</span></p>
+    <div class="row">${inv.state !== 'travel' && st ? jackInButton(st) : ''}<button type="button" class="btn" data-go="server">Firewall</button></div></section>`;
+}
 export function wallMarkup(s, now = Date.now()) {
   const inv = s.invasion, st = invaderStatus(s);
   const bar = st && inv.state !== 'travel' ? `<div class="wall-bar ${inv.state}"><span style="width:${Math.max(0, Math.min(100, Math.round(inv.hp * 100)))}%"></span></div>` : '';
@@ -1904,7 +1919,7 @@ function mapSide(s, sel, node) {
       <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}</div></section>`;
   }
   if (node.kind === 'intrusion') return alertCard();
-  if (node.kind === 'invader') return wallMarkup(s);
+  if (node.kind === 'invader') return invaderCard(s);
   if (node.kind === 'fleet') return fleetCard(s);
   if (node.kind === 'hidden') {
     const h = node.hidden, via = s.locations.find((x) => x.id === h.via), flag = hiddenFlagged(s, h), kit = kitOf(s);
@@ -2008,9 +2023,10 @@ function outpostCore(s, l) {
   if (!o.h) {
     const rack = harvesters(s);
     if (o.readyAt && Date.now() < o.readyAt) return `<p class="svc-line">Harvester slot resetting · ${fmtTime(o.readyAt - Date.now())} ${buyoutBtn(s, `outpost buyout ${l.id}`, outpostBuyout(l)?.price)}</p>`;
-    if (!rack.length) return '';
+    // Nothing in the rack: where one comes from. Craft it (its plan known), or find one packaged in a vault.
+    if (!rack.length) return `<div class="outpost op-pick"><p class="svc-line"><span class="tag dim">${glyph('harvester')}no harvester</span></p><div class="row">${Object.keys(OUTPOST.kinds).some((k) => knowsPlan(s, k)) ? `<button type="button" class="btn" data-go="craft:harvesters">${glyph('harvester')}Craft a harvester</button>` : `<span class="tag dim" title="Your first vault holds the Siphon plan (plan.pln); vaults also hold packaged harvesters (.vx)">${glyph('blueprint')}needs a plan</span>`}</div></div>`;
     const full = l.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s);
-    return `<div class="outpost op-pick"><div class="op-pick-head">${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Outposts you can run')}</div><ul class="op-rack">${rack.map((h, i) => `<li><span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.traits.map((x) => `<span class="tag" title="${esc(OUTPOST.traits[x].rule)}">${esc(OUTPOST.traits[x].name)}</span>`).join('')}</span><button type="button" class="btn small primary" data-command="outpost install ${esc(l.id)} ${i + 1}" ${full ? 'disabled title="No outpost slot free. Pull a harvester out, or level your server."' : ''}>Install</button></li>`).join('')}</ul></div>`;
+    return `<div class="outpost op-pick"><div class="op-pick-head">${slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Outposts you can run')}</div><ul class="op-rack">${rack.map((h, i) => `<li><span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.from ? `<span class="tag ${h.from === 'found' ? 'you' : 'dim'}" title="${h.from === 'found' ? 'A packaged native from a vault' : 'Crafted on the Craft page'}">${h.from}</span>` : ''}${h.traits.map((x) => `<span class="tag" title="${esc(OUTPOST.traits[x].rule)}">${esc(OUTPOST.traits[x].name)}</span>`).join('')}</span><button type="button" class="btn small primary" data-command="outpost install ${esc(l.id)} ${i + 1}" ${full ? 'disabled title="No outpost slot free. Pull a harvester out, or level your server."' : ''}>Install</button></li>`).join('')}</ul></div>`;
   }
   const h = o.h, m = MATERIALS[codeOf(l.family)];
   const traits = h.traits.map((t) => `<span class="tag" title="${esc(OUTPOST.traits[t].rule)}">${esc(OUTPOST.traits[t].name)}</span>`).join(' ');

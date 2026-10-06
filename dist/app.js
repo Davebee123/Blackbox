@@ -1744,6 +1744,8 @@ function goTo(target) {
   const [where, what] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
+  else if (where === 'server') go('server');
+  else if (where === 'craft') { craftUi = { cat: what || null, pick: null }; go('craft'); }
   else if (where === 'hub') openHub(what);
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }

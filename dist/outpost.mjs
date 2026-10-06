@@ -129,7 +129,7 @@ export function bankHarvester(s, h, why = 'Banked: ') {
     for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Harvester scraps', virus: 'harvester', seed: s.serial });
     return emit(s, 'info', `Your harvester rack is full (${OUTPOST.stashCap}): the package broke down into 2 salvage.`);
   }
-  harvesters(s).push({ ...h });
+  harvesters(s).push({ ...h, from: 'found' });
   emit(s, 'harvester', `${why}${harvesterName(h)}, a packaged native. Install it on a server you've taken over.`, { harvester: true });
 }
 
@@ -463,7 +463,7 @@ function compile(s, kind, payText = null) {
   s.server.credits -= c.credits;
   have[c.material] -= c.code;
   spend(s, pay);
-  harvesters(s).push({ kind, level: serverLevel(s), traits: [] });
+  harvesters(s).push({ kind, level: serverLevel(s), traits: [], from: 'crafted' });
   emit(s, 'harvester', `Compiled: ${harvesterName(harvesters(s).at(-1))}.`, { harvester: true });
 }
 
