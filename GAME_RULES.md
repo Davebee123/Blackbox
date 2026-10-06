@@ -457,6 +457,25 @@ Once you run an outpost, the network organises against it.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
 
+## Firewalls and the away rule (in progress)
+
+The plan the next changes build to; each part moves into the sections above as it lands.
+
+**One rule, online or off.** All PvE runs on real time. Whatever comes for something you hold meets that holding's **firewall**: **Blocked** (it bounces), **Contested** (the firewall and the threat wear each other down, each on its clock) or **Breach** (it gets through and the holding falls when its timer runs out: a crash at home, a lockdown at an outpost or a hub you hold, a silo lost). Being online only means you can jack in and fight it. No logged-on clocks, no "never while away" exceptions: the firewall is the guardrail, and you can see it.
+
+**Threats come from what you've attached.** A threat's level comes from the server that sends it (or the holding it targets), never from your own level. Attach a level-20 server and level-20 things can find you; detach it and they can't. Your own power levels off; defence is what you build per holding.
+
+**The firewall** (every holding has one: home, outposts, hubs you hold, silos):
+- **Level:** linear, and it never grows by itself. You upgrade it with credits and code, one level at a time.
+- **Readout:** one line on each holding's card, *Vulnerable to lv N+* (teal *Not vulnerable* when nothing attached can get through), with a family note when a filter changes it.
+- **Fragmentation:** every threat it meets fragments it, shown as a block grid; fragmented blocks cost it levels. **Defrag** restores it, taking a few minutes at reduced strength.
+- **Hardening scripts** (`harden.sh`): one-use, +3 levels for 8 hours. Bought at hub shops.
+- **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, and rarer Tarpit and Honeypot effects. Home has the most slots; outposts and silos one or two.
+
+**Bait.** While you're online, a honeypot pulls a holding's next threat in now, so you fight it on your terms; after it, nothing comes for that holding for a while (the card shows the safe period). Before logging off: bait, clear, defrag, harden if it still reads vulnerable.
+
+**Silos.** Rare faction servers (at most one per faction, never an early find) that hold a faction's stock. Run clean lines for them (rep), with Trojan and logic-bomb mines on hops you don't hold; or capture one with a Backdoor payload and hold it against the faction's counter-swarm. A silo that falls goes back to the faction with everything stored in it.
+
 ## Threats at a glance
 
 Three kinds of threat, two things they leave behind, four things you do. The specifics go in the name: *Invasion at your wall*, *Invasion at nyx's outpost on VANTA-RELAY-80*, *Swarm from LANTERN at your outpost on …*, *Swarm from Kestrel at KESTREL-DC-NORTH*.
