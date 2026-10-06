@@ -1096,7 +1096,7 @@ export function consortiumMarkup(s, now = Date.now()) {
       ${dividendTable(s)}
       <div class="con-waiting"><span><small>Waiting</small><b>${w ? esc(w) : 'nothing yet'}</b></span><button type="button" class="btn primary" data-command="consortium collect" ${w ? '' : 'disabled'}>Collect</button></div></section>
     <section class="card"><h2>While you're away</h2>${awayLine(s)}<div class="row">${btn('server', 'Firewall and services')}</div></section>
-    <div class="row con-leave"><button type="button" class="btn small" data-command="consortium leave" data-confirm="Leave ${esc(c.name)}? Everything of yours stays yours.">Leave</button></div>
+    <div class="row con-leave"><button type="button" class="btn small" data-command="consortium leave" data-confirm="Click again to leave">Leave</button></div>
   </div></div>`;
 }
 
@@ -1664,7 +1664,7 @@ function mapSide(s, sel, node) {
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line"><span class="tag dim" title="Can't be taken over; never sends invasions">wild</span></p>
       ${consortiumLine(s, l)}
-      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Detach ${esc(l.name)}? It freezes as it is (and what you found through it) until you attach it again." ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
+      <div class="row">${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? `disabled title="Still tracing your last connection"` : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}${st !== 'here' && relockLeft(l) ? `<small class="svc-line">Reconnect in ${relockLeft(l)}s</small>` : ''}</div></section>`;
   }
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
@@ -1681,7 +1681,7 @@ function mapSide(s, sel, node) {
     ${l.faction ? `<p class="svc-line fline" style="--fc:${FX[l.faction].color}">${fIcon(l.faction)}<b>${esc(FX[l.faction].short)}</b> runs it · opening its vault takes it: ${esc(FX[l.faction].short)} −${OWNED.takeoverHit}${FX[l.faction].rivals.length ? `, ${FX[l.faction].rivals.map((r) => esc(FX[r].short)).join(' and ')} +${Math.round(OWNED.takeoverHit * 0.5)}` : ''}</p>` : ''}
     ${dropLine(s, l)}
     ${outpostCard(s, l)}
-    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Detach ${esc(l.name)}? It freezes as it is (and what you found through it) until you attach it again." ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}</div></section>`;
+    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Connect</button>`}${!l.member && !l.trunk && s.locations.includes(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy || s.server.credits < memoryCost(l) ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}</div></section>`;
 }
 
 // The swarm: what's coming, where, when, and the button to meet it.
@@ -2029,10 +2029,11 @@ export function hubOptions(s, f, now = Date.now()) {
 function goodsMarkup(s, f, now) {
   const F = FX[f];
   if (f === 'halcyon' || hostile(s, f) || offline(s, f, now)) return '';
-  return `<h3 class="mk-sec">Goods</h3><div class="mk-table mk-goods"><div class="mk-tr mk-th"><span>Good</span><span class="mk-num">Stock</span><span>Buy</span></div>${shopOf(s, f, now).map((g) => `<div class="mk-tr${g.locked ? ' locked' : ''}">
+  return `<h3 class="mk-sec">Goods</h3><div class="mk-table mk-goods"><div class="mk-tr mk-th"><span>Good</span><span class="mk-num">Stock</span><span class="mk-num">Price</span><span></span></div>${shopOf(s, f, now).map((g) => `<div class="mk-tr${g.locked ? ' locked' : ''}">
       <span class="mk-name" title="${esc(g.about)}">${glyph(g.id === 'tip' ? 'f-lantern' : GLYPH_OF_GOOD[g.id] || 'crate')}<b>${esc(g.name)}</b></span>
       <span class="mk-num mk-held${g.left ? '' : ' zero'}">${g.left}</span>
-      ${g.locked ? `<span class="tag dim mk-lock">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small ${s.server.credits >= g.price && g.left ? 'primary' : ''}" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>${g.price}</button>`}
+      <span class="mk-num mk-buyp mk-gprice">${g.price}</span>
+      ${g.locked ? `<span class="tag dim mk-lock" title="Opens at ${esc(F.tiers[g.need])}">${esc(F.tiers[g.need])}</span>` : `<button type="button" class="btn small" data-command="buy ${f} ${g.id}" ${s.server.credits >= g.price && g.left ? '' : 'disabled'}>Buy</button>`}
     </div>`).join('')}</div>`;
 }
 function workMarkup(s, f) {
@@ -2139,7 +2140,7 @@ function marketMarkup(s, f, now) {
     const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : ''].filter(Boolean).join(' · ');
     const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
     // Two halves: what it pays you here (and how that compares across hubs), then what it charges.
-    const sell = (k) => (k ? `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k ? '' : 'disabled'} title="+${q.sell * k} credits · ${min} min">Sell ${k}</button>` : '<span></span>');
+    const sell = (k) => (k ? `<button type="button" class="btn small" data-command="market sell ${f} ${w} ${k}" ${n >= k ? '' : 'disabled'} title="+${q.sell * k} credits · ${min} min">Sell ${k}</button>` : '<span></span>');
     return `<div class="mk-tr">
       <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b></span>
       <span class="mk-num mk-held${n ? '' : ' zero'}" title="You have ${n}">${n}</span>
@@ -2149,7 +2150,7 @@ function marketMarkup(s, f, now) {
       <button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="−${q.buy} credits · ${min} min">Buy 1</button>
     </div>`;
   }).join('');
-  const head = `<div class="mk-tr mk-th"><span>Ware</span><span class="mk-num">Held</span><span class="mk-sell-h">Sell here</span><span></span><span></span><span class="mk-buy-h">Buy here</span><span></span></div>`;
+  const head = `<div class="mk-tr mk-th"><span>Ware</span><span class="mk-num">Held</span><span class="mk-sell-h">Sell here</span><span class="mk-buy-h">Buy here</span></div>`;
   const mine = transfersOf(s).filter((x) => x.f === f);
   const flying = mine.length ? `<h3 class="mk-sec">In transfer</h3><div class="mk-table mk-xfers">${mine.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<div class="mk-tr">
       <span class="mk-name">${glyph(x.side === 'good' ? GLYPH_OF_GOOD[x.good] || 'crate' : GLYPH_OF_GOOD[x.w])}<b>${x.side === 'good' ? esc(x.name) : esc(WARES[x.w].name.replace(/ code$/, ''))}</b><span class="mk-dir" title="${x.side === 'sell' ? 'Outgoing' : 'Incoming'}">${x.side === 'sell' ? '→' : '←'}</span>${x.side === 'good' ? '' : `<span class="mk-sub">×${x.n}</span>`}</span>

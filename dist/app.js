@@ -1017,6 +1017,7 @@ function render(force = false) {
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
   wasCooling = cooling;
   applySideMarks();
+  showArmed();
   renderPrompt();
   placeTip();
   dirty = false;
@@ -1298,6 +1299,13 @@ function flyStatuses(s) {
   });
 }
 
+// A two-click confirm in progress: its button shows the question (re-applied after each redraw).
+let confirmArm = null;
+function showArmed() {
+  if (!confirmArm || confirmArm.until < Date.now()) return;
+  for (const b of document.querySelectorAll('[data-command][data-confirm]')) if (b.dataset.command === confirmArm.cmd) { b.textContent = confirmArm.ask; b.classList.add('armed'); }
+}
+
 // Who did it, to what: the actor's row lights in its side's colour and the target takes the mark.
 // Your half of the cycle resolves the instant you press Enter: keep it lit long enough to see.
 const hold = (key, ms) => { const e = campaign.encounter; if (e) Object.defineProperty(e, key, { value: Date.now() + ms, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, ms + 50); };
@@ -1420,7 +1428,14 @@ document.addEventListener('click', (e) => {
   const cmd = e.target.closest('[data-command]');
   if (cmd && !cmd.disabled) {
     // Irreversible buttons (scrapping good gear) ask with a second click.
-    if (cmd.dataset.confirm && !(cmd.armed > Date.now())) { cmd.armed = Date.now() + 3000; cmd.dataset.label ||= cmd.textContent; cmd.textContent = cmd.dataset.confirm; setTimeout(() => { if (cmd.isConnected) cmd.textContent = cmd.dataset.label; }, 3000); return; }
+    // Armed by command, not by element: a redraw (the map card ticks every second) keeps it armed.
+    if (cmd.dataset.confirm && !(confirmArm?.cmd === cmd.dataset.command && confirmArm.until > Date.now())) {
+      confirmArm = { cmd: cmd.dataset.command, until: Date.now() + 4000, label: cmd.innerHTML, ask: cmd.dataset.confirm };
+      showArmed();
+      setTimeout(() => { confirmArm = null; dirty = true; }, 4050);
+      return;
+    }
+    confirmArm = null;
     if (cmd.classList.contains('ability')) { $('command-input').value = cmd.dataset.command; $('command-input').focus(); return; }
     return run(cmd.dataset.command);
   }

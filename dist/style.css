@@ -2337,3 +2337,22 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 /* A listing with several files to pull: one button takes them all. */
 .ls-all { margin: 2px 0 4px; }
 .ls-all .tok.act { font-weight: 600; }
+/* The market, calmer: one accent. The percent is plain text (amber ▲ when it pays above average,
+   grey otherwise), the headers are grey, every button is the same quiet button. */
+.mk-wares .mk-d { border: 0; padding: 0; min-width: 0; font: 600 11px var(--mono); background: none; }
+.mk-wares .mk-d.up { color: var(--amber); }
+.mk-wares .mk-d.down, .mk-wares .mk-d.flat { color: var(--dim); }
+.mk-th .mk-sell-h, .mk-th .mk-buy-h { color: var(--muted); }
+.mk-wares .btn.small, .mk-goods .btn.small { border-color: var(--line-strong, var(--line)); color: var(--text); background: transparent; box-shadow: none; }
+.mk-wares .btn.small:hover:not([disabled]), .mk-goods .btn.small:hover:not([disabled]) { border-color: var(--amber); color: var(--bright); }
+.mk-wares .mk-name .glyph, .mk-goods .mk-name .glyph { color: var(--muted); }
+.mk-buyp { color: var(--bright); font-weight: 700; }
+.mk-goods .mk-tr { grid-template-columns: minmax(0, 1fr) 52px 64px 74px; }
+.mk-goods .mk-gprice { border-left: 0; padding-left: 0; }
+/* Header labels sit exactly over their columns. */
+.mk-wares .mk-th > span { align-self: end; }
+.mk-th .mk-buy-h { padding-top: 0; }
+/* A button waiting on its second click: the question, highlighted, on one line it can fit. */
+.btn.armed { border-color: var(--hot); color: var(--hot); white-space: normal; text-align: left; max-width: 100%; }
+.mk-wares .mk-th > span { align-self: center; }
+.mk-th .mk-buy-h { border-left: 0; padding-left: 12px; }
