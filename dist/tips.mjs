@@ -129,7 +129,7 @@ export const TIPS = [
   { id: 'protocols-zeroday', page: 'loadout', at: '.gitem.r-zeroday', text: 'This is a Zero-day. It has a special effect on top of its stats, and you can run one of each kind.' },
 
   // ---------- craft ----------
-  { id: 'craft-plans', page: 'craft', at: '.plan-lock', text: 'A dimmed row needs its plan first. Your first vault holds the Siphon plan; Halcyon sells the rest, and some vaults hold one.' },
+  { id: 'craft-plans', page: 'craft', at: '.craft-cats .craft-cat', text: 'Only what you know shows here. New recipes come as blueprints: viruses drop them, vaults hold them, and Halcyon sells plans.' },
   { id: 'craft-modules', page: 'craft', at: '.craft-cat[data-craft-cat="modules"]', when: (s) => (s.plans || []).some((id) => ['pipeline', 'storage', 'node', 'ids', 'lure'].includes(id)), text: 'Modules you craft go into your stock (×n on the row). Install them from an outpost\'s card on the map.' },
 
   // ---------- loadout ----------

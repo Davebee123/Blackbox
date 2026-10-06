@@ -639,7 +639,8 @@ export function craftCats(s) {
   if (zds.length) cats.push({ id: 'zeroday', name: 'Zero-days', icon: 'source', items: zds.map((z) => ({ id: z, name: ZERO_DAYS[z].name, sub: 'source', icon: 'source', ready: p.can(p.zc), out: { title: ZERO_DAYS[z].name, rarity: 'zeroday', lines: [ZERO_DAYS[z].effect] }, cost: { credits: p.zc.credits, salvage: p.zcost }, cmd: `compile ${z}`, pay: `zeroday:${p.zc.salvage}` })) });
   // Filters: always craftable; a stat to build around, or any.
   const knownF = filterRecipes(s);
-  cats.push({ id: 'filters', name: 'Filters', icon: 'firewall', items: [null, ...CRAFTABLE].map((k) => ({
+  // Only the recipes you've found: nothing shows until a blueprint teaches it.
+  if (knownF.length) cats.push({ id: 'filters', name: 'Filters', icon: 'firewall', items: [...(knownF.length > 1 ? [null] : []), ...CRAFTABLE.filter((k) => knownF.includes(k))].map((k) => ({
     id: k || 'any', name: k ? FILTER_STATS[k].label.replace(/^of /, '') : 'Any of your recipes', sub: k ? `+${FILTER_STATS[k].range.join('–')}${FILTER_STATS[k].name}` : `${knownF.length} recipes`, icon: 'firewall',
     locked: k ? !knownF.includes(k) : !knownF.length, lock: 'Its blueprint drops from viruses', lockTag: 'blueprint', ready: fOk && (k ? knownF.includes(k) : knownF.length > 0),
     out: { title: k ? `${FILTER_STATS[k].kind === 'prefix' ? FILTER_STATS[k].label + ' ' : ''}${filterBase(L)}${FILTER_STATS[k].kind === 'suffix' ? ' ' + FILTER_STATS[k].label : ''}` : `A ${filterBase(L)}`, rarity: 'tuned', lines: [`Tuned (blue), item level ${L}`, `+${Math.max(1, Math.round((1 + L / 10) * 1.1))} firewall levels`, k ? `${FILTER_STATS[k].range.join('–')}${FILTER_STATS[k].name}` : 'built around one of your recipes, at random', `${filtersOf(s).length}/${FILTER_CAP} held · ${filterSlots(s)} ${filterSlots(s) === 1 ? 'slot' : 'slots'}`] },
@@ -648,10 +649,11 @@ export function craftCats(s) {
     id, name: c.name, sub: SERVICES[c.service].name, icon: c.service, ready: !got && !busy && srv.credits >= CONFIG_COST.credits && (materialsOf(s)[code] || 0) >= CONFIG_COST.code && canAfford(s, SALVAGE_COSTS.config()), done: got,
     out: { title: `${c.name} config`, lines: [`For your ${SERVICES[c.service].name}`, c.rule, 'Crafted once, kept'] }, cost: got ? null : { credits: CONFIG_COST.credits, code: { [code]: CONFIG_COST.code }, salvage: SALVAGE_COSTS.config() }, cmd: `craft config ${id}`, pay: 'config' }; }) });
   if (anyOwned) {
-    cats.push({ id: 'harvesters', name: 'Harvesters', icon: 'harvester', items: Object.keys(OUTPOST.kinds).map((k) => { const c = harvCost(k, s), known = knowsPlan(s, k); return {
+    const hk = Object.keys(OUTPOST.kinds).filter((k) => knowsPlan(s, k)), mk = Object.keys(OUTPOST.mods).filter((k) => knowsPlan(s, k));
+    if (hk.length) cats.push({ id: 'harvesters', name: 'Harvesters', icon: 'harvester', items: hk.map((k) => { const c = harvCost(k, s), known = knowsPlan(s, k); return {
       id: k, name: OUTPOST.kinds[k].name, sub: known ? `rack ${harvesters(s).length}/${OUTPOST.stashCap}` : 'needs its plan', icon: k, ready: known && !busy && canCompile(s, k), locked: !known,
       out: { title: OUTPOST.kinds[k].name, lines: [OUTPOST.kinds[k].about, 'Stock, at your server level'] }, cost: known ? { credits: c.credits, code: { [c.material]: c.code }, salvage: SALVAGE_COSTS[`harvester-${k}`]() } : null, cmd: `outpost compile ${k}`, pay: `harvester-${k}`, lock: `${planName(k)}: viruses drop it as a blueprint; Halcyon sells it; vaults hold them` }; }) });
-    cats.push({ id: 'modules', name: 'Modules', icon: 'module', items: Object.keys(OUTPOST.mods).map((id) => { const known = knowsPlan(s, id), c = modCost(s, id), n = modStock(s)[id] || 0; return {
+    if (mk.length) cats.push({ id: 'modules', name: 'Modules', icon: 'module', items: mk.map((id) => { const known = knowsPlan(s, id), c = modCost(s, id), n = modStock(s)[id] || 0; return {
       id, name: OUTPOST.mods[id].name, sub: known ? (n ? `×${n} in stock` : 'none in stock') : 'needs its plan', icon: id, ready: known && !busy && canBuildMod(s, id), locked: !known,
       out: { title: OUTPOST.mods[id].name, lines: [OUTPOST.mods[id].rule, 'Goes in an outpost’s port; move it between outposts as you like'] }, cost: known ? { ...c, salvage: SALVAGE_COSTS.module() } : null, cmd: `outpost build ${id}`, pay: 'module', lock: `${planName(id)}: viruses drop it as a blueprint; Halcyon sells it; vaults hold them` }; }) });
   }
