@@ -1604,7 +1604,8 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-mem-no]')) { V.setMemAsk(null); dirty = true; return; }
   const node = e.target.closest('[data-select]');
   if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
-  if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop) { mapPop = false; dirty = true; } }
+  // Clicking away (empty map, or the card's ×) closes the card and clears the selection too.
+  if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop || mapSel) { mapPop = false; mapSel = null; V.setMemAsk(null); dirty = true; } }
   const mail = e.target.closest('[data-mail]');
   if (mail) {
     mailSel = mail.dataset.mail;
@@ -1814,7 +1815,7 @@ document.addEventListener('change', (e) => {
 document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');
   if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; mapPop = true; dirty = true; }
-  if (e.key === 'Escape' && mapPop && module === 'map') { mapPop = false; dirty = true; }
+  if (e.key === 'Escape' && (mapPop || mapSel) && module === 'map') { mapPop = false; mapSel = null; dirty = true; }
 });
 
 // Typing anywhere goes to the prompt.
