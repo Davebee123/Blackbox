@@ -52,6 +52,7 @@ Red is used only for "lands this cycle" and critical server health.
 |---|---|
 | `dist/data.mjs` | Every tunable number, abilities, families, mutations, fixtures, virus generation |
 | `dist/firewall.mjs` | The firewall: its level (`firewall upgrade`), fragmentation and `defrag`, `harden.sh` (`firewall harden`), and its effective level, which is what the wall blocks. Tested in `firewall.test.mjs`. |
+| `dist/filters.mjs` | Filters: firewall gear (`rollFilter`, `vaultFilter` for `filter.flt` in vaults), the slots from the Firewall service, `filterStat`, `filter equip\|unequip\|scrap <n>`. Tested in `firewall.test.mjs`. |
 | `dist/invasion.mjs` | Invasions: invasions from found locations, the wall (blocked / contested / breach), `jack in`, the network clock (`tickNetwork`, logged-on time; in a consortium, time away is played out too) and the end of Degraded mode |
 | `dist/gear.mjs` | Items: slots (Exploit, Proxy, Shell, Script, Implant), the 20 base items, affixes, rarities, `rollItem` and `uniqueItem`, drop odds (`LOOT`, time targets → odds per kill), deconstruct yields; services (ports, versions, costs), code materials. Pure data and functions. Unique effects run in combat.mjs (`fxFire`). |
 | `dist/combat.mjs` | Pure deterministic engine: `command()`, `resolveCycle()`, `advance()`, `intents()`, leads, disconnects. Fights damage `defender(s)`: the server at home, your Signal on a run. No DOM. Written so it can move onto a shared server for co-op unchanged. |

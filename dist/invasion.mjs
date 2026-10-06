@@ -14,6 +14,7 @@ import { tickStation } from './station.mjs';
 import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { has as hasConfig } from './configs.mjs';
 import { effLevel, fragment, tickFirewall } from './firewall.mjs';
+import { filterStat } from './filters.mjs';
 import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
@@ -29,9 +30,9 @@ export const INVADER = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: '
 export const strength = (level, mutation = null, grade = 1) => 100 * power(level) * (mutation ? I().mutated : 1) * (GRADES[grade]?.hp || 1); // a v2/v3 invader is that much harder to stop
 // Your wall's rating: your firewall's effective level (firewall.mjs), set so it blocks invaders at
 // or under that level outright. Down while the server is Degraded.
-export function wallRating(s) {
+export function wallRating(s, family = null) {
   if (s.degraded) return 0;
-  const L = effLevel(s);
+  const L = effLevel(s, undefined, family);
   return L < 1 ? 100 * I().wall : 100 * power(L) * I().block;
 }
 // Firewall configs bend the rating: Stateful +20%; Adaptive +40% against the family that has hit
@@ -42,7 +43,7 @@ export function configRating(s, family) {
   if (hasConfig(s, 'adaptive')) return family && family === topFamily(s) ? 1.4 : 0.9;
   return 1;
 }
-export const ratioOf = (s, inv) => (wallRating(s) * configRating(s, inv.family) * archWall(s) * consortiumWall(s)) / strength(inv.level, inv.mutation, inv.grade);
+export const ratioOf = (s, inv) => (wallRating(s, inv.family) * configRating(s, inv.family) * archWall(s) * consortiumWall(s)) / strength(inv.level, inv.mutation, inv.grade);
 export const outcome = (ratio) => (ratio >= I().block ? 'blocked' : ratio > I().breach ? 'siege' : 'breach');
 // 0 at the breach line, 1 at the block line.
 const along = (ratio) => Math.min(1, Math.max(0, (ratio - I().breach) / (I().block - I().breach)));
@@ -64,7 +65,7 @@ export function wallBands(s, rating = wallRating(s)) {
   return { blocks, holds };
 }
 // Travel time from a location: longer from deeper layers, longer still behind a Tarpit.
-export const travelMs = (s, depth = 1) => Math.round((I().travelMs + I().perLayerMs * (Math.max(1, depth) - 1)) * (1 + (serviceValue(s, 'tarpit') * (hasConfig(s, 'sticky') ? 1.5 : 1)) / 100));
+export const travelMs = (s, depth = 1) => Math.round((I().travelMs + I().perLayerMs * (Math.max(1, depth) - 1)) * (1 + (serviceValue(s, 'tarpit') * (hasConfig(s, 'sticky') ? 1.5 : 1) + filterStat(s, 'tarpit')) / 100));
 export const fighting = (s, inv = s.invasion) => !!inv && active(s) && s.encounter.invader === inv.id;
 export const degradedLeft = (s, now = Date.now()) => (s.degraded ? (s.degraded.until ? Math.max(0, s.degraded.until - now) : CONFIG.degradedMs) : 0);
 // "2 min", "40s"
@@ -145,7 +146,7 @@ function stepInvasion(s, dt, at = null) {
     emit(s, o === 'siege' ? 'wall-siege' : 'wall-breach', o === 'siege' ? `Your wall now contests ${inv.name}.` : `${inv.name} broke through to a breach.`, { invader: inv.id });
   }
   if (o === 'siege') {
-    inv.hp -= (grindRate(r) / 100) * (dt / 60000);
+    inv.hp -= (grindRate(r) / 100) * (1 + filterStat(s, 'grind') / 100) * (dt / 60000);
     if (inv.hp <= 0) return stopped(s, inv, true);
   }
   // Away, a member may come and deal with it.
@@ -153,7 +154,7 @@ function stepInvasion(s, dt, at = null) {
     if (inv.helper === undefined) { inv.helper = memberHelp(s); inv.helpLeft = AWAY.helpMs; }
     if (inv.helper && (inv.helpLeft -= dt) <= 0) return endInvasion(s, `${inv.helper} stopped ${inv.name} at your wall while you were away.`);
   }
-  inv.chipAcc = (inv.chipAcc || 0) + ((s.server.max * chipRate(r)) / 100) * (dt / 60000);
+  inv.chipAcc = (inv.chipAcc || 0) + ((s.server.max * chipRate(r)) / 100) * (1 - Math.min(0.8, filterStat(s, 'chip') / 100)) * (dt / 60000);
   const n = Math.floor(inv.chipAcc + 1e-9);
   if (n > 0) {
     inv.chipAcc -= n;
@@ -199,6 +200,7 @@ function arrive(s) {
   inv.left = 0;
   // Tarpit configs: Toll wears it down on the way; Beacon reads an unknown origin's route.
   if (hasConfig(s, 'toll')) inv.hp = Math.min(inv.hp, 0.8);
+  if (filterStat(s, 'sting')) inv.hp = Math.min(inv.hp, 1 - filterStat(s, 'sting') / 100); // a filter's sting: it arrives worn
   if (hasConfig(s, 'beacon') && inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), 15, 'Beacon: ');
   const r = ratioOf(s, inv);
   const o = outcome(r);

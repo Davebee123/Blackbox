@@ -7,6 +7,7 @@
 import { emit, warn, hooks, serverLevel } from './combat.mjs';
 import { CONFIG, power } from './data.mjs';
 import { items } from './hidden.mjs';
+import { filterStat } from './filters.mjs';
 
 export const FIREWALL = {
   blocks: 16, // the grid
@@ -33,16 +34,19 @@ export const fwOf = (s) => (s.firewall ||= { level: startLevel(s), frag: 0, defr
 export const fragLevels = (s) => Math.floor(fwOf(s).frag / FIREWALL.perLevel);
 export const defragging = (s, at = clock()) => fwOf(s).defragUntil > at;
 export const hardenLeft = (s, at = clock()) => Math.max(0, fwOf(s).hardenUntil - at);
-// What it blocks outright right now.
-export function effLevel(s, at = clock()) {
+// What it blocks outright right now (against a family, its filters' bonus for that family too).
+export function effLevel(s, at = clock(), family = null) {
   const f = fwOf(s);
-  return Math.max(0, f.level - fragLevels(s) - (defragging(s, at) ? FIREWALL.defragLoss : 0) + (hardenLeft(s, at) ? FIREWALL.harden.plus : 0));
+  return Math.max(0, f.level + filterStat(s, 'strength') + (family ? filterStat(s, family) : 0) - fragLevels(s) - (defragging(s, at) ? FIREWALL.defragLoss : 0) + (hardenLeft(s, at) ? FIREWALL.harden.plus : 0));
 }
+// Filters: slower fragmentation, a faster defrag (each capped at 80%).
+const less = (s, k) => 1 - Math.min(0.8, filterStat(s, k) / 100);
+export const defragMs = (s) => Math.round(FIREWALL.defragMs * less(s, 'defrag'));
 
 // A threat met it: fragment.
 export function fragment(s, outcome) {
   const f = fwOf(s);
-  f.frag = Math.min(FIREWALL.blocks, f.frag + (FIREWALL.frag[outcome] || 0));
+  f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + (FIREWALL.frag[outcome] || 0) * less(s, 'frag')) * 100) / 100);
 }
 // The clock: a defrag that's done leaves it whole.
 export function tickFirewall(s, at = clock()) {
@@ -66,8 +70,8 @@ export function firewallCommand(s, text, at = clock()) {
   if (text === 'defrag' || text === 'firewall defrag') {
     if (defragging(s, at)) return warn(s, 'Already defragmenting.');
     if (!f.frag) return warn(s, 'Nothing to defragment.');
-    f.defragUntil = at + FIREWALL.defragMs;
-    return emit(s, 'firewall', `Defragmenting: ${FIREWALL.defragMs / 60000} minutes, ${FIREWALL.defragLoss} levels down meanwhile.`);
+    f.defragUntil = at + defragMs(s);
+    return emit(s, 'firewall', `Defragmenting: ${Math.round(defragMs(s) / 6000) / 10} minutes, ${FIREWALL.defragLoss} levels down meanwhile.`);
   }
   if (text === 'firewall harden') {
     if (!items(s).harden) return warn(s, 'You have no hardening script. Hub shops sell harden.sh.');

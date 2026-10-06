@@ -1,6 +1,7 @@
 // Runs: exploring a traced location as a small file system with Unix commands.
 // Pure like the combat engine: state in, events out.
 import { vaultConfig, bankConfig, CONFIGS } from './configs.mjs';
+import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
@@ -99,7 +100,7 @@ export function layoutOf(loc) {
   // harvester or a config: fixed by its seed (LOOT.vault*). Your first server's has a protocol and a blueprint.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
-  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasDaemon(loc) ? ['daemon.exe'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(hasVx(loc) ? [vxName(loc)] : []), ...(vaultPlan(loc) ? ['plan.pln'] : []), ...(vaultConfig(loc) ? [vaultConfig(loc) + '.cfg'] : [])] } };
+  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasDaemon(loc) ? ['daemon.exe'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(hasVx(loc) ? [vxName(loc)] : []), ...(vaultPlan(loc) ? ['plan.pln'] : []), ...(vaultConfig(loc) ? [vaultConfig(loc) + '.cfg'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
@@ -252,6 +253,7 @@ export function fileInfo(loc, path, name) {
     const h = vaultHarvester(loc);
     return { kind: 'harvester', size: '220k', harvester: h, text: [`package: a native ${fam.toLowerCase()} process, sealed for transport.`, `${harvesterName(h)}. Installed on a server you own, it harvests while you're away.`, 'pull it and bank it.'] };
   }
+  if (name === 'filter.flt' && vaultFilter(loc) && layoutOf(loc)[path]?.locked) { const f = vaultFilter(loc); return { kind: 'filter', size: '24k', filter: f, text: [`firewall filter: ${f.name} (${RARITIES[f.rarity].name.toLowerCase()}, lv ${f.level}).`, `${filterLine(f)}.`, 'bank it, then put it in your firewall at home (Server page).'] }; }
   if (name === 'plan.pln' && vaultPlan(loc) && layoutOf(loc)[path]?.locked) return { kind: 'plan', size: '48k', plan: vaultPlan(loc), text: [`plan: ${planName(vaultPlan(loc))}.`, 'bank it to learn it, then craft it at home (Craft page).'] };
   if (name === 'daemon.exe' && layoutOf(loc)[path]?.locked) return { kind: 'daemon', size: '96k', text: ['binary: a daemon, a small program that fights beside you.', 'bank it to keep it.'] };
   if (name === 'blueprint.bp' && layoutOf(loc)[path]?.locked) return { kind: 'blueprint', size: '64k', text: ['blueprint: plans for a service or a protocol recipe.', 'bank it to learn it.'] };
@@ -550,6 +552,7 @@ export function packGain(f, credits = null) {
     case 'harvester': return row(harvesterName(f.harvester), '', 'item', { rarity: 'custom' });
     case 'config': return row(`${CONFIGS[f.config]?.name || f.config} config`, '', 'blueprint', { rarity: 'custom' });
     case 'plan': return row(planName(f.plan), '', 'blueprint', { rarity: 'tuned' });
+    case 'filter': return row(f.filter.name, '', 'item', { rarity: f.filter.rarity, sub: filterLine(f.filter) });
     default: return row(f.label || f.name, '', 'found');
   }
 }
@@ -618,7 +621,7 @@ export function jackOut(s) {
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
-  emit(s, 'jacked-out', `JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'config').map((f) => CONFIGS[f.config].name + ' config source'), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
+  emit(s, 'jacked-out', `JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'config').map((f) => CONFIGS[f.config].name + ' config source'), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
   for (const f of sources) {
@@ -629,6 +632,7 @@ export function jackOut(s) {
   for (const f of pack.filter((x) => x.kind === 'harvester')) bankHarvester(s, f.harvester);
   for (const f of pack.filter((x) => x.kind === 'config')) bankConfig(s, f.config);
   for (const f of pack.filter((x) => x.kind === 'plan')) learnPlan(s, f.plan, 'Plan banked: ');
+  for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
   for (const f of daemons) learnDaemon(s, 'Daemon banked: ');
   for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: loc.id });

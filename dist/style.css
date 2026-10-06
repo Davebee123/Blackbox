@@ -2478,3 +2478,13 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 @keyframes fw-sweep { 50% { opacity: 0.25; } }
 .fw-acts { gap: 6px; flex-wrap: wrap; }
 .tag.warn { color: var(--amber); border-color: var(--amber); }
+.flt-panel { margin-top: 14px; }
+.flt-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.flt-list .flt { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 2px 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--inset); }
+.flt-list .flt b { font-size: 13px; }
+.flt-list .flt small { grid-column: 1; grid-row: 2; color: var(--muted); font: 11px var(--mono); }
+.flt-list .flt .btn { grid-row: 1 / 3; }
+.flt-list .flt.on { border-color: var(--you); border-left: 3px solid var(--you); }
+.flt-list .flt.empty { grid-template-columns: 1fr; border-style: dashed; }
+.flt-list .flt.empty small { grid-row: 1; }
+.flt-panel .craft-sub small { color: var(--muted); font-weight: 400; margin-left: 6px; }

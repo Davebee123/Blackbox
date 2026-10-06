@@ -61,3 +61,50 @@ test('harden.sh: +3 levels for 8 hours, one script each', () => {
   assert.equal(effLevel(s, 8 * 60 * MIN + 1), 4, 'and then it wears off');
   hooks.now = null;
 });
+
+test('filters: rolled gear for the firewall, in slots from the Firewall service', async () => {
+  const { rollFilter, addFilter, filtersOf, equipped, vaultFilter } = await import('./dist/filters.mjs');
+  const { seeded } = await import('./dist/gear.mjs');
+  const s = fresh();
+  fwOf(s).level = 5;
+  const f = rollFilter(seeded(3), { level: 20, rarity: 'tuned' });
+  assert.equal(f.kind, 'filter');
+  assert.ok(f.stats.strength >= 1);
+  assert.ok(Object.keys(f.stats).length >= 2, 'a blue has an affix');
+  addFilter(s, f);
+  command(s, 'filter equip 1');
+  assert.equal(equipped(s).length, 0, 'no Firewall service, no slots');
+  s.services = { firewall: 1 };
+  command(s, 'filter equip 1');
+  assert.equal(equipped(s).length, 1);
+  assert.equal(effLevel(s), 5 + f.stats.strength, 'its strength adds levels');
+  addFilter(s, rollFilter(seeded(4), { level: 20 }));
+  command(s, 'filter equip 2');
+  assert.equal(equipped(s).length, 1, 'one slot at v1');
+  command(s, 'filter scrap 1');
+  assert.equal(filtersOf(s).length, 1);
+  assert.equal(equipped(s).length, 0, 'scrapping takes it out');
+  // A family filter counts only against that family; fragmentation filters slow the wear.
+  s.filters = { held: [{ kind: 'filter', rarity: 'tuned', level: 10, name: 'Compacted Packet Filter of Wormguard', stats: { strength: 1, worm: 3, frag: 50 } }], on: [0] };
+  assert.equal(effLevel(s, undefined, 'worm'), 9);
+  assert.equal(effLevel(s, undefined, 'ghostroot'), 6);
+  fragment(s, 'breach');
+  assert.equal(fwOf(s).frag, 1.5, 'half the wear');
+  // Some vaults hold one, fixed by the server's seed.
+  const loc = { seed: 0, level: 12 };
+  for (; loc.seed < 200 && !vaultFilter(loc); loc.seed++);
+  assert.ok(vaultFilter(loc), 'about one vault in seven');
+  assert.deepEqual(vaultFilter(loc), vaultFilter({ ...loc }), 'the same every time');
+});
+
+test('a filter pulled from a vault is banked when you jack out', async () => {
+  const { filtersOf } = await import('./dist/filters.mjs');
+  const { play } = await import('./dist/run.mjs');
+  const s = fresh();
+  command(s, 'developer location worm');
+  play(s, 'connect ' + s.locations[0].id);
+  s.run.pack.push({ kind: 'filter', name: 'filter.flt', filter: { kind: 'filter', rarity: 'stock', level: 3, name: 'Packet Filter', stats: { strength: 1 } } });
+  play(s, 'jack out');
+  assert.equal(filtersOf(s).length, 1);
+  assert.equal(filtersOf(s)[0].name, 'Packet Filter');
+});

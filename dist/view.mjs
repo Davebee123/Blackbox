@@ -31,7 +31,8 @@ import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
-import { FIREWALL, fwOf, effLevel, fragLevels, defragging, hardenLeft, upgradeCost } from './firewall.mjs';
+import { FIREWALL, fwOf, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs } from './firewall.mjs';
+import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, costLine, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, BACKTRACE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
@@ -731,7 +732,7 @@ export function wallRuler(s, compact = false, bands = wallBands(s)) {
   return `<div class="wall-ruler${compact ? ' compact' : ''}" title="${esc(bandsText(s))}">
     <div class="wr-track">${seg('blocked', 0, blocks, 'firewall', blocks ? `Stopped at the wall: up to level ${blocks}` : '')}${seg('siege', blocks, holds, 'tarpit', `Contested: level ${blocks + 1}–${holds}`)}${seg('breach', holds, hi, 'kill', `Breaks through: level ${holds + 1} and up`)}</div>
     <div class="wr-marks">${you ? mark(you, 'you', `servers ${you}`) : ''}${inv ? mark(inv.level, 'inv ' + inv.state, `${inv.name} ${inv.level}`) : ''}</div>
-    ${compact ? '' : `<div class="wr-scale">${[...new Set([1, blocks, holds, hi])].filter((lv) => lv >= 1 && lv !== you && lv !== inv?.level).map((lv) => `<span style="left:${pct(lv - 0.5)}">${lv}</span>`).join('')}</div>`}
+    ${compact ? '' : `<div class="wr-scale">${[...new Set([1, blocks, holds, hi])].filter((lv) => lv >= 1 && Math.abs(lv - you) > 1 && (!inv || Math.abs(lv - inv.level) > 1)).map((lv) => `<span style="left:${pct(lv - 0.5)}">${lv}</span>`).join('')}</div>`}
   </div>`;
 }
 // The highest level any server attached to your network sends: what your firewall is up against.
@@ -748,17 +749,28 @@ export function vulnLine(s, b = wallBands(s)) {
 // the same blocks go first), sweeping while it defragments, shielded while hardened.
 const SCATTER = [5, 12, 2, 9, 14, 0, 7, 11, 3, 15, 6, 1, 10, 4, 13, 8];
 export function fwGrid(s, now = Date.now()) {
-  const f = fwOf(s), bad = new Set(SCATTER.slice(0, f.frag));
-  const tip = `${f.frag}/${FIREWALL.blocks} fragmented · −${fragLevels(s)} ${fragLevels(s) === 1 ? 'level' : 'levels'}${defragging(s, now) ? ' · defragmenting' : ''}${hardenLeft(s, now) ? ` · hardened ${fmtTime(hardenLeft(s, now))}` : ''}`;
+  const f = fwOf(s), bad = new Set(SCATTER.slice(0, Math.floor(f.frag)));
+  const tip = `${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented · −${fragLevels(s)} ${fragLevels(s) === 1 ? 'level' : 'levels'}${defragging(s, now) ? ' · defragmenting' : ''}${hardenLeft(s, now) ? ` · hardened ${fmtTime(hardenLeft(s, now))}` : ''}`;
   return `<div class="fw-grid${defragging(s, now) ? ' defrag' : ''}${hardenLeft(s, now) ? ' hard' : ''}" title="${esc(tip)}">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>`;
 }
+const filterStatSum = (s) => filtersOn(s).reduce((a, x) => a + (x.stats.strength || 0), 0);
 function firewallPanel(s, now) {
   const f = fwOf(s), c = upgradeCost(f.level), eff = effLevel(s, now), busy = active(s);
   const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher;
   const mods = [fragLevels(s) ? `<span class="tag warn" title="Fragmented">−${fragLevels(s) + (defragging(s, now) ? FIREWALL.defragLoss : 0)}</span>` : defragging(s, now) ? `<span class="tag warn" title="Defragmenting">−${FIREWALL.defragLoss}</span>` : '', hardenLeft(s, now) ? `<span class="tag you" title="harden.sh · ${fmtTime(hardenLeft(s, now))} left">+${FIREWALL.harden.plus} · ${fmtTime(hardenLeft(s, now))}</span>` : ''].join('');
   const left = defragging(s, now) ? fmtLeft(f.defragUntil - now) : '';
-  return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level">lv ${eff}</b>${eff !== f.level ? `<small class="fw-base">of ${f.level}</small>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
-    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}">${glyph('firewall')}lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag" ${f.frag && !defragging(s, now) && !busy ? '' : 'disabled'} title="${FIREWALL.defragMs / 60000} min, −${FIREWALL.defragLoss} levels meanwhile">${defragging(s, now) ? `Defrag · ${left}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button></div></div>`;
+  return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
+    <div class="row fw-acts"><button type="button" class="btn small ${can ? 'primary' : ''}" data-command="firewall upgrade" ${can && !busy ? '' : 'disabled'} title="Level ${f.level + 1}">${glyph('firewall')}lv ${f.level + 1} · ${c.credits}c · ${c.cipher} ${esc(MATERIALS.cipher.name.replace(/ code$/, ''))}</button><button type="button" class="btn small" data-command="firewall defrag" ${f.frag && !defragging(s, now) && !busy ? '' : 'disabled'} title="${Math.round(defragMs(s) / 6000) / 10} min, −${FIREWALL.defragLoss} levels meanwhile">${defragging(s, now) ? `Defrag · ${left}` : 'Defrag'}</button><button type="button" class="btn small" data-command="firewall harden" ${kitOf(s).harden && !busy ? '' : 'disabled'} title="+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours">harden.sh × ${kitOf(s).harden || 0}</button></div></div>`;
+}
+// The firewall's filters: its slots (from the Firewall service), then what you hold. Equip and
+// scrap at home; each one's stats on one line, its rarity in its colour.
+function filterPanel(s) {
+  const held = filtersOf(s), on = (s.filters?.on || []), n = filterSlots(s), busy = active(s) || !!s.run;
+  if (!n && !held.length) return '';
+  const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ''}"><b class="iname r-${f.rarity}" title="lv ${f.level}">${esc(f.name)}</b><small>${esc(filterLine(f))}</small>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? (n ? 'Every slot is full' : 'Install the Firewall service for slots') : 'Put it in'}">In</button><button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
+  const slots = Array.from({ length: n }, (_, k) => { const i = on[k]; return i != null && held[i] ? '' : '<li class="flt empty"><small>empty slot</small></li>'; }).join('');
+  const rows = held.map(tile);
+  return `<div class="flt-panel"><h3 class="craft-sub">Filters <small>${on.length}/${n}</small></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;
 }
 export function wallMarkup(s, now = Date.now()) {
   const inv = s.invasion, st = invaderStatus(s);
@@ -767,7 +779,7 @@ export function wallMarkup(s, now = Date.now()) {
   const body = inv
     ? `<div class="invader ${inv.state}"><div class="gitem-head"><b>${esc(inv.name)}</b>${levelTag(s, inv.level)}${inv.mutation ? `<span class="tag tag-mut" data-mut="${inv.mutation}" title="${esc(MUTATIONS[inv.mutation].rule)}">${esc(MUTATIONS[inv.mutation].name)}</span>` : ''}<span class="tag ${inv.state === 'breach' ? 'hot' : ''}">${esc(invaderShort(s))}</span></div><small>${esc(inv.fromName)}</small>${bar}${inv.state !== 'travel' ? `<div class="row">${jackInButton(st)}</div>` : ''}</div>`
     : '';
-  return `<section class="card wall-card"><h2>Firewall</h2>${degradedMarkup(s, now)}${firewallPanel(s, now)}${bands}${body}</section>`;
+  return `<section class="card wall-card"><h2>Firewall</h2>${degradedMarkup(s, now)}${firewallPanel(s, now)}${bands}${body}${filterPanel(s)}</section>`;
 }
 
 // A running service's configs: stock plus the ones you own; the running one is lit.

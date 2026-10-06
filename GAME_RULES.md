@@ -470,7 +470,7 @@ The plan the next changes build to; each part moves into the sections above as i
 - **Readout:** one line on each holding's card, *Vulnerable to lv N+* (teal *Not vulnerable* when nothing attached can get through), with a family note when a filter changes it.
 - **Fragmentation:** every threat it meets fragments it, shown as a block grid; fragmented blocks cost it levels. **Defrag** restores it, taking a few minutes at reduced strength.
 - **Hardening scripts** (`harden.sh`): one-use, +3 levels for 8 hours. Bought at hub shops. *(Home: done; see Invasions and the wall.)*
-- **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, and rarer Tarpit and Honeypot effects. Home has the most slots; outposts and silos one or two.
+- **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, and rarer Tarpit and Honeypot effects. Home has the most slots; outposts and silos one or two. *(Home: done; see Invasions and the wall.)*
 
 **Bait.** While you're online, a honeypot pulls a holding's next threat in now, so you fight it on your terms; after it, nothing comes for that holding for a while (the card shows the safe period). Before logging off: bait, clear, defrag, harden if it still reads vulnerable.
 
@@ -544,7 +544,7 @@ The idle layer. While you're logged on, the locations you've found send viruses 
   - **Defrag** (`defrag`): 3 minutes, running 2 levels weaker meanwhile, then every block is whole again.
   - **Hardening:** `harden.sh` (Kestrel's and NULL CHOIR's shops, and Halcyon's agency stock) adds 3 levels for 8 hours (`firewall harden`); another adds 8 more hours.
   - Its **effective level** (level − fragmentation − a running defrag + hardening) is what it blocks outright. The card reads **Vulnerable to lv N+** against the highest level your attached servers send (amber if that would be contested, red if it would break through), or **Not vulnerable**. The map's server card says the same in one line.
-  - The **Firewall service** gives it filter slots (1, 2, 3 by version), for filters (coming).
+  - **Filters** (`filters.mjs`): gear for the firewall, rolled like protocols (Scrap, Stock, Tuned, Custom; an item level). The **Firewall service** gives the slots (1, 2, 3 by version). Every filter adds levels (about 1 + item level / 10, more on better bases: Packet, Stateful from 10, Deep from 25, Neural from 40). Tuned ones carry 1–2 more stats, Custom ones 3: **+2–4 levels against one family** (Wormguard, Lockbreak, Exorcism; that family only), **15–40% less fragmentation**, **20–50% faster defrag**, **15–35% more grind** and **15–35% less chip** while contested, and on Custom ones only, **15–30% slower invasions** (of Tar) or invasions that **arrive 10–25% worn** (of the Hive). About one vault in seven holds a `filter.flt` (pull it, jack out to bank it). The Firewall card lists them: what's in, the empty slots, then the rest; **In**, **Out** and **×** (scrap for 1–3 salvage) at home only (`filter equip|unequip|scrap <n>`). You hold 12 at most.
 - **The wall's rating** against the invasion's strength (100 × its power), set so the firewall blocks invasions up to its effective level:
 
 | Rating vs invasion | Result |
