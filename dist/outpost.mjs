@@ -59,7 +59,7 @@ export const OUTPOST = {
   mods: {
     pipeline: { name: 'Pipeline', rule: '+50% yield.' },
     storage: { name: 'Storage Array', rule: 'Double storage.' },
-    node: { name: 'Firewall Node', rule: 'Invasions and swarms here take twice as long to take it.' },
+    node: { name: 'Firewall Node', rule: '+3 levels on this outpost\'s firewall.' },
     ids: { name: 'IDS', rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
     lure: { name: 'Honeytoken', rule: 'Draws trouble: noticed twice as often, swarms and infestations come sooner and pick it first, and beating them here pays double.' },
   },
