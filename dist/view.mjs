@@ -1835,9 +1835,7 @@ function mapSide(s, sel, node) {
   // A server you found but never connected: Connect asks first, showing the memory it takes.
   if (l.fresh && l.detached && s.locations.includes(l)) {
     const j = joinCost(s, l), asking = memAsk === l.id, after = j.used + j.add;
-    // Free memory: the pips you have, and the one(s) this server would take (blinking).
-    const free = Math.max(0, j.cap - j.used), left = j.cap - after;
-    const pips = `<span class="slots mem-join${j.fits ? '' : ' over'}" title="Free memory: ${free}/${j.cap} → ${Math.max(0, left)}/${j.cap}">${glyph('memory')}${Array.from({ length: j.cap }, (_, i) => `<i class="${i < Math.max(0, left) ? 'on' : i < free ? 'take' : ''}"></i>`).join('')}<small>${free}<span class="mj-to">→</span><b>${left}</b>/${j.cap} free</small></span>`;
+    const pips = memPips(j);
     const why = busy ? 'Finish what you are doing first' : relockLeft(l) ? 'Still tracing your last connection' : !j.fits ? 'Not enough memory: detach another server first' : '';
     return `<section class="card mem-card${asking ? ' asking' : ''}"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · found</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.faction ? ` · <span class="tag" style="--fc:${FX[l.faction].color}">${esc(FX[l.faction].short)}</span>` : ''}${l.rogue ? ' · <span class="tag hot">rogue</span>' : ''}</p>
@@ -1851,8 +1849,8 @@ function mapSide(s, sel, node) {
     const up = l.detached ? null : (() => { let p = l; while (p && !p.detached) p = s.locations.find((x) => x.id === p.parent); return p; })();
     return `<section class="card mem-card"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · detached</h2><h1>${esc(l.name)}</h1>
       <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.outpost?.h ? ` · ${glyph(l.outpost.h.kind)}outpost frozen at ${stockOf(l)}/${capOf(l)}` : ''}</p>
-      <div class="srv-slots">${slotPips('memory', Math.max(0, memoryCap(s) - liveCount(s)), memoryCap(s), 'Free memory')}</div>
-      <div class="row">${up ? `<button type="button" class="btn" data-select="${esc(up.id)}">${esc(up.name)} is detached</button>` : `<button type="button" class="btn primary" data-command="attach ${esc(l.id)}" ${busy || s.server.credits < memoryCost(l) || liveCount(s) >= memoryCap(s) ? 'disabled' : ''} title="${liveCount(s) >= memoryCap(s) ? 'Memory is full: detach another server first' : 'Back on your network, as it was'}">${glyph('credits')}Attach · ${memoryCost(l)}</button>`}</div></section>`;
+      <div class="srv-slots">${memPips(joinCost(s, l))}</div>
+      <div class="row">${up ? `<button type="button" class="btn" data-select="${esc(up.id)}">${esc(up.name)} is detached</button>` : `<button type="button" class="btn primary" data-command="attach ${esc(l.id)}" ${busy || s.server.credits < memoryCost(l) || !joinCost(s, l).fits ? 'disabled' : ''} title="${!joinCost(s, l).fits ? 'Not enough free memory: detach another server first' : 'Back on your network, as it was'}">${glyph('credits')}Attach · ${memoryCost(l)}</button>`}</div></section>`;
   }
   if (l.occupied) {
     const live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
@@ -1947,6 +1945,11 @@ function outpostCore(s, l) {
 
 const layoutName = (l) => ({ relay: 'Relay node', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab' })[l.template] || 'Node';
 
+// Free memory: the pips you have, and the one(s) a server would take (blinking): "4 → 3/4 free".
+function memPips(j) {
+  const free = Math.max(0, j.cap - j.used), left = j.cap - j.used - j.add;
+  return `<span class="slots mem-join${j.fits ? '' : ' over'}" title="Free memory: ${free}/${j.cap} → ${Math.max(0, left)}/${j.cap}">${glyph('memory')}${Array.from({ length: j.cap }, (_, i) => `<i class="${i < Math.max(0, left) ? 'on' : i < free ? 'take' : ''}"></i>`).join('')}<small>${free}<span class="mj-to">→</span><b>${left}</b>/${j.cap} free</small></span>`;
+}
 // Volume sliders: music, ambience (radio, rain, the street, the room tone), effects.
 export const volumesOf = (s) => ({ music: 0.8, ambience: 0.8, sfx: 0.8, ...(s.settings?.volume || {}) });
 function volumeCard(s) {
