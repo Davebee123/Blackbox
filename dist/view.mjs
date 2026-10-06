@@ -2002,6 +2002,7 @@ function mapSide(s, sel, node) {
     const job = openContracts(s).find((c) => c.hidden === h.id && !c.loc);
     return `<section class="card${flag ? ' alert' : ''}"><h2>Unknown server · layer ${h.depth}</h2><h1>?</h1>
       <p class="svc-line">past ${esc(via?.name || '?')} · signal <span class="sigbars">${'▮'.repeat(h.signal)}${'▯'.repeat(5 - h.signal)}</span></p>
+      <p class="svc-line">${h.pinged || h.lead > 0 ? `<span class="tag fam-tag" title="Its virus family: kills of this family trace it once a relay pings it">${glyph(FAM_GLYPH[h.family] || 'kill')}${esc(FAMILIES[h.family]?.name || h.family)}</span>` : `<span class="tag dim" title="A relay on ${esc(via?.name || 'the server next to it')} reads its family (so does an invader from it)">${glyph('kill')}family ?</span>`}</p>
       ${flag && job ? `<p class="svc-line"><span class="tag">Contract</span> ${esc(contractTitle(s, job))}</p>` : ''}
       <div class="lvl-row"><span class="lvl-bar"><span style="width:${h.lead}%"></span></span><small>${h.lead}% traced</small></div>
       ${traceWays(s, h, via, kit)}

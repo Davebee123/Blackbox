@@ -575,7 +575,14 @@ export function warn(s, text, detail = {}) {
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
 const normalize = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
-const squash = (text) => text.toLowerCase().replace(/[ _-]/g, '');
+const squash = (text) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
+// What you type to aim at a part: its name ("grinder", "lock-core"), or its id when two living parts share a name.
+export const partKey = (s, p) => {
+  if (!p) return '';
+  const slug = p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // The shortest that still finds this part: its first word, then its whole name, then its id.
+  return [slug.split('-')[0], slug].find((k) => k && findPart(s, k) === p) || p.id;
+};
 
 // ---------- encounter lifecycle ----------
 
@@ -1224,7 +1231,7 @@ export function closest(word, options) {
 function suggestFor(s, words) {
   const bar = Object.values(keyMap(s)).filter((id) => usable(s).includes(id));
   const parts = livingParts(s);
-  const target = (rest) => { if (!rest) return ''; const p = findPart(s, rest) || parts.find((x) => x.id === closest(rest, parts.map((y) => y.id)) || x.name === closest(rest, parts.map((y) => y.name))); return p ? ' ' + p.id : null; };
+  const target = (rest) => { if (!rest) return ''; const p = findPart(s, rest) || parts.find((x) => x.id === closest(rest, parts.map((y) => y.id)) || x.name === closest(rest, parts.map((y) => y.name))); return p ? ' ' + partKey(s, p) : null; };
   // "spikefrag2": a skill and a part with the space missing.
   for (const id of bar) if (words[0].startsWith(id) && words[0].length > id.length) { const t = target(words[0].slice(id.length) + words.slice(1).join('')); if (t) return id + t; }
   const id = closest(words[0], bar);
@@ -2717,14 +2724,14 @@ export function restore(raw) {
 export function suggestions(s, input = '') {
   const text = input.toLowerCase().trimStart();
   const space = text.indexOf(' ');
-  const living = livingParts(s).map((p) => p.id);
+  const living = livingParts(s);
   if (space > 0) {
     const ability = text.slice(0, space);
     const a = ABILITIES[ability];
     const prefix = text.slice(space + 1).trim();
     if (a && ['part', 'attack'].includes(a.target)) {
-      const ids = a.target === 'attack' ? attackers(s).map((p) => p.id) : living;
-      return ids.filter((id) => id.startsWith(prefix)).map((id) => `${ability} ${id}`);
+      const keys = (a.target === 'attack' ? attackers(s) : living).map((p) => partKey(s, p));
+      return keys.filter((k) => k.startsWith(prefix)).map((k) => `${ability} ${k}`);
     }
   }
   const base = active(s)

@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { createArt } from './virus-art.mjs';
@@ -692,8 +692,8 @@ function prepare(abilityId) {
   let text = abilityId;
   if (a.target === 'command') text += ' ';
   if (a.target === 'schedule') text += ' 2 ';
-  if (a.target === 'part') text += selected && alive(part(s, selected)) ? ` ${selected}` : ' ';
-  if (a.target === 'attack') text += selected && part(s, selected)?.attack && alive(part(s, selected)) ? ` ${selected}` : '';
+  if (a.target === 'part') text += selected && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : ' ';
+  if (a.target === 'attack') text += selected && part(s, selected)?.attack && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : '';
   input.value = text;
   input.focus();
   updateSuggestions();
@@ -1587,7 +1587,7 @@ document.addEventListener('click', (e) => {
     selected = selected === target.dataset.target ? null : target.dataset.target;
     const input = $('command-input');
     const [word] = input.value.trim().split(' ');
-    if (selected && ABILITIES[word] && ABILITIES[word].target !== 'none') input.value = `${word} ${selected}`;
+    if (selected && ABILITIES[word] && ABILITIES[word].target !== 'none') input.value = `${word} ${partKey(campaign, part(campaign, selected))}`;
     input.focus();
     dirty = true;
     return;

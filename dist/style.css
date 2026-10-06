@@ -2687,3 +2687,4 @@ details.map-pick { pointer-events: auto; }
 .trace-ways .tw b { font: 700 12px var(--mono); color: var(--r-tuned); }
 .trace-ways .tw.off { opacity: 0.45; } .trace-ways .tw.off .glyph { color: var(--muted); } .trace-ways .tw.off b { color: var(--muted); }
 .trace-ways .tw.done span { text-decoration: line-through; color: var(--muted); } .trace-ways .tw.done b::after { content: ' ✓'; }
+.fam-tag .glyph, .svc-line .tag.dim .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
