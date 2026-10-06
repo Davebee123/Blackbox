@@ -50,6 +50,10 @@ export const TIPS = [
   { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'This is Halcyon\'s board. Offers come and go on their own, and you can take up to three at a time. Only a contract you have taken counts.' },
   { id: 'store', page: '*', at: '.modules [data-module="store"]', when: (s, m) => m !== 'store', text: 'Halcyon\'s store is open. Its own line is always there, and other agencies\' stock changes through the day.' },
   { id: 'store-plans', page: 'store', at: '.plan-shelf', text: 'Plans for harvesters and outpost modules. Buy one once and you can craft that kind on the Craft page for good.' },
+  // ---------- hub sessions ----------
+  { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'You are connected to a faction hub. Pick a line (click it, or type its number) to open that window: its market, its work, payloads.' },
+  { id: 'hub-market', page: 'hub', at: '.mk-wares .mk-sellp', text: 'Sell here: what this hub pays you for each. ▲ means it pays more than the other hubs, so it is a good place to sell; ▼, sell elsewhere.' },
+  { id: 'hub-buy', page: 'hub', at: '.mk-wares .mk-buyp', text: 'Buy here: what it charges you. Every sale and buy travels as a file transfer, so the credits or goods arrive after the minutes shown up top.' },
   { id: 'store-chase', page: 'store', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'LANTERN read out a dead drop on this server. It closes soon.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: wild, never taken over. Viruses sit in its folders and come back a few minutes after you kill them.' },

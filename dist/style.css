@@ -2320,3 +2320,12 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .arch-use { position: absolute; top: 10px; right: 10px; }
 /* A hub's Compile list: each payload's costs on one line. */
 .pay-compile .needs { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* The market: each row is ware · held | sell here (price, vs other hubs, Sell 1 / Sell all) | buy here (price, Buy 1). */
+.mk-wares .mk-tr { grid-template-columns: minmax(96px, 1fr) 40px 104px 64px 64px 56px 64px; }
+.mk-sellp { display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; }
+.mk-sellp .mk-price { font: 700 15px var(--mono); color: var(--bright); }
+.mk-buyp { font: 600 14px var(--mono); color: var(--text); text-align: right; padding-left: 12px; border-left: 1px solid var(--line-strong, var(--line)); }
+.mk-th .mk-sell-h { grid-column: 3 / 6; text-align: left; padding-left: 14px; color: var(--good, #8fd18f); }
+.mk-th .mk-buy-h { grid-column: 6 / 8; text-align: left; padding-left: 12px; border-left: 1px solid var(--line-strong, var(--line)); color: var(--amber); }
+.mk-th span:last-child { text-align: left; }
+.mk-tr .btn.small { white-space: nowrap; }

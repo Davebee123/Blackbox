@@ -2135,17 +2135,18 @@ function marketMarkup(s, f, now) {
     const avg = FACTION_IDS.reduce((a, g) => a + quote(s, g, w).sell, 0) / FACTION_IDS.length, d = Math.round((q.sell / avg - 1) * 100);
     const why = [cond.mult[w] ? `${cond.name} ×${cond.mult[w]}` : '', ev.mult[w] ? `${ev.name} ×${ev.mult[w]}` : ''].filter(Boolean).join(' · ');
     const dir = d >= 3 ? 'up' : d <= -3 ? 'down' : 'flat';
-    const sell = (k) => (k ? `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k ? '' : 'disabled'} title="+${q.sell * k} · ${min} min">${k}</button>` : '<span></span>');
+    // Two halves: what it pays you here (and how that compares across hubs), then what it charges.
+    const sell = (k) => (k ? `<button type="button" class="btn small ${n >= k ? 'primary' : ''}" data-command="market sell ${f} ${w} ${k}" ${n >= k ? '' : 'disabled'} title="+${q.sell * k} credits · ${min} min">Sell ${k}</button>` : '<span></span>');
     return `<div class="mk-tr">
       <span class="mk-name" title="${esc(WARES[w].name)}">${glyph(GLYPH_OF_GOOD[w])}<b>${esc(WARES[w].name.replace(/ code$/, ''))}</b></span>
-      <span class="mk-num mk-held${n ? '' : ' zero'}">${n}</span>
-      <span class="mk-num mk-price" title="What it pays here, each">${q.sell}</span>
-      <span class="mk-num"><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
+      <span class="mk-num mk-held${n ? '' : ' zero'}" title="You have ${n}">${n}</span>
+      <span class="mk-sellp"><b class="mk-price" title="Pays you ${q.sell} each">${q.sell}</b><span class="mk-d ${dir}" title="Against the ${Math.round(avg)}-credit average across hubs${why ? ` · ${esc(why)}` : ''}">${dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='}${Math.abs(d)}%</span></span>
       ${sell(1)}${sell(lot > 1 ? lot : 0)}
-      <button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="Buy 1 · ${min} min">${q.buy}</button>
+      <span class="mk-buyp" title="Charges you ${q.buy} each">${q.buy}</span>
+      <button type="button" class="btn small" data-command="market buy ${f} ${w} 1" ${s.server.credits >= q.buy ? '' : 'disabled'} title="−${q.buy} credits · ${min} min">Buy 1</button>
     </div>`;
   }).join('');
-  const head = `<div class="mk-tr mk-th"><span>Ware</span><span class="mk-num">Held</span><span class="mk-num">Pays</span><span class="mk-num">vs avg</span><span class="mk-span2">Sell</span><span>Buy</span></div>`;
+  const head = `<div class="mk-tr mk-th"><span>Ware</span><span class="mk-num">Held</span><span class="mk-sell-h">Sell here</span><span></span><span></span><span class="mk-buy-h">Buy here</span><span></span></div>`;
   const mine = transfersOf(s).filter((x) => x.f === f);
   const flying = mine.length ? `<h3 class="mk-sec">In transfer</h3><div class="mk-table mk-xfers">${mine.map((x) => { const left = Math.max(0, x.landsAt - now), pct = Math.round((1 - left / Math.max(1, x.landsAt - x.sentAt)) * 100); return `<div class="mk-tr">
       <span class="mk-name">${glyph(x.side === 'good' ? GLYPH_OF_GOOD[x.good] || 'crate' : GLYPH_OF_GOOD[x.w])}<b>${x.side === 'good' ? esc(x.name) : esc(WARES[x.w].name.replace(/ code$/, ''))}</b><span class="mk-dir" title="${x.side === 'sell' ? 'Outgoing' : 'Incoming'}">${x.side === 'sell' ? '→' : '←'}</span>${x.side === 'good' ? '' : `<span class="mk-sub">×${x.n}</span>`}</span>
