@@ -40,6 +40,8 @@ export function tickStation(s, dt) {
     const d = loc.drop;
     if (!d) continue;
     d.left -= dt;
+    // Emptied: both files banked, and you've left. The signal's gone.
+    if (s.run?.loc !== loc.id && STATION.files.every((f) => loc.state?.taken?.[STATION.dir + '/' + f])) { loc.drop = null; emit(s, 'station-closed', `You emptied the dead drop on ${loc.name}. The signal's gone.`, { location: loc.id }); continue; }
     if (d.left <= 0 && s.run?.loc !== loc.id) { loc.drop = null; emit(s, 'station-closed', `The dead drop on ${loc.name} is gone.`, { location: loc.id }); }
   }
   if (hackerLevel(s) < STATION.from || !s.zone) return s.logs.filter((e) => e.id > first);

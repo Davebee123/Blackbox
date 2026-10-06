@@ -50,6 +50,9 @@ test('decode the broadcast, unlock /drop, pull and bank a blue-or-better protoco
   const got = (s.stash || []).slice(stash);
   assert.equal(got.length, 1);
   assert.ok(['tuned', 'custom'].includes(got[0].rarity));
+  tickNetwork(s, 2_000_000);
+  assert.equal(dropOf(loc), null, 'emptied: the signal goes');
+  assert.ok(s.logs.some((e) => e.type === 'station-closed' && /emptied/.test(e.message)));
 });
 
 test('a drop closes after its time, but not while you are standing in it, and only one is up at a time', () => {

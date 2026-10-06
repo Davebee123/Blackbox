@@ -349,7 +349,7 @@ From class level 3, a numbers station, **LANTERN**, breaks into the radio now an
 
 `LANTERN LANTERN · VANTA-SINK-36 · 05 13 02 05 18 · 47`
 
-It names a server in clear and spells a word in numbers, two digits a letter (01 = A … 26 = Z), then two digits. The word plus the digits (`ember47`) is the password to a **dead drop**: a locked `/drop` folder at that server's root, up for 15 minutes of logged-on time (it waits while you're inside it). It holds `cache.dat` (40 + 12×level credits) and `kit.bin` (a protocol at that level: 85% Tuned, 15% Custom). A wrong password costs 3 Signal like a vault. The drop goes on a traced server you can reach (never a rogue one), or on SPRAWL-00 if you haven't traced any; one drop at a time. Missing one costs nothing. On the map the server gets an antenna mark, and its card shows the numbers and the minutes left. `developer station` broadcasts one now.
+It names a server in clear and spells a word in numbers, two digits a letter (01 = A … 26 = Z), then two digits. The word plus the digits (`ember47`) is the password to a **dead drop**: a locked `/drop` folder at that server's root, up for 15 minutes of logged-on time (it waits while you're inside it). It holds `cache.dat` (40 + 12×level credits) and `kit.bin` (a protocol at that level: 85% Tuned, 15% Custom). A wrong password costs 3 Signal like a vault. The drop goes on a traced server you can reach (never a rogue one), or on SPRAWL-00 if you haven't traced any; one drop at a time. Missing one costs nothing. Once you've banked both files and left, the drop closes and its mark leaves the map. On the map the server gets an antenna mark, and its card shows the numbers and the minutes left. `developer station` broadcasts one now.
 
 ## The Halcyon store
 
