@@ -1180,8 +1180,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .sp-row { padding: 5px 8px 5px 6px; border-left: 2px solid var(--line); background: rgba(241, 185, 47, 0.03); }
 .sp-row .sp-ico { color: var(--muted); }
 .sp-row .sp-lbl { flex: 1; min-width: 0; display: grid; }
-.sp-row .sp-t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sp-row small { font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-row .sp-t { overflow-wrap: anywhere; }
+.sp-row small { font-size: 10px; color: var(--dim); line-height: 1.35; }
 .sp-qty { font: 700 13px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; }
 .sp-pack { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 1px 4px; border: 1px solid var(--line-strong); color: var(--muted); }
 .sp-row.k-code .sp-ico, .sp-row.k-loot .sp-ico { color: var(--amber-soft); }
