@@ -5,7 +5,10 @@ import { compilePayload, deployPayload, resolveStrike, builtOf, flyingOf, PAYLOA
 import { rep, captured, donationOf, donate, hostile, shopOf } from './dist/factions.mjs';
 import { quote, trade, tickMarket } from './dist/market.mjs';
 import { tickPayloads } from './dist/payload.mjs';
-import { HUBS, tickHubs, tickRetake, collect, bankOf, retakeOf, lockedDown, heldOf } from './dist/hubs.mjs';
+import { HUBS, tickHubs, tickRetake as gather, collect, bankOf, retakeOf, lockedDown, heldOf } from './dist/hubs.mjs';
+import { tickFleet } from './dist/fleet.mjs';
+// A hub's retake is a swarm now: gathering (hubs.mjs), then travel and siege (fleet.mjs), as tickNetwork runs them.
+const tickRetake = (s, dt, paused, at) => { gather(s, dt, paused, at); tickFleet(s, dt, paused, at); };
 
 const T0 = 1_000_000_000_000;
 const open = () => {

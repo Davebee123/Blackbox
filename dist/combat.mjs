@@ -2892,6 +2892,7 @@ export function restore(raw) {
     // v25: service configs and virus fleets. Nothing to convert.
     s.configs ||= {}; s.configsKnown ||= []; s.configsOwned ||= [];
     s.fleet ||= null;
+    s.retake = null; // a hub's retake is a swarm now (fleet.mjs); one in flight on an old save is dropped
     // v26: outpost modules, the Load Balancer and Scheduler, server architecture.
     if (!('architecture' in s)) s.architecture = null;
     // v27: loot. The three category slots become Exploit, Proxy, Shell and Script; old protocols

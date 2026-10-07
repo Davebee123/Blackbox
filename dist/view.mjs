@@ -1648,7 +1648,7 @@ export function threatsOf(s, now = Date.now()) {
     : { cls: 'hot', icon: 'kill', name: inv.name, where: inv.state === 'siege' ? 'contested at your wall' : 'BREACH at your wall', tag: `lv ${inv.level}`, pct: inv.hp, sel: 'invader' });
   else if (threatTop(s) && s.net?.next > 0) add({ cls: 'dim', icon: 'clock', name: 'Next invasion', where: s.net.open ? 'ports open' : 'your wall', left: s.net.next, total: s.net.open ? CONFIG.invasion.everyMs[1] * CONFIG.invasion.open.pace : CONFIG.invasion.everyMs[1], sel: 'server' });
   const f = s.fleet;
-  if (f) { const tgt = s.locations.find((l) => l.id === f.target); add({ cls: f.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${f.ships}`, where: `${f.state === 'siege' ? 'at' : '→'} ${tgt?.name || 'outpost'}`, tag: `lv ${f.level}`, left: fleetLeft(s, now), total: f.state === 'travel' ? f.travel : FLEET.siegeMs, sel: 'fleet', verb: f.state === 'travel' ? 'arrives' : 'falls' }); }
+  if (f && !f.hub) { const tgt = s.locations.find((l) => l.id === f.target); add({ cls: f.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${f.ships}`, where: `${f.state === 'siege' ? 'at' : '→'} ${tgt?.name || 'outpost'}`, tag: `lv ${f.level}`, left: fleetLeft(s, now), total: f.state === 'travel' ? f.travel : FLEET.siegeMs, sel: 'fleet', verb: f.state === 'travel' ? 'arrives' : 'falls' }); }
   for (const l of (s.locations || []).filter((x) => x.outpost?.h)) {
     const o = l.outpost;
     if (o.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: l.name, left: o.lockdown.left, total: OUTPOST.lockdownMs, sel: l.id, verb: 'ends' });

@@ -155,8 +155,9 @@ test('a hub you hold: its swarm comes at the hub\'s level, never yours', async (
   s.standing = { halcyon: 10, kestrel: -100 }; // Hostile: it wants its hub back
   s.net = { retakeAt: 0 };
   tickRetake(s, 1000, false, 1);
-  assert.ok(s.retake, 'a swarm sets out');
-  assert.equal(s.retake.level, FACTIONS.kestrel.hub.level + HUBS.levelUp);
+  const { retakeOf } = await import('./dist/hubs.mjs');
+  assert.ok(retakeOf(s), 'a swarm sets out');
+  assert.equal(retakeOf(s).level, FACTIONS.kestrel.hub.level + HUBS.levelUp);
 });
 
 test('the server losing Integrity wears its firewall: a block for every 5% of max lost', async () => {

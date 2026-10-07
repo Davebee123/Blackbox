@@ -495,6 +495,8 @@ Three kinds of threat, two things they leave behind, four things you do. The spe
 
 At a wall, an invasion is **Blocked**, **Contested** (the wall grinds it while it chips you) or a **Breach**, by your wall's strength.
 
+**Two kinds of threat** (the threat merge): an **invasion** at your wall (one virus; your server's firewall, Integrity chipped), and a **swarm** at a holding (one or more viruses, a fight each; an outpost's natives, servers past it, or a hub's old owner; the holding's firewall, then lockdown). One swarm at a time across your network.
+
 Everything runs on real time, online or off: whatever comes meets that holding's **firewall** first (Blocked, Contested, Breach), and being online means you can step in and fight it. Threats come only from servers attached to your network, at their levels (or the holding's), never yours.
 
 ### Your home server
@@ -519,7 +521,7 @@ Lockdown here: 2 h, no harvesting, the stockpile kept, nothing past it cut off. 
 |---|---|---|---|---|---|---|
 | **Swarm from its old owner** | The faction, while Hostile, at the hub's level + 1 | 30 min after the capture, then 2–4 h | Travels 10 min, meets the hub's firewall, then 8 min to defend; earns nothing meanwhile | **Intercept** / **Defend**, a fight a process (`hub defend`) | Lockdown | Code, salvage, XP |
 
-Lockdown here: until you **Retake** it (one fight, `hub retake`). No income; the hub is still yours.
+Lockdown here: until you **Retake** it (one fight, `hub retake`). No income; the hub is still yours. The old owner's swarm is the same swarm as at an outpost (`fleet.mjs`, aimed at the hub), so only one swarm is ever out on your network: a hub's waits while an outpost's is out, and the other way round.
 
 ### Consortium members' servers
 
