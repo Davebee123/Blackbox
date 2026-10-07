@@ -1411,7 +1411,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
       : isKnown ? `<button type="button" class="btn primary" data-command="equip ${id} ${x.id}" ${equipped.length >= LOADOUT.equipSlots ? `disabled title="All ${LOADOUT.equipSlots} slots full: unequip one first"` : ''}>Equip</button>`
       : `<span class="lvl-lock">${previewing && !a.core.includes(x.id) ? `${esc(kit.name)} · ` : ''}Level ${unlockLevel(id, x.id, shown)}</span>`;
     return `<li class="skill ${state}${a.core.includes(x.id) ? '' : ' subskill'}" title="${esc(scaledText(s, x.id, x.rule, id))}"><div class="skill-top"><b>${isEq ? `<kbd>${equipped.indexOf(x.id) + 2}</kbd>` : state === 'locked' ? '<span class="lock" aria-hidden="true"></span>' : ''}${glyph(x.verb, 'badge verb-' + x.verb)}${esc(x.name)}</b><span class="stags">${tagHtml(x)}</span></div>
-      <div class="skill-foot"><p>${esc(scaledText(s, x.id, SKILL_TEXT[x.id]?.desc || ABILITIES[x.id]?.short || x.rule, id))}</p>${action}</div></li>`;
+      <div class="skill-foot"><p>${esc(scaledText(s, x.id, SKILL_TEXT[x.id]?.desc || ABILITIES[x.id]?.desc || ABILITIES[x.id]?.short || x.rule, id))}</p>${action}</div></li>`;
   }).join('');
 
   // The tree, top to bottom: ranked filler rows between the three choice tiers.
