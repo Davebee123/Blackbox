@@ -2215,6 +2215,7 @@ export function spoilsOf(events) {
   for (const e of events) {
     if (e.type === 'fast-kill') add('Fast kill', `+${e.amount} XP`, 'fast', { text: `Fast kill +${e.amount} XP`, sub: `${e.cycles} cycles` });
     else if (e.type === 'hot-kill') add('Hot strain', `+${e.amount} XP`, 'fast', { text: `Hot strain +${e.amount} XP` });
+    else if (e.type === 'xp' && / decoded$/.test(e.message?.split(' · ')[1]?.replace(/\.$/, '') || '')) add(`Decoded: ${e.message.split(' · ')[1].replace(/ decoded\.?$/, '')}`, `+${e.amount} XP`, 'fast', { text: `${e.message.split(' · ')[1]} +${e.amount} XP` });
     else if (e.type === 'rested') add('Rested', `+${e.amount} XP`, 'fast', { text: `Rested +${e.amount} XP` });
     else if (e.type === 'fresh') add(`Fresh: ${XP_KINDS[e.kind] || ''}`, `+${e.amount} XP`, 'fast', { text: `Fresh ${XP_KINDS[e.kind] || ''} +${e.amount} XP` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });

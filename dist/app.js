@@ -388,7 +388,7 @@ function react(events) {
   const won = events.find((e) => e.type === 'victory');
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
-  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && e.type === 'loot'), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
+  if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
   strikes(events);

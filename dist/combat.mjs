@@ -810,7 +810,7 @@ export function gainServerXp(s, amount, why) {
     syncServer(s);
     const slot = SERVER.daemonSlotsAt.includes(after) ? ' +1 daemon slot.' : '';
     emit(s, 'server-level', `SERVER LEVEL ${after}.${slot} Max Integrity ${s.server.max}.`, { level: after, serverXp: amount, why });
-  } else if (why) emit(s, 'info', `Server +${amount} XP · ${why}.`, { serverXp: amount, why });
+  } // no log line otherwise: it mirrors your own XP line, and the server card shows its bar
 }
 
 // ---------- talents ----------

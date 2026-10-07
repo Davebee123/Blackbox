@@ -122,7 +122,7 @@ test('the tray shows a run skill (Spoof) as "on runs" in a fight', async () => {
   assert.match(trayMarkup(s), /Spoof<\/span><span class="state">on runs/);
 });
 
-test('a win writes what it gave you into the log: damage taken, XP, server XP, salvage, lead', () => {
+test('a win writes what it gave you into the log: damage taken, XP (one line; the server\'s mirrors it), salvage, lead', () => {
   const s = fresh();
   selectEncounter(s, 'cryptjack', 7, { level: 1 });
   command(s, 'engage');
@@ -135,7 +135,8 @@ test('a win writes what it gave you into the log: damage taken, XP, server XP, s
   const text = events.map((e) => e.message).join('\n');
   assert.match(text, /neutralized in 2 cycles\. Nothing got through/);
   assert.match(text, /\+30 XP/);
-  assert.match(text, /Server \+30 XP/);
+  assert.doesNotMatch(text, /Server \+30 XP/, 'no second line for the server');
+  assert.ok(s.serverXp >= 30, 'the server still earns it');
   assert.match(text, /Cipher Seed recovered/);
   assert.match(text, /Ransomware lead/);
 });
