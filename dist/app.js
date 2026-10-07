@@ -381,10 +381,10 @@ function lossCard(e) {
   const rows = [
     { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Signal lost'), qty: '', text: 'Signal lost' },
     ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
-    { kind: 'found', label: 'Your server', qty: 'safe', text: 'Your server is safe' },
-    ...(e.relockMs ? [{ kind: 'time', label: `Back into ${e.where || 'it'} in`, qty: clock(e.relockMs), text: 'Reconnect wait' }] : []),
-    ...(sig < need ? [{ kind: 'time', label: 'Signal to connect in', qty: clock(((need - sig) / (CONFIG.signalRest * max)) * 60000), text: 'Signal rest' }] : []),
   ];
+  // One clock: you can go back once both the reconnect wait and your Signal allow it, so the later of the two.
+  const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
+  if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
   showGain('Disconnected', e.where || '', rows, false);
   $('gain').classList.add('loss');
 }
