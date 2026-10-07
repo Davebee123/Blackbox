@@ -11,7 +11,9 @@ export const CONFIG = {
   // real fight and red a gamble.
   // Below you, a little the other way (3% a level, up to +15% dealt / −30% taken).
   gap: { dealt: 0.07, taken: 0.1, floor: 0.4, below: 0.03 },
-  phaseBounce: 0.25, // Flicker: a quarter of your command's hit on an out-of-phase part bounces back at you
+  phaseBounce: 0.15, // Flicker: 15% of your command's hit on an out-of-phase part bounces back at you
+  enrage: 1.3, // Bricker: a part under half Integrity hits this much harder
+  linked: 0.33, // Linked parts (v2+): the share of a broken part's hit its survivor takes on (a half broke Breakers on v2 Ghostroots)
   startingCredits: 0, // you start broke: caches, kills and contracts pay
   // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
   // full now. The price is for a full bar at your level; less missing costs less (at least 1).
@@ -239,7 +241,7 @@ export const FAMILIES = {
     summary: 'Spawns fragments that gnaw the server every cycle. The Replicator makes them.',
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
-      { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3 } },
+      { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
     ],
   },
   ghostroot: {
@@ -247,8 +249,9 @@ export const FAMILIES = {
     threatens: 'Integrity',
     summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler hits you and scrambles you for 2 cycles: each of your attacks has a 25% chance to hit you instead, at half strength.',
     parts: [
-      { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
-      { id: 'scrambler', name: 'Scrambler', integrity: 46, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 8, interval: 4, first: 2 } },
+      // The Scrambler carries the threat, not the Pulse: killing the Pulse first no longer halves the fight.
+      { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
+      { id: 'scrambler', name: 'Scrambler', integrity: 40, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 9, interval: 4, first: 2 } },
     ],
   },
 };
@@ -261,13 +264,13 @@ const PULSE = (amount, first) => ({ id: 'pulse', name: 'Pulse Node', integrity: 
 export const STRAINS = {
   keylogger: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Keylogger',
-    rule: 'A Sync Window opens every cycle. The Logger only takes damage from commands fired inside it; every command fired outside it is logged, and 3 logs come back as an 18-damage Dump.',
-    parts: [PULSE(12, 3), { id: 'logger', name: 'Logger', integrity: 30, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, attack: { name: 'Dump', effect: 'damage', amount: 18, interval: 999, first: 999, dump: true } }],
+    rule: 'A Sync Window opens every cycle. The Logger only takes damage from commands fired inside it; every command fired outside it is logged, and 3 logs come back as an 18-damage Dump. It Dumps on its own every 6 cycles too.',
+    parts: [PULSE(12, 3), { id: 'logger', name: 'Logger', integrity: 30, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, attack: { name: 'Dump', effect: 'damage', amount: 18, interval: 6, first: 6, dump: true } }],
   },
   hashrat: {
     lineage: 'ransomware', from: 5, depth: 2, name: 'Hashrat',
-    rule: 'While the Miner lives, your cooldowns tick down only every other cycle.',
-    parts: [PULSE(12, 3), { id: 'miner', name: 'Miner', integrity: 30, armor: 0, loot: 'Miner Rig', special: true, tax: true }],
+    rule: 'While the Miner lives, your cooldowns tick down only every other cycle. Left alone, it Overclocks: 4 damage every 2 cycles.',
+    parts: [PULSE(12, 3), { id: 'miner', name: 'Miner', integrity: 30, armor: 0, loot: 'Miner Rig', special: true, tax: true, attack: { name: 'Overclock', effect: 'damage', amount: 4, interval: 2, first: 2, alone: true } }],
   },
   floodgate: {
     lineage: 'worm', from: 6, depth: 2, name: 'Floodgate',
@@ -292,22 +295,22 @@ export const STRAINS = {
   },
   flicker: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker',
-    rule: 'The Shade is only there on even cycles. On odd cycles your hits pass straight through it, and a quarter of the hit bounces back at you. It strikes when it is there.',
+    rule: 'The Shade is only there on even cycles. On odd cycles your hits pass straight through it, and 15% of the hit bounces back at you. It strikes when it is there.',
     parts: [PULSE(13, 3), { id: 'shade', name: 'Shade', integrity: 22, armor: 1, loot: 'Shade Lens', special: true, phase: true, attack: { name: 'Fade', effect: 'damage', amount: 5, interval: 2, first: 2 } }],
   },
   extortion: {
     lineage: 'ransomware', from: 6, depth: 2, name: 'Extortion',
-    rule: 'The Demand winds up a 26-damage Deadline. Deal it 18 damage in the 2 cycles before it lands and the Deadline is called off.',
-    parts: [PULSE(12, 3), { id: 'demand', name: 'Demand', integrity: 40, armor: 0, loot: 'Ransom Note', special: true, attack: { name: 'Deadline', effect: 'damage', amount: 26, interval: 5, first: 4, windup: 18 } }],
+    rule: 'The Demand winds up a 26-damage Deadline. Deal it 14 damage in the 2 cycles before it lands and the Deadline is called off.',
+    parts: [PULSE(12, 3), { id: 'demand', name: 'Demand', integrity: 40, armor: 0, loot: 'Ransom Note', special: true, attack: { name: 'Deadline', effect: 'damage', amount: 26, interval: 5, first: 4, windup: 14 } }],
   },
   echo: {
     lineage: 'ghostroot', from: 8, depth: 2, name: 'Echo',
-    rule: 'While the Echo lives, every hit you take repeats a cycle later at half damage. It never attacks.',
-    parts: [PULSE(14, 3), { id: 'echo', name: 'Echo', integrity: 30, armor: 1, loot: 'Echo Chamber', special: true, echo: true }],
+    rule: 'While the Echo lives, every hit you take repeats a cycle later at half damage, and it Reverbs for 6 every 4 cycles.',
+    parts: [PULSE(14, 3), { id: 'echo', name: 'Echo', integrity: 30, armor: 1, loot: 'Echo Chamber', special: true, echo: true, attack: { name: 'Reverb', effect: 'damage', amount: 6, interval: 4, first: 3 } }],
   },
   bricker: {
     lineage: 'ransomware', from: 9, depth: 2, name: 'Bricker', enrage: true,
-    rule: 'Each part hits half again as hard once it drops below half Integrity. Take parts from healthy to dead in one go.',
+    rule: 'Each part hits 30% harder once it drops below half Integrity. Take parts from healthy to dead in one go.',
     parts: [PULSE(12, 3), { id: 'locker', name: 'Locker', integrity: 36, armor: 1, loot: 'Brick Key', special: true, attack: { name: 'Brick', effect: 'damage', amount: 10, interval: 3, first: 3 } }],
   },
   overrun: {
@@ -419,9 +422,12 @@ export const MUTATIONS = {
   armored: { name: 'Armored', rule: 'Every part has one more armor chit.' },
   regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor a cycle sooner, so strip it only when you can finish it.' },
   hasty: { name: 'Hasty', rule: 'Every attack comes a cycle sooner and repeats a cycle faster, but its parts have 10% less Integrity, so kill it fast.' },
-  rerouting: { name: 'Rerouting', rule: 'When a part breaks, half its attack damage reroutes to the surviving part that attacks next.' },
+  rerouting: { name: 'Rerouting', rule: 'When a part breaks, half its attack damage reroutes to the surviving part that attacks next.', retired: true }, // every v2+ virus is Linked now (combat.mjs)
   adaptive: { name: 'Adaptive', rule: 'A part your commands hit three cycles in a row adapts: it gains an armor chit at the end of that cycle.' },
 };
+
+// The mutations a virus can roll (a retired one only lingers on old saves' viruses).
+export const ROLLED_MUTATIONS = Object.keys(MUTATIONS).filter((k) => !MUTATIONS[k].retired);
 
 export const FIXTURES = {
   cryptjack: { name: 'CRYPTJACK', family: 'ransomware', mutation: null, threat: 15 },
@@ -499,7 +505,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const homeFamilies = Object.keys(FAMILIES);
   const familyId = overrides.family || (forced ? STRAINS[forced].lineage : random ? homeFamilies[Math.floor(next() * homeFamilies.length)] : fixture.family);
   const family = familyOf(familyId);
-  const mutationIds = Object.keys(MUTATIONS);
+  const mutationIds = ROLLED_MUTATIONS;
   const rolled = random ? mutationIds[Math.floor(next() * mutationIds.length)] : forced ? null : fixture.mutation;
   const mutation = overrides.mutation !== undefined ? overrides.mutation : rolled;
   const threat = overrides.threat ?? (random ? 12 + Math.floor(next() * 9) : forced ? 13 : fixture.threat);

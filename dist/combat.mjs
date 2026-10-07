@@ -1734,17 +1734,17 @@ function breakPart(s, p) {
     e.autoStopped = true;
   }
   emit(s, 'broken', `${p.name.toUpperCase()} BROKEN${p.attack ? `. ${p.attack.name} stops` : ''}.`, { target: p.id });
-  // Rerouting (mutation): half its attack damage moves to the surviving damage attacker that lands next.
-  // Rerouting: half the broken part's hit goes to the survivor that attacks next. A survivor whose attack
-  // isn't a hit (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
+  // Linked parts (every v2 or bigger virus; the old Rerouting mutation too): a third of the broken part's hit
+  // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
+  // (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
   const hitOf = (x) => (x.attack?.effect === 'damage' ? x.attack.amount : x.attack?.hit || 0);
-  if (e.virus.mutation === 'rerouting' && hitOf(p) > 0) {
+  if ((e.virus.mutation === 'rerouting' || e.virus.grade >= 2) && hitOf(p) > 0) {
     const to = livingParts(s).filter((x) => x !== p && x.attack && x.attack.effect !== 'heal').sort((a, b) => a.attack.due - b.attack.due)[0];
-    const add = Math.max(1, Math.round(hitOf(p) / 2));
+    const add = Math.max(1, Math.round(hitOf(p) * CONFIG.linked));
     if (to) {
       if (to.attack.effect === 'damage') to.attack.amount += add; else to.attack.hit = (to.attack.hit || 0) + add;
       to.rerouted = (to.rerouted || 0) + add;
-      emit(s, 'reroute', `${p.attack.name} reroutes to ${to.name}: its ${to.attack.name} ${to.attack.effect === 'damage' ? '' : 'now hits '}+${add}.`, { target: to.id, from: p.id, amount: add });
+      emit(s, 'reroute', `Linked: ${p.attack.name} passes to ${to.name}: its ${to.attack.name} ${to.attack.effect === 'damage' ? '' : 'now hits '}+${add}.`, { target: to.id, from: p.id, amount: add });
     }
   }
   if (zeroDay(s, 'buffer-overflow') && !e.forceCrit) { e.forceCrit = true; emit(s, 'status', 'Buffer Overflow: your next hit crits.'); }
@@ -2010,7 +2010,7 @@ function takeDamage(s, amount, source, label) {
 export function attackAmount(p) {
   const a = p.attack;
   let n = a.amount + (a.ramp ? (a.step || 0) * (a.rampBy || 1) : 0) + (a.bonus || 0);
-  if (p.enrage && p.integrity < p.max / 2) n *= 1.5;
+  if (p.enrage && p.integrity < p.max / 2) n *= CONFIG.enrage;
   return Math.round(n);
 }
 
@@ -2328,7 +2328,12 @@ function cycleStart(s) {
   return false;
 }
 // Attacks due now, soonest first.
-const dueNow = (s) => attackers(s).sort((a, b) => a.attack.due - b.attack.due).filter((p) => p.attack.due <= s.encounter.cycle);
+// A part that only attacks alone (the Hashrat's Miner) waits a cycle at a time while it has company.
+const dueNow = (s) => {
+  const live = livingParts(s).length;
+  for (const p of attackers(s)) if (p.attack.alone && live > 1 && p.attack.due <= s.encounter.cycle) p.attack.due = s.encounter.cycle + 1;
+  return attackers(s).sort((a, b) => a.attack.due - b.attack.due).filter((p) => p.attack.due <= s.encounter.cycle);
+};
 // One part's attack lands. True if the fight ended.
 function strike(s, p) {
   const e = s.encounter;

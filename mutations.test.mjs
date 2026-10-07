@@ -18,11 +18,12 @@ test('the new mutations are in the pool, with a rule each', () => {
   for (const id of ['rerouting', 'adaptive']) assert.ok(MUTATIONS[id]?.rule.length > 20, id);
 });
 
-test('Rerouting: a broken part hands half its attack damage to the next attacker', () => {
+test('Linked (and old Rerouting viruses): a broken part hands a third of its attack damage to the next attacker', async () => {
+  const { CONFIG } = await import('./dist/data.mjs');
   const s = start('rerouting');
   const pulse = part(s, 'pulse'), enc = part(s, 'encryptor');
   enc.attack = { ...pulse.attack, name: 'Spark', amount: 10, due: s.encounter.cycle + 3 }; // a second damage attacker
-  const before = enc.attack.amount, half = Math.round(pulse.attack.amount / 2);
+  const before = enc.attack.amount, half = Math.max(1, Math.round(pulse.attack.amount * CONFIG.linked));
   pulse.integrity = 1;
   command(s, 'spike pulse');
   const ev = resolveCycle(s);

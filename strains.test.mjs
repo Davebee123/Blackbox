@@ -198,14 +198,14 @@ test('Echo: while the Echo lives, each hit repeats next cycle at half', () => {
   assert.equal(t.server.integrity, before, 'no Echo, no echo');
 });
 
-test('Bricker: below half Integrity a part hits half again as hard', () => {
+test('Bricker: below half Integrity a part hits 30% harder', () => {
   const s = start('bricker');
   const locker = part(s, 'locker');
   const full = locker.attack.amount;
   const shown = () => s.encounter && intentsOf(s).find((i) => i.source === 'locker')?.amount;
   locker.integrity = Math.floor(locker.max / 2) - 1;
-  assert.equal(attackAmount(locker), Math.round(full * 1.5));
-  assert.equal(shown(), Math.round(full * 1.5), 'the timeline shows the enraged hit');
+  assert.equal(attackAmount(locker), Math.round(full * 1.3));
+  assert.equal(shown(), Math.round(full * 1.3), 'the timeline shows the enraged hit');
 });
 
 test('Overrun: its fragments bite one harder every cycle they live', () => {

@@ -940,8 +940,8 @@ Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integri
 | Family | Threatens | Basic part | Signature part |
 |---|---|---|---|
 | Ransomware (CRYPTJACK) | Integrity | Pulse Node: 34, ◆, Surge 14 every 4 (first cycle 3) | Encryptor: 38, ◆ (◆◆ from level 5), Encrypt every 5 (first cycle 4): +4 damage per cycle, stacking, until it breaks |
-| Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 5), spawns a fragment every 4 (first cycle 3). Fragments: 18 Integrity (scaled like the virus's health, not its damage), no armor, gnaw 3 every cycle, max 3 |
-| Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 14 every 4 (first cycle 3) | Scrambler: 38, ◆ (◆◆ from level 5), veiled, Scramble every 4 (first cycle 2): Scrambled for 2 cycles, each of your attacks 25% likely to hit you instead at half |
+| Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 5), spawns a fragment every 4 (first cycle 3) with a 4-damage Splice. Fragments: 18 Integrity (scaled like the virus's health, not its damage), no armor, gnaw 3 every cycle, max 3 |
+| Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 11 every 4 (first cycle 3) | Scrambler: 40, ◆ (◆◆ from level 5), veiled, Scramble every 4 (first cycle 2), hitting for 9: Scrambled for 2 cycles, each of your attacks 25% likely to hit you instead at half |
 
 Guards on runs are lighter (you have 50 Signal): Watchdog (Sentry 24 bare, Sweep 6 every 3; Tracker 28 ◆, Trace-back 16 every 5), Sentinel (Lens and Lockout, 24 ◆ each, both veiled), Crawler (Maw 24 bare; Brood 28 ◆ spawns fragments), Shredder (Grinder 26 ◆, Grind 9 every 4; Shredder 26 ◆, Shred 14 every 5).
 
@@ -952,7 +952,7 @@ Mutations are always visible and each changes a decision:
 - **Armored** — every part has one more armor chit.
 - **Regenerative** — a stripped part patches after 1 cycle instead of 2. Strip it only when you can finish it.
 - **Hasty** — every attack comes a cycle sooner and repeats a cycle faster (never more often than every 2 cycles), but its parts have 10% less Integrity. Race it.
-- **Rerouting** — when a part breaks, half its hit moves to the surviving part that attacks next. A survivor whose attack isn't a hit (Encrypt, Scramble, Replicate) gains a hit on top of what it does (the timeline shows `−N · …`, the part a `+N rerouted` tag). Which part you break first decides what the rest hits for.
+- **Linked** (every v2 or bigger virus; it replaced the old Rerouting mutation, which no longer rolls) — when a part breaks, a third of its hit moves to the surviving part that attacks next (`CONFIG.linked`; WoW council fights). A survivor whose attack isn't a hit (Encrypt, Scramble, Replicate) gains a hit on top of what it does (the timeline shows `−N · …`, the part a `+N rerouted` tag). Which part you break first decides what the rest hits for.
 - **Adaptive** — a part your commands hit three cycles in a row gains an armor chit at the end of that third cycle (*ADAPTS +◆*). A part one cycle from it is tagged *adapting*. Switch for a cycle, or finish it with that hit.
 
 (Reactive and Redundant were cut: they added rules without adding decisions.)
@@ -1025,16 +1025,16 @@ Strains are graded too. A swarm counts one layer deeper than the outpost it targ
 
 | Strain | Family | From (level, layer) | Parts | Rule |
 |---|---|---|---|---|
-| Keylogger | Ghostroot | 4, layer 2 | Pulse Node, Logger | A Sync Window (0.14 wide) opens every cycle. The Logger only takes damage from commands fired inside it, and from burns and helpers started inside one. Every command fired outside it (auto-repeat and planned steps included) is logged; at 3, the Logger's Dump (18) lands next cycle and the log clears. |
-| Hashrat | Ransomware | 5, layer 2 | Pulse Node, Miner (no armor, no attack) | While the Miner lives, every other cycle your cooldowns don't tick. |
+| Keylogger | Ghostroot | 4, layer 2 | Pulse Node, Logger | A Sync Window (0.14 wide) opens every cycle. The Logger only takes damage from commands fired inside it, and from burns and helpers started inside one. Every command fired outside it (auto-repeat and planned steps included) is logged; at 3, the Logger's Dump (18) lands next cycle and the log clears. It also Dumps on its own every 6 cycles. |
+| Hashrat | Ransomware | 5, layer 2 | Pulse Node, Miner (no armor) | While the Miner lives, every other cycle your cooldowns don't tick. Left alone, it Overclocks: 4 every 2 cycles. |
 | Floodgate | Worm | 6, layer 2 | Pulse Node, Flooder (no armor) | Flood hits every cycle from cycle 2 for 2, +1 (scaled) each time; any delay resets it. |
 | Leech | Worm | 8, layer 2 | Pulse Node, Tap (28) | Siphon (8, every 3) heals the virus's most damaged part by what it deals and clears one burn on it. Shields and throttling starve it. |
 | Sleeper | Ghostroot | 10, layer 2 | Pulse Node, Cell | Dormant (attacks off the timeline) until any hit lands or cycle 6. On waking, the Cell's Alarm (14) lands that cycle, then every 5; the Pulse Node attacks every 3. |
 | Patchwork | Worm | 3, layer 2 | Pulse Node, Patcher (28) | Patch (every 3, from cycle 3) heals the most damaged part by 12 (scaled with its size). A heal on its own side: your chits, Null Route and misses don't stop it; delays do. |
-| Flicker | Ghostroot | 4, layer 2 | Pulse Node, Shade (22) | The Shade is out of phase on odd cycles: every hit on it passes through (no damage, no chit), burns and helpers too, and a quarter of your own command's hit bounces back at you (`CONFIG.phaseBounce`; never your last point). Its Fade (5) lands every even cycle. A stripped Shade patches a cycle later than normal. |
-| Extortion | Ransomware | 6, layer 2 | Pulse Node, Demand (40, no armor) | Deadline (26, every 5, from cycle 4). Damage dealt to the Demand in the 2 cycles before Deadline lands adds up; at 18 (scaled) the Deadline is called off and starts over. |
-| Echo | Ghostroot | 8, layer 2 | Pulse Node, Echo (no attack) | While the Echo lives, every damage attack that gets through repeats next cycle at half (shown on the timeline). Echoes don't echo. |
-| Bricker | Ransomware | 9, layer 2 | Pulse Node, Locker | Each part's attacks deal ×1.5 while it's below half Integrity (the timeline shows it). |
+| Flicker | Ghostroot | 4, layer 2 | Pulse Node, Shade (22) | The Shade is out of phase on odd cycles: every hit on it passes through (no damage, no chit), burns and helpers too, and 15% of your own command's hit bounces back at you (`CONFIG.phaseBounce`; never your last point). Its Fade (5) lands every even cycle. A stripped Shade patches a cycle later than normal. |
+| Extortion | Ransomware | 6, layer 2 | Pulse Node, Demand (40, no armor) | Deadline (26, every 5, from cycle 4). Damage dealt to the Demand in the 2 cycles before Deadline lands adds up; at 14 (scaled) the Deadline is called off and starts over. |
+| Echo | Ghostroot | 8, layer 2 | Pulse Node, Echo | While the Echo lives, every damage attack that gets through repeats next cycle at half (shown on the timeline). Echoes don't echo. Its Reverb hits for 6 every 4. |
+| Bricker | Ransomware | 9, layer 2 | Pulse Node, Locker | Each part's attacks deal ×1.3 while it's below half Integrity (`CONFIG.enrage`; the timeline shows it). |
 | Overrun | Worm | 11, layer 2 | Pulse Node, Hive | Swarm spawns a fragment every 4 cycles (from cycle 2). Its fragments bite +1 (scaled) every cycle they live. |
 
 The balance sim plays Keylogger on the beat and hits a Flicker's Shade only when it's in phase (as a skilled player would).

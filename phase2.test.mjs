@@ -171,3 +171,15 @@ test('breadcrumb: a server traced by level 4, and wick points you at a vault at 
   gainXp(s, xpToNext(4), 'test');
   assert.ok(s.logs.some((e) => e.type === 'breadcrumb'), 'wick pages you');
 });
+
+test('Phase 3: every v2 virus is Linked; Rerouting is no longer rolled; no strain goes inert', async () => {
+  const { ROLLED_MUTATIONS, STRAINS } = await import('./dist/data.mjs');
+  const { part } = await import('./dist/combat.mjs');
+  assert.ok(!ROLLED_MUTATIONS.includes('rerouting'));
+  const s = at(10);
+  selectEncounter(s, 'cryptjack', 3, { level: 10, grade: 2, mutation: null }); command(s, 'engage');
+  const pulse = part(s, 'pulse'), enc = part(s, 'encryptor'); pulse.integrity = 1; pulse.armor = 0;
+  command(s, 'spike pulse'); resolveCycle(s);
+  assert.ok(enc.attack.hit > 0, 'the Encryptor took on part of the Pulse');
+  for (const id of ['echo', 'hashrat', 'keylogger']) assert.ok(STRAINS[id].parts.every((p) => p.attack), `${id}: every part can hurt you`);
+});

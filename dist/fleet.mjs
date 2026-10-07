@@ -8,7 +8,7 @@
 // Everything runs on real time, online or off. At the outpost it meets its firewall (firewall.mjs):
 // blocked, it bounces; contested, the firewall kills a process now and then; a breach just runs
 // the timer. The outpost produces nothing while the swarm sits at it.
-import { CONFIG, SERVER, MUTATIONS, FAMILIES, variantFor } from './data.mjs';
+import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, FAMILIES, variantFor } from './data.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hooks } from './combat.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
 import { FACTIONS } from './factions.mjs';
@@ -50,7 +50,7 @@ export function launch(s, at = clock(), faction = null) {
   const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + FLEET.levelUp);
   const total = Math.round(FLEET.travelMs * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
-  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: rand(s) < SERVER.mutationChance(level) * 0.75 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
+  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: rand(s) < SERVER.mutationChance(level) * 0.75 ? ROLLED_MUTATIONS[Math.floor(rand(s) * ROLLED_MUTATIONS.length)] : null };
   if (faction) s.fleet.faction = faction;
   const who = faction ? ` from ${FACTIONS[faction].short}` : '';
   emit(s, 'fleet', `SWARM: Swarm${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });

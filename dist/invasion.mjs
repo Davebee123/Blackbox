@@ -15,7 +15,7 @@ import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } fr
 import { isLive } from './memory.mjs';
 import { effLevel, tickFirewall, wear } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
-import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor } from './data.mjs';
+import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, createVirus, power, variantFor } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hooks, emit, warn, rand, active, holding, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead } from './combat.mjs';
@@ -197,7 +197,7 @@ function depart(s, from = null) {
   if (!loc) return null;
   const level = Math.min(CONFIG.maxMobLevel, loc.level || 1);
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1;
-  const ids = Object.keys(MUTATIONS);
+  const ids = ROLLED_MUTATIONS;
   const mutation = rand(s) < SERVER.mutationChance(level) ? ids[Math.floor(rand(s) * ids.length)] : null;
   const key = INVADER[loc.family];
   const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed); // deeper servers send bigger viruses, and strains
