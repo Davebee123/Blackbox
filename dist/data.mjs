@@ -149,10 +149,11 @@ export const CONFIG = {
 //   debuff (makes a part easier to hurt, or weaker) · shield/heal · buff (you, for a while) · util
 // Synergy comes from combining verbs (a debuff boosts every hit and every burn tick;
 // burn ticks and helper hits count as hits for Hook), never from rules inside one skill.
-// Keys are not fixed per skill: 1–3 are the cantrips, 4–8 your equipped skills (see keyMap).
+// Keys are not fixed per skill: 1 is Spike, 2–8 your equipped skills, 9 SIGINT from level 10 (see keyMap).
 // target: 'part' | 'attack' (a part with an attack; optional) | 'none'. pierce: goes through armor chits. bare: only on a part with no armor.
 export const ABILITIES = {
   // cantrips: everyone
+  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Interrupt a cast', help: 'sigint — interrupts the cast a crew boss is compiling (Compiling… on its row). Some casts can\'t be interrupted, and an interrupted boss casts its next one a cycle sooner. Ready every 8 cycles.' },
   spike: { verb: 'hit', name: 'Spike', target: 'part', damage: 25, cooldown: 0, icon: 'spike', short: 'Hit 25', help: 'spike <part> — 25 damage. If you type nothing, you Spike the last part you hit.' },
   // Every class skill is simple, with one twist: a burn (damage over cycles), a proc (something
   // you do lights up a key for a cycle or two), a reactive window (usable right after an event),
@@ -530,15 +531,80 @@ export const power = (level) => 1 + CONFIG.powerPerLevel * (Math.max(1, level) -
 // Enemies match you level for level (no soft start: the first fights should cost something).
 export const mobPower = (level) => power(level) * 1;
 
+// ---------- crew bosses (raid.mjs) ----------
+// Each phase gives every role a job (docs/bosses.md has the review sheet). Mechanic kinds and their fields
+// are in raid.mjs MECHANICS; size is a share of the victim's max Signal (scaled down before level 16).
+// THE FOREMAN: the tank and interrupt check.
+const FOREMAN = {
+  targets: { pulse: 'aggro' },
+  quiet: ['encryptor'], // its Encryptor's encryption is LAYOFFS now (a cast the crew can stop)
+  enrage: { name: 'Mass Layoff', size: 0.2 },
+  phases: [
+    { from: 1, name: 'Day shift', mechs: [
+      { id: 'pinkslip', kind: 'buster', name: 'Pink Slip', target: 'aggro', size: 0.9, every: 6, first: 4 },
+      { id: 'bell', kind: 'pulse', name: 'Shift Bell', size: 0.1, every: 5, first: 3 },
+      { id: 'payroll', kind: 'priority', name: 'Payroll Lockbox', hp: 0.07, ward: 0.75, fuse: 4, size: 0.3, every: 10, first: 2 },
+      { id: 'scabs', kind: 'adds', name: 'Scab', target: 'marked', count: 2, hp: 0.02, hit: 0.07, every: 7, first: 6 },
+      { id: 'clockin', kind: 'pulse', name: 'Clock In', cast: true, interrupt: true, size: 0.45, every: 5, first: 3 },
+    ] },
+    { from: 0.5, name: 'Layoffs', say: 'The Foreman starts the layoffs. LAYOFFS compiles every 5 cycles, and every PINK SLIP leaves Thermal Stress.', mechs: [
+      { id: 'pinkslip', kind: 'buster', name: 'Pink Slip', target: 'aggro', size: 0.9, every: 6, first: 3, stress: true },
+      { id: 'bell', kind: 'pulse', name: 'Shift Bell', size: 0.1, every: 5, first: 4 },
+      { id: 'scabs', kind: 'adds', name: 'Scab', target: 'marked', count: 2, hp: 0.02, hit: 0.07, every: 7, first: 4 },
+      { id: 'layoffs', kind: 'dot', name: 'Layoffs', target: 'crew', cast: true, interrupt: true, size: 0.08, lasts: 99, every: 5, first: 2 },
+    ] },
+  ],
+};
+// HEATSINK: the healer check.
+const HEATSINK = {
+  targets: { pulse: 'aggro', mirror: 'lowest' },
+  enrage: { name: 'Thermal Runaway', size: 0.2 },
+  quiet: ['replicator'], // its Replicator sends workers (the adds below) instead of fragments
+  phases: [
+    { from: 1, name: 'Warm loop', mechs: [
+      { id: 'spike', kind: 'pulse', name: 'Thermal Spike', size: 0.06, grow: 0.012, every: 3, first: 3 },
+      { id: 'overheat', kind: 'burst', name: 'Overheat', target: 'marked', size: 0.3, every: 5, first: 4 },
+      { id: 'leak', kind: 'dot', name: 'Coolant Leak', target: 'marked', count: 1, size: 0.1, lasts: 99, every: 4, first: 2, from: 12 },
+      { id: 'workers', kind: 'adds', name: 'Coolant Worker', target: 'marked', count: 2, hp: 0.025, hit: 0.05, every: 7, first: 5, source: 'replicator' },
+      { id: 'stall', kind: 'dot', name: 'Fan Stall', target: 'crew', cast: true, interrupt: true, size: 0.06, lasts: 4, every: 8, first: 7 },
+    ] },
+    { from: 0.4, name: 'Meltdown', say: 'The Heatsink melts down. THERMAL SPIKE every 2 cycles, and COOLANT LEAK on two of you.', mechs: [
+      { id: 'meltspike', kind: 'pulse', name: 'Thermal Spike', size: 0.06, grow: 0.008, every: 2, first: 2 },
+      { id: 'overheat', kind: 'burst', name: 'Overheat', target: 'marked', size: 0.3, every: 5, first: 3 },
+      { id: 'leak', kind: 'dot', name: 'Coolant Leak', target: 'marked', count: 2, size: 0.1, lasts: 99, spread: 3, every: 6, first: 2, from: 12 },
+      { id: 'coremelt', kind: 'buster', name: 'Core Melt', target: 'aggro', size: 0.4, every: 5, first: 4 },
+      { id: 'stall', kind: 'dot', name: 'Fan Stall', target: 'crew', cast: true, interrupt: true, size: 0.06, lasts: 4, every: 8, first: 5 },
+    ] },
+  ],
+};
+// COLDWALLET: the damage check, and everyone's.
+const COLDWALLET = {
+  targets: { pulse: 'aggro' },
+  enrage: { name: 'Liquidation', size: 0.2 },
+  phases: [
+    { from: 1, name: 'Hot wallet', mechs: [
+      { id: 'margin', kind: 'buster', name: 'Margin Call', target: 'aggro', size: 0.55, every: 4, first: 3 },
+      { id: 'gas', kind: 'pulse', name: 'Gas Fee', size: 0.1, every: 4, first: 5 },
+      { id: 'coldstorage', kind: 'shield', name: 'Cold Storage', amount: 0.12, window: 3, size: 0.35, every: 6, first: 4 },
+      { id: 'rugpull', kind: 'pulse', name: 'Rug Pull', cast: true, interrupt: true, size: 0.3, every: 7, first: 6 },
+    ] },
+    { from: 0.5, name: 'Bank run', say: 'A bank run on the Coldwallet. WITHDRAWAL compiles every 5 cycles and can\'t be interrupted, and ENCRYPTED SECTORS lock up the healer.', mechs: [
+      { id: 'margin', kind: 'buster', name: 'Margin Call', target: 'aggro', size: 0.55, every: 4, first: 3 },
+      { id: 'withdrawal', kind: 'pulse', name: 'Withdrawal', cast: true, interrupt: false, size: 0.3, every: 5, first: 2 },
+      { id: 'sectors', kind: 'absorb', name: 'Encrypted Sectors', target: 'healer', size: 0.3, every: 6, first: 3 },
+      { id: 'coldstorage', kind: 'shield', name: 'Cold Storage', amount: 0.12, window: 3, size: 0.35, every: 6, first: 5 },
+    ] },
+  ],
+};
 // Elites: group content (a third of a Pit's folders, the trunk server's too). Much bigger, harder
 // hitting and better armored; they pay three times the XP and roll for drops three times.
 // Elites are crew rooms (WoW elites): very unlikely solo, three loot rolls, a blue at least, a small
 // unique chance. Only in Pit folders, never on the way to anything you need.
 // Bosses: a solo fight with phases. hp and dmg scale the whole virus; at each phase's share of its
 // total Integrity it does something (re-arm every part, call in a Sentry, attack faster), and from
-// enrageAt every attack lands every cycle, a quarter harder. healerDmg (the farm's three): their damage also
-// steps up as the Sysop's heals come in (runLate points: ×1 to level 11, ×1.6 from 18), so a crew there is
-// built around a healer.
+// enrageAt every attack lands every cycle, a quarter harder. healerDmg (optional): damage that steps up by
+// level (runLate points). raid: a crew boss on the group boss framework (raid.mjs, the farm's three): its
+// phases are mechanics with target rules and telegraphs, and its own parts hit softly (dmg).
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
@@ -547,10 +613,12 @@ export const BOSSES = {
   // REPO MAN (events.mjs): the bounty from level 8.
   repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate: every attack comes a cycle sooner.' }] },
   // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half it splits off a second Decoy, on the off-beat.
-  // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: elite bosses, sized for a crew.
-  foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 3.5, dmg: 1, healerDmg: [[11, 1], [18, 1.6]], enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:lockbox'], say: 'The Foreman calls in a Lockbox: it shields the parts around it.' }, { at: 0.25, do: ['rearm'], say: 'The Foreman re-arms every part.' }] },
-  heatsink: { name: 'HEATSINK', family: 'worm', hp: 5.5, dmg: 1, healerDmg: [[11, 1], [18, 1.6]], enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'The Heatsink re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'The Heatsink runs hot: every attack comes a cycle sooner.' }] },
-  coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 3, dmg: 1, healerDmg: [[11, 1], [18, 1.6]], enrageAt: 18, phases: [{ at: 0.66, do: ['spawn:decoy'], say: 'The Coldwallet splits off a second Decoy, on the off-beat.' }, { at: 0.33, do: ['faster'], say: 'The Coldwallet panics: every attack comes a cycle sooner.' }] },
+  // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: crew bosses on the group boss framework (raid.mjs).
+  // Sized for a crew of four (smaller crews get a smaller boss: crewHp in raid.mjs). Their own parts hit
+  // softly (dmg) and go at whoever holds aggro; the danger is the mechanics, each a share of max Signal.
+  foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
+  heatsink: { name: 'HEATSINK', family: 'worm', hp: 15, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
+  coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
@@ -709,6 +777,7 @@ export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
   // Your 4th skill (Crack, Retaliate, Backdoor, Botnet) comes before Backtrace: armor needs an answer early.
   { level: 7, what: 3 }, { level: 10, what: 'edge' }, // the edge comes with your subclass; its skills at SUBCLASS.unlocks
+  { level: 10, what: 'sigint' }, // everyone's interrupt, for crew bosses' casts (raid.mjs)
 ];
 // XP: a kill is worth 20 + 10 per enemy level. Level L to L+1 takes about 5 + 1.2×L kills of
 // your own level (6 at level 1, 27 at 18, 64 at 49): an MMO-length climb, 1,700 fights to 50.
@@ -732,6 +801,7 @@ export const TREE = [
 const f = (id, name, rule, per) => ({ id, name, rule, per, max: 3 });
 export const CANTRIPS = [
   { key: '1', id: 'spike', name: 'Spike', rule: 'Hit 25. If you type nothing, you Spike the last part you hit.' },
+  { key: '9', id: 'sigint', name: 'SIGINT', rule: 'Interrupts the cast a crew boss is compiling. Some casts can\'t be interrupted, and an interrupted boss casts its next one a cycle sooner. It\'s ready every 8 cycles.' },
 ];
 // Edge: each class's signature passive, from level 10 (the root of its talent tree).
 export const EDGE = {

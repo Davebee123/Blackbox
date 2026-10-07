@@ -26,14 +26,14 @@ const start = ({ sub = 'herder', talents = [], ranks = {}, id = 'cryptjack' } = 
   return s;
 };
 const act = (s, text) => {
-  const w = text.split(' ')[0], eq = (s.loadout.equipped.operator ||= Object.values(keyMap(s)).filter((x) => x !== 'spike'));
+  const w = text.split(' ')[0], eq = (s.loadout.equipped.operator ||= Object.values(keyMap(s)).filter((x) => x !== 'spike' && x !== 'sigint'));
   if (ABILITIES[w] && w !== 'spike' && !Object.values(keyMap(s)).includes(w) && knownSkills(s, 'operator').includes(w)) { if (eq.length >= 7) eq.shift(); eq.push(w); }
   const events = command(s, text);
   assert.ok(!events.some((e) => e.type === 'warning'), events.at(-1)?.message);
   return resolveCycle(s);
 };
 // A command on its own (no cycle), with the skill put on the bar first.
-const tryCmd = (s, text) => { const w = text.split(' ')[0], eq = (s.loadout.equipped.operator ||= Object.values(keyMap(s)).filter((x) => x !== 'spike')); if (!eq.includes(w)) { if (eq.length >= 7) eq.shift(); eq.push(w); } return command(s, text).at(-1).message; };
+const tryCmd = (s, text) => { const w = text.split(' ')[0], eq = (s.loadout.equipped.operator ||= Object.values(keyMap(s)).filter((x) => x !== 'spike' && x !== 'sigint')); if (!eq.includes(w)) { if (eq.length >= 7) eq.shift(); eq.push(w); } return command(s, text).at(-1).message; };
 const lost = (s, id) => part(s, id).max - part(s, id).integrity;
 const surge = (s, id, amount, due = s.encounter.cycle, interval = 4) => (part(s, id).attack = { name: 'Surge', effect: 'damage', amount, interval, due });
 const edges = (fn) => { CONFIG.edges = true; try { fn(); } finally { CONFIG.edges = false; } };

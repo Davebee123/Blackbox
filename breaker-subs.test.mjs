@@ -35,7 +35,7 @@ const demo = (o) => start('demolitionist', o);
 const oc = (o) => start('overclocker', o);
 // Put the skill on the bar (the dev kit knows them all), fire it, resolve the cycle.
 const act = (s, text) => {
-  const w = text.split(' ')[0], eq = (s.loadout.equipped.breaker ||= Object.values(keyMap(s)).filter((x) => x !== 'spike'));
+  const w = text.split(' ')[0], eq = (s.loadout.equipped.breaker ||= Object.values(keyMap(s)).filter((x) => x !== 'spike' && x !== 'sigint'));
   if (ABILITIES[w] && w !== 'spike' && !Object.values(keyMap(s)).includes(w) && knownSkills(s, 'breaker').includes(w)) { if (eq.length >= 7) eq.shift(); eq.push(w); }
   const events = command(s, text);
   assert.ok(!events.some((e) => e.type === 'warning'), events.at(-1)?.message);
@@ -48,7 +48,7 @@ const lost = (s, id) => part(s, id).max - part(s, id).integrity;
 const armor = (s, id, n) => Object.assign(part(s, id), { armor: n, maxArmor: n, patchAt: null });
 const extra = (s, id, hp = 500) => { const p = { ...s.encounter.virus.parts[0], id, name: id.toUpperCase(), integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, attack: null }; s.encounter.virus.parts.push(p); return p; };
 const stacks = (s, n) => { s.encounter.momentum = { stacks: n, until: s.encounter.cycle + 2 }; };
-const equip = (s, id) => { const eq = (s.loadout.equipped.breaker ||= Object.values(keyMap(s)).filter((x) => x !== 'spike')); if (!eq.includes(id)) { if (eq.length >= 7) eq.shift(); eq.push(id); } };
+const equip = (s, id) => { const eq = (s.loadout.equipped.breaker ||= Object.values(keyMap(s)).filter((x) => x !== 'spike' && x !== 'sigint')); if (!eq.includes(id)) { if (eq.length >= 7) eq.shift(); eq.push(id); } };
 const refused = (s, text) => { equip(s, text.split(' ')[0]); return command(s, text).at(-1); };
 const withEdges = (fn) => { CONFIG.edges = true; try { fn(); } finally { CONFIG.edges = false; } };
 

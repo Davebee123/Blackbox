@@ -25,6 +25,7 @@
 //   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1
 import { subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
+import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
 
 const A = (id) => ABILITIES[id];
 
@@ -159,6 +160,7 @@ const use = {
     if (e.encrypt > 0) { e.encrypt = 0; cleared.push('encryption'); }
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     if (cleared.length) emit(to, 'decrypted', `${label}: ${cleared.join(' and ')} cleared.`);
+    if (to.encounter.virus?.raid) cleanse(to, ['dots', 'absorb']); // a crew boss's Corruption and encrypted sectors (raid.mjs)
     mend(s, to, healScaled(s, a.heal), label);
   },
   rollback(s, { a, to }) {
@@ -212,10 +214,13 @@ const validate = {
 
 // ---------- the planner: how a Warden tanks and a Sysop heals ----------
 const ok = (s, text) => !!text && !toIntent(s, text).error;
-const first = (s, list) => list.find((c) => ok(s, c)) || null;
+// Against a crew boss a healer keeps Patch for the Corruption it's about to cleanse (raid.mjs savePatch).
+const first = (s, list) => list.find((c) => ok(s, c) && !(/^patch\b/.test(c) && savePatch(s)) && !(c === 'bulkhead' && saveBulkhead(s))) || null;
 const landing = (s, cols = 0) => intents(s).filter((i) => i.col <= cols && !i.hidden && (i.effect === 'damage' || i.hit));
 
 function wardenPlan(s, t) {
+  const raid = tankMove(s); // a crew boss: hold aggro for its busters (raid.mjs)
+  if (raid) return raid;
   const e = s.encounter, d = defender(s), allies = alliesOf(s);
   const now = landing(s, 0);
   const incoming = now.reduce((n, i) => n + (i.hit || i.amount), 0);
@@ -251,6 +256,8 @@ export const HEAL = {
   topUp: 0.95, // in a crew: keep a Heartbeat on the lowest under this
 };
 function sysopPlan(s, t) {
+  const raid = healMove(s); // a crew boss: cleanse, and pre-heal whoever a big hit is marked for (raid.mjs)
+  if (raid) return raid;
   const e = s.encounter;
   const all = crewOf(s).filter((x) => x.me || defender(x.st).integrity > 0).map((x) => ({ ...x, f: frac(x.st) })).sort((a, b) => a.f - b.f);
   const solo = all.length === 1;
@@ -343,6 +350,6 @@ export default {
   plan(s, t) {
     if (classOf(s) !== 'bastion') return null;
     const sub = subOf(s);
-    return sub === 'warden' ? wardenPlan(s, t) : sub === 'sysop' ? sysopPlan(s, t) : null;
+    return sub === 'warden' ? wardenPlan(s, t) : sub === 'sysop' ? sysopPlan(s, t) : !sub ? tankMove(s) : null; // before subclasses a Bastion tanks
   },
 };

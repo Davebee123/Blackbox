@@ -35,6 +35,7 @@ import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defrag
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { ports, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
+import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, defaultSub, skillOrder } from './data.mjs';
 import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, specOf, specOptions, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
@@ -388,6 +389,7 @@ function youStanding(s) {
   if (e.chits > 0) add('Armor', 'you', `${'◆'.repeat(e.chits)} The next attack on you does nothing, however big.`);
   if (e.shield > 0) add('Shield', 'you', `${e.shield}. Absorbs damage from attacks.`);
   if (e.helpers?.length) add('Helpers', 'daemon', `${e.helpers.length} running. They hit after you each cycle.`);
+  for (const x of raidMarks(s, s)) add(x.name, x.kind, x.tip); // a crew boss: Thermal Stress, Corruption, encrypted sectors, marks, aggro
   return out;
 }
 
@@ -468,8 +470,10 @@ export function boardMarkup(s, selected, preview = null) {
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one ◆ back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}<div class="intent hidden">?</div>${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c);
-      // With a crew, a damage attack lands on everyone, or on whoever is drawing fire.
-      const to = crew.length && hit?.effect === 'damage' ? sink || 'all' : null;
+      // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
+      // target rule (raid.mjs) on the one player it's aiming at.
+      const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
+      const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
       return `<div class="bcell">${cryptChip}${hit ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${patchChip}</div>`;
     }).join('');
     const spike = p.armor > 0 ? 'spike breaks a ◆' : `spike deals ${previewDamage(s, 'spike', p)}`;
@@ -484,10 +488,26 @@ export function boardMarkup(s, selected, preview = null) {
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
   const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle: your move, then the virus's"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span></div>` : '';
-  return strip + head + you() + rows + gone;
+  return strip + head + you() + raidRow(s) + rows + gone;
 }
 
-const LOG_CLASS = { reroute: 'bad', miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
+// A crew boss (raid.mjs): its mechanics on their own row, each chip on the cycle it lands, with who it's
+// going at. A cast shows as Compiling, and says whether SIGINT stops it. Hover a chip for the whole of it.
+const RAID_WHAT = { buster: 'a big hit on whoever holds aggro', pulse: 'a hit on everyone', burst: 'a big hit on the marked player', dot: 'damage every cycle until it is cleansed', absorb: 'a lock that eats the next heals', adds: 'a pair of adds that hit the marked player every cycle unless someone draws fire', priority: 'an add that shields the boss and goes off unless it is broken', shield: 'a shield over the boss to break in time' };
+function raidRow(s) {
+  if (!raidOf(s) || !active(s)) return '';
+  const list = raidIntents(s, 4);
+  const chip = (i) => {
+    const aim = i.aim ? `→ ${i.aim}` : i.kind === 'priority' ? 'comes online' : i.kind === 'shield' ? 'goes up' : '';
+    if (i.left) return `<div class="intent raid fuse" title="${esc(i.kind === 'shield' ? `${i.name} has ${i.amount} shield left. Break it before it runs out, or it goes off on everyone.` : `Break ${i.name} before it goes off on everyone.`)}"><b>${esc(i.name)}</b><small>${i.kind === 'shield' ? `${i.amount} left` : 'goes off'}</small></div>`;
+    const tip = `${i.name} is ${RAID_WHAT[i.kind] || i.kind}${i.amount ? `, ${i.amount} on ${i.aim === 'everyone' ? 'each of you' : i.aim || 'its target'}` : i.aim ? `, going for ${i.aim}` : ''}. It lands ${i.col ? `in ${i.col}` : 'this cycle'}.${i.cast ? (i.interrupt ? ' SIGINT stops it.' : ' It can\'t be interrupted.') : ''}`;
+    return `<div class="intent raid ${i.cast ? 'cast' : ''} ${i.col === 0 ? 'now' : ''}" data-k="raid:${esc(i.id)}@${s.encounter.cycle + i.col}" title="${esc(tip)}">${i.cast ? '<small class="compiling">Compiling…</small>' : ''}<b>${esc(i.name)}</b><small>${esc(aim)}${i.cast && !i.interrupt ? ' · no SIGINT' : ''}</small></div>`;
+  };
+  const cells = [0, 1, 2, 3].map((c) => `<div class="bcell">${list.filter((i) => i.col === c).map(chip).join('')}</div>`).join('');
+  return `<div class="brow braid"><div class="bcell bname"><b>${esc(s.encounter.virus.name)}</b><small class="quiet">${list.length ? 'what it does next' : 'nothing announced'}</small></div>${cells}</div>`;
+}
+
+const LOG_CLASS = { telegraph: 'warn', reroute: 'bad', miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
 
 // Whose half of the cycle is playing: 'you' (you and your crew), 'them' (the virus), or 'wait' (your move).
 export function phaseOf(s) {
@@ -498,7 +518,7 @@ export function phaseOf(s) {
   return st ? 'you' : 'wait';
 }
 // Which side a log line belongs to: yours teal, the virus's red.
-const THEIRS = new Set(['server-hit', 'encrypt', 'encrypted', 'blind', 'spawn', 'patch', 'evaded', 'blocked', 'intrusion']);
+const THEIRS = new Set(['server-hit', 'encrypt', 'encrypted', 'blind', 'spawn', 'patch', 'evaded', 'blocked', 'intrusion', 'telegraph']);
 const MINE_LOG = new Set(['damage', 'broken', 'miss', 'resolved', 'status', 'armor', 'interrupt', 'hold']);
 export function logMarkup(s, limit = 60) {
   const start = s.logs.findLastIndex((e) => e.type === 'intrusion');
@@ -1388,18 +1408,20 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
   const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<div class="arch-card"><button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}">
       <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea">${x.role.map((r) => `<span class="tag dim">${esc(r)}</span>`).join(' ')}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
 
-  // The bar you'll fight with: Spike, then your 7 equipped skills.
+  // The bar you'll fight with: Spike, then your 7 equipped skills, then SIGINT (everyone's interrupt, from 10).
   const byId = Object.fromEntries(a.skills.map((x) => [x.id, x]));
   const line = skillOrder(id, shown).map((k) => byId[k]).filter(Boolean); // the core, then the shown subclass's skills
+  const cantrip = (c) => (unlockLevel(id, c.id) <= lvl
+    ? `<li class="slot cantrip" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${glyph(c.id === 'spike' ? 'spike' : 'stun')}${esc(c.name)}</b><small>everyone</small></li>`
+    : `<li class="slot empty" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${esc(c.name)}</b><small>Lv ${unlockLevel(id, c.id)}</small></li>`);
   const bar = [
-    ...CANTRIPS.map((c) => (unlockLevel(id, c.id) <= lvl
-      ? `<li class="slot cantrip" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${glyph('spike')}${esc(c.name)}</b><small>everyone</small></li>`
-      : `<li class="slot empty" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${esc(c.name)}</b><small>Lv ${unlockLevel(id, c.id)}</small></li>`)),
+    cantrip(CANTRIPS[0]),
     ...Array.from({ length: LOADOUT.equipSlots }, (_, i) => {
       const sk = byId[equipped[i]];
       const future = line.filter((x) => !known.includes(x.id))[i - equipped.length];
       return sk ? `<li class="slot on" title="${esc(scaledText(s, sk.id, sk.rule, id))}"><kbd>${i + 2}</kbd><b>${glyph(sk.verb, 'verb-' + sk.verb)}${esc(sk.name)}</b></li>` : `<li class="slot empty"><kbd>${i + 2}</kbd><b>${future && known.length < LOADOUT.equipSlots ? esc(future.name) : 'empty'}</b>${future && known.length < LOADOUT.equipSlots ? `<small>Lv ${unlockLevel(id, future.id, shown)}</small>` : ''}</li>`;
     }),
+    ...CANTRIPS.slice(1).map(cantrip),
   ].join('');
 
   const VERB = { hit: 'hit', burn: 'burn', stun: 'stun', debuff: 'debuff', shield: 'shield', heal: 'heal', buff: 'buff', util: 'utility', run: 'run' };
@@ -2420,7 +2442,7 @@ const CREW_PARTY = (s, mates, inFight, fc, actedWho) => `<div class="party">${ma
         // What they mean to do this cycle: the skill (its verb's colour and icon) and the part.
         const a = q && ABILITIES[q.ability], tgt = q?.target && part(s, q.target);
         const intent = !live ? '' : !up ? '<div class="pm-intent dim">down</div>' : a ? `<div class="pm-intent verb-${a.verb}" title="${esc(a.help || a.short || '')}">${glyph(a.verb)}<b>${esc(a.name)}</b>${tgt ? `<span class="pm-at">→ ${esc(tgt.name)}</span>` : ''}${q.last ? '<small>last</small>' : ''}</div>` : '<div class="pm-intent dim">holding</div>';
-        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)} <span class="pm-lv">Lv ${hackerLevel(m)}</span></small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${sig}/${m.run.max}` : 'down'}</small>${intent}${!inFight ? runMate(s, m.who) : ''}</div>`;
+        return `<div class="pmate${up ? '' : ' down'}${m.who === actedWho ? ' acting' : ''}" data-mate="${esc(m.who)}"><b>${esc(m.who)}</b><small class="pm-cls">${esc(ARCHETYPES[m.loadout.archetype].name)} <span class="pm-lv">Lv ${hackerLevel(m)}</span></small>${live && up && drawingFire(m) ? '<span class="tag hot pm-tag">drawing fire</span>' : ''}${live && up ? raidMarks(s, m).filter((x) => x.name !== 'Aggro' || !drawingFire(m)).map((x) => `<span class="tag ${x.kind} pm-tag" title="${esc(x.tip)}">${esc(x.name)}</span>`).join('') : ''}<span class="pbar"><span style="width:${pct}%"></span>${fc ? lossMark(m.run.integrity, m.run.max, fc.mates[m.who] || 0) : ''}</span><small>${up ? `${sig}/${m.run.max}` : 'down'}</small>${intent}${!inFight ? runMate(s, m.who) : ''}</div>`;
       }).join('')}</div>`;
 // The crew window (app.js floats it, draggable): the crew as they'll join you, live in a run fight
 // (bars, who's down, what each means to do this cycle). Only there when you have a crew.

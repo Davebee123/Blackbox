@@ -179,6 +179,15 @@ code { font-family: var(--mono); color: var(--amber); }
 /* Encryption: the damage you take every cycle until the Encryptor breaks. On the Encryptor's row, in every column. */
 .intent.crypt { margin-bottom: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; border-color: var(--hot); color: var(--hot); background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px); }
 .intent.crypt small { color: var(--hot); opacity: 0.8; }
+/* A crew boss's mechanics (raid.mjs): their own row on the board, each chip on the cycle it lands. */
+.braid .bname small { display: block; font-size: 11px; }
+.intent.raid { border-color: var(--hot); color: var(--hot); display: flex; flex-direction: column; gap: 1px; }
+.intent.raid b { font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; }
+.intent.raid small { color: var(--text-dim, inherit); opacity: 0.85; }
+.intent.raid.now { background: var(--hot-soft); }
+.intent.raid.cast { border-style: dashed; }
+.intent.raid .compiling { color: var(--hot); font-style: italic; opacity: 1; }
+.intent.raid.fuse { border-color: var(--amber); color: var(--amber); }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
 .crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }

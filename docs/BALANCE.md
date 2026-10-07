@@ -89,23 +89,25 @@ Each one swapped into the fifth slot. Change vs the first five.
 
 ## Crews in the farm (KESSLER-FARM-00)
 
-You (a Demolitionist, played by the planner) and sim crewmates, everyone in blues with their subclass's stats, 20 seeds: the packs, then each boss, up to 4 tries each, everyone rested before a try. Boss wins are over tries; your Signal lost is in the wins; lowest anyone is the lowest share of Signal anyone in the crew reached (a lost try counts as 0); the Sysop column is the share of its cycles spent on a heal.
+You (a Demolitionist, played by the planner) and sim crewmates, everyone in blues with their subclass's stats, 20 seeds: the packs, then each crew boss, up to 4 tries each, everyone rested before a try. Each boss column is its wins over tries; Cleared is the seeds where all three fell; lowest anyone is the lowest share of Signal anyone in the crew reached (a lost try counts as 0); the Sysop column is the share of its cycles spent on a heal. A full crew is a Warden, a Sysop and a Payload with you (two damage dealers). The rows below it each take one thing away: the tank, the healer, everyone's SIGINT (`bots: { interrupt: false }`), or a damage dealer (a second Sysop instead). docs/bosses.md has what each role does.
 
-| Level | Crew | Boss wins | Your Signal lost | Lowest anyone | Fights someone dips under 40% | Sysop cycles healing | Cycles |
-|---|---|---:|---:|---:|---:|---:|---:|
-| 18 | none (3) | 52/125 | 75% | 8% | 94% | – | 6.5 |
-| 18 | Sysop (3) | 60/61 | 48% | 37% | 61% | 39% | 10.5 |
-| 18 | Warden (3) | 60/63 | 67% | 30% | 68% | – | 9.9 |
-| 18 | Warden + Sysop (3) | 60/64 | 28% | 47% | 34% | 38% | 15.0 |
-| 18 | none (4) | 56/89 | 79% | 12% | 94% | – | 6.4 |
-| 18 | Sysop (4) | 60/60 | 34% | 54% | 13% | 42% | 7.1 |
-| 18 | Warden (4) | 60/62 | 51% | 46% | 18% | – | 6.9 |
-| 18 | Warden + Sysop (4) | 60/60 | 23% | 61% | 12% | 34% | 9.0 |
-| 30 | none (3) | 51/144 | 80% | 6% | 99% | – | 6.2 |
-| 30 | Sysop (3) | 60/61 | 22% | 48% | 31% | 50% | 10.1 |
-| 30 | Warden (3) | 57/79 | 60% | 27% | 73% | – | 8.3 |
-| 30 | Warden + Sysop (3) | 60/64 | 4% | 58% | 25% | 40% | 14.7 |
-| 30 | none (4) | 57/83 | 80% | 10% | 95% | – | 6.2 |
-| 30 | Sysop (4) | 60/60 | 32% | 54% | 28% | 40% | 6.8 |
-| 30 | Warden (4) | 60/60 | 52% | 46% | 50% | – | 6.8 |
-| 30 | Warden + Sysop (4) | 60/60 | 8% | 68% | 7% | 40% | 8.5 |
+| Level | Crew | Foreman | Heatsink | Coldwallet | Cleared | Lowest anyone | Fights someone dips under 40% | Sysop cycles healing | Cycles |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 18 | Warden + Sysop (4) | 20/20 | 20/20 | 20/22 | 20/20 | 20% | 89% | 53% | 18.3 |
+| 18 | no tank (4) | 10/58 | 20/20 | 20/31 | 10/20 | 7% | 95% | 50% | 12.6 |
+| 18 | no healer (4) | 20/21 | 14/58 | 20/20 | 14/20 | 5% | 98% | – | 15.0 |
+| 18 | no SIGINT (4) | 0/80 | 20/27 | 20/26 | 0/20 | 3% | 100% | 53% | 13.2 |
+| 18 | one damage (4) | 5/72 | 16/49 | 0/80 | 0/20 | 2% | 98% | 52% | 24.1 |
+| 18 | Warden + Sysop (3) | 18/38 | 20/26 | 10/66 | 9/20 | 9% | 94% | 54% | 24.5 |
+| 18 | Sysop (3) | 20/31 | 20/20 | 20/21 | 20/20 | 24% | 69% | 54% | 17.6 |
+| 18 | Warden (3) | 20/20 | 13/57 | 20/20 | 13/20 | 5% | 97% | – | 16.3 |
+| 18 | Sysop (2) | 13/53 | 20/20 | 19/32 | 12/20 | 16% | 81% | 52% | 25.1 |
+| 30 | Warden + Sysop (4) | 20/20 | 20/20 | 20/21 | 20/20 | 36% | 61% | 64% | 18.7 |
+| 30 | no tank (4) | 0/80 | 20/20 | 18/37 | 0/20 | 4% | 99% | 62% | 9.1 |
+| 30 | no healer (4) | 20/21 | 2/78 | 20/20 | 2/20 | 9% | 86% | – | 14.0 |
+| 30 | no SIGINT (4) | 0/80 | 20/33 | 20/21 | 0/20 | 6% | 100% | 65% | 12.7 |
+| 30 | one damage (4) | 4/76 | 2/75 | 0/80 | 0/20 | 0% | 100% | 62% | 23.8 |
+| 30 | Warden + Sysop (3) | 15/51 | 17/43 | 19/33 | 12/20 | 8% | 92% | 59% | 25.9 |
+| 30 | Sysop (3) | 20/23 | 20/20 | 18/37 | 18/20 | 11% | 90% | 64% | 17.3 |
+| 30 | Warden (3) | 20/22 | 9/62 | 20/20 | 9/20 | 12% | 82% | – | 14.9 |
+| 30 | Sysop (2) | 18/34 | 20/25 | 17/45 | 15/20 | 16% | 82% | 62% | 24.2 |

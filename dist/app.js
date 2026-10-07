@@ -1791,7 +1791,7 @@ $('command-input').addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'Escape') { if (tip && !input.value) { hideTip(true); return; } input.value = ''; $('suggestions').hidden = true; return; }
-  if (/^[1-8]$/.test(e.key) && !input.value.trim()) {
+  if (/^[1-9]$/.test(e.key) && !input.value.trim()) {
     e.preventDefault();
     prepare(keyMap(shown())[e.key]);
   }

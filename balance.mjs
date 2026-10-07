@@ -169,7 +169,7 @@ if (isMain) {
   }
   // The crew dungeon (farmsim.mjs, loaded last: run.mjs's hooks change how a bare sim fight runs).
   const { farmTable } = await import('./farmsim.mjs');
-  md += '\n## Crews in the farm (KESSLER-FARM-00)\n\nYou (a Demolitionist, played by the planner) and sim crewmates, everyone in blues with their subclass\'s stats, 20 seeds: the packs, then each boss, up to 4 tries each, everyone rested before a try. Boss wins are over tries; your Signal lost is in the wins; lowest anyone is the lowest share of Signal anyone in the crew reached (a lost try counts as 0); the Sysop column is the share of its cycles spent on a heal.\n\n' + farmTable();
+  md += '\n## Crews in the farm (KESSLER-FARM-00)\n\nYou (a Demolitionist, played by the planner) and sim crewmates, everyone in blues with their subclass\'s stats, 20 seeds: the packs, then each crew boss, up to 4 tries each, everyone rested before a try. Each boss column is its wins over tries; Cleared is the seeds where all three fell; lowest anyone is the lowest share of Signal anyone in the crew reached (a lost try counts as 0); the Sysop column is the share of its cycles spent on a heal. A full crew is a Warden, a Sysop and a Payload with you (two damage dealers). The rows below it each take one thing away: the tank, the healer, everyone\'s SIGINT (`bots: { interrupt: false }`), or a damage dealer (a second Sysop instead). docs/bosses.md has what each role does.\n\n' + farmTable();
   fs.mkdirSync('docs', { recursive: true });
   fs.writeFileSync('docs/BALANCE.md', md);
   console.log(md);

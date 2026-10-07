@@ -87,12 +87,20 @@ test('the farm\'s eight: two from each boss (with bad-luck protection), two from
   assert.equal(FARM_UNIQUES.length, 8);
 });
 
-// Crew balance (farmsim.mjs): the farm is built around a healer from level 18. Seeded, about 3 s.
-test('at level 18 a crew of four with a Sysop bot wins every boss try, and someone still dips; without a healer or a tank it often needs another try', async () => {
+// Crew balance (farmsim.mjs): the farm's three are crew bosses (raid.mjs), each a check on a role. Seeded,
+// about 6 s: a full crew (Warden, Sysop and two damage, everyone with SIGINT) wins at least 95% of boss tries
+// with someone dipping; take away its tank, its healer, its SIGINTs or a damage dealer and the matching boss
+// mostly wins.
+test('at level 18 a full crew wins at least 95% of boss tries under pressure; without its tank, healer, SIGINTs or second damage dealer the matching boss mostly wins', async () => {
   const { farmScore } = await import('./farmsim.mjs');
-  const healer = farmScore('demolitionist', ['sysop', 'payload', 'herder'], 18);
-  assert.ok(healer.wins >= 0.95 * healer.tries, `with a Sysop: ${healer.wins}/${healer.tries}`);
-  assert.ok(healer.low < 65 && healer.heals > 30, `pressure: lowest ${healer.low.toFixed(0)}%, healing ${healer.heals.toFixed(0)}% of cycles`);
-  const none = farmScore('demolitionist', ['payload', 'herder', 'hijacker'], 18);
-  assert.ok(none.wins <= 0.8 * none.tries, `no healer, no tank: ${none.wins}/${none.tries}`);
+  const full = farmScore('demolitionist', ['warden', 'sysop', 'payload'], 18, { seeds: 8 });
+  assert.ok(full.wins >= 0.95 * full.tries, `full crew: ${full.wins}/${full.tries}`);
+  assert.ok(full.low < 50 && full.heals > 30, `pressure: lowest ${full.low.toFixed(0)}%, healing ${full.heals.toFixed(0)}% of cycles`);
+  const one = (crew, boss, bots = {}) => farmScore('demolitionist', crew, 18, { seeds: 16, only: boss, tries: 1, bots }).by[boss];
+  const tank = one(['sysop', 'payload', 'herder'], 'foreman'), healer = one(['warden', 'payload', 'herder'], 'heatsink');
+  const sigint = one(['warden', 'sysop', 'payload'], 'foreman', { interrupt: false }), damage = one(['warden', 'sysop', 'sysop'], 'coldwallet');
+  assert.ok(tank.wins <= 0.5 * tank.tries, `no tank, the Foreman: ${tank.wins}/${tank.tries}`);
+  assert.ok(healer.wins <= 0.6 * healer.tries, `no healer, the Heatsink: ${healer.wins}/${healer.tries}`);
+  assert.ok(sigint.wins <= 0.3 * sigint.tries, `no SIGINT, the Foreman: ${sigint.wins}/${sigint.tries}`);
+  assert.ok(damage.wins <= 0.3 * damage.tries, `one damage dealer, the Coldwallet: ${damage.wins}/${damage.tries}`);
 });

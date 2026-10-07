@@ -2,8 +2,11 @@
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
 import { classPlan, hooks, classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
+import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 
-const ok = (s, text) => !toIntent(s, text).error;
+// Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
+const ok = (s, text) => !toIntent(s, text).error && !(TAUNTS.has(text) && noTaunt(s));
+const TAUNTS = new Set(['firewall', 'bulkhead']);
 // Try commands in order; the first one that's valid right now wins.
 const first = (s, list) => list.find((c) => c && ok(s, c)) || null;
 const landingNow = (s) => intents(s).filter((i) => i.col === 0 && !i.hidden);
@@ -42,7 +45,10 @@ export function planner(s) {
   // Encrypted: the Encryptor holds the key, so it's the next threat whatever its timer says.
   const key = (s.encounter.encrypt > 0 && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || livingParts(s).find((p) => p.rearm) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring; a Replicator that keeps spawning
   // Burn classes (Infiltrator) get the most out of big parts that outlive their burns; the rest go for the biggest threat.
-  const t0 = key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  // A crew boss (raid.mjs): its mechanics first (interrupt, cleanse, dodge), then its priority add or workers.
+  const raid = raidMove(s);
+  if (raid && ok(s, raid)) return raid;
+  const t0 = raidFocus(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
   // Lockbox: a warded part soaks a burst, so break the Lockbox first.
   const warder = livingParts(s).find((p) => p.ward === t.id);

@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+import { SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -25,6 +25,7 @@ import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, isOutpost, retireHarvesters, devOutpost, postsOf, LISTEN } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
+import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
 import { portsCommand } from './invasion.mjs';
@@ -128,9 +129,9 @@ export function armorLeft(s) {
 }
 
 // ---------- your class in a fight ----------
-// Key 1 is Spike, everyone's free hit; 2–8 are your seven equipped skills, in order.
-// A key only appears once your class's level unlocks it.
-export const CANTRIP_IDS = ['spike'];
+// Key 1 is Spike, everyone's free hit; 2–8 are your seven equipped skills, in order; 9 is SIGINT, everyone's
+// interrupt (from level 10: it stops a crew boss's cast, raid.mjs). A key only appears once your class's level unlocks it.
+export const CANTRIP_IDS = ['spike', 'sigint'];
 export const classOf = (s) => s.loadout?.archetype || 'breaker';
 // Your subclass (SUBS in data.mjs; dist/classes/): from SUBCLASS.from, the one you picked, else your
 // class's old-edge subclass until you pick. Before that level, none: just the class's core.
@@ -167,8 +168,10 @@ export function keyMap(s) {
   const map = {};
   const lvl = hackerLevel(s);
   const arch = classOf(s);
-  CANTRIP_IDS.forEach((id, i) => { if (unlockLevel(arch, id) <= lvl) map[String(i + 1)] = id; });
+  const key = (id) => CANTRIPS.find((c) => c.id === id)?.key;
+  if (unlockLevel(arch, 'spike') <= lvl) map[key('spike')] = 'spike';
   equippedSkills(s, arch).forEach((id, i) => { map[String(i + 2)] = id; });
+  for (const id of CANTRIP_IDS.slice(1)) if (unlockLevel(arch, id) <= lvl) map[key(id)] = id;
   return map;
 }
 export const keyOf = (s, id) => Object.entries(keyMap(s)).find(([, v]) => v === id)?.[0] || '';
@@ -1317,6 +1320,7 @@ function engage(s) {
   }
   emit(s, 'engage', `Engaged ${e.virus.name}.`);
   hooks.crewEngage?.(s); // crew.mjs: crewmates join (run fights only)
+  raidStart(s); // a crew boss (raid.mjs): its mechanics, once the crew is in
 }
 
 // Fast kills: beat your own usual pace (cycles per 100 Integrity of virus, kept per class) by a
@@ -1608,6 +1612,7 @@ export function validate(s, intent) {
   if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).filter((b) => intent.ability !== 'detonate' || b.id !== 'implant').length) return `No burns on ${part(s, intent.target).name}${intent.ability === 'detonate' && burnsOn(s, part(s, intent.target)).length ? ' but the Rootkit Implant (it burns until the part breaks)' : ''}.`;
   if (['reroute', 'cron-storm'].includes(intent.ability) && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'kill-switch' && !e.helpers.length) return 'No helpers running.';
+  if (intent.ability === 'sigint') { const why = sigintCheck(s); if (why) return why; }
   const check = classCheck(intent.ability);
   if (check) { const why = check(s, intent); if (why) return why; }
   if (intent.ally && !allyOf(s, intent.ally)) return `${intent.ally} isn't standing.`;
@@ -1786,6 +1791,7 @@ export function toIntent(s, text, checkNow = true) {
   const last = /\s(last|late)$/.test(text);
   if (last) text = text.replace(/\s(last|late)$/, '');
   if (text === 'hold' || text === 'wait') return { ability: 'hold', text: 'hold' };
+  if (text === 'interrupt') text = 'sigint';
   if (text === 'jack out') return e.mode === 'run' ? { ability: 'flee', text: 'jack out' } : { error: 'You are home. Nothing to jack out of.' };
   const intent = parse(s, text);
   if (intent.error) return intent;
@@ -1899,6 +1905,14 @@ export function hit(s, p, base, opts = {}) {
     if (took) emit(s, 'server-hit', `It bounces back: −${took}.`, { source: decoy.id, amount: took, bounce: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
+  // A crew boss's firewall phase (raid.mjs): while its shield is up, every hit on the boss lands on the shield,
+  // armor or not.
+  if (base > 0 && e.virus.raid?.shield && !p.raidAdd) {
+    const n = Math.floor((opts.dot ? base * dotMult(s) : base + (opts.mine && !opts.server ? gearStat(s, 'damage') : 0)) * damageMultiplier(s, p, opts) + 1e-9);
+    raidShield(s, p, n, true);
+    if (!opts.server) noteDealt(s, n); // it still draws aggro
+    return { dealt: 0, overflow: 0, absorbed: true };
+  }
   // Armor chits: a hit on an armored part does no damage and breaks one chit.
   // Burn ticks, helpers and every target of a spread hit count, one chit each.
   if (p.armor > 0 && !opts.pierce) {
@@ -1942,6 +1956,8 @@ export function hit(s, p, base, opts = {}) {
     p.wardAt = e.cycle; p.wardUsed = used + dealt;
     if (dealt < was) notes.push(`warded: ${was - dealt} held back`);
   }
+  // A crew boss (raid.mjs): a firewall phase's shield takes the hit first, a priority add's ward cuts it.
+  if (dealt > 0 && e.virus.raid) { const was = dealt; dealt = raidShield(s, p, dealt); if (dealt < was && !dealt) notes.push('shielded'); }
   if (crit) notes.push('CRIT');
   if (opts.pierce && p.armor > 0) notes.push('through armor');
   if (p.exposedUntil >= e.cycle) notes.push('exposed');
@@ -1949,6 +1965,7 @@ export function hit(s, p, base, opts = {}) {
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
   p.integrity -= dealt;
   if (dealt > 0 && s.encounter?.virus) { const d = (s.encounter.virus.dealt ||= {}); d[s.who || ''] = (d[s.who || ''] || 0) + dealt; } // who did the damage: drop-ins earn by it
+  if (dealt > 0 && e.virus.raid && !opts.server) noteDealt(s, dealt); // aggro (raid.mjs)
   p.lastDamaged = e.cycle;
   // Leech: a share of what you deal heals you (paid out once per cycle).
   if (!opts.server && opts.mine && dealt > 0) e.leechAcc = (e.leechAcc || 0) + gearStat(s, 'leech') * (crit ? Math.max(1, ...fxFire(s, 'crit', { do: 'leech-x' }).map((x) => x.value)) : 1);
@@ -2057,6 +2074,7 @@ function breakPart(s, p) {
     e.autoStopped = true;
   }
   emit(s, 'broken', `${p.name.toUpperCase()} BROKEN${p.attack ? `. ${p.attack.name} stops` : ''}.`, { target: p.id });
+  if (e.virus.raid) raidBroke(s); // a crew boss's adds go down with it
   // Linked parts (every v2 or bigger virus; the old Rerouting mutation too): a third of the broken part's hit
   // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
   // (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
@@ -2176,6 +2194,9 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `${target.name} burning: ${tick}${a.grow ? ', growing' : ''} per cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}${stack > 1 ? ` (${stack} stacks)` : ''}.`, { target: target.id, mark: 'burn', ability: id });
   }
   if (id === 'purge' && e.encrypt) { e.encrypt = 0; emit(s, 'decrypted', 'Purge: your encryption is cleared.'); }
+  if (id === 'purge' && e.virus.raid) cleanse(s, ['dots', 'stress']); // a crew boss's damage over time and Thermal Stress
+  if (id === 'sigint') sigint(s);
+  if (a.verb === 'heal' && e.virus.raid) noteHeal(s); // the healer rule (raid.mjs)
   if (a.helper) {
     let dmg = a.helper, n = a.ticks, count = a.helpers || 1;
     if (id === 'deploy') {
@@ -2221,6 +2242,7 @@ function useAbility(s, intent, auto = false) {
     const to = (intent.ally && allyOf(s, intent.ally)) || s, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
     heal(to, healScaled(s, (hasTalent(s, 'service-pack') ? a.pack : a.heal) + 3 * rank(s, 'patch-notes')), label);
     to.encounter.regen = { amount: healScaled(s, a.tick), left: a.ticks, from: to.encounter.cycle + 1, name: label };
+    if (e.virus.raid) cleanse(to, ['dots']); // a crew boss's Corruption: Patch cleanses it (raid.mjs)
   }
   if (id === 'null-route') { e.nullRoute = 1; e.nextCrit = true; emit(s, 'status', 'Null-routed: the next attack misses you, and your next skill crits.', { mark: 'buff', ability: id }); }
   if (id === 'crack') {
@@ -2282,6 +2304,7 @@ export function stretchBurns(s, t, cycles, label) {
 const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st || null;
 export function heal(s, amount, label) {
   const d = defender(s);
+  if (s.encounter?.virus?.raid) amount = raidAbsorb(s, amount); // encrypted sectors (raid.mjs)
   const healed = Math.min(amount, d.max - d.integrity);
   d.integrity += healed;
   emit(s, 'heal', `${label} +${healed}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed });
@@ -2339,6 +2362,20 @@ export function takeDamage(s, amount, source, label) {
     e.once.snapshot = true;
     heal(s, Math.round((d.max * serviceValue(s, 'snapshot')) / 100), 'Snapshot restored');
   }
+  return dealt;
+}
+
+// A crew boss's mechanic landing on one player (raid.mjs): a buster, a pulse, a burst, a tick of
+// Corruption. It can't miss or crit, but your armor chit stops it whole, Null Route dodges it (not a tick
+// of damage over time), and shields, Block, Bulkhead, DMZ, Thermal Stress and Hot Standby all count.
+export function mechanicHit(s, amount, label, source = 'raid', opts = {}) {
+  const e = s.encounter;
+  if (!e || defender(s).integrity <= 0) return 0;
+  if (!opts.dot && (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle)) { e.nullRoute = 0; delete e.buffs['null-route']; emit(s, 'blocked', `${label} misses ${s.who || 'you'}, null-routed.`, { source }); openProc(s, 'slipped'); return 0; }
+  if (!opts.dot && e.chits > 0) { e.chits--; emit(s, 'blocked', `${label} hits ${s.who ? s.who + '\'s' : 'your'} ◆ and does nothing.`, { source }); return 0; }
+  const p = { id: source, name: label, integrity: 1, max: 1, attack: { name: label, effect: 'damage', amount, interval: 99 } };
+  const dealt = takeDamage(s, Math.max(1, Math.round(amount * classMult('taken', s, p.attack, p) * raidTaken(s))), source, label);
+  if (dealt) { classEach('struck', s, p.attack, dealt, p); e.undo = { type: 'damage', amount: dealt }; }
   return dealt;
 }
 
@@ -2413,7 +2450,7 @@ function landAttack(s, p) {
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less.`, { source: p.id }); }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p)), p.id, atk.name);
+    const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p) * (e.virus.raid ? raidTaken(s) : 1)), p.id, atk.name);
     if (dealt) classEach('struck', s, atk, dealt, p);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
@@ -2613,6 +2650,7 @@ export function stepCycle(s) {
   }
   const landed = e.steps.landed;
   e.steps = null;
+  if (e.virus.raid && raidLand(s)) return since(s, first);
   cycleClose(s, landed);
   return since(s, first);
 }
@@ -2682,7 +2720,10 @@ function strike(s, p) {
   // unless someone is drawing fire (Bastion Firewall): then it all goes at them.
   const crew = p.attack.effect === 'damage' ? hooks.crewAll?.(s) || [] : [];
   const sink = crew.length ? drawingFire(s) || crew.find(drawingFire) : null;
+  // A crew boss's attack with a target rule (raid.mjs): it goes at one player (a taunt still pulls it).
+  const aimed = !sink && p.attack.target && p.attack.effect === 'damage' && e.virus.raid ? attackTarget(s, p) : null;
   if (sink) landAttack(sink, p);
+  else if (aimed) landAttack(aimed, p);
   else {
     for (const m of crew) landAttack(m, { ...p, attack: { ...p.attack } }); // a copy each, so its timer and ramp move once
     landAttack(s, p);
@@ -2754,6 +2795,7 @@ function cycleClose(s, landed) {
   e.cycle++;
   e.elapsedMs = 0;
   rollSync(s);
+  if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
@@ -2764,6 +2806,7 @@ function endCycle(s, first) {
     landed++;
     if (strike(s, p)) return since(s, first);
   }
+  if (s.encounter.virus.raid && raidLand(s)) return since(s, first);
   cycleClose(s, landed);
   return since(s, first);
 }

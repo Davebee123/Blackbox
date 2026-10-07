@@ -26,7 +26,7 @@ export const start = (cls, level = 22, id = 'cryptjack', seed = 7) => {
 };
 export const act = (s, text) => {
   // A skill this kit knows but hasn't got on its bar takes the last slot (the dev kit knows every skill of the class).
-  const w = text.split(' ')[0], arch = s.loadout.archetype, eq = (s.loadout.equipped[arch] ||= Object.values(keyMap(s)).filter((x) => x !== 'spike'));
+  const w = text.split(' ')[0], arch = s.loadout.archetype, eq = (s.loadout.equipped[arch] ||= Object.values(keyMap(s)).filter((x) => x !== 'spike' && x !== 'sigint'));
   if (ABILITIES[w] && w !== 'spike' && !Object.values(keyMap(s)).includes(w) && knownSkills(s, arch).includes(w)) { if (eq.length >= 7) eq.pop(); eq.push(w); }
   const events = command(s, text);
   assert.ok(!events.some((e) => e.type === 'warning'), events.at(-1)?.message);
@@ -43,9 +43,10 @@ test('every skill does one kind of thing', () => {
   for (const [id, a] of Object.entries(ABILITIES)) assert.ok(verbs.has(a.verb), id);
 });
 
-test('keys: 1 Spike, 2–8 equipped skills; other classes\' skills are refused', () => {
+test('keys: 1 Spike, 2–8 equipped skills, 9 SIGINT from level 10; other classes\' skills are refused', () => {
   const s = start('bastion');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', ...knownSkills(s, 'bastion').slice(0, 7)]);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', ...knownSkills(s, 'bastion').slice(0, 7), 'sigint']);
+  assert.equal(keyMap(s)['9'], 'sigint', 'everyone\'s interrupt, on 9');
   assert.deepEqual(Object.values(keyMap(s)).slice(1, 5), ['rate-limit', 'firewall', 'purge', 'retaliate'], 'the core first');
   assert.match(command(s, 'overload pulse').at(-1).message, /isn't on your bar/);
   assert.equal(command(s, '4 pulse').at(-1).type, 'queued');

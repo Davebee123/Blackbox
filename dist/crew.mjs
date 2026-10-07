@@ -18,6 +18,7 @@ import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerL
 import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { ARCHETYPES, SKILLS, SUBS, SUBCLASS, defaultSub } from './data.mjs';
 import { planner } from './planner.mjs';
+import { raidDef, crewHp } from './raid.mjs';
 import { online, isFriend } from './presence.mjs';
 import { isMember } from './consortium.mjs';
 
@@ -103,7 +104,8 @@ hooks.crewEngage = (s) => {
   e.party = 1 + mates.length; // for the XP split (combat.mjs payKill)
   e.guests = mates.filter((m) => m.guest).map((m) => m.who); // drop-ins earn by their damage (payKill)
   // An elite is already sized for a crew, so it doesn't grow with it.
-  const k = 1 + (e.virus.elite ? CREW.elitePer : e.virus.boss ? CREW.bossPer : CREW.hpPer) * mates.length;
+  // A crew boss (raid.mjs) is sized for four: a smaller crew gets a smaller one.
+  const k = raidDef(e.virus) ? crewHp(1 + mates.length) : 1 + (e.virus.elite ? CREW.elitePer : e.virus.boss ? CREW.bossPer : CREW.hpPer) * mates.length;
   const kd = 1 + CREW.dmgPer * mates.length;
   for (const p of e.virus.parts) {
     p.max = Math.round(p.max * k); p.integrity = Math.round(p.integrity * k);
@@ -118,7 +120,7 @@ hooks.crewEngage = (s) => {
     classEach('start', m); // subclass modules (dist/classes)
     decide(m);
   }
-  emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and consortium in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', consortium' : ''})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);
+  emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and consortium in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', consortium' : ''})`).join(', ')}. ${raidDef(e.virus) ? `${e.virus.name} is a crew boss, sized for a crew of ${1 + mates.length}.` : `The virus is ${Math.round((k - 1) * 100)}% tougher.`}`);
 };
 
 // One crewmate's turn (the i-th still standing).
@@ -128,7 +130,9 @@ function turn(s, m) {
   const q = m.encounter.queue;
   if (q?.target && !alive(part(m, q.target))) decide(m); // its target broke this cycle: pick again
   playerPhase(m);
-  decide(m);
+  // What it decides now runs next cycle. Against a crew boss (raid.mjs) it reads the fight as of that cycle,
+  // so a cooldown ready then counts and a mechanic landing then is due now.
+  if (m.encounter.virus?.raid) { m.encounter.cycle++; decide(m); m.encounter.cycle--; } else decide(m);
 }
 const standing = (s) => inFight(s).filter(mateUp);
 hooks.crewAct = (s) => { for (const m of standing(s)) turn(s, m); };
