@@ -1212,6 +1212,9 @@ export function finish(s, result) {
     // A named target that beat you twice is worn down too: it drops back to v1.
     if (keep && (spawn.losses = (spawn.losses || 0) + 1) >= 2 && spawn.grade > 1) { delete spawn.grade; emit(s, 'info', `${spawn.name} is worn down: back to v1.`); }
     if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = now + (spawn.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); }
+    // A Pit elite that beats you (or that you run from) moves on: no retrying it until it's gone.
+    const elite = wild && e.virus.elite && result !== 'victory' && wild.spawns?.[e.room];
+    if (elite?.alive && elite.elite) { elite.alive = false; elite.respawnAt = now + ELITE.goneMs; emit(s, 'info', `${elite.name} moved on. The folder fills again in about ${Math.round(ELITE.goneMs / 60000)} minutes.`); }
     const named = spawn?.bounty && !keep ? spawn.name : null;
     if (named) delete spawn.bounty;
     if (result === 'victory') {
@@ -1398,6 +1401,8 @@ export function parse(s, input) {
   if (!usable(s).includes(ability)) return { error: `${a.name} isn't on your bar. Your keys: ${bar}.` };
   const rest = words.slice(found.used);
   const arg = rest.join(' ');
+  // In a crew, Patch takes a crewmate's name and heals them instead (crew.mjs hooks.crewAllies).
+  if (ability === 'patch' && arg) return allyOf(s, arg) ? { ability, ally: arg } : { error: `${arg} isn't in this fight with you.` };
   if (a.target === 'none') return arg ? { error: `${a.name} doesn't take a target.` } : { ability };
   if (a.target === 'attack' && !arg) {
     const soonest = attackers(s).sort((x, y) => x.attack.due - y.attack.due)[0];
@@ -1434,7 +1439,11 @@ export function validate(s, intent) {
   if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).length) return `No burns on ${part(s, intent.target).name}.`;
   if (['reroute', 'cron-storm'].includes(intent.ability) && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'kill-switch' && !e.helpers.length) return 'No helpers running.';
-  if (intent.ability === 'patch' && defender(s).integrity >= defender(s).max) return 'Already at full health.';
+  if (intent.ability === 'patch') {
+    const to = intent.ally ? allyOf(s, intent.ally) : s;
+    if (!to) return `${intent.ally} isn't standing.`;
+    if (defender(to).integrity >= defender(to).max) return intent.ally ? `${intent.ally} is at full Signal.` : 'Already at full health.';
+  }
   if (intent.ability === 'failover' && defender(s).integrity >= defender(s).max) return 'Failover needs missing health.';
   return null;
 }
@@ -1608,7 +1617,7 @@ export function toIntent(s, text, checkNow = true) {
     const error = validate(s, intent);
     if (error) return { error };
   }
-  const text2 = (intent.target ? `${intent.ability} ${intent.target}` : intent.ability) + (last ? ' last' : '');
+  const text2 = (intent.target ? `${intent.ability} ${intent.target}` : intent.ally ? `${intent.ability} ${intent.ally}` : intent.ability) + (last ? ' last' : '');
   return { ...intent, text: text2, ...(last ? { last: true } : {}) };
 }
 
@@ -2026,8 +2035,9 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `Drawing fire: every attack comes at ${s.who || 'you'} for ${a.taunt} cycles.`, { mark: 'buff', ability: id });
   }
   if (id === 'patch') {
-    heal(s, scaled(s, (hasTalent(s, 'service-pack') ? 20 : a.heal) + 3 * rank(s, 'patch-notes')), a.name);
-    e.regen = { amount: scaled(s, a.tick), left: a.ticks, from: e.cycle + 1, name: a.name };
+    const to = (intent.ally && allyOf(s, intent.ally)) || s, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
+    heal(to, scaled(s, (hasTalent(s, 'service-pack') ? 20 : a.heal) + 3 * rank(s, 'patch-notes')), label);
+    to.encounter.regen = { amount: scaled(s, a.tick), left: a.ticks, from: to.encounter.cycle + 1, name: label };
   }
   if (id === 'null-route') { e.nullRoute = 1; e.nextCrit = true; emit(s, 'status', 'Null-routed: the next attack misses you, and your next skill crits.', { mark: 'buff', ability: id }); }
   if (id === 'crack') {
@@ -2078,6 +2088,8 @@ function stretchBurns(s, t, cycles, label) {
   return true;
 }
 
+// Who else is standing in this fight, by name ('you' for the player, to a crewmate): crew.mjs.
+const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st || null;
 function heal(s, amount, label) {
   const d = defender(s);
   const healed = Math.min(amount, d.max - d.integrity);
@@ -2208,9 +2220,10 @@ function landAttack(s, p) {
     if (crit && fxFire(s, 'struck', { do: 'crit-normal' }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have crit. It lands as a normal hit.`, { source: p.id }); }
     let half = fxFire(s, 'struck', { do: 'halve' })[0];
     if (half) emit(s, 'blocked', `${half.it.name}: ${atk.name} deals half.`, { source: p.id });
-    else if (e.hardened > 0) { e.hardened--; half = true; emit(s, 'blocked', `Hardened: ${atk.name} deals half.`, { source: p.id }); }
+    let cut = half ? 0.5 : 1;
+    if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less.`, { source: p.id }); }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1)), p.id, atk.name);
+    const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut), p.id, atk.name);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
     // Echo: while the Echo lives, the hit repeats next cycle at half.

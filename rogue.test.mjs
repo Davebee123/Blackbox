@@ -127,3 +127,25 @@ test('elites: a third of a Pit\'s folders, built for a crew, three times the XP'
   }
   assert.ok(Math.abs(el / n - ELITE.share) < 0.1, `${el}/${n}`);
 });
+
+test('a Pit elite that beats you moves on: no retrying it until its folder fills again', async () => {
+  const { ELITE } = await import('./dist/data.mjs');
+  const { selectEncounter } = await import('./dist/combat.mjs');
+  let t = 1_700_000_000_000;
+  hooks.now = () => t;
+  try {
+    const s = world();
+    const loc = rogueOf(s, 'pit');
+    play(s, 'connect ' + loc.id);
+    const room = rogueRooms(loc)[0];
+    Object.assign(loc.spawns[room], { elite: true, alive: true });
+    s.run.cwd = room;
+    const sp = loc.spawns[room];
+    selectEncounter(s, 'random', sp.seed, { mode: 'run', room, level: sp.level, family: sp.family, zone: true, wild: loc.id, elite: true, name: sp.name });
+    command(s, 'engage');
+    finish(s, 'defeat');
+    assert.equal(sp.alive, false, 'it left');
+    assert.equal(sp.respawnAt, t + ELITE.goneMs);
+    assert.ok(s.logs.some((e) => /moved on/.test(e.message)));
+  } finally { hooks.now = null; }
+});

@@ -45,7 +45,7 @@ export const CONFIG = {
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
   twinReboot: { in: 3, at: 0.4, max: 1 }, // Mirror: a twin reboots this many cycles later at 40% with its armor, once
   mirrorBounce: 0.3, // Decoy: a mirrored command does nothing and this share bounces back
-  runEarly: [1, 1, 1.1, 1.3, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
+  runEarly: [1, 1, 1.35, 1.5, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
   xpEarly: { bonus: 0.15, full: 10, gone: 15 }, // levels up to 10 take 15% more XP, easing back to normal by 15
   // A broken part leaves salvage behind only sometimes.
   salvageChance: 0.35,
@@ -156,10 +156,10 @@ export const ABILITIES = {
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through armor, once', help: 'zero-day <part> — 65 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
   'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 45, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 45 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
-  firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — shields you from the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
+  firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 16, taunt: 3, cooldown: 4, icon: 'shell-shield', short: 'Shield 16, draw fire', help: 'firewall — shields you from the next 16 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 3 cycles.' },
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
-  patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 10, tick: 5, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 10 + 5×3', help: 'patch — heal 10 now, then 5 a cycle for 3 cycles.' },
+  patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 8, tick: 5, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 8 + 5×3', help: 'patch [name] — heal 8 now, then 5 a cycle for 3 cycles. In a crew, patch nyx heals nyx instead.' },
   throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, cooldown: 4, icon: 'interrupt', short: 'Weaken −50%', help: 'throttle [part] — its attacks deal half for 3 cycles.' },
   purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, decrypt', help: 'purge <part> — burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption.' },
   harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain a ◆: the next attack on you does nothing, however big.' },
@@ -218,7 +218,8 @@ export const SKILLS = {
   momentum: 0.1, // Breaker passive: +10% per part you break...
   momentumMax: 3, // ...up to 3 stacks (+30%)...
   momentumCycles: 2, // ...lasting 2 cycles after your last break (each break refreshes it)
-  hardened: 1, // Bastion passive: damage hits each fight that land at half (a full block was too much)
+  hardened: 1, // Bastion passive: damage hits each fight that land softer (a full block was too much)...
+  hardenedCut: 0.25, // ...by this much (half kept Bastion far below the friction target)
   siphonSignalShare: 1, // Siphon heals Signal on runs, Integrity at home
   fixedCounter: 12,
 };
@@ -524,7 +525,7 @@ export const BOSSES = {
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
-export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08 };
+export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // Build a virus from a named fixture or a seeded random variant.
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
@@ -745,7 +746,7 @@ export const ARCHETYPES = {
   bastion: {
     name: 'Bastion', role: ['Tank', 'Healer'], idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
-    passive: { name: 'Hardened', rule: 'You start every fight with a ◆: the first attack on you does nothing.' },
+    passive: { name: 'Hardened', rule: 'The first damage hit on you each fight deals 25% less.' },
     skills: skillsOf(['rate-limit', 'firewall', 'purge', 'retaliate', 'suspend', 'patch', 'throttle', 'harden', 'reclaim', 'quarantine', 'failover']),
     fillers: [
       [f('patch-notes', 'Patch Notes', 'Patch heals +3 per rank.', 3), f('stateful-firewall', 'Stateful Firewall', 'Firewall absorbs +5 per rank.', 5)],

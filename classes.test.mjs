@@ -105,14 +105,14 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (62) f
 });
 
 // ---------- Bastion ----------
-test('Bastion: Hardened halves the first hit; Rate Limit hits 45 (+15 if its attack is due), cooldown 3, and halves its next attack; Patch heals 10 then 5 a cycle', () => {
+test('Bastion: Hardened takes a quarter off the first hit; Rate Limit hits 45 (+15 if its attack is due), cooldown 3, and halves its next attack; Patch heals 8 then 5 a cycle', () => {
   const s = start('bastion');
   assert.equal(s.encounter.hardened, 1);
   part(s, 'encryptor').attack = null;
   const surge = part(s, 'pulse').attack.amount;
   s.encounter.cycle = part(s, 'pulse').attack.due;
   act(s, 'hold');
-  assert.equal(100 - s.server.integrity, Math.round(surge / 2), 'Hardened: the first Surge lands at half');
+  assert.equal(100 - s.server.integrity, Math.round(surge * 0.75), 'Hardened: the first Surge lands 25% softer');
   assert.equal(s.encounter.hardened, 0);
   const t = noArmor(quiet(start('bastion')));
   big(t, 'pulse');
@@ -134,9 +134,9 @@ test('Bastion: Hardened halves the first hit; Rate Limit hits 45 (+15 if its att
   assert.ok(took > 0 && took < full, `half its Surge (${took} of ${full})`);
   t.server.integrity = 50;
   act(t, 'patch');
-  assert.equal(t.server.integrity, 60);
+  assert.equal(t.server.integrity, 58);
   act(t, 'hold');
-  assert.equal(t.server.integrity, 65, 'then 5 a cycle');
+  assert.equal(t.server.integrity, 63, 'then 5 a cycle');
 });
 
 test('Bastion: Firewall absorbs 25 and lights Retaliate (twice the hit, next cycle); Throttle halves attacks', () => {

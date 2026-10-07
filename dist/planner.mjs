@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
+import { hooks, classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
 
 const ok = (s, text) => !toIntent(s, text).error;
 // Try commands in order; the first one that's valid right now wins.
@@ -87,6 +87,9 @@ export function planner(s) {
   // 2b. Heavy encryption: purge it. Low health: patch, or hit back with what you're missing.
   if (s.encounter.encrypt >= 6 && ok(s, 'purge ' + t.id)) return 'purge ' + t.id;
   if (d.integrity < d.max * 0.5) { const h = first(s, ['patch', 'failover', 'reclaim ' + t.id]); if (h) return h; }
+  // A healer in a crew: patch whoever else is lowest, under half.
+  const hurt = (hooks.crewAllies?.(s) || []).map((x) => ({ who: x.who, d: defender(x.st) })).filter((x) => x.d.integrity < x.d.max * 0.5).sort((a, b) => a.d.integrity / a.d.max - b.d.integrity / b.d.max)[0];
+  if (hurt && ok(s, 'patch ' + hurt.who)) return 'patch ' + hurt.who;
   // 3. Work on the next threat: strip its armor with small or spread hits, then finish.
   if (t.armor > 0) {
     return first(s, [

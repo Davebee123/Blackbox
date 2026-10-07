@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, part } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
-import { CREW, matesOf } from './dist/crew.mjs';
+import { CREW, matesOf, mateSignal } from './dist/crew.mjs';
 import { planner } from './dist/planner.mjs';
 import { FRESH as __FRESH } from './dist/combat.mjs';
 __FRESH.bonus = 0; // exact XP checks: the Fresh bonus has its own tests (phase2.test.mjs)
@@ -61,6 +61,7 @@ test('your target broke before your turn: the command goes at the next part', ()
 
 test('crew off: back to solo; home intrusions stay solo', () => {
   const s = fresh();
+  s.hackers = { breaker: { level: 5, xp: 0 } };
   play(s, 'crew sim bastion');
   command(s, 'encounter cryptjack'); command(s, 'engage');
   assert.ok(!matesOf(s)[0].encounter, 'no crew at home');
@@ -176,4 +177,48 @@ test('a member who drops in earns by the damage they dealt; you split the rest w
   assert.ok(share > 0 && share < 1, `both hit it (${share})`);
   // Same virus, same level: your XP is the party pool minus the guest's share.
   assert.ok(Math.abs(duo.xp - Math.round(solo.xp * (1 + 0.1) * (1 - share))) <= 1, `${duo.xp} vs ${solo.xp} × 1.1 × ${1 - share}`);
+});
+
+test('the sim crew: from level 5, Stock gear, and Signal that carries from fight to fight on a run', () => {
+  const low = fresh();
+  play(low, 'crew sim bastion');
+  assert.ok(!(low.crewSim || []).length, 'not before level 5');
+  const s = start('bastion');
+  const [nyx] = matesOf(s);
+  assert.ok(nyx.stash.length && nyx.stash.every((it) => it.rarity === 'stock'), 'plain gear');
+  nyx.run.integrity = 3;
+  for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });
+  for (let n = 0; n < 10 && active(s); n++) { command(s, 'spike ' + s.encounter.virus.parts.find((p) => p.integrity > 0).id); resolveCycle(s); }
+  assert.equal(s.run.crew.nyx.signal, 3, 'it walks out with what it had');
+  play(s, 'cd /'); play(s, 'cd tmp');
+  if (s.encounter?.phase === 'alert') play(s, 'attack');
+  if (matesOf(s)[0].encounter) assert.equal(matesOf(s)[0].run.integrity, 3, 'and walks into the next fight with it');
+  s.run.crew.nyx.signal = 0;
+  assert.equal(mateSignal(s, nyx), Math.max(1, Math.round(nyx.run.max * CREW.reboot)), 'a downed crewmate reboots low');
+});
+
+test('a healer: patch <name> heals that crewmate, and a Bastion crewmate patches whoever is low', async () => {
+  const s = fresh();
+  s.hackers = { bastion: { level: 18, xp: 0 } };
+  s.loadout.archetype = 'bastion';
+  play(s, 'crew sim breaker operator');
+  play(s, 'connect sprawl'); play(s, 'cd var'); play(s, 'attack');
+  const [nyx] = matesOf(s);
+  nyx.run.integrity = 5;
+  command(s, 'patch nyx');
+  assert.equal(s.encounter.queue?.text, 'patch nyx');
+  for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = 999;
+  resolveCycle(s);
+  assert.ok(nyx.run.integrity > 5, 'nyx got healed');
+  assert.ok(s.logs.some((e) => e.who === 'nyx' && e.type === 'heal' && /Patch from you/.test(e.message)));
+  assert.match(command(s, 'patch zed').find((e) => e.type === 'warning')?.message || '', /isn't in this fight/);
+  // A Bastion bot heals you when you're low.
+  const t = fresh();
+  t.hackers = { breaker: { level: 18, xp: 0 } };
+  play(t, 'crew sim bastion');
+  play(t, 'connect sprawl'); play(t, 'cd var'); play(t, 'attack');
+  t.run.integrity = 5;
+  const bot = matesOf(t)[0];
+  bot.encounter.readyAt = {};
+  assert.equal(planner(bot), 'patch you');
 });

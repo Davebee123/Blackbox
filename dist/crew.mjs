@@ -1,6 +1,6 @@
 // Simulated crew: bot crewmates in your run fights, to try co-op before there's a server.
 // `crew sim breaker bastion` (up to 3), `crew` to list, `crew off`. Each crewmate is a full player
-// state of its own (its class at its own level, fixed when it joins, a Tuned protocol in every slot, its own Signal), fighting
+// state of its own (its class at its own level, fixed when it joins, a Stock protocol in every slot, its own Signal), fighting
 // the same virus object as you on the same cycle, played by the balance planner (planner.mjs).
 //
 // Rules being tried out:
@@ -10,6 +10,9 @@
 // - Enemies get CREW.hpPer more Integrity per extra player (CREW.dmgPer more damage, if set).
 // - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it.
 // - Only run fights (SPRAWL-00, rogue servers, guards); home intrusions stay solo.
+// - A crewmate's Signal carries from fight to fight through a run, like yours (s.run.crew[name].signal).
+//   One that went down reboots at CREW.reboot of its Signal for the next fight. A new run starts them full.
+// - The sim crew is there from CREW.from: early levels are solo.
 // Crewmates live beside the save (not in it): s.crewSim holds who's in the crew.
 import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part } from './combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './gear.mjs';
@@ -23,6 +26,8 @@ export const CREW = {
   hpPer: 0.5, // enemy Integrity: +50% per extra player: a party makes normal fights easy (MMO-style), but long enough for their mechanics to show
   elitePer: 0.05, // elites are built for a crew of four: they barely grow with it (0.15 made a full crew lose 8 in 20 at level 18)
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
+  from: 5, // class level for crew sim
+  reboot: 0.25, // a crewmate that went down comes back at this much Signal for the next fight
   names: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill'],
 };
 
@@ -41,18 +46,24 @@ export function matesOf(s) {
   return m;
 }
 const inFight = (s) => matesOf(s).filter((m) => m.encounter && active(m));
+// A crewmate's Signal between fights: what it carried out of the last one on this run, else full.
+export const mateSignal = (s, m) => {
+  const c = !m.guest && s.run?.crew?.[m.who];
+  return c && c.signal != null ? (c.signal > 0 ? Math.min(c.signal, maxSignal(m)) : Math.max(1, Math.round(maxSignal(m) * CREW.reboot))) : maxSignal(m);
+};
 export const mateUp = (m) => m.encounter && active(m) && m.run.integrity > 0;
 
 function makeMate(host, { cls, name, guest, level: own }, i) {
   const m = fresh();
   if (guest) m.guest = true;
   m.who = name;
+  Object.defineProperty(m, 'host', { value: host, enumerable: false, configurable: true });
   m.loadout.archetype = cls;
   const level = own ?? hackerLevel(host);
   m.hackers = { [cls]: { level, xp: 0 } };
   m.rng = ((host.rng || 1) * 31 + i * 7919) >>> 0;
   for (let k = 0; k < protocolSlots(level); k++) {
-    const it = addItem(m, rollItem(seeded(level * 100 + k + i * 17), { level, rarity: 'tuned', group: SLOT_KINDS[k] }));
+    const it = addItem(m, rollItem(seeded(level * 100 + k + i * 17), { level, rarity: 'stock', group: SLOT_KINDS[k] }));
     command(m, 'load ' + it.id);
   }
   // One log and one event counter for the whole fight, so the log reads in order.
@@ -94,7 +105,9 @@ hooks.crewEngage = (s) => {
     if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * kd));
   }
   for (const m of mates) {
-    m.run.integrity = m.run.max = maxSignal(m); // crewmates rest up between fights
+    // Signal carries between fights on a run; guests (consortium drop-ins) come in rested.
+    m.run.max = maxSignal(m);
+    m.run.integrity = mateSignal(s, m);
     m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null,
       chits: 0, hardened: classOf(m) === 'bastion' ? SKILLS.hardened : 0, metrics: structuredClone(e.metrics), down: false };
     decide(m);
@@ -117,6 +130,12 @@ hooks.crewTurns = (s) => standing(s).length;
 hooks.crewActOne = (s, i) => turn(s, standing(s)[i]);
 hooks.crewActNamed = (s, who) => turn(s, standing(s).find((m) => m.who === who));
 hooks.crewStanding = (s) => standing(s); // for the turn order (combat.mjs turnOrder)
+// Everyone else standing in the fight, by name, as one player sees them: 'you' is the player.
+// Patch takes one of these names (combat.mjs allyOf).
+hooks.crewAllies = (s) => {
+  const host = s.host || s;
+  return [{ who: 'you', st: host }, ...standing(host).map((m) => ({ who: m.who, st: m }))].filter((x) => x.st !== s);
+};
 
 // Everyone still standing in the fight besides you: a damage attack lands on each of them too.
 hooks.crewAll = (s) => inFight(s).filter(mateUp).map((m) => { m.encounter.cycle = s.encounter.cycle; return m; });
@@ -128,7 +147,11 @@ export function checkDown(s) {
 hooks.crewHurt = checkDown;
 
 hooks.crewEnd = (s) => {
-  for (const m of matesOf(s)) m.encounter = null;
+  for (const m of matesOf(s)) {
+    const c = !m.guest && m.encounter && s.run?.crew?.[m.who];
+    if (c) c.signal = Math.max(0, m.run.integrity);
+    m.encounter = null;
+  }
   s.guests = []; // guests go back to what they were doing
 };
 
@@ -144,6 +167,7 @@ export function crewCommand(s, rest) {
     emit(s, 'info', 'Crew off. You fight alone.');
   } else if (words[0] === 'sim') {
     if (active(s)) return warn(s, 'Finish the fight first.'), s.logs.filter((e) => e.id > first);
+    if (hackerLevel(s) < CREW.from) return warn(s, `The sim crew comes at level ${CREW.from}. Until then you run alone.`), s.logs.filter((e) => e.id > first);
     const picks = words.slice(1);
     const classes = Object.keys(ARCHETYPES);
     const want = (picks.length ? picks : classes.filter((c) => c !== classOf(s))).slice(0, CREW.max);
