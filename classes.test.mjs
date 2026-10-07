@@ -41,7 +41,7 @@ test('every skill does one kind of thing', () => {
 
 test('keys: 1 Spike, 2–8 equipped skills; other classes\' skills are refused', () => {
   const s = start('bastion');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'purge', 'throttle']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit', 'firewall', 'purge', 'retaliate', 'suspend', 'patch', 'throttle']);
   assert.match(command(s, 'overload pulse').at(-1).message, /isn't on your bar/);
   assert.equal(command(s, '4 pulse').at(-1).type, 'queued');
 });

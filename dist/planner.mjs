@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn } from './combat.mjs';
+import { classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
 
 const ok = (s, text) => !toIntent(s, text).error;
 // Try commands in order; the first one that's valid right now wins.
@@ -44,6 +44,14 @@ export function planner(s) {
   // Burn classes (Infiltrator) get the most out of big parts that outlive their burns; the rest go for the biggest threat.
   const t0 = key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
+  // Lockbox: a warded part soaks a burst, so break the Lockbox first.
+  const warder = livingParts(s).find((p) => p.ward === t.id);
+  if (warder && classOf(s) !== 'infiltrator') t = warder; // burns tick under the cap anyway
+  // Twins: work on the healthier of the pair, so both go down close together.
+  const twin = livingParts(s).find((p) => p !== t && (p.twin === t.id || t.twin === p.id));
+  if (twin && (twin.integrity / twin.max > t.integrity / t.max + 0.2 || (burnsOn(s, t) >= 2 && burnsOn(s, twin) < burnsOn(s, t)))) t = twin; // burns too: spread them over both
+  // Decoy: on its beat your commands are mirrored, so set up instead (burns, helpers, defence).
+  if (mirrorOn(s)) { const quiet = first(s, ['harden', 'firewall', burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;

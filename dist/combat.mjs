@@ -1696,6 +1696,16 @@ function hit(s, p, base, opts = {}) {
     if (took) emit(s, 'server-hit', `The static bounces back off the ${p.name}: −${took}.`, { source: p.id, amount: took, bounce: true });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
+  // Decoy: on its beat your own commands are mirrored. They do nothing, and some bounces back
+  // (never your last point). Burns, helpers and your server's hits get through.
+  const decoy = mirrorOn(s);
+  if (decoy && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0) {
+    const back = Math.min(Math.max(1, Math.round(base * CONFIG.mirrorBounce)), defender(s).integrity - 1);
+    const took = back > 0 ? takeDamage(s, back, decoy.id, `${decoy.name} mirror`) : 0;
+    emit(s, 'status', `Mirrored by the ${decoy.name}: your command does nothing.`, { target: p.id });
+    if (took) emit(s, 'server-hit', `It bounces back: −${took}.`, { source: decoy.id, amount: took, bounce: true });
+    return { dealt: 0, overflow: 0, absorbed: true };
+  }
   // Armor chits: a hit on an armored part does no damage and breaks one chit.
   // Burn ticks, helpers and every target of a spread hit count, one chit each.
   if (p.armor > 0 && !opts.pierce) {
@@ -1725,8 +1735,16 @@ function hit(s, p, base, opts = {}) {
   const chance = critChance(s) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
   const crit = forced || (raw > 0 && chance > 0 && rand(s) * 100 < chance);
   if (crit) raw = Math.floor(raw * critMultiplier(s)) + (opts.server ? 0 : gearStat(s, 'critDamage'));
-  const dealt = Math.min(p.integrity, raw);
+  let dealt = Math.min(p.integrity, raw);
   const notes = [];
+  // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything.
+  if (dealt > 0 && livingParts(s).some((x) => x.ward === p.id)) {
+    const cap = Math.max(1, Math.round(p.max * CONFIG.ward)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
+    const was = dealt;
+    dealt = Math.max(0, Math.min(dealt, cap - used));
+    p.wardAt = e.cycle; p.wardUsed = used + dealt;
+    if (dealt < was) notes.push(`warded: ${was - dealt} held back`);
+  }
   if (crit) notes.push('CRIT');
   if (opts.pierce && p.armor > 0) notes.push('through armor');
   if (p.exposedUntil >= e.cycle) notes.push('exposed');
@@ -1759,6 +1777,10 @@ function hit(s, p, base, opts = {}) {
   return { dealt, overflow: Math.max(0, raw - dealt), crit };
 }
 
+// The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
+export const mirrorOn = (s, cycle = s.encounter?.cycle) => livingParts(s).find((x) => x.reflect && cycle % x.reflect === 0) || null;
+const twinOf = (s, p) => parts(s).find((x) => x !== p && (x.twin === p.id || p.twin === x.id)) || null;
+
 // The living part whose attack lands soonest (ties: the bigger hit).
 function soonestAttacker(s, except = null) {
   return attackers(s).filter((p) => p.id !== except).sort((a, b) => a.attack.due - b.attack.due || b.attack.amount - a.attack.amount)[0] || livingParts(s).find((p) => p.id !== except) || null;
@@ -1774,6 +1796,9 @@ function breakPart(s, p) {
   if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `${p.name} decoded. Hover it to see what it does.`, { target: p.id }); gainXp(s, xpFor(s, e.virus.level, DECODE_XP), `${p.name} decoded`, 'intel'); }
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
+  // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
+  const tw = twinOf(s, p);
+  if (tw && alive(tw) && (p.reboots || 0) < CONFIG.twinReboot.max) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
   if (p.kind !== 'fragment' && classOf(s) === 'breaker') e.momentum = { stacks: Math.min(SKILLS.momentumMax, momentumStacks(s) + 1), until: e.cycle + SKILLS.momentumCycles };
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
@@ -2435,6 +2460,16 @@ function cycleClose(s, landed) {
     }
   }
 
+  // Mirror: a broken twin comes back while its twin still lives.
+  for (const p of parts(s).filter((x) => x.rebootAt && x.integrity === 0 && e.cycle >= x.rebootAt)) {
+    const tw = twinOf(s, p);
+    p.rebootAt = null;
+    if (!tw || !alive(tw)) continue;
+    p.reboots = (p.reboots || 0) + 1;
+    Object.assign(p, { integrity: Math.round(p.max * CONFIG.twinReboot.at), armor: p.maxArmor, patchAt: null });
+    if (p.attack) p.attack.due = e.cycle + 2;
+    emit(s, 'patch', `${p.name} REBOOTS at ${p.integrity}/${p.max}${p.reboots >= CONFIG.twinReboot.max ? '. It can\'t do it again.' : '.'}`, { target: p.id, reboot: true });
+  }
   // Adaptive (mutation): a part hit three cycles running hardens.
   if (e.virus.mutation === 'adaptive') for (const p of livingParts(s).filter((x) => x.adaptAt === e.cycle && x.adaptRun >= 3)) {
     p.armor += 1; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; p.adaptRun = 0;
@@ -2648,6 +2683,10 @@ export function intents(s, columns = 4) {
   }
   const echo = livingParts(s).find((x) => x.echo);
   if (echo) for (const x of e.echoes || []) if (x.due - e.cycle >= 0 && x.due - e.cycle < columns) out.push({ source: echo.id, name: x.name + ' echo', effect: 'damage', amount: x.amount, col: x.due - e.cycle, hidden: false, kind: echo.kind });
+  // The Decoy's beat (your commands mirrored), and a broken twin's reboot: chips on the board like attacks.
+  const decoy = livingParts(s).find((x) => x.reflect);
+  if (decoy) for (let col = 0; col < columns; col++) if ((e.cycle + col) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Mirror', effect: 'mirror', amount: Math.round(CONFIG.mirrorBounce * 100), col, hidden: timersHidden(s, decoy), kind: decoy.kind });
+  for (const p of parts(s)) if (p.rebootAt && p.integrity === 0 && p.rebootAt - e.cycle >= 0 && p.rebootAt - e.cycle < columns) out.push({ source: p.id, name: 'Reboot', effect: 'reboot', amount: Math.round(p.max * CONFIG.twinReboot.at), col: p.rebootAt - e.cycle, hidden: false, kind: p.kind });
   return out.sort((a, b) => a.col - b.col);
 }
 

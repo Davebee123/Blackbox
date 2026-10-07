@@ -74,10 +74,10 @@ function strainTags(s, v) {
 }
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield' };
+const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield', mirror: 'interrupt', reboot: 'pulse-node' };
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
-const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : '+frag'));
-const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part' };
+const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : i.effect === 'mirror' ? `${i.amount}% back` : i.effect === 'reboot' ? `${i.amount} hp` : '+frag'));
+const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command does nothing this cycle, and some bounces back', reboot: 'comes back, unless its twin is broken first' };
 let runMode = false;
 const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
 
@@ -310,6 +310,7 @@ export function collectionMarkup(s) {
   return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div><ul class="coll">${rows}</ul></section>`;
 }
 
+const partName = (id) => ({ encryptor: 'Encryptor', replicator: 'Replicator' }[id] || id);
 // What a component does, in a line (the codex). ??? until you've broken one.
 export function partAbout(p) {
   const a = p.attack, out = [];
@@ -328,7 +329,10 @@ export function partAbout(p) {
   if (p.echo) out.push('every hit you take repeats at half');
   if (p.rearm) out.push(`re-arms another part every ${p.rearm} cycles`);
   if (p.overrun) out.push('its fragments overrun you');
-  return out.join('; ') || 'no attack of its own';
+  if (p.ward) out.push(`wards the ${partName(p.ward)}: it loses at most ${Math.round(CONFIG.ward * 100)}% of itself a cycle while this lives`);
+  if (p.twin) out.push(`twinned with the ${partName(p.twin)}: break one while the other lives and it reboots, so break both`);
+  if (p.reflect) out.push(`every ${p.reflect} cycles it mirrors your commands: they do nothing, and some bounces back`);
+  return out.join('. ').replace(/^./, (c) => c.toUpperCase()) + (out.length ? '.' : '') || 'It has no attack of its own.';
 }
 function partTags(s, p) {
   const e = s.encounter, tags = [];

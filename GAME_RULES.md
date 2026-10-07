@@ -147,7 +147,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 
 **Blueprints.** Nothing is buildable at the start. Every regular service (11) and every protocol recipe (16) is a blueprint you find once. A quarter of vaults hold a `blueprint.bp` (your first server's always does); a home kill drops one 0.8% of the time and a guard 2% (into your pack). Each one teaches something you don't have yet, at random, from **every kind of recipe**: protocol recipes and service blueprints, **filter recipes** (one per stat), harvester and module **plans**, and **config sources**. Once you know everything, one is 2 salvage.
 
-**The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×2.1 damage (`CONFIG.runHp`, `runDamage`), and on top of that an early-game step by enemy level (`CONFIG.runEarly`: ×1.1 at 3, ×1.3 at 4, ×1.45 from 5 to 12, easing back to ×1 by 17), when you have the least gear. The game is meant to be hard: a fight at your level costs a good player 35–50% of their Signal, and one two levels up can beat you. Tuned with `node friction.mjs` against the gear you're likely to have (targets: nothing equipped 60–75%, whites 40–50%, blues 35–45%, yellows 20–30%). Health a same-level fight costs (scripted planner, levels 5–10, after the Ghostroot fix): nothing equipped ~70%, whites ~42%, blues ~28–33%, yellows ~19–22%; level 1 sits on target (53 / 31 / 25 / 16). Home fights on your server are unchanged. The Infiltrator is weakest before Backdoor (level 10) and mid-pack after it.
+**The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×2.1 damage (`CONFIG.runHp`, `runDamage`), and on top of that an early-game step by enemy level (`CONFIG.runEarly`: ×1.1 at 3, ×1.3 at 4, ×1.45 from 5 to 12, easing back to ×1 by 17), when you have the least gear. Encryption skips that step, because it stacks. The game is meant to be hard: a fight at your level costs a good player 35–50% of their Signal, and one two levels up can beat you. Tuned with `node friction.mjs` against the gear you're likely to have (targets: nothing equipped 60–75%, whites 40–50%, blues 35–45%, yellows 20–30%). Health a same-level fight costs (scripted planner, levels 5–10, after the Ghostroot fix): nothing equipped ~70%, whites ~42%, blues ~28–33%, yellows ~19–22%; level 1 sits on target (53 / 31 / 25 / 16). Home fights on your server are unchanged. The Infiltrator is weakest before Backdoor (level 10) and mid-pack after it.
 
 ## The economy
 
@@ -890,11 +890,11 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Breaker | 38 | `zero-day <part>` | 65 damage straight through armor. Once per fight. | once |
 | Bastion | 1 | `rate-limit <part>` | 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits. | 3 |
 | Bastion | 3 | `firewall` | Shields you from the next 20 damage. If it soaks a whole hit, Retaliate lights up. | 4 |
-| Bastion | 5 | `suspend [part]` | SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest. | 4 |
-| Bastion | 10 | `retaliate <part>` | Hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after. | lit |
-| Bastion | 14 | `patch` | Heal 10 now, then 5 a cycle for 3 cycles. | 4 |
-| Bastion | 18 | `throttle [part]` | Its attacks deal half for 3 cycles. | 4 |
-| Bastion | 22 | `purge <part>` | Burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption. | 4 |
+| Bastion | 5 | `purge <part>` | Burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption. | 4 |
+| Bastion | 7 | `retaliate <part>` | Hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after. | lit |
+| Bastion | 14 | `suspend [part]` | SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest. | 4 |
+| Bastion | 18 | `patch` | Heal 10 now, then 5 a cycle for 3 cycles. | 4 |
+| Bastion | 22 | `throttle [part]` | Its attacks deal half for 3 cycles. | 4 |
 | Bastion | 26 | `harden` | Gain an armor chit: the next attack on you does nothing, however big. | 6 |
 | Bastion | 30 | `reclaim <part>` | 35 damage, and you heal half of what it does. On armor it breaks 2 chits. | 3 |
 | Bastion | 34 | `quarantine [part]` | Push its attack back 3 cycles; while it waits, it takes +25% damage. | 6 |
@@ -953,6 +953,14 @@ Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integri
 | Ransomware (CRYPTJACK) | Integrity | Pulse Node: 34, ◆, Surge 14 every 4 (first cycle 3) | Encryptor: 38, ◆ (◆◆ from level 5), Encrypt every 5 (first cycle 4): +4 damage per cycle, stacking, until it breaks |
 | Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 5), spawns a fragment every 4 (first cycle 3) with a 4-damage Splice. Fragments: 18 Integrity (scaled like the virus's health, not its damage), no armor, gnaw 3 every cycle, max 3 |
 | Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 11 every 4 (first cycle 3) | Scrambler: 40, ◆ (◆◆ from level 5), veiled, Scramble every 4 (first cycle 2), hitting for 9: Scrambled for 2 cycles, each of your attacks 25% likely to hit you instead at half |
+
+**Third parts.** From level 3 (ghostroot from 4), wild viruses of each family bring a third part, and the other two give up 15% of their Integrity for it. Each one punishes just bursting the signature part, and each shows on the board like an attack. Named fixtures (CRYPTJACK, SPLINTER, GHOSTROOT) keep two parts.
+
+| Family | Third part | What it does |
+|---|---|---|
+| Ransomware | **Lockbox** (from level 3): 16, ◆, no attack | Wards the Encryptor: while the Lockbox lives, the Encryptor loses at most 25% of its max Integrity a cycle, from everything (`CONFIG.ward`). The rest shows as *warded: N held back*. Break the Lockbox first, or chip the Encryptor under the cap while encryption stacks. |
+| Worm | **Mirror** (from level 3): 18, ◆, Splice 3 every 4 | Twinned with the Replicator: break one while the other lives and a **Reboot** chip appears; 3 cycles later it comes back at 40% with its armor, once (`CONFIG.twinReboot`). Break both close together. |
+| Ghostroot | **Decoy** (from level 4): 18, ◆, veiled | Every 4th cycle a **Mirror** chip sits in its column: your own commands that cycle do nothing, and 30% of the hit bounces back (never your last point; `CONFIG.mirrorBounce`). Burns, helpers and your server's hits get through. Veiled, so you see the beat only once its armor is gone (or it's Tagged). Breaking it ends the mirroring. |
 
 Guards on runs are lighter (you have 50 Signal): Watchdog (Sentry 24 bare, Sweep 6 every 3; Tracker 28 ◆, Trace-back 16 every 5), Sentinel (Lens and Lockout, 24 ◆ each, both veiled), Crawler (Maw 24 bare; Brood 28 ◆ spawns fragments), Shredder (Grinder 26 ◆, Grind 9 every 4; Shredder 26 ◆, Shred 14 every 5).
 

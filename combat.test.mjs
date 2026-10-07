@@ -277,12 +277,14 @@ test('invalid input keeps the queued command', () => {
   assert.equal(s.encounter.queue.text, 'overload pulse', 'Breaker key 2 is Overload');
 });
 
-test('every enemy is two parts, a basic attacker and a signature part, with armor as chits', async () => {
+test('every enemy is a basic attacker and a signature part (a family adds a third from level 3), with armor as chits', async () => {
   const { FAMILIES, GUARDS } = await import('./dist/data.mjs');
   for (const f of [...Object.values(FAMILIES), ...Object.values(GUARDS)]) {
-    assert.equal(f.parts.length, 2, f.name);
+    const base = f.parts.filter((p) => !p.from), third = f.parts.filter((p) => p.from);
+    assert.equal(base.length, 2, f.name);
+    assert.ok(third.length <= 1 && third.every((p) => p.from >= 3 && (p.ward || p.twin || p.reflect)), f.name);
     assert.equal(f.parts.filter((p) => p.special).length, 1, f.name);
-    assert.ok(f.parts.every((p) => p.armor >= 0 && p.armor <= (f.ice ? 3 : 2) && (p.attack || p.rearm)), f.name); // ICE may wear more, and a part may work passively
+    assert.ok(f.parts.every((p) => p.armor >= 0 && p.armor <= (f.ice ? 3 : 2) && (p.attack || p.rearm || p.ward || p.reflect)), f.name); // ICE may wear more, and a part may work passively
     assert.ok(!f.armor, f.name + ' has no separate armor part');
   }
 });

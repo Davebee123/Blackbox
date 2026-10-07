@@ -41,6 +41,10 @@ export const CONFIG = {
   // tuned against the gear you're likely to have, so a level is a grind until an item lands.
   runHp: 1.4, // × part Integrity on top of partToughness
   runDamage: 2.1, // × enemy attacks
+  thirdTrim: 0.85, // a family's third part (Lockbox, Mirror, Decoy) comes out of the other two's Integrity
+  ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
+  twinReboot: { in: 3, at: 0.4, max: 1 }, // Mirror: a twin reboots this many cycles later at 40% with its armor, once
+  mirrorBounce: 0.3, // Decoy: a mirrored command does nothing and this share bounces back
   runEarly: [1, 1, 1.1, 1.3, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
   xpEarly: { bonus: 0.15, full: 10, gone: 15 }, // levels up to 10 take 15% more XP, easing back to normal by 15
   // A broken part leaves salvage behind only sometimes.
@@ -235,6 +239,8 @@ export const FAMILIES = {
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Encryptor', integrity: 38, armor: 1, loot: 'Cipher Seed', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 5, first: 4 } },
+      // From level 3: the Lockbox wards the Encryptor (it can't lose more than a quarter of itself a cycle while the Lockbox lives).
+      { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3 },
     ],
   },
   worm: {
@@ -244,6 +250,8 @@ export const FAMILIES = {
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
+      // From level 3: the Mirror and the Replicator are twins. Break one while the other lives and it reboots.
+      { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'replicator', from: 3, attack: { name: 'Splice', effect: 'damage', amount: 3, interval: 4, first: 3 } },
     ],
   },
   ghostroot: {
@@ -254,6 +262,8 @@ export const FAMILIES = {
       // The Scrambler carries the threat, not the Pulse: killing the Pulse first no longer halves the fight.
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
       { id: 'scrambler', name: 'Scrambler', integrity: 40, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 9, interval: 4, first: 2 } },
+      // From level 4: every 4th cycle the Decoy mirrors your commands. They do nothing, and some bounces back.
+      { id: 'decoy', name: 'Decoy', integrity: 18, armor: 1, veiled: true, loot: 'Decoy Shell', reflect: 4, from: 4 },
     ],
   },
 };
@@ -476,6 +486,9 @@ function makePart(spec, kind, scale, extraArmor = 0) {
     echo: !!spec.echo, // Echo: every hit you take repeats next cycle at half
     overrun: !!spec.overrun, // Overrun's Hive: its fragments bite harder every cycle
     rearm: spec.rearm || 0, // Bouncer's Keyring: re-arms the other part every N cycles
+    ward: spec.ward || null, // Lockbox: the part it wards loses at most CONFIG.ward of its max a cycle
+    twin: spec.twin || null, // Mirror: its twin; break one while the other lives and it reboots
+    reflect: spec.reflect || 0, // Decoy: every Nth cycle your commands are mirrored
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
     lastDamaged: 0,
@@ -522,9 +535,13 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
-  const parts = (strain ? strain.parts : family.parts).map((spec) => makePart(spec, 'system', scale * g.hp, extra(spec) + (spec.special ? 0 : g.armor)));
+  // A family's third part joins wild viruses from its level (named fixtures stay as they are); the others give up some Integrity for it.
+  const specs = (strain ? strain.parts : family.parts).filter((spec) => !spec.from || ((random || overrides.family) && level >= spec.from));
+  const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
+  const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * (CONFIG.runEarly[level - 1] ?? 1) : 1);
-  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale));
+  // Encryption stacks, so it skips the early-game step (it would compound).
+  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' && overrides.run ? CONFIG.runEarly[level - 1] ?? 1 : 1)));
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
   for (const p of parts) if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * dmgScale)); // a special that also hits (the Scrambler)
   for (const p of parts) if (p.attack?.grow) p.attack.grow = Math.max(1, Math.round(p.attack.grow * dmgScale));
@@ -709,7 +726,7 @@ export const ARCHETYPES = {
     name: 'Bastion', role: ['Tank', 'Healer'], idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
     passive: { name: 'Hardened', rule: 'You start every fight with a ◆: the first attack on you does nothing.' },
-    skills: skillsOf(['rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'purge', 'throttle', 'harden', 'reclaim', 'quarantine', 'failover']),
+    skills: skillsOf(['rate-limit', 'firewall', 'purge', 'retaliate', 'suspend', 'patch', 'throttle', 'harden', 'reclaim', 'quarantine', 'failover']),
     fillers: [
       [f('patch-notes', 'Patch Notes', 'Patch heals +3 per rank.', 3), f('stateful-firewall', 'Stateful Firewall', 'Firewall absorbs +5 per rank.', 5)],
       [f('token-bucket', 'Token Bucket', 'Rate Limit +4 damage per rank.', 4), f('redundancy', 'Redundancy', '+4 max Signal on runs per rank.', 4)],
