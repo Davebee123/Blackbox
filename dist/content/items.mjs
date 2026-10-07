@@ -753,6 +753,191 @@ export default {
         }
       ],
       "flavour": "The end feeds the beginning."
+    },
+    {
+      "id": "crown-packet",
+      "name": "Crown Packet",
+      "base": "proof-of-concept",
+      "level": 3,
+      "primary": {
+        "damage": [
+          7,
+          8
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-winding",
+        "do": "damage%",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "relayking"
+        }
+      ],
+      "flavour": "It still thinks it decides where everything goes."
+    },
+    {
+      "id": "hop-limit",
+      "name": "Hop Limit",
+      "base": "reverse-shell",
+      "level": 3,
+      "primary": {
+        "signal": 16,
+        "regen": 0.7
+      },
+      "effect": {
+        "when": "struck",
+        "do": "restore%",
+        "value": 3
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "relayking"
+        }
+      ],
+      "flavour": "Every hop costs it something. Not you."
+    },
+    {
+      "id": "squatters-rights",
+      "name": "Squatter's Rights",
+      "base": "open-proxy",
+      "level": 4,
+      "primary": {
+        "signal": 32,
+        "reduction": 1
+      },
+      "effect": {
+        "when": "start",
+        "do": "chit"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "resident"
+        }
+      ],
+      "flavour": "It lived here first. Now you do."
+    },
+    {
+      "id": "eviction-notice",
+      "name": "Eviction Notice",
+      "base": "proof-of-concept",
+      "level": 4,
+      "primary": {
+        "damage": [
+          8,
+          9
+        ]
+      },
+      "secondary": {
+        "crit": 3
+      },
+      "effect": {
+        "when": "break",
+        "do": "refund",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "resident"
+        }
+      ],
+      "flavour": "Thirty days. Or thirty cycles."
+    },
+    {
+      "id": "lien",
+      "name": "Lien",
+      "base": "cron-job",
+      "level": 8,
+      "primary": {
+        "damage": 4,
+        "signal": 20
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-bare",
+        "do": "damage+",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "repoman"
+        }
+      ],
+      "flavour": "Everything it touches already belongs to someone."
+    },
+    {
+      "id": "repossessed-key",
+      "name": "Repossessed Key",
+      "base": "tty-upgrade",
+      "level": 8,
+      "primary": {
+        "signal": 26,
+        "regen": 1.2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "encrypt-half"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "repoman"
+        }
+      ],
+      "flavour": "He took it back. You took it back again."
+    },
+    {
+      "id": "choirboy",
+      "name": "Choirboy",
+      "base": "socks-tunnel",
+      "level": 10,
+      "primary": {
+        "signal": 55,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "blind-short"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "choir"
+        }
+      ],
+      "flavour": "Sings on key. Never on cue."
+    },
+    {
+      "id": "hollow-note",
+      "name": "Hollow Note",
+      "base": "weaponized-exploit",
+      "level": 10,
+      "primary": {
+        "damage": [
+          12,
+          15
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "odd-cycle",
+        "do": "damage%",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "choir"
+        }
+      ],
+      "flavour": "Hit on the off-beat, where the echo isn't."
     }
   ]
 };

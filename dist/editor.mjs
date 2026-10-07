@@ -3,7 +3,7 @@
 // (content.mjs) runs as you type; Play from here opens the game at a beat on a test save.
 import { check, checkItems, fxText, fill, beatVars, JOB_VARS, COMMON, JOB_TYPES, JOB_NAMES, CONTRACT_KINDS, SIDES, REWARDS, FX_WHEN, FX_IF, FX_DO, FX_SCALE, FX_LIMIT, SOURCE_KINDS } from './content.mjs';
 import { BASES, STATS, SLOTS, RARITIES, uniqueItem, statLine, seeded } from './gear.mjs';
-import { STRAINS, GUARDS } from './data.mjs';
+import { STRAINS, GUARDS, BOSSES } from './data.mjs';
 const ROGUE = { kinds: { nest: { name: 'Nest' }, pit: { name: 'Pit' }, gauntlet: { name: 'Gauntlet' } } }; // (rogue.mjs pulls in the whole engine)
 import { zoneRooms } from './zone.mjs';
 
@@ -260,6 +260,7 @@ const sourceIds = (kind) => ({
   rogue: { '': 'Any rogue server', ...Object.fromEntries(Object.entries(ROGUE.kinds).map(([k, x]) => [k, x.name])) },
   story: Object.fromEntries(story.beats.map((b) => [b.id, b.subject])),
   contract: { takeover: 'A takeover contract', glassjaw: 'A GLASSJAW job' },
+  boss: Object.fromEntries(Object.entries(BOSSES).map(([k, x]) => [k, x.name])),
 }[kind]);
 function uniqueForm(i) {
   const u = items.uniques[i], p = `items.uniques.${i}`, fx = u.effect, b = BASES[u.base];

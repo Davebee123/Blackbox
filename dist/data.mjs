@@ -525,6 +525,9 @@ export const BOSSES = {
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
+// Each boss has two uniques of its own (content/items.mjs, source kind 'boss'): this chance a kill, and
+// this much more for every kill that gave none (shown in the log and the collection).
+export const BOSS_LOOT = { chance: 0.3, pity: 0.1 };
 export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // Build a virus from a named fixture or a seeded random variant.

@@ -119,3 +119,32 @@ test('early bosses: RELAY-KING holds /net/relay from level 3; the bounty is REPO
   assert.equal(s.encounter.virus.boss, 'choir');
   assert.equal(s.encounter.virus.family, 'ghostroot');
 });
+
+test('boss uniques: each boss has two; a kill without one raises the next kill\'s chance by 10%, shown in the log', async () => {
+  const { BOSS_LOOT } = await import('./dist/data.mjs');
+  const { bossUniques, bossChance } = await import('./dist/combat.mjs');
+  const { collectionMarkup } = await import('./dist/view.mjs');
+  for (const b of Object.keys(BOSSES)) assert.equal(bossUniques(b).length, 2, b);
+  const was = BOSS_LOOT.chance;
+  try {
+    BOSS_LOOT.chance = -1; // a miss for sure
+    const s = onRun();
+    openVault(s);
+    say(s, 'cd core');
+    winFight(s);
+    assert.equal(s.pity.resident, 1);
+    assert.ok(s.logs.some((e) => /No unique from Resident this time\. Next kill: -?\d+%/.test(e.message)));
+    BOSS_LOOT.chance = was;
+    assert.equal(Math.round(bossChance(s, 'resident') * 100), Math.round((was + BOSS_LOOT.pity) * 100));
+    s.collection = { 'wicks-old-toolkit': 1 };
+    assert.match(collectionMarkup(s), new RegExp(`A Resident · <span class="coll-odds"[^>]*>${Math.round((was + BOSS_LOOT.pity) * 100)}% a kill`));
+    // A hit resets it, and gives one you haven't found.
+    BOSS_LOOT.chance = 2;
+    const t = onRun();
+    openVault(t);
+    say(t, 'cd core');
+    winFight(t);
+    assert.equal(t.pity.resident, 0);
+    assert.ok(t.stash.some((it) => bossUniques('resident').some((u) => u.id === it.unique)));
+  } finally { BOSS_LOOT.chance = was; }
+});

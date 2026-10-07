@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { ELITE, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+import { ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
 import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
@@ -395,6 +395,24 @@ const dropsHere = (u, ctx) => (u.sources || []).some((src) => src.kind === ctx.k
 export function uniqueFrom(s, ctx, level) {
   const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && dropsHere(u, ctx) && !['story', 'contract', 'store'].includes(ctx.kind));
   return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null;
+}
+// A boss's own uniques (sources kind 'boss'): BOSS_LOOT.chance a kill, BOSS_LOOT.pity more for every
+// kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
+export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
+export const bossChance = (s, boss) => Math.min(1, BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0));
+function bossUnique(s, boss, level) {
+  const pool = bossUniques(boss);
+  if (!pool.length) return;
+  const name = BOSSES[boss]?.name || boss;
+  if (rand(s) < bossChance(s, boss)) {
+    (s.pity ||= {})[boss] = 0;
+    const fresh = pool.filter((u) => !s.collection?.[u.id]), from = fresh.length ? fresh : pool;
+    const u = from[Math.floor(rand(s) * from.length)];
+    addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `);
+  } else {
+    (s.pity ||= {})[boss] = (s.pity[boss] || 0) + 1;
+    emit(s, 'info', `No unique from ${name} this time. Next kill: ${Math.round(bossChance(s, boss) * 100)}%.`);
+  }
 }
 // An elite's unique: any world drop (SPRAWL, vaults, guards, rogue servers) up to its level, wherever
 // it was written to drop. Story, contract, store and strain uniques stay where they belong.
@@ -1198,6 +1216,7 @@ export function finish(s, result) {
   if ((e.mode === 'home' || e.zone) && result === 'victory') lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(e.virus.level - hackerLevel(s))) * (e.virus.strain && e.virus.strain === hotStrain(s) ? 1 + HOT.bonus : 1));
 
   if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
+  if (result === 'victory' && e.virus.boss) bossUnique(s, e.virus.boss, e.virus.level);
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();

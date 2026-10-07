@@ -2757,6 +2757,7 @@ details.map-pick { pointer-events: auto; }
 .coll li { display: grid; gap: 1px; padding: 4px 0; border-top: 1px solid var(--line); }
 .coll li small { font-size: 11px; color: var(--dim); }
 .coll .coll-q { color: var(--gray); letter-spacing: 2px; }
+.coll .coll-odds { color: var(--amber, #e0b050); }
 
 /* Trace on a break-in: beside Signal in the run header. */
 .net-trace { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }

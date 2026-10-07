@@ -135,6 +135,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 **Drops: a grind, on purpose.** Targets in play time: a blue every 20–30 minutes, a yellow about every two hours, a gold every 10–12 hours. Per kill (at the assumed pace of 20 kills an hour, about what the pacing bot measures; `LOOT` in gear.mjs): one in six drops a grey or white; blue 1 in 12 kills, yellow 1 in 60, gold 1 in 300, then vaults and double rolls make up the rest. Most kills drop nothing.
 - **Guards, rogue-server Pits and bounties** roll twice and keep the best. Deeper layers add 25% a layer to the blue and yellow odds.
 - **Vaults:** half hold a protocol (`kit.bin`, fixed per server; your first server's always does), white or better: white 80 · blue 16 · yellow 3.5 · gold 0.5 (a unique that drops from vaults that deep).
+- **A boss's uniques:** two each, 30% a kill plus 10% for every kill without one (see Bosses).
 - **A strain's trophy:** 1 in 200 kills of that strain drops its own unique (Keylogger → Logger Spool, Hashrat → Cryptominer…).
 - **Scavenge is magic find** with diminishing returns: +50% Scavenge = +33% better odds.
 - **Rewards:** a story beat or contract can give a unique (killing claimjack gives wick's Old Toolkit: 5–6 Damage, +10 Signal, about a good blue at level 1).
@@ -836,7 +837,7 @@ A virus component's name always shows (so you can target it), but what it does r
 
 ## Collection log
 
-Every unique and strain trophy has a place in the **Collection** on the System page (`collectionMarkup`), sorted by level: the ones you've found by name, the rest as **???** with their level and where they come from (SPRAWL-00, a guard, a layer's vaults, a rogue server, the storyline, a contract, Halcyon's store; a strain's trophy names the strain only once you've met it). A bar and *N/total* show how far you are. The card stays hidden until your first unique. A new one adds a *New in collection* row to the reward card. It counts the first time you get one, even if a full stash breaks it down; an old save counts what it already holds.
+Every unique and strain trophy has a place in the **Collection** on the System page (`collectionMarkup`), sorted by level: the ones you've found by name, the rest as **???** with their level and where they come from (SPRAWL-00, a guard, a layer's vaults, a rogue server, the storyline, a contract, Halcyon's store, a boss; a strain's trophy names the strain only once you've met it). A missing boss unique also shows that boss's chance a kill, bad-luck protection included. A bar and *N/total* show how far you are. The card stays hidden until your first unique. A new one adds a *New in collection* row to the reward card. It counts the first time you get one, even if a full stash breaks it down; an old save counts what it already holds.
 
 ## Buyout
 
@@ -964,6 +965,19 @@ Order within a cycle: your command → burns → helpers → heals over time →
 | HOLLOW CHOIR (ghostroot) | Its own event (Boss) from level 10, 25 minutes on a traced server | level 10 | 1.6× | at half: splits off a second Decoy on the off-beat, so it mirrors you two cycles in four | cycle 16 |
 
 A boss drops like an elite (three loot rolls). The Hollow Choir also pays twice the bounty's credits and a Custom protocol. A phase change flashes on screen.
+
+**Boss uniques.** Each boss has two uniques of its own (`BOSS_LOOT`). A kill has a 30% chance to drop one, and every kill that drops none adds 10% to the next, back to 30% once one drops. One you haven't found comes first. After a miss the log says the next kill's chance, and the Collection shows it beside each boss unique you're missing.
+
+| Boss | Unique | What it does |
+|---|---|---|
+| RELAY-KING | Crown Packet (exploit, level 3) | +30% damage on a part whose attack lands this cycle or next |
+| RELAY-KING | Hop Limit (shell, level 3) | When an attack lands on you, restore 3% of your health |
+| A Resident | Squatter's Rights (proxy, level 4) | Start every fight with a ◆ |
+| A Resident | Eviction Notice (exploit, level 4) | When you break a part, all your cooldowns drop by 1 |
+| REPO MAN | Lien (script, level 8) | +6 damage on a part with no armor left |
+| REPO MAN | Repossessed Key (shell, level 8) | Encryption on you stacks half as fast |
+| HOLLOW CHOIR | Choirboy (proxy, level 10) | Scrambles on you last one cycle less |
+| HOLLOW CHOIR | Hollow Note (exploit, level 10) | +30% damage on odd cycles |
 
 **Regrowth.** A held server whose lockdown runs out without you retaking it counts it. Two of those within 24 hours and the Resident regrows: the server isn't yours until you beat it in `/core` again. What you built there waits.
 
