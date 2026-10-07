@@ -720,6 +720,7 @@ function go(name, quiet = false) {
 }
 
 // Fill the prompt the way a hotkey would; the player still presses Enter.
+const touch = () => matchMedia('(pointer: coarse)').matches;
 function prepare(abilityId) {
   const a = ABILITIES[abilityId];
   const s = shown();
@@ -731,7 +732,7 @@ function prepare(abilityId) {
   if (a.target === 'part') text += selected && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : ' ';
   if (a.target === 'attack') text += selected && part(s, selected)?.attack && alive(part(s, selected)) ? ` ${partKey(s, part(s, selected))}` : '';
   input.value = text;
-  input.focus();
+  if (!touch()) input.focus(); // on a phone, focusing pops the keyboard over the board
   updateSuggestions();
 }
 
@@ -1654,14 +1655,18 @@ document.addEventListener('click', (e) => {
     return;
   }
   const ability = e.target.closest('[data-ability]');
-  if (ability) return prepare(ability.dataset.ability);
+  if (ability) { // tap a skill to pick it, tap it again to fire it (no keyboard needed)
+    const cur = $('command-input').value.trim(), id = ability.dataset.ability;
+    if (cur.split(' ')[0] === id && !['command', 'schedule'].includes(ABILITIES[id]?.target)) { $('command-input').value = ''; return run(cur); }
+    return prepare(id);
+  }
   const target = e.target.closest('[data-target]');
   if (target && !target.disabled) {
     selected = selected === target.dataset.target ? null : target.dataset.target;
     const input = $('command-input');
     const [word] = input.value.trim().split(' ');
     if (selected && ABILITIES[word] && ABILITIES[word].target !== 'none') input.value = `${word} ${partKey(campaign, part(campaign, selected))}`;
-    input.focus();
+    if (!touch()) input.focus();
     dirty = true;
     return;
   }

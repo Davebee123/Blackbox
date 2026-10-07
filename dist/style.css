@@ -2720,3 +2720,14 @@ details.map-pick { pointer-events: auto; }
 .sp-row.k-lost { border-left-color: var(--hot); } .sp-row.k-lost .sp-ico { color: var(--hot); }
 .sp-row.k-time .sp-qty { font-variant-numeric: tabular-nums; }
 .gain.loss .sp-kicker { color: var(--hot); }
+
+/* Phones: three timeline columns (Now, +1, +2), slimmer chips, skill names that fit, labelled credits. */
+@media (max-width: 480px) {
+  .brow { grid-template-columns: minmax(84px, 1.1fr) repeat(3, minmax(0, 1fr)); }
+  .brow > .bcell:nth-child(5) { display: none; }
+  .brow > .bcell.span4 { grid-column: 2 / -1; }
+  .intent .ico { display: none; }
+  .intent { padding-left: 4px; padding-right: 4px; }
+  .tray { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .meter:not(.meter-signal):not(.meter-integrity) .meter-label { display: inline; font-size: 10px; }
+}

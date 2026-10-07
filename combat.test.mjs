@@ -305,9 +305,9 @@ test('fixtures are all winnable by at least two different plans', async () => {
 test('speed changes seconds per cycle, not the rules', async () => {
   const { cycleLength } = await import('./dist/combat.mjs');
   const s = start();
-  assert.equal(cycleLength(s), CONFIG.speeds.relaxed, 'relaxed by default');
-  command(s, 'speed normal');
-  assert.equal(cycleLength(s), CONFIG.speeds.normal);
+  assert.equal(cycleLength(s), CONFIG.speeds.normal, 'normal by default');
+  command(s, 'speed fast');
+  assert.equal(cycleLength(s), CONFIG.speeds.fast);
   command(s, 'speed relaxed');
   assert.equal(cycleLength(s), CONFIG.speeds.relaxed);
   advance(s, CONFIG.speeds.relaxed - 1);
