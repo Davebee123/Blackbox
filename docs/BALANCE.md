@@ -5,10 +5,10 @@ One scripted planner for every class (it finishes bare or about-to-fire parts, a
 | Bracket | Spike, no gear | Spike only | Breaker | Bastion | Infiltrator | Operator |
 |---|---:|---:|---:|---:|---:|---:|
 | Lv 1 | 11/24 · 0 clean · 81% · 10.6c | 24/24 · 1 clean · 41% · 9.1c | 24/24 · 2 clean · 27% · 8.0c | 24/24 · 9 clean · 12% · 8.0c | 24/24 · 0 clean · 25% · 7.5c | 24/24 · 4 clean · 18% · 7.0c |
-| Lv 10 | 4/24 · 0 clean · 95% · 9.2c | 15/24 · 1 clean · 76% · 12.0c | 24/24 · 5 clean · 19% · 7.9c | 24/24 · 9 clean · 11% · 12.7c | 24/24 · 2 clean · 35% · 8.2c | 24/24 · 5 clean · 18% · 6.6c |
-| Lv 18 | 0/24 · 0 clean · 100% · 7.0c | 9/24 · 0 clean · 89% · 11.0c | 24/24 · 1 clean · 38% · 7.8c | 24/24 · 3 clean · 36% · 13.5c | 24/24 · 2 clean · 27% · 7.9c | 24/24 · 1 clean · 45% · 8.7c |
-| Lv 30 | 0/24 · 0 clean · 100% · 6.4c | 11/24 · 0 clean · 89% · 11.8c | 24/24 · 0 clean · 40% · 8.4c | 24/24 · 7 clean · 19% · 13.3c | 24/24 · 6 clean · 20% · 7.1c | 24/24 · 5 clean · 27% · 6.2c |
-| Lv 50 | 0/24 · 0 clean · 100% · 5.4c | 9/24 · 1 clean · 85% · 10.7c | 23/24 · 1 clean · 48% · 7.9c | 24/24 · 10 clean · 21% · 11.5c | 24/24 · 5 clean · 26% · 7.0c | 24/24 · 8 clean · 12% · 4.9c |
+| Lv 10 | 4/24 · 1 clean · 91% · 9.0c | 15/24 · 1 clean · 76% · 12.0c | 24/24 · 5 clean · 18% · 7.8c | 24/24 · 9 clean · 11% · 12.5c | 24/24 · 2 clean · 34% · 8.1c | 24/24 · 5 clean · 18% · 6.5c |
+| Lv 18 | 1/24 · 0 clean · 98% · 7.5c | 9/24 · 0 clean · 87% · 11.0c | 24/24 · 2 clean · 37% · 7.8c | 24/24 · 3 clean · 35% · 13.3c | 24/24 · 1 clean · 27% · 7.9c | 24/24 · 1 clean · 44% · 8.6c |
+| Lv 30 | 4/24 · 0 clean · 92% · 7.2c | 11/24 · 1 clean · 81% · 11.3c | 24/24 · 1 clean · 36% · 8.3c | 24/24 · 8 clean · 17% · 13.0c | 24/24 · 7 clean · 18% · 6.9c | 24/24 · 7 clean · 25% · 5.9c |
+| Lv 50 | 4/24 · 0 clean · 91% · 6.8c | 10/24 · 1 clean · 77% · 10.5c | 23/24 · 2 clean · 40% · 7.7c | 24/24 · 10 clean · 17% · 11.2c | 24/24 · 6 clean · 22% · 6.7c | 24/24 · 9 clean · 10% · 4.8c |
 
 Cells: wins · clean kills (nothing got through: no damage, encryption included) · average health lost · average cycles.
 
@@ -18,7 +18,7 @@ Every strain open at the level, six grade 2 wilds and six wilds two levels up.
 
 | Bracket | Breaker | Bastion | Infiltrator | Operator |
 |---|---:|---:|---:|---:|
-| Lv 1 | 11/12 · 56% · 11.7c | 12/12 · 24% · 10.6c | 12/12 · 53% · 8.9c | 11/12 · 53% · 10.4c |
+| Lv 1 | 12/12 · 50% · 10.6c | 12/12 · 16% · 9.3c | 12/12 · 50% · 8.8c | 12/12 · 52% · 9.8c |
 | Lv 10 | 20/22 · 42% · 9.1c | 21/22 · 29% · 13.2c | 21/22 · 40% · 8.6c | 22/22 · 30% · 7.3c |
 | Lv 18 | 23/23 · 35% · 7.9c | 22/23 · 30% · 14.4c | 23/23 · 32% · 8.3c | 23/23 · 38% · 9.1c |
 | Lv 30 | 23/23 · 35% · 8.4c | 23/23 · 23% · 14.3c | 23/23 · 24% · 6.9c | 23/23 · 28% · 6.7c |
@@ -28,10 +28,10 @@ Target (a `todo` test in balance.test.mjs until Phase 3): a blue-geared fight at
 
 ## Skill use at level 50
 
-- **Breaker:** shatter 25% · crack 24% · spike 24% · segfault 21% · overload 2% · brace 2% · flood 2% · exploit 1%
-- **Bastion:** spike 60% · rate-limit 21% · suspend 8% · retaliate 6% · patch 3% · purge 3% · firewall 0%
-- **Infiltrator:** inject 58% · null-route 12% · opening 12% · backdoor 10% · detonate 7% · spike 2%
-- **Operator:** spike 29% · botnet 21% · deploy 21% · jam 15% · kill-switch 7% · spawn 5% · barrier 1%
+- **Breaker:** shatter 26% · spike 26% · crack 24% · segfault 18% · overload 2% · brace 2% · flood 1% · exploit 1%
+- **Bastion:** spike 60% · rate-limit 21% · suspend 7% · retaliate 6% · patch 3% · purge 3%
+- **Infiltrator:** inject 56% · opening 13% · null-route 13% · backdoor 10% · detonate 7% · spike 2%
+- **Operator:** spike 29% · botnet 22% · deploy 21% · jam 17% · kill-switch 5% · spawn 5% · barrier 1%
 
 ## Unlockable skills (level 50, whole tree)
 
@@ -39,35 +39,35 @@ Each one swapped into the fifth slot. Change vs the first five.
 
 | Class | Skill | Wins | Health lost | Δ | Cycles | Δ |
 |---|---|---:|---:|---:|---:|---:|
-| Breaker | Shatter | 24/24 | 45% | -3 | 7.9 | -0.0 |
-| Breaker | Segfault | 24/24 | 21% | -27 | 6.6 | -1.3 |
-| Breaker | Fork Bomb | 24/24 | 41% | -7 | 6.8 | -1.1 |
-| Breaker | Thermal Runaway | 24/24 | 16% | -32 | 6.3 | -1.6 |
-| Breaker | Sudo | 24/24 | 21% | -27 | 6.5 | -1.4 |
-| Breaker | Zero-day | 24/24 | 14% | -34 | 5.4 | -2.5 |
-| Bastion | Throttle | 24/24 | 40% | +19 | 12.1 | +0.6 |
-| Bastion | Purge | 24/24 | 26% | +5 | 11.5 | -0.0 |
-| Bastion | Harden | 24/24 | 41% | +20 | 12.0 | +0.5 |
-| Bastion | Reclaim | 24/24 | 31% | +9 | 11.8 | +0.3 |
-| Bastion | Quarantine | 24/24 | 41% | +20 | 12.0 | +0.5 |
-| Bastion | Failover | 24/24 | 40% | +18 | 11.8 | +0.3 |
-| Infiltrator | Detonate | 24/24 | 41% | +15 | 6.6 | -0.4 |
-| Infiltrator | Opening | 24/24 | 40% | +14 | 6.7 | -0.3 |
-| Infiltrator | Propagate | 24/24 | 40% | +14 | 6.7 | -0.3 |
-| Infiltrator | Spoof | 24/24 | 40% | +14 | 6.7 | -0.3 |
-| Infiltrator | Rootkit Implant | 24/24 | 40% | +14 | 6.7 | -0.3 |
-| Operator | Jam | 24/24 | 10% | -2 | 4.9 | +0.0 |
-| Operator | Kill Switch | 24/24 | 11% | -1 | 4.1 | -0.8 |
-| Operator | Garbage Collect | 24/24 | 29% | +16 | 4.5 | -0.3 |
-| Operator | Fork | 24/24 | 10% | -2 | 4.0 | -0.9 |
-| Operator | Reroute | 24/24 | 10% | -2 | 4.0 | -0.9 |
-| Operator | Cron Storm | 24/24 | 10% | -2 | 4.0 | -0.9 |
+| Breaker | Shatter | 24/24 | 40% | -0 | 7.7 | +0.0 |
+| Breaker | Segfault | 24/24 | 18% | -21 | 6.6 | -1.1 |
+| Breaker | Fork Bomb | 24/24 | 37% | -3 | 6.8 | -0.9 |
+| Breaker | Thermal Runaway | 24/24 | 13% | -26 | 6.3 | -1.4 |
+| Breaker | Sudo | 24/24 | 18% | -21 | 6.5 | -1.2 |
+| Breaker | Zero-day | 24/24 | 12% | -28 | 5.4 | -2.3 |
+| Bastion | Throttle | 24/24 | 36% | +19 | 11.8 | +0.6 |
+| Bastion | Purge | 24/24 | 22% | +5 | 11.1 | -0.0 |
+| Bastion | Harden | 24/24 | 37% | +20 | 11.8 | +0.7 |
+| Bastion | Reclaim | 24/24 | 27% | +10 | 11.5 | +0.3 |
+| Bastion | Quarantine | 24/24 | 37% | +20 | 11.9 | +0.7 |
+| Bastion | Failover | 24/24 | 35% | +18 | 11.5 | +0.3 |
+| Infiltrator | Detonate | 24/24 | 35% | +13 | 6.3 | -0.3 |
+| Infiltrator | Opening | 24/24 | 33% | +12 | 6.4 | -0.3 |
+| Infiltrator | Propagate | 24/24 | 33% | +12 | 6.4 | -0.3 |
+| Infiltrator | Spoof | 24/24 | 33% | +12 | 6.4 | -0.3 |
+| Infiltrator | Rootkit Implant | 24/24 | 33% | +12 | 6.4 | -0.3 |
+| Operator | Jam | 24/24 | 8% | -2 | 4.8 | +0.0 |
+| Operator | Kill Switch | 24/24 | 9% | -1 | 4.0 | -0.8 |
+| Operator | Garbage Collect | 24/24 | 25% | +15 | 4.5 | -0.3 |
+| Operator | Fork | 24/24 | 9% | -1 | 4.0 | -0.8 |
+| Operator | Reroute | 24/24 | 9% | -1 | 4.0 | -0.8 |
+| Operator | Cron Storm | 24/24 | 9% | -1 | 4.0 | -0.8 |
 
 ## Every maxed build (level 50, all ranks)
 
 | Class | Best build | Health lost · cycles | Worst build | Health lost · cycles |
 |---|---|---:|---|---:|
-| Breaker | Hair Trigger / Piercing / Unsafe Mode | 13% · 4.3 | Hair Trigger / Core Dump / Cascade Failure | 49% · 8.0 |
-| Bastion | Service Pack / Backpressure / Preemption | 19% · 11.7 | Deep Packet Inspection / Active Defense / Uptime | 22% · 10.6 |
-| Infiltrator | Fast Hands / Polymorphic / Leaked Creds | 26% · 7.0 | Supercookie / Rotating Proxies / Assassinate | 29% · 7.3 |
-| Operator | Big Process / Extra Nodes / Parallel Deploy | 12% · 4.9 | Big Process / Hive / Supervisor | 40% · 7.0 |
+| Breaker | Hair Trigger / Piercing / Unsafe Mode | 12% · 4.3 | Hair Trigger / Core Dump / Cascade Failure | 40% · 7.8 |
+| Bastion | Service Pack / Backpressure / Preemption | 15% · 11.5 | Deep Packet Inspection / Active Defense / Uptime | 18% · 10.3 |
+| Infiltrator | Fast Hands / Polymorphic / Leaked Creds | 22% · 6.7 | Supercookie / Rotating Proxies / Assassinate | 24% · 6.9 |
+| Operator | Big Process / Extra Nodes / Parallel Deploy | 10% · 4.8 | Big Process / Hive / Supervisor | 33% · 6.3 |
