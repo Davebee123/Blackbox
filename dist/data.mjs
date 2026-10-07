@@ -687,7 +687,7 @@ const RUN_SKILLS = {
 const skillsOf = (ids) => ids.map((id) => RUN_SKILLS[id] || card(id));
 export const ARCHETYPES = {
   breaker: {
-    name: 'Breaker', idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
+    name: 'Breaker', role: ['DPS', 'Burst'], idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
     status: 'exposed',
     passive: { name: 'Momentum', rule: 'Each part you break: +10% damage for 2 cycles, up to 3 stacks. Another break refreshes it.' },
     skills: skillsOf(['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
@@ -703,7 +703,7 @@ export const ARCHETYPES = {
     ],
   },
   bastion: {
-    name: 'Bastion', idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
+    name: 'Bastion', role: ['Tank', 'Healer'], idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
     passive: { name: 'Hardened', rule: 'You start every fight with a ◆: the first attack on you does nothing.' },
     skills: skillsOf(['rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'purge', 'throttle', 'harden', 'reclaim', 'quarantine', 'failover']),
@@ -719,7 +719,7 @@ export const ARCHETYPES = {
     ],
   },
   infiltrator: {
-    name: 'Infiltrator', idea: 'Know where to hit, and slip through runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
+    name: 'Infiltrator', role: ['DPS', 'Damage over time', 'Stealth runs'], idea: 'Know where to hit, and slip through runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
     passive: { name: 'Ghost', rule: 'Slip past one guard a run without a fight. Every fight opens with a blue Surprise window: Inject, Tag and Keepalive fired in it hit harder. Return trips on runs are free.' },
     skills: skillsOf(['inject', 'backdoor', 'keepalive', 'tag', 'null-route', 'detonate', 'opening', 'propagate', 'spoof', 'tap', 'implant']),
@@ -735,7 +735,7 @@ export const ARCHETYPES = {
     ],
   },
   operator: {
-    name: 'Operator', idea: 'Write the script, let it run.', solo: 'Steady damage without constant input.', crew: 'Makes everyone’s hits count for more.',
+    name: 'Operator', role: ['Support', 'Summoner'], idea: 'Write the script, let it run.', solo: 'Steady damage without constant input.', crew: 'Makes everyone’s hits count for more.',
     status: 'hooked',
     passive: { name: 'Extra thread', rule: '+1 daemon slot.' },
     skills: skillsOf(['deploy', 'hook', 'spawn', 'botnet', 'kill-switch', 'jam', 'barrier', 'garbage-collect', 'fork', 'reroute', 'cron-storm']),

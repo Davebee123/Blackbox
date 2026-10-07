@@ -164,9 +164,9 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent .ico { width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
 .intent b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
 .intent .code { display: none; font: 700 12px var(--mono); font-style: normal; letter-spacing: 0.5px; }
-@container (max-width: 150px) { .intent b.long { display: none; } .intent .code.long { display: inline; } } /* short names (Surge) always fit */
+@container (max-width: 200px) { .intent b.long { display: none; } .intent .code.long { display: inline; } } /* short names (Surge) always fit */
 .bcell { container-type: inline-size; }
-.intent small { margin-left: auto; font-family: var(--mono); color: var(--muted); }
+.intent small { margin-left: auto; font-family: var(--mono); color: var(--muted); white-space: nowrap; }
 .intent.now { border-color: var(--hot); color: var(--hot); background: var(--hot-soft); }
 .intent.now small { color: var(--hot); }
 .intent.next { border-color: var(--next); color: var(--next); }
@@ -829,6 +829,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .levelup { position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 50; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 14px 28px; background: var(--panel-2); border: 1px solid var(--you); border-radius: 6px; box-shadow: 0 0 40px rgba(127, 209, 199, 0.25); max-width: min(560px, calc(100vw - 32px)); pointer-events: none; }
 .levelup b { font: 700 22px var(--mono); letter-spacing: 3px; color: var(--you); }
 .levelup span { color: var(--text); font-size: 14px; }
+.levelup .lu-go { pointer-events: auto; margin-top: 4px; }
 .levelup.show { animation: levelup-in 3.2s ease-out both; }
 @keyframes levelup-in { 0% { opacity: 0; transform: translate(-50%, -10px) scale(0.96); } 8% { opacity: 1; transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
 .no-motion .levelup.show { animation: none; }
@@ -2740,8 +2741,7 @@ details.map-pick { pointer-events: auto; }
 .cp-card { display: grid; align-content: start; gap: 6px; text-align: left; padding: 12px; background: var(--inset); border: 1px solid var(--line); border-radius: 5px; color: var(--text); cursor: pointer; }
 .cp-card:hover, .cp-card:focus-visible { border-color: var(--you); box-shadow: 0 0 0 1px var(--you) inset; }
 .cp-name { font-size: 17px; font-weight: 600; color: var(--bright); }
-.cp-solo { color: var(--text); }
-.cp-crew { font-size: 12px; color: var(--muted); }
+.cp-role { display: flex; flex-wrap: wrap; gap: 4px; }
 .cp-passive { justify-self: start; font-size: 11px; padding: 1px 6px; border: 1px solid var(--line-strong); border-radius: 3px; color: var(--amber-soft); }
 .cp-skills { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 12px; }
 .cp-skills small { color: var(--dim); }
@@ -2766,3 +2766,6 @@ details.map-pick { pointer-events: auto; }
 .net-trace strong { font: 600 18px var(--mono); color: var(--amber); }
 .net-trace.low strong { color: var(--you); }
 .net-trace.hot strong, .net-trace.hunted strong { color: var(--hot); }
+
+/* A contract ready to deliver: a yellow check by Mail. */
+.modules .ready-check { display: inline-block; margin-left: 5px; color: var(--amber); font: 700 13px var(--mono); }

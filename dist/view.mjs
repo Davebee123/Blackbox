@@ -41,6 +41,8 @@ import { XP_KINDS, xpFor, watchmanBar, cooldownOf, skillBase, knowsPart, codexKe
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
 // A short code for an attack when its name won't fit (Surge → SRG, Encrypt → ENC): never an ellipsis.
+// Name and effect together too wide for a narrow cell: show the code instead of clipping the name.
+const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(i)).length > 14;
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
 // Skill text with this level's numbers: every level adds 4% to damage, heals and shields.
@@ -163,7 +165,7 @@ export function timelineMarkup(s) {
   const cols = [0, 1, 2, 3].map((c) => {
     const items = hidden ? [] : list.filter((i) => i.col === c);
     const chips = items
-      .map((i) => `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" title="${esc(i.name)} from ${esc(part(s, i.source)?.name)}: ${effectLabel(i)} ${effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${i.name.length > 6 ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${i.name.length > 6 ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small></div>`)
+      .map((i) => `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" title="${esc(i.name)} from ${esc(part(s, i.source)?.name)}: ${effectLabel(i)} ${effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small></div>`)
       .join('');
     const quiet = !hidden && !items.length ? `<span class="quiet">${runMode ? 'quiet' : 'quiet · trace lands'}</span>` : '';
     const head = c === 0
@@ -265,7 +267,7 @@ function statusPanel(s) {
 
 
 function attackChip(i, c, k = '', to = null) {
-  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${i.name.length > 6 ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${i.name.length > 6 ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a
@@ -1364,7 +1366,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 
   // Each class card: click to look at it; Use (any class you aren't playing) switches to it, at home.
   const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<div class="arch-card"><button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}">
-      <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea" title="${esc('In a crew: ' + x.crew)}">${esc(x.solo)}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
+      <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea">${x.role.map((r) => `<span class="tag dim">${esc(r)}</span>`).join(' ')}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
 
   // The bar you'll fight with: Spike, then your 7 equipped skills.
   const byId = Object.fromEntries(a.skills.map((x) => [x.id, x]));
@@ -2318,10 +2320,12 @@ const NEW_TABS = {
   loadout: (s) => (s.stash || []).map((it) => it.id),
   craft: (s) => [...(s.recipes || [])],
   daemons: (s) => Object.entries(s.daemonsOwned || {}).map(([id, v]) => `${id}:${v}`),
+  skills: (s) => knownSkills(s, classOf(s)).map((id) => `${classOf(s)}:${id}`), // a level that unlocked a skill: shown on Loadout
 };
 export function newOn(s, tab) {
   if (!NEW_TABS[tab]) return 0;
   if (!s.seen) { s.seen = {}; for (const t of Object.keys(NEW_TABS)) s.seen[t] = NEW_TABS[t](s); }
+  for (const t of Object.keys(NEW_TABS)) s.seen[t] ||= NEW_TABS[t](s); // a tab added later starts seen
   const seen = new Set(s.seen[tab] || []);
   return NEW_TABS[tab](s).filter((x) => !seen.has(x)).length;
 }
@@ -2621,7 +2625,7 @@ const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector'
 export function classPickMarkup(s) {
   const cards = Object.entries(ARCHETYPES).map(([k, a]) => {
     const first = a.skills.slice(0, 2).map((x) => `<li title="${esc(x.rule || '')}"><b>${esc(x.name)}</b> <small>${esc(ABILITIES[x.id]?.short || '')}</small></li>`).join('');
-    return `<button type="button" class="cp-card" data-pick-class="${k}"><span class="cp-name">${esc(a.name)}</span><span class="cp-solo">${esc(a.solo)}</span><span class="cp-crew">In a crew: ${esc(a.crew)}</span><span class="cp-passive" title="${esc(a.passive.rule)}">${esc(a.passive.name)}</span><ul class="cp-skills">${first}</ul></button>`;
+    return `<button type="button" class="cp-card" data-pick-class="${k}"><span class="cp-name">${esc(a.name)}</span><span class="cp-role">${a.role.map((r) => `<span class="tag you">${esc(r)}</span>`).join('')}</span><span class="cp-passive" title="${esc(a.passive.rule)}">${esc(a.passive.name)}</span><ul class="cp-skills">${first}</ul></button>`;
   }).join('');
   return `<div class="cp-box" role="dialog" aria-label="Pick your class"><h2>Pick your class</h2><div class="cp-grid">${cards}</div><p class="cp-note">Switch on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></div>`;
 }

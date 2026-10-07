@@ -27,6 +27,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 |---|---|
 | Signal | 50 at the start of each run. Moving (`cd`) costs 1. Guards hit it. A wrong password costs 3. |
 | Trace | A break-in (any server with a vault; not SPRAWL-00 or rogue servers) has a **Trace** bar beside Signal: how loud you've been. Each `cd` adds 4, each file you pull 6, a wrong password 20, a guard fight 2 a cycle; arming Spoof takes 20 off, and an Infiltrator gains it half as fast (`TRACE` in run.mjs). At 100 a **hunter** ICE (Tracer, a level above the server) engages you where you stand, and you can't jack out (or flee) until it's down; beat it and Trace drops to 50. Jack out under 40% with the vault opened for a **clean job**: +25% banked credits and half a kill of XP (Break-in). |
+| Contracts ready | A yellow **✓** by Mail on the top bar whenever a contract is ready to deliver (its hover says how many). |
 | Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. A **Disconnected** card says what took you out, any files lost, and *Reconnection possible in m:ss*: the later of the reconnect wait and your Signal resting back to a quarter. |
 | Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal. |
 | Locked | A locked directory needs `unlock <dir> <password>`. The password is written in a file somewhere in the location. |
@@ -626,7 +627,7 @@ Two kinds, so a new player never faces everything at once.
 
 ## Classes and loadout
 
-You pick your first class right after you log in: four cards, each with what it's for solo and in a crew, its passive and its first two skills. Change it on the Loadout page (`archetype <id>`). **Trying classes is free:** until any class reaches level 5 (`LOADOUT.trialUntil`), switching to a class you haven't played takes your level and XP with it. After that each class levels on its own. The Loadout's class cards show the same solo line, with the crew line on hover. Your bar has up to 8 keys, shown only once you've unlocked them:
+You pick your first class right after you log in: four cards, each with its role in MMO terms (Breaker: DPS, Burst; Bastion: Tank, Healer; Infiltrator: DPS, Damage over time, Stealth runs; Operator: Support, Summoner), its passive and its first two skills. Change it on the Loadout page (`archetype <id>`). **Trying classes is free:** until any class reaches level 5 (`LOADOUT.trialUntil`), switching to a class you haven't played takes your level and XP with it. After that each class levels on its own. The Loadout's class cards show the same role tags. A level that unlocks a skill puts a *See it on Loadout* button on its level-up banner, and the Loadout tab's teal count includes new skills until you open it. Your bar has up to 8 keys, shown only once you've unlocked them:
 
 - **Key 1 (everyone):** Spike, the free hit that repeats when you give no order.
 - **Keys 2–8:** your seven equipped class skills (`equip`, `unequip`). Run skills (Spoof, Tap) take a slot too and are used on runs. There's no shared Interrupt: delaying attacks belongs to Bastion and Operator. Each class has its own Edge, a passive from level 10.

@@ -10,7 +10,7 @@ import { createShell } from './shell.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
-import { nextPayIn, boardOpen, storyAt } from './mail.mjs';
+import { nextPayIn, boardOpen, storyAt, openContracts, ready } from './mail.mjs';
 import { hubsOf, hubFound, hubTraceOf, FACTIONS } from './factions.mjs';
 import { WARES } from './market.mjs';
 import { logComms, commsOf, unseen, unseenAlert, seeAll, markDone, pruneComms, clearComms, clearOne } from './comms.mjs';
@@ -498,7 +498,7 @@ function react(events) {
       case 'level-up': case 'server-level': {
         if (won) break;
         const [t, ...rest] = e.message.split('. ');
-        levelUp(t.replace(/\.$/, ''), rest.join('. '));
+        levelUp(t.replace(/\.$/, ''), rest.join('. '), (e.unlocked || []).some((id) => id !== 'edge')); // a new skill: a way to Loadout
         feel.add('win', null);
         break;
       }
@@ -576,14 +576,16 @@ let ending = false; // the last break is landing
 
 // ---------- notices ----------
 // A level-up gets its own banner, on any screen.
-function levelUp(title, text) {
+function levelUp(title, text, skill = false) {
   $('levelup-title').textContent = title;
   $('levelup-text').textContent = text;
   const el = $('levelup');
+  el.querySelector('.lu-go')?.remove();
+  if (skill) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small primary lu-go'; b.dataset.module = 'loadout'; b.textContent = 'See it on Loadout'; el.append(b); }
   el.hidden = false;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   clearTimeout(levelUp.t);
-  levelUp.t = setTimeout(() => { el.hidden = true; }, 3200);
+  levelUp.t = setTimeout(() => { el.hidden = true; }, skill ? 7000 : 3200);
 }
 function notice(text, bad = false, suggest = null, sticky = false) {
   const el = $('notice');
@@ -982,6 +984,9 @@ function renderMeters() {
   const unreadMail = (campaign.mail?.list || []).filter((m) => !m.read).length;
   $('mail-count').hidden = !unreadMail;
   $('mail-count').textContent = unreadMail;
+  const readyN = openContracts(campaign).filter((c) => ready(campaign, c)).length; // a contract to hand in: a check by Mail
+  $('mail-ready').hidden = !readyN;
+  $('mail-ready').title = `${readyN} contract${readyN === 1 ? '' : 's'} ready to deliver`;
   $('tab-store').hidden = true; // Halcyon's store lives in its hub (connect halcyon → Shop)
   // Craft shows up once there's something to make (WoW/FFXIV unlock UI as you go): a recipe, a plan, a config or filter source.
   const craftable = (campaign.recipes || []).length || (campaign.plans || []).length || (campaign.filterRecipes || []).length || (campaign.harvesters || []).length;
@@ -992,9 +997,10 @@ function renderMeters() {
   $('con-count').hidden = !need;
   $('con-count').textContent = need;
   if (module === 'loadout' && loadoutTab === 'daemons') V.sawTab(campaign, 'daemons'); // daemons are a Loadout tab
+  if (module === 'loadout' && loadoutTab !== 'daemons') V.sawTab(campaign, 'skills'); // new skills: seen once you open Loadout
   for (const t of ['loadout', 'craft']) {
     if (module === t && !(t === 'loadout' && loadoutTab === 'daemons')) V.sawTab(campaign, t); // you're looking at it
-    const n = V.newOn(campaign, t) + (t === 'loadout' ? V.newOn(campaign, 'daemons') : 0), el = $('new-' + t);
+    const n = V.newOn(campaign, t) + (t === 'loadout' ? V.newOn(campaign, 'daemons') + V.newOn(campaign, 'skills') : 0), el = $('new-' + t);
     el.hidden = !n;
     el.textContent = n;
     el.title = `${n} new`;
