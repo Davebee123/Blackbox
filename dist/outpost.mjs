@@ -38,6 +38,7 @@ export const BUILDINGS = {
   miner: { name: 'Data Miner', kind: 'producer', bw: 2, cost: { credits: 500, code: 25, salvage: 12 }, mins: 60, lv: 10, plan: true, rule: 'Rolls the server\'s loot every 90 minutes: credits, code, salvage, now and then a protocol. Better on a Legacy site.', make: () => ({ rolls: 1 / 1.5 }) },
   sentry: { name: 'Sentry Daemon', kind: 'defence', bw: 2, cost: { credits: 600, code: 30, salvage: 15 }, mins: 120, lv: 15, plan: true, rule: 'Kills one virus of every swarm that reaches this server.' },
   refinery: { name: 'Refinery', kind: 'producer', spec: true, bw: 3, cost: { credits: 2500, code: 120, salvage: 50, exploit: 3 }, mins: 360, lv: 20, plan: true, needs: { kind: 'producer', n: 3 }, rule: 'Producers on this server make 50% more, and it stores a day\'s worth.' },
+  post: { name: 'Listening Post', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 30, lv: 5, rule: 'Listens for the unique you name (listen <unique>): wherever it drops, it drops 25% more often. Each Listening Post adds 25%.' },
   citadel: { name: 'Citadel', kind: 'defence', spec: true, bw: 3, cost: { credits: 2500, code: 120, salvage: 50, exploit: 3 }, mins: 360, lv: 20, plan: true, needs: { kind: 'defence', n: 2 }, rule: 'This server\'s firewall is 6 levels higher, and a lost defence never locks it down.' },
 };
 
@@ -113,7 +114,10 @@ export function sizeOf(loc) {
 export const slotsOf = (loc) => Math.min(OUTPOST.maxSlots, sizeOf(loc).n + (loc.trait === 'backbone' ? 1 : 0) + rootPorts(loc));
 export const buildingsOf = (loc) => (loc ? (loc.buildings ||= []) : []);
 export const has = (loc, id) => !!loc?.buildings?.includes(id);
-export const hasMod = has; // fleet.mjs, firewall.mjs: an outpost "running" a Honeytoken, an IDS, a Firewall Node
+export const hasMod = has;
+// Listening Posts across the servers you hold (BUILDINGS.post): each makes the unique you listen for 25% likelier.
+export const postsOf = (s) => (s.locations || []).filter((l) => l.takenOver).reduce((n, l) => n + (l.buildings || []).filter((b) => b === 'post').length, 0);
+export const LISTEN = { per: 0.25 }; // fleet.mjs, firewall.mjs: an outpost "running" a Honeytoken, an IDS, a Firewall Node
 export const isOutpost = (loc) => !!loc?.takenOver && !!loc.buildings?.length;
 export const outposts = (s) => (s.locations || []).filter((l) => isOutpost(l) && isLive(s, l)); // a detached server's outpost is frozen (memory.mjs)
 export const bandwidth = (s) => OUTPOST.bandwidth(serverLevel(s)) + serviceValue(s, 'router') + archBandwidth(s) + consortiumBandwidth(s);

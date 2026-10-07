@@ -529,6 +529,9 @@ export const BOSSES = {
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
+// A hot run (connect <server> +hot): friction you choose. Every fight on it has more Integrity and hits
+// harder; every kill pays more XP and rolls for loot once more.
+export const HOT_RUN = { hp: 1.25, dmg: 1.2, xp: 1.25, rolls: 1 };
 // Each boss has two uniques of its own (content/items.mjs, source kind 'boss'): this chance a kill, and
 // this much more for every kill that gave none (shown in the log and the collection).
 export const BOSS_LOOT = { chance: 0.3, pity: 0.1 };
@@ -673,7 +676,7 @@ export const SERVER = {
 // Each class levels on its own, from 1 to 50, a long WoW-style climb. Every level adds 4%
 // power; skills unlock along the way (the bar is full at 18, the last skill at 38); a talent
 // point every other level from 10 (21 by level 50, a full tree).
-export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEvery: 2, trialUntil: 5 }; // trialUntil: until a class reaches it, switching carries your level over
+export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEvery: 2, trialUntil: 5, specFrom: 5, specRanks: 2 }; // spec: at level 5 pick one of your class's two first-row talents, worth specRanks free ranks // trialUntil: until a class reaches it, switching carries your level over
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },

@@ -2792,3 +2792,13 @@ details.map-pick { pointer-events: auto; }
 .op-buildlist .bl-why { color: var(--warn, #e0a030) !important; }
 .cd-meta .cd-lines { grid-column: auto; } /* inside the meta block it's one column: don't push the text into an implicit second one */
 .coll-set { margin: 4px 0 8px; color: var(--amber); font-size: 12px; letter-spacing: 1px; }
+.ttree .tspec .tspec-opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; grid-column: 1 / -1; }
+.ttree .tspec .tspec-opts .act { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.ttree .tspec .tspec-opts .act small { font-size: 11px; opacity: 0.8; }
+.hot-btn { color: var(--hot); border-color: var(--hot); }
+.net-hot { align-self: center; }
+.coll li.heard { outline: 1px solid var(--hot); }
+.coll .coll-listen { float: right; margin-top: -30px; font-size: 11px; padding: 1px 6px; }
+.ttree .tspec .tspec-opts { justify-content: center; }
+.ttree .tspec .tspec-opts .act { border: 1px solid var(--line, #5a4a22); padding: 6px 10px; border-radius: 3px; min-width: 150px; }
+.ttree .tspec .tspec-opts .act.on { border-color: var(--amber); color: var(--amber); background: rgba(241, 185, 47, 0.08); }

@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+import { HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
 import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
@@ -17,7 +17,7 @@ const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { eventCommand, eventWon, outbreakMult } from './events.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
-import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, isOutpost, retireHarvesters, devOutpost } from './outpost.mjs';
+import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, isOutpost, retireHarvesters, devOutpost, postsOf, LISTEN } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -403,7 +403,7 @@ export function uniqueFrom(s, ctx, level) {
 const LEAN = 3;
 function pickUnique(s, pool) {
   if (!pool.length) return null;
-  const w = (u) => (u.lean && u.lean === classOf(s) ? LEAN : 1);
+  const w = (u) => (u.lean && u.lean === classOf(s) ? LEAN : 1) * (u.id === s.listen ? listenBoost(s) : 1);
   let r = rand(s) * pool.reduce((n, u) => n + w(u), 0);
   for (const u of pool) { r -= w(u); if (r < 0) return u; }
   return pool.at(-1);
@@ -411,14 +411,27 @@ function pickUnique(s, pool) {
 // A boss's own uniques (sources kind 'boss'): BOSS_LOOT.chance a kill, BOSS_LOOT.pity more for every
 // kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
 export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
-export const bossChance = (s, boss) => Math.min(1, BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0));
+export const bossChance = (s, boss) => Math.min(1, (BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1));
+// The Listening Post (outpost.mjs): the unique you listen for drops LISTEN.per more often per post, wherever it drops.
+export const listenBoost = (s) => (s.listen && postsOf(s) ? 1 + LISTEN.per * postsOf(s) : 1);
+const listened = (s) => (s.listen && postsOf(s) ? UNIQUES[s.listen] || null : null);
+export function listenCommand(s, text) {
+  const want = text.replace(/^listen\s*/, '').trim().toLowerCase();
+  if (!postsOf(s)) return warn(s, 'Listening needs a Listening Post on a server you hold (a support building, from level 5).');
+  if (!want) return emit(s, 'info', s.listen && UNIQUES[s.listen] ? `Listening for ${UNIQUES[s.listen].name}: ${Math.round((listenBoost(s) - 1) * 100)}% more often wherever it drops.` : 'Listening for nothing. Type listen <unique>, or pick one in the Collection.');
+  const u = UNIQUES[want] || Object.values(UNIQUES).find((x) => x.name.toLowerCase() === want);
+  if (!u) return warn(s, `No unique called ${want}.`);
+  if ((u.sources || []).every((src) => ['story', 'contract', 'store'].includes(src.kind))) return warn(s, `${u.name} is a reward, not a drop. Nothing to listen for.`);
+  s.listen = u.id;
+  return emit(s, 'info', `Listening for ${u.name}: ${Math.round((listenBoost(s) - 1) * 100)}% more often wherever it drops.`);
+}
 function bossUnique(s, boss, level) {
   const pool = bossUniques(boss);
   if (!pool.length) return;
   const name = BOSSES[boss]?.name || boss;
   if (rand(s) < bossChance(s, boss)) {
     (s.pity ||= {})[boss] = 0;
-    const fresh = pool.filter((u) => !s.collection?.[u.id]), from = fresh.length ? fresh : pool;
+    const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s)), from = heard.length ? heard : fresh.length ? fresh : pool;
     const u = from[Math.floor(rand(s) * from.length)];
     addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `);
   } else {
@@ -436,10 +449,11 @@ function eliteUnique(s, level) {
 // One roll: maybe nothing, mostly grey or white, now and then blue, rarely yellow or gold. Odds come
 // from time targets and the pace (LOOT.killsPerHour); Scavenge is magic find; depth helps a little.
 function rollOnce(s, ctx, level) {
+  const lu = listened(s), heard = lu && lu.level <= level + 2 && dropsHere(lu, ctx) ? listenBoost(s) : 1; // a Listening Post's unique drops here
   const odds = lootOdds(), mf = magicFind(gearStat(s, 'scavenge')), deep = 1 + LOOT.depthBonus * Math.max(0, (ctx.layer || 1) - 1);
   const r = rand(s);
   let rarity = null;
-  if (r < odds.zeroday * mf) rarity = 'zeroday';
+  if (r < odds.zeroday * mf * heard) rarity = 'zeroday';
   else if (r < (odds.zeroday + odds.custom * deep) * mf) rarity = 'custom';
   else if (r < (odds.zeroday + (odds.custom + odds.tuned) * deep) * mf) rarity = 'tuned';
   else if (r < LOOT.common) rarity = rand(s) < LOOT.greyShare ? 'scrap' : 'stock';
@@ -455,7 +469,7 @@ function rollOnce(s, ctx, level) {
 // A strain also has its own trophy: 1 in LOOT.trophy kills of that strain.
 export function rollDrop(s, ctx, level) {
   if (typeof ctx === 'string') ctx = { kind: ctx === 'guard' ? 'guard' : 'home' };
-  const rolls = ctx.rolls || LOOT.rolls[ctx.kind] || 1;
+  const rolls = (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (s.encounter?.virus?.hot && s.encounter.phase !== 'active' ? HOT_RUN.rolls : 0); // a hot run's kill rolls once more
   let best = null;
   for (let i = 0; i < rolls; i++) {
     const it = rollOnce(s, ctx, level);
@@ -466,7 +480,8 @@ export function rollDrop(s, ctx, level) {
     if (rand(s) < ELITE.unique) { const u = eliteUnique(s, level); if (u) best = uniqueItem(u, level, () => rand(s)); }
     if (!best || RARITY_ORDER.indexOf(best.rarity) < RARITY_ORDER.indexOf(ELITE.floor)) best = rollItem(() => rand(s), { level, rarity: ELITE.floor });
   }
-  if (ctx.strain && (ctx.trophy || rand(s) < 1 / LOOT.trophy)) { // a streak reward rolls for it outright
+  const trophyOf = (st) => Object.values(UNIQUES).find((u) => (u.sources || []).some((src) => src.kind === 'strain' && src.id === st));
+  if (ctx.strain && (ctx.trophy || rand(s) < (trophyOf(ctx.strain)?.id === s.listen ? listenBoost(s) : 1) / LOOT.trophy)) { // a streak reward rolls for it outright
     const t = Object.values(UNIQUES).find((u) => (u.sources || []).some((src) => src.kind === 'strain' && src.id === ctx.strain));
     if (t) best = uniqueItem(t, level, () => rand(s));
   }
@@ -661,6 +676,14 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
   const virus = createVirus(key, seed, over);
+  if (mode === 'run' && s.run?.hot) { // a hot run (HOT_RUN): tougher fights
+    virus.hot = true;
+    for (const p of virus.parts) {
+      p.max = p.integrity = Math.round(p.max * HOT_RUN.hp);
+      if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * HOT_RUN.dmg));
+      if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * HOT_RUN.dmg));
+    }
+  }
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
   (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
@@ -807,7 +830,7 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     const eq = s.loadout.equipped[arch];
     for (const g of got) if (skillOrder(arch).includes(g) && eq.length < LOADOUT.equipSlots && !eq.includes(g)) eq.push(g);
     const names = got.map((id) => (id === 'edge' ? `${EDGE[arch].name} (${EDGE[arch].rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
-    const talent = gainsTalent(h.level) ? ' +1 talent point.' : '';
+    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.specFrom && !specOf(s, arch) ? ` Pick a specialty: ${specOptions(arch).map((o) => o.name).join(' or ')} (type specialty).` : '');
     emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${talent} Power +4%.`, { level: h.level, unlocked: got });
   }
   if (h.level >= LOADOUT.maxLevel) h.xp = 0;
@@ -885,7 +908,11 @@ export function tierState(s, arch, tier) {
   return rowState(s, arch, TREE.findIndex((r) => r.kind === 'choice' && r.tier === tier));
 }
 // Your current class's rank in a filler node.
-export const rank = (s, id) => ranksOf(s, classOf(s))[id] || 0;
+export const rank = (s, id) => (ranksOf(s, classOf(s))[id] || 0) + (specOf(s) === id && hackerLevel(s) >= LOADOUT.specFrom ? LOADOUT.specRanks : 0);
+// The specialty (level 5): one of your class's two first-row talents, LOADOUT.specRanks free ranks in it.
+export const specOf = (s, arch = classOf(s)) => s.loadout?.spec?.[arch] || null;
+export const specOptions = (arch) => ARCHETYPES[arch].fillers[0];
+export const specRule = (o) => o.rule.replace(/\d+/, (n) => String(Number(n) * LOADOUT.specRanks)).replace(' per rank', '');
 const fillerNode = (arch, id) => ARCHETYPES[arch].fillers.flat().find((n) => n.id === id || n.name.toLowerCase() === id);
 
 function loadoutCommand(s, text) {
@@ -909,6 +936,17 @@ function loadoutCommand(s, text) {
     if (equipped.length >= LOADOUT.equipSlots) return warn(s, `All ${LOADOUT.equipSlots} slots are full. Unequip one first.`);
     s.loadout.equipped[arch] = [...equipped, skill.id];
     return emit(s, 'loadout', `${skill.name} equipped on key ${equipped.length + 2}.`);
+  }
+  if (words[0] === 'specialty') {
+    const arch = ARCHETYPES[words[1]] ? words.splice(1, 1)[0] : s.loadout.archetype, opts = specOptions(arch); // specialty [class] <talent>
+    const say = opts.map((o) => `${o.name} (${specRule(o).replace(/\.$/, '')})`).join(' or ');
+    if (hackerLevel(s, arch) < LOADOUT.specFrom) return warn(s, `Your ${ARCHETYPES[arch].name} specialty comes at level ${LOADOUT.specFrom}: ${say}.`);
+    const want = words.slice(1).join(' ');
+    if (!want) return emit(s, 'info', specOf(s, arch) ? `Specialty: ${opts.find((o) => o.id === specOf(s, arch)).name}. The other: ${opts.find((o) => o.id !== specOf(s, arch)).name} (specialty ${opts.find((o) => o.id !== specOf(s, arch)).id}). Free to change at home.` : `Pick a specialty: ${say}. Type specialty ${opts[0].id} or specialty ${opts[1].id}.`);
+    const o = opts.find((x) => x.id === want || x.name.toLowerCase() === want);
+    if (!o) return warn(s, `${ARCHETYPES[arch].name} specialties: ${opts.map((x) => x.id).join(', ')}.`);
+    (s.loadout.spec ||= {})[arch] = o.id;
+    return emit(s, 'loadout', `Specialty: ${o.name}. ${specRule(o)}`);
   }
   if (words[0] === 'archetype') {
     const id = words[1] === 'sysadmin' ? 'bastion' : words[1]; // its old name still works
@@ -1201,7 +1239,7 @@ function payKill(s, e, base, why) {
   // A party splits the kill's XP, with a small bonus per extra player (PARTY_XP). Members who dropped in
   // (consortium guests) take their share of the damage they dealt, so joining late pays only for what
   // you did; you and your own crew split the rest evenly.
-  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1));
+  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (e.virus.hot ? HOT_RUN.xp : 1) * (1 + PARTY_XP * (n - 1));
   const dealt = e.virus.dealt || {}, total = Object.values(dealt).reduce((a, b) => a + b, 0);
   const guests = n > 1 ? e.guests || [] : [];
   const guestShare = total ? guests.reduce((a, g) => a + (dealt[g] || 0), 0) / total : 0;
@@ -1540,7 +1578,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer code \d+$/.test(text)) {
     const n = Number(text.split(' ')[2]);
     gainCode(s, { cipher: n, worm: n, kernel: n, exploit: Math.ceil(n / 10) }, 'Developer: ');
-  } else if (/^archetype( \w+)?$/.test(text) || /^talent( |$)/.test(text) || /^(equip|unequip)( |$)/.test(text)) {
+  } else if (/^listen( |$)/.test(text)) {
+    listenCommand(s, text);
+  } else if (/^archetype( \w+)?$/.test(text) || /^talent( |$)/.test(text) || /^(equip|unequip)( |$)/.test(text) || /^specialty( |$)/.test(text)) {
     loadoutCommand(s, text);
   } else if (/^developer level \d+$/.test(text)) {
     const want = Math.max(1, Math.min(LOADOUT.maxLevel, Number(text.split(' ')[2])));

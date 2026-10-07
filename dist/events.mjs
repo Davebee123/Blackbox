@@ -9,7 +9,7 @@
 //   leak      Someone leaks the vault key of a server you've found but not taken.
 //
 // Pure: state in, events out.
-import { emit, warn, active, hackerLevel, selectEncounter, command, addItem } from './combat.mjs';
+import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique } from './combat.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
@@ -20,7 +20,12 @@ export const DIRECTOR = {
   firstMs: [4 * 60000, 8 * 60000], // logged-on time to the first event
   everyMs: [15 * 60000, 30 * 60000], // and between events
   max: 2, // events up at once
+  named: 6, // one courier in this many carries a unique you're missing, by name
 };
+// Uniques you haven't found that drop out in the world at about your level (not a boss's, the farm's,
+// a story's or a strain's trophy): what a courier can be carrying.
+const WORLD = ['sprawl', 'vault', 'guard', 'rogue'];
+const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind))).map((u) => u.id);
 const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f));
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
 
@@ -28,11 +33,13 @@ export const CARDS = {
   courier: {
     name: 'Courier', weight: 3, ms: 15 * 60000, fight: true,
     where: (s) => places(s),
-    make: (s) => ({ family: pick(s, FAMS), level: hackerLevel(s), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}` }),
-    text: (ev, where) => `LANTERN's courier ${ev.name} is carrying a dead drop through ${where}. Intercept it before it leaves to take the drop.`,
-    reward: (ev) => `${credits(ev.level)} credits and a protocol`,
+    // About one courier in DIRECTOR.named carries a unique you haven't found, by name: a lucky shot.
+    make: (s) => ({ family: pick(s, FAMS), level: hackerLevel(s), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
+    text: (ev, where) => `LANTERN's courier ${ev.name} is carrying ${ev.unique ? `${UNIQUES[ev.unique].name}, a unique you haven't found,` : 'a dead drop'} through ${where}. Intercept it before it leaves to take ${ev.unique ? 'it' : 'the drop'}.`,
+    reward: (ev) => `${credits(ev.level)} credits and ${ev.unique ? UNIQUES[ev.unique].name : 'a protocol'}`,
     won: (s, ev) => {
       s.server.credits += credits(ev.level);
+      if (ev.unique) { giveUnique(s, ev.unique, 'Dead drop: '); return `You took the dead drop: ${credits(ev.level)} credits and ${UNIQUES[ev.unique].name}.`; }
       const r = seeded(ev.seed), item = rollItem(r, { level: ev.level, rarity: r() < 0.15 ? 'custom' : 'tuned' }); // fixed by the event
       addItem(s, item, 'Dead drop: ');
       return `You took the dead drop: ${credits(ev.level)} credits and a protocol.`;

@@ -24,6 +24,7 @@ import { isMember } from './consortium.mjs';
 export const CREW = {
   max: 3, // crewmates besides you
   hpPer: 0.5, // enemy Integrity: +50% per extra player: a party makes normal fights easy (MMO-style), but long enough for their mechanics to show
+  bossPer: 0.8, // a boss grows more with the party than an ordinary fight (a crew of four made RELAY-KING trivial at +50%)
   elitePer: 0.05, // elites are built for a crew of four: they barely grow with it (0.15 made a full crew lose 8 in 20 at level 18)
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   from: 5, // class level for crew sim
@@ -98,7 +99,7 @@ hooks.crewEngage = (s) => {
   e.party = 1 + mates.length; // for the XP split (combat.mjs payKill)
   e.guests = mates.filter((m) => m.guest).map((m) => m.who); // drop-ins earn by their damage (payKill)
   // An elite is already sized for a crew, so it doesn't grow with it.
-  const k = 1 + (e.virus.elite ? CREW.elitePer : CREW.hpPer) * mates.length;
+  const k = 1 + (e.virus.elite ? CREW.elitePer : e.virus.boss ? CREW.bossPer : CREW.hpPer) * mates.length;
   const kd = 1 + CREW.dmgPer * mates.length;
   for (const p of e.virus.parts) {
     p.max = Math.round(p.max * k); p.integrity = Math.round(p.integrity * k);

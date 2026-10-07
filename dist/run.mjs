@@ -2,7 +2,7 @@
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
-import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
+import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
@@ -366,6 +366,8 @@ const near = (s, text, word, names, cmd) => { const n = closest(word, names); re
 
 export function connect(s, id) {
   const first = s.serial;
+  const hot = /\s\+hot$/.test(id); // connect <server> +hot (HOT in data.mjs)
+  id = id.replace(/\s\+hot$/, '');
   const zone = id === CONFIG.zone.id || id === CONFIG.zone.name.toLowerCase();
   const loc = zone ? zoneOf(s) : findLocation(s, id) || [...s.locations, ...memberServers(s)].find((l) => l.name.toLowerCase() === id);
   const signal = signalNow(s);
@@ -393,11 +395,13 @@ export function connect(s, id) {
     s.run = { loc: loc.id, cwd: '/', integrity: signal, max: maxSignal(s), pack: [], visited: ['/'] };
     // Your crew comes along, linked to you (they follow where you go). See the crew strip.
     s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: '/', link: 'you' }]));
+    if (hot) s.run.hot = true;
     const q = QUIRKS[loc.quirk];
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} ${liveSpawns(s) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied: ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
+    if (hot) emit(s, 'warning', `HOT RUN. Every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     ls(s);
     if (!zone && !loc.member) collect(s, loc, 'Collected from ');
     if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
