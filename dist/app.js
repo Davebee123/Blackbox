@@ -1067,6 +1067,15 @@ let mapPickOpen = false; // whether the picker's menu is open (it survives redra
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
 let memYes = null; // the found server you just said yes to (its connect goes through)
 addEventListener('resize', () => { dirty = true; applyMapZoom(); });
+// A page's markup, or, if drawing it throws, a card with the error to copy into a bug report.
+function pageOrError(draw) {
+  try { return draw(); } catch (err) {
+    console.error(err);
+    const text = `${module}: ${err?.message || err}\n${String(err?.stack || '').split('\n').slice(1, 6).join('\n')}`;
+    const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    return `<section class="card page-error"><h2>This page hit an error</h2><p class="svc-line">The rest of the game still works. Send this text with your bug report.</p><pre>${esc(text)}</pre><div class="row"><button type="button" class="btn primary" data-module="map">Back to the map</button></div></section>`;
+  }
+}
 function render(force = false) {
   if (force) cache.clear();
   renderMeters();
@@ -1117,7 +1126,8 @@ function render(force = false) {
     }
   } else {
     const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
-    if (!(module === 'hub' && mkDrag)) put('page-view', (pages[module] || pages.map)(campaign)); // not while you drag a ticket's slider
+    // A page that throws shows what broke (and a way back) instead of stopping every render after it.
+    if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {

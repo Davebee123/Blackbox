@@ -2861,3 +2861,7 @@ details.map-pick { pointer-events: auto; }
 .sp-card { display: flex; flex-direction: column; }
 .sp-card > .sp-head, .sp-card > .sp-xp, .sp-card > .sp-level, .sp-card > .sp-go { flex: none; }
 .sp-card > .sp-rows { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+
+/* A page that failed to draw (app.js pageOrError): the error, selectable, and a way back. */
+.page-error { max-width: 720px; margin: 24px auto; border-color: var(--hot); }
+.page-error pre { white-space: pre-wrap; user-select: text; font: 12px var(--mono); color: var(--text); background: var(--inset); padding: 10px; border-radius: 3px; max-height: 240px; overflow: auto; }
