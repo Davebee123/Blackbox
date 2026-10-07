@@ -40,7 +40,9 @@ export const CONFIG = {
   // The monster pass (friction.mjs): fights on your Signal (runs, SPRAWL-00, rogue servers) are
   // tuned against the gear you're likely to have, so a level is a grind until an item lands.
   runHp: 1.4, // × part Integrity on top of partToughness
-  runDamage: 1.9, // × enemy attacks
+  runDamage: 2.1, // × enemy attacks
+  runEarly: [1, 1, 1.1, 1.3, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
+  xpEarly: { bonus: 0.15, full: 10, gone: 15 }, // levels up to 10 take 15% more XP, easing back to normal by 15
   // A broken part leaves salvage behind only sometimes.
   salvageChance: 0.35,
   maxMobLevel: 60,
@@ -116,7 +118,7 @@ export const CONFIG = {
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
-  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterBelow: 3, starterHit: 0.6 }, // under level 3, SPRAWL's hits land at 60%: room for a few fights per Signal while you learn // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
+  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
   relockMs: 60000, // any server but an outpost won't take you back for a minute after you leave: no jack out, top up, return
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
@@ -521,7 +523,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
   const parts = (strain ? strain.parts : family.parts).map((spec) => makePart(spec, 'system', scale * g.hp, extra(spec) + (spec.special ? 0 : g.armor)));
-  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage : 1);
+  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * (CONFIG.runEarly[level - 1] ?? 1) : 1);
   for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale));
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
   for (const p of parts) if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * dmgScale)); // a special that also hits (the Scrambler)
@@ -637,7 +639,8 @@ export const UNLOCKS = [
 // XP: a kill is worth 20 + 10 per enemy level. Level L to L+1 takes about 5 + 1.2×L kills of
 // your own level (6 at level 1, 27 at 18, 64 at 49): an MMO-length climb, 1,700 fights to 50.
 export const killXp = (level) => 20 + 10 * Math.max(1, level);
-export const xpToNext = (level) => Math.round(killXp(level) * (5 + 1.2 * level));
+const early = (c, L) => 1 + c.bonus * Math.min(1, Math.max(0, (c.gone - L) / (c.gone - c.full)));
+export const xpToNext = (level) => Math.round(killXp(level) * (5 + 1.2 * level) * early(CONFIG.xpEarly, level));
 // WoW-style: enemies above you give a little more, ones below give less, 10 levels below nothing.
 export const xpScale = (gap) => (gap >= 0 ? 1 + 0.05 * Math.min(gap, 5) : Math.max(0, 1 + 0.1 * gap));
 // Other XP, as shares of a kill at that level.

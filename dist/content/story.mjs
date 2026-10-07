@@ -65,6 +65,7 @@ export default {
         "room": "/var/log",
         "grade": 2,
         "maxLevel": 4,
+        "plus": 1,
         "calm": true
       },
       "boardAfterHour": true,

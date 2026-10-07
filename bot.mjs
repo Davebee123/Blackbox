@@ -61,7 +61,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     }
     if (active(s)) finish(s, 'defeat');
     const r = s.reports.at(-1);
-    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (/-\d{4}$/.test(s.encounter?.virus?.name || '') && s.zone?.spawns?.[s.encounter.room]?.bounty) stats.bountyLosses++; if (log) console.log('lost to', key); }
+    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };
@@ -151,7 +151,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     const named = (p) => (s.zone?.spawns?.[p]?.bounty ? 0 : 1); // a contract's named target first
     const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/').sort((a, b) => named(a) - named(b));
     const grey = !sprawlWorth(); // outgrown: only the contract's named target
-    for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; if (grey && !s.zone?.spawns?.[room]?.bounty) continue; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
+    for (const room of rooms) { if (!s.run || s.run.integrity < s.run.max * 0.5) break; if (grey && !s.zone?.spawns?.[room]?.bounty) continue; if (stats.bountyLosses >= 2 && s.zone?.spawns?.[room]?.bounty) continue; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
     leave();
     return true;
   };
@@ -221,7 +221,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     const todo = s.locations.filter((l) => !l.rogue && !l.takenOver && open(l) && pending(l) && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
     const rot = s.locations.filter((l) => procOf(l, t) && open(l) && procOf(l, t).level <= L + 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => procOf(b, t).level - procOf(a, t).level)[0];
     const rogue = s.locations.filter((l) => l.rogue && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
-    const hunt = contracts && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
+    const hunt = contracts && stats.bountyLosses < 2 && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;
     if (hunt) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
     if (!did && todo) { did = book('runs', () => runLoc(todo)); if (did) stats.did.run++; }

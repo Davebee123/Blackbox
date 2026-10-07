@@ -227,8 +227,8 @@ function arm(s, j) {
     const rooms = zoneRooms().filter((r) => !(s.encounter?.zone && s.encounter.room === r) && !z.spawns[r]?.bounty);
     const room = j.room && rooms.includes(j.room) ? j.room : rooms[Math.floor(rand(s) * rooms.length)] || zoneRooms()[0];
     j.room = room;
-    // Two levels above the level it was posted at; a story bounty can cap that (claimjack: 4) and come unmutated.
-    if (!j.spawnSet) { j.level = Math.min(j.maxLevel || Infinity, CONFIG.zone.maxLevel + 2, (j.level ?? hackerLevel(s)) + 2); j.spawnSet = true; }
+    // Two levels above the level it was posted at; a story bounty can set its own step and cap (claimjack: one up, never above 4) and come unmutated.
+    if (!j.spawnSet) { j.level = Math.min(j.maxLevel || Infinity, CONFIG.zone.maxLevel + 2, (j.level ?? hackerLevel(s)) + (j.plus ?? 2)); j.spawnSet = true; }
     z.spawns[room] = { alive: true, family: j.family, level: j.level, seed: (z.seed * 97 + j.id * 977) >>> 0, name: j.name, bounty: true, ...(j.grade ? { grade: j.grade } : {}), ...(j.calm ? { calm: true } : {}) }; // a story bounty can be an elite (grade 2+)
   }
   if (j.type === 'item' && j.loc) plant(s, j);

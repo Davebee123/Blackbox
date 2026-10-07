@@ -3,7 +3,7 @@
 // node friction.mjs [levels…]
 import { score, BRACKETS } from './balance.mjs';
 export const GEAR = { nothing: { noGear: true }, whites: { rarity: 'stock' }, blues: { rarity: 'tuned' }, yellows: { rarity: 'custom' } };
-export const TARGET = { nothing: [50, 60], whites: [35, 45], blues: [25, 30], yellows: [12, 18] };
+export const TARGET = { nothing: [60, 75], whites: [40, 50], blues: [35, 45], yellows: [20, 30] };
 export function friction(levels = [1, 5, 10, 18, 30], classes = ['Breaker', 'Bastion', 'Infiltrator', 'Operator']) {
   const rows = [];
   for (const L of levels) {
