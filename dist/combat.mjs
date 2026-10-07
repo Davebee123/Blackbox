@@ -17,7 +17,7 @@ const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { eventCommand, eventWon, outbreakMult } from './events.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
-import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
+import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, isOutpost, retireHarvesters, devOutpost } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -1103,7 +1103,7 @@ export function disconnect(s, reason) {
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
   s.signal = Math.max(0, run.integrity);
   s.run = null;
-  if (loc && !loc.outpost?.h) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // any server but an outpost: see rogue.mjs relocks/relockLeft
+  if (loc && !isOutpost(loc)) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // any server but an outpost: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
@@ -1462,6 +1462,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.degraded = null;
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
+  } else if (/^developer outpost \S+/.test(text)) {
+    devOutpost(s, text.split(' ')[2], text.split(' ').slice(3), now);
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
     const had = new Set(s.locations.map((l) => l.id));
     addLead(s, text.split(' ')[2], 100, 'Developer: ');
@@ -2995,6 +2997,7 @@ export function restore(raw) {
     retireConfigs(s);
     memoryRestore(s);
     retireTraits(s);
+    retireHarvesters(s); // harvesters and modules are buildings now (outpost.mjs)
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts

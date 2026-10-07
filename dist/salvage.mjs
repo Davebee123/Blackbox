@@ -16,6 +16,7 @@ export const SALVAGE_COSTS = {
   zeroday: (n) => ({ any: Math.max(0, n - 2), need: [{ label: 'guard component', names: GUARD_PARTS, n: 2 }] }),
   service: (n) => ({ any: n, need: [] }),
   module: () => ({ any: 5, need: [] }),
+  building: (n) => ({ any: n, need: [] }), // outpost.mjs: a building's salvage
   filter: () => ({ any: 4, need: [] }),
   relay: () => ({ any: 4, need: [] }),
   'harvester-siphon': () => ({ any: 5, need: [{ label: 'Replication Seed', names: ['Replication Seed'], n: 1 }] }),

@@ -124,8 +124,7 @@ test('every outpost has its own firewall at its server\'s level; natives it bloc
   command(s, 'developer location worm');
   const a = s.locations[0];
   a.level = 8; a.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 8, traits: [] }];
-  command(s, `outpost install ${a.id}`, 0);
+  command(s, `developer outpost ${a.id}`, 0);
   s.materials = { kernel: 20 };
   assert.equal(fwAt(s, a).level, 8, 'it comes with the server');
   const { tickFleet } = await import('./dist/fleet.mjs');

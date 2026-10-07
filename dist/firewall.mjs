@@ -72,7 +72,7 @@ export const hardenLeft = (s, at = clock(), loc = null) => Math.max(0, fwAt(s, l
 // Filters are your home firewall's; an outpost's has its Firewall Node instead.
 // The wall is three knobs you turn (its level, filters, harden.sh); everything else that adds
 // levels shows as one "+N": architecture and consortium at home, a Firewall Node and Root 5 on an outpost.
-export const wallBonus = (s, loc = null) => (loc ? ((loc.mods || []).includes('node') ? NODE_PLUS : 0) + rootWall(loc) : archWall(s) + consortiumWall(s));
+export const wallBonus = (s, loc = null) => (loc ? ((loc.buildings || []).includes('node') ? NODE_PLUS : 0) + ((loc.buildings || []).includes('citadel') ? 2 * NODE_PLUS : 0) + rootWall(loc) : archWall(s) + consortiumWall(s));
 export function effLevel(s, at = clock(), family = null, loc = null) {
   const f = fwAt(s, loc);
   const kit = loc ? 0 : filterStat(s, 'strength') + (family ? filterStat(s, family) : 0);
@@ -99,7 +99,7 @@ export function wear(s, points) {
 }
 // The clock: a defrag that's done leaves it whole (home, and every outpost).
 export function tickFirewall(s, at = clock()) {
-  for (const loc of [null, ...(s.locations || []).filter((l) => l.outpost?.h), ...Object.values(s.hubs || {}).map((h) => h.captured?.wall).filter(Boolean)]) {
+  for (const loc of [null, ...(s.locations || []).filter((l) => l.takenOver && l.buildings?.length), ...Object.values(s.hubs || {}).map((h) => h.captured?.wall).filter(Boolean)]) {
     const f = fwAt(s, loc);
     if (!f.defragUntil || at < f.defragUntil) continue;
     f.defragUntil = 0; f.frag = 0;
@@ -116,7 +116,7 @@ export function firewallCommand(s, text, at = clock()) {
   // A server (your outpost) or a faction (a hub you hold).
   const hubF = id && s.hubs?.[id]?.captured ? id : null;
   const loc = !id ? null : hubF ? (s.hubs[hubF].captured.wall ||= { level: HUB_LEVEL(hubF) }) : (s.locations || []).find((l) => l.id === id || l.name.toLowerCase() === id);
-  if (id && !hubF && !loc?.outpost?.h) return warn(s, 'Only your home server, your outposts and hubs you hold have a firewall you run.');
+  if (id && !hubF && !(loc?.takenOver && loc.buildings?.length)) return warn(s, 'Only your home server, your outposts and hubs you hold have a firewall you run.');
   const f = fwAt(s, loc), where = hubF ? 'Your hub\'s firewall' : loc ? `${loc.name}'s firewall` : 'Firewall';
   if (verb === 'upgrade') {
     if (f.level >= FIREWALL.maxLevel) return warn(s, `${where} is at its highest level.`);

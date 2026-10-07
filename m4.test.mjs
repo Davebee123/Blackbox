@@ -53,8 +53,7 @@ test('a fleet sets out for an outpost, sieges it, and breaks when every ship is 
   command(s, 'developer location worm');
   const a = s.locations[0];
   a.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 3, traits: [] }];
-  command(s, `outpost install ${a.id}`, T0);
+  command(s, `developer outpost ${a.id}`, T0);
   const f = launch(s);
   assert.ok(f && f.target === a.id && f.ships >= 2);
   s.net.next = 1e12;
@@ -73,8 +72,7 @@ test('an undefended fleet puts the outpost in lockdown', () => {
   command(s, 'developer location worm');
   const a = s.locations[0];
   a.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 3, traits: [] }];
-  command(s, `outpost install ${a.id}`, T0);
+  command(s, `developer outpost ${a.id}`, T0);
   launch(s);
   s.net.next = 1e12;
   let t = T0; s.net.wall = t;
@@ -92,40 +90,6 @@ test('a v24 save loads with configs and no fleet', () => {
   assert.equal(back.fleet, null);
 });
 
-test('outpost modules: ports, Pipeline, Storage Array, Firewall Node, IDS', async () => {
-  const { capOf, perHour, OUTPOST, outpostPorts, modsOf, modStock, learnPlan } = await import('./dist/outpost.mjs');
-  const s = fresh();
-  command(s, 'developer location worm');
-  const a = s.locations[0];
-  a.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 5, traits: [] }];
-  command(s, `outpost install ${a.id}`, T0);
-  const cap = capOf(a), rate = perHour(a, a.outpost.h, s);
-  s.server.credits = 2000; s.materials.worm = 100; s.materials.kernel = 100; s.materials.cipher = 100;
-  command(s, 'developer salvage 30');
-  command(s, `outpost mod ${a.id} pipeline`);
-  assert.equal(modsOf(a).length, 0, 'no module in stock');
-  command(s, 'outpost build pipeline');
-  assert.equal(modStock(s).pipeline || 0, 0, 'no plan, no module');
-  for (const id of ['pipeline', 'storage', 'node']) { learnPlan(s, id); command(s, `outpost build ${id}`); }
-  assert.deepEqual(modStock(s), { pipeline: 1, storage: 1, node: 1 });
-  command(s, `outpost mod ${a.id} pipeline`);
-  command(s, `outpost mod ${a.id} storage`);
-  assert.equal(capOf(a), cap * 2);
-  assert.ok(Math.abs(perHour(a, a.outpost.h, s) - rate * 1.5) < 1e-9);
-  assert.equal(outpostPorts(s), 2);
-  command(s, `outpost mod ${a.id} node`);
-  assert.equal(a.mods.length, 2, 'two ports at the start');
-  command(s, `outpost unmod ${a.id} storage`);
-  assert.equal(modStock(s).storage, 1, 'a removed module goes back to your stock');
-  command(s, `outpost mod ${a.id} node`);
-  assert.ok(a.mods.includes('node'));
-  const { effLevel, NODE_PLUS } = await import('./dist/firewall.mjs');
-  const base = effLevel(s, undefined, null, a);
-  command(s, `outpost unmod ${a.id} node`);
-  assert.equal(effLevel(s, undefined, null, a), base - NODE_PLUS, 'a Firewall Node adds levels to the outpost\'s firewall');
-});
-
 test('Edge Router adds bandwidth; the Scheduler collects outposts on its own', async () => {
   const { bandwidth, stockOf } = await import('./dist/outpost.mjs');
   const s = fresh();
@@ -135,8 +99,7 @@ test('Edge Router adds bandwidth; the Scheduler collects outposts on its own', a
   command(s, 'developer location worm');
   const a = s.locations[0];
   a.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 5, traits: [] }];
-  command(s, `outpost install ${a.id}`, T0);
+  command(s, `developer outpost ${a.id}`, T0);
   s.services.scheduler = 3; // every 15 minutes
   s.net.next = 1e12;
   tickNetwork(s, T0);

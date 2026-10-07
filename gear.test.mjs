@@ -654,7 +654,7 @@ test('buyout: finish an install now for credits, 3x its cost at the start and le
   // Outposts: a lockdown ends, a slot reset is skipped.
   const loc = { id: 'x', name: 'X', outpost: { lockdown: { left: OUTPOST.lockdownMs / 2 } } };
   assert.equal(outpostBuyout(loc, 0).what, 'lockdown');
-  assert.equal(outpostBuyout({ outpost: { readyAt: 1000 } }, 0).what, 'reset');
+  assert.equal(outpostBuyout({ outpost: {}, build: { id: 'siphon', startedAt: 0, doneAt: 1000 } }, 0).what, 'build');
   assert.equal(outpostBuyout({ outpost: {} }, 0), null);
 });
 

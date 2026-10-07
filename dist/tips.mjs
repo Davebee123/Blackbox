@@ -37,7 +37,7 @@ export const TIPS = [
   { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You found a server. Select it and press Connect to hack in. It takes memory while it is on your network. Its ring fills as you explore it.' },
   { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your free memory. They show how many more servers your network can hold. The blinking one is what this server takes. Detach a server you are done with to get one back.' },
   { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'An invasion is heading for your wall. How strong your Firewall is decides whether it is blocked, contested, or breaks through.' },
-  { id: 'map-outpost', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.h), at: '.outpost .lvl-bar', text: 'This outpost fills while you are away, up to its cap. Connect to the server to collect what it has gathered.' },
+  { id: 'map-outpost', page: 'map', when: (s) => (s.locations || []).some((l) => l.takenOver && l.buildings?.length), at: '.outpost .op-store', text: 'What your buildings make piles up here while you are away, up to what the server can store. Connect to the server to collect it.' },
   { id: 'map-besieged', page: 'map', when: (s) => s.fleet?.state === 'siege', at: '.mnode.besieged', text: 'A swarm is at this outpost, and it makes nothing meanwhile. Defend it before the timer runs out, or it goes into lockdown. Its stockpile stays yours.' },
   { id: 'map-lockdown', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.lockdown), at: '.mnode.locked', text: 'This outpost is in lockdown. It harvests nothing for a while, but its stockpile is safe. Retake it with a fight to end it sooner.' },
   { id: 'map-fleet', page: 'map', when: (s) => !!s.fleet, at: '.mnode.fleet', text: 'A swarm is coming for one of your outposts. Each fight kills one virus. Intercept the swarm on the way, or defend once it lands. Any left when its timer runs out put the outpost in lockdown.' },
@@ -71,7 +71,7 @@ export const TIPS = [
   { id: 'store-chase', page: 'hub', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Something is happening on this server. Its card says what, and how long you have to act.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server. Nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },
-  { id: 'map-install', page: 'map', at: '.op-up', text: 'Upgrade to Outpost puts a harvester from your rack on this server, and it stockpiles code while you\'re away. How many outposts run at once is the Outposts count on your server card.' },
+  { id: 'map-build', page: 'map', at: '.op-buildlist', text: 'Build on a server you hold. Each building takes one of its slots and some of your bandwidth, costs credits, code and salvage, and builds in real time. What it makes piles up while you are away.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },
   { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'This is an unknown server. Beat the viruses it sends at you to trace it. A vault\'s trace record traces it too. Once a relay flags it, kills of any virus from its family count as well.' },
 

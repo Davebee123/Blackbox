@@ -14,6 +14,7 @@ import { items } from './dist/hidden.mjs';
 import { procOf, procIn } from './dist/root.mjs';
 import { sweepPuzzle, sweepFile } from './dist/forensics.mjs';
 import { eventsOf, CARDS } from './dist/events.mjs';
+import { BUILDINGS, buildBlock } from './dist/outpost.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
@@ -98,7 +99,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
   // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
   // A Resident that just beat it waits until it calms down (6 hours), like a player would.
   const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d] && !(d === CORE && residentBonus(loc, t) > 0)) return true; if (x.locked && !x.drop && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
-  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.outpost?.h && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
+  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.buildings?.length && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
     if (!loc.fresh || !loc.detached) return true;
@@ -216,6 +217,10 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     mailWork();
     if (spend === 'all' && !s.run && !active(s) && !s.install) { // build: the cheapest service you can install
       for (const id of Object.keys(SERVICES)) if (!installBlock(s, id)) { const c = s.server.credits; command(s, 'install ' + id); (stats.spent ||= {}).services = (stats.spent.services || 0) + c - s.server.credits; break; }
+    }
+    if (spend === 'all' && !s.run && !active(s)) { // and a building on a server it holds (outpost.mjs): producers first, the cheapest that fits
+      const order = Object.keys(BUILDINGS).sort((x, y) => (BUILDINGS[x].kind === 'producer' ? 0 : 1) - (BUILDINGS[y].kind === 'producer' ? 0 : 1) || BUILDINGS[x].cost.credits - BUILDINGS[y].cost.credits);
+      outer: for (const l of s.locations.filter((x) => x.takenOver && !x.build)) for (const id of order) if (!buildBlock(s, l, id, t)) { const c = s.server.credits; command(s, `outpost build ${l.id} ${id}`, t); (stats.spent ||= {}).buildings = (stats.spent.buildings || 0) + c - s.server.credits; break outer; }
     }
     book('deconstruct', gearUp);
     restUp();

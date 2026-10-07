@@ -717,7 +717,7 @@ test('every server but an outpost makes you wait a minute before reconnecting', 
   assert.match(play(s, 'connect ' + loc.id).at(-1).message, /Reconnect in \d+s/);
   assert.equal(s.run, null);
   loc.lockUntil = 0;
-  loc.outpost = { h: { kind: 'siphon' } }; // an outpost: no wait
+  loc.takenOver = true; loc.buildings = ['siphon']; loc.outpost = { stock: {} }; // an outpost: no wait
   connect(s, loc.id); play(s, 'jack out');
   connect(s, loc.id);
   assert.ok(s.run, 'an outpost takes you straight back');

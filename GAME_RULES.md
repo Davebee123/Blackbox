@@ -4,7 +4,7 @@ This is the single source of truth for how combat works. If code, README or an o
 
 ## The Craft page
 
-Everything you build is on one page, **Craft** (at home only), in three panes: **categories** down the left (Protocols, Zero-days, Filters, Harvesters, Modules; each shows only once it has something in it, with a count of what you can craft now), the **recipes** in the one you pick, only ones you know (a teal dot on the ones you can afford; a recipe you haven't found doesn't show, and a category with none stays hidden), and the recipe you pick on the right: **what comes out** (its name in its rarity colour, rarity and level as chips, its stats as icon rows with their numbers; a filter adds your filters held and its slots as pips), **what it takes**, a row each (credits, code, salvage, named components; your have / its need, red when short), and **Craft**. That's all the page shows: whether you can make each thing, and what's missing if you can't. Hover any protocol (or filter) for its card: a spinning ASCII model of its kind (an Exploit's spike, a Proxy's diamond, a Shell's cube, a Script's prism, a filter's disc) in its rarity colour, over its name, rarity, kind, level, stats, effect and flavour. On a stash protocol (and on its **Load**/**Swap** button) the card ends with what loading it changes against what that slot runs now: ▲ gains, ▼ losses, and any Zero-day or unique effect you'd give up (or *into an empty slot*). Protocols you *run* live on the **Loadout** page's first tab, Protocols (the stash as one row per item on the left, slots and stats on the right); skills and talents share the second tab (slots, stats, stash: load, unload, scrap).
+Everything you build is on one page, **Craft** (at home only), in three panes: **categories** down the left (Protocols, Zero-days, Filters, Relays; each shows only once it has something in it, with a count of what you can craft now), the **recipes** in the one you pick, only ones you know (a teal dot on the ones you can afford; a recipe you haven't found doesn't show, and a category with none stays hidden), and the recipe you pick on the right: **what comes out** (its name in its rarity colour, rarity and level as chips, its stats as icon rows with their numbers; a filter adds your filters held and its slots as pips), **what it takes**, a row each (credits, code, salvage, named components; your have / its need, red when short), and **Craft**. That's all the page shows: whether you can make each thing, and what's missing if you can't. Hover any protocol (or filter) for its card: a spinning ASCII model of its kind (an Exploit's spike, a Proxy's diamond, a Shell's cube, a Script's prism, a filter's disc) in its rarity colour, over its name, rarity, kind, level, stats, effect and flavour. On a stash protocol (and on its **Load**/**Swap** button) the card ends with what loading it changes against what that slot runs now: ▲ gains, ▼ losses, and any Zero-day or unique effect you'd give up (or *into an empty slot*). Protocols you *run* live on the **Loadout** page's first tab, Protocols (the stash as one row per item on the left, slots and stats on the right); skills and talents share the second tab (slots, stats, stash: load, unload, scrap).
 
 ## First launch
 
@@ -156,7 +156,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 **Where they go.**
 - **Health (the everyday sink).** Signal rests back at 20% a minute and the server at 2% a minute, offline too. Or pay to top up now: a full Signal bar costs 8 + 1.5×(class level) credits, a full server 10 + 2×(server level); less missing costs less (at least 1). Click the meter, or type `top up` / `repair [n]`. Short of credits, the rest comes out of your biggest pile of code, 8 credits a unit. On a run it's the store's Signal patch instead. A bot that always pays spends about a quarter to a third of its income on it and reaches level 10 two to three times sooner than one that always waits; the Bastion barely needs it.
 - **You start with 0 credits.** Caches, kills and contracts pay; topping up Signal or repairing costs credits from the first one you earn.
-- **Building (the big goals).** Services, outpost modules and harvesters cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
+- **Building (the big goals).** Services and buildings on your outposts cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
 - **Gear.** Compiling a blue costs 60 + 15×level credits and 8 salvage, cheaper than the store's sealed item (180 + 14×level).
 
 | Sink | Credits | Code | Salvage | Other |
@@ -166,7 +166,6 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Service v1 / v2 / v3 | 120 / 600 / 2,000 | 12 / 40 / 100 | 6 / 15 / 40 | Exploits 0 / 1 / 3 |
 | Compile a blue | 60 + 15L | | 8 | its recipe |
 | Compile a Zero-day | 400 + 30L | | 16 (2 guard parts) | its source |
-| Harvester | 200 | 15 | 5 | its seed |
 | Outpost module (into your stock; needs its plan) | 150 | 8 | 5 | |
 | Architecture switch | 1,000 | | | |
 
@@ -386,7 +385,6 @@ Salvage works like mana in Magic: most costs take **any** salvage, and a few als
   |---|---|
   | Protocol (compile) | 4 salvage |
   | Zero-day (compile) | 6 salvage + 2 guard components (Sentry Lens, Tracker Core, Sentinel Lens, Lockout Relay, Crawler Maw, Brood Seed, Shredder Blade, Grinder Core) |
-  | Siphon / Scraper / Tap harvester | + 1 Replication Seed / Cipher Seed / Signal Key (on top of credits and code) |
 
 - **Choosing what pays.** Every build button opens a picker with the stacks and a − / + for each. It starts filled with a sensible default (plain Scrap first, then pieces no recipe asks for, then the most plentiful), and Build lights up once the payment covers the cost. On the command line: `compile crit pay scrap:2,pulse-kernel:2` (without `pay`, the default is used).
 
@@ -403,53 +401,55 @@ A server you've taken over keeps paying you back if you keep coming back to it (
 | 1 | Taken over |
 | 2 | `/root` opens: a stash of the server's code (4 + level/4), refilled every rotation |
 | 3 | It stops costing memory |
-| 4 | One more module port, and its harvester yields 25% more |
-| 5 | Its firewall +3 levels, and its harvester yields double (it works like two) |
+| 4 | One more building slot, and its producers make 25% more |
+| 5 | Its firewall +3 levels, and its producers make double |
 
 ## Outposts
 
-A server you've taken over can run a **harvester**: a packaged virus that works for you there.
+A server you hold (you beat its Resident in `/core`) is yours to build on, like a colony in Master of Orion 2. What you build decides what it does. Nothing costs upkeep and nothing switches itself off.
 
-- **Plans.** You can only craft a harvester or a module whose **plan** you know. Your first vault holds the Siphon plan (`plan.pln`); about 15% of other vaults hold one you may not have (banking a known plan gives 2 salvage); Halcyon's store sells every plan once (Siphon 120, Scraper and Tap 220, modules 180–260 credits, plus 8 a level). On the Craft page a row without its plan is dimmed with a *plan* tag.
-- **Server → outpost.** A taken-over server's card has **Upgrade to Outpost**, with what it needs as a chip: a harvester (0/1, red, when you have none: the button takes you to the Craft page). With one harvester in your rack the button installs it; with several, each one has its own Upgrade button. The outpost-slot count shows only when you're out of slots.
-- **Getting one.** Your rack shows where each came from (*found* or *crafted*); a taken-over server with an empty rack offers **Craft a harvester** (or says you need a plan). Mostly you craft them on the Craft page, one per kind (200 credits, 15 code and 5 salvage, plus its seed: Siphon uses Worm code, Scraper Cipher, Tap Kernel). Compiled harvesters are Stock, at your server level. Rarely (12% of vaults, twice that on Legacy sites) a vault holds a packaged native (`<family>.vx`): pull it and jack out. Only these can carry traits. The rack holds 6.
-- **A harvester is a kind, a level and 0–2 traits** (Stock none, Tuned one, Custom two).
-  - Siphon: a steady flow of the server's code (1 + level/10 an hour, storage 6 + level/2).
-  - Scraper: a loot roll every 90 minutes, 4 stored. Rolls are credits, code, salvage or, rarely, a protocol.
-  - Tap: a small trickle (0.5 + level/20 an hour), noticed a quarter as often.
-  - Harvesters have no traits: what a site gives comes from its site trait and the modules you install (Pipeline for yield, Storage Array for storage, IDS for being noticed less).
-- **Site traits** are fixed when a server is found (45% have one): Rich (+50% yield), Legacy (better loot rolls; its vault more often holds a package, and a better one), Backbone (no bandwidth), Hostile (twice the invasions, +50% yield), Hardened (its natives are Armored).
-- **Outpost slots** (*Outposts n/m* on the server card, pips on the outpost) limit how many outposts run at once. Harvesters never run on your own server: they go out to servers you've taken over. Installing one from an outpost's card lists your rack one row per harvester (kind, level, traits) with its own Install button: 1, plus 1 every 10 server levels (5 at most).
-- **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
-- **Pulling out** gives the harvester back with what it holds; the slot then resets for 30 minutes.
-- **Its firewall.** Every outpost has its own (`firewall.mjs`): it comes with the server, at the server's level, and you raise it like your home one: `firewall upgrade|harden <server>`, or the outpost card's row (its level, *Vulnerable to lv N+* against the swarms that come for it, Upgrade, harden.sh). It's a level and nothing more: no fragmentation, no defrag. No filters out here; a **Firewall Node** module adds 3 levels.
-- **Natives.** An outpost's natives notice it about every 6 hours (by kind, traits and site), real time, online or off, and come as a **small swarm** (1–2 viruses at the server's level, arriving in 3 minutes; `FLEET.nativeMs`). Like any swarm it meets the outpost's firewall: **blocked**, it bounces; **contested**, the firewall wears it down; a **breach** just runs the 8-minute timer. **Defend** it (`outpost defend`, or the card's button: one fight a virus). One swarm is out on the network at a time, so natives wait while another swarm is out. An outpost produces nothing while a swarm sits at it. If the timer runs out:
-  - the outpost goes into **lockdown** for 2 real hours: no harvesting, but its stockpile is kept;
+- **Slots.** Each held server has 3, 4 or 5 building slots by its size (fixed by its seed: small 30%, medium 50%, large 20%), +1 on a Backbone site and +1 at Root 4, at most 6.
+- **Bandwidth** is yours, across your network: 3 + server level ÷ 4 (3 at level 1, 8 at level 20), plus the Edge Router, the Hub architecture and the consortium. Each building takes 1–3. You can't build everything everywhere.
+- **Building** runs in real time, offline too: one build per server and two across your network at once. It costs credits, the server's family code and salvage (you pick which salvage), and the specialisations take 3 Exploits too. A lockdown or a swarm at the server holds a build up. **Finish now** buys it out. Taking a building down (×) gives back half its credits.
+- **Plans.** You start knowing the Code Siphon. Every other building needs its **plan**: about 15% of vaults hold one (your first vault always does), and Halcyon's shop sells each once. A plan you already know banks as 2 salvage.
+- **Production** piles up in the server's store, up to 8 hours' worth (Storage Array 16, Refinery a day), and connecting to the server collects it (the Scheduler does it on its own). A lockdown stops production; what's stored stays.
+
+| Building | Kind | Bandwidth | Cost (credits / code / salvage) | Time | Needs | What it does |
+|---|---|---|---|---|---|---|
+| Code Siphon | producer | 1 | 150 / 10 / 4 | 10 min | — | 1.5 + level/10 of the server's code an hour |
+| Credit Skimmer | producer | 1 | 300 / 15 / 8 | 30 min | plan | 20 + 3×level credits an hour; natives notice the server 50% more |
+| Scrap Mill | producer | 1 | 200 / 12 / 6 | 20 min | plan | 1 + level/15 salvage an hour |
+| Data Miner | producer | 2 | 500 / 25 / 12 | 1 h | plan, server lv 10 | A loot roll every 90 minutes (credits, code, salvage, now and then a protocol; better on Legacy) |
+| Firewall Node | defence | 1 | 200 / 12 / 6 | 20 min | plan | The server's firewall +3 levels |
+| IDS | defence | 1 | 350 / 18 / 8 | 40 min | plan | Natives notice it half as often; swarms heading here are seen sooner |
+| Sentry Daemon | defence | 2 | 600 / 30 / 15 | 2 h | plan, server lv 15 | Kills one virus of every swarm that reaches the server |
+| Storage Array | support | 1 | 250 / 12 / 6 | 20 min | plan | Stores twice as much |
+| Pipeline | support | 2 | 400 / 20 / 10 | 45 min | plan, server lv 10 | Producers here make 50% more |
+| Honeytoken | support | 1 | 250 / 12 / 6 | 30 min | plan | Draws trouble: noticed twice as often, swarms pick it first and come sooner; beating them here pays double |
+| Refinery | producer, specialisation | 3 | 2,500 / 120 / 50 + 3 Exploits | 6 h | plan, server lv 20, 3 producers here | Producers here make 50% more; stores a day's worth |
+| Citadel | defence, specialisation | 3 | 2,500 / 120 / 50 + 3 Exploits | 6 h | plan, server lv 20, 2 defences here | The firewall +6 levels; a lost defence never locks it down |
+
+One specialisation per server. A Legacy site takes a quarter off a specialisation.
+
+- **Site traits** are fixed when a server is found (45% have one): Rich (producers +50%), Legacy (better loot rolls, cheaper specialisations), Backbone (+1 slot), Hostile (natives come twice as often, producers +50%), Hardened (its Resident and natives are Armored).
+- **Its firewall.** Every outpost has its own (`firewall.mjs`), at the server's level; raise it like your home one (`firewall upgrade|harden <server>`, or the row on its card). Firewall Nodes and Citadels add to it.
+- **Natives.** A server with buildings is an **outpost**, and its natives notice it about every 6 hours of play, more often the more you build (15% more per building, times what each one draws). They come as a **small swarm** (1–2 viruses at the server's level, arriving in 3 minutes; `FLEET.nativeMs`). Like any swarm it meets the outpost's firewall: **blocked**, it bounces; **contested**, the firewall wears it down; **breached**, you have 8 minutes to **Defend**. Lose and:
+  - the outpost goes into **lockdown** for 2 real hours: it makes nothing, but what's stored is kept;
   - the server and everything past it stay open (nothing is ever cut off).
 - **Retake** it (beat the natives there) to end a lockdown sooner.
-
-- **Modules.** Each outpost has **module slots** (pips), like your server's service slots: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is in lockdown). Modules are things you own: craft one on the Craft page (its plan known; 150 credits, 8 code and 5 salvage: Pipeline Worm, Storage Array and Honeytoken Kernel, Firewall Node and IDS Cipher) and it goes in your **module stock** (×n on its row). An outpost's card offers only modules you have in stock; taking one out puts it back in your stock, to use on another outpost.
-
-  | Module | What it does |
-  |---|---|
-  | Pipeline | +50% yield |
-  | Storage Array | Double storage |
-  | Firewall Node | Its firewall +3 levels |
-  | IDS | Natives notice it half as often; swarms heading here are seen 50% sooner |
-  | Honeytoken | Draws trouble, for when you want more fights: noticed twice as often, swarms come twice as often and pick it first, infestations come sooner and pick it first. Beating them here pays double (a stopped invasion: an hour's harvest and a kill's XP; an infestation: two hours instead of one; a swarm: double code and XP) |
-
-- **Home services for outposts:** Edge Router (+1 / 2 / 3 outpost slots, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
+- **Regrowth.** Two lockdowns you let run out while you're logged on, within 24 hours, and the Resident regrows: the server isn't yours until you beat it in `/core` again. Its buildings wait. A lockdown that ends while you're away never counts.
+- **Home services for outposts:** Edge Router (+1 / 2 / 3 bandwidth, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
 - **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 1,000 credits, between fights.
 
   | Architecture | Trade |
   |---|---|
-  | Fortress | Firewall +5 levels; harvesters yield 25% less |
-  | Hub | +2 outpost slots; firewall −3 levels |
-  | Lab | Crafting costs 30% fewer credits; outposts are noticed a quarter more often |
+  | Fortress | Firewall +5 levels; producers make 25% less |
+  | Hub | +2 bandwidth; firewall −3 levels |
+  | Lab | Crafting and building cost 30% fewer credits; outposts are noticed a quarter more often |
 
-- **Infestations are gone**: a Root log rotation is the virus that moves in for you to clear.
+- **Old saves.** Harvesters and modules became buildings: a Siphon or Tap became a Code Siphon, a Scraper a Data Miner, each installed module its building (what didn't fit came back as 150 credits). Harvesters in your rack came back as 200 credits each, modules in stock as 150. A Scraper plan became the Data Miner's, a Tap plan the Credit Skimmer's.
 
-Commands: `outpost install <server> [n]`, `outpost build <module>`, `outpost mod|unmod <server> <module>`, `buy plan-<kind|module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake <server>`, `outpost compile siphon|scraper|tap`.
+Commands: `outpost build <server> <building>`, `outpost demolish <server> <building>`, `outpost buyout|defend|retake <server>`, `buy plan-<building>`, `architecture fortress|hub|lab`, `developer outpost <server> [building…]` (testing).
 
 ## Configs (gone)
 
@@ -519,7 +519,7 @@ Everything runs on real time, online or off: whatever comes meets that holding's
 | **Swarm at your outpost** | 2–4 processes from past it, 2 levels above it | First 45 min after your first outpost, then 90–150 min | Travels 10 min, meets the outpost's firewall, then 8 min to defend; makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
 | **Swarm from a faction at your outpost** | A Hostile faction you just struck | Once a strike | As a swarm, in the faction's colours | As a swarm | Lockdown | As a swarm |
 
-Lockdown here: 2 h, no harvesting, the stockpile kept, nothing past it cut off. **Retake** (`outpost retake`) ends it sooner.
+Lockdown here: 2 h, nothing made, what's stored kept, nothing past it cut off. **Retake** (`outpost retake`) ends it sooner.
 
 ### Hubs you hold
 
@@ -838,7 +838,7 @@ Every unique and strain trophy has a place in the **Collection** on the System p
 Timed builds can be finished now for credits, Master of Orion style (`BUYOUT` in combat.mjs): 3× the credit cost when the timer starts, falling with the time left, never under 20. *Finish now · N* sits by the timer.
 
 - **Installs and upgrades** (`buyout`): the service runs at once. Not while the server is degraded.
-- **Outposts** (`outpost buyout <server>`): a lockdown ends (base 250 credits), or a harvester slot that's resetting is ready (base 80).
+- **Outposts** (`outpost buyout <server>`): a lockdown ends (base 250 credits), or a building finishes (base half its credits).
 
 ## The pager
 

@@ -76,7 +76,7 @@ test('the screens carry names, numbers and state, not explanations', () => {
   for (const t of TIPS) if (/^(map|server|protocols|loadout|daemons)-/.test(t.id)) assert.ok(t.text.length > 20);
 });
 
-test('the newer systems have their tips: a found server’s memory, plans on Craft, and your harvester rack', async () => {
+test('the newer systems have their tips: a found server’s memory, plans on Craft, and what to build on a server you hold', async () => {
   const { addLocation } = await import('./dist/combat.mjs');
   const { MEMORY } = await import('./dist/memory.mjs');
   const was = MEMORY.on; MEMORY.on = true; // the memory tip, with memory switched on
@@ -90,9 +90,11 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   command(s, 'attach ' + loc.id);
   loc.takenOver = true;
   assert.equal(nextTip(s, 'craft', onPage(craftMarkup(s))).id, 'craft-plans', 'where recipes come from');
-  s.harvesters = [{ kind: 'siphon', level: 1, traits: [] }];
   markSeen(s, 'map-memory'); markSeen(s, 'map-owned');
-  assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-install');
+  // Other tips about this server (its quirk, its trait) may come first; the build tip follows.
+  let t = null;
+  for (let i = 0; i < 6; i++) { t = nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))); if (!t || t.id === 'map-build') break; markSeen(s, t.id); }
+  assert.equal(t?.id, 'map-build');
   MEMORY.on = was;
 });
 

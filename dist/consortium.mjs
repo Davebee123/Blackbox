@@ -241,7 +241,7 @@ function pay(s, L, k, family, text) {
 
 // The travelling virus: from a lost siege or a crash, on along the trunk line to another outpost.
 // prev: hops it has already made.
-const outpostsOnNet = (s) => [...memberServers(s).filter((l) => l.held && !l.held.siege && !l.held.lockdown && !rebooting(s, l.member)), ...(s.locations || []).filter((l) => l.outpost?.h && !l.outpost.siege && !l.outpost.lockdown)];
+const outpostsOnNet = (s) => [...memberServers(s).filter((l) => l.held && !l.held.siege && !l.held.lockdown && !rebooting(s, l.member)), ...(s.locations || []).filter((l) => l.takenOver && l.buildings?.length && !l.outpost.siege && !l.outpost.lockdown)];
 export function roam(s, from, prev = 0) {
   return; // trunk-line hops are cut until real players share a network (threat merge)
   const c = consortiumOf(s);

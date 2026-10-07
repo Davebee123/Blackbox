@@ -36,8 +36,7 @@ test('memory: detach to make room for free, attach for the same price every time
   s.server.credits = 10000;
   const [a] = s.locations, last = s.locations.at(-1);
   a.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 5, traits: [] }];
-  command(s, `outpost install ${a.id}`, 0);
+  command(s, `developer outpost ${a.id}`, 0);
   assert.equal(outposts(s).length, 1);
   const before = s.server.credits;
   command(s, `detach ${a.id}`, 1000);

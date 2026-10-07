@@ -207,18 +207,18 @@ test('the forecast: what your command will cost a part, and what the virus will 
   assert.equal(forecast(s).you, e.encrypt || 0, 'an armor chit takes the hit');
 });
 
-test('an outpost card renders with its stockpile and module slots', async () => {
+test('an outpost card renders its slots, what is built, and a Build list', async () => {
   const { mapMarkup } = await import('./dist/view.mjs');
   const { play } = await import('./dist/run.mjs');
   const s = fresh();
   command(s, 'developer location worm');
   const l = s.locations[0];
   l.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 5, traits: [] }];
-  play(s, `outpost install ${l.id} 1`);
+  play(s, `developer outpost ${l.id}`);
   const html = mapMarkup(s, l.id);
-  assert.match(html, /class="lvl-bar"/);
-  assert.match(html, /Module ports/);
+  assert.match(html, /Building slots/);
+  assert.match(html, /Code Siphon/);
+  assert.match(html, /<summary>Build<\/summary>/);
 });
 
 test('what you type changes the expected damage on the board before you press Enter', async () => {

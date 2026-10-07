@@ -12,7 +12,7 @@ import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, FAMILIES, variantFor } fro
 import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hooks } from './combat.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
 import { FACTIONS } from './factions.mjs';
-import { outposts, fall, hasMod } from './outpost.mjs';
+import { outposts, fall, hasMod, isOutpost } from './outpost.mjs';
 import { hiddenNodes } from './hidden.mjs';
 import { ratingAt, fragment } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
@@ -76,7 +76,7 @@ function launchAtHub(s, at, f) {
 // What a swarm is after: an outpost, or a hub you hold. holder: whose firewall it meets.
 const aim = (s, f) => f.hub
   ? { ok: captured(s, f.hub) && !lockedDown(s, f.hub), name: FACTIONS[f.hub].hub.name, holder: hubWall(s, f.hub), where: { faction: f.hub } }
-  : (() => { const t = locOf(s, f.target); return { ok: !!t?.outpost?.h && !t.outpost.lockdown, name: t?.name, holder: t, loc: t, where: { location: f.target } }; })();
+  : (() => { const t = locOf(s, f.target); return { ok: isOutpost(t) && !t.outpost?.lockdown, name: t?.name, holder: t, loc: t, where: { location: f.target } }; })();
 
 function schedule(s, at, first = false) {
   const net = (s.net ||= {});
@@ -107,6 +107,8 @@ export function tickFleet(s, dt, paused = false, at = clock()) {
       const o = outcome(ratio());
       if (a.loc) fragment(s, o, a.loc);
       if (o === 'blocked') return disband(s, `The swarm bounced off ${a.name}'s firewall.`);
+      // A Sentry Daemon (outpost.mjs) kills one on arrival.
+      if (a.loc && hasMod(a.loc, 'sentry') && f.ships > 0) { f.ships--; emit(s, 'fleet-hit', `${a.name}'s Sentry Daemon killed a virus on arrival. ${f.ships} left in the swarm.`, a.where); if (f.ships <= 0) return disband(s, `${a.name}'s Sentry Daemon broke the swarm.`); }
       f.state = 'siege';
       emit(s, f.hub ? 'hub-siege' : 'fleet-siege', `Swarm${f.faction ? ` from ${FACTIONS[f.faction].short}` : ''} at ${f.hub ? '' : 'your outpost on '}${a.name}: ${f.ships} left, ${o === 'siege' ? 'contested by its firewall' : 'BREACHING its firewall'}. Defend within ${Math.round(f.siegeLeft / 60000)} minutes or it goes into lockdown.`, a.where);
     }

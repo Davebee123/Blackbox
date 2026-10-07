@@ -99,7 +99,7 @@ test('root access: log rotations bring a process and a cache; clearing them rais
   const R = await import('./dist/root.mjs');
   const { play, layoutOf, fileInfo } = await import('./dist/run.mjs');
   const { liveCount } = await import('./dist/memory.mjs');
-  const { outpostPorts } = await import('./dist/outpost.mjs');
+  const { slotsOf: outpostPorts } = await import('./dist/outpost.mjs');
   const { effLevel } = await import('./dist/firewall.mjs');
   const { tickServices, hooks } = await import('./dist/combat.mjs');
   const s = at(8);
@@ -121,9 +121,9 @@ test('root access: log rotations bring a process and a cache; clearing them rais
   assert.equal(R.rootOf(loc), 2);
   assert.ok(layoutOf(loc)['/root'], '/root opens at Root 2');
   // Root 3: off your memory; Root 4: a port; Root 5: firewall +3.
-  const fw = effLevel(s, 0, null, loc), ports = outpostPorts(s, loc);
+  const fw = effLevel(s, 0, null, loc), ports = outpostPorts(loc);
   loc.root.level = 3; assert.equal(liveCount(s), used - 1);
-  loc.root.level = 4; assert.equal(outpostPorts(s, loc), ports + 1);
+  loc.root.level = 4; assert.equal(outpostPorts(loc), Math.min(6, ports + 1));
   loc.root.level = 5; assert.equal(effLevel(s, 0, null, loc), fw + 3);
   delete hooks.now;
 });
