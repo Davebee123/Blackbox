@@ -228,7 +228,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     const open = (l) => (isLive(s, l) || l.fresh) && !(relocks(l) && relockLeft(l, t));
     const todo = s.locations.filter((l) => !l.rogue && !l.takenOver && open(l) && pending(l) && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
     const rot = s.locations.filter((l) => procOf(l, t) && open(l) && procOf(l, t).level <= L + 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => procOf(b, t).level - procOf(a, t).level)[0];
-    const rogue = s.locations.filter((l) => l.rogue && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
+    const rogue = s.locations.filter((l) => l.rogue && !l.farm && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
     const hunt = contracts && stats.bountyLosses < 2 && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;
     if (hunt) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }

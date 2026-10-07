@@ -4,7 +4,7 @@ import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
-import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock } from './rogue.mjs';
+import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork } from './invasion.mjs';
@@ -268,6 +268,7 @@ export function fileInfo(loc, path, name) {
     '/.ghost/.key': { kind: 'text', size: '1k', text: [`vault key, kept where plain ls won't show it: ${loc.password}`] },
   };
   const full = join(path, name);
+  if (loc.farm && full !== '/motd.txt') return farmFile(loc, path, name);
   if (loc.rogue) return full === '/motd.txt' ? { kind: 'text', size: '1k', text: rogueMotd(loc) } : null;
   if (sweepFile(loc) && full === '/' + sweepFile(loc)) return { kind: 'sweep', size: '9k', text: ['an incident log. cat it to sweep it.'] };
   if (name === 'kit.bin' && layoutOf(loc)[path]?.locked) {
@@ -376,6 +377,7 @@ export function connect(s, id) {
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (relocks(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
+  else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first: crew sim <class>, or crew invite <friend>.`);
   else {
     // A found server joins your network as you connect (the game asks first: app.js).
     if (loc.fresh && loc.detached) memoryCommand(s, 'attach', loc.id);
@@ -468,6 +470,7 @@ function cd(s, arg, pulled = null) {
   // Every directory on the way down must be passable.
   for (let p = target; p !== '/' && !up; p = p.slice(0, p.lastIndexOf('/')) || '/') {
     if (p !== target && watching(s, loc, p)) return err(s, `${p} is guarded. Clear it before going deeper.`);
+    if (p !== target && loc.farm && loc.spawns?.[p]?.alive) return err(s, `${loc.spawns[p].name} is still running in ${p}. Clear it before going deeper.`);
     if (p !== target && locked(loc, p)) return err(s, `${p} is locked.`);
   }
   // Leaving a guarded directory before engaging backs you off the guard.
@@ -608,6 +611,7 @@ function unlock(s, rest) {
   out(s, `${dir}/ unlocked.`, 'net-good');
   s.run.cracked = true;
   gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked', 'breakin');
+  if (loc.farm) return out(s, `The ledger is open. The Coldwallet waits in ${target}/core.`, 'net-good');
   if (loc.member) return out(s, `The vault is open, but ${loc.name} stays ${loc.member}'s.`); // a consortium member's: no takeover
   if (!loc.takenOver) out(s, `The vault is open. ${CORE}/ is open now too: the Resident lives there. Beat it and ${loc.name} is yours.`, 'net-good');
 }
@@ -803,7 +807,7 @@ function attack(s, arg) {
   const sp = (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
   if (!sp?.alive) return err(s, 'Nothing running in this folder. ls to look, cd to move.');
   if (arg && !sp.name.startsWith(arg.replace(/\.exe$/, ''))) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
-  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, name: sp.bounty ? sp.name : sp.name.toUpperCase(), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {}) });
+  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, name: sp.bounty ? sp.name : sp.name.toUpperCase(), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {}) });
   command(s, 'engage');
 }
 

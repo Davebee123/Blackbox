@@ -522,6 +522,10 @@ export const BOSSES = {
   // REPO MAN (events.mjs): the bounty from level 8.
   repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate: every attack comes a cycle sooner.' }] },
   // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half it splits off a second Decoy, on the off-beat.
+  // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: elite bosses, sized for a crew.
+  foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 3.5, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:lockbox'], say: 'The Foreman calls in a Lockbox: it shields the parts around it.' }, { at: 0.25, do: ['rearm'], say: 'The Foreman re-arms every part.' }] },
+  heatsink: { name: 'HEATSINK', family: 'worm', hp: 5.5, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'The Heatsink re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'The Heatsink runs hot: every attack comes a cycle sooner.' }] },
+  coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 3, dmg: 1, enrageAt: 18, phases: [{ at: 0.66, do: ['spawn:decoy'], say: 'The Coldwallet splits off a second Decoy, on the off-beat.' }, { at: 0.33, do: ['faster'], say: 'The Coldwallet panics: every attack comes a cycle sooner.' }] },
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
@@ -574,7 +578,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (strain?.dormant) for (const p of parts) if (p.attack) { p.attack.wake = Math.max(1, p.attack.due - 1); p.attack.due = 999; }
 
   if (overrides.elite) for (const p of parts) {
-    p.max = p.integrity = Math.round(p.max * ELITE.hp);
+    p.max = p.integrity = Math.round(p.max * (overrides.eliteHp ?? ELITE.hp));
     p.armor = p.maxArmor = p.maxArmor + ELITE.armor;
     if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * ELITE.dmg));
     if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * ELITE.dmg));

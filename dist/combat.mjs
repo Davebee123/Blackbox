@@ -657,7 +657,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (opts.family) over.family = opts.family;
   if (opts.strain) over.strain = opts.strain;
   if (opts.grade) over.grade = opts.grade;
-  if (opts.elite) over.elite = true;
+  if (opts.elite) { over.elite = true; if (opts.eliteHp) over.eliteHp = opts.eliteHp; }
   if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
   const virus = createVirus(key, seed, over);
@@ -1246,7 +1246,7 @@ export function finish(s, result) {
     if (keep && (spawn.losses = (spawn.losses || 0) + 1) >= 2 && spawn.grade > 1) { delete spawn.grade; emit(s, 'info', `${spawn.name} is worn down: back to v1.`); }
     if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = now + (spawn.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); }
     // A Pit elite that beats you (or that you run from) moves on: no retrying it until it's gone.
-    const elite = wild && e.virus.elite && result !== 'victory' && wild.spawns?.[e.room];
+    const elite = wild && !wild.farm && e.virus.elite && result !== 'victory' && wild.spawns?.[e.room]; // the farm's are a crew's job: they stay
     if (elite?.alive && elite.elite) { elite.alive = false; elite.respawnAt = now + ELITE.goneMs; emit(s, 'info', `${elite.name} moved on. The folder fills again in about ${Math.round(ELITE.goneMs / 60000)} minutes.`); }
     const named = spawn?.bounty && !keep ? spawn.name : null;
     if (named) delete spawn.bounty;

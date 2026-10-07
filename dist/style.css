@@ -2791,3 +2791,4 @@ details.map-pick { pointer-events: auto; }
 .op-buildlist .bl-cost { color: var(--dim) !important; }
 .op-buildlist .bl-why { color: var(--warn, #e0a030) !important; }
 .cd-meta .cd-lines { grid-column: auto; } /* inside the meta block it's one column: don't push the text into an implicit second one */
+.coll-set { margin: 4px 0 8px; color: var(--amber); font-size: 12px; letter-spacing: 1px; }

@@ -1186,6 +1186,189 @@ export default {
         }
       ],
       "flavour": "Four candles. Four thousand processes."
+    },
+    {
+      "id": "foremans-lanyard",
+      "name": "Foreman's Lanyard",
+      "base": "socks-tunnel",
+      "level": 7,
+      "primary": {
+        "signal": 46,
+        "reduction": 1
+      },
+      "effect": {
+        "when": "struck",
+        "if": "below-half",
+        "do": "halve",
+        "limit": "fight"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "foreman"
+        }
+      ],
+      "flavour": "Badge in. Nobody checks the photo."
+    },
+    {
+      "id": "overtime",
+      "name": "Overtime",
+      "base": "cron-job",
+      "level": 7,
+      "primary": {
+        "damage": 4,
+        "signal": 18
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 2,
+        "scale": "cycles",
+        "cap": 30
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "foreman"
+        }
+      ],
+      "flavour": "The longer the shift, the worse it gets for them."
+    },
+    {
+      "id": "thermal-paste",
+      "name": "Thermal Paste",
+      "base": "weaponized-exploit",
+      "level": 8,
+      "primary": {
+        "damage": [
+          11,
+          14
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-tagged",
+        "do": "crit%",
+        "value": 20
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "heatsink"
+        }
+      ],
+      "flavour": "A thin layer, exactly where the heat goes."
+    },
+    {
+      "id": "fan-curve",
+      "name": "Fan Curve",
+      "base": "tty-upgrade",
+      "level": 8,
+      "primary": {
+        "signal": 24,
+        "regen": 1.2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "burn-grow",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "heatsink"
+        }
+      ],
+      "flavour": "Spins up when it gets hot. It always gets hot."
+    },
+    {
+      "id": "cold-wallet",
+      "name": "Cold Wallet",
+      "base": "socks-tunnel",
+      "level": 9,
+      "primary": {
+        "signal": 50,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "struck",
+        "do": "crit-normal"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "coldwallet"
+        }
+      ],
+      "flavour": "Offline. Unhackable. Until now."
+    },
+    {
+      "id": "air-gap",
+      "name": "Air Gap",
+      "base": "tty-upgrade",
+      "level": 9,
+      "primary": {
+        "signal": 26,
+        "regen": 1
+      },
+      "secondary": {
+        "evasion": 4
+      },
+      "effect": {
+        "when": "start",
+        "do": "chit"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "coldwallet"
+        }
+      ],
+      "flavour": "Nothing touches it. Nothing touches you."
+    },
+    {
+      "id": "hashboard",
+      "name": "Hashboard",
+      "base": "cron-job",
+      "level": 7,
+      "primary": {
+        "damage": 5,
+        "signal": 16
+      },
+      "effect": {
+        "when": "break",
+        "do": "refund-skill"
+      },
+      "sources": [
+        {
+          "kind": "farm"
+        }
+      ],
+      "flavour": "Pulled warm out of a dead rig. Still hashing."
+    },
+    {
+      "id": "dead-pool",
+      "name": "Dead Pool",
+      "base": "weaponized-exploit",
+      "level": 8,
+      "primary": {
+        "damage": [
+          12,
+          15
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "damage%",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "farm"
+        }
+      ],
+      "flavour": "The mining pool paid out to nobody for a year. It pays you now."
     }
   ]
 };

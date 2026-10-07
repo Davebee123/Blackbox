@@ -19,7 +19,7 @@ import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './a
 import { schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, relayCost, canBuildRelay, OUTPOST, BUILDINGS, bandwidth, bandwidthUsed, stockOf, capOf, makes, siteLabel, slotsOf, sizeOf as serverSize, buildingsOf, buildBlock, buildCost, costLine, isOutpost, hasMod } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES } from './data.mjs';
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
-import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
+import { ROGUE, rogueSpawns, rogueRooms, relockLeft, FARM_UNIQUES } from './rogue.mjs';
 import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS } from './events.mjs';
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
@@ -296,7 +296,7 @@ export function codexMarkup(s) {
 const collSource = (s, src) => !src ? '' : src.kind === 'sprawl' ? 'SPRAWL-00' : src.kind === 'vault' ? `Layer ${src.layer || 1} vaults`
   : src.kind === 'guard' ? `${GUARDS[src.id]?.name || src.id} guard` : src.kind === 'strain' ? (s.met?.[src.id] ? `${STRAINS[src.id]?.name} trophy` : '???')
   : src.kind === 'rogue' ? `${ROGUE.kinds[src.id]?.name || 'Rogue'} servers` : src.kind === 'story' ? 'Storyline' : src.kind === 'contract' ? 'Contract reward' : src.kind === 'store' ? 'Halcyon store'
-  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : '';
+  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : '';
 export function collectionMarkup(s) {
   const got = s.collection || {}, all = Object.values(UNIQUES);
   const n = all.filter((u) => got[u.id]).length;
@@ -308,7 +308,9 @@ export function collectionMarkup(s) {
       ? `<li class="on" title="${esc(UNIQUES[u.id].flavour || '')}"><b class="iname r-zeroday">${esc(u.name)}</b><small>Lv ${u.level} · ${esc(src)}</small></li>`
       : `<li><span class="coll-q">???</span><small>Lv ${u.level} · ${esc(src)}${boss ? ` · <span class="coll-odds" title="Each kill that drops none of its uniques adds 10%">${Math.round(bossChance(s, boss) * 100)}% a kill</span>` : ''}</small></li>`;
   }).join('');
-  return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div><ul class="coll">${rows}</ul></section>`;
+  // A set: the crew dungeon's eight, once it's on your map.
+  const farm = (s.locations || []).some((l) => l.farm) ? `<p class="coll-set">KESSLER-FARM-00 · ${FARM_UNIQUES.filter((id) => got[id]).length}/${FARM_UNIQUES.length}</p>` : '';
+  return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div>${farm}<ul class="coll">${rows}</ul></section>`;
 }
 
 const partName = (id) => ({ encryptor: 'Encryptor', replicator: 'Replicator' }[id] || id);

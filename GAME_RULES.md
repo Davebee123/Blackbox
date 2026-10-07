@@ -80,6 +80,37 @@ About 1 in 6 servers you trace is **rogue** (never your first two, and never mor
 | Pit | Mixed families, 2 levels above the server, a second roll for drops. A third of its folders hold an **elite** (see below) |
 | Gauntlet | Mixed families; clear every folder in one run for a bonus cache (60 + 12×level credits, code, XP) |
 
+### KESSLER-FARM-00 (the crew dungeon)
+
+At level 7 **KESSLER-FARM-00** turns up on your map: a mining farm somebody stopped paying for. It only lets you in with a crew (`crew sim <class>` from level 5, or `crew invite <friend>`). It keeps up with your level. Inside:
+
+| Folder | What's there |
+|---|---|
+| `/intake` | an elite worm pack. It blocks the way to `/intake/racks` until it falls |
+| `/intake/racks` | **THE FOREMAN** (ransomware boss). At half it calls in a Lockbox, at a quarter it re-arms. Enrages at cycle 16. Its `shift.log` gives the ledger password's word, once it's down |
+| `/cooling` | an elite ghostroot pack, in the way of `/cooling/nest` and `/cooling/loop` |
+| `/cooling/nest` | an optional elite ransomware pack (its kills can drop Hashboard) |
+| `/cooling/loop` | **HEATSINK** (worm boss). At 60% it re-arms, at 30% every attack comes a cycle sooner. Enrages at cycle 18. Its `temps.log` gives the password's digits, once it's down |
+| `/ledger` | locked: `unlock ledger <word><digits>` |
+| `/ledger/core` | **COLDWALLET** (ghostroot boss). At two thirds it splits off a second Decoy, at a third every attack comes a cycle sooner. Enrages at cycle 18 |
+
+- Packs are elites at 2.9× Integrity. The bosses are elite and crew-sized (3.5×, 5.5× and 3× Integrity), so a crew barely makes them bigger.
+- **Attrition:** your Signal and your crew's carry from fight to fight. After the Foreman and the Heatsink the crew regroups: everyone back up to at least 60%. Progress stays when you jack out to rest: a pack comes back 30 minutes after it falls, a boss 6 hours after, and the ledger locks again when the Coldwallet is back.
+- **Loot:** every fight drops like an elite (three rolls, a blue at least). Each boss has two uniques with bad-luck protection (see Bosses), and every pack kill has a 1 in 40 chance at Dead Pool (the nest's, 1 in 20 at Hashboard). The Collection counts the set: *KESSLER-FARM-00 · n/8*.
+- A Pit elite that beats you moves on; the farm's don't. They wait for your crew to come back.
+- Scripted crews of three with blues at level 8 win the packs and the Foreman and Heatsink most of the time, and the Coldwallet about two times in three, losing 40–80% Signal a boss. A duo with an Operator struggles.
+
+| Boss | Unique | What it does |
+|---|---|---|
+| THE FOREMAN | Foreman's Lanyard (proxy, level 7) | Below half, the next hit on you deals half, once a fight |
+| THE FOREMAN | Overtime (script, level 7) | +2% damage for every cycle the fight has lasted, up to +30% |
+| HEATSINK | Thermal Paste (exploit, level 8) | +20% crit chance on a Tagged part |
+| HEATSINK | Fan Curve (shell, level 8) | Your burns grow +2 a cycle |
+| COLDWALLET | Cold Wallet (proxy, level 9) | A crit against you lands as a normal hit |
+| COLDWALLET | Air Gap (shell, level 9) | Start every fight with a ◆ |
+| Packs | Hashboard (script, level 7) | When you break a part, that skill's cooldown comes back |
+| Packs | Dead Pool (exploit, level 8) | +30% damage on a part below half |
+
 ### Guards
 
 Every enemy is built the same way: one basic attacker and one signature part that is the whole idea of that enemy, each with armor chits (◆).

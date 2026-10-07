@@ -130,6 +130,7 @@ hooks.crewTurns = (s) => standing(s).length;
 hooks.crewActOne = (s, i) => turn(s, standing(s)[i]);
 hooks.crewActNamed = (s, who) => turn(s, standing(s).find((m) => m.who === who));
 hooks.crewStanding = (s) => standing(s); // for the turn order (combat.mjs turnOrder)
+hooks.crewMates = (s) => matesOf(s).filter((m) => !m.guest); // your own crew (rogue.mjs: the farm's regroup)
 // Everyone else standing in the fight, by name, as one player sees them: 'you' is the player.
 // Patch takes one of these names (combat.mjs allyOf).
 hooks.crewAllies = (s) => {

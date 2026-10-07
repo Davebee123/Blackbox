@@ -13,6 +13,7 @@ import { emit, warn, active, hackerLevel, selectEncounter, command, addItem } fr
 import { FAMILIES, CONFIG } from './data.mjs';
 import { rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
+import { openFarm } from './rogue.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -102,6 +103,7 @@ export const eventMinutes = (ev) => Math.max(1, Math.ceil(ev.left / 60000));
 export const outbreakMult = (s, family) => (eventsOf(s).some((e) => e.card === 'outbreak' && e.family === family) ? 2 : 1);
 
 export function tickEvents(s, dt) {
+  openFarm(s); // KESSLER-FARM-00 turns up at level 7 (rogue.mjs)
   const d = (s.director ||= { next: null, n: 0, last: null });
   for (const ev of [...eventsOf(s)]) {
     if (s.encounter?.event === ev.id && active(s)) continue; // the one you're fighting waits for you
