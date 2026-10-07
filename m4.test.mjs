@@ -4,7 +4,6 @@ import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION } fr
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork, ratioOf, travelMs } from './dist/invasion.mjs';
-import { CONFIGS, vaultConfig, configOn } from './dist/configs.mjs';
 import { FLEET, launch } from './dist/fleet.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
@@ -29,54 +28,20 @@ const takeOver = (s, loc) => {
 };
 const withFirewall = () => { const s = fresh(); s.services = { firewall: 1, tarpit: 1, honeypot: 1, hotpatch: 1 }; return s; };
 
-test('config source waits in some vaults; bank it, craft it, set it', () => {
-  const s = fresh();
-  let loc;
-  for (let i = 0; i < 300 && !loc; i++) { command(s, 'developer location worm'); if (vaultConfig(s.locations.at(-1))) loc = s.locations.at(-1); }
-  assert.ok(loc, 'some vault holds one');
-  for (const l of s.locations) if (l !== loc) { l.detached = true; delete l.fresh; } // memory for it
-  const id = vaultConfig(loc);
-  takeOver(s, loc);
-  play(s, `pull ${id}.cfg`);
-  play(s, 'jack out');
-  assert.ok(s.configsKnown.includes(id));
-  s.services[CONFIGS[id].service] = 1;
-  command(s, `config ${CONFIGS[id].service} ${id}`);
-  assert.equal(configOn(s, CONFIGS[id].service), null, 'known is not owned: craft it first');
-  s.server.credits = 1000; s.materials = { cipher: 50, worm: 50, kernel: 50, exploit: 0 }; s.salvage = Array.from({ length: 6 }, () => ({ name: 'Scrap' }));
-  command(s, `craft config ${id}`);
-  assert.ok(s.configsOwned.includes(id));
-  command(s, `config ${CONFIGS[id].service} ${id}`);
-  assert.equal(configOn(s, CONFIGS[id].service), id);
-  command(s, `config ${CONFIGS[id].service} none`);
-  assert.equal(configOn(s, CONFIGS[id].service), null);
-});
-
-test('the wall is three knobs: the firewall configs are gone (a save that owned one gets its credits back)', async () => {
+test('configs are gone (a save that owned one gets its credits back), and the wall is three knobs', async () => {
   const { restore, SAVE_VERSION } = await import('./dist/combat.mjs');
-  assert.deepEqual(Object.keys(CONFIGS), ['triage']);
   const s = withFirewall();
   Object.assign(s, { version: 29, configsOwned: ['stateful', 'triage'], configsKnown: ['stateful', 'triage', 'beacon'], configs: { firewall: 'stateful' } });
   s.services = { ...s.services, tarpit: 2, honeypot: 1 };
   const credits = s.server.credits;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.deepEqual(t.configsOwned, ['triage']); assert.deepEqual(t.configsKnown, ['triage']);
+  assert.deepEqual(t.configsOwned, []); assert.deepEqual(t.configsKnown, [], 'configs are gone, Triage too');
+  assert.deepEqual(t.configs, {});
   assert.ok(!t.services.tarpit && !t.services.honeypot);
-  assert.equal(t.server.credits, credits + 250);
+  assert.equal(t.server.credits, credits + 2 * 250, 'stateful and triage refunded');
   const stats = t.filters.held.map((f) => Object.keys(f.stats));
   assert.ok(stats.some((k) => k.includes('tarpit')) && stats.some((k) => k.includes('evasion')), 'each retired service comes back as a filter');
-});
-
-test('Hot-patcher Triage: double repair below half, half above', async () => {
-  const { serviceStat } = await import('./dist/combat.mjs');
-  const s = withFirewall();
-  s.configsOwned = ['triage'];
-  const plain = serviceStat(s, 'regen');
-  command(s, 'config hotpatch triage');
-  assert.equal(serviceStat(s, 'regen'), plain * 0.5);
-  s.server.integrity = 10;
-  assert.equal(serviceStat(s, 'regen'), plain * 2);
 });
 
 test('a fleet sets out for an outpost, sieges it, and breaks when every ship is down', () => {
@@ -104,14 +69,14 @@ test('an undefended fleet puts the outpost in lockdown', () => {
   command(s, 'developer location worm');
   const a = s.locations[0];
   a.takenOver = true;
-  s.harvesters = [{ kind: 'siphon', level: 3, traits: ['sturdy'] }];
+  s.harvesters = [{ kind: 'siphon', level: 3, traits: [] }];
   command(s, `outpost install ${a.id}`, T0);
   launch(s);
   s.net.next = 1e12;
   let t = T0; s.net.wall = t;
   for (let i = 0; i < (FLEET.travelMs + FLEET.siegeMs) / 1000 + 10; i++) tickNetwork(s, (t += 1000));
   assert.equal(s.fleet, null);
-  assert.ok(a.outpost.lockdown, 'Sturdy does not save it from a fleet');
+  assert.ok(a.outpost.lockdown);
 });
 
 test('a v24 save loads with configs and no fleet', () => {

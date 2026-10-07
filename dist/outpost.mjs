@@ -29,13 +29,7 @@ export const OUTPOST = {
     scraper: { name: 'Scraper', about: 'Rolls the server\'s loot now and then.', rate: () => 1 / 1.5, cap: () => 4, notice: 1 },
     tap: { name: 'Tap', about: 'A small trickle of code, rarely noticed.', rate: (L) => 0.5 + L / 20, cap: (L) => 4 + Math.floor(L / 4), notice: 0.25 },
   },
-  traits: {
-    rich: { name: 'Rich', rule: '+50% yield.' },
-    deep: { name: 'Deep', rule: 'Double storage.' },
-    quiet: { name: 'Quiet', rule: 'Natives notice it half as often.' },
-    sturdy: { name: 'Sturdy', rule: 'Half the time, an invasion gives up on its own.' },
-    lucky: { name: 'Lucky', rule: 'Better loot rolls.' },
-  },
+  // (Harvester traits are gone: site traits and modules do those jobs.)
   // Location traits, fixed when a server is found.
   sites: {
     rich: { name: 'Rich', rule: 'Harvesters here yield +50%.' },
@@ -46,7 +40,6 @@ export const OUTPOST = {
   },
   siteChance: 0.45,
   kindOdds: [['siphon', 0.5], ['scraper', 0.3], ['tap', 0.2]],
-  rarityOdds: [[0, 0.55], [1, 0.35], [2, 0.1]], // number of traits
   noticeMs: 6 * 3600000, // mean logged-on time before natives notice an outpost (a Honeytoken: twice as often)
   siegeMs: 10 * 60000, // logged-on time to defend it before it falls
   resetMs: 30 * 60000, // after a pull-out, the port resets before a new one fits
@@ -72,7 +65,6 @@ export const OUTPOST = {
   planChance: 0.15, // share of vaults holding a plan you don't know yet
   bandwidth: (serverLv) => Math.min(5, 1 + Math.floor(serverLv / 10)),
 };
-const RARITY = ['Stock', 'Tuned', 'Custom'];
 
 export const harvesters = (s) => (s.harvesters ||= []);
 export const plansOf = (s) => (s.plans ||= []);
@@ -98,7 +90,7 @@ export function vaultPlan(loc) {
 const locOf = (s, id) => s.locations.find((l) => l.id === id || l.name.toLowerCase() === id);
 const pick = (r, odds) => { let x = r(); for (const [k, p] of odds) { if ((x -= p) < 0) return k; } return odds[0][0]; };
 
-export const harvesterName = (h) => `${RARITY[h.traits.length]} ${OUTPOST.kinds[h.kind].name} lv${h.level}${h.traits.length ? ` (${h.traits.map((t) => OUTPOST.traits[t].name).join(', ')})` : ''}`;
+export const harvesterName = (h) => `${OUTPOST.kinds[h.kind].name} lv${h.level}`;
 
 // A location trait (or none), fixed by its seed.
 export function siteTrait(loc) {
@@ -112,12 +104,7 @@ export function siteTrait(loc) {
 export function vaultHarvester(loc) {
   const r = seeded(loc.seed * 17 + 9);
   const kind = pick(r, OUTPOST.kindOdds);
-  let n = pick(r, OUTPOST.rarityOdds);
-  if (loc.trait === 'legacy' && n < 2 && r() < 0.5) n++;
-  const pool = Object.keys(OUTPOST.traits);
-  const traits = [];
-  while (traits.length < n) { const t = pool[Math.floor(r() * pool.length)]; if (!traits.includes(t)) traits.push(t); }
-  return { kind, level: loc.level || 1, traits, family: loc.family };
+  return { kind, level: loc.level || 1, traits: [], family: loc.family };
 }
 export const vxName = (loc) => `${loc.family}.vx`;
 export const hasVx = (loc) => !loc.zone && seeded(loc.seed * 19 + 11)() < OUTPOST.vaultChance * (loc.trait === 'legacy' ? 2 : 1);
@@ -145,8 +132,8 @@ export const bandwidthUsed = (s) => outposts(s).filter((l) => l.trait !== 'backb
 
 
 // Yield ----------------------------------------------------------------------------------------
-const yieldMult = (loc, h, s) => (1 + (h.traits.includes('rich') ? 0.5 : 0) + (hasMod(loc, 'pipeline') ? 0.5 : 0)) * (loc.trait === 'rich' || loc.trait === 'hostile' ? 1.5 : 1) * rootYield(loc) * (s ? archYield(s) * consortiumYield(s) : 1); // Root 4/5: ×1.25/×2 (root.mjs)
-export const capOf = (loc, h = loc.outpost.h) => OUTPOST.kinds[h.kind].cap(h.level) * (h.traits.includes('deep') ? 2 : 1) * (hasMod(loc, 'storage') ? 2 : 1);
+const yieldMult = (loc, h, s) => (1 + (hasMod(loc, 'pipeline') ? 0.5 : 0)) * (loc.trait === 'rich' || loc.trait === 'hostile' ? 1.5 : 1) * rootYield(loc) * (s ? archYield(s) * consortiumYield(s) : 1); // Root 4/5: ×1.25/×2 (root.mjs)
+export const capOf = (loc, h = loc.outpost.h) => OUTPOST.kinds[h.kind].cap(h.level) * (hasMod(loc, 'storage') ? 2 : 1);
 export const perHour = (loc, h = loc.outpost.h, s = null) => OUTPOST.kinds[h.kind].rate(h.level) * yieldMult(loc, h, s);
 export const stockOf = (loc) => Math.floor(loc.outpost?.stock || 0);
 
@@ -164,7 +151,7 @@ export function collect(s, loc, why = 'Outpost: ') {
   o.stock -= n;
   const h = o.h;
   if (h.kind !== 'scraper') return gainCode(s, { [codeOf(loc.family)]: n }, `${why}${loc.name}: `);
-  const lucky = (h.traits.includes('lucky') ? 0.05 : 0) + (loc.trait === 'legacy' ? 0.05 : 0);
+  const lucky = loc.trait === 'legacy' ? 0.05 : 0;
   const got = scrape(s, loc, n, h.level, lucky, `${why}${loc.name}: `);
   emit(s, 'harvest', `${why}${loc.name}'s Scraper turned up ${got || 'a protocol'}.`, { location: loc.id });
 }
@@ -284,7 +271,7 @@ function tickSites(s, now, dt, paused, away) {
       if (o.siege.left <= 0 && !holding(s, 'outpost', loc.id)) fall(s, loc);
       continue;
     }
-    const mult = OUTPOST.kinds[o.h.kind].notice * (o.h.traits.includes('quiet') ? 0.5 : 1) * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * (hasMod(loc, 'lure') ? 2 : 1) * archNotice(s) * (away ? 0.5 : 1);
+    const mult = OUTPOST.kinds[o.h.kind].notice * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * (hasMod(loc, 'lure') ? 2 : 1) * archNotice(s) * (away ? 0.5 : 1);
     if (elapsed > 0 && rand(s) < Math.min(1, elapsed / OUTPOST.noticeMs) * mult) startSiege(s, loc);
   }
 }
@@ -304,10 +291,6 @@ export function startSiege(s, loc) {
 
 export function fall(s, loc, force = false) {
   const o = loc.outpost;
-  if (!force && o.h.traits.includes('sturdy') && rand(s) < 0.5) {
-    o.siege = null;
-    return emit(s, 'outpost-held', `${loc.name} held on its own: the Sturdy harvester outlasted the invasion.`, { location: loc.id });
-  }
   const hop = o.siege?.hop || 0;
   o.siege = null;
   o.lockdown = { left: OUTPOST.lockdownMs }; // the stockpile stays; the server stays open

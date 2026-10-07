@@ -1,6 +1,5 @@
 // Runs: exploring a traced location as a small file system with Unix commands.
 // Pure like the combat engine: state in, events out.
-import { vaultConfig, bankConfig, CONFIGS } from './configs.mjs';
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { vxName, hasVx, vaultHarvester, bankHarvester, harvesterName, collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
 import { CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
@@ -103,7 +102,7 @@ export function layoutOf(loc) {
   // harvester or a config: fixed by its seed (LOOT.vault*). Your first server's has a protocol and a blueprint.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
-  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasDaemon(loc) ? ['daemon.exe'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(hasVx(loc) ? [vxName(loc)] : []), ...(vaultPlan(loc) ? ['plan.pln'] : []), ...(vaultConfig(loc) ? [vaultConfig(loc) + '.cfg'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
+  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasDaemon(loc) ? ['daemon.exe'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(hasVx(loc) ? [vxName(loc)] : []), ...(vaultPlan(loc) ? ['plan.pln'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
@@ -254,10 +253,6 @@ export function fileInfo(loc, path, name) {
   const vaultPath = Object.keys(layoutOf(loc)).find((k) => layoutOf(loc)[k].locked && !layoutOf(loc)[k].drop);
   const planted = loc.extraFiles?.find((f) => f.name === name && (f.dir || vaultPath) === path);
   if (planted) return { kind: planted.kind || 'contract', size: planted.kind === 'route' ? '6k' : '40k', label: planted.label, hidden: planted.hidden, text: planted.text };
-  if (name.endsWith('.cfg') && vaultConfig(loc) + '.cfg' === name && layoutOf(loc)[path]?.locked) {
-    const id = vaultConfig(loc), c = CONFIGS[id];
-    return { kind: 'config', size: '18k', config: id, text: [`config source: ${c.name}, for a ${c.service === 'hotpatch' ? 'Hot-patcher' : c.service[0].toUpperCase() + c.service.slice(1)}.`, c.rule, 'bank it, then craft it at home (Craft page).'] };
-  }
   if (hasVx(loc) && name === vxName(loc) && layoutOf(loc)[path]?.locked) {
     const h = vaultHarvester(loc);
     return { kind: 'harvester', size: '220k', harvester: h, text: [`package: a native ${fam.toLowerCase()} process, sealed for transport.`, `${harvesterName(h)}. Installed on a server you own, it harvests while you're away.`, 'pull it and bank it.'] };
@@ -644,7 +639,6 @@ export function jackOut(s) {
     else { s.recipes.push(f.zeroDay); emit(s, 'drop', ZERO_DAYS[f.zeroDay] ? `Source banked: you can compile ${ZERO_DAYS[f.zeroDay].name} at home (Craft page).` : `Source banked: you can install ${SERVICES[f.zeroDay].name} on your server (Server page).`, { recipe: f.zeroDay }); }
   }
   for (const f of pack.filter((x) => x.kind === 'harvester')) bankHarvester(s, f.harvester);
-  for (const f of pack.filter((x) => x.kind === 'config')) bankConfig(s, f.config);
   for (const f of pack.filter((x) => x.kind === 'plan')) learnPlan(s, f.plan, 'Plan banked: ');
   for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');

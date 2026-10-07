@@ -573,16 +573,14 @@ test('blueprints: nothing is buildable at first; each teaches something new; eve
   assert.match(installBlock(s, 'firewall'), /blueprint/);
   assert.equal(knownRecipes(s).length, 0);
   learnBlueprint(s);
-  // The pool is every kind of recipe: protocol recipes and services, filter recipes, plans, configs.
+  // The pool is every kind of recipe: protocol recipes and services, filter recipes, plans.
   const { CRAFTABLE, knowsFilter } = await import('./dist/filters.mjs');
   const { OUTPOST, knowsPlan } = await import('./dist/outpost.mjs');
-  const { CONFIGS, known } = await import('./dist/configs.mjs');
-  const all = BLUEPRINTS.length + CRAFTABLE.length + Object.keys(OUTPOST.plans).length + Object.keys(CONFIGS).length;
+  const all = BLUEPRINTS.length + CRAFTABLE.length + Object.keys(OUTPOST.plans).length;
   for (let i = 1; i < all; i++) learnBlueprint(s);
   assert.ok(BLUEPRINTS.every((id) => knows(s, id)));
   assert.ok(CRAFTABLE.every((k) => knowsFilter(s, k)), 'filter recipes');
   assert.ok(Object.keys(OUTPOST.plans).every((k) => knowsPlan(s, k)), 'plans');
-  assert.ok(Object.keys(CONFIGS).every((k) => known(s).includes(k)), 'config sources');
   const salvage = s.salvage.length;
   learnBlueprint(s);
   assert.equal(s.salvage.length, salvage + 2, 'one you know already is salvage');

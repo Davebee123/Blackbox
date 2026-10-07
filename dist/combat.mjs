@@ -11,7 +11,9 @@ import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
-import { has as hasConfig, configCommand, CONFIGS, known as configsKnown, bankConfig, RETIRED_CONFIGS, CONFIG_COST } from './configs.mjs';
+// Configs are gone (service side-grades; Triage was the last). A save that owned any is refunded.
+const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
+const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, infestWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
@@ -72,8 +74,6 @@ export function fresh() {
     harvesters: [], // packaged harvesters waiting to go on an outpost
     harvKinds: [], // harvester kinds you can compile
     configs: {}, // service → config running on it
-    configsKnown: [], // config sources banked (craftable)
-    configsOwned: [], // configs crafted
     fleet: null, // a virus fleet on its way to one of your outposts
     architecture: null, // fortress | hub | lab, picked at server level 20
   };
@@ -284,7 +284,6 @@ export function serviceStat(s, stat) {
   let n = 0;
   for (const id of Object.keys(s.services || {})) if (SERVICES[id]?.stat === stat) n += serviceValue(s, id);
   // Hot-patcher Triage: double repair below half Integrity, half above.
-  if (stat === 'regen' && n && hasConfig(s, 'triage')) n *= s.server.integrity < serverMax(s) / 2 ? 2 : 0.5;
   return n;
 }
 
@@ -516,7 +515,6 @@ export function learnBlueprint(s, why = '') {
   const others = [
     ...CRAFTABLE.filter((k) => !knowsFilter(s, k)).map((k) => () => learnFilter(s, k, why)),
     ...Object.keys(OUTPOST.plans).filter((k) => !knowsPlan(s, k)).map((k) => () => learnPlan(s, k, why)),
-    ...Object.keys(CONFIGS).filter((k) => !configsKnown(s).includes(k)).map((k) => () => bankConfig(s, k, why)),
   ];
   if (!left.length && !others.length) {
     for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Blueprint scraps', virus: 'blueprint', seed: 0 });
@@ -1519,7 +1517,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^(fleet|swarm)( |$)/.test(text)) {
     fleetCommand(s, text);
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
-    configCommand(s, text);
+    warn(s, 'Configs are gone: services run as they come.');
   } else if (text.startsWith('outpost ')) {
     outpostCommand(s, text, now);
   } else if (/^craft( booster)?( pay .*)?$/.test(text)) {
@@ -2756,6 +2754,18 @@ function migrateToProtocols(s) {
 // (blue for v1 and v2, yellow for v3), each config you owned as its credits, an install in progress
 // as its price.
 const RETIRED_SERVICES = { tarpit: 'tarpit', honeypot: 'evasion', sandbox: 'sanitize' };
+// Configs are gone: refund the ones you crafted (any save, any version; it only pays once).
+function retireConfigs(s) {
+  const gone = new Set(RETIRED_CONFIGS);
+  const refund = (s.configsOwned || []).filter((k) => gone.has(k)).length * CONFIG_REFUND;
+  if (refund) { s.server.credits += refund; emit(s, 'info', `Configs retired: +${refund} credits.`); }
+  s.configs = {}; s.configsOwned = []; s.configsKnown = [];
+}
+// Harvester traits are gone too: every harvester is plain (site traits and modules do those jobs).
+function retireTraits(s) {
+  for (const h of s.harvesters || []) h.traits = [];
+  for (const l of s.locations || []) if (l.outpost?.h) l.outpost.h.traits = [];
+}
 function retireWall(s, was) {
   if (was >= 30) return;
   const L = Math.max(1, serverLevel(s));
@@ -2766,11 +2776,6 @@ function retireWall(s, was) {
     if (s.configs) delete s.configs[id];
   }
   if (s.configs) delete s.configs.firewall;
-  const gone = new Set(RETIRED_CONFIGS);
-  const refund = (s.configsOwned || []).filter((k) => gone.has(k)).length * CONFIG_COST.credits;
-  if (refund) { s.server.credits += refund; emit(s, 'info', `Firewall configs retired: +${refund} credits.`); }
-  if (s.configsOwned) s.configsOwned = s.configsOwned.filter((k) => !gone.has(k));
-  if (s.configsKnown) s.configsKnown = s.configsKnown.filter((k) => !gone.has(k));
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
@@ -2897,6 +2902,8 @@ export function restore(raw) {
     if (s.daemons) s.daemons = s.daemons.map((d) => (d === 'tracer' ? 'stall' : d));
     if (s.encounter) { delete s.encounter.trace; delete s.encounter.pendingTrace; }
     retireWall(s, was);
+    retireConfigs(s);
+    retireTraits(s);
     initMail(s);
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;

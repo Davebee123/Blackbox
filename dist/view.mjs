@@ -1,6 +1,5 @@
 // Markup builders. Pure functions of state; they never change it.
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
-import { CONFIGS, forService, known as configsKnown, owned as configsOwned, configOn, codeFor as configCode, CONFIG_COST } from './configs.mjs';
 import { glyph } from './glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -657,7 +656,7 @@ const craftSection = (s, key, title, purpose, body, open = !(s.settings?.craftSh
 export function craftCats(s) {
   const p = protocolsParts(s), srv = s.server, busy = p.busy, L = hackerLevel(s);
   const anyOwned = s.locations.some((l) => l.takenOver) || harvesters(s).length;
-  const zds = (s.recipes || []).filter((z) => ZERO_DAYS[z]), cfgs = configsKnown(s);
+  const zds = (s.recipes || []).filter((z) => ZERO_DAYS[z]);
   const fc = filterCost(L), fOk = !busy && srv.credits >= fc.credits && (materialsOf(s).cipher || 0) >= fc.code.cipher && canAfford(s, SALVAGE_COSTS.filter()) && filtersOf(s).length < FILTER_CAP;
   const cats = [];
   // Protocols: one recipe per stat you know, or any of them.
@@ -675,9 +674,6 @@ export function craftCats(s) {
     out: { title: k ? `${FILTER_STATS[k].kind === 'prefix' ? FILTER_STATS[k].label + ' ' : ''}${filterBase(L)}${FILTER_STATS[k].kind === 'suffix' ? ' ' + FILTER_STATS[k].label : ''}` : `A ${filterBase(L)}`, rarity: 'tuned', level: L, stats: [['firewall', `+${Math.max(1, Math.round((1 + L / 10) * 1.1))}`, 'firewall lv', 'Levels on your firewall while it sits in a slot'], k ? filterStatRow(k) : ['item', '?', 'one of yours', 'Built around one of your recipes, at random']],
       foot: `<span class="tag dim" title="Filters you hold">${glyph('item')}${filtersOf(s).length}/${FILTER_CAP}</span>${filterSlots(s) ? slotPips('firewall', filtersOn(s).length, filterSlots(s), 'Filter slots') : `<span class="tag hot" title="No filter slots yet: install the Filter Bay, or take your firewall to v3">${glyph('firewall')}0 slots</span>`}` },
     cost: { credits: fc.credits, code: fc.code, salvage: SALVAGE_COSTS.filter() }, cmd: `filter craft ${k || 'any'}`, pay: 'filter' })) });
-  if (cfgs.length) cats.push({ id: 'configs', name: 'Configs', icon: 'config', items: cfgs.map((id) => { const c = CONFIGS[id], got = configsOwned(s).includes(id), code = configCode(id); return {
-    id, name: c.name, sub: SERVICES[c.service].name, icon: c.service, ready: !got && !busy && srv.credits >= CONFIG_COST.credits && (materialsOf(s)[code] || 0) >= CONFIG_COST.code && canAfford(s, SALVAGE_COSTS.config()), done: got,
-    out: { title: `${c.name} config`, tags: [[c.service, SERVICES[c.service].name, 'The service it runs on']], lines: [c.rule] }, cost: got ? null : { credits: CONFIG_COST.credits, code: { [code]: CONFIG_COST.code }, salvage: SALVAGE_COSTS.config() }, cmd: `craft config ${id}`, pay: 'config' }; }) });
   if (anyOwned) {
     const hk = Object.keys(OUTPOST.kinds).filter((k) => knowsPlan(s, k)), mk = Object.keys(OUTPOST.mods).filter((k) => knowsPlan(s, k));
     if (hk.length) cats.push({ id: 'harvesters', name: 'Harvesters', icon: 'harvester', items: hk.map((k) => { const c = harvCost(k, s), known = knowsPlan(s, k); return {
@@ -946,15 +942,6 @@ export function wallMarkup(s, now = Date.now()) {
   return `<section class="card wall-card"><h2>Firewall</h2>${degradedMarkup(s, now)}${firewallPanel(s, now)}${bands}${portsRow(s)}${body}${filterPanel(s)}</section>`;
 }
 
-// A running service's configs: stock plus the ones you own; the running one is lit.
-function configRow(s, id, busy) {
-  const all = forService(id);
-  if (!all.length) return '';
-  const on = configOn(s, id), mine = all.filter((k) => configsOwned(s).includes(k));
-  const chip = (k, label, tip) => `<button type="button" class="cfg${(on || null) === k ? ' on' : ''}" data-command="config ${id} ${k || 'none'}" ${busy ? 'disabled' : ''} title="${esc(tip)}" aria-pressed="${(on || null) === k}">${k ? glyph('config') : ''}${esc(label)}</button>`;
-  const missing = all.length - mine.length;
-  return `<div class="cfg-row"><span class="cfg-label">Config</span>${chip(null, 'Stock', 'The service as it comes.')}${mine.map((k) => chip(k, CONFIGS[k].name, CONFIGS[k].rule)).join('')}${missing ? `<span class="cfg-missing" title="Config source for this service turns up in vaults">+${missing} to find</span>` : ''}</div>`;
-}
 // Server architecture: picked at server level 20, a trade each way.
 function archMarkup(s) {
   const lvl = serverLevel(s), cur = archOf(s), busy = active(s);
@@ -981,7 +968,7 @@ export function serverMarkup(s, now = Date.now()) {
       <button type="button" class="btn ${why ? '' : 'primary'} small" data-command="install ${id}" ${why || busy ? 'disabled' : ''} title="${esc(why || (v > 1 ? 'Upgrade' : 'Install'))}">${v > 1 ? `Upgrade to v${v}` : 'Install'} · ${x.minutes} min</button>`;
   };
   const running = Object.keys(s.services || {}).map((id) => `<li class="svc on"><div class="svc-main"><div class="gitem-head"><b class="svc-name">${glyph(id, 'badge')}${esc(SERVICES[id].name)}</b><span class="tag you">v${serviceVersion(s, id)}</span></div>
-      <small>${esc(serviceEffect(s, id, serviceVersion(s, id)))}</small>${configRow(s, id, busy)}<div class="svc-next">${next(id)}</div></div>
+      <small>${esc(serviceEffect(s, id, serviceVersion(s, id)))}</small><div class="svc-next">${next(id)}</div></div>
       <div class="gitem-actions"><button type="button" class="btn small" data-command="uninstall ${id}" data-confirm="Sure? Half the code back" ${busy || s.install?.id === id ? 'disabled' : ''} title="Frees the port; half the code comes back">Uninstall</button></div></li>`).join('');
   // Only services you have the blueprint (or source) for; the rest are still out there.
   const free = Object.keys(SERVICES).filter((id) => !serviceVersion(s, id) && knows(s, id));
@@ -2131,7 +2118,7 @@ function outpostCore(s, l) {
       ? `<button type="button" class="btn" data-go="craft:harvesters" title="Needs a harvester: craft one (Craft page)">${glyph('harvester')}Upgrade to Outpost${needChip(0)}</button>`
       : `<button type="button" class="btn" disabled title="Needs a harvester. Your first vault holds the Siphon plan (plan.pln); vaults also hold packaged harvesters (.vx)">${glyph('harvester')}Upgrade to Outpost${needChip(0)}</button>`}</div></div>`;
     const full = l.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s);
-    const hLabel = (h) => `<span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.from ? `<span class="tag ${h.from === 'found' ? 'you' : 'dim'}" title="${h.from === 'found' ? 'A packaged native from a vault' : 'Crafted on the Craft page'}">${h.from}</span>` : ''}${h.traits.map((x) => `<span class="tag" title="${esc(OUTPOST.traits[x].rule)}">${esc(OUTPOST.traits[x].name)}</span>`).join('')}</span>`;
+    const hLabel = (h) => `<span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.from ? `<span class="tag ${h.from === 'found' ? 'you' : 'dim'}" title="${h.from === 'found' ? 'A packaged native from a vault' : 'Crafted on the Craft page'}">${h.from}</span>` : ''}</span>`;
     const block = full ? 'disabled title="No outpost slot free. Pull a harvester out, or level your server."' : why;
     const slots = full ? slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Outposts you can run') : '';
     // One harvester: one button. Several: pick which one goes in.
@@ -2139,8 +2126,7 @@ function outpostCore(s, l) {
     return `<div class="outpost op-pick"><div class="op-pick-head"><span class="op-pick-t">${glyph('harvester')}Upgrade to Outpost</span>${slots}</div><ul class="op-rack">${rack.map((h, i) => `<li>${hLabel(h)}<button type="button" class="btn small primary op-up" data-command="outpost install ${esc(l.id)} ${i + 1}" ${block}>Upgrade</button></li>`).join('')}</ul></div>`;
   }
   const h = o.h, m = MATERIALS[codeOf(l.family)];
-  const traits = h.traits.map((t) => `<span class="tag" title="${esc(OUTPOST.traits[t].rule)}">${esc(OUTPOST.traits[t].name)}</span>`).join(' ');
-  const head = `<p class="svc-line"><span class="tag you">Outpost</span> <span title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}${esc(OUTPOST.kinds[h.kind].name)} lv${h.level}</span> ${traits}</p>`;
+  const head = `<p class="svc-line"><span class="tag you">Outpost</span> <span title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}${esc(OUTPOST.kinds[h.kind].name)} lv${h.level}</span></p>`;
   if (o.lockdown) return `<div class="outpost lost">${head}<p class="svc-line"><span class="tag hot" title="No harvesting until it ends. The stockpile is kept, and the server stays open.">Lockdown</span> ${fmtTime(o.lockdown.left)} left · ${stockOf(l)}/${capOf(l)} kept</p><div class="row"><button type="button" class="btn primary" data-command="outpost retake ${esc(l.id)}" ${why}>Retake</button>${buyoutBtn(s, `outpost buyout ${l.id}`, outpostBuyout(l)?.price)}</div></div>`;
   // The stockpile: how full, how much, how fast. Connect to collect.
   const fill = `<div class="lvl-row" title="${h.kind === 'scraper' ? 'Loot rolls waiting' : esc(m.name) + ' waiting'}. Connect to collect."><span class="lvl-bar"><span style="width:${(100 * (o.stock || 0)) / capOf(l)}%"></span></span><small>${stockOf(l)}/${capOf(l)} · ${Math.round(perHour(l, l.outpost.h, s) * 10) / 10}/h</small></div>`;
@@ -2314,7 +2300,7 @@ export const paySlugs = (pay) => Object.entries(pay).filter(([, n]) => n).map(([
 // s.seen keeps what you've seen; a save from before badges starts with everything seen.
 const NEW_TABS = {
   loadout: (s) => (s.stash || []).map((it) => it.id),
-  craft: (s) => [...(s.recipes || []), ...(s.configsKnown || []).map((c) => 'cfg:' + c)],
+  craft: (s) => [...(s.recipes || [])],
   daemons: (s) => Object.entries(s.daemonsOwned || {}).map(([id, v]) => `${id}:${v}`),
 };
 export function newOn(s, tab) {

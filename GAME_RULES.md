@@ -4,7 +4,7 @@ This is the single source of truth for how combat works. If code, README or an o
 
 ## The Craft page
 
-Everything you build is on one page, **Craft** (at home only), in three panes: **categories** down the left (Protocols, Zero-days, Filters, Configs, Harvesters, Modules; each shows only once it has something in it, with a count of what you can craft now), the **recipes** in the one you pick, only ones you know (a teal dot on the ones you can afford; a recipe you haven't found doesn't show, and a category with none stays hidden), and the recipe you pick on the right: **what comes out** (its name in its rarity colour, rarity and level as chips, its stats as icon rows with their numbers; a filter adds your filters held and its slots as pips), **what it takes**, a row each (credits, code, salvage, named components; your have / its need, red when short), and **Craft**. That's all the page shows: whether you can make each thing, and what's missing if you can't. Hover any protocol (or filter) for its card: a spinning ASCII model of its kind (an Exploit's spike, a Proxy's diamond, a Shell's cube, a Script's prism, a filter's disc) in its rarity colour, over its name, rarity, kind, level, stats, effect and flavour. On a stash protocol (and on its **Load**/**Swap** button) the card ends with what loading it changes against what that slot runs now: ▲ gains, ▼ losses, and any Zero-day or unique effect you'd give up (or *into an empty slot*). Protocols you *run* live on the **Loadout** page's first tab, Protocols (the stash as one row per item on the left, slots and stats on the right); skills and talents share the second tab (slots, stats, stash: load, unload, scrap).
+Everything you build is on one page, **Craft** (at home only), in three panes: **categories** down the left (Protocols, Zero-days, Filters, Harvesters, Modules; each shows only once it has something in it, with a count of what you can craft now), the **recipes** in the one you pick, only ones you know (a teal dot on the ones you can afford; a recipe you haven't found doesn't show, and a category with none stays hidden), and the recipe you pick on the right: **what comes out** (its name in its rarity colour, rarity and level as chips, its stats as icon rows with their numbers; a filter adds your filters held and its slots as pips), **what it takes**, a row each (credits, code, salvage, named components; your have / its need, red when short), and **Craft**. That's all the page shows: whether you can make each thing, and what's missing if you can't. Hover any protocol (or filter) for its card: a spinning ASCII model of its kind (an Exploit's spike, a Proxy's diamond, a Shell's cube, a Script's prism, a filter's disc) in its rarity colour, over its name, rarity, kind, level, stats, effect and flavour. On a stash protocol (and on its **Load**/**Swap** button) the card ends with what loading it changes against what that slot runs now: ▲ gains, ▼ losses, and any Zero-day or unique effect you'd give up (or *into an empty slot*). Protocols you *run* live on the **Loadout** page's first tab, Protocols (the stash as one row per item on the left, slots and stats on the right); skills and talents share the second tab (slots, stats, stash: load, unload, scrap).
 
 ## First launch
 
@@ -154,7 +154,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 **Where they go.**
 - **Health (the everyday sink).** Signal rests back at 20% a minute and the server at 2% a minute, offline too. Or pay to top up now: a full Signal bar costs 8 + 1.5×(class level) credits, a full server 10 + 2×(server level); less missing costs less (at least 1). Click the meter, or type `top up` / `repair [n]`. Short of credits, the rest comes out of your biggest pile of code, 8 credits a unit. On a run it's the store's Signal patch instead. A bot that always pays spends about a quarter to a third of its income on it and reaches level 10 two to three times sooner than one that always waits; the Bastion barely needs it.
 - **You start with 0 credits.** Caches, kills and contracts pay; topping up Signal or repairing costs credits from the first one you earn.
-- **Building (the big goals).** Services, outpost modules, harvesters and configs cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
+- **Building (the big goals).** Services, outpost modules and harvesters cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
 - **Gear.** Compiling a blue costs 60 + 15×level credits and 8 salvage, cheaper than the store's sealed item (180 + 14×level).
 
 | Sink | Credits | Code | Salvage | Other |
@@ -166,7 +166,6 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Compile a Zero-day | 400 + 30L | | 16 (2 guard parts) | its source |
 | Harvester | 200 | 15 | 5 | its seed |
 | Outpost module (into your stock; needs its plan) | 150 | 8 | 5 | |
-| Config | 250 | 15 | 6 | its source |
 | Architecture switch | 1,000 | | | |
 
 
@@ -412,7 +411,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   - Siphon: a steady flow of the server's code (1 + level/10 an hour, storage 6 + level/2).
   - Scraper: a loot roll every 90 minutes, 4 stored. Rolls are credits, code, salvage or, rarely, a protocol.
   - Tap: a small trickle (0.5 + level/20 an hour), noticed a quarter as often.
-  - Traits: Rich (+50% yield), Deep (double storage), Quiet (noticed half as often), Sturdy (half the time an invasion gives up on its own), Lucky (better loot rolls).
+  - Harvesters have no traits: what a site gives comes from its site trait and the modules you install (Pipeline for yield, Storage Array for storage, IDS for being noticed less).
 - **Site traits** are fixed when a server is found (45% have one): Rich (+50% yield), Legacy (better loot rolls; its vault more often holds a package, and a better one), Backbone (no bandwidth), Hostile (twice the invasions, +50% yield), Hardened (its natives are Armored).
 - **Outpost slots** (*Outposts n/m* on the server card, pips on the outpost) limit how many outposts run at once. Harvesters never run on your own server: they go out to servers you've taken over. Installing one from an outpost's card lists your rack one row per harvester (kind, level, traits) with its own Install button: 1, plus 1 every 10 server levels (5 at most).
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
@@ -446,15 +445,9 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
 
 Commands: `outpost install <server> [n]`, `outpost build <module>`, `outpost mod|unmod <server> <module>`, `buy plan-<kind|module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake <server>`, `outpost compile siphon|scraper|tap`.
 
-## Configs
+## Configs (gone)
 
-Every service can run one **config**: a side-grade that changes how it works, not how big it is. Swapping is instant and free, but only between fights (the Server page shows a Config row on each running service that has them). The firewall, Tarpit and Honeypot configs are gone (the wall is three knobs, see Invasions and the wall); a save that owned one got its credits back.
-
-| Service | Config | What it does |
-|---|---|---|
-| Hot-patcher | Triage | Double repair below half Integrity, half above |
-
-**Getting one.** 8% of vaults hold a config source (`<config>.cfg`). Bank it and you know it; craft it on the Craft page for 250 credits, 15 of the service's code and 6 salvage. A source you already know is 2 salvage.
+Services used to take a config, a side-grade per service. They're gone: services run as they come. A save that crafted one gets 250 credits back for each.
 
 ## Swarms
 
@@ -463,7 +456,7 @@ Once you run an outpost, the network organises against it.
 - A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
 - You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes).
 - **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the timer waits while you fight (a paused fight, or one left open over a reload, holds nothing).
-- Once it arrives, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown (Sturdy doesn't save it): retake it to end it sooner.
+- Once it arrives, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown: retake it to end it sooner.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
 
@@ -738,7 +731,7 @@ Pages show instead of explaining; the words are in the hover.
 - **The top bar:** the pages on the left; in the middle who you are (handle · class · level, the class's XP as a thin bar under it); on the right the people button, the pager, then Integrity, Signal and credits.
 - **HOME on the map:** its name, then Integrity as a thin bar (teal, amber below 60%, red below 30%) with the number under it.
 - **The map's server card:** two level bars at the top, the server's (amber) and your class's under it (named for the class, in your colour), each with its level at the end (hover for XP), an Integrity bar, credits, salvage and servers found as icon counts, the wall ruler, service slots as a strip of tiles, and Memory, Outposts (running / slots) and Salvage as counts. Your packed harvesters are on the Craft page, not the server card. An install in progress shows as a small bar.
-- **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols, Configs and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid). The Server page's Blueprints card and every running service's next version show their cost the same way: a row each for credits, code, Exploits, salvage and the server level it needs, *have/need*, red when short; the button carries the build time.
+- **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid). The Server page's Blueprints card and every running service's next version show their cost the same way: a row each for credits, code, Exploits, salvage and the server level it needs, *have/need*, red when short; the button carries the build time.
 - **Timeline chips** show an attack's name; where a long name won't fit the column, a three-letter code takes its place (Surge → SRG, Encrypt → ENC), never an ellipsis. Hover for the full name.
 - **On a phone** (under 480 px): the board shows Now, +1 and +2; chips drop their icon; the skill tray is three wide. Tap a skill to pick it and tap it again to fire it (tapping a part aims it); the keyboard stays down.
 - **Paused** shows as a strip across the top of the board (*PAUSED · any order resumes*), not a corner word.
@@ -972,7 +965,7 @@ A win shows a card over the virus with what it gave you: XP (one bar, any level-
 
 **Fast kills.** Each class keeps your usual pace (cycles per 100 Integrity of virus, a running average). From your sixth kill with a class, a win at least a quarter faster than that pays **+25% XP**, shown as a gold *Fast kill* row. It's measured against you, so a slow, tanky class earns it as often as a burst one.
 
-**New on the tabs.** Loadout, Craft and Daemons carry a teal count of what's arrived since you last opened them (protocols; blueprints, source and configs; daemons and daemon upgrades).
+**New on the tabs.** Loadout, Craft and Daemons carry a teal count of what's arrived since you last opened them (protocols; blueprints and source; daemons and daemon upgrades).
 
 A loss crashes the server: it reboots at half Integrity in Degraded mode (see Invasions). Between fights the server **rests**: it repairs 2% of its max a minute (empty to full in about 50 minutes, offline too), stopping while an invasion is contested at or breaches your wall. `repair [n]`, or a click on the Integrity meter, pays for it now (see The economy). Leads and located origins appear on the Map, salvage and protocols on the Loadout page (Protocols tab), code on the Server page. Testing only: `developer reboot`, `developer location <ransomware|worm|ghostroot>`.
 

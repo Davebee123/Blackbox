@@ -146,7 +146,6 @@ export const TIPS = [
   { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons are programs you find on runs. A slotted daemon fights beside you on its own cooldown, and finding the same one again upgrades it.' },
   { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade: pick the one that fits how you play. You can rebuild later for credits.' },
   { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'A module you crafted, ready for this outpost\'s ports. It bends how the outpost works; take it out and it goes back to your stock for another outpost.' },
-  { id: 'server-config', page: 'server', when: (s) => (s.configsOwned || []).length > 0, at: '.cfg-row', text: 'You crafted a config. Configs change how a service works rather than how strong it is, and you can swap them freely between fights.' },
 ];
 
 // The next tip to show on this page, or null. `visible(selector)` says whether an element is on

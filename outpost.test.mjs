@@ -72,12 +72,14 @@ test('an outpost needs a taken-over server and bandwidth, and fills offline up t
   assert.equal(stockOf(a), 0);
 });
 
-test('Rich and Deep traits change yield and storage', () => {
+test('harvesters have no traits: storage comes from the Storage Array module', () => {
   const s = fresh();
   const a = found(s);
   a.takenOver = true;
   s.harvesters = [siphon(10, ['deep'])];
   command(s, `outpost install ${a.id}`, T0);
+  assert.equal(capOf(a), OUTPOST.kinds.siphon.cap(10), 'an old Deep trait does nothing');
+  a.mods = ['storage'];
   assert.equal(capOf(a), OUTPOST.kinds.siphon.cap(10) * 2);
 });
 

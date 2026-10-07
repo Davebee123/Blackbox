@@ -984,7 +984,7 @@ function renderMeters() {
   $('mail-count').textContent = unreadMail;
   $('tab-store').hidden = true; // Halcyon's store lives in its hub (connect halcyon → Shop)
   // Craft shows up once there's something to make (WoW/FFXIV unlock UI as you go): a recipe, a plan, a config or filter source.
-  const craftable = (campaign.recipes || []).length || (campaign.plans || []).length || (campaign.configsKnown || []).length || (campaign.filterRecipes || []).length || (campaign.harvesters || []).length;
+  const craftable = (campaign.recipes || []).length || (campaign.plans || []).length || (campaign.filterRecipes || []).length || (campaign.harvesters || []).length;
   document.querySelector('[data-module="craft"]').hidden = !craftable && module !== 'craft';
   $('tab-consortium').hidden = !consortiumOf(campaign) && !campaign.consortiumInvite;
   fitTopbar();
