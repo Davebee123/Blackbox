@@ -2811,3 +2811,22 @@ details.map-pick { pointer-events: auto; }
 .ttree .tsub-look span { font-size: 12px; }
 .library .skill.subskill { border-left: 2px solid var(--amber-deep, #7e5311); }
 .lib-head small { opacity: 0.7; font-size: 11px; margin-left: 8px; }
+/* The Build panel (view.mjs buildPanelMarkup): a wide sheet over the map for one held server. */
+.build-panel { position: absolute; inset: 44px 12px 12px; z-index: 6; overflow: auto; background: var(--panel, #120f0a); border: 1px solid var(--amber-deep, #7e5311); border-radius: 4px; padding: 16px 18px; filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.65)); }
+.build-panel .bp-head { display: flex; align-items: flex-start; gap: 16px; padding-right: 36px; margin-bottom: 8px; }
+.build-panel .bp-head h1 { margin: 2px 0 0; }
+.build-panel .bp-meta { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.build-panel .bp-x { position: absolute; top: 12px; right: 12px; }
+.build-panel .bp-now { margin: 4px 0; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.build-panel .bp-grid { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.build-panel .bp-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; }
+.build-panel .bp-card.locked { opacity: 0.55; }
+.build-panel .bp-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.build-panel .bp-top b { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+.build-panel .bp-card p { margin: 0; font-size: 12px; line-height: 1.4; }
+.build-panel .bp-card small { font-size: 11px; color: var(--muted); }
+.build-panel .bp-card .bl-why { color: var(--amber-soft, #d69a22); }
+.build-panel .bp-card .btn { align-self: flex-start; margin-top: auto; }
+.op-build-row { margin-top: 10px; }
+.op-build-open small { margin-left: 8px; opacity: 0.75; font-size: 11px; }
+@media (max-width: 700px) { .build-panel { inset: 40px 6px 6px; padding: 12px; } .build-panel .bp-grid { grid-template-columns: 1fr; } }

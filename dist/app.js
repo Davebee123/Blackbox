@@ -615,6 +615,13 @@ function run(raw) {
   const join = text.match(/^connect (\S+)(?: \+hot)?$/);
   const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
   if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
+  // build [server]: the Build panel for a server you hold (the one selected on the map, if you name none).
+  const bw = text.match(/^build(?: (\S+))?$/);
+  if (bw) {
+    const want = bw[1] ? campaign.locations?.find((l) => l.id === bw[1] || l.name.toLowerCase() === bw[1]) : campaign.locations?.find((l) => l.id === mapSel);
+    if (want?.takenOver) { buildFor = want.id; mapSel = want.id; mapList = false; go('map'); dirty = true; return; }
+    notice(want ? `${want.name} isn't yours yet. Beat its Resident first.` : 'build <server>: name a server you hold.', true); return;
+  }
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
   const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir)$/);
   if (dial && V.hubOptions(campaign, dial[1]).length) return openHub(dial[1]);
@@ -1053,6 +1060,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggl
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
+let buildFor = null; // the held server whose Build panel is open over the map (V.buildPanelMarkup)
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
 let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
@@ -1097,7 +1105,7 @@ function render(force = false) {
     }
     render.logLen = s.logs.length;
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -1108,7 +1116,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     if (!(module === 'hub' && mkDrag)) put('page-view', (pages[module] || pages.map)(campaign)); // not while you drag a ticket's slider
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
@@ -1712,6 +1720,10 @@ document.addEventListener('click', (e) => {
   const node = e.target.closest('[data-select]');
   if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
   // Clicking away (empty map, or the card's ×) closes the card and clears the selection too.
+  const bopen = e.target.closest('[data-build-open]');
+  if (bopen) { buildFor = bopen.dataset.buildOpen; mapList = false; if (module !== 'map') go('map'); dirty = true; return; }
+  if (e.target.closest('[data-build-close]')) { buildFor = null; dirty = true; return; }
+  if (buildFor && e.target.closest('.build-panel')) return; // clicks inside the panel don't reach the map under it
   if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop || mapSel) { mapPop = false; mapSel = null; V.setMemAsk(null); dirty = true; } }
   const mail = e.target.closest('[data-mail]');
   if (mail) {
@@ -1933,6 +1945,7 @@ document.addEventListener('change', (e) => {
 document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');
   if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; mapPop = true; dirty = true; }
+  if (e.key === 'Escape' && buildFor && module === 'map') { buildFor = null; dirty = true; return; }
   if (e.key === 'Escape' && (mapPop || mapSel) && module === 'map') { mapPop = false; mapSel = null; dirty = true; }
 });
 

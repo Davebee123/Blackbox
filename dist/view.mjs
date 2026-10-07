@@ -1758,7 +1758,7 @@ export const setMapScale = (z) => { const was = mapScale; mapScale = z; return M
 // Map filters: any mix of mine · targets · threats (none = everything). Old callers pass one string.
 const MAP_FILTERS = [['mine', 'Mine', 'f-mine'], ['targets', 'Targets', 'f-target'], ['threats', 'Threats', 'f-threat']];
 const filterList = (f) => (Array.isArray(f) ? f : !f || f === 'all' ? [] : [f]).filter((k) => MAP_FILTERS.some(([x]) => x === k));
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null } = {}) {
   const none = !sel; // nothing selected (you clicked away): no reticle, and the side card shows your server
   sel ||= 'server';
   filter = filterList(filter);
@@ -1872,7 +1872,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${svg}${build ? buildPanelMarkup(s, build) : card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 const LIST_COLS = [['name', 'Server'], ['family', 'Family'], ['level', 'Lv'], ['layer', 'Layer'], ['explored', 'Explored'], ['status', 'Status']];
 function serverList(s, sel, filter, sort) {
@@ -2188,14 +2188,28 @@ function outpostCard(s, l) {
   const opBox = (kind, title, info, btnHtml) => `<div class="op-box ${kind}"><div class="op-top"><span class="tag hot">${title}</span><small>${info}</small></div><div class="row">${btnHtml}</div></div>`;
   const lock = o.lockdown ? opBox('lost', 'Lockdown', `${fmtTime(o.lockdown.left)} left. It makes nothing until then; what's stored is kept.`, `<button type="button" class="btn primary" data-command="outpost retake ${esc(l.id)}" ${why}>Retake</button>${buyoutBtn(s, `outpost buyout ${l.id}`, outpostBuyout(l, now)?.price)}`) : '';
   const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', s.fleet.faction ? `Swarm from ${esc(FX[s.fleet.faction].short)}` : s.fleet.natives ? 'Natives' : 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `arrives in ${fmtLeft(fleetLeft(s))}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
-  // The Build list: buildings you could put here, cheapest first; the rest say what they need.
-  const rows = Object.keys(BUILDINGS).filter((id) => !mine.includes(id) && b?.id !== id).map((id) => {
-    const B = BUILDINGS[id], block = buildBlock(s, l, id, now), c = buildCost(s, id, l);
-    return `<li class="${block ? 'locked' : ''}"><div class="bl-main"><b>${glyph(BICON[id] || 'module')}${esc(B.name)}</b><small>${esc(B.rule)}</small><small class="bl-cost">${esc(costLine(c))} · ${B.mins >= 60 ? `${B.mins / 60} h` : `${B.mins} min`} · ${B.bw} bandwidth</small>${block ? `<small class="bl-why">${esc(block)}</small>` : ''}</div><button type="button" class="btn small ${block ? '' : 'primary'}" data-command="outpost build ${esc(l.id)} ${id}" data-pay="building:${c.salvage.any}" data-pay-title="${esc(B.name)}" ${block || busy ? 'disabled' : ''}>Build</button></li>`;
-  }).join('');
-  const list = `<details class="op-buildlist"${mine.length ? '' : ' open'}><summary>Build</summary><ul class="bl">${rows}</ul></details>`;
+  // Build opens its own panel over the map (buildPanelMarkup): every building at once, no scrolling.
+  const ready = buildRows(s, l, now).filter((x) => !x.block).length;
+  const list = `<div class="row op-build-row"><button type="button" class="btn ${mine.length ? '' : 'primary'} op-build-open" data-build-open="${esc(l.id)}" title="Every building you could put here, what it costs and what it needs (or type build ${esc(l.id)})">${glyph('module')}Build<small>${ready ? `${ready} ready` : 'see what it needs'}</small></button></div>`;
   const hint = !mine.length && !b ? '<p class="op-hint">This server is yours. Build on it to make it produce or defend itself. Buildings take its slots and your bandwidth.</p>' : '';
   return `<div class="outpost${fl ? ' besieged' : ''}${o.lockdown ? ' lost' : ''}">${head}${hint}${tiles}${prog}${store}${mine.length ? fwRow(s, l, l.id, (l.level || 1) + 2) : ''}${lock}${fl}${list}</div>`;
+}
+// The buildings you could put on a held server: each with why you can't yet (block), if so.
+function buildRows(s, l, now = Date.now()) {
+  const mine = buildingsOf(l), b = l.build;
+  return Object.keys(BUILDINGS).filter((id) => !mine.includes(id) && b?.id !== id).map((id) => ({ id, B: BUILDINGS[id], block: buildBlock(s, l, id, now), c: buildCost(s, id, l) }));
+}
+// The Build panel: a wide sheet over the map for one held server. Its slots and bandwidth up top,
+// what's building now, then every building as a card, the ones you can build first.
+export function buildPanelMarkup(s, id, now = Date.now()) {
+  const l = (s.locations || []).find((x) => x.id === id);
+  if (!l?.takenOver) return '';
+  const busy = active(s) || s.run, mine = buildingsOf(l), slots = slotsOf(l), size = serverSize(l), b = l.build;
+  const rows = buildRows(s, l, now).sort((x, y) => (x.block ? 1 : 0) - (y.block ? 1 : 0));
+  const cards = rows.map(({ id: bid, B, block, c }) => `<li class="bp-card${block ? ' locked' : ''}"><div class="bp-top"><b>${glyph(BICON[bid] || 'module')}${esc(B.name)}</b><span class="tag dim">${esc(B.kind)}</span></div><p>${esc(B.rule)}</p><small class="bl-cost">${esc(costLine(c))} · ${B.mins >= 60 ? `${B.mins / 60} h` : `${B.mins} min`} · ${B.bw} bandwidth</small>${block ? `<small class="bl-why">${esc(block)}</small>` : ''}<button type="button" class="btn small ${block ? '' : 'primary'}" data-command="outpost build ${esc(l.id)} ${bid}" data-pay="building:${c.salvage.any}" data-pay-title="${esc(B.name)}" ${block || busy ? 'disabled' : ''}>Build</button></li>`).join('');
+  const building = b ? `<p class="bp-now">${glyph(BICON[b.id] || 'module')}Building ${esc(BUILDINGS[b.id].name)}: ${fmtTime(b.doneAt - now)} left.</p>` : '';
+  const built = mine.length ? `<p class="bp-now">Built here: ${mine.map((x) => esc(BUILDINGS[x].name)).join(', ')}.</p>` : '';
+  return `<div class="build-panel" id="build-panel" role="dialog" aria-label="Build on ${esc(l.name)}"><header class="bp-head"><div><h2>Build</h2><h1>${esc(l.name)}</h1></div><div class="bp-meta">${slotPips('module', mine.length + (b ? 1 : 0), slots, `Building slots (a ${size.id} server)`)}<span class="tag dim" title="Bandwidth used across your network">${glyph('router')}${bandwidthUsed(s)}/${bandwidth(s)}</span>${busy ? '<span class="tag warn">At home only</span>' : ''}</div><button type="button" class="btn small bp-x" data-build-close title="Close (Esc)">×</button></header>${building}${built}<ul class="bp-grid">${cards}</ul></div>`;
 }
 
 const layoutName = (l) => ({ relay: 'Relay node', mailhub: 'Mail hub', mirror: 'Public mirror', archive: 'Backup archive', lab: 'Research lab' })[l.template] || 'Node';
