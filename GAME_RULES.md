@@ -26,7 +26,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 | Rule | Detail |
 |---|---|
 | Signal | 50 at the start of each run. Moving (`cd`) costs 1. Guards hit it. A wrong password costs 3. |
-| Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. |
+| Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. A **Disconnected** card says what took you out, any files lost, and when you can connect again (the reconnect wait, and Signal to a quarter). |
 | Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal. |
 | Locked | A locked directory needs `unlock <dir> <password>`. The password is written in a file somewhere in the location. |
 | Leads | The **leads** button in a run's header opens a panel beside the terminal with every trace in progress: each family's lead and each unknown server you can see (where it hangs off, its layer), with its percent, and the contract marker on flagged ones. At most 8 unknown servers show at once, here and on the map (`HIDDEN.shown`): flagged ones first, then the most traced, then the newest ping. The rest are still there and still trace; they show once one ahead of them is found. Click one to see it on the map; the button closes it. |

@@ -1091,13 +1091,14 @@ export function disconnect(s, reason) {
   }
   const loc = run.loc === CONFIG.zone.id ? s.zone : findLocation(s, run.loc);
   const lost = run.pack.length;
+  const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
   s.signal = Math.max(0, run.integrity);
   s.run = null;
   if (loc && !loc.outpost?.h) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // any server but an outpost: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched; ${loc ? loc.name + ' is still there' : 'the location is still there'}.`);
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc && !loc.outpost?.h ? CONFIG.relockMs : 0 });
 }
 
 function newMetrics(s) {

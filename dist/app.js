@@ -355,6 +355,20 @@ function rewardCard(kicker, e, events, toast = false) {
   const rows = [{ label: String(e.message || '').replace(/^[A-Z ]+: /, '').replace(/\.$/, ''), qty: '', kind: 'found', text: e.message || '' }, ...V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6))];
   showGain(kicker, name, rows, toast);
 }
+// Losing a run: what took you out, what it cost, and when you can go back.
+function lossCard(e) {
+  const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
+  const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
+  const rows = [
+    { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Signal lost'), qty: '', text: 'Signal lost' },
+    ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
+    { kind: 'found', label: 'Your server', qty: 'safe', text: 'Your server is safe' },
+    ...(e.relockMs ? [{ kind: 'time', label: `Back into ${e.where || 'it'} in`, qty: clock(e.relockMs), text: 'Reconnect wait' }] : []),
+    ...(sig < need ? [{ kind: 'time', label: 'Signal to connect in', qty: clock(((need - sig) / (CONFIG.signalRest * max)) * 60000), text: 'Signal rest' }] : []),
+  ];
+  showGain('Disconnected', e.where || '', rows, false);
+  $('gain').classList.add('loss');
+}
 function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }
 const gainOpen = () => { const el = $('gain'); return el && !el.hidden && !el.classList.contains('toast'); };
 function hideSpoils() {
@@ -518,7 +532,7 @@ function react(events) {
         setTimeout(() => { ending = false; }, 900);
         break;
       case 'crashed': flash(e.mode === 'run' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); break;
-      case 'disconnected': feel.add('lose', null); notice(e.message, true); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => go('map'), 1600); break; // no tip over the loss
+      case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
   }

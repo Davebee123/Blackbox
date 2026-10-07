@@ -2717,3 +2717,6 @@ details.map-pick { pointer-events: auto; }
 
 .sig-eta { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; margin-left: 4px; }
 .meter-signal.weak .sig-eta { color: var(--amber); }
+.sp-row.k-lost { border-left-color: var(--hot); } .sp-row.k-lost .sp-ico { color: var(--hot); }
+.sp-row.k-time .sp-qty { font-variant-numeric: tabular-nums; }
+.gain.loss .sp-kicker { color: var(--hot); }
