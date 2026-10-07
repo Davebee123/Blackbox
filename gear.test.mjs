@@ -142,7 +142,7 @@ test('enemies crit too (from level 3), for ×1.5 damage', () => {
   CONFIG.enemyCrit = 1;
   const s = fight(fresh(), 'cryptjack', 6);
   part(s, 'encryptor').attack = null;
-  s.encounter.chits = 0;
+  s.encounter.hardened = 0;
   const pulse = part(s, 'pulse');
   s.encounter.cycle = pulse.attack.due;
   const amount = pulse.attack.amount;
@@ -228,7 +228,7 @@ test('Decoy and Sandboxed filters: attacks and specials on your server can fail'
   s.filters = { held: [{ kind: 'filter', rarity: 'tuned', level: 1, name: 'Decoy Packet Filter', stats: { strength: 1, evasion: 100, sanitize: 100 } }], on: [0] };
   fight(s);
   const pulse = part(s, 'pulse'), enc = part(s, 'encryptor');
-  s.encounter.chits = 0;
+  s.encounter.hardened = 0;
   s.encounter.cycle = Math.max(pulse.attack.due, enc.attack.due);
   command(s, 'hold');
   const ev = resolveCycle(s);
@@ -461,7 +461,7 @@ test('Cron Job and Snapshot are special services: Cron hits every 3rd cycle, Sna
 
   const n = svc(fresh(), { snapshot: 3 });
   fight(n);
-  n.encounter.chits = 0;
+  n.encounter.hardened = 0;
   part(n, 'encryptor').attack = null;
   const pulse = part(n, 'pulse');
   pulse.attack.amount = 60;

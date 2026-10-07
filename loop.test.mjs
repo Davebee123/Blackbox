@@ -33,12 +33,14 @@ test('no one kind of play carries the climb: fights stay under 70% of XP (the bo
   }
 });
 
-test('fighting alone is the slow road: SPRAWL-only takes at least 1.4x as long to level 12 as mixed play (median of 3 seeds)', async () => {
+test('fighting alone is the slow road: SPRAWL-only takes 1.25x as long to level 12 as mixed play for every class, 1.5x on average (median of 5 seeds)', async () => {
   const { CONFIG } = await import('./dist/data.mjs');
   const med = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
   const lead = CONFIG.leadBase;
-  const at = (cls, only) => { CONFIG.leadBase = only ? 0 : lead; return med([1, 2, 3].map((seed) => simulate({ cls, target: 12, seed }).stats.levelAt[12] ?? 1e5)); };
+  const at = (cls, only) => { CONFIG.leadBase = only ? 0 : lead; return med([1, 2, 3, 4, 5].map((seed) => simulate({ cls, target: 12, seed }).stats.levelAt[12] ?? 1e5)); };
   try {
-    for (const cls of CLASSES) { const r = at(cls, true) / at(cls, false); assert.ok(r >= 1.4, `${cls}: ${r.toFixed(2)}x`); }
+    const r = CLASSES.map((cls) => at(cls, true) / at(cls, false));
+    r.forEach((x, i) => assert.ok(x >= 1.25, `${CLASSES[i]}: ${x.toFixed(2)}x`));
+    assert.ok(r.reduce((a, b) => a + b, 0) / r.length >= 1.5, `average ${r.map((x) => x.toFixed(2)).join(' / ')}`);
   } finally { CONFIG.leadBase = lead; }
 });

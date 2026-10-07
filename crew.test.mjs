@@ -40,7 +40,7 @@ test('a damage attack lands on everyone in the fight, each in full', () => {
   for (const x of e.virus.parts) if (x !== p && x.attack) x.attack.due = 999;
   p.attack.due = e.cycle;
   const mates = matesOf(s);
-  for (const m of [s, ...mates]) m.encounter.chits = 0;
+  for (const m of [s, ...mates]) m.encounter.hardened = 0;
   const before = [s.run.integrity, ...mates.map((m) => m.run.integrity)];
   command(s, 'hold'); for (const m of mates) { m.encounter.queue = { ability: 'hold', text: 'hold' }; }
   resolveCycle(s);
@@ -76,7 +76,7 @@ test('a Bastion drawing fire (Firewall) takes every attack; nobody else is hit',
   for (const x of e.virus.parts) if (x !== p && x.attack) x.attack.due = 999;
   p.attack.due = e.cycle;
   const [nyx, kilo] = matesOf(s);
-  for (const m of [s, nyx, kilo]) { m.encounter.chits = 0; m.encounter.shield = 0; }
+  for (const m of [s, nyx, kilo]) { m.encounter.hardened = 0; m.encounter.shield = 0; }
   nyx.encounter.buffs.sinkhole = e.cycle + 1;
   const before = [s.run.integrity, nyx.run.integrity, kilo.run.integrity];
   command(s, 'hold'); nyx.encounter.queue = kilo.encounter.queue = { ability: 'hold', text: 'hold' };

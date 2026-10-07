@@ -80,7 +80,7 @@ test('armor-piercing hits go straight through chits; Crack strips three', () => 
   s.loadout.equipped.breaker = ['zero-day', 'crack'];
   const enc = Object.assign(part(s, 'encryptor'), { armor: 3, maxArmor: 3, integrity: 500, max: 500 });
   act(s, 'zero-day encryptor');
-  assert.equal(enc.max - enc.integrity, 80);
+  assert.equal(enc.max - enc.integrity, 65);
   assert.equal(enc.armor, 3, 'chits untouched');
   act(s, 'crack encryptor');
   assert.equal(enc.armor, 0);

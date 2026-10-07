@@ -183,3 +183,15 @@ test('Phase 3: every v2 virus is Linked; Rerouting is no longer rolled; no strai
   assert.ok(enc.attack.hit > 0, 'the Encryptor took on part of the Pulse');
   for (const id of ['echo', 'hashrat', 'keylogger']) assert.ok(STRAINS[id].parts.every((p) => p.attack), `${id}: every part can hurt you`);
 });
+
+test('Phase 3: elites are crew rooms (a blue at least); Hardened halves the first hit; Null Route dodges one attack; uniques sit near a yellow', async () => {
+  const { rollDrop } = await import('./dist/combat.mjs');
+  const { RARITY_ORDER, ITEM_SCALE } = await import('./dist/gear.mjs');
+  const { SKILLS, ABILITIES } = await import('./dist/data.mjs');
+  const s = at(12);
+  for (let i = 0; i < 20; i++) { const it = rollDrop(s, { kind: 'rogue', elite: true, rolls: 3 }, 12); assert.ok(it && RARITY_ORDER.indexOf(it.rarity) >= RARITY_ORDER.indexOf('tuned'), 'never under a blue'); }
+  assert.equal(SKILLS.hardened, 1);
+  assert.equal(ABILITIES['null-route'].cooldown, 6);
+  assert.equal(ABILITIES['zero-day'].damage, 65);
+  assert.equal(ITEM_SCALE.unique, 0.5);
+});

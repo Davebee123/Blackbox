@@ -30,7 +30,7 @@ export const act = (s, text) => {
 };
 export const quiet = (s) => { for (const p of s.encounter.virus.parts) p.attack = null; return s; };
 // Strip every armor chit (and stop patching) so hits land in full; drop your own chits too.
-export const noArmor = (s) => { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null }); s.encounter.chits = 0; return s; };
+export const noArmor = (s) => { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null }); s.encounter.hardened = 0; return s; };
 export const big = (s, id) => Object.assign(part(s, id), { integrity: 500, max: 500 });
 export const lost = (s, id) => part(s, id).max - part(s, id).integrity;
 
@@ -105,13 +105,15 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (55) f
 });
 
 // ---------- Bastion ----------
-test('Bastion: Hardened blocks the first attack; Rate Limit hits 40 (+15 if its attack is due), cooldown 3, and halves its next attack; Patch heals 10 then 5 a cycle', () => {
+test('Bastion: Hardened halves the first hit; Rate Limit hits 40 (+15 if its attack is due), cooldown 3, and halves its next attack; Patch heals 10 then 5 a cycle', () => {
   const s = start('bastion');
-  assert.equal(s.encounter.chits, 1);
+  assert.equal(s.encounter.hardened, 1);
+  part(s, 'encryptor').attack = null;
+  const surge = part(s, 'pulse').attack.amount;
   s.encounter.cycle = part(s, 'pulse').attack.due;
   act(s, 'hold');
-  assert.equal(s.server.integrity, 100, 'the armor chit ate the Surge');
-  assert.equal(s.encounter.chits, 0);
+  assert.equal(100 - s.server.integrity, Math.round(surge / 2), 'Hardened: the first Surge lands at half');
+  assert.equal(s.encounter.hardened, 0);
   const t = noArmor(quiet(start('bastion')));
   big(t, 'pulse');
   act(t, 'rate-limit pulse');
@@ -121,7 +123,7 @@ test('Bastion: Hardened blocks the first attack; Rate Limit hits 40 (+15 if its 
   const d = noArmor(start('bastion'));
   big(d, 'pulse');
   part(d, 'encryptor').attack = null;
-  d.encounter.chits = 0;
+  d.encounter.hardened = 0;
   const p = part(d, 'pulse');
   p.attack.due = d.encounter.cycle + 2;
   act(d, 'rate-limit pulse');
@@ -139,7 +141,7 @@ test('Bastion: Hardened blocks the first attack; Rate Limit hits 40 (+15 if its 
 
 test('Bastion: Firewall absorbs 25 and lights Retaliate (twice the hit, next cycle); Throttle halves attacks', () => {
   const s = noArmor(start('bastion'));
-  s.encounter.chits = 0;
+  s.encounter.hardened = 0;
   part(s, 'encryptor').attack = null;
   const pulse = big(s, 'pulse');
   const amount = pulse.attack.amount;
@@ -150,7 +152,7 @@ test('Bastion: Firewall absorbs 25 and lights Retaliate (twice the hit, next cyc
   act(s, 'retaliate pulse');
   assert.equal(lost(s, 'pulse'), 2 * amount);
   const t = start('bastion');
-  t.encounter.chits = 0;
+  t.encounter.hardened = 0;
   const p2 = part(t, 'pulse');
   t.encounter.cycle = p2.attack.due;
   act(t, 'throttle pulse');

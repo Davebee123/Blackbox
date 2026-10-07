@@ -224,7 +224,8 @@ function openProc(s, kind, extra = {}) {
   emit(s, 'proc', `${a.name} is lit.`, { ability: ids[0] });
 }
 // Armor-piercing: goes straight through armor chits (Backdoor, Bypass; Overload with Piercing).
-export const ignoresArmor = (s, id) => !!ABILITIES[id]?.pierce || (id === 'overload' && hasTalent(s, 'piercing'));
+// Piercing (Breaker talent): only a fight's first Overload goes through armor.
+export const ignoresArmor = (s, id) => !!ABILITIES[id]?.pierce || (id === 'overload' && hasTalent(s, 'piercing') && !s.encounter?.once?.pierced);
 
 // What a skill would do to a part now: 0 if armor would absorb it (it breaks a chit instead).
 export function previewDamage(s, abilityId, p) {
@@ -421,6 +422,11 @@ export function rollDrop(s, ctx, level) {
   for (let i = 0; i < rolls; i++) {
     const it = rollOnce(s, ctx, level);
     if (it && (!best || RARITY_ORDER.indexOf(it.rarity) > RARITY_ORDER.indexOf(best.rarity))) best = it;
+  }
+  // An elite (a crew room): never less than a blue, and now and then a unique.
+  if (ctx.elite) {
+    if (rand(s) < ELITE.unique) { const u = uniqueFrom(s, ctx, level); if (u) best = uniqueItem(u, level, () => rand(s)); }
+    if (!best || RARITY_ORDER.indexOf(best.rarity) < RARITY_ORDER.indexOf(ELITE.floor)) best = rollItem(() => rand(s), { level, rarity: ELITE.floor });
   }
   if (ctx.strain && rand(s) < 1 / LOOT.trophy) {
     const t = Object.values(UNIQUES).find((u) => (u.sources || []).some((src) => src.kind === 'strain' && src.id === ctx.strain));
@@ -1089,7 +1095,8 @@ function engage(s) {
   e.metrics = newMetrics(s);
   rollSync(s);
   // Bastion Hardened: start the fight with an armor chit of your own.
-  e.chits = classOf(s) === 'bastion' ? SKILLS.hardened : 0;
+  e.chits = 0;
+  e.hardened = classOf(s) === 'bastion' ? SKILLS.hardened : 0; // Bastion's passive: the first damage hit each fight lands at half
   // Uniques that fire as a fight starts (Gate Bypass, Cell Key).
   for (const x of fxFire(s, 'start')) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with an armor chit.`); }
@@ -1167,7 +1174,7 @@ export function finish(s, result) {
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || findLocation(s, e.process)?.depth || 1, family: e.virus.family, strain: e.virus.strain, rolls: e.virus.elite ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
+      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || findLocation(s, e.process)?.depth || 1, family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite, rolls: e.virus.elite ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
@@ -1818,6 +1825,7 @@ function useAbility(s, intent, auto = false) {
   // Null Route: your next skill crits.
   const crit = base > 0 && e.nextCrit ? ((e.nextCrit = false), true) : false;
   const res = base ? hit(s, target, base, { mine: true, crit, chits: a.chits, pierce: ignoresArmor(s, id) || rootkit, by: rootkit && target.armor > 0 ? 'Rootkit' : undefined }) : null;
+  if (id === 'overload' && hasTalent(s, 'piercing')) e.once.pierced = true;
   // Echo: the hit may repeat for half (on armor, it breaks another chit).
   if (base && alive(target) && gearStat(s, 'echo') && rand(s) * 100 < gearStat(s, 'echo')) hit(s, target, Math.max(1, Math.round(base * (fxHas(s, 'echo-full') ? 1 : ECHO.share))), { mine: true, by: 'Echo' });
   // Overload: a crit resets its cooldown.
@@ -1884,7 +1892,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `${a.name} for ${a.cycles} cycles.`, { mark: 'buff', ability: id });
   }
   if (a.shield) {
-    const amount = scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 40 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield);
+    const amount = scaled(s, id === 'firewall' ? (hasTalent(s, 'deep-packet-inspection') ? 30 : a.shield) + 5 * rank(s, 'stateful-firewall') : a.shield);
     e.shield = Math.max(e.shield || 0, amount);
     emit(s, 'status', `Shield up: absorbs the next ${amount} damage.`, { mark: 'shield', ability: id });
   }
@@ -1897,7 +1905,7 @@ function useAbility(s, intent, auto = false) {
     heal(s, scaled(s, (hasTalent(s, 'service-pack') ? 20 : a.heal) + 3 * rank(s, 'patch-notes')), a.name);
     e.regen = { amount: scaled(s, a.tick), left: a.ticks, from: e.cycle + 1, name: a.name };
   }
-  if (id === 'null-route') { e.buffs['null-route'] = e.cycle; e.nextCrit = true; emit(s, 'status', 'Null-routed: this cycle\'s attacks miss you, and your next skill crits.', { mark: 'buff', ability: id }); }
+  if (id === 'null-route') { e.nullRoute = 1; e.nextCrit = true; emit(s, 'status', 'Null-routed: the next attack misses you, and your next skill crits.', { mark: 'buff', ability: id }); }
   if (id === 'crack') {
     const n = Math.min(a.strip, target.armor);
     target.armor -= n;
@@ -1924,6 +1932,8 @@ function useAbility(s, intent, auto = false) {
     for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true }); if (virusIntegrity(s).current === 0) break; }
   }
   if (id === 'kill-switch') {
+    // Supervisor (Operator talent): cashing in your helpers readies Deploy.
+    if (hasTalent(s, 'supervisor') && e.readyAt.deploy) { delete e.readyAt.deploy; emit(s, 'proc', 'Supervisor: Deploy is ready.', { ability: 'deploy' }); }
     for (const h of e.helpers.splice(0)) {
       const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s);
       if (t) hit(s, t, Math.round(h.damage * h.left * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true });
@@ -2040,7 +2050,7 @@ function landAttack(s, p) {
   if (atk.dump) e.keylog = 0; // Keylogger: the log empties into the Dump
   if (watchman(s, p)) return;
   // Null Route: this cycle's attacks miss (and Opening lights up).
-  if (e.buffs['null-route'] >= e.cycle) { emit(s, 'blocked', `${atk.name} misses: you null-routed it.`, { source: p.id }); return openProc(s, 'slipped'); }
+  if (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle) { e.nullRoute = 0; delete e.buffs['null-route']; emit(s, 'blocked', `${atk.name} misses: you null-routed it.`, { source: p.id }); return openProc(s, 'slipped'); }
   // Retaliate lights up when a damage attack reaches you, whatever soaks it.
   if (hits) openProc(s, 'struck', { amount: Math.round(hitPower) });
   // Your armor chits (Bastion): the whole attack does nothing, however big.
@@ -2072,8 +2082,9 @@ function landAttack(s, p) {
     // Enemy crits: a roll on every damage attack (from enemy level 3).
     let crit = (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit;
     if (crit && fxFire(s, 'struck', { do: 'crit-normal' }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have crit. It lands as a normal hit.`, { source: p.id }); }
-    const half = fxFire(s, 'struck', { do: 'halve' })[0];
+    let half = fxFire(s, 'struck', { do: 'halve' })[0];
     if (half) emit(s, 'blocked', `${half.it.name}: ${atk.name} deals half.`, { source: p.id });
+    else if (e.hardened > 0) { e.hardened--; half = true; emit(s, 'blocked', `Hardened: ${atk.name} deals half.`, { source: p.id }); }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * (half ? 0.5 : 1)), p.id, atk.name);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
@@ -2481,7 +2492,7 @@ function runDaemons(s) {
     if (!acted) continue;
     e.daemonReady[id] = e.cycle + d.cooldown;
     e.metrics.daemon = (e.metrics.daemon || 0) + 1;
-    if (hasTalent(s, 'supervisor') && e.readyAt.deploy) e.readyAt.deploy -= 1;
+
   }
 }
 // Watchman: once per fight, a big attack about to land waits a cycle.

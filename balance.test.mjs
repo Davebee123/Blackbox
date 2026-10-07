@@ -43,4 +43,4 @@ const band = (lo, hi) => () => {
   }
   assert.deepEqual(off, []);
 };
-test('target band: a blue-geared fight at your level costs every class 22–35% of its health, classes within 15 points', { todo: 'Phase 3 class passes and Hardened rework' }, band(22, 35));
+test('target band: a blue-geared fight at your level costs every class 22–35% of its health, classes within 15 points', { todo: 'class tuning: late-game Operator, the level-18 stretch' }, band(22, 35));

@@ -43,7 +43,7 @@ test('Fork Bomb (double on Exposed); Thermal Runaway grows; Brace blocks and cra
   const z = quiet(start('breaker', ['zero-day']));
   big(z, 'pulse');
   act(z, 'zero-day pulse');
-  assert.equal(lost(z, 'pulse'), 80);
+  assert.equal(lost(z, 'pulse'), 65);
   assert.match(command(z, 'zero-day pulse').at(-1).message, /used up/);
   const b = start('breaker', ['brace']);
   part(b, 'encryptor').attack = null;
@@ -82,7 +82,7 @@ test('Purge burns, heals and decrypts; Reclaim heals half; Quarantine delays and
   act(f, 'failover');
   assert.equal(lost(f, 'pulse'), 20, 'a quarter of 80 missing');
   const h = start('bastion', ['harden']);
-  h.encounter.chits = 0;
+  h.encounter.hardened = 0;
   act(h, 'harden');
   assert.equal(h.encounter.chits, 1);
 });
@@ -161,7 +161,7 @@ test('talents change the numbers they say', () => {
   act(y, 'patch');
   assert.equal(y.server.integrity, 70, 'Service Pack: 20 up front');
   y.server.integrity = 5;
-  y.encounter.chits = 0;
+  y.encounter.hardened = 0;
   part(y, 'pulse').attack = { name: 'Surge', effect: 'damage', amount: 14, interval: 4, due: y.encounter.cycle };
   act(y, 'hold');
   assert.equal(y.server.integrity, 1, 'Uptime holds at 1');

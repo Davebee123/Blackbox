@@ -147,7 +147,7 @@ export const ABILITIES = {
   'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 6, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 6→18', help: 'thermal-runaway <part> — burns it for 6, then 10, 14 and 18.' },
   brace: { cls: 'breaker', verb: 'buff', name: 'Brace', target: 'none', damage: 0, cycles: 2, block: 5, cooldown: 5, icon: 'shell-shield', short: 'Block 5, crack back', help: 'brace — for 2 cycles: +5 Block, and whatever hits you loses an armor chit (or takes 10 if it has none).' },
   sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
-  'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 80, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 80 through armor, once', help: 'zero-day <part> — 80 damage straight through armor. Once per fight.' },
+  'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through armor, once', help: 'zero-day <part> — 65 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
   'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 40, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 40 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits.' },
   firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — shields you from the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
@@ -168,7 +168,7 @@ export const ABILITIES = {
   detonate: { cls: 'infiltrator', verb: 'hit', name: 'Detonate', target: 'part', damage: 0, cooldown: 4, icon: 'event-warning', short: 'Burns now ×1.5', help: 'detonate <part> — every burn on it deals all its remaining damage now, ×1.5.' },
   opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: 'Hit 50 (after a miss)', help: 'opening <part> — hits it for 50 the cycle after an attack misses you or is delayed.' },
   propagate: { cls: 'infiltrator', verb: 'util', name: 'Propagate', target: 'part', damage: 0, cooldown: 5, icon: 'mutation', short: 'Copy burns to all', help: 'propagate <part> — copy your burns on it to every other part.' },
-  'null-route': { cls: 'infiltrator', verb: 'shield', name: 'Null Route', target: 'none', damage: 0, cooldown: 5, icon: 'behavior', short: 'Dodge; next skill crits', help: 'null-route — every attack this cycle misses you, and your next skill crits.' },
+  'null-route': { cls: 'infiltrator', verb: 'shield', name: 'Null Route', target: 'none', damage: 0, cooldown: 6, icon: 'behavior', short: 'Dodge one; next skill crits', help: 'null-route — the next attack misses you, and your next skill crits.' },
   implant: { cls: 'infiltrator', verb: 'burn', name: 'Rootkit Implant', target: 'part', damage: 0, tick: 10, ticks: 99, once: true, cooldown: 0, icon: 'injector', short: 'Burn 10 until it breaks', help: 'implant <part> — burns it for 10 every cycle until the part breaks. Once per fight.' },
   // Operator: helpers, and what you do with them
   deploy: { cls: 'operator', verb: 'burn', name: 'Deploy', target: 'part', damage: 0, helper: 12, ticks: 4, cooldown: 4, icon: 'command', short: 'Helper 12 ×4', help: 'deploy <part> — sends a helper to hit it for 12 every cycle for 4 cycles (it moves on if the part breaks).' },
@@ -212,7 +212,7 @@ export const SKILLS = {
   momentum: 0.1, // Breaker passive: +10% per part you break...
   momentumMax: 3, // ...up to 3 stacks (+30%)...
   momentumCycles: 2, // ...lasting 2 cycles after your last break (each break refreshes it)
-  hardened: 1, // Bastion passive: armor chits you start a fight with
+  hardened: 1, // Bastion passive: damage hits each fight that land at half (a full block was too much)
   siphonSignalShare: 1, // Siphon heals Signal on runs, Integrity at home
   fixedCounter: 12,
 };
@@ -493,7 +493,9 @@ export const mobPower = (level) => power(level) * 1;
 
 // Elites: group content (a third of a Pit's folders, the trunk server's too). Much bigger, harder
 // hitting and better armored; they pay three times the XP and roll for drops three times.
-export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3 };
+// Elites are crew rooms (WoW elites): very unlikely solo, three loot rolls, a blue at least, a small
+// unique chance. Only in Pit folders, never on the way to anything you need.
+export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08 };
 
 // Build a virus from a named fixture or a seeded random variant.
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
@@ -696,7 +698,7 @@ export const ARCHETYPES = {
     ],
     talents: [
       [t('sharp-exploit', 'Sharp Exploit', 'Exploit also deals 20 damage.'), t('hair-trigger', 'Hair Trigger', 'Overload has cooldown 2 but deals 35.')],
-      [t('core-dump', 'Core Dump', 'Segfault\'s execute starts under 40%.'), t('piercing', 'Piercing', 'Overload goes straight through armor.')],
+      [t('core-dump', 'Core Dump', 'Segfault\'s execute starts under 40%.'), t('piercing', 'Piercing', 'Your first Overload each fight goes straight through armor.')],
       [t('cascade-failure', 'Cascade Failure', 'Your first break each fight resets your cooldowns.'), t('unsafe-mode', 'Unsafe Mode', '+30% damage dealt, +20% damage taken.')],
     ],
   },
@@ -711,7 +713,7 @@ export const ARCHETYPES = {
       [f('hardened-kernel', 'Hardened Kernel', 'Take 3% less damage from attacks per rank.', 0.03), f('reverse-shell', 'Reverse Shell', 'Retaliate hits +5 per rank.', 5)],
     ],
     talents: [
-      [t('deep-packet-inspection', 'Deep Packet Inspection', 'Firewall absorbs 40.'), t('service-pack', 'Service Pack', 'Patch heals 20 up front.')],
+      [t('deep-packet-inspection', 'Deep Packet Inspection', 'Firewall absorbs 30.'), t('service-pack', 'Service Pack', 'Patch heals 20 up front.')],
       [t('backpressure', 'Backpressure', 'Throttled cuts attacks by 75%.'), t('active-defense', 'Active Defense', 'Retaliate stays lit for 2 cycles.')],
       [t('uptime', 'Uptime', 'Once per fight, a hit that would drop you to 0 leaves you at 1.'), t('preemption', 'Preemption', 'Suspend has cooldown 2.')],
     ],
@@ -745,7 +747,7 @@ export const ARCHETYPES = {
     talents: [
       [t('big-process', 'Big Process', 'Deploy helpers deal 14.'), t('long-running', 'Long-running', 'Deploy helpers last 6 cycles.')],
       [t('extra-nodes', 'Extra Nodes', 'Botnet sends 4 helpers.'), t('hive', 'Hive', 'Your helper cap is 9.')],
-      [t('parallel-deploy', 'Parallel Deploy', 'Deploy starts two helpers at half damage: same total, twice the hits for Hook.'), t('supervisor', 'Supervisor', 'Each time a daemon acts, Deploy’s cooldown drops by 1.')],
+      [t('parallel-deploy', 'Parallel Deploy', 'Deploy starts two helpers at half damage: same total, twice the hits for Hook.'), t('supervisor', 'Supervisor', 'Kill Switch readies Deploy.')],
     ],
   },
 };

@@ -401,7 +401,7 @@ function ls(s, all = false) {
   if (isWild(loc)) {
     const spawns = loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc);
     const sp = spawns[s.run.cwd];
-    if (sp?.alive) entries.push({ kind: 'virus', name: sp.name + '.exe', size: `lv${sp.level}`, cmd: `attack ${sp.name}`, tags: [FAMILIES[sp.family].name.toLowerCase()], jobs: jobNames(s, { family: sp.family, zone: true, name: sp.bounty ? sp.name : null, level: sp.level }) });
+    if (sp?.alive) entries.push({ kind: 'virus', name: sp.name + '.exe', size: `lv${sp.level}`, cmd: `attack ${sp.name}`, tags: [...(sp.elite ? ['crew'] : []), FAMILIES[sp.family].name.toLowerCase()], jobs: jobNames(s, { family: sp.family, zone: true, name: sp.bounty ? sp.name : null, level: sp.level }) });
   }
   // A server you own: the process its last log rotation brought in (root.mjs).
   const proc = procIn(loc, s.run.cwd);
@@ -415,7 +415,7 @@ function ls(s, all = false) {
     // What's waiting in there counts for a contract: a guard you haven't beaten, or a rogue folder's virus.
     const g = guarded(loc, full) && layoutOf(loc)[full]?.guard, wild = hostile && loc.spawns[full];
     const jobs = g ? jobNames(s, { family: g, zone: false, level: levelOf(loc) }) : wild ? jobNames(s, { family: wild.family, zone: true, name: wild.bounty ? wild.name : null, level: wild.level }) : [];
-    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile'] : tags, people, jobs });
+    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile', ...(loc.spawns[full].elite ? ['crew'] : [])] : tags, people, jobs });
   }
   for (const f of here.files.filter(show)) {
     const info = fileInfo(loc, s.run.cwd, f);

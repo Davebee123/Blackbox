@@ -94,7 +94,7 @@ export const BASES = {
 };
 export const PRIMARY_STATS = ['damage', 'signal', 'reduction', 'regen'];
 // Every base's primaries × this (tuned with the monster pass, see friction.mjs).
-export const ITEM_SCALE = { primary: 0.42, unique: 0.7 }; // unique: on a named unique's stats (not its downside)
+export const ITEM_SCALE = { primary: 0.42, unique: 0.5 }; // unique: on a named unique's stats (not its downside); about a yellow, its effect is the point
 // The best base of a slot at an item level (the highest tier unlocked).
 export const baseFor = (slot, level) => Object.entries(BASES).filter(([, b]) => b.slot === slot && !b.uniqueOnly && b.level <= Math.max(1, level)).sort((a, b) => b[1].level - a[1].level)[0]?.[0] || null;
 

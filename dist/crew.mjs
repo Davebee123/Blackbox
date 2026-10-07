@@ -13,7 +13,7 @@
 // Crewmates live beside the save (not in it): s.crewSim holds who's in the crew.
 import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part } from './combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './gear.mjs';
-import { ARCHETYPES } from './data.mjs';
+import { ARCHETYPES, SKILLS } from './data.mjs';
 import { planner } from './planner.mjs';
 import { online, isFriend } from './presence.mjs';
 import { isMember } from './consortium.mjs';
@@ -95,7 +95,7 @@ hooks.crewEngage = (s) => {
   for (const m of mates) {
     m.run.integrity = m.run.max = maxSignal(m); // crewmates rest up between fights
     m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null,
-      chits: classOf(m) === 'bastion' ? 1 : 0, metrics: structuredClone(e.metrics), down: false };
+      chits: 0, hardened: classOf(m) === 'bastion' ? SKILLS.hardened : 0, metrics: structuredClone(e.metrics), down: false };
     decide(m);
   }
   emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and consortium in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', consortium' : ''})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);

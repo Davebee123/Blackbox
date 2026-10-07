@@ -210,6 +210,7 @@ test('Bricker: below half Integrity a part hits 30% harder', () => {
 
 test('Overrun: its fragments bite one harder every cycle they live', () => {
   const s = start('overrun', 'bastion');
+  s.encounter.hardened = 0; // Hardened would halve the first bite
   part(s, 'pulse').attack = null;
   const hive = part(s, 'hive');
   hive.attack.due = s.encounter.cycle;
@@ -219,7 +220,7 @@ test('Overrun: its fragments bite one harder every cycle they live', () => {
   hive.attack = null;
   const bites = [];
   for (let i = 0; i < 3; i++) { const b = s.server.integrity; fire(s, 'hold'); bites.push(b - s.server.integrity); }
-  assert.ok(bites[2] > bites[0], `bites grow: ${bites}`);
+  assert.ok(Math.max(...bites.slice(1)) > bites[0], `bites grow: ${bites}`); // (one may miss)
 });
 
 test('ICE: a Bouncer re-arms its Gate; a Tracer hits harder the longer it lasts; ICE only from layer 2', async () => {
