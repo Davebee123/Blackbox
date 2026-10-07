@@ -2662,7 +2662,7 @@ button.mk-row.open { background: rgba(241, 185, 47, 0.08); border-bottom-color: 
 /* Hover card for a file moving on the map. */
 .pkt-tip { position: fixed; z-index: 80; pointer-events: none; }
 .pkt-card { min-width: 190px; display: grid; gap: 6px; padding: 10px 12px; background: rgba(10, 8, 5, 0.97); border: 1px solid var(--line-strong); border-top: 2px solid var(--you); border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); font-size: 12px; }
-.pkt-card.pay { border-top-color: var(--hot); }
+.pkt-card.pkt-pay { border-top-color: var(--hot); }
 .pkt-top { display: flex; gap: 8px; align-items: center; }
 .pkt-top .glyph { width: 22px; height: 22px; color: var(--amber); }
 .pkt-top span { display: grid; }

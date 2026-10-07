@@ -1719,7 +1719,7 @@ export function trafficMarkup(s, nodes) {
 // hub-to-hub traffic the price gap it's chasing. t: { icon, what, n, from, to, credits?, lands?, lo?, hi? }.
 export function packetTipMarkup(t, now = Date.now()) {
   const ware = WARES[t.icon] ? t.icon : null, file = t.pay ? `${(t.what || '').toLowerCase().replace(/\W+/g, '_')}.bin` : `${ware || 'goods'}${t.n > 1 ? '_x' + t.n : ''}.dat`;
-  return `<div class="pkt-card${t.pay ? ' pay' : ''}"><div class="pkt-top">${glyph(t.icon || 'item', 'badge')}<span><b>${esc(t.what)}${t.n > 1 ? ` <small>×${t.n}</small>` : ''}</b><code>${esc(file)}</code></span></div>
+  return `<div class="pkt-card${t.pay ? ' pkt-pay' : ''}"><div class="pkt-top">${glyph(t.icon || 'item', 'badge')}<span><b>${esc(t.what)}${t.n > 1 ? ` <small>×${t.n}</small>` : ''}</b><code>${esc(file)}</code></span></div>
     <div class="pkt-route"><span>${esc(t.from)}</span><i>→</i><span>${esc(t.to)}</span></div>
     ${t.lo != null ? `<div class="pkt-row" title="Price a unit: where it's cheap → where it pays">${glyph('credits')}<b>${t.lo}</b><i>→</i><b class="up">${t.hi}</b><small>▲${Math.round((t.hi / Math.max(1, t.lo) - 1) * 100)}%</small></div>` : ''}
     ${t.credits ? `<div class="pkt-row">${glyph('credits')}<b class="${t.credits > 0 ? 'up' : ''}">${t.credits > 0 ? '+' : '−'}${Math.abs(t.credits)}</b></div>` : ''}
