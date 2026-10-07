@@ -16,7 +16,7 @@
   --text: #f0e2b6;
   --bright: #fff2c8;
   --muted: #b99d61;
-  --dim: #6f5b35;
+  --dim: #8f7748; /* 4.6:1 on the panel: it carries real information (senders, timers, hints) */
   --amber: #f1b92f;
   --amber-soft: #d69a22;
   --amber-deep: #7e5311;
@@ -27,7 +27,7 @@
   --next: #ffd85c;
   --you: #7fd1c7;
   --daemon: #c3a6ff;
-  --gray: #5c5446;
+  --gray: #7d7362;
   --sans: 'Inter Tight', 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', ui-monospace, monospace;
 }
@@ -1123,7 +1123,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .comms .act { font: 600 11px var(--mono); color: var(--amber); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .comms .quiet { padding: 12px; }
 @media (min-width: 1700px) { .pager .lcd { width: 180px; } }
-@media (max-width: 1439px) and (min-width: 901px) { .pager .lcd, .ctx-tabs .pager .lcd { display: none; } .pager { padding: 6px 7px; } }
+@media (max-width: 1439px) and (min-width: 1101px) { .pager .lcd { width: 130px; } .ctx-tabs .pager .lcd { display: none; } .pager { padding: 6px 7px; } }
+@media (max-width: 1100px) and (min-width: 901px) { .pager .lcd, .ctx-tabs .pager .lcd { display: none; } .pager { padding: 6px 7px; } }
 @media (max-width: 1300px) and (min-width: 901px) { .modules button { padding: 6px 4px; } }
 @media (max-width: 900px) { .pager .lcd { width: 120px; } .comms { top: 96px; right: 12px; } }
 .troot + .troot { margin-top: 6px; }

@@ -69,14 +69,16 @@ export const LAYOUTS = {
 LAYOUTS.sprawl = SPRAWL;
 const ZONE_FAMILIES = ['ransomware', 'worm', 'ghostroot'];
 // Fill empty folders whose timer is up. Each spawn is a plain virus of a home family at your level,
-// up to level 3: past that, the fights worth having are on the servers you trace.
+// up to CONFIG.zone.maxLevel: past that, the fights worth having are on the servers you trace. Below
+// level 3 no Ghostroot (it's veiled): your first fights show you what's coming (Slay the Spire).
 export function zoneSpawns(s, now = clock()) {
   const z = zoneOf(s);
   for (const room of zoneRooms()) {
     const sp = z.spawns[room];
     if (sp?.alive || (sp && sp.respawnAt > now)) continue;
     const n = ++z.serial;
-    const family = ZONE_FAMILIES[(n + room.length) % ZONE_FAMILIES.length];
+    const pool = hackerLevel(s) < 3 ? ZONE_FAMILIES.filter((f) => f !== 'ghostroot') : ZONE_FAMILIES;
+    const family = pool[(n + room.length) % pool.length];
     const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past CONFIG.zone.maxLevel
     z.spawns[room] = { alive: true, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].name.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
@@ -819,6 +821,9 @@ export function nextActions(s) {
   const acts = [];
   const proc = procIn(loc, s.run.cwd);
   if (proc) acts.push({ label: `attack ${proc.name}`, cmd: `attack ${proc.name}`, hot: true, note: proc.rare ? 'rare' : `lv ${proc.level}` });
+  // A live virus in this folder (SPRAWL-00, a rogue server): the tray offers it first.
+  const wild = isWild(loc) && (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
+  if (wild?.alive) acts.push({ label: `attack ${wild.name}`, cmd: `attack ${wild.name}`, hot: true, note: wild.elite ? 'crew' : `lv ${wild.level}` });
   const show = (n) => s.run.showHidden || !hiddenName(n);
   for (const f of here.files.filter(show)) {
     const full = join(s.run.cwd, f);

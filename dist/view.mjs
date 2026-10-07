@@ -952,6 +952,7 @@ function configRow(s, id, busy) {
 // Server architecture: picked at server level 20, a trade each way.
 function archMarkup(s) {
   const lvl = serverLevel(s), cur = archOf(s), busy = active(s);
+  if (lvl < ARCH_LEVEL - 5) return ''; // hidden until it's in sight
   if (lvl < ARCH_LEVEL) return `<section class="card arch-card locked"><h2>Architecture</h2><p class="svc-line"><span class="tag dim" title="Opens at server level ${ARCH_LEVEL}">server lv ${ARCH_LEVEL}</span></p></section>`;
   const opts = Object.entries(ARCHITECTURES).map(([id, a]) => `<li class="${cur === id ? 'on' : ''}"><span><b class="iname" title="${esc(a.rule)}">${glyph({ fortress: 'firewall', hub: 'router', lab: 'buildfarm' }[id], 'badge')}${esc(a.name)}</b></span>${cur === id ? '<span class="tag you">running</span>' : `<button type="button" class="btn ${cur ? '' : 'primary'} small" data-command="architecture ${id}" ${busy || (cur && s.server.credits < ARCH_SWITCH) ? 'disabled' : ''} title="${cur ? `Rebuild as a ${esc(a.name)}: ${ARCH_SWITCH} credits` : 'Build around this'}">${cur ? `Switch (${ARCH_SWITCH}c)` : 'Choose'}</button>`}</li>`).join('');
   return `<section class="card arch-card"><h2>Architecture${cur ? ` · ${esc(ARCHITECTURES[cur].name)}` : ''}</h2><ul class="craft-list">${opts}</ul></section>`;
@@ -1024,7 +1025,7 @@ const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title
 function lsMarkup(e) {
   const pulls = e.entries.filter((x) => x.pull).length;
   return `${e.here?.length ? `<div class="ls-here">here ${peopleChips(e.here)}</div>` : ''}<div class="ls">${pulls >= 2 ? `<div class="ls-all"><button type="button" class="tok act" data-run="pull all" title="Every file here into your pack">pull all · ${pulls}</button></div>` : ''}${e.entries.map((x) => {
-    const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => t === 'crew' ? '<span class="tag tag-crew" title="Crew room: an elite, built for a party. Very unlikely solo; three loot rolls, a blue at least.">◆ CREW</span>' : `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'hostile' ? 'hot' : 'dim'}">${esc(t)}</span>`).join('');
+    const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => t === 'crew' ? '<span class="tag tag-crew" title="Crew room: an elite, built for a party. Very unlikely solo; three loot rolls, a blue at least.">◆ CREW</span>' : `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'hostile' ? 'warn' : 'dim'}">${esc(t)}</span>`).join('');
     const name = x.kind === 'dir' ? (x.name === '..' ? '..' : x.name + '/') : x.name;
     const main = x.cmd.endsWith(' ') ? `data-prefill="${esc(x.cmd)}"` : `data-run="${esc(x.cmd)}"`;
     // Counts for a contract: a small marker, the contract(s) on hover.
@@ -1130,13 +1131,15 @@ export function daemonsMarkup(s) {
 // ---------- mail: letters, the contract board and the Halcyon retainer ----------
 // sel: 'l<id>' a letter, 'j<id>' a contract (taken or on the board).
 const jobTag = (s, c) => (c.done ? ['Done', 'dim'] : contractReady(s, c) ? ['Ready', 'you'] : c.offBooks ? ['Off books', 'hot'] : c.story !== undefined ? ['LOWLIGHT', ''] : ['Taken', '']);
+// Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
+const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
 function jobBox(s, c, now) {
   const isOffer = c.expiresAt != null;
   const pr = contractProgress(s, c), ok = contractReady(s, c);
   const full = heldCount(s) >= MAIL.take;
   const acts = c.done ? '' : isOffer
     ? `<button type="button" class="btn primary" data-command="mail accept ${c.id}" ${full ? `disabled title="You hold ${MAIL.take} contracts. Deliver or drop one first."` : ''}>Take</button>`
-    : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${c.story === undefined ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
+    : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${trackGo(c) && !ok ? `<button type="button" class="btn" data-go="${esc(trackGo(c))}">${glyph('trace')}Show on map</button>` : ''}${c.story === undefined ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
   return `<div class="contract${ok ? ' ready' : ''}${c.done ? ' done' : ''}${isOffer ? ' offer' : ''}">
     <div class="c-head"><b>${glyph({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer ? '<span class="tag you">your call</span>' : ''}</div>
     ${isOffer ? '' : `<div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.round(pr.part * 100)}%"></span></span><small>${esc(pr.text)}</small></div>`}

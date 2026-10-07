@@ -331,9 +331,12 @@ function leaveFight() { const to = ended === 'run' && campaign.run ? 'net' : 'ma
 // The gain card: a pull pops a one-row card that fades on its own; a jack-out shows everything
 // banked and waits for Enter (or a click, or the next command).
 let gainTimer = 0;
+// Rewards land in one place: a centred card (a toast for small things). A card already up queues the next.
+let gainQueue = [];
 function showGain(kicker, name, rows, toast) {
   const el = $('gain');
   if (!el) return;
+  if (!toast && gainOpen()) { gainQueue.push([kicker, name, rows, toast]); return; }
   clearTimeout(gainTimer);
   el.className = `gain${toast ? ' toast' : ''}`;
   el.innerHTML = V.gainMarkup(kicker, name, rows, !toast);
@@ -346,7 +349,13 @@ function showGain(kicker, name, rows, toast) {
   }, 260 + i * 110));
   if (toast) gainTimer = setTimeout(() => { el.classList.add('out'); gainTimer = setTimeout(hideGain, 400); }, 2600);
 }
-function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } }
+// A reward outside a fight: the event's own line, plus whatever XP and Fresh came with it in the same batch.
+function rewardCard(kicker, e, events, toast = false) {
+  const name = e.location ? campaign.locations?.find((l) => l.id === e.location)?.name || '' : '';
+  const rows = [{ label: String(e.message || '').replace(/^[A-Z ]+: /, '').replace(/\.$/, ''), qty: '', kind: 'found', text: e.message || '' }, ...V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6))];
+  showGain(kicker, name, rows, toast);
+}
+function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }
 const gainOpen = () => { const el = $('gain'); return el && !el.hidden && !el.classList.contains('toast'); };
 function hideSpoils() {
   document.body.classList.remove('fight-over'); const el = $('spoils'); if (el) { el.hidden = true; el.innerHTML = ''; } }
@@ -422,13 +431,13 @@ function react(events) {
         if (fx && big) feel.add(() => juice.quake(frac, e.crit));
         break;
       }
-      case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity)) notice(e.message); break;
+      case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity) && !active(campaign) && !won && !ended) rewardCard('Found', e, [e], true); break;
       case 'miss': feel.add('miss', e.target ? row(e.target) : '.bnow', 'MISS'); break;
       case 'evaded': feel.add('evade', MINE, 'EVADED'); break;
       case 'gear': feel.add('good', null); if (e.gains?.length) showGain('Deconstructed', e.name || '', e.gains, false); break;
       case 'code': if (!won) feel.add('pickup', null); break;
       case 'service': feel.add('good', null); break;
-      case 'service-done': feel.add('unlock', null); notice(e.message); break;
+      case 'service-done': feel.add('unlock', null); rewardCard('Installed', e, events, true); break;
       // Invasions: one line each, and only when something changes.
       case 'invader': notice(e.message); break;
       case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
@@ -479,12 +488,12 @@ function react(events) {
       case 'contract-done': feel.add('unlock', null); showGain('Contract delivered', e.name || '', e.gains || [], false); break;
       case 'standing-down': feel.add('nope', null); break;
       case 'contract-taken': feel.add('good', null); notice(e.message); break;
-      case 'bought': feel.add('pickup', null); notice(e.message); break;
+      case 'bought': feel.add('pickup', null); rewardCard('Bought', e, events, true); break;
       case 'relay': feel.add('jackin', null); notice(e.message); break;
 
       case 'synced': feel.add(e.surprise ? 'surprise' : 'sync', row(e.target) || '.bnow', e.surprise ? 'SURPRISE' : 'SYNCED'); if (fx) feel.add(() => juice.punch(0.5)); break;
       case 'boost': feel.add('unlock', '.net-signal', `+${e.amount}`); break;
-      case 'crafted': feel.add('pickup', null); notice(e.message); break;
+      case 'crafted': feel.add('pickup', null); rewardCard('Crafted', e, events, true); break;
       case 'fleet': case 'fleet-siege': feel.add('prewarn', null); break;
       case 'infest': feel.add('prewarn', null); break;
       case 'fleet-hit': feel.add('good', null); notice(e.message); break;
@@ -492,12 +501,15 @@ function react(events) {
       case 'config': feel.add('unlock', null); notice(e.message); break;
       case 'architecture': flash('REBUILT'); feel.add('win', null); notice(e.message); break;
       case 'outpost-up': feel.add('unlock', null); notice(e.message); break;
-      case 'harvester': feel.add('pickup', null); notice(e.message); break;
+      case 'harvester': feel.add('pickup', null); rewardCard('Compiled', e, events, true); break;
       case 'harvest': feel.add('pickup', null); break;
       case 'outpost-siege': case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
       case 'outpost-fell': flash('OUTPOST LOST'); feel.add('lose', null); break;
       case 'outpost-held': feel.add('good', null); notice(e.message); break;
-      case 'takeover': flash('TAKEN OVER'); feel.add('win', null); notice(e.message); break;
+      case 'takeover': flash('TAKEN OVER'); feel.add('win', null); rewardCard('Taken over', e, events); break;
+      case 'root': feel.add('unlock', null); rewardCard(`Root ${e.root}`, e, events); break;
+      case 'streak': feel.add('win', null); rewardCard('Streak', e, events); break;
+      case 'rotation': feel.add(e.rare ? 'prewarn' : 'good', null); break;
       case 'victory':
         flash('NEUTRALIZED');
         feel.add('win', '.hud');
@@ -515,6 +527,10 @@ function react(events) {
   barsBefore = after;
   pagerReact(events);
   shell.react(events);
+  // XP earned away from a fight (a vault, a sweep, a dead drop, a decode, a first craft): a quick card.
+  const carded = events.some((e) => ['takeover', 'root', 'streak', 'contract-done', 'crafted', 'bought', 'harvester', 'service-done'].includes(e.type));
+  const xpOut = !won && !ended && !active(campaign) && !carded && events.filter((e) => e.type === 'xp');
+  if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), !events.some((x) => x.type === 'level-up')); }
   if (events.length) dirty = true;
 }
 
@@ -614,7 +630,8 @@ function run(raw) {
   if (fighting && !warning && active(campaign) && !e.paused && e.queue && e.queue !== queuedBefore) { const more = command(campaign, 'now'); react(more); events = [...events, ...more]; }
   if (warning) notice(warning.message, true, warning.suggest);
   else {
-    const info = events.some((e) => e.type === 'contract-done') ? null : events.findLast((e) => ['info', 'repair', 'daemon-set', 'gear', 'drop', 'service', 'service-done', 'code'].includes(e.type));
+    // Rewards have their card; the corner keeps warnings and plain status (never "Server +N XP").
+    const info = events.some((e) => e.type === 'contract-done') ? null : events.findLast((e) => ['info', 'repair', 'daemon-set', 'service'].includes(e.type) && !e.serverXp);
     if (info) notice(info.message);
   }
   // (a connect or hang-up has its own sound, so the channel change stays quiet)
@@ -926,6 +943,9 @@ function renderMeters() {
   $('mail-count').hidden = !unreadMail;
   $('mail-count').textContent = unreadMail;
   $('tab-store').hidden = true; // Halcyon's store lives in its hub (connect halcyon → Shop)
+  // Craft shows up once there's something to make (WoW/FFXIV unlock UI as you go): a recipe, a plan, a config or filter source.
+  const craftable = (campaign.recipes || []).length || (campaign.plans || []).length || (campaign.configsKnown || []).length || (campaign.filterRecipes || []).length || (campaign.harvesters || []).length;
+  document.querySelector('[data-module="craft"]').hidden = !craftable && module !== 'craft';
   $('tab-consortium').hidden = !consortiumOf(campaign) && !campaign.consortiumInvite;
   fitTopbar();
   const need = alertsOf(campaign).length + (campaign.consortiumInvite && !consortiumOf(campaign) ? 1 : 0);
@@ -1647,6 +1667,16 @@ $('command-input').addEventListener('input', updateSuggestions);
 $('command-input').addEventListener('keydown', (e) => {
   const input = e.currentTarget;
   if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter') feel.key(e.key === 'Enter' ? 'enter' : e.key === 'Backspace' ? 'back' : 'char');
+  // In a fight, ] and [ on an empty line cycle your target through the living parts (WoW's Tab targeting).
+  if ((e.key === ']' || e.key === '[') && active(campaign) && !input.value.trim()) {
+    e.preventDefault();
+    const ids = campaign.encounter.virus.parts.filter((p) => p.integrity > 0).map((p) => p.id);
+    if (!ids.length) return;
+    const i = ids.indexOf(selected);
+    selected = ids[(i + (e.key === ']' ? 1 : -1) + ids.length) % ids.length];
+    dirty = true;
+    return;
+  }
   if (e.key === 'Tab') {
     if (!suggestionList.length) return;
     e.preventDefault();
