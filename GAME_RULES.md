@@ -837,11 +837,11 @@ Timed builds can be finished now for credits, Master of Orion style (`BUYOUT` in
 
 ## The pager
 
-The pager sits on the top bar, between the tabs and your meters (on narrower screens just its lamp and count). It keeps the last 40 world events on your save, so what happened while you were away is still there when you come back.
+The pager sits on the top bar, between the tabs and your meters (on narrower screens just its lamp and count). It keeps up to 20 world events on your save, and only while they still matter. News (pay, the retainer, standing, restocks, harvests, flags and finds) goes 10 minutes after it came in, read or not. Something to act on stays while it's true: an offer leaves with it from the board, a ready contract once you deliver it, a swarm or invasion alert once it's over, and nothing stays past an hour. The same news again (the next retainer, another restock) replaces the old line instead of stacking.
 
 - Its little screen scrolls the latest line; the lamp blinks amber while anything is unread, red if it's a breach; the number is how many you haven't seen.
 - Click it for **Comms**: the list, newest first (× on any entry clears just that one; Clear clears everything you have seen), filtered by All, Contracts (offers, contracts ready), Mail, Network (flags, relays, locations, invasions, swarms, breaches) or Money (retainer, pay, standing, the store). Each line has its sender, its age and a link to where it happened: the letter or contract in Mail, the server on the map, the Store, or Jack in for a breach. Opening it marks everything read.
-- **Handled** lines grey out and clear after 5 minutes: you handled one when you opened what it points at, or ticked it (✓). Lines with nothing to act on count as handled once seen. **Clear** removes everything you've seen.
+- **Handled** lines grey out and clear after 2 minutes: you handled one when you opened what it points at, or ticked it (✓). Lines with nothing to act on count as handled once seen. **Clear** removes everything you've seen.
 - An unanswered alert shakes the pager every 10 seconds until you open Comms. A **breach** makes the Integrity meter flash red with a pulsing BREACH badge, and pings every 15 seconds until it's dealt with.
 - It chirps for letters, offers, contracts ready, the retainer, flags, locations, invasions and dropped standing; pay for a delivery, rising standing, restocks and takeovers only light it up. While you're in a fight, only a breach chirps.
 

@@ -2070,7 +2070,7 @@ function mapSide(s, sel, node) {
   }
   if (node.kind === 'lead') {
     const f = FAMILIES[node.family];
-    return `<section class="card"><h2>Lead</h2><h1>${esc(f.name)} · ${node.progress}%</h1><div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.min(100, node.progress)}%"></span></span></div></section>`;
+    return `<section class="card"><h2>Lead</h2><h1>${esc(f.name)} · ${node.progress}%</h1><div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.min(100, node.progress)}%"></span></span></div><p class="op-hint">This traces the server that sends ${esc(f.name.toLowerCase())} viruses. Each one you kill fills it, and at 100% that server shows up on your map.</p></section>`;
   }
   const l = node.loc, st = nodeState(s, l);
   // A server you found but never connected: Connect asks first, showing the memory it takes.
@@ -2263,7 +2263,13 @@ export function spoilsOf(events) {
       const what = e.item ? itemLabel(e.item) : e.daemon || /daemon/i.test(e.message || '') ? 'Daemon' : e.recipe || /blueprint/i.test(e.message || '') ? 'Blueprint' : 'Drop';
       const kind = e.item ? 'item' : what === 'Daemon' ? 'daemon' : what === 'Blueprint' ? 'blueprint' : 'item';
       add(what, '', kind, { pack: !!e.pack, rarity: e.item?.rarity, sub: e.item ? statLine(e.item.stats) : '' });
-    } else if (e.type === 'lead') { const m = e.message.match(/(\w+) lead \+(\d+)% \((\d+)%\)/); add(m ? `${m[1]} lead` : 'Lead', m ? `+${m[2]}%` : '', 'lead', { text: m ? `${m[1]} lead +${m[2]}%` : 'Lead', pct: m ? Math.min(100, +m[3]) : null, from: m ? Math.max(0, +m[3] - +m[2]) : null }); }
+    } else if (e.type === 'lead') {
+      // Say where the trace leads: the server that sent this family, an unknown server, or a hub.
+      const m = e.message.match(/(\w+) lead \+(\d+)% \((\d+)%\)/), h = e.message.match(/Unknown (\w+) server past ([^:]+): (\d+)%/), f = e.message.match(/(\S+(?: \S+)?) hub trace (\d+)%/);
+      if (m) add(`Trace to a ${m[1].toLowerCase()} server`, `+${m[2]}%`, 'lead', { text: `Trace to a ${m[1].toLowerCase()} server +${m[2]}%`, sub: 'At 100% you find the server that sent them', pct: Math.min(100, +m[3]), from: Math.max(0, +m[3] - +m[2]) });
+      else if (h) add(`Trace to the unknown ${h[1]} server past ${h[2]}`, `${h[3]}%`, 'lead', { text: `Trace to the unknown ${h[1]} server past ${h[2]}: ${h[3]}%`, pct: Math.min(100, +h[3]) });
+      else if (f) add(`Trace to the ${f[1]} hub`, `${f[2]}%`, 'lead', { text: `Trace to the ${f[1]} hub: ${f[2]}%`, pct: Math.min(100, +f[2]) });
+    }
     else if (e.type === 'collected') add('New in collection', '', 'found', { text: `New in collection: ${e.message.replace(/^Collection: /, '')}` });
     else if (e.type === 'located') add(e.message.replace(/^[^:]*: /, 'Found ').replace(/\.$/, ''), '', 'found');
     else if (e.type === 'contract-ready') { if (/is down\. Contract ready/.test(e.message || '')) add('Bounty target down', '', 'bounty', { sub: 'Deliver it from Mail' }); else add('Contract ready', '', 'found'); }

@@ -3,7 +3,15 @@
 // Pure: events in, entries out. The pager itself (the top-bar widget and its list) lives in
 // view.mjs and app.js.
 
-export const COMMS = { keep: 40, doneMs: 5 * 60000 };
+// The pager keeps what still matters. News (money, harvests, flags) times out on its own; things
+// to act on (an offer, a ready contract, a swarm) stay while they're true and go when they aren't.
+export const COMMS = {
+  keep: 20,
+  doneMs: 2 * 60000, // a handled entry lingers this long, greyed out
+  newsMs: 10 * 60000, // news goes this long after it came in, read or not
+  actMs: 60 * 60000, // nothing waits longer than this
+};
+const NEWS = new Set(['paid', 'standing', 'store', 'net']);
 
 // Filters on the list, and which kinds sit under each.
 export const GROUPS = { Contracts: ['offer', 'ready'], Mail: ['mail'], Network: ['net', 'alert'], Money: ['paid', 'standing', 'store'] };
@@ -12,8 +20,8 @@ export const groupOf = (kind) => Object.keys(GROUPS).find((g) => GROUPS[g].inclu
 // event type → { kind, label, from, beep }. beep: whether the pager beeps (quiet ones only light up).
 const MAP = {
   mail: (e) => ({ kind: 'mail', label: 'Mail', from: e.from || 'Mail', text: e.subject || e.message.replace(/^New mail from [^:]+: /, ''), go: e.letter ? `mail:l${e.letter}` : 'mail', beep: true }),
-  board: (e) => ({ kind: 'offer', label: 'Offer', from: 'Halcyon board', text: e.message.replace(/^New offers? on the board: /, ''), go: e.offer ? `mail:j${e.offer}` : 'mail', beep: true }),
-  'contract-ready': (e) => ({ kind: 'ready', label: 'Ready', from: 'Contract', text: e.message.replace(/^Contract ready: /, ''), go: e.contract ? `mail:j${e.contract}` : 'mail', beep: true }),
+  board: (e) => ({ ref: e.offer, kind: 'offer', label: 'Offer', from: 'Halcyon board', text: e.message.replace(/^New offers? on the board: /, ''), go: e.offer ? `mail:j${e.offer}` : 'mail', beep: true }),
+  'contract-ready': (e) => ({ ref: e.contract, kind: 'ready', label: 'Ready', from: 'Contract', text: e.message.replace(/^Contract ready: /, ''), go: e.contract ? `mail:j${e.contract}` : 'mail', beep: true }),
   'contract-done': (e) => ({ kind: 'paid', label: 'Paid', from: 'Halcyon Mutual', text: e.message.replace(/^DELIVERED: /, ''), go: 'mail', beep: false }),
   retainer: (e) => ({ kind: 'paid', label: 'Retainer', from: 'Halcyon Mutual', text: e.message.replace(/^Halcyon retainer: /, ''), go: 'mail', beep: true }),
   'standing-up': (e) => ({ kind: 'standing', label: 'Standing', from: 'Halcyon Mutual', text: e.message, go: 'mail', beep: false }),
@@ -67,9 +75,9 @@ export function logComms(s, events, now = Date.now()) {
     const f = MAP[e.type];
     if (!f) continue;
     const c = { id: (s.commsSeq = (s.commsSeq || 0) + 1), t: now, seen: false, ...f(e) };
-    // Restocks and offers come often: fold a repeat into the last unseen line instead of stacking.
-    const last = list[0];
-    if (last && !last.seen && c.kind === 'store' && last.kind === 'store') { last.t = now; continue; }
+    // The same news again (a restock, the next harvest, another swarm alert) replaces the old line.
+    const twin = list.findIndex((x) => x.label === c.label && x.from === c.from && x.go === c.go && (x.kind !== 'offer' && x.kind !== 'ready'));
+    if (twin >= 0) list.splice(twin, 1);
     list.unshift(c);
     added.push(c);
   }
@@ -79,8 +87,19 @@ export function logComms(s, events, now = Date.now()) {
 export function seeAll(s, now = Date.now()) { for (const c of commsOf(s)) { c.seen = true; if (!c.go && !c.done) c.done = now; } } // nothing to do about it: seen is handled
 // Handled (you opened what it pointed at, or ticked it off): greyed out, and gone after COMMS.doneMs.
 export function markDone(s, id, now = Date.now()) { const c = commsOf(s).find((x) => x.id === id); if (c && !c.done) { c.done = now; c.seen = true; } }
+// Still true? An offer still on the board, a contract still waiting, a swarm or invasion still on.
+function live(s, c) {
+  if (c.kind === 'offer') return c.ref == null || (s.mail?.offers || []).some((o) => o.id === c.ref);
+  if (c.kind === 'ready') return c.ref == null || (s.mail?.jobs || []).some((j) => j.id === c.ref && !j.done);
+  if (c.kind === 'alert') {
+    if (c.go === 'jack') return !!s.invasion;
+    if (c.go === 'map:fleet' || c.from === 'Hub' || c.from === 'Outpost') return !!s.fleet || c.label === 'Lockdown';
+  }
+  if (c.event) return (s.events || []).some((x) => x.id === c.event);
+  return true;
+}
 export function pruneComms(s, now = Date.now()) {
-  const list = commsOf(s), keep = list.filter((c) => !c.done || now - c.done < COMMS.doneMs);
+  const list = commsOf(s), keep = list.filter((c) => (!c.done || now - c.done < COMMS.doneMs) && live(s, c) && now - c.t < (NEWS.has(c.kind) ? COMMS.newsMs : COMMS.actMs));
   if (keep.length !== list.length) { s.comms = keep; return true; }
   return false;
 }
