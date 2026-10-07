@@ -8,15 +8,17 @@ import { emit, warn, serverLevel, active } from './combat.mjs';
 import { freeOfMemory } from './root.mjs';
 
 export const MEMORY = {
+  on: false, // TESTING without memory: every server you find is on your network (flip back to true to restore it)
   base: 4, // slots at server level 1
   per: 5, // one more every this many server levels
   cost: (level) => 25 + 5 * Math.max(1, level), // credits to attach (detaching is free)
 };
 
-export const memoryCap = (s) => MEMORY.base + Math.floor(serverLevel(s) / MEMORY.per);
+export const memoryCap = (s) => (MEMORY.on ? MEMORY.base + Math.floor(serverLevel(s) / MEMORY.per) : Infinity);
 const byId = (s, id) => (s.locations || []).find((l) => l.id === id);
 // On your network: attached itself, and every server it was found through too.
 export function isLive(s, loc) {
+  if (!MEMORY.on) return true;
   for (let l = loc, n = 0; l && n < 50; l = l.parent ? byId(s, l.parent) : null, n++) if (l.detached) return false;
   return true;
 }
@@ -39,7 +41,13 @@ function wouldAdd(s, loc) {
 
 // When a server is found it's on the map, not on your network: you choose to connect it, and that
 // takes memory (no credits the first time: Connect on its card, or connect <server>, asks first).
+// Without memory, an old save's detached and found-but-not-joined servers all come back on.
+export function memoryRestore(s) {
+  if (MEMORY.on) return;
+  for (const l of s.locations || []) delete l.detached;
+}
 export function onFound(s, loc) {
+  if (!MEMORY.on) { loc.unseen = true; return; } // on your network at once; unseen = never connected (FIND_CAP)
   loc.detached = true;
   loc.fresh = true;
 }
@@ -47,6 +55,7 @@ export function onFound(s, loc) {
 export const joinCost = (s, loc) => { const add = wouldAdd(s, loc); return { add, used: liveCount(s), cap: memoryCap(s), fits: liveCount(s) + add <= memoryCap(s) }; };
 
 export function memoryCommand(s, verb, id, now = Date.now()) {
+  if (!MEMORY.on) return warn(s, 'No memory limit: every server you find is on your network.');
   const loc = byId(s, id) || (s.locations || []).find((l) => l.name.toLowerCase() === id);
   if (!loc) return warn(s, `usage: ${verb} <server>`);
   if (active(s) || s.run) return warn(s, 'Jack out and finish your fight first.');

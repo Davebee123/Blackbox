@@ -92,7 +92,7 @@ test('never-connected finds are capped at ten: the oldest drops off the map', as
   const { FIND_CAP } = await import('./dist/combat.mjs');
   const s = at(5);
   for (let i = 0; i < FIND_CAP + 4; i++) addLocation(s, 'worm', 1);
-  assert.equal(s.locations.filter((l) => l.fresh).length, FIND_CAP);
+  assert.equal(s.locations.filter((l) => l.fresh || l.unseen).length, FIND_CAP);
 });
 
 test('root access: log rotations bring a process and a cache; clearing them raises Root, which pays off', async () => {

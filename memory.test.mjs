@@ -4,6 +4,7 @@ import { fresh, command, addLocation } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
 import { MEMORY, memoryCap, liveCount, isLive, memoryCost, branchOf, joinCost } from './dist/memory.mjs';
 import { outposts } from './dist/outpost.mjs';
+MEMORY.on = true; // these test the memory system itself (the game is trying it switched off)
 
 const world = (n) => { const s = fresh(); s.tutorialCompleted = true; for (let i = 0; i < n; i++) { const l = addLocation(s, 'worm', 1); command(s, `attach ${l.id}`); } return s; };
 

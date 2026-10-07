@@ -35,7 +35,7 @@ const siphon = (level = 5, traits = []) => ({ kind: 'siphon', level, traits });
 
 test('packaged natives are rare: only some vaults hold one, and they bank as harvesters', () => {
   const s = fresh();
-  for (let i = 0; i < 60; i++) command(s, 'developer location ' + ['worm', 'ransomware', 'ghostroot'][i % 3]);
+  for (let i = 0; i < 60; i++) { command(s, 'developer location ' + ['worm', 'ransomware', 'ghostroot'][i % 3]); for (const l of s.locations) { delete l.unseen; delete l.fresh; } } // visited: the find cap keeps them
   const share = s.locations.filter(hasVx).length / s.locations.length;
   assert.ok(share > 0 && share < 0.3, `share ${share}`);
   const loc = s.locations.find(hasVx);

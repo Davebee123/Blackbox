@@ -379,6 +379,7 @@ export function connect(s, id) {
   else {
     // A found server joins your network as you connect (the game asks first: app.js).
     if (loc.fresh && loc.detached) memoryCommand(s, 'attach', loc.id);
+    delete loc.unseen; // connected at last (FIND_CAP counts the ones you never have)
     // A waiting home intrusion is parked for the run and comes back afterwards.
     if (s.encounter?.phase === 'alert' && s.encounter.mode !== 'run') s.parked = s.encounter;
     if (s.encounter && s.encounter.phase !== 'active') s.encounter = null;

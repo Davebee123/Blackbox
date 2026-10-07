@@ -24,6 +24,7 @@ export const ROOT = {
   levelXp: 0.75, // kills of XP for each Root level
   freeMemory: 3, portAt: 4, yieldAt: 4, yield: 0.25, wallAt: 5, wallPlus: 3, doubleAt: 5,
   cache: (level, root) => Math.round((20 + 4 * level) * (1 + 0.25 * (root - 1))), // credits in a rotated cache
+  spread: 6, // more servers than this spread the same cache money thinner (each pays spread/owned of it)
   stash: (level) => 4 + Math.floor(level / 4), // code in /root's stash
 };
 const now = () => hooks.now?.() ?? Date.now();
@@ -36,6 +37,8 @@ const rootState = (loc) => (loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: n
 export const rootProgress = (loc) => { const r = rootState(loc); return r.level >= ROOT.max ? null : { have: r.cleared, need: ROOT.need[r.level + 1] }; };
 // Root 3+: off your memory (memory.mjs).
 export const freeOfMemory = (loc) => rootOf(loc) >= ROOT.freeMemory;
+// Root 3 (without memory): the server stops sending invasions at you.
+export const quietAtRoot = (loc) => rootOf(loc) >= ROOT.freeMemory;
 export const rootPorts = (loc) => (rootOf(loc) >= ROOT.portAt ? 1 : 0);
 export const rootYield = (loc) => (rootOf(loc) >= ROOT.doubleAt ? 2 : rootOf(loc) >= ROOT.yieldAt ? 1 + ROOT.yield : 1);
 export const rootWall = (loc) => (rootOf(loc) >= ROOT.wallAt ? ROOT.wallPlus : 0);
@@ -59,7 +62,7 @@ export function rootFileInfo(loc, path, name, codeName) {
   if (!owned(loc)) return null;
   const level = loc.level || 1;
   if (path === '/' && name === CACHE_FILE && loc.root?.n) {
-    const amount = ROOT.cache(level, rootOf(loc));
+    const amount = loc.root.cache ?? ROOT.cache(level, rootOf(loc)); // set when the logs rotated (spread over the servers you hold)
     return { kind: 'credits', size: '12k', amount, text: [`rotated log cache #${loc.root.n}: about ${amount} credits in old payment tokens.`, 'pull it to take it. the next rotation leaves another.'] };
   }
   if (path === STASH_DIR && name === STASH_FILE && rootOf(loc) >= 2) {
@@ -84,6 +87,9 @@ export function rotate(s, loc, at, rooms) {
   const r = rootState(loc);
   r.n++;
   r.nextAt = at + ROOT.rotateMs;
+  // The cache it leaves: spread thinner the more servers you hold (ROOT.spread), so owning many isn't a money printer.
+  const held = (s.locations || []).filter((l) => l.takenOver).length || 1;
+  r.cache = Math.max(1, Math.round(ROOT.cache(loc.level || 1, rootOf(loc)) * Math.min(1, ROOT.spread / held)));
   // Fresh files: the cache and the stash can be taken again.
   if (loc.state?.taken) { delete loc.state.taken['/' + CACHE_FILE]; delete loc.state.taken[STASH_DIR + '/' + STASH_FILE]; }
   const seed = ((loc.seed || 1) * 7919 + r.n * 104729) >>> 0, rnd = seeded(seed);
@@ -114,4 +120,4 @@ export function processWon(s, e) {
     gainXp(s, xpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
   }
 }
-export const ROOT_PERKS = { 1: 'taken over', 2: '/root opens, with a stash of code', 3: 'off your memory', 4: '+1 module port, harvester +25%', 5: 'firewall +3, harvester doubled' };
+export const ROOT_PERKS = { 1: 'taken over', 2: '/root opens, with a stash of code', 3: 'it stops sending invasions', 4: '+1 module port, harvester +25%', 5: 'firewall +3, harvester doubled' };

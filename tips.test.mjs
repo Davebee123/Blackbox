@@ -78,6 +78,8 @@ test('the screens carry names, numbers and state, not explanations', () => {
 
 test('the newer systems have their tips: a found server’s memory, plans on Craft, and your harvester rack', async () => {
   const { addLocation } = await import('./dist/combat.mjs');
+  const { MEMORY } = await import('./dist/memory.mjs');
+  const was = MEMORY.on; MEMORY.on = true; // the memory tip, with memory switched on
   const s = fresh();
   s.tutorialCompleted = true;
   const loc = addLocation(s, 'worm', 1); // found: not on your network yet
@@ -91,6 +93,7 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   s.harvesters = [{ kind: 'siphon', level: 1, traits: [] }];
   markSeen(s, 'map-memory'); markSeen(s, 'map-owned');
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-install');
+  MEMORY.on = was;
 });
 
 test('your first protocol: Loadout, then Load at home; on a run the tip says it waits for home', async () => {

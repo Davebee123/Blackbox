@@ -1,7 +1,7 @@
 // BLACKBOX combat engine. Pure and deterministic: commands in, events out.
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
-import { onFound, memoryCommand, isLive, joinCost } from './memory.mjs';
+import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
 import { ELITE, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
 import { contractKill, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
@@ -678,8 +678,9 @@ export function addLocation(s, family, depth = 1, parent = null) {
 export const FIND_CAP = 10;
 function dropStaleFinds(s) {
   const busy = new Set(openContracts(s).flatMap((c) => [c.loc, (s.hidden || []).find((n) => n.id === c.hidden)?.via]).filter(Boolean));
-  const unused = (l) => l.fresh && l.detached && !busy.has(l.id) && !s.locations.some((x) => x.parent === l.id);
-  while (s.locations.filter((l) => l.fresh && l.detached).length > FIND_CAP) {
+  const never = (l) => (l.fresh && l.detached) || l.unseen; // found, never connected (unseen: memory off)
+  const unused = (l) => never(l) && !busy.has(l.id) && !s.locations.some((x) => x.parent === l.id);
+  while (s.locations.filter(never).length > FIND_CAP) {
     const old = s.locations.find(unused);
     if (!old) break;
     s.locations.splice(s.locations.indexOf(old), 1);
@@ -2910,6 +2911,7 @@ export function restore(raw) {
     if (s.encounter) { delete s.encounter.trace; delete s.encounter.pendingTrace; }
     retireWall(s, was);
     retireConfigs(s);
+    memoryRestore(s);
     retireTraits(s);
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
     initMail(s);
