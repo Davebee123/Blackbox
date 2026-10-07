@@ -97,7 +97,9 @@ export function planner(s) {
   if (t.armor > 0) {
     return first(s, [
       killNow(s, t),
-      armored(s).length >= 2 && 'fork-bomb',
+      // Fork Bomb strips one ◆ a part: worth it only when Crack is cooling. (Spamming it whenever two
+      // parts wore armor kept the Demolitionist from its real strip, Shaped Charge into Shatter.)
+      armored(s).length >= 2 && !ok(s, 'crack ' + t.id) && !ok(s, 'shaped-charge ' + t.id) && 'fork-bomb',
       armored(s).length >= 2 && 'garbage-collect',
       t.armor >= 2 && 'crack ' + t.id,
       t.armor >= 2 && 'botnet ' + t.id,
@@ -112,6 +114,7 @@ export function planner(s) {
   }
   return first(s, [
     killNow(s, t),
+    livingParts(s).filter(bare).length >= 3 && 'fork-bomb', // three bare parts: the area hit
     t.integrity > 40 && readyIn(s, 'overload') <= 1 && (t.patchAt == null || t.patchAt > s.encounter.cycle + 1) && 'exploit ' + t.id,
     burnsOn(s, t) >= 2 && 'detonate ' + t.id,
     t.integrity > 30 && 'tag ' + t.id,

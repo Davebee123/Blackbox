@@ -52,6 +52,11 @@ export const CONFIG = {
   twinReboot: { in: 3, at: 0.4, max: 1 }, // Mirror: a twin reboots this many cycles later at 40% with its armor, once
   mirrorBounce: 0.3, // Decoy: a mirrored command does nothing and this share bounces back
   runEarly: [1, 1, 1.35, 1.5, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
+  // ...and from level 10 a late step on top of that (linear between the points, flat after the last): your
+  // subclass, talents, a fifth and sixth protocol slot and v2–v3 services outgrow the 4% a level, so without
+  // it a same-level fight cost blues 30% at 10 and only 22–30% at 18–30. Bosses and elites keep their own
+  // numbers (crew content is tuned for crews).
+  runLate: [[9, 1], [10, 1.1], [18, 1.12], [30, 1.35]],
   xpEarly: { bonus: 0.15, full: 10, gone: 15 }, // levels up to 10 take 15% more XP, easing back to normal by 15
   // A broken part leaves salvage behind only sometimes.
   salvageChance: 0.35,
@@ -152,7 +157,7 @@ export const ABILITIES = {
   overload: { cls: 'breaker', verb: 'hit', name: 'Overload', target: 'part', damage: 40, cooldown: 3, icon: 'overload', short: 'Hit 40, crit resets', help: 'overload <part> — 40 damage. If it crits, its cooldown resets.' },
   exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 0, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Exposed: +25% crit', help: 'exploit <part> — Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
   crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 3, icon: 'shell-shield', short: 'Strip 3 ◆', help: 'crack <part> — breaks 3 ◆ on it at once.' },
-  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 62, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 62 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last ◆. 62 damage.' },
+  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 38, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 38 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last ◆. 38 damage.' },
   flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 38, cooldown: 4, icon: 'overload', short: 'Hit 38, ×2 if bare', help: 'flood <part> — 38 damage, double on a part with no armor left.' },
   segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 below 30%', help: 'segfault <part> — 30 damage, three times that on a part under 30%.' },
   'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 15, cooldown: 3, icon: 'overload', short: 'Hit 15 all', help: 'fork-bomb — 15 damage to every part, 30 to an Exposed one.' },
@@ -511,6 +516,12 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
 export const THREAT_STEPS = { armor: [{ threat: 14, part: 'special' }, { threat: 16, part: 'special' }, { threat: 22, part: 'basic' }], sooner: 24 };
 
 // Power at a level: 4% more per level from level 1 (players and enemies alike).
+// The late step (CONFIG.runLate) at an enemy level: 1 up to the first point, linear between points, flat after.
+export function runLate(level, pts = CONFIG.runLate) {
+  if (!pts?.length || level <= pts[0][0]) return 1;
+  for (let i = 1; i < pts.length; i++) if (level <= pts[i][0]) { const [a, x] = pts[i - 1], [b, y] = pts[i]; return x + ((y - x) * (level - a)) / (b - a); }
+  return pts.at(-1)[1];
+}
 export const power = (level) => 1 + CONFIG.powerPerLevel * (Math.max(1, level) - 1);
 // Enemies match you level for level (no soft start: the first fights should cost something).
 export const mobPower = (level) => power(level) * 1;
@@ -572,9 +583,10 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const specs = (strain ? strain.parts : family.parts).filter((spec) => !spec.from || ((random || overrides.family) && level >= spec.from));
   const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));
-  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * (CONFIG.runEarly[level - 1] ?? 1) : 1);
-  // Encryption stacks, so it skips the early-game step (it would compound).
-  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' && overrides.run ? CONFIG.runEarly[level - 1] ?? 1 : 1)));
+  const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
+  const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);
+  // Encryption stacks, so it skips the early-game and late steps (they would compound).
+  for (const p of parts) if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * dmgScale / (p.attack.effect === 'encrypt' ? step : 1)));
   for (const p of parts) if (p.attack?.effect === 'heal') p.attack.amount = Math.max(1, Math.round(p.attack.amount * scale * g.hp));
   for (const p of parts) if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * dmgScale)); // a special that also hits (the Scrambler)
   for (const p of parts) if (p.attack?.grow) p.attack.grow = Math.max(1, Math.round(p.attack.grow * dmgScale));
@@ -719,7 +731,7 @@ export const EDGE = {
   // sub: since subclasses, the old edge belongs to one of them (edge(s, cls) in combat.mjs checks it).
   breaker: { name: 'Overkill', rule: 'When your hit breaks a part, the damage left over spills onto the next part (up to 20).', cap: 20, sub: 'demolitionist' },
   bastion: { name: 'Grudge', rule: 'The part that last hit you takes +20% from your hits.', bonus: 0.2, sub: 'warden' },
-  infiltrator: { name: 'Weak Spot', rule: 'Your first hit on each part crits.', sub: 'phantom' },
+  infiltrator: { name: 'Weak Spot', rule: 'Your first hit on each part\'s bare code crits (not through armor).', sub: 'phantom' },
   operator: { name: 'Last Gasp', rule: 'Each helper hits once more as it expires.', sub: 'herder' },
 };
 // Sync Window bonuses: each class syncs its own way.

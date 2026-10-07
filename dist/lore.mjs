@@ -7,7 +7,7 @@ export const SKILL_TEXT = {
   overload: { desc: 'Overclock a part, dealing 40 damage. Critical hits reset the cooldown.', lore: 'Push the clock past spec and let the silicon scream.' },
   exploit: { desc: 'For 2 cycles, open a hole in a part\'s defenses, increasing the chance to crit on that part by 25%.', lore: 'Every system has a door somebody forgot to lock.' },
   crack: { desc: 'Crack a part\'s armor, removing 3 ◆.', lore: 'Hardened code is only hard until it isn’t.' },
-  shatter: { desc: 'Shatter a part, dealing 62 damage. Usable for 2 cycles after you strip a part\'s last armor.', lore: 'Once the shell is gone, there’s nothing left to catch you.' },
+  shatter: { desc: 'Shatter a part, dealing 38 damage. Usable for 2 cycles after you strip a part\'s last armor.', lore: 'Once the shell is gone, there’s nothing left to catch you.' },
   flood: { desc: 'Flood a part with garbage traffic, dealing 30 damage. Deals double damage to parts with no armor.', lore: 'Brute force is a strategy. An honest one.' },
   segfault: { desc: 'Crash a part, dealing 30 damage. Deals triple damage to parts below 30% health.', lore: 'Read past the end of the buffer and watch it fall over.' },
   'fork-bomb': { desc: 'Flood every part, dealing 15 damage to each. Exposed parts take 30.', lore: ':(){ :|:& };: — the oldest joke on the net.' },

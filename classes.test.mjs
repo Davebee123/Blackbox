@@ -87,7 +87,7 @@ test('Breaker Momentum: a stack per break, capped at 3, lasts 2 cycles from the 
   assert.equal(e.momentum.until, e.cycle - 1 + SKILLS.momentumCycles, 'refreshed by the last break');
 });
 
-test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (62) for 2 cycles; Segfault triples under 30%', () => {
+test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (38) for 2 cycles; Segfault triples under 30%', () => {
   const s = quiet(start('breaker'));
   const enc = Object.assign(part(s, 'encryptor'), { armor: 4, maxArmor: 4, integrity: 500, max: 500 });
   assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't lit/);
@@ -97,7 +97,7 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (62) f
   assert.equal(enc.armor, 0, 'the last chit');
   assert.equal(command(s, 'shatter encryptor').at(-1).type, 'queued', 'Shatter is lit');
   resolveCycle(s);
-  assert.equal(enc.max - enc.integrity, 62);
+  assert.equal(enc.max - enc.integrity, 38);
   assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't lit/, 'one use per window');
   const x = noArmor(quiet(start('breaker')));
   const p = Object.assign(part(x, 'pulse'), { integrity: 100, max: 100 });

@@ -81,7 +81,7 @@ export const subs = {
   },
   phantom: {
     name: 'Phantom', role: ['DPS', 'Burst', 'Stealth runs'], idea: 'In, out, and never seen.', solo: 'Crits, and the easiest runs.', crew: 'Gets the crew past guards and picks off parts.',
-    edge: { legacy: true, name: 'Weak Spot', rule: 'Your first hit on each part crits.' },
+    edge: { legacy: true, name: 'Weak Spot', rule: 'Your first hit on each part\'s bare code crits (not through armor).' },
     skills: ['null-route', 'opening', 'backstab', 'spoof', 'shadow-copy', 'tap', 'log-wipe', 'implant'],
     fillers: [
       [f('cold-open', 'Cold Open', 'Weak Spot hits deal +5% per rank.', 0.05), f('recon', 'Recon', 'Opening +5 damage per rank.', 5)],

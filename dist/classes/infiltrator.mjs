@@ -175,7 +175,7 @@ export default {
     let m = 1;
     if (opts.by === 'Detonate') m *= 1 + 0.1 * rank(s, 'shaped-charge');
     // Cold Open: the hit Weak Spot is about to crit.
-    if (opts.mine && !opts.dot && !opts.by && subEdge(s, 'phantom') && !e.weakHit?.[p.id]) m *= 1 + 0.05 * rank(s, 'cold-open');
+    if (opts.mine && !opts.dot && !opts.by && subEdge(s, 'phantom') && !(opts.pierce && p.armor > 0) && !e.weakHit?.[p.id]) m *= 1 + 0.05 * rank(s, 'cold-open');
     if (opts.mine && !opts.dot && !opts.by && e.lastSkill === 'backstab') m *= 1 + 0.1 * rank(s, 'pivot');
     return m;
   },
@@ -220,7 +220,8 @@ const dueIn = (s, p) => (p?.attack ? p.attack.due - s.encounter.cycle : 99);
 // What lands on you this cycle and next, by size.
 const incoming = (s, within = 0) => intents(s).filter((i) => i.col <= within && !i.hidden && (i.effect === 'damage' || i.hit)).reduce((n, i) => n + (i.effect === 'damage' ? i.amount : i.hit || 0), 0);
 // Damage still to come from your burns on a part (Polymorph's too).
-const queued = (s, p) => allBurnsOn(s, p).reduce((n, b) => n + b.damage * b.left, 0);
+// What Detonate would cash in: a Rootkit Implant isn't (it burns until the part breaks).
+const queued = (s, p) => allBurnsOn(s, p).reduce((n, b) => n + (b.id === 'implant' ? 0 : b.damage * b.left), 0);
 // A hit that breaks a part about to fire (or a bare one) right now, cheapest first (not a Shade out of phase).
 const HITS = ['opening', 'spike', 'backstab', 'backdoor'];
 const killNow = (s) => {
@@ -302,7 +303,7 @@ function phantomPlan(s, t, living, hurt) {
   const fresh = living.filter((p) => !e.weakHit?.[p.id]).length;
   if (fresh === 0 && living.length >= 2) { const c = first(s, ['log-wipe']); if (c) return c; }
   if (t.integrity >= 60) { const c = first(s, ['implant ' + t.id]); if (c) return c; }
-  // Weak Spot: the first hit on each part crits, so open on a fresh part with the biggest hit to hand.
+  // Weak Spot: the first hit on each part's bare code crits, so open on a fresh part with the biggest hit to hand.
   if (!e.weakHit?.[t.id] && !(e.cycle === 1 && e.sync?.surprise)) { const c = first(s, ['opening ' + t.id, 'backdoor ' + t.id, !t.armor && 'backstab ' + t.id, !t.armor && 'spike ' + t.id]); if (c) return c; }
   // A bare part: Backstab beats a Spike even without the crit.
   if (!t.armor && burnsOn(s, t).length >= 2) { const c = first(s, ['backstab ' + t.id]); if (c) return c; }

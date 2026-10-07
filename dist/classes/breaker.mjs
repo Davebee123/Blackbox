@@ -275,7 +275,7 @@ function planDemo(s, t) {
   if (dueNow(s).length || livingParts(s).some((p) => bare(p) && killable(s, p)) || killable(s, t) || (bare(t) && ok(s, 'shatter ' + t.id))) return null;
   const armorElsewhere = others.reduce((n, p) => n + (p.armor || 0), 0);
   // Strip: Shaped Charge on a thick shell, or when Crack is cooling (Cluster Charge: when the rest wear armor too).
-  const calm = (p) => !p.attack || p.attack.due - e.cycle >= 2; // provoked, its attack still lands after your next command
+  const calm = (p) => !A('shaped-charge').provoke || !p.attack || p.attack.due - e.cycle >= 2; // provoked (if it provokes), its attack still lands after your next command
   if (calm(t) && (t.armor >= 4 || (t.armor >= 2 && (!ok(s, 'crack ' + t.id) || (hasTalent(s, 'cluster-charge') && armorElsewhere >= 2))))) {
     if (ok(s, 'shaped-charge ' + t.id)) return 'shaped-charge ' + t.id;
   }

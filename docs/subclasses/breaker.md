@@ -12,9 +12,9 @@ A subclass line holds eight skills, which unlock at levels 12, 14, 18, 22, 26, 3
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
-| 12 | `shatter <part>` | Lights up for 2 cycles when you break a part's last ◆. It deals 62 damage. | lit |
+| 12 | `shatter <part>` | Lights up for 2 cycles when you break a part's last ◆. It deals 38 damage. | lit |
 | 14 | `fork-bomb` | Deals 15 damage to every part, or 30 to an Exposed one. | 3 |
-| 18 | `shaped-charge <part>` | Breaks every ◆ on the part at once, which lights Shatter. The blast is loud, so the part's attack comes a cycle sooner. On a part with no armor left, it deals 30 damage instead. | 5 |
+| 18 | `shaped-charge <part>` | Breaks every ◆ on the part at once, which lights Shatter. On a part with no armor left, it deals 30 damage instead. | 5 |
 | 22 | `thermal-runaway <part>` | Burns the part for 6, then 10, 14 and 18. | 4 |
 | 26 | `logic-bomb <part>` | Plants a bomb that goes off 2 cycles later. It deals 50 damage to that part and 20 to every other part. If the part breaks first, the bomb goes off on the next one. On armor, the 50 breaks two ◆. | 4 |
 | 30 | `chain-reaction` | For 3 cycles, every part you break blows up and hits every other part for 20. A part broken by a blast sets off a blast of its own. | 6 |
@@ -39,7 +39,7 @@ Choice tiers (pick one of two):
 | 2 | **Cascade Failure.** Your first break each fight resets all your cooldowns. | **Meltdown.** Thermal Runaway also starts on every other part at half strength. |
 | 3 | **Total Overkill.** Overkill spills onto every other part, not just the next one. | **Scorched Earth.** No part patches its ◆ back while you're in the fight. |
 
-**Playing it.** Strip first, then cash in. Crack and Shaped Charge take the armor off, Shatter lights up the moment the last ◆ breaks, and Fork Bomb finishes off single chits on several parts at once. Shaped Charge pulls the part's attack a cycle closer, so fire it when the attack is still a few cycles away, or when you can break the part before it lands. Logic Bomb and Chain Reaction reward fights with many parts, such as Worm fragments and bosses. Bit Rot is for parts that keep patching their armor back.
+**Playing it.** Strip first, then cash in. Crack and Shaped Charge take the armor off, Shatter lights up the moment the last ◆ breaks, and Fork Bomb finishes off single chits on several parts at once, or hits three bare parts together. Shatter is a finisher, not a one-shot: strip, Shatter, and follow up before the part patches. Logic Bomb and Chain Reaction reward fights with many parts, such as Worm fragments and bosses. Bit Rot is for parts that keep patching their armor back.
 
 ## Overclocker
 

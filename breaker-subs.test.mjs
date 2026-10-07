@@ -83,7 +83,7 @@ test('every talent and filler in both trees is implemented somewhere, and the tw
 });
 
 // ---------- Demolitionist ----------
-test('Shaped Charge: breaks every ◆ at once and lights Shatter, but its attack comes a cycle sooner; 30 on a bare part', () => {
+test('Shaped Charge: breaks every ◆ at once and lights Shatter (no longer provokes); 30 on a bare part', () => {
   const s = demo();
   part(s, 'encryptor').attack = null;
   const p = armor(s, 'pulse', 5);
@@ -92,10 +92,10 @@ test('Shaped Charge: breaks every ◆ at once and lights Shatter, but its attack
   const due = p.attack.due;
   act(s, 'shaped-charge pulse');
   assert.equal(p.armor, 0);
-  assert.equal(p.attack.due, due - 1, 'provoked');
+  assert.equal(p.attack.due, due, 'not provoked');
   assert.equal(p.patchAt, s.encounter.cycle - 1 + patchDelay(s));
   act(s, 'shatter pulse');
-  assert.equal(lost(s, 'pulse'), 62, 'Shatter was lit');
+  assert.equal(lost(s, 'pulse'), 38, 'Shatter was lit');
   assert.equal(readyIn(s, 'shaped-charge'), 3, 'cooldown 5');
   const b = noArmor(quiet(demo()));
   big(b, 'pulse');
@@ -182,7 +182,7 @@ test('Demolitionist fillers: Blast Radius, Shrapnel, Deep Burn', () => {
   armor(h, 'pulse', 2); big(h, 'pulse');
   act(h, 'shaped-charge pulse');
   act(h, 'shatter pulse');
-  assert.equal(lost(h, 'pulse'), Math.floor(62 * 1.08), 'Shrapnel: +8% a rank on Shatter');
+  assert.equal(lost(h, 'pulse'), Math.floor(38 * 1.08), 'Shrapnel: +8% a rank on Shatter');
   const d = noArmor(quiet(demo({ ranks: { 'deep-burn': 2 } })));
   big(d, 'pulse');
   act(d, 'thermal-runaway pulse');
@@ -398,7 +398,7 @@ test('the planner: Shaped Charge on a thick shell, Thermal Throttle through armo
   s.loadout.equipped.breaker = ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge'];
   assert.equal(planner(s), 'shaped-charge pulse');
   p.attack.due = s.encounter.cycle + 1;
-  assert.notEqual(planner(s), 'shaped-charge pulse', 'not when the provoked attack would land before you follow up');
+  assert.equal(planner(s), 'shaped-charge pulse', 'it no longer provokes, so an attack a cycle out is no reason to wait');
   const o = oc();
   part(o, 'encryptor').integrity = 0;
   const q = armor(o, 'pulse', 3); big(o, 'pulse');

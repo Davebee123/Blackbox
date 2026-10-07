@@ -68,7 +68,7 @@ The Hijacker takes over the virus's own attacks. It spends helpers as currency: 
 |---:|---|---|---:|
 | 12 | `jam <part>` | Pull one of your helpers off the part to push its attack back a cycle. The part is Jammed. | 2 |
 | 14 | `hijack <part>` | Pull one of your helpers off the part to take over its next attack. If that attack is a hit, it lands on another part of the virus for 60% of its size (up to 60), straight through armor. A part on its own hits itself. An encryption, a scramble, a spawn or a heal does nothing. The part is Jammed until then. | 6 |
-| 18 | `replay <part>` | Record the part's attack and play it back at it. The part takes its own attack's size, at least 20 and at most 40, straight through armor. | 5 |
+| 18 | `replay <part>` | Record the part's attack and play it back at it. The part takes its own attack's size, at least 20 and at most 30, straight through armor. | 5 |
 | 22 | `spoofed-ack <part>` | Fake the handshake. The part's attack waits a cycle, and the part takes half of that attack itself (at least 8, at most 40). The part is Jammed until the attack goes off. | 5 |
 | 26 | `barrier <part>` | Pull one of your helpers off the part and turn it into a shield worth all the damage it had left. | 3 |
 | 30 | `cache-poison <part>` | The part is Poisoned for 5 cycles. An armor patch it is due hits it for 15 instead, and its patch timer starts over. A heal it casts on its own side hurts the part it was meant for by the same amount. | 4 |
@@ -98,8 +98,9 @@ Measured with the class balance script (`balance.mjs`): blue gear, a talent poin
 
 | Level | Herder | Hijacker |
 |---:|---:|---:|
-| 10 | 33% | 38% |
-| 18 | 40% | 30% |
-| 30 | 27% | 25% |
+| 10 | 36% | 41% |
+| 18 | 45% | 34% |
+| 30 | 36% | 35% |
+| 50 | 41% | 38% |
 
-Both subclasses win every fight in these brackets. At level 10 the two only differ by their edge, because their lines start at level 12.
+Both subclasses win every fight in these brackets. (Balance pass: enemy hits on your Signal take the late step from level 10, `CONFIG.runLate`, and Replay is capped at 30, not 40: at level 50 it one-shot the lead part and the Hijacker lost only 10%.) At level 10 the two only differ by their edge, because their lines start at level 12.

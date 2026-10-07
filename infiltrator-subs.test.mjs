@@ -292,6 +292,31 @@ test('Weak Spot (Phantom edge) and Log Wipe: the first hit on each part crits; L
   });
 });
 
+test('Weak Spot needs bare code: a hit through armor neither crits nor uses it up', () => {
+  withEdges(() => {
+    const s = quiet(start('phantom'));
+    const p = Object.assign(big(s, 'pulse'), { armor: 2, maxArmor: 2 });
+    act(s, 'backdoor pulse');
+    assert.equal(lost(s, 'pulse'), 24, 'through armor: no crit');
+    p.armor = 0;
+    act(s, 'spike pulse');
+    assert.equal(lost(s, 'pulse') - 24, Math.floor(25 * 1.5), 'the first hit on its bare code crits');
+  });
+});
+
+test('Detonate cashes in burns but leaves a Rootkit Implant burning (its timer is "until it breaks")', () => {
+  const s = noArmor(quiet(start('payload')));
+  big(s, 'pulse');
+  act(s, 'implant pulse');
+  s.loadout.equipped.infiltrator.push('detonate');
+  assert.match(command(s, 'detonate pulse').at(-1).message, /Rootkit Implant/, 'nothing else to cash in');
+  act(s, 'inject pulse');
+  const before = lost(s, 'pulse');
+  act(s, 'detonate pulse');
+  assert.equal(lost(s, 'pulse') - before, Math.round(2 * 12 * 1.5) + 10, 'the Inject\'s two ticks ×1.5, and the Implant ticks on');
+  assert.equal(s.encounter.burns.filter((b) => b.id === 'implant').length, 1);
+});
+
 test('Phantom talents: Blind Spot (your first burn tick on each part crits), Kill Chain (a break readies Backstab and lights Opening)', () => {
   withEdges(() => {
     const s = noArmor(quiet(start('phantom', { talents: ['blind-spot'] })));

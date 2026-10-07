@@ -14,10 +14,10 @@ import { f, t } from './kit.mjs';
 export const abilities = {
   // Demolitionist: armor and area.
   'shaped-charge': {
-    cls: 'breaker', sub: 'demolitionist', verb: 'debuff', name: 'Shaped Charge', target: 'part', damage: 0, strip: 99, bareHit: 30, provoke: 1, cooldown: 5, icon: 'shell-shield',
-    short: 'Strip all ◆, provokes',
-    help: 'shaped-charge <part> — breaks every ◆ on it at once, but the blast is loud, so its attack comes a cycle sooner. On a part with no armor left, it deals 30 damage instead.',
-    desc: 'Blow the casing off a part, breaking every armor chit on it at once. The blast is loud, so the part\'s attack comes a cycle sooner. On a part with no armor left, it deals 30 damage instead.',
+    cls: 'breaker', sub: 'demolitionist', verb: 'debuff', name: 'Shaped Charge', target: 'part', damage: 0, strip: 99, bareHit: 30, cooldown: 5, icon: 'shell-shield',
+    short: 'Strip all ◆ at once',
+    help: 'shaped-charge <part> — breaks every ◆ on it at once. On a part with no armor left, it deals 30 damage instead.',
+    desc: 'Blow the casing off a part, breaking every armor chit on it at once. On a part with no armor left, it deals 30 damage instead.',
   },
   'logic-bomb': {
     cls: 'breaker', sub: 'demolitionist', verb: 'hit', name: 'Logic Bomb', target: 'part', damage: 0, bomb: 50, blast: 20, fuse: 2, cooldown: 4, icon: 'event-warning',

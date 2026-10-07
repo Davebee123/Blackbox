@@ -1588,7 +1588,7 @@ export function validate(s, intent) {
   if (intent.ability === 'crack' && !part(s, intent.target).armor) return `${part(s, intent.target).name} has no armor to crack.`;
   if (['suspend', 'quarantine', 'throttle', 'jam'].includes(intent.ability) && !part(s, intent.target).attack) return `${part(s, intent.target).name} has no attack.`;
   if (a.recall && !helpersOn(s, part(s, intent.target)).length) return `You have no helper on ${part(s, intent.target).name}.`;
-  if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).length) return `No burns on ${part(s, intent.target).name}.`;
+  if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).filter((b) => intent.ability !== 'detonate' || b.id !== 'implant').length) return `No burns on ${part(s, intent.target).name}${intent.ability === 'detonate' && burnsOn(s, part(s, intent.target)).length ? ' but the Rootkit Implant (it burns until the part breaks)' : ''}.`;
   if (['reroute', 'cron-storm'].includes(intent.ability) && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'kill-switch' && !e.helpers.length) return 'No helpers running.';
   const check = classCheck(intent.ability);
@@ -1900,8 +1900,9 @@ export function hit(s, p, base, opts = {}) {
   if (raw > 0 && opts.mine && e.subro === p.id) { raw *= 2; e.subro = null; emit(s, 'status', `Subrogation: ${p.name} pays double.`, { target: p.id }); }
   // Grudge (Bastion's edge): the part that last hit you takes more from your hits.
   if (raw > 0 && opts.mine && !opts.server && e.grudge === p.id && edge(s, 'bastion')) raw = Math.floor(raw * (1 + EDGE.bastion.bonus));
-  // Weak Spot (Infiltrator's edge): your first damaging hit on each part crits.
-  const weak = raw > 0 && opts.mine && !opts.dot && !opts.server && edge(s, 'infiltrator') && !(e.weakHit ||= {})[p.id];
+  // Weak Spot (Infiltrator's edge): your first damaging hit on each part's bare code crits (a hit
+  // through armor doesn't find it, and doesn't use it up).
+  const weak = raw > 0 && opts.mine && !opts.dot && !opts.server && edge(s, 'infiltrator') && !(opts.pierce && p.armor > 0) && !(e.weakHit ||= {})[p.id];
   if (weak) e.weakHit[p.id] = true;
   // Crits: a roll on every hit that does damage.
   // Buffer Overflow (Zero-day): after you break a part, your next damaging hit crits.
@@ -2210,7 +2211,9 @@ function useAbility(s, intent, auto = false) {
   }
   if (id === 'harden') { e.chits = (e.chits || 0) + 1; emit(s, 'status', `Hardened: the next attack on you does nothing${e.chits > 1 ? ` (${e.chits} chits)` : ''}.`, { mark: 'shield', ability: id }); }
   if (id === 'detonate') {
-    const mine = burnsOn(s, target);
+    // A Rootkit Implant burns until the part breaks: it has no "rest" to cash in, so it keeps burning
+    // (cashing in its 99-tick timer one-shot any part).
+    const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
     let total = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; e.burns.splice(e.burns.indexOf(b), 1); }
     hit(s, target, Math.round(total * 1.5 * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true });

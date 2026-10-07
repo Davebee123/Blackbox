@@ -322,7 +322,7 @@ test('Cache Poison: a patch that is due hits the part instead, and a heal it cas
   assert.equal(part(plain, 'pulse').armor, 1, 'without it, it patches');
 });
 
-test('Replay: the part takes its own attack, 20 to 40, through armor; Packet Capture adds 5 a rank', () => {
+test('Replay: the part takes its own attack, 20 to 30, through armor; Packet Capture adds 5 a rank', () => {
   const s = start({ sub: 'hijacker' });
   Object.assign(part(s, 'pulse'), { armor: 3, maxArmor: 3 });
   surge(s, 'pulse', 30, s.encounter.cycle + 3);
@@ -336,7 +336,7 @@ test('Replay: the part takes its own attack, 20 to 40, through armor; Packet Cap
   const hi = start({ sub: 'hijacker', ranks: { 'packet-capture': 2 } });
   surge(hi, 'pulse', 90, hi.encounter.cycle + 3);
   act(hi, 'replay pulse');
-  assert.equal(lost(hi, 'pulse'), 50);
+  assert.equal(lost(hi, 'pulse'), 40, 'capped at 30, +10');
 });
 
 test('Cold Storage: Barrier shields 10% more per rank', () => {

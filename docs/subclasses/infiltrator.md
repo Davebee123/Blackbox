@@ -21,7 +21,7 @@ When a part you are burning breaks, its burns jump to the part whose attack land
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
 | 12 | `wormable <part>` | Burns it for 10 a cycle for 4 cycles. Each cycle the burn you cast ticks, it also copies itself onto one more part that has no Wormable yet, with the time it has left. The copies burn but do not spread. | 3 |
-| 14 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. Polymorph's burn goes off too. | 4 |
+| 14 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. Polymorph's burn goes off too. A Rootkit Implant keeps burning: it has no end to cash in. | 4 |
 | 18 | `implant <part>` | Rootkit Implant. Burns it for 10 every cycle until the part breaks. Once per fight. | once |
 | 22 | `skim <part>` | Burns it for 9 a cycle for 4 cycles, and every tick that lands heals you 4. | 3 |
 | 26 | `propagate <part>` | Copies your burns on it to every other part. | 5 |
@@ -58,7 +58,7 @@ Phantom is the stealth and burst Infiltrator. It lands crits, dodges what it can
 
 ### Edge: Weak Spot
 
-Your first hit on each part crits. Burns do not count, so a Phantom opens on a fresh part with a hit (Backdoor, Backstab, Opening or Spike) and lets the burns follow.
+Your first hit on each part's bare code crits. Burns do not count, and neither does a hit that goes through armor (it doesn't use the Weak Spot up either), so a Phantom opens on a fresh bare part with a hit (Backstab, Opening, Spike, or Backdoor once the armor is off) and lets the burns follow.
 
 ### Skills
 
@@ -92,7 +92,7 @@ The tiers ask what kind of Phantom you are. Fast Hands, Kill Chain and Deep Cove
 
 ### How it plays
 
-Open on the part that hurts most with Backdoor: it goes through armor, and Weak Spot makes it crit. Backstab parts that are not about to attack, because those hits always crit. When a big attack is coming, Null Route or Shadow Copy takes it, and Opening is lit for the next cycle. Once every part has had its first hit, Log Wipe gives you all your Weak Spots back. A Lockbox caps how much its part can lose each cycle, which wastes a burst, so a Phantom breaks the Lockbox first.
+Open on the part that hurts most: Backdoor goes through armor (no crit until the armor is off), and the first hit on its bare code crits. Backstab parts that are not about to attack, because those hits always crit. When a big attack is coming, Null Route or Shadow Copy takes it, and Opening is lit for the next cycle. Once every part has had its first hit, Log Wipe gives you all your Weak Spots back. A Lockbox caps how much its part can lose each cycle, which wastes a burst, so a Phantom breaks the Lockbox first.
 
 ## Shared notes
 

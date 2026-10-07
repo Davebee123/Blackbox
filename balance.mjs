@@ -55,7 +55,7 @@ export function build(s, cls, b, opts) {
   if (!opts.noGear) {
     for (let i = 0; i < protocolSlots(b.level); i++) {
       if (SLOT_KINDS[i] === 'implant' && b.level < 15) continue;
-      const it = addItem(s, rollItem(seeded(b.level * 100 + i), { level: b.level, rarity: opts.rarity || 'tuned', group: SLOT_KINDS[i] }));
+      const it = addItem(s, rollItem(seeded(b.level * 100 + i + (opts.gearSeed || 0) * 7919), { level: b.level, rarity: opts.rarity || 'tuned', group: SLOT_KINDS[i] }));
       command(s, 'load ' + it.id);
     }
     s.services = { ...b.services };
@@ -119,7 +119,7 @@ export function hardScore(policy, b, opts = {}) {
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   const classes = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
-  let md = '# BLACKBOX class balance by level\n\nOne scripted planner for every class (it finishes bare or about-to-fire parts, answers attacks it cannot prevent, strips armor with small or spread hits, then finishes), playing each class’s own kit. Each bracket: 20 random home intrusions at your level and the four guards at the deepest layer reached (your level + 2 per layer). Your numbers and theirs both grow 4% per level; misses follow the level gap (5% at your level). Talents as a player would have them: a point at level 10 and every 2 levels after, spent in a fixed order (14 points at 50, not the whole tree). Everyone loads a Tuned (blue) protocol in every open slot (4, 5 at 15, 6 at 30) at their level (an implant slot only from 15, where implants start to drop) and runs a bracket’s worth of defensive services (none at 1; four v1 at 10; up to eight v3 at 50), except the no-gear column, which has neither. Crits are on for both sides (seeded). Health lost is a share of your own max. Scripted policies, not people.\n\n';
+  let md = '# BLACKBOX class balance by level\n\nOne scripted planner for every class (it finishes bare or about-to-fire parts, answers attacks it cannot prevent, strips armor with small or spread hits, then finishes), playing each class’s own kit (from level 10 its default subclass: Demolitionist, Warden, Phantom, Herder; every subclass has its own table below). Each bracket: 20 random home intrusions at your level and the four guards at the deepest layer reached (your level + 2 per layer). Your numbers and theirs both grow 4% per level, and enemy hits on your Signal take the late step from level 10 (`CONFIG.runLate`: ×1.1 at 10, ×1.12 at 18, ×1.35 from 30); misses follow the level gap (5% at your level). Talents as a player would have them: a point at level 10 and every 2 levels after, spent in a fixed order (14 points at 50, not the whole tree). Everyone loads a Tuned (blue) protocol in every open slot (4, 5 at 15, 6 at 30) at their level (an implant slot only from 15, where implants start to drop) and runs a bracket’s worth of defensive services (none at 1; four v1 at 10; up to eight v3 at 50), except the no-gear column, which has neither. Crits are on for both sides (seeded). Health lost is a share of your own max. Scripted policies, not people.\n\n';
   md += '| Bracket | Spike, no gear | ' + ['Spike only', ...classes].join(' | ') + ' |\n|---|---:|' + ['x', ...classes].map(() => '---:').join('|') + '|\n';
   const summary = {};
   for (const b of BRACKETS) {
@@ -133,7 +133,11 @@ if (isMain) {
   }
   md += '\nCells: wins · clean kills (nothing got through: no damage, encryption included) · average health lost · average cycles.\n\n## The hard slice\n\nEvery strain open at the level, six grade 2 wilds and six wilds two levels up.\n\n| Bracket | ' + classes.join(' | ') + ' |\n|---|' + classes.map(() => '---:').join('|') + '|\n';
   for (const b of BRACKETS) md += `| ${b.name} | ${classes.map((p) => { const r = hardScore(p, b); return `${r.wins}/${r.total} · ${r.lost.toFixed(0)}% · ${r.cycles.toFixed(1)}c`; }).join(' | ')} |\n`;
-  md += '\nTarget (a `todo` test in balance.test.mjs until Phase 3): a blue-geared fight at your level costs every class 22–35% of its health, classes within 15 points.\n\n## Skill use at level 50\n\n';
+  // Every subclass, from the level you pick one: the class columns above play each class's default.
+  const subs = Object.entries(CLASS).filter(([p]) => p !== 'Spike only').flatMap(([p, cls]) => Object.keys(ARCHETYPES[cls].subs).map((sub) => [p, sub]));
+  md += '\n## By subclass\n\nThe same fights for each of the eight subclasses (blues, the bracket\'s services and talents; the bar is the core four and the line\'s first three). Cells: health lost · wins.\n\n| Bracket | ' + subs.map(([, sub]) => SUBS[sub].name).join(' | ') + ' |\n|---|' + subs.map(() => '---:').join('|') + '|\n';
+  for (const b of BRACKETS.filter((x) => x.level >= SUBCLASS.from)) md += `| ${b.name} | ${subs.map(([p, sub]) => { const r = score(p, b, { sub }); return `${r.lost.toFixed(0)}% · ${r.wins}/${r.total}`; }).join(' | ')} |\n`;
+  md += '\nTarget (friction.mjs; a `todo` test in balance.test.mjs): a blue-geared fight at your level costs every subclass 35–45% of its health at levels 10, 18 and 30, subclasses within about 10 points.\n\n## Skill use at level 50\n\n';
   for (const p of classes) {
     const u = summary[p].at(-1).uses, total = Object.values(u).reduce((a, c) => a + c, 0);
     md += `- **${p}:** ${Object.entries(u).sort((a, c) => c[1] - a[1]).map(([k, v]) => `${k} ${Math.round((v / total) * 100)}%`).join(' · ')}\n`;
