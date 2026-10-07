@@ -214,19 +214,25 @@ test('a crash on your own server costs Halcyon standing, but a breach alone neve
   assert.equal(standing(t), 1);
 });
 
-test('GLASSJAW pays more (no Indemnity) but doing its work costs Halcyon standing', () => {
+test('GLASSJAW pays for the risk (2.5x credits, 1.5x XP, a protocol; no Indemnity), and doing its work costs Halcyon standing', () => {
   const s = contractor();
   s.standing.halcyon = 40;
-  let o;
-  for (let i = 0; i < 400 && !o; i++) { const x = offer(s, T0); if (x.offBooks && x.type === 'materials') o = x; }
-  assert.ok(o);
+  let o, h;
+  for (let i = 0; i < 400 && !(o && h); i++) { const x = offer(s, T0); if (x.type === 'materials') { if (x.offBooks) o ||= x; else if (!x.faction || x.faction === 'halcyon') h ||= x; } }
+  assert.ok(o && h);
   assert.equal(o.reward.indemnity, 0);
+  assert.ok(o.reward.credits >= h.reward.credits * 2.4, `${o.reward.credits} vs ${h.reward.credits}`);
+  assert.ok(o.reward.xp > h.reward.xp);
+  assert.ok(o.reward.drop, 'a protocol on delivery');
   s.mail.offers = [o];
   command(s, `mail accept ${o.id}`);
   s.materials[o.material] = 99;
+  const items = (s.stash || []).length;
   command(s, `mail deliver ${o.id}`);
   assert.equal(standing(s), 40 - MAIL.offBooksHit);
   assert.ok(standing(s, 'glassjaw') > 0);
+  assert.equal((s.stash || []).length, items + 1, 'the protocol');
+  assert.ok(['tuned', 'custom'].includes(s.stash.at(-1).rarity));
 });
 
 test('the hidden network: invaders from servers you haven’t found, traced back when you beat them', () => {

@@ -16,7 +16,7 @@
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
 // (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
 import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
-import { MATERIALS } from './gear.mjs';
+import { MATERIALS, rollItem, seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, learnDaemon, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
@@ -37,7 +37,8 @@ export const MAIL = {
   offerLife: [15 * 60 * 1000, 15 * 60 * 1000], // an offer nobody takes is gone after 15 minutes
   crashHit: 10, // standing lost when your server crashes
   offBooksHit: 8, // standing lost for doing GLASSJAW's work
-  offBooksPay: 1.6,
+  offBooksPay: 2.5, // GLASSJAW pays for the risk: 2.5x the credits, 1.5x the XP and a protocol (offBooksXp, delivered)
+  offBooksXp: 1.5,
   offBooksChance: 0.2,
   factionShare: 0.5, // of the rest of the board, once the hubs are up: other factions' work
   factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Indemnity)
@@ -301,6 +302,8 @@ export function offer(s, at = now()) {
     j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW wants it. Halcyon wants it more.' : 'pull it and bank it, then deliver it from Mail.'],
       reward: { credits: pay(50, 8), indemnity: ind(3), standing: 6, xp: 2.5, ...hit, ...repFor(6) } };
   }
+  // GLASSJAW's work is worth the standing it costs: more XP, and a protocol on delivery.
+  if (off) { j.reward.xp = Math.round(j.reward.xp * MAIL.offBooksXp * 10) / 10; j.reward.drop = true; }
   // Halcyon pays the Relay plan on one server job at a time, until you know it.
   if (faction === 'halcyon' && !off && ['takeover', 'item'].includes(type) && !(s.plans || []).includes('relay') && ![...openContracts(s), ...offers(s)].some((c) => c.reward?.plan)) j.reward.plan = 'relay';
   // The words: a variant from content/contracts.mjs, for this kind and side.
@@ -443,7 +446,7 @@ export const rewardLine = (s, c) => [
   c.reward.xp ? `${xpFor(s, hackerLevel(s), c.reward.xp)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
-  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.daemon ? 'a daemon' : '',
+  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.daemon ? 'a daemon' : '',
 ].filter(Boolean).join(' · ');
 
 // ---------- commands ----------
@@ -503,6 +506,7 @@ export function mailCommand(s, text, at = now()) {
     c.reward.blueprint && { label: 'Blueprint', qty: '', kind: 'blueprint', text: 'a blueprint' },
     c.reward.daemon && { label: 'Daemon', qty: '', kind: 'daemon', text: 'a daemon' },
     c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
+    c.reward.drop && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
   ].filter(Boolean);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
   if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
@@ -514,6 +518,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.reward.plan) learnPlan(s, c.reward.plan, 'Halcyon bonus: ');
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
   if (c.reward.daemon) learnDaemon(s, 'LOWLIGHT bonus: ');
+  if (c.reward.drop) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < 0.25 ? 'custom' : 'tuned' }), 'GLASSJAW paid in kind: '); }
   if (c.reward.item) giveUnique(s, c.reward.item, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `);
   if (c.story !== undefined) { s.mail.waiting = 'armed'; s.mail.waitFrom = at; const next = postStory(s, at); if (next) emit(s, 'mail', `New mail from ${next.from}: ${next.subject}.`, { letter: next.id, from: next.from, subject: next.subject }); }
 }
