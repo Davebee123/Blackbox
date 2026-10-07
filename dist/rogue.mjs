@@ -19,7 +19,7 @@ export const ROGUE = {
   rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,
-  relockMs: CONFIG.relockMs, // after you leave a wild server it won't take you back for a minute
+  relockMs: CONFIG.relockMs, // after you leave a wild server it won't take you back for 30 seconds
 };
 export const isRogue = (loc) => !!loc?.rogue;
 export const isWild = (loc) => !!(loc?.zone || loc?.rogue);

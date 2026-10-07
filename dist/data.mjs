@@ -123,7 +123,7 @@ export const CONFIG = {
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
   zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
-  relockMs: 60000, // any server but an outpost won't take you back for a minute after you leave: no jack out, top up, return
+  relockMs: 30000, // any server but an outpost won't take you back for 30 seconds after you leave: no jack out, top up, return
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
   degradedMs: 10 * 60000,
