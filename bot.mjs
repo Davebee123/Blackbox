@@ -126,6 +126,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
         if (s.run && procIn(loc, d, t)) { say('attack'); fight(); stats.procs = (stats.procs || 0) + 1; } // a log rotation's process (root.mjs)
         if (!s.run || s.run.cwd !== d) continue;
         for (const f of L[d].files || []) if (!/bait/.test(f) && !loc.state.taken[(d === '/' ? '' : d) + '/' + f]) say(`pull ${f}`);
+        if (s.encounter?.hunter) fight(); // traced: the hunter came (run.mjs TRACE)
         // A log sweep (forensics.mjs): a player reads it and works it out; the bot gets it on the
         // second try 70% of the time and gives up otherwise.
         if (d === '/' && sweepFile(loc) && !loc.state.sweep?.solved && !sweeps[loc.id]) {
@@ -136,7 +137,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
         if (L[d].locked) stats.vaults++;
       }
     }
-    if (s.run) say('jack out');
+    leave();
     seen.add(loc.id);
     if (loc.takenOver && !loc.relay && items(s).relay) command(s, 'relay ' + loc.id);
     return true;
@@ -151,7 +152,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/').sort((a, b) => named(a) - named(b));
     const grey = !sprawlWorth(); // outgrown: only the contract's named target
     for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; if (grey && !s.zone?.spawns?.[room]?.bounty) continue; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
-    if (s.run) say('jack out');
+    leave();
     return true;
   };
   // An invasion at the wall: jack in and fight it (unless it's far over your level).
@@ -164,6 +165,13 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     fight();
     stats.invasions = (stats.invasions || 0) + 1;
     return true;
+  };
+  // Leaving a run: a hunter on your trace has to be beaten first (run.mjs TRACE). If the fight
+  // runs past the bot's cap, it gives up on the run like a player pulling the plug.
+  const leave = () => {
+    if (s.encounter?.hunter) fight();
+    if (s.run?.hunter) { s.encounter = null; s.run.hunter = false; }
+    if (s.run) say('jack out');
   };
   const taken = {}, tries = {}, sweeps = {};
   let seedRnd = (seed * 2654435761) >>> 0; const rnd = () => ((seedRnd = (Math.imul(seedRnd, 1664525) + 1013904223) >>> 0) / 2 ** 32);
@@ -194,7 +202,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     say(`unlock ${STATION.dir.slice(1)} ${d.pass}`);
     say(`cd ${STATION.dir}`);
     for (const f of STATION.files) say(`pull ${f}`);
-    if (s.run) say('jack out');
+    leave();
     stats.drops2 = (stats.drops2 || 0) + 1;
     return true;
   };

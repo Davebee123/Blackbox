@@ -114,6 +114,7 @@ export const TIPS = [
 
   // ---------- runs ----------
   { id: 'net-signal', page: 'net', at: '.net-signal', text: 'Signal is your health while connected. Each cd costs 1, and hits in a fight cost more. At 0 you are sent home and lose the files you picked up here.' },
+  { id: 'net-trace', page: 'net', at: '.net-trace.hot', text: 'Trace is how loud you have been here. At 100 a hunter comes for you, and you cannot jack out until it is down.' },
   { id: 'net-names', page: 'net', at: '.term .ls .tok', text: 'Click a name to open it or read it. Use pull to copy a file into your pack.' },
   { id: 'net-guarded', page: 'net', at: '.term .tag-guarded', text: 'This folder is guarded. Going in starts a fight, and the guard\'s hits cost Signal.' },
   { id: 'net-locked', page: 'net', at: '.term .tag-locked', text: 'This folder is locked. The password is in a file somewhere on this node; type unlock, the folder and the password.' },

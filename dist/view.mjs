@@ -19,7 +19,7 @@ import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './a
 import { outpostPorts, modsOf, hasMod, schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, modStock, modCost, canBuildMod } from './outpost.mjs';
 import { OUTPOST, INFEST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
-import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns } from './run.mjs';
+import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
 import { dropOf, dropMinutes, spell } from './station.mjs';
 import { matesOf, mateUp } from './crew.mjs';
@@ -1113,6 +1113,7 @@ export function netMarkup(s, { leads = false } = {}) {
     <header class="net-head">
       <div class="net-where"><b>${esc(loc.name)}${loc.depth > 1 ? ` <span class="tag">layer ${loc.depth}</span>` : ''}${QUIRKS[loc.quirk] ? ` <span class="tag tag-quirk" data-quirk="${loc.quirk}" title="${esc(QUIRKS[loc.quirk].rule)}">${esc(QUIRKS[loc.quirk].name)}</span>` : ''}</b><span>${esc(s.run.cwd)}</span></div>
       <div class="net-signal ${level}" title="Signal: your health on this run. Moving costs ${CONFIG.cdCost}. At 0 you go home without your pack."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct}%"></span></span><strong>${s.run.integrity}</strong><small>/${s.run.max}</small></div>
+      ${!loc.zone && !loc.rogue ? `<div class="net-trace${(s.run.trace || 0) >= 70 ? ' hot' : (s.run.trace || 0) < TRACE.clean ? ' low' : ''}${s.run.hunter ? ' hunted' : ''}" title="Trace: how loud this break-in has been. Moves, pulls, wrong passwords and fights raise it; Spoof lowers it. At 100 a hunter comes and you can't jack out until it's down. Under ${TRACE.clean}% with the vault open: a clean job, +25% credits."><span class="lbl">Trace</span><span class="sigbar"><span style="width:${s.run.trace || 0}%"></span></span><strong>${s.run.hunter ? 'HUNTED' : (s.run.trace || 0) + '%'}</strong></div>` : ''}
       <button type="button" class="net-pack" data-run="pack" title="What you're carrying (unbanked)">pack <b>${s.run.pack.length}</b></button>
       <button type="button" class="net-pack net-leads-btn" data-leads aria-pressed="${leads}" title="Leads">${glyph('trace')}leads</button>
     </header>

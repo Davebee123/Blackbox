@@ -143,7 +143,9 @@ test('jack out banks the pack; a pulled signal file leads deeper', () => {
   assert.ok(packed >= vaultCode(loc.level || 1), 'the vault payload is a cache of code');
   say(s, 'jack out');
   assert.equal(s.run, null);
-  assert.equal(s.server.credits, credits + Math.round(CONFIG.cacheCredits * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1)));
+  const base = Math.round(CONFIG.cacheCredits * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1));
+  assert.equal(s.server.credits, credits + base + Math.round(base * 0.25), 'a clean job (vault opened, low trace) pays a quarter more');
+  assert.ok(s.logs.some((e) => e.type === 'clean-job'));
   assert.equal(s.materials[code], packed, 'banked on jack-out');
   const deeper = hiddenNodes(s).find((n) => n.via === loc.id && n.family === loc.deeper);
   assert.ok(deeper && deeper.lead >= HIDDEN.recordLead, 'the trace to a layer-2 node moves on');
@@ -720,4 +722,29 @@ test('every server but an outpost makes you wait a minute before reconnecting', 
   connect(s, loc.id);
   assert.ok(s.run, 'an outpost takes you straight back');
   assert.ok(CONFIG.relockMs >= 60000);
+});
+
+test('trace: moves, pulls and wrong passwords raise it; at 100 a hunter comes and blocks jack out until beaten', async () => {
+  const { TRACE } = await import('./dist/run.mjs');
+  const s = onRun();
+  const loc = currentLocation(s);
+  say(s, 'cd relay');
+  assert.equal(s.run.trace, TRACE.cd, 'a move');
+  winFight(s);
+  const t0 = s.run.trace;
+  assert.ok(t0 > TRACE.cd, 'a guard fight is loud');
+  say(s, 'unlock vault nope');
+  assert.equal(s.run.trace, t0 + TRACE.wrong, 'a wrong password');
+  s.run.trace = 100 - TRACE.cd;
+  say(s, `unlock vault ${loc.password}`);
+  say(s, 'cd vault');
+  assert.ok(s.run.hunter && s.encounter?.hunter, 'traced: the hunter is on you');
+  say(s, 'jack out');
+  assert.ok(s.run, 'no jacking out while hunted');
+  winFight(s);
+  assert.ok(!s.run.hunter);
+  assert.equal(s.run.trace, TRACE.after);
+  say(s, 'jack out');
+  assert.equal(s.run, null);
+  assert.ok(!s.logs.some((e) => e.type === 'clean-job'), 'not clean: you were traced');
 });

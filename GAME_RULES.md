@@ -26,6 +26,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 | Rule | Detail |
 |---|---|
 | Signal | 50 at the start of each run. Moving (`cd`) costs 1. Guards hit it. A wrong password costs 3. |
+| Trace | A break-in (any server with a vault; not SPRAWL-00 or rogue servers) has a **Trace** bar beside Signal: how loud you've been. Each `cd` adds 4, each file you pull 6, a wrong password 20, a guard fight 2 a cycle; arming Spoof takes 20 off, and an Infiltrator gains it half as fast (`TRACE` in run.mjs). At 100 a **hunter** ICE (Tracer, a level above the server) engages you where you stand, and you can't jack out (or flee) until it's down; beat it and Trace drops to 50. Jack out under 40% with the vault opened for a **clean job**: +25% banked credits and half a kill of XP (Break-in). |
 | Disconnect | At 0 Signal you're thrown home: your unbanked pack is lost, your server is untouched, the location stays. Guards you beat stay beaten. A **Disconnected** card says what took you out, any files lost, and *Reconnection possible in m:ss*: the later of the reconnect wait and your Signal resting back to a quarter. |
 | Guards | A guarded directory starts a fight when you enter it. `engage` to fight, `cd ..` to back off. Guard fights use the same combat rules, except damage (encryption included) hits Signal. |
 | Locked | A locked directory needs `unlock <dir> <password>`. The password is written in a file somewhere in the location. |

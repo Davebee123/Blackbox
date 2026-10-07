@@ -139,6 +139,26 @@ export const hasKit = (loc) => !!loc.starter || seeded(loc.seed * 41 + 7)() < LO
 export const hasBlueprint = (loc) => !!loc.starter || seeded(loc.seed * 43 + 9)() < LOOT.vaultBlueprint;
 // The protocol waiting in a location's vault: the same every time you look.
 export const levelOf = (loc) => loc.level || SERVER.locationLevel(1, loc.depth || 1);
+
+// Trace: how loud a break-in has been. Moves, pulls, wrong passwords and guard fights raise it; Spoof
+// lowers it, and an Infiltrator raises it half as fast. At 100 a hunter ICE comes for you and you can't
+// jack out until it's beaten. Jack out under TRACE.clean with the vault opened: a clean job pays more.
+// Only on servers with a vault (not SPRAWL-00 or rogue servers).
+export const TRACE = { cd: 4, pull: 6, wrong: 20, cycle: 2, spoof: -20, after: 50, clean: 40, cleanCredits: 0.25, cleanXp: 0.5 };
+const traced = (loc) => !!loc && !loc.zone && !loc.rogue;
+export function traceAdd(s, n) {
+  const r = s.run, loc = currentLocation(s);
+  if (!r || r.hunter || !traced(loc) || !n) return;
+  r.trace = Math.max(0, Math.min(100, (r.trace || 0) + Math.round(n * (n > 0 && classOf(s) === 'infiltrator' ? 0.5 : 1))));
+  if (r.trace >= 100 && !active(s)) hunt(s);
+}
+function hunt(s) {
+  const loc = currentLocation(s);
+  s.run.hunter = true;
+  selectEncounter(s, 'tracer', (loc.seed || 1) + s.run.cwd.length * 7, { mode: 'run', room: s.run.cwd, level: levelOf(loc) + 1, name: 'HUNTER' });
+  if (s.encounter) s.encounter.hunter = true;
+  emit(s, 'warning', 'TRACED. A hunter ICE found you. Beat it before you can jack out.');
+}
 // A vault always holds one item, white or better (LOOT.vault), fixed by its seed. A gold is a
 // unique that drops from vaults this deep.
 export function vaultItem(loc) {
@@ -454,7 +474,7 @@ function cd(s, arg, pulled = null) {
   if (!up && locked(loc, target)) return err(s, `${arg}/ is locked. Type unlock ${arg.split('/').pop()} <password>.`);
   // Infiltrator Light footprint: going back where you've been is free.
   const free = classOf(s) === 'infiltrator' && s.run.visited.includes(target);
-  if (!free) s.run.integrity = Math.max(0, s.run.integrity - CONFIG.cdCost);
+  if (!free) { s.run.integrity = Math.max(0, s.run.integrity - CONFIG.cdCost); traceAdd(s, TRACE.cd); }
   // Rig Regen: a little Signal back with every move.
   const rg = gearStat(s, 'regen', 'hacker');
   if (rg && s.run.integrity > 0) {
@@ -543,6 +563,7 @@ function pull(s, arg) {
   s.run.pack.push({ path: full, name, ...info });
   if (cloakedIn(s, dir)) s.run.cloakPulled = true;
   emit(s, 'net-good', `pulled ${arg} into your pack. It is yours once you jack out.`, { gain: packGain(s.run.pack.at(-1)) });
+  traceAdd(s, TRACE.pull);
 }
 
 // One pack file as a row for the gain card (app.js): { label, qty, kind, rarity, sub, text }.
@@ -559,7 +580,6 @@ export function packGain(f, credits = null) {
     case 'daemon': return row('Daemon', '', 'daemon', { sub: '???' });
     case 'deeper': return row('Trace record', '', 'found');
     case 'harvester': return row(harvesterName(f.harvester), '', 'item', { rarity: 'custom' });
-    case 'config': return row(`${CONFIGS[f.config]?.name || f.config} config`, '', 'blueprint', { rarity: 'custom' });
     case 'plan': return row(planName(f.plan), '', 'blueprint', { rarity: 'tuned' });
     case 'filter': return row(f.filter.name, '', 'item', { rarity: f.filter.rarity, sub: filterLine(f.filter) });
     default: return row(f.label || f.name, '', 'found');
@@ -578,12 +598,14 @@ function unlock(s, rest) {
   if (pass !== (drop ? dropOf(loc).pass : loc.password)) {
     s.run.integrity = Math.max(0, s.run.integrity - 3);
     err(s, `access denied. The failed attempt cost 3 Signal (${s.run.integrity}/${s.run.max}).`);
-    if (s.run.integrity <= 0) disconnect(s, 'Signal ran out');
+    if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
+    traceAdd(s, TRACE.wrong);
     return;
   }
   loc.state.unlocked[target] = true;
   if (drop) { out(s, `${dir}/ unlocked. The dead drop is yours.`, 'net-good'); return gainXp(s, xpFor(s, dropOf(loc)?.level || levelOf(loc), 1.5), 'dead drop cracked', 'intel'); } // LANTERN's puzzle
   out(s, `${dir}/ unlocked.`, 'net-good');
+  s.run.cracked = true;
   gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked', 'breakin');
   if (loc.member) return out(s, `The vault is open, but ${loc.name} stays ${loc.member}'s.`); // a consortium member's: no takeover
   strikeServer(s, loc, 'takeover'); // a faction's server: a blow to it (factions.mjs)
@@ -602,7 +624,7 @@ function boost(s) {
 }
 
 export function jackOut(s) {
-  const loc = currentLocation(s);
+  const loc = currentLocation(s), r0 = s.run;
   const pack = s.run.pack;
   let credits = 0;
   for (const f of pack) {
@@ -618,6 +640,9 @@ export function jackOut(s) {
   for (const f of pack.filter((x) => x.kind === 'code')) code[f.material] = (code[f.material] || 0) + f.amount;
   // Scavenge: more credits from what you bank.
   credits = Math.round(credits * (1 + gearStat(s, 'scavenge') / 100));
+  // A clean job: the vault opened and the trace still low.
+  const clean = !!s.run.cracked && !s.run.hunter && (s.run.trace || 0) < TRACE.clean;
+  if (clean) credits += Math.round(credits * TRACE.cleanCredits);
   s.server.credits += credits;
   const items = pack.filter((f) => f.kind === 'item').map((f) => f.item);
   // Banking loot feeds the server's level.
@@ -630,7 +655,8 @@ export function jackOut(s) {
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
-  emit(s, 'jacked-out', `JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'config').map((f) => CONFIGS[f.config].name + ' config source'), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
+  emit(s, 'jacked-out', `JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
+  if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, xpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
   for (const f of sources) {
@@ -658,7 +684,13 @@ export function jackOut(s) {
 
 // One entry point for everything the player types on the campaign.
 // After a fight you win on a run: the folder you're in, listed again (what's left, one click away).
-hooks.runWon = (s) => { if (s.run) ls(s); };
+hooks.runWon = (s) => {
+  if (!s.run) return;
+  const e = s.encounter;
+  if (e?.hunter) { s.run.hunter = false; s.run.trace = TRACE.after; emit(s, 'net-good', `Hunter down. Trace ${TRACE.after}%: you can jack out.`); }
+  else if (e && !e.zone && !e.wild && !e.process) traceAdd(s, TRACE.cycle * (e.cycle || 1)); // a guard fight is loud
+  if (s.run) ls(s);
+};
 
 export function play(s, input) {
   const text = normalize(input);
@@ -689,12 +721,12 @@ export function play(s, input) {
   else if (word === 'cat') cat(s, rest);
   else if (word === 'pull') (rest === 'all' || rest === '*' ? pullAll(s) : pull(s, rest));
   else if (word === 'unlock') unlock(s, rest);
-  else if (word === 'jack') jackOut(s);
+  else if (word === 'jack') { if (s.run.hunter) err(s, 'TRACED: the hunter has your trace. Beat it before you jack out.'); else jackOut(s); }
   else if (word === 'tree') tree(s);
   else if (word === 'spoof') {
     if (!equipped(s, 'spoof')) err(s, 'spoof is an Infiltrator skill. Equip it on the Loadout page.');
     else if (!canCloak(s)) err(s, s.run.cloak === 'armed' ? 'Your spoof is already armed.' : 'No spoof left this run.');
-    else { s.run.cloaks = (s.run.cloaks || 0) + 1; s.run.cloakPulled = false; s.run.cloak = 'armed'; out(s, 'spoof armed: the next guarded folder you enter won\'t start a fight.', 'net-good'); }
+    else { s.run.cloaks = (s.run.cloaks || 0) + 1; s.run.cloakPulled = false; s.run.cloak = 'armed'; traceAdd(s, TRACE.spoof); out(s, 'spoof armed: the next guarded folder you enter won\'t start a fight.', 'net-good'); }
   }
   else if (word === 'slip') slip(s);
   else if (word === 'attack') attack(s, rest);
@@ -868,6 +900,7 @@ hooks.foldersOf = (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !la
 hooks.jackOut = (s) => jackOut(s); // Deadman's Switch (combat.mjs)
 hooks.flee = (s) => {
   if (!s.run) return;
+  if (s.encounter?.hunter) return warn(s, 'The hunter has your trace: no jacking out until it is down.');
   s.encounter.phase = 'fled';
   jackOut(s);
 };

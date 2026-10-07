@@ -2756,3 +2756,13 @@ details.map-pick { pointer-events: auto; }
 .coll li { display: grid; gap: 1px; padding: 4px 0; border-top: 1px solid var(--line); }
 .coll li small { font-size: 11px; color: var(--dim); }
 .coll .coll-q { color: var(--gray); letter-spacing: 2px; }
+
+/* Trace on a break-in: beside Signal in the run header. */
+.net-trace { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.net-trace .lbl { font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.net-trace .sigbar span { background: var(--amber); }
+.net-trace.low .sigbar span { background: var(--you); }
+.net-trace.hot .sigbar span, .net-trace.hunted .sigbar span { background: var(--hot); }
+.net-trace strong { font: 600 18px var(--mono); color: var(--amber); }
+.net-trace.low strong { color: var(--you); }
+.net-trace.hot strong, .net-trace.hunted strong { color: var(--hot); }
