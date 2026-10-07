@@ -791,6 +791,8 @@ Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 cr
 
 ### Payloads
 
+**Switched off for now** (`PAYLOAD.on` in payload.mjs), to be revisited: hubs show no Payloads line, `payload` says so, and nothing compiles, flies or strikes. Hubs you already hold stay yours. With payloads off, a hub can't be taken. The rules below are what they do when switched back on.
+
 Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed from the hub page's Payloads card. They execute on their own when they arrive.
 
 - **Compile:** 60 + 10×level credits, 10 code and 3 salvage. An **Exfil** takes Cipher code and pulls credits plus the code the hub hoards. A **Wiper** takes Worm code and knocks the hub offline. Power is 10 + 2×your level; spending an Exploit arms it (×1.5). You hold three at most.

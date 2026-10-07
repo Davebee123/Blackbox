@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command } from './dist/combat.mjs';
 import { hubOptions, hubBanner, hubTerminalMarkup, setOrder } from './dist/view.mjs';
+import { PAYLOAD as __PAYLOAD } from './dist/payload.mjs';
+__PAYLOAD.on = true; // payloads are switched off in the game for now; capturing a hub still needs them here
 
 const open = () => { const s = fresh(); s.tutorialCompleted = true; command(s, 'mail'); s.mail.boardOpen = true; s.hubFound = { glassjaw: true, kestrel: true, lantern: true, nullchoir: true }; return s; };
 const keys = (s, f) => hubOptions(s, f).map((o) => o.key);

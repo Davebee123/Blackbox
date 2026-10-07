@@ -7,6 +7,8 @@ import { quote, trade, tickMarket } from './dist/market.mjs';
 import { tickPayloads } from './dist/payload.mjs';
 import { HUBS, tickHubs, tickRetake as gather, collect, bankOf, retakeOf, lockedDown, heldOf } from './dist/hubs.mjs';
 import { tickFleet } from './dist/fleet.mjs';
+import { PAYLOAD as __PAYLOAD } from './dist/payload.mjs';
+__PAYLOAD.on = true; // payloads are switched off in the game for now; capturing a hub still needs them here
 // A hub's retake is a swarm now: gathering (hubs.mjs), then travel and siege (fleet.mjs), as tickNetwork runs them.
 const tickRetake = (s, dt, paused, at) => { gather(s, dt, paused, at); tickFleet(s, dt, paused, at); };
 

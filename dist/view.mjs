@@ -1711,7 +1711,7 @@ export function trafficMarkup(s, nodes) {
     const sell = x.side === 'sell';
     mine(x.f, x.id, x.sentAt, x.landsAt, sell, 'you', { mine: 1, icon: x.side === 'good' ? 'crate' : x.w, what: x.side === 'good' ? x.name : WARES[x.w].name, n: x.side === 'good' ? 1 : x.n, from: sell ? 'You' : FX[x.f].short, to: sell ? FX[x.f].short : 'You', credits: sell ? x.credits : -x.credits, lands: x.landsAt });
   }
-  for (const p of flyingOf(s)) mine(p.f, p.id, p.sentAt, p.landsAt, true, 'pay', { mine: 1, pay: 1, icon: 'spike', what: PAYLOADS[p.kind].name, n: 1, from: 'You', to: FX[p.f].short, lands: p.landsAt });
+  if (PAYLOAD.on) for (const p of flyingOf(s)) mine(p.f, p.id, p.sentAt, p.landsAt, true, 'pay', { mine: 1, pay: 1, icon: 'spike', what: PAYLOADS[p.kind].name, n: 1, from: 'You', to: FX[p.f].short, lands: p.landsAt });
   return routes.length ? `<g class="mtraffic">${routes.join('')}${dots.join('')}</g>` : '';
 }
 
@@ -2471,13 +2471,13 @@ export function hubOptions(s, f, now = Date.now()) {
   const servers = { key: 'servers', label: 'Their servers', meta: `${theirs}` };
   const pay = { key: 'payloads', label: 'Payloads', meta: `${glyph('firewall')}${defenceOf(s, f, now)}` };
   if (captured(s, f)) return [{ key: 'hold', label: 'Your hub', meta: `${glyph('credits')}${bankOf(s, f)}` }, { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` }, { key: 'shop', label: 'Shop', meta: 'at cost' }];
-  if (hostile(s, f)) return [pay, ...(f !== 'halcyon' ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []), servers];
-  if (offline(s, f, now)) return [pay, servers];
+  if (hostile(s, f)) return [...(PAYLOAD.on ? [pay] : []), ...(f !== 'halcyon' ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []), servers];
+  if (offline(s, f, now)) return [...(PAYLOAD.on ? [pay] : []), servers];
   return [
     { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` },
     { key: 'shop', label: 'Shop', meta: f === 'halcyon' ? 'instant' : `${shopOf(s, f, now).filter((g) => !g.locked && g.left).length}` },
     { key: 'work', label: 'Work', meta: `${offers}` },
-    pay,
+    ...(PAYLOAD.on ? [pay] : []),
     ...(f !== 'halcyon' && donationOf(s, f).open ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []),
     servers,
   ];

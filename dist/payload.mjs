@@ -23,6 +23,7 @@ export const PAYLOADS = {
   backdoor: { name: 'Backdoor', about: 'Takes an offline hub for you.', code: 'kernel' },
 };
 export const PAYLOAD = {
+  on: false, // switched off for now (to be revisited): no Payloads line at hubs, no payload command, nothing in flight moves
   credits: (L) => 60 + 10 * L, code: 10, salvage: 3, // to compile
   power: (L) => 10 + 2 * L, armed: 1.5, // an Exploit makes it half again as strong
   defence: (hubLevel) => 12 + 2 * hubLevel, alertStep: 0.25, alertEaseMs: 6 * 3600000, // each strike +25% defence; one step eases every 6 hours
@@ -120,6 +121,7 @@ export function resolveStrike(s, t, at = t.landsAt) {
 }
 
 export function tickPayloads(s, at = now()) {
+  if (!PAYLOAD.on) return;
   const m = s.payloads; if (!m?.flying.length) return;
   for (const t of m.flying.filter((x) => at >= x.landsAt)) {
     m.flying.splice(m.flying.indexOf(t), 1);
@@ -130,6 +132,7 @@ export function tickPayloads(s, at = now()) {
 }
 
 export function payloadCommand(s, text, at = now()) {
+  if (!PAYLOAD.on) return warn(s, 'Payloads are switched off for now.');
   const [, verb, a, b] = text.split(' ');
   if (verb === 'compile') return compilePayload(s, a, b === 'exploit' || b === 'armed');
   if (verb === 'deploy' || verb === 'launch') return deployPayload(s, a, b, at);

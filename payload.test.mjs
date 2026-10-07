@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, materialsOf } from './dist/combat.mjs';
 import { compilePayload, deployPayload, tickPayloads, resolveStrike, builtOf, flyingOf, defenceOf, alertOf, offline, forecastStrike, PAYLOAD } from './dist/payload.mjs';
+PAYLOAD.on = true; // payloads are switched off in the game for now; these tests keep them working for when they come back
 import { trade, priceOf, travelMs } from './dist/market.mjs';
 import { rep, buyFrom } from './dist/factions.mjs';
 
