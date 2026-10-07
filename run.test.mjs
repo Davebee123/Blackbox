@@ -755,3 +755,15 @@ test('trace: moves, pulls and wrong passwords raise it; at 100 a hunter comes an
   assert.equal(s.run, null);
   assert.ok(!s.logs.some((e) => e.type === 'clean-job'), 'not clean: you were traced');
 });
+
+test('attack <name> matches in any case: attack relay-king finds RELAY-KING.exe', async () => {
+  const { KING_ROOM, zoneSpawns } = await import('./dist/run.mjs');
+  const s = fresh();
+  s.hackers = { breaker: { level: 4, xp: 0 } };
+  zoneSpawns(s);
+  say(s, 'connect sprawl'); say(s, 'cd net'); say(s, 'cd relay');
+  assert.equal(s.run.cwd, KING_ROOM);
+  say(s, 'attack relay-king');
+  assert.ok(s.encounter, 'the fight starts');
+  assert.ok(!s.logs.some((e) => /No relay-king here/.test(e.message)));
+});

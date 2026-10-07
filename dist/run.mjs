@@ -803,17 +803,20 @@ function attack(s, arg) {
   const loc = currentLocation(s);
   const proc = procIn(loc, s.run.cwd);
   if (proc) {
-    if (arg && !proc.name.startsWith(arg.replace(/\.exe$/, ''))) return err(s, `No ${arg} here. This folder has ${proc.name}.exe.`);
+    if (arg && !named(proc.name, arg)) return err(s, `No ${arg} here. This folder has ${proc.name}.exe.`);
     selectEncounter(s, 'random', proc.seed, { mode: 'run', room: s.run.cwd, level: proc.level, family: proc.family, zone: true, process: loc.id, name: proc.name.toUpperCase(), strain: proc.strain, grade: proc.grade });
     return command(s, 'engage');
   }
   if (!isWild(loc)) return err(s, 'Nothing here to attack. Guards start a fight when you walk in.');
   const sp = (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
   if (!sp?.alive) return err(s, 'Nothing running in this folder. ls to look, cd to move.');
-  if (arg && !sp.name.startsWith(arg.replace(/\.exe$/, ''))) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
+  if (arg && !named(sp.name, arg)) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
   selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, name: sp.bounty ? sp.name : sp.name.toUpperCase(), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {}) });
   command(s, 'engage');
 }
+
+// attack <name>: the start of its name, in any case, with or without .exe.
+const named = (name, arg) => name.toLowerCase().startsWith(arg.toLowerCase().replace(/\.exe$/, ''));
 
 // Infiltrator Tap: the whole map at once (once per run).
 function tap(s) {
