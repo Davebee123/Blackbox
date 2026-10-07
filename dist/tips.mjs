@@ -80,10 +80,10 @@ export const TIPS = [
   // ---------- fight ----------
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window join
   // into one tip when they're on screen together; each still shows alone if it turns up later.
-  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-armor', 'sync'], text: 'Timeline: each attack sits in the cycle it lands. Your command runs first, then the cycle turns.' },
-  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'Skills: press a number, click a part, Enter. Wait, and you Spike the last part you hit.' },
-  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'Armor ◆: a hit breaks one chit and does no damage. Strip them with small hits; save your big one.' },
-  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'Sync Window: fire while the cycle bar is inside it for +10% damage and your class bonus.' },
+  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-armor', 'sync'], text: 'This board shows the virus\'s attacks. The Now column is this cycle, and each column to the right is one cycle later. Each cycle you get one move, and it happens before the attacks in Now hit you.' },
+  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'To make your move, press a skill\'s number, click the part of the virus you want to hit, then press Enter. If the timer runs out first, you Spike the last part you hit.' },
+  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'The ◆ next to a part is armor. A hit on an armored part removes one ◆ and does no damage, so clear the armor with your weaker skills before using your strongest one.' },
+  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'The bar under Now fills as the cycle runs. Press Enter while it is inside the bright window and your move does 10% more damage, plus a bonus for your class.' },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no armor left patches one chit back five cycles later, unless you break it first.' },
   { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will hit. Strip its armor or Tag it to see its timer.' },
   { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
