@@ -20,6 +20,7 @@ import { strength, outcome, grindRate } from './invasion.mjs';
 import { launch, fleetCommand } from './fleet.mjs';
 import { hooks, emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT, firstTime } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
+import { items } from './hidden.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
 import { consortiumYield, consortiumBandwidth, memberHelp, roam, memberServers } from './consortium.mjs';
@@ -63,6 +64,7 @@ export const OUTPOST = {
   // Plans: what you need to know before you can craft a harvester or a module. Your first vault
   // holds the Siphon's; the rest are Halcyon's (store.mjs) or turn up in vaults.
   plans: { siphon: 120, scraper: 220, tap: 220, pipeline: 260, storage: 220, node: 260, ids: 220, lure: 180 }, // credits at Halcyon, plus 8 a level
+  relay: { credits: 60, code: 6, material: 'kernel' }, // to craft one, once a contract has paid you the Relay plan
   planChance: 0.15, // share of vaults holding a plan you don't know yet
   bandwidth: (serverLv) => Math.min(5, 1 + Math.floor(serverLv / 10)),
 };
@@ -70,14 +72,14 @@ export const OUTPOST = {
 export const harvesters = (s) => (s.harvesters ||= []);
 export const plansOf = (s) => (s.plans ||= []);
 export const knowsPlan = (s, id) => plansOf(s).includes(id);
-export const planName = (id) => `${OUTPOST.kinds[id]?.name || OUTPOST.mods[id]?.name} plan`;
+export const planName = (id) => (id === 'relay' ? 'Relay plan' : `${OUTPOST.kinds[id]?.name || OUTPOST.mods[id]?.name} plan`);
 export const planPrice = (id, L) => OUTPOST.plans[id] + 8 * L;
 export const modStock = (s) => (s.modStock ||= {});
 export function learnPlan(s, id, why = '') {
-  if (!OUTPOST.plans[id]) return;
+  if (!OUTPOST.plans[id] && id !== 'relay') return; // the Relay plan only comes from a contract
   if (knowsPlan(s, id)) { for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Plan scraps', virus: 'plan', seed: 0 }); return emit(s, 'info', `${why}${planName(id)}, already known: +2 salvage.`); }
   plansOf(s).push(id);
-  emit(s, 'drop', `${why}${planName(id)}. You can craft ${OUTPOST.kinds[id] ? `${OUTPOST.kinds[id].name} harvesters` : `${OUTPOST.mods[id].name} modules`} (Craft page).`, { plan: id });
+  emit(s, 'drop', `${why}${planName(id)}. You can craft ${id === 'relay' ? 'relays' : OUTPOST.kinds[id] ? `${OUTPOST.kinds[id].name} harvesters` : `${OUTPOST.mods[id].name} modules`} on the Craft page.`, { plan: id });
 }
 // The plan a vault holds, if any (fixed by its seed): your first vault, the Siphon's.
 export function vaultPlan(loc) {
@@ -233,7 +235,23 @@ function tickScheduler(s, now) {
 export const modCost = (s, id) => ({ credits: archCredits(s, OUTPOST.modCost.credits), code: { [OUTPOST.modCode[id]]: OUTPOST.modCost.code }, salvage: SALVAGE_COSTS.module() });
 export const canBuildMod = (s, id) => { const c = modCost(s, id), k = OUTPOST.modCode[id]; return knowsPlan(s, id) && s.server.credits >= c.credits && (materialsOf(s)[k] || 0) >= OUTPOST.modCost.code && canAfford(s, c.salvage); };
 // Craft a module into your stock (it goes on an outpost later).
+export const relayCost = (s) => ({ credits: archCredits(s, OUTPOST.relay.credits), code: { [OUTPOST.relay.material]: OUTPOST.relay.code }, salvage: SALVAGE_COSTS.relay() });
+export const canBuildRelay = (s) => { const c = relayCost(s); return knowsPlan(s, 'relay') && s.server.credits >= c.credits && (materialsOf(s)[OUTPOST.relay.material] || 0) >= OUTPOST.relay.code && canAfford(s, c.salvage); };
+// Craft a relay: it goes in your kit, to install from an owned server's map card.
+function buildRelay(s, payText = null) {
+  if (!knowsPlan(s, 'relay')) return warn(s, 'You don\'t have the Relay plan. Some Halcyon contracts pay it.');
+  const c = relayCost(s), k = OUTPOST.relay.material, have = materialsOf(s);
+  if (s.server.credits < c.credits || (have[k] || 0) < OUTPOST.relay.code) return warn(s, `A relay costs ${c.credits} credits, ${OUTPOST.relay.code} ${MATERIALS[k].name} and ${c.salvage.any} salvage.`);
+  const pay = settle(s, c.salvage, payText);
+  if (typeof pay === 'string') return warn(s, `Relay: ${pay}`);
+  spend(s, pay);
+  s.server.credits -= c.credits;
+  have[k] -= OUTPOST.relay.code;
+  items(s).relay += 1;
+  emit(s, 'harvester', `Crafted a relay (${items(s).relay} in your kit). Install it from a server you've taken over.`, { relay: true });
+}
 function buildMod(s, id, payText = null) {
+  if (id === 'relay') return buildRelay(s, payText);
   const m = OUTPOST.mods[id];
   if (!m) return warn(s, `Modules: ${Object.keys(OUTPOST.mods).join(', ')}.`);
   if (!knowsPlan(s, id)) return warn(s, `You don't have the ${planName(id)}.`);

@@ -23,6 +23,7 @@ import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from 
 import STORY_TEXT from './content/story.mjs';
 import CONTRACT_TEXT from './content/contracts.mjs';
 import { fill } from './content.mjs';
+import { learnPlan } from './outpost.mjs';
 import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf, hubFound } from './factions.mjs';
 
 export const MAIL = {
@@ -300,6 +301,8 @@ export function offer(s, at = now()) {
     j = { type, ...target, file: f.file, label: f.label, text: [f.line, off ? 'GLASSJAW wants it. Halcyon wants it more.' : 'pull it and bank it, then deliver it from Mail.'],
       reward: { credits: pay(50, 8), indemnity: ind(3), standing: 6, xp: 2.5, ...hit, ...repFor(6) } };
   }
+  // Halcyon pays the Relay plan on one server job at a time, until you know it.
+  if (faction === 'halcyon' && !off && ['takeover', 'item'].includes(type) && !(s.plans || []).includes('relay') && ![...openContracts(s), ...offers(s)].some((c) => c.reward?.plan)) j.reward.plan = 'relay';
   // The words: a variant from content/contracts.mjs, for this kind and side.
   const kind = ['takeover', 'item'].includes(type) && !j.loc ? type + '-unknown' : type;
   const side = off ? 'glassjaw' : 'halcyon';
@@ -440,7 +443,7 @@ export const rewardLine = (s, c) => [
   c.reward.xp ? `${xpFor(s, hackerLevel(s), c.reward.xp)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
-  c.reward.relay ? 'a relay' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.daemon ? 'a daemon' : '',
+  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.daemon ? 'a daemon' : '',
 ].filter(Boolean).join(' · ');
 
 // ---------- commands ----------
@@ -496,6 +499,7 @@ export function mailCommand(s, text, at = now()) {
     c.offBooks && { label: `${fname('glassjaw')} rep`, qty: '+5', kind: 'found', text: '5 rep' },
     c.reward.rep && c.faction && { label: `${fname(c.faction)} rep`, qty: `+${c.reward.rep}`, kind: 'found', text: `${c.reward.rep} rep` },
     c.reward.relay && { label: 'Relay', qty: `×${c.reward.relay}`, kind: 'item', text: 'a relay' },
+    c.reward.plan && { label: 'Relay plan', qty: '', kind: 'blueprint', text: 'the Relay plan' },
     c.reward.blueprint && { label: 'Blueprint', qty: '', kind: 'blueprint', text: 'a blueprint' },
     c.reward.daemon && { label: 'Daemon', qty: '', kind: 'daemon', text: 'a daemon' },
     c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
@@ -507,6 +511,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
   if (c.reward.rep && c.faction) changeRep(s, c.faction, c.reward.rep, 'Contract delivered');
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }
+  if (c.reward.plan) learnPlan(s, c.reward.plan, 'Halcyon bonus: ');
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
   if (c.reward.daemon) learnDaemon(s, 'LOWLIGHT bonus: ');
   if (c.reward.item) giveUnique(s, c.reward.item, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `);
