@@ -145,7 +145,7 @@ export const DECONSTRUCT = {
   tuned: { salvage: [2, 3], code: 1, exploit: 0 },
   custom: { salvage: [5, 5], code: 2, exploit: 1 },
   zeroday: { salvage: [10, 10], code: 4, exploit: 3 },
-  indemnified: { salvage: [10, 10], code: 4, exploit: 3 },
+  indemnified: { salvage: [10, 10], code: 4, exploit: 0 }, // bought with Indemnity: no Exploits back, or the store mints them
 };
 
 // Zero-day protocols: a Custom protocol plus one special effect. One of each per loadout.

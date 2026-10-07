@@ -101,8 +101,9 @@ export function resolveStrike(s, t, at = t.landsAt) {
   if (share && t.kind === 'exfil') {
     const credits = Math.round(PAYLOAD.exfil.credits(F.hub.level) * share);
     s.server.credits += credits; got.push(`+${credits} credits`);
+    // Code the hub is short of. Exploits are rare: a hub that wants them gives one, never a code-sized pile.
     const wants = Object.entries(CONDITIONS[HUB_CONDITION[f]].mult).filter(([w, x]) => x > 1 && w !== 'salvage').map(([w]) => w);
-    const w = wants[0] || 'cipher', n = Math.max(1, Math.round(PAYLOAD.exfil.code(F.hub.level) * share));
+    const w = wants[0] || 'cipher', n = w === 'exploit' ? 1 : Math.max(1, Math.round(PAYLOAD.exfil.code(F.hub.level) * share));
     materialsOf(s)[w] = (materialsOf(s)[w] || 0) + n; got.push(`+${n} ${w}`);
   }
   if (share && t.kind === 'wiper') {

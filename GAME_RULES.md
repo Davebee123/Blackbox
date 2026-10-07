@@ -139,7 +139,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 - **Pace:** the System page shows your kills an hour of active play (the game open, used in the last 2 minutes). The odds assume 20; the pacing bot (`bot.mjs`, 6-second cycles, every reconnect wait and memory limit, skipping grey fights) measures 9–16 counting the time it waits for something on its level.
 - A good drop shows as a notice; greys and whites drop quietly.
 
-**Deconstruct** (`deconstruct <id>`, or `scrap`): grey 1 salvage, white 1–2, blue 2–3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits; +1 salvage per 10 item levels. The code is the family the item dropped from. A drop into a full stash (40) is deconstructed. Deconstructing (a protocol, or scrapping a filter) opens a card listing what you got (salvage, code, Exploits), like the one a jack-out shows; Enter or a click closes it.
+**Deconstruct** (`deconstruct <id>`, or `scrap`): grey 1 salvage, white 1–2, blue 2–3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits (an Indemnified protocol from Halcyon's store gives no Exploits back); +1 salvage per 10 item levels. The code is the family the item dropped from. A drop into a full stash (40) is deconstructed. Deconstructing (a protocol, or scrapping a filter) opens a card listing what you got (salvage, code, Exploits), like the one a jack-out shows; Enter or a click closes it.
 
 **Compile** at home with a recipe: `compile <stat>` gives a **blue** at your level with that stat as one of its affixes (60 + 15×level credits and 8 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
 
@@ -800,7 +800,7 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
 - **Deploy:** it uploads like a file transfer (same times, relays help). You can't hit a hub that's already offline. A payload that reaches a hub you've taken in the meantime stands down and returns to you.
 - **Execution:** power × a roll of ±20% against the hub's defence (12 + 2×hub level, +25% for each recent strike; one step eases every 6 hours). Under 70%, it's **Blocked**. From 70% to 100%, a **Partial** breach does half the job. At 100% and over, it's a **Breach**. Each payload you hold shows its likely band against that hub before you deploy it.
 - **Results:**
-  - An Exfil on a breach pays 50 + 12×hub level credits and 6 + hub level/2 of the code its condition wants.
+  - An Exfil on a breach pays 50 + 12×hub level credits and 6 + hub level/2 of the code its condition wants (a hub short of Exploits gives just 1).
   - A Wiper on a breach takes the hub offline for 4 hours (2 on a partial): its market shuts and its map node goes dim.
   - The owner's rep drops 3 when blocked, 6 on a partial and 10 on a breach. The rep ripple warms its rivals.
 - **Backdoor** (Kernel code) takes the hub for you, but only if it's offline when the Backdoor executes: Wiper it first, then get a Backdoor in before it comes back up. It shows Blocked until then. A breach captures the hub, costing −40 rep with its owner (the ripple spreads it). Never Halcyon's; two hubs at most.
