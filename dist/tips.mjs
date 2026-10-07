@@ -78,8 +78,9 @@ export const TIPS = [
   { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'An unknown server. Beating what it sends at you traces it, and so does a vault\'s trace record. Once a relay flags it, kills of its family and the route file count too.' },
 
   // ---------- fight ----------
-  // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window join
-  // into one tip when they're on screen together; each still shows alone if it turns up later.
+  // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
+  // clicked through as steps of one tip, each pointing at its own thing; each still shows alone
+  // if it turns up later.
   { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-armor', 'sync'], text: 'This board shows the virus\'s attacks. The Now column is this cycle, and each column to the right is one cycle later. Each cycle you get one move, and it happens before the attacks in Now hit you.' },
   { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'To make your move, press a skill\'s number, click the part of the virus you want to hit, then press Enter. If the timer runs out first, you Spike the last part you hit.' },
   { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'The ◆ next to a part is armor. A hit on an armored part removes one ◆ and does no damage, so clear the armor with your weaker skills before using your strongest one.' },
@@ -160,7 +161,7 @@ export function nextTip(s, page, visible) {
     if (!t.joins) return t;
     const more = t.joins.map((id) => TIPS.find((x) => x.id === id))
       .filter((x) => x && !seen[x.id] && (!x.when || x.when(s, page)) && visible(x.at));
-    return more.length ? { ...t, text: [t.text, ...more.map((x) => x.text)].join('\n'), covers: more.map((x) => x.id) } : t;
+    return more.length ? { ...t, steps: [t, ...more], covers: more.map((x) => x.id) } : t;
   }
   return null;
 }

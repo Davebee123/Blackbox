@@ -1297,32 +1297,44 @@ function checkTips(now) {
   tipWait = now + 400;
   const t = nextTip(campaign, module, onScreen);
   if (!t) return;
-  tip = { t, paused: false };
-  const tx = $('tip-text');
-  tx.textContent = '';
-  for (const line of t.text.split('\n')) { // a joined tip: one line per thing, its name in bold
-    const m = t.covers && line.match(/^([^:]{1,16}):\s(.*)$/);
-    const d = document.createElement('span');
-    d.className = 'tip-line';
-    if (m) { const b = document.createElement('b'); b.textContent = m[1]; d.append(b, ' ' + m[2]); } else d.textContent = line;
-    tx.append(d);
-  }
-  $('tip').classList.toggle('wide', !!t.covers);
+  tip = { t, cur: t, step: 0, paused: false };
+  showStep();
   $('tip').hidden = false;
   if (t.pause && active(campaign) && !campaign.encounter.paused) { campaign.encounter.paused = true; tip.paused = true; dirty = true; }
   placeTip();
   const box = $('tip');
   box.classList.remove('show'); void box.offsetWidth; box.classList.add('show');
 }
+// A tip with steps (your first fight): one pause, clicked through a step at a time, each step
+// pointing at its own thing. Next, Enter or clicking the thing moves on; the last step closes it.
+function showStep() {
+  const steps = tip.t.steps;
+  tip.cur = steps ? steps[tip.step] : tip.t;
+  $('tip-text').textContent = tip.cur.text;
+  $('tip-step').textContent = steps ? `${tip.step + 1}/${steps.length}` : '';
+  $('tip-ok').textContent = steps && tip.step < steps.length - 1 ? 'Next' : 'Got it';
+}
+function advanceTip() {
+  if (!tip) return;
+  if (tip.t.steps && tip.step < tip.t.steps.length - 1) {
+    tip.step++;
+    showStep();
+    placeTip();
+    const box = $('tip');
+    box.classList.remove('show'); void box.offsetWidth; box.classList.add('show');
+    return;
+  }
+  hideTip(true);
+}
 function placeTip() {
   if (!tip) return;
-  const el = document.querySelector(tip.t.at);
-  if (!el || !onScreen(tip.t.at)) return hideTip(false); // it'll come back when its thing does
+  const el = document.querySelector(tip.cur.at);
+  if (!el || !onScreen(tip.cur.at)) return hideTip(false); // it'll come back when its thing does
   document.querySelectorAll('.tip-target').forEach((x) => { if (x !== el) x.classList.remove('tip-target'); });
   el.classList.add('tip-target');
   const box = $('tip'), r = el.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
   // Under a container (the board): the thing it explains stays in view; the arrow still points at it.
-  const u = (tip.t.under && document.querySelector(tip.t.under)?.getBoundingClientRect()) || r;
+  const u = (tip.cur.under && document.querySelector(tip.cur.under)?.getBoundingClientRect()) || r;
   // Keep it on the screen: inside the monitor's picture when it sits in its casing, else the window.
   const scr = document.body.classList.contains('cased') ? document.querySelector('.app')?.getBoundingClientRect() : null;
   const pad = scr ? 28 : 12; // clear of the tube's darker edges
@@ -1344,7 +1356,7 @@ function hideTip(seen) {
   tip = null;
   tipWait = performance.now() + 700; // a breath before the next one
 }
-$('tip-ok').addEventListener('click', () => { hideTip(true); $('command-input').focus(); });
+$('tip-ok').addEventListener('click', () => { advanceTip(); $('command-input').focus(); });
 $('tip-off').addEventListener('click', () => { campaign.settings.tips = false; hideTip(true); notice('Tips off. Turn them back on on the System page.'); dirty = true; });
 addEventListener('resize', () => placeTip());
 
@@ -1555,7 +1567,7 @@ document.addEventListener('click', (e) => {
 }, true);
 document.addEventListener('keydown', (e) => { if (payState && e.key === 'Escape') { payState = null; payDraw(); } });
 document.addEventListener('click', (e) => {
-  if (tip && !e.target.closest('#tip') && e.target.closest(tip.t.at)) hideTip(true);
+  if (tip && !e.target.closest('#tip') && e.target.closest(tip.cur.at)) advanceTip();
   if (e.target.closest('[data-spoils-go]')) { if (ended) leaveFight(); else hideSpoils(); return; }
   if (e.target.closest('[data-gain-go]')) { hideGain(); return; }
   const pick = e.target.closest('[data-mk-pick]');
@@ -1663,7 +1675,7 @@ $('command-form').addEventListener('submit', (e) => {
   $('suggestions').hidden = true;
   if (gainOpen()) hideGain(); // the Banked card goes with the next Enter, whatever it carries
   if (!value.trim()) {
-    if (tip) { hideTip(true); return; } // Enter closes a tip first
+    if (tip) { advanceTip(); return; } // Enter moves a tip on (or closes it) first
     // Empty Enter in a fight: stop waiting and resolve this cycle now.
     if (active(campaign) && !campaign.encounter.paused) { react(command(campaign, 'now')); save(); dirty = true; }
     else if (module === 'combat' && ended && !$('spoils').hidden && performance.now() - endedAt > 1200) leaveFight();
