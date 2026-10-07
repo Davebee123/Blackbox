@@ -191,7 +191,7 @@ export function timersHidden(s, p = null) {
 // Statuses on a part (the debuffs every class can cash in).
 export function statusesOn(s, p) {
   const c = s.encounter.cycle;
-  return ['exposed', 'tagged', 'hooked', 'throttled', 'quarantined'].filter((k) => p[k + 'Until'] >= c);
+  return ['exposed', 'tagged', 'hooked', 'throttled', 'quarantined', 'jammed', 'poisoned', 'thrash'].filter((k) => p[k + 'Until'] >= c);
 }
 export const on = (s, p, k) => p[k + 'Until'] >= s.encounter.cycle;
 export const buffed = (e, k) => e.buffs?.[k] >= e.cycle;

@@ -22,6 +22,7 @@ import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, z
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft, FARM_UNIQUES } from './rogue.mjs';
 import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS } from './events.mjs';
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
+import { momentumCap } from './classes/breaker.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
 import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serversOf, memberServers, memberLevel, CONSORTIUM, dividendOf, dividendRate, dividendSources, dividendWaiting, dividendText, rebooting, consortiumWall, alertsOf, tiersOf as conTiers } from './consortium.mjs';
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
@@ -49,7 +50,8 @@ export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
   const k = arch ? power(hackerLevel(s, arch)) : powerOf(s);
   if (!a || !text || k === 1) return text;
-  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all'].map((f) => a[f]).filter(Boolean);
+  // a.scales: the extra numbers a subclass skill writes in its text (dist/classes), as fields to scale.
+  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => a[f]).filter((n) => typeof n === 'number' && n > 1);
   if (id === 'counter') nums.push(SKILLS.fixedCounter);
   if (id === 'hook') nums.push(SKILLS.hooked);
   let out = text;
@@ -271,11 +273,12 @@ function attackChip(i, c, k = '', to = null) {
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a
 // debuffed part reads at a glance. Exposed also hatches its bar: it's open.
-const MARKS = { exposed: 'crit', tagged: 'ids', hooked: 'injector', throttled: 'debuff', quarantined: 'stun', burn: 'burn', helper: 'daemon' };
+const MARKS = { exposed: 'crit', tagged: 'ids', hooked: 'injector', throttled: 'debuff', quarantined: 'stun', jammed: 'stun', poisoned: 'debuff', thrash: 'burn', burn: 'burn', helper: 'daemon' };
 export function partMarks(s, p) {
   const e = s.encounter;
   if (!alive(p)) return [];
-  const out = ['exposed', 'tagged', 'hooked', 'throttled', 'quarantined'].filter((k) => p[k + 'Until'] >= e.cycle);
+  // Subclass marks too (dist/classes): Jammed and Poisoned (Hijacker), Thrash (Payload).
+  const out = ['exposed', 'tagged', 'hooked', 'throttled', 'quarantined', 'jammed', 'poisoned', 'thrash'].filter((k) => p[k + 'Until'] >= e.cycle);
   if ((e.burns || []).some((b) => b.target === p.id)) out.push('burn');
   if (e.helpers?.some((h) => h.target === p.id)) out.push('helper');
   return out;
@@ -387,8 +390,8 @@ export function statusSpans(s) {
   const e = s.encounter, out = [];
   const add = (name, until, kind, title, value = '') => { if (until >= e.cycle) out.push({ name, value, cycles: until - e.cycle + 1, kind, title }); };
   const st = momentumStacks(s);
-  if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${SKILLS.momentumMax} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
-  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall, with a crew).' : ABILITIES[k]?.help || '');
+  if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${momentumCap(s)} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
+  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall or Bulkhead, with a crew).' : ABILITIES[k]?.help || '');
   add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill crits.");
   add('Scrambled', e.scrambleUntil ?? -1, 'hot', `Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead, at ${Math.round(CONFIG.scramble.self * 100)}%.`, `${Math.round(CONFIG.scramble.chance * 100)}% self-hit`);
   return out;

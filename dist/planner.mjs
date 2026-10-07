@@ -51,7 +51,7 @@ export function planner(s) {
   const twin = livingParts(s).find((p) => p !== t && (p.twin === t.id || t.twin === p.id));
   if (twin && (twin.integrity / twin.max > t.integrity / t.max + 0.2 || (burnsOn(s, t) >= 2 && burnsOn(s, twin) < burnsOn(s, t)))) t = twin; // burns too: spread them over both
   // Decoy: on its beat your commands are mirrored, so set up instead (burns, helpers, defence).
-  if (mirrorOn(s)) { const quiet = first(s, ['harden', 'firewall', burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
+  if (mirrorOn(s)) { const quiet = first(s, ['harden', 'firewall', 'bulkhead', 'dmz', 'multicast', 'heartbeat', 'shadow-copy', 'log-wipe', 'overvolt', 'turbo-boost', 'chain-reaction', 'malloc', 'fan-out ' + t.id, burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
