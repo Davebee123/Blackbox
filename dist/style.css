@@ -2714,3 +2714,6 @@ details.map-pick { pointer-events: auto; }
 
 /* Crew rooms (elites): a gold frame, so nobody walks in solo by accident */
 .tag.tag-crew { color: #1a1206; background: var(--gold, #e8b54a); border-color: var(--gold, #e8b54a); font-weight: 700; letter-spacing: 0.06em; box-shadow: 0 0 0 1px rgba(232, 181, 74, 0.35), 0 0 8px rgba(232, 181, 74, 0.25); }
+
+.sig-eta { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; margin-left: 4px; }
+.meter-signal.weak .sig-eta { color: var(--amber); }

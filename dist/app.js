@@ -929,6 +929,12 @@ function renderMeters() {
     m.classList.toggle('weak', f < need);
     m.classList.toggle('resting', !campaign.run && !active(campaign) && sig < max);
     const mins = Math.ceil((max - sig) / (CONFIG.signalRest * max));
+    // Resting: a clock to full (to connect, while too weak for it), so a low meter says when, not just "slowly".
+    const resting = !campaign.run && !active(campaign) && sig < max;
+    const goal = f < need ? Math.ceil(max * need) : max, secs = Math.max(0, Math.ceil(((goal - sig) / (CONFIG.signalRest * max)) * 60));
+    const eta = $('signal-eta');
+    eta.hidden = !resting;
+    if (resting) { eta.textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`; eta.title = f < need ? 'Time until you have enough Signal to connect' : 'Time until Signal is full'; }
     meterBuy(m, 'top up', campaign.run ? 0 : topUpCost(campaign, 'signal'),
       `Signal ${sig}/${max}: your health out on the net. ${sig < max ? `Rests back to full in about ${mins} min at home.${f < need ? ` You need ${Math.ceil(max * need)} to connect.` : ''}` : 'Full.'}`);
   }

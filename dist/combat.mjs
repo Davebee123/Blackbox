@@ -631,7 +631,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
   (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
-  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
+  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {}, soft: opts.zone && !opts.wild && !opts.process && hackerLevel(s) < CONFIG.zone.starterBelow ? CONFIG.zone.starterHit : 1 }; // soft: your first levels in SPRAWL-00 hit softer, so you can learn the board
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
     ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.`
     : mode === 'run'
@@ -2073,7 +2073,7 @@ export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
-  const power = attackAmount(p) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
+  const power = attackAmount(p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
