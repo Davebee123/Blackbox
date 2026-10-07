@@ -622,7 +622,7 @@ export const BOSSES = {
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
-// A hot run (connect <server> +hot): friction you choose. Every fight on it has more Integrity and hits
+// A loud run (connect <server> loud; called a hot run in the code): friction you choose. Every fight on it has more Integrity and hits
 // harder; every kill pays more XP and rolls for loot once more.
 export const HOT_RUN = { hp: 1.25, dmg: 1.2, xp: 1.25, rolls: 1 };
 // Each boss has two uniques of its own (content/items.mjs, source kind 'boss'): this chance a kill, and
