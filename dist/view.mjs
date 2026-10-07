@@ -352,7 +352,12 @@ function partTags(s, p) {
   if (e.virus.mutation === 'adaptive' && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains a ◆ at the end of the cycle">adapting</span>');
   if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted from a broken part: its attack +${p.rerouted}">+${p.rerouted} rerouted</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
-  if (burn.length) tags.push(`<span class="tag you" title="Takes damage every cycle">burning ${burn.reduce((n, b) => n + b.damage, 0)}</span>`);
+  // Burns, one tag per kind: how many stacks (of how many it can take), and the damage a cycle in all.
+  for (const name of [...new Set(burn.map((b) => b.name))]) {
+    const mine = burn.filter((b) => b.name === name), cap = Object.values(ABILITIES).find((a) => a.name === name)?.stacks;
+    const dmg = mine.reduce((n, b) => n + b.damage, 0);
+    tags.push(`<span class="tag you burn-tag" title="${esc(`${name}: ${mine.length}${cap ? ` of ${cap}` : ''} ${mine.length === 1 ? 'stack' : 'stacks'} on it, ${dmg} damage a cycle in all. Cycles left: ${mine.map((b) => b.left).join(', ')}.`)}">${esc(name)}${mine.length > 1 || cap ? ` ×${mine.length}${cap ? `/${cap}` : ''}` : ''} · ${dmg}</span>`);
+  }
   if (e.helpers?.some((h) => h.target === p.id)) tags.push(`<span class="tag daemon" title="Your helper hits it every cycle">helper</span>`);
   return tags.join('');
 }

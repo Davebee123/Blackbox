@@ -900,7 +900,7 @@ Class skills, in the order they unlock. **Lit** skills only work in the cycle or
 | Bastion | 30 | `reclaim <part>` | 35 damage, and you heal half of what it does. On armor it breaks 2 chits. | 3 |
 | Bastion | 34 | `quarantine [part]` | Push its attack back 3 cycles; while it waits, it takes +25% damage. | 6 |
 | Bastion | 38 | `failover` | Hit every part for a quarter of your missing health (at least 20). | 5 |
-| Infiltrator | 1 | `inject <part>` | 10 damage every cycle for 3 cycles. Up to 3 on one part. | 1 |
+| Infiltrator | 1 | `inject <part>` | 12 damage every cycle for 3 cycles. It stacks: up to 3 on one part, each with its own timer. The part shows a tag like *Inject ×2/3 · 24* (hover for each stack's cycles left). | 1 |
 | Infiltrator | 3 | `tag <part>` | For 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled. | 3 |
 | Infiltrator | 5 | `keepalive` | Every burn on the part lasts 2 cycles longer. | 2 |
 | Infiltrator | 10 | `backdoor <part>` | 24 damage straight through armor, +6 for each burn on it. | 4 |
