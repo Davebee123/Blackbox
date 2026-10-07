@@ -525,7 +525,9 @@ One specialisation per server. A Legacy site takes a quarter off a specialisatio
 
 - **Old saves.** Harvesters and modules became buildings: a Siphon or Tap became a Code Siphon, a Scraper a Data Miner, each installed module its building (what didn't fit came back as 150 credits). Harvesters in your rack came back as 200 credits each, modules in stock as 150. A Scraper plan became the Data Miner's, a Tap plan the Credit Skimmer's.
 
-Commands: `outpost build <server> <building>`, `outpost demolish <server> <building>`, `outpost buyout|defend|retake <server>`, `buy plan-<building>`, `architecture fortress|hub|lab`, `developer outpost <server> [building…]` (testing).
+**Building.** A held server's card has a **Build** button. It opens the Build panel over the map: every building as a card with what it does, what it costs, how long it takes, and what it still needs. Typing `build <server>` (or just `build` with a server selected) opens the same panel, and Esc closes it.
+
+Commands: `build [server]`, `outpost build <server> <building>`, `outpost demolish <server> <building>`, `outpost buyout|defend|retake <server>`, `buy plan-<building>`, `architecture fortress|hub|lab`, `developer outpost <server> [building…]` (testing).
 
 ## Configs (gone)
 

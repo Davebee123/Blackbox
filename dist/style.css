@@ -2818,7 +2818,7 @@ details.map-pick { pointer-events: auto; }
 .build-panel .bp-meta { display: flex; gap: 8px; align-items: center; margin-left: auto; flex-wrap: wrap; }
 .build-panel .bp-x { position: absolute; top: 12px; right: 12px; }
 .build-panel .bp-now { margin: 4px 0; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
-.build-panel .bp-grid { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.build-panel .bp-grid { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
 .build-panel .bp-card { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; }
 .build-panel .bp-card.locked { opacity: 0.55; }
 .build-panel .bp-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

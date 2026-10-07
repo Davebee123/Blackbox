@@ -71,7 +71,7 @@ export const TIPS = [
   { id: 'store-chase', page: 'hub', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Something is happening on this server. Its card says what, and how long you have to act.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server. Nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },
-  { id: 'map-build', page: 'map', at: '.op-buildlist', text: 'Build on a server you hold. Each building takes one of its slots and some of your bandwidth, costs credits, code and salvage, and builds in real time. What it makes piles up while you are away.' },
+  { id: 'map-build', page: 'map', at: '.op-build-open', text: 'Build on a server you hold. Each building takes one of its slots and some of your bandwidth, costs credits, code and salvage, and builds in real time. What it makes piles up while you are away.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },
   { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'This is an unknown server. Beat the viruses it sends at you to trace it. A vault\'s trace record traces it too. Once a relay flags it, kills of any virus from its family count as well.' },
 

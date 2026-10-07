@@ -251,3 +251,20 @@ test('old saves: a harvester becomes its building, modules theirs, the rack and 
 test('site traits are fixed by the seed', () => {
   assert.equal(siteTrait({ seed: 77 }), siteTrait({ seed: 77 }));
 });
+
+test('the Build panel: a button on the server card opens every building at once, over the map', async () => {
+  const { mapSelection, buildPanelMarkup, mapMarkup } = await import('./dist/view.mjs');
+  const { addLocation: add } = await import('./dist/combat.mjs');
+  const s = fresh();
+  s.hackers = { breaker: { level: 14, xp: 0 } };
+  const l = add(s, 'worm', 1); delete l.fresh; delete l.detached;
+  l.takenOver = true;
+  const card = mapSelection(s, l.id);
+  assert.match(card, new RegExp(`data-build-open="${l.id}"`), 'a Build button on the card');
+  assert.doesNotMatch(card, /class="bl"/, 'the list no longer sits in the card');
+  const panel = buildPanelMarkup(s, l.id);
+  assert.equal((panel.match(/class="bp-card/g) || []).length, Object.keys((await import('./dist/outpost.mjs')).BUILDINGS).length, 'every building');
+  assert.match(panel, /data-build-close/);
+  assert.match(mapMarkup(s, l.id, 'mine', { build: l.id }), /class="build-panel"/);
+  assert.equal(buildPanelMarkup(s, 'nope'), '', 'only for a server you hold');
+});

@@ -218,7 +218,7 @@ test('an outpost card renders its slots, what is built, and a Build list', async
   const html = mapMarkup(s, l.id);
   assert.match(html, /Building slots/);
   assert.match(html, /Code Siphon/);
-  assert.match(html, /<summary>Build<\/summary>/);
+  assert.match(html, /data-build-open=/, "a Build button that opens the Build panel");
 });
 
 test('what you type changes the expected damage on the board before you press Enter', async () => {
