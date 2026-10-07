@@ -268,3 +268,16 @@ test('the Build panel: a button on the server card opens every building at once,
   assert.match(mapMarkup(s, l.id, 'mine', { build: l.id }), /class="build-panel"/);
   assert.equal(buildPanelMarkup(s, 'nope'), '', 'only for a server you hold');
 });
+
+test('a Build panel for a server that is no longer yours falls back to the server card', async () => {
+  const { mapMarkup } = await import('./dist/view.mjs');
+  const { addLocation: add } = await import('./dist/combat.mjs');
+  const s = fresh();
+  const l = add(s, 'worm', 1); delete l.fresh; delete l.detached;
+  l.takenOver = true;
+  assert.match(mapMarkup(s, l.id, 'mine', { pop: true, build: l.id }), /class="build-panel"/);
+  l.takenOver = false;
+  const html = mapMarkup(s, l.id, 'mine', { pop: true, build: l.id });
+  assert.doesNotMatch(html, /class="build-panel"/);
+  assert.match(html, /class="map-pop"/, 'the card shows instead of nothing');
+});

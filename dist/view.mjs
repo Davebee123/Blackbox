@@ -1872,7 +1872,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${svg}${build ? buildPanelMarkup(s, build) : card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${svg}${(build && buildPanelMarkup(s, build)) || card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
 const LIST_COLS = [['name', 'Server'], ['family', 'Family'], ['level', 'Lv'], ['layer', 'Layer'], ['explored', 'Explored'], ['status', 'Status']];
 function serverList(s, sel, filter, sort) {

@@ -1718,7 +1718,7 @@ document.addEventListener('click', (e) => {
   if (yes) { const id = yes.dataset.memYes; V.setMemAsk(null); memYes = id; run('connect ' + id); memYes = null; dirty = true; return; }
   if (e.target.closest('[data-mem-no]')) { V.setMemAsk(null); dirty = true; return; }
   const node = e.target.closest('[data-select]');
-  if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
+  if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; buildFor = null; dirty = true; return; } // picking a server closes any Build panel
   // Clicking away (empty map, or the card's ×) closes the card and clears the selection too.
   const bopen = e.target.closest('[data-build-open]');
   if (bopen) { buildFor = bopen.dataset.buildOpen; mapList = false; if (module !== 'map') go('map'); dirty = true; return; }
@@ -1946,6 +1946,7 @@ document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');
   if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; mapPop = true; dirty = true; }
   if (e.key === 'Escape' && buildFor && module === 'map') { buildFor = null; dirty = true; return; }
+  if (node && (e.key === 'Enter' || e.key === ' ')) buildFor = null;
   if (e.key === 'Escape' && (mapPop || mapSel) && module === 'map') { mapPop = false; mapSel = null; dirty = true; }
 });
 
