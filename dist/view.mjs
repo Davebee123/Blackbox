@@ -1138,7 +1138,7 @@ function jobBox(s, c, now) {
     ? `<button type="button" class="btn primary" data-command="mail accept ${c.id}" ${full ? `disabled title="You hold ${MAIL.take} contracts. Deliver or drop one first."` : ''}>Take</button>`
     : `<button type="button" class="btn primary" data-command="mail deliver ${c.id}" ${ok ? '' : 'disabled'}>Deliver</button>${c.story === undefined ? `<button type="button" class="btn" data-command="mail drop ${c.id}">Drop</button>` : ''}`;
   return `<div class="contract${ok ? ' ready' : ''}${c.done ? ' done' : ''}${isOffer ? ' offer' : ''}">
-    <div class="c-head"><b>${glyph({ kill: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item' }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : ''}</div>
+    <div class="c-head"><b>${glyph({ kill: 'kill', strain: 'kill', bounty: 'bounty', takeover: 'takeover', materials: 'materials', item: 'item', side: 'f-' + c.faction }[c.type] || 'item', 'badge')}${esc(contractTitle(s, c))}</b>${c.offBooks ? '<span class="tag hot">Off the books</span>' : ''}${isOffer && c.type !== 'side' ? `<small class="c-exp">expires in ${fmtTime(c.expiresAt - now)}</small>` : isOffer ? '<span class="tag you">your call</span>' : ''}</div>
     ${isOffer ? '' : `<div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.round(pr.part * 100)}%"></span></span><small>${esc(pr.text)}</small></div>`}
     <div class="rw-chips" title="${c.done ? 'Paid' : 'Pays'}: ${esc(rewardLine(s, c))}">${rewardChips(s, c)}</div>
     ${acts ? `<div class="row">${acts}</div>` : ''}
@@ -1163,7 +1163,7 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const unreadJob = new Set(letters.filter((m) => m.job != null && taken.has(m.job) && !m.read).map((m) => m.job));
   const unreadLetters = letters.filter((m) => !m.read && !(m.job != null && taken.has(m.job))).length;
   const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id)); }).join('');
-  const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? 'Off books' : '', c.offBooks ? 'hot' : '', `${fIcon(c.faction || 'halcyon')}<small class="mexp">${fmtTime(c.expiresAt - now)}</small>`)).join('');
+  const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? 'Off books' : '', c.offBooks ? 'hot' : '', `${fIcon(c.faction || 'halcyon')}<small class="mexp">${c.type === 'side' ? 'pick one' : fmtTime(c.expiresAt - now)}</small>`)).join('');
   const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
   const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? 'LOWLIGHT' : '', 'dim')).join('');
@@ -2206,6 +2206,8 @@ export function spoilsOf(events) {
   if (xp) add('XP', `+${xp}`, 'xp', { text: `+${xp} XP` });
   for (const e of events) {
     if (e.type === 'fast-kill') add('Fast kill', `+${e.amount} XP`, 'fast', { text: `Fast kill +${e.amount} XP`, sub: `${e.cycles} cycles` });
+    else if (e.type === 'hot-kill') add('Hot strain', `+${e.amount} XP`, 'fast', { text: `Hot strain +${e.amount} XP` });
+    else if (e.type === 'rested') add('Rested', `+${e.amount} XP`, 'fast', { text: `Rested +${e.amount} XP` });
     else if (e.type === 'fresh') add(`Fresh: ${XP_KINDS[e.kind] || ''}`, `+${e.amount} XP`, 'fast', { text: `Fresh ${XP_KINDS[e.kind] || ''} +${e.amount} XP` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });
     else if (e.type === 'server-level') add(`Server level ${e.level}`, '', 'level');

@@ -116,7 +116,7 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   // hunt it: the relay's route file, then kills of its family
   home.lockUntil = 0; // skip the reconnect wait (rogue.mjs relocks)
   play(s, 'connect ' + home.id);
-  const route = home.extraFiles.find((f) => f.kind === 'route');
+  const route = home.extraFiles.find((f) => f.kind === 'route' && f.hidden === n.id);
   play(s, 'pull ' + route.name);
   play(s, 'jack out');
   assert.equal(n.lead, HIDDEN.routeLead);
@@ -140,7 +140,8 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   assert.equal(s.mail.story, STORY_LENGTH);
   assert.match(s.mail.list[0].subject, /Contractor/);
   assert.equal(tierOf(s).name, 'Contractor');
-  assert.equal(offers(s).length, 3, 'the board opens');
+  assert.equal(offers(s).filter((o) => o.type !== 'side').length, 3, 'the board opens');
+  assert.equal(offers(s).filter((o) => o.type === 'side').length, 2, 'with a side to pick');
 });
 
 test('the board: offers arrive at uneven times up to five and expire; take three, count only what you took', () => {

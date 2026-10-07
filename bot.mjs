@@ -198,10 +198,13 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     stats.drops2 = (stats.drops2 || 0) + 1;
     return true;
   };
-  let guard = 0;
+  let guard = 0, tickAt = t;
   while (hackerLevel(s) < target && guard++ < 20000 && t - 1_700_000_000_000 < 72 * 3600000) {
     book('home', homeFight);
-    for (const e of [...tickNetwork(s, t), ...tickServices(s, t)]) note(e); // the world's clock catches up after each thing it did
+    // The world's clock catches up after each thing it did, in 30-second steps (a logged-on player's
+    // ticks: one big jump would play out as time away, with rested XP and away-pace invasions).
+    for (let at = Math.max(tickAt, t - 6 * 3600000) + 30000; at <= t; at += 30000) for (const e of [...tickNetwork(s, at), ...tickServices(s, at)]) note(e);
+    tickAt = t;
     if (book('invasion', invasion)) continue;
     if (book('runs', deadDrop)) continue;
     s.pace = { ...(s.pace || { kills: 0 }), ms: t - 1_700_000_000_000 }; // the bot's whole session is active play (Fresh uses it)
@@ -214,7 +217,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     const L = hackerLevel(s);
     const open = (l) => (isLive(s, l) || l.fresh) && !(relocks(l) && relockLeft(l, t));
     const todo = s.locations.filter((l) => !l.rogue && !l.takenOver && open(l) && pending(l) && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
-    const rot = s.locations.filter((l) => procOf(l, t) && open(l) && procOf(l, t).level <= L + 3).sort((a, b) => procOf(b, t).level - procOf(a, t).level)[0];
+    const rot = s.locations.filter((l) => procOf(l, t) && open(l) && procOf(l, t).level <= L + 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => procOf(b, t).level - procOf(a, t).level)[0];
     const rogue = s.locations.filter((l) => l.rogue && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
     const hunt = contracts && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;

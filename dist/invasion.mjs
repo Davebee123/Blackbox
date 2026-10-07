@@ -15,10 +15,10 @@ import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } fr
 import { isLive } from './memory.mjs';
 import { effLevel, tickFirewall, wear } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
-import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, createVirus, power, variantFor } from './data.mjs';
+import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, createVirus, power, variantFor, killXp, xpToNext } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
-import { hooks, emit, warn, rand, active, holding, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead } from './combat.mjs';
+import { hooks, emit, warn, rand, active, holding, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead, hackerLevel } from './combat.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -121,7 +121,10 @@ function away(s, from, to) {
     tickFleet(s, AWAY.stepMs, false, t);
     tickRetake(s, AWAY.stepMs, false, t);
     stepInvasion(s, AWAY.stepMs, t);
+    // Rested: every safe hour away (no crash) banks a kill's worth of XP, up to 1.5 levels.
+    if (!s.degraded) { const L = hackerLevel(s); s.rested = Math.min(Math.round(1.5 * xpToNext(L)), (s.rested || 0) + killXp(L) / 60); }
   }
+  if (s.rested >= 1) s.rested = Math.floor(s.rested);
 }
 
 // The invader: setting out, on its way, then at the wall. at: the time, while away.

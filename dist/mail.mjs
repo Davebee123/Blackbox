@@ -15,9 +15,9 @@
 // in a server's vault: pull it, bank it, deliver it). A takeover or item contract can point at
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
 // (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
-import { FAMILIES, CONFIG } from './data.mjs';
+import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
 import { MATERIALS } from './gear.mjs';
-import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, learnDaemon, materialsOf, rand, hooks, addLocation, giveUnique } from './combat.mjs';
+import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, learnDaemon, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
 import STORY_TEXT from './content/story.mjs';
@@ -130,7 +130,7 @@ function jobVars(s, j = {}) {
     count: j.count, family: j.family ? lower(FAMILIES[j.family]?.name) : 'stray', crew: j.family ? crewOf(j.family) : 'the crews',
     name: j.name, room: j.room, amount: j.amount, material: j.material ? lower(MATERIALS[j.material]?.name) : undefined,
     server: loc?.name || (j.any ? 'any server you have traced' : 'a server you haven’t found yet'), owner: loc?.owner,
-    file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '',
+    file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', strain: j.strain ? STRAINS[j.strain]?.name : undefined,
   };
 }
 // Turn a written beat into a letter and its job.
@@ -173,7 +173,7 @@ function postStory(s, at = now(), force = false) {
     l.job = j.id;
     arm(s, j);
   }
-  if (beat.opensBoard && !m.boardOpen) { m.boardOpen = true; for (let i = 0; i < 3; i++) offer(s, at); m.nextOfferAt = at + gap(s); }
+  if (beat.opensBoard && !m.boardOpen) { m.boardOpen = true; for (let i = 0; i < 3; i++) offer(s, at); m.nextOfferAt = at + gap(s); postSides(s, at); }
   // A letter with no job doesn't hold the story up: the next beat is on its way.
   if (!job) m.waiting = STORY.some((b) => !m.posted.includes(b.id)) ? 'armed' : false, m.waitFrom = at;
   return l;
@@ -191,7 +191,7 @@ export function storyAt(s, id, at = now()) {
   s.retainer = { at }; s.cargo ||= []; s.indemnity ||= 0;
   if (!s.locations.length) addLocation(s, 'worm', 1);
   if (before.some((b) => b.job?.type === 'takeover')) { const loc = s.locations[0]; loc.takenOver = true; s.mail.took = loc.id; if (before.some((b) => b.reward?.relay)) items(s).relay += 1; }
-  if (s.mail.boardOpen) { for (let i = 0; i < 3; i++) offer(s, at); s.mail.nextOfferAt = at + gap(s); }
+  if (s.mail.boardOpen) { for (let i = 0; i < 3; i++) offer(s, at); s.mail.nextOfferAt = at + gap(s); postSides(s, at); }
   return postStory(s, at, true);
 }
 // A beat waiting on a level or a delay: post it when it's ready.
@@ -249,6 +249,17 @@ const between = (s, [lo, hi]) => Math.round(lo + rand(s) * (hi - lo));
 const gap = (s) => between(s, MAIL.offerEvery);
 const CODES = ['cipher', 'worm', 'kernel'];
 
+// A side to pick (WoW's Aldor or Scryers), telegraphed: when the board opens, KESTREL and NULL CHOIR
+// (rivals of each other) both make an offer that waits on the board. Take one and the other is gone;
+// delivering it pays that faction's rep, and the ripple turns its rival against you.
+export const SIDES = [['kestrel', 'nullchoir'], ['nullchoir', 'kestrel']];
+function postSides(s, at) {
+  if (s.mail.sidesPosted) return;
+  s.mail.sidesPosted = true;
+  for (const [f, against] of SIDES) s.mail.offers.push({ id: s.mail.next++, from: FACTIONS[f].name, got: 0, at, expiresAt: at + 10 * 365 * 24 * 3600000, type: 'side', faction: f, against,
+    subject: `${FACTIONS[f].short} wants an answer`, body: [`${FACTIONS[f].short} and ${FACTIONS[against].short} are at war. Pick ${FACTIONS[f].short}: +20 with them, and ${FACTIONS[against].short} will not forget it.`, 'Take this and the other offer is gone.'],
+    reward: { credits: 0, standing: 0, rep: 20 } });
+}
 export function offer(s, at = now()) {
   const L = hackerLevel(s);
   const off = standing(s) >= 10 && rand(s) < MAIL.offBooksChance;
@@ -260,7 +271,9 @@ export function offer(s, at = now()) {
   const target = rivals.length && rand(s) < 0.6 ? { loc: pick(s, rivals).id } : pickTarget(s);
   // Named processes live in SPRAWL-00: posted only while it's still your level (it tops out at CONFIG.zone.maxLevel).
   const kinds = (off ? ['materials', 'item', 'kill'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item']).filter((k) => (target || !['takeover', 'item'].includes(k)) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2));
-  const type = pick(s, kinds);
+  // Strain contracts (RuneScape Slayer): once strains are open at your level, a quarter of the board.
+  const strainsOpen = Object.keys(STRAINS).filter((k) => STRAINS[k].from <= L && L >= CONFIG.zone.maxLevel + 2);
+  const type = !off && strainsOpen.length && rand(s) < 0.25 ? 'strain' : pick(s, kinds);
   const fam = pick(s, Object.keys(CREWS));
   const pay = (base, per) => Math.round((base + per * L) * (off ? MAIL.offBooksPay : theirs ? MAIL.factionPay : 1));
   const ind = (n) => (off || theirs ? 0 : n + Math.floor(L / 12));
@@ -268,7 +281,10 @@ export function offer(s, at = now()) {
   const repFor = (n) => (theirs ? { standing: 0, rep: n } : {}); // other factions pay in their own rep
   const T = CONTRACT_TEXT;
   let j;
-  if (type === 'kill') {
+  if (type === 'strain') {
+    const count = 3 + (L >= 15 ? 1 : 0) + (L >= 30 ? 1 : 0);
+    j = { type, strain: pick(s, strainsOpen), count, reward: { credits: pay(40, 6), indemnity: ind(1), standing: 5, xp: 2, ...repFor(5) } };
+  } else if (type === 'kill') {
     const count = 3 + (L >= 10 ? 1 : 0) + (L >= 30 ? 1 : 0);
     j = { type, family: fam, count, reward: { credits: pay(30, 5), indemnity: ind(1), standing: 5, xp: 1.5, ...hit, ...repFor(5) } };
   } else if (type === 'bounty') {
@@ -303,16 +319,22 @@ export function offer(s, at = now()) {
 // A kill anywhere: { family, zone, bounty (spawn name) }.
 // The open contracts a kill would count for (the same test as contractKill): for the marker on
 // a virus or a guarded folder in a run's listing.
+// Strain contracts: every fifth one in a row pays double and rolls for the strain's trophy; dropping one resets it.
+export const SLAYER = { every: 5 };
 // What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
-const CONTRACT_KIND = { kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin' };
+const CONTRACT_KIND = { side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
-export function wantedBy(s, { family, zone, name = null, level = null }) {
-  return openContracts(s).filter((c) => (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) || (c.type === 'bounty' && !c.got && name && name === c.name));
+export function wantedBy(s, { family, zone, name = null, level = null, strain = null }) {
+  return openContracts(s).filter((c) => (c.type === 'strain' && c.got < c.count && strain === c.strain && inRange(c, level)) || (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) || (c.type === 'bounty' && !c.got && name && name === c.name));
 }
-export function contractKill(s, { family, zone, bounty: tag, level = null }) {
+export function contractKill(s, { family, zone, bounty: tag, level = null, strain = null }) {
   for (const c of openContracts(s)) {
+    if (c.type === 'strain' && c.got < c.count && strain === c.strain && inRange(c, level)) {
+      c.got++;
+      if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+    }
     if (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) {
       c.got++;
       if (level != null) { c.lvSum = (c.lvSum || 0) + level; c.lvN = (c.lvN || 0) + 1; } // it pays at the level of the kills that filled it
@@ -365,20 +387,23 @@ function changeStanding(s, f, delta, why) {
 
 export function ready(s, c) {
   if (c.done || !jobs(s).includes(c)) return false;
-  if (c.type === 'kill') return c.got >= c.count;
+  if (c.type === 'kill' || c.type === 'strain') return c.got >= c.count;
   if (c.type === 'bounty') return !!c.got;
   if (c.type === 'takeover') return c.any ? !!c.took : !!s.locations.find((l) => l.id === c.loc)?.takenOver;
   if (c.type === 'materials') return (materialsOf(s)[c.material] || 0) >= c.amount;
   if (c.type === 'item') return cargo(s).some((x) => x.contract === c.id);
+  if (c.type === 'side') return true; // picking a side is the whole job
   return false;
 }
 const locName = (s, id) => s.locations.find((l) => l.id === id)?.name || null;
 export function title(s, c) {
+  if (c.type === 'strain') return `Neutralize ${c.count} ${STRAINS[c.strain]?.name || ''}` + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
   if (c.type === 'kill') return (c.where === 'sprawl' ? `Kill ${c.count} processes in SPRAWL-00` : `Kill ${c.count} ${FAMILIES[c.family]?.name || ''} processes`) + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
   if (c.type === 'bounty') return `Kill ${c.name}`;
   if (c.type === 'takeover') return c.any ? 'Take over a server' : `Take over ${locName(s, c.loc) || 'an unknown server'}`;
   if (c.type === 'materials') return `Deliver ${c.amount} ${MATERIALS[c.material].name}`;
   if (c.type === 'item') return `Recover ${c.file}`;
+  if (c.type === 'side') return `Side with ${FACTIONS[c.faction].short}`;
   return 'Contract';
 }
 // Where an unknown target stands: not heard yet, flagged (with its trace), or found.
@@ -391,7 +416,7 @@ function hunt(s, c) {
 // What's left to do, in a few words, and how far along it is (0–1).
 export function progress(s, c) {
   if (c.done) return { text: 'Delivered', part: 1 };
-  if (c.type === 'kill') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count };
+  if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count };
   if (c.type === 'bounty') return { text: c.got ? 'Neutralized' : c.room ? `In SPRAWL-00, ${c.room}` : 'Somewhere in SPRAWL-00', part: c.got ? 1 : 0 };
   if (c.type === 'takeover') {
     if (c.any) return c.took ? { text: `${locName(s, c.took)} is yours`, part: 1 } : { text: s.locations.length ? 'Open the vault of any server you have traced' : 'Trace a server first', part: 0 };
@@ -406,6 +431,7 @@ export function progress(s, c) {
     const inPack = s.run?.pack.some((f) => f.kind === 'contract' && f.name === c.file);
     return { text: inPack ? 'In your pack: jack out to bank it' : `In the vault on ${locName(s, c.loc)}`, part: inPack ? 0.85 : 0.5 };
   }
+  if (c.type === 'side') return { text: `${FACTIONS[c.faction].short} +${c.reward.rep}, ${FACTIONS[c.against].short} turns against you`, part: 1 };
   return { text: '', part: 0 };
 }
 export const rewardLine = (s, c) => [
@@ -429,6 +455,7 @@ export function mailCommand(s, text, at = now()) {
     if (!o) return warn(s, 'That offer is gone.');
     if (heldCount(s) >= MAIL.take) return warn(s, `You already hold ${MAIL.take} contracts. Deliver or drop one first.`);
     s.mail.offers.splice(s.mail.offers.indexOf(o), 1);
+    if (o.type === 'side') s.mail.offers = s.mail.offers.filter((x) => x.type !== 'side'); // one side or the other
     delete o.expiresAt;
     s.mail.jobs.push(o);
     arm(s, o);
@@ -438,6 +465,7 @@ export function mailCommand(s, text, at = now()) {
   if (!c || c.done) return warn(s, 'No such contract.');
   if (word === 'drop') {
     if (c.story !== undefined) return warn(s, 'LOWLIGHT jobs can’t be dropped. Take your time with it.');
+    if (c.type === 'strain' && s.slayer?.streak) { s.slayer.streak = 0; emit(s, 'info', 'Strain streak reset.'); }
     disarm(s, c);
     s.mail.jobs.splice(s.mail.jobs.indexOf(c), 1);
     return emit(s, 'info', `Dropped: ${title(s, c)}. Nobody holds it against you.`);
@@ -451,6 +479,9 @@ export function mailCommand(s, text, at = now()) {
   // Delivered ones stay for the Completed list: every LOWLIGHT job, and the last 15 others.
   const keep = new Set(s.mail.jobs.filter((x) => x.done && x.story === undefined).slice(-15));
   s.mail.jobs = s.mail.jobs.filter((x) => !x.done || x.story !== undefined || keep.has(x));
+  // A strain contract streak: every fifth in a row pays double and rolls for the strain's trophy.
+  let fifth = false;
+  if (c.type === 'strain') { const sl = (s.slayer ||= { streak: 0 }); sl.streak++; fifth = sl.streak % SLAYER.every === 0; if (fifth) c.reward = { ...c.reward, credits: c.reward.credits * 2, xp: c.reward.xp * 2 }; }
   s.server.credits += c.reward.credits;
   s.indemnity = indemnity(s) + (c.reward.indemnity || 0);
   // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP is at the
@@ -471,6 +502,7 @@ export function mailCommand(s, text, at = now()) {
   ].filter(Boolean);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
   if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
+  if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}: double pay on ${title(s, c)}.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }
   if (c.reward.standing) changeStanding(s, 'halcyon', c.reward.standing, c.offBooks ? 'Halcyon heard about the GLASSJAW job' : 'Contract delivered');
   if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
   if (c.reward.rep && c.faction) changeRep(s, c.faction, c.reward.rep, 'Contract delivered');
@@ -501,19 +533,20 @@ export function tickMail(s, at = now()) {
     if (stuck) stuck.at ??= at;
     if (!stuck || at - stuck.at < MAIL.boardAfterMs) return;
     m.boardOpen = true;
+    postSides(s, at);
     emit(s, 'mail', 'Halcyon opened its board to you: other work while you finish this one.');
   }
   // Offers nobody took run out.
   const before = m.offers.length;
-  m.offers = m.offers.filter((o) => o.expiresAt > at);
+  m.offers = m.offers.filter((o) => o.type === 'side' || o.expiresAt > at); // a side to pick waits
   let added = 0;
   if (m.nextOfferAt == null) m.nextOfferAt = at;
-  while (m.offers.length < MAIL.offers && at >= m.nextOfferAt && added < MAIL.offers) {
+  while (m.offers.filter((o) => o.type !== 'side').length < MAIL.offers && at >= m.nextOfferAt && added < MAIL.offers) {
     offer(s, at);
     added++;
     m.nextOfferAt = rand(s) < MAIL.burst ? m.nextOfferAt : at + gap(s);
   }
-  if (m.offers.length >= MAIL.offers && at >= m.nextOfferAt) m.nextOfferAt = at + gap(s);
+  if (m.offers.filter((o) => o.type !== 'side').length >= MAIL.offers && at >= m.nextOfferAt) m.nextOfferAt = at + gap(s);
   if (added) emit(s, 'board', added === 1 ? `New offer on the board: ${m.offers.at(-1).subject}.` : `${added} new offers on the board.`, { offer: m.offers.at(-1).id });
   else if (m.offers.length !== before) emit(s, 'board-expired', 'An offer on the board expired.', { quiet: true });
 }

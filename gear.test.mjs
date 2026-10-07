@@ -377,7 +377,7 @@ test('a full stash deconstructs new items instead', () => {
   for (let i = 0; i < STASH_CAP; i++) addItem(s, item({ damage: 1 }));
   addItem(s, item({ damage: 9 }, { rarity: 'tuned' }));
   assert.equal(s.stash.length, STASH_CAP);
-  assert.equal(s.salvage.length, DECONSTRUCT.tuned.salvage[0]);
+  assert.ok(s.salvage.length >= DECONSTRUCT.tuned.salvage[0] && s.salvage.length <= DECONSTRUCT.tuned.salvage[1]);
 });
 
 test('runs: your first vault holds a protocol kit and a code cache; deeper vaults can hold source you bank', () => {

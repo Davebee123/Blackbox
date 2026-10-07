@@ -36,8 +36,8 @@ export const versionOf = (level) => 1 + Math.floor(Math.max(0, level) / VERSION_
 export const perksAt = (level) => VERSION_PERKS.filter((p) => p.v <= versionOf(level));
 const perk = (s, id, loc = null) => perksAt(fwAt(s, loc).level).filter((p) => p.perk === id).length;
 export const versionSlots = (s) => perk(s, 'slot'); // your home firewall's extra filter slots
-// To go from level L to L+1: a major version (L+1 a multiple of 10) triples the credits, doubles the Cipher and takes an Exploit.
-export const upgradeCost = (L) => { const major = (L + 1) % VERSION_EVERY === 0, base = { credits: 30 + 20 * L, cipher: 2 + L }; return major ? { credits: base.credits * 3, cipher: base.cipher * 2, exploit: 1, major: true } : base; };
+// To go from level L to L+1 (mostly Cipher, so code has somewhere to go): a major version (L+1 a multiple of 10) triples the credits, doubles the Cipher and takes an Exploit.
+export const upgradeCost = (L) => { const major = (L + 1) % VERSION_EVERY === 0, base = { credits: 15 + 10 * L, cipher: 3 + 2 * L }; return major ? { credits: base.credits * 3, cipher: base.cipher * 2, exploit: 1, major: true } : base; };
 // A defrag: credits for every fragmented block, more on a bigger firewall.
 export const defragCost = (f) => Math.max(5, Math.round(f.frag * (3 + f.level)));
 

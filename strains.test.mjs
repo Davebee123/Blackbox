@@ -64,9 +64,8 @@ test('Keylogger: the Logger only feels synced commands, and three unsynced ones 
   fire(s, 'spike pulse');
   fire(s, 'spike pulse');
   assert.equal(logger.attack.due, s.encounter.cycle, 'the Dump comes next cycle');
-  const before = s.server.integrity;
-  fire(s, 'spike pulse', true);
-  assert.ok(s.server.integrity < before, 'the Dump lands');
+  const ev = fire(s, 'spike pulse', true);
+  assert.ok(ev.some((e) => /^Dump (hits|misses)/.test(e.message || '')), 'the Dump fires (it can miss, like any hit)');
   assert.equal(s.encounter.keylog, 0, 'the log empties');
 });
 

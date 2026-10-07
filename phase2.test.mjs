@@ -195,3 +195,50 @@ test('Phase 3: elites are crew rooms (a blue at least); Hardened halves the firs
   assert.equal(ABILITIES['zero-day'].damage, 65);
   assert.equal(ITEM_SCALE.unique, 0.5);
 });
+
+test('Phase 4: a hot strain every 4 hours (the same for everyone), first decodes pay, rested XP banks while you are safely away', async () => {
+  const { tickServices, hotStrain, HOT, DECODE_XP } = await import('./dist/combat.mjs');
+  const { tickNetwork } = await import('./dist/invasion.mjs');
+  const { killXp, STRAINS } = await import('./dist/data.mjs');
+  const a = at(12), b = at(12), T = 1_800_000_000_000;
+  tickServices(a, T); tickServices(b, T + 1000);
+  assert.ok(STRAINS[hotStrain(a, T)], 'a strain open at your level runs hot');
+  assert.equal(hotStrain(a, T), hotStrain(b, T + 1000), 'everyone sees the same one');
+  assert.equal(HOT.everyMs, 4 * 3600000);
+  assert.equal(DECODE_XP, 2);
+  const r = at(10); r.firewall = { level: 60, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  tickNetwork(r, T); tickNetwork(r, T + 3 * 3600000);
+  assert.ok(Math.abs(r.rested - 3 * killXp(10)) <= 2, `three safe hours: three kills banked (${r.rested})`);
+});
+
+test('Phase 4: strain contracts count only their strain, and every fifth in a row pays double', async () => {
+  const { SLAYER } = await import('./dist/mail.mjs');
+  const s = at(14);
+  s.mail = { offers: [], jobs: [], next: 1, boardOpen: true };
+  let o; for (let i = 0; i < 200 && (!o || o.type !== 'strain'); i++) { s.mail.offers = []; o = offer(s, 0); }
+  assert.equal(o.type, 'strain');
+  s.mail.offers = []; s.mail.jobs.push(o);
+  contractKill(s, { family: 'worm', zone: true, level: 14, strain: null });
+  assert.equal(o.got, 0, 'a plain kill does not count');
+  for (let i = 0; i < o.count; i++) contractKill(s, { family: 'worm', zone: true, level: 14, strain: o.strain });
+  assert.equal(o.got, o.count);
+  s.slayer = { streak: SLAYER.every - 1 };
+  const credits = s.server.credits, pay = o.reward.credits;
+  command(s, 'mail deliver ' + o.id);
+  assert.equal(s.server.credits - credits, 2 * pay, 'the fifth pays double');
+});
+
+test('Phase 4: when the board opens, KESTREL and NULL CHOIR each ask you to pick a side; taking one withdraws the other', async () => {
+  const { storyAt, offers } = await import('./dist/mail.mjs');
+  const { rep } = await import('./dist/factions.mjs');
+  const s = at(8);
+  storyAt(s, 'ledger', 0); // past the turf job: the board is open
+  const sides = offers(s).filter((o) => o.type === 'side');
+  assert.equal(sides.length, 2);
+  const k = sides.find((o) => o.faction === 'kestrel');
+  const before = { k: rep(s, 'kestrel'), n: rep(s, 'nullchoir') };
+  command(s, 'mail accept ' + k.id);
+  assert.ok(!offers(s).some((o) => o.type === 'side'), 'the other side is gone');
+  command(s, 'mail deliver ' + k.id);
+  assert.ok(rep(s, 'kestrel') > before.k && rep(s, 'nullchoir') < before.n, 'one up, its rival down');
+});

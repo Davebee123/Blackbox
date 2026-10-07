@@ -140,9 +140,9 @@ export const RARITIES = {
 export const RARITY_ORDER = ['scrap', 'stock', 'tuned', 'custom', 'zeroday', 'indemnified'];
 // What deconstructing gives: salvage, code (the family it dropped from) and Exploits.
 export const DECONSTRUCT = {
-  scrap: { salvage: [1, 2], code: 0, exploit: 0 },
-  stock: { salvage: [2, 3], code: 0, exploit: 0 },
-  tuned: { salvage: [3, 3], code: 1, exploit: 0 },
+  scrap: { salvage: [1, 1], code: 0, exploit: 0 },
+  stock: { salvage: [1, 2], code: 0, exploit: 0 },
+  tuned: { salvage: [2, 3], code: 1, exploit: 0 },
   custom: { salvage: [5, 5], code: 2, exploit: 1 },
   zeroday: { salvage: [10, 10], code: 4, exploit: 3 },
   indemnified: { salvage: [10, 10], code: 4, exploit: 3 },
@@ -166,7 +166,7 @@ export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z
 // hour). A blue about every 25 minutes, a yellow every two hours, a gold about every 11 hours;
 // most kills drop nothing. Grindy on purpose. See the items design doc.
 export const LOOT = {
-  killsPerHour: 60, // measured: what the scripted player averages (bot.mjs); the System page shows yours
+  killsPerHour: 20, // measured: what the pacing bot averages (bot.mjs, about 10-18 with its waits); the System page shows yours
   // Per kill (vaults and double rolls on guards add the rest, to land near the targets:
   // a blue every 20–30 min, a yellow about two hours, a gold every 10–12 hours).
   minutes: { tuned: 36, custom: 180, zeroday: 900 },

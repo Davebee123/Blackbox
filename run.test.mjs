@@ -498,8 +498,9 @@ test('XP: fights, vaults and new locations level you up; the server gets every p
   let earned = 0;
   for (let i = 0; i < 4; i++) {
     command(s, 'encounter random'); command(s, 'engage'); s.encounter.queue = null;
+    const mark = s.serial;
     finishOff(s, s.encounter.virus.parts.at(-1).id);
-    earned += s.logs.filter((e) => e.type === 'xp').at(-1).amount;
+    earned += s.logs.filter((e) => e.type === 'xp' && e.id > mark).reduce((n, e) => n + e.amount, 0); // the kill, and a first decode
   }
   assert.equal(s.serverXp - sx, earned, 'every XP a hacker earns, the server earns too');
   assert.ok(xpToNext(18) > 10 * xpToNext(1), 'the climb gets longer');

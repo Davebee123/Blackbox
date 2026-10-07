@@ -1,5 +1,16 @@
 // Written in the content editor (editor.html). Safe to edit by hand too: it's JSON after 'export default'.
 export default {
+  "strain": {
+    "halcyon": [
+      {
+        "subject": "Strain watch: {strain}",
+        "body": [
+          "Claims keep coming in from {strain}. Neutralize {count} of them at your level, wherever they turn up.",
+          "Five of these in a row and we start paying like we mean it."
+        ]
+      }
+    ]
+  },
   "kill": {
     "halcyon": [
       {

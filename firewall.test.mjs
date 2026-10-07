@@ -199,7 +199,7 @@ test('major versions every 10 levels: the upgrade into one takes an Exploit, and
   const { slotsOf } = await import('./dist/filters.mjs');
   assert.equal(versionOf(9), 1); assert.equal(versionOf(10), 2); assert.equal(versionOf(20), 3);
   assert.equal(upgradeCost(8).exploit, undefined);
-  assert.deepEqual(upgradeCost(9), { credits: (30 + 180) * 3, cipher: 11 * 2, exploit: 1, major: true });
+  assert.deepEqual(upgradeCost(9), { credits: (15 + 90) * 3, cipher: 21 * 2, exploit: 1, major: true });
   const s = fresh();
   fwOf(s).level = 9;
   s.server.credits = 9999; s.materials = { cipher: 99, exploit: 0 };

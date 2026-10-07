@@ -428,7 +428,7 @@ export function rollDrop(s, ctx, level) {
     if (rand(s) < ELITE.unique) { const u = uniqueFrom(s, ctx, level); if (u) best = uniqueItem(u, level, () => rand(s)); }
     if (!best || RARITY_ORDER.indexOf(best.rarity) < RARITY_ORDER.indexOf(ELITE.floor)) best = rollItem(() => rand(s), { level, rarity: ELITE.floor });
   }
-  if (ctx.strain && rand(s) < 1 / LOOT.trophy) {
+  if (ctx.strain && (ctx.trophy || rand(s) < 1 / LOOT.trophy)) { // a streak reward rolls for it outright
     const t = Object.values(UNIQUES).find((u) => (u.sources || []).some((src) => src.kind === 'strain' && src.id === ctx.strain));
     if (t) best = uniqueItem(t, level, () => rand(s));
   }
@@ -567,6 +567,7 @@ export function tickServices(s, now = Date.now()) {
   tickPayloads(s, now);
   tickHubs(s, now);
   tickRoot(s, now, (loc) => hooks.procRooms?.(loc) || []);
+  tickHot(s, now);
   return since(s, first);
 }
 
@@ -701,6 +702,23 @@ function breadcrumb(s, level) {
   if (level === 4 && !tame.length) addLocation(s, Object.entries(s.leadProgress || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || 'worm', 1);
   const open = (s.locations || []).find((l) => !l.rogue && !l.member && !l.takenOver);
   if (level === 5 && open && !tame.some((l) => Object.keys(l.state?.unlocked || {}).length)) emit(s, 'breadcrumb', `wick: strays won't feed you forever. ${open.name} has a vault. go open it.`, { location: open.id });
+}
+// Decoding a part you've never broken: kills of XP (Phase 4).
+export const DECODE_XP = 2;
+// ---------- the hot strain ----------
+// Every 4 hours one strain open at your level runs hot: +50% XP and lead from it (EverQuest's hot
+// zones). On the pager when it changes.
+export const HOT = { everyMs: 4 * 3600000, bonus: 0.5 };
+export const hotStrain = (s, now = hooks.now?.() ?? Date.now()) => (s.hot && now < s.hot.until ? s.hot.strain : null);
+// Fixed by the 4-hour window, not your save: everyone sees the same hot strain (it'll matter online).
+function tickHot(s, now) {
+  if (s.hot && now < s.hot.until) return;
+  const L = hackerLevel(s), open = Object.keys(STRAINS).filter((k) => STRAINS[k].from <= L);
+  if (!open.length) return;
+  const slot = Math.floor(now / HOT.everyMs);
+  const pick = open[(Math.imul(slot, 2654435761) >>> 0) % open.length];
+  s.hot = { strain: pick, until: (slot + 1) * HOT.everyMs };
+  emit(s, 'hot-strain', `${STRAINS[pick].name} is running hot: +50% XP and lead for 4 hours.`, { strain: pick });
 }
 // ---------- varied play (Fresh) ----------
 // XP comes in kinds. The first XP of a kind other than fighting that you haven't earned in 20 minutes
@@ -1135,7 +1153,12 @@ function payKill(s, e, base, why) {
   const xp = Math.max(1, Math.round((xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1))) / n));
   const bonus = e.fast ? Math.max(1, Math.round(xp * FAST.bonus)) : 0;
   if (bonus) emit(s, 'fast-kill', `Fast kill: ${e.cycle} cycles. +${bonus} XP.`, { amount: bonus, cycles: e.cycle });
-  gainXp(s, xp + bonus, why, 'fight');
+  const hot = e.virus.strain && e.virus.strain === hotStrain(s) ? Math.max(1, Math.round(xp * HOT.bonus)) : 0;
+  if (hot) emit(s, 'hot-kill', `Hot strain: +${hot} XP.`, { amount: hot });
+  // Rested (WoW): XP banked while you were safely away doubles a kill until it runs out.
+  const rested = Math.min(s.rested || 0, xp);
+  if (rested) { s.rested -= rested; emit(s, 'rested', `Rested: +${rested} XP.`, { amount: rested }); }
+  gainXp(s, xp + bonus + hot + rested, why, 'fight');
 }
 
 export function finish(s, result) {
@@ -1149,7 +1172,7 @@ export function finish(s, result) {
   const d = defender(s);
   let lead = 0;
   // Lead falls with the level gap like XP does: a grey kill (10+ levels under you) traces nothing.
-  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(e.virus.level - hackerLevel(s))));
+  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(e.virus.level - hackerLevel(s))) * (e.virus.strain && e.virus.strain === hotStrain(s) ? 1 + HOT.bonus : 1));
 
   if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
@@ -1170,7 +1193,7 @@ export function finish(s, result) {
     if (named) delete spawn.bounty;
     if (result === 'victory') {
       emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
-      contractKill(s, { family: e.virus.family, zone: true, bounty: named, level: e.virus.level });
+      contractKill(s, { family: e.virus.family, zone: true, bounty: named, level: e.virus.level, strain: e.virus.strain });
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
@@ -1194,7 +1217,7 @@ export function finish(s, result) {
       const loc = findLocation(s, s.run?.loc);
       if (loc) { loc.state.cleared[e.room] = true; clearedFor(s, loc); } // a faction's server: they like that (factions.mjs)
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
-      contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level });
+      contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
       payKill(s, e, XP.guard, `${e.virus.name} down`);
       // A guard's drop goes in your pack: it's yours once you jack out.
       const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: loc?.depth || 1, family: loc?.family }, e.virus.level);
@@ -1227,7 +1250,7 @@ export function finish(s, result) {
   const inv = e.invader && s.invasion?.id === e.invader ? s.invasion : null;
   const hid = inv?.hidden ? hiddenNode(s, inv.hidden) : null; // an invader from a server you haven't found
   if (result === 'victory') {
-    contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level });
+    contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
     if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
@@ -1580,6 +1603,8 @@ function actorTurn(s, who) {
 
 const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s)); // as run.mjs
 // Topping up: pay to have Signal or server Integrity full now (CONFIG.topUp), instead of resting.
+// What a unit of code counts for when you're short of credits (top-ups).
+export const CODE_CREDITS = 8;
 export function topUpPrice(s, what) {
   const [base, per] = CONFIG.topUp[what];
   return base + per * (what === 'signal' ? hackerLevel(s) : serverLevel(s));
@@ -1600,10 +1625,16 @@ function topUp(s, what, wanted = null) {
   const now = signal ? signalNow(s) : s.server.integrity;
   let n = Math.min(max - now, wanted ?? max);
   if (n <= 0) return warn(s, signal ? 'Signal is already full.' : 'Server is already at full Integrity.');
+  // Short on credits: the rest comes out of your biggest pile of code (any kind), CODE_CREDITS each.
+  const mats = materialsOf(s), pile = ['cipher', 'worm', 'kernel'].sort((a, b) => (mats[b] || 0) - (mats[a] || 0))[0];
+  const short = Math.max(0, topUpCost(s, what, n) - s.server.credits), code = Math.ceil(short / CODE_CREDITS);
+  let paidCode = 0;
+  if (short && (mats[pile] || 0) >= code) { paidCode = code; mats[pile] -= code; s.server.credits += code * CODE_CREDITS; }
   while (n > 0 && topUpCost(s, what, n) > s.server.credits) n--; // as much as you can afford
   if (n <= 0) return warn(s, `Not enough credits (${topUpCost(s, what)} to fill it).`);
   const cost = topUpCost(s, what, n);
   s.server.credits -= cost;
+  if (paidCode) emit(s, 'info', `Paid ${paidCode} ${MATERIALS[pile].name} toward it.`);
   if (signal) { s.signal = now + n >= max ? null : now + n; s.signalAcc = 0; }
   else s.server.integrity += n;
   emit(s, 'repair', signal ? `Signal topped up: +${n} for ${cost} credits. Signal ${now + n}/${max}.` : `Repaired ${n} Integrity for ${cost} credits. Server ${s.server.integrity}/${s.server.max}.`, { what, credits: cost });
@@ -1711,7 +1742,8 @@ export const codexKey = (v, p) => `${v.strain || v.family}:${p.id}`;
 export const knowsPart = (s, v, p) => p.kind === 'fragment' || !!s.codex?.[codexKey(v, p)];
 function breakPart(s, p) {
   const e = s.encounter;
-  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `Codex: ${p.name} decoded.`, { target: p.id }); }
+  // The first time you break a part: it's decoded in the Codex, and that pays two kills of XP.
+  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `Codex: ${p.name} decoded.`, { target: p.id }); gainXp(s, xpFor(s, e.virus.level, DECODE_XP), `${p.name} decoded`, 'intel'); }
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
