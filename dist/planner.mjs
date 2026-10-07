@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn } from './combat.mjs';
+import { classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn } from './combat.mjs';
 
 const ok = (s, text) => !toIntent(s, text).error;
 // Try commands in order; the first one that's valid right now wins.
@@ -10,6 +10,13 @@ const landingNow = (s) => intents(s).filter((i) => i.col === 0 && !i.hidden);
 // The part to work on: the one whose (visible) attack lands soonest; hidden ones count as due in 2.
 const dueOf = (s, p) => (intents(s).find((i) => i.source === p.id && !i.hidden)?.col ?? (p.attack ? 2 : 9));
 export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s)[0];
+// How a player who reads the codex picks a target: the most threat per point of Integrity left
+// (attack size over interval; encryption stacks, fragments multiply, a heal undoes work), armor
+// counted as Integrity. Hidden timers don't matter: the codex says what each part does.
+const threatOf = (p) => { const a = p.attack; if (!a) return 0; const amt = a.effect === 'damage' ? a.amount : a.effect === 'encrypt' ? a.amount * 3 + (a.hit || 0) : a.effect === 'replicate' ? 6 + (a.hit || 0) : a.effect === 'heal' ? 8 : a.hit || 0; return amt / Math.max(1, Math.min(a.interval || 4, 6)); };
+// Burns and helpers already on a part count for it: switching away wastes them.
+const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target === p.id).length + 0.3 * s.encounter.helpers.filter((h) => h.target === p.id).length;
+export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 const HITS = ['zero-day', 'shatter', 'retaliate', 'opening', 'segfault', 'overload', 'flood', 'backdoor', 'reclaim', 'rate-limit', 'spike'];
 // A command that breaks this part right now, if there is one.
@@ -34,7 +41,8 @@ export function planner(s) {
   const now = landingNow(s);
   // Encrypted: the Encryptor holds the key, so it's the next threat whatever its timer says.
   const key = (s.encounter.encrypt > 0 && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || livingParts(s).find((p) => p.rearm) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring; a Replicator that keeps spawning
-  const t0 = key || soonest(s);
+  // Burn classes (Infiltrator) get the most out of big parts that outlive their burns; the rest go for the biggest threat.
+  const t0 = key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
@@ -56,6 +64,7 @@ export function planner(s) {
   if (big) {
     const answer = first(s, [
       big.effect === 'damage' && s.encounter.chits === 0 && 'harden',
+      big.effect === 'damage' && 'rate-limit ' + big.source, // hits harder when its attack is due, and halves it
       'suspend ' + big.source,
       helpersOn(s, part(s, big.source)) && 'jam ' + big.source,
       big.effect === 'damage' && 'firewall',
@@ -81,6 +90,7 @@ export function planner(s) {
       burnsOn(s, t) < 3 && 'inject ' + t.id,
       'thermal-runaway ' + t.id,
       'deploy ' + t.id,
+      'spawn ' + t.id,
       'hook ' + t.id,
       'backdoor ' + t.id,
       'spike ' + t.id,
