@@ -1704,6 +1704,13 @@ body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template
 .inv-row { --edge: var(--line-strong); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px 6px 10px; background: var(--inset); border-left: 3px solid var(--edge); border-radius: 2px; min-height: 44px; }
 .inv.slots .inv-row { grid-template-columns: 74px auto minmax(0, 1fr) auto; }
 .inv-row:hover { background: rgba(241, 185, 47, 0.05); }
+/* Hovering a stash item lights the protocol slot it goes in (data-kind on both, view.mjs). */
+body:has(.stash-card .inv-row[data-kind="exploit"]:hover) .inv.slots .inv-row[data-kind="exploit"],
+body:has(.stash-card .inv-row[data-kind="proxy"]:hover) .inv.slots .inv-row[data-kind="proxy"],
+body:has(.stash-card .inv-row[data-kind="shell"]:hover) .inv.slots .inv-row[data-kind="shell"],
+body:has(.stash-card .inv-row[data-kind="script"]:hover) .inv.slots .inv-row[data-kind="script"],
+body:has(.stash-card .inv-row[data-kind="implant"]:hover) .inv.slots .inv-row[data-kind="implant"] { outline: 1px solid var(--amber); outline-offset: -1px; background: rgba(241, 185, 47, 0.12); box-shadow: 0 0 10px rgba(241, 185, 47, 0.25); }
+.inv.slots .inv-row { transition: background 0.12s, box-shadow 0.12s; }
 .inv-row.r-scrap { --edge: var(--r-scrap); } .inv-row.r-stock { --edge: var(--r-stock); } .inv-row.r-tuned { --edge: var(--r-tuned); }
 .inv-row.r-custom { --edge: var(--r-custom); } .inv-row.r-zeroday { --edge: var(--r-zeroday); background: linear-gradient(90deg, rgba(212, 166, 74, 0.08), var(--inset) 40%); } .inv-row.r-indemnified { --edge: var(--r-indemnified); }
 .inv-row.empty, .inv-row.locked { background: none; border-left-style: dashed; grid-template-columns: 74px minmax(0, 1fr); }

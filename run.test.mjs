@@ -767,3 +767,15 @@ test('attack <name> matches in any case: attack relay-king finds RELAY-KING.exe'
   assert.ok(s.encounter, 'the fight starts');
   assert.ok(!s.logs.some((e) => /No relay-king here/.test(e.message)));
 });
+
+test('protocols: stash items and slots share a data-kind, so hovering an item lights its slot', async () => {
+  const { protocolGearMarkup } = await import('./dist/view.mjs');
+  const { rollItem } = await import('./dist/gear.mjs');
+  const s = fresh();
+  s.hackers = { breaker: { level: 14, xp: 0 } };
+  let seed = 3; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const it = rollItem(rand, { level: 10 }); it.id = 'hv1'; s.stash.push(it);
+  const html = protocolGearMarkup(s);
+  const kind = html.match(/class="inv-row [^"]*" data-kind="([a-z]+)">/)[1];
+  assert.match(html, new RegExp(`<ul class="inv slots">.*data-kind="${kind}"`, 's'));
+});

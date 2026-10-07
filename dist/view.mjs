@@ -623,11 +623,12 @@ function protocolsParts(s, focus = null) {
   const slotList = Array.from({ length: PROTOCOL_SLOTS.at(-1).slots }, (_, i) => {
     const kind = SLOTS[SLOT_KINDS[i]]?.name || SLOT_KINDS[i];
     const label = `<span class="inv-slot"><b>${i + 1}</b>${esc(kind)}</span>`;
-    if (i >= n) return `<li class="inv-row locked">${label}<span class="inv-empty">opens at Lv ${PROTOCOL_SLOTS.find((x) => x.slots > i).level}</span></li>`;
+    const k = `data-kind="${SLOT_KINDS[i]}"`; // hovering a stash item lights the slot it goes in (style.css)
+    if (i >= n) return `<li class="inv-row locked" ${k}>${label}<span class="inv-empty">opens at Lv ${PROTOCOL_SLOTS.find((x) => x.slots > i).level}</span></li>`;
     const it = rigOf(s)[i] && stashItem(s, rigOf(s)[i]);
     return it
-      ? `<li class="inv-row ${rarityClass(it)}">${label}${invBody(it)}<span class="inv-acts"><button type="button" class="inv-btn" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button></span></li>`
-      : `<li class="inv-row empty">${label}<span class="inv-empty">empty</span></li>`;
+      ? `<li class="inv-row ${rarityClass(it)}" ${k}>${label}${invBody(it)}<span class="inv-acts"><button type="button" class="inv-btn" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button></span></li>`
+      : `<li class="inv-row empty" ${k}>${label}<span class="inv-empty">empty</span></li>`;
   }).join('');
   const sort = (a, b) => (loadedOn(s, b.id) === classOf(s)) - (loadedOn(s, a.id) === classOf(s)) || RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || b.level - a.level;
   // The stash lists what isn't in your slots (loaded items live in the slots above it).
@@ -642,7 +643,7 @@ function protocolsParts(s, focus = null) {
     const swap = freeSlot(s, groupOf(it)) < 0 && !full;
     const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" data-ptip="${esc(it.id)}" ${busy || full || dupe ? 'disabled' : ''} title="${busy ? 'At home only' : full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
     const scrap = where ? '' : `<button type="button" class="inv-btn" data-command="deconstruct ${it.id}"${confirm} ${busy ? 'disabled' : ''} title="Deconstruct: salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}</button>`;
-    return `<li class="inv-row ${rarityClass(it)}">${invBody(it, whereTag)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
+    return `<li class="inv-row ${rarityClass(it)}" data-kind="${groupOf(it)}">${invBody(it, whereTag)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
   }).join('');
   const counts = Object.fromEntries(SLOT_KINDS.filter((k, i, a) => a.indexOf(k) === i).map((k) => [k, spare.filter((it) => groupOf(it) === k).length]));
   const filters = `<div class="inv-filters" role="group" aria-label="Show">${[['all', 'All', spare.length], ...Object.entries(counts).map(([k, c]) => [k, SLOTS[k]?.name || k, c])].map(([k, l, c]) => `<button type="button" data-stash-filter="${k}" aria-pressed="${stashUi.filter === k}" ${c || k === 'all' ? '' : 'disabled'}>${esc(l)} <span>${c}</span></button>`).join('')}</div>`;

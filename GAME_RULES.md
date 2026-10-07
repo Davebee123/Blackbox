@@ -146,7 +146,7 @@ Two sides, two ways to get stronger. **You** run protocols: loot with rolled sta
 
 ### Items (you): loot, Diablo 2 style
 
-Everything you equip is software: code, tools and access, never hardware. The Loadout page's Protocols tab (type `protocols`) shows your slots, your stat sheet and the stash. Design: the items design doc ("BLACKBOX: loot and 50 items").
+Everything you equip is software: code, tools and access, never hardware. The Loadout page's Protocols tab (type `protocols`) shows your slots, your stat sheet and the stash. Hovering an item in the stash lights the slot it goes in. Design: the items design doc ("BLACKBOX: loot and 50 items").
 
 **Slots.** Exploit (weapon: Damage), Proxy (chest: Signal + Block), Shell (helm: Signal + Regen + Restore), Script (ring: Damage + Signal + Payload); an **Implant** slot opens at level 15 and another at 30 (Implants drop and compile from item level 15, about one item in five, as well as the named uniques). `load` puts an item in its slot; if the slot is full it **swaps** (the old one goes back to the stash). Each class loads its own; one place at a time; one of each unique and each Zero-day per loadout.
 
