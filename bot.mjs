@@ -42,8 +42,11 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   const fight = () => {
     if (!s.encounter) return;
     if (s.encounter.phase === 'alert') command(s, 'engage');
-    const key = fightKey(), where = s.run?.loc;
+    const key = fightKey(), where = s.run?.loc, v = s.encounter.virus;
     stats.fights[key] = (stats.fights[key] || 0) + 1;
+    // The fight mix by your level: grey (10+ levels under you) vs strains and ICE (the fights with a rule).
+    const mix = ((stats.mix ||= {})[hackerLevel(s)] ||= { fights: 0, grey: 0, special: 0 });
+    mix.fights++; if (v.level - hackerLevel(s) <= -10) mix.grey++; if (v.strain || ['tracer', 'bouncer'].includes(v.family)) mix.special++;
     for (let n = 0; n < 80 && active(s); n++) {
       const text = policy(s) || 'hold';
       if (s.encounter.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';

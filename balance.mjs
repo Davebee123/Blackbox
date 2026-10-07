@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, addItem, maxSignal, syncServer } from './dist/combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
-import { ARCHETYPES, SERVER, skillOrder, LOADOUT } from './dist/data.mjs';
+import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS } from './dist/data.mjs';
 
 import { planner, soonest } from './dist/planner.mjs';
 
@@ -22,24 +22,36 @@ export const BRACKETS = [
   { name: 'Lv 1', level: 1, server: 1, depth: 1, services: {} },
   { name: 'Lv 10', level: 10, server: 10, depth: 1, services: { raid: 1 } },
   { name: 'Lv 18', level: 18, server: 18, depth: 2, services: { raid: 1, kernel: 1 } },
-  { name: 'Lv 30', level: 30, server: 30, depth: 2, tree: 'half', services: { raid: 2, kernel: 1, hotpatch: 1, scrubber: 1 } },
-  { name: 'Lv 50', level: 50, server: 50, depth: 3, tree: 'full', services: { raid: 3, kernel: 2, hotpatch: 2, scrubber: 2, counter: 2, cron: 1 } },
+  { name: 'Lv 30', level: 30, server: 30, depth: 2, services: { raid: 2, kernel: 1, hotpatch: 1, scrubber: 1 } },
+  { name: 'Lv 50', level: 50, server: 50, depth: 3, services: { raid: 3, kernel: 2, hotpatch: 2, scrubber: 2, counter: 2, cron: 1 } },
 ];
 
-// Talent picks for a filled tree: each tier's first choice (or `picks`), every rank (or `ranks`).
+// Talents as a player would have them: a point at 10 and every 2 levels after (LOADOUT), spent in a
+// fixed order (rank up a row's first node, take the tier's choice, move down). `tree: 'full'` maxes it.
+const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
 export function build(s, cls, b, opts) {
   s.loadout.archetype = cls;
   s.hackers = { [cls]: { level: b.level, xp: 0 } };
   let xp = 0; for (let l = 1; l < b.server; l++) xp += SERVER.xpToNext(l); s.serverXp = xp;
   const a = ARCHETYPES[cls];
   if (b.tree === 'full') { s.loadout.picks[cls] = [0, 0, 0]; s.loadout.ranks[cls] = Object.fromEntries(a.fillers.flat().map((n) => [n.id, 3])); }
-  if (b.tree === 'half') { s.loadout.picks[cls] = [0]; s.loadout.ranks[cls] = Object.fromEntries(a.fillers[0].map((n) => [n.id, 3])); s.loadout.ranks[cls][a.fillers[1][0].id] = 3; }
+  else {
+    let left = b.level < LOADOUT.talentFrom ? 0 : Math.floor((b.level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
+    const ranks = {}, picks = [];
+    for (const [id, n] of fillOrder(a.fillers)) {
+      if (left <= 0) break;
+      if (!n) { picks[+id[1]] = (opts.picks || [0, 0, 0])[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
+    }
+    s.loadout.picks[cls] = picks; s.loadout.ranks[cls] = ranks;
+  }
   if (opts.picks) s.loadout.picks[cls] = opts.picks;
   if (opts.ranks) s.loadout.ranks[cls] = opts.ranks;
   if (opts.extra) s.loadout.equipped[cls] = [...skillOrder(cls).slice(0, 4), opts.extra];
-  // Protocols: a Tuned one in every open slot at the bracket's level. Services: the bracket's set.
+  // Protocols: a Tuned one in every open slot at the bracket's level, except an implant slot below
+  // the level implants start to drop (item level 15). Services: the bracket's set.
   if (!opts.noGear) {
     for (let i = 0; i < protocolSlots(b.level); i++) {
+      if (SLOT_KINDS[i] === 'implant' && b.level < 15) continue;
       const it = addItem(s, rollItem(seeded(b.level * 100 + i), { level: b.level, rarity: opts.rarity || 'tuned', group: SLOT_KINDS[i] }));
       command(s, 'load ' + it.id);
     }
@@ -57,7 +69,7 @@ export function fight(policy, key, b, opts = {}) {
   const guard = opts.mode === 'run';
   if (guard) s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
   const startHp = guard ? s.run.max : s.server.max; // health lost is a share of your own max
-  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}) } : guard ? { mode: 'run', room: '/sim', level: SERVER.locationLevel(b.level, opts.depth || 1) } : {});
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}) } : guard ? { mode: 'run', room: '/sim', level: SERVER.locationLevel(b.level, opts.depth || 1) } : {});
   command(s, 'engage');
   const uses = {};
   for (let n = 0; n < 80 && active(s); n++) {
@@ -88,10 +100,22 @@ export function score(policy, b, opts = {}) {
   return { wins: runs.filter((r) => r.win).length, total: runs.length, clean: runs.filter((r) => r.clean).length, lost: avg(runs.map((r) => r.lostPct)), cycles: avg(runs.map((r) => r.cycles)), uses };
 }
 
+// The fights that should hurt: every strain open at this level, grade 2 wilds, and wilds 2 levels up.
+export const strainsAt = (level) => Object.keys(STRAINS).filter((k) => STRAINS[k].from <= level);
+export function hardScore(policy, b, opts = {}) {
+  const runs = [
+    ...strainsAt(b.level).map((strain, i) => fight(policy, 'random', b, { ...opts, seed: 100 + i, mode: 'run', zone: true, strain })),
+    ...Array.from({ length: 6 }, (_, i) => fight(policy, 'random', b, { ...opts, seed: 200 + i, mode: 'run', zone: true, grade: 2 })),
+    ...Array.from({ length: 6 }, (_, i) => fight(policy, 'random', b, { ...opts, seed: 300 + i, mode: 'run', zone: true, levelUp: 2 })),
+  ];
+  const avg = (xs) => xs.reduce((a, c) => a + c, 0) / xs.length;
+  return { wins: runs.filter((r) => r.win).length, total: runs.length, clean: runs.filter((r) => r.clean).length, lost: avg(runs.map((r) => Math.min(100, r.lostPct))), cycles: avg(runs.map((r) => r.cycles)) };
+}
+
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   const classes = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
-  let md = '# BLACKBOX class balance by level\n\nOne scripted planner for every class (it finishes bare or about-to-fire parts, answers attacks it cannot prevent, strips armor with small or spread hits, then finishes), playing each class’s own kit. Each bracket: 20 random home intrusions at your level and the four guards at the deepest layer reached (your level + 2 per layer). Your numbers and theirs both grow 4% per level; misses follow the level gap (5% at your level). Levels 30 and 50 include talents (30: two ranked nodes maxed and the first tier-1 choice; 50: the whole tree). Everyone loads a Tuned protocol in every open slot (4, 5 at 15, 6 at 30) at their level and runs a bracket’s worth of defensive services (none at 1; four v1 at 10; up to eight v3 at 50), except the no-gear column, which has neither. Crits are on for both sides (seeded). Health lost is a share of your own max. Scripted policies, not people.\n\n';
+  let md = '# BLACKBOX class balance by level\n\nOne scripted planner for every class (it finishes bare or about-to-fire parts, answers attacks it cannot prevent, strips armor with small or spread hits, then finishes), playing each class’s own kit. Each bracket: 20 random home intrusions at your level and the four guards at the deepest layer reached (your level + 2 per layer). Your numbers and theirs both grow 4% per level; misses follow the level gap (5% at your level). Talents as a player would have them: a point at level 10 and every 2 levels after, spent in a fixed order (14 points at 50, not the whole tree). Everyone loads a Tuned (blue) protocol in every open slot (4, 5 at 15, 6 at 30) at their level (an implant slot only from 15, where implants start to drop) and runs a bracket’s worth of defensive services (none at 1; four v1 at 10; up to eight v3 at 50), except the no-gear column, which has neither. Crits are on for both sides (seeded). Health lost is a share of your own max. Scripted policies, not people.\n\n';
   md += '| Bracket | Spike, no gear | ' + ['Spike only', ...classes].join(' | ') + ' |\n|---|---:|' + ['x', ...classes].map(() => '---:').join('|') + '|\n';
   const summary = {};
   for (const b of BRACKETS) {
@@ -103,7 +127,9 @@ if (isMain) {
     const ng = score('Spike only', b, { noGear: true });
     md += `| ${b.name} | ${ng.wins}/${ng.total} · ${ng.clean} clean · ${ng.lost.toFixed(0)}% · ${ng.cycles.toFixed(1)}c | ${cells.join(' | ')} |\n`;
   }
-  md += '\nCells: wins · clean kills (nothing got through: no damage, encryption included) · average health lost · average cycles.\n\n## Skill use at level 50\n\n';
+  md += '\nCells: wins · clean kills (nothing got through: no damage, encryption included) · average health lost · average cycles.\n\n## The hard slice\n\nEvery strain open at the level, six grade 2 wilds and six wilds two levels up.\n\n| Bracket | ' + classes.join(' | ') + ' |\n|---|' + classes.map(() => '---:').join('|') + '|\n';
+  for (const b of BRACKETS) md += `| ${b.name} | ${classes.map((p) => { const r = hardScore(p, b); return `${r.wins}/${r.total} · ${r.lost.toFixed(0)}% · ${r.cycles.toFixed(1)}c`; }).join(' | ')} |\n`;
+  md += '\nTarget (a `todo` test in balance.test.mjs until Phase 3): a blue-geared fight at your level costs every class 22–35% of its health, classes within 15 points.\n\n## Skill use at level 50\n\n';
   for (const p of classes) {
     const u = summary[p].at(-1).uses, total = Object.values(u).reduce((a, c) => a + c, 0);
     md += `- **${p}:** ${Object.entries(u).sort((a, c) => c[1] - a[1]).map(([k, v]) => `${k} ${Math.round((v / total) * 100)}%`).join(' · ')}\n`;

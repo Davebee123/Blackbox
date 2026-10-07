@@ -115,6 +115,7 @@ Red is used only for "lands this cycle" and critical server health.
 node --test            # every *.test.mjs, including balance.test.mjs (class balance by level)
 node playtest.mjs      # kill orders vs enemies → docs/PLAYTEST.md
 node balance.mjs       # one scripted player per class at five points on the level curve → docs/BALANCE.md
+# balance.test.mjs and loop.test.mjs guard the class band and the fight mix; targets not met yet are `todo` tests
 ```
 
 The playtest script runs 7 scripted strategies against each fixture and 30 random variants. It checks that no single kill order always wins; it can't tell you if the game is fun. Play it with people for that.
