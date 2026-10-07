@@ -34,7 +34,7 @@ export const STATS = {
   crit: { side: 'hacker', group: 'offense', name: 'Crit', unit: '%', base: 4, about: 'Chance a hit that does damage crits (everyone starts at 5%).' },
   critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Added to every crit, on top of ×1.5.' },
   accuracy: { side: 'hacker', group: 'offense', name: 'Accuracy', unit: '%', base: 2.5, about: 'Cancels the enemy\'s evasion, so your damaging skills miss less. A miss still spends the cooldown.' },
-  echo: { side: 'hacker', group: 'offense', name: 'Echo', unit: '%', base: 5, cap: 40, about: 'Chance a skill hit repeats for half damage. Against armor, the echo breaks another chit.' },
+  echo: { side: 'hacker', group: 'offense', name: 'Echo', unit: '%', base: 5, cap: 40, about: 'Chance a skill hit repeats for half damage. Against armor, the echo breaks another ◆.' },
   payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1, flat: true, about: 'Added to every burn tick and helper hit.' },
   // Defense (health on its side; the rest on both sides)
   signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'More max Signal on runs.' },
@@ -45,7 +45,7 @@ export const STATS = {
   sanitize: { side: 'both', group: 'survival', name: 'Sanitize', unit: '%', base: 8, cap: 50, about: 'Chance an Encrypt, Blind or spawn fails (up to 50%).' },
   leech: { side: 'hacker', group: 'survival', name: 'Leech', unit: '', base: 1, flat: true, about: 'Heals you this much for every skill hit that does damage: your server at home, your Signal on runs.' },
   shield: { side: 'server', group: 'survival', name: 'Shield', unit: '', base: 10, flat: true, about: 'Start every home fight with a shield that soaks this much.' },
-  countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'When an attack lands on your server, the part that fired it takes this much. It\'s a hit: on armor, it breaks a chit.' },
+  countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'When an attack lands on your server, the part that fired it takes this much. It\'s a hit: on armor, it breaks a ◆.' },
   // Utility
   clock: { side: 'hacker', group: 'utility', name: 'Clock Speed', unit: '%', base: 8, about: 'Fills a meter every cycle. When it\'s full, all your cooldowns tick one extra cycle.' },
   stealth: { side: 'hacker', group: 'utility', name: 'Stealth', unit: '%', base: 8, cap: 60, about: 'Chance each enemy part\'s first attack comes a cycle later.' },
@@ -322,7 +322,7 @@ export const SERVICES = {
   kernel: { name: 'Hardened Kernel', code: 'kernel', stat: 'reduction', values: [2, 4, 6], unit: ' Block', flat: true, about: 'Hits on your server do less.' },
   scrubber: { name: 'Scrubber', code: 'cipher', stat: 'shield', values: [4, 7, 10], unit: '% shield at the start of each home fight', about: 'Every home fight starts with a shield.' },
   hotpatch: { name: 'Hot-patcher', code: 'worm', stat: 'regen', values: [0.3, 0.6, 1], unit: ' Regen', flat: true, about: 'Slow self-repair: per cycle in home fights, per minute between fights.' },
-  counter: { name: 'Counter-intrusion', code: 'worm', stat: 'countermeasures', values: [2, 4, 6], unit: ' back per hit', flat: true, about: 'Whatever hits your server takes a hit back (on armor, it breaks a chit).' },
+  counter: { name: 'Counter-intrusion', code: 'worm', stat: 'countermeasures', values: [2, 4, 6], unit: ' back per hit', flat: true, about: 'Whatever hits your server takes a hit back (on armor, it breaks a ◆).' },
   uplink: { name: 'Route Logger', code: 'cipher', stat: 'routeBoost', values: [25, 50, 75], unit: '% more from route files', about: 'Route files, trace records, injectors and log sweeps trace further, so the next layer turns up sooner.' },
   buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
   router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' outpost slots', about: 'Run more outposts at once.' },

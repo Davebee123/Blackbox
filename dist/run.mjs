@@ -376,9 +376,9 @@ export function connect(s, id) {
     // Your crew comes along, linked to you (they follow where you go). See the crew strip.
     s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: '/', link: 'you' }]));
     const q = QUIRKS[loc.quirk];
-    if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} hostile ${liveSpawns(s) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
-    else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied: ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'process' : 'processes'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
-    else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} hostile ${liveRogue(loc) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
+    if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} ${liveSpawns(s) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
+    else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied: ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
+    else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     ls(s);
     if (!zone && !loc.member) collect(s, loc, 'Collected from ');
@@ -417,7 +417,7 @@ function ls(s, all = false) {
     // What's waiting in there counts for a contract: a guard you haven't beaten, or a rogue folder's virus.
     const g = guarded(loc, full) && layoutOf(loc)[full]?.guard, wild = hostile && loc.spawns[full];
     const jobs = g ? jobNames(s, { family: g, zone: false, level: levelOf(loc) }) : wild ? jobNames(s, { family: wild.family, zone: true, name: wild.bounty ? wild.name : null, level: wild.level, strain: wild.strain }) : [];
-    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile', ...(loc.spawns[full].elite ? ['crew'] : [])] : tags, people, jobs });
+    entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'virus', ...(loc.spawns[full].elite ? ['crew'] : [])] : tags, people, jobs });
   }
   for (const f of here.files.filter(show)) {
     const info = fileInfo(loc, s.run.cwd, f);

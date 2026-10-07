@@ -4,15 +4,15 @@ import { CONFIG } from './data.mjs';
 
 export const LESSONS = [
   {
-    title: 'Break an armor chit',
+    title: 'Break a ◆',
     command: 'spike encryptor',
-    explain: 'Each part wears armor chits (◆). A hit on armor does no damage, however big: it breaks one chit. Encryptor has two. Each row also shows when that part attacks. Type spike encryptor.',
-    result: 'One chit broke and the Encryptor took no damage. Small hits are how you strip armor; save your big ones for parts with no armor left.',
+    explain: 'Each part wears armor (◆). A hit on armor does no damage, however big: it breaks one ◆. Encryptor has two. Each row also shows when that part attacks. Type spike encryptor.',
+    result: 'One ◆ broke and the Encryptor took no damage. Small hits are how you strip armor; save your big ones for parts with no armor left.',
   },
   {
     title: 'Crack the armor',
     command: 'crack encryptor',
-    explain: 'Crack breaks every chit left on a part at once. A part with no armor takes full hits, but it patches a chit back five cycles later unless you break it first: watch for ◆ patch on its row. Type crack encryptor.',
+    explain: 'Crack breaks every ◆ left on a part at once. A part with no armor takes full hits, but it patches a ◆ back five cycles later unless you break it first: watch for ◆ patch on its row. Type crack encryptor.',
     result: 'Encryptor\'s armor is broken: its row shows the cracks. The patch marker on its row is your deadline.',
   },
   {
@@ -25,7 +25,7 @@ export const LESSONS = [
     title: 'Finish it',
     command: 'spike pulse',
     live: true,
-    explain: 'Type spike pulse, then type nothing. If you don\'t type anything, your last attack repeats every cycle: the first Spike breaks its chit, the next ones land. Type hold if you ever want to do nothing.',
+    explain: 'Type spike pulse, then type nothing. If you don\'t type anything, your last attack repeats every cycle: the first Spike breaks its ◆, the next ones land. Type hold if you ever want to do nothing.',
     result: '',
   },
 ];

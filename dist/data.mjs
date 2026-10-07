@@ -139,25 +139,25 @@ export const ABILITIES = {
   // Breaker: burst, crits, breaking armor
   overload: { cls: 'breaker', verb: 'hit', name: 'Overload', target: 'part', damage: 40, cooldown: 3, icon: 'overload', short: 'Hit 40, crit resets', help: 'overload <part> — 40 damage. If it crits, its cooldown resets.' },
   exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 0, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Exposed: +25% crit', help: 'exploit <part> — Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
-  crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 3, icon: 'shell-shield', short: 'Strip 3 chits', help: 'crack <part> — breaks 3 armor chits on it at once.' },
-  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 55, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 55 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last armor chit. 55 damage.' },
+  crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 3, icon: 'shell-shield', short: 'Strip 3 ◆', help: 'crack <part> — breaks 3 ◆ on it at once.' },
+  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 55, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 55 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last ◆. 55 damage.' },
   flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 38, cooldown: 4, icon: 'overload', short: 'Hit 38, ×2 if bare', help: 'flood <part> — 38 damage, double on a part with no armor left.' },
   segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 below 30%', help: 'segfault <part> — 30 damage, three times that on a part under 30%.' },
   'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 15, cooldown: 3, icon: 'overload', short: 'Hit 15 all', help: 'fork-bomb — 15 damage to every part, 30 to an Exposed one.' },
   'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 6, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 6→18', help: 'thermal-runaway <part> — burns it for 6, then 10, 14 and 18.' },
-  brace: { cls: 'breaker', verb: 'buff', name: 'Brace', target: 'none', damage: 0, cycles: 2, block: 5, cooldown: 5, icon: 'shell-shield', short: 'Block 5, crack back', help: 'brace — for 2 cycles: +5 Block, and whatever hits you loses an armor chit (or takes 10 if it has none).' },
+  brace: { cls: 'breaker', verb: 'buff', name: 'Brace', target: 'none', damage: 0, cycles: 2, block: 5, cooldown: 5, icon: 'shell-shield', short: 'Block 5, crack back', help: 'brace — for 2 cycles: +5 Block, and whatever hits you loses a ◆ (or takes 10 if it has none).' },
   sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through armor, once', help: 'zero-day <part> — 65 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
-  'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 40, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 40 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 chits.' },
+  'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 40, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 40 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
   firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — shields you from the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
   patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 10, tick: 5, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 10 + 5×3', help: 'patch — heal 10 now, then 5 a cycle for 3 cycles.' },
   throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, cooldown: 4, icon: 'interrupt', short: 'Weaken −50%', help: 'throttle [part] — its attacks deal half for 3 cycles.' },
   purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, decrypt', help: 'purge <part> — burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption.' },
-  harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain an armor chit: the next attack on you does nothing, however big.' },
-  reclaim: { cls: 'bastion', verb: 'hit', name: 'Reclaim', target: 'part', damage: 35, lifesteal: 0.5, chits: 2, cooldown: 3, icon: 'server', short: 'Hit 35, heal half', help: 'reclaim <part> — 35 damage, and you heal half of what it does. On armor it breaks 2 chits.' },
+  harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain a ◆: the next attack on you does nothing, however big.' },
+  reclaim: { cls: 'bastion', verb: 'hit', name: 'Reclaim', target: 'part', damage: 35, lifesteal: 0.5, chits: 2, cooldown: 3, icon: 'server', short: 'Hit 35, heal half', help: 'reclaim <part> — 35 damage, and you heal half of what it does. On armor it breaks 2 ◆.' },
   quarantine: { cls: 'bastion', verb: 'stun', name: 'Quarantine', target: 'attack', damage: 0, delay: 3, status: 'quarantined', cycles: 3, cooldown: 6, icon: 'event-lock', short: 'Delay 3, +25% dmg', help: 'quarantine [part] — push its attack back 3 cycles; while it waits, it takes +25% damage.' },
   failover: { cls: 'bastion', verb: 'hit', name: 'Failover', target: 'none', damage: 0, cooldown: 5, icon: 'event-warning', short: 'Hit all for missing/4', help: 'failover — hit every part for a quarter of your missing health (at least 20).' },
   // Infiltrator: burns and precision
@@ -190,7 +190,7 @@ export const ABILITIES = {
 // by itself once per fight when its moment comes.
 export const DAEMONS = {
   sweeper: { name: 'Sweeper', cooldown: 4, amount: 10, rule: 'Hits the part whose attack lands soonest for 10.' },
-  fuzzer: { name: 'Fuzzer', cooldown: 5, rule: 'Breaks an armor chit on an armored part.' },
+  fuzzer: { name: 'Fuzzer', cooldown: 5, rule: 'Breaks a ◆ on an armored part.' },
   stall: { name: 'Stall', cooldown: 6, rule: 'Pushes the attack landing soonest back a cycle.' },
   mender: { name: 'Mender', cooldown: 5, amount: 8, rule: 'Heals you 8.' },
   spider: { name: 'Spider', cooldown: 5, amount: 4, rule: 'Burns the part you last hit for 4 a cycle, for 3 cycles.' },
@@ -419,11 +419,11 @@ export const GUARDS = {
 
 // Every mutation is visible from the start and changes a decision.
 export const MUTATIONS = {
-  armored: { name: 'Armored', rule: 'Every part has one more armor chit.' },
+  armored: { name: 'Armored', rule: 'Every part has one more ◆.' },
   regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor a cycle sooner, so strip it only when you can finish it.' },
   hasty: { name: 'Hasty', rule: 'Every attack comes a cycle sooner and repeats a cycle faster, but its parts have 10% less Integrity, so kill it fast.' },
   rerouting: { name: 'Rerouting', rule: 'When a part breaks, a third of its attack damage reroutes to the surviving part that attacks next.', retired: true }, // every v2+ virus is Linked now (combat.mjs)
-  adaptive: { name: 'Adaptive', rule: 'A part your commands hit three cycles in a row adapts: it gains an armor chit at the end of that cycle.' },
+  adaptive: { name: 'Adaptive', rule: 'A part your commands hit three cycles in a row adapts: it gains a ◆ at the end of that cycle.' },
 };
 
 // The mutations a virus can roll (a retired one only lingers on old saves' viruses).
@@ -665,7 +665,7 @@ export const EDGE = {
 };
 // Sync Window bonuses: each class syncs its own way.
 export const SYNC = {
-  breaker: { amount: 1, rule: 'Cracks an extra armor chit on the part you hit.' },
+  breaker: { amount: 1, rule: 'Cracks an extra ◆ on the part you hit.' },
   bastion: { amount: 8, rule: 'Shields you for 8.' },
   infiltrator: { amount: 1, rule: 'Stretches your burns on the part you hit by a cycle.' },
   operator: { amount: 1, rule: 'Makes each helper hit once more.' },
@@ -705,7 +705,7 @@ export const ARCHETYPES = {
   bastion: {
     name: 'Bastion', idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
-    passive: { name: 'Hardened', rule: 'You start every fight with an armor chit: the first attack on you does nothing.' },
+    passive: { name: 'Hardened', rule: 'You start every fight with a ◆: the first attack on you does nothing.' },
     skills: skillsOf(['rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'throttle', 'purge', 'harden', 'reclaim', 'quarantine', 'failover']),
     fillers: [
       [f('patch-notes', 'Patch Notes', 'Patch heals +3 per rank.', 3), f('stateful-firewall', 'Stateful Firewall', 'Firewall absorbs +5 per rank.', 5)],

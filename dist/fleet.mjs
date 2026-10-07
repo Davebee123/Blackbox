@@ -53,7 +53,7 @@ export function launch(s, at = clock(), faction = null) {
   s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: rand(s) < SERVER.mutationChance(level) * 0.75 ? ROLLED_MUTATIONS[Math.floor(rand(s) * ROLLED_MUTATIONS.length)] : null };
   if (faction) s.fleet.faction = faction;
   const who = faction ? ` from ${FACTIONS[faction].short}` : '';
-  emit(s, 'fleet', `SWARM: Swarm${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} processes (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });
+  emit(s, 'fleet', `SWARM: Swarm${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} viruses (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });
   return s.fleet;
 }
 
@@ -96,7 +96,7 @@ export function tickFleet(s, dt, paused = false, at = clock()) {
   if (oc === 'blocked') return disband(s, `${target.name}'s firewall turned the swarm back.`);
   if (oc === 'siege') {
     f.grind = (f.grind || 0) + (grindRate(r) / 100) * (dt / 60000);
-    while (f.grind >= 1 && f.ships > 0) { f.grind -= 1; f.ships--; emit(s, 'fleet-hit', `${target.name}'s firewall killed a process. ${f.ships} left in the swarm.`, { location: target.id }); }
+    while (f.grind >= 1 && f.ships > 0) { f.grind -= 1; f.ships--; emit(s, 'fleet-hit', `${target.name}'s firewall killed a virus. ${f.ships} left in the swarm.`, { location: target.id }); }
     if (f.ships <= 0) return disband(s, `${target.name}'s firewall wore the swarm down.`);
   }
   f.siegeLeft -= dt;
@@ -129,7 +129,7 @@ export function fleetCommand(s, text) {
   if (!s.encounter || s.encounter.phase === 'active') return;
   s.gate = gate && gate !== s.encounter ? gate : null;
   s.encounter.fleet = f.id;
-  emit(s, 'jack-in', `${f.state === 'travel' ? 'Intercepting' : 'Defending'}: ${s.encounter.virus.name}, process ${f.total - f.ships + 1} of ${f.total}.`, { location: f.target });
+  emit(s, 'jack-in', `${f.state === 'travel' ? 'Intercepting' : 'Defending'}: ${s.encounter.virus.name}, virus ${f.total - f.ships + 1} of ${f.total}.`, { location: f.target });
   command(s, 'engage');
 }
 
@@ -138,7 +138,7 @@ export function fleetWon(s, e) {
   const f = s.fleet;
   if (!f || e.fleet !== f.id) return;
   f.ships--;
-  if (f.ships > 0) return emit(s, 'fleet-hit', `Process killed. ${f.ships} left in the swarm${f.state === 'siege' ? ` (${Math.ceil(f.siegeLeft / 60000)} min left to defend)` : ''}.`, { location: f.target });
+  if (f.ships > 0) return emit(s, 'fleet-hit', `Virus killed. ${f.ships} left in the swarm${f.state === 'siege' ? ` (${Math.ceil(f.siegeLeft / 60000)} min left to defend)` : ''}.`, { location: f.target });
   s.fleet = null;
   // The haul: code from every process, salvage, and a bonus kill's worth of XP.
   const k = codeOf(f.family);
@@ -146,5 +146,5 @@ export function fleetWon(s, e) {
   for (let i = 0; i < f.total; i++) s.salvage.push({ name: `${FAMILIES[f.family].name} core`, virus: 'fleet', seed: f.seed + i });
   const lure = hasMod(locOf(s, f.target), 'lure') ? 2 : 1; // a Honeytoken pays double
   gainXp(s, xpFor(s, f.level, f.total * 0.5 * lure), 'swarm broken', 'fight');
-  emit(s, 'fleet-broken', `SWARM BROKEN. ${f.total} processes killed: +${f.total} salvage.`, { location: f.target });
+  emit(s, 'fleet-broken', `SWARM BROKEN. ${f.total} viruses killed: +${f.total} salvage.`, { location: f.target });
 }

@@ -8,7 +8,7 @@ export const COMMON = { handle: 'your handle (the name you logged in with)', cre
 export const JOB_VARS = {
   none: {},
   kill: { count: 'how many to kill', family: 'the family, lower case (worm), or "stray" for any', crew: 'the crew that runs that family (SWARMLINE)' },
-  bounty: { name: 'the named process (claimjack-0412)', family: 'its family, lower case', room: 'the SPRAWL-00 folder it sits in' },
+  bounty: { name: 'the named virus (claimjack-0412)', family: 'its family, lower case', room: 'the SPRAWL-00 folder it sits in' },
   materials: { amount: 'how many units', material: 'the code, lower case (worm code)' },
   takeover: { server: 'the server to take (KESSLER-RELAY-22), or "any server you have traced"', owner: 'who runs it (KESSLER)', crew: 'the crew it belongs to' },
   'takeover-unknown': {},
@@ -18,10 +18,10 @@ export const JOB_VARS = {
 // Story beats also know the server you took over in the Turf job.
 export const STORY_VARS = { took: 'the server you took over (once you have one)' };
 export const JOB_TYPES = ['none', 'kill', 'bounty', 'materials', 'takeover', 'item'];
-export const JOB_NAMES = { none: 'Letter only', kill: 'Kill processes', bounty: 'Bounty: one named process', materials: 'Hand over code', takeover: 'Take over a server', item: 'Recover a file' };
+export const JOB_NAMES = { none: 'Letter only', kill: 'Kill viruses', bounty: 'Bounty: one named virus', materials: 'Hand over code', takeover: 'Take over a server', item: 'Recover a file' };
 // Contract templates: one list of variants per side. GLASSJAW only offers some kinds.
 export const CONTRACT_KINDS = {
-  kill: { name: 'Kill processes', sides: ['halcyon', 'glassjaw'] },
+  kill: { name: 'Kill viruses', sides: ['halcyon', 'glassjaw'] },
   bounty: { name: 'Bounty', sides: ['halcyon'] },
   materials: { name: 'Hand over code', sides: ['halcyon', 'glassjaw'] },
   takeover: { name: 'Take over a known server', sides: ['halcyon'] },
@@ -61,7 +61,7 @@ export function check(story, contracts) {
       if (!JOB_TYPES.includes(j.type) || j.type === 'none') say(where, b.id, `Unknown job type "${j.type}".`);
       if (j.type === 'kill' && !(j.count >= 1)) say(where, b.id, 'A kill job needs a count of 1 or more.');
       if (j.type === 'materials' && !(j.amount >= 1)) say(where, b.id, 'A code job needs an amount of 1 or more.');
-      if (j.type === 'bounty' && !/^[a-z0-9.-]+$/i.test(j.name || '')) say(where, b.id, 'A bounty needs a process name (letters, numbers, dashes).');
+      if (j.type === 'bounty' && !/^[a-z0-9.-]+$/i.test(j.name || '')) say(where, b.id, 'A bounty needs a virus name (letters, numbers, dashes).');
       if (j.type === 'item' && !/^[\w.-]+$/.test(j.file || '')) say(where, b.id, 'A file job needs a file name (like claims.db).');
       if (j.type === 'item' && !j.near) say(where, b.id, 'A file job needs to know where the file is.');
       if (j.type === 'item' && j.near === 'took' && !beats.slice(0, i).some((x) => x.job?.type === 'takeover')) say(where, b.id, 'This file is near "the server you took over", but no earlier beat has a takeover job.');
@@ -122,7 +122,7 @@ export const FX_DO = {
   'damage+': { when: ['hit'], label: '+X damage', value: true },
   'crit%': { when: ['hit'], label: '+X% crit chance', value: true },
   'force-crit': { when: ['start'], label: 'your first hit is a crit' },
-  chit: { when: ['start'], label: 'start with an armor chit' },
+  chit: { when: ['start'], label: 'start with a ◆' },
   refund: { when: ['break'], label: 'all your cooldowns drop by X', value: true },
   'refund-skill': { when: ['break'], label: "that skill's cooldown comes back" },
   heal: { when: ['break', 'crit'], label: 'heal X', value: true },

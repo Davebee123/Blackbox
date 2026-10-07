@@ -75,7 +75,7 @@ export function tickRoot(s, at = now(), rooms = () => []) {
     if (loc.detached) continue; // frozen (memory.mjs)
     const r = rootState(loc);
     if (r.nextAt == null) { r.nextAt = at + ROOT.firstMs; continue; }
-    if (r.proc?.alive && r.proc.until && at >= r.proc.until) { r.proc.alive = false; emit(s, 'info', `The rare process on ${loc.name} moved on.`, { location: loc.id }); }
+    if (r.proc?.alive && r.proc.until && at >= r.proc.until) { r.proc.alive = false; emit(s, 'info', `The rare virus on ${loc.name} moved on.`, { location: loc.id }); }
     if (at < r.nextAt) continue;
     rotate(s, loc, at, rooms(loc));
   }
@@ -96,7 +96,7 @@ export function rotate(s, loc, at, rooms) {
   const room = rooms.length ? rooms[Math.floor(rnd() * rooms.length)] : '/';
   const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].name.toLowerCase();
   r.proc = { alive: true, room, family, level, seed, grade, strain, rare, ...(rare ? { until: at + ROOT.rareMs } : {}), name: `${rare ? 'rare-' : ''}${label}-${String(1000 + (seed % 9000)).slice(-4)}` };
-  emit(s, 'rotation', `${loc.name}: logs rotated. ${rare ? `A rare process (${r.proc.name}) is in ${room} for the next hour.` : `A new process is in ${room}.`}`, { location: loc.id, rare });
+  emit(s, 'rotation', `${loc.name}: logs rotated. ${rare ? `A rare virus (${r.proc.name}) is in ${room} for the next hour.` : `A new virus is in ${room}.`}`, { location: loc.id, rare });
 }
 
 // A process down (combat.mjs calls this through hooks.processWon): access grows, a rare one pays more.
@@ -107,7 +107,7 @@ export function processWon(s, e) {
   p.alive = false;
   const r = loc.root;
   r.cleared++;
-  if (p.rare) { const more = rollDrop(s, { kind: 'rogue', family: p.family, strain: p.strain, rolls: ROOT.rareRolls }, p.level); if (more) addItem(s, more, 'Rare process: '); }
+  if (p.rare) { const more = rollDrop(s, { kind: 'rogue', family: p.family, strain: p.strain, rolls: ROOT.rareRolls }, p.level); if (more) addItem(s, more, 'Rare virus: '); }
   while (r.level < ROOT.max && r.cleared >= ROOT.need[r.level + 1]) {
     r.level++;
     emit(s, 'root', `ROOT ${r.level} on ${loc.name}: ${ROOT_PERKS[r.level]}.`, { location: loc.id, root: r.level });

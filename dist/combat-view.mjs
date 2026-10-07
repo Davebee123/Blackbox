@@ -27,14 +27,14 @@ export function recentCards(logs){
  const visible=logs.slice(Math.max(0,start)).filter(e=>!['resolved','queued','replaced','wait','info'].includes(e.type));
  return visible.slice(-4).reverse().map(e=>{
   let title=e.message.split(' / ')[0],detail=e.message.split(' / ').slice(1).join(' / ');
-  if(e.type==='intrusion'){title='Hostile detected';detail=e.message.split(' detected.')[0];}
+  if(e.type==='intrusion'){title='Virus detected';detail=e.message.split(' detected.')[0];}
   if(e.type==='engage'){title='Connection engaged';detail='Combat started';}
   if(e.type==='damage'){title=(e.target||'Target')+' −'+e.amount;detail='Subsystem damage';}
   if(e.type==='corruption'){title='Server −'+e.amount+' Integrity';detail=e.source==='fragments'?'Fragments':e.source==='pulse'?'Pulse Attack':e.source==='injector'?'Packet Spike':'Server damage';}
   if(e.type==='scan'){title='Scan complete';detail='Discovery saved in INTEL';}
   if(e.type==='cancelled'){title=e.message.split('.')[0];detail='Enemy action stopped';}
   if(e.type==='destroyed'){title=(e.target||'Subsystem')+' destroyed';detail='Component disabled';}
-  if(e.type==='victory'){title='Hostile neutralized';detail='Connection secured';}
+  if(e.type==='victory'){title='Virus neutralized';detail='Connection secured';}
   if(e.type==='crashed'){title='Server crashed';detail='Combat stopped';}
   return {...e,title,detail};
  });

@@ -20,6 +20,8 @@ To skip straight to a run in your real save, type `developer location ransomware
 
 ## Screens
 
+**One name per thing.** On screen an enemy is a **virus** (never a process, stray or hostile), what it's made of are its **parts** (never modules), and armor is **◆** (never chits or encryption; Encrypt is the Encryptor's attack). Outpost modules are a different thing and keep their name. GAME_RULES.md uses "chit" for one ◆ as an internal word.
+
 **Show, don't tell.** The screen shows state with numbers, bars, chips, pips and icons; explanations live in hover tooltips (`title`), never in sentences on the page. A count is `×N`, a comparison is a coloured `▲/▼ %` chip, progress is a bar, a cost is have/need chips, a state is a tag. Empty states are a word or two. New UI follows this; text that explains goes into a tooltip.
 
 The top bar shows **Map, Mail, Server, Craft, Loadout, System** always (Daemons is a Loadout tab), **Consortium** when you're in one, plus **Fight** and **Run** only while a fight or run is live. Halcyon's store is its hub's **Shop** window (`connect halcyon`).

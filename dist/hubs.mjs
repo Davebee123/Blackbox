@@ -80,7 +80,7 @@ function sendRetake(s, f, at) {
   const L = Math.min(CONFIG.maxMobLevel, FACTIONS[f].hub.level + HUBS.levelUp), family = FACTION_FAMILY[f]; // the hub's level, never yours
   s.retakeSeq = (s.retakeSeq || 0) + 1;
   s.retake = { id: 'rt' + s.retakeSeq, f, family, key: KEY[family], level: L, ships: HUBS.ships, total: HUBS.ships, state: 'travel', arriveAt: at + HUBS.travelMs, travel: HUBS.travelMs, siegeLeft: HUBS.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
-  emit(s, 'hub-retake', `Swarm from ${FACTIONS[f].short} at ${FACTIONS[f].hub.name}: ${HUBS.ships} processes (level ${L}), arriving in ${Math.round(HUBS.travelMs / 60000)} minutes.`, { faction: f });
+  emit(s, 'hub-retake', `Swarm from ${FACTIONS[f].short} at ${FACTIONS[f].hub.name}: ${HUBS.ships} viruses (level ${L}), arriving in ${Math.round(HUBS.travelMs / 60000)} minutes.`, { faction: f });
 }
 export function tickRetake(s, dt, paused = false, at = now()) {
   const net = (s.net ||= {});
@@ -116,7 +116,7 @@ export function tickRetake(s, dt, paused = false, at = now()) {
   if (oc === 'blocked') { s.retake = null; return emit(s, 'hub-held', `${FACTIONS[r.f].hub.name}'s firewall turned ${FACTIONS[r.f].short}'s swarm back.`, { faction: r.f }); }
   if (oc === 'siege') {
     r.grind = (r.grind || 0) + (grindRate(ratio) / 100) * (dt / 60000);
-    while (r.grind >= 1 && r.ships > 0) { r.grind -= 1; r.ships--; emit(s, 'hub-hit', `${FACTIONS[r.f].hub.name}'s firewall killed a process. ${r.ships} left.`, { faction: r.f }); }
+    while (r.grind >= 1 && r.ships > 0) { r.grind -= 1; r.ships--; emit(s, 'hub-hit', `${FACTIONS[r.f].hub.name}'s firewall killed a virus. ${r.ships} left.`, { faction: r.f }); }
     if (r.ships <= 0) { s.retake = null; return emit(s, 'hub-held', `${FACTIONS[r.f].hub.name}'s firewall wore ${FACTIONS[r.f].short}'s swarm down.`, { faction: r.f }); }
   }
   r.siegeLeft -= dt;
@@ -162,7 +162,7 @@ export function hubWon(s, e) {
   const r = s.retake;
   if (!r || e.retake !== r.id) return;
   r.ships--;
-  if (r.ships > 0) return emit(s, 'hub-hit', `Process killed. ${r.ships} left${r.state === 'siege' ? ` (${Math.ceil(r.siegeLeft / 60000)} min left to defend)` : ''}.`, { faction: r.f });
+  if (r.ships > 0) return emit(s, 'hub-hit', `Virus killed. ${r.ships} left${r.state === 'siege' ? ` (${Math.ceil(r.siegeLeft / 60000)} min left to defend)` : ''}.`, { faction: r.f });
   s.retake = null;
   const k = codeOf(r.family);
   if (k) gainCode(s, { [k]: r.total * codeDrop(r.level) * 2 }, 'Swarm broken: ');

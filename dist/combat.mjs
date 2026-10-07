@@ -1126,7 +1126,7 @@ function engage(s) {
   e.hardened = classOf(s) === 'bastion' ? SKILLS.hardened : 0; // Bastion's passive: the first damage hit each fight lands at half
   // Uniques that fire as a fight starts (Gate Bypass, Cell Key).
   for (const x of fxFire(s, 'start')) {
-    if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with an armor chit.`); }
+    if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with a ◆.`); }
     if (x.fx.do === 'force-crit') e.forceCrit = true;
   }
   // Server gear: a Shield stat starts every home fight shielded.
@@ -1403,7 +1403,7 @@ export function validate(s, intent) {
   const wait = intent.ignoreCooldown ? 0 : readyIn(s, intent.ability);
   if (wait) return `${a.name} is ready in ${wait} ${wait === 1 ? 'cycle' : 'cycles'}.`;
   if (a.target !== 'none' && !alive(part(s, intent.target))) return 'That part is already broken.';
-  if (a.proc && !procOpen(s, a.proc)) return `${a.name} isn't lit. ${a.proc === 'stripped' ? 'Break a part\'s last armor chit first.' : a.proc === 'struck' ? 'It lights up after an attack reaches you.' : 'It lights up after an attack misses you or is delayed.'}`;
+  if (a.proc && !procOpen(s, a.proc)) return `${a.name} isn't lit. ${a.proc === 'stripped' ? 'Break a part\'s last ◆ first.' : a.proc === 'struck' ? 'It lights up after an attack reaches you.' : 'It lights up after an attack misses you or is delayed.'}`;
   if (a.once && e.once?.[intent.ability]) return `${a.name} is used up for this fight.`;
   if (a.bare && part(s, intent.target).armor > 0) {
     const p = part(s, intent.target);
@@ -1689,7 +1689,7 @@ function hit(s, p, base, opts = {}) {
     p.armor -= heavy ? 2 : 1;
     p.lastDamaged = e.cycle;
     if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); if (!opts.server) openProc(s, 'stripped'); }
-    emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two armor chits broken' : 'armor chit broken'}${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
+    emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
     return { dealt: 0, overflow: 0, absorbed: true };
   }
   // Flat gear: Damage on your skill hits, Payload on burn ticks and helper hits.
@@ -2100,7 +2100,7 @@ function landAttack(s, p) {
   // Your armor chits (Bastion): the whole attack does nothing, however big.
   if (e.chits > 0 && atk.effect !== 'replicate') {
     e.chits--;
-    return emit(s, 'blocked', `${atk.name} hits your armor chit and does nothing${e.chits ? ` (${e.chits} left)` : ''}.`, { source: p.id });
+    return emit(s, 'blocked', `${atk.name} hits your ◆ and does nothing${e.chits ? ` (${e.chits} left)` : ''}.`, { source: p.id });
   }
   e.metrics.attacksLanded++;
   // Sanitize: a special attack may fail outright.
@@ -2113,7 +2113,7 @@ function landAttack(s, p) {
   }
   // Breaker Brace: whatever hits you loses an armor chit (or takes 10 if it has none).
   if (buffed(e, 'brace') && alive(p) && hits) {
-    if (p.armor > 0) { p.armor--; if (!p.armor) p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); emit(s, 'armor', `Brace: ${p.name} loses a chit${p.armor ? ` (${p.armor} left)` : ''}.`, { target: p.id, left: p.armor }); if (!p.armor) openProc(s, 'stripped'); }
+    if (p.armor > 0) { p.armor--; if (!p.armor) p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); emit(s, 'armor', `Brace: ${p.name} loses a ◆${p.armor ? ` (${p.armor} left)` : ''}.`, { target: p.id, left: p.armor }); if (!p.armor) openProc(s, 'stripped'); }
     else hit(s, p, scaled(s, 10), { by: 'Brace' });
   }
   // Deductible (Halcyon): the first attack that lands each fight costs you nothing.
@@ -2415,14 +2415,14 @@ function cycleClose(s, landed) {
     if (p.maxArmor > 0 && p.armor === 0 && p.patchAt !== null && e.cycle >= p.patchAt) {
       p.armor = 1;
       p.patchAt = null;
-      emit(s, 'patch', `${p.name} patched: 1 armor chit back.`, { target: p.id });
+      emit(s, 'patch', `${p.name} patched: 1 ◆ back.`, { target: p.id });
     }
   }
 
   // Adaptive (mutation): a part hit three cycles running hardens.
   if (e.virus.mutation === 'adaptive') for (const p of livingParts(s).filter((x) => x.adaptAt === e.cycle && x.adaptRun >= 3)) {
     p.armor += 1; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; p.adaptRun = 0;
-    emit(s, 'patch', `${p.name} adapts: +1 armor chit.`, { target: p.id, adapt: true });
+    emit(s, 'patch', `${p.name} adapts: +1 ◆.`, { target: p.id, adapt: true });
   }
   // Bouncer: the Keyring re-arms the other parts to full armor on its beat, three times; then it
   // overheats and stops, so the fight can't stall forever.
@@ -2498,8 +2498,8 @@ function syncBonus(s, intent) {
   if (cls === 'breaker' && alive(t) && t.armor > 0) {
     t.armor--; t.lastDamaged = e.cycle;
     if (!t.armor) t.patchAt = e.cycle + patchDelay(s);
-    emit(s, 'armor', `Sync: ${t.name} armor chit cracked${t.armor ? ` (${t.armor} left)` : '. Its armor is broken'}.`, { target: t.id, left: t.armor });
-    what = 'a chit cracks';
+    emit(s, 'armor', `Sync: ${t.name} ◆ cracked${t.armor ? ` (${t.armor} left)` : '. Its armor is broken'}.`, { target: t.id, left: t.armor });
+    what = 'a ◆ cracks';
   } else if (cls === 'bastion') { e.shield = (e.shield || 0) + b.amount; what = `+${b.amount} shield (${e.shield})`; }
   else if (cls === 'infiltrator') { if (stretchBurns(s, t, b.amount, 'Sync')) what = 'burns last longer'; }
   else if (cls === 'operator' && e.helpers.length) {
