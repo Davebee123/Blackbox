@@ -178,7 +178,7 @@ export const LOOT = {
   vaultBlueprint: 0.25, // share holding a blueprint (blueprint.bp)
   vaultSource: 0.25, // share of layer-2+ vaults holding source (.src)
   rolls: { home: 1, guard: 2, pit: 2, bounty: 2 },
-  depthBonus: 0.1, // per layer past the first, on blue and yellow odds
+  depthBonus: 0.25, // per layer past the first, on blue and yellow odds
 };
 // Odds per kill for each rarity, from the time targets and the pace.
 export const lootOdds = (kph = LOOT.killsPerHour) => Object.fromEntries(Object.entries(LOOT.minutes).map(([r, m]) => [r, 60 / (m * kph)]));

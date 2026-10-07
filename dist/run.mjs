@@ -76,7 +76,7 @@ export function zoneSpawns(s, now = clock()) {
     if (sp?.alive || (sp && sp.respawnAt > now)) continue;
     const n = ++z.serial;
     const family = ZONE_FAMILIES[(n + room.length) % ZONE_FAMILIES.length];
-    const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past level 3
+    const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past CONFIG.zone.maxLevel
     z.spawns[room] = { alive: true, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].name.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return z.spawns;
@@ -168,7 +168,7 @@ const passDigits = (loc) => loc.password.match(/\d+$/)[0];
 export function fileInfo(loc, path, name) {
   const fam = FAMILIES[loc.family].name;
   const deeper = FAMILIES[loc.deeper].name;
-  const cash = Math.round((CONFIG.cacheCredits + CONFIG.depthLoot * ((loc.depth || 1) - 1)) * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1));
+  const cash = Math.round(CONFIG.cacheCredits * (1 + CONFIG.depthLoot * ((loc.depth || 1) - 1)) * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1));
   const owner = loc.owner.toLowerCase();
   const month = loc.month || 'mar';
   const credits = (amount, what) => ({ kind: 'credits', size: '6k', amount, text: [`binary: ${what}, about ${amount} credits.`, 'pull it to take it.'] });
@@ -394,7 +394,7 @@ function ls(s, all = false) {
   if (isWild(loc)) {
     const spawns = loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc);
     const sp = spawns[s.run.cwd];
-    if (sp?.alive) entries.push({ kind: 'virus', name: sp.name + '.exe', size: `lv${sp.level}`, cmd: `attack ${sp.name}`, tags: [FAMILIES[sp.family].name.toLowerCase()], jobs: jobNames(s, { family: sp.family, zone: true, name: sp.bounty ? sp.name : null }) });
+    if (sp?.alive) entries.push({ kind: 'virus', name: sp.name + '.exe', size: `lv${sp.level}`, cmd: `attack ${sp.name}`, tags: [FAMILIES[sp.family].name.toLowerCase()], jobs: jobNames(s, { family: sp.family, zone: true, name: sp.bounty ? sp.name : null, level: sp.level }) });
   }
   for (const d of here.dirs.filter(show)) {
     const full = join(s.run.cwd, d);
@@ -404,7 +404,7 @@ function ls(s, all = false) {
     const people = peopleIn(s, loc, full, true);
     // What's waiting in there counts for a contract: a guard you haven't beaten, or a rogue folder's virus.
     const g = guarded(loc, full) && layoutOf(loc)[full]?.guard, wild = hostile && loc.spawns[full];
-    const jobs = g ? jobNames(s, { family: g, zone: false }) : wild ? jobNames(s, { family: wild.family, zone: true, name: wild.bounty ? wild.name : null }) : [];
+    const jobs = g ? jobNames(s, { family: g, zone: false, level: levelOf(loc) }) : wild ? jobNames(s, { family: wild.family, zone: true, name: wild.bounty ? wild.name : null, level: wild.level }) : [];
     entries.push({ kind: 'dir', name: d, cmd: locked(loc, full) ? `unlock ${d} ` : `cd ${d}`, tags: hostile ? [...tags, 'hostile'] : tags, people, jobs });
   }
   for (const f of here.files.filter(show)) {

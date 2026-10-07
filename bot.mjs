@@ -40,13 +40,13 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
   const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family]).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
   const fight = () => {
-    if (!s.encounter) return;
+    if (!s.encounter || (s.encounter.phase !== 'alert' && !active(s))) return; // a finished fight still on screen
     if (s.encounter.phase === 'alert') command(s, 'engage');
     const key = fightKey(), where = s.run?.loc, v = s.encounter.virus;
     stats.fights[key] = (stats.fights[key] || 0) + 1;
     // The fight mix by your level: grey (10+ levels under you) vs strains and ICE (the fights with a rule).
     const mix = ((stats.mix ||= {})[hackerLevel(s)] ||= { fights: 0, grey: 0, special: 0 });
-    mix.fights++; if (v.level - hackerLevel(s) <= -10) mix.grey++; if (v.strain || ['tracer', 'bouncer'].includes(v.family)) mix.special++;
+    mix.fights++; if (v.level - hackerLevel(s) <= -10) { mix.grey++; const k = (s.encounter.mode) + (s.encounter.zone ? ":zone" : "") + (s.encounter.wild ? ":wild" : "") + (s.encounter.outpost ? ":outpost" : "") + (s.encounter.infest ? ":infest" : "") + (s.encounter.fleet ? ":fleet" : "") + (s.encounter.invader ? ":inv" : "") + (s.run?.loc ? ":" + s.run.loc : ""); (stats.greyBy ||= {})[k] = ((stats.greyBy ||= {})[k] || 0) + 1; } if (v.strain || ['tracer', 'bouncer'].includes(v.family)) mix.special++;
     for (let n = 0; n < 80 && active(s); n++) {
       const text = policy(s) || 'hold';
       if (s.encounter.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
@@ -134,7 +134,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     say('connect sprawl');
     if (!s.run) return false;
     const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/');
-    for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
+    const grey = hackerLevel(s) > CONFIG.zone.maxLevel + 1; // outgrown: only the contract's named target
+    for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; if (grey && !s.zone?.spawns?.[room]?.bounty) continue; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
     if (s.run) say('jack out');
     return true;
   };
@@ -181,7 +182,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     if (hunt) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
     if (!did && todo) { did = book('runs', () => runLoc(todo)); if (did) stats.did.run++; }
     if (!did && rogue) { did = book('rogue', () => runLoc(rogue)); if (did) stats.did.rogue++; }
-    if (!did) { did = book('sprawl', sprawl); if (did) { stats.did.sprawl++; if (L > CONFIG.zone.maxLevel + 1) stats.did.sprawlOverLevel++; } }
+    // SPRAWL-00 once you've outgrown it is grey: a player waits out a reconnect timer instead.
+    if (!did && L <= CONFIG.zone.maxLevel + 1) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
     if (!did) { const w = t; wait(15); stats.waitMins = (stats.waitMins || 0) + (t - w) / 60000; } // nothing open: the reconnect timers are running
     lvlCheck();
   }

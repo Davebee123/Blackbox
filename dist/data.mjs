@@ -74,7 +74,7 @@ export const CONFIG = {
   daemonSlots: 1, // +1 at server levels 10 and 20; Operators +1
   // Runs
   depthThreat: 3, // guard threat added per depth below the first
-  depthLoot: 20, // extra credits in caches per depth
+  depthLoot: 0.4, // caches hold 40% more credits per layer down
   maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
   cdCost: 1, // Signal spent per move between directories
   leadBase: 25, // lead progress every neutralized virus gives (four kills; a Route Logger adds more)
@@ -114,7 +114,7 @@ export const CONFIG = {
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
-  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 3 },
+  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 8 }, // SPRAWL follows you up to level 8, then you've outgrown it
   relockMs: 60000, // any server but an outpost won't take you back for a minute after you leave: no jack out, top up, return
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
@@ -478,7 +478,7 @@ function makePart(spec, kind, scale, extraArmor = 0) {
 // What an enemy's level adds beyond size: an armor chit on the signature part at level 3
 // and again at 7, one on the basic part at 13, and first attacks a cycle sooner from 15.
 // (Threat = level + 9.) Home intrusions reach these as the server levels up; deep guards sooner.
-export const THREAT_STEPS = { armor: [{ threat: 12, part: 'special' }, { threat: 16, part: 'special' }, { threat: 22, part: 'basic' }], sooner: 24 };
+export const THREAT_STEPS = { armor: [{ threat: 14, part: 'special' }, { threat: 16, part: 'special' }, { threat: 22, part: 'basic' }], sooner: 24 };
 
 // Power at a level: 4% more per level from level 1 (players and enemies alike).
 export const power = (level) => 1 + CONFIG.powerPerLevel * (Math.max(1, level) - 1);
@@ -587,13 +587,23 @@ export function createLocation(family, seed, depth = 1) {
 // Its level opens daemon slots, sets how tough intrusions are, and when service versions open.
 // The server levels with everyone: it gets every bit of XP any hacker earns, plus a little for
 // banked loot. Its level sets its base Integrity and opens daemon slots.
+// Each layer of the net has a level band: servers found there sit inside it (EverQuest/WoW zone ranges).
+export const BANDS = [[1, 9], [7, 18], [16, 28], [26, 40], [38, 50]];
+// Your layer: the deepest one whose band you've reached.
+export const layerFor = (level) => BANDS.reduce((d, [lo], i) => (level >= lo ? i + 1 : d), 1);
 export const SERVER = {
   maxLevel: 50,
   xpToNext: (level) => xpToNext(level),
   xp: { item: 10, creditsPer: 10 }, // banking: 10 per item, 1 per 10 credits
   // Enemies have a level. Home intrusions come in at your level; a location keeps the level
-  // it was found at (your level + 2 per layer down). Mutations and enemy crits from level 3.
-  locationLevel: (hackerLevel, depth) => hackerLevel + 2 * (depth - 1),
+  // it was found at: your level on any layer whose band holds it, otherwise 2 more per layer
+  // deeper, kept inside the layer's band (a deeper layer sits ahead of you, a shallower one behind).
+  layerFor,
+  locationLevel: (hackerLevel, depth) => {
+    const [lo, hi] = BANDS[Math.min(BANDS.length, Math.max(1, depth || 1)) - 1];
+    if (hackerLevel >= lo && hackerLevel <= hi) return hackerLevel;
+    return Math.min(hi, Math.max(lo, hackerLevel + 2 * ((depth || 1) - layerFor(hackerLevel))));
+  },
   guardLevel: (level, depth) => level + 3 * (depth - 1), // (old saves without a location level)
   mutationsFrom: 3, // enemy crits start here
   // How often a virus at a level is mutated: none below 4, a quarter to level 9, then 40% (wild ones,

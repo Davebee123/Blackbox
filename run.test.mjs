@@ -399,6 +399,7 @@ test('nest quirk adds an optional Crawler room; hoard pays more with armored gua
 
 test('every location gets its family quirk', async () => {
   const s = fresh();
+  s.net = { nested: true }; // past the guaranteed early Nest
   for (const f of ['ransomware', 'worm', 'ghostroot']) command(s, `developer location ${f}`);
   assert.deepEqual(s.locations.map((l) => l.quirk), ['hoard', 'nest', 'hidden']);
 });

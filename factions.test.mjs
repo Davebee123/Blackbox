@@ -54,6 +54,7 @@ test('a hub’s goods: tier-gated, limited stock, delivered by file transfer; sh
 
 test('faction servers: some traced servers belong to a faction; opening the vault takes it from them', () => {
   const s = open();
+  s.net = { nested: true }; // past the guaranteed early Nest
   const loc = addLocation(s, 'worm', 1); addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
   const target = s.locations.at(-1);
   claimServer(s, target, 0.01); // force it

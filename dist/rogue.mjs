@@ -6,8 +6,8 @@
 //   Nest      one family, strains twice as often
 //   Pit       mixed families, 2 levels above the server, a second roll for drops
 //   Gauntlet  mixed families; clear every folder in one run for a bonus cache
-import { emit, rand, gainCode, gainXp, xpFor, hooks } from './combat.mjs';
-import { FAMILIES, variantFor, STRAINS, CONFIG, ELITE } from './data.mjs';
+import { emit, rand, gainCode, gainXp, xpFor, hooks, hackerLevel } from './combat.mjs';
+import { FAMILIES, variantFor, STRAINS, CONFIG, ELITE, SERVER } from './data.mjs';
 import { seeded, codeOf } from './gear.mjs';
 import { occupationCleared } from './consortium.mjs';
 
@@ -34,11 +34,14 @@ export function rollRogue(s, loc) {
   const net = (s.net ||= {});
   if ((s.locations || []).length < ROGUE.firstTame) return; // your first servers are always normal: the early jobs need one to take over
   const r = seeded((loc.seed || 1) * 61 + 7);
-  const rogue = r() < ROGUE.share || (net.rogueDry || 0) >= ROGUE.pity;
+  // The first one past the tame pair is a Nest of the family that traced it (the one you've been killing).
+  const early = !net.nested && !loc.parent && !(s.locations || []).some((l) => l.rogue); // not a server a contract traced
+  const rogue = early || r() < ROGUE.share || (net.rogueDry || 0) >= ROGUE.pity;
   if (!rogue) { net.rogueDry = (net.rogueDry || 0) + 1; return; }
   net.rogueDry = 0;
   const kinds = Object.keys(ROGUE.kinds);
-  loc.rogue = { kind: kinds[Math.floor(r() * kinds.length)] };
+  loc.rogue = { kind: early ? 'nest' : kinds[Math.floor(r() * kinds.length)] };
+  net.nested = true;
   loc.template = 'rogue';
   loc.quirk = null; // quirks and site traits are about vaults and harvesting: not here
   loc.trait = null;
@@ -73,6 +76,8 @@ export function rogueMotd(loc) {
 export function rogueSpawns(s, loc, now = clock()) {
   if (!loc.rogue) return {};
   loc.spawns ||= {};
+  // A rogue server keeps up with you inside its layer's band, then tops out (you've outgrown it).
+  if (!loc.member && !loc.trunk) loc.level = Math.max(loc.level || 1, SERVER.locationLevel(hackerLevel(s), loc.depth || 1));
   const fams = Object.keys(FAMILIES);
   for (const room of rogueRooms(loc)) {
     const sp = loc.spawns[room];

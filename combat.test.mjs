@@ -392,7 +392,11 @@ test('enemies have a level: home intrusions come in at your level, and grow with
   assert.equal(t.encounter.virus.level, 7);
   assert.ok(t.encounter.virus.parts.every((p, i) => p.max > low[i]), 'bigger');
   assert.deepEqual(t.encounter.virus.parts.map((p) => p.armor), [1, 5], 'the Encryptor gained chits at levels 3 and 7 (3, worn half again: 5)');
-  assert.equal(SERVER.locationLevel(1, 3), 5, 'locations are 2 levels tougher per layer down');
+  assert.equal(SERVER.locationLevel(1, 2), 7, 'a deeper layer sits inside its band (layer 2: 7–18)');
+  assert.equal(SERVER.locationLevel(12, 2), 12, 'your own layer: your level');
+  assert.equal(SERVER.locationLevel(12, 3), 16, 'the next layer: 2 more, at least its floor');
+  assert.equal(SERVER.locationLevel(20, 1), 9, 'a shallower layer tops out at its ceiling');
+  assert.deepEqual([1, 6, 7, 15, 16, 26, 38, 50].map(SERVER.layerFor), [1, 1, 2, 2, 3, 4, 5, 5], 'your layer: the deepest band you have reached');
   assert.ok(mobPower(1) === power(1) && mobPower(6) === power(6), 'viruses match you level for level');
   assert.ok(Math.abs(power(50) - 2.96) < 1e-9, '+4% per level');
   CONFIG.powerPerLevel = 0;

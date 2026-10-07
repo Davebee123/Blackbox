@@ -1922,7 +1922,7 @@ function zoneCard(s) {
   const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
   const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Signal too weak: rest to ${need}` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
-    <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}</div>
+    <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', levelTag(s, Math.min(CONFIG.zone.maxLevel, hackerLevel(s)), `Lv 1–${CONFIG.zone.maxLevel}`))}</div>
     ${dropLine(s, s.zone)}
     <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}</div></section>`;
 }

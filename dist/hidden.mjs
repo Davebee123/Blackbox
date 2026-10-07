@@ -13,7 +13,7 @@
 // Relays: an item you install on a server you've taken over. It pings that server's hidden
 // neighbours; the one carrying a contract's signal is flagged.
 import { FAMILIES, SERVER } from './data.mjs';
-import { emit, warn, rand, addLocation } from './combat.mjs';
+import { emit, warn, rand, addLocation, hackerLevel } from './combat.mjs';
 import { isLive } from './memory.mjs';
 import { targetedHidden, contractLocated } from './mail.mjs';
 
@@ -39,7 +39,7 @@ export function spawnHidden(s, loc) {
   for (let i = have; i < HIDDEN.perServer; i++) {
     const family = i === 0 && loc.deeper ? loc.deeper : fams[Math.floor(rand(s) * fams.length)];
     s.hiddenSeq = (s.hiddenSeq || 0) + 1;
-    hiddenNodes(s).push({ id: 'h' + s.hiddenSeq, family, via: loc.id, depth: (loc.depth || 1) + 1, level: (loc.level || 1) + 3, lead: 0, pinged: !!loc.relay, signal: 1 + Math.floor(rand(s) * 5) });
+    hiddenNodes(s).push({ id: 'h' + s.hiddenSeq, family, via: loc.id, depth: (loc.depth || 1) + 1, level: SERVER.locationLevel(hackerLevel(s), (loc.depth || 1) + 1), lead: 0, pinged: !!loc.relay, signal: 1 + Math.floor(rand(s) * 5) });
   }
 }
 

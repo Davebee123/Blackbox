@@ -627,7 +627,7 @@ export function addLead(s, family, amount, why = '') {
   emit(s, 'lead', `${why}${FAMILIES[family].name} lead +${amount}% (${Math.min(100, s.leadProgress[family])}%).`, { family });
   while (s.leadProgress[family] >= 100) {
     s.leadProgress[family] -= 100;
-    addLocation(s, family, 1);
+    addLocation(s, family, SERVER.layerFor(hackerLevel(s))); // kills trace your own layer
   }
 }
 
@@ -674,6 +674,8 @@ export function gainXp(s, amount, why) {
     if (!s.loadout.equipped[arch]) s.loadout.equipped[arch] = [...equippedSkills(s, arch)];
     h.xp -= xpToNext(h.level);
     h.level++;
+    // Rogue servers keep up with you inside their layer's band (rogue.mjs does it on a visit too).
+    for (const l of s.locations || []) if (l.rogue && !l.member) l.level = Math.max(l.level || 1, SERVER.locationLevel(h.level, l.depth || 1));
     const got = newAtLevel(arch, h.level);
     // New skills go straight onto the bar while there's room.
     const eq = s.loadout.equipped[arch];
@@ -1080,7 +1082,8 @@ export function finish(s, result) {
   e.paused = false;
   const d = defender(s);
   let lead = 0;
-  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = CONFIG.leadBase + Math.round(gearStat(s, 'lead', 'server'));
+  // Lead falls with the level gap like XP does: a grey kill (10+ levels under you) traces nothing.
+  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = Math.round((CONFIG.leadBase + gearStat(s, 'lead', 'server')) * Math.min(1, xpScale(e.virus.level - hackerLevel(s))));
 
   if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
@@ -1099,7 +1102,7 @@ export function finish(s, result) {
     if (named) delete spawn.bounty;
     if (result === 'victory') {
       emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
-      contractKill(s, { family: e.virus.family, zone: true, bounty: named });
+      contractKill(s, { family: e.virus.family, zone: true, bounty: named, level: e.virus.level });
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
@@ -1122,7 +1125,7 @@ export function finish(s, result) {
       const loc = findLocation(s, s.run?.loc);
       if (loc) { loc.state.cleared[e.room] = true; clearedFor(s, loc); } // a faction's server: they like that (factions.mjs)
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
-      contractKill(s, { family: e.virus.family, zone: false });
+      contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level });
       payKill(s, e, XP.guard, `${e.virus.name} down`);
       // A guard's drop goes in your pack: it's yours once you jack out.
       const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: loc?.depth || 1, family: loc?.family }, e.virus.level);
@@ -1155,7 +1158,7 @@ export function finish(s, result) {
   const inv = e.invader && s.invasion?.id === e.invader ? s.invasion : null;
   const hid = inv?.hidden ? hiddenNode(s, inv.hidden) : null; // an invader from a server you haven't found
   if (result === 'victory') {
-    contractKill(s, { family: e.virus.family, zone: false });
+    contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level });
     if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');

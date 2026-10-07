@@ -289,7 +289,7 @@ export function offer(s, at = now()) {
   const vars = jobVars(s, j);
   const from = theirs ? FACTIONS[faction].name : v.from ? SENDERS[v.from] : off ? SENDERS.glassjaw : pick(s, [SENDERS.claims, SENDERS.claims, SENDERS.wick]);
   j = { subject: fill(v.subject, vars), body: (v.body || []).map((p) => fill(p, vars)).filter(Boolean), ...j };
-  const o = { id: s.mail.next++, from, got: 0, at, expiresAt: at + between(s, MAIL.offerLife), ...j };
+  const o = { id: s.mail.next++, from, got: 0, at, level: L, expiresAt: at + between(s, MAIL.offerLife), ...j };
   if (off) o.offBooks = true;
   o.faction = faction;
   s.mail.offers.push(o);
@@ -300,12 +300,15 @@ export function offer(s, at = now()) {
 // A kill anywhere: { family, zone, bounty (spawn name) }.
 // The open contracts a kill would count for (the same test as contractKill): for the marker on
 // a virus or a guarded folder in a run's listing.
-export function wantedBy(s, { family, zone, name = null }) {
-  return openContracts(s).filter((c) => (c.type === 'kill' && c.got < c.count && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) || (c.type === 'bounty' && !c.got && name && name === c.name));
+// A kill contract counts kills no more than 4 levels under the level it was posted at.
+export const KILL_RANGE = 4;
+const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
+export function wantedBy(s, { family, zone, name = null, level = null }) {
+  return openContracts(s).filter((c) => (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) || (c.type === 'bounty' && !c.got && name && name === c.name));
 }
-export function contractKill(s, { family, zone, bounty: tag }) {
+export function contractKill(s, { family, zone, bounty: tag, level = null }) {
   for (const c of openContracts(s)) {
-    if (c.type === 'kill' && c.got < c.count && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) {
+    if (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) {
       c.got++;
       if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
     }
@@ -364,7 +367,7 @@ export function ready(s, c) {
 }
 const locName = (s, id) => s.locations.find((l) => l.id === id)?.name || null;
 export function title(s, c) {
-  if (c.type === 'kill') return c.where === 'sprawl' ? `Kill ${c.count} processes in SPRAWL-00` : `Kill ${c.count} ${FAMILIES[c.family]?.name || ''} processes`;
+  if (c.type === 'kill') return (c.where === 'sprawl' ? `Kill ${c.count} processes in SPRAWL-00` : `Kill ${c.count} ${FAMILIES[c.family]?.name || ''} processes`) + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
   if (c.type === 'bounty') return `Kill ${c.name}`;
   if (c.type === 'takeover') return c.any ? 'Take over a server' : `Take over ${locName(s, c.loc) || 'an unknown server'}`;
   if (c.type === 'materials') return `Deliver ${c.amount} ${MATERIALS[c.material].name}`;
@@ -443,8 +446,9 @@ export function mailCommand(s, text, at = now()) {
   s.mail.jobs = s.mail.jobs.filter((x) => !x.done || x.story !== undefined || keep.has(x));
   s.server.credits += c.reward.credits;
   s.indemnity = indemnity(s) + (c.reward.indemnity || 0);
-  // What it paid, for the delivered card (app.js shows it in the middle of the screen).
-  const xp = c.reward.xp ? xpFor(s, hackerLevel(s), c.reward.xp) : 0, fname = (f) => FACTIONS[f]?.short || f;
+  // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP is at the
+  // level the contract was posted at.
+  const xp = c.reward.xp ? xpFor(s, c.level ?? hackerLevel(s), c.reward.xp) : 0, fname = (f) => FACTIONS[f]?.short || f;
   const gains = [
     c.reward.credits && { label: 'Credits', qty: `+${c.reward.credits}`, kind: 'credits', text: `${c.reward.credits} credits` },
     c.reward.indemnity && { label: 'Indemnity', qty: `+${c.reward.indemnity}`, kind: 'loot', text: `${c.reward.indemnity} Indemnity` },

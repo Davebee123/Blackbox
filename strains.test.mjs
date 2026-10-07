@@ -123,12 +123,12 @@ test('Sleeper: nothing lands while it sleeps; a hit wakes it and the Alarm lands
   assert.equal(t.encounter.virus.dormant, false, 'its timer wakes it too');
 });
 
-test('SPRAWL-00 is a starter area: its viruses never pass level 3', async () => {
+test('SPRAWL-00 is a starter area: its viruses never pass level 8', async () => {
   const { zoneSpawns } = await import('./dist/run.mjs');
   const s = veteran('breaker', 20);
   const spawns = Object.values(zoneSpawns(s));
   assert.ok(spawns.length > 0);
-  for (const sp of spawns) assert.ok(sp.level <= 3, `level ${sp.level}`);
+  for (const sp of spawns) assert.ok(sp.level <= 8, `level ${sp.level}`);
 });
 
 test('Patchwork: the Patcher heals the most damaged part; nothing of yours stops it', () => {
