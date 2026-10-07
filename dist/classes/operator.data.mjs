@@ -9,37 +9,52 @@
 import { f, t } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
-export const abilities = {};
+// Numbers the engine reads from here (operator.mjs): helper/ticks (Fan-out), cycles (Mesh, Cache
+// Poison), boost/count (Malloc), share (OOM Kill, Spoofed ACK, Hijack), cap/floor (Replay, Spoofed ACK),
+// patch (Cache Poison: what a turned patch hits for).
+export const abilities = {
+  // Herder: the swarm.
+  'fan-out': { cls: 'operator', sub: 'herder', verb: 'burn', name: 'Fan-out', target: 'part', damage: 0, helper: 6, ticks: 3, cooldown: 4, icon: 'expand', short: 'Helper 6 ×3 on every part', help: 'fan-out <part> — sends a helper to every part (this one first) to hit it for 6 every cycle for 3 cycles.', desc: 'Fan out a helper to every part of the virus. Each one hits its part for 6 damage every cycle for 3 cycles.' },
+  mesh: { cls: 'operator', sub: 'herder', verb: 'buff', name: 'Mesh', target: 'none', damage: 0, cycles: 3, share: 0.5, cooldown: 6, icon: 'server', short: 'Helper hits splash all', help: 'mesh — for 3 cycles, every helper hit that does damage also hits every other part for half as much.', desc: 'Network your helpers for 3 cycles. Every helper hit that does damage also hits every other part for half as much, and those hits break armor too.' },
+  malloc: { cls: 'operator', sub: 'herder', verb: 'buff', name: 'Malloc', target: 'none', damage: 0, boost: 0.5, count: 3, cooldown: 5, icon: 'overload', short: 'Next 3 helpers +50%', help: 'malloc — the next 3 helpers you start deal 50% more and run a cycle longer.', desc: 'Allocate more memory. The next 3 helpers you start deal 50% more damage and run a cycle longer.' },
+  'oom-kill': { cls: 'operator', sub: 'herder', verb: 'heal', name: 'OOM Kill', target: 'none', damage: 0, share: 0.4, cooldown: 6, icon: 'clear', short: 'Helpers → heal', help: 'oom-kill — the out-of-memory killer takes every helper you have running, and you heal for 40% of the damage they had left.', desc: 'Let the out-of-memory killer reap every helper you have running. You heal for 40% of the damage they still had left to deal.' },
+  // Hijacker: their code, your commands.
+  'spoofed-ack': { cls: 'operator', sub: 'hijacker', verb: 'stun', name: 'Spoofed ACK', target: 'attack', damage: 0, delay: 1, share: 0.5, cap: 40, cooldown: 5, icon: 'interrupt', short: 'Delay 1, half back', help: 'spoofed-ack <part> — fake the handshake: its attack waits a cycle, and the part takes half that attack (up to 40). It is Jammed until the attack goes off.', desc: 'Fake the handshake. The part’s attack waits a cycle, and the part takes half of that attack itself (up to 40). It stays Jammed until the attack goes off.' },
+  hijack: { cls: 'operator', sub: 'hijacker', verb: 'stun', name: 'Hijack', target: 'attack', damage: 0, recall: true, share: 0.6, cap: 60, cooldown: 6, icon: 'command', short: 'Spend a helper: it hits its own side', help: 'hijack <part> — pull one of your helpers off it to take over its next attack: a hit lands on another part for 60% of its size (up to 60), straight through armor, and anything else does nothing. It is Jammed until then.', desc: 'Pull one of your helpers off the part to take over its next attack. A hit lands on another part of the virus for 60% of its size (up to 60), straight through armor (a part on its own hits itself). An encryption, a scramble, a spawn or a heal does nothing. The part stays Jammed until then.' },
+  'cache-poison': { cls: 'operator', sub: 'hijacker', verb: 'debuff', name: 'Cache Poison', target: 'part', damage: 0, cycles: 5, patch: 15, cooldown: 4, icon: 'mutation', short: 'Its repairs hurt it', help: 'cache-poison <part> — Poisoned for 5 cycles: an armor patch it is due hits it for 15 instead, and a heal it casts hurts the part it was meant for.', desc: 'Poison the part’s cache for 5 cycles. An armor patch it is due hits it for 15 damage instead of putting a ◆ back, and a heal it casts on its own side does that much damage instead.' },
+  replay: { cls: 'operator', sub: 'hijacker', verb: 'hit', name: 'Replay', target: 'part', damage: 0, cap: 40, floor: 20, cooldown: 5, icon: 'exploit', short: 'Its own attack, thru armor', help: 'replay <part> — record its attack and play it back at it: it takes its own attack’s size (20 to 40), straight through armor.', desc: 'Record the part’s attack and play it back at it. The part takes its own attack’s size, at least 20 and at most 40, straight through armor.' },
+  blackhole: { cls: 'operator', sub: 'hijacker', verb: 'stun', name: 'Blackhole', target: 'attack', damage: 0, recall: true, cooldown: 6, icon: 'event-lock', short: 'Spend a helper: drop its attack', help: 'blackhole <part> — pull one of your helpers off it: its next attack is dropped and does nothing. It is Jammed until then.', desc: 'Pull one of your helpers off the part to route its next attack into a blackhole. The attack does nothing at all, whatever it is. The part stays Jammed until then.' },
+};
 
 export const subs = {
   herder: {
     name: 'Herder', role: ['Summoner', 'Damage over time'], idea: 'More processes than they can kill.', solo: 'A swarm of helpers doing the work.', crew: 'Constant damage on everything.',
     edge: { legacy: true, name: 'Last Gasp', rule: 'Each helper hits once more as it expires.' },
-    skills: ['kill-switch', 'garbage-collect', 'fork', 'cron-storm'],
+    skills: ['fan-out', 'mesh', 'kill-switch', 'garbage-collect', 'malloc', 'fork', 'oom-kill', 'cron-storm'],
     fillers: [
       [f('thread-pool', 'Thread Pool', 'Deploy helpers deal +1 per rank.', 1), f('node-pool', 'Node Pool', 'Botnet helpers deal +1 per rank.', 1)],
-      [f('dead-mans-switch', 'Dead Man’s Switch', 'Kill Switch cashes in +5% per rank.', 0.05), f('kernel-hook', 'Kernel Hook', 'Hooked parts take +1 more per hit per rank.', 1)],
-      [f('load-balancer', 'Load Balancer', 'Take 3% less damage from attacks per rank.', 0.03), f('extra-memory', 'Extra Memory', '+3 max Signal on runs per rank.', 3)],
+      [f('wide-area', 'Wide Area', 'Fan-out helpers deal +1 per rank.', 1), f('dead-mans-switch', 'Dead Man’s Switch', 'Kill Switch cashes in +5% per rank.', 0.05)],
+      [f('load-balancer', 'Load Balancer', 'Take 3% less damage from attacks per rank.', 0.03), f('gc-tuning', 'GC Tuning', 'Garbage Collect deals 30% more per rank.', 0.3)],
     ],
     talents: [
       [t('big-process', 'Big Process', 'Deploy helpers deal 14.'), t('long-running', 'Long-running', 'Deploy helpers last 6 cycles.')],
-      [t('extra-nodes', 'Extra Nodes', 'Botnet sends 4 helpers.'), t('hive', 'Hive', 'Your helper cap is 9.')],
-      [t('parallel-deploy', 'Parallel Deploy', 'Deploy starts two helpers at half damage: same total, twice the hits for Hook.'), t('supervisor', 'Supervisor', 'Kill Switch readies Deploy.')],
+      [t('hive', 'Hive', 'Your helper cap is 9.'), t('hydra', 'Hydra', 'When a part breaks, each of your helpers on it splits in two on the next part, up to your cap.')],
+      [t('zombie-process', 'Zombie Process', 'Last Gasp hits twice.'), t('supervisor', 'Supervisor', 'Kill Switch readies Deploy.')],
     ],
   },
   hijacker: {
     name: 'Hijacker', role: ['Control', 'Support'], idea: 'Their code, your commands.', solo: 'Turns the virus against itself.', crew: 'Shuts attacks down for everyone.',
     edge: { name: 'Man in the Middle', rule: 'Jammed parts take +20% from everyone.' },
-    skills: ['jam', 'barrier', 'reroute'],
+    skills: ['jam', 'hijack', 'replay', 'spoofed-ack', 'barrier', 'cache-poison', 'reroute', 'blackhole'],
     fillers: [
-      [f('kernel-hook', 'Kernel Hook', 'Hooked parts take +1 more per hit per rank.', 1), f('thread-pool', 'Thread Pool', 'Deploy helpers deal +1 per rank.', 1)],
-      [f('node-pool', 'Node Pool', 'Botnet helpers deal +1 per rank.', 1), f('dead-mans-switch', 'Dead Man’s Switch', 'Kill Switch cashes in +5% per rank.', 0.05)],
-      [f('load-balancer', 'Load Balancer', 'Take 3% less damage from attacks per rank.', 0.03), f('extra-memory', 'Extra Memory', '+3 max Signal on runs per rank.', 3)],
+      [f('thread-pool', 'Thread Pool', 'Deploy helpers deal +1 per rank.', 1), f('kernel-hook', 'Kernel Hook', 'Hooked parts take +1 more per hit per rank.', 1)],
+      [f('ack-flood', 'ACK Flood', 'Spoofed ACK sends back +10% of the attack per rank.', 0.1), f('cold-storage', 'Cold Storage', 'Barrier shields 10% more per rank.', 0.1)],
+      [f('load-balancer', 'Load Balancer', 'Take 3% less damage from attacks per rank.', 0.03), f('packet-capture', 'Packet Capture', 'Replay hits +5 per rank.', 5)],
     ],
     talents: [
-      [t('long-running', 'Long-running', 'Deploy helpers last 6 cycles.'), t('big-process', 'Big Process', 'Deploy helpers deal 14.')],
-      [t('hive', 'Hive', 'Your helper cap is 9.'), t('extra-nodes', 'Extra Nodes', 'Botnet sends 4 helpers.')],
-      [t('supervisor', 'Supervisor', 'Kill Switch readies Deploy.'), t('parallel-deploy', 'Parallel Deploy', 'Deploy starts two helpers at half damage: same total, twice the hits for Hook.')],
+      [t('long-jam', 'Long Jam', 'Jam pushes the attack back 2 cycles.'), t('loopback', 'Loopback', 'Jam and Blackhole leave the helper running.')],
+      [t('double-agent', 'Double Agent', 'Hijack takes the part’s next two attacks.'), t('crosstalk', 'Crosstalk', 'A hijacked hit lands on every other part.')],
+      [t('full-duplex', 'Full Duplex', 'Jammed parts take +40% from everyone, not +20%.'), t('kill-chain', 'Kill Chain', 'Breaking a Jammed part readies Jam, Spoofed ACK and Hijack.')],
     ],
   },
 };
