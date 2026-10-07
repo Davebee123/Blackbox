@@ -86,3 +86,13 @@ test('the farm\'s eight: two from each boss (with bad-luck protection), two from
   assert.match(collectionMarkup(s), /KESSLER-FARM-00 · 1\/8/);
   assert.equal(FARM_UNIQUES.length, 8);
 });
+
+// Crew balance (farmsim.mjs): the farm is built around a healer from level 18. Seeded, about 3 s.
+test('at level 18 a crew of four with a Sysop bot wins every boss try, and someone still dips; without a healer or a tank it often needs another try', async () => {
+  const { farmScore } = await import('./farmsim.mjs');
+  const healer = farmScore('demolitionist', ['sysop', 'payload', 'herder'], 18);
+  assert.ok(healer.wins >= 0.95 * healer.tries, `with a Sysop: ${healer.wins}/${healer.tries}`);
+  assert.ok(healer.low < 65 && healer.heals > 30, `pressure: lowest ${healer.low.toFixed(0)}%, healing ${healer.heals.toFixed(0)}% of cycles`);
+  const none = farmScore('demolitionist', ['payload', 'herder', 'hijacker'], 18);
+  assert.ok(none.wins <= 0.8 * none.tries, `no healer, no tank: ${none.wins}/${none.tries}`);
+});

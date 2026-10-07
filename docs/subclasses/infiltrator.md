@@ -6,7 +6,7 @@ Before level 10 every Infiltrator has the same core: `inject`, `tag`, `keepalive
 
 From level 12 each subclass learns its own line of eight skills, one at levels 12, 14, 18, 22, 26, 30, 34 and 38. Your bar still has seven slots, so past level 18 you choose which skills to carry.
 
-Numbers below are at level 1. Damage, burns, heals and shields grow with your level, the same way every skill's numbers do.
+Numbers below are at level 1. Damage and shields grow 4% a level, the same way every skill's numbers do. Burns and the heals you cast grow half as fast with level (+2%), and Payload and Restore on your gear make up the rest: a Payload in blues that chases Payload carries about 38% at level 18 and 52% at 30, and its Inject ticks 22 and 28 there (17 and 21 in whites).
 
 ## Payload
 

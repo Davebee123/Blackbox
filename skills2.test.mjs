@@ -167,7 +167,7 @@ test('talents change the numbers they say', () => {
   const y = quiet(start('bastion', ['firewall', 'patch'], [1, 0, 0]));
   y.server.integrity = 50;
   act(y, 'patch');
-  assert.equal(y.server.integrity, 70, 'Service Pack: 20 up front');
+  assert.equal(y.server.integrity, 60, 'Service Pack: 10 up front');
   y.server.integrity = 5;
   y.encounter.hardened = 0;
   part(y, 'pulse').attack = { name: 'Surge', effect: 'damage', amount: 14, interval: 4, due: y.encounter.cycle };

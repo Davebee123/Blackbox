@@ -7,6 +7,10 @@ import * as OPERATOR_SUBS from './classes/operator.data.mjs';
 const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: INFILTRATOR_SUBS, operator: OPERATOR_SUBS };
 
 export const CONFIG = {
+  // Heals you cast and damage over time (burns, helpers) keep this share of the +4% a level everything
+  // else gets; the rest comes from gear (Restore, Payload), so a built healer or burn class outscales a bare one.
+  healLevel: 0.5,
+  dotLevel: 0.5,
   cycleMs: 8000, // default; players pick a speed below
   speeds: { relaxed: 12000, normal: 8000, fast: 5000 },
   // Server
@@ -166,11 +170,11 @@ export const ABILITIES = {
   sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through armor, once', help: 'zero-day <part> — 65 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
-  'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 45, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 45 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
+  'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 45, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 45 (+15 if due), throttle', help: 'rate-limit <part> — 45 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
   firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 16, taunt: 3, cooldown: 4, icon: 'shell-shield', short: 'Shield 16, draw fire', help: 'firewall — shields you from the next 16 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 3 cycles.' },
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
-  patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 8, tick: 5, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 8 + 5×3', help: 'patch [name] — heal 8 now, then 5 a cycle for 3 cycles. In a crew, patch nyx heals nyx instead.' },
+  patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 4, pack: 10, tick: 2, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 4 + 2×3', help: 'patch [name] — heal 4 now, then 2 a cycle for 3 cycles. In a crew, patch nyx heals nyx instead.' },
   throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, cooldown: 4, icon: 'interrupt', short: 'Weaken −50%', help: 'throttle [part] — its attacks deal half for 3 cycles.' },
   purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, decrypt', help: 'purge <part> — burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption.' },
   harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain a ◆: the next attack on you does nothing, however big.' },
@@ -532,7 +536,9 @@ export const mobPower = (level) => power(level) * 1;
 // unique chance. Only in Pit folders, never on the way to anything you need.
 // Bosses: a solo fight with phases. hp and dmg scale the whole virus; at each phase's share of its
 // total Integrity it does something (re-arm every part, call in a Sentry, attack faster), and from
-// enrageAt every attack lands every cycle, a quarter harder.
+// enrageAt every attack lands every cycle, a quarter harder. healerDmg (the farm's three): their damage also
+// steps up as the Sysop's heals come in (runLate points: ×1 to level 11, ×1.6 from 18), so a crew there is
+// built around a healer.
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
@@ -542,9 +548,9 @@ export const BOSSES = {
   repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate: every attack comes a cycle sooner.' }] },
   // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half it splits off a second Decoy, on the off-beat.
   // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: elite bosses, sized for a crew.
-  foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 3.5, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:lockbox'], say: 'The Foreman calls in a Lockbox: it shields the parts around it.' }, { at: 0.25, do: ['rearm'], say: 'The Foreman re-arms every part.' }] },
-  heatsink: { name: 'HEATSINK', family: 'worm', hp: 5.5, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'The Heatsink re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'The Heatsink runs hot: every attack comes a cycle sooner.' }] },
-  coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 3, dmg: 1, enrageAt: 18, phases: [{ at: 0.66, do: ['spawn:decoy'], say: 'The Coldwallet splits off a second Decoy, on the off-beat.' }, { at: 0.33, do: ['faster'], say: 'The Coldwallet panics: every attack comes a cycle sooner.' }] },
+  foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 3.5, dmg: 1, healerDmg: [[11, 1], [18, 1.6]], enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:lockbox'], say: 'The Foreman calls in a Lockbox: it shields the parts around it.' }, { at: 0.25, do: ['rearm'], say: 'The Foreman re-arms every part.' }] },
+  heatsink: { name: 'HEATSINK', family: 'worm', hp: 5.5, dmg: 1, healerDmg: [[11, 1], [18, 1.6]], enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'The Heatsink re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'The Heatsink runs hot: every attack comes a cycle sooner.' }] },
+  coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 3, dmg: 1, healerDmg: [[11, 1], [18, 1.6]], enrageAt: 18, phases: [{ at: 0.66, do: ['spawn:decoy'], say: 'The Coldwallet splits off a second Decoy, on the off-beat.' }, { at: 0.33, do: ['faster'], say: 'The Coldwallet panics: every attack comes a cycle sooner.' }] },
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
@@ -611,7 +617,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const boss = BOSSES[overrides.boss] || null;
   if (boss) for (const p of parts) {
     p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? boss.hp));
-    for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * boss.dmg));
+    const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1);
+    for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * dmg));
   }
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
   const tagNo = String(seed >>> 0).slice(-4).padStart(4, '0');

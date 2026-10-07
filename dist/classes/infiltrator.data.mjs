@@ -66,6 +66,7 @@ export const abilities = {
 export const subs = {
   payload: {
     name: 'Payload', role: ['DPS', 'Damage over time'], idea: 'Plant it, and let it spread.', solo: 'Burns that take whole viruses apart.', crew: 'Spreads damage across every part.',
+    chase: ['payload', 'crit'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { name: 'Bloom', rule: 'When a part you are burning breaks, its burns jump to the next part.' },
     skills: ['wormable', 'detonate', 'implant', 'skim', 'propagate', 'polymorph', 'thrash', 'irq-storm'],
     fillers: [
@@ -81,6 +82,7 @@ export const subs = {
   },
   phantom: {
     name: 'Phantom', role: ['DPS', 'Burst', 'Stealth runs'], idea: 'In, out, and never seen.', solo: 'Crits, and the easiest runs.', crew: 'Gets the crew past guards and picks off parts.',
+    chase: ['crit', 'damage'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { legacy: true, name: 'Weak Spot', rule: 'Your first hit on each part\'s bare code crits (not through armor).' },
     skills: ['null-route', 'opening', 'backstab', 'spoof', 'shadow-copy', 'tap', 'log-wipe', 'implant'],
     fillers: [

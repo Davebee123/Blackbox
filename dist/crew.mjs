@@ -1,6 +1,6 @@
 // Simulated crew: bot crewmates in your run fights, to try co-op before there's a server.
 // `crew sim breaker bastion` (up to 3), `crew` to list, `crew off`. Each crewmate is a full player
-// state of its own (its class at its own level, fixed when it joins, a Stock protocol in every slot, its own Signal), fighting
+// state of its own (its class at its own level, fixed when it joins, a Stock protocol in every slot unless its entry gives a rarity, its own Signal), fighting
 // the same virus object as you on the same cycle, played by the balance planner (planner.mjs).
 //
 // Rules being tried out:
@@ -15,8 +15,8 @@
 // - The sim crew is there from CREW.from: early levels are solo.
 // Crewmates live beside the save (not in it): s.crewSim holds who's in the crew.
 import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part, classEach } from './combat.mjs';
-import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './gear.mjs';
-import { ARCHETYPES, SKILLS, SUBS } from './data.mjs';
+import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
+import { ARCHETYPES, SKILLS, SUBS, SUBCLASS, defaultSub } from './data.mjs';
 import { planner } from './planner.mjs';
 import { online, isFriend } from './presence.mjs';
 import { isMember } from './consortium.mjs';
@@ -38,7 +38,7 @@ export function matesOf(s) {
   for (const x of s.crewSim || []) x.level ??= hackerLevel(s);
   const want = [...(s.crewSim || []), ...(s.guests || [])]; // guests: consortium members who joined a fight on the consortium's ground
   let m = s._mates;
-  const key = want.map((x) => `${x.cls}:${x.sub || ''}:${x.name}:${x.level ?? hackerLevel(s)}`).join(',');
+  const key = want.map((x) => `${x.cls}:${x.sub || ''}:${x.name}:${x.level ?? hackerLevel(s)}:${x.rarity || ''}`).join(',');
   if (!m || m.key !== key) {
     m = want.map((x, i) => makeMate(s, x, i));
     m.key = key;
@@ -54,7 +54,7 @@ export const mateSignal = (s, m) => {
 };
 export const mateUp = (m) => m.encounter && active(m) && m.run.integrity > 0;
 
-function makeMate(host, { cls, sub, name, guest, level: own }, i) {
+function makeMate(host, { cls, sub, name, guest, level: own, rarity = 'stock' }, i) {
   const m = fresh();
   if (guest) m.guest = true;
   m.who = name;
@@ -64,8 +64,11 @@ function makeMate(host, { cls, sub, name, guest, level: own }, i) {
   const level = own ?? hackerLevel(host);
   m.hackers = { [cls]: { level, xp: 0 } };
   m.rng = ((host.rng || 1) * 31 + i * 7919) >>> 0;
+  // Its gear: a protocol of its rarity (Stock unless the crew entry says) in every slot, each carrying a
+  // stat its subclass chases (SUBS[sub].chase) when the rarity has affixes.
+  const chase = SUBS[sub || (level >= SUBCLASS.from ? defaultSub(cls) : null)]?.chase;
   for (let k = 0; k < protocolSlots(level); k++) {
-    const it = addItem(m, rollItem(seeded(level * 100 + k + i * 17), { level, rarity: 'stock', group: SLOT_KINDS[k] }));
+    const it = addItem(m, rollItem(seeded(level * 100 + k + i * 17), { level, rarity, group: SLOT_KINDS[k], stat: chaseStat(chase, k, rarity) }));
     command(m, 'load ' + it.id);
   }
   // One log and one event counter for the whole fight, so the log reads in order.

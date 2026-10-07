@@ -2,7 +2,7 @@
 // Scripted policies, not people: they check the numbers are in the same league, not that it's fun.
 import fs from 'node:fs';
 import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, addItem, maxSignal, syncServer } from './dist/combat.mjs';
-import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
+import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat } from './dist/gear.mjs';
 import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS, SUBS, SUBCLASS, defaultSub } from './dist/data.mjs';
 
 import { planner, soonest } from './dist/planner.mjs';
@@ -51,11 +51,15 @@ export function build(s, cls, b, opts) {
   if (opts.ranks) s.loadout.ranks[key] = opts.ranks;
   if (opts.extra) s.loadout.equipped[key] = [...skillOrder(cls).slice(0, 4), opts.extra];
   // Protocols: a Tuned one in every open slot at the bracket's level, except an implant slot below
-  // the level implants start to drop (item level 15). Services: the bracket's set.
+  // the level implants start to drop (item level 15). From the subclass, each carries the stat its
+  // player chases (the subclass's `chase` list in turn: Restore for a Sysop, Payload for a burn or
+  // helper class), as a player would build; a white has no affix to carry one. Services: the bracket's set.
   if (!opts.noGear) {
+    const rarity = opts.rarity || 'tuned';
     for (let i = 0; i < protocolSlots(b.level); i++) {
       if (SLOT_KINDS[i] === 'implant' && b.level < 15) continue;
-      const it = addItem(s, rollItem(seeded(b.level * 100 + i + (opts.gearSeed || 0) * 7919), { level: b.level, rarity: opts.rarity || 'tuned', group: SLOT_KINDS[i] }));
+      const stat = opts.randomGear ? undefined : chaseStat(kit?.chase, i, rarity);
+      const it = addItem(s, rollItem(seeded(b.level * 100 + i + (opts.gearSeed || 0) * 7919), { level: b.level, rarity, group: SLOT_KINDS[i], stat }));
       command(s, 'load ' + it.id);
     }
     s.services = { ...b.services };
@@ -119,7 +123,7 @@ export function hardScore(policy, b, opts = {}) {
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   const classes = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
-  let md = '# BLACKBOX class balance by level\n\nOne scripted planner for every class (it finishes bare or about-to-fire parts, answers attacks it cannot prevent, strips armor with small or spread hits, then finishes), playing each class’s own kit (from level 10 its default subclass: Demolitionist, Warden, Phantom, Herder; every subclass has its own table below). Each bracket: 20 random home intrusions at your level and the four guards at the deepest layer reached (your level + 2 per layer). Your numbers and theirs both grow 4% per level, and enemy hits on your Signal take the late step from level 10 (`CONFIG.runLate`: ×1.1 at 10, ×1.12 at 18, ×1.35 from 30); misses follow the level gap (5% at your level). Talents as a player would have them: a point at level 10 and every 2 levels after, spent in a fixed order (14 points at 50, not the whole tree). Everyone loads a Tuned (blue) protocol in every open slot (4, 5 at 15, 6 at 30) at their level (an implant slot only from 15, where implants start to drop) and runs a bracket’s worth of defensive services (none at 1; four v1 at 10; up to eight v3 at 50), except the no-gear column, which has neither. Crits are on for both sides (seeded). Health lost is a share of your own max. Scripted policies, not people.\n\n';
+  let md = '# BLACKBOX class balance by level\n\nOne scripted planner for every class (it finishes bare or about-to-fire parts, answers attacks it cannot prevent, strips armor with small or spread hits, then finishes), playing each class’s own kit (from level 10 its default subclass: Demolitionist, Warden, Phantom, Herder; every subclass has its own table below). Each bracket: 20 random home intrusions at your level and the four guards at the deepest layer reached (your level + 2 per layer). Your numbers and theirs both grow 4% per level, and enemy hits on your Signal take the late step from level 10 (`CONFIG.runLate`: ×1.1 at 10, ×1.12 at 18, ×1.35 from 30); misses follow the level gap (5% at your level). Talents as a player would have them: a point at level 10 and every 2 levels after, spent in a fixed order (14 points at 50, not the whole tree). Everyone loads a Tuned (blue) protocol in every open slot (4, 5 at 15, 6 at 30) at their level (an implant slot only from 15, where implants start to drop), from level 10 each carrying a stat its subclass chases, in turn (the subclass’s `chase` list: Damage and Crit for a Demolitionist, Restore and Clock Speed for a Sysop, Payload for the burn and helper classes…) and runs a bracket’s worth of defensive services (none at 1; four v1 at 10; up to eight v3 at 50), except the no-gear column, which has neither. Crits are on for both sides (seeded). Health lost is a share of your own max. Scripted policies, not people.\n\n';
   md += '| Bracket | Spike, no gear | ' + ['Spike only', ...classes].join(' | ') + ' |\n|---|---:|' + ['x', ...classes].map(() => '---:').join('|') + '|\n';
   const summary = {};
   for (const b of BRACKETS) {
@@ -163,6 +167,9 @@ if (isMain) {
     const [best, worst] = [rows[0], rows.at(-1)];
     md += `| ${p} | ${best.name} | ${best.lost.toFixed(0)}% · ${best.cycles.toFixed(1)} | ${worst.name} | ${worst.lost.toFixed(0)}% · ${worst.cycles.toFixed(1)} |\n`;
   }
+  // The crew dungeon (farmsim.mjs, loaded last: run.mjs's hooks change how a bare sim fight runs).
+  const { farmTable } = await import('./farmsim.mjs');
+  md += '\n## Crews in the farm (KESSLER-FARM-00)\n\nYou (a Demolitionist, played by the planner) and sim crewmates, everyone in blues with their subclass\'s stats, 20 seeds: the packs, then each boss, up to 4 tries each, everyone rested before a try. Boss wins are over tries; your Signal lost is in the wins; lowest anyone is the lowest share of Signal anyone in the crew reached (a lost try counts as 0); the Sysop column is the share of its cycles spent on a heal.\n\n' + farmTable();
   fs.mkdirSync('docs', { recursive: true });
   fs.writeFileSync('docs/BALANCE.md', md);
   console.log(md);

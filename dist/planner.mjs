@@ -89,7 +89,7 @@ export function planner(s) {
   }
   // 2b. Heavy encryption: purge it. Low health: patch, or hit back with what you're missing.
   if (s.encounter.encrypt >= 6 && ok(s, 'purge ' + t.id)) return 'purge ' + t.id;
-  if (d.integrity < d.max * 0.5) { const h = first(s, ['patch', 'failover', 'reclaim ' + t.id]); if (h) return h; }
+  if (d.integrity < d.max * 0.5) { const h = first(s, [d.integrity < d.max * 0.3 && 'patch', 'failover', 'reclaim ' + t.id]); if (h) return h; } // a healer keeps Patch for under 30% (bastion.mjs HEAL.solo)
   // A healer in a crew: patch whoever else is lowest, under half.
   const hurt = (hooks.crewAllies?.(s) || []).map((x) => ({ who: x.who, d: defender(x.st) })).filter((x) => x.d.integrity < x.d.max * 0.5).sort((a, b) => a.d.integrity / a.d.max - b.d.integrity / b.d.max)[0];
   if (hurt && ok(s, 'patch ' + hurt.who)) return 'patch ' + hurt.who;

@@ -35,7 +35,7 @@ export const STATS = {
   critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Added to every crit, on top of ×1.5.' },
   accuracy: { side: 'hacker', group: 'offense', name: 'Accuracy', unit: '%', base: 2.5, about: 'Cancels the enemy\'s evasion, so your damaging skills miss less. A miss still spends the cooldown.' },
   echo: { side: 'hacker', group: 'offense', name: 'Echo', unit: '%', base: 5, cap: 40, about: 'Chance a skill hit repeats for half damage. Against armor, the echo breaks another ◆.' },
-  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1, flat: true, about: 'Added to every burn tick and helper hit.' },
+  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '%', base: 6, about: 'Every burn tick and every helper hit you start deals this percentage more damage.' }, // Damage over time keeps only part of the level growth (CONFIG.dotLevel), and Payload makes up the rest.
   // Defense (health on its side; the rest on both sides)
   signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'More max Signal on runs.' },
   integrity: { side: 'server', group: 'survival', name: 'Integrity', unit: '', base: 20, flat: true, about: 'More max server Integrity.' },
@@ -43,6 +43,7 @@ export const STATS = {
   reduction: { side: 'both', group: 'survival', name: 'Block', unit: '', base: 1, flat: true, about: 'Taken off every hit (a hit never drops below half).' },
   evasion: { side: 'both', group: 'survival', name: 'Evasion', unit: '%', base: 2.5, cap: 20, about: 'Chance an enemy\'s damage attack misses (up to 20%).' },
   sanitize: { side: 'both', group: 'survival', name: 'Sanitize', unit: '%', base: 8, cap: 50, about: 'Chance an Encrypt, Blind or spawn fails (up to 50%).' },
+  restore: { side: 'hacker', group: 'survival', name: 'Restore', unit: '%', base: 6, about: 'Every heal you cast, on yourself or on a crewmate, heals this percentage more.' }, // Heals keep only part of the level growth (CONFIG.healLevel), and Restore makes up the rest.
   leech: { side: 'hacker', group: 'survival', name: 'Leech', unit: '', base: 1, flat: true, about: 'Heals you this much for every skill hit that does damage: your server at home, your Signal on runs.' },
   shield: { side: 'server', group: 'survival', name: 'Shield', unit: '', base: 10, flat: true, about: 'Start every home fight with a shield that soaks this much.' },
   countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'When an attack lands on your server, the part that fired it takes this much. It\'s a hit: on armor, it breaks a ◆.' },
@@ -63,7 +64,7 @@ export const groupOf = (item) => { const g = item?.group || STATS[Object.keys(it
 // A protocol is named after its strongest stat.
 export const PROTOCOL_NAMES = {
   damage: 'Overdrive', crit: 'Precision', critDamage: 'Amplifier', accuracy: 'Targeting', echo: 'Echo', payload: 'Injector',
-  clock: 'Clockrate', leech: 'Leech', stealth: 'Cloak', signal: 'Relay', regen: 'Self-repair', reduction: 'Hardening',
+  clock: 'Clockrate', leech: 'Leech', stealth: 'Cloak', signal: 'Relay', regen: 'Self-repair', restore: 'Restore Point', reduction: 'Hardening',
   evasion: 'Jitter', sanitize: 'Sanitizer', scavenge: 'Scavenger', sync: 'Phaselock',
 };
 
@@ -80,19 +81,19 @@ export const BASES = {
   'vpn-cascade': { slot: 'proxy', name: 'VPN Cascade', level: 11, primary: { signal: 70, reduction: 2 }, flavour: "Three countries before you're anywhere." },
   'onion-circuit': { slot: 'proxy', name: 'Onion Circuit', level: 18, primary: { signal: 100, reduction: 3 }, flavour: 'Layer on layer. Nobody sees the middle.' },
   mixnet: { slot: 'proxy', name: 'Mixnet', level: 26, primary: { signal: 140, reduction: 4 }, flavour: 'Your packets, shuffled with ten thousand others.' },
-  'reverse-shell': { slot: 'shell', name: 'Reverse Shell', level: 1, primary: { signal: 12, regen: 0.5 }, flavour: 'It called home. You answered.' },
-  'tty-upgrade': { slot: 'shell', name: 'TTY Upgrade', level: 5, primary: { signal: 22, regen: 1 }, flavour: 'Tab completion. History. Civilisation.' },
-  'root-shell': { slot: 'shell', name: 'Root Shell', level: 11, primary: { signal: 35, regen: 1.5 }, flavour: '#' },
-  'restricted-shell-escape': { slot: 'shell', name: 'Restricted Shell Escape', level: 18, primary: { signal: 50, regen: 2 }, flavour: 'They boxed you in. Cute.' },
-  'ghost-shell': { slot: 'shell', name: 'Ghost Shell', level: 26, primary: { signal: 70, regen: 3 }, flavour: 'No process name. No parent. No logs.' },
-  'one-liner': { slot: 'script', name: 'One-liner', level: 1, primary: { damage: 2, signal: 10 }, flavour: 'Pipes all the way down.' },
-  'cron-job': { slot: 'script', name: 'Cron Job', level: 5, primary: { damage: 4, signal: 18 }, flavour: "Runs at 3 a.m. whether you're awake or not." },
-  dropper: { slot: 'script', name: 'Dropper', level: 11, primary: { damage: 6, signal: 28 }, flavour: 'Small, polite, carries something worse.' },
-  loader: { slot: 'script', name: 'Loader', level: 18, primary: { damage: 9, signal: 40 }, flavour: 'Unpacks in memory. Leaves nothing on disk.' },
-  'polymorphic-engine': { slot: 'script', name: 'Polymorphic Engine', level: 26, primary: { damage: 13, signal: 55 }, flavour: 'Never the same twice.' },
+  'reverse-shell': { slot: 'shell', name: 'Reverse Shell', level: 1, primary: { signal: 12, regen: 0.5, restore: 12 }, flavour: 'It called home. You answered.' },
+  'tty-upgrade': { slot: 'shell', name: 'TTY Upgrade', level: 5, primary: { signal: 22, regen: 1, restore: 16 }, flavour: 'Tab completion. History. Civilisation.' },
+  'root-shell': { slot: 'shell', name: 'Root Shell', level: 11, primary: { signal: 35, regen: 1.5, restore: 20 }, flavour: '#' },
+  'restricted-shell-escape': { slot: 'shell', name: 'Restricted Shell Escape', level: 18, primary: { signal: 50, regen: 2, restore: 24 }, flavour: 'They boxed you in. Cute.' },
+  'ghost-shell': { slot: 'shell', name: 'Ghost Shell', level: 26, primary: { signal: 70, regen: 3, restore: 30 }, flavour: 'No process name. No parent. No logs.' },
+  'one-liner': { slot: 'script', name: 'One-liner', level: 1, primary: { damage: 2, signal: 10, payload: 12 }, flavour: 'Pipes all the way down.' },
+  'cron-job': { slot: 'script', name: 'Cron Job', level: 5, primary: { damage: 4, signal: 18, payload: 16 }, flavour: "Runs at 3 a.m. whether you're awake or not." },
+  dropper: { slot: 'script', name: 'Dropper', level: 11, primary: { damage: 6, signal: 28, payload: 20 }, flavour: 'Small, polite, carries something worse.' },
+  loader: { slot: 'script', name: 'Loader', level: 18, primary: { damage: 9, signal: 40, payload: 24 }, flavour: 'Unpacks in memory. Leaves nothing on disk.' },
+  'polymorphic-engine': { slot: 'script', name: 'Polymorphic Engine', level: 26, primary: { damage: 13, signal: 55, payload: 30 }, flavour: 'Never the same twice.' },
   implant: { slot: 'implant', name: 'Implant', level: 15, primary: { damage: 6, signal: 30 }, flavour: 'Resident. Quiet. Yours.' }, // drops and compiles from item level 15 (the first Implant slot)
 };
-export const PRIMARY_STATS = ['damage', 'signal', 'reduction', 'regen'];
+export const PRIMARY_STATS = ['damage', 'signal', 'reduction', 'regen', 'restore', 'payload'];
 // Every base's primaries × this (tuned with the monster pass, see friction.mjs).
 export const ITEM_SCALE = { primary: 0.42, unique: 0.5 }; // unique: on a named unique's stats (not its downside); about a yellow, its effect is the point
 // The best base of a slot at an item level (the highest tier unlocked).
@@ -104,12 +105,13 @@ export const AFFIXES = {
   weaponized: { kind: 'prefix', name: 'Weaponized', stat: 'damage', lo: 1, hi: 4, from: 1 },
   precise: { kind: 'prefix', name: 'Precise', stat: 'crit', lo: 3, hi: 5, from: 1 },
   calibrated: { kind: 'prefix', name: 'Calibrated', stat: 'accuracy', lo: 3, hi: 5, from: 1 },
-  loaded: { kind: 'prefix', name: 'Loaded', stat: 'payload', lo: 1, hi: 1.5, from: 4 }, // Payload lands on every helper and burn tick: at 3 a level, late Operators barely got hurt
+  loaded: { kind: 'prefix', name: 'Loaded', stat: 'payload', lo: 4, hi: 10, from: 3 }, // Payload is a percentage. It lands on every helper hit and burn tick.
   multithreaded: { kind: 'prefix', name: 'Multithreaded', stat: 'clock', lo: 6, hi: 10, from: 6 },
   brutal: { kind: 'prefix', name: 'Brutal', stat: 'critDamage', lo: 4, hi: 10, from: 8 },
   recursive: { kind: 'prefix', name: 'Recursive', stat: 'echo', lo: 4, hi: 8, from: 10 },
   bunker: { kind: 'suffix', name: 'of the Bunker', stat: 'signal', lo: 6, hi: 20, from: 1 },
   mending: { kind: 'suffix', name: 'of Mending', stat: 'regen', lo: 0.3, hi: 1, from: 1 },
+  restoration: { kind: 'suffix', name: 'of Restoration', stat: 'restore', lo: 4, hi: 10, from: 3 }, // Restore is a percentage. It lands on every heal you cast.
   scavenger: { kind: 'suffix', name: 'of the Scavenger', stat: 'scavenge', lo: 6, hi: 12, from: 1 },
   ghost: { kind: 'suffix', name: 'of the Ghost', stat: 'evasion', lo: 2, hi: 4, from: 3 },
   leeching: { kind: 'suffix', name: 'of Leeching', stat: 'leech', lo: 1, hi: 2, from: 5 },
@@ -267,6 +269,9 @@ export function rollItem(rand, opts = {}) {
 }
 // Which affix carries a stat (for compiling a chosen stat).
 export const AFFIX_FOR = Object.fromEntries(Object.entries(AFFIXES).filter(([, a]) => !a.junk).map(([id, a]) => [a.stat, id]));
+// The stat a player chasing `chase` (a subclass's list, data.mjs SUBS) wants on their i-th protocol: the
+// list in turn, one per slot. Only a rarity with affixes can carry one (a white has none).
+export const chaseStat = (chase, i, rarity) => (RARITIES[rarity]?.affixes[1] && chase?.length ? chase[i % chase.length] : undefined);
 
 // A named unique (content/items.mjs) at an item level: its primaries and secondaries scale from
 // its own level, its downside doesn't.

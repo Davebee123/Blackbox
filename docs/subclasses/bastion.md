@@ -7,7 +7,7 @@ Both subclasses keep the Bastion core from levels 1 to 7: Rate Limit, Firewall, 
 | Subclass | Role | The idea | Alone | In a crew |
 |---|---|---|---|---|
 | **Warden** | Tank, Retaliation | Every hit comes to you, and goes back. | Outlasts anything and hits back. | The tank: draws fire and turns it around. |
-| **Sysop** | Healer, Support | Keep everyone up, and the logs clean. | Heals through long fights. | The healer: keeps the crew standing and undoes what the virus does. |
+| **Sysop** | Healer, Support | Keep everyone up, and the logs clean. | Weaker alone: slow kills, small heals on itself. | The healer: keeps the crew standing and undoes what the virus does. |
 
 ## Warden
 
@@ -52,15 +52,17 @@ Choices (pick one of two in each tier):
 
 **Edge: Overprovision.** Healing past full turns into a shield, up to 20. It works on the heals from your skills (Patch up front and as it ticks, Multicast, Heartbeat, Scrub, Rollback, Rebalance and Reclaim), and the shield lands on whoever you healed. It never builds a shield past 20: a player who already has 20 or more shield keeps what they have.
 
-The Sysop heals, and fixes what a virus does to a crewmate. In a crew, the heals that take a name (`patch nyx`, `heartbeat nyx`, `scrub nyx`, `rollback nyx`, `hot-standby nyx`) land on that crewmate, and a crewmate's name for you is `you`. With no name they land on you, so a Sysop alone heals itself.
+The Sysop heals, and fixes what a virus does to a crewmate. It is built for a crew: Multicast heals everyone at once, and its single heals are small. Alone it is the weak one on purpose, like a healer levelling solo. It kills slowly and its heals on itself are small, so a fight at its level costs a blue-geared Sysop about half its Signal, and it wins about four fights in five (most other subclasses: 30–47%, and 92% or more).
+
+**Restore.** Heals you cast keep only half of the 4% a level everything else gets (+2% a level, `CONFIG.healLevel`); Restore on your gear makes up the rest. Every Shell rolls it as a primary, and *of Restoration* adds it as a suffix (4–10% from item level 1 to 20, about 19% at 30). A Sysop in blues that chases it (and Clock Speed for more casts) has about 48% at level 18 and 65% at 30, and its Multicast heals 32 and 42 there; in whites (about 11–13%, from the Shell) 24 and 29. Reclaim's lifesteal and Rollback give back damage, so they grow with it already and take only Restore. In a crew, the heals that take a name (`patch nyx`, `heartbeat nyx`, `scrub nyx`, `rollback nyx`, `hot-standby nyx`) land on that crewmate, and a crewmate's name for you is `you`. With no name they land on you, so a Sysop alone heals itself.
 
 ### Sysop skills
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
-| 12 | `patch [name]` | Heals 8 now, then 5 a cycle for 3 cycles. In a crew, `patch nyx` heals nyx instead. | 4 |
-| 14 | `multicast` | Heals you and everyone in your crew for 10. | 4 |
-| 18 | `heartbeat [name]` | Heals 5 a cycle for 4 cycles, starting now. A new Heartbeat on the same player replaces the old one. | 4 |
+| 12 | `patch [name]` | Heals 4 now, then 2 a cycle for 3 cycles. In a crew, `patch nyx` heals nyx instead. | 4 |
+| 14 | `multicast` | Heals you and everyone in your crew for 16. | 4 |
+| 18 | `heartbeat [name]` | Heals 4 a cycle for 4 cycles, starting now. A new Heartbeat on the same player replaces the old one. | 4 |
 | 22 | `scrub [name]` | Clears encryption and Scrambled, and heals 8. | 5 |
 | 26 | `reclaim <part>` | Deals 35 damage, and you heal half of what it does. On armor it breaks 2 chits. | 3 |
 | 30 | `rollback [name]` | Undoes the last attack that hurt that player: it heals back everything the attack did, or deletes the fragment it spawned. | 6 |
@@ -83,10 +85,12 @@ Choices (pick one of two in each tier):
 
 | Tier | Option a | Option b |
 |---|---|---|
-| 1 (3 points above) | **Service Pack**: Patch heals 20 up front. | **Ping Flood**: Multicast also hits every part for what it heals each player. |
+| 1 (3 points above) | **Service Pack**: Patch heals 10 up front. | **Ping Flood**: Multicast also hits every part for what it heals each player. |
 | 2 (8 points above) | **Critical Path**: your heals on anyone under a third of their Signal heal 50% more. | **Redistribute**: Reclaim also heals the lowest crewmate as much as it heals you. Alone, it heals you twice as much. |
 | 3 (14 points above) | **Overcommit**: Overprovision holds twice as much shield. | **Loopback**: every heal you cast also heals you for a third of it. |
 
 ## Crewmates
 
-Simulated crewmates (`crew sim warden`, `crew sim sysop`) are played by the same planner as the balance scripts, and they take the seven skills their role wants rather than the first seven they learned. A Warden crewmate keeps Rate Limit, Firewall and Retaliate, then the first four it knows of Bulkhead, Blowback, Harden, DMZ, Suspend and Purge. It pulls the fire with Bulkhead or Firewall whenever attacks are about to land on everyone or a crewmate is hurt, armors up with Harden when it is drawing a big hit, and spends Blowback once it has stored enough to matter. A Sysop crewmate keeps Rate Limit and Firewall, then the first five it knows of Patch, Multicast, Hot Standby, Heartbeat, Scrub and Rollback, and Retaliate if a slot is left. It puts whoever is about to drop on standby, Multicasts when two players are hurt, Patches or Rolls Back the lowest, keeps a Heartbeat on whoever is drawing fire, and Scrubs your encryption once it stacks up.
+Simulated crewmates (`crew sim warden`, `crew sim sysop`) are played by the same planner as the balance scripts, and they take the seven skills their role wants rather than the first seven they learned. A Warden crewmate keeps Rate Limit, Firewall and Retaliate, then the first four it knows of Bulkhead, Blowback, Harden, DMZ, Suspend and Purge. It pulls the fire with Bulkhead or Firewall whenever attacks are about to land on everyone or a crewmate is hurt, armors up with Harden when it is drawing a big hit, and spends Blowback once it has stored enough to matter. A Sysop crewmate keeps Rate Limit and Firewall, then the first five it knows of Patch, Multicast, Hot Standby, Heartbeat, Scrub and Rollback, and Retaliate if a slot is left. It heals ahead of the damage (`HEAL` in bastion.mjs): it puts anyone under 30% on standby, Multicasts when two players are under 85%, Patches or Rolls Back the lowest under 80%, keeps a Heartbeat on whoever is drawing fire and on the lowest under 95%, and Scrubs your encryption once it stacks up. A Sysop alone (a bot, or the balance scripts) keeps its heals for under 30%: one that topped itself up under half made a Sysop solo too safe.
+
+The farm's bosses are built around a healer: from level 12 their damage rises, to ×1.6 at 18. With a Sysop a crew of four wins every boss try (simulated, everyone in blues), and someone in it still dips to about half; without a healer or a tank it wins about two tries in three.

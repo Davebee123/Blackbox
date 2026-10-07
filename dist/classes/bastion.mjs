@@ -23,7 +23,7 @@
 //              [{ id, name, amount, left, from, cap, crit, loop }] (cap: the healer's Overprovision cap,
 //              0 without the edge; crit: Critical Path; loop: the healer's name, for Loopback)
 //   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1
-import { subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -130,7 +130,7 @@ const use = {
   patch(s, { a, to, e }) {
     // The generic Patch has healed; the Sysop's edge and talents act on what it did.
     const label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
-    const want = scaled(s, (hasTalent(s, 'service-pack') ? 20 : a.heal) + 3 * rank(s, 'patch-notes'));
+    const want = healScaled(s, (hasTalent(s, 'service-pack') ? a.pack : a.heal) + 3 * rank(s, 'patch-notes'));
     const got = lastHeal(to, label) ?? want;
     const d = defender(to);
     if (hasTalent(s, 'critical-path') && d.integrity - got < d.max / 3) mend(s, to, Math.round(want / 2), 'Critical Path', { loop: null });
@@ -144,14 +144,14 @@ const use = {
     }
   },
   multicast(s, { a }) {
-    const amount = scaled(s, a.heal + 3 * rank(s, 'fan-out'));
+    const amount = healScaled(s, a.heal + 3 * rank(s, 'fan-out'));
     for (const x of crewOf(s)) mend(s, x.st, amount, x.me ? a.name : `${a.name} from ${s.who || 'you'}`);
     if (hasTalent(s, 'ping-flood')) for (const p of livingParts(s)) hit(s, p, amount, { mine: true, by: 'Ping Flood' });
   },
   heartbeat(s, { a, to }) {
     const label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
-    addHot(s, to, { id: 'heartbeat', name: label, amount: scaled(s, a.tick + rank(s, 'tick-rate')), left: a.ticks, from: to.encounter.cycle });
-    emit(to, 'status', `${label}: ${scaled(s, a.tick + rank(s, 'tick-rate'))} a cycle for ${a.ticks} cycles.`, { mark: 'buff', ability: 'heartbeat' });
+    addHot(s, to, { id: 'heartbeat', name: label, amount: healScaled(s, a.tick + rank(s, 'tick-rate')), left: a.ticks, from: to.encounter.cycle });
+    emit(to, 'status', `${label}: ${healScaled(s, a.tick + rank(s, 'tick-rate'))} a cycle for ${a.ticks} cycles.`, { mark: 'buff', ability: 'heartbeat' });
   },
   scrub(s, { a, to }) {
     const e = to.encounter, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
@@ -159,12 +159,12 @@ const use = {
     if (e.encrypt > 0) { e.encrypt = 0; cleared.push('encryption'); }
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     if (cleared.length) emit(to, 'decrypted', `${label}: ${cleared.join(' and ')} cleared.`);
-    mend(s, to, scaled(s, a.heal), label);
+    mend(s, to, healScaled(s, a.heal), label);
   },
   rollback(s, { a, to }) {
     const e = to.encounter, u = e.undo, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
     e.undo = null;
-    if (u?.type === 'damage') mend(s, to, u.amount, label);
+    if (u?.type === 'damage') mend(s, to, Math.round(u.amount * restoreMult(s)), label);
     if (u?.type === 'replicate') { const f = part(to, u.part); if (alive(f)) { f.integrity = 0; emit(to, 'heal', `${label}: ${f.name} deleted.`, { target: f.id }); } }
   },
   'hot-standby'(s, { a, to }) {
@@ -178,12 +178,12 @@ const use = {
       for (const x of all) { const d = defender(x.st); d.integrity = Math.max(1, Math.min(d.max, Math.round(avg * d.max))); }
       emit(s, 'status', `Rebalance: everyone at ${Math.round(avg * 100)}% of their Signal.`, { mark: 'buff', ability: 'rebalance' });
     }
-    const amount = scaled(s, a.heal);
+    const amount = healScaled(s, a.heal);
     for (const x of all) mend(s, x.st, amount, x.me ? a.name : `${a.name} from ${s.who || 'you'}`);
   },
   reclaim(s, { res }) {
     if (!(res?.dealt > 0)) return;
-    const amount = Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal));
+    const amount = Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal * restoreMult(s)));
     // The generic lifesteal has healed you: what spilled past full is Overprovision's.
     overprovision(s, amount - (lastHeal(s, A('reclaim').name) ?? amount), capOf(s));
     if (!hasTalent(s, 'redistribute')) return;
@@ -241,6 +241,15 @@ function wardenPlan(s, t) {
   return null;
 }
 
+// When the Sysop bot heals (shares of max Signal). Alone it keeps its heals for when it's in trouble, so a
+// Sysop solo is the weaker one on purpose; in a crew it heals ahead of the damage, most cycles.
+export const HEAL = {
+  urgent: 0.3, // anyone under this: Hot Standby, then the biggest heal there is
+  solo: 0.3, // alone: Patch, Heartbeat (and Multicast a little lower) only under this
+  crew: 0.8, // in a crew: Patch the lowest under this
+  crewAll: 0.85, // in a crew: Multicast when two or more are under this
+  topUp: 0.95, // in a crew: keep a Heartbeat on the lowest under this
+};
 function sysopPlan(s, t) {
   const e = s.encounter;
   const all = crewOf(s).filter((x) => x.me || defender(x.st).integrity > 0).map((x) => ({ ...x, f: frac(x.st) })).sort((a, b) => a.f - b.f);
@@ -250,30 +259,30 @@ function sysopPlan(s, t) {
   const dirty = all.find((x) => x.st.encounter.encrypt >= 6 || x.st.encounter.scrambleUntil >= x.st.encounter.cycle);
   if (dirty && !solo) { const c = first(s, [aim(s, 'scrub', dirty.st)]); if (c) return c; }
   // Someone about to go: standby, then the biggest heal there is.
-  if (low.f < 0.3) {
+  if (low.f < HEAL.urgent) {
     const c = first(s, [!low.st.encounter.standby && aim(s, 'hot-standby', low.st), aim(s, 'patch', low.st), aim(s, 'rollback', low.st), !solo && 'multicast', aim(s, 'heartbeat', low.st), aim(s, 'scrub', low.st)]);
     if (c) return c;
   }
   // Two or more hurt: the crew heal.
-  if (all.filter((x) => x.f < 0.7).length >= 2) { const c = first(s, ['multicast']); if (c) return c; }
+  if (all.filter((x) => x.f < HEAL.crewAll).length >= 2) { const c = first(s, ['multicast']); if (c) return c; }
   // Uneven crew: rebalance.
   if (!solo && all.at(-1).f - low.f > 0.45 && low.f < 0.5) { const c = first(s, ['rebalance']); if (c) return c; }
   const undo = (x) => (x.st.encounter.undo?.type === 'damage' ? x.st.encounter.undo.amount : 0);
   const hb = (x) => x.st.encounter.hots?.some((h) => h.id === 'heartbeat' && h.left > 0);
-  if (low.f < (solo ? 0.5 : 0.6)) {
+  if (low.f < (solo ? HEAL.solo : HEAL.crew)) {
     const c = first(s, [aim(s, 'patch', low.st), undo(low) >= defender(low.st).max * 0.12 && aim(s, 'rollback', low.st), !hb(low) && aim(s, 'heartbeat', low.st), !solo && 'multicast']);
     if (c) return c;
   }
   // Keep the tank (whoever is drawing fire) and anyone slipping on a heartbeat.
   const tank = all.find((x) => !x.me && x.st.encounter.buffs?.sinkhole >= x.st.encounter.cycle);
   if (tank && tank.f < 0.9 && !hb(tank)) { const c = first(s, [aim(s, 'heartbeat', tank.st)]); if (c) return c; }
-  if (!solo && low.f < 0.8 && !hb(low)) { const c = first(s, [aim(s, 'heartbeat', low.st)]); if (c) return c; }
+  if (!solo && low.f < HEAL.topUp && !hb(low)) { const c = first(s, [aim(s, 'heartbeat', low.st)]); if (c) return c; }
   if (dirty) { const c = first(s, [aim(s, 'scrub', dirty.st)]); if (c) return c; }
   // Alone: keep a heartbeat going once you're hurt; Multicast when it's all there is (with Ping
   // Flood it's also a hit on every part).
-  if (solo && low.f < 0.5 && !hb(low)) { const c = first(s, ['heartbeat']); if (c) return c; }
+  if (solo && low.f < HEAL.solo && !hb(low)) { const c = first(s, ['heartbeat']); if (c) return c; }
   if (hasTalent(s, 'ping-flood') && livingParts(s).filter((p) => !p.armor).length >= 2) { const c = first(s, ['multicast']); if (c) return c; }
-  if (solo && low.f < 0.45) { const c = first(s, ['multicast']); if (c) return c; }
+  if (solo && low.f < HEAL.solo - 0.05) { const c = first(s, ['multicast']); if (c) return c; }
   return null;
 }
 

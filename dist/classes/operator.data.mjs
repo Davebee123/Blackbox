@@ -29,6 +29,7 @@ export const abilities = {
 export const subs = {
   herder: {
     name: 'Herder', role: ['Summoner', 'Damage over time'], idea: 'More processes than they can kill.', solo: 'A swarm of helpers doing the work.', crew: 'Constant damage on everything.',
+    chase: ['payload', 'signal'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { legacy: true, name: 'Last Gasp', rule: 'Each helper hits once more as it expires.' },
     skills: ['fan-out', 'mesh', 'kill-switch', 'garbage-collect', 'malloc', 'fork', 'oom-kill', 'cron-storm'],
     fillers: [
@@ -44,6 +45,7 @@ export const subs = {
   },
   hijacker: {
     name: 'Hijacker', role: ['Control', 'Support'], idea: 'Their code, your commands.', solo: 'Turns the virus against itself.', crew: 'Shuts attacks down for everyone.',
+    chase: ['payload', 'clock'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { name: 'Man in the Middle', rule: 'Jammed parts take +20% from everyone.' },
     skills: ['jam', 'hijack', 'replay', 'spoofed-ack', 'barrier', 'cache-poison', 'reroute', 'blackhole'],
     fillers: [

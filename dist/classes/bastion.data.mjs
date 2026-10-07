@@ -23,12 +23,12 @@ export const abilities = {
     help: 'dmz — this cycle and next, attacks deal 30% less to you and to everyone in your crew.',
     desc: 'Open a demilitarized zone around the crew. This cycle and next, every attack deals 30% less to you and to everyone fighting beside you.' },
   // Sysop: the healer. Heals that spill into shields, and fixes for what a virus does to a crewmate.
-  multicast: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Multicast', target: 'none', damage: 0, heal: 10, cooldown: 4, icon: 'expand', short: 'Heal 10, whole crew',
-    help: 'multicast — heals you and everyone in your crew for 10.',
-    desc: 'One packet, every host. Multicast heals you and everyone fighting beside you for 10.' },
-  heartbeat: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Heartbeat', target: 'none', ally: true, damage: 0, tick: 5, ticks: 4, cooldown: 4, icon: 'server', short: 'Heal 5×4',
-    help: 'heartbeat [name] — heals you 5 a cycle for 4 cycles, starting now. In a crew, heartbeat nyx heals nyx instead. A new Heartbeat replaces the old one.',
-    desc: 'Keep the session alive. Heartbeat heals you or a crewmate for 5 every cycle for 4 cycles, starting this cycle. A second Heartbeat on the same player replaces the first.' },
+  multicast: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Multicast', target: 'none', damage: 0, heal: 16, cooldown: 4, icon: 'expand', short: 'Heal 16, whole crew',
+    help: 'multicast — heals you and everyone in your crew for 16.',
+    desc: 'One packet, every host. Multicast heals you and everyone fighting beside you for 16.' },
+  heartbeat: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Heartbeat', target: 'none', ally: true, damage: 0, tick: 4, ticks: 4, cooldown: 4, icon: 'server', short: 'Heal 4×4',
+    help: 'heartbeat [name] — heals you 4 a cycle for 4 cycles, starting now. In a crew, heartbeat nyx heals nyx instead. A new Heartbeat replaces the old one.',
+    desc: 'Keep the session alive. Heartbeat heals you or a crewmate for 4 every cycle for 4 cycles, starting this cycle. A second Heartbeat on the same player replaces the first.' },
   scrub: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Scrub', target: 'none', ally: true, damage: 0, heal: 8, cooldown: 5, icon: 'clear', short: 'Decrypt, unscramble, heal 8',
     help: 'scrub [name] — clears encryption and Scrambled from you, and heals you 8. In a crew, scrub nyx does it for nyx.',
     desc: 'Scrub the logs clean. Scrub clears encryption and Scrambled from you or a crewmate and heals them for 8.' },
@@ -46,6 +46,7 @@ export const abilities = {
 export const subs = {
   warden: {
     name: 'Warden', role: ['Tank', 'Retaliation'], idea: 'Every hit comes to you, and goes back.', solo: 'Outlasts anything and hits back.', crew: 'The tank: draws fire and turns it around.',
+    chase: ['signal', 'restore'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { legacy: true, name: 'Grudge', rule: 'The part that last hit you takes +20% from your hits.' },
     skills: ['suspend', 'bulkhead', 'blowback', 'throttle', 'harden', 'quarantine', 'dmz', 'failover'],
     fillers: [
@@ -60,7 +61,8 @@ export const subs = {
     ],
   },
   sysop: {
-    name: 'Sysop', role: ['Healer', 'Support'], idea: 'Keep everyone up, and the logs clean.', solo: 'Heals through long fights.', crew: 'The healer: keeps the crew standing and undoes what the virus does.',
+    name: 'Sysop', role: ['Healer', 'Support'], idea: 'Keep everyone up, and the logs clean.', solo: 'Weaker alone: slow kills, small heals on itself.', crew: 'The healer: keeps the crew standing and undoes what the virus does.',
+    chase: ['restore', 'clock'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { name: 'Overprovision', rule: 'Healing past full turns into a shield, up to 20.' },
     skills: ['patch', 'multicast', 'heartbeat', 'scrub', 'reclaim', 'rollback', 'hot-standby', 'rebalance'],
     fillers: [
@@ -69,7 +71,7 @@ export const subs = {
       [f('tick-rate', 'Tick Rate', 'Heartbeat heals +1 a cycle per rank.', 1), f('hardened-kernel', 'Hardened Kernel', 'Take 3% less damage from attacks per rank.', 0.03)],
     ],
     talents: [
-      [t('service-pack', 'Service Pack', 'Patch heals 20 up front.'), t('ping-flood', 'Ping Flood', 'Multicast also hits every part for what it heals.')],
+      [t('service-pack', 'Service Pack', 'Patch heals 10 up front.'), t('ping-flood', 'Ping Flood', 'Multicast also hits every part for what it heals.')],
       [t('critical-path', 'Critical Path', 'Your heals on anyone under a third of their Signal heal 50% more.'), t('redistribute', 'Redistribute', 'Reclaim heals the lowest crewmate as much as it heals you. Alone, it heals you twice as much.')],
       [t('overcommit', 'Overcommit', 'Overprovision holds twice as much shield.'), t('loopback', 'Loopback', 'Every heal you cast also heals you for a third of it.')],
     ],

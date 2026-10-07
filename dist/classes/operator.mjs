@@ -24,7 +24,7 @@
 //   blackhole              its next attack does nothing (Blackhole).
 //   poisonedUntil, poison  Cache Poison: its patches and heals turn into damage.
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
-import { subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -236,7 +236,7 @@ export default {
       const total = helperValue(s), n = e.helpers.length;
       e.helpers = [];
       emit(s, 'status', `OOM Kill: ${n === 1 ? 'one helper' : n + ' helpers'} reaped.`, { ability: 'oom-kill' });
-      heal(s, Math.max(1, Math.round(total * a.share)), 'OOM Kill');
+      heal(s, Math.max(1, Math.round(total * a.share * restoreMult(s))), 'OOM Kill');
     },
     // ----- Hijacker -----
     jam: (s, { target, e }) => {

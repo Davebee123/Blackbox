@@ -45,17 +45,23 @@ export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange'
 const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(i)).length > 14;
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
-// Skill text with this level's numbers: every level adds 4% to damage, heals and shields.
+// Skill text with this level's numbers: every level adds 4% to damage and shields. Heals you cast and
+// damage over time (burn ticks, helpers) take CONFIG.healLevel / dotLevel of that, times Restore / Payload.
 export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
   const k = arch ? power(hackerLevel(s, arch)) : powerOf(s);
-  if (!a || !text || k === 1) return text;
+  const kHeal = (1 + (k - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
+  const kDot = (1 + (k - 1) * CONFIG.dotLevel) * (1 + gearStat(s, 'payload') / 100);
+  if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1)) return text;
+  const healing = a.verb === 'heal' || id === 'patch';
+  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot };
   // a.scales: the extra numbers a subclass skill writes in its text (dist/classes), as fields to scale.
-  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => a[f]).filter((n) => typeof n === 'number' && n > 1);
-  if (id === 'counter') nums.push(SKILLS.fixedCounter);
-  if (id === 'hook') nums.push(SKILLS.hooked);
+  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k]).filter(([n]) => typeof n === 'number' && n > 1);
+  if (id === 'counter') nums.push([SKILLS.fixedCounter, k]);
+  if (id === 'hook') nums.push([SKILLS.hooked, k]);
   let out = text;
-  for (const n of [...new Set(nums)]) out = out.replace(new RegExp(`(^|[^\\d.×])${n}(?![\\d%])`, 'g'), (m, pre) => `${pre}${Math.max(1, Math.round(n * k))}`);
+  const seen = new Set();
+  for (const [n, f] of nums) if (!seen.has(n) && seen.add(n)) out = out.replace(new RegExp(`(^|[^\\d.×])${n}(?![\\d%]| cycles)`, 'g'), (m, pre) => `${pre}${Math.max(1, Math.round(n * f))}`); // not a count of cycles (Heartbeat: 4 a cycle for 4 cycles)
   return out;
 }
 

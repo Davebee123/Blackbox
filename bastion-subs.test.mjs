@@ -209,7 +209,7 @@ test('Overprovision: healing past full becomes a shield, up to 20 (Reserve Pool 
   defender(s).integrity = defender(s).max - 4;
   act(s, 'multicast');
   assert.equal(hp(s), defender(s).max);
-  assert.equal(s.encounter.shield, 6, '10 healed, 4 of it needed: 6 shield');
+  assert.equal(s.encounter.shield, 12, '16 healed, 4 of it needed: 12 shield');
   for (let i = 0; i < 4; i++) { s.encounter.readyAt = {}; act(s, 'multicast'); }
   assert.equal(s.encounter.shield, 20, 'capped at 20');
   const r = quiet(start('sysop', ['multicast'], ['overcommit'], { 'reserve-pool': 2 }));
@@ -219,9 +219,9 @@ test('Overprovision: healing past full becomes a shield, up to 20 (Reserve Pool 
   const p = quiet(start('sysop', ['patch']));
   defender(p).integrity = defender(p).max - 2;
   act(p, 'patch');
-  assert.equal(p.encounter.shield, 6, 'Patch: 8 up front, 6 of it past full');
+  assert.equal(p.encounter.shield, 2, 'Patch: 4 up front, 2 of it past full');
   act(p, 'hold');
-  assert.equal(p.encounter.shield, 6 + 5, 'and its ticks spill too');
+  assert.equal(p.encounter.shield, 2 + 2, 'and its ticks spill too');
   // No edge, no shield: a Warden's heal stops at full.
   const w = quiet(start('warden'));
   w.encounter.readyAt = {};
@@ -233,19 +233,19 @@ test('Multicast heals everyone; Fan-out +3 a rank; Ping Flood also hits every pa
   big(s, 'pulse'); big(s, 'encryptor');
   defender(s).integrity = 50;
   act(s, 'multicast');
-  assert.equal(hp(s), 66);
-  assert.equal(lost(s, 'pulse'), 16);
-  assert.equal(lost(s, 'encryptor'), 16);
+  assert.equal(hp(s), 72, '16 + 2 × 3');
+  assert.equal(lost(s, 'pulse'), 22);
+  assert.equal(lost(s, 'encryptor'), 22);
   assert.equal(readyIn(s, 'multicast'), ABILITIES.multicast.cooldown - 1);
 });
 
-test('Heartbeat: 5 a cycle for 4 cycles from now, a new one replaces the old; Tick Rate +1 a rank', () => {
+test('Heartbeat: 4 a cycle for 4 cycles from now, a new one replaces the old; Tick Rate +1 a rank', () => {
   const s = quiet(start('sysop', ['heartbeat'], [], { 'tick-rate': 2 }));
   defender(s).integrity = 40;
   act(s, 'heartbeat');
-  assert.equal(hp(s), 47);
+  assert.equal(hp(s), 46, '4 + 2 for Tick Rate');
   act(s, 'hold'); act(s, 'hold'); act(s, 'hold'); act(s, 'hold');
-  assert.equal(hp(s), 40 + 4 * 7, 'four ticks, then it stops');
+  assert.equal(hp(s), 40 + 4 * 6, 'four ticks, then it stops');
   s.encounter.readyAt = {};
   act(s, 'heartbeat');
   s.encounter.readyAt = {};
@@ -307,7 +307,7 @@ test('Sysop talents: Service Pack, Critical Path, Redistribute, Loopback', () =>
   const sp = quiet(start('sysop', ['patch'], ['service-pack']));
   defender(sp).integrity = 50;
   act(sp, 'patch');
-  assert.equal(hp(sp), 50 + 20, 'Service Pack: 20 up front');
+  assert.equal(hp(sp), 50 + 10, 'Service Pack: 10 up front');
   // Critical Path: +50% on someone under a third.
   const cp = quiet(start('sysop', ['scrub'], ['critical-path']));
   defender(cp).integrity = 10;
@@ -334,16 +334,16 @@ test('a Sysop heals crewmates by name: Heartbeat, Scrub, Rollback, Hot Standby; 
   nyx.run.integrity = 20;
   for (const m of [nyx, kilo]) order(m, 'hold');
   act(s, 'heartbeat nyx');
-  assert.ok(nyx.run.integrity >= 25, 'its first tick lands on nyx at the end of nyx\'s turn');
-  assert.ok(s.logs.some((e) => e.who === 'nyx' && e.type === 'heal' && e.amount === 5 && /^Heartbeat from you/.test(e.message)));
+  assert.ok(nyx.run.integrity >= 24, 'its first tick lands on nyx at the end of nyx\'s turn');
+  assert.ok(s.logs.some((e) => e.who === 'nyx' && e.type === 'heal' && e.amount === 4 && /^Heartbeat from you/.test(e.message)));
   assert.match(command(s, 'heartbeat zed').find((e) => e.type === 'warning')?.message || '', /isn't in this fight/);
   // Multicast: everyone.
   s.encounter.readyAt = {};
   s.run.integrity -= 30; kilo.run.integrity -= 30;
   for (const m of [nyx, kilo]) order(m, 'hold');
   const ev = act(s, 'multicast');
-  assert.ok(ev.some((e) => e.type === 'heal' && !e.who && e.amount === 10 && /^Multicast \+/.test(e.message)), 'you');
-  assert.ok(ev.some((e) => e.type === 'heal' && e.who === 'kilo' && e.amount === 10 && /^Multicast from you/.test(e.message)), 'kilo');
+  assert.ok(ev.some((e) => e.type === 'heal' && !e.who && e.amount === 16 && /^Multicast \+/.test(e.message)), 'you');
+  assert.ok(ev.some((e) => e.type === 'heal' && e.who === 'kilo' && e.amount === 16 && /^Multicast from you/.test(e.message)), 'kilo');
   assert.ok(ev.some((e) => e.who === 'nyx' && /^Multicast from you/.test(e.message)), 'and nyx');
   // Rollback on nyx: the last attack on nyx comes back.
   nyx.run.integrity = nyx.run.max;
@@ -389,10 +389,10 @@ test('Overprovision lands on the crewmate: healing them past full shields them',
   nyx.run.integrity = nyx.run.max - 2;
   order(nyx, 'hold');
   act(s, 'patch nyx');
-  assert.equal(nyx.encounter.shield, 6, '8 up front, 6 of it past full: a shield on nyx');
+  assert.equal(nyx.encounter.shield, 2, '4 up front, 2 of it past full: a shield on nyx');
   order(nyx, 'hold');
   act(s, 'hold');
-  assert.equal(nyx.encounter.shield, 6 + 5, 'and a tick of 5');
+  assert.equal(nyx.encounter.shield, 2 + 2, 'and a tick of 2');
 });
 
 test('Sysop talents in a crew: Redistribute heals the lowest crewmate, Loopback heals you for a third of a heal on someone else', () => {

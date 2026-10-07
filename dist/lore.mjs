@@ -21,7 +21,7 @@ export const SKILL_TEXT = {
   firewall: { desc: 'Raise a firewall that absorbs 20 damage. Absorbing a full hit enables Retaliate. With a crew, every attack comes at you for 2 cycles.', lore: 'Default deny. Everything else asks permission.' },
   retaliate: { desc: 'Strike back at a part, dealing double the damage you just took (up to 60). Usable the cycle after you are hit.', lore: 'Every packet it sent you, it gets back with interest.' },
   suspend: { desc: 'Suspend a part, delaying its attack by 2 cycles. With no target, delays the next attack to land.', lore: 'Freeze the process mid-thought. Let it wonder.' },
-  patch: { desc: 'Patch yourself, restoring 10 Integrity, then 5 per cycle for 3 cycles.', lore: 'Hot-fix the wound while the fight is still live.' },
+  patch: { desc: 'Patch yourself or a crewmate, restoring 4 Signal, then 2 per cycle for 3 cycles.', lore: 'Hot-fix the wound while the fight is still live.' },
   throttle: { desc: 'Throttle a part, reducing its attack damage by 50% for 3 cycles.', lore: 'Rate-limit the bastard down to a trickle.' },
   purge: { desc: 'Purge a part, dealing 6 damage per cycle for 4 cycles and restoring 2 Integrity per tick. Removes your encryption.', lore: 'Flush the infection. Keep what it was carrying.' },
   harden: { desc: 'Harden your system. The next attack against you deals no damage.', lore: 'Strip the attack surface to bare metal.' },

@@ -35,7 +35,7 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 
-export const SAVE_VERSION = 31; // v31: subclasses (retireClassTrees)
+export const SAVE_VERSION = 32; // v31: subclasses (retireClassTrees); v32: Payload is a percentage
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -344,6 +344,13 @@ export const critMultiplier = () => CRIT.multiplier;
 // Your power: every level, your numbers grow 4% (damage, heals, shields, Signal).
 export const powerOf = (s) => power(hackerLevel(s));
 export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
+// Heals you cast: CONFIG.healLevel of the level growth, times Restore. restoreMult alone for heals that
+// give back damage (Reclaim's half, Rollback), which already grow with it.
+export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
+export const healScaled = (s, n) => Math.max(1, Math.round(n * (1 + (powerOf(s) - 1) * CONFIG.healLevel) * restoreMult(s)));
+// Damage over time (burn ticks, helper hits): built with scaled(), it keeps CONFIG.dotLevel of the level
+// growth at the hit, times Payload.
+export const dotMult = (s) => ((1 + (powerOf(s) - 1) * CONFIG.dotLevel) / powerOf(s)) * (1 + gearStat(s, 'payload') / 100);
 // The level gap to the enemy you're fighting (positive: it's above you).
 export const levelGap = (s) => (s.encounter?.virus?.level || hackerLevel(s)) - hackerLevel(s);
 // Classic-style misses: 5% against a same-level target, +1% per level it's above you, −1% per
@@ -1904,7 +1911,10 @@ export function hit(s, p, base, opts = {}) {
     return { dealt: 0, overflow: 0, absorbed: true };
   }
   // Flat gear: Damage on your skill hits, Payload on burn ticks and helper hits.
-  if (base > 0 && !opts.server) base += opts.dot ? gearStat(s, 'payload') : opts.mine ? gearStat(s, 'damage') + fxFire(s, 'hit', { target: p, do: 'damage+' }).reduce((n, x) => n + x.value, 0) : 0;
+  if (base > 0 && !opts.server) {
+    if (opts.dot) base *= dotMult(s); // Payload, and damage over time's share of level growth
+    else if (opts.mine) base += gearStat(s, 'damage') + fxFire(s, 'hit', { target: p, do: 'damage+' }).reduce((n, x) => n + x.value, 0);
+  }
   let raw = Math.floor(base * damageMultiplier(s, p, opts) + 1e-9); // tolerance: 25 × 1.5 × 1.2 is 45, not 44.999…
   // Subrogation (Halcyon): the part that last hit you takes double from your next skill hit.
   if (raw > 0 && opts.mine && e.subro === p.id) { raw *= 2; e.subro = null; emit(s, 'status', `Subrogation: ${p.name} pays double.`, { target: p.id }); }
@@ -2137,7 +2147,7 @@ function useAbility(s, intent, auto = false) {
   // Overload: a crit resets its cooldown.
   if (id === 'overload' && res?.crit) { delete e.readyAt.overload; emit(s, 'proc', 'Overload crit: ready again.', { ability: 'overload' }); }
   if (a.proc) delete e.procs[a.proc]; // Shatter, Retaliate, Opening spend their window
-  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal)), a.name);
+  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal * restoreMult(s))), a.name);
   if (a.all) for (const p of livingParts(s)) hit(s, p, a.all * powerOf(s) * (id === 'fork-bomb' && on(s, p, 'exposed') ? 2 : 1), { mine: true, by: a.name });
   if (id === 'garbage-collect') for (const h of e.helpers) h.left++;
   if (id === 'failover') {
@@ -2160,7 +2170,7 @@ function useAbility(s, intent, auto = false) {
     // Inject stacks up to 3 on one part; a fourth replaces the oldest.
     for (let k = 0; k < (id === 'inject' && e.surprise ? CONFIG.surprise.injectStacks : 1); k++) {
       if (a.stacks) { const mine = e.burns.filter((b) => b.target === target.id && b.id === id); if (mine.length >= a.stacks) e.burns.splice(e.burns.indexOf(mine[0]), 1); }
-      e.burns.push({ id, target: target.id, damage: tick, grow: a.grow ? scaled(s, a.grow) : 0, left: ticks, name: a.name, drain: a.drain ? scaled(s, a.drain) : 0, synced: !!e.synced });
+      e.burns.push({ id, target: target.id, damage: tick, grow: a.grow ? scaled(s, a.grow) : 0, left: ticks, name: a.name, drain: a.drain ? healScaled(s, a.drain) : 0, synced: !!e.synced });
     }
     const stack = a.stacks ? e.burns.filter((b) => b.target === target.id && b.id === id).length : 0;
     emit(s, 'status', `${target.name} burning: ${tick}${a.grow ? ', growing' : ''} per cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}${stack > 1 ? ` (${stack} stacks)` : ''}.`, { target: target.id, mark: 'burn', ability: id });
@@ -2209,8 +2219,8 @@ function useAbility(s, intent, auto = false) {
   }
   if (id === 'patch') {
     const to = (intent.ally && allyOf(s, intent.ally)) || s, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
-    heal(to, scaled(s, (hasTalent(s, 'service-pack') ? 20 : a.heal) + 3 * rank(s, 'patch-notes')), label);
-    to.encounter.regen = { amount: scaled(s, a.tick), left: a.ticks, from: to.encounter.cycle + 1, name: label };
+    heal(to, healScaled(s, (hasTalent(s, 'service-pack') ? a.pack : a.heal) + 3 * rank(s, 'patch-notes')), label);
+    to.encounter.regen = { amount: healScaled(s, a.tick), left: a.ticks, from: to.encounter.cycle + 1, name: label };
   }
   if (id === 'null-route') { e.nullRoute = 1; e.nextCrit = true; emit(s, 'status', 'Null-routed: the next attack misses you, and your next skill crits.', { mark: 'buff', ability: id }); }
   if (id === 'crack') {
@@ -2226,7 +2236,7 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
     let total = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round(total * 1.5 * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true });
+    hit(s, target, Math.round(total * dotMult(s) * 1.5 * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
   }
   if (id === 'propagate') {
     const mine = burnsOn(s, target);
@@ -3066,7 +3076,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
@@ -3194,6 +3204,8 @@ export function restore(raw) {
     memoryRestore(s);
     retireTraits(s);
     retireHarvesters(s); // harvesters and modules are buildings now (outpost.mjs)
+    // v32: Payload was flat (+1–2 a tick); it's a percentage now, about what the flat bonus was worth.
+    if (was < 32) for (const it of s.stash || []) if (it.stats?.payload) it.stats.payload = Math.round(it.stats.payload * 7);
     retireClassTrees(s, was); // subclasses: each class's old tree moves to its default subclass
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;

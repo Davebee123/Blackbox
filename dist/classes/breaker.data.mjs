@@ -68,6 +68,7 @@ export const abilities = {
 export const subs = {
   demolitionist: {
     name: 'Demolitionist', role: ['DPS', 'Armor', 'Area'], idea: 'Bring the whole thing down.', solo: 'Strips armor fast and hits every part.', crew: 'Opens every part for the crew.',
+    chase: ['damage', 'crit'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { legacy: true, name: 'Overkill', rule: 'When your hit breaks a part, the damage left over spills onto the next part (up to 20).' },
     skills: ['shatter', 'fork-bomb', 'shaped-charge', 'thermal-runaway', 'logic-bomb', 'chain-reaction', 'bit-rot', 'zero-day'],
     fillers: [
@@ -83,6 +84,7 @@ export const subs = {
   },
   overclocker: {
     name: 'Overclocker', role: ['DPS', 'Burst'], idea: 'Run it hot until something melts.', solo: 'The biggest single hits in the game.', crew: 'Deletes the part that matters.',
+    chase: ['crit', 'damage'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { name: 'Redline', rule: 'Momentum stacks to 5, but you take 10% more damage while you have any.', max: 5, taken: 1.1 },
     skills: ['overvolt', 'segfault', 'thermal-throttle', 'brace', 'stack-smash', 'sudo', 'turbo-boost', 'zero-day'],
     fillers: [

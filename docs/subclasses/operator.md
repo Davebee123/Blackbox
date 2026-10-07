@@ -94,13 +94,15 @@ Long Jam holds one attack for longer, and Loopback lets you Jam every other cycl
 
 ## Balance
 
-Measured with the class balance script (`balance.mjs`): blue gear, a talent point at level 10 and every two levels after, and the default bar (the core four and the first three skills of the line). Health lost is the average share of Signal over 20 home intrusions and the four guards at the deepest layer.
+Helper hits are damage over time: they grow half as fast with level as other numbers (+2% a level), and Payload on your gear makes up the rest (a Script rolls it as a primary, *Loaded* as a prefix). A Herder chases Payload and Signal, a Hijacker Payload and Clock Speed.
+
+Measured with the class balance script (`balance.mjs`): blue gear with the stats each subclass chases, a talent point at level 10 and every two levels after, and the default bar (the core four and the first three skills of the line). Health lost is the average share of Signal over 20 home intrusions and the four guards at the deepest layer.
 
 | Level | Herder | Hijacker |
 |---:|---:|---:|
-| 10 | 36% | 41% |
-| 18 | 45% | 34% |
-| 30 | 36% | 35% |
-| 50 | 41% | 38% |
+| 10 | 37% | 46% |
+| 18 | 40% | 32% |
+| 30 | 41% | 44% |
+| 50 | 43% | 45% |
 
-Both subclasses win every fight in these brackets. (Balance pass: enemy hits on your Signal take the late step from level 10, `CONFIG.runLate`, and Replay is capped at 30, not 40: at level 50 it one-shot the lead part and the Hijacker lost only 10%.) At level 10 the two only differ by their edge, because their lines start at level 12.
+Both subclasses win 92% or more of the fights in these brackets. (Balance pass: enemy hits on your Signal take the late step from level 10, `CONFIG.runLate`, and Replay is capped at 30, not 40: at level 50 it one-shot the lead part and the Hijacker lost only 10%.) At level 10 the two only differ by their edge, because their lines start at level 12.

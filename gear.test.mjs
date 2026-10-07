@@ -2,7 +2,7 @@
 // compiling, scrapping, Zero-days, the install queue and save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, serviceVersion, serviceValue, portCount, portsUsed, syncServer, installBlock, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, serviceVersion, serviceValue, portCount, portsUsed, syncServer, installBlock, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
 import { CONFIG, power } from './dist/data.mjs';
 import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, VERSIONS, PROTOCOL_STATS, protocolSlots, ports, rollItem, seeded, codeOf, codeDrop, vaultCode, serviceCost } from './dist/gear.mjs';
@@ -260,11 +260,67 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
   const b = fresh();
   b.loadout.archetype = 'infiltrator';
   b.hackers = { infiltrator: { level: 18, xp: 0 } };
-  give(b, { payload: 6 });
+  give(b, { payload: 50 });
   bare(quiet(fight(b)));
   Object.assign(part(b, 'pulse'), { integrity: 500, max: 500 });
   command(b, 'inject pulse'); resolveCycle(b);
-  assert.equal(500 - part(b, 'pulse').integrity, 18, 'Inject 12 + 6');
+  assert.equal(500 - part(b, 'pulse').integrity, 18, 'Inject 12, +50% Payload');
+});
+
+test('Restore: every heal you cast heals that much more (Patch up front and as it ticks); Payload: every helper hit too', () => {
+  const sysop = (restoreStat) => {
+    const s = fresh();
+    s.loadout.archetype = 'bastion'; s.hackers = { bastion: { level: 12, xp: 0 } }; s.loadout.sub = { bastion: 'sysop' };
+    s.loadout.equipped.sysop = ['firewall', 'patch'];
+    if (restoreStat) give(s, { restore: restoreStat });
+    quiet(fight(s));
+    s.server.integrity = 50;
+    command(s, 'patch'); resolveCycle(s);
+    const now = s.server.integrity;
+    command(s, 'hold'); resolveCycle(s);
+    return [now - 50, s.server.integrity - now];
+  };
+  assert.deepEqual(sysop(0), [4, 2], 'Patch: 4 now, then 2 a cycle');
+  assert.deepEqual(sysop(50), [6, 3], '+50% Restore');
+  const herder = (payload) => {
+    const s = fresh();
+    s.loadout.archetype = 'operator'; s.hackers = { operator: { level: 12, xp: 0 } };
+    if (payload) give(s, { payload });
+    bare(quiet(fight(s)));
+    Object.assign(part(s, 'pulse'), { integrity: 500, max: 500 });
+    command(s, 'deploy pulse'); resolveCycle(s);
+    const first = 500 - part(s, 'pulse').integrity;
+    command(s, 'hold'); resolveCycle(s);
+    return 500 - part(s, 'pulse').integrity - first;
+  };
+  assert.equal(herder(0), 12, 'a helper hits for 12');
+  assert.equal(herder(50), 18, '+50% Payload');
+});
+
+test('heals you cast and damage over time keep half the +4% a level (CONFIG.healLevel, CONFIG.dotLevel); Restore and Payload make up the rest', () => {
+  CONFIG.powerPerLevel = 0.04;
+  const s = fresh();
+  s.loadout.archetype = 'bastion'; s.hackers = { bastion: { level: 26, xp: 0 } };
+  assert.equal(scaled(s, 10), 20, 'everything else: ×2 at level 26');
+  assert.equal(healScaled(s, 10), 15, 'a heal you cast: half that growth');
+  assert.equal(dotMult(s), 0.75, 'a burn tick or helper hit (built with scaled): 1.5 of the 2');
+  give(s, { restore: 20, payload: 20 });
+  assert.equal(healScaled(s, 10), 18, '+20% Restore');
+  assert.ok(Math.abs(dotMult(s) - 0.9) < 1e-9, '+20% Payload');
+  CONFIG.powerPerLevel = 0;
+});
+
+test('v32: Payload on old protocols was flat (+1–2 a tick); it comes back as a percentage, ×7', () => {
+  const old = fresh();
+  old.version = 31;
+  const a = addItem(old, item({ payload: 2, damage: 3 }));
+  const b = addItem(old, item({ payload: 1.5 }));
+  const s = restore(JSON.parse(JSON.stringify(old)));
+  assert.equal(s.version, SAVE_VERSION);
+  assert.deepEqual(s.stash.find((x) => x.id === a.id).stats, { payload: 14, damage: 3 });
+  assert.equal(s.stash.find((x) => x.id === b.id).stats.payload, 11);
+  const again = restore(JSON.parse(JSON.stringify(s)));
+  assert.equal(again.stash.find((x) => x.id === a.id).stats.payload, 14, 'once only');
 });
 
 test('Clock Speed ticks cooldowns faster; Leech heals per hit; Stealth delays first attacks', () => {
