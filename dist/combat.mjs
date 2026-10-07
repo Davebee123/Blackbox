@@ -134,8 +134,10 @@ export const CANTRIP_IDS = ['spike'];
 export const classOf = (s) => s.loadout?.archetype || 'breaker';
 // Your subclass (SUBS in data.mjs; dist/classes/): from SUBCLASS.from, the one you picked, else your
 // class's old-edge subclass until you pick. Before that level, none: just the class's core.
-export const subOf = (s, arch = classOf(s)) => (hackerLevel(s, arch) >= SUBCLASS.from ? s.loadout?.sub?.[arch] || defaultSub(arch) : null);
-export const subPicked = (s, arch = classOf(s)) => !!s.loadout?.sub?.[arch];
+// A pick only counts if it names a subclass of that class (an unknown id plays the default).
+const pickedSub = (s, arch) => { const x = s.loadout?.sub?.[arch]; return SUBS[x]?.cls === arch ? x : null; };
+export const subOf = (s, arch = classOf(s)) => (hackerLevel(s, arch) >= SUBCLASS.from ? pickedSub(s, arch) || defaultSub(arch) : null);
+export const subPicked = (s, arch = classOf(s)) => !!pickedSub(s, arch);
 // Is this subclass's edge on? Class modules check their own edges with it.
 export const subEdge = (s, id) => CONFIG.edges !== false && subOf(s) === id;
 // Your subclass's tree and skill line (null before SUBCLASS.from).
@@ -911,14 +913,22 @@ export function gainServerXp(s, amount, why) {
 
 // Subclasses (v31): a class's talent ranks move into its default subclass's tree (the nodes it still
 // has); tier picks are cleared, the points free to spend again. Bars carry over as each subclass is used.
-function retireClassTrees(s) {
+function retireClassTrees(s, was) {
   const L = (s.loadout ||= {});
+  // A subclass pick that isn't one of that class's (renamed, or a hand-edited save) is dropped.
+  if (L.sub) for (const [arch, x] of Object.entries(L.sub)) if (SUBS[x]?.cls !== arch) delete L.sub[arch];
   for (const arch of Object.keys(ARCHETYPES)) {
     const sub = defaultSub(arch), ids = new Set(SUBS[sub].fillers.flat().map((n) => n.id));
     const old = L.ranks?.[arch];
     if (old && Object.keys(old).length && !L.ranks[sub]) L.ranks[sub] = Object.fromEntries(Object.entries(old).filter(([id]) => ids.has(id)));
     if (L.ranks?.[arch]) delete L.ranks[arch];
     if (L.picks?.[arch]) delete L.picks[arch];
+    // A class already past the subclass level: its old bar becomes its default subclass's, the skills
+    // that moved to the other line fall off, and what it knows fills the slots they leave (as a level-up would).
+    if (was < 31 && L.equipped?.[arch] && !L.equipped[sub] && subOf(s, arch)) {
+      const known = knownSkills(s, arch), kept = L.equipped[arch].filter((id) => known.includes(id));
+      L.equipped[sub] = [...kept, ...known.filter((id) => !kept.includes(id))].slice(0, LOADOUT.equipSlots);
+    }
   }
 }
 // ---------- talents ----------
@@ -3184,7 +3194,7 @@ export function restore(raw) {
     memoryRestore(s);
     retireTraits(s);
     retireHarvesters(s); // harvesters and modules are buildings now (outpost.mjs)
-    retireClassTrees(s); // subclasses: each class's old tree moves to its default subclass
+    retireClassTrees(s, was); // subclasses: each class's old tree moves to its default subclass
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts

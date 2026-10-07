@@ -167,7 +167,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 **Drops: a grind, on purpose.** Targets in play time: a blue every 20–30 minutes, a yellow about every two hours, a gold every 10–12 hours. Per kill (at the assumed pace of 20 kills an hour, about what the pacing bot measures; `LOOT` in gear.mjs): one in six drops a grey or white; blue 1 in 12 kills, yellow 1 in 60, gold 1 in 300, then vaults and double rolls make up the rest. Most kills drop nothing.
 - **Guards, rogue-server Pits and bounties** roll twice and keep the best. Deeper layers add 25% a layer to the blue and yellow odds.
 - **Vaults:** half hold a protocol (`kit.bin`, fixed per server; your first server's always does), white or better: white 80 · blue 16 · yellow 3.5 · gold 0.5 (a unique that drops from vaults that deep).
-- **Class uniques** lean toward a class: they drop anywhere they're written to, three times as often for that class. The Collection names the class.
+- **Class uniques** lean toward a class or a subclass: they drop anywhere they're written to, three times as often for that subclass and twice as often for the rest of its class (a class lean: twice as often for that class). The Collection names the class or subclass.
 
 | Class | Unique | Where | What it does |
 |---|---|---|---|
@@ -656,7 +656,7 @@ A virus is its parts: a basic attacker and a signature part. Each part wears **a
 | No part picked | A skill that needs a part, fired without one, goes at the last part you hit, else the part that attacks soonest. |
 | Delays | Only Bastion (Suspend, Quarantine) and Operator (Jam) can push an attack back. Breakers answer with Brace and faster kills, Infiltrators with Null Route. |
 | Weak point | Found with Scan (Infiltrator, level 11). It takes +50% damage. When it breaks, a new one forms on another part. |
-| Edge | Each class's signature passive, from level 10 (the root of its talent tree): **Breaker, Overkill**: when your hit breaks a part, the damage left over spills onto the next part, up to 20. **Bastion, Grudge**: the part that last hit you takes +20% from your hits. **Infiltrator, Weak Spot**: your first hit on each part's bare code crits (a hit through armor doesn't find it, and doesn't use it up). **Operator, Last Gasp**: each helper hits once more as it expires. |
+| Edge | Each class's signature passive, from level 10 (the root of its talent tree). Since subclasses each of these belongs to one subclass (Demolitionist, Warden, Phantom, Herder), and the other subclass has its own (docs/subclasses/): **Breaker, Overkill**: when your hit breaks a part, the damage left over spills onto the next part, up to 20. **Bastion, Grudge**: the part that last hit you takes +20% from your hits. **Infiltrator, Weak Spot**: your first hit on each part's bare code crits (a hit through armor doesn't find it, and doesn't use it up). **Operator, Last Gasp**: each helper hits once more as it expires. |
 | Encryption | Each Encrypt adds its amount to a stack; the stack hits you every cycle (after your command and helpers, before attacks). Breaking the Encryptor recovers the key and clears it. Your armor chits and Lockdown stop an Encrypt; shields soak the per-cycle damage; Rollback wipes the stack. |
 | Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at 50% (it shows SCRAMBLED and the hit on you; the cooldown is spent). Chits and Lockdown stop it. |
 
@@ -927,7 +927,7 @@ Type the name or press its key. Targets accept prefixes: `spike enc`.
 |---|---|---|---:|
 | everyone (level 1) | `spike <part>` | 25 damage | — |
 
-Class skills, in the order they unlock. **Lit** skills only work in the cycle or two after their event: Shatter after you break a part's last armor chit, Retaliate after an attack reaches you, Opening after an attack misses you or is delayed. Their key glows while they're lit.
+Class skills, in the order they unlock. Since subclasses (level 10) this table is the pre-subclass order: each class keeps its first four as its core (levels 1, 3, 5 and 7), and every skill after that belongs to a subclass line with its own levels (docs/subclasses/). **Lit** skills only work in the cycle or two after their event: Shatter after you break a part's last armor chit, Retaliate after an attack reaches you, Opening after an attack misses you or is delayed. Their key glows while they're lit.
 
 | Who | Level | Skill | What it does | Cooldown |
 |---|---:|---|---|---:|

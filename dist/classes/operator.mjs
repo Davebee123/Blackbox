@@ -332,6 +332,8 @@ export default {
   },
   broke(s, p) {
     const e = s.encounter;
+    // Talent ids aren't unique across classes (a Phantom has a Kill Chain too): only an Operator's count here.
+    if (classOf(s) !== 'operator') return;
     // Hydra (Herder talent): each helper on the broken part splits in two on the next one.
     if (hasTalent(s, 'hydra')) {
       const next = soonestAttacker(s);

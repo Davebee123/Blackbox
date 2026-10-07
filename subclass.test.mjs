@@ -95,3 +95,67 @@ test('crew sim takes a subclass: a Sysop crewmate', async () => {
   assert.equal(subOf(nyx), 'sysop');
   assert.ok(knownSkills(nyx, 'bastion').includes('patch'));
 });
+
+test('a saved subclass that is not one of its class\'s (unknown, or another class\'s) plays the default, and restore drops it', () => {
+  for (const bad of ['bogus', 'sysop']) {
+    const s = at('breaker', 22);
+    s.loadout.sub = { breaker: bad };
+    assert.equal(subOf(s), 'demolitionist', bad);
+    assert.ok(!subPicked(s), bad);
+    assert.ok(knownSkills(s, 'breaker').includes('shatter'), 'the default line, not just the core');
+    assert.equal(kitOf(s).name, 'Demolitionist');
+    assert.doesNotThrow(() => command(s, 'subclass'));
+    const t = restore(JSON.parse(JSON.stringify(s)));
+    assert.equal(t.loadout.sub.breaker, undefined, bad);
+    assert.match(command(t, 'subclass').at(-1).message, /not picked yet/);
+  }
+  // A real pick below level 10 stays, for when the class gets there.
+  const low = at('breaker', 9);
+  low.loadout.sub = { breaker: 'overclocker' };
+  const t = restore(JSON.parse(JSON.stringify(low)));
+  assert.equal(subOf(t), null);
+  t.hackers.breaker.level = 10;
+  assert.equal(subOf(t), 'overclocker');
+});
+
+test('an old save past level 10: its bar becomes the default subclass\'s, with what it knows in the slots the other line\'s skills left', () => {
+  const s = at('breaker', 22);
+  s.loadout.equipped = { breaker: ['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault'] };
+  s.version = 30;
+  const t = restore(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(equippedSkills(t, 'breaker'), ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge']);
+  // A save below 10 keeps its bar as it was.
+  const low = at('bastion', 8);
+  low.loadout.equipped = { bastion: ['rate-limit', 'firewall'] };
+  low.version = 30;
+  assert.deepEqual(equippedSkills(restore(JSON.parse(JSON.stringify(low))), 'bastion'), ['rate-limit', 'firewall']);
+});
+
+test('a talent id two subclasses share works only for its own class: a Phantom\'s Kill Chain is not the Hijacker\'s', async () => {
+  const { selectEncounter, resolveCycle, part } = await import('./dist/combat.mjs');
+  const s = at('infiltrator', 50);
+  s.loadout.sub = { infiltrator: 'phantom' };
+  s.loadout.picks.phantom = [undefined, 0, undefined];
+  assert.ok(hasTalent(s, 'kill-chain'));
+  selectEncounter(s, 'cryptjack', 7, { level: 6 });
+  command(s, 'engage');
+  // A crewmate Hijacker jammed it (the mark is on the shared part).
+  Object.assign(part(s, 'pulse'), { armor: 0, maxArmor: 0, integrity: 1, jammedUntil: s.encounter.cycle + 3 });
+  command(s, 'spike pulse');
+  resolveCycle(s);
+  assert.ok(s.logs.some((e) => /Kill Chain: Backstab is ready/.test(e.message)));
+  assert.ok(!s.logs.some((e) => /Jam, Spoofed ACK and Hijack are ready/.test(e.message)));
+});
+
+test('subclass skills whose numbers grow with your level say so on screen (scales)', async () => {
+  const { scaledText } = await import('./dist/view.mjs');
+  const { ABILITIES, power } = await import('./dist/data.mjs');
+  const s = at('breaker', 26), k = power(26);
+  const n = (x) => String(Math.round(x * k));
+  assert.match(scaledText(s, 'logic-bomb', ABILITIES['logic-bomb'].short), new RegExp(`Bomb ${n(50)}, \\+${n(20)} to all, in 2`));
+  assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].short), new RegExp(n(20)));
+  assert.match(scaledText(s, 'thermal-throttle', ABILITIES['thermal-throttle'].short), new RegExp(`${n(20)} \\+${n(20)} a stack`));
+  assert.match(scaledText(s, 'turbo-boost', ABILITIES['turbo-boost'].short), new RegExp(`\\+2 Momentum, costs ${n(6)}`));
+  assert.match(scaledText(s, 'shaped-charge', ABILITIES['shaped-charge'].help), new RegExp(`deals ${n(30)} damage`));
+  assert.match(scaledText(s, 'cache-poison', ABILITIES['cache-poison'].help), new RegExp(`for ${n(15)} instead`));
+});

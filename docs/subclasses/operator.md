@@ -24,7 +24,7 @@ The Herder fills the board with helpers and makes every one of them count. It ha
 
 ### Skills
 
-The line unlocks one skill at a time. Your bar holds seven skills, so from level 18 you choose which ones to carry.
+The line unlocks one skill at a time. Your bar holds seven skills: the core four and the line's first three fill it at level 18, so from level 22 you choose which ones to carry.
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
