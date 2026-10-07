@@ -111,7 +111,8 @@ export function createFeel({ settings, reducedMotion }) {
     f.textContent = text;
     if (size) f.style.setProperty('--size', size.toFixed(2));
     f.style.setProperty('--dx', `${Math.round((Math.random() - 0.5) * 28)}px`);
-    f.style.left = `${r.left + r.width * 0.72}px`;
+    const word = !/\d/.test(text); // a word (BROKEN) sits mid-bar, clear of the number at its right end
+    f.style.left = `${r.left + r.width * (word ? 0.45 : 0.72)}px`;
     f.style.top = `${r.top + r.height * 0.3}px`;
     document.body.appendChild(f);
     setTimeout(() => f.remove(), 1100);

@@ -8,7 +8,8 @@
 // sit below this container instead, so the thing it explains stays in view).
 import { keyMap } from './combat.mjs';
 import { MUTATIONS, QUIRKS, STRAINS, GUARDS } from './data.mjs';
-import { hackerLevel } from './combat.mjs';
+import { hackerLevel, loadedOn } from './combat.mjs';
+const spare = (s) => (s.stash || []).some((it) => !loadedOn(s, it.id)); // something you could load
 import { retakeOf } from './hubs.mjs';
 
 const home = (s) => s.encounter?.mode !== 'run';
@@ -18,8 +19,8 @@ export const TIPS = [
   { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, installs are paused and the server earns no XP.' },
   { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'You picked up code. Your server uses it to build services, which you can do on the Server page.' },
   // Your first protocol: Loadout → the Protocols tab → Load. Three short steps, each pointing at the next click.
-  { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && (s.stash || []).length > 0, text: 'You have a protocol to equip. Open Loadout. You can only equip at home, not on a run or mid-fight.' },
-  { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => (s.stash || []).length > 0, text: 'Your protocols are on this tab.' },
+  { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'You have a protocol to equip. Open Loadout. You can only equip at home, not on a run or mid-fight.' },
+  { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'Your protocols are on this tab.' },
   { id: 'protocol-home', page: 'loadout', at: '.inv-btn.load[disabled]', when: (s) => !!s.run || s.encounter?.phase === 'active', text: 'You can only equip protocols at home. Jack out (and finish any fight) first, then come back and Load it.' },
   { id: 'protocol-load', page: 'loadout', at: '.inv-btn.load:not([disabled])', text: 'Click Load to equip it. Every protocol you load adds its stats to yours, in every fight.' },
   { id: 'top-up', page: '*', at: '#meter-signal .meter-buy', text: 'Your Signal rests back on its own at home, slowly. Click + to pay credits and fill it now.' },

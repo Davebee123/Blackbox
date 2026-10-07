@@ -1383,7 +1383,10 @@ export function parse(s, input) {
     const soonest = attackers(s).sort((x, y) => x.attack.due - y.attack.due)[0];
     return soonest ? { ability, target: soonest.id } : { error: 'Nothing left to interrupt.' };
   }
-  if (!arg) return { error: `${a.name} needs a target: ${livingParts(s).map((p) => p.id).join(', ')}.` };
+  if (!arg) { // no part named: the last part you hit, else the one that attacks soonest, else any
+    const t = lastTarget(s) || soonestAttacker(s) || livingParts(s)[0];
+    return t ? { ability, target: t.id } : { error: 'Nothing left to hit.' };
+  }
   const target = findPart(s, arg);
   if (!target) {
     const near = closest(arg, livingParts(s).map((p) => p.id)) || livingParts(s).find((p) => p.name === closest(arg, livingParts(s).map((x) => x.name)))?.id;

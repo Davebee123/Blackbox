@@ -623,7 +623,7 @@ export function protocolSlotsCard(s) {
 }
 export function protocolStashCard(s) {
   const p = protocolsParts(s);
-  return `<section class="card stash-card"><h2>Stash · ${p.stash.length}/${STASH_CAP}</h2>${p.spare.length ? `${p.filters}<ul class="inv">${p.rows || '<li class="inv-row empty"><span class="inv-empty">none of these</span></li>'}</ul>` : '<p class="svc-line">empty</p>'}</section>`;
+  return `<section class="card stash-card"><h2>Stash · ${p.stash.length}/${STASH_CAP}</h2>${p.spare.length ? `${p.filters}<ul class="inv">${p.rows || '<li class="inv-row empty"><span class="inv-empty">none of these</span></li>'}</ul>` : `<p class="svc-line">${p.stash.length ? 'all loaded' : 'empty'}</p>`}</section>`;
 }
 export const protocolGearMarkup = (s) => protocolSlotsCard(s) + protocolStashCard(s);
 export const protocolsMarkup = (s) => `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protocolGearMarkup(s)}</div></div>`;

@@ -518,7 +518,7 @@ function react(events) {
         setTimeout(() => { ending = false; }, 900);
         break;
       case 'crashed': flash(e.mode === 'run' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); break;
-      case 'disconnected': feel.add('lose', null); notice(e.message, true); setTimeout(() => go('map'), 1600); break;
+      case 'disconnected': feel.add('lose', null); notice(e.message, true); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => go('map'), 1600); break; // no tip over the loss
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
   }
@@ -1355,6 +1355,7 @@ function hideTip(seen) {
   document.querySelectorAll('.tip-target').forEach((x) => x.classList.remove('tip-target'));
   $('tip').hidden = true;
   tip = null;
+  tipWait = Math.max(tipWait, performance.now() + (seen ? 6000 : 400)); // one at a time, with room to play between
   tipWait = performance.now() + 700; // a breath before the next one
 }
 $('tip-ok').addEventListener('click', () => { advanceTip(); $('command-input').focus(); });
