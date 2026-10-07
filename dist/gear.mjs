@@ -104,7 +104,7 @@ export const AFFIXES = {
   weaponized: { kind: 'prefix', name: 'Weaponized', stat: 'damage', lo: 1, hi: 4, from: 1 },
   precise: { kind: 'prefix', name: 'Precise', stat: 'crit', lo: 3, hi: 5, from: 1 },
   calibrated: { kind: 'prefix', name: 'Calibrated', stat: 'accuracy', lo: 3, hi: 5, from: 1 },
-  loaded: { kind: 'prefix', name: 'Loaded', stat: 'payload', lo: 1, hi: 3, from: 4 },
+  loaded: { kind: 'prefix', name: 'Loaded', stat: 'payload', lo: 1, hi: 1.5, from: 4 }, // Payload lands on every helper and burn tick: at 3 a level, late Operators barely got hurt
   multithreaded: { kind: 'prefix', name: 'Multithreaded', stat: 'clock', lo: 6, hi: 10, from: 6 },
   brutal: { kind: 'prefix', name: 'Brutal', stat: 'critDamage', lo: 4, hi: 10, from: 8 },
   recursive: { kind: 'prefix', name: 'Recursive', stat: 'echo', lo: 4, hi: 8, from: 10 },

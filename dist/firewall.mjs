@@ -37,7 +37,14 @@ export const perksAt = (level) => VERSION_PERKS.filter((p) => p.v <= versionOf(l
 const perk = (s, id, loc = null) => perksAt(fwAt(s, loc).level).filter((p) => p.perk === id).length;
 export const versionSlots = (s) => perk(s, 'slot'); // your home firewall's extra filter slots
 // To go from level L to L+1 (mostly Cipher, so code has somewhere to go): a major version (L+1 a multiple of 10) triples the credits, doubles the Cipher and takes an Exploit.
-export const upgradeCost = (L) => { const major = (L + 1) % VERSION_EVERY === 0, base = { credits: 15 + 10 * L, cipher: 3 + 2 * L }; return major ? { credits: base.credits * 3, cipher: base.cipher * 2, exploit: 1, major: true } : base; };
+// Cipher is the wall's code, with some Worm and Kernel too: every family's code has a use late on.
+export const upgradeCost = (L) => {
+  const major = (L + 1) % VERSION_EVERY === 0, half = 1 + Math.floor(L / 2);
+  const base = { credits: 15 + 10 * L, cipher: 2 + L, worm: half, kernel: half };
+  return major ? { credits: base.credits * 3, cipher: base.cipher * 2, worm: half * 2, kernel: half * 2, exploit: 1, major: true } : base;
+};
+const MATS = ['cipher', 'worm', 'kernel', 'exploit'];
+export const canPay = (s, c) => s.server.credits >= c.credits && MATS.every((m) => (s.materials?.[m] || 0) >= (c[m] || 0));
 // A defrag: credits for every fragmented block, more on a bigger firewall.
 export const defragCost = (f) => Math.max(5, Math.round(f.frag * (3 + f.level)));
 
@@ -112,9 +119,9 @@ export function firewallCommand(s, text, at = clock()) {
   const f = fwAt(s, loc), where = hubF ? 'Your hub\'s firewall' : loc ? `${loc.name}'s firewall` : 'Firewall';
   if (verb === 'upgrade') {
     if (f.level >= FIREWALL.maxLevel) return warn(s, `${where} is at its highest level.`);
-    const c = upgradeCost(f.level), have = s.materials?.cipher || 0, ex = s.materials?.exploit || 0;
-    if (s.server.credits < c.credits || have < c.cipher || ex < (c.exploit || 0)) return warn(s, `Level ${f.level + 1} takes ${c.credits} credits and ${c.cipher} Cipher code${c.exploit ? ' and an Exploit (a new version)' : ''}.`);
-    s.server.credits -= c.credits; s.materials.cipher -= c.cipher; if (c.exploit) s.materials.exploit -= c.exploit;
+    const c = upgradeCost(f.level);
+    if (!canPay(s, c)) return warn(s, `Level ${f.level + 1} takes ${c.credits} credits, ${c.cipher} Cipher, ${c.worm} Worm and ${c.kernel} Kernel code${c.exploit ? ' and an Exploit (a new version)' : ''}.`);
+    s.server.credits -= c.credits; for (const m of MATS) if (c[m]) s.materials[m] -= c[m];
     f.level++;
     const got = c.major ? VERSION_PERKS.find((p) => p.v === versionOf(f.level)) : null;
     return emit(s, 'firewall', `${where}: level ${f.level}${c.major ? `, version ${versionOf(f.level)}${got ? `: ${got.name}` : ''}` : ''}.`, loc ? { location: loc.id } : {});

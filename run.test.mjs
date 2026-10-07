@@ -462,9 +462,9 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   assert.equal(hackerLevel(s), 1);
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload']);
   command(s, 'developer level 3');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'exploit']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'flood']);
   command(s, 'developer level 5');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'exploit', 'flood']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'flood', 'exploit']);
   command(s, 'developer level 7');
   assert.ok(Object.values(keyMap(s)).includes('crack'), 'Crack, the armor stripper, at level 7');
   command(s, 'developer level 22');
@@ -528,7 +528,7 @@ test('saves from before the skill rework start each class on the new kit, and ol
   s.loadout.equipped = { breaker: ['overload', 'sudo', 'pass-the-hash', 'memory-leak', 'bypass'] };
   s.daemons = [{ name: 'warden', trigger: { type: 'attack', part: 'any' }, command: 'interrupt $', on: true }];
   const r = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(r, 'breaker'), ['overload', 'exploit', 'flood', 'crack', 'brace', 'shatter', 'segfault']);
+  assert.deepEqual(equippedSkills(r, 'breaker'), ['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault']);
   assert.deepEqual(r.daemons, []);
   assert.deepEqual(r.daemonsOwned, {});
 });

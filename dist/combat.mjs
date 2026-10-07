@@ -1626,7 +1626,7 @@ const signalNow = (s) => Math.min(maxSignal(s), s.signal ?? maxSignal(s)); // as
 export const CODE_CREDITS = 8;
 export function topUpPrice(s, what) {
   const [base, per] = CONFIG.topUp[what];
-  return base + per * (what === 'signal' ? hackerLevel(s) : serverLevel(s));
+  return Math.round(base + per * (what === 'signal' ? hackerLevel(s) : serverLevel(s)));
 }
 // What it costs to fill `points` of the bar (all that's missing by default).
 export function topUpCost(s, what, points = null) {

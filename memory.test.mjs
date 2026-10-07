@@ -30,7 +30,7 @@ test('memory: past the cap, a new find arrives detached; you can\'t connect to i
   assert.ok(!s.run && out.some((e) => /memory/i.test(e.message)));
 });
 
-test('memory: detach to make room, attach for the same price every time; a frozen outpost makes nothing', () => {
+test('memory: detach to make room for free, attach for the same price every time; a frozen outpost makes nothing', () => {
   const s = world(MEMORY.base + 1);
   s.server.credits = 10000;
   const [a] = s.locations, last = s.locations.at(-1);
@@ -41,7 +41,7 @@ test('memory: detach to make room, attach for the same price every time; a froze
   const before = s.server.credits;
   command(s, `detach ${a.id}`, 1000);
   assert.ok(a.detached && !isLive(s, a));
-  assert.equal(before - s.server.credits, memoryCost(a));
+  assert.equal(before - s.server.credits, 0, 'detaching is free');
   assert.equal(outposts(s).length, 0, 'frozen: not running');
   command(s, `attach ${last.id}`, 2000);
   assert.ok(!last.detached);

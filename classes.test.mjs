@@ -41,7 +41,7 @@ test('every skill does one kind of thing', () => {
 
 test('keys: 1 Spike, 2–8 equipped skills; other classes\' skills are refused', () => {
   const s = start('bastion');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'throttle', 'purge']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'purge', 'throttle']);
   assert.match(command(s, 'overload pulse').at(-1).message, /isn't on your bar/);
   assert.equal(command(s, '4 pulse').at(-1).type, 'queued');
 });
@@ -82,7 +82,7 @@ test('Breaker Momentum: a stack per break, capped at 3, lasts 2 cycles from the 
   assert.equal(e.momentum.until, e.cycle - 1 + SKILLS.momentumCycles, 'refreshed by the last break');
 });
 
-test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (55) for 2 cycles; Segfault triples under 30%', () => {
+test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (62) for 2 cycles; Segfault triples under 30%', () => {
   const s = quiet(start('breaker'));
   const enc = Object.assign(part(s, 'encryptor'), { armor: 4, maxArmor: 4, integrity: 500, max: 500 });
   assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't lit/);
@@ -92,7 +92,7 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (55) f
   assert.equal(enc.armor, 0, 'the last chit');
   assert.equal(command(s, 'shatter encryptor').at(-1).type, 'queued', 'Shatter is lit');
   resolveCycle(s);
-  assert.equal(enc.max - enc.integrity, 55);
+  assert.equal(enc.max - enc.integrity, 62);
   assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't lit/, 'one use per window');
   const x = noArmor(quiet(start('breaker')));
   const p = Object.assign(part(x, 'pulse'), { integrity: 100, max: 100 });
@@ -105,7 +105,7 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (55) f
 });
 
 // ---------- Bastion ----------
-test('Bastion: Hardened halves the first hit; Rate Limit hits 40 (+15 if its attack is due), cooldown 3, and halves its next attack; Patch heals 10 then 5 a cycle', () => {
+test('Bastion: Hardened halves the first hit; Rate Limit hits 45 (+15 if its attack is due), cooldown 3, and halves its next attack; Patch heals 10 then 5 a cycle', () => {
   const s = start('bastion');
   assert.equal(s.encounter.hardened, 1);
   part(s, 'encryptor').attack = null;
@@ -117,7 +117,7 @@ test('Bastion: Hardened halves the first hit; Rate Limit hits 40 (+15 if its att
   const t = noArmor(quiet(start('bastion')));
   big(t, 'pulse');
   act(t, 'rate-limit pulse');
-  assert.equal(lost(t, 'pulse'), 40);
+  assert.equal(lost(t, 'pulse'), 45);
   assert.equal(t.encounter.readyAt['rate-limit'] - t.encounter.cycle, 2, 'cooldown 3: ready again in 3 cycles');
   // Its next attack, whenever it lands, deals half.
   const d = noArmor(start('bastion'));
@@ -164,9 +164,9 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   const s = noArmor(quiet(start('infiltrator')));
   big(s, 'pulse');
   act(s, 'inject pulse');
-  assert.equal(lost(s, 'pulse'), 10);
+  assert.equal(lost(s, 'pulse'), 12);
   act(s, 'inject pulse');
-  assert.equal(lost(s, 'pulse'), 10 + 20, 'two stacks tick');
+  assert.equal(lost(s, 'pulse'), 12 + 24, 'two stacks tick');
   s.encounter.burns = [1, 2, 3].map((n) => ({ id: 'inject', target: 'pulse', damage: 1, grow: 0, left: 5, name: 'Inject', drain: 0, n }));
   s.encounter.readyAt = {};
   act(s, 'inject pulse');
@@ -176,7 +176,7 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   big(t, 'pulse');
   act(t, 'tag pulse');
   act(t, 'inject pulse');
-  assert.equal(lost(t, 'pulse'), 15, '10 × 1.5');
+  assert.equal(lost(t, 'pulse'), 18, '12 × 1.5');
   const b = quiet(start('infiltrator'));
   big(b, 'pulse');
   b.encounter.burns.push({ id: 'inject', target: 'pulse', damage: 0, grow: 0, left: 5, name: 'Inject', drain: 0 });
@@ -187,7 +187,7 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   act(d, 'inject pulse');
   const before = lost(d, 'pulse');
   act(d, 'detonate pulse');
-  assert.equal(lost(d, 'pulse') - before, Math.round(2 * 10 * 1.5), 'the two ticks left, now, ×1.5');
+  assert.equal(lost(d, 'pulse') - before, Math.round(2 * 12 * 1.5), 'the two ticks left, now, ×1.5');
   assert.equal(d.encounter.burns.length, 0);
   const g = start('infiltrator', 18, 'ghostroot');
   assert.equal(timersHidden(g, part(g, 'pulse')), true);

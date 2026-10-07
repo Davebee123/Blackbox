@@ -21,7 +21,7 @@ import { isMember } from './consortium.mjs';
 export const CREW = {
   max: 3, // crewmates besides you
   hpPer: 0.5, // enemy Integrity: +50% per extra player: a party makes normal fights easy (MMO-style), but long enough for their mechanics to show
-  elitePer: 0.15, // elites are built for a crew: they grow a little with it, so four still has to play it
+  elitePer: 0.05, // elites are built for a crew of four: they barely grow with it (0.15 made a full crew lose 8 in 20 at level 18)
   dmgPer: 0, // enemy damage per extra player (0: each player takes each hit at its solo size)
   names: ['nyx', 'kilo', 'vanta', 'sable', 'moth', 'quill'],
 };

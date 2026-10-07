@@ -1,6 +1,6 @@
 // Server memory: how many servers your network holds at once. Every server you find takes a slot
 // (rogue ones too); when memory is full, a new find arrives detached: on the map, not on your
-// network. Attaching or detaching a server costs credits, more for a higher-level one, the same
+// network. Attaching a server costs credits (detaching is free), more for a higher-level one, the same
 // every time (no penalty for swapping back). Detaching freezes that server and everything found
 // through it: no runs, no harvesting, no sieges, timers stopped. Attach it again and it picks up
 // where it was. Outpost slots (bandwidth) still decide how many outposts run.
@@ -10,7 +10,7 @@ import { freeOfMemory } from './root.mjs';
 export const MEMORY = {
   base: 4, // slots at server level 1
   per: 5, // one more every this many server levels
-  cost: (level) => 25 + 5 * Math.max(1, level), // credits to attach or detach
+  cost: (level) => 25 + 5 * Math.max(1, level), // credits to attach (detaching is free)
 };
 
 export const memoryCap = (s) => MEMORY.base + Math.floor(serverLevel(s) / MEMORY.per);
@@ -53,11 +53,9 @@ export function memoryCommand(s, verb, id, now = Date.now()) {
   const price = memoryCost(loc);
   if (verb === 'detach') {
     if (loc.detached) return warn(s, `${loc.name} is already detached.`);
-    if (s.server.credits < price) return warn(s, `Detaching ${loc.name} costs ${price} credits; you have ${s.server.credits}.`);
-    s.server.credits -= price;
-    loc.detached = true;
+    loc.detached = true; // free: only attaching costs (a fee both ways taxed exploring twice)
     const frozen = branchOf(s, loc).length - 1;
-    return emit(s, 'info', `${loc.name} detached for ${price} credits${frozen ? `, with the ${frozen} ${frozen === 1 ? 'server' : 'servers'} found through it` : ''}. Frozen as it was. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
+    return emit(s, 'info', `${loc.name} detached${frozen ? `, with the ${frozen} ${frozen === 1 ? 'server' : 'servers'} found through it` : ''}. Frozen as it was. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
   }
   if (!loc.detached && isLive(s, loc)) return warn(s, `${loc.name} is already attached.`);
   if (!isLive(s, byId(s, loc.parent) || {})) { let up = byId(s, loc.parent); while (up && !up.detached) up = byId(s, up.parent); return warn(s, `${loc.name} is frozen with the server it hangs off: attach ${up?.name || 'that one'} first.`); }

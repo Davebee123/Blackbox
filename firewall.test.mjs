@@ -15,7 +15,7 @@ test('it starts at level 1 and only goes up when you pay for it', () => {
   command(s, 'developer server 20');
   assert.equal(effLevel(s), 1, 'a higher server level adds nothing');
   const c = upgradeCost(1);
-  s.server.credits = c.credits; s.materials = { cipher: c.cipher };
+  s.server.credits = c.credits; s.materials = { cipher: c.cipher, worm: c.worm, kernel: c.kernel };
   command(s, 'firewall upgrade');
   assert.equal(fwOf(s).level, 2);
   assert.equal(s.server.credits, 0); assert.equal(s.materials.cipher, 0);
@@ -134,7 +134,7 @@ test('every outpost has its own firewall at its server\'s level; natives it bloc
   startSiege(s, a);
   assert.ok(a.outpost.siege && a.outpost.siege.hp === 1, 'a weaker firewall lets them in');
   command(s, `firewall upgrade ${a.id}`);
-  s.server.credits = 9999; s.materials = { cipher: 999, kernel: 0 };
+  s.server.credits = 9999; s.materials = { cipher: 999, worm: 999, kernel: 999 };
   for (let i = 0; i < 4; i++) command(s, `firewall upgrade ${a.id}`);
   assert.equal(fwAt(s, a).level, 7);
   a.outpost.at = 0;
@@ -199,10 +199,10 @@ test('major versions every 10 levels: the upgrade into one takes an Exploit, and
   const { slotsOf } = await import('./dist/filters.mjs');
   assert.equal(versionOf(9), 1); assert.equal(versionOf(10), 2); assert.equal(versionOf(20), 3);
   assert.equal(upgradeCost(8).exploit, undefined);
-  assert.deepEqual(upgradeCost(9), { credits: (15 + 90) * 3, cipher: 21 * 2, exploit: 1, major: true });
+  assert.deepEqual(upgradeCost(9), { credits: (15 + 90) * 3, cipher: 11 * 2, worm: 5 * 2, kernel: 5 * 2, exploit: 1, major: true });
   const s = fresh();
   fwOf(s).level = 9;
-  s.server.credits = 9999; s.materials = { cipher: 99, exploit: 0 };
+  s.server.credits = 9999; s.materials = { cipher: 99, worm: 99, kernel: 99, exploit: 0 };
   command(s, 'firewall upgrade');
   assert.equal(fwOf(s).level, 9, 'a new version needs an Exploit');
   s.materials.exploit = 1;

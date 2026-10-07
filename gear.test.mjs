@@ -264,7 +264,7 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
   bare(quiet(fight(b)));
   Object.assign(part(b, 'pulse'), { integrity: 500, max: 500 });
   command(b, 'inject pulse'); resolveCycle(b);
-  assert.equal(500 - part(b, 'pulse').integrity, 16, 'Inject 10 + 6');
+  assert.equal(500 - part(b, 'pulse').integrity, 18, 'Inject 12 + 6');
 });
 
 test('Clock Speed ticks cooldowns faster; Leech heals per hit; Stealth delays first attacks', () => {

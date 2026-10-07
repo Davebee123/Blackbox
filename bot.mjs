@@ -19,7 +19,7 @@ import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
 import { CONFIG, STRAINS, FAMILIES, GUARDS } from './dist/data.mjs';
 
-export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6, cmdSec = 3, log = false, contracts = true, spend = 'none' } = {}) {
+export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12, cmdSec = 3, log = false, contracts = true, spend = 'none' } = {}) {
   let t = 1_700_000_000_000;
   hooks.now = () => t;
   const s = fresh();
@@ -242,7 +242,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const [cls = 'breaker', target = '10', seed = '7', cycleSec = '6', cmdSec = '3'] = process.argv.slice(2);
+  const [cls = 'breaker', target = '10', seed = '7', cycleSec = '12', cmdSec = '3'] = process.argv.slice(2);
   const { stats } = simulate({ cls, target: +target, seed: +seed, cycleSec: +cycleSec, cmdSec: +cmdSec, log: true });
   console.log(JSON.stringify(stats, null, 1));
 }

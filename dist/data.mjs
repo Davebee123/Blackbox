@@ -18,7 +18,7 @@ export const CONFIG = {
   // Topping up: Signal and server Integrity rest back slowly for free, or you pay to have them
   // full now. The price is for a full bar at your level; less missing costs less (at least 1).
   // Signal goes by your class level, Integrity by your server level.
-  topUp: { signal: [8, 3], server: [10, 4] }, // [base, per level]
+  topUp: { signal: [8, 1.5], server: [10, 2] }, // [base, per level]
   // Crits: your hits crit at baseCrit% (+ Crit from protocols) for ×1.5. Enemy damage attacks
   // crit at enemyCrit (from enemy level 3; a brand-new server never sees one).
   baseCrit: 5,
@@ -140,7 +140,7 @@ export const ABILITIES = {
   overload: { cls: 'breaker', verb: 'hit', name: 'Overload', target: 'part', damage: 40, cooldown: 3, icon: 'overload', short: 'Hit 40, crit resets', help: 'overload <part> — 40 damage. If it crits, its cooldown resets.' },
   exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 0, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Exposed: +25% crit', help: 'exploit <part> — Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
   crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 3, icon: 'shell-shield', short: 'Strip 3 ◆', help: 'crack <part> — breaks 3 ◆ on it at once.' },
-  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 55, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 55 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last ◆. 55 damage.' },
+  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 62, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 62 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last ◆. 55 damage.' },
   flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 38, cooldown: 4, icon: 'overload', short: 'Hit 38, ×2 if bare', help: 'flood <part> — 38 damage, double on a part with no armor left.' },
   segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 below 30%', help: 'segfault <part> — 30 damage, three times that on a part under 30%.' },
   'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 15, cooldown: 3, icon: 'overload', short: 'Hit 15 all', help: 'fork-bomb — 15 damage to every part, 30 to an Exposed one.' },
@@ -149,7 +149,7 @@ export const ABILITIES = {
   sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through armor, once', help: 'zero-day <part> — 65 damage straight through armor. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
-  'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 40, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 40 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
+  'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 45, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 45 (+15 if due), throttle', help: 'rate-limit <part> — 40 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
   firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 20, taunt: 2, cooldown: 4, icon: 'shell-shield', short: 'Shield 20, draw fire', help: 'firewall — shields you from the next 20 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 2 cycles.' },
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
@@ -161,7 +161,7 @@ export const ABILITIES = {
   quarantine: { cls: 'bastion', verb: 'stun', name: 'Quarantine', target: 'attack', damage: 0, delay: 3, status: 'quarantined', cycles: 3, cooldown: 6, icon: 'event-lock', short: 'Delay 3, +25% dmg', help: 'quarantine [part] — push its attack back 3 cycles; while it waits, it takes +25% damage.' },
   failover: { cls: 'bastion', verb: 'hit', name: 'Failover', target: 'none', damage: 0, cooldown: 5, icon: 'event-warning', short: 'Hit all for missing/4', help: 'failover — hit every part for a quarter of your missing health (at least 20).' },
   // Infiltrator: burns and precision
-  inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 10, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 10×3, stacks', help: 'inject <part> — 10 damage every cycle for 3 cycles. Up to 3 on one part.' },
+  inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 12, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 12×3, stacks', help: 'inject <part> — 10 damage every cycle for 3 cycles. Up to 3 on one part.' },
   tag: { cls: 'infiltrator', verb: 'debuff', name: 'Tag', target: 'part', damage: 0, status: 'tagged', cycles: 4, cooldown: 3, icon: 'weakness', short: 'Burns +50%, timer', help: 'tag <part> — for 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled.' },
   backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 6, cooldown: 4, icon: 'injector', short: 'Hit 24 thru armor, +6/burn', help: 'backdoor <part> — 24 damage straight through armor, +6 for each burn on it.' },
   keepalive: { cls: 'infiltrator', verb: 'util', name: 'Keepalive', target: 'part', damage: 0, cycles: 2, cooldown: 2, icon: 'injector', short: 'Burns +2 cycles', help: 'keepalive <part> — every burn on it lasts 2 cycles longer.' },
@@ -690,7 +690,7 @@ export const ARCHETYPES = {
     name: 'Breaker', idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
     status: 'exposed',
     passive: { name: 'Momentum', rule: 'Each part you break: +10% damage for 2 cycles, up to 3 stacks. Another break refreshes it.' },
-    skills: skillsOf(['overload', 'exploit', 'flood', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
+    skills: skillsOf(['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
     fillers: [
       [f('overclocked', 'Overclocked Core', '+3% damage per rank.', 0.03), f('chain-exploit', 'Chain Exploit', 'Momentum +2% per stack per rank.', 0.02)],
       [f('exploit-kit', 'Exploit Kit', 'Exposed gives +5% more crit chance per rank.', 5), f('heat-sink', 'Heat Sink', 'Overload +4 damage per rank.', 4)],
@@ -706,7 +706,7 @@ export const ARCHETYPES = {
     name: 'Bastion', idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
     passive: { name: 'Hardened', rule: 'You start every fight with a ◆: the first attack on you does nothing.' },
-    skills: skillsOf(['rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'throttle', 'purge', 'harden', 'reclaim', 'quarantine', 'failover']),
+    skills: skillsOf(['rate-limit', 'firewall', 'suspend', 'retaliate', 'patch', 'purge', 'throttle', 'harden', 'reclaim', 'quarantine', 'failover']),
     fillers: [
       [f('patch-notes', 'Patch Notes', 'Patch heals +3 per rank.', 3), f('stateful-firewall', 'Stateful Firewall', 'Firewall absorbs +5 per rank.', 5)],
       [f('token-bucket', 'Token Bucket', 'Rate Limit +4 damage per rank.', 4), f('redundancy', 'Redundancy', '+4 max Signal on runs per rank.', 4)],
@@ -722,7 +722,7 @@ export const ARCHETYPES = {
     name: 'Infiltrator', idea: 'Know where to hit, and slip through runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
     passive: { name: 'Ghost', rule: 'Slip past one guard a run without a fight. Every fight opens with a blue Surprise window: Inject, Tag and Keepalive fired in it hit harder. Return trips on runs are free.' },
-    skills: skillsOf(['inject', 'tag', 'keepalive', 'backdoor', 'null-route', 'detonate', 'opening', 'propagate', 'spoof', 'tap', 'implant']),
+    skills: skillsOf(['inject', 'backdoor', 'keepalive', 'tag', 'null-route', 'detonate', 'opening', 'propagate', 'spoof', 'tap', 'implant']),
     fillers: [
       [f('heap-spray', 'Heap Spray', 'Inject +2 per tick per rank.', 2), f('recon', 'Recon', 'Opening +5 damage per rank.', 5)],
       [f('backchannel', 'Backchannel', 'Backdoor +4 damage per rank.', 4), f('onion-routing', 'Onion Routing', '+3 max Signal on runs per rank.', 3)],
@@ -738,7 +738,7 @@ export const ARCHETYPES = {
     name: 'Operator', idea: 'Write the script, let it run.', solo: 'Steady damage without constant input.', crew: 'Makes everyone’s hits count for more.',
     status: 'hooked',
     passive: { name: 'Extra thread', rule: '+1 daemon slot.' },
-    skills: skillsOf(['deploy', 'hook', 'spawn', 'botnet', 'barrier', 'jam', 'kill-switch', 'garbage-collect', 'fork', 'reroute', 'cron-storm']),
+    skills: skillsOf(['deploy', 'hook', 'spawn', 'botnet', 'kill-switch', 'jam', 'barrier', 'garbage-collect', 'fork', 'reroute', 'cron-storm']),
     fillers: [
       [f('thread-pool', 'Thread Pool', 'Deploy helpers deal +1 per rank.', 1), f('kernel-hook', 'Kernel Hook', 'Hooked parts take +1 more per hit per rank.', 1)],
       [f('node-pool', 'Node Pool', 'Botnet helpers deal +1 per rank.', 1), f('dead-mans-switch', 'Dead Man’s Switch', 'Kill Switch cashes in +5% per rank.', 0.05)],
