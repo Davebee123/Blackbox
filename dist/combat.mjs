@@ -359,6 +359,7 @@ export function syncServer(s) {
 // A new protocol into the stash. A full stash scraps it for salvage instead.
 export function addItem(s, item, why = 'Loot: ') {
   s.stash ||= [];
+  if (item.unique && !(s.collection ||= {})[item.unique]) { s.collection[item.unique] = hooks.now?.() ?? Date.now(); emit(s, 'collected', `Collection: ${item.name}.`, { unique: item.unique }); }
   if (s.stash.length >= STASH_CAP) {
     const got = deconstruct(s, item);
     emit(s, 'info', `Stash full (${STASH_CAP}): ${itemLabel(item)} deconstructed: ${got}.`);
@@ -2910,6 +2911,7 @@ export function restore(raw) {
     retireWall(s, was);
     retireConfigs(s);
     retireTraits(s);
+    s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
     initMail(s);
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;

@@ -824,6 +824,10 @@ Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 
 
 A virus component's name always shows (so you can target it), but what it does reads **???** (a small ? by its name; hover says *Unknown*) until you've broken one of it yourself. Then hovering its name says what it does, on every virus that has it. The System page lists every component by virus: the ones you've decoded with what they do, the rest as ???. A virus you've never met is ??? all the way down, its name and its parts' names too, so the list spoils nothing. Keyed by strain or family and part (a Ransomware Pulse Node and a Worm one are separate). Breaking a new one flashes DECODED.
 
+## Collection log
+
+Every unique and strain trophy has a place in the **Collection** on the System page (`collectionMarkup`), sorted by level: the ones you've found by name, the rest as **???** with their level and where they come from (SPRAWL-00, a guard, a layer's vaults, a rogue server, the storyline, a contract, Halcyon's store; a strain's trophy names the strain only once you've met it). A bar and *N/total* show how far you are. The card stays hidden until your first unique. A new one adds a *New in collection* row to the reward card. It counts the first time you get one, even if a full stash breaks it down; an old save counts what it already holds.
+
 ## Buyout
 
 Timed builds can be finished now for credits, Master of Orion style (`BUYOUT` in combat.mjs): 3× the credit cost when the timer starts, falling with the time left, never under 20. *Finish now · N* sits by the timer.

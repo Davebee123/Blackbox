@@ -287,3 +287,21 @@ test('trying classes: until a class reaches LOADOUT.trialUntil, switching to a f
   assert.equal(hackerLevel(s), 1, 'past the trial, classes level on their own');
   assert.equal(hackerLevel(s, 'bastion'), LOADOUT.trialUntil);
 });
+
+test('collection log: a unique counts the first time you get one; the card hides until then', async () => {
+  const { fresh: f2, addItem, UNIQUES, restore } = await import('./dist/combat.mjs');
+  const { uniqueItem } = await import('./dist/gear.mjs');
+  const { collectionMarkup } = await import('./dist/view.mjs');
+  const s = f2();
+  assert.equal(collectionMarkup(s), '', 'nothing to show yet');
+  const u = Object.values(UNIQUES).find((x) => x.sources?.[0]?.kind === 'sprawl');
+  addItem(s, uniqueItem(u, 3, () => 0.5));
+  assert.ok(s.collection[u.id]);
+  assert.ok(s.logs.some((e) => e.type === 'collected'));
+  addItem(s, uniqueItem(u, 3, () => 0.5));
+  assert.equal(s.logs.filter((e) => e.type === 'collected').length, 1, 'once');
+  assert.match(collectionMarkup(s), new RegExp(`Collection · 1/${Object.keys(UNIQUES).length}`));
+  assert.match(collectionMarkup(s), /\?\?\?/, 'the rest are still unknown');
+  const old = f2(); old.stash = [{ ...uniqueItem(u, 3, () => 0.5), id: 'g1' }]; delete old.collection;
+  assert.ok(restore(JSON.parse(JSON.stringify(old))).collection[u.id], 'what an old save holds counts');
+});

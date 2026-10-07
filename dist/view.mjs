@@ -290,6 +290,24 @@ export function codexMarkup(s) {
   const met = (k, parts) => !!s.met?.[k] || parts.some((p) => s.codex?.[`${k}:${p.id}`]);
   return `<section class="card codex-card"><h2>Codex · ${known}/${all.length}</h2><div class="codex">${groups.map(([k, name, parts]) => `<div class="cx-group${met(k, parts) ? '' : ' unmet'}"><b>${met(k, parts) ? esc(name) : '???'}</b><ul>${parts.map((p) => { const on = !!s.codex?.[`${k}:${p.id}`]; return `<li class="${on ? 'on' : ''}"><span>${met(k, parts) ? esc(p.name) : '???'}</span><small>${on ? esc(partAbout(p)) : '???'}</small></li>`; }).join('')}</ul></div>`).join('')}</div></section>`;
 }
+// The collection log: every unique and trophy, found or not. Hidden until your first one; one you
+// haven't found shows where it comes from (a strain's name only once you've met that strain).
+const collSource = (s, src) => !src ? '' : src.kind === 'sprawl' ? 'SPRAWL-00' : src.kind === 'vault' ? `Layer ${src.layer || 1} vaults`
+  : src.kind === 'guard' ? `${GUARDS[src.id]?.name || src.id} guard` : src.kind === 'strain' ? (s.met?.[src.id] ? `${STRAINS[src.id]?.name} trophy` : '???')
+  : src.kind === 'rogue' ? `${ROGUE.kinds[src.id]?.name || 'Rogue'} servers` : src.kind === 'story' ? 'Storyline' : src.kind === 'contract' ? 'Contract reward' : src.kind === 'store' ? 'Halcyon store' : '';
+export function collectionMarkup(s) {
+  const got = s.collection || {}, all = Object.values(UNIQUES);
+  const n = all.filter((u) => got[u.id]).length;
+  if (!n) return '';
+  const rows = all.slice().sort((a, b) => a.level - b.level).map((u) => {
+    const src = collSource(s, (u.sources || [])[0]);
+    return got[u.id]
+      ? `<li class="on" title="${esc(UNIQUES[u.id].flavour || '')}"><b class="iname r-zeroday">${esc(u.name)}</b><small>Lv ${u.level} · ${esc(src)}</small></li>`
+      : `<li><span class="coll-q">???</span><small>Lv ${u.level} · ${esc(src)}</small></li>`;
+  }).join('');
+  return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div><ul class="coll">${rows}</ul></section>`;
+}
+
 // What a component does, in a line (the codex). ??? until you've broken one.
 export function partAbout(p) {
   const a = p.attack, out = [];
@@ -2181,6 +2199,7 @@ export function systemMarkup(s) {
       <button type="button" class="btn" data-run="tips replay">Replay tips</button>
     </div>
     <div class="row sound-test"><span class="next-label">Sound test</span>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win / level'], ['chit', 'Armor ◆'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
+    ${collectionMarkup(s)}
     ${codexMarkup(s)}
     <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section>
     <section class="card"><h2>Wire</h2><div class="ticker"><span>${(TICKER.map(esc).join('  //  ') + '  //  ').repeat(2)}</span></div></section>
@@ -2212,6 +2231,7 @@ export function spoilsOf(events) {
       const kind = e.item ? 'item' : what === 'Daemon' ? 'daemon' : what === 'Blueprint' ? 'blueprint' : 'item';
       add(what, '', kind, { pack: !!e.pack, rarity: e.item?.rarity, sub: e.item ? statLine(e.item.stats) : '' });
     } else if (e.type === 'lead') { const m = e.message.match(/(\w+) lead \+(\d+)% \((\d+)%\)/); add(m ? `${m[1]} lead` : 'Lead', m ? `+${m[2]}%` : '', 'lead', { text: m ? `${m[1]} lead +${m[2]}%` : 'Lead', pct: m ? Math.min(100, +m[3]) : null, from: m ? Math.max(0, +m[3] - +m[2]) : null }); }
+    else if (e.type === 'collected') add('New in collection', '', 'found', { text: `New in collection: ${e.message.replace(/^Collection: /, '')}` });
     else if (e.type === 'located') add(e.message.replace(/^[^:]*: /, 'Found ').replace(/\.$/, ''), '', 'found');
     else if (e.type === 'contract-ready') { if (/is down\. Contract ready/.test(e.message || '')) add('Bounty target down', '', 'bounty', { sub: 'Deliver it from Mail' }); else add('Contract ready', '', 'found'); }
     else if (e.type === 'outpost-held') {
