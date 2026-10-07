@@ -623,6 +623,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   const virus = createVirus(key, seed, over);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
+  (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
   s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
     ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.`

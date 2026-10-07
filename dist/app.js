@@ -1033,7 +1033,7 @@ function render(force = false) {
     const cycleKey = s.encounter.virus.id + ':' + s.encounter.cycle;
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
-    put('board', V.boardMarkup(s, selected, aimPreview));
+    put('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
     for (const f of pendingStrikes.splice(0)) f();
     if (before) turnTimeline(before);
@@ -1298,7 +1298,16 @@ function checkTips(now) {
   const t = nextTip(campaign, module, onScreen);
   if (!t) return;
   tip = { t, paused: false };
-  $('tip-text').textContent = t.text;
+  const tx = $('tip-text');
+  tx.textContent = '';
+  for (const line of t.text.split('\n')) { // a joined tip: one line per thing, its name in bold
+    const m = t.covers && line.match(/^([^:]{1,16}):\s(.*)$/);
+    const d = document.createElement('span');
+    d.className = 'tip-line';
+    if (m) { const b = document.createElement('b'); b.textContent = m[1]; d.append(b, ' ' + m[2]); } else d.textContent = line;
+    tx.append(d);
+  }
+  $('tip').classList.toggle('wide', !!t.covers);
   $('tip').hidden = false;
   if (t.pause && active(campaign) && !campaign.encounter.paused) { campaign.encounter.paused = true; tip.paused = true; dirty = true; }
   placeTip();
@@ -1328,7 +1337,7 @@ function placeTip() {
 }
 function hideTip(seen) {
   if (!tip) return;
-  if (seen) { markSeen(campaign, tip.t.id); save(); }
+  if (seen) { for (const id of [tip.t.id, ...(tip.t.covers || [])]) markSeen(campaign, id); save(); }
   if (tip.paused && active(campaign) && campaign.encounter.paused) { campaign.encounter.paused = false; dirty = true; }
   document.querySelectorAll('.tip-target').forEach((x) => x.classList.remove('tip-target'));
   $('tip').hidden = true;

@@ -162,7 +162,10 @@ code { font-family: var(--mono); color: var(--amber); }
 .cyclebar span { position: relative; display: block; height: 100%; background: var(--you); }
 .intent { display: flex; align-items: center; gap: 6px; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 3px; font-size: 13px; background: var(--panel-2); }
 .intent .ico { width: 14px; height: 14px; flex: none; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
-.intent b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.intent b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
+.intent .code { display: none; font: 700 12px var(--mono); font-style: normal; letter-spacing: 0.5px; }
+@container (max-width: 150px) { .intent b.long { display: none; } .intent .code.long { display: inline; } } /* short names (Surge) always fit */
+.bcell { container-type: inline-size; }
 .intent small { margin-left: auto; font-family: var(--mono); color: var(--muted); }
 .intent.now { border-color: var(--hot); color: var(--hot); background: var(--hot-soft); }
 .intent.now small { color: var(--hot); }
@@ -494,6 +497,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   #board .brow { padding-left: 32px; }
   .bname small { display: none; }
   .intent b { display: none; }
+  .intent .code { display: inline; }
   .intent.mine small { display: none; }
   .bnow { grid-template-columns: 1fr !important; gap: 2px; }
   .bhead .countdown { font-size: 15px; }
@@ -810,6 +814,10 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .tip { position: fixed; z-index: 58; width: min(320px, calc(100vw - 24px)); padding: 12px 14px 10px; background: var(--panel-2); border: 1px solid var(--you); border-radius: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(127, 209, 199, 0.14); font-size: 14px; color: var(--bright); }
 .tip[hidden] { display: none; }
 .tip p { margin: 0 0 10px; line-height: 1.45; }
+.tip.wide { width: min(420px, calc(100vw - 24px)); }
+.tip-line { display: block; }
+.tip-line + .tip-line { margin-top: 6px; }
+.tip-line b { color: var(--you); font-weight: 600; }
 .tip::before { content: ''; position: absolute; left: var(--arrow, 50%); top: -7px; width: 12px; height: 12px; background: var(--panel-2); border-left: 1px solid var(--you); border-top: 1px solid var(--you); transform: translateX(-50%) rotate(45deg); }
 .tip.above::before { top: auto; bottom: -7px; transform: translateX(-50%) rotate(225deg); }
 .tip-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -2697,8 +2705,8 @@ details.map-pick { pointer-events: auto; }
 .op-pick-t .glyph { width: 14px; height: 14px; }
 /* A paused fight: the board dims under a banner. Any order (or the Fight tab) resumes it. */
 #board.is-paused { position: relative; }
-#board.is-paused > * { opacity: 0.45; }
-#board.is-paused::after { content: 'PAUSED · ANY ORDER RESUMES'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border: 1px solid var(--amber); background: rgba(9, 6, 3, 0.92); color: var(--amber); font: 700 12px var(--mono); letter-spacing: 3px; pointer-events: none; white-space: nowrap; }
+#board.is-paused > :not(.pause-strip) { opacity: 0.45; }
+#board .pause-strip { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); padding: 3px 12px; border: 1px solid var(--amber); background: rgba(9, 6, 3, 0.92); color: var(--amber); font: 700 11px var(--mono); letter-spacing: 2px; z-index: 3; pointer-events: none; white-space: nowrap; opacity: 1 !important; }
 
 /* Root access (root.mjs): pips on the server card, a ↻ (or ★ rare) on the map node */
 .root-pips { letter-spacing: 1px; color: var(--teal, #6fd3c1); }

@@ -41,6 +41,8 @@ import { XP_KINDS, xpFor, watchmanBar, cooldownOf, skillBase, knowsPart, codexKe
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
+// A short code for an attack when its name won't fit (Surge → SRG, Encrypt → ENC): never an ellipsis.
+export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
 // Skill text with this level's numbers: every level adds 4% to damage, heals and shields.
 export function scaledText(s, id, text, arch = null) {
@@ -162,7 +164,7 @@ export function timelineMarkup(s) {
   const cols = [0, 1, 2, 3].map((c) => {
     const items = hidden ? [] : list.filter((i) => i.col === c);
     const chips = items
-      .map((i) => `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" title="${esc(i.name)} from ${esc(part(s, i.source)?.name)}: ${effectLabel(i)} ${effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b>${esc(i.name)}</b><small>${effectLabel(i)}</small></div>`)
+      .map((i) => `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" title="${esc(i.name)} from ${esc(part(s, i.source)?.name)}: ${effectLabel(i)} ${effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${i.name.length > 6 ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${i.name.length > 6 ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small></div>`)
       .join('');
     const quiet = !hidden && !items.length ? `<span class="quiet">${runMode ? 'quiet' : 'quiet · trace lands'}</span>` : '';
     const head = c === 0
@@ -264,7 +266,7 @@ function statusPanel(s) {
 
 
 function attackChip(i, c, k = '', to = null) {
-  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b>${esc(i.name)}</b><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${i.name.length > 6 ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${i.name.length > 6 ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a
@@ -285,7 +287,9 @@ export function codexMarkup(s) {
   const groups = [...Object.entries(FAMILIES).map(([k, f]) => [k, f.name, f.parts]), ...Object.entries(STRAINS).map(([k, st]) => [k, st.name, st.parts]), ...Object.entries(GUARDS).map(([k, g]) => [k, g.name, g.parts])];
   const all = groups.flatMap(([k, , parts]) => parts.map((p) => `${k}:${p.id}`));
   const known = all.filter((k) => s.codex?.[k]).length;
-  return `<section class="card codex-card"><h2>Codex · ${known}/${all.length}</h2><div class="codex">${groups.map(([k, name, parts]) => `<div class="cx-group"><b>${esc(name)}</b><ul>${parts.map((p) => { const on = !!s.codex?.[`${k}:${p.id}`]; return `<li class="${on ? 'on' : ''}"><span>${esc(p.name)}</span><small>${on ? esc(partAbout(p)) : '???'}</small></li>`; }).join('')}</ul></div>`).join('')}</div></section>`;
+  // What you've never met stays ??? (names too): nothing spoils what's out there.
+  const met = (k, parts) => !!s.met?.[k] || parts.some((p) => s.codex?.[`${k}:${p.id}`]);
+  return `<section class="card codex-card"><h2>Codex · ${known}/${all.length}</h2><div class="codex">${groups.map(([k, name, parts]) => `<div class="cx-group${met(k, parts) ? '' : ' unmet'}"><b>${met(k, parts) ? esc(name) : '???'}</b><ul>${parts.map((p) => { const on = !!s.codex?.[`${k}:${p.id}`]; return `<li class="${on ? 'on' : ''}"><span>${met(k, parts) ? esc(p.name) : '???'}</span><small>${on ? esc(partAbout(p)) : '???'}</small></li>`; }).join('')}</ul></div>`).join('')}</div></section>`;
 }
 // What a component does, in a line (the codex). ??? until you've broken one.
 export function partAbout(p) {
@@ -795,6 +799,8 @@ export function slotPips(icon, used, total, name) {
 // with your server's level and an incoming invader marked on it. Each level is a cell; marks and
 // scale numbers sit on the middle of theirs, and a number a mark already shows isn't repeated.
 export function wallRuler(s, compact = false, bands = wallBands(s)) {
+  // Shown once something has come for your wall (FFXIV/WoW: UI as it starts to matter).
+  if (!s.invasion && !Object.keys(s.net?.seen || {}).length) return compact ? '' : '<div class="wall-ruler quiet" title="Nothing has come for your wall yet"><span>no invasions yet</span></div>';
   if (s.degraded) return '<div class="wall-ruler down" title="Your wall is down while the server is degraded"><span>wall down</span></div>';
   const { blocks, holds } = bands, you = threatTop(s), inv = s.invasion; // the mark: the highest level your attached servers send
   const hi = Math.max(holds + 4, you + 4, (inv?.level || 0) + 2, 8), pct = (lv) => `${Math.min(100, (lv / hi) * 100)}%`;

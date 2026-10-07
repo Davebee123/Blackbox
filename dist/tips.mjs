@@ -78,10 +78,12 @@ export const TIPS = [
   { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'An unknown server. Beating what it sends at you traces it, and so does a vault\'s trace record. Once a relay flags it, kills of its family and the route file count too.' },
 
   // ---------- fight ----------
-  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', text: 'This is the timeline. Each attack sits in the column of the cycle where it lands. When you enter a command it runs first, and the cycle turns.' },
-  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'These are your skills. Press a number, click a part to target it, then press Enter. If you wait, you Spike the last part you hit.' },
-  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'These diamonds are armor chits. A hit on an armored part breaks one chit and does no damage, so strip them with small hits and save your big one.' },
-  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'This is the Sync Window. Fire your command while the cycle bar is inside it for 10% more damage and a bonus of your class. It moves every cycle.' },
+  // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window join
+  // into one tip when they're on screen together; each still shows alone if it turns up later.
+  { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-armor', 'sync'], text: 'Timeline: each attack sits in the cycle it lands. Your command runs first, then the cycle turns.' },
+  { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'Skills: press a number, click a part, Enter. Wait, and you Spike the last part you hit.' },
+  { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'Armor ◆: a hit breaks one chit and does no damage. Strip them with small hits; save your big one.' },
+  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'Sync Window: fire while the cycle bar is inside it for +10% damage and your class bonus.' },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no armor left patches one chit back five cycles later, unless you break it first.' },
   { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will hit. Strip its armor or Tag it to see its timer.' },
   { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
@@ -155,7 +157,10 @@ export function nextTip(s, page, visible) {
     if (t.page !== '*' && t.page !== page) continue;
     if (t.when && !t.when(s, page)) continue;
     if (!visible(t.at)) continue;
-    return t;
+    if (!t.joins) return t;
+    const more = t.joins.map((id) => TIPS.find((x) => x.id === id))
+      .filter((x) => x && !seen[x.id] && (!x.when || x.when(s, page)) && visible(x.at));
+    return more.length ? { ...t, text: [t.text, ...more.map((x) => x.text)].join('\n'), covers: more.map((x) => x.id) } : t;
   }
   return null;
 }

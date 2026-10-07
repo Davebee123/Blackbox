@@ -47,11 +47,9 @@ test('fight tips pause the fight and wait for what they explain', () => {
   const t = nextTip(s, 'combat', onPage(html));
   assert.equal(t.id, 'fight-timeline');
   assert.ok(t.pause);
-  markSeen(s, t.id);
-  assert.equal(nextTip(s, 'combat', onPage(html)).id, 'fight-keys');
-  markSeen(s, 'fight-keys');
-  assert.equal(nextTip(s, 'combat', onPage(html)).id, 'fight-armor');
-  markSeen(s, 'fight-armor');
+  assert.deepEqual(t.covers, ['fight-keys', 'fight-armor', 'sync'], 'the first fight is one pause: board, keys, armor and sync together');
+  for (const id of [t.id, ...t.covers]) markSeen(s, id);
+  assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-keys');
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-quiet', 'no Trace tip before you have Trace');
 });
 
