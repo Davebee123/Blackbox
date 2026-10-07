@@ -938,6 +938,254 @@ export default {
         }
       ],
       "flavour": "Hit on the off-beat, where the echo isn't."
+    },
+    {
+      "id": "tracking-pixel",
+      "name": "Tracking Pixel",
+      "base": "one-liner",
+      "level": 3,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": 2,
+        "signal": 10
+      },
+      "secondary": {
+        "accuracy": 3
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-tagged",
+        "do": "damage%",
+        "value": 25
+      },
+      "sources": [
+        {
+          "kind": "sprawl"
+        },
+        {
+          "kind": "vault",
+          "layer": 1
+        }
+      ],
+      "flavour": "One transparent pixel. It sees everything."
+    },
+    {
+      "id": "slow-drip",
+      "name": "Slow Drip",
+      "base": "proof-of-concept",
+      "level": 4,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": [
+          7,
+          8
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-burning",
+        "do": "crit%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "sprawl"
+        },
+        {
+          "kind": "rogue"
+        }
+      ],
+      "flavour": "Nobody notices a leak until the floor gives."
+    },
+    {
+      "id": "spearphish",
+      "name": "Spearphish",
+      "base": "weaponized-exploit",
+      "level": 7,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": [
+          11,
+          13
+        ]
+      },
+      "secondary": {
+        "crit": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "skill-cd",
+        "skill": "tag",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 2
+        },
+        {
+          "kind": "rogue"
+        }
+      ],
+      "flavour": "Addressed to them by name. They always open it."
+    },
+    {
+      "id": "jackhammer",
+      "name": "Jackhammer",
+      "base": "weaponized-exploit",
+      "level": 5,
+      "lean": "breaker",
+      "primary": {
+        "damage": [
+          11,
+          13
+        ]
+      },
+      "effect": {
+        "when": "always",
+        "do": "skill-cd",
+        "skill": "flood",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 1
+        },
+        {
+          "kind": "rogue"
+        }
+      ],
+      "flavour": "Subtlety is a setting. It's turned off."
+    },
+    {
+      "id": "shrapnel",
+      "name": "Shrapnel",
+      "base": "cron-job",
+      "level": 8,
+      "lean": "breaker",
+      "primary": {
+        "damage": 4,
+        "signal": 18
+      },
+      "effect": {
+        "when": "break",
+        "do": "heal",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "sprawl"
+        },
+        {
+          "kind": "rogue"
+        }
+      ],
+      "flavour": "What's left of them patches what's left of you."
+    },
+    {
+      "id": "uptime-sla",
+      "name": "Uptime SLA",
+      "base": "socks-tunnel",
+      "level": 6,
+      "lean": "bastion",
+      "primary": {
+        "signal": 48,
+        "reduction": 1
+      },
+      "effect": {
+        "when": "struck",
+        "if": "below-half",
+        "do": "restore%",
+        "value": 8,
+        "limit": "fight"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 1
+        },
+        {
+          "kind": "rogue"
+        }
+      ],
+      "flavour": "Five nines. You are the nines."
+    },
+    {
+      "id": "hot-patch",
+      "name": "Hot Patch",
+      "base": "reverse-shell",
+      "level": 4,
+      "lean": "bastion",
+      "primary": {
+        "signal": 14,
+        "regen": 0.6
+      },
+      "effect": {
+        "when": "always",
+        "do": "skill-cd",
+        "skill": "patch",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "sprawl"
+        }
+      ],
+      "flavour": "Applied live. Reboot is for cowards."
+    },
+    {
+      "id": "thread-pool",
+      "name": "Thread Pool",
+      "base": "cron-job",
+      "level": 5,
+      "lean": "operator",
+      "primary": {
+        "damage": 3,
+        "signal": 18
+      },
+      "effect": {
+        "when": "custom",
+        "do": "dot%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "sprawl"
+        },
+        {
+          "kind": "vault",
+          "layer": 1
+        }
+      ],
+      "flavour": "Workers waiting. Always one more."
+    },
+    {
+      "id": "fork-handle",
+      "name": "Fork Handle",
+      "base": "tty-upgrade",
+      "level": 9,
+      "lean": "operator",
+      "primary": {
+        "signal": 26,
+        "regen": 1
+      },
+      "effect": {
+        "when": "always",
+        "do": "skill-cd",
+        "skill": "botnet",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 2
+        },
+        {
+          "kind": "rogue"
+        }
+      ],
+      "flavour": "Four candles. Four thousand processes."
     }
   ]
 };

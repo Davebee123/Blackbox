@@ -33,11 +33,11 @@ test('no one kind of play carries the climb: fights stay under 70% of XP (the bo
   }
 });
 
-test('fighting alone is the slow road: SPRAWL-only takes 1.25x as long to level 12 as mixed play for every class, 1.4x on average (median of 5 seeds)', async () => {
+test('fighting alone is the slow road: SPRAWL-only takes 1.25x as long to level 12 as mixed play for every class, 1.4x on average (median of 7 seeds: 5 swung with which uniques dropped)', async () => {
   const { CONFIG } = await import('./dist/data.mjs');
   const med = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
   const lead = CONFIG.leadBase;
-  const at = (cls, only) => { CONFIG.leadBase = only ? 0 : lead; return med([1, 2, 3, 4, 5].map((seed) => simulate({ cls, target: 12, seed }).stats.levelAt[12] ?? 1e5)); };
+  const at = (cls, only) => { CONFIG.leadBase = only ? 0 : lead; return med([1, 2, 3, 4, 5, 6, 7].map((seed) => simulate({ cls, target: 12, seed }).stats.levelAt[12] ?? 1e5)); };
   try {
     const r = CLASSES.map((cls) => at(cls, true) / at(cls, false));
     r.forEach((x, i) => assert.ok(x >= 1.25, `${CLASSES[i]}: ${x.toFixed(2)}x`));

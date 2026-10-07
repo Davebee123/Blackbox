@@ -1,9 +1,9 @@
 // The content editor: story beats, contract templates and their lists, saved into dist/content/
 // through serve.mjs. Templates start every new piece with working text to overwrite. The checker
 // (content.mjs) runs as you type; Play from here opens the game at a beat on a test save.
-import { check, checkItems, fxText, fill, beatVars, JOB_VARS, COMMON, JOB_TYPES, JOB_NAMES, CONTRACT_KINDS, SIDES, REWARDS, FX_WHEN, FX_IF, FX_DO, FX_SCALE, FX_LIMIT, SOURCE_KINDS } from './content.mjs';
+import { check, checkItems, fxText, fill, beatVars, JOB_VARS, COMMON, JOB_TYPES, JOB_NAMES, CONTRACT_KINDS, SIDES, REWARDS, FX_WHEN, FX_IF, FX_DO, FX_SCALE, FX_LIMIT, SOURCE_KINDS, CLASSES } from './content.mjs';
 import { BASES, STATS, SLOTS, RARITIES, uniqueItem, statLine, seeded } from './gear.mjs';
-import { STRAINS, GUARDS, BOSSES } from './data.mjs';
+import { STRAINS, GUARDS, BOSSES, ABILITIES } from './data.mjs';
 const ROGUE = { kinds: { nest: { name: 'Nest' }, pit: { name: 'Pit' }, gauntlet: { name: 'Gauntlet' } } }; // (rogue.mjs pulls in the whole engine)
 import { zoneRooms } from './zone.mjs';
 
@@ -211,7 +211,8 @@ function render() { renderNav(); renderForm(); renderSide(); touched(); }
 
 // ---------- uniques ----------
 let uMenu = false;
-const STAT_NAME = (k) => STATS[k]?.name || k;
+const STAT_NAME = (k) => STATS[k]?.name || ABILITIES[k]?.name || k;
+const SKILL_OPTS = Object.fromEntries(Object.entries(ABILITIES).filter(([, a]) => a.cls).map(([k, a]) => [k, `${a.name} (${a.cls}, cooldown ${a.cooldown})`]));
 const STAT_OPTS = Object.fromEntries(Object.keys(STATS).filter((k) => STATS[k].side !== 'server').map((k) => [k, STATS[k].name]));
 const fmtRange = (v) => (Array.isArray(v) ? `${v[0]}–${v[1]}` : v ?? '');
 // Templates: each starts as a working unique to change.
@@ -268,7 +269,7 @@ function uniqueForm(i) {
   const doOpts = fx ? Object.fromEntries(Object.entries(FX_DO).filter(([, d]) => d.when.includes(fx.when)).map(([k, d]) => [k, d.label])) : {};
   const d = fx && FX_DO[fx.do];
   const fxHtml = fx ? `<div class="ed-row">${field('When', select(p + '.effect.when', fx.when, FX_WHEN))}${field('If', select(p + '.effect.if', fx.if || '', FX_IF))}${field('Does', select(p + '.effect.do', fx.do, doOpts))}</div>
-      <div class="ed-row">${d?.value ? field('X', num(p + '.effect.value', fx.value, 'min="0" step="any"')) : ''}${d?.stat ? field('Which stat', select(p + '.effect.stat', fx.stat || '', { '': 'Pick one', ...STAT_OPTS })) : ''}${d?.value ? field('Scales', select(p + '.effect.scale', fx.scale || '', FX_SCALE)) : ''}${fx.scale ? field('Up to', num(p + '.effect.cap', fx.cap, 'min="0" step="any" placeholder="no cap"')) : ''}</div>
+      <div class="ed-row">${d?.value ? field('X', num(p + '.effect.value', fx.value, 'min="0" step="any"')) : ''}${d?.stat ? field('Which stat', select(p + '.effect.stat', fx.stat || '', { '': 'Pick one', ...STAT_OPTS })) : ''}${d?.skill ? field('Which skill', select(p + '.effect.skill', fx.skill || '', { '': 'Pick one', ...SKILL_OPTS })) : ''}${d?.value ? field('Scales', select(p + '.effect.scale', fx.scale || '', FX_SCALE)) : ''}${fx.scale ? field('Up to', num(p + '.effect.cap', fx.cap, 'min="0" step="any" placeholder="no cap"')) : ''}</div>
       <div class="ed-row">${field('How often', select(p + '.effect.limit', fx.limit || '', FX_LIMIT))}${fx.limit === 'cooldown' ? field('Minutes', num(p + '.effect.cooldown', fx.cooldown, 'min="1"')) : ''}</div>
       ${field('Wording (optional)', input(p + '.effect.text', fx.text, `placeholder="${esc(fxText(fx, STAT_NAME))}"`), 'Leave empty to use the generated line shown above the box.')}
       <button type="button" class="btn small danger" data-act="u-fx-del">Remove the effect</button>`
@@ -280,7 +281,7 @@ function uniqueForm(i) {
   return `<h1 style="color:var(--r-zeroday)">${esc(u.name || 'Unique')}</h1><p class="lede">A gold Zero-day: fixed name, stats and effect. Its numbers grow when it drops at a higher level; its downside doesn't.</p>
     <div class="ed-acts"><button type="button" class="btn" data-act="u-dup">Duplicate</button><button type="button" class="btn danger" data-act="u-del">Delete</button></div>
     <section class="ed-sec"><h2>Identity</h2><div class="ed-row">${field('Name', input(p + '.name', u.name))}${field('Id', input(p + '.id', u.id), 'Saves remember items by id.')}</div>
-      <div class="ed-row">${field('Base', select(p + '.base', u.base, baseOpts))}${field('Level', num(p + '.level', u.level, 'min="1" max="60"'), 'It can drop from 2 levels below this.')}</div>
+      <div class="ed-row">${field('Base', select(p + '.base', u.base, baseOpts))}${field('Level', num(p + '.level', u.level, 'min="1" max="60"'), 'It can drop from 2 levels below this.')}${field('Leans toward', select(p + '.lean', u.lean || '', CLASSES), 'Drops three times as often for this class.')}</div>
       ${field('Flavour', input(p + '.flavour', u.flavour), 'One line, shown on hover.')}</section>
     <section class="ed-sec"><h2>Primary stats</h2><p class="ed-hint">${b ? `${esc(b.name)} gives ${esc(Object.entries(b.primary).map(([k, v]) => `${fmtRange(v)} ${STAT_NAME(k)}`).join(', '))} at level ${b.level}. A unique is usually about ×1.3.` : ''}</p>${statRows(u, 'primary')}
       <div class="ed-acts"><button type="button" class="btn small" data-act="u-stat-add" data-at="primary">+ Stat</button><button type="button" class="btn small" data-act="u-base">Fill from base ×1.3</button></div></section>

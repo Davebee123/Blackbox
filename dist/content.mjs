@@ -109,6 +109,8 @@ export const FX_IF = {
   'target-below-half': 'the target is below half Integrity',
   'target-bare': 'the target has no armor left',
   'target-winding': "the target's attack lands this cycle or next",
+  'target-tagged': 'the target is Tagged',
+  'target-burning': 'the target is burning',
   synced: 'you fired in a Sync Window',
   'even-cycle': "it's an even cycle",
   'odd-cycle': "it's an odd cycle",
@@ -131,6 +133,7 @@ export const FX_DO = {
   'crit-normal': { when: ['struck'], label: 'a crit against you lands as a normal hit' },
   'restore%': { when: ['struck'], label: 'restore X% of your health', value: true },
   'stat-x2': { when: ['always'], label: 'one of its stats counts double', stat: true },
+  'skill-cd': { when: ['always'], label: "one skill's cooldown is X shorter (never under 1)", value: true, skill: true },
   jackout: { when: ['disconnect'], label: 'you jack out with your pack instead' },
   'burn-grow': { when: ['custom'], label: 'your burns grow +X a cycle', value: true },
   'dot%': { when: ['custom'], label: 'your burns and helpers deal +X%', value: true },
@@ -141,6 +144,8 @@ export const FX_DO = {
 };
 export const FX_SCALE = { '': 'flat', cycles: 'per cycle the fight has lasted', contracts: 'per contract you hold', broken: 'per part broken this fight' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
+// A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
+export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator' };
 export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir)' };
 
 // One line of plain text for an effect: "+25% damage when you fired in a Sync Window."
@@ -150,6 +155,7 @@ export function fxText(fx, statName = (k) => k) {
   const d = FX_DO[fx.do];
   let what = (d?.label || fx.do).replace('X', fx.value ?? 'X');
   if (fx.do === 'stat-x2') what = `${statName(fx.stat)} counts double`;
+  if (fx.do === 'skill-cd') what = `${statName(fx.skill)} cools down ${fx.value} ${fx.value === 1 ? 'cycle' : 'cycles'} faster`;
   const scale = fx.scale ? ` ${FX_SCALE[fx.scale]}` : '';
   const cap = fx.cap ? ` (up to ${fx.do === 'damage%' || fx.do === 'crit%' ? '+' + fx.cap + '%' : '+' + fx.cap})` : '';
   const lead = { crit: 'On a crit', break: 'When you break a part', start: 'Each fight', struck: 'When an attack lands on you', disconnect: 'When your Signal hits 0 on a run' }[fx.when];
@@ -182,12 +188,14 @@ export function checkItems(items, bases, stats) {
       else if (!d.when.includes(fx.when)) say(where, u.id, `"${d.label}" can't fire "${(FX_WHEN[fx.when] || fx.when).toLowerCase()}". It fits: ${d.when.map((w) => FX_WHEN[w].toLowerCase()).join(', ')}.`);
       if (d?.value && !(Number(fx.value) > 0)) say(where, u.id, 'This effect needs a value above 0.');
       if (d?.stat && !stats[fx.stat]) say(where, u.id, 'Pick which stat counts double.');
+      if (d?.skill && !fx.skill) say(where, u.id, 'Pick which skill cools down faster.');
       if (fx.if && FX_IF[fx.if] === undefined) say(where, u.id, `Unknown condition "${fx.if}".`);
       if (fx.if === 'crit' && fx.when !== 'break') say(where, u.id, '"It was a crit" only works with "when you break a part".');
-      if (['target-below-half', 'target-bare', 'target-winding'].includes(fx.if) && fx.when !== 'hit') say(where, u.id, 'Target conditions only work with "when you hit a part".');
+      if (/^target-/.test(fx.if || '') && fx.when !== 'hit') say(where, u.id, 'Target conditions only work with "when you hit a part".');
       if (fx.limit === 'cooldown' && !(fx.cooldown > 0)) say(where, u.id, 'A cooldown needs minutes.');
       if (fx.limit === 'run' && fx.when === 'start') say(where, u.id, '"Once per run" with "when a fight starts" fires on the first fight only.', false);
     }
+    if (u.lean && !CLASSES[u.lean]) say(where, u.id, `Unknown class "${u.lean}" to lean toward.`);
     if (!(u.sources || []).length) say(where, u.id, 'No sources: it can never drop.', false);
     for (const src of u.sources || []) if (!SOURCE_KINDS[src.kind]) say(where, u.id, `Unknown source "${src.kind}".`);
   }

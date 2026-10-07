@@ -14,7 +14,7 @@ const vet = () => { const s = fresh(); s.hackers = { breaker: { level: 30, xp: 0
 
 test('the written uniques have no mistakes', () => {
   assert.deepEqual(checkItems(ITEMS, BASES, STATS).filter((x) => x.bad).map((x) => x.msg), []);
-  assert.equal(Object.keys(UNIQUES).length, 38); // 30, and two for each of the four bosses
+  assert.equal(Object.keys(UNIQUES).length, 47); // 30, two for each of the four bosses, and nine leaning toward a class
 });
 
 test('effect blocks: damage when synced, a chit and a crit at the start, half the first hit', () => {
@@ -92,4 +92,31 @@ test('drops: strains have trophies, uniques come from where they drop, rewards g
   fight(s); for (const x of s.encounter.virus.parts) x.integrity = 0; finish(s, 'victory');
   assert.equal(s.pace.kills, 1);
   assert.equal(paceOf(s).perHour, null, 'not enough time yet');
+});
+
+test('class uniques: Tagged and burning targets, a shorter skill cooldown, and a lean toward their class', async () => {
+  const { cooldownOf, uniqueFrom, UNIQUES } = await import('./dist/combat.mjs');
+  const { ABILITIES } = await import('./dist/data.mjs');
+  const s = vet();
+  wear(s, 'tracking-pixel');
+  fight(s);
+  const p = part(s, 'pulse');
+  const plain = damageMultiplier(s, p, { mine: true });
+  p.taggedUntil = s.encounter.cycle + 2;
+  assert.ok(damageMultiplier(s, p, { mine: true }) > plain * 1.24, '+25% on a Tagged part');
+  const t = vet();
+  t.hackers = { infiltrator: { level: 10, xp: 0 } }; t.loadout.archetype = 'infiltrator';
+  assert.equal(cooldownOf(t, 'tag'), ABILITIES.tag.cooldown);
+  wear(t, 'spearphish');
+  assert.equal(cooldownOf(t, 'tag'), ABILITIES.tag.cooldown - 1, 'Spearphish: Tag a cycle sooner');
+  assert.equal(cooldownOf(t, 'inject'), ABILITIES.inject.cooldown);
+  // The lean: an Infiltrator finds Infiltrator uniques three times as often.
+  const count = (cls) => {
+    const x = fresh(); x.loadout.archetype = cls; x.hackers = { [cls]: { level: 9, xp: 0 } }; x.rng = 7;
+    let n = 0;
+    for (let i = 0; i < 3000; i++) if (UNIQUES[uniqueFrom(x, { kind: 'sprawl' }, 9)?.id]?.lean === 'infiltrator') n++;
+    return n;
+  };
+  const inf = count('infiltrator'), brk = count('breaker');
+  assert.ok(inf > brk * 2, `${inf} vs ${brk}`);
 });

@@ -127,7 +127,10 @@ export function hasTalent(s, id) {
 export function cooldownOf(s, id) {
   if (id === 'overload' && hasTalent(s, 'hair-trigger')) return 2;
   if (id === 'suspend' && hasTalent(s, 'preemption')) return 2;
-  return ABILITIES[id]?.cooldown || 0;
+  const base = ABILITIES[id]?.cooldown || 0;
+  // A unique that shortens one skill's cooldown (effect skill-cd), never under 1.
+  const off = fxFire(s, 'always', { do: 'skill-cd' }, false).filter((x) => x.fx.skill === id).reduce((n, x) => n + x.value, 0);
+  return off && base ? Math.max(1, base - off) : base;
 }
 export function keyMap(s) {
   const map = {};
@@ -394,7 +397,16 @@ const dropsHere = (u, ctx) => (u.sources || []).some((src) => src.kind === ctx.k
   || (src.kind === 'sprawl' && ctx.kind === 'sprawl') || (src.kind === 'guard' && ctx.kind === 'guard' && src.id === ctx.id));
 export function uniqueFrom(s, ctx, level) {
   const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && dropsHere(u, ctx) && !['story', 'contract', 'store'].includes(ctx.kind));
-  return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null;
+  return pickUnique(s, pool);
+}
+// One of a pool, a unique that leans toward your class (its lean) LEAN times as likely.
+const LEAN = 3;
+function pickUnique(s, pool) {
+  if (!pool.length) return null;
+  const w = (u) => (u.lean && u.lean === classOf(s) ? LEAN : 1);
+  let r = rand(s) * pool.reduce((n, u) => n + w(u), 0);
+  for (const u of pool) { r -= w(u); if (r < 0) return u; }
+  return pool.at(-1);
 }
 // A boss's own uniques (sources kind 'boss'): BOSS_LOOT.chance a kill, BOSS_LOOT.pity more for every
 // kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
@@ -419,7 +431,7 @@ function bossUnique(s, boss, level) {
 const WORLD = ['sprawl', 'vault', 'guard', 'rogue'];
 function eliteUnique(s, level) {
   const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind)));
-  return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null;
+  return pickUnique(s, pool);
 }
 // One roll: maybe nothing, mostly grey or white, now and then blue, rarely yellow or gold. Odds come
 // from time targets and the pace (LOOT.killsPerHour); Scavenge is magic find; depth helps a little.
@@ -481,6 +493,8 @@ function fxCond(s, fx, ctx = {}) {
     case 'target-below-half': return !!p && p.integrity < p.max / 2;
     case 'target-bare': return !!p && !p.armor;
     case 'target-winding': return !!p?.attack && !!e && p.attack.due - e.cycle <= 1;
+    case 'target-tagged': return !!p && !!e && p.taggedUntil >= e.cycle;
+    case 'target-burning': return !!p && burnsOn(s, p).length > 0;
     case 'synced': return !!e?.synced || !!ctx.synced;
     case 'even-cycle': return !!e && e.cycle % 2 === 0;
     case 'odd-cycle': return !!e && e.cycle % 2 === 1;
@@ -519,7 +533,7 @@ export function fxFire(s, when, ctx = {}, spend = true) {
   return out;
 }
 const fxHas = (s, what) => uniqueFx(s).find((x) => x.fx.do === what) || null;
-export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || k) : '');
+export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : '');
 
 // ---------- blueprints ----------
 export const knows = (s, id) => (s.recipes || []).includes(id);

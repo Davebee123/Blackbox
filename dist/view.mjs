@@ -302,7 +302,7 @@ export function collectionMarkup(s) {
   const n = all.filter((u) => got[u.id]).length;
   if (!n) return '';
   const rows = all.slice().sort((a, b) => a.level - b.level).map((u) => {
-    const src = collSource(s, (u.sources || [])[0]);
+    const src = collSource(s, (u.sources || [])[0]) + (u.lean ? ` · ${ARCHETYPES[u.lean]?.name || u.lean}` : '');
     const boss = (u.sources || []).find((x) => x.kind === 'boss')?.id;
     return got[u.id]
       ? `<li class="on" title="${esc(UNIQUES[u.id].flavour || '')}"><b class="iname r-zeroday">${esc(u.name)}</b><small>Lv ${u.level} · ${esc(src)}</small></li>`

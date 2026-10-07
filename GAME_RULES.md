@@ -130,11 +130,25 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Zero-day | Gold | A **unique** (30, written in the editor) or a found Zero-day (Rootkit, Race Condition, Buffer Overflow) |
 | Indemnified | Orange | Halcyon's store only |
 
-**Uniques** have a fixed name, stats, flavour line and usually one **effect**, sometimes a downside. Found at a higher level, their stats grow; their downside doesn't. They can drop again. Effects are blocks (when · if · does · limits), so new ones are written in the editor without code: e.g. Logger Spool (+25% damage in a Sync Window, Keylogger trophy), Gate Bypass (start each fight with an armor chit, Bouncer ICE), Deadman's Switch (at 0 Signal on a run you jack out with your pack; rearms 90 real minutes later). Hover an item for its flavour.
+**Uniques** have a fixed name, stats, flavour line and usually one **effect**, sometimes a downside. Found at a higher level, their stats grow; their downside doesn't. They can drop again. Effects are blocks (when · if · does · limits), so new ones are written in the editor without code. Conditions include a Tagged or a burning target, and an effect can shorten one skill's cooldown (never under 1). Examples: e.g. Logger Spool (+25% damage in a Sync Window, Keylogger trophy), Gate Bypass (start each fight with an armor chit, Bouncer ICE), Deadman's Switch (at 0 Signal on a run you jack out with your pack; rearms 90 real minutes later). Hover an item for its flavour.
 
 **Drops: a grind, on purpose.** Targets in play time: a blue every 20–30 minutes, a yellow about every two hours, a gold every 10–12 hours. Per kill (at the assumed pace of 20 kills an hour, about what the pacing bot measures; `LOOT` in gear.mjs): one in six drops a grey or white; blue 1 in 12 kills, yellow 1 in 60, gold 1 in 300, then vaults and double rolls make up the rest. Most kills drop nothing.
 - **Guards, rogue-server Pits and bounties** roll twice and keep the best. Deeper layers add 25% a layer to the blue and yellow odds.
 - **Vaults:** half hold a protocol (`kit.bin`, fixed per server; your first server's always does), white or better: white 80 · blue 16 · yellow 3.5 · gold 0.5 (a unique that drops from vaults that deep).
+- **Class uniques** lean toward a class: they drop anywhere they're written to, three times as often for that class. The Collection names the class.
+
+| Class | Unique | Where | What it does |
+|---|---|---|---|
+| Infiltrator | Tracking Pixel (script, level 3) | SPRAWL-00, layer 1 vaults | +25% damage on a Tagged part |
+| Infiltrator | Slow Drip (exploit, level 4) | SPRAWL-00, rogue servers | +15% crit chance on a burning part |
+| Infiltrator | Spearphish (exploit, level 7) | Layer 2 vaults, rogue servers | Tag cools down a cycle faster |
+| Breaker | Jackhammer (exploit, level 5) | Layer 1 vaults, rogue servers | Flood cools down a cycle faster |
+| Breaker | Shrapnel (script, level 8) | SPRAWL-00, rogue servers | Heal 6 when you break a part |
+| Bastion | Hot Patch (shell, level 4) | SPRAWL-00 | Patch cools down a cycle faster |
+| Bastion | Uptime SLA (proxy, level 6) | Layer 1 vaults, rogue servers | Below half, a hit on you restores 8% of your health, once a fight |
+| Operator | Thread Pool (script, level 5) | SPRAWL-00, layer 1 vaults | Burns and helpers deal +15% |
+| Operator | Fork Handle (shell, level 9) | Layer 2 vaults, rogue servers | Botnet cools down a cycle faster |
+
 - **A boss's uniques:** two each, 30% a kill plus 10% for every kill without one (see Bosses).
 - **A strain's trophy:** 1 in 200 kills of that strain drops its own unique (Keylogger → Logger Spool, Hashrat → Cryptominer…).
 - **Scavenge is magic find** with diminishing returns: +50% Scavenge = +33% better odds.
@@ -1026,7 +1040,7 @@ A loss crashes the server: it reboots at half Integrity in Degraded mode (see In
 ## Balance targets (checked by `node playtest.mjs` and `node balance.mjs`)
 
 - Every fixture is winnable by at least two different plans, and the plans trade different things. On CRYPTJACK, breaking the Pulse Node first lets the Encryptor start its stack; breaking the Encryptor first costs a 14-damage Surge. A class that can delay (Bastion, Operator) can avoid both.
-- Class balance (`node balance.mjs` → docs/BALANCE.md, guarded by `balance.test.mjs`): one scripted planner plays every class's own kit at five points on the level curve, loading a Tuned protocol in every open slot at the bracket's level and running a bracket's worth of defensive services (the first column has neither, to show what they're worth). Every class wins at least 85% of fights at its level, loses less than plain Spiking, and gets at least as many clean kills; the hard slice is beatable (at least 55% each) but risky (at level 10 some class loses two or more). **Target band** (a `todo` test): a fight at your level costs every class 28–55% at level 1 (no gear), 35–50% at level 10 and 22–40% from level 18, classes within 15 points. Not met yet: Bastion runs high (45–52%) and Operator low (26–30%) at levels 10–12. **Fight mix** (`loop.test.mjs`, the pacing bot to level 20): grey fights are 0–1% of fights from level 10 to 20 (under 20%) and strains and ICE 48–63% from 12 (at least 15%). **XP mix:** fights are about 60% of the bot's XP (under 70%; it never crafts or trades), break-ins about 30%, intel and building the rest. **The slow road:** playing only SPRAWL-00 takes 1.8–2.2× as long to reach level 12 as mixed play (median of 3 seeds; the test wants 1.4×). Current result (wins · clean kills · health lost · cycles):
+- Class balance (`node balance.mjs` → docs/BALANCE.md, guarded by `balance.test.mjs`): one scripted planner plays every class's own kit at five points on the level curve, loading a Tuned protocol in every open slot at the bracket's level and running a bracket's worth of defensive services (the first column has neither, to show what they're worth). Every class wins at least 85% of fights at its level, loses less than plain Spiking, and gets at least as many clean kills; the hard slice is beatable (at least 55% each) but risky (at level 10 some class loses two or more). **Target band** (a `todo` test): a fight at your level costs every class 28–55% at level 1 (no gear), 35–50% at level 10 and 22–40% from level 18, classes within 15 points. Not met yet: Bastion runs high (45–52%) and Operator low (26–30%) at levels 10–12. **Fight mix** (`loop.test.mjs`, the pacing bot to level 20): grey fights are 0–1% of fights from level 10 to 20 (under 20%) and strains and ICE 48–63% from 12 (at least 15%). **XP mix:** fights are about 60% of the bot's XP (under 70%; it never crafts or trades), break-ins about 30%, intel and building the rest. **The slow road:** playing only SPRAWL-00 takes about 1.5× as long to reach level 12 as mixed play (median of 7 seeds; the test wants 1.25× for every class and 1.4× on average). Current result (wins · clean kills · health lost · cycles):
 
 | Bracket | Spike, no gear | Spike only | Breaker | Bastion | Infiltrator | Operator |
 |---|---:|---:|---:|---:|---:|---:|
