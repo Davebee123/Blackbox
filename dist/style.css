@@ -2830,3 +2830,7 @@ details.map-pick { pointer-events: auto; }
 .op-build-row { margin-top: 10px; }
 .op-build-open small { margin-left: 8px; opacity: 0.75; font-size: 11px; }
 @media (max-width: 700px) { .build-panel { inset: 40px 6px 6px; padding: 12px; } .build-panel .bp-grid { grid-template-columns: 1fr; } }
+/* A long spoils card: the header and the Continue button stay put, the rewards scroll between them. */
+.sp-card { display: flex; flex-direction: column; }
+.sp-card > .sp-head, .sp-card > .sp-xp, .sp-card > .sp-level, .sp-card > .sp-go { flex: none; }
+.sp-card > .sp-rows { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
