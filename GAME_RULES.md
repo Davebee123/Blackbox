@@ -25,7 +25,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 
 | Rule | Detail |
 |---|---|
-| Hot run | `connect <server> +hot` (or **+hot** beside Connect): friction you choose. Every fight on that run has 25% more Integrity and hits 20% harder. Every kill pays 25% more XP and rolls for loot once more. A **hot** tag sits beside Signal. |
+| Loud run | `connect <server> loud` (or **Go loud** beside Connect; the old `+hot` still works): friction you choose. Every fight on that run has 25% more Integrity and hits 20% harder. Every kill pays 25% more XP and rolls for loot once more. A **loud** tag sits beside Signal. |
 | Signal | 50 at the start of each run. Moving (`cd`) costs 1. Guards hit it. A wrong password costs 3. |
 | Trace | A break-in (any server with a vault; not SPRAWL-00 or rogue servers) has a **Trace** bar beside Signal: how loud you've been. Each `cd` adds 4, each file you pull 6, a wrong password 20, a guard fight 2 a cycle; arming Spoof takes 20 off, and an Infiltrator gains it half as fast (`TRACE` in run.mjs). At 100 a **hunter** ICE (Tracer, a level above the server) engages you where you stand, and you can't jack out (or flee) until it's down; beat it and Trace drops to 50. Jack out under 40% with the vault opened for a **clean job**: +25% banked credits and half a kill of XP (Break-in). |
 | Contracts ready | A yellow **✓** by Mail on the top bar whenever a contract is ready to deliver (its hover says how many). |
@@ -488,6 +488,7 @@ A server you hold (you beat its Resident in `/core`) is yours to build on, like 
 - **Building** runs in real time, offline too: one build per server and two across your network at once. It costs credits, the server's family code and salvage (you pick which salvage), and the specialisations take 3 Exploits too. A lockdown or a swarm at the server holds a build up. **Finish now** buys it out. Taking a building down (×) gives back half its credits.
 - **Plans.** You start knowing the Code Siphon. Every other building needs its **plan**: about 15% of vaults hold one (your first vault always does), and Halcyon's shop sells each once. A plan you already know banks as 2 salvage.
 - **Production** piles up in the server's store, up to 8 hours' worth (Storage Array 16, Refinery a day), and connecting to the server collects it (the Scheduler does it on its own). A lockdown stops production; what's stored stays.
+- **On the map card** a held server's outpost section has one header (Outpost, its slots used and your bandwidth used) and a labelled row for each part: **Buildings** (what's built, × to take one down, and the Build button), **Stored** (what's waiting, collected when you connect) and **Wall** (its firewall level and what it is vulnerable to).
 
 | Building | Kind | Bandwidth | Cost (credits / code / salvage) | Time | Needs | What it does |
 |---|---|---|---|---|---|---|

@@ -366,8 +366,9 @@ const near = (s, text, word, names, cmd) => { const n = closest(word, names); re
 
 export function connect(s, id) {
   const first = s.serial;
-  const hot = /\s\+hot$/.test(id); // connect <server> +hot (HOT in data.mjs)
-  id = id.replace(/\s\+hot$/, '');
+  const LOUD = /\s(?:loud|\+loud|\+hot)$/; // connect <server> loud (HOT_RUN in data.mjs); +hot still works
+  const hot = LOUD.test(id);
+  id = id.replace(LOUD, '');
   const zone = id === CONFIG.zone.id || id === CONFIG.zone.name.toLowerCase();
   const loc = zone ? zoneOf(s) : findLocation(s, id) || [...s.locations, ...memberServers(s)].find((l) => l.name.toLowerCase() === id);
   const signal = signalNow(s);
@@ -401,7 +402,7 @@ export function connect(s, id) {
     else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied: ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
-    if (hot) emit(s, 'warning', `HOT RUN. Every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
+    if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     ls(s);
     if (!zone && !loc.member) collect(s, loc, 'Collected from ');
     if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');

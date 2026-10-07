@@ -612,7 +612,7 @@ function run(raw) {
   history = [text, ...history.filter((h) => h !== text)].slice(0, 40);
   historyIndex = -1;
   // A server you found but never connected: typing connect asks first, on its map card.
-  const join = text.match(/^connect (\S+)(?: \+hot)?$/);
+  const join = text.match(/^connect (\S+)(?: (?:loud|\+loud|\+hot))?$/);
   const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
   if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
   // build [server]: the Build panel for a server you hold (the one selected on the map, if you name none).

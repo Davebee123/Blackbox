@@ -22,12 +22,12 @@ test('the specialty: at level 5 pick one of your class\'s two first-row talents,
   for (const c of Object.keys(ARCHETYPES)) assert.equal(ARCHETYPES[c].spec.length, 2, c);
 });
 
-test('a hot run: connect <server> +hot makes every fight tougher and every kill pay more', () => {
+test('a loud run: connect <server> loud makes every fight tougher and every kill pay more', () => {
   const plain = fresh(), hot = fresh();
   for (const s of [plain, hot]) s.hackers = { breaker: { level: 5, xp: 0 } };
-  play(plain, 'connect sprawl'); play(hot, 'connect sprawl +hot');
+  play(plain, 'connect sprawl'); play(hot, 'connect sprawl loud');
   assert.ok(hot.run.hot && !plain.run.hot);
-  assert.ok(hot.logs.some((e) => /HOT RUN/.test(e.message)));
+  assert.ok(hot.logs.some((e) => /LOUD RUN/.test(e.message)));
   for (const s of [plain, hot]) { play(s, 'cd var'); play(s, 'attack'); }
   const hp = (s) => s.encounter.virus.parts.reduce((n, p) => n + p.max, 0);
   assert.ok(Math.abs(hp(hot) / hp(plain) - HOT_RUN.hp) < 0.05, `${hp(hot)} vs ${hp(plain)}`);

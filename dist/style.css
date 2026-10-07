@@ -2776,9 +2776,20 @@ details.map-pick { pointer-events: auto; }
 .event-line .row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
 
 /* Buildings on a held server (outpost.mjs): slots and bandwidth, what's built, the build, the store, the Build list. */
-.outpost .op-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-.outpost .op-store { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-.outpost .op-store small { color: var(--dim); font-size: 11px; }
+.outpost .op-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+.outpost .op-meta { display: flex; gap: 12px; font: 11px var(--mono); color: var(--muted); }
+.outpost .op-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.outpost .op-meta .glyph { width: 1em; height: 1em; }
+/* One labeled row each for Buildings, Stored and Wall: label on the left, its content on the right. */
+.outpost .op-row { display: grid; grid-template-columns: 72px 1fr; gap: 8px; align-items: start; padding: 7px 0; border-top: 1px solid var(--line); }
+.outpost .op-label { font: 600 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--dim); padding-top: 5px; }
+.outpost .op-val { min-width: 0; }
+.outpost .op-val .mods { margin-top: 0; gap: 6px; }
+.outpost .op-val .fw-mini { margin: 0; padding: 0; border: 0; background: none; }
+.outpost .op-store { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; padding-top: 3px; }
+.outpost .op-stock { display: inline-flex; align-items: center; gap: 4px; font: 12px var(--mono); color: var(--text); }
+.outpost .op-stock .glyph { width: 1em; height: 1em; }
+.outpost .op-store small { flex-basis: 100%; color: var(--dim); font-size: 11px; }
 .outpost .op-build { margin-top: 8px; }
 .op-buildlist { margin-top: 10px; }
 .op-buildlist summary { cursor: pointer; font: 600 12px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
@@ -2795,7 +2806,8 @@ details.map-pick { pointer-events: auto; }
 .ttree .tspec .tspec-opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; grid-column: 1 / -1; }
 .ttree .tspec .tspec-opts .act { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
 .ttree .tspec .tspec-opts .act small { font-size: 11px; opacity: 0.8; }
-.hot-btn { color: var(--hot); border-color: var(--hot); }
+.hot-btn { color: var(--hot); border-color: var(--hot); display: inline-flex; flex-direction: column; align-items: center; line-height: 1.15; }
+.hot-btn small { font-size: 10px; opacity: 0.75; letter-spacing: 0.3px; }
 .net-hot { align-self: center; }
 .coll li.heard { outline: 1px solid var(--hot); }
 .coll .coll-listen { float: right; margin-top: -30px; font-size: 11px; padding: 1px 6px; }
@@ -2827,7 +2839,6 @@ details.map-pick { pointer-events: auto; }
 .build-panel .bp-card small { font-size: 11px; color: var(--muted); }
 .build-panel .bp-card .bl-why { color: var(--amber-soft, #d69a22); }
 .build-panel .bp-card .btn { align-self: flex-start; margin-top: auto; }
-.op-build-row { margin-top: 10px; }
 .op-build-open small { margin-left: 8px; opacity: 0.75; font-size: 11px; }
 @media (max-width: 700px) { .build-panel { inset: 40px 6px 6px; padding: 12px; } .build-panel .bp-grid { grid-template-columns: 1fr; } }
 /* A long spoils card: the header and the Continue button stay put, the rewards scroll between them. */
