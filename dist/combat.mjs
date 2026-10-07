@@ -749,7 +749,7 @@ function freshBonus(s, amount, kind) {
 export function gainXp(s, amount, why, kind = null, tally = kind) {
   if (amount <= 0) return;
   const bonus = freshBonus(s, amount, kind);
-  if (bonus) { emit(s, 'fresh', `Fresh: ${XP_KINDS[kind]} +${bonus} XP.`, { amount: bonus, kind }); amount += bonus; }
+  if (bonus) { emit(s, 'fresh', `Fresh bonus +${bonus} XP (${XP_KINDS[kind]}).`, { amount: bonus, kind }); amount += bonus; }
   if (tally) (s.xpMix ||= {})[tally] = (s.xpMix[tally] || 0) + amount;
   // The server levels with everyone: it gets every point any hacker earns.
   gainServerXp(s, amount, why);
@@ -1755,7 +1755,7 @@ export const knowsPart = (s, v, p) => p.kind === 'fragment' || !!s.codex?.[codex
 function breakPart(s, p) {
   const e = s.encounter;
   // The first time you break a part: it's decoded in the Codex, and that pays two kills of XP.
-  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `Codex: ${p.name} decoded.`, { target: p.id }); gainXp(s, xpFor(s, e.virus.level, DECODE_XP), `${p.name} decoded`, 'intel'); }
+  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `${p.name} decoded. Hover it to see what it does.`, { target: p.id }); gainXp(s, xpFor(s, e.virus.level, DECODE_XP), `${p.name} decoded`, 'intel'); }
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
@@ -1812,7 +1812,7 @@ function breakPart(s, p) {
   }
   if (e.autoStopped) {
     e.autoStopped = false;
-    if (virusIntegrity(s).current > 0) emit(s, 'warning-soft', 'Auto-repeat stopped: pick your next target.');
+    if (virusIntegrity(s).current > 0) emit(s, 'warning-soft', 'That part is broken. Pick your next target.');
   }
 }
 
@@ -1841,7 +1841,7 @@ function useAbility(s, intent, auto = false) {
   else if (auto) e.metrics.auto++;
   if (!intent.ignoreCooldown) e.readyAt[id] = e.cycle + cooldownOf(s, id);
   if (a.once) e.once[id] = true;
-  emit(s, 'resolved', `${auto === 'daemon' ? `Daemon ${intent.daemon}: ` : auto ? 'Auto: ' : ''}${intent.text}.`, { ability: id, target: intent.target, auto });
+  emit(s, 'resolved', `${auto === 'daemon' ? `Daemon ${intent.daemon}: ` : ''}${intent.text}${auto && auto !== 'daemon' ? ' (timer ran out)' : ''}.`, { ability: id, target: intent.target, auto });
   const base = target ? skillBase(s, id, target) : 0;
   e.lastSkill = id;
   // An empty cycle Spikes the last part you hit.

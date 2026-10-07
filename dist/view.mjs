@@ -436,7 +436,7 @@ export function boardMarkup(s, selected, preview = null) {
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
     const fade = dying(p) ? ` style="animation-delay:-${Math.max(0, 1000 - (p._dyingUntil - Date.now()))}ms"` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}${knowsPart(s, e.virus, p) ? '' : ' · what it does: ???'}">
-      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p) : '??? Break one to find out what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
+      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p) : 'Unknown. Break one to learn what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
       ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
@@ -819,7 +819,7 @@ export const threatTop = (s) => Math.max(0, ...(s.locations || []).filter((l) =>
 export function vulnLine(s, b = wallBands(s)) {
   const top = threatTop(s);
   if (s.degraded) return '<span class="vuln low">Wall down</span>';
-  if (b.blocks >= top) return `<span class="vuln ok" title="${top ? `Your servers send up to level ${top}` : 'Nothing attached sends invasions'}">Not vulnerable</span>`;
+  if (b.blocks >= top) return `<span class="vuln ok" title="${top ? `Your servers send up to level ${top}` : 'Nothing attached sends invasions'}">Safe</span>`;
   return `<span class="vuln ${b.holds >= top ? 'mid' : 'low'}" title="Blocks up to level ${b.blocks}; contests up to ${b.holds}. Your servers send up to level ${top}.">Vulnerable to lv ${b.blocks + 1}+</span>`;
 }
 // The firewall's blocks: solid when whole, scattered and dim when fragmented (a fixed scatter, so
@@ -838,7 +838,7 @@ function fwRow(s, holder, arg, top, now = Date.now()) {
   const f = fwAt(s, holder), b = wallBands(s, ratingAt(s, holder, null, now)), c = upgradeCost(f.level), busy = active(s) || !!s.run;
   const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher && (s.materials?.exploit || 0) >= (c.exploit || 0);
   const state = b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low', frag = fragLevels(s, holder), def = defragging(s, now, holder), hard = hardenLeft(s, now, holder);
-  const line = state === 'ok' ? `<span class="vuln ok" title="Up to level ${top} comes for it">Not vulnerable</span>` : `<span class="vuln ${state}" title="Blocks up to level ${b.blocks}; contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
+  const line = state === 'ok' ? `<span class="vuln ok" title="Up to level ${top} comes for it">Safe</span>` : `<span class="vuln ${state}" title="Blocks up to level ${b.blocks}; contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
   const bad = new Set(SCATTER.slice(0, Math.floor(f.frag)));
   return `<div class="fw-mini"><div class="fw-head"><span class="fw-tag">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${fwVersion(f)}${frag || def ? `<span class="tag warn">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : ''}${hard ? `<span class="tag you">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''}${line}</div>
     <div class="fw-grid small${def ? ' defrag' : ''}${hard ? ' hard' : ''}" title="${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>
@@ -1172,10 +1172,10 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const unreadJob = new Set(letters.filter((m) => m.job != null && taken.has(m.job) && !m.read).map((m) => m.job));
   const unreadLetters = letters.filter((m) => !m.read && !(m.job != null && taken.has(m.job))).length;
   const heldRows = held.map((c) => { const [t, cls] = jobTag(s, c); return row('j' + c.id, c.from, contractTitle(s, c), t, cls, '', unreadJob.has(c.id)); }).join('');
-  const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? 'Off books' : '', c.offBooks ? 'hot' : '', `${fIcon(c.faction || 'halcyon')}<small class="mexp">${c.type === 'side' ? 'pick one' : fmtTime(c.expiresAt - now)}</small>`)).join('');
+  const boardRows = board.map((c) => row('j' + c.id, c.from, c.subject, c.offBooks ? '<span title="GLASSJAW work through Halcyon\'s board: pays 1.6× the credits, costs Halcyon standing">Off books</span>' : '', c.offBooks ? 'hot' : '', `${fIcon(c.faction || 'halcyon')}<small class="mexp">${c.type === 'side' ? '<span title="A side offer: take this one or its rival. It never expires.">pick one</span>' : fmtTime(c.expiresAt - now)}</small>`)).join('');
   const letterRows = letters.filter((m) => m.job == null || !taken.has(m.job)).map((m) => row('l' + m.id, m.from, m.subject, '', '', '', !m.read)).join('');
   const done = doneContracts(s);
-  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? 'LOWLIGHT' : '', 'dim')).join('');
+  const doneRows = done.map((c) => row('j' + c.id, c.from, contractTitle(s, c), c.story !== undefined ? '<span title="A job from LOWLIGHT, your crew: the storyline">LOWLIGHT</span>' : '', 'dim')).join('');
   const st = standing(s), tier = tierOf(s), next = nextTier(s);
   // A faction's chip shows once you've met it: found its hub, or found one of its servers.
   const met = hubsOf(s).length ? FACTION_IDS.filter((f) => f !== 'halcyon' && (hubFound(s, f) || (s.locations || []).some((l) => l.faction === f))) : [];
@@ -1940,7 +1940,7 @@ function consortiumLine(s, l) {
 // The rogue server's card: the main thing to do, so it also leads the server card.
 function zoneCard(s) {
   const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Signal too weak: rest to ${need}` : '';
+  const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Needs ${need} Signal` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
     <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', `<b class="${hackerLevel(s) > CONFIG.zone.maxLevel + 4 ? 'con-gray' : hackerLevel(s) > CONFIG.zone.maxLevel ? 'con-orange' : 'con-yellow'}" title="${hackerLevel(s) > CONFIG.zone.maxLevel ? 'You\'re outgrowing it: its kills pay less every level' : 'Its viruses keep up with you to this level'}">Lv 1–${CONFIG.zone.maxLevel}</b>`)}</div>
     ${dropLine(s, s.zone)}
@@ -2011,7 +2011,7 @@ function mapSide(s, sel, node) {
   if (node.kind === 'intrusion') return alertCard();
   if (false) {
     const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
-    const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : sig < need ? `Signal too weak: rest to ${need}` : '';
+    const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : sig < need ? `Needs ${need} Signal` : '';
     return `${alertCard()}<section class="card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
       <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Signal', `${here ? s.run.integrity : sig}/${max}`)}</div>
       <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}</div></section>`;
@@ -2044,7 +2044,7 @@ function mapSide(s, sel, node) {
       <p>${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.faction ? ` · <span class="tag" style="--fc:${FX[l.faction].color}">${esc(FX[l.faction].short)}</span>` : ''}${l.rogue ? ' · <span class="tag hot">rogue</span>' : ''}</p>
       <div class="srv-slots">${pips}</div>
       ${asking
-        ? `<div class="mem-ask"><div class="row"><button type="button" class="btn primary" data-mem-yes="${esc(l.id)}" ${why ? `disabled title="${esc(why)}"` : ''}>${glyph('memory')}Connect · +${j.add}</button><button type="button" class="btn" data-mem-no>Cancel</button></div></div>`
+        ? `<div class="mem-ask"><div class="row"><button type="button" class="btn primary" data-mem-yes="${esc(l.id)}" ${why ? `disabled title="${esc(why)}"` : `title="Joins your network: uses ${j.add} memory"`}>${glyph('memory')}Connect · +${j.add}</button><button type="button" class="btn" data-mem-no>Cancel</button></div></div>`
         : `<div class="row"><button type="button" class="btn primary" data-mem-ask="${esc(l.id)}" ${why && why !== 'Not enough memory: detach another server first' ? `disabled title="${esc(why)}"` : `title="Uses ${j.add} memory"`}>Connect</button></div>`}</section>`;
   }
   // Memory (memory.mjs): a detached server is frozen; its card is just that and Attach.
