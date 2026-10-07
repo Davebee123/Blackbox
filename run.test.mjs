@@ -409,31 +409,33 @@ test('every location gets its family quirk', async () => {
 });
 
 test('talent tree: points come from levels, ranks open the tiers, swapping is free, refunds keep it valid', async () => {
-  const { picksOf, ranksOf, tierState, pointsSpent, talentPoints } = await import('./dist/combat.mjs');
+  const { picksOf, ranksOf, tierState, pointsSpent, talentPoints, kitOf } = await import('./dist/combat.mjs');
   const s = fresh();
   assert.equal(talentPoints(s), 0);
   assert.match(command(s, 'talent add overclocked').at(-1).message, /Talents start at level 10/);
   command(s, 'developer level 18'); // points at 10, 12, 14, 16, 18
   assert.equal(talentPoints(s), 5);
+  // The tree is your subclass's: its first row, then its second.
+  const [[a, b], [c]] = kitOf(s).fillers;
   assert.match(command(s, 'talent 1 a').at(-1).message, /needs 3 points/);
-  command(s, 'talent add overclocked');
-  command(s, 'talent add overclocked');
-  command(s, 'talent add chain-exploit');
-  assert.match(command(s, 'talent add overclocked').at(-1).message, /Overclocked Core 3\/3/);
-  assert.match(command(s, 'talent add overclocked').at(-1).message, /max rank/);
+  command(s, `talent add ${a.id}`);
+  command(s, `talent add ${a.id}`);
+  command(s, `talent add ${b.id}`);
+  assert.match(command(s, `talent add ${a.id}`).at(-1).message, new RegExp(`${a.name} 3/3`));
+  assert.match(command(s, `talent add ${a.id}`).at(-1).message, /max rank/);
   assert.equal(tierState(s, 'breaker', 0), 'open');
   command(s, 'talent 1 a');
   command(s, 'talent 1 b');
   assert.deepEqual(picksOf(s, 'breaker'), [1], 'swapping is free');
   assert.equal(pointsSpent(s, 'breaker'), 5);
-  assert.match(command(s, 'talent add exploit-kit').at(-1).message, /No free talent points/);
-  command(s, 'talent remove chain-exploit');
-  assert.match(command(s, 'talent remove overclocked').at(-1).message, /Deeper picks depend/);
+  assert.match(command(s, `talent add ${c.id}`).at(-1).message, /No free talent points/);
+  command(s, `talent remove ${b.id}`);
+  assert.match(command(s, `talent remove ${a.id}`).at(-1).message, /Deeper picks depend/);
   assert.equal(talentPoints(s, 'bastion'), 0, 'each class levels on its own');
   command(s, 'talent reset breaker');
   assert.deepEqual(picksOf(s, 'breaker'), []);
   command(s, 'encounter cryptjack'); command(s, 'engage');
-  assert.match(command(s, 'talent add overclocked').at(-1).message, /at home/);
+  assert.match(command(s, `talent add ${a.id}`).at(-1).message, /at home/);
 });
 
 test('the loadout page: Protocols (stash left, slots right), then Skills and talents, picks locked during a fight', async () => {
@@ -450,7 +452,7 @@ test('the loadout page: Protocols (stash left, slots right), then Skills and tal
   assert.match(html, /0 free<\/b> · 0\/\d+ spent · 0 earned/, 'the tree shows its points, no explanation');
   command(s, 'archetype operator');
   command(s, 'developer level 18');
-  assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="talent operator add thread-pool"/);
+  assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="talent operator add [a-z-]+"/);
   assert.match(loadoutMarkup(s, 'operator', 'skills'), /data-command="unequip operator deploy"/);
   command(s, 'encounter cryptjack'); command(s, 'engage');
   html = loadoutMarkup(s, 'operator', 'skills');
@@ -469,15 +471,19 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'overload', 'flood', 'exploit']);
   command(s, 'developer level 7');
   assert.ok(Object.values(keyMap(s)).includes('crack'), 'Crack, the armor stripper, at level 7');
+  // From 10 the subclass's line (the default one until you pick): its skills come at SUBCLASS.unlocks.
+  const { SUBCLASS } = await import('./dist/data.mjs');
+  const { kitOf } = await import('./dist/combat.mjs');
+  command(s, 'developer level 10');
+  const line = kitOf(s).skills;
+  assert.match(command(s, `equip ${line[1]}`).at(-1).message, new RegExp(`level ${SUBCLASS.unlocks[1]}`));
   command(s, 'developer level 22');
   assert.equal(equippedSkills(s, 'breaker').length, 7, 'bar full by level 22');
-  command(s, 'developer level 26');
-  assert.ok(knownSkills(s, 'breaker').includes('fork-bomb'));
-  assert.ok(!equippedSkills(s, 'breaker').includes('fork-bomb'), 'past seven, you choose what to equip');
-  assert.match(command(s, 'equip fork-bomb').at(-1).message, /slots are full/);
-  command(s, 'unequip segfault'); command(s, 'equip fork-bomb');
-  assert.ok(equippedSkills(s, 'breaker').includes('fork-bomb'));
-  assert.match(command(s, 'equip zero-day').at(-1).message, /level 38/);
+  const extra = knownSkills(s, 'breaker').find((id) => !equippedSkills(s, 'breaker').includes(id));
+  assert.ok(extra, 'past seven, you choose what to equip');
+  assert.match(command(s, `equip ${extra}`).at(-1).message, /slots are full/);
+  command(s, `unequip ${line[0]}`); command(s, `equip ${extra}`);
+  assert.ok(equippedSkills(s, 'breaker').includes(extra));
   command(s, 'archetype sysadmin');
   assert.equal(hackerLevel(s), 1, 'a new class starts at level 1');
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit']);
@@ -523,14 +529,15 @@ test('intrusions come in at your level; enemies far below you give little XP', a
 });
 
 test('saves from before the skill rework start each class on the new kit, and old daemon rules go', async () => {
-  const { restore, equippedSkills } = await import('./dist/combat.mjs');
+  const { restore, equippedSkills, knownSkills } = await import('./dist/combat.mjs');
   const s = fresh();
   s.version = 18;
   s.hackers = { breaker: { level: 25, xp: 0 } };
   s.loadout.equipped = { breaker: ['overload', 'sudo', 'pass-the-hash', 'memory-leak', 'bypass'] };
   s.daemons = [{ name: 'warden', trigger: { type: 'attack', part: 'any' }, command: 'interrupt $', on: true }];
   const r = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(r, 'breaker'), ['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault']);
+  assert.deepEqual(equippedSkills(r, 'breaker'), knownSkills(r, 'breaker').slice(0, 7), 'the kit as it unlocks, its subclass line included');
+  assert.deepEqual(equippedSkills(r, 'breaker').slice(0, 4), ['overload', 'flood', 'exploit', 'crack']);
   assert.deepEqual(r.daemons, []);
   assert.deepEqual(r.daemonsOwned, {});
 });

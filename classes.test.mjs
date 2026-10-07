@@ -1,7 +1,7 @@
 // The four classes' first five skills: each does exactly one thing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, keyMap, daemonSlots, timersHidden, intents, readyIn, momentumStacks } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, keyMap, daemonSlots, timersHidden, intents, readyIn, momentumStacks, knownSkills } from './dist/combat.mjs';
 import { CONFIG, SKILLS, ABILITIES } from './dist/data.mjs';
 // These tests check exact numbers: no crits (gear.test.mjs covers them).
 CONFIG.baseCrit = 0;
@@ -19,11 +19,15 @@ export const start = (cls, level = 22, id = 'cryptjack', seed = 7) => {
   const s = fresh();
   s.loadout.archetype = cls;
   s.hackers = { [cls]: { level, xp: 0 } };
+  s.loadout.devKit = { talents: [] }; // every class skill by its level, whichever subclass has it (mechanics tests)
   selectEncounter(s, id, seed, { level: 6 }); // a mid-level enemy: the numbers these tests check
   command(s, 'engage');
   return s;
 };
 export const act = (s, text) => {
+  // A skill this kit knows but hasn't got on its bar takes the last slot (the dev kit knows every skill of the class).
+  const w = text.split(' ')[0], arch = s.loadout.archetype, eq = (s.loadout.equipped[arch] ||= Object.values(keyMap(s)).filter((x) => x !== 'spike'));
+  if (ABILITIES[w] && w !== 'spike' && !Object.values(keyMap(s)).includes(w) && knownSkills(s, arch).includes(w)) { if (eq.length >= 7) eq.pop(); eq.push(w); }
   const events = command(s, text);
   assert.ok(!events.some((e) => e.type === 'warning'), events.at(-1)?.message);
   return resolveCycle(s);
@@ -41,7 +45,8 @@ test('every skill does one kind of thing', () => {
 
 test('keys: 1 Spike, 2–8 equipped skills; other classes\' skills are refused', () => {
   const s = start('bastion');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit', 'firewall', 'purge', 'retaliate', 'suspend', 'patch', 'throttle']);
+  assert.deepEqual(Object.values(keyMap(s)), ['spike', ...knownSkills(s, 'bastion').slice(0, 7)]);
+  assert.deepEqual(Object.values(keyMap(s)).slice(1, 5), ['rate-limit', 'firewall', 'purge', 'retaliate'], 'the core first');
   assert.match(command(s, 'overload pulse').at(-1).message, /isn't on your bar/);
   assert.equal(command(s, '4 pulse').at(-1).type, 'queued');
 });
@@ -223,6 +228,8 @@ test('Operator: +1 daemon slot; Deploy helper; Hook adds 6 to every hit, helpers
 test('Operator: Jam spends a helper to delay the part\'s attack a cycle', () => {
   const s = noArmor(start('operator'));
   big(s, 'pulse');
+  act(s, 'deploy pulse'); act(s, 'jam pulse'); // puts Jam on the bar
+  s.encounter.helpers = []; s.encounter.readyAt = {};
   assert.match(command(s, 'jam pulse').at(-1).message, /no helper/);
   act(s, 'deploy pulse');
   const due = part(s, 'pulse').attack.due;

@@ -15,10 +15,18 @@ CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap sca
 import { start as startAt, act, quiet, noArmor, big, lost } from './classes.test.mjs';
 
 // A level-25 class with exactly these skills on the bar, these talent picks (0 = a, 1 = b) and ranks.
+// The old one-tree talents by tier (a, b): these tests name talents the way they always did, and the
+// dev kit (s.loadout.devKit) turns them on whichever subclass now has them.
+const OLD_TALENTS = {
+  breaker: [['sharp-exploit', 'hair-trigger'], ['core-dump', 'piercing'], ['cascade-failure', 'unsafe-mode']],
+  bastion: [['deep-packet-inspection', 'service-pack'], ['backpressure', 'active-defense'], ['uptime', 'preemption']],
+  infiltrator: [['fast-hands', 'supercookie'], ['polymorphic', 'rotating-proxies'], ['leaked-creds', 'assassinate']],
+  operator: [['big-process', 'long-running'], ['extra-nodes', 'hive'], ['parallel-deploy', 'supervisor']],
+};
 const start = (cls, bar, picks = [], id = 'cryptjack', ranks = {}) => {
   const s = startAt(cls, 50, id);
+  s.loadout.devKit = { talents: picks.map((x, i) => (x === 0 || x === 1 ? OLD_TALENTS[cls][i][x] : null)).filter(Boolean) };
   s.loadout.equipped[cls] = bar;
-  s.loadout.picks[cls] = picks;
   s.loadout.ranks[cls] = ranks;
   return s;
 };
@@ -210,7 +218,7 @@ test('run skills: Tap maps everything, Rotating Proxies cloaks twice, Leaked Cre
   s.loadout.archetype = 'infiltrator';
   s.hackers = { infiltrator: { level: 50, xp: 0 } };
   s.loadout.equipped.infiltrator = ['spoof', 'tap'];
-  s.loadout.picks.infiltrator = [0, 1, 0]; // Rotating Proxies, Leaked Creds
+  s.loadout.devKit = { talents: ['rotating-proxies', 'leaked-creds'] };
   command(s, 'developer location worm');
   Object.assign(s.locations[0], { template: 'relay', quirk: null });
   connect(s, s.locations[0].id);

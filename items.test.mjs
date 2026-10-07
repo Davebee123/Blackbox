@@ -112,9 +112,9 @@ test('class uniques: Tagged and burning targets, a shorter skill cooldown, and a
   assert.equal(cooldownOf(t, 'inject'), ABILITIES.inject.cooldown);
   // The lean: an Infiltrator finds Infiltrator uniques three times as often.
   const count = (cls) => {
-    const x = fresh(); x.loadout.archetype = cls; x.hackers = { [cls]: { level: 9, xp: 0 } }; x.rng = 7;
+    const x = fresh(); x.loadout.archetype = cls; x.hackers = { [cls]: { level: 12, xp: 0 } }; x.rng = 7;
     let n = 0;
-    for (let i = 0; i < 3000; i++) if (UNIQUES[uniqueFrom(x, { kind: 'sprawl' }, 9)?.id]?.lean === 'infiltrator') n++;
+    for (let i = 0; i < 3000; i++) if (['payload', 'phantom'].includes(UNIQUES[uniqueFrom(x, { kind: 'sprawl' }, 12)?.id]?.lean)) n++;
     return n;
   };
   const inf = count('infiltrator'), brk = count('breaker');

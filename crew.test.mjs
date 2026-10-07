@@ -201,6 +201,7 @@ test('a healer: patch <name> heals that crewmate, and a Bastion crewmate patches
   const s = fresh();
   s.hackers = { bastion: { level: 18, xp: 0 } };
   s.loadout.archetype = 'bastion';
+  play(s, 'subclass sysop');
   play(s, 'crew sim breaker operator');
   play(s, 'connect sprawl'); play(s, 'cd var'); play(s, 'attack');
   const [nyx] = matesOf(s);
@@ -215,7 +216,7 @@ test('a healer: patch <name> heals that crewmate, and a Bastion crewmate patches
   // A Bastion bot heals you when you're low.
   const t = fresh();
   t.hackers = { breaker: { level: 18, xp: 0 } };
-  play(t, 'crew sim bastion');
+  play(t, 'crew sim sysop');
   play(t, 'connect sprawl'); play(t, 'cd var'); play(t, 'attack');
   t.run.integrity = 5;
   const bot = matesOf(t)[0];

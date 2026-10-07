@@ -19,7 +19,7 @@ test('the specialty: at level 5 pick one of your class\'s two first-row talents,
   assert.equal(rank(s, 'patch-notes'), 0);
   command(s, 'specialty patch-notes');
   assert.equal(rank(s, 'patch-notes'), 2, 'changed');
-  for (const c of Object.keys(ARCHETYPES)) assert.equal(ARCHETYPES[c].fillers[0].length, 2, c);
+  for (const c of Object.keys(ARCHETYPES)) assert.equal(ARCHETYPES[c].spec.length, 2, c);
 });
 
 test('a hot run: connect <server> +hot makes every fight tougher and every kill pay more', () => {

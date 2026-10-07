@@ -1,4 +1,10 @@
 // BLACKBOX rules data. Every tunable number lives here; see GAME_RULES.md.
+// Subclasses (level 10) live in dist/classes/<class>.data.mjs and join ABILITIES and ARCHETYPES below.
+import * as BREAKER_SUBS from './classes/breaker.data.mjs';
+import * as BASTION_SUBS from './classes/bastion.data.mjs';
+import * as INFILTRATOR_SUBS from './classes/infiltrator.data.mjs';
+import * as OPERATOR_SUBS from './classes/operator.data.mjs';
+const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: INFILTRATOR_SUBS, operator: OPERATOR_SUBS };
 
 export const CONFIG = {
   cycleMs: 8000, // default; players pick a speed below
@@ -189,6 +195,8 @@ export const ABILITIES = {
   reroute: { cls: 'operator', verb: 'util', name: 'Reroute', target: 'part', damage: 0, cooldown: 4, icon: 'command', short: 'Move helpers, each hits', help: 'reroute <part> — every helper moves to this part and hits it once on arrival.' },
   'cron-storm': { cls: 'operator', verb: 'hit', name: 'Cron Storm', target: 'none', damage: 0, cooldown: 6, icon: 'expand', short: 'Helpers hit twice', help: 'cron-storm — every helper hits twice this cycle.' },
 };
+// The subclasses' own skills (dist/classes/<class>.data.mjs).
+for (const d of Object.values(CLASS_DATA)) Object.assign(ABILITIES, d.abilities);
 
 // Daemons: small programs you find (daemon.exe in vaults, now and then from guards and kills).
 // A slotted daemon acts on its own cooldown, in addition to your order. Finding one you have
@@ -681,8 +689,7 @@ export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEver
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
   // Your 4th skill (Crack, Retaliate, Backdoor, Botnet) comes before Backtrace: armor needs an answer early.
-  { level: 7, what: 3 }, { level: 10, what: 'edge' }, { level: 14, what: 4 }, { level: 18, what: 5 },
-  { level: 22, what: 6 }, { level: 26, what: 7 }, { level: 30, what: 8 }, { level: 34, what: 9 }, { level: 38, what: 10 },
+  { level: 7, what: 3 }, { level: 10, what: 'edge' }, // the edge comes with your subclass; its skills at SUBCLASS.unlocks
 ];
 // XP: a kill is worth 20 + 10 per enemy level. Level L to L+1 takes about 5 + 1.2×L kills of
 // your own level (6 at level 1, 27 at 18, 64 at 49): an MMO-length climb, 1,700 fights to 50.
@@ -709,10 +716,11 @@ export const CANTRIPS = [
 ];
 // Edge: each class's signature passive, from level 10 (the root of its talent tree).
 export const EDGE = {
-  breaker: { name: 'Overkill', rule: 'When your hit breaks a part, the damage left over spills onto the next part (up to 20).', cap: 20 },
-  bastion: { name: 'Grudge', rule: 'The part that last hit you takes +20% from your hits.', bonus: 0.2 },
-  infiltrator: { name: 'Weak Spot', rule: 'Your first hit on each part crits.' },
-  operator: { name: 'Last Gasp', rule: 'Each helper hits once more as it expires.' },
+  // sub: since subclasses, the old edge belongs to one of them (edge(s, cls) in combat.mjs checks it).
+  breaker: { name: 'Overkill', rule: 'When your hit breaks a part, the damage left over spills onto the next part (up to 20).', cap: 20, sub: 'demolitionist' },
+  bastion: { name: 'Grudge', rule: 'The part that last hit you takes +20% from your hits.', bonus: 0.2, sub: 'warden' },
+  infiltrator: { name: 'Weak Spot', rule: 'Your first hit on each part crits.', sub: 'phantom' },
+  operator: { name: 'Last Gasp', rule: 'Each helper hits once more as it expires.', sub: 'herder' },
 };
 // Sync Window bonuses: each class syncs its own way.
 export const SYNC = {
@@ -736,78 +744,68 @@ const RUN_SKILLS = {
   tap: { id: 'tap', name: 'Tap', rule: 'On runs: once per run, print the whole folder tree, its guards, and which file holds the key.', verb: 'run' },
 };
 const skillsOf = (ids) => ids.map((id) => RUN_SKILLS[id] || card(id));
+// A class's subclasses, from its module: skill cards for their lines, plus their trees and edge.
+const subsOf = (cls) => Object.fromEntries(Object.entries(CLASS_DATA[cls].subs).map(([id, x]) => [id, { ...x, id, cls, cards: skillsOf(x.skills) }]));
 export const ARCHETYPES = {
   breaker: {
     name: 'Breaker', role: ['DPS', 'Burst'], idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
     status: 'exposed',
     passive: { name: 'Momentum', rule: 'Each part you break: +10% damage for 2 cycles, up to 3 stacks. Another break refreshes it.' },
-    skills: skillsOf(['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day']),
-    fillers: [
-      [f('overclocked', 'Overclocked Core', '+3% damage per rank.', 0.03), f('chain-exploit', 'Chain Exploit', 'Momentum +2% per stack per rank.', 0.02)],
-      [f('exploit-kit', 'Exploit Kit', 'Exposed gives +5% more crit chance per rank.', 5), f('heat-sink', 'Heat Sink', 'Overload +4 damage per rank.', 4)],
-      [f('armor-cracker', 'Armor Cracker', 'Parts you strip take 1 cycle longer to patch per rank.', 1), f('failsafe', 'Failsafe', 'Take 3% less damage from attacks per rank.', 0.03)],
-    ],
-    talents: [
-      [t('sharp-exploit', 'Sharp Exploit', 'Exploit also deals 20 damage.'), t('hair-trigger', 'Hair Trigger', 'Overload has cooldown 2 but deals 35.')],
-      [t('core-dump', 'Core Dump', 'Segfault\'s execute starts under 40%.'), t('piercing', 'Piercing', 'Your first Overload each fight goes straight through armor.')],
-      [t('cascade-failure', 'Cascade Failure', 'Your first break each fight resets your cooldowns.'), t('unsafe-mode', 'Unsafe Mode', '+30% damage dealt, +20% damage taken.')],
-    ],
+    core: ['overload', 'flood', 'exploit', 'crack'], // levels 1–7; the rest of a kit is its subclass's (subs)
+    spec: [f('overclocked', 'Overclocked Core', '+3% damage per rank.', 0.03), f('chain-exploit', 'Chain Exploit', 'Momentum +2% per stack per rank.', 0.02)], // the level-5 specialty: one of these, two free ranks
+    subs: subsOf('breaker'),
+    skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
   bastion: {
     name: 'Bastion', role: ['Tank', 'Healer'], idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
     passive: { name: 'Hardened', rule: 'The first damage hit on you each fight deals 25% less.' },
-    skills: skillsOf(['rate-limit', 'firewall', 'purge', 'retaliate', 'suspend', 'patch', 'throttle', 'harden', 'reclaim', 'quarantine', 'failover']),
-    fillers: [
-      [f('patch-notes', 'Patch Notes', 'Patch heals +3 per rank.', 3), f('stateful-firewall', 'Stateful Firewall', 'Firewall absorbs +5 per rank.', 5)],
-      [f('token-bucket', 'Token Bucket', 'Rate Limit +4 damage per rank.', 4), f('redundancy', 'Redundancy', '+4 max Signal on runs per rank.', 4)],
-      [f('hardened-kernel', 'Hardened Kernel', 'Take 3% less damage from attacks per rank.', 0.03), f('reverse-shell', 'Reverse Shell', 'Retaliate hits +5 per rank.', 5)],
-    ],
-    talents: [
-      [t('deep-packet-inspection', 'Deep Packet Inspection', 'Firewall absorbs 30.'), t('service-pack', 'Service Pack', 'Patch heals 20 up front.')],
-      [t('backpressure', 'Backpressure', 'Throttled cuts attacks by 75%.'), t('active-defense', 'Active Defense', 'Retaliate stays lit for 2 cycles.')],
-      [t('uptime', 'Uptime', 'Once per fight, a hit that would drop you to 0 leaves you at 1.'), t('preemption', 'Preemption', 'Suspend has cooldown 2.')],
-    ],
+    core: ['rate-limit', 'firewall', 'purge', 'retaliate'], // levels 1–7; the rest of a kit is its subclass's (subs)
+    spec: [f('patch-notes', 'Patch Notes', 'Patch heals +3 per rank.', 3), f('stateful-firewall', 'Stateful Firewall', 'Firewall absorbs +5 per rank.', 5)], // the level-5 specialty: one of these, two free ranks
+    subs: subsOf('bastion'),
+    skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
   infiltrator: {
     name: 'Infiltrator', role: ['DPS', 'Damage over time', 'Stealth runs'], idea: 'Know where to hit, and slip through runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
     passive: { name: 'Ghost', rule: 'Slip past one guard a run without a fight. Every fight opens with a blue Surprise window: Inject, Tag and Keepalive fired in it hit harder. Return trips on runs are free.' },
-    skills: skillsOf(['inject', 'backdoor', 'keepalive', 'tag', 'null-route', 'detonate', 'opening', 'propagate', 'spoof', 'tap', 'implant']),
-    fillers: [
-      [f('heap-spray', 'Heap Spray', 'Inject +2 per tick per rank.', 2), f('recon', 'Recon', 'Opening +5 damage per rank.', 5)],
-      [f('backchannel', 'Backchannel', 'Backdoor +4 damage per rank.', 4), f('onion-routing', 'Onion Routing', '+3 max Signal on runs per rank.', 3)],
-      [f('persistent-tag', 'Persistent Tag', 'Tagged burns tick +10% more per rank.', 0.1), f('low-profile', 'Low Profile', 'Take 3% less damage from attacks per rank.', 0.03)],
-    ],
-    talents: [
-      [t('fast-hands', 'Fast Hands', 'Opening stays lit for 2 cycles.'), t('supercookie', 'Supercookie', 'Tag lasts 6 cycles.')],
-      [t('polymorphic', 'Polymorphic', 'Inject lasts 5 cycles.'), t('rotating-proxies', 'Rotating Proxies', 'Spoof twice per run.')],
-      [t('leaked-creds', 'Leaked Creds', 'Slip past 3 guards a run instead of 1.'), t('assassinate', 'Assassinate', 'Detonate on a Tagged part deals double.')],
-    ],
+    core: ['inject', 'backdoor', 'keepalive', 'tag'], // levels 1–7; the rest of a kit is its subclass's (subs)
+    spec: [f('heap-spray', 'Heap Spray', 'Inject +2 per tick per rank.', 2), f('recon', 'Recon', 'Opening +5 damage per rank.', 5)], // the level-5 specialty: one of these, two free ranks
+    subs: subsOf('infiltrator'),
+    skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
   operator: {
     name: 'Operator', role: ['Support', 'Summoner'], idea: 'Write the script, let it run.', solo: 'Steady damage without constant input.', crew: 'Makes everyone’s hits count for more.',
     status: 'hooked',
     passive: { name: 'Extra thread', rule: '+1 daemon slot.' },
-    skills: skillsOf(['deploy', 'hook', 'spawn', 'botnet', 'kill-switch', 'jam', 'barrier', 'garbage-collect', 'fork', 'reroute', 'cron-storm']),
-    fillers: [
-      [f('thread-pool', 'Thread Pool', 'Deploy helpers deal +1 per rank.', 1), f('kernel-hook', 'Kernel Hook', 'Hooked parts take +1 more per hit per rank.', 1)],
-      [f('node-pool', 'Node Pool', 'Botnet helpers deal +1 per rank.', 1), f('dead-mans-switch', 'Dead Man’s Switch', 'Kill Switch cashes in +5% per rank.', 0.05)],
-      [f('load-balancer', 'Load Balancer', 'Take 3% less damage from attacks per rank.', 0.03), f('extra-memory', 'Extra Memory', '+3 max Signal on runs per rank.', 3)],
-    ],
-    talents: [
-      [t('big-process', 'Big Process', 'Deploy helpers deal 14.'), t('long-running', 'Long-running', 'Deploy helpers last 6 cycles.')],
-      [t('extra-nodes', 'Extra Nodes', 'Botnet sends 4 helpers.'), t('hive', 'Hive', 'Your helper cap is 9.')],
-      [t('parallel-deploy', 'Parallel Deploy', 'Deploy starts two helpers at half damage: same total, twice the hits for Hook.'), t('supervisor', 'Supervisor', 'Kill Switch readies Deploy.')],
-    ],
+    core: ['deploy', 'hook', 'spawn', 'botnet'], // levels 1–7; the rest of a kit is its subclass's (subs)
+    spec: [f('thread-pool', 'Thread Pool', 'Deploy helpers deal +1 per rank.', 1), f('kernel-hook', 'Kernel Hook', 'Hooked parts take +1 more per hit per rank.', 1)], // the level-5 specialty: one of these, two free ranks
+    subs: subsOf('operator'),
+    skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
 };
 // Skills in unlock order for a class; the first seven fill the bar by level 18.
-export const skillOrder = (arch) => ARCHETYPES[arch].skills.map((x) => x.id);
+// Subclasses: picked at SUBCLASS.from (when the edge used to come); each has its own skill line,
+// unlocking at SUBCLASS.unlocks in the order its module writes them, its own edge and talent tree.
+export const SUBCLASS = { from: 10, unlocks: [12, 14, 18, 22, 26, 30, 34, 38] };
+// Every subclass by id (ids are unique across classes): { id, cls, name, edge, skills, cards, fillers, talents }.
+export const SUBS = Object.fromEntries(Object.values(ARCHETYPES).flatMap((a) => Object.values(a.subs).map((x) => [x.id, x])));
+// The class that never picked one plays its old-edge subclass (EDGE[cls].sub) until it does.
+export const defaultSub = (arch) => EDGE[arch]?.sub || Object.keys(ARCHETYPES[arch].subs)[0];
+for (const a of Object.values(ARCHETYPES)) {
+  const seen = new Set();
+  a.skills = skillsOf([...a.core, ...Object.values(a.subs).flatMap((x) => x.skills)].filter((id) => !seen.has(id) && seen.add(id)));
+}
+// A kit's skills in unlock order: the class's core, then its subclass's line (none before you pick).
+export const skillOrder = (arch, sub = null) => [...ARCHETYPES[arch].core, ...(sub && ARCHETYPES[arch].subs[sub] ? ARCHETYPES[arch].subs[sub].skills : [])];
 export const startingSkills = (arch) => skillOrder(arch).slice(0, LOADOUT.equipSlots);
-// Level at which a class learns a skill or cantrip.
-export function unlockLevel(arch, id) {
-  const i = skillOrder(arch).indexOf(id);
-  const u = UNLOCKS.find((x) => (i >= 0 ? x.what === i : x.what === id));
-  return u ? u.level : Infinity;
+// Level at which a class learns a skill or cantrip. A subclass skill: at its place in that subclass's
+// line (with no subclass named, the first of the class's lines that has it).
+export function unlockLevel(arch, id, sub = null) {
+  const i = ARCHETYPES[arch].core.indexOf(id);
+  const u = UNLOCKS.find((x) => (i >= 0 ? x.what === i : x.what === id)); // the core, the cantrips, the edge
+  if (u) return u.level;
+  const subs = sub ? [ARCHETYPES[arch].subs[sub]].filter(Boolean) : Object.values(ARCHETYPES[arch].subs);
+  for (const x of subs) { const j = x.skills.indexOf(id); if (j >= 0) return SUBCLASS.unlocks[j] ?? Infinity; }
+  return Infinity;
 }

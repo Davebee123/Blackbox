@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, addItem, maxSignal, syncServer } from './dist/combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
-import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS } from './dist/data.mjs';
+import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS, SUBS, SUBCLASS, defaultSub } from './dist/data.mjs';
 
 import { planner, soonest } from './dist/planner.mjs';
 
@@ -33,20 +33,23 @@ export function build(s, cls, b, opts) {
   s.loadout.archetype = cls;
   s.hackers = { [cls]: { level: b.level, xp: 0 } };
   let xp = 0; for (let l = 1; l < b.server; l++) xp += SERVER.xpToNext(l); s.serverXp = xp;
-  const a = ARCHETYPES[cls];
-  if (b.tree === 'full') { s.loadout.picks[cls] = [0, 0, 0]; s.loadout.ranks[cls] = Object.fromEntries(a.fillers.flat().map((n) => [n.id, 3])); }
+  // From SUBCLASS.from a subclass (opts.sub, else the class's default): its skill line and tree.
+  const sub = b.level >= SUBCLASS.from ? opts.sub || defaultSub(cls) : null, key = sub || cls, kit = SUBS[sub];
+  if (sub) s.loadout.sub = { [cls]: sub };
+  if (!kit) { /* no tree before the subclass */ }
+  else if (b.tree === 'full') { s.loadout.picks[key] = [0, 0, 0]; s.loadout.ranks[key] = Object.fromEntries(kit.fillers.flat().map((n) => [n.id, 3])); }
   else {
     let left = b.level < LOADOUT.talentFrom ? 0 : Math.floor((b.level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
     const ranks = {}, picks = [];
-    for (const [id, n] of fillOrder(a.fillers)) {
+    for (const [id, n] of fillOrder(kit.fillers)) {
       if (left <= 0) break;
       if (!n) { picks[+id[1]] = (opts.picks || [0, 0, 0])[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
     }
-    s.loadout.picks[cls] = picks; s.loadout.ranks[cls] = ranks;
+    s.loadout.picks[key] = picks; s.loadout.ranks[key] = ranks;
   }
-  if (opts.picks) s.loadout.picks[cls] = opts.picks;
-  if (opts.ranks) s.loadout.ranks[cls] = opts.ranks;
-  if (opts.extra) s.loadout.equipped[cls] = [...skillOrder(cls).slice(0, 4), opts.extra];
+  if (opts.picks) s.loadout.picks[key] = opts.picks;
+  if (opts.ranks) s.loadout.ranks[key] = opts.ranks;
+  if (opts.extra) s.loadout.equipped[key] = [...skillOrder(cls).slice(0, 4), opts.extra];
   // Protocols: a Tuned one in every open slot at the bracket's level, except an implant slot below
   // the level implants start to drop (item level 15). Services: the bracket's set.
   if (!opts.noGear) {
@@ -140,7 +143,7 @@ if (isMain) {
   md += '\n## Unlockable skills (level 50, whole tree)\n\nEach one swapped into the fifth slot. Change vs the first five.\n\n| Class | Skill | Wins | Health lost | Δ | Cycles | Δ |\n|---|---|---:|---:|---:|---:|---:|\n';
   for (const p of classes) {
     const cls = CLASS[p], base = summary[p].at(-1);
-    for (const id of skillOrder(cls).slice(5)) {
+    for (const id of skillOrder(cls, defaultSub(cls)).slice(5)) {
       if (['tap', 'brute-login'].includes(id)) continue;
       const r = score(p, top, { extra: id });
       md += `| ${p} | ${ARCHETYPES[cls].skills.find((x) => x.id === id).name} | ${r.wins}/${r.total} | ${r.lost.toFixed(0)}% | ${(r.lost - base.lost >= 0 ? '+' : '') + (r.lost - base.lost).toFixed(0)} | ${r.cycles.toFixed(1)} | ${(r.cycles - base.cycles >= 0 ? '+' : '') + (r.cycles - base.cycles).toFixed(1)} |\n`;
@@ -149,7 +152,7 @@ if (isMain) {
   // Every full-tree build: all ranks + each combination of choices.
   md += '\n## Every maxed build (level 50, all ranks)\n\n| Class | Best build | Health lost · cycles | Worst build | Health lost · cycles |\n|---|---|---:|---|---:|\n';
   for (const p of classes) {
-    const cls = CLASS[p], a = ARCHETYPES[cls];
+    const cls = CLASS[p], a = SUBS[defaultSub(cls)];
     const rows = [];
     for (let m = 0; m < 8; m++) { const picks = [m & 1, (m >> 1) & 1, (m >> 2) & 1]; const r = score(p, top, { picks }); rows.push({ name: picks.map((x, i) => a.talents[i][x].name).join(' / '), ...r }); }
     rows.sort((x, y) => x.lost - y.lost);

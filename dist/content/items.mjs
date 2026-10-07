@@ -944,7 +944,7 @@ export default {
       "name": "Tracking Pixel",
       "base": "one-liner",
       "level": 3,
-      "lean": "infiltrator",
+      "lean": "phantom",
       "primary": {
         "damage": 2,
         "signal": 10
@@ -974,7 +974,7 @@ export default {
       "name": "Slow Drip",
       "base": "proof-of-concept",
       "level": 4,
-      "lean": "infiltrator",
+      "lean": "payload",
       "primary": {
         "damage": [
           7,
@@ -1002,7 +1002,7 @@ export default {
       "name": "Spearphish",
       "base": "weaponized-exploit",
       "level": 7,
-      "lean": "infiltrator",
+      "lean": "phantom",
       "primary": {
         "damage": [
           11,
@@ -1034,7 +1034,7 @@ export default {
       "name": "Jackhammer",
       "base": "weaponized-exploit",
       "level": 5,
-      "lean": "breaker",
+      "lean": "demolitionist",
       "primary": {
         "damage": [
           11,
@@ -1063,7 +1063,7 @@ export default {
       "name": "Shrapnel",
       "base": "cron-job",
       "level": 8,
-      "lean": "breaker",
+      "lean": "overclocker",
       "primary": {
         "damage": 4,
         "signal": 18
@@ -1088,7 +1088,7 @@ export default {
       "name": "Uptime SLA",
       "base": "socks-tunnel",
       "level": 6,
-      "lean": "bastion",
+      "lean": "warden",
       "primary": {
         "signal": 48,
         "reduction": 1
@@ -1116,7 +1116,7 @@ export default {
       "name": "Hot Patch",
       "base": "reverse-shell",
       "level": 4,
-      "lean": "bastion",
+      "lean": "sysop",
       "primary": {
         "signal": 14,
         "regen": 0.6
@@ -1139,7 +1139,7 @@ export default {
       "name": "Thread Pool",
       "base": "cron-job",
       "level": 5,
-      "lean": "operator",
+      "lean": "herder",
       "primary": {
         "damage": 3,
         "signal": 18
@@ -1165,7 +1165,7 @@ export default {
       "name": "Fork Handle",
       "base": "tty-upgrade",
       "level": 9,
-      "lean": "operator",
+      "lean": "hijacker",
       "primary": {
         "signal": 26,
         "regen": 1

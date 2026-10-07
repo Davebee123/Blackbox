@@ -14,9 +14,9 @@
 //   One that went down reboots at CREW.reboot of its Signal for the next fight. A new run starts them full.
 // - The sim crew is there from CREW.from: early levels are solo.
 // Crewmates live beside the save (not in it): s.crewSim holds who's in the crew.
-import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part } from './combat.mjs';
+import { hooks, fresh, command, playerPhase, active, addItem, maxSignal, hackerLevel, classOf, emit, warn, livingParts, alive, part, classEach } from './combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS } from './gear.mjs';
-import { ARCHETYPES, SKILLS } from './data.mjs';
+import { ARCHETYPES, SKILLS, SUBS } from './data.mjs';
 import { planner } from './planner.mjs';
 import { online, isFriend } from './presence.mjs';
 import { isMember } from './consortium.mjs';
@@ -38,7 +38,7 @@ export function matesOf(s) {
   for (const x of s.crewSim || []) x.level ??= hackerLevel(s);
   const want = [...(s.crewSim || []), ...(s.guests || [])]; // guests: consortium members who joined a fight on the consortium's ground
   let m = s._mates;
-  const key = want.map((x) => `${x.cls}:${x.name}:${x.level ?? hackerLevel(s)}`).join(',');
+  const key = want.map((x) => `${x.cls}:${x.sub || ''}:${x.name}:${x.level ?? hackerLevel(s)}`).join(',');
   if (!m || m.key !== key) {
     m = want.map((x, i) => makeMate(s, x, i));
     m.key = key;
@@ -54,12 +54,13 @@ export const mateSignal = (s, m) => {
 };
 export const mateUp = (m) => m.encounter && active(m) && m.run.integrity > 0;
 
-function makeMate(host, { cls, name, guest, level: own }, i) {
+function makeMate(host, { cls, sub, name, guest, level: own }, i) {
   const m = fresh();
   if (guest) m.guest = true;
   m.who = name;
   Object.defineProperty(m, 'host', { value: host, enumerable: false, configurable: true });
   m.loadout.archetype = cls;
+  if (sub) m.loadout.sub = { [cls]: sub }; // a subclass, from level 10 (else its class's default)
   const level = own ?? hackerLevel(host);
   m.hackers = { [cls]: { level, xp: 0 } };
   m.rng = ((host.rng || 1) * 31 + i * 7919) >>> 0;
@@ -111,6 +112,7 @@ hooks.crewEngage = (s) => {
     m.run.integrity = mateSignal(s, m);
     m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null,
       chits: 0, hardened: classOf(m) === 'bastion' ? SKILLS.hardened : 0, metrics: structuredClone(e.metrics), down: false };
+    classEach('start', m); // subclass modules (dist/classes)
     decide(m);
   }
   emit(s, 'status', `${mates.some((m) => m.guest) ? 'Crew and consortium in' : 'Crew in'}: ${mates.map((m) => `${m.who} (${ARCHETYPES[classOf(m)].name}${m.guest ? ', consortium' : ''})`).join(', ')}. The virus is ${Math.round((k - 1) * 100)}% tougher.`);
@@ -173,11 +175,12 @@ export function crewCommand(s, rest) {
     const picks = words.slice(1);
     const classes = Object.keys(ARCHETYPES);
     const want = (picks.length ? picks : classes.filter((c) => c !== classOf(s))).slice(0, CREW.max);
-    const bad = want.find((c) => !ARCHETYPES[c]);
-    if (bad) warn(s, `No class called ${bad}. Classes: ${classes.join(', ')}.`);
+    const bad = want.find((c) => !ARCHETYPES[c] && !SUBS[c]);
+    if (bad) warn(s, `No class or subclass called ${bad}. Classes: ${classes.join(', ')}. Subclasses: ${Object.keys(SUBS).join(', ')}.`);
     else {
-      s.crewSim = want.map((cls, i) => ({ cls, name: CREW.names[i], level: hackerLevel(s) })); // at your level now; switching class later doesn't move theirs
-      emit(s, 'info', `Crew (simulated): ${s.crewSim.map((x) => `${x.name}, ${ARCHETYPES[x.cls].name}`).join(' · ')}. They join your run fights.`);
+      // A class, or a subclass (crew sim sysop): at your level now; switching class later doesn't move theirs.
+      s.crewSim = want.map((c, i) => ({ cls: SUBS[c]?.cls || c, ...(SUBS[c] ? { sub: c } : {}), name: CREW.names[i], level: hackerLevel(s) }));
+      emit(s, 'info', `Crew (simulated): ${s.crewSim.map((x) => `${x.name}, ${x.sub ? SUBS[x.sub].name : ARCHETYPES[x.cls].name}`).join(' · ')}. They join your run fights.`);
     }
   } else if (words[0] === 'invite' && words[1]) {
     // A friend who's online joins as a crewmate (still a bot until there's a server), in their class.

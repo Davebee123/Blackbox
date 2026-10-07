@@ -2,7 +2,12 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+import { SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+// The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
+import BREAKER_FX from './classes/breaker.mjs';
+import BASTION_FX from './classes/bastion.mjs';
+import INFILTRATOR_FX from './classes/infiltrator.mjs';
+import OPERATOR_FX from './classes/operator.mjs';
 
 import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
@@ -30,10 +35,20 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 
-export const SAVE_VERSION = 30;
+export const SAVE_VERSION = 31; // v31: subclasses (retireClassTrees)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
-export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewActNamed, crewStanding, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; run.mjs crewGuests, foldersOf; the browser sets stepped.
+export const hooks = { flee: null, now: null };
+// Class modules' hooks (see the header of dist/classes/breaker.mjs for each one).
+const CLASS_HOOKS = [];
+const classHooks = () => (CLASS_HOOKS.length ? CLASS_HOOKS : CLASS_HOOKS.push(BREAKER_FX, BASTION_FX, INFILTRATOR_FX, OPERATOR_FX) && CLASS_HOOKS);
+const classUse = (id) => { for (const h of classHooks()) if (h.use?.[id]) return h.use[id]; return null; };
+const classCheck = (id) => { for (const h of classHooks()) if (h.validate?.[id]) return h.validate[id]; return null; };
+// Run a hook on every class module: 'each' calls them all; 'mult' multiplies their numbers; 'sum' adds them.
+export const classEach = (name, ...args) => { for (const h of classHooks()) h[name]?.(...args); };
+const classMult = (name, ...args) => classHooks().reduce((m, h) => m * (h[name] ? h[name](...args) ?? 1 : 1), 1);
+const classSum = (name, ...args) => classHooks().reduce((n, h) => n + (h[name] ? h[name](...args) || 0 : 0), 0);
+export const classPlan = (s, t) => { for (const h of classHooks()) { const c = h.plan?.(s, t); if (c) return c; } return null; }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewActNamed, crewStanding, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; run.mjs crewGuests, foldersOf; the browser sets stepped.
 
 export function fresh() {
   const s = {
@@ -117,17 +132,31 @@ export function armorLeft(s) {
 // A key only appears once your class's level unlocks it.
 export const CANTRIP_IDS = ['spike'];
 export const classOf = (s) => s.loadout?.archetype || 'breaker';
-// Is this talent picked for your current class?
+// Your subclass (SUBS in data.mjs; dist/classes/): from SUBCLASS.from, the one you picked, else your
+// class's old-edge subclass until you pick. Before that level, none: just the class's core.
+export const subOf = (s, arch = classOf(s)) => (hackerLevel(s, arch) >= SUBCLASS.from ? s.loadout?.sub?.[arch] || defaultSub(arch) : null);
+export const subPicked = (s, arch = classOf(s)) => !!s.loadout?.sub?.[arch];
+// Is this subclass's edge on? Class modules check their own edges with it.
+export const subEdge = (s, id) => CONFIG.edges !== false && subOf(s) === id;
+// Your subclass's tree and skill line (null before SUBCLASS.from).
+export const kitOf = (s, arch = classOf(s)) => SUBS[subOf(s, arch)] || null;
+// Where a kit's choices are kept: the subclass's own key, so each subclass keeps its own tree and bar.
+const kitKey = (s, arch) => (s.loadout?.devKit ? arch : subOf(s, arch) || arch);
+// Is this talent picked for your current subclass?
+// s.loadout.devKit (tests of single mechanics): every skill of the class by its level, and the talents it names.
 export function hasTalent(s, id) {
-  const arch = classOf(s);
-  const picks = s.loadout?.picks?.[arch] || [];
-  return ARCHETYPES[arch].talents.some((pair, i) => (picks[i] === 0 || picks[i] === 1) && pair[picks[i]].id === id);
+  if (s.loadout?.devKit) return (s.loadout.devKit.talents || []).includes(id);
+  const kit = kitOf(s);
+  if (!kit) return false;
+  const picks = picksOf(s, classOf(s));
+  return kit.talents.some((pair, i) => (picks[i] === 0 || picks[i] === 1) && pair[picks[i]].id === id);
 }
 // Cooldowns after talents.
 export function cooldownOf(s, id) {
   if (id === 'overload' && hasTalent(s, 'hair-trigger')) return 2;
   if (id === 'suspend' && hasTalent(s, 'preemption')) return 2;
-  const base = ABILITIES[id]?.cooldown || 0;
+  let base = ABILITIES[id]?.cooldown || 0;
+  for (const h of classHooks()) if (h.cooldown) base = h.cooldown(s, id, base);
   // A unique that shortens one skill's cooldown (effect skill-cd), never under 1.
   const off = fxFire(s, 'always', { do: 'skill-cd' }, false).filter((x) => x.fx.skill === id).reduce((n, x) => n + x.value, 0);
   return off && base ? Math.max(1, base - off) : base;
@@ -164,8 +193,8 @@ export function statusesOn(s, p) {
   const c = s.encounter.cycle;
   return ['exposed', 'tagged', 'hooked', 'throttled', 'quarantined'].filter((k) => p[k + 'Until'] >= c);
 }
-const on = (s, p, k) => p[k + 'Until'] >= s.encounter.cycle;
-const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
+export const on = (s, p, k) => p[k + 'Until'] >= s.encounter.cycle;
+export const buffed = (e, k) => e.buffs?.[k] >= e.cycle;
 
 // opts.mine: your own hit (your buffs apply). Armor isn't a multiplier: see hit().
 // Breaker Momentum: stacks still running, and the damage they add (Chain Exploit +2% a stack per rank).
@@ -191,6 +220,7 @@ export function damageMultiplier(s, p, opts = {}) {
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%' })) m *= 1 + x.value / 100;
   }
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
+  if (!opts.server) m *= classMult('dealt', s, p, opts);
   return m;
 }
 
@@ -218,7 +248,7 @@ export const helperCap = (s) => (hasTalent(s, 'hive') ? 9 : SKILLS.helperCap);
 //   stripped: you broke a part's last chit (Shatter) · struck: an attack reached you (Retaliate) ·
 //   slipped: an attack missed you or was delayed (Opening).
 export const procOpen = (s, kind) => { const e = s.encounter; const x = e?.procs?.[kind]; return !!x && (typeof x === 'number' ? x : x.until) >= e.cycle; };
-function openProc(s, kind, extra = {}) {
+export function openProc(s, kind, extra = {}) {
   const e = s.encounter;
   const ids = Object.keys(ABILITIES).filter((id) => ABILITIES[id].proc === kind && usable(s).includes(id));
   if (!ids.length) return;
@@ -311,7 +341,7 @@ export const defense = (s, stat) => gearStat(s, stat, guarding(s));
 export const critMultiplier = () => CRIT.multiplier;
 // Your power: every level, your numbers grow 4% (damage, heals, shields, Signal).
 export const powerOf = (s) => power(hackerLevel(s));
-const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
+export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 // The level gap to the enemy you're fighting (positive: it's above you).
 export const levelGap = (s) => (s.encounter?.virus?.level || hackerLevel(s)) - hackerLevel(s);
 // Classic-style misses: 5% against a same-level target, +1% per level it's above you, −1% per
@@ -403,7 +433,8 @@ export function uniqueFrom(s, ctx, level) {
 const LEAN = 3;
 function pickUnique(s, pool) {
   if (!pool.length) return null;
-  const w = (u) => (u.lean && u.lean === classOf(s) ? LEAN : 1) * (u.id === s.listen ? listenBoost(s) : 1);
+  // A lean to your subclass counts in full; to your class (or the other subclass of it), two thirds.
+  const w = (u) => (!u.lean ? 1 : u.lean === subOf(s) ? LEAN : u.lean === classOf(s) || SUBS[u.lean]?.cls === classOf(s) ? LEAN * 2 / 3 : 1) * (u.id === s.listen ? listenBoost(s) : 1);
   let r = rand(s) * pool.reduce((n, u) => n + w(u), 0);
   for (const u of pool) { r -= w(u); if (r < 0) return u; }
   return pool.at(-1);
@@ -819,33 +850,39 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
   while (h.level < LOADOUT.maxLevel && h.xp >= xpToNext(h.level)) {
     const arch = classOf(s);
     // Pin the bar you have now before the level changes, so nothing falls off it.
-    if (!s.loadout.equipped[arch]) s.loadout.equipped[arch] = [...equippedSkills(s, arch)];
+    if (!s.loadout.equipped[kitKey(s, arch)]) s.loadout.equipped[kitKey(s, arch)] = [...equippedSkills(s, arch)];
     h.xp -= xpToNext(h.level);
     h.level++;
     breadcrumb(s, h.level);
     // Rogue servers keep up with you inside their layer's band (rogue.mjs does it on a visit too).
     for (const l of s.locations || []) if (l.rogue && !l.member) l.level = Math.max(l.level || 1, SERVER.locationLevel(h.level, l.depth || 1));
-    const got = newAtLevel(arch, h.level);
+    const sub = subOf(s, arch);
+    // Reaching your subclass level: the bar you had carries into the subclass's own bar.
+    if (sub && !s.loadout.equipped[sub]) s.loadout.equipped[sub] = [...(s.loadout.equipped[arch] || equippedSkills(s, arch))];
+    const got = newAtLevel(arch, h.level, sub);
     // New skills go straight onto the bar while there's room.
-    const eq = s.loadout.equipped[arch];
-    for (const g of got) if (skillOrder(arch).includes(g) && eq.length < LOADOUT.equipSlots && !eq.includes(g)) eq.push(g);
-    const names = got.map((id) => (id === 'edge' ? `${EDGE[arch].name} (${EDGE[arch].rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
-    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.specFrom && !specOf(s, arch) ? ` Pick a specialty: ${specOptions(arch).map((o) => o.name).join(' or ')} (type specialty).` : '');
+    const eq = (s.loadout.equipped[kitKey(s, arch)] ||= [...equippedSkills(s, arch)]);
+    for (const g of got) if (skillOrder(arch, sub).includes(g) && eq.length < LOADOUT.equipSlots && !eq.includes(g)) eq.push(g);
+    const names = got.map((id) => (id === 'edge' ? `${SUBS[sub].edge.name} (${SUBS[sub].edge.rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
+    const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Pick a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play ${SUBS[sub].name}.` : '';
+    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.specFrom && !specOf(s, arch) ? ` Pick a specialty: ${specOptions(arch).map((o) => o.name).join(' or ')} (type specialty).` : '') + pickSub;
     emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${talent} Power +4%.`, { level: h.level, unlocked: got });
   }
   if (h.level >= LOADOUT.maxLevel) h.xp = 0;
 }
 // Skills and cantrips a class gains exactly at a level.
-export function newAtLevel(arch, lvl) {
-  return UNLOCKS.filter((u) => u.level === lvl).map((u) => (typeof u.what === 'number' ? skillOrder(arch)[u.what] : u.what));
+export function newAtLevel(arch, lvl, sub = null) {
+  const core = UNLOCKS.filter((u) => u.level === lvl).map((u) => (typeof u.what === 'number' ? ARCHETYPES[arch].core[u.what] : u.what));
+  const line = sub ? (ARCHETYPES[arch].subs[sub]?.skills || []).filter((id, i) => SUBCLASS.unlocks[i] === lvl) : [];
+  return [...core, ...line];
 }
 // The next thing a class will unlock, for the "next at level N" hint.
 export function nextUnlock(s, arch = classOf(s)) {
-  const lvl = hackerLevel(s, arch);
-  const u = UNLOCKS.find((x) => x.level > lvl);
+  const lvl = hackerLevel(s, arch), sub = subOf(s, arch) || defaultSub(arch);
+  const all = [...UNLOCKS.map((u) => ({ level: u.level, id: typeof u.what === 'number' ? ARCHETYPES[arch].core[u.what] : u.what })), ...ARCHETYPES[arch].subs[sub].skills.map((id, i) => ({ level: SUBCLASS.unlocks[i], id }))];
+  const u = all.filter((x) => x.level > lvl).sort((a, b) => a.level - b.level)[0];
   if (!u) return null;
-  const id = typeof u.what === 'number' ? skillOrder(arch)[u.what] : u.what;
-  return { level: u.level, id, name: id === 'edge' ? EDGE[arch].name : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id };
+  return { level: u.level, id: u.id, name: u.id === 'edge' ? 'your subclass' : ARCHETYPES[arch].skills.find((x) => x.id === u.id)?.name || ABILITIES[u.id]?.name || u.id };
 }
 
 // The server levels from everyone's work: defending it and banking loot.
@@ -872,31 +909,50 @@ export function gainServerXp(s, amount, why) {
   } // no log line otherwise: it mirrors your own XP line, and the server card shows its bar
 }
 
+// Subclasses (v31): a class's talent ranks move into its default subclass's tree (the nodes it still
+// has); tier picks are cleared, the points free to spend again. Bars carry over as each subclass is used.
+function retireClassTrees(s) {
+  const L = (s.loadout ||= {});
+  for (const arch of Object.keys(ARCHETYPES)) {
+    const sub = defaultSub(arch), ids = new Set(SUBS[sub].fillers.flat().map((n) => n.id));
+    const old = L.ranks?.[arch];
+    if (old && Object.keys(old).length && !L.ranks[sub]) L.ranks[sub] = Object.fromEntries(Object.entries(old).filter(([id]) => ids.has(id)));
+    if (L.ranks?.[arch]) delete L.ranks[arch];
+    if (L.picks?.[arch]) delete L.picks[arch];
+  }
+}
 // ---------- talents ----------
 // Talent points: one every other level from 10 (21 by level 50). Per class; changing picks is free.
 export const talentPoints = (s, arch = classOf(s)) => { const l = hackerLevel(s, arch); return l < LOADOUT.talentFrom ? 0 : Math.floor((l - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1; };
-export const picksOf = (s, arch) => s.loadout?.picks?.[arch] || [];
-export const ranksOf = (s, arch) => s.loadout?.ranks?.[arch] || {};
-// Skills a class knows at its level, and the ones on its bar.
-export const knownSkills = (s, arch) => skillOrder(arch).filter((id) => unlockLevel(arch, id) <= hackerLevel(s, arch));
+// Talent picks and ranks are kept per subclass (each subclass has its own tree).
+export const picksOf = (s, arch) => s.loadout?.picks?.[kitKey(s, arch)] || [];
+export const ranksOf = (s, arch) => s.loadout?.ranks?.[kitKey(s, arch)] || {};
+// Skills a class knows at its level (its core, and its subclass's line), and the ones on its bar.
+export const knownSkills = (s, arch) => {
+  if (s.loadout?.devKit) return ARCHETYPES[arch].skills.map((x) => x.id).filter((id) => unlockLevel(arch, id) <= hackerLevel(s, arch));
+  const sub = subOf(s, arch);
+  return skillOrder(arch, sub).filter((id) => unlockLevel(arch, id, sub) <= hackerLevel(s, arch));
+};
 export const equippedSkills = (s, arch) => {
   const known = knownSkills(s, arch);
-  const eq = s.loadout?.equipped?.[arch];
+  const eq = s.loadout?.equipped?.[kitKey(s, arch)] || s.loadout?.equipped?.[arch];
   return (eq ? eq.filter((id) => known.includes(id)) : known.slice(0, LOADOUT.equipSlots)).slice(0, LOADOUT.equipSlots);
 };
 const findSkill = (arch, name) => ARCHETYPES[arch].skills.find((x) => x.id === name || x.id === name.replace(/ /g, '-') || x.name.toLowerCase() === name);
 const picked = (x) => x === 0 || x === 1;
 
 // Points spent in one row of the tree (see TREE in data.mjs).
-function rowSpent(picks, ranks, arch, row) {
+// kit: a subclass (SUBS), whose fillers and talents make the tree.
+function rowSpent(picks, ranks, kit, row) {
+  if (!kit) return 0;
   if (row.kind === 'choice') return picked(picks[row.tier]) ? 1 : 0;
-  return ARCHETYPES[arch].fillers[row.row].reduce((n, node) => n + (ranks[node.id] || 0), 0);
+  return kit.fillers[row.row].reduce((n, node) => n + (ranks[node.id] || 0), 0);
 }
-const spentAboveWith = (picks, ranks, arch, i) => TREE.slice(0, i).reduce((n, row) => n + rowSpent(picks, ranks, arch, row), 0);
-export const pointsSpent = (s, arch) => TREE.reduce((n, row) => n + rowSpent(picksOf(s, arch), ranksOf(s, arch), arch, row), 0);
-export const spentAbove = (s, arch, i) => spentAboveWith(picksOf(s, arch), ranksOf(s, arch), arch, i);
-function treeValid(picks, ranks, arch) {
-  return TREE.every((row, i) => !rowSpent(picks, ranks, arch, row) || spentAboveWith(picks, ranks, arch, i) >= row.need);
+const spentAboveWith = (picks, ranks, kit, i) => TREE.slice(0, i).reduce((n, row) => n + rowSpent(picks, ranks, kit, row), 0);
+export const pointsSpent = (s, arch) => TREE.reduce((n, row) => n + rowSpent(picksOf(s, arch), ranksOf(s, arch), kitOf(s, arch), row), 0);
+export const spentAbove = (s, arch, i) => spentAboveWith(picksOf(s, arch), ranksOf(s, arch), kitOf(s, arch), i);
+function treeValid(picks, ranks, kit) {
+  return TREE.every((row, i) => !rowSpent(picks, ranks, kit, row) || spentAboveWith(picks, ranks, kit, i) >= row.need);
 }
 // Row state: 'open' (can spend here), 'locked' (open but no free points), 'blocked' (needs more points above).
 export function rowState(s, arch, i) {
@@ -911,9 +967,29 @@ export function tierState(s, arch, tier) {
 export const rank = (s, id) => (ranksOf(s, classOf(s))[id] || 0) + (specOf(s) === id && hackerLevel(s) >= LOADOUT.specFrom ? LOADOUT.specRanks : 0);
 // The specialty (level 5): one of your class's two first-row talents, LOADOUT.specRanks free ranks in it.
 export const specOf = (s, arch = classOf(s)) => s.loadout?.spec?.[arch] || null;
-export const specOptions = (arch) => ARCHETYPES[arch].fillers[0];
+export const specOptions = (arch) => ARCHETYPES[arch].spec;
 export const specRule = (o) => o.rule.replace(/\d+/, (n) => String(Number(n) * LOADOUT.specRanks)).replace(' per rank', '');
-const fillerNode = (arch, id) => ARCHETYPES[arch].fillers.flat().find((n) => n.id === id || n.name.toLowerCase() === id);
+const fillerNode = (kit, id) => kit?.fillers.flat().find((n) => n.id === id || n.name.toLowerCase() === id);
+
+// subclass [class] [<id>]: the first pick anywhere out of a fight; switching back and forth, at home.
+// Free. Each subclass keeps its own bar and talent tree, so switching back finds them as you left them.
+function subclassCommand(s, text) {
+  const words = text.split(' ').slice(1);
+  const arch = ARCHETYPES[words[0]] ? words.shift() : classOf(s);
+  const opts = Object.values(ARCHETYPES[arch].subs);
+  const say = opts.map((x) => `${x.name} (subclass ${x.id}): ${x.idea}`).join(' Or ');
+  if (hackerLevel(s, arch) < SUBCLASS.from) return warn(s, `Your ${ARCHETYPES[arch].name} subclass comes at level ${SUBCLASS.from}. ${say}`);
+  const want = words.join(' ').toLowerCase();
+  if (!want) return emit(s, 'info', `${subPicked(s, arch) ? 'Subclass' : 'Subclass (not picked yet)'}: ${SUBS[subOf(s, arch)].name}. ${say}`);
+  const x = opts.find((o) => o.id === want || o.name.toLowerCase() === want);
+  if (!x) return warn(s, `${ARCHETYPES[arch].name} subclasses: ${opts.map((o) => o.id).join(', ')}.`);
+  if (active(s)) return warn(s, 'Finish the fight first.');
+  if (subPicked(s, arch) && s.run) return warn(s, 'Switch subclass at home. Jack out first.');
+  if (subPicked(s, arch) && s.loadout.sub[arch] === x.id) return emit(s, 'info', `You're already a ${x.name}.`);
+  (s.loadout.sub ||= {})[arch] = x.id;
+  if (!s.loadout.equipped[x.id]) s.loadout.equipped[x.id] = knownSkills(s, arch).slice(0, LOADOUT.equipSlots);
+  emit(s, 'loadout', `Subclass: ${x.name}. ${x.idea} Edge: ${x.edge.name}. ${x.edge.rule}`);
+}
 
 function loadoutCommand(s, text) {
   const words = text.split(' ');
@@ -924,17 +1000,19 @@ function loadoutCommand(s, text) {
     let arch = s.loadout.archetype;
     if (ARCHETYPES[rest[0]]) { arch = rest[0]; rest = rest.slice(1); }
     const skill = rest.length ? findSkill(arch, rest.join(' ')) : null;
-    if (!skill) return warn(s, `usage: ${words[0]} <skill>. ${ARCHETYPES[arch].name} skills: ${skillOrder(arch).join(', ')}.`);
+    if (!skill) return warn(s, `usage: ${words[0]} <skill>. ${ARCHETYPES[arch].name} skills: ${skillOrder(arch, subOf(s, arch)).join(', ')}.`);
     const known = knownSkills(s, arch), equipped = [...equippedSkills(s, arch)];
-    if (!known.includes(skill.id)) return warn(s, `${skill.name} unlocks at ${ARCHETYPES[arch].name} level ${unlockLevel(arch, skill.id)}.`);
+    const line = subOf(s, arch) ? skillOrder(arch, subOf(s, arch)) : ARCHETYPES[arch].core;
+    if (!line.includes(skill.id)) { const other = Object.values(ARCHETYPES[arch].subs).find((x) => x.skills.includes(skill.id)); return warn(s, `${skill.name} is a ${other?.name || 'subclass'} skill${hackerLevel(s, arch) < SUBCLASS.from ? ` (subclasses come at level ${SUBCLASS.from})` : ` (subclass ${other?.id})`}.`); }
+    if (!known.includes(skill.id)) return warn(s, `${skill.name} unlocks at ${ARCHETYPES[arch].name} level ${unlockLevel(arch, skill.id, subOf(s, arch))}.`);
     if (words[0] === 'unequip') {
       if (!equipped.includes(skill.id)) return warn(s, `${skill.name} isn't equipped.`);
-      s.loadout.equipped[arch] = equipped.filter((x) => x !== skill.id);
+      s.loadout.equipped[kitKey(s, arch)] = equipped.filter((x) => x !== skill.id);
       return emit(s, 'loadout', `${skill.name} unequipped.`);
     }
     if (equipped.includes(skill.id)) return warn(s, `${skill.name} is already on key ${equipped.indexOf(skill.id) + 2}.`);
     if (equipped.length >= LOADOUT.equipSlots) return warn(s, `All ${LOADOUT.equipSlots} slots are full. Unequip one first.`);
-    s.loadout.equipped[arch] = [...equipped, skill.id];
+    s.loadout.equipped[kitKey(s, arch)] = [...equipped, skill.id];
     return emit(s, 'loadout', `${skill.name} equipped on key ${equipped.length + 2}.`);
   }
   if (words[0] === 'specialty') {
@@ -966,16 +1044,18 @@ function loadoutCommand(s, text) {
   if (ARCHETYPES[rest[0]]) { arch = rest[0]; rest = rest.slice(1); }
   if (ARCHETYPES[rest[1]] && rest[0] === 'reset') arch = rest[1];
   if (rest[0] === 'reset') {
-    s.loadout.picks[arch] = [];
-    s.loadout.ranks[arch] = {};
+    s.loadout.picks[kitKey(s, arch)] = [];
+    s.loadout.ranks[kitKey(s, arch)] = {};
     return emit(s, 'loadout', `${ARCHETYPES[arch].name} talents cleared. ${talentPoints(s, arch)} point(s) free.`);
   }
   const noPoints = hackerLevel(s, arch) < LOADOUT.talentFrom ? `Talents start at level ${LOADOUT.talentFrom}.` : `No free talent points. You get one every ${LOADOUT.talentEvery} levels.`;
   if (rest[0] === 'add' || rest[0] === 'remove') {
-    const node = fillerNode(arch, rest.slice(1).join(' '));
-    if (!node) return warn(s, `usage: talent add|remove <node>. ${ARCHETYPES[arch].name} nodes: ${ARCHETYPES[arch].fillers.flat().map((n) => n.id).join(', ')}.`);
+    const kit = kitOf(s, arch);
+    if (!kit) return warn(s, `Talents start at level ${LOADOUT.talentFrom}, with your subclass.`);
+    const node = fillerNode(kit, rest.slice(1).join(' '));
+    if (!node) return warn(s, `usage: talent add|remove <node>. ${kit.name} nodes: ${kit.fillers.flat().map((n) => n.id).join(', ')}.`);
     const ranks = { ...ranksOf(s, arch) };
-    const i = TREE.findIndex((r) => r.kind === 'filler' && ARCHETYPES[arch].fillers[r.row].includes(node));
+    const i = TREE.findIndex((r) => r.kind === 'filler' && kit.fillers[r.row].includes(node));
     if (rest[0] === 'add') {
       if ((ranks[node.id] || 0) >= node.max) return warn(s, `${node.name} is at max rank.`);
       const st = rowState(s, arch, i);
@@ -985,9 +1065,9 @@ function loadoutCommand(s, text) {
     } else {
       if (!ranks[node.id]) return warn(s, `${node.name} has no ranks.`);
       ranks[node.id]--;
-      if (!treeValid(picksOf(s, arch), ranks, arch)) return warn(s, 'Deeper picks depend on that point. Take those back first.');
+      if (!treeValid(picksOf(s, arch), ranks, kit)) return warn(s, 'Deeper picks depend on that point. Take those back first.');
     }
-    s.loadout.ranks[arch] = ranks;
+    s.loadout.ranks[kitKey(s, arch)] = ranks;
     return emit(s, 'loadout', `${node.name} ${ranks[node.id]}/${node.max}. ${node.rule}`);
   }
   const tier = Number(rest[0]), side = rest[1];
@@ -997,9 +1077,9 @@ function loadoutCommand(s, text) {
   if (state === 'locked') return warn(s, noPoints);
   const picks = [...picksOf(s, arch)];
   picks[tier - 1] = side === 'a' ? 0 : 1;
-  s.loadout.picks[arch] = picks;
-  const talent = ARCHETYPES[arch].talents[tier - 1][picks[tier - 1]];
-  emit(s, 'loadout', `${ARCHETYPES[arch].name} tier ${tier}: ${talent.name}. ${talent.rule}`);
+  s.loadout.picks[kitKey(s, arch)] = picks;
+  const talent = kitOf(s, arch).talents[tier - 1][picks[tier - 1]];
+  emit(s, 'loadout', `${kitOf(s, arch).name} tier ${tier}: ${talent.name}. ${talent.rule}`);
 }
 
 // ---------- upgrades ----------
@@ -1203,6 +1283,7 @@ function engage(s) {
   // Bastion Hardened: start the fight with an armor chit of your own.
   e.chits = 0;
   e.hardened = classOf(s) === 'bastion' ? SKILLS.hardened : 0; // Bastion's passive: the first damage hit each fight lands at half
+  classEach('start', s);
   // Uniques that fire as a fight starts (Gate Bypass, Cell Key).
   for (const x of fxFire(s, 'start')) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with a ◆.`); }
@@ -1473,7 +1554,7 @@ export function parse(s, input) {
   const rest = words.slice(found.used);
   const arg = rest.join(' ');
   // In a crew, Patch takes a crewmate's name and heals them instead (crew.mjs hooks.crewAllies).
-  if (ability === 'patch' && arg) return allyOf(s, arg) ? { ability, ally: arg } : { error: `${arg} isn't in this fight with you.` };
+  if ((ability === 'patch' || a.ally) && arg) return allyOf(s, arg) ? { ability, ally: arg } : { error: `${arg} isn't in this fight with you.` };
   if (a.target === 'none') return arg ? { error: `${a.name} doesn't take a target.` } : { ability };
   if (a.target === 'attack' && !arg) {
     const soonest = attackers(s).sort((x, y) => x.attack.due - y.attack.due)[0];
@@ -1510,6 +1591,9 @@ export function validate(s, intent) {
   if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).length) return `No burns on ${part(s, intent.target).name}.`;
   if (['reroute', 'cron-storm'].includes(intent.ability) && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'kill-switch' && !e.helpers.length) return 'No helpers running.';
+  const check = classCheck(intent.ability);
+  if (check) { const why = check(s, intent); if (why) return why; }
+  if (intent.ally && !allyOf(s, intent.ally)) return `${intent.ally} isn't standing.`;
   if (intent.ability === 'patch') {
     const to = intent.ally ? allyOf(s, intent.ally) : s;
     if (!to) return `${intent.ally} isn't standing.`;
@@ -1578,6 +1662,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer code \d+$/.test(text)) {
     const n = Number(text.split(' ')[2]);
     gainCode(s, { cipher: n, worm: n, kernel: n, exploit: Math.ceil(n / 10) }, 'Developer: ');
+  } else if (/^subclass( |$)/.test(text)) {
+    subclassCommand(s, text);
   } else if (/^listen( |$)/.test(text)) {
     listenCommand(s, text);
   } else if (/^archetype( \w+)?$/.test(text) || /^talent( |$)/.test(text) || /^(equip|unequip)( |$)/.test(text) || /^specialty( |$)/.test(text)) {
@@ -1761,7 +1847,7 @@ function topUp(s, what, wanted = null) {
 
 // opts: mine (your own hit: Breaker Momentum applies), ignoreArmor, by (label for the log), noHook.
 // Returns the damage dealt and any overflow past zero.
-function hit(s, p, base, opts = {}) {
+export function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
@@ -1822,7 +1908,7 @@ function hit(s, p, base, opts = {}) {
   const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || (opts.mine && buffed(e, 'sudo')));
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
-  const chance = critChance(s) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
+  const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
   const crit = forced || (raw > 0 && chance > 0 && rand(s) * 100 < chance);
   if (crit) raw = Math.floor(raw * critMultiplier(s)) + (opts.server ? 0 : gearStat(s, 'critDamage'));
   let dealt = Math.min(p.integrity, raw);
@@ -1864,7 +1950,9 @@ function hit(s, p, base, opts = {}) {
     const spill = Math.min(EDGE.breaker.cap, raw - dealt), next = spill > 0 && opts.mine && !opts.overkill && edge(s, 'breaker') ? soonestAttacker(s) : null;
     if (next) hit(s, next, spill, { by: 'Overkill', overkill: true, pierce: true, noHook: true });
   } else if (on(s, p, 'hooked') && !opts.noHook) hit(s, p, scaled(s, SKILLS.hooked + rank(s, 'kernel-hook')), { by: 'Hook', noHook: true });
-  return { dealt, overflow: Math.max(0, raw - dealt), crit };
+  const out = { dealt, overflow: Math.max(0, raw - dealt), crit, broke: p.integrity === 0 };
+  if (!opts.server) classEach('hit', s, p, out, opts);
+  return out;
 }
 
 // Bosses (BOSSES): a phase fires once the virus is down to its share of total Integrity; from
@@ -1903,7 +1991,7 @@ export const mirrorOn = (s, cycle = s.encounter?.cycle) => livingParts(s).find((
 const twinOf = (s, p) => parts(s).find((x) => x !== p && (x.twin === p.id || p.twin === x.id)) || null;
 
 // The living part whose attack lands soonest (ties: the bigger hit).
-function soonestAttacker(s, except = null) {
+export function soonestAttacker(s, except = null) {
   return attackers(s).filter((p) => p.id !== except).sort((a, b) => a.attack.due - b.attack.due || b.attack.amount - a.attack.amount)[0] || livingParts(s).find((p) => p.id !== except) || null;
 }
 
@@ -1924,6 +2012,7 @@ function breakPart(s, p) {
   if (p.kind !== 'fragment' && classOf(s) === 'breaker') e.momentum = { stacks: Math.min(SKILLS.momentumMax, momentumStacks(s) + 1), until: e.cycle + SKILLS.momentumCycles };
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
   if (hasTalent(s, 'cascade-failure') && !e.once.rampage) { e.once.rampage = true; e.readyAt = {}; emit(s, 'status', 'Cascade Failure: cooldowns reset.'); }
+  classEach('broke', s, p);
   // Uniques that fire on a break (Cryptominer, Zero Cool).
   for (const x of fxFire(s, 'break', { crit: e.lastCrit })) {
     if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${x.it.name}: your cooldowns drop by ${x.value}.`); }
@@ -2147,13 +2236,18 @@ function useAbility(s, intent, auto = false) {
     }
   }
   if (id === 'keepalive') stretchBurns(s, target, e.surprise ? CONFIG.surprise.keepalive : a.cycles, 'Keepalive');
+  // A subclass skill's own effect (dist/classes/<class>.mjs). to: the crewmate an ally skill was aimed at.
+  classUse(id)?.(s, { a, id, target, to: (intent.ally && allyOf(s, intent.ally)) || s, res, base, intent, auto, e });
 }
+// Who's standing beside you in this fight, by name ('you' is the player): for ally skills and class modules.
+export const alliesOf = (s) => hooks.crewAllies?.(s) || [];
 const STATUS_WORD = { exposed: 'Exposed (+25% crit chance)', tagged: 'Tagged (burns +50%, timer visible)', hooked: 'Hooked (+6 per hit)', throttled: 'Throttled (attacks deal half)', quarantined: 'Quarantined (+25% damage)' };
 
 // Your class's edge (EDGE in data.mjs), from its level.
-export const edge = (s, cls) => CONFIG.edges !== false && classOf(s) === cls && hackerLevel(s) >= unlockLevel(cls, 'edge'); // CONFIG.edges: tests of other numbers turn them off
+// Since subclasses, a class's old edge is one subclass's (EDGE[cls].sub).
+export const edge = (s, cls) => CONFIG.edges !== false && classOf(s) === cls && subOf(s) === EDGE[cls].sub; // CONFIG.edges: tests of other numbers turn them off
 // Keepalive and the Infiltrator's Sync: every burn on a part runs longer.
-function stretchBurns(s, t, cycles, label) {
+export function stretchBurns(s, t, cycles, label) {
   const burns = alive(t) ? burnsOn(s, t) : [];
   if (!burns.length) return false;
   for (const b of burns) b.left += cycles;
@@ -2163,7 +2257,7 @@ function stretchBurns(s, t, cycles, label) {
 
 // Who else is standing in this fight, by name ('you' for the player, to a crewmate): crew.mjs.
 const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st || null;
-function heal(s, amount, label) {
+export function heal(s, amount, label) {
   const d = defender(s);
   const healed = Math.min(amount, d.max - d.integrity);
   d.integrity += healed;
@@ -2201,7 +2295,7 @@ export const blocked = (s, amount) => (blockOf(s) ? Math.max(Math.ceil(amount / 
 const SPECIALS = ['encrypt', 'scramble', 'replicate'];
 
 // Damage from an attack or from encryption: your shield soaks it first.
-function takeDamage(s, amount, source, label) {
+export function takeDamage(s, amount, source, label) {
   const e = s.encounter;
   const d = defender(s);
   // Reduction: the rig's on runs, the server's at home.
@@ -2296,7 +2390,8 @@ function landAttack(s, p) {
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less.`, { source: p.id }); }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut), p.id, atk.name);
+    const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p)), p.id, atk.name);
+    if (dealt) classEach('struck', s, atk, dealt, p);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
     // Echo: while the Echo lives, the hit repeats next cycle at half.
@@ -2422,6 +2517,7 @@ export function playerPhase(s, phase = 'all') {
   }
   e.helpers = e.helpers.filter((h) => h.left > 0);
   if (e.regen && e.regen.from <= e.cycle && e.regen.left > 0) { heal(s, e.regen.amount, e.regen.name || 'Patch'); e.regen.left--; }
+  classEach('cycle', s); // class modules: the end of this player's turn
   // Leech pays out; Regen ticks (the rig's on runs, the server's at home).
   if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech'); }
   const rg = defense(s, 'regen');
@@ -2957,7 +3053,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
@@ -3085,6 +3181,7 @@ export function restore(raw) {
     memoryRestore(s);
     retireTraits(s);
     retireHarvesters(s); // harvesters and modules are buildings now (outpost.mjs)
+    retireClassTrees(s); // subclasses: each class's old tree moves to its default subclass
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts

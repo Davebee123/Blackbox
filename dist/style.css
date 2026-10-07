@@ -2802,3 +2802,12 @@ details.map-pick { pointer-events: auto; }
 .ttree .tspec .tspec-opts { justify-content: center; }
 .ttree .tspec .tspec-opts .act { border: 1px solid var(--line, #5a4a22); padding: 6px 10px; border-radius: 3px; min-width: 150px; }
 .ttree .tspec .tspec-opts .act.on { border-color: var(--amber); color: var(--amber); background: rgba(241, 185, 47, 0.08); }
+.ttree .tsub .tsub-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; grid-column: 1 / -1; }
+.ttree .tsub-card { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--line, #5a4a22); border-radius: 3px; padding: 8px; text-align: left; }
+.ttree .tsub-card.on { border-color: var(--amber); }
+.ttree .tsub-card.look { background: rgba(241, 185, 47, 0.06); }
+.ttree .tsub-look { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.ttree .tsub-look small { opacity: 0.75; font-size: 11px; }
+.ttree .tsub-look span { font-size: 12px; }
+.library .skill.subskill { border-left: 2px solid var(--amber-deep, #7e5311); }
+.lib-head small { opacity: 0.7; font-size: 11px; margin-left: 8px; }
