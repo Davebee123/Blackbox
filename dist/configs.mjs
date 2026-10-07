@@ -30,7 +30,7 @@ export const codeFor = (id) => { const c = SERVICES[CONFIGS[id].service].code; r
 
 // The config source waiting in a location's vault, or null (fixed per location).
 export function vaultConfig(loc) {
-  if (loc.zone) return null;
+  if (loc.zone || loc.rogue) return null; // a rogue server has no vault
   const r = seeded(loc.seed * 23 + 17);
   if (r() >= CONFIG_VAULT_CHANCE) return null;
   const ids = Object.keys(CONFIGS);

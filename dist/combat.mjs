@@ -639,7 +639,8 @@ export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s
 
 // Templates rotate so consecutive locations play differently.
 export function addLocation(s, family, depth = 1, parent = null) {
-  let seed = s.seed * 31 + s.locations.length * 7 + 5;
+  s.foundSeq = Math.max(s.foundSeq || 0, s.locations.length) + 1; // a running count: dropped finds (FIND_CAP) don't come back
+  let seed = s.seed * 31 + (s.foundSeq - 1) * 7 + 5;
   let loc = createLocation(family, seed, depth);
   while (s.locations.some((l) => l.id === loc.id)) loc = createLocation(family, ++seed, depth);
   loc.template = TEMPLATES[s.locations.filter((l) => !l.rogue).length % TEMPLATES.length]; // rogue servers don't take a turn

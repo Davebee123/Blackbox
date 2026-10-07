@@ -32,8 +32,9 @@ const withFirewall = () => { const s = fresh(); s.services = { firewall: 1, tarp
 test('config source waits in some vaults; bank it, craft it, set it', () => {
   const s = fresh();
   let loc;
-  for (let i = 0; i < 30 && !loc; i++) { command(s, 'developer location worm'); if (vaultConfig(s.locations.at(-1))) loc = s.locations.at(-1); }
+  for (let i = 0; i < 300 && !loc; i++) { command(s, 'developer location worm'); if (vaultConfig(s.locations.at(-1))) loc = s.locations.at(-1); }
   assert.ok(loc, 'some vault holds one');
+  for (const l of s.locations) if (l !== loc) { l.detached = true; delete l.fresh; } // memory for it
   const id = vaultConfig(loc);
   takeOver(s, loc);
   play(s, `pull ${id}.cfg`);
