@@ -692,6 +692,8 @@ function dropStaleFinds(s) {
 // Each class (hacker profile) levels on its own from 1. XP goes to the class you're playing.
 export const hackerOf = (s, arch = classOf(s)) => (s.hackers ||= {})[arch] ||= { level: 1, xp: 0 };
 export const hackerLevel = (s, arch = classOf(s)) => hackerOf(s, arch).level;
+// Still trying classes: no class has reached LOADOUT.trialUntil, so switching carries your level over.
+export const classTrial = (s) => !Object.values(s.hackers || {}).some((h) => h.level >= LOADOUT.trialUntil);
 // XP for something at an enemy/location level: a share of a kill, scaled by the level gap.
 export const xpFor = (s, level, share = 1) => Math.round(killXp(level) * share * xpScale(level - hackerLevel(s)));
 export const gainsTalent = (level) => level >= LOADOUT.talentFrom && (level - LOADOUT.talentFrom) % LOADOUT.talentEvery === 0;
@@ -878,8 +880,13 @@ function loadoutCommand(s, text) {
     const id = words[1] === 'sysadmin' ? 'bastion' : words[1]; // its old name still works
     if (!id) return emit(s, 'info', `Class: ${ARCHETYPES[s.loadout.archetype].name} (level ${hackerLevel(s)}). Options: ${Object.keys(ARCHETYPES).join(', ')}.`);
     if (!ARCHETYPES[id]) return warn(s, `No class called ${id}. Try: ${Object.keys(ARCHETYPES).join(', ')}.`);
+    // Trying classes out: until any class reaches LOADOUT.trialUntil, a switch to a class you haven't
+    // played takes your level and XP with it, so your first pick costs nothing to change.
+    const from = s.loadout.archetype, cur = hackerOf(s, from), to = hackerOf(s, id);
+    const trial = id !== from && classTrial(s) && to.level === 1 && !to.xp && (cur.level > 1 || cur.xp);
+    if (trial) { s.hackers[id] = { ...cur }; s.hackers[from] = { level: 1, xp: 0 }; }
     s.loadout.archetype = id;
-    return emit(s, 'loadout', `Class: ${ARCHETYPES[id].name}, level ${hackerLevel(s, id)}. ${ARCHETYPES[id].idea}`);
+    return emit(s, 'loadout', `Class: ${ARCHETYPES[id].name}, level ${hackerLevel(s, id)}.${trial ? ' Your level came with you.' : ''} ${ARCHETYPES[id].solo}`);
   }
   // talent [class] <1-3> <a|b> · talent add|remove <node> · talent reset [class]
   let rest = words.slice(1);

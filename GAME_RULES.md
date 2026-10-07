@@ -636,7 +636,7 @@ Two kinds, so a new player never faces everything at once.
 
 ## Classes and loadout
 
-Pick a class on the Loadout page (`archetype <id>`). Your bar has up to 8 keys, shown only once you've unlocked them:
+You pick your first class right after you log in: four cards, each with what it's for solo and in a crew, its passive and its first two skills. Change it on the Loadout page (`archetype <id>`). **Trying classes is free:** until any class reaches level 5 (`LOADOUT.trialUntil`), switching to a class you haven't played takes your level and XP with it. After that each class levels on its own. The Loadout's class cards show the same solo line, with the crew line on hover. Your bar has up to 8 keys, shown only once you've unlocked them:
 
 - **Key 1 (everyone):** Spike, the free hit that repeats when you give no order.
 - **Keys 2–8:** your seven equipped class skills (`equip`, `unequip`). Run skills (Spoof, Tap) take a slot too and are used on runs. There's no shared Interrupt: delaying attacks belongs to Bastion and Operator. Each class has its own Edge, a passive from level 10.

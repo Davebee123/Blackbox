@@ -173,14 +173,33 @@ let introOn = false;
 function firstLogin() {
   introOn = true;
   intro.run().then(({ handle, pwLen }) => {
-    introOn = false;
     campaign.profile = { handle, pwLen, since: Date.now() };
+    return pickClass();
+  }).then(() => {
+    introOn = false;
     save();
     dirty = true;
     cache.clear();
     go('map', true);
     feel.add('pager', '#pager');
     notice('New mail: wick has written to you.');
+  });
+}
+// Your first class: four cards, pick one (switching stays free for a while; see LOADOUT.trialUntil).
+function pickClass() {
+  return new Promise((done) => {
+    const el = document.createElement('div');
+    el.className = 'class-pick';
+    el.innerHTML = V.classPickMarkup(campaign);
+    document.body.append(el);
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pick-class]');
+      if (!b) return;
+      command(campaign, `archetype ${b.dataset.pickClass}`);
+      feel.add('unlock', null);
+      el.remove();
+      done();
+    });
   });
 }
 const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: () => canMove(), tick: () => feel.key('char') });

@@ -1359,7 +1359,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
 
   // Each class card: click to look at it; Use (any class you aren't playing) switches to it, at home.
   const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<div class="arch-card"><button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}">
-      <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea">${esc(x.idea)}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
+      <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea" title="${esc('In a crew: ' + x.crew)}">${esc(x.solo)}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
 
   // The bar you'll fight with: Spike, then your 7 equipped skills.
   const byId = Object.fromEntries(a.skills.map((x) => [x.id, x]));
@@ -2613,3 +2613,13 @@ function marketMarkup(s, f, now) {
     <div class="mk-table mk-wares">${head}${rows}</div>${flying}`;
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint', daemon: 'daemon' };
+
+// Your first class, picked right after you log in: what each one is for, its passive and its first
+// two skills. Switching is free until a class reaches LOADOUT.trialUntil (your level comes along).
+export function classPickMarkup(s) {
+  const cards = Object.entries(ARCHETYPES).map(([k, a]) => {
+    const first = a.skills.slice(0, 2).map((x) => `<li title="${esc(x.rule || '')}"><b>${esc(x.name)}</b> <small>${esc(ABILITIES[x.id]?.short || '')}</small></li>`).join('');
+    return `<button type="button" class="cp-card" data-pick-class="${k}"><span class="cp-name">${esc(a.name)}</span><span class="cp-solo">${esc(a.solo)}</span><span class="cp-crew">In a crew: ${esc(a.crew)}</span><span class="cp-passive" title="${esc(a.passive.rule)}">${esc(a.passive.name)}</span><ul class="cp-skills">${first}</ul></button>`;
+  }).join('');
+  return `<div class="cp-box" role="dialog" aria-label="Pick your class"><h2>Pick your class</h2><div class="cp-grid">${cards}</div><p class="cp-note">Switch on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></div>`;
+}

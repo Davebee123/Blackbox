@@ -271,3 +271,19 @@ test('review fixes: elites can drop a unique; rested pays whole XP only', async 
   assert.ok(Object.values(r.hackers).every((h) => Number.isInteger(h.xp)), 'no fractional XP');
   assert.equal(r.rested, 0.5, 'the fraction waits');
 });
+
+test('trying classes: until a class reaches LOADOUT.trialUntil, switching to a fresh class carries your level', async () => {
+  const { fresh: f2, command: cmd, hackerLevel, classOf } = await import('./dist/combat.mjs');
+  const { LOADOUT } = await import('./dist/data.mjs');
+  const s = f2();
+  s.hackers = { breaker: { level: 3, xp: 40 } };
+  cmd(s, 'archetype bastion');
+  assert.equal(classOf(s), 'bastion');
+  assert.equal(hackerLevel(s), 3, 'level came along');
+  assert.equal(s.hackers.bastion.xp, 40);
+  assert.equal(hackerLevel(s, 'breaker'), 1);
+  s.hackers.bastion.level = LOADOUT.trialUntil;
+  cmd(s, 'archetype operator');
+  assert.equal(hackerLevel(s), 1, 'past the trial, classes level on their own');
+  assert.equal(hackerLevel(s, 'bastion'), LOADOUT.trialUntil);
+});
