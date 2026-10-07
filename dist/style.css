@@ -2789,3 +2789,4 @@ details.map-pick { pointer-events: auto; }
 .op-buildlist .bl-main small { font-size: 11px; color: var(--muted); line-height: 1.35; }
 .op-buildlist .bl-cost { color: var(--dim) !important; }
 .op-buildlist .bl-why { color: var(--warn, #e0a030) !important; }
+.cd-meta .cd-lines { grid-column: auto; } /* inside the meta block it's one column: don't push the text into an implicit second one */
