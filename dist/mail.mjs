@@ -536,6 +536,7 @@ export function tickMail(s, at = now()) {
     postSides(s, at);
     emit(s, 'mail', 'Halcyon opened its board to you: other work while you finish this one.');
   }
+  postSides(s, at); // once; a save whose board opened before sides existed gets them here
   // Offers nobody took run out.
   const before = m.offers.length;
   m.offers = m.offers.filter((o) => o.type === 'side' || o.expiresAt > at); // a side to pick waits

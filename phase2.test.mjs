@@ -255,3 +255,19 @@ test('the map shows at most HIDDEN.shown unknown servers: flagged and most trace
   assert.equal(shown[1].id, 'h20', 'then the newest ping');
   assert.ok(!shown.some((n) => n.id === 'h21'), 'never one you have not heard of');
 });
+
+test('review fixes: elites can drop a unique; rested pays whole XP only', async () => {
+  const { rollDrop, fresh: f2, UNIQUES } = await import('./dist/combat.mjs');
+  const { ELITE } = await import('./dist/data.mjs');
+  const s = f2();
+  let uniques = 0;
+  for (let i = 0; i < 400; i++) { const it = rollDrop(s, { kind: 'rogue', id: 'pit', elite: true }, 12); if (it?.unique || UNIQUES[it?.id]) uniques++; }
+  assert.ok(uniques > 0 && uniques < 400 * ELITE.unique * 3, `elite uniques in 400 kills: ${uniques}`);
+  const r = f2();
+  r.rested = 0.5;
+  command(r, 'encounter cryptjack'); command(r, 'engage');
+  for (const p of r.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1 });
+  for (let n = 0; n < 10 && active(r); n++) { command(r, 'spike ' + r.encounter.virus.parts.find((p) => p.integrity > 0).id); resolveCycle(r); }
+  assert.ok(Object.values(r.hackers).every((h) => Number.isInteger(h.xp)), 'no fractional XP');
+  assert.equal(r.rested, 0.5, 'the fraction waits');
+});

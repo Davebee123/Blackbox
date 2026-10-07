@@ -422,7 +422,7 @@ export const MUTATIONS = {
   armored: { name: 'Armored', rule: 'Every part has one more armor chit.' },
   regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor a cycle sooner, so strip it only when you can finish it.' },
   hasty: { name: 'Hasty', rule: 'Every attack comes a cycle sooner and repeats a cycle faster, but its parts have 10% less Integrity, so kill it fast.' },
-  rerouting: { name: 'Rerouting', rule: 'When a part breaks, half its attack damage reroutes to the surviving part that attacks next.', retired: true }, // every v2+ virus is Linked now (combat.mjs)
+  rerouting: { name: 'Rerouting', rule: 'When a part breaks, a third of its attack damage reroutes to the surviving part that attacks next.', retired: true }, // every v2+ virus is Linked now (combat.mjs)
   adaptive: { name: 'Adaptive', rule: 'A part your commands hit three cycles in a row adapts: it gains an armor chit at the end of that cycle.' },
 };
 

@@ -214,5 +214,5 @@ export function sweepCommand(s, loc, arg) {
   const amount = SWEEP.rewards[Math.min(st.tries, SWEEP.rewards.length - 1)];
   emit(s, 'net-good', `SWEPT: ${arg}${st.tries ? '' : ', first read'}.`);
   addLead(s, loc.deeper || loc.family, routed(s, amount), 'Log sweep: ', true); // a route file: the next layer
-  gainXp(s, xpFor(s, loc.level || 1, SWEEP.xpShare), 'log sweep', 'intel');
+  gainXp(s, xpFor(s, loc.level || 1, SWEEP.xpShare * amount / SWEEP.rewards[0]), 'log sweep', 'intel'); // guessing pays less, like the lead
 }

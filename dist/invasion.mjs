@@ -124,7 +124,6 @@ function away(s, from, to) {
     // Rested: every safe hour away (no crash) banks a kill's worth of XP, up to 1.5 levels.
     if (!s.degraded) { const L = hackerLevel(s); s.rested = Math.min(Math.round(1.5 * xpToNext(L)), (s.rested || 0) + killXp(L) / 60); }
   }
-  if (s.rested >= 1) s.rested = Math.floor(s.rested);
 }
 
 // The invader: setting out, on its way, then at the wall. at: the time, while away.

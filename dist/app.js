@@ -336,7 +336,7 @@ let gainQueue = [];
 function showGain(kicker, name, rows, toast) {
   const el = $('gain');
   if (!el) return;
-  if (!toast && gainOpen()) { gainQueue.push([kicker, name, rows, toast]); return; }
+  if (gainOpen()) { gainQueue.push([kicker, name, rows, toast]); return; } // never over a card that waits for Enter
   clearTimeout(gainTimer);
   el.className = `gain${toast ? ' toast' : ''}`;
   el.innerHTML = V.gainMarkup(kicker, name, rows, !toast);
@@ -1350,6 +1350,7 @@ function placeTip() {
 function hideTip(seen) {
   if (!tip) return;
   if (seen) { for (const id of [tip.t.id, ...(tip.t.covers || [])]) markSeen(campaign, id); save(); }
+  else if (tip.t.steps && tip.step > 0) { for (const x of tip.t.steps.slice(0, tip.step)) markSeen(campaign, x.id); save(); } // steps you read stay read
   if (tip.paused && active(campaign) && campaign.encounter.paused) { campaign.encounter.paused = false; dirty = true; }
   document.querySelectorAll('.tip-target').forEach((x) => x.classList.remove('tip-target'));
   $('tip').hidden = true;

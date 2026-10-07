@@ -159,7 +159,7 @@ test('the board: offers arrive at uneven times up to five and expire; take three
   const s2 = contractor();
   tickMail(s2, T0);
   assert.ok(offers(s2).length > 0);
-  const first = offers(s2)[0];
+  const first = offers(s2).find((o) => o.type !== 'side'); // side offers wait to be picked
   tickMail(s2, first.expiresAt + 1);
   assert.ok(!offers(s2).includes(first), 'an untaken offer runs out');
   // taking
@@ -368,4 +368,16 @@ test('a letter that came with a contract shows once: as the contract, not again 
   assert.match(html, /data-mail="j6"/);
   assert.match(html, /class="mrow unread[^"]*" data-mail="j6"/, 'its unread dot moves to the contract');
   assert.match(html, /Send us two\.|hi/, 'a contract reads as its letter');
+});
+
+test('a save whose board opened before side offers existed gets them on the next tick', () => {
+  const s = contractor();
+  s.mail.boardOpen = true;
+  delete s.mail.sidesPosted;
+  s.mail.offers = (s.mail.offers || []).filter((o) => o.type !== 'side');
+  tickMail(s, T0);
+  assert.ok(offers(s).some((o) => o.type === 'side'), 'side offers posted');
+  const n = offers(s).filter((o) => o.type === 'side').length;
+  tickMail(s, T0 + 60000);
+  assert.equal(offers(s).filter((o) => o.type === 'side').length, n, 'only once');
 });

@@ -395,6 +395,13 @@ export function uniqueFrom(s, ctx, level) {
   const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && dropsHere(u, ctx) && !['story', 'contract', 'store'].includes(ctx.kind));
   return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null;
 }
+// An elite's unique: any world drop (SPRAWL, vaults, guards, rogue servers) up to its level, wherever
+// it was written to drop. Story, contract, store and strain uniques stay where they belong.
+const WORLD = ['sprawl', 'vault', 'guard', 'rogue'];
+function eliteUnique(s, level) {
+  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind)));
+  return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null;
+}
 // One roll: maybe nothing, mostly grey or white, now and then blue, rarely yellow or gold. Odds come
 // from time targets and the pace (LOOT.killsPerHour); Scavenge is magic find; depth helps a little.
 function rollOnce(s, ctx, level) {
@@ -425,7 +432,7 @@ export function rollDrop(s, ctx, level) {
   }
   // An elite (a crew room): never less than a blue, and now and then a unique.
   if (ctx.elite) {
-    if (rand(s) < ELITE.unique) { const u = uniqueFrom(s, ctx, level); if (u) best = uniqueItem(u, level, () => rand(s)); }
+    if (rand(s) < ELITE.unique) { const u = eliteUnique(s, level); if (u) best = uniqueItem(u, level, () => rand(s)); }
     if (!best || RARITY_ORDER.indexOf(best.rarity) < RARITY_ORDER.indexOf(ELITE.floor)) best = rollItem(() => rand(s), { level, rarity: ELITE.floor });
   }
   if (ctx.strain && (ctx.trophy || rand(s) < 1 / LOOT.trophy)) { // a streak reward rolls for it outright
@@ -1157,7 +1164,7 @@ function payKill(s, e, base, why) {
   const hot = e.virus.strain && e.virus.strain === hotStrain(s) ? Math.max(1, Math.round(xp * HOT.bonus)) : 0;
   if (hot) emit(s, 'hot-kill', `Hot strain: +${hot} XP.`, { amount: hot });
   // Rested (WoW): XP banked while you were safely away doubles a kill until it runs out.
-  const rested = Math.min(s.rested || 0, xp);
+  const rested = Math.floor(Math.min(s.rested || 0, xp)); // whole XP only; the fraction waits in s.rested
   if (rested) { s.rested -= rested; emit(s, 'rested', `Rested: +${rested} XP.`, { amount: rested }); }
   gainXp(s, xp + bonus + hot + rested, why, 'fight');
 }
