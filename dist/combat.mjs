@@ -1162,9 +1162,14 @@ function fastKill(s, e) {
   return fast;
 }
 function payKill(s, e, base, why) {
-  // A party splits the kill's XP, with a small bonus per extra player (PARTY_XP).
-  const n = e.party || 1;
-  const xp = Math.max(1, Math.round((xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1))) / n));
+  // A party splits the kill's XP, with a small bonus per extra player (PARTY_XP). Members who dropped in
+  // (consortium guests) take their share of the damage they dealt, so joining late pays only for what
+  // you did; you and your own crew split the rest evenly.
+  const n = e.party || 1, pool = xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1));
+  const dealt = e.virus.dealt || {}, total = Object.values(dealt).reduce((a, b) => a + b, 0);
+  const guests = n > 1 ? e.guests || [] : [];
+  const guestShare = total ? guests.reduce((a, g) => a + (dealt[g] || 0), 0) / total : 0;
+  const xp = Math.max(1, Math.round((pool * (1 - guestShare)) / Math.max(1, n - guests.length)));
   const bonus = e.fast ? Math.max(1, Math.round(xp * FAST.bonus)) : 0;
   if (bonus) emit(s, 'fast-kill', `Fast kill: ${e.cycle} cycles. +${bonus} XP.`, { amount: bonus, cycles: e.cycle });
   const hot = e.virus.strain && e.virus.strain === hotStrain(s) ? Math.max(1, Math.round(xp * HOT.bonus)) : 0;
@@ -1723,6 +1728,7 @@ function hit(s, p, base, opts = {}) {
   if (p.taggedUntil >= e.cycle) notes.push('tagged');
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
   p.integrity -= dealt;
+  if (dealt > 0 && s.encounter?.virus) { const d = (s.encounter.virus.dealt ||= {}); d[s.who || ''] = (d[s.who || ''] || 0) + dealt; } // who did the damage: drop-ins earn by it
   p.lastDamaged = e.cycle;
   // Leech: a share of what you deal heals you (paid out once per cycle).
   if (!opts.server && opts.mine && dealt > 0) e.leechAcc = (e.leechAcc || 0) + gearStat(s, 'leech') * (crit ? Math.max(1, ...fxFire(s, 'crit', { do: 'leech-x' }).map((x) => x.value)) : 1);

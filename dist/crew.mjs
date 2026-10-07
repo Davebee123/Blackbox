@@ -85,6 +85,7 @@ hooks.crewEngage = (s) => {
   if (!mates.length) return;
   // A bigger party: tougher parts.
   e.party = 1 + mates.length; // for the XP split (combat.mjs payKill)
+  e.guests = mates.filter((m) => m.guest).map((m) => m.who); // drop-ins earn by their damage (payKill)
   // An elite is already sized for a crew, so it doesn't grow with it.
   const k = 1 + (e.virus.elite ? CREW.elitePer : CREW.hpPer) * mates.length;
   const kd = 1 + CREW.dmgPer * mates.length;

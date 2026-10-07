@@ -154,3 +154,26 @@ test('a crewmate keeps its own level: switching your class does not move it', as
   command(s, 'archetype breaker');
   assert.equal(hackerLevel(matesOf(s)[0]), 3);
 });
+
+test('a member who drops in earns by the damage they dealt; you split the rest with your crew', async () => {
+  const { hooks } = await import('./dist/combat.mjs');
+  const killXp = (guest) => {
+    const was = hooks.crewGuests;
+    hooks.crewGuests = guest ? () => [{ name: 'zed', cls: 'breaker', level: 5 }] : was;
+    const s = fresh();
+    s.hackers = { breaker: { level: 5, xp: 0 } };
+    play(s, 'connect sprawl'); play(s, 'cd var'); play(s, 'attack');
+    hooks.crewGuests = was;
+    for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0 });
+    for (let n = 0; n < 40 && active(s); n++) { command(s, planner(s) || 'hold'); resolveCycle(s); }
+    const xp = s.logs.filter((e) => e.type === 'xp' && /neutralized|down/.test(e.message)).reduce((n, e) => n + e.amount, 0);
+    return { xp, dealt: s.encounter?.virus?.dealt || {}, party: s.encounter?.party };
+  };
+  const solo = killXp(false), duo = killXp(true);
+  assert.equal(duo.party, 2, 'the member joined');
+  const total = Object.values(duo.dealt).reduce((a, b) => a + b, 0);
+  const share = (duo.dealt.zed || 0) / total;
+  assert.ok(share > 0 && share < 1, `both hit it (${share})`);
+  // Same virus, same level: your XP is the party pool minus the guest's share.
+  assert.ok(Math.abs(duo.xp - Math.round(solo.xp * (1 + 0.1) * (1 - share))) <= 1, `${duo.xp} vs ${solo.xp} × 1.1 × ${1 - share}`);
+});
