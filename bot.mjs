@@ -13,7 +13,7 @@ import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
 import { items } from './dist/hidden.mjs';
 import { procOf, procIn } from './dist/root.mjs';
 import { sweepPuzzle, sweepFile } from './dist/forensics.mjs';
-import { STATION, dropOf } from './dist/station.mjs';
+import { eventsOf, CARDS } from './dist/events.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
@@ -186,23 +186,17 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
       say('mail accept ' + o.id); taken[o.id] = t;
     }
   });
-  // LANTERN (station.mjs): the bot catches half the broadcasts and goes for the drop (the password
-  // is read out on the radio; a player decodes it).
+  // Events (events.mjs): the bot goes after half the couriers and bounties it sees.
   const heard = {};
   const deadDrop = () => {
-    const loc = [s.zone, ...s.locations].find((l) => l && dropOf(l) && heard[dropOf(l).n] === undefined);
-    if (!loc) return false;
-    const d = dropOf(loc);
-    heard[d.n] = rnd() < 0.5;
-    if (!heard[d.n] || s.run || active(s)) return false;
-    if (!loc.zone && ((relocks(loc) && relockLeft(loc, t)) || !makeRoom(loc))) return false;
-    t += 3 * 60000; // decoding the numbers
-    say(`connect ${loc.zone ? 'sprawl' : loc.id}`);
-    if (!s.run) return false;
-    say(`unlock ${STATION.dir.slice(1)} ${d.pass}`);
-    say(`cd ${STATION.dir}`);
-    for (const f of STATION.files) say(`pull ${f}`);
-    leave();
+    if (!CONFIG.leadBase) return false; // a SPRAWL-only run (loop.test.mjs) stays in SPRAWL
+    const ev = eventsOf(s).find((e) => e.card === 'courier' && heard[e.id] === undefined); // bounties are two levels up: the bot leaves them
+    if (!ev) return false;
+    heard[ev.id] = rnd() < 0.5;
+    if (!heard[ev.id] || s.run || active(s)) return false;
+    say(`event fight ${ev.id}`);
+    if (!active(s)) return false;
+    fight();
     stats.drops2 = (stats.drops2 || 0) + 1;
     return true;
   };

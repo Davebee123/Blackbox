@@ -12,7 +12,7 @@ import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
-import { broadcast } from './station.mjs';
+import { deal } from './events.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -162,7 +162,7 @@ export function tickMarket(s, at = now()) {
     m.transfers.splice(m.transfers.indexOf(t), 1);
     if (t.side === 'good') {
       emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: ${t.name}.`, { faction: t.f });
-      if (t.good === 'tip') broadcast(s); // a broadcast schedule bought before LANTERN dropped it
+      if (t.good === 'tip') deal(s, 'courier'); // a broadcast schedule bought before LANTERN dropped it
       else if (t.good === 'bootleg') addFilter(s, rollFilter(() => rand(s), { level: t.L, rarity: rand(s) < 0.7 ? 'stock' : 'tuned' }), 'Unsealed: ');
       else deliverGoods(s, t.good, t.L);
       continue;

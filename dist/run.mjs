@@ -11,7 +11,7 @@ import { jackIn, developerNetwork } from './invasion.mjs';
 import { contractTakeover, bankCargo, wantedBy, title as contractTitle } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
-import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
+import { deal } from './events.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
@@ -97,7 +97,6 @@ export function layoutOf(loc) {
   const extra = QUIRK_ROOMS[loc?.quirk];
   let out = iced(loc, base);
   if (extra) out = Object.assign({ ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, ...Object.keys(extra).map((k) => k.slice(1))] } }, extra);
-  out = withDrop(loc, out);
   // A vault holds a code cache, and maybe a protocol, a blueprint, a daemon, source (layer 2+), a
   // harvester or a config: fixed by its seed (LOOT.vault*). Your first server's has a protocol and a blueprint.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
@@ -116,12 +115,6 @@ export function layoutOf(loc) {
     if (out[dir] && !out[dir].files.includes(f.name)) out = { ...out, [dir]: { ...out[dir], files: [...out[dir].files, f.name] } };
   }
   return out;
-}
-// A numbers-station dead drop (station.mjs): a locked /drop at the root while it's up.
-function withDrop(loc, out) {
-  if (!dropOf(loc) || !out['/']) return out;
-  const name = STATION.dir.slice(1);
-  return { ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, name] }, [STATION.dir]: { dirs: [], files: [...STATION.files], locked: true, drop: true } };
 }
 // ICE: on layer 2 and deeper, about half the servers swap their Watchdog or Sentinel for ICE
 // (fixed by the seed): a Watchdog becomes a Tracer, a Sentinel a Bouncer.
@@ -263,7 +256,6 @@ export function fileInfo(loc, path, name) {
     '/.ghost/.key': { kind: 'text', size: '1k', text: [`vault key, kept where plain ls won't show it: ${loc.password}`] },
   };
   const full = join(path, name);
-  if (path === STATION.dir && dropOf(loc)) return dropFile(loc, name);
   if (loc.rogue) return full === '/motd.txt' ? { kind: 'text', size: '1k', text: rogueMotd(loc) } : null;
   if (sweepFile(loc) && full === '/' + sweepFile(loc)) return { kind: 'sweep', size: '9k', text: ['an incident log. cat it to sweep it.'] };
   if (name === 'kit.bin' && layoutOf(loc)[path]?.locked) {
@@ -595,8 +587,7 @@ function unlock(s, rest) {
   if (!layoutOf(loc)[target]) return err(s, `unlock: no such directory: ${dir}`);
   if (!locked(loc, target)) return out(s, `${dir}/ isn't locked.`);
   if (guarded(loc, s.run.cwd)) return err(s, `The ${guardName(loc, s.run.cwd)} is watching. Deal with it first.`);
-  const drop = layoutOf(loc)[target].drop;
-  if (pass !== (drop ? dropOf(loc).pass : loc.password)) {
+  if (pass !== loc.password) {
     s.run.integrity = Math.max(0, s.run.integrity - 3);
     err(s, `access denied. The failed attempt cost 3 Signal (${s.run.integrity}/${s.run.max}).`);
     if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
@@ -604,7 +595,6 @@ function unlock(s, rest) {
     return;
   }
   loc.state.unlocked[target] = true;
-  if (drop) { out(s, `${dir}/ unlocked. The dead drop is yours.`, 'net-good'); return gainXp(s, xpFor(s, dropOf(loc)?.level || levelOf(loc), 1.5), 'dead drop cracked', 'intel'); } // LANTERN's puzzle
   out(s, `${dir}/ unlocked.`, 'net-good');
   s.run.cracked = true;
   gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked', 'breakin');
@@ -703,7 +693,7 @@ export function play(s, input) {
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
   if (text === 'jack in' || text === 'defend') return jackIn(s);
   if (text === 'developer invade' || text === 'developer crash') return developerNetwork(s, text);
-  if (text === 'developer station') { const first = s.serial; broadcast(s); return since(s, first); } // a numbers-station dead drop now
+  if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { const first = s.serial; deal(s, text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null)); return since(s, first); } // an event now
   const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out');
   if (!s.run || !isRun) return command(s, input);
   const first = s.serial;

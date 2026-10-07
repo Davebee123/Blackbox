@@ -69,7 +69,7 @@ export const TIPS = [
   { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'These are your orders on the way. → is going out (credits on landing), ← is coming in. The bar fills as each lands.' },
   { id: 'hub-payloads', page: 'hub', at: '.pay-compile', text: 'Payloads are viruses you write to hit this hub. Exfil steals credits and code, Wiper knocks it offline, Backdoor takes an offline hub. Each strike costs rep with it.' },
   { id: 'store-chase', page: 'hub', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
-  { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Someone left a file on this server. Grab it before the timer runs out.' },
+  { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Something is happening on this server. Its card says what, and how long you have to act.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server. Nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },
   { id: 'map-install', page: 'map', at: '.op-up', text: 'Upgrade to Outpost puts a harvester from your rack on this server, and it stockpiles code while you\'re away. How many outposts run at once is the Outposts count on your server card.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },

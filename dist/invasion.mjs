@@ -10,7 +10,7 @@
 import { tickOutposts } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
 import { tickRetake } from './hubs.mjs';
-import { tickStation } from './station.mjs';
+import { tickEvents } from './events.mjs';
 import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { isLive } from './memory.mjs';
 import { effLevel, tickFirewall, wear } from './firewall.mjs';
@@ -87,7 +87,7 @@ export function tickNetwork(s, now = Date.now()) {
   tickFleet(s, dt, !!s.degraded, now);
   tickRetake(s, dt, !!s.degraded, now); // hubs you hold, and the factions that want them back
   tickFirewall(s, now); // a defrag that's done
-  tickStation(s, dt); // the numbers station keeps broadcasting, degraded or not
+  tickEvents(s, dt); // the event director deals what happens on the net, degraded or not
   tickConsortium(s, dt, now); // the dividend, sieges, raids, the travelling virus, invites (consortium.mjs)
   if (s.degraded) {
     const d = s.degraded;

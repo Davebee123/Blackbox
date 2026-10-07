@@ -377,7 +377,7 @@ export function standingCrash(s) {
   if (!s.mail) return;
   changeStanding(s, 'halcyon', -Math.min(MAIL.crashHit, standing(s) - 1), 'Halcyon logged the breach');
 }
-function changeStanding(s, f, delta, why) {
+export function changeStanding(s, f, delta, why) {
   if (!delta) return;
   const before = tierOf(s).name, was = standing(s, f);
   s.standing[f] = Math.max(0, Math.min(100, was + delta));

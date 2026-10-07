@@ -15,6 +15,7 @@ import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs
 const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
 const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
+import { eventCommand, eventWon, outbreakMult } from './events.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
@@ -542,7 +543,7 @@ export function gainCode(s, gains, why = '') {
 function codeFrom(s, family, level, source) {
   const k = codeOf(family);
   const out = {};
-  if (k) out[k] = Math.round(codeDrop(level) * (source === 'guard' ? 1.5 : 1) * (1 + gearStat(s, 'scavenge', 'hacker') / 100));
+  if (k) out[k] = Math.round(codeDrop(level) * (source === 'guard' ? 1.5 : 1) * (1 + gearStat(s, 'scavenge', 'hacker') / 100) * outbreakMult(s, family));
   if (rand(s) < EXPLOIT_CHANCE[source]) out.exploit = 1;
   return out;
 }
@@ -1284,6 +1285,7 @@ export function finish(s, result) {
     if (e.outpost) outpostWon(s, e);
     if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
+    if (e.event) eventWon(s, e); // a courier or a bounty (events.mjs)
     if (e.retake || e.hubClear) hubWon(s, e);
   } else {
     // The invader stays at the wall, as worn down as you left it.
@@ -1338,7 +1340,7 @@ function distance(a, b) {
 }
 // A command that isn't one, with no fight running: a fight order says so; a run command says where it
 // works; anything else gets a "did you mean" (clickable in the notice).
-const HOME_WORDS = ['connect', 'jack', 'mail', 'outpost', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'compile', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'architecture', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
+const HOME_WORDS = ['connect', 'jack', 'mail', 'outpost', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'compile', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'architecture', 'event', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
 const RUN_WORDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'attack', 'engage', 'slip', 'spoof', 'tap', 'sweep'];
 function unknownAtHome(s, text) {
   const [w, ...rest] = text.split(' ');
@@ -1522,6 +1524,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     architectureCommand(s, text);
   } else if (/^(fleet|swarm)( |$)/.test(text)) {
     fleetCommand(s, text);
+  } else if (/^event( |$)/.test(text)) {
+    eventCommand(s, text);
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
   } else if (text.startsWith('outpost ')) {
@@ -2916,6 +2920,8 @@ export function restore(raw) {
     retireConfigs(s);
     memoryRestore(s);
     retireTraits(s);
+    for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
+    delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
     initMail(s);
     syncFlags(s); // servers a relay already pings get their route files

@@ -51,7 +51,7 @@ const MAP = {
   harvest: (e) => ({ kind: 'paid', label: 'Harvest', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'hot-strain': (e) => ({ kind: 'net', label: 'Hot', from: 'Network', text: e.message, go: 'map', beep: true }),
   breadcrumb: (e) => ({ kind: 'mail', label: 'wick', from: 'wick', text: e.message.replace(/^wick: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
-  station: (e) => ({ kind: 'net', label: 'Station', from: 'LANTERN', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true }),
+  'world-event': (e) => ({ event: e.event, kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', outbreak: 'Outbreak', leak: 'Leak' }[e.card] || 'Event', from: e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : 'Network', text: e.message, go: e.location ? `map:${e.location}` : e.card === 'outbreak' ? null : 'map', beep: true }),
   'consortium-invite': (e) => ({ kind: 'net', label: 'Invite', from: 'Consortium', text: e.message.replace(/ consortium accept, or consortium decline\.$/, ''), go: 'people:consortium', beep: true }),
   'consortium-merged': (e) => ({ kind: 'net', label: 'Merged', from: 'Consortium', text: e.message.replace(/ See the Map\.$/, ''), go: 'map:consortium', beep: false }),
   'consortium-tier': (e) => ({ kind: 'net', label: 'Consortium', from: 'Consortium', text: e.message, go: 'map:consortium', beep: true }),
@@ -99,7 +99,7 @@ function live(s, c) {
   return true;
 }
 export function pruneComms(s, now = Date.now()) {
-  const list = commsOf(s), keep = list.filter((c) => (!c.done || now - c.done < COMMS.doneMs) && live(s, c) && now - c.t < (NEWS.has(c.kind) ? COMMS.newsMs : COMMS.actMs));
+  const list = commsOf(s), keep = list.filter((c) => (!c.done || now - c.done < COMMS.doneMs) && live(s, c) && now - c.t < (NEWS.has(c.kind) && !c.event ? COMMS.newsMs : COMMS.actMs));
   if (keep.length !== list.length) { s.comms = keep; return true; }
   return false;
 }

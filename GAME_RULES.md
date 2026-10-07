@@ -344,13 +344,18 @@ Online co-op comes later (a hosted server with logins). To try how it plays firs
 - A crewmate at 0 Signal is down for the rest of the fight. You going down still ends it. Rewards are yours (the bots keep nothing).
 - On the fight screen each kind of crew information has one home. **Health**: a Crew column in the HUD, beside your Signal, a line per crewmate (name, bar with the blinking forecast slice, number; struck through when down; a *drawing fire* tag; lit on their turn; hover for their command). **Where they aim**: their avatar on the part's rail. **What happened**: the damage number on the part, the strike in their colour, and the log, where their lines carry their name.
 
-## The numbers station (station.mjs)
+## Events (events.mjs)
 
-From class level 3, a numbers station, **LANTERN**, breaks into the radio now and then: the first time 4–8 minutes of logged-on time after you reach level 3, then every 20–35 minutes. The broadcast goes to the pager (and plays as a numbers transmission with Sound on):
+The net isn't a storyline: things happen on it, and you act on them or let them pass. From class level 3 an **event director** deals one event now and then: the first 4–8 minutes of logged-on time after you reach level 3, then every 15–30 minutes, never the same kind twice in a row, at most two up at once. Each one goes to the pager and stays there while it's up. Missing one costs nothing. The director rolls its own dice, so an event never shifts the rest of the game's rolls.
 
-`LANTERN LANTERN · VANTA-SINK-36 · 05 13 02 05 18 · 47`
+| Event | Where | Lasts | What you do | What you get |
+|---|---|---|---|---|
+| **Courier** | a traced server | 15 min | LANTERN's courier is carrying a dead drop through. *Intercept* it from the server's card: a fight at your level. | 40 + 12×level credits and a protocol (85% Tuned, 15% Custom), on top of the kill |
+| **Bounty** | a traced server | 25 min | Halcyon posts a bounty on a named virus two levels above you. *Intercept* it. | 80 + 15×level credits and +2 Halcyon standing, on top of the kill |
+| **Outbreak** | the net | 30 min | One family surges. | Its kills drop double code |
+| **Leak** | a server you've found but not taken | at once | Someone leaks its vault key. | Its vault opens without the password |
 
-It names a server in clear and spells a word in numbers, two digits a letter (01 = A … 26 = Z), then two digits. The word plus the digits (`ember47`) is the password to a **dead drop**: a locked `/drop` folder at that server's root, up for 15 minutes of logged-on time (it waits while you're inside it). It holds `cache.dat` (40 + 12×level credits) and `kit.bin` (a protocol at that level: 85% Tuned, 15% Custom). A wrong password costs 3 Signal like a vault. The drop goes on a traced server you can reach (never a rogue one), or on SPRAWL-00 if you haven't traced any; one drop at a time. Missing one costs nothing. Once you've banked both files and left, the drop closes and its mark leaves the map. On the map the server gets an antenna mark, and its card shows the numbers and the minutes left. `developer station` broadcasts one now.
+A server with an event gets an antenna mark on the map, the event and its minutes left on its card, and a row in the map's threat list. An event you're fighting waits for you. Losing the fight leaves it up until its time runs out. `developer event [courier|bounty|outbreak|leak]` deals one now. (LANTERN's numbers-station dead drops, which you had to decode, unlock and bank, became the courier.)
 
 ## The Halcyon store
 
