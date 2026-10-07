@@ -667,3 +667,17 @@ test('Uplink trace is gone: old saves swap Traceroute for Keepalive and the Trac
   assert.deepEqual(s.daemonsOwned, { stall: 2 });
   assert.deepEqual(s.daemons, ['stall']);
 });
+
+test('a recipe with a capital in its id compiles (commands are lowercased: compile critDamage)', async () => {
+  const { STATS } = await import('./dist/gear.mjs');
+  const { PROTOCOL_NAMES, recipeId } = await import('./dist/gear.mjs');
+  const ids = Object.keys(STATS).filter((k) => /[A-Z]/.test(k) && PROTOCOL_NAMES[k]);
+  assert.ok(ids.length, 'there are camelCase recipes');
+  for (const id of ids) {
+    const s = fresh();
+    s.recipes = [recipeId(id)]; s.server.credits = 1e5; s.salvage = Array.from({ length: 40 }, () => ({ name: 'Scrap', virus: 't', seed: 0 }));
+    const n = (s.stash || []).length;
+    command(s, `compile ${id}`);
+    assert.equal((s.stash || []).length, n + 1, `compile ${id}`);
+  }
+});

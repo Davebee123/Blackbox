@@ -990,7 +990,7 @@ function protocolCommand(s, full) {
   if (word === 'compile') {
     const zd = ZERO_DAYS[arg] && !ZERO_DAYS[arg].chase ? arg : Object.keys(ZERO_DAYS).find((z) => !ZERO_DAYS[z].chase && ZERO_DAYS[z].name.toLowerCase() === arg);
     if (SERVICES[arg]) return warn(s, `${SERVICES[arg].name} is a service: install it on the Server page.`);
-    let stat = !zd && arg ? Object.keys(STATS).find((k) => k === arg || STATS[k].name.toLowerCase() === arg || PROTOCOL_NAMES[k]?.toLowerCase() === arg) : null;
+    let stat = !zd && arg ? Object.keys(STATS).find((k) => k.toLowerCase() === arg || STATS[k].name.toLowerCase() === arg || PROTOCOL_NAMES[k]?.toLowerCase() === arg) : null;
     const mine = knownRecipes(s);
     if (!zd && arg && !stat) return warn(s, `compile <recipe>: ${mine.join(', ') || 'you have no recipes yet'}${(s.recipes || []).some((r) => ZERO_DAYS[r]) ? `, or a Zero-day you have source for: ${s.recipes.filter((r) => ZERO_DAYS[r]).join(', ')}` : ''}.`);
     if (stat && !PROTOCOL_NAMES[stat]) return warn(s, `${STATS[stat].name} comes from services, not protocols.`);
