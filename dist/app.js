@@ -912,8 +912,10 @@ function put(id, html) {
   cache.set(id, html);
   const el = $(id);
   const open = [...el.querySelectorAll('details')].map((d) => d.open); // re-renders keep what you opened
+  const kept = new Map([...el.querySelectorAll('[data-keep]')].map((k) => [k.dataset.keep, k.scrollTop])); // and where you scrolled
   el.innerHTML = html;
   el.querySelectorAll('details').forEach((d, i) => { if (open[i]) d.open = true; });
+  for (const k of el.querySelectorAll('[data-keep]')) if (kept.get(k.dataset.keep)) k.scrollTop = kept.get(k.dataset.keep);
 }
 
 function renderMeters() {

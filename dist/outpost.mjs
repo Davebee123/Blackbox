@@ -33,10 +33,10 @@ export const OUTPOST = {
   // (Harvester traits are gone: site traits and modules do those jobs.)
   // Location traits, fixed when a server is found.
   sites: {
-    rich: { name: 'Rich', rule: 'Harvesters here yield +50%.' },
+    rich: { name: 'Rich', rule: 'Harvesters here yield 50% more.' },
     legacy: { name: 'Legacy', rule: 'Better loot rolls here.' },
     backbone: { name: 'Backbone', rule: 'An outpost here uses no bandwidth.' },
-    hostile: { name: 'Hostile', rule: 'Twice the invasions, +50% yield.' },
+    hostile: { name: 'Hostile', rule: 'Invasions come twice as often, and harvesters yield 50% more.' },
     hardened: { name: 'Hardened', rule: 'Its natives are Armored.' },
   },
   siteChance: 0.45,
@@ -52,11 +52,11 @@ export const OUTPOST = {
   // stay put when you swap or pull the harvester, and sleep while the outpost is in lockdown.
   ports: (serverLv) => 2 + (serverLv >= 20 ? 1 : 0) + (serverLv >= 35 ? 1 : 0),
   mods: {
-    pipeline: { name: 'Pipeline', rule: '+50% yield.' },
-    storage: { name: 'Storage Array', rule: 'Double storage.' },
-    node: { name: 'Firewall Node', rule: '+3 levels on this outpost\'s firewall.' },
+    pipeline: { name: 'Pipeline', rule: 'Harvesters here yield 50% more.' },
+    storage: { name: 'Storage Array', rule: 'This outpost stores twice as much.' },
+    node: { name: 'Firewall Node', rule: 'This outpost\'s firewall is 3 levels higher.' },
     ids: { name: 'IDS', rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
-    lure: { name: 'Honeytoken', rule: 'Draws trouble: noticed twice as often, swarms come sooner and pick it first, and beating them here pays double.' },
+    lure: { name: 'Honeytoken', rule: 'This outpost draws trouble. Natives notice it twice as often, and swarms come sooner and pick it first. Beating them here pays double.' },
   },
   modCost: { credits: 150, code: 8, salvage: 5 }, // to craft one (Craft page); it goes in your module stock
   modCode: { pipeline: 'worm', storage: 'kernel', node: 'cipher', ids: 'cipher', lure: 'kernel' },

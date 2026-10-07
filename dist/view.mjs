@@ -1745,7 +1745,20 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const minX = Math.min(...xs, -250) - mx, maxX = Math.max(...xs, 250) + mx, minY = Math.min(...ys, -240) - my, maxY = Math.max(...ys, 240) + my + 4;
   const deepest = Math.max(1, ...s.locations.map((l) => l.depth || 1));
   const rings = con ? [{ r: RM, t: 'trunk', cls: 'trunk' }] : [{ r: 120, t: 'wall', cls: 'wall' }, ...Array.from({ length: deepest }, (_, i) => ({ r: R1 + i * R2, t: `layer ${i + 1}` }))];
-  const scope = `<g class="mscope">${rings.map((g) => `<circle r="${g.r}" class="mring-range ${g.cls || ''}"/><text text-anchor="start" x="${Math.round(g.r * 0.72) + 4}" y="${-Math.round(g.r * 0.69) - 4}" class="mring-label">${g.t}</text>`).join('')}
+  // A ring's name sits on the ring, near the top right, but clear of every server on the map.
+  // A server takes its marker plus the name to its right; the gap is measured between the two boxes.
+  const room = (x, y) => Math.min(...nodes.map((n) => Math.hypot(Math.max(x - n.x - 130, 0, n.x - 14 - x - 64), Math.max(y - 12 - n.y - 22, 0, n.y - 14 - y - 2))));
+  const ringAt = (r) => {
+    let best = null;
+    for (let i = 0; i < 90; i++) {
+      const d = 44 + (i % 2 ? -1 : 1) * Math.ceil(i / 2) * 4; // fan out from 44°
+      const x = Math.round(r * Math.cos(d * Math.PI / 180)) + 4, y = -Math.round(r * Math.sin(d * Math.PI / 180)) - 4, k = room(x, y);
+      if (k >= 6) return [x, y];
+      if (!best || k > best[2]) best = [x, y, k];
+    }
+    return best;
+  };
+  const scope = `<g class="mscope">${rings.map((g) => { const [x, y] = ringAt(g.r); return `<circle r="${g.r}" class="mring-range ${g.cls || ''}"/><text text-anchor="start" x="${x}" y="${y}" class="mring-label">${g.t}</text>`; }).join('')}
     <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>`;
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
@@ -1827,7 +1840,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover: click to always show them' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
-  const card = pop ? `<div class="map-pop" id="map-pop" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
+  const card = pop ? `<div class="map-pop" id="map-pop" data-keep="${esc(sel || '')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
@@ -2520,7 +2533,7 @@ export function hubTerminalMarkup(s, f, lines, win, now = Date.now()) {
     <header class="net-head"><div class="net-where">${fIcon(f)}<b>${esc(h.name)}</b></div>${repBar(s, f)}<button type="button" class="btn small" data-hub-close title="Disconnect">×</button></header>
     <ol class="term" id="hubterm">${lines.map((l) => `<li class="${l.cls}">${l.menu ? hubMenuLine(s, f, now, win).html : l.html}</li>`).join('')}</ol>
   </section>`;
-  const w = W ? `<section class="card hub-win"><h2${W.tip ? ` title="${esc(W.tip(f))}"` : ''}>${esc(W.title)}<button type="button" class="btn small x" data-hub-opt="" title="Close">×</button></h2>${W.body(s, f, now)}</section>` : '';
+  const w = W ? `<section class="card hub-win" data-keep="${esc(f + ' ' + W.title)}"><h2${W.tip ? ` title="${esc(W.tip(f))}"` : ''}>${esc(W.title)}<button type="button" class="btn small x" data-hub-opt="" title="Close">×</button></h2>${W.body(s, f, now)}</section>` : '';
   return `<div class="hub-session${W ? ' with-win' : ''}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}">${term}${w}</div>`;
 }
 export const hubMarkup = (s, f, now = Date.now()) => hubTerminalMarkup(s, f, hubBanner(s, f, now), null, now);

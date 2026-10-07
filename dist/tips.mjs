@@ -30,21 +30,21 @@ export const TIPS = [
   // ---------- map ----------
   { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. Viruses that attack it show up next to it. Kill enough of one family and you find the server that sent them.' },
   { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is a rogue server. Viruses gather in its folders. Connect, find them with ls and cd, and attack the ones you want to fight.' },
-  { id: 'net-sweep', page: 'net', at: '.sweep:not(.past):not(.solved)', text: 'Click a line to light up every line it shares a source with, and filter out the noise. A right answer pushes your lead toward the next server; a wrong one only shrinks the push.' },
+  { id: 'net-sweep', page: 'net', at: '.sweep:not(.past):not(.solved)', text: 'Click a line to light up every line it shares a source with, and filter out the noise. A right answer pushes your lead toward the next server. A wrong one only shrinks the push.' },
   { id: 'net-hostile', page: 'net', at: '.term .tok.virus', text: 'A virus is running in this folder. Click it, or type attack, when you are ready. It comes back a while after you kill it.' },
-  { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready; nothing happens until you do.' },
+  { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready. Nothing happens until you do.' },
   { id: 'map-lead', page: 'map', at: '.mnode.lead', text: 'This is a lead. Each kill of this family fills it. At 100% you find the server that sent them.' },
   { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You found a server. Select it and press Connect to hack in. It takes memory while it is on your network. Its ring fills as you explore it.' },
-  { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your free memory: how many more servers your network can hold. The blinking one is what this server takes. Detach a server you are done with to get one back.' },
+  { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your free memory. They show how many more servers your network can hold. The blinking one is what this server takes. Detach a server you are done with to get one back.' },
   { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'An invasion is heading for your wall. How strong your Firewall is decides whether it is blocked, contested, or breaks through.' },
   { id: 'map-outpost', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.h), at: '.outpost .lvl-bar', text: 'This outpost fills while you are away, up to its cap. Connect to the server to collect what it has gathered.' },
   { id: 'map-besieged', page: 'map', when: (s) => s.fleet?.state === 'siege', at: '.mnode.besieged', text: 'A swarm is at this outpost, and it makes nothing meanwhile. Defend it before the timer runs out, or it goes into lockdown. Its stockpile stays yours.' },
-  { id: 'map-lockdown', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.lockdown), at: '.mnode.locked', text: 'This outpost is in lockdown: no harvesting for a while, but its stockpile is safe. Retake it with a fight to end it sooner.' },
-  { id: 'map-fleet', page: 'map', when: (s) => !!s.fleet, at: '.mnode.fleet', text: 'A swarm is coming for one of your outposts. Each fight kills one virus: intercept on the way, or defend once it lands. Any left when its timer runs out put the outpost in lockdown.' },
+  { id: 'map-lockdown', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.lockdown), at: '.mnode.locked', text: 'This outpost is in lockdown. It harvests nothing for a while, but its stockpile is safe. Retake it with a fight to end it sooner.' },
+  { id: 'map-fleet', page: 'map', when: (s) => !!s.fleet, at: '.mnode.fleet', text: 'A swarm is coming for one of your outposts. Each fight kills one virus. Intercept the swarm on the way, or defend once it lands. Any left when its timer runs out put the outpost in lockdown.' },
   { id: 'map-contested', page: 'map', at: '.mnode.invader.siege[data-select="invader"]', text: 'Your wall is wearing this invasion down, but it costs you Integrity. Jack in to finish it now, or raise the wall to block it next time.' },
   { id: 'map-breach', page: 'map', at: '.mnode.invader.breach', text: 'A breach takes some of your Integrity every minute. You can jack in to fight it yourself, and it counts as a full kill.' },
   { id: 'map-hub-swarm', page: 'map', when: (s) => !!retakeOf(s), at: '.mnode.hub.yours.threat', text: 'The old owner is sending viruses to take this hub back. The timer is under its name. The hub earns nothing until you beat them, one fight per virus.' },
-  { id: 'map-hub-lockdown', page: 'map', when: (s) => !retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub is in lockdown: no income until you retake it with one fight. It is still yours, and stays yours.' },
+  { id: 'map-hub-lockdown', page: 'map', when: (s) => !retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub is in lockdown. It earns nothing until you retake it with one fight. It is still yours, and stays yours.' },
   { id: 'map-member-raid', page: 'map', at: '.mnode.member.besieged', text: 'A member\'s outpost is under invasion. Select it and Defend for a bounty. Left alone, it may hold or go into lockdown, at no cost to you.' },
   { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'A contract points at this server. Open its vault to take it over, or to find the file you were sent for.' },
   { id: 'pager', page: '*', at: '#pager .led.on', text: 'This is your pager. New mail, offers, finished contracts, the retainer and anything moving on the network land here. Click it for the list.' },
@@ -56,24 +56,24 @@ export const TIPS = [
   { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'This is Halcyon\'s board. Offers come and go on their own, and you can take up to three at a time. Only a contract you have taken counts.' },
   { id: 'store', page: 'hub', at: '.hub-win .store-page', text: 'Halcyon\'s store is its hub\'s Shop. Its own line is always there, and other agencies\' stock changes through the day.' },
   { id: 'hub-shop', page: 'hub', at: '.hub-win .ptiles.stash .ptile', text: 'Every hub has a Shop: that faction\'s own goods. Better rep unlocks more of the shelf and trims the price.' },
-  { id: 'store-plans', page: 'hub', at: '.plan-shelf', text: 'Plans for harvesters and outpost modules. Buy one once and you can craft that kind on the Craft page for good.' },
+  { id: 'store-plans', page: 'hub', at: '.plan-shelf', text: 'These are plans for harvesters and outpost modules. Buy one once and you can craft that kind on the Craft page for good.' },
   // ---------- hub sessions ----------
-  { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'You are connected to a faction hub. Pick a line (click it, or type its number) to open that window: its market, its work, payloads.' },
+  { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'You are connected to a faction hub. Pick a line (click it, or type its number) to open that window, such as its market, its work or payloads.' },
   // The market, one step per tip in the order you meet it: rows, ▲/▼, the news, then the ticket.
-  { id: 'hub-market', page: 'hub', at: '.mk-wares .mk-row', text: 'Each ware: how many you hold, what this hub pays you for one (Sell here) and what it charges (Buy here). Click a ware to trade it.' },
-  { id: 'hub-compare', page: 'hub', at: '.mk-wares .mk-d', text: '▲ pays more than the average hub, ▼ less. Prices differ from hub to hub: sell where it is ▲, buy where it is cheap.' },
-  { id: 'hub-news', page: 'hub', at: '.mk-tags .tag', text: 'What this hub wants, and today\'s news across the net. They push some wares up and others down: hover one to see which.' },
+  { id: 'hub-market', page: 'hub', at: '.mk-wares .mk-row', text: 'Each row shows how many of a ware you hold, what this hub pays you for one (Sell here) and what it charges (Buy here). Click a ware to trade it.' },
+  { id: 'hub-compare', page: 'hub', at: '.mk-wares .mk-d', text: '▲ means this hub pays more than the average hub, and ▼ means it pays less. Prices differ from hub to hub, so sell where a ware is ▲ and buy where it is cheap.' },
+  { id: 'hub-news', page: 'hub', at: '.mk-tags .tag', text: 'This shows what this hub wants and today\'s news across the net. They push some wares up and others down. Hover one to see which.' },
   { id: 'hub-slider', page: 'hub', at: '.mk-ticket input[data-mk-n]', text: 'Drag to pick how many. Every one you sell lowers this hub\'s price a little (every one you buy raises it), so a big order gets less for each.' },
-  { id: 'hub-preview', page: 'hub', at: '.mk-ticket .mk-prev', text: 'Your order before you place it: the total, the price for each, and how that compares to the same order elsewhere (amber means better here).' },
+  { id: 'hub-preview', page: 'hub', at: '.mk-ticket .mk-prev', text: 'This is your order before you place it. It shows the total, the price for each, and how that compares to the same order elsewhere. Amber means it is better here.' },
   { id: 'hub-go', page: 'hub', at: '.mk-ticket .mk-go', text: 'Orders take the minutes shown on ⇄ to arrive. Relays make that shorter. Prices you moved drift back over a few hours.' },
-  { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'Your orders on the way. → is going out (credits on landing), ← is coming in. The bar fills as each lands.' },
+  { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'These are your orders on the way. → is going out (credits on landing), ← is coming in. The bar fills as each lands.' },
   { id: 'hub-payloads', page: 'hub', at: '.pay-compile', text: 'Payloads are viruses you write to hit this hub. Exfil steals credits and code, Wiper knocks it offline, Backdoor takes an offline hub. Each strike costs rep with it.' },
   { id: 'store-chase', page: 'hub', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Someone left a file on this server. Grab it before the timer runs out.' },
-  { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server: wild, never taken over. Viruses sit in its folders and come back a few minutes after you kill them.' },
-  { id: 'map-install', page: 'map', at: '.op-up', text: 'Upgrade to Outpost puts a harvester from your rack on this server: it stockpiles code while you\'re away. How many outposts run at once is the Outposts count on your server card.' },
+  { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server. Nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },
+  { id: 'map-install', page: 'map', at: '.op-up', text: 'Upgrade to Outpost puts a harvester from your rack on this server, and it stockpiles code while you\'re away. How many outposts run at once is the Outposts count on your server card.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },
-  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'An unknown server. Beating what it sends at you traces it, and so does a vault\'s trace record. Once a relay flags it, kills of its family count too.' },
+  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'This is an unknown server. Beat the viruses it sends at you to trace it. A vault\'s trace record traces it too. Once a relay flags it, kills of any virus from its family count as well.' },
 
   // ---------- fight ----------
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
@@ -114,7 +114,7 @@ export const TIPS = [
   { id: 'net-trace', page: 'net', at: '.net-trace.hot', text: 'Trace is how loud you have been here. At 100 a hunter comes for you, and you cannot jack out until it is down.' },
   { id: 'net-names', page: 'net', at: '.term .ls .tok', text: 'Click a name to open it or read it. Use pull to copy a file into your pack.' },
   { id: 'net-guarded', page: 'net', at: '.term .tag-guarded', text: 'This folder is guarded. Going in starts a fight, and the guard\'s hits cost Signal.' },
-  { id: 'net-locked', page: 'net', at: '.term .tag-locked', text: 'This folder is locked. The password is in a file somewhere on this node; type unlock, the folder and the password.' },
+  { id: 'net-locked', page: 'net', at: '.term .tag-locked', text: 'This folder is locked. The password is in a file somewhere on this node. Type unlock, the folder and the password.' },
   { id: 'net-pack', page: 'net', at: '.net-pack', when: (s) => (s.run?.pack.length || 0) > 0, text: 'Files you pull wait in your pack. Jack out to bank them and keep them.' },
 
   // ---------- server ----------
@@ -142,8 +142,8 @@ export const TIPS = [
 
   // ---------- daemons ----------
   { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons are programs you find on runs. A slotted daemon fights beside you on its own cooldown, and finding the same one again upgrades it.' },
-  { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade: pick the one that fits how you play. You can rebuild later for credits.' },
-  { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'A module you crafted, ready for this outpost\'s ports. It bends how the outpost works; take it out and it goes back to your stock for another outpost.' },
+  { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade, so pick the one that fits how you play. You can rebuild later for credits.' },
+  { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'A module you crafted, ready for this outpost\'s ports. It bends how the outpost works. Take it out and it goes back to your stock for another outpost.' },
 ];
 
 // The next tip to show on this page, or null. `visible(selector)` says whether an element is on

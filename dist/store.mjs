@@ -36,20 +36,20 @@ export const lineAbout = (x) => x.about || ZERO_DAYS[x.id].effect;
 
 // What agencies might have. credits: price at your level before drift.
 export const GOODS = {
-  relay: { name: 'Relay (refurbished)', about: 'A second-hand relay: same ping.', credits: (L) => 95 + 6 * L, qty: [1, 2] },
-  cracker: { name: 'Key cracker', about: 'Reveals the vault key of a server you’ve found (use it from its map card).', credits: (L) => 60 + 6 * L, qty: [1, 3] },
-  injector: { name: 'Trace injector', about: 'Adds 30% to the trace on an unknown server (use it from its map card).', credits: (L) => 80 + 6 * L, qty: [1, 2] },
-  signal: { name: 'Signal patch', about: 'Your Signal back to full, now.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
-  harden: { name: 'harden.sh', about: 'Your firewall +3 levels for 8 hours.', credits: (L) => 70 + 6 * L, qty: [1, 2] },
-  repair: { name: 'Hot-swap kit', about: 'Your server’s Integrity back to full, now.', credits: (L) => 40 + 5 * L, qty: [1, 3] },
+  relay: { name: 'Relay (refurbished)', about: 'A second-hand relay. It pings just like a new one.', credits: (L) => 95 + 6 * L, qty: [1, 2] },
+  cracker: { name: 'Key cracker', about: 'Reveal the vault key of a server you’ve found. Use it from the server’s map card.', credits: (L) => 60 + 6 * L, qty: [1, 3] },
+  injector: { name: 'Trace injector', about: 'Add 30% to the trace on an unknown server. Use it from the server’s map card.', credits: (L) => 80 + 6 * L, qty: [1, 2] },
+  signal: { name: 'Signal patch', about: 'Instantly refill your Signal.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
+  harden: { name: 'harden.sh', about: 'Increase the level of your firewall by 3 for 8 hours.', credits: (L) => 70 + 6 * L, qty: [1, 2] },
+  repair: { name: 'Hot-swap kit', about: 'Instantly repair your server’s Integrity.', credits: (L) => 40 + 5 * L, qty: [1, 3] },
   cipher: { name: 'Cipher code lot', code: 'cipher', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   kernel: { name: 'Kernel code lot', code: 'kernel', credits: (L) => 45 + 5 * L, qty: [1, 3] },
-  exploit: { name: 'Exploit', about: 'One Exploit, for the top service versions.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
-  salvage: { name: 'Salvage lot', about: 'Five pieces of salvage.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
-  crate: { name: 'Sealed item', about: 'A sealed Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
-  blueprint: { name: 'Sealed blueprint', about: 'A blueprint you don’t have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
-  daemon: { name: 'Daemon image', about: 'A daemon, or a version up if you have it.', credits: (L) => 300 + 20 * L, qty: [1, 1], tier: 2 },
+  exploit: { name: 'Exploit', about: 'Get one Exploit. The top service versions need them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
+  salvage: { name: 'Salvage lot', about: 'Get five pieces of salvage.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
+  crate: { name: 'Sealed item', about: 'Open a sealed Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
+  blueprint: { name: 'Sealed blueprint', about: 'Learn a blueprint you don’t have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
+  daemon: { name: 'Daemon image', about: 'Get a daemon, or a version up of one you already have.', credits: (L) => 300 + 20 * L, qty: [1, 1], tier: 2 },
 };
 const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 1, blueprint: 1, daemon: 1 };
 export const codeAmount = (L) => 3 + Math.floor(L / 5);
@@ -59,7 +59,7 @@ export function priceNow(s, id, price, L = hackerLevel(s)) {
   const units = id === 'salvage' ? 5 : id === 'exploit' ? 1 : GOODS[id]?.code ? codeAmount(L) : 0;
   return units ? Math.max(price, Math.ceil(bestSell(s, id) * units * 1.1)) : price;
 }
-export const goodsAbout = (g, L) => g.about || `${codeAmount(L)} ${MATERIALS[g.code].name}.`;
+export const goodsAbout = (g, L) => g.about || `Get ${codeAmount(L)} ${MATERIALS[g.code].name}.`;
 
 export const storeOf = (s) => (s.store ||= { slots: [], serial: 0 });
 const between = (s, [lo, hi]) => Math.round(lo + rand(s) * (hi - lo));
