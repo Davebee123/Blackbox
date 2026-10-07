@@ -9,6 +9,7 @@ import { CONFIG, power } from './data.mjs';
 import { items } from './hidden.mjs';
 import { filterStat } from './filters.mjs';
 import { FACTIONS } from './factions.mjs';
+import { rootWall } from './root.mjs';
 const HUB_LEVEL = (f) => FACTIONS[f].hub.level;
 
 export const FIREWALL = {
@@ -62,7 +63,7 @@ export const hardenLeft = (s, at = clock(), loc = null) => Math.max(0, fwAt(s, l
 // Filters are your home firewall's; an outpost's has its Firewall Node instead.
 export function effLevel(s, at = clock(), family = null, loc = null) {
   const f = fwAt(s, loc);
-  const kit = loc ? (loc.mods || []).includes('node') ? NODE_PLUS : 0 : filterStat(s, 'strength') + (family ? filterStat(s, family) : 0);
+  const kit = loc ? ((loc.mods || []).includes('node') ? NODE_PLUS : 0) + rootWall(loc) : filterStat(s, 'strength') + (family ? filterStat(s, family) : 0); // Root 5: +3 (root.mjs)
   return Math.max(0, f.level + kit - fragLevels(s, loc) - (defragging(s, at, loc) ? FIREWALL.defragLoss : 0) + (hardenLeft(s, at, loc) ? FIREWALL.harden.plus : 0));
 }
 // Filters: slower fragmentation, a faster defrag (each capped at 80%).

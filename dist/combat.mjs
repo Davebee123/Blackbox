@@ -17,6 +17,7 @@ import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, infestWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
+import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
 import { portsCommand } from './invasion.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter } from './filters.mjs';
@@ -558,6 +559,7 @@ export function tickServices(s, now = Date.now()) {
   tickMarket(s, now);
   tickPayloads(s, now);
   tickHubs(s, now);
+  tickRoot(s, now, (loc) => hooks.procRooms?.(loc) || []);
   return since(s, first);
 }
 
@@ -613,7 +615,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   const virus = createVirus(key, seed, over);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
   if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
-  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
+  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {} };
   if (!opts.quiet) emit(s, 'intrusion', opts.zone
     ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.`
     : mode === 'run'
@@ -1109,7 +1111,7 @@ export function finish(s, result) {
   if (e.zone) {
     const now = hooks.now?.() ?? Date.now();
     const wild = e.wild && findLocation(s, e.wild); // a rogue server's folder, or SPRAWL-00's
-    const spawn = wild ? null : s.zone?.spawns?.[e.room];
+    const spawn = wild || e.process ? null : s.zone?.spawns?.[e.room]; // a rotation's process (root.mjs) isn't SPRAWL's
     // A named contract target you lost to stays put, so the contract can still be finished.
     const keep = spawn?.bounty && result !== 'victory';
     // A named target that beat you twice is worn down too: it drops back to v1.
@@ -1123,13 +1125,14 @@ export function finish(s, result) {
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-      const ctx = { kind: wild ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || 1, family: e.virus.family, strain: e.virus.strain, rolls: e.virus.elite ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
+      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || findLocation(s, e.process)?.depth || 1, family: e.virus.family, strain: e.virus.strain, rolls: e.virus.elite ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
       if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
       if (lead) addLead(s, e.virus.family, lead);
       if (wild) rogueKill(s, wild, e.room, now, () => { const more = rollDrop(s, { ...ctx, strain: null }, e.virus.level); if (more) addItem(s, more, 'The Pit gives up more: '); });
+      if (e.process) processWon(s, e); // root access grows (root.mjs)
       hooks.runWon?.(s);
     } else {
       emit(s, 'crashed', `${e.virus.name} burned your Signal to zero.`, { mode: 'run' });

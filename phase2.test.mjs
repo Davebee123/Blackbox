@@ -94,3 +94,36 @@ test('never-connected finds are capped at ten: the oldest drops off the map', as
   for (let i = 0; i < FIND_CAP + 4; i++) addLocation(s, 'worm', 1);
   assert.equal(s.locations.filter((l) => l.fresh).length, FIND_CAP);
 });
+
+test('root access: log rotations bring a process and a cache; clearing them raises Root, which pays off', async () => {
+  const R = await import('./dist/root.mjs');
+  const { play, layoutOf, fileInfo } = await import('./dist/run.mjs');
+  const { liveCount } = await import('./dist/memory.mjs');
+  const { outpostPorts } = await import('./dist/outpost.mjs');
+  const { effLevel } = await import('./dist/firewall.mjs');
+  const { tickServices, hooks } = await import('./dist/combat.mjs');
+  const s = at(8);
+  const loc = addLocation(s, 'worm', 1); loc.detached = false; delete loc.fresh; loc.takenOver = true;
+  assert.equal(R.rootOf(loc), 1);
+  const used = liveCount(s);
+  tickServices(s, 0); // arms the first rotation
+  assert.equal(loc.root.nextAt, R.ROOT.firstMs);
+  tickServices(s, R.ROOT.firstMs);
+  const p = R.procOf(loc, R.ROOT.firstMs + 1);
+  assert.ok(p && p.room !== '/', 'a process moved in');
+  assert.ok(layoutOf(loc)['/'].files.includes(R.CACHE_FILE), 'and a rotated cache');
+  assert.equal(fileInfo(loc, '/', R.CACHE_FILE).kind, 'credits');
+  // Clear it: Root 2, and /root opens.
+  hooks.now = () => R.ROOT.firstMs + 1;
+  s.run = { loc: loc.id, cwd: p.room, integrity: 999, max: 999, pack: [], visited: ['/'] };
+  play(s, 'attack'); assert.equal(s.encounter.process, loc.id);
+  win(s);
+  assert.equal(R.rootOf(loc), 2);
+  assert.ok(layoutOf(loc)['/root'], '/root opens at Root 2');
+  // Root 3: off your memory; Root 4: a port; Root 5: firewall +3.
+  const fw = effLevel(s, 0, null, loc), ports = outpostPorts(s, loc);
+  loc.root.level = 3; assert.equal(liveCount(s), used - 1);
+  loc.root.level = 4; assert.equal(outpostPorts(s, loc), ports + 1);
+  loc.root.level = 5; assert.equal(effLevel(s, 0, null, loc), fw + 3);
+  delete hooks.now;
+});

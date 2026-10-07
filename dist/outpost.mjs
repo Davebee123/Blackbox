@@ -14,6 +14,7 @@
 // In a consortium, sieges come while you're away too (consortium.mjs), and members may break them.
 import { MUTATIONS, variantFor, CONFIG } from './data.mjs';
 import { isLive } from './memory.mjs';
+import { rootPorts, rootYield } from './root.mjs';
 import { ratingAt, fragment, effLevel } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
 import { emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT } from './combat.mjs';
@@ -137,13 +138,14 @@ export function bankHarvester(s, h, why = 'Banked: ') {
 export const bandwidth = (s) => OUTPOST.bandwidth(serverLevel(s)) + serviceValue(s, 'router') + archBandwidth(s) + consortiumBandwidth(s);
 export const modsOf = (loc) => (loc ? (loc.mods ||= []) : []);
 export const hasMod = (loc, id) => !!loc?.mods?.includes(id);
-export const outpostPorts = (s) => OUTPOST.ports(serverLevel(s));
+// A server's module ports: your server level's, +1 at Root 4 (root.mjs).
+export const outpostPorts = (s, loc = null) => OUTPOST.ports(serverLevel(s)) + rootPorts(loc);
 export const outposts = (s) => (s.locations || []).filter((l) => l.outpost?.h && isLive(s, l)); // a detached server's outpost is frozen (memory.mjs)
 export const bandwidthUsed = (s) => outposts(s).filter((l) => l.trait !== 'backbone').length;
 
 
 // Yield ----------------------------------------------------------------------------------------
-const yieldMult = (loc, h, s) => (1 + (h.traits.includes('rich') ? 0.5 : 0) + (hasMod(loc, 'pipeline') ? 0.5 : 0)) * (loc.trait === 'rich' || loc.trait === 'hostile' ? 1.5 : 1) * (s ? archYield(s) * consortiumYield(s) : 1);
+const yieldMult = (loc, h, s) => (1 + (h.traits.includes('rich') ? 0.5 : 0) + (hasMod(loc, 'pipeline') ? 0.5 : 0)) * (loc.trait === 'rich' || loc.trait === 'hostile' ? 1.5 : 1) * rootYield(loc) * (s ? archYield(s) * consortiumYield(s) : 1); // Root 4/5: ×1.25/×2 (root.mjs)
 export const capOf = (loc, h = loc.outpost.h) => OUTPOST.kinds[h.kind].cap(h.level) * (h.traits.includes('deep') ? 2 : 1) * (hasMod(loc, 'storage') ? 2 : 1);
 export const perHour = (loc, h = loc.outpost.h, s = null) => OUTPOST.kinds[h.kind].rate(h.level) * yieldMult(loc, h, s);
 export const stockOf = (loc) => Math.floor(loc.outpost?.stock || 0);
@@ -348,7 +350,7 @@ function installMod(s, loc, id) {
   if (!m) return warn(s, `Modules: ${Object.keys(OUTPOST.mods).join(', ')}.`);
   if (!loc.takenOver) return warn(s, `Take ${loc.name} over first.`);
   if (hasMod(loc, id)) return warn(s, `${loc.name} already runs a ${m.name}.`);
-  if (modsOf(loc).length >= outpostPorts(s)) return warn(s, `${loc.name}'s ports are full (${outpostPorts(s)}). Remove a module first.`);
+  if (modsOf(loc).length >= outpostPorts(s, loc)) return warn(s, `${loc.name}'s ports are full (${outpostPorts(s, loc)}). Remove a module first.`);
   if (!modStock(s)[id]) return warn(s, `You have no ${m.name} module. Craft one first (Craft page).`);
   modStock(s)[id]--;
   modsOf(loc).push(id);

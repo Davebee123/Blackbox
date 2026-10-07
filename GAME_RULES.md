@@ -384,6 +384,22 @@ Salvage works like mana in Magic: most costs take **any** salvage, and a few als
 
 - **Choosing what pays.** Every build button opens a picker with the stacks and a − / + for each. It starts filled with a sensible default (plain Scrap first, then pieces no recipe asks for, then the most plentiful), and Build lights up once the payment covers the cost. On the command line: `compile crit pay scrap:2,pulse-kernel:2` (without `pay`, the default is used).
 
+## Root access
+
+A server you've taken over keeps paying you back if you keep coming back to it (`root.mjs`; RuneScape's player-owned house, WoW's dailies and rare spawns).
+
+- **Log rotation.** An hour after the takeover, then every 2 hours (real time, online or off; not while it's detached), its logs rotate: a fresh process moves into one of its open folders (at your level inside the server's layer band, maybe a strain or a bigger grade, like a rogue server's), and a rotated cache of credits (`rotated.gz`, 20 + 4 × level, +25% a Root level) waits at its root. The map marks a waiting process with **↻** on the node; the server card shows it (name, level, folder) or how long to the next rotation. `attack` it in its folder (the button under the prompt): it's a wild kill (XP, code, a drop, a lead).
+- **Rare process.** A quarter of rotations bring a rare one instead (**★**): 2 levels up, three loot rolls on top of the kill's drop, and gone within the hour.
+- **Root levels.** Every process you clear counts. Root 1 at the takeover; Root 2 after 1, 3 after 2, 4 after 4, 5 after 7. The card shows five pips (the perks on hover):
+
+| Root | What it gives |
+|---|---|
+| 1 | Taken over |
+| 2 | `/root` opens: a stash of the server's code (4 + level/4), refilled every rotation |
+| 3 | It stops costing memory |
+| 4 | One more module port, and its harvester yields 25% more |
+| 5 | Its firewall +3 levels, and its harvester yields double (it works like two) |
+
 ## Outposts
 
 A server you've taken over can run a **harvester**: a packaged virus that works for you there.
@@ -800,7 +816,7 @@ While your rep with a faction is under 24, its hub page offers **Donate**: credi
 
 ## Server memory
 
-Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 4 at server level 1, one more every 5 server levels. Every server you've found and kept attached takes a slot, rogue ones too; SPRAWL-00 and consortium servers don't. It shows as chip pips on the map's server card. Finds you've never connected to are capped at ten: when an eleventh arrives, the oldest one nothing points at (no contract on it, nothing found through it) drops off the map, with the unknown servers past it.
+Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 4 at server level 1, one more every 5 server levels. Every server you've found and kept attached takes a slot, rogue ones too; SPRAWL-00, consortium servers and servers at Root 3 or more (see Root access) don't. It shows as chip pips on the map's server card. Finds you've never connected to are capped at ten: when an eleventh arrives, the oldest one nothing points at (no contract on it, nothing found through it) drops off the map, with the unknown servers past it.
 
 - **A find arrives off your network.** A server you trace lands on the map dimmed, marked *found*. Nothing is decided for you: its card shows your **free** memory as pips (free now → free after, e.g. *4 → 3/4 free*, the slot it would take blinking; red when there isn't enough). The server card and log messages count free memory the same way and a **Connect** button. Connect (or typing `connect <server>`) opens that prompt on its card first; **Connect · +N** commits it (N: it and anything found past it), **Cancel** backs out. The first connection costs memory only, no credits. With memory full, the pips show red and Connect waits until you detach something.
 - **Attach / detach** (a server that was already on your network) from its map card (or `attach <server>`, `detach <server>`): 25 + 5 × its level credits, either way, the same every time. Swapping back and forth costs no more than that.

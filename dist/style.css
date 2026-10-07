@@ -2698,3 +2698,10 @@ details.map-pick { pointer-events: auto; }
 #board.is-paused { position: relative; }
 #board.is-paused > * { opacity: 0.45; }
 #board.is-paused::after { content: 'PAUSED · ANY ORDER RESUMES'; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border: 1px solid var(--amber); background: rgba(9, 6, 3, 0.92); color: var(--amber); font: 700 12px var(--mono); letter-spacing: 3px; pointer-events: none; white-space: nowrap; }
+
+/* Root access (root.mjs): pips on the server card, a ↻ (or ★ rare) on the map node */
+.root-pips { letter-spacing: 1px; color: var(--teal, #6fd3c1); }
+.root-pips i { font-style: normal; opacity: 0.35; }
+.mnode .rotmark text { font-size: 11px; fill: var(--teal, #6fd3c1); text-anchor: middle; dominant-baseline: central; }
+.mnode .rotmark.rare text { fill: var(--amber, #ffb84d); }
+.motion .mnode .rotmark { animation: drop-ping 2.4s ease-in-out infinite; }

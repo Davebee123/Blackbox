@@ -31,6 +31,7 @@ import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf, HIDDEN } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
+import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
@@ -1805,7 +1806,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${dropOf(l) ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${l.outpost?.h ? `<title>${esc(l.name)} · stockpile ${stockOf(l)}/${capOf(l)}</title>` : ''}${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(l)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${draw}</svg>`;
@@ -1882,6 +1883,16 @@ function serverCard(s) {
 }
 
 // A numbers-station dead drop (station.mjs): a mark on the map node, and the broadcast on its card.
+// Root access (root.mjs): five pips, the perks on hover; and the process a log rotation brought in.
+const rootPips = (l) => { const r = rootOf(l), p = rootProgress(l); return `<span class="root-pips" title="${esc(Array.from({ length: ROOT.max }, (_, i) => `${i < r ? '■' : '□'} Root ${i + 1}: ${ROOT_PERKS[i + 1]}`).join('\n') + (p ? `\n\n${p.have}/${p.need} processes cleared for Root ${r + 1}` : ''))}">${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`; };
+const rotMark = (l) => { const p = procOf(l); return p ? `<g class="rotmark${p.rare ? ' rare' : ''}" transform="translate(-13 -12)"><title>${esc(`${p.rare ? 'Rare process' : 'Log rotation'}: ${p.name} lv ${p.level} in ${p.room}`)}</title><text>${p.rare ? '★' : '↻'}</text></g>` : ''; };
+const hm = (ms) => (ms >= 3600000 ? `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m` : fmtLeft(ms));
+const rotLine = (s, l) => {
+  if (!rootOf(l)) return '';
+  const p = procOf(l), next = l.root?.nextAt, now = Date.now();
+  if (p) return `<p class="svc-line"><span class="tag ${p.rare ? 'hot' : 'you'}">${p.rare ? '★' : '↻'} ${esc(p.name)}</span> ${levelTag(s, p.level, `Lv ${p.level}`)} · ${esc(p.room)}${p.until ? ` · ${hm(p.until - now)}` : ''}</p>`;
+  return next ? `<p class="svc-line dim" title="Its logs rotate every ${ROOT.rotateMs / 3600000} hours: a fresh process, and a new cache">↻ ${hm(Math.max(0, next - now))}</p>` : '';
+};
 const dropMark = (l) => (dropOf(l) ? '<g class="dropmark" transform="translate(12 -12) scale(1.4)"><path d="M0 4 L0 -3 M-3 -5 Q0 -8 3 -5 M-5 -7 Q0 -12 5 -7"/></g>' : '');
 function dropLine(s, l) {
   const d = dropOf(l);
@@ -2058,11 +2069,12 @@ function mapSide(s, sel, node) {
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     <p>${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
-    <div class="stats">${stat('Files', `${taken}/${total}`)}${l.takenOver ? stat('Server', 'Yours') : stat('Guard', Object.keys(l.state.cleared).length ? 'beaten' : 'up')}${stat('Runs', l.runs || 0)}</div>
+    <div class="stats">${stat('Files', `${taken}/${total}`)}${l.takenOver ? stat('Root', rootPips(l)) : stat('Guard', Object.keys(l.state.cleared).length ? 'beaten' : 'up')}${stat('Runs', l.runs || 0)}</div>
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))}</p>`).join('')}
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}
     ${l.relay ? '<p class="svc-line"><span class="tag you">Relay up</span></p>' : ''}
+    ${rotLine(s, l)}
     ${consortiumLine(s, l)}
     ${l.faction ? `<p class="svc-line fline" style="--fc:${FX[l.faction].color}">${fIcon(l.faction)}<b>${esc(FX[l.faction].short)}</b> runs it · opening its vault takes it: ${esc(FX[l.faction].short)} −${OWNED.takeoverHit}${FX[l.faction].rivals.length ? `, ${FX[l.faction].rivals.map((r) => esc(FX[r].short)).join(' and ')} +${Math.round(OWNED.takeoverHit * 0.5)}` : ''}</p>` : ''}
     ${dropLine(s, l)}
@@ -2085,7 +2097,7 @@ function fleetCard(s) {
 
 // Outpost modules: the server's ports on this outpost, and what fits them.
 function modsMarkup(s, l) {
-  const mine = modsOf(l), ports = outpostPorts(s), busy = active(s) || s.run, stock = modStock(s);
+  const mine = modsOf(l), ports = outpostPorts(s, l), busy = active(s) || s.run, stock = modStock(s);
   const on = mine.map((id) => `<span class="mod on" title="${esc(OUTPOST.mods[id].rule)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}<button type="button" class="mod-x" data-command="outpost unmod ${esc(l.id)} ${id}" ${busy ? 'disabled' : ''} title="Take it out: back to your stock" aria-label="Remove ${esc(OUTPOST.mods[id].name)}">×</button></span>`).join('');
   // Only modules you've crafted and have in stock can go in.
   const free = mine.length < ports ? Object.keys(OUTPOST.mods).filter((id) => !mine.includes(id) && stock[id]).map((id) => `<button type="button" class="mod add" data-command="outpost mod ${esc(l.id)} ${id}" ${busy ? 'disabled' : ''} title="${esc(OUTPOST.mods[id].rule)}">${glyph(id)}${esc(OUTPOST.mods[id].name)}<small>×${stock[id]}</small></button>`).join('') : '';

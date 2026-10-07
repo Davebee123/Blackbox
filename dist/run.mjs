@@ -18,6 +18,7 @@ import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
 import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
 import { strikeServer } from './factions.mjs';
+import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -104,6 +105,10 @@ export function layoutOf(loc) {
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
+  // Root access (root.mjs): a rotated cache at the root, and from Root 2 a /root with a stash.
+  const rf = rootFiles(loc);
+  if (rf.cache && out['/'] && !out['/'].files.includes(CACHE_FILE)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, CACHE_FILE] } };
+  if (rf.stash && out['/'] && !out[STASH_DIR]) out = { ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, STASH_DIR.slice(1)] }, [STASH_DIR]: { dirs: [], files: [STASH_FILE] } };
   // Contracts and relays plant files too (see mail.mjs, hidden.mjs): in the vault unless they say where.
   for (const f of loc?.extraFiles || []) {
     const dir = f.dir || vault;
@@ -166,6 +171,8 @@ const passWord = (loc) => loc.password.replace(/\d+$/, '');
 const passDigits = (loc) => loc.password.match(/\d+$/)[0];
 
 export function fileInfo(loc, path, name) {
+  const rooted = rootFileInfo(loc, path, name, codeOf(loc.family));
+  if (rooted) return rooted;
   const fam = FAMILIES[loc.family].name;
   const deeper = FAMILIES[loc.deeper].name;
   const cash = Math.round(CONFIG.cacheCredits * (1 + CONFIG.depthLoot * ((loc.depth || 1) - 1)) * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1));
@@ -370,7 +377,7 @@ export function connect(s, id) {
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} hostile ${liveSpawns(s) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
     else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied: ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'process' : 'processes'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} hostile ${liveRogue(loc) === 1 ? 'process' : 'processes'} running.`, { location: loc.id });
-    else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
+    else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     ls(s);
     if (!zone && !loc.member) collect(s, loc, 'Collected from ');
     if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`);
@@ -396,6 +403,9 @@ function ls(s, all = false) {
     const sp = spawns[s.run.cwd];
     if (sp?.alive) entries.push({ kind: 'virus', name: sp.name + '.exe', size: `lv${sp.level}`, cmd: `attack ${sp.name}`, tags: [FAMILIES[sp.family].name.toLowerCase()], jobs: jobNames(s, { family: sp.family, zone: true, name: sp.bounty ? sp.name : null, level: sp.level }) });
   }
+  // A server you own: the process its last log rotation brought in (root.mjs).
+  const proc = procIn(loc, s.run.cwd);
+  if (proc) entries.push({ kind: 'virus', name: proc.name + '.exe', size: `lv${proc.level}`, cmd: `attack ${proc.name}`, tags: [proc.rare ? 'rare' : 'rotation', FAMILIES[proc.family].name.toLowerCase()], jobs: jobNames(s, { family: proc.family, zone: true, level: proc.level }) });
   for (const d of here.dirs.filter(show)) {
     const full = join(s.run.cwd, d);
     const tags = [guarded(loc, full) ? 'guarded' : '', locked(loc, full) ? 'locked' : ''].filter(Boolean);
@@ -756,6 +766,12 @@ hooks.crewGuests = (s, room) => {
 // The rogue server: attack the virus in this folder.
 function attack(s, arg) {
   const loc = currentLocation(s);
+  const proc = procIn(loc, s.run.cwd);
+  if (proc) {
+    if (arg && !proc.name.startsWith(arg.replace(/\.exe$/, ''))) return err(s, `No ${arg} here. This folder has ${proc.name}.exe.`);
+    selectEncounter(s, 'random', proc.seed, { mode: 'run', room: s.run.cwd, level: proc.level, family: proc.family, zone: true, process: loc.id, name: proc.name.toUpperCase(), strain: proc.strain, grade: proc.grade });
+    return command(s, 'engage');
+  }
   if (!isWild(loc)) return err(s, 'Nothing here to attack. Guards start a fight when you walk in.');
   const sp = (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
   if (!sp?.alive) return err(s, 'Nothing running in this folder. ls to look, cd to move.');
@@ -801,6 +817,8 @@ export function nextActions(s) {
     return [{ label: `engage ${s.encounter.virus.name}`, cmd: 'engage', hot: true }, ...(slipsLeft(s) > 0 && !s.encounter.zone ? [{ label: 'slip past', cmd: 'slip', note: `${slipsLeft(s)} left` }] : []), { label: 'cd ..', cmd: 'cd ..', note: 'back off' }];
   }
   const acts = [];
+  const proc = procIn(loc, s.run.cwd);
+  if (proc) acts.push({ label: `attack ${proc.name}`, cmd: `attack ${proc.name}`, hot: true, note: proc.rare ? 'rare' : `lv ${proc.level}` });
   const show = (n) => s.run.showHidden || !hiddenName(n);
   for (const f of here.files.filter(show)) {
     const full = join(s.run.cwd, f);
@@ -854,3 +872,6 @@ hooks.flee = (s) => {
   s.encounter.phase = 'fled';
   jackOut(s);
 };
+
+// Where a log rotation can put its process (root.mjs): any open folder but the root, the vault and /root.
+hooks.procRooms = (loc) => Object.entries(layoutOf(loc)).filter(([d, x]) => d !== '/' && !x.locked && d !== STASH_DIR && !(x.guard && !loc.state?.cleared?.[d])).map(([d]) => d);

@@ -11,6 +11,7 @@ import { play, layoutOf, currentLocation, signalNow, takeable } from './dist/run
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
 import { items } from './dist/hidden.mjs';
+import { procOf, procIn } from './dist/root.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
@@ -94,7 +95,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   // nothing left, no outpost, relay or contract on it?
   // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
   const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d]) return true; if (x.locked && !x.drop && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
-  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc)) && isLive(s, loc) && !loc.outpost?.h && !loc.relay && !openContracts(s).some((c) => c.loc === loc.id);
+  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.outpost?.h && !loc.relay && !openContracts(s).some((c) => c.loc === loc.id);
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
     if (!loc.fresh || !loc.detached) return true;
@@ -120,6 +121,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
         if (L[d].locked && !loc.state.unlocked[d]) { say(`cd ${d.slice(0, d.lastIndexOf('/')) || '/'}`); say(`unlock ${d.split('/').pop()} ${loc.password}`); }
         say(`cd ${d}`);
         if (s.encounter?.mode === 'run') fight();
+        if (s.run && procIn(loc, d, t)) { say('attack'); fight(); stats.procs = (stats.procs || 0) + 1; } // a log rotation's process (root.mjs)
         if (!s.run || s.run.cwd !== d) continue;
         for (const f of L[d].files || []) if (!/bait/.test(f) && !loc.state.taken[(d === '/' ? '' : d) + '/' + f]) say(`pull ${f}`);
         if (L[d].locked) stats.vaults++;
@@ -134,7 +136,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     if (s.zone && relockLeft(s.zone, t)) return false;
     say('connect sprawl');
     if (!s.run) return false;
-    const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/');
+    const named = (p) => (s.zone?.spawns?.[p]?.bounty ? 0 : 1); // a contract's named target first
+    const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/').sort((a, b) => named(a) - named(b));
     const grey = hackerLevel(s) > CONFIG.zone.maxLevel + 1; // outgrown: only the contract's named target
     for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; if (grey && !s.zone?.spawns?.[room]?.bounty) continue; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
     if (s.run) say('jack out');
@@ -173,12 +176,14 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     restUp();
     const L = hackerLevel(s);
     const open = (l) => (isLive(s, l) || l.fresh) && !(relocks(l) && relockLeft(l, t));
-    const todo = s.locations.filter((l) => !l.rogue && open(l) && pending(l) && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
+    const todo = s.locations.filter((l) => !l.rogue && !l.takenOver && open(l) && pending(l) && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
+    const rot = s.locations.filter((l) => procOf(l, t) && open(l) && procOf(l, t).level <= L + 3).sort((a, b) => procOf(b, t).level - procOf(a, t).level)[0];
     const rogue = s.locations.filter((l) => l.rogue && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id] || 0) < 2).sort((a, b) => b.level - a.level)[0];
     const hunt = contracts && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;
     if (hunt) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
     if (!did && todo) { did = book('runs', () => runLoc(todo)); if (did) stats.did.run++; }
+    if (!did && rot) { did = book('rotation', () => runLoc(rot)); if (did) stats.did.rotation = (stats.did.rotation || 0) + 1; }
     if (!did && rogue) { did = book('rogue', () => runLoc(rogue)); if (did) stats.did.rogue++; }
     // SPRAWL-00 once you've outgrown it is grey: a player waits out a reconnect timer instead.
     if (!did && L <= CONFIG.zone.maxLevel + 1) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }

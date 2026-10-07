@@ -5,6 +5,7 @@
 // through it: no runs, no harvesting, no sieges, timers stopped. Attach it again and it picks up
 // where it was. Outpost slots (bandwidth) still decide how many outposts run.
 import { emit, warn, serverLevel, active } from './combat.mjs';
+import { freeOfMemory } from './root.mjs';
 
 export const MEMORY = {
   base: 4, // slots at server level 1
@@ -19,7 +20,8 @@ export function isLive(s, loc) {
   for (let l = loc, n = 0; l && n < 50; l = l.parent ? byId(s, l.parent) : null, n++) if (l.detached) return false;
   return true;
 }
-export const liveCount = (s) => (s.locations || []).filter((l) => isLive(s, l)).length;
+// Root 3+ servers (root.mjs) are on your network for free.
+export const liveCount = (s) => (s.locations || []).filter((l) => isLive(s, l) && !freeOfMemory(l)).length;
 export const memoryCost = (loc) => MEMORY.cost(loc.level || 1);
 // A server and everything found through it.
 export function branchOf(s, loc) {
@@ -30,7 +32,7 @@ export function branchOf(s, loc) {
 // What attaching would add: the servers in its branch that would be live again.
 function wouldAdd(s, loc) {
   loc.detached = false;
-  const n = branchOf(s, loc).filter((l) => isLive(s, l)).length;
+  const n = branchOf(s, loc).filter((l) => isLive(s, l) && !freeOfMemory(l)).length;
   loc.detached = true;
   return n;
 }
