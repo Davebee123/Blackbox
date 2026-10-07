@@ -16,7 +16,7 @@ const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'st
 const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
-import { outpostCommand, outpostWon, infestWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
+import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { tickRoot, processWon } from './root.mjs';
@@ -1282,7 +1282,6 @@ export function finish(s, result) {
     if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
     if (inv) endInvasion(s, `${inv.name} is gone from your wall.`);
     if (e.outpost) outpostWon(s, e);
-    if (e.infest) infestWon(s, e);
     if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
     if (e.retake || e.hubClear) hubWon(s, e);
@@ -2773,6 +2772,9 @@ function retireConfigs(s) {
 function retireTraits(s) {
   for (const h of s.harvesters || []) h.traits = [];
   for (const l of s.locations || []) if (l.outpost?.h) l.outpost.h.traits = [];
+  for (const l of s.locations || []) if (l.outpost) { delete l.outpost.infest; delete l.outpost.siege; }
+  for (const l of s.locations || []) if (l.outpost?.fw) Object.assign(l.outpost.fw, { frag: 0, defragUntil: 0 }); // holdings' firewalls don't fragment
+  for (const h of Object.values(s.hubs || {})) if (h.captured?.wall) Object.assign(h.captured.wall, { frag: 0, defragUntil: 0 }); // infestations are gone; natives come as a swarm now
 }
 function retireWall(s, was) {
   if (was >= 30) return;

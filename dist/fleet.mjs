@@ -23,6 +23,7 @@ export const FLEET = {
   travelMs: 10 * 60000, // warning time (Tarpit Beacon: half again)
   siegeMs: 8 * 60000, // at the outpost, before it falls
   levelUp: 2, // processes come in a little above the outpost's level
+  nativeMs: 3 * 60000, // natives that noticed an outpost: a small swarm at its own level, from close by
 };
 const SHIP = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
 const locOf = (s, id) => s.locations.find((l) => l.id === id);
@@ -39,21 +40,25 @@ function origin(s, target) {
 
 const clock = () => hooks.now?.() ?? Date.now();
 // The outpost's firewall against the swarm (each process at the swarm's level).
-const swarmRatio = (s, target, f) => ratingAt(s, target, f.family) / strength(f.level, f.mutation);
-export function launch(s, at = clock(), faction = null) {
-  const targets = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege);
+const swarmRatio = (s, target, f) => ratingAt(s, target, f.family) / strength(f.level, f.natives ? null : f.mutation); // natives meet the wall at their plain level
+// opts.natives: the outpost's own natives noticed it (outpost.mjs): 1-2 viruses at its level, close by.
+export function launch(s, at = clock(), faction = null, opts = {}) {
+  if (s.fleet) return null; // one swarm on the network at a time
+  const targets = outposts(s).filter((l) => !l.outpost.lockdown);
   if (!targets.length) return null;
   const pool = targets.some((l) => hasMod(l, 'lure')) ? targets.filter((l) => hasMod(l, 'lure')) : targets; // a Honeytoken first
-  const target = pool[Math.floor(rand(s) * pool.length)];
-  const o = origin(s, target);
-  const ships = Math.min(4, 2 + Math.floor(outposts(s).length / 2) + (rand(s) < 0.3 ? 1 : 0));
-  const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + FLEET.levelUp);
-  const total = Math.round(FLEET.travelMs * (hasMod(target, 'ids') ? 1.5 : 1));
+  const natives = opts.natives || null;
+  const target = natives || pool[Math.floor(rand(s) * pool.length)];
+  const o = natives ? { family: target.family, name: `${target.name}'s natives` } : origin(s, target);
+  const ships = natives ? 1 + (rand(s) < 0.3 ? 1 : 0) : Math.min(4, 2 + Math.floor(outposts(s).length / 2) + (rand(s) < 0.3 ? 1 : 0));
+  const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + (natives ? 0 : FLEET.levelUp));
+  const total = Math.round((natives ? FLEET.nativeMs : FLEET.travelMs) * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
-  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: rand(s) < SERVER.mutationChance(level) * 0.75 ? ROLLED_MUTATIONS[Math.floor(rand(s) * ROLLED_MUTATIONS.length)] : null };
+  s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: natives && target.trait === 'hardened' ? 'armored' : rand(s) < SERVER.mutationChance(level) * 0.75 ? ROLLED_MUTATIONS[Math.floor(rand(s) * ROLLED_MUTATIONS.length)] : null };
   if (faction) s.fleet.faction = faction;
-  const who = faction ? ` from ${FACTIONS[faction].short}` : '';
-  emit(s, 'fleet', `SWARM: Swarm${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} viruses (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });
+  if (natives) s.fleet.natives = true;
+  const who = faction ? ` from ${FACTIONS[faction].short}` : natives ? ': its natives' : '';
+  emit(s, 'fleet', `SWARM${who} at your outpost on ${target.name}: ${ships} ${FAMILIES[o.family].name.toLowerCase()} ${ships === 1 ? 'virus' : 'viruses'} (level ${level}), arriving in ${Math.round(total / 60000)} minutes.`, { location: target.id });
   return s.fleet;
 }
 
@@ -102,7 +107,6 @@ export function tickFleet(s, dt, paused = false, at = clock()) {
   f.siegeLeft -= dt;
   if (f.siegeLeft <= 0) {
     s.fleet = null;
-    target.outpost.siege = null;
     emit(s, 'info', `The swarm took ${target.name}.`);
     fall(s, target, true);
   }

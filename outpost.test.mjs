@@ -4,7 +4,7 @@ import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION } fr
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
-import { learnPlan, knowsPlan, OUTPOST, harvesters, hasVx, bandwidth, stockOf, capOf, vxName, vaultHarvester, siteTrait } from './dist/outpost.mjs';
+import { startSiege, learnPlan, knowsPlan, OUTPOST, harvesters, hasVx, bandwidth, stockOf, capOf, vxName, vaultHarvester, siteTrait } from './dist/outpost.mjs';
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -83,7 +83,7 @@ test('harvesters have no traits: storage comes from the Storage Array module', (
   assert.equal(capOf(a), OUTPOST.kinds.siphon.cap(10) * 2);
 });
 
-test('an undefended siege puts the outpost in lockdown: no harvesting, stockpile kept, servers past it still open; retaking ends it', () => {
+test('an undefended swarm puts the outpost in lockdown: no harvesting, stockpile kept, servers past it still open; retaking ends it', () => {
   const s = fresh();
   const a = found(s);
   a.takenOver = true;
@@ -93,7 +93,8 @@ test('an undefended siege puts the outpost in lockdown: no harvesting, stockpile
   s.harvesters = [siphon()];
   command(s, `outpost install ${a.id}`, T0);
   a.outpost.fw = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing to stop them
-  a.outpost.siege = { left: OUTPOST.siegeMs, seed: 7 };
+  s.net.fleetAt = 1e15;
+  startSiege(s, a); s.fleet.arriveAt = T0; // its natives, at the door
   a.outpost.stock = 3;
   s.net.wall = T0;
   s.net.next = 1e12; // no invaders in this test
@@ -125,16 +126,16 @@ test('a lockdown ends on its own', () => {
   assert.equal(a.outpost.lockdown, null);
 });
 
-test('defending in time breaks the siege', () => {
+test('defending in time breaks the natives\' swarm', () => {
   const s = fresh();
   const a = found(s);
   a.takenOver = true;
   s.harvesters = [siphon()];
   command(s, `outpost install ${a.id}`, T0);
-  a.outpost.siege = { left: OUTPOST.siegeMs, seed: 7 };
-  command(s, `outpost defend ${a.id}`, T0);
-  win(s);
-  assert.equal(a.outpost.siege, null);
+  startSiege(s, a);
+  assert.ok(s.fleet?.natives, 'its natives come as a swarm');
+  for (let i = 0; i < 4 && s.fleet; i++) { command(s, `outpost defend ${a.id}`, T0); win(s); }
+  assert.equal(s.fleet, null, 'every virus down');
   assert.equal(a.outpost.lockdown, null);
 });
 
@@ -188,9 +189,8 @@ test('a v23 save gets site traits and an empty harvester rack', () => {
   assert.equal(back.locations[0].trait, siteTrait(a));
 });
 
-test('a Honeytoken draws trouble to its outpost (sooner and first) and pays double for beating it', async () => {
+test('a Honeytoken draws swarms to its outpost first', async () => {
   const { launch } = await import('./dist/fleet.mjs');
-  const { infestWon } = await import('./dist/outpost.mjs');
   const s = fresh();
   s.server.level = 20; s.serverXp = 1e9;
   const a = found(s), b = found(s);
@@ -200,21 +200,6 @@ test('a Honeytoken draws trouble to its outpost (sooner and first) and pays doub
   command(s, `outpost install ${b.id}`, T0);
   b.mods = ['lure'];
   for (let i = 0; i < 6; i++) { s.fleet = null; assert.equal(launch(s).target, b.id, 'swarms pick the Honeytoken'); }
-  // Infestations: sooner with a lure out there, and on it.
-  s.fleet = null;
-  s.net = {};
-  const { tickOutposts } = await import('./dist/outpost.mjs');
-  for (let m = 1; m <= 50 && !b.outpost.infest; m++) tickOutposts(s, T0 + m * 60000, 60000); // logged on, a minute at a time
-  assert.ok(b.outpost.infest && !a.outpost.infest, 'an infestation within 50 minutes, on the Honeytoken');
-  // Clearing it pays double: two hours of harvest instead of one.
-  b.outpost.stock = 0;
-  b.outpost.infest.count = 1;
-  infestWon(s, { infest: b.id });
-  const lured = b.outpost.stock;
-  a.outpost.stock = 0;
-  a.outpost.infest = { total: 1, count: 1, left: 1e6, seed: 1 };
-  infestWon(s, { infest: a.id });
-  assert.ok(lured > a.outpost.stock, `${lured} vs ${a.outpost.stock}`);
 });
 
 test('plans: your first vault holds the Siphon plan; a known plan banked again is salvage', async () => {

@@ -123,6 +123,6 @@ test('the market teaches itself in order: rows, ▲/▼, the news, then the tick
 
 test('every threat on the map has a tip, and none says a lost outpost is gone for good', () => {
   const has = (sel) => TIPS.some((t) => t.page === 'map' && t.at === sel);
-  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.besieged', '.mnode.locked', '.mnode.fleet', '.mnode.hub.yours.threat', '.mnode.invader[data-select="roamer"]', '.mnode.member.besieged', '.mnode.member.down']) assert.ok(has(sel), sel);
+  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.besieged', '.mnode.locked', '.mnode.fleet', '.mnode.hub.yours.threat', '.mnode.member.besieged']) assert.ok(has(sel), sel);
   for (const t of TIPS) assert.doesNotMatch(t.text, /take (it|the outpost) back|take the outpost|cut off/, t.id);
 });

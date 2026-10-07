@@ -17,7 +17,7 @@ import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
 import { outpostPorts, modsOf, hasMod, schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, modStock, modCost, canBuildMod } from './outpost.mjs';
-import { OUTPOST, INFEST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
+import { OUTPOST, harvesters, harvesterName, compileCost as harvCost, canCompile, bandwidth, bandwidthUsed, stockOf, capOf, perHour, siteLabel } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS } from './data.mjs';
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft } from './rogue.mjs';
@@ -855,7 +855,6 @@ function fwRow(s, holder, arg, top, now = Date.now()) {
   const line = state === 'ok' ? `<span class="vuln ok" title="Up to level ${top} comes for it">Safe</span>` : `<span class="vuln ${state}" title="Blocks up to level ${b.blocks}; contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
   const bad = new Set(SCATTER.slice(0, Math.floor(f.frag)));
   return `<div class="fw-mini"><div class="fw-head"><span class="fw-tag">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${fwVersion(f)}${frag || def ? `<span class="tag warn">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : ''}${hard ? `<span class="tag you">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''}${line}</div>
-    <div class="fw-grid small${def ? ' defrag' : ''}${hard ? ' hard' : ''}" title="${Math.floor(f.frag)}/${FIREWALL.blocks} fragmented">${Array.from({ length: FIREWALL.blocks }, (_, i) => `<i class="${bad.has(i) ? 'frag' : ''}"></i>`).join('')}</div>
     ${fwActs(s, f, arg, can, c, busy, def, now)}</div>`;
 }
 // Open ports: a switch under the firewall's ruler. On, invasions come faster and pay more while you
@@ -1606,7 +1605,7 @@ function nodeState(s, l) {
 // you're not in, or yours and quiet): a minor server is a dim dot, its name on hover or zoom.
 function mapTags(s, l, st, job) {
   const o = l.outpost || {};
-  const threat = !!(o.siege || o.infest || o.lockdown || l.held?.siege || l.held?.lockdown || s.fleet?.target === l.id || dropOf(l));
+  const threat = !!(o.lockdown || l.held?.siege || l.held?.lockdown || s.fleet?.target === l.id || dropOf(l));
   const mine = !!(l.takenOver || o.h || l.held);
   const fresh = !!(l.fresh && l.detached);
   const target = job || fresh || (st === 'new' && !l.rogue && !mine);
@@ -1652,9 +1651,7 @@ export function threatsOf(s, now = Date.now()) {
   if (f) { const tgt = s.locations.find((l) => l.id === f.target); add({ cls: f.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${f.ships}`, where: `${f.state === 'siege' ? 'at' : '→'} ${tgt?.name || 'outpost'}`, tag: `lv ${f.level}`, left: fleetLeft(s, now), total: f.state === 'travel' ? f.travel : FLEET.siegeMs, sel: 'fleet', verb: f.state === 'travel' ? 'arrives' : 'falls' }); }
   for (const l of (s.locations || []).filter((x) => x.outpost?.h)) {
     const o = l.outpost;
-    if (o.siege) add({ cls: 'hot', icon: 'kill', name: 'Natives', where: `at ${l.name}`, tag: `lv ${o.siege.level || l.level || 1}`, left: o.siege.left, total: OUTPOST.siegeMs, sel: l.id, verb: 'falls' });
     if (o.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: l.name, left: o.lockdown.left, total: OUTPOST.lockdownMs, sel: l.id, verb: 'ends' });
-    if (o.infest) add({ cls: 'warn', icon: 'kill', name: `Infested ×${o.infest.count}`, where: l.name, left: o.infest.left, total: INFEST.stayMs, sel: l.id, verb: 'leaves' });
   }
   const r = retakeOf(s);
   if (r) add({ cls: r.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${r.ships}`, where: `${r.state === 'siege' ? 'at' : '→'} your ${FX[r.f].short} hub`, tag: `lv ${r.level}`, left: retakeLeft(s, now), total: r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs, sel: 'hub-' + r.f, verb: r.state === 'travel' ? 'arrives' : 'falls' });
@@ -1816,7 +1813,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const taken = takenOf(l), total = takeable(l).length;
     const job = openContracts(s).some((c) => c.loc === l.id);
     const rest = st === 'here' ? 'here' : l.held?.siege ? 'invasion' : l.held?.lockdown ? 'lockdown' : l.held ? l.held.kind : job ? 'contract' : l.outpost?.lockdown ? 'lockdown' : l.outpost?.siege ? 'invasion' : l.outpost?.h ? gauge(stockOf(l), capOf(l)) : l.takenOver ? '' : st === 'done' ? 'clean' : '';
-    const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : l.outpost.siege || (s.fleet?.target === l.id && s.fleet.state === 'siege') ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
+    const op = l.outpost?.h ? (l.outpost.lockdown ? ' locked' : s.fleet?.target === l.id && s.fleet.state === 'siege' ? ' besieged' : ' outpost') : l.held ? (l.held.siege ? ' besieged' : l.held.lockdown ? ' locked' : ' outpost') : '';
     if (l.rogue) {
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
@@ -1842,7 +1839,7 @@ function serverList(s, sel, filter, sort) {
     const taken = takenOf(l), total = takeable(l).length || 1, o = l.outpost || {};
     const chips = [
       st === 'here' ? '<span class="tag you">here</span>' : '',
-      o.siege ? '<span class="tag hot">invasion</span>' : '', o.lockdown ? '<span class="tag hot">lockdown</span>' : '', o.infest ? '<span class="tag warn">infested</span>' : '',
+      s.fleet?.target === l.id ? '<span class="tag hot">swarm</span>' : '', o.lockdown ? '<span class="tag hot">lockdown</span>' : '',
       s.fleet?.target === l.id ? '<span class="tag hot">swarm</span>' : '',
       job ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : '',
       l.fresh && l.detached ? '<span class="tag">found</span>' : l.detached ? '<span class="tag dim">detached</span>' : '',
@@ -2150,11 +2147,9 @@ function outpostCore(s, l) {
   // The stockpile: how full, how much, how fast. Connect to collect.
   const fill = `<div class="lvl-row" title="${h.kind === 'scraper' ? 'Loot rolls waiting' : esc(m.name) + ' waiting'}. Connect to collect."><span class="lvl-bar"><span style="width:${(100 * (o.stock || 0)) / capOf(l)}%"></span></span><small>${stockOf(l)}/${capOf(l)} · ${Math.round(perHour(l, l.outpost.h, s) * 10) / 10}/h</small></div>`;
   // Threats on the outpost, each in its own box: what, how many/long (a bar), one button.
-  const opBox = (kind, title, info, pct, btnHtml) => `<div class="op-box ${kind}"><div class="op-top"><span class="tag ${kind === 'infest' ? 'warn' : 'hot'}">${title}</span><small>${info}</small></div>${pct == null ? '' : `<div class="op-bar"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>`}<div class="row">${btnHtml}</div></div>`;
-  const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', s.fleet.faction ? `Swarm from ${esc(FX[s.fleet.faction].short)}` : 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `arrives in ${fmtLeft(fleetLeft(s))}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
-  const siege = o.siege ? opBox('siege', 'Invasion', `lv ${o.siege.level || l.level || 1} · ${o.siege.hp != null && o.siege.hp < 1 ? `${Math.round(o.siege.hp * 100)}% · ` : ''}falls in ${fmtTime(o.siege.left)}`, (o.siege.left / OUTPOST.siegeMs) * 100, `<button type="button" class="btn primary" data-command="outpost defend ${esc(l.id)}" ${why}>Defend</button>`) : '';
-  const inf = o.infest ? opBox('infest', 'Infested', `${o.infest.count}/${o.infest.total} left · ${fmtTime(o.infest.left)}`, (o.infest.left / INFEST.stayMs) * 100, `<button type="button" class="btn primary" data-command="outpost clear ${esc(l.id)}" ${why} title="Clear them for an hour of production at once. Ignore them and they move on.">Clear</button>`) : '';
-  return `<div class="outpost${o.siege || fl ? ' besieged' : ''}">${head}${fill}${fwRow(s, l, l.id, (l.level || 1) + 2)}${fl}${siege}${inf}${o.siege ? '' : `<div class="row"><button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
+  const opBox = (kind, title, info, pct, btnHtml) => `<div class="op-box ${kind}"><div class="op-top"><span class="tag hot">${title}</span><small>${info}</small></div>${pct == null ? '' : `<div class="op-bar"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div>`}<div class="row">${btnHtml}</div></div>`;
+  const fl = s.fleet && s.fleet.target === l.id ? opBox('swarm', s.fleet.faction ? `Swarm from ${esc(FX[s.fleet.faction].short)}` : s.fleet.natives ? 'Natives' : 'Swarm', `${s.fleet.ships} ${esc(FAMILIES[s.fleet.family].name.toLowerCase())} · ${s.fleet.state === 'travel' ? `arrives in ${fmtLeft(fleetLeft(s))}` : `falls in ${fmtLeft(s.fleet.siegeLeft)}`}`, null, `<button type="button" class="btn primary" data-command="swarm engage" ${why}>${s.fleet.state === 'travel' ? 'Intercept' : 'Defend'}</button>`) : '';
+  return `<div class="outpost${fl ? ' besieged' : ''}">${head}${fill}${fwRow(s, l, l.id, (l.level || 1) + 2)}${fl}${fl && s.fleet.state === 'siege' ? '' : `<div class="row"><button type="button" class="btn" data-command="outpost pull ${esc(l.id)}" title="Take the harvester back, with what it holds. The slot then resets for ${OUTPOST.resetMs / 60000} minutes.">Pull out</button></div>`}</div>`;
 }
 
 

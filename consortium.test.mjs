@@ -265,32 +265,7 @@ test('away, a strong wall holds: invaders are stopped and nothing crashes', () =
   });
 });
 
-test("a raid on an away member's wall: defend it for a bounty, or their server crashes, occupied, and pays nothing meanwhile", () => {
-  helping(0, () => {
-    const s = world();
-    play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
-    for (let i = 0; i < 40 && !s.consortium.raid; i++) tickConsortium(s, 60000);
-    assert.equal(s.consortium.raid?.member, 'nyx');
-    const credits = s.server.credits;
-    play(s, 'consortium defend nyx');
-    assert.ok(s.encounter?.raid);
-    win(s);
-    assert.equal(s.consortium.raid, null);
-    assert.ok(s.server.credits > credits, 'bounty');
-    for (let i = 0; i < 40 && !s.consortium.raid; i++) tickConsortium(s, 60000);
-    tickConsortium(s, CONSORTIUM.raidMs + 1);
-    assert.ok(rebooting(s, 'nyx'), "nyx's server crashed");
-    assert.equal(dividendOf(s, serversOf(s, 'nyx').find((l) => l.held)), 0, 'their outposts pay nothing');
-    const home = memberServers(s).find((l) => l.home);
-    play(s, 'connect ' + home.id);
-    clearOut(s, home);
-    play(s, 'jack out');
-    tickConsortium(s, 1000);
-    assert.ok(!rebooting(s, 'nyx'), 'cleared: back up');
-  });
-});
-
-test("a lost siege on a member's outpost: lockdown, retake it for a bounty; the virus travels to another outpost", () => {
+test("a lost siege on a member's outpost: lockdown, retake it for a bounty", () => {
   helping(0, () => {
     const s = world();
     play(s, 'consortium create LOWLIGHT');
@@ -300,33 +275,11 @@ test("a lost siege on a member's outpost: lockdown, retake it for a bounty; the 
     tickConsortium(s, 2000);
     assert.ok(loc.held.lockdown, 'lockdown');
     assert.equal(dividendOf(s, loc), 0);
-    const r = s.consortium.roamer;
-    assert.ok(r && r.from === loc.id && r.to !== loc.id, 'the virus moves on');
+    assert.ok(!s.consortium.roamer, 'trunk hops are cut: the virus stays put');
     play(s, 'consortium defend ' + loc.id);
     win(s);
     assert.equal(loc.held.lockdown, null, 'retaken');
-    tickConsortium(s, CONSORTIUM.roam.travelMs);
-    const hit = memberServers(s).find((l) => l.id === r.to);
-    assert.equal(hit.held.siege?.hop, 1, 'it lands: a siege, one hop on');
   });
-});
-
-test('intercepting the travelling virus pays a growing bounty', () => {
-  const s = world();
-  play(s, 'consortium create LOWLIGHT');
-  for (const h of ['nyx', 'ash']) play(s, 'consortium invite ' + h);
-  const from = serversOf(s, 'nyx').find((l) => l.held);
-  const { roam } = consortiumMod;
-  roam(s, from, 2);
-  assert.equal(s.consortium.roamer.hop, 3);
-  const credits = s.server.credits;
-  play(s, 'consortium intercept');
-  assert.ok(s.encounter?.roamer);
-  win(s);
-  assert.equal(s.consortium.roamer, null);
-  assert.ok(s.server.credits - credits >= CONSORTIUM.bounty(1).credits * 2, 'bounty x2 at hop 3');
-  roam(s, from, 3);
-  assert.equal(s.consortium.roamer, null, 'past three hops it burns out');
 });
 
 test('Grid: firewall +2 levels', async () => {
@@ -337,19 +290,6 @@ test('Grid: firewall +2 levels', async () => {
   play(s, 'consortium create LOWLIGHT');
   for (const h of PRESENCE.pool.slice(0, 11)) play(s, 'consortium invite ' + h);
   assert.equal(effLevel(s, 0), base + 2);
-});
-
-test('a raid fight left paused holds nothing: the member still crashes', () => {
-  helping(0, () => {
-    const s = world();
-    play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
-    for (let i = 0; i < 40 && !s.consortium.raid; i++) tickConsortium(s, 60000);
-    play(s, 'consortium defend nyx');
-    if (s.encounter.phase === 'alert') command(s, 'engage');
-    s.encounter.paused = true;
-    tickConsortium(s, CONSORTIUM.raidMs + 1);
-    assert.ok(rebooting(s, 'nyx'), 'a paused fight doesn’t stop the clock');
-  });
 });
 
 test('a member server reset brings fights and caches back, not vault loot or vault XP', async () => {

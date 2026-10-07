@@ -119,7 +119,7 @@ test('a filter pulled from a vault is banked when you jack out', async () => {
 
 test('every outpost has its own firewall at its server\'s level; natives it blocks bounce, ones it contests are worn down', async () => {
   const { fwAt } = await import('./dist/firewall.mjs');
-  const { tickOutposts, OUTPOST, startSiege } = await import('./dist/outpost.mjs');
+  const { OUTPOST, startSiege } = await import('./dist/outpost.mjs');
   const s = fresh();
   command(s, 'developer location worm');
   const a = s.locations[0];
@@ -128,20 +128,21 @@ test('every outpost has its own firewall at its server\'s level; natives it bloc
   command(s, `outpost install ${a.id}`, 0);
   s.materials = { kernel: 20 };
   assert.equal(fwAt(s, a).level, 8, 'it comes with the server');
-  startSiege(s, a);
-  assert.equal(a.outpost.siege, null, 'natives at its level bounce');
+  const { tickFleet } = await import('./dist/fleet.mjs');
+  const arrive = () => { startSiege(s, a); tickFleet(s, 0, false, s.fleet.arriveAt); };
+  arrive();
+  assert.equal(s.fleet, null, 'natives at its level bounce off its firewall');
   fwAt(s, a).level = 3;
-  startSiege(s, a);
-  assert.ok(a.outpost.siege && a.outpost.siege.hp === 1, 'a weaker firewall lets them in');
+  arrive();
+  assert.ok(s.fleet?.state === 'siege', 'a weaker firewall lets them in');
+  const ships = s.fleet.ships;
   command(s, `firewall upgrade ${a.id}`);
   s.server.credits = 9999; s.materials = { cipher: 999, worm: 999, kernel: 999 };
   for (let i = 0; i < 4; i++) command(s, `firewall upgrade ${a.id}`);
   assert.equal(fwAt(s, a).level, 7);
-  a.outpost.at = 0;
-  tickOutposts(s, 60000, 60000);
-  assert.ok(!a.outpost.siege || a.outpost.siege.hp < 1, 'contested: worn down');
-  for (let t = 2; t < 10 && a.outpost.siege; t++) tickOutposts(s, t * 60000, 60000);
-  assert.equal(a.outpost.siege, null);
+  s.fleet.siegeLeft = 60 * 60000; // time enough to see the wearing down
+  for (let t = 1; t < 60 && s.fleet; t++) tickFleet(s, 60000, false, s.fleet?.arriveAt + t * 60000);
+  assert.equal(s.fleet, null, `contested: the firewall wore all ${ships} down`);
   assert.ok(!a.outpost.lockdown, 'the firewall wore them down before the timer ran out');
 });
 

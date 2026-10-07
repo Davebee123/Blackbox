@@ -278,8 +278,7 @@ Simulated until the server exists (developer mode only, `?dev`): `online sim` tu
 - **Shared ground.** Every member's server, plus your own outposts and rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with their own loot. **XP for a drop-in is by damage:** a member who joined your fight takes the share of the kill's XP that matches the share of the virus's health they took off; you and your own crew split the rest evenly (the pool is the kill plus 10% per extra player, as in any party). Dropping into a fight you barely touched pays next to nothing. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
 - **Owner and dividend.** An outpost's owner keeps its whole stockpile, as always. On top of that, every member's outpost pays each other member a **dividend**: 25% of what it produces, in kind (a Siphon's or Tap's code of its family, a Scraper's finds: credits, code, salvage, now and then a protocol). It fills in real time (offline too), a small stock per outpost of up to 12 hours' worth. An invaded outpost pays nothing until the invasion is stopped. The Consortium page shows what comes in an hour and what's waiting: *Collect*, or `consortium collect`. Each member outpost's card shows its rate and what's waiting. (Your outposts pay the other members the same way, at no cost to you.)
 - **Invasions at members' outposts, and lockdowns.** Now and then (every 10–18 minutes of logged-on time) natives invade a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win for credits (30 + 8 × level), its family's code and XP. Nobody defends it: half the time a member deals with it; otherwise it goes into **lockdown** (pays no dividend for 2 hours). *Retake for a bounty* ends it.
-- **Invasions at members' walls.** Every 15–25 minutes an invasion reaches an away member's wall (`consortium defend <handle>`, 8 minutes). Nobody stops it, and half the time a member does anyway; otherwise their server **crashes and reboots** for 2 hours, **occupied**: it shows under them on the map (`<HANDLE>-HOME`), open to anyone. Clear every folder for a bounty and it's back up. Their outposts pay no dividend while it reboots.
-- **Invasions on the trunk line.** A lockdown or a crash (theirs or yours) sends the virus on along the trunk line toward another outpost, a member's or yours, a level stronger, arriving in 10 minutes as a fresh invasion. It's on the consortium map, and in the alerts: *Intercept* (`consortium intercept`) for a bounty that grows +50% a hop. One at a time; it burns out after 3 hops.
+- **Raids on members' walls and the trunk line are cut** for now (the threat merge): they come back when real players share a network.
 - **The Consortium page** (a top tab, there while you're in a consortium or have an invite; its badge counts what needs you). Left: **Needs you**, a card per alert (invasions at walls, at outposts and on the trunk line, lockdowns, crashed servers; yours first), each with what it is, a timer bar, the level and what it pays, and one button (Defend, Intercept, Connect, Retake); then the members (status, outposts, where they are; Map, Invite to crew, Kick). Right: the consortium and its size ladder, the dividend (*Collect*), and how your wall fares while you're away. The people panel's Consortium tab is a short summary that links to it.
 - **Size.** The more servers merged (yours included), the better for everyone:
 
@@ -417,11 +416,11 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
 - **Outpost slots** (*Outposts n/m* on the server card, pips on the outpost) limit how many outposts run at once. Harvesters never run on your own server: they go out to servers you've taken over. Installing one from an outpost's card lists your rack one row per harvester (kind, level, traits) with its own Install button: 1, plus 1 every 10 server levels (5 at most).
 - **Production runs in real time, offline too,** up to the cap. Connecting to the server collects it. Degraded mode pauses outposts.
 - **Pulling out** gives the harvester back with what it holds; the slot then resets for 30 minutes.
-- **Its firewall.** Every outpost has its own (`firewall.mjs`): it comes with the server, at the server's level, and you build it like your home one: `firewall upgrade|defrag|harden <server>`, or the outpost card's row (its level, *Vulnerable to lv N+* against the swarms that come for it, its blocks, Upgrade, Defrag, harden.sh). It fragments as threats meet it. No filters out here; a **Firewall Node** module adds 3 levels.
-- **Invasions.** Natives (at the server's level) notice an outpost about every 6 hours (by kind, traits and site), real time, online or off. They meet its firewall first: **blocked**, they bounce; **contested**, the firewall wears them down while a 10-minute timer runs (worn to nothing, they're gone); a **breach** just runs the timer. **Defend** it yourself (a home-style fight at the server's level) before the timer runs out. An outpost produces nothing while it's invaded. If the timer runs out:
+- **Its firewall.** Every outpost has its own (`firewall.mjs`): it comes with the server, at the server's level, and you raise it like your home one: `firewall upgrade|harden <server>`, or the outpost card's row (its level, *Vulnerable to lv N+* against the swarms that come for it, Upgrade, harden.sh). It's a level and nothing more: no fragmentation, no defrag. No filters out here; a **Firewall Node** module adds 3 levels.
+- **Natives.** An outpost's natives notice it about every 6 hours (by kind, traits and site), real time, online or off, and come as a **small swarm** (1–2 viruses at the server's level, arriving in 3 minutes; `FLEET.nativeMs`). Like any swarm it meets the outpost's firewall: **blocked**, it bounces; **contested**, the firewall wears it down; a **breach** just runs the 8-minute timer. **Defend** it (`outpost defend`, or the card's button: one fight a virus). One swarm is out on the network at a time, so natives wait while another swarm is out. An outpost produces nothing while a swarm sits at it. If the timer runs out:
   - the outpost goes into **lockdown** for 2 real hours: no harvesting, but its stockpile is kept;
   - the server and everything past it stay open (nothing is ever cut off).
-- **Retake** it (beat the natives there) to end a lockdown sooner. In a consortium, the virus that won moves on along the trunk line (see Consortium).
+- **Retake** it (beat the natives there) to end a lockdown sooner.
 
 - **Modules.** Each outpost has **module slots** (pips), like your server's service slots: 2, then 3 at server level 20 and 4 at 35. They belong to the server, so modules stay when you swap or pull the harvester (and sleep while the outpost is in lockdown). Modules are things you own: craft one on the Craft page (its plan known; 150 credits, 8 code and 5 salvage: Pipeline Worm, Storage Array and Honeytoken Kernel, Firewall Node and IDS Cipher) and it goes in your **module stock** (×n on its row). An outpost's card offers only modules you have in stock; taking one out puts it back in your stock, to use on another outpost.
 
@@ -442,7 +441,7 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
   | Hub | +2 outpost slots; firewall −3 levels |
   | Lab | Crafting costs 30% fewer credits; outposts are noticed a quarter more often |
 
-- **Infestations.** Every so often (two hours, divided by how many outposts you run, a Honeytoken counting three; never under 40 minutes, 20 with a Honeytoken) a pack of 2–3 wild viruses moves into one outpost, at its level and one layer deeper. They stay 20 minutes. **Clear** them one fight at a time (`outpost clear <server>`) and the stockpile gets an hour's worth of yield on top, plus XP. Ignore them and they leave; nothing is lost.
+- **Infestations are gone**: a Root log rotation is the virus that moves in for you to clear.
 
 Commands: `outpost install <server> [n]`, `outpost build <module>`, `outpost mod|unmod <server> <module>`, `buy plan-<kind|module>`, `architecture fortress|hub|lab`, `outpost pull|defend|retake <server>`, `outpost compile siphon|scraper|tap`.
 
@@ -472,7 +471,7 @@ The plan the next changes build to; each part moves into the sections above as i
 **The firewall** (every holding has one: home, outposts, hubs you hold, silos):
 - **Level:** linear, and it never grows by itself. You upgrade it with credits and code, one level at a time.
 - **Readout:** one line on each holding's card, *Vulnerable to lv N+* (teal *Safe* when nothing attached can get through), with a family note when a filter changes it.
-- **Fragmentation:** your server losing Integrity wears its firewall (a block per 5% lost); an outpost's or hub's wears with every threat it meets. Shown as a block grid; fragmented blocks cost it levels. **Defrag** restores it, taking a few minutes at reduced strength.
+- **Fragmentation:** your server losing Integrity wears its firewall (a block per 5% lost); an outpost's or hub's never fragments (it's a level and nothing more). Shown as a block grid; fragmented blocks cost it levels. **Defrag** restores it, taking a few minutes at reduced strength.
 - **Hardening scripts** (`harden.sh`): one-use, +3 levels for 8 hours. Bought at hub shops. *(Home: done; see Invasions and the wall.)*
 - **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, Evasion and Sanitize at home, and rarer tar, sting and reflection. Home has the most slots; outposts and silos one or two. *(Home: done; see Invasions and the wall.)*
 
@@ -486,14 +485,13 @@ Three kinds of threat, two things they leave behind, four things you do. The spe
 
 | Word | Means |
 |---|---|
-| **Invasion** | One attacker comes for a wall or an outpost (yours, or a consortium member's). It travels, then sits at its target on a timer. |
-| **Swarm** | Several processes come for an outpost or a hub you hold, one fight each. It travels, then sits at its target on a timer. Natives send them, and so does a Hostile faction. |
-| **Infestation** | A pack of wild viruses settles into one of your outposts for a while, then leaves. Optional: clearing it pays. |
+| **Invasion** | One attacker comes for your wall (or a consortium member's outpost). It travels, then sits at its target on a timer. |
+| **Swarm** | One or more viruses come for an outpost or a hub you hold, one fight each. It travels, then sits at its target on a timer. Natives send small ones (1–2), servers past it bigger ones (2–4), and so does a Hostile faction. One swarm at a time. |
 | **Lockdown** | What an outpost or hub goes into when an invasion or swarm runs out its timer: it makes nothing until it ends. Never lost for good. |
 | **Crash** | What a server suffers when its wall falls: yours goes Degraded (rebooting); a member's is rebooting and open to clear. |
 | **Intercept** / **Defend** | Fight it on the way / at its target. |
 | **Retake** | End a lockdown sooner (one fight). |
-| **Clear** | Fight out an infestation, or a crashed member's server. |
+| **Clear** | Fight out your server when it's occupied after a crash. |
 
 At a wall, an invasion is **Blocked**, **Contested** (the wall grinds it while it chips you) or a **Breach**, by your wall's strength.
 
@@ -509,11 +507,9 @@ Everything runs on real time, online or off: whatever comes meets that holding's
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
-| **Invasion at your outpost** | That server's natives | About every 6 h | Meets its firewall, then 10 min to defend; makes nothing meanwhile | **Defend** (outpost card) | Lockdown | Kill XP (Honeytoken: + an hour's harvest) |
+| **Natives at your outpost** | That server's natives: a swarm of 1–2 at its level | About every 6 h | Arrives in 3 min, meets its firewall, then 8 min to defend; makes nothing meanwhile | **Defend**, a fight a virus | Lockdown | As a swarm |
 | **Swarm at your outpost** | 2–4 processes from past it, 2 levels above it | First 45 min after your first outpost, then 90–150 min | Travels 10 min, meets the outpost's firewall, then 8 min to defend; makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
 | **Swarm from a faction at your outpost** | A Hostile faction you just struck | Once a strike | As a swarm, in the faction's colours | As a swarm | Lockdown | As a swarm |
-| **Infestation** | 2–3 wild viruses | Every 2 h ÷ outposts, never under 40 min (while you play: it's an opportunity, not a threat) | Stays 20 min | **Clear**, a fight each (`outpost clear`) | They leave; nothing lost | +1 h of yield, XP |
-| **Invasion on the trunk line** (consortium) | The winner of a lockdown or crash, a level stronger | After a lockdown or crash; up to 3 hops | Arrives in 10 min as an invasion at an outpost | **Intercept** (`consortium intercept`) | An invasion at that outpost | Bounty, +50% a hop |
 
 Lockdown here: 2 h, no harvesting, the stockpile kept, nothing past it cut off. **Retake** (`outpost retake`) ends it sooner.
 
@@ -530,10 +526,8 @@ Lockdown here: until you **Retake** it (one fight, `hub retake`). No income; the
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
 | **Invasion at a member's outpost** | Its natives | Every 10–18 min (logged-on) | 8 min | **Defend for a bounty** (`consortium defend <server>`) | Half the time a member stops it; else lockdown (no dividend, 2 h) | Bounty: credits, code, XP |
-| **Invasion at a member's wall** | A virus at it, while they're away | Every 15–25 min (logged-on) | 8 min | **Defend** (`consortium defend <handle>`) | Half the time a member stops it; else a crash (rebooting 2 h, its outposts pay no dividend) | Bounty |
-| **Invasion on the trunk line** | The winner of a lockdown or crash | After a lockdown or crash; up to 3 hops | Arrives in 10 min as an invasion at an outpost | **Intercept** (`consortium intercept`) | An invasion at that outpost | Bounty, +50% a hop |
 
-A member's lockdown: **Retake for a bounty**. A member's crash: **Clear** every folder for a bounty.
+A member's lockdown: **Retake for a bounty**. (Raids on members' walls and the trunk line's travelling virus are cut until real players share a network.)
 
 ## Invasions and the wall
 
@@ -820,7 +814,7 @@ Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 
 
 - **A find arrives off your network.** A server you trace lands on the map dimmed, marked *found*. Nothing is decided for you: its card shows your **free** memory as pips (free now → free after, e.g. *4 → 3/4 free*, the slot it would take blinking; red when there isn't enough). The server card and log messages count free memory the same way and a **Connect** button. Connect (or typing `connect <server>`) opens that prompt on its card first; **Connect · +N** commits it (N: it and anything found past it), **Cancel** backs out. The first connection costs memory only, no credits. With memory full, the pips show red and Connect waits until you detach something.
 - **Attach / detach** (a server that was already on your network) from its map card (or `attach <server>`, `detach <server>`): attaching costs 25 + 5 × its level credits, the same every time; detaching is free.
-- **Detaching freezes** the server and everything found through it: no runs, its outpost makes nothing, no invasions, swarms or infestations, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
+- **Detaching freezes** the server and everything found through it: no runs, its outpost makes nothing, no invasions or swarms, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
 - Outpost slots still decide how many outposts run; memory decides how many servers you hold.
 
 ## The codex

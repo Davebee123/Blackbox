@@ -207,7 +207,7 @@ test('the forecast: what your command will cost a part, and what the virus will 
   assert.equal(forecast(s).you, e.encrypt || 0, 'an armor chit takes the hit');
 });
 
-test('an outpost card renders with its stockpile, module slots and an infestation box', async () => {
+test('an outpost card renders with its stockpile and module slots', async () => {
   const { mapMarkup } = await import('./dist/view.mjs');
   const { play } = await import('./dist/run.mjs');
   const s = fresh();
@@ -216,11 +216,9 @@ test('an outpost card renders with its stockpile, module slots and an infestatio
   l.takenOver = true;
   s.harvesters = [{ kind: 'siphon', level: 5, traits: [] }];
   play(s, `outpost install ${l.id} 1`);
-  l.outpost.infest = { total: 3, count: 2, left: 600000, seed: 3 };
   const html = mapMarkup(s, l.id);
   assert.match(html, /class="lvl-bar"/);
   assert.match(html, /Module ports/);
-  assert.match(html, /op-box infest/);
 });
 
 test('what you type changes the expected damage on the board before you press Enter', async () => {

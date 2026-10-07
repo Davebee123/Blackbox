@@ -84,6 +84,7 @@ export const defragMs = (s, loc = null) => Math.round(FIREWALL.defragMs * (loc ?
 
 // A threat met it: fragment.
 export function fragment(s, outcome, loc = null) {
+  if (loc) return; // an outpost's or hub's firewall is a level, nothing more (threat merge): only home fragments
   const f = fwAt(s, loc);
   f.frag = Math.min(FIREWALL.blocks, Math.round((f.frag + (FIREWALL.frag[outcome] || 0) * (loc ? 1 : less(s, 'frag')) * (perk(s, 'wear', loc) ? 0.75 : 1)) * 100) / 100);
 }

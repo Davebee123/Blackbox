@@ -223,6 +223,7 @@ function tidy(s) {
   if (s.occupation && (s.occupation.occupied.cleared || !s.degraded) && here !== s.occupation.id) s.occupation = null;
   const c = consortiumOf(s);
   if (c) c.servers = c.servers.filter((l) => !l.home || here === l.id || (!l.occupied.cleared && l.occupied.left > 0));
+  if (c) { c.roamer = null; c.raid = null; } // trunk hops and raids at members' walls are cut (threat merge)
 }
 
 // A bounty: credits and the family's code, times k (and Mesh's doubling).
@@ -242,6 +243,7 @@ function pay(s, L, k, family, text) {
 // prev: hops it has already made.
 const outpostsOnNet = (s) => [...memberServers(s).filter((l) => l.held && !l.held.siege && !l.held.lockdown && !rebooting(s, l.member)), ...(s.locations || []).filter((l) => l.outpost?.h && !l.outpost.siege && !l.outpost.lockdown)];
 export function roam(s, from, prev = 0) {
+  return; // trunk-line hops are cut until real players share a network (threat merge)
   const c = consortiumOf(s);
   if (!c || c.roamer) return;
   const hop = prev + 1;
@@ -311,18 +313,6 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
       if (who && who !== raid.member) emit(s, 'info', `${who} stopped ${raid.name} at ${raid.member}'s wall.`);
       else crashMember(s, raid);
     }
-  } else if (!raid && c.members.length) {
-    if (net.raidNext == null) net.raidNext = between(s, CONSORTIUM.raidEveryMs);
-    net.raidNext -= dt;
-    if (net.raidNext <= 0) {
-      net.raidNext = null;
-      const away = c.members.filter((h) => !rebooting(s, h));
-      if (away.length) {
-        const h = away[Math.floor(rand(s) * away.length)], fams = Object.keys(FAMILIES), family = fams[Math.floor(rand(s) * fams.length)];
-        c.raid = { member: h, family, name: NATIVE[family].toUpperCase(), level: memberLevel(s, h) + 1, left: CONSORTIUM.raidMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
-        emit(s, 'consortium-raid', `Invasion at ${h}'s wall: ${c.raid.name} (lv ${c.raid.level}), while they're away. Defend it within ${CONSORTIUM.raidMs / 60000} minutes for a bounty.`);
-      }
-    }
   }
   if (c.roamer) { c.roamer.left -= dt; if (c.roamer.left <= 0) roamerArrives(s); }
   const open = memberServers(s).filter((l) => l.held && !l.held.siege && !l.held.lockdown);
@@ -365,7 +355,6 @@ export function alertsOf(s) {
   if (!c) return out;
   const own = s.occupation && !s.occupation.occupied.cleared ? s.occupation : null;
   if (own) out.push({ kind: 'crash', title: 'Your server crashed', detail: `Rebooting. Clear its ${CONSORTIUM.homeRooms.length} folders to bring it back now.`, left: s.degraded?.until ? Math.max(0, s.degraded.until - (hooks.now?.() ?? Date.now())) : CONSORTIUM.rebootMs, total: CONSORTIUM.rebootMs, level: own.level, family: own.family, cmd: 'connect home', label: 'Connect', mine: true });
-  for (const l of s.locations || []) if (l.outpost?.siege) out.push({ kind: 'siege', title: `Invasion at your outpost on ${l.name}`, detail: 'Your outpost. Lose it and it goes into lockdown.', left: l.outpost.siege.left, total: OUTPOST.siegeMs, level: l.level || 1, family: l.family, cmd: `outpost defend ${l.id}`, label: 'Defend', mine: true });
   if (c.raid) out.push({ kind: 'raid', title: `Invasion at ${c.raid.member}'s wall`, detail: `${c.raid.name}. They're away: stop it or their server crashes.`, left: c.raid.left, total: CONSORTIUM.raidMs, level: c.raid.level, family: c.raid.family, cmd: `consortium defend ${c.raid.member}`, label: 'Defend', bounty: bountyOf(s, c.raid.level) });
   if (c.roamer) { const r = c.roamer; out.push({ kind: 'roam', title: `Invasion on the trunk line: ${r.name}`, detail: `Hop ${r.hop} of ${CONSORTIUM.roam.hops}, from ${r.fromName}. It arrives as an invasion.`, left: r.left, total: r.total, level: r.level, family: r.family, cmd: 'consortium intercept', label: 'Intercept', bounty: bountyOf(s, r.level, 1 + CONSORTIUM.roam.bounty * r.hop) }); }
   for (const l of memberServers(s)) {

@@ -17,7 +17,8 @@ import { isLive } from './memory.mjs';
 import { rootPorts, rootYield } from './root.mjs';
 import { ratingAt, fragment, effLevel } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
-import { emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT, firstTime } from './combat.mjs';
+import { launch, fleetCommand } from './fleet.mjs';
+import { hooks, emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT, firstTime } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
@@ -55,7 +56,7 @@ export const OUTPOST = {
     storage: { name: 'Storage Array', rule: 'Double storage.' },
     node: { name: 'Firewall Node', rule: '+3 levels on this outpost\'s firewall.' },
     ids: { name: 'IDS', rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
-    lure: { name: 'Honeytoken', rule: 'Draws trouble: noticed twice as often, swarms and infestations come sooner and pick it first, and beating them here pays double.' },
+    lure: { name: 'Honeytoken', rule: 'Draws trouble: noticed twice as often, swarms come sooner and pick it first, and beating them here pays double.' },
   },
   modCost: { credits: 150, code: 8, salvage: 5 }, // to craft one (Craft page); it goes in your module stock
   modCode: { pipeline: 'worm', storage: 'kernel', node: 'cipher', ids: 'cipher', lure: 'kernel' },
@@ -179,69 +180,10 @@ export function scrape(s, loc, n, level, lucky = 0, why = '') {
 // sits at it.
 export function tickOutposts(s, now, dt, paused = false, away = false) {
   tickSites(s, now, dt, paused, away);
-  if (!paused) { tickScheduler(s, now); if (!away) tickInfest(s, dt); }
+  if (!paused) tickScheduler(s, now);
 }
 
-// Infestations ----------------------------------------------------------------------------------
-// Now and then a few viruses move into one of your outposts for a while. Clear them (outpost
-// clear <server>, one fight each) for a bonus to that outpost's stockpile and XP; ignore them and
-// they move on, costing nothing. The more outposts you hold, the more often it happens, so the
-// fighting grows with your network. Logged-on time, like sieges; Degraded mode pauses it.
-export const INFEST = { everyMs: 120 * 60000, minMs: 40 * 60000, stayMs: 20 * 60000, size: [2, 3], bonusMs: 60 * 60000 };
-// More outposts, more often; a Honeytoken counts three times (and halves the floor).
-export const lured = (s) => outposts(s).filter((l) => hasMod(l, 'lure'));
-const infestEvery = (s) => Math.max(INFEST.minMs / (lured(s).length ? 2 : 1), INFEST.everyMs / Math.max(1, outposts(s).length + 2 * lured(s).length));
-function tickInfest(s, dt) {
-  if (dt <= 0) return;
-  const net = (s.net ||= {});
-  for (const loc of outposts(s)) {
-    const inf = loc.outpost.infest;
-    if (!inf) continue;
-    if (holding(s, 'infest', loc.id)) continue; // the clock waits while you clear it (not while paused)
-    inf.left -= dt;
-    if (inf.left <= 0) { loc.outpost.infest = null; emit(s, 'info', `The infestation on ${loc.name} moved on.`, { location: loc.id }); }
-  }
-  const ok = outposts(s).filter((l) => !l.outpost.lockdown && !l.outpost.siege && !l.outpost.infest);
-  if (!ok.length) return;
-  if (net.infestNext == null) net.infestNext = infestEvery(s);
-  net.infestNext -= dt;
-  if (net.infestNext > 0) return;
-  net.infestNext = infestEvery(s);
-  const pool = ok.filter((l) => hasMod(l, 'lure')).length ? ok.filter((l) => hasMod(l, 'lure')) : ok; // a Honeytoken first
-  const loc = pool[Math.floor(rand(s) * pool.length)];
-  const [lo, hi] = INFEST.size, n = lo + Math.floor(rand(s) * (hi - lo + 1));
-  loc.outpost.infest = { total: n, count: n, left: INFEST.stayMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1 };
-  emit(s, 'infest', `INFESTED: ${n} viruses moved into your outpost on ${loc.name}. Clear them within ${INFEST.stayMs / 60000} minutes for a bonus.`, { location: loc.id });
-}
-function clearInfest(s, loc) {
-  const inf = loc.outpost?.infest;
-  if (!inf) return warn(s, `${loc.name} isn't infested.`);
-  const seed = (inf.seed + inf.count * 7919) >>> 0;
-  const fams = ['ransomware', 'worm', 'ghostroot'];
-  const family = rand(s) < 0.6 ? loc.family : fams[seed % fams.length];
-  const { strain, grade } = variantFor(family, loc.level || 1, loc.depth || 1, seed);
-  const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  selectEncounter(s, 'random', seed, { level: loc.level || 1, family, strain, grade, mutation: null, quiet: true });
-  if (!s.encounter || s.encounter.phase === 'active') return;
-  s.gate = gate && gate !== s.encounter ? gate : null;
-  s.encounter.infest = loc.id;
-  emit(s, 'jack-in', `Clearing ${loc.name}: ${s.encounter.virus.name}, ${inf.total - inf.count + 1} of ${inf.total}.`, { location: loc.id });
-  command(s, 'engage');
-}
-// Called from finish() when an infestation fight is won.
-export function infestWon(s, e) {
-  const loc = locOf(s, e.infest), inf = loc?.outpost?.infest;
-  if (!inf) return;
-  inf.count--;
-  if (inf.count > 0) return emit(s, 'info', `${inf.count} left on ${loc.name}.`, { location: loc.id });
-  loc.outpost.infest = null;
-  const before = loc.outpost.stock || 0;
-  const lure = hasMod(loc, 'lure') ? 2 : 1; // a Honeytoken pays double
-  produce(s, loc, INFEST.bonusMs * lure);
-  const got = Math.floor(loc.outpost.stock || 0) - Math.floor(before);
-  gainXp(s, xpFor(s, loc.level || 1, lure), `${loc.name} cleared`, 'fight');
-  emit(s, 'outpost-held', `${loc.name} CLEARED. The outpost runs hot for a while: +${got} to its stockpile${got ? '' : ' (it was already full)'}.`, { location: loc.id });
-}
+// (Infestations are gone: a Root rotation is the virus that moves in for you to clear.)
 function tickSites(s, now, dt, paused, away) {
   for (const loc of outposts(s)) {
     const o = loc.outpost;
@@ -257,45 +199,22 @@ function tickSites(s, now, dt, paused, away) {
     }
     if (paused) continue;
     const elapsed = Math.max(0, now - since), swarmed = s.fleet?.target === loc.id && s.fleet.state === 'siege';
-    if (!o.siege && !swarmed) produce(s, loc, elapsed);
-    if (o.siege) {
-      if (!holding(s, 'outpost', loc.id)) {
-        // Its firewall at work: a contested siege is worn down, and one it now blocks is over.
-        const r = nativeRatio(s, loc, o.siege.level), oc = outcome(r);
-        if (oc === 'siege') o.siege.hp = (o.siege.hp ?? 1) - (grindRate(r) / 100) * (dt / 60000);
-        if (oc === 'blocked' || (o.siege.hp ?? 1) <= 0) { o.siege = null; emit(s, 'outpost-held', `${loc.name}'s firewall ${oc === 'blocked' ? 'turned the natives back' : 'wore the natives down'}.`, { location: loc.id }); continue; }
-        o.siege.left -= dt;
-      }
-      if (away && o.siege.helper === undefined) o.siege.helper = memberHelp(s); // in a consortium, a member may break it
-      if (away && o.siege.helper && o.siege.left <= OUTPOST.siegeMs / 2) { emit(s, 'outpost-held', `${o.siege.helper} stopped the invasion at ${loc.name} while you were away.`, { location: loc.id }); o.siege = null; continue; }
-      if (o.siege.left <= 0 && !holding(s, 'outpost', loc.id)) fall(s, loc);
-      continue;
-    }
+    if (!swarmed) produce(s, loc, elapsed);
+    if (s.fleet) continue; // one swarm at a time: natives wait their turn
     const mult = OUTPOST.kinds[o.h.kind].notice * (loc.trait === 'hostile' ? 2 : 1) * (hasMod(loc, 'ids') ? 0.5 : 1) * (hasMod(loc, 'lure') ? 2 : 1) * archNotice(s) * (away ? 0.5 : 1);
     if (elapsed > 0 && rand(s) < Math.min(1, elapsed / OUTPOST.noticeMs) * mult) startSiege(s, loc);
   }
 }
 
-// Natives come for it: they meet the outpost's own firewall first (firewall.mjs). Blocked, they
-// bounce; contested, the firewall wears them down while the timer runs; a breach just runs it.
+// Natives come for it: a small swarm (fleet.mjs), at the outpost's level, from close by. It meets
+// the outpost's firewall on arrival like any swarm.
 export const nativeRatio = (s, loc, level = loc.level || 1) => ratingAt(s, loc, loc.family) / strength(level);
-export function startSiege(s, loc) {
-  const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, level = loc.level || 1;
-  const o = outcome(nativeRatio(s, loc, level));
-  fragment(s, o, loc);
-  if (o === 'blocked') return emit(s, 'outpost-held', `Natives came for ${loc.name}: its firewall (lv ${effLevel(s, undefined, null, loc)}) stopped them.`, { location: loc.id });
-  const left = OUTPOST.siegeMs;
-  loc.outpost.siege = { left, seed, hp: 1, level };
-  emit(s, 'outpost-siege', `Invasion at your outpost on ${loc.name}: its natives (lv ${level}), ${o === 'siege' ? 'contested by its firewall' : 'BREACHING its firewall'}. Defend it within ${left / 60000} minutes or it goes into lockdown.`, { location: loc.id });
-}
+export const startSiege = (s, loc) => launch(s, hooks.now?.() ?? Date.now(), null, { natives: loc });
 
 export function fall(s, loc, force = false) {
   const o = loc.outpost;
-  const hop = o.siege?.hop || 0;
-  o.siege = null;
   o.lockdown = { left: OUTPOST.lockdownMs }; // the stockpile stays; the server stays open
   emit(s, 'outpost-fell', `LOCKDOWN: natives took ${loc.name}. It stops harvesting for ${OUTPOST.lockdownMs / 3600000} hours; its stockpile is kept. Retake it to end it sooner.`, { location: loc.id });
-  roam(s, loc, hop); // in a consortium, the virus moves on along the trunk line
 }
 
 // The Scheduler (a home service) collects every outpost on a timer, real time, offline too.
@@ -350,7 +269,7 @@ function removeMod(s, loc, id) {
 // Fights ---------------------------------------------------------------------------------------
 const NATIVE = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
 function fightNatives(s, loc, why) {
-  const seed = loc.outpost.siege?.seed || ((loc.seed * 7 + (s.serial || 0)) >>> 0) || 1;
+  const seed = ((loc.seed * 7 + (s.serial || 0)) >>> 0) || 1;
   const mutation = loc.trait === 'hardened' ? 'armored' : null;
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
   const { strain, grade } = variantFor(loc.family, loc.level || 1, loc.depth || 1, seed);
@@ -370,11 +289,6 @@ export function outpostWon(s, e) {
   if (o.lockdown) {
     o.lockdown = null;
     emit(s, 'outpost-held', `${loc.name} retaken: the lockdown is over and it's harvesting again.`, { location: loc.id });
-  } else if (o.siege) {
-    o.siege = null;
-    // A Honeytoken pays for the trouble it draws: an hour's harvest and a kill's worth of XP.
-    if (hasMod(loc, 'lure')) { produce(s, loc, 60 * 60000); gainXp(s, xpFor(s, loc.level || 1, 1), `${loc.name} held`, 'fight'); }
-    emit(s, 'outpost-held', `Invasion stopped: ${loc.name} is safe.${hasMod(loc, 'lure') ? ' The Honeytoken pays out.' : ''}`, { location: loc.id });
   }
 }
 
@@ -423,7 +337,7 @@ export function outpostCommand(s, full, now) {
   }
   if (!o?.h) return warn(s, `${loc.name} has no outpost.`);
   if (verb === 'pull') {
-    if (o.siege) return warn(s, 'Not while it\'s under siege.');
+    if (s.fleet?.target === loc.id && s.fleet.state === 'siege') return warn(s, 'Not while a swarm is at it.');
     collect(s, loc);
     if (harvesters(s).length >= OUTPOST.stashCap) return warn(s, `Your harvester rack is full (${OUTPOST.stashCap}).`);
     harvesters(s).push(o.h);
@@ -432,8 +346,8 @@ export function outpostCommand(s, full, now) {
   }
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
-  if (verb === 'defend') return o.siege ? fightNatives(s, loc, 'Defending') : warn(s, `${loc.name} isn't under siege.`);
-  if (verb === 'clear') return clearInfest(s, loc);
+  if (verb === 'defend') return s.fleet?.target === loc.id ? fleetCommand(s, 'swarm engage') : warn(s, `Nothing is coming for ${loc.name}.`);
+  if (verb === 'clear') return warn(s, 'Infestations are gone: clear a log rotation instead.');
   if (verb === 'retake') return o.lockdown ? fightNatives(s, loc, 'Retaking') : warn(s, `${loc.name} isn't in lockdown.`);
   warn(s, 'usage: outpost install|pull|defend|clear|retake <server>');
 }

@@ -5,7 +5,7 @@ import { play, layoutOf, takeable } from './dist/run.mjs';
 import { ROGUE, rogueRooms, rogueSpawns, relockLeft } from './dist/rogue.mjs';
 import { pickOrigin } from './dist/hidden.mjs';
 import { sweepKind } from './dist/forensics.mjs';
-import { tickOutposts, INFEST } from './dist/outpost.mjs';
+import { tickOutposts } from './dist/outpost.mjs';
 import { MEMORY } from './dist/memory.mjs';
 MEMORY.base = 99; // these tests trace dozens of servers to find each kind
 
@@ -82,29 +82,6 @@ test('a kill empties the folder for 3–5 minutes; a Gauntlet cleared in one run
     t += ROGUE.respawnMs[1] + 1;
     assert.ok(Object.values(rogueSpawns(s, loc, t)).every((x) => x.alive), 'they come back');
   } finally { delete hooks.now; }
-});
-
-test('infestations: they come to your outposts, pay a bonus when cleared, and leave if ignored', () => {
-  const s = world();
-  const loc = addLocation(s, 'worm', 1);
-  command(s, `attach ${loc.id}`);
-  loc.takenOver = true;
-  loc.outpost = { h: { kind: 'siphon', level: 5, traits: [] }, at: 0, stock: 0, siege: null, fallen: false };
-  (s.net ||= {}).infestNext = 1; // due now (a long jump would also roll a siege)
-  tickOutposts(s, 1, 2);
-  const inf = loc.outpost.infest;
-  assert.ok(inf && inf.count >= 2, 'an infestation arrives');
-  const n = inf.count;
-  for (let i = 0; i < n; i++) { command(s, `outpost clear ${loc.id}`); assert.equal(s.encounter.infest, loc.id); winFight(s); }
-  assert.equal(loc.outpost.infest, null);
-  assert.ok(loc.outpost.stock > 0, 'the stockpile got its bonus');
-  // the next one, ignored, moves on
-  s.net.infestNext = 1;
-  tickOutposts(s, 2, 2);
-  assert.ok(loc.outpost.infest);
-  loc.outpost.infest.left = 1;
-  tickOutposts(s, 3, 2);
-  assert.equal(loc.outpost.infest, null);
 });
 
 test('jack out of a wild server and it will not take you back for a minute (no jack out, top up, return)', () => {
