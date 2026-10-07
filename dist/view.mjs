@@ -331,7 +331,7 @@ export function partAbout(p) {
   if (p.ward) out.push(`wards the ${partName(p.ward)}: it loses at most ${Math.round(CONFIG.ward * 100)}% of itself a cycle while this lives`);
   if (p.twin) out.push(`twinned with the ${partName(p.twin)}: break one while the other lives and it reboots, so break both`);
   if (p.reflect) out.push(`every ${p.reflect} cycles it mirrors your commands: they do nothing, and some bounces back`);
-  return out.join('. ').replace(/^./, (c) => c.toUpperCase()) + (out.length ? '.' : '') || 'It has no attack of its own.';
+  return out.map((x) => x.replace(/^./, (c) => c.toUpperCase())).join('. ') + (out.length ? '.' : '') || 'It has no attack of its own.'; // each its own sentence
 }
 function partTags(s, p) {
   const e = s.encounter, tags = [];
