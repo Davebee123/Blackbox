@@ -125,7 +125,7 @@ test('turn order: armor strippers first, damage skills after; "last" puts your c
   assert.ok(s.logs.some((e) => e.type === 'resolved' && !e.who), 'your command still went off');
 });
 
-test('a party splits kill XP, with 10% more per extra player; elites don\'t grow with the party', async () => {
+test('a party splits kill XP, with 10% more per extra player; elites grow only a little with the party', async () => {
   const { hackerOf } = await import('./dist/combat.mjs');
   const xpOf = (crew) => {
     const s = start(crew);
@@ -135,7 +135,7 @@ test('a party splits kill XP, with 10% more per extra player; elites don\'t grow
   };
   const solo = xpOf(null), trio = xpOf('bastion infiltrator');
   assert.ok(Math.abs(trio - Math.round((solo * 1.2) / 3)) <= 1, `${trio} vs ${solo}`);
-  assert.equal(CREW.elitePer, 0);
+  assert.ok(CREW.elitePer > 0 && CREW.elitePer < CREW.hpPer, 'elites grow less with the party than normal fights');
 });
 
 test('a crewmate keeps its own level: switching your class does not move it', async () => {

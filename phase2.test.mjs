@@ -242,3 +242,16 @@ test('Phase 4: when the board opens, KESTREL and NULL CHOIR each ask you to pick
   command(s, 'mail deliver ' + k.id);
   assert.ok(rep(s, 'kestrel') > before.k && rep(s, 'nullchoir') < before.n, 'one up, its rival down');
 });
+
+test('the map shows at most HIDDEN.shown unknown servers: flagged and most traced first', async () => {
+  const { shownHidden, HIDDEN, hiddenNodes } = await import('./dist/hidden.mjs');
+  const { fresh } = await import('./dist/combat.mjs');
+  const s = fresh();
+  for (let i = 1; i <= 20; i++) hiddenNodes(s).push({ id: 'h' + i, family: 'worm', via: 'x', depth: 2, level: 1, lead: i === 3 ? 60 : 0, pinged: true, signal: 1 });
+  hiddenNodes(s).push({ id: 'h21', family: 'worm', via: 'x', depth: 2, level: 1, lead: 0, pinged: false, signal: 1 });
+  const shown = shownHidden(s);
+  assert.equal(shown.length, HIDDEN.shown);
+  assert.equal(shown[0].id, 'h3', 'the most traced leads');
+  assert.equal(shown[1].id, 'h20', 'then the newest ping');
+  assert.ok(!shown.some((n) => n.id === 'h21'), 'never one you have not heard of');
+});

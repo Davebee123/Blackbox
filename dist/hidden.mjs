@@ -25,6 +25,7 @@ export const HIDDEN = {
   killLead: 12, // a kill of a flagged node's family
   routeLead: 50, // the relay's route file, banked
   recordLead: 35, // a vault's trace record, banked: part of a trace, not the server
+  shown: 8, // unknown servers on the map and the leads list at once: the most worth chasing
 };
 
 // Trace is three rules: kills trace your own layer; route files (relay pings, vault trace records,
@@ -35,6 +36,10 @@ export const routed = (s, n) => Math.round(n * routeBoost(s));
 export const hiddenNodes = (s) => (s.hidden ||= []);
 export const hiddenNode = (s, id) => hiddenNodes(s).find((n) => n.id === id) || null;
 export const visible = (n) => n.pinged || n.lead > 0;
+// What the map shows: flagged first, then the most traced, then the newest ping; at most HIDDEN.shown.
+export const shownHidden = (s) => hiddenNodes(s).filter(visible)
+  .sort((a, b) => flagged(s, b) - flagged(s, a) || b.lead - a.lead || +b.id.slice(1) - +a.id.slice(1))
+  .slice(0, HIDDEN.shown);
 const locOf = (s, id) => s.locations.find((l) => l.id === id);
 
 // A found server gets its hidden neighbours (called from addLocation).

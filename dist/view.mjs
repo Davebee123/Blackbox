@@ -29,7 +29,7 @@ import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serve
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
-import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf, HIDDEN } from './hidden.mjs';
+import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
@@ -1088,7 +1088,7 @@ export const signalLevel = (run) => (run.integrity / run.max <= 0.3 ? 'low' : ru
 // percent; a contract's marker on the flagged ones. Click one to see it on the map.
 function leadsPanel(s) {
   const fams = Object.entries(s.leadProgress || {}).filter(([f, n]) => FAMILIES[f] && n > 0).sort((a, b) => b[1] - a[1]);
-  const nodes = hiddenNodes(s).filter(hiddenVisible).sort((a, b) => b.lead - a.lead);
+  const nodes = shownHidden(s);
   const bar = (n) => `<span class="ld-bar"><span style="width:${Math.min(100, n)}%"></span></span><b class="ld-n">${Math.floor(n)}%</b>`;
   const famRows = fams.map(([f, n]) => `<li class="ld-row" data-go="map:lead-${esc(f)}" title="${esc(FAMILIES[f].name)} lead">${glyph(f)}<span class="ld-name">${esc(FAMILIES[f].name)}</span>${bar(n)}</li>`).join('');
   const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${n.pinged || n.seen ? esc(FAMILIES[n.family].name.toLowerCase()) + ' ' : ''}server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('contract')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
@@ -1508,7 +1508,7 @@ export function mapLayout(s) {
   }
   // Deeper layers, parents before children (locations are stored in creation order). Unknown
   // servers you've heard of (a lead, a relay ping) sit among them as "?".
-  const shown = hiddenNodes(s).filter(hiddenVisible);
+  const shown = shownHidden(s);
   const kids = (id) => [...s.locations.filter((x) => x.parent === id), ...shown.filter((n) => n.via === id)];
   for (const l of s.locations) {
     if (byId[l.id]) continue;
@@ -1871,7 +1871,7 @@ function listHubs(s, sel, filter) {
 function listLeads(s, sel, filter) {
   if (filter.length && !filter.includes('targets')) return '';
   const fams = Object.entries(s.leadProgress || {}).filter(([f, n]) => FAMILIES[f] && n > 0).map(([f, n]) => ({ id: 'lead-' + f, name: `${FAMILIES[f].name} lead`, fam: f, pct: n, depth: '1', flag: false }));
-  const nodes = hiddenNodes(s).filter(hiddenVisible).map((n) => ({ id: n.id, name: `? past ${s.locations.find((l) => l.id === n.via)?.name || '?'}`, fam: n.pinged || n.seen ? n.family : null, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
+  const nodes = shownHidden(s).map((n) => ({ id: n.id, name: `? past ${s.locations.find((l) => l.id === n.via)?.name || '?'}`, fam: n.pinged || n.seen ? n.family : null, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
   const rows = [...fams, ...nodes].sort((a, b) => b.pct - a.pct);
   if (!rows.length) return '';
   return `<h4 class="sl-sec">Leads and unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${r.fam ? glyph(r.fam) + esc(FAMILIES[r.fam]?.name || '') : '?'}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
