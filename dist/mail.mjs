@@ -27,6 +27,7 @@ import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf
 
 export const MAIL = {
   periodMs: 30 * 60 * 1000, // the retainer pays every 30 minutes, offline too
+  boardAfterMs: 60 * 60 * 1000, // a storyline job marked boardAfterHour (the named process, the first takeover), held this long, opens the board anyway
   maxPeriods: 16, // up to 8 hours of it builds up while you're away
   offers: 5, // offers on the board at once
   take: 3, // contracts you can hold at once (storyline jobs don't count)
@@ -167,7 +168,7 @@ function postStory(s, at = now(), force = false) {
   const { job, ...msg } = beatLetter(s, beat, k);
   const l = letter(s, msg, at);
   if (job) {
-    const j = { id: l.id, from: msg.from, subject: msg.subject, body: msg.body, got: 0, ...job };
+    const j = { id: l.id, from: msg.from, subject: msg.subject, body: msg.body, got: 0, at, ...job };
     m.jobs.push(j);
     l.job = j.id;
     arm(s, j);
@@ -225,8 +226,9 @@ function arm(s, j) {
     const rooms = zoneRooms().filter((r) => !(s.encounter?.zone && s.encounter.room === r) && !z.spawns[r]?.bounty);
     const room = j.room && rooms.includes(j.room) ? j.room : rooms[Math.floor(rand(s) * rooms.length)] || zoneRooms()[0];
     j.room = room;
-    j.level ||= hackerLevel(s) + 2;
-    z.spawns[room] = { alive: true, family: j.family, level: j.level, seed: (z.seed * 97 + j.id * 977) >>> 0, name: j.name, bounty: true, ...(j.grade ? { grade: j.grade } : {}) }; // a story bounty can be an elite (grade 2+)
+    // Two levels above the level it was posted at; a story bounty can cap that (claimjack: 4) and come unmutated.
+    if (!j.spawnSet) { j.level = Math.min(j.maxLevel || Infinity, (j.level ?? hackerLevel(s)) + 2); j.spawnSet = true; }
+    z.spawns[room] = { alive: true, family: j.family, level: j.level, seed: (z.seed * 97 + j.id * 977) >>> 0, name: j.name, bounty: true, ...(j.grade ? { grade: j.grade } : {}), ...(j.calm ? { calm: true } : {}) }; // a story bounty can be an elite (grade 2+)
   }
   if (j.type === 'item' && j.loc) plant(s, j);
   syncFlags(s);
@@ -488,7 +490,13 @@ export function tickMail(s, at = now()) {
   }
   const m = s.mail;
   storyTick(s, at);
-  if (!boardOpen(s)) return;
+  if (!boardOpen(s)) {
+    const stuck = m.jobs.find((j) => j.story !== undefined && !j.done && STORY.find((b) => b.id === j.beat)?.boardAfterHour);
+    if (stuck) stuck.at ??= at;
+    if (!stuck || at - stuck.at < MAIL.boardAfterMs) return;
+    m.boardOpen = true;
+    emit(s, 'mail', 'Halcyon opened its board to you: other work while you finish this one.');
+  }
   // Offers nobody took run out.
   const before = m.offers.length;
   m.offers = m.offers.filter((o) => o.expiresAt > at);

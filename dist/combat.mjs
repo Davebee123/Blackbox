@@ -4,7 +4,7 @@
 import { onFound, memoryCommand, isLive, joinCost } from './memory.mjs';
 import { ELITE, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
-import { contractKill, standingCrash, mailCommand, tickMail, initMail } from './mail.mjs';
+import { contractKill, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
@@ -649,8 +649,23 @@ export function addLocation(s, family, depth = 1, parent = null) {
   s.locations.push(loc);
   spawnHidden(s, loc);
   onFound(s, loc); // memory full: it arrives detached (memory.mjs)
+  dropStaleFinds(s);
   emit(s, 'located', `${depth > 1 ? `DEEPER NODE (layer ${depth})` : 'ORIGIN LOCATED'}: ${loc.name}.`, { location: loc.id });
   return loc;
+}
+
+// Finds you never connected to: keep the newest FIND_CAP. An older one nothing points at (no
+// contract, nothing found through it) drops off the map, with the unknown servers past it.
+export const FIND_CAP = 10;
+function dropStaleFinds(s) {
+  const busy = new Set(openContracts(s).flatMap((c) => [c.loc, (s.hidden || []).find((n) => n.id === c.hidden)?.via]).filter(Boolean));
+  const unused = (l) => l.fresh && l.detached && !busy.has(l.id) && !s.locations.some((x) => x.parent === l.id);
+  while (s.locations.filter((l) => l.fresh && l.detached).length > FIND_CAP) {
+    const old = s.locations.find(unused);
+    if (!old) break;
+    s.locations.splice(s.locations.indexOf(old), 1);
+    s.hidden = (s.hidden || []).filter((n) => n.via !== old.id);
+  }
 }
 
 // ---------- levels ----------
@@ -1097,6 +1112,8 @@ export function finish(s, result) {
     const spawn = wild ? null : s.zone?.spawns?.[e.room];
     // A named contract target you lost to stays put, so the contract can still be finished.
     const keep = spawn?.bounty && result !== 'victory';
+    // A named target that beat you twice is worn down too: it drops back to v1.
+    if (keep && (spawn.losses = (spawn.losses || 0) + 1) >= 2 && spawn.grade > 1) { delete spawn.grade; emit(s, 'info', `${spawn.name} is worn down: back to v1.`); }
     if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = now + CONFIG.zone.respawnMs; }
     const named = spawn?.bounty && !keep ? spawn.name : null;
     if (named) delete spawn.bounty;

@@ -92,7 +92,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   const homeFight = () => { if (!s.run && s.encounter && s.encounter.mode !== 'run') fight(); };
   // Has this server anything left (a guard up, the vault shut, files not taken)? And is it done with:
   // nothing left, no outpost, relay or contract on it?
-  const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d]) return true; if (x.locked && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
+  // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
+  const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d]) return true; if (x.locked && !x.drop && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
   const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc)) && isLive(s, loc) && !loc.outpost?.h && !loc.relay && !openContracts(s).some((c) => c.loc === loc.id);
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
@@ -151,9 +152,6 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   const taken = {};
   const mailWork = () => book('contracts', () => {
     if (!contracts || s.run || active(s)) return;
-    // The bot can't trace hidden servers, so it can't finish a storyline item job; a player would. Open the board after an hour on it.
-    const stuck = openContracts(s).find((c) => c.story !== undefined && c.type === 'item');
-    if (stuck) { taken[stuck.id] ??= t; if (t - taken[stuck.id] > 60 * 60000) s.mail.boardOpen = true; }
     for (const c of openContracts(s)) {
       if (ready(s, c)) say('mail deliver ' + c.id);
       else if (c.story === undefined && t - (taken[c.id] ?? t) > 90 * 60000) say('mail drop ' + c.id);

@@ -59,3 +59,38 @@ test('the first rogue server is a Nest of the family that traced it, and it keep
   rogueSpawns(s, nest, 1);
   assert.equal(nest.level, 9, 'layer 1 tops out at 9');
 });
+
+test('claimjack is capped at level 4 and unmutated, wears down to v1 after two losses, and the board opens after an hour regardless', async () => {
+  const { tickMail, boardOpen, MAIL } = await import('./dist/mail.mjs');
+  const { storyAt } = await import('./dist/mail.mjs');
+  const s = at(9);
+  storyAt(s, 'claimjack', 0);
+  const j = openContracts(s).find((c) => c.name === 'claimjack-0412');
+  assert.ok(j, 'posted');
+  const sp = s.zone.spawns[j.room];
+  assert.ok(sp.level <= 4); assert.ok(sp.calm); assert.equal(sp.grade, 2);
+  assert.ok(!boardOpen(s));
+  tickMail(s, MAIL.boardAfterMs - 1000); assert.ok(!boardOpen(s));
+  tickMail(s, MAIL.boardAfterMs + 1000); assert.ok(boardOpen(s), 'open after an hour on it');
+  const { play } = await import('./dist/run.mjs');
+  for (let k = 0; k < 2; k++) {
+    s.run = { loc: 'sprawl', cwd: j.room, integrity: 1, max: 100, pack: [], visited: ['/'] };
+    play(s, 'attack');
+    assert.equal(s.encounter.virus.mutation, null);
+    for (let n = 0; n < 60 && active(s); n++) { command(s, 'hold'); resolveCycle(s); }
+  }
+  assert.ok(s.zone.spawns[j.room].alive && !s.zone.spawns[j.room].grade, 'still there, back to v1');
+});
+
+test('a v2 invader is blocked at its level +2, a v3 at +4', async () => {
+  const { strength } = await import('./dist/invasion.mjs');
+  assert.equal(strength(10, null, 2), strength(12));
+  assert.equal(strength(10, null, 3), strength(14));
+});
+
+test('never-connected finds are capped at ten: the oldest drops off the map', async () => {
+  const { FIND_CAP } = await import('./dist/combat.mjs');
+  const s = at(5);
+  for (let i = 0; i < FIND_CAP + 4; i++) addLocation(s, 'worm', 1);
+  assert.equal(s.locations.filter((l) => l.fresh).length, FIND_CAP);
+});

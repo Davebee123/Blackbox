@@ -63,8 +63,11 @@ export default {
         "family": "ransomware",
         "name": "claimjack-0412",
         "room": "/var/log",
-        "grade": 2
+        "grade": 2,
+        "maxLevel": 4,
+        "calm": true
       },
+      "boardAfterHour": true,
       "reward": {
         "item": "wicks-old-toolkit",
         "credits": 100,
@@ -94,6 +97,7 @@ export default {
         "blueprint": true,
         "relay": 1
       },
+      "boardAfterHour": true,
       "opensBoard": true
     },
     {

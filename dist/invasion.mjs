@@ -17,7 +17,7 @@ import { isLive } from './memory.mjs';
 import { effLevel, tickFirewall, wear } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
 import { archWall } from './architecture.mjs';
-import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor, GRADES } from './data.mjs';
+import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hooks, emit, warn, rand, active, holding, serverLevel, serviceVersion, serviceValue, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, addLead } from './combat.mjs';
@@ -28,7 +28,9 @@ const since = (s, first) => s.logs.filter((e) => e.id > first);
 export const INVADER = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
 
 // ---------- the wall ----------
-export const strength = (level, mutation = null, grade = 1) => 100 * power(level) * (mutation ? I().mutated : 1) * (GRADES[grade]?.hp || 1); // a v2/v3 invader is that much harder to stop
+// A v2 invader counts as 2 levels higher at the wall, a v3 as 4: your firewall blocks it at its level +2 / +4.
+export const GRADE_LEVELS = 2;
+export const strength = (level, mutation = null, grade = 1) => 100 * power(level + GRADE_LEVELS * ((grade || 1) - 1)) * (mutation ? I().mutated : 1);
 // Your wall's rating: your firewall's effective level (firewall.mjs), set so it blocks invaders at
 // or under that level outright. Down while the server is Degraded.
 export function wallRating(s, family = null) {
