@@ -1208,10 +1208,10 @@ export function finish(s, result) {
     const wild = e.wild && findLocation(s, e.wild); // a rogue server's folder, or SPRAWL-00's
     const spawn = wild || e.process ? null : s.zone?.spawns?.[e.room]; // a rotation's process (root.mjs) isn't SPRAWL's
     // A named contract target you lost to stays put, so the contract can still be finished.
-    const keep = spawn?.bounty && result !== 'victory';
+    const keep = (spawn?.bounty || spawn?.boss) && result !== 'victory'; // a boss you lost to stays too
     // A named target that beat you twice is worn down too: it drops back to v1.
     if (keep && (spawn.losses = (spawn.losses || 0) + 1) >= 2 && spawn.grade > 1) { delete spawn.grade; emit(s, 'info', `${spawn.name} is worn down: back to v1.`); }
-    if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = now + CONFIG.zone.respawnMs; }
+    if (spawn && !keep) { spawn.alive = false; spawn.respawnAt = now + (spawn.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); }
     const named = spawn?.bounty && !keep ? spawn.name : null;
     if (named) delete spawn.bounty;
     if (result === 'victory') {
@@ -1220,7 +1220,7 @@ export function finish(s, result) {
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || findLocation(s, e.process)?.depth || 1, family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite, rolls: e.virus.elite ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
+      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || findLocation(s, e.process)?.depth || 1, family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite, rolls: e.virus.elite || e.virus.boss ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
@@ -1797,14 +1797,16 @@ function bossPhases(s) {
     for (const act of ph.do) {
       if (act === 'rearm') for (const p of livingParts(s)) if (p.kind === 'system') { p.armor = Math.max(1, p.maxArmor); p.maxArmor = p.armor; p.patchAt = null; }
       if (act === 'faster') for (const p of attackers(s)) p.attack.interval = Math.max(2, p.attack.interval - 1);
-      if (act === 'spawn' && !parts(s).some((p) => p.id === 'sentry')) {
-        const spec = GUARDS.watchdog.parts.find((x) => x.id === 'sentry');
+      if (act.startsWith('spawn')) { // spawn:<part> from the boss's family (a second one gets its own id); plain spawn: a Sentry
+        const id = act.split(':')[1] || 'sentry';
+        const spec = (FAMILIES[v.family] || GUARDS[v.family])?.parts.find((x) => x.id === id) || GUARDS.watchdog.parts.find((x) => x.id === 'sentry');
         const p = makePart(spec, 'system', v.hpPower);
+        if (parts(s).some((x) => x.id === p.id)) { p.id += '2'; p.name += ' II'; if (p.reflect) p.reflectOff = Math.floor(p.reflect / 2); }
         if (p.attack) { p.attack.amount = Math.max(1, Math.round(p.attack.amount * v.power)); p.attack.due = e.cycle + 1; }
         v.parts.push(p);
       }
     }
-    emit(s, 'phase', `PHASE 2. ${ph.say}`, { boss: v.boss });
+    emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${ph.say}`, { boss: v.boss });
   }
   if (v.enrageAt && e.cycle === v.enrageAt - ENRAGE.warn) emit(s, 'warning', `${v.name} enrages in ${ENRAGE.warn} cycles: every attack will land every cycle.`);
   if (v.enrageAt && e.cycle === v.enrageAt && !v.enraged) {
@@ -1815,7 +1817,7 @@ function bossPhases(s) {
 }
 
 // The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
-export const mirrorOn = (s, cycle = s.encounter?.cycle) => livingParts(s).find((x) => x.reflect && cycle % x.reflect === 0) || null;
+export const mirrorOn = (s, cycle = s.encounter?.cycle) => livingParts(s).find((x) => x.reflect && (cycle + (x.reflectOff || 0)) % x.reflect === 0) || null;
 const twinOf = (s, p) => parts(s).find((x) => x !== p && (x.twin === p.id || p.twin === x.id)) || null;
 
 // The living part whose attack lands soonest (ties: the bigger hit).
@@ -2722,8 +2724,7 @@ export function intents(s, columns = 4) {
   const echo = livingParts(s).find((x) => x.echo);
   if (echo) for (const x of e.echoes || []) if (x.due - e.cycle >= 0 && x.due - e.cycle < columns) out.push({ source: echo.id, name: x.name + ' echo', effect: 'damage', amount: x.amount, col: x.due - e.cycle, hidden: false, kind: echo.kind });
   // The Decoy's beat (your commands mirrored), and a broken twin's reboot: chips on the board like attacks.
-  const decoy = livingParts(s).find((x) => x.reflect);
-  if (decoy) for (let col = 0; col < columns; col++) if ((e.cycle + col) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Mirror', effect: 'mirror', amount: Math.round(CONFIG.mirrorBounce * 100), col, hidden: timersHidden(s, decoy), kind: decoy.kind });
+  for (const decoy of livingParts(s).filter((x) => x.reflect)) for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Mirror', effect: 'mirror', amount: Math.round(CONFIG.mirrorBounce * 100), col, hidden: timersHidden(s, decoy), kind: decoy.kind });
   for (const p of parts(s)) if (p.rebootAt && p.integrity === 0 && p.rebootAt - e.cycle >= 0 && p.rebootAt - e.cycle < columns) out.push({ source: p.id, name: 'Reboot', effect: 'reboot', amount: Math.round(p.max * CONFIG.twinReboot.at), col: p.rebootAt - e.cycle, hidden: false, kind: p.kind });
   return out.sort((a, b) => a.col - b.col);
 }

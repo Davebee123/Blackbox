@@ -350,11 +350,12 @@ The net isn't a storyline: things happen on it, and you act on them or let them 
 | Event | Where | Lasts | What you do | What you get |
 |---|---|---|---|---|
 | **Courier** | a traced server | 15 min | LANTERN's courier is carrying a dead drop through. *Intercept* it from the server's card: a fight at your level. | 40 + 12×level credits and a protocol (85% Tuned, 15% Custom), on top of the kill |
-| **Bounty** | a traced server | 25 min | Halcyon posts a bounty on a named virus two levels above you. *Intercept* it. | 80 + 15×level credits and +2 Halcyon standing, on top of the kill |
+| **Bounty** | a traced server | 25 min | Halcyon posts a bounty on a named virus two levels above you (from level 8, on REPO MAN, a boss at your level). *Intercept* it. | 80 + 15×level credits and +2 Halcyon standing, on top of the kill |
+| **Boss** (Hollow Choir) | a traced server, from level 10 | 25 min | The HOLLOW CHOIR, a ghostroot boss. *Intercept* it. | Twice the bounty's credits and a Custom protocol, on top of the kill |
 | **Outbreak** | the net | 30 min | One family surges. | Its kills drop double code |
 | **Leak** | a server you've found but not taken | at once | Someone leaks its vault key. | Its vault opens without the password |
 
-A server with an event gets an antenna mark on the map, the event and its minutes left on its card, and a row in the map's threat list. An event you're fighting waits for you. Losing the fight leaves it up until its time runs out. `developer event [courier|bounty|outbreak|leak]` deals one now. (LANTERN's numbers-station dead drops, which you had to decode, unlock and bank, became the courier.)
+A server with an event gets an antenna mark on the map, the event and its minutes left on its card, and a row in the map's threat list. An event you're fighting waits for you. Losing the fight leaves it up until its time runs out. `developer event [courier|bounty|choir|outbreak|leak]` deals one now. (LANTERN's numbers-station dead drops, which you had to decode, unlock and bank, became the courier.)
 
 ## The Halcyon store
 
@@ -949,6 +950,16 @@ Order within a cycle: your command → burns → helpers → heals over time →
 **Taking a server.** Opening a vault no longer takes the server. It opens `/core` at the root, where the server's **Resident** lives: the owner's process, a boss built from the server's family (all three parts) at the server's level, with 1.4× Integrity (1.1× on your first server). A Cloak doesn't get you past it. Beat it and the server is yours (`RESIDENT` in run.mjs, `BOSSES.resident` in data.mjs). Lose and you're disconnected as usual, and for the next 6 hours the Resident is a level stronger, up to three levels for three losses. On a server you hold, `/core` is quiet.
 
 **Bosses** have phases and an enrage timer. At half its total Integrity the Resident re-arms every part (**PHASE 2**). From cycle 18 it **enrages**: every attack lands every cycle, a quarter harder, with a warning three cycles before. Scripted classes at the Resident's level win it about two times in three.
+
+**Early bosses**, on the same phase system (`BOSSES` in data.mjs). Each is a three-part virus of its family at your level:
+
+| Boss | Where | From | Integrity | Phases | Enrages |
+|---|---|---|---|---|---|
+| RELAY-KING (worm) | SPRAWL-00's `/net/relay`, back 30 minutes after you beat it (it stays if it beats you) | level 3 | 1.6× | at half: every attack comes a cycle sooner | cycle 16 |
+| REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | at 60%: re-arms every part; at 30%: every attack a cycle sooner | cycle 18 |
+| HOLLOW CHOIR (ghostroot) | Its own event (Boss) from level 10, 25 minutes on a traced server | level 10 | 1.6× | at half: splits off a second Decoy on the off-beat, so it mirrors you two cycles in four | cycle 16 |
+
+A boss drops like an elite (three loot rolls). The Hollow Choir also pays twice the bounty's credits and a Custom protocol. A phase change flashes on screen.
 
 **Regrowth.** A held server whose lockdown runs out without you retaking it counts it. Two of those within 24 hours and the Resident regrows: the server isn't yours until you beat it in `/core` again. What you built there waits.
 

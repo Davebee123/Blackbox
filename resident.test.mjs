@@ -97,3 +97,25 @@ test('the Resident regrows after two lockdowns left to run out: the core is guar
   assert.ok(!loc.takenOver);
   assert.ok(layoutOf(loc)[CORE].guard);
 });
+
+test('early bosses: RELAY-KING holds /net/relay from level 3; the bounty is REPO MAN from 8; the Hollow Choir comes from 10', async () => {
+  const { zoneSpawns, KING_ROOM } = await import('./dist/run.mjs');
+  const { deal } = await import('./dist/events.mjs');
+  const s = fresh();
+  s.hackers = { breaker: { level: 2, xp: 0 } };
+  assert.ok(!zoneSpawns(s)[KING_ROOM].boss, 'not before level 3');
+  s.hackers.breaker.level = 3; s.zone.spawns = {};
+  assert.equal(zoneSpawns(s)[KING_ROOM].boss, 'relayking');
+  s.hackers.breaker.level = 8;
+  command(s, 'developer location worm');
+  assert.equal(deal(s, 'bounty').boss, 'repoman');
+  s.events = [];
+  s.hackers.breaker.level = 9;
+  assert.equal(deal(s, 'choir'), null, 'no Hollow Choir before level 10');
+  s.hackers.breaker.level = 10;
+  const ev = deal(s, 'choir');
+  assert.equal(ev.boss, 'choir');
+  command(s, `event fight ${ev.id}`);
+  assert.equal(s.encounter.virus.boss, 'choir');
+  assert.equal(s.encounter.virus.family, 'ghostroot');
+});

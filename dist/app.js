@@ -508,6 +508,7 @@ function react(events) {
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
       case 'interrupt': feel.add('interrupt', row(e.target), 'DELAYED'); break;
       case 'warning': feel.add('nope', '#command-form'); break;
+      case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
       case 'proc': feel.add('good', null); break;
       case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); break;

@@ -40,13 +40,27 @@ export const CARDS = {
   bounty: {
     name: 'Bounty', weight: 2, ms: 25 * 60000, fight: true,
     where: (s) => places(s),
-    make: (s) => ({ family: pick(s, FAMS), level: Math.min(CONFIG.maxMobLevel, hackerLevel(s) + 2), name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true }),
-    text: (ev, where) => `Halcyon posted a bounty on ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus loose on ${where}. Kill it before it moves on.`,
+    // From level 8 the bounty is REPO MAN, a boss (BOSSES.repoman) at your level instead of a named virus two up.
+    make: (s) => (hackerLevel(s) >= 8 ? { family: 'ransomware', level: hackerLevel(s), name: 'REPO MAN', boss: 'repoman' } : { family: pick(s, FAMS), level: Math.min(CONFIG.maxMobLevel, hackerLevel(s) + 2), name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true }),
+    text: (ev, where) => (ev.boss ? `Halcyon posted a bounty on REPO MAN, a level ${ev.level} ransomware boss loose on ${where}. It re-arms at 60% and gets desperate at 30%. Kill it before it moves on.` : `Halcyon posted a bounty on ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus loose on ${where}. Kill it before it moves on.`),
     reward: (ev) => `${bountyPay(ev.level)} credits and Halcyon standing`,
     won: (s, ev) => {
       s.server.credits += bountyPay(ev.level);
       changeStanding(s, 'halcyon', 2, 'Bounty collected');
       return `Bounty collected on ${ev.name}: ${bountyPay(ev.level)} credits.`;
+    },
+  },
+  choir: {
+    name: 'Hollow Choir', weight: 1, ms: 25 * 60000, fight: true, from: 10,
+    where: (s) => (hackerLevel(s) >= 10 ? places(s) : []),
+    make: (s) => ({ family: 'ghostroot', level: hackerLevel(s), name: 'HOLLOW CHOIR', boss: 'choir' }),
+    text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It mirrors your commands, and at half it splits off a second Decoy. Silence it before it moves on.`,
+    reward: (ev) => `${bountyPay(ev.level) * 2} credits and a protocol, Custom or better`,
+    won: (s, ev) => {
+      s.server.credits += bountyPay(ev.level) * 2;
+      const r = seeded(ev.seed), item = rollItem(r, { level: ev.level, rarity: 'custom' });
+      addItem(s, item, 'Hollow Choir: ');
+      return `The Hollow Choir is silenced: ${bountyPay(ev.level) * 2} credits and a protocol.`;
     },
   },
   outbreak: {
@@ -135,7 +149,7 @@ export function eventCommand(s, text) {
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  selectEncounter(s, 'random', ev.seed, { level: ev.level, family: ev.family, name: ev.name, elite: !!ev.elite, mutation: null, quiet: true });
+  selectEncounter(s, 'random', ev.seed, { level: ev.level, family: ev.family, name: ev.name, elite: !!ev.elite, ...(ev.boss ? { boss: ev.boss } : {}), mutation: null, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   s.gate = gate && gate !== s.encounter ? gate : null;
   s.encounter.event = ev.id;

@@ -51,7 +51,7 @@ const MAP = {
   harvest: (e) => ({ kind: 'paid', label: 'Harvest', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'hot-strain': (e) => ({ kind: 'net', label: 'Hot', from: 'Network', text: e.message, go: 'map', beep: true }),
   breadcrumb: (e) => ({ kind: 'mail', label: 'wick', from: 'wick', text: e.message.replace(/^wick: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
-  'world-event': (e) => ({ event: e.event, kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', outbreak: 'Outbreak', leak: 'Leak' }[e.card] || 'Event', from: e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : 'Network', text: e.message, go: e.location ? `map:${e.location}` : e.card === 'outbreak' ? null : 'map', beep: true }),
+  'world-event': (e) => ({ event: e.event, kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', choir: 'Boss', outbreak: 'Outbreak', leak: 'Leak' }[e.card] || 'Event', from: e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : e.card === 'choir' ? 'Hollow Choir' : 'Network', text: e.message, go: e.location ? `map:${e.location}` : e.card === 'outbreak' ? null : 'map', beep: true }),
   'consortium-invite': (e) => ({ kind: 'net', label: 'Invite', from: 'Consortium', text: e.message.replace(/ consortium accept, or consortium decline\.$/, ''), go: 'people:consortium', beep: true }),
   'consortium-merged': (e) => ({ kind: 'net', label: 'Merged', from: 'Consortium', text: e.message.replace(/ See the Map\.$/, ''), go: 'map:consortium', beep: false }),
   'consortium-tier': (e) => ({ kind: 'net', label: 'Consortium', from: 'Consortium', text: e.message, go: 'map:consortium', beep: true }),

@@ -122,7 +122,7 @@ export const CONFIG = {
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
-  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
+  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
   relockMs: 60000, // any server but an outpost won't take you back for a minute after you leave: no jack out, top up, return
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
@@ -516,6 +516,12 @@ export const mobPower = (level) => power(level) * 1;
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
+  // RELAY-KING (run.mjs): a worm boss in SPRAWL-00's /net from level 3, back every half hour.
+  relayking: { name: 'RELAY-KING', family: 'worm', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['faster'], say: 'RELAY-KING speeds up: every attack comes a cycle sooner.' }] },
+  // REPO MAN (events.mjs): the bounty from level 8.
+  repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate: every attack comes a cycle sooner.' }] },
+  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half it splits off a second Decoy, on the off-beat.
+  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
 export const ENRAGE = { dmg: 1.25, warn: 3 };
 export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08 };
@@ -528,7 +534,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const forced = STRAINS[key] ? key : null;
   if (!random && !fixture && !forced) throw new Error('Unknown fixture ' + key);
   const homeFamilies = Object.keys(FAMILIES);
-  const familyId = overrides.family || (forced ? STRAINS[forced].lineage : random ? homeFamilies[Math.floor(next() * homeFamilies.length)] : fixture.family);
+  const familyId = overrides.family || BOSSES[overrides.boss]?.family || (forced ? STRAINS[forced].lineage : random ? homeFamilies[Math.floor(next() * homeFamilies.length)] : fixture.family);
   const family = familyOf(familyId);
   const mutationIds = ROLLED_MUTATIONS;
   const rolled = random ? mutationIds[Math.floor(next() * mutationIds.length)] : forced ? null : fixture.mutation;

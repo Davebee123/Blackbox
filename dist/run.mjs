@@ -79,10 +79,13 @@ export function zoneSpawns(s, now = clock()) {
     const pool = hackerLevel(s) < 3 ? ZONE_FAMILIES.filter((f) => f !== 'ghostroot') : ZONE_FAMILIES;
     const family = pool[(n + room.length) % pool.length];
     const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past CONFIG.zone.maxLevel
+    // From level 3, /net/relay holds RELAY-KING, a boss (BOSSES.relayking), back half an hour after you beat it.
+    if (room === KING_ROOM && hackerLevel(s) >= 3) { z.spawns[room] = { alive: true, family: 'worm', level: Math.min(CONFIG.zone.maxLevel + 2, hackerLevel(s)), seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
     z.spawns[room] = { alive: true, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].name.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return z.spawns;
 }
+export const KING_ROOM = '/net/relay';
 export const liveSpawns = (s) => Object.values(s.zone?.spawns || {}).filter((x) => x.alive).length;
 
 // Quirks add rooms on top of the template.
@@ -800,7 +803,7 @@ function attack(s, arg) {
   const sp = (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
   if (!sp?.alive) return err(s, 'Nothing running in this folder. ls to look, cd to move.');
   if (arg && !sp.name.startsWith(arg.replace(/\.exe$/, ''))) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
-  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, name: sp.bounty ? sp.name : sp.name.toUpperCase(), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {}) });
+  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, name: sp.bounty ? sp.name : sp.name.toUpperCase(), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {}) });
   command(s, 'engage');
 }
 
