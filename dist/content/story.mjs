@@ -83,7 +83,7 @@ export default {
       "subject": "Turf reassignment",
       "body": [
         "The crews you have been tracing run servers on our clients’ networks. We would like one of them to change hands.",
-        "Pick any server you have traced, get past its guard and open its vault. How you find the key is your business.",
+        "Pick any server you have traced, get past its guard, open its vault, and beat the Resident in /core. How you find the key is your business.",
         "We will send you a relay when it is done. Put it on the server you take."
       ],
       "job": {

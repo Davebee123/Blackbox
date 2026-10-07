@@ -15,7 +15,7 @@ const H = 3600000;
 const win = (s) => {
   if (s.encounter?.phase === 'alert') command(s, 'engage');
   for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });
-  for (let i = 0; i < 6 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); }
+  for (let i = 0; i < 30 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, "spike " + p.id); resolveCycle(s); }
 };
 const takeOver = (s, loc) => {
   if (s.run) play(s, 'jack out');
@@ -27,6 +27,10 @@ const takeOver = (s, loc) => {
   if (s.encounter?.phase === 'alert' || active(s)) win(s);
   play(s, 'cd ' + vault.slice(0, vault.lastIndexOf('/')));
   play(s, `unlock vault ${loc.password}`);
+  // The Resident in /core (run.mjs): beat it to take the server, then come back to the vault.
+  play(s, 'cd /core');
+  if (s.encounter?.phase === 'alert' || active(s)) win(s);
+  play(s, 'cd ' + vault.slice(0, vault.lastIndexOf('/')));
   play(s, 'cd vault');
   return vault;
 };

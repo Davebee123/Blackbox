@@ -66,7 +66,7 @@ export default {
         "subject": "Turf: {server}",
         "body": [
           "{owner} runs {server} for {crew}. We want it out of their hands.",
-          "Get past its guard and open its vault."
+          "Get past its guard, open its vault, and beat the Resident in /core."
         ]
       }
     ]
@@ -77,7 +77,7 @@ export default {
         "subject": "Turf: an unknown server",
         "body": [
           "One of the crews runs a server one hop past the ones you know. We have its signal and nothing else.",
-          "A relay nearby will flag it. Trace it, then open its vault."
+          "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in /core."
         ]
       }
     ]

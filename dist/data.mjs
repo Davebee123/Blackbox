@@ -464,7 +464,7 @@ function rng(seed) {
   return () => ((state = (Math.imul(1664525, state) + 1013904223) >>> 0) / 4294967296);
 }
 
-function makePart(spec, kind, scale, extraArmor = 0) {
+export function makePart(spec, kind, scale, extraArmor = 0) {
   const max = Math.max(1, Math.round(spec.integrity * scale * (kind === 'fragment' ? 1 : CONFIG.partToughness)));
   const worn = (spec.armor || 0) + extraArmor;
   const armor = worn >= 2 ? Math.round(worn * CONFIG.armorScale) : worn; // 2 → 3, 3 → 5, 4 → 6
@@ -510,6 +510,14 @@ export const mobPower = (level) => power(level) * 1;
 // hitting and better armored; they pay three times the XP and roll for drops three times.
 // Elites are crew rooms (WoW elites): very unlikely solo, three loot rolls, a blue at least, a small
 // unique chance. Only in Pit folders, never on the way to anything you need.
+// Bosses: a solo fight with phases. hp and dmg scale the whole virus; at each phase's share of its
+// total Integrity it does something (re-arm every part, call in a Sentry, attack faster), and from
+// enrageAt every attack lands every cycle, a quarter harder.
+export const BOSSES = {
+  // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
+  resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
+};
+export const ENRAGE = { dmg: 1.25, warn: 3 };
 export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08 };
 
 // Build a virus from a named fixture or a seeded random variant.
@@ -562,12 +570,18 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * ELITE.dmg));
     if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * ELITE.dmg));
   }
+  // A boss (BOSSES): bigger and a little harder; its phases and enrage timer ride on the virus.
+  const boss = BOSSES[overrides.boss] || null;
+  if (boss) for (const p of parts) {
+    p.max = p.integrity = Math.round(p.max * (overrides.bossHp ?? boss.hp));
+    for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * boss.dmg));
+  }
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
   const tagNo = String(seed >>> 0).slice(-4).padStart(4, '0');
   const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}) };
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}) };
 }
 
 // ---------- locations ----------

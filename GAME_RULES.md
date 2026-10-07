@@ -241,7 +241,7 @@ Delivering a contract raises standing. A crash on your own server costs 10, but 
 | Side | KESTREL and NULL CHOIR each post one when the board opens, and they wait there: take one and the other is gone. Delivering it pays +20 rep with that faction, and the ripple turns its rival against you (WoW's Aldor or Scryers) | — |
 | Kill | N kills of a family, anywhere (or anything in SPRAWL-00), no more than 4 levels under the level it was posted at (its title says Lv N+). XP pays at the average level of the kills that filled it | — |
 | Named process | You kill the named process the contract puts in a SPRAWL-00 folder (two levels above you, never past SPRAWL's cap + 2; only posted while SPRAWL is still your level) | — |
-| Takeover | You open the server's vault. That server is then **taken over** (yours, teal on the map) | — |
+| Takeover | You open the server's vault, then beat its **Resident** in `/core`. That server is then **taken over** (yours, teal on the map) | — |
 | Materials | You have the code in stock | the code is handed over |
 | Recover a file | The contract's file sits in a server's vault; pull it and jack out to bank it | the file is handed over |
 
@@ -618,7 +618,7 @@ Two kinds, so a new player never faces everything at once.
 - **Decoding:** the first time you break a part you've never broken, it's decoded in the Codex and pays two kills of XP (Intel), shown as a *Decoded* row on the win card. Your server earns the same XP as you; the log writes it once.
 - **Hot strain:** every 4 hours one strain open at your level runs hot: +50% XP and lead from it, on the pager when it changes. Fixed by the 4-hour window, so everyone with the same strains open sees the same one.
 - **Rested:** every safe hour you're logged off (no crash) banks a kill's worth of XP, up to 1.5 levels' worth. Kills spend it: each kill pays double until it runs out (a *Rested* row on the spoils card). It rewards building a safe period with your firewall.
-- **Varied play pays (Fresh).** XP comes in kinds: **Fights** (kills, invasions, swarms, outpost clears), **Break-ins** (a first run, a vault, a takeover), **Intel** (log sweeps, LANTERN dead drops), **Building** (first crafts, installs, Root levels) and **Trading**. The first XP of a kind other than fighting that you haven't earned in 20 minutes of active play pays half again (at most a kill's worth); the gain shows a *FRESH* row. Nothing fades: doing one thing over and over just pays normally. Events under half a kill never count, so a free action can't farm it. Contracts get no bonus; they count as the activity behind them (a kill contract is fighting).
+- **Varied play pays (Fresh).** XP comes in kinds: **Fights** (kills, invasions, swarms, outpost clears), **Break-ins** (a first run, a vault, a Resident beaten), **Intel** (log sweeps, LANTERN dead drops), **Building** (first crafts, installs, Root levels) and **Trading**. The first XP of a kind other than fighting that you haven't earned in 20 minutes of active play pays half again (at most a kill's worth); the gain shows a *FRESH* row. Nothing fades: doing one thing over and over just pays normally. Events under half a kill never count, so a free action can't farm it. Contracts get no bonus; they count as the activity behind them (a kill contract is fighting).
 - **XP away from fighting:** a takeover 1.5 kills (on top of the vault's 1.5); each Root level ¾ of a kill; a cracked dead drop 1.5; a log sweep 1 on the first read (less for each wrong answer, like its lead); the first time you compile each protocol recipe, craft each filter, config, harvester or module, run each service version, or trade at each hub, half a kill (once each).
 - **Contracts pay at the level of the work:** a kill contract's XP is paid at the average level of the kills that filled it.
 - **Out of the starter area:** if you reach level 4 with no server traced, one is (the family you've chased most); at 5, wick pages you with one you haven't cracked yet (the pager; click it to see it on the map).
@@ -943,6 +943,14 @@ All numbers are per rank.
 | Operator | Big Process: Deploy helpers deal 14 · or · Long-running: Deploy helpers last 6 cycles | Extra Nodes: Botnet sends 4 helpers · or · Hive: Your helper cap is 9 | Parallel Deploy: Deploy starts two helpers at half damage: same total, twice the hits for Hook · or · Supervisor: Kill Switch readies Deploy |
 
 Order within a cycle: your command → burns → helpers → heals over time → enemy attacks → patches.
+
+## The Resident and bosses
+
+**Taking a server.** Opening a vault no longer takes the server. It opens `/core` at the root, where the server's **Resident** lives: the owner's process, a boss built from the server's family (all three parts) at the server's level, with 1.4× Integrity (1.1× on your first server). A Cloak doesn't get you past it. Beat it and the server is yours (`RESIDENT` in run.mjs, `BOSSES.resident` in data.mjs). Lose and you're disconnected as usual, and for the next 6 hours the Resident is a level stronger, up to three levels for three losses. On a server you hold, `/core` is quiet.
+
+**Bosses** have phases and an enrage timer. At half its total Integrity the Resident re-arms every part (**PHASE 2**). From cycle 18 it **enrages**: every attack lands every cycle, a quarter harder, with a warning three cycles before. Scripted classes at the Resident's level win it about two times in three.
+
+**Regrowth.** A held server whose lockdown runs out without you retaking it counts it. Two of those within 24 hours and the Resident regrows: the server isn't yours until you beat it in `/core` again. What you built there waits.
 
 ## Families and mutations
 

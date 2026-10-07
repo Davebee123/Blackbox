@@ -2,11 +2,11 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { ELITE, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
+import { ELITE, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel } from './data.mjs';
 
-import { contractKill, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
+import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
-import { buyFrom, claimServer, reclaimCheck, clearedFor } from './factions.mjs';
+import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
@@ -626,6 +626,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (opts.strain) over.strain = opts.strain;
   if (opts.grade) over.grade = opts.grade;
   if (opts.elite) over.elite = true;
+  if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
   const virus = createVirus(key, seed, over);
   if (mode === 'home') { s.seed = seed; s.gate = null; }
@@ -1238,6 +1239,8 @@ export function finish(s, result) {
     if (result === 'victory') {
       const loc = findLocation(s, s.run?.loc);
       if (loc) { loc.state.cleared[e.room] = true; clearedFor(s, loc); } // a faction's server: they like that (factions.mjs)
+      // The Resident (run.mjs /core): beat it and the server is yours.
+      if (loc && e.virus.boss === 'resident' && !loc.takenOver) { loc.resident = null; loc.regrow = null; strikeServer(s, loc, 'takeover'); contractTakeover(s, loc); }
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
       payKill(s, e, XP.guard, `${e.virus.name} down`);
@@ -1263,6 +1266,9 @@ export function finish(s, result) {
       hooks.runWon?.(s);
     } else {
       emit(s, 'crashed', `${e.virus.name} burned your Signal to zero.`, { mode: 'run' });
+      // A Resident that beats you grows: a level more for 6 hours, up to three.
+      const home = e.virus.boss === 'resident' && findLocation(s, s.run?.loc);
+      if (home) { const now = hooks.now?.() ?? Date.now(), had = home.resident && now - home.resident.at < 6 * 3600000 ? home.resident.bonus : 0; home.resident = { bonus: Math.min(3, had + 1), at: now }; emit(s, 'warning', `The Resident of ${home.name} beat you. It's a level stronger for the next 6 hours.`, { location: home.id }); }
       disconnect(s, 'Signal lost');
     }
     return;
@@ -1775,6 +1781,35 @@ function hit(s, p, base, opts = {}) {
     if (next) hit(s, next, spill, { by: 'Overkill', overkill: true, pierce: true, noHook: true });
   } else if (on(s, p, 'hooked') && !opts.noHook) hit(s, p, scaled(s, SKILLS.hooked + rank(s, 'kernel-hook')), { by: 'Hook', noHook: true });
   return { dealt, overflow: Math.max(0, raw - dealt), crit };
+}
+
+// Bosses (BOSSES): a phase fires once the virus is down to its share of total Integrity; from
+// enrageAt every attack lands every cycle, a quarter harder, with a warning a few cycles ahead.
+function bossPhases(s) {
+  const e = s.encounter, v = e.virus;
+  if (!v.boss) return;
+  const life = virusIntegrity(s), share = life.max ? life.current / life.max : 0;
+  for (const ph of v.phases || []) {
+    if (ph.done || share > ph.at || !life.current) continue;
+    ph.done = true;
+    for (const act of ph.do) {
+      if (act === 'rearm') for (const p of livingParts(s)) if (p.kind === 'system') { p.armor = Math.max(1, p.maxArmor); p.maxArmor = p.armor; p.patchAt = null; }
+      if (act === 'faster') for (const p of attackers(s)) p.attack.interval = Math.max(2, p.attack.interval - 1);
+      if (act === 'spawn' && !parts(s).some((p) => p.id === 'sentry')) {
+        const spec = GUARDS.watchdog.parts.find((x) => x.id === 'sentry');
+        const p = makePart(spec, 'system', v.hpPower);
+        if (p.attack) { p.attack.amount = Math.max(1, Math.round(p.attack.amount * v.power)); p.attack.due = e.cycle + 1; }
+        v.parts.push(p);
+      }
+    }
+    emit(s, 'phase', `PHASE 2. ${ph.say}`, { boss: v.boss });
+  }
+  if (v.enrageAt && e.cycle === v.enrageAt - ENRAGE.warn) emit(s, 'warning', `${v.name} enrages in ${ENRAGE.warn} cycles: every attack will land every cycle.`);
+  if (v.enrageAt && e.cycle === v.enrageAt && !v.enraged) {
+    v.enraged = true;
+    for (const p of attackers(s)) { p.attack.interval = 1; p.attack.due = Math.min(p.attack.due, e.cycle + 1); if (['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.round(p.attack.amount * ENRAGE.dmg); }
+    emit(s, 'phase', `${v.name} ENRAGES: every attack lands every cycle.`, { boss: v.boss, enrage: true });
+  }
 }
 
 // The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
@@ -2460,6 +2495,7 @@ function cycleClose(s, landed) {
     }
   }
 
+  bossPhases(s);
   // Mirror: a broken twin comes back while its twin still lives.
   for (const p of parts(s).filter((x) => x.rebootAt && x.integrity === 0 && e.cycle >= x.rebootAt)) {
     const tw = twinOf(s, p);

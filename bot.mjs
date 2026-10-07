@@ -7,7 +7,7 @@
 // node bot.mjs [class] [targetLevel] [seed]
 import { topUpCost, installBlock, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
 import { RARITY_ORDER, SLOT_KINDS, groupOf, SERVICES } from './dist/gear.mjs';
-import { play, layoutOf, currentLocation, signalNow, takeable } from './dist/run.mjs';
+import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
 import { items } from './dist/hidden.mjs';
@@ -96,7 +96,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
   // Has this server anything left (a guard up, the vault shut, files not taken)? And is it done with:
   // nothing left, no outpost, relay or contract on it?
   // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
-  const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d]) return true; if (x.locked && !x.drop && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
+  // A Resident that just beat it waits until it calms down (6 hours), like a player would.
+  const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d] && !(d === CORE && residentBonus(loc, t) > 0)) return true; if (x.locked && !x.drop && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
   const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.outpost?.h && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
@@ -118,9 +119,11 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
       for (const room of Object.keys(layoutOf(loc)).filter((p) => p !== '/')) { if (!s.run) break; say(`cd ${room}`); say('attack'); fight(); if (s.run) say('cd /'); }
     } else {
       const L = layoutOf(loc), dirs = Object.keys(L).sort((a, b) => a.split('/').length - b.split('/').length);
+      if (!L[CORE] && Object.values(L).some((x) => x.locked)) { L[CORE] = { dirs: [], files: [] }; dirs.push(CORE); } // the core opens with the vault: go there last
       for (const d of dirs) {
         if (!s.run) break;
         if (L[d].locked && !loc.state.unlocked[d]) { say(`cd ${d.slice(0, d.lastIndexOf('/')) || '/'}`); say(`unlock ${d.split('/').pop()} ${loc.password}`); }
+        if (d === CORE && (residentBonus(loc, t) > 0 || s.run.integrity < s.run.max * 0.7)) continue; // the Resident: fresh, and on a good Signal
         say(`cd ${d}`);
         if (s.encounter?.mode === 'run') fight();
         if (s.run && procIn(loc, d, t)) { say('attack'); fight(); stats.procs = (stats.procs || 0) + 1; } // a log rotation's process (root.mjs)

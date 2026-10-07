@@ -48,6 +48,7 @@ export const OUTPOST = {
   stashCap: 6,
   vaultChance: 0.12, // share of vaults holding a packaged native (Legacy sites: double)
   compile: { credits: 200, code: 15, material: { siphon: 'worm', scraper: 'cipher', tap: 'kernel' } },
+  regrowMs: 24 * 3600000, // two lockdowns left to run out within this and the Resident regrows
   lockdownMs: 2 * 3600000, // real time an outpost stays in lockdown after a lost siege
   // Outpost ports and the modules that go in them. The ports belong to the server, so modules
   // stay put when you swap or pull the harvester, and sleep while the outpost is in lockdown.
@@ -130,7 +131,7 @@ export const modsOf = (loc) => (loc ? (loc.mods ||= []) : []);
 export const hasMod = (loc, id) => !!loc?.mods?.includes(id);
 // A server's module ports: your server level's, +1 at Root 4 (root.mjs).
 export const outpostPorts = (s, loc = null) => OUTPOST.ports(serverLevel(s)) + rootPorts(loc);
-export const outposts = (s) => (s.locations || []).filter((l) => l.outpost?.h && isLive(s, l)); // a detached server's outpost is frozen (memory.mjs)
+export const outposts = (s) => (s.locations || []).filter((l) => l.outpost?.h && l.takenOver && isLive(s, l)); // a detached server's outpost is frozen (memory.mjs)
 export const bandwidthUsed = (s) => outposts(s).filter((l) => l.trait !== 'backbone').length;
 
 
@@ -185,6 +186,15 @@ export function tickOutposts(s, now, dt, paused = false, away = false) {
   if (!paused) tickScheduler(s, now);
 }
 
+// The Resident regrows: the server isn't yours until you beat it in /core again. What you built
+// waits, idle, and comes back with it.
+export function regrow(s, loc) {
+  loc.takenOver = false;
+  loc.lapsed = [];
+  delete loc.state.cleared['/core'];
+  emit(s, 'outpost-fell', `${loc.name}'s Resident regrew. The server isn't yours until you beat it in /core again. What you built there waits.`, { location: loc.id });
+}
+
 // (Infestations are gone: a Root rotation is the virus that moves in for you to clear.)
 function tickSites(s, now, dt, paused, away) {
   for (const loc of outposts(s)) {
@@ -196,7 +206,10 @@ function tickSites(s, now, dt, paused, away) {
       o.lockdown.left -= now - since;
       if (o.lockdown.left > 0) continue;
       o.lockdown = null;
-      emit(s, 'outpost-up', `${loc.name}'s lockdown is over: harvesting again.`, { location: loc.id });
+      // A lockdown nobody retook: two in a day and the Resident regrows (run.mjs /core).
+      loc.lapsed = [...(loc.lapsed || []).filter((t) => now - t < OUTPOST.regrowMs), now];
+      if (loc.lapsed.length >= 2) { regrow(s, loc); continue; }
+      emit(s, 'outpost-up', `${loc.name}'s lockdown is over: harvesting again. Another lockdown left to run out within a day and its Resident regrows.`, { location: loc.id });
       continue;
     }
     if (paused) continue;
@@ -342,7 +355,7 @@ export function outpostCommand(s, full, now) {
   if (verb === 'unmod') return removeMod(s, loc, b);
   const o = loc.outpost;
   if (verb === 'install') {
-    if (!loc.takenOver) return warn(s, `Take ${loc.name} over first: open its vault.`);
+    if (!loc.takenOver) return warn(s, `Take ${loc.name} over first: open its vault, then beat the Resident in /core.`);
     if (o?.h) return warn(s, `${loc.name} already runs a harvester.`);
     if (o?.readyAt && now < o.readyAt) return warn(s, `${loc.name}'s harvester slot is still resetting (${Math.ceil((o.readyAt - now) / 60000)} min).`);
     const i = Math.max(1, Number(b) || 1) - 1;

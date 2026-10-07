@@ -46,7 +46,7 @@ export const TIPS = [
   { id: 'map-hub-swarm', page: 'map', when: (s) => !!retakeOf(s), at: '.mnode.hub.yours.threat', text: 'The old owner is sending viruses to take this hub back. The timer is under its name. The hub earns nothing until you beat them, one fight per virus.' },
   { id: 'map-hub-lockdown', page: 'map', when: (s) => !retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub is in lockdown. It earns nothing until you retake it with one fight. It is still yours, and stays yours.' },
   { id: 'map-member-raid', page: 'map', at: '.mnode.member.besieged', text: 'A member\'s outpost is under invasion. Select it and Defend for a bounty. Left alone, it may hold or go into lockdown, at no cost to you.' },
-  { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'A contract points at this server. Open its vault to take it over, or to find the file you were sent for.' },
+  { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'A contract points at this server. Open its vault and beat the Resident in /core to take it over, or open the vault to find the file you were sent for.' },
   { id: 'pager', page: '*', at: '#pager .led.on', text: 'This is your pager. New mail, offers, finished contracts, the retainer and anything moving on the network land here. Click it for the list.' },
   { id: 'mail', page: '*', at: '.modules [data-module="mail"]', when: (s, m) => m !== 'mail' && (s.mail?.list || []).some((x) => !x.read), text: 'You have mail. Your crew, LOWLIGHT, and Halcyon Mutual send you contracts here.' },
 

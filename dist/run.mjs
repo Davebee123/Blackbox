@@ -109,6 +109,9 @@ export function layoutOf(loc) {
   const rf = rootFiles(loc);
   if (rf.cache && out['/'] && !out['/'].files.includes(CACHE_FILE)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, CACHE_FILE] } };
   if (rf.stash && out['/'] && !out[STASH_DIR]) out = { ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, STASH_DIR.slice(1)] }, [STASH_DIR]: { dirs: [], files: [STASH_FILE] } };
+  // The core (Resident): once the vault is open, /core holds the server's owner process. Beat it to
+  // take the server. On a server you hold it's quiet; if the Resident regrows it's back.
+  if (vault && loc && !loc.member && loc.state?.unlocked?.[vault] && out['/'] && !out[CORE]) out = { ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, CORE.slice(1)] }, [CORE]: { dirs: [], files: [], resident: true, ...(loc.takenOver ? {} : { guard: 'resident' }) } };
   // Contracts and relays plant files too (see mail.mjs, hidden.mjs): in the vault unless they say where.
   for (const f of loc?.extraFiles || []) {
     const dir = f.dir || vault;
@@ -172,7 +175,13 @@ export const sourceOf = (loc) => ((loc.depth || 1) >= 2 && seeded(loc.seed * 47 
 const sourceName = (id) => (ZERO_DAYS[id] ? ZERO_DAYS[id].name : SERVICES[id].name);
 
 const hiddenName = (name) => name.startsWith('.');
-const guardName = (loc, path) => GUARDS[layoutOf(loc)[path]?.guard]?.name.toLowerCase() || 'guard';
+const guardName = (loc, path) => (layoutOf(loc)[path]?.resident ? 'Resident' : GUARDS[layoutOf(loc)[path]?.guard]?.name.toLowerCase() || 'guard');
+export const CORE = '/core';
+// The Resident: two levels over its server (your first server's, none), and a level more for each
+// time it has beaten you in the last 6 hours (up to 3).
+export const RESIDENT = { over: 0, perLoss: 1, maxLoss: 3, lossMs: 6 * 3600000, starterHp: 1.1 }; // over: levels above its server
+export const residentBonus = (loc, now = Date.now()) => (loc.resident && now - loc.resident.at < RESIDENT.lossMs ? loc.resident.bonus : 0);
+export const residentLevel = (loc, now = Date.now()) => Math.min(CONFIG.maxMobLevel, (loc.level || 1) + (loc.starter ? 0 : RESIDENT.over) + residentBonus(loc, now));
 
 const FLAVOR = {
   ransomware: 'payout routing for the ransom crews.',
@@ -486,7 +495,10 @@ function cd(s, arg, pulled = null) {
   if (!s.run.visited.includes(target)) s.run.visited.push(target);
   if (s.run.integrity <= 0) return disconnect(s, 'Signal ran out');
   // Like a MUD room: arriving shows what's here.
-  if (watching(s, loc, target) && s.run.cloak === 'armed') {
+  if (watching(s, loc, target) && layoutOf(loc)[target].resident) {
+    emit(s, 'net-warn', `The Resident of ${loc.name} is home. Beat it and the server is yours.`);
+    selectEncounter(s, 'random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room: target, level: residentLevel(loc, hooks.now?.() ?? Date.now()), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name: `RESIDENT · ${loc.name}` });
+  } else if (watching(s, loc, target) && s.run.cloak === 'armed') {
     s.run.cloak = target;
     emit(s, 'net-good', `CLOAKED. The ${guardName(loc, target)} doesn't see you. Read what you like and pull one file, then get out.`);
     ls(s);
@@ -599,8 +611,7 @@ function unlock(s, rest) {
   s.run.cracked = true;
   gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked', 'breakin');
   if (loc.member) return out(s, `The vault is open, but ${loc.name} stays ${loc.member}'s.`); // a consortium member's: no takeover
-  strikeServer(s, loc, 'takeover'); // a faction's server: a blow to it (factions.mjs)
-  contractTakeover(s, loc);
+  if (!loc.takenOver) out(s, `The vault is open. ${CORE}/ is open now too: the Resident lives there. Beat it and ${loc.name} is yours.`, 'net-good');
 }
 
 // A Signal booster: half your Signal back, on the spot.

@@ -346,7 +346,7 @@ export function contractKill(s, { family, zone, bounty: tag, level = null, strai
     if (c.type === 'bounty' && !c.got && tag === c.name) { c.got = 1; emit(s, 'contract-ready', `${c.name} is down. Contract ready: deliver it from Mail.`, { contract: c.id }); }
   }
 }
-// A vault opened: the server is yours.
+// The Resident beaten (run.mjs /core): the server is yours.
 export function contractTakeover(s, loc) {
   if (loc.takenOver) return;
   loc.takenOver = true;
