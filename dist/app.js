@@ -498,7 +498,8 @@ function react(events) {
       case 'level-up': case 'server-level': {
         if (won) break;
         const [t, ...rest] = e.message.split('. ');
-        levelUp(t.replace(/\.$/, ''), rest.join('. '), (e.unlocked || []).some((id) => id !== 'edge')); // a new skill: a way to Loadout
+        if (e.type === 'server-level') levelUp(`SERVER LEVEL ${e.level}`, V.serverLevelText(e.level, campaign.server.max), false); // what it adds, and how it grows
+        else levelUp(t.replace(/\.$/, ''), rest.join('. '), (e.unlocked || []).some((id) => id !== 'edge')); // a new skill: a way to Loadout
         feel.add('win', null);
         break;
       }

@@ -34,7 +34,7 @@ import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
-import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
+import { ports, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
 import { XP_KINDS, xpFor, watchmanBar, cooldownOf, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
@@ -1000,6 +1000,7 @@ export function serverMarkup(s, now = Date.now()) {
   }).join('');
   return `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">
     <section class="card server-head"><h2>Server · Lv ${serverLevel(s)}</h2><h1>${slotPips('node', used, total, 'Service slots')}</h1>
+      ${(() => { const p = serverProgress(s); return p.next ? `<div class="lvl-row"><span class="lvl-bar"><span style="width:${(p.xp / p.next) * 100}%"></span></span><small>${p.xp}/${p.next} XP</small></div><p class="op-hint">Your server levels up from all the XP you earn. ${serverNext(p.level)}</p>` : ''; })()}
       ${matGrid(s)}</section>
     ${wallMarkup(s, now)}
     ${archMarkup(s)}
@@ -1143,7 +1144,7 @@ export function daemonsMarkup(s) {
 
 // ---------- mail: letters, the contract board and the Halcyon retainer ----------
 // sel: 'l<id>' a letter, 'j<id>' a contract (taken or on the board).
-const jobTag = (s, c) => (c.done ? ['Done', 'dim'] : contractReady(s, c) ? ['Ready', 'you'] : c.offBooks ? ['Off books', 'hot'] : c.story !== undefined ? ['LOWLIGHT', ''] : ['Taken', '']);
+const jobTag = (s, c) => (c.done ? ['Done', 'dim'] : contractReady(s, c) ? ['Ready', 'you'] : c.offBooks ? ['Off books', 'hot'] : c.story !== undefined ? ['LOWLIGHT', ''] : ['Active', '']);
 // Where a contract's work is: its server, an unknown one it points at, or SPRAWL-00 (the WoW quest tracker).
 const trackGo = (c) => (c.loc ? `map:${c.loc}` : c.hidden ? `map:${c.hidden}` : c.type === 'bounty' || c.where === 'sprawl' ? 'map:sprawl' : null);
 function jobBox(s, c, now) {
@@ -1902,6 +1903,23 @@ export function mapSelection(s, sel = 'server', view = 'mine') {
   return mapSide(s, node?.id || 'server', node);
 }
 
+// What reaching a server level adds, in words: "a service slot", "an outpost slot"…
+export function serverGains(lvl) {
+  const out = [];
+  if (ports(lvl) > ports(lvl - 1)) out.push('a service slot');
+  if (SERVER.daemonSlotsAt.includes(lvl)) out.push('a daemon slot');
+  if (OUTPOST.bandwidth(lvl) > OUTPOST.bandwidth(lvl - 1)) out.push('an outpost slot');
+  if (lvl === ARCH_LEVEL) out.push('a choice of architecture');
+  return out;
+}
+const andList = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : xs[0] || '');
+// The next server level that adds something, and what.
+function serverNext(lvl) {
+  for (let l = lvl + 1; l <= SERVER.maxLevel; l++) { const g = serverGains(l); if (g.length) return `Level ${l} adds ${andList(g)}.`; }
+  return '';
+}
+export const serverLevelText = (lvl, max) => `Your server levels up from all the XP you earn. Its max Integrity is now ${max}.${serverGains(lvl).length ? ` This level adds ${andList(serverGains(lvl))}.` : ''}`;
+
 // Server level: shared by everyone on the server. Defending it and banking loot raise it.
 function serverCard(s) {
   const p = serverProgress(s);
@@ -2106,7 +2124,8 @@ function mapSide(s, sel, node) {
     ${l.faction ? `<p class="svc-line fline" style="--fc:${FX[l.faction].color}">${fIcon(l.faction)}<b>${esc(FX[l.faction].short)}</b> runs it · opening its vault takes it: ${esc(FX[l.faction].short)} −${OWNED.takeoverHit}${FX[l.faction].rivals.length ? `, ${FX[l.faction].rivals.map((r) => esc(FX[r].short)).join(' and ')} +${Math.round(OWNED.takeoverHit * 0.5)}` : ''}</p>` : ''}
     ${dropLine(s, l)}
     ${outpostCard(s, l)}
-    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay. Halcyon sells them."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}</div></section>`;
+    ${l.takenOver && !l.relay && !kitOf(s).relay ? `<p class="op-hint">${boardOpen(s) ? 'You can install a relay here once you have one. Buy one in Halcyon\'s store, or earn one from a contract.' : 'You can install a relay here once you have one. Halcyon Mutual sells them once you start working for them.'}</p>` : ''}
+    <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay yet."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}</div></section>`;
 }
 
 // The swarm: what's coming, where, when, and the button to meet it.
@@ -2147,14 +2166,15 @@ function outpostCore(s, l) {
     // Nothing in the rack: where one comes from. Craft it (its plan known), or find one packaged in a vault.
     if (!rack.length) return `<div class="outpost op-pick"><div class="row">${Object.keys(OUTPOST.kinds).some((k) => knowsPlan(s, k))
       ? `<button type="button" class="btn" data-go="craft:harvesters" title="Needs a harvester: craft one (Craft page)">${glyph('harvester')}Upgrade to Outpost${needChip(0)}</button>`
-      : `<button type="button" class="btn" disabled title="Needs a harvester. Your first vault holds the Siphon plan (plan.pln); vaults also hold packaged harvesters (.vx)">${glyph('harvester')}Upgrade to Outpost${needChip(0)}</button>`}</div></div>`;
+      : `<button type="button" class="btn" disabled title="Needs a harvester. Your first vault holds the Siphon plan (plan.pln); vaults also hold packaged harvesters (.vx)">${glyph('harvester')}Upgrade to Outpost${needChip(0)}</button>`}</div><p class="op-hint">${Object.keys(OUTPOST.kinds).some((k) => knowsPlan(s, k)) ? 'You need a harvester to make this server an outpost. Craft one on the Craft page.' : 'You need a harvester to make this server an outpost. Your first vault holds the Siphon plan, and vaults also hold packaged harvesters.'}</p></div>`;
     const full = l.trait !== 'backbone' && bandwidthUsed(s) >= bandwidth(s);
     const hLabel = (h) => `<span class="op-h" title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}<b>${esc(OUTPOST.kinds[h.kind].name)}</b><span class="tag dim">lv${h.level}</span>${h.from ? `<span class="tag ${h.from === 'found' ? 'you' : 'dim'}" title="${h.from === 'found' ? 'A packaged native from a vault' : 'Crafted on the Craft page'}">${h.from}</span>` : ''}</span>`;
     const block = full ? 'disabled title="No outpost slot free. Pull a harvester out, or level your server."' : why;
     const slots = full ? slotPips('harvester', bandwidthUsed(s), bandwidth(s), 'Outposts you can run') : '';
+    const fullHint = full ? '<p class="op-hint">All your outpost slots are in use. Pull a harvester out of another outpost, or level up your server for another slot.</p>' : '';
     // One harvester: one button. Several: pick which one goes in.
-    if (rack.length === 1) return `<div class="outpost op-pick"><div class="row"><button type="button" class="btn primary op-up" data-command="outpost install ${esc(l.id)} 1" ${block}>${glyph('harvester')}Upgrade to Outpost<span class="bcost" title="Installs your ${esc(OUTPOST.kinds[rack[0].kind].name)}">${glyph(rack[0].kind)}${esc(OUTPOST.kinds[rack[0].kind].name)}</span></button>${slots}</div></div>`;
-    return `<div class="outpost op-pick"><div class="op-pick-head"><span class="op-pick-t">${glyph('harvester')}Upgrade to Outpost</span>${slots}</div><ul class="op-rack">${rack.map((h, i) => `<li>${hLabel(h)}<button type="button" class="btn small primary op-up" data-command="outpost install ${esc(l.id)} ${i + 1}" ${block}>Upgrade</button></li>`).join('')}</ul></div>`;
+    if (rack.length === 1) return `<div class="outpost op-pick"><div class="row"><button type="button" class="btn primary op-up" data-command="outpost install ${esc(l.id)} 1" ${block}>${glyph('harvester')}Upgrade to Outpost<span class="bcost" title="Installs your ${esc(OUTPOST.kinds[rack[0].kind].name)}">${glyph(rack[0].kind)}${esc(OUTPOST.kinds[rack[0].kind].name)}</span></button>${slots}</div>${fullHint}</div>`;
+    return `<div class="outpost op-pick"><div class="op-pick-head"><span class="op-pick-t">${glyph('harvester')}Upgrade to Outpost</span>${slots}</div><ul class="op-rack">${rack.map((h, i) => `<li>${hLabel(h)}<button type="button" class="btn small primary op-up" data-command="outpost install ${esc(l.id)} ${i + 1}" ${block}>Upgrade</button></li>`).join('')}</ul>${fullHint}</div>`;
   }
   const h = o.h, m = MATERIALS[codeOf(l.family)];
   const head = `<p class="svc-line"><span class="tag you">Outpost</span> <span title="${esc(OUTPOST.kinds[h.kind].about)}">${glyph(h.kind)}${esc(OUTPOST.kinds[h.kind].name)} lv${h.level}</span></p>`;

@@ -809,6 +809,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .install-bar { height: 8px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--inset); overflow: hidden; }
 .install-bar span { display: block; height: 100%; background: var(--you); box-shadow: 0 0 10px rgba(127, 209, 199, 0.5); transition: width 0.9s linear; }
 .svc-line { margin: 8px 0 0; font: 12px var(--mono); color: var(--muted); }
+.op-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 @media (max-width: 640px) { .svc { flex-direction: column; align-items: stretch; } .gslot { grid-template-columns: 70px minmax(0, 1fr); } .gslot .btn { grid-column: 2; justify-self: start; } .gitem { flex-direction: column; align-items: stretch; } }
 /* First-time tips: one coach mark at a time, pointing at the thing it explains. */
 .tip { position: fixed; z-index: 58; width: min(320px, calc(100vw - 24px)); padding: 12px 14px 10px; background: var(--panel-2); border: 1px solid var(--you); border-radius: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 24px rgba(127, 209, 199, 0.14); font-size: 14px; color: var(--bright); }
