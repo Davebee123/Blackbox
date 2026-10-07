@@ -43,9 +43,9 @@ test('kill contracts count kills within 4 levels of where they were posted, and 
   assert.match(contractTitle(s, c), /Lv 8\+/);
 });
 
-test('SPRAWL-00 eases you in: the first armor step lands at level 5, and its viruses follow you to level 8', () => {
+test('SPRAWL-00 eases you in: the first armor step lands at level 5, and its viruses follow you to level 5', () => {
   assert.equal(THREAT_STEPS.armor[0].threat, SERVER.threat(5));
-  assert.equal(CONFIG.zone.maxLevel, 8);
+  assert.equal(CONFIG.zone.maxLevel, 5);
 });
 
 test('the first rogue server is a Nest of the family that traced it, and it keeps up with you inside its band', () => {
@@ -126,4 +126,48 @@ test('root access: log rotations bring a process and a cache; clearing them rais
   loc.root.level = 4; assert.equal(outpostPorts(s, loc), ports + 1);
   loc.root.level = 5; assert.equal(effLevel(s, 0, null, loc), fw + 3);
   delete hooks.now;
+});
+
+test('Fresh: the first XP of a kind other than fighting that you haven\'t earned in 20 minutes of play pays half again (up to a kill); nothing fades', async () => {
+  const { gainXp, FRESH } = await import('./dist/combat.mjs');
+  const { killXp } = await import('./dist/data.mjs');
+  const s = at(10); s.pace = { kills: 0, ms: 0 };
+  const k = killXp(10), xp = () => hackerOf(s).xp;
+  let x = xp(); gainXp(s, k, 'a kill', 'fight'); assert.equal(xp() - x, k, 'fighting is the default: no bonus');
+  x = xp(); gainXp(s, k, 'a sweep', 'intel'); assert.equal(xp() - x, k + Math.round(k * FRESH.bonus), 'stepping away from it: fresh');
+  x = xp(); gainXp(s, k, 'another sweep', 'intel'); assert.equal(xp() - x, k, 'again: plain, never less');
+  x = xp(); gainXp(s, Math.round(k / 4), 'a trickle', 'build'); assert.equal(xp() - x, Math.round(k / 4), 'under half a kill: never fresh');
+  s.pace.ms += FRESH.gapMs;
+  x = xp(); gainXp(s, 4 * k, 'a vault', 'intel'); assert.equal(xp() - x, 5 * k, '20 minutes on: fresh again, capped at a kill');
+  x = xp(); gainXp(s, k, 'contract', null, 'breakin'); assert.equal(xp() - x, k, 'contracts: no bonus');
+  assert.ok(s.xpMix.intel > s.xpMix.fight && s.xpMix.breakin === k, 'the mix tallies what it counted as');
+});
+
+test('firsts pay once: a recipe crafted, a service installed, a trade at a hub', async () => {
+  const { firstTime, FRESH } = await import('./dist/combat.mjs');
+  const b = FRESH.bonus; FRESH.bonus = 0;
+  const s = at(6), xp = () => hackerOf(s).xp;
+  let x = xp(); firstTime(s, 'filter-frag', 'first filter'); assert.ok(xp() > x);
+  x = xp(); firstTime(s, 'filter-frag', 'first filter'); assert.equal(xp(), x, 'never twice');
+  FRESH.bonus = b;
+});
+
+test('kill contracts pay at the level of the kills that filled them, and count as fights; bounties stay in SPRAWL\'s range', async () => {
+  const s = at(12);
+  s.mail = { offers: [], jobs: [], next: 1, boardOpen: true };
+  for (let i = 0; i < 80; i++) { s.mail.offers = []; const o = offer(s, 0); assert.notEqual(o.type, 'bounty', 'no named processes past SPRAWL\'s levels'); }
+  let o; for (let i = 0; i < 50 && (!o || o.type !== 'kill'); i++) { s.mail.offers = []; o = offer(s, 0); }
+  s.mail.offers = []; s.mail.jobs.push(o);
+  for (let i = 0; i < o.count; i++) contractKill(s, { family: o.family, zone: false, level: 9 });
+  assert.equal(Math.round(o.lvSum / o.lvN), 9);
+});
+
+test('breadcrumb: a server traced by level 4, and wick points you at a vault at 5', async () => {
+  const { gainXp, xpToNext } = await import('./dist/combat.mjs').then(async (m) => ({ ...m, xpToNext: (await import('./dist/data.mjs')).xpToNext }));
+  const s = at(3); s.locations = [];
+  gainXp(s, xpToNext(3), 'test');
+  assert.equal(hackerOf(s).level, 4);
+  assert.ok(s.locations.some((l) => !l.rogue), 'traced one');
+  gainXp(s, xpToNext(4), 'test');
+  assert.ok(s.logs.some((e) => e.type === 'breadcrumb'), 'wick pages you');
 });

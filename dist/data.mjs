@@ -114,7 +114,7 @@ export const CONFIG = {
   // The rogue server: where you go to fight from the start. Viruses sit in its folders at
   // your level, up to level 3 (it's a starter area), and come back a while after you kill them. Signal carries between connections
   // (and rests back up like the server); you need a quarter of it to connect.
-  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 8 }, // SPRAWL follows you up to level 8, then you've outgrown it
+  zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5 }, // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
   relockMs: 60000, // any server but an outpost won't take you back for a minute after you leave: no jack out, top up, return
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,

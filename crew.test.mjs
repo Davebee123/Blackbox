@@ -4,6 +4,8 @@ import { fresh, command, resolveCycle, active, part } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
 import { CREW, matesOf } from './dist/crew.mjs';
 import { planner } from './dist/planner.mjs';
+import { FRESH as __FRESH } from './dist/combat.mjs';
+__FRESH.bonus = 0; // exact XP checks: the Fresh bonus has its own tests (phase2.test.mjs)
 
 const start = (crew) => {
   const s = fresh();

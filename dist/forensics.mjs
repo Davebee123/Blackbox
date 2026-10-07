@@ -15,7 +15,7 @@ import { emit, warn, addLead, gainXp, xpFor } from './combat.mjs';
 import { routed } from './hidden.mjs';
 import { seeded } from './gear.mjs';
 
-export const SWEEP = { share: 0.5, rewards: [40, 25, 15, 10], xpShare: 0.3 };
+export const SWEEP = { share: 0.5, rewards: [40, 25, 15, 10], xpShare: 1 }; // a sweep pays a kill's XP: it's a puzzle, not filler
 export const SWEEP_FILES = { auth: 'breach.log', exfil: 'transfer.log', proc: 'ps.snapshot' };
 
 const pick = (r, a) => a[Math.floor(r() * a.length)];
@@ -214,5 +214,5 @@ export function sweepCommand(s, loc, arg) {
   const amount = SWEEP.rewards[Math.min(st.tries, SWEEP.rewards.length - 1)];
   emit(s, 'net-good', `SWEPT: ${arg}${st.tries ? '' : ', first read'}.`);
   addLead(s, loc.deeper || loc.family, routed(s, amount), 'Log sweep: ', true); // a route file: the next layer
-  gainXp(s, xpFor(s, loc.level || 1, SWEEP.xpShare), 'log sweep');
+  gainXp(s, xpFor(s, loc.level || 1, SWEEP.xpShare), 'log sweep', 'intel');
 }

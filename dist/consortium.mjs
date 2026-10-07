@@ -210,7 +210,7 @@ export const rebooting = (s, h) => !!h && memberServers(s).some((l) => l.home &&
 export function occupationCleared(s, loc) {
   if (loc.occupied.cleared) return;
   loc.occupied.cleared = true;
-  gainXp(s, xpFor(s, loc.level || 1, 2), `${loc.name} cleared`);
+  gainXp(s, xpFor(s, loc.level || 1, 2), `${loc.name} cleared`, 'fight');
   if (!loc.member) {
     s.degraded = null;
     return emit(s, 'rebooted', 'OCCUPATION CLEARED: your server is back online.');
@@ -234,7 +234,7 @@ function pay(s, L, k, family, text) {
   const { credits, code } = bountyOf(s, L, k), m = codeOf(family);
   s.server.credits += credits;
   gainCode(s, { [m]: code }, '');
-  gainXp(s, xpFor(s, L, 1), 'consortium bounty');
+  gainXp(s, xpFor(s, L, 1), 'consortium bounty', 'fight');
   emit(s, 'outpost-held', `${text} Bounty: +${credits} credits, +${code} ${MATERIALS[m].name}.`);
 }
 

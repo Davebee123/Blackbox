@@ -113,7 +113,7 @@ export function rogueKill(s, loc, room, now, extraDrop) {
       const credits = 60 + 12 * (loc.level || 1), code = 4 + Math.floor((loc.level || 1) / 5);
       s.server.credits += credits;
       gainCode(s, { [codeOf(loc.family)]: code }, '');
-      gainXp(s, xpFor(s, loc.level || 1, 1), 'gauntlet cleared');
+      gainXp(s, xpFor(s, loc.level || 1, 1), 'gauntlet cleared', 'fight');
       emit(s, 'net-good', `GAUNTLET CLEARED. The cache at the root opens: +${credits} credits, +${code} code.`);
     }
   }

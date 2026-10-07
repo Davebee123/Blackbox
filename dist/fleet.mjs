@@ -145,6 +145,6 @@ export function fleetWon(s, e) {
   if (k) gainCode(s, { [k]: f.total * codeDrop(f.level) * 2 * (hasMod(locOf(s, f.target), 'lure') ? 2 : 1) }, 'Swarm broken: ');
   for (let i = 0; i < f.total; i++) s.salvage.push({ name: `${FAMILIES[f.family].name} core`, virus: 'fleet', seed: f.seed + i });
   const lure = hasMod(locOf(s, f.target), 'lure') ? 2 : 1; // a Honeytoken pays double
-  gainXp(s, xpFor(s, f.level, f.total * 0.5 * lure), 'swarm broken');
+  gainXp(s, xpFor(s, f.level, f.total * 0.5 * lure), 'swarm broken', 'fight');
   emit(s, 'fleet-broken', `SWARM BROKEN. ${f.total} processes killed: +${f.total} salvage.`, { location: f.target });
 }

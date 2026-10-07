@@ -4,7 +4,7 @@
 // more grind and less chip while contested, decoys and a sandbox for home fights, and on rarer ones
 // a tar pit, a sting or a reflection.
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it). Equip at home.
-import { emit, warn, active, serviceVersion, hackerLevel, materialsOf, rand } from './combat.mjs';
+import { emit, warn, active, serviceVersion, hackerLevel, materialsOf, rand, firstTime } from './combat.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay } from './salvage.mjs';
 import { RARITIES, seeded } from './gear.mjs';
 import { versionSlots } from './firewall.mjs';
@@ -109,6 +109,7 @@ function craftFilter(s, stat, payText) {
   spend(s, pay);
   s.server.credits -= c.credits; mats.cipher -= c.code.cipher;
   addFilter(s, rollFilter(() => rand(s), { level: L, rarity: 'tuned', stat }), 'Crafted: ');
+  firstTime(s, 'filter-' + stat, `first ${recipeLabel(stat)} filter`);
 }
 export function filterCommand(s, full) {
   const [text, payText] = splitPay(full);

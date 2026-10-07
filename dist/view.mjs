@@ -37,7 +37,7 @@ import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, F
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power } from './data.mjs';
-import { xpFor, watchmanBar, cooldownOf, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
+import { XP_KINDS, xpFor, watchmanBar, cooldownOf, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -1933,7 +1933,8 @@ function zoneCard(s) {
   const here = s.run?.loc === CONFIG.zone.id, sig = signalNow(s), max = maxSignal(s), need = Math.ceil(max * CONFIG.zone.minSignal);
   const why = active(s) ? 'Finish the fight first' : s.run ? 'Jack out first' : relockLeft(s.zone) ? `Reconnect in ${relockLeft(s.zone)}s` : sig < need ? `Signal too weak: rest to ${need}` : '';
   return `<section class="card zone-card"><h2>Rogue server</h2><h1>${CONFIG.zone.name}</h1>
-    <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', levelTag(s, Math.min(CONFIG.zone.maxLevel, hackerLevel(s)), `Lv 1–${CONFIG.zone.maxLevel}`))}</div>
+    <div class="stats">${stat('Hostiles', `${liveSpawns(s)}/${zoneRooms().length}`)}${stat('Levels', `<b class="${hackerLevel(s) > CONFIG.zone.maxLevel + 4 ? 'con-gray' : hackerLevel(s) > CONFIG.zone.maxLevel ? 'con-orange' : 'con-yellow'}" title="${hackerLevel(s) > CONFIG.zone.maxLevel ? 'You\'re outgrowing it: its kills pay less every level' : 'Its viruses keep up with you to this level'}">Lv 1–${CONFIG.zone.maxLevel}</b>`)}</div>
+    <p class="svc-line"><span class="tag dim" title="Stray processes: always there, never the best pay">strays</span></p>
     ${dropLine(s, s.zone)}
     <div class="row">${here ? btn('net', 'Back to the run', true) : `<button type="button" class="btn primary" data-command="connect ${CONFIG.zone.id}" ${why ? `disabled title="${esc(why)}"` : ''}>Connect</button>`}${why && !here ? `<small class="svc-line">${esc(why)}</small>` : ''}</div></section>`;
 }
@@ -2205,6 +2206,7 @@ export function spoilsOf(events) {
   if (xp) add('XP', `+${xp}`, 'xp', { text: `+${xp} XP` });
   for (const e of events) {
     if (e.type === 'fast-kill') add('Fast kill', `+${e.amount} XP`, 'fast', { text: `Fast kill +${e.amount} XP`, sub: `${e.cycles} cycles` });
+    else if (e.type === 'fresh') add(`Fresh: ${XP_KINDS[e.kind] || ''}`, `+${e.amount} XP`, 'fast', { text: `Fresh ${XP_KINDS[e.kind] || ''} +${e.amount} XP` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });
     else if (e.type === 'server-level') add(`Server level ${e.level}`, '', 'level');
     else if (e.type === 'code' && e.gains) for (const [m, n] of Object.entries(e.gains)) add(MATERIALS[m]?.name || m, `+${n}`, m === 'exploit' ? 'exploit' : 'code', { pack: !!e.pack, text: `+${n} ${MATERIALS[m]?.name || m}` });

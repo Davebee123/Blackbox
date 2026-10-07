@@ -15,7 +15,7 @@
 // in a server's vault: pull it, bank it, deliver it). A takeover or item contract can point at
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
 // (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
-import { FAMILIES } from './data.mjs';
+import { FAMILIES, CONFIG } from './data.mjs';
 import { MATERIALS } from './gear.mjs';
 import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, learnDaemon, materialsOf, rand, hooks, addLocation, giveUnique } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
@@ -227,7 +227,7 @@ function arm(s, j) {
     const room = j.room && rooms.includes(j.room) ? j.room : rooms[Math.floor(rand(s) * rooms.length)] || zoneRooms()[0];
     j.room = room;
     // Two levels above the level it was posted at; a story bounty can cap that (claimjack: 4) and come unmutated.
-    if (!j.spawnSet) { j.level = Math.min(j.maxLevel || Infinity, (j.level ?? hackerLevel(s)) + 2); j.spawnSet = true; }
+    if (!j.spawnSet) { j.level = Math.min(j.maxLevel || Infinity, CONFIG.zone.maxLevel + 2, (j.level ?? hackerLevel(s)) + 2); j.spawnSet = true; }
     z.spawns[room] = { alive: true, family: j.family, level: j.level, seed: (z.seed * 97 + j.id * 977) >>> 0, name: j.name, bounty: true, ...(j.grade ? { grade: j.grade } : {}), ...(j.calm ? { calm: true } : {}) }; // a story bounty can be an elite (grade 2+)
   }
   if (j.type === 'item' && j.loc) plant(s, j);
@@ -258,7 +258,8 @@ export function offer(s, at = now()) {
   const theirs = faction !== 'halcyon' && faction !== 'glassjaw';
   const rivals = theirs ? rivalServers(s, faction).filter((l) => !targeted(s).has(l.id)) : [];
   const target = rivals.length && rand(s) < 0.6 ? { loc: pick(s, rivals).id } : pickTarget(s);
-  const kinds = (off ? ['materials', 'item', 'kill'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item']).filter((k) => target || !['takeover', 'item'].includes(k));
+  // Named processes live in SPRAWL-00: posted only while it's still your level (it tops out at CONFIG.zone.maxLevel).
+  const kinds = (off ? ['materials', 'item', 'kill'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item']).filter((k) => (target || !['takeover', 'item'].includes(k)) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2));
   const type = pick(s, kinds);
   const fam = pick(s, Object.keys(CREWS));
   const pay = (base, per) => Math.round((base + per * L) * (off ? MAIL.offBooksPay : theirs ? MAIL.factionPay : 1));
@@ -302,6 +303,8 @@ export function offer(s, at = now()) {
 // A kill anywhere: { family, zone, bounty (spawn name) }.
 // The open contracts a kill would count for (the same test as contractKill): for the marker on
 // a virus or a guarded folder in a run's listing.
+// What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
+const CONTRACT_KIND = { kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
@@ -312,6 +315,7 @@ export function contractKill(s, { family, zone, bounty: tag, level = null }) {
   for (const c of openContracts(s)) {
     if (c.type === 'kill' && c.got < c.count && inRange(c, level) && (c.where === 'sprawl' ? zone : !c.family || c.family === family)) {
       c.got++;
+      if (level != null) { c.lvSum = (c.lvSum || 0) + level; c.lvN = (c.lvN || 0) + 1; } // it pays at the level of the kills that filled it
       if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
     }
     if (c.type === 'bounty' && !c.got && tag === c.name) { c.got = 1; emit(s, 'contract-ready', `${c.name} is down. Contract ready: deliver it from Mail.`, { contract: c.id }); }
@@ -321,6 +325,7 @@ export function contractKill(s, { family, zone, bounty: tag, level = null }) {
 export function contractTakeover(s, loc) {
   if (loc.takenOver) return;
   loc.takenOver = true;
+  gainXp(s, xpFor(s, loc.level || 1, 1.5), `${loc.name} taken over`, 'breakin');
   emit(s, 'takeover', `${loc.name} TAKEN OVER. ${CREWS[loc.family] || loc.owner} just lost a server.`, { location: loc.id });
   for (const c of openContracts(s)) {
     if (c.type !== 'takeover') continue;
@@ -450,7 +455,8 @@ export function mailCommand(s, text, at = now()) {
   s.indemnity = indemnity(s) + (c.reward.indemnity || 0);
   // What it paid, for the delivered card (app.js shows it in the middle of the screen). XP is at the
   // level the contract was posted at.
-  const xp = c.reward.xp ? xpFor(s, c.level ?? hackerLevel(s), c.reward.xp) : 0, fname = (f) => FACTIONS[f]?.short || f;
+  const paidAt = c.lvN ? Math.round(c.lvSum / c.lvN) : c.level ?? hackerLevel(s);
+  const xp = c.reward.xp ? xpFor(s, paidAt, c.reward.xp) : 0, fname = (f) => FACTIONS[f]?.short || f;
   const gains = [
     c.reward.credits && { label: 'Credits', qty: `+${c.reward.credits}`, kind: 'credits', text: `${c.reward.credits} credits` },
     c.reward.indemnity && { label: 'Indemnity', qty: `+${c.reward.indemnity}`, kind: 'loot', text: `${c.reward.indemnity} Indemnity` },
@@ -464,7 +470,7 @@ export function mailCommand(s, text, at = now()) {
     c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
   ].filter(Boolean);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
-  if (xp) gainXp(s, xp, 'contract');
+  if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
   if (c.reward.standing) changeStanding(s, 'halcyon', c.reward.standing, c.offBooks ? 'Halcyon heard about the GLASSJAW job' : 'Contract delivered');
   if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
   if (c.reward.rep && c.faction) changeRep(s, c.faction, c.reward.rep, 'Contract delivered');

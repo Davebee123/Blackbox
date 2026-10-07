@@ -4,7 +4,7 @@
 // Getting one: config source (<id>.cfg) turns up in some vaults. Bank it and you know the config;
 // craft it on the Craft page (credits, the service's code, salvage) and you own it. Set it on the
 // Server page: swapping is instant and free, but only between fights.
-import { emit, warn, active, materialsOf, serviceVersion } from './combat.mjs';
+import { emit, warn, active, materialsOf, serviceVersion, firstTime } from './combat.mjs';
 import { SERVICES, MATERIALS, seeded } from './gear.mjs';
 import { settle, spend, splitPay } from './salvage.mjs';
 import { archCredits } from './architecture.mjs';
@@ -77,6 +77,7 @@ function craft(s, id, payText) {
   m[code] -= c.code;
   spend(s, pay);
   owned(s).push(id);
+  firstTime(s, 'config-' + id, `first ${CONFIGS[id].name}`);
   emit(s, 'crafted', `Crafted ${CONFIGS[id].name}. Set it on the ${SERVICES[CONFIGS[id].service].name} (Server page).`, { config: id });
 }
 

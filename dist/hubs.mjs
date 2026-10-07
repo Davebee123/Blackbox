@@ -156,7 +156,7 @@ export function hubWon(s, e) {
   if (e.hubClear) {
     const c = hub(s, e.hubClear)?.captured; if (!c?.lockdown) return;
     c.lockdown = null; c.bankAt = now();
-    gainXp(s, xpFor(s, e.virus?.level || hackerLevel(s), 1), 'lockdown cleared');
+    gainXp(s, xpFor(s, e.virus?.level || hackerLevel(s), 1), 'lockdown cleared', 'fight');
     return emit(s, 'hub-held', `${FACTIONS[e.hubClear].hub.name} is yours again.`, { faction: e.hubClear });
   }
   const r = s.retake;
@@ -167,7 +167,7 @@ export function hubWon(s, e) {
   const k = codeOf(r.family);
   if (k) gainCode(s, { [k]: r.total * codeDrop(r.level) * 2 }, 'Swarm broken: ');
   for (let i = 0; i < r.total; i++) s.salvage.push({ name: `${FACTIONS[r.f].short} process`, virus: 'retake', seed: r.seed + i });
-  gainXp(s, xpFor(s, r.level, r.total * 0.5), 'swarm broken');
+  gainXp(s, xpFor(s, r.level, r.total * 0.5), 'swarm broken', 'fight');
   emit(s, 'hub-held', `SWARM BROKEN. ${FACTIONS[r.f].hub.name} holds: +${r.total} salvage.`, { faction: r.f });
 }
 

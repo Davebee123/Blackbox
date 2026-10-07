@@ -7,7 +7,7 @@
 // Trades are file transfers: what you sell leaves your stock now and its credits arrive when the
 // transfer completes; what you buy is paid now and arrives later. Transfer time depends on the hub, and
 // relays on servers you hold shorten it. A transfer can't be lost: the worst case is waiting.
-import { emit, warn, materialsOf, hooks, rand } from './combat.mjs';
+import { emit, warn, materialsOf, hooks, rand, firstTime } from './combat.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
@@ -100,6 +100,7 @@ export function trade(s, side, f, w, n, at = now()) {
     if (w === 'salvage') s.salvage.splice(0, n); else materialsOf(s)[w] -= n;
     const t = { id: ++m.serial, side, f, w, n, credits, sentAt: at, landsAt: at + travelMs(s, f) };
     m.transfers.push(t);
+    firstTime(s, 'trade-' + f, `first trade with ${FACTIONS[f].short}`, 'trade');
     return emit(s, 'transfer-out', `Sending ${n} ${WARES[w].name} to ${FACTIONS[f].short}: ${credits} credits when it completes (${Math.round((t.landsAt - at) / 60000)} min).`, { faction: f });
   }
   let cost = 0;
@@ -108,6 +109,7 @@ export function trade(s, side, f, w, n, at = now()) {
   s.server.credits -= cost;
   const t = { id: ++m.serial, side, f, w, n, credits: cost, sentAt: at, landsAt: at + travelMs(s, f) };
   m.transfers.push(t);
+  firstTime(s, 'trade-' + f, `first trade with ${FACTIONS[f].short}`, 'trade');
   emit(s, 'transfer-out', `Ordered ${n} ${WARES[w].name} from ${FACTIONS[f].short} for ${cost} credits: it arrives in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
 }
 // What an order would do, without doing it: the lot's total at its sliding prices, the first and last

@@ -553,6 +553,7 @@ export function tickServices(s, now = Date.now()) {
     (s.services ||= {})[job.id] = job.v;
     syncServer(s);
     emit(s, 'service-done', `${SERVICES[job.id].name} v${job.v} is running.`, { service: job.id, v: job.v });
+    firstTime(s, `install-${job.id}-${job.v}`, `${SERVICES[job.id].name} v${job.v} running`);
   }
   tickMail(s, now);
   tickStore(s, now);
@@ -679,20 +680,58 @@ export const hackerLevel = (s, arch = classOf(s)) => hackerOf(s, arch).level;
 // XP for something at an enemy/location level: a share of a kill, scaled by the level gap.
 export const xpFor = (s, level, share = 1) => Math.round(killXp(level) * share * xpScale(level - hackerLevel(s)));
 export const gainsTalent = (level) => level >= LOADOUT.talentFrom && (level - LOADOUT.talentFrom) % LOADOUT.talentEvery === 0;
-export function gainXp(s, amount, why) {
+// The first time you make or do something (a recipe crafted, a service installed, a trade at a hub):
+// half a kill of XP, once. id: what it was, so it never pays twice.
+export function firstTime(s, id, why, kind = 'build', share = 0.5) {
+  const done = (s.firsts ||= []);
+  if (done.includes(id)) return;
+  done.push(id);
+  gainXp(s, xpFor(s, hackerLevel(s), share), why, kind);
+}
+// Out of SPRAWL-00 (WoW's starter-zone breadcrumb): by level 4 you've traced a server (the family
+// you've chased most), and at 5 wick points you at one you haven't cracked yet.
+function breadcrumb(s, level) {
+  const tame = (s.locations || []).filter((l) => !l.rogue && !l.member);
+  if (level === 4 && !tame.length) addLocation(s, Object.entries(s.leadProgress || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || 'worm', 1);
+  const open = (s.locations || []).find((l) => !l.rogue && !l.member && !l.takenOver);
+  if (level === 5 && open && !tame.some((l) => Object.keys(l.state?.unlocked || {}).length)) emit(s, 'breadcrumb', `wick: strays won't feed you forever. ${open.name} has a vault. go open it.`, { location: open.id });
+}
+// ---------- varied play (Fresh) ----------
+// XP comes in kinds. The first XP of a kind other than fighting that you haven't earned in 20 minutes
+// of active play pays half again (up to one kill's worth) and says so (a Fresh row). Nothing fades: doing one thing over and
+// over just pays normally. Small events (under half a kill) never count, so a free action can't
+// farm it. Contracts are a wrapper: no bonus, tallied as the activity behind them.
+export const FRESH = { gapMs: 20 * 60000, bonus: 0.5, minKill: 0.5 };
+export const XP_KINDS = { fight: 'Fights', breakin: 'Break-ins', intel: 'Intel', build: 'Building', trade: 'Trading' };
+const playMs = (s) => s.pace?.ms || 0;
+function freshBonus(s, amount, kind) {
+  const L = hackerLevel(s), k = killXp(L);
+  if (!XP_KINDS[kind] || kind === 'fight' || !(FRESH.bonus > 0) || amount < k * FRESH.minKill) return 0; // fighting is the default: the bonus is for stepping away from it
+  const last = (s.freshAt ||= {})[kind], now = playMs(s);
+  s.freshAt[kind] = now;
+  if (last != null && now - last < FRESH.gapMs) return 0;
+  return Math.max(1, Math.round(Math.min(amount * FRESH.bonus, k)));
+}
+// kind: what earned it (XP_KINDS), for the Fresh bonus. tally: what it counts as in the XP mix
+// (a contract's activity), when there's no bonus.
+export function gainXp(s, amount, why, kind = null, tally = kind) {
   if (amount <= 0) return;
+  const bonus = freshBonus(s, amount, kind);
+  if (bonus) { emit(s, 'fresh', `Fresh: ${XP_KINDS[kind]} +${bonus} XP.`, { amount: bonus, kind }); amount += bonus; }
+  if (tally) (s.xpMix ||= {})[tally] = (s.xpMix[tally] || 0) + amount;
   // The server levels with everyone: it gets every point any hacker earns.
   gainServerXp(s, amount, why);
   const h = hackerOf(s);
   if (h.level >= LOADOUT.maxLevel) return;
   h.xp += amount;
-  emit(s, 'xp', `+${amount} XP${why ? ' · ' + why : ''}.`, { amount });
+  emit(s, 'xp', `+${amount} XP${why ? ' · ' + why : ''}.`, { amount, kind: tally });
   while (h.level < LOADOUT.maxLevel && h.xp >= xpToNext(h.level)) {
     const arch = classOf(s);
     // Pin the bar you have now before the level changes, so nothing falls off it.
     if (!s.loadout.equipped[arch]) s.loadout.equipped[arch] = [...equippedSkills(s, arch)];
     h.xp -= xpToNext(h.level);
     h.level++;
+    breadcrumb(s, h.level);
     // Rogue servers keep up with you inside their layer's band (rogue.mjs does it on a visit too).
     for (const l of s.locations || []) if (l.rogue && !l.member) l.level = Math.max(l.level || 1, SERVER.locationLevel(h.level, l.depth || 1));
     const got = newAtLevel(arch, h.level);
@@ -927,7 +966,8 @@ function protocolCommand(s, full) {
     const lvl = hackerLevel(s); // you compile protocols at your own level
     const made = rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile' });
     made.compiled = true; // breaks down for salvage and code, never Exploits (no compile-to-sell loop)
-    return addItem(s, made, 'Compiled: ');
+    addItem(s, made, 'Compiled: ');
+    return firstTime(s, 'compile-' + (zd || stat), `first ${zd ? ZERO_DAYS[zd].name : PROTOCOL_NAMES[stat]} compiled`);
   }
 }
 
@@ -1088,7 +1128,7 @@ function payKill(s, e, base, why) {
   const xp = Math.max(1, Math.round((xpFor(s, e.virus.level, base) * (e.virus.elite ? ELITE.xp : 1) * (1 + PARTY_XP * (n - 1))) / n));
   const bonus = e.fast ? Math.max(1, Math.round(xp * FAST.bonus)) : 0;
   if (bonus) emit(s, 'fast-kill', `Fast kill: ${e.cycle} cycles. +${bonus} XP.`, { amount: bonus, cycles: e.cycle });
-  gainXp(s, xp + bonus, why);
+  gainXp(s, xp + bonus, why, 'fight');
 }
 
 export function finish(s, result) {
@@ -1184,7 +1224,7 @@ export function finish(s, result) {
     if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-    if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports'); }
+    if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports', 'fight'); }
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1 }, e.virus.level);
     if (item) addItem(s, item);
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');

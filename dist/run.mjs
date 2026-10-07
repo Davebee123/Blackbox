@@ -380,7 +380,7 @@ export function connect(s, id) {
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     ls(s);
     if (!zone && !loc.member) collect(s, loc, 'Collected from ');
-    if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`);
+    if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
   }
   return since(s, first);
 }
@@ -585,9 +585,9 @@ function unlock(s, rest) {
     return;
   }
   loc.state.unlocked[target] = true;
-  if (drop) return out(s, `${dir}/ unlocked. The dead drop is yours.`, 'net-good');
+  if (drop) { out(s, `${dir}/ unlocked. The dead drop is yours.`, 'net-good'); return gainXp(s, xpFor(s, dropOf(loc)?.level || levelOf(loc), 1.5), 'dead drop cracked', 'intel'); } // LANTERN's puzzle
   out(s, `${dir}/ unlocked.`, 'net-good');
-  gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked');
+  gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked', 'breakin');
   if (loc.member) return out(s, `The vault is open, but ${loc.name} stays ${loc.member}'s.`); // a consortium member's: no takeover
   strikeServer(s, loc, 'takeover'); // a faction's server: a blow to it (factions.mjs)
   contractTakeover(s, loc);

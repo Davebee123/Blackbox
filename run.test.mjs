@@ -6,6 +6,8 @@ import { play, connect, currentLocation } from './dist/run.mjs';
 import * as runMod from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { codeOf, vaultCode } from './dist/gear.mjs';
+import { FRESH as __FRESH } from './dist/combat.mjs';
+__FRESH.bonus = 0; // exact XP checks: the Fresh bonus has its own tests (phase2.test.mjs)
 // These tests check exact numbers: no crits (gear.test.mjs covers them).
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;

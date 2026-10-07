@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part } from './dist/combat.mjs';
 import { boardMarkup, hudMarkup, trayMarkup, mapMarkup, mapLayout } from './dist/view.mjs';
 import { CONFIG } from './dist/data.mjs';
+import { FRESH as __FRESH } from './dist/combat.mjs';
+__FRESH.bonus = 0; // exact XP checks: the Fresh bonus has its own tests (phase2.test.mjs)
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.partToughness = 1; // mechanics tests use the parts' base numbers

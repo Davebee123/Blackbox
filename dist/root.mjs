@@ -11,7 +11,7 @@
 // Sometimes a rotation brings a rare process instead: 2 levels up, three loot rolls, and it's gone
 // within the hour. Rotations run in real time, online or off (not while it's detached: frozen);
 // the map marks a waiting one with ↻.
-import { emit, hooks, hackerLevel, rollDrop, addItem } from './combat.mjs';
+import { emit, hooks, hackerLevel, rollDrop, addItem, gainXp, xpFor } from './combat.mjs';
 import { FAMILIES, SERVER, variantFor, STRAINS } from './data.mjs';
 import { seeded } from './gear.mjs';
 
@@ -21,6 +21,7 @@ export const ROOT = {
   firstMs: 60 * 60000, // the first rotation, an hour after the takeover
   rotateMs: 2 * 3600000, // then every two hours
   rareChance: 0.25, rareMs: 60 * 60000, rareLevels: 2, rareRolls: 3,
+  levelXp: 0.75, // kills of XP for each Root level
   freeMemory: 3, portAt: 4, yieldAt: 4, yield: 0.25, wallAt: 5, wallPlus: 3, doubleAt: 5,
   cache: (level, root) => Math.round((20 + 4 * level) * (1 + 0.25 * (root - 1))), // credits in a rotated cache
   stash: (level) => 4 + Math.floor(level / 4), // code in /root's stash
@@ -110,6 +111,7 @@ export function processWon(s, e) {
   while (r.level < ROOT.max && r.cleared >= ROOT.need[r.level + 1]) {
     r.level++;
     emit(s, 'root', `ROOT ${r.level} on ${loc.name}: ${ROOT_PERKS[r.level]}.`, { location: loc.id, root: r.level });
+    gainXp(s, xpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
   }
 }
 export const ROOT_PERKS = { 1: 'taken over', 2: '/root opens, with a stash of code', 3: 'off your memory', 4: '+1 module port, harvester +25%', 5: 'firewall +3, harvester doubled' };

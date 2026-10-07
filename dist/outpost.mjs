@@ -17,7 +17,7 @@ import { isLive } from './memory.mjs';
 import { rootPorts, rootYield } from './root.mjs';
 import { ratingAt, fragment, effLevel } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
-import { emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT } from './combat.mjs';
+import { emit, warn, rand, active, holding, gainCode, serverLevel, selectEncounter, command, rollDrop, addItem, materialsOf, serviceValue, serviceVersion, gainXp, xpFor, buyoutPrice, BUYOUT, firstTime } from './combat.mjs';
 import { MATERIALS, codeOf, seeded } from './gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
@@ -252,7 +252,7 @@ export function infestWon(s, e) {
   const lure = hasMod(loc, 'lure') ? 2 : 1; // a Honeytoken pays double
   produce(s, loc, INFEST.bonusMs * lure);
   const got = Math.floor(loc.outpost.stock || 0) - Math.floor(before);
-  gainXp(s, xpFor(s, loc.level || 1, lure), `${loc.name} cleared`);
+  gainXp(s, xpFor(s, loc.level || 1, lure), `${loc.name} cleared`, 'fight');
   emit(s, 'outpost-held', `${loc.name} CLEARED. The outpost runs hot for a while: +${got} to its stockpile${got ? '' : ' (it was already full)'}.`, { location: loc.id });
 }
 function tickSites(s, now, dt, paused, away) {
@@ -344,6 +344,7 @@ function buildMod(s, id, payText = null) {
   have[k] -= OUTPOST.modCost.code;
   modStock(s)[id] = (modStock(s)[id] || 0) + 1;
   emit(s, 'harvester', `Crafted: ${m.name} module (${modStock(s)[id]} in stock).`, { module: id });
+  firstTime(s, 'module-' + id, `first ${m.name} module`);
 }
 function installMod(s, loc, id) {
   const m = OUTPOST.mods[id];
@@ -389,7 +390,7 @@ export function outpostWon(s, e) {
   } else if (o.siege) {
     o.siege = null;
     // A Honeytoken pays for the trouble it draws: an hour's harvest and a kill's worth of XP.
-    if (hasMod(loc, 'lure')) { produce(s, loc, 60 * 60000); gainXp(s, xpFor(s, loc.level || 1, 1), `${loc.name} held`); }
+    if (hasMod(loc, 'lure')) { produce(s, loc, 60 * 60000); gainXp(s, xpFor(s, loc.level || 1, 1), `${loc.name} held`, 'fight'); }
     emit(s, 'outpost-held', `Invasion stopped: ${loc.name} is safe.${hasMod(loc, 'lure') ? ' The Honeytoken pays out.' : ''}`, { location: loc.id });
   }
 }
@@ -467,6 +468,7 @@ function compile(s, kind, payText = null) {
   spend(s, pay);
   harvesters(s).push({ kind, level: serverLevel(s), traits: [], from: 'crafted' });
   emit(s, 'harvester', `Compiled: ${harvesterName(harvesters(s).at(-1))}.`, { harvester: true });
+  firstTime(s, 'harvester-' + kind, `first ${OUTPOST.kinds[kind].name}`);
 }
 
 export const siteLabel = (loc) => (loc.trait ? OUTPOST.sites[loc.trait] : null);

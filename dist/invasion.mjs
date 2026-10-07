@@ -230,7 +230,7 @@ function stopped(s, inv, ground) {
   const k = filterStat(s, 'reflect') && codeOf(inv.family);
   if (k) gainCode(s, { [k]: filterStat(s, 'reflect') }, 'Reflection: ');
   endInvasion(s, `${ground ? `Your wall wore ${inv.name} down to nothing` : `Your wall stopped ${inv.name} (level ${inv.level}) from ${inv.fromName}`}: +1 salvage.`, { blocked: true });
-  gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`);
+  gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`, 'fight');
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
 }
 

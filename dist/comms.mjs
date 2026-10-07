@@ -41,6 +41,7 @@ const MAP = {
   'fleet-broken': (e) => ({ kind: 'net', label: 'Broken', from: 'Swarm', text: e.message.replace(/^SWARM BROKEN\. /, ''), go: e.location ? `map:${e.location}` : 'map', beep: false }),
   infest: (e) => ({ kind: 'net', label: 'Infested', from: 'Outpost', text: e.message.replace(/^INFESTED: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   harvest: (e) => ({ kind: 'paid', label: 'Harvest', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
+  breadcrumb: (e) => ({ kind: 'mail', label: 'wick', from: 'wick', text: e.message.replace(/^wick: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   station: (e) => ({ kind: 'net', label: 'Station', from: 'LANTERN', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'consortium-invite': (e) => ({ kind: 'net', label: 'Invite', from: 'Consortium', text: e.message.replace(/ consortium accept, or consortium decline\.$/, ''), go: 'people:consortium', beep: true }),
   'consortium-merged': (e) => ({ kind: 'net', label: 'Merged', from: 'Consortium', text: e.message.replace(/ See the Map\.$/, ''), go: 'map:consortium', beep: false }),

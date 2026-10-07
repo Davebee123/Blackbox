@@ -12,6 +12,8 @@ import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
 import { items } from './dist/hidden.mjs';
 import { procOf, procIn } from './dist/root.mjs';
+import { sweepPuzzle, sweepFile } from './dist/forensics.mjs';
+import { STATION, dropOf } from './dist/station.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
@@ -59,7 +61,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     }
     if (active(s)) finish(s, 'defeat');
     const r = s.reports.at(-1);
-    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where] = (losses[where] || 0) + 1; if (/-\d{4}$/.test(s.encounter?.virus?.name || '') && s.zone?.spawns?.[s.encounter.room]?.bounty) stats.bountyLosses++; if (log) console.log('lost to', key); }
+    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (/-\d{4}$/.test(s.encounter?.virus?.name || '') && s.zone?.spawns?.[s.encounter.room]?.bounty) stats.bountyLosses++; if (log) console.log('lost to', key); }
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };
@@ -95,7 +97,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   // nothing left, no outpost, relay or contract on it?
   // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
   const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d]) return true; if (x.locked && !x.drop && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
-  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.outpost?.h && !loc.relay && !openContracts(s).some((c) => c.loc === loc.id);
+  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.outpost?.h && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
     if (!loc.fresh || !loc.detached) return true;
@@ -124,6 +126,13 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
         if (s.run && procIn(loc, d, t)) { say('attack'); fight(); stats.procs = (stats.procs || 0) + 1; } // a log rotation's process (root.mjs)
         if (!s.run || s.run.cwd !== d) continue;
         for (const f of L[d].files || []) if (!/bait/.test(f) && !loc.state.taken[(d === '/' ? '' : d) + '/' + f]) say(`pull ${f}`);
+        // A log sweep (forensics.mjs): a player reads it and works it out; the bot gets it on the
+        // second try 70% of the time and gives up otherwise.
+        if (d === '/' && sweepFile(loc) && !loc.state.sweep?.solved && !sweeps[loc.id]) {
+          sweeps[loc.id] = true; const p = sweepPuzzle(loc);
+          say(`cat ${sweepFile(loc)}`); t += 60000;
+          if (p && rnd() < 0.7) { const wrong = p.suspects.find((x) => x !== p.answer); if (wrong) say(`sweep ${wrong}`); say(`sweep ${p.answer}`); stats.sweeps = (stats.sweeps || 0) + 1; }
+        }
         if (L[d].locked) stats.vaults++;
       }
     }
@@ -132,13 +141,15 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     if (loc.takenOver && !loc.relay && items(s).relay) command(s, 'relay ' + loc.id);
     return true;
   };
+  // SPRAWL-00 is worth a player's time while its kills still pay at least half (5 levels over its cap).
+  const sprawlWorth = () => hackerLevel(s) <= CONFIG.zone.maxLevel + 5;
   const sprawl = () => {
     if (s.zone && relockLeft(s.zone, t)) return false;
     say('connect sprawl');
     if (!s.run) return false;
     const named = (p) => (s.zone?.spawns?.[p]?.bounty ? 0 : 1); // a contract's named target first
     const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/').sort((a, b) => named(a) - named(b));
-    const grey = hackerLevel(s) > CONFIG.zone.maxLevel + 1; // outgrown: only the contract's named target
+    const grey = !sprawlWorth(); // outgrown: only the contract's named target
     for (const room of rooms) { if (!s.run || signalNow(s) < maxSignal(s) * 0.3) break; if (grey && !s.zone?.spawns?.[room]?.bounty) continue; say(`cd ${room}`); if (/no hostile|empty|nothing/i.test(JSON.stringify(say('attack')))) { say('cd /'); continue; } fight(); if (s.run) say('cd /'); }
     if (s.run) say('jack out');
     return true;
@@ -147,12 +158,15 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
   const invasion = () => {
     const inv = s.invasion;
     if (!inv || inv.state === 'travel' || s.run || active(s) || inv.level > hackerLevel(s) + 3) return false;
+    if ((tries[inv.id] || 0) >= 2) return false; // lost to it twice: leave it to the wall, like a player would
+    tries[inv.id] = (tries[inv.id] || 0) + 1;
     (play(s, 'jack in') || []).forEach(note);
     fight();
     stats.invasions = (stats.invasions || 0) + 1;
     return true;
   };
-  const taken = {};
+  const taken = {}, tries = {}, sweeps = {};
+  let seedRnd = (seed * 2654435761) >>> 0; const rnd = () => ((seedRnd = (Math.imul(seedRnd, 1664525) + 1013904223) >>> 0) / 2 ** 32);
   const mailWork = () => book('contracts', () => {
     if (!contracts || s.run || active(s)) return;
     for (const c of openContracts(s)) {
@@ -164,10 +178,33 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
       say('mail accept ' + o.id); taken[o.id] = t;
     }
   });
+  // LANTERN (station.mjs): the bot catches half the broadcasts and goes for the drop (the password
+  // is read out on the radio; a player decodes it).
+  const heard = {};
+  const deadDrop = () => {
+    const loc = [s.zone, ...s.locations].find((l) => l && dropOf(l) && heard[dropOf(l).n] === undefined);
+    if (!loc) return false;
+    const d = dropOf(loc);
+    heard[d.n] = rnd() < 0.5;
+    if (!heard[d.n] || s.run || active(s)) return false;
+    if (!loc.zone && ((relocks(loc) && relockLeft(loc, t)) || !makeRoom(loc))) return false;
+    t += 3 * 60000; // decoding the numbers
+    say(`connect ${loc.zone ? 'sprawl' : loc.id}`);
+    if (!s.run) return false;
+    say(`unlock ${STATION.dir.slice(1)} ${d.pass}`);
+    say(`cd ${STATION.dir}`);
+    for (const f of STATION.files) say(`pull ${f}`);
+    if (s.run) say('jack out');
+    stats.drops2 = (stats.drops2 || 0) + 1;
+    return true;
+  };
   let guard = 0;
   while (hackerLevel(s) < target && guard++ < 20000 && t - 1_700_000_000_000 < 72 * 3600000) {
     book('home', homeFight);
+    for (const e of [...tickNetwork(s, t), ...tickServices(s, t)]) note(e); // the world's clock catches up after each thing it did
     if (book('invasion', invasion)) continue;
+    if (book('runs', deadDrop)) continue;
+    s.pace = { ...(s.pace || { kills: 0 }), ms: t - 1_700_000_000_000 }; // the bot's whole session is active play (Fresh uses it)
     mailWork();
     if (spend === 'all' && !s.run && !active(s) && !s.install) { // build: the cheapest service you can install
       for (const id of Object.keys(SERVICES)) if (!installBlock(s, id)) { const c = s.server.credits; command(s, 'install ' + id); (stats.spent ||= {}).services = (stats.spent.services || 0) + c - s.server.credits; break; }
@@ -178,7 +215,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     const open = (l) => (isLive(s, l) || l.fresh) && !(relocks(l) && relockLeft(l, t));
     const todo = s.locations.filter((l) => !l.rogue && !l.takenOver && open(l) && pending(l) && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
     const rot = s.locations.filter((l) => procOf(l, t) && open(l) && procOf(l, t).level <= L + 3).sort((a, b) => procOf(b, t).level - procOf(a, t).level)[0];
-    const rogue = s.locations.filter((l) => l.rogue && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id] || 0) < 2).sort((a, b) => b.level - a.level)[0];
+    const rogue = s.locations.filter((l) => l.rogue && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
     const hunt = contracts && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;
     if (hunt) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
@@ -186,7 +223,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 6,
     if (!did && rot) { did = book('rotation', () => runLoc(rot)); if (did) stats.did.rotation = (stats.did.rotation || 0) + 1; }
     if (!did && rogue) { did = book('rogue', () => runLoc(rogue)); if (did) stats.did.rogue++; }
     // SPRAWL-00 once you've outgrown it is grey: a player waits out a reconnect timer instead.
-    if (!did && L <= CONFIG.zone.maxLevel + 1) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
+    if (!did && sprawlWorth()) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
     if (!did) { const w = t; wait(15); stats.waitMins = (stats.waitMins || 0) + (t - w) / 60000; } // nothing open: the reconnect timers are running
     lvlCheck();
   }
