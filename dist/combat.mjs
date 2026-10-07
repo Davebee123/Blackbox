@@ -11,7 +11,7 @@ import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
-import { has as hasConfig, configCommand, CONFIGS, known as configsKnown, bankConfig } from './configs.mjs';
+import { has as hasConfig, configCommand, CONFIGS, known as configsKnown, bankConfig, RETIRED_CONFIGS, CONFIG_COST } from './configs.mjs';
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { architectureCommand, archCredits } from './architecture.mjs';
 import { outpostCommand, outpostWon, infestWon, siteTrait, OUTPOST, knowsPlan, learnPlan } from './outpost.mjs';
@@ -20,14 +20,14 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
 import { portsCommand } from './invasion.mjs';
-import { filterCommand, CRAFTABLE, knowsFilter, learnFilter } from './filters.mjs';
+import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags } from './hidden.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue } from './gear.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 
-export const SAVE_VERSION = 29;
+export const SAVE_VERSION = 30;
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null }; // now: the clock (tests set it). crew.mjs adds crewAct, crewActOne, crewActNamed, crewStanding, crewTurns, crewAll, crewHurt, crewEngage, crewEnd; run.mjs crewGuests, foldersOf; the browser sets stepped.
@@ -297,7 +297,7 @@ export function gearStat(s, stat, side = null) {
     const fx = it.unique && UNIQUES[it.unique]?.effect;
     if (fx?.when === 'always' && fx.do === 'stat-x2' && fx.stat === stat && !['signal', 'integrity'].includes(stat) && fxCond(s, fx)) n += it.stats[stat] || 0;
   }
-  if (side !== 'hacker') n += serviceStat(s, stat);
+  if (side !== 'hacker') n += serviceStat(s, stat) + (FILTER_STATS[stat]?.home ? filterStat(s, stat) : 0); // decoys and a sandbox in the firewall's filters
   if (STATS[stat]?.dp) n = Math.round(n * 10) / 10;
   return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
 }
@@ -624,12 +624,13 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
 }
 
 // Every neutralized virus moves you toward its origin. 100 = a location.
-export function addLead(s, family, amount, why = '') {
+// `next`: a route file's lead (a log sweep) locates on the layer past yours; a kill's, on yours.
+export function addLead(s, family, amount, why = '', next = false) {
   s.leadProgress[family] = (s.leadProgress[family] || 0) + amount;
   emit(s, 'lead', `${why}${FAMILIES[family].name} lead +${amount}% (${Math.min(100, s.leadProgress[family])}%).`, { family });
   while (s.leadProgress[family] >= 100) {
     s.leadProgress[family] -= 100;
-    addLocation(s, family, SERVER.layerFor(hackerLevel(s))); // kills trace your own layer
+    addLocation(s, family, SERVER.layerFor(hackerLevel(s)) + (next ? 1 : 0)); // kills trace your own layer
   }
 }
 
@@ -1100,7 +1101,7 @@ export function finish(s, result) {
   const d = defender(s);
   let lead = 0;
   // Lead falls with the level gap like XP does: a grey kill (10+ levels under you) traces nothing.
-  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = Math.round((CONFIG.leadBase + gearStat(s, 'lead', 'server')) * Math.min(1, xpScale(e.virus.level - hackerLevel(s))));
+  if ((e.mode === 'home' || e.zone) && result === 'victory') lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(e.virus.level - hackerLevel(s))));
 
   if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
@@ -2013,9 +2014,6 @@ function landAttack(s, p) {
   if (hits && enemyMissChance(s) > 0 && rand(s) * 100 < enemyMissChance(s)) {
     e.metrics.evaded++;
     openProc(s, 'slipped');
-    // Honeypot configs, at home: Tar pushes its next attack back; Sting hits back.
-    if (e.mode === 'home' && hasConfig(s, 'tar')) atk.due += 1;
-    if (e.mode === 'home' && hasConfig(s, 'sting') && alive(p)) { emit(s, 'evaded', `${atk.name} misses you. Sting hits back.`, { source: p.id }); hit(s, p, Math.max(1, Math.round(6 * power(serverLevel(s)))), { by: 'Sting' }); return; }
     return emit(s, 'evaded', `${atk.name} misses you${defense(s, 'evasion') ? ' (evaded)' : ''}.`, { source: p.id });
   }
   // Breaker Brace: whatever hits you loses an armor chit (or takes 10 if it has none).
@@ -2645,8 +2643,30 @@ function migrateToProtocols(s) {
   s.version = SAVE_VERSION;
 }
 
+// v30: the wall is three knobs. Tarpit, Honeypot and Sandbox (services) and the firewall, Tarpit
+// and Honeypot configs are gone: each service you ran comes back as a filter carrying its stat
+// (blue for v1 and v2, yellow for v3), each config you owned as its credits, an install in progress
+// as its price.
+const RETIRED_SERVICES = { tarpit: 'tarpit', honeypot: 'evasion', sandbox: 'sanitize' };
+function retireWall(s, was) {
+  if (was >= 30) return;
+  const L = Math.max(1, serverLevel(s));
+  for (const [id, stat] of Object.entries(RETIRED_SERVICES)) {
+    const v = s.services?.[id];
+    if (v) { addFilter(s, rollFilter(seeded(L * 31 + v), { level: L, rarity: v >= 3 ? 'custom' : 'tuned', stat }), `${id[0].toUpperCase() + id.slice(1)} retired: `); delete s.services[id]; }
+    if (s.install?.id === id) { s.server.credits += VERSIONS[s.install.v - 1].credits; s.install = null; }
+    if (s.configs) delete s.configs[id];
+  }
+  if (s.configs) delete s.configs.firewall;
+  const gone = new Set(RETIRED_CONFIGS);
+  const refund = (s.configsOwned || []).filter((k) => gone.has(k)).length * CONFIG_COST.credits;
+  if (refund) { s.server.credits += refund; emit(s, 'info', `Firewall configs retired: +${refund} credits.`); }
+  if (s.configsOwned) s.configsOwned = s.configsOwned.filter((k) => !gone.has(k));
+  if (s.configsKnown) s.configsKnown = s.configsKnown.filter((k) => !gone.has(k));
+  if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
+}
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
@@ -2768,6 +2788,7 @@ export function restore(raw) {
     if (s.daemonsOwned?.tracer) { s.daemonsOwned.stall = Math.max(s.daemonsOwned.stall || 0, s.daemonsOwned.tracer); delete s.daemonsOwned.tracer; }
     if (s.daemons) s.daemons = s.daemons.map((d) => (d === 'tracer' ? 'stall' : d));
     if (s.encounter) { delete s.encounter.trace; delete s.encounter.pendingTrace; }
+    retireWall(s, was);
     initMail(s);
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;

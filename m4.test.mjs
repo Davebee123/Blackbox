@@ -51,20 +51,20 @@ test('config source waits in some vaults; bank it, craft it, set it', () => {
   assert.equal(configOn(s, CONFIGS[id].service), null);
 });
 
-test('Firewall configs bend the wall; Tarpit Sticky slows invaders more', () => {
+test('the wall is three knobs: the firewall configs are gone (a save that owned one gets its credits back)', async () => {
+  const { restore, SAVE_VERSION } = await import('./dist/combat.mjs');
+  assert.deepEqual(Object.keys(CONFIGS), ['triage']);
   const s = withFirewall();
-  s.configsOwned = Object.keys(CONFIGS);
-  const inv = { level: 5, mutation: null, family: 'worm' };
-  const base = ratioOf(s, inv);
-  command(s, 'config firewall stateful');
-  assert.ok(Math.abs(ratioOf(s, inv) / base - 1.2) < 1e-9);
-  s.net.seen = { worm: 3, ransomware: 1 };
-  command(s, 'config firewall adaptive');
-  assert.ok(Math.abs(ratioOf(s, inv) / base - 1.4) < 1e-9);
-  assert.ok(Math.abs(ratioOf(s, { ...inv, family: 'ransomware' }) / base - 0.9) < 1e-9);
-  const slow = travelMs(s, 1);
-  command(s, 'config tarpit sticky');
-  assert.ok(travelMs(s, 1) > slow);
+  Object.assign(s, { version: 29, configsOwned: ['stateful', 'triage'], configsKnown: ['stateful', 'triage', 'beacon'], configs: { firewall: 'stateful' } });
+  s.services = { ...s.services, tarpit: 2, honeypot: 1 };
+  const credits = s.server.credits;
+  const t = restore(JSON.parse(JSON.stringify(s)));
+  assert.equal(t.version, SAVE_VERSION);
+  assert.deepEqual(t.configsOwned, ['triage']); assert.deepEqual(t.configsKnown, ['triage']);
+  assert.ok(!t.services.tarpit && !t.services.honeypot);
+  assert.equal(t.server.credits, credits + 250);
+  const stats = t.filters.held.map((f) => Object.keys(f.stats));
+  assert.ok(stats.some((k) => k.includes('tarpit')) && stats.some((k) => k.includes('evasion')), 'each retired service comes back as a filter');
 });
 
 test('Hot-patcher Triage: double repair below half, half above', async () => {
@@ -185,8 +185,10 @@ test('architecture: picked at server level 20; Fortress walls, Hub bandwidth, La
   command(s, 'developer server 20');
   const inv = { level: 20, mutation: null, family: 'worm' };
   const base = ratioOf(s, inv), bw = bandwidth(s), cc = compileCost(s).credits;
+  const { effLevel } = await import('./dist/firewall.mjs');
+  const lv = effLevel(s, 0);
   command(s, 'architecture fortress');
-  assert.ok(Math.abs(ratioOf(s, inv) / base - 1.25) < 1e-9);
+  assert.equal(effLevel(s, 0), lv + 5, 'Fortress: firewall +5');
   s.server.credits = 1500;
   command(s, 'architecture hub');
   assert.equal(s.server.credits, 500, 'switching costs 1000');

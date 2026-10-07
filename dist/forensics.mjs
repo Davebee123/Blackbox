@@ -12,6 +12,7 @@
 // needs the note at the top of the log. The log comes from the server's seed: the same every
 // visit, different everywhere.
 import { emit, warn, addLead, gainXp, xpFor } from './combat.mjs';
+import { routed } from './hidden.mjs';
 import { seeded } from './gear.mjs';
 
 export const SWEEP = { share: 0.5, rewards: [40, 25, 15, 10], xpShare: 0.3 };
@@ -212,6 +213,6 @@ export function sweepCommand(s, loc, arg) {
   st.solved = arg;
   const amount = SWEEP.rewards[Math.min(st.tries, SWEEP.rewards.length - 1)];
   emit(s, 'net-good', `SWEPT: ${arg}${st.tries ? '' : ', first read'}.`);
-  addLead(s, loc.deeper || loc.family, amount, 'Log sweep: ');
+  addLead(s, loc.deeper || loc.family, routed(s, amount), 'Log sweep: ', true); // a route file: the next layer
   gainXp(s, xpFor(s, loc.level || 1, SWEEP.xpShare), 'log sweep');
 }

@@ -57,7 +57,7 @@ export const CONSORTIUM = {
     { at: 3, name: 'Linked', rule: '+10% outpost yield and dividend', yield: 0.1 },
     { at: 5, name: 'Mesh', rule: 'Invasion bounties doubled', bounty: 2 },
     { at: 8, name: 'Backbone', rule: 'A trunk rogue server opens on the network', trunk: true },
-    { at: 12, name: 'Grid', rule: '+1 outpost slot and +10% wall', bandwidth: 1, wall: 0.1 },
+    { at: 12, name: 'Grid', rule: '+1 outpost slot and firewall +2 levels', bandwidth: 1, wall: 2 },
   ],
   names: ['Halyard', 'Null Choir', 'Black Lattice', 'Copperline', 'Saltmarsh Ring', 'Dead Channel', 'Quiet Meridian', 'Glasshouse', 'Low Signal', 'Tinroof'],
 };
@@ -82,7 +82,7 @@ export const nextTier = (s) => (consortiumOf(s) ? CONSORTIUM.tiers.find((t) => s
 const perk = (s, key, none) => tiersOf(s).reduce((v, t) => t[key] ?? v, none);
 export const consortiumYield = (s) => 1 + perk(s, 'yield', 0);
 export const consortiumBandwidth = (s) => perk(s, 'bandwidth', 0);
-export const consortiumWall = (s) => 1 + perk(s, 'wall', 0);
+export const consortiumWall = (s) => perk(s, 'wall', 0); // firewall levels (firewall.mjs wallBonus)
 // Nobody defended it: maybe a member dealt with it anyway (simulated). A handle, or null.
 export function memberHelp(s) {
   const c = consortiumOf(s);

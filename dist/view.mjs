@@ -32,7 +32,7 @@ import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from 
 import { hiddenNodes, visible as hiddenVisible, flagged as hiddenFlagged, items as kitOf, HIDDEN } from './hidden.mjs';
 import { archWall } from './architecture.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf } from './root.mjs';
-import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
+import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, defragMs, defragCost, versionOf, perksAt, VERSION_PERKS, VERSION_EVERY } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft } from './invasion.mjs';
 import { LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
@@ -869,7 +869,7 @@ function firewallPanel(s, now) {
   const f = fwOf(s), c = upgradeCost(f.level), eff = effLevel(s, now), busy = active(s);
   const can = s.server.credits >= c.credits && (s.materials?.cipher || 0) >= c.cipher && (s.materials?.exploit || 0) >= (c.exploit || 0);
   const mods = [fragLevels(s) ? `<span class="tag warn" title="Fragmented">−${fragLevels(s) + (defragging(s, now) ? FIREWALL.defragLoss : 0)}</span>` : defragging(s, now) ? `<span class="tag warn" title="Defragmenting">−${FIREWALL.defragLoss}</span>` : '', hardenLeft(s, now) ? `<span class="tag you" title="harden.sh · ${fmtTime(hardenLeft(s, now))} left">+${FIREWALL.harden.plus} · ${fmtTime(hardenLeft(s, now))}</span>` : ''].join('');
-  return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${fwVersion(f)}${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
+  return `<div class="fw-panel"><div class="fw-head"><b class="fw-lv" title="Blocks invasions up to this level · base level ${f.level}">lv ${eff}</b>${fwVersion(f)}${filterStatSum(s) ? `<span class="tag you" title="Filters">+${filterStatSum(s)}</span>` : ''}${wallBonus(s) ? `<span class="tag ${wallBonus(s) > 0 ? 'you' : 'warn'}" title="${esc([archWall(s) && `Architecture ${archWall(s) > 0 ? '+' : ''}${archWall(s)}`, consortiumWall(s) && `Consortium +${consortiumWall(s)}`].filter(Boolean).join(' · '))}">${wallBonus(s) > 0 ? '+' : ''}${wallBonus(s)}</span>` : ''}${mods}${vulnLine(s)}</div>${fwGrid(s, now)}
     ${fwActs(s, f, '', can, c, busy, defragging(s, now), now)}</div>`;
 }
 // A contract's pay as icon chips: credits, Indemnity, XP, standing and rep, anything extra.
@@ -882,7 +882,7 @@ function rewardChips(s, c) {
     r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), r.daemon && chip('daemon', '+1', 'A daemon'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
 }
 // A filter's stats as chips (an icon and a number each); dim while it isn't in a slot.
-const FILTER_ICON = { strength: 'firewall', worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel', frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike' };
+const FILTER_ICON = { strength: 'firewall', worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel', frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike', evasion: 'evasion', sanitize: 'sanitize', reflect: 'honeypot' };
 function filterChips(s, f, on) {
   const lv = fwOf(s).level;
   return Object.entries(f.stats).map(([k, v]) => {
@@ -1912,7 +1912,7 @@ function wallRow(s, icon, label, b, tipExtra = '') {
 function awayLine(s) {
   if (!consortiumOf(s)) return '';
   if (s.degraded) return srvLine('clock', 'Away', '<span class="tag warn">Rebooting</span>', '', 'No wall until it is back up');
-  return wallRow(s, 'clock', 'Away', wallBands(s, wallRating(s) * archWall(s) * consortiumWall(s)), ` While you're logged off (consortium bonus included); a crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours.`);
+  return wallRow(s, 'clock', 'Away', wallBands(s, wallRating(s)), ` While you're logged off (consortium bonus included); a crash reboots your server for ${CONSORTIUM.rebootMs / 3600000} hours.`);
 }
 
 // The consortium (consortium.mjs) on a server card: whose it is, a siege to break, or shared ground.

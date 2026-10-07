@@ -221,11 +221,11 @@ test('misses: your damaging skills can miss (the cooldown is still spent); Accur
   CONFIG.misses = false;
 });
 
-test('Honeypot and Sandbox: attacks and specials on your server can fail', () => {
-  const was = { e: STATS.evasion.cap, s: STATS.sanitize.cap, h: SERVICES.honeypot.values, b: SERVICES.sandbox.values };
+test('Decoy and Sandboxed filters: attacks and specials on your server can fail', () => {
+  const was = { e: STATS.evasion.cap, s: STATS.sanitize.cap };
   STATS.evasion.cap = STATS.sanitize.cap = 100;
-  SERVICES.honeypot.values = SERVICES.sandbox.values = [100, 100, 100];
-  const s = svc(fresh(), { honeypot: 1, sandbox: 1 });
+  const s = svc(fresh(), { firewall: 1 });
+  s.filters = { held: [{ kind: 'filter', rarity: 'tuned', level: 1, name: 'Decoy Packet Filter', stats: { strength: 1, evasion: 100, sanitize: 100 } }], on: [0] };
   fight(s);
   const pulse = part(s, 'pulse'), enc = part(s, 'encryptor');
   s.encounter.chits = 0;
@@ -237,7 +237,6 @@ test('Honeypot and Sandbox: attacks and specials on your server can fail', () =>
   assert.equal(s.server.integrity, 100);
   assert.equal(s.encounter.encrypt, 0);
   Object.assign(STATS.evasion, { cap: was.e }); Object.assign(STATS.sanitize, { cap: was.s });
-  SERVICES.honeypot.values = was.h; SERVICES.sandbox.values = was.b;
 });
 
 test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payload boosts burns', () => {
@@ -510,9 +509,9 @@ test('the install queue: code and credits, one at a time, in real time; versions
   command(full, 'developer salvage 200');
   command(full, 'developer blueprints');
   full.server.credits = 9999;
-  svc(full, { raid: 1, kernel: 1, scrubber: 1, hotpatch: 1, counter: 1, honeypot: 1 });
+  svc(full, { raid: 1, kernel: 1, scrubber: 1, hotpatch: 1, counter: 1, uplink: 1 });
   assert.equal(portsUsed(full), 6);
-  assert.match(installBlock(full, 'sandbox'), /service slots are in use/);
+  assert.match(installBlock(full, 'buildfarm'), /service slots are in use/);
   command(full, 'developer server 25');
   assert.equal(portCount(full), 9);
   command(full, 'install raid', 0);
@@ -558,7 +557,7 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   assert.deepEqual(s.services, { raid: 1, uplink: 1 });
   assert.equal(s.server.max - Math.round(100 * power(serverLevel(s))), 5, 'RAID v1');
   assert.equal(gearStat(s, 'signal'), 10);
-  assert.equal(gearStat(s, 'lead'), 5, 'Route Logger v1');
+  assert.equal(gearStat(s, 'routeBoost'), 25, 'Route Logger v1: route files trace 25% further');
   assert.equal(loaded(s)[0].rarity, 'stock');
   const t = fresh();
   assert.equal(daemonSlots(t), CONFIG.daemonSlots);

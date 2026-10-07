@@ -13,7 +13,7 @@
 // Relays: an item you install on a server you've taken over. It pings that server's hidden
 // neighbours; the one carrying a contract's signal is flagged.
 import { FAMILIES, SERVER } from './data.mjs';
-import { emit, warn, rand, addLocation, hackerLevel } from './combat.mjs';
+import { emit, warn, rand, addLocation, hackerLevel, serviceValue } from './combat.mjs';
 import { isLive } from './memory.mjs';
 import { targetedHidden, contractLocated } from './mail.mjs';
 
@@ -27,6 +27,11 @@ export const HIDDEN = {
   recordLead: 35, // a vault's trace record, banked: part of a trace, not the server
 };
 
+// Trace is three rules: kills trace your own layer; route files (relay pings, vault trace records,
+// injectors, log sweeps) trace the next one; relays reveal what's next door and its family.
+// The Route Logger service makes every route file count for more.
+export const routeBoost = (s) => 1 + serviceValue(s, 'uplink') / 100;
+export const routed = (s, n) => Math.round(n * routeBoost(s));
 export const hiddenNodes = (s) => (s.hidden ||= []);
 export const hiddenNode = (s, id) => hiddenNodes(s).find((n) => n.id === id) || null;
 export const visible = (n) => n.pinged || n.lead > 0;
@@ -103,7 +108,7 @@ export function syncFlags(s) {
 // A route file banked on jack-out.
 export function bankRoute(s, f) {
   const n = hiddenNode(s, f.hidden);
-  if (n) hiddenLead(s, n, HIDDEN.routeLead, 'Route file: ');
+  if (n) hiddenLead(s, n, routed(s, HIDDEN.routeLead), 'Route file: ');
 }
 
 // Items used from the map --------------------------------------------------------------------
@@ -122,7 +127,7 @@ export function useItem(s, text) {
   const n = hiddenNode(s, id);
   if (!n || !visible(n)) return warn(s, 'Pick an unknown server on the map.');
   items(s).injector--;
-  hiddenLead(s, n, 30, 'Trace injector: ');
+  hiddenLead(s, n, routed(s, 30), 'Trace injector: ');
 }
 
 // Pick an invader's origin: a found server, or (sometimes) a hidden one behind it.

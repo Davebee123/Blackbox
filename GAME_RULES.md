@@ -13,7 +13,7 @@ A new game opens on a bare terminal: `blackbox login:` asks for a handle (2–16
 ## The loop
 
 1. `connect sprawl`: **SPRAWL-00**, a rogue server, is where you go to fight from the start. A virus sits in each of its six folders at your level, but never above level 8: it's a starter area (its card says Lv 1–8), and past that the fights worth having are on the servers you trace (`ls` shows it as `name.exe`); SPRAWL-00 only ever has the plain families, never strains or bigger grades; `attack` it when you're ready. A kill pays like a home kill, straight away (XP, code, a possible drop, a lead), and the folder fills again 90 seconds later.
-2. Every neutralized virus gives a lead toward its family's origin: +25% a kill (four kills), plus the Route Logger service's bonus, falling with the level gap like XP (10% less a level under you, nothing from a grey kill). At 100% the origin is located, on **your layer** (see Level bands).
+2. Every neutralized virus gives a lead toward its family's origin: +25% a kill (four kills), falling with the level gap like XP (10% less a level under you, nothing from a grey kill). At 100% the origin is located, on **your layer** (see Level bands).
 3. `connect <location>` starts a run on a traced origin. Your server stays home; out on the net your health is **Signal** (100 × your power, plus protocols). Signal carries between connections and rests back up while you're home and not fighting (20% of max a minute, empty to full in 5 minutes, and it catches up while the game is closed); you need a quarter of it to connect. Or **top up**: click the Signal meter (a **+** chip sits beside it whenever it isn't full, and a first-time tip points at it), or type `top up`, to pay for the rest now (see The economy). The Integrity meter has the same **+** for `repair`. On a run, the store's **Signal patch** fills it. (Signal boosters are retired: they can't be crafted any more, and ones you still carry work with `boost`.)
 4. Explore the location's file system, fight what guards it, read files for clues, pull files into your pack.
 5. Some files lead deeper: a trace record puts 35% on the trace to a node one layer down.
@@ -101,6 +101,8 @@ Every location has its family's quirk: one visible rule, shown on the map card, 
 
 ### Going deeper
 
+**Trace is three rules.** (1) Kills trace your own layer (their family's lead). (2) Route files trace the next layer: relay route files (`ping-*.trc`), vault trace records, trace injectors and log sweeps; the **Route Logger** service makes each count 25 / 50 / 75% more. (3) A relay reveals the unknown servers next to it, and their family.
+
 A trace record (`signal.trc`) you pull and bank puts **35%** on the trace to an unknown node **one layer deeper** (the one it names, or a flagged one first); kills, your relay's pings and trace injectors do the rest. On the Map it branches off the node it came from. Each layer sits in its own level band (see Level bands): a deeper one is ahead of you. Each layer down adds +25% to blue and yellow drop odds and 40% more credits per cache.
 
 ## Protocols, services and code
@@ -187,15 +189,12 @@ The server has no items. It runs **services** in **service slots**, Master of Or
 | Service | Code | v1 / v2 / v3 |
 |---|---|---|
 | Filter Bay | Cipher | 1 / 2 / 3 filter slots on your firewall; see Invasions |
-| Tarpit | Worm | invasions travel 50 / 100 / 150% slower |
 | RAID Array | Worm | +5 / 10 / 15% max Integrity |
 | Hardened Kernel | Kernel | 2 / 4 / 6 Block on hits at home (× server power) |
 | Scrubber | Cipher | every home fight starts with a shield of 4 / 7 / 10% of max Integrity |
 | Hot-patcher | Worm | Regen 0.3 / 0.6 / 1 (×your server's power): per cycle in home fights, per real minute between them |
 | Counter-intrusion | Worm | whatever hits your server takes 2 / 4 / 6 (×power) back; on armor it breaks a chit |
-| Honeypot | Kernel | 3 / 5 / 8% Evasion at home |
-| Sandbox | Cipher | 15 / 30 / 45% Sanitize at home |
-| Route Logger | Cipher | +5 / 10 / 15 lead per kill |
+| Route Logger | Cipher | route files (relay pings, trace records, injectors, log sweeps) trace 25 / 50 / 75% further |
 | Build Farm | Kernel | compiling costs 15 / 25 / 35% less |
 | **Cron Job** (special) | Worm + Kernel | every 3rd cycle of a home fight, hits the soonest attacker for 8 × power × 0.4 / 0.6 / 0.8 (shown on the *You* row) |
 | **Snapshot** (special) | Cipher + Kernel | once per home fight, when a hit drops you below half, restores 8 / 12 / 16% |
@@ -287,7 +286,7 @@ Simulated until the server exists (developer mode only, `?dev`): `online sim` tu
 | 3 | Linked | +10% outpost yield and dividend |
 | 5 | Mesh | Invasion bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
-| 12 | Grid | +1 outpost slot and +10% wall |
+| 12 | Grid | +1 outpost slot and firewall +2 levels |
 
 Up to 20 servers. Crews of up to three are drawn from consortium members and friends (*Invite to crew*, `crew invite <name>`).
 
@@ -437,8 +436,8 @@ A server you've taken over can run a **harvester**: a packaged virus that works 
 
   | Architecture | Trade |
   |---|---|
-  | Fortress | Wall rating +25%; harvesters yield 25% less |
-  | Hub | +2 outpost slots; wall rating −15% |
+  | Fortress | Firewall +5 levels; harvesters yield 25% less |
+  | Hub | +2 outpost slots; firewall −3 levels |
   | Lab | Crafting costs 30% fewer credits; outposts are noticed a quarter more often |
 
 - **Infestations.** Every so often (two hours, divided by how many outposts you run, a Honeytoken counting three; never under 40 minutes, 20 with a Honeytoken) a pack of 2–3 wild viruses moves into one outpost, at its level and one layer deeper. They stay 20 minutes. **Clear** them one fight at a time (`outpost clear <server>`) and the stockpile gets an hour's worth of yield on top, plus XP. Ignore them and they leave; nothing is lost.
@@ -447,19 +446,10 @@ Commands: `outpost install <server> [n]`, `outpost build <module>`, `outpost mod
 
 ## Configs
 
-Every service can run one **config**: a side-grade that changes how it works, not how big it is. Swapping is instant and free, but only between fights (the Server page shows a Config row on each running service that has them).
+Every service can run one **config**: a side-grade that changes how it works, not how big it is. Swapping is instant and free, but only between fights (the Server page shows a Config row on each running service that has them). The firewall, Tarpit and Honeypot configs are gone (the wall is three knobs, see Invasions and the wall); a save that owned one got its credits back.
 
 | Service | Config | What it does |
 |---|---|---|
-| Firewall | Stateful | Wall rating +20%; invasions it stops leave nothing behind |
-| Firewall | Reflective | Invasions it stops drop their family's code as well |
-| Firewall | Deep Inspection | Invasions it stops add lead progress toward where they came from |
-| Firewall | Adaptive | +40% against the family that hits you most, −10% against the rest |
-| Tarpit | Sticky | Invasions crawl half again as slowly |
-| Tarpit | Toll | Invasions reach your wall worn down to 80% |
-| Tarpit | Beacon | Invasions from unknown servers add 15% lead as they pass; swarms are seen coming 50% sooner |
-| Honeypot | Tar | A part whose attack misses you fires its next one a cycle later |
-| Honeypot | Sting | A part whose attack misses you takes a hit back |
 | Hot-patcher | Triage | Double repair below half Integrity, half above |
 
 **Getting one.** 8% of vaults hold a config source (`<config>.cfg`). Bank it and you know it; craft it on the Craft page for 250 credits, 15 of the service's code and 6 salvage. A source you already know is 2 salvage.
@@ -469,7 +459,7 @@ Every service can run one **config**: a side-grade that changes how it works, no
 Once you run an outpost, the network organises against it.
 - The first swarm gathers about 45 minutes after your first outpost goes up; after that, one every 90–150 minutes (half that with a Honeytoken out). One swarm at a time. Everything runs on real time, online or off. At the outpost it meets the outpost's firewall: **blocked**, it bounces off; **contested**, the firewall kills a process now and then (each time its grind adds up to a whole one); a **breach** just runs the timer. The outpost produces nothing while a swarm sits at it.
 - A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
-- You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes; 15 with a Tarpit Beacon).
+- You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes).
 - **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the timer waits while you fight (a paused fight, or one left open over a reload, holds nothing).
 - Once it arrives, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown (Sturdy doesn't save it): retake it to end it sooner.
 - Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
@@ -488,7 +478,7 @@ The plan the next changes build to; each part moves into the sections above as i
 - **Readout:** one line on each holding's card, *Vulnerable to lv N+* (teal *Not vulnerable* when nothing attached can get through), with a family note when a filter changes it.
 - **Fragmentation:** your server losing Integrity wears its firewall (a block per 5% lost); an outpost's or hub's wears with every threat it meets. Shown as a block grid; fragmented blocks cost it levels. **Defrag** restores it, taking a few minutes at reduced strength.
 - **Hardening scripts** (`harden.sh`): one-use, +3 levels for 8 hours. Bought at hub shops. *(Home: done; see Invasions and the wall.)*
-- **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, and rarer Tarpit and Honeypot effects. Home has the most slots; outposts and silos one or two. *(Home: done; see Invasions and the wall.)*
+- **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, Evasion and Sanitize at home, and rarer tar, sting and reflection. Home has the most slots; outposts and silos one or two. *(Home: done; see Invasions and the wall.)*
 
 **The away clock.** Away, everything runs on a long passive clock (home invasions every 2–4 hours, swarms and old owners at a quarter pace); online, **Open ports** brings invasions faster and richer. Before logging off: defrag, harden if it still reads vulnerable.
 
@@ -555,7 +545,7 @@ The idle layer. The servers attached to your network send viruses back along it 
 
 - **When.** The first sets out 3 minutes after you find your first location; the next 6–10 minutes after the last one is dealt with. While you're logged off, a long passive clock takes over: one every 2–4 hours (see below). **Open ports** (`open ports` / `close ports`, the switch under the Firewall card's ruler, with *Invasions ×2.5* and *Rewards +50%* beside it, lit while it's on) brings them 2.5× as often while you play, each worth +50% (XP, salvage when the wall stops one, code when you kill one); they close when you log off. Only servers attached to your network send them (Memory): detach one and its invasions stop.
 - **Who.** A virus of the location's family (CRYPTJACK, SPLINTER or GHOSTROOT) at the location's level; from level 4, sometimes mutated (a quarter of the time to level 9, then 40%).
-- **Travel.** 2 minutes from a layer-1 location, a minute more per layer. A Tarpit slows it.
+- **Travel.** 2 minutes from a layer-1 location, a minute more per layer. A filter of Tar slows it.
 - **The firewall** (`firewall.mjs`) is your wall. It has a **level** you build, and it never grows by itself: neither your level nor your server's raises it.
   - **Upgrade** (`firewall upgrade`, or the button): a level at a time, 30 + 20 × level credits and 2 + level Cipher code. A new firewall starts at level 1 (an old save starts where its old wall blocked).
   - **Major versions:** every 10 levels is a version (v1 is levels 1–9, v2 from 10, v3 from 20…), shown as a tag beside its level (its perks on hover). The upgrade into a new version costs triple the credits, double the Cipher and an Exploit, and brings a perk: **v2** defrag 30% faster, **v3** +1 filter slot, **v4** wears 25% slower, **v5** +1 filter slot, **v6** harden.sh lasts twice as long. Outposts' and hubs' firewalls have versions too (their filter slots aside).
@@ -563,7 +553,8 @@ The idle layer. The servers attached to your network send viruses back along it 
   - **Defrag** (`defrag`): (3 + level) credits a fragmented block; 3 minutes, running 2 levels weaker meanwhile, then every block is whole again.
   - **Hardening:** `harden.sh` (Kestrel's and NULL CHOIR's shops, and Halcyon's agency stock) adds 3 levels for 8 hours (`firewall harden`); another adds 8 more hours.
   - Its **effective level** (level − fragmentation − a running defrag + hardening) is what it blocks outright. The card reads **Vulnerable to lv N+** against the highest level your attached servers send (amber if that would be contested, red if it would break through), or **Not vulnerable**. The map's server card says the same in one line.
-  - **Filters** (`filters.mjs`): gear for the firewall, rolled like protocols (Scrap, Stock, Tuned, Custom; an item level). The **Filter Bay** service gives slots (1, 2, 3 by version), and your firewall's v3 and v5 one more each. Every filter adds levels (about 1 + item level / 10, more on better bases: Packet, Stateful from 10, Deep from 25, Neural from 40). Tuned ones carry 1–2 more stats, Custom ones 3: **+2–4 levels against one family** (Wormguard, Lockbreak, Exorcism; that family only), **15–40% less fragmentation**, **20–50% faster defrag**, **15–35% more grind** and **15–35% less chip** while contested, and on Custom ones only, **15–30% slower invasions** (of Tar) or invasions that **arrive 10–25% worn** (of the Hive). About one vault in seven holds a `filter.flt` (pull it, jack out to bank it). Or **craft** one on the Craft page (Filters): a Tuned filter at your level, built around a stat whose **recipe** you know (Wormguard, Lockbreak, Exorcism, Compacted, Indexed, Abrasive, Buffered; blueprints teach them) or any of yours, for 60 + 8 × level credits, 6 + level/2 Cipher code and 4 salvage (`filter craft <stat|any>`). The Firewall card lists them: what's in, the empty slots, then the rest; **In**, **Out** and **×** (scrap for 1–3 salvage) at home only (`filter equip|unequip|scrap <n>`). You hold 12 at most.
+  - **Three knobs.** The wall is your firewall's level (and version), its filters, and harden.sh. Everything else that adds levels shows as one **+N** chip beside the level (hover for what's in it): at home, Architecture (Fortress +5, Hub −3) and the consortium's Grid tier (+2); on an outpost, a Firewall Node (+3) and Root 5 (+3). Tarpit, Honeypot and Sandbox are no longer services: a save that ran one got a filter carrying its stat (blue for v1–v2, yellow for v3).
+  - **Filters** (`filters.mjs`): gear for the firewall, rolled like protocols (Scrap, Stock, Tuned, Custom; an item level). The **Filter Bay** service gives slots (1, 2, 3 by version), and your firewall's v3 and v5 one more each. Every filter adds levels (about 1 + item level / 10, more on better bases: Packet, Stateful from 10, Deep from 25, Neural from 40). Tuned ones carry 1–2 more stats, Custom ones 3: **+2–4 levels against one family** (Wormguard, Lockbreak, Exorcism; that family only), **15–40% less fragmentation**, **20–50% faster defrag**, **15–35% more grind** and **15–35% less chip** while contested, **2–5% Evasion** (Decoy) and **10–25% Sanitize** (Sandboxed) for home fights, and on Custom ones only, **2–5 of its family's code from every invader it stops** (of Reflection), **15–30% slower invasions** (of Tar) or invasions that **arrive 10–25% worn** (of the Hive). About one vault in seven holds a `filter.flt` (pull it, jack out to bank it). Or **craft** one on the Craft page (Filters): a Tuned filter at your level, built around a stat whose **recipe** you know (Wormguard, Lockbreak, Exorcism, Compacted, Indexed, Abrasive, Buffered; blueprints teach them) or any of yours, for 60 + 8 × level credits, 6 + level/2 Cipher code and 4 salvage (`filter craft <stat|any>`). The Firewall card lists them: what's in, the empty slots, then the rest; **In**, **Out** and **×** (scrap for 1–3 salvage) at home only (`filter equip|unequip|scrap <n>`). You hold 12 at most.
 - **The wall's rating** against the invasion's strength (100 × its power), set so the firewall blocks invasions up to its effective level:
 
 | Rating vs invasion | Result |

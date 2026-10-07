@@ -1,7 +1,8 @@
 // Filters: gear for your firewall, rolled like protocols (a rarity, an item level, stats). They sit
 // in the firewall's slots (the Filter Bay service: 1, 2, 3 by version) and change what it does, never
 // what it targets: more levels, more against one family, slower fragmentation, a faster defrag,
-// more grind and less chip while contested, and on rarer ones a tar pit or a sting.
+// more grind and less chip while contested, decoys and a sandbox for home fights, and on rarer ones
+// a tar pit, a sting or a reflection.
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it). Equip at home.
 import { emit, warn, active, serviceVersion, hackerLevel, materialsOf, rand } from './combat.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay } from './salvage.mjs';
@@ -26,8 +27,11 @@ export const FILTER_STATS = {
   defrag: { name: '% faster defrag', range: [20, 50], kind: 'prefix', label: 'Indexed' },
   grind: { name: '% more wear on invaders', range: [15, 35], kind: 'prefix', label: 'Abrasive' },
   chip: { name: '% less chip damage', range: [15, 35], kind: 'prefix', label: 'Buffered' },
+  evasion: { name: '% Evasion at home', range: [2, 5], kind: 'prefix', label: 'Decoy', home: true },
+  sanitize: { name: '% Sanitize at home', range: [10, 25], kind: 'prefix', label: 'Sandboxed', home: true },
   tarpit: { name: '% slower invasions', range: [15, 30], kind: 'suffix', label: 'of Tar', rare: true },
   sting: { name: '% worn on arrival', range: [10, 25], kind: 'suffix', label: 'of the Hive', rare: true },
+  reflect: { name: ' code from each invader it stops', range: [2, 5], kind: 'suffix', label: 'of Reflection', rare: true },
 };
 const AFFIXES = { scrap: [0, 0], stock: [0, 0], tuned: [1, 2], custom: [3, 3] };
 const MULT = { scrap: 0.8, stock: 1, tuned: 1.1, custom: 1.25 };

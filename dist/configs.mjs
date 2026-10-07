@@ -9,24 +9,15 @@ import { SERVICES, MATERIALS, seeded } from './gear.mjs';
 import { settle, spend, splitPay } from './salvage.mjs';
 import { archCredits } from './architecture.mjs';
 
+// Retired configs (a save that owned one is refunded: combat.mjs restore).
+export const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting'];
 export const CONFIGS = {
-  // Firewall
-  stateful: { service: 'firewall', name: 'Stateful', rule: 'Wall rating +20%. Invasions it stops leave nothing behind.' },
-  reflective: { service: 'firewall', name: 'Reflective', rule: 'Invasions it stops drop their family\'s code as well.' },
-  inspection: { service: 'firewall', name: 'Deep Inspection', rule: 'Invasions it stops add lead progress toward where they came from.' },
-  adaptive: { service: 'firewall', name: 'Adaptive', rule: 'Wall rating +40% against the family that hits you most, −10% against the rest.' },
-  // Tarpit
-  sticky: { service: 'tarpit', name: 'Sticky', rule: 'Invasions crawl half again as slowly.' },
-  toll: { service: 'tarpit', name: 'Toll', rule: 'Invasions reach your wall worn down to 80%.' },
-  beacon: { service: 'tarpit', name: 'Beacon', rule: 'Invasions from unknown servers add lead as they pass. Swarms are seen coming sooner.' },
-  // Honeypot
-  tar: { service: 'honeypot', name: 'Tar', rule: 'A part whose attack misses you fires its next one a cycle later.' },
-  sting: { service: 'honeypot', name: 'Sting', rule: 'A part whose attack misses you takes a hit back.' },
+  // (The firewall, Tarpit and Honeypot configs became filter stats: filters.mjs.)
   // Hot-patcher
   triage: { service: 'hotpatch', name: 'Triage', rule: 'Double repair below half Integrity, half repair above it.' },
 };
 export const CONFIG_COST = { credits: 250, code: 15, salvage: 6 };
-export const CONFIG_VAULT_CHANCE = 0.08;
+export const CONFIG_VAULT_CHANCE = 0.02; // only Triage is left
 
 export const known = (s) => (s.configsKnown ||= []);
 export const owned = (s) => (s.configsOwned ||= []);

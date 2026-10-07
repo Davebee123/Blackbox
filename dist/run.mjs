@@ -10,7 +10,7 @@ import { findLocation, closest, command, selectEncounter, active, emit, warn, ha
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork } from './invasion.mjs';
 import { contractTakeover, bankCargo, wantedBy, title as contractTitle } from './mail.mjs';
-import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN } from './hidden.mjs';
+import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { STATION, dropOf, dropFile, broadcast } from './station.mjs';
 import { crewCommand } from './crew.mjs';
@@ -655,7 +655,7 @@ export function jackOut(s) {
     spawnHidden(s, loc);
     const near = hiddenNodes(s).filter((n) => n.via === loc.id);
     const n = near.find((x) => flagged(s, x)) || near.find((x) => x.family === f.family) || near[0];
-    if (n) hiddenLead(s, n, HIDDEN.recordLead, 'Trace record: ');
+    if (n) hiddenLead(s, n, routed(s, HIDDEN.recordLead), 'Trace record: ');
   }
   for (const f of pack.filter((x) => x.kind === 'route')) { bankRoute(s, f); if (loc.extraFiles) loc.extraFiles = loc.extraFiles.filter((x) => x.name !== f.name); }
 }

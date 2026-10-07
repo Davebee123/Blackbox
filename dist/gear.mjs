@@ -314,6 +314,8 @@ export const VERSIONS = [
 ];
 // One rule per service. `stat`/`values`: what it adds per version (see serviceValue).
 // `code`: which code it's built from. `special`: needs its source (found in vaults) first.
+// The wall is three knobs (firewall level, filters, harden.sh): what Tarpit, Honeypot and Sandbox
+// did is filter stats now (filters.mjs).
 export const SERVICES = {
   firewall: { name: 'Filter Bay', code: 'cipher', stat: 'firewall', values: [1, 2, 3], unit: ' filter slots', flat: true, about: 'Slots for filters on your firewall.' },
   raid: { name: 'RAID Array', code: 'worm', stat: 'integrity', values: [5, 10, 15], unit: '% max Integrity', about: 'More server Integrity.' },
@@ -321,11 +323,8 @@ export const SERVICES = {
   scrubber: { name: 'Scrubber', code: 'cipher', stat: 'shield', values: [4, 7, 10], unit: '% shield at the start of each home fight', about: 'Every home fight starts with a shield.' },
   hotpatch: { name: 'Hot-patcher', code: 'worm', stat: 'regen', values: [0.3, 0.6, 1], unit: ' Regen', flat: true, about: 'Slow self-repair: per cycle in home fights, per minute between fights.' },
   counter: { name: 'Counter-intrusion', code: 'worm', stat: 'countermeasures', values: [2, 4, 6], unit: ' back per hit', flat: true, about: 'Whatever hits your server takes a hit back (on armor, it breaks a chit).' },
-  honeypot: { name: 'Honeypot', code: 'kernel', stat: 'evasion', values: [3, 5, 8], unit: '% Evasion', about: 'Some attacks on your server hit a decoy and miss.' },
-  sandbox: { name: 'Sandbox', code: 'cipher', stat: 'sanitize', values: [15, 30, 45], unit: '% Sanitize', about: 'Encrypts, Blinds and spawns may fail on your server.' },
-  uplink: { name: 'Route Logger', code: 'cipher', stat: 'lead', values: [5, 10, 15], unit: ' lead per kill', flat: true, about: 'Every kill fills its lead faster, so origins turn up sooner.' },
+  uplink: { name: 'Route Logger', code: 'cipher', stat: 'routeBoost', values: [25, 50, 75], unit: '% more from route files', about: 'Route files, trace records, injectors and log sweeps trace further, so the next layer turns up sooner.' },
   buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
-  tarpit: { name: 'Tarpit', code: 'worm', stat: 'tarpit', values: [50, 100, 150], unit: '% slower invasions', about: 'Invasions crawl toward you: fewer of them, and more warning.' },
   router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' outpost slots', about: 'Run more outposts at once.' },
   scheduler: { name: 'Scheduler', code: 'kernel', stat: 'scheduler', values: [60, 30, 15], unit: '-minute collection', about: 'Collects every outpost on a timer, so you don\'t have to visit.' },
   cron: { name: 'Cron Job', code: ['worm', 'kernel'], special: true, stat: 'cron', values: [0.4, 0.6, 0.8], unit: '× cron hits', about: 'Home fights: every 3rd cycle your server hits the soonest attacker.' },

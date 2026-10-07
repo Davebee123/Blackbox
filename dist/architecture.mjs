@@ -4,8 +4,8 @@
 import { emit, warn, active, serverLevel } from './combat.mjs';
 
 export const ARCHITECTURES = {
-  fortress: { name: 'Fortress', rule: 'Wall rating +25%. Harvesters yield 25% less.' },
-  hub: { name: 'Hub', rule: '+2 outpost bandwidth. Wall rating −15%.' },
+  fortress: { name: 'Fortress', rule: 'Firewall +5 levels. Harvesters yield 25% less.' },
+  hub: { name: 'Hub', rule: '+2 outpost bandwidth. Firewall −3 levels.' },
   lab: { name: 'Lab', rule: 'Crafting costs 30% fewer credits. Outposts are noticed a quarter more often.' },
 };
 export const ARCH_LEVEL = 20;
@@ -15,7 +15,8 @@ export const archOf = (s) => (ARCHITECTURES[s.architecture] ? s.architecture : n
 export const isArch = (s, id) => archOf(s) === id;
 
 // Multipliers the rest of the game asks for.
-export const archWall = (s) => (isArch(s, 'fortress') ? 1.25 : isArch(s, 'hub') ? 0.85 : 1);
+// Firewall levels it adds to your home wall (firewall.mjs wallBonus).
+export const archWall = (s) => (isArch(s, 'fortress') ? 5 : isArch(s, 'hub') ? -3 : 0);
 export const archYield = (s) => (isArch(s, 'fortress') ? 0.75 : 1);
 export const archBandwidth = (s) => (isArch(s, 'hub') ? 2 : 0);
 export const archNotice = (s) => (isArch(s, 'lab') ? 1.25 : 1);

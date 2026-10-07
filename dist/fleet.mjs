@@ -14,7 +14,6 @@ import { codeOf, codeDrop } from './gear.mjs';
 import { FACTIONS } from './factions.mjs';
 import { outposts, fall, hasMod } from './outpost.mjs';
 import { hiddenNodes } from './hidden.mjs';
-import { has as hasConfig } from './configs.mjs';
 import { ratingAt, fragment } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
 
@@ -49,7 +48,7 @@ export function launch(s, at = clock(), faction = null) {
   const o = origin(s, target);
   const ships = Math.min(4, 2 + Math.floor(outposts(s).length / 2) + (rand(s) < 0.3 ? 1 : 0));
   const level = Math.min(CONFIG.maxMobLevel, (target.level || 1) + FLEET.levelUp);
-  const total = Math.round(FLEET.travelMs * (hasConfig(s, 'beacon') ? 1.5 : 1) * (hasMod(target, 'ids') ? 1.5 : 1));
+  const total = Math.round(FLEET.travelMs * (hasMod(target, 'ids') ? 1.5 : 1));
   s.fleetSeq = (s.fleetSeq || 0) + 1;
   s.fleet = { id: 'fl' + s.fleetSeq, family: o.family, key: SHIP[o.family], level, ships, total: ships, target: target.id, fromName: o.name, from: o.from || null, hidden: o.hidden || null, state: 'travel', arriveAt: at + total, travel: total, siegeLeft: FLEET.siegeMs, seed: (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1, mutation: rand(s) < SERVER.mutationChance(level) * 0.75 ? Object.keys(MUTATIONS)[Math.floor(rand(s) * Object.keys(MUTATIONS).length)] : null };
   if (faction) s.fleet.faction = faction;

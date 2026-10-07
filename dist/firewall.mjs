@@ -10,6 +10,8 @@ import { items } from './hidden.mjs';
 import { filterStat } from './filters.mjs';
 import { FACTIONS } from './factions.mjs';
 import { rootWall } from './root.mjs';
+import { archWall } from './architecture.mjs';
+import { consortiumWall } from './consortium.mjs';
 const HUB_LEVEL = (f) => FACTIONS[f].hub.level;
 
 export const FIREWALL = {
@@ -61,10 +63,13 @@ export const defragging = (s, at = clock(), loc = null) => fwAt(s, loc).defragUn
 export const hardenLeft = (s, at = clock(), loc = null) => Math.max(0, fwAt(s, loc).hardenUntil - at);
 // What it blocks outright right now (against a family, its filters' bonus for that family too).
 // Filters are your home firewall's; an outpost's has its Firewall Node instead.
+// The wall is three knobs you turn (its level, filters, harden.sh); everything else that adds
+// levels shows as one "+N": architecture and consortium at home, a Firewall Node and Root 5 on an outpost.
+export const wallBonus = (s, loc = null) => (loc ? ((loc.mods || []).includes('node') ? NODE_PLUS : 0) + rootWall(loc) : archWall(s) + consortiumWall(s));
 export function effLevel(s, at = clock(), family = null, loc = null) {
   const f = fwAt(s, loc);
-  const kit = loc ? ((loc.mods || []).includes('node') ? NODE_PLUS : 0) + rootWall(loc) : filterStat(s, 'strength') + (family ? filterStat(s, family) : 0); // Root 5: +3 (root.mjs)
-  return Math.max(0, f.level + kit - fragLevels(s, loc) - (defragging(s, at, loc) ? FIREWALL.defragLoss : 0) + (hardenLeft(s, at, loc) ? FIREWALL.harden.plus : 0));
+  const kit = loc ? 0 : filterStat(s, 'strength') + (family ? filterStat(s, family) : 0);
+  return Math.max(0, f.level + kit + wallBonus(s, loc) - fragLevels(s, loc) - (defragging(s, at, loc) ? FIREWALL.defragLoss : 0) + (hardenLeft(s, at, loc) ? FIREWALL.harden.plus : 0));
 }
 // Filters: slower fragmentation, a faster defrag (each capped at 80%).
 const less = (s, k) => 1 - Math.min(0.8, filterStat(s, k) / 100);

@@ -329,14 +329,14 @@ test('intercepting the travelling virus pays a growing bounty', () => {
   assert.equal(s.consortium.roamer, null, 'past three hops it burns out');
 });
 
-test('Grid: +10% wall', () => {
+test('Grid: firewall +2 levels', async () => {
+  const { effLevel } = await import('./dist/firewall.mjs');
   const s = world();
   command(s, 'developer location ransomware');
-  const inv = { level: 5, family: 'ransomware', mutation: null, grade: 1 };
-  const base = ratioOf(s, inv);
+  const base = effLevel(s, 0);
   play(s, 'consortium create LOWLIGHT');
   for (const h of PRESENCE.pool.slice(0, 11)) play(s, 'consortium invite ' + h);
-  assert.ok(Math.abs(ratioOf(s, inv) / base - 1.1) < 1e-9);
+  assert.equal(effLevel(s, 0), base + 2);
 });
 
 test('a raid fight left paused holds nothing: the member still crashes', () => {

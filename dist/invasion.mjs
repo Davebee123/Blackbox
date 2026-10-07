@@ -11,12 +11,10 @@ import { tickOutposts } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
 import { tickRetake } from './hubs.mjs';
 import { tickStation } from './station.mjs';
-import { tickConsortium, consortiumOf, consortiumWall, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
-import { has as hasConfig } from './configs.mjs';
+import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { isLive } from './memory.mjs';
 import { effLevel, tickFirewall, wear } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
-import { archWall } from './architecture.mjs';
 import { CONFIG, SERVER, MUTATIONS, createVirus, power, variantFor } from './data.mjs';
 import { SERVICES, codeOf, codeDrop } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
@@ -38,15 +36,8 @@ export function wallRating(s, family = null) {
   const L = effLevel(s, undefined, family);
   return L < 1 ? 100 * I().wall : 100 * power(L) * I().block;
 }
-// Firewall configs bend the rating: Stateful +20%; Adaptive +40% against the family that has hit
-// you most, −10% against the rest.
 export const topFamily = (s) => Object.entries(s.net?.seen || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-export function configRating(s, family) {
-  if (hasConfig(s, 'stateful')) return 1.2;
-  if (hasConfig(s, 'adaptive')) return family && family === topFamily(s) ? 1.4 : 0.9;
-  return 1;
-}
-export const ratioOf = (s, inv) => (wallRating(s, inv.family) * configRating(s, inv.family) * archWall(s) * consortiumWall(s)) / strength(inv.level, inv.mutation, inv.grade);
+export const ratioOf = (s, inv) => wallRating(s, inv.family) / strength(inv.level, inv.mutation, inv.grade);
 export const outcome = (ratio) => (ratio >= I().block ? 'blocked' : ratio > I().breach ? 'siege' : 'breach');
 // 0 at the breach line, 1 at the block line.
 const along = (ratio) => Math.min(1, Math.max(0, (ratio - I().breach) / (I().block - I().breach)));
@@ -68,7 +59,7 @@ export function wallBands(s, rating = wallRating(s)) {
   return { blocks, holds };
 }
 // Travel time from a location: longer from deeper layers, longer still behind a Tarpit.
-export const travelMs = (s, depth = 1) => Math.round((I().travelMs + I().perLayerMs * (Math.max(1, depth) - 1)) * (1 + (serviceValue(s, 'tarpit') * (hasConfig(s, 'sticky') ? 1.5 : 1) + filterStat(s, 'tarpit')) / 100));
+export const travelMs = (s, depth = 1) => Math.round((I().travelMs + I().perLayerMs * (Math.max(1, depth) - 1)) * (1 + filterStat(s, 'tarpit') / 100));
 export const fighting = (s, inv = s.invasion) => !!inv && active(s) && s.encounter.invader === inv.id;
 export const degradedLeft = (s, now = Date.now()) => (s.degraded ? (s.degraded.until ? Math.max(0, s.degraded.until - now) : CONFIG.degradedMs) : 0);
 // "2 min", "40s"
@@ -223,9 +214,7 @@ function arrive(s) {
   const inv = s.invasion;
   inv.left = 0;
   // Tarpit configs: Toll wears it down on the way; Beacon reads an unknown origin's route.
-  if (hasConfig(s, 'toll')) inv.hp = Math.min(inv.hp, 0.8);
   if (filterStat(s, 'sting')) inv.hp = Math.min(inv.hp, 1 - filterStat(s, 'sting') / 100); // a filter's sting: it arrives worn
-  if (hasConfig(s, 'beacon') && inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), 15, 'Beacon: ');
   const r = ratioOf(s, inv);
   const o = outcome(r);
   if (o === 'blocked') return stopped(s, inv, false);
@@ -236,11 +225,11 @@ function arrive(s) {
 
 // The wall stopped it: outright on arrival, or worn down by a siege.
 function stopped(s, inv, ground) {
-  const quiet = hasConfig(s, 'stateful'); // Stateful: dropped at the wall, nothing left behind
-  if (!quiet) for (let i = 0; i < (inv.open ? 2 : 1); i++) s.salvage.push({ name: `${inv.name} fragment`, virus: inv.name, seed: inv.seed });
-  if (hasConfig(s, 'reflective')) { const k = codeOf(inv.family); if (k) gainCode(s, { [k]: 2 * codeDrop(inv.level) }, 'Reflective: '); }
-  if (hasConfig(s, 'inspection')) { if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), 20, 'Deep Inspection: '); else addLead(s, inv.family, 15, 'Deep Inspection: '); }
-  endInvasion(s, `${ground ? `Your wall wore ${inv.name} down to nothing` : `Your wall stopped ${inv.name} (level ${inv.level}) from ${inv.fromName}`}${quiet ? '.' : ': +1 salvage.'}`, { blocked: true });
+  for (let i = 0; i < (inv.open ? 2 : 1); i++) s.salvage.push({ name: `${inv.name} fragment`, virus: inv.name, seed: inv.seed });
+  // A filter of Reflection: it drops some of its family's code.
+  const k = filterStat(s, 'reflect') && codeOf(inv.family);
+  if (k) gainCode(s, { [k]: filterStat(s, 'reflect') }, 'Reflection: ');
+  endInvasion(s, `${ground ? `Your wall wore ${inv.name} down to nothing` : `Your wall stopped ${inv.name} (level ${inv.level}) from ${inv.fromName}`}: +1 salvage.`, { blocked: true });
   gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`);
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
 }

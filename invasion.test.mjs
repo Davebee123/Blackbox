@@ -62,14 +62,13 @@ test('invaders only come from locations you have found; the network plays on whi
   assert.ok(s.logs.some((e) => e.type === 'wall-breach' || e.type === 'wall-siege' || e.type === 'invasion-cleared'), 'it reached your wall while you were away');
 });
 
-test('travel: 2 minutes from layer 1, a minute more per layer, slower behind a Tarpit', () => {
+test('travel: 2 minutes from layer 1, a minute more per layer, slower behind a filter of Tar', () => {
   const s = world();
   assert.equal(travelMs(s, 1), 2 * MIN);
   assert.equal(travelMs(s, 3), 4 * MIN);
-  s.services = { tarpit: 1 };
-  assert.equal(travelMs(s, 1), 3 * MIN, 'Tarpit v1: 50% slower');
-  s.services = { tarpit: 3 };
-  assert.equal(travelMs(s, 1), 5 * MIN);
+  s.services = { firewall: 1 };
+  s.filters = { held: [{ kind: 'filter', rarity: 'custom', level: 1, name: 'Packet Filter of Tar', stats: { strength: 1, tarpit: 50 } }], on: [0] };
+  assert.equal(travelMs(s, 1), 3 * MIN, 'Tar 50%: half again as slow');
 });
 
 test('the wall: no firewall means a breach; a level-6 invader is contested by a level-1 firewall; a level-1 one is blocked', () => {
