@@ -25,7 +25,7 @@ import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay, behindOf } from './progression.mjs';
 import * as BR from './breach.mjs';
-import { breachMarkup, breachFocusY } from './breach-view.mjs';
+import { breachMarkup, breachFocusY, bxUi, bxToggle } from './breach-view.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -371,6 +371,7 @@ function leaveFight() { const to = ended === 'breach' ? 'breach' : ended === 'ru
 function breachClick(verb, arg) {
   if (verb === 'again') { const u = new URL(location.href); u.searchParams.delete('seed'); location.href = u.toString(); return; }
   const n = arg != null && /^-?\d+$/.test(arg) ? Number(arg) : arg;
+  if (verb !== 'equip') bxUi.pack = false; // the pack's pop-over stays up only while you equip from it
   feel.key('click');
   breachDone(verb === 'go' ? BR.go(campaign, n, { pause: true }) : BR.act(campaign, verb, n));
 }
@@ -384,6 +385,13 @@ function breachDone(events) {
   else if (module !== 'breach' && !active(campaign)) go('breach', true);
   dirty = true;
 }
+// The breach strip's Pack pop-over and the tty: a click toggles them; a click elsewhere or Esc closes the pack.
+document.addEventListener('click', (e) => {
+  const t = e.target.closest?.('[data-bx-ui]');
+  if (t) { bxToggle(t.dataset.bxUi, campaign); feel.key('click'); dirty = true; return; }
+  if (bxUi.pack && !e.target.closest?.('.bx-pop')) { bxUi.pack = false; dirty = true; }
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bxUi.pack) { bxUi.pack = false; dirty = true; } });
 // Keep the map where it was across redraws; when you move, bring your row into view.
 let bxAt;
 function breachScroll(keep) {
@@ -392,7 +400,15 @@ function breachScroll(keep) {
   const at = campaign.breach?.at || null;
   if (at !== bxAt || keep == null) { bxAt = at; const y = breachFocusY(campaign); sc.style.scrollBehavior = 'auto'; sc.scrollTop = Math.max(0, y - sc.clientHeight * 0.35); sc.style.scrollBehavior = ''; }
   else sc.scrollTop = keep;
+  // On a phone the page scrolls, not the map: when a node opens a screen, bring it up under the run strip.
+  const key = campaign.breach?.result || campaign.breach?.screen?.kind || null;
+  if (key !== bxScreen) {
+    bxScreen = key;
+    const side = document.querySelector('.bx-side'), hud = document.querySelector('.bx-hud');
+    if (key && side && matchMedia('(max-width: 900px)').matches) { side.style.scrollMarginTop = `${(hud?.offsetHeight || 0) + 8}px`; side.scrollIntoView({ block: 'start' }); }
+  }
 }
+let bxScreen = null;
 // The gain card: a pull pops a one-row card that fades on its own; a jack-out shows everything
 // banked and waits for Enter (or a click, or the next command).
 let gainTimer = 0;

@@ -11,7 +11,7 @@ import { MODS, CVES, rollDraft, patchMods, unpatchMods, modPool } from './dist/d
 import { SUBSYSTEMS, REWRITES } from './dist/rewrites.mjs';
 import { seeded } from './dist/gear.mjs';
 import { winRate, runBreach, CLASSES } from './breachsim.mjs';
-import { breachMarkup } from './dist/breach-view.mjs';
+import { breachMarkup, bxUi, bxToggle } from './dist/breach-view.mjs';
 
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
 function breach(cls = 'breaker', seed = 3) {
@@ -423,6 +423,45 @@ test('capture card: every subsystem listed, stock where you never cleared it', (
   assert.match(html, /Kernel Hook/);
   assert.match(html, /core\.dump/);
   assert.equal((html.match(/class="stock"/g) || []).length, 4);
+});
+
+// ---------- the page ----------
+test('the page: a run strip, one decision, the rewrites in the gutter, the pack behind a button, a short tty', () => {
+  const s = breach('breaker', 3), b = s.breach;
+  bxUi.pack = false; bxUi.log = false; bxUi.seen.clear();
+  let html = breachMarkup(s);
+  // The strip: Signal, tokens and rerolls. Nothing drafted or picked up yet, so no mods, CVEs or Pack, and no placeholders.
+  assert.match(html, /class="bx-hud"/);
+  assert.match(html, new RegExp(`<strong>${b.signal}</strong><small>/${b.max}</small>`));
+  assert.ok(!/none yet|>empty</.test(html), 'absent means empty');
+  assert.ok(!/bx-perks|data-bx-ui="pack"/.test(html));
+  // Nothing to decide: one line. No rewrites grid; the gutter reads plain subsystem names.
+  assert.match(html, /bx-idle[^>]*>.*Jack in: pick a first node/);
+  assert.ok(!/bx-subs|>stock</.test(html), 'no rewrites grid, and no "stock" filler in the gutter');
+  // A mod, a CVE, a rewrite and gear in the pack.
+  b.mods = ['aftershock']; b.cves = ['heartbleed']; b.rewrites = { smtpd: { id: 'spamcannon', tier: 2 } };
+  const it = rollDraft(s, seeded(9), 'gate', { act: 0, level: 10 })[0];
+  b.screen = { kind: 'draft', title: 'Draft', draft: 'virus', cards: [it] };
+  act(s, 'pick', 0);
+  html = breachMarkup(s);
+  assert.match(html, /class="bx-perk mod" title="Aftershock · mod on Crack: Crack also deals/);
+  assert.match(html, /class="bx-perk cve r-stock" title="Heartbleed · common CVE: Heals you/);
+  assert.match(html, /class="bx-gut held[^"]*"[^>]*title="Spam Cannon II on smtpd: Now: [^"]+ Output: Viruses on servers linked to it start with 25% less Integrity\."><span class="bx-gut-dir">smtpd\/<\/span><small>Spam Cannon II<\/small>/);
+  assert.match(html, /data-bx-ui="pack"[^>]*>.*Pack<\/span><b>1<\/b><small>banks at the gate<\/small>/);
+  assert.match(html, /bx-packbtn new/, 'new gear marks the button');
+  assert.ok(!/class="bx-pop"/.test(html), 'the pack is closed until you open it');
+  bxToggle('pack', s);
+  html = breachMarkup(s);
+  assert.match(html, /class="bx-pop"/);
+  assert.match(html, new RegExp(`data-breach="equip" data-arg="${b.pack[0]}"`), 'Equip is in the pop-over');
+  assert.ok(!/bx-packbtn new/.test(html), 'opening the pack marks its gear seen');
+  // The tty: the last two lines, twelve when open.
+  for (let i = 0; i < 20; i++) b.log.push(`line ${i}`);
+  const lines = () => (breachMarkup(s).match(/<div class="bx-log-lines">(.*?)<\/div><\/section>/)[1].match(/<div/g) || []).length;
+  assert.equal(lines(), 2);
+  bxToggle('log');
+  assert.equal(lines(), 12);
+  bxToggle('log'); bxToggle('pack', s);
 });
 
 // ---------- the bot ----------
