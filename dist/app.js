@@ -405,6 +405,8 @@ function markFx(e, mate) {
 
 function react(events) {
   const won = events.find((e) => e.type === 'victory');
+  // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
+  const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
   if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
@@ -468,18 +470,21 @@ function react(events) {
       case 'miss': feel.add('miss', e.target ? row(e.target) : '.bnow', 'MISS'); break;
       case 'evaded': feel.add('evade', MINE, 'EVADED'); break;
       case 'gear': feel.add('good', null); if (e.gains?.length) showGain('Deconstructed', e.name || '', e.gains, false); break;
-      case 'code': if (!won) feel.add('pickup', null); break;
+      case 'code': if (!won && !hush) feel.add('pickup', null); break;
       case 'service': feel.add('good', null); break;
       case 'service-done': feel.add('unlock', null); rewardCard('Installed', e, events, true); break;
       // Invasions: one line each, and only when something changes.
-      case 'invader': notice(e.message); break;
+      case 'invader': if (!e.quiet) notice(e.message); break;
+      case 'wall-scout': feel.add('interrupt', '#meter-integrity', 'SCOUT'); notice(e.message); break;
+      case 'sabotage': feel.add('hurt', '#meter-integrity', 'SABOTAGE'); notice(e.message, true); break;
+      case 'theft': case 'wall-mapped': feel.add('lose', null); notice(e.message, true); break;
       case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
       case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/^JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
       case 'world-event': if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
-      case 'invasion-cleared': if (!won) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
+      case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
       case 'encrypt': art.hit(e.source, 'attack'); flash('ENCRYPTED'); feel.add('encrypt', MINE, `+${e.amount}/cycle`); break;
@@ -490,7 +495,7 @@ function react(events) {
       case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`); if (e.from) art.hit(e.target, 'attack'); break;
-      case 'xp': feel.add('cycle', null, `+${e.amount} XP`); break;
+      case 'xp': if (!hush) feel.add('cycle', null, `+${e.amount} XP`); break;
       case 'status': if (e.mark) markFx(e, false); break;
       case 'fast-kill': feel.add('good', null); break;
       case 'fresh': feel.add('good', null, `FRESH +${e.amount}`); break; // stepping away from fighting paid half again

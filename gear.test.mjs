@@ -664,7 +664,7 @@ test('saves from before categories: a protocol keeps its lead stat\'s category, 
   assert.ok(!rigOf(s).includes('g3'), 'a second one has no slot');
 });
 
-test('resting: between fights the server repairs 1% of its max every 10 seconds, but not while an invader is at the wall', () => {
+test('resting: between fights the server repairs 1% of its max every 10 seconds, at half that while an invader is at the wall', () => {
   CONFIG.restRegen = 0.06;
   const s = fresh();
   s.server.integrity = 50;
@@ -672,11 +672,11 @@ test('resting: between fights the server repairs 1% of its max every 10 seconds,
   assert.equal(s.server.integrity, 51, '1 point every 10 seconds at 100 max');
   s.invasion = { state: 'breach' };
   for (let i = 0; i < 60; i++) idleRegen(s, 1000);
-  assert.equal(s.server.integrity, 51, 'a breach stops it');
+  assert.equal(s.server.integrity, 54, 'a breach halves it');
   s.invasion = null;
   s.encounter = null;
   for (let i = 0; i < 60; i++) idleRegen(s, 1000);
-  assert.equal(s.server.integrity, 57);
+  assert.equal(s.server.integrity, 60);
   CONFIG.restRegen = 0;
 });
 

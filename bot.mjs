@@ -163,8 +163,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
   const invasion = () => {
     const inv = s.invasion;
     if (!inv || inv.state === 'travel' || s.run || active(s) || inv.level > hackerLevel(s) + 3) return false;
-    if ((tries[inv.id] || 0) >= 2) return false; // lost to it twice: leave it to the wall, like a player would
-    tries[inv.id] = (tries[inv.id] || 0) + 1;
+    const key = inv.id + ':' + (inv.mine || 0); // a pack or pair is a fight per virus: count tries per virus
+    if ((tries[key] || 0) >= 2) return false; // lost to it twice: leave it to the wall, like a player would
+    tries[key] = (tries[key] || 0) + 1;
     (play(s, 'jack in') || []).forEach(note);
     fight();
     stats.invasions = (stats.invasions || 0) + 1;

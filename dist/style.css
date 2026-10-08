@@ -784,6 +784,16 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .wall-bar { height: 6px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--bg); overflow: hidden; }
 .wall-bar span { display: block; height: 100%; background: var(--amber); transition: width 0.9s linear; }
 .wall-bar.breach span { background: var(--hot); }
+/* An invasion's warning line, what it pays, your streak (invasion.mjs). */
+.inv-tell { margin: 4px 0; color: var(--text); font-size: 13px; line-height: 1.4; }
+.inv-pay { margin: 4px 0; }
+.inv-pay .rw b { font: 600 12px var(--mono); }
+.inv-streak { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.inv-streak .tag .glyph { width: 12px; height: 12px; margin-right: 3px; vertical-align: -2px; }
+.wall-card .invader.watch { border-left-color: var(--hot); border-left-style: dotted; }
+.wall-bar.watch span { background: var(--hot); }
+.mnode.invader.watch .vbody { fill: rgba(255, 91, 61, 0.25); stroke: var(--hot); stroke-width: 1.2; }
+.gstash .svc.off { opacity: 0.7; border-style: dashed; }
 .degraded { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; padding: 6px 10px; border: 1px solid var(--hot); border-radius: 4px; background: rgba(255, 91, 61, 0.08); font: 600 12px var(--mono); letter-spacing: 1px; cursor: help; }
 .degraded b { color: var(--hot); }
 .degraded span { color: var(--text); }

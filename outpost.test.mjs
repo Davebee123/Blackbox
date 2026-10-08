@@ -141,7 +141,7 @@ test('an undefended swarm puts the outpost in lockdown: nothing made, the store 
   const deep = s.locations.at(-1);
   deep.parent = a.id;
   command(s, `developer outpost ${a.id}`, T0);
-  a.outpost.fw = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing to stop them
+  a.outpost.fw = { pin: 0, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing to stop them
   quiet(s);
   startSiege(s, a); s.fleet.arriveAt = T0; // its natives, at the door
   a.outpost.stock = { code: 3 };

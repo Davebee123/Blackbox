@@ -7,7 +7,8 @@ import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
-import { jackIn, developerNetwork } from './invasion.mjs';
+import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
+import { developerWall } from './firewall.mjs';
 import { contractTakeover, bankCargo, wantedBy, title as contractTitle } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
@@ -708,8 +709,11 @@ export function play(s, input) {
   if (word === 'crew') return crewCommand(s, rest); // simulated co-op (crew.mjs)
   if (word === 'consortium' || word === 'guild') return consortiumCommand(s, input.trim().replace(/^\S+\s*/, '')); // consortium.mjs (as typed: a name keeps its capitals)
   if (['online', 'who', 'friends', 'friend'].includes(word)) { const first = s.serial; presenceCommand(s, word, rest, emit, warn); return since(s, first); } // presence.mjs
-  if (text === 'jack in' || text === 'defend') return jackIn(s);
-  if (text === 'developer invade' || text === 'developer crash') return developerNetwork(s, text);
+  if (text === 'jack in' || text === 'defend' || text === 'intercept') return jackIn(s, text === 'intercept' ? 'intercept' : 'jack in');
+  if (text === 'invasions' || text === 'invasion') return invasionsCommand(s);
+  if (/^developer invade( \w+)?$/.test(text) || text === 'developer crash') return developerNetwork(s, text);
+  if (/^developer wall (\d+|off)$/.test(text)) { const first = s.serial; developerWall(s, text); return since(s, first); } // pin your wall's base (firewall.mjs)
+  if (/^(install|uninstall) /.test(text)) { const first = s.serial; if (sabotageBlock(s, text)) return since(s, first); } // a saboteur holds a service (invasion.mjs)
   if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { const first = s.serial; deal(s, text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null)); return since(s, first); } // an event now
   const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out');
   if (!s.run || !isRun) return command(s, input);

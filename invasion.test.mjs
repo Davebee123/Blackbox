@@ -20,7 +20,7 @@ function world({ level = 1, family = 'worm', depth = 1, services = {}, fw = 0 } 
   command(s, `developer location ${family}`);
   Object.assign(s.locations[0], { level, depth });
   s.services = { ...services };
-  s.firewall = { level: fw, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
   s.clock = 0;
@@ -91,17 +91,17 @@ test('the wall: no firewall means a breach; a level-6 invader is contested by a 
   assert.equal(v2.salvage.length, salvage + 1);
   assert.ok(ev.some((e) => e.type === 'invasion-cleared' && e.blocked));
   assert.ok(ev.some((e) => e.type === 'xp'), 'a trickle of XP');
-  assert.ok(v2.net.next >= I.everyMs[0] && v2.net.next <= I.everyMs[1], 'the next one sets out 6–10 minutes later');
+  assert.ok(v2.net.next >= I.everyMs[0] && v2.net.next <= I.everyMs[1], 'the next one sets out 20–30 minutes later');
 });
 
 test('wall bands: what your wall blocks and holds, by invader level', () => {
   const s = fresh();
   command(s, 'developer server 10');
-  s.firewall = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  s.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   assert.deepEqual(wallBands(s), { blocks: 0, holds: 0 }, 'no firewall to speak of');
-  s.firewall.level = 1;
+  s.firewall.pin = 1;
   assert.deepEqual(wallBands(s), { blocks: 1, holds: 13 }, 'it blocks its own level; the server level adds nothing');
-  s.firewall.level = 10;
+  s.firewall.pin = 10;
   assert.deepEqual(wallBands(s), { blocks: 10, holds: 26 });
   assert.equal(outcome(1.2), 'blocked');
   assert.equal(outcome(0.8), 'breach');
@@ -128,7 +128,7 @@ test('a firewall upgrade mid-breach turns it into a siege', () => {
   const s = world({ level: 6 });
   atWall(s);
   assert.equal(s.invasion.state, 'breach');
-  s.firewall.level = 1;
+  s.firewall.pin = 1;
   const ev = wait(s, 5000);
   assert.equal(s.invasion.state, 'siege');
   assert.ok(types(ev).includes('wall-siege'));
@@ -198,8 +198,9 @@ test('crash: a breach chips you to zero, the server reboots at half and runs deg
   assert.equal(s.server.integrity, 50);
   assert.ok(s.degraded);
   assert.equal(wallRating(s), 0, 'the wall is down');
+  assert.equal(s.invasion, null, 'it got what it came for and left: one crash, not a loop of them');
   wait(s, 5 * MIN);
-  assert.equal(s.server.integrity, 50, 'the invader waits: no chip while degraded');
+  assert.equal(s.server.integrity, 50, 'nothing chips while degraded');
   const left = degradedLeft(s, s.clock);
   assert.ok(left > 4.5 * MIN && left < 5.5 * MIN, 'about 5 of the 10 minutes left');
   // Server XP stops; your own XP doesn't.
@@ -207,15 +208,25 @@ test('crash: a breach chips you to zero, the server reboots at half and runs deg
   play(s, 'developer level 3');
   assert.equal(s.serverXp, sxp, 'the rebooting server earns nothing');
   assert.equal(s.hackers.breaker.level, 3);
-  // The real clock runs out even with the game closed, and the breach resumes once it's back up.
+  // The real clock runs out even with the game closed.
   s.clock += 10 * MIN;
   const back = tickNetwork(s, s.clock);
   assert.ok(types(back).includes('rebooted'));
   assert.equal(s.degraded, null);
-  const hp = s.server.integrity;
-  assert.ok(hp < 50, 'it chipped again after the reboot, while you were still away');
-  wait(s, MIN);
-  assert.equal(s.server.integrity, hp - 1, 'and keeps on');
+  // An invader you lost a fight to stays at the wall, and chips again once the server is back up.
+  const t = world();
+  atWall(t);
+  play(t, 'jack in');
+  t.server.integrity = 1;
+  t.encounter.cycle = t.encounter.virus.parts.find((p) => p.attack).attack.due;
+  command(t, 'hold');
+  resolveCycle(t);
+  assert.ok(t.degraded && t.invasion);
+  t.clock += 10 * MIN;
+  tickNetwork(t, t.clock);
+  const hp = t.server.integrity;
+  wait(t, 2 * MIN);
+  assert.ok(t.server.integrity < hp, 'and keeps on');
 });
 
 test('Degraded mode pauses the install queue', () => {

@@ -28,7 +28,7 @@ import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
-import { portsCommand } from './invasion.mjs';
+import { portsCommand, invaderDown, invasionRestore } from './invasion.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
@@ -36,7 +36,7 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 
-export const SAVE_VERSION = 32; // v31: subclasses (retireClassTrees); v32: Payload is a percentage
+export const SAVE_VERSION = 33; // v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -378,7 +378,7 @@ export function idleRegen(s, ms) {
   }
   if (active(s) || s.server.integrity <= 0 || s.server.integrity >= s.server.max) return changed;
   const besieged = s.invasion && ['siege', 'breach'].includes(s.invasion.state);
-  const rate = gearStat(s, 'regen', 'server') + (besieged ? 0 : CONFIG.restRegen * s.server.max);
+  const rate = gearStat(s, 'regen', 'server') + CONFIG.restRegen * s.server.max * (besieged ? 0.5 : 1); // half rate while an invasion is at the wall
   if (!rate) return changed;
   s.server.regenAcc = (s.server.regenAcc || 0) + (rate * ms) / 60000;
   if (s.server.regenAcc < 1 - 1e-9) return changed;
@@ -1463,7 +1463,7 @@ export function finish(s, result) {
     if (item) addItem(s, item);
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
     if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
-    if (inv) endInvasion(s, `${inv.name} is gone from your wall.`);
+    if (inv) invaderDown(s, inv); // the next of a pack steps up, or the bounty (invasion.mjs)
     if (e.outpost) outpostWon(s, e);
     if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
@@ -3119,7 +3119,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
@@ -3250,6 +3250,7 @@ export function restore(raw) {
     // v32: Payload was flat (+1–2 a tick); it's a percentage now, about what the flat bonus was worth.
     if (was < 32) for (const it of s.stash || []) if (it.stats?.payload) it.stats.payload = Math.round(it.stats.payload * 7);
     retireClassTrees(s, was); // subclasses: each class's old tree moves to its default subclass
+    invasionRestore(s, was); // v33: invasion kinds, bounties, signatures
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts

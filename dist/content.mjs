@@ -148,7 +148,7 @@ export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once 
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
   demolitionist: 'Breaker: Demolitionist', overclocker: 'Breaker: Overclocker', warden: 'Bastion: Warden', sysop: 'Bastion: Sysop',
   payload: 'Infiltrator: Payload', phantom: 'Infiltrator: Phantom', herder: 'Operator: Herder', hijacker: 'Operator: Hijacker' }; // a subclass lean: three times as likely for it, twice for its class
-export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)' };
+export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)' };
 
 // One line of plain text for an effect: "+25% damage when you fired in a Sync Window."
 export function fxText(fx, statName = (k) => k) {

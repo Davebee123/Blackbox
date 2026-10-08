@@ -120,7 +120,7 @@ export const TIPS = [
   // ---------- server ----------
   { id: 'server-ports', page: 'server', at: '.server-head', text: 'Your server runs services in its service slots. Each one costs code from the viruses you kill, and takes real time to install.' },
   { id: 'server-wall', page: 'server', at: '.wall-card .fw-lv', text: 'Your firewall stops invasions up to its level. Servers on your network send them, even while you are away. Amber or red up top means one of them can get past.' },
-  { id: 'fw-upgrade', page: 'server', at: '.fw-up', text: 'Raise your firewall a level for credits and Cipher code. It only goes up when you do this.' },
+  { id: 'fw-upgrade', page: 'server', at: '.fw-up', text: 'Your firewall keeps up with the servers on your network by itself. An upgrade buys a margin on top, up to +6, for credits and code.' },
   { id: 'fw-frag', page: 'server', at: '.fw-grid i.frag', text: 'Each invasion breaks some blocks. Every 4 broken blocks cost a level. Defrag repairs them for credits, and the wall is weaker while it runs.' },
   { id: 'server-queue', page: 'server', at: '.install', text: 'Installs run one at a time in real time. They keep going while you fight, go on runs, or close the game.' },
   { id: 'server-blueprints', page: 'server', at: '.blueprint-card', text: 'You can only build a service once you have its blueprint. Blueprints wait in vaults, and a kill drops one now and then.' },

@@ -244,7 +244,7 @@ test('the hidden network: invaders from servers you haven’t found, traced back
   assert.ok(near.every((n) => n.depth === 2 && n.lead === 0 && !n.pinged));
   const share = HIDDEN.invaderShare;
   HIDDEN.invaderShare = 1;
-  s.firewall = { level: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing blocks it at the wall
+  s.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing blocks it at the wall
   play(s, 'developer invade');
   HIDDEN.invaderShare = share;
   const inv = s.invasion;

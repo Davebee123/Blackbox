@@ -206,7 +206,7 @@ test('Phase 4: a hot strain every 4 hours (the same for everyone), first decodes
   assert.equal(hotStrain(a, T), hotStrain(b, T + 1000), 'everyone sees the same one');
   assert.equal(HOT.everyMs, 4 * 3600000);
   assert.equal(DECODE_XP, 2);
-  const r = at(10); r.firewall = { level: 60, frag: 0, defragUntil: 0, hardenUntil: 0 };
+  const r = at(10); r.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   tickNetwork(r, T); tickNetwork(r, T + 3 * 3600000);
   assert.ok(Math.abs(r.rested - 3 * killXp(10)) <= 2, `three safe hours: three kills banked (${r.rested})`);
 });

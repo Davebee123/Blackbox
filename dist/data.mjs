@@ -114,7 +114,7 @@ export const CONFIG = {
   // which runs on the real clock.
   invasion: {
     firstMs: 3 * 60000, // after your first location is found
-    everyMs: [6 * 60000, 10 * 60000], // between one invader clearing and the next setting out
+    everyMs: [20 * 60000, 30 * 60000], // between one invasion clearing and the next setting out (fewer, bigger: invasion.mjs KINDS)
     travelMs: 2 * 60000, // from a layer-1 location; +1 minute per layer deeper
     perLayerMs: 60000,
     maxTickMs: 5000, // a long gap (closed tab, sleep) counts as this much
@@ -129,7 +129,7 @@ export const CONFIG = {
     open: { pace: 0.4, reward: 1.5 }, // Open ports (online only): invasions 2.5× as often, each worth +50%
   },
   // Resting: between fights the server repairs itself, 2% of its max a minute (empty to full in
-  // about 50 minutes), offline too. It stops while an invader is sieging or breaching your wall.
+  // about 50 minutes), offline too, at half that while an invasion is contested or breaching at your wall.
   // Or pay to top up (topUp above).
   restRegen: 0.02,
   signalRest: 0.2, // Signal back per minute at home, out of a fight: empty to full in 5 minutes, offline too

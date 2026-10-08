@@ -1369,6 +1369,81 @@ export default {
         }
       ],
       "flavour": "The mining pool paid out to nobody for a year. It pays you now."
+    },
+    {
+      "id": "tripwire",
+      "name": "Tripwire",
+      "base": "reverse-shell",
+      "level": 6,
+      "primary": {
+        "signal": 18,
+        "regen": 0.8
+      },
+      "secondary": {
+        "evasion": 3
+      },
+      "effect": {
+        "when": "struck",
+        "do": "halve",
+        "limit": "fight"
+      },
+      "sources": [
+        {
+          "kind": "invasion"
+        }
+      ],
+      "flavour": "It goes off before they know it is there."
+    },
+    {
+      "id": "honeynet",
+      "name": "Honeynet",
+      "base": "dropper",
+      "level": 14,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 20
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "crit",
+        "do": "heal",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "invasion"
+        }
+      ],
+      "flavour": "Every box on it is bait, and every one of them is listening."
+    },
+    {
+      "id": "sinkhole",
+      "name": "Sinkhole",
+      "base": "zero-click",
+      "level": 24,
+      "primary": {
+        "damage": [
+          22,
+          28
+        ]
+      },
+      "secondary": {
+        "accuracy": 4
+      },
+      "effect": {
+        "when": "break",
+        "do": "refund",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "invasion"
+        }
+      ],
+      "flavour": "Point their traffic at nothing and watch it fall in."
     }
   ]
 };
