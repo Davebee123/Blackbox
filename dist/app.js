@@ -24,6 +24,8 @@ import { createHitFx } from './hitfx.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay, behindOf } from './progression.mjs';
+import * as BR from './breach.mjs';
+import { breachMarkup, breachFocusY } from './breach-view.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -33,7 +35,7 @@ const playtest = params.get('playtest');
 // ---------- state ----------
 let campaign = load();
 if (params.has('dev')) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
-let module = playtest === 'story' ? 'mail' : 'map';
+let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : 'map';
 let selected = null;
 let mapSel = 'server';
 let nag = {}; // when the pager last shook for an alert, and the breach last pinged
@@ -66,6 +68,19 @@ function load() {
     s.tutorialCompleted = true;
     s.profile = { handle: params.get('handle') || 'tester', pwLen: 6, since: Date.now() };
     storyAt(s, params.get('beat'));
+    return s;
+  }
+  // The roguelite prototype (breach.mjs): ?playtest=breach&class=operator&level=10&sub=hijacker&seed=7. One breach of
+  // MERIDIAN-MX-14 on a fresh campaign that is never saved: a real save is not read, touched or migrated.
+  if (playtest === 'breach') {
+    const s = fresh();
+    s.rng = newRng();
+    s.tutorialCompleted = true;
+    s.profile = { handle: params.get('handle') || 'tester', pwLen: 6, since: Date.now() };
+    const cls = ['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('class') || params.get('cls')) ? params.get('class') || params.get('cls') : 'breaker';
+    const lv = Math.max(1, Math.min(50, Number(params.get('level')) || 10));
+    BR.outfit(s, { cls, level: lv, sub: params.get('sub') || params.get('subclass'), gearSeed: Number(params.get('seed')) || 0 });
+    BR.startBreach(s, { seed: Number(params.get('seed')) || (newRng() % 100000) + 1, level: lv });
     return s;
   }
   if (playtest) {
@@ -321,7 +336,7 @@ function showSpoils(events) {
   const to = need ? Math.min(1, h.xp / need) : 1;
   const xp = { level: h.level, from: leveled ? 0 : Math.max(0, (h.xp - gained) / (need || 1)), to };
   const head = { name: e.virus.name, level: e.virus.level, family: FAMILY_NAMES[e.virus.family] || '', cycles: e.cycle, damage: e.metrics.attackDamage, clean: !e.metrics.attackDamage };
-  el.innerHTML = V.spoilsMarkup(head, rows, xp, ended === 'run' && campaign.run ? 'Back to the run' : 'Back to the map');
+  el.innerHTML = V.spoilsMarkup(head, rows, xp, ended === 'breach' ? 'Back to the breach' : ended === 'run' && campaign.run ? 'Back to the run' : 'Back to the map');
   el.hidden = false;
   // Each line lands with a small tick; names decode from noise first.
   const motion = campaign.settings.motion !== false;
@@ -350,7 +365,34 @@ function decode(node) {
   step();
 }
 // After a won fight: back where you came from (the run, or the map).
-function leaveFight() { const to = ended === 'run' && campaign.run ? 'net' : 'map'; ended = null; go(to); }
+function leaveFight() { const to = ended === 'breach' ? 'breach' : ended === 'run' && campaign.run ? 'net' : 'map'; ended = null; go(to); }
+// ---------- a breach (breach.mjs) ----------
+// A button on the breach page: a move on the map, or the screen's verb. A fight starts paused on the Fight page.
+function breachClick(verb, arg) {
+  if (verb === 'again') { const u = new URL(location.href); u.searchParams.delete('seed'); location.href = u.toString(); return; }
+  const n = arg != null && /^-?\d+$/.test(arg) ? Number(arg) : arg;
+  feel.key('click');
+  breachDone(verb === 'go' ? BR.go(campaign, n, { pause: true }) : BR.act(campaign, verb, n));
+}
+function breachDone(events) {
+  if (campaign.encounter?.breach && active(campaign) && !campaign.encounter.paused && events.some((e) => e.type === 'engage')) campaign.encounter.paused = true;
+  react(events);
+  const warning = events.findLast((e) => e.type === 'warning');
+  if (warning) notice(warning.message, true);
+  else { const last = events.findLast((e) => /^breach/.test(e.type) || e.type === 'intrusion'); if (last && module !== 'breach') notice(last.message); }
+  if (events.some((e) => e.type === 'engage') && active(campaign)) { go('combat'); notice('Fight paused. Any order starts it.'); }
+  else if (module !== 'breach' && !active(campaign)) go('breach', true);
+  dirty = true;
+}
+// Keep the map where it was across redraws; when you move, bring your row into view.
+let bxAt;
+function breachScroll(keep) {
+  const sc = $('bx-scroll');
+  if (!sc) return;
+  const at = campaign.breach?.at || null;
+  if (at !== bxAt || keep == null) { bxAt = at; const y = breachFocusY(campaign); sc.style.scrollBehavior = 'auto'; sc.scrollTop = Math.max(0, y - sc.clientHeight * 0.35); sc.style.scrollBehavior = ''; }
+  else sc.scrollTop = keep;
+}
 // The gain card: a pull pops a one-row card that fades on its own; a jack-out shows everything
 // banked and waits for Enter (or a click, or the next command).
 let gainTimer = 0;
@@ -470,7 +512,7 @@ function react(events) {
         if (fx && big) feel.add(() => juice.quake(frac, e.crit));
         break;
       }
-      case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity) && !active(campaign) && !won && !ended) rewardCard('Found', e, [e], true); break;
+      case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity) && !active(campaign) && !won && !ended && !campaign.breach) rewardCard('Found', e, [e], true); break; // a breach shows its own pack
       case 'miss': feel.add('miss', e.target ? row(e.target) : '.bnow', 'MISS'); break;
       case 'evaded': feel.add('evade', MINE, 'EVADED'); break;
       case 'gear': feel.add('good', null); if (e.gains?.length) showGain('Deconstructed', e.name || '', e.gains, false); break;
@@ -567,7 +609,7 @@ function react(events) {
         ending = true; hideTip(false); ended = e.mode || 'home'; endedAt = performance.now();
         setTimeout(() => { ending = false; }, 900);
         break;
-      case 'crashed': flash(e.mode === 'run' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); break;
+      case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } break;
       case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
@@ -657,6 +699,13 @@ function run(raw) {
     const o = opts.find((x) => x.key === text || x.label.toLowerCase() === text);
     if (o) return pickHub(o.key, text);
     if (['help', 'menu', 'ls', '?'].includes(text)) { hubEcho(text); hubLines.push(menuLine); dirty = true; return; }
+  }
+  // A breach (breach.mjs): ls, cd, tree and the screen's verbs, out of a fight. Jacking out mid-fight isn't one.
+  if (campaign.breach) {
+    BR.settle(campaign); // a fight that ended: your Signal back on the breach, and gear loads again
+    if (text === 'jack out' && active(campaign)) return notice('No jacking out mid-fight on a breach. Win it, or lose the pack.', true);
+    if (!active(campaign)) { const ev = BR.breachCommand(campaign, text); if (ev) return breachDone(ev); }
+    if (/^(equip|unequip) /.test(text) && !active(campaign) && !(campaign.breach.screen?.kind === 'defrag' && campaign.breach.screen.reslot)) return notice('Your bar changes only at a defrag (Re-slot).', true);
   }
   // Developer commands are for tests and ?dev / playtest pages, not the real game (a crashed
   // server's reboot excepted: the engine points you to it).
@@ -754,7 +803,9 @@ function go(name, quiet = false) {
   if (name === 'daemons') { loadoutTab = 'daemons'; name = 'loadout'; } // a Loadout tab now
   // Contextual tabs only exist while there is something there.
   if (name === 'combat' && !active(campaign) && !(campaign.encounter && campaign.encounter.mode === 'run')) name = 'map';
-  if (name === 'net' && !campaign.run) name = 'map';
+  if (name === 'net' && (!campaign.run || campaign.run.breach)) name = campaign.breach ? 'breach' : 'map';
+  if (campaign.breach && name === 'map') name = 'breach';
+  if (name === 'breach' && !campaign.breach) name = 'map';
   // Stepping away from a live fight pauses it; coming back picks it up again.
   const leaving = module === 'combat' && name !== 'combat' && active(campaign) && !campaign.encounter.paused;
   if (leaving) { campaign.encounter.paused = true; campaign.encounter.autoPaused = true; notice('Fight paused.'); }
@@ -996,7 +1047,7 @@ function renderMeters() {
     const sig = campaign.run ? campaign.run.integrity : signalNow(campaign), max = campaign.run ? campaign.run.max : maxSignal(campaign);
     const f = max ? sig / max : 0, need = CONFIG.zone.minSignal;
     const m = $('meter-signal');
-    m.hidden = !!campaign.run || active(campaign); // a fight has its own bars
+    m.hidden = !!campaign.run || active(campaign) || !!campaign.breach; // a fight has its own bars, a breach its own page
     $('signal-value').textContent = sig;
     const lit = Math.ceil(f * 5 - 1e-9);
     m.querySelectorAll('.sig-bars i').forEach((b, i) => b.classList.toggle('on', i < lit));
@@ -1016,7 +1067,9 @@ function renderMeters() {
   // On a run, Signal lives in the prompt, the net header and the combat HUD.
   // Fight and Run tabs appear only while there is a fight or a run.
   $('tab-combat').hidden = !active(campaign);
-  $('tab-net').hidden = !campaign.run;
+  $('tab-net').hidden = !campaign.run || !!campaign.run.breach;
+  $('tab-breach').hidden = !campaign.breach;
+  document.body.classList.toggle('breach-mode', !!campaign.breach); // a breach playtest: the campaign's tabs and meters step aside
   document.body.classList.toggle('ctx-tabs', active(campaign) || !!campaign.run);
   $('combat-dot').hidden = !active(campaign) || module === 'combat';
   const unreadMail = (campaign.mail?.list || []).filter((m) => !m.read).length;
@@ -1155,9 +1208,11 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
+    const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
+    if (module === 'breach') breachScroll(keep);
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {
@@ -1200,6 +1255,11 @@ function renderPrompt() {
   if (active(campaign) && V.phaseOf(campaign) === 'them') {
     el.className = 'prompt acting';
     el.innerHTML = `<span>${V.esc(campaign.encounter.virus.name)} acts…</span>`;
+  } else if (campaign.breach) {
+    const b = campaign.breach, sig = BR.signalOf(campaign), max = BR.maxOf(campaign);
+    el.className = 'prompt run ' + V.signalLevel({ integrity: sig, max });
+    el.innerHTML = `<span class="p-sig">[${sig}/${max}]</span> <span class="p-loc">${V.esc(BR.SERVER_CARD.id)}:</span><span class="p-cwd">${V.esc(BR.currentNode(campaign)?.path || '/')}$</span>`;
+    $('command-input').placeholder = b.result ? '' : 'ls · cd <n> · tree';
   } else if (r) {
     el.className = 'prompt run ' + V.signalLevel(r);
     el.innerHTML = `<span class="p-sig">[${r.integrity}/${r.max}]</span> <span class="p-loc">${V.esc(currentLocation(campaign).id)}:</span><span class="p-cwd">${V.esc(r.cwd)}$</span>`;
@@ -1357,7 +1417,7 @@ function services() {
   const dt = Math.min(5000, now - lastTick); lastTick = now;
   if (!document.hidden && now - lastInput < 120000 && !playtest) tickPlay(campaign, dt); // and the clock of the level your class is on (Behind)
   const hp = campaign.server.integrity;
-  const events = [...tickNetwork(campaign, now), ...tickServices(campaign, now)];
+  const events = campaign.breach ? [] : [...tickNetwork(campaign, now), ...tickServices(campaign, now)]; // a breach playtest has no network
   if (events.length) { react(events); save(); }
   // A siege or breach took a bite: the meter says so.
   const bite = hp - campaign.server.integrity;
@@ -1725,6 +1785,8 @@ document.addEventListener('click', (e) => {
   if (stf) { V.stashUi.filter = stf.dataset.stashFilter; feel.key('click'); dirty = true; return; }
   const sf = e.target.closest('[data-sweep-filter]');
   if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
+  const bx = e.target.closest('[data-breach]');
+  if (bx && !bx.disabled) { breachClick(bx.dataset.breach, bx.dataset.arg); return; }
   const direct = e.target.closest('[data-run]');
   if (direct) { run(direct.dataset.run); $('command-input').focus(); return; }
   const pre = e.target.closest('[data-prefill]');
@@ -1998,11 +2060,11 @@ document.addEventListener('keydown', (e) => {
   if (e.key.length === 1 && !/input|textarea/i.test(e.target.tagName)) $('command-input').focus();
 });
 
-if (playtest) document.title = 'BLACKBOX · playtest';
-go(active(campaign) ? 'combat' : campaign.run ? 'net' : playtest === 'story' ? 'mail' : 'map');
+if (playtest) document.title = playtest === 'breach' ? 'BLACKBOX · breach' : 'BLACKBOX · playtest';
+go(active(campaign) ? 'combat' : campaign.breach ? 'breach' : campaign.run ? 'net' : playtest === 'story' ? 'mail' : 'map');
 // No intrusion waits at the gate any more: you go to the rogue server to find fights.
 if (campaign.encounter?.phase === 'alert' && campaign.encounter.mode === 'home' && !campaign.encounter.invader) campaign.encounter = null;
-{ const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
+if (!campaign.breach) { const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
 if (!playtest) { if (!campaign.profile) firstLogin(); else shell.boot(); }
 requestAnimationFrame(frame);
 window.blackbox = { get state() { return campaign; }, run };
