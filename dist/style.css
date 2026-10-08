@@ -3330,3 +3330,9 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .fw-act { flex-wrap: wrap; row-gap: 2px; }
 .fw-act .fa-name { white-space: nowrap; }
 .fw-act .fa-cost { margin-left: auto; }
+
+/* Sync bonus: the class's Sync Window extra, in the window's yellow (talent tree root, class picker). */
+.troot.tsync { border-color: rgba(255, 216, 92, 0.35); }
+.troot .tag.sync { color: #1a1400; border-color: var(--next); background: var(--next); font-weight: 600; }
+.cp-sync { font-size: 11px; line-height: 1.4; color: var(--muted); }
+.cp-sync b { color: var(--next); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 10px; margin-right: 4px; }

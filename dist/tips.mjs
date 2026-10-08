@@ -7,8 +7,8 @@
 // on screen) · when (optional: state it needs) · text · pause (fight tips) · under (optional:
 // sit below this container instead, so the thing it explains stays in view).
 import { keyMap } from './combat.mjs';
-import { MUTATIONS, QUIRKS, STRAINS, GUARDS } from './data.mjs';
-import { hackerLevel, loadedOn } from './combat.mjs';
+import { MUTATIONS, QUIRKS, STRAINS, GUARDS, ARCHETYPES, SYNC } from './data.mjs';
+import { hackerLevel, loadedOn, classOf } from './combat.mjs';
 const spare = (s) => (s.stash || []).some((it) => !loadedOn(s, it.id)); // something you could load
 import { retakeOf } from './hubs.mjs';
 
@@ -82,7 +82,7 @@ export const TIPS = [
   { id: 'fight-timeline', page: 'combat', pause: true, at: '.board .bnow', under: '#board', when: (s) => s.encounter?.phase === 'active', joins: ['fight-keys', 'fight-armor', 'sync'], text: 'This board shows the virus\'s attacks. The Now column is this cycle, and each column to the right is one cycle later. Each cycle you get one move, and it happens before the attacks in Now hit you.' },
   { id: 'fight-keys', page: 'combat', pause: true, at: '#tray', under: '.command-dock', when: (s) => s.encounter?.phase === 'active', text: 'To make your move, type a skill and a part, then press Enter. Or press a skill\'s number, click a part, and press Enter. If the timer runs out first, key 1 hits the last part you hit again.' },
   { id: 'fight-armor', page: 'combat', pause: true, at: '.board .chits', under: '#board', text: 'The ◆ next to a part is armor. A hit on an armored part removes one ◆ and does no damage, so clear the armor with your weaker skills before using your strongest one.' },
-  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'The bar under Now fills as the cycle runs. Press Enter while it is inside the bright window and your move does 10% more damage, plus a bonus for your class.' },
+  { id: 'sync', page: 'combat', at: '#sync-win', pause: true, text: 'The bar under Now fills as the cycle runs. Press Enter while it is inside the bright window and your move does 10% more damage.', more: (s) => `As ${/^[AEIOU]/.test(ARCHETYPES[classOf(s)].name) ? 'an' : 'a'} ${ARCHETYPES[classOf(s)].name}, it also ${SYNC[classOf(s)].rule.replace(/^./, (c) => c.toLowerCase())}` },
   { id: 'fight-patch', page: 'combat', pause: true, at: '.board .intent.patch', under: '#board', text: 'A part with no ◆ left gets one back five cycles later, unless you break it first.' },
   { id: 'fight-veiled', page: 'combat', pause: true, at: '.board .intent.hidden', under: '#board', text: 'This part hides when it will hit. Remove its ◆ to see its timer.' },
   { id: 'fight-encrypt', page: 'combat', pause: true, at: '.board .intent.crypt', under: '#board', text: 'Encryption damages you every cycle and grows each time it lands. It stops when you break the Encryptor.' },
@@ -161,10 +161,11 @@ export function nextTip(s, page, visible) {
     if (t.page !== '*' && t.page !== page) continue;
     if (t.when && !t.when(s, page)) continue;
     if (!visible(t.at)) continue;
-    if (!t.joins) return t;
+    const own = (x) => x.more ? { ...x, text: `${x.text} ${x.more(s)}` } : x; // more: a sentence that depends on you (your class)
+    if (!t.joins) return own(t);
     const more = t.joins.map((id) => TIPS.find((x) => x.id === id))
-      .filter((x) => x && !seen[x.id] && (!x.when || x.when(s, page)) && visible(x.at));
-    return more.length ? { ...t, steps: [t, ...more], covers: more.map((x) => x.id) } : t;
+      .filter((x) => x && !seen[x.id] && (!x.when || x.when(s, page)) && visible(x.at)).map(own);
+    return more.length ? { ...own(t), steps: [own(t), ...more], covers: more.map((x) => x.id) } : own(t);
   }
   return null;
 }

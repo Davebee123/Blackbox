@@ -1074,10 +1074,11 @@ export const EDGE = {
 };
 // Sync Window bonuses: each class syncs its own way.
 export const SYNC = {
-  breaker: { amount: 1, rule: 'Breaks 1 more ◆ on the part you hit.' },
-  bastion: { amount: 8, rule: 'Shields you for 8.' },
-  infiltrator: { amount: 1, rule: 'Extends your burns on the part you hit by 1 cycle.' },
-  operator: { amount: 1, rule: 'Makes each of your helpers strike once more.' },
+  // tag: the word that floats up with SYNCED when the bonus lands.
+  breaker: { amount: 1, rule: 'Breaks 1 more ◆ on the part you hit.', tag: '+1 ◆' },
+  bastion: { amount: 8, rule: 'Shields you for 8.', tag: '+8 shield' },
+  infiltrator: { amount: 1, rule: 'Extends your burns on the part you hit by 1 cycle.', tag: 'burns +1' },
+  operator: { amount: 1, rule: 'Makes each of your helpers strike once more.', tag: 'helpers again' },
 };
 // Shared statuses: each class makes one; anyone's hits cash it in.
 export const STATUSES = {

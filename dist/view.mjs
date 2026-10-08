@@ -1721,6 +1721,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
         <div class="tpoints" title="A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}."><span class="tbar"><span style="width:${Math.min(100, (spent / TREE_MAX) * 100)}%"></span></span><span><b>${Math.max(0, points - spent)} free</b> · ${spent}/${TREE_MAX} spent · ${points} earned</span></div></div>
         <ol class="ttree">
           <li class="troot"><span class="tag">passive</span><b>${esc(a.passive.name)}</b><span class="trule">${esc(a.passive.rule)}</span></li>
+          <li class="troot tsync"><span class="tag sync">sync</span><b>Sync bonus</b><span class="trule">Fired in a Sync Window, your command deals ${Math.round(CONFIG.sync.bonus * 100)}% more damage and ${esc(SYNC[id].rule.replace(/^./, (c) => c.toLowerCase()))}</span></li>
           <li class="troot tspec${lvl < LOADOUT.specFrom ? ' locked' : ''}" title="Part of the ${esc(a.name)} kit from level ${LOADOUT.specFrom}: ${LOADOUT.specRanks} ranks of ${esc(kitTalent(id).name)}"><span class="tag">Lv ${LOADOUT.specFrom}</span><b>${esc(kitTalent(id).name)}</b><span class="trule">${esc(specRule(kitTalent(id)))}</span></li>
           <li class="troot tsub${lvl < SUBCLASS.from ? ' locked' : ''}"><span class="tag">${lvl < SUBCLASS.from ? `Lv ${SUBCLASS.from}` : 'subclass'}</span><b>Subclass</b><span class="trule">${lvl < SUBCLASS.from ? 'Each has its own skills, edge and talent tree.' : subPicked(s, id) ? 'Switch any time at home. Each keeps its own bar and tree.' : `Pick one. Until you do, you play ${esc(SUBS[activeSub].name)}.`}</span>
             <span class="tsub-opts">${Object.values(a.subs).map((x) => { const on = x.id === activeSub && subPicked(s, id), look = x.id === shown; const can = lvl >= SUBCLASS.from && x.id !== (subPicked(s, id) ? activeSub : null) && !(busy && subPicked(s, id)) && !active(s);
@@ -2949,7 +2950,7 @@ const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector'
 export function classPickMarkup(s) {
   const cards = Object.entries(ARCHETYPES).map(([k, a]) => {
     const first = a.skills.slice(0, 2).map((x) => `<li title="${esc(x.rule || '')}"><b>${esc(x.name)}</b> <small>${esc(ABILITIES[x.id]?.short || '')}</small></li>`).join('');
-    return `<button type="button" class="cp-card" data-pick-class="${k}"><span class="cp-name">${esc(a.name)}</span><span class="cp-role">${a.role.map((r) => `<span class="tag you">${esc(r)}</span>`).join('')}</span><span class="cp-passive" title="${esc(a.passive.rule)}">${esc(a.passive.name)}</span><ul class="cp-skills">${first}</ul></button>`;
+    return `<button type="button" class="cp-card" data-pick-class="${k}"><span class="cp-name">${esc(a.name)}</span><span class="cp-role">${a.role.map((r) => `<span class="tag you">${esc(r)}</span>`).join('')}</span><span class="cp-passive" title="${esc(a.passive.rule)}">${esc(a.passive.name)}</span><span class="cp-sync"><b>Sync</b> ${esc(SYNC[k].rule)}</span><ul class="cp-skills">${first}</ul></button>`;
   }).join('');
   return `<div class="cp-box" role="dialog" aria-label="Pick your class"><h2>Pick your class</h2><div class="cp-grid">${cards}</div><p class="cp-note">Switch on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></div>`;
 }

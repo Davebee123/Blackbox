@@ -541,7 +541,7 @@ function react(events) {
       case 'bought': feel.add('pickup', null); rewardCard('Bought', e, events, true); break;
       case 'relay': feel.add('jackin', null); notice(e.message); break;
 
-      case 'synced': feel.add(e.surprise ? 'surprise' : 'sync', row(e.target) || '.bnow', e.surprise ? 'SURPRISE' : 'SYNCED'); if (fx) feel.add(() => juice.punch(0.5)); break;
+      case 'synced': feel.add(e.surprise ? 'surprise' : 'sync', row(e.target) || '.bnow', `${e.surprise ? 'SURPRISE' : 'SYNCED'}${e.bonus ? ' · ' + e.bonus.toUpperCase() : ''}`); if (fx) feel.add(() => juice.punch(0.5)); break;
       case 'boost': feel.add('unlock', '.net-signal', `+${e.amount}`); break;
       case 'crafted': feel.add('pickup', null); rewardCard('Crafted', e, events, true); break;
       case 'fleet': case 'fleet-siege': feel.add('prewarn', null); break;

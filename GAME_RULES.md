@@ -872,6 +872,8 @@ On **25% of cycles**, a window (10% of the cycle, about a second at normal speed
 | Infiltrator | Stretches your burns on the part you hit by a cycle |
 | Operator | Makes each helper hit once more |
 
+Your class's sync bonus is on the Loadout page, as a root of the talent tree under the passive, and on the class picker. When it lands, its effect floats up with SYNCED (*SYNCED · +1 ◆*); with nothing to work on (no ◆ left, no burns, no helpers) only SYNCED shows.
+
 **Infiltrator Surprise.** For an Infiltrator the first cycle of every fight always opens a wider window (15%), glowing blue instead of yellow. Fired in it, on top of the sync bonus: Inject lands an extra stack, Tag lasts 6 cycles and its burns tick +75% (not +50%), and Keepalive stretches burns 4 cycles (not 2).
 
 Auto-repeat (the cycle running out) and later steps of a `;` plan never sync. The window's spot comes from the fight and the cycle, not the game's dice, so it never changes other rolls.

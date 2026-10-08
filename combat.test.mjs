@@ -457,6 +457,11 @@ test('Sync Window: fire inside it for +10% and your class bonus; outside, auto-r
   ev = fireAt(s, w2.at + w2.width / 2, 'spike ' + id);
   assert.ok(ev.some((x) => x.type === 'synced'));
   assert.equal(b2 - s.encounter.virus.parts[0].integrity, Math.floor(plain * 1.1 + 1e-9));
+  assert.equal(ev.find((x) => x.type === 'synced').bonus, '', 'no ◆ to crack: the float says SYNCED alone');
+  // With ◆ on the part, the Breaker's bonus lands and names itself for the float (SYNCED · +1 ◆).
+  s = setup('breaker'); s.encounter.virus.parts[0].armor = 3;
+  ev = fireAt(s, s.encounter.sync.at + s.encounter.sync.width / 2, 'spike ' + id);
+  assert.equal(ev.find((x) => x.type === 'synced').bonus, '+1 ◆');
   // The window moves each cycle.
   const moved = s.encounter.sync.at !== w2.at;
   assert.ok(moved || true);
