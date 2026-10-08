@@ -25,7 +25,7 @@ Rolled by weight when it sets out, from what the sending server's level allows a
 | **Pack** | 16 | server lv 3 | *A pack of 3. It counts 4 levels higher at your wall until it thins out.* | jack in once per virus; the next steps up | chip until it thins | 3 (1 a virus) |
 | **Pair** | 12 | server lv 4, 2+ servers attached | *X and Y came together. The pair counts 2 levels higher at your wall until one of them falls.* | two fights; a family filter only covers one | chip | 3 |
 | **Champion** | 12 | server lv 8 | *A champion, built like an elite. It counts 2 levels higher at your wall and leaves a capture when you kill it.* | jack in, or harden.sh to turn it away | chip | 5 and a capture |
-| **Saboteur** | 10 | server lv 4, a service running | *If it gets past your wall, it shuts off your RAID Array until you kill it.* | a wall that stops it, or kill it | that service off while it stays; no installs | 3 |
+| **Saboteur** | 10 | server lv 4, a service running | *If it gets past your wall, it shuts off your Edge Router until you kill it.* | a wall that stops it, or kill it | that service off while it stays; no installs | 3 |
 | **Thief** | 10 | server lv 3, an outpost with 3+ stored, online | *It is after the stores on X. Intercept it on the way, or it takes half of what is stored there.* | `intercept` on its 8-minute road (the outpost's firewall may stop it too) | half of each stock on that outpost | 3 |
 | **Scout** | 10 | server lv 2, online | *It is mapping your wall. Kill it in the next 5 min, or the next invasion counts 3 levels higher.* | jack in within 5 minutes; a wall 3 levels clear of its server swats it quietly | the next invasion counts +3 at your wall | 2 |
 
@@ -80,7 +80,7 @@ The designer's call, folded into this work: keeping the wall level with what you
 - **Base.** Your home wall's base is the level of the highest server attached to your network, less 2, never under 1. It moves for free as you attach and detach. An outpost's base is that server's level; a hub's is the hub's level.
 - **Tiers.** Upgrades buy a margin on top, +1 to +6, kept for good. Tier *t* on base *B*: (25 + 6B) × t credits, (2 + B/3) × t Cipher, ⌈t × (1 + B/10)⌉ each of Worm and Kernel, and from +3, 3 × (t − 2) signatures. On a base of 10: 85 credits for +1, 255 for +2 in all, 1,785 for all six.
 - **What a margin buys.** At +0 a raider from your strongest server is contested; at +2 it's blocked; +4 blocks a v2 raider, +5 a champion and +6 a full pack (before filters and the +N chip). Less margin means more invasions ask for you and more bounty to grow, which is a choice and not a mistake.
-- **Versions became tier perks**, same perks: +2 defrag 30% faster, +3 a filter slot, +4 fragments 25% slower, +5 a filter slot, +6 harden.sh lasts twice as long. `TIER_PERKS` in firewall.mjs takes more.
+- **Versions became tier perks**: +2 defrag 30% faster, +3 a filter slot, +4 fragments 25% slower, +5 a filter slot, +6 harden.sh lasts twice as long. The progression pass (docs/progression.md, save v34) added a filter slot and +5% max Integrity at each of +1, +3 and +5: the Filter Bay and the RAID Array folded into the wall. `TIER_PERKS` in firewall.mjs takes more.
 - **Repair** carries on at half rate while an invasion is contested or breaching at your wall (it used to stop).
 - **Old saves** (v32 to v33): a climbed wall becomes the tier nearest its old margin over the new base (0 to +6), and whatever the old climb cost beyond that tier's price comes back as credits, code and Exploits, with a log line saying so. An outpost's or hub's wall converts the same way against its own level.
 
@@ -104,7 +104,7 @@ The designer's call, folded into this work: keeping the wall level with what you
 
 ## Still worth doing
 
-- Fold the home-fight services into firewall perks and filter stats (planned for a later pass; services are untouched here).
+- ~~Fold the home-fight services into firewall perks and filter stats.~~ Done in the progression pass (docs/progression.md): four became filter stats, the RAID Array and the Filter Bay tier perks, Cron Job and Snapshot daemons.
 - A pager filter for just the wall, now that blocked invasions add quiet lines.
 - Sounds of its own for a thief arriving and a scout finishing, instead of the general loss cue.
 - An `invasions` panel on the Map listing the last few and what each paid, so the streak has a history.

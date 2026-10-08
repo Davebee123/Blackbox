@@ -23,7 +23,7 @@ import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
-import { tickPlay } from './progression.mjs';
+import { tickPlay, behindOf } from './progression.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -949,7 +949,9 @@ function renderMeters() {
   $('who-class').textContent = V.className(cls);
   $('who-lv').textContent = h.level;
   $('who-fill').style.width = (h.level >= 50 ? 100 : (h.xp / V.xpNeeded(h.level)) * 100) + '%';
-  $('whoami').title = `${h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`}`;
+  const behind = behindOf(campaign)?.on; // Behind: the XP bar turns amber while kills pay +50% on a level running long
+  $('whoami').classList.toggle('behind', !!behind);
+  $('whoami').title = `${h.level >= 50 ? 'max' : `${h.xp}/${V.xpNeeded(h.level)} XP`}${behind ? ' · Behind: kills +50% XP until the next level' : ''}`;
   const pct = (srv.integrity / srv.max) * 100;
   $('integrity-fill').style.width = pct + '%';
   $('integrity-value').textContent = srv.integrity;

@@ -2330,6 +2330,7 @@ body.phase-wait .cmdline, body.phase-wait #command-input { box-shadow: 0 0 0 1px
 .whoami .who-dot { color: var(--dim); }
 .whoami .who-bar { grid-column: 1 / -1; height: 3px; background: rgba(127, 209, 199, 0.12); border-radius: 2px; overflow: hidden; }
 .whoami .who-bar span { display: block; height: 100%; background: var(--you); }
+.whoami.behind .who-bar span { background: var(--amber); } /* Behind: kills pay +50% XP on a level running long */
 /* The pager sits by the server's meters now, just left of Integrity. */
 .topbar .pager { margin-left: 0; }
 @media (max-width: 900px) { .whoami { display: none; } }
