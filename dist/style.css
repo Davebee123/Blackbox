@@ -3263,3 +3263,39 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .gain.loss .sp-card { border-color: rgba(255, 91, 61, 0.55); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 36px rgba(255, 91, 61, 0.14); }
 .gain.loss .sp-card::before { background: linear-gradient(180deg, rgba(255, 91, 61, 0.08), transparent); }
 .gain.loss .sp-corner { border-color: var(--hot); }
+
+/* Firewall upgrade buttons carry their costs: they keep their padding, and in a narrow column (an outpost's Wall
+   row) the costs drop under the label instead of running out of the card. */
+.fw-up { padding: 4px 10px; max-width: 100%; text-align: left; }
+.op-val .fw-up { flex-wrap: wrap; row-gap: 3px; }
+.op-val .fw-up .bcost { margin-left: 0; padding-left: 0; border-left: 0; flex-basis: 100%; flex-wrap: wrap; gap: 4px 8px; }
+.op-val .fw-head { row-gap: 4px; }
+.op-val .fw-up { justify-content: flex-start; }
+.op-val .fw-head .vuln { margin-left: 0; }
+
+/* The fight board takes the whole left column, so every part of the virus shows without scrolling. The log moves
+   under the picture on the right. Rows are tighter, and if the parts still don't fit, app.js adds .dense and the
+   rows tighten again (sub-lines go, chips go to one line). */
+@media (min-width: 901px) {
+  .combat { grid-template-rows: auto minmax(0, 1fr) minmax(96px, 32%); grid-template-areas: 'hud hud' 'board stage' 'board log'; }
+  .combat .board { max-height: none; min-height: 0; }
+  body.fight-over .combat { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: 'hud hud' 'log stage'; }
+}
+.combat .brow:not(.bhead) > .bcell { padding-top: 7px; padding-bottom: 7px; }
+.combat .intent { padding: 5px 8px; font-size: 13px; }
+.combat .bhead .bcell { padding-top: 4px; padding-bottom: 4px; }
+.combat .board.dense .brow:not(.bhead) > .bcell { padding-top: 3px; padding-bottom: 3px; gap: 2px; }
+.combat .board.dense .intent { padding: 3px 7px; font-size: 12px; }
+.combat .board.dense .intent small:not(.at), .combat .board.dense .bname small, .combat .board.dense .bcell > .quiet, .combat .board.dense .bcell > small.quiet { display: none; }
+.combat .board.dense .intent.tell .tl-main { padding-top: 2px; }
+.combat .board.dense .intent.tell .tl-ans { padding-bottom: 3px; }
+.combat .board.dense .bhead .cyclebar { display: none; }
+.combat .board.dense .part-top { flex-wrap: nowrap; }
+.combat .board.dense .part-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* A short screen: the HUD gives the board its height back. */
+@media (min-width: 901px) and (max-height: 820px) {
+  .combat { gap: 8px; }
+  .combat .hud { padding-top: 6px; padding-bottom: 6px; row-gap: 4px; }
+}
+.combat .board.dense .brow:not(.bhead) { min-height: 44px; }
+.combat .board.dense .brow { grid-template-columns: minmax(200px, 2.2fr) repeat(4, minmax(0, 1fr)); }

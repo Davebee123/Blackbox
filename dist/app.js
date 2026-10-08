@@ -1103,6 +1103,7 @@ function pageOrError(draw) {
     return `<section class="card page-error"><h2>This page hit an error</h2><p class="svc-line">The rest of the game still works. Send this text with your bug report.</p><pre>${esc(text)}</pre><div class="row"><button type="button" class="btn primary" data-module="map">Back to the map</button></div></section>`;
   }
 }
+const fitBoard = { key: null }; // the fight whose board went dense (render)
 function render(force = false) {
   if (force) cache.clear();
   renderMeters();
@@ -1129,6 +1130,8 @@ function render(force = false) {
     const before = turned ? chipSnapshot() : null;
     put('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
+    // Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
+    { const bd = $('board'), key = s.encounter.virus.id; if (fitBoard.key !== key) { fitBoard.key = key; bd.classList.remove('dense'); } if (!bd.classList.contains('dense') && bd.scrollHeight > bd.clientHeight + 2) bd.classList.add('dense'); }
     for (const f of pendingStrikes.splice(0)) f();
     if (before) turnTimeline(before);
     cycleChanged(s);
