@@ -765,6 +765,13 @@ Three planner changes come before any new skill, because the audit shows they ar
 | 10 | Shipped presets | (a) Two per subclass (`rotation` and one conditional). (b) None. (c) One per section 4 build. | (a). Enough to show what a conditional build is, without choosing for the player. |
 | 11 | Test thresholds | The numbers in section 7. | Start there and tighten after the first pass. Five of the eight subclasses already reach the diversity floor of 5.0 at every level measured. |
 
+## 9. The designer's decisions
+
+- **Order.** Reorder the subclass lines as proposed. Saves keep every skill they already know.
+- **Swapping.** Presets can be swapped anywhere outside combat, home or run. Swapped-in keys start the next fight cooling. Editing presets follows the same rule.
+- **Solo and crew.** Classes don't need to be equal in both modes. Each subclass may be weaker in one mode as long as it is stronger in the other, the way a holy priest is weak solo and strong in a group. The balance bands become per mode and per subclass: a subclass that leans crew may sit at the hard edge of the solo band, as long as it carries a crew in the crew sims.
+- **Spike.** Each class may rename Spike to fit its theme, but it stays a plain direct-damage filler with no cooldown. The 20% press cap stands.
+
 ## Appendix: rerunning the audit
 
 The audit used balance.mjs's `build` and `POLICIES` and dist/combat.mjs's `defaultBar`, with a fight function written like balance.mjs's `fight` that also passes `boss` to `selectEncounter` (with the boss's family and strain from `BOSSES`). For each subclass and level it played the sample in 2.1 with seeds offset by 0 and 77, then the same fights with each key left empty, with only the class core, and with each known skill that isn't on the default bar swapped in for the least-pressed key. The moment check in 2.4 read `tellOn` from dist/tells.mjs and the board before each command. The build comparison in 2.13 played named bars at level 40 on the four sets listed there. The scripts were throwaway and are not in the repo.
