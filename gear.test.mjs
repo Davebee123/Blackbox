@@ -747,3 +747,29 @@ test('a recipe with a capital in its id compiles (commands are lowercased: compi
     assert.equal((s.stash || []).length, n + 1, `compile ${id}`);
   }
 });
+
+test('compile <recipe> <slot>: you pick the slot the protocol compiles into; Implant opens at level 15', async () => {
+  const { groupOf } = await import('./dist/gear.mjs');
+  const { craftMarkup } = await import('./dist/view.mjs');
+  const s = fresh();
+  command(s, 'developer level 5');
+  s.server.credits = 100000;
+  s.recipes = ['recipe:crit'];
+  for (let i = 0; i < 200; i++) s.salvage.push({ name: 'x' });
+  for (const slot of ['exploit', 'proxy', 'shell', 'script']) {
+    command(s, `compile crit ${slot}`);
+    assert.equal(groupOf(s.stash.at(-1)), slot, slot);
+    assert.ok(s.stash.at(-1).stats.crit > 0);
+  }
+  command(s, 'compile precision proxy'); // the recipe's own name works too
+  assert.equal(groupOf(s.stash.at(-1)), 'proxy');
+  assert.match(command(s, 'compile crit implant').at(-1).message, /Implants compile from level 15/);
+  command(s, 'developer level 15');
+  command(s, 'compile crit implant');
+  assert.equal(groupOf(s.stash.at(-1)), 'implant');
+  // The Craft page picks the slot on the recipe, and its button compiles into it.
+  const html = craftMarkup(s, { cat: 'protocols', pick: 'crit', slot: 'shell' });
+  assert.match(html, /data-craft-slot="shell" aria-pressed="true"/);
+  assert.match(html, /data-command="compile crit shell"/);
+  assert.match(html, /Precision Shell/);
+});

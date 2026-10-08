@@ -255,7 +255,7 @@ There are no grey protocols. (Filters still come in Scrap, a grey.) Old saves' g
 
 **Deconstruct** (`deconstruct <id>`, or `scrap`): white 1–2 salvage, blue 2–3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits (an Indemnified protocol from Halcyon's store gives no Exploits back); +1 salvage per 10 item levels. The code is the family the item dropped from. A drop into a full stash (40) is deconstructed. Deconstructing (a protocol, or scrapping a filter) opens a card listing what you got (salvage, code, Exploits), like the one a jack-out shows; Enter or a click closes it.
 
-**Compile** at home with a recipe: `compile <stat>` gives a **blue** at your level with that stat as one of its affixes (60 + 15×level credits and 8 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
+**Compile** at home with a recipe: `compile <stat> <slot>` gives a **blue** at your level, in the slot you name (Exploit, Proxy, Shell or Script, and Implant from level 15), with that stat as one of its affixes. The Craft page has a slot picker on each protocol recipe. With no slot named, the slot is rolled (60 + 15×level credits and 8 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
 
 **Blueprints.** Nothing is buildable at the start. Every service (4) and every protocol recipe (17) is a blueprint you find once. A quarter of vaults hold a `blueprint.bp` (your first server's always does); a home kill drops one 0.8% of the time and a guard 2% (into your pack). Each one teaches something you don't have yet, at random, from **every kind of recipe**: protocol recipes and service blueprints, **filter recipes** (one per stat), harvester and module **plans**, and **config sources**. Once you know everything, one is 2 salvage.
 
@@ -282,7 +282,7 @@ There are no grey protocols. (Filters still come in Scrap, a grey.) Old saves' g
 | Architecture switch | 1,000 | | | |
 
 
-**Commands** (at home, between fights): `protocols`, `load <id>` (swaps a full slot), `unload <id|slot#>`, `deconstruct <id>`, `compile [stat]`, `compile <zero-day>`.
+**Commands** (at home, between fights): `protocols`, `load <id>` (swaps a full slot), `unload <id|slot#>`, `deconstruct <id>`, `compile [stat] [slot]`, `compile <zero-day>`.
 
 ### Services (your server)
 

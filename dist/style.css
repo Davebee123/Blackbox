@@ -3009,3 +3009,9 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .tt { position: fixed; z-index: 90; max-width: 300px; padding: 8px 11px; background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: 13px/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
 .tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 12px var(--mono); letter-spacing: 0.5px; }
 @media (prefers-reduced-motion: reduce) { .tt { animation: none; } }
+
+/* The Craft page's slot picker (craftCats): which slot a protocol compiles into, one segment each. */
+.cd-slots { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.cd-slot { padding: 4px 10px; border: 1px solid var(--line); border-radius: 2px; background: var(--inset); color: var(--muted); font: 600 12px var(--mono); letter-spacing: 0.5px; cursor: pointer; }
+.cd-slot:hover, .cd-slot:focus-visible { border-color: var(--line-strong); color: var(--text); outline: none; }
+.cd-slot.on { border-color: var(--amber); color: var(--amber); background: rgba(241, 185, 47, 0.08); }
