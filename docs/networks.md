@@ -142,7 +142,7 @@ A darknet listing picks the native you listen for first, then one you've heard o
 
 ## 7. Showing it
 
-- **The Network card** sits on the Server page and on the Consortium page: the name, the lean as a bar, the native strain and its family, the native boss (a link to its lair, with its chance a kill), the two favoured cards, the rich code and material, and the native uniques as ??? or by name, with the native chance a kill and a *listen* button. A darknet listing shows on it with a Buy button.
+- **The Network card** sits on the Server page and on the Consortium page. It shows only what you have learned by playing on the network (`s.netIntel`, network.mjs `intelOf`): the families you've beaten there as a bar, the native strain once you've beaten it there twice, the native boss once its lair is on your map, a favoured card once it has come up twice, and the rich code and material once the code has leaned eight times. Everything else reads ???, and the natives stay ??? until seen or named. It shows no odds or multipliers. A darknet listing shows on it with a Buy button.
 - **Members.** Each member row on the Consortium page carries their network's name (lean, strain, boss and natives on hover). On the consortium map each member node is labelled with their network's name and native strain, and the member's card carries their Network card under it.
 - **Tooltips.** A native unique's hover card carries a *Native · Rust Lattice (yours)* tag, and its title names the network too.
 - **Commands.** `network` prints your signature, `network <member>` a member's, and `event buy <id>` buys a darknet listing. For testing: `developer network <seed>`, `developer lair` and `developer native <id>`.

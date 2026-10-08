@@ -420,14 +420,14 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   assert.ok(sc.veiled && sc.armor > 0);
   tell(s, 'possession', 'scrambler', 2);
   const html = boardMarkup(s, null);
-  assert.match(html, /intent raid tell t-charge/);
+  assert.match(html, /intent tell t-charge/);
   assert.match(html, /POSSESSION|Possession/);
-  assert.match(html, /hit it/);
+  assert.match(html, /Hit it/);
   assert.match(html, /Only a command of yours aimed at it counts/);
   const cast = fight({ level: 12 });
   quietParts(cast);
   tell(cast, 'extortion', 'encryptor', 1);
-  assert.match(boardMarkup(cast, null), /Compiling…[\s\S]*SIGINT, or hit ×2/);
+  assert.match(boardMarkup(cast, null), /Casting[\s\S]*SIGINT, or hit ×2/);
 });
 
 test('bots read tells: the planner hits a charging part on its last chance, SIGINTs a cast, and goes quiet on the Mimic\'s beat; one that ignores them doesn\'t', () => {

@@ -188,12 +188,21 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.raid.cast { border-style: dashed; }
 .intent.raid .compiling { color: var(--hot); font-style: italic; opacity: 1; }
 .intent.raid.fuse { border-color: var(--amber); color: var(--amber); }
-/* A solo tell (tells.mjs): the crew-boss chip on its part's row, with what answers it on the last line. */
-.intent.raid.tell { white-space: normal; }
-.intent.raid.tell small { white-space: normal; line-height: 1.25; }
-.intent.raid.tell .answer { color: var(--amber); opacity: 1; font-weight: 600; }
-.intent.raid.tell.t-seal, .intent.raid.tell.t-mimic { border-color: var(--amber); }
-.intent.raid.tell.t-seal b, .intent.raid.tell.t-mimic b { color: var(--amber); }
+/* A solo tell (tells.mjs): an attack chip, charged. A kicker strip (what kind, when), the name and what it does,
+   then the answer as an order on its own line. Charges and casts are hot; seals and the Mimic are amber. */
+.intent.tell { --tc: var(--hot); --tc-soft: var(--hot-soft); display: grid; gap: 0; padding: 0; border: 1px solid var(--tc); color: var(--text); overflow: hidden; }
+.intent.tell.t-seal, .intent.tell.t-mimic { --tc: var(--amber); --tc-soft: rgba(241, 185, 47, 0.12); }
+.intent.tell.t-cast { border-style: dashed; }
+.intent.tell .tl-kick { display: flex; align-items: center; gap: 5px; padding: 2px 7px; background: var(--tc-soft); color: var(--tc); font: 600 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+.intent.tell .tl-kick .ico { width: 11px; height: 11px; }
+.intent.tell .tl-when { margin-left: auto; letter-spacing: 0.5px; }
+.intent.tell .tl-main { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; padding: 4px 7px 2px; min-width: 0; }
+.intent.tell .tl-main b { font-weight: 600; color: var(--tc); }
+.intent.tell .tl-what { margin-left: 0; color: var(--muted); }
+.intent.tell .tl-ans { display: flex; align-items: baseline; gap: 6px; padding: 1px 7px 5px; color: var(--amber); font: 600 11px var(--mono); white-space: nowrap; }
+.intent.tell .tl-prog { margin-left: auto; color: var(--muted); font-weight: 400; }
+.intent.tell.now { background: var(--tc-soft); }
+.intent.tell.now .tl-kick { background: var(--tc); color: var(--panel-2); }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
 .crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }
@@ -517,7 +526,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .intent .code { display: inline; }
   .intent.mine small { display: none; }
   .intent.raid b { display: block; white-space: normal; font-size: 10px; letter-spacing: 0.5px; } /* a tell or a crew boss's mechanic keeps its name: it's what you answer */
-  .intent.raid.tell small:not(.answer) { display: none; }
+  .intent.tell .tl-what, .intent.tell .tl-when { display: none; }
+  .intent.tell b { display: block; white-space: normal; font-size: 11px; }
   .bnow { grid-template-columns: 1fr !important; gap: 2px; }
   .bhead .countdown { font-size: 15px; }
   .hud-bar .bar-top { flex-wrap: wrap; }
@@ -2902,6 +2912,7 @@ details.map-pick { pointer-events: auto; }
 .cm-net small { color: var(--dim); }
 .net-card h1 { font-size: 20px; }
 .lean-bar { display: flex; height: 22px; margin: 8px 0 10px; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; background: var(--inset); }
+.net-none { margin: 8px 0 10px; color: var(--muted); font-size: 13px; }
 .lean-seg { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 0 6px; overflow: hidden; white-space: nowrap; font: 600 11px var(--mono); letter-spacing: 0.5px; color: var(--bg); }
 .lean-seg.l0 { background: var(--amber); } .lean-seg.l1 { background: var(--amber-soft); } .lean-seg.l2 { background: var(--amber-deep); color: var(--text); }
 .lean-seg .glyph { flex: none; }

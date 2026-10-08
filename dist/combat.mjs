@@ -39,7 +39,7 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 import { situationOf } from './situations.mjs';
-import { fightNet, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
+import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
 export const SAVE_VERSION = 36; // v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
@@ -523,6 +523,7 @@ function nativeBossUnique(s, boss, level) {
 }
 // After a kill on a network: maybe one of its native uniques (network.mjs, on its own dice). A guard's goes in your pack.
 function nativeDrop(s, e, pack = false) {
+  noteKill(s, e); // what you learn about the network by fighting on it (network.mjs intelOf)
   const it = nativeRoll(s, fightNet(s, e), e.virus.level, e.virus.elite || e.virus.boss ? 3 : 1, e.virus.level);
   if (!it) return;
   if (pack && s.run) { s.run.pack.push({ path: `${e.room}/#native-${e.seed}-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item: it }); emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(it)}, native to ${it.home?.name || 'another network'}. In your pack until you jack out.`, { item: it, pack: true, rarity: it.rarity }); }

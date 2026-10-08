@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, part, active, addItem, loaded, restore, SAVE_VERSION, UNIQUES, selectEncounter, syncServer, damageMultiplier, fxAnswer, hit, finish, patchDelay } from './dist/combat.mjs';
 import { play, connect, currentLocation, layoutOf } from './dist/run.mjs';
 import { CONFIG, BOSSES, NATIVE_BOSSES, STRAINS, variantFor, STRAIN_NATIVE, BOSS_LOOT, TELL } from './dist/data.mjs';
-import { uniqueItem, seeded, RULES } from './dist/gear.mjs';
+import { uniqueItem, seeded, RULES, MATERIALS } from './dist/gear.mjs';
 import { NETWORK, NATIVE_POOL, signature, sigOf, memberSeed, netOf, fightNet, nativeRoll, nativeChance, awayChance, named, biasCode, leanPick, eventMult, lairOf, openLair, networkRestore, networkLines, homeName, darknetPick } from './dist/network.mjs';
 import { deal, eventsOf, CARDS } from './dist/events.mjs';
 import { rogueSpawns, ROGUE } from './dist/rogue.mjs';
@@ -249,12 +249,14 @@ test('show it: the Network card, the member cards and map, the native tooltip, t
   const s = at(24);
   const g = sigOf(s, 'you');
   let html = networkCardMarkup(s, 'you');
-  assert.ok(html.includes(g.name) && html.includes(STRAINS[g.strain].name) && html.includes(BOSSES[g.boss].name));
-  assert.equal((html.match(/coll-q">\?\?\?/g) || []).length, g.uniques.length, 'every native ??? until seen or named');
+  // Nothing is told: the strain, the events and the riches are ??? until you've found them by playing there.
+  assert.ok(html.includes(g.name) && !html.includes(STRAINS[g.strain].name) && !html.includes('lean-bar') && !html.includes('% a kill'));
+  assert.equal((html.match(/Not seen or named yet/g) || []).length, g.uniques.length, 'every native ??? until seen or named');
+  s.netIntel = { you: { fam: { [g.order[0]]: 3 }, strains: { [g.strain]: 2 }, events: {}, rich: 8 } };
   s.netNamed = { [g.uniques[0]]: true };
   html = networkCardMarkup(s, 'you');
   assert.ok(html.includes(UNIQUES[g.uniques[0]].name), 'named shows by name');
-  assert.ok(html.includes('lean-bar') && html.includes('% a kill'));
+  assert.ok(html.includes('lean-bar') && html.includes(STRAINS[g.strain].name) && html.includes(MATERIALS[g.code.rich].short));
   // The Server page carries it.
   play(s, 'network');
   assert.ok(s.logs.at(-1).message.includes(g.name));
@@ -275,6 +277,8 @@ test('show it: the Network card, the member cards and map, the native tooltip, t
   assert.ok(page.includes('cm-net') && page.includes(ng.name), 'the member row names their network');
   const map = mapMarkup(s, 'member-nyx', 'consortium', { side: false, pop: true });
   assert.ok(map.includes(ng.name), "the map's member node and card name it");
+  assert.ok(!networkCardMarkup(s, 'nyx').includes(STRAINS[ng.strain].name), 'a member network is ??? until you play on it');
+  s.netIntel.nyx = { fam: {}, strains: { [ng.strain]: 2 }, events: {}, rich: 0 };
   assert.ok(networkCardMarkup(s, 'nyx').includes(STRAINS[ng.strain].name));
   play(s, 'network nyx');
   assert.ok(s.logs.at(-1).message.includes(ng.name));
@@ -366,3 +370,25 @@ test('native effects: Open, locks and wards, the Tripwire, twins, reads, after-e
   } finally { Object.assign(CONFIG, was); }
 });
 
+
+test('you learn a network by playing it: its native strain after two kills, a favoured event after it comes up twice, its riches once its code leans', async () => {
+  const { noteKill, noteEvent, knowsStrain, knowsEvent, knowsRich, biasCode, intelOf, INTEL } = await import('./dist/network.mjs');
+  const s = at(12);
+  const g = sigOf(s, 'you');
+  const e = { mode: 'home', virus: { family: STRAINS[g.strain].lineage, strain: g.strain } };
+  assert.ok(!knowsStrain(s, 'you'));
+  noteKill(s, e);
+  assert.ok(!knowsStrain(s, 'you'));
+  noteKill(s, e);
+  assert.ok(knowsStrain(s, 'you'));
+  assert.equal(intelOf(s, 'you').fam[STRAINS[g.strain].lineage], 2);
+  assert.match(s.logs.at(-1).message, /You notice .* turns up often on/);
+  const card = g.events[0];
+  noteEvent(s, card);
+  assert.ok(!knowsEvent(s, card));
+  noteEvent(s, card);
+  assert.ok(knowsEvent(s, card));
+  const other = ['cipher', 'worm', 'kernel'].find((k) => k !== g.code.rich);
+  for (let i = 0; i < 40 && !knowsRich(s, 'you'); i++) biasCode(s, 'you', { [other]: 5 });
+  assert.ok(knowsRich(s, 'you') && intelOf(s, 'you').rich >= INTEL.rich);
+});
