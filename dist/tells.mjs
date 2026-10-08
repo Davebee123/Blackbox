@@ -61,9 +61,23 @@ function findSource(v, def) {
   if (fits(pick)) return pick;
   return [sys.find((x) => x.special), sys.find(isBasic), ...sys].find(fits) || null;
 }
+// Two tells from the roguelite redesign (docs/roguelite.md 5.2), brought by breach viruses only (breach.mjs sets
+// v.tellSet): each asks for its own verb, and letting it land can be the right call.
+//   overclock  a cast (SIGINT or two hits in its window). If it lands, for `lasts` cycles every part takes `mult`×
+//              damage and every attack comes a cycle sooner: a gamble for whoever holds a big cooldown.
+//   lock       no answer but breaking the part. When it lands it arms: the first command you fire after it is locked
+//              for `cycles` cycles, key 1 included. The play is what you feed it (a long cooldown you just used).
+export const NEW_TELLS = {
+  overclock: { kind: 'cast', name: 'Overclock', part: 'basic', does: 'overclock', lasts: 2, mult: 2 },
+  lock: { kind: 'lock', name: 'Lock', part: 'special', cycles: 3 },
+};
+const tellDef = (id) => TELLS[id] || NEW_TELLS[id];
+// Parts take this much more while their virus is Overclocked (combat.mjs damageMultiplier).
+export const overclockMult = (s) => { const e = s.encounter; return e?.virus?.buffs?.overclock >= e?.cycle ? NEW_TELLS.overclock.mult : 1; };
 // The tells a virus could bring, in order: a strain's own charge and its lineage's cast and seal, else its family's (or guard's).
 // A native boss (BOSSES nb-*) brings its own set, or its strain's with the charge under the boss's name. Each names its gene.
 function setOf(v) {
+  if (v.tellSet) return v.tellSet.map((id) => ({ ...tellDef(id), id })); // a breach virus: its own kinds (breach.mjs)
   const st = v.strain && STRAINS[v.strain], boss = v.boss && BOSSES[v.boss];
   if (st?.tell && !TELL_SETS[v.boss]) {
     const own = { kind: 'charge', part: 'special', gene: 'overcharge', ...st.tell, ...(boss?.charge ? { name: boss.charge } : {}), id: 'strain' };
@@ -211,6 +225,7 @@ export function answerOf(t, p, s = null) {
   if (t.kind === 'charge') return `deal ${left} to the ${p?.name} in its window${armored && chits ? `, or break ${chits} ◆ on it` : ''}`;
   if (t.kind === 'cast') return `SIGINT in its window, or hit the ${p?.name} ${times(Math.max(1, (t.need || 0) - (t.wound || 0)))} in it`;
   if (t.kind === 'seal') return `strip the ${p?.name} before it lands`;
+  if (t.kind === 'lock') return `break the ${p?.name}, or let it land and feed it a skill that is cooling anyway`;
   return 'go quiet on the beat';
 }
 // When its window opens, as the log says it: 'now', or 'next cycle', 'in 2 cycles'.
@@ -229,6 +244,7 @@ function sayOf(s, t, p) {
   }
   if (t.kind === 'cast') return `The ${p.name} is compiling ${L}. It lands ${when(n)}. ${window}SIGINT interrupts it ${opens ? 'then' : 'now'}, and so does hitting the ${p.name} ${times(t.need)} ${opens ? 'in the window' : 'before it lands'}.${before}`;
   if (t.kind === 'seal') return `The ${p.name} starts ${L}. If it still wears ◆ ${when(n)}, it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it before then.`;
+  if (t.kind === 'lock') return `The ${p.name} starts ${L}. It lands ${when(n)}. After that, the first command you fire is locked for ${cycles(t.cycles || 3)}, key 1 included. Feed it a skill that is cooling anyway, or break the ${p.name}.`;
   return `The ${p.name} is recording you. ${upper(when(n))} it plays back whatever you fire, so fire something quiet then.`;
 }
 // A tell's window opens (a new cycle): the log says so, once, with what it takes now.
@@ -246,6 +262,7 @@ function windowOpens(s, t, p) {
 export function tellCycle(s) {
   if (!tellsOf(s) || s.encounter.phase !== 'active') return;
   castsEnd(s);
+  lockTakes(s);
   for (const t of tellsOf(s).list) if (t.told && t.kind === 'charge') { const p = sourceOf(s, t); if (alive(p) && p.attack && (p.attack.n || 0) > t.n) rest(s, t, s.encounter.cycle - 1); }
   announce(s);
   // Windows that open this cycle: the log says so, once a tell (one said inside its window already said it).
@@ -407,6 +424,19 @@ function lockLast(s, t, why) {
   (e.locked ||= {})[id] = e.cycle + n;
   emit(s, 'locked', `${why} knocks ${ABILITIES[id].name} offline for ${cycles(n)}.`, { ability: id, tell: t.id, cycles: n });
 }
+// An armed Lock (a lock tell that landed): the first command you fired after it is locked for its cycles, counted from
+// the cycle you fired it. A skill already cooling that long loses nothing. Holding fires nothing, so it waits.
+function lockTakes(s) {
+  const e = s.encounter, L = e.lockArmed, cmd = e.lastCmd;
+  if (!L || !cmd || cmd.cycle <= L.at || cmd.id === 'hold' || cmd.id === 'flee') return;
+  e.lockArmed = null;
+  const id = cmd.id, a = ABILITIES[id], until = cmd.cycle + L.cycles, was = e.readyAt[id] || 0;
+  if (!a) return;
+  e.readyAt[id] = Math.max(was, until + 1);
+  (e.locked ||= {})[id] = Math.max(e.locked[id] || 0, until);
+  const name = id === 'spike' ? 'key 1' : a.name;
+  emit(s, 'locked', was > until ? `${L.name.toUpperCase()} locks ${name}, which was cooling for longer anyway.` : `${L.name.toUpperCase()} locks ${name} for ${cycles(L.cycles)}.`, { ability: id, tell: L.tell, cycles: L.cycles, fed: was > until });
+}
 // The virus's half, after its parts' attacks: each tell due lands. True if the fight ended.
 export function tellLand(s) {
   const T = tellsOf(s), e = s.encounter;
@@ -468,7 +498,10 @@ export function tellLand(s) {
       read(s, t, p, { open: true });
     } else if (t.kind === 'cast') {
       castLands(s, t, p);
-      lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t);
+      if (t.does !== 'overclock') { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); } // Overclock's cost is the gamble itself
+    } else if (t.kind === 'lock') {
+      e.lockArmed = { at: e.cycle, name: t.name, cycles: t.cycles || 3, tell: t.id, source: p.id };
+      emit(s, 'status', `${label(t)} lands. The first command you fire next is locked for ${cycles(t.cycles || 3)}, key 1 included.`, { source: p.id, tell: t.id, missed: true, mark: 'lock' });
     } else if (t.kind === 'mimic') {
       const r = mimicLands(s, t, p);
       if (r === true) return done(), true;
@@ -488,7 +521,7 @@ function advance(p, e) {
 }
 // A cast that compiled: a buff on the virus for TELL.castLasts cycles (a second one starts the clock over).
 function castLands(s, t, p) {
-  const v = s.encounter.virus, c = s.encounter.cycle, lasts = Math.max(1, TELL.castLasts - (fxOn(s, 'cast-short')?.fx.value || 0)), until = c + lasts; // Hush Money (a native unique): it ends sooner
+  const v = s.encounter.virus, c = s.encounter.cycle, lasts = Math.max(1, (t.lasts ?? TELL.castLasts) - (fxOn(s, 'cast-short')?.fx.value || 0)), until = c + lasts; // Hush Money (a native unique): it ends sooner
   const fresh = !(v.buffs?.[t.does] >= c);
   (v.buffs ||= {})[t.does] = until;
   if (t.does === 'loud') {
@@ -498,6 +531,10 @@ function castLands(s, t, p) {
     const all = livingParts(s).filter((x) => x.kind === 'system' && !implanted(s, x)); // a Rootkit Implant stops it growing
     for (const x of all) { const n = Math.round(x.max * TELL.grow); x.max += n; x.integrity += n; }
     emit(s, 'phase', `${label(t)} compiles. ${all.map((x) => x.name).join(', ')} ${all.length === 1 ? 'grows' : 'grow'} ${Math.round(TELL.grow * 100)}% more Integrity.`, { target: p.id, tell: t.id, missed: true });
+  } else if (t.does === 'overclock') {
+    // Every attack still to come moves a cycle sooner (never onto this cycle, which is over), and every part takes double.
+    if (fresh) for (const x of attackers(s)) if (x.attack.due < 900 && x.attack.due >= c + 2) x.attack.due--;
+    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every part of ${v.name} takes double damage, and every attack comes a cycle sooner.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'haste') {
     // What's on the timeline stays where it is (nothing lands unannounced); the repeats after it come sooner.
     if (fresh) for (const x of attackers(s)) if (x.attack.interval > 2) { x.attack.hasted = true; x.attack.interval--; }
@@ -521,7 +558,7 @@ function castsEnd(s, quiet = false) {
     delete v.buffs[k];
     if (k === 'loud') for (const x of attackers(s)) boost(x, 1 / TELL.loud);
     if (k === 'haste') for (const x of attackers(s).filter((y) => y.attack.hasted)) { x.attack.hasted = false; x.attack.interval++; }
-    if (!quiet) emit(s, 'status', `${v.name}'s ${k === 'loud' ? 'extortion' : k === 'grow' ? 'update' : 'persistence'} runs out.`, {});
+    if (!quiet) emit(s, 'status', `${v.name}'s ${k === 'loud' ? 'extortion' : k === 'grow' ? 'update' : k === 'overclock' ? 'overclock' : 'persistence'} runs out.`, {});
   }
 }
 // What the Mimic would play back of a command: its direct hit (a skill's listed damage, at your size, times
@@ -777,6 +814,14 @@ const quickStrip = (s, p) => p.armor <= 1 || (p.armor <= 3 && usable(s).includes
 export function tellMove(s, t0 = null, planned = null) {
   if (!answers() || TELL.bots.move === false || !tellsOf(s)) return null;
   const c = s.encounter.cycle;
+  // An armed Lock (it landed): feed it the readiest long cooldown instead of key 1 or a short key, so it costs little.
+  const pid = (planned || '').split(' ')[0];
+  if (s.encounter.lockArmed && planned && pid !== 'sigint' && cooldownOf(s, pid) < 3) {
+    const at = planned.split(' ')[1];
+    const feed = usable(s).filter((id) => !['spike', 'sigint'].includes(id) && cooldownOf(s, id) >= 3 && readyIn(s, id) === 0).sort((a, b) => cooldownOf(s, b) - cooldownOf(s, a))
+      .map((id) => (['part', 'attack'].includes(ABILITIES[id].target) ? `${id} ${at}` : id)).find((x) => ok(s, x));
+    if (feed) return feed;
+  }
   // A Mimic with nothing to copy this beat (Unmask, Echo Cancel, Log Wipe, Honeypot, Sudo): no need to go quiet.
   const e0 = s.encounter, blind = (p) => !p || p.unmaskUntil >= c || p.echoCancelUntil >= c || e0.mimicBlind || e0.buffs?.honeypot >= c || e0.buffs?.sudo >= c;
   const recording = soon(s, 0).find((t) => t.kind === 'mimic' && !blind(sourceOf(s, t)));

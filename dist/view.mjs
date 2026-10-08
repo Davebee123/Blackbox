@@ -288,20 +288,20 @@ function statusPanel(s) {
 // A tell (tells.mjs): on its part's row, in the column it lands, never hidden. It says what it is, what's coming
 // and what answers it, in a word or two; the hover has the whole of it. Its window (the cycles it can be answered
 // in) shows as NOW on the chip while it's open, and a longer window marks the cells before it (tellSpan).
-const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording' };
-const TELL_ICON = { charge: 'event-warning', cast: 'interrupt', seal: 'event-lock', mimic: 'scan' };
+const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
+const TELL_ICON = { charge: 'event-warning', cast: 'interrupt', seal: 'event-lock', mimic: 'scan', lock: 'event-lock' };
 function tellChip(s, i, c, k = '', to = null) {
   const p = part(s, i.source), left = i.left ?? Math.max(0, (i.need || 0) - (i.wound || 0));
   const open = i.open ?? c === 0, opens = i.winFrom ?? c; // its window is open now; or opens in that many cycles
   // What it does, as short as an attack chip's number.
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount} · burst` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
-    : i.tell === 'cast' ? (i.does === 'loud' ? '+35% hits' : i.does === 'grow' ? '+25% hp' : 'faster')
-    : i.tell === 'seal' ? '+◆' : 'copies you';
+    : i.tell === 'cast' ? (i.does === 'loud' ? '+35% hits' : i.does === 'grow' ? '+25% hp' : i.does === 'overclock' ? '×2 both ways' : 'faster')
+    : i.tell === 'seal' ? '+◆' : i.tell === 'lock' ? 'locks a key' : 'copies you';
   // The answer as an order: what it takes, and now (its window is open) or when its window opens.
   const at = open ? 'now' : `in ${opens}`;
   const answer = i.tell === 'charge' ? `Burst ${left}${i.armored && i.chits ? ` or ◆${i.chits}` : ''} ${at}`
     : i.tell === 'cast' ? (open ? `SIGINT or hit ×${left} now` : `SIGINT ${at}`)
-    : i.tell === 'seal' ? (c ? `Strip ◆${p?.armor || 0} first` : `Strip ◆${p?.armor || 0} now`) : `Go quiet ${at}`;
+    : i.tell === 'seal' ? (c ? `Strip ◆${p?.armor || 0} first` : `Strip ◆${p?.armor || 0} now`) : i.tell === 'lock' ? 'Feed it a cooldown' : `Go quiet ${at}`;
   const progress = i.wound && ['charge', 'cast'].includes(i.tell) ? `${i.wound}/${i.need}` : '';
   const lands = c ? `in ${c}` : 'this cycle';
   const window = !open ? `Its window opens ${opens === 1 ? 'next cycle' : `in ${opens} cycles`}, and hits before then don't count.` : c ? `Its window is open now and stays open until it lands.` : 'Its window is open now: this cycle is the last.';
@@ -310,7 +310,9 @@ function tellChip(s, i, c, k = '', to = null) {
   const after = 'If it lands it leaves you Corrupted, knocks your last skill offline, and hangs your next command.';
   const tip = i.tell === 'charge'
     ? `${i.name}: the ${p?.name}'s ${i.plain || 'attack'} in this cell, charged (${what}). It lands ${lands}. ${window} To call it off, ${i.answer}. Each ◆ you break in the window counts as half the burst. Half the burst lands it plain and spares you what it leaves behind, and less takes its extra off in step. ${counts} ${pays} ${after}`
+    : i.tell === 'cast' && i.does === 'overclock' ? `The ${p?.name} is casting ${i.name}. It lands ${lands}: for 2 cycles every part takes double damage, and every attack comes a cycle sooner. ${window} To stop it, ${i.answer}. Or let it land, and spend your biggest cooldown into the doubled parts. ${counts}`
     : i.tell === 'cast' ? `The ${p?.name} is casting ${i.name}. It lands ${lands}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. ${window} To stop it, ${i.answer}. ${counts} ${pays} ${after}`
+    : i.tell === 'lock' ? `${i.name}: when it lands (${lands}), the first command you fire after it is locked for 3 cycles, key 1 included. Nothing answers it but breaking the ${p?.name}. Feed it a skill you just fired, or one with a long cooldown, and it costs you little.`
     : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${lands}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it before then, and the skill that takes its last ◆ is ready again.`
     : `The Mimic plays back the command you fire ${lands}, at you${BOSSES[s.encounter?.virus?.boss]?.mimic > 1 ? ', twice over if you\'re Scrambled' : ''}. Fire something with no direct hit then (a debuff, a strip, a burn, a shield), and the Mimic is Open.`;
   return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">`
@@ -500,6 +502,8 @@ export function statusSpans(s) {
   if (e.corrupt) add('Corrupted', e.cycle + e.corrupt.left - 1, 'hot', `${e.corrupt.name} got through, and deals ${e.corrupt.amount} damage every cycle. Purge, Scrub or Rollback cleanses it.`, `−${e.corrupt.amount}`);
   if (e.hung >= e.cycle) add('Hung', e.hung, 'hot', 'A tell landed, and your command does not fire that cycle.');
   for (const [id, until] of Object.entries(e.locked || {})) add(`${ABILITIES[id]?.name || id} offline`, until, 'hot', 'A tell landed and knocked this skill offline.');
+  if (e.lockArmed) add('Lock armed', e.cycle, 'hot', 'The first command you fire is locked for 3 cycles, key 1 included. Feed it a skill that is cooling anyway.');
+  if (e.virus?.buffs?.overclock >= e.cycle) add('Overclocked', e.virus.buffs.overclock, 'hot', 'Every part of the virus takes double damage, and every attack comes a cycle sooner.', '×2');
   add('Scrambled', e.scrambleUntil ?? -1, 'hot', `Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead, at ${Math.round(CONFIG.scramble.self * 100)}% damage.`, `${Math.round(CONFIG.scramble.chance * 100)}% self-hit`);
   return out;
 }

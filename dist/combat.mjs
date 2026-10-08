@@ -26,7 +26,7 @@ import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, i
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
-import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf } from './tells.mjs';
+import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
 import { TELL } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
@@ -240,6 +240,7 @@ export function damageMultiplier(s, p, opts = {}) {
   if (opts.dot && on(s, p, 'tagged')) m *= SKILLS.tagged + (p.tagBoost || 0) + 0.1 * rank(s, 'persistent-tag');
   if (on(s, p, 'quarantined')) m *= SKILLS.quarantined;
   if (on(s, p, 'open')) m *= TELL.open.mult; // a tell read: the part is open (tells.mjs)
+  m *= overclockMult(s); // an Overclock that landed: every part takes double (tells.mjs, breaches only)
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) m *= CONFIG.weakMultiplier;
   if (opts.mine) {
     m *= 1 + 0.03 * rank(s, 'overclocked');
@@ -611,6 +612,7 @@ const uniqueFx = (s) => {
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
   }
+  out.push(...(hooks.extraFx?.(s) || [])); // a breach's CVEs (drafts.mjs): effect blocks that last the breach
   const amp = out.find((x) => x.fx.do === 'rule-amp');
   if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100) * 10) / 10;
   return out.concat(Object.values(rules));
@@ -771,6 +773,7 @@ export function emit(s, type, message, detail = {}) {
   const event = { id: ++s.serial, cycle: s.encounter?.cycle || 0, type, message, ...(s.who ? { who: s.who } : {}), ...detail }; // who: a crewmate's name (crew.mjs)
   s.logs.push(event);
   if (s.logs.length > 600) s.logs.shift();
+  hooks.emitted?.(s, event); // a breach's mods and CVEs react to what happens (drafts.mjs)
   return event;
 }
 
@@ -1696,6 +1699,13 @@ export function finish(s, result) {
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
+  // A breach node (breach.mjs): the kill's XP here. The draft, the pack and the map are the breach's.
+  if (e.breach) {
+    emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'breach' });
+    if (result === 'victory') payKill(s, e, XP.guard, `${e.virus.name} neutralized`);
+    hooks.breachEnd?.(s, result);
+    return;
+  }
   // The rogue server: a kill pays like a home kill, straight away (nothing to lose in a pack),
   // and the folder fills again a while later.
   if (e.zone) {
