@@ -46,7 +46,7 @@ export const abilities = {
   fuzz: {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Fuzz', target: 'part', damage: 12, tick: 8, ticks: 3, counts: 2, cooldown: 4, icon: 'event-warning',
     short: '12 + burn 8; 2 hits vs tells',
-    help: 'fuzz <part> — Deals 12 damage and burns the target for 8 every cycle for 3 cycles. Counts as two hits against a tell, enough to call off an elite\'s charge or interrupt a cast.',
+    help: 'fuzz <part> — Deals 12 damage and burns the target for 8 every cycle for 3 cycles. Its hit counts twice toward the burst that calls off a charge, and as two hits against a cast.',
     desc: 'Throws malformed input at the target until something breaks, dealing 12 damage and burning it for 8 every cycle for 3 cycles. The garbage counts as two hits against a tell, so one Fuzz interrupts a cast or calls off an elite\'s charge.',
   },
   'logic-trap': {
