@@ -188,6 +188,12 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.raid.cast { border-style: dashed; }
 .intent.raid .compiling { color: var(--hot); font-style: italic; opacity: 1; }
 .intent.raid.fuse { border-color: var(--amber); color: var(--amber); }
+/* A solo tell (tells.mjs): the crew-boss chip on its part's row, with what answers it on the last line. */
+.intent.raid.tell { white-space: normal; }
+.intent.raid.tell small { white-space: normal; line-height: 1.25; }
+.intent.raid.tell .answer { color: var(--amber); opacity: 1; font-weight: 600; }
+.intent.raid.tell.t-seal, .intent.raid.tell.t-mimic { border-color: var(--amber); }
+.intent.raid.tell.t-seal b, .intent.raid.tell.t-mimic b { color: var(--amber); }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
 .crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }
@@ -508,6 +514,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .intent b { display: none; }
   .intent .code { display: inline; }
   .intent.mine small { display: none; }
+  .intent.raid b { display: block; white-space: normal; font-size: 10px; letter-spacing: 0.5px; } /* a tell or a crew boss's mechanic keeps its name: it's what you answer */
+  .intent.raid.tell small:not(.answer) { display: none; }
   .bnow { grid-template-columns: 1fr !important; gap: 2px; }
   .bhead .countdown { font-size: 15px; }
   .hud-bar .bar-top { flex-wrap: wrap; }

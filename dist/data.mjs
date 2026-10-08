@@ -55,6 +55,10 @@ export const CONFIG = {
   ward: 0.25, // Lockbox: the warded part loses at most this share of its max a cycle
   twinReboot: { in: 3, at: 0.4, max: 1 }, // Mirror: a twin reboots this many cycles later at 40% with its armor, once
   mirrorBounce: 0.3, // Decoy: a mirrored command does nothing and this share bounces back
+  // The third parts that change the fight (FAMILIES, pool 'third'; GAME_RULES.md Families):
+  mutex: { share: 0.25, every: 4 }, // Mutex: the part it locks carries a shield of a quarter of its max, back to full 4 cycles after it breaks
+  tripwire: { loud: 1.25 }, // Tripwire: break it while the others live and they hit 25% harder, each attack a cycle sooner
+  c2: { gnaw: 0.5 }, // C2 Node: while it lives, fragments gnaw 50% harder; break it and they drop with it
   runEarly: [1, 1, 1.35, 1.5, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.45, 1.35, 1.25, 1.15, 1.05], // and this on top, by enemy level (1 past 16): levels 5–12 hit hardest, before gear catches up
   // ...and from level 10 a late step on top of that (linear between the points, flat after the last): your
   // subclass, talents, a fifth and sixth protocol slot and v2–v3 services outgrow the 4% a level, so without
@@ -153,7 +157,7 @@ export const CONFIG = {
 // target: 'part' | 'attack' (a part with an attack; optional) | 'none'. pierce: goes through armor chits. bare: only on a part with no armor.
 export const ABILITIES = {
   // cantrips: everyone
-  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Interrupt a cast', help: 'sigint — interrupts the cast a crew boss is compiling (Compiling… on its row). Some casts can\'t be interrupted, and an interrupted boss casts its next one a cycle sooner. Ready every 8 cycles.' },
+  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Interrupt a cast', help: 'sigint — interrupts a cast that is compiling (Compiling… on the board): a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and whatever you interrupt casts its next one sooner. Ready every 8 cycles.' },
   spike: { verb: 'hit', name: 'Spike', target: 'part', damage: 25, cooldown: 0, icon: 'spike', short: 'Hit 25', help: 'spike <part> — 25 damage. If you type nothing, you Spike the last part you hit.' },
   // Every class skill is simple, with one twist: a burn (damage over cycles), a proc (something
   // you do lights up a key for a cycle or two), a reactive window (usable right after an event),
@@ -161,9 +165,9 @@ export const ABILITIES = {
   // Breaker: burst, crits, breaking armor
   overload: { cls: 'breaker', verb: 'hit', name: 'Overload', target: 'part', damage: 40, cooldown: 3, icon: 'overload', short: 'Hit 40, crit resets', help: 'overload <part> — 40 damage. If it crits, its cooldown resets.' },
   exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 0, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Exposed: +25% crit', help: 'exploit <part> — Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
-  crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 3, icon: 'shell-shield', short: 'Strip 3 ◆', help: 'crack <part> — breaks 3 ◆ on it at once.' },
+  crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 2, icon: 'shell-shield', short: 'Strip 3 ◆', help: 'crack <part> — breaks 3 ◆ on it at once.' },
   shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 38, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 38 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last ◆. 38 damage.' },
-  flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 38, cooldown: 4, icon: 'overload', short: 'Hit 38, ×2 if bare', help: 'flood <part> — 38 damage, double on a part with no armor left.' },
+  flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 38, cooldown: 6, icon: 'overload', short: 'Hit 38, ×2 if bare', help: 'flood <part> — 38 damage, double on a part with no armor left.' },
   segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 below 30%', help: 'segfault <part> — 30 damage, three times that on a part under 30%.' },
   'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 15, cooldown: 3, icon: 'overload', short: 'Hit 15 all', help: 'fork-bomb — 15 damage to every part, 30 to an Exposed one.' },
   'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 6, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 6→18', help: 'thermal-runaway <part> — burns it for 6, then 10, 14 and 18.' },
@@ -258,8 +262,13 @@ export const FAMILIES = {
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Encryptor', integrity: 38, armor: 1, loot: 'Cipher Seed', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 5, first: 4 } },
+      // A third part (pool 'third': a wild virus brings one of those open at its level, picked by its seed).
       // From level 3: the Lockbox wards the Encryptor (it can't lose more than a quarter of itself a cycle while the Lockbox lives).
-      { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3 },
+      { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3, pool: 'third' },
+      // From level 8: the Mutex holds a lock on the Encryptor, a shield that comes back while the Mutex lives.
+      { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third' },
+      // From level 20: the Tripwire. Break it while the others live and they go loud.
+      { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 20, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } },
     ],
   },
   worm: {
@@ -270,7 +279,9 @@ export const FAMILIES = {
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
       // From level 3: the Mirror and the Replicator are twins. Break one while the other lives and it reboots.
-      { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'replicator', from: 3, attack: { name: 'Splice', effect: 'damage', amount: 3, interval: 4, first: 3 } },
+      { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'replicator', from: 3, pool: 'third', attack: { name: 'Splice', effect: 'damage', amount: 3, interval: 4, first: 3 } },
+      // From level 8: the C2 Node commands the fragments. They gnaw harder while it lives and drop when it breaks.
+      { id: 'c2', name: 'C2 Node', integrity: 18, armor: 1, loot: 'C2 Beacon', command: true, from: 8, pool: 'third', attack: { name: 'Beacon', effect: 'damage', amount: 3, interval: 4, first: 3 } },
     ],
   },
   ghostroot: {
@@ -282,7 +293,9 @@ export const FAMILIES = {
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
       { id: 'scrambler', name: 'Scrambler', integrity: 40, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 9, interval: 4, first: 2 } },
       // From level 4: every 4th cycle the Decoy mirrors your commands. They do nothing, and some bounces back.
-      { id: 'decoy', name: 'Decoy', integrity: 18, armor: 1, veiled: true, loot: 'Decoy Shell', reflect: 4, from: 4 },
+      { id: 'decoy', name: 'Decoy', integrity: 18, armor: 1, veiled: true, loot: 'Decoy Shell', reflect: 4, from: 4, pool: 'third' },
+      // From level 8: the Mimic records your commands and plays the last one back at you on its beat (its MIMIC tell).
+      { id: 'mimic', name: 'Mimic', integrity: 18, armor: 1, veiled: true, loot: 'Mimic Mask', mimic: true, from: 8, pool: 'third' },
     ],
   },
 };
@@ -294,58 +307,58 @@ export const FAMILIES = {
 const PULSE = (amount, first) => ({ id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount, interval: 4, first } });
 export const STRAINS = {
   keylogger: {
-    lineage: 'ghostroot', from: 4, depth: 2, name: 'Keylogger',
+    lineage: 'ghostroot', from: 4, depth: 2, name: 'Keylogger', tell: { name: 'Keystorm' },
     rule: 'A Sync Window opens every cycle. The Logger only takes damage from commands fired inside it; every command fired outside it is logged, and 3 logs come back as an 18-damage Dump. It Dumps on its own every 6 cycles too.',
     parts: [PULSE(12, 3), { id: 'logger', name: 'Logger', integrity: 30, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, attack: { name: 'Dump', effect: 'damage', amount: 18, interval: 6, first: 6, dump: true } }],
   },
   hashrat: {
-    lineage: 'ransomware', from: 5, depth: 2, name: 'Hashrat',
+    lineage: 'ransomware', from: 5, depth: 2, name: 'Hashrat', tell: { name: 'Overcharge', part: 'basic' },
     rule: 'While the Miner lives, your cooldowns tick down only every other cycle. Left alone, it Overclocks: 4 damage every 2 cycles.',
     parts: [PULSE(12, 3), { id: 'miner', name: 'Miner', integrity: 30, armor: 0, loot: 'Miner Rig', special: true, tax: true, attack: { name: 'Overclock', effect: 'damage', amount: 4, interval: 2, first: 2, alone: true } }],
   },
   floodgate: {
-    lineage: 'worm', from: 6, depth: 2, name: 'Floodgate',
+    lineage: 'worm', from: 6, depth: 2, name: 'Floodgate', tell: { name: 'Deluge' },
     rule: 'The Flooder hits every cycle, one harder each time; any delay resets it.',
     parts: [PULSE(12, 4), { id: 'flooder', name: 'Flooder', integrity: 28, armor: 0, loot: 'Flood Valve', special: true, attack: { name: 'Flood', effect: 'damage', amount: 2, interval: 1, first: 2, ramp: 1 } }],
   },
   leech: {
-    lineage: 'worm', from: 8, depth: 2, name: 'Leech',
+    lineage: 'worm', from: 8, depth: 2, name: 'Leech', tell: { name: 'Gorge' },
     rule: 'The Tap heals its most damaged part by everything its bite deals, and clears one burn from it.',
     parts: [PULSE(12, 4), { id: 'tap', name: 'Tap', integrity: 28, armor: 1, loot: 'Tap Fang', special: true, attack: { name: 'Siphon', effect: 'damage', amount: 8, interval: 3, first: 3, siphon: true } }],
   },
   sleeper: {
-    lineage: 'ghostroot', from: 10, depth: 2, name: 'Sleeper', dormant: 6,
+    lineage: 'ghostroot', from: 10, depth: 2, name: 'Sleeper', tell: { name: 'Wake-up Call' }, dormant: 6,
     rule: 'Dormant until you deal damage or cycle 6. When it wakes, the Cell sounds a 14-damage Alarm and the Pulse Node attacks a cycle sooner.',
     parts: [PULSE(14, 3), { id: 'cell', name: 'Cell', integrity: 32, armor: 1, loot: 'Cell Key', special: true, attack: { name: 'Alarm', effect: 'damage', amount: 14, interval: 5, first: 999, alarm: true } }],
   },
   // Wave 1b: six more for the early climb (levels 3–11), all from layer 2.
   patchwork: {
-    lineage: 'worm', from: 3, depth: 2, name: 'Patchwork',
+    lineage: 'worm', from: 3, depth: 2, name: 'Patchwork', tell: { name: 'Hotfix' },
     rule: 'Every 3 cycles the Patcher heals the most damaged part by 12. Kill it first, or burst the other one down between patches.',
     parts: [PULSE(12, 4), { id: 'patcher', name: 'Patcher', integrity: 28, armor: 1, loot: 'Patch Kit', special: true, attack: { name: 'Patch', effect: 'heal', amount: 12, interval: 3, first: 3 } }],
   },
   flicker: {
-    lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker',
+    lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker', tell: { name: 'Blink' },
     rule: 'The Shade is only there on even cycles. On odd cycles your hits pass straight through it, and 15% of the hit bounces back at you. It strikes when it is there.',
     parts: [PULSE(13, 3), { id: 'shade', name: 'Shade', integrity: 22, armor: 1, loot: 'Shade Lens', special: true, phase: true, attack: { name: 'Fade', effect: 'damage', amount: 5, interval: 2, first: 2 } }],
   },
   extortion: {
-    lineage: 'ransomware', from: 6, depth: 2, name: 'Extortion',
+    lineage: 'ransomware', from: 6, depth: 2, name: 'Extortion', tell: { name: 'Overcharge', part: 'basic' },
     rule: 'The Demand winds up a 26-damage Deadline. Deal it 14 damage in the 2 cycles before it lands and the Deadline is called off.',
     parts: [PULSE(12, 3), { id: 'demand', name: 'Demand', integrity: 40, armor: 0, loot: 'Ransom Note', special: true, attack: { name: 'Deadline', effect: 'damage', amount: 26, interval: 5, first: 4, windup: 14 } }],
   },
   echo: {
-    lineage: 'ghostroot', from: 8, depth: 2, name: 'Echo',
+    lineage: 'ghostroot', from: 8, depth: 2, name: 'Echo', tell: { name: 'Feedback' },
     rule: 'While the Echo lives, every hit you take repeats a cycle later at half damage, and it Reverbs for 6 every 4 cycles.',
     parts: [PULSE(14, 3), { id: 'echo', name: 'Echo', integrity: 30, armor: 1, loot: 'Echo Chamber', special: true, echo: true, attack: { name: 'Reverb', effect: 'damage', amount: 6, interval: 4, first: 3 } }],
   },
   bricker: {
-    lineage: 'ransomware', from: 9, depth: 2, name: 'Bricker', enrage: true,
+    lineage: 'ransomware', from: 9, depth: 2, name: 'Bricker', tell: { name: 'Brick Wall' }, enrage: true,
     rule: 'Each part hits 30% harder once it drops below half Integrity. Take parts from healthy to dead in one go.',
     parts: [PULSE(12, 3), { id: 'locker', name: 'Locker', integrity: 36, armor: 1, loot: 'Brick Key', special: true, attack: { name: 'Brick', effect: 'damage', amount: 10, interval: 3, first: 3 } }],
   },
   overrun: {
-    lineage: 'worm', from: 11, depth: 2, name: 'Overrun',
+    lineage: 'worm', from: 11, depth: 2, name: 'Overrun', tell: { name: 'Swarm', spawn: 1 },
     rule: 'The Hive spawns fragments that bite one harder every cycle they live. Clear them young, or kill the Hive.',
     parts: [PULSE(10, 4), { id: 'hive', name: 'Hive', integrity: 34, armor: 1, loot: 'Hive Comb', special: true, overrun: true, attack: { name: 'Swarm', effect: 'replicate', amount: 1, interval: 4, first: 2 } }],
   },
@@ -508,6 +521,10 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     ward: spec.ward || null, // Lockbox: the part it wards loses at most CONFIG.ward of its max a cycle
     twin: spec.twin || null, // Mirror: its twin; break one while the other lives and it reboots
     reflect: spec.reflect || 0, // Decoy: every Nth cycle your commands are mirrored
+    lock: spec.lock || null, // Mutex: the part it holds a lock (a shield) on
+    deadman: !!spec.deadman, // Tripwire: break it while the others live and they go loud
+    command: !!spec.command, // C2 Node: fragments gnaw harder while it lives, and drop when it breaks
+    mimic: !!spec.mimic, // Mimic: plays your last command back at you (its tell)
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
     lastDamaged: 0,
@@ -630,6 +647,87 @@ export const HOT_RUN = { hp: 1.25, dmg: 1.2, xp: 1.25, rolls: 1 };
 export const BOSS_LOOT = { chance: 0.3, pity: 0.1 };
 export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
+// ---------- solo tells (tells.mjs) ----------
+// A tell is a move a part announces ahead, on its row of the board and in the log, that the player answers.
+// Solo fights only (wild viruses, guards, elites, strains, the solo bosses, home intrusions); crew bosses
+// have their own mechanics (raid.mjs). docs/solo-tells.md is the designer's review sheet. Four kinds:
+//   charge  its next attack, much bigger (mult). Called off if your commands hit its part (damage it, or break a
+//           ◆ on it) enough times before it lands (hits; burns and helpers don't count), or softened like any
+//           attack (a ◆, a shield, Null Route, Throttle, Brace).
+//   cast    compiling a buff on the virus (does) for castLasts cycles, from level 10. SIGINT stops it; so do
+//           castHits hits on its part.
+//   seal    if the part still wears ◆ when it lands, it re-arms to full with one ◆ more, and every stripped part
+//           gets a ◆ back. Strip it first.
+//   mimic   the Mimic plays the command you fire on its beat back at you (its direct damage). Go quiet then.
+// Breaking a tell's part always stops it. Nothing lands unannounced: every tell shows `lead` cycles ahead.
+export const TELL = {
+  // By the virus's level: how many tells it brings (count), how far ahead each shows (lead), how many of your
+  // commands have to hit its part to call a charge (hits) or a cast (castHits) off, how much bigger a charge is
+  // (mult), and the most a charge adds to the hit it rides on, as a share of your max (cap; dot: Full Disk's
+  // burst a cycle). Gentle while you have three skills, full from 17.
+  tiers: [
+    { to: 5, count: 1, lead: 3, hits: 1, castHits: 2, mult: 2, cap: 0.1, dot: 0.03 },
+    { to: 9, count: 1, lead: 2, hits: 1, castHits: 2, mult: 2.2, cap: 0.14, dot: 0.04 },
+    { to: 16, count: 2, lead: 2, hits: 1, castHits: 2, mult: 2.4, cap: 0.18, dot: 0.05 },
+    { to: 99, count: 2, lead: 2, hits: 1, castHits: 2, mult: 2.3, cap: 0.17, dot: 0.05 },
+  ],
+  ceiling: 0.55, // and never more than this share of your max in one hit: no one-shots
+  elite: { count: 1, cap: 1.15, hits: 1 }, // an elite brings one more, each can cost 15% more (never a one-shot), and a charge takes one more hit
+  boss: { count: 3, cap: 1.1, hits: 1 }, // a solo boss brings every tell open at its level, and its charges take one more hit
+  champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
+
+  castFrom: 10, // casts come with SIGINT
+  knock: 1, // a charge called off knocks its plain attack back this many cycles
+  burst: 3, // Full Disk: its burst of encryption lasts this many cycles
+  castLasts: 4, // a cast's buff lasts this many cycles (another one starts the clock over, it doesn't stack)
+  loud: 1.35, // Double Extortion: its attacks hit 35% harder
+  grow: 0.25, // Self-Update: every part grows a quarter more Integrity
+  mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
+  sooner: 2, // an interrupted cast comes back two cycles sooner, so SIGINT (ready every 8) can stop at most every other one
+  bots: { answer: true }, // sim switch (balance.mjs): a bot that plays as if it can't see tells
+};
+// The library. part: where it sits. 'idle' is picked when it's announced: the part you've left alone longest
+// that can do it (an attacker for a charge; a part wearing ◆ for a seal), the signature part first on a tie. So a
+// tell punishes tunnel vision: while you work on one part, another winds up. name: its name on the signature
+// part (other: on any other part). first: the cycle it's first announced; every: cycles from one landing to the next.
+export const TELLS = {
+  // Charges: answer with damage (or ◆), or soften it.
+  fulldisk: { kind: 'charge', name: 'Full Disk', other: 'Overcharge', part: 'idle', first: 2, every: 6 }, // an Encrypt with a burst of encryption on top for 3 cycles
+  massmailer: { kind: 'charge', name: 'Mass Mailer', other: 'Overcharge', part: 'idle', first: 2, every: 6, spawn: 1 }, // a Replicate that hatches two (up to the limit)
+  possession: { kind: 'charge', name: 'Possession', other: 'Overcharge', part: 'idle', first: 2, every: 6, longer: 2, plain: true }, // a Scramble that lasts two cycles longer (Scrub clears it)
+  lockon: { kind: 'charge', name: 'Lock-on', other: 'Overcharge', part: 'idle', first: 2, every: 6 }, // Watchdog, Tracer
+  infest: { kind: 'charge', name: 'Infest', other: 'Overcharge', part: 'idle', first: 2, every: 6, spawn: 1 }, // Crawler
+  deepshred: { kind: 'charge', name: 'Deep Shred', other: 'Overcharge', part: 'idle', first: 2, every: 6, shred: true }, // Shredder: it shreds a file in your pack too
+  ram: { kind: 'charge', name: 'Battering Ram', other: 'Battering Ram', part: 'idle', first: 2, every: 6 }, // Bouncer (only its Gate attacks)
+  // Casts (from level 10): SIGINT, the wind-up, or break the part.
+  extortion: { kind: 'cast', name: 'Double Extortion', part: 'idle', first: 4, every: 7, does: 'loud' }, // its attacks hit 35% harder for 4 cycles
+  selfupdate: { kind: 'cast', name: 'Self-Update', part: 'idle', first: 4, every: 7, does: 'grow' }, // every part grows a quarter more Integrity
+  persistence: { kind: 'cast', name: 'Persistence', part: 'idle', first: 4, every: 7, does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
+  callhome: { kind: 'cast', name: 'Call Home', part: 'idle', first: 4, every: 7, does: 'haste' }, // guards
+  // Seals: strip the part before it lands, or it re-arms with one ◆ more.
+  keyrotation: { kind: 'seal', name: 'Key Rotation', part: 'idle', first: 5, every: 7 },
+  resync: { kind: 'seal', name: 'Resync', part: 'idle', first: 5, every: 7 },
+  godark: { kind: 'seal', name: 'Go Dark', part: 'idle', first: 5, every: 7 },
+  blacklist: { kind: 'seal', name: 'Blacklist', part: 'idle', first: 3, every: 7 }, // Sentinel
+  // The Mimic's beat (a part's nature, not counted against the tier's count).
+  mimic: { kind: 'mimic', name: 'Mimic', part: 'mimic', first: 3, every: 4 },
+};
+// Which tells each virus brings, in order: a tier's count takes the first ones open at the virus's level
+// (a cast from TELL.castFrom; a seal from SEAL_FROM, on a part that wears ◆). Strains bring their own charge
+// (STRAINS[id].tell) and their lineage's cast and seal.
+export const SEAL_FROM = 6;
+export const TELL_SETS = {
+  ransomware: ['fulldisk', 'extortion', 'keyrotation'],
+  worm: ['massmailer', 'selfupdate', 'resync'],
+  ghostroot: ['possession', 'persistence', 'godark'],
+  watchdog: ['lockon', 'callhome'],
+  sentinel: ['blacklist', 'callhome'],
+  crawler: ['infest', 'callhome'],
+  shredder: ['deepshred', 'callhome'],
+  bouncer: ['ram', 'callhome'],
+  tracer: ['lockon', 'callhome'],
+};
+
 // Build a virus from a named fixture or a seeded random variant.
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const next = rng(seed);
@@ -654,7 +752,12 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
   // A family's third part joins wild viruses from its level (named fixtures stay as they are); the others give up some Integrity for it.
-  const specs = (strain ? strain.parts : family.parts).filter((spec) => !spec.from || ((random || overrides.family) && level >= spec.from));
+  const open = (strain ? strain.parts : family.parts).filter((spec) => !spec.from || ((random || overrides.family) && level >= spec.from));
+  // The third part: one of those open at its level (FAMILIES, pool 'third'), picked by its own hash of the
+  // seed so it never moves the virus's other rolls. A boss keeps its family's first (the classic one).
+  const pool = open.filter((spec) => spec.pool === 'third');
+  const third = pool.length ? pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
+  const specs = open.filter((spec) => spec.pool !== 'third' || spec === third);
   const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
@@ -777,7 +880,7 @@ export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
   // Your 4th skill (Crack, Retaliate, Backdoor, Botnet) comes before Backtrace: armor needs an answer early.
   { level: 7, what: 3 }, { level: 10, what: 'edge' }, // the edge comes with your subclass; its skills at SUBCLASS.unlocks
-  { level: 10, what: 'sigint' }, // everyone's interrupt, for crew bosses' casts (raid.mjs)
+  { level: 10, what: 'sigint' }, // everyone's interrupt, for casts: a crew boss's (raid.mjs), a solo tell's (tells.mjs)
 ];
 // XP: a kill is worth 20 + 10 per enemy level. Level L to L+1 takes about 5 + 1.2×L kills of
 // your own level (6 at level 1, 27 at 18, 64 at 49): an MMO-length climb, 1,700 fights to 50.
@@ -801,7 +904,7 @@ export const TREE = [
 const f = (id, name, rule, per) => ({ id, name, rule, per, max: 3 });
 export const CANTRIPS = [
   { key: '1', id: 'spike', name: 'Spike', rule: 'Hit 25. If you type nothing, you Spike the last part you hit.' },
-  { key: '9', id: 'sigint', name: 'SIGINT', rule: 'Interrupts the cast a crew boss is compiling. Some casts can\'t be interrupted, and an interrupted boss casts its next one a cycle sooner. It\'s ready every 8 cycles.' },
+  { key: '9', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling: a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and whatever you interrupt casts its next one sooner. It\'s ready every 8 cycles.' },
 ];
 // Edge: each class's signature passive, from level 10 (the root of its talent tree).
 export const EDGE = {

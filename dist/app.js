@@ -70,6 +70,8 @@ function load() {
   if (playtest) {
     const s = fresh();
     if (['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('cls'))) s.loadout.archetype = params.get('cls'); // ?playtest=cryptjack&cls=infiltrator
+    const lv = Number(params.get('level')); // ?playtest=random&level=12: that level, and the virus at it (tells scale with it)
+    if (lv >= 1 && lv <= 50) s.hackers = { [s.loadout.archetype]: { level: lv, xp: 0 } };
     command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
     command(s, 'engage');
@@ -509,9 +511,10 @@ function react(events) {
         break;
       }
       case 'heal': feel.add('good', MINE, e.amount ? `+${e.amount}` : null); break;
-      case 'blocked': feel.add('interrupt', MINE, 'BLOCKED'); break;
+      case 'blocked': feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
-      case 'interrupt': feel.add('interrupt', row(e.target), 'DELAYED'); break;
+      case 'interrupt': feel.add('interrupt', row(e.target), e.tell ? 'STOPPED' : 'DELAYED'); break;
+      case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
       case 'warning': feel.add('nope', '#command-form'); break;
       case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;

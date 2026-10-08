@@ -63,7 +63,7 @@ The Sysop heals, and fixes what a virus does to a crewmate. It is built for a cr
 | 12 | `patch [name]` | Heals 4 now, then 2 a cycle for 3 cycles. In a crew, `patch nyx` heals nyx instead. | 4 |
 | 14 | `multicast` | Heals you and everyone in your crew for 16. | 4 |
 | 18 | `heartbeat [name]` | Heals 4 a cycle for 4 cycles, starting now. A new Heartbeat on the same player replaces the old one. | 4 |
-| 22 | `scrub [name]` | Clears encryption and Scrambled, and heals 8. | 5 |
+| 22 | `scrub [name]` | Clears encryption (a Full Disk burst too) and Scrambled, and heals 8. | 5 |
 | 26 | `reclaim <part>` | Deals 35 damage, and you heal half of what it does. On armor it breaks 2 chits. | 3 |
 | 30 | `rollback [name]` | Undoes the last attack that hurt that player: it heals back everything the attack did, or deletes the fragment it spawned. | 6 |
 | 34 | `hot-standby [name]` | Puts that player on standby: the next attack that would drop them to 0 leaves them at 1. | once a fight |

@@ -22,6 +22,7 @@
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
 import { subOf, subEdge, hasTalent, rank, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
+import { tellHit } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -74,6 +75,7 @@ function strip(s, p, n, label) {
   if (!k) return 0;
   p.armor -= k;
   p.lastDamaged = e.cycle;
+  if (label !== 'Bit Rot') tellHit(s, p); // a command's strip hits it: a charge or cast on it counts it (tells.mjs)
   if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); openProc(s, 'stripped'); }
   emit(s, 'armor', `${label}: ${p.name} loses ${k} ◆${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
   return k;

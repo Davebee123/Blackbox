@@ -26,6 +26,7 @@ import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, i
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
+import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellCast } from './tells.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear } from './firewall.mjs';
 import { portsCommand, invaderDown, invasionRestore } from './invasion.mjs';
@@ -1321,6 +1322,9 @@ function engage(s) {
   emit(s, 'engage', `Engaged ${e.virus.name}.`);
   hooks.crewEngage?.(s); // crew.mjs: crewmates join (run fights only)
   raidStart(s); // a crew boss (raid.mjs): its mechanics, once the crew is in
+  // Mutex: the part it locks starts the fight behind its shield (sized once the crew has made the virus bigger).
+  for (const m of livingParts(s).filter((x) => x.lock)) { const t = part(s, m.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } }
+  tellStart(s); // a solo fight's tells (tells.mjs)
 }
 
 // Fast kills: beat your own usual pace (cycles per 100 Integrity of virus, kept per class) by a
@@ -1612,7 +1616,7 @@ export function validate(s, intent) {
   if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).filter((b) => intent.ability !== 'detonate' || b.id !== 'implant').length) return `No burns on ${part(s, intent.target).name}${intent.ability === 'detonate' && burnsOn(s, part(s, intent.target)).length ? ' but the Rootkit Implant (it burns until the part breaks)' : ''}.`;
   if (['reroute', 'cron-storm'].includes(intent.ability) && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'kill-switch' && !e.helpers.length) return 'No helpers running.';
-  if (intent.ability === 'sigint') { const why = sigintCheck(s); if (why) return why; }
+  if (intent.ability === 'sigint') { const why = e.virus.raid ? sigintCheck(s) : tellCast(s) ? null : 'Nothing is compiling. SIGINT stops a cast.'; if (why) return why; }
   const check = classCheck(intent.ability);
   if (check) { const why = check(s, intent); if (why) return why; }
   if (intent.ally && !allyOf(s, intent.ally)) return `${intent.ally} isn't standing.`;
@@ -1920,6 +1924,7 @@ export function hit(s, p, base, opts = {}) {
     const heavy = (opts.chits > 1 || (opts.mine && !opts.dot && !opts.by && base >= CONFIG.heavyHit * powerOf(s) - 1e-9)) && p.armor > 1; // (base is already your size)
     p.armor -= heavy ? 2 : 1;
     p.lastDamaged = e.cycle;
+    if (e.commanding && !opts.dot) tellHit(s, p); // your command hit it: a charge or cast on it counts it (tells.mjs)
     if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); if (!opts.server) openProc(s, 'stripped'); }
     emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
     return { dealt: 0, overflow: 0, absorbed: true };
@@ -1956,6 +1961,14 @@ export function hit(s, p, base, opts = {}) {
     p.wardAt = e.cycle; p.wardUsed = used + dealt;
     if (dealt < was) notes.push(`warded: ${was - dealt} held back`);
   }
+  // Mutex: while it lives, the part it locks carries a shield (its lock) that takes the hit first.
+  let unlocked = false;
+  if (dealt > 0 && p.lockHp > 0 && livingParts(s).some((x) => x.lock === p.id)) {
+    const soak = Math.min(p.lockHp, dealt);
+    p.lockHp -= soak; dealt -= soak;
+    notes.push(`lock: ${soak} held`);
+    if (!p.lockHp) { p.lockAt = e.cycle + CONFIG.mutex.every; unlocked = true; }
+  }
   // A crew boss (raid.mjs): a firewall phase's shield takes the hit first, a priority add's ward cuts it.
   if (dealt > 0 && e.virus.raid) { const was = dealt; dealt = raidShield(s, p, dealt); if (dealt < was && !dealt) notes.push('shielded'); }
   if (crit) notes.push('CRIT');
@@ -1972,6 +1985,8 @@ export function hit(s, p, base, opts = {}) {
   if (crit && opts.mine && dealt > 0) for (const x of fxFire(s, 'crit', { do: 'heal' })) heal(s, x.value, x.it.name);
   e.lastCrit = !!crit && !!opts.mine;
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit });
+  if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor });
+  if (dealt > 0 && e.virus.tells && e.commanding && !opts.dot) tellHit(s, p); // your command hit it: a charge or cast on it counts it (tells.mjs)
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
   if (w && dealt > 0 && p.integrity > 0 && p.attack.due - e.cycle <= 2) {
@@ -2075,6 +2090,28 @@ function breakPart(s, p) {
   }
   emit(s, 'broken', `${p.name.toUpperCase()} BROKEN${p.attack ? `. ${p.attack.name} stops` : ''}.`, { target: p.id });
   if (e.virus.raid) raidBroke(s); // a crew boss's adds go down with it
+  if (e.virus.tells) tellBroke(s, p); // its tells stop with it (tells.mjs)
+  // Mutex: its lock goes with it.
+  if (p.lock) { const t = part(s, p.lock); if (t?.lockHp) { t.lockHp = 0; t.lockAt = null; emit(s, 'status', `The ${t.name}'s lock is gone with the Mutex.`, { target: t.id }); } }
+  // C2 Node: the fragments lose their command, and drop with it.
+  if (p.command) {
+    const frags = livingParts(s).filter((x) => x.kind === 'fragment');
+    for (const f of frags) f.integrity = 0;
+    if (frags.length) emit(s, 'broken', `${frags.length === 1 ? 'Its fragment drops' : `All ${frags.length} fragments drop`} with the C2 Node.`, { target: frags[0].id, c2: true });
+  }
+  // Tripwire: break it while the others live and they go loud: harder hits, each attack a cycle sooner.
+  if (p.deadman) {
+    const loud = livingParts(s).filter((x) => x.kind === 'system');
+    for (const x of loud) {
+      x.loud = true;
+      const a = x.attack;
+      if (!a) continue;
+      if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * CONFIG.tripwire.loud));
+      if (a.hit) a.hit = Math.max(1, Math.round(a.hit * CONFIG.tripwire.loud));
+      if (a.due > e.cycle + 1 && a.due < 900) a.due--;
+    }
+    if (loud.length) emit(s, 'phase', `TRIPWIRE. ${loud.map((x) => x.name).join(' and ')} ${loud.length === 1 ? 'goes' : 'go'} loud: ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% harder, and every attack a cycle sooner.`, { target: loud[0].id, tripwire: true });
+  }
   // Linked parts (every v2 or bigger virus; the old Rerouting mutation too): a third of the broken part's hit
   // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
   // (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
@@ -2097,7 +2134,7 @@ function breakPart(s, p) {
   }
   // Breaking the Encryptor hands you the key: the encryption stops.
   if (e.encrypt && p.attack?.effect === 'encrypt' && !livingParts(s).some((x) => x.attack?.effect === 'encrypt')) {
-    e.encrypt = 0;
+    e.encrypt = 0; e.burst = null;
     emit(s, 'decrypted', 'Key recovered: your server is decrypted.', { target: p.id });
   }
   if (e.autoStopped) {
@@ -2109,6 +2146,7 @@ function breakPart(s, p) {
 function useAbility(s, intent, auto = false) {
   const e = s.encounter;
   if (intent.ability === 'hold') {
+    e.lastCmd = { id: 'hold', cycle: e.cycle };
     e.metrics.holds++;
     emit(s, 'hold', 'Held. No command fired.');
     return;
@@ -2134,6 +2172,7 @@ function useAbility(s, intent, auto = false) {
   emit(s, 'resolved', `${auto === 'daemon' ? `Daemon ${intent.daemon}: ` : ''}${intent.text}${auto && auto !== 'daemon' ? ' (timer ran out)' : ''}.`, { ability: id, target: intent.target, auto });
   const base = target ? skillBase(s, id, target) : 0;
   e.lastSkill = id;
+  e.lastCmd = { id, cycle: e.cycle, target: intent.target || null }; // what the Mimic plays back (tells.mjs)
   // An empty cycle Spikes the last part you hit.
   if (base && auto !== 'daemon') e.lastAttack = `spike ${intent.target}`;
 
@@ -2193,9 +2232,9 @@ function useAbility(s, intent, auto = false) {
     const stack = a.stacks ? e.burns.filter((b) => b.target === target.id && b.id === id).length : 0;
     emit(s, 'status', `${target.name} burning: ${tick}${a.grow ? ', growing' : ''} per cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}${stack > 1 ? ` (${stack} stacks)` : ''}.`, { target: target.id, mark: 'burn', ability: id });
   }
-  if (id === 'purge' && e.encrypt) { e.encrypt = 0; emit(s, 'decrypted', 'Purge: your encryption is cleared.'); }
+  if (id === 'purge' && (e.encrypt || e.burst)) { e.encrypt = 0; e.burst = null; emit(s, 'decrypted', 'Purge: your encryption is cleared.'); }
   if (id === 'purge' && e.virus.raid) cleanse(s, ['dots', 'stress']); // a crew boss's damage over time and Thermal Stress
-  if (id === 'sigint') sigint(s);
+  if (id === 'sigint') { if (e.virus.raid) sigint(s); else tellSigint(s); } // a crew boss's cast, or a solo one (tells.mjs)
   if (a.verb === 'heal' && e.virus.raid) noteHeal(s); // the healer rule (raid.mjs)
   if (a.helper) {
     let dmg = a.helper, n = a.ticks, count = a.helpers || 1;
@@ -2248,6 +2287,7 @@ function useAbility(s, intent, auto = false) {
   if (id === 'crack') {
     const n = Math.min(a.strip, target.armor);
     target.armor -= n;
+    tellHit(s, target);
     emit(s, 'armor', `Crack: ${target.name} loses ${n} ${n === 1 ? 'chit' : 'chits'}${target.armor ? ` (${target.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: target.id, left: target.armor });
     if (!target.armor) { target.patchAt = e.cycle + patchDelay(s); openProc(s, 'stripped'); }
   }
@@ -2329,7 +2369,7 @@ function rollback(s) {
   e.undo = null;
   if (u?.type === 'damage') heal(s, u.amount, 'Rolled back');
   if (u?.type === 'replicate') { const f = part(s, u.part); if (alive(f)) { f.integrity = 0; emit(s, 'heal', `Rolled back: ${f.name} deleted.`, { target: f.id }); } }
-  if (e.encrypt) { e.encrypt = 0; emit(s, 'decrypted', 'Rolled back: encryption wiped.'); }
+  if (e.encrypt || e.burst) { e.encrypt = 0; e.burst = null; emit(s, 'decrypted', 'Rolled back: encryption wiped.'); }
 }
 
 export const cronDue = (cycle) => cycle % 3 === 0;
@@ -2387,13 +2427,15 @@ export function attackAmount(p) {
   return Math.round(n);
 }
 
+// C2 Node: while it lives, fragments gnaw harder (CONFIG.c2).
+export const c2Gnaw = (s, p) => (p.kind === 'fragment' && livingParts(s).some((x) => x.command) ? 1 + CONFIG.c2.gnaw : 1);
 // A player drawing fire this cycle (Bastion Firewall in a crew): the one every attack goes at.
 export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.cycle ? s : null);
 
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
-  const power = attackAmount(p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
+  const power = attackAmount(p) * c2Gnaw(s, p) * (e.soft || 1) * gapTaken(levelGap(s)) * (p.boosted ? CONFIG.reactiveBonus : 1) * (on(s, p, 'throttled') ? (hasTalent(s, 'backpressure') ? 0.25 : SKILLS.throttled) : 1);
   // A hit: a damage attack, or a special that also hits (the Scrambler's Scramble). Its size is `hit`, scaled like the rest.
   const hits = atk.effect === 'damage' || !!atk.hit, hitPower = atk.hit ? (power * atk.hit) / Math.max(1, atk.amount) : power;
   p.boosted = false;
@@ -2443,7 +2485,7 @@ function landAttack(s, p) {
   if (hits) {
     const tough = 1 - 0.03 * (rank(s, 'failsafe') + rank(s, 'hardened-kernel') + rank(s, 'low-profile') + rank(s, 'load-balancer'));
     // Enemy crits: a roll on every damage attack (from enemy level 3).
-    let crit = (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit;
+    let crit = !atk.noCrit && (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit; // a tell never crits (tells.mjs): it's already as big as it gets
     if (crit && fxFire(s, 'struck', { do: 'crit-normal' }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have crit. It lands as a normal hit.`, { source: p.id }); }
     let half = fxFire(s, 'struck', { do: 'halve' })[0];
     if (half) emit(s, 'blocked', `${half.it.name}: ${atk.name} deals half.`, { source: p.id });
@@ -2520,7 +2562,8 @@ export function playerPhase(s, phase = 'all') {
   if (e.queue) {
     const q = e.queue;
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
-    useAbility(s, q);
+    e.commanding = true; // hits while your command resolves count toward a tell's hits (tells.mjs)
+    try { useAbility(s, q); } finally { e.commanding = false; }
     if (e.synced && active(s) && q.ability !== 'hold') syncBonus(s, q);
     e.surprise = false;
   }
@@ -2529,7 +2572,8 @@ export function playerPhase(s, phase = 'all') {
     if (intent.error) emit(s, 'hold', 'Auto-repeat had no target. Nothing fired.');
     else {
       intent.text = `${intent.ability} ${intent.target}`;
-      useAbility(s, intent, true);
+      e.commanding = true;
+      try { useAbility(s, intent, true); } finally { e.commanding = false; }
     }
   } else {
     e.metrics.holds++;
@@ -2650,6 +2694,7 @@ export function stepCycle(s) {
   }
   const landed = e.steps.landed;
   e.steps = null;
+  if (e.virus.tells && tellLand(s)) return since(s, first);
   if (e.virus.raid && raidLand(s)) return since(s, first);
   cycleClose(s, landed);
   return since(s, first);
@@ -2676,6 +2721,16 @@ function cycleStart(s) {
       finish(s, 'crashed');
       return true;
     }
+  }
+
+  // Full Disk (a tell, tells.mjs): a burst of encryption on top of the stack, for a few cycles.
+  if (e.burst?.left > 0) {
+    const dealt = takeDamage(s, e.burst.amount, e.burst.source, e.burst.name);
+    e.burst.left--;
+    e.metrics.encrypted += dealt;
+    if (dealt) emit(s, 'encrypted', `${e.burst.name}: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: e.burst.source, amount: dealt });
+    if (!e.burst.left) e.burst = null;
+    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   }
 
   // Sleeper: dormant until a hit or its timer wakes it. While it sleeps its attacks wait.
@@ -2710,7 +2765,7 @@ function cycleStart(s) {
 const dueNow = (s) => {
   const live = livingParts(s).length;
   for (const p of attackers(s)) if (p.attack.alone && live > 1 && p.attack.due <= s.encounter.cycle) p.attack.due = s.encounter.cycle + 1;
-  return attackers(s).sort((a, b) => a.attack.due - b.attack.due).filter((p) => p.attack.due <= s.encounter.cycle);
+  return attackers(s).sort((a, b) => a.attack.due - b.attack.due).filter((p) => p.attack.due <= s.encounter.cycle && !chargeNow(s, p)); // a charge takes the place of its part's attack (tells.mjs)
 };
 // One part's attack lands. True if the fight ended.
 function strike(s, p) {
@@ -2732,6 +2787,13 @@ function strike(s, p) {
   if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
   return false;
+}
+// A part strikes with an attack that isn't its own (a tell, tells.mjs): the same landing, to the same players,
+// its own timer untouched. True if the fight ended.
+export function strikeWith(s, p, atk) {
+  const real = p.attack;
+  p.attack = { ...atk, due: s.encounter.cycle };
+  try { return strike(s, p); } finally { p.attack = real; }
 }
 // The end of a cycle once the attacks are in: patches, cooldown effects, the turn over.
 function cycleClose(s, landed) {
@@ -2770,6 +2832,11 @@ function cycleClose(s, landed) {
     k.rearms = (k.rearms || 0) + 1;
     emit(s, 'patch', `${k.name} re-arms ${re.map((x) => x.name).join(' and ')}: full armor.${k.rearms >= CONFIG.rearmMax ? ` ${k.name} overheats: no more re-arms.` : ''}`, { target: re[0].id });
   }
+  // Mutex: a broken lock comes back while the Mutex lives.
+  for (const p of livingParts(s).filter((x) => x.lockAt != null && e.cycle >= x.lockAt)) {
+    p.lockAt = null;
+    if (livingParts(s).some((x) => x.lock === p.id)) { p.lockHp = p.lockMax; emit(s, 'patch', `The Mutex locks the ${p.name} again: a ${p.lockMax} shield.`, { target: p.id, lock: true }); }
+  }
   // Tracer: every cycle the fight goes on, its Trace-back hits harder.
   for (const p of attackers(s).filter((x) => x.attack.grow)) p.attack.bonus = (p.attack.bonus || 0) + p.attack.grow;
 
@@ -2796,6 +2863,7 @@ function cycleClose(s, landed) {
   e.elapsedMs = 0;
   rollSync(s);
   if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
+  if (e.virus.tells) tellCycle(s); // a solo fight's tells: what it announces now (tells.mjs)
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
@@ -2806,6 +2874,7 @@ function endCycle(s, first) {
     landed++;
     if (strike(s, p)) return since(s, first);
   }
+  if (s.encounter.virus.tells && tellLand(s)) return since(s, first); // the tells due now (tells.mjs)
   if (s.encounter.virus.raid && raidLand(s)) return since(s, first);
   cycleClose(s, landed);
   return since(s, first);
@@ -2835,7 +2904,7 @@ function syncBonus(s, intent) {
   const t = intent?.target && part(s, intent.target);
   let what = '';
   if (cls === 'breaker' && alive(t) && t.armor > 0) {
-    t.armor--; t.lastDamaged = e.cycle;
+    t.armor--; t.lastDamaged = e.cycle; tellHit(s, t);
     if (!t.armor) t.patchAt = e.cycle + patchDelay(s);
     emit(s, 'armor', `Sync: ${t.name} ◆ cracked${t.armor ? ` (${t.armor} left)` : '. Its armor is broken'}.`, { target: t.id, left: t.armor });
     what = 'a ◆ cracks';
@@ -2884,7 +2953,7 @@ function runDaemons(s) {
 export const watchmanBar = (s) => scaled(s, DAEMONS.watchman.amount);
 function watchman(s, p) {
   const e = s.encounter, v = daemonVersion(s, 'watchman');
-  if (!slottedDaemons(s).includes('watchman') || (e.once.watchman || 0) >= (v >= 3 ? 2 : 1) || p.attack.effect !== 'damage' || p.attack.amount < watchmanBar(s)) return false;
+  if (!slottedDaemons(s).includes('watchman') || p.attack.tell || (e.once.watchman || 0) >= (v >= 3 ? 2 : 1) || p.attack.effect !== 'damage' || p.attack.amount < watchmanBar(s)) return false;
   e.once.watchman = (e.once.watchman || 0) + 1;
   const n = v >= 2 ? 2 : 1;
   p.attack.due = e.cycle + n;
@@ -2953,6 +3022,9 @@ export function intents(s, columns = 4) {
   const e = s.encounter;
   if (!active(s)) return [];
   const out = [];
+  // Tells (tells.mjs): each on its part's row, never hidden. A charge takes the place of its part's attack in its column.
+  const told = tellIntents(s, columns);
+  const charged = new Set(told.filter((t) => t.tell === 'charge').map((t) => `${t.source}@${t.col}`));
   for (const p of attackers(s)) {
     const hidden = timersHidden(s, p);
     let due = p.attack.due;
@@ -2962,7 +3034,7 @@ export function intents(s, columns = 4) {
     while (due - e.cycle < columns) {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
-      if (col >= 0) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind });
+      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind });
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
       due += a.interval;
@@ -2974,6 +3046,7 @@ export function intents(s, columns = 4) {
   // The Decoy's beat (your commands mirrored), and a broken twin's reboot: chips on the board like attacks.
   for (const decoy of livingParts(s).filter((x) => x.reflect)) for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Mirror', effect: 'mirror', amount: Math.round(CONFIG.mirrorBounce * 100), col, hidden: timersHidden(s, decoy), kind: decoy.kind });
   for (const p of parts(s)) if (p.rebootAt && p.integrity === 0 && p.rebootAt - e.cycle >= 0 && p.rebootAt - e.cycle < columns) out.push({ source: p.id, name: 'Reboot', effect: 'reboot', amount: Math.round(p.max * CONFIG.twinReboot.at), col: p.rebootAt - e.cycle, hidden: false, kind: p.kind });
+  out.push(...told);
   return out.sort((a, b) => a.col - b.col);
 }
 

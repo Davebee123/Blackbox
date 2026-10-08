@@ -2,6 +2,8 @@
 
 KESSLER-FARM-00's three bosses run on the group boss framework (`dist/raid.mjs`; the rules are in GAME_RULES.md under Crew bosses). This sheet is for reviewing them: for each boss, phase by phase, what the tank, the healer, the damage dealers and support are doing, and what happens when they don't. The numbers are shares of the target's max Signal at level 17 and up (two fifths of that at level 9 and below, three fifths at 13, a fifth more at 30), for a crew of four.
 
+The solo bosses (RELAY-KING, REPO MAN, HOLLOW CHOIR, the Residents) don't use this framework. They bring every solo tell open at their level instead, and docs/solo-tells.md is their review sheet.
+
 **How a fight is lost.** You going down ends it. So does a wipe: half the crew down (two of three or four). A missed mechanic downs someone or costs a big share of their Signal; two usually lose.
 
 **How a fight reads.** Every mechanic is announced two cycles ahead on the boss's row of the board and in the log (`PINK SLIP → nyx in 2.`). A cast shows *Compiling…* and says whether SIGINT stops it. The crew strip shows what's on each crewmate (Thermal Stress stacks, Corruption, encrypted sectors, who's marked).

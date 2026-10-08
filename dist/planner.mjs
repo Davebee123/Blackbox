@@ -2,16 +2,20 @@
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
 import { classPlan, hooks, classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
+import { ABILITIES, TELL } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
+import { tellMove, tellFocus, answers, QUIET } from './tells.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 const ok = (s, text) => !toIntent(s, text).error && !(TAUNTS.has(text) && noTaunt(s));
 const TAUNTS = new Set(['firewall', 'bulkhead']);
 // Try commands in order; the first one that's valid right now wins.
 const first = (s, list) => list.find((c) => c && ok(s, c)) || null;
-const landingNow = (s) => intents(s).filter((i) => i.col === 0 && !i.hidden);
+// A bot that ignores tells (TELL.bots.answer false) reads the board as if they weren't there (tells.mjs).
+const seen = (s) => intents(s).filter((i) => !i.tell || (answers() && TELL.bots.see !== false));
+const landingNow = (s) => seen(s).filter((i) => i.col === 0 && !i.hidden);
 // The part to work on: the one whose (visible) attack lands soonest; hidden ones count as due in 2.
-const dueOf = (s, p) => (intents(s).find((i) => i.source === p.id && !i.hidden)?.col ?? (p.attack ? 2 : 9));
+const dueOf = (s, p) => (seen(s).find((i) => i.source === p.id && !i.hidden)?.col ?? (p.attack ? 2 : 9));
 export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s, b) || b.max - a.max)[0] || livingParts(s)[0];
 // How a player who reads the codex picks a target: the most threat per point of Integrity left
 // (attack size over interval; encryption stacks, fragments multiply, a heal undoes work), armor
@@ -19,7 +23,10 @@ export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s,
 const threatOf = (p) => { const a = p.attack; if (!a) return 0; const amt = a.effect === 'damage' ? a.amount : a.effect === 'encrypt' ? a.amount * 3 + (a.hit || 0) : a.effect === 'replicate' ? 6 + (a.hit || 0) : a.effect === 'heal' ? 8 : a.hit || 0; return amt / Math.max(1, Math.min(a.interval || 4, 6)); };
 // Burns and helpers already on a part count for it: switching away wastes them.
 const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target === p.id).length + 0.3 * s.encounter.helpers.filter((h) => h.target === p.id).length;
-export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
+// Parts that change the fight (data.mjs FAMILIES): a Tripwire sets the others off when it breaks, so it goes last;
+// a C2 Node takes its fragments with it, so it goes first once they pile up.
+const order = (s, p) => (p.deadman && livingParts(s).some((x) => x !== p && x.kind === 'system') ? 0.05 : p.command && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
+export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 const HITS = ['zero-day', 'shatter', 'retaliate', 'opening', 'segfault', 'overload', 'flood', 'backdoor', 'reclaim', 'rate-limit', 'spike'];
 // A command that breaks this part right now, if there is one.
@@ -41,6 +48,23 @@ const helpersOn = (s, p) => s.encounter.helpers.filter((h) => h.target === p.id)
 // One planner for every class: finish what you can, answer what lands now, strip, then finish.
 // Commands a class doesn't have are skipped, so each class plays its own kit.
 export function planner(s) {
+  const plan = play(s);
+  // Tells it answers outright (tells.mjs): SIGINT a cast, go quiet on the Mimic's beat when the plan hits hard,
+  // strip a part about to seal.
+  const at = livingParts(s).find((p) => plan && plan.endsWith(' ' + p.id)) || null;
+  const told = tellMove(s, at, plan);
+  if (told && ok(s, told)) return told;
+  // Scrambled (a Scramble, or a Possession that made it longer): a big hit may turn on you, so set up instead,
+  // unless the hit breaks the part.
+  const e = s.encounter;
+  if (e.scrambleUntil >= e.cycle && plan && at && !killing(s, plan, at)) {
+    const id = plan.split(' ')[0];
+    if (ABILITIES[id]?.damage > 25) { const quiet = first(s, [...QUIET, ...['crack', 'shaped-charge', 'bit-rot', 'exploit', 'tag', 'hook', 'inject', 'deploy', 'spawn', 'botnet', 'fan-out', 'purge', 'thermal-runaway', 'keepalive', 'spike'].map((k) => k + ' ' + at.id)]); if (quiet) return quiet; }
+  }
+  return plan;
+}
+const killing = (s, plan, p) => { const id = plan.split(' ')[0]; return !p.armor && previewDamage(s, id, p) >= p.integrity; };
+function play(s) {
   const now = landingNow(s);
   // Encrypted: the Encryptor holds the key, so it's the next threat whatever its timer says.
   const key = (s.encounter.encrypt > 0 && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || livingParts(s).find((p) => p.rearm) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring; a Replicator that keeps spawning
@@ -48,16 +72,20 @@ export function planner(s) {
   // A crew boss (raid.mjs): its mechanics first (interrupt, cleanse, dodge), then its priority add or workers.
   const raid = raidMove(s);
   if (raid && ok(s, raid)) return raid;
-  const t0 = raidFocus(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  // A tell (tells.mjs): a charge or cast whose wind-up it can reach, or a part about to seal.
+  const t0 = raidFocus(s) || tellFocus(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
-  // Lockbox: a warded part soaks a burst, so break the Lockbox first.
-  const warder = livingParts(s).find((p) => p.ward === t.id);
+  // Lockbox: a warded part soaks a burst, so break the Lockbox first. Mutex: its lock comes back while it lives,
+  // so break it first too (a burn class chips under either anyway).
+  const warder = livingParts(s).find((p) => p.ward === t.id || (p.lock === t.id && t.lockHp > 0));
   if (warder && classOf(s) !== 'infiltrator') t = warder; // burns tick under the cap anyway
+  // Tripwire: leave it for last while anything else stands.
+  if (t.deadman) t = livingParts(s).filter((p) => p !== t && p.kind === 'system').sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
   // Twins: work on the healthier of the pair, so both go down close together.
   const twin = livingParts(s).find((p) => p !== t && (p.twin === t.id || t.twin === p.id));
   if (twin && (twin.integrity / twin.max > t.integrity / t.max + 0.2 || (burnsOn(s, t) >= 2 && burnsOn(s, twin) < burnsOn(s, t)))) t = twin; // burns too: spread them over both
   // Decoy: on its beat your commands are mirrored, so set up instead (burns, helpers, defence).
-  if (mirrorOn(s)) { const quiet = first(s, ['harden', 'firewall', 'bulkhead', 'dmz', 'multicast', 'heartbeat', 'shadow-copy', 'log-wipe', 'overvolt', 'turbo-boost', 'chain-reaction', 'malloc', 'fan-out ' + t.id, burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
+  if (mirrorOn(s)) { const quiet = first(s, [...QUIET.slice(0, 12), 'fan-out ' + t.id, burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
@@ -77,9 +105,11 @@ export function planner(s) {
     if (bare(p) && queued >= p.integrity && ok(s, 'kill-switch')) return 'kill-switch';
   }
   // 2. Something lands now that we can't break: answer it.
-  const big = now.filter((i) => (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead
+  const big = now.filter((i) => i.effect !== 'tell' && (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead (a tell that isn't a hit: tellMove)
   if (big) {
-    const answer = first(s, [
+    // A Tripwire's own hit: soften it, but don't break it while the others stand.
+    const trip = part(s, big.source)?.deadman && livingParts(s).some((x) => x.id !== big.source && x.kind === 'system');
+    const answer = first(s, trip ? ['harden', 'firewall', 'null-route', 'throttle ' + big.source, 'brace'] : [
       big.effect === 'damage' && s.encounter.chits === 0 && 'harden',
       big.effect === 'damage' && 'rate-limit ' + big.source, // hits harder when its attack is due, and halves it
       'suspend ' + big.source,

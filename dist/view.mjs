@@ -276,6 +276,21 @@ function statusPanel(s) {
 }
 
 
+// A tell (tells.mjs): on its part's row, in the column it lands, never hidden. It says what it is, what's coming
+// and what answers it, in a word or two; the hover has the whole of it.
+const TELL_KICK = { charge: 'Winding up', cast: 'Compiling…', seal: 'Sealing', mimic: 'Recording' };
+function tellChip(s, i, c, k = '', to = null) {
+  const p = part(s, i.source), left = Math.max(0, (i.need || 0) - (i.wound || 0));
+  const hits = (n) => (n === 1 ? 'hit it once' : `hit it ×${n}`);
+  const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? 'burst of encryption' : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`) : '';
+  const answer = i.tell === 'charge' ? (i.wound ? `${i.wound}/${i.need} hits` : hits(left)) : i.tell === 'cast' ? `SIGINT, or ${left === 1 ? 'hit once' : `hit ×${left}`}` : i.tell === 'seal' ? `strip ◆${p?.armor || 0}` : 'go quiet';
+  const tip = i.tell === 'charge'
+    ? `${i.name} from the ${p?.name}: its next ${p?.attack?.name || 'attack'}, much bigger (${what}). It lands ${c ? `in ${c}` : 'this cycle'}. Hit the ${p?.name} with ${left === 1 ? 'a command' : `${left} commands`} before then to call it off, or soften it (a ◆, a shield, Null Route, Throttle, Brace).`
+    : i.tell === 'cast' ? `The ${p?.name} is compiling ${i.name}. It lands ${c ? `in ${c}` : 'this cycle'}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. SIGINT stops it, and so does hitting the ${p?.name} ${left} ${left === 1 ? 'time' : 'times'}.`
+    : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${c ? `in ${c}` : 'this cycle'}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it first.`
+    : `The Mimic plays back the command you fire ${c ? `in ${c}` : 'this cycle'}, at you. Fire something with no direct hit then (a debuff, a strip, a burn, a shield).`;
+  return `<div class="intent raid tell t-${esc(i.tell)} ${i.tell === 'cast' ? 'cast' : ''} ${c === 0 ? 'now' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><small class="compiling">${TELL_KICK[i.tell] || ''}</small><b>${esc(i.name)}</b>${what ? `<small>${esc(what)}</small>` : ''}<small class="answer">${esc(answer)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+}
 function attackChip(i, c, k = '', to = null) {
   return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
@@ -348,6 +363,10 @@ export function partAbout(p) {
   if (p.ward) out.push(`wards the ${partName(p.ward)}: it loses at most ${Math.round(CONFIG.ward * 100)}% of itself a cycle while this lives`);
   if (p.twin) out.push(`twinned with the ${partName(p.twin)}: break one while the other lives and it reboots, so break both`);
   if (p.reflect) out.push(`every ${p.reflect} cycles it mirrors your commands: they do nothing, and some bounces back`);
+  if (p.lock) out.push(`holds a lock on the ${partName(p.lock)}: a shield of ${Math.round(CONFIG.mutex.share * 100)}% of it that comes back ${CONFIG.mutex.every} cycles after you break it, while this lives`);
+  if (p.deadman) out.push(`a tripwire: break it while the others stand and they go loud, ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% harder and a cycle sooner, so break it last`);
+  if (p.command) out.push(`commands the fragments: they gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder while it lives, and drop when it breaks`);
+  if (p.mimic) out.push('records you: on its beat it plays the command you fire back at you, so fire something with no direct hit then');
   return out.map((x) => x.replace(/^./, (c) => c.toUpperCase())).join('. ') + (out.length ? '.' : '') || 'It has no attack of its own.'; // each its own sentence
 }
 function partTags(s, p) {
@@ -368,6 +387,12 @@ function partTags(s, p) {
   // Mutations: an Adaptive part one more cycle of hits from hardening; damage a Rerouting virus moved here.
   if (e.virus.mutation === 'adaptive' && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains a ◆ at the end of the cycle">adapting</span>');
   if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted from a broken part: its attack +${p.rerouted}">+${p.rerouted} rerouted</span>`);
+  // Parts that change the fight (data.mjs FAMILIES): the Mutex's lock, a Tripwire, the C2 Node, the parts gone loud.
+  if (p.lockHp > 0 && p.integrity > 0) tags.push(`<span class="tag hot" title="Locked by the Mutex: hits land on the lock first. It comes back ${CONFIG.mutex.every} cycles after it breaks while the Mutex lives.">lock ${p.lockHp}</span>`);
+  else if (p.lockAt != null && p.integrity > 0) tags.push(`<span class="tag" title="Its lock is broken. The Mutex locks it again at the end of cycle ${p.lockAt} unless you break the Mutex.">relocks in ${Math.max(0, p.lockAt - e.cycle)}</span>`);
+  if (p.deadman && p.integrity > 0) tags.push(`<span class="tag hot" title="Break it while the others stand and they go loud: ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% harder, every attack a cycle sooner. Break it last.">tripwire</span>`);
+  if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="The Tripwire set it off: its attacks hit ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% harder">loud</span>`);
+  if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="While it lives, fragments gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder. Break it and every fragment drops with it.">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
   // Burns, one tag per kind: how many stacks (of how many it can take), and the damage a cycle in all.
   for (const name of [...new Set(burn.map((b) => b.name))]) {
@@ -470,21 +495,25 @@ export function boardMarkup(s, selected, preview = null) {
       const crypting = e.encrypt > 0 && p.attack?.effect === 'encrypt';
       const cryptChip = !crypting ? '' : c === 0 ? `<div class="intent crypt" title="Encrypted: you lose ${e.encrypt} this cycle. Break ${esc(p.name)} to stop it.">−${e.encrypt} <small>encrypted</small></div>` : `<div class="crypt-line" data-label="−${e.encrypt} encrypted"></div>`;
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one ◆ back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}<div class="intent hidden">?</div>${patchChip}</div>`;
-      const hit = mine.find((i) => i.col === c);
+      // A tell shows whatever the part hides (tells.mjs): nothing big lands unannounced.
+      const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('');
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${told || '<div class="intent hidden">?</div>'}${patchChip}</div>`;
+      const hit = mine.find((i) => i.col === c && !i.tell);
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${hit ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${patchChip}</div>`;
+      return `<div class="bcell">${cryptChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${patchChip}</div>`;
     }).join('');
+    // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
+    const showCells = p.attack || mine.some((i) => i.tell || !i.hidden);
     const spike = p.armor > 0 ? 'spike breaks a ◆' : `spike deals ${previewDamage(s, 'spike', p)}`;
     const marks = partMarks(s, p);
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
     const fade = dying(p) ? ` style="animation-delay:-${Math.max(0, 1000 - (p._dyingUntil - Date.now()))}ms"` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}${knowsPart(s, e.virus, p) ? '' : ' · what it does: ???'}">
       <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p) : 'Unknown. Break one to learn what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
-      ${p.attack ? cells : '<div class="bcell span4"></div>'}</button>`;
+      ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).

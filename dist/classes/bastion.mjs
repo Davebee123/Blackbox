@@ -157,7 +157,7 @@ const use = {
   scrub(s, { a, to }) {
     const e = to.encounter, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
     const cleared = [];
-    if (e.encrypt > 0) { e.encrypt = 0; cleared.push('encryption'); }
+    if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); } // a Full Disk's burst too (tells.mjs)
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     if (cleared.length) emit(to, 'decrypted', `${label}: ${cleared.join(' and ')} cleared.`);
     if (to.encounter.virus?.raid) cleanse(to, ['dots', 'absorb']); // a crew boss's Corruption and encrypted sectors (raid.mjs)
@@ -263,7 +263,7 @@ function sysopPlan(s, t) {
   const solo = all.length === 1;
   const low = all[0];
   // Encryption (on the player who leads the fight) or a scramble: scrub it.
-  const dirty = all.find((x) => x.st.encounter.encrypt >= 6 || x.st.encounter.scrambleUntil >= x.st.encounter.cycle);
+  const dirty = all.find((x) => x.st.encounter.encrypt >= 6 || x.st.encounter.burst || x.st.encounter.scrambleUntil >= x.st.encounter.cycle);
   if (dirty && !solo) { const c = first(s, [aim(s, 'scrub', dirty.st)]); if (c) return c; }
   // Someone about to go: standby, then the biggest heal there is.
   if (low.f < HEAL.urgent) {

@@ -30,7 +30,7 @@ export const abilities = {
     help: 'heartbeat [name] — heals you 4 a cycle for 4 cycles, starting now. In a crew, heartbeat nyx heals nyx instead. A new Heartbeat replaces the old one.',
     desc: 'Keep the session alive. Heartbeat heals you or a crewmate for 4 every cycle for 4 cycles, starting this cycle. A second Heartbeat on the same player replaces the first.' },
   scrub: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Scrub', target: 'none', ally: true, damage: 0, heal: 8, cooldown: 5, icon: 'clear', short: 'Decrypt, unscramble, heal 8',
-    help: 'scrub [name] — clears encryption and Scrambled from you, and heals you 8. In a crew, scrub nyx does it for nyx.',
+    help: 'scrub [name] — clears encryption (a Full Disk burst too) and Scrambled from you, and heals you 8. In a crew, scrub nyx does it for nyx.',
     desc: 'Scrub the logs clean. Scrub clears encryption and Scrambled from you or a crewmate and heals them for 8.' },
   rollback: { cls: 'bastion', sub: 'sysop', verb: 'heal', name: 'Rollback', target: 'none', ally: true, damage: 0, cooldown: 6, icon: 'behavior', short: 'Undo the last hit',
     help: 'rollback [name] — undoes the last attack that hurt you: heals back all it did, or deletes the fragment it spawned. In a crew, rollback nyx does it for nyx.',

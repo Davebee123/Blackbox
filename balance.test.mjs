@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { score, hardScore, fight, BRACKETS } from './balance.mjs';
-import { ARCHETYPES, SUBCLASS } from './dist/data.mjs';
+import { ARCHETYPES, SUBCLASS, TELL } from './dist/data.mjs';
 
 const CLASSES = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
 const runs = Object.fromEntries(BRACKETS.map((b) => [b.name, Object.fromEntries(CLASSES.map((c) => [c, score(c, b)]))]));
@@ -33,7 +33,7 @@ test('the hard slice (every open strain, grade 2 wilds, wilds 2 levels up) is be
 });
 
 // Known outlier: with the gear its player chases (Damage and Crit, balance.mjs build), the Demolitionist
-// runs about 19% from Lv 29: flat Damage on every one of its many hits (Overkill, Fork Bomb, Shatter).
+// runs about 21% from Lv 29: flat Damage on every one of its many hits (Overkill, Fork Bomb, Shatter).
 // It's a Damage-stat problem, not a healing one; until it's fixed it has its own floor at Lv 30.
 const floor = (sub, b) => (sub === 'demolitionist' && b.level >= 30 ? 15 : 25);
 test('every subclass is viable at Lv 10, 18 and 30: at least 85% wins (the Sysop 70%), 25–50% lost, all eight within 30 points', () => {
@@ -65,6 +65,27 @@ test('the Sysop alone is the weak one: 38–58% lost and 70–92% wins at Lv 18 
   }
 });
 
+// Solo tells (tells.mjs): a bot that plays as if it can't see them (TELL.bots.answer false) does measurably worse
+// than one that reads them, on the same fights: about 4 points of Signal a fight on average and more fights lost.
+// Smaller than a crew boss's role checks on purpose (there, missing a role loses most tries): solo, the tells
+// are about learning the mob, and every one has an answer the class already owns.
+test('reading tells pays: a bot that ignores them loses at least 2.5 points more Signal a fight across the subclasses at Lv 10, 18 and 30, at least 1.5 at each, and wins no more', () => {
+  TELL.bots.answer = false;
+  let ignored;
+  try { ignored = Object.fromEntries(BRACKETS.filter((b) => b.level >= SUBCLASS.from && b.level <= 30).map((b) => [b.name, Object.fromEntries(SUBS.map(([c, sub]) => [sub, score(c, b, { sub })]))])); } finally { TELL.bots.answer = true; }
+  let gap = 0, n = 0, wins = 0;
+  const lines = [];
+  for (const [name, row] of Object.entries(ignored)) {
+    let g = 0;
+    for (const [sub, r] of Object.entries(row)) { g += r.lost - subRuns[name][sub].lost; wins += subRuns[name][sub].wins - r.wins; }
+    g /= Object.keys(row).length; gap += g; n++;
+    lines.push(`${name} ${g.toFixed(1)}`);
+    assert.ok(g >= 1.5, `${name}: ignoring tells costs ${g.toFixed(1)} points (${lines.join(', ')})`);
+  }
+  assert.ok(gap / n >= 2.5, `ignoring tells costs ${(gap / n).toFixed(1)} points a fight on average (${lines.join(', ')})`);
+  assert.ok(wins >= 0, `a bot that reads tells wins at least as often (${wins} more)`);
+});
+
 test('no class drifts far out of the band: under 55% lost, and within 40 points of each other', () => {
   for (const b of BRACKETS) {
     const lost = CLASSES.map((c) => runs[b.name][c].lost);
@@ -87,4 +108,4 @@ const band = () => () => {
   }
   assert.deepEqual(off, []);
 };
-test('target band: a fight at your level costs every subclass 35–45% at Lv 10, 18 and 30 (the Sysop 45–55% from Lv 18; 28–55% at Lv 1), within about 10 points', { todo: 'with the gear each subclass chases: Lv 1 Bastion, Infiltrator and Operator run 21–22%; Lv 10 Demolitionist, Overclocker and Hijacker 46–48% on these seeds; the Warden (Signal on its gear) 26% at Lv 18 and 35% at 30, the Hijacker 32% at 18; the Demolitionist 19% at Lv 30 (flat Damage on its many hits); the Payload 46% at 30; the Sysop 37–40% on these 24 fights (41–45% with 80–85% wins over wider samples)' }, band());
+test('target band: a fight at your level costs every subclass 35–45% at Lv 10, 18 and 30 (the Sysop 45–55% from Lv 18; 28–55% at Lv 1), within about 10 points', { todo: 'with the gear each subclass chases: Lv 1 Bastion, Infiltrator and Operator run 15–21%; the Phantom 29% at Lv 10, 32% at 18 and 28% at 30; the Payload 34% at Lv 10 and 49% at 30; the Warden (Signal on its gear) 29% at Lv 18 and 34% at 30, the Hijacker 34% at 18 and 46% at 30; the Demolitionist 21% at Lv 30 (flat Damage on its many hits); the Sysop 41–46% on these 24 fights' }, band());
