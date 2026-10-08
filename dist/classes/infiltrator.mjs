@@ -93,7 +93,7 @@ export default {
     },
     'logic-trap'(s) {
       mine(s).trap = true;
-      emit(s, 'status', 'Logic Trap set: the next hit on you deals half, and its part catches your burns.', { mark: 'shield', ability: 'logic-trap' });
+      emit(s, 'status', 'Logic Trap set. The next hit on you deals half damage, and its part catches your burns.', { mark: 'shield', ability: 'logic-trap' });
     },
     outbreak(s, { a, e }) {
       const tick = scaled(s, A('inject').tick + 2 * rank(s, 'heap-spray'));
@@ -103,12 +103,12 @@ export default {
         e.burns.push({ id: 'inject', target: p.id, damage: tick, grow: 0, left: a.ticks, name: 'Inject', drain: 0, synced: !!e.synced });
       }
       e.stickyUntil = e.cycle + a.cycles - 1;
-      emit(s, 'status', `Outbreak: every part catches an Inject, ${tick} a cycle, and for ${a.cycles} cycles nothing clears your burns.`, { mark: 'burn', ability: 'outbreak' });
+      emit(s, 'status', `Outbreak: every part catches an Inject for ${tick} every cycle, and for ${a.cycles} cycles nothing clears your burns.`, { mark: 'burn', ability: 'outbreak' });
     },
     fingerprint(s, { target, e }) {
       if (!alive(target) || !e.weakHit) return;
       delete e.weakHit[target.id];
-      emit(s, 'status', `Fingerprinted: Weak Spot is fresh on the ${target.name}.`, { target: target.id, ability: 'fingerprint' });
+      emit(s, 'status', `Fingerprinted. Weak Spot is fresh on the ${target.name}.`, { target: target.id, ability: 'fingerprint' });
     },
     'side-channel'(s, { a, target, e }) { if (alive(target)) target.seenUntil = Math.max(target.seenUntil || 0, e.cycle + a.cycles - 1); },
     // Unmask: your hits on it crit more often for a while, its timer shows, and a Decoy or a Mimic has nothing of you to copy.
@@ -117,7 +117,7 @@ export default {
       target.seenUntil = Math.max(target.seenUntil || 0, e.cycle + a.cycles - 1);
       target.unmasked = { who: s.who || '', until: e.cycle + a.cycles - 1 };
       if (target.reflect || target.mimic) target.unmaskUntil = e.cycle + a.cycles;
-      emit(s, 'status', `${target.name} unmasked for ${a.cycles} cycles: your hits on it crit ${a.crit}% more often and its timer shows${target.reflect || target.mimic ? ', and it has nothing of you to copy on its next beat' : ''}.`, { target: target.id, mark: 'debuff', ability: 'unmask' });
+      emit(s, 'status', `${target.name} unmasked for ${a.cycles} cycles. Your hits on it have a ${a.crit}% higher chance to critically strike, and its timer shows${target.reflect || target.mimic ? ', and it has nothing of you to copy on its next beat' : ''}.`, { target: target.id, mark: 'debuff', ability: 'unmask' });
     },
     // Rotate Keys: a cleanse, and the next hits on you land lighter. Each one lights Opening.
     'rotate-keys'(s, { a, e }) {
@@ -126,18 +126,18 @@ export default {
       if (e.corrupt) { e.corrupt = null; cleared.push('Corrupted'); }
       if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
       mine(s).rotated = a.hits;
-      emit(s, 'status', `Keys rotated${cleared.length ? `: ${cleared.join(' and ')} cleared` : ''}. The next ${a.hits} hits on you deal ${Math.round(a.cut * 100)}% less, and each lights Opening.`, { mark: 'shield', ability: 'rotate-keys' });
+      emit(s, 'status', `Keys rotated${cleared.length ? `, and ${cleared.join(' and ')} cleared` : ''}. The next ${a.hits} hits on you deal ${Math.round(a.cut * 100)}% less damage, and each makes Opening usable.`, { mark: 'shield', ability: 'rotate-keys' });
     },
     vanish(s, { a, e }) {
       e.nullRoute = Math.max(e.nullRoute || 0, a.misses);
       e.slipLong = a.misses; // each miss leaves Opening lit for 2 cycles (combat.mjs landAttack)
       e.weakHit = {};
       mine(s).weakDot = {};
-      emit(s, 'status', `Vanished: the next ${a.misses} attacks on you miss, and Weak Spot is fresh on every part.`, { mark: 'buff', ability: 'vanish' });
+      emit(s, 'status', `Vanished. The next ${a.misses} attacks on you miss, and Weak Spot is fresh on every part.`, { mark: 'buff', ability: 'vanish' });
     },
     thrash(s, { target, a, e }) {
       target.thrashUntil = e.cycle + a.cycles - 1;
-      emit(s, 'status', `${target.name} Thrashing for ${plural(a.cycles, 'cycle')}: every burn on it ticks twice a cycle.`, { target: target.id, mark: 'burn', ability: 'thrash' });
+      emit(s, 'status', `${target.name} is Thrashing for ${plural(a.cycles, 'cycle')}. Every burn on it ticks twice a cycle.`, { target: target.id, mark: 'burn', ability: 'thrash' });
     },
     'irq-storm'(s, { e }) {
       const all = [...e.burns, ...mine(s).poly];
@@ -187,7 +187,7 @@ export default {
       e.mimicBlind = true; // the Mimic's next beat has nothing of you (tells.mjs)
       let extra = '';
       if (talent(s, 'deep-cover')) { delete e.readyAt['null-route']; delete e.readyAt['shadow-copy']; extra = ' Deep Cover: Null Route and Shadow Copy are ready.'; }
-      emit(s, 'status', `Logs wiped. Weak Spot is fresh on every part, and the next hit on you deals half.${extra}`, { mark: 'buff', ability: 'log-wipe' });
+      emit(s, 'status', `Logs wiped. Weak Spot is fresh on every part, and the next hit on you deals half damage.${extra}`, { mark: 'buff', ability: 'log-wipe' });
     },
   },
   validate: {
@@ -254,15 +254,15 @@ export default {
       return 0;
     }
     let m = 1;
-    if (st.wiped) { st.wiped = false; emit(s, 'blocked', `${atk.name} can't find you in the logs: it deals half.`, {}); m *= 0.5; }
-    if (st.rotated > 0) { st.rotated--; emit(s, 'blocked', `${atk.name} hits a key you've already rotated: it deals ${Math.round(A('rotate-keys').cut * 100)}% less.`, {}); m *= 1 - A('rotate-keys').cut; openProc(s, 'slipped'); }
+    if (st.wiped) { st.wiped = false; emit(s, 'blocked', `${atk.name} cannot find you in the logs, and deals half damage.`, {}); m *= 0.5; }
+    if (st.rotated > 0) { st.rotated--; emit(s, 'blocked', `${atk.name} hits a key you have already rotated, and deals ${Math.round(A('rotate-keys').cut * 100)}% less damage.`, {}); m *= 1 - A('rotate-keys').cut; openProc(s, 'slipped'); }
     // Logic Trap: the hit deals half, and the part that lands it catches a copy of every burn on your target.
     if (st.trap && p) {
       st.trap = false;
       const e = s.encounter, at = part(s, (e.lastAttack || '').split(' ')[1]) || null;
       const copies = at && at !== p && alive(p) ? e.burns.filter((b) => b.target === at.id) : [];
       for (const b of copies) e.burns.push({ ...b, target: p.id, spreads: false });
-      emit(s, 'blocked', `${atk.name} springs your Logic Trap: it deals half${copies.length ? `, and the ${p.name} catches ${plural(copies.length, 'burn')}` : ''}.`, { source: p.id, ability: 'logic-trap' });
+      emit(s, 'blocked', `${atk.name} springs your Logic Trap and deals half damage${copies.length ? `, and the ${p.name} catches ${plural(copies.length, 'burn')}` : ''}.`, { source: p.id, ability: 'logic-trap' });
       m *= 1 - A('logic-trap').cut;
     }
     return m;

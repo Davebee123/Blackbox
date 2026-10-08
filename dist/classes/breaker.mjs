@@ -78,7 +78,7 @@ function strip(s, p, n, label) {
   if (label !== 'Bit Rot') tellHit(s, p, { chits: k }); // a command's strip hits it: a tell on it may count it (tells.mjs)
   if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); if (label !== 'Bit Rot') stripMark(s, p); openProc(s, 'stripped', { part: p.id }); }
   chipped(s, p, k); // Debris Field
-  emit(s, 'armor', `${label}: ${p.name} loses ${k} ◆${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
+  emit(s, 'armor', `${label}: ${p.name} loses ${k} ◆${p.armor ? ` (${p.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
   return k;
 }
 const blastMult = (s) => 1 + 0.1 * rank(s, 'blast-radius');
@@ -103,14 +103,14 @@ const use = {
   'chain-reaction'(s, { a, target, e }) {
     if (!alive(target)) return;
     target.bkChain = { until: e.cycle + a.cycles - 1, who: who(s) };
-    emit(s, 'status', `${target.name} is wired to blow: if it breaks in the next ${a.cycles} cycles, it hits every other part for ${scaled(s, a.blast)}.`, { target: target.id, mark: 'debuff', ability: 'chain-reaction' });
+    emit(s, 'status', `${target.name} is wired to blow. If it breaks in the next ${a.cycles} cycles, it hits every other part for ${scaled(s, a.blast)}.`, { target: target.id, mark: 'debuff', ability: 'chain-reaction' });
   },
   // Bit Rot: any part rots and takes more from you; one that wears armor also loses a ◆ a cycle and can't patch.
   'bit-rot'(s, { a, target, e }) {
     if (!alive(target)) return;
     target.bkRot = { until: e.cycle + a.cycles - 1, who: who(s) };
     const shell = target.armor > 0 || target.maxArmor > 0;
-    emit(s, 'status', `${target.name} is rotting for ${a.cycles} cycles: it takes ${Math.round(a.more * 100)}% more from you${shell ? ', loses a ◆ each cycle and can\'t patch' : ''}.`, { target: target.id, mark: 'debuff', ability: 'bit-rot' });
+    emit(s, 'status', `${target.name} is rotting for ${a.cycles} cycles. It takes ${Math.round(a.more * 100)}% more damage from you${shell ? ', loses a ◆ each cycle and cannot patch' : ''}.`, { target: target.id, mark: 'debuff', ability: 'bit-rot' });
   },
   // Fork Bomb: a strip on every armored part and a hit on every bare one (fragments three times over). The part whose
   // attack lands soonest goes last, so a Shatter it lights is on that one.
@@ -131,7 +131,7 @@ const use = {
   'debris-field'(s, { a, e }) {
     e.buffs['debris-field'] = e.cycle + a.cycles - 1;
     e.bkDebris = 0;
-    emit(s, 'status', `Debris Field for ${a.cycles} cycles: every ◆ you break shields you for ${scaled(s, a.per)}, up to ${scaled(s, a.most)}.`, { mark: 'buff', ability: 'debris-field' });
+    emit(s, 'status', `Debris Field for ${a.cycles} cycles. Every ◆ you break shields you for ${scaled(s, a.per)}, up to ${scaled(s, a.most)}.`, { mark: 'buff', ability: 'debris-field' });
   },
   // Backfire: a charge winding up on it goes off inside it, and the attack lands plain (a read, tells.mjs).
   // (The charge was read before its hit landed: validate below. The hit may have called it off already.)
@@ -146,7 +146,7 @@ const use = {
   },
   'rm-rf'(s, { a, e }) {
     e.buffs['rm-rf'] = e.cycle + a.cycles - 1;
-    emit(s, 'status', `rm -rf for ${a.cycles} cycles: every hit you land also hits every other part for half.`, { mark: 'buff', ability: 'rm-rf' });
+    emit(s, 'status', `rm -rf for ${a.cycles} cycles. Every hit you land also hits every other part for half damage.`, { mark: 'buff', ability: 'rm-rf' });
   },
   'thermal-runaway'(s, { target, e }) {
     const burn = e.burns.filter((b) => b.id === 'thermal-runaway' && b.target === target.id).at(-1);
@@ -158,7 +158,7 @@ const use = {
     if (hasTalent(s, 'meltdown')) {
       const others = livingParts(s).filter((p) => p !== target);
       for (const p of others) e.burns.push({ ...burn, target: p.id, damage: Math.max(1, Math.round(burn.damage / 2)), grow: Math.round((burn.grow || 0) / 2) });
-      if (others.length) emit(s, 'status', `Meltdown sets ${others.map((p) => p.name).join(' and ')} burning too, at half strength.`, { mark: 'burn', ability: 'thermal-runaway' });
+      if (others.length) emit(s, 'status', `Meltdown sets ${others.map((p) => p.name).join(' and ')} burning too, for half damage.`, { mark: 'burn', ability: 'thermal-runaway' });
     }
   },
   // Overclocker
@@ -198,7 +198,7 @@ const use = {
   'fault-injection'(s, { a, target, e }) {
     if (!alive(target)) return;
     target.bkFault = { until: e.cycle + a.cycles - 1, who: who(s) };
-    emit(s, 'status', `Fault Injection: every hit you land on the ${target.name} crits for ${a.cycles} cycles.`, { target: target.id, mark: 'debuff', ability: 'fault-injection' });
+    emit(s, 'status', `Fault Injection: every hit you land on the ${target.name} is a critical strike for ${a.cycles} cycles.`, { target: target.id, mark: 'debuff', ability: 'fault-injection' });
   },
   'turbo-boost'(s, { a, e }) {
     const low = defender(s).integrity < defender(s).max / 2; // run it hot when you're hurt: free, and one more stack

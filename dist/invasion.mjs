@@ -133,7 +133,7 @@ export function tellOf(s, inv = s.invasion) {
     thief: `It is after the stores on ${tgt?.name || 'your outpost'}. Intercept it on the way, or it takes half of what is stored there.`,
     scout: inv.state === 'watch' ? `It is mapping your wall. Kill it in the next ${fmtLeft(inv.mapLeft)}, or the next invasion counts ${SCOUT.mark} levels higher.` : `It wants to map your wall. If your wall doesn't stop it, kill it within ${fmtLeft(SCOUT.mapMs)} or the next invasion counts ${SCOUT.mark} levels higher.`,
   }[inv.kind || 'raider'] || '';
-  const q = { hoard: `It carries its server's hoard: it is Armored, and its bounty is half again as big.`, nest: 'It brings a brood from its Nest, one more virus behind it.', hidden: `It hides like its server does, so it counts ${QUIRKED.hiddenPush} levels higher at your wall.` }[inv.quirk] || '';
+  const q = { hoard: `It carries its server's hoard, so it is Armored and its bounty is 50% bigger.`, nest: 'It brings a brood from its Nest, one more virus behind it.', hidden: `It hides like its server does, so it counts ${QUIRKED.hiddenPush} levels higher at your wall.` }[inv.quirk] || '';
   const m = inv.marked ? `A scout mapped your wall for it, so it counts ${inv.marked} levels higher.` : '';
   return [say, q, m].filter(Boolean).join(' ');
 }
@@ -513,11 +513,11 @@ export function capture(s, level, why) {
 // Open ports: online only, invasions come 2.5× as often and each is worth +50%. Closes when you log off.
 export function portsCommand(s, text) {
   const on = text === 'open ports';
-  if (on && !(s.locations || []).some((l) => !l.rogue && isLive(s, l))) return warn(s, 'Nothing attached: invasions come from servers on your network.');
+  if (on && !(s.locations || []).some((l) => !l.rogue && isLive(s, l))) return warn(s, 'Nothing is attached. Invasions come from servers on your network.');
   if (!!s.net?.open === on) return warn(s, on ? 'Your ports are already open.' : 'Your ports are closed.');
   (s.net ||= {}).open = on;
   if (on && s.net.next > 0) s.net.next = Math.round(s.net.next * I().open.pace);
-  emit(s, 'firewall', on ? 'Ports open: invasions come 2.5× as often, each worth +50%. They close when you log off.' : 'Ports closed.');
+  emit(s, 'firewall', on ? 'Ports open. Invasions come 2.5× as often, and each is worth 50% more. They close when you log off.' : 'Ports closed.');
 }
 
 // ---------- jacking in ----------
@@ -558,8 +558,8 @@ export function invasionsCommand(s) {
     lines.push(`${labelOf(inv)}: ${inv.name}, level ${inv.level}, from ${inv.fromName}. It is ${where}.`);
     if (tellOf(s, inv)) lines.push(tellOf(s, inv));
     lines.push(`Kill it for ${b.now} ${b.now === 1 ? 'signature' : 'signatures'} (up to ${b.max} if it sits contested). The wall alone gets ${b.wall}, an outright block ${b.blocked}.${b.capture ? ' A capture comes with your kill.' : ''}`);
-  } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next * (s.net.open ? I().open.pace : 1))}.${s.net.mark ? ` A scout mapped your wall: it counts ${s.net.mark} levels higher.` : ''}`);
-  lines.push(`Streak ${streakOf(s)}: the next stop pays +${Math.round((streakMult(s) - 1) * 100)}%, and a capture comes every ${STREAK.capture} in a row. You hold ${sigsOf(s)} ${sigsOf(s) === 1 ? 'signature' : 'signatures'}.`);
+  } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next * (s.net.open ? I().open.pace : 1))}.${s.net.mark ? ` A scout mapped your wall, so it counts ${s.net.mark} levels higher.` : ''}`);
+  lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more, and a capture comes every ${STREAK.capture} in a row. You hold ${sigsOf(s)} ${sigsOf(s) === 1 ? 'signature' : 'signatures'}.`);
   for (const l of lines) emit(s, 'info', l);
   return since(s, first);
 }

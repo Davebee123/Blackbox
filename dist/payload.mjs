@@ -19,7 +19,7 @@ const now = () => hooks.now?.() ?? Date.now();
 
 export const PAYLOADS = {
   exfil: { name: 'Exfil', about: 'Pulls credits and the code a hub hoards.', code: 'cipher' },
-  wiper: { name: 'Wiper', about: 'Knocks a hub offline: its market shuts, and the other hubs pay more for what it buys.', code: 'worm' },
+  wiper: { name: 'Wiper', about: 'Knocks a hub offline. Its market shuts, and the other hubs pay more for what it buys.', code: 'worm' },
   backdoor: { name: 'Backdoor', about: 'Takes an offline hub for you.', code: 'kernel' },
 };
 export const PAYLOAD = {
@@ -60,7 +60,7 @@ export function forecastStrike(s, p, f, at = now()) {
 export function compilePayload(s, kind, armed = false) {
   const P = PAYLOADS[kind];
   if (!P) return warn(s, `Payloads: ${Object.keys(PAYLOADS).join(', ')}.`);
-  if (!hubsOf(s).length) return warn(s, 'Payloads need a target: faction hubs open with the contract board.');
+  if (!hubsOf(s).length) return warn(s, 'Payloads need a target. Faction hubs open with the contract board.');
   const m = payOf(s), mats = materialsOf(s), L = hackerLevel(s), credits = PAYLOAD.credits(L);
   if (m.built.length >= PAYLOAD.maxBuilt) return warn(s, `You can hold ${PAYLOAD.maxBuilt} payloads. Deploy one first.`);
   if (s.server.credits < credits) return warn(s, `A ${P.name} costs ${credits} credits.`);
@@ -86,7 +86,7 @@ export function deployPayload(s, id, f, at = now()) {
   m.built.splice(m.built.indexOf(p), 1);
   const t = { ...p, f, sentAt: at, landsAt: at + travelMs(s, f) };
   m.flying.push(t);
-  emit(s, 'payload-out', `${PAYLOADS[p.kind].name} #${p.id} uploading to ${FACTIONS[f].hub.name}: executes in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
+  emit(s, 'payload-out', `${PAYLOADS[p.kind].name} #${p.id} uploading to ${FACTIONS[f].hub.name}. It executes in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
 }
 
 // The run: power × a roll against the hub's defence (seeded by the payload: it doesn't move the game's dice).

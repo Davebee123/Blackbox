@@ -273,7 +273,7 @@ test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 def
   assert.equal(slotsOf(s), 3, '+1: a third filter slot');
   command(s, 'firewall upgrade');
   assert.equal(fwOf(s).plus, 2);
-  assert.ok(s.logs.at(-1).message.includes('Defrag 30% faster'));
+  assert.ok(s.logs.at(-1).message.includes('30% faster defrag'));
   assert.equal(defragMs(s), Math.round(FIREWALL.defragMs * 0.7), '+2: defrag 30% faster');
   s.sigs = 2;
   command(s, 'firewall upgrade');

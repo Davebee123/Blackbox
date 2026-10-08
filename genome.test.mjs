@@ -125,7 +125,7 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
   const n = i.logs.length, cycle = i.encounter.cycle;
   command(i, 'inspect pulse');
   assert.equal(i.encounter.cycle, cycle, 'inspect takes no cycle');
-  assert.match(i.logs.slice(n).map((e) => e.message).join(' '), /Surge is an attack type that presses on Burst\. A plain heavy hit/);
+  assert.match(i.logs.slice(n).map((e) => e.message).join(' '), /Surge is an attack type that presses on Burst\. Deals a plain heavy hit/);
 });
 
 test('inspect: a part\'s genes, what each does once decoded, and nothing spent', () => {

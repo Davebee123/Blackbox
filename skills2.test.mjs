@@ -109,7 +109,7 @@ test('Purge burns, heals and decrypts; Reclaim heals half; Quarantine delays and
 test('Opening lights after an attack is delayed or misses you; Propagate copies burns; Null Route dodges and crits; Implant burns until it breaks', () => {
   const s = noArmor(start('infiltrator', ['opening', 'propagate', 'null-route', 'implant']));
   big(s, 'pulse'); big(s, 'encryptor');
-  assert.match(command(s, 'opening pulse').at(-1).message, /isn't lit/);
+  assert.match(command(s, 'opening pulse').at(-1).message, /isn't usable yet/);
   slip(s);
   act(s, 'opening pulse');
   assert.equal(lost(s, 'pulse'), 50);

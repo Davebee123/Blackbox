@@ -553,7 +553,7 @@ test('codex: a component says ??? until you break one, then what it does', async
   assert.ok(ev.some((e) => e.type === 'codex'));
   assert.ok(s.codex[codexKey(v, p)]);
   // The codex learns gene by gene: the Pulse Node's Surge is decoded, with its rule and its answer.
-  assert.match(codexMarkup(s), /cx-gene on"><span>.*Surge.*A plain heavy hit every 3 to 5 cycles/);
+  assert.match(codexMarkup(s), /cx-gene on"><span>.*Surge.*Deals a plain heavy hit every 3 to 5 cycles/);
   assert.match(codexMarkup(s), /Codex · 1\/41 decoded/);
   // The next CRYPTJACK's Pulse Node is known on sight, and so is a worm's: the gene carries across bodies.
   const t = fresh(); t.codex = s.codex;

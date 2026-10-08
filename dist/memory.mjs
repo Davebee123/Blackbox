@@ -55,7 +55,7 @@ export function onFound(s, loc) {
 export const joinCost = (s, loc) => { const add = wouldAdd(s, loc); return { add, used: liveCount(s), cap: memoryCap(s), fits: liveCount(s) + add <= memoryCap(s) }; };
 
 export function memoryCommand(s, verb, id, now = Date.now()) {
-  if (!MEMORY.on) return warn(s, 'No memory limit: every server you find is on your network.');
+  if (!MEMORY.on) return warn(s, 'No memory limit. Every server you find is on your network.');
   const loc = byId(s, id) || (s.locations || []).find((l) => l.name.toLowerCase() === id);
   if (!loc) return warn(s, `usage: ${verb} <server>`);
   if (active(s) || s.run) return warn(s, 'Jack out and finish your fight first.');
@@ -67,11 +67,11 @@ export function memoryCommand(s, verb, id, now = Date.now()) {
     return emit(s, 'info', `${loc.name} detached${frozen ? `, with the ${frozen} ${frozen === 1 ? 'server' : 'servers'} found through it` : ''}. Frozen as it was. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
   }
   if (!loc.detached && isLive(s, loc)) return warn(s, `${loc.name} is already attached.`);
-  if (!isLive(s, byId(s, loc.parent) || {})) { let up = byId(s, loc.parent); while (up && !up.detached) up = byId(s, up.parent); return warn(s, `${loc.name} is frozen with the server it hangs off: attach ${up?.name || 'that one'} first.`); }
+  if (!isLive(s, byId(s, loc.parent) || {})) { let up = byId(s, loc.parent); while (up && !up.detached) up = byId(s, up.parent); return warn(s, `${loc.name} is frozen with the server it hangs off. Attach ${up?.name || 'that one'} first.`); }
   const add = wouldAdd(s, loc);
   if (liveCount(s) + add > memoryCap(s)) return warn(s, `Not enough memory: ${loc.name} needs ${add}, ${memoryCap(s) - liveCount(s)} free. Detach something first.`);
   const fee = loc.fresh ? 0 : price; // a first connection costs only memory
-  if (s.server.credits < fee) return warn(s, `Attaching ${loc.name} costs ${fee} credits; you have ${s.server.credits}.`);
+  if (s.server.credits < fee) return warn(s, `Attaching ${loc.name} costs ${fee} credits. You have ${s.server.credits}.`);
   s.server.credits -= fee;
   loc.detached = false;
   const first = loc.fresh;

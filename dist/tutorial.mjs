@@ -6,26 +6,26 @@ export const LESSONS = [
   {
     title: 'Break a ◆',
     command: 'bash encryptor',
-    explain: 'Each part wears armor (◆). A hit on armor does no damage, however big: it breaks one ◆. Encryptor has two. Each row also shows when that part attacks. Bash is a Breaker\'s plain hit, on key 1. Type bash encryptor.',
-    result: 'One ◆ broke and the Encryptor took no damage. Small hits are how you strip armor; save your big ones for parts with no armor left.',
+    explain: 'Each part wears armor (◆). A hit on armor does no damage, however big. It breaks one ◆ instead. The Encryptor has two. Each row also shows when that part attacks. Bash is a Breaker\'s plain hit, on key 1. Type bash encryptor.',
+    result: 'One ◆ broke, and the Encryptor took no damage. Small hits are how you strip armor. Save your big ones for parts with no armor left.',
   },
   {
     title: 'Crack the armor',
     command: 'crack encryptor',
-    explain: 'Crack breaks every ◆ left on a part at once. A part with no armor takes full hits, but it patches a ◆ back five cycles later unless you break it first: watch for ◆ patch on its row. Type crack encryptor.',
-    result: 'Encryptor\'s armor is broken: its row shows the cracks. The patch marker on its row is your deadline.',
+    explain: 'Crack breaks 3 ◆ on a part at once. A part with no armor takes full hits, but it patches a ◆ back 5 cycles later unless you break it first. Watch for ◆ patch on its row. Type crack encryptor.',
+    result: 'The Encryptor\'s armor is broken, and its row shows the cracks. The patch marker on its row is your deadline.',
   },
   {
     title: 'Break a part',
     command: 'overload encryptor',
     explain: 'Breaking a part stops its attack for good. Its armor is gone, so Overload lands in full. Type overload encryptor.',
-    result: 'Encryptor broke before it could patch: Encrypt is gone from its row and you recovered its loot. Plan each part as strip, then finish, before its attack lands.',
+    result: 'The Encryptor broke before it could patch. Encrypt is gone from its row, and you recovered its loot. Plan each part as strip, then finish, before its attack lands.',
   },
   {
     title: 'Finish it',
     command: 'bash pulse',
     live: true,
-    explain: 'Type bash pulse, then type nothing. If you don\'t type anything, your last attack repeats every cycle: the first Bash breaks its ◆, the next ones land. Type hold if you ever want to do nothing.',
+    explain: 'Type bash pulse, then type nothing. If you don\'t type anything, your last attack repeats every cycle. The first Bash breaks its ◆, and the next ones land. Type hold if you ever want to do nothing.',
     result: '',
   },
 ];
@@ -78,7 +78,7 @@ export function tickTutorial(t, delta) {
     t.phase = 'complete';
     t.result = t.state.encounter.phase === 'victory'
       ? 'Training virus neutralized. That is the whole loop: read each row, pick what to break, delay what you can\'t afford, trace when it\'s quiet. Your real server was never touched.'
-      : 'The training server crashed. Replay to try again; your real server was never touched.';
+      : 'The training server crashed. Replay to try again. Your real server was never touched.';
   } else if (t.phase === 'running' && e.cycle !== before) {
     e.paused = true;
     t.phase = 'review';

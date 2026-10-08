@@ -133,7 +133,7 @@ test('boss uniques: each boss has two; a kill without one raises the next kill\'
     say(s, 'cd core');
     winFight(s);
     assert.equal(s.pity.resident, 1);
-    assert.ok(s.logs.some((e) => /No unique from Resident this time\. Next kill: -?\d+%/.test(e.message)));
+    assert.ok(s.logs.some((e) => /No unique from Resident this time\. The next kill has a -?\d+% chance/.test(e.message)));
     BOSS_LOOT.chance = was;
     assert.equal(Math.round(bossChance(s, 'resident') * 100), Math.round((was + BOSS_LOOT.pity) * 100));
     s.collection = { 'wicks-old-toolkit': 1 };

@@ -29,17 +29,17 @@ import { nativeStrain } from './network.mjs';
 // spec: a specialisation, one per server, needing others on the server first (needs).
 export const BUILDINGS = {
   siphon: { name: 'Code Siphon', kind: 'producer', bw: 1, cost: { credits: 150, code: 10, salvage: 4 }, mins: 10, lv: 1, rule: 'Produces the server\'s code.', make: (L) => ({ code: 1.5 + L / 10 }) },
-  skimmer: { name: 'Credit Skimmer', kind: 'producer', bw: 1, cost: { credits: 300, code: 15, salvage: 8 }, mins: 30, lv: 1, plan: true, heat: 1.5, rule: 'Produces credits. Its natives notice the server 50% more often.', make: (L) => ({ credits: 20 + 3 * L }) },
+  skimmer: { name: 'Credit Skimmer', kind: 'producer', bw: 1, cost: { credits: 300, code: 15, salvage: 8 }, mins: 30, lv: 1, plan: true, heat: 1.5, rule: 'Produces credits. Natives notice the server 50% more often.', make: (L) => ({ credits: 20 + 3 * L }) },
   mill: { name: 'Scrap Mill', kind: 'producer', bw: 1, cost: { credits: 200, code: 12, salvage: 6 }, mins: 20, lv: 1, plan: true, rule: 'Produces salvage.', make: (L) => ({ salvage: 1 + L / 15 }) },
   node: { name: 'Firewall Node', kind: 'defence', bw: 1, cost: { credits: 200, code: 12, salvage: 6 }, mins: 20, lv: 1, plan: true, rule: 'This server\'s firewall is 3 levels higher.' },
   storage: { name: 'Storage Array', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 20, lv: 1, plan: true, rule: 'This server stores twice as much before it fills.' },
   pipeline: { name: 'Pipeline', kind: 'support', bw: 2, cost: { credits: 400, code: 20, salvage: 10 }, mins: 45, lv: 10, plan: true, rule: 'Producers on this server make 50% more.' },
-  ids: { name: 'IDS', kind: 'defence', bw: 1, cost: { credits: 350, code: 18, salvage: 8 }, mins: 40, lv: 1, plan: true, heat: 0.5, rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
+  ids: { name: 'IDS', kind: 'defence', bw: 1, cost: { credits: 350, code: 18, salvage: 8 }, mins: 40, lv: 1, plan: true, heat: 0.5, rule: 'Natives notice this server half as often, and you see swarms heading here sooner.' },
   lure: { name: 'Honeytoken', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 30, lv: 1, plan: true, heat: 2, rule: 'This server draws trouble. Natives notice it twice as often, and swarms come sooner and pick it first. Beating them here pays double.' },
-  miner: { name: 'Data Miner', kind: 'producer', bw: 2, cost: { credits: 500, code: 25, salvage: 12 }, mins: 60, lv: 10, plan: true, rule: 'Rolls the server\'s loot every 90 minutes: credits, code, salvage, now and then a protocol. Better on a Legacy site.', make: () => ({ rolls: 1 / 1.5 }) },
+  miner: { name: 'Data Miner', kind: 'producer', bw: 2, cost: { credits: 500, code: 25, salvage: 12 }, mins: 60, lv: 10, plan: true, rule: 'Rolls the server\'s loot every 90 minutes for credits, code, salvage and now and then a protocol. Rolls better on a Legacy site.', make: () => ({ rolls: 1 / 1.5 }) },
   sentry: { name: 'Sentry Daemon', kind: 'defence', bw: 2, cost: { credits: 600, code: 30, salvage: 15 }, mins: 120, lv: 15, plan: true, rule: 'Kills one virus of every swarm that reaches this server.' },
   refinery: { name: 'Refinery', kind: 'producer', spec: true, bw: 3, cost: { credits: 2500, code: 120, salvage: 50, exploit: 3 }, mins: 360, lv: 20, plan: true, needs: { kind: 'producer', n: 3 }, rule: 'Producers on this server make 50% more, and it stores a day\'s worth.' },
-  post: { name: 'Listening Post', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 30, lv: 5, rule: 'Listens for the unique you name (listen <unique>): wherever it drops, it drops 25% more often. Each Listening Post adds 25%.' },
+  post: { name: 'Listening Post', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 30, lv: 5, rule: 'Listens for the unique you name with listen <unique>. Wherever it can drop, it drops 25% more often. Each Listening Post adds another 25%.' },
   citadel: { name: 'Citadel', kind: 'defence', spec: true, bw: 3, cost: { credits: 2500, code: 120, salvage: 50, exploit: 3 }, mins: 360, lv: 20, plan: true, needs: { kind: 'defence', n: 2 }, rule: 'This server\'s firewall is 6 levels higher, and a lost defence never locks it down.' },
 };
 
@@ -54,7 +54,7 @@ export const OUTPOST = {
   sites: {
     rich: { name: 'Rich', rule: 'Producers here make 50% more.' },
     legacy: { name: 'Legacy', rule: 'Better loot rolls here, and specialisations cost a quarter less.' },
-    backbone: { name: 'Backbone', rule: 'One more building slot.' },
+    backbone: { name: 'Backbone', rule: 'Grants 1 more building slot.' },
     hostile: { name: 'Hostile', rule: 'Natives come twice as often, and producers here make 50% more.' },
     hardened: { name: 'Hardened', rule: 'Its Resident and natives are Armored.' },
   },
@@ -178,7 +178,7 @@ function demolish(s, loc, id) {
   loc.buildings = buildingsOf(loc).filter((x) => x !== id);
   const c = buildCost(s, id, loc), back = Math.round(c.credits * OUTPOST.refund);
   s.server.credits += back;
-  emit(s, 'info', `${BUILDINGS[id].name} on ${loc.name} taken down: ${back} credits back.`, { location: loc.id });
+  emit(s, 'info', `${BUILDINGS[id].name} on ${loc.name} taken down. ${back} credits came back.`, { location: loc.id });
 }
 
 // What it makes ----------------------------------------------------------------------------------
@@ -311,7 +311,7 @@ function tickSites(s, now, dt, paused, away) {
       // /core). One that ends while you're away doesn't count: being away never costs you a server.
       if (!away) loc.lapsed = [...(loc.lapsed || []).filter((t) => now - t < OUTPOST.regrowMs), now];
       if ((loc.lapsed || []).length >= 2) { regrow(s, loc); continue; }
-      emit(s, 'outpost-up', `${loc.name}'s lockdown is over: it's producing again. Another lockdown left to run out within a day and its Resident regrows.`, { location: loc.id });
+      emit(s, 'outpost-up', `${loc.name}'s lockdown is over, and it is producing again. If another lockdown runs out within a day, its Resident regrows.`, { location: loc.id });
       continue;
     }
     if (paused) continue;
@@ -331,9 +331,9 @@ export const startSiege = (s, loc) => launch(s, hooks.now?.() ?? Date.now(), nul
 export function fall(s, loc, force = false) {
   const o = loc.outpost;
   // A Citadel holds: a lost defence costs you the fight, not the server's output.
-  if (has(loc, 'citadel') && !force) return emit(s, 'outpost-held', `${loc.name}'s Citadel held: no lockdown.`, { location: loc.id });
+  if (has(loc, 'citadel') && !force) return emit(s, 'outpost-held', `${loc.name}'s Citadel held, and there is no lockdown.`, { location: loc.id });
   o.lockdown = { left: OUTPOST.lockdownMs }; // what's stored stays; the server stays open
-  emit(s, 'outpost-fell', `LOCKDOWN: natives took ${loc.name}. It stops producing for ${OUTPOST.lockdownMs / 3600000} hours; what's stored is kept. Retake it to end it sooner.`, { location: loc.id });
+  emit(s, 'outpost-fell', `LOCKDOWN: natives took ${loc.name}. It stops producing for ${OUTPOST.lockdownMs / 3600000} hours, but what is stored is kept. Retake it to end it sooner.`, { location: loc.id });
 }
 
 // The Scheduler (a home service) collects every outpost on a timer, real time, offline too.
@@ -386,7 +386,7 @@ export function outpostWon(s, e) {
   if (!o) return;
   if (o.lockdown) {
     o.lockdown = null;
-    emit(s, 'outpost-held', `${loc.name} retaken: the lockdown is over and it's harvesting again.`, { location: loc.id });
+    emit(s, 'outpost-held', `${loc.name} retaken. The lockdown is over, and it is harvesting again.`, { location: loc.id });
   }
 }
 
@@ -404,20 +404,20 @@ export function outpostBuyout(loc, now = Date.now()) {
 function buyout(s, loc, now) {
   const b = outpostBuyout(loc, now);
   if (!b) return warn(s, `Nothing to finish on ${loc.name}.`);
-  if (s.server.credits < b.price) return warn(s, `That costs ${b.price} credits; you have ${s.server.credits}.`);
+  if (s.server.credits < b.price) return warn(s, `That costs ${b.price} credits. You have ${s.server.credits}.`);
   s.server.credits -= b.price;
-  if (b.what === 'lockdown') { loc.outpost.lockdown = null; emit(s, 'outpost-held', `Bought out: ${loc.name}'s lockdown is over for ${b.price} credits.`, { location: loc.id }); }
-  else { emit(s, 'bought', `Bought out: the build on ${loc.name} is done for ${b.price} credits.`, { location: loc.id, amount: b.price }); finishBuild(s, loc); }
+  if (b.what === 'lockdown') { loc.outpost.lockdown = null; emit(s, 'outpost-held', `Bought out ${loc.name}'s lockdown for ${b.price} credits. It is over.`, { location: loc.id }); }
+  else { emit(s, 'bought', `Bought out the build on ${loc.name} for ${b.price} credits. It is done.`, { location: loc.id, amount: b.price }); finishBuild(s, loc); }
 }
 const byName = (id) => (BUILDINGS[id] ? id : Object.keys(BUILDINGS).find((k) => BUILDINGS[k].name.toLowerCase().replace(/\s+/g, '-') === id || BUILDINGS[k].name.toLowerCase().split(' ')[0] === id) || id);
 export function outpostCommand(s, full, now) {
   const [text, payText] = splitPay(full);
   const [, verb, a, b] = text.split(' ');
   if (verb === 'build' && a === 'relay' && !b) return buildRelay(s, payText);
-  if (['compile', 'install', 'pull', 'mod', 'unmod'].includes(verb)) return warn(s, 'Harvesters and modules are buildings now: outpost build <server> <building>.');
+  if (['compile', 'install', 'pull', 'mod', 'unmod'].includes(verb)) return warn(s, 'Harvesters and modules are buildings now. Use outpost build <server> <building>.');
   const loc = a && locOf(s, a);
   const theirs = !loc && a && memberServers(s).find((l) => l.id === a || l.name.toLowerCase() === a);
-  if (theirs) return warn(s, `${theirs.name} is ${theirs.member}'s: only they build there.`);
+  if (theirs) return warn(s, `${theirs.name} is ${theirs.member}'s, and only they build there.`);
   if (!loc) return warn(s, 'usage: outpost build|demolish <server> <building>, or outpost buyout|defend|retake <server>');
   if (verb === 'build') return startBuild(s, loc, byName(b), payText, now);
   if (verb === 'demolish') return demolish(s, loc, byName(b));

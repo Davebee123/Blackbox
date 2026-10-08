@@ -86,7 +86,7 @@ export const flagged = (s, n) => !!n.pinged && targetedHidden(s, n.id);
 export function installRelay(s, id) {
   const loc = locOf(s, id);
   if (!loc) return warn(s, 'No such server.');
-  if (!loc.takenOver) return warn(s, `Take ${loc.name} over first: a relay needs a server whose vault you've opened.`);
+  if (!loc.takenOver) return warn(s, `Take ${loc.name} over first. A relay needs a server whose vault you have opened.`);
   if (loc.relay) return warn(s, `${loc.name} already runs a relay.`);
   if (!items(s).relay) return warn(s, 'You have no relay. Halcyon sells them.');
   items(s).relay--;

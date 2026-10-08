@@ -376,14 +376,14 @@ export function connect(s, id) {
   const loc = zone ? zoneOf(s) : findLocation(s, id) || [...s.locations, ...memberServers(s)].find((l) => l.name.toLowerCase() === id);
   const signal = signalNow(s);
   if (active(s)) warn(s, 'Finish the fight first.');
-  else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Signal ${signal}/${maxSignal(s)}: too weak to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
+  else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Your Signal (${signal}/${maxSignal(s)}) is too weak to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
   else if (!loc) warn(s, `No server called "${id}" on your map.`);
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (relocks(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
-  else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first: crew sim <class>, or crew invite <friend>.`);
+  else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first with crew sim <class> or crew invite <friend>.`);
   else {
     // A found server joins your network as you connect (the game asks first: app.js).
     if (loc.fresh && loc.detached) memoryCommand(s, 'attach', loc.id);
@@ -402,7 +402,7 @@ export function connect(s, id) {
     if (hot) s.run.hot = true;
     const q = QUIRKS[loc.quirk];
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} ${liveSpawns(s) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
-    else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied: ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
+    else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied by ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
@@ -673,7 +673,7 @@ export function jackOut(s) {
   for (const f of sources) {
     s.recipes ||= [];
     if (s.recipes.includes(f.zeroDay)) { for (let i = 0; i < 3; i++) s.salvage.push({ name: 'Source scraps', virus: loc.name, seed: loc.seed }); emit(s, 'info', `You already have ${sourceName(f.zeroDay)} source: +3 salvage.`); }
-    else { s.recipes.push(f.zeroDay); emit(s, 'drop', ZERO_DAYS[f.zeroDay] ? `Source banked: you can compile ${ZERO_DAYS[f.zeroDay].name} at home (Craft page).` : `Source banked: you can install ${SERVICES[f.zeroDay].name} on your server (Server page).`, { recipe: f.zeroDay }); }
+    else { s.recipes.push(f.zeroDay); emit(s, 'drop', ZERO_DAYS[f.zeroDay] ? `Source banked. You can compile ${ZERO_DAYS[f.zeroDay].name} at home, on the Craft page.` : `Source banked. You can install ${SERVICES[f.zeroDay].name} on your server, on the Server page.`, { recipe: f.zeroDay }); }
   }
   for (const f of pack.filter((x) => x.kind === 'plan')) learnPlan(s, f.plan, 'Plan banked: ');
   for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
@@ -696,7 +696,7 @@ export function jackOut(s) {
 hooks.runWon = (s) => {
   if (!s.run) return;
   const e = s.encounter;
-  if (e?.hunter) { s.run.hunter = false; s.run.trace = TRACE.after; emit(s, 'net-good', `Hunter down. Trace ${TRACE.after}%: you can jack out.`); }
+  if (e?.hunter) { s.run.hunter = false; s.run.trace = TRACE.after; emit(s, 'net-good', `Hunter down. Trace is at ${TRACE.after}%, and you can jack out.`); }
   else if (e && !e.zone && !e.wild && !e.process) traceAdd(s, TRACE.cycle * (e.cycle || 1)); // a guard fight is loud
   if (s.run) ls(s);
 };
@@ -961,7 +961,7 @@ hooks.foldersOf = (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !la
 hooks.jackOut = (s) => jackOut(s); // Deadman's Switch (combat.mjs)
 hooks.flee = (s) => {
   if (!s.run) return;
-  if (s.encounter?.hunter) return warn(s, 'The hunter has your trace: no jacking out until it is down.');
+  if (s.encounter?.hunter) return warn(s, 'The hunter has your trace. You cannot jack out until it is down.');
   s.encounter.phase = 'fled';
   jackOut(s);
 };

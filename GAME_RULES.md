@@ -191,7 +191,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Regen | Heals this much per cycle in fights. Rig: on runs, also per move. Server: at home, and very slowly between fights (per minute). | Shell primary; of Mending (suffix) |
 | Block | Taken off every hit (a hit never drops below half). | Proxy primary |
 | Evasion (%) | Chance an enemy's damage attack misses (up to 20%). | of the Ghost (suffix) |
-| Sanitize (%) | Chance an Encrypt, Blind or spawn fails (up to 50%). | of Scrubbing (suffix) |
+| Sanitize (%) | Gives each Encrypt, Scramble or Replicate against you a chance to fail, up to 50%. | of Scrubbing (suffix) |
 | Restore (%) | Every heal you cast, on yourself or on a crewmate, heals this percentage more. | Shell primary; of Restoration (suffix) |
 | Leech | Heals you this much for every skill hit that does damage: your server at home, your Signal on runs. | of Leeching (suffix) |
 | Clock Speed (%) | Fills a meter every cycle. When it's full, all your cooldowns tick one extra cycle. | Multithreaded (prefix) |
@@ -821,7 +821,7 @@ A virus is its parts: a basic attacker and a signature part. Each part wears **a
 | Weak point | Found with Scan (Infiltrator, level 11). It takes +50% damage. When it breaks, a new one forms on another part. |
 | Edge | Each class's signature passive, from level 10 (the root of its talent tree). Since subclasses each of these belongs to one subclass (Demolitionist, Warden, Phantom, Herder), and the other subclass has its own (docs/subclasses/): **Breaker, Overkill**: when your hit breaks a part, the damage left over spills onto the next part, up to 20. **Bastion, Grudge**: the part that last hit you takes +20% from your hits. **Infiltrator, Weak Spot**: your first hit on each part's bare code crits (a hit through armor doesn't find it, and doesn't use it up). **Operator, Last Gasp**: each helper hits once more as it expires. |
 | Encryption | Each Encrypt adds its amount to a stack; the stack hits you every cycle (after your command and helpers, before attacks). Breaking the Encryptor recovers the key and clears it. Your armor chits and Lockdown stop an Encrypt; shields soak the per-cycle damage; Rollback wipes the stack. |
-| Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at 50% (it shows SCRAMBLED and the hit on you; the cooldown is spent). Chits and Lockdown stop it. |
+| Scramble | For a couple of cycles, each of your attacks has a 25% chance to hit you instead, at 50% (it shows SCRAMBLED and the hit on you; the cooldown is spent). A ◆ stops it. |
 
 ## Levels
 
@@ -857,7 +857,7 @@ You pick your first class right after you log in: four cards, each with its role
 - **Situational keys light up.** A skill built for a moment on the board says so on its key when that moment is there, in a word or two in amber: *drain charge* on Suspend when a charge is winding up, *stops a cast* on Quarantine, *fragments* on Fork Bomb, *Exposed ×2* on Stack Smash (situations.mjs). A key a landed tell knocked offline says *OFFLINE* in red until it comes back. docs/skills.md lists every skill's moment.
 - **Each skill is simple, with one twist**, WoW style: a **burn** (damage every cycle: Inject stacks, Thermal Runaway grows, Purge heals you as it ticks), a **proc** that lights a key for a cycle or two (Shatter after you strip a part, Overload resetting on a crit), a **reactive** skill (Retaliate after you're hit, Opening after an attack misses you), or an **execute** (Segfault ×3 under 30%). Combos: Exploit then Overload for crits, Firewall then Retaliate, Inject ×3 then Detonate, Deploy then Barrier or Jam.
 - **Passives** are always on: Breaker Momentum (each part you break: +10% damage for 2 cycles, up to 3 stacks; another break adds a stack and resets the 2 cycles), Bastion Hardened (the first damage hit on you each fight deals 25% less; half kept the Bastion far below the friction target), Infiltrator Ghost (on a run, `slip` walks past one guard without a fight: no XP or drop, and it's back on guard next run; every fight opens with a Surprise window, see The Sync Window; return trips on runs are free), Operator Extra thread (+1 daemon slot).
-- **Statuses** anyone's hits cash in: Exposed (+25% crit chance, 2 cycles, Breaker), Tagged (burns tick +50% and its timer shows even if veiled, Infiltrator), Throttled (its attacks deal half) and Quarantined (+25% damage while its attack is held, Bastion), Hooked (+6 on every hit, helpers and burns too, Operator). Operators run at most 6 helpers at once.
+- **Statuses** anyone's hits cash in: Exposed (hits on it have a 25% higher chance to critically strike, 2 cycles, Breaker), Tagged (burns tick +50% and its timer shows even if veiled, Infiltrator), Throttled (its attacks deal half) and Quarantined (+25% damage while its attack is held, Bastion), Hooked (+6 on every hit, helpers and burns too, Operator). Operators run at most 6 helpers at once.
 - **Talents:** each class's tree has six rows. Three **choice tiers** (pick one of two) with a **ranked row** before each (two nodes, up to 3 ranks each: small bonuses). A row opens once you've spent enough points in the rows above it: ranks 0, tier 1 needs 3, ranks 4, tier 2 needs 8, ranks 9, tier 3 needs 14. Changing picks and ranks is free at home. Commands: `talent <1-3> <a|b>`, `talent add|remove <node>`, `talent reset`.
 - Loadouts change at home only.
 
@@ -890,16 +890,16 @@ A **slotted daemon acts on its own cooldown, in addition to your order**, right 
 
 | Daemon | What it does (v1) | Cooldown |
 |---|---|---:|
-| Sweeper | Hits the part whose attack lands soonest for 10. | 4 |
-| Fuzzer | Breaks an armor chit on an armored part. | 5 |
-| Stall | Pushes the attack landing soonest back a cycle. | 6 |
-| Mender | Heals you 8. | 5 |
-| Spider | Burns the part you last hit for 4 a cycle, for 3 cycles. | 5 |
-| Mirror | Hits the part you last hit for 12. | 3 |
-| Watchman | Once per fight: delays an attack of 20 or more (scaled with your power) by a cycle. v2 delays it two cycles; v3 does it twice a fight. | once per fight |
-| Canary | Once per fight: shields you for 15 the first time you drop below half. | once per fight |
-| Cron Job | Hits the part winding up a tell for 8 (or the part whose attack lands soonest). It was a home-fight service; as a daemon it fights wherever you do. | 3 |
-| Snapshot | Once per fight: the first time a hit drops you below half, restores 8% of your max (v2 12%, v3 16%). It was a home-fight service. | once per fight |
+| Sweeper | Deals 10 damage to the part whose attack lands soonest. | 4 |
+| Fuzzer | Breaks 1 ◆ on the most armored part. | 5 |
+| Stall | Delays the attack that lands soonest by 1 cycle. | 6 |
+| Mender | Heals you for 8. | 5 |
+| Spider | Burns the part you last attacked for 4 damage every cycle for 3 cycles. | 5 |
+| Mirror | Deals 12 damage to the part you last attacked. | 3 |
+| Watchman | Delays an attack of 20 or more damage (scaled with your power) by 1 cycle. Works once per fight. At v2 it delays the attack 2 cycles, and at v3 it works twice a fight. | once per fight |
+| Canary | Shields you for 15 the first time you drop below half health. Works once per fight. | once per fight |
+| Cron Job | Deals 8 damage to the part winding up a tell, or else to the part whose attack lands soonest. It was a home-fight service; as a daemon it fights wherever you do. | 3 |
+| Snapshot | Heals you for 8% of your max health the first time a hit drops you below half. Works once per fight. Heals 12% at v2 and 16% at v3. It was a home-fight service. | once per fight |
 
 `jack out` during a guard fight is an emergency escape: it resolves on your turn, you keep your pack, and the guard stays.
 
@@ -1449,7 +1449,7 @@ Strains are graded too. A swarm counts one layer deeper than the outpost it targ
 | Strain | Family | From (level, layer) | Parts | Rule |
 |---|---|---|---|---|
 | Keylogger | Ghostroot | 4, layer 2 | Pulse Node, Logger | A Sync Window (0.14 wide) opens every cycle. The Logger only takes damage from commands fired inside it, and from burns and helpers started inside one. Every command fired outside it (auto-repeat and planned steps included) is logged; at 3, the Logger's Dump (18) lands next cycle and the log clears. It also Dumps on its own every 6 cycles. |
-| Hashrat | Ransomware | 5, layer 2 | Pulse Node, Miner (no armor) | While the Miner lives, every other cycle your cooldowns don't tick. Left alone, it Overclocks: 4 every 2 cycles. |
+| Hashrat | Ransomware | 5, layer 2 | Pulse Node, Miner (no armor) | While the Miner lives, your cooldowns tick down only every other cycle. Once it is the last part left, it Overclocks for 4 damage every 2 cycles. |
 | Floodgate | Worm | 6, layer 2 | Pulse Node, Flooder (no armor) | Flood hits every cycle from cycle 2 for 2, +1 (scaled) each time; any delay resets it. |
 | Leech | Worm | 8, layer 2 | Pulse Node, Tap (28) | Siphon (8, every 3) heals the virus's most damaged part by what it deals and clears one burn on it. Shields and throttling starve it. |
 | Sleeper | Ghostroot | 10, layer 2 | Pulse Node, Cell | Dormant (attacks off the timeline) until any hit lands or cycle 6. On waking, the Cell's Alarm (14) lands that cycle, then every 5; the Pulse Node attacks every 3. |

@@ -105,7 +105,7 @@ test('every blue carries a minor rule and every yellow a major one; one number l
     assert.equal(it.rule ? RULES[it.rule].tier : null, RARITIES[rarity].rule || null);
     if (rarity === 'tuned') assert.ok(it.affixes.length <= 1, 'a blue: at most one number');
     if (rarity === 'custom') assert.ok(it.affixes.length >= 2 && it.affixes.length <= 4, 'a yellow: two to four');
-    if (it.rule) assert.match(effectLine(it), new RegExp(`^${RULES[it.rule].name}: `));
+    if (it.rule) assert.match(effectLine(it), new RegExp(`^${RULES[it.rule].name} — `));
   }
   const blue = rollItem(seeded(7), { level: 10, rarity: 'tuned', slot: 'exploit' });
   assert.ok(blue.name.includes(RULES[blue.rule].of) || blue.affixes.some((a) => blue.name.includes(a === 'precise' ? 'Precise' : '')), `a blue's name carries its rule when it has no suffix: ${blue.name}`);

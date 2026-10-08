@@ -259,7 +259,7 @@ function postSides(s, at) {
   if (s.mail.sidesPosted) return;
   s.mail.sidesPosted = true;
   for (const [f, against] of SIDES) s.mail.offers.push({ id: s.mail.next++, from: FACTIONS[f].name, got: 0, at, expiresAt: at + 10 * 365 * 24 * 3600000, type: 'side', faction: f, against,
-    subject: `${FACTIONS[f].short} wants an answer`, body: [`${FACTIONS[f].short} and ${FACTIONS[against].short} are at war. Pick ${FACTIONS[f].short}: +20 with them, and ${FACTIONS[against].short} will not forget it.`, 'Take this and the other offer is gone.'],
+    subject: `${FACTIONS[f].short} wants an answer`, body: [`${FACTIONS[f].short} and ${FACTIONS[against].short} are at war. Pick ${FACTIONS[f].short} and gain 20 rep with them, but ${FACTIONS[against].short} will not forget it.`, 'Take this and the other offer is gone.'],
     reward: { credits: 0, standing: 0, rep: 20 } });
 }
 export function offer(s, at = now()) {
@@ -346,7 +346,7 @@ export function contractKill(s, { family, zone, bounty: tag, level = null, strai
       if (level != null) { c.lvSum = (c.lvSum || 0) + level; c.lvN = (c.lvN || 0) + 1; } // it pays at the level of the kills that filled it
       if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
     }
-    if (c.type === 'bounty' && !c.got && tag === c.name) { c.got = 1; emit(s, 'contract-ready', `${c.name} is down. Contract ready: deliver it from Mail.`, { contract: c.id }); }
+    if (c.type === 'bounty' && !c.got && tag === c.name) { c.got = 1; emit(s, 'contract-ready', `${c.name} is down. Contract ready. Deliver it from Mail.`, { contract: c.id }); }
   }
 }
 // The Resident beaten (run.mjs /core): the server is yours.
@@ -416,7 +416,7 @@ export function title(s, c) {
 function hunt(s, c) {
   const n = hiddenNode(s, c.hidden);
   if (!n) return { text: 'Signal lost', part: 0 };
-  if (!flagged(s, n)) return { text: 'Not flagged yet: put a relay on a server next to it', part: 0 };
+  if (!flagged(s, n)) return { text: 'Not flagged yet. Put a relay on a server next to it.', part: 0 };
   return { text: `Flagged past ${locName(s, n.via)} · traced ${n.lead}%`, part: 0.1 + 0.3 * (n.lead / 100) };
 }
 // What's left to do, in a few words, and how far along it is (0–1).
@@ -428,14 +428,14 @@ export function progress(s, c) {
     if (c.any) return c.took ? { text: `${locName(s, c.took)} is yours`, part: 1 } : { text: s.locations.length ? 'Open the vault of any server you have traced' : 'Trace a server first', part: 0 };
     if (!c.loc) return hunt(s, c);
     const l = s.locations.find((x) => x.id === c.loc);
-    return { text: l?.takenOver ? 'Vault opened' : l && Object.keys(l.state.cleared).length ? 'Guard beaten; vault still locked' : 'Guard up', part: l?.takenOver ? 1 : l && Object.keys(l.state.cleared).length ? 0.7 : 0.45 };
+    return { text: l?.takenOver ? 'Vault opened' : l && Object.keys(l.state.cleared).length ? 'Guard beaten, vault still locked' : 'Guard up', part: l?.takenOver ? 1 : l && Object.keys(l.state.cleared).length ? 0.7 : 0.45 };
   }
   if (c.type === 'materials') { const have = materialsOf(s)[c.material] || 0; return { text: `${Math.min(have, c.amount)}/${c.amount} in stock`, part: Math.min(1, have / c.amount) }; }
   if (c.type === 'item') {
     if (ready(s, c)) return { text: 'Banked', part: 1 };
     if (!c.loc) return hunt(s, c);
     const inPack = s.run?.pack.some((f) => f.kind === 'contract' && f.name === c.file);
-    return { text: inPack ? 'In your pack: jack out to bank it' : `In the vault on ${locName(s, c.loc)}`, part: inPack ? 0.85 : 0.5 };
+    return { text: inPack ? 'In your pack. Jack out to bank it.' : `In the vault on ${locName(s, c.loc)}`, part: inPack ? 0.85 : 0.5 };
   }
   if (c.type === 'side') return { text: `${FACTIONS[c.faction].short} +${c.reward.rep}, ${FACTIONS[c.against].short} turns against you`, part: 1 };
   return { text: '', part: 0 };
@@ -510,7 +510,7 @@ export function mailCommand(s, text, at = now()) {
   ].filter(Boolean);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
   if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
-  if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}: double pay on ${title(s, c)}.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }
+  if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}. ${title(s, c)} pays double.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }
   if (c.reward.standing) changeStanding(s, 'halcyon', c.reward.standing, c.offBooks ? 'Halcyon heard about the GLASSJAW job' : 'Contract delivered');
   if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
   if (c.reward.rep && c.faction) changeRep(s, c.faction, c.reward.rep, 'Contract delivered');
@@ -544,7 +544,7 @@ export function tickMail(s, at = now()) {
     if (!stuck || at - stuck.at < MAIL.boardAfterMs) return;
     m.boardOpen = true;
     postSides(s, at);
-    emit(s, 'mail', 'Halcyon opened its board to you: other work while you finish this one.');
+    emit(s, 'mail', 'Halcyon opened its board to you, with other work while you finish this one.');
   }
   postSides(s, at); // once; a save whose board opened before sides existed gets them here
   // Offers nobody took run out.

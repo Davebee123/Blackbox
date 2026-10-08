@@ -240,7 +240,7 @@ test('Decoy and Sandboxed filters: attacks and specials on your server can fail'
   command(s, 'hold');
   const ev = resolveCycle(s);
   assert.ok(ev.some((e) => e.type === 'evaded'));
-  assert.ok(ev.some((e) => /sanitized/.test(e.message)));
+  assert.ok(ev.some((e) => /Sanitize stopped it/.test(e.message)));
   assert.equal(s.server.integrity, 100);
   assert.equal(s.encounter.encrypt, 0);
   Object.assign(STATS.evasion, { cap: was.e }); Object.assign(STATS.sanitize, { cap: was.s });

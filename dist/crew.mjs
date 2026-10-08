@@ -172,7 +172,7 @@ export function crewCommand(s, rest) {
   const words = rest.split(' ').filter(Boolean);
   if (!words.length) {
     const c = s.crewSim || [];
-    emit(s, 'info', c.length ? `Crew (simulated): ${c.map((x) => `${x.name}, ${ARCHETYPES[x.cls].name}`).join(' · ')}. They fight beside you in run fights.` : 'No crew. Try: crew sim bastion infiltrator');
+    emit(s, 'info', c.length ? `Crew (simulated): ${c.map((x) => `${x.name}, ${ARCHETYPES[x.cls].name}`).join(' · ')}. They fight beside you in run fights.` : 'No crew. Try crew sim bastion infiltrator.');
   } else if (words[0] === 'off') {
     s.crewSim = [];
     emit(s, 'info', 'Crew off. You fight alone.');

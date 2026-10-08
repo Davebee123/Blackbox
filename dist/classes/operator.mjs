@@ -82,7 +82,7 @@ function freshHelpers(s) {
     h.seen = true;
     if (e.malloc > 0) { h.damage = Math.round(h.damage * (1 + A('malloc').boost)); h.left++; e.malloc--; n++; }
   }
-  if (n) emit(s, 'status', `Malloc: ${n === 1 ? 'a helper' : n + ' helpers'} with more memory: +${Math.round(A('malloc').boost * 100)}% and a cycle longer.${e.malloc ? ` ${e.malloc} left.` : ''}`, { mark: 'helper' });
+  if (n) emit(s, 'status', `Malloc gives ${n === 1 ? 'a helper' : n + ' helpers'} more memory, for ${Math.round(A('malloc').boost * 100)}% more damage and a cycle longer.${e.malloc ? ` ${e.malloc} left.` : ''}`, { mark: 'helper' });
 }
 
 // ---------- held attacks (resolved before the virus's turn) ----------
@@ -130,7 +130,7 @@ function resolveHeld(s) {
     if (atk.effect === 'heal' && on(s, p, 'poisoned')) {
       atk.due = e.cycle + atk.interval;
       const meant = livingParts(s).sort((a, b) => a.integrity / a.max - b.integrity / b.max)[0];
-      emit(s, 'blocked', `${p.name}'s ${atk.name} is poisoned: it hurts the ${meant.name} instead.`, { source: p.id, target: meant.id });
+      emit(s, 'blocked', `${p.name}'s ${atk.name} is poisoned, and it hurts the ${meant.name} instead.`, { source: p.id, target: meant.id });
       hit(s, meant, Math.max(1, Math.round(atk.amount)), { by: 'Cache Poison', pierce: true });
     }
   }
@@ -286,7 +286,7 @@ export default {
         e.helpers.push({ target: p.id, damage: dmg, left: a.ticks, synced: !!e.synced });
         n++;
       }
-      if (n) emit(s, 'status', `Fan-out: helpers on ${n === 1 ? 'one more part' : n + ' more parts'}, ${dmg} per cycle for ${cycles(a.ticks)}.`, { mark: 'helper', ability: 'fan-out' });
+      if (n) emit(s, 'status', `Fan-out puts helpers on ${n === 1 ? 'one more part' : n + ' more parts'}, dealing ${dmg} every cycle for ${cycles(a.ticks)}.`, { mark: 'helper', ability: 'fan-out' });
       freshHelpers(s);
     },
     deploy: (s) => freshHelpers(s),
@@ -296,26 +296,26 @@ export default {
     sniff: (s) => freshHelpers(s),
     mesh: (s, { a, e }) => {
       e.buffs.mesh = e.cycle + a.cycles - 1;
-      emit(s, 'status', `Mesh for ${cycles(a.cycles)}: every helper hit splashes half onto every other part.`, { mark: 'buff', ability: 'mesh' });
+      emit(s, 'status', `Mesh for ${cycles(a.cycles)}. Every helper hit splashes half its damage onto every other part.`, { mark: 'buff', ability: 'mesh' });
       // Every helper hits once now, so the command is never wasted.
       for (const h of [...e.helpers]) { let t = part(s, h.target); if (!alive(t)) t = soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced }); if (!livingParts(s).length) break; }
     },
     'load-shed': (s, { e }) => {
       e.loadShed = true;
-      emit(s, 'status', `Load Shed: the next attack on you is split over your ${e.helpers.length === 1 ? 'helper' : e.helpers.length + ' helpers'}.`, { mark: 'shield', ability: 'load-shed' });
+      emit(s, 'status', `Load Shed splits the next attack on you over your ${e.helpers.length === 1 ? 'helper' : e.helpers.length + ' helpers'}.`, { mark: 'shield', ability: 'load-shed' });
     },
     crontab: (s, { a, target, e }) => {
       e.crontab = { target: target.id, damage: scaled(s, a.hit), from: e.cycle };
-      emit(s, 'status', `Crontab: a job hits the ${target.name} for ${e.crontab.damage} every other cycle until the fight ends.`, { target: target.id, mark: 'helper', ability: 'crontab' });
+      emit(s, 'status', `Crontab schedules a job that hits the ${target.name} for ${e.crontab.damage} every other cycle until the fight ends.`, { target: target.id, mark: 'helper', ability: 'crontab' });
     },
     malloc: (s, { a, e }) => {
       e.malloc = a.count;
-      emit(s, 'status', `Malloc: your next ${a.count} helpers deal +${Math.round(a.boost * 100)}% and run a cycle longer.`, { mark: 'buff', ability: 'malloc' });
+      emit(s, 'status', `Malloc: your next ${a.count} helpers deal ${Math.round(a.boost * 100)}% more damage and run a cycle longer.`, { mark: 'buff', ability: 'malloc' });
     },
     'oom-kill': (s, { a, e }) => {
       const total = helperValue(s), n = e.helpers.length;
       e.helpers = [];
-      emit(s, 'status', `OOM Kill: ${n === 1 ? 'one helper' : n + ' helpers'} reaped.`, { ability: 'oom-kill' });
+      emit(s, 'status', `OOM Kill reaps ${n === 1 ? 'one helper' : n + ' helpers'}.`, { ability: 'oom-kill' });
       heal(s, Math.max(1, Math.round(total * a.share * restoreMult(s))), 'OOM Kill');
     },
     // ----- Hijacker -----
@@ -331,7 +331,7 @@ export default {
         target.attack.due += 1 + (hasTalent(s, 'long-jam') ? 1 : 0); // Long Jam: a second cycle
         if (target.attack.ramp && target.attack.step) target.attack.step = 0;
         e.metrics.interrupts++;
-        emit(s, 'interrupt', `Jam pulls your helper off the ${target.name}: its ${target.attack.name} waits ${hasTalent(s, 'long-jam') ? '2 cycles' : 'a cycle'}.`, { target: target.id });
+        emit(s, 'interrupt', `Jam pulls your helper off the ${target.name}, and its ${target.attack.name} waits ${hasTalent(s, 'long-jam') ? '2 cycles' : 'a cycle'}.`, { target: target.id });
         openProc(s, 'slipped');
         loopback(s, target);
       }
@@ -342,14 +342,14 @@ export default {
       target.takeoverUntil = e.cycle + a.cycles - 1;
       target.takeoverAt = e.commanding?.at ?? e.cycle;
       jamMark(s, target);
-      emit(s, 'status', `${target.name} taken over for ${cycles(a.cycles)}: its attacks land on its own side at full size.`, { target: target.id, ability: 'takeover' });
+      emit(s, 'status', `${target.name} is taken over for ${cycles(a.cycles)}. Its attacks land on its own side at full damage.`, { target: target.id, ability: 'takeover' });
     },
     'echo-cancel': (s, { a, target, e }) => {
       if (!alive(target)) return;
       target.echoCancelUntil = e.cycle + a.cycles - 1;
-      if (target.echo && e.echoes?.length) { e.echoes = []; emit(s, 'status', `Echo Cancel: the ${target.name}'s echoes go quiet.`, { target: target.id }); }
+      if (target.echo && e.echoes?.length) { e.echoes = []; emit(s, 'status', `Echo Cancel quiets the ${target.name}'s echoes.`, { target: target.id }); }
       if (target.reflect || target.mimic) target.unmaskUntil = e.cycle + a.cycles;
-      if (target.reflect || target.mimic || target.echo) emit(s, 'status', `Echo Cancel on the ${target.name}: its next beat plays back into the virus.`, { target: target.id, ability: 'echo-cancel' });
+      if (target.reflect || target.mimic || target.echo) emit(s, 'status', `Echo Cancel on the ${target.name}. Its next beat plays back into the virus.`, { target: target.id, ability: 'echo-cancel' });
     },
     barrier: (s, { target, e }) => {
       const r = recalled(s, target), k = 0.1 * rank(s, 'cold-storage');
@@ -373,27 +373,27 @@ export default {
       if (cast) { tellAnswer(s, cast, target, `HIJACKED: ${cast.name.toUpperCase()} compiles for you. Your hits deal +35% for 4 cycles.`); e.buffs.stolen = e.cycle + 3; } // and its next attack is yours too
       target.hijack = { left: hasTalent(s, 'double-agent') ? 2 : 1, share: a.share, cap: scaled(s, a.cap), cross: hasTalent(s, 'crosstalk'), at: e.commanding?.at ?? e.cycle };
       jamMark(s, target);
-      emit(s, 'status', `${target.name} hijacked: its next ${target.hijack.left === 2 ? 'two attacks turn' : 'attack turns'} on its own side. Jammed.`, { target: target.id, ability: 'hijack' });
+      emit(s, 'status', `${target.name} hijacked. Its next ${target.hijack.left === 2 ? 'two attacks turn' : 'attack turns'} on its own side, and it is Jammed.`, { target: target.id, ability: 'hijack' });
     },
     blackhole: (s, { target }) => {
       if (!alive(target)) return;
       target.blackhole = true;
       loopback(s, target);
       jamMark(s, target);
-      emit(s, 'status', `Blackhole: ${target.name}'s next attack goes nowhere. Jammed.`, { target: target.id, ability: 'blackhole' });
+      emit(s, 'status', `Blackhole: ${target.name}'s next attack goes nowhere, and it is Jammed.`, { target: target.id, ability: 'blackhole' });
     },
     'cache-poison': (s, { a, target, e }) => {
       if (!alive(target)) return;
       target.poisonedUntil = e.cycle + a.cycles;
       target.poison = scaled(s, a.patch);
       e.burns.push({ id: 'cache-poison', target: target.id, damage: scaled(s, a.burn), grow: 0, left: a.cycles, name: 'Cache Poison', drain: 0, synced: !!e.synced }); // it bites every cycle too
-      emit(s, 'status', `${target.name} Poisoned for ${cycles(a.cycles)}: its patches and heals turn into damage.`, { target: target.id, ability: 'cache-poison' });
+      emit(s, 'status', `${target.name} is Poisoned for ${cycles(a.cycles)}. Its patches and heals turn into damage.`, { target: target.id, ability: 'cache-poison' });
     },
     replay: (s, { a, target }) => {
       if (!alive(target)) return;
       const ch = chargeSize(s, target); // a charge winding up plays back at its charged size, up to twice the cap
       const amount = clamp(ch ? ch.amount : attackSize(s, target), scaled(s, a.floor), scaled(s, a.cap) * (ch ? 2 : 1)) + (rank(s, 'packet-capture') ? scaled(s, 5 * rank(s, 'packet-capture')) : 0);
-      emit(s, 'status', `Replay: ${target.name}'s ${target.attack?.name || 'attack'} plays back at it.`, { target: target.id, ability: 'replay' });
+      emit(s, 'status', `Replay plays the ${target.name}'s ${target.attack?.name || 'attack'} back at it.`, { target: target.id, ability: 'replay' });
       hit(s, target, amount, { mine: true, pierce: true, by: 'Replay' });
     },
   },

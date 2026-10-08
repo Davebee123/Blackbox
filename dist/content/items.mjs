@@ -1911,7 +1911,7 @@ export default {
         "if": "charged",
         "do": "restore%",
         "value": 6,
-        "text": "When a tell lands on you: restore 6% of your health."
+        "text": "Heals you for 6% of your max health when a tell lands on you."
       },
       "sources": [
         {
@@ -2154,7 +2154,7 @@ export default {
         "if": "target-fragment",
         "do": "heal",
         "value": 5,
-        "text": "When you break a fragment: heal 5."
+        "text": "Heals you for 5 when you break a fragment."
       },
       "sources": [
         {
@@ -2308,7 +2308,7 @@ export default {
         "when": "hit",
         "if": "target-locked",
         "do": "shatter",
-        "text": "On a part behind a Mutex lock or a Lockbox ward, a hit that meets ◆ breaks two of them."
+        "text": "Makes each hit on an armored part behind a Mutex lock or a Lockbox ward break 2 ◆."
       },
       "sources": [
         {
@@ -2332,7 +2332,7 @@ export default {
         "if": "target-fragment",
         "do": "refund",
         "value": 1,
-        "text": "When you break a fragment: your cooldowns drop by 1."
+        "text": "Reduces all your cooldowns by 1 cycle when you break a fragment."
       },
       "sources": [
         {

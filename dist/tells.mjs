@@ -294,14 +294,14 @@ function corrupt(s, t, p) {
   if (!k || clean(s)) return;
   const amount = Math.max(1, Math.round(defender(s).max * k));
   s.encounter.corrupt = { name: t.name, amount, left: 3, source: p.id };
-  emit(s, 'status', `${label(t)} leaves you Corrupted: −${amount} a cycle for 3 cycles. Purge or Scrub cleans it.`, { source: p.id, tell: t.id, mark: 'corrupt' });
+  emit(s, 'status', `${label(t)} leaves you Corrupted. You take ${amount} damage every cycle for 3 cycles, unless Purge or Scrub cleanses it.`, { source: p.id, tell: t.id, mark: 'corrupt' });
 }
 // Your last skill (not Spike or SIGINT) is knocked offline: locked for that many cycles. From level 10 a charge or
 // a cast that lands hangs you too: your next command doesn't fire (tier.hang).
 function hang(s, t) {
   if (!tellsOf(s).tier.hang || clean(s)) return;
   s.encounter.hung = s.encounter.cycle + 1;
-  emit(s, 'status', `${label(t)} hangs your session: your next command won't fire.`, { tell: t.id, mark: 'hung' });
+  emit(s, 'status', `${label(t)} hangs your session. Your next command will not fire.`, { tell: t.id, mark: 'hung' });
 }
 function lockLast(s, t, why) {
   const e = s.encounter, n = tellsOf(s).tier.after;
@@ -309,7 +309,7 @@ function lockLast(s, t, why) {
   if (!n || !id || !ABILITIES[id] || clean(s)) return;
   e.readyAt[id] = Math.max(e.readyAt[id] || 0, e.cycle + n + 1);
   (e.locked ||= {})[id] = e.cycle + n;
-  emit(s, 'locked', `${why}: ${ABILITIES[id].name} is knocked offline for ${cycles(n)}.`, { ability: id, tell: t.id, cycles: n });
+  emit(s, 'locked', `${why} knocks ${ABILITIES[id].name} offline for ${cycles(n)}.`, { ability: id, tell: t.id, cycles: n });
 }
 // The virus's half, after its parts' attacks: each tell due lands. True if the fight ended.
 export function tellLand(s) {
@@ -330,7 +330,7 @@ export function tellLand(s) {
       // Full Disk: a burst of encryption on top of its Encrypt, for TELL.burst cycles (it goes when the part breaks, or with Purge).
       if (atk.burst && (s.encounter.encrypt || 0) > locked) { // its Encrypt got through (a ◆, Null Route or Sanitize stops both)
         s.encounter.burst = { name: t.name, amount: atk.burst, left: TELL.burst, source: p.id };
-        emit(s, 'encrypt', `${label(t)}: a burst of encryption on top, −${atk.burst} a cycle for ${TELL.burst} cycles.`, { source: p.id, amount: atk.burst, tell: t.id, missed: true });
+        emit(s, 'encrypt', `${label(t)} adds a burst of encryption, dealing ${atk.burst} damage every cycle for ${TELL.burst} cycles.`, { source: p.id, amount: atk.burst, tell: t.id, missed: true });
         tally(s, t, 'cost', atk.burst * TELL.burst);
       }
       // A brood: more spawns on top of the charged one (up to the usual limit).
@@ -394,7 +394,7 @@ function castLands(s, t, p) {
   (v.buffs ||= {})[t.does] = until;
   if (t.does === 'loud') {
     if (fresh) for (const x of attackers(s)) boost(x, TELL.loud);
-    emit(s, 'phase', `${label(t)} compiles. Every attack ${v.name} has hits ${Math.round((TELL.loud - 1) * 100)}% harder for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every attack from ${v.name} deals ${Math.round((TELL.loud - 1) * 100)}% more damage.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'grow') {
     const all = livingParts(s).filter((x) => x.kind === 'system' && !implanted(s, x)); // a Rootkit Implant stops it growing
     for (const x of all) { const n = Math.round(x.max * TELL.grow); x.max += n; x.integrity += n; }
@@ -402,7 +402,7 @@ function castLands(s, t, p) {
   } else if (t.does === 'haste') {
     // What's on the timeline stays where it is (nothing lands unannounced); the repeats after it come sooner.
     if (fresh) for (const x of attackers(s)) if (x.attack.interval > 2) { x.attack.hasted = true; x.attack.interval--; }
-    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every attack ${v.name} has repeats a cycle faster.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every attack from ${v.name} repeats a cycle faster.`, { target: p.id, tell: t.id, missed: true });
   }
 }
 const boost = (x, k) => { const a = x.attack; if (!a) return; if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * k)); if (a.hit) a.hit = Math.max(1, Math.round(a.hit * k)); };

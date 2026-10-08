@@ -101,7 +101,7 @@ test('Breaker Momentum: a stack per break, capped at 3, lasts 2 cycles from the 
 test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (38) for 2 cycles; Segfault triples under 30%', () => {
   const s = quiet(start('breaker'));
   const enc = Object.assign(part(s, 'encryptor'), { armor: 4, maxArmor: 4, integrity: 500, max: 500 });
-  assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't lit/);
+  assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't usable yet/);
   act(s, 'crack encryptor');
   assert.equal(enc.armor, 1);
   act(s, 'spike encryptor');
@@ -109,7 +109,7 @@ test('Breaker: Crack strips 3 chits; breaking the last one lights Shatter (38) f
   assert.equal(command(s, 'shatter encryptor').at(-1).type, 'queued', 'Shatter is lit');
   resolveCycle(s);
   assert.equal(enc.max - enc.integrity, 38);
-  assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't lit/, 'one use per window');
+  assert.match(command(s, 'shatter encryptor').at(-1).message, /isn't usable yet/, 'one use per window');
   const x = noArmor(quiet(start('breaker')));
   const p = Object.assign(part(x, 'pulse'), { integrity: 100, max: 100 });
   act(x, 'segfault pulse');
@@ -162,7 +162,7 @@ test('Bastion: Firewall absorbs 25 and lights Retaliate (twice the hit, next cyc
   const pulse = big(s, 'pulse');
   const amount = pulse.attack.amount;
   s.encounter.cycle = pulse.attack.due;
-  assert.match(command(s, 'retaliate pulse').at(-1).message, /isn't lit/);
+  assert.match(command(s, 'retaliate pulse').at(-1).message, /isn't usable yet/);
   act(s, 'firewall');
   assert.equal(s.server.integrity, 100, 'the shield took the hit');
   act(s, 'retaliate pulse');

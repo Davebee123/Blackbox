@@ -37,9 +37,9 @@ export const FILTER_STATS = {
   reduction: { name: ' Block at home', range: [2, 6], kind: 'prefix', label: 'Hardened', home: true, scale: true },
   regen: { name: ' Regen at home', range: [0.3, 1], kind: 'prefix', label: 'Self-healing', home: true, scale: true, dp: true },
   shield: { name: '% of max Integrity as a shield in home fights', range: [4, 10], kind: 'suffix', label: 'of the Scrubber', home: true, pct: true },
-  countermeasures: { name: ' back on every hit at home', range: [2, 6], kind: 'suffix', label: 'of Barbs', home: true, scale: true },
+  countermeasures: { name: ' damage back on every hit at home', range: [2, 6], kind: 'suffix', label: 'of Barbs', home: true, scale: true },
   tarpit: { name: '% slower invasions', range: [15, 30], kind: 'suffix', label: 'of Tar', rare: true },
-  sting: { name: '% worn on arrival', range: [10, 25], kind: 'suffix', label: 'of the Hive', rare: true },
+  sting: { name: '% of each invader worn down on arrival', range: [10, 25], kind: 'suffix', label: 'of the Hive', rare: true },
   reflect: { name: ' code from each invader it stops', range: [2, 5], kind: 'suffix', label: 'of Reflection', rare: true },
 };
 const AFFIXES = { scrap: [0, 0], stock: [0, 0], tuned: [1, 2], custom: [3, 3] };
@@ -115,10 +115,10 @@ export const filterCost = (L) => ({ credits: 60 + 8 * L, code: { cipher: 6 + Mat
 function craftFilter(s, stat, payText) {
   if (s.run || active(s)) return warn(s, 'Craft at home, between fights.');
   if (stat && !CRAFTABLE.includes(stat)) return warn(s, `Filters: ${CRAFTABLE.join(', ')}, or any.`);
-  if (stat && !knowsFilter(s, stat)) return warn(s, `You don't have the ${recipeLabel(stat)} recipe yet: viruses drop blueprints.`);
-  if (!stat && !filterRecipes(s).length) return warn(s, 'You know no filter recipes yet: viruses drop blueprints.');
+  if (stat && !knowsFilter(s, stat)) return warn(s, `You don't have the ${recipeLabel(stat)} recipe yet. Viruses drop blueprints.`);
+  if (!stat && !filterRecipes(s).length) return warn(s, 'You know no filter recipes yet. Viruses drop blueprints.');
   if (!stat) stat = filterRecipes(s)[Math.floor(rand(s) * filterRecipes(s).length)]; // any of yours
-  if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters: scrap one first.`);
+  if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters. Scrap one first.`);
   const L = hackerLevel(s), c = filterCost(L), mats = materialsOf(s);
   if (s.server.credits < c.credits || (mats.cipher || 0) < c.code.cipher || (s.sigs || 0) < c.sigs) return warn(s, `A filter takes ${c.credits} credits, ${c.code.cipher} Cipher code and ${c.sigs} signatures (you hold ${s.sigs || 0}).`);
   const pay = settle(s, SALVAGE_COSTS.filter(), payText);

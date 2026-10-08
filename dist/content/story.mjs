@@ -107,7 +107,7 @@ export default {
       "subject": "the ledger",
       "body": [
         "Somebody lifted Halcyon’s claims ledger, {file}. Its signal was last seen close to a server you control.",
-        "Put your relay up on it and listen. When the relay flags the signal, hunt the server down: kill what it sends, read the relay’s logs.",
+        "Put your relay up on it and listen. When the relay flags the signal, hunt the server down. Kill what it sends, and read the relay’s logs.",
         "Then pull the ledger out of its vault, bank it, and send it back through Mail. Do not read it. (Read it.)"
       ],
       "job": {
@@ -135,7 +135,7 @@ export default {
       "subject": "Contractor status",
       "body": [
         "Your probation is over. LOWLIGHT stays your crew, but we will send work to you directly from now on.",
-        "Our board carries up to five offers at a time. Take up to three; drop any you like, and nothing is held against you.",
+        "Our board carries up to five offers at a time. Take up to three, and drop any you like. Nothing is held against you.",
         "Contracts pay credits and Indemnity. Indemnity is only good at our store, where you will also find relays.",
         "Your retainer grows with your standing. A breach on your own server costs standing, and so does working for our competitors."
       ],

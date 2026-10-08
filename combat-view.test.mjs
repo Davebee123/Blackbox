@@ -64,9 +64,9 @@ test('tray shows cooldown and queued states', () => {
 test('a mutation is a tag, its rule on hover (and in a first-time tip); the gate card is just the virus and Engage', async () => {
   const { TIPS } = await import('./dist/tips.mjs');
   const s = start('splinter');
-  assert.match(hudMarkup(s), /data-mut="regenerative" title="[^"]*patches its armor a cycle sooner/);
+  assert.match(hudMarkup(s), /data-mut="regenerative" title="[^"]*patches its ◆ back 1 cycle sooner/);
   assert.doesNotMatch(hudMarkup(s), /<p class="mutation-rule"/);
-  assert.ok(TIPS.some((t) => t.id === 'mut-regenerative' && /a cycle sooner/.test(t.text)));
+  assert.ok(TIPS.some((t) => t.id === 'mut-regenerative' && /1 cycle sooner/.test(t.text)));
   const h = fresh();
   selectEncounter(h, 'splinter', 1);
   assert.match(mapMarkup(h, 'intrusion'), /At the gate/);

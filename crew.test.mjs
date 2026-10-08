@@ -55,7 +55,7 @@ test('your target broke before your turn: the command goes at the next part', ()
   command(s, 'spike ' + a.id);
   a.integrity = 0;
   resolveCycle(s);
-  assert.ok(s.logs.some((e) => e.type === 'info' && /already broken: Spike goes at/.test(e.message)));
+  assert.ok(s.logs.some((e) => e.type === 'info' && /already broken, so Spike goes at/.test(e.message)));
   assert.ok(b.integrity < b.max || b.armor < b.maxArmor, 'it hit the other part');
 });
 
