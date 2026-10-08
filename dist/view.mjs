@@ -301,7 +301,7 @@ function tellChip(s, i, c, k = '', to = null) {
     ? `${i.name}: the ${p?.name}'s ${i.plain || 'attack'} in this cell, charged (${what}). It lands ${c ? `in ${c}` : 'this cycle'}. To call it off: ${i.answer}. ${counts} ${pays} ${lands}`
     : i.tell === 'cast' ? `The ${p?.name} is compiling ${i.name}. It lands ${c ? `in ${c}` : 'this cycle'}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. To stop it: ${i.answer}. ${counts} ${pays} ${lands}`
     : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${c ? `in ${c}` : 'this cycle'}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it first: the skill that takes its last ◆ is ready again.`
-    : `The Mimic plays back the command you fire ${c ? `in ${c}` : 'this cycle'}, at you. Fire something with no direct hit then (a debuff, a strip, a burn, a shield), and the Mimic is Open.`;
+    : `The Mimic plays back the command you fire ${c ? `in ${c}` : 'this cycle'}, at you${BOSSES[s.encounter?.virus?.boss]?.mimic > 1 ? ', twice over if you\'re Scrambled' : ''}. Fire something with no direct hit then (a debuff, a strip, a burn, a shield), and the Mimic is Open.`;
   return `<div class="intent raid tell t-${esc(i.tell)} ${i.tell === 'cast' ? 'cast' : ''} ${c === 0 ? 'now' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><small class="compiling">${TELL_KICK[i.tell] || ''}</small><b>${esc(i.name)}</b>${what ? `<small>${esc(what)}</small>` : ''}<small class="answer">${esc(answer)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 function attackChip(i, c, k = '', to = null) {

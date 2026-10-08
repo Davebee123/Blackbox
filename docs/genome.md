@@ -806,7 +806,26 @@ The Pool Lock, measured as section 7.5 asked. At 16 the rebuilt boss wins 78% wi
 | After, wins by subclass of 12 | | Demolitionist 8, Overclocker 9, Warden 12, Sysop 3, Payload 6, Phantom 10, Herder 9, Hijacker 4 | Sysop 0 | Sysop 1 |
 | Worst single hit and worst three cycles at 12 | | 42% and 73% (51% and 85% before) | | |
 
-At their floors both sit in the band: the reader wins 60 to 80%, the misreader 45% or more, and the blind bot more than 20 points less. Every subclass wins at least four in twelve, except the Sysop against MIRRORSHADE, which is flagged for its kit (section 7.2). At 12 the misreader now wins as often as the reader, which is what the rebuild was for. Both Breakers, at 0 of 12 before, win 8 and 9.
+On the genome build, before the class kits, both sat in the band at their floors: the reader won 60 to 80%, the misreader 45% or more, and the blind bot more than 20 points less. Every subclass won at least four in twelve, except the Sysop against MIRRORSHADE, which is flagged for its kit (section 7.2). At 12 the misreader won as often as the reader, which is what the rebuild was for. Both Breakers, at 0 of 12 before, won 8 and 9.
+
+**MIRRORSHADE after the class kits.** On the merged build, at the same ×1.3 Integrity and ×0.9 damage, the reader won 83% at 12, the misreader 85% and the blind bot 73%. Reading was worth 10 points, and the band asks for 20.
+
+The Mimic's beat is the read this fight is built on, and the blind bot went quiet on 180 of the 218 beats the Mimic recorded without reading one of them. Before the kits it went quiet on 176 of 222. The beats fall on cycles 3 and 7, inside the Scrambles of cycles 2 to 4 and 7 to 9. While it's Scrambled the planner holds back its big hits whether it reads tells or not, and the kits open on cycle 3 with set-ups the Mimic has nothing to copy from: Crack, Retaliate, Detonate, Null Route and Hook. Half comes by cycle 5 or 6, so most fights record only that one beat. A plain playback cost the blind bot 8% of its Signal a fight, and 10% before the kits.
+
+That was enough before the kits because the fight was close. The Scrambler took 44% of a blind bot's Signal a fight and the Pulse Node 10%. With the kits those fell to 34% and 6%, and the blind bot had room to spare. The kits' strips and hits also answer the boss's other tells by accident. Go Dark landed on the blind bot 3 times in 96 fights, down from 16, and Glass Cut didn't land once.
+
+The reading planner misread the beat as well. It answered a cast or a seal (a hit for Persistence, a Spike to strip the Scrambler before Go Dark) without checking whether the Mimic was recording, so it fired hits into the beat. The Payload took six playbacks that way in its twelve fights, and the readers took ten before the kits.
+
+The fix makes the Mimic the amplifier on its Scramble in play as well as on paper. While you're Scrambled, MIRRORSHADE's Mimic plays your hit back twice over (BOSSES `mimic: 2`, in `mimicLands`), still under the tell ceiling of half your max. Clearing the Scramble with Vent, Scrub or Rotate Keys, or sending it after a Honeypot, brings the playback back to one. A reader who goes quiet on the beat never pays it, so the worst single hit and the worst three cycles at 12 stay at 42% and 74%. The planner's answers to a cast or a seal now skip a command with a direct hit on a beat the Mimic is recording, and the reader takes no playbacks at all. Integrity and damage stay at ×1.3 and ×0.9. Raising damage alone to ×1.2 had opened the gap to 21 points, but the worst three cycles reached 89% and the Sysop and the Payload collapsed at 18.
+
+| MIRRORSHADE, merged build | Lv 12 (floor) | Lv 18 | Lv 30 |
+|---|---:|---:|---:|
+| Before the fix: read, misread, blind | 83%, 85%, 73% | 82%, 76%, 54% | 86%, 81%, 68% |
+| After the fix: read, misread, blind | **84%, 83%, 58%** | 82%, 75%, 48% | 86%, 79%, 64% |
+| After, wins by subclass of 12 | Demolitionist 8, Overclocker 9, Warden 10, Sysop 11, Payload 12, Phantom 10, Herder 12, Hijacker 9 | Sysop 0, Payload 9, the rest 11 or 12 | Sysop 2, the rest 11 or 12 |
+| Worst single hit and worst three cycles, after | 42% and 74% | 43% and 65% | 45% and 77% |
+
+The reader sits at the top of the test's band at 12 (55 to 85%), as HASHLORD does at 16. The kits made every class stronger, and the fight was left at its size so the change stays on the tell.
 
 ### 15.4 Per gene
 
@@ -875,7 +894,7 @@ Most of these are a boss charge that got through. A boss's charge adds up to 27.
 ### 15.6 Decisions for the designer
 
 1. **The spike cap against boss charges.** Either a boss charge's extra counts toward the cap, and most of today's bosses fail it, or rule 5 reads the plain hit with a crit and leaves charges, which can be answered, to the tell system's own ceiling of 50%.
-2. **The Sysop against MIRRORSHADE.** It wins 3 of 12 at 12 and 0 to 1 of 12 from 18. The Doppelganger's extra attacker lands while the Sysop's slow kill is still going. It's flagged for its kit, as section 7.2 says, but the gap widens with level.
+2. **The Sysop against MIRRORSHADE.** With the class kits it wins 11 of 12 at 12, but 0 of 12 at 18 and 2 of 12 at 30. The Doppelganger's extra attacker lands while the Sysop's slow kill is still going. It's flagged for its kit, as section 7.2 says, but the gap widens with level.
 3. **Costs the table disagrees with.** Armored, Twin, Linked and the Keyring cost far more than their points, and the Decoy, the Mimic, Regenerative and Adaptive far less. Phase 3's budget rolls by these costs, so they should move first. The levers are the Decoy's and the Mimic's Integrity trim, Regenerative's one-cycle patch and Linked's third of a hit.
 4. **The Keyring answer.** The planner and the codex line say to break the Keyring first, and the harness says that loses. Either the answer or the Keyring changes.
 5. **Floors on the other bosses.** Only HASHLORD (16) and MIRRORSHADE (12) have floors. Section 7.4 gives every boss one (FLOODWALL 16, ECHOLALIA 18, TRIPMINE 20). Holding `/core` until then is a one-line data change each, but it delays those networks' lair bosses, so it waits for the lair bands of phase 4.

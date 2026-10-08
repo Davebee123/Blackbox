@@ -451,8 +451,11 @@ function mimicLands(s, t, p) {
     return false;
   }
   tally(s, t, 'landed');
-  const amount = Math.max(1, Math.round(Math.min(TELL.ceiling * defender(host).max, direct * TELL.mimic)));
-  emit(s, 'status', `The ${p.name} plays your ${a.name} back at you.`, { source: p.id, tell: t.id, missed: true });
+  // A boss's Mimic that sits on its Scramble (BOSSES mimic, MIRRORSHADE's): while you're Scrambled it plays your hit
+  // back that many times over, still under the ceiling.
+  const loud = s.encounter.scrambleUntil >= s.encounter.cycle ? BOSSES[e.virus.boss]?.mimic || 1 : 1;
+  const amount = Math.max(1, Math.round(Math.min(TELL.ceiling * defender(host).max, direct * TELL.mimic * loud)));
+  emit(s, 'status', loud > 1 ? `You're Scrambled, and the ${p.name} plays your ${a.name} back at you ${loud === 2 ? 'twice' : `${loud} times`} over.` : `The ${p.name} plays your ${a.name} back at you.`, { source: p.id, tell: t.id, missed: true });
   const over = strikeWith(s, p, { name: `${a.name} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
   if (!over) { lockLast(s, t, 'MIMIC'); corrupt(s, t, p); }
   return over;
@@ -589,6 +592,9 @@ export function tellMove(s, t0 = null, planned = null) {
     const id = planned.split(' ')[0], m = sourceOf(s, recording);
     if (mimicHit(s, id, part(s, planned.split(' ')[1]) || m) > 0) return first(s, quietFor(s, t0 && alive(t0) ? t0 : livingParts(s).find((x) => x !== m) || m));
   }
+  // On a beat it's recording, an answer with a direct hit in it comes straight back too: a cast or a seal waits for a
+  // quiet answer, or for the next cycle.
+  const echoes = (text) => !!(text && recording && mimicHit(s, text.split(' ')[0], part(s, text.split(' ')[1]) || sourceOf(s, recording)) > 0);
   // A kill comes first, unless a charge landing now (on another part) costs more than the kill saves.
   if (kills(s, planned)) {
     const big = soon(s, 0).find((t) => t.kind === 'charge' && t.part !== (planned || '').split(' ')[1] && chargeCost(s, t, sourceOf(s, t)) + after(s) >= defender(s).max * 0.12);
@@ -613,18 +619,18 @@ export function tellMove(s, t0 = null, planned = null) {
     if (t.kind === 'cast' && left > 0) {
       // A skill built for a cast answers it and does something besides (damage, a stun): keep SIGINT for the next one.
       const own = next - c <= 1 && first(s, [left <= 2 && 'overvolt ' + p.id, 'quarantine ' + p.id, s.encounter.helpers.some((h) => h.target === p.id) && 'hijack ' + p.id, s.encounter.helpers.length >= left && 'reroute ' + p.id, next - c >= 1 && left <= 2 && 'thermal-runaway ' + p.id]);
-      if (own) return own;
+      if (own && !echoes(own)) return own;
       if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && ok(s, 'sigint') && next - c <= 1) return 'sigint';
       if (!usable(s).includes('sigint') || readyIn(s, 'sigint') > next - c) {
         if (hitsIt(planned, p)) return null;
         const h = left <= next - c + 1 ? hitOn(s, p) : null;
-        if (h) return h;
+        if (h && !echoes(h)) return h;
       }
     }
     // A seal: strip its part before it lands, when one command does it (or two, with time).
     if (t.kind === 'seal' && TELL.bots.strip !== false && next - c <= 1 && p.armor > 0 && quickStrip(s, p)) {
       const strip = first(s, [p.armor >= 2 && 'shaped-charge ' + p.id, p.armor >= 2 && 'crack ' + p.id, p.armor >= 2 && 'rate-limit ' + p.id, p.armor <= 2 && 'overvolt ' + p.id, p.armor <= 1 && 'spike ' + p.id]);
-      if (strip) return strip;
+      if (strip && !echoes(strip)) return strip;
     }
   }
   return null;

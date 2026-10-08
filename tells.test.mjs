@@ -307,6 +307,26 @@ test('the Mimic plays the command you fire on its beat back at you; go quiet and
   assert.ok(ev.some((e) => e.type === 'read' && e.open), 'read: the Mimic is Open');
 });
 
+test('MIRRORSHADE\'s Mimic sits on its Scramble: while you\'re Scrambled it plays your hit back twice over', () => {
+  const played = (scrambled) => {
+    const s = fight({ level: 14, family: 'ghostroot', opts: { boss: 'nb-mirrorshade', name: 'MIRRORSHADE' } });
+    quietParts(s);
+    tell(s, 'mimic', 'mimic', 0);
+    for (const p of livingParts(s)) Object.assign(p, { armor: 0, maxArmor: 0, integrity: 999, max: 999 });
+    if (scrambled) s.encounter.scrambleUntil = s.encounter.cycle + 1;
+    const before = hp(s);
+    fire(s, 'overload pulse');
+    return before - hp(s);
+  };
+  const chance = CONFIG.scramble.chance;
+  CONFIG.scramble.chance = 0; // no self-hits from the Scramble: only the playback lands
+  try {
+    const plain = played(false), loud = played(true);
+    assert.ok(plain > 0, 'its Overload came back at it');
+    assert.ok(Math.abs(loud - 2 * plain) <= 1, `twice over while Scrambled: ${loud} against ${plain}`);
+  } finally { CONFIG.scramble.chance = chance; }
+});
+
 test('breaking a tell\'s part stops it', () => {
   const s = fight({ level: 12 });
   quietParts(s);

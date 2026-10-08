@@ -479,7 +479,7 @@ They follow the unique rules (the best base at their item level ×1.2), and they
 | BACK ORIFICE | Worm, a C2 Node | Spam Run hatches two. Sooner at half; at 25% a Mirror twins the Replicator |
 | PATCH TUESDAY | The Patchwork strain | Rollup. Re-arms at 60%, sooner at 30% |
 | FLOODWALL | The Floodgate strain | Storm Surge. Re-arms at half |
-| MIRRORSHADE | Ghostroot, a Mimic, NULL CHOIR's | From level 12 (at 12 and 13 its Scrambler wears ◆3 and Scrambles every 5). Glass Cut, a plain charge on the Scrambler. Re-arms at 60%; at half the Mimic stops recording and becomes a Doppelganger of the first part you broke, or of the Pulse Node |
+| MIRRORSHADE | Ghostroot, a Mimic, NULL CHOIR's | From level 12 (at 12 and 13 its Scrambler wears ◆3 and Scrambles every 5). Glass Cut, a plain charge on the Scrambler. While you're Scrambled its Mimic plays your hit back twice over, still never more than half your max. Re-arms at 60%; at half the Mimic stops recording and becomes a Doppelganger of the first part you broke, or of the Pulse Node |
 | SLEEPWALKER | The Sleeper strain | Night Terror. Re-arms at half |
 | ECHOLALIA | The Echo strain | Last Word. Re-arms at 60%, sooner at 30% |
 
@@ -1266,7 +1266,7 @@ An **elite** brings one more (its family's seal) and its charges take two hits a
 
 **SIGINT in solo fights** stops a solo cast at the price of your command for the cycle, and a cast is the only tell it answers. It's ready every 8 cycles and casts come every 7 or so, so a class with a skill built for casts keeps SIGINT for the next one.
 
-**The bots read tells too** (planner.mjs, `tellMove` in tells.mjs, and each class's planner in dist/classes): they answer a charge on its last chance when what it adds and leaves behind is worth a command, with a skill built for it when they have one; they answer a cast with their own skill first and SIGINT after; they fire something quiet on the Mimic's beat; they strip a part about to seal. A kill comes first unless a bigger charge lands now. `TELL.bots.answer = false` is a bot that plays as if it can't see them: on the class-balance fights it loses about 13 points more Signal a fight from level 10 (18 at 10, 13 at 18 and 8 at 30), wins 503 of 576 fights against the reader's 557, and at levels 5 and 8 loses about 1 and 9 points more (balance.test.mjs checks the gap).
+**The bots read tells too** (planner.mjs, `tellMove` in tells.mjs, and each class's planner in dist/classes): they answer a charge on its last chance when what it adds and leaves behind is worth a command, with a skill built for it when they have one; they answer a cast with their own skill first and SIGINT after; they fire something quiet on the Mimic's beat, and on a beat it's recording they answer a cast or a seal only with a command that has no direct hit; they strip a part about to seal. A kill comes first unless a bigger charge lands now. `TELL.bots.answer = false` is a bot that plays as if it can't see them: on the class-balance fights it loses about 13 points more Signal a fight from level 10 (18 at 10, 13 at 18 and 8 at 30), wins 503 of 576 fights against the reader's 557, and at levels 5 and 8 loses about 1 and 9 points more (balance.test.mjs checks the gap).
 
 ## Crew bosses (raid.mjs)
 
