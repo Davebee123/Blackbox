@@ -551,7 +551,7 @@ test('situational answers to seals and casts: Bit Rot and Cache Poison fail a se
   quietParts(r);
   r.loadout.equipped.demolitionist = ['overload', 'flood', 'exploit', 'crack', 'bit-rot'];
   const enc = part(r, 'encryptor');
-  enc.armor = enc.maxArmor = 5;
+  enc.armor = enc.maxArmor = 7; // Bit Rot's hit breaks two, and the rot one a cycle: the shell is still up when the seal lands
   const tr = tell(r, 'keyrotation', 'encryptor', 2);
   fire(r, 'bit-rot encryptor');
   hold(r, 2);

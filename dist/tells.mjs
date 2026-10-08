@@ -270,10 +270,13 @@ export function tellBroke(s, p) {
 export const chargeNow = (s, p) => !!tellsOf(s)?.list.some((t) => t.kind === 'charge' && t.told && t.part === p.id && p.attack && t.n === (p.attack.n || 0) && p.attack.due <= s.encounter.cycle);
 // What a charge does when it lands, as the attack it powers up would (so ◆, shields, Null Route, Throttle and
 // Brace all count), bigger, never more than the tier's cap of your max on top (cap; dot for a stack), never past the ceiling.
+// The most a tell lands for, as a share of your max: a solo boss's TELL.ceiling (its landing is capped at 60% in
+// combat.mjs spikeCap), a wild virus's or a guard's the spike cap's 45% (CONFIG.spikeCap.wild).
+const ceilingOf = (s) => (s.encounter?.virus?.boss ? TELL.ceiling : Math.min(TELL.ceiling, CONFIG.spikeCap.wild));
 function chargeAttack(s, t, p) {
   const T = tellsOf(s), max = defender(s).max, a = p.attack;
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
-  const big = (n, cap) => Math.max(1, Math.round(Math.max(n, Math.min(TELL.ceiling * max, n + Math.min(cap * max, n * (T.tier.mult - 1))))));
+  const big = (n, cap) => Math.max(1, Math.round(Math.max(n, Math.min(ceilingOf(s) * max, n + Math.min(cap * max, n * (T.tier.mult - 1))))));
   const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id };
   if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p), T.tier.cap) / enr)) };
   if (a.effect === 'encrypt') return { ...base, burst: Math.max(1, Math.round(Math.min(T.tier.dot * max, a.amount * (T.tier.mult - 1)))) }; // its Encrypt, and a burst on top (TELL.burst cycles)
@@ -454,7 +457,7 @@ function mimicLands(s, t, p) {
   // A boss's Mimic that sits on its Scramble (BOSSES mimic, MIRRORSHADE's): while you're Scrambled it plays your hit
   // back that many times over, still under the ceiling.
   const loud = s.encounter.scrambleUntil >= s.encounter.cycle ? BOSSES[e.virus.boss]?.mimic || 1 : 1;
-  const amount = Math.max(1, Math.round(Math.min(TELL.ceiling * defender(host).max, direct * TELL.mimic * loud)));
+  const amount = Math.max(1, Math.round(Math.min(ceilingOf(s) * defender(host).max, direct * TELL.mimic * loud)));
   emit(s, 'status', loud > 1 ? `You're Scrambled, and the ${p.name} plays your ${a.name} back at you ${loud === 2 ? 'twice' : `${loud} times`} over.` : `The ${p.name} plays your ${a.name} back at you.`, { source: p.id, tell: t.id, missed: true });
   const over = strikeWith(s, p, { name: `${a.name} (mimicked)`, effect: 'damage', amount, interval: 99, noCrit: true, tell: t.id });
   if (!over) { lockLast(s, t, 'MIMIC'); corrupt(s, t, p); }

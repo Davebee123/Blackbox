@@ -140,11 +140,12 @@ export const MATCHED = {
   healers: [{ strain: 'patchwork', seed: 300 }, { strain: 'patchwork', seed: 310 }, { strain: 'leech', seed: 400 }, { strain: 'leech', seed: 410 }, bossFight('nb-patchday'), ...many(4, (i) => ({ family: 'worm', seed: 10 * i + 7 }))],
   ghostroot: [...many(6, (i) => ({ family: 'ghostroot', seed: 10 * i + 1 })), bossFight('choir'), bossFight('nb-mirrorshade')],
   hijack: [{ strain: 'patchwork', seed: 300 }, { strain: 'leech', seed: 400 }, bossFight('nb-patchday'), ...many(3, (i) => ({ family: 'ghostroot', seed: 10 * i + 5 })), bossFight('nb-mirrorshade'), { strain: 'echo', seed: 500 }, bossFight('nb-echolalia')],
+  evasion: [...many(4, (i) => ({ elite: true, seed: 10 * i + 2 })), { strain: 'bricker', seed: 600 }, { strain: 'extortion', seed: 610 }, { strain: 'floodgate', seed: 620 }, bossFight('nb-deadbolt'), bossFight('nb-tripmine'), bossFight('relayking')],
   guards: ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer'].flatMap((g) => [{ guard: g, seed: 1 }, { guard: g, seed: 11 }]),
   generic: [...many(4, (i) => ({ family: 'ransomware', seed: 10 * i + 9 })), ...many(4, (i) => ({ family: 'ghostroot', seed: 10 * i + 9 })), { family: 'worm', seed: 909 }, { family: 'worm', seed: 919 }],
 };
 // Which set a subclass's shipped conditional build is for.
-export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 'swarm', sysop: 'healers', payload: 'swarm', phantom: 'ghostroot', herder: 'swarm', hijacker: 'hijack' };
+export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 'swarm', sysop: 'healers', payload: 'swarm', phantom: 'evasion', herder: 'swarm', hijacker: 'hijack' };
 // The solo band per subclass (docs/kits.md 9: per mode, per subclass), in Signal lost on the class-balance fights.
 // A subclass leans solo or crew (SUBS[sub].lean). The Bastions lean crew and pay for it alone in pace, not Signal:
 // their kills are slow (about twice as many cycles a fight), and they heal or shield it back, so they may sit

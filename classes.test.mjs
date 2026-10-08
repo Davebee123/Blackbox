@@ -268,7 +268,7 @@ test('Operator: Botnet sends three small helpers; Garbage Collect hits every par
   h.loadout.equipped.operator = ['botnet', 'garbage-collect'];
   const hp = h.encounter.virus.parts.map((p) => p.integrity);
   act(h, 'garbage-collect');
-  assert.ok(h.encounter.virus.parts.every((p, i) => p.integrity === hp[i] - 10));
+  assert.ok(h.encounter.virus.parts.every((p, i) => p.integrity === hp[i] - 14));
 });
 
 // ---------- runs ----------

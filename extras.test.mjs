@@ -15,7 +15,7 @@ test('the kit talent: from level 5 every class has the first of its first-row ta
   s.hackers.bastion.level = 5;
   assert.equal(rank(s, 'patch-notes'), LOADOUT.specRanks);
   assert.equal(rank(s, 'stateful-firewall'), 0);
-  assert.match(command(s, 'specialty stateful-firewall').at(-1).message, /no specialty to pick any more\. Patch Notes is part of the Bastion kit from level 5: Patch heals \+6/);
+  assert.match(command(s, 'specialty stateful-firewall').at(-1).message, /no specialty to pick any more\. Patch Notes is part of the Bastion kit from level 5: Increases the healing of Patch by 6\./);
   assert.equal(rank(s, 'stateful-firewall'), 0, 'nothing to change');
   s.loadout.ranks = { warden: { 'patch-notes': 3 } }; s.hackers.bastion.level = 12;
   assert.equal(rank(s, 'patch-notes'), 5, 'the kit\'s two ranks come on top of any you buy');

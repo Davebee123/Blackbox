@@ -166,7 +166,7 @@ const GUARDS = {
     guard: true,
     ice: true,
     art: 'ransomware',
-    rule: 'Every 4 cycles the Keyring re-arms the Gate to full armor, three times, then it overheats. Break the Keyring, or kill the Gate between re-arms.',
+    rule: 'Every 4 cycles the Keyring re-arms the Gate to full armor, three times, then it overheats. The Keyring has no attack. Kill the Gate between re-arms, and break the Keyring first only when the Gate\'s shell is too thick to get through in time.',
     summary: 'ICE on the door. The Keyring keeps re-arming the Gate.',
     parts: [
       { id: 'pulse', name: 'Gate', integrity: 30, armor: 3, loot: 'Gate Hinge', attack: { name: 'Ram', effect: 'damage', amount: 10, interval: 3, first: 2 } },

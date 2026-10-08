@@ -2,7 +2,7 @@
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
 import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards } from './combat.mjs';
-import { ABILITIES, TELL } from './data.mjs';
+import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
@@ -30,7 +30,7 @@ const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target ==
 const order = (s, p) => (p.deadman && !ignores('tripwire') && livingParts(s).some((x) => x !== p && x.kind === 'system') ? 0.05 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
-const HITS = ['zero-day', 'retaliate', 'opening', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'spike']; // the cheap core hits before key 1
+const HITS = ['zero-day', 'retaliate', 'opening', 'chain-reaction', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'spike']; // the cheap core hits before key 1
 // A command that breaks this part right now, if there is one.
 // Flicker: the Shade is out of phase on odd cycles; a player hits something else then.
 const phasedOut = (s, p) => p.phase && !ignores('phaseshift') && s.encounter.cycle % 2 === 1;
@@ -50,6 +50,20 @@ export const doomed = (s, p) => alive(p) && !(p.armor > 0) && s.encounter.burns.
 const burnsOn = (s, p) => s.encounter.burns.filter((b) => b.target === p.id).length;
 const helpersOn = (s, p) => s.encounter.helpers.filter((h) => h.target === p.id).length;
 
+// A Bouncer's Keyring (genes.mjs keyring) has no attack: at the end of every 4th cycle it re-arms its partner, the
+// Gate, to full ◆, three times. A re-arm only gives the shell back, so burns, helpers and hits through armor lose
+// nothing to it, and the Gate comes first. A Breaker lives by its strips (the Overclocker less so: Thermal Throttle
+// and Sudo go through ◆): when it can't get through the Gate's shell and break it before the next re-arm, every strip
+// is wasted, so it breaks the Keyring first.
+function keyringNow(s) {
+  if (ignores('keyring') || classOf(s) !== 'breaker' || subOf(s) === 'overclocker') return null;
+  const e = s.encounter, k = livingParts(s).find((p) => p.rearm && (p.rearms || 0) < CONFIG.rearmMax);
+  const gate = k && livingParts(s).find((p) => p !== k && p.maxArmor > 0);
+  if (!gate || !(gate.armor > 0) || ok(s, 'shaped-charge ' + gate.id)) return null;
+  const left = k.rearm - ((e.cycle - 1) % k.rearm); // commands before the re-arm, this one included
+  const strips = (ok(s, 'crack ' + gate.id) ? ABILITIES.crack.strip : 1) + Math.max(0, left - 2); // the last command is the kill
+  return strips < gate.armor ? k : null;
+}
 // One planner for every class: finish what you can, answer what lands now, strip, then finish.
 // Commands a class doesn't have are skipped, so each class plays its own kit.
 export function planner(s) {
@@ -72,7 +86,7 @@ const killing = (s, plan, p) => { const id = plan.split(' ')[0]; return !p.armor
 function play(s) {
   const now = landingNow(s);
   // Encrypted: the Encryptor holds the key, so it's the next threat whatever its timer says.
-  const key = (s.encounter.encrypt > 0 && !ignores('encrypt') && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || livingParts(s).find((p) => p.rearm && !ignores('keyring')) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring; a Replicator that keeps spawning
+  const key = (s.encounter.encrypt > 0 && !ignores('encrypt') && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || keyringNow(s) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring on a re-arm cycle; a Replicator that keeps spawning
   // Burn classes (Infiltrator) get the most out of big parts that outlive their burns; the rest go for the biggest threat.
   // A crew boss (raid.mjs): its mechanics first (interrupt, cleanse, dodge), then its priority add or workers.
   const raid = raidMove(s);
@@ -169,7 +183,7 @@ function play(s) {
     burnsOn(s, t) >= 2 && 'detonate ' + t.id,
     t.integrity > 30 && 'tag ' + t.id,
     burnsOn(s, t) < 3 && 'inject ' + t.id,
-    'segfault ' + t.id, 'overload ' + t.id, 'flood ' + t.id, 'backdoor ' + t.id, 'reclaim ' + t.id, 'rate-limit ' + t.id,
+    'segfault ' + t.id, livingParts(s).length >= 2 && 'chain-reaction ' + t.id, 'overload ' + t.id, 'flood ' + t.id, 'backdoor ' + t.id, 'reclaim ' + t.id, 'rate-limit ' + t.id,
     'deploy ' + t.id, 'thermal-runaway ' + t.id, 'sudo',
     !burnsOn(s, t) && t.integrity > 30 && 'purge ' + t.id, // a Bastion's filler: a burn that heals beats a Spike on a part that will last
     ...classFill(s, t),

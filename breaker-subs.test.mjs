@@ -128,17 +128,23 @@ test('Logic Bomb: 2 cycles later, 50 to its part and 20 to every other; on the n
   assert.equal(part(a, 'pulse').armor, 1);
 });
 
-test('Chain Reaction: 30 to the part, and if it breaks within 3 cycles it hits the rest for 25; a part the blast breaks blows up too', () => {
+test('Chain Reaction: 40 to the part (2 ◆ on armor), and if it breaks within 3 cycles it hits the rest for 30; a part the blast breaks blows up too', () => {
   const s = noArmor(quiet(demo()));
   big(s, 'encryptor');
   extra(s, 'x1', 10);
-  Object.assign(part(s, 'pulse'), { integrity: 40, max: 40 });
+  Object.assign(part(s, 'pulse'), { integrity: 50, max: 50 });
   act(s, 'chain-reaction pulse');
-  assert.equal(part(s, 'pulse').integrity, 10, 'a 30 hit in any fight');
+  assert.equal(part(s, 'pulse').integrity, 10, 'a 40 hit in any fight');
   act(s, 'spike pulse');
   assert.equal(part(s, 'x1').integrity, 0, 'the blast broke X1');
-  assert.equal(lost(s, 'encryptor'), Math.floor(25 * 1.1) + Math.floor(25 * 1.2), 'two blasts, each with the Momentum of the breaks so far');
-  assert.equal(readyIn(s, 'chain-reaction'), 4, 'cooldown 6');
+  assert.equal(lost(s, 'encryptor'), Math.floor(30 * 1.1) + Math.floor(30 * 1.2), 'two blasts, each with the Momentum of the breaks so far');
+  assert.equal(readyIn(s, 'chain-reaction'), 3, 'cooldown 5');
+  // On armor it breaks 2 ◆ and wires the part all the same.
+  const a = quiet(demo());
+  armor(a, 'pulse', 3); big(a, 'encryptor');
+  act(a, 'chain-reaction pulse');
+  assert.equal(part(a, 'pulse').armor, 1);
+  assert.ok(part(a, 'pulse').bkChain, 'wired');
   // Past its 3 cycles, a break is just a break.
   const t = noArmor(quiet(demo()));
   big(t, 'encryptor'); big(t, 'pulse');
@@ -148,11 +154,11 @@ test('Chain Reaction: 30 to the part, and if it breaks within 3 cycles it hits t
   assert.equal(lost(t, 'encryptor'), 0);
 });
 
-test('Bit Rot: 20 now, then a ◆ off at the end of each of your turns for 4 cycles, and no patching while it rots; a plain hit on a part that never had armor', () => {
+test('Bit Rot: 25 now (2 ◆ on armor), then a ◆ off at the end of each of your turns for 4 cycles, no patching, and 20% more from you while it rots', () => {
   const s = quiet(demo());
-  const p = armor(s, 'pulse', 6);
+  const p = armor(s, 'pulse', 7);
   act(s, 'bit-rot pulse');
-  assert.equal(p.armor, 4, 'its hit breaks one, the rot another');
+  assert.equal(p.armor, 4, 'its hit breaks two, the rot another');
   act(s, 'hold'); act(s, 'hold'); act(s, 'hold');
   assert.equal(p.armor, 1, 'four cycles, four ◆');
   act(s, 'hold');
@@ -170,8 +176,10 @@ test('Bit Rot: 20 now, then a ◆ off at the end of each of your turns for 4 cyc
   const n = noArmor(quiet(demo()));
   big(n, 'pulse');
   act(n, 'bit-rot pulse');
-  assert.equal(lost(n, 'pulse'), 20, 'worth a Spike anywhere');
-  assert.ok(!part(n, 'pulse').bkRot, 'nothing to rot');
+  assert.equal(lost(n, 'pulse'), 25, 'worth a Spike anywhere');
+  assert.ok(part(n, 'pulse').bkRot, 'a bare part rots too');
+  act(n, 'spike pulse');
+  assert.equal(lost(n, 'pulse'), 25 + Math.floor(25 * 1.2), 'and takes 20% more from you');
 });
 
 test('Demolitionist fillers: Blast Radius, Shrapnel, Deep Burn', () => {

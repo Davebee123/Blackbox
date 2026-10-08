@@ -111,19 +111,22 @@ export default {
       emit(s, 'status', `Fingerprinted: Weak Spot is fresh on the ${target.name}.`, { target: target.id, ability: 'fingerprint' });
     },
     'side-channel'(s, { a, target, e }) { if (alive(target)) target.seenUntil = Math.max(target.seenUntil || 0, e.cycle + a.cycles - 1); },
+    // Unmask: your hits on it crit more often for a while, its timer shows, and a Decoy or a Mimic has nothing of you to copy.
     unmask(s, { a, target, e }) {
       if (!alive(target)) return;
       target.seenUntil = Math.max(target.seenUntil || 0, e.cycle + a.cycles - 1);
+      target.unmasked = { who: s.who || '', until: e.cycle + a.cycles - 1 };
       if (target.reflect || target.mimic) target.unmaskUntil = e.cycle + a.cycles;
-      emit(s, 'status', `${target.name} unmasked: its veil is down for ${a.cycles} cycles${target.reflect || target.mimic ? ', and it has nothing of you to copy on its next beat' : ''}.`, { target: target.id, mark: 'debuff', ability: 'unmask' });
+      emit(s, 'status', `${target.name} unmasked for ${a.cycles} cycles: your hits on it crit ${a.crit}% more often and its timer shows${target.reflect || target.mimic ? ', and it has nothing of you to copy on its next beat' : ''}.`, { target: target.id, mark: 'debuff', ability: 'unmask' });
     },
-    'rotate-keys'(s, { e }) {
+    // Rotate Keys: a cleanse, and the next hits on you land lighter. Each one lights Opening.
+    'rotate-keys'(s, { a, e }) {
       const cleared = [];
       if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); }
       if (e.corrupt) { e.corrupt = null; cleared.push('Corrupted'); }
       if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
-      mine(s).rotated = true;
-      emit(s, 'status', `Keys rotated${cleared.length ? `: ${cleared.join(' and ')} cleared` : ''}. The next hit on you deals 30% less.`, { mark: 'shield', ability: 'rotate-keys' });
+      mine(s).rotated = a.hits;
+      emit(s, 'status', `Keys rotated${cleared.length ? `: ${cleared.join(' and ')} cleared` : ''}. The next ${a.hits} hits on you deal ${Math.round(a.cut * 100)}% less, and each lights Opening.`, { mark: 'shield', ability: 'rotate-keys' });
     },
     vanish(s, { a, e }) {
       e.nullRoute = Math.max(e.nullRoute || 0, a.misses);
@@ -233,6 +236,8 @@ export default {
     if (!isInf(s)) return 0;
     const e = s.encounter;
     if (opts.mine && !opts.dot && !opts.by && e.lastSkill === 'backstab' && notDue(s, p)) return 100;
+    // Unmask: your hits on the part crit more often while it lasts.
+    if (opts.mine && !opts.dot && p.unmasked && p.unmasked.who === (s.who || '') && p.unmasked.until >= e.cycle) return A('unmask').crit;
     // Blind Spot (Phantom talent): your first burn tick on each part crits too.
     if (opts.dot && subEdge(s, 'phantom') && hasTalent(s, 'blind-spot')) { const st = mine(s); if (!st.weakDot[p.id]) { st.weakDot[p.id] = true; return 100; } }
     return 0;
@@ -250,7 +255,7 @@ export default {
     }
     let m = 1;
     if (st.wiped) { st.wiped = false; emit(s, 'blocked', `${atk.name} can't find you in the logs: it deals half.`, {}); m *= 0.5; }
-    if (st.rotated) { st.rotated = false; emit(s, 'blocked', `${atk.name} hits a key you've already rotated: it deals 30% less.`, {}); m *= 1 - A('rotate-keys').cut; }
+    if (st.rotated > 0) { st.rotated--; emit(s, 'blocked', `${atk.name} hits a key you've already rotated: it deals ${Math.round(A('rotate-keys').cut * 100)}% less.`, {}); m *= 1 - A('rotate-keys').cut; openProc(s, 'slipped'); }
     // Logic Trap: the hit deals half, and the part that lands it catches a copy of every burn on your target.
     if (st.trap && p) {
       st.trap = false;
@@ -381,8 +386,9 @@ function payloadPlan(s, t, living, hurt) {
   if (injects(s, t) < INJECT_FLOOR && queued(s, t) < t.integrity) { const c = first(s, ['inject ' + t.id]); if (c) return c; }
   // Fuzz: a hit and a burn, and a tell on it counts it twice.
   if (tellOn(s, t) && ['charge', 'cast'].includes(tellOn(s, t).kind)) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; }
-  // Thick armor: Polymorph burns straight through it while the other burns break ◆.
-  if (t.armor >= 2) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
+  // Thick armor: Polymorph burns straight through it while the other burns break ◆. On a bare part it's the
+  // biggest burn there is, so it goes on anything that will outlive it.
+  if (t.armor >= 2 || queued(s, t) + previewDamage(s, 'spike', t) < t.integrity) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
   // The moments: low on Signal (Skim pays it back), one part loaded and the rest clean (Propagate), three burns
   // stacked on a bare part (Thrash).
   if (hurt < 0.6) { const c = first(s, ['skim ' + t.id]); if (c) return c; }
@@ -427,7 +433,11 @@ function phantomPlan(s, t, living, hurt) {
   if (fresh === 0 && living.length >= 2) { const c = first(s, ['log-wipe']); if (c) return c; }
   if (t.integrity >= 60) { const c = first(s, ['implant ' + t.id]); if (c) return c; }
   // Weak Spot: the first hit on each part's bare code crits, so open on a fresh part with the biggest hit to hand.
-  if (!e.weakHit?.[t.id] && !(e.cycle === 1 && e.sync?.surprise)) { const c = first(s, ['opening ' + t.id, 'backdoor ' + t.id, !t.armor && 'backstab ' + t.id, !t.armor && 'spike ' + t.id]); if (c) return c; }
+  // Unmask a part that will take a few hits: the crits that follow come more often.
+  const unmasked = t.unmasked?.who === (s.who || '') && t.unmasked.until >= e.cycle;
+  const long = !unmasked && t.integrity > 1.5 * previewDamage(s, 'unmask', t);
+  if (!e.weakHit?.[t.id] && !(e.cycle === 1 && e.sync?.surprise)) { const c = first(s, ['opening ' + t.id, long && 'unmask ' + t.id, 'backdoor ' + t.id, !t.armor && 'backstab ' + t.id, !t.armor && 'spike ' + t.id]); if (c) return c; }
+  if (long && !(readyIn(s, 'backstab') === 0 && usable(s).includes('backstab'))) { const c = first(s, ['unmask ' + t.id]); if (c) return c; }
   // A bare part: Backstab beats a Spike even without the crit, so it goes whenever it's ready (a lit Opening first).
   if (!t.armor) { const c = first(s, ['opening ' + t.id, 'backstab ' + t.id]); if (c) return c; }
   return null;

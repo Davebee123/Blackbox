@@ -3,7 +3,10 @@
 // the content doesn't meet yet are `todo` tests: they run and report the misfits, like the class band in balance.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bossBand, geneCheck, PROBES, ANSWERED, SUBS, playersAt } from './genesim.mjs';
+import { bossBand, bossFight, geneCheck, PROBES, ANSWERED, SUBS, playersAt, player } from './genesim.mjs';
+import { strainsAt } from './balance.mjs';
+import { selectEncounter, command, resolveCycle, active } from './dist/combat.mjs';
+import { planner } from './dist/planner.mjs';
 import { BOSSES } from './dist/data.mjs';
 import { GENES, GENE_IDS } from './dist/genes.mjs';
 
@@ -88,7 +91,7 @@ test('no rolled gene or tell runs away: at most 25 points a fight with it, and a
 // here, over noise), answering a gene worth at least 3 points, ignoring one costing no more than 20, and every
 // subclass owning an answer that wins at least as often as ignoring (rule 4). Named builds are measured against their
 // family's body, which they replace a part of, so they're reported in genesim.mjs and left out of the point target.
-test('per-gene calibration: about 3–4 points a cost point, answers worth 3 or more, ignoring 20 at most, an answer in every kit', { todo: 'docs/genome.md "What shipped" has the table: Armored, Linked and the Keyring cost far more than their points, Regenerative, Adaptive, Escalation, the Decoy, the Mimic and most tells far less (the Decoy and the Mimic trim the other parts by 15%, so a reader comes out ahead); answering the Keyring first loses to ignoring it' }, () => {
+test('per-gene calibration: about 3–4 points a cost point, answers worth 3 or more, ignoring 20 at most, an answer in every kit', { todo: 'docs/genome.md "What shipped" has the table: Armored, Linked and the Keyring cost far more than their points, Regenerative, Adaptive, Escalation, the Decoy, the Mimic and most tells far less (the Decoy and the Mimic trim the other parts by 15%, so a reader comes out ahead); the Keyring is now answered as it should be (the Gate between re-arms, the Keyring first only for a Breaker that can\'t get through the Gate\'s shell in time), which saves a Lv 5 Breaker most of its fights but is worth little over every kit' }, () => {
   const off = [];
   for (const [id, c] of Object.entries(checks)) {
     if (BUILT.includes(id)) continue;
@@ -100,6 +103,31 @@ test('per-gene calibration: about 3–4 points a cost point, answers worth 3 or 
   assert.deepEqual(off, []);
 });
 
-test('the spike cap on the rebuilt bosses: no single landing over 45% of your max', { todo: 'a boss charge adds up to 27.5% of your max on top of its plain hit (TELL.boss.cap), so HASHLORD\'s Difficulty Bomb lands at 46–50% on the smallest Signal pools at 16; MIRRORSHADE stays at 42%. Most of today\'s solo bosses land 45–77% (docs/genome.md "What shipped")' }, () => {
-  for (const id of ['nb-hashlord', 'nb-mirrorshade']) assert.ok(band(id).spike <= 0.45, `${id}: ${band(id).spike.toFixed(2)} (${band(id).spikeBy})`);
+// The spike cap (docs/genome.md rule 5, as the designer set it in docs/kits.md 11, CONFIG.spikeCap): a solo boss's
+// single landing may reach 60% of your max, so it hurts but never one-shots you, and a wild virus's or a guard's charge
+// stops at 45%. The rebuilt bosses on their twelve seeds, every solo boss at 10, 18 and 30 on one seed a subclass,
+// and the hard slice of wild fights (every open strain, elites) at 10 and 30.
+test('the spike cap: a solo boss lands at most 60% of your max in one hit, a wild virus\'s charge at most 45%', () => {
+  for (const id of ['nb-hashlord', 'nb-mirrorshade']) assert.ok(band(id).spike <= 0.6, `${id}: ${band(id).spike.toFixed(2)} (${band(id).spikeBy})`);
+  const solo = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid);
+  for (const id of solo) for (const L of [10, 18, 30]) for (const [cls, sub] of SUBS) {
+    const r = bossFight(id, Math.max(L, BOSSES[id].floor || 0), cls, sub, 1);
+    assert.ok(r.spike <= 0.6, `${id} at ${L}, ${sub}: ${r.spike.toFixed(2)} (${r.spikeBy})`);
+  }
+  let charges = 0;
+  for (const L of [10, 30]) for (const [cls, sub] of SUBS) {
+    const fights = [...strainsAt(L).map((strain, i) => ({ strain, seed: 100 + i })), ...[0, 1, 2].map((i) => ({ elite: true, seed: 950 + i }))];
+    for (const f of fights) {
+      const s = player(cls, sub, L), max = s.run.max;
+      s.rng = (f.seed * 2654435761 + L) >>> 0;
+      selectEncounter(s, 'random', f.seed, { mode: 'run', room: '/sim', level: L, zone: true, strain: f.strain, ...(f.elite ? { elite: true } : {}) });
+      s.encounter.soft = 1;
+      command(s, 'engage');
+      for (let n = 0; n < 80 && active(s); n++) {
+        command(s, planner(s) || 'hold');
+        for (const x of resolveCycle(s)) if (x.type === 'server-hit' && x.tell && !x.who) { charges++; assert.ok(x.amount <= 0.45 * max + 1, `${sub} at ${L}, ${JSON.stringify(f)}: ${x.message} (max ${max})`); }
+      }
+    }
+  }
+  assert.ok(charges > 20, `charges landed: ${charges}`);
 });

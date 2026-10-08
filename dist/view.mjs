@@ -1614,7 +1614,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
     return `<span class="tag stag cd${n ? '' : ' none'}" title="${n ? `Cooldown: ${n} ${n === 1 ? 'cycle' : 'cycles'} before you can use it again` : 'No cooldown'}">⟳ ${n || '—'}</span>`;
   };
   // A specialist carries the board it is built for (docs/kits.md 5.4): Fragments, Healers, Seals, Mimic…
-  const specTag = (x) => (kit?.tags?.[x.id] ? `<span class="tag stag spec" title="Built for this board">${esc(kit.tags[x.id])}</span>` : '');
+  const specTag = (x) => (kit?.tags?.[x.id] ? `<span class="tag stag spec" title="Best on this board, a bonus on top of its general use">${esc(kit.tags[x.id])}</span>` : '');
   const tagHtml = (x) => `${specTag(x)}${cdHtml(x)}<span class="tag stag verb-${x.verb}" title="What it does">${VERB[x.verb] || x.verb}</span>`;
   const lib = line.map((x) => {
     const isEq = equipped.includes(x.id), isKnown = known.includes(x.id);

@@ -117,8 +117,8 @@ test('OOM Kill: every helper goes, and you heal 40% of what they had left', () =
 test('GC Tuning: Garbage Collect hits 30% harder per rank', () => {
   const s = start({ ranks: { 'gc-tuning': 1 } });
   act(s, 'garbage-collect');
-  assert.equal(lost(s, 'pulse'), 13);
-  assert.equal(lost(s, 'encryptor'), 13);
+  assert.equal(lost(s, 'pulse'), Math.floor(14 * 1.3));
+  assert.equal(lost(s, 'encryptor'), Math.floor(14 * 1.3));
 });
 
 test('Hydra: when a part breaks, each of your helpers on it splits in two on the next one', () => {
@@ -306,12 +306,12 @@ test('Blackhole: spend a helper, and the next attack does nothing at all; Loopba
   assert.equal(l.encounter.helpers.length, 1);
 });
 
-test('Cache Poison: a patch that is due hits the part instead, and a heal it casts hurts', () => {
+test('Cache Poison: 18 now and 8 a cycle, its attacks deal 20% less, a patch that is due hits the part instead, and a heal it casts hurts', () => {
   const s = start({ sub: 'hijacker' });
   Object.assign(part(s, 'pulse'), { maxArmor: 1, armor: 0, patchAt: s.encounter.cycle });
   act(s, 'cache-poison pulse');
   assert.equal(part(s, 'pulse').armor, 0, 'no chit back');
-  assert.equal(lost(s, 'pulse'), 15 + 5, 'the turned patch, and the poison\'s first bite');
+  assert.equal(lost(s, 'pulse'), 18 + 15 + 8, 'its hit, the turned patch, and the poison\'s first bite');
   assert.equal(part(s, 'pulse').patchAt, s.encounter.cycle - 1 + patchDelay(s), 'its patch starts over');
   const h = start({ sub: 'hijacker' });
   part(h, 'pulse').integrity = 400;
@@ -322,6 +322,17 @@ test('Cache Poison: a patch that is due hits the part instead, and a heal it cas
   Object.assign(part(plain, 'pulse'), { maxArmor: 1, armor: 0, patchAt: plain.encounter.cycle });
   act(plain, 'hold');
   assert.equal(part(plain, 'pulse').armor, 1, 'without it, it patches');
+});
+
+test('Cache Poison: a poisoned part\'s attacks deal 20% less, on anyone', () => {
+  const plain = start({ sub: 'hijacker' }), s = start({ sub: 'hijacker' });
+  for (const x of [plain, s]) { for (const p of x.encounter.virus.parts) p.attack = null; surge(x, 'pulse', 30, x.encounter.cycle + 1); x.encounter.hardened = 0; }
+  act(plain, 'hold'); act(s, 'cache-poison pulse');
+  const before = [plain.server.integrity, s.server.integrity];
+  act(plain, 'hold'); act(s, 'hold');
+  const took = (x, i) => before[i] - x.server.integrity;
+  assert.ok(took(plain, 0) > 0);
+  assert.equal(took(s, 1), Math.round(took(plain, 0) * (1 - ABILITIES['cache-poison'].weaken)));
 });
 
 test('Replay: the part takes its own attack, 25 to 40, through armor; Packet Capture adds 5 a rank', () => {

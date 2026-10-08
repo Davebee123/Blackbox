@@ -897,6 +897,8 @@ Most of these are a boss charge that got through. A boss's charge adds up to 27.
 2. **The Sysop against MIRRORSHADE.** With the class kits it wins 11 of 12 at 12, but 0 of 12 at 18 and 2 of 12 at 30. The Doppelganger's extra attacker lands while the Sysop's slow kill is still going. It's flagged for its kit, as section 7.2 says, but the gap widens with level.
 3. **Costs the table disagrees with.** Armored, Twin, Linked and the Keyring cost far more than their points, and the Decoy, the Mimic, Regenerative and Adaptive far less. Phase 3's budget rolls by these costs, so they should move first. The levers are the Decoy's and the Mimic's Integrity trim, Regenerative's one-cycle patch and Linked's third of a hit.
 4. **The Keyring answer.** The planner and the codex line say to break the Keyring first, and the harness says that loses. Either the answer or the Keyring changes.
+
+The designer settled 1 and 4 after the kit review (docs/kits.md, section 11). A solo boss's single landing may reach 60% of your max and no more, and a wild virus's charge stops at 45%. The Keyring's answer is to kill the Gate between re-arms, and only a Breaker that can't get through the Gate's shell in time breaks the Keyring first.
 5. **Floors on the other bosses.** Only HASHLORD (16) and MIRRORSHADE (12) have floors. Section 7.4 gives every boss one (FLOODWALL 16, ECHOLALIA 18, TRIPMINE 20). Holding `/core` until then is a one-line data change each, but it delays those networks' lair bosses, so it waits for the lair bands of phase 4.
 6. **Tripwire at 16** (open decision 13) isn't applied. It stays at 20 until it's confirmed, because it changes which wild viruses roll at 16 to 19.
 

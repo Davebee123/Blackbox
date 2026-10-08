@@ -47,24 +47,25 @@ test('every subclass is viable alone at Lv 10, 18 and 30: at least 85% wins, ins
   }
 });
 
-// The Bastions alone: built for a crew, like a tank or a healer levelling solo. Since the kit pass (docs/kits.md)
-// the Sysop's hits heal (Checksum, Reclaim at 12), so alone it rarely loses Signal; what it pays is time. Over a
-// wider sample (three gear sets, 40 wilds and 8 guard fights each) both Bastions take at least 1.4 times the cycles
-// of the damage dealers' median a fight. Carrying a crew: farm.test.mjs.
+// The Bastions alone: built for a crew, like a tank or a healer levelling solo. What they pay alone is time. Over a
+// wider sample (three gear sets, 40 wilds and 8 guard fights each) the Warden takes at least 1.4 times the cycles of
+// the damage dealers' median a fight, and the Sysop at least twice as many (docs/kits.md 11: alone its hits deal 75%,
+// SUBS.sysop.alone), while it still loses little Signal: 15% a fight at most, its heals drawn from its full hits.
+// Carrying a crew: farm.test.mjs.
 const wide = (c, b, sub) => {
   const rs = [0, 1, 2].flatMap((gearSeed) => [...Array.from({ length: 40 }, (_, i) => fight(c, 'random', b, { sub, gearSeed, seed: 500 + i, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].flatMap((g) => [1, 2].map((seed) => fight(c, g, b, { sub, gearSeed, seed, mode: 'run', depth: b.depth })))]);
   return { lost: rs.reduce((a, r) => a + r.lostPct, 0) / rs.length, wins: rs.filter((r) => r.win).length / rs.length, cycles: rs.reduce((a, r) => a + r.cycles, 0) / rs.length };
 };
-test('the Bastions alone are the slow ones: at least 1.4 times the damage dealers\' median cycles a fight at Lv 18 and 30 with blues, both winning 85%', () => {
+test('the Bastions alone are the slow ones: the Warden at least 1.4 times the damage dealers\' median cycles a fight at Lv 18 and 30, the Sysop at least twice, both winning 85% and the Sysop losing 15% or less', () => {
   for (const b of BRACKETS.filter((x) => x.level === 18 || x.level === 30)) {
     const rs = Object.fromEntries(SUBS.map(([c, sub]) => [sub, wide(c, b, sub)]));
     const line = Object.entries(rs).map(([sub, r]) => `${sub} ${r.lost.toFixed(0)}% ${Math.round(r.wins * 100)} ${r.cycles.toFixed(1)}c`).join(' / ');
     const dps = SUBS.filter(([c]) => c !== 'Bastion').map(([, sub]) => rs[sub].cycles).sort((x, y) => x - y);
     const median = (dps[2] + dps[3]) / 2;
-    for (const sub of ['warden', 'sysop']) {
-      assert.ok(rs[sub].cycles >= 1.4 * median, `${b.name}: ${line}`);
-      assert.ok(rs[sub].wins >= 0.85, `${b.name}: ${line}`);
-    }
+    assert.ok(rs.warden.cycles >= 1.4 * median, `${b.name}: ${line}`);
+    assert.ok(rs.sysop.cycles >= 2 * median, `${b.name}: Sysop ${(rs.sysop.cycles / median).toFixed(2)}x: ${line}`);
+    assert.ok(rs.sysop.lost <= 15, `${b.name}: ${line}`);
+    for (const sub of ['warden', 'sysop']) assert.ok(rs[sub].wins >= 0.85, `${b.name}: ${line}`);
   }
 });
 

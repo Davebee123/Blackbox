@@ -27,6 +27,7 @@ import { slotsOf, subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part,
 import { ABILITIES, SKILLS } from '../data.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
 import { tellOn, tellAnswer, undoCast, landsAt } from '../tells.mjs';
+import { subs as SUBS_BASTION } from './bastion.data.mjs';
 // (Circuit Breaker's cap and Honeypot's cut: the absorb hook below; Revoke's failed heals and patches: combat.mjs.)
 
 const A = (id) => ABILITIES[id];
@@ -55,6 +56,11 @@ function overprovision(to, over, cap) {
 }
 // A Sysop's heal: Critical Path, the heal itself, Overprovision on what spills past full, and Loopback.
 // opts.cap / opts.crit / opts.loop override the healer's own (heals over time keep the numbers they were cast with).
+// The Sysop alone (no crew in the fight): its hits and burns deal SUBS.sysop.alone of their size, so a solo fight takes
+// it about twice as long as a damage dealer. The heals it draws from its hits (Checksum, Reclaim, Maintenance Window)
+// still come from the full size, so it is as safe as before.
+const aloneCut = (s) => (classOf(s) === 'bastion' && subOf(s) === 'sysop' && s.encounter && !alliesOf(s).length ? SUBS_BASTION.sysop.alone : 1);
+const drawn = (s) => 1 / aloneCut(s);
 function mend(s, to, amount, label, opts = {}) {
   const d = to && to.encounter && defender(to);
   if (!d || d.integrity <= 0) return 0;
@@ -121,7 +127,7 @@ const use = {
     if (!(res?.dealt > 0)) return;
     const others = alliesOf(s).filter((x) => defender(x.st).integrity > 0).map((x) => x.st).sort((x, y) => frac(x) - frac(y));
     const to = others.length && frac(others[0]) < frac(s) ? others[0] : s; // in a crew, the lowest crewmate
-    mend(s, to, Math.max(1, Math.round(res.dealt * a.share * restoreMult(s))), to === s ? a.name : `${a.name} from ${s.who || 'you'}`);
+    mend(s, to, Math.max(1, Math.round(res.dealt * a.share * restoreMult(s) * drawn(s))), to === s ? a.name : `${a.name} from ${s.who || 'you'}`);
   },
   'maintenance-window'(s, { a, e }) {
     e.buffs['maintenance-window'] = e.cycle + a.cycles - 1;
@@ -242,7 +248,7 @@ const use = {
   },
   reclaim(s, { res }) {
     if (!(res?.dealt > 0)) return;
-    const amount = Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal * restoreMult(s)));
+    const amount = Math.max(1, Math.round(res.dealt * A('reclaim').lifesteal * restoreMult(s) * drawn(s)));
     // The generic lifesteal has healed you: what spilled past full is Overprovision's.
     overprovision(s, amount - (lastHeal(s, A('reclaim').name) ?? amount), capOf(s));
     if (windowOpen(s)) mend(s, s, Math.round(amount * A('maintenance-window').boost), 'Maintenance Window', { plain: true });
@@ -316,6 +322,10 @@ function wardenPlan(s, t) {
   if (killNow(s)) return null;
   const read = readBoard(s);
   if (read) return read;
+  // DMZ as a general cooldown: a heavy cycle on its way (a fifth of your max or more, now or next cycle) with
+  // nothing else cutting it.
+  const heavy = landing(s, 1).reduce((n, i) => n + (i.hit || i.amount || 0), 0);
+  if (!allies.length && heavy >= d.max * 0.2 && !buffed(e, 'dmz') && !buffed(e, 'bulkhead') && !buffed(e, 'circuit-breaker') && !(landing(s, 0).length && ok(s, 'bulkhead')) && ok(s, 'dmz')) return 'dmz';
   // A charge landing now that nobody called off: Bulkhead takes three quarters off it.
   if (landing(s, 0).some((i) => i.tell === 'charge' && (i.hit || i.amount) >= d.max * 0.12) && !buffed(e, 'bulkhead') && ok(s, 'bulkhead')) return 'bulkhead';
   const now = landing(s, 0);
@@ -349,6 +359,7 @@ const healerPart = (s) => livingParts(s).find((p) => !(p.revokedUntil >= s.encou
 export const HEAL = {
   urgent: 0.3, // anyone under this: Hot Standby, then the biggest heal there is
   solo: 0.3, // alone: Patch, Heartbeat (and Multicast a little lower) only under this
+  soloTop: 0.75, // alone: Multicast and Rebalance top you up under this
   crew: 0.8, // in a crew: Patch the lowest under this
   crewAll: 0.85, // in a crew: Multicast when two or more are under this
   topUp: 0.95, // in a crew: keep a Heartbeat on the lowest under this
@@ -367,6 +378,10 @@ function sysopPlan(s, t) {
   if (!buffed(e, 'maintenance-window') && ((solo && low.f < 0.6 && landing(s, 1).length) || (!solo && all.filter((x) => x.f < 0.75).length >= 2))) { const c = first(s, ['maintenance-window']); if (c) return c; }
   const heals = healerPart(s);
   if (heals) { const c = first(s, ['revoke ' + heals.id]); if (c) return c; }
+  // Alone, Revoke is a general answer too: the part that hits hardest, its attack a cycle out, deals less while it's revoked.
+  // (In a crew the healer heals; the crew's damage dealers take the part down.)
+  const hardest = solo && attackers(s).filter((p) => !(p.revokedUntil >= e.cycle) && p.attack.effect === 'damage').sort((a, b) => b.attack.amount / b.attack.interval - a.attack.amount / a.attack.interval)[0];
+  if (hardest && hardest.attack.due - e.cycle <= 1 && attackAmount(hardest) >= defender(low.st).max * 0.1) { const c = first(s, ['revoke ' + hardest.id]); if (c) return c; }
   // The tells a healer reads: a Heartbeat up before a charge lands (it lands half), Rollback after a hit or a
   // cast that got through, Scrub on Corrupted, Multicast into fragments.
   const charge = intents(s).find((i) => i.tell === 'charge' && i.col <= 1 && (i.hit || i.amount) >= defender(low.st).max * 0.12);
@@ -405,6 +420,8 @@ function sysopPlan(s, t) {
   if (solo && low.f < HEAL.solo && !hb(low)) { const c = first(s, ['heartbeat']); if (c) return c; }
   if (hasTalent(s, 'ping-flood') && livingParts(s).filter((p) => !p.armor).length >= 2) { const c = first(s, ['multicast']); if (c) return c; }
   if (solo && low.f < HEAL.solo - 0.05) { const c = first(s, ['multicast']); if (c) return c; }
+  // Alone, Multicast and Rebalance are top-ups: a heal and, for Multicast, a hit on every part.
+  if (solo && low.f < HEAL.soloTop) { const c = first(s, ['multicast', 'rebalance']); if (c) return c; }
   return null;
 }
 
@@ -455,6 +472,8 @@ export default {
       const size = atk.effect === 'damage' ? attackAmount(p) : atk.hit || 0;
       m *= p.kind === 'fragment' || size < defender(s).max * A('dmz').minor ? 0 : 1 - A('dmz').cut; // the small stuff doesn't get in
     }
+    // Revoke (Sysop): a revoked part's attacks deal less, on anyone.
+    if (p?.revokedUntil >= e.cycle) m *= 1 - A('revoke').weaken;
     // Heartbeat (Sysop) running on you: a charged hit deals half.
     if (atk.tell && e.hots?.some((h) => h.id === 'heartbeat' && h.left > 0)) m *= 0.75;
     if (classOf(s) === 'bastion' && subOf(s) === 'warden' && usable(s).includes('blowback')) e.ledger = (e.ledger || 0) + attackSize(s, atk, p);
@@ -486,11 +505,14 @@ export default {
   // Maintenance Window: your hits heal you for a quarter of what they deal.
   hit(s, p, res, opts) {
     if (!windowOpen(s) || !opts.mine || opts.dot || opts.server || !(res.dealt > 0)) return;
-    mend(s, s, Math.max(1, Math.round(res.dealt * A('maintenance-window').share * restoreMult(s))), 'Maintenance Window', { plain: true, loop: null });
+    mend(s, s, Math.max(1, Math.round(res.dealt * A('maintenance-window').share * restoreMult(s) * drawn(s))), 'Maintenance Window', { plain: true, loop: null });
   },
+  drawn: (s) => drawn(s),
   dealt(s, p, opts) {
     if (!opts.mine || opts.server) return 1;
     let m = 1;
+    // A healer alone (the Sysop with no crew): its hits are small, so a solo fight takes it about twice as long.
+    m *= aloneCut(s);
     if (rank(s, 'vendetta') && s.encounter.grudge === p.id && subEdge(s, 'warden')) m *= 1 + 0.05 * rank(s, 'vendetta');
     if (hasTalent(s, 'kernel-panic')) { const d = defender(s); if (d.integrity < d.max / 3) m *= 1.3; }
     return m;

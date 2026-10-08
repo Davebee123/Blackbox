@@ -24,7 +24,7 @@
 //   blackhole              its next attack does nothing (Blackhole).
 //   poisonedUntil, poison  Cache Poison: its patches and heals turn into damage.
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
-import { subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers } from '../combat.mjs';
+import { alliesOf, subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
 import { chargeNow, tellOn, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
 
@@ -199,6 +199,8 @@ function herderPlan(s, t) {
     // Memory before the big spawns.
     !e.malloc && n < helperCap(s) - 2 && (ok(s, 'deploy ' + t.id) || ok(s, 'botnet ' + t.id)) && t.integrity > t.max * 0.5 && 'malloc',
     n >= 3 && living.length >= 2 && !buffed(e, 'mesh') && 'mesh',
+    // Garbage Collect as a general key: a hit on every part, and the swarm runs a cycle longer.
+    (n >= 3 || living.length >= 3) && e.helpers.some((h) => h.left <= 1) && 'garbage-collect',
     // Hook a part your swarm is on: +6 on every helper hit.
     helpersOn(s, t).length >= 3 && !on(s, t, 'hooked') && 'hook ' + t.id,
     n >= 4 && 'cron-storm',
@@ -256,6 +258,8 @@ function hijackerPlan(s, t) {
     healer && 'cache-poison ' + healer.id,
     patching && 'cache-poison ' + patching.id,
     t.attack && attackSize(s, t) >= scaled(s, A('replay').floor) && 'replay ' + t.id,
+    // Cache Poison as a general key, between the helpers: a hit and a burn, and the part bites less while it lasts.
+    !alliesOf(s).length && !on(s, t, 'poisoned') && (!ok(s, 'botnet ' + t.id) || !ok(s, 'deploy ' + t.id)) && t.integrity > previewDamage(s, 'cache-poison', t) && 'cache-poison ' + t.id,
     next && !covered && spender && !helpersOn(s, next).length && 'spawn ' + next.id,
     !t.armor && others >= 3 && 'reroute ' + t.id,
   ]);
@@ -432,6 +436,8 @@ export default {
     }
     resolveHeld(s);
   },
+  // Cache Poison (Hijacker): a poisoned part's attacks deal less, on anyone.
+  taken(s, atk, p) { return p && on(s, p, 'poisoned') ? 1 - A('cache-poison').weaken : 1; },
   // Load Shed (Herder): the next attack is split over your helpers; each loses that much of what it had left.
   absorb(s, amount, atk, p) {
     const e = s.encounter;

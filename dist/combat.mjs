@@ -44,7 +44,7 @@ import { partGenes } from './genes.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 37; // v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 38; // v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -1123,6 +1123,22 @@ function kitRestore(s, was) {
     const kept = bar.filter((id) => known.includes(id) && !isRunSkill(id));
     const fill = presetBar(arch, sub, lvl, shippedPresets(sub).rotation || [], known).filter((id) => !kept.includes(id));
     L.equipped[sub] = [...kept, ...fill].slice(0, barSlots(lvl));
+  }
+}
+// v38: the Demolitionist's and the Phantom's second presets became playstyles of their own (docs/kits.md 11): `swarm`
+// is `area` and `ghostroot` is `evasion`. A save keeps its place in the list and the bar that follows it. A preset a
+// player saved under the old name is theirs and stays as it is.
+export const PRESET_RENAMES = { demolitionist: { swarm: 'area' }, phantom: { ghostroot: 'evasion' } };
+function presetRenameRestore(s, was) {
+  if (was >= 38) return;
+  const L = s.loadout || {};
+  for (const [sub, names] of Object.entries(PRESET_RENAMES)) {
+    const all = L.presets?.[sub];
+    for (const [from, to] of Object.entries(names)) {
+      if (!all?.[from]?.shipped || all[to]) continue;
+      L.presets[sub] = Object.fromEntries(Object.entries(L.presets[sub]).map(([k, v]) => [k === from ? to : k, v]));
+      if (L.follow?.[sub] === from) L.follow[sub] = to;
+    }
   }
 }
 // ---------- talents ----------
@@ -2589,7 +2605,7 @@ function useAbility(s, intent, auto = false) {
   // Overload: a crit resets its cooldown.
   if (id === 'overload' && res?.crit) { delete e.readyAt.overload; emit(s, 'proc', 'Overload crit: ready again.', { ability: 'overload' }); }
   if (a.proc) delete e.procs[a.proc]; // Shatter, Retaliate, Opening spend their window
-  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal * restoreMult(s))), a.name);
+  if (a.lifesteal && res?.dealt) heal(s, Math.max(1, Math.round(res.dealt * a.lifesteal * restoreMult(s) * classMult('drawn', s))), a.name); // drawn: a class's heals from its hits (the Sysop alone heals from what it would have dealt)
   if (a.all) for (const p of livingParts(s)) hit(s, p, a.all * powerOf(s) * (a.fragx && p.kind === 'fragment' ? a.fragx : 1), { mine: true, by: a.name }); // fragments take more (Fork Bomb, Garbage Collect)
   if (id === 'garbage-collect') for (const h of e.helpers) h.left++;
   if (id === 'failover') {
@@ -2848,6 +2864,13 @@ export const c2Gnaw = (s, p) => (p.kind === 'fragment' && livingParts(s).some((x
 // A player drawing fire this cycle (Bastion Firewall in a crew): the one every attack goes at.
 export const drawingFire = (s) => (s.encounter?.buffs?.sinkhole >= s.encounter?.cycle ? s : null);
 
+// The spike cap (CONFIG.spikeCap): a solo boss's single landing never takes more than 60% of your max, and a wild
+// virus's or a guard's charge (a tell, atk.tell) no more than 45%. A crew boss (raid.mjs) is left to its own rules.
+export const spikeCap = (s, atk = null) => {
+  const e = s.encounter, share = e?.virus?.raid ? null : e?.virus?.boss ? CONFIG.spikeCap.boss : atk?.tell ? CONFIG.spikeCap.wild : null;
+  return share ? Math.max(1, Math.floor(defender(s).max * share)) : Infinity;
+};
+const spikeCapped = (s, n, atk) => Math.min(n, spikeCap(s, atk));
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
@@ -2907,7 +2930,7 @@ function landAttack(s, p) {
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less.`, { source: p.id }); }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, absorbed(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p) * (e.virus.raid ? raidTaken(s) : 1)), atk, p), p.id, atk.name);
+    const dealt = takeDamage(s, absorbed(s, spikeCapped(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p) * (e.virus.raid ? raidTaken(s) : 1)), atk), atk, p), p.id, atk.name);
     if (dealt) classEach('struck', s, atk, dealt, p);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%', atk }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.name || x.it.name);
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
@@ -2929,7 +2952,7 @@ function landAttack(s, p) {
     }
     if (dealt && zeroDay(s, 'subrogation')) e.subro = p.id;
     const verb = crit ? 'CRITS' : 'hits';
-    if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit });
+    if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit, ...(atk.tell ? { tell: atk.tell } : {}) });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
     const cm = e.mode === 'home' && gearStat(s, 'countermeasures', 'server');
     if (cm && dealt && alive(p)) hit(s, p, cm, { by: 'Countermeasures', server: true });
@@ -3626,7 +3649,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
@@ -3757,6 +3780,7 @@ export function restore(raw) {
     progressionRestore(s, was); // v34: one level; services, the specialty and greys folded away
     barRestore(s, was); // v35: the nine-key bar, and tells on one clock
     kitRestore(s, was); // v37: 15-key pools, reordered lines, presets
+    presetRenameRestore(s, was); // v38: swarm is area (Demolitionist), ghostroot is evasion (Phantom)
     networkRestore(s, was); // v36: every save's network gets a seed (network.mjs)
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;

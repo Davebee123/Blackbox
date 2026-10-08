@@ -893,6 +893,125 @@ kits.test.mjs checks the lines, the presets and their commands, the cooling on a
 - **The Breaker climbs faster alone.** With the level-10 fix, SPRAWL-only play gets a Breaker to 12 only 8% slower than mixed play, where every other class takes at least 37% longer. loop.test.mjs holds the Breaker, which leans solo, to 1.0 times.
 - **Key 1 at 10.** The Payload and the Herder press key 1 26% and 31% of the time at 10, before their cheap hits open. Moving Fuzz or nohup to 10 would fix that, at the cost of a reorder.
 
+## 11. After review
+
+The designer reviewed the kit pass and asked for four things: tooltips that read like a World of Warcraft tooltip, specialist keys that are useful in most fights with their special case as a bonus, second presets that are playstyles of their own, and three items left over from the merge (a slower Sysop alone, a cap on boss charges, and the Keyring's answer). All of it is in, SAVE_VERSION is 38, and the full suite is green apart from its two `todo` tests (the friction band and the per-gene calibration). Unless a table says otherwise, the numbers come from the 24 class-balance fights of section 10 (20 wilds and the four guards), at Lv 30.
+
+### Tooltips
+
+Every ability's `help` keeps its command first (`flood <part> — `), because the help line, the skill cards and the tests read it, and the tooltip comes after the dash. The text is in the third person, states each effect with its number, gives durations as *for 4 cycles*, puts conditions after the main effect, and ends with *Once per fight.* or *Cooldown resets on a critical strike.* as sentences of their own. The `short` line on each key stays terse and leads with the number, at 29 characters or fewer. Talent and filler rules read the same way (*Increases the damage of Shatter by 8% per rank.*), key 1's card in each class does too, and the library's descriptions in dist/lore.mjs that still had old numbers (Flood's 30, Zero-day's 80, Brace's Block) were brought up to date. The numbers still grow with your level on screen, as before (`scaledText`).
+
+| Skill | Before | After |
+|---|---|---|
+| Flood | 38 damage, double on a part with no armor left. | Deals 38 damage to the target. Damage is doubled against a target with no armor. |
+| Overload | 40 damage. If it crits, its cooldown resets. | Deals 40 damage to the target. Cooldown resets on a critical strike. |
+| Zero-day | 65 damage straight through armor, locks and wards. Once per fight. | Deals 65 damage to the target, straight through armor, locks and wards. Once per fight. |
+| Rate Limit | 45 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆. | Deals 45 damage and Throttles the target, so its next attack deals half. Deals 15 more if its attack is due this cycle. Breaks 2 ◆ on an armored part. |
+| Inject | 12 damage every cycle for 3 cycles. It stacks: up to 3 on one part, each with its own timer. | Burns the target for 12 damage every cycle for 3 cycles. Stacks up to 3 times on one part, each with its own timer. |
+| Backstab | 32 damage. It always crits a part that's busy with a tell: winding up a charge, compiling a cast, sealing or recording. | Deals 32 damage to the target. Always a critical strike against a part busy with a tell: winding up a charge, compiling a cast, sealing or recording. |
+| Heartbeat | heals you 4 a cycle for 4 cycles, starting now, and a charged hit on you while it runs deals 25% less. | Heals you for 4 every cycle for 4 cycles, starting now. A charged hit on you deals 25% less while it runs. |
+| Hijack | pull one of your helpers off it to take over its tell. A charge lands on another part of the virus at full size, through armor; a cast compiles for you instead (+35% damage for 4 cycles). | Spends one of your helpers on the target to take over its tell. A charge lands on another part of the virus at full size, through armor. A cast compiles for you instead, and your hits deal 35% more for 4 cycles. |
+
+| Key | Short before | Short after |
+|---|---|---|
+| Flood | Hit 38, ×2 if bare | 38 damage, ×2 on bare parts |
+| Overload | Hit 40, crit resets | 40 damage, resets on a crit |
+| Crack | Strip 3 ◆ | Breaks 3 ◆ |
+| Purge | Burn 6×4, heal, cleanse | Burn 6 ×4, heals, cleanses |
+| Rate Limit | Hit 45 (+15 if due), throttle | 45 damage and Throttles |
+
+At 390 pixels the tray shows the first 17 or so characters of a short line, as it did before, so each one leads with what matters. The tray, the Loadout's skills tab and the library have no horizontal scroll at that width (headless Chromium, a level-30 Demolitionist on `area`, a Phantom on `evasion`, a Sysop and a Hijacker).
+
+### General use over narrow counters
+
+Each specialist key (the `layers.specialist` of every subclass) was put on the rotation bar at Lv 30, or the level it opens, in the last slot when the preset leaves it off, and played over the 24 fights. A key pressed in fewer than a quarter of them got a general baseline, with its special case kept. kits-balance.test.mjs now holds every specialist key to a quarter of the fights.
+
+| Subclass | Key | What changed | Fights it is pressed in, before → after |
+|---|---|---|---|
+| Demolitionist | Fork Bomb | A Crack on every part: it breaks 3 ◆ on each armored part and deals 16 to each bare one (fragments ×3). Cooldown 4. It used to deal 16 to every part, which on an armored part only broke one ◆. | 3 → 21 |
+| Demolitionist | Chain Reaction | 40 damage (30 before), or 2 ◆ off an armored part, and the blast is 30 (25). Cooldown 5 (6). The planner wires the part it is about to Shatter, and takes kills with it when other parts stand to catch the blast. | 4 → 14 |
+| Demolitionist | Bit Rot | 25 damage (20), or 2 ◆ off an armored part, and any part rots: it takes 20% more from you while it does. The planner opens on a ◆4 shell with it, or strips with it while Crack cools. | 0 → 13 |
+| Warden | DMZ | Unchanged in numbers. Alone, the Warden puts it up whenever a fifth of its Signal is about to land and nothing else cuts it. | 4 → 12 |
+| Sysop | Multicast | Unchanged in numbers. Alone it tops the Sysop up below 75%, and it hits every part on the way. | 0 → 13 |
+| Sysop | Revoke | A revoked part's attacks deal 25% less for 4 cycles, on anyone. Alone, the Sysop Revokes the part that hits hardest a cycle before it lands. | 6 → 23 |
+| Sysop | Rebalance | Unchanged. Alone it is a top-up heal below 75% (at 38). | 0 → 10 |
+| Payload | Polymorph | Burns for 14 on a bare part too (10 before), and the planner puts it on anything that will outlive its burns. | 5 → 9 |
+| Phantom | Unmask | 26 damage through armor (20, not through), and for 4 cycles your hits on the part have +25% crit chance. The veil and the Mimic still come with it. | 5 → 15 |
+| Phantom | Rotate Keys (utility) | Softens the next two hits by 30% instead of one, and each lights Opening, so it serves the `evasion` build. | |
+| Herder | Garbage Collect | 14 to every part (10). The Herder presses it when three or more helpers are about to run out, so they run a cycle longer. | 3 → 11 |
+| Hijacker | Cache Poison | 18 damage (none before) and 8 a cycle (5), and a poisoned part's attacks deal 20% less. Alone, the Hijacker poisons its target when Botnet or Deploy is cooling. | 1 → 7 |
+
+Throttle (12), Honeypot (9), Propagate (13), Fork (16), Crontab (20) and Echo Cancel (13) were already in use. Sudo sits at 6 of 24, a quarter exactly, and was left as it was: a wider rule cost the Overclocker Signal in crews. Two attempts were dropped for the same reason. A Fork Bomb that stripped two ◆ a part was too weak to press, and every Demolitionist key that cost a command before the first kill (a Bit Rot on the next part, a Fork Bomb on cycle 1) lost 15 to 25 points of Signal, because at 30 the first cycle decides who fires first.
+
+### Second presets
+
+The second preset of each subclass is now a playstyle, tested against `rotation` on two sets: the 24 generic fights, where it must stay within 5 points of the rotation either way, and the fights its playstyle suits (balance.mjs `MATCHED`, two seeds each), where it must lose at least 5 points less. The old test, which asked a counter build to win by 5 on its matched fights, was a `todo` for the Demolitionist and the Phantom and is gone.
+
+| Subclass | Preset | For | Generic, against `rotation` | Its fights, better by |
+|---|---|---|---:|---:|
+| Demolitionist | `area` (was `swarm`) | Spreading damage over every part: Fork Bomb, Chain Reaction and rm -rf for Thermal Runaway and Logic Bomb | 3.8 better | 7.2 (many parts) |
+| Overclocker | `rules` | Locks, wards, Tripwires and the Mimic | 1.5 worse | 8.4 |
+| Warden | `swarm` | Fragments, Replicates and loud parts | 1.8 worse | 7.6 |
+| Sysop | `healers` | Leech, Patchwork, PATCH TUESDAY | 1.9 better | 14.2 |
+| Payload | `swarm` | Worms, fragments, an Overrun | 0.3 worse | 5.6 |
+| Phantom | `evasion` (was `ghostroot`) | Misses and Opening: Opening, Null Route, Shadow Copy and Rotate Keys lead, Fingerprint and Log Wipe sit out | 3.0 better | 10.2 (big hitters) |
+| Herder | `swarm` | Garbage Collect for Mesh | 0.2 better | 23.1 |
+| Hijacker | `rules` | Healers, the Echo, the Mimic | 4.3 worse | 8.1 |
+
+The `rotation` presets changed in two places. The Phantom's carries Unmask in its seventh key, where Log Wipe was, and the Demolitionist's puts Exploit ahead of Fork Bomb, so the Lv 18 rotation is the single-target bar (Fork Bomb sits on it at 14 and 16, when there is room). The Herder's `swarm` used to swap Spawn and Load Shed for Garbage Collect and Fork, which made it 8 points better than `rotation` on every fight. It now swaps Mesh for Garbage Collect. The Evasion set is four elites, a Bricker, an Extortion and a Floodgate, DEADBOLT, TRIPMINE and RELAY-KING.
+
+A v37 save renames the two presets in place (`PRESET_RENAMES`, `presetRenameRestore` in combat.mjs): the shipped `swarm` becomes `area` for the Demolitionist and `ghostroot` becomes `evasion` for the Phantom, in the same place in the list, and a bar that followed the old name follows the new one. A preset the player saved under one of those names is theirs and keeps it. The other six second presets keep their names.
+
+### The Sysop alone
+
+Alone (no crew in the fight) the Sysop's hits and burns deal 75% of their size (`SUBS.sysop.alone`). The heals it draws from its hits (Checksum, Reclaim, Maintenance Window) are worked out from the full hit, so they stay where they were. Its core rotation is now Checksum, Reclaim, Purge and Heartbeat: the four hits on their own lost about 30% at 30 with the cut, a healer's simplest rotation includes a heal, and that one loses about 14%. In a crew nothing changes.
+
+| Over three gear sets, 48 fights each | Cycles a fight, before → after | Against the damage dealers' median | Signal lost, before → after | Wins |
+|---|---|---|---|---|
+| Lv 18 | 15.8 → 18.0 | 1.78× → 2.03× | 3.3% → 3.8% | 99% |
+| Lv 30 | 14.0 → 16.5 | 1.88× → 2.23× | 7.7% → 10.5% | 93% |
+
+balance.test.mjs holds the Sysop to twice the median and 15% lost at most, and the Warden to 1.4 times as before. A cut to 70% reached 2.10× at 18 but lost a Tripwire probe at 30 outright, and the hard bound on rolled genes (25 points) failed.
+
+### Boss charges
+
+A solo boss's single landing on you, charged or plain, now stops at 60% of your max, so nothing one-shots you. A wild virus's or a guard's charge stops at 45% (`CONFIG.spikeCap`, applied where an attack lands and in the charge's own size). Crew bosses keep their own rules. The spike-cap test is no longer a `todo`: it holds HASHLORD and MIRRORSHADE on their twelve seeds and every solo boss at 10, 18 and 30 (one seed a subclass) to 60%, and every charge in the hard slice at 10 and 30 to 45%.
+
+| Worst single landing, one seed a subclass at 10, 18 and 30 | Before | After |
+|---|---:|---:|
+| SLEEPWALKER | 64% | 49% |
+| PATCH TUESDAY, DEADBOLT, TRIPMINE | 58–59% | 57–58% |
+| HASHLORD | 55% | 55% |
+| MIRRORSHADE | 43% | 35% |
+| The rest | 25–46% | 25–49% |
+
+A plain wild hit with a crit can still pass 45%: 55 of 2,806 landings in the hard slice did (a Deadline crit at 75% the worst). Capping those too made a solo player so much safer at levels 1 to 12 that SPRAWL-only play caught up with mixed play (the slow-road test in loop.test.mjs fell from 1.85× to 1.39×), so the 45% holds for charges only.
+
+### The Keyring
+
+Breaking the Keyring first was wrong for every kit but one. The Keyring has no attack, and its re-arm only gives the Gate its shell back, so burns, helpers and hits through armor lose nothing to it. What it beats is a strip: a Breaker that can't get through the Gate's shell and kill it before the next re-arm wastes every Crack. So the planner now works on the Gate, and only a Breaker without Shaped Charge, whose strips can't bare the Gate in the cycles left before the next re-arm, breaks the Keyring first (`keyringNow` in planner.mjs). The codex line, the Bouncer's rule and its first-meeting tip say the same: kill the Gate between re-arms, and break the Keyring first only when its shell is too thick.
+
+| Keyring probe, six seeds | Before | After |
+|---|---:|---:|
+| Points answering saves over ignoring it | −14.8 | +0.2 |
+| A Lv 5 Breaker's wins, answering · ignoring | 5 · 0 of 6 | 5 · 0 of 6 |
+| The Payload's wins, answering · ignoring | 17 · 18 of 18 | 18 · 18 of 18 |
+
+The calibration test's bar of 3 points for an answer is still a `todo` for the Keyring: for every kit but a low-level Breaker, the right answer is to play the Bouncer as a plain guard.
+
+### What else moved
+
+- **COLDWALLET** went from Integrity ×8 to ×8.8. Fork Bomb opens every part for the crew now, so a crew with one damage dealer beat it 7 times in 16, where the farm test wants the boss to win most tries. At ×8.8 it wins 12 of 16, and the full crew still wins 24 of 25 tries.
+- **Solo numbers on the 24 fights** moved only where the kits changed: the Demolitionist at 18 from 25% to 22% (Fork Bomb on its bar there), the Phantom at 30 from 26% to 24% (Unmask on the bar), and the Sysop's cycles as above. Every band, the boss bands, the tells gap, the press tests and the crew tests hold.
+- **The planner** takes kills with Chain Reaction before Overload and Flood, and a lit Shatter or an attack due this cycle comes before any Demolitionist set-up.
+
+### For the designer
+
+- **The Payload's `swarm` and the Hijacker's `rules` are close to the lines.** The Payload's is 5.6 better on its fights (5 is the bar), and the Hijacker's 4.3 worse on generic fights (5 is the bar).
+- **The Sysop at 18 is at 2.03×.** A small change to the damage dealers' pace at 18 can move it under 2.
+- **Sudo and Garbage Collect at 40.** Sudo is pressed in a quarter of the fights exactly. Garbage Collect is pressed in 11 of 24 at 30 but 3 of 24 at 40, where the fights end before the helpers run down.
+- **Wild hits over 45%.** Only charges are capped for wild viruses. Capping every hit needs the solo pace at levels 1 to 12 looked at again, or the slow-road test moved.
+
 ## Appendix: rerunning the audit
 
 The audit used balance.mjs's `build` and `POLICIES` and dist/combat.mjs's `defaultBar`, with a fight function written like balance.mjs's `fight` that also passes `boss` to `selectEncounter` (with the boss's family and strain from `BOSSES`). For each subclass and level it played the sample in 2.1 with seeds offset by 0 and 77, then the same fights with each key left empty, with only the class core, and with each known skill that isn't on the default bar swapped in for the least-pressed key. The moment check in 2.4 read `tellOn` from dist/tells.mjs and the board before each command. The build comparison in 2.13 played named bars at level 40 on the four sets listed there. The scripts were throwaway and are not in the repo.

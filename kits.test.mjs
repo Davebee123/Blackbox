@@ -1,4 +1,4 @@
-// Class kits (docs/kits.md): fifteen keys a subclass, presets, key 1 under each class's own name, and the v37 save.
+// Class kits (docs/kits.md): fifteen keys a subclass, presets, key 1 under each class's own name, and the v37 and v38 saves.
 // The press-share and balance checks of the kit pass are in kits-balance.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -57,18 +57,18 @@ test('two shipped presets a subclass, rotation first; the default bar is the rot
 test('loadout save, use, list, show and delete; a shipped preset keeps filling the bar as you level', () => {
   const s = at('breaker', 30, 'demolitionist');
   assert.equal(followOf(s), 'rotation');
-  assert.match(say(s, 'loadout list'), /Demolitionist presets\. rotation: .*\(shipped\)\. swarm: .*\(shipped\)\. Your bar follows rotation\./);
-  assert.match(say(s, 'loadout show swarm'), /^swarm \(shipped\): 2 Crack \(core\) · 3 Shatter/);
+  assert.match(say(s, 'loadout list'), /Demolitionist presets\. rotation: .*\(shipped\)\. area: .*\(shipped\)\. Your bar follows rotation\./);
+  assert.match(say(s, 'loadout show area'), /^area \(shipped\): 2 Crack \(core\) · 3 Shatter \(core\) · 4 Fork Bomb \(specialist\)/);
   // use: the bar is the preset's, and what it brought in starts the next fight cooling.
   const was = equippedSkills(s, 'breaker');
-  const msg = say(s, 'loadout use swarm');
+  const msg = say(s, 'loadout use area');
   const bar = equippedSkills(s, 'breaker');
-  assert.deepEqual(bar, presetKeys(s, 'breaker', 'swarm'));
+  assert.deepEqual(bar, presetKeys(s, 'breaker', 'area'));
   const brought = bar.filter((id) => !was.includes(id));
   assert.ok(brought.length >= 1, msg);
-  assert.match(msg, /^Bar set from swarm\. In: /);
+  assert.match(msg, /^Bar set from area\. In: /);
   assert.match(msg, /start(s)? your next fight cooling\./);
-  assert.equal(followOf(s), 'swarm');
+  assert.equal(followOf(s), 'area');
   // save: the bar as it is, under a name; edits by hand stop following a preset.
   say(s, 'unequip ' + bar.at(-1));
   assert.equal(followOf(s), null);
@@ -95,14 +95,14 @@ test('loadout save, use, list, show and delete; a shipped preset keeps filling t
 
 test('presets swap anywhere out of a fight, home or run; the keys a swap brings in start the next fight cooling', () => {
   const s = at('breaker', 30, 'demolitionist');
-  say(s, 'loadout use swarm');
-  const brought = presetKeys(s, 'breaker', 'swarm').filter((id) => !defaultBar('breaker', 'demolitionist', 30).includes(id) && (ABILITIES[id].cooldown || ABILITIES[id].once));
-  assert.ok(brought.length, 'the swarm build brings in a key with a cooldown');
+  say(s, 'loadout use area');
+  const brought = presetKeys(s, 'breaker', 'area').filter((id) => !defaultBar('breaker', 'demolitionist', 30).includes(id) && (ABILITIES[id].cooldown || ABILITIES[id].once));
+  assert.ok(brought.length, 'the area build brings in a key with a cooldown');
   fight(s);
   for (const id of brought) assert.ok(readyIn(s, id) > 0, `${id} starts cooling`);
   assert.ok(s.logs.some((e) => /Swapped in before this fight, still cooling:/.test(e.message)));
   // In a fight: no swapping, no saving, no deleting.
-  for (const c of ['loadout use rotation', 'loadout save x', 'loadout delete swarm']) assert.match(say(s, c), /Presets change between fights\. Finish this one first\./);
+  for (const c of ['loadout use rotation', 'loadout save x', 'loadout delete area']) assert.match(say(s, c), /Presets change between fights\. Finish this one first\./);
   // list and show still work in a fight.
   assert.match(say(s, 'loadout show rotation'), /^rotation \(shipped\)/);
   // The next fight after that one: nothing cools from the swap any more.
@@ -120,8 +120,8 @@ test('presets swap anywhere out of a fight, home or run; the keys a swap brings 
 test('tab completion offers the loadout verbs and your preset names', () => {
   const s = at('infiltrator', 30, 'phantom');
   assert.deepEqual(loadoutSuggestions(s, 'loadout u'), ['loadout use ']);
-  assert.deepEqual(loadoutSuggestions(s, 'loadout use '), ['loadout use rotation', 'loadout use ghostroot']);
-  assert.deepEqual(loadoutSuggestions(s, 'loadout show g'), ['loadout show ghostroot']);
+  assert.deepEqual(loadoutSuggestions(s, 'loadout use '), ['loadout use rotation', 'loadout use evasion']);
+  assert.deepEqual(loadoutSuggestions(s, 'loadout show e'), ['loadout show evasion']);
   say(s, 'loadout save mine');
   assert.ok(loadoutSuggestions(s, 'loadout delete ').includes('loadout delete mine'));
 });
@@ -158,7 +158,7 @@ test('a v36 save: known skills stay known, untouched bars become the new default
   s.version = 36;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 37);
+  assert.equal(SAVE_VERSION, 38);
   assert.ok(knownSkills(t, 'bastion').includes('patch'), 'Patch kept');
   assert.deepEqual(t.loadout.kept.sysop, ['patch']);
   assert.deepEqual(t.loadout.equipped.sysop, presetBar('bastion', 'sysop', 13, SUBS.sysop.presets.rotation, knownSkills(t, 'bastion')), 'an untouched bar becomes the new rotation, with what it kept');
@@ -178,4 +178,35 @@ test('a v36 save: known skills stay known, untouched bars become the new default
   assert.equal(u.loadout.kept, undefined);
   // Every class keeps a sane bar after the move: nothing it doesn't know.
   for (const cls of Object.keys(ARCHETYPES)) for (const id of equippedSkills(t, cls)) assert.ok(knownSkills(t, cls).includes(id), `${cls} ${id}`);
+});
+
+test('a v37 save: the Demolitionist\'s swarm preset becomes area and the Phantom\'s ghostroot becomes evasion, in place, with the bars that follow them', () => {
+  const s = at('breaker', 30, 'demolitionist');
+  s.hackers.infiltrator = { level: 30, xp: 0 };
+  s.loadout.sub.infiltrator = 'phantom';
+  s.loadout.presets = {
+    demolitionist: { rotation: { shipped: true }, swarm: { shipped: true }, mine: ['crack', 'shatter'] },
+    phantom: { rotation: { shipped: true }, ghostroot: { shipped: true } },
+    payload: { rotation: { shipped: true }, swarm: { shipped: true } },
+  };
+  s.loadout.follow = { demolitionist: 'swarm', phantom: 'rotation', payload: 'swarm' };
+  s.version = 37;
+  const t = restore(JSON.parse(JSON.stringify(s)));
+  assert.equal(t.version, 38);
+  assert.deepEqual(Object.keys(t.loadout.presets.demolitionist), ['rotation', 'area', 'mine']);
+  assert.deepEqual(t.loadout.presets.demolitionist.mine, ['crack', 'shatter'], 'a saved preset is untouched');
+  assert.deepEqual(Object.keys(t.loadout.presets.phantom), ['rotation', 'evasion']);
+  assert.equal(t.loadout.follow.demolitionist, 'area', 'a bar that followed swarm follows area');
+  assert.equal(t.loadout.follow.phantom, 'rotation');
+  assert.deepEqual(Object.keys(t.loadout.presets.payload), ['rotation', 'swarm'], 'the other subclasses keep their names');
+  assert.equal(t.loadout.follow.payload, 'swarm');
+  assert.deepEqual(presetKeys(t, 'breaker', 'area'), presetBar('breaker', 'demolitionist', 30, SUBS.demolitionist.presets.area, knownSkills(t, 'breaker')));
+  // A preset the player saved under the old name is theirs: it keeps the name, and nothing is renamed over it.
+  const u = at('infiltrator', 30, 'phantom');
+  u.loadout.presets = { phantom: { rotation: { shipped: true }, ghostroot: ['backstab', 'inject'] } };
+  u.loadout.follow = { phantom: 'ghostroot' };
+  u.version = 37;
+  const v = restore(JSON.parse(JSON.stringify(u)));
+  assert.deepEqual(v.loadout.presets.phantom.ghostroot, ['backstab', 'inject']);
+  assert.equal(v.loadout.follow.phantom, 'ghostroot');
 });

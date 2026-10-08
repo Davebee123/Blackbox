@@ -157,10 +157,10 @@ test('subclass skills whose numbers grow with your level say so on screen (scale
   const s = at('breaker', 26), k = power(26);
   const n = (x) => String(Math.round(x * k));
   assert.match(scaledText(s, 'logic-bomb', ABILITIES['logic-bomb'].short), new RegExp(`Bomb ${n(50)} \\+${n(20)} all`));
-  assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].help), new RegExp(`every other part for ${n(25)}`));
+  assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].help), new RegExp(`explodes for ${n(30)} damage to every other part`));
   assert.match(scaledText(s, 'thermal-throttle', ABILITIES['thermal-throttle'].short), new RegExp(`${n(20)} \\+${n(20)} a stack`));
   assert.match(scaledText(s, 'turbo-boost', ABILITIES['turbo-boost'].help), new RegExp(`for ${n(6)} Signal`));
   assert.match(scaledText(s, 'overvolt', ABILITIES.overvolt.short), new RegExp(`Two hits of ${n(20)}`));
-  assert.match(scaledText(s, 'shaped-charge', ABILITIES['shaped-charge'].help), new RegExp(`deals ${n(30)} damage`));
+  assert.match(scaledText(s, 'shaped-charge', ABILITIES['shaped-charge'].help), new RegExp(`Deals ${n(30)} damage instead`));
   assert.match(scaledText(s, 'cache-poison', ABILITIES['cache-poison'].help), new RegExp(`for ${n(15)} instead`));
 });

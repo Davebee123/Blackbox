@@ -105,10 +105,24 @@ const use = {
     target.bkChain = { until: e.cycle + a.cycles - 1, who: who(s) };
     emit(s, 'status', `${target.name} is wired to blow: if it breaks in the next ${a.cycles} cycles, it hits every other part for ${scaled(s, a.blast)}.`, { target: target.id, mark: 'debuff', ability: 'chain-reaction' });
   },
+  // Bit Rot: any part rots and takes more from you; one that wears armor also loses a ◆ a cycle and can't patch.
   'bit-rot'(s, { a, target, e }) {
-    if (!alive(target) || !(target.armor > 0 || target.maxArmor > 0)) return;
+    if (!alive(target)) return;
     target.bkRot = { until: e.cycle + a.cycles - 1, who: who(s) };
-    emit(s, 'status', `${target.name} is rotting for ${a.cycles} cycles. It loses a ◆ each cycle and can't patch.`, { target: target.id, mark: 'debuff', ability: 'bit-rot' });
+    const shell = target.armor > 0 || target.maxArmor > 0;
+    emit(s, 'status', `${target.name} is rotting for ${a.cycles} cycles: it takes ${Math.round(a.more * 100)}% more from you${shell ? ', loses a ◆ each cycle and can\'t patch' : ''}.`, { target: target.id, mark: 'debuff', ability: 'bit-rot' });
+  },
+  // Fork Bomb: a strip on every armored part and a hit on every bare one (fragments three times over). The part whose
+  // attack lands soonest goes last, so a Shatter it lights is on that one.
+  'fork-bomb'(s, { a, id, e }) {
+    if (missed(s, { a, id })) return;
+    const order = [...livingParts(s)].sort((x, y) => (y.attack?.due ?? 99) - (x.attack?.due ?? 99));
+    for (const p of order) {
+      if (!alive(p)) continue;
+      if (p.armor > 0) strip(s, p, a.strip, a.name);
+      else hit(s, p, a.bareHit * powerOf(s) * (p.kind === 'fragment' ? a.fragx : 1), { mine: true, by: a.name });
+    }
+    e.lastAttack = null;
   },
   // Shatter: its shards hit every other bare part.
   shatter(s, { a, target }) {
@@ -254,9 +268,12 @@ function cycle(s) {
 }
 
 function dealt(s, p, opts) {
-  if (!opts.mine || opts.dot || !breaker(s)) return 1;
+  if (!opts.mine || !breaker(s)) return 1;
   const e = s.encounter;
-  let m = 1;
+  // Bit Rot: a rotting part takes more from you, burns included.
+  const rot = p.bkRot && p.bkRot.who === who(s) && p.bkRot.until >= e.cycle ? 1 + A('bit-rot').more : 1;
+  if (opts.dot) return rot;
+  let m = rot;
   // Blast Radius: the spread hits.
   if (['Fork Bomb', 'Logic Bomb', 'Chain Reaction'].includes(opts.by)) m *= blastMult(s);
   // Shrapnel: Shatter.
@@ -352,8 +369,17 @@ const healthy = (s, share) => defender(s).integrity > defender(s).max * share;
 const charging = (s, lag = 2) => livingParts(s).find((p) => { const ch = tellOn(s, p, 'charge'); return ch && p.attack && ch.n === (p.attack.n || 0) && p.attack.due - s.encounter.cycle <= lag; });
 // What lands on you this cycle and next, by size.
 const incoming = (s, within = 0) => intents(s).filter((i) => i.col <= within && !i.hidden && (i.effect === 'damage' || i.hit)).reduce((n, i) => n + (i.hit || i.amount || 0), 0);
+// What one Fork Bomb is worth now: its hit on every bare part (fragments three times over, no more than each has
+// left), and a ◆ off every armored one, counted as a small hit.
+function forkValue(s) {
+  const a = A('fork-bomb');
+  return livingParts(s).reduce((n, p) => n + (p.armor > 0 ? (Math.min(p.armor, a.strip) * estimate(s, p, 25)) / 3 : Math.min(p.integrity, estimate(s, p, a.bareHit * (p.kind === 'fragment' ? a.fragx : 1)))), 0);
+}
+// ◆ one Fork Bomb breaks now, over every armored part.
+const forkChits = (s) => livingParts(s).reduce((n, p) => n + Math.min(p.armor || 0, A('fork-bomb').strip), 0);
 function planDemo(s, t) {
   const e = s.encounter, d = defender(s), living = livingParts(s);
+  const calm0 = (p) => !A('shaped-charge').provoke || !p.attack || p.attack.due - e.cycle >= 2;
   // A charge winding up: Backfire blows it up inside its part (armor or not), and the attack lands plain.
   const ch = charging(s, 1);
   if (ch && !living.some((p) => bare(p) && killable(s, p)) && ok(s, 'backfire ' + ch.id)) return 'backfire ' + ch.id; // a kill first
@@ -363,7 +389,8 @@ function planDemo(s, t) {
   // (fragments up: the weakest one; otherwise a part its own 30 breaks now, so the blast goes off this cycle)
   const fragsUp = living.filter((p) => p.kind === 'fragment');
   const fuse = (fragsUp.length >= 2 ? fragsUp : living.filter((p) => p.integrity <= estimate(s, p, 30))).filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity)[0];
-  if (fuse && living.length >= 3 && !living.some((p) => p.deadman) && ok(s, 'chain-reaction ' + fuse.id)) return 'chain-reaction ' + fuse.id; // never into a Tripwire
+  const litOn = e.procs?.stripped?.until >= e.cycle && alive(part(s, e.procs.stripped.part)) && ok(s, 'shatter ' + e.procs.stripped.part); // a lit Shatter is spent first
+  if (fuse && living.length >= 3 && !litOn && !dueNow(s).length && !living.some((p) => p.deadman) && ok(s, 'chain-reaction ' + fuse.id)) return 'chain-reaction ' + fuse.id; // never into a Tripwire
   // Debris Field before a big strip, with an attack a cycle or two out for the shield to soak.
   const armorAll = living.reduce((n, p) => n + (p.armor || 0), 0);
   if (armorAll >= 3 && !dueNow(s).length && incoming(s, 2) >= d.max * 0.08 && (ok(s, 'crack ' + t.id) || ok(s, 'shaped-charge ' + t.id)) && ok(s, 'debris-field')) return 'debris-field';
@@ -371,6 +398,14 @@ function planDemo(s, t) {
   const seal = livingParts(s).find((p) => tellOn(s, p, 'seal') && p.armor >= 2 && !(p.bkRot?.until >= e.cycle) && !(p.armor <= 3 && ok(s, 'crack ' + p.id)));
   if (seal && ok(s, 'bit-rot ' + seal.id)) return 'bit-rot ' + seal.id;
   const others = livingParts(s).filter((p) => p !== t);
+  // The general uses (no kill to take first). Chain Reaction breaks the last ◆ or two off a part and wires it, so the
+  // Shatter that follows sets off the blast on every other part (on a bare part it is a big hit that does the same).
+  // Bit Rot opens on a thick shell, or strips while Crack cools: two ◆ now and one a cycle, so a ◆3 part is bare for
+  // Shatter next cycle, and it takes more from you while it rots.
+  const killFirst = livingParts(s).some((p) => bare(p) && killable(s, p)) || killable(s, t) || dueNow(s).length || litOn;
+  const wire = living.length >= 2 && !t.deadman && !living.some((p) => p.deadman) && (bare(t) ? !ok(s, 'shatter ' + t.id) && t.integrity > estimate(s, t, 30) : t.armor <= A('chain-reaction').chits);
+  if (!killFirst && wire && ok(s, 'chain-reaction ' + t.id)) return 'chain-reaction ' + t.id;
+  if (!killFirst && !(t.bkRot?.until >= e.cycle) && (t.armor >= 4 || (t.armor >= 2 && !ok(s, 'crack ' + t.id) && !(t.armor >= 4 && calm0(t) && ok(s, 'shaped-charge ' + t.id)))) && ok(s, 'bit-rot ' + t.id)) return 'bit-rot ' + t.id;
   // Something about to fire, a lit Shatter on a bare part, or a kill: the generic rules handle those.
   if (dueNow(s).length || livingParts(s).some((p) => bare(p) && killable(s, p)) || killable(s, t) || (bare(t) && ok(s, 'shatter ' + t.id))) return null;
   // rm -rf before the big hits on a bare part, with the rest of the virus standing to catch half.
@@ -399,6 +434,15 @@ function planDemo(s, t) {
   const trip = livingParts(s).find((p) => p.deadman) && livingParts(s).filter((p) => p.kind === 'system').length <= 2;
   const lasts = t.integrity >= estimate(s, t, 110) && living.length >= 3 && !t.deadman && !(t.armor > 0 && ok(s, 'crack ' + t.id));
   if ((twin || trip || lasts) && ok(s, 'logic-bomb ' + t.id)) return 'logic-bomb ' + t.id;
+
+  // The general uses of the area kit: Bit Rot on a part that will take a while (everything you land on it hits
+  // harder), Chain Reaction as a big hit with others standing to catch the blast, Fork Bomb when every part
+  // together takes more than one hit on the target.
+  const bestHit = Math.max(0, ...['overload', 'flood', 'segfault', 'chain-reaction'].filter((id) => ok(s, id + ' ' + t.id)).map((id) => previewDamage(s, id, t)));
+  // Fork Bomb: a Crack on every part at once. Press it when it breaks more than Crack would and still bares the
+  // target (so Shatter follows), or when its hit on the bare parts beats one hit on the target.
+  const forkBares = !(t.armor > A('fork-bomb').strip) || !ok(s, 'crack ' + t.id);
+  if (living.length >= 2 && ok(s, 'fork-bomb') && ((forkBares && forkChits(s) > Math.min(t.armor || 0, A('crack').strip) + 1) || (living.filter(bare).length >= 2 && forkValue(s) >= Math.max(bestHit, estimate(s, t, 25))))) return 'fork-bomb';
 
   // A part stripped bare: Shaped Charge hits it for 30 when nothing bigger is ready.
   if (bare(t) && !['overload', 'flood', 'segfault'].some((id) => ok(s, id + ' ' + t.id)) && ok(s, 'shaped-charge ' + t.id) && t.integrity > estimate(s, t, 25)) return 'shaped-charge ' + t.id;

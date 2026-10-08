@@ -236,8 +236,9 @@ test('Multicast heals everyone; Fan-out +3 a rank; Ping Flood also hits every pa
   defender(s).integrity = 50;
   act(s, 'multicast');
   assert.equal(hp(s), 72, '16 + 2 × 3');
-  assert.equal(lost(s, 'pulse'), 22);
-  assert.equal(lost(s, 'encryptor'), 22);
+  // Alone, the Sysop's hits deal SUBS.sysop.alone of their size (docs/kits.md 11): 22 × 0.75.
+  assert.equal(lost(s, 'pulse'), Math.floor(22 * SUBS.sysop.alone));
+  assert.equal(lost(s, 'encryptor'), Math.floor(22 * SUBS.sysop.alone));
   assert.equal(readyIn(s, 'multicast'), ABILITIES.multicast.cooldown - 1);
 });
 
@@ -328,7 +329,8 @@ test('Sysop talents: Service Pack, Critical Path, Redistribute, Loopback', () =>
   big(rd, 'pulse');
   defender(rd).integrity = 20;
   act(rd, 'reclaim pulse');
-  assert.equal(hp(rd), 20 + 18 + 18);
+  // Alone its hit deals 75% (26 of 35), and the heal is drawn from the full hit: 17, and 17 again.
+  assert.equal(hp(rd), 20 + 17 + 17);
   // Loopback: a third of each heal comes back to you.
   const lb = quiet(start('sysop', ['scrub'], ['loopback']));
   defender(lb).integrity = 20;
