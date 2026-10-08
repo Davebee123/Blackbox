@@ -1691,9 +1691,11 @@ document.addEventListener('click', (e) => {
   const loc = e.target.closest('[data-locate]');
   if (loc) { pendingLocate = loc.dataset.locate === '__sel' ? mapSel : loc.dataset.locate; mapList = false; mapSel = pendingLocate; mapPop = true; if (module !== 'map') go('map'); dirty = true; return; }
   const cc = e.target.closest('[data-craft-cat]');
-  if (cc) { craftUi = { cat: cc.dataset.craftCat, pick: null }; dirty = true; return; }
+  if (cc) { craftUi = { ...craftUi, cat: cc.dataset.craftCat, pick: null }; dirty = true; return; }
   const cp = e.target.closest('[data-craft-pick]');
   if (cp) { craftUi = { ...craftUi, pick: cp.dataset.craftPick }; dirty = true; return; }
+  const cs = e.target.closest('[data-craft-slot]');
+  if (cs) { craftUi = { ...craftUi, slot: cs.dataset.craftSlot }; dirty = true; return; } // the slot a protocol compiles into
   const ml = e.target.closest('[data-maplist]');
   if (ml) { mapList = ml.dataset.maplist === '1'; dirty = true; return; }
   const ms = e.target.closest('[data-msort]');

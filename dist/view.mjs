@@ -817,16 +817,19 @@ const craftSection = (s, key, title, purpose, body, open = !(s.settings?.craftSh
 
 // The Craft page: categories down the side, the recipes in the one you pick, and the one you pick
 // on the right: what comes out, what it takes (have/need), and the button. ui: { cat, pick }.
-export function craftCats(s) {
+export function craftCats(s, ui = {}) {
   const p = protocolsParts(s), srv = s.server, busy = p.busy, L = hackerLevel(s);
+  // The slot a protocol compiles into: picked on the recipe (ui.slot), Implant from level 15.
+  const slots = Object.keys(SLOTS).filter((k) => k !== 'implant' || L >= 15), slot = slots.includes(ui.slot) ? ui.slot : 'exploit';
   const zds = (s.recipes || []).filter((z) => ZERO_DAYS[z]);
   const fc = filterCost(L), fOk = !busy && srv.credits >= fc.credits && (materialsOf(s).cipher || 0) >= fc.code.cipher && (s.sigs || 0) >= fc.sigs && canAfford(s, SALVAGE_COSTS.filter()) && filtersOf(s).length < FILTER_CAP;
   const cats = [];
   // Protocols: one recipe per stat you know, or any of them.
   cats.push({ id: 'protocols', name: 'Protocols', icon: 'protocol', items: p.mine.length ? [...(p.mine.length > 1 ? [null] : []), ...p.mine].map((k) => ({
     id: k || 'any', name: k ? PROTOCOL_NAMES[k] : 'Any of your recipes', sub: k ? STATS[k].name : `${p.mine.length} recipes`, icon: k ? 'protocol' : 'item', ready: p.can(p.c),
-    out: { title: k ? `${PROTOCOL_NAMES[k]} protocol` : 'A protocol', rarity: 'tuned', level: L, stats: [k ? [k, '', STATS[k].name + (STATS[k].group === 'survival' ? ' (runs)' : ''), STATS[k].about] : ['item', '?', 'one of yours', 'Built around one of your recipes, at random']] },
-    cost: { credits: p.c.credits, salvage: p.ccost }, cmd: `compile${k ? ' ' + k : ''}`, pay: `protocol:${p.c.salvage}`, extra: serviceVersion(s, 'buildfarm') ? `<span class="tag you">Build farm −${serviceValue(s, 'buildfarm')}%</span>` : '' })) : [], empty: 'No recipes yet: blueprints teach them.' });
+    picker: `<h3 class="craft-sub">Slot</h3><div class="cd-slots" role="group" aria-label="Slot">${slots.map((x) => `<button type="button" class="cd-slot${x === slot ? ' on' : ''}" data-craft-slot="${x}" aria-pressed="${x === slot}" title="${esc(SLOTS[x].about)}">${esc(SLOTS[x].name)}</button>`).join('')}</div>`,
+    out: { title: `${k ? PROTOCOL_NAMES[k] : 'A'} ${SLOTS[slot].name}`, rarity: 'tuned', level: L, tags: [['item', SLOTS[slot].name, SLOTS[slot].about]], stats: [k ? [k, '', STATS[k].name + (STATS[k].group === 'survival' ? ' (runs)' : ''), STATS[k].about] : ['item', '?', 'one of yours', 'Built around one of your recipes, at random']] },
+    cost: { credits: p.c.credits, salvage: p.ccost }, cmd: `compile${k ? ' ' + k : ''} ${slot}`, pay: `protocol:${p.c.salvage}`, extra: serviceVersion(s, 'buildfarm') ? `<span class="tag you">Build farm −${serviceValue(s, 'buildfarm')}%</span>` : '' })) : [], empty: 'No recipes yet: blueprints teach them.' });
   if (zds.length) cats.push({ id: 'zeroday', name: 'Zero-days', icon: 'source', items: zds.map((z) => ({ id: z, name: ZERO_DAYS[z].name, sub: 'source', icon: 'source', ready: p.can(p.zc), out: { title: ZERO_DAYS[z].name, rarity: 'zeroday', level: L, lines: [ZERO_DAYS[z].effect] }, cost: { credits: p.zc.credits, salvage: p.zcost }, cmd: `compile ${z}`, pay: `zeroday:${p.zc.salvage}` })) });
   // Filters: always craftable; a stat to build around, or any.
   const knownF = filterRecipes(s);
@@ -863,7 +866,7 @@ function costRows(s, cost, cls = '') {
   return `<ul class="cd-cost${cls ? ' ' + cls : ''}">${rows.join('')}</ul>`;
 }
 export function craftMarkup(s, ui = {}) {
-  const cats = craftCats(s), busy = active(s) || !!s.run;
+  const cats = craftCats(s, ui), busy = active(s) || !!s.run;
   const why = s.run ? 'Craft at home: jack out first' : active(s) ? 'Finish the fight first' : '';
   const cat = cats.find((c) => c.id === ui.cat) || cats[0];
   const item = cat.items.find((x) => x.id === ui.pick) || cat.items.find((x) => x.ready) || cat.items.find((x) => !x.locked) || cat.items[0];
@@ -871,7 +874,7 @@ export function craftMarkup(s, ui = {}) {
   const list = `<ul class="craft-items">${cat.items.length ? cat.items.map((x) => `<li><button type="button" class="craft-item${x === item ? ' on' : ''}${x.locked ? ' locked' : ''}${x.ready ? ' ready' : ''}" data-craft-pick="${esc(x.id)}">${glyph(x.icon)}<span class="ci-txt"><b>${esc(x.name)}</b><small>${esc(x.sub || '')}</small></span>${x.locked ? `<span class="tag dim plan-lock" title="${esc(x.lock || '')}">${glyph('blueprint')}${x.lockTag || 'plan'}</span>` : x.done ? '<span class="tag you">owned</span>' : x.ready ? '<i class="ci-dot" title="You can craft it"></i>' : ''}</button></li>`).join('') : `<li class="craft-empty">${esc(cat.empty || 'Nothing here yet.')}</li>`}</ul>`;
   const detail = !item ? `<section class="craft-detail card"><p class="quiet">${esc(cat.empty || '')}</p></section>`
     : `<section class="craft-detail card"><h2>${esc(cat.name)}</h2><div class="cd-out${item.out.rarity ? ' r-' + item.out.rarity : ''}">${glyph(item.icon, 'badge')}<h1 class="cd-name${item.out.rarity ? ' r-' + item.out.rarity : ''}">${esc(item.out.title)}</h1>${outBody(item.out)}</div>
-      ${item.locked ? `<p class="cd-lock"><span class="tag dim plan-lock">${glyph('blueprint')}${item.lockTag || 'plan'}</span> ${esc(item.lock || '')}</p>` : item.done ? '<p class="cd-lock"><span class="tag you">owned</span></p>' : `<h3 class="craft-sub">Takes</h3>${costRows(s, item.cost)}${item.extra || ''}
+      ${item.locked ? `<p class="cd-lock"><span class="tag dim plan-lock">${glyph('blueprint')}${item.lockTag || 'plan'}</span> ${esc(item.lock || '')}</p>` : item.done ? '<p class="cd-lock"><span class="tag you">owned</span></p>' : `${item.picker || ''}<h3 class="craft-sub">Takes</h3>${costRows(s, item.cost)}${item.extra || ''}
       <button type="button" class="btn primary cd-go" data-command="${esc(item.cmd)}"${item.pay ? ` data-pay="${esc(item.pay)}" data-pay-title="${esc(item.out.title)}"` : ''} ${item.ready ? '' : 'disabled'} ${why ? `title="${esc(why)}"` : item.ready ? '' : 'title="Not enough of something above"'}>Craft</button>`}</section>`;
   return `<div class="craft-ui${busy ? ' busy' : ''}">${nav}${list}${detail}</div>`;
 }

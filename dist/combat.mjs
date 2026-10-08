@@ -1462,11 +1462,16 @@ function protocolCommand(s, full) {
     return emit(s, 'gear', `${itemLabel(it)} deconstructed: ${deconstruct(s, it, gains)}.`, { item: it.id, gains, name: itemLabel(it) });
   }
   if (word === 'compile') {
-    const zd = ZERO_DAYS[arg] && !ZERO_DAYS[arg].chase ? arg : Object.keys(ZERO_DAYS).find((z) => !ZERO_DAYS[z].chase && ZERO_DAYS[z].name.toLowerCase() === arg);
-    if (SERVICES[arg]) return warn(s, `${SERVICES[arg].name} is a service: install it on the Server page.`);
-    let stat = !zd && arg ? Object.keys(STATS).find((k) => k.toLowerCase() === arg || STATS[k].name.toLowerCase() === arg || PROTOCOL_NAMES[k]?.toLowerCase() === arg) : null;
+    // compile <recipe> [slot]: the slot you name (Exploit, Proxy, Shell, Script, Implant from level 15), or one at random.
+    const words = arg.split(/\s+/), last = words.at(-1);
+    const slot = words.length > 1 || SLOTS[last] ? Object.keys(SLOTS).find((k) => k === last || SLOTS[k].name.toLowerCase() === last) : null;
+    const what = slot ? words.slice(0, -1).join(' ') : arg; // the recipe, without the slot
+    if (slot === 'implant' && hackerLevel(s) < 15) return warn(s, 'Implants compile from level 15.');
+    const zd = ZERO_DAYS[what] && !ZERO_DAYS[what].chase ? what : Object.keys(ZERO_DAYS).find((z) => !ZERO_DAYS[z].chase && ZERO_DAYS[z].name.toLowerCase() === what);
+    if (SERVICES[what]) return warn(s, `${SERVICES[what].name} is a service: install it on the Server page.`);
+    let stat = !zd && what ? Object.keys(STATS).find((k) => k.toLowerCase() === what || STATS[k].name.toLowerCase() === what || PROTOCOL_NAMES[k]?.toLowerCase() === what) : null;
     const mine = knownRecipes(s);
-    if (!zd && arg && !stat) return warn(s, `compile <recipe>: ${mine.join(', ') || 'you have no recipes yet'}${(s.recipes || []).some((r) => ZERO_DAYS[r]) ? `, or a Zero-day you have source for: ${s.recipes.filter((r) => ZERO_DAYS[r]).join(', ')}` : ''}.`);
+    if (!zd && what && !stat) return warn(s, `compile <recipe>: ${mine.join(', ') || 'you have no recipes yet'}${(s.recipes || []).some((r) => ZERO_DAYS[r]) ? `, or a Zero-day you have source for: ${s.recipes.filter((r) => ZERO_DAYS[r]).join(', ')}` : ''}.`);
     if (stat && !PROTOCOL_NAMES[stat]) return warn(s, `${STATS[stat].name} comes from your server (its firewall's tiers and filters), not protocols.`);
     if (zd && !(s.recipes || []).includes(zd)) return warn(s, `You don't have ${ZERO_DAYS[zd].name} source. Find ${zd}.src in a vault on a deeper run.`);
     if (!zd && !mine.length) return warn(s, 'You have no protocol recipes yet. They turn up in vaults, and now and then on a kill.');
@@ -1479,7 +1484,7 @@ function protocolCommand(s, full) {
     s.server.credits -= c.credits;
     spend(s, pay);
     const lvl = hackerLevel(s); // you compile protocols at your own level
-    const made = rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile' });
+    const made = rollItem(() => rand(s), zd ? { level: lvl, zeroDay: zd } : { level: lvl, stat: AFFIX_FOR[stat] ? stat : null, source: 'compile', slot });
     made.compiled = true; // breaks down for salvage and code, never Exploits (no compile-to-sell loop)
     addItem(s, made, 'Compiled: ');
     return firstTime(s, 'compile-' + (zd || stat), `first ${zd ? ZERO_DAYS[zd].name : PROTOCOL_NAMES[stat]} compiled`);
