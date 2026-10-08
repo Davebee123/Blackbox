@@ -79,7 +79,7 @@ test('a specialisation needs its prerequisites, the server level, and one per se
   const a = held(s);
   learnPlan(s, 'refinery'); learnPlan(s, 'skimmer'); learnPlan(s, 'mill');
   assert.match(buildBlock(s, a, 'refinery'), /server level 20/);
-  s.serverXp = 1e9;
+  s.hackers = { breaker: { level: 20, xp: 0 } }; // your server's level is your highest class level
   assert.match(buildBlock(s, a, 'refinery'), /3 producers/);
   a.buildings = ['siphon', 'skimmer', 'mill'];
   a.trait = 'backbone';

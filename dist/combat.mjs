@@ -26,18 +26,19 @@ import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, i
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
-import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellCast } from './tells.mjs';
+import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellCast, tellsOf } from './tells.mjs';
 import { tickRoot, processWon } from './root.mjs';
-import { firewallCommand, wear } from './firewall.mjs';
+import { firewallCommand, wear, raidShare } from './firewall.mjs';
+import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, RETIRED } from './progression.mjs';
 import { portsCommand, invaderDown, invasionRestore } from './invasion.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags } from './hidden.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, ports, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, RULES, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 
-export const SAVE_VERSION = 33; // v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore)
+export const SAVE_VERSION = 34; // v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -79,9 +80,8 @@ export function fresh() {
     nextItem: 0,
     rng: 0x2545f491,
     loadout: { archetype: 'breaker', picks: {}, ranks: {}, equipped: {} },
-    // Each class levels on its own and starts at 1. The server levels from everyone's work.
+    // Each class levels on its own and starts at 1. The server's level is your highest class's.
     hackers: {},
-    serverXp: 0,
     salvage: [],
     logs: [],
     reports: [],
@@ -122,7 +122,7 @@ export function cycleLength(s) {
 }
 
 // Cycles between a part losing its last armor chit and patching one back.
-export const patchDelay = (s) => CONFIG.patchDelay - (s.encounter?.virus.mutation === 'regenerative' ? 1 : 0) + rank(s, 'armor-cracker');
+export const patchDelay = (s) => CONFIG.patchDelay - (s.encounter?.virus.mutation === 'regenerative' ? 1 : 0) + rank(s, 'armor-cracker') + fxFire(s, 'custom', { do: 'patch-slow' }, false).reduce((n, x) => n + x.value, 0);
 // Total armor chits left on the virus (and how many it started with).
 export function armorLeft(s) {
   const all = livingParts(s);
@@ -307,8 +307,6 @@ export function loadedOn(s, id) {
 
 // ---------- services (the server) ----------
 export const serviceVersion = (s, id) => (s.services || {})[id] || 0;
-export const portsUsed = (s) => Object.keys(s.services || {}).length + (s.install && !serviceVersion(s, s.install.id) ? 1 : 0);
-export const portCount = (s) => ports(serverLevel(s));
 const baseMax = (s) => Math.round(CONFIG.maxIntegrity * power(serverLevel(s)));
 // What a running service adds, in the stat's own terms.
 export function serviceValue(s, id, v = serviceVersion(s, id)) {
@@ -337,7 +335,7 @@ export function gearStat(s, stat, side = null) {
     const fx = it.unique && UNIQUES[it.unique]?.effect;
     if (fx?.when === 'always' && fx.do === 'stat-x2' && fx.stat === stat && !['signal', 'integrity'].includes(stat) && fxCond(s, fx)) n += it.stats[stat] || 0;
   }
-  if (side !== 'hacker') n += serviceStat(s, stat) + (FILTER_STATS[stat]?.home ? filterStat(s, stat) : 0); // decoys and a sandbox in the firewall's filters
+  if (side !== 'hacker') n += serviceStat(s, stat) + (FILTER_STATS[stat]?.home ? (FILTER_STATS[stat].pct ? Math.round((serverMax(s) * filterStat(s, stat)) / 100) : filterStat(s, stat)) : 0); // the firewall's filters for the fights at home: decoys, a sandbox, Block, a shield, Regen, barbs
   if (STATS[stat]?.dp) n = Math.round(n * 10) / 10;
   return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
 }
@@ -390,9 +388,7 @@ export function idleRegen(s, ms) {
 }
 export const zeroDay = (s, id) => loaded(s).find((it) => it.zeroDay === id) || null;
 export const critChance = (s) => CONFIG.baseCrit + gearStat(s, 'crit', 'hacker');
-export const serverMax = (s) => baseMax(s) + serviceStat(s, 'integrity');
-// Cron Job and Snapshot are services now.
-export const cronDamage = (s) => Math.round(8 * power(serverLevel(s)) * (SERVICES.cron.values[serviceVersion(s, 'cron') - 1] || 0));
+export const serverMax = (s) => baseMax(s) + Math.round(baseMax(s) * raidShare(s)); // firewall tiers +1, +3, +5: +5% each
 // Rootkit: your first hit each fight goes through armor.
 export const rootkitReady = (s) => !!zeroDay(s, 'rootkit') && active(s) && !s.encounter.once?.rootkit;
 // Keep the server's max Integrity in step with its level and its RAID Array.
@@ -475,7 +471,15 @@ function bossUnique(s, boss, level) {
   const name = BOSSES[boss]?.name || boss;
   if (rand(s) < bossChance(s, boss)) {
     (s.pity ||= {})[boss] = 0;
-    const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s)), from = heard.length ? heard : fresh.length ? fresh : pool;
+    const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s));
+    // A boss that drops each of its own once (BOSS_LOOT.once: the Resident, met on every takeover): once you
+    // hold them all, its roll gives a world unique you don't have, or a yellow.
+    if (!fresh.length && BOSS_LOOT.once.includes(boss)) {
+      const lack = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !s.collection?.[u.id] && (u.sources || []).some((src) => WORLD.includes(src.kind)));
+      const w = pickUnique(s, lack);
+      return addItem(s, w ? uniqueItem(w, level, () => rand(s)) : rollItem(() => rand(s), { level, rarity: 'custom' }), `${name} drops: `);
+    }
+    const from = heard.length ? heard : fresh.length ? fresh : pool;
     const u = from[Math.floor(rand(s) * from.length)];
     addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `);
   } else {
@@ -543,7 +547,17 @@ export function giveUnique(s, id, why = 'Reward: ') {
 
 // ---------- unique effects ----------
 // Each loaded unique's effect (blocks from content/items.mjs). fxCond: does its condition hold now?
-const uniqueFx = (s) => loaded(s).map((it) => (it.unique && UNIQUES[it.unique]?.effect ? { it, fx: UNIQUES[it.unique].effect, id: it.unique } : null)).filter(Boolean);
+// A blue's or a yellow's rule (gear.mjs RULES) runs the same way, at its item's value; the same rule twice counts once, at its best.
+const uniqueFx = (s) => {
+  const out = [], rules = {};
+  for (const it of loaded(s)) {
+    if (it.unique && UNIQUES[it.unique]?.effect) out.push({ it, fx: UNIQUES[it.unique].effect, id: it.unique });
+    const r = it.rule && RULES[it.rule];
+    if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
+  }
+  return out.concat(Object.values(rules));
+};
+const telling = (s, p) => !!tellsOf(s)?.list.some((t) => t.told && (!p || t.part === p.id));
 function fxCond(s, fx, ctx = {}) {
   const e = s.encounter, p = ctx.target;
   const d = () => (e?.mode === 'run' || s.run ? s.run || { integrity: 1, max: 1 } : s.server);
@@ -554,6 +568,10 @@ function fxCond(s, fx, ctx = {}) {
     case 'target-winding': return !!p?.attack && !!e && p.attack.due - e.cycle <= 1;
     case 'target-tagged': return !!p && !!e && p.taggedUntil >= e.cycle;
     case 'target-burning': return !!p && burnsOn(s, p).length > 0;
+    case 'target-telling': return !!p && telling(s, p);
+    case 'target-signature': return !!p?.special;
+    case 'any-tell': return telling(s, null);
+    case 'charged': return !!ctx.atk?.tell;
     case 'synced': return !!e?.synced || !!ctx.synced;
     case 'even-cycle': return !!e && e.cycle % 2 === 0;
     case 'odd-cycle': return !!e && e.cycle % 2 === 1;
@@ -592,7 +610,20 @@ export function fxFire(s, when, ctx = {}, spend = true) {
   return out;
 }
 const fxHas = (s, what) => uniqueFx(s).find((x) => x.fx.do === what) || null;
-export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : '');
+export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name}: ${fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
+// What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).
+export function fxAnswer(s) {
+  const e = s.encounter;
+  if (!e) return;
+  for (const x of fxFire(s, 'answer')) {
+    const who = x.name || x.it.name;
+    if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who}: your cooldowns drop by ${x.value}.`); }
+    if (x.fx.do === 'heal') heal(s, x.value, who);
+    if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who}: shield ${e.shield}.`, { mark: 'shield' }); }
+  }
+}
+// How much one command counts toward calling off a tell (Double Tap, Spectre: twice).
+export const tellWeight = (s) => (fxHas(s, 'tell-hits') ? 2 : 1);
 
 // ---------- blueprints ----------
 export const knows = (s, id) => (s.recipes || []).includes(id);
@@ -814,8 +845,9 @@ function breadcrumb(s, level) {
   const open = (s.locations || []).find((l) => !l.rogue && !l.member && !l.takenOver);
   if (level === 5 && open && !tame.some((l) => Object.keys(l.state?.unlocked || {}).length)) emit(s, 'breadcrumb', `wick: strays won't feed you forever. ${open.name} has a vault. go open it.`, { location: open.id });
 }
-// Decoding a part you've never broken: kills of XP (Phase 4).
-export const DECODE_XP = 2;
+// Decoding a part you've never broken: kills of XP (Phase 4). One kill: at two it paid half the XP of
+// levels 1–5 and left a cliff at 6 (docs/progression.md).
+export const DECODE_XP = 1;
 // ---------- the hot strain ----------
 // Every 4 hours one strain open at your level runs hot: +50% XP and lead from it (EverQuest's hot
 // zones). On the pager when it changes.
@@ -854,8 +886,6 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
   const bonus = freshBonus(s, amount, kind);
   if (bonus) { emit(s, 'fresh', `Fresh bonus +${bonus} XP (${XP_KINDS[kind]}).`, { amount: bonus, kind }); amount += bonus; }
   if (tally) (s.xpMix ||= {})[tally] = (s.xpMix[tally] || 0) + amount;
-  // The server levels with everyone: it gets every point any hacker earns.
-  gainServerXp(s, amount, why);
   const h = hackerOf(s);
   if (h.level >= LOADOUT.maxLevel) return;
   h.xp += amount;
@@ -865,7 +895,10 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     // Pin the bar you have now before the level changes, so nothing falls off it.
     if (!s.loadout.equipped[kitKey(s, arch)]) s.loadout.equipped[kitKey(s, arch)] = [...equippedSkills(s, arch)];
     h.xp -= xpToNext(h.level);
+    const top = serverLevel(s); // your highest class level before this one (the server's level)
     h.level++;
+    levelStarted(s, h); // Behind: the new level's clock
+    if (h.level > top) syncServer(s); // the server's level is your highest class level
     breadcrumb(s, h.level);
     // Rogue servers keep up with you inside their layer's band (rogue.mjs does it on a visit too).
     for (const l of s.locations || []) if (l.rogue && !l.member) l.level = Math.max(l.level || 1, SERVER.locationLevel(h.level, l.depth || 1));
@@ -878,8 +911,13 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     for (const g of got) if (skillOrder(arch, sub).includes(g) && eq.length < LOADOUT.equipSlots && !eq.includes(g)) eq.push(g);
     const names = got.map((id) => (id === 'edge' ? `${SUBS[sub].edge.name} (${SUBS[sub].edge.rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
     const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Pick a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play ${SUBS[sub].name}.` : '';
-    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.specFrom && !specOf(s, arch) ? ` Pick a specialty: ${specOptions(arch).map((o) => o.name).join(' or ')} (type specialty).` : '') + pickSub;
-    emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${talent} Power +4%.`, { level: h.level, unlocked: got });
+    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + pickSub;
+    // The banner lists what the level brings on every track, and the next level that brings something.
+    const subAt = (l) => (l >= SUBCLASS.from ? sub || defaultSub(arch) : null);
+    const skillsAt = (l) => newAtLevel(arch, l, subAt(l)).map((id) => (id === 'edge' ? SUBS[subAt(l)].edge.name : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || CANTRIPS.find((c) => c.id === id)?.name || id));
+    const gains = [...skillsAt(h.level), ...(h.level === SUBCLASS.from && !subPicked(s, arch) ? ['a subclass to pick'] : []), ...levelGains(arch, h.level, top)];
+    const next = nextGains(arch, h.level, Math.max(top, h.level), skillsAt);
+    emit(s, 'level-up', `LEVEL ${h.level} ${ARCHETYPES[arch].name.toUpperCase()}.${names.length ? ' New: ' + names.join(', ') + '.' : ''}${talent} Power +4%.`, { level: h.level, unlocked: got, gains, next, server: h.level > top ? s.server.max : null });
   }
   if (h.level >= LOADOUT.maxLevel) h.xp = 0;
 }
@@ -898,29 +936,11 @@ export function nextUnlock(s, arch = classOf(s)) {
   return { level: u.level, id: u.id, name: u.id === 'edge' ? 'your subclass' : ARCHETYPES[arch].skills.find((x) => x.id === u.id)?.name || ABILITIES[u.id]?.name || u.id };
 }
 
-// The server levels from everyone's work: defending it and banking loot.
-export function serverLevel(s) {
-  let lvl = 1, xp = s.serverXp || 0;
-  while (lvl < SERVER.maxLevel && xp >= SERVER.xpToNext(lvl)) { xp -= SERVER.xpToNext(lvl); lvl++; }
-  return lvl;
-}
-export function serverProgress(s) {
-  let lvl = 1, xp = s.serverXp || 0;
-  while (lvl < SERVER.maxLevel && xp >= SERVER.xpToNext(lvl)) { xp -= SERVER.xpToNext(lvl); lvl++; }
-  return { level: lvl, xp, next: lvl < SERVER.maxLevel ? SERVER.xpToNext(lvl) : 0 };
-}
-export function gainServerXp(s, amount, why) {
-  if (amount <= 0) return;
-  if (s.degraded) return; // a rebooting server earns nothing (Degraded mode)
-  const before = serverLevel(s);
-  s.serverXp = (s.serverXp || 0) + amount;
-  const after = serverLevel(s);
-  if (after > before) {
-    syncServer(s);
-    const slot = SERVER.daemonSlotsAt.includes(after) ? ' +1 daemon slot.' : '';
-    emit(s, 'server-level', `SERVER LEVEL ${after}.${slot} Max Integrity ${s.server.max}.`, { level: after, serverXp: amount, why });
-  } // no log line otherwise: it mirrors your own XP line, and the server card shows its bar
-}
+// Your server's level is your highest class level: no XP of its own. devServer: a floor for testing
+// (developer server <n>).
+export const serverLevel = (s) => Math.min(SERVER.maxLevel, Math.max(1, s.devServer || 0, ...Object.values(s.hackers || {}).map((h) => h?.level || 1)));
+// The class whose level it is.
+export const serverClass = (s) => Object.entries(s.hackers || {}).sort((a, b) => (b[1]?.level || 1) - (a[1]?.level || 1))[0]?.[0] || classOf(s);
 
 // Subclasses (v31): a class's talent ranks move into its default subclass's tree (the nodes it still
 // has); tier picks are cleared, the points free to spend again. Bars carry over as each subclass is used.
@@ -985,10 +1005,10 @@ export function tierState(s, arch, tier) {
   return rowState(s, arch, TREE.findIndex((r) => r.kind === 'choice' && r.tier === tier));
 }
 // Your current class's rank in a filler node.
-export const rank = (s, id) => (ranksOf(s, classOf(s))[id] || 0) + (specOf(s) === id && hackerLevel(s) >= LOADOUT.specFrom ? LOADOUT.specRanks : 0);
-// The specialty (level 5): one of your class's two first-row talents, LOADOUT.specRanks free ranks in it.
-export const specOf = (s, arch = classOf(s)) => s.loadout?.spec?.[arch] || null;
-export const specOptions = (arch) => ARCHETYPES[arch].spec;
+export const rank = (s, id) => (ranksOf(s, classOf(s))[id] || 0) + (kitTalent(classOf(s)).id === id && hackerLevel(s) >= LOADOUT.specFrom ? LOADOUT.specRanks : 0);
+// The class's kit talent: from level 5, the first of its two first-row talents, LOADOUT.specRanks free
+// ranks in it (it was the level-5 specialty pick; the measured gain was a few percent, so it's simply yours).
+export const kitTalent = (arch) => ARCHETYPES[arch].spec.find((o) => o.id === LOADOUT.kit[arch]) || ARCHETYPES[arch].spec[0];
 export const specRule = (o) => o.rule.replace(/\d+/, (n) => String(Number(n) * LOADOUT.specRanks)).replace(' per rank', '');
 const fillerNode = (kit, id) => kit?.fillers.flat().find((n) => n.id === id || n.name.toLowerCase() === id);
 
@@ -1037,15 +1057,8 @@ function loadoutCommand(s, text) {
     return emit(s, 'loadout', `${skill.name} equipped on key ${equipped.length + 2}.`);
   }
   if (words[0] === 'specialty') {
-    const arch = ARCHETYPES[words[1]] ? words.splice(1, 1)[0] : s.loadout.archetype, opts = specOptions(arch); // specialty [class] <talent>
-    const say = opts.map((o) => `${o.name} (${specRule(o).replace(/\.$/, '')})`).join(' or ');
-    if (hackerLevel(s, arch) < LOADOUT.specFrom) return warn(s, `Your ${ARCHETYPES[arch].name} specialty comes at level ${LOADOUT.specFrom}: ${say}.`);
-    const want = words.slice(1).join(' ');
-    if (!want) return emit(s, 'info', specOf(s, arch) ? `Specialty: ${opts.find((o) => o.id === specOf(s, arch)).name}. The other: ${opts.find((o) => o.id !== specOf(s, arch)).name} (specialty ${opts.find((o) => o.id !== specOf(s, arch)).id}). Free to change at home.` : `Pick a specialty: ${say}. Type specialty ${opts[0].id} or specialty ${opts[1].id}.`);
-    const o = opts.find((x) => x.id === want || x.name.toLowerCase() === want);
-    if (!o) return warn(s, `${ARCHETYPES[arch].name} specialties: ${opts.map((x) => x.id).join(', ')}.`);
-    (s.loadout.spec ||= {})[arch] = o.id;
-    return emit(s, 'loadout', `Specialty: ${o.name}. ${specRule(o)}`);
+    const arch = ARCHETYPES[words[1]] ? words[1] : s.loadout.archetype, k = kitTalent(arch);
+    return emit(s, 'info', `There's no specialty to pick any more. ${k.name} is part of the ${ARCHETYPES[arch].name} kit from level ${LOADOUT.specFrom}: ${specRule(k)}`);
   }
   if (words[0] === 'archetype') {
     const id = words[1] === 'sysadmin' ? 'bastion' : words[1]; // its old name still works
@@ -1164,7 +1177,7 @@ function protocolCommand(s, full) {
     let stat = !zd && arg ? Object.keys(STATS).find((k) => k.toLowerCase() === arg || STATS[k].name.toLowerCase() === arg || PROTOCOL_NAMES[k]?.toLowerCase() === arg) : null;
     const mine = knownRecipes(s);
     if (!zd && arg && !stat) return warn(s, `compile <recipe>: ${mine.join(', ') || 'you have no recipes yet'}${(s.recipes || []).some((r) => ZERO_DAYS[r]) ? `, or a Zero-day you have source for: ${s.recipes.filter((r) => ZERO_DAYS[r]).join(', ')}` : ''}.`);
-    if (stat && !PROTOCOL_NAMES[stat]) return warn(s, `${STATS[stat].name} comes from services, not protocols.`);
+    if (stat && !PROTOCOL_NAMES[stat]) return warn(s, `${STATS[stat].name} comes from your server (its firewall's tiers and filters), not protocols.`);
     if (zd && !(s.recipes || []).includes(zd)) return warn(s, `You don't have ${ZERO_DAYS[zd].name} source. Find ${zd}.src in a vault on a deeper run.`);
     if (!zd && !mine.length) return warn(s, 'You have no protocol recipes yet. They turn up in vaults, and now and then on a kill.');
     if (stat && !mine.includes(stat)) return warn(s, `You don't have the ${PROTOCOL_NAMES[stat]} recipe yet.`);
@@ -1192,10 +1205,8 @@ export function installBlock(s, id) {
   const v = serviceVersion(s, id) + 1;
   if (v > VERSIONS.length) return `${d.name} is at v${VERSIONS.length}, the top version.`;
   if (s.install) return `Installing ${SERVICES[s.install.id].name} v${s.install.v}. One install at a time.`;
-  if (d.special && !knows(s, id)) return `${d.name} needs its source: find ${id}.src in a vault on a deeper run.`;
-  if (!d.special && !knows(s, id)) return `You don't have the ${d.name} blueprint yet.`;
-  if (v === 1 && portsUsed(s) >= portCount(s)) return `All ${portCount(s)} service slots are in use. Uninstall a service first.`;
-  if (serverLevel(s) < VERSIONS[v - 1].needs) return `${d.name} v${v} needs server level ${VERSIONS[v - 1].needs}.`;
+  if (!knows(s, id)) return `You don't have the ${d.name} blueprint yet.`;
+  if (serverLevel(s) < VERSIONS[v - 1].needs) return `${d.name} v${v} needs level ${VERSIONS[v - 1].needs} (your highest class).`;
   const cost = serviceCost(id, v), m = materialsOf(s);
   const short = Object.entries(cost).filter(([k, n]) => n > (k === 'credits' ? s.server.credits : m[k] || 0));
   if (short.length || !canAfford(s, SALVAGE_COSTS.service(serviceSalvage(v)))) return `${d.name} v${v} needs ${costLine({ ...cost, salvage: serviceSalvage(v) })}.`;
@@ -1206,7 +1217,7 @@ function serviceCommand(s, text, now) {
   const arg = restWords.join(' ').trim();
   if (word === 'services') {
     const on = Object.entries(s.services || {}).map(([id, v]) => `${SERVICES[id].name} v${v}`);
-    return emit(s, 'info', `Ports ${portsUsed(s)}/${portCount(s)}: ${on.join(', ') || 'nothing running'}.${s.install ? ` Installing ${SERVICES[s.install.id].name} v${s.install.v}.` : ''}`);
+    return emit(s, 'info', `Services: ${on.join(', ') || 'nothing running'}.${s.install ? ` Installing ${SERVICES[s.install.id].name} v${s.install.v}.` : ''}`);
   }
   if (active(s)) return warn(s, 'Change services between fights.');
   if (text === 'buyout' || text === 'buyout install') {
@@ -1230,7 +1241,7 @@ function serviceCommand(s, text, now) {
   }
   const id = serviceId(arg);
   if (word === 'install') {
-    if (!id) return warn(s, `install <service>: ${Object.keys(SERVICES).join(', ')}.`);
+    if (!id) return warn(s, RETIRED[arg] ? `${RETIRED[arg].name} isn't a service any more: the firewall's tiers and filters, and the daemons, do its job.` : `install <service>: ${Object.keys(SERVICES).join(', ')}.`);
     const why = installBlock(s, id);
     if (why) return warn(s, why);
     const v = serviceVersion(s, id) + 1, cost = serviceCost(id, v), m = materialsOf(s);
@@ -1309,9 +1320,10 @@ function engage(s) {
   for (const x of fxFire(s, 'start')) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with a ◆.`); }
     if (x.fx.do === 'force-crit') e.forceCrit = true;
+    if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${x.value} shield.`, { mark: 'shield' }); }
   }
-  // Server gear: a Shield stat starts every home fight shielded.
-  if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = gearStat(s, 'shield', 'server');
+  // A filter of the Scrubber starts every home fight shielded.
+  if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
   // Stealth: each part's first attack may come a cycle later.
   const st = gearStat(s, 'stealth');
   if (st) {
@@ -1357,7 +1369,10 @@ function payKill(s, e, base, why) {
   // Rested (WoW): XP banked while you were safely away doubles a kill until it runs out.
   const rested = Math.floor(Math.min(s.rested || 0, xp)); // whole XP only; the fraction waits in s.rested
   if (rested) { s.rested -= rested; emit(s, 'rested', `Rested: +${rested} XP.`, { amount: rested }); }
-  gainXp(s, xp + bonus + hot + rested, why, 'fight');
+  // Behind (progression.mjs): a level running past its target pays kills half again until it ends.
+  const behind = behindBonus(s, xp);
+  if (behind) emit(s, 'behind', `Behind: +${behind} XP.`, { amount: behind });
+  gainXp(s, xp + bonus + hot + rested + behind, why, 'fight');
 }
 
 export function finish(s, result) {
@@ -1701,10 +1716,10 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     if (h.level > want) { h.level = want; h.xp = 0; }
     emit(s, 'info', `Developer: ${ARCHETYPES[classOf(s)].name} level ${h.level}.`);
   } else if (/^developer server \d+$/.test(text)) {
-    const want = Math.max(1, Math.min(SERVER.maxLevel, Number(text.split(' ')[2])));
-    let xp = 0; for (let l = 1; l < want; l++) xp += SERVER.xpToNext(l);
-    s.serverXp = xp;
-    emit(s, 'info', `Developer: server level ${serverLevel(s)}.`);
+    // Your server's level is your highest class level; for testing, this sets a floor under it.
+    s.devServer = Math.max(1, Math.min(SERVER.maxLevel, Number(text.split(' ')[2])));
+    syncServer(s);
+    emit(s, 'info', `Developer: server level ${serverLevel(s)} (a floor under your highest class level, for testing).`);
   } else if (/^filter (equip|unequip|scrap) \d+$/.test(text) || /^filter craft( \w+)?( pay .*)?$/.test(text)) {
     filterCommand(s, text);
   } else if (/^firewall (upgrade|defrag|harden)( \S+)?$/.test(text) || text === 'defrag') {
@@ -1921,7 +1936,7 @@ export function hit(s, p, base, opts = {}) {
   // Burn ticks, helpers and every target of a spread hit count, one chit each.
   if (p.armor > 0 && !opts.pierce) {
     // A heavy hit from your own command cracks two.
-    const heavy = (opts.chits > 1 || (opts.mine && !opts.dot && !opts.by && base >= CONFIG.heavyHit * powerOf(s) - 1e-9)) && p.armor > 1; // (base is already your size)
+    const heavy = (opts.chits > 1 || (opts.mine && !opts.dot && !opts.by && (base >= CONFIG.heavyHit * powerOf(s) - 1e-9 || fxFire(s, 'hit', { target: p, do: 'shatter' }).length))) && p.armor > 1; // (base is already your size; Shellshock breaks two)
     p.armor -= heavy ? 2 : 1;
     p.lastDamaged = e.cycle;
     if (e.commanding && !opts.dot) tellHit(s, p); // your command hit it: a charge or cast on it counts it (tells.mjs)
@@ -1982,7 +1997,9 @@ export function hit(s, p, base, opts = {}) {
   p.lastDamaged = e.cycle;
   // Leech: a share of what you deal heals you (paid out once per cycle).
   if (!opts.server && opts.mine && dealt > 0) e.leechAcc = (e.leechAcc || 0) + gearStat(s, 'leech') * (crit ? Math.max(1, ...fxFire(s, 'crit', { do: 'leech-x' }).map((x) => x.value)) : 1);
-  if (crit && opts.mine && dealt > 0) for (const x of fxFire(s, 'crit', { do: 'heal' })) heal(s, x.value, x.it.name);
+  if (crit && opts.mine && dealt > 0) for (const x of fxFire(s, 'crit', { do: 'heal' })) heal(s, x.value, x.name || x.it.name);
+  // Race Window, Hot Reload: a crit from your command readies that skill again.
+  if (crit && opts.mine && !opts.dot && dealt > 0 && e.commanding && e.lastSkill && e.readyAt[e.lastSkill] > e.cycle) for (const x of fxFire(s, 'crit', { do: 'refund-skill' })) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${x.name || x.it.name}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); break; }
   e.lastCrit = !!crit && !!opts.mine;
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit });
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor });
@@ -2068,9 +2085,22 @@ function breakPart(s, p) {
   classEach('broke', s, p);
   // Uniques that fire on a break (Cryptominer, Zero Cool).
   for (const x of fxFire(s, 'break', { crit: e.lastCrit })) {
-    if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${x.it.name}: your cooldowns drop by ${x.value}.`); }
-    if (x.fx.do === 'refund-skill' && e.lastSkill) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${x.it.name}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); }
-    if (x.fx.do === 'heal') heal(s, x.value, x.it.name);
+    const who = x.name || x.it.name;
+    if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who}: your cooldowns drop by ${x.value}.`); }
+    if (x.fx.do === 'refund-skill' && e.lastSkill) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${who}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); }
+    if (x.fx.do === 'heal') heal(s, x.value, who);
+    // Daisy Chain, Log4Shell: the part winding up a tell takes a hit (or the next to attack). Not from a hit it set off.
+    if (x.fx.do === 'break-hit' && !e.chaining) {
+      const t = livingParts(s).find((q) => q !== p && q.kind === 'system' && telling(s, q)) || soonestAttacker(s, p.id);
+      if (alive(t) && t !== p) { e.chaining = true; hit(s, t, x.value, { by: who }); e.chaining = false; }
+    }
+  }
+  // Slammer: burns on the part you broke jump to the next part, with what they had left.
+  if (fxHas(s, 'burn-jump')) {
+    const next = soonestAttacker(s, p.id);
+    const moved = alive(next) && next !== p ? e.burns.filter((b) => b.target === p.id && b.left > 0) : [];
+    for (const b of moved) b.target = next.id;
+    if (moved.length) emit(s, 'status', `${fxHas(s, 'burn-jump').it.name}: ${moved.length === 1 ? 'a burn jumps' : `${moved.length} burns jump`} to ${next.name}.`, { target: next.id, mark: 'burn' });
   }
   // The weak point moves: a new one forms on another part.
   if (e.virus.weakPoint === p.id) {
@@ -2372,7 +2402,6 @@ function rollback(s) {
   if (e.encrypt || e.burst) { e.encrypt = 0; e.burst = null; emit(s, 'decrypted', 'Rolled back: encryption wiped.'); }
 }
 
-export const cronDue = (cycle) => cycle % 3 === 0;
 // Block: taken off every hit, but a hit never drops below half.
 export const blockOf = (s) => defense(s, 'reduction') + (s.encounter?.buffs?.brace >= s.encounter?.cycle ? scaled(s, ABILITIES.brace.block) : 0);
 export const blocked = (s, amount) => (blockOf(s) ? Math.max(Math.ceil(amount / 2), amount - blockOf(s)) : amount);
@@ -2397,10 +2426,10 @@ export function takeDamage(s, amount, source, label) {
   if (e.mode === 'home' && dealt) wear(s, dealt); // your server's Integrity: it wears your firewall
   e.metrics.attackDamage += dealt;
   if (dealt) canary(s);
-  // Snapshot (Zero-day): once per home fight, dropping below half restores 20.
-  if (dealt && e.mode === 'home' && !e.once.snapshot && d.integrity > 0 && d.integrity < d.max / 2 && serviceVersion(s, 'snapshot')) {
+  // Snapshot (a daemon): once per fight, dropping below half restores a share of your max.
+  if (dealt && !e.once.snapshot && d.integrity > 0 && d.integrity < d.max / 2 && slottedDaemons(s).includes('snapshot')) {
     e.once.snapshot = true;
-    heal(s, Math.round((d.max * serviceValue(s, 'snapshot')) / 100), 'Snapshot restored');
+    heal(s, Math.max(1, Math.round((d.max * snapshotPct(s)) / 100)), 'Snapshot restored');
   }
   return dealt;
 }
@@ -2486,15 +2515,15 @@ function landAttack(s, p) {
     const tough = 1 - 0.03 * (rank(s, 'failsafe') + rank(s, 'hardened-kernel') + rank(s, 'low-profile') + rank(s, 'load-balancer'));
     // Enemy crits: a roll on every damage attack (from enemy level 3).
     let crit = !atk.noCrit && (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit; // a tell never crits (tells.mjs): it's already as big as it gets
-    if (crit && fxFire(s, 'struck', { do: 'crit-normal' }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have crit. It lands as a normal hit.`, { source: p.id }); }
-    let half = fxFire(s, 'struck', { do: 'halve' })[0];
-    if (half) emit(s, 'blocked', `${half.it.name}: ${atk.name} deals half.`, { source: p.id });
+    if (crit && fxFire(s, 'struck', { do: 'crit-normal', atk }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have crit. It lands as a normal hit.`, { source: p.id }); }
+    let half = fxFire(s, 'struck', { do: 'halve', atk })[0];
+    if (half) emit(s, 'blocked', `${half.name || half.it.name}: ${atk.name} deals half.`, { source: p.id });
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less.`, { source: p.id }); }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p) * (e.virus.raid ? raidTaken(s) : 1)), p.id, atk.name);
     if (dealt) classEach('struck', s, atk, dealt, p);
-    for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%' }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.it.name);
+    for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%', atk }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.name || x.it.name);
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
     // Echo: while the Echo lives, the hit repeats next cycle at half.
     if (dealt && !atk.echoed && livingParts(s).some((x) => x.echo)) {
@@ -2629,12 +2658,6 @@ export function playerPhase(s, phase = 'all') {
     e.regenAcc = (e.regenAcc || 0) + rg;
     const n = Math.floor(e.regenAcc);
     if (n) { e.regenAcc -= n; const d = defender(s); const got = Math.min(n, d.max - d.integrity); d.integrity += got; if (got) emit(s, 'regen', `Regen +${got}.`, { amount: got }); }
-  }
-  // Cron Job (Zero-day): every 3rd cycle of a home fight, the server hits the soonest attacker.
-  const cron = e.mode === 'home' && serviceVersion(s, 'cron');
-  if (cron && cronDue(e.cycle) && virusIntegrity(s).current > 0) {
-    const t = soonestAttacker(s);
-    if (t) hit(s, t, cronDamage(s), { by: 'Cron Job', server: true });
   }
 
   return true;
@@ -2924,6 +2947,7 @@ function syncBonus(s, intent) {
 export const daemonVersion = (s, id) => (s.daemonsOwned || {})[id] || 0;
 export const slottedDaemons = (s) => (s.daemons || []).filter((id) => DAEMONS[id] && daemonVersion(s, id));
 export const daemonAmount = (s, id) => scaled(s, (DAEMONS[id].amount || 0) * DAEMON_VERSIONS[daemonVersion(s, id) - 1]);
+export const snapshotPct = (s) => Math.round(DAEMONS.snapshot.pct * (DAEMON_VERSIONS[daemonVersion(s, 'snapshot') - 1] || 1)); // 8, 12, 16
 // When a daemon acts next (a cycle number), or null for the once-per-fight ones.
 export const daemonNext = (s, id) => (DAEMONS[id].once ? null : Math.max(s.encounter.cycle, s.encounter.daemonReady?.[id] || s.encounter.cycle));
 const lastTarget = (s) => { const t = s.encounter.lastAttack && part(s, s.encounter.lastAttack.split(' ')[1]); return alive(t) ? t : null; };
@@ -2941,6 +2965,7 @@ function runDaemons(s) {
     else if (id === 'mender') { const dd = defender(s); if (dd.integrity < dd.max) { say('patches you'); heal(s, daemonAmount(s, id), d.name); } else acted = false; }
     else if (id === 'spider') { const t = lastTarget(s) || soonestAttacker(s); if (t) { say(`bites ${t.name}`); e.burns.push({ id: 'spider', target: t.id, damage: daemonAmount(s, id), grow: 0, left: 3, name: d.name, drain: 0 }); } else acted = false; }
     else if (id === 'mirror') { const t = lastTarget(s); if (t) { say(`echoes you on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name }); } else acted = false; }
+    else if (id === 'cron') { const t = livingParts(s).find((q) => q.kind === 'system' && telling(s, q)) || soonestAttacker(s); if (t) { say(`runs on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name }); } else acted = false; }
     if (!acted) continue;
     e.daemonReady[id] = e.cycle + d.cooldown;
     e.metrics.daemon = (e.metrics.daemon || 0) + 1;
@@ -3137,10 +3162,11 @@ function migrateToProtocols(s) {
     if (it.kind === 'protocol') { keep.push(it); continue; }
     if (it.side === 'server') {
       const svc = it.zeroDay === 'cron-job' ? 'cron' : it.zeroDay === 'snapshot' ? 'snapshot' : OLD_SERVER_STAT[Object.keys(it.stats || {})[0]];
-      if (svc && SERVICES[svc].special && !s.recipes.includes(svc)) s.recipes.push(svc);
-      if (svc && running.has(it.id) && !s.services[svc] && Object.keys(s.services).length < portCount(s)) s.services[svc] = 1;
+      const def = SERVICES[svc] || RETIRED[svc]; // v34 retired most of these; progressionRestore converts them
+      if (svc && def?.daemon && !s.recipes.includes(svc)) s.recipes.push(svc);
+      if (svc && def && running.has(it.id) && !s.services[svc]) s.services[svc] = 1;
       else {
-        const codes = [].concat(SERVICES[svc]?.code || 'kernel');
+        const codes = [].concat(def?.code || 'kernel');
         for (const c of codes) materialsOf(s)[c] += Math.ceil(({ stock: 1, tuned: 2, custom: 3, zeroday: 5 }[it.rarity] || 1) * 5 / codes.length); // the old scrap values
       }
     } else {
@@ -3192,7 +3218,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
@@ -3250,9 +3276,6 @@ export function restore(raw) {
     // the server's level matches your best class; a pending intrusion is rerolled at the new levels.
     if (was < 14) {
       for (const h of Object.values(s.hackers || {})) { h.level = Math.min(LOADOUT.maxLevel, h.level <= 4 ? 2 * h.level - 1 : 2 * h.level); h.xp = 0; }
-      const best = Math.max(1, ...Object.values(s.hackers || {}).map((h) => h.level));
-      let xp = 0; for (let l = 1; l < best; l++) xp += SERVER.xpToNext(l);
-      s.serverXp = xp;
       for (const l of s.locations || []) l.level = Math.min(CONFIG.maxMobLevel, (l.level || 1) * 2);
       s.encounter = null;
       s.stash ||= []; s.gear ||= { server: {}, rigs: {} };
@@ -3260,7 +3283,6 @@ export function restore(raw) {
     }
     if (was < 15) migrateToProtocols(s);
     s.hackers ||= {};
-    s.serverXp ||= 0;
     s.stash ||= [];
     s.gear ||= { rigs: {} };
     s.recipes ||= [];
@@ -3324,6 +3346,7 @@ export function restore(raw) {
     if (was < 32) for (const it of s.stash || []) if (it.stats?.payload) it.stats.payload = Math.round(it.stats.payload * 7);
     retireClassTrees(s, was); // subclasses: each class's old tree moves to its default subclass
     invasionRestore(s, was); // v33: invasion kinds, bounties, signatures
+    progressionRestore(s, was); // v34: one level; services, the specialty and greys folded away
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts

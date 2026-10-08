@@ -1,25 +1,25 @@
-// The level-5 specialty, hot runs, the Listening Post, and couriers that carry a unique you're missing.
+// The level-5 kit talent (the specialty that was), hot runs, the Listening Post, and couriers that carry a unique you're missing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, rank, specOf, active, listenBoost, bossChance, UNIQUES } from './dist/combat.mjs';
+import { fresh, command, rank, kitTalent, active, listenBoost, bossChance, UNIQUES } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
 import { LOADOUT, HOT_RUN, ARCHETYPES } from './dist/data.mjs';
 import { deal, eventText } from './dist/events.mjs';
 import { BUILDINGS } from './dist/outpost.mjs';
 
-test('the specialty: at level 5 pick one of your class\'s two first-row talents, worth two ranks; free to change at home', () => {
+test('the kit talent: from level 5 every class has the first of its first-row talents at two ranks; there is no specialty to pick', () => {
   const s = fresh();
   s.hackers = { bastion: { level: 4, xp: 0 } }; s.loadout.archetype = 'bastion';
-  command(s, 'specialty patch-notes');
-  assert.equal(specOf(s), null, 'not before level 5');
+  assert.equal(kitTalent('bastion').id, 'patch-notes');
+  assert.equal(rank(s, 'patch-notes'), 0, 'not before level 5');
   s.hackers.bastion.level = 5;
-  assert.match(command(s, 'specialty').at(-1).message, /Patch Notes \(Patch heals \+6\) or Stateful Firewall \(Firewall absorbs \+10\)/);
-  command(s, 'specialty stateful-firewall');
-  assert.equal(rank(s, 'stateful-firewall'), LOADOUT.specRanks);
-  assert.equal(rank(s, 'patch-notes'), 0);
-  command(s, 'specialty patch-notes');
-  assert.equal(rank(s, 'patch-notes'), 2, 'changed');
-  for (const c of Object.keys(ARCHETYPES)) assert.equal(ARCHETYPES[c].spec.length, 2, c);
+  assert.equal(rank(s, 'patch-notes'), LOADOUT.specRanks);
+  assert.equal(rank(s, 'stateful-firewall'), 0);
+  assert.match(command(s, 'specialty stateful-firewall').at(-1).message, /no specialty to pick any more\. Patch Notes is part of the Bastion kit from level 5: Patch heals \+6/);
+  assert.equal(rank(s, 'stateful-firewall'), 0, 'nothing to change');
+  s.loadout.ranks = { warden: { 'patch-notes': 3 } }; s.hackers.bastion.level = 12;
+  assert.equal(rank(s, 'patch-notes'), 5, 'the kit\'s two ranks come on top of any you buy');
+  for (const c of Object.keys(ARCHETYPES)) assert.ok(kitTalent(c)?.id, c);
 });
 
 test('a loud run: connect <server> loud makes every fight tougher and every kill pay more', () => {

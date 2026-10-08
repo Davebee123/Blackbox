@@ -11,6 +11,7 @@ CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
+(await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A level-25 Breaker, so every Breaker skill is on the bar.
 const veteran = () => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 }, infiltrator: { level: 50, xp: 0 } }; return s; };
@@ -362,7 +363,7 @@ test('daemons are found; a slotted one acts on its own cooldown, on top of your 
   assert.equal(pulse.max - pulse.integrity, 10, 'then it cools down (4 cycles)');
   learnDaemon(s, '', 'sweeper');
   assert.equal(s.daemonsOwned.sweeper, 2, 'finding it again upgrades it');
-  assert.equal(daemonSlots(s), CONFIG.daemonSlots);
+  assert.equal(daemonSlots(s), CONFIG.daemonSlots + 2, 'a veteran: your server is your highest class level, past both daemon slot levels');
 });
 
 test('daemon slots: slot and unslot between fights; the slot count is the limit', async () => {

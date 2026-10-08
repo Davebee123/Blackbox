@@ -36,10 +36,11 @@ import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, sigsOf, STREAK, SCOUT } from './invasion.mjs';
-import { ports, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
+import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, defaultSub, skillOrder } from './data.mjs';
-import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, specOf, specOptions, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverProgress, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, portsUsed, portCount, cronDamage, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, cronDue, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
+import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, snapshotPct, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
+import { behindOf } from './progression.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -412,7 +413,7 @@ function youStanding(s) {
   if (e.encrypt > 0) add('Encrypted', 'hot', `−${e.encrypt} every cycle until the Encryptor breaks. Rollback wipes it; Lockdown stops more.`);
   if (gearStat(s, 'clock')) add('Clock Speed', 'you', `${Math.floor(e.clock || 0)}%. At 100%, every cooldown ticks one extra cycle.`);
   if (rootkitReady(s)) add('Rootkit', 'you', 'Ready: your first hit this fight goes through armor.');
-  if (e.mode === 'home' && serviceVersion(s, 'snapshot') && !e.once?.snapshot) add('Snapshot', 'you', `Once this fight, dropping below half restores ${serviceValue(s, 'snapshot')}%.`);
+  if (slottedDaemons(s).includes('snapshot') && !e.once?.snapshot) add('Snapshot', 'you', `Once this fight, dropping below half restores ${snapshotPct(s)}%.`);
   if (e.chits > 0) add('Armor', 'you', `${'◆'.repeat(e.chits)} The next attack on you does nothing, however big.`);
   if (e.shield > 0) add('Shield', 'you', `${e.shield}. Absorbs damage from attacks.`);
   if (e.helpers?.length) add('Helpers', 'daemon', `${e.helpers.length} running. They hit after you each cycle.`);
@@ -453,12 +454,10 @@ export function boardMarkup(s, selected, preview = null) {
         ? `<div class="intent mine auto" data-k="you@${e.cycle}" data-at="${esc(e.lastAttack.split(' ')[1] || '')}" title="Nothing typed: you Spike the last part you hit">${esc(e.lastAttack)} <small>auto</small></div>`
         : '<div class="intent mine idle">—</div>';
   const planCell = (i) => (e.plan[i] ? `<div class="intent mine plan" data-k="you@${e.cycle + 1 + i}" data-at="${esc(e.plan[i].target || '')}">${esc(e.plan[i].text)}</div>` : '');
-  // Cron Job (server Zero-day): when the server hits on its own.
-  const cron = fighting && e.mode === 'home' && serviceVersion(s, 'cron');
   // Your slotted daemons: each chip sits on the cycle it acts next.
   const dmn = fighting ? slottedDaemons(s).filter((id) => !DAEMONS[id].once) : [];
   const daemonCell = (c) => dmn.filter((id) => daemonNext(s, id) === e.cycle + c).map((id) => `<div class="intent daemon" data-k="daemon:${id}@${e.cycle + c}" title="${esc(DAEMONS[id].name)} v${daemonVersion(s, id)}: ${esc(daemonRule(s, id))}">${esc(DAEMONS[id].name.toLowerCase())}</div>`).join('');
-  const cronCell = (c) => daemonCell(c) + (cron && cronDue(e.cycle + c) ? `<div class="intent daemon cron" data-k="cron@${e.cycle + c}" title="Cron Job (service): your server hits the soonest attacker for ${cronDamage(s)}">cron ${cronDamage(s)}</div>` : '');
+  const cronCell = (c) => daemonCell(c);
   const you = () => fighting
     ? `<div class="brow byou${e.steps?.order?.[e.steps.next - 1] === 'you' ? ' acting' : ''}"><div class="bcell bname"><span class="you-top"><b>You</b></span></div><div class="bcell">${nowChip}${cronCell(0)}${quietCol(0) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div><div class="bcell">${planCell(0)}${cronCell(1)}</div><div class="bcell">${planCell(1)}${cronCell(2)}</div><div class="bcell">${cronCell(3)}</div></div>`
     : `<div class="brow byou"><div class="bcell bname"><b>You</b></div><div class="bcell span4 quiet">${e.phase === 'alert' ? 'not engaged' : 'over'}</div></div>`;
@@ -605,7 +604,7 @@ const leadStat = (it) => Object.keys(it?.stats || {})[0] || 'protocol';
 const itemTitle = (it) => [`${RARITIES[it.rarity]?.name || ''} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
 const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemTitle(it))}">${glyph(leadStat(it), 'badge')}${esc(itemLabel(it))}</b>`;
 // A unique's effect (or a found Zero-day's), under its stats.
-const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : it.unique && effectLine(it) ? `<small class="zd">${esc(effectLine(it))}</small>` : '');
+const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : (it.unique || it.rule) && effectLine(it) ? `<small class="zd${it.rule ? ' rule' : ''}">${esc(effectLine(it))}</small>` : '');
 const statsHtml = (it) => `<small>${Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}">${esc(statLine({ [k]: v }))}</span>`).join(' · ')}</small>`;
 
 // The hover card for an item (app.js shows it, and spins its model): a rotating ASCII wireframe
@@ -619,7 +618,7 @@ export function itemTipMarkup(s, ref) {
   const where = !f && loadedOn(s, it.id) ? `<span class="tag dim">on ${esc(ARCHETYPES[loadedOn(s, it.id)].name)}</span>` : '';
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
-  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
+  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
 }
 // Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
 function swapCompare(s, it) {
@@ -629,7 +628,7 @@ function swapCompare(s, it) {
   const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
   const rows = keys.map((k) => [k, (it.stats[k] || 0) - (out?.stats?.[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
     .map(([k, d]) => `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmtStat(k, Math.abs(d))} ${esc(STATS[k].name)}</span>`);
-  const fx = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : '');
+  const fx = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
   if (fx(out) && fx(out) !== fx(it)) rows.push(`<span class="down">▼ ${esc(fx(out))}</span>`);
   return `<div class="ptip-vs"><small>${out ? `vs ${esc(itemLabel(out))}` : 'into an empty slot'}</small>${rows.length ? rows.join('') : '<span class="dim">no change</span>'}</div>`;
 }
@@ -639,7 +638,7 @@ export const stashUi = { filter: 'all' };
 // One item as an inventory row: rarity edge (CSS), slot glyph, name and level, then its stats in one line.
 const invStats = (it) => Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}"><b>${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
 function invBody(it, extra = '') {
-  const fx = it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique ? effectLine(it) : '';
+  const fx = it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it) : '';
   return `<span class="inv-icon" aria-hidden="true">${glyph(leadStat(it))}</span><span class="inv-main" data-ptip="${esc(it.id || '')}"><span class="inv-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${extra}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}</span>`;
 }
 
@@ -790,7 +789,7 @@ function costRows(s, cost, cls = '') {
     if (salvageTotal(cost.salvage)) row('salvage', 'Salvage (any)', s.salvage.length, salvageTotal(cost.salvage));
     for (const x of cost.salvage.need) row('crate', x.label, x.names.reduce((n, k) => n + (st[k] || 0), 0), x.n);
   }
-  if (cost.level > 1) row('server', 'Server level', serverLevel(s), cost.level);
+  if (cost.level > 1) row('server', 'Level (your highest class)', serverLevel(s), cost.level);
   return `<ul class="cd-cost${cls ? ' ' + cls : ''}">${rows.join('')}</ul>`;
 }
 export function craftMarkup(s, ui = {}) {
@@ -815,15 +814,8 @@ export const fmtTime = (ms) => (ms >= 3600000 ? `${Math.floor(Math.ceil(ms / 600
 export function serviceEffect(s, id, v) {
   const d = SERVICES[id], x = d.values[v - 1], val = serviceValue(s, id, v);
   switch (d.stat) {
-    case 'integrity': return `+${val} max Integrity (${x}%)`;
-    case 'shield': return `home fights start with a ${val} shield (${x}% of max)`;
-    case 'regen': return `+${val} Regen`;
-    case 'countermeasures': return `whatever hits your server takes ${val}`;
-    case 'cron': return `every 3rd cycle, hits the soonest attacker for ${Math.round(8 * power(serverLevel(s)) * x)}`;
-    case 'snapshot': return `once per home fight, below half: restores ${x}%`;
     case 'compileDiscount': return `compiling costs ${x}% less`;
-    case 'firewall': return `${x} filter ${x === 1 ? 'slot' : 'slots'} on your firewall`;
-    case 'tarpit': return `invasions travel ${x}% slower`;
+    case 'routeBoost': return `route files trace ${x}% further`;
     case 'bandwidth': return `+${x} harvester ${x === 1 ? 'slot' : 'slots'}`;
     case 'scheduler': return `collects every outpost each ${x} minutes`;
     default: return `+${x}% ${STATS[d.stat].name}`;
@@ -1006,7 +998,9 @@ function rewardChips(s, c) {
     r.relay && chip('relay', `×${r.relay}`, 'A relay'), r.blueprint && chip('blueprint', '+1', 'A blueprint'), r.daemon && chip('daemon', '+1', 'A daemon'), r.item && chip('item', '+1', 'A protocol')].filter(Boolean).join('');
 }
 // A filter's stats as chips (an icon and a number each); dim while it isn't in a slot.
-const FILTER_ICON = { strength: 'firewall', worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel', frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike', evasion: 'evasion', sanitize: 'sanitize', reflect: 'honeypot' };
+const FILTER_ICON = { strength: 'firewall', worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel', frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike', evasion: 'evasion', sanitize: 'sanitize', reflect: 'honeypot', reduction: 'reduction', regen: 'regen', shield: 'shield', countermeasures: 'countermeasures' };
+// Behind (progression.mjs): a tag by your XP bar while kills pay +50% on a level running long.
+const behindTag = (s, arch) => { const b = behindOf(s, arch); if (!b) return ''; return b.on ? `<span class="tag warn behind" title="This level is past ${Math.round(b.after / 60000)} minutes of play (its target is ${Math.round(b.target / 60000)}). Kills pay +50% XP until the next level.">Behind · kills +50% XP</span>` : ''; };
 function filterChips(s, f, on) {
   const lv = fwLevel(s);
   return Object.entries(f.stats).map(([k, v]) => {
@@ -1076,7 +1070,6 @@ function archMarkup(s) {
 }
 export function serverMarkup(s, now = Date.now()) {
   const srv = s.server, m = materialsOf(s), busy = active(s);
-  const used = portsUsed(s), total = portCount(s);
   const mats = Object.keys(MATERIALS).map((k) => `<div class="stat"><span>${glyph(k)}${esc(MATERIALS[k].name)}</span><strong>${m[k] || 0}</strong></div>`).join('') + `<div class="stat" title="Any salvage: deconstruct items for more."><span>Salvage</span><strong>${s.salvage.length}</strong></div>`;
   const job = s.install;
   const queue = job
@@ -1093,19 +1086,18 @@ export function serverMarkup(s, now = Date.now()) {
   };
   const running = Object.keys(s.services || {}).map((id) => `<li class="svc on"><div class="svc-main"><div class="gitem-head"><b class="svc-name">${glyph(id, 'badge')}${esc(SERVICES[id].name)}</b><span class="tag you">v${serviceVersion(s, id)}</span></div>
       <small>${esc(serviceEffect(s, id, serviceVersion(s, id)))}</small><div class="svc-next">${next(id)}</div></div>
-      <div class="gitem-actions"><button type="button" class="btn small" data-command="uninstall ${id}" data-confirm="Sure? Half the code back" ${busy || s.install?.id === id ? 'disabled' : ''} title="Frees the port; half the code comes back">Uninstall</button></div></li>`).join('');
+      <div class="gitem-actions"><button type="button" class="btn small" data-command="uninstall ${id}" data-confirm="Sure? Half the code back" ${busy || s.install?.id === id ? 'disabled' : ''} title="Half the code comes back">Uninstall</button></div></li>`).join('');
   // Only services you have the blueprint (or source) for; the rest are still out there.
   const free = Object.keys(SERVICES).filter((id) => !serviceVersion(s, id) && knows(s, id) && s.net?.sabotage?.id !== id);
-  const unknown = BLUEPRINTS.filter((id) => SERVICES[id] && !knows(s, id)).length + Object.keys(SERVICES).filter((id) => SERVICES[id].special && !knows(s, id)).length;
+  const unknown = BLUEPRINTS.filter((id) => SERVICES[id] && !knows(s, id)).length;
   const available = free.map((id) => {
     const d = SERVICES[id];
-    const locked = d.special && !(s.recipes || []).includes(id);
-    return `<li class="svc ${locked ? 'locked' : ''}"><div class="svc-main"><div class="gitem-head"><b class="svc-name">${glyph(id, 'badge')}${esc(d.name)}</b>${d.special ? `<span class="tag" title="${esc(d.about)}">special</span>` : ''}${s.install?.id === id ? '<span class="tag you">installing</span>' : ''}</div>
-      ${locked ? `<span class="tag dim" title="Find ${id}.src in a vault, layer 2 or deeper">needs source</span>` : s.install?.id === id ? '' : `<div class="svc-next">${next(id)}</div>`}</div></li>`;
+    return `<li class="svc"><div class="svc-main"><div class="gitem-head"><b class="svc-name" title="${esc(d.about)}">${glyph(id, 'badge')}${esc(d.name)}</b>${s.install?.id === id ? '<span class="tag you">installing</span>' : ''}</div>
+      ${s.install?.id === id ? '' : `<div class="svc-next">${next(id)}</div>`}</div></li>`;
   }).join('');
   return `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">
-    <section class="card server-head"><h2>Server · Lv ${serverLevel(s)}</h2><h1>${slotPips('node', used, total, 'Service slots')}</h1>
-      ${(() => { const p = serverProgress(s); return p.next ? `<div class="lvl-row"><span class="lvl-bar"><span style="width:${(p.xp / p.next) * 100}%"></span></span><small>${p.xp}/${p.next} XP</small></div><p class="op-hint">Your server levels up from all the XP you earn. ${serverNext(p.level)}</p>` : ''; })()}
+    <section class="card server-head"><h2>Server</h2><h1 title="Your server's level is your highest class level">Lv ${serverLevel(s)} <span class="tag dim">${esc(ARCHETYPES[serverClass(s)]?.name || '')}</span></h1>
+      ${serverNext(serverLevel(s)) ? `<p class="svc-line next-gain" title="The next level that adds something to your server">${esc(serverNext(serverLevel(s)))}</p>` : ''}
       ${matGrid(s)}</section>
     ${wallMarkup(s, now)}
     ${archMarkup(s)}
@@ -1555,7 +1547,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
     ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'skills' ? `
     <div class="loadout-grid">
       <section class="card skills-card">
-        <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>` : '<span>max level</span>'}</div></div>
+        <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>${behindTag(s, id)}` : '<span>max level</span>'}</div></div>
           ${id === equippedArch ? '<span class="tag you">in use</span>' : busy ? '' : btn(`archetype ${id}`, `Use ${a.name}`, true)}</div>
         <p class="status-line" title="${esc(st.rule)}"><span class="status-label">Applies</span> <span class="tag stag status">${esc(st.name)}</span></p>
         <ol class="keybar" aria-label="Your bar">${bar}</ol>
@@ -1566,7 +1558,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
         <div class="tpoints" title="A talent point every ${LOADOUT.talentEvery} levels from level ${LOADOUT.talentFrom}."><span class="tbar"><span style="width:${Math.min(100, (spent / TREE_MAX) * 100)}%"></span></span><span><b>${Math.max(0, points - spent)} free</b> · ${spent}/${TREE_MAX} spent · ${points} earned</span></div></div>
         <ol class="ttree">
           <li class="troot"><span class="tag">passive</span><b>${esc(a.passive.name)}</b><span class="trule">${esc(a.passive.rule)}</span></li>
-          <li class="troot tspec${lvl < LOADOUT.specFrom ? ' locked' : ''}"><span class="tag">Lv ${LOADOUT.specFrom}</span><b>Specialty</b><span class="trule">Pick one. Free to change at home.</span><span class="tspec-opts">${specOptions(id).map((o) => { const on = specOf(s, id) === o.id; return `<button type="button" class="act${on ? ' on' : ' dim'}" ${lvl < LOADOUT.specFrom || (busy && id === equippedArch) ? 'disabled' : `data-run="specialty ${id} ${o.id}"`} aria-pressed="${on}" title="${esc(specRule(o))}">${esc(o.name)}<small>${esc(specRule(o).replace(/\.$/, ''))}</small></button>`; }).join('')}</span></li>
+          <li class="troot tspec${lvl < LOADOUT.specFrom ? ' locked' : ''}" title="Part of the ${esc(a.name)} kit from level ${LOADOUT.specFrom}: ${LOADOUT.specRanks} ranks of ${esc(kitTalent(id).name)}"><span class="tag">Lv ${LOADOUT.specFrom}</span><b>${esc(kitTalent(id).name)}</b><span class="trule">${esc(specRule(kitTalent(id)))}</span></li>
           <li class="troot tsub${lvl < SUBCLASS.from ? ' locked' : ''}"><span class="tag">${lvl < SUBCLASS.from ? `Lv ${SUBCLASS.from}` : 'subclass'}</span><b>Subclass</b><span class="trule">${lvl < SUBCLASS.from ? 'Each has its own skills, edge and talent tree.' : subPicked(s, id) ? 'Switch any time at home. Each keeps its own bar and tree.' : `Pick one. Until you do, you play ${esc(SUBS[activeSub].name)}.`}</span>
             <span class="tsub-opts">${Object.values(a.subs).map((x) => { const on = x.id === activeSub && subPicked(s, id), look = x.id === shown; const can = lvl >= SUBCLASS.from && x.id !== (subPicked(s, id) ? activeSub : null) && !(busy && subPicked(s, id)) && !active(s);
               return `<span class="tsub-card${on ? ' on' : ''}${look ? ' look' : ''}"><button type="button" class="tsub-look" data-arch="${id}/${x.id}" aria-pressed="${look}" title="Look at its skills and tree"><b>${esc(x.name)}</b><small>${x.role.map(esc).join(' · ')}</small><span>${esc(x.idea)}</span></button>${on ? '<span class="tag you">yours</span>' : `<button type="button" class="btn small" ${can ? `data-command="subclass ${id} ${x.id}"` : 'disabled'} title="${lvl < SUBCLASS.from ? `At level ${SUBCLASS.from}` : busy ? 'At home' : ''}">${subPicked(s, id) ? 'Switch' : 'Pick'}</button>`}</span>`; }).join('')}</span></li>
@@ -2026,11 +2018,13 @@ export function mapSelection(s, sel = 'server', view = 'mine') {
   return mapSide(s, node?.id || 'server', node);
 }
 
-// What reaching a server level adds, in words: "a service slot", "an outpost slot"…
+// What reaching a server level adds, in words: "a daemon slot", "an outpost slot"… Your server's level is
+// your highest class level, so these come with a level-up (its banner lists them: levelUpLines).
 export function serverGains(lvl) {
   const out = [];
-  if (ports(lvl) > ports(lvl - 1)) out.push('a service slot');
   if (SERVER.daemonSlotsAt.includes(lvl)) out.push('a daemon slot');
+  const v = VERSIONS.find((x) => x.needs === lvl && x.v > 1);
+  if (v) out.push(`service v${v.v}`);
   if (OUTPOST.bandwidth(lvl) > OUTPOST.bandwidth(lvl - 1)) out.push('an outpost slot');
   if (lvl === ARCH_LEVEL) out.push('a choice of architecture');
   return out;
@@ -2038,16 +2032,17 @@ export function serverGains(lvl) {
 const andList = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}` : xs[0] || '');
 // The next server level that adds something, and what.
 function serverNext(lvl) {
-  for (let l = lvl + 1; l <= SERVER.maxLevel; l++) { const g = serverGains(l); if (g.length) return `Level ${l} adds ${andList(g)}.`; }
+  for (let l = lvl + 1; l <= SERVER.maxLevel; l++) { const g = serverGains(l); if (g.length) return `Lv ${l}: ${andList(g)}`; }
   return '';
 }
-export const serverLevelText = (lvl, max) => `Your server levels up from all the XP you earn. Its max Integrity is now ${max}.${serverGains(lvl).length ? ` This level adds ${andList(serverGains(lvl))}.` : ''}`;
-
-// Server level: shared by everyone on the server. Defending it and banking loot raise it.
-function serverCard(s) {
-  const p = serverProgress(s);
-  const opens = p.next && SERVER.daemonSlotsAt.includes(p.level + 1) ? ['a daemon slot'] : [];
-  return `<div class="lvl-row" title="The server gets every point of XP your classes earn"><span class="lvl-badge">Server Lv ${p.level}</span>${p.next ? `<span class="lvl-bar"><span style="width:${(p.xp / p.next) * 100}%"></span></span><small>${p.xp}/${p.next} XP</small>` : '<small>max level</small>'}</div>`;
+// The level-up banner's lines (app.js levelUp): what the level brings on every track, then a ghost line
+// for the next level that brings something.
+export function levelUpLines(e) {
+  const out = [];
+  if (e.gains?.length) out.push({ text: e.gains.map((g) => g[0].toUpperCase() + g.slice(1)).join(' · ') });
+  out.push({ text: `Power +4%${e.server ? ` · Server Integrity ${e.server}` : ''}` });
+  if (e.next) out.push({ text: `Lv ${e.next.level}: ${e.next.gains.join(', ')}`, ghost: true });
+  return out;
 }
 
 // An event on a server (events.mjs): a mark on the map node, and what's happening on its card.
@@ -2107,12 +2102,11 @@ function zoneCard(s) {
 }
 // The server card's lines: icon and name, then what it is (a bar or pips), then its number.
 const srvLine = (icon, name, body, value, tip = '') => `<div class="srv-line"${tip ? ` title="${esc(tip)}"` : ''}><span class="srv-k">${glyph(icon)}${esc(name)}</span><span class="srv-v">${body}</span><b class="srv-n">${value}</b></div>`;
-// The service slots, left to right: what runs in each (icon and version), what's installing, then free slots.
+// The services, left to right: what runs (icon and version), then what's installing.
 function svcStrip(s) {
-  const running = Object.entries(s.services || {}).map(([id, v]) => `<span class="svc-tile on" title="${esc(SERVICES[id].name)} v${v}">${glyph(id)}<small>v${v}</small></span>`);
+  const running = Object.entries(s.services || {}).filter(([id]) => SERVICES[id]).map(([id, v]) => `<span class="svc-tile on" title="${esc(SERVICES[id].name)} v${v}">${glyph(id)}<small>v${v}</small></span>`);
   const inst = s.install && !serviceVersion(s, s.install.id) ? [`<span class="svc-tile busy" title="${esc(SERVICES[s.install.id].name)}: installing">${glyph(s.install.id)}<small>…</small></span>`] : [];
-  const free = Array.from({ length: Math.max(0, portCount(s) - running.length - inst.length) }, () => '<span class="svc-tile free" title="Free slot"></span>');
-  return [...running, ...inst, ...free].join('');
+  return [...running, ...inst].join('');
 }
 function mapSide(s, sel, node) {
   const e = gateOf(s), srv = s.server;
@@ -2134,12 +2128,11 @@ function mapSide(s, sel, node) {
     const occ = s.occupation && !s.occupation.occupied.cleared ? mapSide(s, 'home', { kind: 'location', loc: s.occupation }) : '';
     return `${runCard}${alertCard()}${occ}
       <section class="card srv-card"><h2>Your server</h2>
-        ${(() => { const sp = serverProgress(s);
-          return srvLine('integrity', 'Server', `<span class="srv-bar xp"><span style="width:${sp.next ? (sp.xp / sp.next) * 100 : 100}%"></span></span>`, `<small>Lv</small> ${sp.level}`, `Server level ${sp.level}${sp.next ? `: ${sp.xp}/${sp.next} XP` : ' (max)'}`); })()}
+        ${srvLine('integrity', 'Server', `<span class="tag dim">${esc(ARCHETYPES[serverClass(s)]?.name || '')}</span>`, `<small>Lv</small> ${serverLevel(s)}`, `Your server's level is your highest class level.${serverNext(serverLevel(s)) ? ` ${serverNext(serverLevel(s))}.` : ''}`)}
         ${srvLine('integrity', 'Integrity', `<span class="srv-bar hp ${srv.integrity / srv.max <= 0.3 ? 'low' : srv.integrity / srv.max <= 0.6 ? 'mid' : ''}"><span style="width:${(srv.integrity / srv.max) * 100}%"></span></span>`, `${srv.integrity}<small>/${srv.max}</small>`)}
         ${s.degraded ? srvLine('firewall', 'Firewall', '<span class="tag warn">down</span>', '', 'Your wall is down while the server is degraded') : wallRow(s, 'firewall', 'Firewall', wallBands(s))}
         ${degradedMarkup(s)}${awayLine(s)}
-        <div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${portsUsed(s)}/${portCount(s)}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>
+        ${Object.keys(s.services || {}).length || s.install ? `<div class="srv-svc"><div class="srv-svc-head"><span>${glyph('node')}Services</span><small>${Object.keys(s.services || {}).length}</small></div><div class="svc-strip">${svcStrip(s)}</div></div>` : ''}
         ${!MEMORY.on ? '' : srvLine('memory', 'Memory', '', `${Math.max(0, memoryCap(s) - liveCount(s))}<small>/${memoryCap(s)} free</small>`, `${liveCount(s)} servers on your network`)}
         ${srvLine('router', 'Bandwidth', '', `${bandwidthUsed(s)}<small>/${bandwidth(s)}</small>`, 'What your buildings take across your network, of how much you have. It grows with your server level.')}
         ${srvLine('salvage', 'Salvage', '', `${s.salvage.length}`)}
@@ -2375,6 +2368,7 @@ export function spoilsOf(events) {
     else if (e.type === 'hot-kill') add('Hot strain', `+${e.amount} XP`, 'fast', { text: `Hot strain +${e.amount} XP` });
     else if (e.type === 'xp' && / decoded$/.test(e.message?.split(' · ')[1]?.replace(/\.$/, '') || '')) add(`Decoded: ${e.message.split(' · ')[1].replace(/ decoded\.?$/, '')}`, `+${e.amount} XP`, 'fast', { text: `${e.message.split(' · ')[1]} +${e.amount} XP` });
     else if (e.type === 'rested') add('Rested', `+${e.amount} XP`, 'fast', { text: `Rested +${e.amount} XP` });
+    else if (e.type === 'behind') add('Behind', `+${e.amount} XP`, 'fast', { text: `Behind +${e.amount} XP`, sub: 'this level is running long' });
     else if (e.type === 'fresh') add(`Fresh: ${XP_KINDS[e.kind] || ''}`, `+${e.amount} XP`, 'fast', { text: `Fresh ${XP_KINDS[e.kind] || ''} +${e.amount} XP` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });
     else if (e.type === 'server-level') add(`Server level ${e.level}`, '', 'level');

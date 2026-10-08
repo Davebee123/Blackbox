@@ -13,6 +13,7 @@ CONFIG.misses = false; // and no misses
 CONFIG.edges = false; // each class's edge (Overkill, Grudge, Weak Spot, Last Gasp) has its own test
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
+(await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A class at a level (default 9: bar full with its first five).
 export const start = (cls, level = 22, id = 'cryptjack', seed = 7) => {
@@ -213,7 +214,7 @@ test('burns and helpers break a chit per tick: small hits are how you strip armo
 // ---------- Operator ----------
 test('Operator: +1 daemon slot; Deploy helper; Hook adds 6 to every hit, helpers included; Kill Switch cashes in', () => {
   const s = noArmor(quiet(start('operator')));
-  assert.equal(daemonSlots(s), CONFIG.daemonSlots + 1);
+  assert.equal(daemonSlots(s), CONFIG.daemonSlots + 2 + 1, "a level-38 server (your highest class level) has both its daemon slots, and the Operator one more");
   big(s, 'pulse');
   act(s, 'hook pulse');
   act(s, 'deploy pulse');

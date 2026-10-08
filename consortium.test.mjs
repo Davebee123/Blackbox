@@ -254,8 +254,7 @@ test('away, a strong wall holds: invaders are stopped and nothing crashes', () =
     const s = world();
     command(s, 'developer location ransomware');
     play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
-    s.services = { ...(s.services || {}), firewall: 3 };
-    s.serverXp = 1e7; // a high-level server
+    s.hackers = { breaker: { level: 50, xp: 0 } }; // a high-level server (your highest class level)
     const T0 = 1_800_000_000_000;
     tickNetwork(s, T0);
     tickNetwork(s, T0 + 8 * 3600000);

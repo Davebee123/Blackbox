@@ -10,6 +10,7 @@ import OPERATOR from './dist/classes/operator.mjs';
 const REAL = { baseCrit: CONFIG.baseCrit, enemyCrit: CONFIG.enemyCrit, partToughness: CONFIG.partToughness, enemyRamp: CONFIG.enemyRamp, misses: CONFIG.misses, edges: CONFIG.edges, powerPerLevel: CONFIG.powerPerLevel, gap: CONFIG.gap };
 // Exact numbers: no crits, no misses, base part numbers, flat power, no level gap; edges off unless a test turns one on.
 Object.assign(CONFIG, { baseCrit: 0, enemyCrit: 0, partToughness: 1, enemyRamp: 0, misses: false, edges: false, powerPerLevel: 0, gap: { dealt: 0, taken: 0, floor: 1, below: 0 } });
+(await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A level-50 Operator in a quiet cryptjack fight (Pulse and Encryptor), with the dev kit: every skill
 // of the class, these talents, these ranks, and this subclass.

@@ -17,6 +17,7 @@ CONFIG.misses = false;
 CONFIG.edges = false;
 CONFIG.powerPerLevel = 0;
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
+(await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A Breaker of a subclass, with every class skill it has by level 50 (the dev kit) and these talents and ranks.
 const start = (sub, { talents = [], ranks = {}, level = 50 } = {}) => {

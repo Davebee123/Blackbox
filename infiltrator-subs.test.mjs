@@ -17,6 +17,7 @@ CONFIG.misses = false;
 CONFIG.edges = false;
 CONFIG.powerPerLevel = 0;
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
+(await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A level-50 Infiltrator in a subclass, with these talents (dev kit: every class skill) and ranks.
 const start = (sub, { talents = [], ranks = {}, id = 'cryptjack', seed = 7 } = {}) => {

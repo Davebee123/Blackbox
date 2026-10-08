@@ -203,10 +203,8 @@ test('crash: a breach chips you to zero, the server reboots at half and runs deg
   assert.equal(s.server.integrity, 50, 'nothing chips while degraded');
   const left = degradedLeft(s, s.clock);
   assert.ok(left > 4.5 * MIN && left < 5.5 * MIN, 'about 5 of the 10 minutes left');
-  // Server XP stops; your own XP doesn't.
-  const sxp = s.serverXp;
+  // Your XP doesn't stop (the server has none of its own: its level is your highest class level).
   play(s, 'developer level 3');
-  assert.equal(s.serverXp, sxp, 'the rebooting server earns nothing');
   assert.equal(s.hackers.breaker.level, 3);
   // The real clock runs out even with the game closed.
   s.clock += 10 * MIN;
@@ -234,8 +232,8 @@ test('Degraded mode pauses the install queue', () => {
   s.materials.worm = 20;
   s.server.credits = 500;
   command(s, 'developer salvage 10');
-  s.recipes.push('raid');
-  command(s, 'install raid', 0);
+  s.recipes.push('router');
+  command(s, 'install router', 0);
   assert.equal(s.install.doneAt, 15 * MIN);
   play(s, 'developer crash');
   wait(s, 5000); // the clock starts
@@ -245,7 +243,7 @@ test('Degraded mode pauses the install queue', () => {
   tickServices(s, 16 * MIN + 5000);
   assert.ok(s.install, 'not done at the old time');
   tickServices(s, 25 * MIN + 5000);
-  assert.equal(s.services.raid, 1);
+  assert.equal(s.services.router, 1);
 });
 
 test('losing a home fight reboots into Degraded mode too; losing to an invader leaves it at the wall', () => {

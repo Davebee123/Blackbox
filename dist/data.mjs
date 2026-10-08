@@ -65,7 +65,7 @@ export const CONFIG = {
   // it a same-level fight cost blues 30% at 10 and only 22–30% at 18–30. Bosses and elites keep their own
   // numbers (crew content is tuned for crews).
   runLate: [[9, 1], [10, 1.1], [18, 1.12], [30, 1.35]],
-  xpEarly: { bonus: 0.15, full: 10, gone: 15 }, // levels up to 10 take 15% more XP, easing back to normal by 15
+  xpEarly: { bonus: 0, full: 10, gone: 15 }, // the early bump is gone (it was 15% more XP to level 10, easing back by 15): decoding pays less instead
   // A broken part leaves salvage behind only sometimes.
   salvageChance: 0.35,
   maxMobLevel: 60,
@@ -98,7 +98,7 @@ export const CONFIG = {
   surprise: { width: 0.15, injectStacks: 2, tagCycles: 6, tagged: 1.75, keepalive: 4 },
   // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
   slip: { perRun: 1, leakedCreds: 3 },
-  daemonSlots: 1, // +1 at server levels 10 and 20; Operators +1
+  daemonSlots: 1, // +1 at server levels 10 and 20 (your highest class level); Operators +1
   // Runs
   depthThreat: 3, // guard threat added per depth below the first
   depthLoot: 0.4, // caches hold 40% more credits per layer down
@@ -225,6 +225,9 @@ export const DAEMONS = {
   mirror: { name: 'Mirror', cooldown: 3, amount: 12, rule: 'Hits the part you last hit for 12.' },
   watchman: { name: 'Watchman', once: true, amount: 20, rule: 'Once per fight: delays an attack of 20 or more by a cycle (v2: two cycles; v3: twice a fight).' },
   canary: { name: 'Canary', once: true, amount: 15, rule: 'Once per fight: shields you for 15 the first time you drop below half.' },
+  // Cron Job and Snapshot were home-fight services; as daemons they fight wherever you do.
+  cron: { name: 'Cron Job', cooldown: 3, amount: 8, rule: 'Every 3 cycles, hits the part winding up a tell for 8 (or the part whose attack lands soonest).' },
+  snapshot: { name: 'Snapshot', once: true, pct: 8, rule: 'Once per fight: the first time a hit drops you below half, restores 8% of your max (v2: 12%, v3: 16%).' },
 };
 export const DAEMON_VERSIONS = [1, 1.5, 2];
 export const DAEMON_DROPS = { vault: 0.1, guard: 0.01, home: 0.0025 };
@@ -644,7 +647,7 @@ export const ENRAGE = { dmg: 1.25, warn: 3 };
 export const HOT_RUN = { hp: 1.25, dmg: 1.2, xp: 1.25, rolls: 1 };
 // Each boss has two uniques of its own (content/items.mjs, source kind 'boss'): this chance a kill, and
 // this much more for every kill that gave none (shown in the log and the collection).
-export const BOSS_LOOT = { chance: 0.3, pity: 0.1 };
+export const BOSS_LOOT = { chance: 0.3, pity: 0.1, once: ['resident'] }; // once: bosses that drop each of their own uniques only once (combat.mjs bossUnique)
 export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // ---------- solo tells (tells.mjs) ----------
@@ -839,18 +842,15 @@ export function createLocation(family, seed, depth = 1) {
   };
 }
 
-// The server levels from everything the crew does for it: defending it and banking loot.
-// Its level opens daemon slots, sets how tough intrusions are, and when service versions open.
-// The server levels with everyone: it gets every bit of XP any hacker earns, plus a little for
-// banked loot. Its level sets its base Integrity and opens daemon slots.
+// Your server's level is your highest class level (combat.mjs serverLevel): it has no XP of its own.
+// It sets its base Integrity and opens daemon slots, service versions, outpost bandwidth, buildings
+// and architecture.
 // Each layer of the net has a level band: servers found there sit inside it (EverQuest/WoW zone ranges).
 export const BANDS = [[1, 9], [7, 18], [16, 28], [26, 40], [38, 50]];
 // Your layer: the deepest one whose band you've reached.
 export const layerFor = (level) => BANDS.reduce((d, [lo], i) => (level >= lo ? i + 1 : d), 1);
 export const SERVER = {
   maxLevel: 50,
-  xpToNext: (level) => xpToNext(level),
-  xp: { item: 10, creditsPer: 10 }, // banking: 10 per item, 1 per 10 credits
   // Enemies have a level. Home intrusions come in at your level; a location keeps the level
   // it was found at: your level on any layer whose band holds it, otherwise 2 more per layer
   // deeper, kept inside the layer's band (a deeper layer sits ahead of you, a shallower one behind).
@@ -874,7 +874,10 @@ export const SERVER = {
 // Each class levels on its own, from 1 to 50, a long WoW-style climb. Every level adds 4%
 // power; skills unlock along the way (the bar is full at 18, the last skill at 38); a talent
 // point every other level from 10 (21 by level 50, a full tree).
-export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEvery: 2, trialUntil: 5, specFrom: 5, specRanks: 2 }; // spec: at level 5 pick one of your class's two first-row talents, worth specRanks free ranks // trialUntil: until a class reaches it, switching carries your level over
+// kit: from level 5 (specFrom) one of a class's two first-row talents (ARCHETYPES[cls].spec) is part of its base kit, specRanks
+// free ranks: the level-5 specialty pick is gone. The Infiltrator's is Recon: two ranks of Heap Spray took a blue Payload from
+// 34% to 21% of its Signal a fight at level 10 (docs/progression.md), far past the few percent the others add.
+export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEvery: 2, trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
@@ -891,6 +894,10 @@ export const xpToNext = (level) => Math.round(killXp(level) * (5 + 1.2 * level) 
 export const xpScale = (gap) => (gap >= 0 ? 1 + 0.05 * Math.min(gap, 5) : Math.max(0, 1 + 0.1 * gap));
 // Other XP, as shares of a kill at that level.
 export const XP = { home: 1, guard: 0.8, vault: 1.5, newLocation: 0.7 };
+// Catch-up (Behind): each level has a target of base + per × level minutes of active play. Once a level
+// runs past `after` times its target, kills pay +bonus until the level ends. Only time you played counts.
+export const CATCHUP = { base: 6, per: 2.2, after: 1.25, bonus: 0.5 };
+export const levelTarget = (level) => (CATCHUP.base + CATCHUP.per * Math.max(1, level)) * 60000;
 // The talent tree, top to bottom: filler rows (ranked, up to 3 each) between the
 // three choice tiers. A row opens once you've spent `need` points in the rows above it.
 export const TREE = [

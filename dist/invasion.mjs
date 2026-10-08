@@ -309,9 +309,9 @@ function unit(s, loc, level, mutation) {
 }
 const clampLv = (L) => Math.max(1, Math.min(CONFIG.maxMobLevel, L));
 const tame = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && !l.zone);
-// A service a saboteur can shut off: the best one you run (never the Filter Bay: that's the wall itself).
+// A service a saboteur can shut off: the best one you run.
 function serviceTarget(s) {
-  const ids = Object.keys(s.services || {}).filter((id) => id !== 'firewall' && SERVICES[id] && s.services[id] > 0);
+  const ids = Object.keys(s.services || {}).filter((id) => SERVICES[id] && s.services[id] > 0);
   if (!ids.length) return null;
   const top = Math.max(...ids.map((id) => s.services[id])), best = ids.filter((id) => s.services[id] === top);
   return best[Math.floor(rand(s) * best.length)];

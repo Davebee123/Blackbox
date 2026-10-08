@@ -102,6 +102,7 @@ export const FX_WHEN = {
   struck: 'When an attack lands on you',
   always: 'Always (a stat bonus)',
   disconnect: 'When your Signal hits 0 on a run',
+  answer: 'When you call off a tell',
   custom: 'Custom rule',
 };
 export const FX_IF = {
@@ -117,6 +118,10 @@ export const FX_IF = {
   'below-half': "you're below half health",
   'below-20': "you're below 20% health",
   crit: 'it was a crit',
+  'target-telling': 'the target is winding up a tell',
+  'target-signature': "the target is the virus's signature part",
+  'any-tell': 'a part is winding up a tell',
+  charged: 'the hit is a tell landing',
 };
 // What each block does, which "when" it fits, and what it needs (value, stat).
 export const FX_DO = {
@@ -125,9 +130,13 @@ export const FX_DO = {
   'crit%': { when: ['hit'], label: '+X% crit chance', value: true },
   'force-crit': { when: ['start'], label: 'your first hit is a crit' },
   chit: { when: ['start'], label: 'start with a ◆' },
-  refund: { when: ['break'], label: 'all your cooldowns drop by X', value: true },
-  'refund-skill': { when: ['break'], label: "that skill's cooldown comes back" },
-  heal: { when: ['break', 'crit'], label: 'heal X', value: true },
+  refund: { when: ['break', 'answer'], label: 'all your cooldowns drop by X', value: true },
+  'refund-skill': { when: ['break', 'crit'], label: "that skill's cooldown comes back" },
+  heal: { when: ['break', 'crit', 'answer'], label: 'heal X', value: true },
+  shield: { when: ['start', 'answer'], label: 'a shield of X goes up', value: true },
+  'break-hit': { when: ['break'], label: 'the part winding up a tell (or the next to attack) takes X', value: true },
+  shatter: { when: ['hit'], label: 'a hit on a part wearing ◆ breaks two of them' },
+  'tell-hits': { when: ['always'], label: 'each command you land counts twice toward calling off a tell' },
   'leech-x': { when: ['crit'], label: 'Leech heals X times as much', value: true },
   halve: { when: ['struck'], label: 'the hit deals half' },
   'crit-normal': { when: ['struck'], label: 'a crit against you lands as a normal hit' },
@@ -141,6 +150,8 @@ export const FX_DO = {
   'encrypt-half': { when: ['custom'], label: 'Encryption on you stacks half as fast' },
   'sync-wide': { when: ['custom'], label: 'Sync Windows are 50% wider' },
   'blind-short': { when: ['custom'], label: 'Scrambles on you last one cycle less' },
+  'patch-slow': { when: ['custom'], label: 'bare parts patch their ◆ back X cycles later', value: true },
+  'burn-jump': { when: ['custom'], label: 'burns on a part you break jump to the next part, with what they had left' },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'per cycle the fight has lasted', contracts: 'per contract you hold', broken: 'per part broken this fight' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
@@ -160,7 +171,7 @@ export function fxText(fx, statName = (k) => k) {
   if (fx.do === 'skill-cd') what = `${statName(fx.skill)} cools down ${fx.value} ${fx.value === 1 ? 'cycle' : 'cycles'} faster`;
   const scale = fx.scale ? ` ${FX_SCALE[fx.scale]}` : '';
   const cap = fx.cap ? ` (up to ${fx.do === 'damage%' || fx.do === 'crit%' ? '+' + fx.cap + '%' : '+' + fx.cap})` : '';
-  const lead = { crit: 'On a crit', break: 'When you break a part', start: 'Each fight', struck: 'When an attack lands on you', disconnect: 'When your Signal hits 0 on a run' }[fx.when];
+  const lead = { crit: 'On a crit', break: 'When you break a part', start: 'Each fight', struck: 'When an attack lands on you', disconnect: 'When your Signal hits 0 on a run', answer: 'When you call off a tell' }[fx.when];
   const cond = fx.if ? (lead ? `, if ${FX_IF[fx.if]}` : ` when ${FX_IF[fx.if]}`) : '';
   const limit = fx.limit === 'cooldown' ? `. Rearms ${fx.cooldown || 60} minutes later` : fx.limit === 'fight' ? ', once per fight' : fx.limit === 'run' ? ', once per run' : '';
   const t = lead ? `${lead}${cond}: ${what}${scale}${cap}${limit}.` : `${what}${scale}${cap}${cond}${limit}.`;

@@ -2,10 +2,10 @@
 // compiling, scrapping, Zero-days, the install queue and save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, serviceVersion, serviceValue, portCount, portsUsed, syncServer, installBlock, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, serviceVersion, serviceValue, syncServer, installBlock, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
 import { CONFIG, power } from './dist/data.mjs';
-import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, VERSIONS, PROTOCOL_STATS, protocolSlots, ports, rollItem, seeded, codeOf, codeDrop, vaultCode, serviceCost } from './dist/gear.mjs';
+import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, VERSIONS, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, serviceCost } from './dist/gear.mjs';
 
 // Exact numbers unless a test turns crits or misses on.
 CONFIG.baseCrit = 0;
@@ -17,10 +17,13 @@ CONFIG.salvageChance = 1;
 CONFIG.misses = false; // and no misses
 CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it back on)
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
+(await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
-const item = (stats, extra = {}) => ({ kind: 'protocol', side: 'hacker', rarity: 'stock', level: 5, stats, zeroDay: null, name: 'Test protocol', ...extra });
+const item =(stats, extra = {}) => ({ kind: 'protocol', side: 'hacker', rarity: 'stock', level: 5, stats, zeroDay: null, name: 'Test protocol', ...extra });
 const give = (s, stats, extra) => { const it = addItem(s, item(stats, extra)); command(s, 'load ' + it.id); return it; };
 const svc = (s, services) => { s.services = { ...services }; syncServer(s); s.server.integrity = s.server.max; return s; };
+// Filters in the wall's slots (two at +0), with the stats a home fight reads.
+const wall = (s, ...stats) => { s.filters = { held: stats.map((x, i) => ({ kind: 'filter', rarity: 'tuned', level: 1, name: `Filter ${i + 1}`, stats: { strength: 1, ...x } })), on: stats.map((_, i) => i) }; syncServer(s); s.server.integrity = s.server.max; return s; };
 const fight = (s, key = 'cryptjack', level = 6) => { selectEncounter(s, key, 7, { level }); command(s, 'engage'); return s; };
 const bare = (s) => { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null }); return s; };
 const quiet = (s) => { for (const p of s.encounter.virus.parts) p.attack = null; return s; };
@@ -35,7 +38,7 @@ test('items: a base for its slot (primaries), affixes by rarity (one prefix and 
   CONFIG.powerPerLevel = 0.04;
   const r = seeded(11);
   for (let i = 0; i < 300; i++) {
-    const rarity = ['scrap', 'stock', 'tuned', 'custom'][i % 4];
+    const rarity = ['stock', 'tuned', 'custom'][i % 3];
     const it = rollItem(r, { level: 1 + (i % 30), rarity });
     const base = BASES[it.base];
     assert.ok(SLOTS[it.group] && base.slot === it.group, 'a base for its slot');
@@ -47,7 +50,11 @@ test('items: a base for its slot (primaries), affixes by rarity (one prefix and 
     const pre = it.affixes.filter((a) => AFFIXES[a].kind === 'prefix').length, suf = it.affixes.filter((a) => AFFIXES[a].kind === 'suffix').length;
     assert.ok(pre <= (rarity === 'custom' ? 3 : 1) && suf <= (rarity === 'custom' ? 3 : 1));
     for (const a of real) assert.ok(AFFIXES[a].from <= it.level, `${a} needs level ${AFFIXES[a].from}`);
+    // A rule on every blue (a minor one) and every yellow (a major one), none on a white.
+    assert.equal(it.rule ? RULES[it.rule].tier : null, RARITIES[rarity].rule || null, `${rarity}: its rule`);
   }
+  assert.equal(rollItem(seeded(2), { level: 5, rarity: 'scrap' }).rarity, 'stock', 'no grey protocols');
+  assert.ok(!AFFIXES.buggy && !AFFIXES.leaky, 'and no junk affixes');
   const blue = rollItem(seeded(4), { level: 8, rarity: 'tuned', slot: 'exploit' });
   assert.match(blue.name, /Weaponized Exploit/, 'named for its base, with its affixes around it');
   const lo = rollItem(seeded(3), { level: 5, rarity: 'stock', slot: 'exploit' }).stats.damage;
@@ -154,11 +161,11 @@ test('enemies crit too (from level 3), for ×1.5 damage', () => {
   CONFIG.enemyCrit = 0;
 });
 
-test('services at home: Hardened Kernel softens hits, Scrubber shields the start, Hot-patcher heals per cycle and very slowly between fights', () => {
-  const s = svc(fresh(), { kernel: 3, scrubber: 3, hotpatch: 2 });
-  assert.equal(serviceValue(s, 'kernel'), 6);
-  assert.equal(serviceValue(s, 'scrubber'), 10, '10% of max Integrity');
-  assert.equal(serviceValue(s, 'hotpatch'), 0.6);
+test('filters at home (the services that were): Hardened softens hits, of the Scrubber shields the start, Self-healing heals per cycle and very slowly between fights', () => {
+  const s = wall(fresh(), { reduction: 6, shield: 10 }, { regen: 0.6 });
+  assert.equal(gearStat(s, 'reduction', 'server'), 6);
+  assert.equal(gearStat(s, 'shield', 'server'), 10, '10% of max Integrity');
+  assert.equal(gearStat(s, 'regen', 'server'), 0.6);
   fight(s);
   assert.equal(s.encounter.shield, 10);
   part(s, 'encryptor').attack = null;
@@ -224,7 +231,7 @@ test('misses: your damaging skills can miss (the cooldown is still spent); Accur
 test('Decoy and Sandboxed filters: attacks and specials on your server can fail', () => {
   const was = { e: STATS.evasion.cap, s: STATS.sanitize.cap };
   STATS.evasion.cap = STATS.sanitize.cap = 100;
-  const s = svc(fresh(), { firewall: 1 });
+  const s = fresh();
   s.filters = { held: [{ kind: 'filter', rarity: 'tuned', level: 1, name: 'Decoy Packet Filter', stats: { strength: 1, evasion: 100, sanitize: 100 } }], on: [0] };
   fight(s);
   const pulse = part(s, 'pulse'), enc = part(s, 'encryptor');
@@ -352,8 +359,8 @@ test('Clock Speed ticks cooldowns faster; Leech heals per hit; Stealth delays fi
   STATS.stealth.cap = cap;
 });
 
-test('Counter-intrusion: whatever hits your server takes a hit back', () => {
-  const s = svc(fresh(), { counter: 3 });
+test('a filter of Barbs (Counter-intrusion that was): whatever hits your server takes a hit back', () => {
+  const s = wall(fresh(), { countermeasures: 6 });
   bare(fight(s));
   part(s, 'encryptor').attack = null;
   const pulse = part(s, 'pulse');
@@ -397,8 +404,8 @@ test('compile: pick the stat, pay credits and salvage, get a protocol at your le
   assert.equal(it.kind, 'protocol');
   assert.equal(it.level, 3);
   assert.ok(it.stats.crit > 0, 'the stat you asked for');
-  assert.match(command(s, 'compile integrity').at(-1).message, /services/, 'server stats come from services');
-  assert.match(command(s, 'compile raid').at(-1).message, /service/, 'a service isn\'t compiled');
+  assert.match(command(s, 'compile integrity').at(-1).message, /server/, 'server stats come from the server');
+  assert.match(command(s, 'compile buildfarm').at(-1).message, /service/, 'a service isn\'t compiled');
   assert.notEqual(it.rarity, 'zeroday');
   assert.equal(s.server.credits, 1000 - COMPILE.cost(3).credits);
   assert.equal(s.salvage.length, 10 - COMPILE.cost(3).salvage);
@@ -505,17 +512,23 @@ test('Zero-days: Rootkit\'s first hit goes through armor; Race Condition refunds
   assert.equal(resolveCycle(b).find((e) => e.type === 'damage').crit, false, 'just the one');
 });
 
-test('Cron Job and Snapshot are special services: Cron hits every 3rd cycle, Snapshot restores once below half', () => {
-  const c = svc(fresh(), { cron: 3 });
+test('Cron Job and Snapshot are daemons now: Cron hits every 3 cycles, the part winding up a tell first; Snapshot restores once below half', () => {
+  const c = fresh();
+  c.daemonsOwned = { cron: 1 }; c.daemons = ['cron'];
   bare(fight(c));
+  c.encounter.virus.tells = null;
   for (const p of c.encounter.virus.parts) { p.attack = null; p.integrity = p.max = 200; }
   part(c, 'pulse').attack = { name: 'x', effect: 'damage', amount: 0, interval: 99, due: 99 };
-  command(c, 'hold'); resolveCycle(c); command(c, 'hold'); resolveCycle(c);
-  assert.equal(part(c, 'pulse').integrity, 200, 'nothing on cycles 1 and 2');
   command(c, 'hold'); resolveCycle(c);
-  assert.equal(part(c, 'pulse').integrity, 200 - Math.round(8 * 0.8), 'cycle 3: the cron job fires (8 × 0.8 at v3)');
+  assert.equal(part(c, 'pulse').integrity, 200 - 8, 'cycle 1: it runs on the next to attack, for 8');
+  command(c, 'hold'); resolveCycle(c); command(c, 'hold'); resolveCycle(c);
+  assert.equal(part(c, 'pulse').integrity, 192, 'then it waits 3 cycles');
+  command(c, 'hold'); resolveCycle(c);
+  assert.equal(part(c, 'pulse').integrity, 184, 'and runs again');
 
-  const n = svc(fresh(), { snapshot: 3 });
+  const n = fresh();
+  n.daemonsOwned = { snapshot: 3 }; n.daemons = ['snapshot'];
+  syncServer(n);
   fight(n);
   n.encounter.hardened = 0;
   part(n, 'encryptor').attack = null;
@@ -526,58 +539,53 @@ test('Cron Job and Snapshot are special services: Cron hits every 3rd cycle, Sna
   assert.equal(n.server.integrity, 100 - 60 + 16, 'dropped below half, restored 16%');
 });
 
-test('the install queue: code and credits, one at a time, in real time; versions gate on server level', () => {
+test('the install queue: code and credits, one at a time, in real time; versions gate on your level; no ports', () => {
   const s = fresh();
-  assert.equal(portCount(s), 6);
-  assert.deepEqual([1, 9, 17, 41, 50].map(ports), [6, 7, 8, 11, 12]);
-  assert.match(command(s, 'install raid', 0).at(-1).message, /RAID Array blueprint/, 'every service starts as a blueprint to find');
-  s.recipes = ['raid', 'kernel'];
-  assert.match(command(s, 'install raid', 0).at(-1).message, /needs 120c \+ 12 Worm \+ 6 salvage/);
+  assert.deepEqual(Object.keys(SERVICES), ['uplink', 'buildfarm', 'router', 'scheduler'], 'four services, all for the network around you');
+  assert.match(command(s, 'install router', 0).at(-1).message, /Edge Router blueprint/, 'every service starts as a blueprint to find');
+  assert.match(command(s, 'install raid', 0).at(-1).message, /isn't a service any more/, 'the home-fight ones went to the wall');
+  s.recipes = ['router', 'buildfarm'];
+  assert.match(command(s, 'install router', 0).at(-1).message, /needs 120c \+ 12 Worm \+ 6 salvage/);
   s.materials.worm = 20; s.materials.kernel = 20; s.server.credits = 300;
-  assert.match(command(s, 'install raid', 0).at(-1).message, /6 salvage/, 'salvage too');
+  assert.match(command(s, 'install router', 0).at(-1).message, /6 salvage/, 'salvage too');
   command(s, 'developer salvage 12');
-  command(s, 'install raid', 0);
-  assert.deepEqual({ ...s.install, pay: undefined }, { id: 'raid', v: 1, startedAt: 0, doneAt: VERSIONS[0].minutes * 60000, pay: undefined });
+  command(s, 'install router', 0);
+  assert.deepEqual({ ...s.install, pay: undefined }, { id: 'router', v: 1, startedAt: 0, doneAt: VERSIONS[0].minutes * 60000, pay: undefined });
   assert.equal(s.materials.worm, 8);
   assert.equal(s.server.credits, 180);
   assert.equal(s.salvage.length, 6);
-  assert.match(command(s, 'install kernel', 1000).at(-1).message, /One install at a time/);
+  assert.match(command(s, 'install buildfarm', 1000).at(-1).message, /One install at a time/);
   assert.equal(tickServices(s, 60000).length, 0, 'not yet');
   const done = tickServices(s, VERSIONS[0].minutes * 60000);
   assert.equal(done[0].type, 'service-done');
-  assert.equal(serviceVersion(s, 'raid'), 1);
-  assert.equal(s.server.max, 105, 'RAID v1: +5% max Integrity');
-  assert.equal(s.server.integrity, 105);
-  assert.match(installBlock(s, 'raid'), /server level 10/, 'v2 waits for server level 10');
-  command(s, 'install kernel', 0);
+  assert.equal(serviceVersion(s, 'router'), 1);
+  assert.match(installBlock(s, 'router'), /level 10/, 'v2 waits for level 10 (your highest class)');
+  command(s, 'install buildfarm', 0);
   command(s, 'cancel install', 0);
   assert.equal(s.install, null);
   assert.equal(s.materials.kernel, 20, 'cancelling refunds everything');
   assert.equal(s.salvage.length, 6, 'salvage too');
-  assert.match(installBlock(s, 'cron'), /source/, 'special services need their source');
-  command(s, 'uninstall raid');
-  assert.equal(serviceVersion(s, 'raid'), 0);
+  command(s, 'uninstall router');
+  assert.equal(serviceVersion(s, 'router'), 0);
   assert.equal(s.materials.worm, 14, 'half the code back');
-  assert.equal(s.server.max, 100);
 
   const full = fresh();
   command(full, 'developer code 500');
   command(full, 'developer salvage 200');
   command(full, 'developer blueprints');
   full.server.credits = 9999;
-  svc(full, { raid: 1, kernel: 1, scrubber: 1, hotpatch: 1, counter: 1, uplink: 1 });
-  assert.equal(portsUsed(full), 6);
-  assert.match(installBlock(full, 'buildfarm'), /service slots are in use/);
-  command(full, 'developer server 25');
-  assert.equal(portCount(full), 9);
-  command(full, 'install raid', 0);
-  assert.equal(full.install.v, 2, 'an upgrade uses no new port');
+  svc(full, { uplink: 1, buildfarm: 1, router: 1 });
+  assert.equal(installBlock(full, 'scheduler'), null, 'no ports: every service you know can run');
+  assert.match(installBlock(full, 'router'), /level 10/);
+  full.hackers = { breaker: { level: 25, xp: 0 } };
+  command(full, 'install router', 0);
+  assert.equal(full.install.v, 2, 'your highest class level opens v2');
   command(full, 'developer finish', 0);
-  command(full, 'install raid', 0);
+  command(full, 'install router', 0);
   assert.equal(full.install.v, 3);
-  assert.deepEqual(serviceCost('raid', 3), { credits: 2000, worm: 100, exploit: 3 });
+  assert.deepEqual(serviceCost('router', 3), { credits: 2000, worm: 100, exploit: 3 });
   fight(full);
-  assert.match(command(full, 'install kernel').at(-1).message, /between fights/);
+  assert.match(command(full, 'install scheduler').at(-1).message, /between fights/);
 });
 
 test('saves from before protocols: installed server gear becomes running services, the rest becomes code', () => {
@@ -593,14 +601,16 @@ test('saves from before protocols: installed server gear becomes running service
   old.gear = { server: { storage: 'g1', module: 'g3' }, rigs: { breaker: { deck: 'g4' } } };
   old.recipes = ['cron-job'];
   const s = restore(JSON.parse(JSON.stringify(old)));
-  assert.deepEqual(s.services, { raid: 1, cron: 1 });
+  assert.deepEqual(s.services, {}, 'v34: the RAID Array went to the wall, the Cron Job became a daemon');
+  assert.equal(s.daemonsOwned.cron, 1);
   assert.equal(s.materials.kernel, 5, 'the uninstalled Firewall came back as Kernel code');
-  assert.deepEqual(s.recipes, ['cron', 'raid'], 'plus a blueprint for each service it runs');
+  assert.equal(s.materials.worm, 12, 'and the RAID Array as what it cost');
+  assert.deepEqual(s.recipes, [], 'no blueprints left for services that are gone');
   assert.deepEqual(s.stash.map((x) => x.id), ['g4']);
   assert.equal(s.stash[0].kind, 'protocol');
   assert.equal(s.stash[0].name, 'Tuned Overdrive');
   assert.deepEqual(rigOf(s), ['g4'], 'your rig carries over as loaded protocols');
-  assert.equal(s.server.max, 105);
+  assert.equal(s.server.max, 100);
 });
 
 test('the old Upgrades come back as running services and a loaded protocol; daemon slots come from server level', () => {
@@ -610,15 +620,15 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   old.server.max = 140; old.server.integrity = 140;
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(s.upgrades, undefined);
-  assert.deepEqual(s.services, { raid: 1, uplink: 1 });
-  assert.equal(s.server.max - Math.round(100 * power(serverLevel(s))), 5, 'RAID v1');
+  assert.deepEqual(s.services, { uplink: 1 }, 'the RAID Array is the wall\'s now (v34)');
+  assert.equal(s.server.max, Math.round(100 * power(serverLevel(s))));
   assert.equal(gearStat(s, 'signal'), 10);
   assert.equal(gearStat(s, 'routeBoost'), 25, 'Route Logger v1: route files trace 25% further');
   assert.equal(loaded(s)[0].rarity, 'stock');
   const t = fresh();
   assert.equal(daemonSlots(t), CONFIG.daemonSlots);
-  command(t, 'developer server 20');
-  assert.equal(daemonSlots(t), CONFIG.daemonSlots + 2);
+  t.hackers = { operator: { level: 9, xp: 0 }, bastion: { level: 20, xp: 0 } };
+  assert.equal(daemonSlots(t), CONFIG.daemonSlots + 2, 'your highest class level opens them, whichever class you play');
 });
 
 test('blueprints: nothing is buildable at first; each teaches something new; every vault holds one', async () => {
@@ -626,7 +636,7 @@ test('blueprints: nothing is buildable at first; each teaches something new; eve
   const { layoutOf } = await import('./dist/run.mjs');
   const { BLUEPRINTS } = await import('./dist/gear.mjs');
   const s = fresh();
-  assert.match(installBlock(s, 'firewall'), /blueprint/);
+  assert.match(installBlock(s, 'uplink'), /blueprint/);
   assert.equal(knownRecipes(s).length, 0);
   learnBlueprint(s);
   // The pool is every kind of recipe: protocol recipes and services, filter recipes, plans.
@@ -698,14 +708,14 @@ test('buyout: finish an install now for credits, 3x its cost at the start and le
   const { outpostBuyout, OUTPOST } = await import('./dist/outpost.mjs');
   const { VERSIONS } = await import('./dist/gear.mjs');
   const s = fresh();
-  s.install = { id: 'firewall', v: 1, startedAt: 0, doneAt: 600000, pay: {} };
+  s.install = { id: 'uplink', v: 1, startedAt: 0, doneAt: 600000, pay: {} };
   const full = installBuyout(s, 0), half = installBuyout(s, 300000);
   assert.equal(full, Math.max(BUYOUT.min, 3 * VERSIONS[0].credits));
   assert.ok(half <= full && half >= BUYOUT.min);
   s.server.credits = full + 5;
   command(s, 'buyout', 0);
   assert.equal(s.install, null);
-  assert.equal(s.services.firewall, 1);
+  assert.equal(s.services.uplink, 1);
   assert.equal(s.server.credits, 5);
   // Outposts: a lockdown ends, a slot reset is skipped.
   const loc = { id: 'x', name: 'X', outpost: { lockdown: { left: OUTPOST.lockdownMs / 2 } } };

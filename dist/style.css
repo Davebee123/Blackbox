@@ -857,8 +857,10 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .levelup { position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 50; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 14px 28px; background: var(--panel-2); border: 1px solid var(--you); border-radius: 6px; box-shadow: 0 0 40px rgba(127, 209, 199, 0.25); max-width: min(560px, calc(100vw - 32px)); pointer-events: none; }
 .levelup b { font: 700 22px var(--mono); letter-spacing: 3px; color: var(--you); }
 .levelup span { color: var(--text); font-size: 14px; }
+.levelup #levelup-text { display: grid; gap: 2px; }
+.levelup .lu-line.ghost { color: var(--dim); font-size: 12px; }
 .levelup .lu-go { pointer-events: auto; margin-top: 4px; }
-.levelup.show { animation: levelup-in 3.2s ease-out both; }
+.levelup.show { animation: levelup-in 5s ease-out both; }
 @keyframes levelup-in { 0% { opacity: 0; transform: translate(-50%, -10px) scale(0.96); } 8% { opacity: 1; transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
 .no-motion .levelup.show { animation: none; }
 @media (max-width: 1440px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } }

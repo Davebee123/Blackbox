@@ -16,7 +16,7 @@
 // State lives on the shared virus (v.tells), so a crewmate sees the same tells:
 //   list  [{ id, kind, name, part, at (cycle it's announced), next (cycle it lands), told, wound, need, ... }]
 //   tier  the level tier's numbers (lead, mult, cap, dot), with an elite's or a boss's extra cap
-import { emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, previewDamage } from './combat.mjs';
+import { emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, previewDamage, fxAnswer, tellWeight } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES } from './data.mjs';
 import { raidDef } from './raid.mjs';
 
@@ -143,13 +143,14 @@ export function tellHit(s, p) {
   for (const t of T.list) {
     if (!t.told || t.part !== p.id || !t.need || t.next < e.cycle || t.hitBy.includes(key)) continue;
     t.hitBy.push(key);
-    t.wound++;
+    t.wound += tellWeight(s); // Double Tap, Spectre: a command counts twice
     if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound} of ${t.need} hits. One more before it lands stops it.`, { source: p.id, tell: t.id }); continue; }
     // A charge called off knocks the attack it was riding on back (TELL.knock cycles): it lands later, at its usual size.
     const a = t.kind === 'charge' && p.attack;
     if (a && a.due <= t.next) a.due = Math.max(a.due, t.next) + TELL.knock;
     emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', t.kind === 'cast' ? `You hit the ${p.name} out of its compile: ${label(t)} is stopped.` : `You hit the ${p.name} in time: ${label(t)} is called off${a ? `, and its plain ${a.name} is knocked back ${TELL.knock === 1 ? 'a cycle' : `${TELL.knock} cycles`}` : ''}.`, { source: p.id, target: p.id, tell: t.id, answered: true });
     rest(s, t, e.cycle, true);
+    fxAnswer(s); // gear that fires when you call off a tell (Retry Loop, Abort Handler, Ctrl-C…)
   }
 }
 // A tell is done (it landed, or it was answered): the next one comes `every` cycles on.
@@ -306,6 +307,7 @@ export function tellSigint(s) {
   rest(s, t, s.encounter.cycle, true);
   t.at = Math.max(s.encounter.cycle + 1, t.at - TELL.sooner);
   emit(s, 'interrupt', `SIGINT stops ${label(t)}. The ${p?.name || 'virus'} starts the next one ${TELL.sooner} cycles sooner.`, { target: p?.id, tell: t.id, answered: true });
+  fxAnswer(s);
   return true;
 }
 

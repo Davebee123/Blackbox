@@ -3,8 +3,9 @@
 //
 // You run PROTOCOLS: items with rolled stats in generic slots (any protocol in any slot),
 // like Corepunk. Loot and salvage build you.
-// Your server runs SERVICES on its ports: built with code materials, one install at a time,
-// versions v1–v3, one rule each (Master of Orion 2 style). Code builds your base.
+// Your server runs SERVICES: built with code materials, one install at a time, versions v1–v3,
+// one rule each (Master of Orion 2 style). Four of them, all for the network around you: the home
+// fight is the firewall's job (filters, tiers) and the daemons'. Code builds your base.
 import { power } from './data.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
@@ -68,7 +69,8 @@ export const PROTOCOL_NAMES = {
   evasion: 'Jitter', sanitize: 'Sanitizer', scavenge: 'Scavenger', sync: 'Phaselock',
 };
 
-// Base items: five per slot, a tier every few levels. Primary stats at the tier's own level
+// Base items: seven per slot (the Implant three), a tier every few levels. The last two, at 34 and 42,
+// each give about 1.4 times what the tier before gives at their level, so a new base is a moment. Primary stats at the tier's own level
 // (Damage as a range), scaled by item level from there. See the items design doc.
 export const BASES = {
   'proof-of-concept': { slot: 'exploit', name: 'Proof of Concept', level: 1, primary: { damage: [5, 7] }, flavour: 'Works on the third try.' },
@@ -76,26 +78,38 @@ export const BASES = {
   'exploit-chain': { slot: 'exploit', name: 'Exploit Chain', level: 11, primary: { damage: [15, 19] }, flavour: 'Three bugs, one door.' },
   'zero-click': { slot: 'exploit', name: 'Zero-click', level: 18, primary: { damage: [22, 28] }, flavour: 'They never touch a thing.' },
   wormable: { slot: 'exploit', name: 'Wormable', level: 26, primary: { damage: [32, 40] }, flavour: 'Hit one box, hit them all.' },
+  'sandbox-escape': { slot: 'exploit', name: 'Sandbox Escape', level: 34, primary: { damage: [52, 65] }, flavour: 'The walls were only ever a suggestion.' },
+  'hypervisor-escape': { slot: 'exploit', name: 'Hypervisor Escape', level: 42, primary: { damage: [83, 104] }, flavour: 'Out of the guest. Into the host. Into all of them.' },
   'open-proxy': { slot: 'proxy', name: 'Open Proxy', level: 1, primary: { signal: 25, reduction: 1 }, flavour: 'Left open by someone who should know better.' },
   'socks-tunnel': { slot: 'proxy', name: 'SOCKS Tunnel', level: 5, primary: { signal: 45, reduction: 1 }, flavour: 'Everything goes through one quiet hole.' },
   'vpn-cascade': { slot: 'proxy', name: 'VPN Cascade', level: 11, primary: { signal: 70, reduction: 2 }, flavour: "Three countries before you're anywhere." },
   'onion-circuit': { slot: 'proxy', name: 'Onion Circuit', level: 18, primary: { signal: 100, reduction: 3 }, flavour: 'Layer on layer. Nobody sees the middle.' },
   mixnet: { slot: 'proxy', name: 'Mixnet', level: 26, primary: { signal: 140, reduction: 4 }, flavour: 'Your packets, shuffled with ten thousand others.' },
+  'domain-front': { slot: 'proxy', name: 'Domain Front', level: 34, primary: { signal: 227, reduction: 6 }, flavour: 'Every request looks like it went to someone too big to block.' },
+  'covert-channel': { slot: 'proxy', name: 'Covert Channel', level: 42, primary: { signal: 362, reduction: 10 }, flavour: 'Hidden in the timing between packets nobody reads.' },
   'reverse-shell': { slot: 'shell', name: 'Reverse Shell', level: 1, primary: { signal: 12, regen: 0.5, restore: 12 }, flavour: 'It called home. You answered.' },
   'tty-upgrade': { slot: 'shell', name: 'TTY Upgrade', level: 5, primary: { signal: 22, regen: 1, restore: 16 }, flavour: 'Tab completion. History. Civilisation.' },
   'root-shell': { slot: 'shell', name: 'Root Shell', level: 11, primary: { signal: 35, regen: 1.5, restore: 20 }, flavour: '#' },
   'restricted-shell-escape': { slot: 'shell', name: 'Restricted Shell Escape', level: 18, primary: { signal: 50, regen: 2, restore: 24 }, flavour: 'They boxed you in. Cute.' },
   'ghost-shell': { slot: 'shell', name: 'Ghost Shell', level: 26, primary: { signal: 70, regen: 3, restore: 30 }, flavour: 'No process name. No parent. No logs.' },
+  'ring-zero-shell': { slot: 'shell', name: 'Ring 0 Shell', level: 34, primary: { signal: 114, regen: 4.9, restore: 49 }, flavour: 'Below the kernel, nothing asks who you are.' },
+  'firmware-shell': { slot: 'shell', name: 'Firmware Shell', level: 42, primary: { signal: 181, regen: 7.8, restore: 78 }, flavour: 'Reinstall the OS. It is still there.' },
   'one-liner': { slot: 'script', name: 'One-liner', level: 1, primary: { damage: 2, signal: 10, payload: 12 }, flavour: 'Pipes all the way down.' },
   'cron-job': { slot: 'script', name: 'Cron Job', level: 5, primary: { damage: 4, signal: 18, payload: 16 }, flavour: "Runs at 3 a.m. whether you're awake or not." },
   dropper: { slot: 'script', name: 'Dropper', level: 11, primary: { damage: 6, signal: 28, payload: 20 }, flavour: 'Small, polite, carries something worse.' },
   loader: { slot: 'script', name: 'Loader', level: 18, primary: { damage: 9, signal: 40, payload: 24 }, flavour: 'Unpacks in memory. Leaves nothing on disk.' },
   'polymorphic-engine': { slot: 'script', name: 'Polymorphic Engine', level: 26, primary: { damage: 13, signal: 55, payload: 30 }, flavour: 'Never the same twice.' },
+  'living-off-the-land': { slot: 'script', name: 'Living off the Land', level: 34, primary: { damage: 21, signal: 89, payload: 49 }, flavour: 'Every tool it needs was already installed.' },
+  'metamorphic-engine': { slot: 'script', name: 'Metamorphic Engine', level: 42, primary: { damage: 34, signal: 142, payload: 78 }, flavour: 'It rewrites itself, and the rewrite rewrites itself.' },
   implant: { slot: 'implant', name: 'Implant', level: 15, primary: { damage: 6, signal: 30 }, flavour: 'Resident. Quiet. Yours.' }, // drops and compiles from item level 15 (the first Implant slot)
+  bootkit: { slot: 'implant', name: 'Bootkit', level: 34, primary: { damage: 12.5, signal: 62 }, flavour: 'Loads before anything that could notice it.' },
+  'firmware-rootkit': { slot: 'implant', name: 'Firmware Rootkit', level: 42, primary: { damage: 20, signal: 100 }, flavour: 'Lives in the chip. Survives the disk.' },
 };
 export const PRIMARY_STATS = ['damage', 'signal', 'reduction', 'regen', 'restore', 'payload'];
 // Every base's primaries × this (tuned with the monster pass, see friction.mjs).
-export const ITEM_SCALE = { primary: 0.42, unique: 0.5 }; // unique: on a named unique's stats (not its downside); about a yellow, its effect is the point
+// unique: a named unique's own listed stats (not its downside). uniqueBase: a unique's primaries are also
+// the best base of its slot at its item level times this (a yellow's), and it keeps whichever is higher.
+export const ITEM_SCALE = { primary: 0.42, unique: 0.5, uniqueBase: 1.2 };
 // The best base of a slot at an item level (the highest tier unlocked).
 export const baseFor = (slot, level) => Object.entries(BASES).filter(([, b]) => b.slot === slot && !b.uniqueOnly && b.level <= Math.max(1, level)).sort((a, b) => b[1].level - a[1].level)[0]?.[0] || null;
 
@@ -118,9 +132,38 @@ export const AFFIXES = {
   silence: { kind: 'suffix', name: 'of Silence', stat: 'stealth', lo: 6, hi: 10, from: 5 },
   beat: { kind: 'suffix', name: 'of the Beat', stat: 'sync', lo: 3, hi: 6, from: 7 },
   scrubbing: { kind: 'suffix', name: 'of Scrubbing', stat: 'sanitize', lo: 6, hi: 12, from: 8 },
-  // Junk: only greys roll these.
-  buggy: { kind: 'prefix', name: 'Buggy', stat: 'damage', lo: -1, hi: -2, from: 1, junk: true },
-  leaky: { kind: 'suffix', name: 'that Leaks', stat: 'evasion', lo: -2, hi: -3, from: 1, junk: true },
+};
+// Rule affixes: every blue carries one minor rule and every yellow one major rule, written in the effect
+// blocks uniques use (combat.mjs fxFire; content.mjs FX_WHEN, FX_IF, FX_DO). Each changes what a fight asks
+// of you, most of them through the tells and the parts. value: [at item level 1, at 40], growing up to a
+// quarter more past 40. of: the blue's name when it has no numeric suffix. The same rule twice in a
+// loadout counts once, at its best value.
+export const RULES = {
+  // Minor (blues)
+  'interrupt-handler': { tier: 'minor', name: 'Interrupt Handler', of: 'of Interrupts', fx: { when: 'hit', if: 'target-telling', do: 'damage%' }, value: [15, 25] },
+  'signature-scan': { tier: 'minor', name: 'Signature Scan', of: 'of Signatures', fx: { when: 'hit', if: 'target-signature', do: 'damage%' }, value: [10, 20] },
+  'null-deref': { tier: 'minor', name: 'Null Deref', of: 'of Pointers', fx: { when: 'hit', if: 'target-bare', do: 'damage+' }, value: [1, 6] },
+  'safe-mode': { tier: 'minor', name: 'Safe Mode', of: 'of Safe Mode', fx: { when: 'struck', if: 'below-half', do: 'restore%', limit: 'fight' }, value: [3, 5] },
+  'stack-canary': { tier: 'minor', name: 'Stack Canary', of: 'of Canaries', fx: { when: 'start', do: 'shield' }, value: [1, 6] },
+  'exception-handler': { tier: 'minor', name: 'Exception Handler', of: 'of Exceptions', fx: { when: 'answer', do: 'shield' }, value: [1, 6] },
+  'sticky-bit': { tier: 'minor', name: 'Sticky Bit', of: 'of Sticky Bits', fx: { when: 'custom', do: 'patch-slow' }, value: [1, 2] },
+  'clock-skew': { tier: 'minor', name: 'Clock Skew', of: 'of Skew', fx: { when: 'hit', if: 'odd-cycle', do: 'crit%' }, value: [5, 10] },
+  // Major (yellows)
+  'abort-handler': { tier: 'major', name: 'Abort Handler', fx: { when: 'answer', do: 'heal' }, value: [4, 14] },
+  'double-tap': { tier: 'major', name: 'Double Tap', fx: { when: 'always', do: 'tell-hits' } },
+  'fork-on-break': { tier: 'major', name: 'Fork on Break', fx: { when: 'break', do: 'refund' }, value: [1, 2] },
+  'daisy-chain': { tier: 'major', name: 'Daisy Chain', fx: { when: 'break', do: 'break-hit' }, value: [6, 16] },
+  'read-only-mount': { tier: 'major', name: 'Read-only Mount', fx: { when: 'struck', if: 'below-half', do: 'halve', limit: 'fight' } },
+  'race-window': { tier: 'major', name: 'Race Window', fx: { when: 'crit', do: 'refund-skill' } },
+  'deep-inspection': { tier: 'major', name: 'Deep Inspection', fx: { when: 'hit', if: 'target-telling', do: 'damage%' }, value: [30, 45] },
+  'clean-room': { tier: 'major', name: 'Clean Room', fx: { when: 'struck', do: 'crit-normal' } },
+};
+// A rule's number at an item level (roll: 0–1, ±10%).
+export const ruleValue = (id, level, roll = 0.5) => {
+  const v = RULES[id]?.value;
+  if (!v) return undefined;
+  const t = Math.min(1.25, (Math.max(1, level) - 1) / 39);
+  return Math.max(1, Math.round((v[0] + (v[1] - v[0]) * t) * (0.9 + 0.2 * roll)));
 };
 export const affixValue = (id, level, roll = 0.5) => {
   const a = AFFIXES[id], t = Math.max(0, (Math.max(1, level) - 1) / 19);
@@ -130,12 +173,13 @@ export const affixValue = (id, level, roll = 0.5) => {
 const NAME_A = ['Ghost', 'Null', 'Black', 'Silent', 'Hollow', 'Iron', 'Glass', 'Static', 'Dead', 'Pale', 'Burnt', 'Cold', 'Feral', 'Rust', 'Neon', 'Grey'];
 const NAME_B = { exploit: ['Fang', 'Needle', 'Spike', 'Wedge', 'Payload', 'Lance'], proxy: ['Veil', 'Lattice', 'Bastion', 'Shroud', 'Bulwark', 'Mesh'], shell: ['Den', 'Cradle', 'Hollow', 'Burrow', 'Root', 'Nest'], script: ['Loop', 'Hook', 'Thread', 'Whisper', 'Daemon', 'Trick'], implant: ['Seed', 'Heart', 'Core', 'Tick', 'Ghost', 'Knot'] };
 
-// Rarity: D2 colours. `mult` scales the base's primaries; `affixes`: [min, max].
+// Rarity: D2 colours. `mult` scales the base's primaries; `affixes`: [min, max] numeric affixes; `rule`:
+// the rule affix it carries (RULES). Protocols drop white or better: Scrap is for filters only.
 export const RARITIES = {
-  scrap: { name: 'Scrap', colour: 'grey', mult: 0.8, affixes: [0, 0], scrap: 1 },
+  scrap: { name: 'Scrap', colour: 'grey', mult: 0.8, affixes: [0, 0], scrap: 1 }, // filters only (filters.mjs)
   stock: { name: 'Stock', colour: 'white', mult: 1, affixes: [0, 0], scrap: 2 },
-  tuned: { name: 'Tuned', colour: 'blue', mult: 1.1, affixes: [1, 2], scrap: 3 },
-  custom: { name: 'Custom', colour: 'yellow', mult: 1.2, affixes: [3, 5], scrap: 5 },
+  tuned: { name: 'Tuned', colour: 'blue', mult: 1.1, affixes: [0, 1], rule: 'minor', scrap: 3 },
+  custom: { name: 'Custom', colour: 'yellow', mult: 1.2, affixes: [2, 4], rule: 'major', scrap: 5 },
   zeroday: { name: 'Zero-day', colour: 'gold', mult: 1.3, affixes: [0, 0], scrap: 10 },
   indemnified: { name: 'Indemnified', colour: 'orange', mult: 1.4, affixes: [2, 2], scrap: 10 },
 };
@@ -172,8 +216,7 @@ export const LOOT = {
   // Per kill (vaults and double rolls on guards add the rest, to land near the targets:
   // a blue every 20–30 min, a yellow about two hours, a gold every 10–12 hours).
   minutes: { tuned: 36, custom: 180, zeroday: 900 },
-  common: 1 / 6, // share of kills that drop a grey or white
-  greyShare: 0.35, // of those, greys
+  common: 0.65 / 6, // share of kills that drop a white (about one in nine; there are no greys)
   trophy: 200, // a strain's own unique: 1 in this many kills of that strain
   vault: { stock: 80, tuned: 16, custom: 3.5, zeroday: 0.5 }, // a vault's protocol (kit.bin), white or better
   vaultKit: 0.5, // share of vaults holding a protocol (kit.bin)
@@ -237,6 +280,7 @@ export function rollItem(rand, opts = {}) {
   const level = Math.max(1, opts.level || 1);
   let zeroDay = opts.zeroDay || null;
   let rarity = opts.rarity || (opts.source === 'compile' ? 'tuned' : opts.source === 'vault' ? pickWeighted(rand, LOOT.vault) : 'stock');
+  if (rarity === 'scrap') rarity = 'stock'; // no grey protocols
   if (rarity === 'zeroday' && !zeroDay) rarity = 'custom'; // a random gold is a unique: see uniqueItem
   if (zeroDay) rarity = ZERO_DAYS[zeroDay].chase ? 'indemnified' : 'zeroday';
   const r = RARITIES[rarity];
@@ -246,7 +290,7 @@ export function rollItem(rand, opts = {}) {
   const stats = primaries(base, level, r.mult, rand);
   // Affixes: at most one prefix and one suffix on a blue, up to three of each on a yellow.
   const affixes = [];
-  const pool = Object.keys(AFFIXES).filter((k) => !AFFIXES[k].junk && AFFIXES[k].from <= level);
+  const pool = Object.keys(AFFIXES).filter((k) => AFFIXES[k].from <= level);
   const want = opts.stat ? AFFIX_FOR[opts.stat] : null;
   if (want && AFFIXES[want].from > level) pool.push(want);
   let n = r.affixes[0] + Math.floor(rand() * (r.affixes[1] - r.affixes[0] + 1));
@@ -260,31 +304,40 @@ export function rollItem(rand, opts = {}) {
     if (!ok.length) break;
     take(pick(rand, ok));
   }
-  if (rarity === 'scrap' && rand() < 0.4) take(pick(rand, ['buggy', 'leaky']));
+  // Its rule: a minor one on a blue, a major one on a yellow (RULES).
+  const tier = !zeroDay && r.rule;
+  const rule = tier ? pick(rand, Object.keys(RULES).filter((k) => RULES[k].tier === tier)) : null;
+  const ruleVal = rule ? ruleValue(rule, level, rand()) : undefined;
   const pre = affixes.map((a) => AFFIXES[a]).find((a) => a.kind === 'prefix'), suf = affixes.map((a) => AFFIXES[a]).find((a) => a.kind === 'suffix');
   const name = zeroDay ? ZERO_DAYS[zeroDay].name
     : rarity === 'custom' ? `${pick(rand, NAME_A)} ${pick(rand, NAME_B[slot] || NAME_B.script)}`
-    : [pre?.name, BASES[base].name, suf?.name].filter(Boolean).join(' ');
-  return { kind: 'protocol', side: 'hacker', group: slot, base, rarity, level, stats, affixes, zeroDay, unique: null, name };
+    : [pre?.name, BASES[base].name, suf?.name || (rule && RULES[rule].of)].filter(Boolean).join(' ');
+  return { kind: 'protocol', side: 'hacker', group: slot, base, rarity, level, stats, affixes, zeroDay, unique: null, name, ...(rule ? { rule, ...(ruleVal ? { ruleValue: ruleVal } : {}) } : {}) };
 }
 // Which affix carries a stat (for compiling a chosen stat).
-export const AFFIX_FOR = Object.fromEntries(Object.entries(AFFIXES).filter(([, a]) => !a.junk).map(([id, a]) => [a.stat, id]));
+export const AFFIX_FOR = Object.fromEntries(Object.entries(AFFIXES).map(([id, a]) => [a.stat, id]));
 // The stat a player chasing `chase` (a subclass's list, data.mjs SUBS) wants on their i-th protocol: the
 // list in turn, one per slot. Only a rarity with affixes can carry one (a white has none).
 export const chaseStat = (chase, i, rarity) => (RARITIES[rarity]?.affixes[1] && chase?.length ? chase[i % chase.length] : undefined);
 
-// A named unique (content/items.mjs) at an item level: its primaries and secondaries scale from
-// its own level, its downside doesn't.
+// A named unique (content/items.mjs) at an item level. Each primary is the higher of two numbers: the
+// best base of its slot at that level times ITEM_SCALE.uniqueBase (a yellow's), or its own listed number
+// grown from its own level. So a unique keeps up with what drops beside it through its level band. A
+// listed stat the base doesn't carry comes along at its own number, secondaries as written, and the
+// downside in full.
 export function uniqueItem(u, level, rand) {
   const L = Math.max(u.level, level || u.level);
   const k = power(L) / power(u.level);
   const stats = {};
   const q = ITEM_SCALE.unique;
+  const slot = BASES[u.base]?.slot || 'script';
+  const best = baseFor(slot, L) || u.base;
+  const fromBase = BASES[best] ? primaries(best, L, ITEM_SCALE.uniqueBase, rand) : {};
   for (const [stat, v] of Object.entries(u.primary || {})) stats[stat] = round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * k * q) || 1;
+  for (const [stat, v] of Object.entries(fromBase)) stats[stat] = Math.max(stats[stat] || 0, v);
   for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Math.max(STATS[stat]?.dp ? 0.1 : 1, round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * q)) });
   addStats(stats, u.downside);
-  const slot = BASES[u.base]?.slot || 'script';
-  return { kind: 'protocol', side: 'hacker', group: slot, base: u.base, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name };
+  return { kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name };
 }
 
 // "+6% Damage · +2% Crit"
@@ -307,9 +360,7 @@ export const EXPLOIT_CHANCE = { home: 0.04, guard: 0.08 };
 export const vaultCode = (level) => 12 + Math.floor(Math.max(1, level) / 2);
 
 // ---------- services ----------
-// Ports: 6 to start, one more every 8 server levels, 12 at level 41+.
-export const ports = (serverLevel) => Math.min(12, 6 + Math.floor((Math.max(1, serverLevel) - 1) / 8));
-// What each version costs and takes (real time: 15 minutes, an hour, four hours). v2 needs
+// No ports: every service you hold the blueprint for can run (there are four). What each version costs and takes (real time: 15 minutes, an hour, four hours). v2 needs
 // server level 10, v3 level 25. Salvage is any salvage (what deconstructing items gives).
 // Economy pass: a v1 is about 10 minutes of income at level 5, a v2 about half an hour at 15.
 export const VERSIONS = [
@@ -318,22 +369,16 @@ export const VERSIONS = [
   { v: 3, code: 100, exploit: 3, credits: 2000, salvage: 40, minutes: 240, needs: 25 },
 ];
 // One rule per service. `stat`/`values`: what it adds per version (see serviceValue).
-// `code`: which code it's built from. `special`: needs its source (found in vaults) first.
-// The wall is three knobs (firewall level, filters, harden.sh): what Tarpit, Honeypot and Sandbox
-// did is filter stats now (filters.mjs).
+// `code`: which code it's built from.
+// The home fight belongs to the wall now: what the Filter Bay, RAID Array, Hardened Kernel, Scrubber,
+// Hot-patcher and Counter-intrusion did comes from the firewall's tiers and its filters (firewall.mjs
+// TIER_PERKS, filters.mjs FILTER_STATS), and Cron Job and Snapshot are daemons (data.mjs DAEMONS).
+// Old saves: progression.mjs (v34).
 export const SERVICES = {
-  firewall: { name: 'Filter Bay', code: 'cipher', stat: 'firewall', values: [1, 2, 3], unit: ' filter slots', flat: true, about: 'Slots for filters on your firewall.' },
-  raid: { name: 'RAID Array', code: 'worm', stat: 'integrity', values: [5, 10, 15], unit: '% max Integrity', about: 'More server Integrity.' },
-  kernel: { name: 'Hardened Kernel', code: 'kernel', stat: 'reduction', values: [2, 4, 6], unit: ' Block', flat: true, about: 'Hits on your server do less.' },
-  scrubber: { name: 'Scrubber', code: 'cipher', stat: 'shield', values: [4, 7, 10], unit: '% shield at the start of each home fight', about: 'Every home fight starts with a shield.' },
-  hotpatch: { name: 'Hot-patcher', code: 'worm', stat: 'regen', values: [0.3, 0.6, 1], unit: ' Regen', flat: true, about: 'Slow self-repair: per cycle in home fights, per minute between fights.' },
-  counter: { name: 'Counter-intrusion', code: 'worm', stat: 'countermeasures', values: [2, 4, 6], unit: ' back per hit', flat: true, about: 'Whatever hits your server takes a hit back (on armor, it breaks a ◆).' },
   uplink: { name: 'Route Logger', code: 'cipher', stat: 'routeBoost', values: [25, 50, 75], unit: '% more from route files', about: 'Route files, trace records, injectors and log sweeps trace further, so the next layer turns up sooner.' },
   buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
   router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' outpost slots', about: 'Run more outposts at once.' },
   scheduler: { name: 'Scheduler', code: 'kernel', stat: 'scheduler', values: [60, 30, 15], unit: '-minute collection', about: 'Collects every outpost on a timer, so you don\'t have to visit.' },
-  cron: { name: 'Cron Job', code: ['worm', 'kernel'], special: true, stat: 'cron', values: [0.4, 0.6, 0.8], unit: '× cron hits', about: 'Home fights: every 3rd cycle your server hits the soonest attacker.' },
-  snapshot: { name: 'Snapshot', code: ['cipher', 'kernel'], special: true, stat: 'snapshot', values: [8, 12, 16], unit: '% restore', about: 'Once per home fight, when a hit drops you below half, restore some Integrity.' },
 };
 export const SERVICE_SOURCES = Object.keys(SERVICES).filter((k) => SERVICES[k].special);
 // What a version of a service costs, as { credits, cipher, worm, kernel, exploit }.

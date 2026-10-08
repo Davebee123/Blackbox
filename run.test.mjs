@@ -489,8 +489,8 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   assert.deepEqual(Object.values(keyMap(s)), ['spike', 'rate-limit']);
 });
 
-test('XP: fights, vaults and new locations level you up; the server gets every point, plus banked loot', async () => {
-  const { hackerOf } = await import('./dist/combat.mjs');
+test('XP: fights, vaults and new locations level you up; the server has no XP of its own (its level is your highest class level)', async () => {
+  const { hackerOf, serverLevel } = await import('./dist/combat.mjs');
   const { XP, killXp, xpToNext } = await import('./dist/data.mjs');
   const s = withTemplate('relay');
   const loc = currentLocation(s);
@@ -499,10 +499,8 @@ test('XP: fights, vaults and new locations level you up; the server gets every p
   say(s, `unlock vault ${loc.password}`);
   assert.ok(hackerOf(s).xp > 0 || hackerOf(s).level > 1, 'a guard and a vault give XP');
   say(s, 'pull cache.dat');
-  const before = s.serverXp;
   say(s, 'jack out');
-  assert.ok(s.serverXp > before, 'banking loot feeds the server');
-  const sx = s.serverXp;
+  assert.equal(s.serverXp, undefined, 'banking loot earns no XP');
   let earned = 0;
   for (let i = 0; i < 4; i++) {
     command(s, 'encounter random'); command(s, 'engage'); s.encounter.queue = null;
@@ -510,7 +508,8 @@ test('XP: fights, vaults and new locations level you up; the server gets every p
     finishOff(s, s.encounter.virus.parts.at(-1).id);
     earned += s.logs.filter((e) => e.type === 'xp' && e.id > mark).reduce((n, e) => n + e.amount, 0); // the kill, and a first decode
   }
-  assert.equal(s.serverXp - sx, earned, 'every XP a hacker earns, the server earns too');
+  assert.ok(earned > 0);
+  assert.equal(serverLevel(s), hackerOf(s).level, 'the server is at your level');
   assert.ok(xpToNext(18) > 10 * xpToNext(1), 'the climb gets longer');
 });
 

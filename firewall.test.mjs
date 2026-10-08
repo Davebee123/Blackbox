@@ -109,7 +109,7 @@ test('harden.sh: +3 levels for 8 hours, one script each', () => {
   hooks.now = null;
 });
 
-test('filters: rolled gear for the firewall, in slots from the Firewall service', async () => {
+test('filters: rolled gear for the firewall, in its two slots (and one more at tiers +1, +3 and +5)', async () => {
   const { rollFilter, addFilter, filtersOf, equipped, vaultFilter } = await import('./dist/filters.mjs');
   const { seeded } = await import('./dist/gear.mjs');
   const s = fresh();
@@ -120,14 +120,15 @@ test('filters: rolled gear for the firewall, in slots from the Firewall service'
   assert.ok(Object.keys(f.stats).length >= 2, 'a blue has an affix');
   addFilter(s, f);
   command(s, 'filter equip 1');
-  assert.equal(equipped(s).length, 0, 'no Firewall service, no slots');
-  s.services = { firewall: 1 };
-  command(s, 'filter equip 1');
-  assert.equal(equipped(s).length, 1);
+  assert.equal(equipped(s).length, 1, 'the wall has two slots of its own (the Filter Bay folded into it)');
   assert.equal(effLevel(s), 5 + f.stats.strength, 'its strength adds levels');
   addFilter(s, rollFilter(seeded(4), { level: 20 }));
+  addFilter(s, rollFilter(seeded(5), { level: 20 }));
   command(s, 'filter equip 2');
-  assert.equal(equipped(s).length, 1, 'one slot at v1');
+  command(s, 'filter equip 3');
+  assert.equal(equipped(s).length, 2, 'two slots at +0');
+  command(s, 'filter unequip 2');
+  command(s, 'filter scrap 3');
   command(s, 'filter scrap 1');
   assert.equal(filtersOf(s).length, 1);
   assert.equal(equipped(s).length, 0, 'scrapping takes it out');
@@ -259,14 +260,18 @@ test('away: a long passive clock (one invasion every 2-4 hours); open ports spee
   assert.ok(AWAY.everyMs[0] >= 2 * 3600000);
 });
 
-test('tier perks: +2 defrags faster, +3 and +5 a filter slot each, +4 fragments slower, +6 a longer harden.sh', async () => {
+test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 defrags faster, +4 fragments slower, +6 a longer harden.sh', async () => {
   const { defragMs, tierPerk, TIER_PERKS } = await import('./dist/firewall.mjs');
   const { slotsOf } = await import('./dist/filters.mjs');
-  assert.deepEqual(TIER_PERKS.map((p) => p.tier), [2, 3, 4, 5, 6]);
+  assert.deepEqual(TIER_PERKS.map((p) => `${p.tier}${p.perk}`), ['1slot', '1raid', '2defrag', '3slot', '3raid', '4wear', '5slot', '5raid', '6harden']);
   const s = fresh();
   fwOf(s).pin = 9;
   s.server.credits = 99999; s.materials = { cipher: 999, worm: 999, kernel: 999, exploit: 0 };
-  command(s, 'firewall upgrade'); command(s, 'firewall upgrade');
+  const base = s.server.max;
+  command(s, 'firewall upgrade');
+  assert.equal(s.server.max, base + Math.round(base * 0.05), '+1: the RAID Array\'s +5% max Integrity lives on the wall now');
+  assert.equal(slotsOf(s), 3, '+1: a third filter slot');
+  command(s, 'firewall upgrade');
   assert.equal(fwOf(s).plus, 2);
   assert.ok(s.logs.at(-1).message.includes('Defrag 30% faster'));
   assert.equal(defragMs(s), Math.round(FIREWALL.defragMs * 0.7), '+2: defrag 30% faster');
@@ -277,11 +282,10 @@ test('tier perks: +2 defrags faster, +3 and +5 a filter slot each, +4 fragments 
   command(s, 'firewall upgrade');
   assert.equal(fwOf(s).plus, 3);
   assert.equal(s.sigs, 0);
-  assert.equal(slotsOf(s), 1, '+3: a filter slot of its own');
-  s.services = { firewall: 2 };
-  assert.equal(slotsOf(s), 3, 'on top of the service\'s');
+  assert.equal(slotsOf(s), 4, '+3: one more');
   fwOf(s).plus = 6;
-  assert.equal(slotsOf(s), 4);
+  assert.equal(slotsOf(s), 5);
+  assert.equal(tierPerk(s, 'raid'), 3, '+15% max Integrity at +5 and up, what a RAID Array v3 gave');
   assert.equal(tierPerk(s, 'harden'), 1);
   assert.equal(tierPerk(s, 'wear'), 1);
 });

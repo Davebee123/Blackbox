@@ -15,6 +15,7 @@ CONFIG.powerPerLevel = 0;
 CONFIG.partToughness = 1;
 CONFIG.enemyRamp = 0;
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 };
+(await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A level-38 Bastion of a subclass with these skills on the bar and these talents (by id) and ranks.
 function start(sub, bar = [], talents = [], ranks = {}, id = 'cryptjack') {

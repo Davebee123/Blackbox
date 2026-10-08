@@ -1,14 +1,16 @@
 // Filters: gear for your firewall, rolled like protocols (a rarity, an item level, stats). They sit
-// in the firewall's slots (the Filter Bay service: 1, 2, 3 by version) and change what it does, never
-// what it targets: more levels, more against one family, slower fragmentation, a faster defrag,
-// more grind and less chip while contested, decoys and a sandbox for home fights, and on rarer ones
-// a tar pit, a sting or a reflection.
+// in the firewall's slots (two, and one more at each of tiers +1, +3 and +5) and change what it does,
+// never what it targets: more levels, more against one family, slower fragmentation, a faster defrag,
+// more grind and less chip while contested, and for the fights at home decoys, a sandbox, Block, a
+// shield, Regen and barbs, and on rarer ones a tar pit, a sting or a reflection. The home-fight stats
+// were services once (the Hardened Kernel, the Scrubber, the Hot-patcher, Counter-intrusion).
 // Getting one: filter.flt in some vaults (pull it, jack out to bank it; Stock or Tuned at best),
 // crafting (it takes signatures, which only invasions pay), and captures from invasions, the only
 // place Custom filters (and the rare tar, sting and reflection) come from. Equip at home.
-import { emit, warn, active, serviceVersion, hackerLevel, materialsOf, rand, firstTime } from './combat.mjs';
+import { emit, warn, active, hackerLevel, materialsOf, rand, firstTime } from './combat.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay } from './salvage.mjs';
 import { RARITIES, seeded } from './gear.mjs';
+import { power } from './data.mjs';
 import { tierSlots } from './firewall.mjs';
 
 export const FILTER_CAP = 12; // how many you can hold
@@ -31,6 +33,11 @@ export const FILTER_STATS = {
   chip: { name: '% less chip damage', range: [15, 35], kind: 'prefix', label: 'Buffered' },
   evasion: { name: '% Evasion at home', range: [2, 5], kind: 'prefix', label: 'Decoy', home: true },
   sanitize: { name: '% Sanitize at home', range: [10, 25], kind: 'prefix', label: 'Sandboxed', home: true },
+  // scale: the range grows with the filter's item level (+4% a level, as the services' numbers did).
+  reduction: { name: ' Block at home', range: [2, 6], kind: 'prefix', label: 'Hardened', home: true, scale: true },
+  regen: { name: ' Regen at home', range: [0.3, 1], kind: 'prefix', label: 'Self-healing', home: true, scale: true, dp: true },
+  shield: { name: '% of max Integrity as a shield in home fights', range: [4, 10], kind: 'suffix', label: 'of the Scrubber', home: true, pct: true },
+  countermeasures: { name: ' back on every hit at home', range: [2, 6], kind: 'suffix', label: 'of Barbs', home: true, scale: true },
   tarpit: { name: '% slower invasions', range: [15, 30], kind: 'suffix', label: 'of Tar', rare: true },
   sting: { name: '% worn on arrival', range: [10, 25], kind: 'suffix', label: 'of the Hive', rare: true },
   reflect: { name: ' code from each invader it stops', range: [2, 5], kind: 'suffix', label: 'of Reflection', rare: true },
@@ -39,6 +46,11 @@ const AFFIXES = { scrap: [0, 0], stock: [0, 0], tuned: [1, 2], custom: [3, 3] };
 const MULT = { scrap: 0.8, stock: 1, tuned: 1.1, custom: 1.25 };
 
 const pick = (r, xs) => xs[Math.floor(r() * xs.length)];
+// One stat's number on a filter at item level L.
+const statRoll = (k, r, L) => {
+  const x = FILTER_STATS[k], [a, b] = x.range, v = (a + (b - a) * r()) * (x.scale ? power(L) : 1) + (x.family ? Math.floor(L / 20) : 0);
+  return x.dp ? Math.max(0.1, Math.round(v * 10) / 10) : Math.max(1, Math.round(v));
+};
 export const baseName = (L) => [...BASES].reverse().find((b) => Math.max(1, L) >= b.from).name;
 export function rollFilter(r, { level = 1, rarity = null, stat = null } = {}) {
   const L = Math.max(1, level);
@@ -48,12 +60,12 @@ export function rollFilter(r, { level = 1, rarity = null, stat = null } = {}) {
   const [lo, hi] = AFFIXES[rarity], n = Math.max(stat ? 1 : 0, lo + Math.floor(r() * (hi - lo + 1)));
   const taken = [];
   // A crafted filter is built around the stat you pick.
-  if (stat && FILTER_STATS[stat]) { const [a, b] = FILTER_STATS[stat].range; stats[stat] = Math.round(a + (b - a) * r() + (FILTER_STATS[stat].family ? Math.floor(L / 20) : 0)); taken.push(stat); }
+  if (stat && FILTER_STATS[stat]) { stats[stat] = statRoll(stat, r, L); taken.push(stat); }
   while (taken.length < n) {
     const ok = Object.keys(FILTER_STATS).filter((k) => !taken.includes(k) && (!FILTER_STATS[k].rare || rarity === 'custom') && !(FILTER_STATS[k].family && taken.some((t) => FILTER_STATS[t].family)));
     if (!ok.length) break;
-    const k = pick(r, ok), [a, b] = FILTER_STATS[k].range;
-    stats[k] = Math.round(a + (b - a) * r() + (FILTER_STATS[k].family ? Math.floor(L / 20) : 0));
+    const k = pick(r, ok);
+    stats[k] = statRoll(k, r, L);
     taken.push(k);
   }
   const pre = taken.map((k) => FILTER_STATS[k]).find((x) => x.kind === 'prefix'), suf = taken.map((k) => FILTER_STATS[k]).find((x) => x.kind === 'suffix');
@@ -71,8 +83,9 @@ export function vaultFilter(loc) {
 
 const own = (s) => (s.filters ||= { held: [], on: [] }); // on: indexes into held
 export const filtersOf = (s) => own(s).held;
-// Slots: the Filter Bay service's (1–3 by version), plus your firewall's tiers (+3, +5).
-export const slotsOf = (s) => (serviceVersion(s, 'firewall') || 0) + tierSlots(s);
+// Slots: two, plus one at each of your firewall's tiers +1, +3 and +5 (the Filter Bay folded into the wall).
+export const BASE_SLOTS = 2;
+export const slotsOf = (s) => BASE_SLOTS + tierSlots(s);
 export const equipped = (s) => own(s).on.slice(0, slotsOf(s)).map((i) => own(s).held[i]).filter(Boolean);
 // The sum of a stat over what's equipped.
 export const filterStat = (s, k) => equipped(s).reduce((a, f) => a + (f.stats[k] || 0), 0);
@@ -127,7 +140,7 @@ function filterAction(s, text) {
   if (s.run || active(s)) return warn(s, 'Filters go in and out at home, not on a run or mid-fight.');
   if (verb === 'equip') {
     if (o.on.includes(i)) return warn(s, `${f.name} is already in.`);
-    if (o.on.length >= slotsOf(s)) return warn(s, slotsOf(s) ? `Every filter slot is full (${slotsOf(s)}). Take one out first.` : 'No filter slots: install the Filter Bay, or take your firewall to v3.');
+    if (o.on.length >= slotsOf(s)) return warn(s, `Every filter slot is full (${slotsOf(s)}). Take one out first, or buy a firewall tier: +1, +3 and +5 each add a slot.`);
     o.on.push(i);
     return emit(s, 'firewall', `${f.name} in: ${filterLine(f)}.`);
   }

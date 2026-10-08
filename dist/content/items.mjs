@@ -1444,6 +1444,311 @@ export default {
         }
       ],
       "flavour": "Point their traffic at nothing and watch it fall in."
+    },
+    {
+      "id": "rowhammer",
+      "name": "Rowhammer",
+      "base": "zero-click",
+      "level": 18,
+      "lean": "breaker",
+      "primary": {
+        "damage": [
+          22,
+          28
+        ]
+      },
+      "secondary": {
+        "crit": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "patch-slow",
+        "value": 3
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 3
+        },
+        {
+          "kind": "rogue",
+          "layer": 3
+        }
+      ],
+      "flavour": "Hammer one row hard enough and the next one gives."
+    },
+    {
+      "id": "ctrl-c",
+      "name": "Ctrl-C",
+      "base": "loader",
+      "level": 20,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 24
+      },
+      "secondary": {
+        "clock": 6
+      },
+      "effect": {
+        "when": "answer",
+        "do": "refund",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 3
+        },
+        {
+          "kind": "guard",
+          "id": "tracer"
+        }
+      ],
+      "flavour": "The oldest interrupt there is."
+    },
+    {
+      "id": "slammer",
+      "name": "Slammer",
+      "base": "loader",
+      "level": 22,
+      "lean": "payload",
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 30
+      },
+      "effect": {
+        "when": "custom",
+        "do": "burn-jump"
+      },
+      "sources": [
+        {
+          "kind": "rogue",
+          "layer": 3
+        },
+        {
+          "kind": "vault",
+          "layer": 3
+        }
+      ],
+      "flavour": "376 bytes. Ten minutes. Everyone."
+    },
+    {
+      "id": "log4shell",
+      "name": "Log4Shell",
+      "base": "zero-click",
+      "level": 24,
+      "lean": "demolitionist",
+      "primary": {
+        "damage": [
+          22,
+          28
+        ]
+      },
+      "secondary": {
+        "accuracy": 3
+      },
+      "effect": {
+        "when": "break",
+        "do": "break-hit",
+        "value": 22
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 3
+        },
+        {
+          "kind": "guard",
+          "id": "shredder"
+        }
+      ],
+      "flavour": "It was only ever meant to write a log line."
+    },
+    {
+      "id": "spectre",
+      "name": "Spectre",
+      "base": "restricted-shell-escape",
+      "level": 26,
+      "primary": {
+        "signal": 50,
+        "regen": 2,
+        "restore": 24
+      },
+      "secondary": {
+        "evasion": 3
+      },
+      "downside": {
+        "regen": -1
+      },
+      "effect": {
+        "when": "always",
+        "do": "tell-hits"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 3
+        },
+        {
+          "kind": "rogue",
+          "layer": 3
+        }
+      ],
+      "flavour": "It read what it was never meant to, before anything checked."
+    },
+    {
+      "id": "bulletproof-host",
+      "name": "Bulletproof Host",
+      "base": "mixnet",
+      "level": 28,
+      "lean": "bastion",
+      "primary": {
+        "signal": 140,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "always",
+        "if": "any-tell",
+        "do": "stat-x2",
+        "stat": "reduction"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 4
+        },
+        {
+          "kind": "rogue",
+          "layer": 3
+        }
+      ],
+      "flavour": "Abuse reports go to a fax machine in a basement."
+    },
+    {
+      "id": "hot-reload",
+      "name": "Hot Reload",
+      "base": "implant",
+      "level": 30,
+      "lean": "overclocker",
+      "primary": {
+        "damage": 8,
+        "signal": 40
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "downside": {
+        "signal": -10
+      },
+      "effect": {
+        "when": "crit",
+        "do": "refund-skill"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 4
+        },
+        {
+          "kind": "rogue",
+          "layer": 4
+        }
+      ],
+      "flavour": "Swap the code while it runs. Nobody restarts anything."
+    },
+    {
+      "id": "interrupt-vector",
+      "name": "Interrupt Vector",
+      "base": "polymorphic-engine",
+      "level": 32,
+      "lean": "warden",
+      "primary": {
+        "damage": 13,
+        "signal": 55,
+        "payload": 30
+      },
+      "secondary": {
+        "reduction": 2
+      },
+      "effect": {
+        "when": "answer",
+        "do": "shield",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 4
+        },
+        {
+          "kind": "guard",
+          "id": "bouncer"
+        }
+      ],
+      "flavour": "Every handler you ever wrote, pointed at one address."
+    },
+    {
+      "id": "blue-pill",
+      "name": "Blue Pill",
+      "base": "ghost-shell",
+      "level": 34,
+      "primary": {
+        "signal": 70,
+        "regen": 3,
+        "restore": 30
+      },
+      "secondary": {
+        "sanitize": 8
+      },
+      "effect": {
+        "when": "struck",
+        "if": "charged",
+        "do": "halve"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 4
+        },
+        {
+          "kind": "rogue",
+          "layer": 4
+        }
+      ],
+      "flavour": "The machine runs inside something it cannot see."
+    },
+    {
+      "id": "shellshock",
+      "name": "Shellshock",
+      "base": "wormable",
+      "level": 38,
+      "lean": "breaker",
+      "primary": {
+        "damage": [
+          32,
+          40
+        ]
+      },
+      "downside": {
+        "crit": -3
+      },
+      "effect": {
+        "when": "hit",
+        "do": "shatter"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "layer": 4
+        },
+        {
+          "kind": "rogue",
+          "layer": 4
+        }
+      ],
+      "flavour": "Bash would run anything you put after the function."
     }
   ]
 };

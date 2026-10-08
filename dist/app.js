@@ -23,6 +23,7 @@ import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
+import { tickPlay } from './progression.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -502,14 +503,14 @@ function react(events) {
       case 'fast-kill': feel.add('good', null); break;
       case 'fresh': feel.add('good', null, `FRESH +${e.amount}`); break; // stepping away from fighting paid half again
       case 'codex': feel.add('mark', '.hud-bar.enemy', 'DECODED', { noFlash: true }); break;
-      case 'level-up': case 'server-level': {
+      case 'level-up': {
         if (won) break;
-        const [t, ...rest] = e.message.split('. ');
-        if (e.type === 'server-level') levelUp(`SERVER LEVEL ${e.level}`, V.serverLevelText(e.level, campaign.server.max), false); // what it adds, and how it grows
-        else levelUp(t.replace(/\.$/, ''), rest.join('. '), (e.unlocked || []).some((id) => id !== 'edge')); // a new skill: a way to Loadout
+        // One banner for every track: what the level brings, and the next level that brings something.
+        levelUp(e.message.split('. ')[0].replace(/\.$/, ''), V.levelUpLines(e), (e.unlocked || []).some((id) => id !== 'edge')); // a new skill: a way to Loadout
         feel.add('win', null);
         break;
       }
+      case 'behind-on': feel.add('good', null, 'BEHIND +50% XP'); break;
       case 'heal': feel.add('good', MINE, e.amount ? `+${e.amount}` : null); break;
       case 'blocked': feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
@@ -588,14 +589,15 @@ let ending = false; // the last break is landing
 // A level-up gets its own banner, on any screen.
 function levelUp(title, text, skill = false) {
   $('levelup-title').textContent = title;
-  $('levelup-text').textContent = text;
+  if (Array.isArray(text)) $('levelup-text').innerHTML = text.map((l) => `<span class="lu-line${l.ghost ? ' ghost' : ''}">${V.esc(l.text)}</span>`).join('');
+  else $('levelup-text').textContent = text;
   const el = $('levelup');
   el.querySelector('.lu-go')?.remove();
   if (skill) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small primary lu-go'; b.dataset.module = 'loadout'; b.textContent = 'See it on Loadout'; el.append(b); }
   el.hidden = false;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   clearTimeout(levelUp.t);
-  levelUp.t = setTimeout(() => { el.hidden = true; }, skill ? 7000 : 3200);
+  levelUp.t = setTimeout(() => { el.hidden = true; }, skill ? 7000 : 5000);
 }
 function notice(text, bad = false, suggest = null, sticky = false) {
   const el = $('notice');
@@ -1333,7 +1335,7 @@ function services() {
   const now = Date.now();
   // Active play time, for kills an hour (System page): the tab is open and you've touched it in the last 2 minutes.
   const dt = Math.min(5000, now - lastTick); lastTick = now;
-  if (!document.hidden && now - lastInput < 120000 && !playtest) (campaign.pace ||= { kills: 0, ms: 0 }).ms += dt;
+  if (!document.hidden && now - lastInput < 120000 && !playtest) tickPlay(campaign, dt); // and the clock of the level your class is on (Behind)
   const hp = campaign.server.integrity;
   const events = [...tickNetwork(campaign, now), ...tickServices(campaign, now)];
   if (events.length) { react(events); save(); }

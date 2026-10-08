@@ -3,14 +3,15 @@
 //              BASE_GAP (an outpost's or a hub's, that holding's own level). It moves with what you
 //              attach and detach, for free: keeping level with your network is no longer a bill.
 //   tier       upgrades buy a margin on top, +1 to +6 (TIERS), each a real price; tiers carry perks
-//              (TIER_PERKS: a faster defrag, filter slots, slower wear, a longer harden.sh).
+//              (TIER_PERKS: filter slots, a sturdier server, a faster defrag, slower wear, a longer
+//              harden.sh). The Filter Bay and the RAID Array were services once; they live here now.
 //   fragments  an invasion that gets past it (contested: a block, a breach: two) fragments it (a
 //              16-block grid); each 4 fragmented blocks cost it a level. Buying a tier leaves it
 //              whole; Defrag restores it without one, running weaker for a few minutes meanwhile.
 //   hardening  harden.sh (a hub-shop consumable, or written from signatures): +3 levels for 8 hours.
 // Filters and the +N chip (architecture, the consortium's Grid, a Firewall Node, Root 5) add on top.
 // Its effective level is what it blocks outright: an invader at or under it bounces.
-import { emit, warn, hooks } from './combat.mjs';
+import { emit, warn, hooks, syncServer } from './combat.mjs';
 import { CONFIG, power } from './data.mjs';
 import { items } from './hidden.mjs';
 import { filterStat } from './filters.mjs';
@@ -31,11 +32,17 @@ export const FIREWALL = {
 export const BASE_GAP = 2; // your home wall's base: your highest attached server's level, less this (never under 1)
 export const TIERS = 6; // +1 to +6 on top of the base
 // Perks by tier, for any firewall (home, outpost, hub). Add one here and read it with tierPerk().
+// raid: +RAID_PERK of your server's max Integrity each (home only).
+export const RAID_PERK = 0.05;
 export const TIER_PERKS = [
+  { tier: 1, perk: 'slot', name: '+1 filter slot' },
+  { tier: 1, perk: 'raid', name: '+5% max Integrity' },
   { tier: 2, perk: 'defrag', name: 'Defrag 30% faster' },
   { tier: 3, perk: 'slot', name: '+1 filter slot' },
+  { tier: 3, perk: 'raid', name: '+5% max Integrity' },
   { tier: 4, perk: 'wear', name: 'Fragments 25% slower' },
   { tier: 5, perk: 'slot', name: '+1 filter slot' },
+  { tier: 5, perk: 'raid', name: '+5% max Integrity' },
   { tier: 6, perk: 'harden', name: 'harden.sh lasts twice as long' },
 ];
 export const perksAt = (tier) => TIER_PERKS.filter((p) => p.tier <= tier);
@@ -60,6 +67,7 @@ export function baseOf(s, loc = null) {
 export const tierOf = (s, loc = null) => Math.min(TIERS, fwAt(s, loc).plus || 0);
 export const tierPerk = (s, id, loc = null) => perksAt(tierOf(s, loc)).filter((p) => p.perk === id).length;
 export const tierSlots = (s) => tierPerk(s, 'slot'); // your home firewall's extra filter slots
+export const raidShare = (s) => RAID_PERK * tierPerk(s, 'raid'); // your server's extra max Integrity, as a share
 // Its level before filters, the +N chip, fragmentation and hardening: base + tier.
 export const fwLevel = (s, loc = null) => baseOf(s, loc) + tierOf(s, loc);
 
@@ -134,8 +142,9 @@ export function firewallCommand(s, text, at = clock()) {
     // An upgrade rebuilds it whole: fragmentation (and a defrag running) are gone with it.
     const mended = f.frag > 0 || f.defragUntil > at;
     f.frag = 0; f.wear = 0; f.defragUntil = 0;
-    const got = TIER_PERKS.find((p) => p.tier === t);
-    return emit(s, 'firewall', `${where}: +${t} over its base, level ${fwLevel(s, loc)}${got ? `. ${got.name}` : ''}${mended ? '. Every block is whole again' : ''}.`, loc ? { location: loc.id } : {});
+    const got = TIER_PERKS.filter((p) => p.tier === t && (!loc || p.perk !== 'raid')).map((p) => p.name);
+    if (!loc) syncServer(s); // a tier can add max Integrity
+    return emit(s, 'firewall', `${where}: +${t} over its base, level ${fwLevel(s, loc)}${got.length ? `. ${got.join(', ')}` : ''}${mended ? '. Every block is whole again' : ''}.`, loc ? { location: loc.id } : {});
   }
   if (verb === 'defrag') {
     if (defragging(s, at, loc)) return warn(s, 'Already defragmenting.');

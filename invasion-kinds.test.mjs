@@ -205,25 +205,22 @@ test('a champion: elite-grade (the tells for elites apply), a level over its ser
 });
 
 test('a saboteur: through the wall, it shuts off a service until you kill it; nothing installs meanwhile', () => {
-  const s = world({ services: { raid: 2, firewall: 1, kernel: 1 } });
-  const max = s.server.max;
+  const s = world({ services: { router: 2, buildfarm: 1, uplink: 1 } });
   invade(s, 'saboteur');
   const inv = s.invasion;
-  assert.equal(inv.service, 'raid', 'the best service you run, never the Filter Bay');
-  assert.match(tellOf(s), /RAID Array/);
-  assert.equal(s.services.raid, undefined, 'shut off');
-  assert.ok(s.server.max < max);
+  assert.equal(inv.service, 'router', 'the best service you run');
+  assert.match(tellOf(s), /Edge Router/);
+  assert.equal(s.services.router, undefined, 'shut off');
   assert.ok(s.logs.some((e) => e.type === 'sabotage'));
-  play(s, 'install kernel');
+  play(s, 'install buildfarm');
   assert.match(s.logs.at(-1).message, /Get rid of it first/);
   play(s, 'jack in');
   win(s);
-  assert.equal(s.services.raid, 2, 'back on, at its version');
-  assert.equal(s.server.max, max);
+  assert.equal(s.services.router, 2, 'back on, at its version');
   // Blocked at the wall, it does nothing.
-  const t = world({ fw: 40, services: { raid: 1 } });
+  const t = world({ fw: 40, services: { router: 1 } });
   invade(t, 'saboteur');
-  assert.equal(t.services.raid, 1);
+  assert.equal(t.services.router, 1);
 });
 
 test('a thief: it heads for an outpost\'s stores; intercept it on the way, or it takes half', () => {
@@ -365,7 +362,7 @@ test('saves from v32 load with their invasion as a raider and no signatures', ()
   delete old.sigs;
   const r = restore(old);
   assert.equal(r.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 33);
+  assert.equal(SAVE_VERSION, 34);
   assert.equal(r.invasion.kind, 'raider');
   assert.deepEqual(r.invasion.queue, []);
   assert.equal(r.invasion.bounty, KINDS.raider.bounty);

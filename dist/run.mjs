@@ -5,7 +5,7 @@ import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, gainServerXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -655,8 +655,6 @@ export function jackOut(s) {
   if (clean) credits += Math.round(credits * TRACE.cleanCredits);
   s.server.credits += credits;
   const items = pack.filter((f) => f.kind === 'item').map((f) => f.item);
-  // Banking loot feeds the server's level.
-  const bankXp = Math.floor(credits / SERVER.xp.creditsPer) + SERVER.xp.item * (items.length + gear.length + sources.length + blueprints.length);
   s.signal = s.run.integrity;
   s.run = null;
   if (relocks(loc)) loc.lockUntil = clock() + ROGUE.relockMs;
@@ -679,7 +677,6 @@ export function jackOut(s) {
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
   for (const f of daemons) learnDaemon(s, 'Daemon banked: ');
   for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: loc.id });
-  gainServerXp(s, bankXp, 'loot banked');
   // A trace record moves the trace on one of this server's hidden neighbours (a flagged one
   // first, else the one it names): part of the way, not the server itself.
   for (const f of pack.filter((x) => x.kind === 'deeper')) {

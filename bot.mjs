@@ -16,11 +16,16 @@ import { sweepPuzzle, sweepFile } from './dist/forensics.mjs';
 import { eventsOf, CARDS } from './dist/events.mjs';
 import { BUILDINGS, buildBlock } from './dist/outpost.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
+import { tickPlay } from './dist/progression.mjs';
 import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
-import { CONFIG, STRAINS, FAMILIES, GUARDS } from './dist/data.mjs';
+import { CONFIG, STRAINS, FAMILIES, GUARDS, power } from './dist/data.mjs';
 
-export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12, cmdSec = 3, log = false, contracts = true, spend = 'none' } = {}) {
+// gearRule: 'rarity' (the highest rarity, then the highest level) or 'stats' (what an item adds: its Damage
+// as a share of your hit, its Signal as a share of your max, small weights for the rest, 3% for an effect).
+// trace: per-level records for the progression measures (docs/progression.md): fights, wins, rest, XP by
+// kind, drops, gold repeats, upgrades and their size, what is worn at each level, and how long uniques stay on.
+export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12, cmdSec = 3, log = false, contracts = true, spend = 'none', gearRule = 'rarity', trace = false, capHours = 72 } = {}) {
   let t = 1_700_000_000_000;
   hooks.now = () => t;
   const s = fresh();
@@ -35,18 +40,30 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
   const ledger = (stats.ledger = {}), byLevel = (stats.byLevel = {});
   const book = (why, fn) => { const a = purse(); const r = fn(); const b = purse(); for (const k in a) if (b[k] > a[k]) { const row = (ledger[why] ||= {}); row[k] = (row[k] || 0) + b[k] - a[k]; } return r; };
   const wait = (sec) => book('idle', () => { for (let left = sec; left > 0; left -= 30) { const d = Math.min(30, left) * 1000; t += d; idleRegen(s, d); for (const e of [...tickNetwork(s, t), ...tickServices(s, t)]) note(e); } });
+  const per = (stats.per = {}), here = () => (per[hackerLevel(s)] ||= { fights: 0, wins: 0, rest: 0, xp: {}, drops: {}, gold: 0, goldDup: 0, effectDrops: 0, upgrades: [], effectUps: 0 });
+  const seenZd = new Set();
+  let collected = null;
   const note = (e) => {
     stats.events[e.type] = (stats.events[e.type] || 0) + 1;
+    if (trace && e.type === 'collected') collected = e.unique;
+    if (trace && e.type === 'xp') { const x = here().xp, k = e.kind || 'other'; x[k] = (x[k] || 0) + e.amount; }
+    if (trace && e.type === 'drop' && e.item) {
+      const h = here(), it = e.item; h.drops[it.rarity] = (h.drops[it.rarity] || 0) + 1;
+      if (it.unique || it.zeroDay) { h.gold++; h.effectDrops++; const dup = it.unique ? collected !== it.unique : seenZd.has(it.zeroDay); if (dup) h.goldDup++; if (it.zeroDay) seenZd.add(it.zeroDay); }
+      else if (it.rule) h.effectDrops++;
+      collected = null;
+    }
     if (e.type === 'drop' && (e.item || e.rarity)) { const r = e.rarity || e.item.rarity; stats.drops[r] = (stats.drops[r] || 0) + 1; stats.firstAt[r] ??= Math.round((t - 1_700_000_000_000) / 60000); }
     if (e.type === 'xp') { const why = (e.message.split('·')[1] || 'other').trim().replace(/[0-9]+/g, '#').replace(/ on .*/, '').replace(/\.$/, ''); stats.xp[why] = (stats.xp[why] || 0) + e.amount; }
   };
   const say = (text) => { const ev = play(s, text) || []; ev.forEach(note); t += cmdSec * 1000; return ev; };
-  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
+  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (trace) { const g = loaded(s), spike = 25 * power(l); (stats.worn_at ||= {})[l] = { uniques: g.filter((x) => x.unique).length, effects: g.filter(effectOf).length, slots: g.length, dmg: Math.round((g.reduce((n, x) => n + (x.stats.damage || 0), 0) / spike) * 100) / 100, sig: Math.round((g.reduce((n, x) => n + (x.stats.signal || 0), 0) / maxSignal(s)) * 100) / 100 }; } if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
   const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family]).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
   const fight = () => {
     if (!s.encounter || (s.encounter.phase !== 'alert' && !active(s))) return; // a finished fight still on screen
     if (s.encounter.phase === 'alert') command(s, 'engage');
-    const key = fightKey(), where = s.run?.loc, v = s.encounter.virus;
+    const key = fightKey(), where = s.run?.loc, v = s.encounter.virus, at = trace ? here() : null;
+    if (at) at.fights++;
     stats.fights[key] = (stats.fights[key] || 0) + 1;
     // The fight mix by your level: grey (10+ levels under you) vs strains and ICE (the fights with a rule).
     const mix = ((stats.mix ||= {})[hackerLevel(s)] ||= { fights: 0, grey: 0, special: 0 });
@@ -62,7 +79,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     }
     if (active(s)) finish(s, 'defeat');
     const r = s.reports.at(-1);
-    if (r?.result === 'victory') stats.wins++; else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
+    if (r?.result === 'victory') { stats.wins++; if (at) at.wins++; } else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };
@@ -75,12 +92,35 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     }
     let n = 0; const t0 = t; while ((signalNow(s) < maxSignal(s) || s.server.integrity < s.server.max * 0.3) && n++ < 400) wait(10);
     stats.restMins = (stats.restMins || 0) + (t - t0) / 60000;
+    if (trace) here().rest += (t - t0) / 60000;
     if (s.server.integrity <= 0) { stats.crashes++; command(s, 'reboot'); }
   };
   // Gear like a player: the best item in each slot (rarity, then level); deconstruct the rest.
-  const value = (it) => RARITY_ORDER.indexOf(it.rarity) * 100 + it.level;
+  const effectOf = (it) => !!(it.unique || it.zeroDay || it.rule);
+  const hitNow = () => 25 * power(hackerLevel(s)) + loaded(s).reduce((n, x) => n + (x.stats.damage || 0), 0);
+  const W = { crit: 0.004, critDamage: 0.001, accuracy: 0.002, echo: 0.004, payload: 0.001, regen: 0.01, reduction: 0.01, evasion: 0.004, sanitize: 0.001, restore: 0.001, leech: 0.005, clock: 0.002, stealth: 0.001, sync: 0.001, scavenge: 0.0005 };
+  const worth = (it, hit = hitNow(), sig = maxSignal(s)) => (it.stats.damage || 0) / hit + (it.stats.signal || 0) / sig + Object.entries(it.stats).reduce((n, [k, v]) => n + (W[k] || 0) * v, 0) + (effectOf(it) ? 0.03 : 0);
+  const value = gearRule === 'stats' ? (it) => worth(it) : (it) => RARITY_ORDER.indexOf(it.rarity) * 100 + it.level;
+  const judged = new Set(), wornSince = {};
+  // An upgrade: a drop that beats the weakest item in its slot by the rule. Its size: the larger of the Damage
+  // it adds as a share of your hit and the Signal it adds as a share of your max.
+  const judge = (it, old) => {
+    if (!trace || judged.has(it.id)) return;
+    judged.add(it.id);
+    if (old && value(it) <= value(old)) return;
+    const hit = hitNow(), sig = maxSignal(s), d = (k) => (it.stats[k] || 0) - (old?.stats[k] || 0);
+    here().upgrades.push(Math.round(Math.max(d('damage') / hit, d('signal') / sig) * 1000) / 10);
+    if (effectOf(it) && !(old && effectOf(old))) here().effectUps++;
+  };
+  const wear = () => {
+    if (!trace) return;
+    const on = new Set(loaded(s).filter((x) => x.unique).map((x) => x.id)), L = hackerLevel(s), now = t;
+    for (const id of on) wornSince[id] ??= { L, t: now };
+    for (const [id, w] of Object.entries(wornSince)) if (!on.has(id)) { (stats.worn ||= []).push({ levels: L - w.L, mins: Math.round((now - w.t) / 60000) }); delete wornSince[id]; }
+  };
   const gearUp = () => {
     if (s.run || active(s)) return;
+    for (const it of [...(s.stash || [])].filter((x) => !loadedOn(s, x.id))) { const kind = groupOf(it), slots = SLOT_KINDS.slice(0, slotCount(s)).map((k, i) => (k === kind ? i : -1)).filter((i) => i >= 0); if (!slots.length) continue; const w = slots.map((i) => rigOf(s)[i] && stashItem(s, rigOf(s)[i])).sort((a, b) => (a ? value(a) : -1) - (b ? value(b) : -1))[0]; judge(it, w || null); }
     for (const it of [...(s.stash || [])].sort((a, b) => value(b) - value(a))) {
       if (loadedOn(s, it.id)) continue;
       const kind = groupOf(it);
@@ -92,6 +132,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
       else command(s, 'deconstruct ' + it.id);
     }
     for (const it of [...(s.stash || [])]) if (!loadedOn(s, it.id)) command(s, 'deconstruct ' + it.id);
+    wear();
   };
   const homeFight = () => { if (!s.run && s.encounter && s.encounter.mode !== 'run') fight(); };
   // Has this server anything left (a guard up, the vault shut, files not taken)? And is it done with:
@@ -206,7 +247,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     return true;
   };
   let guard = 0, tickAt = t;
-  while (hackerLevel(s) < target && guard++ < 20000 && t - 1_700_000_000_000 < 72 * 3600000) {
+  while (hackerLevel(s) < target && guard++ < 20000 && t - 1_700_000_000_000 < capHours * 3600000) {
     book('home', homeFight);
     // The world's clock catches up after each thing it did, in 30-second steps (a logged-on player's
     // ticks: one big jump would play out as time away, with rested XP and away-pace invasions).
@@ -214,7 +255,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     tickAt = t;
     if (book('invasion', invasion)) continue;
     if (book('runs', deadDrop)) continue;
-    s.pace = { ...(s.pace || { kills: 0 }), ms: t - 1_700_000_000_000 }; // the bot's whole session is active play (Fresh uses it)
+    tickPlay(s, t - 1_700_000_000_000 - (s.pace?.ms || 0)); // the bot's whole session is active play (Fresh and Behind use it)
     mailWork();
     if (spend === 'all' && !s.run && !active(s) && !s.install) { // build: the cheapest service you can install
       for (const id of Object.keys(SERVICES)) if (!installBlock(s, id)) { const c = s.server.credits; command(s, 'install ' + id); (stats.spent ||= {}).services = (stats.spent.services || 0) + c - s.server.credits; break; }
@@ -241,6 +282,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
     if (!did) { const w = t; wait(15); stats.waitMins = (stats.waitMins || 0) + (t - w) / 60000; } // nothing open: the reconnect timers are running
     lvlCheck();
   }
+  if (trace) { const L = hackerLevel(s); for (const w of Object.values(wornSince)) (stats.wornOpen ||= []).push({ levels: L - w.L, mins: Math.round((t - w.t) / 60000) }); }
   stats.mins = Math.round((t - 1_700_000_000_000) / 60000);
   stats.killsPerHour = Math.round(stats.wins / (stats.mins / 60));
   stats.gear = loaded(s).map((it) => `${it.rarity}:${it.name} v${it.level}`);
