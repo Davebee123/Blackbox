@@ -301,8 +301,9 @@ test('Infiltrator Surprise: a blue window on cycle 1; Inject, Tag and Keepalive 
   command(s, 'inject ' + p.id);
   s.encounter.synced = true;
   const ev = resolveCycle(s);
-  assert.equal(s.encounter.burns.filter((b) => b.target === p.id).length, 2, 'an extra Inject stack');
-  assert.ok(ev.some((e) => e.type === 'synced' && e.surprise && /SURPRISE/.test(e.message)));
+  assert.equal(s.encounter.burns.filter((b) => b.target === p.id).length, 1, 'still one Inject: it does not stack');
+  assert.equal(ev.filter((e) => /^Inject \(Surprise\)/.test(e.message)).length, CONFIG.surprise.injectNow, 'it ticks at once, on top of its cycle\'s tick');
+  assert.ok(ev.some((e) => e.type === 'synced' && e.surprise && /SURPRISE/.test(e.message) && /Inject ticks at once/.test(e.message)));
   assert.ok(!s.encounter.sync?.surprise, 'only the first cycle');
   // Tag in the window: 6 cycles, burns +75%.
   const t = start();
@@ -313,8 +314,9 @@ test('Infiltrator Surprise: a blue window on cycle 1; Inject, Tag and Keepalive 
   // Missing the window: the normal effect.
   const m = start();
   const r = m.encounter.virus.parts[0];
-  command(m, 'inject ' + r.id); resolveCycle(m);
+  const mev = (command(m, 'inject ' + r.id), resolveCycle(m));
   assert.equal(m.encounter.burns.filter((b) => b.target === r.id).length, 1);
+  assert.ok(!mev.some((e) => /^Inject \(Surprise\)/.test(e.message)), 'no extra tick');
   // Other classes get no surprise window.
   const b = fresh(); command(b, 'encounter cryptjack'); command(b, 'engage');
   assert.ok(!b.encounter.sync?.surprise);

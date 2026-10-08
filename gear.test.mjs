@@ -271,7 +271,7 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
   bare(quiet(fight(b)));
   Object.assign(part(b, 'pulse'), { integrity: 500, max: 500 });
   command(b, 'inject pulse'); resolveCycle(b);
-  assert.equal(500 - part(b, 'pulse').integrity, 18, 'Inject 12, +50% Payload');
+  assert.equal(500 - part(b, 'pulse').integrity, 30, 'Inject 20, +50% Payload');
 });
 
 test('Restore: every heal you cast heals that much more (Patch up front and as it ticks); Payload: every helper hit too', () => {

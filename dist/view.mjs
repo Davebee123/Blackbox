@@ -462,11 +462,13 @@ function partTags(s, p) {
   if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="The Tripwire set it off: its attacks deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage">loud</span>`);
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="While it lives, fragments gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder. Break it and every fragment drops with it.">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
-  // Burns, one tag per kind: how many stacks (of how many it can take), and the damage a cycle in all.
+  // Burns, one tag per kind: the damage a cycle in all, and how many when there's more than one of a kind
+  // (Inject is one a part: pressing it again refreshes it).
   for (const name of [...new Set(burn.map((b) => b.name))]) {
-    const mine = burn.filter((b) => b.name === name), cap = Object.values(ABILITIES).find((a) => a.name === name)?.stacks;
-    const dmg = mine.reduce((n, b) => n + b.damage, 0);
-    tags.push(`<span class="tag you burn-tag" title="${esc(`${name}: ${mine.length}${cap ? ` of ${cap}` : ''} ${mine.length === 1 ? 'stack' : 'stacks'} on it, ${dmg} damage a cycle in all. Cycles left: ${mine.map((b) => b.left).join(', ')}.`)}">${esc(name)}${mine.length > 1 || cap ? ` ×${mine.length}${cap ? `/${cap}` : ''}` : ''} · ${dmg}</span>`);
+    const mine = burn.filter((b) => b.name === name);
+    const dmg = mine.reduce((n, b) => n + b.damage, 0), left = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'} left`;
+    const tip = mine.length === 1 ? `${name}: ${dmg} damage a cycle, ${left(mine[0].left)}.` : `${name}: ${mine.length} on it, ${dmg} damage a cycle in all. Cycles left: ${mine.map((b) => b.left).join(', ')}.`;
+    tags.push(`<span class="tag you burn-tag" title="${esc(tip)}">${esc(name)}${mine.length > 1 ? ` ×${mine.length}` : ''} · ${dmg}</span>`);
   }
   if (e.helpers?.some((h) => h.target === p.id)) tags.push(`<span class="tag daemon" title="Your helper hits it every cycle">helper</span>`);
   return tags.join('');
@@ -516,7 +518,7 @@ export function boardMarkup(s, selected, preview = null) {
   const remaining = Math.max(0, (cycleLength(s) - e.elapsedMs) / 1000);
   const quietCol = (c) => fighting && !hidden && !list.some((i) => i.col === c);
   const head = `<div class="brow bhead"><div class="bcell bname">Part</div>
-    <div class="bcell bnow"><span>Now <small class="cyc">cycle ${e.cycle}</small></span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject lands an extra stack, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
+    <div class="bcell bnow"><span>Now <small class="cyc">cycle ${e.cycle}</small></span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
     ${[1, 2, 3].map((c) => `<div class="bcell">+${c}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
   // Your row mirrors the parts: what you'll do in each upcoming cycle.
   const nowChip = e.queue

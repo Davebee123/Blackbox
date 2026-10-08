@@ -176,34 +176,41 @@ test('Bastion: Firewall absorbs 25 and lights Retaliate (twice the hit, next cyc
 });
 
 // ---------- Infiltrator ----------
-test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a veiled timer; Backdoor +6 per burn, through armor; Detonate', () => {
+test('Infiltrator: Inject is one heavy burn a part, and pressing it again refreshes it; Tag makes burns tick +50% and shows a veiled timer; Backdoor +per burn, through armor; Detonate', () => {
   const s = noArmor(quiet(start('infiltrator')));
   big(s, 'pulse');
   act(s, 'inject pulse');
-  assert.equal(lost(s, 'pulse'), 12);
+  assert.equal(lost(s, 'pulse'), 20, 'one press: 20 a cycle');
+  assert.equal(s.encounter.burns[0].left, 3, 'for 4 cycles (one ticked)');
+  act(s, 'hold');
+  assert.equal(lost(s, 'pulse'), 40);
+  assert.equal(readyIn(s, 'inject'), 1, 'a 3-cycle cooldown');
+  act(s, 'hold');
   act(s, 'inject pulse');
-  assert.equal(lost(s, 'pulse'), 12 + 24, 'two stacks tick');
-  s.encounter.burns = [1, 2, 3].map((n) => ({ id: 'inject', target: 'pulse', damage: 1, grow: 0, left: 5, name: 'Inject', drain: 0, n }));
-  s.encounter.readyAt = {};
-  act(s, 'inject pulse');
-  assert.equal(s.encounter.burns.filter((b) => b.target === 'pulse').length, 3, 'a fourth replaces the oldest');
-  assert.ok(!s.encounter.burns.some((b) => b.n === 1));
+  assert.equal(s.encounter.burns.filter((b) => b.target === 'pulse').length, 1, 'pressed again: still one Inject on it');
+  assert.equal(s.encounter.burns[0].left, 3, 'its duration reset to 4 (one ticked)');
+  assert.equal(lost(s, 'pulse'), 80, 'and it ticks once a cycle, not twice');
+  // A copy landing on a part with your Inject (Propagate, Bloom, Contagion…) refreshes it too, keeping the longer duration.
+  s.encounter.burns.push({ id: 'inject', target: 'pulse', damage: 20, grow: 0, left: 6, name: 'Inject', drain: 0 });
+  act(s, 'hold');
+  assert.deepEqual(s.encounter.burns.map((b) => b.left), [5], 'merged: the longer one, ticked once');
+  assert.equal(lost(s, 'pulse'), 100);
   const t = noArmor(quiet(start('infiltrator')));
   big(t, 'pulse');
   act(t, 'tag pulse');
   act(t, 'inject pulse');
-  assert.equal(lost(t, 'pulse'), 10 + 18, 'Tag hits for 10, then 12 × 1.5');
+  assert.equal(lost(t, 'pulse'), 10 + 30, 'Tag hits for 10, then 20 × 1.5');
   const b = quiet(start('infiltrator'));
   big(b, 'pulse');
   b.encounter.burns.push({ id: 'inject', target: 'pulse', damage: 0, grow: 0, left: 5, name: 'Inject', drain: 0 });
   act(b, 'backdoor pulse');
-  assert.equal(lost(b, 'pulse'), 30, '24 + 6 for one burn');
+  assert.equal(lost(b, 'pulse'), 24 + ABILITIES.backdoor.perBurn, `24 + ${ABILITIES.backdoor.perBurn} for one burn`);
   const d = noArmor(quiet(start('infiltrator')));
   big(d, 'pulse');
   act(d, 'inject pulse');
   const before = lost(d, 'pulse');
   act(d, 'detonate pulse');
-  assert.equal(lost(d, 'pulse') - before, Math.round(2 * 12 * 1.5), 'the two ticks left, now, ×1.5');
+  assert.equal(lost(d, 'pulse') - before, Math.round(3 * 20 * ABILITIES.detonate.mult), 'the three ticks left, now, ×1.5');
   assert.equal(d.encounter.burns.length, 0);
   const g = start('infiltrator', 18, 'ghostroot');
   assert.equal(timersHidden(g, part(g, 'pulse')), true);
@@ -305,7 +312,7 @@ test('the level-5 kit skills: Flood, Suspend, Keepalive, Spawn', () => {
   assert.equal(part(a, 'pulse').attack.due, due + 2);
   assert.match(command(a, 'suspend').at(-1).message, /ready in/);
   const i = start('infiltrator');
-  const ip = i.encounter.virus.parts.find((p) => p.integrity > 0);
+  const ip = big(i, i.encounter.virus.parts.find((p) => p.integrity > 0).id); // big enough to outlast a 20-a-cycle Inject
   act(i, 'inject ' + ip.id);
   const left = i.encounter.burns.find((b) => b.target === ip.id).left;
   act(i, 'keepalive ' + ip.id);

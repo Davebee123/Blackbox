@@ -744,7 +744,9 @@ function holdFor(s, t, p, planned, toOpen) {
   // The plan fires the window's key now: what's left for the window without it.
   const rest = bestBurst(s, t, p, { by: toOpen, without: id });
   if (rest && rest.v >= Math.min(left, keep.v)) return null;
-  return first(s, [target && 'spike ' + target, 'spike ' + p.id]);
+  // Something else meanwhile: an Inject the part doesn't have yet (one a part), else a Spike.
+  const fresh = (x) => x && !s.encounter.burns.some((b) => b.id === 'inject' && b.target === x);
+  return first(s, [fresh(target) && 'inject ' + target, target && 'spike ' + target, 'spike ' + p.id]);
 }
 // A planned command that answers this tell (it's aimed at the part and hits it).
 const hitsIt = (planned, p) => { const [id, at] = (planned || '').split(' '); return at === p.id && !ABILITIES[id]?.noAnswer && (ABILITIES[id]?.damage > 0 || ['crack', 'shaped-charge', 'retaliate', 'opening', 'segfault', 'stack-smash', 'thermal-throttle', 'blowback', 'overvolt', 'replay', 'spoofed-ack', 'reclaim', 'backfire'].includes(id) || ABILITIES[id]?.verb === 'hit'); };

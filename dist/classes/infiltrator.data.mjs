@@ -12,12 +12,12 @@ import { f, t } from './kit.mjs';
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // Numbers that grow with your level sit in damage/tick fields (the library scales them on screen).
 export const abilities = {
-  // Payload: burns that spread, stack up and go off.
+  // Payload: burns that spread, pile up and go off.
   wormable: {
-    cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Wormable', target: 'part', damage: 0, tick: 10, ticks: 4, cooldown: 3, icon: 'mutation',
-    short: 'Burn 10 ×4; spreads',
-    help: 'wormable <part> — Burns the target for 10 damage every cycle for 4 cycles, spreading to one more part each cycle.',
-    desc: 'Releases a burn that finds its own way through the virus. Every cycle the original ticks, it copies itself onto a part with no Wormable on it yet, with the time it has left. The copies burn but do not spread.',
+    cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Wormable', target: 'part', damage: 0, tick: 8, ticks: 4, cooldown: 3, icon: 'mutation',
+    short: 'Burn 8 ×4; spreads Inject',
+    help: 'wormable <part> — Burns the target for 8 damage every cycle for 4 cycles, spreading to one more part each cycle. Your Inject on the target spreads with it.',
+    desc: 'Releases a burn that finds its own way through the virus. Every cycle the original ticks, it copies itself onto a part with no Wormable on it yet, with the time it has left, and carries your Inject on the target along with it. An Inject it carries onto a part that already has one refreshes it. The copies burn but do not spread.',
   },
   skim: {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Skim', target: 'part', damage: 0, tick: 9, ticks: 4, drain: 4, cooldown: 3, icon: 'clear',
@@ -56,10 +56,10 @@ export const abilities = {
     desc: 'Booby-traps your own session. The next hit against you deals half damage, and the part that landed it catches a copy of every burn you have running on your target.',
   },
   outbreak: {
-    cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Outbreak', target: 'none', damage: 0, tick: 12, ticks: 3, cycles: 4, cooldown: 10, icon: 'mutation',
+    cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Outbreak', target: 'none', damage: 0, tick: 20, ticks: 4, cycles: 4, cooldown: 10, icon: 'mutation',
     short: 'Injects every part',
-    help: 'outbreak — Applies Inject to every part (12 damage every cycle for 3 cycles). For 4 cycles, your burns cannot be removed.',
-    desc: 'Lets it loose. Applies Inject to every part at once, and for 4 cycles nothing the virus does can remove your burns. A Leech cannot feed them away, and a Patchwork cannot patch them out.',
+    help: 'outbreak — Applies Inject to every part (20 damage every cycle for 4 cycles), refreshing any already there. For 4 cycles, your burns cannot be removed.',
+    desc: 'Lets it loose. Applies Inject to every part at once, refreshing an Inject already there, and for 4 cycles nothing the virus does can remove your burns. A Leech cannot feed them away, and a Patchwork cannot patch them out.',
   },
   // Phantom: crits, decoys and getting out clean.
   backstab: {
@@ -126,13 +126,13 @@ export const subs = {
     layers: { core: ['inject', 'tag', 'keepalive', 'wormable', 'detonate', 'backdoor'], utility: ['fuzz', 'skim', 'logic-trap', 'irq-storm'], cooldown: ['implant', 'thrash', 'outbreak'], specialist: ['polymorph', 'propagate'] },
     tags: { polymorph: 'Armor', propagate: 'Fragments', implant: 'Healers' },
     fillers: [
-      [f('heap-spray', 'Heap Spray', 'Increases the damage of each Inject tick by 2 per rank.', 2), f('persistent-tag', 'Persistent Tag', 'Increases the damage of burns on a Tagged part by 10% per rank.', 0.1)],
+      [f('heap-spray', 'Heap Spray', 'Increases the damage of each Inject tick by 3 per rank.', 3), f('persistent-tag', 'Persistent Tag', 'Increases the damage of burns on a Tagged part by 10% per rank.', 0.1)],
       [f('shaped-charge', 'Shaped Charge', 'Increases the damage of Detonate by 10% per rank.', 0.1), f('backchannel', 'Backchannel', 'Increases the damage of Backdoor by 4 per rank.', 4)],
       [f('low-profile', 'Low Profile', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('virulence', 'Virulence', 'Increases the damage of each Wormable, Skim and Polymorph tick by 2 per rank.', 2)],
     ],
     talents: [
-      [t('supercookie', 'Supercookie', 'Tag lasts 6 cycles.'), t('polymorphic', 'Long Fuse', 'Inject lasts 5 cycles.')],
-      [t('contagion', 'Contagion', 'Each Inject also starts a copy of itself on the part whose attack lands soonest.'), t('assassinate', 'Assassinate', 'Detonate deals double damage to a Tagged part.')],
+      [t('supercookie', 'Supercookie', 'Tag lasts 6 cycles.'), t('polymorphic', 'Long Fuse', 'Inject lasts 6 cycles.')],
+      [t('contagion', 'Contagion', 'Each Inject also starts a copy of itself on the part whose attack lands soonest, or refreshes the one there.'), t('assassinate', 'Assassinate', 'Detonate deals double damage to a Tagged part.')],
       [t('superspreader', 'Superspreader', 'Bloom copies the burns to every other part, not only the next one.'), t('persistence', 'Persistence', 'Rootkit Implant can be used twice per fight.')],
     ],
   },
