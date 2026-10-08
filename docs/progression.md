@@ -1,6 +1,6 @@
 # Progression: what the numbers say, and a proposal
 
-This is a review sheet for the progression pass. It measures the four things that feel odd (leveling pace, gear, the number of tracks, and unlocks), ranks what causes each, and proposes changes with numbers. Nothing in the game has been changed.
+This is a review sheet for the progression pass. It measures the four things that feel odd (leveling pace, gear, the number of tracks, and unlocks), ranks what causes each, and proposes changes with numbers. The designer approved the package in section 4 with the decisions listed at the top of section 6, and section 6 (What changed) gives what was built and the same measures before and after it. Sections 1 to 5 are the review as it was written.
 
 Everything below was measured on commit 16ca6f3, before the solo combat rework that is in progress. Fight lengths, loss rates and some press shares will move when that lands, so the press tables in section 1.4 should be rerun afterwards. The structure of the findings (which track gates what, how gear scales, when unlocks arrive and whether they reach the bar) does not depend on combat tuning.
 
@@ -382,3 +382,131 @@ To check it once it is built, rerun the same measures. The pays-and-builds climb
 7. Is a catch-up bonus that only counts time you played acceptable, given the dislike of FOMO and the liking for friction?
 8. Should the class pace gap be closed in combat (fight length and late loss rate) or with XP?
 9. Paying for top-ups removes resting entirely from level 16. Is that the intended trade, or should top-ups cost more late so that money and waiting both stay in play?
+
+## 6. What changed
+
+The designer approved the package in section 4 with these decisions. Server level became your highest class level, with server XP and banking XP deleted. The firewall follows the network, as the invasion pass had already built it. Unique stats come from the best base at their item level ×1.2. The class pace gap is to be closed in combat by the skills pass, not with XP, so this pass measures it and leaves it alone. Paying for top-ups stays optional, and talents stay as they are.
+
+### What was built
+
+**One level.** Your server's level is your highest class level (`serverLevel` in combat.mjs). It has no XP of its own, and banking loot no longer pays any. Every gate it had reads that level now: base Integrity, daemon slots at 10 and 20, service v2 at 10 and v3 at 25, outpost bandwidth, memory, buildings and architecture. The Server page and the map's server card show the level with the class it comes from, and what the next level adds. `developer server <n>` now sets a floor under it, for tests.
+
+**One banner.** A level-up lists everything the level brings on every track, then the power line (with the server's new Integrity when the level raised it), then a ghost line for the next level that brings something (`levelGains` and `nextGains` in progression.mjs). Level 20 for a Breaker reads *A talent point · A daemon slot · An outpost slot · Buildings: Refinery, Citadel · A choice of architecture*, then *Power +4% · Server Integrity 185*, then *Lv 22: Thermal Runaway, a talent point*.
+
+**Pace.** Decoding pays one kill instead of two, and the 15% early XP bump is gone. A level that runs past 1.25 times its target of 6 + 2.2 × level minutes of play pays kills +50% until it ends (*Behind*). Only time played on that class counts (`tickPlay`). The log says so when it starts, the spoils card has a *Behind* row, the Loadout's XP bar has a *Behind* tag, and the top bar's XP line turns amber. Server repair at half rate while an invasion is contested or breaching was already in (`idleRegen`), and gear.test.mjs checks it.
+
+**Uniques.** A unique's primaries are the best base of its slot at its item level ×1.2, or its own listed numbers grown from its level, whichever is higher. Eviction Notice found at level 20 is a Zero-click with 14 Damage instead of 6. The Resident drops each of its two uniques once (`BOSS_LOOT.once`). After both are in the collection its roll gives a world unique you don't have yet, or a yellow. Ten world uniques were written for levels 18 to 40:
+
+| Unique | Slot, level | What it does |
+|---|---|---|
+| Rowhammer | Exploit, 18 | Bare parts patch their ◆ back 3 cycles later |
+| Ctrl-C | Script, 20 | When you call off a tell, every cooldown drops by 2 |
+| Slammer | Script, 22 | Burns on a part you break jump to the next part, with what they had left |
+| Log4Shell | Exploit, 24 | When you break a part, the part winding up a tell (or the next to attack) takes 22 |
+| Spectre | Shell, 26 | Each command you land counts twice toward calling off a tell |
+| Bulletproof Host | Proxy, 28 | Block counts double while a part winds up a tell |
+| Hot Reload | Implant, 30 | When your command crits, that skill is ready again |
+| Interrupt Vector | Script, 32 | When you call off a tell, a shield of 30 goes up |
+| Blue Pill | Shell, 34 | A tell landing on you deals half |
+| Shellshock | Exploit, 38 | A hit on a part wearing ◆ breaks two of them |
+
+They needed new effect blocks, which the editor now offers. The new trigger is *when you call off a tell* (a charge or cast hit off in time, or a cast stopped by SIGINT). The new conditions are *the target is winding up a tell*, *the target is the signature part*, *a part is winding up a tell* and *the hit is a tell landing*. The new effects are a shield, a hit on the part winding up, two ◆ broken at once, a command counting twice against a tell, a slower patch and burns that jump on.
+
+**Rule affixes.** Every blue carries one minor rule and every yellow one major rule, and each lost one numeric affix to make room (a blue rolls 0–1 numbers, a yellow 2–4). There are eight of each, written in the same effect blocks (`RULES` in gear.mjs; the table is in GAME_RULES.md). Most of them read the board. Interrupt Handler and Deep Inspection hit a part winding up a tell harder. Exception Handler and Abort Handler pay off when you call one off. Double Tap makes one command count twice against a tell, and Daisy Chain throws a break at the part that is winding up. Signature Scan and Null Deref favour a part, and Sticky Bit keeps stripped parts bare longer. The same rule on two items counts once. The first pool had a Retry Loop, where calling off a tell took a cycle off every cooldown. A single refund a fight took 13 points off the level-10 Overclocker's health lost, because one cycle of Flood decides those fights, so Exception Handler replaced it. Stack Canary started as a 6–24 shield and was worth five points of health a fight across the subclasses. It is 1–6 now.
+
+**Bases and greys.** Each slot has two more base tiers, at 34 and 42 (Sandbox Escape and Hypervisor Escape for the Exploit), each about 1.4 times what the tier before gives at its level. Grey protocols and the Buggy and that Leaks affixes are gone, so about one kill in nine drops a white.
+
+**Tracks.** Four services stay: the Route Logger, the Build Farm, the Edge Router and the Scheduler. Section 3 kept them because each works on the network and none on the home fight. There are no ports. The rest moved as section 3 proposed:
+
+| Was a service | Now |
+|---|---|
+| Filter Bay | The firewall has two filter slots, and tiers +1, +3 and +5 add one each (five at +5, what a v3 Bay and the old tier slots gave) |
+| RAID Array | Tiers +1, +3 and +5 each add 5% to the server's max Integrity (15% at +5, a v3 Array) |
+| Hardened Kernel | Filter stat *Hardened*, 2–6 Block at home |
+| Scrubber | Filter stat *of the Scrubber*, a 4–10% shield at the start of a home fight |
+| Hot-patcher | Filter stat *Self-healing*, 0.3–1 Regen at home |
+| Counter-intrusion | Filter stat *of Barbs*, 2–6 back on every hit at home |
+| Cron Job | A daemon, cooldown 3, that hits the part winding up a tell for 8, or the next to attack |
+| Snapshot | A daemon, once a fight, whose first hit below half restores 8% (12% at v2, 16% at v3) |
+
+The specialty is gone. Its two ranks are part of every class's kit from level 5: Overclocked Core for the Breaker, Patch Notes for the Bastion, Thread Pool for the Operator and Recon for the Infiltrator. The Infiltrator gets Recon because two ranks of Heap Spray took a blue Payload from 34% of its Signal lost a fight at level 10 to 21%, under the 25% floor balance.test.mjs holds. The other three move the subclass table by three points or less.
+
+**Save v34** (`progressionRestore` in progression.mjs). Server XP is dropped. A save that ran the Filter Bay, the RAID Array or one of the four services that became filter stats gets back everything each version cost, in credits, code, Exploits and salvage. The blueprint of a service that became a filter stat becomes that filter's recipe. A running Cron Job or Snapshot becomes that daemon at the service's version, and so does a Cron Job or Snapshot source you held. An install in progress is refunded. The specialty cost nothing, so its pick is simply dropped, with a log line naming each class's kit talent. Greys become Stock items of their base and level without the junk affix. Uniques you hold grow to the new formula and never shrink. Blues and yellows you hold get a rule and keep their numbers. The skills pass may bump SAVE_VERSION too, so a merge should keep both steps.
+
+### Before and after
+
+Both columns come from the same bot (`bot.mjs` `simulate`, which now has the `trace` and `gearRule: 'stats'` options built in) on four classes, six seeds and three money modes to level 40, plus 24 climbs with the stat-aware gear rule. "Before" is commit 7fd95f3, with the solo tells and the invasion rework already in, so it differs a little from section 1. The bot plays at the relaxed 12-second cycle, as before.
+
+| Class | Pays and builds, level 30 | Level 40 | Never pays, level 30 | Level 40 |
+|---|---:|---:|---:|---:|
+| Breaker | 17.5 → 18.0 h | 28.7 → 30.4 h | 27.3 → 30.4 h | 51.5 → 56.3 h |
+| Bastion | 37.5 → 35.0 h | 65.3 (5/6) → 61.6 h | 69.8 (4/6) → 54.9 (5/6) h | not reached |
+| Infiltrator | 20.8 → 20.1 h | 34.2 → 34.0 h | 31.0 → 28.5 h | 52.5 → 51.5 h |
+| Operator | 24.1 → 23.5 h | 42.3 → 41.6 h | 49.6 → 39.5 h | not reached → over 72 h (1/6) |
+
+To level 10 the climb is a little slower (pays and builds: Breaker 2.4 → 2.5 hours, Infiltrator 2.4 → 2.9, Operator 2.2 → 2.8, Bastion 3.0 → 3.1), because decoding pays half as much and the early bump is gone. To level 20 it is within half an hour of before, except the Infiltrator (8.5 → 9.6 hours).
+
+The class gap to 30 in the climbs that pay and build went from the Bastion at 2.14 times the Breaker's time, the Operator at 1.37 and the Infiltrator at 1.18 to 1.94, 1.30 and 1.12. The target is 1.25 for every class, and the rest of it is the skills pass's to close. Catch-up is most of what moved the Bastion. It paid the Bastion 5–8% of its XP from level 11 and the other classes 0–4%, and it was on for about a third to a half of all levels past 15 in those climbs. In the climbs that never pay it was on for 62–98% of levels, because the bot counts its resting as play, and it paid the Bastion 8–14% of its XP and the others 2–12%.
+
+Minutes per level, all classes pooled, pays and builds (median of the climbs):
+
+| Level | 5 | 6 | 10 | 15 | 16 | 20 | 22 | 25 | 26 | 30 | 33 | 35 | 39 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Before | 10 | 24 | 27 | 45 | 42 | 58 | 64 | 85 | 78 | 90 | 87 | 81 | 99 |
+| After | 14 | 25 | 27 | 41 | 47 | 52 | 77 | 79 | 89 | 90 | 101 | 89 | 95 |
+
+The cliff at level 6 went from 2.40 times level 5 to 1.81 times. It is still the only level from 6 to 39 over 1.4 times the one before. The biggest step after it is level 22 at 1.38 (before, it was level 25 at 1.37).
+
+Gear for a player who equips by stats, before → after:
+
+| Levels | Upgrades a level | Median upgrade | Upgrades of 10% or more | Effect drops | Upgrades that add an effect |
+|---|---:|---:|---:|---:|---:|
+| 1–5 | 0.7 → 0.8 | 9.6% → 7.1% | 48% → 44% | 22% → 83% | 28% → 69% |
+| 6–10 | 1.1 → 1.0 | 4.5% → 3.8% | 14% → 6% | 11% → 82% | 11% → 24% |
+| 11–15 | 1.3 → 1.6 | 3.8% → 2.9% | 8% → 4% | 10% → 85% | 7% → 12% |
+| 16–20 | 1.6 → 1.7 | 4.5% → 2.8% | 6% → 3% | 12% → 88% | 4% → 9% |
+| 21–25 | 1.3 → 1.4 | 4.2% → 1.8% | 4% → 1% | 13% → 90% | 2% → 1% |
+| 26–30 | 1.5 → 1.5 | 3.7% → 3.5% | 5% → 6% | 11% → 91% | 1% → 1% |
+| 31–35 | 1.3 → 2.2 | 4.6% → 2.8% | 1% → 5% | 12% → 90% | 0% → 1% |
+| 36–39 | 1.2 → 2.1 | 3.5% → 2.5% | 2% → 2% | 11% → 89% | 0% → 0% |
+
+From level 16 there were 1.36 upgrades a level before and 1.78 after. The quarter points went from 1%, 4.3% and 6.6% to 0.9%, 2.6% and 5.9%, and 4% of upgrades were 10% or more both times. The new tiers show at 31–39, where upgrades come about twice a level. The median upgrade got smaller because an item with a rule counts about 3% of power to the stat player, so it swaps for an effect at nearly the same numbers. Gear Damage at level 40 went from 0.84 of a Spike to 1.07.
+
+What a stat player wears, before → after:
+
+| Level | Uniques (share of slots) | Effect items loaded | Gear Damage (× Spike) | Gear Signal (share of max) |
+|---:|---:|---:|---:|---:|
+| 10 | 17% → 21% | 1 → 4 | 0.22 → 0.24 | 25% → 23% |
+| 20 | 3% → 14% | 0 → 5 | 0.45 → 0.49 | 41% → 39% |
+| 30 | 0% → 11% | 0 → 5 | 0.72 → 0.65 | 49% → 46% |
+| 35 | 0% → 14% | 0 → 6 | 0.86 → 0.93 | 55% → 53% |
+| 40 | 0% → 1% | 0 → 6 | 0.84 → 1.07 | 55% → 59% |
+
+All 24 stat climbs wear an effect item in all six slots at level 40, where none did before. The stat player loaded a unique 216 times instead of 67, and kept each a median of 2 levels (114 minutes) against 3 levels before. A unique at its drop level ×1.2 is overtaken after two or three levels of 4% growth and a yellow's affixes. The rarity-first player kept each unique a median of 4 levels instead of 2. Few uniques drop from 36 up, which is why the share falls to 1% at 40.
+
+Gold is still about one drop an hour: 36.8 a climb before and 35.1 after. Repeats fell from 75% of gold drops to 7%, because the Resident's roll now hands out world uniques you don't have. Greys went from 2–8% of drops to none, whites from 12–28% to 10–16%, and blues from 36–63% to 48–64%.
+
+The balance and economy checks stayed in place. The subclass fights in balance.test.mjs (blues, health lost a fight) moved by three points or less at levels 10 and 30. At 18 the Overclocker went from 40% to 32%, and the others moved by two points or less. The Sysop's wide sample at level 30 went from 48% lost and 77% wins to 51% and 72%, still inside its 70–92% band. friction.mjs moved by three points or less in every row but one: yellows at level 5 went from 27% to 21%, at the bottom of their 20–30% band, which is where a major rule shows most. econ.mjs shows the bot that builds spending 120–720 credits on services by level 20 instead of 1,440–1,680, and the rest on top-ups and buildings, with no climb running short.
+
+### Against the checks in section 4
+
+Section 4 asked for six things.
+
+- Every class within 1.25 times the fastest to level 30, in the climbs that pay and build. Not yet: the Bastion is at 1.94 and the Operator at 1.30. That is the skills pass's.
+- No level from 6 to 39 taking more than 1.4 times the one before. Level 6 is 1.81 times level 5, down from 2.40. Every other level is under 1.4.
+- The never-pays climb reaching 30 for every class within 72 hours. 23 of 24 climbs do, against 22 of 24 before. One Bastion seed still stalls.
+- A stat player wearing an effect item in at least two slots at level 40. All 24 do, in all six slots.
+- About 1.5 upgrades a level with at least a fifth of them over 10%. There are 1.78 a level, but still 4% over 10%.
+- Gold under 20% repeats. It is 7%.
+
+### Decisions for the designer
+
+1. **The Infiltrator's kit talent.** Two ranks of Heap Spray make the Payload far stronger than the few percent the specialty was meant to be (34% to 21% of its Signal a fight at level 10), so the Infiltrator's kit is Recon. Recon does nothing for a Payload. Should the Infiltrator get one rank of Heap Spray instead, or should Inject's base tick come down when the skills pass reworks it?
+2. **Blues roll 0–1 numbers.** "Drop one number affix" was read literally, so a blue rolls 0 or 1 where it rolled 1 or 2. Section 3 had proposed exactly one. A blue built around a stat (compiled, or chased by the balance bots) always has that one.
+3. **Old blues and yellows got a rule and kept their numbers,** so a stash from before v34 is a little stronger than new drops. The alternative is to take away each one's weakest affix.
+4. **Big upgrades are still rare.** 4% of upgrades are 10% or more, against a target of a fifth. The two late tiers did not change that, because one slot's base is a small share of your hit. Spreading the rarities (Tuned 1.15, Custom 1.3) is the next lever section 3 named, and it would need a friction pass.
+5. **Uniques still fade in two or three levels for a stat player.** If a unique should last through its band, its primaries could take ×1.3, or a unique could count its item level as two or three levels above its drop.
+6. **The gold rate.** The Resident still rolls gold on every takeover at 30% plus pity, so gold stays at about one an hour, nearly all of it new. Lowering the Resident's chance once both of its own are found would bring gold toward the design's one every 10 to 12 hours.
+7. **Behind counts resting at the terminal.** A player who rests with the game open and keeps typing builds Behind time, and the bot shows it on for most levels of a climb that never pays. Counting only time in fights and runs would make it a pure stall catcher.
+8. **Level 6** still takes 1.8 times as long as level 5 (25 minutes against 14). Halving decoding moved most of the gap. Most of the rest is that the early decodes are all spent by level 5.
+9. **A merge note for the class tests.** The kit talent changes exact skill numbers from level 5. Eight test files that check exact numbers (the four subclass files, classes, combat, skills2 and gear) got one line in their header that sets `LOADOUT.specRanks = 0`. Two assertions about daemon slots changed, because a level-38 or level-50 test server now has both of its daemon slots.
