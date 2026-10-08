@@ -96,9 +96,9 @@ export const CONFIG = {
   // Auto-repeat and planned steps never sync.
   sync: { width: 0.1, grace: 0.03, from: 0.05, to: 0.5, bonus: 0.1, chance: 0.25 },
   // Infiltrator Surprise: the first cycle of every fight always opens a (blue, wider) window.
-  // Fired in it: Inject lands an extra stack, Tag lasts 6 cycles and burns tick +75%,
-  // Keepalive stretches burns 4 cycles.
-  surprise: { width: 0.15, injectStacks: 2, tagCycles: 6, tagged: 1.75, keepalive: 4 },
+  // Fired in it: Inject ticks once at once (on top of its cycle's tick), Tag lasts 6 cycles and burns
+  // tick +75%, Keepalive stretches burns 4 cycles.
+  surprise: { width: 0.15, injectNow: 1, tagCycles: 6, tagged: 1.75, keepalive: 4 },
   // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
   slip: { perRun: 1, leakedCreds: 3 },
   daemonSlots: 1, // +1 at server levels 10 and 20 (your highest class level); Operators +1
@@ -196,11 +196,12 @@ export const ABILITIES = {
   quarantine: { cls: 'bastion', verb: 'stun', name: 'Quarantine', target: 'attack', damage: 0, delay: 3, status: 'quarantined', cycles: 3, cooldown: 6, icon: 'event-lock', short: 'Delays 3, +25%; interrupts', help: 'quarantine [part] — Delays the target\'s next attack by 3 cycles, and the target takes 25% more damage until it attacks. Interrupts a cast it is compiling.' },
   failover: { cls: 'bastion', verb: 'hit', name: 'Failover', target: 'none', damage: 0, cooldown: 5, icon: 'event-warning', short: 'Hits all: ¼ missing health', help: 'failover — Deals damage to every part equal to 25% of your missing health (minimum 20).' },
   // Infiltrator: burns and precision
-  inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 12, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 12 ×3; stacks 3', help: 'inject <part> — Burns the target for 12 damage every cycle for 3 cycles. Stacks up to 3 times on one part.' },
+  // Inject: one heavy burn a part. Pressing it again on the same part refreshes it (refresh: no second copy).
+  inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 20, ticks: 4, refresh: true, cooldown: 3, icon: 'injector', short: 'Burn 20 ×4; refreshes', help: 'inject <part> — Burns the target for 20 damage every cycle for 4 cycles. Reapplying it refreshes the duration.' },
   tag: { cls: 'infiltrator', verb: 'debuff', name: 'Tag', target: 'part', damage: 10, status: 'tagged', cycles: 4, cooldown: 3, icon: 'weakness', short: '10 damage; burns +50%', help: 'tag <part> — Deals 10 damage and Tags the target for 4 cycles. Burns on a Tagged part deal 50% more damage, and its attack timer shows through a veil.' },
-  backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 6, cooldown: 4, icon: 'injector', short: '24 ignoring ◆; +6 a burn', help: 'backdoor <part> — Deals 24 damage to the target, ignoring armor, plus 6 for each burn on it.' },
+  backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 8, cooldown: 4, icon: 'injector', short: '24 ignoring ◆; +8 a burn', help: 'backdoor <part> — Deals 24 damage to the target, ignoring armor, plus 8 for each burn on it.' },
   keepalive: { cls: 'infiltrator', verb: 'util', name: 'Keepalive', target: 'part', damage: 0, cycles: 2, cooldown: 3, icon: 'injector', short: 'Burns tick now; +2 cycles', help: 'keepalive <part> — Every burn on the target ticks once immediately and lasts 2 cycles longer.' },
-  detonate: { cls: 'infiltrator', verb: 'hit', name: 'Detonate', target: 'part', damage: 0, cooldown: 4, icon: 'event-warning', short: 'Burns go off now, +50%', help: 'detonate <part> — Every burn on the target deals all its remaining damage at once, increased by 50%.' },
+  detonate: { cls: 'infiltrator', verb: 'hit', name: 'Detonate', target: 'part', damage: 0, mult: 1.5, cooldown: 4, icon: 'event-warning', short: 'Burns go off now, +50%', help: 'detonate <part> — Every burn on the target deals all its remaining damage at once, increased by 50%.' },
   opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: '50 damage after a miss', help: 'opening <part> — Deals 50 damage to the target. Usable only the cycle after an attack misses you or is delayed.' },
   propagate: { cls: 'infiltrator', verb: 'util', name: 'Propagate', target: 'part', damage: 0, cooldown: 5, icon: 'mutation', short: 'Copies its burns to all', help: 'propagate <part> — Copies your burns on the target to every other part.' },
   'null-route': { cls: 'infiltrator', verb: 'shield', name: 'Null Route', target: 'none', damage: 0, cooldown: 6, icon: 'behavior', short: 'Next attack misses; crit', help: 'null-route — The next attack against you misses, and your next skill is a critical strike.' },
@@ -689,7 +690,7 @@ export const BOSSES = {
   'nb-mirrorshade': { name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
     trim: { below: 14, part: 'scrambler', armor: 3, interval: 5 },
     signature: { name: 'Doppelganger', rule: 'At half Integrity, the Mimic stops recording and takes the shape of the first part you broke, with its attack and its ◆. If you have not broken one, it takes the shape of the Pulse Node.' },
-    hp: 1.3, dmg: 0.9, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
+    hp: 1.34, dmg: 0.9, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
   'nb-sleepwalker': { name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss. It stays dormant until you hit it, then its Cell sounds the Alarm. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way. Every part re-arms.' }] },
   'nb-echolalia': { name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss. Every hit that gets through to you repeats 1 cycle later at half damage. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you. Every attack comes a cycle sooner.' }] },
 };
@@ -1131,7 +1132,7 @@ export const ARCHETYPES = {
     status: 'tagged',
     passive: { name: 'Ghost', rule: 'Slips you past one guard per run without a fight. Every fight opens with a blue Surprise window, and Inject, Tag and Keepalive fired in it are stronger. Return trips on runs are free.' },
     core: ['inject', 'backdoor', 'keepalive', 'tag'], // levels 1–7; the rest of a kit is its subclass's (subs)
-    spec: [f('heap-spray', 'Heap Spray', 'Increases the damage of each Inject tick by 2 per rank.', 2), f('recon', 'Recon', 'Increases the damage of Opening by 5 per rank.', 5)], // the level-5 specialty: one of these, two free ranks
+    spec: [f('heap-spray', 'Heap Spray', 'Increases the damage of each Inject tick by 3 per rank.', 3), f('recon', 'Recon', 'Increases the damage of Opening by 5 per rank.', 5)], // the level-5 specialty: one of these, two free ranks
     subs: subsOf('infiltrator'),
     skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },

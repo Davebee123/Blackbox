@@ -69,18 +69,37 @@ test('both lines: eight skills each in unlock order, every new skill has its car
 });
 
 // ---------- Payload ----------
-test('Wormable: 10 a cycle for 4 cycles, and the cast one spreads a copy to one more part each cycle (copies do not spread)', () => {
+test('Wormable: 8 a cycle for 4 cycles, and the cast one spreads a copy to one more part each cycle (copies do not spread), carrying your Inject', () => {
   const s = noArmor(quiet(start('payload')));
   big(s, 'pulse'); big(s, 'encryptor'); addPart(s, 'c'); addPart(s, 'd');
   act(s, 'wormable pulse');
-  assert.equal(lost(s, 'pulse'), 10);
+  assert.equal(lost(s, 'pulse'), 8);
   const on = () => s.encounter.burns.filter((b) => b.id === 'wormable').map((b) => b.target).sort();
   assert.deepEqual(on(), ['encryptor', 'pulse']);
   act(s, 'hold');
   assert.deepEqual(on(), ['c', 'encryptor', 'pulse'], 'one more part, not two: the copy does not spread');
   act(s, 'hold'); act(s, 'hold');
-  assert.deepEqual([lost(s, 'pulse'), lost(s, 'encryptor'), lost(s, 'c'), lost(s, 'd')], [40, 30, 20, 10]);
+  assert.deepEqual([lost(s, 'pulse'), lost(s, 'encryptor'), lost(s, 'c'), lost(s, 'd')], [32, 24, 16, 8]);
   assert.equal(s.encounter.burns.length, 0);
+  // It spreads your Inject: each copy carries the Inject on its part along, with the time it has left.
+  const w = noArmor(quiet(start('payload')));
+  big(w, 'pulse'); big(w, 'encryptor'); addPart(w, 'c');
+  act(w, 'inject pulse');
+  act(w, 'wormable pulse');
+  const inj = () => w.encounter.burns.filter((b) => b.id === 'inject').map((b) => `${b.target} ${b.left}`).sort();
+  assert.deepEqual(inj(), ['encryptor 2', 'pulse 2'], 'the Inject went with the copy, with the time it had left');
+  act(w, 'hold');
+  assert.equal(lost(w, 'encryptor'), 8 + 20, 'both ticked there');
+  assert.deepEqual(inj(), ['c 1', 'encryptor 1', 'pulse 1'], 'on to the next part');
+  // Carried onto a part that has your Inject already: still one there, with the longer time left.
+  const x = noArmor(quiet(start('payload')));
+  big(x, 'pulse'); big(x, 'encryptor');
+  act(x, 'inject encryptor');
+  x.encounter.readyAt = {};
+  act(x, 'inject pulse');
+  act(x, 'wormable pulse');
+  assert.deepEqual(x.encounter.burns.filter((b) => b.id === 'inject').map((b) => `${b.target} ${b.left}`).sort(), ['encryptor 2', 'pulse 2'], 'one Inject a part: a carried one refreshes, never stacks');
+  assert.equal(msgs(w, /Wormable spreads to the .*, carrying your Inject/).length, 2);
 });
 
 test('Skim burns 9 a cycle and every tick heals you 4; Polymorph burns 14 through armor (Tag counts, it is not an ordinary burn)', () => {
@@ -119,16 +138,18 @@ test('Detonate and Keepalive reach Polymorph; Thrash makes every burn on a part 
   assert.ok(lost(s, 'pulse') > before + 14 * 3);
   const t = noArmor(quiet(start('payload')));
   big(t, 'pulse');
-  act(t, 'inject pulse');
+  t.encounter.burns.push({ id: 'skim', target: 'pulse', damage: 12, grow: 0, left: 2, name: 'Skim', drain: 0 });
+  act(t, 'hold');
   assert.equal(lost(t, 'pulse'), 12);
   act(t, 'thrash pulse');
-  assert.equal(lost(t, 'pulse'), 12 + 24, 'two ticks this cycle');
-  act(t, 'hold');
-  assert.equal(lost(t, 'pulse'), 12 + 24 + 24, 'the last tick of the Inject ticks twice too');
+  assert.equal(lost(t, 'pulse'), 12 + 24, 'two ticks this cycle: the last tick of the Skim ticks twice too');
+  assert.equal(t.encounter.burns.length, 0);
   act(t, 'inject pulse');
-  assert.equal(lost(t, 'pulse'), 60 + 24, 'still Thrashing (3 cycles)');
+  assert.equal(lost(t, 'pulse'), 36 + 40, 'the Inject ticks twice');
   act(t, 'hold');
-  assert.equal(lost(t, 'pulse'), 84 + 12, 'over: once a cycle again');
+  assert.equal(lost(t, 'pulse'), 76 + 40, 'still Thrashing (3 cycles)');
+  act(t, 'hold');
+  assert.equal(lost(t, 'pulse'), 116 + 20, 'over: once a cycle again');
 });
 
 test('IRQ Storm: every burn on every part ticks once more now, and none runs out sooner; nothing to storm without burns', () => {
@@ -142,7 +163,7 @@ test('IRQ Storm: every burn on every part ticks once more now, and none runs out
   const [a, b] = [lost(s, 'pulse'), lost(s, 'encryptor')];
   assert.equal(s.encounter.infil.poly[0].left, 2);
   act(s, 'irq-storm');
-  assert.equal(lost(s, 'pulse') - a, 24, 'the storm tick and the cycle\'s tick');
+  assert.equal(lost(s, 'pulse') - a, 40, 'the storm tick and the cycle\'s tick');
   assert.equal(lost(s, 'encryptor') - b, 28, 'Polymorph on a bare part: 14, twice');
   assert.equal(s.encounter.infil.poly[0].left, 1, 'only the cycle used it up');
 });
@@ -153,15 +174,15 @@ test('Bloom (Payload edge): when a burning part breaks, its burns jump a cycle s
     big(s, 'pulse');
     big(s, 'encryptor');
     part(s, 'encryptor').attack.due = 99;
-    act(s, 'inject pulse'); act(s, 'inject pulse'); act(s, 'keepalive pulse');
-    assert.deepEqual(s.encounter.burns.map((b) => b.left), [2, 3]);
+    act(s, 'skim pulse'); act(s, 'inject pulse'); act(s, 'keepalive pulse');
+    assert.deepEqual(s.encounter.burns.map((b) => `${b.id} ${b.left}`), ['skim 3', 'inject 4']);
     part(s, 'pulse').integrity = 1;
     act(s, 'spike pulse');
     assert.equal(part(s, 'pulse').integrity, 0);
     assert.equal(msgs(s, /^Bloom: 2 burns jump from the Pulse Node to the Encryptor/).length, 1);
-    assert.deepEqual(s.encounter.burns.map((b) => b.target), ['encryptor'], 'one burn still running there');
-    assert.deepEqual(s.encounter.burns.map((b) => b.left), [1], 'a cycle shorter, and it ticked there: 3 → 2 → 1, and 2 → 1 → done');
-    assert.equal(lost(s, 'encryptor'), 24);
+    assert.deepEqual(s.encounter.burns.map((b) => b.target), ['encryptor', 'encryptor'], 'both still running there');
+    assert.deepEqual(s.encounter.burns.map((b) => `${b.id} ${b.left}`), ['skim 1', 'inject 2'], 'a cycle shorter, and they ticked there: 3 → 2 → 1, and 4 → 3 → 2');
+    assert.equal(lost(s, 'encryptor'), 9 + 20);
     const p = noArmor(start('phantom'));
     act(p, 'inject pulse');
     part(p, 'pulse').integrity = 1;
@@ -175,7 +196,11 @@ test('Payload talents: Contagion, Persistence, Superspreader; ranks: Shaped Char
   const c = noArmor(quiet(start('payload', { talents: ['contagion'] })));
   big(c, 'pulse'); big(c, 'encryptor');
   act(c, 'inject pulse');
-  assert.equal(lost(c, 'encryptor'), 12, 'Contagion: the Inject spread');
+  assert.equal(lost(c, 'encryptor'), 20, 'Contagion: the Inject spread');
+  c.encounter.readyAt = {};
+  act(c, 'inject pulse');
+  assert.equal(c.encounter.burns.filter((b) => b.id === 'inject' && b.target === 'encryptor').length, 1, 'a second Inject refreshes the copy there, never stacks');
+  assert.equal(lost(c, 'encryptor'), 40);
   const p = noArmor(quiet(start('payload', { talents: ['persistence'] })));
   big(p, 'pulse'); big(p, 'encryptor');
   act(p, 'implant pulse');
@@ -189,18 +214,18 @@ test('Payload talents: Contagion, Persistence, Superspreader; ranks: Shaped Char
     part(u, 'pulse').integrity = 1;
     act(u, 'spike pulse');
     assert.ok(msgs(u, /Superspreader copies one to every other part/).length);
-    assert.deepEqual([lost(u, 'encryptor'), lost(u, 'c')], [12, 12], 'the burn ticked on both');
+    assert.deepEqual([lost(u, 'encryptor'), lost(u, 'c')], [20, 20], 'the burn ticked on both');
   });
   const d = noArmor(quiet(start('payload', { ranks: { 'shaped-charge': 2 } })));
   big(d, 'pulse');
   act(d, 'inject pulse');
   const before = lost(d, 'pulse');
   act(d, 'detonate pulse');
-  assert.equal(lost(d, 'pulse') - before, Math.floor(Math.round(2 * 12 * 1.5) * 1.2), 'Detonate +20%');
+  assert.equal(lost(d, 'pulse') - before, Math.floor(Math.round(3 * 20 * ABILITIES.detonate.mult) * 1.2), 'Detonate +20%');
   const v = noArmor(quiet(start('payload', { ranks: { virulence: 3 } })));
   big(v, 'pulse');
   act(v, 'wormable pulse');
-  assert.equal(lost(v, 'pulse'), 16, 'Wormable 10 +6');
+  assert.equal(lost(v, 'pulse'), 14, 'Wormable 8 +6');
 });
 
 // ---------- Phantom ----------
@@ -316,7 +341,7 @@ test('Detonate cashes in burns but leaves a Rootkit Implant burning (its timer i
   act(s, 'inject pulse');
   const before = lost(s, 'pulse');
   act(s, 'detonate pulse');
-  assert.equal(lost(s, 'pulse') - before, Math.round(2 * 12 * 1.5) + 10, 'the Inject\'s two ticks ×1.5, and the Implant ticks on');
+  assert.equal(lost(s, 'pulse') - before, Math.round(3 * 20 * ABILITIES.detonate.mult) + 10, 'the Inject\'s three ticks ×1.5, and the Implant ticks on');
   assert.equal(s.encounter.burns.filter((b) => b.id === 'implant').length, 1);
 });
 
@@ -325,9 +350,9 @@ test('Phantom talents: Blind Spot (your first burn tick on each part crits), Kil
     const s = noArmor(quiet(start('phantom', { talents: ['blind-spot'] })));
     big(s, 'pulse');
     act(s, 'inject pulse');
-    assert.equal(lost(s, 'pulse'), 18);
-    act(s, 'hold');
     assert.equal(lost(s, 'pulse'), 30);
+    act(s, 'hold');
+    assert.equal(lost(s, 'pulse'), 50);
   });
   const k = noArmor(quiet(start('phantom', { talents: ['kill-chain'] })));
   big(k, 'encryptor');
@@ -340,12 +365,12 @@ test('Phantom talents: Blind Spot (your first burn tick on each part crits), Kil
   assert.ok(procOpen(k, 'slipped'));
 });
 
-test('old talents still in the trees keep working by id: Long Fuse is Polymorphic (Inject lasts 5 cycles)', () => {
+test('old talents still in the trees keep working by id: Long Fuse is Polymorphic (Inject lasts 6 cycles)', () => {
   assert.ok(SUBS.payload.talents.flat().some((n) => n.id === 'polymorphic' && n.name === 'Long Fuse'));
   const s = noArmor(quiet(start('payload', { talents: ['polymorphic'] })));
   big(s, 'pulse');
   act(s, 'inject pulse');
-  assert.equal(s.encounter.burns[0].left, 4);
+  assert.equal(s.encounter.burns[0].left, 5);
   assert.ok(hasTalent(s, 'polymorphic'));
   for (const id of ['rotating-proxies', 'leaked-creds', 'fast-hands']) assert.ok(SUBS.phantom.talents.flat().some((n) => n.id === id), id);
 });

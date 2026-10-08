@@ -827,6 +827,8 @@ The fix makes the Mimic the amplifier on its Scramble in play as well as on pape
 
 The reader sits at the top of the test's band at 12 (55 to 85%), as HASHLORD does at 16. The kits made every class stronger, and the fight was left at its size so the change stays on the tell.
 
+**After the Inject rework (docs/kits.md 12).** One heavy Inject on a 3-cycle cooldown leaves the Phantom a quiet key (Tag) for the Mimic's beat where it used to fire another Inject or a Spike, and it won all twelve fights at 12 (10 before), which put the reader at 86%. MIRRORSHADE's Integrity went from ×1.3 to ×1.34: the reader wins 83% at 12 (Demolitionist 9, Overclocker 9, Warden 9, Sysop 8, Payload 12, Phantom 12, Herder 12, Hijacker 9).
+
 ### 15.4 Per gene
 
 These come from `node genesim.mjs genes`, with six seeds (the test runs two). Each gene is fought as a probe against its body alone: a third part or a mutation on its family's body, Linked on a v1, the Bouncer against the Shredder and the Tracer against the Watchdog, and a tell alone against no tells. *Answering saves* compares the planner playing the gene with one that ignores that gene alone (`GENE_BOTS.ignore`), on genes the planner has a rule for. Points are Signal lost a fight, averaged over levels 5, 10, 18 and 30 where the gene is open.

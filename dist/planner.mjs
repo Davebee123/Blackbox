@@ -48,6 +48,7 @@ const armored = (s) => livingParts(s).filter((p) => p.armor > 0);
 // a command spent finishing it is wasted.
 export const doomed = (s, p) => alive(p) && !(p.armor > 0) && s.encounter.burns.filter((b) => b.target === p.id).reduce((n, b) => n + b.damage, 0) + s.encounter.helpers.filter((h) => h.target === p.id).reduce((n, h) => n + h.damage + hookHit(s, p), 0) >= p.integrity;
 const burnsOn = (s, p) => s.encounter.burns.filter((b) => b.target === p.id).length;
+const injected = (s, p) => s.encounter.burns.some((b) => b.id === 'inject' && b.target === p.id); // one a part: another press only refreshes it
 const helpersOn = (s, p) => s.encounter.helpers.filter((h) => h.target === p.id).length;
 
 // A Bouncer's Keyring (genes.mjs keyring) has no attack: at the end of every 4th cycle it re-arms its partner, the
@@ -107,7 +108,7 @@ function play(s) {
   const twin = livingParts(s).find((p) => p !== t && (p.twin === t.id || t.twin === p.id));
   if (twin && !ignores('twin') && (twin.integrity / twin.max > t.integrity / t.max + 0.2 || (burnsOn(s, t) >= 2 && burnsOn(s, twin) < burnsOn(s, t)))) t = twin; // burns too: spread them over both
   // Decoy: on its beat your commands are mirrored, so set up instead (burns, helpers, defence).
-  if (mirrorOn(s) && !ignores('decoymirror') && !(mirrorOn(s).unmaskUntil >= s.encounter.cycle)) { const quiet = first(s, [...QUIET.filter((id) => !['patch', 'null-route', 'sudo', 'fork', 'mesh'].includes(id)), 'fan-out ' + t.id, burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
+  if (mirrorOn(s) && !ignores('decoymirror') && !(mirrorOn(s).unmaskUntil >= s.encounter.cycle)) { const quiet = first(s, [...QUIET.filter((id) => !['patch', 'null-route', 'sudo', 'fork', 'mesh'].includes(id)), 'fan-out ' + t.id, 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && !ignores('adaptive') && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
@@ -165,7 +166,7 @@ function play(s) {
       armored(s).length >= 2 && livingParts(s).some((p) => p.kind === 'fragment') && 'garbage-collect', // its moment is fragments: as a strip it costs more than it breaks
       t.armor >= 2 && 'crack ' + t.id,
       t.armor >= 2 && 'botnet ' + t.id,
-      burnsOn(s, t) < 3 && 'inject ' + t.id,
+      !injected(s, t) && 'inject ' + t.id,
       'thermal-runaway ' + t.id,
       'deploy ' + t.id,
       'spawn ' + t.id,
@@ -182,7 +183,7 @@ function play(s) {
     t.integrity > 90 && readyIn(s, 'overload') <= 1 && ['overload', 'flood', 'shatter'].filter((id) => readyIn(s, id) === 0 && usable(s).includes(id)).length >= 1 && (t.patchAt == null || t.patchAt > s.encounter.cycle + 1) && 'exploit ' + t.id,
     burnsOn(s, t) >= 2 && 'detonate ' + t.id,
     t.integrity > 30 && 'tag ' + t.id,
-    burnsOn(s, t) < 3 && 'inject ' + t.id,
+    !injected(s, t) && 'inject ' + t.id,
     'segfault ' + t.id, livingParts(s).length >= 2 && 'chain-reaction ' + t.id, 'overload ' + t.id, 'flood ' + t.id, 'backdoor ' + t.id, 'reclaim ' + t.id, 'rate-limit ' + t.id,
     'deploy ' + t.id, 'thermal-runaway ' + t.id, 'sudo',
     !burnsOn(s, t) && t.integrity > 30 && 'purge ' + t.id, // a Bastion's filler: a burn that heals beats a Spike on a part that will last

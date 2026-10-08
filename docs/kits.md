@@ -484,12 +484,12 @@ The Sysop gets a rotation: Checksum and Reclaim heal as they hit, with Rate Limi
 
 ### 3.7 Payload
 
-The rotation is Inject to three stacks, Tag, Wormable, then Detonate to cash in, with Keepalive now doing something the moment it is pressed. Fuzz is an early tell answer, which the Payload lacks until IRQ Storm at 38 today. Outbreak is the burst you plan around. Most of the Payload's loss today is the bot, which must keep Inject at three stacks before reaching for its line.
+The rotation is Inject, Tag, Wormable, then Detonate to cash in, with Keepalive now doing something the moment it is pressed. (Since section 12, Inject is one heavy burn a part that refreshes instead of stacking: one press, then Wormable spreads it, Tag amplifies it and Detonate cashes it in.) Fuzz is an early tell answer, which the Payload lacks until IRQ Storm at 38 today. Outbreak is the burst you plan around. Most of the Payload's loss today is the bot, which must keep Inject at three stacks before reaching for its line.
 
 | Lv | Skill | Layer | Short | Help | Cooldown | Change |
 |---:|---|---|---|---|---:|---|
 | 1–7 | Inject, Backdoor, Keepalive, Tag | Core | | Class core (Keepalive and Tag as in 3.2) | | |
-| 10 | Wormable | Core | Burn 10×4, spreads | As today. | 3 | Moved from 12. |
+| 10 | Wormable | Core | Burn 8×4, spreads Inject | Burns for 8 a cycle (was 10), and your Inject on the target spreads with it (section 12). | 3 | Moved from 12. |
 | 12 | Detonate | Core (finisher) | Burns now ×1.5 | As today. | 4 | Moved from 14. |
 | 14 | **Fuzz** | Utility (tell answer) | Hit 12 + burn 8×3; counts twice | fuzz \<part\> — 12 damage, and a burn of 8 a cycle for 3 cycles. Its hit counts twice against a tell: it calls off an elite's charge, or stops a cast. | 4 | New. |
 | 16 | Rootkit Implant | Cooldown (healers) | Burn 10 till it breaks; no heals | As today. | once | Moved from 18. |
@@ -498,7 +498,7 @@ The rotation is Inject to three stacks, Tag, Wormable, then Detonate to cash in,
 | 22 | **Logic Trap** | Utility (mitigation) | Next hit half; its part catches your burns | logic-trap — the next hit on you deals half, and the part that lands it catches a copy of every burn you have on your target. | 6 | New. |
 | 26 | Propagate | Specialist (fragments, many parts) | Copy burns to all; fragments ×2 | propagate \<part\> — copies your burns on it to every other part. Fragments catch them at double. | 5 | Reworked. |
 | 30 | Thrash | Cooldown | Burns on it tick twice | As today. | 5 | Moved from 34. |
-| 34 | **Outbreak** | Cooldown | Inject every part; burns stick | outbreak — every part catches an Inject (12 a cycle for 3 cycles), and for 4 cycles nothing can clear your burns. | 10 | New. Leech and Patchwork clear burns today. |
+| 34 | **Outbreak** | Cooldown | Inject every part; burns stick | outbreak — every part catches an Inject (20 a cycle for 4 cycles, refreshing one already there), and for 4 cycles nothing can clear your burns. | 10 | New. Leech and Patchwork clear burns today. |
 | 38 | IRQ Storm | Utility (tell answer) | Every burn ticks now; hits tells | As today. | 4 | |
 
 ### 3.8 Phantom
@@ -745,7 +745,7 @@ Three planner changes come before any new skill, because the audit shows they ar
 
 | Planner | Change | Why |
 |---|---|---|
-| Payload | Keep Inject at three stacks before pressing Wormable, Implant or Thrash. | The Payload drops Inject from 48% of its presses at 10 to 2% at 30 and loses 5 to 7 points to its own class core. |
+| Payload | Keep Inject at three stacks before pressing Wormable, Implant or Thrash (since section 12: keep one Inject on the target, then spread it). | The Payload drops Inject from 48% of its presses at 10 to 2% at 30 and loses 5 to 7 points to its own class core. |
 | Herder (generic planner) | Press Garbage Collect only with fragments up, and Kill Switch only when the cash-in breaks a part or answers a tell that would cost more than the helpers have left. | Both cost 3 to 6 points today. |
 | Phantom | Press Backstab on any bare part when it is ready. | 32 on a 2-cycle cooldown beats a Spike, and the bot presses it in 28% of fights. |
 
@@ -907,7 +907,7 @@ Every ability's `help` keeps its command first (`flood <part> — `), because th
 | Overload | 40 damage. If it crits, its cooldown resets. | Deals 40 damage to the target. Cooldown resets on a critical strike. |
 | Zero-day | 65 damage straight through armor, locks and wards. Once per fight. | Deals 65 damage to the target, straight through armor, locks and wards. Once per fight. |
 | Rate Limit | 45 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆. | Deals 45 damage and Throttles the target, so its next attack deals half. Deals 15 more if its attack is due this cycle. Breaks 2 ◆ on an armored part. |
-| Inject | 12 damage every cycle for 3 cycles. It stacks: up to 3 on one part, each with its own timer. | Burns the target for 12 damage every cycle for 3 cycles. Stacks up to 3 times on one part, each with its own timer. |
+| Inject | 20 damage every cycle for 4 cycles. Pressing it again on the same part refreshes it; it never stacks. | Burns the target for 20 damage every cycle for 4 cycles. Reapplying it refreshes the duration. |
 | Backstab | 32 damage. It always crits a part that's busy with a tell: winding up a charge, compiling a cast, sealing or recording. | Deals 32 damage to the target. Always a critical strike against a part busy with a tell: winding up a charge, compiling a cast, sealing or recording. |
 | Heartbeat | heals you 4 a cycle for 4 cycles, starting now, and a charged hit on you while it runs deals 25% less. | Heals you for 4 every cycle for 4 cycles, starting now. A charged hit on you deals 25% less while it runs. |
 | Hijack | pull one of your helpers off it to take over its tell. A charge lands on another part of the virus at full size, through armor; a cast compiles for you instead (+35% damage for 4 cycles). | Spends one of your helpers on the target to take over its tell. A charge lands on another part of the virus at full size, through armor. A cast compiles for you instead, and your hits deal 35% more for 4 cycles. |
@@ -1011,6 +1011,46 @@ The calibration test's bar of 3 points for an answer is still a `todo` for the K
 - **The Sysop at 18 is at 2.03×.** A small change to the damage dealers' pace at 18 can move it under 2.
 - **Sudo and Garbage Collect at 40.** Sudo is pressed in a quarter of the fights exactly. Garbage Collect is pressed in 11 of 24 at 30 but 3 of 24 at 40, where the fights end before the helpers run down.
 - **Wild hits over 45%.** Only charges are capped for wild viruses. Capping every hit needs the solo pace at levels 1 to 12 looked at again, or the slow-road test moved.
+
+## 12. Inject: one strong burn
+
+A player's report: "Inject feels awkward to play with. You're required to inject 3 times to deal good damage which is annoying." The designer chose one strong burn. One press is enough, and stacking moves to other skills: Wormable spreads it, Tag amplifies it, Detonate cashes it in.
+
+### The numbers
+
+| Skill | Before | Now | Why |
+|---|---|---|---|
+| Inject | 12 a cycle for 3 cycles, stacks to 3 (a fourth replaces the oldest), cooldown 1 | **20 a cycle for 4 cycles, cooldown 3.** Pressing it again on the same part refreshes it (the longer time left wins) instead of adding a second. A copy landing on a part with your Inject (Propagate, Wormable, Contagion, Bloom, Logic Trap, Outbreak) refreshes it too. | The rework. 80 damage a press instead of 36. |
+| Surprise window | Inject lands an extra stack | Inject ticks once at once, on top of its cycle's tick | A bigger first tick, with no second burn to track. |
+| Heap Spray | Inject +2 a tick a rank | +3 a tick a rank | The same share of a bigger tick (15% a rank). |
+| Long Fuse (`polymorphic`) | Inject lasts 5 cycles | 6 cycles | Still two cycles more. |
+| Contagion | Copies each Inject (a fourth replaced the oldest) | Copies it, or refreshes the one there | No stacks. |
+| Backdoor | +6 a burn | +8 a burn | One Inject used to be up to three burns. |
+| Wormable | Burn 10 a cycle, spreads | Burn 8 a cycle; each copy carries your Inject on the target with it (refreshing one there) | "Wormable spreads it." The carried Inject is worth far more than the 2 a tick it gave up, and without the trim the Payload sat under its solo floor at Lv 10. |
+| Outbreak | An Inject (12 ×3) on every part | An Inject (20 ×4) on every part, refreshing one there | Inject's numbers. |
+| Detonate, Tag, Keepalive | | As before | Tag (+50% for 4 cycles on a 3-cycle cooldown) and Detonate (the rest at once, +50%) already fit one heavy burn. |
+
+The burn tag on a part reads *Inject · 20* now: no ×n/cap count for a burn that can't stack. The MIRRORSHADE boss went from ×1.3 to ×1.34 Integrity (docs/genome.md 15.3): with Tag free for the Mimic's beat, the Phantom won all twelve fights at its floor and put the reader over the band's 85%.
+
+### The intended rotations
+
+- **Payload.** Inject in the Surprise window (it ticks at once). Then spread it: Propagate copies every burn on the target to every part without an Inject, Wormable walks it on one part a cycle (Wormable first against a Replicator, as it reaches the fragments still to come). Tag the target while the Inject burns, Fuzz on a tell, Polymorph through thick armor. Detonate when what is left of the burns breaks the part or the part is about to fire, with Propagate first when there's time so the burns live on elsewhere. Inject again only on a part without one.
+- **Phantom.** In the Surprise window, Inject, unless the target fires within a cycle and Backdoor now with Side Channel or Unmask next breaks it first. Keep one Inject burning under the hits: on the target, then on the next part to attack. Backdoor, Side Channel and Fingerprint (which takes a last ◆ or two off and leaves the bare code fresh for a crit) on armor; Opening, Backstab and Unmask on bare code. Holding a key for a charge's window now fires an Inject the part doesn't have, not a Spike.
+
+### What the planner does differently
+
+The planner (dist/classes/infiltrator.mjs) presses Inject only on a part without one (planner.mjs and tells.mjs too: the old `burnsOn < 3` checks are gone), puts the Phantom's next Inject on the next part to attack, takes a Payload's Detonate on a part about to fire before any other kill, puts Polymorph on thick armor before Inject and on anything that will outlive its burns, and raises Logic Trap's bar to a hit of 20% of your max (it was 12%, and it spent the cycle Wormable wanted).
+
+### Balance, before and after (balance.mjs, the 24 class-balance fights, Signal lost)
+
+| | Lv 10 | Lv 18 | Lv 30 |
+|---|---:|---:|---:|
+| Phantom, before | 27% (9.6 cycles) | 25% (8.9) | 20% (8.2) |
+| Phantom, now | 37% (10.0) | 25% (8.5) | 20% (6.6) |
+| Payload, before | 21% (7.4) | 41% (8.7) | 36% (6.3) |
+| Payload, now | 18% (6.1) | 41% (7.1) | 38% (6.1) |
+
+The Phantom still loses less alone than every crew-leaning damage dealer at 18 and 30, and the Payload still carries a crew best (the farm at 18 and 30: Payload wins 100% of boss tries with a low point of 40%, the Phantom 90% and 33%; before, 97% and 37%, 61% and 19%). The hard slice: the Payload 22/22 to 23/23 (29–46% lost), the Phantom 19/22 at 10, 23/23 from 18 (22–54%). Reading tells is still worth the most at Lv 10 and 18. Effective keys at 18, 30 and 40: the Payload 6.9, 7.1 and 6.5, the Phantom 5.1, 6.6 and 6.0. The Phantom at Lv 10, with Fingerprint its only line key, is the one place the rework costs: one Inject on a 3-cycle cooldown leaves it pressing Spike between its few keys, where three stacks used to be one key pressed every cycle. It stays inside its band.
 
 ## Appendix: rerunning the audit
 

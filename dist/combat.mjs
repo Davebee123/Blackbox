@@ -270,8 +270,29 @@ export function skillBase(s, id, p) {
   if (id === 'retaliate') return Math.min(scaled(s, a.cap), 2 * (e?.procs?.struck?.amount || 0)) + (rank(s, 'reverse-shell') ? scaled(s, 5 * rank(s, 'reverse-shell')) : 0);
   return base * powerOf(s);
 }
-// Your burns on a part (Inject stacks, Purge, Thermal Runaway…).
+// Your burns on a part (Inject, Purge, Thermal Runaway…).
 export const burnsOn = (s, p) => (p && s.encounter?.burns ? s.encounter.burns.filter((b) => b.target === p.id) : []);
+// A refreshing burn (ABILITIES[id].refresh: Inject) is one a part: a second copy landing there (reapplied,
+// copied or moved: Propagate, Bloom, Contagion, Outbreak, Wormable…) merges into the one already there, keeping
+// the longer duration and the bigger tick. Merges every pair in your burns; returns the burn left for b.
+export function mergeBurns(e, b = null) {
+  const keep = new Map();
+  for (let i = 0; i < e.burns.length; i++) {
+    const x = e.burns[i];
+    if (!ABILITIES[x.id]?.refresh) continue;
+    const k = x.id + ' ' + x.target, y = keep.get(k);
+    if (!y) { keep.set(k, x); continue; }
+    y.left = Math.max(y.left, x.left); y.damage = Math.max(y.damage, x.damage); y.synced = !!(y.synced || x.synced);
+    e.burns.splice(i--, 1);
+  }
+  return b && !e.burns.includes(b) ? keep.get(b.id + ' ' + b.target) || null : b;
+}
+// Start a burn (or refresh the one of its kind already there): the burn now running.
+export function addBurn(e, b) { e.burns.push(b); return mergeBurns(e, b); }
+// Inject's length: 4 cycles (Long Fuse 6).
+export const injectTicks = (s) => (hasTalent(s, 'polymorphic') ? 6 : ABILITIES.inject.ticks);
+// Inject's tick before scaling: Heap Spray +3 a rank.
+export const injectTick = (s) => ABILITIES.inject.tick + 3 * rank(s, 'heap-spray');
 export const helpersOn = (s, p) => (p && s.encounter?.helpers ? s.encounter.helpers.filter((h) => h.target === p.id) : []);
 export const helperCap = (s) => (hasTalent(s, 'hive') ? 9 : SKILLS.helperCap);
 // Procs and reactive windows: a key lights up after an event and stays lit through `until`.
@@ -2474,6 +2495,7 @@ function breakPart(s, p) {
     const next = soonestAttacker(s, p.id);
     const moved = alive(next) && next !== p ? e.burns.filter((b) => b.target === p.id && b.left > 0) : [];
     for (const b of moved) b.target = next.id;
+    if (moved.length) mergeBurns(e);
     if (moved.length) emit(s, 'status', `${fxHas(s, 'burn-jump').it.name}: ${moved.length === 1 ? 'a burn jumps' : `${moved.length} burns jump`} to ${next.name}.`, { target: next.id, mark: 'burn' });
   }
   // The weak point moves: a new one forms on another part.
@@ -2634,15 +2656,14 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', id === 'rate-limit' ? `${target.name} ${STATUS_WORD[a.status]} for its next attack.` : `${target.name} ${id === 'tag' && target.tagBoost ? `Tagged (burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, timer visible)` : STATUS_WORD[a.status]} for ${n} ${n === 1 ? 'cycle' : 'cycles'}.`, { target: target.id, mark: a.status, ability: id });
   }
   if (a.tick && a.verb === 'burn' && target) {
-    let ticks = id === 'inject' && hasTalent(s, 'polymorphic') ? 5 : a.ticks;
-    const tick = scaled(s, a.tick + (id === 'inject' ? 2 * rank(s, 'heap-spray') : 0));
-    // Inject stacks up to 3 on one part; a fourth replaces the oldest.
-    for (let k = 0; k < (id === 'inject' && e.surprise ? CONFIG.surprise.injectStacks : 1); k++) {
-      if (a.stacks) { const mine = e.burns.filter((b) => b.target === target.id && b.id === id); if (mine.length >= a.stacks) e.burns.splice(e.burns.indexOf(mine[0]), 1); }
-      e.burns.push({ id, target: target.id, damage: tick, grow: a.grow ? scaled(s, a.grow) : 0, left: ticks, name: a.name, drain: a.drain ? healScaled(s, a.drain) : 0, synced: !!e.synced });
-    }
-    const stack = a.stacks ? e.burns.filter((b) => b.target === target.id && b.id === id).length : 0;
-    emit(s, 'status', `${target.name} is burning for ${tick}${a.grow ? ', growing,' : ''} every cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}${stack > 1 ? ` (${stack} stacks)` : ''}.`, { target: target.id, mark: 'burn', ability: id });
+    // Inject: Long Fuse makes it longer. Reapplied, it refreshes the one already on the part (the longer
+    // duration of the two) instead of adding a second. Fired in the Surprise window it also ticks at once.
+    const ticks = id === 'inject' ? injectTicks(s) : a.ticks;
+    const tick = scaled(s, id === 'inject' ? injectTick(s) : a.tick);
+    const was = a.refresh && burnsOn(s, target).some((b) => b.id === id);
+    const b = addBurn(e, { id, target: target.id, damage: tick, grow: a.grow ? scaled(s, a.grow) : 0, left: ticks, name: a.name, drain: a.drain ? healScaled(s, a.drain) : 0, synced: !!e.synced });
+    emit(s, 'status', was ? `${a.name} refreshed on the ${target.name}: ${b.damage} every cycle for ${b.left} cycles.` : `${target.name} is burning for ${tick}${a.grow ? ', growing,' : ''} every cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}.`, { target: target.id, mark: 'burn', ability: id });
+    if (id === 'inject' && e.surprise) for (let k = 0; k < CONFIG.surprise.injectNow && alive(target); k++) hit(s, target, b.damage, { by: 'Inject (Surprise)', dot: true, synced: b.synced });
   }
   if (id === 'purge' && (e.encrypt || e.burst || e.corrupt)) { const what = e.corrupt && !(e.encrypt || e.burst) ? 'corruption' : 'encryption'; e.encrypt = 0; e.burst = null; e.corrupt = null; emit(s, 'decrypted', `Purge clears your ${what}.`); }
   if (id === 'purge' && e.virus.raid) cleanse(s, ['dots', 'stress']); // a crew boss's damage over time and Thermal Stress
@@ -2712,13 +2733,13 @@ function useAbility(s, intent, auto = false) {
     const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
     let total = 0;
     for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round(total * dotMult(s) * 1.5 * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
+    hit(s, target, Math.round(total * dotMult(s) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
   }
   if (id === 'propagate') {
     // Fragments catch the copies at double.
     const mine = burnsOn(s, target);
     let n = 0;
-    for (const p of livingParts(s)) if (p.id !== target.id) for (const b of mine) { e.burns.push({ ...b, target: p.id, damage: p.kind === 'fragment' ? b.damage * 2 : b.damage }); n++; }
+    for (const p of livingParts(s)) if (p.id !== target.id) for (const b of mine) { addBurn(e, { ...b, target: p.id, damage: p.kind === 'fragment' ? b.damage * 2 : b.damage }); n++; }
     emit(s, 'status', `Propagate: ${n} ${n === 1 ? 'burn' : 'burns'} copied to the other parts${livingParts(s).some((p) => p.kind === 'fragment') ? ', fragments at double' : ''}.`, { mark: 'burn', ability: id });
   }
   if (id === 'reroute') {
@@ -3047,9 +3068,12 @@ export function playerPhase(s, phase = 'all') {
   if (!active(s)) return false; // fled mid-fight
   e.queue = e.plan.shift() || null;
 
-  // 1b. Burns and helpers tick after you. Every tick is a hit (Hook adds to it).
+  // 1b. Burns and helpers tick after you. Every tick is a hit (Hook adds to it). A refreshing burn (Inject)
+  // is one a part: any second copy that got there merges first.
+  mergeBurns(e);
   for (const b of [...e.burns]) {
     if (virusIntegrity(s).current === 0) break;
+    if (!e.burns.includes(b)) continue; // merged into another as it moved (a break's burns jumping on)
     const t = part(s, b.target);
     if (alive(t)) {
       const r = hit(s, t, b.damage + (b.fxGrow || 0), { by: b.name, dot: true, synced: b.synced });
@@ -3375,7 +3399,7 @@ function syncBonus(s, intent) {
     what = 'helpers strike again';
   }
   const surprise = e.surprise && ['inject', 'tag', 'keepalive'].includes(intent?.ability);
-  emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${surprise ? `, ${{ inject: 'an extra Inject stack', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, keepalive: `burns +${CONFIG.surprise.keepalive} cycles` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise, bonus: what ? b.tag : '' });
+  emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${surprise ? `, ${{ inject: 'Inject ticks at once', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, keepalive: `burns +${CONFIG.surprise.keepalive} cycles` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise, bonus: what ? b.tag : '' });
 }
 
 // ---------- daemons ----------

@@ -2,11 +2,13 @@
 
 At level 10 an Infiltrator picks one of two subclasses with `subclass payload` or `subclass phantom`. The first pick works anywhere out of a fight. Switching later is free, but only at home. Each subclass keeps its own skill bar and its own talent tree, so switching back finds them as you left them.
 
-Before level 10 every Infiltrator has the same core: `inject`, `tag`, `keepalive` and `backdoor`, and the Ghost passive. Ghost lets you slip past one guard a run without a fight, opens every fight with a blue Surprise window (Inject, Tag and Keepalive fired in it hit harder), and makes return trips on runs free. Both subclasses keep all of that.
+Before level 10 every Infiltrator has the same core: `inject`, `tag`, `keepalive` and `backdoor`, and the Ghost passive. Ghost lets you slip past one guard a run without a fight, opens every fight with a blue Surprise window (Inject, Tag and Keepalive fired in it hit harder: Inject ticks once at once), and makes return trips on runs free. Both subclasses keep all of that.
 
 From level 10 each subclass learns its own line of eleven skills, one at each of levels 10, 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38, so with the four core skills it has fifteen keys to choose from. Your bar holds seven, an eighth from level 22 and a ninth from level 30. Two presets come with each subclass (docs/kits.md): `rotation`, which your bar follows as skills unlock until you change it by hand, and one built for a kind of fight. `loadout use <name>` puts a preset on anywhere out of a fight, at home or on a run, and the keys it brings in start your next fight cooling. `loadout save <name>` keeps the bar you have under a name, and `loadout list` shows them all. A save from before the fifteen-key lines keeps every skill it knew.
 
-Numbers below are at level 1. Damage and shields grow 4% a level, the same way every skill's numbers do. Burns and the heals you cast grow half as fast with level (+2%), and Payload and Restore on your gear make up the rest: a Payload in blues that chases Payload carries about 38% at level 18 and 52% at 30, and its Inject ticks 22 and 28 there (17 and 21 in whites).
+Numbers below are at level 1. Damage and shields grow 4% a level, the same way every skill's numbers do. Burns and the heals you cast grow half as fast with level (+2%), and Payload and Restore on your gear make up the rest: a Payload in blues that chases Payload carries about 38% at level 18 and 52% at 30, and its Inject ticks about 37 and 47 there (28 and 35 in whites).
+
+Inject is one heavy burn: 20 damage every cycle for 4 cycles, on a 3-cycle cooldown. One press is enough. Pressing it again on the same part refreshes it (its duration starts over) instead of adding a second one, and so does a copy of it landing there from Wormable, Propagate, Contagion, Bloom or Outbreak (the longer time left wins). What used to come from stacking it comes from the rest of the kit: Wormable spreads it, Tag amplifies it, and Detonate cashes it in.
 
 ## Payload
 
@@ -20,7 +22,7 @@ When a part you are burning breaks, its burns jump to the part whose attack land
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
-| 10 | `wormable <part>` | Burns the target for 10 damage every cycle for 4 cycles. Each cycle it burns, it spreads a copy to one more part. | 3 |
+| 10 | `wormable <part>` | Burns the target for 8 damage every cycle for 4 cycles. Each cycle it burns, it spreads a copy to one more part, and your Inject on the target spreads with it (refreshing one already there). | 3 |
 | 12 | `detonate <part>` | Every burn on the target deals all its remaining damage at once, increased by 50%. | 4 |
 | 14 | `fuzz <part>` | Deals 12 damage and burns the target for 8 every cycle for 3 cycles. Its hit counts twice against a tell, so it calls off an elite's charge or stops a cast. | 4 |
 | 16 | `implant <part>` | Burns the target for 10 damage every cycle until it breaks. It can't be healed or grown while it burns. Once per fight. | once |
@@ -29,7 +31,7 @@ When a part you are burning breaks, its burns jump to the part whose attack land
 | 22 | `logic-trap` | The next hit on you deals half damage, and the part that lands it catches a copy of every burn on your target. | 6 |
 | 26 | `propagate <part>` | Copies your burns on the target to every other part. | 5 |
 | 30 | `thrash <part>` | For 3 cycles, every burn on the target ticks twice each cycle, whoever started it. | 5 |
-| 34 | `outbreak` | Every part catches an Inject, 12 damage every cycle for 3 cycles. For 4 cycles nothing can clear your burns. | 10 |
+| 34 | `outbreak` | Every part catches an Inject, 20 damage every cycle for 4 cycles (one already there is refreshed). For 4 cycles nothing can clear your burns. | 10 |
 | 38 | `irq-storm` | Every burn you have on every part ticks once more right now. Each part it reaches takes it as a hit from your command, which calls off a charge or counts toward stopping a cast. | 4 |
 
 Polymorph rewrites itself every cycle, which is why armor never stops it. It also hides it from some of your older skills. Detonate sets it off and Keepalive stretches it, but only on a part that has an ordinary burn on it as well. Propagate does not copy it, and Backdoor does not count it as a burn. Tag, Thrash, IRQ Storm and Bloom all work on it.
@@ -42,10 +44,10 @@ Talent points come at level 10 and every two levels after. The filler rows take 
 
 | Row | Opens at | Left | Right |
 |---|---:|---|---|
-| Ranks | 0 points | Heap Spray: Inject +2 per tick per rank. | Persistent Tag: Tagged burns tick +10% more per rank. |
-| Tier 1 | 3 points | Supercookie: Tag lasts 6 cycles. | Long Fuse: Inject lasts 5 cycles. |
+| Ranks | 0 points | Heap Spray: Inject +3 per tick per rank. | Persistent Tag: Tagged burns tick +10% more per rank. |
+| Tier 1 | 3 points | Supercookie: Tag lasts 6 cycles. | Long Fuse: Inject lasts 6 cycles. |
 | Ranks | 4 points | Shaped Charge: Detonate deals +10% per rank. | Backchannel: Backdoor +4 damage per rank. |
-| Tier 2 | 8 points | Contagion: each Inject also starts a copy on the part whose attack lands soonest. | Assassinate: Detonate on a Tagged part deals double. |
+| Tier 2 | 8 points | Contagion: each Inject also starts a copy on the part whose attack lands soonest, or refreshes the one there. | Assassinate: Detonate on a Tagged part deals double. |
 | Ranks | 9 points | Low Profile: take 3% less damage from attacks per rank. | Virulence: Wormable, Skim and Polymorph +2 per tick per rank. |
 | Tier 3 | 14 points | Superspreader: Bloom also copies the burns to every other part, not just the next one. | Persistence: Rootkit Implant can be used twice a fight. |
 
@@ -53,7 +55,7 @@ Each tier is a real choice. Contagion and Superspreader spread your damage wide,
 
 ### How it plays
 
-Open with Inject in the Surprise window for the extra stack. On a virus with two or more parts, cast Wormable early and let it walk through them. Put the Rootkit Implant on the biggest part: when that part breaks, Bloom carries the Implant on to the next. Save Detonate for the cycle it finishes a part. Polymorph is the biggest burn you have, 14 a cycle on any part. Against armor it does damage while your other burns are still breaking chits. Implant shuts off heals: a Leech, a Patchwork or a Self-Update can't grow a part it burns. IRQ Storm ticks every burn at once, and each part it ticks takes it as your hit, so it can call off a charge on a burning part. A burn on its own never calls off a tell, but Fuzz does: it hits and leaves a burn, and it counts twice against a tell, so one Fuzz stops a cast. Logic Trap halves the next hit on you, and the part that lands it catches a copy of your burns. Outbreak puts an Inject on every part, and for 4 cycles nothing can clear your burns. The `swarm` preset swaps Tag and the Rootkit Implant for Propagate and Logic Trap, for worms, fragments and an Overrun.
+Open with Inject in the Surprise window: it ticks at once there. One Inject a part is all you need, so press it again only when it runs out or on a part that has none. Then spread it: on a virus with two or more parts, Propagate copies it (and everything else burning on the target) to every other part at once, and Wormable walks it on a part a cycle, which is the better first spread against a Replicator, as it reaches the fragments still to come. Tag the target while the Inject burns, and Detonate when what is left of the burns breaks the part, or when it is about to fire: Propagate first if it has time, so the burns live on elsewhere. Put the Rootkit Implant on the biggest part: when that part breaks, Bloom carries the Implant on to the next. Save Detonate for the cycle it finishes a part. Polymorph is the biggest burn you have, 14 a cycle on any part. Against armor it does damage while your other burns are still breaking chits. Implant shuts off heals: a Leech, a Patchwork or a Self-Update can't grow a part it burns. IRQ Storm ticks every burn at once, and each part it ticks takes it as your hit, so it can call off a charge on a burning part. A burn on its own never calls off a tell, but Fuzz does: it hits and leaves a burn, and it counts twice against a tell, so one Fuzz stops a cast. Logic Trap halves the next hit on you, and the part that lands it catches a copy of your burns. Outbreak puts an Inject on every part, and for 4 cycles nothing can clear your burns. The `swarm` preset swaps Tag and the Rootkit Implant for Propagate and Logic Trap, for worms, fragments and an Overrun.
 
 ## Phantom
 
@@ -96,11 +98,11 @@ Shadow Copy only takes a hit. An Encrypt or a Replicate that does no damage goes
 | Ranks | 9 points | Low Profile: take 3% less damage from attacks per rank. | Backchannel: Backdoor +4 damage per rank. |
 | Tier 3 | 14 points | Deep Cover: Log Wipe also readies Null Route and Shadow Copy. | Leaked Creds: slip past 3 guards a run instead of 1. |
 
-The tiers ask what kind of Phantom you are. Fast Hands, Kill Chain and Deep Cover make a duelist who chains crits and dodges through a fight. Blind Spot lets a Phantom lean on Inject and still get its crits. Rotating Proxies and Leaked Creds make a ghost who barely fights on runs at all.
+The tiers ask what kind of Phantom you are. Fast Hands, Kill Chain and Deep Cover make a duelist who chains crits and dodges through a fight. Blind Spot crits the first tick of each Inject, the heaviest burn there is. Rotating Proxies and Leaked Creds make a ghost who barely fights on runs at all.
 
 ### How it plays
 
-Open on the part that hurts most: Backdoor goes through armor (no crit until the armor is off), and the first hit on its bare code crits. Backstab a part that is busy with a tell (charging, compiling, sealing or recording), because those hits always crit. When a big attack is coming, Null Route or Shadow Copy takes it, and Opening is lit for the next cycle. Once every part has had its first hit, Log Wipe gives you all your Weak Spots back, and the Mimic's next beat has nothing of you to play. A Lockbox caps how much its part can lose each cycle, which wastes a burst, so a Phantom breaks the Lockbox first. Fingerprint is the cheap hit that makes a part's Weak Spot fresh again, and Side Channel hits through armor. Rotate Keys clears a scramble and takes 30% off the next two hits, and each of those lights Opening. Vanish makes the next two attacks miss, which lights Opening twice. Unmask is a 26 hit through armor that leaves the part unmasked for 4 cycles: your hits on it crit 25% more often, its timer shows through a veil, and a Mimic or a Decoy has nothing of you to copy on its next beat. The `rotation` preset carries Unmask in place of Log Wipe. The `evasion` preset is built around misses and Opening: it leads with Opening, Null Route, Shadow Copy and Rotate Keys, keeps Backstab, Side Channel, Inject, Backdoor and Unmask, and drops Fingerprint and Log Wipe. Every attack it dodges or softens lights Opening for a 50 hit. It is a little better than `rotation` on an ordinary fight and clearly better against elites, Bricker and Extortion strains and the bosses that hit hard.
+Open on the part that hurts most. In the Surprise window, Inject ticks at once, so a Phantom opens with it, unless the part fires within a cycle and Backdoor now and Side Channel or Unmask next would break it first: then the burst comes first. Keep one Inject burning under your hits (cooldown 3; pressing it again only refreshes it), and when the target has one, the next part to attack gets the next. Backdoor goes through armor (no crit until the armor is off), and the first hit on its bare code crits. Backstab a part that is busy with a tell (charging, compiling, sealing or recording), because those hits always crit. When a big attack is coming, Null Route or Shadow Copy takes it, and Opening is lit for the next cycle. Once every part has had its first hit, Log Wipe gives you all your Weak Spots back, and the Mimic's next beat has nothing of you to play. A Lockbox caps how much its part can lose each cycle, which wastes a burst, so a Phantom breaks the Lockbox first. Fingerprint is the cheap hit that makes a part's Weak Spot fresh again, and Side Channel hits through armor. Rotate Keys clears a scramble and takes 30% off the next two hits, and each of those lights Opening. Vanish makes the next two attacks miss, which lights Opening twice. Unmask is a 26 hit through armor that leaves the part unmasked for 4 cycles: your hits on it crit 25% more often, its timer shows through a veil, and a Mimic or a Decoy has nothing of you to copy on its next beat. The `rotation` preset carries Unmask in place of Log Wipe. The `evasion` preset is built around misses and Opening: it leads with Opening, Null Route, Shadow Copy and Rotate Keys, keeps Backstab, Side Channel, Inject, Backdoor and Unmask, and drops Fingerprint and Log Wipe. Every attack it dodges or softens lights Opening for a 50 hit. It is a little better than `rotation` on an ordinary fight and clearly better against elites, Bricker and Extortion strains and the bosses that hit hard.
 
 ## Shared notes
 

@@ -24,7 +24,7 @@
 import { CONFIG, ABILITIES } from '../data.mjs';
 import { soonest, doomed } from '../planner.mjs';
 import { tellOn, tellOpen, tellHit } from '../tells.mjs';
-import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn, addBurn, mergeBurns, injectTicks, injectTick } from '../combat.mjs';
 
 const A = (id) => ABILITIES[id];
 const isInf = (s) => classOf(s) === 'infiltrator';
@@ -64,6 +64,7 @@ function bloom(s, p) {
   if (talent(s, 'superspreader')) {
     for (const x of livingParts(s)) if (x !== next) for (const b of moving) { (b.poly ? mine(s).poly : e.burns).push({ ...b, target: x.id, spreads: false }); copies++; }
   }
+  mergeBurns(e); // an Inject landing where you already have one refreshes it
   emit(s, 'status', `Bloom: ${plural(moving.length, 'burn')} jump${moving.length === 1 ? 's' : ''} from the ${p.name} to the ${next.name}${copies ? `, and Superspreader copies ${copies === 1 ? 'one' : 'them'} to every other part` : ''}.`, { target: next.id, mark: 'burn' });
 }
 
@@ -95,13 +96,10 @@ export default {
       mine(s).trap = true;
       emit(s, 'status', 'Logic Trap set. The next hit on you deals half damage, and its part catches your burns.', { mark: 'shield', ability: 'logic-trap' });
     },
+    // Outbreak: an Inject on every part (one already there is refreshed).
     outbreak(s, { a, e }) {
-      const tick = scaled(s, A('inject').tick + 2 * rank(s, 'heap-spray'));
-      for (const p of livingParts(s)) {
-        const there = e.burns.filter((b) => b.id === 'inject' && b.target === p.id);
-        if (there.length >= 3) e.burns.splice(e.burns.indexOf(there[0]), 1);
-        e.burns.push({ id: 'inject', target: p.id, damage: tick, grow: 0, left: a.ticks, name: 'Inject', drain: 0, synced: !!e.synced });
-      }
+      const tick = scaled(s, injectTick(s));
+      for (const p of livingParts(s)) addBurn(e, { id: 'inject', target: p.id, damage: tick, grow: 0, left: injectTicks(s), name: 'Inject', drain: 0, synced: !!e.synced });
       e.stickyUntil = e.cycle + a.cycles - 1;
       emit(s, 'status', `Outbreak: every part catches an Inject for ${tick} every cycle, and for ${a.cycles} cycles nothing clears your burns.`, { mark: 'burn', ability: 'outbreak' });
     },
@@ -154,7 +152,7 @@ export default {
       if (!poly.length || !alive(target)) return;
       let total = 0;
       for (const b of poly) { total += b.damage * b.left; st.poly.splice(st.poly.indexOf(b), 1); }
-      hit(s, target, Math.round(total * 1.5 * (talent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true });
+      hit(s, target, Math.round(total * A('detonate').mult * (talent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true });
     },
     keepalive(s, { target, a, e }) { for (const b of polyOn(s, target)) { if (alive(target)) tick(s, b, target, `Keepalive (${b.name})`); b.left += e.surprise ? CONFIG.surprise.keepalive : a.cycles; } },
     // Contagion (Payload talent): the new Inject also starts on the part attacking soonest.
@@ -163,9 +161,7 @@ export default {
       const b = e.burns.filter((x) => x.id === 'inject' && x.target === target.id).at(-1);
       const to = attackers(s).filter((p) => p !== target).sort((x, y) => x.attack.due - y.attack.due)[0] || livingParts(s).find((p) => p !== target);
       if (!b || !to) return;
-      const there = e.burns.filter((x) => x.id === 'inject' && x.target === to.id);
-      if (there.length >= 3) e.burns.splice(e.burns.indexOf(there[0]), 1);
-      e.burns.push({ ...b, target: to.id });
+      addBurn(e, { ...b, target: to.id });
       emit(s, 'status', `Contagion: the Inject spreads to the ${to.name}.`, { target: to.id, mark: 'burn' });
     },
     // Persistence (Payload talent): a second Implant.
@@ -213,13 +209,16 @@ export default {
       b.left--;
     }
     st.poly = st.poly.filter((b) => b.left > 0 && alive(part(s, b.target)));
-    // Wormable: each one cast spreads a copy to a part that has none yet.
+    // Wormable: each one cast spreads a copy to a part that has none yet, and carries your Inject on its
+    // part with it (an Inject already there is refreshed).
     for (const b of e.burns.filter((x) => x.id === 'wormable' && x.spreads && x.left > 0)) {
       const has = new Set(e.burns.filter((x) => x.id === 'wormable').map((x) => x.target));
       const to = attackers(s).filter((p) => !has.has(p.id)).sort((x, y) => x.attack.due - y.attack.due)[0] || livingParts(s).find((p) => !has.has(p.id));
       if (!to) continue;
       e.burns.push({ ...b, target: to.id, spreads: false });
-      emit(s, 'status', `Wormable spreads to the ${to.name}.`, { target: to.id, mark: 'burn' });
+      const inj = e.burns.find((x) => x.id === 'inject' && x.target === b.target && x.left > 0);
+      if (inj) addBurn(e, { ...inj, target: to.id });
+      emit(s, 'status', `Wormable spreads to the ${to.name}${inj ? ', carrying your Inject' : ''}.`, { target: to.id, mark: 'burn' });
     }
   },
   dealt(s, p, opts) {
@@ -261,7 +260,7 @@ export default {
       st.trap = false;
       const e = s.encounter, at = part(s, (e.lastAttack || '').split(' ')[1]) || null;
       const copies = at && at !== p && alive(p) ? e.burns.filter((b) => b.target === at.id) : [];
-      for (const b of copies) e.burns.push({ ...b, target: p.id, spreads: false });
+      for (const b of copies) addBurn(e, { ...b, target: p.id, spreads: false });
       emit(s, 'blocked', `${atk.name} springs your Logic Trap and deals half damage${copies.length ? `, and the ${p.name} catches ${plural(copies.length, 'burn')}` : ''}.`, { source: p.id, ability: 'logic-trap' });
       m *= 1 - A('logic-trap').cut;
     }
@@ -287,8 +286,8 @@ const first = (s, list) => list.find((c) => c && ok(s, c)) || null;
 export function fill(s, t) {
   if (!isInf(s) || !t) return [];
   const sub = subOf(s);
-  if (sub === 'payload') return ['fuzz ' + t.id, 'keepalive ' + t.id, 'skim ' + t.id];
-  if (sub === 'phantom') return [!t.armor && 'backstab ' + t.id, 'side-channel ' + t.id, 'fingerprint ' + t.id, 'unmask ' + t.id];
+  if (sub === 'payload') return ['fuzz ' + t.id, 'wormable ' + t.id, 'keepalive ' + t.id, 'skim ' + t.id];
+  if (sub === 'phantom') return [!t.armor && 'backstab ' + t.id, !t.armor && 'fingerprint ' + t.id, 'side-channel ' + t.id, 'fingerprint ' + t.id, 'unmask ' + t.id]; // on bare code Fingerprint first: the next hit crits
   return [];
 }
 const dueIn = (s, p) => (p?.attack ? p.attack.due - s.encounter.cycle : 99);
@@ -310,6 +309,8 @@ const killNow = (s) => {
 function plan(s, t0) {
   const sub = subOf(s), d = defender(s);
   if (mirrorOn(s) && !(mirrorOn(s).unmaskUntil >= s.encounter.cycle)) return null; // a Decoy's beat: the shared planner plays quiet (unless it's unmasked)
+  // A Payload's Detonate that breaks a part about to fire comes before any other kill: it has the most to cash in.
+  if (sub === 'payload') { const p = livingParts(s).find((x) => dueIn(s, x) <= 0 && !x.armor && queued(s, x) * A('detonate').mult >= x.integrity); const c = p && first(s, ['detonate ' + p.id]); if (c) return c; }
   const kill = killNow(s);
   if (kill) return kill; // a hit that breaks a part about to fire, or a bare one
   const living = livingParts(s);
@@ -323,7 +324,7 @@ function plan(s, t0) {
   // hands the part your burns).
   const heavy = incoming(s, 0);
   if (heavy >= Math.max(8, d.max * 0.1)) {
-    const dodge = first(s, ['shadow-copy', heavy >= d.max * 0.12 && 'logic-trap', heavy >= d.max * 0.18 && 'null-route', heavy >= d.max * 0.15 && 'log-wipe', heavy >= d.max * 0.12 && 'rotate-keys']);
+    const dodge = first(s, ['shadow-copy', heavy >= d.max * 0.2 && 'logic-trap', heavy >= d.max * 0.18 && 'null-route', heavy >= d.max * 0.15 && 'log-wipe', heavy >= d.max * 0.12 && 'rotate-keys']);
     if (dodge) return dodge;
   }
   // Two big hits in the next two cycles: Vanish takes both.
@@ -339,25 +340,29 @@ function pick(s, t0) {
   const best = livingParts(s).filter((p) => !p.phase).sort((a, b) => threat(b) - threat(a))[0];
   return best && threat(best) > 1.5 * threat(t0) ? best : t0;
 }
-// The class's core kit: Inject to three stacks, Tag them, Keepalive what's about to run out, Backdoor.
+// The class's core kit: Inject on the target (once: pressing it again only refreshes it), Tag it, Keepalive
+// what's about to run out, Backdoor between.
 function core(s, t) {
-  const e = s.encounter, burns = burnsOn(s, t), q = queued(s, t);
+  const e = s.encounter, burns = burnsOn(s, t), q = queued(s, t), inj = injected(s, t);
+  // The Surprise window: open with Inject (it ticks at once in it).
   if (e.cycle === 1 && e.sync?.surprise) return first(s, ['inject ' + t.id, 'tag ' + t.id]);
-  // A Phantom leads with its direct hits (Weak Spot, Backstab, Side Channel) and keeps one or two burns under them.
+  // A Phantom leads with its direct hits (Weak Spot, Backstab, Side Channel) and keeps an Inject burning under them.
   if (subOf(s) === 'phantom') return first(s, [
     !t.armor && 'opening ' + t.id,
     !t.armor && 'backstab ' + t.id,
-    burns.length < 1 && 'inject ' + t.id,
+    !inj && t.integrity > 30 && 'inject ' + t.id,
+    inj && nextInject(s, t),
+    t.armor > 0 && t.armor <= 2 && 'fingerprint ' + t.id, // a ◆ off, and the bare code under it is fresh for a crit
     t.armor > 0 && 'side-channel ' + t.id,
     'backdoor ' + t.id,
-    burns.length < 2 && t.integrity > 60 && 'inject ' + t.id,
     ...fill(s, t),
-    'inject ' + t.id,
+    !inj && 'inject ' + t.id,
   ]);
   return first(s, [
-    burns.length >= 2 && q * 1.5 >= t.integrity * 0.8 && 'detonate ' + t.id,
-    burns.length >= 2 && !on(s, t, 'tagged') && q < t.integrity * 1.2 && 'tag ' + t.id,
-    burns.length < 3 && 'inject ' + t.id,
+    burns.length >= 2 && q * A('detonate').mult >= t.integrity * 0.8 && 'detonate ' + t.id,
+    inj && !on(s, t, 'tagged') && q < t.integrity * 1.2 && 'tag ' + t.id,
+    !inj && 'inject ' + t.id,
+    inj && nextInject(s, t),
     burns.length >= 2 && burns.some((b) => b.left <= 1) && q < t.integrity && 'keepalive ' + t.id,
     'backdoor ' + t.id,
     ...fill(s, t),
@@ -365,8 +370,11 @@ function core(s, t) {
   ]);
 }
 
-const injects = (s, p) => burnsOn(s, p).filter((b) => b.id === 'inject').length;
-export const INJECT_FLOOR = 1; // then the line, then more stacks
+// Your Inject is on the part (one a part: another press only refreshes it).
+const injected = (s, p) => burnsOn(s, p).some((b) => b.id === 'inject');
+// The target has your Inject: the next part that will last has none yet, so the burn works there while you
+// finish this one (the part attacking soonest first).
+const nextInject = (s, t) => { const p = livingParts(s).filter((x) => x !== t && !injected(s, x) && !x.phase && x.integrity > 30).sort((a, b) => dueIn(s, a) - dueIn(s, b))[0]; return p ? 'inject ' + p.id : null; };
 function payloadPlan(s, t, living, hurt) {
   const e = s.encounter;
   // IRQ Storm: a charge or a cast about to land on a part you're burning (each part it ticks counts as your hit).
@@ -375,34 +383,44 @@ function payloadPlan(s, t, living, hurt) {
   // The Implant on a part that heals or grows (a Patcher, a Tap, a Self-Update on the board): it can't while it burns.
   const healer = living.find((p) => p.attack?.effect === 'heal' || p.attack?.siphon || tellOn(s, p, 'cast')?.does === 'grow');
   if (healer) { const c = first(s, ['implant ' + healer.id]); if (c) return c; }
-  // Opening move (the Surprise window): Inject, for the extra stack.
+  // Opening move (the Surprise window): Inject, for the longer burn.
   if (e.cycle === 1 && e.sync?.surprise && t.armor === 0) return first(s, ['inject ' + t.id]);
-  // A finisher: Detonate when the burns left on it break it (or nearly).
+  // A finisher: Detonate when the burns left on it break it (or nearly). Propagate first, when its attack isn't due
+  // yet and another part has no Inject: the burns live on there after Detonate spends them here.
   const q = queued(s, t);
-  if (q * 1.5 >= t.integrity && allBurnsOn(s, t).length >= 1 && t.armor === 0) { const c = first(s, ['detonate ' + t.id]); if (c) return c; }
+  if (q * A('detonate').mult >= t.integrity && allBurnsOn(s, t).length >= 1 && t.armor === 0) { const c = first(s, [dueIn(s, t) > 0 && living.some((p) => p !== t && !injected(s, p)) && 'propagate ' + t.id, 'detonate ' + t.id]); if (c) return c; }
   // Outbreak: three parts or more, or fragments: every part catches an Inject at once.
   if (living.length >= 3 || (living.length >= 2 && living.some((p) => p.kind === 'fragment'))) { const c = first(s, ['outbreak']); if (c) return c; }
-  // Inject first: three stacks on the target carry the Payload, and the line comes on top of them.
-  if (injects(s, t) < INJECT_FLOOR && queued(s, t) < t.integrity) { const c = first(s, ['inject ' + t.id]); if (c) return c; }
+  // Thick armor: Polymorph burns straight through it while the other burns only break ◆.
+  if (t.armor >= 2) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
+  // Inject first: it carries the Payload, and the line comes on top of it (Wormable carries it on, Tag
+  // amplifies it, Detonate cashes it in).
+  if (!injected(s, t) && queued(s, t) < t.integrity) { const c = first(s, ['inject ' + t.id]); if (c) return c; }
+  // Then spread it. Propagate copies every burn on the target to every other part at once (fragments at double),
+  // to the parts without an Inject, or to even the burns out once the target carries more than the others. Wormable
+  // walks it on a part a cycle: against a Replicator it goes first, as it reaches the fragments still to come.
+  else {
+    const bare = living.filter((p) => p !== t && !injected(s, p)).length, more = allBurnsOn(s, t).length >= 2 && living.some((p) => p !== t && allBurnsOn(s, p).length < allBurnsOn(s, t).length);
+    const spawns = living.some((p) => p.attack?.effect === 'replicate' || p.kind === 'fragment');
+    const prop = (bare >= 1 || more) && 'propagate ' + t.id, worm = bare >= 1 && 'wormable ' + t.id;
+    const c = first(s, spawns ? [worm, prop] : [prop, worm]);
+    if (c) return c;
+  }
   // Fuzz: a hit and a burn, and a tell on it counts it twice.
   if (tellOpen(s, t) && ['charge', 'cast'].includes(tellOpen(s, t).kind)) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; } // in its window
-  // Thick armor: Polymorph burns straight through it while the other burns break ◆. On a bare part it's the
-  // biggest burn there is, so it goes on anything that will outlive it.
-  if (t.armor >= 2 || queued(s, t) + previewDamage(s, 'spike', t) < t.integrity) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
-  // The moments: low on Signal (Skim pays it back), one part loaded and the rest clean (Propagate), three burns
-  // stacked on a bare part (Thrash).
+  // Polymorph is the biggest burn after Inject, so it goes on anything that will outlive it.
+  if (queued(s, t) < t.integrity) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
+  // The moments: low on Signal (Skim pays it back), a loaded target and a part with fewer burns (Propagate
+  // evens them out), two burns on a bare part (Thrash).
   if (hurt < 0.6) { const c = first(s, ['skim ' + t.id]); if (c) return c; }
-  if (allBurnsOn(s, t).length >= 2 && living.filter((p) => p !== t && !allBurnsOn(s, p).length).length >= 1) { const c = first(s, ['propagate ' + t.id]); if (c) return c; }
+  if (allBurnsOn(s, t).length >= 2 && living.some((p) => p !== t && allBurnsOn(s, p).length < allBurnsOn(s, t).length)) { const c = first(s, ['propagate ' + t.id]); if (c) return c; }
   if (allBurnsOn(s, t).length >= 2 && !t.armor && t.integrity > queued(s, t) * 0.5) { const c = first(s, ['thrash ' + t.id]); if (c) return c; }
-  // Several parts, or fragments: spread (once the target carries a stack, so the copies come with something to cash in).
-  if (living.length >= 2 && injects(s, t) >= 1) { const c = first(s, ['wormable ' + t.id]); if (c) return c; }
   // Implant the biggest part early, once.
   const big = [...living].sort((a, b) => b.integrity - a.integrity)[0];
   if (big && big.integrity >= 60) { const c = first(s, ['implant ' + big.id]); if (c) return c; }
   // Tag the stacks once two burns are on it, then Fuzz on top (a hit and a burn of its own).
   if (allBurnsOn(s, t).length >= 2 && !on(s, t, 'tagged') && queued(s, t) < t.integrity * 1.2) { const c = first(s, ['tag ' + t.id]); if (c) return c; }
   if (queued(s, t) < t.integrity) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; }
-  if (injects(s, t) < 3 && queued(s, t) < t.integrity) { const c = first(s, ['inject ' + t.id]); if (c) return c; }
   // Thrash: three or more burns stacked on a bare part, each ticks twice.
   if (allBurnsOn(s, t).length >= 3 && !t.armor && t.integrity > queued(s, t) * 0.5) { const c = first(s, ['thrash ' + t.id]); if (c) return c; }
   // Propagate: one part loaded, the others clean.
@@ -432,11 +450,19 @@ function phantomPlan(s, t, living, hurt) {
   const fresh = living.filter((p) => !e.weakHit?.[p.id]).length;
   if (fresh === 0 && living.length >= 2) { const c = first(s, ['log-wipe']); if (c) return c; }
   if (t.integrity >= 60) { const c = first(s, ['implant ' + t.id]); if (c) return c; }
+  // The Surprise window: Inject ticks at once in it, so a Phantom opens with it, unless the target fires within a
+  // cycle and its burst through armor
+  // (Backdoor now, then Side Channel or Unmask) breaks it first.
+  if (e.cycle === 1 && e.sync?.surprise) {
+    const burst = previewDamage(s, 'backdoor', t) + Math.max(0, ...['side-channel', 'unmask'].filter((id) => usable(s).includes(id)).map((id) => previewDamage(s, id, t)));
+    const c = first(s, [burst >= t.integrity && dueIn(s, t) <= 1 && 'backdoor ' + t.id, 'inject ' + t.id]); if (c) return c;
+  }
   // Weak Spot: the first hit on each part's bare code crits, so open on a fresh part with the biggest hit to hand.
   // Unmask a part that will take a few hits: the crits that follow come more often.
   const unmasked = t.unmasked?.who === (s.who || '') && t.unmasked.until >= e.cycle;
   const long = !unmasked && t.integrity > 1.5 * previewDamage(s, 'unmask', t);
-  if (!e.weakHit?.[t.id] && !(e.cycle === 1 && e.sync?.surprise)) { const c = first(s, ['opening ' + t.id, long && 'unmask ' + t.id, 'backdoor ' + t.id, !t.armor && 'backstab ' + t.id, !t.armor && 'spike ' + t.id]); if (c) return c; }
+  // Inject (cooldown 3, one a part) burns under the hits: before a Spike, once the big hits are cooling.
+  if (!e.weakHit?.[t.id]) { const c = first(s, ['opening ' + t.id, long && 'unmask ' + t.id, 'backdoor ' + t.id, !t.armor && 'backstab ' + t.id, !injected(s, t) && t.integrity > 30 && 'inject ' + t.id, !t.armor && 'spike ' + t.id]); if (c) return c; }
   if (long && !(readyIn(s, 'backstab') === 0 && usable(s).includes('backstab'))) { const c = first(s, ['unmask ' + t.id]); if (c) return c; }
   // A bare part: Backstab beats a Spike even without the crit, so it goes whenever it's ready (a lit Opening first).
   if (!t.armor) { const c = first(s, ['opening ' + t.id, 'backstab ' + t.id]); if (c) return c; }

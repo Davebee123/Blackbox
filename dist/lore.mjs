@@ -30,7 +30,7 @@ export const SKILL_TEXT = {
   failover: { desc: 'Fails over to backup, dealing damage to every part equal to 25% of your missing health (minimum 20).', lore: 'The worse it gets, the harder the backup swings.' },
 
   // Infiltrator: know where to hit, and slip through runs.
-  inject: { desc: 'Injects a payload into the target, burning it for 12 damage every cycle for 3 cycles. Stacks up to 3 times on one part.', lore: 'By the time it notices, it’s already inside.' },
+  inject: { desc: 'Injects a payload into the target, burning it for 20 damage every cycle for 4 cycles. Injecting the same part again refreshes it.', lore: 'By the time it notices, it’s already inside.' },
   tag: { desc: 'Tags the target, dealing 10 damage. For 4 cycles, burns on it deal 50% more damage, and its attack timer shows through a veil.', lore: 'Once you’re tagged, there is nowhere dark enough.' },
   backdoor: { desc: 'Slips in through a backdoor, dealing 24 damage to the target and ignoring armor. Deals 6 additional damage for each burn on it.', lore: 'Why knock when you left yourself a way in?' },
   keepalive: { desc: 'Sends a heartbeat down the wire. Every burn on the target ticks once immediately and lasts 2 cycles longer.', lore: 'Send a heartbeat down the wire and the session never times out.' },
