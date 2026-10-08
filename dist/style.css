@@ -2863,8 +2863,12 @@ details.map-pick { pointer-events: auto; }
 .ttree .tspec .tspec-opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; grid-column: 1 / -1; }
 .ttree .tspec .tspec-opts .act { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
 .ttree .tspec .tspec-opts .act small { font-size: 11px; opacity: 0.8; }
-.hot-btn { color: var(--hot); border-color: var(--hot); display: inline-flex; flex-direction: column; align-items: center; line-height: 1.15; }
-.hot-btn small { font-size: 10px; opacity: 0.75; letter-spacing: 0.3px; }
+/* Go loud (a loud run): a hazard-taped switch, not a plain button. The numbers are on hover (LOUD_TIP). */
+.hot-btn { position: relative; display: inline-flex; align-items: center; gap: 7px; color: var(--hot); border-color: var(--hot); font: 700 12px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; padding-left: 16px; overflow: hidden; }
+.hot-btn::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 7px; background: repeating-linear-gradient(135deg, var(--hot) 0 3px, transparent 3px 6px); opacity: 0.85; }
+.hot-btn .loud-ico { width: 13px; height: 13px; background: currentColor; -webkit-mask: url('ui/icons/event-warning.svg') center/contain no-repeat; mask: url('ui/icons/event-warning.svg') center/contain no-repeat; }
+.hot-btn:hover:not(:disabled), .hot-btn:focus-visible { background: repeating-linear-gradient(135deg, var(--hot-soft) 0 8px, transparent 8px 16px); color: var(--hot); }
+.hot-btn:disabled::before { opacity: 0.35; }
 .net-hot { align-self: center; }
 .coll li.heard { outline: 1px solid var(--hot); }
 .coll .coll-listen { float: right; margin-top: -30px; font-size: 11px; padding: 1px 6px; }
