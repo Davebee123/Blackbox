@@ -24,7 +24,7 @@ test('every lesson can be completed in order and ends in victory', () => {
   submitTutorial(t, LESSONS.at(-1).command);
   assert.equal(t.phase, 'live');
   for (let i = 0; i < 200 && t.phase === 'live'; i++) {
-    if (!t.state.encounter.lastAttack && !t.state.encounter.queue) submitTutorial(t, 'spike pulse');
+    if (!t.state.encounter.lastAttack && !t.state.encounter.queue) submitTutorial(t, 'bash pulse');
     tickTutorial(t, CONFIG.cycleMs / 5);
   }
   assert.equal(t.phase, 'complete');
@@ -35,7 +35,7 @@ test('the wrong command is refused without advancing', () => {
   const t = beginTutorial(settings);
   submitTutorial(t, 'scan');
   assert.equal(t.phase, 'ready');
-  assert.match(t.error, /spike encryptor/);
+  assert.match(t.error, /bash encryptor/);
 });
 
 test('lesson 3 breaks the Encryptor before it patches, and its attack stops', () => {

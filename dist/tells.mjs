@@ -346,6 +346,9 @@ export function tellLand(s) {
         const who = by && by.cycle >= t.said ? [s, ...alliesOf(s).map((x) => x.st)].find((x) => (x.who || '') === by.who) : null;
         if (who) read(who, t, p, { skill: by.id });
       }
+    } else if (t.kind === 'cast' && t.does === 'grow' && p.revokedUntil >= e.cycle) { // Revoke (Sysop): it can't sign the update
+      emit(s, 'interrupt', `${label(t)} fails: the ${p.name} is revoked.`, { source: p.id, tell: t.id, answered: true });
+      read(s, t, p, { open: true });
     } else if (t.kind === 'cast') {
       castLands(s, t, p);
       lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t);
@@ -415,14 +418,16 @@ export function mimicHit(s, id, target) {
 // 'quiet' if you gave it nothing (a read: it opens).
 function mimicLands(s, t, p) {
   const host = s.host || s, e = host.encounter, last = e.lastCmd;
-  const blind = e.buffs?.sudo >= e.cycle || e.mimicBlind; // Sudo, Log Wipe: it has nothing of you
+  const honey = e.buffs?.honeypot >= e.cycle; // Honeypot (Warden): the beat goes after the honeypot
+  if (honey) { delete e.buffs.honeypot; emit(s, 'blocked', `The ${p.name}'s beat goes after your honeypot.`, { source: p.id, tell: t.id, answered: true }); }
+  const blind = e.buffs?.sudo >= e.cycle || e.mimicBlind || honey || p.unmaskUntil >= e.cycle; // Sudo, Log Wipe, Unmask: it has nothing of you
   if (e.mimicBlind) delete e.mimicBlind;
   const id = last && last.cycle === e.cycle && !blind ? last.id : null, a = id && ABILITIES[id];
   const target = last && part(host, last.target);
   const direct = id ? mimicHit(host, id, target || p) / TELL.mimic : 0;
   if (!direct) { emit(s, 'blocked', `The ${p.name} plays back ${a ? a.name : 'nothing'}, and there's no hit in it to copy.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
-  // Reflector (a native unique): the playback lands on the Mimic instead, at a share of the hit.
-  const turn = fxOn(host, 'mimic-turn');
+  // Reflector (a native unique): the playback lands on the Mimic instead, at a share of the hit. Echo Cancel: all of it.
+  const turn = p.echoCancelUntil >= e.cycle ? { it: { name: 'Echo Cancel' }, fx: { value: 100 } } : fxOn(host, 'mimic-turn');
   if (turn) {
     tally(s, t, 'answered');
     emit(s, 'blocked', `The ${p.name} plays your ${a.name} back, and ${turn.it.name} turns it on the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
@@ -515,22 +520,23 @@ const first = (s, list) => list.find((c) => ok(s, c)) || null;
 const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && tellNext(s, t) - s.encounter.cycle <= lag);
 const tellNext = (s, t) => { const p = sourceOf(s, t); return t.kind === 'charge' && p?.attack && t.n != null ? landsAt(p, t.n) : t.next; };
 // Commands that deal no direct damage: what you fire on the Mimic's beat.
-export const QUIET = ['harden', 'firewall', 'bulkhead', 'dmz', 'multicast', 'heartbeat', 'shadow-copy', 'log-wipe', 'turbo-boost', 'chain-reaction', 'malloc', 'brace', 'patch', 'null-route', 'sudo', 'fork', 'mesh'];
+export const QUIET = ['harden', 'firewall', 'bulkhead', 'dmz', 'heartbeat', 'shadow-copy', 'log-wipe', 'turbo-boost', 'malloc', 'brace', 'patch', 'null-route', 'sudo', 'fork', 'debris-field', 'rm-rf', 'vent', 'circuit-breaker', 'honeypot', 'maintenance-window', 'logic-trap', 'rotate-keys', 'vanish', 'load-shed', 'multicast', 'mesh'];
 const quietFor = (s, t) => [...QUIET, ...['crack', 'shaped-charge', 'bit-rot', 'exploit', 'tag', 'hook', 'inject', 'deploy', 'spawn', 'botnet', 'fan-out', 'purge', 'thermal-runaway', 'keepalive', 'wormable', 'polymorph', 'skim', 'thrash', 'cache-poison'].map((id) => id + ' ' + t.id), 'hold'];
 // The best command of yours that answers a charge or a cast on p: the hit that does the most to it (a skill built
 // for the moment, Segfault, Backstab, Overvolt, comes out on top by itself), or on armor whatever breaks ◆.
-const HITS = ['segfault', 'backstab', 'overvolt', 'retaliate', 'opening', 'overload', 'flood', 'backdoor', 'reclaim', 'rate-limit', 'blowback', 'stack-smash', 'replay', 'spoofed-ack', 'thermal-throttle', 'crack', 'shaped-charge', 'spike'];
+const HITS = ['segfault', 'backstab', 'overvolt', 'backfire', 'fuzz', 'retaliate', 'opening', 'overload', 'flood', 'backdoor', 'reclaim', 'rate-limit', 'blowback', 'stack-smash', 'replay', 'spoofed-ack', 'thermal-throttle', 'reject', 'checksum', 'hot-loop', 'fingerprint', 'side-channel', 'unmask', 'revoke', 'sniff', 'echo-cancel', 'nohup', 'jam', 'chain-reaction', 'bit-rot', 'throttle', 'crack', 'shaped-charge', 'spike'];
 const counts = (s, text) => { const id = text.split(' ')[0]; return !ABILITIES[id]?.noAnswer; };
 function hitOn(s, p, strip = false) {
   if (p.armor > 0 || strip) return first(s, [p.armor >= 2 && 'crack ' + p.id, p.armor >= 2 && 'shaped-charge ' + p.id, p.armor >= 2 && 'rate-limit ' + p.id, 'overvolt ' + p.id, 'spike ' + p.id].filter(Boolean));
   return HITS.map((id) => id + ' ' + p.id).filter((c) => ok(s, c) && counts(s, c)).sort((a, b) => score(s, b, p) - score(s, a, p))[0] || null;
 }
-const score = (s, text, p) => { const id = text.split(' ')[0]; return previewDamage(s, id, p) + (id === 'overvolt' ? 40 : 0) + (id === 'backstab' && tellOn(s, p) ? 30 : 0); };
+const score = (s, text, p) => { const id = text.split(' ')[0]; return previewDamage(s, id, p) + (['overvolt', 'fuzz'].includes(id) ? 40 : 0) + (id === 'backfire' && tellOn(s, p, 'charge') ? 60 : 0) + (id === 'backstab' && tellOn(s, p) ? 30 : 0); };
 // Skills built to answer a tell outright (dist/classes/*.mjs): a plan that fires one of them on the part answers it.
-const BUILT = { charge: ['suspend', 'jam', 'spoofed-ack', 'hijack', 'blackhole', 'irq-storm', 'kill-switch', 'reroute', 'replay'], cast: ['quarantine', 'hijack', 'sigint', 'overvolt', 'irq-storm', 'kill-switch', 'reroute', 'thermal-runaway'], seal: ['bit-rot', 'cache-poison', 'shaped-charge', 'crack'] };
-const built = (planned, t, p) => { const [id, at] = (planned || '').split(' '); return (BUILT[t.kind] || []).includes(id) && (!at || at === p.id); };
+const BUILT = { charge: ['suspend', 'jam', 'spoofed-ack', 'hijack', 'blackhole', 'irq-storm', 'kill-switch', 'reroute', 'replay', 'backfire', 'takeover'], cast: ['quarantine', 'hijack', 'sigint', 'overvolt', 'fuzz', 'irq-storm', 'kill-switch', 'reroute', 'thermal-runaway'], seal: ['bit-rot', 'cache-poison', 'shaped-charge', 'crack'] };
+// (Kill Switch and Reroute have no target: they count only on a part your helpers are on.)
+const built = (planned, t, p, s = null) => { const [id, at] = (planned || '').split(' '); return (BUILT[t.kind] || []).includes(id) && (at ? at === p.id : !s || !['kill-switch', 'reroute'].includes(id) || s.encounter.helpers.some((h) => h.target === p.id)); };
 // A planned command that answers this tell (it's aimed at the part and hits it).
-const hitsIt = (planned, p) => { const [id, at] = (planned || '').split(' '); return at === p.id && !ABILITIES[id]?.noAnswer && (ABILITIES[id]?.damage > 0 || ['crack', 'shaped-charge', 'retaliate', 'opening', 'segfault', 'stack-smash', 'thermal-throttle', 'blowback', 'overvolt', 'replay', 'spoofed-ack', 'reclaim'].includes(id) || ABILITIES[id]?.verb === 'hit'); };
+const hitsIt = (planned, p) => { const [id, at] = (planned || '').split(' '); return at === p.id && !ABILITIES[id]?.noAnswer && (ABILITIES[id]?.damage > 0 || ['crack', 'shaped-charge', 'retaliate', 'opening', 'segfault', 'stack-smash', 'thermal-throttle', 'blowback', 'overvolt', 'replay', 'spoofed-ack', 'reclaim', 'backfire'].includes(id) || ABILITIES[id]?.verb === 'hit'); };
 // A planned command that breaks a part: nothing a tell asks for is worth more.
 function kills(s, planned) {
   const [id, at] = (planned || '').split(' '), p = at && part(s, at);
@@ -559,7 +565,9 @@ const quickStrip = (s, p) => p.armor <= 1 || (p.armor <= 3 && usable(s).includes
 export function tellMove(s, t0 = null, planned = null) {
   if (!answers() || TELL.bots.move === false || !tellsOf(s)) return null;
   const c = s.encounter.cycle;
-  const recording = soon(s, 0).find((t) => t.kind === 'mimic');
+  // A Mimic with nothing to copy this beat (Unmask, Echo Cancel, Log Wipe, Honeypot, Sudo): no need to go quiet.
+  const e0 = s.encounter, blind = (p) => !p || p.unmaskUntil >= c || p.echoCancelUntil >= c || e0.mimicBlind || e0.buffs?.honeypot >= c || e0.buffs?.sudo >= c;
+  const recording = soon(s, 0).find((t) => t.kind === 'mimic' && !blind(sourceOf(s, t)));
   // The Mimic's beat comes first: a hit fired into it comes straight back, a kill too (unless it ends the fight).
   if (recording && TELL.bots.quiet !== false && planned && !(kills(s, planned) && livingParts(s).length === 1)) {
     const id = planned.split(' ')[0], m = sourceOf(s, recording);
@@ -578,14 +586,14 @@ export function tellMove(s, t0 = null, planned = null) {
     const next = tellNext(s, t), now = next === c, left = (t.need || 0) - (t.wound || 0);
     // A charge: on its last chance (or the one before, when it takes two), when what it adds is worth a command.
     if (t.kind === 'charge' && TELL.bots.hit !== false && left > 0 && next - c + 1 <= Math.max(1, left)) {
-      if (built(planned, t, p) || (t.answer === 'strip' ? planned?.endsWith(' ' + p.id) && /^(crack|shaped-charge|spike|rate-limit|overvolt)/.test(planned) && p.armor > 0 : hitsIt(planned, p))) return null; // the plan answers it already
+      if (built(planned, t, p, s) || (t.answer === 'strip' ? planned?.endsWith(' ' + p.id) && /^(crack|shaped-charge|spike|rate-limit|overvolt)/.test(planned) && p.armor > 0 : hitsIt(planned, p))) return null; // the plan answers it already
       const builds = ABILITIES[(planned || '').split(' ')[0]]?.verb === 'burn';
       if (chargeCost(s, t, p) + after(s) >= defender(s).max * (builds ? 0.12 : 0.05)) {
         const h = hitOn(s, p, t.answer === 'strip');
         if (h && (!recording || !mimicHit(s, h.split(' ')[0], p))) return h;
       }
     }
-    if (t.kind === 'cast' && left > 0 && built(planned, t, p)) return null;
+    if (t.kind === 'cast' && left > 0 && built(planned, t, p, s)) return null;
     if (t.kind === 'cast' && left > 0) {
       // A skill built for a cast answers it and does something besides (damage, a stun): keep SIGINT for the next one.
       const own = next - c <= 1 && first(s, [left <= 2 && 'overvolt ' + p.id, 'quarantine ' + p.id, s.encounter.helpers.some((h) => h.target === p.id) && 'hijack ' + p.id, s.encounter.helpers.length >= left && 'reroute ' + p.id, next - c >= 1 && left <= 2 && 'thermal-runaway ' + p.id]);

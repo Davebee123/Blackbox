@@ -24,7 +24,7 @@
 //   blackhole              its next attack does nothing (Blackhole).
 //   poisonedUntil, poison  Cache Poison: its patches and heals turn into damage.
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
-import { subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
 import { chargeNow, tellOn, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
 
@@ -103,8 +103,10 @@ function resolveHeld(s) {
       emit(s, 'blocked', `${atk.name} falls into the blackhole and does nothing.`, { source: p.id });
       continue;
     }
-    if (p.hijack) {
-      const hj = p.hijack;
+    // Takeover: for its cycles, every attack it makes turns on its own side at full size.
+    const took = p.takeoverUntil >= e.cycle ? { left: Infinity, share: 1, cap: Infinity, cross: false, at: p.takeoverAt, takeover: true } : null;
+    if (p.hijack || took) {
+      const hj = p.hijack || took;
       // A charge riding this attack: it's yours, at its full charged size (tells.mjs).
       const ch = chargeNow(s, p) ? chargeSize(s, p) : null;
       const size = ch ? ch.amount : attackSize(s, p);
@@ -113,13 +115,14 @@ function resolveHeld(s) {
       atk.n = (atk.n || 0) + 1;
       if (atk.windup) atk.wound = 0;
       e.metrics.interrupts++;
-      if (--hj.left <= 0) delete p.hijack; else jamMark(s, p);
+      if (hj.takeover) jamMark(s, p);
+      else if (--hj.left <= 0) delete p.hijack; else jamMark(s, p);
       if (size > 0) {
         const others = livingParts(s).filter((x) => x !== p);
         const to = !others.length ? [p] : hj.cross ? others : [soonestAttacker(s, p.id) || others[0]];
         const amount = Math.max(1, ch ? size : Math.min(hj.cap || Infinity, Math.round(size * hj.share)));
-        emit(s, 'blocked', `HIJACKED: ${p.name}'s ${atk.name} turns on ${to.length > 1 ? 'every other part' : to[0] === p ? 'itself' : 'the ' + to[0].name}.`, { source: p.id, target: to[0].id });
-        for (const x of to) if (alive(x)) hit(s, x, amount, { by: 'Hijack', pierce: true });
+        emit(s, 'blocked', `${hj.takeover ? 'TAKEN OVER' : 'HIJACKED'}: ${p.name}'s ${atk.name} turns on ${to.length > 1 ? 'every other part' : to[0] === p ? 'itself' : 'the ' + to[0].name}.`, { source: p.id, target: to[0].id });
+        for (const x of to) if (alive(x)) hit(s, x, amount, { by: hj.takeover ? 'Takeover' : 'Hijack', pierce: true });
       } else emit(s, 'blocked', `HIJACKED: ${p.name}'s ${atk.name} goes nowhere.`, { source: p.id });
       continue;
     }
@@ -153,7 +156,7 @@ function finishable(s) {
   for (const p of livingParts(s)) {
     if (p.armor > 0 || !(now.has(p.id) || p.patchAt != null)) continue;
     if (ok(s, 'spike ' + p.id) && previewDamage(s, 'spike', p) >= p.integrity) return true;
-    if (queued(s, p) >= p.integrity && ok(s, 'kill-switch')) return true;
+    // (helpers that would finish it: Kill Switch only to stop an attack, planner.mjs)
   }
   return false;
 }
@@ -168,9 +171,15 @@ function threatNow(s) {
 const tellSoon = (s, kinds, lag = 1) => livingParts(s).map((p) => [p, tellOn(s, p)]).find(([p, x]) => x && kinds.includes(x.kind) && (x.kind === 'charge' && p.attack ? landsAt(p, x.n) : x.next) - s.encounter.cycle <= lag) || [null, null];
 function herderPlan(s, t) {
   const e = s.encounter, d = defender(s), living = livingParts(s), n = e.helpers.length;
+  // A big hit landing now with the swarm out: shed it onto the helpers.
+  const big = threatNow(s);
+  if (big && n >= 3 && (big.hit || big.amount) >= d.max * 0.14 && helperValue(s) >= (big.hit || big.amount) * 0.6 && !finishable(s) && ok(s, 'load-shed')) return 'load-shed';
   // Fragments up: Garbage Collect takes them all at once, where a Spike takes one.
   if (living.some((p) => p.kind === 'fragment') && living.length >= 3 && ok(s, 'garbage-collect')) return 'garbage-collect';
   if (finishable(s)) return null;
+  // Crontab once, on the part that will stand longest: it hits every other cycle until the fight ends.
+  const long = [...living].sort((a, b) => b.integrity - a.integrity)[0];
+  if (long && long.integrity >= scaled(s, 60) && !e.crontab && ok(s, 'crontab ' + long.id)) return 'crontab ' + long.id;
   const [told] = tellSoon(s, ['charge', 'cast']);
   const frags = living.filter((p) => p.kind === 'fragment').length;
   const armor = living.reduce((k, p) => k + (p.armor || 0), 0);
@@ -193,12 +202,17 @@ function herderPlan(s, t) {
     // Hook a part your swarm is on: +6 on every helper hit.
     helpersOn(s, t).length >= 3 && !on(s, t, 'hooked') && 'hook ' + t.id,
     n >= 4 && 'cron-storm',
+    // nohup between the big helpers: a hit now and one more on the part.
+    !(t.armor > 0) && 'nohup ' + t.id,
   ]);
 }
 
 function hijackerPlan(s, t) {
   const e = s.encounter;
   if (finishable(s)) return null;
+  // Echo Cancel on a Mimic, a Decoy or an Echo: its next beat turns on the virus.
+  const echo = livingParts(s).find((p) => (p.mimic || p.reflect || p.echo) && !(p.echoCancelUntil >= e.cycle));
+  if (echo && ok(s, 'echo-cancel ' + echo.id)) return 'echo-cancel ' + echo.id;
   // The tells: Hijack a charge or a cast (a helper on the part spends it), Replay a charge at its charged size,
   // Reroute the swarm into a cast (each arrival a hit), Cache Poison a seal, Blackhole a charge you can't stop.
   const [tp, tt] = tellSoon(s, ['charge', 'cast', 'seal']);
@@ -211,6 +225,10 @@ function hijackerPlan(s, t) {
     // A charge about to land on you that nothing else answers: turn a helper on that part into a shield.
     if (tt.kind === 'charge' && with_) { const b = firstOk(s, ['barrier ' + tp.id]); if (b) return b; }
   }
+  // Takeover (once the tells are answered): the hardest-hitting part with others standing, its attack (or a charge on it) a cycle or two out.
+  const crowd = livingParts(s).length >= 2;
+  const boss = attackers(s).filter((p) => p.attack.due - e.cycle <= 2 && (p.attack.effect === 'damage' || p.attack.hit)).sort((a, b) => (chargeSize(s, b)?.amount || attackSize(s, b)) - (chargeSize(s, a)?.amount || attackSize(s, a)))[0];
+  if (boss && crowd && ((chargeSize(s, boss)?.amount || attackSize(s, boss)) >= defender(s).max * 0.12) && ok(s, 'takeover ' + boss.id)) return 'takeover ' + boss.id;
   // Low, and a big hit landing now: the helper on that part becomes a shield worth what it had left.
   const bigNow = threatNow(s);
   if (bigNow && defender(s).integrity < defender(s).max * 0.5 && helpersOn(s, part(s, bigNow.source)).length) { const b = firstOk(s, ['barrier ' + bigNow.source]); if (b) return b; }
@@ -243,7 +261,16 @@ function hijackerPlan(s, t) {
   ]);
 }
 
+// The cheap keys between the big ones (planner.mjs, before key 1).
+function fill(s, t) {
+  if (classOf(s) !== 'operator' || !t) return [];
+  const sub = subOf(s);
+  if (sub === 'herder') return ['nohup ' + t.id, 'hook ' + t.id]; // (Spawn's 7 a cycle is slower than a Ping: not a filler)
+  if (sub === 'hijacker') return ['sniff ' + t.id, t.attack && 'jam ' + t.id, 'echo-cancel ' + t.id, !on(s, t, 'poisoned') && 'cache-poison ' + t.id, 'spawn ' + t.id];
+  return [];
+}
 export default {
+  fill,
   use: {
     // ----- Herder -----
     'fan-out': (s, { a, target, e }) => {
@@ -261,9 +288,21 @@ export default {
     deploy: (s) => freshHelpers(s),
     spawn: (s) => freshHelpers(s),
     botnet: (s) => freshHelpers(s),
+    nohup: (s) => freshHelpers(s),
+    sniff: (s) => freshHelpers(s),
     mesh: (s, { a, e }) => {
       e.buffs.mesh = e.cycle + a.cycles - 1;
       emit(s, 'status', `Mesh for ${cycles(a.cycles)}: every helper hit splashes half onto every other part.`, { mark: 'buff', ability: 'mesh' });
+      // Every helper hits once now, so the command is never wasted.
+      for (const h of [...e.helpers]) { let t = part(s, h.target); if (!alive(t)) t = soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced }); if (!livingParts(s).length) break; }
+    },
+    'load-shed': (s, { e }) => {
+      e.loadShed = true;
+      emit(s, 'status', `Load Shed: the next attack on you is split over your ${e.helpers.length === 1 ? 'helper' : e.helpers.length + ' helpers'}.`, { mark: 'shield', ability: 'load-shed' });
+    },
+    crontab: (s, { a, target, e }) => {
+      e.crontab = { target: target.id, damage: scaled(s, a.hit), from: e.cycle };
+      emit(s, 'status', `Crontab: a job hits the ${target.name} for ${e.crontab.damage} every other cycle until the fight ends.`, { target: target.id, mark: 'helper', ability: 'crontab' });
     },
     malloc: (s, { a, e }) => {
       e.malloc = a.count;
@@ -276,15 +315,37 @@ export default {
       heal(s, Math.max(1, Math.round(total * a.share * restoreMult(s))), 'OOM Kill');
     },
     // ----- Hijacker -----
+    // Jam: a hit that leaves it Jammed. With one of your helpers on it, the helper goes too and the attack waits a cycle.
     jam: (s, { target, e }) => {
       if (!alive(target)) return;
-      // A charge on the attack you jammed loses its signal: it lands plain, a cycle later (a read, tells.mjs).
-      const ch = target.attack && tellOn(s, target, 'charge');
-      if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `JAMMED: ${ch.name.toUpperCase()} loses its signal. The ${target.name}'s ${target.attack.name} lands plain, a cycle later.`);
-      // Long Jam: a second cycle.
-      if (hasTalent(s, 'long-jam') && target.attack) { target.attack.due += 1; emit(s, 'interrupt', `Long Jam: ${target.attack.name} waits another cycle.`, { target: target.id }); }
-      loopback(s, target);
+      const h = helpersOn(s, target)[0];
+      if (h && target.attack) {
+        e.helpers.splice(e.helpers.indexOf(h), 1);
+        // A charge on the attack you jammed loses its signal: it lands plain, a cycle later (a read, tells.mjs).
+        const ch = tellOn(s, target, 'charge');
+        if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `JAMMED: ${ch.name.toUpperCase()} loses its signal. The ${target.name}'s ${target.attack.name} lands plain, a cycle later.`);
+        target.attack.due += 1 + (hasTalent(s, 'long-jam') ? 1 : 0); // Long Jam: a second cycle
+        if (target.attack.ramp && target.attack.step) target.attack.step = 0;
+        e.metrics.interrupts++;
+        emit(s, 'interrupt', `Jam pulls your helper off the ${target.name}: its ${target.attack.name} waits ${hasTalent(s, 'long-jam') ? '2 cycles' : 'a cycle'}.`, { target: target.id });
+        openProc(s, 'slipped');
+        loopback(s, target);
+      }
       jamMark(s, target);
+    },
+    takeover: (s, { a, target, e }) => {
+      if (!alive(target)) return;
+      target.takeoverUntil = e.cycle + a.cycles - 1;
+      target.takeoverAt = e.commanding?.at ?? e.cycle;
+      jamMark(s, target);
+      emit(s, 'status', `${target.name} taken over for ${cycles(a.cycles)}: its attacks land on its own side at full size.`, { target: target.id, ability: 'takeover' });
+    },
+    'echo-cancel': (s, { a, target, e }) => {
+      if (!alive(target)) return;
+      target.echoCancelUntil = e.cycle + a.cycles - 1;
+      if (target.echo && e.echoes?.length) { e.echoes = []; emit(s, 'status', `Echo Cancel: the ${target.name}'s echoes go quiet.`, { target: target.id }); }
+      if (target.reflect || target.mimic) target.unmaskUntil = e.cycle + a.cycles;
+      if (target.reflect || target.mimic || target.echo) emit(s, 'status', `Echo Cancel on the ${target.name}: its next beat plays back into the virus.`, { target: target.id, ability: 'echo-cancel' });
     },
     barrier: (s, { target, e }) => {
       const r = recalled(s, target), k = 0.1 * rank(s, 'cold-storage');
@@ -321,6 +382,7 @@ export default {
       if (!alive(target)) return;
       target.poisonedUntil = e.cycle + a.cycles;
       target.poison = scaled(s, a.patch);
+      e.burns.push({ id: 'cache-poison', target: target.id, damage: scaled(s, a.burn), grow: 0, left: a.cycles, name: 'Cache Poison', drain: 0, synced: !!e.synced }); // it bites every cycle too
       emit(s, 'status', `${target.name} Poisoned for ${cycles(a.cycles)}: its patches and heals turn into damage.`, { target: target.id, ability: 'cache-poison' });
     },
     replay: (s, { a, target }) => {
@@ -361,7 +423,29 @@ export default {
     }
     e.expiring = e.helpers.filter((h) => h.left === 1);
     for (const h of e.helpers) h.seen = true;
+    // Crontab (Herder): every other cycle, until the fight ends; it moves on when its part breaks.
+    const ct = e.crontab;
+    if (ct && (e.cycle - ct.from) % 2 === 0 && livingParts(s).length) {
+      let t = part(s, ct.target);
+      if (!alive(t)) { t = soonestAttacker(s) || livingParts(s)[0]; if (t) ct.target = t.id; }
+      if (t) hit(s, t, ct.damage, { by: 'Crontab', dot: true });
+    }
     resolveHeld(s);
+  },
+  // Load Shed (Herder): the next attack is split over your helpers; each loses that much of what it had left.
+  absorb(s, amount, atk, p) {
+    const e = s.encounter;
+    if (!e?.loadShed || classOf(s) !== 'operator' || !(amount > 0)) return amount;
+    e.loadShed = false;
+    const hs = e.helpers;
+    if (!hs.length) return amount;
+    const each = amount / hs.length;
+    let took = 0;
+    for (const h of hs) { const can = Math.min(each, h.damage * h.left); took += can; h.left = Math.max(0, Math.floor((h.damage * h.left - can) / Math.max(1, h.damage))); }
+    e.helpers = hs.filter((h) => h.left > 0);
+    took = Math.round(took);
+    emit(s, 'blocked', `Load Shed: your helpers carry ${took} of ${atk.name}.`, { source: p?.id, ability: 'load-shed' });
+    return amount - took;
   },
   // Man in the Middle: a Jammed part takes more from everyone (the mark is on the part).
   // GC Tuning (Herder rank): Garbage Collect hits harder.

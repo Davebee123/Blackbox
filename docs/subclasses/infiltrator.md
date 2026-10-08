@@ -4,7 +4,7 @@ At level 10 an Infiltrator picks one of two subclasses with `subclass payload` o
 
 Before level 10 every Infiltrator has the same core: `inject`, `tag`, `keepalive` and `backdoor`, and the Ghost passive. Ghost lets you slip past one guard a run without a fight, opens every fight with a blue Surprise window (Inject, Tag and Keepalive fired in it hit harder), and makes return trips on runs free. Both subclasses keep all of that.
 
-From level 12 each subclass learns its own line of eight skills, one at levels 12, 14, 18, 22, 26, 30, 34 and 38. Your bar holds seven skills, an eighth from level 22 and a ninth from level 30, and the skill that opens with each new slot goes into it. From level 26 you choose which skills to carry.
+From level 10 each subclass learns its own line of eleven skills, one at each of levels 10, 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38, so with the four core skills it has fifteen keys to choose from. Your bar holds seven, an eighth from level 22 and a ninth from level 30. Two presets come with each subclass (docs/kits.md): `rotation`, which your bar follows as skills unlock until you change it by hand, and one built for a kind of fight. `loadout use <name>` puts a preset on anywhere out of a fight, at home or on a run, and the keys it brings in start your next fight cooling. `loadout save <name>` keeps the bar you have under a name, and `loadout list` shows them all. A save from before the fifteen-key lines keeps every skill it knew.
 
 Numbers below are at level 1. Damage and shields grow 4% a level, the same way every skill's numbers do. Burns and the heals you cast grow half as fast with level (+2%), and Payload and Restore on your gear make up the rest: a Payload in blues that chases Payload carries about 38% at level 18 and 52% at 30, and its Inject ticks 22 and 28 there (17 and 21 in whites).
 
@@ -20,13 +20,16 @@ When a part you are burning breaks, its burns jump to the part whose attack land
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
-| 12 | `wormable <part>` | Burns it for 10 a cycle for 4 cycles. Each cycle the burn you cast ticks, it also copies itself onto one more part that has no Wormable yet, with the time it has left. The copies burn but do not spread. | 3 |
-| 14 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. Polymorph's burn goes off too. A Rootkit Implant keeps burning: it has no end to cash in. | 4 |
-| 18 | `implant <part>` | Burns it for 10 every cycle until the part breaks, and it can't be healed or grown while it burns. Once per fight. | once |
-| 22 | `skim <part>` | Burns it for 9 a cycle for 4 cycles, and every tick that lands heals you 4. | 3 |
-| 26 | `propagate <part>` | Copies your burns on it to every other part. | 5 |
-| 30 | `polymorph <part>` | Burns it for 14 a cycle for 3 cycles, straight through armor. Once the part is bare, it burns for half. | 3 |
-| 34 | `thrash <part>` | For 3 cycles, every burn on it ticks twice a cycle, from anyone in the fight. The extra tick does not use up the burn. | 5 |
+| 10 | `wormable <part>` | Burns it for 10 a cycle for 4 cycles. Each cycle it burns, it also spreads a copy to one more part. | 3 |
+| 12 | `detonate <part>` | Every burn on it deals all its remaining damage now, ×1.5. | 4 |
+| 14 | `fuzz <part>` | 12 damage, and a burn of 8 a cycle for 3 cycles. Its hit counts twice against a tell: it calls off an elite's charge, or stops a cast. | 4 |
+| 16 | `implant <part>` | Burns it for 10 every cycle until the part breaks, and it can't be healed or grown while it burns. Once per fight. | once |
+| 18 | `skim <part>` | Burns it for 9 a cycle for 4 cycles, and every tick that lands heals you 4. | 3 |
+| 20 | `polymorph <part>` | Burns it for 14 a cycle for 3 cycles, straight through armor. Once the part is bare, it burns for 10. | 3 |
+| 22 | `logic-trap` | The next hit on you deals half, and the part that lands it catches a copy of every burn you have on your target. | 6 |
+| 26 | `propagate <part>` | Copy your burns on it to every other part. | 5 |
+| 30 | `thrash <part>` | For 3 cycles, every burn on it ticks twice a cycle, from anyone. | 5 |
+| 34 | `outbreak` | Every part catches an Inject (12 a cycle for 3 cycles), and for 4 cycles nothing can clear your burns. | 10 |
 | 38 | `irq-storm` | Every burn you have, on every part, ticks once more right now. Each part it ticks counts it as a hit from your command: it calls a charge off, or counts toward a cast. | 4 |
 
 Polymorph rewrites itself every cycle, which is why armor never stops it. It also hides it from some of your older skills. Detonate sets it off and Keepalive stretches it, but only on a part that has an ordinary burn on it as well. Propagate does not copy it, and Backdoor does not count it as a burn. Tag, Thrash, IRQ Storm and Bloom all work on it.
@@ -50,7 +53,7 @@ Each tier is a real choice. Contagion and Superspreader spread your damage wide,
 
 ### How it plays
 
-Open with Inject in the Surprise window for the extra stack. On a virus with two or more parts, cast Wormable early and let it walk through them. Put the Rootkit Implant on the biggest part: when that part breaks, Bloom carries the Implant on to the next. Save Detonate for the cycle it finishes a part. Against armor, Polymorph does damage while your other burns are still breaking chits, and it burns for half once the part is bare. Implant shuts off heals: a Leech, a Patchwork or a Self-Update can't grow a part it burns. IRQ Storm ticks every burn at once, and each part it ticks takes it as your hit, so it can call off a charge on a burning part. A burn on its own never calls off a tell.
+Open with Inject in the Surprise window for the extra stack. On a virus with two or more parts, cast Wormable early and let it walk through them. Put the Rootkit Implant on the biggest part: when that part breaks, Bloom carries the Implant on to the next. Save Detonate for the cycle it finishes a part. Against armor, Polymorph does damage while your other burns are still breaking chits, and it burns for half once the part is bare. Implant shuts off heals: a Leech, a Patchwork or a Self-Update can't grow a part it burns. IRQ Storm ticks every burn at once, and each part it ticks takes it as your hit, so it can call off a charge on a burning part. A burn on its own never calls off a tell, but Fuzz does: it hits and leaves a burn, and it counts twice against a tell, so one Fuzz stops a cast. Logic Trap halves the next hit on you, and the part that lands it catches a copy of your burns. Outbreak puts an Inject on every part, and for 4 cycles nothing can clear your burns. The `swarm` preset swaps Tag and the Rootkit Implant for Propagate and Logic Trap, for worms, fragments and an Overrun.
 
 ## Phantom
 
@@ -64,13 +67,18 @@ Your first hit on each part's bare code crits. Burns do not count, and neither d
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
+| 10 | `fingerprint <part>` | 15 damage, and Weak Spot is fresh on it again. | 3 |
 | 12 | `null-route` | The next attack misses you, and your next skill crits. | 6 |
 | 14 | `opening <part>` | Hits it for 50 the cycle after an attack misses you or is delayed. | lit |
-| 18 | `backstab <part>` | 32 damage. It always crits a part that's busy with a tell: winding up a charge, compiling a cast, sealing or recording. | 2 |
-| 22 | `spoof` (runs) | Once per run, the next guarded folder does not start a fight. You can read and pull one file there. | once a run |
-| 26 | `shadow-copy [name]` | Shadow Copy. A decoy takes the next hit that would land on you, and Opening lights up when it does. In a crew, `shadow-copy nyx` puts the decoy on nyx instead. | 5 |
+| 16 | `backstab <part>` | 32 damage. It always crits a part that's busy with a tell: winding up a charge, compiling a cast, sealing or recording. | 2 |
+| 18 | `side-channel <part>` | 20 damage straight through armor, and its timer shows for 3 cycles even if it is veiled. | 2 |
+| 20 | `shadow-copy [name]` | A decoy of you takes the next hit that would land on you, and Opening lights up when it does. In a crew, shadow-copy nyx puts the decoy on nyx. | 5 |
+| 20 | `spoof` (runs) | Once per run, the next guarded folder does not start a fight. You can read and pull one file there. | once a run |
+| 22 | `rotate-keys` | Clears encryption, Scrambled and Corrupted from you, and the next hit on you deals 30% less. | 6 |
+| 26 | `log-wipe` | Wipe your tracks: Weak Spot is fresh on every part again, the next hit on you deals half, and the Mimic's next beat has nothing of you to play. | 6 |
+| 30 | `unmask <part>` | 20 damage. Its veil drops for 4 cycles, and if it is a Decoy or a Mimic it can't copy you on its next beat. | 4 |
 | 30 | `tap` (runs) | Once per run, prints the whole folder tree, its guards, and which file holds the key. | once a run |
-| 34 | `log-wipe` | Wipe your tracks: Weak Spot is fresh on every part again, the next hit on you deals half, and the Mimic's next beat has nothing of you to play. | 6 |
+| 34 | `vanish` | The next 2 attacks on you miss, Weak Spot is fresh on every part, and Opening stays lit for 2 cycles after each miss. | 12 |
 | 38 | `implant <part>` | Burns it for 10 every cycle until the part breaks, and it can't be healed or grown while it burns. Once per fight. | once |
 
 Spoof and Tap are run skills. They take no slot on your bar: you know them once they unlock, and you type them on a run.
@@ -92,7 +100,7 @@ The tiers ask what kind of Phantom you are. Fast Hands, Kill Chain and Deep Cove
 
 ### How it plays
 
-Open on the part that hurts most: Backdoor goes through armor (no crit until the armor is off), and the first hit on its bare code crits. Backstab a part that is busy with a tell (charging, compiling, sealing or recording), because those hits always crit. When a big attack is coming, Null Route or Shadow Copy takes it, and Opening is lit for the next cycle. Once every part has had its first hit, Log Wipe gives you all your Weak Spots back, and the Mimic's next beat has nothing of you to play. A Lockbox caps how much its part can lose each cycle, which wastes a burst, so a Phantom breaks the Lockbox first.
+Open on the part that hurts most: Backdoor goes through armor (no crit until the armor is off), and the first hit on its bare code crits. Backstab a part that is busy with a tell (charging, compiling, sealing or recording), because those hits always crit. When a big attack is coming, Null Route or Shadow Copy takes it, and Opening is lit for the next cycle. Once every part has had its first hit, Log Wipe gives you all your Weak Spots back, and the Mimic's next beat has nothing of you to play. A Lockbox caps how much its part can lose each cycle, which wastes a burst, so a Phantom breaks the Lockbox first. Fingerprint is the cheap hit that makes a part's Weak Spot fresh again, and Side Channel hits through armor. Rotate Keys takes a slice off the next hit and clears a scramble, and Vanish makes the next two attacks miss, which lights Opening twice. Unmask blinds the Mimic and a Decoy for a beat and hits the part. The `ghostroot` preset swaps Log Wipe for Unmask, for the Ghostroot, HOLLOW CHOIR and MIRRORSHADE.
 
 ## Shared notes
 

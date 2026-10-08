@@ -33,14 +33,16 @@ test('no one kind of play carries the climb: fights stay under 70% of XP (the bo
   }
 });
 
-test('fighting alone is the slow road: SPRAWL-only takes 1.25x as long to level 12 as mixed play for every class, 1.4x on average (median of 7 seeds: 5 swung with which uniques dropped)', async () => {
+// The Breaker leans solo (docs/kits.md 9): since its level-10 kit it climbs alone about a third faster than before,
+// so it is held to 1.0x, still never faster alone than with mixed play.
+test('fighting alone is the slow road: SPRAWL-only takes 1.25x as long to level 12 as mixed play for every class (the Breaker, which leans solo, 1.0x), 1.4x on average (median of 7 seeds: 5 swung with which uniques dropped)', async () => {
   const { CONFIG } = await import('./dist/data.mjs');
   const med = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
   const lead = CONFIG.leadBase;
   const at = (cls, only) => { CONFIG.leadBase = only ? 0 : lead; return med([1, 2, 3, 4, 5, 6, 7].map((seed) => simulate({ cls, target: 12, seed }).stats.levelAt[12] ?? 1e5)); };
   try {
     const r = CLASSES.map((cls) => at(cls, true) / at(cls, false));
-    r.forEach((x, i) => assert.ok(x >= 1.25, `${CLASSES[i]}: ${x.toFixed(2)}x`));
+    r.forEach((x, i) => assert.ok(x >= (CLASSES[i] === 'breaker' ? 1.0 : 1.25), `${CLASSES[i]}: ${x.toFixed(2)}x`));
     assert.ok(r.reduce((a, b) => a + b, 0) / r.length >= 1.4, `average ${r.map((x) => x.toFixed(2)).join(' / ')}`);
   } finally { CONFIG.leadBase = lead; }
 });

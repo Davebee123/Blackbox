@@ -277,7 +277,7 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
 test('Restore: every heal you cast heals that much more (Patch up front and as it ticks); Payload: every helper hit too', () => {
   const sysop = (restoreStat) => {
     const s = fresh();
-    s.loadout.archetype = 'bastion'; s.hackers = { bastion: { level: 12, xp: 0 } }; s.loadout.sub = { bastion: 'sysop' };
+    s.loadout.archetype = 'bastion'; s.hackers = { bastion: { level: 14, xp: 0 } }; s.loadout.sub = { bastion: 'sysop' }; // Patch opens at 14 (docs/kits.md)
     s.loadout.equipped.sysop = ['firewall', 'patch'];
     if (restoreStat) give(s, { restore: restoreStat });
     quiet(fight(s));

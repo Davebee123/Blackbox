@@ -21,11 +21,12 @@
 // through armor, ticked here), Thrash (burns on a part tick twice), IRQ Storm (every burn ticks now).
 // Phantom: Backstab (crits on a part that isn't about to attack), Shadow Copy (a decoy eats the next
 // hit), Log Wipe (Weak Spot fresh again). Weak Spot itself is in combat.mjs (edge(s, 'infiltrator')).
-import { CONFIG } from '../data.mjs';
-import { soonest } from '../planner.mjs';
+import { CONFIG, ABILITIES } from '../data.mjs';
+import { soonest, doomed } from '../planner.mjs';
 import { tellOn, tellHit } from '../tells.mjs';
-import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn } from '../combat.mjs';
 
+const A = (id) => ABILITIES[id];
 const isInf = (s) => classOf(s) === 'infiltrator';
 const talent = (s, id) => isInf(s) && hasTalent(s, id);
 const ranked = (s, id) => (isInf(s) ? rank(s, id) : 0);
@@ -42,7 +43,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const polyOn = (s, p) => (s.encounter.infil?.who === (s.who || '') ? s.encounter.infil.poly.filter((b) => b.target === p.id) : []);
 const allBurnsOn = (s, p) => [...burnsOn(s, p), ...polyOn(s, p)];
 // Polymorph burns full through ◆ and half once the part is bare.
-const tick = (s, b, t, by = b.name) => hit(s, t, (b.poly && !(t.armor > 0) ? Math.max(1, Math.round(b.damage / 2)) : b.damage) + (b.fxGrow || 0), { by, dot: true, synced: b.synced, pierce: !!b.poly });
+const tick = (s, b, t, by = b.name) => hit(s, t, (b.poly && !(t.armor > 0) ? b.bare ?? Math.max(1, Math.round(b.damage / 2)) : b.damage) + (b.fxGrow || 0), { by, dot: true, synced: b.synced, pierce: !!b.poly });
 // Everyone standing in this fight, you first (crewmates' states too): Bloom and Thrash reach them all.
 const everyone = (s) => { const out = [s]; for (const x of alliesOf(s)) if (x.st && !out.includes(x.st)) out.push(x.st); return out; };
 const thrashing = (s, p) => alive(p) && p.thrashUntil >= s.encounter.cycle;
@@ -81,13 +82,55 @@ export default {
     },
     skim(s, { target, e }) { const b = e.burns.filter((x) => x.id === 'skim' && x.target === target.id).at(-1); if (b) b.damage += virulence(s); },
     // Polymorph: out of the engine's burns, into our own (ticked through armor in cycle).
-    polymorph(s, { target, e }) {
+    polymorph(s, { a, target, e }) {
       const b = e.burns.filter((x) => x.id === 'polymorph' && x.target === target.id).at(-1);
       if (!b) return;
       e.burns.splice(e.burns.indexOf(b), 1);
       b.damage += virulence(s);
+      b.bare = scaled(s, a.bareTick) + virulence(s); // on a bare part it burns for 10, never less than a Spike's worth over its run
       b.poly = true;
       mine(s).poly.push(b);
+    },
+    'logic-trap'(s) {
+      mine(s).trap = true;
+      emit(s, 'status', 'Logic Trap set: the next hit on you deals half, and its part catches your burns.', { mark: 'shield', ability: 'logic-trap' });
+    },
+    outbreak(s, { a, e }) {
+      const tick = scaled(s, A('inject').tick + 2 * rank(s, 'heap-spray'));
+      for (const p of livingParts(s)) {
+        const there = e.burns.filter((b) => b.id === 'inject' && b.target === p.id);
+        if (there.length >= 3) e.burns.splice(e.burns.indexOf(there[0]), 1);
+        e.burns.push({ id: 'inject', target: p.id, damage: tick, grow: 0, left: a.ticks, name: 'Inject', drain: 0, synced: !!e.synced });
+      }
+      e.stickyUntil = e.cycle + a.cycles - 1;
+      emit(s, 'status', `Outbreak: every part catches an Inject, ${tick} a cycle, and for ${a.cycles} cycles nothing clears your burns.`, { mark: 'burn', ability: 'outbreak' });
+    },
+    fingerprint(s, { target, e }) {
+      if (!alive(target) || !e.weakHit) return;
+      delete e.weakHit[target.id];
+      emit(s, 'status', `Fingerprinted: Weak Spot is fresh on the ${target.name}.`, { target: target.id, ability: 'fingerprint' });
+    },
+    'side-channel'(s, { a, target, e }) { if (alive(target)) target.seenUntil = Math.max(target.seenUntil || 0, e.cycle + a.cycles - 1); },
+    unmask(s, { a, target, e }) {
+      if (!alive(target)) return;
+      target.seenUntil = Math.max(target.seenUntil || 0, e.cycle + a.cycles - 1);
+      if (target.reflect || target.mimic) target.unmaskUntil = e.cycle + a.cycles;
+      emit(s, 'status', `${target.name} unmasked: its veil is down for ${a.cycles} cycles${target.reflect || target.mimic ? ', and it has nothing of you to copy on its next beat' : ''}.`, { target: target.id, mark: 'debuff', ability: 'unmask' });
+    },
+    'rotate-keys'(s, { e }) {
+      const cleared = [];
+      if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); }
+      if (e.corrupt) { e.corrupt = null; cleared.push('Corrupted'); }
+      if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
+      mine(s).rotated = true;
+      emit(s, 'status', `Keys rotated${cleared.length ? `: ${cleared.join(' and ')} cleared` : ''}. The next hit on you deals 30% less.`, { mark: 'shield', ability: 'rotate-keys' });
+    },
+    vanish(s, { a, e }) {
+      e.nullRoute = Math.max(e.nullRoute || 0, a.misses);
+      e.slipLong = a.misses; // each miss leaves Opening lit for 2 cycles (combat.mjs landAttack)
+      e.weakHit = {};
+      mine(s).weakDot = {};
+      emit(s, 'status', `Vanished: the next ${a.misses} attacks on you miss, and Weak Spot is fresh on every part.`, { mark: 'buff', ability: 'vanish' });
     },
     thrash(s, { target, a, e }) {
       target.thrashUntil = e.cycle + a.cycles - 1;
@@ -110,7 +153,7 @@ export default {
       for (const b of poly) { total += b.damage * b.left; st.poly.splice(st.poly.indexOf(b), 1); }
       hit(s, target, Math.round(total * 1.5 * (talent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true });
     },
-    keepalive(s, { target, a, e }) { for (const b of polyOn(s, target)) b.left += e.surprise ? CONFIG.surprise.keepalive : a.cycles; },
+    keepalive(s, { target, a, e }) { for (const b of polyOn(s, target)) { if (alive(target)) tick(s, b, target, `Keepalive (${b.name})`); b.left += e.surprise ? CONFIG.surprise.keepalive : a.cycles; } },
     // Contagion (Payload talent): the new Inject also starts on the part attacking soonest.
     inject(s, { target, e }) {
       if (!talent(s, 'contagion')) return;
@@ -194,7 +237,7 @@ export default {
     if (opts.dot && subEdge(s, 'phantom') && hasTalent(s, 'blind-spot')) { const st = mine(s); if (!st.weakDot[p.id]) { st.weakDot[p.id] = true; return 100; } }
     return 0;
   },
-  taken(s, atk) {
+  taken(s, atk, p) {
     const st = s.encounter?.infil;
     if (!st || st.who !== (s.who || '')) return 1;
     if (st.decoy) {
@@ -205,8 +248,19 @@ export default {
       openProc(caster, 'slipped');
       return 0;
     }
-    if (st.wiped) { st.wiped = false; emit(s, 'blocked', `${atk.name} can't find you in the logs: it deals half.`, {}); return 0.5; }
-    return 1;
+    let m = 1;
+    if (st.wiped) { st.wiped = false; emit(s, 'blocked', `${atk.name} can't find you in the logs: it deals half.`, {}); m *= 0.5; }
+    if (st.rotated) { st.rotated = false; emit(s, 'blocked', `${atk.name} hits a key you've already rotated: it deals 30% less.`, {}); m *= 1 - A('rotate-keys').cut; }
+    // Logic Trap: the hit deals half, and the part that lands it catches a copy of every burn on your target.
+    if (st.trap && p) {
+      st.trap = false;
+      const e = s.encounter, at = part(s, (e.lastAttack || '').split(' ')[1]) || null;
+      const copies = at && at !== p && alive(p) ? e.burns.filter((b) => b.target === at.id) : [];
+      for (const b of copies) e.burns.push({ ...b, target: p.id, spreads: false });
+      emit(s, 'blocked', `${atk.name} springs your Logic Trap: it deals half${copies.length ? `, and the ${p.name} catches ${plural(copies.length, 'burn')}` : ''}.`, { source: p.id, ability: 'logic-trap' });
+      m *= 1 - A('logic-trap').cut;
+    }
+    return m;
   },
   broke(s, p) {
     for (const st of everyone(s)) bloom(st, p);
@@ -218,11 +272,20 @@ export default {
     }
   },
   plan(s, t) { return isInf(s) && subOf(s) ? plan(s, t) : null; },
+  fill: (s, t) => fill(s, t),
 };
 
 // ---------- the planner ----------
 const ok = (s, text) => !toIntent(s, text).error;
 const first = (s, list) => list.find((c) => c && ok(s, c)) || null;
+// The cheap keys between the big ones (planner.mjs, before key 1).
+export function fill(s, t) {
+  if (!isInf(s) || !t) return [];
+  const sub = subOf(s);
+  if (sub === 'payload') return ['fuzz ' + t.id, 'keepalive ' + t.id, 'skim ' + t.id];
+  if (sub === 'phantom') return [!t.armor && 'backstab ' + t.id, 'side-channel ' + t.id, 'fingerprint ' + t.id, 'unmask ' + t.id];
+  return [];
+}
 const dueIn = (s, p) => (p?.attack ? p.attack.due - s.encounter.cycle : 99);
 // What lands on you this cycle and next, by size.
 const incoming = (s, within = 0) => intents(s).filter((i) => i.col <= within && !i.hidden && (i.effect === 'damage' || i.hit)).reduce((n, i) => n + (i.effect === 'damage' ? i.amount : i.hit || 0), 0);
@@ -230,10 +293,10 @@ const incoming = (s, within = 0) => intents(s).filter((i) => i.col <= within && 
 // What Detonate would cash in: a Rootkit Implant isn't (it burns until the part breaks).
 const queued = (s, p) => allBurnsOn(s, p).reduce((n, b) => n + (b.id === 'implant' ? 0 : b.damage * b.left), 0);
 // A hit that breaks a part about to fire (or a bare one) right now, cheapest first (not a Shade out of phase).
-const HITS = ['opening', 'spike', 'backstab', 'backdoor'];
+const HITS = ['opening', 'fingerprint', 'tag', 'fuzz', 'side-channel', 'unmask', 'spike', 'backstab', 'backdoor']; // the cheapest that does it
 const killNow = (s) => {
   for (const p of [...livingParts(s).filter((x) => dueIn(s, x) <= 0), ...livingParts(s).filter((x) => !x.armor)]) {
-    if (p.phase && s.encounter.cycle % 2 === 1) continue;
+    if ((p.phase && s.encounter.cycle % 2 === 1) || doomed(s, p)) continue;
     for (const id of HITS) if (ok(s, id + ' ' + p.id) && previewDamage(s, id, p) >= p.integrity) return id + ' ' + p.id;
   }
   return null;
@@ -241,7 +304,7 @@ const killNow = (s) => {
 
 function plan(s, t0) {
   const sub = subOf(s), d = defender(s);
-  if (mirrorOn(s)) return null; // a Decoy's beat: the shared planner plays quiet
+  if (mirrorOn(s) && !(mirrorOn(s).unmaskUntil >= s.encounter.cycle)) return null; // a Decoy's beat: the shared planner plays quiet (unless it's unmasked)
   const kill = killNow(s);
   if (kill) return kill; // a hit that breaks a part about to fire, or a bare one
   const living = livingParts(s);
@@ -251,12 +314,18 @@ function plan(s, t0) {
   // A Phantom hits in bursts, and a Lockbox caps those: break the Lockbox first.
   const warder = sub === 'phantom' && living.find((p) => p.ward === t.id);
   if (warder) t = warder;
-  // A big hit lands this cycle: a decoy, a dodge or a wipe takes it.
+  // A big hit lands this cycle: a decoy, a dodge or a wipe takes it (the Payload's Logic Trap halves it and
+  // hands the part your burns).
   const heavy = incoming(s, 0);
   if (heavy >= Math.max(8, d.max * 0.1)) {
-    const dodge = first(s, ['shadow-copy', heavy >= d.max * 0.18 && 'null-route', heavy >= d.max * 0.15 && 'log-wipe']);
+    const dodge = first(s, ['shadow-copy', heavy >= d.max * 0.12 && 'logic-trap', heavy >= d.max * 0.18 && 'null-route', heavy >= d.max * 0.15 && 'log-wipe', heavy >= d.max * 0.12 && 'rotate-keys']);
     if (dodge) return dodge;
   }
+  // Two big hits in the next two cycles: Vanish takes both.
+  if (incoming(s, 1) >= d.max * 0.25 && intents(s).filter((i) => i.col <= 1 && !i.hidden && (i.effect === 'damage' || i.hit)).length >= 2) { const c = first(s, ['vanish']); if (c) return c; }
+  // Encryption, Corrupted or a scramble on you: rotate the keys.
+  const e0 = s.encounter;
+  if (e0.corrupt || e0.encrypt >= 6 || e0.burst || e0.scrambleUntil >= e0.cycle) { const c = first(s, ['rotate-keys']); if (c) return c; }
   return (sub === 'payload' ? payloadPlan(s, t, living, hurt) : phantomPlan(s, t, living, hurt)) || core(s, t);
 }
 // The part to burn: the planner's, or the one that hits hardest for its size if that's much worse.
@@ -269,16 +338,30 @@ function pick(s, t0) {
 function core(s, t) {
   const e = s.encounter, burns = burnsOn(s, t), q = queued(s, t);
   if (e.cycle === 1 && e.sync?.surprise) return first(s, ['inject ' + t.id, 'tag ' + t.id]);
+  // A Phantom leads with its direct hits (Weak Spot, Backstab, Side Channel) and keeps one or two burns under them.
+  if (subOf(s) === 'phantom') return first(s, [
+    !t.armor && 'opening ' + t.id,
+    !t.armor && 'backstab ' + t.id,
+    burns.length < 1 && 'inject ' + t.id,
+    t.armor > 0 && 'side-channel ' + t.id,
+    'backdoor ' + t.id,
+    burns.length < 2 && t.integrity > 60 && 'inject ' + t.id,
+    ...fill(s, t),
+    'inject ' + t.id,
+  ]);
   return first(s, [
     burns.length >= 2 && q * 1.5 >= t.integrity * 0.8 && 'detonate ' + t.id,
     burns.length >= 2 && !on(s, t, 'tagged') && q < t.integrity * 1.2 && 'tag ' + t.id,
     burns.length < 3 && 'inject ' + t.id,
     burns.length >= 2 && burns.some((b) => b.left <= 1) && q < t.integrity && 'keepalive ' + t.id,
     'backdoor ' + t.id,
+    ...fill(s, t),
     'inject ' + t.id,
   ]);
 }
 
+const injects = (s, p) => burnsOn(s, p).filter((b) => b.id === 'inject').length;
+export const INJECT_FLOOR = 1; // then the line, then more stacks
 function payloadPlan(s, t, living, hurt) {
   const e = s.encounter;
   // IRQ Storm: a charge or a cast about to land on a part you're burning (each part it ticks counts as your hit).
@@ -292,11 +375,28 @@ function payloadPlan(s, t, living, hurt) {
   // A finisher: Detonate when the burns left on it break it (or nearly).
   const q = queued(s, t);
   if (q * 1.5 >= t.integrity && allBurnsOn(s, t).length >= 1 && t.armor === 0) { const c = first(s, ['detonate ' + t.id]); if (c) return c; }
-  // Several parts, or fragments: spread.
-  if (living.length >= 2) { const c = first(s, ['wormable ' + t.id]); if (c) return c; }
+  // Outbreak: three parts or more, or fragments: every part catches an Inject at once.
+  if (living.length >= 3 || (living.length >= 2 && living.some((p) => p.kind === 'fragment'))) { const c = first(s, ['outbreak']); if (c) return c; }
+  // Inject first: three stacks on the target carry the Payload, and the line comes on top of them.
+  if (injects(s, t) < INJECT_FLOOR && queued(s, t) < t.integrity) { const c = first(s, ['inject ' + t.id]); if (c) return c; }
+  // Fuzz: a hit and a burn, and a tell on it counts it twice.
+  if (tellOn(s, t) && ['charge', 'cast'].includes(tellOn(s, t).kind)) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; }
+  // Thick armor: Polymorph burns straight through it while the other burns break ◆.
+  if (t.armor >= 2) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
+  // The moments: low on Signal (Skim pays it back), one part loaded and the rest clean (Propagate), three burns
+  // stacked on a bare part (Thrash).
+  if (hurt < 0.6) { const c = first(s, ['skim ' + t.id]); if (c) return c; }
+  if (allBurnsOn(s, t).length >= 2 && living.filter((p) => p !== t && !allBurnsOn(s, p).length).length >= 1) { const c = first(s, ['propagate ' + t.id]); if (c) return c; }
+  if (allBurnsOn(s, t).length >= 2 && !t.armor && t.integrity > queued(s, t) * 0.5) { const c = first(s, ['thrash ' + t.id]); if (c) return c; }
+  // Several parts, or fragments: spread (once the target carries a stack, so the copies come with something to cash in).
+  if (living.length >= 2 && injects(s, t) >= 1) { const c = first(s, ['wormable ' + t.id]); if (c) return c; }
   // Implant the biggest part early, once.
   const big = [...living].sort((a, b) => b.integrity - a.integrity)[0];
   if (big && big.integrity >= 60) { const c = first(s, ['implant ' + big.id]); if (c) return c; }
+  // Tag the stacks once two burns are on it, then Fuzz on top (a hit and a burn of its own).
+  if (allBurnsOn(s, t).length >= 2 && !on(s, t, 'tagged') && queued(s, t) < t.integrity * 1.2) { const c = first(s, ['tag ' + t.id]); if (c) return c; }
+  if (queued(s, t) < t.integrity) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; }
+  if (injects(s, t) < 3 && queued(s, t) < t.integrity) { const c = first(s, ['inject ' + t.id]); if (c) return c; }
   // Thrash: three or more burns stacked on a bare part, each ticks twice.
   if (allBurnsOn(s, t).length >= 3 && !t.armor && t.integrity > queued(s, t) * 0.5) { const c = first(s, ['thrash ' + t.id]); if (c) return c; }
   // Propagate: one part loaded, the others clean.
@@ -314,16 +414,21 @@ function payloadPlan(s, t, living, hurt) {
 
 function phantomPlan(s, t, living, hurt) {
   const e = s.encounter;
+  // Unmask a Mimic or a Decoy whose beat is coming: it has nothing of you to copy.
+  const mask = living.find((p) => (p.mimic || p.reflect) && !(p.unmaskUntil >= e.cycle) && (mirrorOn(s, e.cycle + 1) === p || (tellOn(s, p, 'mimic')?.next ?? 99) - e.cycle === 1));
+  if (mask) { const c = first(s, ['unmask ' + mask.id]); if (c) return c; }
   // Backstab a part busy with a tell: a sure crit, and it answers the tell.
   const busy = living.find((p) => !p.armor && notDue(s, p) && !p.mimic) || (!t.armor && notDue(s, t) ? t : null);
   if (busy) { const c = first(s, ['backstab ' + busy.id]); if (c) return c; }
+  // Fingerprint a bare part whose Weak Spot is used, with Backstab ready next: the Backstab crits again.
+  if (!t.armor && e.weakHit?.[t.id] && usable(s).includes('backstab') && readyIn(s, 'backstab') <= 1 && t.integrity > 40) { const c = first(s, ['fingerprint ' + t.id]); if (c) return c; }
   // Weak Spot used up on every part: wipe the logs.
   const fresh = living.filter((p) => !e.weakHit?.[p.id]).length;
   if (fresh === 0 && living.length >= 2) { const c = first(s, ['log-wipe']); if (c) return c; }
   if (t.integrity >= 60) { const c = first(s, ['implant ' + t.id]); if (c) return c; }
   // Weak Spot: the first hit on each part's bare code crits, so open on a fresh part with the biggest hit to hand.
   if (!e.weakHit?.[t.id] && !(e.cycle === 1 && e.sync?.surprise)) { const c = first(s, ['opening ' + t.id, 'backdoor ' + t.id, !t.armor && 'backstab ' + t.id, !t.armor && 'spike ' + t.id]); if (c) return c; }
-  // A bare part: Backstab beats a Spike even without the crit.
-  if (!t.armor && burnsOn(s, t).length >= 2) { const c = first(s, ['backstab ' + t.id]); if (c) return c; }
+  // A bare part: Backstab beats a Spike even without the crit, so it goes whenever it's ready (a lit Opening first).
+  if (!t.armor) { const c = first(s, ['opening ' + t.id, 'backstab ' + t.id]); if (c) return c; }
   return null;
 }

@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
+import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit } from './combat.mjs';
 import { ABILITIES, TELL } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET } from './tells.mjs';
@@ -28,7 +28,7 @@ const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target ==
 const order = (s, p) => (p.deadman && livingParts(s).some((x) => x !== p && x.kind === 'system') ? 0.05 : p.command && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
-const HITS = ['zero-day', 'shatter', 'retaliate', 'opening', 'segfault', 'overload', 'flood', 'backdoor', 'reclaim', 'rate-limit', 'spike'];
+const HITS = ['zero-day', 'retaliate', 'opening', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'spike']; // the cheap core hits before key 1
 // A command that breaks this part right now, if there is one.
 // Flicker: the Shade is out of phase on odd cycles; a player hits something else then.
 const phasedOut = (s, p) => p.phase && s.encounter.cycle % 2 === 1;
@@ -42,6 +42,9 @@ function killNow(s, p) {
   return null;
 }
 const armored = (s) => livingParts(s).filter((p) => p.armor > 0);
+// A part your burns and helpers break this cycle anyway (they tick after your command, before the virus):
+// a command spent finishing it is wasted.
+export const doomed = (s, p) => alive(p) && !(p.armor > 0) && s.encounter.burns.filter((b) => b.target === p.id).reduce((n, b) => n + b.damage, 0) + s.encounter.helpers.filter((h) => h.target === p.id).reduce((n, h) => n + h.damage + hookHit(s, p), 0) >= p.integrity;
 const burnsOn = (s, p) => s.encounter.burns.filter((b) => b.target === p.id).length;
 const helpersOn = (s, p) => s.encounter.helpers.filter((h) => h.target === p.id).length;
 
@@ -88,7 +91,7 @@ function play(s) {
   const twin = livingParts(s).find((p) => p !== t && (p.twin === t.id || t.twin === p.id));
   if (twin && (twin.integrity / twin.max > t.integrity / t.max + 0.2 || (burnsOn(s, t) >= 2 && burnsOn(s, twin) < burnsOn(s, t)))) t = twin; // burns too: spread them over both
   // Decoy: on its beat your commands are mirrored, so set up instead (burns, helpers, defence).
-  if (mirrorOn(s)) { const quiet = first(s, [...QUIET.slice(0, 12), 'fan-out ' + t.id, burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
+  if (mirrorOn(s) && !(mirrorOn(s).unmaskUntil >= s.encounter.cycle)) { const quiet = first(s, [...QUIET.filter((id) => !['patch', 'null-route', 'sudo', 'fork', 'mesh'].includes(id)), 'fan-out ' + t.id, burnsOn(s, t) < 3 && 'inject ' + t.id, 'deploy ' + t.id, 'spawn ' + t.id, 'botnet ' + t.id, 'tag ' + t.id, 'patch', 'brace', 'hold']); if (quiet) return quiet; }
   // Adaptive: a third cycle in a row on the same part hardens it. Switch, unless this hit breaks it.
   const wary = (p) => s.encounter.virus.mutation === 'adaptive' && p.adaptRun >= 2 && p.adaptAt === s.encounter.cycle - 1;
   if (wary(t) && !killNow(s, t)) t = livingParts(s).filter((p) => p !== t && !wary(p) && !phasedOut(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
@@ -103,10 +106,13 @@ function play(s) {
   // 1. Break a part that's about to fire, or a bare part before it patches.
   const urgent = [...new Set(now.map((i) => part(s, i.source)))].filter(alive);
   for (const p of [...urgent, ...livingParts(s).filter(bare)]) {
+    if (doomed(s, p)) continue;
+    // Kill Switch first when the helpers on a part break it: with Last Gasp in the cash-in it loses nothing, unless
+    // some helpers still chip armor (cashed in on ◆ they break one each). On a part about to fire it's worth that.
+    const queued = s.encounter.helpers.filter((h) => h.target === p.id).reduce((n, h) => n + h.damage * (h.left + 1), 0);
+    if (bare(p) && (urgent.includes(p) || s.encounter.helpers.filter((h) => part(s, h.target)?.armor > 0).reduce((n, h) => n + h.left, 0) <= 2) && queued >= p.integrity && !killNow(s, p)?.match(/^(nohup|sniff) /) && ok(s, 'kill-switch')) return 'kill-switch'; // the helpers would finish it anyway: now, and the command is free
     const k = killNow(s, p);
     if (k) return k;
-    const queued = s.encounter.helpers.filter((h) => h.target === p.id).reduce((n, h) => n + h.damage * h.left, 0);
-    if (bare(p) && queued >= p.integrity && ok(s, 'kill-switch')) return 'kill-switch';
   }
   // 2. Something lands now that we can't break: answer it.
   const big = now.filter((i) => i.effect !== 'tell' && (i.effect !== 'damage' || i.amount >= Math.max(6, defender(s).max * 0.08)) && !part(s, i.source)?.phase).sort((a, b) => b.amount - a.amount)[0]; // a Shade in phase: hit it instead (a tell that isn't a hit: tellMove)
@@ -140,7 +146,7 @@ function play(s) {
       // Fork Bomb strips one ◆ a part: worth it only when Crack is cooling. (Spamming it whenever two
       // parts wore armor kept the Demolitionist from its real strip, Shaped Charge into Shatter.)
       armored(s).length >= 2 && !ok(s, 'crack ' + t.id) && !ok(s, 'shaped-charge ' + t.id) && 'fork-bomb',
-      armored(s).length >= 2 && 'garbage-collect',
+      armored(s).length >= 2 && livingParts(s).some((p) => p.kind === 'fragment') && 'garbage-collect', // its moment is fragments: as a strip it costs more than it breaks
       t.armor >= 2 && 'crack ' + t.id,
       t.armor >= 2 && 'botnet ' + t.id,
       burnsOn(s, t) < 3 && 'inject ' + t.id,
@@ -149,20 +155,22 @@ function play(s) {
       'spawn ' + t.id,
       'hook ' + t.id,
       'backdoor ' + t.id,
-      !burnsOn(s, t) && subOf(s) !== 'sysop' && 'purge ' + t.id, // a Warden's: its ticks crack ◆ too, and heal (a Sysop alone stays the slow one)
+      !burnsOn(s, t) && 'purge ' + t.id, // a Bastion's: its ticks crack ◆ too, and heal
+      ...classFill(s, t),
       'spike ' + t.id,
     ]);
   }
   return first(s, [
     killNow(s, t),
     livingParts(s).filter(bare).length >= 3 && 'fork-bomb', // three bare parts: the area hit
-    t.integrity > 40 && readyIn(s, 'overload') <= 1 && (t.patchAt == null || t.patchAt > s.encounter.cycle + 1) && 'exploit ' + t.id,
+    t.integrity > 90 && readyIn(s, 'overload') <= 1 && ['overload', 'flood', 'shatter'].filter((id) => readyIn(s, id) === 0 && usable(s).includes(id)).length >= 1 && (t.patchAt == null || t.patchAt > s.encounter.cycle + 1) && 'exploit ' + t.id,
     burnsOn(s, t) >= 2 && 'detonate ' + t.id,
     t.integrity > 30 && 'tag ' + t.id,
     burnsOn(s, t) < 3 && 'inject ' + t.id,
     'segfault ' + t.id, 'overload ' + t.id, 'flood ' + t.id, 'backdoor ' + t.id, 'reclaim ' + t.id, 'rate-limit ' + t.id,
     'deploy ' + t.id, 'thermal-runaway ' + t.id, 'sudo',
-    !burnsOn(s, t) && t.integrity > 30 && subOf(s) !== 'sysop' && 'purge ' + t.id, // a Warden's filler: a burn that heals beats a Spike on a part that will last
+    !burnsOn(s, t) && t.integrity > 30 && 'purge ' + t.id, // a Bastion's filler: a burn that heals beats a Spike on a part that will last
+    ...classFill(s, t),
     'spike ' + t.id,
   ]);
 }

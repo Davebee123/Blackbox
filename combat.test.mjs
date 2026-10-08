@@ -15,7 +15,8 @@ CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap sca
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 
 // A level-25 Breaker, so every Breaker skill is on the bar.
-const veteran = () => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 }, infiltrator: { level: 50, xp: 0 } }; return s; };
+// Its bar is the class core first (key 2 Overload), as these tests were written; the shipped presets have tests of their own.
+const veteran = () => { const s = fresh(); s.hackers = { breaker: { level: 50, xp: 0 }, infiltrator: { level: 50, xp: 0 } }; s.loadout.equipped.demolitionist = ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge', 'thermal-runaway', 'logic-bomb']; return s; };
 const start = (id = 'cryptjack', seed = 7) => {
   const s = veteran();
   selectEncounter(s, id, seed, { level: 6 }); // a mid-level enemy: the numbers these tests check
@@ -79,7 +80,7 @@ test('a bare part patches one chit back five cycles later, unless you break it f
 test('armor-piercing hits go straight through chits; Crack strips three', () => {
   const s = quiet(start());
   s.hackers.breaker.level = 50;
-  s.loadout.equipped.breaker = ['zero-day', 'crack'];
+  s.loadout.equipped.demolitionist = ['zero-day', 'crack'];
   const enc = Object.assign(part(s, 'encryptor'), { armor: 3, maxArmor: 3, integrity: 500, max: 500 });
   act(s, 'zero-day encryptor');
   assert.equal(enc.max - enc.integrity, 65);
@@ -161,11 +162,13 @@ test('exploit: +25% crit chance on the part this cycle and next, from anyone', (
   const s = bare(quiet(start()));
   Object.assign(part(s, 'pulse'), { integrity: 200, max: 200 });
   CONFIG.baseCrit = 75;
+  CONFIG.baseCrit = 0;
   act(s, 'exploit pulse');
   assert.equal(part(s, 'pulse').exposedUntil, s.encounter.cycle, 'one more cycle');
+  CONFIG.baseCrit = 75;
   act(s, 'spike pulse');
   CONFIG.baseCrit = 0;
-  assert.equal(part(s, 'pulse').integrity, 200 - Math.floor(25 * 1.5));
+  assert.equal(part(s, 'pulse').integrity, 200 - 15 - Math.floor(25 * 1.5), 'Exploit hits for 15, then a sure crit');
 });
 
 test('veiled parts hide their timers while they still have armor', () => {
@@ -339,7 +342,7 @@ test('a plan queues up to three cycles and shows in order', () => {
   resolveCycle(s);
   assert.equal(s.encounter.queue.text, 'overload pulse');
   resolveCycle(s);
-  assert.equal(part(s, 'pulse').max - part(s, 'pulse').integrity, 40);
+  assert.equal(part(s, 'pulse').max - part(s, 'pulse').integrity, 15 + 40, 'Exploit 15, Overload 40');
   resolveCycle(s);
   assert.ok(part(s, 'encryptor').integrity < part(s, 'encryptor').max);
   command(s, 'spike pulse; spike pulse');

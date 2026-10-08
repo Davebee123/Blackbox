@@ -143,7 +143,7 @@ test('IRQ Storm: every burn on every part ticks once more now, and none runs out
   assert.equal(s.encounter.infil.poly[0].left, 2);
   act(s, 'irq-storm');
   assert.equal(lost(s, 'pulse') - a, 24, 'the storm tick and the cycle\'s tick');
-  assert.equal(lost(s, 'encryptor') - b, 14, 'Polymorph on a bare part: half, twice');
+  assert.equal(lost(s, 'encryptor') - b, 20, 'Polymorph on a bare part: 10, twice');
   assert.equal(s.encounter.infil.poly[0].left, 1, 'only the cycle used it up');
 });
 

@@ -68,10 +68,10 @@ const crewSurge = (s, amount) => { for (const p of s.encounter.virus.parts) if (
 const order = (m, text) => { m.encounter.plan = []; const ev = command(m, text); assert.ok(!ev.some((x) => x.type === 'warning'), ev.at(-1)?.message); };
 
 // ---------- the data ----------
-test('both lines are full: eight skills each, unlocking at 12 to 38, each with help, short and desc', () => {
+test('both lines are full: eleven skills each, unlocking at 10 to 38, each with help, short and desc', () => {
   for (const sub of ['warden', 'sysop']) {
     const x = SUBS[sub];
-    assert.equal(x.skills.length, 8, sub);
+    assert.equal(x.skills.length, 11, sub);
     x.skills.forEach((id, i) => assert.equal(unlockLevel('bastion', id, sub), SUBCLASS.unlocks[i], id));
     for (const id of x.skills) {
       const a = ABILITIES[id];
@@ -306,11 +306,11 @@ test('Hot Standby: once a fight, the attack that would drop you to 0 leaves you 
   assert.equal(s.encounter.standby, false, 'spent');
 });
 
-test('Rebalance: alone it heals 6', () => {
+test('Rebalance: alone it heals 12', () => {
   const s = quiet(start('sysop', ['rebalance']));
   defender(s).integrity = 50;
   act(s, 'rebalance');
-  assert.equal(hp(s), 56);
+  assert.equal(hp(s), 62);
 });
 
 test('Sysop talents: Service Pack, Critical Path, Redistribute, Loopback', () => {
@@ -472,6 +472,7 @@ test('bots: a Warden crewmate pulls the fire and sends it back; a Sysop crewmate
   doc.encounter.once['hot-standby'] = true;
   assert.equal(planner(doc), 'patch you');
   t.run.integrity = Math.round(t.run.max * 0.6); mate.run.integrity = Math.round(mate.run.max * 0.6);
+  if (doc.loadout.equipped.sysop?.includes('maintenance-window')) { assert.equal(planner(doc), 'maintenance-window', 'two hurt: the window first'); doc.encounter.readyAt['maintenance-window'] = 99; }
   assert.equal(planner(doc), 'multicast');
   // A crew run: the bot Sysop's skills get used, and the crew wins.
   const r = crewFight(null, 'sysop warden', 30);
