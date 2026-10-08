@@ -787,7 +787,7 @@ Every measurement here comes from the planner in `genesim.mjs` (Tuned blues with
 
 ### 15.3 HASHLORD and MIRRORSHADE, before and after
 
-**HASHLORD** is built as section 7.5 says. A Pool Lock (a Lockbox) wards the Miner against your commands only. Block Reward is a Self-Update cast on the Miner, and the Chain Fork at half spins up a second Miner that the Pool Lock wards too while it stands. Its phases are 60% re-arm and 50% Chain Fork, and its floor is 16. Built as the prototype was, on its old numbers, it won 84 to 88% at 16, and its Pulse Node landed for 47% of a Payload's Signal at 30 (the strain step is ×1.45 there). So it got a flatter step of its own (×0.95 at 18, ×1.1 at 30), damage ×1.05 instead of ×1.3, and Integrity ×3.4 instead of ×2.5.
+**HASHLORD** is built as section 7.5 says. A Pool Lock (a Lockbox) wards the Miner against your commands only. Block Reward is a Self-Update cast on the Miner, and the Chain Fork at half spins up a second Miner that the Pool Lock wards too while it stands. Its phases are 60% re-arm and 50% Chain Fork, and its floor is 16. Built as the prototype was, on its old numbers, it won 84 to 88% at 16, and its Pulse Node landed for 47% of a Payload's Signal at 30 (the strain step is ×1.45 there). So it got a flatter step of its own (×0.95 at 18, ×1.1 at 30), damage ×1.05 instead of ×1.3, and Integrity ×3.4 instead of ×2. After the class-kit redesign made every class stronger, it moved to Integrity ×3.9 and damage ×1.1, which puts the reading planner at 83% at level 16 and 80% at 30 with every subclass winning at least 5 of 12.5.
 
 | HASHLORD | Lv 10 | Lv 16 (floor) | Lv 18 | Lv 30 |
 |---|---:|---:|---:|---:|
