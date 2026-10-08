@@ -8,6 +8,8 @@ The designer's brief, in their words:
 
 And on story: *"I don't even know if we do story mail. Maybe there are nuggets of info we put at the end of the server."*
 
+**Decisions (designer):** proceed with every recommendation in section 10, except counter-breaches, which are cut: *"Idk if counter breaching is going to solve anything. We just need to keep the systems lean."* Lean is the rule: a system that doesn't change what you fight, how you fight or what you can get doesn't ship.
+
 Decisions already made: roguelite runs inside a persistent world, this doc before any code, crafting and salvage removed ("I never craft anything"), and Inject becoming one strong refreshing burn instead of three stacks (landing separately). Mail is cut, and story moves into fragments found at the end of a server (section 6.6).
 
 ## 0. The short version
@@ -158,7 +160,6 @@ You take Aftershock, since Crack is your opener and now it damages too. Then com
 > **smtpd** — pick one
 > **Mail Drop** · Pays 60 + 6 × its level credits when you finish any breach. *Now:* +30 tokens.
 > **Spam Cannon** · Viruses on servers linked to it start with 15% less Integrity. *Now:* the act 1 gate starts with 10% less.
-> **Honeymail** · Counter-breaches come to it, and its defence run is one act. *Now:* Trace rises half as fast this act.
 
 KESTREL-DC-3 is linked to MERIDIAN and is next on your list, so you take Spam Cannon.
 
@@ -217,7 +218,6 @@ A server runs six subsystems, two in each act, drawn from the pool for its act a
 |---|---|---|---|---|---|
 | smtpd | **Mail Drop** | Pays 60 + 6 × its level credits when you finish any breach. | ×1.5, and +1 Exploit on a capture | +30 tokens | Exchange |
 | smtpd | **Spam Cannon** | Viruses on servers linked to it start with 15% less Integrity. | 25% | The act 1 gate starts with 10% less Integrity | |
-| smtpd | **Honeymail** | Counter-breaches go to this server instead, and defending it is one act. | It also pays a CVE pick | Trace rises half as fast this act | Chokepoint |
 | dns | **Sinkhole** | Name a family or a gene you've decoded. Breaches of linked servers roll it 3 times as often, so their drops carry its implicit. | Two picks, or a strain | The rest of this act's viruses roll it | Lure |
 | dns | **Zone Transfer** | You see 1 row further on every breach. | 2 rows | Reveals this whole act | |
 | sshd | **Jump Host** | You can breach servers two links past this one, before they're revealed. | Three links | You may move to any node in the next row | Jump Host |
@@ -254,14 +254,14 @@ That is 22 rewrites over 9 subsystems. The good ideas in docs/server-types.md (L
 
 1. A captured server's output is one line per subsystem you cleared, at tier I or II. A subsystem you skipped stays stock and does nothing. That's the cost of a Beacon you let land, or of a path you didn't take.
 2. **Each rewrite counts once on your network**, at the best tier you hold. Two Kernel Hooks don't make 5 cards. This is the rule rule affixes already follow, and it's what keeps outputs varied: a new capture is worth most when it brings rewrites you don't have.
-3. **Linked rewrites** (Spam Cannon, Sinkhole, Testbed, Jump Host, Honeymail) act on the servers linked to their own server. Two copies on different servers reach different neighbours, and each counts there. Where you capture something matters, so geography on the campaign map becomes a choice.
+3. **Linked rewrites** (Spam Cannon, Sinkhole, Testbed, Jump Host) act on the servers linked to their own server. Two copies on different servers reach different neighbours, and each counts there. Where you capture something matters, so geography on the campaign map becomes a choice.
 4. **Re-imaging.** You can breach a server you hold again at its best heat or higher. Each subsystem you clear lets you keep its old rewrite or pick a new one, and the Resident is the same fight.
 
 ### 3.3 Between runs
 
 Nothing ticks in real time. Outputs fire at the start of a breach (tokens, CVE picks, Signal), during one (drafts, scans, Trace), and when one ends (credits, bounties). A week away costs nothing.
 
-**Counter-breach.** This is home defence, folded in. After every 4 breaches you finish, the author of one of your captured servers' sectors tries to take it back. The server's card turns red and its output switches off until you answer. Answering is a one-act breach of that server: 5 rows and a gate (the author's elite), with that server's own rewrites giving you their *Now*. There's no timer and no loss beyond the output pausing, and at most one waits at a time. Honeymail draws them to itself.
+**No counter-breach.** Home defence is cut outright, not folded in (designer: "Idk if counter breaching is going to solve anything. We just need to keep the systems lean"). A captured server stays captured.
 
 ### 3.4 Limits
 
@@ -530,7 +530,7 @@ Examples: *Capture without letting a Ransom land.* *Read 3 Fork tells.* *Reach t
 | Outposts, buildings, plans | outpost.mjs | **Cut** | Replaced by rewrites |
 | Server types | docs/server-types.md | **Fold** | Its six types are rewrites |
 | Swarms | fleet.mjs | **Cut** | A timer that defends outposts that no longer exist |
-| Invasions, the wall, firewall, signatures, filters, crash | invasion.mjs, firewall.mjs, filters.mjs | **Cut as a mode** | Fold into the counter-breach (3.3) |
+| Invasions, the wall, firewall, signatures, filters, crash | invasion.mjs, firewall.mjs, filters.mjs | **Cut as a mode** | Cut outright (3.3): no counter-breach |
 | Services and code | tickServices | **Cut** | 7% of a climb, and nothing to build with |
 | Server memory | memory.mjs | **Cut** | Already switched off |
 | Salvage, crafting, the Craft page, blueprints | salvage.mjs | **Cut** | Decided |
@@ -580,7 +580,7 @@ A version bump (38 to 39). A current player keeps everything about themselves, a
 |---|---|---|
 | **0. One breach** (the prototype) | `?playtest=breach&class=…&level=10`: one server, 3 acts of 4 rows, 2 gates, DEADBOLT. Nodes: virus, elite, cache, defrag, broker, and 4 terminal events. 6 subsystems with 2 rewrites each, shown as *Now* with the output on the capture card. 12 mods (3 a class), 10 CVEs, gear from `rollItem`. Two new tells, Overclock and Lock. One `core.dump`. No save change. | The designer plays five breaches with two classes. `breachsim.mjs` shows each class winning 50 to 70% at heat 0 in blues. |
 | **1. Tells** | Fork, Swap, Dead Man, Bait, Beacon and Ransom, author tell lists, per-kind payoffs, solo-tells.md rewritten | Per-tell checks: letting it land and answering it are both viable lines in the bot's hands |
-| **2. The world** | The campaign map, captures, outputs, re-imaging, counter-breaches, bounties on cards, the Archive, the save migration. Cut systems switched off by flags (`.on`, as `MEMORY.on` and `PAYLOAD.on` are today). | An old save loads into a playable campaign |
+| **2. The world** | The campaign map, captures, outputs, re-imaging, bounties on cards, the Archive, the save migration. Cut systems switched off by flags (`.on`, as `MEMORY.on` and `PAYLOAD.on` are today). | An old save loads into a playable campaign |
 | **3. Breadth** | 22 rewrites, about 50 mods, 20 or more CVEs, 12 terminal events, five brokers, heat 1 to 8, unlock ranks, the meta vendor, a fragment set per author | Draft-pick rates: no card under 5% or over 40% when offered |
 | **4. Genome in runs** | Genome phase 3's rolled mutations per node by act, phase 2's implicits, Residents from the 26-boss pool by author and band | Genome bands hold on sampled breaches |
 | **5. Clean-up** | Cut code deleted, GAME_RULES.md rewritten, ACTUARY on drafts, then co-op breaches | |
@@ -611,7 +611,7 @@ A version bump (38 to 39). A current player keeps everything about themselves, a
 | 4 | Changing your bar mid-run | Anytime between nodes. Defrag only. Never. | Defrag only (*re-slot*), so mods are a commitment. Gear swaps any time between nodes. |
 | 5 | Do rewrites have a *Now* half? | Yes. Output only. | Yes. Choosing between beating this Resident and wanting this output later is the decision. |
 | 6 | Stacking outputs | Each rewrite once. Stack with falloff. | Once, at the best tier. Linked rewrites count once per neighbourhood. |
-| 7 | Counter-breaches | Off. After every N breaches. On a clock. | After every 4 breaches, one at a time, no clock. The output pauses until you answer. |
+| 7 | Counter-breaches | Off. After every N breaches. On a clock. | **Decided: off.** Home defence is cut, not folded in. Keep the systems lean. |
 | 8 | Heat | Ranked (Slay the Spire). Pick modifiers (Hades). | Ranked first, since it's simpler to read. Pick-your-own can come later. |
 | 9 | Wild tells per fight | One kind. Two. | One kind per wild virus, two on elites, fixed on bosses. Fewer, meaner tells. |
 | 10 | Farming outside runs | Free-roam rogue servers. None. | None. Range replays and re-imaging cover it, and every fight sits inside a run. |
