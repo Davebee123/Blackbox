@@ -911,7 +911,7 @@ function invTags(s, inv) {
   const kind = inv.kind && inv.kind !== 'raider' ? `<span class="tag ${inv.kind === 'champion' ? 'tag-crew' : 'warn'} inv-kind" title="${esc(tellOf(s, inv))}">${esc(labelOf(inv))}</span>` : '';
   const q = inv.quirk && QUIRKS[inv.quirk] ? `<span class="tag tag-strain" title="${esc(QUIRKS[inv.quirk].rule)}">${esc(QUIRKS[inv.quirk].name)}</span>` : '';
   const m = inv.marked ? `<span class="tag hot" title="A scout mapped your wall for it">mapped +${inv.marked}</span>` : '';
-  return kind + q + m;
+  return [kind, q, m].filter(Boolean).map((t) => ' ' + t).join(''); // a space before each, so they never butt up against the level
 }
 // What it pays, before the fight: signatures for your kill (now, then the most it can grow to), a
 // capture if one comes with it, and your streak's bonus.

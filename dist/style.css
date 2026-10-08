@@ -2941,3 +2941,8 @@ details.map-pick { pointer-events: auto; }
 .net-dark span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .net-dark small { color: var(--dim); font-size: 11px; }
 .ptip-body .tag.native { justify-self: start; color: var(--r-zeroday); border-color: rgba(212, 166, 74, 0.5); }
+
+/* Themed hover tips (app.js): every title in the game, in the game's own card. */
+.tt { position: fixed; z-index: 90; max-width: 300px; padding: 8px 11px; background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: 13px/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
+.tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 12px var(--mono); letter-spacing: 0.5px; }
+@media (prefers-reduced-motion: reduce) { .tt { animation: none; } }

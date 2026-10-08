@@ -2064,3 +2064,33 @@ document.addEventListener('mouseout', (e) => {
   const a = e.target.closest?.('[data-ptip]');
   if (a && ptip && !a.contains(e.relatedTarget) && !e.relatedTarget?.closest?.(`[data-ptip="${CSS.escape(ptip.ref)}"]`)) hidePtip();
 });
+
+// Themed hover tips: every title="" in the game shows in the game's own card instead of the browser's.
+// The title moves to data-tt on first hover (so the browser's tip never shows) and the card follows the element.
+// "Name: the rest" leads with the name in bold, like the item cards. Touch has no hover, so it is left alone.
+const tt = { el: null, at: null, timer: 0 };
+function ttHide() { clearTimeout(tt.timer); tt.at = null; if (tt.el) tt.el.hidden = true; }
+function ttShow(anchor) {
+  const text = anchor.dataset.tt;
+  if (!text || !anchor.isConnected) return ttHide();
+  if (!tt.el) { tt.el = document.createElement('div'); tt.el.className = 'tt'; tt.el.setAttribute('role', 'tooltip'); document.body.append(tt.el); }
+  const m = text.match(/^([^:.\n]{2,40}): ([\s\S]+)$/);
+  const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+  tt.el.innerHTML = m ? `<b>${esc(m[1])}</b>${esc(m[2][0].toUpperCase() + m[2].slice(1))}` : esc(text);
+  tt.el.hidden = false;
+  const r = anchor.getBoundingClientRect(), w = tt.el.offsetWidth, h = tt.el.offsetHeight, pad = 8;
+  let x = Math.min(Math.max(pad, r.left + r.width / 2 - w / 2), innerWidth - w - pad), y = r.bottom + 8;
+  if (y + h > innerHeight - pad) y = Math.max(pad, r.top - h - 8);
+  tt.el.style.left = x + 'px'; tt.el.style.top = y + 'px';
+}
+document.addEventListener('pointerover', (e) => {
+  if (e.pointerType === 'touch') return;
+  const a = e.target.closest?.('[title], [data-tt]');
+  if (!a || a.closest('[data-ptip]') || a.matches('.mpkt')) return ttHide();
+  if (a.hasAttribute('title')) { const t = a.getAttribute('title'); a.removeAttribute('title'); if (t) a.dataset.tt = t; }
+  if (tt.at === a) return;
+  ttHide(); tt.at = a;
+  tt.timer = setTimeout(() => tt.at === a && ttShow(a), 280);
+});
+document.addEventListener('pointerout', (e) => { if (tt.at && !tt.at.contains(e.relatedTarget)) ttHide(); });
+for (const ev of ['pointerdown', 'keydown', 'scroll', 'blur']) addEventListener(ev, ttHide, true);
