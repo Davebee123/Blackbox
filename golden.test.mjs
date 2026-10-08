@@ -4,15 +4,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createVirus, STRAINS, BOSSES, GUARDS, FIXTURES } from './dist/data.mjs';
+import { GENES } from './dist/genes.mjs';
 import { hooks } from './dist/combat.mjs';
 import { createVirus as legacy } from './golden-virus.mjs';
 import { fight, BRACKETS, strainsAt } from './balance.mjs';
 import { bossFight } from './genesim.mjs';
 
-// What the genome adds to a virus: its genes and its author.
-const ADDED = ['genes', 'author'];
+// What the genome adds to a virus: its genes, its author, and a name read off them (phase 1).
+const ADDED = ['genes', 'author', 'name'];
+// The name keeps its tag and grade; a wild one swaps its family's name for its body's stem, after the adjective of its
+// costliest rolled gene.
+const STEMS = { RANSOMWARE: 'CRYPTJACK', WORM: 'SPLINTER', GHOSTROOT: 'GHOSTROOT' };
+const nameOk = (a, b) => {
+  const want = b.name.replace(/^(ELITE )?(RANSOMWARE|WORM|GHOSTROOT)-/, (m, e, f) => `${e || ''}${STEMS[f]}-`);
+  if (a.name === want) return !a.genes.some((g) => g.src === 'rolled') || !!a.strain || !/-\d{4}/.test(want);
+  const adj = a.genes.filter((g) => g.src === 'rolled').map((g) => GENES[g.id].adj.toUpperCase());
+  return adj.some((x) => a.name === want.replace(/^(ELITE )?/, (m) => `${m}${x} `));
+};
 const strip = (v) => { const o = structuredClone(v); for (const k of ADDED) delete o[k]; return o; };
-const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid);
+// Phase 1 rebuilt three bosses on purpose (docs/genome.md 7.5 and 5.3): HASHLORD, MIRRORSHADE and HOLLOW CHOIR's Harmony.
+// genesim.test.mjs holds them to their designs and their band; every other boss is the same fight it was.
+const REBUILT = ['nb-hashlord', 'nb-mirrorshade', 'choir'];
+const SOLO = Object.keys(BOSSES).filter((k) => !BOSSES[k].raid && !REBUILT.includes(k));
 
 // 10,000 seeds over everything a virus can be: wild viruses of every family at every level, strains, grades, run
 // and home numbers, mutations rolled, forced and off, elites, bosses, guards and the named fixtures.
@@ -36,13 +49,15 @@ test('golden: 10,000 seeds build the same viruses with genes as without, part fo
   for (let i = 0; i < 10000; i++) {
     const { key, seed, o } = config(i);
     const a = createVirus(key, seed, { ...o }), b = legacy(key, seed, { ...o });
-    assert.deepEqual(strip(a), b, `${key} ${seed} ${JSON.stringify(o)}`);
+    const { name, ...rest } = b;
+    assert.deepEqual(strip(a), rest, `${key} ${seed} ${JSON.stringify(o)}`);
+    assert.ok(nameOk(a, b), `${a.name} for ${b.name}`);
     assert.ok(a.genes.length >= 1, 'every virus carries genes');
     n++;
   }
   assert.equal(n, 10000);
   // Guards on their own keys too, at every layer's levels.
-  for (const g of Object.keys(GUARDS)) for (let t = 10; t <= 50; t += 4) for (const run of [true, false]) assert.deepEqual(strip(createVirus(g, t * 31, { threat: t, run })), legacy(g, t * 31, { threat: t, run }), `${g} ${t}`);
+  for (const g of Object.keys(GUARDS)) for (let t = 10; t <= 50; t += 4) for (const run of [true, false]) { const { name, ...rest } = legacy(g, t * 31, { threat: t, run }); assert.deepEqual(strip(createVirus(g, t * 31, { threat: t, run })), rest, `${g} ${t}`); assert.equal(createVirus(g, t * 31, { threat: t, run }).name, name); }
 });
 
 // The same fight, played by the planner, on a virus from either builder: the same result, the same cycles, the same
@@ -65,5 +80,5 @@ test('golden: the same fights end the same way, wild, strain, grade, guard and b
     }
   }
   for (const id of SOLO.filter((k) => k !== 'resident')) for (const L of [10, 18, 30]) for (const [cls, sub] of [['breaker', 'demolitionist'], ['operator', 'herder']]) { same(`${id} ${L} ${sub}`, () => bossFight(id, L, cls, sub, 1)); n++; }
-  assert.ok(n > 400, `${n} fights`);
+  assert.ok(n > 500, `${n} fights`);
 });

@@ -1,6 +1,6 @@
 # Genome: authored viruses, built from genes
 
-This is a design for review, not a description of code. Nothing here is built yet. It proposes one model for every virus in the game: a virus is a body (its family) plus a set of **genes**, and a hacker crew wrote it. Bosses are fixed gene sets with one signature mechanic each. Loot reads the genes too: what drops from a virus carries a line against what that virus did to you.
+This began as a design for review. Phases 0 and 1 are now built, and section 15 says what shipped and what it measured. The rest is still design. It proposes one model for every virus in the game: a virus is a body (its family) plus a set of **genes**, and a hacker crew wrote it. Bosses are fixed gene sets with one signature mechanic each. Loot reads the genes too: what drops from a virus carries a line against what that virus did to you.
 
 The measurements in this sheet come from throwaway scripts run against the current code (the planner bot, Tuned gear, every subclass, six seeds a cell, run fights). Prototype numbers come from in-memory patches in those scripts. No game file was changed.
 
@@ -756,3 +756,136 @@ The designer approved the recommendations on the first seven open decisions:
 - Only one 4-piece set bonus can be active.
 
 **What level a reflashed network is.** Classes keep their levels through a reflash, so the new network can't restart at level 1. A reflashed network is generated around your current level, the way a new zone opens at the level cap. Its layers band upward from your level with depth, and its lair and boss line sit at the top of that band. Each reflash also raises a **reflash tier** that the network carries. Every tier adds to the virus difficulty budget, raises implicit tiers, and lifts the item level of what drops, with a cap so it stays inside the balance bands. Repeat reflashes become a climb of their own instead of a reset. A reflash only opens at full completion, which in practice means late in the climb, so the new network starts near the top of the level range anyway.
+
+## 15. What shipped: phases 0 and 1
+
+Phases 0 and 1 are built: today's content as genes, authors and bylines, the gene codex, `scan` and `inspect`, the compatibility rules applied to today's content, HASHLORD and MIRRORSHADE rebuilt, and the per-gene cost and answer checks. No new gene rolls into a wild virus, and nothing from phases 2 to 5 is in. SAVE_VERSION stays 36.
+
+Every measurement here comes from the planner in `genesim.mjs` (Tuned blues with the stat each subclass chases, talents for the level, run fights), on all eight subclasses (the four classes below level 10). The boss rows use twelve seeds a cell, so a subclass's wins read out of twelve. They come from this harness, not the throwaway scripts behind sections 1 and 7, so the "before" rows differ a little from the tables there.
+
+### 15.1 Phase 0: genes as data, with no change in play
+
+- `dist/genes.mjs` holds 41 genes: the ten attack types, nine part behaviours, three defences, nine passive rules and ten tells that carry today's content. Each has the fields section 12.1 lists. The 19 new genes are not in it. Phase 3 adds them with the same shape.
+- `dist/authors.mjs` holds the eight authors, with their colours, style lines, signature genes, toolkits, builds and bosses.
+- In `dist/data.mjs`, FAMILIES take their third parts from their genes (`GENES[id].parts`, pooled in `FAMILIES[f].third`, in the old order). MUTATIONS are the rule genes. STRAINS carry `genes`, `author` and their charge's gene. Every TELLS entry names its gene. `createVirus` puts `genes` (each with where it came from: core, build, rolled, grade or boss) and `author` on every virus, and takes `overrides.genes` to force the rolled genes. That is the hook phase 3's `rollGenome` will fill.
+- The golden test (`golden.test.mjs`) builds 10,000 seeds over every family, strain, grade, mutation, elite, boss, guard and fixture through `createVirus` and through the builder from before genes (`golden-virus.mjs`, frozen). Part for part and number for number they match, with only the genes, the author and the name added. It then plays more than 500 planner fights (wild, strain, v2, every guard and every boss but the three rebuilt ones) on each builder's virus, and every result, cycle count, Signal lost and command count matches. That second half plays each subclass's own kit, so it holds whatever the class pass changes.
+
+### 15.2 Phase 1
+
+| What | How it works now |
+|---|---|
+| Authors and bylines | TOLLGATE, SWARMLINE and PALEMASK write the three families. Strains are named builds of their authors, as section 3.8 maps them. Kestrel writes the ICE and the Sentinel. A faction's server runs that faction's viruses, a traced server's guards and Resident are its family's crew's, and SPRAWL-00's strays sign nothing. The fight header shows *WARDED CRYPTJACK-4821 v2* with *· TOLLGATE* after it in the author's colour, and the intrusion line says who wrote it. |
+| Names | A wild virus takes the adjective of its costliest rolled gene (a third part or a mutation, the first on a tie), its body's stem and its file's four digits. Files on a run carry the stem too (`cryptjack-4821.exe`). Named builds, bosses and fixtures keep their names. |
+| Gene chips | There is one chip per gene under the virus's bar, in its axis's colour and icon. The body's chips are dim and dashed, everything else is bright, and a gene you've never seen shows ??? with its category's icon. Hovering a chip gives its rule once it's decoded, and a mutation's rule from the first meeting, as before. On a phone a long name wraps rather than losing its byline. |
+| The gene codex | Each gene is unknown, seen or decoded (section 10.1). A fight makes every gene in it seen, and a tell becomes seen once it's said. Breaking a part decodes its genes, reading a tell decodes its gene, and two kills of a virus that carries a passive rule decode that rule. A part is known on sight once every gene it carries is decoded, on any body. The System page lists the 41 genes by category. Decode XP stays per part, as it was. A save from before genes reads its part codex and the families it met as genes, so nothing migrates. |
+| `scan` | On a run it shows the card of the virus in this folder, of a folder next door that holds a virus or a guard, or of the guard at the door. It costs 1 Signal, and +4 Trace on a break-in. An Infiltrator's scan is free and quiet, shows every gene's name and the rule of each one it hasn't decoded, and its `inspect` keeps those rules for that fight. Mid-fight, `scan` shows the fight's card for free. |
+| `inspect <part>` | It lists a part's genes, and what each does once decoded. It takes no command and no cycle. |
+| Compatibility rules | `compatible()` checks one punishment and one amplifier per axis (Burst exempt, tells left out, as the designer decided), one beat, and the hard exclusions. Over 3,000 sampled wild viruses, and every strain with every mutation and grade, today's content passes. MIRRORSHADE (a Mimic and a Decoy as two Feedback amplifiers, two beats) and the HOLLOW CHOIR (two Decoys, two beats in four) didn't, so both changed. |
+| HOLLOW CHOIR | Harmony: at half its Decoy bounces 50% of your command back instead of 30%. It no longer splits off a second Decoy. At home, where its event fights you, the win rate barely moves (95% to 96% at 10, 93% to 94% at 18). |
+| Lairs | A boss with a floor holds `/core` once you reach it. HASHLORD's lair still opens at 8, but `/core` stands empty until 16 (12 for MIRRORSHADE), and `network` and `attack` there say so. |
+| The harness | `genesim.mjs` holds the boss bands (reader, misreader, blind, by subclass), the spike cap measure and the per-gene checks. `genesim.test.mjs` runs them as tests. |
+
+### 15.3 HASHLORD and MIRRORSHADE, before and after
+
+**HASHLORD** is built as section 7.5 says. A Pool Lock (a Lockbox) wards the Miner against your commands only. Block Reward is a Self-Update cast on the Miner, and the Chain Fork at half spins up a second Miner that the Pool Lock wards too while it stands. Its phases are 60% re-arm and 50% Chain Fork, and its floor is 16. Built as the prototype was, on its old numbers, it won 84 to 88% at 16, and its Pulse Node landed for 47% of a Payload's Signal at 30 (the strain step is ×1.45 there). So it got a flatter step of its own (×0.95 at 18, ×1.1 at 30), damage ×1.05 instead of ×1.3, and Integrity ×3.4 instead of ×2.5.
+
+| HASHLORD | Lv 10 | Lv 16 (floor) | Lv 18 | Lv 30 |
+|---|---:|---:|---:|---:|
+| Before: read, misread, blind | 72%, 67%, 51% | 91%, 83%, 70% | 91%, 79%, 58% | 79%, 76%, 57% |
+| After: read, misread, blind | (not met) | **78%, 69%, 16%** | 77%, 58%, 10% | 80%, 61%, 27% |
+| After, wins by subclass of 12 | | Demolitionist 7, Overclocker 9, Warden 9, Sysop 11, Payload 11, Phantom 7, Herder 10, Hijacker 11 | | Payload 11 and Herder 7 (4 and 4 before) |
+
+The Pool Lock, measured as section 7.5 asked. At 16 the rebuilt boss wins 78% with a Pool Lock that caps only commands, 78% with one that caps burns and helpers too, and 83% with no Pool Lock at all. At 30 the Herder wins 7 of 12 and the Payload 11 of 12 with either ward. The planner breaks a ward first in every kit but the Infiltrator's, which burns under it, so the commands-only cap changes little for these two kits. What sank the Herder and the Payload at 30 before was the size of the Pulse Node's hits, not the ward.
+
+**MIRRORSHADE** is built as section 7.5 says. The Mimic is its one Feedback amplifier, and Glass Cut (a plain Overcharge on the Scrambler) takes Possession's place. At half, the Doppelganger stops the Mimic recording and gives it the attack and ◆ of the first part you broke, or the Pulse Node's. The phase card names the shape. Its phases are 60% re-arm and 50% Doppelganger, and its floor is 12. At 12 and 13 its Scrambler wears ◆3 and Scrambles every 5. Built at its old size it won 31% at 12, and the Doppelganger was most of that (50% without it). Integrity ×1.3 (from ×1.5) and damage ×0.9 (from ×1.1) put it in the band.
+
+| MIRRORSHADE | Lv 10 | Lv 12 (floor) | Lv 18 | Lv 30 |
+|---|---:|---:|---:|---:|
+| Before: read, misread, blind | 51%, 41%, 14% | 54%, 42%, 21% | 80%, 75%, 49% | 94%, 88%, 74% |
+| After: read, misread, blind | 66%, 56%, 25% | **64%, 65%, 43%** | 80%, 79%, 63% | 85%, 83%, 74% |
+| After, wins by subclass of 12 | | Demolitionist 8, Overclocker 9, Warden 12, Sysop 3, Payload 6, Phantom 10, Herder 9, Hijacker 4 | Sysop 0 | Sysop 1 |
+| Worst single hit and worst three cycles at 12 | | 42% and 73% (51% and 85% before) | | |
+
+At their floors both sit in the band: the reader wins 60 to 80%, the misreader 45% or more, and the blind bot more than 20 points less. Every subclass wins at least four in twelve, except the Sysop against MIRRORSHADE, which is flagged for its kit (section 7.2). At 12 the misreader now wins as often as the reader, which is what the rebuild was for. Both Breakers, at 0 of 12 before, win 8 and 9.
+
+### 15.4 Per gene
+
+These come from `node genesim.mjs genes`, with six seeds (the test runs two). Each gene is fought as a probe against its body alone: a third part or a mutation on its family's body, Linked on a v1, the Bouncer against the Shredder and the Tracer against the Watchdog, and a tell alone against no tells. *Answering saves* compares the planner playing the gene with one that ignores that gene alone (`GENE_BOTS.ignore`), on genes the planner has a rule for. Points are Signal lost a fight, averaged over levels 5, 10, 18 and 30 where the gene is open.
+
+| Gene | Cost | Points a fight | A cost point | Answering saves | Ignoring costs |
+|---|---:|---:|---:|---:|---:|
+| Ward | 2 | +9.8 | +4.9 | +1.3 | +11.1 |
+| Mutex lock | 3 | +3.3 | +1.1 | −2.4 | +0.9 |
+| Tripwire (30 only) | 2 | +16.1 | +8.1 | −0.2 | +15.9 |
+| Twin | 2 | +15.0 | +7.5 | +1.0 | +16.0 |
+| C2 command | 2 | +10.8 | +5.4 | 0.0 | +10.8 |
+| Decoy mirror | 3 | −5.3 | −1.8 | +9.1 | +3.8 |
+| Mimic | 3 | −3.6 | −1.2 | +12.9 | +9.4 |
+| Armored | 2 | +17.9 | +8.9 | | |
+| Regenerative | 1 | −0.5 | −0.5 | | |
+| Hasty | 2 | +11.2 | +5.6 | | |
+| Adaptive | 1 | +0.3 | +0.3 | −0.1 | +0.2 |
+| Linked | 1 | +13.9 | +13.9 | | |
+| Keyring | 2 | +16.2 | +8.1 | −14.3 | +1.9 |
+| Escalation | 2 | −1.8 | −0.9 | | |
+| Overcharge (17+) | 1 | −1.3 | −1.3 | +0.1 | −1.2 |
+| Full Disk | 2 | +1.0 | +0.5 | +4.1 | +5.1 |
+| Mass Mailer | 2 | −0.6 | −0.3 | +6.1 | +5.5 |
+| Possession | 2 | −1.4 | −0.7 | +2.0 | +0.6 |
+| Double Extortion | 2 | +3.1 | +1.6 | +4.5 | +7.6 |
+| Self-Update | 2 | +5.2 | +2.6 | +8.9 | +14.0 |
+| Persistence | 2 | +2.0 | +1.0 | +7.9 | +9.9 |
+| Re-key (on the Sentinel) | 2 | +1.3 | +0.6 | −0.2 | +1.1 |
+| Battering Ram | 2 | +6.4 | +3.2 | +3.6 | +10.0 |
+| Hotfix (on the Patchwork) | 2 | +0.4 | +0.2 | −0.8 | −0.4 |
+
+The named builds are measured as each strain against its family's body, a part of which it replaces, so these numbers are the build's net cost: Rage (the Bricker) +21.3, Deadline (the Extortion) +19.0, Flood ramp +5.7, Siphon +4.9, Dormant +3.8, Phase shift +1.3, Cycle tax +0.9, Echo −12.8, Hive brood −12.9, Mend −18.6 and Sync lock −31.3. The Keylogger's number comes from a harness that fires in every window it gets, which a person won't.
+
+What the table says:
+
+- **Ward, C2 command and Hasty sit near the target**, about 5 points a cost point. Twin, Armored, the Keyring and the Tripwire cost about twice their points, and Linked, which comes free with v2, costs 14 points.
+- **The Decoy and the Mimic cost a reader nothing.** As third parts they take 15% of the other two parts' Integrity and carry no attack, so a reader comes out ahead. Ignoring them is what costs, 4 and 9 points. Regenerative, Adaptive, Escalation, Hotfix and Re-key barely move a fight.
+- **Tells are cheap alone and worth reading.** Answering Self-Update, Persistence, the Mimic or Mass Mailer saves 6 to 13 points. Overcharge alone is rarely said, because a two-part body dies before its first one lands.
+- **The planner's Keyring answer is wrong.** Breaking the Keyring first loses 14 points to playing the Bouncer as a plain guard, and every subclass wins more by ignoring it.
+- **The answer bounds don't hold yet.** Answering is worth under 3 points for Ward, Twin, C2, the Tripwire, Adaptive, the Mutex and Re-key, because the planner already plays them well without the rule. It leaves a Tripwire for last anyway, since its Ping is small.
+
+`genesim.test.mjs` holds two hard bounds: no rolled gene or tell costs more than 25 points a fight, and ignoring one never costs more than 25. The calibration targets (2 to 6 points a cost point, answers worth 3 or more, ignoring 20 at most, and every kit's answer winning at least as often as ignoring) run as a `todo` test that lists today's misfits.
+
+### 15.5 The spike cap, today
+
+Rule 5 asks that no single landing pass 45% of a same-level player's Signal. Here is the worst single hit each boss landed on any subclass, reading, over six seeds:
+
+| Boss | Lv 10 | Lv 18 | Lv 30 |
+|---|---:|---:|---:|
+| RELAY-KING | 34% | 49% | 47% |
+| REPO MAN | 18% | 49% | 50% |
+| DEADBOLT | 52% | 40% | 47% |
+| TRIPMINE | 65% | 49% | 47% |
+| BACK ORIFICE | 49% | 49% | 37% |
+| PATCH TUESDAY | 58% | 56% | 77% |
+| FLOODWALL | 39% | 46% | 52% |
+| SLEEPWALKER | 51% | 49% | 68% |
+| ECHOLALIA | 31% | 44% | 63% |
+| HOLLOW CHOIR (at home) | 38% | 41% | 41% |
+| HASHLORD, rebuilt | 50% at 16 | 49% | 57% |
+| MIRRORSHADE, rebuilt | 42% at 12 | 43% | 45% |
+
+Most of these are a boss charge that got through. A boss's charge adds up to 27.5% of your max on top of its plain hit (`TELL.boss.cap`), so any plain hit over about 17% of the smallest Signal pool (a Phantom's or a Payload's) lands a charge past 45%. Cutting HASHLORD's hits further to meet the cap pushed it out of the band before it got under 45%. The cap runs as a `todo` test for the two rebuilt bosses.
+
+### 15.6 Decisions for the designer
+
+1. **The spike cap against boss charges.** Either a boss charge's extra counts toward the cap, and most of today's bosses fail it, or rule 5 reads the plain hit with a crit and leaves charges, which can be answered, to the tell system's own ceiling of 50%.
+2. **The Sysop against MIRRORSHADE.** It wins 3 of 12 at 12 and 0 to 1 of 12 from 18. The Doppelganger's extra attacker lands while the Sysop's slow kill is still going. It's flagged for its kit, as section 7.2 says, but the gap widens with level.
+3. **Costs the table disagrees with.** Armored, Twin, Linked and the Keyring cost far more than their points, and the Decoy, the Mimic, Regenerative and Adaptive far less. Phase 3's budget rolls by these costs, so they should move first. The levers are the Decoy's and the Mimic's Integrity trim, Regenerative's one-cycle patch and Linked's third of a hit.
+4. **The Keyring answer.** The planner and the codex line say to break the Keyring first, and the harness says that loses. Either the answer or the Keyring changes.
+5. **Floors on the other bosses.** Only HASHLORD (16) and MIRRORSHADE (12) have floors. Section 7.4 gives every boss one (FLOODWALL 16, ECHOLALIA 18, TRIPMINE 20). Holding `/core` until then is a one-line data change each, but it delays those networks' lair bosses, so it waits for the lair bands of phase 4.
+6. **Tripwire at 16** (open decision 13) isn't applied. It stays at 20 until it's confirmed, because it changes which wild viruses roll at 16 to 19.
+
+### 15.7 Where phases 2 to 5 plug in
+
+- New genes join `GENES` with the same shape (a part spec under `parts`, or a rule hook), and `compatible()` already knows the hard exclusions that name them.
+- `createVirus` takes `overrides.genes`. Phase 3's `rollGenome` draws from an author's toolkit with `budgetFor` and passes the result there, and `stemOf` names the virus from whatever it rolled.
+- Every virus carries `author`. Phase 3's sector holder is one more case in `placeAuthor` (combat.mjs).
+- Every gene carries `implicit`, its line for phase 2, and `counter`, ACTUARY's swap for phase 5.
+- BOSSES take `extra` parts, a `trim` below a level, `floor`, `band` and `signature`, and the phase verbs now include `fork:<part>`, `harmony` and `doppelganger`. Phase 4's 14 new bosses are data plus one signature verb each.
+- `GENE_BOTS.ignore`, `TELL.sim.only` and `genesim.mjs` are the per-gene harness section 11 asks for. The pairs, sampled-genome and hardest-genome checks are the next ones to add.

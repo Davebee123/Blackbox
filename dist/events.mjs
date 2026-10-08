@@ -67,7 +67,7 @@ export const CARDS = {
     name: 'Hollow Choir', weight: 1, ms: 25 * 60000, fight: true, from: 10,
     where: (s) => (hackerLevel(s) >= 10 ? places(s) : []),
     make: (s) => ({ family: 'ghostroot', level: hackerLevel(s), name: 'HOLLOW CHOIR', boss: 'choir' }),
-    text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It mirrors your commands, and at half it splits off a second Decoy. Silence it before it moves on.`,
+    text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It mirrors your commands, and at half its mirror bounces back harder. Silence it before it moves on.`,
     reward: (ev) => `${bountyPay(ev.level) * 2} credits and a protocol, Custom or better`,
     won: (s, ev) => {
       s.server.credits += bountyPay(ev.level) * 2;

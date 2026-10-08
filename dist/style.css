@@ -2920,3 +2920,38 @@ details.map-pick { pointer-events: auto; }
 .net-dark span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
 .net-dark small { color: var(--dim); font-size: 11px; }
 .ptip-body .tag.native { justify-self: start; color: var(--r-zeroday); border-color: rgba(212, 166, 74, 0.5); }
+/* Genes (genome.mjs): a virus's byline, its gene chips, the scan card and the codex by gene */
+.byline { margin-left: 6px; font: 600 11px var(--mono); letter-spacing: 1px; color: var(--ac, var(--muted)); white-space: nowrap; }
+.byline.stray { color: var(--dim); }
+h1 .byline { font-size: 13px; vertical-align: middle; }
+.hud-bar .bar-top .vname .byline { flex-shrink: 0; margin-left: -4px; font: 600 11px var(--mono); letter-spacing: 1px; line-height: 1.2; color: var(--ac, var(--muted)); }
+.gene-line { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0; }
+.gchip { display: inline-flex; align-items: center; gap: 3px; padding: 0 5px; border: 1px solid color-mix(in srgb, var(--ax) 55%, transparent); border-radius: 2px; color: var(--ax); font: 500 10px/16px var(--mono); letter-spacing: 0.5px; white-space: nowrap; cursor: help; }
+.gchip .glyph { width: 10px; height: 10px; margin: 0; }
+.gchip.g-core { opacity: 0.55; border-style: dashed; }
+.gchip.unknown { color: var(--dim); border-color: var(--line); opacity: 1; }
+.gchip.g-tell { border-style: dotted; }
+.scan-card { display: grid; gap: 4px; margin: 2px 0; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--inset); }
+.sc-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; }
+.sc-head b { color: var(--bright); letter-spacing: 1px; }
+.sc-head small { color: var(--dim); }
+.sc-style { margin: 0; color: var(--muted); font-size: 12px; }
+.sc-row { display: flex; gap: 8px; align-items: baseline; }
+.sc-k { flex: 0 0 42px; color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+.sc-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.sc-deep { list-style: none; margin: 2px 0 0; padding: 0; display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.sc-deep b { color: var(--bright); }
+.cx-gene span { display: flex; align-items: center; gap: 5px; }
+.cx-gene em { font-style: normal; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.cx-gene .gax { display: inline-flex; color: var(--ax); }
+.cx-gene .gax .glyph { width: 11px; height: 11px; margin: 0; }
+.cx-gene.seen span { color: var(--muted); }
+.cx-gene .cx-tele, .cx-gene .cx-answer { color: var(--dim); }
+.cx-gene.on .cx-answer { color: var(--you); }
+/* A long genome name (WARDED CRYPTJACK-4821 v2 · TOLLGATE) wraps on a phone instead of losing its byline */
+@media (max-width: 900px) {
+  .hud-bar .bar-top .vname { flex-wrap: wrap; white-space: normal; row-gap: 2px; }
+  .hud-bar .bar-top .vname strong { font-size: 14px; letter-spacing: 1px; overflow-wrap: anywhere; }
+  .hud-bar .bar-top .vname .byline { margin-left: 0; }
+}
+.cx-gene .cx-tele .glyph { width: 10px; height: 10px; margin: 0 4px 0 0; vertical-align: -1px; }

@@ -549,11 +549,17 @@ test('codex: a component says ??? until you break one, then what it does', async
   const ev = resolveCycle(s);
   assert.ok(ev.some((e) => e.type === 'codex'));
   assert.ok(s.codex[codexKey(v, p)]);
-  assert.match(codexMarkup(s), /Surge: hits you for/);
-  // The next CRYPTJACK's Pulse Node is known on sight.
+  // The codex learns gene by gene: the Pulse Node's Surge is decoded, with its rule and its answer.
+  assert.match(codexMarkup(s), /cx-gene on"><span>.*Surge.*A plain heavy hit every 3 to 5 cycles/);
+  assert.match(codexMarkup(s), /Codex · 1\/41 decoded/);
+  // The next CRYPTJACK's Pulse Node is known on sight, and so is a worm's: the gene carries across bodies.
   const t = fresh(); t.codex = s.codex;
   command(t, 'encounter cryptjack'); command(t, 'engage');
   assert.ok(knowsPart(t, t.encounter.virus, t.encounter.virus.parts.find((x) => x.id === 'pulse')));
+  const w = fresh(); w.geneCodex = s.geneCodex;
+  command(w, 'encounter splinter'); command(w, 'engage');
+  assert.ok(knowsPart(w, w.encounter.virus, w.encounter.virus.parts.find((x) => x.id === 'pulse')), 'Surge is known on a worm too');
+  assert.ok(!knowsPart(w, w.encounter.virus, w.encounter.virus.parts.find((x) => x.id === 'replicator')), 'Replicate is not');
 });
 
 test('a paused fight resumes on any order, and typos at home get a did-you-mean', async () => {

@@ -541,6 +541,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     deadman: !!spec.deadman, // Tripwire: break it while the others live and they go loud
     command: !!spec.command, // C2 Node: fragments gnaw harder while it lives, and drop when it breaks
     mimic: !!spec.mimic, // Mimic: plays your last command back at you (its tell)
+    ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
     lastDamaged: 0,
@@ -640,6 +641,9 @@ const COLDWALLET = {
 // phases are mechanics with target rules and telegraphs, and its own parts hit softly (dmg).
 // A strain boss (two parts, its strain's rule) is soft at 10 and hard to keep up with by 30: its hits step with level.
 const STRAIN_BOSS_LATE = [[8, 1], [10, 0.8], [18, 1.1], [30, 1.45]];
+// HASHLORD's own step, flatter and longer: its Pulse Node carried the fight (a Surge took half your Signal at 30), and a
+// charge on top of a plain hit that big went past the spike cap (docs/genome.md rule 5). More Integrity, smaller hits.
+const HASHLORD_LATE = [[8, 1], [10, 0.8], [18, 0.95], [30, 1.1]];
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
@@ -647,25 +651,38 @@ export const BOSSES = {
   relayking: { name: 'RELAY-KING', family: 'worm', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['faster'], say: 'RELAY-KING speeds up: every attack comes a cycle sooner.' }] },
   // REPO MAN (events.mjs): the bounty from level 8.
   repoman: { name: 'REPO MAN', family: 'ransomware', hp: 1.6, dmg: 1, enrageAt: 18, phases: [{ at: 0.6, do: ['rearm'], say: 'REPO MAN re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'REPO MAN gets desperate: every attack comes a cycle sooner.' }] },
-  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half it splits off a second Decoy, on the off-beat.
+  // HOLLOW CHOIR (events.mjs): a ghostroot boss from level 10. At half its Decoy's bounce rises from 30% to 50% (Harmony), in
+  // place of the second Decoy it used to split off on the off-beat: one global beat, as the compatibility rules ask (genes.mjs).
   // KESSLER-FARM-00 (rogue.mjs FARM), the crew dungeon: crew bosses on the group boss framework (raid.mjs).
   // Sized for a crew of four (smaller crews get a smaller boss: crewHp in raid.mjs). Their own parts hit
   // softly (dmg) and go at whoever holds aggro; the danger is the mechanics, each a share of max Signal.
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
-  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
+  choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, signature: { name: 'Harmony', rule: 'At half its Decoy\'s mirror bounces 50% of your command back, not 30%.' }, phases: [{ at: 0.5, do: ['harmony'], say: 'The Hollow Choir finds its harmony: on the Decoy\'s beat, half of what you fire now bounces back.' }] },
   // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
   // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
   // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
   // their network's native uniques (BOSS_LOOT odds and pity).
   'nb-deadbolt': { name: 'DEADBOLT', family: 'ransomware', third: 'mutex', native: true, lair: 'DEADBOLT-VAULT', hp: 1.25, dmg: 1, enrageAt: 18, about: 'A Mutex locks its Encryptor. At 60% it re-arms, and at 30% a second Mutex throws a fresh lock.', phases: [{ at: 0.6, do: ['rearm'], say: 'DEADBOLT re-arms every part.' }, { at: 0.3, do: ['spawn:mutex'], say: 'DEADBOLT throws a second Mutex: the Encryptor is locked again.' }] },
   'nb-tripmine': { name: 'TRIPMINE', family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'Its Tripwire (a Lockbox below level 20) sends the rest loud if it breaks first. At half every attack comes a cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard: every attack comes a cycle sooner.' }] },
-  'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', hp: 2.5, dmg: 1.3, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Hashrat boss: while its Miner lives your cooldowns tick every other cycle. At 60% it re-arms, at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'HASHLORD overclocks: every attack comes a cycle sooner.' }] },
+  // HASHLORD, rebuilt (docs/genome.md 7.5): GLASSJAW's Hashrat build, from level 16. A Pool Lock wards its Miner, but only
+  // against your commands: burns and helpers go through at full. Block Reward (a Self-Update on the Miner) and the Chain Fork
+  // at half, when a second Miner spins up (the tax comes back if the first is gone, and the Pool Lock wards it too).
+  'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
+    extra: [{ id: 'poollock', name: 'Pool Lock', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'miner', wardCommands: true }],
+    signature: { name: 'Chain Fork', rule: 'At half a second Miner spins up. Its tax comes back if the first Miner is gone, and the Pool Lock wards it too while it stands.' },
+    hp: 3.4, dmg: 1.05, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss: while its Miner lives your cooldowns tick every other cycle, and a Pool Lock wards the Miner against your commands (burns and helpers go through). At 60% it re-arms, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain: a second Miner spins up.' }] },
   'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half every attack comes a cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port: every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror: break it and the Replicator together.' }] },
   'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss: its Patcher heals the most damaged part. At 60% it re-arms, at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot: every attack comes a cycle sooner.' }] },
   'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss: its Flooder hits every cycle, harder each time, and a delay resets it. At half it re-arms.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
-  'nb-mirrorshade': { name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', hp: 1.5, dmg: 1.1, enrageAt: 17, about: 'A Mimic plays your commands back on its beat. At half it splits off a Decoy that mirrors you on the off-beat.', phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'MIRRORSHADE splits off a Decoy: it mirrors you on the off-beat.' }] },
+  // MIRRORSHADE, rebuilt (docs/genome.md 7.5): NULL CHOIR's, from level 12. One feedback amplifier (the Mimic) on its Scramble,
+  // a plain charge (Glass Cut), and the Doppelganger at half: the Mimic stops recording and takes the shape of the first part
+  // you broke, or of the Pulse Node. At 12 and 13 its Scrambler is trimmed (trim): ◆3, and a Scramble every 5 cycles.
+  'nb-mirrorshade': { name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
+    trim: { below: 14, part: 'scrambler', armor: 3, interval: 5 },
+    signature: { name: 'Doppelganger', rule: 'At half the Mimic stops recording and takes the shape of the first part you broke (its attack and its ◆), or of the Pulse Node if you haven\'t broken one.' },
+    hp: 1.3, dmg: 0.9, enrageAt: 17, about: 'A Mimic plays your commands back on its beat. At 60% it re-arms, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
   'nb-sleepwalker': { name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss: dormant until you hit it, then its Cell sounds the Alarm. At half it re-arms.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way: every part re-arms.' }] },
   'nb-echolalia': { name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss: every hit that gets through repeats a cycle later at half. At 60% it re-arms, at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you: every attack comes a cycle sooner.' }] },
 };
@@ -727,6 +744,7 @@ export const TELL = {
   open: { mult: 1.5, cycles: 2 },
   read: { xp: 0.1, xpMax: 0.4, rolls: 1, min: 2 },
   bots: { answer: true }, // sim switch (balance.mjs): a bot that plays as if it can't see tells
+  sim: { only: null }, // sim switch (genesim.mjs): only the tells of these genes (tells.mjs plannedTells)
 };
 // The library. part: the fixed part it sits on ('special', the family's signature part; 'basic'; or a part id),
 // shown on the chip and in the codex. gene: the tell gene it is (genes.mjs); a boss's or a guard's own name for one. A charge needs a part with an attack (it falls back to the other one).
@@ -756,7 +774,10 @@ export const TELLS = {
   deadbolt: { kind: 'charge', name: 'Deadbolt', gene: 'fulldisk', part: 'special' },
   claymore: { kind: 'charge', name: 'Claymore', gene: 'overcharge', part: 'basic' },
   spamrun: { kind: 'charge', name: 'Spam Run', gene: 'massmailer', part: 'special', spawn: 1 },
-  doppelganger: { kind: 'charge', name: 'Doppelganger', gene: 'possession', part: 'special', longer: 2 },
+  doppelganger: { kind: 'charge', name: 'Doppelganger', gene: 'possession', part: 'special', longer: 2 }, // MIRRORSHADE's before its rebuild
+  glasscut: { kind: 'charge', name: 'Glass Cut', gene: 'overcharge', part: 'special' }, // MIRRORSHADE: a plain Overcharge on the Scrambler
+  difficultybomb: { kind: 'charge', name: 'Difficulty Bomb', gene: 'overcharge', part: 'basic' }, // HASHLORD: on the Pulse Node
+  blockreward: { kind: 'cast', name: 'Block Reward', gene: 'selfupdate', part: 'miner', does: 'grow' }, // HASHLORD: a Self-Update on the Miner
 };
 // Which tells each virus brings, in order: a tier's count takes the first ones open at the virus's level
 // (a cast from TELL.castFrom; a seal from SEAL_FROM, on a part that wears ◆). Strains bring their own charge
@@ -776,7 +797,8 @@ export const TELL_SETS = {
   'nb-deadbolt': ['deadbolt', 'extortion', 'overcharge', 'keyrotation'],
   'nb-tripmine': ['claymore', 'extortion', 'fulldisk', 'keyrotation'],
   'nb-backorifice': ['spamrun', 'selfupdate', 'overcharge', 'resync'],
-  'nb-mirrorshade': ['doppelganger', 'persistence', 'overcharge', 'godark'],
+  'nb-mirrorshade': ['glasscut', 'persistence', 'godark'], // its charge is a plain one now: the Mimic is its one feedback amplifier
+  'nb-hashlord': ['difficultybomb', 'blockreward', 'keyrotation'],
 };
 
 // ---------- the genome (genes.mjs, docs/genome.md) ----------
@@ -786,7 +808,7 @@ export const TELL_SETS = {
 // dice, so nothing else moves. overrides.genes forces the rolled genes instead (a probe in genesim.mjs; phase 3
 // rolls them from an author's toolkit by the budget, genes.mjs budgetFor).
 // Each gene on the virus says where it came from (src): core, build, rolled, grade or boss.
-export function genomeOf(parts, { strain = null, mutation = null, grade = 1, boss = null, ice = false, srcs = [] } = {}) {
+export function genomeOf(parts, { strain = null, mutation = null, grade = 1, boss = null, ice = false, srcs = [], linked = false } = {}) {
   const out = [];
   const add = (id, src) => { if (GENES[id] && !out.some((x) => x.id === id)) out.push({ id, src }); };
   const build = STRAINS[strain]?.genes || [];
@@ -794,7 +816,16 @@ export function genomeOf(parts, { strain = null, mutation = null, grade = 1, bos
   parts.forEach((p, i) => { for (const id of partGenes(p)) add(id, srcOf(p, i, id)); });
   if (mutation && MUTATIONS[mutation]) add(MUTATIONS[mutation].gene, boss ? 'boss' : 'rolled');
   if (grade >= 2) add('linked', 'grade');
+  else if (linked) add('linked', 'rolled'); // forced (a probe)
   return out;
+}
+// A wild virus's name before its tag: its body's stem, after the adjective of its costliest rolled gene (the first
+// rolled, on a tie). A strain is a named build: its name is its own.
+export function stemOf(family, genome = []) {
+  const f = familyOf(family), stem = f?.stem || f?.name.toUpperCase() || String(family).toUpperCase();
+  const rolled = genome.filter((g) => g.src === 'rolled' && GENES[g.id]);
+  const top = rolled.reduce((best, g) => (!best || GENES[g.id].cost > GENES[best.id].cost ? g : best), null);
+  return top ? `${GENES[top.id].adj.toUpperCase()} ${stem}` : stem;
 }
 // Who wrote it (authors.mjs): a boss's author, a named build's, Kestrel for ICE and the Sentinel, then whoever
 // the fight's place says (a faction's server, a guard's server; null for SPRAWL-00's strays), then the family's crew.
@@ -839,7 +870,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const pool = open.filter((spec) => spec.pool === 'third');
   const own = overrides.boss && pool.find((spec) => spec.id === BOSSES[overrides.boss]?.third); // a native boss brings its own (data BOSSES nb-*)
   const third = genes ? pool.find((spec) => genes.includes(spec.gene)) || null : pool.length ? own || pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
-  const specs = open.filter((spec) => spec.pool !== 'third' || spec === third);
+  const specs = [...open.filter((spec) => spec.pool !== 'third' || spec === third), ...(BOSSES[overrides.boss]?.extra || [])]; // a boss's own parts (HASHLORD's Pool Lock)
   const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
@@ -873,15 +904,21 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     const dmg = boss.dmg * (boss.healerDmg ? runLate(level, boss.healerDmg) : 1);
     for (const k of ['amount', 'hit', 'rampBy']) if (p.attack?.[k] && (k !== 'amount' || ['damage', 'encrypt'].includes(p.attack.effect))) p.attack[k] = Math.max(1, Math.round(p.attack[k] * dmg));
   }
+  // Under its trim level a boss's budget trims a part: fewer ◆, a slower attack (MIRRORSHADE's Scrambler at 12 and 13).
+  const cut = boss?.trim && level < boss.trim.below && parts.find((p) => p.id === boss.trim.part);
+  if (cut) { cut.armor = cut.maxArmor = Math.min(cut.maxArmor, boss.trim.armor); if (cut.attack) cut.attack.interval = Math.max(cut.attack.interval, boss.trim.interval); }
   const weakPoint = parts[Math.floor(next() * parts.length)].id;
-  const tagNo = String(seed >>> 0).slice(-4).padStart(4, '0');
-  const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
+  const srcs = specs.map((spec) => (spec.pool === 'third' || boss?.extra?.includes(spec) ? 'rolled' : null));
+  const genome = genomeOf(parts, { strain: strainId, mutation, grade, boss: overrides.boss || null, ice: !!family.ice, srcs, linked: !!genes?.includes('linked') });
+  // Its name (docs/genome.md 5.4): the adjective of its costliest rolled gene, its body's stem or its build's name, its
+  // tag (the seed's four digits, or its file's) and its grade: WARDED CRYPTJACK-4821 v2. Named fixtures keep theirs.
+  const tagNo = overrides.tag ? String(overrides.tag).slice(-4).padStart(4, '0') : String(seed >>> 0).slice(-4).padStart(4, '0');
+  const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? stemOf(familyId, genome) + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  const srcs = specs.map((spec) => (spec.pool === 'third' ? 'rolled' : null));
   const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
   return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}),
-    genes: genomeOf(parts, { strain: strainId, mutation, grade, boss: overrides.boss || null, ice: !!family.ice, srcs }), author };
+    genes: genome, author };
 }
 
 // ---------- locations ----------

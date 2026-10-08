@@ -23,25 +23,27 @@
 // New genes (Exfiltrate, SYN Flood, Front End…) join this table in phase 3 with the same shape, and wild viruses
 // start rolling them from their author's toolkit by the budget (budgetFor). Until then nothing here rolls on its own.
 
+// icon: its glyph (glyphs.mjs); colour: its chips' colour.
 export const AXES = {
-  burst: { name: 'Burst', punishes: 'standing in front of big hits', icon: 'event-warning' },
-  attrition: { name: 'Attrition', punishes: 'letting damage build up over time', icon: 'injector' },
-  feedback: { name: 'Feedback', punishes: 'firing a direct hit at the wrong time', icon: 'interrupt' },
-  tempo: { name: 'Tempo', punishes: 'leaning on cooldowns and long skills', icon: 'behavior' },
-  sustain: { name: 'Sustain', punishes: 'slow kills', icon: 'server' },
-  shell: { name: 'Shell', punishes: 'single big hits on one part', icon: 'shell-shield' },
-  order: { name: 'Order', punishes: 'killing parts in the wrong order', icon: 'command' },
-  clock: { name: 'Clock', punishes: 'long fights', icon: 'pulse-node' },
-  fog: { name: 'Fog', punishes: 'not knowing what is coming', icon: 'scan' },
-  swarm: { name: 'Swarm', punishes: 'ignoring adds', icon: 'mutation' },
-  pierce: { name: 'Pierce', punishes: 'stacking shields, ◆ and heals', icon: 'expand' },
+  burst: { name: 'Burst', punishes: 'standing in front of big hits', icon: 'damage', colour: '#ff5b3d' },
+  attrition: { name: 'Attrition', punishes: 'letting damage build up over time', icon: 'burn', colour: '#ff9f43' },
+  feedback: { name: 'Feedback', punishes: 'firing a direct hit at the wrong time', icon: 'mirror', colour: '#b8a6ff' },
+  tempo: { name: 'Tempo', punishes: 'leaning on cooldowns and long skills', icon: 'sync', colour: '#6fb6ff' },
+  sustain: { name: 'Sustain', punishes: 'slow kills', icon: 'payload', colour: '#7bd389' },
+  shell: { name: 'Shell', punishes: 'single big hits on one part', icon: 'shield', colour: '#f1b92f' },
+  order: { name: 'Order', punishes: 'killing parts in the wrong order', icon: 'pipeline', colour: '#e07bd0' },
+  clock: { name: 'Clock', punishes: 'long fights', icon: 'clock', colour: '#ffd85c' },
+  fog: { name: 'Fog', punishes: 'not knowing what is coming', icon: 'stealth', colour: '#9fb0c8' },
+  swarm: { name: 'Swarm', punishes: 'ignoring adds', icon: 'spider', colour: '#8fd46b' },
+  pierce: { name: 'Pierce', punishes: 'stacking shields, ◆ and heals', icon: 'spike', colour: '#7fd1c7' },
 };
+// icon: the glyph a gene you haven't seen shows (??? and its category: so you know it's a part behaviour, say).
 export const CATS = {
-  attack: { name: 'Attack types', one: 'attack type' },
-  part: { name: 'Part behaviours', one: 'part behaviour' },
-  defence: { name: 'Defences', one: 'defence' },
-  rule: { name: 'Passive rules', one: 'passive rule' },
-  tell: { name: 'Tells', one: 'tell' },
+  attack: { name: 'Attack types', one: 'attack type', icon: 'hit' },
+  part: { name: 'Part behaviours', one: 'part behaviour', icon: 'module' },
+  defence: { name: 'Defences', one: 'defence', icon: 'reduction' },
+  rule: { name: 'Passive rules', one: 'passive rule', icon: 'config' },
+  tell: { name: 'Tells', one: 'tell', icon: 'signal' },
 };
 
 const A = (x) => x?.attack || null;
