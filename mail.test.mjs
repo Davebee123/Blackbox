@@ -376,7 +376,7 @@ test('a letter that came with a contract shows once: as the contract, not again 
   assert.ok(!letters.includes('Sample request') && !letters.includes('a name on the list'), 'not listed twice');
   assert.ok(letters.includes('just a letter'));
   assert.match(html, /data-mail="j6"/);
-  assert.match(html, /class="mrow unread[^"]*" data-mail="j6"/, 'its unread dot moves to the contract');
+  assert.match(html, /class="mrow has-f unread[^"]*" data-mail="j6"/, 'its unread dot moves to the contract');
   assert.match(html, /Send us two\.|hi/, 'a contract reads as its letter');
 });
 

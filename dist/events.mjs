@@ -18,7 +18,7 @@ import { FAMILIES, CONFIG } from './data.mjs';
 import { rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
-import { eventMult, leanPick, openLair, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
+import { eventMult, noteEvent, leanPick, openLair, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -158,6 +158,7 @@ export function deal(s, card = null) {
   const ev = { id: ++d.n, card: id, loc: loc?.id || null, left: c.ms, seed: (d.n * 7919 + (loc?.seed || 1) * 31) >>> 0, ...c.make(s, loc) };
   c.start?.(s, ev, loc);
   d.last = id;
+  noteEvent(s, id); // your network's favoured cards show on its card once each has come up twice (network.mjs)
   if (c.ms && id !== 'leak') eventsOf(s).push(ev);
   emit(s, 'world-event', eventText(s, ev), { card: id, event: c.ms && id !== 'leak' ? ev.id : null, location: ev.loc });
   return ev;

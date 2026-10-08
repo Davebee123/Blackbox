@@ -188,12 +188,21 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.raid.cast { border-style: dashed; }
 .intent.raid .compiling { color: var(--hot); font-style: italic; opacity: 1; }
 .intent.raid.fuse { border-color: var(--amber); color: var(--amber); }
-/* A solo tell (tells.mjs): the crew-boss chip on its part's row, with what answers it on the last line. */
-.intent.raid.tell { white-space: normal; }
-.intent.raid.tell small { white-space: normal; line-height: 1.25; }
-.intent.raid.tell .answer { color: var(--amber); opacity: 1; font-weight: 600; }
-.intent.raid.tell.t-seal, .intent.raid.tell.t-mimic { border-color: var(--amber); }
-.intent.raid.tell.t-seal b, .intent.raid.tell.t-mimic b { color: var(--amber); }
+/* A solo tell (tells.mjs): an attack chip, charged. A kicker strip (what kind, when), the name and what it does,
+   then the answer as an order on its own line. Charges and casts are hot; seals and the Mimic are amber. */
+.intent.tell { --tc: var(--hot); --tc-soft: var(--hot-soft); display: grid; gap: 0; padding: 0; border: 1px solid var(--tc); color: var(--text); overflow: hidden; }
+.intent.tell.t-seal, .intent.tell.t-mimic { --tc: var(--amber); --tc-soft: rgba(241, 185, 47, 0.12); }
+.intent.tell.t-cast { border-style: dashed; }
+.intent.tell .tl-kick { display: flex; align-items: center; gap: 5px; padding: 2px 7px; background: var(--tc-soft); color: var(--tc); font: 600 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+.intent.tell .tl-kick .ico { width: 11px; height: 11px; }
+.intent.tell .tl-when { margin-left: auto; letter-spacing: 0.5px; }
+.intent.tell .tl-main { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; padding: 4px 7px 2px; min-width: 0; }
+.intent.tell .tl-main b { font-weight: 600; color: var(--tc); }
+.intent.tell .tl-what { margin-left: 0; color: var(--muted); }
+.intent.tell .tl-ans { display: flex; align-items: baseline; gap: 6px; padding: 1px 7px 5px; color: var(--amber); font: 600 11px var(--mono); white-space: nowrap; }
+.intent.tell .tl-prog { margin-left: auto; color: var(--muted); font-weight: 400; }
+.intent.tell.now { background: var(--tc-soft); }
+.intent.tell.now .tl-kick { background: var(--tc); color: var(--panel-2); }
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
 .crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }
@@ -517,7 +526,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .intent .code { display: inline; }
   .intent.mine small { display: none; }
   .intent.raid b { display: block; white-space: normal; font-size: 10px; letter-spacing: 0.5px; } /* a tell or a crew boss's mechanic keeps its name: it's what you answer */
-  .intent.raid.tell small:not(.answer) { display: none; }
+  .intent.tell .tl-what, .intent.tell .tl-when { display: none; }
+  .intent.tell b { display: block; white-space: normal; font-size: 11px; }
   .bnow { grid-template-columns: 1fr !important; gap: 2px; }
   .bhead .countdown { font-size: 15px; }
   .hud-bar .bar-top { flex-wrap: wrap; }
@@ -867,15 +877,32 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .mnode.tip-target { outline: none; box-shadow: none; filter: drop-shadow(0 0 7px rgba(127, 209, 199, 0.9)); }
 .no-motion .tip.show { animation: none; }
 /* Victory: the fight's gains, until you close it. Under the CRT glass (z 70), over everything else. */
-.levelup { position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 50; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 14px 28px; background: var(--panel-2); border: 1px solid var(--you); border-radius: 6px; box-shadow: 0 0 40px rgba(127, 209, 199, 0.25); max-width: min(560px, calc(100vw - 32px)); pointer-events: none; }
-.levelup b { font: 700 22px var(--mono); letter-spacing: 3px; color: var(--you); }
-.levelup span { color: var(--text); font-size: 14px; }
-.levelup #levelup-text { display: grid; gap: 2px; }
-.levelup .lu-line.ghost { color: var(--dim); font-size: 12px; }
-.levelup .lu-go { pointer-events: auto; margin-top: 4px; }
-.levelup.show { animation: levelup-in 5s ease-out both; }
-@keyframes levelup-in { 0% { opacity: 0; transform: translate(-50%, -10px) scale(0.96); } 8% { opacity: 1; transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
-.no-motion .levelup.show { animation: none; }
+/* A level-up (app.js levelUp): a privilege escalation on the terminal. A header strip, the level as a big
+   readout with the class beside it, each gain as a +line typed in one after another, the next level ghosted,
+   and a bar along the bottom that drains while it stays up. Left-aligned, square, under the CRT glass. */
+.levelup { position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 50; width: min(400px, calc(100vw - 32px)); display: grid; background: rgba(10, 8, 5, 0.97); border: 1px solid var(--you); border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 32px rgba(127, 209, 199, 0.18); pointer-events: none; overflow: hidden; }
+.levelup .lu-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: var(--you); color: #071412; font: 600 10px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; }
+.levelup .lu-dots { display: flex; gap: 3px; } .levelup .lu-dots i { width: 5px; height: 5px; background: currentColor; opacity: 0.55; }
+.levelup .lu-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 12px 14px 8px; align-items: start; }
+.levelup .lu-num { display: grid; justify-items: center; padding: 2px 12px 4px; border: 1px solid rgba(127, 209, 199, 0.35); background: repeating-linear-gradient(0deg, rgba(127, 209, 199, 0.06) 0 1px, transparent 1px 3px); }
+.levelup .lu-num small { font: 600 9px var(--mono); letter-spacing: 2px; color: var(--muted); }
+.levelup .lu-num b { font: 700 40px/1 var(--mono); color: var(--you); text-shadow: 0 0 14px rgba(127, 209, 199, 0.45); font-variant-numeric: tabular-nums; }
+.levelup .lu-who { display: grid; gap: 6px; min-width: 0; }
+.levelup .lu-who > b { font: 700 15px var(--mono); letter-spacing: 3px; color: var(--bright); }
+.levelup .lu-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.levelup .lu-list li { font: 13px/1.4 var(--mono); color: var(--text); }
+.levelup .lu-list li::before { content: '+ '; color: var(--you); font-weight: 700; }
+.levelup .lu-next { margin: 0; padding: 0 14px 10px; font: 11px var(--mono); color: var(--dim); }
+.levelup .lu-go { pointer-events: auto; margin: 0 14px 12px; justify-self: start; }
+.levelup .lu-timer { height: 2px; background: var(--you); transform-origin: left; opacity: 0.7; }
+.levelup.show { animation: levelup-in var(--lu-ms, 5s) ease-out both; }
+.levelup.show .lu-list li { animation: lu-type 0.25s ease-out both; animation-delay: calc(0.25s + var(--i) * 0.12s); }
+.levelup.show .lu-timer { animation: lu-drain var(--ms) linear both; }
+@keyframes levelup-in { 0% { opacity: 0; transform: translate(-50%, -8px); clip-path: inset(0 0 100% 0); } 6% { opacity: 1; transform: translate(-50%, 0); clip-path: inset(0 0 0 0); } 88% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lu-type { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes lu-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.no-motion .levelup.show, .no-motion .levelup.show .lu-list li, .no-motion .levelup.show .lu-timer { animation: none; }
+@media (prefers-reduced-motion: reduce) { .levelup.show, .levelup.show .lu-list li, .levelup.show .lu-timer { animation: none; } }
 @media (max-width: 1440px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } }
 
 /* ---------- immersive shell (shell.mjs; body.shell-on) ----------
@@ -1343,6 +1370,12 @@ body.no-motion .sp-go { animation: none; opacity: 1; }
 .rep-chip .glyph { margin: 0; }
 .hub-page .craft-list li.locked { opacity: 0.55; }
 .mrow .fmark-i { margin-left: auto; }
+/* A contract row: whose job it is, as a mark down the left edge; the rest moves over one column. */
+.mrow.has-f { grid-template-columns: auto minmax(0, 1fr) auto; }
+.mrow.has-f .mrow-f { grid-column: 1; grid-row: 1 / 3; align-self: center; margin: 0 2px 0 0; }
+.mrow .mrow-none { display: inline-block; width: 17px; }
+.mrow.has-f .mfrom, .mrow.has-f .msubj { grid-column: 2; }
+.mrow.has-f .tag, .mrow.has-f .mexp { grid-column: 3; }
 /* The codex: ??? until broken */
 .part-name { position: relative; }
 .part-name[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: max-content; max-width: 280px; padding: 6px 9px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--text); font: 400 12px/1.4 var(--sans); letter-spacing: 0; text-transform: none; white-space: normal; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transition: opacity 0.08s, visibility 0s linear 0.08s; pointer-events: none; }
@@ -2864,8 +2897,12 @@ details.map-pick { pointer-events: auto; }
 .ttree .tspec .tspec-opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; grid-column: 1 / -1; }
 .ttree .tspec .tspec-opts .act { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
 .ttree .tspec .tspec-opts .act small { font-size: 11px; opacity: 0.8; }
-.hot-btn { color: var(--hot); border-color: var(--hot); display: inline-flex; flex-direction: column; align-items: center; line-height: 1.15; }
-.hot-btn small { font-size: 10px; opacity: 0.75; letter-spacing: 0.3px; }
+/* Go loud (a loud run): a hazard-taped switch, not a plain button. The numbers are on hover (LOUD_TIP). */
+.hot-btn { position: relative; display: inline-flex; align-items: center; gap: 7px; color: var(--hot); border-color: var(--hot); font: 700 12px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; padding-left: 16px; overflow: hidden; }
+.hot-btn::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 7px; background: repeating-linear-gradient(135deg, var(--hot) 0 3px, transparent 3px 6px); opacity: 0.85; }
+.hot-btn .loud-ico { width: 13px; height: 13px; background: currentColor; -webkit-mask: url('ui/icons/event-warning.svg') center/contain no-repeat; mask: url('ui/icons/event-warning.svg') center/contain no-repeat; }
+.hot-btn:hover:not(:disabled), .hot-btn:focus-visible { background: repeating-linear-gradient(135deg, var(--hot-soft) 0 8px, transparent 8px 16px); color: var(--hot); }
+.hot-btn:disabled::before { opacity: 0.35; }
 .net-hot { align-self: center; }
 .coll li.heard { outline: 1px solid var(--hot); }
 .coll .coll-listen { float: right; margin-top: -30px; font-size: 11px; padding: 1px 6px; }
@@ -2913,6 +2950,7 @@ details.map-pick { pointer-events: auto; }
 .cm-net small { color: var(--dim); }
 .net-card h1 { font-size: 20px; }
 .lean-bar { display: flex; height: 22px; margin: 8px 0 10px; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; background: var(--inset); }
+.net-none { margin: 8px 0 10px; color: var(--muted); font-size: 13px; }
 .lean-seg { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 0 6px; overflow: hidden; white-space: nowrap; font: 600 11px var(--mono); letter-spacing: 0.5px; color: var(--bg); }
 .lean-seg.l0 { background: var(--amber); } .lean-seg.l1 { background: var(--amber-soft); } .lean-seg.l2 { background: var(--amber-deep); color: var(--text); }
 .lean-seg .glyph { flex: none; }
@@ -2966,3 +3004,8 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
   .hud-bar .bar-top .vname .byline { margin-left: 0; }
 }
 .cx-gene .cx-tele .glyph { width: 10px; height: 10px; margin: 0 4px 0 0; vertical-align: -1px; }
+
+/* Themed hover tips (app.js): every title in the game, in the game's own card. */
+.tt { position: fixed; z-index: 90; max-width: 300px; padding: 8px 11px; background: rgba(10, 8, 5, 0.97); color: var(--text); border: 1px solid var(--line-strong); border-top: 2px solid var(--amber); border-radius: 4px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55); font: 13px/1.45 var(--sans, inherit); pointer-events: none; white-space: pre-line; animation: ptip-in 0.12s ease-out; }
+.tt b { display: block; margin-bottom: 3px; color: var(--amber); font: 600 12px var(--mono); letter-spacing: 0.5px; }
+@media (prefers-reduced-motion: reduce) { .tt { animation: none; } }

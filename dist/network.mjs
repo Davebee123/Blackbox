@@ -126,6 +126,32 @@ export function fightNet(s, e = s.encounter) {
   return netSeedOf(s) ? 'you' : null; // home: your wall, your outposts, your events
 }
 export const nameOf = (s, who) => { const g = sigOf(s, who); return g ? g.name : null; };
+// What you've learned about a network by playing on it (s.netIntel[who]). The Network card and `network` show only
+// this: the families you've fought there, its native strain once you've met it twice, its favoured events once each
+// has come up twice, and what it's rich in once its code has noticeably leaned. Nothing is told; you find it.
+export const INTEL = { strain: 2, event: 2, rich: 8 };
+export const intelOf = (s, who) => ((s.netIntel ||= {})[who] ||= { fam: {}, strains: {}, events: {}, rich: 0 });
+const learn = (s, who, what) => emit(s, 'info', `You notice ${what} on ${nameOf(s, who)}.`, { network: who });
+export function noteKill(s, e) {
+  const who = fightNet(s, e), v = e?.virus, g = who && sigOf(s, who);
+  if (!g || !v) return;
+  const n = intelOf(s, who);
+  if (FAMILIES[v.family]) n.fam[v.family] = (n.fam[v.family] || 0) + 1; // the three families only: guards and bosses aren't a lean
+  if (v.strain) {
+    n.strains[v.strain] = (n.strains[v.strain] || 0) + 1;
+    if (v.strain === g.strain && n.strains[v.strain] === INTEL.strain) learn(s, who, `${STRAINS[v.strain].name} turns up often`);
+  }
+}
+export function noteEvent(s, card) {
+  const g = mine(s);
+  if (!g) return;
+  const n = intelOf(s, 'you');
+  n.events[card] = (n.events[card] || 0) + 1;
+  if (g.events.includes(card) && n.events[card] === INTEL.event) learn(s, 'you', `${card[0].toUpperCase() + card.slice(1)} comes up often`);
+}
+export const knowsStrain = (s, who) => (intelOf(s, who).strains[sigOf(s, who)?.strain] || 0) >= INTEL.strain;
+export const knowsEvent = (s, card) => (intelOf(s, 'you').events[card] || 0) >= INTEL.event;
+export const knowsRich = (s, who) => intelOf(s, who).rich >= INTEL.rich;
 export const whoLabel = (who) => (who === 'you' ? 'yours' : `${who}'s`);
 // Networks you know: yours and your consortium's members'.
 export const knownNets = (s) => [...(netSeedOf(s) ? ['you'] : []), ...(s.consortium?.members || [])];
@@ -221,7 +247,12 @@ export function biasCode(s, who, gains) {
     const x = (carry[k] || 0) + out[k] * NETWORK.codeShare, n = Math.min(out[k], Math.floor(x));
     carry[k] = x - n; out[k] -= n; moved += n;
   }
-  if (moved) out[rich] = (out[rich] || 0) + moved;
+  if (moved) {
+    out[rich] = (out[rich] || 0) + moved;
+    const n = intelOf(s, who), was = n.rich;
+    n.rich += moved;
+    if (was < INTEL.rich && n.rich >= INTEL.rich) learn(s, who, `${MATERIALS[rich].name} keeps turning up`);
+  }
   for (const k of Object.keys(out)) if (!out[k]) delete out[k];
   return out;
 }
@@ -318,14 +349,18 @@ export function networkRestore(s, was) {
 export function networkLines(s, who) {
   const g = sigOf(s, who);
   if (!g) return [who === 'you' ? 'No network seed.' : `No network for ${who}.`];
-  const fam = g.order.map((f, i) => `${FAMILIES[f].name}${i ? '' : ' (lead)'}`).join(' > ');
-  const nat = g.uniques.map((id) => (named(s, id) ? `${UNIQUES[id].name} (lv ${UNIQUES[id].level})` : `??? (lv ${UNIQUES[id].level})`)).join(', ');
+  const n = intelOf(s, who), fought = Object.entries(n.fam).filter(([f]) => FAMILIES[f]).sort((a, b) => b[1] - a[1]);
+  const fam = fought.length ? fought.map(([f, k]) => `${FAMILIES[f].name} ${k}`).join(', ') : 'nothing yet';
+  const nat = g.uniques.map((id) => (named(s, id) ? `${UNIQUES[id].name} (lv ${UNIQUES[id].level})` : '???')).join(', ');
+  const lair = who === 'you' && lairOf(s);
+  const events = who === 'you' ? g.events.filter((k) => knowsEvent(s, k)) : [];
   return [
     `${g.name} · ${whoLabel(who)}`,
-    `Lean: ${fam}. Native strain: ${STRAINS[g.strain].name}.`,
-    `Native boss: ${BOSSES[g.boss].name}${who === 'you' ? (lairOf(s) ? ` in ${lairOf(s).name}` : ` (its lair turns up at level ${NETWORK.lairFrom})`) : ''}.${who === 'you' && BOSSES[g.boss].floor > hackerLevel(s) ? ` It holds /core from level ${BOSSES[g.boss].floor}.` : ''}`,
+    `Fought here: ${fam}.${knowsStrain(s, who) ? ` ${STRAINS[g.strain].name} turns up often.` : ''}`,
+    `Native boss: ${lair ? `${BOSSES[g.boss].name} in ${lair.name}` : '???'}.${lair && BOSSES[g.boss].floor > hackerLevel(s) ? ` It holds /core from level ${BOSSES[g.boss].floor}.` : ''}`,
     `Native uniques: ${nat}.`,
-    `Events: ${g.events.map((k) => k[0].toUpperCase() + k.slice(1)).join(' and ')} more often. Rich in ${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'salvage' : 'Exploits'}.`,
+    ...(who === 'you' ? [`Events that come up often: ${events.length ? events.map((k) => k[0].toUpperCase() + k.slice(1)).join(' and ') : '???'}.`] : []),
+    `Rich in: ${knowsRich(s, who) ? `${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'salvage' : 'Exploits'}` : '???'}.`,
   ];
 }
 export function networkCommand(s, text) {
