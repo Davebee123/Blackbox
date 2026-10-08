@@ -67,7 +67,7 @@ export const CARDS = {
     name: 'Hollow Choir', weight: 1, ms: 25 * 60000, fight: true, from: 10,
     where: (s) => (hackerLevel(s) >= 10 ? places(s) : []),
     make: (s) => ({ family: 'ghostroot', level: hackerLevel(s), name: 'HOLLOW CHOIR', boss: 'choir' }),
-    text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It mirrors your commands, and at half its mirror bounces back harder. Silence it before it moves on.`,
+    text: (ev, where) => `The HOLLOW CHOIR, a level ${ev.level} ghostroot boss, is singing through ${where}. It mirrors your commands, and at half Integrity its mirror bounces back harder. Silence it before it moves on.`,
     reward: (ev) => `${bountyPay(ev.level) * 2} credits and a protocol, Custom or better`,
     won: (s, ev) => {
       s.server.credits += bountyPay(ev.level) * 2;
@@ -96,7 +96,7 @@ export const CARDS = {
     where: (s) => (s.netSeed && hackerLevel(s) >= NETWORK.darknet.from && darknetPick(s, hackerLevel(s)) ? [null] : []),
     make: (s) => { const id = darknetPick(s, hackerLevel(s)); return { unique: id, level: hackerLevel(s), credits: NETWORK.darknet.credits(hackerLevel(s)), exploits: NETWORK.darknet.exploits, net: homeName(s, id).name }; },
     start: (s, ev) => nameNative(s, ev.unique),
-    text: (ev) => `A broker on a darknet channel lists ${UNIQUES[ev.unique].name}, native to ${ev.net}, for ${ev.credits} credits and ${ev.exploits} Exploits. event buy ${ev.id}.`,
+    text: (ev) => `A broker on a darknet channel lists ${UNIQUES[ev.unique].name}, native to ${ev.net}, for ${ev.credits} credits and ${ev.exploits} Exploits. Type event buy ${ev.id} to buy it.`,
     reward: (ev) => UNIQUES[ev.unique].name,
   },
 };

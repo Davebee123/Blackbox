@@ -54,7 +54,7 @@ export default {
       {
         "subject": "Buying code",
         "body": [
-          "We pay over the odds for {material}. {amount} units.",
+          "We pay over the odds for {material}. Send {amount} units.",
           "Halcyon will not like it. That is why it pays."
         ]
       }

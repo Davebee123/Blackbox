@@ -16,7 +16,7 @@ const home = (s) => s.encounter?.mode !== 'run';
 
 export const TIPS = [
   // ---------- anywhere ----------
-  { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, installs are paused and the server earns no XP.' },
+  { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, and your installs and outposts are paused.' },
   { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'Kills drop code. Spend it on the Server page to build services.' },
   // Your first protocol: Loadout → the Protocols tab → Load. Three short steps, each pointing at the next click.
   { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'You have a protocol to equip. Open Loadout. You can only equip at home, not on a run or mid-fight.' },
@@ -55,7 +55,7 @@ export const TIPS = [
   { id: 'mail-contract', page: 'mail', at: '.contract', text: 'A contract counts as you play. When it is done, deliver it here to get paid.' },
   { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'This is Halcyon\'s board. Offers come and go on their own, and you can take up to three at a time. Only a contract you have taken counts.' },
   { id: 'store', page: 'hub', at: '.hub-win .store-page', text: 'Halcyon\'s store is its hub\'s Shop. Its own line is always there, and other agencies\' stock changes through the day.' },
-  { id: 'hub-shop', page: 'hub', at: '.hub-win .ptiles.stash .ptile', text: 'Every hub has a Shop: that faction\'s own goods. Better rep unlocks more of the shelf and trims the price.' },
+  { id: 'hub-shop', page: 'hub', at: '.hub-win .ptiles.stash .ptile', text: 'Every hub has a Shop with that faction\'s own goods. Better rep unlocks more of the shelf and trims the price.' },
   { id: 'store-plans', page: 'hub', at: '.plan-shelf', text: 'These are plans for harvesters and outpost modules. Buy one once and you can craft that kind on the Craft page for good.' },
   // ---------- hub sessions ----------
   { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'You are connected to a faction hub. Pick a line (click it, or type its number) to open that window, such as its market, its work or payloads.' },
@@ -66,8 +66,8 @@ export const TIPS = [
   { id: 'hub-slider', page: 'hub', at: '.mk-ticket input[data-mk-n]', text: 'Drag to pick how many. Every one you sell lowers this hub\'s price a little (every one you buy raises it), so a big order gets less for each.' },
   { id: 'hub-preview', page: 'hub', at: '.mk-ticket .mk-prev', text: 'This is your order before you place it. It shows the total, the price for each, and how that compares to the same order elsewhere. Amber means it is better here.' },
   { id: 'hub-go', page: 'hub', at: '.mk-ticket .mk-go', text: 'Orders take the minutes shown on ⇄ to arrive. Relays make that shorter. Prices you moved drift back over a few hours.' },
-  { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'These are your orders on the way. → is going out (credits on landing), ← is coming in. The bar fills as each lands.' },
-  { id: 'hub-payloads', page: 'hub', at: '.pay-compile', text: 'Payloads are viruses you write to hit this hub. Exfil steals credits and code, Wiper knocks it offline, Backdoor takes an offline hub. Each strike costs rep with it.' },
+  { id: 'hub-xfers', page: 'hub', at: '.mk-xfers', text: 'These are your orders on the way. → is going out, and pays its credits when it lands. ← is coming in. The bar fills as each lands.' },
+  { id: 'hub-payloads', page: 'hub', at: '.pay-compile', text: 'Payloads are viruses you write to hit this hub. Exfil steals credits and code, Wiper knocks it offline, and Backdoor takes an offline hub. Each strike costs rep with it.' },
   { id: 'store-chase', page: 'hub', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Something is happening on this server. Its card says what, and how long you have to act.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server. Nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },
@@ -95,21 +95,21 @@ export const TIPS = [
   { id: 'fight-miss', page: 'combat', at: '#board', when: (s) => (s.encounter?.metrics?.misses || 0) > 0, text: 'You missed. A miss does no damage but still uses the cooldown, and enemies above your level make you miss more often.' },
   { id: 'fight-daemon', page: 'combat', at: '.board .intent.daemon:not(.cron)', under: '#board', text: 'That is your daemon. It acts on its own cooldown, in the cycle where its chip sits, on top of whatever you do.' },
   { id: 'fight-proc', page: 'combat', pause: true, at: '#tray .lit', text: 'A skill lit up. It only works for a cycle or two after something happens, so use it while it glows.' },
-  { id: 'fight-cron', page: 'combat', at: '.board .intent.cron', under: '#board', text: 'Your Cron Job service runs every third cycle and hits the attacker that will land soonest.' },
+  { id: 'fight-cron', page: 'combat', at: '.board .intent.cron', under: '#board', text: 'Your Cron Job daemon runs every third cycle. It hits the part winding up a tell, or else the part whose attack lands soonest.' },
   ...Object.entries({
     keylogger: 'This is a Keylogger. Only moves made inside the Sync Window hurt the Logger. Three moves outside it come back at you as a Dump.',
-    hashrat: 'This is a Hashrat. While its Miner lives, your cooldowns run at half speed. The Miner never attacks, so kill it first.',
+    hashrat: 'This is a Hashrat. While its Miner lives, your cooldowns run at half speed. The Miner attacks only once it is the last part left, so break it first.',
     floodgate: 'This is a Floodgate. Its Flooder hits every cycle, a little harder each time. Any delay resets it.',
-    leech: 'This is a Leech. Its Tap heals the most damaged part by what it bites, and clears a burn from it.',
-    sleeper: 'This is a Sleeper. It does nothing until you hit it or cycle 6. Set up first: when it wakes, its Alarm lands at once.',
-    patchwork: 'This is a Patchwork. Its Patcher heals the most damaged part every 3 cycles. Kill the Patcher first, or finish a part between patches.',
+    leech: 'This is a Leech. Its Tap heals the most damaged part for what it bites, and removes a burn from it.',
+    sleeper: 'This is a Sleeper. It does nothing until you hit it or cycle 6 begins. Set up first, because when it wakes, its Alarm lands at once.',
+    patchwork: 'This is a Patchwork. Its Patcher heals the most damaged part every 3 cycles. Break the Patcher first, or finish a part between heals.',
     flicker: 'This is a Flicker. Its Shade is only there on even cycles. On odd cycles your hits pass through it.',
     extortion: 'This is an Extortion. The Demand winds up a big Deadline. Hit it hard in the 2 cycles before it lands and the Deadline is called off.',
-    echo: 'This is an Echo. While the Echo lives, every hit you take repeats a cycle later at half. Kill it early.',
+    echo: 'This is an Echo. While the Echo lives, every hit you take repeats a cycle later at half damage. Break it early.',
     bricker: 'This is a Bricker. Each part hits 30% harder once it drops below half health. Finish a part quickly once you start on it.',
-    overrun: 'This is an Overrun. Its fragments bite harder every cycle they live. Clear them while they are young, or kill the Hive.',
-    bouncer: 'This is Bouncer ICE. Its Keyring re-arms the Gate every 4 cycles but never attacks. Kill the Gate between re-arms, and break the Keyring first only if the Gate\'s shell is too thick.',
-    tracer: 'This is Tracer ICE. Its Trace-back hits harder every cycle the fight lasts, so finish it fast.',
+    overrun: 'This is an Overrun. Its fragments bite harder every cycle they live. Clear them while they are young, or break the Hive.',
+    bouncer: 'This is Bouncer ICE. Its Keyring re-arms the Gate every 4 cycles but never attacks. Break the Gate between re-arms, and break the Keyring first only if the Gate\'s armor is too thick.',
+    tracer: 'This is Tracer ICE. Its Trace-back deals more damage every cycle the fight lasts, so finish it fast.',
   }).filter(([id]) => STRAINS[id] || GUARDS[id]).map(([id, text]) => ({ id: 'strain-' + id, page: 'combat', pause: true, at: `.tag-strain[data-strain="${id}"]`, text })),
   ...Object.entries(MUTATIONS).map(([id, m]) => ({ id: 'mut-' + id, page: '*', pause: true, at: `.tag-mut[data-mut="${id}"]`, text: `This virus is ${m.name}. ${m.rule}` })),
   ...Object.entries(QUIRKS).map(([id, q]) => ({ id: 'quirk-' + id, page: '*', at: `.tag-quirk[data-quirk="${id}"]`, text: `This location has the ${q.name} quirk. ${q.rule}` })),
@@ -141,7 +141,7 @@ export const TIPS = [
 
   // ---------- loadout ----------
   { id: 'loadout-status', page: 'loadout', at: '.status-line .status', text: 'Your skills put this status on parts. Hover it to see what it does.' },
-  { id: 'loadout-bar', page: 'loadout', at: '.keybar', text: 'This is your skill bar. Everyone has the first three, and you choose up to five class skills as they unlock.' },
+  { id: 'loadout-bar', page: 'loadout', at: '.keybar', text: 'This is your skill bar. Key 1 is your class\'s plain hit, and - is SIGINT from level 10. Class skills fill the other slots: seven, then eight at 22 and nine at 30.' },
   { id: 'loadout-classes', page: 'loadout', at: '.arch-tabs', text: 'There are four classes, and each one levels on its own. You can switch between them at home.' },
   { id: 'loadout-talents', page: 'loadout', at: '.ttree', when: (s) => hackerLevel(s) >= 10, text: 'From level 10 you earn a talent point every other level. Ranks add small bonuses, and each tier asks you to pick one of two. You can change picks at home for free.' },
 
