@@ -67,7 +67,7 @@ export function fresh() {
     stash: [],
     gear: { rigs: {} },
     recipes: [], // sources you've banked: Zero-day protocols you can compile, special services you can install
-    // The server runs services (id → version) on its ports, one install at a time.
+    // The server runs services (id → version), one install at a time.
     services: {},
     install: null,
     materials: { cipher: 0, worm: 0, kernel: 0, exploit: 0 },
@@ -321,7 +321,6 @@ export function serviceValue(s, id, v = serviceVersion(s, id)) {
 export function serviceStat(s, stat) {
   let n = 0;
   for (const id of Object.keys(s.services || {})) if (SERVICES[id]?.stat === stat) n += serviceValue(s, id);
-  // Hot-patcher Triage: double repair below half Integrity, half above.
   return n;
 }
 
@@ -361,7 +360,7 @@ const gapMiss = (gap) => Math.min(CONFIG.maxMiss, Math.max(0, CONFIG.baseMiss + 
 export const missChance = (s) => (CONFIG.misses ? Math.max(0, gapMiss(levelGap(s)) - gearStat(s, 'accuracy')) : 0);
 export const enemyMissChance = (s) => (CONFIG.misses ? Math.min(75, gapMiss(-levelGap(s)) + defense(s, 'evasion')) : defense(s, 'evasion'));
 // Server Regen between fights: very slow (its per-cycle value, per real minute).
-// Between fights: resting (see CONFIG.restRegen) plus any Hot-patcher, per minute.
+// Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen, per minute.
 const maxSignalOf = (s) => maxSignal(s);
 export function idleRegen(s, ms) {
   // Signal rests back up while you're not connected.
@@ -391,7 +390,7 @@ export const critChance = (s) => CONFIG.baseCrit + gearStat(s, 'crit', 'hacker')
 export const serverMax = (s) => baseMax(s) + Math.round(baseMax(s) * raidShare(s)); // firewall tiers +1, +3, +5: +5% each
 // Rootkit: your first hit each fight goes through armor.
 export const rootkitReady = (s) => !!zeroDay(s, 'rootkit') && active(s) && !s.encounter.once?.rootkit;
-// Keep the server's max Integrity in step with its level and its RAID Array.
+// Keep the server's max Integrity in step with its level (your highest class level) and its firewall tier.
 export function syncServer(s) {
   const max = serverMax(s);
   const delta = max - s.server.max;
@@ -1712,7 +1711,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer level \d+$/.test(text)) {
     const want = Math.max(1, Math.min(LOADOUT.maxLevel, Number(text.split(' ')[2])));
     const h = hackerOf(s);
-    while (h.level < want) gainXp(s, xpToNext(h.level) - h.xp);
+    while (h.level < want) gainXp(s, Math.max(1, xpToNext(h.level) - h.xp));
     if (h.level > want) { h.level = want; h.xp = 0; }
     emit(s, 'info', `Developer: ${ARCHETYPES[classOf(s)].name} level ${h.level}.`);
   } else if (/^developer server \d+$/.test(text)) {

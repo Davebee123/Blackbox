@@ -123,7 +123,7 @@ export const TIPS = [
   { id: 'net-pack', page: 'net', at: '.net-pack', when: (s) => (s.run?.pack.length || 0) > 0, text: 'Files you pull wait in your pack. Jack out to bank them and keep them.' },
 
   // ---------- server ----------
-  { id: 'server-ports', page: 'server', at: '.server-head', text: 'Your server runs services in its service slots. Each one costs code from the viruses you kill, and takes real time to install.' },
+  { id: 'server-level', page: 'server', at: '.server-head', text: 'Your server is at the level of your highest class. Its services cost code from the viruses you kill, and take real time to install.' },
   { id: 'server-wall', page: 'server', at: '.wall-card .fw-lv', text: 'Your firewall stops invasions up to its level. Servers on your network send them, even while you are away. Amber or red up top means one of them can get past.' },
   { id: 'fw-upgrade', page: 'server', at: '.fw-up', text: 'Your firewall keeps up with the servers on your network by itself. An upgrade buys a margin on top, up to +6, for credits and code.' },
   { id: 'fw-frag', page: 'server', at: '.fw-grid i.frag', text: 'Each invasion breaks some blocks. Every 4 broken blocks cost a level. Defrag repairs them for credits, and the wall is weaker while it runs.' },

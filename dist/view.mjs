@@ -830,7 +830,7 @@ export function bandsText(s) {
   return `Your wall ${blocks ? `blocks invasions up to level ${blocks}` : 'blocks none outright'}${held}; above level ${holds}, they breach.`;
 }
 export function degradedMarkup(s, now = Date.now()) {
-  return s.degraded ? `<div class="degraded" title="Wall down · installs paused · no server XP"><b>DEGRADED</b><span>${fmtLeft(degradedLeft(s, now))}</span></div>` : '';
+  return s.degraded ? `<div class="degraded" title="Wall down · installs paused"><b>DEGRADED</b><span>${fmtLeft(degradedLeft(s, now))}</span></div>` : '';
 }
 // "≤12 · contested ≤22": what your wall stops outright, and what it holds.
 export function wallShort(s) {
@@ -1023,7 +1023,7 @@ function traceWays(s, h, via, kit) {
     ${row('injector', 'Trace injector', '+30%', kit.injector ? 'on' : 'off', kit.injector ? 'Use it below' : 'Halcyon’s store, Kestrel and LANTERN sell them')}
   </ul>`;
 }
-// The firewall's filters: its slots (from the Filter Bay service), then what you hold. Equip and
+// The firewall's filters: its slots (two, and one more at each of tiers +1, +3 and +5), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
 function filterPanel(s) {
   const held = filtersOf(s), on = (s.filters?.on || []), n = filterSlots(s), busy = active(s) || !!s.run;
@@ -1031,7 +1031,7 @@ function filterPanel(s) {
   const tile = (f, i) => `<li class="flt${on.includes(i) ? ' on' : ' off'}" data-ptip="f:${i}"><b class="iname r-${f.rarity}">${esc(f.name)}</b><span class="fchips">${filterChips(s, f, on.includes(i))}</span>${on.includes(i) ? `<button type="button" class="btn small" data-command="filter unequip ${i + 1}" ${busy ? 'disabled' : ''}>Out</button>` : `${n ? `<button type="button" class="btn small ${on.length < n ? 'primary' : ''}" data-command="filter equip ${i + 1}" ${busy || on.length >= n ? 'disabled' : ''} title="${on.length >= n ? 'Every slot is full' : 'Put it in'}">In</button>` : ''}<button type="button" class="btn small ghost" data-command="filter scrap ${i + 1}" ${busy ? 'disabled' : ''} title="For salvage">×</button>`}</li>`;
   const slots = Array.from({ length: n }, (_, k) => { const i = on[k]; return i != null && held[i] ? '' : '<li class="flt empty"><small>empty slot</small></li>'; }).join('');
   const rows = held.map(tile);
-  return `<div class="flt-panel"><h3 class="craft-sub flt-head">Filters ${n ? slotPips('firewall', on.filter((i) => held[i]).length, n, 'Filter slots') : `<span class="tag hot" title="No filter slots: install the Filter Bay (Server page), or take your firewall to v3">${glyph('firewall')}no slot</span>`}<span class="tag dim" title="Filters you hold">${glyph('item')}${held.length}/${FILTER_CAP}</span></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;
+  return `<div class="flt-panel"><h3 class="craft-sub flt-head">Filters ${n ? slotPips('firewall', on.filter((i) => held[i]).length, n, 'Filter slots') : `<span class="tag hot" title="No filter slots">${glyph('firewall')}no slot</span>`}<span class="tag dim" title="Filters you hold">${glyph('item')}${held.length}/${FILTER_CAP}</span></h3><ul class="flt-list">${on.filter((i) => held[i]).map((i) => rows[i]).join('')}${slots}${held.map((f, i) => (on.includes(i) ? '' : rows[i])).join('')}</ul></div>`;
 }
 // The invasion's own card on the map: the virus, where it's from, what it's doing (with a timer
 // bar), one line on how your firewall meets it, and Jack in once it's at your wall.

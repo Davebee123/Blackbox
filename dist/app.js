@@ -1583,7 +1583,7 @@ function frame(now) {
     const events = advance(campaign, delta);
     if (events.length) { react(events); save(); }
   } else {
-    // Resting between fights, plus any Hot-patcher, by the wall clock: a hidden tab or a closed
+    // Resting between fights, plus any Self-healing filter, by the wall clock: a hidden tab or a closed
     // game (up to 8 hours) catches up.
     const away = Math.min(8 * 3600000, Math.max(0, wall - (campaign.restAt ?? wall)));
     campaign.restAt = wall;

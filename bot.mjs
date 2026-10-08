@@ -46,6 +46,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12
   const note = (e) => {
     stats.events[e.type] = (stats.events[e.type] || 0) + 1;
     if (trace && e.type === 'collected') collected = e.unique;
+    if (trace && e.type === 'behind') { const h = here(); h.behind = (h.behind || 0) + e.amount; }
     if (trace && e.type === 'xp') { const x = here().xp, k = e.kind || 'other'; x[k] = (x[k] || 0) + e.amount; }
     if (trace && e.type === 'drop' && e.item) {
       const h = here(), it = e.item; h.drops[it.rarity] = (h.drops[it.rarity] || 0) + 1;
