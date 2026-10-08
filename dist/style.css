@@ -866,15 +866,32 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .mnode.tip-target { outline: none; box-shadow: none; filter: drop-shadow(0 0 7px rgba(127, 209, 199, 0.9)); }
 .no-motion .tip.show { animation: none; }
 /* Victory: the fight's gains, until you close it. Under the CRT glass (z 70), over everything else. */
-.levelup { position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 50; display: grid; gap: 4px; justify-items: center; text-align: center; padding: 14px 28px; background: var(--panel-2); border: 1px solid var(--you); border-radius: 6px; box-shadow: 0 0 40px rgba(127, 209, 199, 0.25); max-width: min(560px, calc(100vw - 32px)); pointer-events: none; }
-.levelup b { font: 700 22px var(--mono); letter-spacing: 3px; color: var(--you); }
-.levelup span { color: var(--text); font-size: 14px; }
-.levelup #levelup-text { display: grid; gap: 2px; }
-.levelup .lu-line.ghost { color: var(--dim); font-size: 12px; }
-.levelup .lu-go { pointer-events: auto; margin-top: 4px; }
-.levelup.show { animation: levelup-in 5s ease-out both; }
-@keyframes levelup-in { 0% { opacity: 0; transform: translate(-50%, -10px) scale(0.96); } 8% { opacity: 1; transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
-.no-motion .levelup.show { animation: none; }
+/* A level-up (app.js levelUp): a privilege escalation on the terminal. A header strip, the level as a big
+   readout with the class beside it, each gain as a +line typed in one after another, the next level ghosted,
+   and a bar along the bottom that drains while it stays up. Left-aligned, square, under the CRT glass. */
+.levelup { position: fixed; left: 50%; top: 72px; transform: translateX(-50%); z-index: 50; width: min(400px, calc(100vw - 32px)); display: grid; background: rgba(10, 8, 5, 0.97); border: 1px solid var(--you); border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 32px rgba(127, 209, 199, 0.18); pointer-events: none; overflow: hidden; }
+.levelup .lu-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: var(--you); color: #071412; font: 600 10px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; }
+.levelup .lu-dots { display: flex; gap: 3px; } .levelup .lu-dots i { width: 5px; height: 5px; background: currentColor; opacity: 0.55; }
+.levelup .lu-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; padding: 12px 14px 8px; align-items: start; }
+.levelup .lu-num { display: grid; justify-items: center; padding: 2px 12px 4px; border: 1px solid rgba(127, 209, 199, 0.35); background: repeating-linear-gradient(0deg, rgba(127, 209, 199, 0.06) 0 1px, transparent 1px 3px); }
+.levelup .lu-num small { font: 600 9px var(--mono); letter-spacing: 2px; color: var(--muted); }
+.levelup .lu-num b { font: 700 40px/1 var(--mono); color: var(--you); text-shadow: 0 0 14px rgba(127, 209, 199, 0.45); font-variant-numeric: tabular-nums; }
+.levelup .lu-who { display: grid; gap: 6px; min-width: 0; }
+.levelup .lu-who > b { font: 700 15px var(--mono); letter-spacing: 3px; color: var(--bright); }
+.levelup .lu-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.levelup .lu-list li { font: 13px/1.4 var(--mono); color: var(--text); }
+.levelup .lu-list li::before { content: '+ '; color: var(--you); font-weight: 700; }
+.levelup .lu-next { margin: 0; padding: 0 14px 10px; font: 11px var(--mono); color: var(--dim); }
+.levelup .lu-go { pointer-events: auto; margin: 0 14px 12px; justify-self: start; }
+.levelup .lu-timer { height: 2px; background: var(--you); transform-origin: left; opacity: 0.7; }
+.levelup.show { animation: levelup-in var(--lu-ms, 5s) ease-out both; }
+.levelup.show .lu-list li { animation: lu-type 0.25s ease-out both; animation-delay: calc(0.25s + var(--i) * 0.12s); }
+.levelup.show .lu-timer { animation: lu-drain var(--ms) linear both; }
+@keyframes levelup-in { 0% { opacity: 0; transform: translate(-50%, -8px); clip-path: inset(0 0 100% 0); } 6% { opacity: 1; transform: translate(-50%, 0); clip-path: inset(0 0 0 0); } 88% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lu-type { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes lu-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.no-motion .levelup.show, .no-motion .levelup.show .lu-list li, .no-motion .levelup.show .lu-timer { animation: none; }
+@media (prefers-reduced-motion: reduce) { .levelup.show, .levelup.show .lu-list li, .levelup.show .lu-timer { animation: none; } }
 @media (max-width: 1440px) { .meter-level { min-width: 0; } .meter-level .meter-bar { width: 40px; } }
 
 /* ---------- immersive shell (shell.mjs; body.shell-on) ----------
