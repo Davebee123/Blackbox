@@ -26,8 +26,8 @@ export const abilities = {
   },
   polymorph: {
     cls: 'infiltrator', sub: 'payload', verb: 'burn', name: 'Polymorph', target: 'part', damage: 0, tick: 14, ticks: 3, cooldown: 3, icon: 'mutation',
-    short: 'Burn 14×3 through armor',
-    help: 'polymorph <part> — burns it for 14 a cycle for 3 cycles, straight through armor.',
+    short: 'Burn 14×3 thru ◆; 7 on bare',
+    help: 'polymorph <part> — burns it for 14 a cycle for 3 cycles, straight through armor. Once the part is bare, it burns for half.',
     desc: 'A burn that rewrites itself every cycle, so armor never learns to stop it. Its ticks go straight through ◆. Detonate and Keepalive reach it only on a part with an ordinary burn as well, and Propagate and Backdoor do not count it. Tag, Thrash, IRQ Storm and Bloom all work on it.',
   },
   thrash: {
@@ -38,16 +38,16 @@ export const abilities = {
   },
   'irq-storm': {
     cls: 'infiltrator', sub: 'payload', verb: 'hit', name: 'IRQ Storm', target: 'none', damage: 0, cooldown: 4, icon: 'event-warning',
-    short: 'Every burn ticks now',
-    help: 'irq-storm — every burn you have, on every part, ticks once more right now.',
-    desc: 'A flood of interrupts. Every burn you are running ticks one extra time, on every part at once, and none of them runs out any sooner.',
+    short: 'Every burn ticks now; hits tells',
+    help: 'irq-storm — every burn you have, on every part, ticks once more right now. Each part it ticks counts it as a hit from your command: it calls a charge off, or counts toward a cast.',
+    desc: 'A flood of interrupts. Every burn you are running ticks one extra time, on every part at once, and none of them runs out any sooner. Each part the storm reaches takes it as a hit from you, so it calls off a charge winding up on a burning part, or counts toward stopping a cast.',
   },
   // Phantom: crits, decoys and getting out clean.
   backstab: {
     cls: 'infiltrator', sub: 'phantom', verb: 'hit', name: 'Backstab', target: 'part', damage: 32, cooldown: 2, icon: 'behavior',
-    short: 'Hit 32, crits if not due',
-    help: 'backstab <part> — 32 damage. It crits if the part\'s attack is not due this cycle or the next.',
-    desc: 'Strike while it is looking the other way. If the part has no attack landing this cycle or next, the hit always crits.',
+    short: 'Hit 32, crits a busy part',
+    help: 'backstab <part> — 32 damage. It always crits a part that\'s busy with a tell: winding up a charge, compiling a cast, sealing or recording.',
+    desc: 'Strike while it is looking the other way. A part busy with a tell (a charge winding up, a cast compiling, a seal, the Mimic recording) never sees it coming: the hit always crits, and it counts as your answer.',
   },
   'shadow-copy': {
     cls: 'infiltrator', sub: 'phantom', verb: 'shield', name: 'Shadow Copy', target: 'none', ally: true, damage: 0, cooldown: 5, icon: 'behavior',
@@ -58,7 +58,7 @@ export const abilities = {
   'log-wipe': {
     cls: 'infiltrator', sub: 'phantom', verb: 'buff', name: 'Log Wipe', target: 'none', damage: 0, cooldown: 6, icon: 'clear',
     short: 'Weak Spot again, next hit half',
-    help: 'log-wipe — wipe your tracks: Weak Spot is fresh on every part again, and the next hit on you deals half.',
+    help: 'log-wipe — wipe your tracks: Weak Spot is fresh on every part again, the next hit on you deals half, and the Mimic\'s next beat has nothing of you to play.',
     desc: 'Clears every trace of you from the virus\'s logs. It forgets you have hit anything, so your next hit on each part crits again, and the next attack that finds you only half lands.',
   },
 };

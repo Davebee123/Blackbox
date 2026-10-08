@@ -353,6 +353,7 @@ test('archive: three month logs, only the latest key works; the Shredder hits yo
   say(s, 'cd ../srv');
   assert.equal(s.encounter.virus.name, 'SHREDDER');
   command(s, 'engage');
+  s.encounter.virus.tells = null; // its plain Shred (Deep Shred, its tell, is in tells.test.mjs)
   part(s, 'pulse').attack = null;
   s.encounter.cycle = part(s, 'encryptor').attack.due;
   const sig = s.run.integrity;
@@ -478,9 +479,11 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
   const line = kitOf(s).skills;
   assert.match(command(s, `equip ${line[1]}`).at(-1).message, new RegExp(`level ${SUBCLASS.unlocks[1]}`));
   command(s, 'developer level 22');
-  assert.equal(equippedSkills(s, 'breaker').length, 7, 'bar full by level 22');
+  assert.equal(equippedSkills(s, 'breaker').length, 8, 'an eighth slot at 22, and its skill in it');
+  command(s, 'developer level 26');
+  assert.equal(equippedSkills(s, 'breaker').length, 8, 'the bar full at 26');
   const extra = knownSkills(s, 'breaker').find((id) => !equippedSkills(s, 'breaker').includes(id));
-  assert.ok(extra, 'past seven, you choose what to equip');
+  assert.ok(extra, 'past eight, you choose what to equip');
   assert.match(command(s, `equip ${extra}`).at(-1).message, /slots are full/);
   command(s, `unequip ${line[0]}`); command(s, `equip ${extra}`);
   assert.ok(equippedSkills(s, 'breaker').includes(extra));
@@ -535,7 +538,7 @@ test('saves from before the skill rework start each class on the new kit, and ol
   s.loadout.equipped = { breaker: ['overload', 'sudo', 'pass-the-hash', 'memory-leak', 'bypass'] };
   s.daemons = [{ name: 'warden', trigger: { type: 'attack', part: 'any' }, command: 'interrupt $', on: true }];
   const r = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(r, 'breaker'), knownSkills(r, 'breaker').slice(0, 7), 'the kit as it unlocks, its subclass line included');
+  assert.deepEqual(equippedSkills(r, 'breaker'), knownSkills(r, 'breaker').slice(0, 8), 'the kit as it unlocks, its subclass line included (eight slots at 25)');
   assert.deepEqual(equippedSkills(r, 'breaker').slice(0, 4), ['overload', 'flood', 'exploit', 'crack']);
   assert.deepEqual(r.daemons, []);
   assert.deepEqual(r.daemonsOwned, {});

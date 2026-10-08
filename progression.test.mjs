@@ -235,7 +235,7 @@ test('v34: server XP, ports, the specialty, eight services and grey protocols fo
   const credits = old.server.credits, worm = old.materials.worm || 0;
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(s.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 34);
+  assert.ok(SAVE_VERSION >= 34);
   assert.equal(s.serverXp, undefined);
   assert.equal(serverLevel(s), 26, 'your highest class level');
   assert.deepEqual(s.services, { uplink: 1 }, 'only the network services stay');

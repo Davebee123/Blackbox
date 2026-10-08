@@ -32,10 +32,9 @@ test('the hard slice (every open strain, grade 2 wilds, wilds 2 levels up) is be
   }
 });
 
-// Known outlier: with the gear its player chases (Damage and Crit, balance.mjs build), the Demolitionist
-// runs about 21% from Lv 29: flat Damage on every one of its many hits (Overkill, Fork Bomb, Shatter).
-// It's a Damage-stat problem, not a healing one; until it's fixed it has its own floor at Lv 30.
-const floor = (sub, b) => (sub === 'demolitionist' && b.level >= 30 ? 15 : 25);
+// The Demolitionist used to run about 21% from Lv 29 on flat Damage over its many hits, and had its own floor
+// at Lv 30. Since Shaped Charge provokes its part (docs/skills.md) it runs about 27–29%, inside the band.
+const floor = () => 25;
 test('every subclass is viable at Lv 10, 18 and 30: at least 85% wins (the Sysop 70%), 25–50% lost, all eight within 30 points', () => {
   for (const b of BRACKETS.filter((x) => x.level >= SUBCLASS.from && x.level <= 30)) {
     const rs = SUBS.map(([, sub]) => [sub, subRuns[b.name][sub]]);
@@ -66,13 +65,20 @@ test('the Sysop alone is the weak one: 38–58% lost and 70–92% wins at Lv 18 
 });
 
 // Solo tells (tells.mjs): a bot that plays as if it can't see them (TELL.bots.answer false) does measurably worse
-// than one that reads them, on the same fights: about 4 points of Signal a fight on average and more fights lost.
-// Smaller than a crew boss's role checks on purpose (there, missing a role loses most tries): solo, the tells
-// are about learning the mob, and every one has an answer the class already owns.
-test('reading tells pays: a bot that ignores them loses at least 2.5 points more Signal a fight across the subclasses at Lv 10, 18 and 30, at least 1.5 at each, and wins no more', () => {
+// than one that reads them, on the same fights. From level 10 a tell let through costs up to a quarter of your max and
+// leaves something behind (a key offline, Corrupted, Hung), so the gap is about 12–15 points of Signal a fight on
+// average (about 18 at Lv 10, 14 at 18 and 8 at 30, where fights are short) and the ignoring bot loses more fights.
+// Below 10 the tells are gentle on purpose (one at a time, small, no after-effect at 1–5): a smaller gap.
+const below = (L) => ({ ...BRACKETS.filter((b) => b.level <= L).at(-1), name: 'Lv ' + L, level: L, server: L });
+test('reading tells pays: a bot that ignores them loses at least 12 points more Signal a fight on average at Lv 10, 18 and 30 (at least 6 at each), wins fewer fights, and a smaller gap below 10', () => {
   TELL.bots.answer = false;
-  let ignored;
-  try { ignored = Object.fromEntries(BRACKETS.filter((b) => b.level >= SUBCLASS.from && b.level <= 30).map((b) => [b.name, Object.fromEntries(SUBS.map(([c, sub]) => [sub, score(c, b, { sub })]))])); } finally { TELL.bots.answer = true; }
+  let ignored, low, lowRead;
+  const LOW = [5, 8];
+  try {
+    ignored = Object.fromEntries(BRACKETS.filter((b) => b.level >= SUBCLASS.from && b.level <= 30).map((b) => [b.name, Object.fromEntries(SUBS.map(([c, sub]) => [sub, score(c, b, { sub })]))]));
+    low = LOW.map((L) => CLASSES.map((c) => score(c, below(L))));
+  } finally { TELL.bots.answer = true; }
+  lowRead = LOW.map((L) => CLASSES.map((c) => score(c, below(L))));
   let gap = 0, n = 0, wins = 0;
   const lines = [];
   for (const [name, row] of Object.entries(ignored)) {
@@ -80,10 +86,14 @@ test('reading tells pays: a bot that ignores them loses at least 2.5 points more
     for (const [sub, r] of Object.entries(row)) { g += r.lost - subRuns[name][sub].lost; wins += subRuns[name][sub].wins - r.wins; }
     g /= Object.keys(row).length; gap += g; n++;
     lines.push(`${name} ${g.toFixed(1)}`);
-    assert.ok(g >= 1.5, `${name}: ignoring tells costs ${g.toFixed(1)} points (${lines.join(', ')})`);
   }
-  assert.ok(gap / n >= 2.5, `ignoring tells costs ${(gap / n).toFixed(1)} points a fight on average (${lines.join(', ')})`);
-  assert.ok(wins >= 0, `a bot that reads tells wins at least as often (${wins} more)`);
+  const lowGap = LOW.map((L, i) => low[i].reduce((a, r, k) => a + r.lost - lowRead[i][k].lost, 0) / CLASSES.length);
+  const all = `${lines.join(', ')}; ${LOW.map((L, i) => `Lv ${L} ${lowGap[i].toFixed(1)}`).join(', ')}; ${wins} more wins reading`;
+  for (const l of lines) assert.ok(+l.split(' ').at(-1) >= 6, `ignoring tells costs too little at ${l} (${all})`);
+  assert.ok(gap / n >= 12, `ignoring tells costs ${(gap / n).toFixed(1)} points a fight on average from Lv 10 (${all})`);
+  assert.ok(wins > 0, `a bot that reads tells wins more often (${all})`);
+  const lowAvg = lowGap.reduce((a, g) => a + g, 0) / LOW.length;
+  assert.ok(lowAvg >= 1 && lowAvg < gap / n, `below Lv 10 the gap is there but smaller (${all})`);
 });
 
 test('no class drifts far out of the band: under 55% lost, and within 40 points of each other', () => {
@@ -108,4 +118,4 @@ const band = () => () => {
   }
   assert.deepEqual(off, []);
 };
-test('target band: a fight at your level costs every subclass 35–45% at Lv 10, 18 and 30 (the Sysop 45–55% from Lv 18; 28–55% at Lv 1), within about 10 points', { todo: 'with the gear each subclass chases: Lv 1 Bastion, Infiltrator and Operator run 15–21%; the Phantom 29% at Lv 10, 32% at 18 and 28% at 30; the Payload 34% at Lv 10 and 49% at 30; the Warden (Signal on its gear) 29% at Lv 18 and 34% at 30, the Hijacker 34% at 18 and 46% at 30; the Demolitionist 21% at Lv 30 (flat Damage on its many hits); the Sysop 41–46% on these 24 fights' }, band());
+test('target band: a fight at your level costs every subclass 35–45% at Lv 10, 18 and 30 (the Sysop 45–55% from Lv 18; 28–55% at Lv 1), within about 10 points', { todo: 'with the gear each subclass chases: Lv 1 Bastion, Infiltrator and Operator run 15–21%; the Phantom 29% at Lv 10, 32% at 18 and 28% at 30; the Payload 34% at Lv 10 and 49% at 30; the Warden (Signal on its gear) 29% at Lv 18 and 34% at 30, the Hijacker 34% at 18 and 46% at 30; the Demolitionist 28% at Lv 18 and 27% at 30; the Sysop 41–46% on these 24 fights' }, band());

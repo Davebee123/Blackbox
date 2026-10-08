@@ -123,7 +123,7 @@ test('an old save past level 10: its bar becomes the default subclass\'s, with w
   s.loadout.equipped = { breaker: ['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault'] };
   s.version = 30;
   const t = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(t, 'breaker'), ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge']);
+  assert.deepEqual(equippedSkills(t, 'breaker'), ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge', 'thermal-runaway'], 'and the eighth slot (level 22) gets its skill');
   // A save below 10 keeps its bar as it was.
   const low = at('bastion', 8);
   low.loadout.equipped = { bastion: ['rate-limit', 'firewall'] };
@@ -152,10 +152,11 @@ test('subclass skills whose numbers grow with your level say so on screen (scale
   const { ABILITIES, power } = await import('./dist/data.mjs');
   const s = at('breaker', 26), k = power(26);
   const n = (x) => String(Math.round(x * k));
-  assert.match(scaledText(s, 'logic-bomb', ABILITIES['logic-bomb'].short), new RegExp(`Bomb ${n(50)}, \\+${n(20)} to all, in 2`));
+  assert.match(scaledText(s, 'logic-bomb', ABILITIES['logic-bomb'].short), new RegExp(`Bomb ${n(50)} \\+${n(20)} all`));
   assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].short), new RegExp(n(20)));
   assert.match(scaledText(s, 'thermal-throttle', ABILITIES['thermal-throttle'].short), new RegExp(`${n(20)} \\+${n(20)} a stack`));
-  assert.match(scaledText(s, 'turbo-boost', ABILITIES['turbo-boost'].short), new RegExp(`\\+2 Momentum, costs ${n(6)}`));
+  assert.match(scaledText(s, 'turbo-boost', ABILITIES['turbo-boost'].help), new RegExp(`for ${n(6)} Signal`));
+  assert.match(scaledText(s, 'overvolt', ABILITIES.overvolt.short), new RegExp(`Two hits of ${n(20)}`));
   assert.match(scaledText(s, 'shaped-charge', ABILITIES['shaped-charge'].help), new RegExp(`deals ${n(30)} damage`));
   assert.match(scaledText(s, 'cache-poison', ABILITIES['cache-poison'].help), new RegExp(`for ${n(15)} instead`));
 });

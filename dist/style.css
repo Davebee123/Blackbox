@@ -238,7 +238,9 @@ code { font-family: var(--mono); color: var(--amber); }
 .notice { position: absolute; bottom: calc(100% + 4px); right: 0; max-width: 60%; padding: 6px 10px; background: var(--panel-2); border: 1px solid var(--amber); border-radius: 4px; font-size: 13px; z-index: 6; }
 .notice.bad { border-color: var(--hot); color: var(--bright); }
 
-.tray { display: grid; grid-template-columns: minmax(0, 0.8fr) repeat(7, minmax(0, 1fr)) minmax(0, 0.7fr); gap: 6px; } /* Spike · 7 skills · next unlock */
+.tray { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; } /* one row: Spike · 7 to 9 skills · SIGINT · next unlock */
+.tray:has(> :nth-child(11)) .ability { grid-template-columns: 1fr; padding: 8px; } /* eleven keys or more (an eighth slot at 22, a ninth at 30): the names get the icon's room */
+.tray:has(> :nth-child(11)) .ability .ico { display: none; }
 .ability.cantrip { background: var(--inset); }
 .ability.cantrip .name { color: var(--muted); }
 .tag.daemon { color: var(--daemon); border-color: var(--daemon); }
@@ -539,7 +541,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .prompt .p-loc { display: none; }
   .prompt.run { font-size: 12px; }
   .prompt:not(.run)::before { content: '$'; }
-  .tray { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tray { grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .ability { padding: 6px 8px; grid-template-columns: 1fr; }
   .ability .ico { display: none; }
   .ability .name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1057,6 +1059,14 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .ability.lit .state { color: var(--gold, #ffd85c); font-weight: 700; letter-spacing: 1px; }
 @keyframes lit-pulse { 50% { box-shadow: 0 0 0 1px rgba(255, 216, 92, 0.9), 0 0 24px rgba(255, 216, 92, 0.65); } }
 .no-motion .ability.lit { animation: none; }
+/* A situational key whose moment is on the board (situations.mjs): an amber edge and the moment's word. */
+.ability.moment { border-color: rgba(241, 185, 47, 0.75); box-shadow: inset 0 0 0 1px rgba(241, 185, 47, 0.35); }
+.ability.moment .state { color: var(--amber, #f1b92f); font-weight: 700; letter-spacing: 0.5px; }
+/* A key a landed tell knocked offline (tells.mjs). */
+.ability.offline { border-color: rgba(255, 92, 92, 0.6); }
+.ability.offline .state { color: var(--red, #ff5c5c); font-weight: 700; letter-spacing: 1px; }
+/* A part left Open by a tell you read: +50% from everyone. */
+.pmark.m-open { color: #ffd85c; border-color: rgba(255, 216, 92, 0.6); background: rgba(255, 216, 92, 0.12); }
 .mhit { fill: transparent; stroke: none; pointer-events: all; }
 .mnode text { pointer-events: all; }
 /* The rogue server on the map, and live viruses in its folders. */

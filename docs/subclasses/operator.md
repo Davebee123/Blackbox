@@ -18,22 +18,22 @@ A helper is a small process that hits one part every cycle, after your command, 
 
 ## Herder
 
-The Herder fills the board with helpers and makes every one of them count. It has no way to stop an attack, so it wins by breaking parts before their attacks come round.
+The Herder fills the board with helpers and makes every one of them count. It has no way to stop an attack, so it wins by breaking parts before their attacks come round. Fan-out puts a helper on every part when there are three or more, or reaches a part winding up a tell, and Kill Switch then cashes the helpers in: each part they hit takes it as your hit, so two charges can be called off at once. Fork turns thick armor into more helpers, one for each ◆ they break. Garbage Collect and its three-times hit are for fragments. Helpers alone never call off a tell.
 
 **Edge: Last Gasp.** Each helper hits once more as it expires.
 
 ### Skills
 
-The line unlocks one skill at a time. Your bar holds seven skills: the core four and the line's first three fill it at level 18, so from level 22 you choose which ones to carry.
+The line unlocks one skill at a time. Your bar holds seven skills: the core four and the line's first three fill it at level 18. An eighth slot opens at 22 and a ninth at 30, and the skill that opens with each new slot goes into it. From level 26 you choose which ones to carry.
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
 | 12 | `fan-out <part>` | Sends a helper to every part, starting with this one. Each hits its part for 6 every cycle for 3 cycles. | 4 |
 | 14 | `mesh` | For 3 cycles, every helper hit that does damage also hits every other part for half as much. Those splash hits break armor chits like any other hit. | 6 |
-| 18 | `kill-switch` | Your helpers deal all their remaining damage now, and stop. | 3 |
-| 22 | `garbage-collect` | Deals 10 damage to every part, and your helpers last a cycle longer. | 3 |
+| 18 | `kill-switch` | Your helpers deal all their remaining damage now. Each part they hit takes it as a hit from your command: it calls a charge off there. | 3 |
+| 22 | `garbage-collect` | 10 damage to every part, three times that to every fragment, and your helpers last a cycle longer. | 3 |
 | 26 | `malloc` | The next 3 helpers you start deal 50% more and run a cycle longer. | 5 |
-| 30 | `fork` | For 4 cycles, each helper hit has a 15% chance to start another helper, up to your cap. | 6 |
+| 30 | `fork` | For 4 cycles, every ◆ your helpers break starts another helper on that part (up to your helper cap). Made for thick armor. | 6 |
 | 34 | `oom-kill` | The out-of-memory killer takes every helper you have running, and you heal for 40% of the damage they had left. | 6 |
 | 38 | `cron-storm` | Every helper hits twice this cycle. | 6 |
 
@@ -56,23 +56,23 @@ Hive and Hydra pull the swarm in different directions. Hive lets you stack more 
 
 ## Hijacker
 
-The Hijacker takes over the virus's own attacks. It spends helpers as currency: a helper sitting on a part is a foothold in that part's code, and Jam, Hijack and Blackhole each pull one off to do their work. Most of its skills leave the part Jammed.
+The Hijacker takes over the virus's own attacks. It spends helpers as currency: a helper sitting on a part is a foothold in that part's code, and Jam, Hijack and Blackhole each pull one off to do their work. Most of its skills leave the part Jammed, and most of them read a tell. Hijack takes a tell over: a charge lands on another part at full size, a cast compiles for you. Spoofed ACK drains a charge and sends half of it back, Jam makes a charge land plain, Replay plays the charged hit back at its part, Reroute stops a cast with two helpers' arrivals, Cache Poison makes a seal fail, and Blackhole swallows what nothing else answers. Barrier turns a helper into a shield when you're low and a big hit is landing.
 
 **Jammed.** A part is Jammed from the moment you Jam, Hijack, Blackhole or send it a Spoofed ACK until the attack you held goes off (at least through the next cycle).
 
-**Edge: Man in the Middle.** Jammed parts take 20% more damage from everyone, crewmates included.
+**Edge: Man in the Middle.** Jammed parts take 20% more damage from everyone, crewmates included. A helper of yours on a part is a foothold too: your own hits on that part take 20% more.
 
 ### Skills
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
-| 12 | `jam <part>` | Pull one of your helpers off the part to push its attack back a cycle. The part is Jammed. | 2 |
-| 14 | `hijack <part>` | Pull one of your helpers off the part to take over its next attack. If that attack is a hit, it lands on another part of the virus for 60% of its size (up to 60), straight through armor. A part on its own hits itself. An encryption, a scramble, a spawn or a heal does nothing. The part is Jammed until then. | 6 |
-| 18 | `replay <part>` | Record the part's attack and play it back at it. The part takes its own attack's size, at least 20 and at most 30, straight through armor. | 5 |
-| 22 | `spoofed-ack <part>` | Fake the handshake. The part's attack waits a cycle, and the part takes half of that attack itself (at least 8, at most 40). The part is Jammed until the attack goes off. | 5 |
+| 12 | `jam <part>` | Pull one of your helpers off it to push its attack back a cycle. A charge on that attack loses its signal: it lands plain. | 2 |
+| 14 | `hijack <part>` | Pull one of your helpers off it to take over its tell. A charge lands on another part of the virus at full size, through armor; a cast compiles for you instead (+35% damage for 4 cycles). With no tell on it, its next hit lands on its own side for half. It is Jammed until then. | 6 |
+| 18 | `replay <part>` | Record its attack and play it back at it: it takes its own attack’s size (25 to 40), straight through armor. A charge winding up on it plays back at its charged size, up to 80. | 5 |
+| 22 | `spoofed-ack <part>` | Fake the handshake: its attack waits a cycle, and the part takes half that attack (up to 40). A charge on it drains out, and the part takes half the charge (up to 60). It is Jammed until the attack goes off. | 5 |
 | 26 | `barrier <part>` | Pull one of your helpers off the part and turn it into a shield worth all the damage it had left. | 3 |
-| 30 | `cache-poison <part>` | The part is Poisoned for 5 cycles. An armor patch it is due hits it for 15 instead, and its patch timer starts over. A heal it casts on its own side hurts the part it was meant for by the same amount. | 4 |
-| 34 | `reroute <part>` | Every helper moves to this part and hits it once on arrival. | 4 |
+| 30 | `cache-poison <part>` | Poisoned for 5 cycles: an armor patch it is due hits it for 15 instead, a heal it casts hurts the part it was meant for, and a seal it lands fails and hits it for 30. | 4 |
+| 34 | `reroute <part>` | Every helper moves to this part and hits it once on arrival. Each arrival counts as a hit from you: two helpers stop a cast. | 4 |
 | 38 | `blackhole <part>` | Pull one of your helpers off the part. Its next attack goes into a blackhole and does nothing at all, whatever kind of attack it is. The part is Jammed until then. | 6 |
 
 With a skill that takes a part, you can leave the part out: Jam, Hijack, Spoofed ACK and Blackhole then go at the attack that lands soonest. Hijack and Blackhole resolve just before the virus attacks, so a hijacked attack never reaches you or your crew.
@@ -100,9 +100,9 @@ Measured with the class balance script (`balance.mjs`): blue gear with the stats
 
 | Level | Herder | Hijacker |
 |---:|---:|---:|
-| 10 | 37% | 46% |
-| 18 | 40% | 32% |
-| 30 | 41% | 44% |
-| 50 | 43% | 45% |
+| 10 | 30% | 32% |
+| 18 | 44% | 29% |
+| 30 | 40% | 43% |
+| 50 | 36% | 11% |
 
-Both subclasses win 92% or more of the fights in these brackets. (Balance pass: enemy hits on your Signal take the late step from level 10, `CONFIG.runLate`, and Replay is capped at 30, not 40: at level 50 it one-shot the lead part and the Hijacker lost only 10%.) At level 10 the two only differ by their edge, because their lines start at level 12.
+Both subclasses win 92% or more of the fights in these brackets. (Balance pass: enemy hits on your Signal take the late step from level 10, `CONFIG.runLate`. The skills pass in docs/skills.md raised Replay to 25–40, and a charge replayed goes up to 80. The level-50 Hijacker loses only 11%, and it lost 12% with the progression package before the skills pass, with Replay still at 20–30, so Replay isn't what does it. That needs a look of its own.) At level 10 the two only differ by their edge, because their lines start at level 12.

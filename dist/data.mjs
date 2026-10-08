@@ -64,7 +64,7 @@ export const CONFIG = {
   // subclass, talents, a fifth and sixth protocol slot and v2–v3 services outgrow the 4% a level, so without
   // it a same-level fight cost blues 30% at 10 and only 22–30% at 18–30. Bosses and elites keep their own
   // numbers (crew content is tuned for crews).
-  runLate: [[9, 1], [10, 1.1], [18, 1.12], [30, 1.35]],
+  runLate: [[9, 1], [10, 0.95], [18, 1], [30, 1.2]], // lower than it was (1.1, 1.12, 1.35): a tell you let land costs more now (TELL)
   xpEarly: { bonus: 0, full: 10, gone: 15 }, // the early bump is gone (it was 15% more XP to level 10, easing back by 15): decoding pays less instead
   // A broken part leaves salvage behind only sometimes.
   salvageChance: 0.35,
@@ -153,11 +153,11 @@ export const CONFIG = {
 //   debuff (makes a part easier to hurt, or weaker) · shield/heal · buff (you, for a while) · util
 // Synergy comes from combining verbs (a debuff boosts every hit and every burn tick;
 // burn ticks and helper hits count as hits for Hook), never from rules inside one skill.
-// Keys are not fixed per skill: 1 is Spike, 2–8 your equipped skills, 9 SIGINT from level 10 (see keyMap).
+// Keys are not fixed per skill: 1 is Spike, 2–9 and 0 your equipped skills (seven slots, eight at 22, nine at 30), - SIGINT from level 10 (see keyMap).
 // target: 'part' | 'attack' (a part with an attack; optional) | 'none'. pierce: goes through armor chits. bare: only on a part with no armor.
 export const ABILITIES = {
   // cantrips: everyone
-  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Interrupt a cast', help: 'sigint — interrupts a cast that is compiling (Compiling… on the board): a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and whatever you interrupt casts its next one sooner. Ready every 8 cycles.' },
+  sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Interrupt a cast', help: 'sigint — interrupts a cast that is compiling (Compiling… on the board): a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. Ready every 8 cycles.' },
   spike: { verb: 'hit', name: 'Spike', target: 'part', damage: 25, cooldown: 0, icon: 'spike', short: 'Hit 25', help: 'spike <part> — 25 damage. If you type nothing, you Spike the last part you hit.' },
   // Every class skill is simple, with one twist: a burn (damage over cycles), a proc (something
   // you do lights up a key for a cycle or two), a reactive window (usable right after an event),
@@ -166,25 +166,26 @@ export const ABILITIES = {
   overload: { cls: 'breaker', verb: 'hit', name: 'Overload', target: 'part', damage: 40, cooldown: 3, icon: 'overload', short: 'Hit 40, crit resets', help: 'overload <part> — 40 damage. If it crits, its cooldown resets.' },
   exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 0, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Exposed: +25% crit', help: 'exploit <part> — Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
   crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 2, icon: 'shell-shield', short: 'Strip 3 ◆', help: 'crack <part> — breaks 3 ◆ on it at once.' },
-  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 38, proc: 'stripped', window: 2, cooldown: 0, icon: 'overload', short: 'Hit 38 (after a strip)', help: 'shatter <part> — lights up for 2 cycles when you break a part\'s last ◆. 38 damage.' },
+  // noAnswer: a follow-up, not an answer to a tell (tells.mjs): its hit never calls one off.
+  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 38, proc: 'stripped', window: 1, noAnswer: true, cooldown: 0, icon: 'overload', short: 'Hit 38 the part you just bared', help: 'shatter <part> — lit for a cycle on the part whose last ◆ you just broke. 38 damage to it.' },
   flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 38, cooldown: 6, icon: 'overload', short: 'Hit 38, ×2 if bare', help: 'flood <part> — 38 damage, double on a part with no armor left.' },
-  segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 below 30%', help: 'segfault <part> — 30 damage, three times that on a part under 30%.' },
-  'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 15, cooldown: 3, icon: 'overload', short: 'Hit 15 all', help: 'fork-bomb — 15 damage to every part, 30 to an Exposed one.' },
-  'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 6, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 6→18', help: 'thermal-runaway <part> — burns it for 6, then 10, 14 and 18.' },
-  brace: { cls: 'breaker', verb: 'buff', name: 'Brace', target: 'none', damage: 0, cycles: 2, block: 5, cooldown: 5, icon: 'shell-shield', short: 'Block 5, crack back', help: 'brace — for 2 cycles: +5 Block, and whatever hits you loses a ◆ (or takes 10 if it has none).' },
-  sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Crit for 2', help: 'sudo — this cycle and next, every hit you land crits.' },
-  'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through armor, once', help: 'zero-day <part> — 65 damage straight through armor. Once per fight.' },
+  segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 if charging', help: 'segfault <part> — 30 damage, three times that on a part winding up a charge. Crash it mid-wind-up.' },
+  'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 12, fragx: 3, cooldown: 3, icon: 'overload', short: 'Hit 12 all, fragments ×3', help: 'fork-bomb — 12 damage to every part, three times that to every fragment.' },
+  'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 4, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 4→16, melts casts', help: 'thermal-runaway <part> — burns it for 4, then 8, 12 and 16. On a part compiling a cast, every tick counts as a hit on the cast.' },
+  brace: { cls: 'breaker', verb: 'buff', name: 'Brace', target: 'none', damage: 0, cycles: 2, cut: 0.3, back: 2, cooldown: 5, icon: 'shell-shield', short: 'Hits −30%, sent back ×2', help: 'brace — this cycle and next, hits on you deal 30% less, and whatever hits you takes twice what Brace saved you. Made for a charge you can\'t call off.' },
+  sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Part rules off 2', help: 'sudo — root override, this cycle and next: locks and wards don\'t hold your hits, a Tripwire you break stays quiet, and the Decoy and the Mimic can\'t copy you.' },
+  'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, unlock: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through ◆ and locks, once', help: 'zero-day <part> — 65 damage straight through armor, locks and wards. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
   'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 45, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 45 (+15 if due), throttle', help: 'rate-limit <part> — 45 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
   firewall: { cls: 'bastion', verb: 'shield', name: 'Firewall', target: 'none', damage: 0, shield: 16, taunt: 3, cooldown: 4, icon: 'shell-shield', short: 'Shield 16, draw fire', help: 'firewall — shields you from the next 16 damage. If it soaks a whole hit, Retaliate lights up. With a crew, every attack comes at you for 3 cycles.' },
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after.' },
-  suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. With no part, the attack landing soonest.' },
+  suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2; drains a charge', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. A charge on that attack drains out: it lands plain. With no part, the attack landing soonest.' },
   patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 4, pack: 10, tick: 2, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 4 + 2×3', help: 'patch [name] — heal 4 now, then 2 a cycle for 3 cycles. In a crew, patch nyx heals nyx instead.' },
-  throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, cooldown: 4, icon: 'interrupt', short: 'Weaken −50%', help: 'throttle [part] — its attacks deal half for 3 cycles.' },
-  purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, decrypt', help: 'purge <part> — burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption.' },
+  throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, loud: 6, cooldown: 4, icon: 'interrupt', short: 'Half for 3; 6 if loud', help: 'throttle [part] — its attacks deal half for 3 cycles. On a part gone loud (a Tripwire set off, Double Extortion, a Bricker\'s rage), for 6, and the loud wears off.' },
+  purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, cleanse', help: 'purge <part> — burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption and Corrupted.' },
   harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain a ◆: the next attack on you does nothing, however big.' },
   reclaim: { cls: 'bastion', verb: 'hit', name: 'Reclaim', target: 'part', damage: 35, lifesteal: 0.5, chits: 2, cooldown: 3, icon: 'server', short: 'Hit 35, heal half', help: 'reclaim <part> — 35 damage, and you heal half of what it does. On armor it breaks 2 ◆.' },
-  quarantine: { cls: 'bastion', verb: 'stun', name: 'Quarantine', target: 'attack', damage: 0, delay: 3, status: 'quarantined', cycles: 3, cooldown: 6, icon: 'event-lock', short: 'Delay 3, +25% dmg', help: 'quarantine [part] — push its attack back 3 cycles; while it waits, it takes +25% damage.' },
+  quarantine: { cls: 'bastion', verb: 'stun', name: 'Quarantine', target: 'attack', damage: 0, delay: 3, status: 'quarantined', cycles: 3, cooldown: 6, icon: 'event-lock', short: 'Delay 3, +25%; stops a cast', help: 'quarantine [part] — push its attack back 3 cycles; while it waits, it takes +25% damage. A cast it\'s compiling is stopped.' },
   failover: { cls: 'bastion', verb: 'hit', name: 'Failover', target: 'none', damage: 0, cooldown: 5, icon: 'event-warning', short: 'Hit all for missing/4', help: 'failover — hit every part for a quarter of your missing health (at least 20).' },
   // Infiltrator: burns and precision
   inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 12, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 12×3, stacks', help: 'inject <part> — 12 damage every cycle for 3 cycles. It stacks: up to 3 on one part, each with its own timer.' },
@@ -195,18 +196,18 @@ export const ABILITIES = {
   opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: 'Hit 50 (after a miss)', help: 'opening <part> — hits it for 50 the cycle after an attack misses you or is delayed.' },
   propagate: { cls: 'infiltrator', verb: 'util', name: 'Propagate', target: 'part', damage: 0, cooldown: 5, icon: 'mutation', short: 'Copy burns to all', help: 'propagate <part> — copy your burns on it to every other part.' },
   'null-route': { cls: 'infiltrator', verb: 'shield', name: 'Null Route', target: 'none', damage: 0, cooldown: 6, icon: 'behavior', short: 'Dodge one; next skill crits', help: 'null-route — the next attack misses you, and your next skill crits.' },
-  implant: { cls: 'infiltrator', verb: 'burn', name: 'Rootkit Implant', target: 'part', damage: 0, tick: 10, ticks: 99, once: true, cooldown: 0, icon: 'injector', short: 'Burn 10 until it breaks', help: 'implant <part> — burns it for 10 every cycle until the part breaks. Once per fight.' },
+  implant: { cls: 'infiltrator', verb: 'burn', name: 'Rootkit Implant', target: 'part', damage: 0, tick: 10, ticks: 99, once: true, cooldown: 0, icon: 'injector', short: 'Burn 10 till it breaks; no heals', help: 'implant <part> — burns it for 10 every cycle until the part breaks, and it can\'t be healed or grown while it burns. Once per fight.' },
   // Operator: helpers, and what you do with them
   deploy: { cls: 'operator', verb: 'burn', name: 'Deploy', target: 'part', damage: 0, helper: 12, ticks: 4, cooldown: 4, icon: 'command', short: 'Helper 12 ×4', help: 'deploy <part> — sends a helper to hit it for 12 every cycle for 4 cycles (it moves on if the part breaks).' },
   hook: { cls: 'operator', verb: 'debuff', name: 'Hook', target: 'part', damage: 0, status: 'hooked', cycles: 4, cooldown: 3, icon: 'injector', short: 'Hooked 4', help: 'hook <part> — Hooked for 4 cycles: every hit on it from anyone (helpers and burns too) gets +6.' },
   botnet: { cls: 'operator', verb: 'burn', name: 'Botnet', target: 'part', damage: 0, helper: 4, helpers: 3, ticks: 3, cooldown: 5, icon: 'command', short: '3 helpers 4 ×3', help: 'botnet <part> — three small helpers hit it for 4 each every cycle for 3 cycles.' },
   spawn: { cls: 'operator', verb: 'burn', name: 'Spawn', target: 'part', damage: 0, helper: 5, ticks: 3, cooldown: 1, icon: 'command', short: 'Helper 5 ×3', help: 'spawn <part> — sends a small helper to hit it for 5 every cycle for 3 cycles.' },
-  jam: { cls: 'operator', verb: 'stun', name: 'Jam', target: 'attack', damage: 0, delay: 1, recall: true, cooldown: 2, icon: 'interrupt', short: 'Spend a helper: delay 1', help: 'jam <part> — pull one of your helpers off it to push its attack back a cycle.' },
-  'kill-switch': { cls: 'operator', verb: 'hit', name: 'Kill Switch', target: 'none', damage: 0, cooldown: 3, icon: 'event-warning', short: 'Cash in helpers', help: 'kill-switch — your helpers deal all their remaining damage now.' },
-  'garbage-collect': { cls: 'operator', verb: 'hit', name: 'Garbage Collect', target: 'none', damage: 0, all: 10, cooldown: 3, icon: 'clear', short: 'Hit 10 all, helpers +1', help: 'garbage-collect — 10 damage to every part, and your helpers last a cycle longer.' },
-  fork: { cls: 'operator', verb: 'buff', name: 'Fork', target: 'none', damage: 0, cycles: 4, chance: 15, cooldown: 6, icon: 'expand', short: 'Helpers may split', help: 'fork — for 4 cycles, each helper hit has a 15% chance to start another helper (up to your helper cap).' },
+  jam: { cls: 'operator', verb: 'stun', name: 'Jam', target: 'attack', damage: 0, delay: 1, recall: true, cooldown: 2, icon: 'interrupt', short: 'Spend a helper: delay 1; a charge lost', help: 'jam <part> — pull one of your helpers off it to push its attack back a cycle. A charge on that attack loses its signal: it lands plain.' },
+  'kill-switch': { cls: 'operator', verb: 'hit', name: 'Kill Switch', target: 'none', damage: 0, cooldown: 3, icon: 'event-warning', short: 'Cash in helpers; hits tells', help: 'kill-switch — your helpers deal all their remaining damage now. Each part they hit takes it as a hit from your command: it calls a charge off there.' },
+  'garbage-collect': { cls: 'operator', verb: 'hit', name: 'Garbage Collect', target: 'none', damage: 0, all: 10, fragx: 3, cooldown: 3, icon: 'clear', short: 'Hit 10 all, fragments ×3', help: 'garbage-collect — 10 damage to every part, three times that to every fragment, and your helpers last a cycle longer.' },
+  fork: { cls: 'operator', verb: 'buff', name: 'Fork', target: 'none', damage: 0, cycles: 4, cooldown: 6, icon: 'expand', short: 'Each ◆ cracked splits a helper', help: 'fork — for 4 cycles, every ◆ your helpers break starts another helper on that part (up to your helper cap). Made for thick armor.' },
   barrier: { cls: 'operator', verb: 'shield', name: 'Barrier', target: 'part', damage: 0, recall: true, cooldown: 3, icon: 'shell-shield', short: 'Spend a helper: shield', help: 'barrier <part> — pull one of your helpers off it: a shield worth all the damage it had left.' },
-  reroute: { cls: 'operator', verb: 'util', name: 'Reroute', target: 'part', damage: 0, cooldown: 4, icon: 'command', short: 'Move helpers, each hits', help: 'reroute <part> — every helper moves to this part and hits it once on arrival.' },
+  reroute: { cls: 'operator', verb: 'util', name: 'Reroute', target: 'part', damage: 0, cooldown: 4, icon: 'command', short: 'Swarm a part; each arrival a hit', help: 'reroute <part> — every helper moves to this part and hits it once on arrival. Each arrival counts as a hit from you: two helpers stop a cast.' },
   'cron-storm': { cls: 'operator', verb: 'hit', name: 'Cron Storm', target: 'none', damage: 0, cooldown: 6, icon: 'expand', short: 'Helpers hit twice', help: 'cron-storm — every helper hits twice this cycle.' },
 };
 // The subclasses' own skills (dist/classes/<class>.data.mjs).
@@ -637,7 +638,7 @@ export const BOSSES = {
   // Sized for a crew of four (smaller crews get a smaller boss: crewHp in raid.mjs). Their own parts hit
   // softly (dmg) and go at whoever holds aggro; the danger is the mechanics, each a share of max Signal.
   foreman: { name: 'THE FOREMAN', family: 'ransomware', hp: 13, dmg: 0.45, enrageAt: 22, phases: [], raid: FOREMAN },
-  heatsink: { name: 'HEATSINK', family: 'worm', hp: 15, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
+  heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
 };
@@ -653,82 +654,91 @@ export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 
 // ---------- solo tells (tells.mjs) ----------
 // A tell is a move a part announces ahead, on its row of the board and in the log, that the player answers.
 // Solo fights only (wild viruses, guards, elites, strains, the solo bosses, home intrusions); crew bosses
-// have their own mechanics (raid.mjs). docs/solo-tells.md is the designer's review sheet. Four kinds:
-//   charge  its next attack, much bigger (mult). Called off if your commands hit its part (damage it, or break a
-//           ◆ on it) enough times before it lands (hits; burns and helpers don't count), or softened like any
-//           attack (a ◆, a shield, Null Route, Throttle, Brace).
-//   cast    compiling a buff on the virus (does) for castLasts cycles, from level 10. SIGINT stops it; so do
-//           castHits hits on its part.
+// have their own mechanics (raid.mjs). docs/solo-tells.md is the designer's review sheet. One clock: a tell
+// rides the timeline, it never runs on a timer of its own. Four kinds:
+//   charge  powers up one of its part's scheduled attacks (mult, capped). Its cell on the board turns into the
+//           charge at least `lead` cycles ahead, and it lands when that attack was due; delaying the attack moves
+//           it. A command of yours aimed at the part calls it off (hits; `answer: 'strip'`: that many ◆ broken).
+//   cast    compiling a buff on the virus (does) for castLasts cycles, from level 10: a marked cell on its part's
+//           row. SIGINT stops it; so do castHits command hits on its part.
 //   seal    if the part still wears ◆ when it lands, it re-arms to full with one ◆ more, and every stripped part
-//           gets a ◆ back. Strip it first.
+//           gets a ◆ back (and from level 6 your ◆ and shield go). Strip it first.
 //   mimic   the Mimic plays the command you fire on its beat back at you (its direct damage). Go quiet then.
-// Breaking a tell's part always stops it. Nothing lands unannounced: every tell shows `lead` cycles ahead.
+// Only deliberate answers count: your command aimed at the part, typed after the tell was said (not area hits,
+// burns, helpers, spills, auto-repeat or daemons). Breaking a tell's part always stops it.
 export const TELL = {
-  // By the virus's level: how many tells it brings (count), how far ahead each shows (lead), how many of your
-  // commands have to hit its part to call a charge (hits) or a cast (castHits) off, how much bigger a charge is
-  // (mult), and the most a charge adds to the hit it rides on, as a share of your max (cap; dot: Full Disk's
-  // burst a cycle). Gentle while you have three skills, full from 17.
+  // By the virus's level: how many tells it brings (count), how many can be live at once (live), how far ahead
+  // each shows at least (lead), how many command hits call a charge (hits) or a cast (castHits) off, how much
+  // bigger a charge is (mult), the most a charge adds to the hit it rides on as a share of your max (cap; dot:
+  // Full Disk's burst a cycle), and the after-effect of a tell that lands (after: your last skill locked that
+  // many cycles). Gentle while you have three skills, in between to 9, full from 10.
   tiers: [
-    { to: 5, count: 1, lead: 3, hits: 1, castHits: 2, mult: 2, cap: 0.1, dot: 0.03 },
-    { to: 9, count: 1, lead: 2, hits: 1, castHits: 2, mult: 2.2, cap: 0.14, dot: 0.04 },
-    { to: 16, count: 2, lead: 2, hits: 1, castHits: 2, mult: 2.4, cap: 0.18, dot: 0.05 },
-    { to: 99, count: 2, lead: 2, hits: 1, castHits: 2, mult: 2.3, cap: 0.17, dot: 0.05 },
+    { to: 5, count: 1, live: 1, lead: 3, hits: 1, castHits: 2, mult: 2, cap: 0.1, dot: 0.03, after: 0, burn: 0, hang: 0 },
+    { to: 9, count: 1, live: 1, lead: 2, hits: 1, castHits: 2, mult: 2.3, cap: 0.15, dot: 0.04, after: 1, burn: 0.02, hang: 0 },
+    { to: 16, count: 2, live: 1, lead: 2, hits: 1, castHits: 2, mult: 2.8, cap: 0.25, dot: 0.06, after: 2, burn: 0.04, hang: 1 },
+    { to: 99, count: 3, live: 2, lead: 2, hits: 1, castHits: 2, mult: 3, cap: 0.25, dot: 0.06, after: 2, burn: 0.05, hang: 1 },
   ],
-  ceiling: 0.55, // and never more than this share of your max in one hit: no one-shots
-  elite: { count: 1, cap: 1.15, hits: 1 }, // an elite brings one more, each can cost 15% more (never a one-shot), and a charge takes one more hit
+  ceiling: 0.5, // and never more than this share of your max in one hit (or the plain hit, if that's bigger): no one-shots
+  elite: { count: 1, cap: 1.15, hits: 1 }, // an elite brings one more, each can cost 15% more (never past the ceiling), and a charge takes one more hit
   boss: { count: 3, cap: 1.1, hits: 1 }, // a solo boss brings every tell open at its level, and its charges take one more hit
   champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
 
   castFrom: 10, // casts come with SIGINT
-  knock: 1, // a charge called off knocks its plain attack back this many cycles
+  first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal three)
+  rest: { charge: 4, cast: 7, seal: 7 }, // after a tell lands or is answered, the next of its kind may land this many cycles on, plus a seeded 0..jitter
+  jitter: 2,
+  heavy: 0.06, // another part's attack this big (a share of your max) on the same cycle: a charge waits for the next one
   burst: 3, // Full Disk: its burst of encryption lasts this many cycles
   castLasts: 4, // a cast's buff lasts this many cycles (another one starts the clock over, it doesn't stack)
   loud: 1.35, // Double Extortion: its attacks hit 35% harder
   grow: 0.25, // Self-Update: every part grows a quarter more Integrity
   mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
-  sooner: 2, // an interrupted cast comes back two cycles sooner, so SIGINT (ready every 8) can stop at most every other one
+  // Reading pays: a charge or the Mimic answered leaves the part Open (×mult from everyone for `cycles`); a cast
+  // or a seal answered readies the skill that did it. Each read adds xp of the kill's XP (up to xpMax), and
+  // reading every tell in a fight (two or more said) rolls its loot once more.
+  open: { mult: 1.5, cycles: 2 },
+  read: { xp: 0.1, xpMax: 0.4, rolls: 1, min: 2 },
   bots: { answer: true }, // sim switch (balance.mjs): a bot that plays as if it can't see tells
 };
-// The library. part: where it sits. 'idle' is picked when it's announced: the part you've left alone longest
-// that can do it (an attacker for a charge; a part wearing ◆ for a seal), the signature part first on a tie. So a
-// tell punishes tunnel vision: while you work on one part, another winds up. name: its name on the signature
-// part (other: on any other part). first: the cycle it's first announced; every: cycles from one landing to the next.
+// The library. part: the fixed part it sits on ('special', the family's signature part; 'basic'; or a part id),
+// shown on the chip and in the codex. A charge needs a part with an attack (it falls back to the other one).
 export const TELLS = {
-  // Charges: answer with damage (or ◆), or soften it.
-  fulldisk: { kind: 'charge', name: 'Full Disk', other: 'Overcharge', part: 'idle', first: 2, every: 6 }, // an Encrypt with a burst of encryption on top for 3 cycles
-  massmailer: { kind: 'charge', name: 'Mass Mailer', other: 'Overcharge', part: 'idle', first: 2, every: 6, spawn: 1 }, // a Replicate that hatches two (up to the limit)
-  possession: { kind: 'charge', name: 'Possession', other: 'Overcharge', part: 'idle', first: 2, every: 6, longer: 2, plain: true }, // a Scramble that lasts two cycles longer (Scrub clears it)
-  lockon: { kind: 'charge', name: 'Lock-on', other: 'Overcharge', part: 'idle', first: 2, every: 6 }, // Watchdog, Tracer
-  infest: { kind: 'charge', name: 'Infest', other: 'Overcharge', part: 'idle', first: 2, every: 6, spawn: 1 }, // Crawler
-  deepshred: { kind: 'charge', name: 'Deep Shred', other: 'Overcharge', part: 'idle', first: 2, every: 6, shred: true }, // Shredder: it shreds a file in your pack too
-  ram: { kind: 'charge', name: 'Battering Ram', other: 'Battering Ram', part: 'idle', first: 2, every: 6 }, // Bouncer (only its Gate attacks)
-  // Casts (from level 10): SIGINT, the wind-up, or break the part.
-  extortion: { kind: 'cast', name: 'Double Extortion', part: 'idle', first: 4, every: 7, does: 'loud' }, // its attacks hit 35% harder for 4 cycles
-  selfupdate: { kind: 'cast', name: 'Self-Update', part: 'idle', first: 4, every: 7, does: 'grow' }, // every part grows a quarter more Integrity
-  persistence: { kind: 'cast', name: 'Persistence', part: 'idle', first: 4, every: 7, does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
-  callhome: { kind: 'cast', name: 'Call Home', part: 'idle', first: 4, every: 7, does: 'haste' }, // guards
+  // Charges: answer with a command hit on the part (or the ◆ it asks for), or soften it.
+  fulldisk: { kind: 'charge', name: 'Full Disk', part: 'special' }, // an Encrypt with a burst of encryption on top for 3 cycles
+  massmailer: { kind: 'charge', name: 'Mass Mailer', part: 'special', spawn: 1 }, // a Replicate that hatches two (up to the limit)
+  possession: { kind: 'charge', name: 'Possession', part: 'special', longer: 2 }, // a Scramble that lasts two cycles longer (Scrub clears it)
+  lockon: { kind: 'charge', name: 'Lock-on', part: 'special' }, // Watchdog, Tracer: the Tracker
+  infest: { kind: 'charge', name: 'Infest', part: 'special', spawn: 1 }, // Crawler: the Brood
+  deepshred: { kind: 'charge', name: 'Deep Shred', part: 'special', shred: true }, // Shredder: it shreds a file in your pack too
+  overcharge: { kind: 'charge', name: 'Overcharge', part: 'basic' }, // from level 17 (the tier's third tell): a second charge, on the other attacker
+  ram: { kind: 'charge', name: 'Battering Ram', part: 'basic', answer: 'strip', strip: 2 }, // Bouncer (only its Gate attacks): strip ◆2 off the Gate
+  // Casts (from level 10): SIGINT, two hits, or break the part.
+  extortion: { kind: 'cast', name: 'Double Extortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
+  selfupdate: { kind: 'cast', name: 'Self-Update', part: 'special', does: 'grow' }, // every part grows a quarter more Integrity
+  persistence: { kind: 'cast', name: 'Persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
+  callhome: { kind: 'cast', name: 'Call Home', part: 'special', does: 'haste' }, // guards
   // Seals: strip the part before it lands, or it re-arms with one ◆ more.
-  keyrotation: { kind: 'seal', name: 'Key Rotation', part: 'idle', first: 5, every: 7 },
-  resync: { kind: 'seal', name: 'Resync', part: 'idle', first: 5, every: 7 },
-  godark: { kind: 'seal', name: 'Go Dark', part: 'idle', first: 5, every: 7 },
-  blacklist: { kind: 'seal', name: 'Blacklist', part: 'idle', first: 3, every: 7 }, // Sentinel
-  // The Mimic's beat (a part's nature, not counted against the tier's count).
+  keyrotation: { kind: 'seal', name: 'Key Rotation', part: 'special' },
+  resync: { kind: 'seal', name: 'Resync', part: 'special' },
+  godark: { kind: 'seal', name: 'Go Dark', part: 'special' },
+  blacklist: { kind: 'seal', name: 'Blacklist', part: 'special' }, // Sentinel: the Lockout
+  // The Mimic's beat (a part's nature, not counted against the tier's count): every 4 cycles from cycle 3.
   mimic: { kind: 'mimic', name: 'Mimic', part: 'mimic', first: 3, every: 4 },
 };
 // Which tells each virus brings, in order: a tier's count takes the first ones open at the virus's level
 // (a cast from TELL.castFrom; a seal from SEAL_FROM, on a part that wears ◆). Strains bring their own charge
-// (STRAINS[id].tell) and their lineage's cast and seal.
+// (STRAINS[id].tell, on their rule's part) and their lineage's cast and seal.
 export const SEAL_FROM = 6;
 export const TELL_SETS = {
-  ransomware: ['fulldisk', 'extortion', 'keyrotation'],
-  worm: ['massmailer', 'selfupdate', 'resync'],
-  ghostroot: ['possession', 'persistence', 'godark'],
-  watchdog: ['lockon', 'callhome'],
+  ransomware: ['fulldisk', 'extortion', 'overcharge', 'keyrotation'],
+  worm: ['massmailer', 'selfupdate', 'overcharge', 'resync'],
+  ghostroot: ['possession', 'persistence', 'overcharge', 'godark'],
+  watchdog: ['lockon', 'callhome', 'overcharge'],
   sentinel: ['blacklist', 'callhome'],
-  crawler: ['infest', 'callhome'],
-  shredder: ['deepshred', 'callhome'],
+  crawler: ['infest', 'callhome', 'overcharge'],
+  shredder: ['deepshred', 'callhome', 'overcharge'],
   bouncer: ['ram', 'callhome'],
-  tracer: ['lockon', 'callhome'],
+  tracer: ['lockon', 'callhome', 'overcharge'],
 };
 
 // Build a virus from a named fixture or a seeded random variant.
@@ -872,12 +882,13 @@ export const SERVER = {
 
 // ---------- classes, skills, levels and talents ----------
 // Each class levels on its own, from 1 to 50, a long WoW-style climb. Every level adds 4%
-// power; skills unlock along the way (the bar is full at 18, the last skill at 38); a talent
-// point every other level from 10 (21 by level 50, a full tree).
+// power; skills unlock along the way (seven bar slots, an eighth at 22 and a ninth at 30; the last skill at 38);
+// a talent point every other level from 10 (21 by level 50, a full tree).
+// bar: [level, slots] steps; equipSlots: the most you'll ever have. keys: the key each slot is on, in order.
 // kit: from level 5 (specFrom) one of a class's two first-row talents (ARCHETYPES[cls].spec) is part of its base kit, specRanks
 // free ranks: the level-5 specialty pick is gone. The Infiltrator's is Recon: two ranks of Heap Spray took a blue Payload from
 // 34% to 21% of its Signal a fight at level 10 (docs/progression.md), far past the few percent the others add.
-export const LOADOUT = { equipSlots: 7, maxLevel: 50, talentFrom: 10, talentEvery: 2, trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
+export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], maxLevel: 50, talentFrom: 10, talentEvery: 2, trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
@@ -911,7 +922,7 @@ export const TREE = [
 const f = (id, name, rule, per) => ({ id, name, rule, per, max: 3 });
 export const CANTRIPS = [
   { key: '1', id: 'spike', name: 'Spike', rule: 'Hit 25. If you type nothing, you Spike the last part you hit.' },
-  { key: '9', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling: a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and whatever you interrupt casts its next one sooner. It\'s ready every 8 cycles.' },
+  { key: '-', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling: a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. It\'s ready every 8 cycles.' },
 ];
 // Edge: each class's signature passive, from level 10 (the root of its talent tree).
 export const EDGE = {
@@ -997,7 +1008,11 @@ for (const a of Object.values(ARCHETYPES)) {
 }
 // A kit's skills in unlock order: the class's core, then its subclass's line (none before you pick).
 export const skillOrder = (arch, sub = null) => [...ARCHETYPES[arch].core, ...(sub && ARCHETYPES[arch].subs[sub] ? ARCHETYPES[arch].subs[sub].skills : [])];
-export const startingSkills = (arch) => skillOrder(arch).slice(0, LOADOUT.equipSlots);
+// Bar slots at a level (LOADOUT.bar), and the run skills (Spoof, Tap), which never take a slot: they're
+// typed on runs.
+export const barSlots = (level) => LOADOUT.bar.reduce((n, [l, k]) => (level >= l ? k : n), LOADOUT.bar[0][1]);
+export const isRunSkill = (id) => !!RUN_SKILLS[id];
+export const startingSkills = (arch) => skillOrder(arch).filter((id) => !isRunSkill(id)).slice(0, barSlots(1));
 // Level at which a class learns a skill or cantrip. A subclass skill: at its place in that subclass's
 // line (with no subclass named, the first of the class's lines that has it).
 export function unlockLevel(arch, id, sub = null) {

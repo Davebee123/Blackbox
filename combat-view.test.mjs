@@ -111,15 +111,19 @@ test('the Now header shows the cycle number', () => {
   assert.match(boardMarkup(s), /cycle 2/);
 });
 
-test('the tray shows a run skill (Spoof) as "on runs" in a fight', async () => {
+test('run skills (Spoof, Tap) take no slot: the tray leaves them out, and equipping one says it\'s typed on runs', async () => {
   const { trayMarkup } = await import('./dist/view.mjs');
-  const { fresh, command } = await import('./dist/combat.mjs');
+  const { fresh, command, equippedSkills } = await import('./dist/combat.mjs');
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
+  s.loadout.sub = { infiltrator: 'phantom' };
   s.hackers = { infiltrator: { level: 30, xp: 0 } };
-  s.loadout.equipped.infiltrator = ['inject', 'spoof'];
+  s.loadout.equipped.phantom = ['inject', 'spoof'];
+  assert.deepEqual(equippedSkills(s, 'infiltrator'), ['inject']);
+  s.loadout.equipped.phantom = ['inject'];
+  assert.match(command(s, 'equip spoof').at(-1).message, /run skill/);
   command(s, 'encounter cryptjack'); command(s, 'engage');
-  assert.match(trayMarkup(s), /Spoof<\/span><span class="state">on runs/);
+  assert.doesNotMatch(trayMarkup(s), /Spoof/);
 });
 
 test('a win writes what it gave you into the log: damage taken, XP (one line; the server has no XP of its own), salvage, lead', () => {

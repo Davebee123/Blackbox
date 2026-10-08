@@ -14,6 +14,7 @@ CONFIG.powerPerLevel = 0; // flat numbers at every level (level tests turn it ba
 CONFIG.gap = { dealt: 0, taken: 0, floor: 1, below: 0 }; // and no level-gap scaling (combat.test.mjs tests it)
 (await import('./dist/data.mjs')).LOADOUT.specRanks = 0; // the kit talent's two free ranks (progression.mjs): off, for exact numbers
 import { start as startAt, act, quiet, noArmor, big, lost } from './classes.test.mjs';
+CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 
 // A level-25 class with exactly these skills on the bar, these talent picks (0 = a, 1 = b) and ranks.
 // The old one-tree talents by tier (a, b): these tests name talents the way they always did, and the
@@ -33,22 +34,28 @@ const start = (cls, bar, picks = [], id = 'cryptjack', ranks = {}) => {
 };
 
 // ---------- Breaker ----------
-test('Fork Bomb (double on Exposed); Thermal Runaway grows; Brace blocks and cracks the attacker; Sudo crits; Zero-day once, through armor', () => {
+test('Fork Bomb (fragments ×3); Thermal Runaway grows; Brace cuts a hit and sends back twice the cut; Sudo turns off the part rules; Zero-day once, through armor and locks', () => {
   const s = noArmor(quiet(start('breaker', ['exploit', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day'])));
   big(s, 'pulse'); big(s, 'encryptor');
-  act(s, 'exploit pulse');
+  s.encounter.virus.parts.push({ id: 'frag9', name: 'Fragment 9', kind: 'fragment', integrity: 99, max: 99, armor: 0, maxArmor: 0, patchAt: null, attack: null, exposedUntil: 0 });
   act(s, 'fork-bomb');
-  assert.equal(lost(s, 'pulse'), 30);
-  assert.equal(lost(s, 'encryptor'), 15);
+  assert.equal(lost(s, 'pulse'), 12);
+  assert.equal(lost(s, 'frag9'), 36, 'three times that on a fragment');
   const t = noArmor(quiet(start('breaker', ['thermal-runaway'])));
   big(t, 'pulse');
   act(t, 'thermal-runaway pulse'); act(t, 'hold'); act(t, 'hold'); act(t, 'hold');
-  assert.equal(lost(t, 'pulse'), 6 + 10 + 14 + 18);
+  assert.equal(lost(t, 'pulse'), 4 + 8 + 12 + 16);
+  // Sudo: a Lockbox's ward doesn't hold your hits.
   const c = noArmor(quiet(start('breaker', ['sudo'])));
   big(c, 'pulse');
-  act(c, 'sudo');
+  c.encounter.virus.parts.push({ id: 'lockbox', name: 'Lockbox', kind: 'system', integrity: 40, max: 40, armor: 0, maxArmor: 0, ward: 'pulse', attack: null, exposedUntil: 0 });
+  part(c, 'pulse').max = 40; part(c, 'pulse').integrity = 40;
   act(c, 'spike pulse');
-  assert.equal(lost(c, 'pulse'), Math.floor(25 * 1.5), 'Sudo: every hit crits');
+  assert.equal(lost(c, 'pulse'), 10, 'warded: a quarter of its max a cycle');
+  act(c, 'sudo');
+  c.encounter.readyAt = {};
+  act(c, 'spike pulse');
+  assert.equal(lost(c, 'pulse'), 10 + 25, 'root: the ward doesn\'t hold');
   const z = quiet(start('breaker', ['zero-day']));
   big(z, 'pulse');
   act(z, 'zero-day pulse');
@@ -60,9 +67,11 @@ test('Fork Bomb (double on Exposed); Thermal Runaway grows; Brace blocks and cra
   const armor = pulse.armor;
   b.encounter.cycle = pulse.attack.due;
   const amount = pulse.attack.amount;
+  pulse.armor = 0; pulse.integrity = pulse.max = 999;
   act(b, 'brace');
-  assert.equal(100 - b.server.integrity, Math.max(Math.ceil(amount / 2), amount - 5), 'Brace: +5 Block');
-  assert.equal(pulse.armor, armor - 1, 'and the attacker lost a chit');
+  const took = 100 - b.server.integrity;
+  assert.equal(took, Math.round(amount * 0.7), 'Brace: 30% off');
+  assert.equal(lost(b, 'pulse'), 2 * Math.round((took * 0.3) / 0.7), 'and twice what it saved goes back');
 });
 
 // ---------- Bastion ----------
@@ -141,10 +150,15 @@ test('Fork splits helpers up to the cap; Barrier turns a helper into a shield; R
   const b2 = lost(s, 'encryptor');
   act(s, 'cron-storm');
   assert.equal(lost(s, 'encryptor') - b2, 2 * 3 * 4);
-  const f = noArmor(quiet(start('operator', ['botnet', 'fork'])));
+  // Fork: every ◆ a helper breaks starts another helper on that part, up to the cap.
+  const f = quiet(start('operator', ['botnet', 'fork']));
   big(f, 'pulse');
+  Object.assign(part(f, 'pulse'), { armor: 5, maxArmor: 5 });
   const was = SKILLS.helperCap;
+  act(f, 'botnet pulse');
+  f.encounter.readyAt = {};
   act(f, 'fork');
+  assert.ok(f.encounter.helpers.length > 3, `a ◆ cracked, a helper split: ${f.encounter.helpers.length}`);
   for (let k = 0; k < 3; k++) { f.encounter.readyAt = {}; act(f, 'botnet pulse'); }
   assert.ok(f.encounter.helpers.length <= SKILLS.helperCap, 'never past the cap');
   assert.equal(was, 6);
@@ -163,8 +177,9 @@ test('talents change the numbers they say', () => {
   assert.equal(lost(p, 'pulse'), 40, 'Piercing: Overload goes through armor');
   const cd = quiet(noArmor(start('breaker', ['segfault'], [0, 0])));
   const pp = Object.assign(part(cd, 'pulse'), { integrity: 35, max: 100 });
+  pp.integrity = 28;
   act(cd, 'segfault pulse');
-  assert.equal(pp.integrity, 0, 'Core Dump: the execute starts under 40%');
+  assert.equal(pp.integrity, 0, 'Core Dump: Segfault triples under 30% too');
   const y = quiet(start('bastion', ['firewall', 'patch'], [1, 0, 0]));
   y.server.integrity = 50;
   act(y, 'patch');

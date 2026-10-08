@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, advance, restore, part, active, virusIntegrity, intents, patches, timersHidden, previewDamage } from './dist/combat.mjs';
 import { CONFIG, createVirus } from './dist/data.mjs';
+CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 // These tests check exact numbers: no crits (gear.test.mjs covers them).
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;

@@ -25,7 +25,7 @@ Ransomware. Integrity ×13, enrages at cycle 22 (MASS LAYOFF, 20% on everyone ev
 
 ## HEATSINK: the healer check
 
-Worm. Integrity ×15, enrages at cycle 25 (THERMAL RUNAWAY). Its Surge goes at whoever holds aggro, its Mirror's Splice at the lowest. Its Replicator sends the workers instead of fragments.
+Worm. Integrity ×17 (×15 until bots used Shatter only when it was their biggest hit, and a crew without a healer then outran it), enrages at cycle 25 (THERMAL RUNAWAY). Its Surge goes at whoever holds aggro, its Mirror's Splice at the lowest. Its Replicator sends the workers instead of fragments.
 
 | Phase | Role | Their job | If they don't |
 |---|---|---|---|

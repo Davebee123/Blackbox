@@ -2,7 +2,7 @@
 
 Until level 10 every Breaker plays the same core: Overload, Flood, Exploit and Crack. At level 10 you pick one of two subclasses with `subclass demolitionist` or `subclass overclocker`. The first pick works anywhere out of a fight, and switching later is free at home. Each subclass has its own skill line, its own edge (the signature passive) and its own talent tree, and it keeps its own bar and talent points when you switch away and back. A Breaker who never picks plays the Demolitionist.
 
-A subclass line holds eight skills, which unlock at levels 12, 14, 18, 22, 26, 30, 34 and 38. Your bar still has seven slots, so from level 22 you choose which skills to carry. Momentum, the Breaker passive, works the same for both: each part you break gives +10% damage for 2 cycles, and another break adds a stack and resets the timer.
+A subclass line holds eight skills, which unlock at levels 12, 14, 18, 22, 26, 30, 34 and 38. Your bar holds seven skills, an eighth from level 22 and a ninth from level 30, and the skill that opens with each new slot goes into it. From level 26 you choose which skills to carry. Momentum, the Breaker passive, works the same for both: each part you break gives +10% damage for 2 cycles, and another break adds a stack and resets the timer.
 
 ## Demolitionist
 
@@ -12,14 +12,14 @@ A subclass line holds eight skills, which unlock at levels 12, 14, 18, 22, 26, 3
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
-| 12 | `shatter <part>` | Lights up for 2 cycles when you break a part's last ◆. It deals 38 damage. | lit |
-| 14 | `fork-bomb` | Deals 15 damage to every part, or 30 to an Exposed one. | 3 |
-| 18 | `shaped-charge <part>` | Breaks every ◆ on the part at once, which lights Shatter. On a part with no armor left, it deals 30 damage instead. | 5 |
-| 22 | `thermal-runaway <part>` | Burns the part for 6, then 10, 14 and 18. | 4 |
-| 26 | `logic-bomb <part>` | Plants a bomb that goes off 2 cycles later. It deals 50 damage to that part and 20 to every other part. If the part breaks first, the bomb goes off on the next one. On armor, the 50 breaks two ◆. | 4 |
+| 12 | `shatter <part>` | Lit for a cycle on the part whose last ◆ you just broke. 38 damage to it. | lit |
+| 14 | `fork-bomb` | 12 damage to every part, three times that to every fragment. | 3 |
+| 18 | `shaped-charge <part>` | Breaks every ◆ on it at once, and the part lashes out: its attack comes a cycle sooner. On a part with no armor left, it deals 30 damage instead. | 5 |
+| 22 | `thermal-runaway <part>` | Burns it for 4, then 8, 12 and 16. On a part compiling a cast, every tick counts as a hit on the cast. | 4 |
+| 26 | `logic-bomb <part>` | Goes off 2 cycles later: 50 damage to it and 20 to every other part. A part it breaks can't reboot, and a Tripwire it breaks stays quiet. | 4 |
 | 30 | `chain-reaction` | For 3 cycles, every part you break blows up and hits every other part for 20. A part broken by a blast sets off a blast of its own. | 6 |
-| 34 | `bit-rot <part>` | For 4 cycles the part loses a ◆ at the end of each of your turns, and it can't patch any back while it rots. It can't target a part that never had armor. | 5 |
-| 38 | `zero-day <part>` | Deals 65 damage straight through armor. You can use it once per fight. | once |
+| 34 | `bit-rot <part>` | For 4 cycles it loses a ◆ at the end of each of your turns, it can't patch any back, and a seal it starts fails. | 5 |
+| 38 | `zero-day <part>` | 65 damage straight through armor, locks and wards. Once per fight. | once |
 
 ### Demolitionist talents
 
@@ -39,7 +39,7 @@ Choice tiers (pick one of two):
 | 2 | **Cascade Failure.** Your first break each fight resets all your cooldowns. | **Meltdown.** Thermal Runaway also starts on every other part at half strength. |
 | 3 | **Total Overkill.** Overkill spills onto every other part, not just the next one. | **Scorched Earth.** No part patches its ◆ back while you're in the fight. |
 
-**Playing it.** Strip first, then cash in. Crack and Shaped Charge take the armor off, Shatter lights up the moment the last ◆ breaks, and Fork Bomb finishes off single chits on several parts at once, or hits three bare parts together. Shatter is a finisher, not a one-shot: strip, Shatter, and follow up before the part patches. Logic Bomb and Chain Reaction reward fights with many parts, such as Worm fragments and bosses. Bit Rot is for parts that keep patching their armor back.
+**Playing it.** Strip first, then cash in. Crack takes three ◆ off. Shaped Charge takes them all, but the part lashes out and its attack comes a cycle sooner, so blow it on a part whose attack is still far off. Shatter is lit for one cycle on the part you just stripped. Press it when it's your biggest hit there, and Flood when Flood is bigger. Fork Bomb is for fragments: they take three times its hit while everything else takes a little. Thermal Runaway melts a cast, because every tick counts as a hit on it. Logic Bomb breaks twins for good and keeps a Tripwire quiet. Bit Rot makes a seal fail, and Zero-Day goes through a Mutex lock or a Lockbox ward. Area hits and burns never call off a tell: when a part winds up a charge, hit that part.
 
 ## Overclocker
 
@@ -49,14 +49,14 @@ Choice tiers (pick one of two):
 
 | Level | Skill | What it does | Cooldown |
 |---:|---|---|---:|
-| 12 | `overvolt` | Your next Overload within the next 3 cycles hits twice. On armor, each hit breaks two ◆. It costs you 6 Signal, or 6 Integrity at home. | 4 |
-| 14 | `segfault <part>` | Deals 30 damage, or three times that to a part under 30%. | 3 |
-| 18 | `thermal-throttle <part>` | Needs Momentum and spends all of it. It deals 20 damage plus 20 for each stack spent. With 2 or more stacks it goes straight through armor. | 3 |
-| 22 | `brace` | For 2 cycles you get +5 Block, and whatever hits you loses a ◆ (or takes 10 if it has none). | 5 |
-| 26 | `stack-smash <part>` | Deals 30 damage. Each crit hits the part again, up to 3 more times. | 3 |
-| 30 | `sudo` | This cycle and next, every hit you land crits. | 6 |
-| 34 | `turbo-boost` | You gain 2 Momentum stacks that last 3 cycles. It costs you 6 Signal, or 6 Integrity at home. | 5 |
-| 38 | `zero-day <part>` | Deals 65 damage straight through armor. You can use it once per fight. | once |
+| 12 | `overvolt <part>` | Two hits of 20 in one command. Both count against a tell: one Overvolt stops a cast. It costs you 6 Signal (Integrity at home). | 4 |
+| 14 | `segfault <part>` | 30 damage, three times that on a part winding up a charge. Crash it mid-wind-up. | 3 |
+| 18 | `thermal-throttle <part>` | Needs Momentum and spends all of it. It deals 20 damage plus 20 for each stack spent, and with 2 or more stacks it goes straight through armor, locks and wards. | 3 |
+| 22 | `brace` | This cycle and next, hits on you deal 30% less, and whatever hits you takes twice what Brace saved you. Made for a charge you can't call off. | 5 |
+| 26 | `stack-smash <part>` | 30 damage. On an Exposed part it hits twice for sure. Each crit hits it again, up to 3 more times. | 3 |
+| 30 | `sudo` | Root override, this cycle and next: locks and wards don't hold your hits, a Tripwire you break stays quiet, and the Decoy and the Mimic can't copy you. | 6 |
+| 34 | `turbo-boost` | Gain 2 Momentum stacks that last 3 cycles, for 6 Signal (Integrity at home). Under half your Signal it costs nothing and gives 3. | 5 |
+| 38 | `zero-day <part>` | 65 damage straight through armor, locks and wards. Once per fight. | once |
 
 ### Overclocker talents
 
@@ -76,4 +76,4 @@ Choice tiers (pick one of two):
 | 2 | **Core Dump.** Segfault's execute starts under 40%. | **Burn-in.** Thermal Throttle spends only half your Momentum stacks, rounded down, and the rest stay. |
 | 3 | **Unsafe Mode.** You deal 30% more damage and take 20% more. | **Critical Heat.** While you have 4 or more Momentum stacks, every hit you land crits. |
 
-**Playing it.** Build heat, then spend it on one part. Each break adds a Momentum stack, and Redline lets them pile up to 5, so the second and third parts of a fight fall faster than the first. Thermal Throttle turns the stacks into one big hit, and with two or more it ignores armor entirely. Overvolt doubles your next Overload, and Turbo Boost buys stacks without a break, but both cost Signal, and every stack you hold makes the virus hit you harder. Stack Smash pairs with Sudo, Exploit and Critical Heat, because every crit hits again.
+**Playing it.** Build heat, then spend it on one part, and let the board tell you when. A part winding up a charge is Segfault's: three times the hit, and the charge is called off. A cast is Overvolt's: two hits in one command stop it. A charge you can't stop is Brace's, and the part that lands it takes twice what Brace saved you. A Mutex lock, a Lockbox ward, a Tripwire or the Mimic's beat is Sudo's. Exploit a big bare part and Stack Smash it next cycle for two hits, more on crits. Thermal Throttle turns your stacks into one big hit that goes through armor and locks from two stacks, and Turbo Boost is free once you're under half your Signal. Every stack you hold makes the virus hit you harder.

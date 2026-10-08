@@ -35,11 +35,13 @@ import { archWall } from './architecture.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
+import { situationOf } from './situations.mjs';
+import { partTells } from './tells.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, sigsOf, STREAK, SCOUT } from './invasion.mjs';
 import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, VERSIONS, MATERIALS, statLine, itemLabel, fmtStat, sideStats, serviceCost, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
-import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, defaultSub, skillOrder } from './data.mjs';
-import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, snapshotPct, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
+import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, defaultSub, skillOrder, barSlots, isRunSkill } from './data.mjs';
+import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, snapshotPct, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
@@ -279,17 +281,21 @@ function statusPanel(s) {
 
 // A tell (tells.mjs): on its part's row, in the column it lands, never hidden. It says what it is, what's coming
 // and what answers it, in a word or two; the hover has the whole of it.
-const TELL_KICK = { charge: 'Winding up', cast: 'Compiling…', seal: 'Sealing', mimic: 'Recording' };
+const TELL_KICK = { charge: 'Charged', cast: 'Compiling…', seal: 'Sealing', mimic: 'Recording' };
 function tellChip(s, i, c, k = '', to = null) {
   const p = part(s, i.source), left = Math.max(0, (i.need || 0) - (i.wound || 0));
-  const hits = (n) => (n === 1 ? 'hit it once' : `hit it ×${n}`);
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? 'burst of encryption' : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`) : '';
-  const answer = i.tell === 'charge' ? (i.wound ? `${i.wound}/${i.need} hits` : hits(left)) : i.tell === 'cast' ? `SIGINT, or ${left === 1 ? 'hit once' : `hit ×${left}`}` : i.tell === 'seal' ? `strip ◆${p?.armor || 0}` : 'go quiet';
+  // The answer, exactly (tells.mjs answerOf): what counts, and how far along it is.
+  const short = i.tell === 'charge' ? (i.strip ? `strip ◆${i.need}` : left > 1 ? `hit it ×${left}` : 'hit it') : i.tell === 'cast' ? `SIGINT, or hit ×${left}` : i.tell === 'seal' ? `strip ◆${p?.armor || 0}` : 'go quiet';
+  const answer = i.wound && i.tell !== 'seal' ? `${i.wound}/${i.need}${i.strip ? ' ◆' : ' hits'}` : short;
+  const counts = 'Only a command of yours aimed at it counts, typed after it was said: area hits, burns, helpers and auto-repeat don\'t.';
+  const pays = 'Read it and the part is Open: +50% from everyone for 2 cycles.';
+  const lands = 'If it lands it leaves you Corrupted, knocks your last skill offline, and hangs your next command.';
   const tip = i.tell === 'charge'
-    ? `${i.name} from the ${p?.name}: its next ${p?.attack?.name || 'attack'}, much bigger (${what}). It lands ${c ? `in ${c}` : 'this cycle'}. Hit the ${p?.name} with ${left === 1 ? 'a command' : `${left} commands`} before then to call it off, or soften it (a ◆, a shield, Null Route, Throttle, Brace).`
-    : i.tell === 'cast' ? `The ${p?.name} is compiling ${i.name}. It lands ${c ? `in ${c}` : 'this cycle'}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. SIGINT stops it, and so does hitting the ${p?.name} ${left} ${left === 1 ? 'time' : 'times'}.`
-    : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${c ? `in ${c}` : 'this cycle'}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it first.`
-    : `The Mimic plays back the command you fire ${c ? `in ${c}` : 'this cycle'}, at you. Fire something with no direct hit then (a debuff, a strip, a burn, a shield).`;
+    ? `${i.name}: the ${p?.name}'s ${i.plain || 'attack'} in this cell, charged (${what}). It lands ${c ? `in ${c}` : 'this cycle'}. To call it off: ${i.answer}. ${counts} ${pays} ${lands}`
+    : i.tell === 'cast' ? `The ${p?.name} is compiling ${i.name}. It lands ${c ? `in ${c}` : 'this cycle'}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. To stop it: ${i.answer}. ${counts} ${pays} ${lands}`
+    : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${c ? `in ${c}` : 'this cycle'}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it first: the skill that takes its last ◆ is ready again.`
+    : `The Mimic plays back the command you fire ${c ? `in ${c}` : 'this cycle'}, at you. Fire something with no direct hit then (a debuff, a strip, a burn, a shield), and the Mimic is Open.`;
   return `<div class="intent raid tell t-${esc(i.tell)} ${i.tell === 'cast' ? 'cast' : ''} ${c === 0 ? 'now' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}"><small class="compiling">${TELL_KICK[i.tell] || ''}</small><b>${esc(i.name)}</b>${what ? `<small>${esc(what)}</small>` : ''}<small class="answer">${esc(answer)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 function attackChip(i, c, k = '', to = null) {
@@ -298,12 +304,12 @@ function attackChip(i, c, k = '', to = null) {
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a
 // debuffed part reads at a glance. Exposed also hatches its bar: it's open.
-const MARKS = { exposed: 'crit', tagged: 'ids', hooked: 'injector', throttled: 'debuff', quarantined: 'stun', jammed: 'stun', poisoned: 'debuff', thrash: 'burn', burn: 'burn', helper: 'daemon' };
+const MARKS = { open: 'crit', exposed: 'crit', tagged: 'ids', hooked: 'injector', throttled: 'debuff', quarantined: 'stun', jammed: 'stun', poisoned: 'debuff', thrash: 'burn', burn: 'burn', helper: 'daemon' };
 export function partMarks(s, p) {
   const e = s.encounter;
   if (!alive(p)) return [];
   // Subclass marks too (dist/classes): Jammed and Poisoned (Hijacker), Thrash (Payload).
-  const out = ['exposed', 'tagged', 'hooked', 'throttled', 'quarantined', 'jammed', 'poisoned', 'thrash'].filter((k) => p[k + 'Until'] >= e.cycle);
+  const out = ['open', 'exposed', 'tagged', 'hooked', 'throttled', 'quarantined', 'jammed', 'poisoned', 'thrash'].filter((k) => p[k + 'Until'] >= e.cycle);
   if ((e.burns || []).some((b) => b.target === p.id)) out.push('burn');
   if (e.helpers?.some((h) => h.target === p.id)) out.push('helper');
   return out;
@@ -317,7 +323,7 @@ export function codexMarkup(s) {
   const known = all.filter((k) => s.codex?.[k]).length;
   // What you've never met stays ??? (names too): nothing spoils what's out there.
   const met = (k, parts) => !!s.met?.[k] || parts.some((p) => s.codex?.[`${k}:${p.id}`]);
-  return `<section class="card codex-card"><h2>Codex · ${known}/${all.length}</h2><div class="codex">${groups.map(([k, name, parts]) => `<div class="cx-group${met(k, parts) ? '' : ' unmet'}"><b>${met(k, parts) ? esc(name) : '???'}</b><ul>${parts.map((p) => { const on = !!s.codex?.[`${k}:${p.id}`]; return `<li class="${on ? 'on' : ''}"><span>${met(k, parts) ? esc(p.name) : '???'}</span><small>${on ? esc(partAbout(p)) : '???'}</small></li>`; }).join('')}</ul></div>`).join('')}</div></section>`;
+  return `<section class="card codex-card"><h2>Codex · ${known}/${all.length}</h2><div class="codex">${groups.map(([k, name, parts]) => `<div class="cx-group${met(k, parts) ? '' : ' unmet'}"><b>${met(k, parts) ? esc(name) : '???'}</b><ul>${parts.map((p) => { const on = !!s.codex?.[`${k}:${p.id}`]; return `<li class="${on ? 'on' : ''}"><span>${met(k, parts) ? esc(p.name) : '???'}</span><small>${on ? esc(partAbout(p, STRAINS[k] ? { strain: k, family: STRAINS[k].lineage, parts } : { family: k, parts })) : '???'}</small></li>`; }).join('')}</ul></div>`).join('')}</div></section>`;
 }
 // The collection log: every unique and trophy, found or not. Hidden until your first one; one you
 // haven't found shows where it comes from (a strain's name only once you've met that strain).
@@ -344,8 +350,11 @@ export function collectionMarkup(s) {
 
 const partName = (id) => ({ encryptor: 'Encryptor', replicator: 'Replicator' }[id] || id);
 // What a component does, in a line (the codex). ??? until you've broken one.
-export function partAbout(p) {
+export function partAbout(p, v = null) {
   const a = p.attack, out = [];
+  // The tells it carries (tells.mjs): a fixed part, so you know where to look.
+  const tl = v ? partTells(v, p) : [];
+  if (tl.length) out.push(`it powers up its tells: ${tl.map((x) => `${x.name} (a ${x.kind})`).join(' and ')}`);
   if (a) {
     const every = a.interval && a.interval < 900 ? ` every ${a.interval} ${a.interval === 1 ? 'cycle' : 'cycles'}` : '';
     if (a.effect === 'damage') out.push(a.dump ? `${a.name}: a big hit once it has logged 3 keystrokes` : a.alarm ? `${a.name}: raises the alarm, then hits ${a.amount}${every}` : `${a.name}: hits you for ${a.amount}${every}${a.ramp ? ', more each time' : ''}${a.siphon ? ', and heals itself' : ''}${a.grow ? ', growing as the fight goes on' : ''}${a.windup ? `; enough damage while it winds up calls it off` : ''}`);
@@ -427,8 +436,12 @@ export function statusSpans(s) {
   const add = (name, until, kind, title, value = '') => { if (until >= e.cycle) out.push({ name, value, cycles: until - e.cycle + 1, kind, title }); };
   const st = momentumStacks(s);
   if (st) add('Momentum', e.momentum.until, 'you', `Momentum: +${Math.round(momentumBonus(s) * 100)}% damage (${st} of ${momentumCap(s)} stacks). Each break adds a stack and resets the timer.`, `+${Math.round(momentumBonus(s) * 100)}%${st > 1 ? ` ×${st}` : ''}`);
-  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall or Bulkhead, with a crew).' : ABILITIES[k]?.help || '');
+  for (const [k, until] of Object.entries(e.buffs || {})) if (k !== 'null-route') add(k === 'sinkhole' ? 'Drawing fire' : k === 'stolen' ? 'Stolen cast' : ABILITIES[k]?.name || k, until, 'you', k === 'sinkhole' ? 'Every attack comes at you (Firewall or Bulkhead, with a crew).' : k === 'stolen' ? 'A cast you hijacked: your hits deal 35% more.' : ABILITIES[k]?.help || '');
   add('Null-routed', e.buffs?.['null-route'] ?? -1, 'you', "This cycle's attacks miss you, and your next skill crits.");
+  // What a tell that landed left on you (tells.mjs): Corrupted, a hung command, a skill knocked offline.
+  if (e.corrupt) add('Corrupted', e.cycle + e.corrupt.left - 1, 'hot', `${e.corrupt.name} got through: −${e.corrupt.amount} a cycle. Purge, Scrub or Rollback cleans it.`, `−${e.corrupt.amount}`);
+  if (e.hung >= e.cycle) add('Hung', e.hung, 'hot', 'A tell landed: your command doesn\'t fire that cycle.');
+  for (const [id, until] of Object.entries(e.locked || {})) add(`${ABILITIES[id]?.name || id} offline`, until, 'hot', 'A tell landed: this skill is knocked offline.');
   add('Scrambled', e.scrambleUntil ?? -1, 'hot', `Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead, at ${Math.round(CONFIG.scramble.self * 100)}%.`, `${Math.round(CONFIG.scramble.chance * 100)}% self-hit`);
   return out;
 }
@@ -511,7 +524,7 @@ export function boardMarkup(s, selected, preview = null) {
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
     const fade = dying(p) ? ` style="animation-delay:-${Math.max(0, 1000 - (p._dyingUntil - Date.now()))}ms"` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}${knowsPart(s, e.virus, p) ? '' : ' · what it does: ???'}">
-      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p) : 'Unknown. Break one to learn what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
+      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p, e.virus) : 'Unknown. Break one to learn what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}</span><span class="part-tags">${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
@@ -559,8 +572,8 @@ export function logMarkup(s, limit = 60) {
 export function trayMarkup(s) {
   const e = s.encounter;
   const fighting = active(s);
-  // Key 1 Spike, 2–8 your seven equipped skills.
-  const cards = Object.entries(keyMap(s)).map(([key, id]) => {
+  // Key 1 Spike, 2–9 and 0 your equipped skills, - SIGINT.
+  const cards = barKeys(s).map(([key, id]) => {
     const a = ABILITIES[id];
     const cantrip = CANTRIP_IDS.includes(id);
     if (!a) {
@@ -574,11 +587,14 @@ export function trayMarkup(s) {
     // Procs: a lit key only works while its window is open; unlit, it waits.
     const lit = fighting && a.proc && procOpen(s, a.proc);
     const dark = fighting && a.proc && !lit;
-    const state = !fighting ? short : queued ? 'queued' : dark ? 'waiting for its moment' : lit ? 'LIT' : wait ? (wait === 1 ? 'ready next cycle' : `ready in ${wait} cycles`) : short;
+    // Its moment is on the board (situations.mjs): the key says so, in a word or two.
+    const moment = fighting && !wait && !dark ? situationOf(s, id) : null;
+    const offline = fighting && e.locked?.[id] >= e.cycle;
+    const state = !fighting ? short : queued ? 'queued' : offline ? 'OFFLINE' : dark ? 'waiting for its moment' : lit ? 'LIT' : moment ? moment.toUpperCase() : wait ? (wait === 1 ? 'ready next cycle' : `ready in ${wait} cycles`) : short;
     // The charge bar along the bottom: full when it's ready, filling back up while it recharges.
     const cd = cooldownOf(s, id), charge = dark ? 0 : !fighting || !wait ? 100 : cd ? Math.round((1 - wait / Math.max(cd, wait)) * 100) : 0;
     const count = fighting && wait ? `<span class="cd" aria-label="${wait} ${wait === 1 ? 'cycle' : 'cycles'} to go">${wait}</span>` : '';
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, a.help))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(a.name)}</span><span class="state">${state}</span>${count}<span class="charge" style="width:${charge}%"></span></button>`;
+    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, a.help))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(a.name)}</span><span class="state">${state}</span>${count}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
@@ -1471,8 +1487,10 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
   const tabs = Object.entries(ARCHETYPES).map(([k, x]) => `<div class="arch-card"><button type="button" class="arch${k === id ? ' on' : ''}" data-arch="${k}" aria-pressed="${k === id}">
       <span class="arch-name">${esc(x.name)} <span class="tag dim">Lv ${hackerLevel(s, k)}</span>${k === equippedArch ? ' <span class="tag you">in use</span>' : ''}</span><span class="arch-idea">${x.role.map((r) => `<span class="tag dim">${esc(r)}</span>`).join(' ')}</span></button>${k === equippedArch ? '' : `<button type="button" class="btn small arch-use" data-command="archetype ${k}" ${busy ? 'disabled title="At home only"' : `title="Play ${esc(x.name)}"`}>Use</button>`}</div>`).join('');
 
-  // The bar you'll fight with: Spike, then your 7 equipped skills, then SIGINT (everyone's interrupt, from 10).
+  // The bar you'll fight with: Spike, then your equipped skills (7 slots, 8 at 22, 9 at 30), then SIGINT (everyone's interrupt, from 10).
+  // Run skills (Spoof, Tap) take no slot.
   const byId = Object.fromEntries(a.skills.map((x) => [x.id, x]));
+  const slots = barSlots(lvl), fightKnown = known.filter((k) => !isRunSkill(k));
   const line = skillOrder(id, shown).map((k) => byId[k]).filter(Boolean); // the core, then the shown subclass's skills
   const cantrip = (c) => (unlockLevel(id, c.id) <= lvl
     ? `<li class="slot cantrip" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${glyph(c.id === 'spike' ? 'spike' : 'stun')}${esc(c.name)}</b><small>everyone</small></li>`
@@ -1480,9 +1498,13 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
   const bar = [
     cantrip(CANTRIPS[0]),
     ...Array.from({ length: LOADOUT.equipSlots }, (_, i) => {
-      const sk = byId[equipped[i]];
-      const future = line.filter((x) => !known.includes(x.id))[i - equipped.length];
-      return sk ? `<li class="slot on" title="${esc(scaledText(s, sk.id, sk.rule, id))}"><kbd>${i + 2}</kbd><b>${glyph(sk.verb, 'verb-' + sk.verb)}${esc(sk.name)}</b></li>` : `<li class="slot empty"><kbd>${i + 2}</kbd><b>${future && known.length < LOADOUT.equipSlots ? esc(future.name) : 'empty'}</b>${future && known.length < LOADOUT.equipSlots ? `<small>Lv ${unlockLevel(id, future.id, shown)}</small>` : ''}</li>`;
+      const sk = byId[equipped[i]], key = LOADOUT.keys[i];
+      // A slot your level hasn't opened yet shows the level it opens at.
+      const opens = LOADOUT.bar.find(([, n]) => n > i)?.[0] ?? 1;
+      if (i >= slots) return `<li class="slot empty closed" title="This slot opens at level ${opens}"><kbd>${key}</kbd><b>slot</b><small>Lv ${opens}</small></li>`;
+      const future = line.filter((x) => !known.includes(x.id) && !isRunSkill(x.id))[i - equipped.length];
+      const ghost = future && fightKnown.length < slots;
+      return sk ? `<li class="slot on" title="${esc(scaledText(s, sk.id, sk.rule, id))}"><kbd>${key}</kbd><b>${glyph(sk.verb, 'verb-' + sk.verb)}${esc(sk.name)}</b></li>` : `<li class="slot empty"><kbd>${key}</kbd><b>${ghost ? esc(future.name) : 'empty'}</b>${ghost ? `<small>Lv ${unlockLevel(id, future.id, shown)}</small>` : ''}</li>`;
     }),
     ...CANTRIPS.slice(1).map(cantrip),
   ].join('');
@@ -1502,9 +1524,10 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
     const state = isEq ? 'equipped' : isKnown ? 'known' : 'locked';
     const action = busy ? ''
       : isEq ? btn(`unequip ${id} ${x.id}`, 'Unequip')
-      : isKnown ? `<button type="button" class="btn primary" data-command="equip ${id} ${x.id}" ${equipped.length >= LOADOUT.equipSlots ? `disabled title="All ${LOADOUT.equipSlots} slots full: unequip one first"` : ''}>Equip</button>`
+      : isKnown && isRunSkill(x.id) ? '<span class="lvl-lock" title="Run skills take no slot: type it on a run">on runs</span>'
+      : isKnown ? `<button type="button" class="btn primary" data-command="equip ${id} ${x.id}" ${equipped.length >= slots ? `disabled title="All ${slots} slots full: unequip one first"` : ''}>Equip</button>`
       : `<span class="lvl-lock">${previewing && !a.core.includes(x.id) ? `${esc(kit.name)} · ` : ''}Level ${unlockLevel(id, x.id, shown)}</span>`;
-    return `<li class="skill ${state}${a.core.includes(x.id) ? '' : ' subskill'}" title="${esc(scaledText(s, x.id, x.rule, id))}"><div class="skill-top"><b>${isEq ? `<kbd>${equipped.indexOf(x.id) + 2}</kbd>` : state === 'locked' ? '<span class="lock" aria-hidden="true"></span>' : ''}${glyph(x.verb, 'badge verb-' + x.verb)}${esc(x.name)}</b><span class="stags">${tagHtml(x)}</span></div>
+    return `<li class="skill ${state}${a.core.includes(x.id) ? '' : ' subskill'}" title="${esc(scaledText(s, x.id, x.rule, id))}"><div class="skill-top"><b>${isEq ? `<kbd>${LOADOUT.keys[equipped.indexOf(x.id)]}</kbd>` : state === 'locked' ? '<span class="lock" aria-hidden="true"></span>' : ''}${glyph(x.verb, 'badge verb-' + x.verb)}${esc(x.name)}</b><span class="stags">${tagHtml(x)}</span></div>
       <div class="skill-foot"><p>${esc(scaledText(s, x.id, SKILL_TEXT[x.id]?.desc || ABILITIES[x.id]?.desc || ABILITIES[x.id]?.short || x.rule, id))}</p>${action}</div></li>`;
   }).join('');
 

@@ -7,6 +7,7 @@ import { CONFIG, ABILITIES, SUBS, SUBCLASS, unlockLevel } from './dist/data.mjs'
 import { play } from './dist/run.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { planner } from './dist/planner.mjs';
+CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 // Exact numbers: no crits, no misses, flat numbers at every level, no level gap.
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
@@ -254,7 +255,7 @@ test('Heartbeat: 4 a cycle for 4 cycles from now, a new one replaces the old; Ti
   assert.equal(s.encounter.hots.filter((h) => h.id === 'heartbeat').length, 1, 'one at a time');
 });
 
-test('Scrub clears encryption and Scrambled, and heals 8', () => {
+test('Scrub clears encryption, Scrambled and Corrupted, and heals 8, or 12 when it cleared something', () => {
   const s = quiet(start('sysop', ['scrub']));
   defender(s).integrity = 50;
   s.encounter.encrypt = 6;
@@ -262,7 +263,15 @@ test('Scrub clears encryption and Scrambled, and heals 8', () => {
   act(s, 'scrub');
   assert.equal(s.encounter.encrypt, 0);
   assert.ok(!(s.encounter.scrambleUntil >= s.encounter.cycle));
-  assert.equal(hp(s), 58);
+  assert.equal(hp(s), 62, 'something to clean: half again');
+  const c = quiet(start('sysop', ['scrub']));
+  defender(c).integrity = 50;
+  act(c, 'scrub');
+  assert.equal(hp(c), 58, 'nothing to clean: 8');
+  const k = quiet(start('sysop', ['scrub']));
+  k.encounter.corrupt = { name: 'Full Disk', amount: 9, left: 3, source: 'encryptor' };
+  act(k, 'scrub');
+  assert.equal(k.encounter.corrupt, null, 'Corrupted is cleaned too');
 });
 
 test('Rollback undoes the last attack: heals what it did, or deletes the fragment it spawned', () => {
@@ -425,14 +434,21 @@ test('a Warden draws fire with Bulkhead and takes it at half; DMZ covers the who
   assert.equal(nyx.run.integrity, n, 'nobody else is hit');
   assert.equal(w - s.run.integrity, 10, 'the Warden takes it, at half');
   assert.equal(s.encounter.ledger, 20, 'and stores all of it for Blowback');
-  // DMZ: the crewmate takes 30% less too.
+  // DMZ: the crewmate takes 30% less too, and the small stuff (under a tenth of your max) doesn't get in at all.
   const d = crewFight('warden', 'breaker', 38, ['rate-limit', 'firewall', 'retaliate', 'dmz']);
   const [kilo] = matesOf(d);
   const k = kilo.run.integrity;
-  crewSurge(d, 20);
+  crewSurge(d, 60);
   order(kilo, 'hold');
   act(d, 'dmz');
-  assert.equal(k - kilo.run.integrity, 14);
+  assert.equal(k - kilo.run.integrity, 42);
+  const m = crewFight('warden', 'breaker', 38, ['rate-limit', 'firewall', 'retaliate', 'dmz']);
+  const [lima] = matesOf(m);
+  const l = lima.run.integrity;
+  crewSurge(m, 10);
+  order(lima, 'hold');
+  act(m, 'dmz');
+  assert.equal(l - lima.run.integrity, 0, 'a small hit does nothing');
 });
 
 test('bots: a Warden crewmate pulls the fire and sends it back; a Sysop crewmate heals whoever is low, with its own skills', () => {
@@ -445,7 +461,7 @@ test('bots: a Warden crewmate pulls the fire and sends it back; a Sysop crewmate
   bot.encounter.ledger = 60;
   bot.encounter.buffs.sinkhole = bot.encounter.cycle + 1;
   hush(s);
-  for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0 });
+  for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, maxArmor: 0, integrity: 999, max: 999 }); // nothing to finish first
   assert.match(planner(bot), /^blowback /, 'and spends a full ledger');
   // A Sysop bot heals you when you're low, and Multicasts when two are hurt.
   const t = crewFight(null, 'sysop breaker');

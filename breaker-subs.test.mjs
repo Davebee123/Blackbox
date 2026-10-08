@@ -7,6 +7,7 @@ import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkill
 import { CONFIG, SKILLS, ABILITIES, SUBS, SUBCLASS, unlockLevel, skillOrder } from './dist/data.mjs';
 import { planner } from './dist/planner.mjs';
 import * as BREAKER_DATA from './dist/classes/breaker.data.mjs';
+CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 
 // Exact numbers: no crits, misses, edges, level scaling or level gap (as classes.test.mjs).
 CONFIG.baseCrit = 0;
@@ -84,7 +85,7 @@ test('every talent and filler in both trees is implemented somewhere, and the tw
 });
 
 // ---------- Demolitionist ----------
-test('Shaped Charge: breaks every ◆ at once and lights Shatter (no longer provokes); 30 on a bare part', () => {
+test('Shaped Charge: breaks every ◆ at once and lights Shatter, but the part lashes out (its attack comes a cycle sooner); 30 on a bare part', () => {
   const s = demo();
   part(s, 'encryptor').attack = null;
   const p = armor(s, 'pulse', 5);
@@ -93,7 +94,7 @@ test('Shaped Charge: breaks every ◆ at once and lights Shatter (no longer prov
   const due = p.attack.due;
   act(s, 'shaped-charge pulse');
   assert.equal(p.armor, 0);
-  assert.equal(p.attack.due, due, 'not provoked');
+  assert.equal(p.attack.due, due - 1, 'provoked');
   assert.equal(p.patchAt, s.encounter.cycle - 1 + patchDelay(s));
   act(s, 'shatter pulse');
   assert.equal(lost(s, 'pulse'), 38, 'Shatter was lit');
@@ -173,7 +174,7 @@ test('Demolitionist fillers: Blast Radius, Shrapnel, Deep Burn', () => {
   const s = noArmor(quiet(demo({ ranks: { 'blast-radius': 2 } })));
   big(s, 'pulse');
   act(s, 'fork-bomb');
-  assert.equal(lost(s, 'pulse'), Math.floor(15 * 1.2), 'Blast Radius: +10% a rank on Fork Bomb');
+  assert.equal(lost(s, 'pulse'), Math.floor(12 * 1.2), 'Blast Radius: +10% a rank on Fork Bomb');
   const l = noArmor(quiet(demo({ ranks: { 'blast-radius': 1 } })));
   big(l, 'pulse'); big(l, 'encryptor');
   act(l, 'logic-bomb pulse'); act(l, 'hold'); act(l, 'hold');
@@ -187,9 +188,9 @@ test('Demolitionist fillers: Blast Radius, Shrapnel, Deep Burn', () => {
   const d = noArmor(quiet(demo({ ranks: { 'deep-burn': 2 } })));
   big(d, 'pulse');
   act(d, 'thermal-runaway pulse');
-  assert.equal(lost(d, 'pulse'), 10, 'Deep Burn: +2 a tick per rank');
+  assert.equal(lost(d, 'pulse'), 8, 'Deep Burn: +2 a tick per rank');
   act(d, 'hold');
-  assert.equal(lost(d, 'pulse'), 10 + 14, 'it still grows by 4');
+  assert.equal(lost(d, 'pulse'), 8 + 12, 'it still grows by 4');
 });
 
 test('Demolitionist tier 1: Cluster Charge strips 2 ◆ off every other part; Exposed Wiring exposes a part that loses its last ◆', () => {
@@ -211,10 +212,10 @@ test('Demolitionist tier 2: Meltdown burns every other part at half', () => {
   const s = noArmor(quiet(demo({ talents: ['meltdown'] })));
   big(s, 'pulse'); big(s, 'encryptor');
   act(s, 'thermal-runaway pulse');
-  assert.equal(lost(s, 'pulse'), 6);
-  assert.equal(lost(s, 'encryptor'), 3);
+  assert.equal(lost(s, 'pulse'), 4);
+  assert.equal(lost(s, 'encryptor'), 2);
   act(s, 'hold');
-  assert.equal(lost(s, 'encryptor'), 3 + 5, 'it grows by half as much');
+  assert.equal(lost(s, 'encryptor'), 2 + 4, 'it grows by half as much');
 });
 
 test('Demolitionist tier 3: Total Overkill spills onto every other part; Scorched Earth stops patching', () => {
@@ -240,21 +241,16 @@ test('Demolitionist tier 3: Total Overkill spills onto every other part; Scorche
 });
 
 // ---------- Overclocker ----------
-test('Overvolt: your next Overload hits twice, for 6 Signal (Integrity at home); not when you can\'t pay', () => {
+test('Overvolt: two hits of 20 in one command, for 6 Signal (Integrity at home); on armor each breaks a ◆; not when you can\'t pay', () => {
   const s = noArmor(quiet(oc()));
   big(s, 'pulse');
-  act(s, 'overvolt');
+  act(s, 'overvolt pulse');
   assert.equal(s.server.integrity, 94);
-  act(s, 'overload pulse');
-  assert.equal(lost(s, 'pulse'), 80);
-  s.encounter.readyAt = {};
-  act(s, 'overload pulse');
-  assert.equal(lost(s, 'pulse'), 120, 'only the next one');
-  // On armor, both heavy hits break two ◆ each.
+  assert.equal(lost(s, 'pulse'), 40, 'two hits of 20');
   const a = quiet(oc());
-  armor(a, 'pulse', 5);
-  act(a, 'overvolt'); act(a, 'overload pulse');
-  assert.equal(part(a, 'pulse').armor, 1);
+  armor(a, 'pulse', 3);
+  act(a, 'overvolt pulse');
+  assert.equal(part(a, 'pulse').armor, 1, 'one ◆ a hit');
   const p = oc();
   p.server.integrity = 6;
   assert.match(refused(p, 'overvolt').message, /costs 6/);
@@ -289,9 +285,10 @@ test('Stack Smash: 30, and each crit hits again, up to 3 more times', () => {
   assert.equal(lost(s, 'pulse'), 30, 'no crit, one hit');
   const c = noArmor(quiet(oc()));
   big(c, 'pulse');
-  act(c, 'sudo');
-  act(c, 'stack-smash pulse');
-  assert.equal(lost(c, 'pulse'), 4 * Math.floor(30 * 1.5), 'Sudo: every hit crits, so four hits');
+  const crit = CONFIG.baseCrit;
+  CONFIG.baseCrit = 100;
+  try { act(c, 'stack-smash pulse'); } finally { CONFIG.baseCrit = crit; }
+  assert.equal(lost(c, 'pulse'), 4 * Math.floor(30 * 1.5), 'every hit crits, so four hits');
 });
 
 test('Turbo Boost: 2 Momentum stacks for 3 cycles, for 6; not when your Momentum is full', () => {
@@ -391,7 +388,7 @@ test('Overkill (Demolitionist\'s edge) is off for the Overclocker', () => {
 });
 
 // ---------- the planner ----------
-test('the planner: Shaped Charge on a thick shell, Thermal Throttle through armor with stacks, Overload after Overvolt', () => {
+test('the planner: Shaped Charge on a thick shell, Thermal Throttle through armor with stacks, Turbo Boost when you\'re hurt', () => {
   const s = demo();
   part(s, 'encryptor').integrity = 0;
   const p = armor(s, 'pulse', 5);
@@ -399,7 +396,7 @@ test('the planner: Shaped Charge on a thick shell, Thermal Throttle through armo
   s.loadout.equipped.breaker = ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge'];
   assert.equal(planner(s), 'shaped-charge pulse');
   p.attack.due = s.encounter.cycle + 1;
-  assert.equal(planner(s), 'shaped-charge pulse', 'it no longer provokes, so an attack a cycle out is no reason to wait');
+  assert.notEqual(planner(s), 'shaped-charge pulse', 'not when the provoked attack would land before you follow up');
   const o = oc();
   part(o, 'encryptor').integrity = 0;
   const q = armor(o, 'pulse', 3); big(o, 'pulse');
@@ -408,9 +405,10 @@ test('the planner: Shaped Charge on a thick shell, Thermal Throttle through armo
   stacks(o, 2);
   assert.equal(planner(o), 'thermal-throttle pulse');
   stacks(o, 0);
-  q.armor = 0;
-  o.encounter.buffs.overvolt = o.encounter.cycle + 2;
-  assert.equal(planner(o), 'overload pulse');
+  o.loadout.equipped.breaker = ['overload', 'flood', 'exploit', 'crack', 'overvolt', 'segfault', 'thermal-throttle', 'brace', 'turbo-boost'];
+  o.hackers.breaker.level = 34;
+  o.server.integrity = Math.round(o.server.max * 0.4);
+  assert.equal(planner(o), 'turbo-boost', 'under half: free Momentum for a Thermal Throttle');
 });
 
 test('bots play both subclasses to wins', async () => {

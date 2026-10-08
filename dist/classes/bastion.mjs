@@ -23,9 +23,10 @@
 //              [{ id, name, amount, left, from, cap, crit, loop }] (cap: the healer's Overprovision cap,
 //              0 without the edge; crit: Critical Path; loop: the healer's name, for Loopback)
 //   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1
-import { subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult } from '../combat.mjs';
+import { slotsOf, subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
+import { tellOn, tellAnswer, undoCast, landsAt } from '../tells.mjs';
 
 const A = (id) => ABILITIES[id];
 
@@ -104,12 +105,20 @@ const use = {
     e.ledger = 0;
     if (alive(target) && amount > 0) hit(s, target, amount, { mine: true, chits: A('blowback').chits });
   },
+  // Quarantine: a cast the part is compiling is stopped (tells.mjs).
+  quarantine(s, { target }) {
+    const c = alive(target) && tellOn(s, target, 'cast');
+    if (c) tellAnswer(s, c, target, `Quarantined: the ${target.name} can't finish compiling ${c.name.toUpperCase()}.`);
+  },
   dmz(s, { a, e }) {
     e.buffs.dmz = e.cycle + a.cycles - 1;
     emit(s, 'status', `DMZ: attacks deal ${Math.round(a.cut * 100)}% less to ${alliesOf(s).length ? 'the whole crew' : s.who || 'you'} for ${a.cycles} cycles.`, { mark: 'buff', ability: 'dmz' });
   },
   // Warden talents on old skills
   suspend(s, { target, e }) {
+    // A charge on the attack it pushed back drains out: it lands plain (a read, tells.mjs).
+    const ch = alive(target) && target.attack && tellOn(s, target, 'charge');
+    if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `SIGSTOP: ${ch.name.toUpperCase()} drains out of the ${target.name}. Its ${target.attack.name} lands plain, 2 cycles later.`);
     if (!hasTalent(s, 'tarpit') || !alive(target) || !target.attack) return;
     target.throttledUntil = Math.max(target.throttledUntil || 0, target.attack.due);
     emit(s, 'status', `Tarpit: ${target.name} Throttled (attacks deal half) until its attack lands.`, { target: target.id, mark: 'throttled' });
@@ -147,7 +156,8 @@ const use = {
   multicast(s, { a }) {
     const amount = healScaled(s, a.heal + 3 * rank(s, 'fan-out'));
     for (const x of crewOf(s)) mend(s, x.st, amount, x.me ? a.name : `${a.name} from ${s.who || 'you'}`);
-    if (hasTalent(s, 'ping-flood')) for (const p of livingParts(s)) hit(s, p, amount, { mine: true, by: 'Ping Flood' });
+    // The same packet floods every fragment (Ping Flood: every part).
+    for (const p of livingParts(s)) if (p.kind === 'fragment' || hasTalent(s, 'ping-flood')) hit(s, p, amount, { mine: true, by: hasTalent(s, 'ping-flood') ? 'Ping Flood' : 'Multicast' });
   },
   heartbeat(s, { a, to }) {
     const label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
@@ -158,14 +168,18 @@ const use = {
     const e = to.encounter, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
     const cleared = [];
     if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); } // a Full Disk's burst too (tells.mjs)
+    if (e.corrupt) { e.corrupt = null; cleared.push('corruption'); } // a landed tell's after-effect (tells.mjs)
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     if (cleared.length) emit(to, 'decrypted', `${label}: ${cleared.join(' and ')} cleared.`);
     if (to.encounter.virus?.raid) cleanse(to, ['dots', 'absorb']); // a crew boss's Corruption and encrypted sectors (raid.mjs)
-    mend(s, to, healScaled(s, a.heal), label);
+    mend(s, to, Math.round(healScaled(s, a.heal) * (cleared.length ? 1.5 : 1)), label); // half again with something to clean
   },
   rollback(s, { a, to }) {
     const e = to.encounter, u = e.undo, label = to === s ? a.name : `${a.name} from ${s.who || 'you'}`;
     e.undo = null;
+    if (e.corrupt) { e.corrupt = null; emit(to, 'decrypted', `${label}: Corrupted wiped.`); }
+    // A cast the virus just compiled rolls back too (tells.mjs): its buff ends.
+    if (to === s && e.virus?.tells && undoCast(s)) emit(s, 'status', `${label}: the cast the virus compiled is rolled back.`, { mark: 'buff', ability: 'rollback' });
     if (u?.type === 'damage') mend(s, to, Math.round(u.amount * restoreMult(s)), label);
     if (u?.type === 'replicate') { const f = part(to, u.part); if (alive(f)) { f.integrity = 0; emit(to, 'heal', `${label}: ${f.name} deleted.`, { target: f.id }); } }
   },
@@ -203,8 +217,9 @@ const validate = {
     return d.integrity <= Math.round(d.max * 0.1) ? 'Write Protect needs 10% of your max Signal to spend.' : null;
   },
   rollback(s, intent) {
-    const to = aimed(s, intent);
-    return to && !to.encounter?.undo ? `Nothing to roll back${to === s ? '' : ` on ${intent.ally}`}.` : null;
+    const to = aimed(s, intent), e = to?.encounter, v = e?.virus;
+    const cast = to === s && Object.values(v?.buffs || {}).some((u) => u >= e.cycle);
+    return to && !e?.undo && !e?.corrupt && !cast ? `Nothing to roll back${to === s ? '' : ` on ${intent.ally}`}.` : null;
   },
   'hot-standby'(s, intent) {
     const to = aimed(s, intent);
@@ -218,10 +233,41 @@ const ok = (s, text) => !!text && !toIntent(s, text).error;
 const first = (s, list) => list.find((c) => ok(s, c) && !(/^patch\b/.test(c) && savePatch(s)) && !(c === 'bulkhead' && saveBulkhead(s))) || null;
 const landing = (s, cols = 0) => intents(s).filter((i) => i.col <= cols && !i.hidden && (i.effect === 'damage' || i.hit));
 
+// The tells and parts a Bastion has a button for (tells.mjs), solo or in a crew: a charge drained with Suspend,
+// a cast Quarantined when SIGINT is cooling, a loud part Throttled, fragments shut out with DMZ.
+const killNow = (s) => livingParts(s).some((p) => !(p.armor > 0) && ['retaliate', 'rate-limit', 'reclaim', 'spike'].some((id) => ok(s, id + ' ' + p.id) && previewDamage(s, id, p) >= p.integrity));
+const cooling = (s, id) => !usable(s).includes(id) || readyIn(s, id) > 0;
+function readBoard(s) {
+  const e = s.encounter, c = e.cycle;
+  for (const p of livingParts(s)) {
+    const ch = tellOn(s, p, 'charge');
+    if (ch && p.attack && ch.n === (p.attack.n || 0) && p.attack.due - c <= 1 && ok(s, 'suspend ' + p.id)) return 'suspend ' + p.id;
+    const cast = tellOn(s, p, 'cast');
+    if (cast && cast.next - c <= 1 && cooling(s, 'sigint') && ok(s, 'quarantine ' + p.id)) return 'quarantine ' + p.id;
+  }
+  const loud = attackers(s).find((p) => (p.loud || e.virus.buffs?.loud >= c || (p.enrage && p.integrity < p.max / 2)) && p.attack.due - c <= 2 && !on(s, p, 'throttled'));
+  if (loud && ok(s, 'throttle ' + loud.id)) return 'throttle ' + loud.id;
+  // A charge Suspend can't drain (cooling, or not yours): Throttle halves it.
+  const charged = livingParts(s).find((p) => { const ch = tellOn(s, p, 'charge'); return ch && p.attack && ch.n === (p.attack.n || 0) && p.attack.due - c <= 1 && !on(s, p, 'throttled'); });
+  if (charged && !ok(s, 'suspend ' + charged.id) && ok(s, 'throttle ' + charged.id)) return 'throttle ' + charged.id;
+  // Two fragments gnawing: DMZ, and the bites do nothing.
+  if (livingParts(s).filter((p) => p.kind === 'fragment').length >= 2 && !buffed(e, 'dmz') && ok(s, 'dmz')) return 'dmz';
+  return null;
+}
 function wardenPlan(s, t) {
   const raid = tankMove(s); // a crew boss: hold aggro for its busters (raid.mjs)
   if (raid) return raid;
   const e = s.encounter, d = defender(s), allies = alliesOf(s);
+  // A Replicate landing now: DMZ, and it spawns nothing.
+  if (attackers(s).some((p) => p.attack.effect === 'replicate' && p.attack.due <= e.cycle) && !buffed(e, 'dmz') && ok(s, 'dmz')) return 'dmz';
+  // A charge landing now that nobody called off, or two hits at once, with Bulkhead cooling: DMZ takes 30% off for two cycles.
+  const pile = landing(s, 0);
+  if (!allies.length && (pile.length >= 2 || pile.some((i) => i.tell === 'charge')) && !buffed(e, 'dmz') && !buffed(e, 'bulkhead') && !ok(s, 'bulkhead') && !pile.some((i) => ok(s, 'suspend ' + i.source)) && ok(s, 'dmz')) return 'dmz';
+  if (killNow(s)) return null;
+  const read = readBoard(s);
+  if (read) return read;
+  // A charge landing now that nobody called off: Bulkhead takes three quarters off it.
+  if (landing(s, 0).some((i) => i.tell === 'charge' && (i.hit || i.amount) >= d.max * 0.12) && !buffed(e, 'bulkhead') && ok(s, 'bulkhead')) return 'bulkhead';
   const now = landing(s, 0);
   const incoming = now.reduce((n, i) => n + (i.hit || i.amount), 0);
   const drawing = e.buffs?.sinkhole >= e.cycle;
@@ -262,6 +308,19 @@ function sysopPlan(s, t) {
   const all = crewOf(s).filter((x) => x.me || defender(x.st).integrity > 0).map((x) => ({ ...x, f: frac(x.st) })).sort((a, b) => a.f - b.f);
   const solo = all.length === 1;
   const low = all[0];
+  // Fragments up: one Multicast floods them all (and heals) where a Spike takes one.
+  if (livingParts(s).filter((p) => p.kind === 'fragment').length >= 2) { const c = first(s, ['multicast']); if (c) return c; }
+  if (solo && killNow(s)) return null;
+  // The tells a healer reads: a Heartbeat up before a charge lands (it lands half), Rollback after a hit or a
+  // cast that got through, Scrub on Corrupted, Multicast into fragments.
+  const charge = intents(s).find((i) => i.tell === 'charge' && i.col <= 1 && (i.hit || i.amount) >= defender(low.st).max * 0.12);
+  const beating = (x) => x.st.encounter.hots?.some((h) => h.id === 'heartbeat' && h.left > 1);
+  const aimedAt = !solo && charge ? all.find((x) => !x.me && x.st.encounter.buffs?.sinkhole >= x.st.encounter.cycle) || all.find((x) => x.me) : all.find((x) => x.me);
+  if (charge && !beating(aimedAt)) { const c = first(s, [aim(s, 'heartbeat', aimedAt.st)]); if (c) return c; }
+  if (solo && e.virus?.tells && Object.values(e.virus.buffs || {}).some((u) => u >= e.cycle + 2)) { const c = first(s, ['rollback']); if (c) return c; }
+  const dirtyNow = all.find((x) => x.st.encounter.corrupt?.left >= 2);
+  if (dirtyNow) { const c = first(s, [aim(s, 'scrub', dirtyNow.st), dirtyNow.me && 'purge ' + t.id]); if (c) return c; }
+  { const read = readBoard(s); if (read && solo) return read; }
   // Encryption (on the player who leads the fight) or a scramble: scrub it.
   const dirty = all.find((x) => x.st.encounter.encrypt >= 6 || x.st.encounter.burst || x.st.encounter.scrambleUntil >= x.st.encounter.cycle);
   if (dirty && !solo) { const c = first(s, [aim(s, 'scrub', dirty.st)]); if (c) return c; }
@@ -293,7 +352,7 @@ function sysopPlan(s, t) {
   return null;
 }
 
-// A sim crewmate's bar (crew.mjs builds bots with their first seven skills): the seven its role wants,
+// A sim crewmate's bar (crew.mjs builds bots with the default bar): the slots' worth its role wants,
 // of the ones it knows. A Warden keeps its tanking kit, a Sysop its heals.
 const BOT_BAR = {
   warden: ['rate-limit', 'firewall', 'retaliate', 'bulkhead', 'blowback', 'harden', 'dmz', 'suspend', 'purge', 'throttle', 'quarantine', 'failover'],
@@ -307,7 +366,7 @@ export default {
     const e = s.encounter;
     e.ledger = 0; e.hots = []; e.standby = false;
     const sub = classOf(s) === 'bastion' && s.who && s.host && !s.guest ? subOf(s) : null;
-    if (BOT_BAR[sub]) { const known = knownSkills(s, 'bastion'); s.loadout.equipped[sub] = BOT_BAR[sub].filter((id) => known.includes(id)).slice(0, 7); }
+    if (BOT_BAR[sub]) { const known = knownSkills(s, 'bastion'); s.loadout.equipped[sub] = BOT_BAR[sub].filter((id) => known.includes(id)).slice(0, slotsOf(s, 'bastion')); }
   },
   // Heals over time from a Sysop tick at the end of the player's turn.
   cycle(s) {
@@ -325,8 +384,13 @@ export default {
   taken(s, atk, p) {
     const e = s.encounter;
     let m = 1;
-    if (buffed(e, 'bulkhead')) m *= 1 - A('bulkhead').cut;
-    if (buffed(e, 'dmz') || alliesOf(s).some((x) => x.st.encounter?.buffs?.dmz >= e.cycle)) m *= 1 - A('dmz').cut;
+    if (buffed(e, 'bulkhead')) m *= 1 - (atk.tell ? A('bulkhead').charged : A('bulkhead').cut); // a charged hit (tells.mjs): a quarter
+    if (buffed(e, 'dmz') || alliesOf(s).some((x) => x.st.encounter?.buffs?.dmz >= e.cycle)) {
+      const size = atk.effect === 'damage' ? attackAmount(p) : atk.hit || 0;
+      m *= p.kind === 'fragment' || size < defender(s).max * A('dmz').minor ? 0 : 1 - A('dmz').cut; // the small stuff doesn't get in
+    }
+    // Heartbeat (Sysop) running on you: a charged hit deals half.
+    if (atk.tell && e.hots?.some((h) => h.id === 'heartbeat' && h.left > 0)) m *= 0.75;
     if (classOf(s) === 'bastion' && subOf(s) === 'warden' && usable(s).includes('blowback')) e.ledger = (e.ledger || 0) + attackSize(s, atk, p);
     return m;
   },

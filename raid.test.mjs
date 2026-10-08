@@ -244,7 +244,7 @@ test('SIGINT: key 9 from level 10; it only stops a telegraphed cast, some casts 
   assert.ok(!Object.values(keyMap(nine)).includes('sigint'), 'not before level 10');
   assert.ok(!Object.values(raidOf(nine).mechs).length || !raidOf(nine).mechs.clockin, 'and below 10 the Foreman doesn\'t cast what SIGINT would stop');
   const s = bossFight('foreman');
-  assert.equal(keyMap(s)['9'], 'sigint');
+  assert.equal(keyMap(s)['-'], 'sigint', 'on its own key');
   quietParts(s);
   for (const m of Object.values(raidOf(s).mechs)) { m.told = false; m.next = s.encounter.cycle + 40; }
   assert.match(command(s, 'sigint').at(-1).message, /Nothing is compiling/);

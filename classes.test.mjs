@@ -1,8 +1,9 @@
 // The four classes' first five skills: each does exactly one thing.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, keyMap, daemonSlots, timersHidden, intents, readyIn, momentumStacks, knownSkills } from './dist/combat.mjs';
-import { CONFIG, SKILLS, ABILITIES } from './dist/data.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, keyMap, barKeys, daemonSlots, timersHidden, intents, readyIn, momentumStacks, knownSkills } from './dist/combat.mjs';
+import { CONFIG, SKILLS, ABILITIES, LOADOUT, barSlots } from './dist/data.mjs';
+CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 // These tests check exact numbers: no crits (gear.test.mjs covers them).
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
@@ -44,10 +45,18 @@ test('every skill does one kind of thing', () => {
   for (const [id, a] of Object.entries(ABILITIES)) assert.ok(verbs.has(a.verb), id);
 });
 
-test('keys: 1 Spike, 2–8 equipped skills, 9 SIGINT from level 10; other classes\' skills are refused', () => {
+test('keys: 1 Spike, 2–9 and 0 equipped skills (7 slots, 8 at 22, 9 at 30), - SIGINT from level 10; other classes\' skills are refused', () => {
   const s = start('bastion');
-  assert.deepEqual(Object.values(keyMap(s)), ['spike', ...knownSkills(s, 'bastion').slice(0, 7), 'sigint']);
-  assert.equal(keyMap(s)['9'], 'sigint', 'everyone\'s interrupt, on 9');
+  const n = barSlots(s.hackers.bastion.level);
+  assert.deepEqual(barKeys(s).map(([, id]) => id), ['spike', ...knownSkills(s, 'bastion').slice(0, n), 'sigint']);
+  assert.equal(keyMap(s)['-'], 'sigint', 'everyone\'s interrupt, on its own key');
+  assert.deepEqual(barKeys(s).map(([k]) => k), ['1', ...LOADOUT.keys.slice(0, n), '-']);
+  for (const [lvl, n, last] of [[21, 7, '8'], [22, 8, '9'], [30, 9, '0']]) {
+    const t = fresh(); t.loadout.archetype = 'breaker'; t.hackers = { breaker: { level: lvl, xp: 0 } };
+    const keys = barKeys(t).map(([k]) => k);
+    assert.equal(keys.length, n + 2, `level ${lvl}: Spike, ${n} skills, SIGINT`);
+    assert.equal(keys.at(-2), last, `level ${lvl}: the last skill is on ${last}`);
+  }
   assert.deepEqual(Object.values(keyMap(s)).slice(1, 5), ['rate-limit', 'firewall', 'purge', 'retaliate'], 'the core first');
   assert.match(command(s, 'overload pulse').at(-1).message, /isn't on your bar/);
   assert.equal(command(s, '4 pulse').at(-1).type, 'queued');

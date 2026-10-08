@@ -1,66 +1,109 @@
 # Solo tells: the designer's review sheet
 
-Every virus that fights you alone now announces its big moves. A part winds up, the log says what is coming and when, and a chip sits on that part's row in the column where the move lands. The player has two or three cycles to answer it. Crew bosses keep their own mechanics (raid.mjs and docs/bosses.md). This sheet covers everything else: wild viruses, strains, guards and ICE, elites, champion invasions, home intrusions and the solo bosses. The code is in dist/tells.mjs, and the numbers are in `TELL`, `TELLS` and `TELL_SETS` in dist/data.mjs.
+Every virus that fights you alone announces its big moves. A part winds up, the log says what is coming and when, and a chip sits on that part's row in the column where the move lands. Crew bosses keep their own mechanics (raid.mjs and docs/bosses.md). This sheet covers everything else: wild viruses, strains, guards and ICE, elites, champion invasions, home intrusions and the solo bosses. The code is in dist/tells.mjs, and the numbers are in `TELL`, `TELLS` and `TELL_SETS` in dist/data.mjs.
 
 ## How a tell plays
 
-A tell is announced once in the log, for example *The Encryptor winds up FULL DISK. It lands in 2 cycles. Hit it once before then to stop it, or brace for it.* From then on its chip sits on the part's row. The chip has a kicker line (*CHARGING*, *COMPILING…*, *SEALING*, *MIMIC*), the move's name, what it does, and an amber last line that says what answers it: *hit it once*, *SIGINT, or hit ×2*, *strip ◆3* or *go quiet*. A veiled part's tell shows anyway, because nothing lands unannounced. Breaking a tell's part always stops the tell.
+A tell is announced once in the log, for example *The Replicator charges its Replicate into MASS MAILER. It lands in 3 cycles. Hit the Replicator once with a command before then to call it off.* From then on its chip sits on the part's row. The chip has a kicker line (*Charged*, *Compiling…*, *Sealing*, *Mimic*), the move's name, what it does, and an amber last line that says exactly what counts as an answer: *hit it*, *hit it ×2*, *SIGINT or hit ×2*, *strip ◆2*, *strip it* or *go quiet*. Hovering the chip gives the whole rule, what reading it pays, and what it leaves behind if it lands. A veiled part's tell shows anyway. Breaking a tell's part always stops the tell.
 
-The tell picks its part when it is announced. It goes to the part nothing has hit for the longest time that can do the move, and the signature part wins a tie. While you work on the Encryptor, the Pulse Node winds up. On the signature part the move has the family's own name (Full Disk, Mass Mailer, Possession). On any other part it is called Overcharge.
+### One clock
 
-There are four kinds.
+A tell never runs on a timer of its own.
+
+- **A charge powers up an attack that is already on the board.** The attack's cell turns into the charge at least two cycles before it lands (three at levels 1 to 5), and it lands exactly when the attack was due. If you delay the attack with Rate Limit, Suspend or Jam, the charge moves with it. A charge rides one landing of its part's attack, so a called-off charge doesn't come back on the next one.
+- **A cast or a seal gets its own cell** on its part's row, two cycles ahead or more.
+- **No pile-ups.** A charge never lands on the same cycle as another part's heavy attack, or on the Mimic's beat. Below level 17 one tell is live at a time. From 17 two can be live, and never on the same cycle.
+
+### A fixed part
+
+Each tell sits on one part, always the same for its family, guard or strain, and the chip and the codex name it. A family's charge, cast and seal sit on its signature part (the Encryptor, the Replicator, the Scrambler). Overcharge, the second charge from level 17, sits on the plain attacker (the Pulse Node). A strain's charge sits on its rule's part. The Mimic's beat belongs to the Mimic, and the seals sit on the armored signature part. An earlier version picked the part nothing had hit for longest, which players couldn't plan for.
+
+### Only deliberate answers count
+
+A command of yours aimed at the tell's part, typed after the tell was said, counts. These don't, though they still do their damage:
+
+- area hits (Fork Bomb, Shatter, Chain Reaction, Logic Bomb's spread),
+- burns and helpers,
+- a crewmate's splash and Overkill spills,
+- your auto-repeat Spike, and daemons.
+
+A skill that hits for you later counts as the command you typed: Thermal Runaway's ticks, Kill Switch's cash-in on each part, Reroute's arrivals, IRQ Storm's ticks. Each command counts once, except Overvolt (two hits). Double Tap and Spectre make each command count twice.
+
+Some skills are built for a kind of tell and answer it outright when they land on its part:
+
+| Kind | Built answers |
+|---|---|
+| Charge | Suspend and Spoofed ACK drain it, Jam makes it land plain, Hijack lands it on another part, Blackhole swallows it, Segfault crashes it for three times the hit, Replay plays it back at its charged size, Kill Switch and IRQ Storm count as your hit |
+| Cast | SIGINT, Quarantine, Overvolt, Thermal Runaway, Hijack (it compiles for you), Reroute, Kill Switch, IRQ Storm |
+| Seal | Any strip before it lands, Bit Rot (it fails even with ◆ on), Cache Poison (it fails and hits the part for 30) |
+| Mimic | Anything with no direct hit: a debuff, a strip, a burn, a helper, a shield, hold. Log Wipe leaves its next beat nothing to play |
+
+### Reading pays
+
+- **Open.** A charge, a cast or the Mimic's beat answered by a read leaves its part Open: it takes 50% more from everyone for 2 cycles. The log says *READ: the Replicator is open.* and the part flashes.
+- **A ready key.** A seal stopped by a strip readies the skill that did it.
+- **XP.** Each read adds a tenth of the kill's XP to the kill, up to 40%: *Read 3 tells: +42 XP.*
+- **Loot.** Read every tell in a fight (two or more said, none landed) and its loot rolls once more.
+- **Gear.** Uniques and rules that fire on calling off a tell (Ctrl-C, Interrupt Vector, Abort Handler, Exception Handler) fire on every read.
+
+### Ignoring hurts
+
+From level 10 a charge can add a quarter of your max on top of the plain hit, and a charge or a cast that gets through leaves something behind:
+
+- **Offline.** The last skill you used (not Spike or SIGINT) is knocked offline for 2 cycles (1 at levels 6 to 9). Its key says *OFFLINE*.
+- **Corrupted.** You lose 4% of your max a cycle for 3 cycles (2% at 6 to 9, 5% from 17). Purge, Scrub or Rollback cleanses it.
+- **Hung.** From level 10 your next command doesn't fire.
+- **A seal** that lands while its part wears ◆ also takes your own ◆ and shield, from level 6.
+
+Nothing one-shots. One hit never takes more than half your max, or the plain hit if that is bigger. Levels 1 to 5 have no after-effects.
+
+## The kinds
 
 | Kind | What it is | What answers it | What ignoring it costs |
 |---|---|---|---|
-| Charge | The part's next attack, made much bigger. It takes the place of that attack in its column, so you never get both. | Hit the part with a command before it lands. Any command that damages the part or breaks a ◆ on it counts once. Burns and helpers don't count. One hit is enough, or two for an elite or a boss. A charge that is called off knocks its plain attack back a cycle. You can also soften it with a ◆, a shield, Null Route, Throttle, Rate Limit, Brace or Block. | The plain hit times 2 to 2.4, but the extra is capped at a tenth of your max at levels 1 to 5 and about a sixth from level 10. One hit never takes more than 55% of your max. Charges never crit. |
-| Cast | *Compiling…*: a buff on the whole virus that lasts 4 cycles. Casts start at level 10, when you get SIGINT. | SIGINT, two command hits on the part, or breaking the part. | Double Extortion makes every attack 35% harder. Persistence and Call Home make every attack repeat a cycle faster, but what is already on the board stays put. Self-Update gives every part a quarter more Integrity. |
-| Seal | The part re-arms if it still wears ◆ when the seal lands. Seals start at level 6. | Strip the part first. | The part goes back to full ◆ with one more for the rest of the fight, and every part you had stripped gets a ◆ back. |
-| Mimic | The Mimic part records you. On its beat (every 4 cycles from cycle 3) it plays back whatever command you fire that cycle. | Fire something with no direct hit on the beat: a debuff, a strip (Crack has no hit in it), a burn, a helper or a shield. | Your command's whole direct hit comes back at you, softened like any other hit. |
+| Charge | The part's next scheduled attack, made much bigger, in that attack's cell. | One command hit on the part before it lands, two for an elite or a boss. The Battering Ram asks for ◆2 off its Gate. A built answer. Called off, the attack still lands, plain. You can also soften it: a ◆, a shield, Brace, Bulkhead, Throttle, Heartbeat. | ×2 to ×3 the plain hit, the extra capped by level (table below). Charges never crit. Then the after-effects. |
+| Cast | *Compiling…*: a buff on the whole virus for 4 cycles. From level 10, when you get SIGINT. | SIGINT, two command hits on the part, a built answer, or breaking the part. | Double Extortion makes every attack 35% harder. Persistence and Call Home make every attack repeat a cycle faster (what is already on the board stays put). Self-Update gives every part a quarter more Integrity. Then the after-effects. |
+| Seal | The part re-arms if it still wears ◆ when the seal lands. From level 6, on elites, bosses and the Sentinel. | Strip the part first, or Bit Rot or Cache Poison it. | The part goes back to full ◆ with one more for the rest of the fight, every part you had stripped gets a ◆ back, your own ◆ and shield go, and you are Corrupted. |
+| Mimic | The Mimic part records you. On its beat (every 4 cycles from cycle 3) it plays back whatever command you fire that cycle. | Go quiet on the beat. | Your command's whole direct hit comes back at you. |
 
 ## By level
 
-The tiers mirror raid.mjs: gentle while you have three skills, richer from 10 when SIGINT arrives, full from 17.
-
-| Levels | Tells a wild virus brings | Warning | Charge size (the extra over the plain hit, at most) |
-|---|---|---|---|
-| 1–5 | One, its charge | 3 cycles | ×2, up to 10% of your max |
-| 6–9 | One, its charge | 2 cycles | ×2.2, up to 14% |
-| 10–16 | Two, its charge and its cast | 2 cycles | ×2.4, up to 18% |
-| 17+ | Two, its charge and its cast | 2 cycles | ×2.3, up to 17% |
+| Levels | Tells a wild virus brings | Live at once | Warning | Charge (the extra over the plain hit, at most) | After-effects |
+|---|---|---|---|---|---|
+| 1–5 | One, its charge | 1 | 3 cycles | ×2, 10% of your max | None |
+| 6–9 | One, its charge | 1 | 2 cycles | ×2.3, 15% | Offline 1 cycle, Corrupted 2% |
+| 10–16 | Two, its charge and its cast | 1 | 2 cycles | ×2.8, 25% | Offline 2, Corrupted 4%, Hung |
+| 17+ | Three, adding Overcharge on its other attacker | 2 | 2 cycles | ×3, 25% | Offline 2, Corrupted 5%, Hung |
 
 - **Elites** bring one more tell, their family's seal (from level 6). Their charges can cost 15% more and need two hits to call off.
 - **Solo bosses** (RELAY-KING, REPO MAN, HOLLOW CHOIR, the Residents) bring every tell open at their level. Their charges need two hits and can cost 10% more.
-- **Champion invasions** are elite-grade but sized for one player. They bring the usual tells for their level, and their charges are a tenth bigger. They don't get the elite's extra seal.
-- **SPRAWL-00's first two kills**, while its hits land at 60%, bring no tells. The first fights after that bring one charge with three cycles of warning. The tutorial is parked, so it has no tells to tune.
-- **Below level 10**, every tell can be answered with skills the player already has: Spike or any damage skill calls a charge off, and Harden softens one. Casts only appear once SIGINT does.
+- **Champion invasions** bring the usual tells for their level, and their charges are a tenth bigger.
+- **SPRAWL-00's first two kills**, while its hits land at 60%, bring no tells.
+- **Timing.** The first tell lands on cycle 3 at the soonest. After a tell lands or is answered, the next of its kind may land 4 cycles on (a charge) or 7 (a cast or a seal), plus a seeded 0 to 2.
 
 ## Every tell, by family
 
-The warning is 3 cycles at levels 1 to 5 and 2 cycles from level 6. A cast is first announced on cycle 4 and comes every 7 cycles. A seal is first announced on cycle 5 and comes every 7. A charge is first announced on cycle 2 and comes every 6.
-
-The last column gives what one landing cost in the sim, plain hit included, as a share of the player's max Signal. It comes from 4 classes × 18 wild fights per family plus the guards, played by a bot that ignores tells (balance.mjs fights, gear and services; scratch numbers, not a test). The extra over the plain hit is capped as in the table above.
-
 ### Home families
 
-| Family | Tell | Kind | Opens | What it does | Answer | One landing cost (Lv 4 / 12 / 20) |
+| Family | Tell | Kind | On | Opens | What it does | Answer |
 |---|---|---|---|---|---|---|
-| Ransomware | **Full Disk** | Charge | 1 | Its Encrypt, much bigger, plus a burst of encryption on top for 3 cycles (up to 3–5% of your max a cycle) | Hit the Encryptor once. Purge, Scrub, Rollback or breaking the Encryptor clears the burst | – / 15% / 13% |
-| Ransomware | **Double Extortion** | Cast | 10 | Every attack hits 35% harder for 4 cycles | SIGINT, or hit the part twice | Indirect: four cycles of harder hits |
-| Ransomware | **Key Rotation** | Seal | 6 (elites) | The part re-arms with one ◆ more, and stripped parts get a ◆ back | Strip it first | Lost strip work |
-| Worm | **Mass Mailer** | Charge | 1 | A Replicate that hatches two fragments (within the fragment limit) | Hit the Replicator once | 13% / 14% / 8% |
-| Worm | **Self-Update** | Cast | 10 | Every part grows a quarter more Integrity, for good | SIGINT, or hit the part twice | A longer fight |
-| Worm | **Resync** | Seal | 6 (elites) | As Key Rotation | Strip it first | Lost strip work |
-| Ghostroot | **Possession** | Charge | 1 | Its Scramble, plus two more cycles of scrambling (Scrub cleanses it) | Hit the Scrambler once | 21% / 10% / 4% |
-| Ghostroot | **Persistence** | Cast | 10 | Every attack repeats a cycle faster for 4 cycles. What is already on the board doesn't move | SIGINT, or hit the part twice | Indirect: about one extra attack |
-| Ghostroot | **Go Dark** | Seal | 6 (elites) | As Key Rotation | Strip it first | Lost strip work |
-| Any family | **Overcharge** | Charge | 1 | The family's charge, when it lands on a part that isn't the signature one: that part's next attack, bigger | Hit that part once | Included in the rows above |
-| Ghostroot (Mimic part) | **Mimic** | Mimic | 8 | Plays your command's direct hit back at you on its beat | Go quiet on the beat | 11% / 13% ignoring, 1% reading |
-
-The Full Disk shows a dash at level 4 because the sampled ransomware fights all answered it, even the ignoring bot, by hitting the Encryptor anyway. A Possession at level 4 costs a lot because a scrambled level-4 player hits itself.
+| Ransomware | **Full Disk** | Charge | Encryptor | 1 | Its Encrypt, much bigger, plus a burst of encryption on top for 3 cycles | Hit the Encryptor. Purge, Scrub, Rollback or breaking the Encryptor clears the burst |
+| Ransomware | **Double Extortion** | Cast | Encryptor | 10 | Every attack hits 35% harder for 4 cycles | SIGINT, or hit the Encryptor twice |
+| Ransomware | **Overcharge** | Charge | Pulse Node | 17 | Its Surge, much bigger | Hit the Pulse Node |
+| Ransomware | **Key Rotation** | Seal | Encryptor | 6 (elites) | The part re-arms with one ◆ more, and stripped parts get a ◆ back | Strip it first |
+| Worm | **Mass Mailer** | Charge | Replicator | 1 | A Replicate that hatches two fragments (within the limit) | Hit the Replicator. A Warden's DMZ makes the spawns fizzle |
+| Worm | **Self-Update** | Cast | Replicator | 10 | Every part grows a quarter more Integrity, for good | SIGINT, or hit the Replicator twice |
+| Worm | **Overcharge** | Charge | Pulse Node | 17 | Its Surge, much bigger | Hit the Pulse Node |
+| Worm | **Resync** | Seal | Replicator | 6 (elites) | As Key Rotation | Strip it first |
+| Ghostroot | **Possession** | Charge | Scrambler | 1 | Its Scramble, plus two more cycles of scrambling (Scrub cleanses it) | Hit the Scrambler |
+| Ghostroot | **Persistence** | Cast | Scrambler | 10 | Every attack repeats a cycle faster for 4 cycles | SIGINT, or hit the Scrambler twice |
+| Ghostroot | **Overcharge** | Charge | Pulse Node | 17 | Its Surge, much bigger | Hit the Pulse Node |
+| Ghostroot | **Go Dark** | Seal | Scrambler | 6 (elites) | As Key Rotation | Strip it first |
+| Ghostroot (Mimic part) | **Mimic** | Mimic | Mimic | 8 | Plays your command's direct hit back at you on its beat | Go quiet on the beat |
 
 ### Strains
 
-A strain brings a charge of its own on its rule's part, plus its lineage's cast and seal. The strain charge follows the charge rules above, so it adds at most the tier's cap on top of the move it rides.
+A strain brings a charge of its own on its rule's part, plus its lineage's cast and seal. The strain charge follows the charge rules above: it powers up that part's next scheduled move, and it adds at most the tier's cap on top.
 
 | Strain | Tell | On | What it does |
 |---|---|---|---|
@@ -78,16 +121,17 @@ A strain brings a charge of its own on its rule's part, plus its lineage's cast 
 
 ### Guards and ICE
 
-| Guard | Tell | Kind | What it does | One landing cost (Lv 4 / 12 / 20) |
-|---|---|---|---|---|
-| Watchdog, Tracer | **Lock-on** | Charge | Its attack, much bigger | 46% / – / – (answered every time at 12 and 20) |
-| Crawler | **Infest** | Charge | Its spawn, hatching two | Always answered in the sample |
-| Shredder | **Deep Shred** | Charge | Its attack, bigger, and it shreds the newest code or credits file in your pack (never a protocol or a blueprint) | 35% / – / – |
-| Bouncer | **Battering Ram** | Charge | Its Gate's attack, much bigger | 38% / 33% / 9% |
-| Sentinel | **Blacklist** | Seal | As Key Rotation, from cycle 3 | Lost strip work |
-| Every guard | **Call Home** | Cast (from 10) | As Persistence | Indirect |
+| Guard | Tell | Kind | What it does |
+|---|---|---|---|
+| Watchdog, Tracer | **Lock-on** | Charge | Its attack, much bigger |
+| Crawler | **Infest** | Charge | Its spawn, hatching two |
+| Shredder | **Deep Shred** | Charge | Its attack, bigger, and it shreds the newest code or credits file in your pack (never a protocol or a blueprint) |
+| Bouncer | **Battering Ram** | Charge | Its Gate's attack, much bigger. Strip ◆2 off the Gate to call it off |
+| Sentinel | **Blacklist** | Seal | As Key Rotation, from cycle 3 |
+| Every guard | **Call Home** | Cast (from 10) | As Persistence |
+| Watchdog, Crawler, Shredder, Tracer | **Overcharge** | Charge (from 17) | Its other attacker's hit, much bigger |
 
-A guard sits two levels above you per layer, so its plain hit is already large at low levels. That is why one Lock-on landing at level 4 can cost close to half your Signal, even though the charge only adds a tenth of your max on top.
+A guard sits two levels above you per layer, so its plain hit is already large at low levels.
 
 ## Parts that change the fight
 
@@ -107,28 +151,27 @@ The board tags these parts: *lock N* and *relocks in N* on the Encryptor, *tripw
 
 ## SIGINT in solo fights
 
-SIGINT (key 9, from level 10) answers a solo cast as well as a crew boss's. It costs your command for the cycle, and it answers nothing but a cast. To keep it from being too strong, an interrupted cast comes back two cycles sooner than it would have. Casts come every 7 cycles and SIGINT is ready every 8, so it can stop at most every other cast. The other cast you hit off with two command hits, eat, or stop by killing the part. Charges and seals never accept SIGINT. They are answered by playing the board.
+SIGINT moved to the - key, so it keeps the same key all game. It answers a solo cast as well as a crew boss's, at the price of your command for the cycle, and a cast is the only tell it answers. An interrupted solo cast no longer comes back sooner. SIGINT is ready every 8 cycles and casts come about every 7, so a class with a skill built for casts (Quarantine, Overvolt, Thermal Runaway, Hijack, Reroute) keeps SIGINT for the next one. Charges and seals never accept SIGINT.
 
 ## The bots
 
-The planner reads tells (planner.mjs, with `tellMove` in tells.mjs).
+The planner reads tells (planner.mjs, `tellMove` in tells.mjs, and each subclass's planner in dist/classes).
 
-- **Charges.** A cycle before the last chance, the bot hits the charging part, but only if what the charge adds is worth a command. The threshold is 6% of max, or 14% if its planned command would set up a burn or helpers. It skips the answer when something bigger is about to land.
-- **Casts.** It fires SIGINT on the cycle the cast lands, when the buff is worth a command.
-- **The Mimic.** On the Mimic's beat it fires something quiet if its planned hit would come back hard.
-- **Seals.** It strips a part about to seal when one command does it.
-- **Never overridden.** None of that overrides a kill or a hit the bot is softening.
-- **Parts.** The planner leaves a Tripwire for last, breaks the Mutex or bursts through the lock, and goes for the C2 Node once fragments are up.
+- **Charges.** On a charge's last chance the bot answers it when what it adds and leaves behind is worth a command, with a skill built for it when it has one, and with a plain hit on the part otherwise. A big charge landing now wins over a small kill.
+- **Casts.** It answers with its own built skill first, then SIGINT, then two hits.
+- **The Mimic.** On the Mimic's beat it fires something quiet if its planned hit would come back.
+- **Seals.** It strips a part about to seal when one or two commands do it, and Bit Rots or Poisons one it can't strip.
+- **Parts.** The planner leaves a Tripwire for last, breaks the Mutex or bursts through the lock, goes for the C2 Node once fragments are up, and focuses a part it left Open.
 
-`TELL.bots.answer = false` makes a bot that plays as if it can't see the tells. balance.test.mjs runs it on the class-balance fights for every subclass and checks that it does worse.
+`TELL.bots.answer = false` makes a bot that plays as if it can't see the tells. balance.test.mjs runs it on the class-balance fights for every subclass.
 
-| Bracket | Reading (Signal lost, average of 8 subclasses) | Ignoring | Gap |
-|---|---:|---:|---:|
-| Lv 10 | 37% | 43% | 6.6 |
-| Lv 18 | 37% | 40% | 2.9 |
-| Lv 30 | 38% | 41% | 2.9 |
+| Bracket | Reading (Signal lost, average of 8 subclasses) | Ignoring | Gap before this pass | Gap now |
+|---|---:|---:|---:|---:|
+| Lv 10 | 36% | 54% | 6.6 | 18.0 |
+| Lv 18 | 36% | 49% | 2.9 | 12.9 |
+| Lv 30 | 35% | 43% | 2.9 | 7.6 |
 
-Across the three brackets the ignoring bot loses 4.1 points more Signal a fight on average, and it wins 549 fights against the reading bot's 564 (of 576). The test holds the gap at 2.5 points or more on average, at least 1.5 in each bracket, and the reader never wins fewer fights. That is smaller than a crew boss's role checks on purpose. There, a missed role loses most tries. Solo, the tells are about learning the mob. On a wider sample (the gapq scratch run) the gap is about 0 at level 1, 1.5 at 5, 3.7 at 8, 4.7 at 10, 3.2 at 18 and 2.5 at 30. docs/BALANCE.md has the per-subclass table.
+Across the three brackets the ignoring bot now loses 12.8 points more Signal a fight on average, and it wins 503 of 576 fights against the reading bot's 557. Below level 10 the gap is about 1 point at levels 3 and 5 and 9 at level 8. The test holds the gap at 12 points or more on average from level 10, at least 6 in each bracket, the ignoring bot winning fewer fights, and a gap below 10 that is there but smaller. At Lv 30 fights are short (5 to 8 cycles), so fewer tells get said. The Herder (1.4) and the Demolitionist (3.6) are the ones a Lv 30 fight barely tests, because their helpers and area hits break the telling part before most tells land. The Lv 10 Payload is the other end: ignoring tells costs it 39 points and 8 fights, because its burns leave parts alive long enough for every tell to land. docs/skills.md has the per-subclass table.
 
 ## Flood and the Breaker
 
@@ -148,13 +191,10 @@ Flood's cooldown went from 4 to 6. On its own that pushed the level-10 Breaker f
 
 ## Open questions for the designer
 
-1. **The knock-back.** A charge that is called off also knocks its plain attack back a cycle. Players who read tells therefore come out a little ahead of a fight with no tells, most of all a class that hits every part at once. At level 10 with tells off, the Demolitionist loses 49% and the Phantom 37%. With tells on and read, they lose 35% and 29%. At 18 and 30 the difference is within 1–3 points. With no knock-back (`TELL.knock = 0`), a called-off charge just becomes the plain attack. The level-10 Breaker would then sit near 49%, and Crack 2 alone would not hold it in the band. An earlier version cancelled the attack outright, which pushed readers under the 25% floor.
-2. **Area hits answer everything.** One command that damages every part counts as a hit on each, so Fork Bomb or Shatter call off whatever is charging. The ignoring Demolitionist still answers most charges by accident. Is that a strength the class should keep?
-3. **SIGINT's price.** SIGINT stops at most every other cast, and it costs the command. Should a stopped cast come back only a cycle sooner, so that SIGINT can stop more of them?
-4. **Seals.** Wild viruses never seal, even from level 17. Only elites, solo bosses and the Sentinel do. Should wild viruses at 17+ add the seal as a third tell?
-5. **Possession** is a plain Scramble hit with two more cycles of scrambling, not a bigger hit. A bigger hit stacked on the self-hit chance was too much at low levels.
-6. **Deep Shred** destroys a file in the pack: the newest code or credits file, never a protocol or a blueprint. Is losing loot to a guard all right?
-7. **Persistence** never moves an attack that is already on the board. An earlier version did, and it broke the hard slice for the Sysop.
-8. **The level-16 Demolitionist** sits at 55% (it was 56% before this change). It is outside every test bracket.
-9. **Champions at level 14** lose 51–75% of their Signal with tells, against 48–83% without. That is above the 25–50% target with or without tells, and it comes from the invasion rework. Champions at level 10 lose 28–59% and at 18 lose 38–55%.
-10. **Saves.** Tell state lives on the fight's virus and is gone when the fight ends. The new part flags default to off. Nothing in a save changed shape, so SAVE_VERSION stays at 33.
+1. **No knock-back.** A called-off charge now leaves its attack to land plain, on time. The old knock-back (the plain attack a cycle later) let readers come out ahead of a fight with no tells.
+2. **Area hits don't answer.** Fork Bomb, Shatter and the like no longer call off tells. The Demolitionist has to aim at the charging part like everyone else.
+3. **SIGINT's price.** An interrupted solo cast no longer comes back two cycles sooner. With casts every 7 or so and SIGINT every 8, SIGINT still can't stop every cast alone.
+4. **Overcharge from 17.** Wild viruses at 17+ bring a second charge on their plain attacker instead of a seal. Seals stay with elites, bosses and the Sentinel.
+5. **After-effects.** Offline, Corrupted and Hung are what makes ignoring cost 12 to 15 points from level 10. Without them the charge size alone would have had to go past a third of your max, close to one-shot territory.
+6. **Deep Shred** still destroys a file in the pack: the newest code or credits file, never a protocol or a blueprint.
+7. **Saves.** Tell state lives on the fight's virus. A save from an older version drops any tell state mid-fight (`barRestore`, SAVE_VERSION 35), and the fight's tells start fresh.

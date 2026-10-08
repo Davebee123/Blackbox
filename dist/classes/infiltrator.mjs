@@ -23,6 +23,7 @@
 // hit), Log Wipe (Weak Spot fresh again). Weak Spot itself is in combat.mjs (edge(s, 'infiltrator')).
 import { CONFIG } from '../data.mjs';
 import { soonest } from '../planner.mjs';
+import { tellOn, tellHit } from '../tells.mjs';
 import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn } from '../combat.mjs';
 
 const isInf = (s) => classOf(s) === 'infiltrator';
@@ -40,7 +41,8 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // Polymorph's burns: kept apart from the engine's (which armor stops) and ticked here, through armor.
 const polyOn = (s, p) => (s.encounter.infil?.who === (s.who || '') ? s.encounter.infil.poly.filter((b) => b.target === p.id) : []);
 const allBurnsOn = (s, p) => [...burnsOn(s, p), ...polyOn(s, p)];
-const tick = (s, b, t, by = b.name) => hit(s, t, b.damage + (b.fxGrow || 0), { by, dot: true, synced: b.synced, pierce: !!b.poly });
+// Polymorph burns full through ◆ and half once the part is bare.
+const tick = (s, b, t, by = b.name) => hit(s, t, (b.poly && !(t.armor > 0) ? Math.max(1, Math.round(b.damage / 2)) : b.damage) + (b.fxGrow || 0), { by, dot: true, synced: b.synced, pierce: !!b.poly });
 // Everyone standing in this fight, you first (crewmates' states too): Bloom and Thrash reach them all.
 const everyone = (s) => { const out = [s]; for (const x of alliesOf(s)) if (x.st && !out.includes(x.st)) out.push(x.st); return out; };
 const thrashing = (s, p) => alive(p) && p.thrashUntil >= s.encounter.cycle;
@@ -65,7 +67,8 @@ function bloom(s, p) {
 }
 
 // Backstab crits when the part's attack isn't due this cycle or the next.
-const notDue = (s, p) => !p.attack || p.attack.due > s.encounter.cycle + 1;
+// Backstab crits a part busy with a tell (tells.mjs): a charge winding up, a cast compiling, a seal, the Mimic recording.
+const notDue = (s, p) => !!tellOn(s, p);
 
 export default {
   use: {
@@ -93,7 +96,10 @@ export default {
     'irq-storm'(s, { e }) {
       const all = [...e.burns, ...mine(s).poly];
       let n = 0;
-      for (const b of all) { if (virusIntegrity(s).current === 0) break; const t = part(s, b.target); if (alive(t)) { tick(s, b, t, `IRQ Storm (${b.name})`); n++; } }
+      const reached = new Set();
+      for (const b of all) { if (virusIntegrity(s).current === 0) break; const t = part(s, b.target); if (alive(t)) { tick(s, b, t, `IRQ Storm (${b.name})`); n++; reached.add(t); } }
+      // Each part it reaches takes it as a hit from your command (tells.mjs).
+      for (const t of reached) if (alive(t)) tellHit(s, t, { cmd: { id: 'irq-storm', target: t.id, at: e.commanding?.at ?? e.cycle }, key: `irq:${e.cycle}:${s.who || ''}:${t.id}` });
       emit(s, 'status', `IRQ Storm: ${plural(n, 'burn')} ticked at once.`, { mark: 'burn', ability: 'irq-storm' });
     },
     // Detonate and Keepalive reach Polymorph's burns too.
@@ -132,6 +138,7 @@ export default {
       const st = mine(s);
       st.weakDot = {};
       st.wiped = true;
+      e.mimicBlind = true; // the Mimic's next beat has nothing of you (tells.mjs)
       let extra = '';
       if (talent(s, 'deep-cover')) { delete e.readyAt['null-route']; delete e.readyAt['shadow-copy']; extra = ' Deep Cover: Null Route and Shadow Copy are ready.'; }
       emit(s, 'status', `Logs wiped. Weak Spot is fresh on every part, and the next hit on you deals half.${extra}`, { mark: 'buff', ability: 'log-wipe' });
@@ -274,6 +281,12 @@ function core(s, t) {
 
 function payloadPlan(s, t, living, hurt) {
   const e = s.encounter;
+  // IRQ Storm: a charge or a cast about to land on a part you're burning (each part it ticks counts as your hit).
+  const told = living.find((p) => allBurnsOn(s, p).length && tellOn(s, p) && ['charge', 'cast'].includes(tellOn(s, p).kind));
+  if (told) { const c = first(s, ['irq-storm']); if (c) return c; }
+  // The Implant on a part that heals or grows (a Patcher, a Tap, a Self-Update on the board): it can't while it burns.
+  const healer = living.find((p) => p.attack?.effect === 'heal' || p.attack?.siphon || tellOn(s, p, 'cast')?.does === 'grow');
+  if (healer) { const c = first(s, ['implant ' + healer.id]); if (c) return c; }
   // Opening move (the Surprise window): Inject, for the extra stack.
   if (e.cycle === 1 && e.sync?.surprise && t.armor === 0) return first(s, ['inject ' + t.id]);
   // A finisher: Detonate when the burns left on it break it (or nearly).
@@ -284,8 +297,12 @@ function payloadPlan(s, t, living, hurt) {
   // Implant the biggest part early, once.
   const big = [...living].sort((a, b) => b.integrity - a.integrity)[0];
   if (big && big.integrity >= 60) { const c = first(s, ['implant ' + big.id]); if (c) return c; }
+  // Thrash: three or more burns stacked on a bare part, each ticks twice.
+  if (allBurnsOn(s, t).length >= 3 && !t.armor && t.integrity > queued(s, t) * 0.5) { const c = first(s, ['thrash ' + t.id]); if (c) return c; }
+  // Propagate: one part loaded, the others clean.
+  if (allBurnsOn(s, t).length >= 2 && living.filter((p) => p !== t && !allBurnsOn(s, p).length).length >= 2) { const c = first(s, ['propagate ' + t.id]); if (c) return c; }
   // Polymorph: the biggest burn, and armor doesn't stop it.
-  if (t.armor > 0 || allBurnsOn(s, t).length < 4) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }
+  if (t.armor > 0) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; } // through ◆; half once it's bare
   // Plenty of burns out: make them count twice.
   const burning = e.burns.length + (e.infil?.poly?.length || 0);
   if (allBurnsOn(s, t).length >= 2 && t.integrity > queued(s, t) * 0.5 && !t.armor) { const c = first(s, ['thrash ' + t.id]); if (c) return c; }
@@ -297,8 +314,9 @@ function payloadPlan(s, t, living, hurt) {
 
 function phantomPlan(s, t, living, hurt) {
   const e = s.encounter;
-  // Backstab when it's sure to crit.
-  if (!t.armor && notDue(s, t)) { const c = first(s, ['backstab ' + t.id]); if (c) return c; }
+  // Backstab a part busy with a tell: a sure crit, and it answers the tell.
+  const busy = living.find((p) => !p.armor && notDue(s, p) && !p.mimic) || (!t.armor && notDue(s, t) ? t : null);
+  if (busy) { const c = first(s, ['backstab ' + busy.id]); if (c) return c; }
   // Weak Spot used up on every part: wipe the logs.
   const fresh = living.filter((p) => !e.weakHit?.[p.id]).length;
   if (fresh === 0 && living.length >= 2) { const c = first(s, ['log-wipe']); if (c) return c; }

@@ -520,6 +520,11 @@ function react(events) {
       case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
       case 'proc': feel.add('good', null); break;
+      // Tells (tells.mjs): a read pays (the part Open, or a skill ready again); one that lands bites back.
+      case 'read': flash(e.open ? 'READ · OPEN' : 'READ'); feel.add('good', e.target ? row(e.target) : MINE, e.open ? 'OPEN +50%' : 'READY'); break;
+      case 'read-xp': feel.add('good', null, `READ +${e.amount} XP`); break;
+      case 'locked': feel.add('nope', MINE, 'OFFLINE'); break;
+      case 'hung': flash('HUNG'); feel.add('nope', MINE, 'HUNG'); break;
       case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); break;
       case 'hold': feel.add('cycle', '.bnow'); break;
       case 'loot': break; // the break already said it
@@ -1813,7 +1818,7 @@ $('command-input').addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'Escape') { if (tip && !input.value) { hideTip(true); return; } input.value = ''; $('suggestions').hidden = true; return; }
-  if (/^[1-9]$/.test(e.key) && !input.value.trim()) {
+  if (/^[0-9-]$/.test(e.key) && !input.value.trim() && keyMap(shown())[e.key]) { // 1 Spike, 2–9 and 0 your skills, - SIGINT
     e.preventDefault();
     prepare(keyMap(shown())[e.key]);
   }

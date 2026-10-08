@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, hooks, classOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
+import { classPlan, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn } from './combat.mjs';
 import { ABILITIES, TELL } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET } from './tells.mjs';
@@ -73,11 +73,14 @@ function play(s) {
   const raid = raidMove(s);
   if (raid && ok(s, raid)) return raid;
   // A tell (tells.mjs): a charge or cast whose wind-up it can reach, or a part about to seal.
-  const t0 = raidFocus(s) || tellFocus(s) || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  // A part left Open by a tell you read (tells.mjs): +50% from everyone for 2 cycles, so cash it in.
+  const open = !raidFocus(s) && ['breaker', 'bastion'].includes(classOf(s)) && livingParts(s).find((p) => p.openUntil >= s.encounter.cycle && !p.deadman);
+  const t0 = raidFocus(s) || tellFocus(s) || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
   // Lockbox: a warded part soaks a burst, so break the Lockbox first. Mutex: its lock comes back while it lives,
   // so break it first too (a burn class chips under either anyway).
-  const warder = livingParts(s).find((p) => p.ward === t.id || (p.lock === t.id && t.lockHp > 0));
+  const burst = classOf(s) === 'breaker' && subOf(s) === 'overclocker';
+  const warder = livingParts(s).find((p) => p.ward === t.id || (p.lock === t.id && t.lockHp > 0 && !burst)); // an Overclocker bursts through one lock
   if (warder && classOf(s) !== 'infiltrator') t = warder; // burns tick under the cap anyway
   // Tripwire: leave it for last while anything else stands.
   if (t.deadman) t = livingParts(s).filter((p) => p !== t && p.kind === 'system').sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t;
@@ -93,9 +96,10 @@ function play(s) {
   const own = classPlan(s, t);
   if (own && ok(s, own)) return own;
   const d = defender(s);
-  // 0. A lit proc is free damage: use it.
+  // 0. A lit proc: use it while it's the biggest hit you have on the part (it still takes your command).
   const lit = first(s, ['shatter ' + t.id, 'retaliate ' + t.id, 'opening ' + t.id]);
-  if (lit && bare(t)) return lit;
+  const best = Math.max(0, ...['overload', 'flood', 'segfault', 'backdoor', 'reclaim'].filter((id) => ok(s, id + ' ' + t.id)).map((id) => previewDamage(s, id, t)));
+  if (lit && bare(t) && (!lit.startsWith('shatter') || previewDamage(s, 'shatter', t) >= best)) return lit;
   // 1. Break a part that's about to fire, or a bare part before it patches.
   const urgent = [...new Set(now.map((i) => part(s, i.source)))].filter(alive);
   for (const p of [...urgent, ...livingParts(s).filter(bare)]) {
@@ -145,6 +149,7 @@ function play(s) {
       'spawn ' + t.id,
       'hook ' + t.id,
       'backdoor ' + t.id,
+      !burnsOn(s, t) && subOf(s) !== 'sysop' && 'purge ' + t.id, // a Warden's: its ticks crack ◆ too, and heal (a Sysop alone stays the slow one)
       'spike ' + t.id,
     ]);
   }
@@ -156,7 +161,9 @@ function play(s) {
     t.integrity > 30 && 'tag ' + t.id,
     burnsOn(s, t) < 3 && 'inject ' + t.id,
     'segfault ' + t.id, 'overload ' + t.id, 'flood ' + t.id, 'backdoor ' + t.id, 'reclaim ' + t.id, 'rate-limit ' + t.id,
-    'deploy ' + t.id, 'thermal-runaway ' + t.id, 'sudo', 'spike ' + t.id,
+    'deploy ' + t.id, 'thermal-runaway ' + t.id, 'sudo',
+    !burnsOn(s, t) && t.integrity > 30 && subOf(s) !== 'sysop' && 'purge ' + t.id, // a Warden's filler: a burn that heals beats a Spike on a part that will last
+    'spike ' + t.id,
   ]);
 }
 

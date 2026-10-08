@@ -5,7 +5,7 @@ import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, hasTalent, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, hasTalent, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -344,7 +344,7 @@ const locked = (loc, path) => !!layoutOf(loc)[path]?.locked && !loc.state.unlock
 // ---------- commands ----------
 
 export const RUN_COMMANDS = ['split', 'link', 'goto', 'regroup', 'unlink', 'history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
-const equipped = (s, id) => equippedSkills(s, classOf(s)).includes(id);
+const equipped = (s, id) => knownSkills(s, classOf(s)).includes(id); // run skills (Spoof, Tap) take no bar slot: knowing one is enough
 const onceUsed = (s, id) => (s.run.used ||= {})[id];
 
 // Infiltrator Spoof: once per run, the next guarded folder you enter doesn't start a fight.
@@ -733,7 +733,7 @@ export function play(s, input) {
   else if (word === 'jack') { if (s.run.hunter) err(s, 'TRACED: the hunter has your trace. Beat it before you jack out.'); else jackOut(s); }
   else if (word === 'tree') tree(s);
   else if (word === 'spoof') {
-    if (!equipped(s, 'spoof')) err(s, 'spoof is an Infiltrator skill. Equip it on the Loadout page.');
+    if (!equipped(s, 'spoof')) err(s, 'spoof is a Phantom skill, from level 22.');
     else if (!canCloak(s)) err(s, s.run.cloak === 'armed' ? 'Your spoof is already armed.' : 'No spoof left this run.');
     else { s.run.cloaks = (s.run.cloaks || 0) + 1; s.run.cloakPulled = false; s.run.cloak = 'armed'; traceAdd(s, TRACE.spoof); out(s, 'spoof armed: the next guarded folder you enter won\'t start a fight.', 'net-good'); }
   }
@@ -823,7 +823,7 @@ const named = (name, arg) => name.toLowerCase().startsWith(arg.toLowerCase().rep
 // Infiltrator Tap: the whole map at once (once per run).
 function tap(s) {
   const loc = currentLocation(s);
-  if (!equipped(s, 'tap')) return err(s, 'tap is an Infiltrator skill. Equip it on the Loadout page.');
+  if (!equipped(s, 'tap')) return err(s, 'tap is a Phantom skill, from level 30.');
   if (onceUsed(s, 'tap')) return err(s, 'Tap is used up for this run.');
   s.run.used.tap = true;
   const lines = [];

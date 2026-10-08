@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, patchDelay } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, SUBS, SUBCLASS, ARCHETYPES, unlockLevel } from './dist/data.mjs';
 import OPERATOR from './dist/classes/operator.mjs';
+CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 
 // The balance run at the end plays with the real numbers: keep them before these tests flatten them.
 const REAL = { baseCrit: CONFIG.baseCrit, enemyCrit: CONFIG.enemyCrit, partToughness: CONFIG.partToughness, enemyRamp: CONFIG.enemyRamp, misses: CONFIG.misses, edges: CONFIG.edges, powerPerLevel: CONFIG.powerPerLevel, gap: CONFIG.gap };
@@ -247,7 +248,7 @@ test('Hijack: spend a helper, and the part\'s next hit lands on its own side, th
   const was = lost(s, 'pulse');
   act(s, 'hijack pulse');
   assert.equal(s.encounter.helpers.length, 0, 'the helper is spent');
-  assert.equal(lost(s, 'encryptor'), 18, '60% of 30');
+  assert.equal(lost(s, 'encryptor'), 15, 'half of 30 (a charge would land whole: tells.test.mjs)');
   assert.equal(part(s, 'encryptor').armor, 2, 'straight through armor');
   assert.equal(lost(s, 'pulse'), was);
   assert.equal(s.server.integrity, s.server.max, 'nothing reached you');
@@ -261,7 +262,7 @@ test('Hijack: spend a helper, and the part\'s next hit lands on its own side, th
   surge(solo, 'pulse', 30);
   const w2 = lost(solo, 'pulse');
   act(solo, 'hijack pulse');
-  assert.equal(lost(solo, 'pulse') - w2, 18);
+  assert.equal(lost(solo, 'pulse') - w2, 15);
   const enc = start({ sub: 'hijacker' });
   act(enc, 'deploy encryptor');
   part(enc, 'encryptor').attack = { name: 'Encrypt', effect: 'encrypt', amount: 6, interval: 5, due: enc.encounter.cycle };
@@ -276,7 +277,7 @@ test('Double Agent: Hijack takes the next two attacks; Crosstalk: the hit lands 
   act(s, 'hijack pulse');
   act(s, 'hold');
   act(s, 'hold');
-  assert.equal(lost(s, 'encryptor'), 36, 'two hijacked hits');
+  assert.equal(lost(s, 'encryptor'), 30, 'two hijacked hits');
   assert.equal(s.server.integrity, s.server.max);
   assert.equal(part(s, 'pulse').hijack, undefined);
   const c = start({ sub: 'hijacker', talents: ['crosstalk'] });
@@ -284,8 +285,8 @@ test('Double Agent: Hijack takes the next two attacks; Crosstalk: the hit lands 
   act(c, 'deploy pulse');
   surge(c, 'pulse', 30);
   act(c, 'hijack pulse');
-  assert.equal(lost(c, 'encryptor'), 18);
-  assert.equal(lost(c, 'extra'), 18);
+  assert.equal(lost(c, 'encryptor'), 15);
+  assert.equal(lost(c, 'extra'), 15);
 });
 
 test('Blackhole: spend a helper, and the next attack does nothing at all; Loopback keeps the helper', () => {
@@ -323,7 +324,7 @@ test('Cache Poison: a patch that is due hits the part instead, and a heal it cas
   assert.equal(part(plain, 'pulse').armor, 1, 'without it, it patches');
 });
 
-test('Replay: the part takes its own attack, 20 to 30, through armor; Packet Capture adds 5 a rank', () => {
+test('Replay: the part takes its own attack, 25 to 40, through armor; Packet Capture adds 5 a rank', () => {
   const s = start({ sub: 'hijacker' });
   Object.assign(part(s, 'pulse'), { armor: 3, maxArmor: 3 });
   surge(s, 'pulse', 30, s.encounter.cycle + 3);
@@ -333,11 +334,11 @@ test('Replay: the part takes its own attack, 20 to 30, through armor; Packet Cap
   const lo = start({ sub: 'hijacker' });
   surge(lo, 'pulse', 5, lo.encounter.cycle + 3);
   act(lo, 'replay pulse');
-  assert.equal(lost(lo, 'pulse'), 20);
+  assert.equal(lost(lo, 'pulse'), 25);
   const hi = start({ sub: 'hijacker', ranks: { 'packet-capture': 2 } });
   surge(hi, 'pulse', 90, hi.encounter.cycle + 3);
   act(hi, 'replay pulse');
-  assert.equal(lost(hi, 'pulse'), 40, 'capped at 30, +10');
+  assert.equal(lost(hi, 'pulse'), 50, 'capped at 40, +10');
 });
 
 test('Cold Storage: Barrier shields 10% more per rank', () => {

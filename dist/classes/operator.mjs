@@ -26,6 +26,7 @@
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
 import { subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
+import { chargeNow, tellOn, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
 
 const A = (id) => ABILITIES[id];
 const cycles = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
@@ -93,9 +94,10 @@ function resolveHeld(s) {
   for (const p of living) {
     const atk = p.attack;
     if (!alive(p) || !atk || atk.due > e.cycle || (atk.alone && living.length > 1)) continue;
-    if (p.blackhole) {
+    if (p.blackhole && !chargeNow(s, p)) { // a charged attack: tells.mjs drops it into the blackhole as it lands
       delete p.blackhole;
       atk.due = e.cycle + atk.interval;
+      atk.n = (atk.n || 0) + 1;
       if (atk.windup) atk.wound = 0;
       e.metrics.interrupts++;
       emit(s, 'blocked', `${atk.name} falls into the blackhole and does nothing.`, { source: p.id });
@@ -103,15 +105,19 @@ function resolveHeld(s) {
     }
     if (p.hijack) {
       const hj = p.hijack;
-      const size = attackSize(s, p);
+      // A charge riding this attack: it's yours, at its full charged size (tells.mjs).
+      const ch = chargeNow(s, p) ? chargeSize(s, p) : null;
+      const size = ch ? ch.amount : attackSize(s, p);
+      if (ch) tellAnswer(s, ch.t, p, `HIJACKED: ${ch.t.name.toUpperCase()} is yours.`, { at: hj.at });
       atk.due = e.cycle + atk.interval;
+      atk.n = (atk.n || 0) + 1;
       if (atk.windup) atk.wound = 0;
       e.metrics.interrupts++;
       if (--hj.left <= 0) delete p.hijack; else jamMark(s, p);
       if (size > 0) {
         const others = livingParts(s).filter((x) => x !== p);
         const to = !others.length ? [p] : hj.cross ? others : [soonestAttacker(s, p.id) || others[0]];
-        const amount = Math.max(1, Math.min(hj.cap || Infinity, Math.round(size * hj.share)));
+        const amount = Math.max(1, ch ? size : Math.min(hj.cap || Infinity, Math.round(size * hj.share)));
         emit(s, 'blocked', `HIJACKED: ${p.name}'s ${atk.name} turns on ${to.length > 1 ? 'every other part' : to[0] === p ? 'itself' : 'the ' + to[0].name}.`, { source: p.id, target: to[0].id });
         for (const x of to) if (alive(x)) hit(s, x, amount, { by: 'Hijack', pierce: true });
       } else emit(s, 'blocked', `HIJACKED: ${p.name}'s ${atk.name} goes nowhere.`, { source: p.id });
@@ -158,25 +164,56 @@ function threatNow(s) {
     .sort((a, b) => b.amount - a.amount)[0] || null;
 }
 
+// A tell about to land (this cycle or next) on a part, of a kind.
+const tellSoon = (s, kinds, lag = 1) => livingParts(s).map((p) => [p, tellOn(s, p)]).find(([p, x]) => x && kinds.includes(x.kind) && (x.kind === 'charge' && p.attack ? landsAt(p, x.n) : x.next) - s.encounter.cycle <= lag) || [null, null];
 function herderPlan(s, t) {
   const e = s.encounter, d = defender(s), living = livingParts(s), n = e.helpers.length;
+  // Fragments up: Garbage Collect takes them all at once, where a Spike takes one.
+  if (living.some((p) => p.kind === 'fragment') && living.length >= 3 && ok(s, 'garbage-collect')) return 'garbage-collect';
   if (finishable(s)) return null;
+  const [told] = tellSoon(s, ['charge', 'cast']);
+  const frags = living.filter((p) => p.kind === 'fragment').length;
+  const armor = living.reduce((k, p) => k + (p.armor || 0), 0);
   return firstOk(s, [
+    // Kill Switch: your helpers on a part about to land a tell cash in, and each part they hit takes it as your hit.
+    told && livingParts(s).filter((p) => tellOn(s, p) && helpersOn(s, p).length).length >= 2 && 'kill-switch', // two tells answered at once
+    // Garbage Collect: fragments up.
+    frags >= 2 && 'garbage-collect',
+    // Cron Storm: a full swarm hits twice.
+    n >= 5 && 'cron-storm',
+    // Fork: thick armor for the swarm to crack (each ◆ starts a helper).
+    armor >= 3 && n >= 2 && !buffed(e, 'fork') && 'fork',
     // Low: reap the swarm for a heal.
     d.integrity < d.max * 0.45 && helperValue(s) >= d.max * 0.12 && 'oom-kill',
-    // A helper on everything (room for one per part).
-    living.length >= 2 && n <= helperCap(s) - living.length && 'fan-out ' + t.id,
+    // A helper on everything: three parts or more (room for one each), or a tell on another part for Kill Switch to cash in.
+    (living.length >= 3 || (usable(s).includes('kill-switch') && living.some((p) => p !== t && tellOn(s, p) && !helpersOn(s, p).length))) && n <= helperCap(s) - living.length && (!ok(s, 'botnet ' + t.id) || buffed(e, 'fork') || ok(s, 'fork')) && 'fan-out ' + t.id, // Botnet first (three on the target beat one on each), unless Fork will split a helper on every ◆
     // Memory before the big spawns.
     !e.malloc && n < helperCap(s) - 2 && (ok(s, 'deploy ' + t.id) || ok(s, 'botnet ' + t.id)) && t.integrity > t.max * 0.5 && 'malloc',
     n >= 3 && living.length >= 2 && !buffed(e, 'mesh') && 'mesh',
+    // Hook a part your swarm is on: +6 on every helper hit.
+    helpersOn(s, t).length >= 3 && !on(s, t, 'hooked') && 'hook ' + t.id,
     n >= 4 && 'cron-storm',
-    n >= 3 && !buffed(e, 'fork') && 'fork',
   ]);
 }
 
 function hijackerPlan(s, t) {
   const e = s.encounter;
   if (finishable(s)) return null;
+  // The tells: Hijack a charge or a cast (a helper on the part spends it), Replay a charge at its charged size,
+  // Reroute the swarm into a cast (each arrival a hit), Cache Poison a seal, Blackhole a charge you can't stop.
+  const [tp, tt] = tellSoon(s, ['charge', 'cast', 'seal']);
+  if (tp) {
+    const with_ = helpersOn(s, tp).length;
+    const c = firstOk(s, tt.kind === 'seal'
+      ? [tp.armor > 1 && 'cache-poison ' + tp.id]
+      : [with_ && 'hijack ' + tp.id, tt.kind === 'charge' && 'spoofed-ack ' + tp.id, tt.kind === 'charge' && with_ && 'jam ' + tp.id, tt.kind === 'charge' && 'replay ' + tp.id, tt.kind === 'cast' && e.helpers.length >= 2 && 'reroute ' + tp.id, tt.kind === 'charge' && with_ && 'blackhole ' + tp.id]);
+    if (c) return c;
+    // A charge about to land on you that nothing else answers: turn a helper on that part into a shield.
+    if (tt.kind === 'charge' && with_) { const b = firstOk(s, ['barrier ' + tp.id]); if (b) return b; }
+  }
+  // Low, and a big hit landing now: the helper on that part becomes a shield worth what it had left.
+  const bigNow = threatNow(s);
+  if (bigNow && defender(s).integrity < defender(s).max * 0.5 && helpersOn(s, part(s, bigNow.source)).length) { const b = firstOk(s, ['barrier ' + bigNow.source]); if (b) return b; }
   const big = threatNow(s);
   if (big) {
     const id = big.source, p = part(s, id), hits = big.effect === 'damage' || big.hit;
@@ -241,6 +278,9 @@ export default {
     // ----- Hijacker -----
     jam: (s, { target, e }) => {
       if (!alive(target)) return;
+      // A charge on the attack you jammed loses its signal: it lands plain, a cycle later (a read, tells.mjs).
+      const ch = target.attack && tellOn(s, target, 'charge');
+      if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `JAMMED: ${ch.name.toUpperCase()} loses its signal. The ${target.name}'s ${target.attack.name} lands plain, a cycle later.`);
       // Long Jam: a second cycle.
       if (hasTalent(s, 'long-jam') && target.attack) { target.attack.due += 1; emit(s, 'interrupt', `Long Jam: ${target.attack.name} waits another cycle.`, { target: target.id }); }
       loopback(s, target);
@@ -253,13 +293,20 @@ export default {
     'spoofed-ack': (s, { a, target }) => {
       if (!alive(target)) return;
       const share = a.share + 0.1 * rank(s, 'ack-flood');
-      const back = clamp(Math.round(attackSize(s, target) * share), scaled(s, 8), scaled(s, a.cap));
+      // A charge on the attack it fakes out: the ACK takes the charge's size, and the charge drains (a read, tells.mjs).
+      const ch = chargeSize(s, target), riding = ch && target.attack && ch.t.n === (target.attack.n || 0);
+      const size = riding ? ch.amount : attackSize(s, target);
+      if (riding) tellAnswer(s, ch.t, target, `Spoofed ACK: ${ch.t.name.toUpperCase()} acks into nothing. The ${target.name}'s ${target.attack.name} lands plain, a cycle later.`);
+      const back = clamp(Math.round(size * share), scaled(s, 8), scaled(s, a.cap) * (riding ? 1.5 : 1));
       jamMark(s, target);
       hit(s, target, back, { mine: true, by: 'Spoofed ACK' });
     },
-    hijack: (s, { a, target }) => {
+    hijack: (s, { a, target, e }) => {
       if (!alive(target)) return;
-      target.hijack = { left: hasTalent(s, 'double-agent') ? 2 : 1, share: a.share, cap: scaled(s, a.cap), cross: hasTalent(s, 'crosstalk') };
+      // A cast it's compiling compiles for you instead: your hits deal 35% more for 4 cycles (tells.mjs).
+      const cast = tellOn(s, target, 'cast');
+      if (cast) { tellAnswer(s, cast, target, `HIJACKED: ${cast.name.toUpperCase()} compiles for you. Your hits deal +35% for 4 cycles.`); e.buffs.stolen = e.cycle + 3; } // and its next attack is yours too
+      target.hijack = { left: hasTalent(s, 'double-agent') ? 2 : 1, share: a.share, cap: scaled(s, a.cap), cross: hasTalent(s, 'crosstalk'), at: e.commanding?.at ?? e.cycle };
       jamMark(s, target);
       emit(s, 'status', `${target.name} hijacked: its next ${target.hijack.left === 2 ? 'two attacks turn' : 'attack turns'} on its own side. Jammed.`, { target: target.id, ability: 'hijack' });
     },
@@ -278,7 +325,8 @@ export default {
     },
     replay: (s, { a, target }) => {
       if (!alive(target)) return;
-      const amount = clamp(attackSize(s, target), scaled(s, a.floor), scaled(s, a.cap)) + (rank(s, 'packet-capture') ? scaled(s, 5 * rank(s, 'packet-capture')) : 0);
+      const ch = chargeSize(s, target); // a charge winding up plays back at its charged size, up to twice the cap
+      const amount = clamp(ch ? ch.amount : attackSize(s, target), scaled(s, a.floor), scaled(s, a.cap) * (ch ? 2 : 1)) + (rank(s, 'packet-capture') ? scaled(s, 5 * rank(s, 'packet-capture')) : 0);
       emit(s, 'status', `Replay: ${target.name}'s ${target.attack?.name || 'attack'} plays back at it.`, { target: target.id, ability: 'replay' });
       hit(s, target, amount, { mine: true, pierce: true, by: 'Replay' });
     },
@@ -319,6 +367,9 @@ export default {
   // GC Tuning (Herder rank): Garbage Collect hits harder.
   dealt(s, p, opts = {}) {
     let m = p.mitmUntil >= s.encounter.cycle ? 1 + (p.mitmBonus || 0.2) : 1;
+    // Man in the Middle: a helper of yours on a part is a foothold, and your hits on it take the same.
+    if (m === 1 && opts.mine && !['Helper', 'Last Gasp'].includes(opts.by) && subEdge(s, 'hijacker') && helpersOn(s, p).length >= 1) m = 1.2; // your command's hits only, not the helpers'
+    if (opts.mine && buffed(s.encounter, 'stolen')) m *= 1.35; // a cast hijacked (Hijack)
     if (opts.mine && opts.by === 'Garbage Collect' && rank(s, 'gc-tuning')) m *= 1 + 0.3 * rank(s, 'gc-tuning');
     return m;
   },

@@ -8,6 +8,7 @@ import { play } from './dist/run.mjs';
 import { matesOf } from './dist/crew.mjs';
 import { planner } from './dist/planner.mjs';
 import INFIL from './dist/classes/infiltrator.mjs';
+CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the tells
 // Exact numbers: no crits, misses or level scaling; each edge is turned on by the test that needs it.
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
@@ -142,7 +143,7 @@ test('IRQ Storm: every burn on every part ticks once more now, and none runs out
   assert.equal(s.encounter.infil.poly[0].left, 2);
   act(s, 'irq-storm');
   assert.equal(lost(s, 'pulse') - a, 24, 'the storm tick and the cycle\'s tick');
-  assert.equal(lost(s, 'encryptor') - b, 28);
+  assert.equal(lost(s, 'encryptor') - b, 14, 'Polymorph on a bare part: half, twice');
   assert.equal(s.encounter.infil.poly[0].left, 1, 'only the cycle used it up');
 });
 
@@ -203,19 +204,20 @@ test('Payload talents: Contagion, Persistence, Superspreader; ranks: Shaped Char
 });
 
 // ---------- Phantom ----------
-test('Backstab: 32, a sure crit on a part whose attack is not due this cycle or next; Pivot +10% a rank', () => {
+// A tell said on a part (tells.mjs), for skills that read one.
+const busy = (s, id, kind = 'charge') => { s.encounter.virus.tells = { list: [{ id: 'x', kind, name: 'Test', part: id, told: true, said: s.encounter.cycle, next: s.encounter.cycle + 2, n: part(s, id).attack?.n || 0, need: 1, wound: 0, hitBy: [], after: 0, count: 0 }], tier: { lead: 2, live: 1, hits: 1, castHits: 2, mult: 2, cap: 0.1, dot: 0.03, after: 0, burn: 0, hang: 0 } }; };
+test('Backstab: 32, a sure crit on a part busy with a tell (charging, compiling, sealing, recording); Pivot +10% a rank', () => {
   const s = noArmor(start('phantom'));
   big(s, 'pulse'); part(s, 'encryptor').attack = null;
-  part(s, 'pulse').attack.due = s.encounter.cycle + 5;
+  busy(s, 'pulse', 'cast');
   act(s, 'backstab pulse');
   assert.equal(lost(s, 'pulse'), 48, '32 × 1.5');
   const d = noArmor(start('phantom'));
   big(d, 'pulse'); part(d, 'encryptor').attack = null;
-  part(d, 'pulse').attack.due = d.encounter.cycle + 1;
   act(d, 'backstab pulse');
-  assert.equal(lost(d, 'pulse'), 32, 'its attack is due next cycle: no crit');
+  assert.equal(lost(d, 'pulse'), 32, 'nothing on it: no crit');
   const r = noArmor(quiet(start('phantom', { ranks: { pivot: 2 } })));
-  big(r, 'pulse');
+  big(r, 'pulse'); busy(r, 'pulse');
   act(r, 'backstab pulse');
   assert.equal(lost(r, 'pulse'), Math.floor(32 * 1.2 * 1.5));
 });
