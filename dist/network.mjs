@@ -134,9 +134,9 @@ export const intelOf = (s, who) => ((s.netIntel ||= {})[who] ||= { fam: {}, stra
 const learn = (s, who, what) => emit(s, 'info', `You notice ${what} on ${nameOf(s, who)}.`, { network: who });
 export function noteKill(s, e) {
   const who = fightNet(s, e), v = e?.virus, g = who && sigOf(s, who);
-  if (!g || !v?.family) return;
+  if (!g || !v) return;
   const n = intelOf(s, who);
-  n.fam[v.family] = (n.fam[v.family] || 0) + 1;
+  if (FAMILIES[v.family]) n.fam[v.family] = (n.fam[v.family] || 0) + 1; // the three families only: guards and bosses aren't a lean
   if (v.strain) {
     n.strains[v.strain] = (n.strains[v.strain] || 0) + 1;
     if (v.strain === g.strain && n.strains[v.strain] === INTEL.strain) learn(s, who, `${STRAINS[v.strain].name} turns up often`);
@@ -346,7 +346,7 @@ export function networkRestore(s, was) {
 export function networkLines(s, who) {
   const g = sigOf(s, who);
   if (!g) return [who === 'you' ? 'No network seed.' : `No network for ${who}.`];
-  const n = intelOf(s, who), fought = Object.entries(n.fam).sort((a, b) => b[1] - a[1]);
+  const n = intelOf(s, who), fought = Object.entries(n.fam).filter(([f]) => FAMILIES[f]).sort((a, b) => b[1] - a[1]);
   const fam = fought.length ? fought.map(([f, k]) => `${FAMILIES[f].name} ${k}`).join(', ') : 'nothing yet';
   const nat = g.uniques.map((id) => (named(s, id) ? `${UNIQUES[id].name} (lv ${UNIQUES[id].level})` : '???')).join(', ');
   const lair = who === 'you' && lairOf(s);

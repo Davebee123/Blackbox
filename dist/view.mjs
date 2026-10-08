@@ -1113,7 +1113,7 @@ export function networkCardMarkup(s, who = 'you', opts = {}) {
   const g = sigOf(s, who);
   if (!g) return '';
   // Only what you've learned by playing on it (network.mjs intelOf): nothing here is told.
-  const n = intelOf(s, who), fought = Object.entries(n.fam).sort((a, b) => b[1] - a[1]);
+  const n = intelOf(s, who), fought = Object.entries(n.fam).filter(([f]) => FAMILIES[f]).sort((a, b) => b[1] - a[1]); // saves from before this kept guards' too
   const total = fought.reduce((a, [, k]) => a + k, 0);
   const lean = fought.length
     ? `<div class="lean-bar">${fought.map(([f, k], i) => `<span class="lean-seg l${Math.min(i, 2)}" style="width:${Math.round((k / total) * 100)}%" title="${esc(FAMILIES[f].name)}: ${k} of the ${total} viruses you've beaten here">${glyph(codeOf(f))}${esc(FAMILIES[f].name)}</span>`).join('')}</div>`

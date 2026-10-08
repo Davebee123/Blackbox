@@ -392,3 +392,14 @@ test('you learn a network by playing it: its native strain after two kills, a fa
   for (let i = 0; i < 40 && !knowsRich(s, 'you'); i++) biasCode(s, 'you', { [other]: 5 });
   assert.ok(knowsRich(s, 'you') && intelOf(s, 'you').rich >= INTEL.rich);
 });
+
+test('a guard or a boss beaten on your network never breaks the Network card', async () => {
+  const { noteKill, intelOf } = await import('./dist/network.mjs');
+  const s = at(12);
+  noteKill(s, { mode: 'home', virus: { family: 'sentinel' } });
+  intelOf(s, 'you').fam.watchdog = 3; // a save from before the fix
+  noteKill(s, { mode: 'home', virus: { family: 'worm' } });
+  const html = networkCardMarkup(s, 'you');
+  assert.ok(html.includes('lean-bar') && !html.includes('undefined'));
+  assert.ok(networkLines(s, 'you').every((l) => !l.includes('undefined')));
+});
