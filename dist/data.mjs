@@ -5,6 +5,9 @@ import * as BASTION_SUBS from './classes/bastion.data.mjs';
 import * as INFILTRATOR_SUBS from './classes/infiltrator.data.mjs';
 import * as OPERATOR_SUBS from './classes/operator.data.mjs';
 const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: INFILTRATOR_SUBS, operator: OPERATOR_SUBS };
+// Viruses are built from genes (genes.mjs) and written by authors (authors.mjs): docs/genome.md.
+import { GENES, partGenes } from './genes.mjs';
+import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
   // Heals you cast and damage over time (burns, helpers) keep this share of the +4% a level everything
@@ -258,115 +261,116 @@ export const SKILLS = {
 // a hit on an armored part does no damage and breaks one chit (armor-piercing hits go
 // through). Attacks are rare and heavy, telegraphed well ahead: plan the takedown.
 // `veiled` parts hide their attack timers while they still have armor.
+// A family is a body: its two core parts and their core genes (genes.mjs), its stem (the name its viruses
+// carry: CRYPTJACK-4821), and its pool of third parts. A third part is a gene's part (genes.mjs GENES[id].parts);
+// a wild virus brings one of those open at its level, picked by its seed, in the pool's order.
+const thirds = (family, ids) => ids.map((g) => ({ ...GENES[g].parts[family], gene: g }));
 export const FAMILIES = {
   ransomware: {
     name: 'Ransomware',
+    stem: 'CRYPTJACK',
     threatens: 'Integrity',
     summary: 'Encrypts your server: every Encrypt adds damage each cycle until you break the Encryptor, which holds the key.',
+    core: ['surge', 'encrypt'],
+    third: ['ward', 'mutexlock', 'tripwire'], // the Lockbox from level 3, the Mutex from 8, the Tripwire from 20
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 14, interval: 4, first: 3 } },
       { id: 'encryptor', name: 'Encryptor', integrity: 38, armor: 1, loot: 'Cipher Seed', special: true, attack: { name: 'Encrypt', effect: 'encrypt', amount: 4, interval: 5, first: 4 } },
-      // A third part (pool 'third': a wild virus brings one of those open at its level, picked by its seed).
-      // From level 3: the Lockbox wards the Encryptor (it can't lose more than a quarter of itself a cycle while the Lockbox lives).
-      { id: 'lockbox', name: 'Lockbox', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'encryptor', from: 3, pool: 'third' },
-      // From level 8: the Mutex holds a lock on the Encryptor, a shield that comes back while the Mutex lives.
-      { id: 'mutex', name: 'Mutex', integrity: 18, armor: 1, loot: 'Mutex Handle', lock: 'encryptor', from: 8, pool: 'third' },
-      // From level 20: the Tripwire. Break it while the others live and they go loud.
-      { id: 'tripwire', name: 'Tripwire', integrity: 18, armor: 1, loot: 'Trip Coil', deadman: true, from: 20, pool: 'third', attack: { name: 'Ping', effect: 'damage', amount: 3, interval: 3, first: 3 } },
     ],
   },
   worm: {
     name: 'Worm',
+    stem: 'SPLINTER',
     threatens: 'Integrity',
     summary: 'Spawns fragments that gnaw the server every cycle. The Replicator makes them.',
+    core: ['surge', 'replicate'],
+    third: ['twin', 'c2'], // the Mirror from level 3, the C2 Node from 8
     parts: [
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 12, interval: 4, first: 4 } },
       { id: 'replicator', name: 'Replicator', integrity: 38, armor: 1, loot: 'Replication Seed', special: true, attack: { name: 'Replicate', effect: 'replicate', amount: 1, interval: 4, first: 3, hit: 4 } }, // a small Splice hit with each spawn
-      // From level 3: the Mirror and the Replicator are twins. Break one while the other lives and it reboots.
-      { id: 'mirror', name: 'Mirror', integrity: 18, armor: 1, loot: 'Mirror Shard', twin: 'replicator', from: 3, pool: 'third', attack: { name: 'Splice', effect: 'damage', amount: 3, interval: 4, first: 3 } },
-      // From level 8: the C2 Node commands the fragments. They gnaw harder while it lives and drop when it breaks.
-      { id: 'c2', name: 'C2 Node', integrity: 18, armor: 1, loot: 'C2 Beacon', command: true, from: 8, pool: 'third', attack: { name: 'Beacon', effect: 'damage', amount: 3, interval: 4, first: 3 } },
     ],
   },
   ghostroot: {
     name: 'Ghostroot',
+    stem: 'GHOSTROOT',
     threatens: 'Integrity',
     summary: 'Veiled: its timers stay hidden while its parts are armored. The Scrambler hits you and scrambles you for 2 cycles: each of your attacks has a 25% chance to hit you instead, at half strength.',
+    core: ['surge', 'scramble', 'veil'],
+    third: ['decoymirror', 'mimic'], // the Decoy from level 4, the Mimic from 8
     parts: [
       // The Scrambler carries the threat, not the Pulse: killing the Pulse first no longer halves the fight.
       { id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, veiled: true, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount: 11, interval: 4, first: 3 } },
       { id: 'scrambler', name: 'Scrambler', integrity: 40, armor: 1, veiled: true, loot: 'Signal Key', special: true, attack: { name: 'Scramble', effect: 'scramble', amount: 2, hit: 9, interval: 4, first: 2 } },
-      // From level 4: every 4th cycle the Decoy mirrors your commands. They do nothing, and some bounces back.
-      { id: 'decoy', name: 'Decoy', integrity: 18, armor: 1, veiled: true, loot: 'Decoy Shell', reflect: 4, from: 4, pool: 'third' },
-      // From level 8: the Mimic records your commands and plays the last one back at you on its beat (its MIMIC tell).
-      { id: 'mimic', name: 'Mimic', integrity: 18, armor: 1, veiled: true, loot: 'Mimic Mask', mimic: true, from: 8, pool: 'third' },
     ],
   },
 };
+for (const [k, f] of Object.entries(FAMILIES)) f.parts.push(...thirds(k, f.third));
 
-// Strains: variants of a home family, each built around one rule. They share their lineage's
+// Strains: variants of a home family, each built around one rule: a named build of its author (authors.mjs), its
+// fixed genes (genes) on its rule's part, and its charge's gene (tell.gene). They share their lineage's
 // art, materials and leads. They live deeper in the network, never on SPRAWL-00: from its layer
 // and its level on, a strain takes the place of the plain family about half the time in what a
 // server sends (invaders, outpost natives, swarms). See the strains design doc.
 const PULSE = (amount, first) => ({ id: 'pulse', name: 'Pulse Node', integrity: 34, armor: 1, loot: 'Pulse Kernel', attack: { name: 'Surge', effect: 'damage', amount, interval: 4, first } });
 export const STRAINS = {
   keylogger: {
-    lineage: 'ghostroot', from: 4, depth: 2, name: 'Keylogger', tell: { name: 'Keystorm' },
+    lineage: 'ghostroot', from: 4, depth: 2, name: 'Keylogger', genes: ['synclock', 'keystrokedump'], tell: { name: 'Keystorm', gene: 'overcharge' },
     rule: 'A Sync Window opens every cycle. The Logger only takes damage from commands fired inside it; every command fired outside it is logged, and 3 logs come back as an 18-damage Dump. It Dumps on its own every 6 cycles too.',
     parts: [PULSE(12, 3), { id: 'logger', name: 'Logger', integrity: 30, armor: 1, loot: 'Logger Spool', special: true, syncOnly: true, attack: { name: 'Dump', effect: 'damage', amount: 18, interval: 6, first: 6, dump: true } }],
   },
   hashrat: {
-    lineage: 'ransomware', from: 5, depth: 2, name: 'Hashrat', tell: { name: 'Overcharge', part: 'basic' },
+    lineage: 'ransomware', from: 5, depth: 2, name: 'Hashrat', genes: ['cycletax'], tell: { name: 'Overcharge', part: 'basic', gene: 'overcharge' },
     rule: 'While the Miner lives, your cooldowns tick down only every other cycle. Left alone, it Overclocks: 4 damage every 2 cycles.',
     parts: [PULSE(12, 3), { id: 'miner', name: 'Miner', integrity: 30, armor: 0, loot: 'Miner Rig', special: true, tax: true, attack: { name: 'Overclock', effect: 'damage', amount: 4, interval: 2, first: 2, alone: true } }],
   },
   floodgate: {
-    lineage: 'worm', from: 6, depth: 2, name: 'Floodgate', tell: { name: 'Deluge' },
+    lineage: 'worm', from: 6, depth: 2, name: 'Floodgate', genes: ['floodramp'], tell: { name: 'Deluge', gene: 'overcharge' },
     rule: 'The Flooder hits every cycle, one harder each time; any delay resets it.',
     parts: [PULSE(12, 4), { id: 'flooder', name: 'Flooder', integrity: 28, armor: 0, loot: 'Flood Valve', special: true, attack: { name: 'Flood', effect: 'damage', amount: 2, interval: 1, first: 2, ramp: 1 } }],
   },
   leech: {
-    lineage: 'worm', from: 8, depth: 2, name: 'Leech', tell: { name: 'Gorge' },
+    lineage: 'worm', from: 8, depth: 2, name: 'Leech', genes: ['siphon'], tell: { name: 'Gorge', gene: 'hotfix' },
     rule: 'The Tap heals its most damaged part by everything its bite deals, and clears one burn from it.',
     parts: [PULSE(12, 4), { id: 'tap', name: 'Tap', integrity: 28, armor: 1, loot: 'Tap Fang', special: true, attack: { name: 'Siphon', effect: 'damage', amount: 8, interval: 3, first: 3, siphon: true } }],
   },
   sleeper: {
-    lineage: 'ghostroot', from: 10, depth: 2, name: 'Sleeper', tell: { name: 'Wake-up Call' }, dormant: 6,
+    lineage: 'ghostroot', from: 10, depth: 2, name: 'Sleeper', genes: ['dormant'], tell: { name: 'Wake-up Call', gene: 'overcharge' }, dormant: 6,
     rule: 'Dormant until you deal damage or cycle 6. When it wakes, the Cell sounds a 14-damage Alarm and the Pulse Node attacks a cycle sooner.',
     parts: [PULSE(14, 3), { id: 'cell', name: 'Cell', integrity: 32, armor: 1, loot: 'Cell Key', special: true, attack: { name: 'Alarm', effect: 'damage', amount: 14, interval: 5, first: 999, alarm: true } }],
   },
   // Wave 1b: six more for the early climb (levels 3–11), all from layer 2.
   patchwork: {
-    lineage: 'worm', from: 3, depth: 2, name: 'Patchwork', tell: { name: 'Hotfix' },
+    lineage: 'worm', from: 3, depth: 2, name: 'Patchwork', genes: ['mend'], tell: { name: 'Hotfix', gene: 'hotfix' },
     rule: 'Every 3 cycles the Patcher heals the most damaged part by 12. Kill it first, or burst the other one down between patches.',
     parts: [PULSE(12, 4), { id: 'patcher', name: 'Patcher', integrity: 28, armor: 1, loot: 'Patch Kit', special: true, attack: { name: 'Patch', effect: 'heal', amount: 12, interval: 3, first: 3 } }],
   },
   flicker: {
-    lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker', tell: { name: 'Blink' },
+    lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker', genes: ['phaseshift'], tell: { name: 'Blink', gene: 'overcharge' },
     rule: 'The Shade is only there on even cycles. On odd cycles your hits pass straight through it, and 15% of the hit bounces back at you. It strikes when it is there.',
     parts: [PULSE(13, 3), { id: 'shade', name: 'Shade', integrity: 22, armor: 1, loot: 'Shade Lens', special: true, phase: true, attack: { name: 'Fade', effect: 'damage', amount: 5, interval: 2, first: 2 } }],
   },
   extortion: {
-    lineage: 'ransomware', from: 6, depth: 2, name: 'Extortion', tell: { name: 'Overcharge', part: 'basic' },
+    lineage: 'ransomware', from: 6, depth: 2, name: 'Extortion', genes: ['deadline'], tell: { name: 'Overcharge', part: 'basic', gene: 'overcharge' },
     rule: 'The Demand winds up a 26-damage Deadline. Deal it 14 damage in the 2 cycles before it lands and the Deadline is called off.',
     parts: [PULSE(12, 3), { id: 'demand', name: 'Demand', integrity: 40, armor: 0, loot: 'Ransom Note', special: true, attack: { name: 'Deadline', effect: 'damage', amount: 26, interval: 5, first: 4, windup: 14 } }],
   },
   echo: {
-    lineage: 'ghostroot', from: 8, depth: 2, name: 'Echo', tell: { name: 'Feedback' },
+    lineage: 'ghostroot', from: 8, depth: 2, name: 'Echo', genes: ['echo'], tell: { name: 'Feedback', gene: 'overcharge' },
     rule: 'While the Echo lives, every hit you take repeats a cycle later at half damage, and it Reverbs for 6 every 4 cycles.',
     parts: [PULSE(14, 3), { id: 'echo', name: 'Echo', integrity: 30, armor: 1, loot: 'Echo Chamber', special: true, echo: true, attack: { name: 'Reverb', effect: 'damage', amount: 6, interval: 4, first: 3 } }],
   },
   bricker: {
-    lineage: 'ransomware', from: 9, depth: 2, name: 'Bricker', tell: { name: 'Brick Wall' }, enrage: true,
+    lineage: 'ransomware', from: 9, depth: 2, name: 'Bricker', genes: ['rage'], tell: { name: 'Brick Wall', gene: 'overcharge' }, enrage: true,
     rule: 'Each part hits 30% harder once it drops below half Integrity. Take parts from healthy to dead in one go.',
     parts: [PULSE(12, 3), { id: 'locker', name: 'Locker', integrity: 36, armor: 1, loot: 'Brick Key', special: true, attack: { name: 'Brick', effect: 'damage', amount: 10, interval: 3, first: 3 } }],
   },
   overrun: {
-    lineage: 'worm', from: 11, depth: 2, name: 'Overrun', tell: { name: 'Swarm', spawn: 1 },
+    lineage: 'worm', from: 11, depth: 2, name: 'Overrun', genes: ['hivebrood'], tell: { name: 'Swarm', spawn: 1, gene: 'massmailer' },
     rule: 'The Hive spawns fragments that bite one harder every cycle they live. Clear them young, or kill the Hive.',
     parts: [PULSE(10, 4), { id: 'hive', name: 'Hive', integrity: 34, armor: 1, loot: 'Hive Comb', special: true, overrun: true, attack: { name: 'Swarm', effect: 'replicate', amount: 1, interval: 4, first: 2 } }],
   },
 };
+for (const [k, st] of Object.entries(STRAINS)) st.author = buildAuthor(k);
 // The strains a family can field at a level, on a server this many layers deep.
 export const strainsFor = (family, level, depth = 99) => Object.keys(STRAINS).filter((k) => STRAINS[k].lineage === family && level >= STRAINS[k].from && depth >= (STRAINS[k].depth || 2));
 export const STRAIN_SHARE = 0.5;
@@ -470,13 +474,16 @@ export const GUARDS = {
   },
 };
 
-// Every mutation is visible from the start and changes a decision.
+// Every mutation is visible from the start and changes a decision. A mutation is a passive rule gene a wild virus
+// rolls (genes.mjs, mutation: true): its rule is the gene's. Rerouting is retired (every v2+ virus is Linked now,
+// combat.mjs), and only lingers on old saves' viruses.
+const mutation = (id) => ({ name: GENES[id].name, rule: GENES[id].does, gene: id });
 export const MUTATIONS = {
-  armored: { name: 'Armored', rule: 'Every part has one more ◆.' },
-  regenerative: { name: 'Regenerative', rule: 'A stripped part patches its armor a cycle sooner, so strip it only when you can finish it.' },
-  hasty: { name: 'Hasty', rule: 'Every attack comes a cycle sooner and repeats a cycle faster, but its parts have 10% less Integrity, so kill it fast.' },
-  rerouting: { name: 'Rerouting', rule: 'When a part breaks, a third of its attack damage reroutes to the surviving part that attacks next.', retired: true }, // every v2+ virus is Linked now (combat.mjs)
-  adaptive: { name: 'Adaptive', rule: 'A part your commands hit three cycles in a row adapts: it gains a ◆ at the end of that cycle.' },
+  armored: mutation('armored'),
+  regenerative: mutation('regenerative'),
+  hasty: mutation('hasty'),
+  rerouting: { name: 'Rerouting', rule: 'When a part breaks, a third of its attack damage reroutes to the surviving part that attacks next.', retired: true, gene: 'linked' },
+  adaptive: mutation('adaptive'),
 };
 
 // The mutations a virus can roll (a retired one only lingers on old saves' viruses).
@@ -722,34 +729,34 @@ export const TELL = {
   bots: { answer: true }, // sim switch (balance.mjs): a bot that plays as if it can't see tells
 };
 // The library. part: the fixed part it sits on ('special', the family's signature part; 'basic'; or a part id),
-// shown on the chip and in the codex. A charge needs a part with an attack (it falls back to the other one).
+// shown on the chip and in the codex. gene: the tell gene it is (genes.mjs); a boss's or a guard's own name for one. A charge needs a part with an attack (it falls back to the other one).
 export const TELLS = {
   // Charges: answer with a command hit on the part (or the ◆ it asks for), or soften it.
-  fulldisk: { kind: 'charge', name: 'Full Disk', part: 'special' }, // an Encrypt with a burst of encryption on top for 3 cycles
-  massmailer: { kind: 'charge', name: 'Mass Mailer', part: 'special', spawn: 1 }, // a Replicate that hatches two (up to the limit)
-  possession: { kind: 'charge', name: 'Possession', part: 'special', longer: 2 }, // a Scramble that lasts two cycles longer (Scrub clears it)
-  lockon: { kind: 'charge', name: 'Lock-on', part: 'special' }, // Watchdog, Tracer: the Tracker
-  infest: { kind: 'charge', name: 'Infest', part: 'special', spawn: 1 }, // Crawler: the Brood
-  deepshred: { kind: 'charge', name: 'Deep Shred', part: 'special', shred: true }, // Shredder: it shreds a file in your pack too
-  overcharge: { kind: 'charge', name: 'Overcharge', part: 'basic' }, // from level 17 (the tier's third tell): a second charge, on the other attacker
-  ram: { kind: 'charge', name: 'Battering Ram', part: 'basic', answer: 'strip', strip: 2 }, // Bouncer (only its Gate attacks): strip ◆2 off the Gate
+  fulldisk: { kind: 'charge', name: 'Full Disk', gene: 'fulldisk', part: 'special' }, // an Encrypt with a burst of encryption on top for 3 cycles
+  massmailer: { kind: 'charge', name: 'Mass Mailer', gene: 'massmailer', part: 'special', spawn: 1 }, // a Replicate that hatches two (up to the limit)
+  possession: { kind: 'charge', name: 'Possession', gene: 'possession', part: 'special', longer: 2 }, // a Scramble that lasts two cycles longer (Scrub clears it)
+  lockon: { kind: 'charge', name: 'Lock-on', gene: 'overcharge', part: 'special' }, // Watchdog, Tracer: the Tracker
+  infest: { kind: 'charge', name: 'Infest', gene: 'massmailer', part: 'special', spawn: 1 }, // Crawler: the Brood
+  deepshred: { kind: 'charge', name: 'Deep Shred', gene: 'overcharge', part: 'special', shred: true }, // Shredder: it shreds a file in your pack too
+  overcharge: { kind: 'charge', name: 'Overcharge', gene: 'overcharge', part: 'basic' }, // from level 17 (the tier's third tell): a second charge, on the other attacker
+  ram: { kind: 'charge', name: 'Battering Ram', gene: 'batteringram', part: 'basic', answer: 'strip', strip: 2 }, // Bouncer (only its Gate attacks): strip ◆2 off the Gate
   // Casts (from level 10): SIGINT, two hits, or break the part.
-  extortion: { kind: 'cast', name: 'Double Extortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
-  selfupdate: { kind: 'cast', name: 'Self-Update', part: 'special', does: 'grow' }, // every part grows a quarter more Integrity
-  persistence: { kind: 'cast', name: 'Persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
-  callhome: { kind: 'cast', name: 'Call Home', part: 'special', does: 'haste' }, // guards
+  extortion: { kind: 'cast', name: 'Double Extortion', gene: 'doubleextortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
+  selfupdate: { kind: 'cast', name: 'Self-Update', gene: 'selfupdate', part: 'special', does: 'grow' }, // every part grows a quarter more Integrity
+  persistence: { kind: 'cast', name: 'Persistence', gene: 'persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles
+  callhome: { kind: 'cast', name: 'Call Home', gene: 'persistence', part: 'special', does: 'haste' }, // guards
   // Seals: strip the part before it lands, or it re-arms with one ◆ more.
-  keyrotation: { kind: 'seal', name: 'Key Rotation', part: 'special' },
-  resync: { kind: 'seal', name: 'Resync', part: 'special' },
-  godark: { kind: 'seal', name: 'Go Dark', part: 'special' },
-  blacklist: { kind: 'seal', name: 'Blacklist', part: 'special' }, // Sentinel: the Lockout
+  keyrotation: { kind: 'seal', name: 'Key Rotation', gene: 'rekey', part: 'special' },
+  resync: { kind: 'seal', name: 'Resync', gene: 'rekey', part: 'special' },
+  godark: { kind: 'seal', name: 'Go Dark', gene: 'rekey', part: 'special' },
+  blacklist: { kind: 'seal', name: 'Blacklist', gene: 'rekey', part: 'special' }, // Sentinel: the Lockout
   // The Mimic's beat (a part's nature, not counted against the tier's count): every 4 cycles from cycle 3.
-  mimic: { kind: 'mimic', name: 'Mimic', part: 'mimic', first: 3, every: 4 },
+  mimic: { kind: 'mimic', name: 'Mimic', gene: 'mimic', part: 'mimic', first: 3, every: 4 },
   // Native bosses' signature charges (BOSSES nb-*): the family's charge, under the boss's own name.
-  deadbolt: { kind: 'charge', name: 'Deadbolt', part: 'special' },
-  claymore: { kind: 'charge', name: 'Claymore', part: 'basic' },
-  spamrun: { kind: 'charge', name: 'Spam Run', part: 'special', spawn: 1 },
-  doppelganger: { kind: 'charge', name: 'Doppelganger', part: 'special', longer: 2 },
+  deadbolt: { kind: 'charge', name: 'Deadbolt', gene: 'fulldisk', part: 'special' },
+  claymore: { kind: 'charge', name: 'Claymore', gene: 'overcharge', part: 'basic' },
+  spamrun: { kind: 'charge', name: 'Spam Run', gene: 'massmailer', part: 'special', spawn: 1 },
+  doppelganger: { kind: 'charge', name: 'Doppelganger', gene: 'possession', part: 'special', longer: 2 },
 };
 // Which tells each virus brings, in order: a tier's count takes the first ones open at the virus's level
 // (a cast from TELL.castFrom; a seal from SEAL_FROM, on a part that wears ◆). Strains bring their own charge
@@ -772,7 +779,36 @@ export const TELL_SETS = {
   'nb-mirrorshade': ['doppelganger', 'persistence', 'overcharge', 'godark'],
 };
 
+// ---------- the genome (genes.mjs, docs/genome.md) ----------
+// What a virus is made of, before any number: a body (its family's core genes, or a guard's), a named build (a
+// strain's genes on its rule's part), the genes today's dice roll (a third part and a mutation), and its grade
+// (Linked from v2). The roll is today's: the third part by its own hash of the seed, the mutation off the virus's
+// dice, so nothing else moves. overrides.genes forces the rolled genes instead (a probe in genesim.mjs; phase 3
+// rolls them from an author's toolkit by the budget, genes.mjs budgetFor).
+// Each gene on the virus says where it came from (src): core, build, rolled, grade or boss.
+export function genomeOf(parts, { strain = null, mutation = null, grade = 1, boss = null, ice = false, srcs = [] } = {}) {
+  const out = [];
+  const add = (id, src) => { if (GENES[id] && !out.some((x) => x.id === id)) out.push({ id, src }); };
+  const build = STRAINS[strain]?.genes || [];
+  const srcOf = (p, i, id) => (srcs[i] ? (boss ? 'boss' : srcs[i]) : build.includes(id) || (ice && p.special) ? 'build' : 'core');
+  parts.forEach((p, i) => { for (const id of partGenes(p)) add(id, srcOf(p, i, id)); });
+  if (mutation && MUTATIONS[mutation]) add(MUTATIONS[mutation].gene, boss ? 'boss' : 'rolled');
+  if (grade >= 2) add('linked', 'grade');
+  return out;
+}
+// Who wrote it (authors.mjs): a boss's author, a named build's, Kestrel for ICE and the Sentinel, then whoever
+// the fight's place says (a faction's server, a guard's server; null for SPRAWL-00's strays), then the family's crew.
+export function authorOf({ family, strain = null, boss = null }, context) {
+  if (boss) return BOSSES[boss]?.author ?? bossAuthor(boss) ?? (context !== undefined ? context : crewOf(family));
+  if (strain) return STRAINS[strain]?.author || null;
+  if (GUARDS[family]?.ice || family === 'sentinel') return 'kestrel';
+  if (context !== undefined) return context;
+  return crewOf(family);
+}
+
 // Build a virus from a named fixture or a seeded random variant.
+// overrides: family, strain, grade, mutation, threat, run, elite (eliteHp), boss (bossHp), genes (the rolled genes,
+// forced), author (who the fight's place says wrote it, when the virus has no author of its own; null: nobody's).
 export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const next = rng(seed);
   const random = key === 'random';
@@ -784,7 +820,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const family = familyOf(familyId);
   const mutationIds = ROLLED_MUTATIONS;
   const rolled = random ? mutationIds[Math.floor(next() * mutationIds.length)] : forced ? null : fixture.mutation;
-  const mutation = overrides.mutation !== undefined ? overrides.mutation : rolled;
+  const genes = Array.isArray(overrides.genes) ? overrides.genes : null; // forced rolled genes
+  const mutation = overrides.mutation !== undefined ? overrides.mutation : genes ? genes.find((id) => GENES[id]?.mutation) || null : rolled;
   const threat = overrides.threat ?? (random ? 12 + Math.floor(next() * 9) : forced ? 13 : fixture.threat);
   const level = Math.max(1, threat - 9);
   // A strain (forced by key, or chosen by variantFor for deeper servers) and a grade.
@@ -797,11 +834,11 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;
   // A family's third part joins wild viruses from its level (named fixtures stay as they are); the others give up some Integrity for it.
   const open = (strain ? strain.parts : family.parts).filter((spec) => !spec.from || ((random || overrides.family) && level >= spec.from));
-  // The third part: one of those open at its level (FAMILIES, pool 'third'), picked by its own hash of the
+  // The third part: a gene's part (genes.mjs), one of those open at its level (the family's pool, in order), picked by its own hash of the
   // seed so it never moves the virus's other rolls. A boss keeps its family's first (the classic one).
   const pool = open.filter((spec) => spec.pool === 'third');
   const own = overrides.boss && pool.find((spec) => spec.id === BOSSES[overrides.boss]?.third); // a native boss brings its own (data BOSSES nb-*)
-  const third = pool.length ? own || pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
+  const third = genes ? pool.find((spec) => genes.includes(spec.gene)) || null : pool.length ? own || pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
   const specs = open.filter((spec) => spec.pool !== 'third' || spec === third);
   const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));
@@ -841,7 +878,10 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const name = (overrides.elite ? 'ELITE ' : '') + (strain ? strain.name.toUpperCase() + '-' + tagNo : random ? family.name.toUpperCase() + '-' + tagNo : fixture.name) + (grade > 1 ? ` v${grade}` : '');
   // Enemy damage can crit, from level 3 (like mutations).
   const crit = level >= SERVER.mutationsFrom ? CONFIG.enemyCrit : 0;
-  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}) };
+  const srcs = specs.map((spec) => (spec.pool === 'third' ? 'rolled' : null));
+  const author = authorOf({ family: familyId, strain: strainId, boss: overrides.boss || null }, overrides.author);
+  return { id: familyId + '-' + seed, name, family: familyId, strain: strainId, grade, dormant: strain?.dormant ? true : false, art: family.art || familyId, mutation, threat, level, power: dmgScale * (overrides.elite ? ELITE.dmg : 1), hpPower: scale, crit, threatens: family.threatens, parts, weakPoint, weakKnown: false, ...(overrides.elite ? { elite: true } : {}), ...(boss ? { boss: overrides.boss, phases: boss.phases.map((x) => ({ ...x, done: false })), enrageAt: boss.enrageAt } : {}),
+    genes: genomeOf(parts, { strain: strainId, mutation, grade, boss: overrides.boss || null, ice: !!family.ice, srcs }), author };
 }
 
 // ---------- locations ----------

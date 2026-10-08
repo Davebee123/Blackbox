@@ -804,7 +804,7 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (opts.elite) { over.elite = true; if (opts.eliteHp) over.eliteHp = opts.eliteHp; }
   if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
-  const virus = createVirus(key, seed, over);
+  const virus = (hooks.createVirus || createVirus)(key, seed, over); // hooks.createVirus: golden.test.mjs plays the same fight on the builder from before genes
   if (mode === 'run' && s.run?.hot) { // a hot run (HOT_RUN): tougher fights
     virus.hot = true;
     for (const p of virus.parts) {
