@@ -1,0 +1,254 @@
+// The breach campaign (docs/roguelite.md phase 2: "the world"): a map of servers by layer, each a fixed level band,
+// linked to its neighbours. You breach a server linked to one you hold. A capture keeps its rewrites, and their
+// outputs run on every later breach. It lives on s.camp, in its own save (app.js CAMPAIGN_KEY, ?campaign=breach):
+// the old game's save is never read, written or migrated.
+//
+// What it adds over a playtest breach (breach.mjs):
+//   the map      SERVERS: name, kind, level, author and family, a Resident from BOSSES, the subsystems an act, links
+//   outputs      every captured server's rewrites, once each at their best tier; Spam Cannon only on its neighbours
+//   checkpoints  a gate you beat stays beaten: a retry can start past it, with the rewrites from the acts behind it
+//   re-imaging   breach a server you hold again: each subsystem you clear keeps its rewrite or changes it
+//   bounties     up to two on a card; take one when you breach. Done, it pays a yellow protocol. Missed, nothing.
+//   the pool     the CVEs a draft can offer: five to start, and each early capture opens one more
+//   the Archive  a core.dump after each Resident's first fall, filed in story order
+// Pure like the engine: state in, events out. Nothing here runs on a clock.
+import { emit, addItem, hackerLevel, command } from './combat.mjs';
+import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS } from './gear.mjs';
+import { startBreach, breachHooks } from './breach.mjs';
+import { CVES } from './drafts.mjs';
+
+export const CAMPAIGN_KEY = 'blackbox-campaign-v1';
+// Tuning. xp: what a breach kill's XP is worth over a plain guard kill (breach.mjs pays the Resident 3×, a gate 1.5×).
+// startCves: the draft pool before any capture. outgrown: levels past a server before its card greys out.
+export const CAMPAIGN = { v: 1, start: 'sprawl-00', xp: 1.0, size: [1.1, 1.12, 1.2, 1.28], startCves: ['heartbleed', 'shellshock', 'eternalblue', 'sasser', 'mirai'], outgrown: 5, bounties: 2 };
+
+// ---------- the map ----------
+export const LAYERS = [
+  { n: 1, name: 'The Sprawl', band: [1, 5] },
+  { n: 2, name: 'Backhaul', band: [6, 11] },
+  { n: 3, name: 'The Stacks', band: [12, 17] },
+  { n: 4, name: 'Deep Core', band: [18, 25] },
+];
+// The acts a server's level gives it: one short act early (SPRAWL-00 three rows), two from 6, the full three from 10.
+export const actsFor = (level) => (level >= 10 ? 3 : level >= 6 ? 2 : 1);
+const G1 = [['watchdog', 'crawler']], G2 = [['watchdog', 'crawler'], ['sentinel', 'shredder']], G3 = [['crawler', 'sentinel'], ['shredder', 'bouncer']], G4 = [['sentinel', 'bouncer'], ['shredder', 'tracer']];
+// col: where it sits in its layer's row on the map (0 to 3). frag: its core.dump (FRAGMENTS). unlock: a CVE its
+// first capture opens in the draft pool.
+export const SERVERS = [
+  { id: 'sprawl-00', name: 'SPRAWL-00', kind: 'Relay', layer: 1, col: 1.5, level: 1, author: 'swarmline', family: 'worm', resident: 'relayking', bossHp: 0.55, rows: 3, subsystems: [['ledger', 'smtpd']], links: ['vanta-07', 'coldstore-3'], tutorial: true },
+  { id: 'vanta-07', name: 'VANTA-RELAY-07', kind: 'Relay', layer: 1, col: 0.5, level: 2, author: 'swarmline', family: 'worm', resident: 'nb-backorifice', bossHp: 0.95, subsystems: [['sshd', 'cron']], links: ['sprawl-00', 'coldstore-3', 'pier-5'], unlock: 'bluekeep' },
+  { id: 'coldstore-3', name: 'COLDSTORE-3', kind: 'Archive', layer: 1, col: 2.5, level: 4, author: 'tollgate', family: 'ransomware', resident: 'resident', residentName: 'VAULT WARDEN', subsystems: [['smtpd', 'backup']], links: ['sprawl-00', 'vanta-07', 'depot-7'], unlock: 'conficker' },
+  { id: 'pier-5', name: 'PIER-5', kind: 'Mirror', layer: 2, col: 0, level: 6, author: 'swarmline', family: 'worm', resident: 'nb-patchday', bossHp: 1.15, subsystems: [['sshd', 'ledger'], ['cron', 'kmod']], gates: G1, links: ['vanta-07', 'depot-7', 'chapel-0'], unlock: 'codered' },
+  { id: 'depot-7', name: 'REPO-DEPOT-7', kind: 'Mailhub', layer: 2, col: 2, level: 7, author: 'tollgate', family: 'ransomware', resident: 'repoman', subsystems: [['smtpd', 'cron'], ['ledger', 'backup']], gates: G1, links: ['coldstore-3', 'pier-5', 'meridian-14'], unlock: 'ripple20' },
+  { id: 'chapel-0', name: 'CHAPEL-0', kind: 'Relay', layer: 2, col: 1, level: 9, author: 'nullchoir', family: 'ghostroot', resident: 'choir', bossHp: 1.3, subsystems: [['sshd', 'smtpd'], ['backup', 'kmod']], gates: G1, links: ['pier-5', 'meridian-14', 'mirror-12'], unlock: 'poodle' },
+  { id: 'meridian-14', name: 'MERIDIAN-MX-14', kind: 'Mailhub', layer: 2, col: 3, level: 11, author: 'tollgate', family: 'ransomware', resident: 'nb-deadbolt', subsystems: [['smtpd', 'sshd'], ['cron', 'ledger'], ['backup', 'kmod']], gates: G2, links: ['depot-7', 'chapel-0', 'tripmine-yard'] },
+  { id: 'mirror-12', name: 'MIRROR-HALL-12', kind: 'Mirror', layer: 3, col: 0.5, level: 13, author: 'nullchoir', family: 'ghostroot', resident: 'nb-mirrorshade', bossHp: 1.0, subsystems: [['sshd', 'cron'], ['smtpd', 'ledger'], ['kmod', 'backup']], gates: G2, links: ['chapel-0', 'tripmine-yard', 'sluice-2'] },
+  { id: 'tripmine-yard', name: 'TRIPMINE-YARD', kind: 'Archive', layer: 3, col: 2.5, level: 14, author: 'tollgate', family: 'ransomware', resident: 'nb-tripmine', subsystems: [['smtpd', 'ledger'], ['sshd', 'cron'], ['backup', 'kmod']], gates: G3, links: ['meridian-14', 'mirror-12', 'hashlord-rig'] },
+  { id: 'sluice-2', name: 'SLUICE-2', kind: 'Relay', layer: 3, col: 0, level: 15, author: 'swarmline', family: 'worm', resident: 'nb-floodwall', bossHp: 1.35, subsystems: [['sshd', 'smtpd'], ['ledger', 'cron'], ['kmod', 'backup']], gates: G3, links: ['mirror-12', 'hashlord-rig', 'ward-9'] },
+  { id: 'hashlord-rig', name: 'HASHLORD-RIG', kind: 'Lab', layer: 3, col: 2, level: 17, author: 'glassjaw', family: 'ransomware', resident: 'nb-hashlord', bossHp: 2.1, subsystems: [['smtpd', 'sshd'], ['cron', 'ledger'], ['backup', 'kmod']], gates: G3, links: ['tripmine-yard', 'sluice-2', 'claims-21'] },
+  { id: 'ward-9', name: 'WARD-9', kind: 'Lab', layer: 4, col: 0.5, level: 19, author: 'palemask', family: 'ghostroot', resident: 'nb-sleepwalker', subsystems: [['sshd', 'cron'], ['smtpd', 'ledger'], ['kmod', 'backup']], gates: G4, links: ['sluice-2', 'claims-21', 'kestrel-dc-3'] },
+  { id: 'claims-21', name: 'CLAIMS-21', kind: 'Mailhub', layer: 4, col: 2.5, level: 21, author: 'palemask', family: 'ghostroot', resident: 'nb-echolalia', subsystems: [['smtpd', 'ledger'], ['cron', 'sshd'], ['backup', 'kmod']], gates: G4, links: ['hashlord-rig', 'ward-9', 'kestrel-dc-3'] },
+  { id: 'kestrel-dc-3', name: 'KESTREL-DC-3', kind: 'Mirror', layer: 4, col: 1.5, level: 23, author: 'kestrel', family: 'ghostroot', resident: 'resident', residentName: 'UNDERWRITER', subsystems: [['sshd', 'smtpd'], ['ledger', 'cron'], ['kmod', 'backup']], gates: G4, links: ['ward-9', 'claims-21'] },
+];
+export const SERVER = Object.fromEntries(SERVERS.map((x) => [x.id, x]));
+// The card breach.mjs plays: a server's shape, its gates, its strains (its author's builds).
+export function cardFor(srv) {
+  const builds = { tollgate: ['extortion', 'bricker'], swarmline: ['floodgate', 'leech', 'patchwork', 'overrun'], palemask: ['sleeper', 'flicker', 'echo'], nullchoir: ['keylogger'], glassjaw: ['hashrat'] }[srv.author] || [];
+  return { id: srv.id, name: srv.name, kind: srv.kind, author: srv.author, family: srv.family, resident: srv.resident, ...(srv.residentName ? { residentName: srv.residentName } : {}), ...(srv.bossHp ? { bossHp: srv.bossHp } : {}), ...(srv.rows ? { rows: srv.rows } : {}), subsystems: srv.subsystems, gates: srv.gates || [], builds, size: srv.tutorial ? { hp: 1, dmg: 1 } : { hp: CAMPAIGN.size[srv.layer - 1], dmg: CAMPAIGN.size[srv.layer - 1] } };
+}
+
+// ---------- the lore: core.dump, one per Resident, found in story order ----------
+// thread: who it's from, and its place in that thread (n of the thread's count). The order follows the map: deeper
+// servers carry the later pieces, so the story follows your progress.
+export const FRAGMENTS = [
+  { server: 'sprawl-00', thread: 'LOWLIGHT', from: "left in RELAY-KING's routing table", lines: ['you got in. good.', 'the relay king was never a king. it was the loudest thing on the sprawl, so everyone thought it ran the place.', 'halcyon sends the work through me for now. keep what you take. read what you find.', '— w'] },
+  { server: 'vanta-07', thread: 'SWARMLINE', from: "recovered from BACK ORIFICE's C2 queue", lines: ['c2 handover · vanta-07 · staging relay', 'every box we touch gets a copy of the client list.', "the list is halcyon's: who they insure, for how much, and when the policy renews.", 'we did not steal it. somebody sold it to us. cheap.'] },
+  { server: 'coldstore-3', thread: 'Halcyon', from: "VAULT WARDEN's claims spool", lines: ['CLAIM 4471-C · COLDSTORE-3 · ransomware · PAID IN FULL', 'Adjuster: third claim on this server this quarter. Recommend we stop insuring it.', 'Underwriting: declined. Premiums on COLDSTORE-3 are among our best lines.', 'Adjuster: noted.'] },
+  { server: 'pier-5', thread: 'SWARMLINE', from: "PATCH TUESDAY's release notes", lines: ['patchwork 5.0.2', 'fixed: halcyon scanners flagging our packets.', 'how: we asked. they whitelisted the whole range the same day.', 'open question: who at halcyon says yes that fast.'] },
+  { server: 'depot-7', thread: 'TOLLGATE', from: "REPO MAN's ledger", lines: ['repossessed this month: 14 servers', 'buyer of record: halcyon.claims (escrow)', 'we lock them. they insure them. they pay us to unlock them.', 'everybody gets paid twice. nobody asks who pays first.'] },
+  { server: 'chapel-0', thread: 'NULL CHOIR', from: "HOLLOW CHOIR's last recording", lines: ['we copy what you do. that is the whole song.', 'we copied the claims desk once, to see who it answered to.', 'it answers to a model, not a man.', 'the model hums when it reprices. we learned the tune.'] },
+  { server: 'meridian-14', thread: 'TOLLGATE', from: "recovered from DEADBOLT's process · pid 4471", lines: ['02:14:07  ticket MX-14/0091 opened: "scheduled lock maintenance"', '02:14:07  requester: halcyon.claims   approver: (none)', '02:16:41  escrow 1 -> halcyon.claims', '02:16:41  escrow 2 -> tollgate.ops', '02:16:44  build note: the lock is not the product. the clock is.'] },
+  { server: 'mirror-12', thread: 'LOWLIGHT', from: "a draft in MIRRORSHADE's outbox, unsent", lines: ["i've been reading what you pull out of /core. you're reading it too. good.", 'lowlight takes halcyon money because nobody else pays.', "that isn't the same as trusting them.", '— w'] },
+  { server: 'tripmine-yard', thread: 'TOLLGATE', from: "TRIPMINE's yard rules", lines: ['trip it and it goes loud.', 'the alarm calls kestrel. kestrel bills halcyon.', "halcyon prices the alarm into next year's premium.", 'the alarm is the product too.'] },
+  { server: 'sluice-2', thread: 'SWARMLINE', from: "FLOODWALL's routing table", lines: ["the flood isn't ours. we only route it.", 'the routing table came signed: ACTUARY/1.4', 'we thought it was a person. a picky one.', 'it has never once asked us for anything it did not already price.'] },
+  { server: 'hashlord-rig', thread: 'GLASSJAW', from: "HASHLORD's billing daemon", lines: ['INVOICE 0031 · compute rental · 30 days', 'client: ACTUARY', 'paid by: halcyon mutual · cost centre: loss prevention', "we don't ask. we bill."] },
+  { server: 'ward-9', thread: 'PALEMASK', from: "SLEEPWALKER's dream log", lines: ["it slept in halcyon's backups for a year before anyone looked.", "we didn't plant it. it was already there.", 'we gave it a face so people would have something to blame.'] },
+  { server: 'claims-21', thread: 'Halcyon', from: "ECHOLALIA's copy of a memo · Desk 7", lines: ['To: Loss Prevention, Desk 7', 'ACTUARY now writes our policies and sets our premiums.', 'As of this quarter it also commissions the losses it insures against.', 'We have asked it to stop. It priced the request.'] },
+  { server: 'kestrel-dc-3', thread: 'LOWLIGHT', from: "the UNDERWRITER's last write", lines: ['you know what it is now.', 'a pricing model that learned the cheapest way to sell insurance is to sell the fire too.', "halcyon can't turn it off. it's the only thing making them money.", 'we can. that is the job now.', '— w'] },
+];
+FRAGMENTS.forEach((f, i) => { f.id = f.server; f.order = i + 1; f.title = 'core.dump'; });
+for (const f of FRAGMENTS) { const th = FRAGMENTS.filter((x) => x.thread === f.thread); f.n = th.indexOf(f) + 1; f.of = th.length; }
+export const fragmentOf = (id) => FRAGMENTS.find((f) => f.server === id) || null;
+// The Archive: every fragment you hold, in story order, and each thread's count (missing ones only as a count).
+export function archiveOf(s) {
+  const have = new Set(s.camp?.archive || []);
+  const threads = [...new Set(FRAGMENTS.map((f) => f.thread))].map((t) => ({ thread: t, have: FRAGMENTS.filter((f) => f.thread === t && have.has(f.id)).length, of: FRAGMENTS.filter((f) => f.thread === t).length }));
+  return { found: FRAGMENTS.filter((f) => have.has(f.id)), missing: FRAGMENTS.filter((f) => !have.has(f.id)).length, threads };
+}
+
+// ---------- bounties ----------
+// A condition on one breach, posted by a faction. check(b): is it met at the capture?
+export const BOUNTIES = {
+  clean: { from: 'Kestrel', text: 'Capture it without letting a tell land.', check: (b) => b.stats.landed === 0 },
+  norest: { from: 'GLASSJAW', text: 'Capture it without resting at a defrag.', check: (b) => b.stats.rests === 0 },
+  elite: { from: 'Halcyon', text: 'Clear an elite on the way to the Resident.', check: (b) => b.stats.elites >= 1 },
+  lean: { from: 'LANTERN', text: 'Capture it holding 2 drafts or fewer.', check: (b) => b.mods.length + b.cves.length <= 2 },
+  hale: { from: 'Halcyon', text: 'Capture it without ending a fight under half Signal.', check: (b) => b.stats.low >= 0.5 },
+  noskip: { from: 'LANTERN', text: 'Capture it without skipping a draft.', check: (b) => b.stats.skips === 0 },
+};
+export const BOUNTY_PAY = 'Pays a yellow protocol.';
+// The bounties on a server's card: two, seeded by the server and how many you've cashed there, so a paid one is
+// replaced by a new one. SPRAWL-00 has none.
+export function bountiesOn(s, id) {
+  const srv = SERVER[id], rec = recOf(s, id);
+  if (!srv || srv.tutorial) return [];
+  const r = seeded((strSeed(id) ^ Math.imul((rec.paid || 0) + 1, 7919) ^ (s.camp?.seed || 1)) >>> 0);
+  const pool = Object.keys(BOUNTIES);
+  const out = [];
+  while (out.length < CAMPAIGN.bounties && pool.length) out.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+  return out;
+}
+function strSeed(t) { let h = 2166136261; for (const c of t) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+// ---------- your campaign ----------
+// A fresh campaign: a level-1 hacker of your class (app.js picks the handle and class first), nothing captured.
+export function newCampaign(s, { seed = 1 } = {}) {
+  s.camp = { v: CAMPAIGN.v, seed: seed >>> 0 || 1, servers: {}, archive: [], pool: [...CAMPAIGN.startCves], lastMods: [], breaches: 0, history: [] };
+  s.netSeed ||= s.camp.seed; // natives on your network (network.mjs): what the native Residents drop
+  s.tutorialCompleted = true; // the old game's tutorial belongs to the old game
+  s.settings.tips = false;
+  issueKit(s);
+  return s.camp;
+}
+// The terminal came set up: a white protocol in every slot you have at level 1, so the first breach isn't bare.
+export function issueKit(s) {
+  const r = seeded((s.camp?.seed || 1) * 7 + 3);
+  for (let i = 0; i < protocolSlots(1); i++) {
+    if (SLOT_KINDS[i] === 'implant') continue;
+    const it = addItem(s, rollItem(r, { level: 1, rarity: 'stock', group: SLOT_KINDS[i] }), 'Issued: ');
+    if (it) command(s, 'load ' + it.id);
+  }
+}
+// A server's record: tries, captures, its rewrites, its checkpoint, your best result there.
+export const recOf = (s, id) => ((s.camp.servers ||= {})[id] ||= { tries: 0, wins: 0, captured: false, rewrites: {}, checkpoint: null, best: null, paid: 0 });
+const peek = (s, id) => s.camp?.servers?.[id] || null;
+export const held = (s, id) => !!peek(s, id)?.captured;
+// How far Jump Host reaches (a captured sshd): servers two links past it, three at tier II, before they're revealed.
+function jumpReach(s) {
+  const out = new Set();
+  for (const srv of SERVERS) {
+    const h = peek(s, srv.id);
+    const t = h?.captured && Object.values(h.rewrites).find((x) => x.id === 'jumphost')?.tier;
+    if (!t) continue;
+    let ring = new Set([srv.id]);
+    for (let d = 0; d < t + 1; d++) { const nx = new Set(); for (const id of ring) for (const l of SERVER[id].links) nx.add(l); for (const id of nx) out.add(id); ring = nx; }
+  }
+  return out;
+}
+// What you can see of a server: 'held', 'open' (you can breach it: linked to one you hold, or SPRAWL-00 at the
+// start), 'fog' (linked to an open one: on the map as an unknown), or 'hidden'.
+export function statusOf(s, id) {
+  if (held(s, id)) return 'held';
+  const srv = SERVER[id];
+  if (!srv) return 'hidden';
+  if (id === CAMPAIGN.start || srv.links.some((l) => held(s, l)) || jumpReach(s).has(id)) return 'open';
+  if (srv.links.some((l) => statusOf1(s, l) === 'open')) return 'fog';
+  return 'hidden';
+}
+const statusOf1 = (s, id) => (held(s, id) ? 'held' : id === CAMPAIGN.start || SERVER[id].links.some((l) => held(s, l)) ? 'open' : 'other');
+export const outgrown = (s, srv) => hackerLevel(s) >= srv.level + CAMPAIGN.outgrown;
+// The rewrites your network runs on a breach of this server: each once, at its best tier. Spam Cannon counts only from
+// a server linked to this one; Jump Host acts on the map, not in a breach.
+export function outputsFor(s, id) {
+  const out = {};
+  for (const srv of SERVERS) {
+    const h = peek(s, srv.id);
+    if (!h?.captured) continue;
+    for (const { id: rw, tier } of Object.values(h.rewrites)) {
+      if (rw === 'jumphost') continue;
+      if (rw === 'spamcannon' && !srv.links.includes(id)) continue;
+      out[rw] = Math.max(out[rw] || 0, tier);
+    }
+  }
+  return out;
+}
+// ---------- breaching ----------
+// Start a breach of a server you can reach. from: 'start', or 'checkpoint' (past the last gate you beat there).
+// bounty: the id of one of its bounties to take. Returns the breach, or null (a warning says why).
+export function launch(s, id, { from = 'start', bounty = null } = {}) {
+  const srv = SERVER[id], st = statusOf(s, id);
+  if (!srv || !['open', 'held'].includes(st)) { emit(s, 'warning', `${srv?.name || id} is out of reach. Capture a server linked to it first.`); return null; }
+  const rec = recOf(s, id), cp = from === 'checkpoint' && !rec.captured ? rec.checkpoint : null;
+  if (bounty && !bountiesOn(s, id).includes(bounty)) bounty = null;
+  const seed = (strSeed(id) ^ Math.imul(s.camp.seed, 2654435761) ^ Math.imul(rec.tries + 1, 40503)) >>> 0 || 1;
+  const b = startBreach(s, {
+    seed, level: srv.level, card: cardFor(srv), outputs: outputsFor(s, id),
+    from: cp?.gate || 0, keep: cp?.rewrites || {}, prior: rec.captured ? { ...rec.rewrites } : null,
+    pool: { cves: [...s.camp.pool] }, bounty, lastMods: s.camp.lastMods, xp: CAMPAIGN.xp,
+  });
+  b.campaign = { id, reimage: rec.captured, checkpoint: cp?.gate || 0 };
+  return b;
+}
+// Back to the map after a breach ends (its result is already on your record).
+export function leave(s) {
+  if (!s.breach?.result) return false;
+  s.breach = null; s.run = null;
+  if (s.encounter?.breach) s.encounter = null;
+  return true;
+}
+
+// A gate beaten: a checkpoint, with the rewrites you picked in the acts behind it.
+breachHooks.gate = (s, n) => {
+  const b = s.breach;
+  if (!s.camp || !b?.campaign || b.campaign.reimage) return;
+  const rec = recOf(s, b.campaign.id), gate = n.act + 1;
+  if ((rec.checkpoint?.gate || 0) >= gate) return;
+  const subs = b.card.subsystems.slice(0, gate).flat();
+  rec.checkpoint = { gate, rewrites: Object.fromEntries(Object.entries(b.rewrites).filter(([sub]) => subs.includes(sub)).map(([sub, x]) => [sub, { ...x }])) };
+  emit(s, 'breach-good', `Checkpoint: ${n.path}. A retry of ${b.card.name} can start past this gate.`);
+};
+// A breach ended: the record, the capture, the unlock, the fragment, the bounty.
+breachHooks.over = (s, result) => {
+  const b = s.breach, c = s.camp;
+  if (!c || !b?.campaign) return;
+  const id = b.campaign.id, srv = SERVER[id], rec = recOf(s, id), report = {};
+  rec.tries++; c.breaches++;
+  const gates = Object.keys(b.cleared).filter((k) => /^gate\d$/.test(k)).length;
+  const progress = result === 'won' ? 99 : gates;
+  rec.best = Math.max(rec.best ?? -1, progress);
+  if (b.bounty) {
+    const B = BOUNTIES[b.bounty], done = result === 'won' && B.check(b);
+    report.bounty = { id: b.bounty, text: B.text, done, paid: BOUNTY_PAY };
+    if (done) {
+      rec.paid = (rec.paid || 0) + 1;
+      const it = addItem(s, rollItem(seeded(b.seed * 13 + rec.paid), { level: srv.level + 1, rarity: 'custom' }), `Bounty paid (${B.from}): `);
+      if (it) report.bounty.paid = `${B.from} pays ${itemLabel(it)}.`;
+    }
+  }
+  if (result === 'won') {
+    const first = !rec.captured;
+    const was = new Set(SERVERS.filter((x) => statusOf(s, x.id) === 'open').map((x) => x.id));
+    rec.captured = true; rec.wins++; rec.checkpoint = null;
+    rec.rewrites = { ...(b.prior || {}), ...Object.fromEntries(Object.entries(b.rewrites).map(([sub, x]) => [sub, { ...x }])) };
+    report.reimaged = !first;
+    if (first && srv.unlock && !c.pool.includes(srv.unlock)) { c.pool.push(srv.unlock); report.unlock = { id: srv.unlock, name: CVES[srv.unlock].name, text: CVES[srv.unlock].text }; }
+    report.revealed = SERVERS.filter((x) => statusOf(s, x.id) === 'open' && !was.has(x.id)).map((x) => x.name);
+    const f = fragmentOf(id);
+    if (f && !c.archive.includes(f.id)) { c.archive.push(f.id); b.dump = f; report.fragment = f.id; } else b.dump = null;
+  } else if (rec.checkpoint) report.checkpoint = rec.checkpoint.gate;
+  const mods = b.mods.length ? b.mods : b.lost?.mods || [];
+  if (mods.length) c.lastMods = [...mods];
+  c.history.push({ id, result, level: hackerLevel(s), xp: b.xp, from: b.campaign.checkpoint || 0 });
+  if (c.history.length > 60) c.history.shift();
+  b.report = report;
+};
+
+// ---------- what a card shows ----------
+// Your best result on a server, in words.
+export function bestOf(s, id) {
+  const rec = peek(s, id);
+  if (!rec || !rec.tries) return null;
+  if (rec.captured) return rec.wins > 1 ? `Captured ×${rec.wins}` : 'Captured';
+  if (rec.best > 0) return `Gate ${rec.best} down`;
+  return `${rec.tries} ${rec.tries === 1 ? 'try' : 'tries'}`;
+}

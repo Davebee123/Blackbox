@@ -121,11 +121,33 @@
 .bx-screen { border-color: var(--line-strong); box-shadow: inset 0 2px 0 var(--amber); gap: var(--s5); }
 .bx-screen h1 { font: 600 22px/1.15 var(--sans); }
 .bx-screen h2 { color: var(--amber-soft); }
-/* nothing to decide: one line, and the map is the focus */
-.bx-screen.bx-idle { display: flex; align-items: center; gap: var(--s4); padding: var(--s5) var(--s6); border: 1px solid var(--line); border-left: 2px solid var(--amber); border-radius: var(--r-card); background: var(--panel); box-shadow: none; }
-.bx-idle .ico { width: 12px; height: 12px; color: var(--amber); }
-.bx-idle b { font: 600 14px var(--sans); color: var(--bright); }
-.bx-idle small { margin-left: auto; font: 11px var(--mono); color: var(--amber-soft); white-space: nowrap; }
+/* nothing to decide but where to go: one line, then the lit nodes as cards (each one a move) */
+.bx-screen.bx-idle { display: grid; gap: var(--s4); padding: var(--s5) var(--s6); border: 1px solid var(--line); border-left: 2px solid var(--amber); border-radius: var(--r-card); background: var(--panel); box-shadow: none; }
+.bx-idle-k { display: flex; align-items: center; gap: var(--s4); }
+.bx-idle-k .ico { width: 12px; height: 12px; color: var(--amber); }
+.bx-idle-k b { font: 600 14px var(--sans); color: var(--bright); }
+.bx-idle-k small { margin-left: auto; font: 11px var(--mono); color: var(--amber-soft); white-space: nowrap; }
+.bx-peek { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.bx-peek-card { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: var(--s4); align-items: start; width: 100%; height: auto; min-height: 0; padding: var(--s4) var(--s5); text-align: left; border: 1px solid var(--line); border-left: 2px solid var(--amber-deep); border-radius: var(--r-btn); background: var(--inset); color: var(--text); font: inherit; cursor: pointer; }
+.bx-peek-card:hover, .bx-peek-card:focus-visible { border-color: var(--amber); border-left-color: var(--amber); background: var(--amber-wash); }
+.bx-peek-ico { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--amber); border-radius: var(--r-btn); color: var(--amber-soft); }
+.bx-peek-ico .ico { width: 15px; height: 15px; }
+.bx-peek-b { display: grid; gap: var(--s1); min-width: 0; }
+.bx-peek-top { display: flex; align-items: baseline; gap: var(--s4); min-width: 0; }
+.bx-peek-top .bx-card-k { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bx-peek-lv { margin-left: auto; font: 600 12px var(--mono); color: var(--bright); white-space: nowrap; }
+.bx-peek-card b { font: 600 14px var(--sans); color: var(--bright); overflow-wrap: anywhere; }
+.bx-peek-card small { font-size: 12px; color: var(--muted); }
+.bx-peek-next { font: 10px var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; cursor: help; }
+.bx-peek-card.k-elite { border-left-color: var(--hot); } .bx-peek-card.k-elite .bx-peek-ico { border-color: var(--hot); color: var(--hot); }
+.bx-peek-card.k-boss { border-left-color: var(--hot); } .bx-peek-card.k-boss .bx-peek-ico { border-color: var(--hot); color: var(--hot); }
+.bx-peek-card.k-defrag .bx-peek-ico { color: var(--you); } .bx-peek-card.k-cache .bx-peek-ico, .bx-peek-card.k-broker .bx-peek-ico { color: var(--next); }
+.bx-card.k-rewrite.on { border-color: var(--you); border-top-color: var(--you); }
+.bx-was { color: var(--you); cursor: help; }
+.cap-kept { font: 600 9px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--dim); border: 1px solid var(--line-strong); padding: 0 3px; border-radius: var(--r-tag); cursor: help; }
+.cap-report { border-top-color: var(--line-strong); }
+.cap-report b { color: var(--next) !important; }
+.cap-report li.stock b { color: var(--gray) !important; }
 .bx-half { color: var(--next); }
 .bx-screen .row.acts { display: flex; flex-wrap: wrap; }
 .bx-screen .row.acts .btn { flex: 1 1 auto; }
@@ -222,6 +244,9 @@
   .bx-stat small { display: none; }
   .bx-side { overflow: visible; order: -1; }
   .bx-side:not(.focus) .bx-log { display: none; }
+  .bx-peek { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .bx-peek-card { grid-template-columns: minmax(0, 1fr); padding: var(--s3) var(--s4); }
+  .bx-peek-ico, .bx-peek-card small, .bx-peek-next { display: none; }
   .bx-map { overflow: visible; }
   .bx-scroll { overflow: visible; }
   .bx-node { width: 58px; }

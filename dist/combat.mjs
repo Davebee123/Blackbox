@@ -1723,7 +1723,7 @@ export function finish(s, result) {
   // A breach node (breach.mjs): the kill's XP here. The draft, the pack and the map are the breach's.
   if (e.breach) {
     emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'breach' });
-    if (result === 'victory') payKill(s, e, XP.guard, `${e.virus.name} neutralized`);
+    if (result === 'victory') payKill(s, e, XP.guard * (e.breachXp || 1), `${e.virus.name} neutralized`); // a campaign breach pays its own (breach.mjs)
     hooks.breachEnd?.(s, result);
     return;
   }
@@ -2816,6 +2816,7 @@ function survive(s, d, dmg) {
     emit(s, 'heal', 'Uptime holds you at 1.');
     return Math.max(0, d.integrity - 1);
   }
+  if (d.integrity - dmg <= 0 && hooks.lastBlow) { const kept = hooks.lastBlow(s, d, dmg); if (kept != null) return kept; } // a breach's Restore Point (breach.mjs)
   return dmg;
 }
 

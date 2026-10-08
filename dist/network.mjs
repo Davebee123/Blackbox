@@ -118,6 +118,7 @@ export function fightNet(s, e = s.encounter) {
   if (!e) return null;
   if (e.member) return findLocation(s, e.member)?.member || null; // defending a member's outpost
   if (e.raid || e.roamer || e.hubClear || e.retake) return null;
+  if (e.breach && s.camp) return netSeedOf(s) ? 'you' : null; // a campaign breach (campaign.mjs): your network's natives
   if (e.mode === 'run' || e.zone) {
     const id = e.wild || e.process || s.run?.loc;
     if (e.zone && !e.wild && !e.process) return null; // SPRAWL-00

@@ -163,7 +163,8 @@ function rollRarity(r, act, { elite = false, floor = null, boost = 0 } = {}) {
 }
 const pickFrom = (r, list) => list[Math.floor(r() * list.length)];
 function cveCard(s, r, act, opts = {}) {
-  const held = s.breach.cves, pool = Object.values(CVES).filter((c) => !held.includes(c.id));
+  // The campaign's unlock pool (campaign.mjs): only the CVEs you've opened. The playtest offers every one.
+  const held = s.breach.cves, open = s.breach.pool?.cves, pool = Object.values(CVES).filter((c) => !held.includes(c.id) && (!open || open.includes(c.id)));
   if (!pool.length) return null;
   const want = opts.rarity || { stock: 'common', tuned: 'uncommon', custom: 'rare' }[rollRarity(r, act, opts)];
   const tier = pool.filter((c) => c.rarity === want);
@@ -182,9 +183,9 @@ function gearCard(s, r, act, level, opts = {}) {
 }
 // A draft: kind 'virus' (mods, CVEs and gear), 'elite' (a CVE for sure, gear blue or better), 'gate' and 'boss' (gear
 // blue or better), 'rare' (a sandbox: one yellow at least), 'cve' (Forged Keys: CVEs only), 'mod' (Archive: mods only).
-export function rollDraft(s, r, kind, { act = 0, level = 10, count = DRAFT.cards } = {}) {
+export function rollDraft(s, r, kind, { act = 0, level = 10, count = DRAFT.cards, boost: extra = 0 } = {}) {
   const b = s.breach, cards = [], taken = [];
-  const boost = b.rareBoost || 0;
+  const boost = (b.rareBoost || 0) + extra;
   const push = (c) => { if (c && !cards.some((x) => (x.id && x.id === c.id))) { cards.push(c); if (c.kind === 'mod') taken.push(c.id); } };
   if (kind === 'cve') { for (let i = 0; i < 12 && cards.length < count; i++) push(cveCard(s, r, act, { boost })); }
   else if (kind === 'mod') { for (let i = 0; i < 12 && cards.length < count; i++) push(modCard(s, r, taken)); }

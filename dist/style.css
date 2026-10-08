@@ -3340,3 +3340,4 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* Map: the breach prototype's door (?playtest=breach), in the Sync Window's yellow so it reads as new. */
 .map-tools .breach-try { margin-left: auto; margin-right: var(--s2); text-decoration: none; color: var(--next); border-color: rgba(255, 216, 92, 0.55); white-space: nowrap; }
 .map-tools .breach-try:hover { background: rgba(255, 216, 92, 0.1); }
+.map-tools .breach-try + .breach-try { margin-left: 0; }

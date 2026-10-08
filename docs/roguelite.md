@@ -1,6 +1,6 @@
 # Roguelite: a run is a breach of one server
 
-This is a design for review. Nothing here is built, and no code changes until the designer picks a direction. It proposes reshaping BLACKBOX into a roguelite inside a persistent world, the way Hades and Dead Cells work. Each run breaches one server on a branching map like Slay the Spire's. Class levels, gear, uniques and the servers you capture persist. What you draft inside a run resets.
+This began as a design for review. Phase 0 (one breach) and phase 2 (the campaign) are built now: section 9.3 says what shipped. It proposes reshaping BLACKBOX into a roguelite inside a persistent world, the way Hades and Dead Cells work. Each run breaches one server on a branching map like Slay the Spire's. Class levels, gear, uniques and the servers you capture persist. What you draft inside a run resets.
 
 The designer's brief, in their words:
 
@@ -580,7 +580,7 @@ A version bump (38 to 39). A current player keeps everything about themselves, a
 |---|---|---|
 | **0. One breach** (the prototype) | `?playtest=breach&class=…&level=10`: one server, 3 acts of 4 rows, 2 gates, DEADBOLT. Nodes: virus, elite, cache, defrag, broker, and 4 terminal events. 6 subsystems with 2 rewrites each, shown as *Now* with the output on the capture card. 12 mods (3 a class), 10 CVEs, gear from `rollItem`. Two new tells, Overclock and Lock. One `core.dump`. No save change. | The designer plays five breaches with two classes. `breachsim.mjs` shows each class winning 50 to 70% at heat 0 in blues. |
 | **1. Tells** | Fork, Swap, Dead Man, Bait, Beacon and Ransom, author tell lists, per-kind payoffs, solo-tells.md rewritten | Per-tell checks: letting it land and answering it are both viable lines in the bot's hands |
-| **2. The world** | The campaign map, captures, outputs, re-imaging, bounties on cards, the Archive, the save migration. Cut systems switched off by flags (`.on`, as `MEMORY.on` and `PAYLOAD.on` are today). | An old save loads into a playable campaign |
+| **2. The world** (shipped as a separate campaign, 9.3) | The campaign map, captures, outputs, re-imaging, bounties on cards, the Archive, the save migration. Cut systems switched off by flags (`.on`, as `MEMORY.on` and `PAYLOAD.on` are today). | An old save loads into a playable campaign |
 | **3. Breadth** | 22 rewrites, about 50 mods, 20 or more CVEs, 12 terminal events, five brokers, heat 1 to 8, unlock ranks, the meta vendor, a fragment set per author | Draft-pick rates: no card under 5% or over 40% when offered |
 | **4. Genome in runs** | Genome phase 3's rolled mutations per node by act, phase 2's implicits, Residents from the 26-boss pool by author and band | Genome bands hold on sampled breaches |
 | **5. Clean-up** | Cut code deleted, GAME_RULES.md rewritten, ACTUARY on drafts, then co-op breaches | |
@@ -600,6 +600,37 @@ A version bump (38 to 39). A current player keeps everything about themselves, a
 | Tells | tells.mjs announce, windows, live limit, `lockLast`, `deadman`, Fork() | Kind handlers for 8 kinds, a run hook for Beacon |
 | Rewrites | | `dist/rewrites.mjs` (data), output reader |
 | Bots | planner.mjs, balance harness | `breachsim.mjs`: a pathing and drafting bot |
+
+### 9.3 What shipped
+
+**Phase 0** shipped as planned: `?playtest=breach` (README, *Breach prototype*).
+
+**Phase 2, the world**, shipped as a separate campaign you play from level 1: `?campaign=breach`, or *Breach campaign* on the old map. README and GAME_RULES.md, *Breach campaign*, describe it in full. What it holds, against the plan:
+
+| Planned | Shipped |
+|---|---|
+| The campaign map (6.4) | 14 servers in 4 layers (The Sprawl 1–5, Backhaul 6–11, The Stacks 12–17, Deep Core 18–25), linked. You breach a server linked to one you hold. The next ring shows as unknown, and the rest stay hidden. SPRAWL-00 is the tutorial: one act of three rows, then RELAY-KING. Breaches scale with level: one act under 6, two to 9, three from 10. |
+| Residents from BOSSES | RELAY-KING, BACK ORIFICE, VAULT WARDEN (`resident`), PATCH TUESDAY, REPO MAN, HOLLOW CHOIR, DEADBOLT, MIRRORSHADE, TRIPMINE, FLOODWALL, HASHLORD, SLEEPWALKER, ECHOLALIA and the UNDERWRITER (`resident`). Each card shows its Collection: a native boss drops your network's natives. Lair bosses are sized for a full Signal bar, so the campaign trims a few for the end of a run (`bossHp`). |
+| Outputs (3.2) | Every held rewrite runs on later breaches, once at its best tier. Spam Cannon only reaches its neighbours, and Jump Host reaches two links past its server on the map. Credits have no sink in the campaign, so Mail Drop now drops a protocol on each capture. |
+| Re-imaging | Breach a held server again. A subsystem you clear shows *Runs now*: keep it (at the better tier) or rewrite it. What you don't clear keeps its rewrite. Heat isn't built, so there's no heat rule yet. |
+| Losing (10.2) | As decided, plus **checkpoints**: a gate you beat holds, and a retry can start past it with the rewrites from the acts behind it, a fresh map and no drafts. |
+| Bounties (6.7) | Up to 2 a card, take one, a yellow protocol when met, nothing when missed. Faction rank waits for brokers' ranks (phase 3). |
+| The unlock pool (6.2) | Small: five common CVEs to start, and the first captures of five early servers each open one more. Mods follow your bar. |
+| Lore (6.6) | A `core.dump` after each Resident's first fall, 14 fragments in story order across LOWLIGHT, Halcyon, TOLLGATE, SWARMLINE, NULL CHOIR, GLASSJAW and PALEMASK, and an **Archive** tab. Node fragments wait. |
+| The save migration (8) | Not done: the campaign has its own save, so the old game's save is never touched. The migration waits until the campaign replaces the old game. |
+| Cut systems off by flags | The campaign mode doesn't run them: no ticks, no invasions, no mail, and their tabs, meters and commands are hidden. Nothing was deleted. |
+| Not built | Heat 1 to 8, the meta vendor, faction ranks, rare node fragments, Sinkhole, Testbed, Listening Post and the other rewrites past the 12 in phase 0, more CVEs and mods (phase 3). |
+
+**Pacing** (`node campaignsim.mjs 90 3`: a bot that breaches the lowest open server, re-images the deepest one it holds when the next is more than a level over it, retries from checkpoints and takes a bounty; minutes at about 5 seconds a cycle and 20 a node):
+
+| Class | Breaches to 5 | to 10 | to 15 | to 20 | Minutes to 10 | to 20 | Wins | 1–5 | 6–10 | 11–15 | 16+ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Breaker | 4 | 9 | 13 | 21 | 52 | 159 | 72% | 100% | 69% | 91% | 48% |
+| Bastion | 5 | 9 | 15 | 22 | 62 | 239 | 68% | 72% | 85% | 61% | 56% |
+| Infiltrator | 4 | 11 | 16 | 23 | 59 | 175 | 71% | 88% | 63% | 67% | 68% |
+| Operator | 4 | 9 | 14 | 21 | 50 | 172 | 81% | 93% | 80% | 80% | 72% |
+
+Early levels come about one a breach. Runs die mostly to Residents, then act 2 and 3 viruses. The bot picks Payload, Warden, Demolitionist and Herder at 10: Phantom wins far fewer breaches than Payload (breachsim at 15: 0 of 10 against 3), and that gap is the playtest's to look at.
 
 ## 10. Open questions
 

@@ -74,7 +74,8 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
     }
   }
 
-  async function run() {
+  // opts.letter: the transmission's paragraphs for a handle (the campaign brings its own).
+  async function run(opts = {}) {
     const pre = mount();
     await sleep(350);
     line(pre, 'BLACKBOX/OS 0.9.4 · tty1', 'b');
@@ -99,7 +100,7 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
     await sleep(380);
     line(pre, '1 transmission waiting. channel: encrypted.', 'h');
     await sleep(900);
-    await transmission(handle);
+    await transmission(handle, opts.letter || letter);
     el.classList.add('out');
     await sleep(420);
     el.remove();
@@ -107,7 +108,7 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
   }
 
   // The transmission: static, a decode bar, then the letter types out. Click or Enter finishes it.
-  async function transmission(handle) {
+  async function transmission(handle, paras0 = letter) {
     el.classList.add('rx');
     sound('pager');
     const box = document.createElement('div');
@@ -131,7 +132,7 @@ export function createIntro({ key = () => {}, sound = () => {}, reducedMotion = 
     const finish = (e) => { if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return; skip = true; body.querySelectorAll('p').forEach((p) => { p.dataset.skip = '1'; }); };
     addEventListener('keydown', finish, true);
     box.addEventListener('pointerdown', finish);
-    const paras = letter(handle);
+    const paras = paras0(handle);
     for (const text of paras) {
       const p = document.createElement('p');
       body.appendChild(p);

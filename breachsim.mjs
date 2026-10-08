@@ -16,7 +16,15 @@ export function runBreach({ cls = 'breaker', level = 10, seed = 1, sub = null, t
   s.rng = (seed * 2654435761 + cls.length * 97) >>> 0;
   outfit(s, { cls, level, sub, gearSeed: seed });
   const b = startBreach(s, { seed, level });
-  let fights = 0, cycles = 0, stalls = 0;
+  const { fights, cycles, stalls } = playOut(s, { trace });
+  const at = b.map.nodes[b.at];
+  return { ...(keep ? { state: s } : {}), cls, seed, won: b.result === 'won', result: b.result, fights, cycles, stalls, diedAt: b.result === 'lost' ? `${at?.kind}@act${(at?.act ?? 0) + 1}` : null, act: (at?.act ?? 0) + 1, mods: b.mods.length || b.lost?.mods.length || 0, cves: b.cves.length || b.lost?.cves.length || 0, rewrites: Object.keys(b.rewrites).length, xp: b.xp, signal: b.signal };
+}
+// Play the breach on s to its end: fights with the planner, screens with botPick, moves with botRoute, and gear that
+// beats what's in its slot goes on as it lands in the pack (the campaign bot, campaignsim.mjs, uses it too).
+export function playOut(s, { trace = false } = {}) {
+  const b = s.breach;
+  let fights = 0, cycles = 0, stalls = 0, nodes = 0;
   for (let step = 0; step < 500 && !b.result; step++) {
     if (active(s)) {
       fights++;
@@ -33,13 +41,12 @@ export function runBreach({ cls = 'breaker', level = 10, seed = 1, sub = null, t
     }
     const id = botRoute(s);
     if (!id) break;
-    go(s, id);
+    go(s, id); nodes++;
     if (trace) console.log(b.at, b.map.nodes[b.at].kind, `${b.signal}/${b.max}`, b.tokens);
   }
-  const at = b.map.nodes[b.at];
-  return { ...(keep ? { state: s } : {}), cls, seed, won: b.result === 'won', result: b.result, fights, cycles, stalls, diedAt: b.result === 'lost' ? `${at?.kind}@act${(at?.act ?? 0) + 1}` : null, act: (at?.act ?? 0) + 1, mods: b.mods.length || b.lost?.mods.length || 0, cves: b.cves.length || b.lost?.cves.length || 0, rewrites: Object.keys(b.rewrites).length, xp: b.xp, signal: b.signal };
+  return { fights, cycles, stalls, nodes };
 }
-function better(s, it) {
+export function better(s, it) {
   if (!it) return false;
   const slot = SLOT_KINDS.indexOf(it.group), on = slot >= 0 ? stashItem(s, rigOf(s)[slot]) : null;
   return !on || RANK[it.rarity] > RANK[on.rarity] || (RANK[it.rarity] === RANK[on.rarity] && it.level > on.level);

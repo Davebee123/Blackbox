@@ -1,6 +1,6 @@
 // Rewrites (docs/roguelite.md 3): each subsystem you clear on a breach is rewritten. Pick 1 of 2. Its Now half
 // applies for the rest of this breach; its Output is what the server does for you once it's captured (phase 0
-// shows it on the capture card: the campaign that reads it comes in phase 2). Tier I from a virus, tier II from an
+// shows it on the capture card; the campaign, campaign.mjs, runs it on later breaches). Tier I from a virus, tier II from an
 // elite or from clearing the same subsystem twice.
 //
 // Phase 0's server, MERIDIAN-MX-14 (a Mailhub, TOLLGATE's), runs six subsystems, two an act.
@@ -15,7 +15,7 @@ export const SUBSYSTEMS = {
 // output: [tier I, tier II], in tooltip grammar. now: what it does this breach. apply(b, s): the Now, on the breach
 // state (breach.mjs reads b.fx); a returned string is a screen to show next ('cve' or 'mod': a draft of those).
 export const REWRITES = {
-  maildrop: { sub: 'smtpd', name: 'Mail Drop', output: ['Pays 60 + 6 × its level credits when you finish any breach.', 'Pays 90 + 9 × its level credits when you finish any breach, and 1 Exploit on a capture.'], now: 'Grants you 30 tokens.', apply: (b) => { b.tokens += 30; } },
+  maildrop: { sub: 'smtpd', name: 'Mail Drop', output: ['Drops 1 more protocol, blue or better, each time you capture a server.', 'Drops 1 more protocol, yellow, each time you capture a server.'], now: 'Grants you 30 tokens.', apply: (b) => { b.tokens += 30; } },
   spamcannon: { sub: 'smtpd', name: 'Spam Cannon', output: ['Viruses on servers linked to it start with 15% less Integrity.', 'Viruses on servers linked to it start with 25% less Integrity.'], now: 'The act 1 gate starts with 10% less Integrity.', apply: (b) => { b.fx.gateHp = Math.min(b.fx.gateHp ?? 1, 0.9); } },
   jumphost: { sub: 'sshd', name: 'Jump Host', output: ['You can breach servers two links past this one, before they are revealed.', 'You can breach servers three links past this one, before they are revealed.'], now: 'Your next move can go to any node in the next row.', apply: (b) => { b.fx.jump = (b.fx.jump || 0) + 1; } },
   forgedkeys: { sub: 'sshd', name: 'Forged Keys', output: ['Every breach starts with a pick of 1 of 3 CVEs.', 'Every breach starts with a pick of 1 of 3 CVEs, with rare odds doubled.'], now: 'Drafts 1 of 3 CVEs now.', apply: () => 'cve' },
