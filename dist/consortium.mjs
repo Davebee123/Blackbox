@@ -23,11 +23,12 @@
 // - Leaving (or being kicked) cuts the trunk line. You lose nothing of your own.
 // Pure: state in, events out. run.mjs routes the `consortium` command (and `guild`, the old name).
 import { emit, warn, rand, hooks, hackerLevel, selectEncounter, command, gainCode, gainXp, xpFor, active, holding } from './combat.mjs';
-import { createLocation, SERVER, FAMILIES, variantFor } from './data.mjs';
+import { createLocation, SERVER, FAMILIES, variantFor, BOSSES } from './data.mjs';
 import { seeded, codeOf, MATERIALS } from './gear.mjs';
 import { profileOf, PRESENCE, online, simOn } from './presence.mjs';
 import { ROGUE, rogueSpawns } from './rogue.mjs';
 import { OUTPOST, scrape } from './outpost.mjs';
+import { leanPick, nativeStrain, makeLair, biasCode, NETWORK } from './network.mjs';
 
 export const CONSORTIUM = {
   max: 20, // home servers, yours included
@@ -107,7 +108,7 @@ function buildNet(s, h) {
   const out = [];
   for (let i = 0; i < n; i++) {
     let seed = strSeed(h, 10 + i) % 100000;
-    const family = fams[Math.floor(r() * fams.length)];
+    const family = leanPick(s, h, r()); // their network's lean (network.mjs)
     let loc = createLocation(family, seed, 1);
     while (taken.has(loc.id)) loc = createLocation(family, ++seed, 1);
     taken.add(loc.id);
@@ -126,6 +127,17 @@ export function buildNets(s) {
   const c = consortiumOf(s);
   if (!c) return;
   for (const h of c.members) if (!c.servers.some((l) => l.member === h)) c.servers.push(...buildNet(s, h));
+  // Each member's lair (network.mjs): their native boss, on their network, from NETWORK.lairFrom.
+  for (const h of c.members) {
+    const L = memberLevel(s, h), have = c.servers.find((l) => l.id === `${h}-lair`);
+    if (have) { have.level = L; continue; }
+    if (L < NETWORK.lairFrom) continue;
+    const lair = makeLair(s, h, L, `${h}-lair`, '');
+    if (!lair) continue;
+    lair.name = `${BOSSES[lair.lair].lair.split('-')[0]}-${h.toUpperCase()}`;
+    lair.member = h;
+    c.servers.push(lair);
+  }
   const trunk = c.servers.find((l) => l.trunk);
   if (perk(s, 'trunk', false) && !trunk) {
     let seed = strSeed(c.name, 7) % 100000, loc = createLocation('worm', seed, 1);
@@ -189,7 +201,7 @@ export function collectShare(s) {
     if (!n) continue;
     l.held.share -= n;
     if (l.held.kind === 'scraper') finds.push(scrape(s, l, n, l.level || 1, 0, `${c.name} dividend: `));
-    else code[codeOf(l.family)] = (code[codeOf(l.family)] || 0) + n;
+    else for (const [m, k] of Object.entries(biasCode(s, l.member, { [codeOf(l.family)]: n }))) code[m] = (code[m] || 0) + k; // their network's rich code (network.mjs)
   }
   if (!Object.keys(code).length && !finds.length) return warn(s, 'Nothing in the dividend yet.');
   if (Object.keys(code).length) gainCode(s, code, '');
@@ -371,7 +383,8 @@ export function alertsOf(s) {
 const NATIVE = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
 function fight(s, { family, level, seed }, tag, text, location) {
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  const { strain, grade } = variantFor(family, level, 1, seed);
+  const who = tag.member ? memberServers(s).find((l) => l.id === tag.member)?.member : null; // a member's native strain there (network.mjs)
+  const { strain, grade } = variantFor(family, level, 1, seed, nativeStrain(s, who));
   selectEncounter(s, NATIVE[family], seed, { level, strain, grade, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   s.gate = gate && gate !== s.encounter ? gate : null;

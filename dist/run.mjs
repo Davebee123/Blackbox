@@ -18,6 +18,7 @@ import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
 import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
 import { strikeServer } from './factions.mjs';
+import { biasCode, netOf } from './network.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 export { zoneOf, zoneRooms };
 
@@ -646,8 +647,9 @@ export function jackOut(s) {
   const sources = pack.filter((f) => f.kind === 'source');
   const blueprints = pack.filter((f) => f.kind === 'blueprint');
   const daemons = pack.filter((f) => f.kind === 'daemon');
-  const code = {};
-  for (const f of pack.filter((x) => x.kind === 'code')) code[f.material] = (code[f.material] || 0) + f.amount;
+  const raw = {};
+  for (const f of pack.filter((x) => x.kind === 'code')) raw[f.material] = (raw[f.material] || 0) + f.amount;
+  const code = biasCode(s, netOf(s, loc), raw); // a network rich in a code: a share of the rest comes as it (network.mjs)
   // Scavenge: more credits from what you bank.
   credits = Math.round(credits * (1 + gearStat(s, 'scavenge') / 100));
   // A clean job: the vault opened and the trace still low.

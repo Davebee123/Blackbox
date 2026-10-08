@@ -17,7 +17,7 @@ import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
 import { postsOf, LISTEN, schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, relayCost, canBuildRelay, OUTPOST, BUILDINGS, bandwidth, bandwidthUsed, stockOf, capOf, makes, siteLabel, slotsOf, sizeOf as serverSize, buildingsOf, buildBlock, buildCost, costLine, isOutpost, hasMod } from './outpost.mjs';
-import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN } from './data.mjs';
+import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE } from './data.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
 const LOUD_TIP = `Go in loud: every fight on this run has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`;
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
@@ -43,6 +43,8 @@ import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, defaultSub, skillOrder, barSlots, isRunSkill } from './data.mjs';
 import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, snapshotPct, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 import { behindOf } from './progression.mjs';
+import { sigOf, named, lairOf, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
+import { lairChance } from './combat.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -330,14 +332,17 @@ export function codexMarkup(s) {
 const collSource = (s, src) => !src ? '' : src.kind === 'sprawl' ? 'SPRAWL-00' : src.kind === 'vault' ? `Layer ${src.layer || 1} vaults`
   : src.kind === 'guard' ? `${GUARDS[src.id]?.name || src.id} guard` : src.kind === 'strain' ? (s.met?.[src.id] ? `${STRAINS[src.id]?.name} trophy` : '???')
   : src.kind === 'rogue' ? `${ROGUE.kinds[src.id]?.name || 'Rogue'} servers` : src.kind === 'story' ? 'Storyline' : src.kind === 'contract' ? 'Contract reward' : src.kind === 'store' ? 'Halcyon store'
-  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : '';
+  : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : src.kind === 'invasion' ? 'Invasion captures' : '';
+// A native unique's source line: the network you know it from, or just native.
+const nativeSource = (s, id) => { const who = homeOf(s, id); return who ? `Native · ${nameOf(s, who)} (${whoLabel(who)})` : 'Native · another network'; };
 export function collectionMarkup(s) {
-  const got = s.collection || {}, all = Object.values(UNIQUES);
+  // Native uniques (network.mjs) count once they're yours to chase: found, named, or native to a network you know.
+  const got = s.collection || {}, nets = knownNets(s), all = Object.values(UNIQUES).filter((u) => !isNative(u.id) || got[u.id] || named(s, u.id) || nets.some((w) => sigOf(s, w)?.uniques.includes(u.id)));
   const n = all.filter((u) => got[u.id]).length;
   if (!n) return '';
-  const posts = postsOf(s), listenable = (u) => (u.sources || []).some((src) => !['story', 'contract', 'store'].includes(src.kind));
+  const posts = postsOf(s), listenable = (u) => (u.sources || []).some((src) => !['story', 'contract', 'store'].includes(src.kind)) && (!isNative(u.id) || named(s, u.id));
   const rows = all.slice().sort((a, b) => a.level - b.level).map((u) => {
-    const src = collSource(s, (u.sources || [])[0]) + (u.lean ? ` · ${ARCHETYPES[u.lean]?.name || SUBS[u.lean]?.name || u.lean}` : '');
+    const src = (isNative(u.id) ? nativeSource(s, u.id) : collSource(s, (u.sources || [])[0])) + (u.lean ? ` · ${ARCHETYPES[u.lean]?.name || SUBS[u.lean]?.name || u.lean}` : '');
     const boss = (u.sources || []).find((x) => x.kind === 'boss')?.id;
     return got[u.id]
       ? `<li class="on" title="${esc(UNIQUES[u.id].flavour || '')}"><b class="iname r-zeroday">${esc(u.name)}</b><small>Lv ${u.level} · ${esc(src)}</small></li>`
@@ -617,12 +622,17 @@ function locationList(s) {
 // ---------- protocols (you) ----------
 const rarityClass = (it) => `r-${it.rarity}`;
 const leadStat = (it) => Object.keys(it?.stats || {})[0] || 'protocol';
-const itemTitle = (it) => [`${RARITIES[it.rarity]?.name || ''} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
+const itemTitle = (it) => [`${RARITIES[it.rarity]?.name || ''} ${SLOTS[groupOf(it)]?.name || ''}${it.base && BASES[it.base] && !it.unique && it.rarity !== 'custom' ? '' : it.base && BASES[it.base] ? ` (${BASES[it.base].name})` : ''}`.trim(), it.unique && isNative(it.unique) && it.home?.name ? `Native to ${it.home.name}` : '', it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour].filter(Boolean).join('. ');
 const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemTitle(it))}">${glyph(leadStat(it), 'badge')}${esc(itemLabel(it))}</b>`;
 // A unique's effect (or a found Zero-day's), under its stats.
 const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : (it.unique || it.rule) && effectLine(it) ? `<small class="zd${it.rule ? ' rule' : ''}">${esc(effectLine(it))}</small>` : '');
 const statsHtml = (it) => `<small>${Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}">${esc(statLine({ [k]: v }))}</span>`).join(' · ')}</small>`;
 
+// A native unique's home network, for its tooltip: a network you know that has it, else the one it came from.
+export function nativeHome(s, it) {
+  const who = homeOf(s, it.unique), h = who ? { name: nameOf(s, who), who } : it.home || homeName(s, it.unique);
+  return `${h.name}${h.who ? ` (${whoLabel(h.who)})` : ''}`;
+}
 // The hover card for an item (app.js shows it, and spins its model): a rotating ASCII wireframe
 // for its kind, in its rarity colour, over its name, rarity, kind, level, stats and effect.
 export function itemTipMarkup(s, ref) {
@@ -634,7 +644,8 @@ export function itemTipMarkup(s, ref) {
   const where = !f && loadedOn(s, it.id) ? `<span class="tag dim">on ${esc(ARCHETYPES[loadedOn(s, it.id)].name)}</span>` : '';
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
-  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
+  const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
+  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
 }
 // Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
 function swapCompare(s, it) {
@@ -1084,6 +1095,39 @@ function archMarkup(s) {
   const opts = Object.entries(ARCHITECTURES).map(([id, a]) => `<li class="${cur === id ? 'on' : ''}"><span><b class="iname" title="${esc(a.rule)}">${glyph({ fortress: 'firewall', hub: 'router', lab: 'buildfarm' }[id], 'badge')}${esc(a.name)}</b></span>${cur === id ? '<span class="tag you">running</span>' : `<button type="button" class="btn ${cur ? '' : 'primary'} small" data-command="architecture ${id}" ${busy || (cur && s.server.credits < ARCH_SWITCH) ? 'disabled' : ''} title="${cur ? `Rebuild as a ${esc(a.name)}: ${ARCH_SWITCH} credits` : 'Build around this'}">${cur ? `Switch (${ARCH_SWITCH}c)` : 'Choose'}</button>`}</li>`).join('');
   return `<section class="card arch-card"><h2>Architecture${cur ? ` · ${esc(ARCHITECTURES[cur].name)}` : ''}</h2><ul class="craft-list">${opts}</ul></section>`;
 }
+// ---------- networks (network.mjs) ----------
+// A network's signature as a card: its lean as a bar, its native strain, boss and events, what it's rich in,
+// and its native uniques (??? until you've seen one or heard it named). Rules on hover.
+const NATIVE_SLOT = (id) => SLOTS[BASES[UNIQUES[id]?.base]?.slot]?.name || '';
+export function networkCardMarkup(s, who = 'you', opts = {}) {
+  const g = sigOf(s, who);
+  if (!g) return '';
+  const total = Object.values(g.lean).reduce((a, b) => a + b, 0);
+  const lean = g.order.map((f, i) => `<span class="lean-seg l${i}" style="width:${Math.round((g.lean[f] / total) * 100)}%" title="${esc(FAMILIES[f].name)}: ${Math.round((g.lean[f] / total) * 100)}% of the families its mixed folders, neighbours and events bring">${glyph(codeOf(f))}${esc(FAMILIES[f].name)}</span>`).join('');
+  const lair = who === 'you' ? lairOf(s) : memberServers(s).find((l) => l.id === `${who}-lair`);
+  const B = BOSSES[g.boss];
+  const bossLine = lair ? `<button type="button" class="act" data-go="map:${who === 'you' ? '' : 'con='}${esc(lair.id)}" title="${esc(B.about)}">${glyph('kill')}${esc(B.name)}</button><small>${esc(lair.name)} · ${Math.round(lairChance(s, who) * 100)}% a kill</small>` : `<b title="${esc(B.about)}">${esc(B.name)}</b><small>lair at Lv ${NETWORK.lairFrom}</small>`;
+  const rows = [
+    ['Strain', `<span class="tag" title="${esc(STRAINS[g.strain].rule)} Here it is ${STRAIN_NATIVE}× as likely as its family's other strains.">${esc(STRAINS[g.strain].name)}</span><small>${esc(FAMILIES[STRAINS[g.strain].lineage].name)}</small>`],
+    ['Boss', bossLine],
+    ['Events', g.events.map((k) => `<span class="tag" title="Comes up ${NETWORK.eventBoost}× as often here">${esc(EVENT_CARDS[k]?.name || k)} ×${NETWORK.eventBoost}</span>`).join('')],
+    ['Rich in', `<span class="tag" title="${Math.round(NETWORK.codeShare * 100)}% of every other code dropped here comes as it">${glyph(g.code.rich)}${esc(MATERIALS[g.code.rich].short)}</span><span class="tag" title="${g.code.extra === 'salvage' ? 'Parts drop salvage' : 'Exploits drop'} ${NETWORK.richIn[g.code.extra]}× as often here">${glyph(g.code.extra === 'salvage' ? 'salvage' : 'exploit')}${g.code.extra === 'salvage' ? 'Salvage' : 'Exploits'}</span>`],
+  ].map(([k, v]) => `<div class="net-row"><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  const posts = postsOf(s);
+  const natives = g.uniques.map((id) => {
+    const u = UNIQUES[id], known = named(s, id), got = !!s.collection?.[id];
+    const tip = known ? `${effectLine({ unique: id })} ${u.flavour || ''}` : 'Not seen or named yet';
+    const listen = known && posts && !got ? (s.listen === id ? '<span class="tag hot" title="Your Listening Posts make it likelier">listening</span>' : `<button type="button" class="act dim" data-run="listen ${esc(id)}" title="Listen for it">listen</button>`) : '';
+    return `<li class="net-native${got ? ' on' : known ? ' heard' : ''}" title="${esc(tip)}">${known ? `<b class="iname r-zeroday">${esc(u.name)}</b>` : '<span class="coll-q">???</span>'}<small>Lv ${u.level} · ${esc(NATIVE_SLOT(id))}${got ? ' · found' : ''}</small>${listen}</li>`;
+  }).join('');
+  const dark = who === 'you' ? eventsOf(s).filter((ev) => ev.card === 'darknet') : [];
+  const darkRows = dark.map((ev) => `<div class="net-dark" title="${esc(effectLine({ unique: ev.unique }))}"><span>${glyph('item')}<b class="iname r-zeroday">${esc(UNIQUES[ev.unique].name)}</b><small>${esc(ev.net)} · ${fmtTime(ev.left)}</small></span><button type="button" class="btn primary small" data-command="event buy ${ev.id}" ${s.server.credits < ev.credits || (materialsOf(s).exploit || 0) < ev.exploits ? 'disabled' : ''} title="${ev.credits} credits and ${ev.exploits} Exploits">Buy · ${ev.credits}c + ${ev.exploits}${glyph('exploit')}</button></div>`).join('');
+  const odds = `<span class="tag dim net-odds" title="The chance a kill on this network drops one of its natives (more for every kill without one). Off its network a native drops a tenth as often.">${(nativeChance(s, who) * 100).toFixed(1)}% a kill</span>`;
+  return `<section class="card net-card" data-net="${esc(who)}"><h2 title="A network's signature comes from its seed">Network · ${esc(whoLabel(who))}</h2><h1>${esc(g.name)}</h1>
+    <div class="lean-bar">${lean}</div><dl class="net-rows">${rows}</dl>
+    <h3 class="net-sub">Native ${odds}</h3><ul class="net-natives">${natives}</ul>${darkRows}${opts.extra || ''}</section>`;
+}
+
 export function serverMarkup(s, now = Date.now()) {
   const srv = s.server, m = materialsOf(s), busy = active(s);
   const mats = Object.keys(MATERIALS).map((k) => `<div class="stat"><span>${glyph(k)}${esc(MATERIALS[k].name)}</span><strong>${m[k] || 0}</strong></div>`).join('') + `<div class="stat" title="Any salvage: deconstruct items for more."><span>Salvage</span><strong>${s.salvage.length}</strong></div>`;
@@ -1120,6 +1164,7 @@ export function serverMarkup(s, now = Date.now()) {
     <section class="card"><h2>Install queue</h2>${queue}</section>
     <section class="card"><h2>Running · ${Object.keys(s.services || {}).length}</h2>${s.net?.sabotage ? `<ul class="gstash"><li class="svc off"><div class="svc-main"><div class="gitem-head"><b class="svc-name">${glyph(s.net.sabotage.id, 'badge')}${esc(SERVICES[s.net.sabotage.id]?.name || '')}</b><span class="tag hot" title="${esc(`${s.invasion?.name || 'A saboteur'} shut it off. Kill it to bring it back.`)}">shut off · v${s.net.sabotage.v}</span></div></div></li></ul>` : ''}${running ? `<ul class="gstash">${running}</ul>` : '<p class="svc-line">none</p>'}${statSheet(s, 'server')}</section>
   </div><div style="display:grid;gap:12px;align-content:start">
+    ${networkCardMarkup(s, 'you')}
     <section class="card blueprint-card"><h2>Blueprints · ${Object.keys(SERVICES).length - unknown}/${Object.keys(SERVICES).length}</h2>${available ? `<ul class="gstash">${available}</ul>` : `<p class="svc-line">${Object.keys(s.services || {}).length ? 'all built' : 'none'}</p>`}</section>
   </div></div>`;
 }
@@ -1388,6 +1433,8 @@ function dividendTable(s) {
   const what = (x) => (x.material ? MATERIALS[x.material].name : 'finds');
   return `<table class="div-table"><thead><tr><th>Member</th><th>Outpost</th><th>Yields</th><th class="num">/h</th><th>Waiting</th></tr></thead><tbody>${rows.map((x) => `<tr class="${x.stopped ? 'stopped' : ''}"><td>${esc(x.member)}</td><td><button type="button" class="act dim" data-go="map:con=${esc(x.id)}">${esc(x.name)}</button></td><td>${glyph(x.material || 'item')}${esc(what(x))}</td><td class="num">${x.stopped ? '<span class="tag hot" title="Invasion, lockdown or crash">0</span>' : x.rate.toFixed(1)}</td><td><span class="div-fill" title="${Math.floor(x.waiting)} of ${Math.floor(x.cap)}"><span style="width:${x.cap ? Math.min(100, (x.waiting / x.cap) * 100) : 0}%"></span></span><b>${Math.floor(x.waiting)}</b></td></tr>`).join('')}</tbody></table>`;
 }
+// A member's network in a chip (the Consortium page): its name, lead family and native strain; the rest on hover.
+const netChip = (s, h) => { const g = sigOf(s, h); if (!g) return ''; const natives = g.uniques.map((id) => (named(s, id) ? UNIQUES[id].name : '???')).join(', '); return `<button type="button" class="cm-net act dim" data-go="map:member-${esc(h)}" title="${esc(`${g.name}: leans ${FAMILIES[g.order[0]].name}. Native strain ${STRAINS[g.strain].name}, native boss ${BOSSES[g.boss].name}. Natives: ${natives}.`)}">${glyph(codeOf(g.order[0]))}${esc(g.name)}</button>`; };
 export function consortiumMarkup(s, now = Date.now()) {
   const c = consortiumOf(s), inv = s.consortiumInvite, busy = active(s) || !!s.run;
   if (!c) {
@@ -1407,6 +1454,7 @@ export function consortiumMarkup(s, now = Date.now()) {
     const there = p.place?.loc ? `map:con=${p.place.loc}` : `map:member-${h}`;
     return `<li class="con-member${onSet.has(h) ? '' : ' off'}${crew.includes(h) ? ' crew' : ''}"><span class="cm-dot${onSet.has(h) ? ' on' : ''}"></span><span class="cm-name"><b>${esc(h)}</b>${crew.includes(h) ? `<span class="cm-crew" title="In your crew">${glyph('run')}</span>` : ''}${c.founder === h ? '<small title="Founder">★</small>' : ''}</span>
       <span class="cm-cls">${esc(ARCHETYPES[p.cls].name)} <b>${memberLevel(s, h)}</b></span>
+      ${netChip(s, h)}
       <span class="cm-n" title="Outposts">${glyph('harvester')}${mine.filter((l) => l.held).length}</span><span class="cm-n" title="Servers">${glyph('node')}${mine.length}</span>
       <button type="button" class="cm-where act dim" data-go="${esc(there)}" title="Show on the map">${glyph('trace')}${p.place ? esc(whereText(p.place)) : 'home'}</button>
       <span class="cm-state">${state}</span>
@@ -1424,6 +1472,7 @@ export function consortiumMarkup(s, now = Date.now()) {
     <section class="card"><h2>Consortium</h2><h1>${esc(c.name)}</h1>
       <p>${size} servers merged · founded by ${esc(c.founder)} · ${memberServers(s).length} servers on the network</p>
       <ol class="con-ladder">${ladder}</ol></section>
+    ${networkCardMarkup(s, 'you')}
     <section class="card"><h2 title="${Math.round(CONSORTIUM.dividend.share * 100)}% of what every member's outpost makes, offline too">Dividend · ${Math.round(CONSORTIUM.dividend.share * 100)}%</h2>
       ${dividendTable(s)}
       <div class="con-waiting"><span><small>Waiting</small><b>${w ? esc(w) : 'nothing yet'}</b></span><button type="button" class="btn primary" data-command="consortium collect" ${w ? '' : 'disabled'}>Collect</button></div></section>
@@ -1796,7 +1845,7 @@ export function threatsOf(s, now = Date.now()) {
   const r = retakeOf(s);
   if (r) add({ cls: r.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${r.ships}`, where: `${r.state === 'siege' ? 'at' : '→'} your ${FX[r.f].short} hub`, tag: `lv ${r.level}`, left: retakeLeft(s, now), total: r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs, sel: 'hub-' + r.f, verb: r.state === 'travel' ? 'arrives' : 'falls' });
   for (const h of Object.values(s.hubs || {})) if (h.captured?.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: `your ${FX[h.faction].short} hub`, sel: h.id });
-  for (const ev of eventsOf(s)) { const c = EVENT_CARDS[ev.card], l = s.locations.find((x) => x.id === ev.loc); add({ cls: 'drop', icon: c.fight ? 'kill' : 'signal', name: c.fight ? ev.name : `${c.name}: ${FAMILIES[ev.family]?.name || ''}`, where: l ? l.name : 'double code', left: ev.left, total: c.ms, sel: l ? l.id : 'server', verb: c.fight ? 'leaves' : 'ends' }); }
+  for (const ev of eventsOf(s)) { const c = EVENT_CARDS[ev.card], l = s.locations.find((x) => x.id === ev.loc); add({ cls: 'drop', icon: c.fight ? 'kill' : ev.card === 'darknet' ? 'item' : 'signal', name: c.fight ? ev.name : ev.card === 'darknet' ? `Darknet: ${UNIQUES[ev.unique]?.name || '?'}` : `${c.name}: ${FAMILIES[ev.family]?.name || ''}`, where: l ? l.name : ev.card === 'darknet' ? `${ev.credits}c · ${ev.net}` : 'double code', left: ev.left, total: c.ms, sel: l ? l.id : 'server', verb: c.fight ? 'leaves' : ev.card === 'darknet' ? 'closes' : 'ends' }); }
   const rank = { hot: 0, warn: 1, drop: 2, dim: 3 };
   return out.sort((a, b) => rank[a.cls] - rank[b.cls] || (a.left ?? 0) - (b.left ?? 0));
 }
@@ -1935,7 +1984,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     if (n.kind === 'member') {
       const raid = consortiumOf(s).raid?.member === n.handle, down = rebooting(s, n.handle);
       const sieges = serversOf(s, n.handle).filter((l) => l.held?.siege).length + (raid ? 1 : 0);
-      return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${raid ? ' raided' : ''}${down ? ' down' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `lv ${memberLevel(s, n.handle)} · ${serversOf(s, n.handle).length} ${serversOf(s, n.handle).length === 1 ? 'server' : 'servers'}${raid ? ' · invasion at the wall' : down ? ' · crashed' : sieges ? ' · invasion' : ''}`)}</g>`;
+      return `<g class="mnode member${n.online ? ' online' : ''}${sieges ? ' besieged' : ''}${raid ? ' raided' : ''}${down ? ' down' : ''}${on}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(n.handle)}'s home server"><circle r="18" class="mhit"/><rect x="-7" y="-7" width="14" height="14" rx="2"/>${n.online ? '<circle r="2.5" class="zdot"/>' : ''}${pick}${label(n, 10, n.handle, `${nameOf(s, n.handle) || `lv ${memberLevel(s, n.handle)}`} · ${STRAINS[sigOf(s, n.handle)?.strain]?.name || `${serversOf(s, n.handle).length} servers`}${raid ? ' · invasion at the wall' : down ? ' · crashed' : sieges ? ' · invasion' : ''}`)}</g>`;
     }
     if (n.kind === 'intrusion') {
       return `<g class="mnode intrusion f-threat${on}" data-select="intrusion" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Intrusion ${esc(n.virus.name)}"><circle r="18" class="mhit"/><circle r="8" class="pulse"/><path d="M0 -6 L6 0 L0 6 L-6 0 Z"/>${pick}${label(n, 8, n.virus.name, n.fighting ? 'fighting' : `lv ${n.virus.level} · at the gate`, 'hot')}</g>`;
@@ -2181,7 +2230,7 @@ function mapSide(s, sel, node) {
       <div class="stats">${stat('Servers', mine.length)}${stat('Outposts', mine.filter((l) => l.held).length)}${stat('Rogue', mine.filter((l) => l.rogue).length)}${stat('Outposts pay you', `${Math.round(CONSORTIUM.dividend.share * 100)}%`)}</div>
       ${mine.map((l) => `<p class="svc-line"><button type="button" class="act" data-select="${esc(l.id)}">${esc(l.name)}</button> ${l.rogue ? 'rogue' : l.held ? esc(l.held.kind) + ' outpost' : 'traced'} · lv ${l.level}${l.held?.siege ? ' <span class="tag hot">invasion</span>' : ''}</p>`).join('')}
       ${consortiumOf(s).raid?.member === h ? `<p class="svc-line"><span class="tag hot">Invasion</span> ${esc(consortiumOf(s).raid.name)} lv ${consortiumOf(s).raid.level} at their wall · ${fmtLeft(consortiumOf(s).raid.left)}</p><div class="row"><button type="button" class="btn primary" data-command="consortium defend ${esc(h)}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Defend their wall</button></div>` : ''}
-      ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn" title="Crashed: their server is on the map below them, open to clear. Their outposts pay nothing meanwhile.">Crashed</span></p>' : ''}</section>`;
+      ${rebooting(s, h) ? '<p class="svc-line"><span class="tag warn" title="Crashed: their server is on the map below them, open to clear. Their outposts pay nothing meanwhile.">Crashed</span></p>' : ''}</section>${networkCardMarkup(s, h)}`;
   }
   if (node.kind === 'intrusion') return alertCard();
   if (false) {

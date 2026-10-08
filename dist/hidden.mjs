@@ -17,6 +17,7 @@ import { emit, warn, rand, addLocation, hackerLevel, serviceValue } from './comb
 import { isLive } from './memory.mjs';
 import { quietAtRoot } from './root.mjs';
 import { targetedHidden, contractLocated } from './mail.mjs';
+import { leanPick, netOf } from './network.mjs';
 
 export const HIDDEN = {
   perServer: 2,
@@ -48,7 +49,7 @@ export function spawnHidden(s, loc) {
   const fams = Object.keys(FAMILIES);
   const have = hiddenNodes(s).filter((n) => n.via === loc.id).length;
   for (let i = have; i < HIDDEN.perServer; i++) {
-    const family = i === 0 && loc.deeper ? loc.deeper : fams[Math.floor(rand(s) * fams.length)];
+    const family = i === 0 && loc.deeper ? loc.deeper : leanPick(s, netOf(s, loc), rand(s)); // the network's lean (network.mjs)
     s.hiddenSeq = (s.hiddenSeq || 0) + 1;
     hiddenNodes(s).push({ id: 'h' + s.hiddenSeq, family, via: loc.id, depth: (loc.depth || 1) + 1, level: SERVER.locationLevel(hackerLevel(s), (loc.depth || 1) + 1), lead: 0, pinged: !!loc.relay, signal: 1 + Math.floor(rand(s) * 5) });
   }

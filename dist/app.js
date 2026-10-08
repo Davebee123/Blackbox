@@ -82,11 +82,12 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
     const s = restore(raw);
-    if (!raw) s.rng = newRng(); // crits and drops differ from game to game
+    if (!raw) { s.rng = newRng(); s.netSeed = newRng() || 1; } // crits and drops differ from game to game, and every network has its own signature (network.mjs)
     return s;
   } catch {
     const s = fresh();
     s.rng = newRng();
+    s.netSeed = newRng() || 1;
     return s;
   }
 }
@@ -717,6 +718,7 @@ function resetGame() {
   campaign = fresh();
   campaign.settings = settings;
   campaign.rng = newRng();
+  campaign.netSeed = newRng() || 1; // a new game, a new network
   history = [];
   historyIndex = -1;
   mapSel = 'server';

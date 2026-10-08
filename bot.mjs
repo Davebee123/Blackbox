@@ -25,11 +25,12 @@ import { CONFIG, STRAINS, FAMILIES, GUARDS, power } from './dist/data.mjs';
 // as a share of your hit, its Signal as a share of your max, small weights for the rest, 3% for an effect).
 // trace: per-level records for the progression measures (docs/progression.md): fights, wins, rest, XP by
 // kind, drops, gold repeats, upgrades and their size, what is worn at each level, and how long uniques stay on.
-export function simulate({ cls = 'breaker', target = 10, seed = 7, cycleSec = 12, cmdSec = 3, log = false, contracts = true, spend = 'none', gearRule = 'rarity', trace = false, capHours = 72 } = {}) {
+export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = null, cycleSec = 12, cmdSec = 3, log = false, contracts = true, spend = 'none', gearRule = 'rarity', trace = false, capHours = 72 } = {}) {
   let t = 1_700_000_000_000;
   hooks.now = () => t;
   const s = fresh();
   s.seed = seed; s.rng = seed * 2654435761 >>> 0;
+  s.netSeed = (netSeed ?? (seed * 40503 + 977)) >>> 0; // its network's signature (network.mjs): a seed of its own, or one from the play seed
   s.tutorialCompleted = true;
   s.loadout.archetype = cls;
   const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];

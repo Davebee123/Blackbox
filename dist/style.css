@@ -525,7 +525,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .log-lines { max-height: 220px; }
   .timeline-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 0 10px 10px; }
   .tcol { padding: 4px 4px 0; min-height: 90px; }
-  .page-grid { grid-template-columns: 1fr; }
+  .page-grid { grid-template-columns: minmax(0, 1fr); }
   .map-page { display: flex; flex-direction: column; height: auto; }
   .map-canvas { height: 440px; }
   .mlabel { font-size: calc(15px / var(--z, 1)); }
@@ -1441,7 +1441,7 @@ h1 .slots { font-size: 13px; } h1 .slots i { width: 13px; height: 13px; } h1 .sl
 .mat small { color: var(--muted); font-size: 11px; }
 .mat.zero { opacity: 0.45; }
 /* Consortium: members on one grid, the dividend as a table */
-.con-members { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 10px auto auto auto auto minmax(0, 1fr) auto auto; column-gap: 12px; row-gap: 2px; }
+.con-members { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 10px auto auto auto auto auto minmax(0, 1fr) auto auto; column-gap: 12px; row-gap: 2px; }
 .con-member { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; padding: 7px 8px; border-left: 2px solid transparent; background: rgba(241, 185, 47, 0.03); }
 .con-member.crew { border-left-color: var(--you); background: rgba(127, 209, 199, 0.06); }
 .con-member.off { opacity: 0.7; }
@@ -1452,7 +1452,7 @@ h1 .slots { font-size: 13px; } h1 .slots i { width: 13px; height: 13px; } h1 .sl
 .cm-n { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cm-where { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 .con-member .p-acts { justify-self: end; }
-@media (max-width: 900px) { .con-members { grid-template-columns: 10px 1fr auto; } .con-member { grid-template-columns: subgrid; } .cm-cls, .cm-n, .cm-state { display: none; } .cm-where { grid-column: 2 / -1; } }
+@media (max-width: 900px) { .con-members { grid-template-columns: 10px 1fr auto; } .con-member { grid-template-columns: subgrid; } .cm-cls, .cm-n, .cm-state { display: none; } .cm-where, .cm-net { grid-column: 2 / -1; } .con-member .p-acts { grid-column: 3; grid-row: 1; } }
 .div-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 4px 0 10px; }
 .div-table th { text-align: left; font-weight: 500; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; font-size: 10px; padding: 0 6px 4px; border-bottom: 1px solid var(--line); }
 .div-table td { padding: 5px 6px; border-bottom: 1px dashed rgba(241, 185, 47, 0.1); white-space: nowrap; }
@@ -1917,7 +1917,7 @@ body:has(.stash-card .inv-row[data-kind="implant"]:hover) .inv.slots .inv-row[da
 
 /* The Consortium page: alerts as cards (what, how long, what it pays, one button), members, the
    consortium's size ladder, the dividend. */
-.con-col { display: grid; gap: 12px; align-content: start; }
+.con-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
 .con-alarms { display: grid; gap: 10px; }
 .con-alarm { border: 1px solid rgba(255, 91, 61, 0.35); border-left: 3px solid var(--hot); background: rgba(255, 91, 61, 0.05); border-radius: 4px; padding: 12px 14px; display: grid; gap: 6px; }
 .con-alarm.k-lockdown, .con-alarm.k-crash { border-color: rgba(255, 216, 92, 0.3); border-left-color: var(--next); background: rgba(255, 216, 92, 0.04); }
@@ -1943,7 +1943,7 @@ body:has(.stash-card .inv-row[data-kind="implant"]:hover) .inv.slots .inv-row[da
 .con-waiting span { display: grid; gap: 2px; } .con-waiting small { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; } .con-waiting b { color: var(--bright); font-size: 15px; }
 .con-leave { justify-content: flex-end; }
 .people-list .con-head .btn { justify-self: start; margin-top: 4px; } .people-list .con-head .hot { color: var(--hot); }
-@media (max-width: 900px) { .con-page { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .con-page { grid-template-columns: minmax(0, 1fr); } }
 
 /* The top bar keeps to one line: app.js fitTopbar() steps these on while it would wrap. */
 .topbar.fit-1 .brand-name { display: none; }
@@ -2896,3 +2896,27 @@ details.map-pick { pointer-events: auto; }
 /* A page that failed to draw (app.js pageOrError): the error, selectable, and a way back. */
 .page-error { max-width: 720px; margin: 24px auto; border-color: var(--hot); }
 .page-error pre { white-space: pre-wrap; user-select: text; font: 12px var(--mono); color: var(--text); background: var(--inset); padding: 10px; border-radius: 3px; max-height: 240px; overflow: auto; }
+
+/* Networks (network.mjs): a signature as a card, a member's network as a chip, a native unique's home */
+.cm-net { justify-self: start; display: inline-flex; align-items: center; gap: 4px; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.cm-net small { color: var(--dim); }
+.net-card h1 { font-size: 20px; }
+.lean-bar { display: flex; height: 22px; margin: 8px 0 10px; border: 1px solid var(--line-strong); border-radius: 3px; overflow: hidden; background: var(--inset); }
+.lean-seg { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 0 6px; overflow: hidden; white-space: nowrap; font: 600 11px var(--mono); letter-spacing: 0.5px; color: var(--bg); }
+.lean-seg.l0 { background: var(--amber); } .lean-seg.l1 { background: var(--amber-soft); } .lean-seg.l2 { background: var(--amber-deep); color: var(--text); }
+.lean-seg .glyph { flex: none; }
+.net-rows { display: grid; gap: 4px; margin: 0 0 10px; }
+.net-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: center; }
+.net-row dt { font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.net-row dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.net-row dd small { color: var(--dim); font-size: 11px; }
+.net-sub { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.net-natives { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 12px; }
+.net-native { display: grid; gap: 1px; padding: 4px 0; border-top: 1px solid var(--line); }
+.net-native small { font-size: 11px; color: var(--dim); }
+.net-native .coll-q { color: var(--gray); letter-spacing: 2px; }
+.net-native .act, .net-native .tag { justify-self: start; }
+.net-dark { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 0; padding: 8px 10px; border: 1px dashed var(--line-strong); border-radius: 4px; background: var(--inset); }
+.net-dark span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.net-dark small { color: var(--dim); font-size: 11px; }
+.ptip-body .tag.native { justify-self: start; color: var(--r-zeroday); border-color: rgba(212, 166, 74, 0.5); }

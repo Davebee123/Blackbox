@@ -22,6 +22,7 @@ import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVir
 import { SERVICES, codeOf, rollItem, uniqueItem } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost } from './combat.mjs';
+import { nativeStrain } from './network.mjs';
 
 const I = () => CONFIG.invasion;
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -303,7 +304,7 @@ function unit(s, loc, level, mutation) {
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1;
   if (mutation === undefined) mutation = rand(s) < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(rand(s) * ROLLED_MUTATIONS.length)] : null;
   const key = INVADER[loc.family];
-  const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed); // deeper servers send bigger viruses, and strains
+  const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed, nativeStrain(s, 'you')); // deeper servers send bigger viruses, and strains
   const virus = createVirus(key, seed, { threat: SERVER.threat(level), mutation, strain, grade });
   return { key, seed, level, mutation, strain, grade, family: loc.family, name: virus.name };
 }

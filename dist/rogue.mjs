@@ -10,12 +10,13 @@ import { emit, rand, gainCode, gainXp, xpFor, hooks, hackerLevel, giveUnique } f
 import { FAMILIES, variantFor, STRAINS, CONFIG, ELITE, SERVER, BOSSES, createLocation } from './data.mjs';
 import { seeded, codeOf } from './gear.mjs';
 import { occupationCleared } from './consortium.mjs';
+import { netOf, leanPick, nativeStrain, lairSpawns, NETWORK } from './network.mjs';
 
 export const ROGUE = {
   share: 1 / 6, // of servers you trace
   pity: 5, // after this many in a row that aren't, the next one is
   firstTame: 2, // the first two servers you trace are never rogue
-  kinds: { nest: { name: 'Nest', rule: 'One family only, and strains twice as often.' }, pit: { name: 'Pit', rule: 'Mixed families, 2 levels above the server, better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every folder in one run for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' } }, // farm: KESSLER-FARM-00 only, never rolled
+  kinds: { nest: { name: 'Nest', rule: 'One family only, and strains twice as often.' }, pit: { name: 'Pit', rule: 'Mixed families, 2 levels above the server, better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every folder in one run for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds /core, back an hour after it falls. Two folders of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
   rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,
@@ -39,7 +40,7 @@ export function rollRogue(s, loc) {
   const rogue = early || r() < ROGUE.share || (net.rogueDry || 0) >= ROGUE.pity;
   if (!rogue) { net.rogueDry = (net.rogueDry || 0) + 1; return; }
   net.rogueDry = 0;
-  const kinds = Object.keys(ROGUE.kinds).filter((k) => k !== 'farm');
+  const kinds = Object.keys(ROGUE.kinds).filter((k) => k !== 'farm' && k !== 'lair');
   loc.rogue = { kind: early ? 'nest' : kinds[Math.floor(r() * kinds.length)] };
   net.nested = true;
   loc.template = 'rogue';
@@ -71,6 +72,7 @@ export function rogueMotd(loc) {
     nest: [`${loc.name}. nobody has run this box in years. the ${fam} moved in.`, 'every folder is a nest. they come back. they always come back.'],
     pit: [`${loc.name}. abandoned exchange. whatever's down here is hungry.`, 'stronger than the box should hold. better pickings too.'],
     gauntlet: [`${loc.name}. somebody wired every folder with a live process.`, 'clear the lot in one go and the cache at the root opens.'],
+    lair: [`${loc.name}. ${(BOSSES[loc.lair]?.name || 'something').toLowerCase()} lives in /core. this whole network answers to it.`, 'what it keeps was written for this network. you will not see much of it anywhere else.'],
   }[loc.rogue.kind] || [k.rule];
 }
 
@@ -79,19 +81,20 @@ export function rogueSpawns(s, loc, now = clock()) {
   if (!loc.rogue) return {};
   if (loc.farm) return farmSpawns(s, loc, now);
   loc.spawns ||= {};
+  if (loc.lair) return lairSpawns(s, loc, now, variantFor); // a network's lair (network.mjs)
   // A rogue server keeps up with you inside its layer's band, then tops out (you've outgrown it).
   if (!loc.member && !loc.trunk) loc.level = Math.max(loc.level || 1, SERVER.locationLevel(hackerLevel(s), loc.depth || 1));
-  const fams = Object.keys(FAMILIES);
+  const who = netOf(s, loc), native = nativeStrain(s, who); // its network's lean and native strain (network.mjs)
   for (const room of rogueRooms(loc)) {
     const sp = loc.spawns[room];
     if (sp?.alive || (sp && (sp.respawnAt > now || loc.occupied))) continue; // an occupation doesn't come back
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     const r = seeded(seed);
-    const family = loc.rogue.kind === 'nest' ? loc.family : fams[Math.floor(r() * fams.length)];
+    const family = loc.rogue.kind === 'nest' ? loc.family : leanPick(s, who, r());
     const level = (loc.level || 1) + (loc.rogue.kind === 'pit' ? ROGUE.pitLevels : 0);
-    let { grade, strain } = variantFor(family, level, loc.depth || 1, seed);
-    if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37).strain; // twice the chances
+    let { grade, strain } = variantFor(family, level, loc.depth || 1, seed, native);
+    if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37, native).strain; // twice the chances
     const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].name.toLowerCase();
     const elite = loc.rogue.kind === 'pit' && seeded(seed ^ 0x51ed)() < ELITE.share; // group content
     loc.spawns[room] = { alive: true, family, level, seed, strain, grade, ...(elite ? { elite: true } : {}), name: `${elite ? 'elite ' : ''}${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
@@ -105,7 +108,7 @@ export const rogueRespawn = (s) => ROGUE.respawnMs[0] + Math.floor(rand(s) * (RO
 // Gauntlet cleared in one run opens its cache.
 export function rogueKill(s, loc, room, now, extraDrop) {
   const sp = loc.spawns?.[room];
-  if (sp) { sp.alive = false; sp.respawnAt = now + (loc.farm ? (sp.boss ? FARM.bossMs : FARM.packMs) : rogueRespawn(s)); }
+  if (sp) { sp.alive = false; sp.respawnAt = now + (loc.farm ? (sp.boss ? FARM.bossMs : FARM.packMs) : loc.lair ? (sp.boss ? NETWORK.lairMs : NETWORK.lairPackMs) : rogueRespawn(s)); }
   if (loc.farm) farmKill(s, loc, sp);
   if (loc.occupied && !liveRogue(loc)) occupationCleared(s, loc);
   if (loc.rogue.kind === 'pit') extraDrop();

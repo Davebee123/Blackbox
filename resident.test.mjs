@@ -124,7 +124,7 @@ test('boss uniques: each boss has two; a kill without one raises the next kill\'
   const { BOSS_LOOT } = await import('./dist/data.mjs');
   const { bossUniques, bossChance } = await import('./dist/combat.mjs');
   const { collectionMarkup } = await import('./dist/view.mjs');
-  for (const b of Object.keys(BOSSES)) assert.equal(bossUniques(b).length, 2, b);
+  for (const b of Object.keys(BOSSES).filter((k) => !BOSSES[k].native)) assert.equal(bossUniques(b).length, 2, b); // a native boss drops its network's natives (network.test.mjs)
   const was = BOSS_LOOT.chance;
   try {
     BOSS_LOOT.chance = -1; // a miss for sure

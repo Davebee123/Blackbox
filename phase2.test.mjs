@@ -300,7 +300,7 @@ test('collection log: a unique counts the first time you get one; the card hides
   assert.ok(s.logs.some((e) => e.type === 'collected'));
   addItem(s, uniqueItem(u, 3, () => 0.5));
   assert.equal(s.logs.filter((e) => e.type === 'collected').length, 1, 'once');
-  assert.match(collectionMarkup(s), new RegExp(`Collection · 1/${Object.keys(UNIQUES).length}`));
+  assert.match(collectionMarkup(s), new RegExp(`Collection · 1/${Object.values(UNIQUES).filter((x) => !x.sources?.some((src) => src.kind === 'native')).length}`)); // native uniques count once they're yours to chase (network.mjs)
   assert.match(collectionMarkup(s), /\?\?\?/, 'the rest are still unknown');
   const old = f2(); old.stash = [{ ...uniqueItem(u, 3, () => 0.5), id: 'g1' }]; delete old.collection;
   assert.ok(restore(JSON.parse(JSON.stringify(old))).collection[u.id], 'what an old save holds counts');

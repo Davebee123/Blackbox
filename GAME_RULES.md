@@ -246,6 +246,7 @@ There are no grey protocols. (Filters still come in Scrap, a grey.) Old saves' g
 
 - **A boss's uniques:** two each, 30% a kill plus 10% for every kill without one (see Bosses). A Resident drops each of its own once; after that its roll gives a world unique you don't have yet, or a yellow.
 - **A strain's trophy:** 1 in 200 kills of that strain drops its own unique (Keylogger → Logger Spool, Hashrat → Cryptominer…).
+- **Native uniques:** 27 more belong to networks, 3 to 5 to each, about ten times as likely on their own network as anywhere else, with pity there and from its lair boss (see Networks).
 - **Scavenge is magic find** with diminishing returns: +50% Scavenge = +33% better odds.
 - **Rewards:** a story beat or contract can give a unique (killing claimjack gives wick's Old Toolkit: 5–6 Damage, +10 Signal, about a good blue at level 1).
 - **Pace:** the System page shows your kills an hour of active play (the game open, used in the last 2 minutes). The odds assume 20; the pacing bot (`bot.mjs`, 6-second cycles, every reconnect wait and memory limit, skipping grey fights) measures 9–16 counting the time it waits for something on its level.
@@ -389,6 +390,7 @@ Simulated until the server exists (developer mode only, `?dev`): `online sim` tu
 **A consortium** is hackers who merged their servers (simulated members for now). Everyone keeps their own home server and everything on it; merging runs a **trunk line** between home servers, so every member can reach every other member's servers.
 - **Joining.** `consortium create <name>` founds one; invite people from the people panel (*Invite to consortium*) or `consortium invite <handle>`, and their server merges in. While you're in none, someone online now and then invites you (a pager entry, and a card on the people panel's **Consortium** tab): *Merge* / `consortium accept`, or `consortium decline`. Invites lapse after 10 minutes. Anyone can invite; only the founder can kick (`consortium kick <handle>`). `consortium leave` cuts the trunk line. You lose nothing of your own either way. `consortium` alone sums it up. (`guild` still works as the old name, and an old guild becomes a consortium.)
 - **The map.** With a consortium, the Map has two views: *Your network* and the consortium's. The consortium's view has your home server in the middle, a trunk line out to each member's home server (their card lists their servers), and each member's servers branching off theirs: their outposts, servers they've traced and rogue servers (1–4 each, at the member's level, kept within 3 levels of yours while it's simulated).
+- **Members' networks.** Each member's network has its own signature (see Networks): their servers lean to their families and their native strain, their natives drop about ten times as often there as anywhere else, their lair holds their native boss from their level 8, and their dividend comes in their rich code.
 - **Members' servers.** Connect to any of them like your own. Fights, files and drops are yours. Opening a member's vault doesn't take the server over: it stays theirs. Their natives and credit and code caches come back 20 minutes after your last run there; the vault stays open (its XP pays once) and other files you pulled stay pulled. Their home servers are theirs alone (home intrusions stay solo).
 - **Shared ground.** Every member's server, plus your own outposts and rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with their own loot. **XP for a drop-in is by damage:** a member who joined your fight takes the share of the kill's XP that matches the share of the virus's health they took off; you and your own crew split the rest evenly (the pool is the kill plus 10% per extra player, as in any party). Dropping into a fight you barely touched pays next to nothing. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
 - **Owner and dividend.** An outpost's owner keeps its whole stockpile, as always. On top of that, every member's outpost pays each other member a **dividend**: 25% of what it produces, in kind (a Siphon's or Tap's code of its family, a Scraper's finds: credits, code, salvage, now and then a protocol). It fills in real time (offline too), a small stock per outpost of up to 12 hours' worth. An invaded outpost pays nothing until the invasion is stopped. The Consortium page shows what comes in an hour and what's waiting: *Collect*, or `consortium collect`. Each member outpost's card shows its rate and what's waiting. (Your outposts pay the other members the same way, at no cost to you.)
@@ -415,6 +417,76 @@ Up to 20 servers. Crews of up to three are drawn from consortium members and fri
 - The same as commands: `split <name|all>`, `goto <name>`, `link <name>`, `unlink`, `regroup`.
 - The people panel's **Crew** tab lists your crew (up to 3): each crewmate's class and where they are (with you on the run, which folder, linked or not), *Remove from crew* for each, *Disband* for all, and the open slots.
 - **Remove** takes someone out of your crew (and off the run): × on their row in the crew column, *Remove from crew* in the people panel or on the Consortium page, or `crew kick <name>`. Not mid-fight.
+
+## Networks (network.mjs)
+
+Every player's network has a **signature**, rolled from its **network seed**: the same seed always rolls the same network. A new game rolls a seed, and a save from before networks gets one from its own seed and handle (save v36). Each simulated consortium member's network comes from their handle; a real player's will be theirs. docs/networks.md is the designer's review sheet.
+
+| Part | What it does |
+|---|---|
+| Name | *Rust Lattice*, *Saltwire Loop*: on the Network card, the consortium map, member rows and tooltips |
+| Lean | The three families weighted 3, 1.5 and 0.5. Mixed rogue folders (Pits, Gauntlets), the hidden neighbours your servers reveal, the other half of root rotations, and the families of couriers, bounties and outbreaks lean that way |
+| Native strain | One strain (its lead family's seven times in ten), five times as likely as each of its family's other strains on that network |
+| Native boss | One of nine, in its **lair** (below) |
+| Native uniques | 3 to 5 of 27, at least one in each band (5–15, 16–28, 29–40). About ten times as likely on their network as anywhere else |
+| Event bias | Two of the director's cards come up 2.5 times as often |
+| Code bias | Its rich code: 30% of every other code dropped there comes as it (kills, guard drops and vault caches when banked, Code Siphons when collected, a member's dividend). Its rich material, salvage or Exploits, drops 1.5 times as often there |
+
+**Whose network.** Your traced servers, rogue servers, home fights, events and lair are yours. A member's servers and lair are theirs. SPRAWL-00, KESSLER-FARM-00, the trunk server and the hubs are nobody's. Drops, code and strains read the network the fight is on.
+
+**Native uniques.** A kill on a network rolls for its natives open at the kill's level (up to 2 over it): 0.5% a kill (an elite or a boss three times), +0.01% for every kill on that network without one, back to 0.5% when one drops, one you lack first (a mean of 88 kills). Anywhere else, each native you know of (named, or native to a network you know) drops at 0.02% a kill, and the ones you've never heard of share 0.05% a kill. A grey kill rolls nothing. The roll has its own dice. A native shows as ??? until it drops for you or you hear it named: a **darknet listing**, its network's lair boss falling, or a drop. Its tooltip names its home network.
+
+| Native | Lv | Slot | What it does |
+|---|---:|---|---|
+| Null Byte | 5 | Exploit | +35% damage on an Open part |
+| Canary Token | 6 | Shell | Tells are announced a cycle further ahead |
+| Ping of Death | 7 | Script | When you call off a tell, the part you read takes 10 |
+| Lockpick | 8 | Script | Your hits count double against a Mutex lock or a Lockbox ward |
+| Reflector | 9 | Shell | The Mimic's playback hits the Mimic instead of you, at 50% |
+| Fork Reaper | 10 | Exploit | +60% damage on a fragment |
+| Watchlist | 11 | Proxy | When a tell lands on you, restore 6% of your health |
+| IRQ Line | 12 | Script | SIGINT cools down 2 cycles faster |
+| Read Receipt | 13 | Shell | Parts you read stay Open a cycle longer |
+| Split Brain | 14 | Exploit | A twin you break can't reboot |
+| Rootless | 15 | Implant | +25% damage with a skill whose moment is on the board |
+| Write Blocker | 16 | Proxy | A seal that goes through leaves your ◆ and shield, and you stay clean |
+| Policy Engine | 18 | Script | Your blue and yellow rules count 50% more (−3% Crit) |
+| Quiet Wire | 20 | Proxy | A Tripwire you break stays quiet |
+| Static Discharge | 21 | Exploit | +35% crit chance on a part gone loud |
+| Hush Money | 22 | Implant | A cast that compiles lasts 2 cycles less |
+| Brood Tap | 23 | Script | When you break a fragment, heal 5 |
+| Keyjam | 24 | Exploit | +40% damage on a part behind a lock or a ward |
+| Metronome | 26 | Shell | +30% crit chance when you fire in a Sync Window |
+| Hold Music | 28 | Proxy | Evasion counts double while a part winds up a tell |
+| Kill Chain | 30 | Implant | When you break a part, the next part to attack is Open for a cycle |
+| Preempt | 32 | Script | +40% crit chance on a part winding up a tell |
+| Brute Force | 33 | Exploit | On a part behind a lock or a ward, a hit that meets ◆ breaks two of them |
+| Takedown Notice | 34 | Implant | When you break a fragment, every cooldown drops by 1 |
+| Sandman | 36 | Shell | A tell that lands leaves nothing behind (−2 Regen) |
+| Rubber Hose | 38 | Exploit | +6 damage for every tell you read this fight, up to +30 (−3% Crit) |
+| Mirror Maze | 40 | Proxy | The Decoy's mirror lets your commands through at 50%, and nothing bounces back |
+
+They follow the unique rules (the best base at their item level ×1.2), and they're sidegrades: loaded in place of a blue on every subclass at levels 10, 18 and 30, none moves the average health lost by more than 4 points (natives.test.mjs).
+
+**The lair.** From level 8, once you've found three servers, your network's lair is on your map: a rogue server of kind *Lair*, at your level. `/outer` and `/den` hold its family (its native strain more often) and come back half an hour after they fall. `/core` holds its **native boss**, back an hour after it falls. A member's lair is on their network from their level 8. A native boss is a solo boss (every tell open at its level, charges that take two hits, phases, an enrage), and it drops its network's natives at BOSS_LOOT's odds: 30% a kill, +10% a kill without one, kept per network. The first time it falls it names all of them.
+
+| Boss | Built on | What it does |
+|---|---|---|
+| DEADBOLT | Ransomware, a Mutex | Its charge is Deadbolt. Re-arms at 60%; at 30% a second Mutex re-locks the Encryptor |
+| TRIPMINE | Ransomware, a Tripwire (a Lockbox below 20) | Claymore on the Pulse Node. Every attack a cycle sooner at half |
+| HASHLORD | The Hashrat strain | Difficulty Bomb. Re-arms at 60%, sooner at 30% |
+| BACK ORIFICE | Worm, a C2 Node | Spam Run hatches two. Sooner at half; at 25% a Mirror twins the Replicator |
+| PATCH TUESDAY | The Patchwork strain | Rollup. Re-arms at 60%, sooner at 30% |
+| FLOODWALL | The Floodgate strain | Storm Surge. Re-arms at half |
+| MIRRORSHADE | Ghostroot, a Mimic | Doppelganger. At half a Decoy mirrors you on the off-beat |
+| SLEEPWALKER | The Sleeper strain | Night Terror. Re-arms at half |
+| ECHOLALIA | The Echo strain | Last Word. Re-arms at 60%, sooner at 30% |
+
+A strain boss's hits step with level (×0.8 at 10, ×1.1 at 18, ×1.45 at 30).
+
+**The slow ways to someone else's native.** A Listening Post tunes to a native you've heard named (`listen <unique>`): on its network, its usual +25% a post; anywhere else, its 0.02% a kill × (1 + 2 per post). A **darknet listing** (an event card from level 8, weight 0.5) offers a native from another network, the one you listen for first: it names it, and `event buy <id>` (or Buy on the Network card) takes it for 400 + 40 × level credits and 2 Exploits within 20 minutes. Or merge with its network's owner and fight there.
+
+**Show it.** The **Network** card (Server page, Consortium page) has the name, the lean as a bar, the native strain, the native boss with its lair and chance a kill, the favoured cards, what it's rich in, the natives (??? until seen or named, a *listen* button once named) with the native chance a kill, and any darknet listing. Members' rows on the Consortium page name their networks; the consortium map labels each member with their network and native strain, and a member's card carries their Network card. `network` prints yours, `network <member>` theirs. Testing: `developer network <seed>`, `developer lair`, `developer native <id>`.
 
 ## The fight HUD
 
@@ -471,8 +543,9 @@ The net isn't a storyline: things happen on it, and you act on them or let them 
 | **Boss** (Hollow Choir) | a traced server, from level 10 | 25 min | The HOLLOW CHOIR, a ghostroot boss. *Intercept* it. | Twice the bounty's credits and a Custom protocol, on top of the kill |
 | **Outbreak** | the net | 30 min | One family surges. | Its kills drop double code |
 | **Leak** | a server you've found but not taken | at once | Someone leaks its vault key. | Its vault opens without the password |
+| **Darknet listing** | the net, from level 8 | 20 min | A broker lists a native unique from another network (see Networks), naming it. `event buy <id>`. | That unique, for 400 + 40×level credits and 2 Exploits |
 
-A server with an event gets an antenna mark on the map, the event and its minutes left on its card, and a row in the map's threat list. An event you're fighting waits for you. Losing the fight leaves it up until its time runs out. `developer event [courier|bounty|choir|outbreak|leak]` deals one now. (LANTERN's numbers-station dead drops, which you had to decode, unlock and bank, became the courier.)
+Your network's two favoured cards come up 2.5 times as often, and couriers', bounties' and outbreaks' families follow its lean (see Networks). A server with an event gets an antenna mark on the map, the event and its minutes left on its card, and a row in the map's threat list. An event you're fighting waits for you. Losing the fight leaves it up until its time runs out. `developer event [courier|bounty|choir|outbreak|leak]` deals one now. (LANTERN's numbers-station dead drops, which you had to decode, unlock and bank, became the courier.)
 
 ## The Halcyon store
 
@@ -544,7 +617,7 @@ A server you hold (you beat its Resident in `/core`) is yours to build on, like 
 | Sentry Daemon | defence | 2 | 600 / 30 / 15 | 2 h | plan, server lv 15 | Kills one virus of every swarm that reaches the server |
 | Storage Array | support | 1 | 250 / 12 / 6 | 20 min | plan | Stores twice as much |
 | Pipeline | support | 2 | 400 / 20 / 10 | 45 min | plan, server lv 10 | Producers here make 50% more |
-| Listening Post | support | 1 | 250 / 12 / 6 | 30 min | server lv 5 | Listens for the unique you name (`listen <unique>`, or **listen** on its Collection row): wherever it drops, it drops 25% more often, 25% more for each post. That counts its gold roll, a strain's trophy and a boss's chance |
+| Listening Post | support | 1 | 250 / 12 / 6 | 30 min | server lv 5 | Listens for the unique you name (`listen <unique>`, or **listen** on its Collection row): wherever it drops, it drops 25% more often, 25% more for each post. That counts its gold roll, a strain's trophy and a boss's chance. A native unique you've heard named also drops off its network 1 + 2 per post times as often (see Networks) |
 | Honeytoken | support | 1 | 250 / 12 / 6 | 30 min | plan | Draws trouble: noticed twice as often, swarms pick it first and come sooner; beating them here pays double |
 | Refinery | producer, specialisation | 3 | 2,500 / 120 / 50 + 3 Exploits | 6 h | plan, server lv 20, 3 producers here | Producers here make 50% more; stores a day's worth |
 | Citadel | defence, specialisation | 3 | 2,500 / 120 / 50 + 3 Exploits | 6 h | plan, server lv 20, 2 defences here | The firewall +6 levels; a lost defence never locks it down |
@@ -981,7 +1054,7 @@ A virus component's name always shows (so you can target it), but what it does r
 
 ## Collection log
 
-Every unique and strain trophy has a place in the **Collection** on the System page (`collectionMarkup`), sorted by level: the ones you've found by name, the rest as **???** with their level and where they come from (SPRAWL-00, a guard, a layer's vaults, a rogue server, the storyline, a contract, Halcyon's store, a boss; a strain's trophy names the strain only once you've met it). A missing boss unique also shows that boss's chance a kill, bad-luck protection included. A bar and *N/total* show how far you are. The card stays hidden until your first unique. A new one adds a *New in collection* row to the reward card. It counts the first time you get one, even if a full stash breaks it down; an old save counts what it already holds.
+Every unique and strain trophy has a place in the **Collection** on the System page (`collectionMarkup`), sorted by level: the ones you've found by name, the rest as **???** with their level and where they come from (SPRAWL-00, a guard, a layer's vaults, a rogue server, the storyline, a contract, Halcyon's store, a boss; a strain's trophy names the strain only once you've met it). A missing boss unique also shows that boss's chance a kill, bad-luck protection included. A bar and *N/total* show how far you are. The card stays hidden until your first unique. A new one adds a *New in collection* row to the reward card. It counts the first time you get one, even if a full stash breaks it down; an old save counts what it already holds. A native unique is listed once it's yours, named, or native to a network you know (yours or a member's), with that network as its source.
 
 ## Buyout
 
@@ -1108,7 +1181,7 @@ Order within a cycle: your command → burns → helpers → heals over time →
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | at 60%: re-arms every part; at 30%: every attack a cycle sooner | cycle 18 |
 | HOLLOW CHOIR (ghostroot) | Its own event (Boss) from level 10, 25 minutes on a traced server | level 10 | 1.6× | at half: splits off a second Decoy on the off-beat, so it mirrors you two cycles in four | cycle 16 |
 
-A boss drops like an elite (three loot rolls). The Hollow Choir also pays twice the bounty's credits and a Custom protocol. A phase change flashes on screen.
+Each network's **native boss** (nine templates, in its lair) is on the same system; see Networks. A boss drops like an elite (three loot rolls). The Hollow Choir also pays twice the bounty's credits and a Custom protocol. A phase change flashes on screen.
 
 **Boss uniques.** Each boss has two uniques of its own (`BOSS_LOOT`). A kill has a 30% chance to drop one, and every kill that drops none adds 10% to the next, back to 30% once one drops. One you haven't found comes first. A Resident (met on every takeover) drops each of its two only once (`BOSS_LOOT.once`); once you hold both, its roll gives a world unique you don't have yet (one that drops in SPRAWL-00, vaults, guards or rogue servers, up to two levels over the Resident), or a yellow when there's none left. After a miss the log says the next kill's chance, and the Collection shows it beside each boss unique you're missing.
 
@@ -1334,7 +1407,7 @@ About half the servers you find (fixed per server) keep an incident file at the 
 
 ## Strains (waves 1 and 1b)
 
-Strains are variants of a home family built around one rule. They share their family's art, code drops and leads. SPRAWL-00 is the starter area and never has them: strains come from layer 2 and deeper. What a server sends (invasions, swarms) is a strain about half the time once both its layer and its level allow it (fixed by the seed). The fight header shows the strain; its rule is on hover, and a first-time tip explains it.
+Strains are variants of a home family built around one rule. They share their family's art, code drops and leads. Each network has a native strain, five times as likely as each of its family's other strains there (see Networks). SPRAWL-00 is the starter area and never has them: strains come from layer 2 and deeper. What a server sends (invasions, swarms) is a strain about half the time once both its layer and its level allow it (fixed by the seed). The fight header shows the strain; its rule is on hover, and a first-time tip explains it.
 
 ### Grades
 

@@ -1749,6 +1749,673 @@ export default {
         }
       ],
       "flavour": "Bash would run anything you put after the function."
+    },
+    {
+      "id": "null-byte",
+      "name": "Null Byte",
+      "base": "weaponized-exploit",
+      "level": 5,
+      "primary": {
+        "damage": [
+          10,
+          13
+        ]
+      },
+      "secondary": {
+        "crit": 3
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-open",
+        "do": "damage%",
+        "value": 35
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "One zero in the right place, and the string ends."
+    },
+    {
+      "id": "canary-token",
+      "name": "Canary Token",
+      "base": "tty-upgrade",
+      "level": 6,
+      "primary": {
+        "signal": 24,
+        "regen": 1
+      },
+      "secondary": {
+        "sync": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "warn-early",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Somebody touched it. You heard."
+    },
+    {
+      "id": "ping-of-death",
+      "name": "Ping of Death",
+      "base": "cron-job",
+      "level": 7,
+      "primary": {
+        "damage": 4,
+        "signal": 18
+      },
+      "effect": {
+        "when": "answer",
+        "do": "read-hit",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "One packet, far too large to be polite."
+    },
+    {
+      "id": "lockpick",
+      "name": "Lockpick",
+      "base": "cron-job",
+      "level": 8,
+      "primary": {
+        "damage": 4,
+        "signal": 18
+      },
+      "secondary": {
+        "accuracy": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "lock-crush",
+        "value": 100
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "ransomware"
+        }
+      ],
+      "flavour": "Tension wrench, rake, patience."
+    },
+    {
+      "id": "reflector",
+      "name": "Reflector",
+      "base": "tty-upgrade",
+      "level": 9,
+      "primary": {
+        "signal": 26,
+        "regen": 1
+      },
+      "effect": {
+        "when": "custom",
+        "do": "mimic-turn",
+        "value": 50
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "ghostroot"
+        }
+      ],
+      "flavour": "It wanted to copy you. It got a copy of itself."
+    },
+    {
+      "id": "fork-reaper",
+      "name": "Fork Reaper",
+      "base": "weaponized-exploit",
+      "level": 10,
+      "primary": {
+        "damage": [
+          12,
+          15
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-fragment",
+        "do": "damage%",
+        "value": 60
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "worm"
+        }
+      ],
+      "flavour": "kill -9 on everything with the same parent."
+    },
+    {
+      "id": "watchlist",
+      "name": "Watchlist",
+      "base": "vpn-cascade",
+      "level": 11,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "struck",
+        "if": "charged",
+        "do": "restore%",
+        "value": 6,
+        "text": "When a tell lands on you: restore 6% of your health."
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "You knew it was coming. You wrote it down."
+    },
+    {
+      "id": "irq-line",
+      "name": "IRQ Line",
+      "base": "dropper",
+      "level": 12,
+      "primary": {
+        "damage": 6,
+        "signal": 28
+      },
+      "secondary": {
+        "clock": 4
+      },
+      "effect": {
+        "when": "always",
+        "do": "skill-cd",
+        "skill": "sigint",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Your interrupt, at the front of the queue."
+    },
+    {
+      "id": "read-receipt",
+      "name": "Read Receipt",
+      "base": "root-shell",
+      "level": 13,
+      "primary": {
+        "signal": 35,
+        "regen": 1.5
+      },
+      "effect": {
+        "when": "custom",
+        "do": "open-long",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Seen 02:14. It knows you know."
+    },
+    {
+      "id": "split-brain",
+      "name": "Split Brain",
+      "base": "exploit-chain",
+      "level": 14,
+      "primary": {
+        "damage": [
+          17,
+          21
+        ]
+      },
+      "secondary": {
+        "crit": 3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "no-reboot"
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "worm"
+        }
+      ],
+      "flavour": "Two nodes, each sure the other one died."
+    },
+    {
+      "id": "rootless",
+      "name": "Rootless",
+      "base": "implant",
+      "level": 15,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "hit",
+        "if": "moment",
+        "do": "damage%",
+        "value": 25
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "skills"
+        }
+      ],
+      "flavour": "No uid, no gid, no hesitation."
+    },
+    {
+      "id": "write-blocker",
+      "name": "Write Blocker",
+      "base": "vpn-cascade",
+      "level": 16,
+      "primary": {
+        "signal": 75,
+        "reduction": 2
+      },
+      "secondary": {
+        "sanitize": 6
+      },
+      "effect": {
+        "when": "custom",
+        "do": "seal-proof"
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Read all you want. Nothing gets written back."
+    },
+    {
+      "id": "policy-engine",
+      "name": "Policy Engine",
+      "base": "loader",
+      "level": 18,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 24
+      },
+      "downside": {
+        "crit": -3
+      },
+      "effect": {
+        "when": "custom",
+        "do": "rule-amp",
+        "value": 50
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "rules"
+        }
+      ],
+      "flavour": "Every rule you carry, enforced harder."
+    },
+    {
+      "id": "quiet-wire",
+      "name": "Quiet Wire",
+      "base": "onion-circuit",
+      "level": 20,
+      "primary": {
+        "signal": 100,
+        "reduction": 3
+      },
+      "secondary": {
+        "stealth": 6
+      },
+      "effect": {
+        "when": "custom",
+        "do": "quiet-trip"
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "ransomware"
+        }
+      ],
+      "flavour": "Cut the red one. Nobody hears it go."
+    },
+    {
+      "id": "static-discharge",
+      "name": "Static Discharge",
+      "base": "zero-click",
+      "level": 21,
+      "primary": {
+        "damage": [
+          22,
+          28
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-loud",
+        "do": "crit%",
+        "value": 35
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "ransomware"
+        }
+      ],
+      "flavour": "The louder it gets, the easier it arcs."
+    },
+    {
+      "id": "hush-money",
+      "name": "Hush Money",
+      "base": "implant",
+      "level": 22,
+      "primary": {
+        "damage": 7,
+        "signal": 35
+      },
+      "effect": {
+        "when": "custom",
+        "do": "cast-short",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Paid to finish early and say nothing."
+    },
+    {
+      "id": "brood-tap",
+      "name": "Brood Tap",
+      "base": "loader",
+      "level": 23,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 24
+      },
+      "effect": {
+        "when": "break",
+        "if": "target-fragment",
+        "do": "heal",
+        "value": 5,
+        "text": "When you break a fragment: heal 5."
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "worm"
+        }
+      ],
+      "flavour": "Every little one carries a little of what you lost."
+    },
+    {
+      "id": "keyjam",
+      "name": "Keyjam",
+      "base": "zero-click",
+      "level": 24,
+      "primary": {
+        "damage": [
+          22,
+          28
+        ]
+      },
+      "secondary": {
+        "accuracy": 3
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-locked",
+        "do": "damage%",
+        "value": 40
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "ransomware"
+        }
+      ],
+      "flavour": "Jam the key in and twist until something gives."
+    },
+    {
+      "id": "metronome",
+      "name": "Metronome",
+      "base": "ghost-shell",
+      "level": 26,
+      "primary": {
+        "signal": 70,
+        "regen": 3
+      },
+      "secondary": {
+        "sync": 5
+      },
+      "effect": {
+        "when": "hit",
+        "if": "synced",
+        "do": "crit%",
+        "value": 30
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "sync"
+        }
+      ],
+      "flavour": "Tick. Tick. Now."
+    },
+    {
+      "id": "hold-music",
+      "name": "Hold Music",
+      "base": "mixnet",
+      "level": 28,
+      "primary": {
+        "signal": 140,
+        "reduction": 4
+      },
+      "secondary": {
+        "evasion": 6
+      },
+      "effect": {
+        "when": "always",
+        "if": "any-tell",
+        "do": "stat-x2",
+        "stat": "evasion"
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Your call is important to us."
+    },
+    {
+      "id": "kill-chain",
+      "name": "Kill Chain",
+      "base": "implant",
+      "level": 30,
+      "primary": {
+        "damage": 8,
+        "signal": 40
+      },
+      "effect": {
+        "when": "break",
+        "do": "break-open",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Recon, weaponize, deliver. Then the next one."
+    },
+    {
+      "id": "preempt",
+      "name": "Preempt",
+      "base": "polymorphic-engine",
+      "level": 32,
+      "primary": {
+        "damage": 13,
+        "signal": 55,
+        "payload": 30
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-telling",
+        "do": "crit%",
+        "value": 40
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "The scheduler hands you its turn."
+    },
+    {
+      "id": "brute-force",
+      "name": "Brute Force",
+      "base": "wormable",
+      "level": 33,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ]
+      },
+      "secondary": {
+        "crit": 4
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-locked",
+        "do": "shatter",
+        "text": "On a part behind a Mutex lock or a Lockbox ward, a hit that meets ◆ breaks two of them."
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "ransomware"
+        }
+      ],
+      "flavour": "Every key, in order, as fast as the lock will listen."
+    },
+    {
+      "id": "takedown-notice",
+      "name": "Takedown Notice",
+      "base": "bootkit",
+      "level": 34,
+      "primary": {
+        "damage": 12.5,
+        "signal": 62
+      },
+      "effect": {
+        "when": "break",
+        "if": "target-fragment",
+        "do": "refund",
+        "value": 1,
+        "text": "When you break a fragment: your cooldowns drop by 1."
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "worm"
+        }
+      ],
+      "flavour": "Served to every node at once."
+    },
+    {
+      "id": "sandman",
+      "name": "Sandman",
+      "base": "ring-zero-shell",
+      "level": 36,
+      "primary": {
+        "signal": 114,
+        "regen": 4.9
+      },
+      "downside": {
+        "regen": -2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "no-after"
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "It lands, and you sleep straight through it."
+    },
+    {
+      "id": "rubber-hose",
+      "name": "Rubber Hose",
+      "base": "sandbox-escape",
+      "level": 38,
+      "primary": {
+        "damage": [
+          52,
+          65
+        ]
+      },
+      "downside": {
+        "crit": -3
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage+",
+        "value": 6,
+        "scale": "reads",
+        "cap": 30
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "tells"
+        }
+      ],
+      "flavour": "Every secret it gave up makes the next one cheaper."
+    },
+    {
+      "id": "mirror-maze",
+      "name": "Mirror Maze",
+      "base": "domain-front",
+      "level": 40,
+      "primary": {
+        "signal": 227,
+        "reduction": 6
+      },
+      "effect": {
+        "when": "custom",
+        "do": "decoy-pass",
+        "value": 50
+      },
+      "sources": [
+        {
+          "kind": "native",
+          "tag": "ghostroot"
+        }
+      ],
+      "flavour": "Every mirror in here faces your way."
     }
   ]
 };

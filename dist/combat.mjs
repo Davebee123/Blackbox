@@ -38,8 +38,10 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
+import { situationOf } from './situations.mjs';
+import { fightNet, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 35; // v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 36; // v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -232,7 +234,7 @@ export function damageMultiplier(s, p, opts = {}) {
     if (classOf(s) === 'breaker') m *= 1 + momentumBonus(s);
     if (hasTalent(s, 'unsafe-mode')) m *= 1.3;
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
-    for (const x of fxFire(s, 'hit', { target: p, do: 'damage%' })) m *= 1 + x.value / 100;
+    for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
   }
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
   if (!opts.server) m *= classMult('dealt', s, p, opts);
@@ -469,12 +471,15 @@ export function listenCommand(s, text) {
   if (!postsOf(s)) return warn(s, 'Listening needs a Listening Post on a server you hold (a support building, from level 5).');
   if (!want) return emit(s, 'info', s.listen && UNIQUES[s.listen] ? `Listening for ${UNIQUES[s.listen].name}: ${Math.round((listenBoost(s) - 1) * 100)}% more often wherever it drops.` : 'Listening for nothing. Type listen <unique>, or pick one in the Collection.');
   const u = UNIQUES[want] || Object.values(UNIQUES).find((x) => x.name.toLowerCase() === want);
-  if (!u) return warn(s, `No unique called ${want}.`);
+  if (!u || (isNative(u.id) && !named(s, u.id))) return warn(s, `No unique called ${want}.`); // a native you haven't heard named stays ???
   if ((u.sources || []).every((src) => ['story', 'contract', 'store'].includes(src.kind))) return warn(s, `${u.name} is a reward, not a drop. Nothing to listen for.`);
   s.listen = u.id;
+  // A native unique (network.mjs): on its own network the usual boost; anywhere else the post lifts it off its network too.
+  if (isNative(u.id)) return emit(s, 'info', `Listening for ${u.name}: ${Math.round((listenBoost(s) - 1) * 100)}% more often on its network, and ${1 + postsOf(s)} times as often anywhere else.`);
   return emit(s, 'info', `Listening for ${u.name}: ${Math.round((listenBoost(s) - 1) * 100)}% more often wherever it drops.`);
 }
 function bossUnique(s, boss, level) {
+  if (BOSSES[boss]?.native) return nativeBossUnique(s, boss, level);
   const pool = bossUniques(boss);
   if (!pool.length) return;
   const name = BOSSES[boss]?.name || boss;
@@ -495,6 +500,33 @@ function bossUnique(s, boss, level) {
     (s.pity ||= {})[boss] = (s.pity[boss] || 0) + 1;
     emit(s, 'info', `No unique from ${name} this time. Next kill: ${Math.round(bossChance(s, boss) * 100)}%.`);
   }
+}
+// A native boss (network.mjs, its lair): its network's natives open at its level, at BOSS_LOOT's odds and pity
+// (kept per network), one you haven't found first. The first time it falls it names them all.
+export const lairKey = (s, who) => 'lair:' + (who || '');
+export const lairChance = (s, who) => Math.min(1, BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[lairKey(s, who)] || 0));
+function nativeBossUnique(s, boss, level) {
+  const who = fightNet(s), name = BOSSES[boss].name, pool = lairUniques(s, who, level), key = lairKey(s, who);
+  lairFell(s, who);
+  if (!pool.length) return;
+  const heard = pool.includes(s.listen) && postsOf(s) ? listenBoost(s) : 1;
+  if (rand(s) < Math.min(1, lairChance(s, who) * heard)) {
+    (s.pity ||= {})[key] = 0;
+    const fresh = pool.filter((id) => !s.collection?.[id]), from = fresh.includes(s.listen) ? [s.listen] : fresh.length ? fresh : pool;
+    const it = uniqueItem(UNIQUES[from[Math.floor(rand(s) * from.length)]], level, () => rand(s));
+    it.home = { name: nameOf(s, who), who };
+    addItem(s, it, `${name} drops: `);
+  } else {
+    (s.pity ||= {})[key] = (s.pity[key] || 0) + 1;
+    emit(s, 'info', `No native unique from ${name} this time. Next kill: ${Math.round(lairChance(s, who) * 100)}%.`);
+  }
+}
+// After a kill on a network: maybe one of its native uniques (network.mjs, on its own dice). A guard's goes in your pack.
+function nativeDrop(s, e, pack = false) {
+  const it = nativeRoll(s, fightNet(s, e), e.virus.level, e.virus.elite || e.virus.boss ? 3 : 1, e.virus.level);
+  if (!it) return;
+  if (pack && s.run) { s.run.pack.push({ path: `${e.room}/#native-${e.seed}-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item: it }); emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(it)}, native to ${it.home?.name || 'another network'}. In your pack until you jack out.`, { item: it, pack: true, rarity: it.rarity }); }
+  else addItem(s, it, `Native to ${it.home?.name || 'another network'}: `);
 }
 // An elite's unique: any world drop (SPRAWL, vaults, guards, rogue servers) up to its level, wherever
 // it was written to drop. Story, contract, store and strain uniques stay where they belong.
@@ -558,6 +590,7 @@ export function giveUnique(s, id, why = 'Reward: ') {
 // ---------- unique effects ----------
 // Each loaded unique's effect (blocks from content/items.mjs). fxCond: does its condition hold now?
 // A blue's or a yellow's rule (gear.mjs RULES) runs the same way, at its item's value; the same rule twice counts once, at its best.
+// Policy Engine (a native unique, rule-amp): every rule's number counts that much more.
 const uniqueFx = (s) => {
   const out = [], rules = {};
   for (const it of loaded(s)) {
@@ -565,6 +598,8 @@ const uniqueFx = (s) => {
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
   }
+  const amp = out.find((x) => x.fx.do === 'rule-amp');
+  if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100) * 10) / 10;
   return out.concat(Object.values(rules));
 };
 const telling = (s, p) => !!tellsOf(s)?.list.some((t) => t.told && (!p || t.part === p.id));
@@ -588,12 +623,17 @@ function fxCond(s, fx, ctx = {}) {
     case 'below-half': return d().integrity < d().max / 2;
     case 'below-20': return d().integrity < d().max * 0.2;
     case 'crit': return !!ctx.crit;
+    case 'target-open': return !!p && !!e && p.openUntil >= e.cycle;
+    case 'target-locked': return !!p && (p.lockHp > 0 || livingParts(s).some((x) => x.ward === p.id));
+    case 'target-loud': return !!p && (!!p.loud || (!!p.enrage && p.integrity < p.max / 2) || (e?.virus.buffs?.loud ?? -1) >= (e?.cycle ?? 0));
+    case 'target-fragment': return !!p && p.kind === 'fragment';
+    case 'moment': return !!ctx.cmd && !!situationOf(s, ctx.cmd);
     default: return false;
   }
 }
 const fxScale = (s, fx) => {
   const e = s.encounter;
-  const k = fx.scale === 'cycles' ? Math.max(0, (e?.cycle || 1) - 1) : fx.scale === 'contracts' ? (s.mail?.jobs || []).filter((j) => !j.done).length : fx.scale === 'broken' ? e?.breaks || 0 : 1;
+  const k = fx.scale === 'cycles' ? Math.max(0, (e?.cycle || 1) - 1) : fx.scale === 'contracts' ? (s.mail?.jobs || []).filter((j) => !j.done).length : fx.scale === 'broken' ? e?.breaks || 0 : fx.scale === 'reads' ? e?.metrics?.reads || 0 : 1;
   const v = (Number(fx.value) || 0) * k;
   return fx.cap ? Math.min(fx.cap, v) : v;
 };
@@ -620,13 +660,15 @@ export function fxFire(s, when, ctx = {}, spend = true) {
   return out;
 }
 const fxHas = (s, what) => uniqueFx(s).find((x) => x.fx.do === what) || null;
+export const fxOn = fxHas; // tells.mjs: Canary Token, Read Receipt, Reflector, Write Blocker, Hush Money, Sandman
 export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name}: ${fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
 // What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).
-export function fxAnswer(s) {
+export function fxAnswer(s, p = null) {
   const e = s.encounter;
   if (!e) return;
   for (const x of fxFire(s, 'answer')) {
     const who = x.name || x.it.name;
+    if (x.fx.do === 'read-hit' && alive(p) && !e.reading) { e.reading = true; hit(s, p, x.value, { by: who }); e.reading = false; } // Ping of Death: the part you read takes it
     if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who}: your cooldowns drop by ${x.value}.`); }
     if (x.fx.do === 'heal') heal(s, x.value, who);
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who}: shield ${e.shield}.`, { mark: 'shield' }); }
@@ -672,12 +714,14 @@ export function gainCode(s, gains, why = '') {
   emit(s, 'code', `${why}${parts.map(([k, n]) => `+${n} ${MATERIALS[k].name}`).join(', ')}.`, { gains: Object.fromEntries(parts) });
 }
 // What a kill of a family at a level drops (Scavenge adds to it).
+// On a network rich in a code, part of it comes as that code (network.mjs biasCode); a guard's goes in your pack and
+// leans when you bank it. A network rich in Exploits drops them more often.
 function codeFrom(s, family, level, source) {
-  const k = codeOf(family);
+  const k = codeOf(family), who = fightNet(s);
   const out = {};
   if (k) out[k] = Math.round(codeDrop(level) * (source === 'guard' ? 1.5 : 1) * (1 + gearStat(s, 'scavenge', 'hacker') / 100) * outbreakMult(s, family));
-  if (rand(s) < EXPLOIT_CHANCE[source]) out.exploit = 1;
-  return out;
+  if (rand(s) < EXPLOIT_CHANCE[source] * richMult(s, who, 'exploit')) out.exploit = 1;
+  return source === 'guard' ? out : biasCode(s, who, out);
 }
 
 // ---------- buyout ----------
@@ -1465,6 +1509,7 @@ export function finish(s, result) {
       const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || findLocation(s, e.process)?.depth || 1, family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite, rolls: e.virus.elite || e.virus.boss ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
+      nativeDrop(s, e); // network.mjs: its own dice
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
       if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
       if (lead) addLead(s, e.virus.family, lead);
@@ -1492,6 +1537,7 @@ export function finish(s, result) {
         s.run.pack.push({ path: `${e.room}/#drop-${e.seed}-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item });
         emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true });
       }
+      if (s.run) nativeDrop(s, e, true); // network.mjs: its own dice, into your pack
       if (s.run && rand(s) < DAEMON_DROPS.guard) {
         s.run.pack.push({ path: `${e.room}/#dm-${e.seed}-${s.serial}`, name: 'daemon.exe', kind: 'daemon', size: '96k' });
         emit(s, 'drop', `${e.virus.name} dropped a daemon. In your pack until you jack out.`, { pack: true });
@@ -1527,6 +1573,7 @@ export function finish(s, result) {
     if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports', 'fight'); }
     const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1 }, e.virus.level);
     if (item) addItem(s, item);
+    nativeDrop(s, e); // network.mjs: its own dice
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
     if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
     if (inv) invaderDown(s, inv); // the next of a pack steps up, or the bounty (invasion.mjs)
@@ -1738,6 +1785,17 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^(attach|detach) \S+$/.test(text)) {
     const [verb, id] = text.split(' ');
     memoryCommand(s, verb, id, now);
+  } else if (/^developer network \d+$/.test(text)) { // network.mjs: another seed (your lair rolls again)
+    s.netSeed = Number(text.split(' ')[2]) >>> 0 || 1;
+    s.locations = s.locations.filter((l) => !l.lair || l.member);
+    s.netPity = {};
+    emit(s, 'info', `Developer: network seed ${s.netSeed}.`);
+  } else if (text === 'developer lair') {
+    if (!openLair(s, true)) warn(s, s.netSeed ? 'Your lair is already on the map.' : 'No network seed.');
+  } else if (/^developer native \S+$/.test(text)) {
+    const id = text.split(' ')[2];
+    if (!isNative(id)) warn(s, `No native unique called ${id}.`);
+    else { nameNative(s, id); giveUnique(s, id, 'Developer: '); }
   } else if (text === 'developer finish') {
     if (!s.install) warn(s, 'Nothing is installing.');
     else { s.install.doneAt = now; tickServices(s, now); }
@@ -1791,6 +1849,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     fleetCommand(s, text);
   } else if (/^event( |$)/.test(text)) {
     eventCommand(s, text);
+  } else if (/^network( |$)/.test(text)) {
+    networkCommand(s, text); // network.mjs: your network's signature, or a member's
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
   } else if (text.startsWith('outpost ')) {
@@ -1973,7 +2033,9 @@ export function hit(s, p, base, opts = {}) {
   // (never your last point). Burns, helpers and your server's hits get through.
   const decoy = mirrorOn(s);
   const root = opts.mine && !opts.server && (buffed(e, 'sudo') || opts.unlock); // Sudo (Overclocker): the parts' rules don't hold you; Zero-day goes through locks
-  if (decoy && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0 && !buffed(e, 'sudo')) {
+  const maze = decoy && opts.mine && !opts.dot && !opts.by && !opts.server && fxHas(s, 'decoy-pass'); // Mirror Maze (a native unique): it lets you through
+  if (maze && base > 0 && !buffed(e, 'sudo')) { base = Math.max(1, Math.round((base * maze.fx.value) / 100)); emit(s, 'status', `${maze.it.name}: through the ${decoy.name}'s mirror at ${maze.fx.value}%.`, { target: p.id }); }
+  else if (decoy && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0 && !buffed(e, 'sudo')) {
     const back = Math.min(Math.max(1, Math.round(base * CONFIG.mirrorBounce)), defender(s).integrity - 1);
     const took = back > 0 ? takeDamage(s, back, decoy.id, `${decoy.name} mirror`) : 0;
     emit(s, 'status', `Mirrored by the ${decoy.name}: your command does nothing.`, { target: p.id });
@@ -2025,8 +2087,9 @@ export function hit(s, p, base, opts = {}) {
   let dealt = Math.min(p.integrity, raw);
   const notes = [];
   // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything.
+  const crush = opts.mine && !opts.server ? 1 + (fxHas(s, 'lock-crush')?.fx.value || 0) / 100 : 1; // Lockpick (a native unique): locks and wards give way faster
   if (dealt > 0 && !root && livingParts(s).some((x) => x.ward === p.id)) {
-    const cap = Math.max(1, Math.round(p.max * CONFIG.ward)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
+    const cap = Math.max(1, Math.round(p.max * CONFIG.ward * crush)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
     const was = dealt;
     dealt = Math.max(0, Math.min(dealt, cap - used));
     p.wardAt = e.cycle; p.wardUsed = used + dealt;
@@ -2035,8 +2098,8 @@ export function hit(s, p, base, opts = {}) {
   // Mutex: while it lives, the part it locks carries a shield (its lock) that takes the hit first.
   let unlocked = false;
   if (dealt > 0 && !root && p.lockHp > 0 && livingParts(s).some((x) => x.lock === p.id)) {
-    const soak = Math.min(p.lockHp, dealt);
-    p.lockHp -= soak; dealt -= soak;
+    const soak = Math.min(p.lockHp, Math.ceil(dealt * crush)), spent = Math.min(dealt, Math.ceil(soak / crush));
+    p.lockHp -= soak; dealt -= spent;
     notes.push(`lock: ${soak} held`);
     if (!p.lockHp) { p.lockAt = e.cycle + CONFIG.mutex.every; unlocked = true; }
   }
@@ -2100,6 +2163,7 @@ function bossPhases(s) {
         if (parts(s).some((x) => x.id === p.id)) { p.id += '2'; p.name += ' II'; if (p.reflect) p.reflectOff = Math.floor(p.reflect / 2); }
         if (p.attack) { p.attack.amount = Math.max(1, Math.round(p.attack.amount * v.power)); p.attack.due = e.cycle + 1; }
         v.parts.push(p);
+        if (p.lock) { const t = part(s, p.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } } // a Mutex that joins locks its part at once
       }
     }
     emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${ph.say}`, { boss: v.boss });
@@ -2133,15 +2197,17 @@ function breakPart(s, p) {
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
   const tw = twinOf(s, p);
-  if (tw && alive(tw) && (p.reboots || 0) < CONFIG.twinReboot.max && !p.quiet) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
+  if (tw && alive(tw) && (p.reboots || 0) < CONFIG.twinReboot.max && !p.quiet && !fxHas(s, 'no-reboot')) { p.rebootAt = e.cycle + CONFIG.twinReboot.in; emit(s, 'status', `${p.name} is down, but its twin ${tw.name} will reboot it in ${CONFIG.twinReboot.in} cycles. Break both.`, { target: p.id }); }
   // Breaker Momentum: a stack per break (up to SKILLS.momentumMax), for SKILLS.momentumCycles cycles after the last one.
   if (p.kind !== 'fragment' && classOf(s) === 'breaker') e.momentum = { stacks: Math.min(SKILLS.momentumMax, momentumStacks(s) + 1), until: e.cycle + SKILLS.momentumCycles };
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
   if (hasTalent(s, 'cascade-failure') && !e.once.rampage) { e.once.rampage = true; e.readyAt = {}; emit(s, 'status', 'Cascade Failure: cooldowns reset.'); }
   classEach('broke', s, p);
   // Uniques that fire on a break (Cryptominer, Zero Cool).
-  for (const x of fxFire(s, 'break', { crit: e.lastCrit })) {
+  for (const x of fxFire(s, 'break', { crit: e.lastCrit, target: p })) {
     const who = x.name || x.it.name;
+    // Kill Chain (a native unique): the next part to attack is Open, as if you'd read it.
+    if (x.fx.do === 'break-open') { const t = soonestAttacker(s, p.id); if (alive(t) && t !== p && t.kind === 'system') { t.openUntil = Math.max(t.openUntil || 0, e.cycle + x.value); emit(s, 'read', `${who}: the ${t.name} is open.`, { target: t.id, open: true }); } }
     if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who}: your cooldowns drop by ${x.value}.`); }
     if (x.fx.do === 'refund-skill' && e.lastSkill) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${who}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); }
     if (x.fx.do === 'heal') heal(s, x.value, who);
@@ -2165,7 +2231,7 @@ function breakPart(s, p) {
     if (next) { e.virus.weakPoint = next.id; e.virus.weakKnown = false; }
     if (wasKnown && next && usable(s).includes('scan')) emit(s, 'info', 'A new weak point formed. Scan to find it.');
   }
-  if (p.loot && rand(s) < CONFIG.salvageChance) {
+  if (p.loot && rand(s) < CONFIG.salvageChance * richMult(s, fightNet(s), 'salvage')) { // a network rich in salvage (network.mjs)
     s.salvage.push({ name: p.loot, virus: e.virus.name, seed: e.seed });
     e.metrics?.loot?.push(p.loot);
     emit(s, 'loot', `${p.loot} recovered.`, { target: p.id });
@@ -2186,7 +2252,8 @@ function breakPart(s, p) {
     if (frags.length) emit(s, 'broken', `${frags.length === 1 ? 'Its fragment drops' : `All ${frags.length} fragments drop`} with the C2 Node.`, { target: frags[0].id, c2: true });
   }
   // Tripwire: break it while the others live and they go loud: harder hits, each attack a cycle sooner.
-  if (p.deadman && (buffed(e, 'sudo') || p.quiet)) emit(s, 'status', `The ${p.name} breaks without a sound: ${p.quiet ? 'the Logic Bomb took it clean' : 'root override'}.`, { target: p.id });
+  const hush = p.deadman && !p.quiet && !buffed(e, 'sudo') && fxHas(s, 'quiet-trip'); // Quiet Wire (a native unique)
+  if (p.deadman && (buffed(e, 'sudo') || p.quiet || hush)) emit(s, 'status', `The ${p.name} breaks without a sound: ${p.quiet ? 'the Logic Bomb took it clean' : hush ? `${hush.it.name} cut it quietly` : 'root override'}.`, { target: p.id });
   else if (p.deadman) {
     const loud = livingParts(s).filter((x) => x.kind === 'system');
     for (const x of loud) {
@@ -2789,6 +2856,7 @@ export function stepCycle(s) {
   const landed = e.steps.landed;
   e.steps = null;
   if (e.virus.tells && tellLand(s)) return since(s, first);
+  if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return since(s, first); } // a hit back in the virus's half took its last part (Reflector)
   if (e.virus.raid && raidLand(s)) return since(s, first);
   cycleClose(s, landed);
   return since(s, first);
@@ -2979,6 +3047,7 @@ function endCycle(s, first) {
     if (strike(s, p)) return since(s, first);
   }
   if (s.encounter.virus.tells && tellLand(s)) return since(s, first); // the tells due now (tells.mjs)
+  if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return since(s, first); } // a hit back in the virus's half took its last part (Reflector)
   if (s.encounter.virus.raid && raidLand(s)) return since(s, first);
   cycleClose(s, landed);
   return since(s, first);
@@ -3299,7 +3368,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = structuredClone(raw);
     const was = s.version;
@@ -3429,6 +3498,7 @@ export function restore(raw) {
     invasionRestore(s, was); // v33: invasion kinds, bounties, signatures
     progressionRestore(s, was); // v34: one level; services, the specialty and greys folded away
     barRestore(s, was); // v35: the nine-key bar, and tells on one clock
+    networkRestore(s, was); // v36: every save's network gets a seed (network.mjs)
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts

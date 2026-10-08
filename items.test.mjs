@@ -14,7 +14,7 @@ const vet = () => { const s = fresh(); s.hackers = { breaker: { level: 30, xp: 0
 
 test('the written uniques have no mistakes', () => {
   assert.deepEqual(checkItems(ITEMS, BASES, STATS).filter((x) => x.bad).map((x) => x.msg), []);
-  assert.equal(Object.keys(UNIQUES).length, 68); // 30, two for each of the four bosses, nine leaning toward a class, KESSLER-FARM-00's eight, three only invasions carry, and ten world uniques for 18–40
+  assert.equal(Object.keys(UNIQUES).length, 95); // 30, two for each of the four bosses, nine leaning toward a class, KESSLER-FARM-00's eight, three only invasions carry, ten world uniques for 18–40, and the 27 native uniques networks roll (network.mjs)
 });
 
 test('effect blocks: damage when synced, a chit and a crit at the start, half the first hit', () => {

@@ -27,8 +27,8 @@
 //   list  [{ id, kind, name, part, told, said (cycle it was said), next (cycle it lands), n (a charge: the
 //         attack's landing it rides), after (the soonest the next one may land), wound, need, answer }]
 //   tier  the level tier's numbers (lead, live, mult, cap, dot, after), with an elite's or a boss's extra cap
-import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, previewDamage, alliesOf, fxAnswer, tellWeight } from './combat.mjs';
-import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES } from './data.mjs';
+import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, previewDamage, alliesOf, fxAnswer, tellWeight, fxOn } from './combat.mjs';
+import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { raidDef } from './raid.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
@@ -52,13 +52,14 @@ function findSource(v, def) {
   return [sys.find((x) => x.special), sys.find(isBasic), ...sys].find(fits) || null;
 }
 // The tells a virus could bring, in order: a strain's own charge and its lineage's cast and seal, else its family's (or guard's).
+// A native boss (BOSSES nb-*) brings its own set, or its strain's with the charge under the boss's name.
 function setOf(v) {
-  const st = v.strain && STRAINS[v.strain];
+  const st = v.strain && STRAINS[v.strain], boss = v.boss && BOSSES[v.boss];
   if (st?.tell) {
-    const own = { kind: 'charge', part: 'special', ...st.tell, id: 'strain' };
+    const own = { kind: 'charge', part: 'special', ...st.tell, ...(boss?.charge ? { name: boss.charge } : {}), id: 'strain' };
     return [own, ...(TELL_SETS[st.lineage] || []).slice(1).map((id) => ({ ...TELLS[id], id }))];
   }
-  return (TELL_SETS[v.family] || []).map((id) => ({ ...TELLS[id], id }));
+  return (TELL_SETS[v.boss] || TELL_SETS[v.family] || []).map((id) => ({ ...TELLS[id], id }));
 }
 // The tell a part powers up, for the codex (view.mjs partAbout): its name and kind, or null.
 export function partTells(v, p) {
@@ -116,7 +117,8 @@ function heavyAt(s, p, c) {
 function announce(s) {
   const e = s.encounter, T = tellsOf(s);
   if (!T || e.virus.dormant) return; // a Sleeper says nothing until it wakes
-  const c = e.cycle, lead = T.tier.lead, beats = T.list.filter((x) => x.kind === 'mimic');
+  // Canary Token (a native unique): a tell is announced further ahead, never past the board's last column.
+  const c = e.cycle, lead = Math.min(3, T.tier.lead + (fxOn(s, 'warn-early')?.fx.value || 0)), beats = T.list.filter((x) => x.kind === 'mimic');
   const clear = (t, x) => x >= t.after && !live(s, t).some((o) => o.next === x) && !beats.some((b) => alive(sourceOf(s, b)) && beatAt(b, x));
   for (const t of [...T.list].sort((a, b) => a.after - b.after)) {
     if (t.told) continue;
@@ -218,13 +220,14 @@ function read(s, t, p, { open = false, skill = null } = {}) {
   const e = s.encounter;
   tally(s, t, 'read');
   if (open && alive(p)) {
-    p.openUntil = Math.max(p.openUntil || 0, e.cycle + TELL.open.cycles - 1);
-    emit(s, 'read', `READ: the ${p.name} is open. It takes +${Math.round((TELL.open.mult - 1) * 100)}% from everyone for ${cycles(TELL.open.cycles)}.`, { target: p.id, tell: t.id, open: true });
+    const n = TELL.open.cycles + (fxOn(s, 'open-long')?.fx.value || 0); // Read Receipt (a native unique): Open lasts longer
+    p.openUntil = Math.max(p.openUntil || 0, e.cycle + n - 1);
+    emit(s, 'read', `READ: the ${p.name} is open. It takes +${Math.round((TELL.open.mult - 1) * 100)}% from everyone for ${cycles(n)}.`, { target: p.id, tell: t.id, open: true });
   } else if (skill && ABILITIES[skill]) {
     delete e.readyAt[skill];
     emit(s, 'read', `READ: ${ABILITIES[skill].name} is ready again.`, { target: p?.id, tell: t.id, ability: skill });
   }
-  fxAnswer(s); // gear that fires when you call off a tell (Retry Loop, Abort Handler, Ctrl-C…)
+  fxAnswer(s, p); // gear that fires when you call off a tell (Abort Handler, Ctrl-C, Ping of Death…)
 }
 // A tell is done (it landed, or it was answered): the next one may land `rest` cycles on, give or take.
 function rest(s, t, from, answered = false) {
@@ -266,9 +269,11 @@ function chargeAttack(s, t, p) {
 // After-effects: a tell that lands leaves something behind (from level 6; the tier's `after` cycles).
 // Corrupted: a charge that got through leaves damage on you for 3 cycles (the tier's burn of your max a cycle),
 // until it runs out or you cleanse it (Purge, Scrub, Rollback).
+// Sandman (a native unique): a tell that lands leaves nothing behind.
+const clean = (s) => !!fxOn(s.host || s, 'no-after');
 function corrupt(s, t, p) {
   const k = tellsOf(s).tier.burn;
-  if (!k) return;
+  if (!k || clean(s)) return;
   const amount = Math.max(1, Math.round(defender(s).max * k));
   s.encounter.corrupt = { name: t.name, amount, left: 3, source: p.id };
   emit(s, 'status', `${label(t)} leaves you Corrupted: −${amount} a cycle for 3 cycles. Purge or Scrub cleans it.`, { source: p.id, tell: t.id, mark: 'corrupt' });
@@ -276,14 +281,14 @@ function corrupt(s, t, p) {
 // Your last skill (not Spike or SIGINT) is knocked offline: locked for that many cycles. From level 10 a charge or
 // a cast that lands hangs you too: your next command doesn't fire (tier.hang).
 function hang(s, t) {
-  if (!tellsOf(s).tier.hang) return;
+  if (!tellsOf(s).tier.hang || clean(s)) return;
   s.encounter.hung = s.encounter.cycle + 1;
   emit(s, 'status', `${label(t)} hangs your session: your next command won't fire.`, { tell: t.id, mark: 'hung' });
 }
 function lockLast(s, t, why) {
   const e = s.encounter, n = tellsOf(s).tier.after;
   const id = e.lastSkill && !['spike', 'sigint'].includes(e.lastSkill) ? e.lastSkill : null;
-  if (!n || !id || !ABILITIES[id]) return;
+  if (!n || !id || !ABILITIES[id] || clean(s)) return;
   e.readyAt[id] = Math.max(e.readyAt[id] || 0, e.cycle + n + 1);
   (e.locked ||= {})[id] = e.cycle + n;
   emit(s, 'locked', `${why}: ${ABILITIES[id].name} is knocked offline for ${cycles(n)}.`, { ability: id, tell: t.id, cycles: n });
@@ -329,9 +334,10 @@ export function tellLand(s) {
         p.maxArmor += 1; p.armor = p.maxArmor; p.patchAt = null;
         const re = livingParts(s).filter((x) => x !== p && x.maxArmor > 0 && x.armor < x.maxArmor);
         for (const x of re) { x.armor++; x.patchAt = null; }
-        const mine = T.tier.after && (e.chits || e.shield) ? ' Your ◆ and shield go with it.' : '';
+        const proof = !!fxOn(s, 'seal-proof'); // Write Blocker (a native unique): it writes nothing back to you
+        const mine = T.tier.after && !proof && (e.chits || e.shield) ? ' Your ◆ and shield go with it.' : '';
         if (mine) { e.chits = 0; e.shield = 0; }
-        if (T.tier.after) corrupt(s, t, p);
+        if (T.tier.after && !proof) corrupt(s, t, p);
         emit(s, 'patch', `${label(t)} goes through while the ${p.name} still wears ◆. It re-arms to ${p.armor} ◆${re.length ? `, and ${re.map((x) => x.name).join(' and ')} ${re.length === 1 ? 'gets' : 'each get'} a ◆ back` : ''}.${mine}`, { target: p.id, tell: t.id, missed: true });
       } else {
         emit(s, 'blocked', `${label(t)} fails. The ${p.name} has no ◆ left to seal with.`, { source: p.id, tell: t.id, answered: true });
@@ -362,12 +368,12 @@ function advance(p, e) {
 }
 // A cast that compiled: a buff on the virus for TELL.castLasts cycles (a second one starts the clock over).
 function castLands(s, t, p) {
-  const v = s.encounter.virus, c = s.encounter.cycle, until = c + TELL.castLasts;
+  const v = s.encounter.virus, c = s.encounter.cycle, lasts = Math.max(1, TELL.castLasts - (fxOn(s, 'cast-short')?.fx.value || 0)), until = c + lasts; // Hush Money (a native unique): it ends sooner
   const fresh = !(v.buffs?.[t.does] >= c);
   (v.buffs ||= {})[t.does] = until;
   if (t.does === 'loud') {
     if (fresh) for (const x of attackers(s)) boost(x, TELL.loud);
-    emit(s, 'phase', `${label(t)} compiles. Every attack ${v.name} has hits ${Math.round((TELL.loud - 1) * 100)}% harder for ${TELL.castLasts} cycles.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. Every attack ${v.name} has hits ${Math.round((TELL.loud - 1) * 100)}% harder for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'grow') {
     const all = livingParts(s).filter((x) => x.kind === 'system' && !implanted(s, x)); // a Rootkit Implant stops it growing
     for (const x of all) { const n = Math.round(x.max * TELL.grow); x.max += n; x.integrity += n; }
@@ -375,7 +381,7 @@ function castLands(s, t, p) {
   } else if (t.does === 'haste') {
     // What's on the timeline stays where it is (nothing lands unannounced); the repeats after it come sooner.
     if (fresh) for (const x of attackers(s)) if (x.attack.interval > 2) { x.attack.hasted = true; x.attack.interval--; }
-    emit(s, 'phase', `${label(t)} compiles. For ${TELL.castLasts} cycles, every attack ${v.name} has repeats a cycle faster.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every attack ${v.name} has repeats a cycle faster.`, { target: p.id, tell: t.id, missed: true });
   }
 }
 const boost = (x, k) => { const a = x.attack; if (!a) return; if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * k)); if (a.hit) a.hit = Math.max(1, Math.round(a.hit * k)); };
@@ -415,6 +421,14 @@ function mimicLands(s, t, p) {
   const target = last && part(host, last.target);
   const direct = id ? mimicHit(host, id, target || p) / TELL.mimic : 0;
   if (!direct) { emit(s, 'blocked', `The ${p.name} plays back ${a ? a.name : 'nothing'}, and there's no hit in it to copy.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
+  // Reflector (a native unique): the playback lands on the Mimic instead, at a share of the hit.
+  const turn = fxOn(host, 'mimic-turn');
+  if (turn) {
+    tally(s, t, 'answered');
+    emit(s, 'blocked', `The ${p.name} plays your ${a.name} back, and ${turn.it.name} turns it on the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
+    hit(host, p, Math.max(1, Math.round((direct * turn.fx.value) / 100)), { by: turn.it.name, pierce: true });
+    return false;
+  }
   tally(s, t, 'landed');
   const amount = Math.max(1, Math.round(Math.min(TELL.ceiling * defender(host).max, direct * TELL.mimic)));
   emit(s, 'status', `The ${p.name} plays your ${a.name} back at you.`, { source: p.id, tell: t.id, missed: true });

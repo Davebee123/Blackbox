@@ -377,10 +377,15 @@ export const STRAIN_SHARE = 0.5;
 export const GRADES = { 1: { hp: 1, dmg: 1, armor: 0 }, 2: { hp: 1.15, dmg: 1.1, armor: 0 }, 3: { hp: 1.35, dmg: 1.25, armor: 0 } };
 export const gradeFor = (depth) => Math.min(3, Math.max(1, depth || 1));
 // What a server this deep sends: its grade, and maybe a strain (fixed by the seed).
-export function variantFor(family, level, depth, seed) {
+// native: the network's native strain (network.mjs), STRAIN_NATIVE times as likely as its family's others there.
+export const STRAIN_NATIVE = 5;
+export function variantFor(family, level, depth, seed, native = null) {
   const grade = gradeFor(depth);
   const pool = strainsFor(family, level, depth || 1), roll = rng((seed ^ 0x5bd1e995) >>> 0);
-  const strain = pool.length && roll() < STRAIN_SHARE ? pool[Math.floor(roll() * pool.length)] : null;
+  if (!pool.length || roll() >= STRAIN_SHARE) return { grade, strain: null };
+  const w = (k) => (k === native ? STRAIN_NATIVE : 1);
+  let r = roll() * pool.reduce((n, k) => n + w(k), 0), strain = pool.at(-1);
+  for (const k of pool) { r -= w(k); if (r < 0) { strain = k; break; } }
   return { grade, strain };
 }
 
@@ -626,6 +631,8 @@ const COLDWALLET = {
 // enrageAt every attack lands every cycle, a quarter harder. healerDmg (optional): damage that steps up by
 // level (runLate points). raid: a crew boss on the group boss framework (raid.mjs, the farm's three): its
 // phases are mechanics with target rules and telegraphs, and its own parts hit softly (dmg).
+// A strain boss (two parts, its strain's rule) is soft at 10 and hard to keep up with by 30: its hits step with level.
+const STRAIN_BOSS_LATE = [[8, 1], [10, 0.8], [18, 1.1], [30, 1.45]];
 export const BOSSES = {
   // The Resident (run.mjs /core): about two wins in three for a geared player at its level.
   resident: { name: 'Resident', hp: 1.4, dmg: 1, enrageAt: 18, phases: [{ at: 0.5, do: ['rearm'], say: 'The Resident re-arms every part.' }] },
@@ -641,7 +648,21 @@ export const BOSSES = {
   heatsink: { name: 'HEATSINK', family: 'worm', hp: 17, dmg: 0.45, enrageAt: 25, phases: [], raid: HEATSINK },
   coldwallet: { name: 'COLDWALLET', family: 'ghostroot', hp: 8, dmg: 0.45, enrageAt: 18, phases: [], raid: COLDWALLET },
   choir: { name: 'HOLLOW CHOIR', family: 'ghostroot', hp: 1.6, dmg: 1, enrageAt: 16, phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'The Hollow Choir splits off a second Decoy, on the off-beat: now it mirrors you two cycles in four.' }] },
+  // Native bosses (network.mjs): each network rolls one of these for its lair, a rogue server of its own. Solo bosses
+  // on the tells framework: every tell open at their level, a signature charge of their own (TELLS, TELL_SETS by id;
+  // a strain boss renames its strain's charge), a third part they always bring (third), and phases. Their drops are
+  // their network's native uniques (BOSS_LOOT odds and pity).
+  'nb-deadbolt': { name: 'DEADBOLT', family: 'ransomware', third: 'mutex', native: true, lair: 'DEADBOLT-VAULT', hp: 1.25, dmg: 1, enrageAt: 18, about: 'A Mutex locks its Encryptor. At 60% it re-arms, and at 30% a second Mutex throws a fresh lock.', phases: [{ at: 0.6, do: ['rearm'], say: 'DEADBOLT re-arms every part.' }, { at: 0.3, do: ['spawn:mutex'], say: 'DEADBOLT throws a second Mutex: the Encryptor is locked again.' }] },
+  'nb-tripmine': { name: 'TRIPMINE', family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'Its Tripwire (a Lockbox below level 20) sends the rest loud if it breaks first. At half every attack comes a cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard: every attack comes a cycle sooner.' }] },
+  'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', hp: 2.5, dmg: 1.3, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Hashrat boss: while its Miner lives your cooldowns tick every other cycle. At 60% it re-arms, at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'HASHLORD overclocks: every attack comes a cycle sooner.' }] },
+  'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half every attack comes a cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port: every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror: break it and the Replicator together.' }] },
+  'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss: its Patcher heals the most damaged part. At 60% it re-arms, at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot: every attack comes a cycle sooner.' }] },
+  'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss: its Flooder hits every cycle, harder each time, and a delay resets it. At half it re-arms.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
+  'nb-mirrorshade': { name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', hp: 1.5, dmg: 1.1, enrageAt: 17, about: 'A Mimic plays your commands back on its beat. At half it splits off a Decoy that mirrors you on the off-beat.', phases: [{ at: 0.5, do: ['spawn:decoy'], say: 'MIRRORSHADE splits off a Decoy: it mirrors you on the off-beat.' }] },
+  'nb-sleepwalker': { name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss: dormant until you hit it, then its Cell sounds the Alarm. At half it re-arms.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way: every part re-arms.' }] },
+  'nb-echolalia': { name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss: every hit that gets through repeats a cycle later at half. At 60% it re-arms, at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you: every attack comes a cycle sooner.' }] },
 };
+export const NATIVE_BOSSES = Object.keys(BOSSES).filter((k) => BOSSES[k].native);
 export const ENRAGE = { dmg: 1.25, warn: 3 };
 // A loud run (connect <server> loud; called a hot run in the code): friction you choose. Every fight on it has more Integrity and hits
 // harder; every kill pays more XP and rolls for loot once more.
@@ -724,6 +745,11 @@ export const TELLS = {
   blacklist: { kind: 'seal', name: 'Blacklist', part: 'special' }, // Sentinel: the Lockout
   // The Mimic's beat (a part's nature, not counted against the tier's count): every 4 cycles from cycle 3.
   mimic: { kind: 'mimic', name: 'Mimic', part: 'mimic', first: 3, every: 4 },
+  // Native bosses' signature charges (BOSSES nb-*): the family's charge, under the boss's own name.
+  deadbolt: { kind: 'charge', name: 'Deadbolt', part: 'special' },
+  claymore: { kind: 'charge', name: 'Claymore', part: 'basic' },
+  spamrun: { kind: 'charge', name: 'Spam Run', part: 'special', spawn: 1 },
+  doppelganger: { kind: 'charge', name: 'Doppelganger', part: 'special', longer: 2 },
 };
 // Which tells each virus brings, in order: a tier's count takes the first ones open at the virus's level
 // (a cast from TELL.castFrom; a seal from SEAL_FROM, on a part that wears ◆). Strains bring their own charge
@@ -739,6 +765,11 @@ export const TELL_SETS = {
   shredder: ['deepshred', 'callhome', 'overcharge'],
   bouncer: ['ram', 'callhome'],
   tracer: ['lockon', 'callhome', 'overcharge'],
+  // Native bosses on a family (a strain boss brings its strain's set, its charge renamed: BOSSES[id].charge).
+  'nb-deadbolt': ['deadbolt', 'extortion', 'overcharge', 'keyrotation'],
+  'nb-tripmine': ['claymore', 'extortion', 'fulldisk', 'keyrotation'],
+  'nb-backorifice': ['spamrun', 'selfupdate', 'overcharge', 'resync'],
+  'nb-mirrorshade': ['doppelganger', 'persistence', 'overcharge', 'godark'],
 };
 
 // Build a virus from a named fixture or a seeded random variant.
@@ -769,7 +800,8 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   // The third part: one of those open at its level (FAMILIES, pool 'third'), picked by its own hash of the
   // seed so it never moves the virus's other rolls. A boss keeps its family's first (the classic one).
   const pool = open.filter((spec) => spec.pool === 'third');
-  const third = pool.length ? pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
+  const own = overrides.boss && pool.find((spec) => spec.id === BOSSES[overrides.boss]?.third); // a native boss brings its own (data BOSSES nb-*)
+  const third = pool.length ? own || pool[overrides.boss ? 0 : (Math.imul((seed >>> 0) ^ 0x7f4a7c15, 2246822519) >>> 0) % pool.length] : null;
   const specs = open.filter((spec) => spec.pool !== 'third' || spec === third);
   const trim = specs.some((spec) => spec.from) ? CONFIG.thirdTrim : 1;
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * (spec.from ? 1 : trim), extra(spec) + (spec.special ? 0 : g.armor)));

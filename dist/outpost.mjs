@@ -21,6 +21,7 @@ import { items } from './hidden.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford, costLabel } from './salvage.mjs';
 import { archYield, archBandwidth, archNotice, archCredits } from './architecture.mjs';
 import { consortiumYield, consortiumBandwidth, memberHelp, roam, memberServers } from './consortium.mjs';
+import { nativeStrain } from './network.mjs';
 
 // What you can build. kind: producer (fills the store), defence, support. bw: bandwidth it takes.
 // cost: credits, code (of the server's family), salvage, Exploits. mins: real time to build.
@@ -369,7 +370,7 @@ function fightNatives(s, loc, why) {
   const seed = ((loc.seed * 7 + (s.serial || 0)) >>> 0) || 1;
   const mutation = loc.trait === 'hardened' ? 'armored' : null;
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  const { strain, grade } = variantFor(loc.family, loc.level || 1, loc.depth || 1, seed);
+  const { strain, grade } = variantFor(loc.family, loc.level || 1, loc.depth || 1, seed, nativeStrain(s, 'you'));
   selectEncounter(s, NATIVE[loc.family], seed, { level: loc.level || 1, mutation: mutation && MUTATIONS[mutation] ? mutation : null, strain, grade, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   s.gate = gate && gate !== s.encounter ? gate : null;

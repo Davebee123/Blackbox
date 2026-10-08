@@ -122,6 +122,11 @@ export const FX_IF = {
   'target-signature': "the target is the virus's signature part",
   'any-tell': 'a part is winding up a tell',
   charged: 'the hit is a tell landing',
+  'target-open': 'the target is Open (a tell you read)',
+  'target-locked': 'the target is behind a Mutex lock or a Lockbox ward',
+  'target-loud': 'the target has gone loud (a Tripwire, a Bricker\'s rage)',
+  'target-fragment': 'the target is a fragment',
+  moment: "the skill's moment is on the board",
 };
 // What each block does, which "when" it fits, and what it needs (value, stat).
 export const FX_DO = {
@@ -152,21 +157,35 @@ export const FX_DO = {
   'blind-short': { when: ['custom'], label: 'Scrambles on you last one cycle less' },
   'patch-slow': { when: ['custom'], label: 'bare parts patch their ◆ back X cycles later', value: true },
   'burn-jump': { when: ['custom'], label: 'burns on a part you break jump to the next part, with what they had left' },
+  // Native uniques (network.mjs): the tells and the part rules.
+  'read-hit': { when: ['answer'], label: 'the part you read takes X', value: true },
+  'break-open': { when: ['break'], label: 'the next part to attack is Open for X cycles', value: true },
+  'warn-early': { when: ['custom'], label: 'tells are announced X cycles further ahead', value: true },
+  'open-long': { when: ['custom'], label: 'parts you read stay Open X cycles longer', value: true },
+  'lock-crush': { when: ['custom'], label: 'your hits count X% more against a Mutex lock or a Lockbox ward', value: true },
+  'mimic-turn': { when: ['custom'], label: "the Mimic's playback hits the Mimic instead of you, at X%", value: true },
+  'no-reboot': { when: ['custom'], label: "a twin you break can't reboot" },
+  'seal-proof': { when: ['custom'], label: 'a seal that goes through leaves your ◆ and shield, and leaves you clean' },
+  'rule-amp': { when: ['custom'], label: 'your blue and yellow rules count X% more', value: true },
+  'quiet-trip': { when: ['custom'], label: 'a Tripwire you break stays quiet' },
+  'cast-short': { when: ['custom'], label: 'a cast that compiles lasts X cycles less', value: true },
+  'no-after': { when: ['custom'], label: 'a tell that lands leaves nothing behind: no key offline, no Corrupted, no Hung' },
+  'decoy-pass': { when: ['custom'], label: "the Decoy's mirror lets your commands through at X%, and nothing bounces back", value: true },
 };
-export const FX_SCALE = { '': 'flat', cycles: 'per cycle the fight has lasted', contracts: 'per contract you hold', broken: 'per part broken this fight' };
+export const FX_SCALE = { '': 'flat', cycles: 'per cycle the fight has lasted', contracts: 'per contract you hold', broken: 'per part broken this fight', reads: 'per tell you read this fight' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
   demolitionist: 'Breaker: Demolitionist', overclocker: 'Breaker: Overclocker', warden: 'Bastion: Warden', sysop: 'Bastion: Sysop',
   payload: 'Infiltrator: Payload', phantom: 'Infiltrator: Phantom', herder: 'Operator: Herder', hijacker: 'Operator: Hijacker' }; // a subclass lean: three times as likely for it, twice for its class
-export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)' };
+export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)', native: 'Native to a network (network.mjs: about ten times as likely on its home network, its lair boss, the Listening Post and darknet listings)' };
 
 // One line of plain text for an effect: "+25% damage when you fired in a Sync Window."
 export function fxText(fx, statName = (k) => k) {
   if (!fx?.do) return '';
   if (fx.text) return fx.text;
   const d = FX_DO[fx.do];
-  let what = (d?.label || fx.do).replace('X', fx.value ?? 'X');
+  let what = (d?.label || fx.do).replace('X', fx.value ?? 'X').replace(/\b1 cycles\b/, 'a cycle');
   if (fx.do === 'stat-x2') what = `${statName(fx.stat)} counts double`;
   if (fx.do === 'skill-cd') what = `${statName(fx.skill)} cools down ${fx.value} ${fx.value === 1 ? 'cycle' : 'cycles'} faster`;
   const scale = fx.scale ? ` ${FX_SCALE[fx.scale]}` : '';
@@ -204,7 +223,7 @@ export function checkItems(items, bases, stats) {
       if (d?.skill && !fx.skill) say(where, u.id, 'Pick which skill cools down faster.');
       if (fx.if && FX_IF[fx.if] === undefined) say(where, u.id, `Unknown condition "${fx.if}".`);
       if (fx.if === 'crit' && fx.when !== 'break') say(where, u.id, '"It was a crit" only works with "when you break a part".');
-      if (/^target-/.test(fx.if || '') && fx.when !== 'hit') say(where, u.id, 'Target conditions only work with "when you hit a part".');
+      if (/^target-/.test(fx.if || '') && !(fx.when === 'hit' || (fx.when === 'break' && fx.if === 'target-fragment'))) say(where, u.id, 'Target conditions only work with "when you hit a part" (and "the target is a fragment" with "when you break a part").');
       if (fx.limit === 'cooldown' && !(fx.cooldown > 0)) say(where, u.id, 'A cooldown needs minutes.');
       if (fx.limit === 'run' && fx.when === 'start') say(where, u.id, '"Once per run" with "when a fight starts" fires on the first fight only.', false);
     }

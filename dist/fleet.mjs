@@ -18,6 +18,7 @@ import { ratingAt, fragment } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
 import { HUBS, FACTION_FAMILY, hubWall, lockedDown } from './hubs.mjs';
 import { captured } from './factions.mjs';
+import { nativeStrain } from './network.mjs';
 
 export const FLEET = {
   firstMs: 45 * 60000, // logged-on time after your first outpost before the first fleet
@@ -151,7 +152,7 @@ export function fleetCommand(s, text) {
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
   // A swarm comes from past the outpost, so it's graded one layer deeper.
   const tgt = s.locations.find((l) => l.id === f.target);
-  const { strain, grade } = variantFor(f.family, f.level, f.hub ? 2 : (tgt?.depth || 1) + 1, (f.seed + f.ships * 7919) >>> 0);
+  const { strain, grade } = variantFor(f.family, f.level, f.hub ? 2 : (tgt?.depth || 1) + 1, (f.seed + f.ships * 7919) >>> 0, f.hub ? null : nativeStrain(s, 'you'));
   selectEncounter(s, f.key, (f.seed + f.ships * 7919) >>> 0, { level: f.level, mutation: f.mutation, strain, grade, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   s.gate = gate && gate !== s.encounter ? gate : null;

@@ -7,6 +7,10 @@
 //   bounty    A named virus, two levels up, is loose on one of your servers. Kill it for a bounty.
 //   outbreak  One family surges for a while: its kills drop double code.
 //   leak      Someone leaks the vault key of a server you've found but not taken.
+//   darknet   A broker lists a native unique from another network (network.mjs) for credits and Exploits.
+//
+// Your network's signature (network.mjs) leans the deck: its two favoured cards come up more often, and the
+// families of couriers, bounties and outbreaks lean toward its own.
 //
 // Pure: state in, events out.
 import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique } from './combat.mjs';
@@ -14,6 +18,7 @@ import { FAMILIES, CONFIG } from './data.mjs';
 import { rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
+import { eventMult, leanPick, openLair, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -34,7 +39,7 @@ export const CARDS = {
     name: 'Courier', weight: 3, ms: 15 * 60000, fight: true,
     where: (s) => places(s),
     // About one courier in DIRECTOR.named carries a unique you haven't found, by name: a lucky shot.
-    make: (s) => ({ family: pick(s, FAMS), level: hackerLevel(s), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
+    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
     text: (ev, where) => `LANTERN's courier ${ev.name} is carrying ${ev.unique ? `${UNIQUES[ev.unique].name}, a unique you haven't found,` : 'a dead drop'} through ${where}. Intercept it before it leaves to take ${ev.unique ? 'it' : 'the drop'}.`,
     reward: (ev) => `${credits(ev.level)} credits and ${ev.unique ? UNIQUES[ev.unique].name : 'a protocol'}`,
     won: (s, ev) => {
@@ -49,7 +54,7 @@ export const CARDS = {
     name: 'Bounty', weight: 2, ms: 25 * 60000, fight: true,
     where: (s) => places(s),
     // From level 8 the bounty is REPO MAN, a boss (BOSSES.repoman) at your level instead of a named virus two up.
-    make: (s) => (hackerLevel(s) >= 8 ? { family: 'ransomware', level: hackerLevel(s), name: 'REPO MAN', boss: 'repoman' } : { family: pick(s, FAMS), level: Math.min(CONFIG.maxMobLevel, hackerLevel(s) + 2), name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true }),
+    make: (s) => (hackerLevel(s) >= 8 ? { family: 'ransomware', level: hackerLevel(s), name: 'REPO MAN', boss: 'repoman' } : { family: fam(s), level: Math.min(CONFIG.maxMobLevel, hackerLevel(s) + 2), name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true }),
     text: (ev, where) => (ev.boss ? `Halcyon posted a bounty on REPO MAN, a level ${ev.level} ransomware boss loose on ${where}. It re-arms at 60% and gets desperate at 30%. Kill it before it moves on.` : `Halcyon posted a bounty on ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus loose on ${where}. Kill it before it moves on.`),
     reward: (ev) => `${bountyPay(ev.level)} credits and Halcyon standing`,
     won: (s, ev) => {
@@ -74,7 +79,7 @@ export const CARDS = {
   outbreak: {
     name: 'Outbreak', weight: 2, ms: 30 * 60000,
     where: () => [null],
-    make: (s) => ({ family: pick(s, FAMS) }),
+    make: (s) => ({ family: fam(s) }),
     text: (ev) => `A ${FAMILIES[ev.family].name.toLowerCase()} outbreak is spreading. For the next 30 minutes, ${FAMILIES[ev.family].name.toLowerCase()} kills drop double code.`,
   },
   leak: {
@@ -84,7 +89,19 @@ export const CARDS = {
     start: (s, ev, loc) => { loc.passwordKnown = true; },
     text: (ev, where) => `Someone leaked the vault key of ${where}. Its vault opens without the password now.`,
   },
+  // A native unique from another network, for sale (network.mjs): one of the slow ways to one that isn't yours.
+  // It names the unique, so a Listening Post can tune to it after.
+  darknet: {
+    name: 'Darknet listing', weight: 0.5, ms: 20 * 60000, from: 8, // NETWORK.darknet.from
+    where: (s) => (s.netSeed && hackerLevel(s) >= NETWORK.darknet.from && darknetPick(s, hackerLevel(s)) ? [null] : []),
+    make: (s) => { const id = darknetPick(s, hackerLevel(s)); return { unique: id, level: hackerLevel(s), credits: NETWORK.darknet.credits(hackerLevel(s)), exploits: NETWORK.darknet.exploits, net: homeName(s, id).name }; },
+    start: (s, ev) => nameNative(s, ev.unique),
+    text: (ev) => `A broker on a darknet channel lists ${UNIQUES[ev.unique].name}, native to ${ev.net}, for ${ev.credits} credits and ${ev.exploits} Exploits. event buy ${ev.id}.`,
+    reward: (ev) => UNIQUES[ev.unique].name,
+  },
 };
+// A family for an event on your network: its lean (network.mjs), on the director's own dice.
+const fam = (s) => leanPick(s, 'you', roll(s));
 const credits = (level) => 40 + 12 * level; // about two ordinary caches
 const bountyPay = (level) => 80 + 15 * level;
 // The director rolls its own dice (mulberry32 on the save), so dealing an event never shifts the
@@ -111,6 +128,7 @@ export const outbreakMult = (s, family) => (eventsOf(s).some((e) => e.card === '
 
 export function tickEvents(s, dt) {
   openFarm(s); // KESSLER-FARM-00 turns up at level 7 (rogue.mjs)
+  openLair(s); // your network's lair, from level 8 (network.mjs)
   const d = (s.director ||= { next: null, n: 0, last: null });
   for (const ev of [...eventsOf(s)]) {
     if (s.encounter?.event === ev.id && active(s)) continue; // the one you're fighting waits for you
@@ -131,8 +149,9 @@ export function deal(s, card = null) {
   const up = new Set(eventsOf(s).map((e) => e.card));
   const ids = (card ? [card] : Object.keys(CARDS).filter((k) => k !== d.last)).filter((k) => CARDS[k] && !up.has(k) && CARDS[k].where(s).length);
   if (!ids.length) return null;
-  let r = roll(s) * ids.reduce((n, k) => n + CARDS[k].weight, 0), id = ids[0];
-  for (const k of ids) { r -= CARDS[k].weight; if (r < 0) { id = k; break; } }
+  const w = (k) => CARDS[k].weight * eventMult(s, k); // your network's favoured cards (network.mjs)
+  let r = roll(s) * ids.reduce((n, k) => n + w(k), 0), id = ids[0];
+  for (const k of ids) { r -= w(k); if (r < 0) { id = k; break; } }
   const c = CARDS[id], spots = c.where(s).filter((l) => !l || !eventsAt(s, l.id).length);
   if (!spots.length) return null;
   const loc = pick(s, spots);
@@ -151,8 +170,15 @@ function end(s, ev, message) {
 
 // event fight <id>: go after a courier or a bounty, from its server's map card.
 export function eventCommand(s, text) {
+  const b = text.match(/^event buy (\d+)$/);
+  if (b) { // a darknet listing (network.mjs)
+    const ev = eventById(s, b[1]);
+    if (!ev || ev.card !== 'darknet') return warn(s, 'That listing is gone.');
+    if (darknetBuy(s, ev)) end(s, ev, null);
+    return;
+  }
   const m = text.match(/^event fight (\d+)$/);
-  if (!m) return warn(s, 'usage: event fight <id>');
+  if (!m) return warn(s, 'usage: event fight <id>, or event buy <id>');
   const ev = eventById(s, m[1]);
   if (!ev || !CARDS[ev.card].fight) return warn(s, 'That event is over.');
   if (s.run) return warn(s, 'Jack out first.');

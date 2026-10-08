@@ -14,6 +14,7 @@
 import { emit, hooks, hackerLevel, rollDrop, addItem, gainXp, xpFor } from './combat.mjs';
 import { FAMILIES, SERVER, variantFor, STRAINS } from './data.mjs';
 import { seeded } from './gear.mjs';
+import { nativeStrain, leanPick } from './network.mjs';
 
 export const ROOT = {
   max: 5,
@@ -95,10 +96,10 @@ export function rotate(s, loc, at, rooms) {
   const seed = ((loc.seed || 1) * 7919 + r.n * 104729) >>> 0, rnd = seeded(seed);
   const rare = rnd() < ROOT.rareChance;
   const fams = Object.keys(FAMILIES);
-  const family = rnd() < 0.5 ? loc.family : fams[Math.floor(rnd() * fams.length)];
+  const family = rnd() < 0.5 ? loc.family : leanPick(s, 'you', rnd()); // the other half leans with your network (network.mjs)
   // It keeps up with you inside the server's layer band (like a rogue server), rare ones 2 levels up.
   const level = Math.max(loc.level || 1, SERVER.locationLevel(hackerLevel(s), loc.depth || 1)) + (rare ? ROOT.rareLevels : 0);
-  const { grade, strain } = variantFor(family, level, loc.depth || 1, seed);
+  const { grade, strain } = variantFor(family, level, loc.depth || 1, seed, nativeStrain(s, 'you'));
   const room = rooms.length ? rooms[Math.floor(rnd() * rooms.length)] : '/';
   const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].name.toLowerCase();
   r.proc = { alive: true, room, family, level, seed, grade, strain, rare, ...(rare ? { until: at + ROOT.rareMs } : {}), name: `${rare ? 'rare-' : ''}${label}-${String(1000 + (seed % 9000)).slice(-4)}` };

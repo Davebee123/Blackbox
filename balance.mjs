@@ -1,8 +1,8 @@
 // Class balance by level: one scripted player per class, at points along the level curve.
 // Scripted policies, not people: they check the numbers are in the same league, not that it's fun.
 import fs from 'node:fs';
-import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, addItem, maxSignal, syncServer } from './dist/combat.mjs';
-import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat } from './dist/gear.mjs';
+import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, addItem, maxSignal, syncServer, UNIQUES } from './dist/combat.mjs';
+import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat, uniqueItem } from './dist/gear.mjs';
 import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS, SUBS, SUBCLASS, defaultSub, TELL } from './dist/data.mjs';
 
 import { planner, soonest } from './dist/planner.mjs';
@@ -64,6 +64,9 @@ export function build(s, cls, b, opts) {
       command(s, 'load ' + it.id);
     }
   }
+  // Uniques in place of the blue in their slot (opts.uniques: ids), at the bracket's level: the native-unique check
+  // (network.test.mjs) loads each one this way.
+  for (const id of opts.uniques || []) { const it = addItem(s, uniqueItem(UNIQUES[id], b.level, seeded(b.level * 7 + 3))); command(s, 'load ' + it.id); }
   syncServer(s);
   s.server.integrity = s.server.max;
 }
