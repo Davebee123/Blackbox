@@ -743,3 +743,16 @@ Phase 0 and phase 1. It makes what already exists legible as genes and authors, 
 | 12 | How much of the roster and ACTUARY's weights to show | Exact numbers. Bars and arrows. Names only. | Bars and arrows, with exact chances on hover. |
 | 13 | Tripwire's level | Keep 20. Open it at 16 so it's in band B with TRIPMINE's other parts. | 16. |
 | 14 | The Breaker at level 10 against three-part bosses | Fix in the bosses (lower floors and numbers). Fix in the class (a defensive tool before 12). | In the class pass. Every three-part solo boss shows it, so it isn't any one boss's fault. |
+
+## 14. The designer's decisions
+
+The designer approved the recommendations on the first seven open decisions:
+- Sectors hand over to a new author once finished, and a full reflash opens at completion.
+- A reflash costs that network's servers and outposts plus credits and Exploits, and keeps everything about you.
+- ACTUARY arrives as a level 26 story beat, holds one sector, and adapts weekly.
+- Lair bosses have their own loot plus a native roll.
+- Tells don't count toward the one-punishment-per-axis rule.
+- Implicits only appear on random rolls.
+- Only one 4-piece set bonus can be active.
+
+**What level a reflashed network is.** Classes keep their levels through a reflash, so the new network can't restart at level 1. A reflashed network is generated around your current level, the way a new zone opens at the level cap. Its layers band upward from your level with depth, and its lair and boss line sit at the top of that band. Each reflash also raises a **reflash tier** that the network carries. Every tier adds to the virus difficulty budget, raises implicit tiers, and lifts the item level of what drops, with a cap so it stays inside the balance bands. Repeat reflashes become a climb of their own instead of a reset. A reflash only opens at full completion, which in practice means late in the climb, so the new network starts near the top of the level range anyway.
