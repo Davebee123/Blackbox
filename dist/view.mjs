@@ -1027,14 +1027,24 @@ const filterStatSum = (s) => filtersOn(s).reduce((a, x) => a + (x.stats.strength
 // A holding's firewall in one compact block (an outpost, a hub you hold): its level, the line on
 // what it's vulnerable to against what comes for it (top: the highest level that does), its blocks,
 // and Upgrade, Defrag and harden.sh. arg: what the firewall commands take for it.
+// A holding's wall in a card row (an outpost, a hub): one status line (level, tier, what it lets through), then
+// its actions as equal tiles, each with its name on top and its cost under it.
 function fwRow(s, holder, arg, top, now = Date.now()) {
   const f = fwAt(s, holder), b = wallBands(s, ratingAt(s, holder, null, now)), c = upgradeCost(s, holder), busy = active(s) || !!s.run;
   const can = canPay(s, c);
   const state = b.blocks >= top ? 'ok' : b.holds >= top ? 'mid' : 'low', frag = fragLevels(s, holder), def = defragging(s, now, holder), hard = hardenLeft(s, now, holder);
-  const line = state === 'ok' ? `<span class="vuln ok" title="Up to level ${top} comes for it">Safe</span>` : `<span class="vuln ${state}" title="Blocks up to level ${b.blocks} and contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
-  const bad = new Set(SCATTER.slice(0, Math.floor(f.frag)));
-  return `<div class="fw-mini"><div class="fw-head"><span class="fw-tag">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${fwTier(s, holder)}${frag || def ? `<span class="tag warn">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : ''}${hard ? `<span class="tag you">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''}${line}</div>
-    ${fwActs(s, holder, arg, can, c, busy, def, now)}</div>`;
+  const line = state === 'ok' ? `<span class="fw-vuln ok" title="Up to level ${top} comes for it">Safe</span>` : `<span class="fw-vuln ${state}" title="Blocks up to level ${b.blocks} and contests up to ${b.holds}. Up to level ${top} comes for it.">Vulnerable to lv ${b.blocks + 1}+</span>`;
+  const mods = [frag || def ? `<span class="fw-mod warn" title="Fragmented">−${frag + (def ? FIREWALL.defragLoss : 0)}</span>` : '', hard ? `<span class="fw-mod you" title="harden.sh">+${FIREWALL.harden.plus} · ${fmtTime(hard)}</span>` : ''].join('');
+  const cmd = (v) => `firewall ${v}${arg ? ' ' + esc(arg) : ''}`, n = kitOf(s).harden || 0;
+  const t = fwTierOf(s, holder) + 1, nv = TIER_PERKS.find((p) => p.tier === t), dc = defragCost(s, holder);
+  const tile = (name, cost, command, ok, tip, cls = '') => `<button type="button" class="fw-act${cls ? ' ' + cls : ''}" data-command="${command}" ${ok ? '' : 'disabled'} title="${esc(tip)}"><span class="fa-name">${name}</span>${cost ? `<span class="fa-cost">${cost}</span>` : ''}</button>`;
+  const tiles = [
+    c && tile(`Upgrade to +${t}`, bcost({ credits: c.credits, cipher: c.cipher, worm: c.worm, kernel: c.kernel, sigs: c.sigs }), cmd('upgrade'), !busy && can, `One level more over the base, for good${nv ? `. ${nv.name}` : ''}${f.frag ? '. It leaves every block whole again' : ''}`, can ? 'primary' : ''),
+    (f.frag || def) && tile(def ? 'Defragmenting' : 'Defrag', def ? fmtLeft(f.defragUntil - now) : bcost({ credits: dc }), cmd('defrag'), !def && !busy && s.server.credits >= dc, `${FIREWALL.defragLoss} levels down while it runs`),
+    n ? tile('harden.sh', `<span class="fa-held">${n} held</span>`, cmd('harden'), !busy, `+${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours`)
+      : (s.sigs || 0) >= FIREWALL.harden.sigs && tile('harden.sh', bcost({ sigs: FIREWALL.harden.sigs }), cmd('harden'), !busy, `Write a harden.sh from signatures: +${FIREWALL.harden.plus} levels for ${FIREWALL.harden.ms / 3600000} hours`),
+  ].filter(Boolean).join('');
+  return `<div class="fw-row"><div class="fw-stat"><span class="fw-lv">${glyph('firewall')}<b>lv ${effLevel(s, now, null, holder)}</b></span>${fwTier(s, holder)}${mods}${line}</div>${tiles ? `<div class="fw-tiles">${tiles}</div>` : ''}</div>`;
 }
 // Open ports: a switch under the firewall's ruler. On, invasions come faster and pay more while you
 // play (invasion.mjs); they close when you log off.

@@ -3299,3 +3299,34 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 }
 .combat .board.dense .brow:not(.bhead) { min-height: 44px; }
 .combat .board.dense .brow { grid-template-columns: minmax(200px, 2.2fr) repeat(4, minmax(0, 1fr)); }
+
+/* A holding's wall in a card row (view.mjs fwRow): a status line, then equal action tiles (name over cost). */
+.fw-row { display: grid; gap: var(--s4); min-width: 0; }
+.fw-stat { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); font: 12px var(--mono); }
+.fw-stat .fw-lv { display: inline-flex; align-items: center; gap: var(--s2); color: var(--bright); }
+.fw-stat .fw-lv .glyph { width: 13px; height: 13px; margin: 0; }
+.fw-stat .tag { margin: 0; }
+.fw-mod { color: var(--muted); } .fw-mod.warn { color: var(--amber); } .fw-mod.you { color: var(--you); }
+.fw-vuln { display: inline-flex; align-items: center; gap: var(--s2); font: 600 11px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; }
+.fw-vuln::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.fw-vuln.ok { color: var(--you); } .fw-vuln.mid { color: var(--amber); } .fw-vuln.low { color: var(--hot); }
+.fw-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: var(--s3); }
+.fw-act { display: grid; align-content: start; gap: 3px; min-height: 46px; padding: 6px 10px; text-align: left; background: var(--inset); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-btn); cursor: pointer; }
+.fw-act .fa-name { font: 600 12px var(--mono); letter-spacing: 0.3px; }
+.fw-act .fa-cost { font: 11px var(--mono); color: var(--muted); }
+.fw-act .fa-cost .bcost { margin: 0; padding: 0; border: 0; gap: 6px; flex-wrap: wrap; font-size: 11px; opacity: 1; }
+.fw-act .fa-cost .bcost .glyph { width: 11px; height: 11px; }
+.fw-act.primary { border-color: var(--amber); }
+.fw-act.primary .fa-name { color: var(--amber); }
+.fw-act:hover:not(:disabled), .fw-act:focus-visible { border-color: var(--amber); background: rgba(241, 185, 47, 0.06); outline: none; }
+.fw-act:disabled { opacity: 0.5; cursor: default; }
+.fw-stat .fw-ver { padding: 0 5px; min-height: 0; font-size: 11px; line-height: 16px; }
+.fw-stat .fw-lv b { font: 600 13px var(--mono); }
+.fw-tiles { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+/* In a narrow row the tiles read best as a short list: the action on the left, its price on the right. */
+.fw-tiles { grid-template-columns: 1fr; gap: var(--s2); }
+.fw-act { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); min-height: 34px; padding: 5px 10px; }
+.fw-act .fa-cost { text-align: right; }
+.fw-act { flex-wrap: wrap; row-gap: 2px; }
+.fw-act .fa-name { white-space: nowrap; }
+.fw-act .fa-cost { margin-left: auto; }
