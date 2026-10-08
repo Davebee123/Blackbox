@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import { fresh, selectEncounter, command, resolveCycle, active, livingParts, attackers, readyIn, intents, alive, part, defender, toIntent, previewDamage, ignoresArmor, addItem, maxSignal, syncServer, UNIQUES } from './dist/combat.mjs';
 import { rollItem, seeded, protocolSlots, SLOT_KINDS, chaseStat, uniqueItem } from './dist/gear.mjs';
-import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS, SUBS, SUBCLASS, defaultSub, TELL } from './dist/data.mjs';
+import { ARCHETYPES, SERVER, skillOrder, LOADOUT, STRAINS, SUBS, SUBCLASS, defaultSub, TELL, BOSSES } from './dist/data.mjs';
 
 import { planner, soonest } from './dist/planner.mjs';
 
@@ -79,7 +79,7 @@ export function fight(policy, key, b, opts = {}) {
   const guard = opts.mode === 'run';
   if (guard) s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
   const startHp = guard ? s.run.max : s.server.max; // health lost is a share of your own max
-  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}) } : guard ? { mode: 'run', room: '/sim', level: SERVER.locationLevel(b.level, opts.depth || 1) } : {});
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}) } : guard ? { mode: 'run', room: '/sim', level: SERVER.locationLevel(b.level, opts.depth || 1) } : {});
   if (s.encounter) s.encounter.soft = 1; // measure the class, not SPRAWL's mercy for new players (CONFIG.zone.starterHit)
   command(s, 'engage');
   const uses = {};
@@ -113,6 +113,52 @@ export function score(policy, b, opts = {}) {
 
 // The fights that should hurt: every strain open at this level, grade 2 wilds, and wilds 2 levels up.
 export const strainsAt = (level) => Object.keys(STRAINS).filter((k) => STRAINS[k].from <= level);
+
+// ---------- kits (docs/kits.md): presets, press shares and the sets each build is for ----------
+// A bracket at any level (the deepest layer of the nearest one).
+export const at = (L) => ({ ...BRACKETS.filter((x) => x.level <= L).at(-1), name: 'Lv ' + L, level: L, server: L });
+export const policyOf = (sub) => { const c = SUBS[sub].cls; return c[0].toUpperCase() + c.slice(1); };
+// Press shares of a set of fights (holds left out), and effective keys: one over the sum of squared shares,
+// Spike and SIGINT included (docs/progression.md).
+export function presses(rs) {
+  const uses = {};
+  for (const r of rs) for (const [k, v] of Object.entries(r.uses || {})) if (k !== 'hold') uses[k] = (uses[k] || 0) + v;
+  const total = Object.values(uses).reduce((a, n) => a + n, 0) || 1;
+  const share = Object.fromEntries(Object.entries(uses).map(([k, v]) => [k, v / total]));
+  return { share, keys: 1 / Object.values(share).reduce((a, x) => a + x * x, 0), spike: share.spike || 0 };
+}
+// The class-balance fights (score) as a list, for press shares: 20 wilds and the four guards.
+export function generic(policy, b, opts = {}) {
+  return [...Array.from({ length: 20 }, (_, i) => fight(policy, 'random', b, { ...opts, seed: i + 1, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].map((g) => fight(policy, g, b, { ...opts, mode: 'run', depth: b.depth }))];
+}
+// The fights each shipped conditional build is for (docs/kits.md section 4, "For"), and a generic set of wilds.
+const bossFight = (id) => ({ boss: id, family: BOSSES[id].family, strain: BOSSES[id].strain });
+const many = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+export const MATCHED = {
+  swarm: [...many(6, (i) => ({ family: 'worm', seed: 10 * i })), { strain: 'overrun', seed: 100 }, { guard: 'crawler', seed: 1 }, bossFight('relayking'), bossFight('nb-backorifice')],
+  rules: [...many(4, (i) => ({ family: 'ransomware', seed: 10 * i + 3 })), ...many(2, (i) => ({ family: 'ghostroot', seed: 10 * i + 5 })), bossFight('nb-deadbolt'), bossFight('nb-tripmine'), bossFight('nb-mirrorshade')],
+  healers: [{ strain: 'patchwork', seed: 300 }, { strain: 'patchwork', seed: 310 }, { strain: 'leech', seed: 400 }, { strain: 'leech', seed: 410 }, bossFight('nb-patchday'), ...many(4, (i) => ({ family: 'worm', seed: 10 * i + 7 }))],
+  ghostroot: [...many(6, (i) => ({ family: 'ghostroot', seed: 10 * i + 1 })), bossFight('choir'), bossFight('nb-mirrorshade')],
+  hijack: [{ strain: 'patchwork', seed: 300 }, { strain: 'leech', seed: 400 }, bossFight('nb-patchday'), ...many(3, (i) => ({ family: 'ghostroot', seed: 10 * i + 5 })), bossFight('nb-mirrorshade'), { strain: 'echo', seed: 500 }, bossFight('nb-echolalia')],
+  guards: ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer'].flatMap((g) => [{ guard: g, seed: 1 }, { guard: g, seed: 11 }]),
+  generic: [...many(4, (i) => ({ family: 'ransomware', seed: 10 * i + 9 })), ...many(4, (i) => ({ family: 'ghostroot', seed: 10 * i + 9 })), { family: 'worm', seed: 909 }, { family: 'worm', seed: 919 }],
+};
+// Which set a subclass's shipped conditional build is for.
+export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 'swarm', sysop: 'healers', payload: 'swarm', phantom: 'ghostroot', herder: 'swarm', hijacker: 'hijack' };
+// The solo band per subclass (docs/kits.md 9: per mode, per subclass), in Signal lost on the class-balance fights.
+// A subclass leans solo or crew (SUBS[sub].lean). The Bastions lean crew and pay for it alone in pace, not Signal:
+// their kills are slow (about twice as many cycles a fight), and they heal or shield it back, so they may sit
+// under the band's floor. Every subclass stays under its ceiling.
+export const soloBand = (sub) => (sub && SUBS[sub].cls === 'bastion' ? [0, 50] : [15, 50]);
+// Average Signal lost (capped at 100) playing a bar over a set, each fight on `seeds` seeds.
+export function setScore(sub, b, bar, set, seeds = [1, 2]) {
+  const pol = policyOf(sub), rs = [];
+  for (const f of set) for (const sd of seeds) {
+    const { guard, seed = 0, ...rest } = f;
+    rs.push(guard ? fight(pol, guard, b, { sub, bar, seed: seed + sd, mode: 'run', depth: b.depth }) : fight(pol, 'random', b, { sub, bar, mode: 'run', zone: true, mutation: null, ...rest, seed: seed + sd }));
+  }
+  return { lost: rs.reduce((a, r) => a + Math.min(100, r.lostPct), 0) / rs.length, wins: rs.filter((r) => r.win).length, total: rs.length, rs };
+}
 export function hardScore(policy, b, opts = {}) {
   const runs = [
     ...strainsAt(b.level).map((strain, i) => fight(policy, 'random', b, { ...opts, seed: 100 + i, mode: 'run', zone: true, strain })),

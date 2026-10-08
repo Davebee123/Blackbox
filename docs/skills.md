@@ -1,10 +1,10 @@
 # Skills that read the board
 
-This pass gave every subclass skill a moment on the board that it is built for, and taught the bots to press it then. Before it, several skills were flat numbers that the planner pressed whenever they were off cooldown, a few made the bot play worse, and Spike carried the Warden, the Sysop and the Herder. The code is in dist/data.mjs and dist/classes/*.data.mjs (the numbers and the text), dist/classes/*.mjs (what each skill does and each subclass's planner), and dist/situations.mjs (the moment each key lights up for).
+This pass gave every subclass skill a moment on the board that it is built for, and taught the bots to press it then. The kit pass that followed (docs/kits.md, section 10) grew each line to eleven skills, moved several of the skills below to new levels and changed some of their numbers. docs/subclasses/ has the current lines, and this page is the record of the pass before it. Before it, several skills were flat numbers that the planner pressed whenever they were off cooldown, a few made the bot play worse, and Spike carried the Warden, the Sysop and the Herder. The code is in dist/data.mjs and dist/classes/*.data.mjs (the numbers and the text), dist/classes/*.mjs (what each skill does and each subclass's planner), and dist/situations.mjs (the moment each key lights up for).
 
 ## The bar
 
-The bar holds Spike on key 1, seven class skills on keys 2 to 8 from level 1, an eighth on key 9 from level 22 and a ninth on key 0 from level 30. SIGINT moved from key 9 to the - key, so it keeps one key for the whole game. Run skills (Spoof, Tap) no longer take a slot. A skill you unlock goes onto the bar by itself while a slot is free, which means the skill that opens at 22 or 30 lands in the new slot. The Loadout shows a closed slot as *slot Lv 22* or *slot Lv 30*. GAME_RULES.md said the bar was full at 18, while the code filled it at 22. Both now say seven, then eight at 22, then nine at 30.
+The bar holds the plain hit on key 1 (Spike then; since the kit pass each class names it, Bash, Ban, Poke or Ping), seven class skills on keys 2 to 8 from level 1, an eighth on key 9 from level 22 and a ninth on key 0 from level 30. SIGINT moved from key 9 to the - key, so it keeps one key for the whole game. Run skills (Spoof, Tap) no longer take a slot. A skill you unlock goes onto the bar by itself while a slot is free, which means the skill that opens at 22 or 30 lands in the new slot. The Loadout shows a closed slot as *slot Lv 22* or *slot Lv 30*. GAME_RULES.md said the bar was full at 18, while the code filled it at 22. Both now say seven, then eight at 22, then nine at 30.
 
 A save from before this pass (SAVE_VERSION 35, `barRestore` in combat.mjs) drops run skills from each bar, keeps the bar as it was, and fills only the slots that are new with what the player would have been given on levelling.
 
@@ -105,7 +105,7 @@ The Hijacker's edge, Man in the Middle, now also counts a helper of yours on a p
 
 ## Spike's share
 
-Spike was the top key for the Warden (47% at Lv 30), the Sysop (50%) and the Herder (46%). After this pass the Warden's top key is Purge at 22%, the Sysop's is Spike at 43%, and the Herder's is Spike at 41%. presses.test.mjs holds every subclass's top key under 45% at Lv 30. A tighter line at 40% would fail on the Sysop, a solo healer whose free hit is how it deals damage at all.
+Spike was the top key for the Warden (47% at Lv 30), the Sysop (50%) and the Herder (46%). After this pass the Warden's top key is Purge at 22%, the Sysop's is Spike at 43%, and the Herder's is Spike at 41%. presses.test.mjs holds every subclass's top key under 45% at Lv 30. A tighter line at 40% would fail on the Sysop, a solo healer whose free hit is how it deals damage at all. The kit pass gave every subclass cheap core hits (Checksum, Reject, nohup, Sniff and others), and key 1 now takes 13% or less of every subclass's presses at Lv 18, 30 and 40 but the Payload's 17% at 40 (docs/kits.md, section 10). kits-balance.test.mjs holds it at 20%.
 
 ## Balance before and after
 

@@ -230,7 +230,7 @@ test('v36: a save from before networks gets a seed from its own, the same every 
   delete old.netSeed;
   const a = restore(structuredClone(old)), b = restore(structuredClone(old));
   assert.equal(a.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 36);
+  assert.ok(SAVE_VERSION >= 36, 'v37 (the 15-key pools) loads it too');
   assert.ok(a.netSeed > 0);
   assert.equal(a.netSeed, b.netSeed, 'deterministic');
   assert.deepEqual(sigOf(a, 'you'), sigOf(b, 'you'));

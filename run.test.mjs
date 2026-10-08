@@ -531,15 +531,15 @@ test('intrusions come in at your level; enemies far below you give little XP', a
 });
 
 test('saves from before the skill rework start each class on the new kit, and old daemon rules go', async () => {
-  const { restore, equippedSkills, knownSkills } = await import('./dist/combat.mjs');
+  const { restore, equippedSkills, defaultBar } = await import('./dist/combat.mjs');
   const s = fresh();
   s.version = 18;
   s.hackers = { breaker: { level: 25, xp: 0 } };
   s.loadout.equipped = { breaker: ['overload', 'sudo', 'pass-the-hash', 'memory-leak', 'bypass'] };
   s.daemons = [{ name: 'warden', trigger: { type: 'attack', part: 'any' }, command: 'interrupt $', on: true }];
   const r = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(r, 'breaker'), knownSkills(r, 'breaker').slice(0, 8), 'the kit as it unlocks, its subclass line included (eight slots at 25)');
-  assert.deepEqual(equippedSkills(r, 'breaker').slice(0, 4), ['overload', 'flood', 'exploit', 'crack']);
+  assert.deepEqual(equippedSkills(r, 'breaker'), defaultBar('breaker', 'demolitionist', 25), 'the default kit: the shipped rotation preset at its level (eight slots at 25)');
+  assert.deepEqual(equippedSkills(r, 'breaker').slice(0, 4), ['crack', 'shatter', 'flood', 'overload']);
   assert.deepEqual(r.daemons, []);
   assert.deepEqual(r.daemonsOwned, {});
 });
@@ -627,12 +627,13 @@ test('did you mean: typos in a fight and on a run suggest the likely command', a
   const s = fresh();
   (await import('./dist/combat.mjs')).selectEncounter(s, 'splinter', 3, { level: 3 });
   command(s, 'engage');
-  assert.equal(parse(s, 'spike pusle').suggest, 'spike pulse');
-  assert.equal(parse(s, 'spikepulse').suggest, 'spike pulse');
-  assert.equal(parse(s, 'pusle').suggest, 'spike pulse', 'just a part: Spike it');
+  assert.equal(parse(s, 'spike pusle').suggest, 'bash pulse', 'key 1 under the Breaker\'s own name');
+  assert.equal(parse(s, 'bash pusle').suggest, 'bash pulse');
+  assert.equal(parse(s, 'bashpulse').suggest, 'bash pulse');
+  assert.equal(parse(s, 'pusle').suggest, 'bash pulse', 'just a part: Bash it');
   assert.equal(parse(s, 'xyzzy').suggest, null, 'no wild guesses');
   command(s, 'spike pusle');
-  assert.equal(s.logs.at(-1).suggest, 'spike pulse');
+  assert.equal(s.logs.at(-1).suggest, 'bash pulse');
   const t = fresh();
   say(t, 'connect sprawl');
   say(t, 'cat mtod.txt');

@@ -5,8 +5,8 @@ import { CONFIG } from './data.mjs';
 export const LESSONS = [
   {
     title: 'Break a ◆',
-    command: 'spike encryptor',
-    explain: 'Each part wears armor (◆). A hit on armor does no damage, however big: it breaks one ◆. Encryptor has two. Each row also shows when that part attacks. Type spike encryptor.',
+    command: 'bash encryptor',
+    explain: 'Each part wears armor (◆). A hit on armor does no damage, however big: it breaks one ◆. Encryptor has two. Each row also shows when that part attacks. Bash is a Breaker\'s plain hit, on key 1. Type bash encryptor.',
     result: 'One ◆ broke and the Encryptor took no damage. Small hits are how you strip armor; save your big ones for parts with no armor left.',
   },
   {
@@ -23,9 +23,9 @@ export const LESSONS = [
   },
   {
     title: 'Finish it',
-    command: 'spike pulse',
+    command: 'bash pulse',
     live: true,
-    explain: 'Type spike pulse, then type nothing. If you don\'t type anything, your last attack repeats every cycle: the first Spike breaks its ◆, the next ones land. Type hold if you ever want to do nothing.',
+    explain: 'Type bash pulse, then type nothing. If you don\'t type anything, your last attack repeats every cycle: the first Bash breaks its ◆, the next ones land. Type hold if you ever want to do nothing.',
     result: '',
   },
 ];

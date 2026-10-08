@@ -20,9 +20,9 @@
 // State: fight state this module keeps lives on the encounter under bk* names, created when first
 // needed (a crewmate's encounter is a copy of the leader's at engage, so nothing is made at start).
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
-import { subOf, subEdge, hasTalent, rank, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
-import { tellHit, tellOn } from '../tells.mjs';
+import { tellHit, tellOn, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -77,6 +77,7 @@ function strip(s, p, n, label) {
   p.lastDamaged = e.cycle;
   if (label !== 'Bit Rot') tellHit(s, p, { chits: k }); // a command's strip hits it: a tell on it may count it (tells.mjs)
   if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); if (label !== 'Bit Rot') stripMark(s, p); openProc(s, 'stripped', { part: p.id }); }
+  chipped(s, p, k); // Debris Field
   emit(s, 'armor', `${label}: ${p.name} loses ${k} ◆${p.armor ? ` (${p.armor} left)` : `. Its armor is broken: it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
   return k;
 }
@@ -98,13 +99,40 @@ const use = {
     (e.bkBombs ||= []).push({ target: target.id, at: e.cycle + a.fuse, who: who(s) });
     emit(s, 'status', `Logic Bomb planted in ${target.name}. It goes off in ${a.fuse} cycles.`, { target: target.id, mark: 'burn', ability: 'logic-bomb' });
   },
-  'chain-reaction'(s, { a, e }) {
-    e.buffs['chain-reaction'] = e.cycle + a.cycles - 1;
-    emit(s, 'status', `Chain Reaction is running for ${a.cycles} cycles. Every part you break hits the rest for ${scaled(s, a.blast)}.`, { mark: 'buff', ability: 'chain-reaction' });
+  // Chain Reaction: the part is wired to blow if it breaks within its cycles (broke, below).
+  'chain-reaction'(s, { a, target, e }) {
+    if (!alive(target)) return;
+    target.bkChain = { until: e.cycle + a.cycles - 1, who: who(s) };
+    emit(s, 'status', `${target.name} is wired to blow: if it breaks in the next ${a.cycles} cycles, it hits every other part for ${scaled(s, a.blast)}.`, { target: target.id, mark: 'debuff', ability: 'chain-reaction' });
   },
   'bit-rot'(s, { a, target, e }) {
+    if (!alive(target) || !(target.armor > 0 || target.maxArmor > 0)) return;
     target.bkRot = { until: e.cycle + a.cycles - 1, who: who(s) };
     emit(s, 'status', `${target.name} is rotting for ${a.cycles} cycles. It loses a ◆ each cycle and can't patch.`, { target: target.id, mark: 'debuff', ability: 'bit-rot' });
+  },
+  // Shatter: its shards hit every other bare part.
+  shatter(s, { a, target }) {
+    for (const p of livingParts(s)) if (p !== target && !(p.armor > 0)) hit(s, p, a.shards * powerOf(s), { mine: true, by: 'Shatter shards' });
+  },
+  'debris-field'(s, { a, e }) {
+    e.buffs['debris-field'] = e.cycle + a.cycles - 1;
+    e.bkDebris = 0;
+    emit(s, 'status', `Debris Field for ${a.cycles} cycles: every ◆ you break shields you for ${scaled(s, a.per)}, up to ${scaled(s, a.most)}.`, { mark: 'buff', ability: 'debris-field' });
+  },
+  // Backfire: a charge winding up on it goes off inside it, and the attack lands plain (a read, tells.mjs).
+  // (The charge was read before its hit landed: validate below. The hit may have called it off already.)
+  backfire(s, { a, target, e }) {
+    const snap = e.bkBackfire;
+    e.bkBackfire = null;
+    if (!alive(target) || !snap || snap.target !== target.id || snap.cycle !== e.cycle) return;
+    const extra = Math.min(scaled(s, a.cap), Math.max(scaled(s, 15), Math.round(snap.extra)));
+    const msg = `BACKFIRE: ${snap.t.name.toUpperCase()} goes off inside the ${target.name}. Its ${target.attack?.name || 'attack'} lands plain.`;
+    if (snap.t.told) tellAnswer(s, snap.t, target, msg); else emit(s, 'blocked', msg, { source: target.id, ability: 'backfire' });
+    hit(s, target, extra, { mine: true, pierce: true, by: 'Backfire' });
+  },
+  'rm-rf'(s, { a, e }) {
+    e.buffs['rm-rf'] = e.cycle + a.cycles - 1;
+    emit(s, 'status', `rm -rf for ${a.cycles} cycles: every hit you land also hits every other part for half.`, { mark: 'buff', ability: 'rm-rf' });
   },
   'thermal-runaway'(s, { target, e }) {
     const burn = e.burns.filter((b) => b.id === 'thermal-runaway' && b.target === target.id).at(-1);
@@ -141,6 +169,23 @@ const use = {
     const exposed = target.exposedUntil >= s.encounter.cycle; // Exposed: the second hit comes for sure
     for (let k = 0; k < a.repeats && (r?.crit || (k === 0 && exposed)) && alive(target); k++) r = hit(s, target, base, { mine: true, by: 'Stack Smash' });
   },
+  'hot-loop'(s, { a }) { addMomentum(s, 1, a.cycles); },
+  vent(s, { a, e }) {
+    const stacks = momentumStacks(s), d = defender(s);
+    setMomentum(s, 0, e.cycle);
+    const cleared = [];
+    if (e.encrypt > 0 || e.burst) { e.encrypt = 0; e.burst = null; cleared.push('encryption'); }
+    if (e.corrupt) { e.corrupt = null; cleared.push('Corrupted'); }
+    if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
+    emit(s, 'status', `Vent: ${stacks ? `${stacks} Momentum ${stacks === 1 ? 'stack' : 'stacks'} dumped` : 'nothing to dump'}${cleared.length ? `, and ${cleared.join(' and ')} cleared` : ''}.`, { ability: 'vent' });
+    heal(s, healScaled(s, a.heal * Math.max(1, stacks)), 'Vent');
+    if (d.integrity > d.max) d.integrity = d.max;
+  },
+  'fault-injection'(s, { a, target, e }) {
+    if (!alive(target)) return;
+    target.bkFault = { until: e.cycle + a.cycles - 1, who: who(s) };
+    emit(s, 'status', `Fault Injection: every hit you land on the ${target.name} crits for ${a.cycles} cycles.`, { target: target.id, mark: 'debuff', ability: 'fault-injection' });
+  },
   'turbo-boost'(s, { a, e }) {
     const low = defender(s).integrity < defender(s).max / 2; // run it hot when you're hurt: free, and one more stack
     if (!low) pay(s, 'turbo-boost');
@@ -150,10 +195,15 @@ const use = {
 };
 
 const validate = {
+  // Backfire reads the charge before its own hit lands (that hit may call the charge off).
+  backfire: (s, intent) => {
+    const p = part(s, intent.target), ch = p && chargeSize(s, p);
+    s.encounter.bkBackfire = ch && p.attack && ch.t.n === (p.attack.n || 0) ? { target: p.id, cycle: s.encounter.cycle, t: ch.t, extra: ch.amount - (p.attack.effect === 'damage' ? p.attack.amount : p.attack.hit || 0) } : null;
+    return null;
+  },
   overvolt: (s) => afford(s, 'overvolt'),
   'turbo-boost': (s) => (defender(s).integrity < defender(s).max / 2 ? null : afford(s, 'turbo-boost')) || (momentumStacks(s) >= momentumCap(s) ? 'Your Momentum is already full.' : null),
   'thermal-throttle': (s) => (momentumStacks(s) ? null : 'Thermal Throttle needs Momentum. Break a part first.'),
-  'bit-rot': (s, intent) => { const p = part(s, intent.target); return p && !p.armor && !p.maxArmor ? `${p.name} has no armor to rot.` : null; },
 };
 
 // ---------- the rest of the hooks ----------
@@ -224,8 +274,18 @@ function struck(s, atk, dealt, p) {
   if (saved > 0) hit(s, p, saved * a.back, { mine: true, by: 'Brace' });
 }
 
-// Critical Heat: with 4 or more stacks, every hit you land crits.
-const crit = (s, p, opts) => (opts.mine && hasTalent(s, 'critical-heat') && momentumStacks(s) >= 4 ? 100 : 0);
+// Critical Heat: with 4 or more stacks, every hit you land crits. Fault Injection: every hit you land on its part.
+const crit = (s, p, opts) => (opts.mine && ((hasTalent(s, 'critical-heat') && momentumStacks(s) >= 4) || (p.bkFault?.who === who(s) && p.bkFault.until >= s.encounter.cycle && breaker(s))) ? 100 : 0);
+// Debris Field: every ◆ you break while it runs shields you, up to its most.
+function chipped(s, p, n) {
+  const e = s.encounter;
+  if (!breaker(s) || !buffed(e, 'debris-field') || !(n > 0)) return;
+  const a = A('debris-field'), room = scaled(s, a.most) - (e.bkDebris || 0), add = Math.min(room, n * scaled(s, a.per));
+  if (add <= 0) return;
+  e.bkDebris = (e.bkDebris || 0) + add;
+  e.shield = (e.shield || 0) + add;
+  emit(s, 'status', `Debris Field: +${add} shield (${e.shield}).`, { mark: 'shield', ability: 'debris-field' });
+}
 
 function onHit(s, p, res, opts) {
   if (!breaker(s)) return;
@@ -241,6 +301,11 @@ function onHit(s, p, res, opts) {
     for (const x of livingParts(s)) if (x.id !== skip && alive(x)) hit(s, x, spill, { by: 'Overkill', overkill: true, pierce: true, noHook: true });
   }
   if (!opts.overkill) e.bkSpilled = null;
+  // rm -rf: every hit you land also lands on every other part for half (not its own spill, not burns).
+  if (buffed(e, 'rm-rf') && res.dealt > 0 && !opts.dot && !opts.rmrf && opts.by !== 'Overkill') {
+    const half = Math.max(1, Math.round(res.dealt * A('rm-rf').share));
+    for (const x of livingParts(s)) if (x !== p && alive(x)) hit(s, x, half, { mine: true, by: 'rm -rf', rmrf: true, noHook: true });
+  }
 }
 
 function broke(s, p) {
@@ -252,11 +317,14 @@ function broke(s, p) {
     const was = e.momentum?.stacks || 0;
     setMomentum(s, Math.min(momentumCap(s), Math.max(was, prev + 1)), e.cycle + lasts(s, SKILLS.momentumCycles));
   }
-  // Chain Reaction: the break blows up into every other part.
-  if (buffed(e, 'chain-reaction')) {
+  // Chain Reaction: a part wired to blow (or broken by a blast) blows up into every other part.
+  if ((p.bkChain?.who === who(s) && p.bkChain.until >= e.cycle) || e.bkBlasting) {
+    delete p.bkChain;
     const rest = livingParts(s).filter((x) => x !== p);
     if (rest.length) emit(s, 'status', `${p.name} blows up in a Chain Reaction.`, { target: p.id, ability: 'chain-reaction' });
-    for (const x of rest) if (alive(x)) hit(s, x, A('chain-reaction').blast * powerOf(s), { mine: true, by: 'Chain Reaction' });
+    const was = e.bkBlasting;
+    e.bkBlasting = true; // a part the blast breaks blows up too
+    try { for (const x of rest) if (alive(x)) hit(s, x, A('chain-reaction').blast * powerOf(s), { mine: true, by: 'Chain Reaction' }); } finally { e.bkBlasting = was; }
   }
 }
 
@@ -280,16 +348,34 @@ function ttDamage(s, p) {
 }
 const healthy = (s, share) => defender(s).integrity > defender(s).max * share;
 
+// A charge riding the next attack of a part, landing within `lag` cycles: Backfire blows it up inside it.
+const charging = (s, lag = 2) => livingParts(s).find((p) => { const ch = tellOn(s, p, 'charge'); return ch && p.attack && ch.n === (p.attack.n || 0) && p.attack.due - s.encounter.cycle <= lag; });
+// What lands on you this cycle and next, by size.
+const incoming = (s, within = 0) => intents(s).filter((i) => i.col <= within && !i.hidden && (i.effect === 'damage' || i.hit)).reduce((n, i) => n + (i.hit || i.amount || 0), 0);
 function planDemo(s, t) {
-  const e = s.encounter;
+  const e = s.encounter, d = defender(s), living = livingParts(s);
+  // A charge winding up: Backfire blows it up inside its part (armor or not), and the attack lands plain.
+  const ch = charging(s, 1);
+  if (ch && !living.some((p) => bare(p) && killable(s, p)) && ok(s, 'backfire ' + ch.id)) return 'backfire ' + ch.id; // a kill first
   // Fragments up: Fork Bomb takes them (three times over) and hits everything else on the way.
-  if (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).length >= 3 && ok(s, 'fork-bomb')) return 'fork-bomb';
+  if (living.some((p) => p.kind === 'fragment') && living.length >= 3 && ok(s, 'fork-bomb')) return 'fork-bomb';
+  // Chain Reaction on a fragment or a part one hit from breaking, with two or more others to catch the blast.
+  // (fragments up: the weakest one; otherwise a part its own 30 breaks now, so the blast goes off this cycle)
+  const fragsUp = living.filter((p) => p.kind === 'fragment');
+  const fuse = (fragsUp.length >= 2 ? fragsUp : living.filter((p) => p.integrity <= estimate(s, p, 30))).filter((p) => !(p.armor > 0)).sort((a, b) => a.integrity - b.integrity)[0];
+  if (fuse && living.length >= 3 && !living.some((p) => p.deadman) && ok(s, 'chain-reaction ' + fuse.id)) return 'chain-reaction ' + fuse.id; // never into a Tripwire
+  // Debris Field before a big strip, with an attack a cycle or two out for the shield to soak.
+  const armorAll = living.reduce((n, p) => n + (p.armor || 0), 0);
+  if (armorAll >= 3 && !dueNow(s).length && incoming(s, 2) >= d.max * 0.08 && (ok(s, 'crack ' + t.id) || ok(s, 'shaped-charge ' + t.id)) && ok(s, 'debris-field')) return 'debris-field';
   // Bit Rot on a part about to seal that wears ◆ more than Crack takes: the seal fails outright, ◆ or not.
   const seal = livingParts(s).find((p) => tellOn(s, p, 'seal') && p.armor >= 2 && !(p.bkRot?.until >= e.cycle) && !(p.armor <= 3 && ok(s, 'crack ' + p.id)));
   if (seal && ok(s, 'bit-rot ' + seal.id)) return 'bit-rot ' + seal.id;
   const others = livingParts(s).filter((p) => p !== t);
   // Something about to fire, a lit Shatter on a bare part, or a kill: the generic rules handle those.
   if (dueNow(s).length || livingParts(s).some((p) => bare(p) && killable(s, p)) || killable(s, t) || (bare(t) && ok(s, 'shatter ' + t.id))) return null;
+  // rm -rf before the big hits on a bare part, with the rest of the virus standing to catch half.
+  const rest = living.filter((p) => p !== t && !p.deadman).reduce((n, p) => n + p.integrity, 0);
+  if (bare(t) && living.length >= 2 && rest >= estimate(s, t, 50) && t.integrity > estimate(s, t, 40) && ['shatter', 'flood', 'overload'].some((id) => ok(s, id + ' ' + t.id)) && !living.some((p) => p.deadman) && ok(s, 'rm-rf')) return 'rm-rf';
   const armorElsewhere = others.reduce((n, p) => n + (p.armor || 0), 0);
   // Strip: Shaped Charge on a thick shell, or when Crack is cooling (Cluster Charge: when the rest wear armor too).
   const calm = (p) => !A('shaped-charge').provoke || !p.attack || p.attack.due - e.cycle >= 2; // provoked (if it provokes), its attack still lands after your next command
@@ -307,10 +393,12 @@ function planDemo(s, t) {
   // Chain Reaction: two parts low enough to set each other off, or fragments to catch.
   const low = livingParts(s).filter((p) => p.integrity <= p.max * 0.35).length;
   if ((low >= 2 || (frags.length >= 2 && livingParts(s).length >= 3)) && ok(s, 'chain-reaction')) return 'chain-reaction';
-  // Logic Bomb: twins (both go down for good), or a Tripwire with one other part left (it goes quietly).
+  // Logic Bomb: twins (both go down for good), a Tripwire with one other part left (it goes quietly), or simply a
+  // burst on a part that will still stand in two cycles, with another part to catch the blast.
   const twin = livingParts(s).find((p) => p.twin && alive(part(s, p.twin)));
   const trip = livingParts(s).find((p) => p.deadman) && livingParts(s).filter((p) => p.kind === 'system').length <= 2;
-  if ((twin || trip) && ok(s, 'logic-bomb ' + t.id)) return 'logic-bomb ' + t.id;
+  const lasts = t.integrity >= estimate(s, t, 110) && living.length >= 3 && !t.deadman && !(t.armor > 0 && ok(s, 'crack ' + t.id));
+  if ((twin || trip || lasts) && ok(s, 'logic-bomb ' + t.id)) return 'logic-bomb ' + t.id;
 
   // A part stripped bare: Shaped Charge hits it for 30 when nothing bigger is ready.
   if (bare(t) && !['overload', 'flood', 'segfault'].some((id) => ok(s, id + ' ' + t.id)) && ok(s, 'shaped-charge ' + t.id) && t.integrity > estimate(s, t, 25)) return 'shaped-charge ' + t.id;
@@ -319,7 +407,13 @@ function planDemo(s, t) {
 
 function planOC(s, t) {
   const e = s.encounter, st = momentumStacks(s), due = dueNow(s), d = defender(s);
+  // Vent the heat: Corrupted, encryption or a scramble on you, or low with stacks to turn into Signal.
+  const dirty = e.corrupt || e.encrypt >= 6 || e.burst || e.scrambleUntil >= e.cycle;
+  if ((dirty && st >= 1) || (dirty && !healthy(s, 0.5)) || (!healthy(s, 0.35) && st >= 2)) { if (ok(s, 'vent')) return 'vent'; }
   if (livingParts(s).some((p) => (bare(p) || p === t) && killable(s, p))) return null; // a kill first
+  // Fault Injection on a big part, with the big hits ready to land on it.
+  const ready = ['segfault', 'overload', 'thermal-throttle', 'stack-smash', 'flood', 'hot-loop'].filter((id) => usable(s).includes(id) && readyIn(s, id) <= 1).length;
+  if (t.integrity >= estimate(s, t, 90) && ready >= 2 && (bare(t) || st >= 2) && ok(s, 'fault-injection ' + t.id)) return 'fault-injection ' + t.id;
   // Segfault crashes a part mid-wind-up: three times the hit, and it calls the charge off.
   const charging = livingParts(s).find((p) => tellOn(s, p, 'charge') && !(p.armor > 0));
   if (charging && ok(s, 'segfault ' + charging.id)) return 'segfault ' + charging.id;
@@ -335,9 +429,10 @@ function planOC(s, t) {
   const now = intents(s).filter((i) => i.col === 0 && (i.effect === 'damage' || i.hit));
   const big = now.reduce((n, i) => n + (i.hit || i.amount), 0);
   if (now.some((i) => i.tell === 'charge' && (i.hit || i.amount) >= d.max * 0.15) && ok(s, 'brace')) return 'brace';
-  // Sudo: a part whose rule is in your way (a lock or a ward on what you're bursting, a Tripwire about to go, a Decoy or Mimic beat).
+  // Sudo: a part whose rule is in your way (a lock or a ward on what you're bursting, a Tripwire about to go, a Decoy or Mimic beat),
+  // or thick armor with Crack cooling: for two cycles every hit goes through.
   const rule = (t.lockHp > 0 && livingParts(s).some((p) => p.lock === t.id)) || livingParts(s).some((p) => p.ward === t.id) || (t.deadman && livingParts(s).filter((p) => p.kind === 'system').length > 1) || mirrorOn(s) || mirrorOn(s, e.cycle + 1);
-  if (rule && ok(s, 'sudo')) return 'sudo';
+  if ((rule || (t.armor >= 3 && !ok(s, 'crack ' + t.id))) && ok(s, 'sudo')) return 'sudo';
   // Turbo Boost when you're hurt: free stacks for a Thermal Throttle.
   if (!healthy(s, 0.5) && usable(s).includes('thermal-throttle') && readyIn(s, 'thermal-throttle') <= 1 && ok(s, 'turbo-boost')) return 'turbo-boost';
   const tt = (p) => st >= 1 && ok(s, 'thermal-throttle ' + p.id);
@@ -351,6 +446,8 @@ function planOC(s, t) {
   if (tt(t) && !bare(t) && through) return 'thermal-throttle ' + t.id;
   if (tt(t) && bare(t) && (st >= 2 || fading) && ttDamage(s, t) >= best) return 'thermal-throttle ' + t.id;
   if (!bare(t)) return null;
+  // Hot Loop builds the heat Thermal Throttle spends: press it when Throttle is ready next and the stacks are short.
+  if (st < 2 && usable(s).includes('thermal-throttle') && readyIn(s, 'thermal-throttle') <= 1 && ok(s, 'hot-loop ' + t.id) && t.integrity > estimate(s, t, 22)) return 'hot-loop ' + t.id;
   // Stack Smash wants Exposed (every crit hits again): Exploit first on a big bare part.
   if (usable(s).includes('stack-smash') && readyIn(s, 'stack-smash') <= 1 && !on(s, t, 'exposed') && t.integrity > estimate(s, t, 60) && ok(s, 'exploit ' + t.id)) return 'exploit ' + t.id;
   // Stack Smash when its crits are likely (Exposed, Critical Heat), or when nothing bigger is ready.
@@ -365,5 +462,12 @@ function plan(s, t) {
   if (isOC(s)) return planOC(s, t);
   return null;
 }
+// The cheap keys between the big ones (planner.mjs, before key 1).
+function fill(s, t) {
+  if (!breaker(s) || !t) return [];
+  if (isDemo(s)) return ['backfire ' + t.id, 'chain-reaction ' + t.id, 'bit-rot ' + t.id, 'exploit ' + t.id];
+  if (isOC(s)) return ['stack-smash ' + t.id, 'hot-loop ' + t.id];
+  return [];
+}
 
-export default { use, validate, cycle, dealt, taken, struck, crit, hit: onHit, broke, plan };
+export default { use, validate, cycle, dealt, taken, struck, crit, hit: onHit, broke, chipped, plan, fill };

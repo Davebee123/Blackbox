@@ -39,8 +39,8 @@ test('Fork Bomb (fragments ×3); Thermal Runaway grows; Brace cuts a hit and sen
   big(s, 'pulse'); big(s, 'encryptor');
   s.encounter.virus.parts.push({ id: 'frag9', name: 'Fragment 9', kind: 'fragment', integrity: 99, max: 99, armor: 0, maxArmor: 0, patchAt: null, attack: null, exposedUntil: 0 });
   act(s, 'fork-bomb');
-  assert.equal(lost(s, 'pulse'), 12);
-  assert.equal(lost(s, 'frag9'), 36, 'three times that on a fragment');
+  assert.equal(lost(s, 'pulse'), 16);
+  assert.equal(lost(s, 'frag9'), 48, 'three times that on a fragment');
   const t = noArmor(quiet(start('breaker', ['thermal-runaway'])));
   big(t, 'pulse');
   act(t, 'thermal-runaway pulse'); act(t, 'hold'); act(t, 'hold'); act(t, 'hold');

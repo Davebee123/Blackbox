@@ -193,7 +193,9 @@ test('the forecast: what your command will cost a part, and what the virus will 
   assert.match(boardMarkup(s, null), /<b class="going">◆<\/b>/);
   s.loadout.archetype = 'infiltrator'; s.hackers = { infiltrator: { level: 3, xp: 0 } };
   e.queue = { ability: 'tag', target: a.id, text: 'tag ' + a.id };
-  assert.equal(forecast(s).chits[a.id] || 0, 0, 'Tag doesn\'t hit: no chit breaks');
+  assert.equal(forecast(s).chits[a.id] || 0, 1, 'Tag hits for 10 (docs/kits.md): on armor it breaks a chit');
+  e.queue = { ability: 'keepalive', target: a.id, text: 'keepalive ' + a.id };
+  assert.equal(forecast(s).chits[a.id] || 0, 0, 'Keepalive doesn\'t hit: no chit breaks');
   e.queue = { ability: 'crack', target: a.id, text: 'crack ' + a.id };
   a.armor = 2; a.maxArmor = 2;
   assert.equal(forecast(s).chits[a.id], 2, 'Crack strips two');

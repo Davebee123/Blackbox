@@ -541,7 +541,7 @@ test('situational answers to seals and casts: Bit Rot and Cache Poison fail a se
   quietParts(c);
   c.loadout.equipped.hijacker = ['deploy', 'hook', 'spawn', 'botnet', 'cache-poison'];
   const ce = part(c, 'encryptor');
-  ce.armor = ce.maxArmor = 3; ce.integrity = ce.max = 999;
+  ce.armor = ce.maxArmor = 6; ce.integrity = ce.max = 999; // the poison's own bite breaks a ◆ a cycle on armor
   const tc = tell(c, 'keyrotation', 'encryptor', 2);
   fire(c, 'cache-poison encryptor');
   hold(c, 2);

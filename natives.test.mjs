@@ -2,7 +2,7 @@
 // whose hooks change how a bare balance fight runs (as farmsim.mjs says of itself).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { score, BRACKETS } from './balance.mjs';
+import { score, BRACKETS, soloBand } from './balance.mjs';
 import { ARCHETYPES } from './dist/data.mjs';
 import { UNIQUES } from './dist/combat.mjs';
 import { NATIVE_POOL } from './dist/network.mjs';
@@ -10,7 +10,8 @@ import { BASES, protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
 
 // Native uniques in the balance harness (balance.mjs, opts.uniques): each one in place of the blue in its slot, on
 // every subclass, at the bracket it first fits (10, 18 or 30). They're sidegrades: no subclass leaves the band
-// (20–52% lost, at least 80% wins; the Sysop 70%) and none moves a bracket's average more than 4 points.
+// (20–52% lost, the Bastions, which lean crew, anywhere under 52% as in balance.mjs soloBand; at least 80% wins)
+// and none moves a bracket's average more than 4 points.
 test('native uniques keep the bands: sidegrades, not upgrades', () => {
   const CLASSES = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
   const SUBS = CLASSES.flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));
@@ -26,8 +27,8 @@ test('native uniques keep the bands: sidegrades, not upgrades', () => {
       for (const [c, sub] of SUBS) {
         const r = score(c, b, { sub, uniques: [id] });
         d += r.lost - base[sub].lost;
-        if (r.lost < 20 || r.lost > 52) off.push(`${id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
-        if (r.wins < (sub === 'sysop' ? 0.7 : 0.8) * r.total) off.push(`${id} ${sub} ${b.name} ${r.wins}/${r.total}`);
+        if (r.lost < (soloBand(sub)[0] ? 20 : 0) || r.lost > 52) off.push(`${id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
+        if (r.wins < 0.8 * r.total) off.push(`${id} ${sub} ${b.name} ${r.wins}/${r.total}`);
       }
       if (Math.abs(d / SUBS.length) > 4) off.push(`${id} ${b.name} moves the average ${(d / SUBS.length).toFixed(1)}`);
     }

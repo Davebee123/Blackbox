@@ -1,6 +1,6 @@
 # Kits: rotations, answers, cooldowns and specialists
 
-This is a design for review. It changes no code. It sets out a kit model with four layers, audits every subclass skill against that model with the balance harness, proposes a pool of 15 skills for each subclass, and gives example loadouts, bar and UI changes, a hook into the genome design, the tests that should hold it, and the open decisions.
+This began as a design for review, and section 10 records what shipped from it. It sets out a kit model with four layers, audits every subclass skill against that model with the balance harness, proposes a pool of 15 skills for each subclass, and gives example loadouts, bar and UI changes, a hook into the genome design, the tests that should hold it, and the open decisions.
 
 The numbers in section 2 are measured. The numbers in sections 3 and 4 for skills that don't exist yet are targets, not measurements.
 
@@ -771,6 +771,127 @@ Three planner changes come before any new skill, because the audit shows they ar
 - **Swapping.** Presets can be swapped anywhere outside combat, home or run. Swapped-in keys start the next fight cooling. Editing presets follows the same rule.
 - **Solo and crew.** Classes don't need to be equal in both modes. Each subclass may be weaker in one mode as long as it is stronger in the other, the way a holy priest is weak solo and strong in a group. The balance bands become per mode and per subclass: a subclass that leans crew may sit at the hard edge of the solo band, as long as it carries a crew in the crew sims.
 - **Spike.** Each class may rename Spike to fit its theme, but it stays a plain direct-damage filler with no cooldown. The 20% press cap stands.
+
+## 10. What shipped
+
+The pools in section 3 shipped with the designer's decisions in section 9. Every subclass line is eleven skills, one at each of levels 10, 12, 14, 16, 18, 20, 22, 26, 30, 34 and 38, so a subclass has fifteen keys by 38. Twenty-six skills are new, the over-conditional ones from the audit got a baseline, and Reclaim opens at 12. Two shipped presets come with each subclass, key 1 has a name in each class, and SAVE_VERSION is 37. The numbers below come from the same fights as section 2 (20 wilds and the four guards, and the thirteen solo bosses on two seeds each) and from farmsim.mjs for crews. *Before* is the code at the start of the pass.
+
+### What each subclass got
+
+| Subclass | New | Reworked | Moved |
+|---|---|---|---|
+| Demolitionist | Debris Field (16), Backfire (20), rm -rf (26) | Shatter's shards hit every other bare part for 12. Fork Bomb deals 16. Chain Reaction takes a part, hits it for 30 and blows for 25 if it breaks. Bit Rot hits for 20. Logic Bomb cools for 5. | Shatter 12→10, Shaped Charge 18→12, Thermal Runaway 22→18, Logic Bomb 26→22 |
+| Overclocker | Hot Loop (10), Vent (20), Fault Injection (26) | Sudo's hits go through ◆, one chit each, and it cools for 8. | Thermal Throttle 18→16, Brace 22→18, Stack Smash 26→22 |
+| Warden | Reject (10), Circuit Breaker (26), Honeypot (34) | Blowback lights Retaliate. Throttle hits for 20. | Blowback 18→16, Harden 26→18, Quarantine 30→20, DMZ 34→30 |
+| Sysop | Checksum (10), Maintenance Window (26), Revoke (30) | Multicast hits every part for 6. Rebalance heals 12 alone. | Reclaim 26→12, Patch 12→14, Heartbeat 18→16, Scrub 22→18, Multicast 14→20, Rollback 30→22 |
+| Payload | Fuzz (14), Logic Trap (22), Outbreak (34) | Polymorph burns for 10 once the part is bare. | Wormable 12→10, Detonate 14→12, Rootkit Implant 18→16, Skim 22→18, Polymorph 30→20, Thrash 34→30 |
+| Phantom | Fingerprint (10), Side Channel (18), Rotate Keys (22), Unmask (30), Vanish (34) | | Backstab 18→16, Spoof 22→20, Shadow Copy 26→20, Log Wipe 34→26 |
+| Herder | nohup (12), Load Shed (16), Crontab (30) | Kill Switch adds Last Gasp to the cash-in, and on armor it breaks a chit for every hit left. Mesh hits once now and cools for 8. | Fan-out 12→10, Kill Switch 18→14, Fork 30→18, Mesh 14→20 |
+| Hijacker | Sniff (10), Takeover (26), Echo Cancel (30) | Jam hits for 15 and holds the part even with no helper on it. Cache Poison burns for 5 a cycle. | Replay 18→12, Spoofed ACK 22→14, Hijack 14→16, Jam 12→18, Barrier 26→20, Cache Poison 30→22 |
+
+A skill a save already knew stays known when it moved later (Patch, Multicast, Jam, Hijack, Mesh).
+
+The class cores changed too. Exploit hits for 15, Tag and Hook for 10, Keepalive ticks every burn once when it lands (cooldown 3), and Spawn's helper hits for 7. docs/subclasses/ has every line in full.
+
+### Key 1
+
+Key 1 keeps its id, `spike`, in the code and the save. Each class types and sees its own word for it, and `spike` still works for everyone.
+
+| Class | Key 1 | Typed |
+|---|---|---|
+| Breaker | Bash | `bash <part>` |
+| Bastion | Ban | `ban <part>` |
+| Infiltrator | Poke | `poke <part>` |
+| Operator | Ping | `ping <part>` |
+
+### Presets
+
+`loadout save <name>`, `loadout use <name>`, `loadout list`, `loadout show <name>` and `loadout delete <name>` work anywhere out of a fight, at home or on a run, and so do `equip` and `unequip`. Every key a swap brings in starts your next fight cooling, as if you had just pressed it (a once-a-fight key cools for 3 cycles). A subclass holds up to six presets. The shipped ones are priority lists: the bar a shipped preset gives is its first keys you know, so a bar that follows `rotation` fills as you level. A bar you edit by hand stops following. The Loadout's skills tab shows the presets as chips over the bar, lit for the one the bar follows, with a *Save bar as…* chip that fills the command line. Tab completion offers the verbs and your preset names.
+
+| Subclass | Conditional preset | Against `rotation` at 30 | For |
+|---|---|---|---|
+| Demolitionist | `swarm` | Fork Bomb and Chain Reaction for Thermal Runaway and Logic Bomb | Worms, fragments, an Overrun |
+| Overclocker | `rules` | Sudo and Vent for Brace and Fault Injection | Ransomware, the Ghostroot, locks, Tripwires and the Mimic |
+| Warden | `swarm` | DMZ and Throttle for Harden and Bulkhead | Worms, fragments, loud parts |
+| Sysop | `healers` | Revoke for Patch | Leech, Patchwork, PATCH TUESDAY |
+| Payload | `swarm` | Propagate and Logic Trap for Tag and the Rootkit Implant | Worms, fragments, an Overrun |
+| Phantom | `ghostroot` | Unmask for Log Wipe | The Ghostroot, HOLLOW CHOIR, MIRRORSHADE |
+| Herder | `swarm` | Garbage Collect and Fork for Spawn and Load Shed | Worms, fragments, thick armor |
+| Hijacker | `rules` | Cache Poison and Echo Cancel for Barrier and Deploy | Healers, the Echo, the Mimic |
+
+### Saves
+
+A save from before the pass (v36) keeps every skill it knew. A skill that now opens later than the save's level goes into `loadout.kept` and stays known. A bar nobody edited (the old default at its level, in the same order) becomes the new `rotation` bar and follows it. An edited bar keeps its keys in their places and fills its empty slots from `rotation`. Every subclass gets its two shipped presets.
+
+### Press shares
+
+Effective keys are one over the sum of the squared press shares, key 1 and SIGINT included. The floor in section 7 is 5.0 at 18, 30 and 40, and key 1's cap is 20%.
+
+| Subclass | Effective keys, before (10 · 18 · 30 · 40) | After | Key 1, before | After |
+|---|---|---|---|---|
+| Demolitionist | 4.8 · 6.5 · 5.1 · 5.2 | 5.5 · 7.1 · 5.2 · 5.5 | 32% · 17% · 1% · 2% | 4% · 4% · 0% · 1% |
+| Overclocker | 4.8 · 4.9 · 5.4 · 5.3 | 5.3 · 5.6 · 5.5 · 5.3 | 32% · 7% · 5% · 7% | 5% · 2% · 1% · 1% |
+| Warden | 4.6 · 6.8 · 6.5 · 6.6 | 5.5 · 6.5 · 7.5 · 7.2 | 27% · 21% · 19% · 20% | 7% · 6% · 3% · 3% |
+| Sysop | 3.4 · 4.1 · 4.2 · 4.0 | 5.3 · 6.9 · 7.2 · 7.4 | 47% · 44% · 43% · 45% | 7% · 3% · 3% · 3% |
+| Payload | 2.6 · 4.5 · 4.5 · 5.1 | 4.5 · 5.4 · 6.7 · 6.2 | 32% · 38% · 38% · 33% | 26% · 13% · 13% · 17% |
+| Phantom | 3.4 · 4.2 · 5.6 · 5.4 | 3.8 · 5.4 · 7.0 · 7.1 | 21% · 27% · 13% · 11% | 14% · 5% · 2% · 2% |
+| Herder | 3.0 · 3.8 · 4.3 · 4.6 | 4.4 · 6.4 · 6.3 · 6.7 | 52% · 45% · 41% · 37% | 31% · 13% · 11% · 10% |
+| Hijacker | 3.0 · 5.8 · 5.3 · 5.2 | 4.8 · 7.9 · 7.8 · 7.3 | 51% · 28% · 33% · 34% | 19% · 9% · 4% · 4% |
+
+| Subclass | Top presses at 30, before | After |
+|---|---|---|
+| Demolitionist | Shatter 34%, Crack 20%, Thermal Runaway 12%, Shaped Charge 11%, Overload 10% | Shatter 34%, Crack 20%, Shaped Charge 11%, Overload 11%, Thermal Runaway 10% |
+| Overclocker | Crack 30%, Overload 19%, Segfault 17%, Overvolt 14%, Thermal Throttle 8% | Crack 29%, Overload 19%, Segfault 16%, Overvolt 14%, Thermal Throttle 10% |
+| Warden | Purge 22%, key 1 19%, Rate Limit 19%, Blowback 10%, Quarantine 9% | Purge 20%, Rate Limit 18%, Reject 17%, Quarantine 10%, Blowback 9% |
+| Sysop | key 1 43%, Rate Limit 12%, SIGINT 12%, Scrub 10%, Retaliate 8% | Purge 20%, Reclaim 17%, Rate Limit 16%, Checksum 14%, Scrub 11% |
+| Payload | key 1 38%, Wormable 19%, Backdoor 14%, Implant 11%, SIGINT 9% | Inject 28%, Backdoor 14%, key 1 13%, Wormable 8%, Detonate 8% |
+| Phantom | Inject 27%, Backdoor 23%, Opening 16%, key 1 13%, SIGINT 8% | Inject 22%, Backdoor 19%, Opening 16%, Side Channel 10%, SIGINT 9% |
+| Herder | key 1 41%, Fan-out 16%, Fork 16%, Mesh 9%, SIGINT 6% | nohup 28%, Botnet 17%, Fan-out 14%, key 1 11%, Mesh 7% |
+| Hijacker | key 1 33%, Botnet 17%, Replay 16%, Spoofed ACK 12%, Hijack 9% | Sniff 22%, Botnet 16%, Replay 13%, Takeover 12%, Spoofed ACK 9% |
+
+The Breakers barely moved at 30: their fights there last six or seven cycles, and Shatter after each strip is most of them. At 10 the Payload still presses key 1 26% of the time and the Herder 31%, because their cheap hits (Fuzz, nohup) open at 14 and 12. The tests hold the floor and the cap from 18.
+
+The planner changed with the kits. The Payload keeps an Inject on its target before it spends its line's burns, the Herder presses Garbage Collect only with fragments up and cashes Kill Switch in only when the helpers on a part would break it, and the Phantom Backstabs any bare part. Each subclass has a `fill` list of cheap keys the generic planner presses before key 1, and a part its burns and helpers break this cycle (Hooked hits counted) gets no command. Kill Switch no longer counts as an answer to a charge on a part with no helpers on it.
+
+### Balance per mode
+
+Each subclass now says which way it leans (`lean` in its data). A subclass that leans one way may be weaker in the other, as the designer's decision allows, and must be strong in the one it leans to.
+
+| Subclass | Leans | Signal lost alone at 18 · 30 | Cycles a fight alone | Solo bosses won at 30, before → after | As a crew's third member: boss tries won at 18 · 30 | Crew's low point at 18 · 30 |
+|---|---|---|---|---|---|---|
+| Demolitionist | Solo | 26% · 23% | 7.2 · 6.8 | 18/26 → 24/26 | 18/20 · 18/21 | 14% · 31% |
+| Overclocker | Solo | 34% · 36% | 8.1 · 6.9 | 22/26 → 24/26 | 17/30 · 18/21 | 10% · 29% |
+| Phantom | Solo | 36% · 26% | 9.4 · 9.8 | 22/26 → 23/26 | 18/26 · 18/28 | 15% · 27% |
+| Payload | Crew | 41% · 38% | 9.0 · 6.5 | 12/26 → 23/26 | 18/18 · 18/18 | 23% · 45% |
+| Herder | Crew | 37% · 41% | 8.5 · 5.9 | 17/26 → 18/26 | 18/20 · 18/18 | 25% · 36% |
+| Hijacker | Crew | 42% · 37% | 8.8 · 8.0 | 24/26 → 20/26 | 18/18 · 18/19 | 32% · 35% |
+| Warden | Crew | 18% · 26% | 13.8 · 14.1 | 26/26 → 24/26 | the tank | the tank |
+| Sysop | Crew | 3% · 5% | 15.6 · 14.3 | 11/26 → 22/26 | the healer | the healer |
+
+The solo-leaning damage dealers lose less alone than the crew-leaning ones, at 18 and 30 together. The crew-leaning ones win more of the crew's boss tries and keep the crew's lowest point higher. The two Bastions carry their crews: on the farm at 18 a crew with no healer clears none of six runs and wins 12 of 36 boss tries, and one with no tank clears one and wins 13 of 40, where the full crew clears all six and wins every try. Alone the Bastions pay in time, at about twice the cycles a fight of a damage dealer.
+
+The level-10 Breakers used to lose most tries against the three-part solo bosses. Over six seeds of the eight three-part bosses, the Demolitionist now wins 30 of 48 (13 before) and the Overclocker 31 of 48 (22 before), against 31 for the Payload and the Phantom, 26 for the Herder and 17 for the Hijacker. Each Breaker beats HOLLOW CHOIR three times in six.
+
+### The tests
+
+| Section 7 check | Now |
+|---|---|
+| At least 5.0 effective keys at 18, 30 and 40 | Every subclass, on the rotation preset |
+| Key 1 at 20% or less | Every subclass from 18. The Payload's 17% at 40 is the highest. |
+| The core rotation alone within 12 points of the full build | Every subclass but the Bastions, whose cores leave out their answers and heals: the Warden is 15 points back at 30 and the Sysop 20. The test gives them 20. |
+| Each conditional preset 5 points better on its fights, and no more than 8 worse elsewhere | The Sysop (14 better), the Hijacker (14), the Herder (8), the Overclocker (8), the Warden (8) and the Payload (6). The Demolitionist's swarm build is 3 better and the Phantom's ghostroot build level with its rotation: a `todo` test. |
+| Tells still pay | The reading bot's gap holds (balance.test.mjs). |
+| Per-mode bands | `soloBand` in balance.mjs: 15–50% lost alone, the Bastions under 50%. The Bastions are held to at least 1.4 times the damage dealers' cycles alone, and the crew-leaning damage dealers to the crew numbers above (kits-crew.test.mjs). |
+
+kits.test.mjs checks the lines, the presets and their commands, the cooling on a swap, key 1's names and the v36 save. kits-balance.test.mjs and kits-crew.test.mjs check the numbers above.
+
+### For the designer
+
+- **The Sysop alone.** Decision 5 kept it weaker by its numbers, but its hits now heal: Checksum, and Reclaim from 12. Alone it loses 3–5% of its Signal a fight from 18 and wins 22 of 26 solo bosses, where it lost 35–45% and won 11 before. It is still the slowest subclass, at about twice the cycles of a damage dealer. With every self-heal set to zero it would lose about 35%, so reaching the hard edge of the solo band through numbers alone means taking most of what it heals with. The tests hold it by pace for now.
+- **Two conditional builds miss the 5-point target.** The Demolitionist's rotation already strips and blasts a swarm well, and the Phantom's rotation already reads the Ghostroot with Backstab and Fingerprint. A swarm or ghostroot key with more bite, or a harder matched set, would make the swap pay.
+- **The Hijacker alone at 30.** It won 24 of 26 solo bosses before and wins 20 now. It leans crew, and in a crew at 18 it keeps the crew higher than any other damage dealer.
+- **The Breaker climbs faster alone.** With the level-10 fix, SPRAWL-only play gets a Breaker to 12 only 8% slower than mixed play, where every other class takes at least 37% longer. loop.test.mjs holds the Breaker, which leans solo, to 1.0 times.
+- **Key 1 at 10.** The Payload and the Herder press key 1 26% and 31% of the time at 10, before their cheap hits open. Moving Fuzz or nohup to 10 would fix that, at the cost of a reorder.
 
 ## Appendix: rerunning the audit
 

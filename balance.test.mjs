@@ -2,7 +2,7 @@
 // Targets not met yet are `todo` tests: they run and report, but don't fail the suite until their phase lands.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { score, hardScore, fight, BRACKETS } from './balance.mjs';
+import { score, hardScore, fight, BRACKETS, soloBand } from './balance.mjs';
 import { ARCHETYPES, SUBCLASS, TELL } from './dist/data.mjs';
 
 const CLASSES = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
@@ -23,7 +23,7 @@ test('at every level bracket each class wins at least 85% of fights at its level
   }
 });
 
-test('the hard slice (every open strain, grade 2 wilds, wilds 2 levels up) is beatable but risky: each class and subclass wins at least 55% (the Sysop, weaker alone on purpose, 45%), and at Lv 10 some class loses two or more', () => {
+test('the hard slice (every open strain, grade 2 wilds, wilds 2 levels up) is beatable but risky: each class and subclass wins at least 55% (the Sysop, slow alone, 45%), and at Lv 10 some class loses two or more', () => {
   for (const b of BRACKETS) {
     const who = b.level >= SUBCLASS.from ? SUBS : CLASSES.map((c) => [c, undefined]);
     const rs = who.map(([c, sub]) => hardScore(c, b, { sub }));
@@ -32,35 +32,39 @@ test('the hard slice (every open strain, grade 2 wilds, wilds 2 levels up) is be
   }
 });
 
-// The Demolitionist used to run about 21% from Lv 29 on flat Damage over its many hits, and had its own floor
-// at Lv 30. Since Shaped Charge provokes its part (docs/skills.md) it runs about 27–29%, inside the band.
-const floor = () => 25;
-test('every subclass is viable at Lv 10, 18 and 30: at least 85% wins (the Sysop 70%), 25–50% lost, all eight within 30 points', () => {
+// The solo band is per subclass (balance.mjs soloBand, docs/kits.md 9): 15–50% lost, and the Bastions, which lean
+// crew and pay for it alone in pace, anywhere under 50%. The six damage dealers stay within 30 points of each other.
+test('every subclass is viable alone at Lv 10, 18 and 30: at least 85% wins, inside its solo band, the damage dealers within 30 points', () => {
   for (const b of BRACKETS.filter((x) => x.level >= SUBCLASS.from && x.level <= 30)) {
     const rs = SUBS.map(([, sub]) => [sub, subRuns[b.name][sub]]);
     for (const [sub, r] of rs) {
-      assert.ok(r.wins >= (sub === 'sysop' ? 0.7 : 0.85) * r.total, `${sub} at ${b.name}: ${r.wins}/${r.total}`);
-      assert.ok(r.lost >= floor(sub, b) && r.lost <= 50, `${sub} at ${b.name}: ${r.lost.toFixed(0)}%`);
+      const [lo, hi] = soloBand(sub);
+      assert.ok(r.wins >= 0.85 * r.total, `${sub} at ${b.name}: ${r.wins}/${r.total}`);
+      assert.ok(r.lost >= lo && r.lost <= hi, `${sub} at ${b.name}: ${r.lost.toFixed(0)}%`);
     }
-    const lost = rs.map(([, r]) => r.lost);
+    const lost = rs.filter(([sub]) => soloBand(sub)[0] > 0).map(([, r]) => r.lost);
     assert.ok(Math.max(...lost) - Math.min(...lost) <= 30, `${b.name}: ${rs.map(([sub, r]) => `${sub} ${r.lost.toFixed(0)}`).join(' / ')}`);
   }
 });
 
-// The Sysop alone: weaker on purpose (heals built for a crew), like a healer levelling solo. Over a wider
-// sample (three gear sets, 40 wilds and 8 guard fights each) a blue Sysop loses 45–55% of its Signal a
-// fight and wins 75–85%; the test holds it to 38–58% and 70–92%, and below every other subclass in wins.
+// The Bastions alone: built for a crew, like a tank or a healer levelling solo. Since the kit pass (docs/kits.md)
+// the Sysop's hits heal (Checksum, Reclaim at 12), so alone it rarely loses Signal; what it pays is time. Over a
+// wider sample (three gear sets, 40 wilds and 8 guard fights each) both Bastions take at least 1.4 times the cycles
+// of the damage dealers' median a fight. Carrying a crew: farm.test.mjs.
 const wide = (c, b, sub) => {
   const rs = [0, 1, 2].flatMap((gearSeed) => [...Array.from({ length: 40 }, (_, i) => fight(c, 'random', b, { sub, gearSeed, seed: 500 + i, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].flatMap((g) => [1, 2].map((seed) => fight(c, g, b, { sub, gearSeed, seed, mode: 'run', depth: b.depth })))]);
-  return { lost: rs.reduce((a, r) => a + r.lostPct, 0) / rs.length, wins: rs.filter((r) => r.win).length / rs.length };
+  return { lost: rs.reduce((a, r) => a + r.lostPct, 0) / rs.length, wins: rs.filter((r) => r.win).length / rs.length, cycles: rs.reduce((a, r) => a + r.cycles, 0) / rs.length };
 };
-test('the Sysop alone is the weak one: 38–58% lost and 70–92% wins at Lv 18 and 30 with blues, and fewer wins than any other subclass', () => {
+test('the Bastions alone are the slow ones: at least 1.4 times the damage dealers\' median cycles a fight at Lv 18 and 30 with blues, both winning 85%', () => {
   for (const b of BRACKETS.filter((x) => x.level === 18 || x.level === 30)) {
     const rs = Object.fromEntries(SUBS.map(([c, sub]) => [sub, wide(c, b, sub)]));
-    const me = rs.sysop, line = Object.entries(rs).map(([sub, r]) => `${sub} ${r.lost.toFixed(0)}% ${Math.round(r.wins * 100)}`).join(' / ');
-    assert.ok(me.lost >= 38 && me.lost <= 58, `${b.name}: ${line}`);
-    assert.ok(me.wins >= 0.7 && me.wins <= 0.92, `${b.name}: ${line}`);
-    for (const [sub, r] of Object.entries(rs)) if (sub !== 'sysop') assert.ok(r.wins > me.wins, `${b.name}: ${line}`);
+    const line = Object.entries(rs).map(([sub, r]) => `${sub} ${r.lost.toFixed(0)}% ${Math.round(r.wins * 100)} ${r.cycles.toFixed(1)}c`).join(' / ');
+    const dps = SUBS.filter(([c]) => c !== 'Bastion').map(([, sub]) => rs[sub].cycles).sort((x, y) => x - y);
+    const median = (dps[2] + dps[3]) / 2;
+    for (const sub of ['warden', 'sysop']) {
+      assert.ok(rs[sub].cycles >= 1.4 * median, `${b.name}: ${line}`);
+      assert.ok(rs[sub].wins >= 0.85, `${b.name}: ${line}`);
+    }
   }
 });
 

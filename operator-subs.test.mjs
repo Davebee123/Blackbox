@@ -42,18 +42,18 @@ const edges = (fn) => { CONFIG.edges = true; try { fn(); } finally { CONFIG.edge
 const logged = (s, re) => s.logs.filter((e) => re.test(e.message)).length;
 
 // ---------- the lines ----------
-test('both lines have eight skills, unlocking from 12 to 38; every new skill is an Operator skill with a card and library text', () => {
+test('both lines have eleven skills, unlocking from 10 to 38; every new skill is an Operator skill with a card and library text', () => {
   for (const id of ['herder', 'hijacker']) {
     const x = SUBS[id];
     assert.equal(x.cls, 'operator');
-    assert.equal(x.skills.length, 8, id);
+    assert.equal(x.skills.length, 11, id);
     x.skills.forEach((k, i) => assert.equal(unlockLevel('operator', k, id), SUBCLASS.unlocks[i], k));
   }
   for (const [k, a] of Object.entries(ABILITIES).filter(([, a]) => a.sub === 'herder' || a.sub === 'hijacker')) {
     assert.equal(a.cls, 'operator', k);
     assert.ok(SUBS[a.sub].skills.includes(k), `${k} is on the ${a.sub} line`);
     assert.match(a.help, new RegExp(`^${k}( <part>)? — .+\\.$`), k);
-    assert.ok(a.short && a.desc && a.icon && a.cooldown > 0, k);
+    assert.ok(a.short && a.desc && a.icon && (a.cooldown > 0 || a.once), k);
     assert.ok(ARCHETYPES.operator.skills.some((c) => c.id === k), k);
   }
   const ids = (x) => new Set([...x.fillers.flat(), ...x.talents.flat()].map((n) => n.id));
@@ -311,7 +311,7 @@ test('Cache Poison: a patch that is due hits the part instead, and a heal it cas
   Object.assign(part(s, 'pulse'), { maxArmor: 1, armor: 0, patchAt: s.encounter.cycle });
   act(s, 'cache-poison pulse');
   assert.equal(part(s, 'pulse').armor, 0, 'no chit back');
-  assert.equal(lost(s, 'pulse'), 15);
+  assert.equal(lost(s, 'pulse'), 15 + 5, 'the turned patch, and the poison\'s first bite');
   assert.equal(part(s, 'pulse').patchAt, s.encounter.cycle - 1 + patchDelay(s), 'its patch starts over');
   const h = start({ sub: 'hijacker' });
   part(h, 'pulse').integrity = 400;
@@ -359,8 +359,8 @@ test('the planner plays both lines: wins at level 18 and 30, using the new skill
       const h = score('Operator', b, { sub: 'herder' });
       const j = score('Operator', b, { sub: 'hijacker' });
       assert.ok(h.wins / h.total >= 0.85 && j.wins / j.total >= 0.85, `wins ${h.wins} ${j.wins}`);
-      assert.ok(h.uses['fan-out'] && h.uses.mesh, JSON.stringify(h.uses));
-      assert.ok(j.uses.hijack && j.uses.replay, JSON.stringify(j.uses));
+      assert.ok(h.uses.nohup && (L < 20 || (h.uses['fan-out'] && h.uses.mesh)), JSON.stringify(h.uses));
+      assert.ok((j.uses.hijack || j.uses.takeover) && j.uses.replay && j.uses.sniff, JSON.stringify(j.uses)); // with tells off (this file), Hijack's moment is a helper on a big attacker
       assert.ok(Math.abs(h.lost - j.lost) <= 15, `close: ${h.lost.toFixed(0)} vs ${j.lost.toFixed(0)}`);
     }
   } finally { Object.assign(CONFIG, flat); }

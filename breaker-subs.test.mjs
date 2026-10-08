@@ -55,7 +55,7 @@ const refused = (s, text) => { equip(s, text.split(' ')[0]); return command(s, t
 const withEdges = (fn) => { CONFIG.edges = true; try { fn(); } finally { CONFIG.edges = false; } };
 
 // ---------- the data ----------
-test('both lines hold 8 skills in unlock order, and every new skill is a well-formed Breaker skill', () => {
+test('both lines hold 11 skills in unlock order (10 to 38), and every new skill is a well-formed Breaker skill', () => {
   const icons = ['behavior', 'clear', 'command', 'event-lock', 'event-warning', 'expand', 'exploit', 'injector', 'interrupt', 'mutation', 'overload', 'server', 'shell-shield', 'spike', 'weakness'];
   const verbs = ['hit', 'burn', 'stun', 'debuff', 'shield', 'heal', 'buff', 'util'];
   for (const sub of ['demolitionist', 'overclocker']) {
@@ -69,7 +69,7 @@ test('both lines hold 8 skills in unlock order, and every new skill is a well-fo
     assert.ok(icons.includes(a.icon) && verbs.includes(a.verb), id);
     assert.ok(a.help.startsWith(id + ' ') || a.help.startsWith(id + ' —'), id);
     assert.match(a.help, / — \S.*\.$/, id);
-    assert.ok(a.short && a.desc && a.cooldown >= 3, id);
+    assert.ok(a.short && a.desc && (a.cooldown >= 2 || a.once), id);
   }
   assert.equal(SUBS.demolitionist.edge.name, 'Overkill');
   assert.equal(SUBS.overclocker.edge.name, 'Redline');
@@ -128,30 +128,31 @@ test('Logic Bomb: 2 cycles later, 50 to its part and 20 to every other; on the n
   assert.equal(part(a, 'pulse').armor, 1);
 });
 
-test('Chain Reaction: for 3 cycles, every part you break hits the rest for 20, and a part it breaks blows up too', () => {
+test('Chain Reaction: 30 to the part, and if it breaks within 3 cycles it hits the rest for 25; a part the blast breaks blows up too', () => {
   const s = noArmor(quiet(demo()));
   big(s, 'encryptor');
   extra(s, 'x1', 10);
-  act(s, 'chain-reaction');
-  part(s, 'pulse').integrity = 1;
+  Object.assign(part(s, 'pulse'), { integrity: 40, max: 40 });
+  act(s, 'chain-reaction pulse');
+  assert.equal(part(s, 'pulse').integrity, 10, 'a 30 hit in any fight');
   act(s, 'spike pulse');
   assert.equal(part(s, 'x1').integrity, 0, 'the blast broke X1');
-  assert.equal(lost(s, 'encryptor'), Math.floor(20 * 1.1) + Math.floor(20 * 1.2), 'two blasts, each with the Momentum of the breaks so far');
+  assert.equal(lost(s, 'encryptor'), Math.floor(25 * 1.1) + Math.floor(25 * 1.2), 'two blasts, each with the Momentum of the breaks so far');
   assert.equal(readyIn(s, 'chain-reaction'), 4, 'cooldown 6');
   // Past its 3 cycles, a break is just a break.
   const t = noArmor(quiet(demo()));
-  big(t, 'encryptor');
-  act(t, 'chain-reaction'); act(t, 'hold'); act(t, 'hold');
+  big(t, 'encryptor'); big(t, 'pulse');
+  act(t, 'chain-reaction pulse'); act(t, 'hold'); act(t, 'hold'); act(t, 'hold');
   part(t, 'pulse').integrity = 1;
   act(t, 'spike pulse');
   assert.equal(lost(t, 'encryptor'), 0);
 });
 
-test('Bit Rot: a ◆ off at the end of each of your turns for 4 cycles, and no patching while it rots; not on a part that never had armor', () => {
+test('Bit Rot: 20 now, then a ◆ off at the end of each of your turns for 4 cycles, and no patching while it rots; a plain hit on a part that never had armor', () => {
   const s = quiet(demo());
-  const p = armor(s, 'pulse', 5);
+  const p = armor(s, 'pulse', 6);
   act(s, 'bit-rot pulse');
-  assert.equal(p.armor, 4);
+  assert.equal(p.armor, 4, 'its hit breaks one, the rot another');
   act(s, 'hold'); act(s, 'hold'); act(s, 'hold');
   assert.equal(p.armor, 1, 'four cycles, four ◆');
   act(s, 'hold');
@@ -167,14 +168,17 @@ test('Bit Rot: a ◆ off at the end of each of your turns for 4 cycles, and no p
   act(t, 'hold');
   assert.equal(q.armor, 1, 'the patch comes once it ends');
   const n = noArmor(quiet(demo()));
-  assert.match(refused(n, 'bit-rot pulse').message, /no armor to rot/);
+  big(n, 'pulse');
+  act(n, 'bit-rot pulse');
+  assert.equal(lost(n, 'pulse'), 20, 'worth a Spike anywhere');
+  assert.ok(!part(n, 'pulse').bkRot, 'nothing to rot');
 });
 
 test('Demolitionist fillers: Blast Radius, Shrapnel, Deep Burn', () => {
   const s = noArmor(quiet(demo({ ranks: { 'blast-radius': 2 } })));
   big(s, 'pulse');
   act(s, 'fork-bomb');
-  assert.equal(lost(s, 'pulse'), Math.floor(12 * 1.2), 'Blast Radius: +10% a rank on Fork Bomb');
+  assert.equal(lost(s, 'pulse'), Math.floor(16 * 1.2), 'Blast Radius: +10% a rank on Fork Bomb');
   const l = noArmor(quiet(demo({ ranks: { 'blast-radius': 1 } })));
   big(l, 'pulse'); big(l, 'encryptor');
   act(l, 'logic-bomb pulse'); act(l, 'hold'); act(l, 'hold');
@@ -418,4 +422,114 @@ test('bots play both subclasses to wins', async () => {
     assert.ok(r.wins >= 0.85 * r.total, `${sub}: ${r.wins}/${r.total}`);
     assert.ok(r.lost < 55, `${sub}: ${r.lost.toFixed(0)}%`);
   }
+});
+
+// ---------- the 15-key pools (docs/kits.md) ----------
+test('Shatter: 38 on the part you just bared, and its shards hit every other bare part for 12', () => {
+  const s = quiet(demo());
+  armor(s, 'pulse', 2); big(s, 'pulse'); big(s, 'encryptor'); part(s, 'encryptor').armor = 0;
+  act(s, 'shaped-charge pulse');
+  act(s, 'shatter pulse');
+  assert.equal(lost(s, 'pulse'), 38);
+  assert.equal(lost(s, 'encryptor'), 12, 'shards on the other bare part');
+});
+
+test('Exploit: 15 and Exposed, so it never costs a hit', () => {
+  const s = noArmor(quiet(demo()));
+  big(s, 'pulse');
+  act(s, 'exploit pulse');
+  assert.equal(lost(s, 'pulse'), 15);
+  assert.ok(part(s, 'pulse').exposedUntil >= s.encounter.cycle, 'Exposed through the next cycle');
+});
+
+test('Debris Field: for 3 cycles every ◆ you break shields you 5, up to 30', () => {
+  const s = quiet(demo());
+  armor(s, 'pulse', 5); armor(s, 'encryptor', 6);
+  act(s, 'debris-field');
+  act(s, 'shaped-charge pulse');
+  assert.equal(s.encounter.shield, 25, 'five ◆, five shields');
+  act(s, 'crack encryptor');
+  assert.equal(s.encounter.shield, 30, 'capped at 30');
+  act(s, 'hold');
+  act(s, 'crack encryptor');
+  assert.equal(s.encounter.shield, 30, 'over after its 3 cycles');
+});
+
+test('Backfire: 25 anywhere; on a part winding up a charge, the charge goes off inside it and the attack lands plain', async () => {
+  const { tellOn } = await import('./dist/tells.mjs');
+  const n = noArmor(quiet(demo()));
+  big(n, 'pulse');
+  act(n, 'backfire pulse');
+  assert.equal(lost(n, 'pulse'), 25);
+  // A charge on a part's next attack (tells.mjs): Backfire turns it on its own part.
+  CONFIG.tells = true;
+  try {
+    let s = null, t = null;
+    for (let seed = 1; seed < 40 && !t; seed++) {
+      s = fresh();
+      s.loadout.archetype = 'breaker'; s.hackers = { breaker: { level: 30, xp: 0 } }; s.loadout.sub = { breaker: 'demolitionist' };
+      s.loadout.equipped.demolitionist = ['backfire', 'crack', 'flood'];
+      selectEncounter(s, 'cryptjack', seed, { level: 30 });
+      command(s, 'engage');
+      for (let k = 0; k < 12 && s.encounter?.phase === 'active' && !t; k++) {
+        t = s.encounter.virus.parts.find((p) => p.integrity > 0 && tellOn(s, p, 'charge') && p.attack) || null;
+        if (!t) { command(s, 'hold'); resolveCycle(s); }
+      }
+    }
+    assert.ok(t, 'a charge came up');
+    t.integrity = t.max = 2000;
+    const ev = command(s, 'backfire ' + t.id);
+    assert.ok(!ev.some((e) => e.type === 'warning'), ev.at(-1)?.message);
+    const out = resolveCycle(s);
+    assert.ok(out.some((e) => /BACKFIRE/.test(e.message)), 'the charge goes off inside it');
+    assert.ok(!tellOn(s, t, 'charge'), 'and is gone');
+  } finally { CONFIG.tells = false; }
+});
+
+test('rm -rf: for 2 cycles every hit you land also hits every other part for half', () => {
+  const s = noArmor(quiet(demo()));
+  big(s, 'pulse'); big(s, 'encryptor');
+  act(s, 'rm-rf');
+  act(s, 'overload pulse');
+  assert.equal(lost(s, 'pulse'), 40);
+  assert.equal(lost(s, 'encryptor'), 20, 'half of it on the other part');
+  assert.equal(readyIn(s, 'rm-rf'), 8, 'cooldown 10');
+});
+
+test('Hot Loop: 22 and a Momentum stack for 2 cycles; Vent spends the stacks to cleanse and heal 5 each', () => {
+  const s = noArmor(quiet(oc()));
+  big(s, 'pulse');
+  act(s, 'hot-loop pulse');
+  assert.equal(lost(s, 'pulse'), 22);
+  assert.equal(momentumStacks(s), 1);
+  stacks(s, 3);
+  s.encounter.corrupt = { left: 3, amount: 4 };
+  s.encounter.encrypt = 6;
+  s.server.integrity = 50;
+  act(s, 'vent');
+  assert.equal(momentumStacks(s), 0);
+  assert.ok(!s.encounter.corrupt && !s.encounter.encrypt, 'Corrupted and encryption cleared');
+  assert.ok(s.server.integrity >= 50 + 15 - 1, 'healed 5 a stack');
+});
+
+test('Fault Injection: 20, and every hit you land on it crits for 3 cycles', () => {
+  const s = noArmor(quiet(oc()));
+  big(s, 'pulse');
+  act(s, 'fault-injection pulse');
+  assert.equal(lost(s, 'pulse'), 20);
+  act(s, 'overload pulse');
+  assert.equal(lost(s, 'pulse'), 20 + Math.floor(40 * 1.5), 'a crit');
+  act(s, 'hold'); act(s, 'hold');
+  act(s, 'spike pulse');
+  assert.equal(lost(s, 'pulse'), 20 + Math.floor(40 * 1.5) + 25, 'over after 3 cycles');
+});
+
+test('Sudo: for 2 cycles your hits go through ◆, each still breaking one', () => {
+  const s = quiet(oc());
+  armor(s, 'pulse', 3); big(s, 'pulse');
+  act(s, 'sudo');
+  act(s, 'overload pulse');
+  assert.equal(lost(s, 'pulse'), 40, 'straight through');
+  assert.equal(part(s, 'pulse').armor, 2, 'and a ◆ broken on the way');
+  assert.equal(readyIn(s, 'sudo'), 6, 'cooldown 8');
 });

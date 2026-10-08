@@ -158,22 +158,23 @@ export const CONFIG = {
 export const ABILITIES = {
   // cantrips: everyone
   sigint: { verb: 'stun', name: 'SIGINT', target: 'none', damage: 0, cooldown: 8, icon: 'interrupt', short: 'Interrupt a cast', help: 'sigint — interrupts a cast that is compiling (Compiling… on the board): a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. Ready every 8 cycles.' },
+  // Key 1: every class's plain hit, with a name of its own (SPIKE below). Typing `spike` works for every class.
   spike: { verb: 'hit', name: 'Spike', target: 'part', damage: 25, cooldown: 0, icon: 'spike', short: 'Hit 25', help: 'spike <part> — 25 damage. If you type nothing, you Spike the last part you hit.' },
   // Every class skill is simple, with one twist: a burn (damage over cycles), a proc (something
   // you do lights up a key for a cycle or two), a reactive window (usable right after an event),
   // or an execute. proc: the event that opens it; window: how many cycles it stays lit.
   // Breaker: burst, crits, breaking armor
   overload: { cls: 'breaker', verb: 'hit', name: 'Overload', target: 'part', damage: 40, cooldown: 3, icon: 'overload', short: 'Hit 40, crit resets', help: 'overload <part> — 40 damage. If it crits, its cooldown resets.' },
-  exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 0, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Exposed: +25% crit', help: 'exploit <part> — Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
+  exploit: { cls: 'breaker', verb: 'debuff', name: 'Exploit', target: 'part', damage: 15, status: 'exposed', cycles: 1, cooldown: 2, icon: 'exploit', short: 'Hit 15, Exposed 2', help: 'exploit <part> — 15 damage, and Exposed this cycle and next: every hit on it from anyone has +25% crit chance.' },
   crack: { cls: 'breaker', verb: 'debuff', name: 'Crack', target: 'part', damage: 0, strip: 3, cooldown: 2, icon: 'shell-shield', short: 'Strip 3 ◆', help: 'crack <part> — breaks 3 ◆ on it at once.' },
   // noAnswer: a follow-up, not an answer to a tell (tells.mjs): its hit never calls one off.
-  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 38, proc: 'stripped', window: 1, noAnswer: true, cooldown: 0, icon: 'overload', short: 'Hit 38 the part you just bared', help: 'shatter <part> — lit for a cycle on the part whose last ◆ you just broke. 38 damage to it.' },
+  shatter: { cls: 'breaker', verb: 'hit', name: 'Shatter', target: 'part', damage: 38, shards: 12, scales: ['shards'], proc: 'stripped', window: 1, noAnswer: true, cooldown: 0, icon: 'overload', short: 'Hit 38 the part you just bared; shards 12', help: 'shatter <part> — lit for a cycle on the part whose last ◆ you just broke. 38 damage to it, and its shards hit every other bare part for 12.' },
   flood: { cls: 'breaker', verb: 'hit', name: 'Flood', target: 'part', damage: 38, cooldown: 6, icon: 'overload', short: 'Hit 38, ×2 if bare', help: 'flood <part> — 38 damage, double on a part with no armor left.' },
   segfault: { cls: 'breaker', verb: 'hit', name: 'Segfault', target: 'part', damage: 30, execute: 3, cooldown: 3, icon: 'spike', short: 'Hit 30, ×3 if charging', help: 'segfault <part> — 30 damage, three times that on a part winding up a charge. Crash it mid-wind-up.' },
-  'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 12, fragx: 3, cooldown: 3, icon: 'overload', short: 'Hit 12 all, fragments ×3', help: 'fork-bomb — 12 damage to every part, three times that to every fragment.' },
+  'fork-bomb': { cls: 'breaker', verb: 'hit', name: 'Fork Bomb', target: 'none', damage: 0, all: 16, fragx: 3, cooldown: 3, icon: 'overload', short: 'Hit 16 all, fragments ×3', help: 'fork-bomb — 16 damage to every part, three times that to every fragment.' },
   'thermal-runaway': { cls: 'breaker', verb: 'burn', name: 'Thermal Runaway', target: 'part', damage: 0, tick: 4, grow: 4, ticks: 4, cooldown: 4, icon: 'injector', short: 'Burn 4→16, melts casts', help: 'thermal-runaway <part> — burns it for 4, then 8, 12 and 16. On a part compiling a cast, every tick counts as a hit on the cast.' },
   brace: { cls: 'breaker', verb: 'buff', name: 'Brace', target: 'none', damage: 0, cycles: 2, cut: 0.3, back: 2, cooldown: 5, icon: 'shell-shield', short: 'Hits −30%, sent back ×2', help: 'brace — this cycle and next, hits on you deal 30% less, and whatever hits you takes twice what Brace saved you. Made for a charge you can\'t call off.' },
-  sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 6, icon: 'behavior', short: 'Part rules off 2', help: 'sudo — root override, this cycle and next: locks and wards don\'t hold your hits, a Tripwire you break stays quiet, and the Decoy and the Mimic can\'t copy you.' },
+  sudo: { cls: 'breaker', verb: 'buff', name: 'Sudo', target: 'none', damage: 0, cycles: 2, cooldown: 8, icon: 'behavior', short: 'Through ◆ and part rules, 2', help: 'sudo — root override, this cycle and next: your hits go through ◆ (each still breaks one), locks and wards don\'t hold them, a Tripwire you break stays quiet, and the Decoy and the Mimic can\'t copy you.' },
   'zero-day': { cls: 'breaker', verb: 'hit', name: 'Zero-day', target: 'part', damage: 65, pierce: true, unlock: true, once: true, cooldown: 0, icon: 'event-warning', short: 'Hit 65 through ◆ and locks, once', help: 'zero-day <part> — 65 damage straight through armor, locks and wards. Once per fight.' },
   // Bastion: the battle cleric. Shields and heals that feed its hits.
   'rate-limit': { cls: 'bastion', verb: 'hit', name: 'Rate Limit', target: 'part', damage: 45, due: 15, chits: 2, status: 'throttled', cooldown: 3, icon: 'interrupt', short: 'Hit 45 (+15 if due), throttle', help: 'rate-limit <part> — 45 damage, +15 if its attack is due this cycle, and its next attack deals half (Throttled). On armor it breaks 2 ◆.' },
@@ -181,7 +182,7 @@ export const ABILITIES = {
   retaliate: { cls: 'bastion', verb: 'hit', name: 'Retaliate', target: 'part', damage: 0, proc: 'struck', window: 1, cap: 60, cooldown: 0, icon: 'shell-shield', short: 'Hit back ×2', help: 'retaliate <part> — hits back for twice the size of the last attack that reached you (or your shield), up to 60, the cycle after.' },
   suspend: { cls: 'bastion', verb: 'stun', name: 'Suspend', target: 'attack', damage: 0, delay: 2, cooldown: 4, icon: 'interrupt', short: 'Delay 2; drains a charge', help: 'suspend [part] — SIGSTOP: push its attack back 2 cycles. A charge on that attack drains out: it lands plain. With no part, the attack landing soonest.' },
   patch: { cls: 'bastion', verb: 'heal', name: 'Patch', target: 'none', damage: 0, heal: 4, pack: 10, tick: 2, ticks: 3, cooldown: 4, icon: 'server', short: 'Heal 4 + 2×3', help: 'patch [name] — heal 4 now, then 2 a cycle for 3 cycles. In a crew, patch nyx heals nyx instead.' },
-  throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 0, status: 'throttled', cycles: 3, loud: 6, cooldown: 4, icon: 'interrupt', short: 'Half for 3; 6 if loud', help: 'throttle [part] — its attacks deal half for 3 cycles. On a part gone loud (a Tripwire set off, Double Extortion, a Bricker\'s rage), for 6, and the loud wears off.' },
+  throttle: { cls: 'bastion', verb: 'debuff', name: 'Throttle', target: 'attack', damage: 20, status: 'throttled', cycles: 3, loud: 6, cooldown: 4, icon: 'interrupt', short: 'Hit 20, half 3; 6 if loud', help: 'throttle [part] — 20 damage, and its attacks deal half for 3 cycles. On a part gone loud (a Tripwire set off, Double Extortion, a Bricker\'s rage), for 6, and the loud wears off.' },
   purge: { cls: 'bastion', verb: 'burn', name: 'Purge', target: 'part', damage: 0, tick: 6, ticks: 4, drain: 2, cooldown: 4, icon: 'clear', short: 'Burn 6×4, heal, cleanse', help: 'purge <part> — burns it for 6 a cycle for 4 cycles; each tick heals you 2. It also clears your encryption and Corrupted.' },
   harden: { cls: 'bastion', verb: 'shield', name: 'Harden', target: 'none', damage: 0, cooldown: 6, icon: 'shell-shield', short: 'Block next attack', help: 'harden — gain a ◆: the next attack on you does nothing, however big.' },
   reclaim: { cls: 'bastion', verb: 'hit', name: 'Reclaim', target: 'part', damage: 35, lifesteal: 0.5, chits: 2, cooldown: 3, icon: 'server', short: 'Hit 35, heal half', help: 'reclaim <part> — 35 damage, and you heal half of what it does. On armor it breaks 2 ◆.' },
@@ -189,9 +190,9 @@ export const ABILITIES = {
   failover: { cls: 'bastion', verb: 'hit', name: 'Failover', target: 'none', damage: 0, cooldown: 5, icon: 'event-warning', short: 'Hit all for missing/4', help: 'failover — hit every part for a quarter of your missing health (at least 20).' },
   // Infiltrator: burns and precision
   inject: { cls: 'infiltrator', verb: 'burn', name: 'Inject', target: 'part', damage: 0, tick: 12, ticks: 3, stacks: 3, cooldown: 1, icon: 'injector', short: 'Burn 12×3, stacks', help: 'inject <part> — 12 damage every cycle for 3 cycles. It stacks: up to 3 on one part, each with its own timer.' },
-  tag: { cls: 'infiltrator', verb: 'debuff', name: 'Tag', target: 'part', damage: 0, status: 'tagged', cycles: 4, cooldown: 3, icon: 'weakness', short: 'Burns +50%, timer', help: 'tag <part> — for 4 cycles, burns on it tick 50% harder and its timer shows even if it is veiled.' },
+  tag: { cls: 'infiltrator', verb: 'debuff', name: 'Tag', target: 'part', damage: 10, status: 'tagged', cycles: 4, cooldown: 3, icon: 'weakness', short: 'Hit 10, burns +50%', help: 'tag <part> — 10 damage, and for 4 cycles burns on it tick 50% harder and its timer shows even if it is veiled.' },
   backdoor: { cls: 'infiltrator', verb: 'hit', name: 'Backdoor', target: 'part', damage: 24, pierce: true, perBurn: 6, cooldown: 4, icon: 'injector', short: 'Hit 24 thru armor, +6/burn', help: 'backdoor <part> — 24 damage straight through armor, +6 for each burn on it.' },
-  keepalive: { cls: 'infiltrator', verb: 'util', name: 'Keepalive', target: 'part', damage: 0, cycles: 2, cooldown: 2, icon: 'injector', short: 'Burns +2 cycles', help: 'keepalive <part> — every burn on it lasts 2 cycles longer.' },
+  keepalive: { cls: 'infiltrator', verb: 'util', name: 'Keepalive', target: 'part', damage: 0, cycles: 2, cooldown: 3, icon: 'injector', short: 'Burns tick now, +2', help: 'keepalive <part> — every burn on it ticks once now and lasts 2 cycles longer.' },
   detonate: { cls: 'infiltrator', verb: 'hit', name: 'Detonate', target: 'part', damage: 0, cooldown: 4, icon: 'event-warning', short: 'Burns now ×1.5', help: 'detonate <part> — every burn on it deals all its remaining damage now, ×1.5.' },
   opening: { cls: 'infiltrator', verb: 'hit', name: 'Opening', target: 'part', damage: 50, proc: 'slipped', window: 1, cooldown: 0, icon: 'behavior', short: 'Hit 50 (after a miss)', help: 'opening <part> — hits it for 50 the cycle after an attack misses you or is delayed.' },
   propagate: { cls: 'infiltrator', verb: 'util', name: 'Propagate', target: 'part', damage: 0, cooldown: 5, icon: 'mutation', short: 'Copy burns to all', help: 'propagate <part> — copy your burns on it to every other part.' },
@@ -199,11 +200,11 @@ export const ABILITIES = {
   implant: { cls: 'infiltrator', verb: 'burn', name: 'Rootkit Implant', target: 'part', damage: 0, tick: 10, ticks: 99, once: true, cooldown: 0, icon: 'injector', short: 'Burn 10 till it breaks; no heals', help: 'implant <part> — burns it for 10 every cycle until the part breaks, and it can\'t be healed or grown while it burns. Once per fight.' },
   // Operator: helpers, and what you do with them
   deploy: { cls: 'operator', verb: 'burn', name: 'Deploy', target: 'part', damage: 0, helper: 12, ticks: 4, cooldown: 4, icon: 'command', short: 'Helper 12 ×4', help: 'deploy <part> — sends a helper to hit it for 12 every cycle for 4 cycles (it moves on if the part breaks).' },
-  hook: { cls: 'operator', verb: 'debuff', name: 'Hook', target: 'part', damage: 0, status: 'hooked', cycles: 4, cooldown: 3, icon: 'injector', short: 'Hooked 4', help: 'hook <part> — Hooked for 4 cycles: every hit on it from anyone (helpers and burns too) gets +6.' },
+  hook: { cls: 'operator', verb: 'debuff', name: 'Hook', target: 'part', damage: 10, status: 'hooked', cycles: 4, cooldown: 3, icon: 'injector', short: 'Hit 10, Hooked 4', help: 'hook <part> — 10 damage, and Hooked for 4 cycles: every hit on it from anyone (helpers and burns too) gets +6.' },
   botnet: { cls: 'operator', verb: 'burn', name: 'Botnet', target: 'part', damage: 0, helper: 4, helpers: 3, ticks: 3, cooldown: 5, icon: 'command', short: '3 helpers 4 ×3', help: 'botnet <part> — three small helpers hit it for 4 each every cycle for 3 cycles.' },
-  spawn: { cls: 'operator', verb: 'burn', name: 'Spawn', target: 'part', damage: 0, helper: 5, ticks: 3, cooldown: 1, icon: 'command', short: 'Helper 5 ×3', help: 'spawn <part> — sends a small helper to hit it for 5 every cycle for 3 cycles.' },
-  jam: { cls: 'operator', verb: 'stun', name: 'Jam', target: 'attack', damage: 0, delay: 1, recall: true, cooldown: 2, icon: 'interrupt', short: 'Spend a helper: delay 1; a charge lost', help: 'jam <part> — pull one of your helpers off it to push its attack back a cycle. A charge on that attack loses its signal: it lands plain.' },
-  'kill-switch': { cls: 'operator', verb: 'hit', name: 'Kill Switch', target: 'none', damage: 0, cooldown: 3, icon: 'event-warning', short: 'Cash in helpers; hits tells', help: 'kill-switch — your helpers deal all their remaining damage now. Each part they hit takes it as a hit from your command: it calls a charge off there.' },
+  spawn: { cls: 'operator', verb: 'burn', name: 'Spawn', target: 'part', damage: 0, helper: 7, ticks: 3, cooldown: 1, icon: 'command', short: 'Helper 7 ×3', help: 'spawn <part> — sends a small helper to hit it for 7 every cycle for 3 cycles.' },
+  jam: { cls: 'operator', verb: 'hit', name: 'Jam', target: 'attack', damage: 15, cooldown: 2, icon: 'interrupt', short: 'Hit 15, Jammed; a helper delays it', help: 'jam <part> — 15 damage, and it is Jammed until its next attack. If one of your helpers is on it, Jam pulls it off to push that attack back a cycle as well: a charge on it loses its signal and lands plain.' },
+  'kill-switch': { cls: 'operator', verb: 'hit', name: 'Kill Switch', target: 'none', damage: 0, cooldown: 3, icon: 'event-warning', short: 'Cash in helpers + Last Gasp; hits tells', help: 'kill-switch — your helpers deal all their remaining damage now, plus their Last Gasp. Each part they hit takes it as a hit from your command: it calls a charge off there.' },
   'garbage-collect': { cls: 'operator', verb: 'hit', name: 'Garbage Collect', target: 'none', damage: 0, all: 10, fragx: 3, cooldown: 3, icon: 'clear', short: 'Hit 10 all, fragments ×3', help: 'garbage-collect — 10 damage to every part, three times that to every fragment, and your helpers last a cycle longer.' },
   fork: { cls: 'operator', verb: 'buff', name: 'Fork', target: 'none', damage: 0, cycles: 4, cooldown: 6, icon: 'expand', short: 'Each ◆ cracked splits a helper', help: 'fork — for 4 cycles, every ◆ your helpers break starts another helper on that part (up to your helper cap). Made for thick armor.' },
   barrier: { cls: 'operator', verb: 'shield', name: 'Barrier', target: 'part', damage: 0, recall: true, cooldown: 3, icon: 'shell-shield', short: 'Spend a helper: shield', help: 'barrier <part> — pull one of your helpers off it: a shield worth all the damage it had left.' },
@@ -952,6 +953,18 @@ export const TREE = [
   { kind: 'choice', tier: 2, need: 14 },
 ];
 const f = (id, name, rule, per) => ({ id, name, rule, per, max: 3 });
+// Key 1, the plain hit every class has: a plain 25 with no cooldown, the filler under every rotation. Each class
+// calls it by its own name and types its own word for it (`spike` works for every class too). Its id stays
+// `spike` everywhere in the code and the save.
+export const SPIKE = {
+  breaker: { word: 'bash', name: 'Bash', rule: 'Hit 25. If you type nothing, you Bash the last part you hit.' },
+  bastion: { word: 'ban', name: 'Ban', rule: 'Hit 25. If you type nothing, you Ban the last part you hit.' },
+  infiltrator: { word: 'poke', name: 'Poke', rule: 'Hit 25. If you type nothing, you Poke the last part you hit.' },
+  operator: { word: 'ping', name: 'Ping', rule: 'Hit 25. If you type nothing, you Ping the last part you hit.' },
+};
+export const spikeOf = (arch) => SPIKE[arch] || { word: 'spike', name: 'Spike', rule: 'Hit 25. If you type nothing, you Spike the last part you hit.' };
+// The cantrips as a class sees them: key 1 under its own name.
+export const cantripsOf = (arch) => CANTRIPS.map((c) => (c.id === 'spike' ? { ...c, name: spikeOf(arch).name, word: spikeOf(arch).word, rule: spikeOf(arch).rule } : c));
 export const CANTRIPS = [
   { key: '1', id: 'spike', name: 'Spike', rule: 'Hit 25. If you type nothing, you Spike the last part you hit.' },
   { key: '-', id: 'sigint', name: 'SIGINT', rule: 'Interrupts a cast that is compiling: a crew boss\'s, or a virus part\'s. Some casts can\'t be interrupted, and a crew boss you interrupt casts its next one sooner. It\'s ready every 8 cycles.' },
@@ -986,8 +999,18 @@ const RUN_SKILLS = {
   tap: { id: 'tap', name: 'Tap', rule: 'On runs: once per run, print the whole folder tree, its guards, and which file holds the key.', verb: 'run' },
 };
 const skillsOf = (ids) => ids.map((id) => RUN_SKILLS[id] || card(id));
+// A subclass's line: its eleven bar skills at SUBCLASS.unlocks, and its run skills (`run`) at their own levels,
+// in unlock order.
+export const SUBCLASS = { from: 10, unlocks: [10, 12, 14, 16, 18, 20, 22, 26, 30, 34, 38] };
+function lineOf(x) {
+  const out = x.skills.map((id, i) => ({ id, level: SUBCLASS.unlocks[i] ?? Infinity }));
+  for (const [id, level] of Object.entries(x.run || {})) out.push({ id, level });
+  return out.sort((a, b) => a.level - b.level);
+}
+const lineIds = (x) => lineOf(x).map((y) => y.id);
+export { lineOf };
 // A class's subclasses, from its module: skill cards for their lines, plus their trees and edge.
-const subsOf = (cls) => Object.fromEntries(Object.entries(CLASS_DATA[cls].subs).map(([id, x]) => [id, { ...x, id, cls, cards: skillsOf(x.skills) }]));
+const subsOf = (cls) => Object.fromEntries(Object.entries(CLASS_DATA[cls].subs).map(([id, x]) => [id, { ...x, id, cls, cards: skillsOf(lineIds(x)) }]));
 export const ARCHETYPES = {
   breaker: {
     name: 'Breaker', role: ['DPS', 'Burst'], idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
@@ -1026,20 +1049,21 @@ export const ARCHETYPES = {
     skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
 };
-// Skills in unlock order for a class; the first seven fill the bar by level 18.
-// Subclasses: picked at SUBCLASS.from (when the edge used to come); each has its own skill line,
-// unlocking at SUBCLASS.unlocks in the order its module writes them, its own edge and talent tree.
-export const SUBCLASS = { from: 10, unlocks: [12, 14, 18, 22, 26, 30, 34, 38] };
+// Skills in unlock order for a class.
+// Subclasses: picked at SUBCLASS.from (when the edge used to come); each has its own skill line of eleven,
+// unlocking at SUBCLASS.unlocks in the order its module writes them, its own edge and talent tree. Run skills
+// (the Phantom's Spoof and Tap) take no slot and come at levels of their own (the subclass's `run`).
 // Every subclass by id (ids are unique across classes): { id, cls, name, edge, skills, cards, fillers, talents }.
 export const SUBS = Object.fromEntries(Object.values(ARCHETYPES).flatMap((a) => Object.values(a.subs).map((x) => [x.id, x])));
 // The class that never picked one plays its old-edge subclass (EDGE[cls].sub) until it does.
 export const defaultSub = (arch) => EDGE[arch]?.sub || Object.keys(ARCHETYPES[arch].subs)[0];
 for (const a of Object.values(ARCHETYPES)) {
   const seen = new Set();
-  a.skills = skillsOf([...a.core, ...Object.values(a.subs).flatMap((x) => x.skills)].filter((id) => !seen.has(id) && seen.add(id)));
+  a.skills = skillsOf([...a.core, ...Object.values(a.subs).flatMap((x) => lineIds(x))].filter((id) => !seen.has(id) && seen.add(id)));
 }
-// A kit's skills in unlock order: the class's core, then its subclass's line (none before you pick).
-export const skillOrder = (arch, sub = null) => [...ARCHETYPES[arch].core, ...(sub && ARCHETYPES[arch].subs[sub] ? ARCHETYPES[arch].subs[sub].skills : [])];
+// A kit's skills in unlock order: the class's core, then its subclass's line (none before you pick), run skills
+// in among them at their own levels.
+export const skillOrder = (arch, sub = null) => [...ARCHETYPES[arch].core, ...(sub && ARCHETYPES[arch].subs[sub] ? lineIds(ARCHETYPES[arch].subs[sub]) : [])];
 // Bar slots at a level (LOADOUT.bar), and the run skills (Spoof, Tap), which never take a slot: they're
 // typed on runs.
 export const barSlots = (level) => LOADOUT.bar.reduce((n, [l, k]) => (level >= l ? k : n), LOADOUT.bar[0][1]);
@@ -1052,6 +1076,19 @@ export function unlockLevel(arch, id, sub = null) {
   const u = UNLOCKS.find((x) => (i >= 0 ? x.what === i : x.what === id)); // the core, the cantrips, the edge
   if (u) return u.level;
   const subs = sub ? [ARCHETYPES[arch].subs[sub]].filter(Boolean) : Object.values(ARCHETYPES[arch].subs);
-  for (const x of subs) { const j = x.skills.indexOf(id); if (j >= 0) return SUBCLASS.unlocks[j] ?? Infinity; }
+  for (const x of subs) { const at = lineOf(x).find((y) => y.id === id); if (at) return at.level; }
   return Infinity;
+}
+// The shipped presets of a subclass (its data's `presets`): `rotation` first. Each is a priority list: the bar it
+// gives at a level is the first keys of it you know, in its order, and then whatever else you know in unlock order
+// if slots are left over (presetBar).
+export const shippedPresets = (sub) => SUBS[sub]?.presets || {};
+export function presetBar(arch, sub, level, list, known = null) {
+  const slots = barSlots(level);
+  const has = known ? (id) => known.includes(id) : (id) => unlockLevel(arch, id, sub) <= level;
+  const fight = (id) => !isRunSkill(id) && has(id) && skillOrder(arch, sub).includes(id);
+  const out = [];
+  for (const id of list) if (out.length < slots && fight(id) && !out.includes(id)) out.push(id);
+  for (const id of skillOrder(arch, sub)) if (out.length < slots && fight(id) && !out.includes(id)) out.push(id);
+  return out;
 }

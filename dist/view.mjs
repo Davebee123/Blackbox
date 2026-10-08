@@ -44,7 +44,8 @@ import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKIL
 import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, snapshotPct, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { lairChance } from './combat.mjs';
+import { lairChance, presetsOf, presetKeys, followOf, spikeName, said } from './combat.mjs';
+import { cantripsOf } from './data.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -166,7 +167,7 @@ export function partsMarkup(s, selected) {
 function youChip(s) {
   const e = s.encounter;
   if (e.queue) return `<div class="intent mine"><b>You:</b> ${esc(e.queue.text)}</div>`;
-  if (e.lastAttack) return `<div class="intent mine" title="Nothing typed: you Spike the last part you hit"><b>You:</b> ${esc(e.lastAttack)} <small>auto</small></div>`;
+  if (e.lastAttack) return `<div class="intent mine" title="Nothing typed: you ${esc(spikeName(s))} the last part you hit"><b>You:</b> ${esc(said(s, e.lastAttack))} <small>auto</small></div>`;
   return '<div class="intent mine"><b>You:</b>&nbsp;nothing queued <small>pick a target</small></div>';
 }
 
@@ -469,7 +470,7 @@ export function boardMarkup(s, selected, preview = null) {
   const nowChip = e.queue
     ? `<div class="intent mine" data-k="you@${e.cycle}" data-at="${esc(e.queue.target || '')}" title="Enter on an empty line: go now">${esc(e.queue.text)}</div>`
     : e.lastAttack
-        ? `<div class="intent mine auto" data-k="you@${e.cycle}" data-at="${esc(e.lastAttack.split(' ')[1] || '')}" title="Nothing typed: you Spike the last part you hit">${esc(e.lastAttack)} <small>auto</small></div>`
+        ? `<div class="intent mine auto" data-k="you@${e.cycle}" data-at="${esc(e.lastAttack.split(' ')[1] || '')}" title="Nothing typed: you ${esc(spikeName(s))} the last part you hit">${esc(said(s, e.lastAttack))} <small>auto</small></div>`
         : '<div class="intent mine idle">—</div>';
   const planCell = (i) => (e.plan[i] ? `<div class="intent mine plan" data-k="you@${e.cycle + 1 + i}" data-at="${esc(e.plan[i].target || '')}">${esc(e.plan[i].text)}</div>` : '');
   // Your slotted daemons: each chip sits on the cycle it acts next.
@@ -599,7 +600,8 @@ export function trayMarkup(s) {
     // The charge bar along the bottom: full when it's ready, filling back up while it recharges.
     const cd = cooldownOf(s, id), charge = dark ? 0 : !fighting || !wait ? 100 : cd ? Math.round((1 - wait / Math.max(cd, wait)) * 100) : 0;
     const count = fighting && wait ? `<span class="cd" aria-label="${wait} ${wait === 1 ? 'cycle' : 'cycles'} to go">${wait}</span>` : '';
-    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, a.help))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(a.name)}</span><span class="state">${state}</span>${count}<span class="charge" style="width:${charge}%"></span></button>`;
+    const help = id === 'spike' ? said(s, a.help).replace(/Spike/g, spikeName(s)) : a.help; // key 1 under your class's name
+    return `<button type="button" class="ability ${cantrip ? 'cantrip' : ''} ${wait || dark ? 'cooling' : fighting ? 'ready' : ''} ${lit ? 'lit' : ''} ${moment ? 'moment' : ''} ${offline ? 'offline' : ''} ${queued ? 'queued' : ''}" data-ability="${id}" title="${esc(scaledText(s, id, help))}"><span class="ico" ${icon(a.icon)}></span><span class="name"><kbd>${key}</kbd>${esc(id === 'spike' ? spikeName(s) : a.name)}</span><span class="state">${state}</span>${count}<span class="charge" style="width:${charge}%"></span></button>`;
   });
   // The next thing your level will unlock, as a faint slot.
   const nx = nextUnlock(s);
@@ -1516,6 +1518,18 @@ const TAG_INFO = { status: 'Makes this class’s shared status', payoff: 'Strong
 
 
 export const className = (id) => ARCHETYPES[id]?.name || id;
+// Presets above the bar (docs/kits.md 5.2): a chip for each, the one your bar follows lit, and the commands under them.
+function presetsHtml(s, id, equippedArch, previewing, keysBusy) {
+  if (id !== equippedArch || previewing || !subOf(s, id)) return '';
+  const all = presetsOf(s, id), on = followOf(s, id);
+  const chip = (n) => {
+    const keys = presetKeys(s, id, n) || [];
+    const title = `${keys.map((k, i) => `${LOADOUT.keys[i]} ${ABILITIES[k]?.name || k}`).join(' · ')}${all[n].shipped ? ' (shipped)' : ''}`;
+    return `<button type="button" class="preset-chip${n === on ? ' on' : ''}" ${keysBusy || n === on ? 'disabled' : `data-command="loadout use ${esc(n)}"`} aria-pressed="${n === on}" title="${esc(title)}">${esc(n)}${all[n].shipped ? '' : ' <small>saved</small>'}</button>`;
+  };
+  return `<div class="presets" aria-label="Presets"><span class="presets-label">Presets</span>${Object.keys(all).map(chip).join('')}<button type="button" class="preset-chip save" data-prefill="loadout save " ${keysBusy ? 'disabled' : ''} title="Type a name to save this bar as a preset">Save bar as…</button>
+    <p class="presets-help">${keysBusy ? 'Presets change between fights.' : `loadout use ${esc(on || 'rotation')} · loadout save &lt;name&gt; · keys you swap in start your next fight cooling`}</p></div>`;
+}
 export const xpNeeded = (level) => xpToNext(level);
 
 export function loadoutMarkup(s, view, tab = 'protocols') {
@@ -1526,7 +1540,8 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
   const a = ARCHETYPES[id];
   const activeSub = subOf(s, id), shown = SUBS[vs]?.cls === id ? vs : activeSub || defaultSub(id), kit = SUBS[shown];
   const previewing = shown !== activeSub; // another subclass (or one you haven't reached): read-only
-  const busy = active(s) || !!s.run; // loadouts change at home, between fights
+  const busy = active(s) || !!s.run; // talents and classes change at home, between fights
+  const keysBusy = active(s); // keys and presets change anywhere out of a fight
   const points = talentPoints(s, id), spent = pointsSpent(s, id), picks = picksOf(s, id);
   const lvl = hackerLevel(s, id), hk = hackerOf(s, id);
   const known = knownSkills(s, id), equipped = equippedSkills(s, id);
@@ -1545,7 +1560,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
     ? `<li class="slot cantrip" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${glyph(c.id === 'spike' ? 'spike' : 'stun')}${esc(c.name)}</b><small>everyone</small></li>`
     : `<li class="slot empty" title="${esc(c.rule)}"><kbd>${c.key}</kbd><b>${esc(c.name)}</b><small>Lv ${unlockLevel(id, c.id)}</small></li>`);
   const bar = [
-    cantrip(CANTRIPS[0]),
+    cantrip(cantripsOf(id)[0]),
     ...Array.from({ length: LOADOUT.equipSlots }, (_, i) => {
       const sk = byId[equipped[i]], key = LOADOUT.keys[i];
       // A slot your level hasn't opened yet shows the level it opens at.
@@ -1567,11 +1582,13 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
     const n = id === classOf(s) ? cooldownOf(s, x.id) : ab.cooldown || 0;
     return `<span class="tag stag cd${n ? '' : ' none'}" title="${n ? `Cooldown: ${n} ${n === 1 ? 'cycle' : 'cycles'} before you can use it again` : 'No cooldown'}">⟳ ${n || '—'}</span>`;
   };
-  const tagHtml = (x) => `${cdHtml(x)}<span class="tag stag verb-${x.verb}" title="What it does">${VERB[x.verb] || x.verb}</span>`;
+  // A specialist carries the board it is built for (docs/kits.md 5.4): Fragments, Healers, Seals, Mimic…
+  const specTag = (x) => (kit?.tags?.[x.id] ? `<span class="tag stag spec" title="Built for this board">${esc(kit.tags[x.id])}</span>` : '');
+  const tagHtml = (x) => `${specTag(x)}${cdHtml(x)}<span class="tag stag verb-${x.verb}" title="What it does">${VERB[x.verb] || x.verb}</span>`;
   const lib = line.map((x) => {
     const isEq = equipped.includes(x.id), isKnown = known.includes(x.id);
     const state = isEq ? 'equipped' : isKnown ? 'known' : 'locked';
-    const action = busy ? ''
+    const action = keysBusy || (busy && id !== equippedArch) ? ''
       : isEq ? btn(`unequip ${id} ${x.id}`, 'Unequip')
       : isKnown && isRunSkill(x.id) ? '<span class="lvl-lock" title="Run skills take no slot: type it on a run">on runs</span>'
       : isKnown ? `<button type="button" class="btn primary" data-command="equip ${id} ${x.id}" ${equipped.length >= slots ? `disabled title="All ${slots} slots full: unequip one first"` : ''}>Equip</button>`
@@ -1622,6 +1639,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
         <div class="thead"><div><h2>Skills</h2><h1>${esc(a.name)}</h1><div class="class-xp"><b>Lv ${lvl}</b>${lvl < LOADOUT.maxLevel ? `<span class="lvl-bar"><span style="width:${(hk.xp / xpToNext(lvl)) * 100}%"></span></span><span>${hk.xp}/${xpToNext(lvl)} XP</span>${behindTag(s, id)}` : '<span>max level</span>'}</div></div>
           ${id === equippedArch ? '<span class="tag you">in use</span>' : busy ? '' : btn(`archetype ${id}`, `Use ${a.name}`, true)}</div>
         <p class="status-line" title="${esc(st.rule)}"><span class="status-label">Applies</span> <span class="tag stag status">${esc(st.name)}</span></p>
+        ${presetsHtml(s, id, equippedArch, previewing, keysBusy)}
         <ol class="keybar" aria-label="Your bar">${bar}</ol>
         <div class="lib-head"><h2>Library · ${known.length}/${line.length}</h2><small>${esc(a.name)} core${kit ? ` and ${esc(kit.name)}` : ''}${previewing ? ' (preview)' : ''}</small></div>
         <ul class="library">${lib}</ul>

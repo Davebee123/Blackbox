@@ -123,7 +123,11 @@ test('an old save past level 10: its bar becomes the default subclass\'s, with w
   s.loadout.equipped = { breaker: ['overload', 'flood', 'exploit', 'crack', 'brace', 'shatter', 'segfault'] };
   s.version = 30;
   const t = restore(JSON.parse(JSON.stringify(s)));
-  assert.deepEqual(equippedSkills(t, 'breaker'), ['overload', 'flood', 'exploit', 'crack', 'shatter', 'fork-bomb', 'shaped-charge', 'thermal-runaway'], 'and the eighth slot (level 22) gets its skill');
+  const bar = equippedSkills(t, 'breaker'), known = knownSkills(t, 'breaker');
+  assert.equal(bar.length, 8, 'eight keys at level 22');
+  for (const id of ['overload', 'flood', 'exploit', 'crack', 'shatter']) assert.ok(bar.includes(id), `${id} kept`);
+  assert.ok(!bar.includes('brace') && !bar.includes('segfault'), 'the Overclocker\'s skills fall off');
+  assert.ok(bar.every((id) => known.includes(id)), 'what it knows fills the rest');
   // A save below 10 keeps its bar as it was.
   const low = at('bastion', 8);
   low.loadout.equipped = { bastion: ['rate-limit', 'firewall'] };
@@ -153,7 +157,7 @@ test('subclass skills whose numbers grow with your level say so on screen (scale
   const s = at('breaker', 26), k = power(26);
   const n = (x) => String(Math.round(x * k));
   assert.match(scaledText(s, 'logic-bomb', ABILITIES['logic-bomb'].short), new RegExp(`Bomb ${n(50)} \\+${n(20)} all`));
-  assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].short), new RegExp(n(20)));
+  assert.match(scaledText(s, 'chain-reaction', ABILITIES['chain-reaction'].help), new RegExp(`every other part for ${n(25)}`));
   assert.match(scaledText(s, 'thermal-throttle', ABILITIES['thermal-throttle'].short), new RegExp(`${n(20)} \\+${n(20)} a stack`));
   assert.match(scaledText(s, 'turbo-boost', ABILITIES['turbo-boost'].help), new RegExp(`for ${n(6)} Signal`));
   assert.match(scaledText(s, 'overvolt', ABILITIES.overvolt.short), new RegExp(`Two hits of ${n(20)}`));

@@ -63,20 +63,20 @@ test('keys: 1 Spike, 2–9 and 0 equipped skills (7 slots, 8 at 22, 9 at 30), - 
 });
 
 // ---------- Breaker ----------
-test('Breaker: Overload hits 40 and a crit resets it; Exploit: +25% crit chance on the part for a cycle; Momentum +10% per break', () => {
+test('Breaker: Overload hits 40 and a crit resets it; Exploit: 15, and +25% crit chance on the part for a cycle; Momentum +10% per break', () => {
   const s = noArmor(quiet(start('breaker')));
   big(s, 'pulse');
   act(s, 'overload pulse');
   assert.equal(lost(s, 'pulse'), 40);
   assert.ok(readyIn(s, 'overload') > 0);
-  CONFIG.baseCrit = 75;
   const c = noArmor(quiet(start('breaker')));
   big(c, 'pulse');
   act(c, 'exploit pulse');
-  assert.equal(lost(c, 'pulse'), 0, 'Exploit itself does no damage');
+  assert.equal(lost(c, 'pulse'), 15, 'Exploit hits for 15 (docs/kits.md: it never costs a hit)');
+  CONFIG.baseCrit = 75;
   act(c, 'overload pulse');
   CONFIG.baseCrit = 0;
-  assert.equal(lost(c, 'pulse'), 60, '75% + Exposed 25%: a sure crit, ×1.5');
+  assert.equal(lost(c, 'pulse'), 15 + 60, '75% + Exposed 25%: a sure crit, ×1.5');
   assert.equal(readyIn(c, 'overload'), 0, 'the crit reset Overload');
   // Momentum: +10% a stack, for 2 cycles after the last break, at most 3 stacks.
   s.encounter.momentum = { stacks: 5, until: s.encounter.cycle + 2 };
@@ -192,7 +192,7 @@ test('Infiltrator: Inject stacks up to 3; Tag makes burns tick +50% and shows a 
   big(t, 'pulse');
   act(t, 'tag pulse');
   act(t, 'inject pulse');
-  assert.equal(lost(t, 'pulse'), 18, '12 × 1.5');
+  assert.equal(lost(t, 'pulse'), 10 + 18, 'Tag hits for 10, then 12 × 1.5');
   const b = quiet(start('infiltrator'));
   big(b, 'pulse');
   b.encounter.burns.push({ id: 'inject', target: 'pulse', damage: 0, grow: 0, left: 5, name: 'Inject', drain: 0 });
@@ -221,28 +221,33 @@ test('burns and helpers break a chit per tick: small hits are how you strip armo
 });
 
 // ---------- Operator ----------
-test('Operator: +1 daemon slot; Deploy helper; Hook adds 6 to every hit, helpers included; Kill Switch cashes in', () => {
+test('Operator: +1 daemon slot; Deploy helper; Hook hits 10 and adds 6 to every hit, helpers included; Kill Switch cashes in', () => {
   const s = noArmor(quiet(start('operator')));
   assert.equal(daemonSlots(s), CONFIG.daemonSlots + 2 + 1, "a level-38 server (your highest class level) has both its daemon slots, and the Operator one more");
   big(s, 'pulse');
   act(s, 'hook pulse');
+  assert.equal(lost(s, 'pulse'), 10, 'Hook hits for 10');
   act(s, 'deploy pulse');
-  assert.equal(lost(s, 'pulse'), 12 + 6);
+  assert.equal(lost(s, 'pulse'), 10 + 12 + 6);
   act(s, 'spike pulse');
-  assert.equal(lost(s, 'pulse'), 18 + 25 + 6 + 12 + 6);
+  assert.equal(lost(s, 'pulse'), 28 + 25 + 6 + 12 + 6);
   const before = lost(s, 'pulse');
   act(s, 'kill-switch');
   assert.equal(lost(s, 'pulse') - before, 24 + 6, 'two helper hits left, cashed in at once (+Hook)');
   assert.equal(s.encounter.helpers.length, 0);
 });
 
-test('Operator: Jam spends a helper to delay the part\'s attack a cycle', () => {
+test('Operator: Jam hits for 15 and Jams the part; with one of your helpers on it, it spends the helper to delay the attack a cycle', () => {
   const s = noArmor(start('operator'));
   big(s, 'pulse');
   act(s, 'deploy pulse'); act(s, 'jam pulse'); // puts Jam on the bar
   s.encounter.helpers = []; s.encounter.readyAt = {};
-  assert.match(command(s, 'jam pulse').at(-1).message, /no helper/);
+  const due0 = part(s, 'pulse').attack.due, hp = part(s, 'pulse').integrity;
+  act(s, 'jam pulse');
+  assert.equal(part(s, 'pulse').attack.due, due0, 'no helper: no delay');
+  assert.ok(part(s, 'pulse').integrity <= hp - 15, 'but the hit lands');
   act(s, 'deploy pulse');
+  s.encounter.readyAt = {};
   const due = part(s, 'pulse').attack.due;
   act(s, 'jam pulse');
   assert.equal(part(s, 'pulse').attack.due, due + 1);

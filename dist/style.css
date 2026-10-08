@@ -635,6 +635,17 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .slot.on kbd { border-color: var(--you); color: var(--you); }
 .slot.empty { border-style: dashed; }
 .slot.empty b { color: var(--dim); font-weight: 400; }
+/* presets above the bar (docs/kits.md 5.2) */
+.presets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 8px; }
+.presets-label { color: var(--muted); font: 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; margin-right: 2px; }
+.preset-chip { font: 12px var(--mono); color: var(--bright); background: var(--inset); border: 1px solid var(--line-strong); border-radius: 12px; padding: 3px 10px; cursor: pointer; min-height: 28px; }
+.preset-chip small { color: var(--dim); font-size: 10px; margin-left: 2px; }
+.preset-chip:hover:not([disabled]) { border-color: var(--amber); }
+.preset-chip.on, .preset-chip.on:disabled { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.08); cursor: default; opacity: 1; font-weight: 600; } /* the preset your bar follows: lit, not greyed */
+.preset-chip.save { border-style: dashed; color: var(--muted); }
+.preset-chip[disabled]:not(.on) { opacity: 0.5; cursor: default; }
+.presets-help { flex-basis: 100%; margin: 0; color: var(--dim); font: 11px var(--mono); }
+.tag.stag.spec { color: var(--amber); border-color: rgba(241, 185, 47, 0.5); }
 .lib-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .lib-head h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; }
 .lib-head span { font: 12px var(--mono); color: var(--muted); }
