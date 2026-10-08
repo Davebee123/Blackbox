@@ -4,9 +4,9 @@
 import { emit, warn, active, serverLevel } from './combat.mjs';
 
 export const ARCHITECTURES = {
-  fortress: { name: 'Fortress', rule: 'Firewall +5 levels. Harvesters yield 25% less.' },
-  hub: { name: 'Hub', rule: '+2 outpost bandwidth. Firewall −3 levels.' },
-  lab: { name: 'Lab', rule: 'Crafting costs 30% fewer credits. Outposts are noticed a quarter more often.' },
+  fortress: { name: 'Fortress', rule: 'Raises your firewall by 5 levels. Your outposts produce 25% less.' },
+  hub: { name: 'Hub', rule: 'Grants 2 more outpost bandwidth. Lowers your firewall by 3 levels.' },
+  lab: { name: 'Lab', rule: 'Compiling protocols, buildings and relays costs 30% fewer credits. Natives notice your outposts 25% more often.' },
 };
 export const ARCH_LEVEL = 20;
 export const ARCH_SWITCH = 1000; // credits to change once you've picked
@@ -33,5 +33,5 @@ export function architectureCommand(s, text) {
   if (s.server.credits < cost) return warn(s, `Rebuilding as a ${ARCHITECTURES[id].name} costs ${cost} credits.`);
   s.server.credits -= cost;
   s.architecture = id;
-  emit(s, 'architecture', `Your server is now a ${ARCHITECTURES[id].name}${cost ? ` (−${cost} credits)` : ''}: ${ARCHITECTURES[id].rule}`);
+  emit(s, 'architecture', `Your server is now a ${ARCHITECTURES[id].name}${cost ? ` (−${cost} credits)` : ''}. ${ARCHITECTURES[id].rule}`);
 }

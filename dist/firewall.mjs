@@ -37,13 +37,13 @@ export const RAID_PERK = 0.05;
 export const TIER_PERKS = [
   { tier: 1, perk: 'slot', name: '+1 filter slot' },
   { tier: 1, perk: 'raid', name: '+5% max Integrity' },
-  { tier: 2, perk: 'defrag', name: 'Defrag 30% faster' },
+  { tier: 2, perk: 'defrag', name: '30% faster defrag' },
   { tier: 3, perk: 'slot', name: '+1 filter slot' },
   { tier: 3, perk: 'raid', name: '+5% max Integrity' },
-  { tier: 4, perk: 'wear', name: 'Fragments 25% slower' },
+  { tier: 4, perk: 'wear', name: '25% slower fragmentation' },
   { tier: 5, perk: 'slot', name: '+1 filter slot' },
   { tier: 5, perk: 'raid', name: '+5% max Integrity' },
-  { tier: 6, perk: 'harden', name: 'harden.sh lasts twice as long' },
+  { tier: 6, perk: 'harden', name: '2× harden.sh duration' },
 ];
 export const perksAt = (tier) => TIER_PERKS.filter((p) => p.tier <= tier);
 

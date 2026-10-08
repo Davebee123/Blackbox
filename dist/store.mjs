@@ -25,7 +25,7 @@ export const AGENCIES = ['Kestrel Underwriting', 'Norrland Re', 'Blue Ledger Sec
 
 // Halcyon's own line. tier: the standing tier (index in TIERS) it takes to buy.
 export const LINE = [
-  { id: 'relay', name: 'Relay', about: 'Install it on a server you’ve taken over. It pings the unknown servers next to it and flags a contract’s signal.', credits: (L) => 120 + 8 * L, tier: 1 },
+  { id: 'relay', name: 'Relay', about: 'Pings the unknown servers next to a server you have taken over, and flags a contract’s signal. Install it on a server you hold.', credits: (L) => 120 + 8 * L, tier: 1 },
   { id: 'deductible', chase: true, indemnity: 30, tier: 2 },
   { id: 'subrogation', chase: true, indemnity: 45, tier: 3 },
   { id: 'actuarial', chase: true, indemnity: 45, tier: 3 },
@@ -36,20 +36,20 @@ export const lineAbout = (x) => x.about || ZERO_DAYS[x.id].effect;
 
 // What agencies might have. credits: price at your level before drift.
 export const GOODS = {
-  relay: { name: 'Relay (refurbished)', about: 'A second-hand relay. It pings just like a new one.', credits: (L) => 95 + 6 * L, qty: [1, 2] },
-  cracker: { name: 'Key cracker', about: 'Reveal the vault key of a server you’ve found. Use it from the server’s map card.', credits: (L) => 60 + 6 * L, qty: [1, 3] },
-  injector: { name: 'Trace injector', about: 'Add 30% to the trace on an unknown server. Use it from the server’s map card.', credits: (L) => 80 + 6 * L, qty: [1, 2] },
-  signal: { name: 'Signal patch', about: 'Instantly refill your Signal.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
-  harden: { name: 'harden.sh', about: 'Increase the level of your firewall by 3 for 8 hours.', credits: (L) => 70 + 6 * L, qty: [1, 2] },
-  repair: { name: 'Hot-swap kit', about: 'Instantly repair your server’s Integrity.', credits: (L) => 40 + 5 * L, qty: [1, 3] },
+  relay: { name: 'Relay (refurbished)', about: 'A second-hand relay. It pings like a new one.', credits: (L) => 95 + 6 * L, qty: [1, 2] },
+  cracker: { name: 'Key cracker', about: 'Reveals the vault key of a server you have found. Use it from the server’s map card.', credits: (L) => 60 + 6 * L, qty: [1, 3] },
+  injector: { name: 'Trace injector', about: 'Adds 30% to the trace on an unknown server. Use it from the server’s map card.', credits: (L) => 80 + 6 * L, qty: [1, 2] },
+  signal: { name: 'Signal patch', about: 'Refills your Signal at once.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
+  harden: { name: 'harden.sh', about: 'Raises your firewall by 3 levels for 8 hours.', credits: (L) => 70 + 6 * L, qty: [1, 2] },
+  repair: { name: 'Hot-swap kit', about: 'Repairs your server’s Integrity at once.', credits: (L) => 40 + 5 * L, qty: [1, 3] },
   cipher: { name: 'Cipher code lot', code: 'cipher', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   kernel: { name: 'Kernel code lot', code: 'kernel', credits: (L) => 45 + 5 * L, qty: [1, 3] },
-  exploit: { name: 'Exploit', about: 'Get one Exploit. The top service versions need them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
-  salvage: { name: 'Salvage lot', about: 'Get five pieces of salvage.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
-  crate: { name: 'Sealed item', about: 'Open a sealed Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
-  blueprint: { name: 'Sealed blueprint', about: 'Learn a blueprint you don’t have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
-  daemon: { name: 'Daemon image', about: 'Get a daemon, or a version up of one you already have.', credits: (L) => 300 + 20 * L, qty: [1, 1], tier: 2 },
+  exploit: { name: 'Exploit', about: 'Grants 1 Exploit. The top service versions need them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
+  salvage: { name: 'Salvage lot', about: 'Grants 5 pieces of salvage.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
+  crate: { name: 'Sealed item', about: 'Opens into a Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
+  blueprint: { name: 'Sealed blueprint', about: 'Teaches you a blueprint you do not have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
+  daemon: { name: 'Daemon image', about: 'Grants a daemon, or upgrades one you already have by a version.', credits: (L) => 300 + 20 * L, qty: [1, 1], tier: 2 },
 };
 const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 1, blueprint: 1, daemon: 1 };
 export const codeAmount = (L) => 3 + Math.floor(L / 5);

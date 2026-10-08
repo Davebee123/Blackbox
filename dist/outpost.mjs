@@ -29,17 +29,17 @@ import { nativeStrain } from './network.mjs';
 // spec: a specialisation, one per server, needing others on the server first (needs).
 export const BUILDINGS = {
   siphon: { name: 'Code Siphon', kind: 'producer', bw: 1, cost: { credits: 150, code: 10, salvage: 4 }, mins: 10, lv: 1, rule: 'Produces the server\'s code.', make: (L) => ({ code: 1.5 + L / 10 }) },
-  skimmer: { name: 'Credit Skimmer', kind: 'producer', bw: 1, cost: { credits: 300, code: 15, salvage: 8 }, mins: 30, lv: 1, plan: true, heat: 1.5, rule: 'Produces credits. Its natives notice the server 50% more often.', make: (L) => ({ credits: 20 + 3 * L }) },
+  skimmer: { name: 'Credit Skimmer', kind: 'producer', bw: 1, cost: { credits: 300, code: 15, salvage: 8 }, mins: 30, lv: 1, plan: true, heat: 1.5, rule: 'Produces credits. Natives notice the server 50% more often.', make: (L) => ({ credits: 20 + 3 * L }) },
   mill: { name: 'Scrap Mill', kind: 'producer', bw: 1, cost: { credits: 200, code: 12, salvage: 6 }, mins: 20, lv: 1, plan: true, rule: 'Produces salvage.', make: (L) => ({ salvage: 1 + L / 15 }) },
   node: { name: 'Firewall Node', kind: 'defence', bw: 1, cost: { credits: 200, code: 12, salvage: 6 }, mins: 20, lv: 1, plan: true, rule: 'This server\'s firewall is 3 levels higher.' },
   storage: { name: 'Storage Array', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 20, lv: 1, plan: true, rule: 'This server stores twice as much before it fills.' },
   pipeline: { name: 'Pipeline', kind: 'support', bw: 2, cost: { credits: 400, code: 20, salvage: 10 }, mins: 45, lv: 10, plan: true, rule: 'Producers on this server make 50% more.' },
-  ids: { name: 'IDS', kind: 'defence', bw: 1, cost: { credits: 350, code: 18, salvage: 8 }, mins: 40, lv: 1, plan: true, heat: 0.5, rule: 'Natives notice it half as often, and swarms heading here are seen sooner.' },
+  ids: { name: 'IDS', kind: 'defence', bw: 1, cost: { credits: 350, code: 18, salvage: 8 }, mins: 40, lv: 1, plan: true, heat: 0.5, rule: 'Natives notice this server half as often, and you see swarms heading here sooner.' },
   lure: { name: 'Honeytoken', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 30, lv: 1, plan: true, heat: 2, rule: 'This server draws trouble. Natives notice it twice as often, and swarms come sooner and pick it first. Beating them here pays double.' },
-  miner: { name: 'Data Miner', kind: 'producer', bw: 2, cost: { credits: 500, code: 25, salvage: 12 }, mins: 60, lv: 10, plan: true, rule: 'Rolls the server\'s loot every 90 minutes: credits, code, salvage, now and then a protocol. Better on a Legacy site.', make: () => ({ rolls: 1 / 1.5 }) },
+  miner: { name: 'Data Miner', kind: 'producer', bw: 2, cost: { credits: 500, code: 25, salvage: 12 }, mins: 60, lv: 10, plan: true, rule: 'Rolls the server\'s loot every 90 minutes for credits, code, salvage and now and then a protocol. Rolls better on a Legacy site.', make: () => ({ rolls: 1 / 1.5 }) },
   sentry: { name: 'Sentry Daemon', kind: 'defence', bw: 2, cost: { credits: 600, code: 30, salvage: 15 }, mins: 120, lv: 15, plan: true, rule: 'Kills one virus of every swarm that reaches this server.' },
   refinery: { name: 'Refinery', kind: 'producer', spec: true, bw: 3, cost: { credits: 2500, code: 120, salvage: 50, exploit: 3 }, mins: 360, lv: 20, plan: true, needs: { kind: 'producer', n: 3 }, rule: 'Producers on this server make 50% more, and it stores a day\'s worth.' },
-  post: { name: 'Listening Post', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 30, lv: 5, rule: 'Listens for the unique you name (listen <unique>): wherever it drops, it drops 25% more often. Each Listening Post adds 25%.' },
+  post: { name: 'Listening Post', kind: 'support', bw: 1, cost: { credits: 250, code: 12, salvage: 6 }, mins: 30, lv: 5, rule: 'Listens for the unique you name with listen <unique>. Wherever it can drop, it drops 25% more often. Each Listening Post adds another 25%.' },
   citadel: { name: 'Citadel', kind: 'defence', spec: true, bw: 3, cost: { credits: 2500, code: 120, salvage: 50, exploit: 3 }, mins: 360, lv: 20, plan: true, needs: { kind: 'defence', n: 2 }, rule: 'This server\'s firewall is 6 levels higher, and a lost defence never locks it down.' },
 };
 
@@ -54,7 +54,7 @@ export const OUTPOST = {
   sites: {
     rich: { name: 'Rich', rule: 'Producers here make 50% more.' },
     legacy: { name: 'Legacy', rule: 'Better loot rolls here, and specialisations cost a quarter less.' },
-    backbone: { name: 'Backbone', rule: 'One more building slot.' },
+    backbone: { name: 'Backbone', rule: 'Grants 1 more building slot.' },
     hostile: { name: 'Hostile', rule: 'Natives come twice as often, and producers here make 50% more.' },
     hardened: { name: 'Hardened', rule: 'Its Resident and natives are Armored.' },
   },

@@ -31,18 +31,18 @@ export const WARE_IDS = Object.keys(WARES);
 export const CONDITIONS = {
   claims: { name: 'Claims backlog', about: 'Halcyon is buried in ransomware claims and pays to study the code.', mult: { cipher: 1.35 } },
   blackbudget: { name: 'Black budget', about: 'GLASSJAW buys every Exploit it can, no questions.', mult: { exploit: 1.5 } },
-  hotracks: { name: 'Overheating racks', about: 'Kestrel’s north data centre runs hot: Kernel code tunes the CPUs, salvage patches the cooling.', mult: { kernel: 1.8, salvage: 1.25 } },
-  thinpipe: { name: 'Thin bandwidth', about: 'LANTERN’s relay is starved: Worm code carries its traffic.', mult: { worm: 1.45 } },
+  hotracks: { name: 'Overheating racks', about: 'Kestrel’s north data centre runs hot. Kernel code tunes the CPUs, and salvage patches the cooling.', mult: { kernel: 1.8, salvage: 1.25 } },
+  thinpipe: { name: 'Thin bandwidth', about: 'LANTERN’s relay is starved, and Worm code carries its traffic.', mult: { worm: 1.45 } },
   scrapyard: { name: 'Scrap economy', about: 'NULL CHOIR lives on salvage and has more than it needs.', mult: { salvage: 0.6, cipher: 1.15 } },
 };
 export const HUB_CONDITION = { halcyon: 'claims', glassjaw: 'blackbudget', kestrel: 'hotracks', lantern: 'thinpipe', nullchoir: 'scrapyard' };
 export const EVENTS = {
-  outbreak: { name: 'Ransomware outbreak', about: 'A wave of ransomware: everyone wants Cipher code.', mult: { cipher: 1.5 } },
-  wormseason: { name: 'Worm season', about: 'A worm tearing through the backbone: Worm code is in demand.', mult: { worm: 1.5 } },
-  patchday: { name: 'Patch Tuesday', about: 'Everyone patched last night: code is cheap for a while.', mult: { cipher: 0.8, worm: 0.8, kernel: 0.8 } },
-  zerorush: { name: 'Zero-day rush', about: 'A zero-day market panic: Exploits fetch a fortune.', mult: { exploit: 1.6 } },
-  blackout: { name: 'Grid blackout', about: 'A city grid failed: salvage and Kernel code go to rebuilding.', mult: { salvage: 1.5, kernel: 1.25 } },
-  calm: { name: 'Quiet market', about: 'Nothing moving. Prices sit near normal.', mult: {} },
+  outbreak: { name: 'Ransomware outbreak', about: 'A wave of ransomware hits, and everyone wants Cipher code.', mult: { cipher: 1.5 } },
+  wormseason: { name: 'Worm season', about: 'A worm tears through the backbone, and Worm code is in demand.', mult: { worm: 1.5 } },
+  patchday: { name: 'Patch Tuesday', about: 'Everyone patched last night, so code is cheap for a while.', mult: { cipher: 0.8, worm: 0.8, kernel: 0.8 } },
+  zerorush: { name: 'Zero-day rush', about: 'A zero-day panic grips the market, and Exploits fetch a fortune.', mult: { exploit: 1.6 } },
+  blackout: { name: 'Grid blackout', about: 'A city grid failed, and salvage and Kernel code go to rebuilding it.', mult: { salvage: 1.5, kernel: 1.25 } },
+  calm: { name: 'Quiet market', about: 'Nothing is moving. Prices sit near normal.', mult: {} },
 };
 export const MARKET = {
   spread: 0.15, // a hub asks 15% over its price and pays 15% under

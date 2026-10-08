@@ -674,7 +674,7 @@ export function fxFire(s, when, ctx = {}, spend = true) {
 }
 const fxHas = (s, what) => uniqueFx(s).find((x) => x.fx.do === what) || null;
 export const fxOn = fxHas; // tells.mjs: Canary Token, Read Receipt, Reflector, Write Blocker, Hush Money, Sandman
-export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name}: ${fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
+export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
 // What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).
 export function fxAnswer(s, p = null) {
   const e = s.encounter;

@@ -96,83 +96,85 @@ export function check(story, contracts) {
 // and limits. The engine (combat.mjs) knows every block here; anything else is a custom effect.
 export const FX_WHEN = {
   hit: 'When you hit a part',
-  crit: 'When you crit',
+  crit: 'When you land a critical strike',
   break: 'When you break a part',
   start: 'When a fight starts',
   struck: 'When an attack lands on you',
   always: 'Always (a stat bonus)',
   disconnect: 'When your Signal hits 0 on a run',
-  answer: 'When you call off a tell',
+  answer: 'When you answer a tell',
   custom: 'Custom rule',
 };
+// Each condition reads after "when" or "while" in the effect's sentence: "Increases your damage by 50% when the target is below half Integrity."
 export const FX_IF = {
   '': 'Always',
   'target-below-half': 'the target is below half Integrity',
-  'target-bare': 'the target has no armor left',
+  'target-bare': 'the target has no armor',
   'target-winding': "the target's attack lands this cycle or next",
   'target-tagged': 'the target is Tagged',
   'target-burning': 'the target is burning',
-  synced: 'you fired in a Sync Window',
-  'even-cycle': "it's an even cycle",
-  'odd-cycle': "it's an odd cycle",
-  'below-half': "you're below half health",
-  'below-20': "you're below 20% health",
-  crit: 'it was a crit',
+  synced: 'you fire in a Sync Window',
+  'even-cycle': 'the cycle is even',
+  'odd-cycle': 'the cycle is odd',
+  'below-half': 'you are below half health',
+  'below-20': 'you are below 20% health',
+  crit: 'the hit is a critical strike',
   'target-telling': 'the target is winding up a tell',
   'target-signature': "the target is the virus's signature part",
   'any-tell': 'a part is winding up a tell',
-  charged: 'the hit is a tell landing',
-  'target-open': 'the target is Open (a tell you read)',
+  charged: 'the attack is a tell landing',
+  'target-open': 'the target is Open (a tell you answered)',
   'target-locked': 'the target is behind a Mutex lock or a Lockbox ward',
-  'target-loud': 'the target has gone loud (a Tripwire, a Bricker\'s rage)',
+  'target-loud': 'the target has gone loud (a Tripwire set off, a Bricker\'s rage)',
   'target-fragment': 'the target is a fragment',
   moment: "the skill's moment is on the board",
 };
-// What each block does, which "when" it fits, and what it needs (value, stat).
+// What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
+// tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
 export const FX_DO = {
-  'damage%': { when: ['hit'], label: '+X% damage', value: true },
-  'damage+': { when: ['hit'], label: '+X damage', value: true },
-  'crit%': { when: ['hit'], label: '+X% crit chance', value: true },
-  'force-crit': { when: ['start'], label: 'your first hit is a crit' },
-  chit: { when: ['start'], label: 'start with a ◆' },
-  refund: { when: ['break', 'answer'], label: 'all your cooldowns drop by X', value: true },
-  'refund-skill': { when: ['break', 'crit'], label: "that skill's cooldown comes back" },
-  heal: { when: ['break', 'crit', 'answer'], label: 'heal X', value: true },
-  shield: { when: ['start', 'answer'], label: 'a shield of X goes up', value: true },
-  'break-hit': { when: ['break'], label: 'the part winding up a tell (or the next to attack) takes X', value: true },
-  shatter: { when: ['hit'], label: 'a hit on a part wearing ◆ breaks two of them' },
-  'tell-hits': { when: ['always'], label: 'each command you land counts twice toward calling off a tell' },
-  'leech-x': { when: ['crit'], label: 'Leech heals X times as much', value: true },
-  halve: { when: ['struck'], label: 'the hit deals half' },
-  'crit-normal': { when: ['struck'], label: 'a crit against you lands as a normal hit' },
-  'restore%': { when: ['struck'], label: 'restore X% of your health', value: true },
-  'stat-x2': { when: ['always'], label: 'one of its stats counts double', stat: true },
-  'skill-cd': { when: ['always'], label: "one skill's cooldown is X shorter (never under 1)", value: true, skill: true },
-  jackout: { when: ['disconnect'], label: 'you jack out with your pack instead' },
-  'burn-grow': { when: ['custom'], label: 'your burns grow +X a cycle', value: true },
-  'dot%': { when: ['custom'], label: 'your burns and helpers deal +X%', value: true },
-  'echo-full': { when: ['custom'], label: 'your Echoes hit for full damage' },
-  'encrypt-half': { when: ['custom'], label: 'Encryption on you stacks half as fast' },
-  'sync-wide': { when: ['custom'], label: 'Sync Windows are 50% wider' },
-  'blind-short': { when: ['custom'], label: 'Scrambles on you last one cycle less' },
-  'patch-slow': { when: ['custom'], label: 'bare parts patch their ◆ back X cycles later', value: true },
-  'burn-jump': { when: ['custom'], label: 'burns on a part you break jump to the next part, with what they had left' },
+  'damage%': { when: ['hit'], label: 'increases your damage by X%', value: true },
+  'damage+': { when: ['hit'], label: 'adds X damage to your hits', value: true },
+  'crit%': { when: ['hit'], label: 'increases your critical strike chance by X%', value: true },
+  'force-crit': { when: ['start'], label: 'makes your first hit in each fight a critical strike', own: true },
+  chit: { when: ['start'], label: 'grants you 1 ◆' },
+  refund: { when: ['break', 'answer'], label: 'reduces all your cooldowns by X cycles', value: true },
+  'refund-skill': { when: ['break', 'crit'], label: 'resets the cooldown of the skill you used' },
+  heal: { when: ['break', 'crit', 'answer'], label: 'heals you for X', value: true },
+  shield: { when: ['start', 'answer'], label: 'shields you for X', value: true },
+  'break-hit': { when: ['break'], label: 'deals X damage to the part winding up a tell, or else to the next part to attack,', value: true },
+  shatter: { when: ['hit'], label: 'makes each hit on an armored part break 2 ◆' },
+  'tell-hits': { when: ['always'], label: 'makes each of your hits count as two against a tell' },
+  'leech-x': { when: ['crit'], label: 'makes Leech heal X times as much', value: true },
+  halve: { when: ['struck'], label: 'halves the damage of an attack that lands on you', own: true },
+  'crit-normal': { when: ['struck'], label: 'turns a critical strike against you into a normal hit', own: true },
+  'restore%': { when: ['struck'], label: 'heals you for X% of your max health', value: true },
+  'stat-x2': { when: ['always'], label: 'doubles one of your stats', stat: true },
+  'skill-cd': { when: ['always'], label: "reduces one skill's cooldown by X cycles (never under 1)", value: true, skill: true },
+  jackout: { when: ['disconnect'], label: 'jacks you out with your pack instead of losing it' },
+  'burn-grow': { when: ['custom'], label: 'makes each of your burns deal X more damage every time it ticks', value: true },
+  'dot%': { when: ['custom'], label: 'increases the damage of your burns and helpers by X%', value: true },
+  'echo-full': { when: ['custom'], label: 'makes your Echoes deal full damage' },
+  'encrypt-half': { when: ['custom'], label: 'halves how fast encryption stacks on you' },
+  'sync-wide': { when: ['custom'], label: 'makes Sync Windows 50% wider' },
+  'blind-short': { when: ['custom'], label: 'makes Scrambles on you last 1 cycle less' },
+  'patch-slow': { when: ['custom'], label: 'makes parts take X cycles longer to patch their ◆ back', value: true },
+  'burn-jump': { when: ['custom'], label: 'moves the burns on a part you break to the next part, with the damage they had left' },
   // Native uniques (network.mjs): the tells and the part rules.
-  'read-hit': { when: ['answer'], label: 'the part you read takes X', value: true },
-  'break-open': { when: ['break'], label: 'the next part to attack is Open for X cycles', value: true },
-  'warn-early': { when: ['custom'], label: 'tells are announced X cycles further ahead', value: true },
-  'open-long': { when: ['custom'], label: 'parts you read stay Open X cycles longer', value: true },
-  'lock-crush': { when: ['custom'], label: 'your hits count X% more against a Mutex lock or a Lockbox ward', value: true },
-  'mimic-turn': { when: ['custom'], label: "the Mimic's playback hits the Mimic instead of you, at X%", value: true },
-  'no-reboot': { when: ['custom'], label: "a twin you break can't reboot" },
-  'seal-proof': { when: ['custom'], label: 'a seal that goes through leaves your ◆ and shield, and leaves you clean' },
-  'rule-amp': { when: ['custom'], label: 'your blue and yellow rules count X% more', value: true },
-  'quiet-trip': { when: ['custom'], label: 'a Tripwire you break stays quiet' },
-  'cast-short': { when: ['custom'], label: 'a cast that compiles lasts X cycles less', value: true },
-  'no-after': { when: ['custom'], label: 'a tell that lands leaves nothing behind: no key offline, no Corrupted, no Hung' },
-  'decoy-pass': { when: ['custom'], label: "the Decoy's mirror lets your commands through at X%, and nothing bounces back", value: true },
+  'read-hit': { when: ['answer'], label: 'deals X damage to a part when you answer its tell', value: true, own: true },
+  'break-open': { when: ['break'], label: 'leaves the next part to attack Open for X cycles', value: true },
+  'warn-early': { when: ['custom'], label: 'announces tells X cycles earlier', value: true },
+  'open-long': { when: ['custom'], label: 'keeps a part Open X cycles longer after you answer its tell', value: true },
+  'lock-crush': { when: ['custom'], label: 'makes your hits count X% more against a Mutex lock or a Lockbox ward', value: true },
+  'mimic-turn': { when: ['custom'], label: "turns the Mimic's playback on the Mimic instead of you, at X% of its damage", value: true },
+  'no-reboot': { when: ['custom'], label: 'stops a twin you break from rebooting' },
+  'seal-proof': { when: ['custom'], label: 'keeps your ◆ and shield when a seal lands, and stops it from Corrupting you' },
+  'rule-amp': { when: ['custom'], label: 'increases the effect of your blue and yellow rules by X%', value: true },
+  'quiet-trip': { when: ['custom'], label: 'keeps a Tripwire you break quiet' },
+  'cast-short': { when: ['custom'], label: "shortens a compiled cast's effect by X cycles", value: true },
+  'no-after': { when: ['custom'], label: 'stops a tell that lands from taking a skill offline, Corrupting you or leaving you Hung' },
+  'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's mirror at X% of their damage, and nothing bounces back", value: true },
 };
-export const FX_SCALE = { '': 'flat', cycles: 'per cycle the fight has lasted', contracts: 'per contract you hold', broken: 'per part broken this fight', reads: 'per tell you read this fight' };
+export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
@@ -180,20 +182,28 @@ export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion'
   payload: 'Infiltrator: Payload', phantom: 'Infiltrator: Phantom', herder: 'Operator: Herder', hijacker: 'Operator: Hijacker' }; // a subclass lean: three times as likely for it, twice for its class
 export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)', native: 'Native to a network (network.mjs: about ten times as likely on its home network, its lair boss, the Listening Post and darknet listings)' };
 
-// One line of plain text for an effect: "+25% damage when you fired in a Sync Window."
+// One sentence for an effect, in the tooltip style: the effect first (a third-person verb), then when it happens.
+// "Increases your damage by 25% when you fire in a Sync Window." "Heals you for 6 when you land a critical strike."
+const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you break a part', start: 'at the start of each fight', struck: 'when an attack lands on you', disconnect: 'when your Signal hits 0 on a run', answer: 'when you answer a tell' };
 export function fxText(fx, statName = (k) => k) {
   if (!fx?.do) return '';
   if (fx.text) return fx.text;
   const d = FX_DO[fx.do];
-  let what = (d?.label || fx.do).replace('X', fx.value ?? 'X').replace(/\b1 cycles\b/, 'a cycle');
-  if (fx.do === 'stat-x2') what = `${statName(fx.stat)} counts double`;
-  if (fx.do === 'skill-cd') what = `${statName(fx.skill)} cools down ${fx.value} ${fx.value === 1 ? 'cycle' : 'cycles'} faster`;
+  let what = (d?.label || fx.do).replace('X', fx.value ?? 'X').replace(/\b1 cycles\b/, '1 cycle');
+  if (fx.do === 'stat-x2') what = `doubles your ${statName(fx.stat)}`;
+  if (fx.do === 'skill-cd') what = `reduces the cooldown of ${statName(fx.skill)} by ${fx.value} ${fx.value === 1 ? 'cycle' : 'cycles'}`;
   const scale = fx.scale ? ` ${FX_SCALE[fx.scale]}` : '';
-  const cap = fx.cap ? ` (up to ${fx.do === 'damage%' || fx.do === 'crit%' ? '+' + fx.cap + '%' : '+' + fx.cap})` : '';
-  const lead = { crit: 'On a crit', break: 'When you break a part', start: 'Each fight', struck: 'When an attack lands on you', disconnect: 'When your Signal hits 0 on a run', answer: 'When you call off a tell' }[fx.when];
-  const cond = fx.if ? (lead ? `, if ${FX_IF[fx.if]}` : ` when ${FX_IF[fx.if]}`) : '';
-  const limit = fx.limit === 'cooldown' ? `. Rearms ${fx.cooldown || 60} minutes later` : fx.limit === 'fight' ? ', once per fight' : fx.limit === 'run' ? ', once per run' : '';
-  const t = lead ? `${lead}${cond}: ${what}${scale}${cap}${limit}.` : `${what}${scale}${cap}${cond}${limit}.`;
+  const cap = fx.cap ? `, up to ${fx.do === 'damage%' || fx.do === 'crit%' ? fx.cap + '%' : fx.cap}` : '';
+  // The trigger, and its condition after it. A few pairs read better as one clause.
+  let when = d?.own ? '' : FX_TRIGGER[fx.when] || '';
+  let cond = fx.if ? FX_IF[fx.if] : '';
+  if (fx.when === 'break' && fx.if === 'crit') { when = 'when you break a part with a critical strike'; cond = ''; }
+  if (fx.when === 'break' && fx.if === 'target-fragment') { when = 'when you break a fragment'; cond = ''; }
+  if (fx.when === 'struck' && fx.if === 'charged') { if (d?.own) what = what.replace('an attack', 'a tell'); else when = 'when a tell lands on you'; cond = ''; }
+  const tail = [when, cond && (when || d?.own ? `while ${cond}` : `when ${cond}`)].filter(Boolean).join(' ');
+  if (!tail) what = what.replace(/,$/, '');
+  const limit = fx.limit === 'cooldown' ? ` Works again ${fx.cooldown || 60} minutes later.` : fx.limit === 'fight' ? ' Works once per fight.' : fx.limit === 'run' ? ' Works once per run.' : '';
+  const t = `${what}${scale}${cap}${tail ? ' ' + tail : ''}.${limit}`;
   return t[0].toUpperCase() + t.slice(1);
 }
 

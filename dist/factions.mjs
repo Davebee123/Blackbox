@@ -62,7 +62,7 @@ export const FACTIONS = {
 export const FACTION_IDS = Object.keys(FACTIONS);
 // Goods only factions sell (the rest are store.mjs GOODS).
 export const FACTION_GOODS = {
-  bootleg: { name: 'Bootleg filter', about: 'A sealed firewall filter at your level: Stock or better.', credits: (L) => 90 + 8 * L },
+  bootleg: { name: 'Bootleg filter', about: 'A sealed firewall filter at your level, Stock or better.', credits: (L) => 90 + 8 * L },
 };
 
 // ---------- rep ----------

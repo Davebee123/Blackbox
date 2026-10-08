@@ -19,7 +19,7 @@ const now = () => hooks.now?.() ?? Date.now();
 
 export const PAYLOADS = {
   exfil: { name: 'Exfil', about: 'Pulls credits and the code a hub hoards.', code: 'cipher' },
-  wiper: { name: 'Wiper', about: 'Knocks a hub offline: its market shuts, and the other hubs pay more for what it buys.', code: 'worm' },
+  wiper: { name: 'Wiper', about: 'Knocks a hub offline. Its market shuts, and the other hubs pay more for what it buys.', code: 'worm' },
   backdoor: { name: 'Backdoor', about: 'Takes an offline hub for you.', code: 'kernel' },
 };
 export const PAYLOAD = {

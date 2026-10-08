@@ -62,7 +62,7 @@ test('the Watchman holds its bar when upgraded: v3 still fires, and twice a figh
   const bar1 = watchmanBar(s);
   s.daemonsOwned = { watchman: 3 }; s.daemons = ['watchman'];
   assert.equal(watchmanBar(s), bar1, 'the version doesn\'t raise the bar');
-  assert.match(DAEMONS.watchman.rule, /v3: twice a fight/);
+  assert.match(DAEMONS.watchman.rule, /at v3 it works twice a fight/);
 });
 
 test('Implants drop and compile from item level 15', () => {

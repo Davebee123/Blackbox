@@ -17,7 +17,7 @@ export const SLOTS = {
   exploit: { name: 'Exploit', like: 'weapon', about: 'The code you fire at a target.' },
   proxy: { name: 'Proxy', like: 'chest', about: 'The route your traffic hides behind.' },
   shell: { name: 'Shell', like: 'helm', about: 'The environment you work from.' },
-  script: { name: 'Script', like: 'ring', about: 'A helper you run alongside.' },
+  script: { name: 'Script', like: 'ring', about: 'A script you run alongside your skills.' },
   implant: { name: 'Implant', like: 'amulet', about: 'Malware you leave resident in your own rig.' },
 };
 // Old saves: the three category slots become the new ones.
@@ -31,29 +31,29 @@ export const OLD_SLOT = { offense: 'exploit', survival: 'proxy', utility: 'scrip
 // group: the protocol's category (its slot kind) and how the pages list stats.
 export const STATS = {
   // Offense (rig, everywhere)
-  damage: { side: 'hacker', group: 'offense', name: 'Damage', unit: '', base: 2, flat: true, about: 'Added to every skill hit you land.' },
-  crit: { side: 'hacker', group: 'offense', name: 'Crit', unit: '%', base: 4, about: 'Chance a hit that does damage crits (everyone starts at 5%).' },
-  critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Added to every crit, on top of ×1.5.' },
-  accuracy: { side: 'hacker', group: 'offense', name: 'Accuracy', unit: '%', base: 2.5, about: 'Cancels the enemy\'s evasion, so your damaging skills miss less. A miss still spends the cooldown.' },
-  echo: { side: 'hacker', group: 'offense', name: 'Echo', unit: '%', base: 5, cap: 40, about: 'Chance a skill hit repeats for half damage. Against armor, the echo breaks another ◆.' },
-  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '%', base: 6, about: 'Every burn tick and every helper hit you start deals this percentage more damage.' }, // Damage over time keeps only part of the level growth (CONFIG.dotLevel), and Payload makes up the rest.
+  damage: { side: 'hacker', group: 'offense', name: 'Damage', unit: '', base: 2, flat: true, about: 'Adds this much damage to every skill hit you land.' },
+  crit: { side: 'hacker', group: 'offense', name: 'Crit', unit: '%', base: 4, about: 'Increases the chance that a damaging hit is a critical strike. Everyone starts at 5%.' },
+  critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Adds this much damage to every critical strike, on top of ×1.5.' },
+  accuracy: { side: 'hacker', group: 'offense', name: 'Accuracy', unit: '%', base: 2.5, about: 'Offsets the enemy\'s evasion, so your damaging skills miss less often. A miss still spends the cooldown.' },
+  echo: { side: 'hacker', group: 'offense', name: 'Echo', unit: '%', base: 5, cap: 40, about: 'Gives each skill hit a chance to repeat for half damage. Against an armored part, the echo breaks another ◆.' },
+  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '%', base: 6, about: 'Increases the damage of your burns and helpers by this percentage.' }, // Damage over time keeps only part of the level growth (CONFIG.dotLevel), and Payload makes up the rest.
   // Defense (health on its side; the rest on both sides)
-  signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'More max Signal on runs.' },
-  integrity: { side: 'server', group: 'survival', name: 'Integrity', unit: '', base: 20, flat: true, about: 'More max server Integrity.' },
-  regen: { side: 'both', group: 'survival', name: 'Regen', unit: '', dp: 1, base: 0.5, flat: true, about: 'Heals this much per cycle in fights. Rig: on runs, also per move. Server: at home, and very slowly between fights (per minute).' },
-  reduction: { side: 'both', group: 'survival', name: 'Block', unit: '', base: 1, flat: true, about: 'Taken off every hit (a hit never drops below half).' },
-  evasion: { side: 'both', group: 'survival', name: 'Evasion', unit: '%', base: 2.5, cap: 20, about: 'Chance an enemy\'s damage attack misses (up to 20%).' },
-  sanitize: { side: 'both', group: 'survival', name: 'Sanitize', unit: '%', base: 8, cap: 50, about: 'Chance an Encrypt, Blind or spawn fails (up to 50%).' },
-  restore: { side: 'hacker', group: 'survival', name: 'Restore', unit: '%', base: 6, about: 'Every heal you cast, on yourself or on a crewmate, heals this percentage more.' }, // Heals keep only part of the level growth (CONFIG.healLevel), and Restore makes up the rest.
-  leech: { side: 'hacker', group: 'survival', name: 'Leech', unit: '', base: 1, flat: true, about: 'Heals you this much for every skill hit that does damage: your server at home, your Signal on runs.' },
-  shield: { side: 'server', group: 'survival', name: 'Shield', unit: '', base: 10, flat: true, about: 'Start every home fight with a shield that soaks this much.' },
-  countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'When an attack lands on your server, the part that fired it takes this much. It\'s a hit: on armor, it breaks a ◆.' },
+  signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'Increases your max Signal on runs.' },
+  integrity: { side: 'server', group: 'survival', name: 'Integrity', unit: '', base: 20, flat: true, about: 'Increases your server\'s max Integrity.' },
+  regen: { side: 'both', group: 'survival', name: 'Regen', unit: '', dp: 1, base: 0.5, flat: true, about: 'Heals this much every cycle in a fight. On your rig, it also heals you on every move during a run. On your server, it also heals slowly between fights, every minute.' },
+  reduction: { side: 'both', group: 'survival', name: 'Block', unit: '', base: 1, flat: true, about: 'Reduces the damage of every hit against you by this much, but never below half.' },
+  evasion: { side: 'both', group: 'survival', name: 'Evasion', unit: '%', base: 2.5, cap: 20, about: 'Gives each enemy damage attack a chance to miss you, up to 20%.' },
+  sanitize: { side: 'both', group: 'survival', name: 'Sanitize', unit: '%', base: 8, cap: 50, about: 'Gives each Encrypt, Scramble or Replicate against you a chance to fail, up to 50%.' },
+  restore: { side: 'hacker', group: 'survival', name: 'Restore', unit: '%', base: 6, about: 'Increases every heal you cast, on yourself or a crewmate, by this percentage.' }, // Heals keep only part of the level growth (CONFIG.healLevel), and Restore makes up the rest.
+  leech: { side: 'hacker', group: 'survival', name: 'Leech', unit: '', base: 1, flat: true, about: 'Heals you this much for every skill hit that deals damage. It heals your server at home and your Signal on runs.' },
+  shield: { side: 'server', group: 'survival', name: 'Shield', unit: '', base: 10, flat: true, about: 'Shields your server for this much at the start of every home fight.' },
+  countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'Deals this much damage to a part when its attack lands on your server. It counts as a hit, so against an armored part it breaks a ◆.' },
   // Utility
-  clock: { side: 'hacker', group: 'utility', name: 'Clock Speed', unit: '%', base: 8, about: 'Fills a meter every cycle. When it\'s full, all your cooldowns tick one extra cycle.' },
-  stealth: { side: 'hacker', group: 'utility', name: 'Stealth', unit: '%', base: 8, cap: 60, about: 'Chance each enemy part\'s first attack comes a cycle later.' },
-  sync: { side: 'hacker', group: 'utility', name: 'Sync', unit: '%', base: 4, cap: 50, about: 'Added to the 25% chance that a cycle opens a Sync Window.' },
-  scavenge: { side: 'hacker', group: 'utility', name: 'Scavenge', unit: '%', base: 8, about: 'Better drops (more often, better rarity) and more credits from caches you bank.' },
-  lead: { side: 'server', group: 'utility', name: 'Lead', unit: '', base: 5, flat: true, about: 'Every home or rogue-server kill fills its lead this much more.' },
+  clock: { side: 'hacker', group: 'utility', name: 'Clock Speed', unit: '%', base: 8, about: 'Fills a meter every cycle. When the meter is full, all your cooldowns tick down 1 extra cycle.' },
+  stealth: { side: 'hacker', group: 'utility', name: 'Stealth', unit: '%', base: 8, cap: 60, about: 'Gives each enemy part\'s first attack a chance to come 1 cycle later.' },
+  sync: { side: 'hacker', group: 'utility', name: 'Sync', unit: '%', base: 4, cap: 50, about: 'Adds to the 25% chance that a cycle opens a Sync Window.' },
+  scavenge: { side: 'hacker', group: 'utility', name: 'Scavenge', unit: '%', base: 8, about: 'Makes items drop more often and at better rarity, and increases the credits from caches you bank.' },
+  lead: { side: 'server', group: 'utility', name: 'Lead', unit: '', base: 5, flat: true, about: 'Increases the lead every home or rogue-server kill gives by this much.' },
 };
 export const GROUPS = { offense: 'Offense', survival: 'Defense', utility: 'Utility' };
 // The stats a side can have: 'hacker' = what protocols roll (rig stats + the shared survival
@@ -197,14 +197,14 @@ export const DECONSTRUCT = {
 // Zero-day protocols: a Custom protocol plus one special effect. One of each per loadout.
 // Found on runs (rarely ready-made, more often as source you bank and compile at home).
 export const ZERO_DAYS = {
-  rootkit: { name: 'Rootkit', effect: 'Your first hit each fight goes straight through armor.' },
-  'race-condition': { name: 'Race Condition', effect: 'The first time each fight one of your skills misses, its cooldown comes straight back.' },
-  'buffer-overflow': { name: 'Buffer Overflow', effect: 'Whenever you break a part, your next hit crits.' },
+  rootkit: { name: 'Rootkit', effect: 'Your first hit in each fight ignores armor.' },
+  'race-condition': { name: 'Race Condition', effect: 'Resets the cooldown of the first skill that misses in each fight.' },
+  'buffer-overflow': { name: 'Buffer Overflow', effect: 'Makes your next hit a critical strike whenever you break a part.' },
   // Sold only by Halcyon Mutual (chase items: never found, never compiled).
-  deductible: { name: 'Deductible', effect: 'The first attack that lands on you each fight does nothing.', chase: true, group: 'survival' },
-  subrogation: { name: 'Subrogation', effect: 'When a part hits you, your next skill hit on it deals double.', chase: true, group: 'offense' },
-  'total-loss': { name: 'Total Loss', effect: 'When you break a part, every other part takes a quarter of its max Integrity (armor soaks it as usual). Breaks it causes do it again.', chase: true, group: 'offense' },
-  actuarial: { name: 'Actuarial Model', effect: 'Veils can\'t hide attack timers from you.', chase: true, group: 'utility' },
+  deductible: { name: 'Deductible', effect: 'The first attack that lands on you in each fight deals no damage.', chase: true, group: 'survival' },
+  subrogation: { name: 'Subrogation', effect: 'When a part hits you, your next skill hit on it deals double damage.', chase: true, group: 'offense' },
+  'total-loss': { name: 'Total Loss', effect: 'When you break a part, deals damage to every other part equal to 25% of the broken part\'s max Integrity. Armor absorbs it as usual, and a part this breaks sets it off again.', chase: true, group: 'offense' },
+  actuarial: { name: 'Actuarial Model', effect: 'Veiled parts cannot hide their attack timers from you.', chase: true, group: 'utility' },
 };
 export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 
@@ -375,10 +375,10 @@ export const VERSIONS = [
 // TIER_PERKS, filters.mjs FILTER_STATS), and Cron Job and Snapshot are daemons (data.mjs DAEMONS).
 // Old saves: progression.mjs (v34).
 export const SERVICES = {
-  uplink: { name: 'Route Logger', code: 'cipher', stat: 'routeBoost', values: [25, 50, 75], unit: '% more from route files', about: 'Route files, trace records, injectors and log sweeps trace further, so the next layer turns up sooner.' },
+  uplink: { name: 'Route Logger', code: 'cipher', stat: 'routeBoost', values: [25, 50, 75], unit: '% more from route files', about: 'Route files, trace records, injectors and log sweeps trace further, so you find the next layer sooner.' },
   buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
   router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' outpost slots', about: 'Run more outposts at once.' },
-  scheduler: { name: 'Scheduler', code: 'kernel', stat: 'scheduler', values: [60, 30, 15], unit: '-minute collection', about: 'Collects every outpost on a timer, so you don\'t have to visit.' },
+  scheduler: { name: 'Scheduler', code: 'kernel', stat: 'scheduler', values: [60, 30, 15], unit: '-minute collection', about: 'Collects every outpost on a timer, so you never have to visit.' },
 };
 export const SERVICE_SOURCES = Object.keys(SERVICES).filter((k) => SERVICES[k].special);
 // What a version of a service costs, as { credits, cipher, worm, kernel, exploit }.
