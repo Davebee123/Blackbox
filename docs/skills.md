@@ -142,7 +142,7 @@ Signal lost a fight and wins, on the 24 class-balance fights at each level, for 
 | Hijacker | 18 | 34% · 24/24 | 29% · 24/24 | 7.0 | 13.0 | 24 → 21 |
 | Hijacker | 30 | 46% · 23/24 | 43% · 24/24 | -0.2 | 11.2 | 23 → 22 |
 
-On average the ignoring bot used to lose 6.6, 2.9 and 2.9 points more at Lv 10, 18 and 30. Now it loses 18.0, 12.9 and 7.6, and it wins 503 of 576 fights where the reader wins 557. The Lv 10 Payload is the outlier. Ignoring tells costs it 39 points and 8 fights, because its burns leave parts alive long enough for every charge and cast to land.
+Since then tells are answered in a window with a burst, and the gap is 19.8, 21.9 and 10.2: docs/solo-tells.md has the per-subclass table. On average the ignoring bot used to lose 6.6, 2.9 and 2.9 points more at Lv 10, 18 and 30. Now it loses 18.0, 12.9 and 7.6, and it wins 503 of 576 fights where the reader wins 557. The Lv 10 Payload is the outlier. Ignoring tells costs it 39 points and 8 fights, because its burns leave parts alive long enough for every charge and cast to land.
 
 The HEATSINK, the farm's healer check, went from Integrity ×15 to ×17. Once the bots stopped wasting commands on Shatter, a crew without a healer beat it 11 times in 16, and the check is that such a crew mostly loses. At ×17 it wins 3 in 16 again, and the full crew still wins every try.
 

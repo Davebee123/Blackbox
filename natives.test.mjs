@@ -10,8 +10,10 @@ import { BASES, protocolSlots, SLOT_KINDS } from './dist/gear.mjs';
 
 // Native uniques in the balance harness (balance.mjs, opts.uniques): each one in place of the blue in its slot, on
 // every subclass, at the bracket it first fits (10, 18 or 30). They're sidegrades: no subclass leaves the band
-// (20–52% lost, the Bastions, which lean crew, anywhere under 52% as in balance.mjs soloBand; at least 80% wins)
-// and none moves a bracket's average more than 4 points.
+// (balance.mjs soloBand's floor, 15%, to 52% lost, the Bastions, which lean crew, anywhere under 52%; at least 80%
+// wins) and none moves a bracket's average more than 4 points. The floor was 20% until the tells' window and burst:
+// a clean answer now staggers the part (Open, its next attack a cycle later), so the strongest readers sit at 17–20%
+// on plain blues (the Demolitionist at Lv 18, the Phantom at 30), inside the class band.
 test('native uniques keep the bands: sidegrades, not upgrades', () => {
   const CLASSES = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'];
   const SUBS = CLASSES.flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));
@@ -27,7 +29,7 @@ test('native uniques keep the bands: sidegrades, not upgrades', () => {
       for (const [c, sub] of SUBS) {
         const r = score(c, b, { sub, uniques: [id] });
         d += r.lost - base[sub].lost;
-        if (r.lost < (soloBand(sub)[0] ? 20 : 0) || r.lost > 52) off.push(`${id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
+        if (r.lost < soloBand(sub)[0] || r.lost > 52) off.push(`${id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
         if (r.wins < 0.8 * r.total) off.push(`${id} ${sub} ${b.name} ${r.wins}/${r.total}`);
       }
       if (Math.abs(d / SUBS.length) > 4) off.push(`${id} ${b.name} moves the average ${(d / SUBS.length).toFixed(1)}`);

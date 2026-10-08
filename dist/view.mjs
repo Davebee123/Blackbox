@@ -286,33 +286,44 @@ function statusPanel(s) {
 
 
 // A tell (tells.mjs): on its part's row, in the column it lands, never hidden. It says what it is, what's coming
-// and what answers it, in a word or two; the hover has the whole of it.
+// and what answers it, in a word or two; the hover has the whole of it. Its window (the cycles it can be answered
+// in) shows as NOW on the chip while it's open, and a longer window marks the cells before it (tellSpan).
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording' };
 const TELL_ICON = { charge: 'event-warning', cast: 'interrupt', seal: 'event-lock', mimic: 'scan' };
 function tellChip(s, i, c, k = '', to = null) {
-  const p = part(s, i.source), left = Math.max(0, (i.need || 0) - (i.wound || 0));
+  const p = part(s, i.source), left = i.left ?? Math.max(0, (i.need || 0) - (i.wound || 0));
+  const open = i.open ?? c === 0, opens = i.winFrom ?? c; // its window is open now; or opens in that many cycles
   // What it does, as short as an attack chip's number.
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount} · burst` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
     : i.tell === 'cast' ? (i.does === 'loud' ? '+35% hits' : i.does === 'grow' ? '+25% hp' : 'faster')
     : i.tell === 'seal' ? '+◆' : 'copies you';
-  // The answer, exactly (tells.mjs answerOf), as an order, with how far along it is.
-  const answer = i.tell === 'charge' ? (i.strip ? `Strip ◆${i.need}` : left > 1 ? `Hit it ×${left}` : 'Hit it once')
-    : i.tell === 'cast' ? `SIGINT, or hit ×${left}` : i.tell === 'seal' ? `Strip ◆${p?.armor || 0} first` : 'Go quiet';
-  const progress = i.wound && i.tell !== 'seal' ? `${i.wound}/${i.need}${i.strip ? ' ◆' : ''}` : '';
-  const when = c ? `in ${c}` : 'now';
-  const counts = 'Only a command of yours aimed at it counts, typed after it was said: area hits, burns, helpers and auto-repeat don\'t.';
-  const pays = 'Read it and the part is Open: +50% from everyone for 2 cycles.';
-  const lands = 'If it lands it leaves you Corrupted, knocks your last skill offline, and hangs your next command.';
+  // The answer as an order: what it takes, and now (its window is open) or when its window opens.
+  const at = open ? 'now' : `in ${opens}`;
+  const answer = i.tell === 'charge' ? `Burst ${left}${i.armored && i.chits ? ` or ◆${i.chits}` : ''} ${at}`
+    : i.tell === 'cast' ? (open ? `SIGINT or hit ×${left} now` : `SIGINT ${at}`)
+    : i.tell === 'seal' ? (c ? `Strip ◆${p?.armor || 0} first` : `Strip ◆${p?.armor || 0} now`) : `Go quiet ${at}`;
+  const progress = i.wound && ['charge', 'cast'].includes(i.tell) ? `${i.wound}/${i.need}` : '';
+  const lands = c ? `in ${c}` : 'this cycle';
+  const window = !open ? `Its window opens ${opens === 1 ? 'next cycle' : `in ${opens} cycles`}, and hits before then don't count.` : c ? `Its window is open now and stays open until it lands.` : 'Its window is open now: this cycle is the last.';
+  const counts = 'Only a command of yours aimed at it counts, typed after it was said. Area hits, burns, helpers and auto-repeat don\'t.';
+  const pays = 'Answer it in full and the part staggers: +50% from everyone for 2 cycles, and its next attack lands a cycle later.';
+  const after = 'If it lands it leaves you Corrupted, knocks your last skill offline, and hangs your next command.';
   const tip = i.tell === 'charge'
-    ? `${i.name}: the ${p?.name}'s ${i.plain || 'attack'} in this cell, charged (${what}). It lands ${c ? `in ${c}` : 'this cycle'}. To call it off: ${i.answer}. ${counts} ${pays} ${lands}`
-    : i.tell === 'cast' ? `The ${p?.name} is casting ${i.name}. It lands ${c ? `in ${c}` : 'this cycle'}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. To stop it: ${i.answer}. ${counts} ${pays} ${lands}`
-    : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${c ? `in ${c}` : 'this cycle'}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it first: the skill that takes its last ◆ is ready again.`
-    : `The Mimic plays back the command you fire ${c ? `in ${c}` : 'this cycle'}, at you${BOSSES[s.encounter?.virus?.boss]?.mimic > 1 ? ', twice over if you\'re Scrambled' : ''}. Fire something with no direct hit then (a debuff, a strip, a burn, a shield), and the Mimic is Open.`;
-  return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">`
-    + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span>${TELL_KICK[i.tell] || ''}<span class="tl-when">${when}</span></div>`
+    ? `${i.name}: the ${p?.name}'s ${i.plain || 'attack'} in this cell, charged (${what}). It lands ${lands}. ${window} To call it off, ${i.answer}. Each ◆ you break in the window counts as half the burst. Half the burst lands it plain and spares you what it leaves behind, and less takes its extra off in step. ${counts} ${pays} ${after}`
+    : i.tell === 'cast' ? `The ${p?.name} is casting ${i.name}. It lands ${lands}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. ${window} To stop it, ${i.answer}. ${counts} ${pays} ${after}`
+    : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${lands}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it before then, and the skill that takes its last ◆ is ready again.`
+    : `The Mimic plays back the command you fire ${lands}, at you${BOSSES[s.encounter?.virus?.boss]?.mimic > 1 ? ', twice over if you\'re Scrambled' : ''}. Fire something with no direct hit then (a debuff, a strip, a burn, a shield), and the Mimic is Open.`;
+  return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">`
+    + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
     + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what">${esc(what)}</small></div>`
     + `<div class="tl-ans">▸ ${esc(answer)}${progress ? `<span class="tl-prog">${esc(progress)}</span>` : ''}</div>`
     + `${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+}
+// A tell's window over more than one cycle (levels 1 to 5, an elite's or a boss's charge, a cast): a strip in each
+// cell of it before the cell it lands in, lit NOW in the cycle you're in.
+function tellSpan(s, i, c) {
+  const now = c === 0;
+  return `<div class="tl-window ${now ? 'live' : ''}" title="${esc(`${i.name}'s window${now ? ' is open now' : ` opens ${c === 1 ? 'next cycle' : `in ${c} cycles`}`}. It lands ${i.col === 1 ? 'next cycle' : `in ${i.col} cycles`}, and every cycle until then counts toward the answer.`)}">${now ? '<span class="tw-word">Window · </span>now' : 'Window'}</div>`;
 }
 function attackChip(i, c, k = '', to = null) {
   return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
@@ -555,7 +566,8 @@ export function boardMarkup(s, selected, preview = null) {
       const cryptChip = !crypting ? '' : c === 0 ? `<div class="intent crypt" title="Encrypted: you lose ${e.encrypt} this cycle. Break ${esc(p.name)} to stop it.">−${e.encrypt} <small>encrypted</small></div>` : `<div class="crypt-line" data-label="−${e.encrypt} encrypted"></div>`;
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one ◆ back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       // A tell shows whatever the part hides (tells.mjs): nothing big lands unannounced.
-      const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('');
+      const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
+        + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
       if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${told || '<div class="intent hidden">?</div>'}${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c && !i.tell);
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a

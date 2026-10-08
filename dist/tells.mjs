@@ -15,19 +15,27 @@
 // cast), shown on the chip and in the codex. No pile-ups: a charge never lands with another part's heavy attack
 // or on a Mimic's beat, below level 17 one tell is live at a time, from 17 two, never on the same cycle.
 //
+// The window. A charge or a cast can only be answered in its last cycles: the cycle it lands (tier.window cycles
+// for a charge, castHits for a cast, so two hits fit). Hits before the window don't count. A tell said with less
+// lead than its window is open from the moment it's said. A seal and the Mimic are timed by their own landing.
+//
 // Deliberate answers. Only a command of yours aimed at the part, typed after the tell was said, counts: area hits,
-// burns, helpers, spills, auto-repeat and daemons don't. A charge asks for a hit (or `strip ◆N`), a cast SIGINT
-// or two hits, a seal a strip, the Mimic a quiet command. Reading pays: a charge or the Mimic called off leaves
-// the part Open (+50% from everyone for 2 cycles); a cast or a seal stopped readies the skill that did it. Each
-// read adds XP to the kill, and reading every tell in a fight rolls its loot once more. Ignoring hurts: from level
-// 10 a charge can add a quarter of your max, and a tell that lands leaves an after-effect (your last skill locked,
-// your ◆ and shield gone).
+// burns, helpers, spills, auto-repeat and daemons don't. A charge asks for a burst in its window: damage from your
+// commands worth tier.share of the part's max, each ◆ broken counting as 1/tier.chits of it (so ◆2 is a whole one).
+// Half the burst lands it plain, with no after-effect, and less takes its extra off in step. A cast asks for SIGINT or two hits in its window, a
+// seal a strip before it lands, the Mimic a quiet command on its beat. Reading pays: a charge, a cast or the Mimic
+// answered staggers the part (Open, +50% from everyone for 2 cycles, and its next attack a cycle later); a seal
+// stopped readies the skill that did it. Each read adds XP to the kill, and reading every tell in a fight rolls its
+// loot once more. Ignoring hurts: from level 10 a charge can add a quarter of your max, and a tell that lands leaves
+// an after-effect (your last skill locked, your ◆ and shield gone).
 //
 // State lives on the shared virus (v.tells), so a crewmate sees the same tells:
 //   list  [{ id, kind, name, part, told, said (cycle it was said), next (cycle it lands), n (a charge: the
-//         attack's landing it rides), after (the soonest the next one may land), wound, need, answer }]
-//   tier  the level tier's numbers (lead, live, mult, cap, dot, after), with an elite's or a boss's extra cap
-import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, previewDamage, alliesOf, fxAnswer, tellWeight, fxOn } from './combat.mjs';
+//         attack's landing it rides), after (the soonest the next one may land), wound (burst dealt, or hits),
+//         need (the burst, or the hits), opened (the cycle its window opened, once logged) }]
+//   tier  the level tier's numbers (lead, live, window, share, chits, mult, cap, dot, after), with an elite's or a
+//         boss's longer window, its share and ◆ rate, and its extra cap
+import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, previewDamage, alliesOf, fxAnswer, tellWeight, fxOn, cooldownOf, ignoresArmor, powerOf } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene } from './genome.mjs';
@@ -108,14 +116,37 @@ export function tellStart(s) {
   const elite = v.elite && !v.champion;
   const list = plannedTells(v);
   const cap = tier.cap * (elite ? TELL.elite.cap : v.champion ? TELL.champion.cap : v.boss ? TELL.boss.cap : 1);
-  const hits = tier.hits + (elite ? TELL.elite.hits : v.boss ? TELL.boss.hits : 0);
-  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, wound: 0, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? 3 : i ? 1 : 0) })), tier: { ...tier, hits, cap, dot: tier.dot * (cap / tier.cap) } };
+  // An elite's or a boss's charge: a window a cycle longer, its own share of a much bigger part, and ◆ worth less each.
+  const big = elite ? TELL.elite : v.boss ? TELL.boss : null;
+  const win = { window: tier.window + (big?.window || 0), share: big?.share ?? tier.share, chits: big?.chits ?? TELL.chits };
+  v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, wound: 0, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? 3 : i ? 1 : 0) })), tier: { ...tier, ...win, cap, dot: tier.dot * (cap / tier.cap) } };
   for (const t of v.tells.list) if (t.kind !== 'mimic') t.after += jitter(v, t);
   announce(s);
 }
 const live = (s, t = null) => tellsOf(s).list.filter((x) => x !== t && x.told && x.kind !== 'mimic');
 // The cycle a part's attack lands for the n-th time (attack.n counts its landings): its timer, then its interval.
 export const landsAt = (p, n) => p.attack.due + (n - (p.attack.n || 0)) * p.attack.interval;
+// The cycle a told tell lands: a charge rides its attack, the rest sit on their own cell.
+export const tellNext = (s, t) => { const p = sourceOf(s, t); return t.kind === 'charge' && p?.attack && t.n != null ? landsAt(p, t.n) : t.next; };
+// The window: the cycles a tell can be answered in, ending the cycle it lands. A charge's is tier.window long (an
+// elite's or a boss's a cycle more), a cast's castHits (two hits fit), a seal's and the Mimic's just that cycle. It
+// never opens before the tell was said. moved: cycles a skill just pushed the attack back (Suspend, Spoofed ACK
+// answer the window the charge was in when they fired).
+const lengthOf = (s, t) => { const T = tellsOf(s)?.tier || {}; return t.kind === 'charge' ? T.window || 1 : t.kind === 'cast' ? T.castHits || 2 : 1; };
+export function windowOf(s, t, moved = 0) {
+  const to = tellNext(s, t);
+  if (to == null) return null;
+  const at = to - moved;
+  return { from: Math.max(t.said ?? at, at - lengthOf(s, t) + 1), to: at, len: lengthOf(s, t) };
+}
+export const inWindow = (s, t, moved = 0) => { const w = windowOf(s, t, moved), c = s.encounter.cycle; return !!w && c >= w.from && c <= w.to; };
+// A told tell on a part whose window is open now (the skills that answer one outright read the board with it).
+export const tellOpen = (s, p, kind = null) => { const t = tellOn(s, p, kind); return t && inWindow(s, t) ? t : null; };
+// What one ◆ broken in the window is worth toward a charge's burst.
+const chitValue = (s, t) => t.need / (tellsOf(s)?.tier.chits || TELL.chits);
+// ◆ still to break for the rest of a burst, and the burst left.
+export const burstLeft = (s, t) => Math.max(0, (t.need || 0) - (t.wound || 0));
+export const chitsLeft = (s, t) => Math.ceil(burstLeft(s, t) / Math.max(1e-9, chitValue(s, t)) - 1e-9);
 // The Mimic's beat: every `every` cycles from `first`.
 const beatAt = (t, c) => c >= t.first && (c - t.first) % t.every === 0;
 // Another part's heavy attack lands on cycle c: a charge never piles up on it.
@@ -161,29 +192,53 @@ function announce(s) {
 }
 function say(s, t, p, next, n) {
   const e = s.encounter;
-  Object.assign(t, { told: true, said: e.cycle, next, n, wound: 0, need: needOf(s, t), hitBy: [], chits: 0 });
+  Object.assign(t, { told: true, said: e.cycle, next, n, wound: 0, need: needOf(s, t, p), hitBy: [], chits: 0, opened: null, early: null });
   if (t.kind !== 'mimic') tally(s, t, 'said');
   seeGene(s.host || s, t.gene, e.virus.author); // the gene codex: a tell you've met is seen (genome.mjs)
   emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next });
+  const w = windowOf(s, t);
+  if (w && w.from <= e.cycle) t.opened = e.cycle; // said inside its window: the line above says so
 }
-// What a deliberate answer takes: hits (a charge, a cast), ◆ broken (a strip charge).
-const needOf = (s, t) => (t.kind === 'charge' ? (t.answer === 'strip' ? t.strip || 2 : tellsOf(s).tier.hits) : t.kind === 'cast' ? tellsOf(s).tier.castHits : 0);
+// What a deliberate answer takes: a charge, a burst (the tier's share of its part's max); a cast, hits.
+const needOf = (s, t, p) => (t.kind === 'charge' ? Math.max(1, Math.round((tellsOf(s).tier.share || 0.5) * (p?.max || 1))) : t.kind === 'cast' ? tellsOf(s).tier.castHits : 0);
 const times = (n) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
-// The answer, exactly, for the chip's last line and the log: what counts.
-export function answerOf(t, p) {
-  if (t.kind === 'charge') return t.answer === 'strip' ? `strip ◆${t.need} off the ${p?.name}` : `hit the ${p?.name}${t.need > 1 ? ` ×${t.need}` : ''}`;
-  if (t.kind === 'cast') return `SIGINT, or hit the ${p?.name} ×${t.need}`;
-  if (t.kind === 'seal') return `strip the ${p?.name}`;
-  return 'go quiet';
+const upper = (x) => x.replace(/^./, (c) => c.toUpperCase());
+// The answer, exactly, for the chip's hover and the log: what counts, and when.
+export function answerOf(t, p, s = null) {
+  const armored = p?.armor > 0, chits = s ? chitsLeft(s, t) : null;
+  const left = s ? burstLeft(s, t) : t.need;
+  if (t.kind === 'charge') return `deal ${left} to the ${p?.name} in its window${armored && chits ? `, or break ${chits} ◆ on it` : ''}`;
+  if (t.kind === 'cast') return `SIGINT in its window, or hit the ${p?.name} ${times(Math.max(1, (t.need || 0) - (t.wound || 0)))} in it`;
+  if (t.kind === 'seal') return `strip the ${p?.name} before it lands`;
+  return 'go quiet on the beat';
 }
-// What the log says when a tell is announced: what's coming, when, and what answers it.
+// When its window opens, as the log says it: 'now', or 'next cycle', 'in 2 cycles'.
+function windowWhen(s, t) { const w = windowOf(s, t); return w ? Math.max(0, w.from - s.encounter.cycle) : 0; }
+// What the log says when a tell is announced: what's coming, when, when its window opens and what answers it.
 function sayOf(s, t, p) {
-  const n = t.next - s.encounter.cycle, L = label(t);
-  if (t.kind === 'charge') return `The ${p.name} charges its ${p.attack?.name || 'attack'} into ${L}. It lands ${when(n)}. ${t.answer === 'strip' ? `Strip ${t.need} ◆ off it` : `Hit the ${p.name} ${times(t.need)}`} with a command before then to call it off.`;
-  if (t.kind === 'cast') return `The ${p.name} is compiling ${L}. It lands ${when(n)}. SIGINT stops it, and so does hitting the ${p.name} ${times(t.need)}.`;
-  if (t.kind === 'seal') return `The ${p.name} starts ${L}. If it still wears ◆ ${when(n)}, it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it first.`;
-  return `The ${p.name} is recording you. ${when(n).replace(/^./, (c) => c.toUpperCase())} it plays back whatever you fire, so fire something quiet then.`;
+  const n = tellNext(s, t) - s.encounter.cycle, L = label(t), w = windowOf(s, t), opens = windowWhen(s, t);
+  // A one-cycle window is the cycle it lands; a longer one opens before it.
+  const single = opens === n;
+  const span = single ? (n ? 'on the cycle it lands' : 'this cycle') : w && w.to > Math.max(w.from, s.encounter.cycle) ? 'before it lands' : 'this cycle';
+  const window = single ? '' : opens ? `Its window opens ${when(opens)}. ` : 'Its window is open now. ';
+  const before = opens ? ' Hits before then don\'t count.' : '';
+  if (t.kind === 'charge') {
+    const or = p.armor > 0 ? `, or break ${chitsLeft(s, t)} ◆ on it,` : '';
+    return `The ${p.name} charges its ${p.attack?.name || 'attack'} into ${L}. It lands ${when(n)}. ${window}Deal ${t.need} to the ${p.name} ${span}${or} to call it off.${before}`;
+  }
+  if (t.kind === 'cast') return `The ${p.name} is compiling ${L}. It lands ${when(n)}. ${window}SIGINT interrupts it ${opens ? 'then' : 'now'}, and so does hitting the ${p.name} ${times(t.need)} ${opens ? 'in the window' : 'before it lands'}.${before}`;
+  if (t.kind === 'seal') return `The ${p.name} starts ${L}. If it still wears ◆ ${when(n)}, it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it before then.`;
+  return `The ${p.name} is recording you. ${upper(when(n))} it plays back whatever you fire, so fire something quiet then.`;
+}
+// A tell's window opens (a new cycle): the log says so, once, with what it takes now.
+function windowOpens(s, t, p) {
+  const left = burstLeft(s, t), last = tellNext(s, t) === s.encounter.cycle, L = label(t);
+  const span = last ? 'this cycle' : 'before it lands';
+  const text = t.kind === 'charge'
+    ? `${L}'s window is open. Deal ${left} to the ${p.name} ${span}${p.armor > 0 ? `, or break ${chitsLeft(s, t)} ◆ on it,` : ''} to call it off.`
+    : `${L}'s window is open. SIGINT interrupts it now, and so does hitting the ${p.name} ${times(left)} ${span}.`;
+  emit(s, 'telegraph', text, { source: p.id, tell: t.id, kind: t.kind, at: tellNext(s, t), window: true });
 }
 
 // A new cycle (after the old one closed): announcements. A charge whose attack went by without landing as a
@@ -193,51 +248,89 @@ export function tellCycle(s) {
   castsEnd(s);
   for (const t of tellsOf(s).list) if (t.told && t.kind === 'charge') { const p = sourceOf(s, t); if (alive(p) && p.attack && (p.attack.n || 0) > t.n) rest(s, t, s.encounter.cycle - 1); }
   announce(s);
+  // Windows that open this cycle: the log says so, once a tell (one said inside its window already said it).
+  for (const t of tellsOf(s).list) {
+    if (t.told && t.opened != null && !inWindow(s, t)) t.opened = null; // its attack was pushed back past it: it opens again later
+    if (!t.told || !['charge', 'cast'].includes(t.kind) || t.opened != null || !inWindow(s, t)) continue;
+    const p = sourceOf(s, t);
+    if (!alive(p)) continue;
+    t.opened = s.encounter.cycle;
+    windowOpens(s, t, p);
+  }
 }
 
 // One of your commands hit a part: it damaged it or broke ◆ on it (combat.mjs hit, Crack, a strip). It counts
-// toward a tell on that part only if it's deliberate: your command aimed at that part, typed after the tell was
-// said, not auto-repeat or a daemon, and a direct hit (combat.mjs leaves out burns, helpers and spills).
-// opts.chits: the ◆ it broke (a strip charge counts those). Each command counts once toward hits (Overvolt twice).
+// toward a tell on that part only if it's deliberate (your command aimed at that part, typed after the tell was
+// said, not auto-repeat or a daemon, and a direct hit: combat.mjs leaves out burns, helpers and spills) and it lands
+// inside the tell's window. opts.dealt: the damage it did; opts.chits: the ◆ it broke.
+//   charge  a burst: the damage counts, and each ◆ as 1/tier.chits of the burst. Double Tap and Spectre count it
+//           twice (combat.mjs tellWeight), and so does Fuzz (its `counts`). Overvolt's two hits each count.
+//   cast    hits: each command counts once (Overvolt and Fuzz twice, Double Tap and Spectre twice).
 // opts.cmd: a stand-in for your command (a skill that hits for you later, as Thermal Runaway's ticks or Kill Switch's
 // cash-in on each part: dist/classes/*.mjs), opts.key: what it counts as, so it adds to the cycle's command hit.
 export function tellHit(s, p, opts = {}) {
   const T = tellsOf(s), e = s.encounter, cmd = opts.cmd || e.commanding;
   if (!T || !alive(p) || !cmd || cmd === true || cmd.auto || cmd.target !== p.id || ABILITIES[cmd.id]?.noAnswer) return;
   for (const t of T.list) {
-    if (!t.told || t.part !== p.id || !t.need || t.next < e.cycle || (cmd.at ?? e.cycle) < t.said) continue;
-    // Double Tap, Spectre (combat.mjs tellWeight): each command counts twice, a hit or a ◆.
-    if (t.answer === 'strip') { if (!opts.chits) continue; t.wound = Math.min(t.need, t.wound + opts.chits * tellWeight(s)); }
-    else {
+    if (!t.told || t.part !== p.id || !t.need || !['charge', 'cast'].includes(t.kind) || tellNext(s, t) < e.cycle || (cmd.at ?? e.cycle) < t.said) continue;
+    // Before the window: it doesn't count, and the log says when it will (once a cycle).
+    if (!inWindow(s, t)) { early(s, t, p); continue; }
+    const last = tellNext(s, t) === e.cycle;
+    if (t.kind === 'charge') {
+      const x = (ABILITIES[cmd.id]?.hits ? 1 : cmd.counts || 1) * tellWeight(s);
+      const add = ((opts.dealt || 0) + (opts.chits || 0) * chitValue(s, t)) * x;
+      if (add <= 0) continue;
+      t.wound = Math.min(t.need, Math.round(t.wound + add));
+      if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound} of ${t.need}. ${t.need - t.wound} more ${last ? 'this cycle' : 'before it lands'} calls it off${p.armor > 0 ? `, or ${chitsLeft(s, t)} ◆` : ''}.`, { source: p.id, tell: t.id, burst: t.wound, need: t.need }); continue; }
+      emit(s, 'blocked', `You burst the ${p.name} in its window: ${label(t)} is called off.`, { source: p.id, target: p.id, tell: t.id, answered: true });
+      read(s, t, p, { open: true });
+    } else {
       const key = opts.key || `${e.cycle}:${s.who || ''}`, used = t.hitBy.filter((k) => k === key).length;
       if (used >= (cmd.counts || 1)) continue;
       t.hitBy.push(key);
       t.wound = Math.min(t.need, t.wound + tellWeight(s));
+      if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound} of ${t.need} hits. ${t.need - t.wound} more ${last ? 'this cycle' : 'before it lands'} interrupts it.`, { source: p.id, tell: t.id }); continue; }
+      emit(s, 'interrupt', `You hit the ${p.name} out of its compile: ${label(t)} is stopped.`, { source: p.id, target: p.id, tell: t.id, answered: true });
+      read(s, t, p, { open: true });
     }
-    if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound} of ${t.need}${t.answer === 'strip' ? ' ◆' : ' hits'}. ${t.need - t.wound} more before it lands stops it.`, { source: p.id, tell: t.id }); continue; }
-    if (t.kind === 'cast') { emit(s, 'interrupt', `You hit the ${p.name} out of its compile: ${label(t)} is stopped.`, { source: p.id, target: p.id, tell: t.id, answered: true }); read(s, t, p, { open: true }); }
-    else { emit(s, 'blocked', `You hit the ${p.name} in time: ${label(t)} is called off. Its ${p.attack?.name || 'attack'} lands plain.`, { source: p.id, target: p.id, tell: t.id, answered: true }); read(s, t, p, { open: true }); }
     rest(s, t, e.cycle, true);
   }
 }
-// A skill built for a tell answers it outright (Suspend drains a charge, Quarantine holds a cast, Hijack takes one
-// over, dist/classes/*.mjs): it counts as a read when it's a command of yours, typed after the tell was said.
-// at: when the answer was typed, for one that resolves later (Hijack).
-export function tellAnswer(s, t, p, msg, { open = t.kind !== 'seal', skill = null, at = null } = {}) {
-  const e = s.encounter, cmd = e.commanding;
-  emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', msg, { source: p.id, target: p.id, tell: t.id, answered: true });
-  if (at != null ? at >= t.said : cmd && !cmd.auto && (cmd.at ?? e.cycle) >= t.said) read(s, t, p, { open, skill: skill || (open ? null : cmd?.id) });
-  rest(s, t, e.cycle, true);
+// A hit before the window: it does its damage, and the log says the tell isn't open yet (once a cycle).
+function early(s, t, p) {
+  const e = s.encounter;
+  if (t.early === e.cycle) return;
+  t.early = e.cycle;
+  emit(s, 'status', `Too early for ${label(t)}. Its window opens ${when(windowWhen(s, t))}, and only hits in it count.`, { source: p.id, tell: t.id, early: true });
 }
-// Reading pays: the part opens (+50% from everyone for 2 cycles), or the skill that answered is ready again.
-function read(s, t, p, { open = false, skill = null } = {}) {
+// A skill built for a tell answers it outright (Suspend drains a charge, Quarantine holds a cast, Hijack takes one
+// over, dist/classes/*.mjs), inside its window like any other answer: false (and nothing said) outside it, and the
+// skill does only what it does anyway. It counts as a read when it's a command of yours, typed after the tell was
+// said. at: when the answer was typed, for one that resolves later (Hijack). moved: cycles the skill just pushed the
+// attack back. stagger false: the skill already delayed the attack itself (Suspend, Jam, Spoofed ACK).
+export function tellAnswer(s, t, p, msg, { open = t.kind !== 'seal', skill = null, at = null, moved = 0, stagger = TELL.open.built !== false } = {}) {
+  const e = s.encounter, cmd = e.commanding;
+  if (t.kind !== 'seal' && !inWindow(s, t, moved)) return false;
+  emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', msg, { source: p.id, target: p.id, tell: t.id, answered: true });
+  if (at != null ? at >= t.said : cmd && !cmd.auto && (cmd.at ?? e.cycle) >= t.said) read(s, t, p, { open, stagger, skill: skill || (open ? null : cmd?.id) });
+  rest(s, t, e.cycle, true);
+  return true;
+}
+// Reading pays. A charge, a cast or the Mimic answered staggers its part: it's Open (+50% from everyone for 2 cycles)
+// and its next attack lands a cycle later (TELL.open.delay). A seal stopped readies the skill that did it.
+function read(s, t, p, { open = false, skill = null, stagger = true } = {}) {
   const e = s.encounter;
   tally(s, t, 'read');
   readGene(s.host || s, t); // the gene codex: a tell you read is decoded (genome.mjs)
   if (open && alive(p)) {
     const n = TELL.open.cycles + (fxOn(s, 'open-long')?.fx.value || 0); // Read Receipt (a native unique): Open lasts longer
     p.openUntil = Math.max(p.openUntil || 0, e.cycle + n - 1);
-    emit(s, 'read', `READ: the ${p.name} is open. It takes +${Math.round((TELL.open.mult - 1) * 100)}% from everyone for ${cycles(n)}.`, { target: p.id, tell: t.id, open: true });
+    // A charge of another tell already riding that attack keeps its cycle (it was said clear of the Mimic's beat and of
+    // other tells): no delay then.
+    const riding = (tellsOf(s)?.list || []).some((x) => x !== t && x.told && x.kind === 'charge' && x.part === p.id && x.n === (p.attack?.n || 0));
+    const late = stagger && !riding && p.attack && p.attack.due < 900 && p.attack.due >= e.cycle ? (e.virus.boss ? TELL.boss.delay ?? TELL.open.delay : TELL.open.delay) || 0 : 0; // a solo boss keeps its clock (TELL.boss.delay)
+    if (late) p.attack.due += late;
+    emit(s, 'read', `READ: the ${p.name} staggers. It takes +${Math.round((TELL.open.mult - 1) * 100)}% from everyone for ${cycles(n)}${late ? `, and its ${p.attack.name} lands ${late === 1 ? 'a cycle' : cycles(late)} later` : ''}.`, { target: p.id, tell: t.id, open: true, stagger: late });
   } else if (skill && ABILITIES[skill]) {
     delete e.readyAt[skill];
     emit(s, 'read', `READ: ${ABILITIES[skill].name} is ready again.`, { target: p?.id, tell: t.id, ability: skill });
@@ -273,16 +366,19 @@ export const chargeNow = (s, p) => !!tellsOf(s)?.list.some((t) => t.kind === 'ch
 // The most a tell lands for, as a share of your max: a solo boss's TELL.ceiling (its landing is capped at 60% in
 // combat.mjs spikeCap), a wild virus's or a guard's the spike cap's 45% (CONFIG.spikeCap.wild).
 const ceilingOf = (s) => (s.encounter?.virus?.boss ? TELL.ceiling : Math.min(TELL.ceiling, CONFIG.spikeCap.wild));
+// A partial burst softens it: what it adds over the plain attack shrinks in step with what you dealt, to nothing at
+// half the burst (TELL.plain): soft, its spawns and its longer scramble too.
+const softOf = (t) => (t.need > 0 && t.wound > 0 ? Math.max(0, 1 - t.wound / (t.need * TELL.plain)) : 1);
 function chargeAttack(s, t, p) {
-  const T = tellsOf(s), max = defender(s).max, a = p.attack;
+  const T = tellsOf(s), max = defender(s).max, a = p.attack, k = softOf(t);
   const enr = p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1; // attackAmount counts Bricker's rage again: take it out
-  const big = (n, cap) => Math.max(1, Math.round(Math.max(n, Math.min(ceilingOf(s) * max, n + Math.min(cap * max, n * (T.tier.mult - 1))))));
-  const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id };
+  const big = (n, cap) => { const top = Math.max(n, Math.min(ceilingOf(s) * max, n + Math.min(cap * max, n * (T.tier.mult - 1)))); return Math.max(1, Math.round(n + (top - n) * k)); };
+  const base = { ...a, name: t.name, ramp: 0, step: 0, rampBy: 0, bonus: 0, grow: 0, windup: 0, wound: 0, noCrit: true, tell: t.id, soft: k, spawn: Math.round((t.spawn || 0) * k) };
   if (a.effect === 'damage') return { ...base, amount: Math.max(1, Math.round(big(attackAmount(p), T.tier.cap) / enr)) };
-  if (a.effect === 'encrypt') return { ...base, burst: Math.max(1, Math.round(Math.min(T.tier.dot * max, a.amount * (T.tier.mult - 1)))) }; // its Encrypt, and a burst on top (TELL.burst cycles)
-  if (a.effect === 'scramble') return { ...base, amount: a.amount + (t.longer || 0), hit: a.hit ? (t.plain ? a.hit : big(a.hit, T.tier.cap)) : 0 }; // Possession: the same hit, a longer scramble
-  if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * T.tier.mult) };
-  return { ...base, hit: a.hit ? big(a.hit, T.tier.cap * 0.5) : 0 }; // replicate: the spawns come on top (t.spawn)
+  if (a.effect === 'encrypt') return { ...base, burst: Math.round(Math.min(T.tier.dot * max, a.amount * (T.tier.mult - 1)) * k) }; // its Encrypt, and a burst on top (TELL.burst cycles)
+  if (a.effect === 'scramble') return { ...base, amount: a.amount + Math.round((t.longer || 0) * k), hit: a.hit ? (t.plain ? a.hit : big(a.hit, T.tier.cap)) : 0 }; // Possession: the same hit, a longer scramble
+  if (a.effect === 'heal') return { ...base, amount: Math.round(a.amount * (1 + (T.tier.mult - 1) * k)) };
+  return { ...base, hit: a.hit ? big(a.hit, T.tier.cap * 0.5) : 0 }; // replicate: the spawns come on top (spawn)
 }
 // After-effects: a tell that lands leaves something behind (from level 6; the tier's `after` cycles).
 // Corrupted: a charge that got through leaves damage on you for 3 cycles (the tier's burn of your max a cycle),
@@ -325,6 +421,8 @@ export function tellLand(s) {
       // Blackhole (Hijacker): the charged attack goes into it like any other.
       if (p.blackhole) { delete p.blackhole; emit(s, 'blocked', `${label(t)} falls into the blackhole and does nothing.`, { source: p.id, tell: t.id, answered: true }); advance(p, e); tally(s, t, 'answered'); rest(s, t, e.cycle, false); continue; }
       const atk = chargeAttack(s, t, p), locked = s.encounter.encrypt || 0, shield = e.shield || 0;
+      // A partial burst: it lands softer by the share you dealt in the window.
+      if (atk.soft < 1) emit(s, 'status', `You burst ${t.wound} of ${t.need} into the ${p.name}. ${label(t)} ${atk.soft <= 0 ? `lands plain${tellsOf(s).tier.after ? ' and leaves nothing behind' : ''}` : `lands ${Math.round((1 - atk.soft) * 100)}% softer`}.`, { source: p.id, tell: t.id, burst: t.wound, need: t.need, plain: atk.soft <= 0 });
       if (strikeWith(s, p, atk)) return done(), true;
       advance(p, e);
       // Full Disk: a burst of encryption on top of its Encrypt, for TELL.burst cycles (it goes when the part breaks, or with Purge).
@@ -334,10 +432,11 @@ export function tellLand(s) {
         tally(s, t, 'cost', atk.burst * TELL.burst);
       }
       // A brood: more spawns on top of the charged one (up to the usual limit).
-      if (t.spawn && atk.effect === 'replicate' && alive(p)) for (let k = 0; k < t.spawn; k++) strikeWith(s, p, { ...atk, hit: 0 });
+      if (atk.spawn && atk.effect === 'replicate' && alive(p)) for (let k = 0; k < atk.spawn; k++) strikeWith(s, p, { ...atk, hit: 0 });
       if (t.shred) shred(s, p, t);
-      // It got through (it hurt, or it took your shield): the after-effect.
-      if (was > defender(s).integrity || (e.shield || 0) < shield || (s.encounter.encrypt || 0) > locked) { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); }
+      // It got through (it hurt, or it took your shield): the after-effect, unless your burst landed it plain.
+      const spared = atk.soft <= 0;
+      if (!spared && (was > defender(s).integrity || (e.shield || 0) < shield || (s.encounter.encrypt || 0) > locked)) { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); }
       done();
     } else if (t.kind === 'seal') {
       if (p.armor > 0 && p.bkRot?.until >= e.cycle) { // Bit Rot (Demolitionist): a rotting part can't seal
@@ -482,9 +581,16 @@ export function tellCast(s) {
   const T = tellsOf(s);
   return T ? T.list.filter((t) => t.kind === 'cast' && t.told).sort((a, b) => a.next - b.next)[0] || null : null;
 }
+// Why SIGINT can't fire on a solo fight now, or null: nothing compiling, or the cast's window isn't open yet.
+export function tellSigintCheck(s) {
+  const t = tellCast(s);
+  if (!t) return 'Nothing is compiling. SIGINT stops a cast.';
+  if (!inWindow(s, t)) return `Too early: ${t.name}'s window opens ${when(windowWhen(s, t))}. SIGINT only interrupts a cast in its window.`;
+  return null;
+}
 export function tellSigint(s) {
   const t = tellCast(s);
-  if (!t) return false;
+  if (!t || !inWindow(s, t)) return false;
   const p = sourceOf(s, t);
   t.interrupted = (t.interrupted || 0) + 1;
   s.encounter.metrics.interrupts++;
@@ -518,7 +624,11 @@ export function tellIntents(s, columns = 4) {
     const next = t.kind === 'charge' && p.attack ? landsAt(p, t.n) : t.next;
     const col = next - e.cycle;
     if (col < 0 || col >= columns) continue;
-    const x = { source: p.id, name: t.name, tell: t.kind, id: t.id, gene: t.gene || null, col, hidden: false, kind: p.kind, need: t.need, wound: t.wound, does: t.does || null, effect: 'tell', amount: 0, answer: answerOf(t, p), strip: t.answer === 'strip' };
+    // The window, in the board's columns: winFrom (the first column it can be answered in) to col; open: it is now.
+    const w = windowOf(s, t);
+    const winFrom = Math.max(0, (w?.from ?? next) - e.cycle);
+    const x = { source: p.id, name: t.name, tell: t.kind, id: t.id, gene: t.gene || null, col, hidden: false, kind: p.kind, need: t.need, wound: t.wound, does: t.does || null, effect: 'tell', amount: 0, answer: answerOf(t, p, s),
+      winFrom, open: winFrom === 0, armored: p.armor > 0, chits: t.kind === 'charge' && p.armor > 0 ? chitsLeft(s, t) : 0, left: burstLeft(s, t) };
     if (t.kind === 'charge' && p.attack) {
       const atk = chargeAttack(s, t, p);
       x.effect = atk.effect;
@@ -533,30 +643,109 @@ export function tellIntents(s, columns = 4) {
 }
 
 // ---------- the bots (planner.mjs) ----------
-// How a player who reads tells answers them: hit a charging part (or strip it), SIGINT a cast or hit it twice,
-// go quiet on the Mimic's beat, strip a part that's about to seal. TELL.bots.answer false: a bot that plays as if
-// there were none (balance.mjs, for the gap test).
+// How a player who reads tells answers them: keep a burst for a charge's window and fire it then (strip the part
+// the cycle before when the bare hit is the bigger burst), SIGINT a cast in its window or hit it twice, go quiet on
+// the Mimic's beat, strip a part that's about to seal. TELL.bots.answer false: a bot that plays as if there were
+// none (balance.mjs, for the gap test).
 export const answers = () => TELL.bots.answer !== false;
 const ok = (s, text) => !!text && !toIntent(s, text).error;
 const first = (s, list) => list.find((c) => ok(s, c)) || null;
 const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && !ignores(t.gene) && tellNext(s, t) - s.encounter.cycle <= lag); // a gene the sim ignores (genes.mjs GENE_BOTS) goes unanswered
-const tellNext = (s, t) => { const p = sourceOf(s, t); return t.kind === 'charge' && p?.attack && t.n != null ? landsAt(p, t.n) : t.next; };
 // Commands that deal no direct damage: what you fire on the Mimic's beat.
 export const QUIET = ['harden', 'firewall', 'bulkhead', 'dmz', 'heartbeat', 'shadow-copy', 'log-wipe', 'turbo-boost', 'malloc', 'brace', 'patch', 'null-route', 'sudo', 'fork', 'debris-field', 'rm-rf', 'vent', 'circuit-breaker', 'honeypot', 'maintenance-window', 'logic-trap', 'rotate-keys', 'vanish', 'load-shed', 'multicast', 'mesh'];
 const quietFor = (s, t) => [...QUIET, ...['crack', 'shaped-charge', 'bit-rot', 'exploit', 'tag', 'hook', 'inject', 'deploy', 'spawn', 'botnet', 'fan-out', 'purge', 'thermal-runaway', 'keepalive', 'wormable', 'polymorph', 'skim', 'thrash', 'cache-poison'].map((id) => id + ' ' + t.id), 'hold'];
-// The best command of yours that answers a charge or a cast on p: the hit that does the most to it (a skill built
-// for the moment, Segfault, Backstab, Overvolt, comes out on top by itself), or on armor whatever breaks ◆.
+// A cast's answer by hits: any hit of yours on the part counts once (Overvolt and Fuzz twice), on armor too.
 const HITS = ['segfault', 'backstab', 'overvolt', 'backfire', 'fuzz', 'retaliate', 'opening', 'overload', 'flood', 'backdoor', 'reclaim', 'rate-limit', 'blowback', 'stack-smash', 'replay', 'spoofed-ack', 'thermal-throttle', 'reject', 'checksum', 'hot-loop', 'fingerprint', 'side-channel', 'unmask', 'revoke', 'sniff', 'echo-cancel', 'nohup', 'jam', 'chain-reaction', 'bit-rot', 'throttle', 'crack', 'shaped-charge', 'spike'];
 const counts = (s, text) => { const id = text.split(' ')[0]; return !ABILITIES[id]?.noAnswer; };
-function hitOn(s, p, strip = false) {
-  if (p.armor > 0 || strip) return first(s, [p.armor >= 2 && 'crack ' + p.id, p.armor >= 2 && 'shaped-charge ' + p.id, p.armor >= 2 && 'rate-limit ' + p.id, 'overvolt ' + p.id, 'spike ' + p.id].filter(Boolean));
+function hitOn(s, p) {
+  if (p.armor > 0) return first(s, ['overvolt ' + p.id, 'fuzz ' + p.id, p.armor >= 2 && 'crack ' + p.id, 'spike ' + p.id].filter(Boolean));
   return HITS.map((id) => id + ' ' + p.id).filter((c) => ok(s, c) && counts(s, c)).sort((a, b) => score(s, b, p) - score(s, a, p))[0] || null;
 }
-const score = (s, text, p) => { const id = text.split(' ')[0]; return previewDamage(s, id, p) + (['overvolt', 'fuzz'].includes(id) ? 40 : 0) + (id === 'backfire' && tellOn(s, p, 'charge') ? 60 : 0) + (id === 'backstab' && tellOn(s, p) ? 30 : 0); };
+const score = (s, text, p) => { const id = text.split(' ')[0]; return previewDamage(s, id, p) + (['overvolt', 'fuzz'].includes(id) ? 40 : 0) + (id === 'backstab' && tellOn(s, p) ? 30 : 0); };
 // Skills built to answer a tell outright (dist/classes/*.mjs): a plan that fires one of them on the part answers it.
-const BUILT = { charge: ['suspend', 'jam', 'spoofed-ack', 'hijack', 'blackhole', 'irq-storm', 'kill-switch', 'reroute', 'replay', 'backfire', 'takeover'], cast: ['quarantine', 'hijack', 'sigint', 'overvolt', 'fuzz', 'irq-storm', 'kill-switch', 'reroute', 'thermal-runaway'], seal: ['bit-rot', 'cache-poison', 'shaped-charge', 'crack'] };
-// (Kill Switch and Reroute have no target: they count only on a part your helpers are on.)
-const built = (planned, t, p, s = null) => { const [id, at] = (planned || '').split(' '); return (BUILT[t.kind] || []).includes(id) && (at ? at === p.id : !s || !['kill-switch', 'reroute'].includes(id) || s.encounter.helpers.some((h) => h.target === p.id)); };
+const BUILT = { charge: ['suspend', 'jam', 'spoofed-ack', 'hijack', 'blackhole', 'backfire'], cast: ['quarantine', 'hijack', 'sigint', 'overvolt', 'fuzz', 'irq-storm', 'kill-switch', 'reroute', 'thermal-runaway'], seal: ['bit-rot', 'cache-poison', 'shaped-charge', 'crack'] };
+// (Kill Switch and Reroute have no target: they count only on a part your helpers are on. Jam, Hijack and Blackhole
+// take a helper on the part to answer a charge.)
+const helped = (s, p) => s.encounter.helpers.some((h) => h.target === p.id);
+const built = (planned, t, p, s = null) => {
+  const [id, at] = (planned || '').split(' ');
+  if (!(BUILT[t.kind] || []).includes(id)) return false;
+  if (t.kind === 'charge' && s && ['jam', 'hijack', 'blackhole'].includes(id) && !helped(s, p)) return false;
+  return at ? at === p.id : !s || !['kill-switch', 'reroute'].includes(id) || helped(s, p);
+};
+// The ◆ a command of yours breaks on an armored part: Crack its strip, Shaped Charge all of them, a heavy hit two,
+// any other hit one (Overvolt's two hits each).
+function chipsOf(s, id, q) {
+  const a = ABILITIES[id];
+  if (!a || !(q.armor > 0) || ignoresArmor(s, id)) return 0;
+  const base = skillBase(s, id, q);
+  const k = id === 'crack' ? a.strip : id === 'shaped-charge' ? q.armor : base > 0 ? (a.chits > 1 || base >= CONFIG.heavyHit * powerOf(s) ? 2 : 1) * (a.hits || 1) : 0;
+  return Math.min(q.armor, k);
+}
+// What a command does toward a charge's burst on p, roughly: a skill built for it is a whole one; otherwise its hit
+// (a break is a whole one too), or on armor the ◆ it breaks at their rate. Kill Switch and IRQ Storm cash in what's
+// on the part. armor: as if the part wore that many ◆ (0: the cycle after a strip).
+function burstOf(s, text, t, p, { armor = null, ready = false } = {}) {
+  if (!text) return 0;
+  const [id, at] = text.split(' '), a = ABILITIES[id];
+  if (!a || a.noAnswer || (!ready && !ok(s, text))) return 0;
+  if (built(text, t, p, s)) return t.need;
+  const x = (a.hits ? 1 : a.counts || 1) * tellWeight(s);
+  if (id === 'kill-switch') return helped(s, p) ? s.encounter.helpers.filter((h) => h.target === p.id).reduce((n, h) => n + h.damage * (h.left + 1), 0) * x : 0;
+  if (id === 'irq-storm') return s.encounter.burns.filter((b) => b.target === p.id).reduce((n, b) => n + b.damage, 0) * x;
+  if (at !== p.id) return 0;
+  // Detonate cashes in your burns on it at once (half again), through ◆.
+  if (id === 'detonate') return s.encounter.burns.filter((b) => b.target === p.id && b.id !== 'implant').reduce((n, b) => n + b.damage * b.left, 0) * 1.5 * x;
+  const q = armor != null ? { ...p, armor } : p;
+  if (q.armor > 0 && !ignoresArmor(s, id)) return chipsOf(s, id, q) * chitValue(s, t) * x;
+  const d = previewDamage(s, id, q) * (id === 'backstab' ? 1.5 : 1); // Backstab crits a part busy with a tell
+  return d >= q.integrity && d > 0 ? t.need : d * x;
+}
+// The command with the biggest burst on p from what's ready now (or within `by` cycles, for planning): the smallest
+// one that does the whole thing, so the bigger keys stay ready, else the biggest there is.
+function bestBurst(s, t, p, { by = 0, armor = null, without = null } = {}) {
+  const ids = [...new Set([...usable(s), 'spike'])].filter((id) => id !== without && ABILITIES[id] && (by ? readyIn(s, id) <= by : true));
+  const texts = ids.flatMap((id) => { const a = ABILITIES[id]; return a.target === 'part' || a.target === 'attack' ? [id + ' ' + p.id] : ['kill-switch', 'irq-storm'].includes(id) ? [id] : []; });
+  const rated = texts.map((text) => ({ text, v: burstOf(s, text, t, p, { armor, ready: !!by && readyIn(s, text.split(' ')[0]) > 0 }) })).filter((x) => x.v > 0);
+  const left = burstLeft(s, t);
+  const whole = rated.filter((x) => x.v >= left).sort((a, b) => (cooldownOf(s, a.text.split(' ')[0]) - cooldownOf(s, b.text.split(' ')[0])) || a.v - b.v)[0];
+  return whole || rated.sort((a, b) => b.v - a.v)[0] || null;
+}
+// Before a charge's window, three ways a plan can spoil it, and what to play instead:
+//   strip ahead  the burst through ◆ falls short, a strip now bares the part, and a bare hit then does the whole thing
+//                (a Breaker's strip-and-hit): strip it now.
+//   chip         the plan chips the part's ◆ down to fewer than its window's burst needs without baring it (◆2 left is
+//                a whole burst for Crack or a heavy hit, ◆1 only half): hit something else now.
+//   spend        the plan fires the key the window needs, and it won't be ready again in time: Spike instead.
+function holdFor(s, t, p, planned, toOpen) {
+  const left = burstLeft(s, t), id = (planned || '').split(' ')[0], target = (planned || '').split(' ')[1];
+  const keep = bestBurst(s, t, p, { by: toOpen });
+  if (!keep) return null;
+  const need = keep.text.split(' ')[0];
+  if (toOpen === 1 && p.armor > 0 && keep.v < left) {
+    const strip = first(s, [p.armor <= 1 && 'spike ' + p.id, p.armor <= ABILITIES.crack.strip && 'crack ' + p.id, 'shaped-charge ' + p.id, p.armor <= 2 && 'overvolt ' + p.id]);
+    const sid = strip && strip.split(' ')[0];
+    const then = strip && bestBurst(s, t, p, { by: 1, armor: 0, without: sid !== 'spike' && cooldownOf(s, sid) > 1 ? sid : null });
+    if (then && then.v >= left && then.v > keep.v) return strip;
+  }
+  if (!planned) return null;
+  if (target === p.id && p.armor > 0 && TELL.bots.chip !== false) {
+    const after = p.armor - chipsOf(s, id, p);
+    if (after > 0 && after < p.armor) {
+      const then = bestBurst(s, t, p, { by: toOpen, armor: after, without: cooldownOf(s, id) > toOpen ? id : null });
+      if (keep.v >= left && (then?.v || 0) < left) { // only to keep a whole answer whole
+        const other = livingParts(s).filter((x) => x !== p).sort((a, b) => (a.attack?.due ?? 99) - (b.attack?.due ?? 99))[0];
+        const alt = other && first(s, ['spike ' + other.id]);
+        if (alt) return alt;
+      }
+    }
+  }
+  if (id !== need || id === 'spike' || cooldownOf(s, id) <= toOpen) return null;
+  // The plan fires the window's key now: what's left for the window without it.
+  const rest = bestBurst(s, t, p, { by: toOpen, without: id });
+  if (rest && rest.v >= Math.min(left, keep.v)) return null;
+  return first(s, [target && 'spike ' + target, 'spike ' + p.id]);
+}
 // A planned command that answers this tell (it's aimed at the part and hits it).
 const hitsIt = (planned, p) => { const [id, at] = (planned || '').split(' '); return at === p.id && !ABILITIES[id]?.noAnswer && (ABILITIES[id]?.damage > 0 || ['crack', 'shaped-charge', 'retaliate', 'opening', 'segfault', 'stack-smash', 'thermal-throttle', 'blowback', 'overvolt', 'replay', 'spoofed-ack', 'reclaim', 'backfire'].includes(id) || ABILITIES[id]?.verb === 'hit'); };
 // A planned command that breaks a part: nothing a tell asks for is worth more.
@@ -572,16 +761,17 @@ function chargeCost(s, t, p) {
   if (atk.effect === 'damage') return atk.amount - attackAmount(p);
   if (atk.effect === 'encrypt') return (atk.burst || 0) * TELL.burst;
   if (atk.effect === 'scramble') return Math.max(0, (atk.hit || 0) - (a.hit || 0)) + max * 0.07 * (t.longer || 0);
-  if (atk.effect === 'replicate') return Math.max(0, (atk.hit || 0) - (a.hit || 0)) + (t.spawn || 0) * max * 0.08;
+  if (atk.effect === 'replicate') return Math.max(0, (atk.hit || 0) - (a.hit || 0)) + (atk.spawn || 0) * max * 0.08;
   return max * 0.06; // a bigger heal on its side
 }
 const after = (s) => (tellsOf(s).tier.after ? defender(s).max * 0.04 * tellsOf(s).tier.after : 0);
 // Stripping a part in one command: Spike on its last ◆, Crack or Shaped Charge on more.
 const quickStrip = (s, p) => p.armor <= 1 || (p.armor <= 3 && usable(s).includes('crack') && readyIn(s, 'crack') === 0) || (usable(s).includes('shaped-charge') && readyIn(s, 'shaped-charge') === 0);
-// A command that answers a tell right now, or null. A reader answers every one it can, as soon as it's sure the
-// command counts (it was said already); a kill still comes first.
-//   charge: hit its part (or strip it) with a command, the best one it has for that
-//   cast:   SIGINT; or two hits if SIGINT is cooling and there's time
+// A command that answers a tell right now, or null. A reader answers every one it can in its window, and plans for
+// it before then; a kill still comes first.
+//   charge: in its window, the biggest burst it has on the part (the smallest that does the whole thing); before
+//           it, keep that key off cooldown, and strip the part the cycle before when the bare hit is the bigger burst
+//   cast:   SIGINT in its window, or two hits in it when SIGINT is cooling
 //   mimic:  on its beat, a command with no direct hit, when the planned one would come back
 //   seal:   strip its part, when one command does it
 export function tellMove(s, t0 = null, planned = null) {
@@ -600,35 +790,50 @@ export function tellMove(s, t0 = null, planned = null) {
   const echoes = (text) => !!(text && recording && mimicHit(s, text.split(' ')[0], part(s, text.split(' ')[1]) || sourceOf(s, recording)) > 0);
   // A kill comes first, unless a charge landing now (on another part) costs more than the kill saves.
   if (kills(s, planned)) {
-    const big = soon(s, 0).find((t) => t.kind === 'charge' && t.part !== (planned || '').split(' ')[1] && chargeCost(s, t, sourceOf(s, t)) + after(s) >= defender(s).max * 0.12);
+    // A cast landing this cycle: SIGINT first, while the virus has more than this part.
+    const cast = soon(s, 0).find((t) => t.kind === 'cast' && inWindow(s, t) && t.part !== (planned || '').split(' ')[1]);
+    if (cast && livingParts(s).length > 1 && TELL.bots.sigint !== false && ok(s, 'sigint')) return 'sigint';
+    const big = soon(s, 0).find((t) => t.kind === 'charge' && inWindow(s, t) && t.part !== (planned || '').split(' ')[1] && chargeCost(s, t, sourceOf(s, t)) + after(s) >= defender(s).max * 0.12);
     if (!big || livingParts(s).length === 1) return null;
-    const p = sourceOf(s, big), h = alive(p) && hitOn(s, p, big.answer === 'strip');
-    return h || null;
+    const p = sourceOf(s, big), h = alive(p) && bestBurst(s, big, p);
+    return h && h.v >= burstLeft(s, big) * 0.5 ? h.text : null;
   }
   for (const t of soon(s, 3).sort((a, b) => tellNext(s, a) - tellNext(s, b))) {
     const p = sourceOf(s, t);
     if (!alive(p)) continue;
-    const next = tellNext(s, t), now = next === c, left = (t.need || 0) - (t.wound || 0);
-    // A charge: on its last chance (or the one before, when it takes two), when what it adds is worth a command.
-    if (t.kind === 'charge' && TELL.bots.hit !== false && left > 0 && next - c + 1 <= Math.max(1, left)) {
-      if (built(planned, t, p, s) || (t.answer === 'strip' ? planned?.endsWith(' ' + p.id) && /^(crack|shaped-charge|spike|rate-limit|overvolt)/.test(planned) && p.armor > 0 : hitsIt(planned, p))) return null; // the plan answers it already
+    const next = tellNext(s, t), left = burstLeft(s, t), w = windowOf(s, t), open = c >= w.from, toOpen = w.from - c;
+    // A charge, when what it adds is worth a command: in its window, the biggest burst; before it, plan for it.
+    if (t.kind === 'charge' && TELL.bots.hit !== false && left > 0) {
       const builds = ABILITIES[(planned || '').split(' ')[0]]?.verb === 'burn';
-      if (chargeCost(s, t, p) + after(s) >= defender(s).max * (builds ? 0.12 : 0.05)) {
-        const h = hitOn(s, p, t.answer === 'strip');
-        if (h && (!recording || !mimicHit(s, h.split(' ')[0], p))) return h;
-      }
-    }
-    if (t.kind === 'cast' && left > 0 && built(planned, t, p, s)) return null;
-    if (t.kind === 'cast' && left > 0) {
-      // A skill built for a cast answers it and does something besides (damage, a stun): keep SIGINT for the next one.
-      const own = next - c <= 1 && first(s, [left <= 2 && 'overvolt ' + p.id, 'quarantine ' + p.id, s.encounter.helpers.some((h) => h.target === p.id) && 'hijack ' + p.id, s.encounter.helpers.length >= left && 'reroute ' + p.id, next - c >= 1 && left <= 2 && 'thermal-runaway ' + p.id]);
-      if (own && !echoes(own)) return own;
-      if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && ok(s, 'sigint') && next - c <= 1) return 'sigint';
-      if (!usable(s).includes('sigint') || readyIn(s, 'sigint') > next - c) {
-        if (hitsIt(planned, p)) return null;
-        const h = left <= next - c + 1 ? hitOn(s, p) : null;
+      if (chargeCost(s, t, p) + after(s) < defender(s).max * (builds ? 0.12 : 0.05)) continue;
+      if (open) {
+        const mine = burstOf(s, planned, t, p);
+        if (mine >= left) return null; // the plan answers it already
+        // Low, and the plan heals: survive first, unless the charge alone would take the rest.
+        const d = defender(s), heals = ['heal', 'shield'].includes(ABILITIES[(planned || '').split(' ')[0]]?.verb);
+        if (heals && TELL.bots.survive !== false && d.integrity < d.max * 0.35 && chargeCost(s, t, p) + attackAmount(p) < d.integrity) continue;
+        // Worth the command when it calls the charge off, or bursts enough of it to land it plain.
+        const h = bestBurst(s, t, p), enough = h && (h.v >= left || (t.wound || 0) + h.v >= t.need * TELL.plain);
+        if (enough && h.v > mine && (!recording || !mimicHit(s, h.text.split(' ')[0], p))) return h.text;
+        if (mine > 0) return null; // the plan bursts it as well as anything would: keep it, and plan nothing for a later tell over it
+      } else if (TELL.bots.hold !== false) {
+        const h = holdFor(s, t, p, planned, toOpen);
         if (h && !echoes(h)) return h;
       }
+    }
+    if (t.kind === 'cast' && left > 0 && built(planned, t, p, s) && (open || (planned || '').startsWith('thermal-runaway '))) return null;
+    if (t.kind === 'cast' && left > 0) {
+      // Thermal Runaway the cycle before the window: its ticks land in it, and each counts as a hit.
+      const tr = toOpen === 1 && left <= 2 && first(s, ['thermal-runaway ' + p.id]);
+      if (tr && !echoes(tr)) return tr;
+      if (!open) continue;
+      // A skill built for a cast answers it and does something besides (damage, a stun): keep SIGINT for the next one.
+      const own = first(s, [left <= 2 && 'overvolt ' + p.id, left <= 2 && 'fuzz ' + p.id, 'quarantine ' + p.id, helped(s, p) && 'hijack ' + p.id, s.encounter.helpers.length >= left && 'reroute ' + p.id]);
+      if (own && !echoes(own)) return own;
+      if (TELL.bots.sigint !== false && hackerLevel(s) >= TELL.castFrom && ok(s, 'sigint')) return 'sigint';
+      if (hitsIt(planned, p)) return null;
+      const h = left <= next - c + 1 ? hitOn(s, p) : null;
+      if (h && !echoes(h)) return h;
     }
     // A seal: strip its part before it lands, when one command does it (or two, with time).
     if (t.kind === 'seal' && TELL.bots.strip !== false && next - c <= 1 && p.armor > 0 && quickStrip(s, p)) {

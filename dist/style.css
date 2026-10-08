@@ -203,6 +203,25 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.tell .tl-prog { margin-left: auto; color: var(--muted); font-weight: 400; }
 .intent.tell.now { background: var(--tc-soft); }
 .intent.tell.now .tl-kick { background: var(--tc); color: var(--panel-2); }
+/* ---- Tell windows (tells.mjs, view.mjs tellChip and tellSpan) ----
+   A tell can only be answered in its window: the cycle it lands, or its last few. While the window is open the chip
+   wears the Sync Window's yellow (a NOW badge, a glow, the order in yellow). A window longer than a cycle marks the
+   cells before the chip with a slim WINDOW strip, lit in the cycle you're in. */
+.intent.tell { grid-template-columns: minmax(0, 1fr); }
+.intent.tell .tl-ans { white-space: normal; }
+.intent.tell .tl-win { margin-left: auto; padding: 0 3px; border-radius: 2px; background: var(--next); color: var(--panel-2); font: 700 9px var(--mono); letter-spacing: 0.5px; }
+.intent.tell.win { border-color: var(--next); box-shadow: 0 0 0 1px var(--next), 0 0 10px rgba(255, 216, 92, 0.45); }
+.intent.tell.win .tl-ans { color: var(--next); }
+.tl-window { margin: 0 0 4px; padding: 1px 6px; border: 1px dashed rgba(255, 216, 92, 0.55); border-radius: 2px; background: rgba(255, 216, 92, 0.1); color: var(--next); font: 600 9px var(--mono); letter-spacing: 1px; text-transform: uppercase; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
+.tl-window.live { border-style: solid; border-color: var(--next); background: rgba(255, 216, 92, 0.42); color: var(--panel-2); box-shadow: 0 0 10px rgba(255, 216, 92, 0.6); }
+@media (max-width: 900px) {
+  .intent.tell .tl-ans { white-space: normal; font-size: 10px; padding: 1px 5px 4px; }
+  .intent.tell .tl-win { padding: 0 3px; font-size: 9px; }
+  .intent.tell.win .tl-kind { display: none; } /* a narrow cell: the icon says the kind, NOW says the window */
+  .tl-window { padding: 1px 2px; letter-spacing: 0; }
+  .tl-window.live .tw-word { display: none; }
+}
+/* ---- end tell windows ---- */
 .crypt-line { position: relative; height: 4px; margin: 0 0 6px; border-radius: 2px; background: repeating-linear-gradient(135deg, var(--hot) 0 4px, transparent 4px 8px); opacity: 0.7; cursor: help; }
 /* Hover: it opens up into the full chip for a moment (over the cell, nothing moves). */
 .crypt-line::after { content: attr(data-label); position: absolute; left: 0; top: 50%; transform: translateY(-50%) scaleY(0.2); transform-origin: left center; opacity: 0; padding: 3px 8px; border: 1px solid var(--hot); border-radius: 3px; background: repeating-linear-gradient(135deg, var(--hot-soft) 0 6px, transparent 6px 12px), var(--panel); color: var(--hot); font: 600 11px var(--mono); letter-spacing: 0.5px; white-space: nowrap; pointer-events: none; z-index: 4; transition: transform 0.15s ease-out, opacity 0.15s ease-out; }

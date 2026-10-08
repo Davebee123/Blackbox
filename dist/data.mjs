@@ -710,29 +710,40 @@ export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 
 // rides the timeline, it never runs on a timer of its own. Four kinds:
 //   charge  powers up one of its part's scheduled attacks (mult, capped). Its cell on the board turns into the
 //           charge at least `lead` cycles ahead, and it lands when that attack was due; delaying the attack moves
-//           it. A command of yours aimed at the part calls it off (hits; `answer: 'strip'`: that many ◆ broken).
+//           it. A burst into the part inside its window calls it off: `share` of the part's max in damage from your
+//           commands, each ◆ broken counting as 1/`chits` of it. Half of it (`plain`) lands it plain with no
+//           after-effect, and less takes its extra off in step.
 //   cast    compiling a buff on the virus (does) for castLasts cycles, from level 10: a marked cell on its part's
-//           row. SIGINT stops it; so do castHits command hits on its part.
+//           row. SIGINT in its window stops it; so do castHits command hits on its part in the window.
 //   seal    if the part still wears ◆ when it lands, it re-arms to full with one ◆ more, and every stripped part
-//           gets a ◆ back (and from level 6 your ◆ and shield go). Strip it first.
+//           gets a ◆ back (and from level 6 your ◆ and shield go). Strip it before then.
 //   mimic   the Mimic plays the command you fire on its beat back at you (its direct damage). Go quiet then.
-// Only deliberate answers count: your command aimed at the part, typed after the tell was said (not area hits,
-// burns, helpers, spills, auto-repeat or daemons). Breaking a tell's part always stops it.
+// The window: a charge or a cast can only be answered in its last cycles, the cycle it lands and (`window` > 1) the
+// ones just before. Hits before the window don't count. A tell said with less lead than its window is open from the
+// moment it's said. Only deliberate answers count: your command aimed at the part, typed after the tell was said
+// (not area hits, burns, helpers, spills, auto-repeat or daemons). Breaking a tell's part always stops it.
 export const TELL = {
   // By the virus's level: how many tells it brings (count), how many can be live at once (live), how far ahead
-  // each shows at least (lead), how many command hits call a charge (hits) or a cast (castHits) off, how much
-  // bigger a charge is (mult), the most a charge adds to the hit it rides on as a share of your max (cap; dot:
-  // Full Disk's burst a cycle), and the after-effect of a tell that lands (after: your last skill locked that
-  // many cycles). Gentle while you have three skills, in between to 9, full from 10.
+  // each shows at least (lead), how many cycles at the end of a charge can answer it (window), the burst that calls
+  // a charge off as a share of its part's max (share), how many command hits stop a cast (castHits, and its window
+  // is as many cycles), how much bigger a charge is (mult), the most a charge adds to the hit it rides on as a share
+  // of your max (cap; dot: Full Disk's burst a cycle), and the after-effect of a tell that lands (after: your last
+  // skill locked that many cycles). Gentle while you have three skills, in between to 9, full from 10.
   tiers: [
-    { to: 5, count: 1, live: 1, lead: 3, hits: 1, castHits: 2, mult: 2, cap: 0.1, dot: 0.03, after: 0, burn: 0, hang: 0 },
-    { to: 9, count: 1, live: 1, lead: 2, hits: 1, castHits: 2, mult: 2.3, cap: 0.15, dot: 0.04, after: 1, burn: 0.02, hang: 0 },
-    { to: 16, count: 2, live: 1, lead: 2, hits: 1, castHits: 2, mult: 2.8, cap: 0.25, dot: 0.06, after: 2, burn: 0.04, hang: 1 },
-    { to: 99, count: 3, live: 2, lead: 2, hits: 1, castHits: 2, mult: 3, cap: 0.25, dot: 0.06, after: 2, burn: 0.05, hang: 1 },
+    { to: 5, count: 1, live: 1, lead: 3, window: 2, share: 0.25, castHits: 2, mult: 2, cap: 0.1, dot: 0.03, after: 0, burn: 0, hang: 0 },
+    { to: 9, count: 1, live: 1, lead: 2, window: 1, share: 0.35, castHits: 2, mult: 2.3, cap: 0.15, dot: 0.04, after: 1, burn: 0.02, hang: 0 },
+    { to: 16, count: 2, live: 1, lead: 2, window: 1, share: 0.5, castHits: 2, mult: 2.8, cap: 0.25, dot: 0.06, after: 2, burn: 0.04, hang: 1 },
+    { to: 99, count: 3, live: 2, lead: 2, window: 1, share: 0.5, castHits: 2, mult: 3, cap: 0.25, dot: 0.06, after: 2, burn: 0.05, hang: 1 },
   ],
+  chits: 2, // ◆ broken in the window that make a whole burst (each one counts as half of it)
+  plain: 0.5, // a burst of this share of a charge's or more lands it plain (none of its extra) and leaves no after-effect; less takes its extra off in step
   ceiling: 0.5, // a solo boss's tell never lands for more than this share of your max (or the plain hit, if that's bigger); a wild virus's stops at CONFIG.spikeCap.wild (tells.mjs ceilingOf)
-  elite: { count: 1, cap: 1.15, hits: 1 }, // an elite brings one more, each can cost 15% more (never past the ceiling), and a charge takes one more hit
-  boss: { count: 3, cap: 1.1, hits: 1 }, // a solo boss brings every tell open at its level, and its charges take one more hit
+  // An elite brings one more tell, and each can cost 15% more (never past the ceiling). Its parts carry about five
+  // times the Integrity, so its burst is a smaller share of a much bigger part, over a window a cycle longer, and
+  // its ◆ count as a third each. A solo boss's the same, and it brings every tell open at its level. A boss staggers
+  // Open like any part, but keeps its clock (delay 0): with the delay too, the readers beat MIRRORSHADE 94% of the time.
+  elite: { count: 1, cap: 1.15, window: 1, share: 0.2, chits: 3 },
+  boss: { count: 3, cap: 1.1, window: 1, share: 0.2, chits: 3, delay: 0 },
   champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
 
   castFrom: 10, // casts come with SIGINT
@@ -745,10 +756,11 @@ export const TELL = {
   loud: 1.35, // Double Extortion: its attacks hit 35% harder
   grow: 0.25, // Self-Update: every part grows a quarter more Integrity
   mimic: 1, // the Mimic hits you with your last command's direct damage, all of it
-  // Reading pays: a charge or the Mimic answered leaves the part Open (×mult from everyone for `cycles`); a cast
-  // or a seal answered readies the skill that did it. Each read adds xp of the kill's XP (up to xpMax), and
-  // reading every tell in a fight (two or more said) rolls its loot once more.
-  open: { mult: 1.5, cycles: 2 },
+  // Reading pays: a charge, a cast or the Mimic answered in its window staggers the part. It's Open (×mult from
+  // everyone for `cycles`) and its next attack lands `delay` cycles later. A seal stopped readies the skill that
+  // did it. Each read adds xp of the kill's XP (up to xpMax), and reading every tell in a fight (two or more said)
+  // rolls its loot once more.
+  open: { mult: 1.5, cycles: 2, delay: 1 },
   read: { xp: 0.1, xpMax: 0.4, rolls: 1, min: 2 },
   bots: { answer: true }, // sim switch (balance.mjs): a bot that plays as if it can't see tells
   sim: { only: null }, // sim switch (genesim.mjs): only the tells of these genes (tells.mjs plannedTells)
@@ -756,7 +768,7 @@ export const TELL = {
 // The library. part: the fixed part it sits on ('special', the family's signature part; 'basic'; or a part id),
 // shown on the chip and in the codex. gene: the tell gene it is (genes.mjs); a boss's or a guard's own name for one. A charge needs a part with an attack (it falls back to the other one).
 export const TELLS = {
-  // Charges: answer with a command hit on the part (or the ◆ it asks for), or soften it.
+  // Charges: answer with a burst into the part in its window (◆ broken count toward it), or soften it.
   fulldisk: { kind: 'charge', name: 'Full Disk', gene: 'fulldisk', part: 'special' }, // an Encrypt with a burst of encryption on top for 3 cycles
   massmailer: { kind: 'charge', name: 'Mass Mailer', gene: 'massmailer', part: 'special', spawn: 1 }, // a Replicate that hatches two (up to the limit)
   possession: { kind: 'charge', name: 'Possession', gene: 'possession', part: 'special', longer: 2 }, // a Scramble that lasts two cycles longer (Scrub clears it)
@@ -764,8 +776,8 @@ export const TELLS = {
   infest: { kind: 'charge', name: 'Infest', gene: 'massmailer', part: 'special', spawn: 1 }, // Crawler: the Brood
   deepshred: { kind: 'charge', name: 'Deep Shred', gene: 'overcharge', part: 'special', shred: true }, // Shredder: it shreds a file in your pack too
   overcharge: { kind: 'charge', name: 'Overcharge', gene: 'overcharge', part: 'basic' }, // from level 17 (the tier's third tell): a second charge, on the other attacker
-  ram: { kind: 'charge', name: 'Battering Ram', gene: 'batteringram', part: 'basic', answer: 'strip', strip: 2 }, // Bouncer (only its Gate attacks): strip ◆2 off the Gate
-  // Casts (from level 10): SIGINT, two hits, or break the part.
+  ram: { kind: 'charge', name: 'Battering Ram', gene: 'batteringram', part: 'basic' }, // Bouncer (only its Gate attacks): the Gate wears ◆, so it mostly asks for ◆2 in the window
+  // Casts (from level 10): SIGINT or two hits in its window, or break the part.
   extortion: { kind: 'cast', name: 'Double Extortion', gene: 'doubleextortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
   selfupdate: { kind: 'cast', name: 'Self-Update', gene: 'selfupdate', part: 'special', does: 'grow' }, // every part grows a quarter more Integrity
   persistence: { kind: 'cast', name: 'Persistence', gene: 'persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles

@@ -75,7 +75,7 @@ No native moves a bracket's average by more than 4 points, every case stays betw
 
 ## 3. The native boss pool
 
-Nine templates on the solo-boss and tells framework (not raid.mjs). Each brings every tell open at its level, its charges take two hits, it has phases and an enrage timer, and a family template always brings its own third part. A strain template is a boss built on that strain, with its strain's tells and its charge renamed.
+Nine templates on the solo-boss and tells framework (not raid.mjs). Each brings every tell open at its level, its charges ask for an elite's burst over a two-cycle window, it has phases and an enrage timer, and a family template always brings its own third part. A strain template is a boss built on that strain, with its strain's tells and its charge renamed.
 
 | Boss | Base | Third part or rule | Signature charge | Phases | Lair |
 |---|---|---|---|---|---|

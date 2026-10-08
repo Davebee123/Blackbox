@@ -22,7 +22,7 @@
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
 import { subOf, subEdge, hasTalent, rank, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
-import { tellHit, tellOn, tellAnswer, chargeSize } from '../tells.mjs';
+import { tellHit, tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -141,7 +141,8 @@ const use = {
     if (!alive(target) || !snap || snap.target !== target.id || snap.cycle !== e.cycle) return;
     const extra = Math.min(scaled(s, a.cap), Math.max(scaled(s, 15), Math.round(snap.extra)));
     const msg = `BACKFIRE: ${snap.t.name.toUpperCase()} goes off inside the ${target.name}. Its ${target.attack?.name || 'attack'} lands plain.`;
-    if (snap.t.told) tellAnswer(s, snap.t, target, msg); else emit(s, 'blocked', msg, { source: target.id, ability: 'backfire' });
+    if (!snap.t.told) emit(s, 'blocked', msg, { source: target.id, ability: 'backfire' }); // its own hit called it off already
+    else tellAnswer(s, snap.t, target, msg); // in its window only (tells.mjs): before it, the hit lands and the charge stays
     hit(s, target, extra, { mine: true, pierce: true, by: 'Backfire' });
   },
   'rm-rf'(s, { a, e }) {
@@ -366,7 +367,7 @@ function ttDamage(s, p) {
 const healthy = (s, share) => defender(s).integrity > defender(s).max * share;
 
 // A charge riding the next attack of a part, landing within `lag` cycles: Backfire blows it up inside it.
-const charging = (s, lag = 2) => livingParts(s).find((p) => { const ch = tellOn(s, p, 'charge'); return ch && p.attack && ch.n === (p.attack.n || 0) && p.attack.due - s.encounter.cycle <= lag; });
+const charging = (s) => livingParts(s).find((p) => { const ch = tellOpen(s, p, 'charge'); return ch && p.attack && ch.n === (p.attack.n || 0); }); // in its window (tells.mjs)
 // What lands on you this cycle and next, by size.
 const incoming = (s, within = 0) => intents(s).filter((i) => i.col <= within && !i.hidden && (i.effect === 'damage' || i.hit)).reduce((n, i) => n + (i.hit || i.amount || 0), 0);
 // What one Fork Bomb is worth now: its hit on every bare part (fragments three times over, no more than each has
@@ -381,7 +382,7 @@ function planDemo(s, t) {
   const e = s.encounter, d = defender(s), living = livingParts(s);
   const calm0 = (p) => !A('shaped-charge').provoke || !p.attack || p.attack.due - e.cycle >= 2;
   // A charge winding up: Backfire blows it up inside its part (armor or not), and the attack lands plain.
-  const ch = charging(s, 1);
+  const ch = charging(s);
   if (ch && !living.some((p) => bare(p) && killable(s, p)) && ok(s, 'backfire ' + ch.id)) return 'backfire ' + ch.id; // a kill first
   // Fragments up: Fork Bomb takes them (three times over) and hits everything else on the way.
   if (living.some((p) => p.kind === 'fragment') && living.length >= 3 && ok(s, 'fork-bomb')) return 'fork-bomb';
@@ -459,7 +460,7 @@ function planOC(s, t) {
   const ready = ['segfault', 'overload', 'thermal-throttle', 'stack-smash', 'flood', 'hot-loop'].filter((id) => usable(s).includes(id) && readyIn(s, id) <= 1).length;
   if (t.integrity >= estimate(s, t, 90) && ready >= 2 && (bare(t) || st >= 2) && ok(s, 'fault-injection ' + t.id)) return 'fault-injection ' + t.id;
   // Segfault crashes a part mid-wind-up: three times the hit, and it calls the charge off.
-  const charging = livingParts(s).find((p) => tellOn(s, p, 'charge') && !(p.armor > 0));
+  const charging = livingParts(s).find((p) => tellOpen(s, p, 'charge') && !(p.armor > 0)); // in its window: before it, the ×3 is only a hit
   if (charging && ok(s, 'segfault ' + charging.id)) return 'segfault ' + charging.id;
   // Stack Smash on an Exposed bare part: it hits twice for sure, and its crits keep going.
   const exposed = [t, ...livingParts(s)].find((p) => bare(p) && p.exposedUntil >= e.cycle && p.integrity > estimate(s, p, 30));
@@ -467,7 +468,7 @@ function planOC(s, t) {
   // Set it up: Exploit a big bare part when Stack Smash is ready for next cycle and nothing lands now.
   if (!due.length && bare(t) && usable(s).includes('stack-smash') && readyIn(s, 'stack-smash') <= 1 && !(t.exposedUntil >= e.cycle) && t.integrity > estimate(s, t, 90) && ok(s, 'exploit ' + t.id)) return 'exploit ' + t.id;
   // Overvolt: two hits in one command, a cast stopped (when SIGINT is cooling), or two ◆ off a part about to seal.
-  const busy = livingParts(s).find((p) => (tellOn(s, p, 'cast') && (!usable(s).includes('sigint') || readyIn(s, 'sigint') > 0)) || (tellOn(s, p, 'seal') && p.armor === 2));
+  const busy = livingParts(s).find((p) => (tellOpen(s, p, 'cast') && (!usable(s).includes('sigint') || readyIn(s, 'sigint') > 0)) || (tellOn(s, p, 'seal') && p.armor === 2));
   if (busy && healthy(s, 0.3) && ok(s, 'overvolt ' + busy.id)) return 'overvolt ' + busy.id;
   // Brace: a charge landing now that nobody called off, or a big hit you can't stop.
   const now = intents(s).filter((i) => i.col === 0 && (i.effect === 'damage' || i.hit));

@@ -464,12 +464,12 @@ test('Debris Field: for 3 cycles every ◆ you break shields you 5, up to 30', (
 });
 
 test('Backfire: 25 anywhere; on a part winding up a charge, the charge goes off inside it and the attack lands plain', async () => {
-  const { tellOn } = await import('./dist/tells.mjs');
+  const { tellOn, tellOpen } = await import('./dist/tells.mjs');
   const n = noArmor(quiet(demo()));
   big(n, 'pulse');
   act(n, 'backfire pulse');
   assert.equal(lost(n, 'pulse'), 25);
-  // A charge on a part's next attack (tells.mjs): Backfire turns it on its own part.
+  // A charge on a part's next attack, in its window (tells.mjs): Backfire turns it on its own part.
   CONFIG.tells = true;
   try {
     let s = null, t = null;
@@ -480,7 +480,7 @@ test('Backfire: 25 anywhere; on a part winding up a charge, the charge goes off 
       selectEncounter(s, 'cryptjack', seed, { level: 30 });
       command(s, 'engage');
       for (let k = 0; k < 12 && s.encounter?.phase === 'active' && !t; k++) {
-        t = s.encounter.virus.parts.find((p) => p.integrity > 0 && tellOn(s, p, 'charge') && p.attack) || null;
+        t = s.encounter.virus.parts.find((p) => p.integrity > 0 && tellOpen(s, p, 'charge') && p.attack) || null; // in its window (tells.mjs)
         if (!t) { command(s, 'hold'); resolveCycle(s); }
       }
     }

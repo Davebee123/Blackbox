@@ -70,12 +70,14 @@ test('the Bastions alone are the slow ones: the Warden at least 1.4 times the da
 });
 
 // Solo tells (tells.mjs): a bot that plays as if it can't see them (TELL.bots.answer false) does measurably worse
-// than one that reads them, on the same fights. From level 10 a tell let through costs up to a quarter of your max and
-// leaves something behind (a key offline, Corrupted, Hung), so the gap is about 12–15 points of Signal a fight on
-// average (about 18 at Lv 10, 14 at 18 and 8 at 30, where fights are short) and the ignoring bot loses more fights.
-// Below 10 the tells are gentle on purpose (one at a time, small, no after-effect at 1–5): a smaller gap.
+// than one that reads them, on the same fights. A tell is answered only in its window and a charge asks for a burst,
+// so a hit at any time no longer calls one off by luck, and a clean answer staggers the part. The gap is about 17
+// points of Signal a fight on average from level 10 (20 at Lv 10, 22 at 18, 10 at 30, where fights are short; it was
+// 15, 15 and 7 before the window) and the ignoring bot loses more fights (66 more wins reading, of 576). The designer
+// asked for 15 to 20. Below 10 the tells are gentle on purpose (no after-effect at 1–5): a smaller gap (3 at Lv 5,
+// 13 at Lv 8).
 const below = (L) => ({ ...BRACKETS.filter((b) => b.level <= L).at(-1), name: 'Lv ' + L, level: L, server: L });
-test('reading tells pays: a bot that ignores them loses at least 12 points more Signal a fight on average at Lv 10, 18 and 30 (at least 6 at each), wins fewer fights, and a smaller gap below 10', () => {
+test('reading tells pays: a bot that ignores them loses 15 to 22 points more Signal a fight on average at Lv 10, 18 and 30 (at least 8 at each), wins fewer fights, and a smaller gap below 10', () => {
   TELL.bots.answer = false;
   let ignored, low, lowRead;
   const LOW = [5, 8];
@@ -94,8 +96,8 @@ test('reading tells pays: a bot that ignores them loses at least 12 points more 
   }
   const lowGap = LOW.map((L, i) => low[i].reduce((a, r, k) => a + r.lost - lowRead[i][k].lost, 0) / CLASSES.length);
   const all = `${lines.join(', ')}; ${LOW.map((L, i) => `Lv ${L} ${lowGap[i].toFixed(1)}`).join(', ')}; ${wins} more wins reading`;
-  for (const l of lines) assert.ok(+l.split(' ').at(-1) >= 6, `ignoring tells costs too little at ${l} (${all})`);
-  assert.ok(gap / n >= 12, `ignoring tells costs ${(gap / n).toFixed(1)} points a fight on average from Lv 10 (${all})`);
+  for (const l of lines) assert.ok(+l.split(' ').at(-1) >= 8, `ignoring tells costs too little at ${l} (${all})`);
+  assert.ok(gap / n >= 15 && gap / n <= 22, `ignoring tells costs ${(gap / n).toFixed(1)} points a fight on average from Lv 10 (${all})`);
   assert.ok(wins > 0, `a bot that reads tells wins more often (${all})`);
   const lowAvg = lowGap.reduce((a, g) => a + g, 0) / LOW.length;
   assert.ok(lowAvg >= 1 && lowAvg < gap / n, `below Lv 10 the gap is there but smaller (${all})`);

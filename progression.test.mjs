@@ -3,7 +3,7 @@
 // migration that folded server XP, ports, the specialty, eight services and greys away.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonVersion, SAVE_VERSION, DECODE_XP, effectLine } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonVersion, SAVE_VERSION, DECODE_XP, effectLine, previewDamage } from './dist/combat.mjs';
 import { CONFIG, CATCHUP, levelTarget, xpToNext, killXp, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES, VERSIONS } from './dist/gear.mjs';
 import { tickPlay, behindOf } from './dist/progression.mjs';
@@ -135,13 +135,13 @@ test('rules at work: Interrupt Handler on a part winding up a tell, Exception Ha
   fxAnswer(t);
   assert.equal(t.encounter.shield, RULES['exception-handler'].value[1], 'a shield');
   assert.equal(t.server.integrity, 50 + RULES['abort-handler'].value[1], 'and a heal');
-  // Double Tap: one command calls off a charge that needs two.
+  // Double Tap: a command counts twice toward a burst, so one Spike calls off a charge that needs more than a Spike.
   const u = at({ breaker: 20 });
   wear(u, rule('double-tap'));
   bare(fight(u, 20));
   const r = part(u, 'pulse');
   Object.assign(r, { integrity: 500, max: 500 });
-  telling(u, r, { need: 2 });
+  telling(u, r, { need: Math.round(previewDamage(u, 'spike', r) * 1.6), next: u.encounter.cycle, said: u.encounter.cycle }); // in its window
   command(u, 'spike pulse'); const ev = resolveCycle(u);
   assert.ok(ev.some((e) => e.tell === 't' && e.answered), 'called off with one command');
 });

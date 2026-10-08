@@ -26,7 +26,7 @@
 import { slotsOf, subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
-import { tellOn, tellAnswer, undoCast, landsAt } from '../tells.mjs';
+import { tellOn, tellOpen, tellAnswer, undoCast, landsAt } from '../tells.mjs';
 import { subs as SUBS_BASTION } from './bastion.data.mjs';
 // (Circuit Breaker's cap and Honeypot's cut: the absorb hook below; Revoke's failed heals and patches: combat.mjs.)
 
@@ -163,10 +163,11 @@ const use = {
     emit(s, 'status', `DMZ: attacks deal ${Math.round(a.cut * 100)}% less to ${alliesOf(s).length ? 'the whole crew' : s.who || 'you'} for ${a.cycles} cycles.`, { mark: 'buff', ability: 'dmz' });
   },
   // Warden talents on old skills
-  suspend(s, { target, e }) {
-    // A charge on the attack it pushed back drains out: it lands plain (a read, tells.mjs).
+  suspend(s, { a, target, e }) {
+    // A charge on the attack it pushed back drains out in its window: it lands plain (a read, tells.mjs). Before the
+    // window the charge rides the attack it pushed back.
     const ch = alive(target) && target.attack && tellOn(s, target, 'charge');
-    if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `SIGSTOP: ${ch.name.toUpperCase()} drains out of the ${target.name}. Its ${target.attack.name} lands plain, 2 cycles later.`);
+    if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `SIGSTOP: ${ch.name.toUpperCase()} drains out of the ${target.name}. Its ${target.attack.name} lands plain, ${a.delay} cycles later.`, { moved: a.delay, stagger: false });
     if (!hasTalent(s, 'tarpit') || !alive(target) || !target.attack) return;
     target.throttledUntil = Math.max(target.throttledUntil || 0, target.attack.due);
     emit(s, 'status', `Tarpit: ${target.name} is Throttled until its attack lands, and its attacks deal half damage.`, { target: target.id, mark: 'throttled' });
@@ -290,10 +291,10 @@ const cooling = (s, id) => !usable(s).includes(id) || readyIn(s, id) > 0;
 function readBoard(s) {
   const e = s.encounter, c = e.cycle;
   for (const p of livingParts(s)) {
-    const ch = tellOn(s, p, 'charge');
-    if (ch && p.attack && ch.n === (p.attack.n || 0) && p.attack.due - c <= 1 && ok(s, 'suspend ' + p.id)) return 'suspend ' + p.id;
-    const cast = tellOn(s, p, 'cast');
-    if (cast && cast.next - c <= 1 && cooling(s, 'sigint') && ok(s, 'quarantine ' + p.id)) return 'quarantine ' + p.id;
+    const ch = tellOpen(s, p, 'charge'); // in its window: before it, Suspend only pushes the charge back
+    if (ch && p.attack && ch.n === (p.attack.n || 0) && ok(s, 'suspend ' + p.id)) return 'suspend ' + p.id;
+    const cast = tellOpen(s, p, 'cast');
+    if (cast && cooling(s, 'sigint') && ok(s, 'quarantine ' + p.id)) return 'quarantine ' + p.id;
   }
   const loud = attackers(s).find((p) => (p.loud || e.virus.buffs?.loud >= c || (p.enrage && p.integrity < p.max / 2)) && p.attack.due - c <= 2 && !on(s, p, 'throttled'));
   if (loud && ok(s, 'throttle ' + loud.id)) return 'throttle ' + loud.id;

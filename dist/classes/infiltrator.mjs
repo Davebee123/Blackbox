@@ -23,7 +23,7 @@
 // hit), Log Wipe (Weak Spot fresh again). Weak Spot itself is in combat.mjs (edge(s, 'infiltrator')).
 import { CONFIG, ABILITIES } from '../data.mjs';
 import { soonest, doomed } from '../planner.mjs';
-import { tellOn, tellHit } from '../tells.mjs';
+import { tellOn, tellOpen, tellHit } from '../tells.mjs';
 import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn } from '../combat.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -142,10 +142,10 @@ export default {
     'irq-storm'(s, { e }) {
       const all = [...e.burns, ...mine(s).poly];
       let n = 0;
-      const reached = new Set();
+      const reached = new Set(), was = new Map(livingParts(s).map((p) => [p.id, [p.integrity, p.armor || 0]]));
       for (const b of all) { if (virusIntegrity(s).current === 0) break; const t = part(s, b.target); if (alive(t)) { tick(s, b, t, `IRQ Storm (${b.name})`); n++; reached.add(t); } }
-      // Each part it reaches takes it as a hit from your command (tells.mjs).
-      for (const t of reached) if (alive(t)) tellHit(s, t, { cmd: { id: 'irq-storm', target: t.id, at: e.commanding?.at ?? e.cycle }, key: `irq:${e.cycle}:${s.who || ''}:${t.id}` });
+      // Each part it reaches takes it as a hit from your command, and what it did there counts toward a burst (tells.mjs).
+      for (const t of reached) if (alive(t)) { const [hp, ar] = was.get(t.id) || [t.integrity, t.armor || 0]; tellHit(s, t, { cmd: { id: 'irq-storm', target: t.id, at: e.commanding?.at ?? e.cycle }, key: `irq:${e.cycle}:${s.who || ''}:${t.id}`, dealt: hp - t.integrity, chits: ar - (t.armor || 0) }); }
       emit(s, 'status', `IRQ Storm: ${plural(n, 'burn')} ticked at once.`, { mark: 'burn', ability: 'irq-storm' });
     },
     // Detonate and Keepalive reach Polymorph's burns too.
@@ -370,7 +370,7 @@ export const INJECT_FLOOR = 1; // then the line, then more stacks
 function payloadPlan(s, t, living, hurt) {
   const e = s.encounter;
   // IRQ Storm: a charge or a cast about to land on a part you're burning (each part it ticks counts as your hit).
-  const told = living.find((p) => allBurnsOn(s, p).length && tellOn(s, p) && ['charge', 'cast'].includes(tellOn(s, p).kind));
+  const told = living.find((p) => allBurnsOn(s, p).length && tellOpen(s, p) && ['charge', 'cast'].includes(tellOpen(s, p).kind)); // in its window
   if (told) { const c = first(s, ['irq-storm']); if (c) return c; }
   // The Implant on a part that heals or grows (a Patcher, a Tap, a Self-Update on the board): it can't while it burns.
   const healer = living.find((p) => p.attack?.effect === 'heal' || p.attack?.siphon || tellOn(s, p, 'cast')?.does === 'grow');
@@ -385,7 +385,7 @@ function payloadPlan(s, t, living, hurt) {
   // Inject first: three stacks on the target carry the Payload, and the line comes on top of them.
   if (injects(s, t) < INJECT_FLOOR && queued(s, t) < t.integrity) { const c = first(s, ['inject ' + t.id]); if (c) return c; }
   // Fuzz: a hit and a burn, and a tell on it counts it twice.
-  if (tellOn(s, t) && ['charge', 'cast'].includes(tellOn(s, t).kind)) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; }
+  if (tellOpen(s, t) && ['charge', 'cast'].includes(tellOpen(s, t).kind)) { const c = first(s, ['fuzz ' + t.id]); if (c) return c; } // in its window
   // Thick armor: Polymorph burns straight through it while the other burns break ◆. On a bare part it's the
   // biggest burn there is, so it goes on anything that will outlive it.
   if (t.armor >= 2 || queued(s, t) + previewDamage(s, 'spike', t) < t.integrity) { const c = first(s, ['polymorph ' + t.id]); if (c) return c; }

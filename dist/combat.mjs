@@ -26,7 +26,7 @@ import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, i
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
-import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellCast, tellOn, tellsOf } from './tells.mjs';
+import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf } from './tells.mjs';
 import { TELL } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
@@ -1940,7 +1940,7 @@ export function validate(s, intent) {
   if (['detonate', 'propagate', 'keepalive'].includes(intent.ability) && !burnsOn(s, part(s, intent.target)).filter((b) => intent.ability !== 'detonate' || b.id !== 'implant').length) return `No burns on ${part(s, intent.target).name}${intent.ability === 'detonate' && burnsOn(s, part(s, intent.target)).length ? ' but the Rootkit Implant (it burns until the part breaks)' : ''}.`;
   if (['reroute', 'cron-storm'].includes(intent.ability) && !e.helpers.length) return 'No helpers running.';
   if (intent.ability === 'kill-switch' && !e.helpers.length) return 'No helpers running.';
-  if (intent.ability === 'sigint') { const why = e.virus.raid ? sigintCheck(s) : tellCast(s) ? null : 'Nothing is compiling. SIGINT stops a cast.'; if (why) return why; }
+  if (intent.ability === 'sigint') { const why = e.virus.raid ? sigintCheck(s) : tellSigintCheck(s); if (why) return why; } // a solo cast: only in its window (tells.mjs)
   const check = classCheck(intent.ability);
   if (check) { const why = check(s, intent); if (why) return why; }
   if (intent.ally && !allyOf(s, intent.ally)) return `${intent.ally} isn't standing.`;
@@ -2322,10 +2322,10 @@ export function hit(s, p, base, opts = {}) {
     if (dealt < was) notes.push(`warded: ${was - dealt} held back`);
   }
   // Mutex: while it lives, the part it locks carries a shield (its lock) that takes the hit first.
-  let unlocked = false;
+  let unlocked = false, soaked = 0;
   if (dealt > 0 && !root && p.lockHp > 0 && livingParts(s).some((x) => x.lock === p.id)) {
     const soak = Math.min(p.lockHp, Math.ceil(dealt * crush)), spent = Math.min(dealt, Math.ceil(soak / crush));
-    p.lockHp -= soak; dealt -= spent;
+    p.lockHp -= soak; dealt -= spent; soaked = spent;
     notes.push(`lock: ${soak} held`);
     if (!p.lockHp) { p.lockAt = e.cycle + CONFIG.mutex.every; unlocked = true; }
   }
@@ -2348,7 +2348,7 @@ export function hit(s, p, base, opts = {}) {
   e.lastCrit = !!crit && !!opts.mine;
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit });
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor });
-  if (dealt > 0 && e.virus.tells && e.commanding && !opts.dot) tellHit(s, p); // your command hit it: a tell on it may count it (tells.mjs)
+  if (dealt + soaked > 0 && e.virus.tells && e.commanding && !opts.dot) tellHit(s, p, { dealt: dealt + soaked }); // your command hit it: a tell on it may count it, a charge by the burst (tells.mjs; a Mutex lock soaking it still counts)
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
   if (w && dealt > 0 && p.integrity > 0 && p.attack.due - e.cycle <= 2) {
@@ -2724,7 +2724,7 @@ function useAbility(s, intent, auto = false) {
   if (id === 'reroute') {
     // Every arrival counts as a hit from your command (tells.mjs): a swarm stops a cast in one go.
     let k = 0;
-    for (const h of e.helpers) { h.target = target.id; hit(s, target, h.damage, { by: 'Helper', dot: true }); if (!alive(target)) break; tellHit(s, target, { cmd: { id, target: target.id, at: intent.at ?? e.cycle }, key: `rr:${e.cycle}:${s.who || ''}:${k++}` }); }
+    for (const h of e.helpers) { h.target = target.id; const was = [target.integrity, target.armor || 0]; hit(s, target, h.damage, { by: 'Helper', dot: true }); if (!alive(target)) break; tellHit(s, target, { cmd: { id, target: target.id, at: intent.at ?? e.cycle }, key: `rr:${e.cycle}:${s.who || ''}:${k++}`, dealt: was[0] - target.integrity, chits: was[1] - (target.armor || 0) }); }
   }
   if (id === 'cron-storm') {
     for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true }); if (virusIntegrity(s).current === 0) break; }
@@ -2732,7 +2732,7 @@ function useAbility(s, intent, auto = false) {
   if (id === 'kill-switch') {
     // Supervisor (Operator talent): cashing in your helpers readies Deploy.
     if (hasTalent(s, 'supervisor') && e.readyAt.deploy) { delete e.readyAt.deploy; emit(s, 'proc', 'Supervisor: Deploy is ready.', { ability: 'deploy' }); }
-    const reached = new Set();
+    const reached = new Set(), was = new Map(livingParts(s).map((p) => [p.id, [p.integrity, p.armor || 0]])); // what it does to each part counts toward a burst there
     for (const h of e.helpers.splice(0)) {
       const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s);
       // Last Gasp comes with it, so cashing in early loses nothing. On armor each hit it had left breaks a ◆ first,
@@ -2741,7 +2741,7 @@ function useAbility(s, intent, auto = false) {
       if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true }); reached.add(t); }
     }
     // Each part it cashes in on takes it as a hit from your command (tells.mjs): it calls a charge off there.
-    for (const t of reached) if (alive(t)) tellHit(s, t, { cmd: { id, target: t.id, at: intent.at ?? e.cycle }, key: `ks:${e.cycle}:${s.who || ''}:${t.id}` });
+    for (const t of reached) if (alive(t)) { const [hp, ar] = was.get(t.id) || [t.integrity, t.armor || 0]; tellHit(s, t, { cmd: { id, target: t.id, at: intent.at ?? e.cycle }, key: `ks:${e.cycle}:${s.who || ''}:${t.id}`, dealt: hp - t.integrity, chits: ar - (t.armor || 0) }); }
   }
   if (id === 'keepalive') {
     // Every burn on it ticks once now (without using itself up), then runs longer.
