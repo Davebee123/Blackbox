@@ -18,6 +18,9 @@ import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
 import { postsOf, LISTEN, schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, relayCost, canBuildRelay, OUTPOST, BUILDINGS, bandwidth, bandwidthUsed, stockOf, capOf, makes, siteLabel, slotsOf, sizeOf as serverSize, buildingsOf, buildBlock, buildCost, costLine, isOutpost, hasMod } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE } from './data.mjs';
+import { GENES, GENE_IDS, CATS, AXES } from './genes.mjs';
+import { AUTHORS } from './authors.mjs';
+import { chipOf, virusGenes, geneState, codexCount, scannedDeep } from './genome.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
 const LOUD_TIP = `Go in loud: every fight on this run has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`;
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
@@ -115,7 +118,7 @@ export function headMarkup(s) {
   const m = v.mutation ? MUTATIONS[v.mutation] : null;
   const weak = v.weakKnown ? part(s, v.weakPoint) : null;
   const status = e.phase === 'active' ? (e.paused ? '<span class="tag">Paused</span>' : '') : `<span class="tag ${e.phase === 'crashed' ? 'hot' : ''}">${esc(e.phase === 'alert' ? 'Not engaged' : e.phase)}</span>`;
-  return `<h1>${esc(v.name)}</h1>
+  return `<h1>${esc(v.name)}${byline(v)}</h1>
     <span class="meta">${levelTag(s, v.level)} ${esc(familyInfo(v.family).name)}${e.mode === 'run' ? ' · on a run' : ''}</span>
     <span class="tag" title="What this family goes after">threatens ${esc(v.threatens)}</span>
     ${m ? `<span class="tag" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}
@@ -262,11 +265,11 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const fc = forecast(s, preview);
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
-  const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. Tougher; three times the XP, and a capture when it falls.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. Much tougher; three times the XP, three loot rolls, a blue at least.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
+  const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. Tougher; three times the XP, and a capture when it falls.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. Much tougher; three times the XP, three loot rolls, a blue at least.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${lossMark(d.integrity, d.max, fc.you)}</div></div></div>${statusPanel(s)}</div>
-    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong><span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}</p></div>`;
+    <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}</p>${geneChips(s, v)}</div>`;
 }
 
 // Everything on you right now, between your bar and the virus's: timed effects (with the cycles
@@ -319,14 +322,42 @@ export function partMarks(s, p) {
 }
 const marksMarkup = (marks) => (marks.length ? `<span class="pmarks">${marks.map((k) => `<span class="pmark m-${k}" title="${k}">${glyph(MARKS[k])}</span>`).join('')}</span>` : '');
 
-// The codex page card: every component, by virus; the ones you've broken say what they do.
+// The codex page card, gene by gene (genome.mjs): what you've never met is ??? with its category, what you've seen
+// has its name, its axis and who you've seen use it, and what you've decoded says what it does and what answers it.
 export function codexMarkup(s) {
-  const groups = [...Object.entries(FAMILIES).map(([k, f]) => [k, f.name, f.parts]), ...Object.entries(STRAINS).map(([k, st]) => [k, st.name, st.parts]), ...Object.entries(GUARDS).map(([k, g]) => [k, g.name, g.parts])];
-  const all = groups.flatMap(([k, , parts]) => parts.map((p) => `${k}:${p.id}`));
-  const known = all.filter((k) => s.codex?.[k]).length;
-  // What you've never met stays ??? (names too): nothing spoils what's out there.
-  const met = (k, parts) => !!s.met?.[k] || parts.some((p) => s.codex?.[`${k}:${p.id}`]);
-  return `<section class="card codex-card"><h2>Codex · ${known}/${all.length}</h2><div class="codex">${groups.map(([k, name, parts]) => `<div class="cx-group${met(k, parts) ? '' : ' unmet'}"><b>${met(k, parts) ? esc(name) : '???'}</b><ul>${parts.map((p) => { const on = !!s.codex?.[`${k}:${p.id}`]; return `<li class="${on ? 'on' : ''}"><span>${met(k, parts) ? esc(p.name) : '???'}</span><small>${on ? esc(partAbout(p, STRAINS[k] ? { strain: k, family: STRAINS[k].lineage, parts } : { family: k, parts })) : '???'}</small></li>`; }).join('')}</ul></div>`).join('')}</div></section>`;
+  const n = codexCount(s);
+  const row = (id) => {
+    const g = GENES[id], st = geneState(s, id), ax = AXES[g.axis];
+    if (st === 'unknown') return `<li class="cx-gene unknown"><span><i class="gax">${glyph(CATS[g.cat].icon)}</i>???</span><small>${esc(`${an(CATS[g.cat].one)} ${CATS[g.cat].one} you haven't met.`)}</small></li>`;
+    const by = (s.geneCodex?.[id]?.by || []).map((a) => AUTHORS[a]?.name).filter(Boolean);
+    const head = `<span><i class="gax" style="--ax:${ax.colour}" title="${esc(`${ax.name}: it punishes ${ax.punishes}.`)}">${glyph(ax.icon)}</i>${esc(g.name)}<em>${esc(ax.name)}</em></span>`;
+    if (st === 'seen') return `<li class="cx-gene seen">${head}<small>${esc(`${by.length ? `You've seen ${list(by)} use it. ` : ''}${g.decode === 'tell' ? 'Read it once to decode it.' : g.decode === 'kills' ? 'Beat two viruses that carry it to decode it.' : 'Break a part that carries it to decode it.'}`)}</small></li>`;
+    return `<li class="cx-gene on">${head}<small>${esc(g.does)}</small><small class="cx-tele" title="How you see it coming">${glyph('ids')}${esc(g.telegraph)}</small><small class="cx-answer">${esc(g.answer)}</small></li>`;
+  };
+  return `<section class="card codex-card"><h2>Codex · ${n.decoded}/${n.total} decoded</h2><div class="codex">${Object.entries(CATS).map(([c, cat]) => `<div class="cx-group"><b>${esc(cat.name)}</b><ul>${GENE_IDS.filter((id) => GENES[id].cat === c).map(row).join('')}</ul></div>`).join('')}</div></section>`;
+}
+const an = (w) => (/^[aeiou]/i.test(w) ? 'An' : 'A');
+const list = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+// Who wrote it, after its name: · TOLLGATE, in its author's colour (authors.mjs). SPRAWL-00's strays have none.
+export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byline" style="--ac:${AUTHORS[v.author].colour}" title="${esc(AUTHORS[v.author].style)}">· ${esc(AUTHORS[v.author].name)}</span>` : '');
+// Its genes, as chips under its bar: the body's dim, what it rolled or was built with bright, ??? until seen. A
+// mutation's chip carries its tip (tips.mjs .tag-mut).
+export function geneChip(c, extra = '') {
+  const ax = AXES[c.axis], what = `${an(c.catName).toLowerCase()} ${c.catName} that presses on ${ax.name}`;
+  const title = !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name} is ${what}. ${c.rule} ${c.answer}` : `${c.name} is ${what}. Decode it to learn its rule.`;
+  return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}" ${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
+}
+function geneChips(s, v) {
+  const genes = virusGenes(v);
+  if (!genes.length) return '';
+  const deep = scannedDeep(s, v);
+  return `<p class="gene-line">${genes.map((g) => geneChip(chipOf(s, g.id, g.src, deep), GENES[g.id].mutation && g.src !== 'boss' ? `data-mut="${g.id}"` : '')).join('')}</p>`;
+}
+// A scan on a run: the genome card in the terminal (genome.mjs genomeCard).
+function scanMarkup(e) {
+  const c = e.card, a = AUTHORS[c.author];
+  const row = (label, chips) => (chips.length ? `<div class="sc-row"><span class="sc-k">${label}</span><span class="sc-chips">${chips.map((x) => geneChip(x)).join('')}</span></div>` : '');
+  return `<div class="scan-card"><div class="sc-head"><b>${esc(c.name)}</b>${a ? `<span class="byline" style="--ac:${a.colour}">· ${esc(a.name)}</span>` : '<span class="byline stray">· unsigned</span>'}<small>Lv ${c.level} · ${esc(c.strain || c.body)}${c.grade > 1 ? ` · v${c.grade}` : ''}</small></div>${a ? `<p class="sc-style">${esc(a.style)}</p>` : ''}${row('body', c.genes.filter((x) => x.src === 'core'))}${row('genes', c.genes.filter((x) => x.src !== 'core'))}${row('tells', c.tells)}${c.deep ? `<ul class="sc-deep">${[...c.genes, ...c.tells].filter((x) => x.rule && x.state !== 'decoded').map((x) => `<li><b>${esc(x.name)}</b> ${esc(x.rule)}</li>`).join('')}</ul>` : ''}</div>`;
 }
 // The collection log: every unique and trophy, found or not. Hidden until your first one; one you
 // haven't found shows where it comes from (a strain's name only once you've met that strain).
@@ -1191,7 +1222,7 @@ export function lessonMarkup(t, lessons) {
 // One column: header (where, Signal, pack), then the terminal. Everything you
 // act on is in the terminal or the buttons under the prompt.
 
-const NET_CLASS = { 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
+const NET_CLASS = { 'net-scan': 'scan-li', 'net-cmd': 'you', 'net-err': 'warn', 'net-good': 'good', 'net-file': 'file', 'net-ls': 'ls', 'net-sweep': 'sweep-li', 'net-out': 'note', 'run-start': 'good', intrusion: 'bad', victory: 'good', crashed: 'bad', disconnected: 'bad', 'jacked-out': 'good', trap: 'bad', 'pack-hit': 'bad', lead: 'good', located: 'good', warning: 'warn' };
 
 // Who's in a SPRAWL-00 folder (presence.mjs): a dot each, friends lit, a name on hover.
 const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title="${esc(list.map((x) => x.handle + (x.fighting ? ' (fighting)' : '')).join(', '))}">${list.slice(0, 3).map((x) => `<span class="who${x.crew ? ' crew' : x.friend ? ' friend' : x.member ? ' member' : ''}${x.fighting ? ' fighting' : ''}">${esc(x.handle)}</span>`).join('')}${list.length > 3 ? `<span class="who more">+${list.length - 3}</span>` : ''}</span>` : '');
@@ -1244,7 +1275,7 @@ export function netTranscript(s, limit = 80) {
   // Warnings from a fight (typos, bad targets) belong to the fight: the terminal skips them.
   const lines = s.logs.slice(Math.max(0, start)).filter((e) => NET_CLASS[e.type] !== undefined && !(e.type === 'warning' && e.fight)).slice(-limit);
   const lastSweep = lines.findLastIndex((e) => e.type === 'net-sweep');
-  return earlier + lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : esc(e.message) + suggestButton(e)}</li>`).join('');
+  return earlier + lines.map((e, i) => `<li class="${NET_CLASS[e.type]}">${e.type === 'net-ls' && e.entries ? lsMarkup(e) : e.type === 'net-sweep' && e.sweep ? sweepMarkup(s, e, i === lastSweep) : e.type === 'net-scan' && e.card ? scanMarkup(e) : esc(e.message) + suggestButton(e)}</li>`).join('');
 }
 
 
@@ -2204,7 +2235,7 @@ function mapSide(s, sel, node) {
   const alertCard = () => {
     if (!e) return '';
     const v = e.virus, f = FAMILIES[v.family], m = MUTATIONS[v.mutation];
-    return `<section class="card alert"><h2>${e.phase === 'active' ? 'Fighting' : 'At the gate'}</h2><h1>${esc(v.name)}</h1>
+    return `<section class="card alert"><h2>${e.phase === 'active' ? 'Fighting' : 'At the gate'}</h2><h1>${esc(v.name)}${byline(v)}</h1>
       <p>${levelTag(s, v.level)} ${esc(f.name)}${m ? ` <span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}</p>
       <div class="row">${e.phase === 'active' ? btn('combat', 'Back to the fight', true) : s.run ? '<span class="tag dim">waiting</span>' : btn('engage', 'Engage', true)}</div></section>`;
   };

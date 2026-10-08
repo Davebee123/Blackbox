@@ -39,6 +39,9 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 import { situationOf } from './situations.mjs';
+import { seeGenes, breakGenes, winGenes, genomeCommand, virusGenes, bylined, decoded } from './genome.mjs';
+import { partGenes } from './genes.mjs';
+import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
 export const SAVE_VERSION = 37; // v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
@@ -633,7 +636,7 @@ function fxCond(s, fx, ctx = {}) {
     case 'below-20': return d().integrity < d().max * 0.2;
     case 'crit': return !!ctx.crit;
     case 'target-open': return !!p && !!e && p.openUntil >= e.cycle;
-    case 'target-locked': return !!p && (p.lockHp > 0 || livingParts(s).some((x) => x.ward === p.id));
+    case 'target-locked': return !!p && (p.lockHp > 0 || livingParts(s).some((x) => wards(x, p)));
     case 'target-loud': return !!p && (!!p.loud || (!!p.enrage && p.integrity < p.max / 2) || (e?.virus.buffs?.loud ?? -1) >= (e?.cycle ?? 0));
     case 'target-fragment': return !!p && p.kind === 'fragment';
     case 'moment': return !!ctx.cmd && !!situationOf(s, ctx.cmd);
@@ -793,6 +796,21 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (active(s)) return warn(s, 'Finish the current fight first.');
   if (mode === 'home' && s.run) return warn(s, 'You are out on a run. Type jack out first.');
   if (mode === 'home' && s.server.integrity <= 0) return warn(s, 'Server crashed. Type developer reboot to restore the test server.');
+  const virus = encounterVirus(s, key, seed, opts);
+  if (mode === 'home') { s.seed = seed; s.gate = null; }
+  (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
+  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {}, soft: opts.zone && !opts.wild && !opts.process && (s.pace?.kills || 0) < CONFIG.zone.starterKills ? CONFIG.zone.starterHit : 1 }; // soft: your first kills in SPRAWL-00 hit softer, so you can learn the board
+  const signed = virus.author && AUTHORS[virus.author] ? ` ${AUTHORS[virus.author].name} wrote it.` : '';
+  if (!opts.quiet) emit(s, 'intrusion', opts.zone
+    ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.${signed}`
+    : mode === 'run'
+    ? `${virus.name} guards ${opts.room}.${signed}`
+    : `${virus.name} detected. Level ${virus.level} ${familyInfo(virus.family).name}.${signed}`);
+}
+// The virus a fight brings (selectEncounter), and what `scan` shows before you start one (run.mjs): the same
+// seed and place always build the same virus, and building it changes nothing.
+export function encounterVirus(s, key, seed, opts = {}) {
+  const mode = opts.mode || 'home';
   const over = {};
   // Every enemy has a level. Home intrusions match the server level (random ones may be
   // one higher); guards pass theirs in. A new server meets level-1 viruses.
@@ -812,8 +830,12 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
   if (opts.grade) over.grade = opts.grade;
   if (opts.elite) { over.elite = true; if (opts.eliteHp) over.eliteHp = opts.eliteHp; }
   if (opts.boss) { over.boss = opts.boss; if (opts.bossHp) over.bossHp = opts.bossHp; }
+  if (opts.genes) over.genes = opts.genes; // forced rolled genes (genesim.mjs probes)
   if (mode === 'run') over.run = true; // tuned for Signal fights (CONFIG.runHp, runDamage)
-  const virus = createVirus(key, seed, over);
+  if (opts.tag) over.tag = opts.tag; // a file's four digits: the fight carries its file's tag (WARDED CRYPTJACK-4821)
+  const by = placeAuthor(s, mode, opts);
+  if (by !== undefined) over.author = by;
+  const virus = (hooks.createVirus || createVirus)(key, seed, over); // hooks.createVirus: golden.test.mjs plays the same fight on the builder from before genes
   if (mode === 'run' && s.run?.hot) { // a hot run (HOT_RUN): tougher fights
     virus.hot = true;
     for (const p of virus.parts) {
@@ -822,15 +844,19 @@ export function selectEncounter(s, key = 'cryptjack', seed = s.seed, opts = {}) 
       if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * HOT_RUN.dmg));
     }
   }
-  if (mode === 'home') { s.seed = seed; s.gate = null; }
-  if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a file you attacked)
-  (s.met ||= {})[virus.strain || virus.family] = true; // the Codex names what you've met
-  s.encounter = { phase: 'alert', mode, zone: !!opts.zone, wild: opts.wild || null, process: opts.process || null, room: opts.room || null, key, virus, seed, cycle: 1, elapsedMs: 0, paused: false, queue: null, plan: [], lastAttack: null, readyAt: {}, nextFragment: 1, metrics: null, breaks: 0, helpers: [], burns: [], buffs: {}, shield: 0, chits: 0, undo: null, encrypt: 0, scrambleUntil: 0, clock: 0, regenAcc: 0, leechAcc: 0, once: {}, soft: opts.zone && !opts.wild && !opts.process && (s.pace?.kills || 0) < CONFIG.zone.starterKills ? CONFIG.zone.starterHit : 1 }; // soft: your first kills in SPRAWL-00 hit softer, so you can learn the board
-  if (!opts.quiet) emit(s, 'intrusion', opts.zone
-    ? `${virus.name} in ${opts.room}. Level ${virus.level} ${familyInfo(virus.family).name}.`
-    : mode === 'run'
-    ? `${virus.name} guards ${opts.room}.`
-    : `${virus.name} detected. Level ${virus.level} ${familyInfo(virus.family).name}.`);
+  if (opts.name) virus.name = opts.name; // a fight with a name already on screen (a boss, a bounty)
+  return virus;
+}
+// Who the place says wrote what runs there (authors.mjs), when the virus has no author of its own: SPRAWL-00's strays
+// are nobody's, a faction's server is that faction's, a traced server's guards and Resident are its family's crew.
+// undefined: the virus's own (its family's crew). opts.author overrides.
+function placeAuthor(s, mode, opts) {
+  if (opts.author !== undefined) return opts.author;
+  if (opts.zone && !opts.wild && !opts.process) return null;
+  if (mode !== 'run' || !s.run || opts.process) return undefined;
+  const loc = findLocation(s, s.run.loc);
+  if (!loc || loc.zone || loc.rogue) return undefined;
+  return loc.faction ? factionAuthor(loc.faction) ?? crewOf(loc.family) : crewOf(loc.family);
 }
 
 // Every neutralized virus moves you toward its origin. 100 = a location.
@@ -1584,6 +1610,7 @@ function engage(s) {
   raidStart(s); // a crew boss (raid.mjs): its mechanics, once the crew is in
   // Mutex: the part it locks starts the fight behind its shield (sized once the crew has made the virus bigger).
   for (const m of livingParts(s).filter((x) => x.lock)) { const t = part(s, m.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } }
+  seeGenes(s, e.virus); // the gene codex: what you fight, you've seen (genome.mjs)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
 
@@ -1643,6 +1670,7 @@ export function finish(s, result) {
   // Every tell in the fight read (two or more said, each answered by a command, none landed): a clean read (tells.mjs).
   if (result === 'victory' && e.metrics.tells) { const xs = Object.values(e.metrics.tells), said = xs.reduce((n, x) => n + x.said, 0); e.cleanRead = said >= TELL.read.min && xs.every((x) => x.read >= x.said && !x.landed); }
   if (result === 'victory' && e.virus.boss) bossUnique(s, e.virus.boss, e.virus.level);
+  if (result === 'victory') winGenes(s, e.virus); // the gene codex: rule genes decode at two kills (genome.mjs)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
@@ -2015,6 +2043,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     eventCommand(s, text);
   } else if (/^network( |$)/.test(text)) {
     networkCommand(s, text); // network.mjs: your network's signature, or a member's
+  } else if (/^(inspect|scan)( |$)/.test(text)) {
+    genomeCommand(s, text); // genome.mjs: a part's genes (free, no cycle), or the card of what you're facing
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
   } else if (text.startsWith('outpost ')) {
@@ -2201,7 +2231,7 @@ export function hit(s, p, base, opts = {}) {
   if (maze && base > 0 && !buffed(e, 'sudo')) { base = Math.max(1, Math.round((base * maze.fx.value) / 100)); emit(s, 'status', `${maze.it.name}: through the ${decoy.name}'s mirror at ${maze.fx.value}%.`, { target: p.id }); }
   else if (decoy && decoy.unmaskUntil >= e.cycle && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0) { /* Unmask, Echo Cancel: its beat has nothing of you to mirror */ }
   else if (decoy && opts.mine && !opts.dot && !opts.by && !opts.server && base > 0 && !buffed(e, 'sudo')) {
-    const back = Math.min(Math.max(1, Math.round(base * CONFIG.mirrorBounce)), defender(s).integrity - 1);
+    const back = Math.min(Math.max(1, Math.round(base * (decoy.bounce ?? CONFIG.mirrorBounce))), defender(s).integrity - 1); // HOLLOW CHOIR's Harmony raises it
     const took = back > 0 ? takeDamage(s, back, decoy.id, `${decoy.name} mirror`) : 0;
     emit(s, 'status', `Mirrored by the ${decoy.name}: your command does nothing.`, { target: p.id });
     if (took) emit(s, 'server-hit', `It bounces back: −${took}.`, { source: decoy.id, amount: took, bounce: true });
@@ -2259,9 +2289,10 @@ export function hit(s, p, base, opts = {}) {
   if (crit) raw = Math.floor(raw * critMultiplier(s)) + (opts.server ? 0 : gearStat(s, 'critDamage'));
   let dealt = Math.min(p.integrity, raw);
   const notes = [];
-  // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything.
+  // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything. HASHLORD's Pool
+  // Lock (wardCommands) holds back your commands only: burns and helpers go through at full.
   const crush = opts.mine && !opts.server ? 1 + (fxHas(s, 'lock-crush')?.fx.value || 0) / 100 : 1; // Lockpick (a native unique): locks and wards give way faster
-  if (dealt > 0 && !root && livingParts(s).some((x) => x.ward === p.id)) {
+  if (dealt > 0 && !root && livingParts(s).some((x) => wards(x, p) && !(x.wardCommands && opts.dot))) {
     const cap = Math.max(1, Math.round(p.max * CONFIG.ward * crush)), used = p.wardAt === e.cycle ? p.wardUsed : 0;
     const was = dealt;
     dealt = Math.max(0, Math.min(dealt, cap - used));
@@ -2326,20 +2357,26 @@ function bossPhases(s) {
   for (const ph of v.phases || []) {
     if (ph.done || share > ph.at || !life.current) continue;
     ph.done = true;
+    let say = ph.say;
     for (const act of ph.do) {
       if (act === 'rearm') for (const p of livingParts(s)) if (p.kind === 'system') { p.armor = Math.max(1, p.maxArmor); p.maxArmor = p.armor; p.patchAt = null; }
       if (act === 'faster') for (const p of attackers(s)) p.attack.interval = Math.max(2, p.attack.interval - 1);
-      if (act.startsWith('spawn')) { // spawn:<part> from the boss's family (a second one gets its own id); plain spawn: a Sentry
+      if (act.startsWith('spawn') || act.startsWith('fork')) { // spawn:<part> from the boss's family, its strain or its own parts (a second one gets its own id); plain spawn: a Sentry. fork:<part>: one at the boss's size (HASHLORD's Chain Fork)
         const id = act.split(':')[1] || 'sentry';
-        const spec = (FAMILIES[v.family] || GUARDS[v.family])?.parts.find((x) => x.id === id) || GUARDS.watchdog.parts.find((x) => x.id === 'sentry');
+        const pool = [...(STRAINS[v.strain]?.parts || []), ...(BOSSES[v.boss]?.extra || []), ...((FAMILIES[v.family] || GUARDS[v.family])?.parts || [])];
+        const spec = pool.find((x) => x.id === id) || GUARDS.watchdog.parts.find((x) => x.id === 'sentry');
         const p = makePart(spec, 'system', v.hpPower);
         if (parts(s).some((x) => x.id === p.id)) { p.id += '2'; p.name += ' II'; if (p.reflect) p.reflectOff = Math.floor(p.reflect / 2); }
         if (p.attack) { p.attack.amount = Math.max(1, Math.round(p.attack.amount * v.power)); p.attack.due = e.cycle + 1; }
+        if (act.startsWith('fork') && BOSSES[v.boss]) p.max = p.integrity = Math.round(p.max * BOSSES[v.boss].hp);
         v.parts.push(p);
         if (p.lock) { const t = part(s, p.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } } // a Mutex that joins locks its part at once
+        for (const w of livingParts(s).filter((x) => x.ward === spec.id && p.id !== spec.id)) (w.wardsToo ||= []).push(p.id); // HASHLORD's Pool Lock wards the forked Miner too
       }
+      if (act === 'harmony') { const d = livingParts(s).find((x) => x.reflect); if (d) d.bounce = 0.5; else say = 'The Hollow Choir reaches for its harmony, but its Decoy is broken.'; }
+      if (act === 'doppelganger') say = doppelganger(s);
     }
-    emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${ph.say}`, { boss: v.boss });
+    emit(s, 'phase', `PHASE ${v.phases.filter((x) => x.done).length + 1}. ${say}`, { boss: v.boss });
   }
   if (v.enrageAt && e.cycle === v.enrageAt - ENRAGE.warn) emit(s, 'warning', `${v.name} enrages in ${ENRAGE.warn} cycles: every attack will land every cycle.`);
   if (v.enrageAt && e.cycle === v.enrageAt && !v.enraged) {
@@ -2349,6 +2386,22 @@ function bossPhases(s) {
   }
 }
 
+// MIRRORSHADE's Doppelganger: the Mimic stops recording and takes the shape of the first part you broke (its attack and
+// its ◆), or of the Pulse Node if you haven't broken one. What the phase card says.
+function doppelganger(s) {
+  const e = s.encounter, v = e.virus, m = livingParts(s).find((x) => x.mimic);
+  if (!m) return `${v.name}'s Mimic is already broken, so the Doppelganger has no body to take.`;
+  const first = (e.metrics?.breakOrder || []).map((id) => part(s, id)).find((x) => x && x !== m && x.kind === 'system' && x.attack);
+  const shape = first || part(s, 'pulse') || livingParts(s).find((x) => x !== m && x.attack);
+  m.mimic = false;
+  m.doppel = shape?.name || null;
+  if (!shape) return `${v.name}'s Mimic stops recording.`;
+  m.attack = { ...shape.attack, due: e.cycle + 2, n: 0, hasted: false };
+  m.armor = m.maxArmor = Math.max(m.armor, shape.maxArmor); m.patchAt = null;
+  return `${v.name}'s Mimic stops recording and takes the shape of the ${shape.name}${first ? ', the first part you broke' : ''}: its ${shape.attack.name} and ${m.armor} ◆.`;
+}
+// A part that wards another (a Lockbox, HASHLORD's Pool Lock, which wards a forked Miner too).
+export const wards = (x, p) => !!p && (x.ward === p.id || !!x.wardsToo?.includes(p.id));
 // The Decoy whose beat is this cycle (it mirrors your commands), and a part's twin (Mirror).
 export const mirrorOn = (s, cycle = s.encounter?.cycle) => livingParts(s).find((x) => x.reflect && (cycle + (x.reflectOff || 0)) % x.reflect === 0) || null;
 const twinOf = (s, p) => parts(s).find((x) => x !== p && (x.twin === p.id || p.twin === x.id)) || null;
@@ -2359,13 +2412,17 @@ export function soonestAttacker(s, except = null) {
 }
 
 // The codex: what a virus component does stays ??? until you've broken one (its name always shows,
-// so you can target it). Keyed by strain or family, and the part.
+// so you can target it). Keyed by strain or family, and the part. The gene codex (genome.mjs) reads across bodies:
+// a part whose genes you've all decoded is known on sight, whatever virus carries it.
 export const codexKey = (v, p) => `${v.strain || v.family}:${p.id}`;
-export const knowsPart = (s, v, p) => p.kind === 'fragment' || !!s.codex?.[codexKey(v, p)];
+export const knowsPart = (s, v, p) => p.kind === 'fragment' || !!s.codex?.[codexKey(v, p)] || (partGenes(p).length > 0 && partGenes(p).every((id) => decoded(s, id)));
 function breakPart(s, p) {
   const e = s.encounter;
   // The first time you break a part: it's decoded in the Codex, and that pays two kills of XP.
-  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `${p.name} decoded. Hover it to see what it does.`, { target: p.id }); gainXp(s, xpFor(s, e.virus.level, DECODE_XP), `${p.name} decoded`, 'intel'); }
+  // Its genes go into the gene codex (genome.mjs); the XP stays with the part, as it was.
+  const genes = p.kind !== 'fragment' && !s.who ? breakGenes(s, p) : [];
+  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `${p.name} decoded${genes.length ? `, and with it ${genes.join(' and ')}` : ''}. Hover it to see what it does.`, { target: p.id, genes }); gainXp(s, xpFor(s, e.virus.level, DECODE_XP), `${p.name} decoded`, 'intel'); }
+  else if (genes.length) emit(s, 'info', `${genes.join(' and ')} decoded. The codex has ${genes.length === 1 ? 'its rule' : 'their rules'} now.`, { target: p.id, genes });
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
@@ -2443,7 +2500,7 @@ function breakPart(s, p) {
   // goes to the survivor that attacks next (WoW council fights). A survivor whose attack isn't a hit
   // (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
   const hitOf = (x) => (x.attack?.effect === 'damage' ? x.attack.amount : x.attack?.hit || 0);
-  if ((e.virus.mutation === 'rerouting' || e.virus.grade >= 2) && hitOf(p) > 0) {
+  if ((e.virus.mutation === 'rerouting' || e.virus.grade >= 2 || e.virus.genes?.some((g) => g.id === 'linked')) && hitOf(p) > 0) {
     const to = livingParts(s).filter((x) => x !== p && x.attack && x.attack.effect !== 'heal').sort((a, b) => a.attack.due - b.attack.due)[0];
     const add = Math.max(1, Math.round(hitOf(p) * CONFIG.linked));
     if (to) {
@@ -3735,7 +3792,7 @@ export function suggestions(s, input = '') {
     }
   }
   const base = active(s)
-    ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status']
+    ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${p.id}`)]
     : ['engage', 'jack in', 'mail', 'outpost', 'repair', 'top up', 'protocols', 'services', 'compile', 'install', 'uninstall', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }

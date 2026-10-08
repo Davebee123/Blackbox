@@ -81,11 +81,11 @@ Nine templates on the solo-boss and tells framework (not raid.mjs). Each brings 
 |---|---|---|---|---|---|
 | DEADBOLT | Ransomware | Mutex | Deadbolt (on the Encryptor) | 60% re-arm, 30% a second Mutex re-locks the Encryptor | DEADBOLT-VAULT |
 | TRIPMINE | Ransomware | Tripwire (a Lockbox below 20) | Claymore (on the Pulse Node) | 50% every attack a cycle sooner | TRIPMINE-YARD |
-| HASHLORD | Hashrat strain | Your cooldowns tick every other cycle while its Miner lives | Difficulty Bomb | 60% re-arm, 30% sooner | HASHLORD-RIG |
+| HASHLORD | Hashrat strain, from level 16 | Your cooldowns tick every other cycle while its Miner lives; a Pool Lock wards the Miner against your commands | Difficulty Bomb, and Block Reward (a cast on the Miner) | 60% re-arm, 50% Chain Fork (a second Miner) | HASHLORD-RIG |
 | BACK ORIFICE | Worm | C2 Node | Spam Run (a Replicate that hatches two) | 50% sooner, 25% a Mirror twins the Replicator | BACKORIFICE-C2 |
 | PATCH TUESDAY | Patchwork strain | Its Patcher heals the most damaged part | Rollup | 60% re-arm, 30% sooner | PATCHDAY-WSUS |
 | FLOODWALL | Floodgate strain | Its Flooder hits every cycle, harder each time | Storm Surge | 50% re-arm | FLOODWALL-SLUICE |
-| MIRRORSHADE | Ghostroot | Mimic | Doppelganger (a Scramble two cycles longer) | 50% a Decoy mirrors you on the off-beat | MIRRORSHADE-HALL |
+| MIRRORSHADE | Ghostroot, from level 12 | Mimic | Glass Cut (a plain charge on the Scrambler) | 60% re-arm, 50% Doppelganger (the Mimic takes the shape of the first part you broke) | MIRRORSHADE-HALL |
 | SLEEPWALKER | Sleeper strain | Dormant until you hit it | Night Terror | 50% re-arm | SLEEPWALKER-WARD |
 | ECHOLALIA | Echo strain | Hits that get through repeat at half | Last Word | 60% re-arm, 30% sooner | ECHOLALIA-CHAMBER |
 
@@ -109,7 +109,7 @@ Nine templates on the solo-boss and tells framework (not raid.mjs). Each brings 
 | REPO MAN (for scale) | 47% | 44% | 59% |
 | HOLLOW CHOIR (for scale) | 31% | 69% | 75% |
 
-A strain boss has two parts and its strain's rule, so it is soft at 10 and easy to outgrow. Its hits step with level (`STRAIN_BOSS_LATE`: ×0.8 at 10, ×1.1 at 18, ×1.45 at 30). HASHLORD still wins too easily at 18.
+A strain boss has two parts and its strain's rule, so it is soft at 10 and easy to outgrow. Its hits step with level (`STRAIN_BOSS_LATE`: ×0.8 at 10, ×1.1 at 18, ×1.45 at 30). HASHLORD and MIRRORSHADE were rebuilt in the genome's first slice (docs/genome.md, What shipped): the rows above are from before, and their lairs hold `/core` from levels 16 and 12.
 
 ## 4. Strain and family leans
 

@@ -30,6 +30,8 @@
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, previewDamage, alliesOf, fxAnswer, tellWeight, fxOn } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { raidDef } from './raid.mjs';
+import { readGene, seeGene } from './genome.mjs';
+import { ignores } from './genes.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
@@ -52,11 +54,11 @@ function findSource(v, def) {
   return [sys.find((x) => x.special), sys.find(isBasic), ...sys].find(fits) || null;
 }
 // The tells a virus could bring, in order: a strain's own charge and its lineage's cast and seal, else its family's (or guard's).
-// A native boss (BOSSES nb-*) brings its own set, or its strain's with the charge under the boss's name.
+// A native boss (BOSSES nb-*) brings its own set, or its strain's with the charge under the boss's name. Each names its gene.
 function setOf(v) {
   const st = v.strain && STRAINS[v.strain], boss = v.boss && BOSSES[v.boss];
-  if (st?.tell) {
-    const own = { kind: 'charge', part: 'special', ...st.tell, ...(boss?.charge ? { name: boss.charge } : {}), id: 'strain' };
+  if (st?.tell && !TELL_SETS[v.boss]) {
+    const own = { kind: 'charge', part: 'special', gene: 'overcharge', ...st.tell, ...(boss?.charge ? { name: boss.charge } : {}), id: 'strain' };
     return [own, ...(TELL_SETS[st.lineage] || []).slice(1).map((id) => ({ ...TELLS[id], id }))];
   }
   return (TELL_SETS[v.boss] || TELL_SETS[v.family] || []).map((id) => ({ ...TELLS[id], id }));
@@ -73,13 +75,11 @@ export function partTells(v, p) {
 const jitter = (v, t) => { const x = Math.sin(((v.id || '').length * 31 + (t.count || 0) * 7.13 + t.id.length * 3.7 + (parseInt(String(v.id).split('-').pop(), 10) || 1) * 0.0137) * 91.7) * 43758.5453; return Math.floor((x - Math.floor(x)) * (TELL.jitter + 1)); };
 
 // ---------- the fight ----------
-// When a solo fight starts (after the crew joins): which tells this virus brings.
-export function tellStart(s) {
-  const e = s.encounter, v = e?.virus;
-  if (!v || v.tells || CONFIG.tells === false || raidDef(v)) return;
-  if ((e.soft ?? 1) < 1) return; // SPRAWL-00's first kills: you're learning the board (CONFIG.zone.starterHit)
+// The tells a virus brings at its level, each on its fixed part, and the Mimic's beat: what tellStart deals out, and
+// what scan and the codex show (genome.mjs). A crew elite brings more; a solo boss every one open at its level.
+// TELL.sim.only (genesim.mjs): only the tells of these genes, to measure one at a time.
+export function plannedTells(v) {
   const tier = tierOf(v.level);
-  // A crew elite brings more and harder tells; a champion invasion (elite-grade, sized for one) only bigger charges.
   const elite = v.elite && !v.champion;
   let count = tier.count + (elite ? TELL.elite.count : 0);
   if (v.boss) count = Math.max(count, TELL.boss.count);
@@ -95,6 +95,18 @@ export function tellStart(s) {
   // The Mimic's beat comes with the part, not the tier.
   const mim = v.parts.find((p) => p.mimic);
   if (mim && TELLS.mimic) list.push({ ...TELLS.mimic, id: 'mimic', part: mim.id });
+  const only = TELL.sim?.only;
+  return only ? list.filter((t) => t.kind === 'mimic' || only.includes(t.gene)) : list;
+}
+// When a solo fight starts (after the crew joins): which tells this virus brings.
+export function tellStart(s) {
+  const e = s.encounter, v = e?.virus;
+  if (!v || v.tells || CONFIG.tells === false || raidDef(v)) return;
+  if ((e.soft ?? 1) < 1) return; // SPRAWL-00's first kills: you're learning the board (CONFIG.zone.starterHit)
+  const tier = tierOf(v.level);
+  // A crew elite brings more and harder tells; a champion invasion (elite-grade, sized for one) only bigger charges.
+  const elite = v.elite && !v.champion;
+  const list = plannedTells(v);
   const cap = tier.cap * (elite ? TELL.elite.cap : v.champion ? TELL.champion.cap : v.boss ? TELL.boss.cap : 1);
   const hits = tier.hits + (elite ? TELL.elite.hits : v.boss ? TELL.boss.hits : 0);
   v.tells = { list: list.map((t, i) => ({ ...t, told: false, next: null, n: null, said: null, wound: 0, count: 0, after: t.kind === 'mimic' ? t.first : TELL.first + (t.kind === 'seal' ? 3 : i ? 1 : 0) })), tier: { ...tier, hits, cap, dot: tier.dot * (cap / tier.cap) } };
@@ -124,6 +136,7 @@ function announce(s) {
     if (t.told) continue;
     const p = sourceOf(s, t);
     if (!alive(p)) continue;
+    if (t.kind === 'mimic' && !p.mimic) continue; // a Mimic that stopped recording (MIRRORSHADE's Doppelganger) has no beat
     if (t.kind === 'mimic') { // the beat: always on the board, as soon as it's within the board's four columns
       for (let x = c; x <= c + 3; x++) if (beatAt(t, x)) { say(s, t, p, x, null); break; }
       continue;
@@ -150,6 +163,7 @@ function say(s, t, p, next, n) {
   const e = s.encounter;
   Object.assign(t, { told: true, said: e.cycle, next, n, wound: 0, need: needOf(s, t), hitBy: [], chits: 0 });
   if (t.kind !== 'mimic') tally(s, t, 'said');
+  seeGene(s.host || s, t.gene, e.virus.author); // the gene codex: a tell you've met is seen (genome.mjs)
   emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next });
 }
 // What a deliberate answer takes: hits (a charge, a cast), ◆ broken (a strip charge).
@@ -219,6 +233,7 @@ export function tellAnswer(s, t, p, msg, { open = t.kind !== 'seal', skill = nul
 function read(s, t, p, { open = false, skill = null } = {}) {
   const e = s.encounter;
   tally(s, t, 'read');
+  readGene(s.host || s, t); // the gene codex: a tell you read is decoded (genome.mjs)
   if (open && alive(p)) {
     const n = TELL.open.cycles + (fxOn(s, 'open-long')?.fx.value || 0); // Read Receipt (a native unique): Open lasts longer
     p.openUntil = Math.max(p.openUntil || 0, e.cycle + n - 1);
@@ -417,6 +432,7 @@ export function mimicHit(s, id, target) {
 // The Mimic plays back the command you fired this cycle: its direct damage, at you. true if the fight ended,
 // 'quiet' if you gave it nothing (a read: it opens).
 function mimicLands(s, t, p) {
+  if (!p.mimic) return false; // it stopped recording (MIRRORSHADE's Doppelganger)
   const host = s.host || s, e = host.encounter, last = e.lastCmd;
   const honey = e.buffs?.honeypot >= e.cycle; // Honeypot (Warden): the beat goes after the honeypot
   if (honey) { delete e.buffs.honeypot; emit(s, 'blocked', `The ${p.name}'s beat goes after your honeypot.`, { source: p.id, tell: t.id, answered: true }); }
@@ -496,7 +512,7 @@ export function tellIntents(s, columns = 4) {
     const next = t.kind === 'charge' && p.attack ? landsAt(p, t.n) : t.next;
     const col = next - e.cycle;
     if (col < 0 || col >= columns) continue;
-    const x = { source: p.id, name: t.name, tell: t.kind, id: t.id, col, hidden: false, kind: p.kind, need: t.need, wound: t.wound, does: t.does || null, effect: 'tell', amount: 0, answer: answerOf(t, p), strip: t.answer === 'strip' };
+    const x = { source: p.id, name: t.name, tell: t.kind, id: t.id, gene: t.gene || null, col, hidden: false, kind: p.kind, need: t.need, wound: t.wound, does: t.does || null, effect: 'tell', amount: 0, answer: answerOf(t, p), strip: t.answer === 'strip' };
     if (t.kind === 'charge' && p.attack) {
       const atk = chargeAttack(s, t, p);
       x.effect = atk.effect;
@@ -517,7 +533,7 @@ export function tellIntents(s, columns = 4) {
 export const answers = () => TELL.bots.answer !== false;
 const ok = (s, text) => !!text && !toIntent(s, text).error;
 const first = (s, list) => list.find((c) => ok(s, c)) || null;
-const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && tellNext(s, t) - s.encounter.cycle <= lag);
+const soon = (s, lag) => (tellsOf(s)?.list || []).filter((t) => t.told && !ignores(t.gene) && tellNext(s, t) - s.encounter.cycle <= lag); // a gene the sim ignores (genes.mjs GENE_BOTS) goes unanswered
 const tellNext = (s, t) => { const p = sourceOf(s, t); return t.kind === 'charge' && p?.attack && t.n != null ? landsAt(p, t.n) : t.next; };
 // Commands that deal no direct damage: what you fire on the Mimic's beat.
 export const QUIET = ['harden', 'firewall', 'bulkhead', 'dmz', 'heartbeat', 'shadow-copy', 'log-wipe', 'turbo-boost', 'malloc', 'brace', 'patch', 'null-route', 'sudo', 'fork', 'debris-field', 'rm-rf', 'vent', 'circuit-breaker', 'honeypot', 'maintenance-window', 'logic-trap', 'rotate-keys', 'vanish', 'load-shed', 'multicast', 'mesh'];

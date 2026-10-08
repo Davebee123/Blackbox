@@ -55,6 +55,7 @@ A typo'd folder, file or fight command gets "Did you mean …?" with the guess a
 | `pwd` | Show where you are |
 | `tree` | Map of the directories you've seen |
 | `pack` | What you're carrying (unbanked) |
+| `scan [virus or folder]` | A virus's genome card before you fight it: who wrote it, its body, its grade and a chip for each gene, named if you've seen it and ??? with its category if you haven't. It reads the virus in this folder, a folder next to you that holds a virus or a guard, or the guard you just walked in on. It costs 1 Signal, and +4 Trace on a break-in. An Infiltrator scans quietly and for free, and its scan shows the rule of each gene it hasn't decoded, for that fight. Mid-fight, `scan` shows the fight's card for free (see Genes and authors). |
 | `help` | List these commands |
 
 `look` and `go` are accepted as aliases. Entering a directory lists it automatically, like arriving in a MUD room.
@@ -474,15 +475,15 @@ They follow the unique rules (the best base at their item level ×1.2), and they
 |---|---|---|
 | DEADBOLT | Ransomware, a Mutex | Its charge is Deadbolt. Re-arms at 60%; at 30% a second Mutex re-locks the Encryptor |
 | TRIPMINE | Ransomware, a Tripwire (a Lockbox below 20) | Claymore on the Pulse Node. Every attack a cycle sooner at half |
-| HASHLORD | The Hashrat strain | Difficulty Bomb. Re-arms at 60%, sooner at 30% |
+| HASHLORD | The Hashrat strain, GLASSJAW's | From level 16. A Pool Lock wards its Miner against your commands (burns and helpers go through). Difficulty Bomb, and Block Reward (a Self-Update on the Miner). Re-arms at 60%; at half the Chain Fork spins up a second Miner |
 | BACK ORIFICE | Worm, a C2 Node | Spam Run hatches two. Sooner at half; at 25% a Mirror twins the Replicator |
 | PATCH TUESDAY | The Patchwork strain | Rollup. Re-arms at 60%, sooner at 30% |
 | FLOODWALL | The Floodgate strain | Storm Surge. Re-arms at half |
-| MIRRORSHADE | Ghostroot, a Mimic | Doppelganger. At half a Decoy mirrors you on the off-beat |
+| MIRRORSHADE | Ghostroot, a Mimic, NULL CHOIR's | From level 12 (at 12 and 13 its Scrambler wears ◆3 and Scrambles every 5). Glass Cut, a plain charge on the Scrambler. Re-arms at 60%; at half the Mimic stops recording and becomes a Doppelganger of the first part you broke, or of the Pulse Node |
 | SLEEPWALKER | The Sleeper strain | Night Terror. Re-arms at half |
 | ECHOLALIA | The Echo strain | Last Word. Re-arms at 60%, sooner at 30% |
 
-A strain boss's hits step with level (×0.8 at 10, ×1.1 at 18, ×1.45 at 30).
+A strain boss's hits step with level (×0.8 at 10, ×1.1 at 18, ×1.45 at 30; HASHLORD's flatter, ×0.95 at 18 and ×1.1 at 30, on more Integrity). A boss with a floor (HASHLORD 16, MIRRORSHADE 12) holds `/core` only once you reach it: until then the lair's other folders are open, `/core` stands empty, and `network` says when it moves in.
 
 **The slow ways to someone else's native.** A Listening Post tunes to a native you've heard named (`listen <unique>`): on its network, its usual +25% a post; anywhere else, its 0.02% a kill × (1 + 2 per post). A **darknet listing** (an event card from level 8, weight 0.5) offers a native from another network, the one you listen for first: it names it, and `event buy <id>` (or Buy on the Network card) takes it for 400 + 40 × level credits and 2 Exploits within 20 minutes. Or merge with its network's owner and fight there.
 
@@ -828,7 +829,7 @@ Two kinds, so a new player never faces everything at once.
 
 - **Hacker level (yours, per class, 1–50).** A long, WoW-style climb. Every class starts at level 1 with Spike and one skill, and levels on its own. **Every level adds 4% power**: your damage, heals, shields and Signal grow (Spike hits 25 at level 1, 44 at 20, 74 at 50), and skill text shows your current numbers. Heals you cast and damage over time take half of it, and Restore and Payload on your gear the rest (see Items). Skills unlock one at a time: level 1 your first skill, 3 your second, 5 your third, 7 your fourth (the class's answer to armor: Crack, Retaliate, Backdoor, Botnet), 10 your class's Edge (a passive: Overkill, Grudge, Weak Spot, Last Gasp), 14/18/22 skills five to seven (the bar is full at 22), then one more every 4 levels from 26 to 38. Past seven you choose which seven to equip.
 - **XP (WoW-style):** a kill is worth 20 + 10 × the enemy's level: a home defense 1×, a guard 0.8×, cracking a vault 1.5× and your first run on a location 0.7× (at the location's level). Enemies above you give up to 25% more; each level below you takes 10% off, so ten levels below give nothing. Level L to L+1 takes 5 + 1.2×L kills of your own level (6 at level 1, 27 at 18, 64 at 49): about 1,700 kills to 50 on paper. The first levels used to take 15% more, and that bump is gone (`CONFIG.xpEarly`). In practice most fights are below your level: the pacing bot takes 10–16 hours to reach 20 (level 10 in 2½–5 hours), rarely waiting: it solves log sweeps on the second try 70% of the time, intercepts half the couriers, clears rotations and farms rogue servers on its level.
-- **Decoding:** the first time you break a part you've never broken, it's decoded in the Codex and pays one kill of XP (Intel), shown as a *Decoded* row on the win card. At two kills it paid half the XP of levels 1–5, and level 6 took three times as long as level 5.
+- **Decoding:** the first time you break a part you've never broken, it's decoded in the Codex (with the genes it carries) and pays one kill of XP (Intel), shown as a *Decoded* row on the win card. At two kills it paid half the XP of levels 1–5, and level 6 took three times as long as level 5.
 - **Behind (catch-up):** each level has a target of 6 + 2.2 × level minutes of active play (28 at 10, 50 at 20, 72 at 30, 92 at 39). Once the level you're on runs past 1.25 times its target, kills pay +50% XP until you reach the next level. Only time you played that class counts (the game open and used in the last 2 minutes), so there is nothing to miss by logging off. The log says so when it starts, the spoils card shows a *Behind* row, and the Loadout's XP bar carries a *Behind* tag and the top bar's XP line turns amber while it's on (`CATCHUP` in data.mjs, progression.mjs).
 - **Hot strain:** every 4 hours one strain open at your level runs hot: +50% XP and lead from it, on the pager when it changes. Fixed by the 4-hour window, so everyone with the same strains open sees the same one.
 - **Rested:** every safe hour you're logged off (no crash) banks a kill's worth of XP, up to 1.5 levels' worth. Kills spend it: each kill pays double until it runs out (a *Rested* row on the spoils card). It rewards building a safe period with your firewall.
@@ -1050,7 +1051,29 @@ Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 
 
 ## The codex
 
-A virus component's name always shows (so you can target it), but what it does reads **???** (a small ? by its name; hover says *Unknown*) until you've broken one of it yourself. Then hovering its name says what it does, on every virus that has it. The System page lists every component by virus: the ones you've decoded with what they do, the rest as ???. A virus you've never met is ??? all the way down, its name and its parts' names too, so the list spoils nothing. Keyed by strain or family and part (a Ransomware Pulse Node and a Worm one are separate). Breaking a new one flashes DECODED.
+The codex learns **gene by gene** (`genome.mjs`), so knowing Ward on a ransomware virus means knowing it on a worm. Every gene is in one of three states:
+
+| State | How you reach it | What the codex shows |
+|---|---|---|
+| Unknown | You've never met it | ??? with its category's icon (an attack type, a part behaviour, a defence, a passive rule, a tell) |
+| Seen | It was in a fight with you (a tell once it was said) | Its name, its axis, and the authors you've seen use it |
+| Decoded | You broke a part that carries it, read it (a tell, the Mimic's beat), or beat two viruses that carry it (a passive rule) | Its whole rule, how you see it coming, and what answers it |
+
+A part's name always shows (so you can target it), but what it does reads **???** (a small ? by its name; hover says *Unknown*) until every gene it carries is decoded. Then hovering its name says what it does, on every virus whose part carries those genes, whatever its body. The System page lists the 41 genes by category with their states. Breaking a part you've never broken flashes DECODED, names the genes it decoded, and pays a kill of Intel XP, as it always did; decoding a gene by a read or by kills pays nothing extra. A mutation's rule shows on its chip as soon as you meet it, as it always has.
+
+A save from before genes keeps its part codex (`s.codex`): each part it decoded decodes its genes, and each family or strain it met shows its body's genes as seen. Nothing migrates (gene state is `s.geneCodex`, and SAVE_VERSION stays 36).
+
+## Genes and authors
+
+Every virus is a body (its family, or a guard's) plus genes, and a crew wrote it (`genes.mjs`, `authors.mjs`; docs/genome.md is the design). The 41 genes are today's content read one way: the families' core genes (Surge, Encrypt, Replicate, Scramble, Veil), the third parts (Ward is the Lockbox, Twin the Mirror, and so on), the mutations, the strains' rules, the ICE's rules, Linked and the tells. Each has a category, an axis it presses on, a cost in budget points and the level it opens at. No gene rolls on its own yet: a wild virus still brings one third part or strain and maybe one mutation, as before.
+
+**Authors.** TOLLGATE writes ransomware, SWARMLINE worms and PALEMASK ghostroots (the crews the contract mail names). A strain is a named build of its author: the Keylogger is NULL CHOIR's, the Hashrat GLASSJAW's, the Floodgate, Leech, Patchwork and Overrun SWARMLINE's, the Sleeper, Flicker and Echo PALEMASK's, the Extortion and Bricker TOLLGATE's. Kestrel writes the ICE and the Sentinel. A faction's server runs its faction's viruses, a traced server's guards are its family's crew's, and SPRAWL-00's strays sign nothing.
+
+**Names and tags.** A wild virus is named for its costliest rolled gene, its body's stem, its file's four digits and its grade: *WARDED CRYPTJACK-4821 v2*. A named build keeps its name (*HASHRAT-0193 v2*), a boss its own. Files on a run carry the stem (`cryptjack-4821.exe`). The fight header puts the byline after the name in the author's colour (*· TOLLGATE*), and a row of gene chips under the virus's bar: the body's dim and dashed, what it rolled or was built with bright, each in its axis's colour, ??? until seen. Hover a chip for what it is, and its rule once decoded.
+
+**`inspect <part>`** in a fight lists that part's genes, and what each does once decoded (or after an Infiltrator's scan). It takes no command and no cycle.
+
+**The compatibility rules** (docs/genome.md 5.3) are checked on genes: at most one punishment and one amplifier per axis (Burst exempt, tells left out, the designer's decision), at most one gene with a beat, and the hard exclusions. Today's wild viruses all pass. MIRRORSHADE and the HOLLOW CHOIR didn't, and were rebuilt (see The Resident and bosses).
 
 ## Collection log
 
@@ -1179,7 +1202,7 @@ Order within a cycle: your command → burns → helpers → heals over time →
 |---|---|---|---|---|---|
 | RELAY-KING (worm) | SPRAWL-00's `/net/relay`, back 30 minutes after you beat it (it stays if it beats you) | level 3 | 1.6× | at half: every attack comes a cycle sooner | cycle 16 |
 | REPO MAN (ransomware) | The Bounty event from level 8 | level 8 | 1.6× | at 60%: re-arms every part; at 30%: every attack a cycle sooner | cycle 18 |
-| HOLLOW CHOIR (ghostroot) | Its own event (Boss) from level 10, 25 minutes on a traced server | level 10 | 1.6× | at half: splits off a second Decoy on the off-beat, so it mirrors you two cycles in four | cycle 16 |
+| HOLLOW CHOIR (ghostroot) | Its own event (Boss) from level 10, 25 minutes on a traced server | level 10 | 1.6× | at half: Harmony, its Decoy's mirror bounces 50% of your command back instead of 30% (it used to split off a second Decoy on the off-beat, two beats in four, which the compatibility rules forbid) | cycle 16 |
 
 Each network's **native boss** (nine templates, in its lair) is on the same system; see Networks. A boss drops like an elite (three loot rolls). The Hollow Choir also pays twice the bounty's credits and a Custom protocol. A phase change flashes on screen.
 
@@ -1320,7 +1343,7 @@ Home intrusions (100 Integrity to defend). Numbers are at enemy level 6; Integri
 | Worm (SPLINTER) | Integrity | Pulse Node: 34, ◆, Surge 12 every 4 (first cycle 4) | Replicator: 38, ◆ (◆◆ from level 5), spawns a fragment every 4 (first cycle 3) with a 4-damage Splice. Fragments: 18 Integrity (scaled like the virus's health, not its damage), no armor, gnaw 3 every cycle, max 3 |
 | Ghostroot (GHOSTROOT) | Integrity | Pulse Node: 34, ◆, veiled, Surge 11 every 4 (first cycle 3) | Scrambler: 40, ◆ (◆◆ from level 5), veiled, Scramble every 4 (first cycle 2), hitting for 9: Scrambled for 2 cycles, each of your attacks 25% likely to hit you instead at half |
 
-**Third parts.** From level 3 (ghostroot from 4), wild viruses of each family bring a third part, and the other two give up 15% of their Integrity for it. Each family has a pool of them: a virus brings one of those open at its level, picked by its seed (`pool: 'third'` in data.mjs), so from level 8 the same family can be two different fights. Each one changes the fight by living or dying, so kill order is the decision, and each shows on the board (a tag, a chip, the codex line). Named fixtures (CRYPTJACK, SPLINTER, GHOSTROOT) keep two parts, and a boss keeps its family's first.
+**Third parts.** From level 3 (ghostroot from 4), wild viruses of each family bring a third part, and the other two give up 15% of their Integrity for it. Each third part is a gene's part (`GENES[id].parts` in genes.mjs). Each family has a pool of them: a virus brings one of those open at its level, picked by its seed (`FAMILIES[f].third` in data.mjs, in order), so from level 8 the same family can be two different fights. Each one changes the fight by living or dying, so kill order is the decision, and each shows on the board (a tag, a chip, the codex line). Named fixtures (CRYPTJACK, SPLINTER, GHOSTROOT) keep two parts, and a boss keeps its family's first.
 
 | Family | Third part | What it does |
 |---|---|---|

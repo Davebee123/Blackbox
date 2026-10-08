@@ -252,6 +252,9 @@ export function openLair(s, force = false) {
   emit(s, 'located', `${B.lair} is on your map: the lair of ${B.name}, your network's native boss. What it guards is native to ${mine(s).name}.`, { location: loc.id });
   return loc;
 }
+// A boss with a floor (BOSSES floor: HASHLORD 16, MIRRORSHADE 12) holds /core only once you've reached it: until then the
+// lair's other folders are open and /core stands empty. It is met at your level, never under its floor.
+export const lairOpen = (s, loc) => loc.member || !BOSSES[loc.lair]?.floor || hackerLevel(s) >= BOSSES[loc.lair].floor;
 // What a lair's folders hold: its family (its network's native strain more often) and, in /core, its boss.
 export function lairSpawns(s, loc, now, variant) {
   const who = netOf(s, loc), B = BOSSES[loc.lair];
@@ -261,9 +264,9 @@ export function lairSpawns(s, loc, now, variant) {
     if (sp?.alive || (sp && sp.respawnAt > now)) continue;
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
-    if (room === '/core') { loc.spawns[room] = { alive: true, family: B.family, boss: loc.lair, level: loc.level, seed, strain: B.strain || null, name: B.name }; continue; }
+    if (room === '/core') { if (!lairOpen(s, loc)) { loc.serial--; continue; } loc.spawns[room] = { alive: true, family: B.family, boss: loc.lair, level: loc.level, seed, strain: B.strain || null, name: B.name }; continue; }
     const { grade, strain } = variant(B.family, loc.level, loc.depth || 1, seed, nativeStrain(s, who));
-    loc.spawns[room] = { alive: true, family: B.family, level: loc.level, seed, strain, grade, name: `${strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[B.family].name.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+    loc.spawns[room] = { alive: true, family: B.family, level: loc.level, seed, strain, grade, name: `${strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[B.family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
 }
@@ -320,7 +323,7 @@ export function networkLines(s, who) {
   return [
     `${g.name} · ${whoLabel(who)}`,
     `Lean: ${fam}. Native strain: ${STRAINS[g.strain].name}.`,
-    `Native boss: ${BOSSES[g.boss].name}${who === 'you' ? (lairOf(s) ? ` in ${lairOf(s).name}` : ` (its lair turns up at level ${NETWORK.lairFrom})`) : ''}.`,
+    `Native boss: ${BOSSES[g.boss].name}${who === 'you' ? (lairOf(s) ? ` in ${lairOf(s).name}` : ` (its lair turns up at level ${NETWORK.lairFrom})`) : ''}.${who === 'you' && BOSSES[g.boss].floor > hackerLevel(s) ? ` It holds /core from level ${BOSSES[g.boss].floor}.` : ''}`,
     `Native uniques: ${nat}.`,
     `Events: ${g.events.map((k) => k[0].toUpperCase() + k.slice(1)).join(' and ')} more often. Rich in ${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'salvage' : 'Exploits'}.`,
   ];

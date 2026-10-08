@@ -2,10 +2,10 @@
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
-import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS } from './data.mjs';
+import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS, BOSSES } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, hasTalent, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, hasTalent, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -19,6 +19,7 @@ import { consortiumCommand, isGround, arrive, memberServers } from './consortium
 import { isLive, joinCost, liveCount, memoryCap, memoryCommand } from './memory.mjs';
 import { strikeServer } from './factions.mjs';
 import { biasCode, netOf } from './network.mjs';
+import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 export { zoneOf, zoneRooms };
 
@@ -83,7 +84,7 @@ export function zoneSpawns(s, now = clock()) {
     const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past CONFIG.zone.maxLevel
     // From level 3, /net/relay holds RELAY-KING, a boss (BOSSES.relayking), back half an hour after you beat it.
     if (room === KING_ROOM && hackerLevel(s) >= 3) { z.spawns[room] = { alive: true, family: 'worm', level: Math.min(CONFIG.zone.maxLevel + 2, hackerLevel(s)), seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
-    z.spawns[room] = { alive: true, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].name.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+    z.spawns[room] = { alive: true, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` }; // the body's stem: the fight is CRYPTJACK-4821 (data.mjs stemOf)
   }
   return z.spawns;
 }
@@ -344,7 +345,7 @@ const locked = (loc, path) => !!layoutOf(loc)[path]?.locked && !loc.state.unlock
 
 // ---------- commands ----------
 
-export const RUN_COMMANDS = ['split', 'link', 'goto', 'regroup', 'unlink', 'history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep'];
+export const RUN_COMMANDS = ['split', 'link', 'goto', 'regroup', 'unlink', 'history', 'ls', 'cd', 'cat', 'pull', 'unlock', 'jack', 'look', 'go', 'pwd', 'tree', 'pack', 'help', 'spoof', 'slip', 'tap', 'attack', 'boost', 'sweep', 'scan'];
 const equipped = (s, id) => knownSkills(s, classOf(s)).includes(id); // run skills (Spoof, Tap) take no bar slot: knowing one is enough
 const onceUsed = (s, id) => (s.run.used ||= {})[id];
 
@@ -506,12 +507,12 @@ function cd(s, arg, pulled = null) {
   // Like a MUD room: arriving shows what's here.
   if (watching(s, loc, target) && layoutOf(loc)[target].resident) {
     emit(s, 'net-warn', `The Resident of ${loc.name} is home. Beat it and the server is yours.`);
-    selectEncounter(s, 'random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room: target, level: residentLevel(loc, hooks.now?.() ?? Date.now()), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name: `RESIDENT · ${loc.name}` });
+    selectEncounter(s, ...guardFight(s, loc, target));
   } else if (watching(s, loc, target) && s.run.cloak === 'armed') {
     s.run.cloak = target;
     emit(s, 'net-good', `CLOAKED. The ${guardName(loc, target)} doesn't see you. Read what you like and pull one file, then get out.`);
     ls(s);
-  } else if (watching(s, loc, target)) selectEncounter(s, layoutOf(loc)[target].guard, loc.seed + target.length, { mode: 'run', room: target, level: levelOf(loc), ...(loc.quirk === 'hoard' ? { mutation: 'armored' } : {}) });
+  } else if (watching(s, loc, target)) selectEncounter(s, ...guardFight(s, loc, target));
   else ls(s);
 }
 
@@ -714,7 +715,7 @@ export function play(s, input) {
   if (/^developer wall (\d+|off)$/.test(text)) { const first = s.serial; developerWall(s, text); return since(s, first); } // pin your wall's base (firewall.mjs)
   if (/^(install|uninstall) /.test(text)) { const first = s.serial; if (sabotageBlock(s, text)) return since(s, first); } // a saboteur holds a service (invasion.mjs)
   if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { const first = s.serial; deal(s, text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null)); return since(s, first); } // an event now
-  const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out');
+  const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out') && !(word === 'scan' && active(s)); // scan mid-fight reads the fight (genome.mjs)
   if (!s.run || !isRun) return command(s, input);
   const first = s.serial;
   if (active(s)) {
@@ -741,12 +742,13 @@ export function play(s, input) {
   }
   else if (word === 'slip') slip(s);
   else if (word === 'attack') attack(s, rest);
+  else if (word === 'scan') scan(s, rest);
   else if (word === 'tap') tap(s);
   else if (word === 'boost') boost(s);
   else if (word === 'sweep') sweepCommand(s, currentLocation(s), rest);
   else if (word === 'pack') out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'source' ? sourceName(f.zeroDay) + ' source' : f.kind === 'blueprint' ? 'blueprint' : f.kind === 'daemon' ? 'daemon' : 'trace record (deeper node)'}`).concat('unbanked until you jack out.') : 'pack is empty.');
   else if (word === 'help') out(s, ['ls            what is here (ls -a shows hidden files)', 'cd <dir>      move (cd .. goes up)', 'cat <file>    read',
-  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
+  'sweep <x>     answer an incident log (cat it first)', 'pull <file>   take it (banked when you jack out)', 'unlock <dir> <password>', 'tree          map of what you have seen', 'history       everything this run (the terminal shows one folder at a time)', 'pack          what you are carrying', `scan <x>      a virus's genes before you fight it (${SCAN.signal} Signal${classOf(s) === 'infiltrator' ? ', quiet for you' : ', and Trace on a break-in'})`, 'jack out      go home', ...(equipped(s, 'spoof') ? ['spoof         slip past the next guard (once per run)'] : []), ...(classOf(s) === 'infiltrator' ? [`slip          walk past a guard without a fight (${slipsLeft(s)} left this run)`] : []), ...(equipped(s, 'tap') ? ['tap           show the whole map, guards and where the key is (once per run)'] : [])]);
   return since(s, first);
 }
 
@@ -802,21 +804,64 @@ hooks.crewGuests = (s, room) => {
   return at(s, loc.id, room).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
 };
 
+// The fight a folder's virus brings: [key, seed, opts] for selectEncounter, and for scan to read before it starts.
+// A wild virus carries its file's four digits (WARDED CRYPTJACK-4821); a boss or a bounty keeps its name.
+const tagOf = (name) => (String(name).match(/(\d{4})$/) || [])[1];
+const procFight = (s, loc, proc, room) => ['random', proc.seed, { mode: 'run', room, level: proc.level, family: proc.family, zone: true, process: loc.id, tag: tagOf(proc.name), strain: proc.strain, grade: proc.grade }];
+const spawnFight = (s, loc, sp, room) => ['random', sp.seed, { mode: 'run', room, level: sp.level, family: sp.family, zone: true, ...(sp.bounty || sp.boss || !tagOf(sp.name) ? { name: sp.bounty ? sp.name : sp.name.toUpperCase() } : { tag: tagOf(sp.name) }), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {})}];
+// A traced server's guarded folder: its Resident in /core, or its guard.
+const guardFight = (s, loc, room) => (layoutOf(loc)[room].resident
+  ? ['random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room, level: residentLevel(loc, hooks.now?.() ?? Date.now()), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name: `RESIDENT · ${loc.name}` }]
+  : [layoutOf(loc)[room].guard, loc.seed + room.length, { mode: 'run', room, level: levelOf(loc), ...(loc.quirk === 'hoard' ? { mutation: 'armored' } : {}) }]);
+
 // The rogue server: attack the virus in this folder.
 function attack(s, arg) {
   const loc = currentLocation(s);
   const proc = procIn(loc, s.run.cwd);
   if (proc) {
     if (arg && !named(proc.name, arg)) return err(s, `No ${arg} here. This folder has ${proc.name}.exe.`);
-    selectEncounter(s, 'random', proc.seed, { mode: 'run', room: s.run.cwd, level: proc.level, family: proc.family, zone: true, process: loc.id, name: proc.name.toUpperCase(), strain: proc.strain, grade: proc.grade });
+    selectEncounter(s, ...procFight(s, loc, proc, s.run.cwd));
     return command(s, 'engage');
   }
   if (!isWild(loc)) return err(s, 'Nothing here to attack. Guards start a fight when you walk in.');
   const sp = (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc))[s.run.cwd];
+  if (!sp && loc.lair && s.run.cwd === '/core' && BOSSES[loc.lair]?.floor > hackerLevel(s)) return err(s, `${BOSSES[loc.lair].name} isn't in yet. It holds /core from level ${BOSSES[loc.lair].floor}.`);
   if (!sp?.alive) return err(s, 'Nothing running in this folder. ls to look, cd to move.');
   if (arg && !named(sp.name, arg)) return err(s, `No ${arg} here. This folder has ${sp.name}.exe.`);
-  selectEncounter(s, 'random', sp.seed, { mode: 'run', room: s.run.cwd, level: sp.level, family: sp.family, zone: true, name: sp.bounty ? sp.name : sp.name.toUpperCase(), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {}) });
+  selectEncounter(s, ...spawnFight(s, loc, sp, s.run.cwd));
   command(s, 'engage');
+}
+
+// scan [virus or folder]: a virus's genome card before you fight it (genome.mjs): the virus in this folder, a folder you
+// can see that holds a virus or a guard, or the guard you just walked in on. It costs SCAN.signal Signal, and SCAN.trace
+// Trace on a break-in. An Infiltrator scans quietly and for free, and reads the rules of genes it hasn't decoded, for
+// that fight (inspect shows them too).
+export const SCAN = { signal: 1, trace: 4 };
+function scanTarget(s, loc, arg) {
+  if (s.encounter && !active(s)) return s.encounter.virus; // the guard at the door
+  const here = s.run.cwd, a = (arg || '').replace(/\.exe$/, '').replace(/\/$/, '');
+  const proc = procIn(loc, here);
+  if (proc && (!a || named(proc.name, a))) return encounterVirus(s, ...procFight(s, loc, proc, here));
+  const spawns = isWild(loc) ? (loc.zone ? zoneSpawns(s) : rogueSpawns(s, loc)) : {};
+  if (spawns[here]?.alive && (!a || named(spawns[here].name, a))) return encounterVirus(s, ...spawnFight(s, loc, spawns[here], here));
+  if (!a) return null;
+  const room = join(here, a); // a folder next to you: one ls shows
+  if (!(layoutOf(loc)[here]?.dirs || []).includes(a) || !layoutOf(loc)[room] || (hiddenName(a) && !s.run.showHidden)) return null;
+  if (spawns[room]?.alive) return encounterVirus(s, ...spawnFight(s, loc, spawns[room], room));
+  if (watching(s, loc, room)) return encounterVirus(s, ...guardFight(s, loc, room));
+  return null;
+}
+function scan(s, arg) {
+  const loc = currentLocation(s);
+  const v = scanTarget(s, loc, arg);
+  if (!v) return err(s, arg ? `Nothing to scan at ${arg}. Scan a virus here, or a folder you can see that holds one.` : 'Nothing to scan in this folder. scan <folder> reads a guard or a virus next door.');
+  const deep = classOf(s) === 'infiltrator';
+  if (!deep) {
+    if (s.run.integrity <= SCAN.signal) return err(s, 'Not enough Signal to scan.');
+    s.run.integrity -= SCAN.signal;
+    traceAdd(s, SCAN.trace);
+  } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
+  showCard(s, v, { deep, type: 'net-scan' });
 }
 
 // attack <name>: the start of its name, in any case, with or without .exe.

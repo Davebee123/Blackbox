@@ -29,7 +29,7 @@ export const SITUATIONS = {
   'cache-poison': (s) => (told(s, 'seal') ? 'seal' : parts(s).some((p) => p.attack?.effect === 'heal' || (p.patchAt != null && p.patchAt - s.encounter.cycle <= 1)) ? 'repairs' : null),
   'logic-bomb': (s) => (parts(s).some((p) => p.twin && alive(part(s, p.twin))) ? 'twins' : parts(s).some((p) => p.deadman) ? 'tripwire' : null),
   sudo: (s) => (rule(s) ? 'part rule' : null),
-  'zero-day': (s) => (parts(s).some((p) => p.lockHp > 0 || parts(s).some((x) => x.ward === p.id)) ? 'locked' : null),
+  'zero-day': (s) => (parts(s).some((p) => p.lockHp > 0 || parts(s).some((x) => x.ward === p.id || x.wardsToo?.includes(p.id))) ? 'locked' : null),
   'thermal-throttle': (s) => (momentumStacks(s) >= 2 ? `heat ×${momentumStacks(s)}` : null),
   'stack-smash': (s) => (parts(s).some((p) => !(p.armor > 0) && p.exposedUntil >= s.encounter.cycle) ? 'Exposed ×2' : null),
   brace: (s) => (charging(s, 0) ? 'charge now' : null),
