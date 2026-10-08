@@ -227,7 +227,7 @@ function hijackerPlan(s, t) {
   }
   // Takeover (once the tells are answered): the hardest-hitting part with others standing, its attack (or a charge on it) a cycle or two out.
   const crowd = livingParts(s).length >= 2;
-  const boss = attackers(s).filter((p) => p.attack.due - e.cycle <= 2 && (p.attack.effect === 'damage' || p.attack.hit)).sort((a, b) => (chargeSize(s, b)?.amount || attackSize(s, b)) - (chargeSize(s, a)?.amount || attackSize(s, a)))[0];
+  const boss = attackers(s).filter((p) => p.attack.due - e.cycle <= A('takeover').cycles - 1 && (p.attack.effect === 'damage' || p.attack.hit)).sort((a, b) => (chargeSize(s, b)?.amount || attackSize(s, b)) - (chargeSize(s, a)?.amount || attackSize(s, a)))[0];
   if (boss && crowd && ((chargeSize(s, boss)?.amount || attackSize(s, boss)) >= defender(s).max * 0.12) && ok(s, 'takeover ' + boss.id)) return 'takeover ' + boss.id;
   // Low, and a big hit landing now: the helper on that part becomes a shield worth what it had left.
   const bigNow = threatNow(s);

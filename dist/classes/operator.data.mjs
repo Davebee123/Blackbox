@@ -61,9 +61,9 @@ export const subs = {
     chase: ['payload', 'clock'], // what a player of it chases on gear, one per protocol in turn (balance sims, sim crewmates)
     edge: { name: 'Man in the Middle', rule: 'Jammed parts take +20% from everyone, and a part with your helper on it (a foothold) takes +20% from you.' },
     skills: ['sniff', 'replay', 'spoofed-ack', 'hijack', 'jam', 'barrier', 'cache-poison', 'takeover', 'echo-cancel', 'reroute', 'blackhole'],
-    rotationCore: ['sniff', 'replay', 'botnet', 'jam'],
+    rotationCore: ['sniff', 'replay', 'botnet', 'deploy'],
     presets: {
-      rotation: ['sniff', 'replay', 'botnet', 'jam', 'spoofed-ack', 'hijack', 'barrier', 'takeover', 'deploy', 'spawn', 'hook', 'cache-poison', 'blackhole'],
+      rotation: ['sniff', 'replay', 'botnet', 'deploy', 'jam', 'spoofed-ack', 'hijack', 'barrier', 'takeover', 'spawn', 'hook', 'cache-poison', 'blackhole'],
       rules: ['sniff', 'replay', 'botnet', 'jam', 'spoofed-ack', 'hijack', 'cache-poison', 'echo-cancel', 'takeover', 'deploy', 'spawn', 'barrier', 'hook'],
     },
     layers: { core: ['sniff', 'replay', 'botnet', 'jam', 'deploy', 'spawn', 'hook'], utility: ['spoofed-ack', 'hijack', 'barrier', 'reroute'], cooldown: ['takeover', 'blackhole'], specialist: ['cache-poison', 'echo-cancel'] },

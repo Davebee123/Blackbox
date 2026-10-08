@@ -641,7 +641,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .preset-chip { font: 12px var(--mono); color: var(--bright); background: var(--inset); border: 1px solid var(--line-strong); border-radius: 12px; padding: 3px 10px; cursor: pointer; min-height: 28px; }
 .preset-chip small { color: var(--dim); font-size: 10px; margin-left: 2px; }
 .preset-chip:hover:not([disabled]) { border-color: var(--amber); }
-.preset-chip.on { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.08); cursor: default; }
+.preset-chip.on, .preset-chip.on:disabled { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.08); cursor: default; opacity: 1; font-weight: 600; } /* the preset your bar follows: lit, not greyed */
 .preset-chip.save { border-style: dashed; color: var(--muted); }
 .preset-chip[disabled]:not(.on) { opacity: 0.5; cursor: default; }
 .presets-help { flex-basis: 100%; margin: 0; color: var(--dim); font: 11px var(--mono); }
