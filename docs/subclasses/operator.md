@@ -102,13 +102,13 @@ Long Jam holds one attack for longer, and Loopback lets you Jam every other cycl
 
 Helper hits are damage over time: they grow half as fast with level as other numbers (+2% a level), and Payload on your gear makes up the rest (a Script rolls it as a primary, *Loaded* as a prefix). A Herder chases Payload and Signal, a Hijacker Payload and Clock Speed.
 
-Measured with the class balance script (`balance.mjs`): blue gear with the stats each subclass chases, a talent point at level 10 and every two levels after, and the default bar (the core four and the first three skills of the line). Health lost is the average share of Signal over 20 home intrusions and the four guards at the deepest layer.
+Measured with the class balance script (`balance.mjs`): blue gear with the stats each subclass chases, a talent point at level 10 and every two levels after, and the default bar (the `rotation` preset at that level). Health lost is the average share of Signal over 20 home intrusions and the four guards at the deepest layer.
 
 | Level | Herder | Hijacker |
 |---:|---:|---:|
-| 10 | 30% | 32% |
-| 18 | 44% | 29% |
-| 30 | 40% | 43% |
-| 50 | 36% | 11% |
+| 10 | 24% | 37% |
+| 18 | 37% | 42% |
+| 30 | 41% | 37% |
+| 40 | 35% | 22% |
 
-Both subclasses win 92% or more of the fights in these brackets. (Balance pass: enemy hits on your Signal take the late step from level 10, `CONFIG.runLate`. The skills pass in docs/skills.md raised Replay to 25–40, and a charge replayed goes up to 80. The level-50 Hijacker loses only 11%, and it lost 12% with the progression package before the skills pass, with Replay still at 20–30, so Replay isn't what does it. That needs a look of its own.) At level 10 the two only differ by their edge, because their lines start at level 12.
+Both subclasses win 22 or more of the 24 fights in these brackets, measured after the kit pass (docs/kits.md, section 10). Enemy hits on your Signal take the late step from level 10 (`CONFIG.runLate`). Both lean crew: alone they lose more than the Breakers and the Phantom, and as a crew's third member they win more of the boss tries and keep the crew higher. Their lines start at 10, with Fan-out for the Herder and Sniff for the Hijacker.
