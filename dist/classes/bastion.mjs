@@ -115,12 +115,12 @@ const use = {
   },
   'circuit-breaker'(s, { a, e }) {
     e.buffs['circuit-breaker'] = e.cycle + a.cycles - 1;
-    emit(s, 'status', `Circuit Breaker for ${a.cycles} cycles: no attack takes more than ${Math.round(defender(s).max * a.most)} from you.`, { mark: 'buff', ability: 'circuit-breaker' });
+    emit(s, 'status', `Circuit Breaker for ${a.cycles} cycles. No attack takes more than ${Math.round(defender(s).max * a.most)} from you.`, { mark: 'buff', ability: 'circuit-breaker' });
   },
   honeypot(s, { a, e }) {
     e.buffs.honeypot = e.cycle + a.cycles - 1;
     e.honeyCut = scaled(s, a.cut);
-    emit(s, 'status', `Honeypot for ${a.cycles} cycles: the next hit on you deals ${e.honeyCut} less, and a Scramble or the Mimic's beat goes after the honeypot.`, { mark: 'buff', ability: 'honeypot' });
+    emit(s, 'status', `Honeypot for ${a.cycles} cycles. The next hit on you deals ${e.honeyCut} less damage, and a Scramble or the Mimic's beat goes after the honeypot.`, { mark: 'buff', ability: 'honeypot' });
   },
   // Sysop
   checksum(s, { a, res }) {
@@ -131,12 +131,12 @@ const use = {
   },
   'maintenance-window'(s, { a, e }) {
     e.buffs['maintenance-window'] = e.cycle + a.cycles - 1;
-    emit(s, 'status', `Maintenance Window for ${a.cycles} cycles: your heals heal ${Math.round(a.boost * 100)}% more, and your hits heal you for a quarter of what they deal.`, { mark: 'buff', ability: 'maintenance-window' });
+    emit(s, 'status', `Maintenance Window for ${a.cycles} cycles. Your heals heal ${Math.round(a.boost * 100)}% more, and your hits heal you for 25% of the damage they deal.`, { mark: 'buff', ability: 'maintenance-window' });
   },
   revoke(s, { a, target, e }) {
     if (!alive(target)) return;
     target.revokedUntil = e.cycle + a.cycles - 1;
-    emit(s, 'status', `${target.name} revoked for ${a.cycles} cycles: its heals, patches and updates fail.`, { target: target.id, mark: 'debuff', ability: 'revoke' });
+    emit(s, 'status', `${target.name} revoked for ${a.cycles} cycles. Its heals, patches and updates fail.`, { target: target.id, mark: 'debuff', ability: 'revoke' });
     // A Self-Update it's compiling fails now (a read, tells.mjs).
     const c = tellOn(s, target, 'cast');
     if (c && c.does === 'grow') tellAnswer(s, c, target, `Revoked: the ${target.name} can't sign ${c.name.toUpperCase()}. It fails.`);
@@ -144,7 +144,7 @@ const use = {
   // Warden
   bulkhead(s, { a, e }) {
     e.buffs.bulkhead = e.cycle + a.cycles - 1;
-    emit(s, 'status', `Bulkhead: attacks on ${s.who || 'you'} deal half for ${a.cycles} cycles.`, { mark: 'buff', ability: 'bulkhead' });
+    emit(s, 'status', `Bulkhead: attacks on ${s.who || 'you'} deal half damage for ${a.cycles} cycles.`, { mark: 'buff', ability: 'bulkhead' });
   },
   blowback(s, { target, e }) {
     const amount = blowbackOf(s);
@@ -169,7 +169,7 @@ const use = {
     if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `SIGSTOP: ${ch.name.toUpperCase()} drains out of the ${target.name}. Its ${target.attack.name} lands plain, 2 cycles later.`);
     if (!hasTalent(s, 'tarpit') || !alive(target) || !target.attack) return;
     target.throttledUntil = Math.max(target.throttledUntil || 0, target.attack.due);
-    emit(s, 'status', `Tarpit: ${target.name} Throttled (attacks deal half) until its attack lands.`, { target: target.id, mark: 'throttled' });
+    emit(s, 'status', `Tarpit: ${target.name} is Throttled until its attack lands, and its attacks deal half damage.`, { target: target.id, mark: 'throttled' });
   },
   retaliate(s, { target, e }) {
     if (!hasTalent(s, 'counterflow') || !alive(target) || !(e.ledger > 0)) return;
@@ -182,7 +182,7 @@ const use = {
     const d = defender(s), cost = Math.round(d.max * 0.1);
     d.integrity = Math.max(1, d.integrity - cost);
     e.chits = (e.chits || 0) + 1;
-    emit(s, 'status', `Write Protect: a second ◆ (${e.chits} chits) for ${cost} Signal.`, { mark: 'shield', ability: 'harden' });
+    emit(s, 'status', `Write Protect: a second ◆ (${e.chits} ◆ in all) for ${cost} Signal.`, { mark: 'shield', ability: 'harden' });
   },
   // Sysop
   patch(s, { a, to, e }) {
@@ -241,7 +241,7 @@ const use = {
     if (all.length > 1) {
       const avg = all.reduce((n, x) => n + frac(x.st), 0) / all.length;
       for (const x of all) { const d = defender(x.st); d.integrity = Math.max(1, Math.min(d.max, Math.round(avg * d.max))); }
-      emit(s, 'status', `Rebalance: everyone at ${Math.round(avg * 100)}% of their Signal.`, { mark: 'buff', ability: 'rebalance' });
+      emit(s, 'status', `Rebalance puts everyone at ${Math.round(avg * 100)}% of their Signal.`, { mark: 'buff', ability: 'rebalance' });
     }
     const amount = healScaled(s, a.heal) * (all.length > 1 ? 1 : 2); // alone, it heals you twice as much
     for (const x of all) mend(s, x.st, amount, x.me ? a.name : `${a.name} from ${s.who || 'you'}`);

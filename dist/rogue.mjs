@@ -16,7 +16,7 @@ export const ROGUE = {
   share: 1 / 6, // of servers you trace
   pity: 5, // after this many in a row that aren't, the next one is
   firstTame: 2, // the first two servers you trace are never rogue
-  kinds: { nest: { name: 'Nest', rule: 'One family only, and strains twice as often.' }, pit: { name: 'Pit', rule: 'Mixed families, 2 levels above the server, better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every folder in one run for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds /core, back an hour after it falls. Two folders of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
+  kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every folder in one run for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds /core, back an hour after it falls. Two folders of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
   rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,
@@ -197,7 +197,7 @@ function farmKill(s, loc, sp) {
   const up = (cur, max) => Math.max(cur, Math.round(max * FARM.regroup));
   s.run.integrity = up(s.run.integrity, s.run.max);
   for (const m of hooks.crewMates?.(s) || []) { const c = s.run.crew?.[m.who]; if (c) c.signal = up(c.signal ?? m.run.max, m.run.max); }
-  emit(s, 'net-good', `Regroup: everyone is back up to at least ${Math.round(FARM.regroup * 100)}% Signal.`);
+  emit(s, 'net-good', `Regroup brings everyone back up to at least ${Math.round(FARM.regroup * 100)}% Signal.`);
 }
 // Its files: the password's word with the Foreman, its digits with the Heatsink, readable once each falls.
 export function farmFile(loc, path, name) {

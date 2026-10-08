@@ -101,16 +101,16 @@ export function trade(s, side, f, w, n, at = now()) {
     const t = { id: ++m.serial, side, f, w, n, credits, sentAt: at, landsAt: at + travelMs(s, f) };
     m.transfers.push(t);
     firstTime(s, 'trade-' + f, `first trade with ${FACTIONS[f].short}`, 'trade');
-    return emit(s, 'transfer-out', `Sending ${n} ${WARES[w].name} to ${FACTIONS[f].short}: ${credits} credits when it completes (${Math.round((t.landsAt - at) / 60000)} min).`, { faction: f });
+    return emit(s, 'transfer-out', `Sending ${n} ${WARES[w].name} to ${FACTIONS[f].short}. You get ${credits} credits when it completes in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
   }
   let cost = 0;
   for (let i = 0; i < n; i++) { cost += quote(s, f, w).buy; m.pressure[f][w] -= 1; }
-  if (s.server.credits < cost) { m.pressure[f][w] += n; return warn(s, `${n} ${WARES[w].name} costs ${cost} credits; you have ${s.server.credits}.`); }
+  if (s.server.credits < cost) { m.pressure[f][w] += n; return warn(s, `${n} ${WARES[w].name} costs ${cost} credits. You have ${s.server.credits}.`); }
   s.server.credits -= cost;
   const t = { id: ++m.serial, side, f, w, n, credits: cost, sentAt: at, landsAt: at + travelMs(s, f) };
   m.transfers.push(t);
   firstTime(s, 'trade-' + f, `first trade with ${FACTIONS[f].short}`, 'trade');
-  emit(s, 'transfer-out', `Ordered ${n} ${WARES[w].name} from ${FACTIONS[f].short} for ${cost} credits: it arrives in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
+  emit(s, 'transfer-out', `Ordered ${n} ${WARES[w].name} from ${FACTIONS[f].short} for ${cost} credits. It arrives in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f });
 }
 // What an order would do, without doing it: the lot's total at its sliding prices, the first and last
 // unit's price, and the same lot priced at the average of the other hubs you can reach (the honest
@@ -181,7 +181,7 @@ export function sendGood(s, f, id, name, credits, L, at = now()) {
   const m = marketOf(s);
   const t = { id: ++m.serial, side: 'good', f, good: id, name, n: 1, L, credits, sentAt: at, landsAt: at + travelMs(s, f) };
   m.transfers.push(t);
-  emit(s, 'transfer-out', `Bought ${name} from ${FACTIONS[f].short} for ${credits} credits: it lands in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f, item: id });
+  emit(s, 'transfer-out', `Bought ${name} from ${FACTIONS[f].short} for ${credits} credits. It lands in ${Math.round((t.landsAt - at) / 60000)} min.`, { faction: f, item: id });
 }
 // The most any hub would pay you for one right now: shops never sell below it (store.mjs), so
 // there's no buying from a shelf to sell straight to a market.

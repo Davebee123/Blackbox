@@ -287,7 +287,7 @@ export function tickConsortium(s, dt, now = hooks.now?.() ?? Date.now()) {
   if (c) {
     const was = shareFull(s);
     accrue(s, now);
-    if (!was && shareFull(s)) emit(s, 'info', `${c.name}'s dividend is full: collect it from the people panel.`);
+    if (!was && shareFull(s)) emit(s, 'info', `${c.name}'s dividend is full. Collect it from the people panel.`);
   }
   if (!c) {
     const inv = s.consortiumInvite;
@@ -345,7 +345,7 @@ function crashMember(s, raid) {
   const loc = occupy(s, { id: `${h}-home`, name: `${h.toUpperCase()}-HOME`, member: h, family: raid.family, level: raid.level, seed: raid.seed });
   c.servers = c.servers.filter((l) => l.id !== loc.id);
   c.servers.push(loc);
-  emit(s, 'consortium-crash', `${raid.name} crashed ${h}'s server. It's rebooting for ${CONSORTIUM.rebootMs / 3600000} hours, occupied: connect and clear it to bring it back sooner. Their outposts pay nothing meanwhile.`, { location: loc.id });
+  emit(s, 'consortium-crash', `${raid.name} crashed ${h}'s server. It is rebooting for ${CONSORTIUM.rebootMs / 3600000} hours and is occupied. Connect and clear it to bring it back sooner. Their outposts pay nothing meanwhile.`, { location: loc.id });
   roam(s, loc, 0);
 }
 
@@ -412,10 +412,10 @@ export function consortiumCommand(s, raw) {
   const arg = verb === 'create' ? more.join(' ') : more.join(' ').toLowerCase();
   const c = consortiumOf(s), done = () => s.logs.filter((e) => e.id > first);
   if (!verb) {
-    if (!c) emit(s, 'info', s.consortiumInvite ? `No consortium. ${s.consortiumInvite.from} invited you to ${s.consortiumInvite.name}: consortium accept.` : 'No consortium. consortium create <name>, or wait for an invite.');
+    if (!c) emit(s, 'info', s.consortiumInvite ? `No consortium. ${s.consortiumInvite.from} invited you to ${s.consortiumInvite.name}. Type consortium accept.` : 'No consortium. Type consortium create <name>, or wait for an invite.');
     else {
       const t = tiersOf(s), nx = nextTier(s);
-      emit(s, 'info', `${c.name}: ${sizeOf(s)} servers merged (${['you', ...c.members].join(', ')}). Dividend from ${memberServers(s).filter((l) => l.held).length} member outposts: ${dividendText(dividendRate(s), 1) || 'nothing'} an hour; waiting: ${dividendText(dividendWaiting(s)) || 'nothing'} (consortium collect). ${t.length ? 'Bonuses: ' + t.map((x) => x.rule).join(', ') + '.' : 'No bonuses yet.'}${nx ? ` At ${nx.at}: ${nx.rule.toLowerCase()}.` : ''}`);
+      emit(s, 'info', `${c.name}: ${sizeOf(s)} servers merged (${['you', ...c.members].join(', ')}). Dividend from ${memberServers(s).filter((l) => l.held).length} member outposts: ${dividendText(dividendRate(s), 1) || 'nothing'} an hour, with ${dividendText(dividendWaiting(s)) || 'nothing'} waiting (consortium collect). ${t.length ? 'Bonuses: ' + t.map((x) => x.rule).join(', ') + '.' : 'No bonuses yet.'}${nx ? ` At ${nx.at}: ${nx.rule.toLowerCase()}.` : ''}`);
     }
     return done();
   }
@@ -439,11 +439,11 @@ export function consortiumCommand(s, raw) {
     emit(s, 'consortium-merged', `MERGED with ${inv.name}. A trunk line runs from your home server to ${inv.members.length} others: ${memberServers(s).length} servers to reach. See the Map.`);
     return done();
   }
-  if (!c) return warn(s, s.consortiumInvite ? 'No consortium yet: consortium accept, or consortium create <name>.' : 'No consortium. consortium create <name>'), done();
+  if (!c) return warn(s, s.consortiumInvite ? 'No consortium yet. Type consortium accept, or consortium create <name>.' : 'No consortium. Type consortium create <name>.'), done();
   if (verb === 'leave') {
     if (active(s) || onTheirs(s)) return warn(s, 'Jack out first.'), done();
     s.consortium = null;
-    emit(s, 'info', `You left ${c.name}. The trunk line is cut; everything of yours stays yours.`);
+    emit(s, 'info', `You left ${c.name}. The trunk line is cut, and everything of yours stays yours.`);
     return done();
   }
   if (verb === 'invite') {

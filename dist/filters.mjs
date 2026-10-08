@@ -115,10 +115,10 @@ export const filterCost = (L) => ({ credits: 60 + 8 * L, code: { cipher: 6 + Mat
 function craftFilter(s, stat, payText) {
   if (s.run || active(s)) return warn(s, 'Craft at home, between fights.');
   if (stat && !CRAFTABLE.includes(stat)) return warn(s, `Filters: ${CRAFTABLE.join(', ')}, or any.`);
-  if (stat && !knowsFilter(s, stat)) return warn(s, `You don't have the ${recipeLabel(stat)} recipe yet: viruses drop blueprints.`);
-  if (!stat && !filterRecipes(s).length) return warn(s, 'You know no filter recipes yet: viruses drop blueprints.');
+  if (stat && !knowsFilter(s, stat)) return warn(s, `You don't have the ${recipeLabel(stat)} recipe yet. Viruses drop blueprints.`);
+  if (!stat && !filterRecipes(s).length) return warn(s, 'You know no filter recipes yet. Viruses drop blueprints.');
   if (!stat) stat = filterRecipes(s)[Math.floor(rand(s) * filterRecipes(s).length)]; // any of yours
-  if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters: scrap one first.`);
+  if (own(s).held.length >= FILTER_CAP) return warn(s, `You hold ${FILTER_CAP} filters. Scrap one first.`);
   const L = hackerLevel(s), c = filterCost(L), mats = materialsOf(s);
   if (s.server.credits < c.credits || (mats.cipher || 0) < c.code.cipher || (s.sigs || 0) < c.sigs) return warn(s, `A filter takes ${c.credits} credits, ${c.code.cipher} Cipher code and ${c.sigs} signatures (you hold ${s.sigs || 0}).`);
   const pay = settle(s, SALVAGE_COSTS.filter(), payText);

@@ -90,7 +90,7 @@ export function presenceCommand(s, word, rest, emit, warn) {
   }
   if (word === 'who') {
     const list = online(s);
-    return emit(s, 'info', !simOn(s) ? 'Nobody online (try: online sim).' : list.length ? `Online: ${list.map((x) => `${x.friend ? '★' : ''}${x.handle} (${ARCHETYPES[x.cls].name} ${x.level}, ${whereText(x.place)})`).join(' · ')}.` : 'Nobody else is online.');
+    return emit(s, 'info', !simOn(s) ? 'Nobody online. Try online sim.' : list.length ? `Online: ${list.map((x) => `${x.friend ? '★' : ''}${x.handle} (${ARCHETYPES[x.cls].name} ${x.level}, ${whereText(x.place)})`).join(' · ')}.` : 'Nobody else is online.');
   }
   if (word === 'friends') return emit(s, 'info', friends(s).length ? `Friends: ${friends(s).join(', ')}.` : 'No friends yet. friend add <handle>');
   const [verb, handle] = rest.split(' ');

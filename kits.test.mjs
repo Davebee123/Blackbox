@@ -100,7 +100,7 @@ test('presets swap anywhere out of a fight, home or run; the keys a swap brings 
   assert.ok(brought.length, 'the area build brings in a key with a cooldown');
   fight(s);
   for (const id of brought) assert.ok(readyIn(s, id) > 0, `${id} starts cooling`);
-  assert.ok(s.logs.some((e) => /Swapped in before this fight, still cooling:/.test(e.message)));
+  assert.ok(s.logs.some((e) => /before this fight, so (it is|they are) still cooling/.test(e.message)));
   // In a fight: no swapping, no saving, no deleting.
   for (const c of ['loadout use rotation', 'loadout save x', 'loadout delete area']) assert.match(say(s, c), /Presets change between fights\. Finish this one first\./);
   // list and show still work in a fight.
@@ -109,7 +109,7 @@ test('presets swap anywhere out of a fight, home or run; the keys a swap brings 
   resolveCycle(s);
   s.encounter = null;
   fight(s);
-  assert.equal(s.logs.filter((e) => /Swapped in before this fight/.test(e.message)).length, 1);
+  assert.equal(s.logs.filter((e) => /before this fight, so (it is|they are) still cooling/.test(e.message)).length, 1);
   // On a run, out of a fight: a swap works, equip and unequip too.
   const r = at('operator', 30, 'herder');
   r.run = { loc: 'sim', cwd: '/', integrity: 100, max: 100, pack: [], visited: ['/'] };

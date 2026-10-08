@@ -178,7 +178,7 @@ function demolish(s, loc, id) {
   loc.buildings = buildingsOf(loc).filter((x) => x !== id);
   const c = buildCost(s, id, loc), back = Math.round(c.credits * OUTPOST.refund);
   s.server.credits += back;
-  emit(s, 'info', `${BUILDINGS[id].name} on ${loc.name} taken down: ${back} credits back.`, { location: loc.id });
+  emit(s, 'info', `${BUILDINGS[id].name} on ${loc.name} taken down. ${back} credits came back.`, { location: loc.id });
 }
 
 // What it makes ----------------------------------------------------------------------------------
@@ -311,7 +311,7 @@ function tickSites(s, now, dt, paused, away) {
       // /core). One that ends while you're away doesn't count: being away never costs you a server.
       if (!away) loc.lapsed = [...(loc.lapsed || []).filter((t) => now - t < OUTPOST.regrowMs), now];
       if ((loc.lapsed || []).length >= 2) { regrow(s, loc); continue; }
-      emit(s, 'outpost-up', `${loc.name}'s lockdown is over: it's producing again. Another lockdown left to run out within a day and its Resident regrows.`, { location: loc.id });
+      emit(s, 'outpost-up', `${loc.name}'s lockdown is over, and it is producing again. If another lockdown runs out within a day, its Resident regrows.`, { location: loc.id });
       continue;
     }
     if (paused) continue;
@@ -331,9 +331,9 @@ export const startSiege = (s, loc) => launch(s, hooks.now?.() ?? Date.now(), nul
 export function fall(s, loc, force = false) {
   const o = loc.outpost;
   // A Citadel holds: a lost defence costs you the fight, not the server's output.
-  if (has(loc, 'citadel') && !force) return emit(s, 'outpost-held', `${loc.name}'s Citadel held: no lockdown.`, { location: loc.id });
+  if (has(loc, 'citadel') && !force) return emit(s, 'outpost-held', `${loc.name}'s Citadel held, and there is no lockdown.`, { location: loc.id });
   o.lockdown = { left: OUTPOST.lockdownMs }; // what's stored stays; the server stays open
-  emit(s, 'outpost-fell', `LOCKDOWN: natives took ${loc.name}. It stops producing for ${OUTPOST.lockdownMs / 3600000} hours; what's stored is kept. Retake it to end it sooner.`, { location: loc.id });
+  emit(s, 'outpost-fell', `LOCKDOWN: natives took ${loc.name}. It stops producing for ${OUTPOST.lockdownMs / 3600000} hours, but what is stored is kept. Retake it to end it sooner.`, { location: loc.id });
 }
 
 // The Scheduler (a home service) collects every outpost on a timer, real time, offline too.
@@ -386,7 +386,7 @@ export function outpostWon(s, e) {
   if (!o) return;
   if (o.lockdown) {
     o.lockdown = null;
-    emit(s, 'outpost-held', `${loc.name} retaken: the lockdown is over and it's harvesting again.`, { location: loc.id });
+    emit(s, 'outpost-held', `${loc.name} retaken. The lockdown is over, and it is harvesting again.`, { location: loc.id });
   }
 }
 
@@ -404,20 +404,20 @@ export function outpostBuyout(loc, now = Date.now()) {
 function buyout(s, loc, now) {
   const b = outpostBuyout(loc, now);
   if (!b) return warn(s, `Nothing to finish on ${loc.name}.`);
-  if (s.server.credits < b.price) return warn(s, `That costs ${b.price} credits; you have ${s.server.credits}.`);
+  if (s.server.credits < b.price) return warn(s, `That costs ${b.price} credits. You have ${s.server.credits}.`);
   s.server.credits -= b.price;
-  if (b.what === 'lockdown') { loc.outpost.lockdown = null; emit(s, 'outpost-held', `Bought out: ${loc.name}'s lockdown is over for ${b.price} credits.`, { location: loc.id }); }
-  else { emit(s, 'bought', `Bought out: the build on ${loc.name} is done for ${b.price} credits.`, { location: loc.id, amount: b.price }); finishBuild(s, loc); }
+  if (b.what === 'lockdown') { loc.outpost.lockdown = null; emit(s, 'outpost-held', `Bought out ${loc.name}'s lockdown for ${b.price} credits. It is over.`, { location: loc.id }); }
+  else { emit(s, 'bought', `Bought out the build on ${loc.name} for ${b.price} credits. It is done.`, { location: loc.id, amount: b.price }); finishBuild(s, loc); }
 }
 const byName = (id) => (BUILDINGS[id] ? id : Object.keys(BUILDINGS).find((k) => BUILDINGS[k].name.toLowerCase().replace(/\s+/g, '-') === id || BUILDINGS[k].name.toLowerCase().split(' ')[0] === id) || id);
 export function outpostCommand(s, full, now) {
   const [text, payText] = splitPay(full);
   const [, verb, a, b] = text.split(' ');
   if (verb === 'build' && a === 'relay' && !b) return buildRelay(s, payText);
-  if (['compile', 'install', 'pull', 'mod', 'unmod'].includes(verb)) return warn(s, 'Harvesters and modules are buildings now: outpost build <server> <building>.');
+  if (['compile', 'install', 'pull', 'mod', 'unmod'].includes(verb)) return warn(s, 'Harvesters and modules are buildings now. Use outpost build <server> <building>.');
   const loc = a && locOf(s, a);
   const theirs = !loc && a && memberServers(s).find((l) => l.id === a || l.name.toLowerCase() === a);
-  if (theirs) return warn(s, `${theirs.name} is ${theirs.member}'s: only they build there.`);
+  if (theirs) return warn(s, `${theirs.name} is ${theirs.member}'s, and only they build there.`);
   if (!loc) return warn(s, 'usage: outpost build|demolish <server> <building>, or outpost buyout|defend|retake <server>');
   if (verb === 'build') return startBuild(s, loc, byName(b), payText, now);
   if (verb === 'demolish') return demolish(s, loc, byName(b));

@@ -117,7 +117,7 @@ export function tickFirewall(s, at = clock()) {
     const f = fwAt(s, loc);
     if (!f.defragUntil || at < f.defragUntil) continue;
     f.defragUntil = 0; f.frag = 0;
-    emit(s, 'firewall', `Defrag done${loc?.name ? ` on ${loc.name}` : loc ? ' on your hub' : ''}: firewall back to level ${effLevel(s, at, null, loc)}.`, loc ? { location: loc.id } : {});
+    emit(s, 'firewall', `Defrag done${loc?.name ? ` on ${loc.name}` : loc ? ' on your hub' : ''}. The firewall is back to level ${effLevel(s, at, null, loc)}.`, loc ? { location: loc.id } : {});
   }
 }
 // The wall's rating at a holding, against a threat's strength (invasion.mjs's numbers): it blocks
