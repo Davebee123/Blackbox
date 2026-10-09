@@ -385,3 +385,30 @@ test('the breach is a playtest only: a fresh campaign has none, and the save ver
   assert.equal(SAVE_VERSION, 38);
   assert.ok(maxSignal(s) > 0);
 });
+
+test('healing cap: heals in a breach fight stop at the Signal you came in with, and the bar fences off the rest', async () => {
+  const { heal, healCap } = await import('./dist/combat.mjs');
+  const { hudMarkup } = await import('./dist/view.mjs');
+  const s = breach('bastion', 3), b = s.breach;
+  b.signal = Math.round(b.max * 0.6);
+  fight(s, nodeOf(s, 'virus'));
+  const came = s.run.integrity;
+  assert.equal(healCap(s), came, 'the cap is the Signal brought in');
+  s.run.integrity = came - 30;
+  heal(s, 100, 'Test');
+  assert.equal(s.run.integrity, came, 'a big heal stops at the cap');
+  heal(s, 10, 'Test');
+  assert.equal(s.run.integrity, came, 'at the cap, nothing more heals');
+  assert.match(hudMarkup(s), /class="heal-cap" style="left:60(\.\d+)?%/, 'the bar marks the cap where it sits');
+});
+
+test('healing cap: Sasser restores like a patch, past the cap, and raises it', async () => {
+  const { heal, healCap } = await import('./dist/combat.mjs');
+  const s = breach('bastion', 3), b = s.breach;
+  b.signal = Math.round(b.max * 0.5);
+  fight(s, nodeOf(s, 'virus'));
+  const came = s.run.integrity;
+  heal(s, Math.round(b.max * 0.2), 'Sasser restores', { lift: true });
+  assert.ok(s.run.integrity > came, 'Sasser goes past the Signal you came in with');
+  assert.equal(healCap(s), s.run.integrity, 'and the cap rises with it');
+});

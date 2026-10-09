@@ -3341,3 +3341,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .map-tools .breach-try { margin-left: auto; margin-right: var(--s2); text-decoration: none; color: var(--next); border-color: rgba(255, 216, 92, 0.55); white-space: nowrap; }
 .map-tools .breach-try:hover { background: rgba(255, 216, 92, 0.1); }
 .map-tools .breach-try + .breach-try { margin-left: 0; }
+
+/* Breach healing cap: the bar past the Signal you came into the fight with is fenced off (hatched, a hard edge). */
+.bigbar { position: relative; }
+.bigbar .heal-cap { position: absolute; top: 0; bottom: 0; display: block; pointer-events: auto; border-left: 2px solid var(--bright); background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0 3px, rgba(255, 255, 255, 0.16) 3px 6px); }

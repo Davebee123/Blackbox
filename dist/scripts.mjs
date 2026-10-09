@@ -16,7 +16,7 @@ const pctOf = (s, k) => Math.max(1, Math.round(defender(s).max * k));
 // target: 'part' when it takes the part you name (the soonest attacker when you name none).
 // use(s, p): does it, and returns false when there was nothing for it to do (the script is kept).
 export const SCRIPTS = {
-  sasser: { name: 'Sasser', rarity: 'common', text: 'Restores 20% of your max Signal.', use: (s) => { const d = defender(s); if (d.integrity >= d.max) return false; heal(s, pctOf(s, 0.2), 'Sasser restores'); } },
+  sasser: { name: 'Sasser', rarity: 'common', text: 'Restores 20% of your max Signal.', use: (s) => { const d = defender(s); if (d.integrity >= d.max) return false; heal(s, pctOf(s, 0.2), 'Sasser restores', { lift: true }); } },
   krack: { name: 'KRACK', rarity: 'common', text: 'Shields you for 20% of your max Signal.', use: (s) => { const e = s.encounter, n = pctOf(s, 0.2); e.shield = Math.max(e.shield || 0, n); emit(s, 'status', `KRACK shields you for ${n}.`, { mark: 'shield' }); } },
   shellshock: { name: 'Shellshock', rarity: 'common', text: 'Delays the attack that lands soonest by 3 cycles.', use: (s) => { const p = soonestAttacker(s); if (!p?.attack || p.attack.due >= 900) return false; p.attack.due += 3; emit(s, 'interrupt', `Shellshock: the ${p.name}'s ${p.attack.name} is delayed ${cyc(3)}.`, { target: p.id }); } },
   spectre: { name: 'Spectre', rarity: 'common', text: 'Exposes every part for 2 cycles.', use: (s) => { const e = s.encounter; for (const p of livingParts(s)) p.exposedUntil = Math.max(p.exposedUntil || 0, e.cycle + 1); emit(s, 'status', 'Spectre Exposes every part for 2 cycles.', { mark: 'exposed' }); } },

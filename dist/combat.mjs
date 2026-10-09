@@ -2804,12 +2804,17 @@ export function stretchBurns(s, t, cycles, label) {
 
 // Who else is standing in this fight, by name ('you' for the player, to a crewmate): crew.mjs.
 const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st || null;
-export function heal(s, amount, label) {
+// How high healing can take you. In a breach, never past the Signal you brought into the fight (breach.mjs
+// fightFrom): heals and shields count inside a fight, defrag and patches between them. The bar marks it (healCap).
+export const healCap = (s) => { const d = defender(s); return s.run?.breach && s.breach?.fightFrom != null ? Math.min(d.max, s.breach.fightFrom) : d.max; };
+// lift: a restore that counts like a patch (the Sasser script): it ignores the cap and raises it with you.
+export function heal(s, amount, label, { lift = false } = {}) {
   const d = defender(s);
   if (s.encounter?.virus?.raid) amount = raidAbsorb(s, amount); // encrypted sectors (raid.mjs)
-  const healed = Math.min(amount, d.max - d.integrity);
+  const cap = lift ? d.max : healCap(s), healed = Math.max(0, Math.min(amount, cap - d.integrity));
   d.integrity += healed;
-  emit(s, 'heal', `${label} +${healed}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed });
+  if (lift && s.run?.breach && s.breach?.fightFrom != null) s.breach.fightFrom = Math.max(s.breach.fightFrom, d.integrity);
+  emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Signal you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed });
 }
 
 // Bastion Uptime: once per fight, a blow that would drop you to 0 leaves you at 1.
@@ -3120,7 +3125,7 @@ export function playerPhase(s, phase = 'all') {
   if (rg) {
     e.regenAcc = (e.regenAcc || 0) + rg;
     const n = Math.floor(e.regenAcc);
-    if (n) { e.regenAcc -= n; const d = defender(s); const got = Math.min(n, d.max - d.integrity); d.integrity += got; if (got) emit(s, 'regen', `Regen +${got}.`, { amount: got }); }
+    if (n) { e.regenAcc -= n; const d = defender(s); const got = Math.max(0, Math.min(n, healCap(s) - d.integrity)); d.integrity += got; if (got) emit(s, 'regen', `Regen +${got}.`, { amount: got }); }
   }
 
   return true;
