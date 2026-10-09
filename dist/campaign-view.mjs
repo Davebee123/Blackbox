@@ -12,6 +12,11 @@ import { ACTS } from './breach.mjs';
 import { residentAbout } from './breach-view.mjs';
 import { SERVERS, SERVER, LAYERS, CAMPAIGN, statusOf, outgrown, outputsFor, bountiesOn, BOUNTIES, BOUNTY_PAY, bestOf, archiveOf, FRAGMENTS, held, heatOpen, heatFloor, canReplay, recOf } from './campaign.mjs';
 import { HEAT, MAX_HEAT, heatList, heatPay } from './heat.mjs';
+import { GENES } from './genes.mjs';
+import { chipOf } from './genome.mjs';
+import { geneChip } from './view.mjs';
+import { WORLD, moveOn, eventOn, watcherOf } from './world.mjs';
+import { DIG } from './breach.mjs';
 
 // What the page shows that the campaign doesn't keep: the server you're looking at, and the bounty you mean to take.
 export const campUi = { sel: null, bounty: {}, heat: {} };
@@ -21,9 +26,32 @@ const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const plural = (n, one, many = one + 's') => `${n} ${n === 1 ? one : many}`;
 
 // ---------- the map ----------
-const G = { band: 150, head: 34, pad: 16 };
+// room: the band above layer 1 where LOWLIGHT's back room sits (docs/world.md 2.1), linked to SPRAWL-00.
+const G = { band: 150, head: 34, pad: 16, room: 52 };
 const xOf = (srv) => 12 + (srv.col * 76) / 3;
-const yOf = (srv) => G.pad + (srv.layer - 1) * G.band + G.head + (G.band - G.head) / 2;
+const yOf = (srv) => G.pad + G.room + (srv.layer - 1) * G.band + G.head + (G.band - G.head) / 2;
+const pips = (n) => '●'.repeat(Math.max(0, n)) + '○'.repeat(Math.max(0, WORLD.pips - n));
+// The world on a server (world.mjs): its move (a dig in, in its author's colour, with its gene as the codex knows it)
+// and its event (a dead drop and the breaches it has left), as words for the card and chips for the node.
+function worldOf(s, id) {
+  const m = moveOn(s, id), e = eventOn(s, id), w = watcherOf(s, id), out = [];
+  if (m) {
+    const A = AUTHORS[m.author], c = chipOf(s, m.gene, 'rolled'), what = c.name || `${/^[aeiou]/i.test(c.catName) ? 'an' : 'a'} ${c.catName} you haven't seen`;
+    out.push({ kind: 'digin', colour: A?.colour, gene: m.gene, word: c.name ? c.name.toLowerCase() : '???', chip: c,
+      text: `${A?.name || m.author} dug in. Every elite and gate carries ${what}.`,
+      pays: `Gear on its breaches drops ${DIG.itemLevel} level higher, and its Resident's unique roll gets +${Math.round(DIG.unique * 100)}% on the capture.` });
+  }
+  if (e) out.push({ kind: 'drop', pips: e.pips, text: 'A dead drop waits in its first act.', pays: `Pull it for a card for your draft pool. It goes cold after ${e.pips} more ${e.pips === 1 ? 'breach' : 'breaches'}.` });
+  if (w && !m) out.push({ kind: 'watch', text: `${AUTHORS[w]?.name || w} is watching.`, pays: 'Nothing on it has changed yet.' });
+  return out;
+}
+function worldChips(s, id) {
+  const xs = worldOf(s, id).filter((x) => x.kind !== 'watch');
+  if (!xs.length) return '';
+  return `<span class="cp-world">${xs.map((x) => (x.kind === 'digin'
+    ? `<span class="cp-w" style="color:${x.colour}" title="${esc(`${x.text} ${x.pays}`)}">dug in · ${esc(x.word)}</span>`
+    : `<span class="cp-w drop" title="${esc(`${x.text} ${x.pays}`)}">drop <span class="cp-pips">${pips(x.pips)}</span></span>`)).join('')}</span>`;
+}
 // The server you look at first: the one you were looking at, else the lowest you can breach and don't hold.
 export function selected(s) {
   if (campUi.sel && SERVER[campUi.sel] && statusOf(s, campUi.sel) !== 'hidden') return campUi.sel;
@@ -41,13 +69,13 @@ function nodeMarkup(s, srv, sel) {
   if (rec?.checkpoint && !rec.captured) marks.push(`<span class="cp-mark ck" title="Checkpoint: a retry can start past gate ${rec.checkpoint.gate}.">G${rec.checkpoint.gate}</span>`);
   return `<button type="button" class="cp-node st-${st}${old ? ' old' : ''}${on}" style="left:${xOf(srv)}%;top:${yOf(srv)}px" data-camp="sel" data-arg="${esc(srv.id)}" title="${esc(`${srv.name}: a level ${srv.level} ${srv.kind}. ${st === 'held' ? 'You hold it.' : 'You can breach it.'}`)}">`
     + `<span class="cp-chip"><span class="ico" ${icon(st === 'held' ? 'server' : 'pulse-node')}></span><b class="${old ? 'con-gray' : conClass(srv.level - L)}">${srv.level}</b>${marks.join('')}</span>`
-    + `<span class="cp-name">${esc(srv.name)}</span><small>${esc(srv.kind)} · ${esc(srv.residentName || BOSSES[srv.resident]?.name || '')}</small></button>`;
+    + `<span class="cp-name">${esc(srv.name)}</span><small>${esc(srv.kind)} · ${esc(srv.residentName || BOSSES[srv.resident]?.name || '')}</small>${worldChips(s, srv.id)}</button>`;
 }
 function mapMarkup(s, sel) {
   const shown = SERVERS.filter((x) => statusOf(s, x.id) !== 'hidden');
   const ids = new Set(shown.map((x) => x.id));
   const layers = LAYERS.filter((l) => shown.some((x) => x.layer === l.n));
-  const height = G.pad * 2 + Math.max(1, ...layers.map((l) => l.n)) * G.band;
+  const height = G.pad * 2 + G.room + Math.max(1, ...layers.map((l) => l.n)) * G.band;
   const seen = new Set();
   const edges = [];
   for (const a of shown) for (const id of a.links) {
@@ -62,8 +90,13 @@ function mapMarkup(s, sel) {
       ? `<path class="cp-e ${cls}" d="M${xOf(a)} ${yOf(a) - 20} Q${(xOf(a) + xOf(b)) / 2} ${yOf(a) - 68} ${xOf(b)} ${yOf(b) - 20}" fill="none" vector-effect="non-scaling-stroke"/>`
       : `<line class="cp-e ${cls}" x1="${xOf(a)}" y1="${yOf(a)}" x2="${xOf(b)}" y2="${yOf(b)}" vector-effect="non-scaling-stroke"/>`);
   }
-  const heads = layers.map((l) => `<div class="cp-layer" style="top:${G.pad + (l.n - 1) * G.band}px;height:${G.band}px"><span class="cp-layer-k">LAYER ${l.n}</span><b>${esc(l.name)}</b><span class="cp-layer-b">lv ${l.band[0]}–${l.band[1]}</span></div>`).join('');
-  return `<div class="cp-board" style="height:${height}px">${heads}<svg class="cp-edges" viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>${shown.map((x) => nodeMarkup(s, x, sel)).join('')}</div>`;
+  // LOWLIGHT's back room: a fixed marker above layer 1, linked to SPRAWL-00 like a server you hold. You never breach
+  // it; it opens the Room.
+  const s0 = SERVER[CAMPAIGN.start], ry = G.pad + G.room / 2;
+  edges.unshift(`<line class="cp-e held" x1="${xOf(s0)}" y1="${ry + 15}" x2="${xOf(s0)}" y2="${yOf(s0) - 19}" vector-effect="non-scaling-stroke"/>`);
+  const room = `<button type="button" class="cp-room" data-module="room" style="left:${xOf(s0)}%;top:${ry}px" title="LOWLIGHT's back room: where you are between breaches. wick, and the board's news."><span class="ico" ${icon('command')}></span>LOWLIGHT<small>back room</small></button>`;
+  const heads = layers.map((l) => `<div class="cp-layer" style="top:${G.pad + G.room + (l.n - 1) * G.band}px;height:${G.band}px"><span class="cp-layer-k">LAYER ${l.n}</span><b>${esc(l.name)}</b><span class="cp-layer-b">lv ${l.band[0]}–${l.band[1]}</span></div>`).join('');
+  return `<div class="cp-board" style="height:${height}px">${heads}${room}<svg class="cp-edges" viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}</svg>${shown.map((x) => nodeMarkup(s, x, sel)).join('')}</div>`;
 }
 
 // ---------- the card ----------
@@ -115,6 +148,9 @@ function cardMarkup(s, id) {
     row('Runs', `<div class="cp-runs">${runsLine(srv)}</div><small class="dim">${esc(shape)}</small>`),
     row('Best', esc(bestOf(s, id) || '—')),
   ];
+  // The World row (world.mjs): one plain sentence per thing the network did here, and what it pays.
+  const world = worldOf(s, id);
+  if (world.length) rows.unshift(row('World', `<ul class="cp-wlist">${world.map((x) => `<li class="w-${x.kind}"${x.colour ? ` style="--w:${x.colour}"` : ''}><span>${esc(x.text)}${x.pips != null ? ` <span class="cp-pips" title="${esc(`${x.pips} ${x.pips === 1 ? 'breach' : 'breaches'} left.`)}">${pips(x.pips)}</span>` : ''}</span>${x.chip ? `<span class="gene-line">${geneChip(x.chip)}</span>` : ''}<small>${esc(x.pays)}</small></li>`).join('')}</ul>`, 'What moved on the network here: an author digging in, or something wick left you.'));
   if (srv.unlock && !rec?.captured) rows.push(row('Opens', `<span class="bx-perk cve r-${{ common: 'stock', uncommon: 'tuned', rare: 'custom' }[CVES[srv.unlock].rarity]}" title="${esc(`${CVES[srv.unlock].name}: ${CVES[srv.unlock].text}`)}">${esc(CVES[srv.unlock].name)}</span>`, 'Its first capture adds this CVE to your draft pool.'));
   rows.push(row('With you', reaching(s, id), 'The rewrites your captured servers run on a breach of this one. Each counts once, at its best tier.'));
   const outs = st === 'held' ? `<h3 class="bx-sec">Output <small>${Object.keys(rec.rewrites).length}/${srv.subsystems.flat().length}</small></h3><ul class="cap-lines cp-out">${srv.subsystems.flat().map((sub) => { const o = outputLine(sub, rec.rewrites[sub]); return `<li class="${rec.rewrites[sub] ? '' : 'stock'}"><span class="cap-sub">${esc(sub)}</span><b>${esc(o.name)}</b><span>${esc(o.text)}</span></li>`; }).join('')}</ul>` : '';
@@ -171,7 +207,7 @@ export function campaignMarkup(s) {
 export function archiveMarkup(s) {
   const a = archiveOf(s);
   const threads = a.threads.map((t) => `<li class="${t.have ? 'on' : ''}" title="${esc(`${t.thread}: ${t.have} of ${t.of} found.`)}"><b>${esc(t.thread)}</b><span>${t.have}/${t.of}</span></li>`).join('');
-  const frags = a.found.map((f) => `<li class="cap-dump"><div class="cap-dump-k"><span class="ar-n">#${f.order}</span><b>${esc(f.title)}</b><span>${esc(f.from)}</span><span class="cap-frag">${esc(f.thread)} ${f.n}/${f.of} · ${esc(SERVER[f.server].name)}</span></div><pre>${f.lines.map(esc).join('\n')}</pre></li>`).join('');
+  const frags = a.found.map((f) => `<li class="cap-dump"><div class="cap-dump-k"><span class="ar-n">#${f.order}</span><b>${esc(f.title)}</b><span>${esc(f.from)}</span><span class="cap-frag">${esc(f.thread)} ${f.n}/${f.of}${f.server ? ` · ${esc(SERVER[f.server].name)}` : ''}</span></div><pre>${f.lines.map(esc).join('\n')}</pre></li>`).join('');
   return `<div class="page-grid ar"><section class="card ar-card"><h2>Archive · ${a.found.length}/${FRAGMENTS.length}</h2><h1>core.dump</h1>
     <ul class="ar-threads">${threads}</ul>
     ${frags ? `<ol class="ar-list">${frags}</ol>` : ''}

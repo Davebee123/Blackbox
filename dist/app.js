@@ -28,6 +28,7 @@ import * as BR from './breach.mjs';
 import { breachMarkup, breachFocusY, bxUi, bxToggle } from './breach-view.mjs';
 import * as CP from './campaign.mjs';
 import { campaignMarkup, archiveMarkup, campUi } from './campaign-view.mjs';
+import { roomMarkup } from './room-view.mjs';
 import { patchMods } from './drafts.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
@@ -452,7 +453,9 @@ document.addEventListener('click', (e) => {
     save(); go('breach'); notice(ev.find((x) => x.type === 'breach')?.message || '');
     return;
   }
-  if (verb === 'leave') { const id = campaign.breach?.campaign?.id; CP.leave(campaign); if (id) campUi.sel = id; save(); go('campaign'); }
+  // After a breach, the room (room-view.mjs): wick, the board. A server named there opens its card on the map.
+  if (verb === 'leave') { const id = campaign.breach?.campaign?.id; CP.leave(campaign); if (id) campUi.sel = id; save(); go('room'); }
+  if (verb === 'show') { if (CP.SERVER[arg]) campUi.sel = arg; go('campaign'); }
 });
 // The heat a server's card is set to: what you picked, else the floor a re-image asks for.
 function heatPick(id) { return Math.max(CP.heatFloor(campaign, id), Math.min(CP.heatOpen(campaign), campUi.heat[id] ?? CP.heatFloor(campaign, id))); }
@@ -754,7 +757,7 @@ function notice(text, bad = false, suggest = null, sticky = false) {
 }
 
 // ---------- commands ----------
-const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 'system', 'campaign', 'archive'];
+const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 'system', 'campaign', 'room', 'archive'];
 const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', crafting: 'craft', workbench: 'craft', build: 'craft', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', fight: 'combat', run: 'net' };
 
 function run(raw) {
@@ -825,7 +828,7 @@ function run(raw) {
   if (text.startsWith("'") || text.startsWith('say ')) return notice('Chat arrives with co-op. For now it is just you and the virus.');
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
   if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|scan|codex|collection|hold|now)\b/.test(text)) {
-    if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, skip, reroll, cat, pull, rest, recompile, plus <mod>, buy, patch, service, leave, choose). In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, loadout, archive and system.', false, null, true);
+    if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, skip, reroll, cat, pull, rest, recompile, plus <mod>, buy, patch, service, leave, choose). In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, room, loadout, archive and system.', false, null, true);
     return notice(`${text.split(' ')[0]}: not on the campaign. Type help.`, true);
   }
 
@@ -898,8 +901,8 @@ function go(name, quiet = false) {
   if (name === 'combat' && !active(campaign) && !(campaign.encounter && campaign.encounter.mode === 'run')) name = 'map';
   if (name === 'net' && (!campaign.run || campaign.run.breach)) name = campaign.breach ? 'breach' : 'map';
   if (CAMP && ['map', 'mail', 'server', 'craft', 'store', 'consortium', 'hub', 'net'].includes(name)) name = 'campaign'; // the old game's pages sit out
-  if (!CAMP && ['campaign', 'archive'].includes(name)) name = 'map';
-  if (campaign.breach && (CAMP ? name === 'campaign' && !campaign.breach.result : name === 'map')) name = 'breach'; // a live breach is the page
+  if (!CAMP && ['campaign', 'room', 'archive'].includes(name)) name = 'map';
+  if (campaign.breach && (CAMP ? ['campaign', 'room'].includes(name) && !campaign.breach.result : name === 'map')) name = 'breach'; // a live breach is the page
   if (name === 'breach' && !campaign.breach) name = CAMP ? 'campaign' : 'map';
   // Stepping away from a live fight pauses it; coming back picks it up again.
   const leaving = module === 'combat' && name !== 'combat' && active(campaign) && !campaign.encounter.paused;
@@ -1166,6 +1169,7 @@ function renderMeters() {
   $('tab-breach').hidden = !campaign.breach;
   $('tab-campaign').hidden = !CAMP;
   $('tab-archive').hidden = !CAMP;
+  $('tab-room').hidden = !CAMP;
   document.body.classList.toggle('breach-mode', !!campaign.breach); // a breach playtest: the campaign's tabs and meters step aside
   document.body.classList.toggle('campaign-mode', CAMP); // the breach campaign: the old game's tabs, meters and pager step aside
   document.body.classList.toggle('ctx-tabs', active(campaign) || !!campaign.run);
@@ -1308,7 +1312,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { campaign: (x) => campaignMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider

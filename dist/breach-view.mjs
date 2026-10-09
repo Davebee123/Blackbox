@@ -6,7 +6,8 @@ import { ABILITIES, GUARDS, FAMILIES, STRAINS, BOSSES } from './data.mjs';
 import { RARITIES, itemLabel, statLine } from './gear.mjs';
 import { stashItem, effectLine, equippedSkills, knownSkills, classOf } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
-import { ACTS, BREACH, EVENTS, BROKERS, nodeList, reachable, visible, currentNode, rowSub, signalOf, maxOf, captureOf, fogOf, eventText, cardOf, residentName, priceOf, nextOf, restShare, recompilable } from './breach.mjs';
+import { FRAGMENTS } from './campaign.mjs';
+import { ACTS, BREACH, EVENTS, BROKERS, dropName, nodeList, reachable, visible, currentNode, rowSub, signalOf, maxOf, captureOf, fogOf, eventText, cardOf, residentName, priceOf, nextOf, restShare, recompilable } from './breach.mjs';
 import { MODS, CVES, cardText, DRAFT, TAGS, buildTags, linksOf, modName, modText } from './drafts.mjs';
 import { SUBSYSTEMS, REWRITES, outputLine } from './rewrites.mjs';
 import { chipOf } from './genome.mjs';
@@ -37,6 +38,7 @@ const KIND = {
   term: { label: 'term', icon: 'command', word: 'A terminal with a file on it, and a choice with a cost.' },
   gate: { label: 'gate', icon: 'event-lock', word: 'A guard. Beat it and your pack banks.' },
   boss: { label: 'core', icon: 'server', word: 'The Resident.' },
+  drop: { label: 'drop', icon: 'event-scan', word: "A dead drop wick left you: a note, and a card for your draft pool. It's yours when the breach ends, won or lost." },
 };
 // What a fight's draft promises, on its node and its card (breach.mjs n.reward): mods teal, CVEs violet, gear amber,
 // and a yellow star for a rare card.
@@ -73,11 +75,18 @@ function layout(map) {
   return { pos, heads, ys, height: y + G.pad };
 }
 
+// A dig in (world.mjs) on this server: its author's gene rides on every elite and gate.
+function dugNote(s) {
+  const d = cardOf(s).world?.digin;
+  if (!d) return '';
+  const c = chipOf(s, d.gene, 'rolled');
+  return ` ${AUTHORS[d.author]?.name || d.author} dug in: it carries ${c.name || `${/^[aeiou]/i.test(c.catName) ? 'an' : 'a'} ${c.catName} you haven't seen`}.`;
+}
 // What a node says on hover, as much as you can read of it.
 function nodeTip(s, n) {
   const b = s.breach, seen = visible(s, n);
   if (!seen) return `Out of sight. You read ${fogOf(s)} rows ahead.`;
-  if (n.kind === 'gate') return `${GUARDS[n.guard].name}, level ${n.level}. ${GUARDS[n.guard].summary} Beat it and your pack banks.`;
+  if (n.kind === 'gate') return `${GUARDS[n.guard].name}, level ${n.level}. ${GUARDS[n.guard].summary}${dugNote(s)} Beat it and your pack banks.`;
   if (n.kind === 'boss') return `${residentName(cardOf(s))}, level ${n.level}. ${residentAbout(n.boss)}`;
   const where = n.sub ? `This row runs ${n.sub}, ${SUBSYSTEMS[n.sub].about}. ` : '';
   if (n.kind === 'virus' || n.kind === 'elite') {
@@ -135,7 +144,8 @@ function mapMarkup(s) {
     const tip = esc(nodeTip(s, n));
     if (n.kind === 'gate' || n.kind === 'boss') {
       const name = n.kind === 'gate' ? GUARDS[n.guard].name.toUpperCase() : residentName(card).toUpperCase();
-      const note = n.kind === 'gate' ? 'banks your pack' : 'the Resident · /core';
+      const dug = n.kind === 'gate' && card.world?.digin && chipOf(s, card.world.digin.gene, 'rolled');
+      const note = n.kind === 'gate' ? `banks your pack${dug ? ` · dug in · ${dug.name ? dug.name.toLowerCase() : '???'}` : ''}` : 'the Resident · /core';
       return `<button type="button" class="bx-bar k-${n.kind} s-${state}" style="top:${p.y}px" ${attrs} title="${tip}"><span class="ico" ${icon(k.icon)}></span><span class="bx-bar-k">${n.kind === 'gate' ? 'GATE' : 'RESIDENT'}</span><b>${esc(name)}</b><small>lv ${n.level} · ${esc(note)}</small>${isHere ? '<span class="bx-you">you</span>' : ''}${cleared ? '<span class="bx-done">down</span>' : ''}</button>`;
     }
     const label = seen ? k.label : '?';
@@ -210,6 +220,13 @@ function screenMarkup(s) {
     const n = b.map.nodes[sc.node];
     return decision(`${path} · cache`, 'Cache',`${term([`$ ls -l ${n.path}`, '-rw-------  1 ops ops  48k  cache.dat', ...(sc.read ? [`$ cat cache.dat`, n.bait ? 'CANARY CANARY CANARY CANARY (every block)' : `tokens: ${n.tokens}${n.gear ? ' · protocol.bin' : ''}`] : [])])}<div class="row acts">${btn('cat', 'cat cache.dat', { disabled: sc.read, tip: 'cat: read the file first. One cache in four is bait.' })}${btn('pull', 'pull', { hot: true, note: sc.read && n.bait ? 'bait' : '' })}${btn('leave', 'leave')}</div>`);
   }
+  if (sc.kind === 'drop') {
+    // A dead drop: wick's note (its fragment, while there's one left to find) and the card it holds.
+    const n = b.map.nodes[sc.node], f = n.frag && FRAGMENTS.find((x) => x.id === n.frag), what = dropName(n);
+    const card = n.card && (CVES[n.card] || MODS[n.card]);
+    const note = f ? f.lines : ['for you.', '— w'];
+    return decision(`${path} · dead drop`, 'Dead drop', `${term([`$ ls -l ${n.path}`, '-rw-------  1 wick wick  2k  note.txt', ...(what ? [`-rw-------  1 wick wick  9k  ${n.card}.${CVES[n.card] ? 'cve' : 'mod'}`] : []), ...(sc.read ? ['$ cat note.txt', ...note] : [])])}${sc.read && card ? `<ul class="bx-cards"><li class="bx-card k-${CVES[n.card] ? 'cve' : 'mod'}"><span class="bx-card-k">${CVES[n.card] ? 'CVE' : 'Mod'} · for your draft pool</span><b>${esc(what)}</b><p>${esc(CVES[n.card]?.text || MODS[n.card].text(MODS[n.card].v[0]))}</p></li></ul>` : ''}<div class="row acts">${btn('cat', 'cat note.txt', { disabled: sc.read })}${btn('pull', 'pull', { primary: true, tip: 'pull: the card joins your draft pool when the breach ends, won or lost, and the note goes in your Archive.' })}${btn('leave', 'leave', { tip: 'Leave it: the drop stays on the map until it goes cold.' })}</div>`);
+  }
   if (sc.kind === 'defrag') {
     const heal = Math.min(maxOf(s) - signalOf(s), Math.round(b.max * restShare(b)));
     if (sc.recompile) return decision(`${path} · recompile`, 'Recompile a mod', recompileList(s, 'plus') + `<div class="row acts">${btn('done', sc.rested ? 'Done' : 'Not now')}</div>`);
@@ -250,7 +267,8 @@ function peekCard(s, n) {
   const b = s.breach, k = KIND[n.kind] || KIND.virus;
   let name = k.label, know = '';
   const meta = [];
-  if (n.kind === 'gate') { name = GUARDS[n.guard].name; know = `${GUARDS[n.guard].summary} Beat it and your pack banks.`; }
+  if (n.kind === 'gate') { name = GUARDS[n.guard].name; know = `${GUARDS[n.guard].summary}${dugNote(s)} Beat it and your pack banks.`; }
+  else if (n.kind === 'drop') { name = 'note.txt'; know = k.word; }
   else if (n.kind === 'boss') { name = residentName(cardOf(s)); know = residentAbout(n.boss); }
   else if (n.kind === 'virus' || n.kind === 'elite') {
     const fam = n.strain ? STRAINS[n.strain].name : FAMILIES[n.family]?.name;
@@ -279,7 +297,8 @@ function reportMarkup(b) {
   if (!r) return '';
   const rows = [];
   if (r.bounty) rows.push(`<li class="${r.bounty.done ? '' : 'stock'}"><span class="cap-sub">bounty</span><b>${esc(r.bounty.done ? 'Paid' : 'Missed')}</b><span>${esc(r.bounty.text)}${esc(r.bounty.done ? ` ${r.bounty.paid}` : ' Missing it costs nothing.')}</span></li>`);
-  for (const u of r.unlocks || (r.unlock ? [r.unlock] : [])) rows.push(`<li><span class="cap-sub">unlock</span><b>${esc(u.name)}</b><span>${esc(`Joins your draft pool. ${u.text}`)}</span></li>`);
+  for (const u of r.unlocks || (r.unlock ? [r.unlock] : [])) rows.push(`<li><span class="cap-sub">${u.from === 'drop' ? 'drop' : 'unlock'}</span><b>${esc(u.name)}</b><span>${esc(`Joins your draft pool. ${u.text}`)}</span></li>`);
+  if (r.drop?.frag) rows.push(`<li><span class="cap-sub">drop</span><b>note.txt</b><span>wick's note goes in your Archive.</span></li>`);
   if (r.heat) rows.push(`<li><span class="cap-sub">heat</span><b>Heat ${r.heat} open</b><span>${esc(`${HEAT[r.heat].name}: ${HEAT[r.heat].text}`)}</span></li>`);
   if (r.replay) rows.push(`<li><span class="cap-sub">replay</span><b>Replayed</b><span>The Resident falls again. The server is as it was.</span></li>`);
   if (r.revealed?.length) rows.push(`<li><span class="cap-sub">links</span><b>${r.revealed.length} open</b><span>${esc(r.revealed.join(', '))}</span></li>`);
@@ -289,7 +308,7 @@ function reportMarkup(b) {
 function resultMarkup(s) {
   const b = s.breach, card = cardOf(s), camp = !!b.card;
   const again = camp
-    ? `<div class="row acts"><button type="button" class="btn primary" data-camp="leave">Back to the map</button><button type="button" class="btn" data-module="loadout">Loadout</button></div>`
+    ? `<div class="row acts"><button type="button" class="btn primary" data-camp="leave">Back to the room</button><button type="button" class="btn" data-module="loadout">Loadout</button></div>`
     : `<div class="row acts"><button type="button" class="btn primary" data-breach="again">New breach</button><button type="button" class="btn" data-module="loadout">Loadout</button></div>`;
   if (b.result === 'won') {
     const c = captureOf(s);

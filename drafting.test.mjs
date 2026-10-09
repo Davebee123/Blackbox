@@ -333,7 +333,7 @@ test('the save: a v1 campaign migrates in place (its own key), a breach in fligh
   delete s.breach.plus; delete s.breach.rules; delete s.breach.heat;
   const back = restore(JSON.parse(JSON.stringify(s)));
   migrate(back);
-  assert.equal(back.camp.v, 2);
+  assert.equal(back.camp.v, CAMPAIGN.v, 'up to the current shape (3: the world)');
   assert.deepEqual(back.camp.mods, []);
   assert.equal(back.camp.heat, 0);
   assert.ok(back.camp.pool.includes('bluekeep') && CAMPAIGN.startCves.every((id) => back.camp.pool.includes(id)));

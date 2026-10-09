@@ -14,7 +14,7 @@ import { nodeList, reachable, firstRow, act, breachHooks, allPaths } from './dis
 import { CAMPAIGN, CAMPAIGN_KEY, SERVERS, SERVER, LAYERS, FRAGMENTS, BOUNTIES, newCampaign, statusOf, outputsFor, launch, leave, recOf, archiveOf, bountiesOn, actsFor, cardFor } from './dist/campaign.mjs';
 import { campaignMarkup, archiveMarkup, campUi } from './dist/campaign-view.mjs';
 import { breachMarkup } from './dist/breach-view.mjs';
-import { runCampaign, report } from './campaignsim.mjs';
+import { runCampaign, report, worldReport } from './campaignsim.mjs';
 import { CLASSES } from './breachsim.mjs';
 
 function camp(cls = 'breaker', seed = 7) {
@@ -321,4 +321,9 @@ test('campaignsim: every class reaches level 10 from level 1 within a bounded nu
   const banked = all.reduce((n, x) => n + x.banked, 0) / all.length, ups = mid.reduce((n, x) => n + x.upgrades, 0) / Math.max(1, mid.length);
   assert.ok(banked >= 0.5 && banked <= 3, `${banked.toFixed(2)} items banked a breach`);
   assert.ok(ups >= 0.15 && ups <= 0.8, `${ups.toFixed(2)} upgrades a breach from level 6`);
+  // The world (docs/world.md 6.4) in the bot's campaigns: at most one new event a breach, at most 2 servers under
+  // pressure, always a clean open server, and no author move after a loss.
+  const w = worldReport(runs);
+  assert.ok(w && w.breaches > 20, 'the world turned');
+  assert.ok(w.eventsMax <= 1 && w.liveMax <= 3 && w.pressureMax <= 2 && w.clean === 1 && w.afterLoss === 0, JSON.stringify(w));
 });

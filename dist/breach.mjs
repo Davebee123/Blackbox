@@ -14,11 +14,11 @@
 // the end back here (hooks.breachEnd), and the mods and CVEs ride hooks.emitted and hooks.extraFx. Between fights
 // s.run is null, so gear loads as at home; during one it holds your Signal, as on any run.
 import { hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, rigOf, attackers, gainXp, part, alive, livingParts, equippedSkills } from './combat.mjs';
-import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf } from './data.mjs';
+import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf, makePart } from './data.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { MODS, CVES, patchMods, unpatchMods, cveFx, onEvent, afterCommand, afterFightCves, rollDraft, DRAFT, cardText, modPool, modName, buildTags, linksOf, cvePool, cardDef } from './drafts.mjs';
 import { SUBSYSTEMS, REWRITES } from './rewrites.mjs';
-import { GENES, rollGenome, partGenes } from './genes.mjs';
+import { GENES, rollGenome, partGenes, compatible } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { decoded } from './genome.mjs';
 import { heatRules } from './heat.mjs';
@@ -52,6 +52,9 @@ export const BREACH = {
   // Heat 1, Loud: a breach is ten fights on one Signal bar, so its loud is a step, not the old run's cliff (HOT_RUN).
   loud: { hp: 1.15, dmg: 1.1 },
 };
+// A dig in (world.mjs): what it pays on its breaches (item levels on gear, added odds on the Resident's unique roll),
+// and the size of the part its gene adds to a gate (of a part the gate's own size would have).
+export const DIG = { itemLevel: 1, unique: 0.1, gatePart: 0.6 };
 // Server kinds lean the map (docs/roguelite.md 2.2): a Mirror one more terminal a row, an Archive caches twice as often.
 export const KIND_WEIGHTS = { Mirror: { term: 30 }, Archive: { cache: 20 } };
 const stepOf = (act, row, rows = BREACH.rows) => act * (rows + 1) + row + 1; // 1..4 an act's rows, 5 its gate; 15 the Resident
@@ -109,9 +112,20 @@ function virusOf(r, node, level, elite, card = SERVER_CARD, gen = {}) {
   const ids = { overclock: 'overclock', lock: 'lock', charge, seal };
   const tells = [];
   for (let i = 0; i < (elite ? 2 : 1); i++) { const k = weighted(r, pool); tells.push(ids[k]); delete pool[k]; }
-  const author = tells.includes('overclock') ? 'glassjaw' : card.author;
+  // A server an author dug in on (world.mjs, the card's world.digin): every elite is that author's and carries its gene.
+  const dig = elite && card.world?.digin;
+  const author = dig ? dig.author : tells.includes('overclock') ? 'glassjaw' : card.author;
   if (!BREACH.genomes) return { family: fam, strain, tells, author, mutation: elite ? undefined : null };
-  return { family: fam, strain, tells, author, ...genomeOfNode(r, level, fam, author, elite, !!strain, gen) };
+  const g = genomeOfNode(r, level, fam, author, elite, !!strain, gen);
+  return { family: fam, strain, tells, author, ...(dig ? { ...digInto(g, dig.gene, fam), dug: dig.gene } : g) };
+}
+// A dig in's gene on a rolled genome, on top of the roll: a part gene (Ward, Twin, Mimic…) is its third part, a mutation
+// (Armored, Hasty…) its first mutation. A rolled mutation that would break the compatibility rules with it goes.
+export function digInto(g, gene, family) {
+  const G = GENES[gene], core = (FAMILIES[family]?.parts || []).filter((p) => p.pool !== 'third').flatMap((p) => partGenes(p));
+  const third = G?.parts ? gene : g.third, muts = G?.parts ? [...g.muts] : [gene, ...g.muts.filter((x) => x !== gene)];
+  while (muts.length > (G?.mutation ? 1 : 0) && compatible([...core, ...(third ? [third] : []), ...muts]).length) muts.pop();
+  return { third, muts, genes: [...(third ? [third] : []), ...muts] };
 }
 // A node's genome (genes.mjs rollGenome): its third part (a part gene, or none) and its mutations, at most one on a wild
 // virus and two on an elite. A named build keeps its own parts and rolls only mutations. gen: { bonus, known } from
@@ -124,7 +138,22 @@ export function genomeOfNode(r, level, family, author, elite = false, strain = f
   return { third: genes.find((id) => GENES[id].parts) || null, muts: genes.filter((id) => GENES[id].mutation), genes };
 }
 // opts: heat (Rotation adds an elite an act), gen (genome options: Testbed, Sinkhole).
-export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, gen = {} } = {}) {
+// A dead drop takes a node in its row: a cache first, then a spare terminal, then a fight in a row that has another,
+// so every act keeps its elite, its terminal and both its subsystems. Its own dice: the rest of the map is unchanged.
+function placeDrop(nodes, actNodes, drop, rows, r) {
+  const row = Math.max(1, Math.min(rows - 2, drop.row || 1)), inRow = actNodes.filter((n) => n.row === row);
+  const fights = (n) => actNodes.filter((x) => x.row === n.row && (x.kind === 'virus' || x.kind === 'elite')).length;
+  const rank = (n) => (n.kind === 'cache' ? 0 : n.kind === 'term' && actNodes.filter((x) => x.kind === 'term').length > 1 ? 1 : n.kind === 'virus' && fights(n) > 1 ? 2 : n.kind === 'virus' ? 3 : n.kind === 'term' ? 4 : 9);
+  const best = Math.min(...inRow.map(rank)), pick = inRow.filter((n) => rank(n) === best);
+  const n = pick[Math.floor(r() * pick.length)];
+  if (!n || best === 9) return null;
+  for (const k of ['family', 'strain', 'tells', 'author', 'genes', 'third', 'muts', 'mutation', 'reward', 'rare', 'event', 'bait', 'tokens', 'gear', 'faction']) delete n[k];
+  Object.assign(n, { kind: 'drop', drop: drop.id, card: drop.card, frag: drop.frag, path: `/${ACTS[n.act].dir}/drop` });
+  return nodes[n.id];
+}
+// opts: heat (Rotation adds an elite an act), gen (genome options: Testbed, Sinkhole), dropAct (the act a dead drop
+// goes in: the first one you play).
+export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, gen = {}, dropAct = 0 } = {}) {
   const r = seeded(seed * 31 + 7);
   const rules = heatRules(heat);
   const acts = actsOf(card), rows = rowsOf(card), w0 = { ...BREACH.weights, ...(KIND_WEIGHTS[card.kind] || {}) };
@@ -175,6 +204,8 @@ export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, ge
     const fights = actNodes.filter((n) => n.kind === 'virus' || n.kind === 'elite');
     for (const n of fights) { n.reward = n.kind === 'elite' ? 'cve' : weighted(r, DRAFT.reward); n.rare = act > 0 && r() < DRAFT.rareNode; }
     for (const k of ['mod', 'cve', 'gear']) if (!fights.some((n) => n.reward === k)) { const c = fights.filter((n) => n.kind === 'virus' && fights.filter((x) => x.reward === n.reward).length > 1)[0]; if (c) c.reward = k; }
+    // A dead drop (world.mjs, the card's world.drop) in the first act you play, in the row wick's lead named.
+    if (card.world?.drop && act === dropAct) placeDrop(nodes, actNodes, card.world.drop, rows, seeded((seed ^ 0xd20b) >>> 0));
     // Wire the act to what came before (all its first row hangs off the last gate) and to its own exit.
     const first = actNodes.filter((n) => n.row === 0), last = actNodes.filter((n) => n.row === rows - 1);
     if (prevExit) for (const n of first) edges.push([prevExit, n.id]);
@@ -328,7 +359,7 @@ export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER
   // What your network does to the roll of this server's viruses: Testbed (linked) adds a point, Sinkhole (linked) keeps
   // them to genes you've decoded.
   const gen = { bonus: (outputs.testbed ? 1 : 0) - (outputs.sinkhole > 1 ? 1 : 0), known: outputs.sinkhole ? new Set(Object.keys(GENES).filter((id) => decoded(s, id))) : null };
-  const map = replay ? replayMap(seed, level, card) : generateMap(seed, level, card, { heat, gen });
+  const map = replay ? replayMap(seed, level, card) : generateMap(seed, level, card, { heat, gen, dropAct: from });
   s.breach = {
     v: 2, seed, level, server: card.id, map, at: null, path: [], cleared: {}, rolls: 0, heat: rules.heat, rules,
     signal: 0, max: 0, tokens: BREACH.startTokens, rerolls: rules.audit ? 0 : BREACH.rerolls, rareBoost: 0,
@@ -339,6 +370,8 @@ export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER
   if (card !== SERVER_CARD) {
     Object.assign(b, { card, outputs: { ...outputs }, prior, pool, bounty, xpMult: xp * rules.xp, from, stats: { rests: 0, landed: 0, elites: 0, skips: 0, low: 1 } });
     applyOutputs(s, b, outputs, lastMods);
+    // A dig in pays like a heat rank: gear drops a level higher, and the Resident's unique roll gets +10%.
+    if (card.world?.digin) { b.fx.gearLevel += DIG.itemLevel; b.fx.unique = DIG.unique; }
   }
   b.max = sigMax(s, b); b.signal = b.max;
   s.run = null;
@@ -437,7 +470,10 @@ function resolve(s, n, opts) {
   if (n.kind === 'defrag') { b.screen = { kind: 'defrag', node: n.id }; return say(s, `${n.path}: a quiet sector. Defrag here.`); }
   if (n.kind === 'broker') { b.screen = { kind: 'broker', node: n.id, faction: n.faction, stock: brokerStock(s, n), half: !!b.fx.halfPrice }; b.fx.halfPrice = false; return say(s, `${n.path}: ${BROKERS[n.faction].name} has a stall open.`); }
   if (n.kind === 'term') { b.screen = { kind: 'term', node: n.id, event: n.event }; return say(s, `${n.path}: ${EVENTS[n.event].file}`); }
+  if (n.kind === 'drop') { b.screen = { kind: 'drop', node: n.id, read: false }; return say(s, `${n.path}: somebody left a note.`); }
 }
+// What a dead drop holds, by name: its card, and wick's note (campaign.mjs FRAGMENTS) when one is left to find.
+export const dropName = (n) => (n.card ? (CVES[n.card]?.name || MODS[n.card]?.name || n.card) : null);
 // The fight a node brings: [key, seed, opts] for selectEncounter.
 export function fightOf(s, n) {
   const room = n.path;
@@ -463,6 +499,7 @@ export function fight(s, n, { pause = false, sample = null } = {}) {
   if (!e) return;
   e.breach = n.id;
   if (sample) e.breachSample = true;
+  if (n.kind === 'gate' && b.card?.world?.digin) digGate(s, e.virus, b.card, n);
   const base = BREACH.size[sample ? 'virus' : n.kind] || BREACH.size.virus, more = b.card?.size || {};
   const loud = b.rules?.loud ? BREACH.loud : { hp: 1, dmg: 1 }; // heat 1: every fight bigger and harder
   const size = { hp: base.hp * (more.hp || 1) * loud.hp, dmg: base.dmg * (more.dmg || 1) * loud.dmg }; // a campaign card's own sizing on top
@@ -502,6 +539,26 @@ export function fight(s, n, { pause = false, sample = null } = {}) {
   if (pause && s.encounter) s.encounter.paused = true;
 }
 
+// A gate on a server an author dug in on (world.mjs): the guard keeps its parts and its fixed tells, and the author's
+// gene joins it. A part gene brings its part (the Lockbox, the Mirror…), guarding the gate's signature part where the
+// gene names a partner; a mutation goes on a part as a rolled one would.
+export function digGate(s, v, card, n) {
+  const gene = card.world.digin.gene, G = GENES[gene];
+  if (!G) return;
+  const spec = G.parts?.[card.family];
+  if (spec) {
+    const ps = v.parts.filter((p) => p.kind !== 'fragment'), mark = ps.find((p) => p.special) || ps.find((p) => p.attack) || ps[0];
+    const own = { ...spec, id: ps.some((p) => p.id === spec.id) ? `${spec.id}2` : spec.id };
+    for (const k of ['ward', 'lock', 'twin']) if (own[k]) own[k] = mark.id;
+    const p = makePart(own, 'system', (v.hpPower || 1) * DIG.gatePart);
+    p.rolled = true; p.dug = true;
+    if (p.attack?.amount && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * (v.power || 1)));
+    v.parts.push(p);
+    (v.genes ||= []).push({ id: gene, src: 'rolled', part: p.id });
+  } else if (G.mutation) applyMutations(s, v, { muts: [gene] }, n.seed);
+  v.dug = gene;
+  say(s, `${AUTHORS[card.world.digin.author]?.name || card.world.digin.author} dug in: ${GUARDS[n.guard].name} carries ${G.name}.`, 'breach-bad');
+}
 // Sinkhole's Now: the act's fights you haven't reached roll again, from the genes you've decoded.
 function sinkholeNow(s, act) {
   const b = s.breach, known = new Set(Object.keys(GENES).filter((id) => decoded(s, id)));
@@ -676,6 +733,14 @@ export function act(s, verb, arg = null) {
       else { tokens(s, n.tokens); const it = n.gear && addItem(s, rollItem(rnd(b, 5), { level: n.level + (b.fx.gearLevel || 0), rarity: rnd(b, 6)() < 0.35 ? 'tuned' : 'stock' }), 'Pulled: '); if (it) { b.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'breach-good'); } }
       b.cleared[n.id] = true; next(s);
     } else if (verb === 'leave') { b.cleared[n.id] = true; say(s, 'You leave the cache alone.'); next(s); }
+    else deny(s, 'cat, pull or leave.');
+  } else if (sc.kind === 'drop') {
+    // A dead drop (world.mjs): wick's note and a card for your draft pool. The campaign pays it when the breach ends,
+    // won or lost. Left alone, it stays on the map.
+    const n = b.map.nodes[sc.node], what = dropName(n);
+    if (verb === 'cat') { sc.read = true; say(s, `cat note.txt: ${what ? `${what}, for your draft pool` : 'a note, and nothing else'}.`); }
+    else if (verb === 'pull') { b.dropped = n.id; b.cleared[n.id] = true; say(s, `Pulled: ${what ? `${what} joins your draft pool` : 'the note'}.`, 'breach-good'); next(s); }
+    else if (verb === 'leave') { b.cleared[n.id] = true; say(s, 'You leave the drop where it is.'); next(s); }
     else deny(s, 'cat, pull or leave.');
   } else if (sc.kind === 'defrag') {
     // Rest, recompile (a mod to its + version) or re-slot. Zerologon: rest and recompile both. Service Account (a
@@ -869,7 +934,7 @@ export function treeLines(s) {
   }
   return lines;
 }
-export const MARK = { virus: 'v', elite: 'E', cache: '$', defrag: '+', broker: 'b', term: '>', gate: 'G', boss: 'R' };
+export const MARK = { virus: 'v', elite: 'E', cache: '$', defrag: '+', broker: 'b', term: '>', gate: 'G', boss: 'R', drop: 'D' };
 
 // ---------- the bot (breachsim.mjs) ----------
 // How a player walks the map and drafts. Three draft policies, to measure how much drafting is skill:
@@ -924,6 +989,7 @@ export function botRoute(s) {
       if (x.kind === 'virus') v += k * (sig > 0.45 ? 2.5 : -1);
       if (x.kind === 'elite') v += k * (sig > 0.8 && ready ? 3 : -4);
       if (x.kind === 'cache') v += k * 2;
+      if (x.kind === 'drop') v += k * 5; // a dead drop: the bot follows wick's leads
       if (x.kind === 'term') v += k * 1.5;
       if (smart && visible(s, x) && (x.kind === 'virus' || (x.kind === 'elite' && sig > 0.8))) v += k * rewardValue(s, x);
     }
@@ -950,6 +1016,7 @@ export function botPick(s) {
   }
   if (sc.kind === 'rewrite') { const pref = ['restorepoint', 'memorymap', 'kernelhook', 'warmstart', 'forgedkeys', 'zonetransfer', 'spamcannon', 'testbed', 'slushfund', 'maildrop', 'audittrail', 'listeningpost', 'jumphost', 'nightlybuild', 'serviceaccount', 'bountyboard', 'range', 'sinkhole', 'pricefix', 'archive']; const i = sc.options.map((id, k) => [k, pref.indexOf(id)]).sort((a, c) => a[1] - c[1])[0][0]; return ['pick', i]; }
   if (sc.kind === 'cache') return sc.read ? [b.map.nodes[sc.node].bait ? 'leave' : 'pull'] : ['cat'];
+  if (sc.kind === 'drop') return sc.read ? ['pull'] : ['cat'];
   if (sc.kind === 'defrag') {
     const mods = recompilable(b);
     if (sc.recompile) { if (!mods.length) return ['done']; if (policy === 'random') return ['plus', mods[Math.floor(botRand(b) * mods.length)]]; const build = buildTags(s); return ['plus', mods.map((id) => ({ id, v: linksOf(s, { kind: 'mod', id }, build).n + RANK3[CVE_RARITY[MODS[id].rarity]] })).sort((a, c) => c.v - a.v)[0].id]; }
