@@ -757,7 +757,7 @@ The designer approved the recommendations on the first seven open decisions:
 
 **What level a reflashed network is.** Classes keep their levels through a reflash, so the new network can't restart at level 1. A reflashed network is generated around your current level, the way a new zone opens at the level cap. Its layers band upward from your level with depth, and its lair and boss line sit at the top of that band. Each reflash also raises a **reflash tier** that the network carries. Every tier adds to the virus difficulty budget, raises implicit tiers, and lifts the item level of what drops, with a cap so it stays inside the balance bands. Repeat reflashes become a climb of their own instead of a reset. A reflash only opens at full completion, which in practice means late in the climb, so the new network starts near the top of the level range anyway.
 
-## 15. What shipped: phases 0 and 1
+## 15. What shipped: phases 0 and 1, and phase 3 on breaches
 
 Phases 0 and 1 are built: today's content as genes, authors and bylines, the gene codex, `scan` and `inspect`, the compatibility rules applied to today's content, HASHLORD and MIRRORSHADE rebuilt, and the per-gene cost and answer checks. No new gene rolls into a wild virus, and nothing from phases 2 to 5 is in. SAVE_VERSION stays 36.
 
@@ -912,3 +912,16 @@ The designer settled 1 and 4 after the kit review (docs/kits.md, section 11). A 
 - Every gene carries `implicit`, its line for phase 2, and `counter`, ACTUARY's swap for phase 5.
 - BOSSES take `extra` parts, a `trim` below a level, `floor`, `band` and `signature`, and the phase verbs now include `fork:<part>`, `harmony` and `doppelganger`. Phase 4's 14 new bosses are data plus one signature verb each.
 - `GENE_BOTS.ignore`, `TELL.sim.only` and `genesim.mjs` are the per-gene harness section 11 asks for. The pairs, sampled-genome and hardest-genome checks are the next ones to add.
+
+### 15.8 Phase 3, on breaches: rolled genomes
+
+Shipped with the roguelite's phase 3 (docs/roguelite.md 9.3), on breach nodes only. The old game's wild viruses still roll as before (one third part or strain, maybe one mutation), so `golden.test.mjs` holds.
+
+- **`rollGenome`** (genes.mjs) draws by weight from the genes open at the virus's level (an author's signature genes 3, the rest of its toolkit 1, anything else 0.1), strikes a gene that breaks a compatibility rule (eight tries a draw), and stops at the gene count or the budget. It rolls only genes that are wired today: the third parts of the virus's body (Ward, Mutex lock, Tripwire; Twin, C2 command; Decoy mirror, Mimic) and the four mutations (Armored, Regenerative, Hasty, Adaptive). None of the 19 new genes is added.
+- **The budget** is `budgetFor` less 2 points on a breach (`BREACH.geneBonus`): at full budget the bot's breach win rate fell from 72% to 44% at heat 0, far outside the phase 0 band. That puts levels 1 to 7 at the body alone, 8 to 12 at one gene (2 points), 13 to 16 at 3 points, 17 to 24 at 4. An elite has 3 points and one gene more. A gene count caps it too (`GENE_COUNT`: one from level 4, two from 8, three from 25).
+- **The designer's caps.** At most one mutation on a wild virus, two on an elite (`MUTATION_CAP`); one third part, since a body has room for one. Bosses keep their hand-written genes, and gates are fixed guards.
+- **A mutation lives on a part** (breach.mjs `applyMutations`): never the third part where another will do, two mutations on two parts. Armored puts 1 ◆ on every part, Hasty brings every attack a cycle sooner and repeats it a cycle faster for 10% of every part's Integrity, and Regenerative and Adaptive work while their part lives (combat.mjs `mutated`). Breaking the part ends the rule: Armored's ◆ go, Hasty's attacks slow back down. A hot tag on the part names the mutation it carries. The virus's name takes the adjective of its costliest rolled gene, as before.
+- **Spike cap (rule 5).** No rollable gene adds damage (Hasty makes attacks sooner, not bigger), so a rolled genome can't push a hit past the cap; the runtime cap on tells (`spikeCap`) stands as it was. Step 6 of 5.2 (simulating the first 20 cycles) isn't run.
+- **On the map.** A node's card shows its genes as chips (genome.mjs `chipOf`): ??? and a category until you've met a gene, its name once seen, its rule once decoded, or every name and rule with a captured Audit Trail. Fighting it puts the chips on the virus's bar, as any fight does.
+- **Sinkhole and Testbed** shape the roll: a server linked to a Sinkhole rolls only genes you've decoded (none, if you've decoded none: the body alone), and one linked to a Testbed rolls a point more.
+- **Measured** (`breachsim.mjs`, heat 2, 96 seeds a class, level 10): with rolled genomes the random drafter wins 58% and the smart one 64%; with the phase 0 roll (one third part, no mutation) 57% and 61%. `drafting.test.mjs` samples 60 seeds at six levels and checks every node's genome against the caps, the budget and `compatible`.

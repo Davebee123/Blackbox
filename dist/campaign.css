@@ -117,3 +117,15 @@
   .cp-out li { grid-template-columns: 56px minmax(0, 1fr); }
   .cp-out li span:last-child { grid-column: 2; }
 }
+
+/* ---- heat (heat.mjs): the picker on a card, the mark on a held node, the rank on the strip ---- */
+.cp-mark.heat { color: var(--bg); background: var(--hot); }
+.cp-heat { display: grid; gap: var(--s3); min-width: 0; }
+.cp-heat-k { display: flex; align-items: center; gap: var(--s3); }
+.cp-heat-k .btn { width: var(--h-btn-sm); padding: 0; justify-content: center; font: 600 14px var(--mono); }
+.cp-heat-k b { min-width: 22px; text-align: center; font: 600 16px var(--mono); color: var(--bright); cursor: help; }
+.cp-heat-k b.hot, .cp-strip b.hot { color: var(--hot); }
+.cp-heat-k small { font: 11px var(--mono); color: var(--dim); }
+.cp-heat-mods { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2); }
+.cp-heat-mod { display: inline-flex; align-items: center; gap: var(--s2); height: var(--h-chip); padding: 0 var(--s3); border: 1px solid rgba(255, 91, 61, 0.45); border-radius: var(--r-tag); font: 500 11px var(--mono); color: var(--text); white-space: nowrap; cursor: help; }
+.cp-heat-mod b { color: var(--hot); font-weight: 700; }

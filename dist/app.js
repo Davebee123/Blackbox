@@ -67,7 +67,7 @@ function load() {
       const raw = JSON.parse(localStorage.getItem(CP.CAMPAIGN_KEY));
       if (raw?.camp) {
         const s = restore(raw);
-        if (s.camp) { if (active(s) && s.breach?.mods?.length) patchMods(s.breach.mods); return s; } // a fight you left: its mods back on
+        if (s.camp) { CP.migrate(s); if (active(s) && s.breach?.mods?.length) patchMods(s.breach.mods, s.breach.plus || []); return s; } // a fight you left: its mods back on
       }
     } catch { /* a broken campaign save: start over */ }
     const s = fresh();
@@ -101,7 +101,7 @@ function load() {
     const cls = ['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('class') || params.get('cls')) ? params.get('class') || params.get('cls') : 'breaker';
     const lv = Math.max(1, Math.min(50, Number(params.get('level')) || 10));
     BR.outfit(s, { cls, level: lv, sub: params.get('sub') || params.get('subclass'), gearSeed: Number(params.get('seed')) || 0 });
-    BR.startBreach(s, { seed: Number(params.get('seed')) || (newRng() % 100000) + 1, level: lv });
+    BR.startBreach(s, { seed: Number(params.get('seed')) || (newRng() % 100000) + 1, level: lv, heat: Math.max(0, Math.min(8, Number(params.get('heat')) || 0)) });
     return s;
   }
   if (playtest) {
@@ -439,11 +439,12 @@ document.addEventListener('click', (e) => {
   feel.key('click');
   if (verb === 'sel') { campUi.sel = arg; dirty = true; if (matchMedia('(max-width: 900px)').matches) requestAnimationFrame(() => document.querySelector('.cp-side')?.scrollIntoView({ block: 'start', behavior: 'smooth' })); return; }
   if (verb === 'bounty') { const [id, k] = arg.split(':'); campUi.bounty[id] = campUi.bounty[id] === k ? null : k; dirty = true; return; }
+  if (verb === 'heat') { const [id, d] = arg.split(':'); campUi.heat[id] = Math.max(CP.heatFloor(campaign, id), Math.min(CP.heatOpen(campaign), heatPick(id) + Number(d))); dirty = true; return; }
   if (verb === 'breach') {
     const [id, from] = arg.split(':');
     if (campaign.breach && !campaign.breach.result) return go('breach');
     if (campaign.breach) CP.leave(campaign);
-    const first = campaign.serial, br = CP.launch(campaign, id, { from, bounty: campUi.bounty[id] || null });
+    const first = campaign.serial, br = CP.launch(campaign, id, { from, bounty: campUi.bounty[id] || null, heat: heatPick(id) });
     const ev = campaign.logs.filter((x) => x.id > first);
     if (!br) { const w = ev.findLast((x) => x.type === 'warning'); return notice(w?.message || 'Out of reach.', true); }
     campUi.bounty[id] = null; bxUi.pack = false; bxUi.log = false; bxUi.seen.clear();
@@ -453,6 +454,8 @@ document.addEventListener('click', (e) => {
   }
   if (verb === 'leave') { const id = campaign.breach?.campaign?.id; CP.leave(campaign); if (id) campUi.sel = id; save(); go('campaign'); }
 });
+// The heat a server's card is set to: what you picked, else the floor a re-image asks for.
+function heatPick(id) { return Math.max(CP.heatFloor(campaign, id), Math.min(CP.heatOpen(campaign), campUi.heat[id] ?? CP.heatFloor(campaign, id))); }
 // The breach strip's Pack pop-over and the tty: a click toggles them; a click elsewhere or Esc closes the pack.
 document.addEventListener('click', (e) => {
   const t = e.target.closest?.('[data-bx-ui]');
@@ -822,7 +825,7 @@ function run(raw) {
   if (text.startsWith("'") || text.startsWith('say ')) return notice('Chat arrives with co-op. For now it is just you and the virus.');
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
   if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|scan|codex|collection|hold|now)\b/.test(text)) {
-    if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, skip, reroll, cat, pull, rest, buy, patch, leave, choose). In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, loadout, archive and system.', false, null, true);
+    if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, skip, reroll, cat, pull, rest, recompile, plus <mod>, buy, patch, service, leave, choose). In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, loadout, archive and system.', false, null, true);
     return notice(`${text.split(' ')[0]}: not on the campaign. Type help.`, true);
   }
 

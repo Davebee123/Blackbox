@@ -103,7 +103,7 @@ const jitter = (v, t) => { const x = Math.sin(((v.id || '').length * 31 + (t.cou
 export function plannedTells(v) {
   const tier = tierOf(v.level);
   const elite = v.elite && !v.champion;
-  let count = tier.count + (elite ? TELL.elite.count : 0);
+  let count = tier.count + (elite ? TELL.elite.count : 0) + (v.extraTells || 0); // extraTells: a breach gate at heat 2 (breach.mjs)
   if (v.boss) count = Math.max(count, TELL.boss.count);
   const list = [];
   for (const def of setOf(v)) {

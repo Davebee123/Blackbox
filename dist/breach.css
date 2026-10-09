@@ -266,3 +266,37 @@
 /* the choice in a tile: framed amber, the tile is the card */
 .bx-card-act .btn { border-color: var(--amber-deep); }
 .bx-card-act .btn:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-wash); }
+
+/* ---- phase 3: what a draft offers, shown ahead; tags that light up; recompile; heat ---- */
+/* a fight's reward: mods teal, CVEs violet, gear amber; a yellow star for a sure rare */
+.bx-rw { display: inline-flex; align-items: center; gap: 2px; height: 15px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 9px/13px var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; cursor: help; background: var(--panel-2); }
+.bx-rw.rw-mod { color: var(--you); } .bx-rw.rw-cve { color: var(--daemon); } .bx-rw.rw-gear { color: var(--next); }
+.bx-rw.rare { box-shadow: 0 0 0 1px var(--r-custom); }
+.bx-rw.rare::first-letter { color: var(--r-custom); }
+.bx-rw.in { height: 16px; vertical-align: 1px; }
+.bx-node .bx-rw { margin-top: 1px; }
+.bx-node.s-fog .bx-rw, .bx-node.s-cleared .bx-rw { display: none; }
+.bx-peek-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); min-width: 0; }
+.bx-genes { display: inline-flex; flex-wrap: wrap; gap: var(--s2); margin: 0; }
+/* a card's tags: makes (arrow out) solid, wants (arrow in) dashed; lit teal where it meets your build */
+.bx-tags, .bx-build { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.bx-build { padding-bottom: var(--s3); border-bottom: 1px dashed var(--line); }
+.bx-build .lbl { margin-right: var(--s2); }
+.bx-tag { display: inline-flex; align-items: center; height: 17px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: var(--r-tag); font: 500 10px/15px var(--mono); color: var(--muted); white-space: nowrap; cursor: help; }
+.bx-tag.w { border-style: dashed; }
+.bx-tag.on { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.1); }
+.bx-link { margin-left: var(--s3); padding: 0 4px; border-radius: var(--r-tag); background: var(--you); color: var(--bg); font: 700 10px/14px var(--mono); letter-spacing: 0; cursor: help; }
+.bx-card.k-mod.r-tuned { border-top-color: var(--r-tuned); } .bx-card.k-mod.r-custom { border-top-color: var(--r-custom); }
+.bx-perk.mod.plus { border-left-color: var(--r-custom); }
+/* recompile: what the mod does now, then its + version */
+.bx-plus { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); }
+.bx-plus li { display: grid; gap: var(--s2); padding: var(--s4) var(--s5); border: 1px solid var(--line); border-left: 2px solid var(--you); border-radius: var(--r-btn); background: var(--inset); }
+.bx-plus b { font: 600 14px var(--sans); color: var(--bright); }
+.bx-plus b .you { color: var(--r-custom); }
+.bx-arrow { color: var(--dim); }
+.bx-plus p { margin: 0; font-size: 12px; }
+.bx-was-t { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(143, 119, 72, 0.6); }
+.bx-plus-t { color: var(--text); }
+.bx-plus .btn { justify-self: start; }
+/* heat on the strip */
+.bx-heat b { color: var(--hot); }
