@@ -2,6 +2,8 @@
 
 This is a design for review. Nothing in it is built. It adds a world around the breach campaign (docs/roguelite.md 9.3, GAME_RULES.md *Breach campaign*) without adding free roam or a separate consequences system.
 
+**Approved (designer: "Seems solid to me for now").** Every recommendation in the open questions stands. Build W0 after roguelite phase 3 merges.
+
 The designer's brief, in their words:
 
 > "I still kinda want there to feel like a world, not just invading these servers. Sorta a mix between the two."
