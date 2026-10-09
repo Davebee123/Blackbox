@@ -100,7 +100,7 @@ export const CONFIG = {
   // tick +75%, Keepalive stretches burns 4 cycles.
   surprise: { width: 0.15, injectNow: 1, tagCycles: 6, tagged: 1.75, keepalive: 4 },
   // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
-  slip: { perRun: 1, leakedCreds: 3 },
+  slip: { perRun: 1 },
   daemonSlots: 1, // +1 at server levels 10 and 20 (your highest class level); Operators +1
   // Runs
   depthThreat: 3, // guard threat added per depth below the first

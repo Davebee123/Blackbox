@@ -157,7 +157,20 @@ export const RULES = {
   'race-window': { tier: 'major', name: 'Race Window', fx: { when: 'crit', do: 'refund-skill' } },
   'deep-inspection': { tier: 'major', name: 'Deep Inspection', fx: { when: 'hit', if: 'target-telling', do: 'damage%' }, value: [30, 45] },
   'clean-room': { tier: 'major', name: 'Clean Room', fx: { when: 'struck', do: 'crit-normal' } },
+  // Skill rules (dist/skillrules.mjs): each changes how one skill of one class plays. They were drafted mods on a breach;
+  // now they roll like any rule, but only when the roll names a class (rollItem's cls: the breach campaign), and only
+  // that class's. text(v): the rule's sentence. patch(v): the skill's fields while a fight runs.
+  aftershock: { tier: 'minor', cls: 'breaker', skill: 'crack', name: 'Aftershock', of: 'of Aftershocks', value: [5, 12], text: (v) => `Crack also deals ${v} damage to the target for each ◆ it breaks.` },
+  'zero-click': { tier: 'major', cls: 'breaker', skill: 'exploit', name: 'Zero Click', value: [4, 10], text: (v) => `Exploit also deals ${v} damage to every other part, and Exposes every part for 2 cycles.` },
+  backpressure: { tier: 'minor', cls: 'bastion', skill: 'rate-limit', name: 'Backpressure', of: 'of Backpressure', text: () => 'Rate Limit also delays the target\'s next attack by 1 cycle.' },
+  'reflective-acl': { tier: 'major', cls: 'bastion', skill: 'firewall', name: 'Reflective ACL', value: [100, 160], text: (v) => `Deals ${v}% of a hit back to the part that dealt it when your shield absorbs that whole hit.` },
+  'long-poll': { tier: 'minor', cls: 'infiltrator', skill: 'keepalive', name: 'Long Poll', of: 'of Long Polling', text: () => 'Keepalive makes every burn on the target tick once more.' },
+  'viral-load': { tier: 'major', cls: 'infiltrator', skill: 'inject', name: 'Viral Load', value: [2, 6], patch: (v) => ({ grow: v }), short: (v) => `Burn 20 ×4, +${v} a tick`, text: (v) => `Inject's burn deals ${v} more damage each time it ticks.` },
+  snare: { tier: 'minor', cls: 'operator', skill: 'hook', name: 'Snare', of: 'of Snares', text: () => 'Hook also delays the target\'s next attack by 1 cycle.' },
+  daemonize: { tier: 'major', cls: 'operator', skill: 'deploy', name: 'Daemonize', value: [8, 14], patch: (v) => ({ helper: v, ticks: 40 }), short: (v) => `Helper: ${v} until done`, text: (v) => `Deploy's helper deals ${v} damage each cycle and stays for the rest of the fight.` },
 };
+// The rules a roll can carry: the general ones, and a class's skill rules when the roll names that class.
+export const rulePool = (tier, cls = null) => Object.keys(RULES).filter((k) => RULES[k].tier === tier && (!RULES[k].cls || RULES[k].cls === cls));
 // A rule's number at an item level (roll: 0–1, ±10%).
 export const ruleValue = (id, level, roll = 0.5) => {
   const v = RULES[id]?.value;
@@ -306,7 +319,7 @@ export function rollItem(rand, opts = {}) {
   }
   // Its rule: a minor one on a blue, a major one on a yellow (RULES).
   const tier = !zeroDay && r.rule;
-  const rule = tier ? pick(rand, Object.keys(RULES).filter((k) => RULES[k].tier === tier)) : null;
+  const rule = tier ? pick(rand, rulePool(tier, opts.cls)) : null;
   const ruleVal = rule ? ruleValue(rule, level, rand()) : undefined;
   const pre = affixes.map((a) => AFFIXES[a]).find((a) => a.kind === 'prefix'), suf = affixes.map((a) => AFFIXES[a]).find((a) => a.kind === 'suffix');
   const name = zeroDay ? ZERO_DAYS[zeroDay].name

@@ -44,7 +44,7 @@ function gearUp(s) {
 }
 
 // One class's campaign: until it reaches level `to` or runs out of breaches.
-export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trace = false } = {}) {
+export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trace = false, sub = null } = {}) {
   const s = fresh();
   s.rng = (seed * 2654435761 + cls.length * 131) >>> 0;
   s.profile = { handle: 'bot', pwLen: 6, since: 0 };
@@ -53,7 +53,7 @@ export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trac
   const log = [], reached = {};
   let minutes = 0;
   for (let i = 0; i < max && hackerLevel(s) < to; i++) {
-    spendTalents(s, { sub: PICK[cls] });
+    spendTalents(s, { sub: sub || PICK[cls] });
     gearUp(s);
     const t = nextTarget(s);
     if (!t) break;
@@ -73,6 +73,9 @@ export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trac
     // breach (playOut equips as it goes) or after it.
     gearUp(s);
     row.upgrades = rigOf(s).filter((x, k) => x && x !== rig.split(',')[k]).length;
+    // A real upgrade (docs/roguelite.md 9.3): a rarity step, or 3 item levels or more, in a slot.
+    const RANK = { stock: 1, tuned: 2, custom: 3, zeroday: 4, indemnified: 4 }, was = rig.split(',');
+    row.real = rigOf(s).filter((x, k) => { const a = stashItem(s, was[k]), c = x && stashItem(s, x); return c && x !== was[k] && (!a || RANK[c.rarity] > RANK[a.rarity] || c.level >= a.level + 3); }).length;
   }
   return { cls, seed, level: hackerLevel(s), xp: hackerOf(s).xp, log, reached, held: SERVERS.filter((x) => held(s, x.id)).length, state: s };
 }
@@ -91,7 +94,7 @@ export function report(runs) {
     for (const x of all) if (x.diedAt) deaths[x.diedAt.replace(/@.*/, '')] = (deaths[x.diedAt.replace(/@.*/, '')] || 0) + 1;
     const perLevel = {};
     for (let l = 1; l < 20; l++) { const a = at(l, 'breaches'), b2 = at(l + 1, 'breaches'); if (a != null && b2 != null) perLevel[l] = +(b2 - a).toFixed(1); }
-    const lootOf = (lo, hi) => { const xs = all.filter((x) => x.level >= lo && x.level <= hi); return xs.length ? { banked: xs.reduce((n, x) => n + (x.banked || 0), 0) / xs.length, upgrades: xs.reduce((n, x) => n + (x.upgrades || 0), 0) / xs.length } : null; };
+    const lootOf = (lo, hi) => { const xs = all.filter((x) => x.level >= lo && x.level <= hi); return xs.length ? { banked: xs.reduce((n, x) => n + (x.banked || 0), 0) / xs.length, upgrades: xs.reduce((n, x) => n + (x.upgrades || 0), 0) / xs.length, real: xs.reduce((n, x) => n + (x.real || 0), 0) / xs.length } : null; };
     const loot = { '1-5': lootOf(1, 5), '6-10': lootOf(6, 10), '11-15': lootOf(11, 15), '16+': lootOf(16, 99) };
     out.push({ cls, loot, to5: at(5, 'breaches'), to10: at(10, 'breaches'), to15: at(15, 'breaches'), to20: at(20, 'breaches'), min10: at(10, 'minutes'), min20: at(20, 'minutes'), winLow: band(1, 5), winMid: band(6, 10), winHigh: band(11, 15), winTop: band(16, 25), win: Math.round((all.filter((x) => x.won).length / all.length) * 100), deaths, perLevel, level: avg((r) => r.level), held: avg((r) => r.held), breaches: avg((r) => r.log.length) });
   }
@@ -106,5 +109,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('class        to5  to10 to15 to20  min10 min20  win  1-5        6-10       11-15      16+        deaths');
   for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} ${f(r.to5)} ${f(r.to10)} ${f(r.to15)} ${f(r.to20)}  ${f(r.min10)}  ${f(r.min20)}  ${String(r.win).padStart(3)}%  ${r.winLow.padEnd(10)} ${r.winMid.padEnd(10)} ${r.winHigh.padEnd(10)} ${r.winTop.padEnd(10)} ${Object.entries(r.deaths).map(([k, v]) => `${k} ${v}`).join(', ')}`);
   for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} breaches per level: ${Object.entries(r.perLevel).map(([l, n]) => `${l}:${n}`).join(' ')}`);
-  for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} loot per breach (banked, upgrades): ${Object.entries(r.loot).filter(([, x]) => x).map(([k, x]) => `${k} ${x.banked.toFixed(1)}, ${x.upgrades.toFixed(1)}`).join(' · ')}`);
+  for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} loot per breach (banked, swaps, real upgrades): ${Object.entries(r.loot).filter(([, x]) => x).map(([k, x]) => `${k} ${x.banked.toFixed(1)}, ${x.upgrades.toFixed(1)}, ${x.real.toFixed(2)}`).join(' · ')}`);
 }

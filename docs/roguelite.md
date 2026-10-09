@@ -1,6 +1,6 @@
 # Roguelite: a run is a breach of one server
 
-This began as a design for review. Phase 0 (one breach), phase 2 (the campaign) and phase 3 (breadth: drafting, heat, rolled genomes) are built now: section 9.3 says what shipped. It proposes reshaping BLACKBOX into a roguelite inside a persistent world, the way Hades and Dead Cells work. Each run breaches one server on a branching map like Slay the Spire's. Class levels, gear, uniques and the servers you capture persist. What you draft inside a run resets.
+This began as a design for review. Phase 0 (one breach), phase 2 (the campaign) and phase 3 (breadth: heat, rolled genomes) are built now: section 9.3 says what shipped. Drafting shipped in phase 3 and was then removed for the map, scripts and gear: section 11. It proposes reshaping BLACKBOX into a roguelite inside a persistent world, the way Hades and Dead Cells work. Each run breaches one server on a branching map like Slay the Spire's. Class levels, gear, uniques and the servers you capture persist. What you draft inside a run resets.
 
 The designer's brief, in their words:
 
@@ -273,6 +273,8 @@ Nothing ticks in real time. Outputs fire at the start of a breach (tokens, CVE p
 | Network size | No cap. A capture costs a 40-minute run, and new captures only add rewrites you lack. | Diminishing returns come from rule 2, not a slot count |
 
 ## 4. Drafting
+
+*Superseded: drafting was built in phase 3 and removed after play (section 11).*
 
 ### 4.1 The draft
 
@@ -632,7 +634,7 @@ A version bump (38 to 39). A current player keeps everything about themselves, a
 
 Early levels come about one a breach. Runs die mostly to Residents, then act 2 and 3 viruses. The bot picks Payload, Warden, Demolitionist and Herder at 10: Phantom wins far fewer breaches than Payload (breachsim at 15: 0 of 10 against 3), and that gap is the playtest's to look at.
 
-**Phase 3, breadth**, shipped with drafting as its centre, plus heat, rolled genomes on breach nodes (genome phase 3, docs/genome.md 15.8) and a loot cut. README and GAME_RULES.md, *Breach drafting, genomes and heat*, describe it. The designer's brief: "if you're lucky, you'll win with good drafts" — the randomness should supply the material and skill turn it into a win.
+**Phase 3, breadth**, shipped with drafting as its centre, plus heat, rolled genomes on breach nodes (genome phase 3, docs/genome.md 15.8) and a loot cut. It has since been replaced by section 11 (no drafting); README and GAME_RULES.md, *Breach map, scripts and heat*, describe what runs now. The designer's brief: "if you're lucky, you'll win with good drafts" — the randomness should supply the material and skill turn it into a win.
 
 | Planned | Shipped |
 |---|---|
@@ -705,3 +707,64 @@ Changed on the way, from the tables: Heartbleed (3 a ◆ to 1), Mirai (a helper 
 | 12 | Lore delivery | `core.dump` only. Plus rare fragments on nodes. Plus a codex voice-over. | `core.dump` after every Resident, plus rare node fragments. Fragments are seeded so they're found in story order. |
 | 13 | Bounties | Cut. On server cards. Offered at breach start. | On server cards, up to 2 (3 with Bounty Board), take one, no penalty for failing. They're optional goals on the screen where you choose. |
 | 14 | Crew | Park. Co-op breaches. | Park. Co-op later as a shared map where each player drafts alone and the crew votes on the path. |
+
+## 11. Drafting removed: the map, scripts and gear
+
+The designer, after playing phase 3: drafting was "too on the nose", and "don't do in run power for now". The map should carry the run instead: keys and vaults, switches, alarms, and a rule for each kind of server. Mods become loot (gear rules) or talent options, CVEs become scripts. This section is what shipped; README and GAME_RULES.md, *Breach prototype*, *Breach campaign* and *Breach map, scripts and heat*, describe it in full. Sections 4 and 6.2, and the phase 3 part of 9.3, are history now.
+
+### 11.1 What went
+
+The draft (its screen, 1 of 3 after every fight), rerolls, skip-for-tokens, the rare pity, tags and the *Build* line, the reward pills on map nodes, the unlock pool (the CVE a server's first capture opened, each heat's first-capture unlocks), recompile at a defrag and NULL CHOIR's recompile, a broker's mods, CVEs and gear, GLASSJAW's reroll, the bounties' card unlocks, the rewrites' *Now* half, and the Phantom's two run-only talents (Rotating Proxies, Leaked Creds). Code: `dist/drafts.mjs` and `drafting.test.mjs` are deleted, and so are the drafting tests in `breach.test.mjs` and the `skill`, `cards` and `variance` modes of `breachsim.mjs` (no drafts, nothing to measure).
+
+### 11.2 Where the mods and CVEs went
+
+| Old | Now |
+|---|---|
+| Aftershock, Zero Click (Breaker); Backpressure, Reflective ACL (Bastion); Long Poll, Viral Load (Infiltrator); Snare, Daemonize (Operator) | **Skill rules on gear**: rare rules a blue or yellow item rolls, minor or major, for its class only (`RULES` in gear.mjs with a `cls`; `dist/skillrules.mjs` lays them on a fight). The old game never rolls them, and reforging never gives one. |
+| Ghost Route, Tracking Pixel | **Phantom talents**, where its tree had thin choices: Ghost Route (tier 2, beside Null Route) and Tracking Pixel (the capstone). |
+| The other 32 mods | Cut: Pry Bar, Overcommit, Critical Mass, Undertow, Shrapnel, Fragmentation, Breaching Charge, Positive Feedback, Arc Flash, Ban Hammer, Token Bucket, Deep Scan, Grudge Match, Counterweight, Cold Storage, Parity Bit, Scavenger, Needle, Slow Drip, Persistence, Lateral Movement, Chain Detonation, Side Load, Ping Flood, Barbed Hook, Clone, Zombie Swarm, Broadcast Storm, Disown, SYN Cookie, Loopback, Dead Drop. |
+| Sasser, KRACK, Shellshock, Spectre (taking EternalBlue's role), BlueKeep (Stuxnet's), Slowloris, Conficker (Follina's), Mirai, Ripple20, Meltdown | **Scripts** (`dist/scripts.mjs`): one-shot, carried between breaches, 3 slots, one a fight, no cycle. |
+| Heartbleed, EternalBlue, Rowhammer, WannaCry, PrintNightmare, Code Red, Stuxnet, Ghostcat, Thermite, Log4Shell, Dirty COW, Qbot, Smurf, TOCTTOU, POODLE, Zerologon, Follina | Cut (passive for-the-breach effects; three folded into scripts above). |
+
+A save's held CVEs become scripts on load (EternalBlue Spectre, Follina Conficker, Stuxnet BlueKeep and so on, up to 3, Sasser if none map). Scripts drop from vaults, elites (a quarter of them), hunters, Residents (half) and now and then a cache; brokers sell them for tokens (35, 55, 85 by rarity); a met bounty pays one, and Mail Drop mails one per capture. The hook for LOWLIGHT's room (docs/world.md W0) is `giveScript(s, id, why)`, `scriptStock(rng, n, floor)` and `priceOf` in `scripts.mjs`, with `scriptHooks.slots` for anything that adds slots.
+
+### 11.3 The map
+
+- **Keycards and vaults.** Per act, a vault (an Archive two) in a middle row and, in an earlier row, a virus carrying a keycard. Open it with a keycard (+15 Trace) or force it (10% Signal, +35 Trace). Contents: blue or yellow gear a third of the time, an uncommon or better script otherwise, and a log line from the server's author. Acts are five rows now so the pair fits (at most 5% of acts come out without one).
+- **Switches.** One an act: Patch server (the act's viruses lose 1 ◆) or Gate relay (the next gate or the Resident starts 20% thinner and attacks 2 cycles late). Fight its watchdog ICE (Trace −20) or splice it (+15).
+- **Trace and the hunter.** 0 to 100. Loud moves raise it (an elite +20, a vault +15 or +35, bait +25, a honeytoken +25, a splice +15, a finished cron job +10); quiet steps lower it (−3), a rest −10, Kestrel's scrub −30, Nightly Build −15 or −30 at gates. At 30 the alarm (a Mailhub's spam floods start); at 55 a hunter ICE, a level over its node, drops 1 to 3 rows ahead and steps toward you one node for each move you make, along links either way. If it reaches you, you fight it; it drops a script and your Trace falls to 15. Below 30 it loses you. Infiltrators raise Trace at half rate; heat 5 starts it at 30, heat 7 raises it 50% faster.
+- **Server kinds, one rule each** (on the server card, the strip and the map): Mailhub *Spam floods* (at Trace 30 a weak, quick extra part joins every fight), Archive *Deep storage* (two vaults and two keycards an act), Relay *Hops* (two shortcuts an act that skip a row), Mirror *Mirrors* (a cache an act hides an elite) and Lab *Overheat* (from cycle 10 the rack burns you for 2% a cycle and every part for 3%).
+
+### 11.4 Loot
+
+Gear comes from the Resident (one piece, white, blue or yellow), elites (12%), gates (8%) and vaults (a third); a plain virus, a bounty or a draft never pays gear. Blue and yellow pieces can roll the skill rules. `campaignsim.mjs` (the campaign's subclasses, 12 seeds to level 20): about 0.9 to 1.7 items banked a breach, and a real upgrade (a rarity step or three item levels in a slot) about 0.5 a breach at levels 6 to 15 and 0.25 to 0.4 from 16, so one every two to three breaches, then slower.
+
+### 11.5 Balance
+
+Format first: breach fights enrage (a virus from cycle 8, an elite 9, a gate 10: ×1.5, then ×1.25 every 3 cycles; Residents keep their own), elites always bring a charge, burst tells are tighter (`BREACH.tells`), and healing inside a fight stops at the Signal you brought in (`b.fightFrom`). Then the trims: per-kind sizes (`BREACH.size`) and a small per-subclass size (`BREACH.classSize`: the Warden's fights hit 15% harder, the Phantom's have 15% less Integrity and hit 20% softer, and so on), Phantom planner fallbacks, and PIER-5's Resident at full size (it was 1.15).
+
+`node campaignsim.mjs` (12 seeds a class to level 20; the campaign's subclasses Demolitionist, Warden, Payload, Herder; win rates by level band after):
+
+| Class | Breaches to 10, before | after | Win, before | after | 1–5 | 6–10 | 11–15 | 16+ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Breaker | 12 | 11 | 71% | 72% | 68% | 71% | 76% | 75% |
+| Bastion | 11 | 9 | 73% | 63% | 79% | 78% | 52% | 52% |
+| Infiltrator | 14 | 11 | 78% | 70% | 67% | 62% | 78% | 77% |
+| Operator | 12 | 10 | 77% | 75% | 75% | 65% | 78% | 85% |
+
+The other subclasses (Overclocker, Sysop, Phantom, Hijacker) win 66%, 62%, 60% and 68% (before: 69%, 70%, 69%, 75%).
+
+`node breachsim.mjs` (MERIDIAN-MX-14 at level 10, blue gear, two scripts, 48 runs a subclass):
+
+| Subclass | Before (drafting), heat 0 | After, heat 0 | After, heat 2 |
+|---|---:|---:|---:|
+| Demolitionist | 79% | 75% | 50% |
+| Overclocker | 71% | 71% | 65% |
+| Warden | 100% | 77% | 67% |
+| Sysop | 90% | 54% | 29% |
+| Payload | 69% | 79% | 58% |
+| Phantom | 31% | 44% | 25% |
+| Herder | 90% | 44% | 29% |
+| Hijacker | 69% | 25% | 6% |
+
+The Bastion's lead is gone: the Warden fell from 100% to 77% on the format changes and the size trim, and in the campaign the Bastion is now strong early and weak late (Labs, FLOODWALL and MIRRORSHADE from level 11). The Phantom rose from 31% to 44% (planner fallbacks, its two new talents, the trim) but is still the weakest Infiltrator, and HASHLORD's Lab counters it. The Operator reads low in this harness (a fresh level-10 subclass in blues against DEADBOLT, without yellows or Daemonize) and is the strongest class in the campaign, so its breachsim number is not a target. A breach is hunted in 8–21% of runs; peak Trace sits around 19 (Infiltrators) to 43.

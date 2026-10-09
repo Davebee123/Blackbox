@@ -365,6 +365,20 @@ function rest(s, t, from, answered = false) {
   t.after = from + (TELL.rest[t.kind] ?? 3) + jitter(s.encounter.virus, t);
   t.next = null;
 }
+// Every tell that's been said and hasn't landed is called off, as if answered, with no stagger (a breach's Ripple20
+// script, scripts.mjs). The Mimic's beat isn't a tell you can call off. Returns how many.
+export function tellCallOff(s, by) {
+  const T = tellsOf(s), e = s.encounter;
+  let n = 0;
+  for (const t of T?.list || []) {
+    if (!t.told || t.kind === 'mimic') continue;
+    const p = sourceOf(s, t);
+    emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', `${by} calls off ${label(t)}.`, { source: p?.id, target: p?.id, tell: t.id, answered: true });
+    rest(s, t, e.cycle, true);
+    n++;
+  }
+  return n;
+}
 // A part broke (combat.mjs breakPart): its tells stop for good (they sit on a fixed part).
 export function tellBroke(s, p) {
   const T = tellsOf(s);

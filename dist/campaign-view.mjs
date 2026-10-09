@@ -7,8 +7,8 @@ import { lairUniques } from './network.mjs';
 import { BOSSES, BOSS_LOOT } from './data.mjs';
 import { AUTHORS } from './authors.mjs';
 import { REWRITES, outputLine } from './rewrites.mjs';
-import { CVES, MODS } from './drafts.mjs';
-import { ACTS } from './breach.mjs';
+import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
+import { ACTS, KINDS, BREACH } from './breach.mjs';
 import { residentAbout } from './breach-view.mjs';
 import { SERVERS, SERVER, LAYERS, CAMPAIGN, statusOf, outgrown, outputsFor, bountiesOn, BOUNTIES, BOUNTY_PAY, bestOf, archiveOf, FRAGMENTS, held, heatOpen, heatFloor, canReplay, recOf } from './campaign.mjs';
 import { HEAT, MAX_HEAT, heatList, heatPay } from './heat.mjs';
@@ -108,14 +108,14 @@ function cardMarkup(s, id) {
   if (outgrown(s, srv)) tags.push(`<span class="tag dim" title="Outgrown: ${L - srv.level} levels under you. Its kills pay little XP.">Outgrown</span>`);
   if (rec?.checkpoint && !rec.captured) tags.push(`<span class="tag warn" title="Checkpoint: gate ${rec.checkpoint.gate} is down. A retry can start past it.">Checkpoint · gate ${rec.checkpoint.gate}</span>`);
   const acts = srv.subsystems.length;
-  const shape = `${plural(acts, 'act')}${acts > 1 ? ` · ${plural(acts - 1, 'gate')}` : ''} · ${(srv.rows || 4)} rows`;
+  const shape = `${plural(acts, 'act')}${acts > 1 ? ` · ${plural(acts - 1, 'gate')}` : ''} · ${srv.rows || BREACH.rows} rows`;
   const rows = [
+    row('Rule', KINDS[srv.kind] ? `<span class="cp-rule"><b>${esc(KINDS[srv.kind].rule)}</b> <span>${esc(KINDS[srv.kind].text)}</span></span>` : '<span class="dim">none</span>', `How a ${srv.kind} plays: its one rule, on every breach of it.`),
     row('Resident', `<span title="${esc(residentAbout(srv.resident))}"><b>${esc(name)}</b> <small class="dim">lv ${srv.level + 1}</small></span>`),
     row('Loot', collection(s, srv), `${name}'s Collection: the uniques it can drop.`),
     row('Runs', `<div class="cp-runs">${runsLine(srv)}</div><small class="dim">${esc(shape)}</small>`),
     row('Best', esc(bestOf(s, id) || '—')),
   ];
-  if (srv.unlock && !rec?.captured) rows.push(row('Opens', `<span class="bx-perk cve r-${{ common: 'stock', uncommon: 'tuned', rare: 'custom' }[CVES[srv.unlock].rarity]}" title="${esc(`${CVES[srv.unlock].name}: ${CVES[srv.unlock].text}`)}">${esc(CVES[srv.unlock].name)}</span>`, 'Its first capture adds this CVE to your draft pool.'));
   rows.push(row('With you', reaching(s, id), 'The rewrites your captured servers run on a breach of this one. Each counts once, at its best tier.'));
   const outs = st === 'held' ? `<h3 class="bx-sec">Output <small>${Object.keys(rec.rewrites).length}/${srv.subsystems.flat().length}</small></h3><ul class="cap-lines cp-out">${srv.subsystems.flat().map((sub) => { const o = outputLine(sub, rec.rewrites[sub]); return `<li class="${rec.rewrites[sub] ? '' : 'stock'}"><span class="cap-sub">${esc(sub)}</span><b>${esc(o.name)}</b><span>${esc(o.text)}</span></li>`; }).join('')}</ul>` : '';
   const can = st === 'open' || st === 'held';
@@ -123,7 +123,7 @@ function cardMarkup(s, id) {
   const heat = heatOf(s, id);
   if (can && heatOpen(s) > 0) rows.push(row('Heat', heatPicker(s, id, heat), 'Heat: pick it for this breach. Each rank adds a modifier and pays for it.'));
   const go = !can ? '' : ck
-    ? `<button type="button" class="btn primary" data-camp="breach" data-arg="${esc(id)}:checkpoint" title="${esc(`Retry past gate ${ck}: a fresh map from act ${ck + 1}, with the rewrites from the acts behind it. Drafts and Signal start fresh.`)}">Breach from gate ${ck}</button><button type="button" class="btn" data-camp="breach" data-arg="${esc(id)}:start">From the start</button>`
+    ? `<button type="button" class="btn primary" data-camp="breach" data-arg="${esc(id)}:checkpoint" title="${esc(`Retry past gate ${ck}: a fresh map from act ${ck + 1}, with the rewrites from the acts behind it. Signal and Trace start fresh.`)}">Breach from gate ${ck}</button><button type="button" class="btn" data-camp="breach" data-arg="${esc(id)}:start">From the start</button>`
     : `<button type="button" class="btn primary" data-camp="breach" data-arg="${esc(id)}:start"${st === 'held' ? ` title="${esc('Re-image: breach it again. Each subsystem you clear keeps its rewrite or takes a new one, and the Resident is the same fight.')}"` : ''}>${st === 'held' ? 'Re-image' : 'Breach'}${heat ? ` · heat ${heat}` : ''}</button>`;
   const replay = st === 'held' && Object.values(rec.rewrites).some((x) => x.id === 'range') ? `<button type="button" class="btn" data-camp="breach" data-arg="${esc(id)}:replay"${canReplay(s, id) ? '' : ' disabled'} title="${esc(`Replay (Range): ${name} alone, for its loot. Each breach you win earns a replay.`)}">Replay<small>${s.camp.replays || 0} left</small></button>` : '';
   return `<section class="card cp-card${st === 'held' ? ' held' : ''}"><h2>Layer ${layer.n} · ${esc(layer.name)}</h2><h1>${esc(srv.name)}</h1><div class="tagline">${tags.join('')}</div>
@@ -144,15 +144,15 @@ function stripMarkup(s) {
   const all = {};
   for (const x of SERVERS) for (const { id, tier } of Object.values(c.servers?.[x.id]?.captured ? c.servers[x.id].rewrites : {})) all[id] = Math.max(all[id] || 0, tier);
   const chips = Object.entries(all).map(([rw, tier]) => `<li class="bx-perk mod" title="${esc(`${REWRITES[rw].name}${tier > 1 ? ' II' : ''}: ${REWRITES[rw].output[tier - 1]}`)}">${esc(REWRITES[rw].name)}${tier > 1 ? ' II' : ''}</li>`).join('');
-  const pool = c.pool.map((id) => CVES[id].name).join(', '), alts = (c.mods || []).map((id) => MODS[id].name).join(', ');
+  const bag = scriptsOf(s), scripts = bag.map((id) => `<li class="bx-perk script r-${TIER[SCRIPTS[id].rarity]}" title="${esc(scriptTip(id))}">${esc(SCRIPTS[id].name)}</li>`).join('');
   return `<header class="bx-hud cp-strip" aria-label="Your network">
     <span class="bx-hud-id" title="Your network: the servers you hold, and what they run for you."><span class="ico" ${icon('server')}></span><b>NETWORK</b></span>
     <span class="bx-stat" title="Held: servers you've captured. Each one's rewrites run on your breaches."><span class="lbl">Held</span><b>${n}</b><small>/${SERVERS.length}</small></span>
     <span class="bx-stat" title="Breaches: every run, won or lost."><span class="lbl">Breaches</span><b>${c.breaches}</b></span>
-    <span class="bx-stat" title="${esc(`CVE pool: what a draft can offer. ${pool}.`)}"><span class="lbl">CVEs</span><b>${c.pool.length}</b><small>/${Object.keys(CVES).length}</small></span>
-    <span class="bx-stat" title="${esc(`Mod pool: a mod for every skill on your bar, and the second mods heat opens${alts ? `: ${alts}` : ''}.`)}"><span class="lbl">Mods</span><b>${Object.values(MODS).filter((m) => !m.alt).length + (c.mods || []).length}</b><small>/${Object.keys(MODS).length}</small></span>
+    <span class="bx-stat" title="${esc(`Scripts: one-shot programs you carry from breach to breach and run in a fight, one a fight. ${bag.length} of ${slotsOf(s)} slots.`)}"><span class="lbl">Scripts</span><b>${bag.length}</b><small>/${slotsOf(s)}</small></span>
     <span class="bx-stat" title="${esc(`Heat: the highest rank you can breach at. Capture any server at heat ${heatOpen(s)} to open the next.${(c.heatCleared || []).length ? ` Cleared: ${c.heatCleared.sort((a, b) => a - b).join(', ')}.` : ''}`)}"><span class="lbl">Heat</span><b class="${heatOpen(s) ? 'hot' : ''}">${heatOpen(s)}</b><small>/${MAX_HEAT}</small></span>
     <span class="bx-stat" title="Archive: core.dump fragments recovered from Residents."><span class="lbl">Archive</span><b>${c.archive.length}</b><small>/${FRAGMENTS.length}</small></span>
+    ${scripts ? `<ul class="bx-perks cp-scripts" aria-label="Scripts">${scripts}</ul>` : ''}
     ${chips ? `<ul class="bx-perks" aria-label="Outputs">${chips}</ul>` : ''}
   </header>`;
 }

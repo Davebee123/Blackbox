@@ -22,7 +22,7 @@ CONFIG.tells = false; // these check skill numbers; tells.test.mjs checks the te
 const OLD_TALENTS = {
   breaker: [['sharp-exploit', 'hair-trigger'], ['core-dump', 'piercing'], ['cascade-failure', 'unsafe-mode']],
   bastion: [['deep-packet-inspection', 'service-pack'], ['backpressure', 'active-defense'], ['uptime', 'preemption']],
-  infiltrator: [['fast-hands', 'supercookie'], ['polymorphic', 'rotating-proxies'], ['leaked-creds', 'assassinate']],
+  infiltrator: [['fast-hands', 'supercookie'], ['polymorphic', 'ghost-route'], ['tracking-pixel', 'assassinate']],
   operator: [['big-process', 'long-running'], ['extra-nodes', 'hive'], ['parallel-deploy', 'supervisor']],
 };
 const start = (cls, bar, picks = [], id = 'cryptjack', ranks = {}) => {
@@ -228,13 +228,12 @@ test('filler ranks change the numbers they say', () => {
   assert.equal(lost(r, 'pulse'), 60, 'Recon: Opening +10');
 });
 
-test('run skills: Tap maps everything, Rotating Proxies cloaks twice, Leaked Creds slips past 3 guards', async () => {
+test('run skills: Tap maps everything; Spoof cloaks once a run, and an Infiltrator slips past one guard', async () => {
   const { play, connect, slipsLeft } = await import('./dist/run.mjs');
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
   s.hackers = { infiltrator: { level: 50, xp: 0 } };
   s.loadout.equipped.infiltrator = ['spoof', 'tap'];
-  s.loadout.devKit = { talents: ['rotating-proxies', 'leaked-creds'] };
   command(s, 'developer location worm');
   Object.assign(s.locations[0], { template: 'relay', quirk: null });
   connect(s, s.locations[0].id);
@@ -246,8 +245,8 @@ test('run skills: Tap maps everything, Rotating Proxies cloaks twice, Leaked Cre
   assert.equal(s.encounter, null);
   play(s, 'cd ..');
   play(s, 'spoof');
-  assert.equal(s.run.cloak, 'armed', 'second spoof with Rotating Proxies');
-  assert.equal(slipsLeft(s), 3, 'Leaked Creds: three slips a run');
+  assert.notEqual(s.run.cloak, 'armed', 'one spoof a run (Rotating Proxies is gone: docs/roguelite.md 11)');
+  assert.equal(slipsLeft(s), 1, 'one slip a run');
 });
 
 test('Infiltrator Ghost: slip past one guard a run, no fight, no reward; it is back next run', async () => {
