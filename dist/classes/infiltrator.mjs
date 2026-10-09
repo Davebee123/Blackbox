@@ -175,6 +175,12 @@ export default {
       st.decoy = { from: s.who || '' };
       emit(s, 'status', `Shadow Copy: a decoy of ${to === s ? 'you' : to.who} takes the next hit.`, { mark: 'shield', ability: 'shadow-copy' });
     },
+    // Ghost Route (Phantom talent): the dodge buys time too.
+    'null-route'(s, { e }) {
+      if (!talent(s, 'ghost-route')) return;
+      const q = soonestAttacker(s);
+      if (q?.attack && q.attack.due < 900) { q.attack.due += 2; emit(s, 'interrupt', `Ghost Route: the ${q.name}'s ${q.attack.name} is delayed 2 cycles.`, { target: q.id }); }
+    },
     'log-wipe'(s, { e }) {
       e.weakHit = {};
       const st = mine(s);
@@ -268,6 +274,12 @@ export default {
   },
   broke(s, p) {
     for (const st of everyone(s)) bloom(st, p);
+    // Tracking Pixel (Phantom talent): a Tag on a part that breaks moves on to the part attacking soonest.
+    const e = s.encounter;
+    if (talent(s, 'tracking-pixel') && p.taggedUntil >= e.cycle && virusIntegrity(s).current > 0) {
+      const q = soonestAttacker(s, p.id);
+      if (alive(q) && q !== p) { q.taggedUntil = Math.max(q.taggedUntil || 0, p.taggedUntil); q.tagBoost = Math.max(q.tagBoost || 0, p.tagBoost || 0); emit(s, 'status', `Tracking Pixel moves Tag to the ${q.name}.`, { target: q.id, mark: 'tagged' }); }
+    }
     // Kill Chain (Phantom talent): a break readies Backstab and lights Opening.
     if (talent(s, 'kill-chain') && virusIntegrity(s).current > 0) {
       delete s.encounter.readyAt.backstab;
@@ -347,7 +359,8 @@ function core(s, t) {
   // The Surprise window: open with Inject (it ticks at once in it).
   if (e.cycle === 1 && e.sync?.surprise) return first(s, ['inject ' + t.id, 'tag ' + t.id]);
   // A Phantom leads with its direct hits (Weak Spot, Backstab, Side Channel) and keeps an Inject burning under them.
-  if (subOf(s) === 'phantom') return first(s, [
+  // Before its hits are on the bar (Opening and Backstab come past level 10), it plays the core kit's burns.
+  if (subOf(s) === 'phantom' && usable(s).some((id) => ['opening', 'backstab', 'side-channel'].includes(id))) return first(s, [
     !t.armor && 'opening ' + t.id,
     !t.armor && 'backstab ' + t.id,
     !inj && t.integrity > 30 && 'inject ' + t.id,

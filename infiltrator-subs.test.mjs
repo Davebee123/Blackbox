@@ -372,7 +372,7 @@ test('old talents still in the trees keep working by id: Long Fuse is Polymorphi
   act(s, 'inject pulse');
   assert.equal(s.encounter.burns[0].left, 5);
   assert.ok(hasTalent(s, 'polymorphic'));
-  for (const id of ['rotating-proxies', 'leaked-creds', 'fast-hands']) assert.ok(SUBS.phantom.talents.flat().some((n) => n.id === id), id);
+  for (const id of ['ghost-route', 'tracking-pixel', 'fast-hands']) assert.ok(SUBS.phantom.talents.flat().some((n) => n.id === id), id);
 });
 
 // ---------- the planner ----------

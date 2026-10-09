@@ -1,10 +1,11 @@
 // The world, first slice (docs/world.md W0: world.mjs, room.mjs, room-view.mjs, content/room.mjs): LOWLIGHT's back
 // room after every breach (wick's line by priority, a lead, the board's news), the world turn with dig in and its
-// pressure rules, dead drops from leads, and the campaign save's v3.
+// pressure rules, dead drops from leads, and the campaign save's v4.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, restore, command, hackerLevel, gainXp } from './dist/combat.mjs';
 import { seeded } from './dist/gear.mjs';
+import { SCRIPTS } from './dist/scripts.mjs';
 import { xpToNext } from './dist/data.mjs';
 import { GENES } from './dist/genes.mjs';
 import { nodeList, act, breachHooks, fight, generateMap, DIG } from './dist/breach.mjs';
@@ -30,8 +31,7 @@ function finish(s, id, result, { stock = 0, stats = {}, at = null } = {}) {
   const rec = recOf(s, id), b = launch(s, id, { from: rec.checkpoint && !rec.captured ? 'checkpoint' : 'start' });
   if (!b) return null;
   b.result = result;
-  b.stats = { rests: 1, landed: 0, elites: 0, skips: 0, low: 1, ...stats };
-  b.mods = ['pry-bar', 'overcommit', 'x']; b.cves = [];
+  b.stats = { rests: 1, landed: 0, elites: 0, low: 1, hunted: 0, vaults: 0, scripts: 1, found: 0, ...stats }; b.tracePeak = 40;
   if (result === 'won') b.rewrites = Object.fromEntries(SERVER[id].subsystems.flat().slice(stock).map((sub) => [sub, { id: 'slushfund', tier: 1 }]));
   if (at) b.at = at; else if (result !== 'won') b.at = nodeList(b.map).find((n) => n.act === 0 && n.row === 0).id;
   breachHooks.over(s, result);
@@ -160,7 +160,7 @@ test('dig in shows on the node and the card, and changes that server\'s elites a
 });
 
 // ---------- dead drops ----------
-test('dead drops come only from wick\'s leads, wait 3 breaches, and pay a pool card and wick\'s note when pulled', () => {
+test('dead drops come only from wick\'s leads, wait 3 breaches, and pay a script and wick\'s note when pulled', () => {
   let seen = 0;
   for (let seed = 1; seed <= 12; seed++) {
     const s = camp('bastion', seed), rr = seeded(seed);
@@ -190,18 +190,19 @@ test('dead drops come only from wick\'s leads, wait 3 breaches, and pay a pool c
   assert.ok(n && n.act === 0 && n.row === e.row && n.path === '/perimeter/drop', 'a drop/ node in act 1, the row the lead named');
   assert.ok(nodeList(b.map).some((x) => x.kind === 'elite') && nodeList(b.map).some((x) => x.kind === 'term'), 'the act keeps its elite and its terminal');
   assert.equal(n.frag, 'drop-1');
-  const card = n.card;
-  assert.ok(card && !s.camp.pool.includes(card));
+  const script = n.script, had = s.camp.scripts.length;
+  assert.ok(SCRIPTS[script], 'a script, never gear');
   b.screen = { kind: 'drop', node: n.id, read: false };
   act(s, 'cat');
   assert.match(breachMarkup(s), /if you&#39;re reading this you followed a lead/);
   act(s, 'pull');
-  b.result = 'lost'; b.at = n.id; b.stats ||= { rests: 0, landed: 0, elites: 0, skips: 0, low: 1 };
+  assert.equal(s.camp.scripts.length, had + 1, 'the script goes in your slots at once');
+  assert.equal(s.camp.scripts.at(-1), script);
+  b.result = 'lost'; b.at = n.id;
   breachHooks.over(s, 'lost');
-  assert.ok(s.camp.pool.includes(card) || s.camp.mods.includes(card), 'the card is in the pool');
   assert.ok(s.camp.archive.includes('drop-1'));
   assert.ok(!s.camp.world.events.some((x) => x.id === e.id), 'the drop is gone');
-  assert.match(breachMarkup(s), /drop<\/span><b>[^<]+<\/b><span>Joins your draft pool/);
+  assert.match(breachMarkup(s), new RegExp(`drop</span><b>${SCRIPTS[script].name}</b>`));
   leave(s);
   assert.equal(FRAGMENTS.filter((f) => f.drop).length, 2, 'the first two of the dead-drop thread');
   for (const f of FRAGMENTS.filter((x) => x.drop)) { assert.ok(f.lines.at(-1) === '— w' && f.lines.every((l) => l === l.toLowerCase() || l === '— w')); }
@@ -210,7 +211,7 @@ test('dead drops come only from wick\'s leads, wait 3 breaches, and pay a pool c
 // ---------- the room ----------
 test('wick picks the most important fact it has a line for, never repeats until a set runs out, and says nothing when nothing fits', () => {
   const s = camp();
-  const d = (o) => ({ result: 'won', id: 'pier-5', where: 'core', streak: 0, first: false, reimage: false, replay: false, checkpoint: 0, heat: 0, opened: 0, stock: [], rests: 1, drafts: 3, elites: 0, skips: 0, digin: null, rewrites: [], lostOn: null, ...o });
+  const d = (o) => ({ result: 'won', id: 'pier-5', where: 'core', streak: 0, first: false, reimage: false, replay: false, checkpoint: 0, heat: 0, opened: 0, stock: [], rests: 1, elites: 0, scripts: 1, vaults: 0, hunted: 0, trace: 50, digin: null, rewrites: [], lostOn: null, ...o });
   const room = freshRoom(), say = (o) => pickLine(room, 'wick', factsOf(s, d(o)))?.text || null;
   assert.equal(say({ first: true, stock: ['kmod'], rewrites: ['maildrop'] }), "patch tuesday's down. that pier won't ship another update.", '1: a first fall beats everything');
   assert.equal(say({ result: 'lost', where: 'gate1', streak: 3 }), 'pier-5 will wait. the others won\'t mind you.', '4: three running beats where');
@@ -222,7 +223,9 @@ test('wick picks the most important fact it has a line for, never repeats until 
   assert.equal(say({ reimage: true, digin: 'swarmline', stock: ['kmod'] }), 'swarmline dug in on pier-5. you dug them out.', '5: a choice, the dig in first');
   assert.equal(say({ reimage: true, stock: ['kmod'] }), "kmod's still stock on pier-5.");
   assert.equal(say({ reimage: true, rewrites: ['spamcannon'] }), 'same box, new furniture.', '5 before 6');
-  assert.equal(say({ reimage: true, rests: 1, rewrites: ['spamcannon'], drafts: 3 }), 'pier-5 runs your way again.');
+  assert.equal(say({ reimage: true, rests: 1, rewrites: ['spamcannon'] }), 'pier-5 runs your way again.');
+  assert.equal(say({ hunted: 1 }), 'they sent a hunter after you on pier-5. you finished anyway.', 'traced, and finished anyway');
+  assert.equal(say({ trace: 10 }), 'pier-5 never knew you were there.');
   s.camp.room.took = [];
   const room2 = freshRoom();
   assert.equal(pickLine(room2, 'wick', factsOf(s, { ...d({ rewrites: ['spamcannon'] }), reimage: false, first: false }))?.text, 'loud mail. the neighbours are going to read every one.', '6: a rewrite the first time');
@@ -240,7 +243,7 @@ test('the room after a breach: the end card goes back to the room, which shows w
   assert.match(roomMarkup(s), /wick says nothing\.[\s\S]*Nothing moved\./, 'before any breach');
   assert.equal(roomSentence(s), 'The radiator knocks. A chair is pulled out for you.');
   const b = launch(s, 'sprawl-00');
-  b.result = 'won'; b.rewrites = {}; b.stats = { rests: 1, landed: 0, elites: 0, skips: 0, low: 1 };
+  b.result = 'won'; b.rewrites = {}; b.stats.rests = 1; b.stats.scripts = 1; b.tracePeak = 40;
   breachHooks.over(s, 'won');
   assert.match(breachMarkup(s), /data-camp="leave">Back to the room</);
   leave(s);
@@ -260,21 +263,23 @@ test('the room after a breach: the end card goes back to the room, which shows w
 });
 
 // ---------- the save ----------
-test('save: v1 and v2 campaigns migrate in place to v3 (the world and the room), and a v3 save round-trips', () => {
-  for (const from of [1, 2]) {
+test('save: v1, v2 and v3 campaigns migrate in place to v4 (the world and the room), and a v4 save round-trips', () => {
+  for (const from of [1, 2, 3]) {
     const s = camp();
     finish(s, 'sprawl-00', 'won');
     delete s.camp.world; delete s.camp.room; s.camp.v = from;
-    if (from === 1) { delete s.camp.mods; delete s.camp.heat; delete s.camp.heatCleared; delete s.camp.replays; }
+    if (from === 1) { delete s.camp.heat; delete s.camp.heatCleared; delete s.camp.replays; }
+    if (from < 3) { s.camp.pool = ['heartbleed']; delete s.camp.scripts; }
     const back = restore(JSON.parse(JSON.stringify(s)));
     migrate(back);
-    assert.equal(back.camp.v, 3);
-    assert.equal(CAMPAIGN.v, 3);
+    assert.equal(back.camp.v, 4);
+    assert.equal(CAMPAIGN.v, 4);
+    assert.ok(back.camp.scripts.length && !back.camp.pool, 'the scripts migration ran first');
     assert.deepEqual(back.camp.world, { turn: 0, moves: {}, watch: {}, events: [], news: [], drops: 0 }, 'the world starts quiet');
     assert.deepEqual(back.camp.room.took, ['slushfund'], 'what you hold counts as taken');
     assert.equal(back.camp.room.visit, null);
     migrate(back);
-    assert.equal(back.camp.v, 3, 'migrating twice changes nothing');
+    assert.equal(back.camp.v, 4, 'migrating twice changes nothing');
   }
   const s = camp();
   finish(s, 'sprawl-00', 'won'); toLevel(s, 4); finish(s, 'coldstore-3', 'won'); finish(s, 'depot-7', 'lost');

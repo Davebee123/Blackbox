@@ -128,6 +128,6 @@ export function modsFor(s, id) {
   if (!WORLD.on || !s.camp?.world) return null;
   const m = moveOn(s, id), e = eventOn(s, id), out = {};
   if (m) out.digin = { author: m.author, gene: m.gene };
-  if (e) out.drop = { id: e.id, row: e.row, card: null, frag: null }; // campaign.mjs fills in the card and the note
+  if (e) out.drop = { id: e.id, row: e.row, script: null, frag: null }; // campaign.mjs fills in the script and the note
   return out.digin || out.drop ? out : null;
 }

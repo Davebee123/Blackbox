@@ -4,7 +4,8 @@
 //   rooms      the sentence at the top of the room, by story beat (the last one whose fragment you hold wins)
 //   wick       lines by fact (room.mjs FACTS): first.<server> a Resident's first fall, lost.<where> a loss by where it
 //              ended, out a jack-out, streak three losses running on one server, then the choices you made in the
-//              run, then rw.<rewrite> the first time you take it. {name} {sub} {resident} {author} {heat} fill in.
+//              run (a dig in taken, a heat opened, a checkpoint, a subsystem left stock, no rests, traced, quiet, two
+//              vaults, two elites, no scripts, a re-image, a replay), then rw.<rewrite> the first time you take it. {name} {sub} {resident} {author} {heat} fill in.
 //   leads      wick's lead when a dead drop goes on the map: first (the first world turn), then the rest in turn
 // wick writes lower case and short (docs/style-guide.md 3). One line about something you did. Never a mechanic.
 export default {
@@ -59,23 +60,25 @@ export default {
     "checkpoint": ["second go at {name}. the second go is the one that counts.", "you picked {name} up where you dropped it. tidy."],
     "stock": ["{sub}'s still stock on {name}.", "you left {sub} stock on {name}. their code still runs there."],
     "norest": ["no rests on {name}. you'll feel that tomorrow."],
-    "lean": ["two cards and a grudge. that was enough for {name}."],
+    "traced": ["they sent a hunter after you on {name}. you finished anyway.", "{name} traced you. it didn't help them."],
+    "quiet": ["{name} never knew you were there."],
+    "vaults": ["two vaults on {name}. read the logs before you sell anything."],
     "elites": ["you went through the big ones on {name} on purpose."],
-    "skipped": ["you passed on half the shelf in {name}. picky."],
+    "noscripts": ["no scripts on {name}. just you and the keys."],
     "reimage": ["same box, new furniture.", "{name} runs your way again."],
     "replay": ["you went back for {resident}'s things. fair."],
 
-    "rw.maildrop": ["mail drop. now the resident pays the postage."],
+    "rw.maildrop": ["mail drop. every box you take sends you a postcard."],
     "rw.spamcannon": ["loud mail. the neighbours are going to read every one."],
     "rw.jumphost": ["jump host. you can see further than you should now."],
     "rw.forgedkeys": ["forged keys. don't tell me where you got the blanks."],
     "rw.warmstart": ["warm start. they'll still be yawning when you walk in."],
-    "rw.nightlybuild": ["nightly build. somebody's compiling for you while you sleep."],
+    "rw.nightlybuild": ["nightly build. somebody wipes the logs behind you while you sleep."],
     "rw.pricefix": ["price fix. the stalls will hate you. they'll still sell."],
     "rw.slushfund": ["slush fund. don't spend it all at the first stall."],
     "rw.restorepoint": ["restore point. good. i'd like you back."],
-    "rw.archive": ["you keep your old mods in a drawer now. sentimental."],
-    "rw.kernelhook": ["kernel hook. more on the table every time."],
+    "rw.archive": ["archive. more pockets. don't fill them with junk."],
+    "rw.kernelhook": ["kernel hook. the residents wake up underdressed."],
     "rw.memorymap": ["memory map. that's a bigger head on you."],
     "rw.serviceaccount": ["a service account. a door you can walk out of."],
     "rw.zonetransfer": ["zone transfer. you read the map before they draw it."],

@@ -156,8 +156,8 @@ export const subs = {
     ],
     talents: [
       [t('fast-hands', 'Fast Hands', 'Opening stays usable for 2 cycles.'), t('blind-spot', 'Blind Spot', 'Weak Spot also makes your first burn tick on each part a critical strike.')],
-      [t('kill-chain', 'Kill Chain', 'Breaking a part resets the cooldown of Backstab and makes Opening usable.'), t('rotating-proxies', 'Rotating Proxies', 'Spoof can be used twice per run.')],
-      [t('deep-cover', 'Deep Cover', 'Log Wipe also resets the cooldowns of Null Route and Shadow Copy.'), t('leaked-creds', 'Leaked Creds', 'You slip past 3 guards per run, instead of 1.')],
+      [t('kill-chain', 'Kill Chain', 'Breaking a part resets the cooldown of Backstab and makes Opening usable.'), t('ghost-route', 'Ghost Route', 'Null Route also delays the attack that lands soonest by 2 cycles.')],
+      [t('deep-cover', 'Deep Cover', 'Log Wipe also resets the cooldowns of Null Route and Shadow Copy.'), t('tracking-pixel', 'Tracking Pixel', 'When a Tagged part breaks, Tag moves to the part whose attack lands soonest, with the cycles it had left.')],
     ],
   },
 };

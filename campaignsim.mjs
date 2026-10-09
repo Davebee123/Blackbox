@@ -4,14 +4,16 @@
 // retries from its checkpoint. It takes the first bounty on a card, spends talents as it levels, and fights, drafts and
 // walks the map like breachsim.mjs's bot.
 // The world (world.mjs, docs/world.md 6.4): the bot follows wick's leads (a dead drop on a server near its level is its
-// next breach) and skips a server under pressure half the time when a clean one is as close. Each breach records what
-// the world did: new events, servers under pressure, the clean-server rule, and any move after a loss.
+// next breach, when it has a script slot free) and skips a server under pressure half the time when a clean one is as
+// close. Each breach records what the world did: new events, servers under pressure, the clean-server rule, and any
+// move after a loss.
 //   node campaignsim.mjs [maxBreaches=80] [seeds=2] [--world on|off]   pacing per class: breaches per level, win rate
 //   by level, deaths, loot, and the world's numbers
 import { fresh, command, hackerLevel, hackerOf, stashItem, rigOf } from './dist/combat.mjs';
 import { spendTalents } from './dist/breach.mjs';
 import { newCampaign, launch, leave, statusOf, SERVERS, SERVER, held, recOf, bountiesOn, CAMPAIGN, outgrown } from './dist/campaign.mjs';
 import { WORLD, moveOn, eventOn, pressured, cleanRuleHolds } from './dist/world.mjs';
+import { scriptsOf, slotsOf } from './dist/scripts.mjs';
 import { SLOT_KINDS, seeded } from './dist/gear.mjs';
 import { playOut, better, CLASSES } from './breachsim.mjs';
 
@@ -34,8 +36,9 @@ export function nextTarget(s, { margin = 1 } = {}) {
   // Too far over you, and something you hold is close to your level: farm it first.
   let pick = target && (target.level <= L + margin || !mine) ? target : mine || target || open[0];
   if (!pick) return null;
-  // The world: a lead from wick is the next breach, when the drop sits on a server near the bot's level.
-  const drop = SERVERS.find((x) => eventOn(s, x.id) && ['open', 'held'].includes(statusOf(s, x.id)) && x.level <= L + margin && !outgrown(s, x));
+  // The world: a lead from wick is the next breach, when the drop sits on a server near the bot's level and the bot
+  // has a free script slot for what it holds.
+  const drop = scriptsOf(s).length < slotsOf(s) && SERVERS.find((x) => eventOn(s, x.id) && ['open', 'held'].includes(statusOf(s, x.id)) && x.level <= L + margin && x.level >= L - WORLD.near && !outgrown(s, x));
   if (drop) pick = drop;
   // A server under pressure: half the time, a clean open server as close to the bot's level goes first.
   else if (moveOn(s, pick.id) && seeded((s.camp.seed * 7919 + s.camp.breaches * 104729) >>> 0)() < 0.5) {
@@ -57,7 +60,7 @@ function gearUp(s) {
 }
 
 // One class's campaign: until it reaches level `to` or runs out of breaches.
-export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trace = false } = {}) {
+export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trace = false, sub = null } = {}) {
   const s = fresh();
   s.rng = (seed * 2654435761 + cls.length * 131) >>> 0;
   s.profile = { handle: 'bot', pwLen: 6, since: 0 };
@@ -66,7 +69,7 @@ export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trac
   const log = [], reached = {};
   let minutes = 0;
   for (let i = 0; i < max && hackerLevel(s) < to; i++) {
-    spendTalents(s, { sub: PICK[cls] });
+    spendTalents(s, { sub: sub || PICK[cls] });
     gearUp(s);
     const t = nextTarget(s);
     if (!t) break;
@@ -93,6 +96,9 @@ export function runCampaign({ cls = 'breaker', seed = 1, to = 20, max = 80, trac
     // breach (playOut equips as it goes) or after it.
     gearUp(s);
     row.upgrades = rigOf(s).filter((x, k) => x && x !== rig.split(',')[k]).length;
+    // A real upgrade (docs/roguelite.md 9.3): a rarity step, or 3 item levels or more, in a slot.
+    const RANK = { stock: 1, tuned: 2, custom: 3, zeroday: 4, indemnified: 4 }, was = rig.split(',');
+    row.real = rigOf(s).filter((x, k) => { const a = stashItem(s, was[k]), c = x && stashItem(s, x); return c && x !== was[k] && (!a || RANK[c.rarity] > RANK[a.rarity] || c.level >= a.level + 3); }).length;
   }
   return { cls, seed, level: hackerLevel(s), xp: hackerOf(s).xp, log, reached, held: SERVERS.filter((x) => held(s, x.id)).length, state: s };
 }
@@ -111,7 +117,7 @@ export function report(runs) {
     for (const x of all) if (x.diedAt) deaths[x.diedAt.replace(/@.*/, '')] = (deaths[x.diedAt.replace(/@.*/, '')] || 0) + 1;
     const perLevel = {};
     for (let l = 1; l < 20; l++) { const a = at(l, 'breaches'), b2 = at(l + 1, 'breaches'); if (a != null && b2 != null) perLevel[l] = +(b2 - a).toFixed(1); }
-    const lootOf = (lo, hi) => { const xs = all.filter((x) => x.level >= lo && x.level <= hi); return xs.length ? { banked: xs.reduce((n, x) => n + (x.banked || 0), 0) / xs.length, upgrades: xs.reduce((n, x) => n + (x.upgrades || 0), 0) / xs.length } : null; };
+    const lootOf = (lo, hi) => { const xs = all.filter((x) => x.level >= lo && x.level <= hi); return xs.length ? { banked: xs.reduce((n, x) => n + (x.banked || 0), 0) / xs.length, upgrades: xs.reduce((n, x) => n + (x.upgrades || 0), 0) / xs.length, real: xs.reduce((n, x) => n + (x.real || 0), 0) / xs.length } : null; };
     const loot = { '1-5': lootOf(1, 5), '6-10': lootOf(6, 10), '11-15': lootOf(11, 15), '16+': lootOf(16, 99) };
     out.push({ cls, loot, to5: at(5, 'breaches'), to10: at(10, 'breaches'), to15: at(15, 'breaches'), to20: at(20, 'breaches'), min10: at(10, 'minutes'), min20: at(20, 'minutes'), winLow: band(1, 5), winMid: band(6, 10), winHigh: band(11, 15), winTop: band(16, 25), win: Math.round((all.filter((x) => x.won).length / all.length) * 100), deaths, perLevel, level: avg((r) => r.level), held: avg((r) => r.held), breaches: avg((r) => r.log.length) });
   }
@@ -153,7 +159,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('class        to5  to10 to15 to20  min10 min20  win  1-5        6-10       11-15      16+        deaths');
   for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} ${f(r.to5)} ${f(r.to10)} ${f(r.to15)} ${f(r.to20)}  ${f(r.min10)}  ${f(r.min20)}  ${String(r.win).padStart(3)}%  ${r.winLow.padEnd(10)} ${r.winMid.padEnd(10)} ${r.winHigh.padEnd(10)} ${r.winTop.padEnd(10)} ${Object.entries(r.deaths).map(([k, v]) => `${k} ${v}`).join(', ')}`);
   for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} breaches per level: ${Object.entries(r.perLevel).map(([l, n]) => `${l}:${n}`).join(' ')}`);
-  for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} loot per breach (banked, upgrades): ${Object.entries(r.loot).filter(([, x]) => x).map(([k, x]) => `${k} ${x.banked.toFixed(1)}, ${x.upgrades.toFixed(1)}`).join(' · ')}`);
+  for (const r of report(runs)) console.log(`${r.cls.padEnd(12)} loot per breach (banked, swaps, real upgrades): ${Object.entries(r.loot).filter(([, x]) => x).map(([k, x]) => `${k} ${x.banked.toFixed(1)}, ${x.upgrades.toFixed(1)}, ${x.real.toFixed(2)}`).join(' · ')}`);
   const w = worldReport(runs);
   if (w) {
     console.log(`world: ${w.breaches} breaches after the first turn · new events ${w.events.toFixed(2)} a breach (most ${w.eventsMax}) · live events most ${w.liveMax} · dead drops met ${w.drops}, pulled ${w.pulled}`);

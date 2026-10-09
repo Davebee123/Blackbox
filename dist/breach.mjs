@@ -1,27 +1,45 @@
 // A breach: one run through one server on a branching map (docs/roguelite.md, phase 0: "one breach, playable end to
 // end"). Pure like the combat engine: state in, events out. It lives on s.breach, which only a playtest campaign
-// carries (app.js ?playtest=breach): no save field, no migration.
+// carries (app.js ?playtest=breach), or the breach campaign (campaign.mjs).
 //
 // The run: three acts (Perimeter, Services, Kernel) of four rows each, a gate (a guard) after acts 1 and 2, and the
 // Resident (DEADBOLT) at /core. A campaign server (campaign.mjs) brings its own card: fewer acts or rows early on,
-// its own Resident, subsystems and gates. Signal is the run's health and carries from node to node; a defrag heals it. Every
-// fight drafts 1 of 3 (drafts.mjs), of the kind its node showed ahead (n.reward); a subsystem's fight then rewrites it
-// (rewrites.mjs). Beating a gate banks the pack. Losing costs the unbanked pack and the drafts; XP and banked gear stay.
-// Phase 3 (docs/roguelite.md 9.3): every wild and elite node rolls its genome (genomeOfNode, applyMutations), a breach
-// has a heat (heat.mjs), a defrag recompiles mods, brokers have services, and the bots draft by policy (POLICIES).
+// its own Resident, subsystems and gates. Signal is the run's health and carries from node to node; a defrag or a
+// broker's patch restores it, and nothing else does: what heals you inside a fight never takes you over the Signal
+// you started it with. A subsystem's fight rewrites it (rewrites.mjs): the rewrite is the server's output once you
+// capture it. Beating a gate banks the pack. Losing costs the unbanked pack; XP, banked gear and your scripts stay.
+//
+// Your build is yours (docs/roguelite.md 11: no power inside a run): talents, subclass, gear and its rules
+// (skillrules.mjs), uniques, presets. What a breach adds is the map, as a dungeon:
+//   keys and vaults  a keycard rides on a virus (beat it, take the card); a vault on another branch opens with one, or
+//                    can be forced, loudly. Vaults hold the good stuff: a better gear roll or a script, and a log.
+//   switches         a security node: take it down (a fight, or a loud splice) and the act's viruses lose a ◆, or
+//                    its gate opens weaker. A map effect on the enemy, never on you.
+//   Trace            loud moves raise it (elites, vaults, bait, honeytokens), quiet steps and switches lower it. At
+//                    TRACE.hunt a hunter ICE drops onto the map and closes a node every move you make.
+//   server kinds     each kind plays by one rule of its own (KINDS): Mailhub spam floods, Archive deep storage,
+//                    Relay hops, Mirror mirrors, Lab overheat.
+//   scripts          one-shot programs you carry (scripts.mjs), one a fight. Vaults, elites, the hunter and the
+//                    Resident drop them now and then; brokers sell them for tokens, and tokens come from caches.
+// Loot is a chase: gear comes from elites, gates, vaults and the Resident (BREACH.loot), about one to three items a
+// breach.
+// Phase 3 (docs/roguelite.md 9.3): every wild and elite node rolls its genome (genomeOfNode, applyMutations), and a
+// breach has a heat (heat.mjs).
 //
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run'), flagged e.breach: combat.mjs finish hands
-// the end back here (hooks.breachEnd), and the mods and CVEs ride hooks.emitted and hooks.extraFx. Between fights
-// s.run is null, so gear loads as at home; during one it holds your Signal, as on any run.
-import { hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, rigOf, attackers, gainXp, part, alive, livingParts, equippedSkills } from './combat.mjs';
+// the end back here (hooks.breachEnd), skill rules ride hooks.emitted and hooks.commanded, and the end of each cycle
+// (enrage, overheat) hooks.cycleEnd. Between fights s.run is null, so gear loads as at home; during one it holds your
+// Signal, as on any run.
+import { hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, subOf, addItem, stashItem, rigOf, attackers, gainXp, part, livingParts, defender, hit } from './combat.mjs';
 import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf, makePart } from './data.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
-import { MODS, CVES, patchMods, unpatchMods, cveFx, onEvent, afterCommand, afterFightCves, rollDraft, DRAFT, cardText, modPool, modName, buildTags, linksOf, cvePool, cardDef } from './drafts.mjs';
 import { SUBSYSTEMS, REWRITES } from './rewrites.mjs';
 import { GENES, rollGenome, partGenes, compatible } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { decoded } from './genome.mjs';
 import { heatRules } from './heat.mjs';
+import { patchRules, unpatchRules, onEvent as ruleEvent, afterCommand as ruleCommand } from './skillrules.mjs';
+import { SCRIPTS, giveScript, rollScript, scriptStock, priceOf as scriptPrice, scriptsOf, slotsOf, runScript } from './scripts.mjs';
 
 // ---------- the server ----------
 export const SERVER_CARD = {
@@ -34,30 +52,68 @@ export const ACTS = [{ name: 'Perimeter', dir: 'perimeter' }, { name: 'Services'
 // Tuning. rows × cols per act, paths drawn through it, fog (rows ahead you can read), node weights for rows 2 and 3,
 // tokens, a defrag's rest, an elite's size, the level steps (act 2 one over the server, act 3 two, the Resident one).
 export const BREACH = {
-  rows: 4, cols: 4, paths: 3, fog: 2, infiltratorFog: 3,
-  weights: { virus: 40, elite: 15, term: 20, cache: 10, broker: 7, defrag: 8 },
-  tokens: { virus: [12, 20], elite: 35, gate: 25, sandbox: 20, cache: [30, 60] },
-  rest: 0.3, eliteHp: 1.5, strainShare: 0.15, actLevel: [0, 1, 2], gateLevel: [0, 1], bossLevel: 1,
-  baitShare: 0.25, baitCost: 0.12, startTokens: 0, rerolls: 1, cacheGear: 0.3, // a cache is tokens; one in three holds a protocol too
+  rows: 5, cols: 4, paths: 3, fog: 2, infiltratorFog: 3,
+  weights: { virus: 40, elite: 15, term: 20, cache: 12, broker: 7, defrag: 8 },
+  tokens: { cache: [30, 60], sandbox: 20 },
+  rest: 0.35, eliteHp: 1.5, strainShare: 0.15, actLevel: [0, 1, 2], gateLevel: [0, 1], bossLevel: 1,
+  baitShare: 0.25, baitCost: 0.12, startTokens: 0, cacheScript: 0.15,
   // A breach is nine or ten fights on one Signal bar with two or three rests: each fight is sized for that, by
-  // node kind (its parts' Integrity and its attacks), on top of the run sizes every Signal fight already has.
-  size: { virus: { hp: 1, dmg: 0.8 }, elite: { hp: 1, dmg: 0.6 }, gate: { hp: 1, dmg: 1 }, boss: { hp: 1, dmg: 0.85 } },
-  // A wild virus brings one tell kind, an elite two (docs/roguelite.md 10.9). Overclock and Lock are the new ones; the
-  // family's charge and seal stay in the mix.
-  tells: { overclock: 3, lock: 3, charge: 2, seal: 2 },
+  // node kind (its parts' Integrity and its attacks), on top of the run sizes every Signal fight already has. The
+  // hunter is a Tracer ICE; a switch's ICE is a small watchdog.
+  size: { virus: { hp: 0.85, dmg: 0.55 }, elite: { hp: 0.8, dmg: 0.45 }, gate: { hp: 0.9, dmg: 0.75 }, boss: { hp: 0.85, dmg: 0.6 }, hunter: { hp: 0.7, dmg: 0.55 }, ice: { hp: 0.6, dmg: 0.5 } },
+  // A wild virus brings one tell kind, an elite two, one of them a charge: answer it with a burst (docs/roguelite.md
+  // 11). Overclock and Lock are the new ones; the family's seal stays in the mix.
+  tells: { charge: 4, overclock: 2, lock: 2, seal: 2 },
   lockFrom: 5, // Lock waits until your bar has a cooldown worth feeding it
   // Rolled genomes (docs/genome.md 5, genes.mjs rollGenome): every wild and elite virus rolls its genes from its
   // author's toolkit within the budget. geneBonus: budget points on top (Testbed adds its own). Off: the phase 0 roll.
   genomes: true, geneBonus: -2,
   // Heat 1, Loud: a breach is ten fights on one Signal bar, so its loud is a step, not the old run's cliff (HOT_RUN).
   loud: { hp: 1.15, dmg: 1.1 },
+  // Enrage: a virus, an elite or a gate still up at this cycle hits first 50% harder, then a quarter more every 4
+  // cycles. Outlasting a fight isn't a plan; a burst is. A Resident keeps the enrage it has (data.mjs BOSSES enrageAt).
+  enrage: { virus: 8, elite: 9, gate: 10, first: 1.5, step: 1.25, every: 3 },
+  // A subclass's (or, under level 10, a class's) own sizing on breaches (docs/roguelite.md 11): its fights' Integrity
+  // and what they hit for. The Bastion's in-fight sustain still outlasts fights the others can't, so they hit it
+  // harder. The Phantom, a burst class with no strip, meets thinner parts that hit softer. The rest even out the
+  // classes' runs from level 1 (campaignsim.mjs).
+  classSize: { bastion: { dmg: 1.15 }, breaker: { dmg: 0.9 }, infiltrator: { dmg: 0.85 }, payload: { dmg: 1 }, phantom: { hp: 0.85, dmg: 0.8 }, operator: { dmg: 1.05 } },
+  // Loot (docs/roguelite.md 11: about one to three items banked a breach, a real upgrade every two or three). gear: the
+  // odds an elite or a gate drops a protocol (the Resident always does); custom and white: a yellow's and a white's
+  // share of it (blue otherwise); script: a script's odds.
+  loot: { elite: { gear: 0.12, custom: 0.3, script: 0.25 }, gate: { gear: 0.08, white: 0.4, custom: 0.1 }, boss: { white: 0.45, custom: 0.1, script: 0.5 }, vault: { gear: 0.35, custom: 0.4 } },
 };
 // A dig in (world.mjs): what it pays on its breaches (item levels on gear, added odds on the Resident's unique roll),
 // and the size of the part its gene adds to a gate (of a part the gate's own size would have).
-export const DIG = { itemLevel: 1, unique: 0.1, gatePart: 0.6 };
-// Server kinds lean the map (docs/roguelite.md 2.2): a Mirror one more terminal a row, an Archive caches twice as often.
-export const KIND_WEIGHTS = { Mirror: { term: 30 }, Archive: { cache: 20 } };
-const stepOf = (act, row, rows = BREACH.rows) => act * (rows + 1) + row + 1; // 1..4 an act's rows, 5 its gate; 15 the Resident
+export const DIG = { itemLevel: 1, unique: 0.1, gatePart: 0.4 };
+// Trace on a breach (from run.mjs TRACE, docs/roguelite.md 2.1): how loud you've been, 0 to 100. alarm: a Mailhub's
+// spam floods start; hunt: a hunter ICE drops onto the map; lose: under it, a hunter on the map loses you; after: where
+// beating the hunter leaves it. The rest is what moves it. An Infiltrator raises it half as fast.
+export const TRACE = { alarm: 30, hunt: 55, lose: 30, after: 15, elite: 20, open: 15, force: 35, bait: 25, quiet: -3, rest: -10, ice: -20, splice: 15, scrub: -30 };
+// Server kinds: one rule each (docs/roguelite.md 11), shown on the server's card and the breach's strip.
+export const KINDS = {
+  Mailhub: { rule: 'Spam floods', text: `Every fight brings a Spam Flood once your Trace reaches ${TRACE.alarm}: one more part, weak and quick.` },
+  Archive: { rule: 'Deep storage', text: 'Every act holds two vaults and two keycards.' },
+  Relay: { rule: 'Hops', text: 'Every act has two open shortcuts that skip a row.' },
+  Mirror: { rule: 'Mirrors', text: 'One cache in every act is a mirror, with an elite behind it.' },
+  Lab: { rule: 'Overheat', text: 'From the 10th cycle of every fight, the rack burns you for 2% of your max Signal each cycle, and every part for 3% of its max Integrity.' },
+};
+export const OVERHEAT = { from: 10, share: 0.03, you: 0.02 };
+// What a switch takes down (docs/roguelite.md 11): the act's viruses, or its gate (the Resident in the last act).
+export const SWITCHES = {
+  armor: { name: 'Patch server', text: 'Every virus left in this act loses 1 ◆ on every part.' },
+  gate: { name: 'Gate relay', text: '{Next} starts with 20% less Integrity, and its first attack 2 cycles late.' },
+};
+// The logs a vault keeps, by author: a line or two of who was here.
+export const VAULT_LOGS = {
+  tollgate: ['escrow.log: 2 of 2 keys held. 1 of 2 keys paid for.', 'ops.txt: lock first, invoice second, insure third.'],
+  swarmline: ['beacon.cfg: phone home every 300s. nobody ever answers.', 'list.csv: 4,112 rows. column C says "insured".'],
+  nullchoir: ['score.mid: four beats, then silence, then four beats.', 'choir.txt: we sing what you type. type something kind.'],
+  glassjaw: ['ledger.db: compute rented by the hour. client field blank.', 'bill.txt: we do not ask. we bill.'],
+  palemask: ['mask.png: a face, cropped from a claims photo.', 'note.txt: wear it long enough and it wears you.'],
+  kestrel: ['incident.log: alarm 4471 acknowledged. no unit dispatched.', 'rota.txt: on call this week: nobody.'],
+};
+const stepOf = (act, row, rows = BREACH.rows) => act * (rows + 1) + row + 1; // 1..5 an act's rows, 6 its gate; 18 the Resident
 // A card's shape: its acts (one per pair of subsystems) and the rows in each.
 export const actsOf = (card = SERVER_CARD) => card.subsystems.length;
 export const rowsOf = (card = SERVER_CARD) => card.rows || BREACH.rows;
@@ -98,10 +154,11 @@ function weighted(r, w) {
   for (const [k, v] of Object.entries(w)) if ((x -= v) < 0) return k;
   return Object.keys(w)[0];
 }
-// The subsystem a row runs: rows 1 and 2 the act's two, row 3 one of them (it alternates by act), the last row none (a
-// rest row). A three-row act (SPRAWL-00) runs its two, then rests.
-export const rowSub = (act, row, card = SERVER_CARD) => { const [a, b] = card.subsystems[act], rows = rowsOf(card); return row >= rows - 1 ? null : row === 0 ? a : row === 1 ? b : row === 2 ? (act % 2 ? b : a) : null; };
-// What a wild or elite node's virus will be, fixed when the map is made (so scan and the map agree).
+// The subsystem a row runs: rows 1 and 2 the act's two, then they take turns (which goes first alternates by act), the
+// last row none (a rest row). A three-row act (SPRAWL-00) runs its two, then rests.
+export const rowSub = (act, row, card = SERVER_CARD) => { const [a, b] = card.subsystems[act], rows = rowsOf(card); return row >= rows - 1 ? null : row === 0 ? a : row === 1 ? b : (row + act) % 2 ? b : a; };
+// What a wild or elite node's virus will be, fixed when the map is made (so scan and the map agree). An elite's first
+// tell is a charge, for a burst to answer.
 function virusOf(r, node, level, elite, card = SERVER_CARD, gen = {}) {
   const strains = (card.builds || []).filter((k) => STRAINS[k] && (STRAINS[k].from || 1) <= level);
   const strain = !elite && node.act > 0 && strains.length && r() < BREACH.strainShare ? strains[Math.floor(r() * strains.length)] : null; // past the perimeter
@@ -111,7 +168,8 @@ function virusOf(r, node, level, elite, card = SERVER_CARD, gen = {}) {
   if (level < BREACH.lockFrom) delete pool.lock; // Lock asks for a cooldown to feed it: not while your bar is two keys
   const ids = { overclock: 'overclock', lock: 'lock', charge, seal };
   const tells = [];
-  for (let i = 0; i < (elite ? 2 : 1); i++) { const k = weighted(r, pool); tells.push(ids[k]); delete pool[k]; }
+  if (elite) { tells.push(charge); delete pool.charge; }
+  while (tells.length < (elite ? 2 : 1)) { const k = weighted(r, pool); tells.push(ids[k]); delete pool[k]; }
   // A server an author dug in on (world.mjs, the card's world.digin): every elite is that author's and carries its gene.
   const dig = elite && card.world?.digin;
   const author = dig ? dig.author : tells.includes('overclock') ? 'glassjaw' : card.author;
@@ -137,18 +195,60 @@ export function genomeOfNode(r, level, family, author, elite = false, strain = f
   if (strain) genes = genes.filter((id) => GENES[id].mutation);
   return { third: genes.find((id) => GENES[id].parts) || null, muts: genes.filter((id) => GENES[id].mutation), genes };
 }
-// opts: heat (Rotation adds an elite an act), gen (genome options: Testbed, Sinkhole).
+// The map's dungeon pieces in one act (docs/roguelite.md 11): a switch, keycards on viruses, vaults on other branches,
+// a Mirror's mirrored cache, a Relay's shortcuts. A three-row act (the tutorial) has none of them.
+function dungeon(r, actNodes, act, rows, card, edges, shortcuts, author) {
+  if (rows < 4) return;
+  const mid = actNodes.filter((n) => n.row > 0 && n.row < rows - 1);
+  const pick = (xs) => xs[Math.floor(r() * xs.length)];
+  const terms = mid.filter((n) => n.kind === 'term').length;
+  // Mirror: one cache an act is a mirror (a virus or a spare terminal becomes the cache when there's none).
+  if (card.kind === 'Mirror') {
+    const m = pick(mid.filter((n) => n.kind === 'cache')) || pick(mid.filter((n) => n.kind === 'virus')) || (terms > 1 ? pick(mid.filter((n) => n.kind === 'term')) : null);
+    if (m) { m.kind = 'cache'; m.mirror = true; delete m.event; }
+  }
+  const free = (n) => !n.mirror && !n.key;
+  const spareTerm = () => mid.filter((x) => x.kind === 'term').length > 1;
+  // A switch: a cache or a virus (never the act's only terminal or its elite).
+  const sw = pick(mid.filter((n) => n.kind === 'cache' && free(n))) || pick(mid.filter((n) => n.kind === 'virus' && free(n))) || (spareTerm() ? pick(mid.filter((n) => n.kind === 'term')) : null);
+  if (sw) { sw.kind = 'switch'; sw.effect = r() < 0.5 ? 'armor' : 'gate'; delete sw.event; }
+  // Vaults sit in the act's middle rows; each one's keycard rides a virus in an earlier row, on another lane where
+  // one can.
+  const deep = card.kind === 'Archive' ? 2 : 1;
+  for (let i = 0; i < deep; i++) {
+    const vault = pick(mid.filter((n) => free(n) && (['virus', 'cache'].includes(n.kind) || (n.kind === 'term' && spareTerm()))));
+    if (!vault) continue;
+    const early = actNodes.filter((n) => n.kind === 'virus' && n.row < vault.row && n.row <= rows - 3 && free(n));
+    const keyAt = pick(early.filter((n) => n.col !== vault.col)) || pick(early);
+    if (keyAt) keyAt.key = true;
+    vault.kind = 'vault'; delete vault.event;
+    const L = BREACH.loot.vault, logs = VAULT_LOGS[author] || VAULT_LOGS.tollgate;
+    vault.vault = r() < L.gear ? { kind: 'gear', rarity: r() < L.custom ? 'custom' : 'tuned' } : { kind: 'script', script: rollScript(r, 'uncommon') };
+    vault.vault.log = logs[Math.floor(r() * logs.length)];
+  }
+  // Relay: two shortcuts an act, from a node to one two rows down (same lane or a neighbour), skipping the row between.
+  if (card.kind === 'Relay') {
+    const from = actNodes.filter((n) => n.row <= rows - 3).sort(() => r() - 0.5);
+    let made = 0;
+    for (const a of from) {
+      const to = actNodes.filter((n) => n.row === a.row + 2 && Math.abs(n.col - a.col) <= 1 && !shortcuts.some(([x, y]) => x === a.id || y === n.id));
+      const c = pick(to);
+      if (c && !edges.some(([x, y]) => x === a.id && y === c.id)) { shortcuts.push([a.id, c.id]); if (++made >= 2) break; }
+    }
+  }
+}
 // A dead drop takes a node in its row: a cache first, then a spare terminal, then a fight in a row that has another,
 // so every act keeps its elite, its terminal and both its subsystems. Its own dice: the rest of the map is unchanged.
 function placeDrop(nodes, actNodes, drop, rows, r) {
   const row = Math.max(1, Math.min(rows - 2, drop.row || 1)), inRow = actNodes.filter((n) => n.row === row);
   const fights = (n) => actNodes.filter((x) => x.row === n.row && (x.kind === 'virus' || x.kind === 'elite')).length;
-  const rank = (n) => (n.kind === 'cache' ? 0 : n.kind === 'term' && actNodes.filter((x) => x.kind === 'term').length > 1 ? 1 : n.kind === 'virus' && fights(n) > 1 ? 2 : n.kind === 'virus' ? 3 : n.kind === 'term' ? 4 : 9);
+  // Never a mirror (its elite), a keycard's virus, a vault or a switch.
+  const rank = (n) => (n.mirror || n.key ? 9 : n.kind === 'cache' ? 0 : n.kind === 'term' && actNodes.filter((x) => x.kind === 'term').length > 1 ? 1 : n.kind === 'virus' && fights(n) > 1 ? 2 : n.kind === 'virus' ? 3 : n.kind === 'term' ? 4 : 9);
   const best = Math.min(...inRow.map(rank)), pick = inRow.filter((n) => rank(n) === best);
   const n = pick[Math.floor(r() * pick.length)];
   if (!n || best === 9) return null;
-  for (const k of ['family', 'strain', 'tells', 'author', 'genes', 'third', 'muts', 'mutation', 'reward', 'rare', 'event', 'bait', 'tokens', 'gear', 'faction']) delete n[k];
-  Object.assign(n, { kind: 'drop', drop: drop.id, card: drop.card, frag: drop.frag, path: `/${ACTS[n.act].dir}/drop` });
+  for (const k of ['family', 'strain', 'tells', 'author', 'genes', 'third', 'muts', 'mutation', 'event', 'bait', 'tokens', 'script', 'faction']) delete n[k];
+  Object.assign(n, { kind: 'drop', drop: drop.id, script: drop.script || null, frag: drop.frag, path: `/${ACTS[n.act].dir}/drop` });
   return nodes[n.id];
 }
 // opts: heat (Rotation adds an elite an act), gen (genome options: Testbed, Sinkhole), dropAct (the act a dead drop
@@ -157,7 +257,7 @@ export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, ge
   const r = seeded(seed * 31 + 7);
   const rules = heatRules(heat);
   const acts = actsOf(card), rows = rowsOf(card), w0 = { ...BREACH.weights, ...(KIND_WEIGHTS[card.kind] || {}) };
-  const nodes = {}, edges = [];
+  const nodes = {}, edges = [], shortcuts = [];
   const add = (n) => { nodes[n.id] = n; return n; };
   let prevExit = null; // the node the next act's first row hangs off (a gate)
   const events = shuffle(r, Object.keys(EVENTS));
@@ -170,9 +270,11 @@ export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, ge
       const [row, c] = k.split(':').map(Number);
       add({ id: id(row, c), act, row, col: c, step: stepOf(act, row, rows), sub: rowSub(act, row, card), level: lvl, seed: Math.floor(r() * 2 ** 31), kind: null, path: `/${ACTS[act].dir}/${rowSub(act, row, card) || 'tmp'}` });
     }
-    for (const k of es) { const [row, a, b] = k.split(/[:>]/).map(Number); edges.push([id(row, a), id(row + 1, b)]); }
-    // Kinds: row 1 all virus; row 4 all defrag or broker; rows 2 and 3 by weight. No elite in act 1's first two rows,
-    // no broker or defrag the row before the rest row (never two in a row on a path).
+    const actEdges = [];
+    for (const k of es) { const [row, a, b] = k.split(/[:>]/).map(Number); actEdges.push([id(row, a), id(row + 1, b)]); }
+    edges.push(...actEdges);
+    // Kinds: the first row all virus; the last all defrag or broker; the rows between by weight, with a broker or a
+    // defrag only in the middle one (never two rests in a row on a path). No elite in act 1's first two rows.
     const actNodes = Object.values(nodes).filter((n) => n.act === act && n.kind == null);
     for (const n of actNodes) {
       if (n.row === 0) n.kind = 'virus';
@@ -180,7 +282,7 @@ export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, ge
       else {
         const w = { ...w0 };
         if (act === 0 && n.row < 2) delete w.elite;
-        if (n.row === rows - 2) { delete w.broker; delete w.defrag; }
+        if (n.row !== Math.floor((rows - 1) / 2) || rows < 5) { delete w.broker; delete w.defrag; }
         n.kind = weighted(r, w);
       }
     }
@@ -193,17 +295,13 @@ export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, ge
     // A rest row of only brokers or only defrags still lets you choose: mix them when there are two or more.
     const rest = actNodes.filter((n) => n.row === rows - 1);
     if (rest.length > 1 && rest.every((n) => n.kind === rest[0].kind)) rest[1].kind = rest[0].kind === 'defrag' ? 'broker' : 'defrag';
+    dungeon(r, actNodes, act, rows, card, actEdges, shortcuts, card.author);
     for (const n of actNodes) {
-      if (['virus', 'elite'].includes(n.kind)) Object.assign(n, virusOf(r, n, lvl, n.kind === 'elite', card, gen));
+      if (['virus', 'elite'].includes(n.kind) || n.mirror) Object.assign(n, virusOf(r, n, lvl, n.kind === 'elite' || !!n.mirror, card, gen));
       if (n.kind === 'term') n.event = events[ev++ % events.length];
-      if (n.kind === 'cache') { n.bait = r() < BREACH.baitShare; n.tokens = BREACH.tokens.cache[0] + Math.floor(r() * (BREACH.tokens.cache[1] - BREACH.tokens.cache[0] + 1)); n.gear = r() < BREACH.cacheGear; }
+      if (n.kind === 'cache') { n.bait = !n.mirror && r() < BREACH.baitShare; n.tokens = BREACH.tokens.cache[0] + Math.floor(r() * (BREACH.tokens.cache[1] - BREACH.tokens.cache[0] + 1)); n.script = !n.bait && !n.mirror && r() < BREACH.cacheScript ? rollScript(r) : null; }
       if (n.kind === 'broker') n.faction = BROKER_IDS[Math.floor(r() * BROKER_IDS.length)];
     }
-    // What each fight's draft offers, shown ahead (docs/roguelite.md 4.1): a mod, a CVE or gear. An elite's is CVEs.
-    // Some fights past the perimeter promise a rare card too. Every act shows each kind at least once.
-    const fights = actNodes.filter((n) => n.kind === 'virus' || n.kind === 'elite');
-    for (const n of fights) { n.reward = n.kind === 'elite' ? 'cve' : weighted(r, DRAFT.reward); n.rare = act > 0 && r() < DRAFT.rareNode; }
-    for (const k of ['mod', 'cve', 'gear']) if (!fights.some((n) => n.reward === k)) { const c = fights.filter((n) => n.kind === 'virus' && fights.filter((x) => x.reward === n.reward).length > 1)[0]; if (c) c.reward = k; }
     // A dead drop (world.mjs, the card's world.drop) in the first act you play, in the row wick's lead named.
     if (card.world?.drop && act === dropAct) placeDrop(nodes, actNodes, card.world.drop, rows, seeded((seed ^ 0xd20b) >>> 0));
     // Wire the act to what came before (all its first row hangs off the last gate) and to its own exit.
@@ -219,19 +317,23 @@ export function generateMap(seed, level = 10, card = SERVER_CARD, { heat = 0, ge
       for (const n of last) edges.push([n.id, core.id]);
     }
   }
-  return { nodes, edges, seed, acts, rows };
+  return { nodes, edges, shortcuts, seed, acts, rows };
 }
+// Server kinds lean the map a little too (docs/roguelite.md 2.2): an Archive holds caches twice as often.
+export const KIND_WEIGHTS = { Archive: { cache: 20 } };
 function shuffle(r, xs) { const a = [...xs]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 export const nodeList = (map) => Object.values(map.nodes);
 export const nextOf = (map, id) => map.edges.filter(([a]) => a === id).map(([, b]) => map.nodes[b]);
+// Where a node leads, shortcuts and all (a Relay's hops skip a row).
+export const exitsOf = (map, id) => [...nextOf(map, id), ...(map.shortcuts || []).filter(([a]) => a === id).map(([, b]) => map.nodes[b])];
 export const firstRow = (map) => nodeList(map).filter((n) => n.step === 1);
-// Every path from the first row ends at the Resident (the tests walk them all).
 // A Range replay (rewrites.mjs Range): the Resident alone at /core.
 export function replayMap(seed, level, card = SERVER_CARD) {
   const r = seeded(seed * 31 + 7);
   const core = { id: 'core', act: 0, row: 0, col: null, step: 1, kind: 'boss', boss: card.resident, level: level + BREACH.bossLevel, seed: Math.floor(r() * 2 ** 31), path: '/core' };
-  return { nodes: { core }, edges: [], seed, acts: 1, rows: 0, replay: true };
+  return { nodes: { core }, edges: [], shortcuts: [], seed, acts: 1, rows: 0, replay: true };
 }
+// Every path from the first row ends at the Resident (the tests walk them all).
 export function allPaths(map) {
   const out = [], walk = (n, path) => { const next = nextOf(map, n.id); if (!next.length) { out.push([...path, n.id]); return; } for (const x of next) walk(x, [...path, n.id]); };
   for (const n of firstRow(map)) walk(n, []);
@@ -245,12 +347,12 @@ export const EVENTS = {
     name: 'Half-written cron', file: '/etc/cron.d/tollgate',
     lines: ['# resident maintenance window. do not edit', '*/5 * * * *  root  /opt/gate/hold --signature --cycles 2', '# TODO(ops): enable after the audit'],
     options: [
-      { label: 'Finish it', text: "Costs 10% of your Signal. {Next}'s signature part attacks 2 cycles later." },
+      { label: 'Finish it', text: "Costs 10% of your Signal and raises your Trace by 10. {Next}'s signature part attacks 2 cycles later." },
       { label: 'Wipe it', text: 'Grants you 15 tokens.' },
     ],
   },
   keys: {
-    name: 'Leaked keys', file: '/home/ops/.ssh/keys.bak',
+    name: 'Leaked creds', file: '/home/ops/.ssh/keys.bak',
     lines: ['-----BEGIN OPENSSH PRIVATE KEY-----', 'comment: kestrel-ice-svc   expires: never', '-----END OPENSSH PRIVATE KEY-----'],
     options: [
       { label: 'Use them', text: '{Next} starts with 1 ◆ less on every part, but its attacks repeat a cycle faster.' },
@@ -261,7 +363,7 @@ export const EVENTS = {
     name: 'Honeytoken', file: '/srv/claims/payroll_q3.xlsx',
     lines: ['-rw-r--r--  1 claims claims 4.1M  payroll_q3.xlsx', 'last opened: never   last modified: 3 minutes ago'],
     options: [
-      { label: 'Pull it', text: 'Grants you 50 tokens. Costs 15% of your Signal.' },
+      { label: 'Pull it', text: 'Grants you 50 tokens. Raises your Trace by 25.' },
       { label: 'Leave it', text: 'Nothing changes.' },
     ],
   },
@@ -269,23 +371,22 @@ export const EVENTS = {
     name: 'Sandbox sample', file: '/var/sandbox/samples',
     lines: ['root  6121  0.0  sandbox --cage --hold', 'cage 3: one sample, still running, still writing'],
     options: [
-      { label: 'Fight it', text: 'Fights the sample at your current Signal. Its draft has a rare card for sure.' },
+      { label: 'Fight it', text: 'Fights the sample at your current Signal. It carries a script, uncommon or rare.' },
       { label: 'Leave it', text: 'Nothing changes.' },
     ],
   },
 };
-// Brokers: a faction's stall (docs/roguelite.md 2.5). What it sells, its price for a Signal patch, and its own service.
-// A stall's mods and CVEs lean to your build: each is the best fit of a few the stall could stock, so a broker is
-// where you go looking for the card a combo is missing.
+// Brokers: a faction's stall (docs/roguelite.md 2.5). Scripts and a Signal patch, for tokens; LANTERN sells the map
+// ahead, Kestrel scrubs your Trace. stock: how many scripts (floor: the lowest rarity it carries). patch: its price.
 export const BROKERS = {
-  glassjaw: { name: 'GLASSJAW', sells: 'Mods and CVEs', stock: ['mod', 'mod', 'cve'], patch: 45, service: { id: 'reroll', name: 'Reroll', price: 25, text: 'Grants you 1 draft reroll.' } },
-  halcyon: { name: 'Halcyon', sells: 'Gear', stock: ['gear', 'gear', 'gear'], patch: 45 },
-  kestrel: { name: 'Kestrel', sells: 'CVEs and Signal', stock: ['cve', 'cve', 'gear'], patch: 25 },
-  nullchoir: { name: 'NULL CHOIR', sells: 'Mods, and recompiles them', stock: ['mod', 'mod', 'mod'], patch: 45, service: { id: 'recompile', name: 'Recompile', price: 60, text: 'Recompiles one of your mods to its + version.' } },
-  lantern: { name: 'LANTERN', sells: 'CVEs, and maps', stock: ['cve', 'cve', 'mod'], patch: 45, service: { id: 'reveal', name: 'Map', price: 30, text: 'Shows every node of the act ahead, past the fog.' } },
+  glassjaw: { name: 'GLASSJAW', sells: 'Scripts', stock: 3, patch: 45 },
+  halcyon: { name: 'Halcyon', sells: 'Scripts, uncommon or better', stock: 2, floor: 'uncommon', patch: 45 },
+  kestrel: { name: 'Kestrel', sells: 'Scripts, a cheap patch and a scrub', stock: 2, patch: 25, service: { id: 'scrub', name: 'Scrub', price: 30, text: 'Lowers your Trace by 30.' } },
+  nullchoir: { name: 'NULL CHOIR', sells: 'Scripts', stock: 3, patch: 45 },
+  lantern: { name: 'LANTERN', sells: 'Scripts, and maps', stock: 2, patch: 45, service: { id: 'reveal', name: 'Map', price: 30, text: 'Shows every node of the act ahead, past the fog.' } },
 };
 const BROKER_IDS = Object.keys(BROKERS);
-export const PRICES = { mod: { common: 55, uncommon: 70, rare: 95 }, cve: { common: 80, uncommon: 110, rare: 150 }, gear: { stock: 60, tuned: 90, custom: 140 }, patch: 0.25 };
+export const PRICES = { patch: 0.25 };
 
 // ---------- the lore at the end ----------
 export const CORE_DUMP = {
@@ -305,6 +406,8 @@ export const CORE_DUMP = {
 // A class at a level with a subclass, its talents spent as a player would (balance.mjs build), and a blue protocol in
 // every open slot, chasing its subclass's stats.
 const fillOrder = (F) => [[F[0][0].id, 3], ['c0'], [F[1][0].id, 3], [F[1][1].id, 1], ['c1'], [F[2][0].id, 3], [F[2][1].id, 2], ['c2'], [F[0][1].id, 3], [F[1][1].id, 2], [F[2][1].id, 1]];
+// The talent pick each tier takes (0 or 1): a sensible player's, by subclass (breachsim.mjs measures them).
+export const TALENT_PICKS = { phantom: [0, 1, 1] };
 // A subclass from level 10 and the talent points a level has, spent as a player would (the campaign bot calls it as it
 // levels too). Returns the subclass's kit, or null below level 10.
 export function spendTalents(s, { cls = classOf(s), level = hackerLevel(s), sub = null } = {}) {
@@ -312,10 +415,10 @@ export function spendTalents(s, { cls = classOf(s), level = hackerLevel(s), sub 
   if (pick) s.loadout.sub = { ...(s.loadout.sub || {}), [cls]: pick };
   if (kit) {
     let left = level < LOADOUT.talentFrom ? 0 : Math.floor((level - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1;
-    const ranks = {}, picks = [];
+    const ranks = {}, picks = [], tp = TALENT_PICKS[pick] || [0, 0, 0];
     for (const [id, n] of fillOrder(kit.fillers)) {
       if (left <= 0) break;
-      if (!n) { picks[+id[1]] = 0; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
+      if (!n) { picks[+id[1]] = tp[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
     }
     s.loadout.picks[key] = picks; s.loadout.ranks[key] = ranks;
   }
@@ -350,32 +453,36 @@ export const fogOf = (s) => {
 //   outputs   { rewriteId: tier } the rewrites your captured servers run for you (each once, at its best tier)
 //   from      gates already beaten (a retry from a checkpoint): you start past the last one, with keep's rewrites
 //   prior     the rewrites the server runs now (re-imaging: each subsystem you clear keeps it or changes it)
-//   pool      { cves } the CVEs the draft can offer (the unlock pool); bounty: the one you took; lastMods: Archive's
+//   bounty    the bounty you took
 //   xp        what each kill's XP is worth here (the campaign pays more than the playtest's flat guard XP)
 //   heat      the breach's heat (heat.mjs): each rank adds a modifier and pays for it
 //   replay    a Range replay: the Resident alone (campaign.mjs)
-export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER_CARD, outputs = {}, from = 0, keep = {}, prior = null, pool = null, bounty = null, lastMods = [], xp = 1, heat = 0, replay = false } = {}) {
+export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER_CARD, outputs = {}, from = 0, keep = {}, prior = null, bounty = null, xp = 1, heat = 0, replay = false } = {}) {
   const rules = heatRules(heat);
   // What your network does to the roll of this server's viruses: Testbed (linked) adds a point, Sinkhole (linked) keeps
   // them to genes you've decoded.
   const gen = { bonus: (outputs.testbed ? 1 : 0) - (outputs.sinkhole > 1 ? 1 : 0), known: outputs.sinkhole ? new Set(Object.keys(GENES).filter((id) => decoded(s, id))) : null };
   const map = replay ? replayMap(seed, level, card) : generateMap(seed, level, card, { heat, gen, dropAct: from });
+  const playtest = card === SERVER_CARD && !s.camp;
   s.breach = {
-    v: 2, seed, level, server: card.id, map, at: null, path: [], cleared: {}, rolls: 0, heat: rules.heat, rules,
-    signal: 0, max: 0, tokens: BREACH.startTokens, rerolls: rules.audit ? 0 : BREACH.rerolls, rareBoost: 0,
-    mods: [], plus: [], cves: [], rewrites: {}, pack: [], banked: [], fx: { rareOdds: rules.rare, gearLevel: rules.itemLevel }, screen: null, queue: [],
+    v: 3, seed, level, server: card.id, map, at: null, path: [], cleared: {}, rolls: 0, heat: rules.heat, rules,
+    signal: 0, max: 0, tokens: BREACH.startTokens, trace: rules.audit, tracePeak: rules.audit, keys: 0, hunter: null, switches: {},
+    rewrites: {}, pack: [], banked: [], fx: { rareOdds: rules.rare, gearLevel: rules.itemLevel }, screen: null, queue: [],
     xp: 0, xpFrom: { level: hackerLevel(s), xp: hackerOf(s).xp }, kills: 0, result: null, log: [], gen: { bonus: gen.bonus, sinkhole: !!gen.known },
+    stats: { rests: 0, landed: 0, elites: 0, low: 1, hunted: 0, vaults: 0, scripts: 0, found: 0 },
   };
   const b = s.breach;
   if (card !== SERVER_CARD) {
-    Object.assign(b, { card, outputs: { ...outputs }, prior, pool, bounty, xpMult: xp * rules.xp, from, stats: { rests: 0, landed: 0, elites: 0, skips: 0, low: 1 } });
-    applyOutputs(s, b, outputs, lastMods);
+    Object.assign(b, { card, outputs: { ...outputs }, prior, bounty, xpMult: xp * rules.xp, from });
+    applyOutputs(s, b, outputs);
     // A dig in pays like a heat rank: gear drops a level higher, and the Resident's unique roll gets +10%.
     if (card.world?.digin) { b.fx.gearLevel += DIG.itemLevel; b.fx.unique = DIG.unique; }
   }
   b.max = sigMax(s, b); b.signal = b.max;
   s.run = null;
-  unpatchMods();
+  unpatchRules();
+  // A playtest has no campaign to carry scripts in: it hands you two to try.
+  if (playtest && !scriptsOf(s).length) { scriptsOf(s).push('sasser', rollScript(rnd(b, 3), 'uncommon')); }
   say(s, `CONNECTED to ${card.name}. ${card.kind}, level ${level}, ${card.author.toUpperCase()}.${rules.heat ? ` Heat ${rules.heat}.` : ''} Resident: ${residentName(card)}.`);
   // A retry from a checkpoint: you stand on the last gate you beat, with the rewrites from the acts behind it.
   if (from > 0 && map.nodes[`gate${from}`]) {
@@ -384,34 +491,27 @@ export function startBreach(s, { seed = 1, level = hackerLevel(s), card = SERVER
     for (const [sub, held] of Object.entries(keep || {})) b.rewrites[sub] = { ...held };
     say(s, `Checkpoint: you pick up past ${GUARDS[map.nodes[b.at].guard].name}, act ${from + 1}.`, 'breach-good');
   }
-  if (b.queue.length && !b.screen) next(s);
   return b;
 }
 // What your captured servers do on this breach (rewrites.mjs output, docs/roguelite.md 3.2). Each rewrite once, at
 // its best tier; the campaign works out which ones reach this server (Spam Cannon only from a linked server).
-function applyOutputs(s, b, out, lastMods) {
+function applyOutputs(s, b, out) {
   const t = (id) => out[id] || 0;
   if (t('slushfund')) b.tokens += t('slushfund') > 1 ? 80 : 40;
   if (t('memorymap')) b.fx.memory = t('memorymap') > 1 ? 0.15 : 0.1;
-  if (t('kernelhook')) { b.fx.kernelHook = true; if (t('kernelhook') > 1) b.fx.gateHook = true; }
+  if (t('kernelhook')) b.fx.kernel = t('kernelhook');
   if (t('warmstart')) { b.fx.warm = true; if (t('warmstart') > 1) b.fx.warmSigint = true; }
-  if (t('nightlybuild')) { b.fx.nightly = t('nightlybuild'); b.rerolls += t('nightlybuild'); }
+  if (t('nightlybuild')) b.fx.nightly = t('nightlybuild') > 1 ? 30 : 15;
+  if (t('forgedkeys')) b.keys += t('forgedkeys');
   if (t('pricefix')) b.fx.discount = t('pricefix') > 1 ? 0.4 : 0.25;
   if (t('restorepoint')) b.fx.restore = t('restorepoint') > 1 ? 0.4 : 0.25;
   if (t('spamcannon')) b.fx.thin = t('spamcannon') > 1 ? 0.25 : 0.15;
   if (t('maildrop')) b.fx.maildrop = t('maildrop');
   if (t('zonetransfer')) b.fx.zone = t('zonetransfer');
-  if (t('audittrail')) b.fx.audit = true;
+  if (t('audittrail')) b.fx.audit = t('audittrail') > 1 ? 2 : true;
   if (t('serviceaccount')) b.fx.service = t('serviceaccount');
   if (t('listeningpost')) b.fx.listen = t('listeningpost') > 1 ? 2 : 1.5;
   if (t('testbed')) b.fx.gearLevel += t('testbed') > 1 ? 3 : 2;
-  if (t('audittrail') > 1) b.fx.audit = 2;
-  // Forged Keys: a CVE pick before the first node. Archive: one of the mods you ended your last breach with.
-  if (t('forgedkeys')) b.queue.push({ kind: 'draft', title: 'Forged Keys', draft: 'cve', cards: rollDraft(s, rnd(b, 61), 'cve', { act: 0, level: b.level, boost: t('forgedkeys') > 1 ? 20 : 0 }), noSkip: false });
-  if (t('archive')) {
-    const bar = modPool(s), mods = (lastMods || []).filter((id) => bar.includes(id));
-    if (mods.length) b.queue.push({ kind: 'draft', title: 'Archive', draft: 'mod', cards: mods.slice(0, 3).map((id) => ({ kind: 'mod', id, rarity: 'tuned' })), picks: t('archive') > 1 ? 2 : 1 });
-  }
 }
 // A line in the breach's terminal (and the game log).
 function say(s, text, type = 'breach') {
@@ -421,11 +521,12 @@ function say(s, text, type = 'breach') {
   return emit(s, type, text);
 }
 const deny = (s, text) => { warn(s, text); return null; };
-// After a fight: your Signal back on the breach, and s.run off so gear loads between nodes.
+// After a fight: your Signal back on the breach (never over what you started the fight with: heals and shields only
+// count inside a fight), and s.run off so gear loads between nodes.
 export function settle(s) {
   const b = s.breach;
   if (!b || !s.run?.breach || active(s)) return;
-  b.signal = Math.max(0, Math.min(s.run.max, s.run.integrity));
+  b.signal = Math.max(0, Math.min(s.run.max, s.run.integrity, b.fightFrom ?? s.run.max));
   b.max = s.run.max;
   s.run = null;
   if (s.encounter?.breach) s.encounter = null; // the fight is over: a run fight with no run would have no Signal to read
@@ -433,16 +534,56 @@ export function settle(s) {
 export const currentNode = (s) => (s.breach?.at ? s.breach.map.nodes[s.breach.at] : null);
 export const currentStep = (s) => currentNode(s)?.step || 0;
 // Rows you can read: two ahead of where you stand (three for an Infiltrator). The gate and the Resident always show.
-// Zone Transfer's Now and LANTERN's map reveal a whole act (b.fx.reveal).
+// LANTERN's map reveals a whole act (b.fx.reveal). The hunter always shows: it wants to be seen.
 export const visible = (s, n) => !!s.breach && (n.kind === 'gate' || n.kind === 'boss' || n.step <= currentStep(s) + fogOf(s) || !!s.breach.cleared[n.id] || !!s.breach.fx.reveal?.includes(n.act));
-// Where you can go now.
+// Where you can go now: along an edge, or a Relay's shortcut.
 export function reachable(s) {
   const b = s.breach;
   if (!b || b.result || b.screen || active(s)) return [];
-  const step = currentStep(s);
   if (!b.at) return firstRow(b.map);
-  if (b.fx.jump) return nodeList(b.map).filter((n) => n.step === step + 1);
-  return nextOf(b.map, b.at);
+  return exitsOf(b.map, b.at);
+}
+
+// ---------- Trace ----------
+// Raise (or lower) your Trace. Loud moves raise it (an Infiltrator half as fast, heat 7 half again), and at
+// TRACE.hunt a hunter drops onto the map. Under TRACE.lose a hunter on the map loses you.
+export function trace(s, n, why = '') {
+  const b = s.breach;
+  if (!b || !n) return;
+  const k = n > 0 ? (classOf(s) === 'infiltrator' ? 0.5 : 1) * (b.rules?.tripwire || 1) : 1;
+  const was = b.trace;
+  b.trace = Math.max(0, Math.min(100, Math.round(b.trace + n * k)));
+  b.tracePeak = Math.max(b.tracePeak || 0, b.trace);
+  if (b.trace === was) return;
+  say(s, `${why ? `${why} ` : ''}Trace ${b.trace > was ? '+' : ''}${b.trace - was} (${b.trace}).`, b.trace > was ? 'breach-bad' : 'breach-good');
+  if (was < TRACE.alarm && b.trace >= TRACE.alarm && cardOf(s).kind === 'Mailhub') say(s, 'ALARM. The mail daemon floods every fight with spam from here on.', 'breach-bad');
+  if (b.trace >= TRACE.hunt && !b.hunter) spawnHunter(s);
+  if (b.hunter && b.trace < TRACE.lose) { say(s, 'The hunter loses your trace and drops off the map.', 'breach-good'); b.hunter = null; }
+}
+// The hunter drops two or three rows ahead of you in this act (the next one, from its last rows), on the lane farthest
+// from yours, and closes in from there.
+function spawnHunter(s) {
+  const b = s.breach, here = currentNode(s), step = here?.step || 0, act = here?.act ?? 0;
+  for (const [ahead, same] of [[3, true], [2, true], [1, true], [3, false], [2, false]]) {
+    const xs = nodeList(b.map).filter((n) => n.step === step + ahead && n.col != null && !b.cleared[n.id] && (!same || n.act === act));
+    if (!xs.length) continue;
+    const at = xs.sort((x, y) => Math.abs(y.col - (here?.col ?? 1.5)) - Math.abs(x.col - (here?.col ?? 1.5)))[0];
+    b.hunter = { at: at.id, level: at.level + 1 };
+    b.stats.hunted++;
+    say(s, `TRACED. A hunter ICE drops onto ${at.path} and comes for you, a node for every move you make.`, 'breach-bad');
+    return;
+  }
+}
+// One step of the hunter toward you, along the map's links (either way).
+function hunterStep(s) {
+  const b = s.breach, h = b.hunter;
+  if (!h || !b.at || h.at === b.at) return;
+  const links = [...b.map.edges, ...(b.map.shortcuts || [])], nb = (id) => links.filter(([x, y]) => x === id || y === id).map(([x, y]) => (x === id ? y : x));
+  const prev = { [b.at]: null }, q = [b.at];
+  while (q.length) { const id = q.shift(); if (id === h.at) break; for (const x of nb(id)) if (!(x in prev)) { prev[x] = id; q.push(x); } }
+  if (!(h.at in prev)) return;
+  const to = prev[h.at];
+  if (to && b.map.nodes[to]?.col != null) h.at = to; // it waits rather than stand on a gate or the core
 }
 
 // Move to a node and resolve it. opts.pause: a fight starts paused (the browser).
@@ -455,54 +596,67 @@ export function go(s, id, opts = {}) {
   else if (b.screen) deny(s, 'Finish what is on screen first.');
   else if (!n || !reachable(s).includes(n)) deny(s, n ? `${n.path} is not reachable from here.` : `No node ${id}.`);
   else {
-    if (b.fx.jump && b.at && !nextOf(b.map, b.at).includes(n)) { b.fx.jump--; say(s, 'Jump Host: you hop lanes.'); }
-    else if (b.fx.jump && b.at) b.fx.jump--;
+    const hop = b.at && !nextOf(b.map, b.at).includes(n);
+    // A quiet step: leaving a node where you raised no Trace lowers it.
+    if (b.at && !b.loud && b.trace > 0) trace(s, TRACE.quiet, 'A quiet step.');
+    b.loud = false;
     b.at = n.id; b.path.push(n.id);
-    say(s, `cd ${n.path}`, 'breach-cmd');
-    resolve(s, n, opts);
+    say(s, `cd ${n.path}${hop ? ' (a hop: the row between is skipped)' : ''}`, 'breach-cmd');
+    hunterStep(s);
+    if (b.hunter?.at === n.id) { b.pending = n.id; say(s, 'The hunter is here.', 'breach-bad'); fight(s, n, { ...opts, as: 'hunter' }); }
+    else resolve(s, n, opts);
   }
   return s.logs.filter((e) => e.id > first);
 }
+const loud = (s, n, why) => { s.breach.loud = true; trace(s, n, why); };
 function resolve(s, n, opts) {
   const b = s.breach;
-  if (['virus', 'elite', 'gate', 'boss'].includes(n.kind)) return fight(s, n, opts);
-  if (n.kind === 'cache') { b.screen = { kind: 'cache', node: n.id, read: false }; return say(s, `${n.path}: cache.dat, ${n.tokens} tokens' worth${n.gear ? ', and a protocol' : ''}.`); }
+  if (['virus', 'elite', 'gate', 'boss'].includes(n.kind)) { if (n.kind === 'elite') loud(s, TRACE.elite, 'An elite is loud.'); return fight(s, n, opts); }
+  if (n.kind === 'cache') { b.screen = { kind: 'cache', node: n.id, read: false, pause: !!opts.pause }; return say(s, `${n.path}: cache.dat, ${n.tokens} tokens' worth${n.script ? ', and a script' : ''}.`); }
   if (n.kind === 'defrag') { b.screen = { kind: 'defrag', node: n.id }; return say(s, `${n.path}: a quiet sector. Defrag here.`); }
-  if (n.kind === 'broker') { b.screen = { kind: 'broker', node: n.id, faction: n.faction, stock: brokerStock(s, n), half: !!b.fx.halfPrice }; b.fx.halfPrice = false; return say(s, `${n.path}: ${BROKERS[n.faction].name} has a stall open.`); }
-  if (n.kind === 'term') { b.screen = { kind: 'term', node: n.id, event: n.event }; return say(s, `${n.path}: ${EVENTS[n.event].file}`); }
+  if (n.kind === 'broker') { b.screen = { kind: 'broker', node: n.id, faction: n.faction, stock: brokerStock(s, n) }; return say(s, `${n.path}: ${BROKERS[n.faction].name} has a stall open.`); }
+  if (n.kind === 'term') { b.screen = { kind: 'term', node: n.id, event: n.event, pause: !!opts.pause }; return say(s, `${n.path}: ${EVENTS[n.event].file}`); }
+  if (n.kind === 'vault') { b.screen = { kind: 'vault', node: n.id }; return say(s, `${n.path}: a vault door. ${b.keys ? `You hold ${b.keys === 1 ? 'a keycard' : `${b.keys} keycards`}.` : 'You hold no keycard.'}`); }
+  if (n.kind === 'switch') { b.screen = { kind: 'switch', node: n.id, pause: !!opts.pause }; return say(s, `${n.path}: a security switch, ${SWITCHES[n.effect].name.toLowerCase()}.`); }
   if (n.kind === 'drop') { b.screen = { kind: 'drop', node: n.id, read: false }; return say(s, `${n.path}: somebody left a note.`); }
 }
-// What a dead drop holds, by name: its card, and wick's note (campaign.mjs FRAGMENTS) when one is left to find.
-export const dropName = (n) => (n.card ? (CVES[n.card]?.name || MODS[n.card]?.name || n.card) : null);
-// The fight a node brings: [key, seed, opts] for selectEncounter.
-export function fightOf(s, n) {
+// What a dead drop holds, by name: its script (and wick's note, campaign.mjs FRAGMENTS, when one is left to find).
+export const dropName = (n) => (n.script ? SCRIPTS[n.script]?.name || n.script : null);
+// The fight a node brings: [key, seed, opts] for selectEncounter. as: 'hunter' (the hunter ICE, caught you here),
+// 'ice' (a switch's guard), 'mirror' (the elite behind a mirrored cache).
+export function fightOf(s, n, as = null) {
   const room = n.path;
+  if (as === 'hunter') return ['tracer', (n.seed ^ 0x7ace) >>> 0, { mode: 'run', room, level: s.breach.hunter?.level || n.level + 1, name: 'HUNTER' }];
+  if (as === 'ice') return ['watchdog', (n.seed ^ 0x1ce) >>> 0, { mode: 'run', room, level: n.level, name: 'SWITCH ICE' }];
   if (n.kind === 'gate') return [n.guard, n.seed, { mode: 'run', room, level: n.level }];
   const card = cardOf(s);
   if (n.kind === 'boss') return ['random', n.seed, { mode: 'run', room, level: n.level, family: BOSSES[n.boss]?.family || card.family, boss: n.boss, mutation: null, name: residentName(card).toUpperCase(), author: card.author, ...(card.bossHp ? { bossHp: card.bossHp } : {}) }];
-  const v = n.sample || n;
+  const v = n.sample || n, elite = n.kind === 'elite' || as === 'mirror';
   // A rolled genome (genomeOfNode): its third part forced through createVirus's genes, no mutation there (breach.mjs
   // lays the rolled ones on parts after, applyMutations).
   const genome = v.genes ? { genes: v.third ? [v.third] : [], mutation: null } : (v.mutation === null ? { mutation: null } : {});
-  return ['random', v.seed ?? n.seed, { mode: 'run', room, level: n.level, family: v.family, ...(v.strain ? { strain: v.strain } : {}), ...genome, author: v.author, ...(n.kind === 'elite' ? { elite: true, eliteHp: BREACH.eliteHp } : {}) }];
+  return ['random', v.seed ?? n.seed, { mode: 'run', room, level: n.level, family: v.family, ...(v.strain ? { strain: v.strain } : {}), ...genome, author: v.author, ...(elite ? { elite: true, eliteHp: BREACH.eliteHp } : {}) }];
 }
-export function fight(s, n, { pause = false, sample = null } = {}) {
+export function fight(s, n, { pause = false, sample = null, as = null } = {}) {
   const b = s.breach;
   s.encounter = null;
   b.max = sigMax(s, b);
   b.signal = Math.min(b.signal, b.max);
+  b.fightFrom = b.signal;
   s.run = { loc: 'breach', breach: true, cwd: n.path, integrity: b.signal, max: b.max, pack: [], visited: [n.path] };
-  patchMods(b.mods, b.plus);
-  const [key, seed, opts] = fightOf(s, sample ? { ...n, kind: 'virus', sample } : n);
+  const [key, seed, opts] = fightOf(s, sample ? { ...n, kind: 'virus', sample } : n, as);
   selectEncounter(s, key, seed, { ...opts, quiet: true });
   const e = s.encounter;
   if (!e) return;
   e.breach = n.id;
   if (sample) e.breachSample = true;
   if (n.kind === 'gate' && b.card?.world?.digin) digGate(s, e.virus, b.card, n);
-  const base = BREACH.size[sample ? 'virus' : n.kind] || BREACH.size.virus, more = b.card?.size || {};
-  const loud = b.rules?.loud ? BREACH.loud : { hp: 1, dmg: 1 }; // heat 1: every fight bigger and harder
-  const size = { hp: base.hp * (more.hp || 1) * loud.hp, dmg: base.dmg * (more.dmg || 1) * loud.dmg }; // a campaign card's own sizing on top
+  if (as) e.breachAs = as;
+  const kind = as === 'mirror' ? 'elite' : as || (sample ? 'virus' : n.kind);
+  const base = BREACH.size[kind] || BREACH.size.virus, more = b.card?.size || {};
+  const louder = b.rules?.loud ? BREACH.loud : { hp: 1, dmg: 1 }; // heat 1: every fight bigger and harder
+  const mine = BREACH.classSize[subOf(s)] || BREACH.classSize[classOf(s)] || {};
+  const size = { hp: base.hp * (more.hp || 1) * louder.hp * (mine.hp || 1), dmg: base.dmg * (more.dmg || 1) * louder.dmg * (mine.dmg || 1) }; // a campaign card's own sizing on top, and your class's
   for (const p of e.virus.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * size.hp));
     const a = p.attack;
@@ -510,32 +664,41 @@ export function fight(s, n, { pause = false, sample = null } = {}) {
     if (a?.hit) a.hit = Math.max(1, Math.round(a.hit * size.dmg));
     if (a?.rampBy) a.rampBy = Math.max(1, Math.round(a.rampBy * size.dmg));
   }
-  const tells = (sample || n).tells;
-  if (tells && n.kind !== 'gate' && n.kind !== 'boss') e.virus.tellSet = tells;
-  // The rolled genome: its third part is marked (Stuxnet reads it), and its mutations go on parts.
   const g = sample || n;
-  if (g.genes) applyMutations(s, e.virus, g, g.seed ?? n.seed);
+  const tells = g.tells;
+  if (tells && !as?.match(/hunter|ice/) && n.kind !== 'gate' && n.kind !== 'boss') e.virus.tellSet = tells;
+  // The rolled genome: its third part is marked, and its mutations go on parts.
+  if (g.genes && !['hunter', 'ice'].includes(as)) applyMutations(s, e.virus, g, g.seed ?? n.seed);
   // Heat 2: gates bring one more tell (Lock). Heat 8: the Resident is bigger and re-arms at 80%.
-  if (n.kind === 'gate' && b.rules?.gateTell) { e.virus.tellSet = [...(TELL_SETS[e.virus.family] || []), 'lock']; e.virus.extraTells = 1; }
+  if (n.kind === 'gate' && !as && b.rules?.gateTell) { e.virus.tellSet = [...(TELL_SETS[e.virus.family] || []), 'lock']; e.virus.extraTells = 1; }
   if (n.kind === 'boss' && b.rules?.resident) { for (const p of e.virus.parts) p.max = p.integrity = Math.round(p.max * 1.25); e.virus.phases = [{ at: 0.8, do: ['rearm'], say: `${e.virus.name} re-arms every part.`, done: false }, ...(e.virus.phases || [])]; }
   // The next gate (or the Resident, after the last one) remembers what you did on the way: a finished cron job, used
-  // keys. Spam Cannon thins the act 1 gate.
-  if (n.kind === 'gate' || n.kind === 'boss') {
-    const g = b.fx.gate || {};
-    if (n.kind === 'gate' && n.act === 0 && b.fx.gateHp < 1) for (const p of e.virus.parts) { p.max = p.integrity = Math.max(1, Math.round(p.max * b.fx.gateHp)); }
-    if (g.delay) { const p = e.virus.parts.find((x) => x.special && x.attack) || attackers(s)[0]; if (p?.attack) p.attack.due += g.delay; }
-    if (g.keys) for (const p of e.virus.parts) { if (p.maxArmor > 0) { p.maxArmor--; p.armor = Math.min(p.armor, p.maxArmor); } if (p.attack && p.attack.interval > 2) p.attack.interval--; }
+  // creds, a gate relay switched off. Kernel Hook thins the Resident.
+  if (!as && (n.kind === 'gate' || n.kind === 'boss')) {
+    const gx = b.fx.gate || {};
+    if (gx.delay) { const p = e.virus.parts.find((x) => x.special && x.attack) || attackers(s)[0]; if (p?.attack) p.attack.due += gx.delay; }
+    if (gx.keys) for (const p of e.virus.parts) { if (p.maxArmor > 0) { p.maxArmor--; p.armor = Math.min(p.armor, p.maxArmor); } if (p.attack && p.attack.interval > 2) p.attack.interval--; }
+    if (b.switches[n.act] === 'gate') { for (const p of e.virus.parts) { p.max = p.integrity = Math.max(1, Math.round(p.max * 0.8)); if (p.attack && p.attack.due < 900) p.attack.due += 2; } }
+    if (n.kind === 'boss' && b.fx.kernel) for (const p of e.virus.parts) { if (p.maxArmor > 0) { p.maxArmor--; p.armor = Math.min(p.armor, p.maxArmor); } if (b.fx.kernel > 1) p.max = p.integrity = Math.max(1, Math.round(p.max * 0.9)); }
     b.fx.gate = null;
   }
+  // A patch server switched off: every virus left in its act loses a ◆ on every part.
+  if (b.switches[n.act] === 'armor' && !as?.match(/hunter|ice/) && n.kind !== 'boss') for (const p of e.virus.parts) if (p.maxArmor > 0) { p.maxArmor--; p.armor = Math.min(p.armor, p.maxArmor); }
+  // Mailhub, after the alarm: a Spam Flood joins the fight.
+  if (cardOf(s).kind === 'Mailhub' && b.trace >= TRACE.alarm && as !== 'ice') spamFlood(s, e);
   if (b.fx.warm) for (const p of attackers(s)) if (p.attack.due < 900) p.attack.due += 1;
   if (b.fx.warmSigint && e.readyAt) delete e.readyAt.sigint;
   // Spam Cannon on a linked server: every fight here starts thinner.
   if (b.fx.thin) for (const p of e.virus.parts) p.max = p.integrity = Math.max(1, Math.round(p.max * (1 - b.fx.thin)));
+  // An elite, a gate or the Resident (or a mirror's elite) enrages if it lasts.
+  const rage = BREACH.enrage[as === 'mirror' ? 'elite' : as ? null : n.kind];
+  if (typeof rage === 'number') e.enrageAt = rage;
   // A campaign kill pays its own XP (campaign.mjs CAMPAIGN.xp): the Resident three times over, a gate half again.
-  if (b.xpMult) e.breachXp = b.xpMult * (n.kind === 'boss' ? 3 : n.kind === 'gate' ? 1.5 : 1);
+  if (b.xpMult) e.breachXp = b.xpMult * (n.kind === 'boss' && !as ? 3 : (n.kind === 'gate' && !as) || as === 'hunter' ? 1.5 : 1);
   const by = e.virus.author ? ` ${e.virus.author.toUpperCase()}.` : '';
   say(s, `${e.virus.name} holds ${n.path}. Level ${e.virus.level}.${by}`, 'intrusion');
   command(s, 'engage');
+  patchRules(s); // your gear's skill rules, for this fight
   if (pause && s.encounter) s.encounter.paused = true;
 }
 
@@ -559,12 +722,32 @@ export function digGate(s, v, card, n) {
   v.dug = gene;
   say(s, `${AUTHORS[card.world.digin.author]?.name || card.world.digin.author} dug in: ${GUARDS[n.guard].name} carries ${G.name}.`, 'breach-bad');
 }
-// Sinkhole's Now: the act's fights you haven't reached roll again, from the genes you've decoded.
-function sinkholeNow(s, act) {
-  const b = s.breach, known = new Set(Object.keys(GENES).filter((id) => decoded(s, id)));
-  for (const n of nodeList(b.map).filter((x) => x.act === act && !b.cleared[x.id] && x.id !== b.at && x.genes)) Object.assign(n, genomeOfNode(seeded(n.seed ^ 0x51ab), n.level, n.family, n.author, n.kind === 'elite', !!n.strain, { known, bonus: b.gen?.bonus || 0 }));
-  b.gen = { ...(b.gen || {}), sinkhole: true };
+// A Mailhub's spam: a weak part, about a twelfth of the virus's Integrity, that hits for a quarter of its average.
+function spamFlood(s, e) {
+  const total = e.virus.parts.reduce((n, p) => n + p.max, 0), hits = attackers(s).map((p) => p.attack.amount || 0).filter(Boolean);
+  const hp = Math.max(8, Math.round(total * 0.08)), dmg = Math.max(2, Math.round((hits.reduce((a, x) => a + x, 0) / Math.max(1, hits.length)) * 0.25));
+  e.virus.parts.push({ id: 'spam', name: 'Spam Flood', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, spam: true, attack: { name: 'Junk Mail', effect: 'damage', amount: dmg, interval: 3, due: e.cycle + 2 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
+  emit(s, 'status', `A Spam Flood joins the fight: ${hp} Integrity, ${dmg} damage every 3 cycles.`, { target: 'spam' });
 }
+// The end of each cycle in a breach fight (combat.mjs hooks.cycleEnd): enrage, and a Lab's overheat.
+hooks.cycleEnd = (s) => {
+  const e = s.encounter, b = s.breach;
+  if (!e?.breach || !b) return;
+  const R = BREACH.enrage;
+  if (e.enrageAt && e.cycle >= e.enrageAt && (e.cycle - e.enrageAt) % R.every === 0) {
+    const k = e.enraged ? R.step : R.first;
+    e.enraged = (e.enraged || 0) + 1;
+    for (const p of attackers(s)) { const a = p.attack; if (a.amount) a.amount = Math.round(a.amount * k); if (a.hit) a.hit = Math.round(a.hit * k); }
+    emit(s, 'warning', `${e.virus.name} ENRAGES: its attacks deal ${Math.round((k - 1) * 100)}% more.`, {});
+  }
+  if (cardOf(s).kind === 'Lab' && e.cycle >= OVERHEAT.from) {
+    const d = defender(s), you = Math.min(d.integrity, Math.max(1, Math.round(d.max * OVERHEAT.you)));
+    d.integrity -= you;
+    for (const p of livingParts(s)) hit(s, p, Math.max(1, Math.round(p.max * OVERHEAT.share)), { by: 'Overheat', pierce: true, server: true });
+    emit(s, 'server-hit', `Overheat: the rack burns you for ${you}, and every part with you. Signal ${d.integrity}/${d.max}.`, { amount: you });
+  }
+};
+
 // A rolled genome on a built virus (docs/genome.md 5, the designer's rules): the third part carries its gene (p.rolled),
 // and each mutation lives on a part, never the third where another will do, so breaking that part ends the rule
 // (mutationEnds). Armored puts 1 ◆ on every part, Hasty brings every attack a cycle sooner and repeats it a cycle
@@ -598,43 +781,62 @@ function mutationEnds(s, p) {
   }
 }
 
-// The end of a breach fight (combat.mjs finish, through hooks.breachEnd): the draft, the rewrite, the pack.
+// ---------- loot ----------
+// A protocol into the pack, rolled for your class (its skill rules can roll), at the node's level and the breach's
+// gear levels (heat, Testbed). Returns the item.
+function gearDrop(s, n, rarity, why = 'Dropped: ') {
+  const b = s.breach;
+  const it = addItem(s, rollItem(rnd(b, 5), { level: n.level + (b.fx.gearLevel || 0), rarity, cls: classOf(s) }), why);
+  if (it) { b.pack.push(it.id); b.stats.found++; say(s, `${itemLabel(it)} goes in your pack.`, 'breach-good'); }
+  return it;
+}
+// What a won fight drops, by kind (BREACH.loot). Rare odds from heat move a blue to a yellow.
+function dropsFor(s, n, kind) {
+  const b = s.breach, r = rnd(b, 13), L = BREACH.loot[kind], rare = (b.fx.rareOdds || 0) / 100;
+  if (!L) return;
+  const rarity = () => { const x = r(); return x < (L.custom || 0) + rare ? 'custom' : x < (L.custom || 0) + rare + (L.white || 0) ? 'stock' : 'tuned'; };
+  if (kind === 'boss') gearDrop(s, n, rarity(), `${residentName(cardOf(s))} drops: `);
+  else if (r() < L.gear) gearDrop(s, n, rarity());
+  if (L.script && r() < L.script) giveScript(s, rollScript(r, kind === 'boss' ? 'uncommon' : null), 'Recovered: ');
+}
+
+// The end of a breach fight (combat.mjs finish, through hooks.breachEnd): the drops, the rewrite, the pack.
 function fightOver(s, result) {
   const b = s.breach, e = s.encounter, n = b?.map.nodes[e?.breach];
   if (!b || !n) return;
-  if (b.stats) { b.stats.landed += Object.values(e.metrics?.tells || {}).reduce((k, x) => k + x.landed, 0); if (n.kind === 'elite' && result === 'victory') b.stats.elites++; }
+  unpatchRules();
+  b.stats.landed += Object.values(e.metrics?.tells || {}).reduce((k, x) => k + x.landed, 0);
+  if ((n.kind === 'elite' || e.breachAs === 'mirror') && result === 'victory') b.stats.elites++;
   if (result !== 'victory') return lose(s, `${e.virus.name} took your Signal to 0 at ${n.path}.`);
   b.kills++;
-  if (b.stats) b.stats.low = Math.min(b.stats.low, (s.run?.integrity ?? b.signal) / Math.max(1, s.run?.max ?? b.max));
-  const [healed, paid] = afterFightCves(s, e);
-  if (healed) emit(s, 'heal', `Sasser restores ${healed} Signal.`, { amount: healed });
-  if (paid) tokens(s, paid);
-  const r = rnd(b, 11);
-  const draftArgs = { act: n.act, level: n.level, count: draftCount(b) };
-  b.fx.nextMore = false; // Range's Now: one draft only
-  if (e.breachSample) { tokens(s, BREACH.tokens.sandbox); queue(s, { kind: 'draft', title: 'Sandbox sample', draft: 'rare', cards: rollDraft(s, r, 'rare', draftArgs) }); return next(s); }
+  b.stats.low = Math.min(b.stats.low, (s.run?.integrity ?? b.signal) / Math.max(1, s.run?.max ?? b.max));
+  const as = e.breachAs;
+  if (e.breachSample) { tokens(s, BREACH.tokens.sandbox); giveScript(s, rollScript(rnd(b, 11), 'uncommon'), 'The sample carried: '); return next(s); }
+  if (as === 'hunter') {
+    say(s, 'Hunter down.', 'breach-good');
+    b.hunter = null;
+    giveScript(s, rollScript(rnd(b, 17)), 'The hunter carried: ');
+    b.trace = TRACE.after; say(s, `Trace drops to ${TRACE.after}.`, 'breach-good');
+    if (b.pending) queue(s, { kind: 'ahead', node: b.pending });
+    b.pending = null;
+    return next(s);
+  }
+  if (as === 'ice') { switchDown(s, n); b.cleared[n.id] = true; trace(s, TRACE.ice, 'The switch goes quiet.'); return next(s); }
+  if (as === 'mirror') { b.cleared[n.id] = true; dropsFor(s, n, 'elite'); return next(s); }
   b.cleared[n.id] = true;
   if (n.kind === 'virus' || n.kind === 'elite') {
-    tokens(s, n.kind === 'elite' ? BREACH.tokens.elite : BREACH.tokens.virus[0] + Math.floor(r() * (BREACH.tokens.virus[1] - BREACH.tokens.virus[0] + 1)));
-    // An elite pays a reroll too: an earned lever.
-    if (n.kind === 'elite') { b.rerolls++; say(s, `+1 reroll (${b.rerolls}).`, 'breach-good'); if (b.fx.service > 1) bank(s); }
-    // The draft keeps the node's promise: its reward kind, a rare card when it showed one. Listening Post's Now: the
-    // next elite offers a card more.
-    const kind = n.kind === 'elite' ? 'elite' : n.reward || 'virus', more = n.kind === 'elite' && b.fx.eliteMore ? 1 : 0;
-    if (more) b.fx.eliteMore = false;
-    queue(s, { kind: 'draft', title: n.kind === 'elite' ? 'Elite draft' : 'Draft', draft: kind, rare: !!n.rare, cards: rollDraft(s, r, kind, { ...draftArgs, count: draftArgs.count + more, rare: !!n.rare }) });
+    if (n.key) { b.keys++; say(s, `The ${e.virus.name} carried a keycard. You hold ${b.keys === 1 ? 'one' : b.keys}.`, 'breach-good'); }
+    if (n.kind === 'elite') { dropsFor(s, n, 'elite'); if (b.fx.service > 1) bank(s); }
     if (n.sub) rewriteFor(s, n);
   } else if (n.kind === 'gate') {
-    tokens(s, BREACH.tokens.gate);
-    queue(s, { kind: 'draft', title: `${GUARDS[n.guard].name} down`, draft: 'gate', cards: rollDraft(s, r, 'gate', { ...draftArgs, count: DRAFT.cards + (b.cves.includes('poodle') ? 1 : 0) + (b.fx.gateHook ? 1 : 0) - (b.rules?.shortList ? 1 : 0) }), noSkip: true });
+    dropsFor(s, n, 'gate');
+    if (b.fx.nightly && b.trace) trace(s, -b.fx.nightly, 'Nightly Build rotates the logs.');
     queue(s, { kind: 'gate', node: n.id });
-    if (b.fx.nightly) { b.rerolls += b.fx.nightly; say(s, `Nightly Build: +${b.fx.nightly} ${b.fx.nightly === 1 ? 'reroll' : 'rerolls'} for the next act.`, 'breach-good'); }
     breachHooks.gate?.(s, n); // a checkpoint (campaign.mjs)
   } else if (n.kind === 'boss') {
-    // The Resident is a breach's gear moment: 1 of 3 gear, blue or better (its uniques roll on their own, combat.mjs
-    // bossUnique). Mail Drop (a captured smtpd) adds a card to it, and a rare one at tier II.
-    const who = residentName(cardOf(s)), mail = b.fx.maildrop || 0;
-    queue(s, { kind: 'draft', title: `${who} down`, draft: 'boss', rare: mail > 1, cards: rollDraft(s, r, 'boss', { ...draftArgs, count: DRAFT.cards + (mail ? 1 : 0) + (b.cves.includes('poodle') ? 1 : 0) - (b.rules?.shortList ? 1 : 0), rare: mail > 1 }), noSkip: true });
+    // The Resident is a breach's gear moment: a protocol, blue or better (its uniques roll on their own, combat.mjs
+    // bossUnique), and now and then a script.
+    dropsFor(s, n, 'boss');
     queue(s, { kind: 'capture' });
   }
   next(s);
@@ -642,16 +844,15 @@ function fightOver(s, result) {
 hooks.breachEnd = (s, result) => fightOver(s, result);
 hooks.emitted = (s, ev) => {
   const b = s.breach;
-  if (!b || b.result || hooks.emitted.busy) return;
+  if (hooks.emitted.busy) return;
   hooks.emitted.busy = true;
   try {
-    if (ev.type === 'xp' && ev.amount > 0) b.xp += ev.amount;
-    if (s.encounter?.breach && ev.type === 'broken' && !ev.c2) mutationEnds(s, part(s, ev.target));
-    if (s.encounter?.breach) onEvent(s, ev);
+    if (b && !b.result && ev.type === 'xp' && ev.amount > 0) b.xp += ev.amount;
+    if (b && s.encounter?.breach && ev.type === 'broken' && !ev.c2) mutationEnds(s, part(s, ev.target));
+    ruleEvent(s, ev);
   } finally { hooks.emitted.busy = false; }
 };
-hooks.commanded = (s, x) => { if (s.breach && !s.breach.result && s.encounter?.breach) afterCommand(s, x); };
-hooks.extraFx = (s) => cveFx(s);
+hooks.commanded = (s, x) => ruleCommand(s, x);
 // Restore Point (a captured backup subsystem): once a breach, a blow that would take your Signal to 0 leaves you at 1
 // and restores a share of it (combat.mjs survive, after Bastion's Uptime). Returns the damage dealt, or null.
 hooks.lastBlow = (s, d) => {
@@ -666,9 +867,8 @@ hooks.lastBlow = (s, d) => {
 // What the campaign (campaign.mjs) listens for: a gate beaten (a checkpoint) and a breach that ended.
 export const breachHooks = { gate: null, over: null };
 
-const draftCount = (b) => DRAFT.cards + (b.fx.kernelHook ? 1 : 0) + (b.cves.includes('poodle') ? 1 : 0) - (b.rules?.shortList ? 1 : 0) + (b.fx.nextMore ? 1 : 0);
-// A broker's price: half from Price Fix's Now, less again from its output.
-export const priceOf = (b, sc, x) => Math.round(x * (sc.half ? 0.5 : 1) * (1 - (b.fx.discount || 0)));
+// A broker's price, less Price Fix's output.
+export const priceOf = (b, sc, x) => Math.round(x * (1 - (b.fx.discount || 0)));
 function tokens(s, n) { s.breach.tokens += n; say(s, `+${n} tokens (${s.breach.tokens}).`, 'breach-good'); }
 function queue(s, screen) { s.breach.queue.push(screen); }
 // The next screen in the queue, or the map.
@@ -689,6 +889,12 @@ function rewriteFor(s, n) {
   const was = b.prior?.[n.sub]; // re-imaging: what the server runs there now
   queue(s, { kind: 'rewrite', sub: n.sub, tier, options: SUBSYSTEMS[n.sub].rewrites, ...(was ? { was: { ...was } } : {}) });
 }
+// A switch goes down: its effect on the act's enemies.
+function switchDown(s, n) {
+  const b = s.breach;
+  b.switches[n.act] = n.effect;
+  say(s, `${SWITCHES[n.effect].name} down. ${eventText(n, SWITCHES[n.effect].text, b.map.acts)}`, 'breach-good');
+}
 
 // ---------- choices ----------
 // One entry point for the screen's buttons, the terminal and the bot: act(s, verb, arg). Events out.
@@ -702,95 +908,90 @@ export function act(s, verb, arg = null) {
   if (verb === 'equip') { const it = stashItem(s, arg); if (it && b.pack.concat(b.banked).includes(it.id)) command(s, 'load ' + it.id); else deny(s, 'Equip what? Pick something from your pack.'); return out(); }
   if (b.result) { deny(s, 'The breach is over.'); return out(); }
   if (!sc) { deny(s, 'Nothing to choose. Pick a node on the map.'); return out(); }
-  if (sc.kind === 'draft') {
-    if (verb === 'pick') {
-      const c = sc.cards[Number(arg)];
-      if (!c) deny(s, 'No such card.');
-      else if (sc.picks > 1) { take(s, c); sc.picks--; sc.cards.splice(Number(arg), 1); if (!sc.cards.length) next(s); } // Archive II: two picks
-      else { take(s, c); next(s); }
-    }
-    else if (verb === 'skip' && !sc.noSkip) { say(s, 'Draft skipped.'); if (b.stats) b.stats.skips++; if (!b.rules?.audit) tokens(s, DRAFT.skip); next(s); }
-    else if (verb === 'reroll' && b.rerolls > 0) { b.rerolls--; const n = b.map.nodes[b.at]; sc.cards = rollDraft(s, rnd(b, 17), sc.draft, { act: n?.act ?? 0, level: n?.level ?? b.level, count: sc.cards.length, rare: !!sc.rare }); say(s, `Draft rerolled. ${b.rerolls} ${b.rerolls === 1 ? 'reroll' : 'rerolls'} left.`); }
-    else deny(s, verb === 'reroll' ? 'No rerolls left.' : 'Pick a card.');
-  } else if (sc.kind === 'rewrite') {
+  const done = () => { b.cleared[sc.node] = true; next(s); };
+  if (sc.kind === 'rewrite') {
     const id = sc.options[Number(arg)];
     if (verb !== 'pick' || !id) deny(s, 'Pick a rewrite.');
     else {
       const r = REWRITES[id], tier = sc.was?.id === id ? Math.max(sc.was.tier, sc.tier) : sc.tier; // re-imaging keeps the better tier
       b.rewrites[sc.sub] = { id, tier };
-      say(s, `${sc.sub} rewritten: ${r.name}${tier > 1 ? ' II' : ''}. Now: ${r.now}`, 'breach-good');
-      const more = r.apply(b, s); // Forged Keys, Archive: a draft of CVEs or mods, next. Sinkhole: the act re-rolls.
-      const n = b.map.nodes[b.at];
-      if (more === 'sinkhole') sinkholeNow(s, n?.act ?? 0);
-      else if (more) b.queue.unshift({ kind: 'draft', title: r.name, draft: more, cards: rollDraft(s, rnd(b, 23), more, { act: n?.act ?? 0, level: n?.level ?? b.level }) });
+      say(s, `${sc.sub} rewritten: ${r.name}${tier > 1 ? ' II' : ''}. Once you capture the server: ${r.output[tier - 1]}`, 'breach-good');
       next(s);
     }
   } else if (sc.kind === 'cache') {
     const n = b.map.nodes[sc.node];
-    if (verb === 'cat') { sc.read = true; say(s, n.bait ? 'cat cache.dat: a canary string in every block. Pulling it trips the alarm.' : `cat cache.dat: clean. Tokens${n.gear ? ', and a protocol' : ''}.`, n.bait ? 'breach-bad' : 'breach'); }
+    if (verb === 'cat') { sc.read = true; say(s, n.mirror ? 'cat cache.dat: the file reads back your own handle. It is a mirror, and something waits behind it.' : n.bait ? 'cat cache.dat: a canary string in every block. Pulling it trips the alarm.' : `cat cache.dat: clean. Tokens${n.script ? ', and a script' : ''}.`, n.bait || n.mirror ? 'breach-bad' : 'breach'); }
     else if (verb === 'pull') {
-      if (n.bait) { const lost = Math.round(b.max * BREACH.baitCost); b.signal = Math.max(1, b.signal - lost); say(s, `The cache was bait. The canary trips and costs you ${lost} Signal.`, 'breach-bad'); }
-      else { tokens(s, n.tokens); const it = n.gear && addItem(s, rollItem(rnd(b, 5), { level: n.level + (b.fx.gearLevel || 0), rarity: rnd(b, 6)() < 0.35 ? 'tuned' : 'stock' }), 'Pulled: '); if (it) { b.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'breach-good'); } }
-      b.cleared[n.id] = true; next(s);
-    } else if (verb === 'leave') { b.cleared[n.id] = true; say(s, 'You leave the cache alone.'); next(s); }
+      if (n.mirror) { b.screen = null; say(s, 'The mirror breaks. An elite steps out of it.', 'breach-bad'); fight(s, n, { as: 'mirror', pause: !!sc.pause }); return out(); }
+      if (n.bait) { const lost = Math.round(b.max * BREACH.baitCost); b.signal = Math.max(1, b.signal - lost); say(s, `The cache was bait. The canary costs you ${lost} Signal.`, 'breach-bad'); loud(s, TRACE.bait, 'The canary sings.'); }
+      else { tokens(s, n.tokens); if (n.script) giveScript(s, n.script, 'Pulled: '); }
+      done();
+    } else if (verb === 'leave') { say(s, 'You leave the cache alone.'); done(); }
     else deny(s, 'cat, pull or leave.');
   } else if (sc.kind === 'drop') {
-    // A dead drop (world.mjs): wick's note and a card for your draft pool. The campaign pays it when the breach ends,
-    // won or lost. Left alone, it stays on the map.
+    // A dead drop (world.mjs): wick's note and a script. Pulled, the script goes in your slots now and the note into
+    // the Archive when the breach ends, won or lost. Every slot full, or left alone, the drop stays on the map.
     const n = b.map.nodes[sc.node], what = dropName(n);
-    if (verb === 'cat') { sc.read = true; say(s, `cat note.txt: ${what ? `${what}, for your draft pool` : 'a note, and nothing else'}.`); }
-    else if (verb === 'pull') { b.dropped = n.id; b.cleared[n.id] = true; say(s, `Pulled: ${what ? `${what} joins your draft pool` : 'the note'}.`, 'breach-good'); next(s); }
+    if (verb === 'cat') { sc.read = true; say(s, `cat note.txt: ${what ? `a note, and ${what}` : 'a note, and nothing else'}.`); }
+    else if (verb === 'pull' && n.script && scriptsOf(s).length >= slotsOf(s)) deny(s, `Your ${slotsOf(s)} script slots are full. Leave the drop: it stays on the map.`);
+    else if (verb === 'pull') { if (n.script) giveScript(s, n.script, 'Dead drop: '); b.dropped = n.id; b.cleared[n.id] = true; say(s, 'You pull the drop. The note is yours.', 'breach-good'); next(s); }
     else if (verb === 'leave') { b.cleared[n.id] = true; say(s, 'You leave the drop where it is.'); next(s); }
     else deny(s, 'cat, pull or leave.');
   } else if (sc.kind === 'defrag') {
-    // Rest, recompile (a mod to its + version) or re-slot. Zerologon: rest and recompile both. Service Account (a
-    // captured sshd): jack out here with your pack.
-    const zero = b.cves.includes('zerologon'), done = () => { b.cleared[sc.node] = true; next(s); };
-    const rest = () => { const n = Math.min(b.max - b.signal, Math.round(b.max * restShare(b))); b.signal += n; if (b.stats) b.stats.rests++; sc.rested = true; say(s, `Defrag: +${n} Signal (${b.signal}/${b.max}).`, 'breach-good'); };
-    if (verb === 'rest' && !sc.rested && !sc.recompile && !sc.reslot) { rest(); if (zero && recompilable(b).length) { sc.recompile = true; say(s, 'Zerologon: recompile a mod too.'); } else done(); }
-    else if (verb === 'recompile' && !sc.reslot && !sc.recompile && recompilable(b).length) { sc.recompile = true; if (zero && !sc.rested) rest(); }
-    else if (verb === 'plus' && sc.recompile) { const id = recompilable(b).includes(arg) ? arg : recompilable(b)[Number(arg)]; if (!id) deny(s, 'Recompile which mod?'); else { upgrade(s, id); done(); } }
-    else if (verb === 'reslot' && !sc.recompile && !sc.rested) { sc.reslot = true; say(s, 'Re-slot: change your keys, then close it. Mods stay on their skills.'); }
-    else if (verb === 'done' && (sc.reslot || sc.recompile)) { if (sc.reslot) say(s, 'Keys set.'); done(); }
+    // Rest or re-slot. Service Account (a captured sshd): jack out here with your pack.
+    if (verb === 'rest' && !sc.reslot) { const n = Math.min(b.max - b.signal, Math.round(b.max * restShare(b))); b.signal += n; b.stats.rests++; say(s, `Defrag: +${n} Signal (${b.signal}/${b.max}).`, 'breach-good'); trace(s, TRACE.rest, 'The logs settle.'); b.loud = true; done(); }
+    else if (verb === 'reslot' && !sc.reslot) { sc.reslot = true; say(s, 'Re-slot: change your keys, then close it.'); }
+    else if (verb === 'done' && sc.reslot) { say(s, 'Keys set.'); done(); }
     else if (verb === 'slot' && sc.reslot) { command(s, String(arg)); }
     else if (verb === 'jackout' && b.fx.service && !sc.reslot) { jackOut(s, 'Service Account'); }
-    else deny(s, 'rest, recompile or reslot.');
+    else deny(s, 'rest or reslot.');
   } else if (sc.kind === 'broker') {
-    const price = (x) => priceOf(b, sc, x);
+    const price = (x) => priceOf(b, sc, x), B = BROKERS[sc.faction];
     if (verb === 'buy') {
       const c = sc.stock[Number(arg)];
       if (!c || c.sold) deny(s, 'Sold, or not on the stall.');
       else if (b.tokens < price(c.price)) deny(s, `That costs ${price(c.price)} tokens. You have ${b.tokens}.`);
-      else { b.tokens -= price(c.price); c.sold = true; say(s, `Bought for ${price(c.price)} tokens.`); take(s, c); }
+      else if (scriptsOf(s).length >= slotsOf(s)) deny(s, `Your ${slotsOf(s)} script slots are full. Run one first.`);
+      else { b.tokens -= price(c.price); c.sold = true; say(s, `Bought for ${price(c.price)} tokens.`); giveScript(s, c.id, 'Bought: '); }
     } else if (verb === 'patch') {
-      const cost = price(BROKERS[sc.faction].patch);
+      const cost = price(B.patch);
       if (sc.patched) deny(s, 'One patch a stall.');
       else if (b.tokens < cost) deny(s, `A patch costs ${cost} tokens. You have ${b.tokens}.`);
       else { b.tokens -= cost; sc.patched = true; const n = Math.min(b.max - b.signal, Math.round(b.max * PRICES.patch)); b.signal += n; say(s, `Patched: +${n} Signal (${b.signal}/${b.max}).`, 'breach-good'); }
     } else if (verb === 'service') {
-      // The stall's own service (BROKERS service): NULL CHOIR recompiles a mod, LANTERN shows the whole act,
-      // GLASSJAW sells a reroll. Once a stall.
-      const B = BROKERS[sc.faction], sv = B.service, cost = sv && price(sv.price);
+      // The stall's own service: LANTERN shows the act ahead, Kestrel scrubs your Trace. Once a stall.
+      const sv = B.service, cost = sv && price(sv.price);
       if (!sv || sc.served) deny(s, sv ? 'One service a stall.' : 'This stall has no service.');
       else if (b.tokens < cost) deny(s, `That costs ${cost} tokens. You have ${b.tokens}.`);
-      else if (sv.id === 'recompile' && !recompilable(b).length) deny(s, 'You hold no mod to recompile.');
-      else if (sv.id === 'recompile' && arg == null) { sc.recompile = true; }
       else {
-        const id = sv.id === 'recompile' ? (recompilable(b).includes(arg) ? arg : recompilable(b)[Number(arg)]) : null;
-        if (sv.id === 'recompile' && !id) deny(s, 'Recompile which mod?');
-        else {
-          b.tokens -= cost; sc.served = true; sc.recompile = false;
-          if (sv.id === 'recompile') upgrade(s, id);
-          if (sv.id === 'reveal') { const n = b.map.nodes[sc.node]; (b.fx.reveal ||= []).push(n.act + (n.row === b.map.rows - 1 && n.act < b.map.acts - 1 ? 1 : 0)); say(s, `LANTERN sells you the map: act ${b.fx.reveal.at(-1) + 1} shows whole.`, 'breach-good'); }
-          if (sv.id === 'reroll') { b.rerolls++; say(s, `+1 reroll (${b.rerolls}).`, 'breach-good'); }
-        }
+        b.tokens -= cost; sc.served = true;
+        if (sv.id === 'reveal') { const n = b.map.nodes[sc.node]; (b.fx.reveal ||= []).push(n.act + (n.row === b.map.rows - 1 && n.act < b.map.acts - 1 ? 1 : 0)); say(s, `LANTERN sells you the map: act ${b.fx.reveal.at(-1) + 1} shows whole.`, 'breach-good'); }
+        if (sv.id === 'scrub') trace(s, TRACE.scrub, 'Kestrel scrubs your logs.');
       }
-    } else if (verb === 'leave') { b.cleared[sc.node] = true; say(s, 'You close the stall.'); next(s); }
+    } else if (verb === 'leave') { say(s, 'You close the stall.'); done(); }
     else deny(s, 'buy, patch or leave.');
   } else if (sc.kind === 'term') {
     const i = Number(arg);
     if (verb !== 'choose' || !EVENTS[sc.event].options[i]) deny(s, 'Choose an option.');
     else termChoose(s, sc, i);
+  } else if (sc.kind === 'vault') {
+    const n = b.map.nodes[sc.node];
+    if (sc.opened) { if (verb === 'leave') done(); else deny(s, 'The vault is empty now. Leave it.'); }
+    else if (verb === 'open' && b.keys > 0) { b.keys--; say(s, 'The keycard opens the vault.'); loud(s, TRACE.open, 'The door logs it.'); openVault(s, sc, n); }
+    else if (verb === 'open') deny(s, 'You hold no keycard. A virus carrying one shows it on the map.');
+    else if (verb === 'force') { const lost = Math.round(b.max * 0.1); b.signal = Math.max(1, b.signal - lost); say(s, `You force the door. It costs you ${lost} Signal.`, 'breach-bad'); loud(s, TRACE.force, 'The alarm on the door goes off.'); openVault(s, sc, n); }
+    else if (verb === 'leave') { say(s, 'You leave the vault shut.'); done(); }
+    else deny(s, 'open, force or leave.');
+  } else if (sc.kind === 'switch') {
+    const n = b.map.nodes[sc.node];
+    if (verb === 'fight') { b.screen = null; say(s, 'You go at the switch\'s ICE.'); fight(s, n, { as: 'ice', pause: !!sc.pause }); }
+    else if (verb === 'splice') { switchDown(s, n); loud(s, TRACE.splice, 'The splice trips a log.'); done(); }
+    else if (verb === 'leave') { say(s, 'You leave the switch up.'); done(); }
+    else deny(s, 'fight, splice or leave.');
+  } else if (sc.kind === 'ahead') {
+    // The hunter is down, and the node it caught you on is still there.
+    if (verb === 'enter') { b.screen = null; resolve(s, b.map.nodes[sc.node], { pause: !!arg }); }
+    else deny(s, 'Go on into the node.');
   } else if (sc.kind === 'gate') {
     if (verb === 'goon') { bank(s); say(s, 'You go deeper.'); next(s); }
     else if (verb === 'jackout') jackOut(s);
@@ -798,29 +999,22 @@ export function act(s, verb, arg = null) {
   }
   return out();
 }
+// A vault opens: what it held, and its log.
+function openVault(s, sc, n) {
+  const b = s.breach, v = n.vault || { kind: 'gear', rarity: 'tuned' };
+  sc.opened = true; b.stats.vaults++;
+  if (v.kind === 'gear') sc.got = gearDrop(s, n, v.rarity, 'Vault: ')?.id || null;
+  else sc.got = giveScript(s, v.script, 'Vault: ') ? v.script : null;
+  if (v.log) say(s, `The vault keeps a log: ${v.log}`);
+}
 function jackOut(s, by = null) {
   const b = s.breach;
-  bank(s); b.result = 'out'; b.screen = { kind: 'result' }; unpatchMods();
+  bank(s); b.result = 'out'; b.screen = { kind: 'result' }; unpatchRules();
   say(s, `${by ? `${by}: ` : ''}JACKED OUT of ${cardOf(s).name}. Your pack is banked. The server stays uncaptured.`, 'jacked-out');
   breachHooks.over?.(s, 'out');
 }
 // A defrag's rest: 30% of your Signal, 20% at heat 4.
-export const restShare = (b) => (b?.rules?.rest ?? BREACH.rest) + (b?.cves?.includes('zerologon') ? 0.1 : 0);
-// The mods you could recompile to +: held, not + yet.
-export const recompilable = (b) => b.mods.filter((id) => !b.plus.includes(id));
-function upgrade(s, id) {
-  const b = s.breach;
-  if (!b.plus.includes(id)) b.plus.push(id);
-  say(s, `Recompiled: ${modName(id, true)}. ${MODS[id].text(MODS[id].v[1])}`, 'breach-good');
-}
-// A card you drafted or bought: a mod on its skill (one a skill: it replaces the one there, + and all), a CVE, or gear
-// in your pack.
-function take(s, c) {
-  const b = s.breach, t = cardText(c);
-  if (c.kind === 'mod') { const gone = b.mods.filter((id) => MODS[id].skill === MODS[c.id].skill); b.mods = b.mods.filter((id) => !gone.includes(id)).concat(c.id); b.plus = b.plus.filter((id) => !gone.includes(id)); say(s, `Mod: ${t.name} on ${t.kicker.split(' · ')[1]}.`, 'breach-good'); }
-  else if (c.kind === 'cve') { if (!b.cves.includes(c.id)) b.cves.push(c.id); say(s, `CVE: ${t.name}.`, 'breach-good'); }
-  else { const it = addItem(s, c.item, 'Drafted: '); if (it) { b.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack. Equip it from there.`, 'breach-good'); } }
-}
+export const restShare = (b) => b?.rules?.rest ?? BREACH.rest;
 function bank(s) {
   const b = s.breach;
   if (b.pack.length) say(s, `Pack banked: ${b.pack.length} ${b.pack.length === 1 ? 'item' : 'items'}.`, 'breach-good');
@@ -830,12 +1024,12 @@ function termChoose(s, sc, i) {
   const b = s.breach, n = b.map.nodes[sc.node], cost = (k) => { const lost = Math.round(b.max * k); b.signal = Math.max(1, b.signal - lost); return lost; };
   const done = () => { b.cleared[n.id] = true; next(s); };
   const ev = sc.event;
-  if (ev === 'cron' && i === 0) { const lost = cost(0.1); (b.fx.gate ||= {}).delay = 2; say(s, `You finish the job. It costs you ${lost} Signal, and ${nextGuard(n, b.map.acts).toLowerCase()}'s signature part will attack 2 cycles late.`, 'breach-good'); }
+  if (ev === 'cron' && i === 0) { const lost = cost(0.1); (b.fx.gate ||= {}).delay = 2; say(s, `You finish the job. It costs you ${lost} Signal, and ${nextGuard(n, b.map.acts).toLowerCase()}'s signature part will attack 2 cycles late.`, 'breach-good'); loud(s, 10, 'The job runs as root.'); }
   else if (ev === 'cron') { tokens(s, 15); say(s, 'You wipe the job.'); }
-  else if (ev === 'keys' && i === 0) { (b.fx.gate ||= {}).keys = true; say(s, `You load the keys. ${nextGuard(n, b.map.acts)} will open thinner, and angrier.`, 'breach-good'); }
-  else if (ev === 'honeytoken' && i === 0) { const lost = cost(0.15); tokens(s, 50); say(s, `The file was a honeytoken. Tracing it back costs you ${lost} Signal.`, 'breach-bad'); }
+  else if (ev === 'keys' && i === 0) { (b.fx.gate ||= {}).keys = true; say(s, `You load the creds. ${nextGuard(n, b.map.acts)} will open thinner, and angrier.`, 'breach-good'); }
+  else if (ev === 'honeytoken' && i === 0) { tokens(s, 50); say(s, 'The file was a honeytoken.', 'breach-bad'); loud(s, 25, 'It phones home.'); }
   else if (ev === 'sandbox' && i === 0) {
-    // The sample: a wild virus at this act's level, one of the new tells, and a rare card in its draft.
+    // The sample: a wild virus at this act's level, and a script for beating it.
     const r = rnd(b, 29);
     const sample = { ...virusOf(r, n, n.level, false, cardOf(s)), seed: Math.floor(r() * 2 ** 31) };
     b.cleared[n.id] = true; b.screen = null;
@@ -844,22 +1038,12 @@ function termChoose(s, sc, i) {
   } else say(s, 'You leave it.');
   done();
 }
-// Who a terminal's gate effects reach: the next gate, or the Resident after the last one.
+// Who a terminal's or a switch's gate effects reach: the next gate, or the Resident after the last one.
 export const nextGuard = (n, acts = ACTS.length) => (n.act < acts - 1 ? 'The next gate' : 'The Resident');
 export const eventText = (n, text, acts = ACTS.length) => text.replace('{Next}', nextGuard(n, acts));
 function brokerStock(s, n) {
-  const b = s.breach, r = rnd(b, 41), out = [], build = buildTags(s), boost = b.rareBoost;
-  for (const kind of BROKERS[n.faction].stock) {
-    // Three it could stock; the one that fits your build best goes on the stall.
-    const pool = kind === 'gear' ? rollDraft(s, r, 'stall', { act: n.act, level: n.level, count: 1 }) : rollDraft(s, r, kind, { act: n.act, level: n.level, count: 3 });
-    const fresh = pool.filter((x) => x.kind === kind && !out.some((y) => y.id && y.id === x.id));
-    const c = fresh.sort((x, y) => linksOf(s, y, build).n - linksOf(s, x, build).n)[0] || (kind !== 'gear' ? rollDraft(s, r, 'stall', { act: n.act, level: n.level, count: 1 })[0] : null);
-    if (!c) continue;
-    c.price = c.kind === 'mod' ? PRICES.mod[MODS[c.id].rarity] : c.kind === 'cve' ? PRICES.cve[CVES[c.id].rarity] : PRICES.gear[c.rarity] || 90;
-    out.push(c);
-  }
-  b.rareBoost = boost; // a stall's stock is not a draft: the pity stays where it was
-  return out;
+  const b = s.breach, B = BROKERS[n.faction];
+  return scriptStock(rnd(b, 41), B.stock, B.floor || null).map((id) => ({ id, price: scriptPrice(id) }));
 }
 
 // ---------- the end ----------
@@ -868,22 +1052,21 @@ function lose(s, why) {
   b.result = 'lost';
   const lost = [];
   for (const id of b.pack) { const it = stashItem(s, id); if (it) { lost.push(itemLabel(it)); for (const r of Object.values(s.gear?.rigs || {})) if (Array.isArray(r)) for (let i = 0; i < r.length; i++) if (r[i] === id) r[i] = null; s.stash = s.stash.filter((x) => x.id !== id); } }
-  b.lost = { why, items: lost, mods: [...b.mods], cves: [...b.cves] };
-  b.pack = []; b.mods = []; b.cves = []; b.tokens = 0; b.queue = [];
+  b.lost = { why, items: lost };
+  b.pack = []; b.tokens = 0; b.queue = []; b.hunter = null;
   b.screen = { kind: 'result' };
-  unpatchMods();
-  say(s, `SIGNAL LOST. ${why} ${lost.length ? `${lost.length} unbanked ${lost.length === 1 ? 'item' : 'items'} lost, with your drafts.` : 'Your drafts are gone.'} XP and banked gear stay.`, 'breach-bad');
+  unpatchRules();
+  say(s, `SIGNAL LOST. ${why}${lost.length ? ` ${lost.length} unbanked ${lost.length === 1 ? 'item' : 'items'} lost.` : ''} XP, banked gear and your scripts stay.`, 'breach-bad');
   breachHooks.over?.(s, 'lost');
 }
 function capture(s) {
   const b = s.breach, card = cardOf(s);
-  // Mail Drop (a captured smtpd): one more item on every capture, blue or better (yellow at tier II).
   bank(s);
   // The capture bonus: a third of the breach's kill XP (docs/roguelite.md 6.1). Only the campaign pays it.
   if (b.xpMult && b.xp > 0) gainXp(s, Math.round(b.xp / 3), `${card.name} captured`);
   b.result = 'won';
   b.screen = { kind: 'result' };
-  unpatchMods();
+  unpatchRules();
   breachHooks.over?.(s, 'won');
   say(s, `${card.name} captured. ${b.dump === null ? 'Its core.dump is already in your Archive.' : '/core lists one more file: core.dump.'}`, 'breach-good');
   return b.screen;
@@ -894,11 +1077,13 @@ export function captureOf(s) {
   return {
     rewrites: cardOf(s).subsystems.flat().map((sub) => ({ sub, held: b.rewrites[sub] || b.prior?.[sub] || null, kept: !b.rewrites[sub] && !!b.prior?.[sub] })),
     xp: b.xp, items: b.banked.map((id) => stashItem(s, id)).filter(Boolean), kills: b.kills, dump: b.dump === undefined ? CORE_DUMP : b.dump,
+    trace: b.tracePeak || 0, vaults: b.stats?.vaults || 0, scripts: b.stats?.scripts || 0, hunted: b.stats?.hunted || 0,
   };
 }
 
 // ---------- the terminal ----------
 // ls, cd, tree, and the screen's verbs typed: a breach is still a terminal.
+const lsTag = (n) => `${n.kind === 'term' ? 'term' : n.kind}${n.key ? ' · keycard' : ''}`;
 export function breachCommand(s, text) {
   const b = s.breach, first = s.serial;
   const [word, ...rest] = text.trim().toLowerCase().split(/\s+/);
@@ -906,7 +1091,7 @@ export function breachCommand(s, text) {
   const out = () => s.logs.filter((e) => e.id > first);
   if (word === 'ls') {
     const xs = reachable(s);
-    say(s, xs.length ? xs.map((n, i) => `${i + 1}  ${(n.kind === 'gate' ? 'gate' : n.kind === 'boss' ? 'core' : n.sub || 'tmp')}/  [${n.kind === 'term' ? 'term' : n.kind}${n.reward ? ` · ${n.rare ? 'rare ' : ''}${n.reward}` : ''}]`).join('\n') : b.screen ? 'Finish what is on screen first.' : 'Nowhere to go.', 'breach-out');
+    say(s, xs.length ? xs.map((n, i) => `${i + 1}  ${(n.kind === 'gate' ? 'gate' : n.kind === 'boss' ? 'core' : n.sub || 'tmp')}/  [${visible(s, n) ? lsTag(n) : '?'}]${b.hunter?.at === n.id ? '  HUNTER' : ''}`).join('\n') : b.screen ? 'Finish what is on screen first.' : 'Nowhere to go.', 'breach-out');
     return out();
   }
   if (word === 'cd' || word === 'go') {
@@ -915,8 +1100,7 @@ export function breachCommand(s, text) {
   }
   if (word === 'tree') { say(s, treeLines(s).join('\n'), 'breach-out'); return out(); }
   if (word === 'pick' || word === 'buy' || word === 'choose') return act(s, word, Number(arg) - 1);
-  if (word === 'plus') return act(s, 'plus', arg || 0); // recompile: plus <mod>
-  if (['skip', 'reroll', 'cat', 'pull', 'leave', 'rest', 'reslot', 'done', 'patch', 'goon', 'recompile', 'service'].includes(word)) return act(s, word);
+  if (['cat', 'pull', 'leave', 'rest', 'reslot', 'done', 'patch', 'goon', 'service', 'open', 'force', 'splice', 'fight', 'enter'].includes(word)) return act(s, word);
   if (word === 'jack' && arg === 'out') return act(s, 'jackout');
   return null; // not a breach word: the caller passes it on
 }
@@ -928,120 +1112,87 @@ export function treeLines(s) {
     for (let row = 0; row <= rows; row++) {
       const ns = nodeList(b.map).filter((n) => n.act === act && n.row === row).sort((x, y) => (x.col ?? 0) - (y.col ?? 0));
       if (!ns.length) continue;
-      const cells = ns.map((n) => (b.at === n.id ? '@' : b.cleared[n.id] ? 'x' : visible(s, n) ? MARK[n.kind] : '?'));
+      const cells = ns.map((n) => (b.at === n.id ? '@' : b.hunter?.at === n.id ? 'H' : b.cleared[n.id] ? 'x' : visible(s, n) ? (n.key ? 'K' : MARK[n.kind]) : '?'));
       lines.push(`│  ${(row === rows ? (act === acts - 1 ? 'core' : 'gate') : rowSub(act, row, card) || 'tmp').padEnd(7)} ${cells.join('  ')}`);
     }
   }
   return lines;
 }
-export const MARK = { virus: 'v', elite: 'E', cache: '$', defrag: '+', broker: 'b', term: '>', gate: 'G', boss: 'R', drop: 'D' };
+export const MARK = { virus: 'v', elite: 'E', cache: '$', defrag: '+', broker: 'b', term: '>', vault: 'V', switch: 'S', gate: 'G', boss: 'R', drop: 'D' };
 
-// ---------- the bot (breachsim.mjs) ----------
-// How a player walks the map and drafts. Three draft policies, to measure how much drafting is skill:
-//   random   takes a random card, rests at every defrag, buys a random card it can afford, walks for safety only
-//   greedy   takes the rarest card (a CVE over a mod over gear on a tie), otherwise as random
-//   smart    reads the tags: takes the card that links most with its kit and its cards, walks toward the rewards it
-//            wants, rerolls a weak draft, recompiles at a defrag when its Signal allows, buys what links at a stall
-// Every policy fights with the planner, equips gear that beats what's loaded and rewrites the same way, so the gap
-// between them is the drafting.
-export const POLICIES = ['random', 'greedy', 'smart'];
-// The smart bot's knobs: how much a node's promised reward pulls its path, the value under which it rerolls a draft,
-// and the Signal share over which it recompiles at a defrag instead of resting.
-export const BOT = { route: 0.35, reroll: 2.6, recompile: 0.7 };
-const RANK3 = { stock: 0, tuned: 1, custom: 2 };
-// The bot's own dice (never the breach's: every policy meets the same maps and drafts).
+// ---------- the bot (breachsim.mjs, campaignsim.mjs) ----------
+// How a sensible player walks the map: fights while Signal is high, rests when it's low, picks up keycards and opens
+// vaults with them, takes switches down, keeps clear of the hunter, and spends tokens on scripts and patches. It
+// fights with the planner (planner.mjs) and runs a script when one fits (botScript).
+export const BOT = { rest: 0.7 };
+// The bot's own dice (never the breach's).
 const botRand = (b) => seeded((b.seed * 7919 + (b.botN = (b.botN || 0) + 1) * 104729) >>> 0)();
-const policyOf = (s) => s.breach?.policy || 'smart';
-// What a card is worth to the smart bot: its rarity, and its links with the build (the tags it shows on its tile).
-export function cardValue(s, c, build = buildTags(s)) {
-  if (BOT.value) { const v = BOT.value(s, c); if (v != null) return v; } // breachsim.mjs: a table of measured values (the oracle)
-  if (c.kind === 'gear') { const g = gearGain(s, c.item); return g > 0 ? 1 + g * 0.45 : 0.3; }
-  const b = s.breach, d = cardDef(c), links = linksOf(s, c, build).n;
-  const replaces = c.kind === 'mod' && b.mods.some((id) => MODS[id].skill === MODS[c.id].skill);
-  // Low on Signal, what keeps you alive counts for more.
-  const need = b.signal < b.max * 0.5 && d.makes.some((t) => t === 'heal' || t === 'shield') ? 1 : 0;
-  return 1.8 + RANK3[c.rarity] * 0.6 + links * 1.6 + need - (replaces ? 1.5 : 0) + (d.wants.length && !links ? -1 : 0);
-}
-// What a fight node's promised reward is worth to the smart bot, before it sees the cards.
-function rewardValue(s, n) {
-  if (!n.reward) return 0;
-  const b = s.breach, build = buildTags(s);
-  const best = (ids, kind) => Math.max(0, ...ids.map((id) => cardValue(s, { kind, id, rarity: CVE_RARITY[(kind === 'mod' ? MODS : CVES)[id].rarity] }, build)));
-  const v = n.reward === 'mod' ? best(modPool(s), 'mod') : n.reward === 'cve' ? best(cvePool(s, build), 'cve') : 1.6;
-  return BOT.route ? v * BOT.route + (n.rare ? 0.8 : 0) : 0;
-}
-const CVE_RARITY = { common: 'stock', uncommon: 'tuned', rare: 'custom' };
-// How a player walks the map: take fights while Signal is high, rest when it's low, take cards that fit.
 export function botRoute(s) {
-  const b = s.breach, xs = reachable(s), smart = policyOf(s) === 'smart';
+  const b = s.breach, xs = reachable(s);
   if (!xs.length) return null;
-  const sig = b.signal / b.max;
+  const sig = b.signal / b.max, hunter = b.hunter?.at;
+  const near = (id) => hunter && (id === hunter || exitsOf(b.map, id).some((x) => x.id === hunter) || exitsOf(b.map, hunter).some((x) => x.id === id));
   const score = (n) => {
-    const look = [n, ...nextOf(b.map, n.id)];
+    const look = [n, ...exitsOf(b.map, n.id)];
     let v = 0;
     for (const x of look) {
-      const k = x === n ? 1 : 0.4;
-      // The smart bot reads the risk too: an elite only once its build can take one (three cards, past the perimeter),
-      // and a rest a little sooner.
-      const ready = !smart || (x.act > 0 && b.mods.length + b.cves.length >= 3);
-      if (x.kind === 'defrag') v += k * (sig < (smart ? 0.7 : 0.6) ? 6 : 1);
-      if (x.kind === 'broker') v += k * (b.tokens >= 80 ? 3 : sig < 0.5 && b.tokens >= 25 ? 2 : 0.5);
-      if (x.kind === 'virus') v += k * (sig > 0.45 ? 2.5 : -1);
-      if (x.kind === 'elite') v += k * (sig > 0.8 && ready ? 3 : -4);
+      const k = x === n ? 1 : 0.4, seen = visible(s, x);
+      if (!seen) continue;
+      if (x.kind === 'defrag') v += k * (sig < BOT.rest ? 6 : 1);
+      if (x.kind === 'broker') v += k * (b.tokens >= 60 ? 3 : sig < 0.5 && b.tokens >= 25 ? 2 : 0.5);
+      if (x.kind === 'virus') v += k * (sig > 0.45 ? 2.5 + (x.key ? 1.5 : 0) : -1);
+      if (x.kind === 'elite') v += k * (sig > 0.8 ? 2.5 : -4);
       if (x.kind === 'cache') v += k * 2;
       if (x.kind === 'drop') v += k * 5; // a dead drop: the bot follows wick's leads
       if (x.kind === 'term') v += k * 1.5;
-      if (smart && visible(s, x) && (x.kind === 'virus' || (x.kind === 'elite' && sig > 0.8))) v += k * rewardValue(s, x);
+      if (x.kind === 'vault') v += k * (b.keys ? 4 : 0.5);
+      if (x.kind === 'switch') v += k * 2.5;
+      if (near(x.id)) v -= k * (sig > 0.75 ? 1 : 5);
     }
     return v;
   };
-  return xs.map((n) => ({ n, v: score(n) })).sort((a, c) => c.v - a.v)[0].n.id;
+  return xs.map((n) => ({ n, v: score(n) + botRand(b) * 0.01 })).sort((a, c) => c.v - a.v)[0].n.id;
 }
-// What to take, by policy.
+// What to choose on a screen.
+const REWRITE_PREF = ['restorepoint', 'memorymap', 'warmstart', 'kernelhook', 'zonetransfer', 'spamcannon', 'forgedkeys', 'testbed', 'slushfund', 'archive', 'maildrop', 'audittrail', 'listeningpost', 'nightlybuild', 'jumphost', 'serviceaccount', 'bountyboard', 'range', 'sinkhole', 'pricefix'];
 export function botPick(s) {
-  const b = s.breach, sc = b.screen, policy = policyOf(s);
+  const b = s.breach, sc = b.screen, sig = b.signal / Math.max(1, b.max);
   if (!sc) return null;
-  if (sc.kind === 'draft') {
-    if (!sc.cards.length) return sc.noSkip ? null : ['skip'];
-    if (policy === 'none') return sc.noSkip ? ['pick', 0] : ['skip']; // a floor for the measurements: no drafts at all
-    if (policy === 'random') return ['pick', Math.floor(botRand(b) * sc.cards.length)];
-    if (policy === 'greedy') {
-      const kindRank = { cve: 2, mod: 1, gear: 0 }, key = (c) => RANK3[c.rarity] * 3 + kindRank[c.kind];
-      const top = Math.max(...sc.cards.map(key)), best = sc.cards.map((c, i) => [c, i]).filter(([c]) => key(c) === top);
-      return ['pick', best[Math.floor(botRand(b) * best.length)][1]];
-    }
-    const build = buildTags(s), vals = sc.cards.map((c, i) => ({ i, v: cardValue(s, c, build) })).sort((a, c) => c.v - a.v);
-    if (vals[0].v < BOT.reroll && b.rerolls > 0 && !sc.rerolled) { sc.rerolled = true; return ['reroll']; }
-    return ['pick', vals[0].i];
-  }
-  if (sc.kind === 'rewrite') { const pref = ['restorepoint', 'memorymap', 'kernelhook', 'warmstart', 'forgedkeys', 'zonetransfer', 'spamcannon', 'testbed', 'slushfund', 'maildrop', 'audittrail', 'listeningpost', 'jumphost', 'nightlybuild', 'serviceaccount', 'bountyboard', 'range', 'sinkhole', 'pricefix', 'archive']; const i = sc.options.map((id, k) => [k, pref.indexOf(id)]).sort((a, c) => a[1] - c[1])[0][0]; return ['pick', i]; }
-  if (sc.kind === 'cache') return sc.read ? [b.map.nodes[sc.node].bait ? 'leave' : 'pull'] : ['cat'];
-  if (sc.kind === 'drop') return sc.read ? ['pull'] : ['cat'];
-  if (sc.kind === 'defrag') {
-    const mods = recompilable(b);
-    if (sc.recompile) { if (!mods.length) return ['done']; if (policy === 'random') return ['plus', mods[Math.floor(botRand(b) * mods.length)]]; const build = buildTags(s); return ['plus', mods.map((id) => ({ id, v: linksOf(s, { kind: 'mod', id }, build).n + RANK3[CVE_RARITY[MODS[id].rarity]] })).sort((a, c) => c.v - a.v)[0].id]; }
-    if (policy === 'smart' && mods.length && (b.signal >= b.max * BOT.recompile || b.cves.includes('zerologon'))) return b.cves.includes('zerologon') ? ['rest'] : ['recompile'];
-    return ['rest'];
-  }
+  if (sc.kind === 'rewrite') { const i = sc.options.map((id, k) => [k, REWRITE_PREF.indexOf(id)]).sort((a, c) => a[1] - c[1])[0][0]; return ['pick', i]; }
+  if (sc.kind === 'cache') { const n = b.map.nodes[sc.node]; if (!sc.read) return ['cat']; return [n.bait || (n.mirror && sig < 0.75) ? 'leave' : 'pull']; }
+  if (sc.kind === 'drop') return !sc.read ? ['cat'] : b.map.nodes[sc.node].script && scriptsOf(s).length >= slotsOf(s) ? ['leave'] : ['pull'];
+  if (sc.kind === 'defrag') return ['rest'];
+  if (sc.kind === 'vault') return sc.opened ? ['leave'] : b.keys ? ['open'] : b.trace < 25 && sig > 0.7 ? ['force'] : ['leave'];
+  if (sc.kind === 'switch') return sig > 0.65 ? ['fight'] : b.trace < 40 ? ['splice'] : ['leave'];
   if (sc.kind === 'broker') {
-    const price = (x) => priceOf(b, sc, x);
-    if (!sc.patched && b.signal < b.max * 0.6 && b.tokens >= price(BROKERS[sc.faction].patch)) return ['patch'];
-    const sv = BROKERS[sc.faction].service;
-    if (policy === 'smart' && sv?.id === 'recompile' && !sc.served && recompilable(b).length && b.tokens >= price(sv.price)) { if (!sc.recompile) return ['service']; const build = buildTags(s); return ['service', recompilable(b).sort((x, y) => linksOf(s, { kind: 'mod', id: y }, build).n - linksOf(s, { kind: 'mod', id: x }, build).n)[0]]; }
-    const can = sc.stock.map((c, i) => [c, i]).filter(([c]) => !c.sold && c.kind !== 'gear' && b.tokens >= price(c.price));
-    if (!can.length || policy === 'none') return ['leave'];
-    if (policy === 'random') return ['buy', can[Math.floor(botRand(b) * can.length)][1]];
-    if (policy === 'greedy') return ['buy', can.sort(([x], [y]) => RANK3[y.rarity] - RANK3[x.rarity])[0][1]];
-    const build = buildTags(s), best = can.map(([c, i]) => ({ i, v: cardValue(s, c, build) })).sort((a, c) => c.v - a.v)[0];
-    return best.v >= 2.6 ? ['buy', best.i] : ['leave'];
+    const price = (x) => priceOf(b, sc, x), B = BROKERS[sc.faction];
+    if (!sc.patched && sig < 0.6 && b.tokens >= price(B.patch)) return ['patch'];
+    if (B.service?.id === 'scrub' && !sc.served && b.trace >= 50 && b.tokens >= price(B.service.price)) return ['service'];
+    const can = sc.stock.map((c, i) => [c, i]).filter(([c]) => !c.sold && b.tokens >= price(c.price));
+    if (can.length && scriptsOf(s).length < slotsOf(s)) return ['buy', can.sort(([x], [y]) => y.price - x.price)[0][1]];
+    return ['leave'];
   }
-  if (sc.kind === 'term') { const ev = sc.event; return ['choose', ev === 'cron' ? (b.signal > b.max * 0.6 ? 0 : 1) : ev === 'keys' ? 0 : ev === 'honeytoken' ? (b.signal > b.max * 0.7 ? 0 : 1) : (b.signal > b.max * 0.7 ? 0 : 1)]; }
+  if (sc.kind === 'term') { const ev = sc.event; return ['choose', ev === 'cron' ? (sig > 0.6 && b.trace < 50 ? 0 : 1) : ev === 'keys' ? 0 : ev === 'honeytoken' ? (b.trace < 30 ? 0 : 1) : (sig > 0.7 ? 0 : 1)]; }
   if (sc.kind === 'gate') return ['goon'];
+  if (sc.kind === 'ahead') return ['enter'];
   return null;
 }
-// What a protocol adds over the one in its slot, roughly: a bigger rarity, or a higher level.
-function gearGain(s, it) {
-  const rank = { custom: 3, tuned: 2, stock: 1, zeroday: 4, indemnified: 4 };
-  const slot = SLOT_KINDS.indexOf(it.group), on = slot >= 0 ? stashItem(s, rigOf(s)[slot]) : null;
-  return on ? (rank[it.rarity] - rank[on.rarity]) * 3 + (it.level - on.level) : 5;
+// When a sensible player runs a script: a heal when low, a shield or a delay before a heavy hit, the burst and tempo
+// ones early in a big fight. Returns [slot] or null.
+export function botScript(s) {
+  const e = s.encounter, bag = scriptsOf(s);
+  if (!e?.breach || e.scriptUsed || !bag.length || !active(s)) return null;
+  const d = defender(s), low = d.integrity / Math.max(1, d.max), n = s.breach.map.nodes[e.breach], big = ['elite', 'gate', 'boss'].includes(n?.kind) || !!e.breachAs;
+  const heavy = attackers(s).some((p) => p.attack.due <= e.cycle + 1 && (p.attack.amount || 0) >= d.integrity * 0.3);
+  const told = !!e.virus.tells?.list?.some((t) => t.told && t.kind !== 'mimic');
+  const at = (ids) => bag.findIndex((id) => ids.includes(id));
+  let i = -1;
+  if (low < 0.35) i = at(['sasser', 'krack', 'slowloris', 'shellshock']);
+  if (i < 0 && heavy) i = at(['krack', 'shellshock', 'slowloris']);
+  if (i < 0 && told && big) i = at(['ripple20', 'meltdown']);
+  if (i < 0 && big && e.cycle <= 2) i = at(['bluekeep', 'spectre', 'mirai', 'conficker']);
+  if (i < 0 && big && e.cycle >= 6) i = at(['conficker', 'meltdown', 'mirai']);
+  return i >= 0 ? [i] : null;
 }
+// Run the bot's script, if it wants one.
+export function botScriptRun(s) { const x = botScript(s); if (x) runScript(s, x[0]); return !!x; }

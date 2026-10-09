@@ -1,16 +1,15 @@
-// The breach prototype (docs/roguelite.md phase 0: breach.mjs, drafts.mjs, rewrites.mjs, the Overclock and Lock tells):
-// the map generator, fog, drafts, mods and CVEs, every rewrite's Now, the two new tells, losing, capturing, and the bot
-// winning a fair share of breaches with every class.
+// The breach prototype (docs/roguelite.md phase 0 and 11: breach.mjs, rewrites.mjs, the Overclock and Lock tells): the
+// map generator, fog, rewrites (output only), the two new tells, losing, capturing, the page, and the bot winning a
+// fair share of breaches with every class. The map's dungeon pieces, scripts and skill rules: mapmech.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, active, part, livingParts, readyIn, previewDamage, finish, stashItem, fxFire, maxSignal } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, active, part, livingParts, readyIn, previewDamage, finish, stashItem, maxSignal, addItem } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, TELL_SETS, createVirus } from './dist/data.mjs';
 import { tellsOf, plannedTells, NEW_TELLS } from './dist/tells.mjs';
 import { generateMap, allPaths, nodeList, nextOf, firstRow, BREACH, ACTS, startBreach, outfit, reachable, visible, go, act, fight, settle, captureOf, SERVER_CARD, EVENTS, CORE_DUMP } from './dist/breach.mjs';
-import { MODS, CVES, rollDraft, patchMods, unpatchMods, modPool } from './dist/drafts.mjs';
 import { SUBSYSTEMS, REWRITES } from './dist/rewrites.mjs';
-import { seeded } from './dist/gear.mjs';
-import { winRate, runBreach, CLASSES } from './breachsim.mjs';
+import { seeded, rollItem } from './dist/gear.mjs';
+import { winRate, runBreach, CLASSES, PICK } from './breachsim.mjs';
 import { breachMarkup, bxUi, bxToggle } from './dist/breach-view.mjs';
 
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
@@ -128,88 +127,6 @@ test('moving: only the next row along an edge; a node resolves into its screen',
   assert.equal(s.run.integrity, b.signal, 'the fight is on your breach Signal');
 });
 
-// ---------- drafts ----------
-test('drafts: a mixed draft is never three of one kind; an elite drafts CVEs; a gate mods, CVEs and one gear, the Resident gear, blue or better', () => {
-  const s = breach('breaker', 2);
-  for (let i = 0; i < 60; i++) {
-    const r = seeded(i + 1);
-    const v = rollDraft(s, r, 'virus', { act: i % 3, level: 10 });
-    assert.equal(v.length, 3);
-    assert.ok(new Set(v.map((c) => c.kind)).size >= 2, `draft ${i}: ${v.map((c) => c.kind)}`);
-    assert.ok(rollDraft(s, r, 'elite', { act: i % 3, level: 10 }).every((c) => c.kind === 'cve'), 'an elite drafts CVEs');
-    const g = rollDraft(s, r, 'gate', { act: 0, level: 10 });
-    assert.equal(g.filter((c) => c.kind === 'gear').length, 1, 'a gate: one gear card');
-    for (const c of g) { assert.ok(['mod', 'cve', 'gear'].includes(c.kind)); assert.ok(['tuned', 'custom'].includes(c.rarity)); }
-    for (const c of rollDraft(s, r, 'boss', { act: 0, level: 10 })) { assert.equal(c.kind, 'gear'); assert.ok(['tuned', 'custom'].includes(c.item.rarity)); }
-    for (const k of ['cve', 'mod', 'gear']) for (const c of rollDraft(s, r, k, { act: 0, level: 10 })) assert.equal(c.kind, k, 'a promised kind is kept');
-    for (const c of v.filter((x) => x.kind === 'mod')) assert.equal(MODS[c.id].cls, 'breaker', 'only your class\'s mods');
-  }
-  // Mods only for skills on your bar (and Key 1); held ones never come again.
-  s.breach.mods = ['aftershock'];
-  assert.ok(!modPool(s).includes('aftershock'));
-  assert.deepEqual(modPool(s).sort(), ['critical-mass', 'fragmentation', 'overcommit', 'pry-bar', 'shrapnel', 'undertow', 'zero-click']);
-  // Kernel Hook and POODLE: a card more each.
-  s.breach.fx.kernelHook = true; s.breach.cves = ['poodle'];
-  const n = nodeOf(s, 'virus');
-  fight(s, n);
-  s.run.max = s.run.integrity = 5000;
-  for (const p of s.encounter.virus.parts) p.integrity = 0;
-  finish(s, 'victory');
-  assert.equal(s.breach.screen.kind, 'draft');
-  assert.equal(s.breach.screen.cards.length, 5);
-});
-
-test('drafts: about ten mods a class (on real skills, from Key 1 up), 27 CVEs; a mod patches while held and comes off clean', () => {
-  assert.ok(Object.keys(MODS).length >= 40, `${Object.keys(MODS).length} mods`);
-  assert.ok(Object.keys(CVES).length >= 20, `${Object.keys(CVES).length} CVEs`);
-  for (const cls of CLASSES) {
-    const s = breach(cls, 1), own = Object.values(MODS).filter((m) => m.cls === cls);
-    assert.ok(own.length >= 10, `${cls}: ${own.length}`);
-    assert.ok(modPool(s).length >= 5, `${cls}: ${modPool(s).length} can roll at level 10`);
-    for (const m of own) { assert.ok(ABILITIES[m.skill], m.id); assert.equal(m.v.length, 2, `${m.id}: a value and a + value`); assert.ok(m.text(m.v[0]) && m.text(m.v[1]), m.id); }
-  }
-  // A mod patches its skill while held (its + values once recompiled), and the global data comes back untouched.
-  const before = JSON.stringify(ABILITIES);
-  patchMods(['overcommit', 'clone', 'grudge-match']);
-  assert.equal(ABILITIES.overload.damage, 60);
-  assert.equal(ABILITIES.spawn.helpers, 2);
-  assert.equal(ABILITIES.retaliate.window, 2);
-  patchMods(['grudge-match'], ['grudge-match']);
-  assert.equal(ABILITIES.retaliate.window, 3, 'Grudge Match+');
-  assert.equal(ABILITIES.overload.damage, 40, 'the last patch came off first');
-  unpatchMods();
-  assert.equal(JSON.stringify(ABILITIES), before);
-});
-
-test('mods and CVEs act in a breach fight: Aftershock, Overcommit, EternalBlue, Heartbleed', () => {
-  // (the genome on a node is its own test, drafting.test.mjs)
-  CONFIG.enemyCrit = 0; CONFIG.misses = false;
-  const s = breach('breaker', 8), b = s.breach;
-  b.mods = ['aftershock', 'overcommit'];
-  b.cves = ['eternalblue', 'heartbleed'];
-  fight(s, nodeOf(s, 'virus'));
-  quiet(s);
-  const e = s.encounter, p = livingParts(s).find((x) => x.armor >= 2) || livingParts(s)[0];
-  p.armor = p.maxArmor = 3;
-  assert.ok(e.forceCrit, 'EternalBlue: the first hit is a critical strike');
-  s.run.integrity = s.run.max - 20;
-  const hp = p.integrity, sig = s.run.integrity;
-  command(s, `crack ${p.id}`); resolveCycle(s);
-  assert.ok(p.integrity < hp, 'Aftershock: Crack hurt the part');
-  assert.ok(s.logs.some((x) => /^Aftershock: /.test(x.message)));
-  assert.ok(s.run.integrity > sig, 'Heartbleed: breaking ◆ healed you');
-  const before = s.run.integrity;
-  const q = livingParts(s)[0];
-  q.armor = 0;
-  command(s, `overload ${q.id}`); resolveCycle(s);
-  assert.ok(s.logs.some((x) => /Overcommit costs you/.test(x.message)) || s.logs.some((x) => /Overcommit refunds/.test(x.message)), 'Overcommit costs Signal (or refunds it on a crit)');
-  assert.ok(before > 0);
-  // Outside a breach the same events do nothing (hooks only read a breach fight).
-  const h = fresh();
-  h.hackers = { breaker: { level: 10, xp: 0 } };
-  assert.deepEqual(fxFire(h, 'start'), []);
-});
-
 // ---------- rewrites ----------
 function rewrite(s, id, tier = 1) {
   const r = REWRITES[id], b = s.breach;
@@ -217,49 +134,29 @@ function rewrite(s, id, tier = 1) {
   act(s, 'pick', SUBSYSTEMS[r.sub].rewrites.indexOf(id));
   assert.deepEqual(b.rewrites[r.sub], { id, tier });
 }
-test('rewrites: nine subsystems, two or three rewrites each, each with a Now and a tier I and II output', () => {
+test('rewrites: nine subsystems, two or three rewrites each, each a tier I and II output and nothing else', () => {
   assert.equal(Object.keys(SUBSYSTEMS).length, 9);
   assert.equal(Object.keys(REWRITES).length, 20);
   for (const [sub, x] of Object.entries(SUBSYSTEMS)) {
     assert.ok(x.rewrites.length >= 2 && x.rewrites.length <= 3, sub);
-    for (const id of x.rewrites) { const r = REWRITES[id]; assert.equal(r.sub, sub); assert.equal(r.output.length, 2); assert.ok(r.now && r.apply); }
+    for (const id of x.rewrites) { const r = REWRITES[id]; assert.equal(r.sub, sub); assert.equal(r.output.length, 2); assert.ok(!('now' in r) && !('apply' in r), `${id}: output only`); for (const o of r.output) assert.ok(!/draft|reroll|CVE|\bmod/i.test(o), `${id}: ${o}`); }
   }
   for (const sub of SERVER_CARD.subsystems.flat()) assert.ok(SUBSYSTEMS[sub], sub);
 });
 
-test('rewrites: every Now applies for the rest of this breach', () => {
-  let s = breach('breaker', 3), b = s.breach;
-  rewrite(s, 'maildrop'); assert.equal(b.tokens, 30);
-  rewrite(s, 'slushfund'); assert.equal(b.tokens, 70);
-  rewrite(s, 'nightlybuild'); assert.equal(b.rerolls, BREACH.rerolls + 2);
-  b.signal = 50; rewrite(s, 'restorepoint'); assert.equal(b.signal, 50 + Math.round(b.max * 0.25));
-  const max = b.max; rewrite(s, 'memorymap'); assert.equal(b.max, max + Math.round(max * 0.1));
-  rewrite(s, 'forgedkeys'); assert.equal(b.screen.kind, 'draft'); assert.ok(b.screen.cards.every((c) => c.kind === 'cve'), 'Forged Keys: a CVE pick now');
-  b.screen = null;
-  rewrite(s, 'archive'); assert.equal(b.screen.kind, 'draft'); assert.ok(b.screen.cards.every((c) => c.kind === 'mod'), 'Archive: a mod pick now');
-  b.screen = null;
-  rewrite(s, 'kernelhook'); assert.ok(b.fx.kernelHook);
-  rewrite(s, 'pricefix');
-  const broker = nodeList(b.map).find((n) => n.kind === 'broker');
-  b.at = nodeList(b.map).find((n) => n.step === broker.step - 1 && nextOf(b.map, n.id).includes(broker)).id;
-  go(s, broker.id);
-  assert.equal(b.screen.kind, 'broker'); assert.ok(b.screen.half, 'Price Fix: the next broker is half price');
-  // Jump Host: the next move can go anywhere in the next row.
-  s = breach('breaker', 3); b = s.breach;
+test('rewrites: picking one changes nothing on this breach; its output waits for the capture', () => {
+  const s = breach('breaker', 3), b = s.breach;
   b.at = firstRow(b.map)[0].id;
-  const along = reachable(s).length, row = nodeList(b.map).filter((n) => n.step === 2).length;
-  rewrite(s, 'jumphost');
-  assert.equal(reachable(s).length, row);
-  assert.ok(row >= along);
-  // Spam Cannon: the act 1 gate starts with 10% less Integrity. Warm Start: every attack a cycle later.
-  const gateHp = (t) => { fight(t, t.breach.map.nodes.gate1); const n = t.encounter.virus.parts.reduce((x, p) => x + p.max, 0); t.encounter = null; return n; };
-  const plain = gateHp(breach('breaker', 3)), thin = breach('breaker', 3);
-  rewrite(thin, 'spamcannon');
-  assert.ok(Math.abs(gateHp(thin) / plain - 0.9) < 0.03, 'Spam Cannon');
-  const due = (t) => { fight(t, nodeOf(t, 'virus')); return t.encounter.virus.parts.filter((p) => p.attack).map((p) => p.attack.due); };
-  const cold = due(breach('breaker', 3)), warm = breach('breaker', 3);
-  rewrite(warm, 'warmstart');
-  assert.deepEqual(due(warm), cold.map((d) => d + 1), 'Warm Start');
+  const before = JSON.stringify({ tokens: b.tokens, signal: b.signal, max: b.max, fx: b.fx, keys: b.keys, trace: b.trace, reach: reachable(s).map((n) => n.id) });
+  for (const id of Object.keys(REWRITES)) { b.screen = null; rewrite(s, id); b.rewrites = {}; }
+  b.screen = null;
+  assert.equal(JSON.stringify({ tokens: b.tokens, signal: b.signal, max: b.max, fx: b.fx, keys: b.keys, trace: b.trace, reach: reachable(s).map((n) => n.id) }), before);
+  assert.ok(s.logs.some((x) => /rewritten: Slush Fund\. Once you capture the server: Every breach starts with 40 tokens\./.test(x.message)));
+  // The screen: Output, no Now.
+  b.screen = { kind: 'rewrite', sub: 'smtpd', tier: 1, options: SUBSYSTEMS.smtpd.rewrites };
+  const html = breachMarkup(s);
+  assert.match(html, /Output<\/span>Mails you a script/);
+  assert.ok(!/bx-now|>Now</.test(html));
 });
 
 test('rewrites: a subsystem\'s fight offers its rewrite once; clearing it again (or an elite) makes it tier II', () => {
@@ -267,9 +164,7 @@ test('rewrites: a subsystem\'s fight offers its rewrite once; clearing it again 
   const s = breach('bastion', 3), b = s.breach, n = nodeOf(s, 'virus');
   const win = (node) => { b.screen = null; b.queue = []; fight(s, node); for (const p of s.encounter.virus.parts) p.integrity = 0; finish(s, 'victory'); settle(s); };
   win(n);
-  assert.equal(b.screen.kind, 'draft');
-  act(s, 'skip');
-  assert.equal(b.screen.kind, 'rewrite');
+  assert.equal(b.screen.kind, 'rewrite', 'no draft: the rewrite comes straight after the fight');
   assert.equal(b.screen.sub, n.sub);
   assert.equal(b.screen.tier, 1);
   act(s, 'pick', 1);
@@ -355,68 +250,64 @@ test('the old tells are untouched outside a breach', () => {
 });
 
 // ---------- the end ----------
-test('losing: the unbanked pack and the drafts go; XP and banked gear stay', () => {
+// A protocol in the pack, as a drop would leave it.
+const packed = (s, seed = 4) => { const it = addItem(s, rollItem(seeded(seed), { level: 10, rarity: 'tuned' }), 'Test: '); s.breach.pack.push(it.id); return it.id; };
+test('losing: the unbanked pack goes; XP, banked gear and your scripts stay', () => {
   const s = breach('breaker', 3), b = s.breach;
-  b.mods = ['aftershock']; b.cves = ['mirai'];
-  const keep = b.banked[0];
-  b.screen = { kind: 'draft', title: 'x', draft: 'boss', cards: rollDraft(s, seeded(4), 'boss', { act: 0, level: 10 }) };
-  act(s, 'pick', 0);
-  const lost = b.pack[0];
-  assert.ok(stashItem(s, lost), 'drafted gear is in the stash (and the pack)');
+  const scripts = [...b.scripts];
+  const lost = packed(s);
+  assert.ok(stashItem(s, lost), 'the drop is in the stash (and the pack)');
   fight(s, nodeOf(s, 'virus'));
   const xp = b.xp;
   s.run.integrity = 0;
   finish(s, 'crashed');
   assert.equal(b.result, 'lost');
   assert.equal(stashItem(s, lost), null, 'the unbanked item is gone');
-  assert.deepEqual([b.mods, b.cves], [[], []]);
+  assert.deepEqual(b.scripts, scripts, 'scripts are yours: they stay');
   assert.equal(b.xp, xp, 'XP stays');
   assert.equal(b.screen.kind, 'result');
-  assert.equal(keep, undefined);
-  assert.match(breachMarkup(s), /SIGNAL LOST/);
+  assert.match(breachMarkup(s), /SIGNAL LOST[\s\S]*and your scripts/);
 });
 
-test('a gate banks the pack after its draft, and you go on or jack out', () => {
+test('a gate banks the pack, and you go on or jack out', () => {
   CONFIG.enemyCrit = 0;
   const win = (s, n) => { fight(s, n); for (const p of s.encounter.virus.parts) p.integrity = 0; finish(s, 'victory'); settle(s); };
   let s = breach('bastion', 3), b = s.breach;
-  b.screen = { kind: 'draft', title: 'x', draft: 'boss', cards: rollDraft(s, seeded(4), 'boss', { act: 0, level: 10 }) };
-  act(s, 'pick', 0);
-  assert.equal(b.pack.length, 1);
+  packed(s);
   win(s, b.map.nodes.gate1);
-  assert.equal(b.screen.kind, 'draft');
-  assert.ok(b.screen.noSkip && b.screen.cards.every((c) => ['tuned', 'custom'].includes(c.rarity)) && b.screen.cards.filter((c) => c.kind === 'gear').length === 1, 'a gate drafts 1 of 3: mods and CVEs and one gear card, blue or better');
-  act(s, 'pick', 1);
   assert.equal(b.screen.kind, 'gate');
-  assert.equal(b.pack.length, 1, 'unbanked until you pass');
+  const n = b.pack.length;
+  assert.ok(n >= 1, 'unbanked until you pass (and a gate drops gear now and then)');
   act(s, 'goon');
-  assert.deepEqual([b.pack.length, b.banked.length, b.result], [0, 1, null]);
+  assert.deepEqual([b.pack.length, b.banked.length, b.result], [0, n, null]);
   // Or jack out: banked, uncaptured.
   s = breach('bastion', 3); b = s.breach;
-  b.screen = { kind: 'draft', title: 'x', draft: 'boss', cards: rollDraft(s, seeded(5), 'boss', { act: 0, level: 10 }) };
-  act(s, 'pick', 0);
+  packed(s, 5);
   win(s, b.map.nodes.gate1);
-  act(s, 'pick', 0);
   act(s, 'jackout');
-  assert.deepEqual([b.result, b.banked.length], ['out', 1]);
+  assert.equal(b.result, 'out');
+  assert.ok(b.banked.length >= 1);
   assert.match(breachMarkup(s), /JACKED OUT/);
 });
 
-test('a won breach: DEADBOLT drafts gear into the pack, the pack banks, and the capture card has the rewrites, loot and core.dump', () => {
-  const r = runBreach({ cls: 'bastion', seed: 2, keep: true }), s = r.state, b = s.breach;
-  assert.ok(r.won, 'the bot wins this one');
+test('a won breach: DEADBOLT drops gear into the pack, the pack banks, and the capture card has the outputs, loot and core.dump', () => {
+  let r = null;
+  for (let seed = 1; seed < 30 && !r; seed++) { const x = runBreach({ cls: 'bastion', seed, keep: true }); if (x.won) r = x; }
+  const s = r.state, b = s.breach;
   assert.equal(b.result, 'won');
   assert.equal(b.pack.length, 0, 'everything banked');
-  assert.ok(b.banked.length >= 1 && b.banked.length <= 4, `a gear pick from DEADBOLT, and little else (${b.banked.length})`);
+  assert.ok(b.banked.length >= 1 && b.banked.length <= 4, `DEADBOLT's drop, and little else (${b.banked.length})`);
   const c = captureOf(s);
   assert.equal(c.rewrites.length, 6);
   assert.ok(c.rewrites.filter((x) => x.held).length >= 3);
   assert.ok(c.xp > 0);
   assert.equal(c.dump, CORE_DUMP);
   assert.equal(CORE_DUMP.thread, 'TOLLGATE');
-  assert.match(breachMarkup(s), /CAPTURED/);
-  const { state, ...rest } = runBreach({ cls: 'bastion', seed: 2, keep: true }), { state: _, ...first } = r;
-  assert.deepEqual(rest, first, 'a breach is seeded: the same seed plays the same way');
+  const html = breachMarkup(s);
+  assert.match(html, /CAPTURED[\s\S]*Output <small>/);
+  assert.match(html, /Trace peak<\/span><b>\d+/);
+  const { state, ...again } = runBreach({ cls: 'bastion', seed: r.seed, keep: true }), { state: _, ...first } = r;
+  assert.deepEqual(again, first, 'a breach is seeded: the same seed plays the same way');
   assert.equal(Object.keys(EVENTS).length, 4, 'four terminal events');
   assert.ok(state);
 });
@@ -440,23 +331,24 @@ test('the page: a run strip, one decision, the rewrites in the gutter, the pack 
   const s = breach('breaker', 3), b = s.breach;
   bxUi.pack = false; bxUi.log = false; bxUi.seen.clear();
   let html = breachMarkup(s);
-  // The strip: Signal, tokens and rerolls. Nothing drafted or picked up yet, so no mods, CVEs or Pack, and no placeholders.
+  // The strip: Signal, Trace, tokens, the server's rule and your scripts. Nothing picked up yet, so no Pack, and no
+  // placeholders.
   assert.match(html, /class="bx-hud"/);
   assert.match(html, new RegExp(`<strong>${b.signal}</strong><small>/${b.max}</small>`));
+  assert.match(html, /class="bx-trace ok"[^>]*><span class="lbl">Trace<\/span>/);
+  assert.match(html, /bx-kind[^>]*><span class="lbl">Mailhub<\/span><b>Spam floods<\/b>/);
+  assert.match(html, /Scripts 2\/3[\s\S]*class="bx-perk script r-stock" title="Sasser · common script: Restores 20%/);
   assert.ok(!/none yet|>empty</.test(html), 'absent means empty');
-  assert.ok(!/bx-perks|data-bx-ui="pack"/.test(html));
+  assert.ok(!/data-bx-ui="pack"/.test(html));
+  assert.ok(!/draft|reroll|bx-rw|bx-tag/i.test(html), 'no drafting left on the page');
   // Nothing to decide: one line. No rewrites grid; the gutter reads plain subsystem names.
   assert.match(html, /bx-idle[^>]*>.*Jack in: pick a first node/);
   assert.ok(!/bx-subs|>stock</.test(html), 'no rewrites grid, and no "stock" filler in the gutter');
-  // A mod, a CVE, a rewrite and gear in the pack.
-  b.mods = ['aftershock']; b.cves = ['heartbleed']; b.rewrites = { smtpd: { id: 'spamcannon', tier: 2 } };
-  const it = rollDraft(s, seeded(9), 'boss', { act: 0, level: 10 })[0];
-  b.screen = { kind: 'draft', title: 'Draft', draft: 'virus', cards: [it] };
-  act(s, 'pick', 0);
+  // A rewrite and gear in the pack.
+  b.rewrites = { smtpd: { id: 'spamcannon', tier: 2 } };
+  packed(s, 9);
   html = breachMarkup(s);
-  assert.match(html, /class="bx-perk mod" title="Aftershock · mod on Crack: Crack also deals/);
-  assert.match(html, /class="bx-perk cve r-stock" title="Heartbleed · common CVE: Heals you/);
-  assert.match(html, /class="bx-gut held[^"]*"[^>]*title="Spam Cannon II on smtpd: Now: [^"]+ Output: Viruses on servers linked to it start with 25% less Integrity\."><span class="bx-gut-dir">smtpd\/<\/span><small>Spam Cannon II<\/small>/);
+  assert.match(html, /class="bx-gut held[^"]*"[^>]*title="Spam Cannon II on smtpd\. Once you capture the server: Viruses on servers linked to it start with 25% less Integrity\."><span class="bx-gut-dir">smtpd\/<\/span><small>Spam Cannon II<\/small>/);
   assert.match(html, /data-bx-ui="pack"[^>]*>.*Pack<\/span><b>1<\/b><small>banks at the gate<\/small>/);
   assert.match(html, /bx-packbtn new/, 'new gear marks the button');
   assert.ok(!/class="bx-pop"/.test(html), 'the pack is closed until you open it');
@@ -475,14 +367,14 @@ test('the page: a run strip, one decision, the rewrites in the gutter, the pack 
 });
 
 // ---------- the bot ----------
-// docs/roguelite.md 9.1 asks 50 to 70% a class at heat 0 in blues. The band here is wider so the test is stable at 16
-// breaches a class, and it guards the floor: every class can win a fair share, none is shut out. breachsim.mjs prints
-// the numbers.
-test('breachsim: every class at level 10 wins a fair share of breaches', { timeout: 300000 }, () => {
-  const rates = CLASSES.map((cls) => winRate(cls, { runs: 16 }));
-  for (const r of rates) assert.ok(r.rate >= 0.3, `${r.cls} wins ${Math.round(r.rate * 100)}%`);
+// docs/roguelite.md 9.1 asks 50 to 70% a class at heat 0 in blues; 11 has the measured table (breachsim.mjs). The band
+// here is wider so the test is stable at 16 breaches a class, with the subclasses the campaign bot picks, and it
+// guards the floor and the ceiling: every class can win a fair share, and the Bastion no longer wins them all.
+test('breachsim: every class at level 10 wins a fair share of breaches, and none wins nearly all', { timeout: 300000 }, () => {
+  const rates = CLASSES.map((cls) => winRate(cls, { runs: 16, sub: PICK[cls] }));
+  for (const r of rates) assert.ok(r.rate >= 0.25 && r.rate <= 0.94, `${r.cls} wins ${Math.round(r.rate * 100)}%`);
   const mean = rates.reduce((n, r) => n + r.rate, 0) / rates.length;
-  assert.ok(mean >= 0.5 && mean <= 0.92, `mean ${Math.round(mean * 100)}%`);
+  assert.ok(mean >= 0.45 && mean <= 0.85, `mean ${Math.round(mean * 100)}%`);
   for (const r of rates) assert.ok(r.fights >= 6, `${r.cls}: about ten fights a breach (${r.fights.toFixed(1)})`);
 });
 

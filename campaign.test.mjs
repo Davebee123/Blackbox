@@ -1,6 +1,6 @@
 // The breach campaign (docs/roguelite.md phase 2: campaign.mjs, campaign-view.mjs, campaignsim.mjs): its own save, a
-// connected map by layer, outputs on later breaches, checkpoints, re-imaging, bounties, the unlock pool, the Archive,
-// and the bot reaching level 10 with every class.
+// connected map by layer, outputs on later breaches, checkpoints, re-imaging, bounties, the Archive, and the bot
+// reaching level 10 with every class.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -8,8 +8,7 @@ import { fresh, restore, command, hackerLevel, gainXp, active, SAVE_VERSION } fr
 import { BOSSES, GUARDS } from './dist/data.mjs';
 import { AUTHORS } from './dist/authors.mjs';
 import { REWRITES, SUBSYSTEMS } from './dist/rewrites.mjs';
-import { CVES, modPool, rollDraft } from './dist/drafts.mjs';
-import { seeded } from './dist/gear.mjs';
+import { SCRIPTS } from './dist/scripts.mjs';
 import { nodeList, reachable, firstRow, act, breachHooks, allPaths } from './dist/breach.mjs';
 import { CAMPAIGN, CAMPAIGN_KEY, SERVERS, SERVER, LAYERS, FRAGMENTS, BOUNTIES, newCampaign, statusOf, outputsFor, launch, leave, recOf, archiveOf, bountiesOn, actsFor, cardFor } from './dist/campaign.mjs';
 import { campaignMarkup, archiveMarkup, campUi } from './dist/campaign-view.mjs';
@@ -37,7 +36,7 @@ test('save: its own key, a round trip through JSON and restore keeps the whole c
   assert.ok(!/localStorage\.(get|set)Item\(SAVE_KEY/.test(app), 'every save goes through KEY, so the campaign never writes the old one');
   const s = camp('bastion', 3);
   hold(s, 'sprawl-00', { ledger: { id: 'slushfund', tier: 1 } });
-  s.camp.archive.push('sprawl-00'); s.camp.pool.push('bluekeep'); s.camp.breaches = 4;
+  s.camp.archive.push('sprawl-00'); s.camp.scripts.push('bluekeep'); s.camp.breaches = 4;
   recOf(s, 'vanta-07').checkpoint = { gate: 1, rewrites: { sshd: { id: 'forgedkeys', tier: 2 } } };
   const back = restore(JSON.parse(JSON.stringify(s)));
   assert.deepEqual(back.camp, s.camp);
@@ -59,7 +58,8 @@ test('a new campaign: level 1, a white protocol in every slot, the tutorial open
   assert.equal(statusOf(s, 'sprawl-00'), 'open');
   assert.ok(SERVERS.filter((x) => x.id !== 'sprawl-00').every((x) => statusOf(s, x.id) !== 'open'));
   assert.equal(s.settings.tips, false);
-  assert.deepEqual(s.camp.pool, CAMPAIGN.startCves);
+  assert.deepEqual(s.camp.scripts, CAMPAIGN.startScripts, 'a Sasser to start');
+  assert.ok(!('pool' in s.camp), 'no draft pool');
 });
 
 // ---------- the map ----------
@@ -113,8 +113,7 @@ test('breaches scale with level: SPRAWL-00 a short tutorial, one act early, two 
   assert.equal(b.map.nodes.core.boss, 'relayking');
   assert.ok(allPaths(b.map).every((p) => p.at(-1) === 'core'));
   assert.ok(nodeList(b.map).filter((n) => ['virus', 'elite'].includes(n.kind)).every((n) => n.level === 1), 'viruses at the server level');
-  // Level 1: only the mods for the skills on your bar (Key 1 and Overload), and no second mods before heat opens them.
-  assert.deepEqual(modPool(s), ['pry-bar', 'overcommit']);
+  assert.ok(!nodeList(b.map).some((n) => n.key || ['vault', 'switch'].includes(n.kind)), 'the tutorial is a plain act');
   leave(s); s.breach = null;
   for (const id of ['sprawl-00', 'vanta-07', 'coldstore-3', 'depot-7']) hold(s, id);
   b = launch(s, 'pier-5'); assert.equal(b.map.acts, 2); assert.ok(b.map.nodes.gate1 && !b.map.nodes.gate2);
@@ -141,10 +140,8 @@ test('outputs: a held server\'s rewrites run on later breaches, each once at its
   assert.equal(b.fx.thin, 0.15);
   assert.equal(b.fx.maildrop, 1);
   assert.ok(b.fx.warm);
-  assert.equal(b.screen?.kind, 'draft', 'Forged Keys: a CVE pick before the first node');
-  assert.ok(b.screen.cards.every((c) => c.kind === 'cve' && s.camp.pool.includes(c.id)), 'from the pool only');
-  assert.deepEqual(reachable(s), [], 'the pick comes first');
-  act(s, 'pick', 0);
+  assert.equal(b.keys, 1, 'Forged Keys: a keycard to start');
+  assert.equal(b.screen, null, 'nothing to pick before the first node');
   assert.deepEqual(reachable(s).map((n) => n.id).sort(), firstRow(b.map).map((n) => n.id).sort());
   // A fight starts thinner on a breach next to a Spam Cannon.
   const n = firstRow(b.map)[0];
@@ -169,7 +166,7 @@ test('Restore Point: once a breach, a blow that would end you leaves you at 1 an
 });
 
 // ---------- the unlock pool, bounties, re-imaging, the Archive ----------
-test('a capture: the record, the unlock, the links it opens, the fragment; a bounty met opens a card in the pool', () => {
+test('a capture: the record, the links it opens, the fragment; a bounty met pays a script', () => {
   const s = camp('operator', 11);
   hold(s, 'sprawl-00');
   const k = bountiesOn(s, 'vanta-07')[0];
@@ -177,28 +174,25 @@ test('a capture: the record, the unlock, the links it opens, the fragment; a bou
   assert.equal(bountiesOn(s, 'sprawl-00').length, 0, 'the tutorial posts none');
   const b = launch(s, 'vanta-07', { bounty: k });
   b.rewrites = { sshd: { id: 'jumphost', tier: 1 } };
-  b.stats = { rests: 0, landed: 0, elites: 1, skips: 0, low: 1 };
-  const stash = s.stash.length, pool = s.camp.pool.length + s.camp.mods.length;
+  Object.assign(b.stats, { rests: 0, landed: 0, elites: 1, hunted: 0, vaults: 1, low: 1 });
+  const stash = s.stash.length, bag = s.camp.scripts.length;
   b.result = 'won';
   breachHooks.over(s, 'won');
   const rec = recOf(s, 'vanta-07');
   assert.ok(rec.captured);
   assert.deepEqual(rec.rewrites, { sshd: { id: 'jumphost', tier: 1 } });
-  assert.ok(s.camp.pool.includes('bluekeep'), 'VANTA-RELAY-07 opens BlueKeep');
-  assert.equal(b.report.unlock.id, 'bluekeep');
   assert.ok(b.report.revealed.includes('PIER-5'));
   assert.equal(b.dump.server, 'vanta-07');
   assert.ok(s.camp.archive.includes('vanta-07'));
   assert.ok(b.report.bounty.done);
   assert.equal(s.stash.length, stash, 'no more gear: the designer found a breach gave too much');
-  assert.equal(s.camp.pool.length + s.camp.mods.length, pool + 2, 'BlueKeep, and the bounty\'s card');
+  assert.equal(s.camp.scripts.length, bag + 1, 'the bounty\'s script');
   assert.equal(rec.paid, 1);
-  assert.match(breachMarkup(s), /CAPTURED[\s\S]*bounty[\s\S]*Paid[\s\S]*BlueKeep/);
+  assert.match(breachMarkup(s), new RegExp(`CAPTURED[\\s\\S]*bounty[\\s\\S]*Paid[\\s\\S]*${SCRIPTS[s.camp.scripts.at(-1)].name}`));
   assert.match(breachMarkup(s), /data-camp="leave"/);
-  // A missed bounty costs nothing; the drafts can't offer a CVE you haven't opened.
+  // A missed bounty costs nothing.
   leave(s);
   const c = launch(s, 'coldstore-3', { bounty: bountiesOn(s, 'coldstore-3')[0] });
-  for (let i = 0; i < 40; i++) for (const card of rollDraft(s, seeded(i), 'elite', { act: 0, level: 4 })) if (card.kind === 'cve') assert.ok(s.camp.pool.includes(card.id), card.id);
   c.result = 'lost';
   breachHooks.over(s, 'lost');
   assert.equal(c.report.bounty.done, false);
@@ -246,7 +240,7 @@ test('checkpoints: a gate you beat holds; a retry starts past it with the rewrit
   b = launch(s, 'pier-5', { from: 'checkpoint' });
   assert.equal(b.at, 'gate1');
   assert.deepEqual(b.rewrites, rec.checkpoint.rewrites);
-  assert.deepEqual(b.mods, []); assert.deepEqual(b.cves, []);
+  assert.equal(b.trace, 0, 'Trace starts fresh');
   assert.ok(reachable(s).length >= 2 && reachable(s).every((n) => n.act === 1 && n.row === 0), 'act 2 is next');
   assert.ok(b.map.nodes.gate1 && b.cleared.gate1);
   // Capturing clears it; from the start ignores it.
@@ -282,7 +276,7 @@ test('the card: Resident and Collection, subsystems by act, best result, bountie
   assert.match(html, /VAULT WARDEN/);
   assert.match(html, /0\/2[\s\S]*30% a kill/, 'its Collection');
   assert.match(html, /\/perimeter <b>smtpd, backup<\/b>/);
-  assert.match(html, /Conficker/, 'what its first capture opens');
+  assert.match(html, /Rule[\s\S]*Deep storage[\s\S]*two vaults and two keycards/, 'its kind\'s rule');
   assert.match(html, /Slush Fund/, 'what your network brings to it');
   assert.equal((html.match(/data-camp="bounty"/g) || []).length, 2);
   assert.match(html, /data-camp="breach" data-arg="coldstore-3:start"[^>]*>Breach</);
@@ -306,15 +300,18 @@ test('the breach page: while you pick a node, the lit nodes show beside the map 
 });
 
 // ---------- the bot ----------
+// docs/roguelite.md 11 has the full table (campaignsim.mjs, 12 seeds a class): about ten breaches to level 10, and every
+// class winning 55 to 75% of its breaches. Three seeds a class here, with bands wide enough for that sample.
 test('campaignsim: every class reaches level 10 from level 1 within a bounded number of breaches', { timeout: 600000 }, () => {
-  const runs = CLASSES.map((cls) => runCampaign({ cls, seed: 1, to: 10, max: 30 }));
+  const runs = CLASSES.flatMap((cls) => [1, 2, 3].map((seed) => runCampaign({ cls, seed, to: 10, max: 30 })));
   for (const r of runs) {
     assert.ok(r.level >= 10, `${r.cls} reached ${r.level} in ${r.log.length} breaches`);
-    assert.ok(r.log.length <= 26, `${r.cls}: ${r.log.length} breaches to level 10`);
+    assert.ok(r.log.length <= 22, `${r.cls}: ${r.log.length} breaches to level 10`);
     assert.ok(r.reached[2].breaches <= 2, `${r.cls}: the first level comes fast`);
   }
+  for (const cls of CLASSES) { const rs = runs.filter((r) => r.cls === cls), n = rs.reduce((k, r) => k + r.log.length, 0) / rs.length; assert.ok(n >= 7 && n <= 15, `${cls}: ${n.toFixed(1)} breaches to level 10 on average`); }
   const rep = report(runs);
-  for (const r of rep) assert.ok(r.win >= 40, `${r.cls} wins ${r.win}% of its breaches`); // campaignsim.mjs prints the full table
+  for (const r of rep) assert.ok(r.win >= 45 && r.win <= 90, `${r.cls} wins ${r.win}% of its breaches`); // campaignsim.mjs prints the full table
   // Loot is a chase (the designer: "WAY too much loot per run"): one to three items banked a breach, and past the first
   // few levels a real upgrade every two or three breaches, not every node.
   const all = runs.flatMap((r) => r.log), mid = all.filter((x) => x.level >= 6);

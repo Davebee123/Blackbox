@@ -25,11 +25,12 @@ import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay, behindOf } from './progression.mjs';
 import * as BR from './breach.mjs';
-import { breachMarkup, breachFocusY, bxUi, bxToggle } from './breach-view.mjs';
+import { breachMarkup, breachFocusY, bxUi, bxToggle, scriptTray } from './breach-view.mjs';
 import * as CP from './campaign.mjs';
 import { campaignMarkup, archiveMarkup, campUi } from './campaign-view.mjs';
 import { roomMarkup } from './room-view.mjs';
-import { patchMods } from './drafts.mjs';
+import { patchRules } from './skillrules.mjs';
+import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -68,7 +69,7 @@ function load() {
       const raw = JSON.parse(localStorage.getItem(CP.CAMPAIGN_KEY));
       if (raw?.camp) {
         const s = restore(raw);
-        if (s.camp) { CP.migrate(s); if (active(s) && s.breach?.mods?.length) patchMods(s.breach.mods, s.breach.plus || []); return s; } // a fight you left: its mods back on
+        if (s.camp) { CP.migrate(s); if (active(s) && s.breach) patchRules(s); return s; } // a fight you left: your gear's skill rules back on
       }
     } catch { /* a broken campaign save: start over */ }
     const s = fresh();
@@ -794,6 +795,17 @@ function run(raw) {
   if (campaign.breach) {
     BR.settle(campaign); // a fight that ended: your Signal back on the breach, and gear loads again
     if (text === 'jack out' && active(campaign)) return notice('No jacking out mid-fight on a breach. Win it, or lose the pack.', true);
+    // A script (scripts.mjs): script <n> [part], or run <name> [part]. One a fight, and it takes no cycle.
+    const sm = text.match(/^(?:script (\d)|run ([a-z0-9]+))(?: (\S+))?$/);
+    if (sm && active(campaign) && campaign.encounter?.breach) {
+      const bag = scriptsOf(campaign), i = sm[1] ? Number(sm[1]) - 1 : bag.findIndex((id) => id === sm[2] || SCRIPTS[id].name.toLowerCase() === sm[2]);
+      const first = campaign.serial, ok = runScript(campaign, i < 0 ? 99 : i, sm[3] ? campaign.encounter.virus.parts.find((p) => alive(p) && (p.id === sm[3] || partKey(campaign, p) === sm[3]))?.id : selected);
+      const ev = campaign.logs.filter((e) => e.id > first);
+      react(ev);
+      const w = ev.findLast((e) => e.type === 'warning');
+      if (w) notice(w.message, true); else if (ok) notice(ev.filter((e) => e.type !== 'breach-cmd').map((e) => e.message).join(' '));
+      save(); dirty = true; return;
+    }
     if (!active(campaign)) { const ev = BR.breachCommand(campaign, text); if (ev) return breachDone(ev); }
     if (/^(equip|unequip) /.test(text) && !active(campaign) && !(campaign.breach.screen?.kind === 'defrag' && campaign.breach.screen.reslot)) return notice('Your bar changes only at a defrag (Re-slot).', true);
   }
@@ -828,7 +840,7 @@ function run(raw) {
   if (text.startsWith("'") || text.startsWith('say ')) return notice('Chat arrives with co-op. For now it is just you and the virus.');
   // The campaign: fights, your gear, skills and talents. The old game's commands (connect, mail, install…) sit out.
   if (CAMP && !fighting && !/^(load|unload|equip|unequip|talent|untalent|respec|subclass|archetype|loadout|preset|deconstruct|scan|codex|collection|hold|now)\b/.test(text)) {
-    if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, skip, reroll, cat, pull, rest, recompile, plus <mod>, buy, patch, service, leave, choose). In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, room, loadout, archive and system.', false, null, true);
+    if (text === 'help') return notice('On the campaign map, pick a server and breach it. On a breach, use ls, cd <n>, tree and the screen\'s verbs (pick, cat, pull, rest, reslot, buy, patch, service, open, force, fight, splice, leave, choose). In a breach fight, script <n> runs one of your scripts. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills and - is SIGINT. For gear and skills, use load, unload, equip and unequip. The pages are campaign, room, loadout, archive and system.', false, null, true);
     return notice(`${text.split(' ')[0]}: not on the campaign. Type help.`, true);
   }
 
@@ -1340,7 +1352,7 @@ function render(force = false) {
   const netTray = module === 'net' && !!campaign.run;
   $('tray').hidden = !(combatLike || netTray);
   $('tray').classList.toggle('net-tray', netTray);
-  put('tray', netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s));
+  put('tray', netTray ? V.netTrayMarkup(nextActions(campaign)) : V.trayMarkup(s) + scriptTray(s));
   // An ability that just came off cooldown flashes once.
   const cooling = new Set([...document.querySelectorAll('#tray .ability.cooling[data-ability]')].map((b) => b.dataset.ability));
   for (const b of document.querySelectorAll('#tray .ability.ready[data-ability]')) if (wasCooling.has(b.dataset.ability)) b.classList.add('just-ready');
@@ -1853,7 +1865,7 @@ document.addEventListener('click', (e) => {
       return;
     }
     confirmArm = null;
-    if (cmd.classList.contains('ability')) { $('command-input').value = cmd.dataset.command; $('command-input').focus(); return; }
+    if (cmd.classList.contains('ability') && !cmd.classList.contains('script')) { $('command-input').value = cmd.dataset.command; $('command-input').focus(); return; } // a script runs at once: it takes no cycle
     return run(cmd.dataset.command);
   }
   const loc = e.target.closest('[data-locate]');

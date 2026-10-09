@@ -636,7 +636,7 @@ const uniqueFx = (s) => {
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
   }
-  out.push(...(hooks.extraFx?.(s) || [])); // a breach's CVEs (drafts.mjs): effect blocks that last the breach
+  out.push(...(hooks.extraFx?.(s) || [])); // more effect blocks from outside the engine (none today)
   const amp = out.find((x) => x.fx.do === 'rule-amp');
   if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100) * 10) / 10;
   return out.concat(Object.values(rules));
@@ -700,7 +700,7 @@ export function fxFire(s, when, ctx = {}, spend = true) {
 }
 const fxHas = (s, what) => uniqueFx(s).find((x) => x.fx.do === what) || null;
 export const fxOn = fxHas; // tells.mjs: Canary Token, Read Receipt, Reflector, Write Blocker, Hush Money, Sandman
-export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
+export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
 // What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).
 export function fxAnswer(s, p = null) {
   const e = s.encounter;
@@ -797,7 +797,7 @@ export function emit(s, type, message, detail = {}) {
   const event = { id: ++s.serial, cycle: s.encounter?.cycle || 0, type, message, ...(s.who ? { who: s.who } : {}), ...detail }; // who: a crewmate's name (crew.mjs)
   s.logs.push(event);
   if (s.logs.length > 600) s.logs.shift();
-  hooks.emitted?.(s, event); // a breach's mods and CVEs react to what happens (drafts.mjs)
+  hooks.emitted?.(s, event); // your gear's skill rules react to what happens (skillrules.mjs, through breach.mjs)
   return event;
 }
 
@@ -2784,7 +2784,7 @@ function useAbility(s, intent, auto = false) {
   }
   // A subclass skill's own effect (dist/classes/<class>.mjs). to: the crewmate an ally skill was aimed at.
   classUse(id)?.(s, { a, id, target, to: (intent.ally && allyOf(s, intent.ally)) || s, res, base, intent, auto, e });
-  hooks.commanded?.(s, { id, target, res, auto }); // a breach's mods act after the command they change (drafts.mjs)
+  hooks.commanded?.(s, { id, target, res, auto }); // a skill rule acts after the command it changes (skillrules.mjs)
 }
 // Who's standing beside you in this fight, by name ('you' is the player): for ally skills and class modules.
 export const alliesOf = (s) => hooks.crewAllies?.(s) || [];
@@ -3355,6 +3355,12 @@ function cycleClose(s, landed) {
     const cooling = Object.keys(e.readyAt).filter((k) => e.readyAt[k] > e.cycle + 1);
     for (const k of cooling) e.readyAt[k] += 1;
     if (cooling.length && !e.once.taxed) { e.once.taxed = true; emit(s, 'status', 'The Miner is eating your cycles. Your cooldowns run at half speed while it lives.'); }
+  }
+  // A breach's end of cycle (breach.mjs): an enrage, a Lab's overheat. It can end the fight either way.
+  if (hooks.cycleEnd && e.breach) {
+    hooks.cycleEnd(s);
+    if (virusIntegrity(s).current === 0) return finish(s, 'victory');
+    if (defender(s).integrity <= 0) return finish(s, 'crashed');
   }
 
   e.cycle++;

@@ -157,7 +157,7 @@ export function progressionRestore(s, was) {
   for (const it of s.stash || []) {
     const tier = it.kind === 'protocol' && !it.zeroDay && !it.unique && !it.rule && RARITIES[it.rarity]?.rule;
     if (!tier) continue;
-    const r = seeded(hash(it.id) + 11), ids = Object.keys(RULES).filter((k) => RULES[k].tier === tier);
+    const r = seeded(hash(it.id) + 11), ids = Object.keys(RULES).filter((k) => RULES[k].tier === tier && !RULES[k].cls);
     it.rule = ids[Math.floor(r() * ids.length)];
     const v = ruleValue(it.rule, it.level || 1, r());
     if (v) it.ruleValue = v;

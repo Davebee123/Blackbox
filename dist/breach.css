@@ -8,7 +8,7 @@
 .bx .ico { width: 13px; height: 13px; flex: none; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
 .bx .lbl { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
 
-/* ---- the run strip: Signal, tokens, rerolls, the pack, then your mods and CVEs ---- */
+/* ---- the run strip: Signal, Trace, tokens, keycards, the server's rule, the pack, then your scripts ---- */
 .bx-hud { grid-column: 1 / -1; position: relative; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4) var(--s6); padding: var(--s4) var(--s6); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); }
 .bx-hud-id { display: inline-flex; align-items: center; gap: var(--s3); color: var(--amber-soft); cursor: help; }
 .bx-hud-id b { font: 600 13px var(--mono); letter-spacing: 1.5px; color: var(--bright); }
@@ -30,7 +30,19 @@
 .bx-packbtn.new::after { content: ''; position: absolute; top: -3px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); }
 .bx-perks { list-style: none; margin: 0 0 0 auto; padding: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s2); min-width: 0; }
 .bx-perk { flex: none; display: inline-flex; align-items: center; height: var(--h-chip); padding: 0 var(--s3); border: 1px solid var(--line); border-left: 2px solid var(--you); border-radius: var(--r-tag); font: 600 11px var(--mono); color: var(--bright); white-space: nowrap; cursor: help; }
-.bx-perk.cve.r-stock { border-left-color: var(--r-stock); } .bx-perk.cve.r-tuned { border-left-color: var(--r-tuned); } .bx-perk.cve.r-custom { border-left-color: var(--r-custom); }
+.bx-perk.script.r-stock { border-left-color: var(--r-stock); } .bx-perk.script.r-tuned { border-left-color: var(--r-tuned); } .bx-perk.script.r-custom { border-left-color: var(--r-custom); }
+.bx-perk-k { flex: none; display: inline-flex; align-items: center; height: var(--h-chip); padding-right: var(--s2); }
+/* Trace: a thin meter with the alarm and the hunter marked on it */
+.bx-trace { display: inline-flex; align-items: center; gap: var(--s3); font-variant-numeric: tabular-nums; cursor: help; }
+.bx-trace .tbar { position: relative; width: 84px; height: 6px; border: 1px solid var(--line-strong); border-radius: 3px; background: var(--inset); overflow: hidden; }
+.bx-trace .tbar span { position: absolute; inset: 0 auto 0 0; background: var(--amber-soft); }
+.bx-trace .tbar i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--muted); }
+.bx-trace b { font: 600 15px var(--mono); color: var(--bright); min-width: 2ch; }
+.bx-trace.alarm .tbar span { background: var(--next); } .bx-trace.alarm b { color: var(--next); }
+.bx-trace.hunt .tbar { border-color: var(--hot); } .bx-trace.hunt .tbar span { background: var(--hot); } .bx-trace.hunt b { color: var(--hot); }
+.bx-hunted { font: 700 10px var(--mono); letter-spacing: 1px; color: var(--hot); animation: bx-blink 1s steps(2) infinite; }
+@keyframes bx-blink { 50% { opacity: 0.35; } }
+.bx-kind b { font: 600 12px var(--sans); color: var(--next); }
 /* the pack: a pop-over under its button */
 .bx-pop { position: absolute; top: calc(100% + var(--s3)); left: 0; z-index: 20; width: min(380px, calc(100vw - 32px)); display: grid; gap: var(--s4); padding: var(--s5) var(--s6); background: var(--panel-2); border: 1px solid var(--amber-deep); border-top: 2px solid var(--amber); border-radius: var(--r-card); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6); }
 .bx-sec { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); display: flex; gap: var(--s3); align-items: baseline; }
@@ -49,6 +61,8 @@
 .bx-e.seen { stroke: var(--line-strong); }
 .bx-e.live { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 6 4; animation: bx-flow 1.2s linear infinite; }
 .bx-e.walked { stroke: var(--you); stroke-width: 2.5; }
+.bx-e.hop { stroke-dasharray: 1 4; stroke-width: 2; }
+.bx-e.hop.live { stroke-dasharray: 2 4; }
 @keyframes bx-flow { to { stroke-dashoffset: -20; } }
 
 /* an act: a kicker band across the board */
@@ -57,6 +71,7 @@
 .bx-act b { font: 600 13px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--bright); }
 .bx-act-sub { font: 11px var(--mono); color: var(--dim); margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .bx-act.done { opacity: 0.55; }
+.bx-act-sw { font: 600 9px/14px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--you); border: 1px solid var(--you); padding: 0 4px; border-radius: var(--r-tag); cursor: help; }
 .bx-act.on { border-top-color: var(--line-strong); background: linear-gradient(90deg, rgba(241, 185, 47, 0.12), transparent 75%); }
 
 /* the gutter: the subsystem a row runs, and what you rewrote it into */
@@ -82,6 +97,15 @@
 .bx-node.k-cache .bx-chip, .bx-node.k-broker .bx-chip { color: var(--next); }
 .bx-node.k-defrag .bx-chip { color: var(--you); }
 .bx-node.k-term .bx-chip { color: var(--bright); }
+.bx-node.k-vault .bx-chip { color: var(--r-custom); border-color: rgba(255, 220, 90, 0.55); }
+.bx-node.k-vault .bx-lbl { color: var(--r-custom); }
+.bx-node.k-switch .bx-chip { color: var(--you); border-style: double; border-width: 3px; }
+/* marks on a node: a keycard rides on it, the hunter stands on it */
+.bx-mk { display: inline-flex; align-items: center; height: 14px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 700 9px/12px var(--mono); letter-spacing: 1px; text-transform: uppercase; background: var(--panel-2); white-space: nowrap; }
+.bx-mk.key { color: var(--r-custom); }
+.bx-mk.hunt { color: var(--hot); animation: bx-blink 1s steps(2) infinite; }
+.bx-node.hunted .bx-chip { border-color: var(--hot); box-shadow: 0 0 0 3px rgba(255, 91, 61, 0.18), 0 0 16px rgba(255, 91, 61, 0.45); }
+.bx-node.s-cleared .bx-mk.key, .bx-node.s-fog .bx-mk.key { display: none; }
 .bx-node.s-fog .bx-chip { border-style: dashed; border-color: rgba(143, 119, 72, 0.35); background: transparent; width: 26px; height: 26px; }
 .bx-node.s-fog .bx-lbl { color: var(--dim); opacity: 0.6; }
 .bx-node.s-seen .bx-chip { opacity: 0.85; }
@@ -160,17 +184,12 @@
 .bx-card-k { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
 .bx-card-act { margin-top: auto; padding-top: var(--s3); display: flex; align-items: center; gap: var(--s3); }
 .bx-card-act .btn { flex: 1; }
-.bx-card.k-mod { border-top-color: var(--you); }
-.bx-card.k-mod .bx-card-k { color: var(--you); }
-.bx-card.k-cve { border-top-color: var(--daemon); }
-.bx-card.k-cve .bx-card-k { color: var(--daemon); }
-.bx-card.k-cve.r-tuned { border-top-color: var(--r-tuned); } .bx-card.k-cve.r-custom { border-top-color: var(--r-custom); }
-.bx-card.k-gear.r-stock { border-top-color: var(--r-stock); } .bx-card.k-gear.r-tuned { border-top-color: var(--r-tuned); } .bx-card.k-gear.r-custom { border-top-color: var(--r-custom); }
-.bx-card.k-gear p { font: 12px var(--mono); color: var(--muted); }
+.bx-card.k-script.r-stock { border-top-color: var(--r-stock); } .bx-card.k-script.r-tuned { border-top-color: var(--r-tuned); } .bx-card.k-script.r-custom { border-top-color: var(--r-custom); }
+.bx-note { margin: 0; font-size: 13px; color: var(--muted); }
 .bx-card .bx-rule { font: 12px var(--sans); color: var(--next); }
 .bx-card.k-rewrite { border-top-color: var(--amber); }
 .bx-card.k-rewrite b { font-size: 17px; }
-.bx-now, .bx-out span { display: block; margin-bottom: var(--s1); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--you); cursor: help; }
+.bx-out span { display: block; margin-bottom: var(--s1); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--you); cursor: help; }
 .bx-card .bx-out { color: var(--muted); font-size: 12px; }
 .bx-out span { color: var(--dim); }
 .bx-price { font: 600 12px var(--mono); color: var(--next); }
@@ -181,9 +200,8 @@
 .bx-opts li { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--s4); align-items: center; }
 .bx-opts span { font-size: 13px; color: var(--text); }
 .bx-slots { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
-.bx-slot { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--s3); align-items: center; padding: var(--s2) var(--s4); border: 1px solid var(--line); border-radius: var(--r-btn); }
+.bx-slot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: var(--s2) var(--s4); border: 1px solid var(--line); border-radius: var(--r-btn); }
 .bx-slot.on { border-color: var(--line-strong); }
-.bx-modtag { font: 10px var(--mono); color: var(--you); }
 
 /* gear: name over stats, Equip in its own column (the item row with an action) */
 .bx-items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
@@ -267,36 +285,15 @@
 .bx-card-act .btn { border-color: var(--amber-deep); }
 .bx-card-act .btn:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-wash); }
 
-/* ---- phase 3: what a draft offers, shown ahead; tags that light up; recompile; heat ---- */
-/* a fight's reward: mods teal, CVEs violet, gear amber; a yellow star for a sure rare */
-.bx-rw { display: inline-flex; align-items: center; gap: 2px; height: 15px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 9px/13px var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; cursor: help; background: var(--panel-2); }
-.bx-rw.rw-mod { color: var(--you); } .bx-rw.rw-cve { color: var(--daemon); } .bx-rw.rw-gear { color: var(--next); }
-.bx-rw.rare { box-shadow: 0 0 0 1px var(--r-custom); }
-.bx-rw.rare::first-letter { color: var(--r-custom); }
-.bx-rw.in { height: 16px; vertical-align: 1px; }
-.bx-node .bx-rw { margin-top: 1px; }
-.bx-node.s-fog .bx-rw, .bx-node.s-cleared .bx-rw { display: none; }
+/* ---- heat on the strip, and a node card's genes ---- */
 .bx-peek-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); min-width: 0; }
 .bx-genes { display: inline-flex; flex-wrap: wrap; gap: var(--s2); margin: 0; }
-/* a card's tags: makes (arrow out) solid, wants (arrow in) dashed; lit teal where it meets your build */
-.bx-tags, .bx-build { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
-.bx-build { padding-bottom: var(--s3); border-bottom: 1px dashed var(--line); }
-.bx-build .lbl { margin-right: var(--s2); }
-.bx-tag { display: inline-flex; align-items: center; height: 17px; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: var(--r-tag); font: 500 10px/15px var(--mono); color: var(--muted); white-space: nowrap; cursor: help; }
-.bx-tag.w { border-style: dashed; }
-.bx-tag.on { border-color: var(--you); color: var(--you); background: rgba(127, 209, 199, 0.1); }
-.bx-link { margin-left: var(--s3); padding: 0 4px; border-radius: var(--r-tag); background: var(--you); color: var(--bg); font: 700 10px/14px var(--mono); letter-spacing: 0; cursor: help; }
-.bx-card.k-mod.r-tuned { border-top-color: var(--r-tuned); } .bx-card.k-mod.r-custom { border-top-color: var(--r-custom); }
-.bx-perk.mod.plus { border-left-color: var(--r-custom); }
-/* recompile: what the mod does now, then its + version */
-.bx-plus { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); }
-.bx-plus li { display: grid; gap: var(--s2); padding: var(--s4) var(--s5); border: 1px solid var(--line); border-left: 2px solid var(--you); border-radius: var(--r-btn); background: var(--inset); }
-.bx-plus b { font: 600 14px var(--sans); color: var(--bright); }
-.bx-plus b .you { color: var(--r-custom); }
-.bx-arrow { color: var(--dim); }
-.bx-plus p { margin: 0; font-size: 12px; }
-.bx-was-t { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(143, 119, 72, 0.6); }
-.bx-plus-t { color: var(--text); }
-.bx-plus .btn { justify-self: start; }
-/* heat on the strip */
 .bx-heat b { color: var(--hot); }
+.bx-peek-card.hunted { border-left-color: var(--hot); }
+/* the server's rule on its campaign card */
+.cp-rule b { color: var(--next); font-weight: 600; }
+.cp-rule span { color: var(--text); }
+/* scripts on the fight tray */
+#tray .ability.script { border-left: 2px solid var(--r-stock); }
+#tray .ability.script.r-tuned { border-left-color: var(--r-tuned); } #tray .ability.script.r-custom { border-left-color: var(--r-custom); }
+#tray .ability.script kbd { min-width: 22px; }

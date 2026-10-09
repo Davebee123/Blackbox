@@ -10,7 +10,7 @@ import ROOM from './content/room.mjs';
 import { SERVER, FRAGMENTS } from './campaign.mjs';
 import { BOSSES } from './data.mjs';
 import { AUTHORS } from './authors.mjs';
-import { rowSub } from './breach.mjs';
+import { rowSub, TRACE } from './breach.mjs';
 
 export { ROOM };
 export const freshRoom = () => ({ visit: null, seen: [], took: [] });
@@ -35,7 +35,7 @@ export function debriefOf(s, b, report = {}) {
     replay: !!b.campaign.replay, checkpoint: b.campaign.checkpoint || 0,
     heat: b.heat || 0, opened: report.heat || 0,
     stock: result === 'won' && !b.campaign.replay ? subs.filter((x) => !rw[x]) : [],
-    rests: st.rests ?? 0, drafts: (b.mods?.length || 0) + (b.cves?.length || 0), elites: st.elites || 0, skips: st.skips || 0,
+    rests: st.rests ?? 0, elites: st.elites || 0, scripts: st.scripts || 0, vaults: st.vaults || 0, hunted: st.hunted || 0, trace: b.tracePeak || 0,
     digin: b.card?.world?.digin?.author || null,
     rewrites: result === 'won' ? Object.values(b.rewrites || {}).map((x) => x.id) : [],
     lostOn: result === 'won' ? null : id,
@@ -59,9 +59,11 @@ export function factsOf(s, d) {
     if (d.checkpoint) add(5, 'checkpoint');
     if (d.stock.length) add(5, 'stock');
     if (!d.replay && d.rests === 0) add(5, 'norest');
-    if (!d.replay && d.drafts <= 2) add(5, 'lean');
+    if (!d.replay && d.hunted) add(5, 'traced');
+    if (!d.replay && !d.hunted && d.trace < TRACE.alarm) add(5, 'quiet');
+    if (d.vaults >= 2) add(5, 'vaults');
     if (d.elites >= 2) add(5, 'elites');
-    if (d.skips >= 3) add(5, 'skipped');
+    if (!d.replay && d.scripts === 0) add(5, 'noscripts');
     if (d.reimage) add(5, 'reimage');
     if (d.replay) add(5, 'replay');
     const took = new Set(c.room?.took || []);

@@ -5,7 +5,7 @@ import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, DAEMON_DROPS, BOSSES } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, hasTalent, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, learnDaemon, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -327,7 +327,7 @@ const guarded = (loc, path) => !!layoutOf(loc)[path]?.guard && !loc.state.cleare
 // A guard the Infiltrator slipped past this run doesn't stop you there (it's back next run).
 const watching = (s, loc, path) => guarded(loc, path) && !s.run?.slipped?.includes(path);
 // Infiltrator Ghost: slip past a guard without a fight (1 a run, 3 with Leaked Creds).
-export const slipsLeft = (s) => (s.run && classOf(s) === 'infiltrator' ? (hasTalent(s, 'leaked-creds') ? CONFIG.slip.leakedCreds : CONFIG.slip.perRun) - (s.run.slips || 0) : 0);
+export const slipsLeft = (s) => (s.run && classOf(s) === 'infiltrator' ? CONFIG.slip.perRun - (s.run.slips || 0) : 0);
 function slip(s) {
   const e = s.encounter;
   if (classOf(s) !== 'infiltrator') return err(s, 'slip is the Infiltrator\'s: only they get past a guard unseen.');
@@ -352,7 +352,7 @@ const onceUsed = (s, id) => (s.run.used ||= {})[id];
 // Infiltrator Spoof: once per run, the next guarded folder you enter doesn't start a fight.
 // Inside you can read and pull one file; the guard stays and you can't go deeper.
 // Rotating Proxies talent: two spoofs per run.
-const canCloak = (s) => equipped(s, 'spoof') && (s.run.cloaks || 0) < (hasTalent(s, 'rotating-proxies') ? 2 : 1) && s.run.cloak !== 'armed' && !(s.run.cloak && s.run.cloak.startsWith('/') && s.run.cloak === s.run.cwd);
+const canCloak = (s) => equipped(s, 'spoof') && (s.run.cloaks || 0) < 1 && s.run.cloak !== 'armed' && !(s.run.cloak && s.run.cloak.startsWith('/') && s.run.cloak === s.run.cwd);
 const cloakedIn = (s, dir) => s.run?.cloak === dir;
 
 function prompt(s) {

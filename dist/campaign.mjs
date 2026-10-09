@@ -8,9 +8,8 @@
 //   outputs      every captured server's rewrites, once each at their best tier; Spam Cannon only on its neighbours
 //   checkpoints  a gate you beat stays beaten: a retry can start past it, with the rewrites from the acts behind it
 //   re-imaging   breach a server you hold again: each subsystem you clear keeps its rewrite or changes it
-//   bounties     up to two on a card; take one when you breach. Done, it pays a yellow protocol. Missed, nothing.
-//   the pool     the cards a draft can offer: a readable core set to start (eight common CVEs, and one mod a skill),
-//                and the pool widens: each server's first capture opens a CVE, each heat's first capture more
+//   bounties     up to two on a card; take one when you breach. Done, it pays a script. Missed, nothing.
+//   scripts      the one-shot scripts you carry (scripts.mjs) live on the campaign, so they last from breach to breach
 //   heat         1 to 8, ranked (heat.mjs): you pick it per breach; a capture at your highest opens the next. Each
 //                server records the best heat you captured it at, and re-imaging asks for that heat or more
 //   replays      Range (a captured sandbox): the Resident alone, for its loot; each breach you win earns a replay
@@ -20,9 +19,9 @@
 //                every breach: the author you hit digs in on its nearest open server.
 // Pure like the engine: state in, events out. Nothing here runs on a clock.
 import { emit, addItem, hackerLevel, command } from './combat.mjs';
-import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS } from './gear.mjs';
+import { seeded, rollItem, protocolSlots, SLOT_KINDS } from './gear.mjs';
 import { startBreach, breachHooks } from './breach.mjs';
-import { CVES, MODS } from './drafts.mjs';
+import { SCRIPTS, giveScript, rollScript, scriptHooks } from './scripts.mjs';
 import { LINKED } from './rewrites.mjs';
 import { MAX_HEAT, heatRules } from './heat.mjs';
 import { WORLD, worldTurn, modsFor, freshWorld } from './world.mjs';
@@ -30,13 +29,10 @@ import { debriefOf, visitAfter, freshRoom } from './room.mjs';
 
 export const CAMPAIGN_KEY = 'blackbox-campaign-v1';
 // Tuning. xp: what a breach kill's XP is worth over a plain guard kill (breach.mjs pays the Resident 3×, a gate 1.5×).
-// startCves: the draft pool before any capture. outgrown: levels past a server before its card greys out.
-// v: the save's shape (2: heat, mods in the pool, replays; 3: the world and the room; migrate() brings an older save
-// up in place). replays: Range's cap.
-export const CAMPAIGN = { v: 3, start: 'sprawl-00', xp: 1.0, size: [1.1, 1.12, 1.2, 1.28], startCves: ['heartbleed', 'shellshock', 'eternalblue', 'sasser', 'mirai', 'printnightmare', 'rowhammer', 'wannacry'], outgrown: 5, bounties: 2, replays: [3, 5] };
-// What each heat's first capture opens: the second mod for a skill that has one (rank 1), then rarer CVEs.
-export const HEAT_UNLOCKS = { 1: ['critical-mass', 'shrapnel', 'backpressure', 'slow-drip', 'snare'], 2: ['qbot'], 3: ['smurf'], 4: ['tocttou'], 5: ['meltdown'], 6: ['follina'], 7: ['zerologon'], 8: [] };
-const cardName = (id) => (CVES[id] ? CVES[id].name : MODS[id]?.name || id);
+// startScripts: what a new campaign carries. outgrown: levels past a server before its card greys out.
+// v: the save's shape (2: heat, replays; 3: scripts, no draft pool; 4: the world and LOWLIGHT's room; migrate() brings
+// an older save up). replays: Range's cap.
+export const CAMPAIGN = { v: 4, start: 'sprawl-00', xp: 1.0, size: [1.1, 1.2, 1.28, 1.36], startScripts: ['sasser'], outgrown: 5, bounties: 2, replays: [3, 5] };
 
 // ---------- the map ----------
 export const LAYERS = [
@@ -48,13 +44,13 @@ export const LAYERS = [
 // The acts a server's level gives it: one short act early (SPRAWL-00 three rows), two from 6, the full three from 10.
 export const actsFor = (level) => (level >= 10 ? 3 : level >= 6 ? 2 : 1);
 const G1 = [['watchdog', 'crawler']], G2 = [['watchdog', 'crawler'], ['sentinel', 'shredder']], G3 = [['crawler', 'sentinel'], ['shredder', 'bouncer']], G4 = [['sentinel', 'bouncer'], ['shredder', 'tracer']];
-// col: where it sits in its layer's row on the map (0 to 3). frag: its core.dump (FRAGMENTS). unlock: a CVE its
-// first capture opens in the draft pool.
+// col: where it sits in its layer's row on the map (0 to 3). frag: its core.dump (FRAGMENTS). unlock: what its first
+// capture opened in phase 3's draft pool, unused since the pool went (docs/roguelite.md 11).
 export const SERVERS = [
   { id: 'sprawl-00', name: 'SPRAWL-00', kind: 'Relay', layer: 1, col: 1.5, level: 1, author: 'swarmline', family: 'worm', resident: 'relayking', bossHp: 0.55, rows: 3, subsystems: [['ledger', 'smtpd']], links: ['vanta-07', 'coldstore-3'], tutorial: true, unlock: 'spectre' },
   { id: 'vanta-07', name: 'VANTA-RELAY-07', kind: 'Relay', layer: 1, col: 0.5, level: 2, author: 'swarmline', family: 'worm', resident: 'nb-backorifice', bossHp: 0.95, subsystems: [['sshd', 'dns']], links: ['sprawl-00', 'coldstore-3', 'pier-5'], unlock: 'bluekeep' },
   { id: 'coldstore-3', name: 'COLDSTORE-3', kind: 'Archive', layer: 1, col: 2.5, level: 4, author: 'tollgate', family: 'ransomware', resident: 'resident', residentName: 'VAULT WARDEN', subsystems: [['smtpd', 'backup']], links: ['sprawl-00', 'vanta-07', 'depot-7'], unlock: 'conficker' },
-  { id: 'pier-5', name: 'PIER-5', kind: 'Mirror', layer: 2, col: 0, level: 6, author: 'swarmline', family: 'worm', resident: 'nb-patchday', bossHp: 1.15, subsystems: [['sshd', 'ledger'], ['syslog', 'kmod']], gates: G1, links: ['vanta-07', 'depot-7', 'chapel-0'], unlock: 'codered' },
+  { id: 'pier-5', name: 'PIER-5', kind: 'Mirror', layer: 2, col: 0, level: 6, author: 'swarmline', family: 'worm', resident: 'nb-patchday', bossHp: 1.0, subsystems: [['sshd', 'ledger'], ['syslog', 'kmod']], gates: G1, links: ['vanta-07', 'depot-7', 'chapel-0'], unlock: 'codered' },
   { id: 'depot-7', name: 'REPO-DEPOT-7', kind: 'Mailhub', layer: 2, col: 2, level: 7, author: 'tollgate', family: 'ransomware', resident: 'repoman', subsystems: [['smtpd', 'cron'], ['ledger', 'backup']], gates: G1, links: ['coldstore-3', 'pier-5', 'meridian-14'], unlock: 'ripple20' },
   { id: 'chapel-0', name: 'CHAPEL-0', kind: 'Relay', layer: 2, col: 1, level: 9, author: 'nullchoir', family: 'ghostroot', resident: 'choir', bossHp: 1.3, subsystems: [['dns', 'smtpd'], ['backup', 'kmod']], gates: G1, links: ['pier-5', 'meridian-14', 'mirror-12'], unlock: 'poodle' },
   { id: 'meridian-14', name: 'MERIDIAN-MX-14', kind: 'Mailhub', layer: 2, col: 3, level: 11, author: 'tollgate', family: 'ransomware', resident: 'nb-deadbolt', subsystems: [['smtpd', 'sshd'], ['cron', 'ledger'], ['backup', 'kmod']], gates: G2, links: ['depot-7', 'chapel-0', 'tripmine-yard'], unlock: 'stuxnet' },
@@ -95,7 +91,7 @@ export const FRAGMENTS = [
 // wick's notes in dead drops (docs/world.md 2.5): a side thread, found in order, one a drop while any are left. The
 // first two of four are written (W0).
 FRAGMENTS.push(
-  { server: null, drop: 1, thread: 'dead drops', from: 'left in a dead drop', lines: ["if you're reading this you followed a lead. good.", 'i leave these on boxes halcyon thinks are finished. nobody audits a finished box.', "the card's yours. it fell off a claims truck.", '— w'] },
+  { server: null, drop: 1, thread: 'dead drops', from: 'left in a dead drop', lines: ["if you're reading this you followed a lead. good.", 'i leave these on boxes halcyon thinks are finished. nobody audits a finished box.', "the script's yours. it fell off a claims truck.", '— w'] },
   { server: null, drop: 2, thread: 'dead drops', from: 'left in a dead drop', lines: ['they asked me who you are. i said a contractor. they wrote it down.', "halcyon writes everything down. that's how you know who pays for what.", 'start writing things down too.', '— w'] },
 );
 FRAGMENTS.forEach((f, i) => { f.id = f.server || `drop-${f.drop}`; f.order = i + 1; f.title = f.drop ? 'note.txt' : 'core.dump'; });
@@ -116,19 +112,16 @@ export const BOUNTIES = {
   clean: { from: 'Kestrel', text: 'Capture it without letting a tell land.', check: (b) => b.stats.landed === 0 },
   norest: { from: 'GLASSJAW', text: 'Capture it without resting at a defrag.', check: (b) => b.stats.rests === 0 },
   elite: { from: 'Halcyon', text: 'Clear an elite on the way to the Resident.', check: (b) => b.stats.elites >= 1 },
-  lean: { from: 'LANTERN', text: 'Capture it holding 2 drafts or fewer.', check: (b) => b.mods.length + b.cves.length <= 2 },
+  quiet: { from: 'LANTERN', text: 'Capture it without a hunter finding you.', check: (b) => !b.stats.hunted },
   hale: { from: 'Halcyon', text: 'Capture it without ending a fight under half Signal.', check: (b) => b.stats.low >= 0.5 },
-  noskip: { from: 'LANTERN', text: 'Capture it without skipping a draft.', check: (b) => b.stats.skips === 0 },
+  vault: { from: 'GLASSJAW', text: 'Open a vault on the way to the Resident.', check: (b) => b.stats.vaults >= 1 },
 };
-// A bounty pays a card into your draft pool (the next one still locked, in BOUNTY_CARDS order), not more gear: once
-// the pool is full, a yellow protocol. Bounty Board II pays twice.
-export const BOUNTY_PAY = 'Opens a card in your draft pool.';
-export const BOUNTY_CARDS = () => [...Object.values(MODS).filter((m) => m.alt).map((m) => m.id), ...Object.keys(CVES)];
-function payBounty(s, srv, b, rec, report) {
-  const c = s.camp, next = BOUNTY_CARDS().find((id) => !(MODS[id] ? c.mods.includes(id) : c.pool.includes(id)));
-  if (next) { (MODS[next] ? c.mods : c.pool).push(next); (report.unlocks ||= []).push({ id: next, name: cardName(next), text: CVES[next]?.text || MODS[next].text(MODS[next].v[0]) }); return `${cardName(next)} joins your draft pool.`; }
-  const it = addItem(s, rollItem(seeded(b.seed * 13 + rec.paid), { level: srv.level + 1, rarity: 'custom' }), 'Bounty paid: ');
-  return it ? `Your pool is full, so it pays ${itemLabel(it)}.` : 'Your pool is full.';
+// A bounty pays a script, uncommon or better, not gear (no gear faucet: docs/world.md, open question 4). Bounty
+// Board II pays twice.
+export const BOUNTY_PAY = 'Pays a script, uncommon or better.';
+function payBounty(s, srv, b, rec) {
+  const id = rollScript(seeded((b.seed * 13 + rec.paid * 7919) >>> 0), 'uncommon');
+  return giveScript(s, id, 'Bounty paid: ') ? `It pays ${SCRIPTS[id].name}.` : `Your script slots are full, so ${SCRIPTS[id].name} stays with the poster.`;
 }
 // The bounties on a server's card: two, seeded by the server and how many you've cashed there, so a paid one is
 // replaced by a new one. SPRAWL-00 has none.
@@ -142,6 +135,8 @@ export function bountiesOn(s, id) {
   while (out.length < n && pool.length) out.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
   return out;
 }
+// Archive (a captured backup subsystem): more script slots.
+scriptHooks.slots = (s) => (s.camp ? networkHas(s, 'archive') : 0);
 // The best tier of a rewrite your network holds (0 for none).
 export function networkHas(s, rw) {
   let t = 0;
@@ -153,38 +148,54 @@ function strSeed(t) { let h = 2166136261; for (const c of t) { h ^= c.charCodeAt
 // ---------- your campaign ----------
 // A fresh campaign: a level-1 hacker of your class (app.js picks the handle and class first), nothing captured.
 export function newCampaign(s, { seed = 1 } = {}) {
-  s.camp = { v: CAMPAIGN.v, seed: seed >>> 0 || 1, servers: {}, archive: [], pool: [...CAMPAIGN.startCves], mods: [], heat: 0, heatCleared: [], replays: 0, lastMods: [], breaches: 0, history: [], world: freshWorld(), room: freshRoom() };
+  s.camp = { v: CAMPAIGN.v, seed: seed >>> 0 || 1, servers: {}, archive: [], scripts: [...CAMPAIGN.startScripts], heat: 0, heatCleared: [], replays: 0, breaches: 0, history: [], world: freshWorld(), room: freshRoom() };
   s.netSeed ||= s.camp.seed; // natives on your network (network.mjs): what the native Residents drop
   s.tutorialCompleted = true; // the old game's tutorial belongs to the old game
   s.settings.tips = false;
   issueKit(s);
   return s.camp;
 }
-// A campaign save from before phase 3 (v1): heat 0 open, nothing cleared, no alt mods, no replays, and the commons
-// the core set gained in its pool. Records gain their heat. Its own key stays (blackbox-campaign-v1), and the old
-// game's save is never read. Returns the campaign.
+// An older campaign save, in place (its own key stays, blackbox-campaign-v1, and the old game's save is never read).
+// v1 (before phase 3): heat 0 open, nothing cleared, no replays; records gain their heat. v2 (drafting): the draft
+// pool goes, and the CVEs a breach in flight held become the scripts of the same name, as many as your slots hold
+// (Sasser if none do). A breach in flight loses its drafts, mods and rerolls, and gains Trace, keycards and switches.
+// Returns the campaign.
 export function migrate(s) {
   const c = s.camp;
   if (!c) return null;
   if ((c.v || 1) < 2) {
-    c.pool = [...new Set([...(c.pool || []), ...CAMPAIGN.startCves])];
-    c.mods ||= []; c.heat ??= 0; c.heatCleared ||= []; c.replays ??= 0;
+    c.heat ??= 0; c.heatCleared ||= []; c.replays ??= 0;
     for (const rec of Object.values(c.servers || {})) rec.heat ??= rec.captured ? 0 : null;
     c.v = 2;
   }
-  // A save from before the world (v2): the world starts at turn 0, quiet, and the room has nothing to say yet. The
-  // rewrites you already hold count as taken, so wick doesn't greet them as new.
+  const b = s.breach;
   if (c.v < 3) {
+    const held = (b?.cves || []).filter((id) => SCRIPT_OF[id]).map((id) => SCRIPT_OF[id]);
+    c.scripts = [...new Set(held)].slice(0, 3);
+    if (!c.scripts.length) c.scripts = [...CAMPAIGN.startScripts];
+    delete c.pool; delete c.mods; delete c.lastMods;
+    c.v = 3;
+  }
+  // v3 (before the world): the world starts at turn 0, quiet, and the room has nothing to say yet. The rewrites you
+  // already hold count as taken, so wick doesn't greet them as new.
+  if (c.v < 4) {
     c.world ||= freshWorld();
     c.room ||= freshRoom();
     c.room.took = [...new Set([...(c.room.took || []), ...Object.values(c.servers || {}).filter((r) => r.captured).flatMap((r) => Object.values(r.rewrites || {}).map((x) => x.id))])];
-    c.v = 3;
+    c.v = 4;
   }
-  // A breach saved mid-run before phase 3: no + mods, heat 0.
-  const b = s.breach;
-  if (b) { b.plus ||= []; b.heat ??= 0; b.rules ||= heatRules(b.heat); b.fx ||= {}; }
+  if (b) {
+    b.heat ??= 0; b.rules = heatRules(b.heat); b.fx ||= {};
+    for (const k of ['mods', 'plus', 'cves', 'rerolls', 'rareBoost', 'pool']) delete b[k];
+    b.trace ??= 0; b.tracePeak ??= b.trace; b.keys ??= 0; b.hunter ??= null; b.switches ||= {}; b.map.shortcuts ||= [];
+    b.stats = { rests: 0, landed: 0, elites: 0, low: 1, hunted: 0, vaults: 0, scripts: 0, found: 0, ...(b.stats || {}) };
+    b.queue = (b.queue || []).filter((x) => x.kind !== 'draft');
+    if (b.screen?.kind === 'draft') b.screen = b.queue.shift() || null;
+  }
   return c;
 }
+// The CVEs that live on as scripts (scripts.mjs), for the save migration.
+const SCRIPT_OF = { sasser: 'sasser', krack: 'krack', shellshock: 'shellshock', spectre: 'spectre', eternalblue: 'spectre', bluekeep: 'bluekeep', slowloris: 'slowloris', conficker: 'conficker', follina: 'conficker', mirai: 'mirai', ripple20: 'ripple20', meltdown: 'meltdown', stuxnet: 'bluekeep' };
 // The terminal came set up: a white protocol in every slot you have at level 1, so the first breach isn't bare.
 export function issueKit(s) {
   const r = seeded((s.camp?.seed || 1) * 7 + 3);
@@ -257,32 +268,28 @@ export function launch(s, id, { from = 'start', bounty = null, heat = 0 } = {}) 
   const seed = (strSeed(id) ^ Math.imul(s.camp.seed, 2654435761) ^ Math.imul(rec.tries + 1, 40503)) >>> 0 || 1;
   // What the world brings to it (world.mjs): a dig in's gene on its elites and gates, a dead drop in its first act.
   const card = cardFor(srv), world = replay ? null : modsFor(s, id);
-  if (world?.drop) Object.assign(world.drop, { card: dropCard(s, seed), frag: nextDropFragment(s)?.id || null });
+  if (world?.drop) Object.assign(world.drop, { script: dropScript(seed), frag: nextDropFragment(s)?.id || null });
   if (world) card.world = world;
   const b = startBreach(s, {
     seed, level: srv.level, card, outputs: outputsFor(s, id),
     from: cp?.gate || 0, keep: cp?.rewrites || {}, prior: rec.captured ? { ...rec.rewrites } : null,
-    pool: { cves: [...s.camp.pool], mods: [...(s.camp.mods || [])] }, bounty: replay ? null : bounty, lastMods: s.camp.lastMods, xp: CAMPAIGN.xp, heat, replay,
+    bounty: replay ? null : bounty, xp: CAMPAIGN.xp, heat, replay,
   });
   if (replay) s.camp.replays--;
   b.campaign = { id, reimage: rec.captured, checkpoint: cp?.gate || 0, replay };
   return b;
 }
-// The card a dead drop holds: one still locked out of your pool (a CVE or a second mod), or none once the pool is
-// full. A drop pays pool cards, never gear.
-const locked = (s) => BOUNTY_CARDS().filter((id) => !(MODS[id] ? (s.camp.mods || []) : s.camp.pool).includes(id));
-function dropCard(s, seed) { const xs = locked(s); return xs.length ? xs[seed % xs.length] : null; }
-// A dead drop pulled on this breach (breach.mjs b.dropped): its card into your pool (the next locked one, if something
-// opened it meanwhile), its note into the Archive, and the drop off the map.
+// The script a dead drop holds (scripts.mjs), fixed when you breach. A drop never pays gear.
+const dropScript = (seed) => rollScript(seeded((seed ^ 0xd209) >>> 0));
+// A dead drop pulled on this breach (breach.mjs b.dropped: its script is already in your slots): its note into the
+// Archive, and the drop off the map.
 function payDrop(s, b, report) {
   const c = s.camp, d = b.card?.world?.drop;
   if (!d || !b.dropped) return;
   const ev = c.world?.events?.find((e) => e.id === d.id);
   if (ev) ev.done = true;
   if (c.world) c.world.drops = (c.world.drops || 0) + 1;
-  const card = d.card && locked(s).includes(d.card) ? d.card : locked(s)[0];
-  report.drop = { card: card || null, frag: null };
-  if (card) { (MODS[card] ? c.mods : c.pool).push(card); (report.unlocks ||= []).push({ id: card, name: cardName(card), text: CVES[card]?.text || MODS[card].text(MODS[card].v[0]), from: 'drop' }); }
+  report.drop = { script: d.script || null, frag: null };
   const f = d.frag && FRAGMENTS.find((x) => x.id === d.frag && !c.archive.includes(x.id));
   if (f) { c.archive.push(f.id); report.drop.frag = f.id; }
 }
@@ -304,7 +311,7 @@ breachHooks.gate = (s, n) => {
   rec.checkpoint = { gate, rewrites: Object.fromEntries(Object.entries(b.rewrites).filter(([sub]) => subs.includes(sub)).map(([sub, x]) => [sub, { ...x }])) };
   emit(s, 'breach-good', `Checkpoint: ${n.path}. A retry of ${b.card.name} can start past this gate.`);
 };
-// A breach ended: the record, the capture, the unlock, the fragment, the bounty.
+// A breach ended: the record, the capture, the fragment, the bounty, Mail Drop's script.
 breachHooks.over = (s, result) => {
   const b = s.breach, c = s.camp;
   if (!c || !b?.campaign) return;
@@ -319,7 +326,7 @@ breachHooks.over = (s, result) => {
     report.bounty = { id: b.bounty, text: B.text, done, paid: BOUNTY_PAY };
     if (done) {
       rec.paid = (rec.paid || 0) + 1;
-      report.bounty.paid = `${B.from} pays. ${payBounty(s, srv, b, rec, report)}${networkHas(s, 'bountyboard') > 1 ? ` ${payBounty(s, srv, b, rec, report)}` : ''}`;
+      report.bounty.paid = `${B.from} pays. ${payBounty(s, srv, b, rec)}${networkHas(s, 'bountyboard') > 1 ? ` ${payBounty(s, srv, b, rec)}` : ''}`;
     }
   }
   if (result === 'won' && b.campaign.replay) {
@@ -333,22 +340,14 @@ breachHooks.over = (s, result) => {
     rec.captured = true; rec.wins++; rec.checkpoint = null;
     rec.rewrites = { ...(b.prior || {}), ...Object.fromEntries(Object.entries(b.rewrites).map(([sub, x]) => [sub, { ...x }])) };
     report.reimaged = !first;
-    report.unlocks ||= [];
-    if (first && srv.unlock && !c.pool.includes(srv.unlock)) { c.pool.push(srv.unlock); report.unlock = { id: srv.unlock, name: CVES[srv.unlock].name, text: CVES[srv.unlock].text }; report.unlocks.push(report.unlock); }
-    // Heat: the best this server was captured at, the next rank once you capture at your highest, and what a rank's
-    // first capture opens in the pool.
+    // Heat: the best this server was captured at, and the next rank once you capture at your highest.
     const h = b.heat || 0;
     rec.heat = Math.max(rec.heat ?? 0, h);
     if (h >= (c.heat || 0) && h < MAX_HEAT) { c.heat = h + 1; report.heat = c.heat; }
-    if (h > 0 && !c.heatCleared.includes(h)) {
-      c.heatCleared.push(h);
-      for (const id of HEAT_UNLOCKS[h] || []) {
-        if (MODS[id] && !c.mods.includes(id)) c.mods.push(id);
-        else if (CVES[id] && !c.pool.includes(id)) c.pool.push(id);
-        else continue;
-        report.unlocks.push({ id, name: cardName(id), text: CVES[id]?.text || MODS[id].text(MODS[id].v[0]) });
-      }
-    }
+    if (h > 0 && !c.heatCleared.includes(h)) c.heatCleared.push(h);
+    // Mail Drop: a script in the mail for every capture (uncommon or better at tier II).
+    const mail = networkHas(s, 'maildrop');
+    if (mail) { const id = rollScript(seeded((b.seed * 31 + 5) >>> 0), mail > 1 ? 'uncommon' : null); report.mail = giveScript(s, id, 'Mail Drop: ') ? id : null; }
     // Range: each breach you win earns a replay, up to its cap.
     const range = networkHas(s, 'range');
     if (range) c.replays = Math.min(CAMPAIGN.replays[range - 1], (c.replays || 0) + 1);
@@ -356,8 +355,6 @@ breachHooks.over = (s, result) => {
     const f = fragmentOf(id);
     if (f && !c.archive.includes(f.id)) { c.archive.push(f.id); b.dump = f; report.fragment = f.id; } else b.dump = null;
   } else if (rec.checkpoint) report.checkpoint = rec.checkpoint.gate;
-  const mods = b.mods.length ? b.mods : b.lost?.mods || [];
-  if (mods.length) c.lastMods = [...mods];
   // The room reads the breach (before it joins the history, so a streak counts the losses before this one). From your
   // second capture the world takes its turn: the author you hit answers, and wick may have a lead.
   c.world ||= freshWorld(); c.room ||= freshRoom();
