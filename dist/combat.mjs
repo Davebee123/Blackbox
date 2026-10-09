@@ -131,7 +131,10 @@ export function cycleLength(s) {
 }
 
 // Cycles between a part losing its last armor chit and patching one back.
-export const patchDelay = (s) => CONFIG.patchDelay - (s.encounter?.virus.mutation === 'regenerative' ? 1 : 0) + rank(s, 'armor-cracker') + fxFire(s, 'custom', { do: 'patch-slow' }, false).reduce((n, x) => n + x.value, 0);
+// A virus's mutation, in force: its own (createVirus), or a breach's rolled one (breach.mjs v.mutations), which lives
+// on a part and ends when that part breaks.
+export const mutated = (s, id) => { const v = s.encounter?.virus; return !!v && (v.mutation === id || !!v.mutations?.some((m) => m.id === id && alive(part(s, m.part)))); };
+export const patchDelay = (s) => CONFIG.patchDelay - (mutated(s, 'regenerative') ? 1 : 0) + rank(s, 'armor-cracker') + fxFire(s, 'custom', { do: 'patch-slow' }, false).reduce((n, x) => n + x.value, 0);
 // Total armor chits left on the virus (and how many it started with).
 export function armorLeft(s) {
   const all = livingParts(s);
@@ -496,7 +499,7 @@ function pickUnique(s, pool) {
 // A boss's own uniques (sources kind 'boss'): BOSS_LOOT.chance a kill, BOSS_LOOT.pity more for every
 // kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
 export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
-export const bossChance = (s, boss) => Math.min(1, (BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1));
+export const bossChance = (s, boss) => Math.min(1, (BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1)); // a breach's Listening Post (rewrites.mjs)
 // The Listening Post (outpost.mjs): the unique you listen for drops LISTEN.per more often per post, wherever it drops.
 export const listenBoost = (s) => (s.listen && postsOf(s) ? 1 + LISTEN.per * postsOf(s) : 1);
 const listened = (s) => (s.listen && postsOf(s) ? UNIQUES[s.listen] || null : null);
@@ -2255,7 +2258,7 @@ export function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
   // Adaptive (mutation): count the cycles in a row your commands hit this part (the chit comes at cycle end).
-  if (e.virus.mutation === 'adaptive' && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
+  if (mutated(s, 'adaptive') && opts.mine && !opts.dot && !opts.server && base > 0 && p.adaptAt !== e.cycle) {
     p.adaptRun = p.adaptAt === e.cycle - 1 ? (p.adaptRun || 0) + 1 : 1;
     p.adaptAt = e.cycle;
   }
@@ -2781,6 +2784,7 @@ function useAbility(s, intent, auto = false) {
   }
   // A subclass skill's own effect (dist/classes/<class>.mjs). to: the crewmate an ally skill was aimed at.
   classUse(id)?.(s, { a, id, target, to: (intent.ally && allyOf(s, intent.ally)) || s, res, base, intent, auto, e });
+  hooks.commanded?.(s, { id, target, res, auto }); // a breach's mods act after the command they change (drafts.mjs)
 }
 // Who's standing beside you in this fight, by name ('you' is the player): for ally skills and class modules.
 export const alliesOf = (s) => hooks.crewAllies?.(s) || [];
@@ -3208,11 +3212,11 @@ function cycleStart(s) {
 
   // Full Disk (a tell, tells.mjs): a burst of encryption on top of the stack, for a few cycles.
   if (e.burst?.left > 0) {
-    const dealt = takeDamage(s, e.burst.amount, e.burst.source, e.burst.name);
-    e.burst.left--;
+    const burst = e.burst, dealt = takeDamage(s, burst.amount, burst.source, burst.name); // (what reacts to the hit can clear it: a breach's Reflective ACL breaking the Encryptor)
+    burst.left--;
     e.metrics.encrypted += dealt;
-    if (dealt) emit(s, 'encrypted', `${e.burst.name}: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: e.burst.source, amount: dealt });
-    if (!e.burst.left) e.burst = null;
+    if (dealt) emit(s, 'encrypted', `${burst.name}: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: burst.source, amount: dealt });
+    if (!burst.left && e.burst === burst) e.burst = null;
     if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   }
 
@@ -3313,7 +3317,7 @@ function cycleClose(s, landed) {
     emit(s, 'patch', `${p.name} REBOOTS at ${p.integrity}/${p.max}${p.reboots >= CONFIG.twinReboot.max ? '. It can\'t do it again.' : '.'}`, { target: p.id, reboot: true });
   }
   // Adaptive (mutation): a part hit three cycles running hardens.
-  if (e.virus.mutation === 'adaptive') for (const p of livingParts(s).filter((x) => x.adaptAt === e.cycle && x.adaptRun >= 3)) {
+  if (mutated(s, 'adaptive')) for (const p of livingParts(s).filter((x) => x.adaptAt === e.cycle && x.adaptRun >= 3)) {
     p.armor += 1; p.maxArmor = Math.max(p.maxArmor || 0, p.armor); p.patchAt = null; p.adaptRun = 0;
     emit(s, 'patch', `${p.name} adapts: +1 ◆.`, { target: p.id, adapt: true });
   }

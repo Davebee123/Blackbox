@@ -20,8 +20,8 @@
 //   mutation      a passive rule a wild virus rolls as its mutation (data.mjs MUTATIONS)
 //   bot           how the planner answers it (planner.mjs, tells.mjs): focus, quiet, strip, window, delay, switch
 //   counter       the gene ACTUARY brings when this one is beaten often (phase 5)
-// New genes (Exfiltrate, SYN Flood, Front End…) join this table in phase 3 with the same shape, and wild viruses
-// start rolling them from their author's toolkit by the budget (budgetFor). Until then nothing here rolls on its own.
+// New genes (Exfiltrate, SYN Flood, Front End…) join this table with the same shape. Breach nodes roll genomes from
+// these (rollGenome, below): their third parts and mutations, from the author's toolkit by the budget (budgetFor).
 
 // icon: its glyph (glyphs.mjs); colour: its chips' colour.
 export const AXES = {
@@ -229,12 +229,50 @@ export function compatible(genes, { boss = false } = {}) {
 }
 
 // ---------- the budget (docs/genome.md 5.1), for phase 3's rolled genes ----------
-// Points a wild virus spends on rolled genes at a level and grade. The body and its tells are free. Nothing calls
-// this to roll yet: today's wild viruses still roll one third part or strain and maybe one mutation (data.mjs).
+// Points a wild virus spends on rolled genes at a level and grade. The body and its tells are free. Breach nodes roll
+// by it (rollGenome); the old game's wild viruses still roll one third part or strain and maybe one mutation (data.mjs).
 export const BUDGET = { wild: [[1, 0], [4, 2], [8, 4], [13, 5], [17, 6], [25, 7], [33, 8]], grade: { 2: 1, 3: 2 }, elite: 3, champion: 2 };
 export function budgetFor(level, { grade = 1, elite = false, champion = false } = {}) {
   const base = BUDGET.wild.reduce((n, [L, pts]) => (level >= L ? pts : n), 0);
   return base + (BUDGET.grade[grade] || 0) + (elite ? BUDGET.elite : 0) + (champion ? BUDGET.champion : 0);
+}
+
+// ---------- the roll (docs/genome.md 5.2), for breach nodes (breach.mjs) ----------
+// How many genes a wild virus rolls at a level (an elite one more), and how many of them may be mutations (rule
+// genes): one on a wild virus, two on an elite (the designer's cap). A third part is a gene too, and a body has room
+// for one.
+export const GENE_COUNT = [[1, 0], [4, 1], [8, 2], [25, 3]];
+export const MUTATION_CAP = { wild: 1, elite: 2 };
+// Weights by author: a signature gene 3, the rest of its toolkit 1, anything else 0.1 (any author can surprise you).
+export const ROLL_WEIGHT = { signature: 3, toolkit: 1, other: 0.1 };
+// Roll a genome: gene ids drawn by weight from the genes open at the level that fit the budget, struck when they break
+// a compatibility rule (eight tries a draw), until the count or the budget runs out. Rolled genes today are the
+// third parts a body can grow (genes.mjs parts) and the mutations (mutation: true): every one is wired in play.
+//   rand        the roll's own stream (so it never moves the game's other dice)
+//   family      the body: only its third parts can roll; core, its body's genes (for the compatibility rules)
+//   signature, toolkit   the author's (authors.mjs)
+//   elite       +3 points, one more gene, two mutations; bonus: points on top (Testbed)
+//   known       a set of gene ids: roll only these (Sinkhole: genes you've decoded)
+export function rollGenome({ rand, level, family, core = [], signature = [], toolkit = [], elite = false, bonus = 0, known = null } = {}) {
+  let budget = budgetFor(level, { elite }) + bonus;
+  const count = GENE_COUNT.reduce((n, [L, k]) => (level >= L ? k : n), 0) + (elite && level >= 4 ? 1 : 0);
+  const cap = elite ? MUTATION_CAP.elite : MUTATION_CAP.wild;
+  const weight = (id) => (signature.includes(id) ? ROLL_WEIGHT.signature : toolkit.includes(id) ? ROLL_WEIGHT.toolkit : ROLL_WEIGHT.other);
+  let pool = GENE_IDS.filter((id) => { const g = GENES[id]; if (g.opens > level || (known && !known.has(id))) return false; return g.mutation || (g.parts?.[family] && (g.parts[family].from || 1) <= level); });
+  const picked = [];
+  while (picked.length < count && budget > 0) {
+    const fits = pool.filter((id) => GENES[id].cost <= budget && !(GENES[id].parts && picked.some((x) => GENES[x].parts)) && !(GENES[id].mutation && picked.filter((x) => GENES[x].mutation).length >= cap));
+    let got = null;
+    for (let t = 0; t < 8 && fits.length && !got; t++) {
+      const total = fits.reduce((n, id) => n + weight(id), 0);
+      let x = rand() * total, id = fits[fits.length - 1];
+      for (const f of fits) if ((x -= weight(f)) < 0) { id = f; break; }
+      if (compatible([...core, ...picked, id]).length) { fits.splice(fits.indexOf(id), 1); pool = pool.filter((y) => y !== id); } else got = id;
+    }
+    if (!got) break;
+    picked.push(got); budget -= GENES[got].cost; pool = pool.filter((y) => y !== got);
+  }
+  return picked;
 }
 
 // ---------- the sim switch (genesim.mjs) ----------

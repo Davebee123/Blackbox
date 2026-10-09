@@ -6,9 +6,12 @@ import { ABILITIES, GUARDS, FAMILIES, STRAINS, BOSSES } from './data.mjs';
 import { RARITIES, itemLabel, statLine } from './gear.mjs';
 import { stashItem, effectLine, equippedSkills, knownSkills, classOf } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
-import { ACTS, BREACH, EVENTS, BROKERS, nodeList, reachable, visible, currentNode, rowSub, signalOf, maxOf, captureOf, fogOf, eventText, cardOf, residentName, priceOf, nextOf } from './breach.mjs';
-import { MODS, CVES, cardText, DRAFT } from './drafts.mjs';
+import { ACTS, BREACH, EVENTS, BROKERS, nodeList, reachable, visible, currentNode, rowSub, signalOf, maxOf, captureOf, fogOf, eventText, cardOf, residentName, priceOf, nextOf, restShare, recompilable } from './breach.mjs';
+import { MODS, CVES, cardText, DRAFT, TAGS, buildTags, linksOf, modName, modText } from './drafts.mjs';
 import { SUBSYSTEMS, REWRITES, outputLine } from './rewrites.mjs';
+import { chipOf } from './genome.mjs';
+import { geneChip } from './view.mjs';
+import { HEAT, heatList, heatPay } from './heat.mjs';
 
 // What the page shows that the breach doesn't keep: the pack's pop-over, the tty opened up, and the gear you've seen
 // in the pack (new gear marks the Pack button until you open it).
@@ -28,13 +31,30 @@ const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const KIND = {
   virus: { label: 'virus', icon: 'pulse-node', word: 'A wild virus. Beat it for a draft, then rewrite its subsystem.' },
   elite: { label: 'elite', icon: 'mutation', word: 'A bigger virus with two tells. Its draft has a CVE for sure, and its rewrite is tier II.' },
-  cache: { label: 'cache', icon: 'loot', word: 'Tokens and a protocol. One cache in four is bait, so read it before you pull it.' },
+  cache: { label: 'cache', icon: 'loot', word: 'Tokens, and now and then a protocol. One cache in four is bait, so read it before you pull it.' },
   defrag: { label: 'defrag', icon: 'shell-shield', word: 'A quiet sector. Rest for 30% Signal, or re-slot your keys.' },
   broker: { label: 'broker', icon: 'exploit', word: "A broker's stall. Spend tokens on mods, CVEs, gear or a Signal patch." },
   term: { label: 'term', icon: 'command', word: 'A terminal with a file on it, and a choice with a cost.' },
   gate: { label: 'gate', icon: 'event-lock', word: 'A guard. Beat it and your pack banks.' },
   boss: { label: 'core', icon: 'server', word: 'The Resident.' },
 };
+// What a fight's draft promises, on its node and its card (breach.mjs n.reward): mods teal, CVEs violet, gear amber,
+// and a yellow star for a rare card.
+export const REWARD = {
+  mod: { word: 'mod', tip: 'Its draft offers mods: each changes how one skill on your bar works.' },
+  cve: { word: 'cve', tip: 'Its draft offers CVEs: each lasts the breach.' },
+  gear: { word: 'gear', tip: 'Its draft offers gear: real items that go in your pack.' },
+};
+const rewardTip = (n) => `${REWARD[n.reward].tip}${n.rare ? ' One of them is rare, for sure.' : ''}`;
+const rewardPill = (n, cls = 'bx-rw') => (n.reward ? `<span class="${cls} rw-${n.reward}${n.rare ? ' rare' : ''}" title="${esc(rewardTip(n))}">${n.rare ? '★' : ''}${REWARD[n.reward].word}</span>` : '');
+// A node's genome as gene chips (genome.mjs chipOf): ??? until you've met a gene, its rule once decoded (or always, with
+// Audit Trail). Its tells after them.
+function geneLine(s, n) {
+  if (!n.genes) return '';
+  const deep = !!s.breach.fx.audit, chips = n.genes.map((id) => geneChip(chipOf(s, id, 'rolled', deep)));
+  const tells = s.breach.fx.audit === 2 ? (n.tells || []).map((id) => `<span class="tag" title="A tell it brings.">${esc(id)}</span>`) : [];
+  return chips.length || tells.length ? `<span class="gene-line bx-genes">${chips.join('')}${tells.join('')}</span>` : '<span class="gene-line bx-genes"><span class="gchip g-core" title="It rolled no genes: the body alone.">body only</span></span>';
+}
 // Geometry: a gutter for the subsystem names, then four lanes. y in px, x in % of the board.
 const G = { gut: 21, row: 78, head: 46, gate: 84, pad: 34 };
 const laneX = (col) => G.gut + ((col + 0.5) * (100 - G.gut - 2)) / BREACH.cols;
@@ -62,7 +82,7 @@ function nodeTip(s, n) {
   const where = n.sub ? `This row runs ${n.sub}, ${SUBSYSTEMS[n.sub].about}. ` : '';
   if (n.kind === 'virus' || n.kind === 'elite') {
     const fam = n.strain ? STRAINS[n.strain].name : FAMILIES[n.family]?.name;
-    return `${where}${n.kind === 'elite' ? 'An elite' : 'A'} level ${n.level} ${fam} virus, written by ${AUTHORS[n.author]?.name || '?'}. ${n.kind === 'elite' ? 'Its draft has a CVE for sure, and its rewrite is tier II.' : 'Beat it for a draft, then the rewrite.'}${b.cleared[n.id] ? ' You cleared it.' : ''}`;
+    return `${where}${n.kind === 'elite' ? 'An elite' : 'A'} level ${n.level} ${fam} virus, written by ${AUTHORS[n.author]?.name || '?'}. ${n.reward ? rewardTip(n) : ''} ${n.kind === 'elite' ? 'Its rewrite is tier II, and it pays a reroll.' : 'Then the rewrite.'}${b.cleared[n.id] ? ' You cleared it.' : ''}`;
   }
   if (n.kind === 'broker') return `${BROKERS[n.faction].name} sells ${BROKERS[n.faction].sells.toLowerCase()} here.`;
   return where + KIND[n.kind].word;
@@ -119,10 +139,13 @@ function mapMarkup(s) {
       return `<button type="button" class="bx-bar k-${n.kind} s-${state}" style="top:${p.y}px" ${attrs} title="${tip}"><span class="ico" ${icon(k.icon)}></span><span class="bx-bar-k">${n.kind === 'gate' ? 'GATE' : 'RESIDENT'}</span><b>${esc(name)}</b><small>lv ${n.level} · ${esc(note)}</small>${isHere ? '<span class="bx-you">you</span>' : ''}${cleared ? '<span class="bx-done">down</span>' : ''}</button>`;
     }
     const label = seen ? k.label : '?';
-    const sub = seen && (n.kind === 'virus' || n.kind === 'elite') ? (n.strain ? STRAINS[n.strain].name.toLowerCase() : AUTHORS[n.author]?.name.toLowerCase()) : seen && n.kind === 'broker' ? BROKERS[n.faction].name.toLowerCase() : seen && n.kind === 'term' ? EVENTS[n.event].file.split('/').pop() : '';
-    return `<button type="button" class="bx-node k-${seen ? n.kind : 'fog'} s-${state}" style="left:${p.x}%;top:${p.y}px" ${attrs} title="${tip}" aria-label="${esc(seen ? `${k.label} ${n.sub || ''}` : 'unknown node')}">`
+    // A fight shows its reward in place of its author (who wrote it is in the tip and on its card).
+    const fightNode = n.kind === 'virus' || n.kind === 'elite';
+    const sub = seen && fightNode ? '' : seen && n.kind === 'broker' ? BROKERS[n.faction].name.toLowerCase() : seen && n.kind === 'term' ? EVENTS[n.event].file.split('/').pop() : '';
+    const rw = seen && fightNode && !cleared ? rewardPill(n) : '';
+    return `<button type="button" class="bx-node k-${seen ? n.kind : 'fog'} s-${state}" style="left:${p.x}%;top:${p.y}px" ${attrs} title="${tip}" aria-label="${esc(seen ? `${k.label} ${n.sub || ''}${n.reward && fightNode ? ` ${n.reward}` : ''}` : 'unknown node')}">`
       + `<span class="bx-chip">${seen ? `<span class="ico" ${icon(k.icon)}></span>` : '<span class="bx-q">?</span>'}</span>`
-      + `${seen ? `<span class="bx-lbl">${esc(label)}</span>` : ''}${sub ? `<small class="bx-sub">${esc(sub)}</small>` : ''}${isHere ? '<span class="bx-you">you</span>' : ''}</button>`;
+      + `${seen ? `<span class="bx-lbl">${esc(label)}</span>` : ''}${rw}${sub ? `<small class="bx-sub">${esc(sub)}</small>` : ''}${isHere ? '<span class="bx-you">you</span>' : ''}</button>`;
   }).join('');
   return `<div class="bx-board" style="height:${height}px">${headMarks}${gut.join('')}<svg class="bx-edges" viewBox="0 0 100 ${height}" preserveAspectRatio="none" aria-hidden="true">${edges}</svg>${nodes}</div>`;
 }
@@ -131,14 +154,34 @@ function mapMarkup(s) {
 // Every screen is one card: a kicker (where you are), the question as its h1, the options, then the actions.
 const btn = (verb, label, { arg = null, primary = false, hot = false, disabled = false, note = '', tip = '' } = {}) => `<button type="button" class="btn${primary ? ' primary' : ''}${hot ? ' hot-btn' : ''}" data-breach="${verb}"${arg != null ? ` data-arg="${esc(arg)}"` : ''}${disabled ? ' disabled' : ''}${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}${note ? `<small>${esc(note)}</small>` : ''}</button>`;
 const decision = (kicker, title, body, cls = '') => `<section class="card bx-screen${cls ? ' ' + cls : ''}"><h2>${kicker}</h2><h1>${title}</h1>${body}</section>`;
-function cardTile(s, c, i, verb, extra = '') {
+// A card's tags as chips (drafts.mjs linksOf): what it makes (an arrow out) and wants (an arrow in), lit teal where it
+// meets your build, with what it meets on hover. The link count sits on the kicker.
+function tagChips(s, c, build) {
+  const L = linksOf(s, c, build);
+  if (!L.tags.length) return { html: '', n: 0 };
+  const chip = (x) => {
+    const T = TAGS[x.tag], on = x.on;
+    const tip = x.side === 'wants' ? `Wants: ${T.tip}${on ? ` Your build makes it (${x.count}).` : ' Nothing in your build makes it yet.'}` : `Makes: ${T.tip}${on ? ` ${x.count === 1 ? 'A card' : `${x.count} cards`} of yours ${x.count === 1 ? 'wants' : 'want'} it.` : ''}`;
+    return `<span class="bx-tag ${x.side === 'wants' ? 'w' : 'm'}${on ? ' on' : ''}" title="${esc(tip)}">${x.side === 'wants' ? '◂ ' : ''}${esc(T.word)}${x.side === 'makes' ? ' ▸' : ''}</span>`;
+  };
+  return { html: `<p class="bx-tags">${L.tags.map(chip).join('')}</p>`, n: L.n };
+}
+const fmtN = (n) => (n % 1 ? n.toFixed(1) : String(n));
+const linkBadge = (n) => (n > 0 ? `<span class="bx-link" title="${esc(`Links with your build: ${fmtN(n)} (its lit tags).`)}">×${fmtN(n)}</span>` : '');
+function cardTile(s, c, i, verb, extra = '', build = buildTags(s)) {
   const t = cardText(c), b = s.breach;
   if (c.kind === 'gear') {
     const it = c.item, rule = it.rule ? effectLine(it) : '';
     return `<li class="bx-card k-gear r-${it.rarity}"><span class="bx-card-k">Gear · ${esc(RARITIES[it.rarity].name)}</span><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b><p>${esc(statLine(it.stats))}</p>${rule ? `<p class="bx-rule">${esc(rule)}</p>` : ''}${extra}<div class="bx-card-act">${btn(verb, 'Take', { arg: i })}</div></li>`;
   }
   const replaces = c.kind === 'mod' && b.mods.find((id) => MODS[id].skill === MODS[c.id].skill && id !== c.id);
-  return `<li class="bx-card k-${c.kind} r-${c.rarity}"><span class="bx-card-k">${esc(t.kicker)}</span><b>${esc(t.name)}</b><p>${esc(t.text)}</p>${replaces ? `<p class="bx-rule">Replaces ${esc(MODS[replaces].name)}.</p>` : ''}${extra}<div class="bx-card-act">${btn(verb, 'Take', { arg: i })}</div></li>`;
+  const tags = tagChips(s, c, build);
+  return `<li class="bx-card k-${c.kind} r-${c.rarity}"><span class="bx-card-k">${esc(t.kicker)}${linkBadge(tags.n)}</span><b>${esc(t.name)}</b><p>${esc(t.text)}</p>${tags.html}${replaces ? `<p class="bx-rule">Replaces ${esc(modName(replaces, b.plus.includes(replaces)))}.</p>` : ''}${extra}<div class="bx-card-act">${btn(verb, 'Take', { arg: i })}</div></li>`;
+}
+// Your build, over a draft: what it makes, as lit chips with counts (the kit's and your cards').
+function buildLine(build) {
+  const xs = Object.entries(build.makes).filter(([t]) => TAGS[t]).sort((a, c) => c[1] - a[1]);
+  return xs.length ? `<p class="bx-build" title="Your build: what your kit and your cards make. A card's tag lights up where it meets one."><span class="lbl">Build</span>${xs.map(([t, n]) => `<span class="bx-tag m on" title="${esc(TAGS[t].tip)}">${esc(TAGS[t].word)}${n > 1 ? ` ×${n}` : ''}</span>`).join('')}</p>` : '';
 }
 function screenMarkup(s) {
   const b = s.breach, sc = b.screen;
@@ -151,8 +194,9 @@ function screenMarkup(s) {
   }
   const path = esc((sc.node ? b.map.nodes[sc.node] : currentNode(s))?.path || '/');
   if (sc.kind === 'draft') {
-    const can = b.rerolls > 0;
-    return decision(`${path} · ${esc(sc.title === 'Draft' ? 'draft' : sc.title)}`, `Pick 1 of ${sc.cards.length}`, `<ul class="bx-cards">${sc.cards.map((c, i) => cardTile(s, c, i, 'pick')).join('')}</ul><div class="row acts">${sc.noSkip ? '' : btn('skip', 'Skip', { note: `+${DRAFT.skip} tokens` })}${btn('reroll', 'Reroll', { disabled: !can, note: `${b.rerolls} left` })}</div>`);
+    const can = b.rerolls > 0, build = buildTags(s);
+    const kind = sc.draft === 'elite' ? 'cve' : sc.draft, promise = REWARD[kind] ? ` · ${rewardPill({ reward: kind, rare: sc.rare }, 'bx-rw in')}` : '';
+    return decision(`${path} · ${esc(sc.title === 'Draft' ? 'draft' : sc.title)}${promise}`, `Pick 1 of ${sc.cards.length}`, `${buildLine(build)}<ul class="bx-cards">${sc.cards.map((c, i) => cardTile(s, c, i, 'pick', '', build)).join('')}</ul><div class="row acts">${sc.noSkip ? '' : btn('skip', 'Skip', { note: b.rules?.audit ? 'pays nothing' : `+${DRAFT.skip} tokens` })}${btn('reroll', 'Reroll', { disabled: !can, note: `${b.rerolls} left` })}</div>`);
   }
   if (sc.kind === 'rewrite') {
     const tiles = sc.options.map((id, i) => {
@@ -164,21 +208,25 @@ function screenMarkup(s) {
   }
   if (sc.kind === 'cache') {
     const n = b.map.nodes[sc.node];
-    return decision(`${path} · cache`, 'Cache',`${term([`$ ls -l ${n.path}`, '-rw-------  1 ops ops  48k  cache.dat', ...(sc.read ? [`$ cat cache.dat`, n.bait ? 'CANARY CANARY CANARY CANARY (every block)' : `tokens: ${n.tokens} · protocol.bin`] : [])])}<div class="row acts">${btn('cat', 'cat cache.dat', { disabled: sc.read, tip: 'cat: read the file first. One cache in four is bait.' })}${btn('pull', 'pull', { hot: true, note: sc.read && n.bait ? 'bait' : '' })}${btn('leave', 'leave')}</div>`);
+    return decision(`${path} · cache`, 'Cache',`${term([`$ ls -l ${n.path}`, '-rw-------  1 ops ops  48k  cache.dat', ...(sc.read ? [`$ cat cache.dat`, n.bait ? 'CANARY CANARY CANARY CANARY (every block)' : `tokens: ${n.tokens}${n.gear ? ' · protocol.bin' : ''}`] : [])])}<div class="row acts">${btn('cat', 'cat cache.dat', { disabled: sc.read, tip: 'cat: read the file first. One cache in four is bait.' })}${btn('pull', 'pull', { hot: true, note: sc.read && n.bait ? 'bait' : '' })}${btn('leave', 'leave')}</div>`);
   }
   if (sc.kind === 'defrag') {
-    const heal = Math.min(maxOf(s) - signalOf(s), Math.round(b.max * BREACH.rest));
+    const heal = Math.min(maxOf(s) - signalOf(s), Math.round(b.max * restShare(b)));
+    if (sc.recompile) return decision(`${path} · recompile`, 'Recompile a mod', recompileList(s, 'plus') + `<div class="row acts">${btn('done', sc.rested ? 'Done' : 'Not now')}</div>`);
     if (sc.reslot) {
       const bar = equippedSkills(s, classOf(s)), spare = knownSkills(s, classOf(s)).filter((id) => !bar.includes(id));
       const row = (id, on) => `<li class="bx-slot${on ? ' on' : ''}"><b>${esc(ABILITIES[id]?.name || id)}</b>${b.mods.find((m) => MODS[m].skill === id) ? `<small class="bx-modtag">${esc(MODS[b.mods.find((m) => MODS[m].skill === id)].name)}</small>` : ''}${btn('slot', on ? 'Unequip' : 'Equip', { arg: `${on ? 'unequip' : 'equip'} ${id}` })}</li>`;
       return decision(`${path} · re-slot`, 'Your keys', `<ul class="bx-slots">${bar.map((id) => row(id, true)).join('')}${spare.map((id) => row(id, false)).join('')}</ul><div class="row acts">${btn('done', 'Done', { primary: true })}</div>`);
     }
-    return decision(`${path} · defrag`, 'Rest, or re-slot', `<div class="row acts">${btn('rest', 'Rest', { primary: true, note: `+${heal} Signal` })}${btn('reslot', 'Re-slot', { note: 'change your keys', tip: 'Re-slot: change the skills on your bar. A defrag is the only place your bar changes.' })}</div>`);
+    const zero = b.cves.includes('zerologon'), mods = recompilable(b).length;
+    return decision(`${path} · defrag${zero ? ' · <span class="bx-half" title="Zerologon: rest and recompile both.">Zerologon</span>' : ''}`, 'Rest, recompile or re-slot', `<div class="row acts">${btn('rest', 'Rest', { primary: true, note: `+${heal} Signal` })}${btn('recompile', 'Recompile', { disabled: !mods, note: mods ? 'a mod to +' : 'no mod', tip: 'Recompile: one of your mods becomes its + version for the rest of the breach.' })}${btn('reslot', 'Re-slot', { note: 'change your keys', tip: 'Re-slot: change the skills on your bar. A defrag is the only place your bar changes.' })}${b.fx.service ? btn('jackout', 'Jack out', { hot: true, note: 'keep the pack', tip: 'Service Account: jack out here with your pack. The server stays uncaptured.' }) : ''}</div>`);
   }
   if (sc.kind === 'broker') {
-    const B = BROKERS[sc.faction], price = (x) => priceOf(b, sc, x);
-    const tiles = sc.stock.map((c, i) => cardTile(s, c, i, 'buy', `<span class="bx-price${b.tokens < price(c.price) ? ' short' : ''}">${c.sold ? 'sold' : `${price(c.price)} tokens`}</span>`).replace('>Take<', c.sold ? ' disabled>Sold<' : '>Buy<')).join('');
-    return decision(`${path} · broker${sc.half ? ' · <span class="bx-half">half price</span>' : ''}`, esc(B.name), `<ul class="bx-cards">${tiles}</ul><div class="row acts">${btn('patch', 'Patch Signal', { disabled: sc.patched, note: `+25% · ${price(B.patch)} tokens` })}${btn('leave', 'Leave', { primary: true })}</div>`);
+    const B = BROKERS[sc.faction], price = (x) => priceOf(b, sc, x), build = buildTags(s);
+    if (sc.recompile) return decision(`${path} · ${esc(B.name)} · recompile`, 'Recompile a mod', recompileList(s, 'service', `${price(B.service.price)} tokens`) + `<div class="row acts">${btn('leave', 'Leave', { primary: true })}</div>`);
+    const tiles = sc.stock.map((c, i) => cardTile(s, c, i, 'buy', `<span class="bx-price${b.tokens < price(c.price) ? ' short' : ''}">${c.sold ? 'sold' : `${price(c.price)} tokens`}</span>`, build).replace('>Take<', c.sold ? ' disabled>Sold<' : '>Buy<')).join('');
+    const sv = B.service ? btn('service', B.service.name, { disabled: sc.served || b.tokens < price(B.service.price) || (B.service.id === 'recompile' && !recompilable(b).length), note: `${price(B.service.price)} tokens`, tip: B.service.text }) : '';
+    return decision(`${path} · broker${sc.half ? ' · <span class="bx-half">half price</span>' : ''}`, esc(B.name), `${buildLine(build)}<ul class="bx-cards">${tiles}</ul><div class="row acts">${btn('patch', 'Patch Signal', { disabled: sc.patched, note: `+25% · ${price(B.patch)} tokens` })}${sv}${btn('leave', 'Leave', { primary: true })}</div>`);
   }
   if (sc.kind === 'term') {
     const ev = EVENTS[sc.event];
@@ -191,6 +239,12 @@ function screenMarkup(s) {
   }
   return '';
 }
+// The mods you can recompile, each with what it does now and as its + version. verb: the button's (plus at a defrag,
+// service at NULL CHOIR's stall).
+function recompileList(s, verb, note = '') {
+  const b = s.breach;
+  return `<ul class="bx-plus">${recompilable(b).map((id) => `<li><span class="bx-card-k">Mod · ${esc(ABILITIES[MODS[id].skill]?.name || MODS[id].skill)}</span><b>${esc(MODS[id].name)} <span class="bx-arrow">→</span> <span class="you">${esc(modName(id, true))}</span></b><p class="bx-was-t">${esc(modText(id))}</p><p class="bx-plus-t">${esc(modText(id, true))}</p>${btn(verb, 'Recompile', { arg: id, note })}</li>`).join('')}</ul>`;
+}
 // A lit node as a card: its kind, where it runs, its level, and what you know of it. The whole card is the move.
 function peekCard(s, n) {
   const b = s.breach, k = KIND[n.kind] || KIND.virus;
@@ -202,7 +256,7 @@ function peekCard(s, n) {
     const fam = n.strain ? STRAINS[n.strain].name : FAMILIES[n.family]?.name;
     name = n.kind === 'elite' ? `Elite ${fam}` : fam;
     meta.push(AUTHORS[n.author]?.name || '');
-    know = n.kind === 'elite' ? 'Its draft has a CVE for sure, and its rewrite is tier II.' : n.sub ? `Beat it for a draft and a rewrite of ${n.sub}.` : 'Beat it for a draft.';
+    know = n.kind === 'elite' ? 'Its rewrite is tier II, and it pays a reroll.' : n.sub ? `A rewrite of ${n.sub} after.` : '';
   } else if (n.kind === 'broker') { name = BROKERS[n.faction].name; know = `Sells ${BROKERS[n.faction].sells.toLowerCase()} for tokens.`; }
   else if (n.kind === 'term') { name = EVENTS[n.event].file.split('/').pop(); know = k.word; }
   else know = k.word;
@@ -211,7 +265,9 @@ function peekCard(s, n) {
   const ahead = [...new Set(nextOf(b.map, n.id).filter((x) => visible(s, x)).map((x) => KIND[x.kind]?.label || x.kind))];
   const then = ahead.length ? `<span class="bx-peek-next" title="Then: where this node leads, as far as you can read.">then ${esc(ahead.join(' · '))}</span>` : '';
   const kick = [k.label, ...meta.filter(Boolean)].join(' · ');
-  return `<li><button type="button" class="bx-peek-card k-${n.kind}" data-breach="go" data-arg="${esc(n.id)}" title="${esc(nodeTip(s, n))}"><span class="bx-peek-ico"><span class="ico" ${icon(k.icon)}></span></span><span class="bx-peek-b"><span class="bx-peek-top"><span class="bx-card-k">${esc(kick)}</span>${lvl}</span><b>${esc(name)}</b><small>${esc(know)}</small>${then}</span></button></li>`;
+  const fightNode = n.kind === 'virus' || n.kind === 'elite';
+  const rw = fightNode ? rewardPill(n) : '', genes = fightNode ? geneLine(s, n) : '';
+  return `<li><button type="button" class="bx-peek-card k-${n.kind}" data-breach="go" data-arg="${esc(n.id)}" title="${esc(nodeTip(s, n))}"><span class="bx-peek-ico"><span class="ico" ${icon(k.icon)}></span></span><span class="bx-peek-b"><span class="bx-peek-top"><span class="bx-card-k">${esc(kick)}</span>${lvl}</span><b>${esc(name)}</b>${rw || genes ? `<span class="bx-peek-row">${rw}${genes}</span>` : ''}${know ? `<small>${esc(know)}</small>` : ''}${then}</span></button></li>`;
 }
 const term = (lines) => `<pre class="bx-term">${lines.map((l) => (l.startsWith('$') ? `<span class="you">${esc(l)}</span>` : esc(l))).join('\n')}</pre>`;
 
@@ -223,7 +279,9 @@ function reportMarkup(b) {
   if (!r) return '';
   const rows = [];
   if (r.bounty) rows.push(`<li class="${r.bounty.done ? '' : 'stock'}"><span class="cap-sub">bounty</span><b>${esc(r.bounty.done ? 'Paid' : 'Missed')}</b><span>${esc(r.bounty.text)}${esc(r.bounty.done ? ` ${r.bounty.paid}` : ' Missing it costs nothing.')}</span></li>`);
-  if (r.unlock) rows.push(`<li><span class="cap-sub">unlock</span><b>${esc(r.unlock.name)}</b><span>${esc(`Joins your draft pool. ${r.unlock.text}`)}</span></li>`);
+  for (const u of r.unlocks || (r.unlock ? [r.unlock] : [])) rows.push(`<li><span class="cap-sub">unlock</span><b>${esc(u.name)}</b><span>${esc(`Joins your draft pool. ${u.text}`)}</span></li>`);
+  if (r.heat) rows.push(`<li><span class="cap-sub">heat</span><b>Heat ${r.heat} open</b><span>${esc(`${HEAT[r.heat].name}: ${HEAT[r.heat].text}`)}</span></li>`);
+  if (r.replay) rows.push(`<li><span class="cap-sub">replay</span><b>Replayed</b><span>The Resident falls again. The server is as it was.</span></li>`);
   if (r.revealed?.length) rows.push(`<li><span class="cap-sub">links</span><b>${r.revealed.length} open</b><span>${esc(r.revealed.join(', '))}</span></li>`);
   if (r.checkpoint) rows.push(`<li><span class="cap-sub">kept</span><b>Checkpoint</b><span>${esc(`A retry can start past gate ${r.checkpoint}, with the rewrites behind it.`)}</span></li>`);
   return rows.length ? `<ul class="cap-lines cap-report">${rows.join('')}</ul>` : '';
@@ -238,7 +296,7 @@ function resultMarkup(s) {
     const lines = c.rewrites.map(({ sub, held, kept }) => { const o = outputLine(sub, held); return `<li class="${held ? '' : 'stock'}"><span class="cap-sub">${esc(sub)}</span><b>${esc(o.name)}${kept ? ' <small class="cap-kept" title="Kept: you did not clear it this time, so the rewrite it ran stays.">kept</small>' : ''}</b><span>${esc(o.text)}</span></li>`; }).join('');
     const loot = c.items.map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b></li>`).join('');
     const dump = c.dump ? `<div class="cap-dump"><div class="cap-dump-k"><b>${esc(c.dump.title)}</b><span>${esc(c.dump.from)}</span><span class="cap-frag">${esc(c.dump.thread)} ${c.dump.n}/${c.dump.of}</span></div><pre>${c.dump.lines.map(esc).join('\n')}</pre></div>` : '';
-    return `<section class="card bx-capture"><div class="cap-kick"><span>${b.report?.reimaged ? 'RE-IMAGED' : 'CAPTURED'}</span><span>${camp ? `level ${b.level}` : 'heat 0'}</span></div><h1>${esc(card.name)}</h1><p class="svc-line">${esc(card.kind)} · ${esc(card.author.toUpperCase())} · ${c.kills} fights · Resident ${esc(residentName(card))} down</p>
+    return `<section class="card bx-capture"><div class="cap-kick"><span>${b.report?.reimaged ? 'RE-IMAGED' : 'CAPTURED'}</span><span>${camp ? `level ${b.level} · ` : ''}heat ${b.heat || 0}</span></div><h1>${esc(card.name)}</h1><p class="svc-line">${esc(card.kind)} · ${esc(card.author.toUpperCase())} · ${c.kills} fights · Resident ${esc(residentName(card))} down</p>
       <ul class="cap-lines">${lines}</ul>
       <div class="cap-stats"><div class="stat"><span>XP</span><b>+${c.xp.toLocaleString('en-US')}</b></div><div class="stat"><span>Loot banked</span><b>${c.items.length}</b></div><div class="stat"><span>Mods · CVEs</span><b>${b.mods.length} · ${b.cves.length}</b></div></div>
       ${reportMarkup(b)}
@@ -269,7 +327,7 @@ function hudMarkup(s) {
   const where = lastAct ? 'banks on capture' : 'banks at the gate';
   const fresh = pack.some((it) => !bxUi.seen.has(it.id));
   const perk = (cls, name, tip) => `<li class="bx-perk ${cls}" title="${esc(tip)}">${esc(name)}</li>`;
-  const mods = b.mods.map((id) => perk('mod', MODS[id].name, `${MODS[id].name} · mod on ${ABILITIES[MODS[id].skill]?.name || MODS[id].skill}: ${MODS[id].text}`)).join('');
+  const mods = b.mods.map((id) => { const plus = b.plus.includes(id); return perk(`mod${plus ? ' plus' : ''}`, modName(id, plus), `${modName(id, plus)} · mod on ${ABILITIES[MODS[id].skill]?.name || MODS[id].skill}: ${modText(id, plus)}`); }).join('');
   const cves = b.cves.map((id) => perk(`cve r-${{ common: 'stock', uncommon: 'tuned', rare: 'custom' }[CVES[id].rarity]}`, CVES[id].name, `${CVES[id].name} · ${CVES[id].rarity} CVE: ${CVES[id].text}`)).join('');
   const packBtn = pack.length || banked.length
     ? `<button type="button" class="bx-stat bx-packbtn${fresh ? ' new' : ''}${bxUi.pack ? ' on' : ''}" data-bx-ui="pack" aria-expanded="${bxUi.pack}" title="${esc(`Pack: gear you picked up on this breach. It ${lastAct ? 'banks when you capture the server' : 'banks at the next gate'}. If your Signal hits 0 first, it is lost.`)}"><span class="lbl">${pack.length ? 'Pack' : 'Banked'}</span><b>${pack.length || banked.length}</b>${pack.length ? `<small>${where}</small>` : ''}<span class="ico" ${icon('chevron')}></span></button>`
@@ -282,10 +340,18 @@ function hudMarkup(s) {
     <span class="bx-hud-id" title="${esc(`${card.name}: A ${card.author.toUpperCase()} ${card.kind} at level ${b.level}. Its Resident is ${residentName(card)}. You read ${fogOf(s)} rows ahead.`)}"><span class="ico" ${icon('server')}></span><b>${esc(card.name)}</b></span>
     <div class="bx-sig ${lvl}" title="Signal: your health for the whole breach. It carries from fight to fight, and only a defrag or a broker's patch restores it."><span class="lbl">Signal</span><span class="sigbar"><span style="width:${pct.toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <span class="bx-stat" title="Tokens: spend them at a broker. Skipping a draft pays ${DRAFT.skip}."><span class="lbl">Tokens</span><b>${b.tokens}</b></span>
-    <span class="bx-stat${b.rerolls ? '' : ' out'}" title="Rerolls: draw a draft's cards again."><span class="lbl">Rerolls</span><b>${b.rerolls}</b></span>
+    <span class="bx-stat${b.rerolls ? '' : ' out'}" title="Rerolls: draw a draft's cards again. An elite pays one."><span class="lbl">Rerolls</span><b>${b.rerolls}</b></span>
+    ${heatStat(b)}
     ${packBtn ? `<div class="bx-packwrap">${packBtn}${pop}</div>` : ''}
     ${mods || cves ? `<ul class="bx-perks" aria-label="Mods and CVEs">${mods}${cves}</ul>` : ''}
   </header>`;
+}
+// Heat on the strip: its rank, and every modifier in force on hover.
+export function heatStat(b) {
+  const h = b.heat || 0;
+  if (!h) return '';
+  const tip = `Heat ${h}: ${heatList(h).map((x) => `${x.name}. ${x.text}`).join(' ')} ${heatPay(h)}`;
+  return `<span class="bx-stat bx-heat" title="${esc(tip)}"><span class="lbl">Heat</span><b>${h}</b></span>`;
 }
 // The tty: its last two lines, and the last twelve when you open it.
 function logMarkup(s) {

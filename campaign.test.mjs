@@ -113,8 +113,8 @@ test('breaches scale with level: SPRAWL-00 a short tutorial, one act early, two 
   assert.equal(b.map.nodes.core.boss, 'relayking');
   assert.ok(allPaths(b.map).every((p) => p.at(-1) === 'core'));
   assert.ok(nodeList(b.map).filter((n) => ['virus', 'elite'].includes(n.kind)).every((n) => n.level === 1), 'viruses at the server level');
-  // Level 1: only the mods for the skills on your bar.
-  assert.deepEqual(modPool(s), ['overcommit']);
+  // Level 1: only the mods for the skills on your bar (Key 1 and Overload), and no second mods before heat opens them.
+  assert.deepEqual(modPool(s), ['pry-bar', 'overcommit']);
   leave(s); s.breach = null;
   for (const id of ['sprawl-00', 'vanta-07', 'coldstore-3', 'depot-7']) hold(s, id);
   b = launch(s, 'pier-5'); assert.equal(b.map.acts, 2); assert.ok(b.map.nodes.gate1 && !b.map.nodes.gate2);
@@ -169,7 +169,7 @@ test('Restore Point: once a breach, a blow that would end you leaves you at 1 an
 });
 
 // ---------- the unlock pool, bounties, re-imaging, the Archive ----------
-test('a capture: the record, the unlock, the links it opens, the fragment; a bounty met pays a yellow', () => {
+test('a capture: the record, the unlock, the links it opens, the fragment; a bounty met opens a card in the pool', () => {
   const s = camp('operator', 11);
   hold(s, 'sprawl-00');
   const k = bountiesOn(s, 'vanta-07')[0];
@@ -178,7 +178,7 @@ test('a capture: the record, the unlock, the links it opens, the fragment; a bou
   const b = launch(s, 'vanta-07', { bounty: k });
   b.rewrites = { sshd: { id: 'jumphost', tier: 1 } };
   b.stats = { rests: 0, landed: 0, elites: 1, skips: 0, low: 1 };
-  const stash = s.stash.length;
+  const stash = s.stash.length, pool = s.camp.pool.length + s.camp.mods.length;
   b.result = 'won';
   breachHooks.over(s, 'won');
   const rec = recOf(s, 'vanta-07');
@@ -190,8 +190,8 @@ test('a capture: the record, the unlock, the links it opens, the fragment; a bou
   assert.equal(b.dump.server, 'vanta-07');
   assert.ok(s.camp.archive.includes('vanta-07'));
   assert.ok(b.report.bounty.done);
-  assert.equal(s.stash.length, stash + 1);
-  assert.equal(s.stash.at(-1).rarity, 'custom', 'a yellow protocol');
+  assert.equal(s.stash.length, stash, 'no more gear: the designer found a breach gave too much');
+  assert.equal(s.camp.pool.length + s.camp.mods.length, pool + 2, 'BlueKeep, and the bounty\'s card');
   assert.equal(rec.paid, 1);
   assert.match(breachMarkup(s), /CAPTURED[\s\S]*bounty[\s\S]*Paid[\s\S]*BlueKeep/);
   assert.match(breachMarkup(s), /data-camp="leave"/);
@@ -315,4 +315,10 @@ test('campaignsim: every class reaches level 10 from level 1 within a bounded nu
   }
   const rep = report(runs);
   for (const r of rep) assert.ok(r.win >= 40, `${r.cls} wins ${r.win}% of its breaches`); // campaignsim.mjs prints the full table
+  // Loot is a chase (the designer: "WAY too much loot per run"): one to three items banked a breach, and past the first
+  // few levels a real upgrade every two or three breaches, not every node.
+  const all = runs.flatMap((r) => r.log), mid = all.filter((x) => x.level >= 6);
+  const banked = all.reduce((n, x) => n + x.banked, 0) / all.length, ups = mid.reduce((n, x) => n + x.upgrades, 0) / Math.max(1, mid.length);
+  assert.ok(banked >= 0.5 && banked <= 3, `${banked.toFixed(2)} items banked a breach`);
+  assert.ok(ups >= 0.15 && ups <= 0.8, `${ups.toFixed(2)} upgrades a breach from level 6`);
 });

@@ -1,6 +1,6 @@
 # Roguelite: a run is a breach of one server
 
-This began as a design for review. Phase 0 (one breach) and phase 2 (the campaign) are built now: section 9.3 says what shipped. It proposes reshaping BLACKBOX into a roguelite inside a persistent world, the way Hades and Dead Cells work. Each run breaches one server on a branching map like Slay the Spire's. Class levels, gear, uniques and the servers you capture persist. What you draft inside a run resets.
+This began as a design for review. Phase 0 (one breach), phase 2 (the campaign) and phase 3 (breadth: drafting, heat, rolled genomes) are built now: section 9.3 says what shipped. It proposes reshaping BLACKBOX into a roguelite inside a persistent world, the way Hades and Dead Cells work. Each run breaches one server on a branching map like Slay the Spire's. Class levels, gear, uniques and the servers you capture persist. What you draft inside a run resets.
 
 The designer's brief, in their words:
 
@@ -631,6 +631,61 @@ A version bump (38 to 39). A current player keeps everything about themselves, a
 | Operator | 4 | 9 | 14 | 21 | 50 | 172 | 81% | 93% | 80% | 80% | 72% |
 
 Early levels come about one a breach. Runs die mostly to Residents, then act 2 and 3 viruses. The bot picks Payload, Warden, Demolitionist and Herder at 10: Phantom wins far fewer breaches than Payload (breachsim at 15: 0 of 10 against 3), and that gap is the playtest's to look at.
+
+**Phase 3, breadth**, shipped with drafting as its centre, plus heat, rolled genomes on breach nodes (genome phase 3, docs/genome.md 15.8) and a loot cut. README and GAME_RULES.md, *Breach drafting, genomes and heat*, describe it. The designer's brief: "if you're lucky, you'll win with good drafts" — the randomness should supply the material and skill turn it into a win.
+
+| Planned | Shipped |
+|---|---|
+| About 50 mods | 42, about ten a class, from Key 1 up (so a level-1 bar has two to draft), each with a + version. Five are a second mod for a skill (Critical Mass, Shrapnel, Backpressure, Slow Drip, Snare), opened by heat 1. |
+| 20 or more CVEs | 27: 8 common, 14 uncommon, 5 rare. NotPetya and Morris are cut (a CVE that gambles the run is luck, not skill), and so are the daemon CVEs. |
+| Drafting | Each fight node shows its draft's kind ahead (mod, CVE or gear, and a ★ for a sure rare), and the draft keeps the promise, so a path is a draft. Every card is tagged with what it makes and wants (nine mechanics); your kit makes some; a card's tags light up where they meet your build, with a link count. No dead offers: mods for your bar, CVEs for what your build makes. Rarity pity: +5 rare points a draft without one. Levers: skip (15 tokens), rerolls (one, and one an elite), recompile at a defrag (+ versions), brokers whose stock leans to your build and a service each. The "pick a card type first" moment is cut: the map's reward pills do that job. |
+| 22 rewrites | 20 over nine subsystems (dns, syslog and sandbox are new): the 12 of phase 0 and Service Account, Zone Transfer, Sinkhole, Bounty Board, Audit Trail, Listening Post, Testbed and Range (a replay of the Resident, a charge for each breach you win, up to 3). Rotate Logs waits for Trace on breaches. Sinkhole, Listening Post and Range are leaner than 3.1: they need no naming screen. |
+| Five brokers | GLASSJAW (a reroll), Halcyon (gear), Kestrel (a cheap patch), NULL CHOIR (recompiles a mod), LANTERN (the act ahead). Faction ranks wait. |
+| Heat 1 to 8 | As 6.3, with three changes: Loud is 15% more Integrity and 10% harder hits on a breach (HOT_RUN's 25% and 20% took a class from 58% to 3% in one rank), Audit is "no reroll to start, a skip pays nothing" (breaches have no Trace), and Hardened ICE's extra tell is Lock. Each rank pays an item level (up to 5), 3 rare points and 25% XP. The campaign opens a rank when you capture any server at your highest, records each server's best, and asks a re-image for it. |
+| Unlock ranks | The pool starts with eight common CVEs and a mod for each skill. Each server's first capture opens a CVE, each heat's first capture more, and bounties open the rest. The meta vendor and faction ranks wait. |
+| 12 terminal events, fragments per author | Not in this phase: the four phase 0 events stay. |
+
+**Loot.** The designer, after two campaign runs: "WAY too much loot per run". Before, a breach rolled three items off the Resident, a gear pick at each gate and at the Resident, gear in a third of fight drafts, a protocol in every cache, a yellow protocol per bounty and one more per capture with Mail Drop: 4.5 items banked a breach at levels 1 to 5, and the stash full by about level 10, after which nothing more could drop. Now gear comes from gear nodes (a sixth of the fights), the Resident's 1 of 3 (the breach's gear moment), one card of each gate's draft (so a breach you don't finish can still bank something), a cache one time in three and Halcyon's stall. Gates otherwise draft mods and CVEs, bounties open cards in the pool, Mail Drop adds a card to the Resident's draft. `campaignsim.mjs` (one campaign a class, 30 breaches):
+
+| Levels | Banked a breach, before | after | Real upgrades a breach, before | after |
+|---|---:|---:|---:|---:|
+| 1–5 | 4.5 | 1.0 | 1.4 | 1.1 |
+| 6–10 | 1.3 (stash filling) | 1.4 | 0.3 | 0.5 |
+| 11–15 | 0 (stash full) | 1.4 | 0 | 0.3 |
+| 16+ | 0 | 1.3 | 0 | 0.2 |
+
+A real upgrade is a rarity step or 3 or more item levels in a slot. `campaign.test.mjs` holds banked items at 0.5 to 3 a breach and upgrades from level 6 at 0.15 to 0.8 a breach (one every two to six breaches).
+
+**Skill against luck** (`node breachsim.mjs skill 96 2`: 96 seeds a class at heat 2, level 10, the campaign's subclasses; every policy meets the same maps and drafts and fights with the same planner, walks for safety the same way and rewrites the same way; *none* skips every draft):
+
+| Policy | Breaker | Bastion | Infiltrator | Operator | All | All but Bastion |
+|---|---:|---:|---:|---:|---:|---:|
+| none | 17% | 74% | 25% | 25% | 35% | 22% |
+| random | 39% | 94% | 49% | 51% | 58% | 46% |
+| greedy (rarity) | 40% | 92% | 54% | 51% | 59% | 48% |
+| smart (tags) | 59% | 93% | 50% | 54% | 64% | 54% |
+
+Drafting is worth 23 points over no drafts. Reading the tags is worth 6 over random (8 without the Bastion, whose Warden wins at the ceiling at every heat this harness reaches: 89% random at heat 6). The target was 15 to 20. The Breaker gets there (+20), the Operator and the Infiltrator don't (+3, +1). Two measurements bound what the drafter alone can add: a bot handed a table of every card's measured value (an oracle) beat random by only 5 points on the same seeds, and the smart bot's own levers (walking toward the rewards it wants, rerolling weak drafts, recompiling) are each within noise. Most runs are decided by an elite or a virus in act 1 or 2, before the build has three cards; a card is worth 5 to 25 points held from the start, and with no dead offers the random pick is rarely a bad one. Reaching 15 to 20 needs a design call, not tuning: bigger, build-defining cards (which raises the outlier bound too), fewer but larger picks, or letting some offers be poor fits so that choosing is a skill. With rolled genomes off (the phase 0 roll) the same table reads random 57%, smart 61%.
+
+**Seed variance** (`node breachsim.mjs variance 24 4 2`, the smart bot, each seed's map, drafts and gear played four times with other combat dice): per-seed win rates spread with an sd of 0.39 against 0.25 from the dice alone, so the seed sets a good share of the outcome. 22 of 96 seeds are lost all four times (none for the Bastion, 8, 9 and 5 of 24 for the Breaker, Infiltrator and Operator). `drafting.test.mjs` bounds the always-lost share at 40% and the sd at 0.45.
+
+**The card table** (`node breachsim.mjs cards 1200 2`: random drafting, so a card is taken by chance, 4,800 breaches, cards with 40 picks or more). A card's edge is its win rate when taken minus its win rate when offered and passed over, against the average card's (+5 points: passing a card often means taking gear). Of 105 class and card pairs, 94 sit inside the band (no more than 12 over, no more than 8 under); 4 are over +12 (the most +15) and 7 under −8 (the least −14). A pair with 400 picks reads within about ±7 points.
+
+| Card (class) | Offered | Pick rate | Win taken | Win passed | Edge |
+|---|---:|---:|---:|---:|---:|
+| Zero Click (Breaker) | 590 | 44% | 69% | 49% | +15 |
+| Snare (Operator) | 808 | 45% | 60% | 42% | +14 |
+| Persistence (Infiltrator) | 779 | 48% | 64% | 46% | +13 |
+| Shellshock (Infiltrator) | 809 | 46% | 56% | 38% | +13 |
+| Tracking Pixel (Infiltrator) | 754 | 49% | 64% | 48% | +12 |
+| WannaCry (Operator) | 820 | 49% | 58% | 41% | +12 |
+| … | | | | | |
+| Stuxnet (Operator) | 428 | 40% | 49% | 55% | −10 |
+| Conficker (Operator) | 458 | 38% | 51% | 58% | −12 |
+| Slowloris (Breaker) | 332 | 38% | 49% | 58% | −14 |
+| Conficker (Breaker) | 343 | 35% | 50% | 59% | −14 |
+
+Changed on the way, from the tables: Heartbleed (3 a ◆ to 1), Mirai (a helper that broke ◆ for a Breaker, +67 from one card, to a hit when you break a part), Shellshock (every fight to elites only), BlueKeep (gates and Resident to the Resident), Thermite (20% to 12%), Qbot (full, then a half, then a quarter of a helper's damage), Daemonize (8 a cycle was a trap at −16; 10), Zombie Swarm (spreading the helpers was a trap at −19; they strike as they arrive), Barbed Hook (no damage was a trap), Zero Click (Exposing alone; then a splash of 10, then 4), Rowhammer (patching ◆ later did nothing: fights end first; now a hit when a part's armor breaks), Ghostcat and Ripple20 (rewritten), WannaCry (tokens alone were a trap at −15 to −22; now Signal and tokens), Code Red and EternalBlue (only for hitters: an Infiltrator's burns never cashed them), Pry Bar, Critical Mass, Lateral Movement, Persistence, Tracking Pixel, Needle and Overcommit. `drafting.test.mjs` runs a smaller table (360 breaches) with a wide band, ±35, so a runaway or broken card fails it.
 
 ## 10. Open questions
 

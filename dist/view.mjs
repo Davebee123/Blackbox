@@ -47,7 +47,7 @@ import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKIL
 import { XP_KINDS, xpFor, watchmanBar, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, installBuyout, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonVersion, daemonNext, daemonAmount, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, serviceVersion, serviceValue, installBlock, snapshotPct, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { lairChance, presetsOf, presetKeys, followOf, spikeName, said } from './combat.mjs';
+import { lairChance, presetsOf, presetKeys, followOf, spikeName, said, mutated } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
@@ -454,8 +454,10 @@ function partTags(s, p) {
   if (p.rearm && p.integrity > 0) { const n = (p.rearm - (e.cycle % p.rearm)) % p.rearm; tags.push(`<span class="tag hot" title="Re-arms the other part to full armor at the end of every ${p.rearm}th cycle">${n ? `re-arms in ${n}` : 're-arms now'}</span>`); }
   if (p.attack?.grow && p.integrity > 0) tags.push(`<span class="tag hot" title="Its Trace-back deals more damage every cycle the fight lasts">+${p.attack.bonus || 0}</span>`);
   if (p.echo && p.integrity > 0) tags.push('<span class="tag hot" title="While this lives, every hit you take repeats next cycle at half damage">echoing</span>');
+  // A breach's rolled mutation lives on a part (breach.mjs): break the part and the rule ends.
+  for (const id of p.integrity > 0 ? p.carries || [] : []) tags.push(`<span class="tag hot carrier" title="${esc(`Carries ${GENES[id]?.name || id}. ${GENES[id]?.does || ''} Break this part and the rule ends.`)}">${esc((GENES[id]?.name || id).toLowerCase())}</span>`);
   // Mutations: an Adaptive part one more cycle of hits from hardening; damage a Rerouting virus moved here.
-  if (e.virus.mutation === 'adaptive' && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains a ◆ at the end of the cycle">adapting</span>');
+  if (mutated(s, 'adaptive') && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains a ◆ at the end of the cycle">adapting</span>');
   if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted from a broken part: its attack deals ${p.rerouted} more">+${p.rerouted} rerouted</span>`);
   // Parts that change the fight (data.mjs FAMILIES): the Mutex's lock, a Tripwire, the C2 Node, the parts gone loud.
   if (p.lockHp > 0 && p.integrity > 0) tags.push(`<span class="tag hot" title="Locked by the Mutex: hits land on the lock first. It comes back ${CONFIG.mutex.every} cycles after it breaks while the Mutex lives.">lock ${p.lockHp}</span>`);
