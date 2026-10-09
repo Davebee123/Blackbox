@@ -499,7 +499,7 @@ function pickUnique(s, pool) {
 // A boss's own uniques (sources kind 'boss'): BOSS_LOOT.chance a kill, BOSS_LOOT.pity more for every
 // kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
 export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
-export const bossChance = (s, boss) => Math.min(1, (BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1)); // a breach's Listening Post (rewrites.mjs)
+export const bossChance = (s, boss) => Math.min(1, (BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1) + (s.breach?.fx?.unique || 0)); // a breach's Listening Post (rewrites.mjs), and a dig in's +10% (world.mjs)
 // The Listening Post (outpost.mjs): the unique you listen for drops LISTEN.per more often per post, wherever it drops.
 export const listenBoost = (s) => (s.listen && postsOf(s) ? 1 + LISTEN.per * postsOf(s) : 1);
 const listened = (s) => (s.listen && postsOf(s) ? UNIQUES[s.listen] || null : null);
@@ -547,7 +547,7 @@ function nativeBossUnique(s, boss, level) {
   lairFell(s, who);
   if (!pool.length) return;
   const heard = pool.includes(s.listen) && postsOf(s) ? listenBoost(s) : 1;
-  if (rand(s) < Math.min(1, lairChance(s, who) * heard)) {
+  if (rand(s) < Math.min(1, lairChance(s, who) * heard + (s.breach?.fx?.unique || 0))) { // a dig in's +10% (world.mjs)
     (s.pity ||= {})[key] = 0;
     const fresh = pool.filter((id) => !s.collection?.[id]), from = fresh.includes(s.listen) ? [s.listen] : fresh.length ? fresh : pool;
     const it = uniqueItem(UNIQUES[from[Math.floor(rand(s) * from.length)]], level, () => rand(s));

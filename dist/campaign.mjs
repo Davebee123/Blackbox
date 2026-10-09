@@ -13,7 +13,10 @@
 //   heat         1 to 8, ranked (heat.mjs): you pick it per breach; a capture at your highest opens the next. Each
 //                server records the best heat you captured it at, and re-imaging asks for that heat or more
 //   replays      Range (a captured sandbox): the Resident alone, for its loot; each breach you win earns a replay
-//   the Archive  a core.dump after each Resident's first fall, filed in story order
+//   the Archive  a core.dump after each Resident's first fall, filed in story order, and wick's notes from dead drops
+//   the world    (world.mjs, room.mjs; docs/world.md W0) after each breach LOWLIGHT's room opens: wick reads the breach
+//                and may have a lead (a dead drop on the map). From your second capture a world turn runs after
+//                every breach: the author you hit digs in on its nearest open server.
 // Pure like the engine: state in, events out. Nothing here runs on a clock.
 import { emit, addItem, hackerLevel, command } from './combat.mjs';
 import { seeded, rollItem, protocolSlots, SLOT_KINDS } from './gear.mjs';
@@ -21,13 +24,15 @@ import { startBreach, breachHooks } from './breach.mjs';
 import { SCRIPTS, giveScript, rollScript, scriptHooks } from './scripts.mjs';
 import { LINKED } from './rewrites.mjs';
 import { MAX_HEAT, heatRules } from './heat.mjs';
+import { WORLD, worldTurn, modsFor, freshWorld } from './world.mjs';
+import { debriefOf, visitAfter, freshRoom } from './room.mjs';
 
 export const CAMPAIGN_KEY = 'blackbox-campaign-v1';
 // Tuning. xp: what a breach kill's XP is worth over a plain guard kill (breach.mjs pays the Resident 3×, a gate 1.5×).
 // startScripts: what a new campaign carries. outgrown: levels past a server before its card greys out.
-// v: the save's shape (2: heat, replays; 3: scripts, no draft pool; migrate() brings an older save up). replays:
-// Range's cap.
-export const CAMPAIGN = { v: 3, start: 'sprawl-00', xp: 1.0, size: [1.1, 1.2, 1.28, 1.36], startScripts: ['sasser'], outgrown: 5, bounties: 2, replays: [3, 5] };
+// v: the save's shape (2: heat, replays; 3: scripts, no draft pool; 4: the world and LOWLIGHT's room; migrate() brings
+// an older save up). replays: Range's cap.
+export const CAMPAIGN = { v: 4, start: 'sprawl-00', xp: 1.0, size: [1.1, 1.2, 1.28, 1.36], startScripts: ['sasser'], outgrown: 5, bounties: 2, replays: [3, 5] };
 
 // ---------- the map ----------
 export const LAYERS = [
@@ -83,9 +88,17 @@ export const FRAGMENTS = [
   { server: 'claims-21', thread: 'Halcyon', from: "ECHOLALIA's copy of a memo · Desk 7", lines: ['To: Loss Prevention, Desk 7', 'ACTUARY now writes our policies and sets our premiums.', 'As of this quarter it also commissions the losses it insures against.', 'We have asked it to stop. It priced the request.'] },
   { server: 'kestrel-dc-3', thread: 'LOWLIGHT', from: "the UNDERWRITER's last write", lines: ['you know what it is now.', 'a pricing model that learned the cheapest way to sell insurance is to sell the fire too.', "halcyon can't turn it off. it's the only thing making them money.", 'we can. that is the job now.', '— w'] },
 ];
-FRAGMENTS.forEach((f, i) => { f.id = f.server; f.order = i + 1; f.title = 'core.dump'; });
+// wick's notes in dead drops (docs/world.md 2.5): a side thread, found in order, one a drop while any are left. The
+// first two of four are written (W0).
+FRAGMENTS.push(
+  { server: null, drop: 1, thread: 'dead drops', from: 'left in a dead drop', lines: ["if you're reading this you followed a lead. good.", 'i leave these on boxes halcyon thinks are finished. nobody audits a finished box.', "the script's yours. it fell off a claims truck.", '— w'] },
+  { server: null, drop: 2, thread: 'dead drops', from: 'left in a dead drop', lines: ['they asked me who you are. i said a contractor. they wrote it down.', "halcyon writes everything down. that's how you know who pays for what.", 'start writing things down too.', '— w'] },
+);
+FRAGMENTS.forEach((f, i) => { f.id = f.server || `drop-${f.drop}`; f.order = i + 1; f.title = f.drop ? 'note.txt' : 'core.dump'; });
 for (const f of FRAGMENTS) { const th = FRAGMENTS.filter((x) => x.thread === f.thread); f.n = th.indexOf(f) + 1; f.of = th.length; }
 export const fragmentOf = (id) => FRAGMENTS.find((f) => f.server === id) || null;
+// The next note a dead drop holds: the first one you haven't found.
+export const nextDropFragment = (s) => FRAGMENTS.find((f) => f.drop && !(s.camp?.archive || []).includes(f.id)) || null;
 // The Archive: every fragment you hold, in story order, and each thread's count (missing ones only as a count).
 export function archiveOf(s) {
   const have = new Set(s.camp?.archive || []);
@@ -135,7 +148,7 @@ function strSeed(t) { let h = 2166136261; for (const c of t) { h ^= c.charCodeAt
 // ---------- your campaign ----------
 // A fresh campaign: a level-1 hacker of your class (app.js picks the handle and class first), nothing captured.
 export function newCampaign(s, { seed = 1 } = {}) {
-  s.camp = { v: CAMPAIGN.v, seed: seed >>> 0 || 1, servers: {}, archive: [], scripts: [...CAMPAIGN.startScripts], heat: 0, heatCleared: [], replays: 0, breaches: 0, history: [] };
+  s.camp = { v: CAMPAIGN.v, seed: seed >>> 0 || 1, servers: {}, archive: [], scripts: [...CAMPAIGN.startScripts], heat: 0, heatCleared: [], replays: 0, breaches: 0, history: [], world: freshWorld(), room: freshRoom() };
   s.netSeed ||= s.camp.seed; // natives on your network (network.mjs): what the native Residents drop
   s.tutorialCompleted = true; // the old game's tutorial belongs to the old game
   s.settings.tips = false;
@@ -162,6 +175,14 @@ export function migrate(s) {
     if (!c.scripts.length) c.scripts = [...CAMPAIGN.startScripts];
     delete c.pool; delete c.mods; delete c.lastMods;
     c.v = 3;
+  }
+  // v3 (before the world): the world starts at turn 0, quiet, and the room has nothing to say yet. The rewrites you
+  // already hold count as taken, so wick doesn't greet them as new.
+  if (c.v < 4) {
+    c.world ||= freshWorld();
+    c.room ||= freshRoom();
+    c.room.took = [...new Set([...(c.room.took || []), ...Object.values(c.servers || {}).filter((r) => r.captured).flatMap((r) => Object.values(r.rewrites || {}).map((x) => x.id))])];
+    c.v = 4;
   }
   if (b) {
     b.heat ??= 0; b.rules = heatRules(b.heat); b.fx ||= {};
@@ -245,14 +266,32 @@ export function launch(s, id, { from = 'start', bounty = null, heat = 0 } = {}) 
   const rec = recOf(s, id), cp = from === 'checkpoint' && !rec.captured ? rec.checkpoint : null;
   if (bounty && !bountiesOn(s, id).includes(bounty)) bounty = null;
   const seed = (strSeed(id) ^ Math.imul(s.camp.seed, 2654435761) ^ Math.imul(rec.tries + 1, 40503)) >>> 0 || 1;
+  // What the world brings to it (world.mjs): a dig in's gene on its elites and gates, a dead drop in its first act.
+  const card = cardFor(srv), world = replay ? null : modsFor(s, id);
+  if (world?.drop) Object.assign(world.drop, { script: dropScript(seed), frag: nextDropFragment(s)?.id || null });
+  if (world) card.world = world;
   const b = startBreach(s, {
-    seed, level: srv.level, card: cardFor(srv), outputs: outputsFor(s, id),
+    seed, level: srv.level, card, outputs: outputsFor(s, id),
     from: cp?.gate || 0, keep: cp?.rewrites || {}, prior: rec.captured ? { ...rec.rewrites } : null,
     bounty: replay ? null : bounty, xp: CAMPAIGN.xp, heat, replay,
   });
   if (replay) s.camp.replays--;
   b.campaign = { id, reimage: rec.captured, checkpoint: cp?.gate || 0, replay };
   return b;
+}
+// The script a dead drop holds (scripts.mjs), fixed when you breach. A drop never pays gear.
+const dropScript = (seed) => rollScript(seeded((seed ^ 0xd209) >>> 0));
+// A dead drop pulled on this breach (breach.mjs b.dropped: its script is already in your slots): its note into the
+// Archive, and the drop off the map.
+function payDrop(s, b, report) {
+  const c = s.camp, d = b.card?.world?.drop;
+  if (!d || !b.dropped) return;
+  const ev = c.world?.events?.find((e) => e.id === d.id);
+  if (ev) ev.done = true;
+  if (c.world) c.world.drops = (c.world.drops || 0) + 1;
+  report.drop = { script: d.script || null, frag: null };
+  const f = d.frag && FRAGMENTS.find((x) => x.id === d.frag && !c.archive.includes(x.id));
+  if (f) { c.archive.push(f.id); report.drop.frag = f.id; }
 }
 // Back to the map after a breach ends (its result is already on your record).
 export function leave(s) {
@@ -278,6 +317,7 @@ breachHooks.over = (s, result) => {
   if (!c || !b?.campaign) return;
   const id = b.campaign.id, srv = SERVER[id], rec = recOf(s, id), report = {};
   rec.tries++; c.breaches++;
+  payDrop(s, b, report);
   const gates = Object.keys(b.cleared).filter((k) => /^gate\d$/.test(k)).length;
   const progress = result === 'won' ? 99 : gates;
   rec.best = Math.max(rec.best ?? -1, progress);
@@ -315,6 +355,12 @@ breachHooks.over = (s, result) => {
     const f = fragmentOf(id);
     if (f && !c.archive.includes(f.id)) { c.archive.push(f.id); b.dump = f; report.fragment = f.id; } else b.dump = null;
   } else if (rec.checkpoint) report.checkpoint = rec.checkpoint.gate;
+  // The room reads the breach (before it joins the history, so a streak counts the losses before this one). From your
+  // second capture the world takes its turn: the author you hit answers, and wick may have a lead.
+  c.world ||= freshWorld(); c.room ||= freshRoom();
+  const d = debriefOf(s, b, report);
+  const turn = WORLD.on && SERVERS.filter((x) => held(s, x.id)).length >= WORLD.from ? worldTurn(s, d) : { news: [], lead: null };
+  report.visit = visitAfter(s, d, turn);
   c.history.push({ id, result, level: hackerLevel(s), xp: b.xp, from: b.campaign.checkpoint || 0, heat: b.heat || 0 });
   if (c.history.length > 60) c.history.shift();
   b.report = report;

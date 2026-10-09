@@ -1,0 +1,50 @@
+/* LOWLIGHT's back room (room-view.mjs): the room's sentence, wick, and the board. docs/ui.md tokens. The room is
+   yours, so its rule is teal; amber is what you click. On a phone the cards stack in the same order. */
+.rm { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s5); max-width: 980px; align-items: start; }
+.rm > * { min-width: 0; }
+.rm .ico { width: 13px; height: 13px; flex: none; background: currentColor; -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
+.rm-top { grid-column: 1 / -1; display: grid; gap: var(--s3); padding: var(--s5) 18px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel); box-shadow: inset 0 2px 0 var(--you); }
+.rm-k { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) var(--s5); }
+.rm-k b { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--you); }
+.rm-k span { font: 11px var(--mono); color: var(--dim); }
+.rm-sentence { margin: 0; font: italic 14px/1.5 var(--sans); color: var(--text); max-width: 70ch; }
+.rm-card { gap: var(--s4); align-content: start; }
+.rm-card h2 { display: flex; align-items: center; gap: var(--s3); font: var(--kicker); letter-spacing: var(--kicker-track); color: var(--amber-soft); }
+.rm-card h2 small { margin-left: auto; font: 11px var(--mono); letter-spacing: 0; text-transform: none; color: var(--dim); }
+.rm-wick h2 { color: var(--you); }
+.rm-say { margin: 0; font: 14px/1.5 var(--mono); color: var(--bright); overflow-wrap: anywhere; }
+.rm-quiet { margin: 0; font: italic 13px var(--sans); color: var(--dim); }
+.rm-lead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s4); align-items: center; padding-top: var(--s4); border-top: 1px solid var(--line); }
+.rm-lead .rm-say { color: var(--you); }
+.rm-news { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.rm-news li { padding-left: var(--s5); border-left: 2px solid var(--amber-deep, var(--line-strong)); font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
+.rm-news.old li { border-left-color: var(--line); color: var(--dim); }
+.rm-srv { display: inline; padding: 0; border: 0; background: none; font: inherit; font-family: var(--mono); color: var(--amber); text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.rm-srv:hover { color: var(--bright); }
+.rm-go { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.rm .rm-go.row.acts .btn { flex: 0 0 auto; min-width: 180px; }
+@media (max-width: 900px) {
+  .rm { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+  .rm .rm-go.row.acts .btn { flex: 1 1 auto; }
+}
+
+/* the room's marker on the campaign map, above layer 1, linked to SPRAWL-00 */
+.cp-room { position: absolute; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: var(--s3); height: 30px; padding: 0 var(--s5); border: 1px solid var(--you); border-radius: var(--r-btn); background: var(--panel-2); box-shadow: inset 0 0 0 999px rgba(127, 209, 199, 0.08); color: var(--you); font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; z-index: 1; cursor: pointer; }
+.cp-room:hover { box-shadow: inset 0 0 0 999px rgba(127, 209, 199, 0.16); }
+.cp-room small { font: 10px var(--mono); letter-spacing: 0; text-transform: none; color: var(--dim); }
+
+/* the world on a server (world.mjs): a move and an event under its name, and the card's World row */
+.cp-world { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 132px; }
+.cp-w { display: inline-flex; align-items: center; gap: 3px; height: 15px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 9px/1 var(--mono); letter-spacing: 0.5px; text-transform: lowercase; white-space: nowrap; background: var(--bg); cursor: help; }
+.cp-w.drop { color: var(--you); }
+.cp-pips { display: inline; letter-spacing: 0; color: inherit; font: inherit; }
+.cp-wlist { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.cp-wlist li { display: grid; gap: var(--s2); }
+.cp-wlist .gene-line { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.cp-wlist small { font: 11px var(--mono); color: var(--dim); }
+.cp-wlist .cp-pips { font: 11px var(--mono); color: var(--you); letter-spacing: 1px; }
+@media (max-width: 900px) {
+  .cp-world { max-width: 96px; }
+  .cp-room { font-size: 10px; padding: 0 var(--s4); }
+  .cp-room small { display: none; }
+}

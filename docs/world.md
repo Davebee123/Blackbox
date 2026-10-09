@@ -1,6 +1,6 @@
 # World: a room between breaches, and a network that moves
 
-This is a design for review. Nothing in it is built. It adds a world around the breach campaign (docs/roguelite.md 9.3, GAME_RULES.md *Breach campaign*) without adding free roam or a separate consequences system.
+This began as a design for review. Its first slice, W0 (the room with wick and the board, the world turn with dig in, dead drops from leads), is built now: section 9 says what shipped. It adds a world around the breach campaign (docs/roguelite.md 9.3, GAME_RULES.md *Breach campaign*) without adding free roam or a separate consequences system.
 
 **Approved (designer: "Seems solid to me for now").** Every recommendation in the open questions stands. Build W0 after roguelite phase 3 merges.
 
@@ -385,3 +385,51 @@ export function worldTurn(camp, d, rng) {
 | 11 | How often events come | About 1 every breach. About 1 every 2. Rarer. | **About 1 every 2**, at most 3 on the map. Raise it if the network feels still in playtests. |
 | 12 | Does a loss move the world? | Authors press after a loss. Nothing moves. Only helpful events. | **No author moves after a loss.** The event roll still runs, and it leans toward leads (a leak on the server you lost) so the world helps you back up. |
 | 13 | Handovers | Opt-in on the board. Automatic once a turf is finished. Cut. | **Opt-in**, late (W4). This is genome option B, already approved. |
+
+## 9. What shipped
+
+**W0, the room and one move**, shipped as section 7 describes, on top of the breach rework that replaced drafting with keys, vaults, switches, Trace and scripts (roguelite.md 11). GAME_RULES.md and README.md, *The world: LOWLIGHT's room and the world turn*, describe it in full. Code: `dist/world.mjs`, `dist/room.mjs`, `dist/content/room.mjs`, `dist/room-view.mjs`, `dist/room.css`, with changes in `campaign.mjs`, `breach.mjs`, `breach-view.mjs`, `campaign-view.mjs`, `combat.mjs` and `app.js`. Tests: `world.test.mjs`, and the bot's campaigns in `campaign.test.mjs`.
+
+Drafting is gone, so everything in this doc that pays or reads **pool cards and drafts** now means **scripts** (`dist/scripts.mjs`): a dead drop holds a script, the fence (W1) should sell scripts through `scriptStock`, `priceOf` and `giveScript` rather than swap pool cards, and ACTUARY's repricing (W4) will need something other than draft leans to read.
+
+| Planned (W0) | Shipped |
+|---|---|
+| The room page with wick, the board's news and the room sentence | As 2.6, without the Claims desk and the fence. A teal marker above layer 1 linked to SPRAWL-00, a **Room** tab, and the end card's **Back to the room**. Three room sentences: before your first capture, after SPRAWL-00, and the doc's line after MIRROR-HALL-12. |
+| `debriefOf`, about 60 lines across priorities 1, 4, 5 and 6 | 66 lines in `dist/content/room.mjs` (14 first falls, 16 losses by where they ended, 16 choices, 20 rewrites), plus 6 leads. Picked by priority, in order within a set, starting over when a set runs out. Priority 5's Beacon line waits: no Beacon tell exists. The choices are what a breach records: a dug-in server taken, a heat opened, a checkpoint, a subsystem left stock, no rests, traced (a hunter came) and finished anyway, stayed quiet (Trace never reached the alarm), two vaults, two elites, no script run, a re-image, a replay. |
+| The world turn with dig in and the pressure rules | As 3.1 and 3.2, steps 1, 2, 3 and 6 (the hunter, ACTUARY and faction reactions wait). It runs from your second capture, never for the tutorial. |
+| Dead drops from wick's leads (pool cards only), the first 2 dead-drop fragments | As 3.3, paying a **script** instead of a pool card (there is no pool now). The first world turn always brings a lead (*the others noticed you.*). wick's two notes are a *dead drops* thread in the Archive. |
+| Save v2 | v4: v2 was heat and v3 the scripts. Same key, migrated in place after the scripts' migration. |
+| No standing yet | None: the board is news only. |
+
+Decisions made on the way, beyond the doc:
+
+- **What "a signature gene on every elite and gate" means.** Every author's signature genes are part genes or attack genes, not mutations, so the dig in's gene is the signature **part** for the server's body that opens at its level (Ward or Mutex lock, Twin, Mimic, Decoy mirror), with a toolkit mutation as the fallback (none is needed on today's map). On an elite it is the third part, on top of the roll, and the elite is written by that author; a rolled mutation that would break the compatibility rules goes. On a gate the guard keeps its parts and fixed tells, and the gene's part joins it at 40% of its size, holding the guard's signature part (the Lockbox wards the Watchdog's Tracker). Full size made pressured breaches about 15 points harder than clean ones; the rework's elites bring a charge, and a Ward's cap works against the burst that answers it, so dug-in elites are still the harder part (see the table).
+- **The clean-server rule after a capture.** The doc checks it when a move is placed, but a capture can close the last clean server too (two dug-in servers left open, and the one you took opened nothing). Then the oldest move lifts and the board says *TOLLGATE pulled out of …*, so the rule holds on every turn. It never retakes anything.
+- **Watches.** A move that waits on the rules is a watch (on the board and the card's World row). It never fires on its own: the author's next answer replaces it, as in 3.6's turn 5. An author with no open server left says so on the board (claims come in W2).
+- **Where drops go.** On a server you can breach or hold, never SPRAWL-00 or one you've outgrown, and when it can be no more than 1 level under you and away from a dig in. In a breach the drop takes a cache in its row first, then a spare terminal, then a fight in a row that has another, never a mirror, a keycard's virus, a vault or a switch, so every act keeps its elite, its terminal, its keys and both subsystems.
+- **A drop's script goes in your slots when you pull it.** With every slot full you can't pull it, and it stays on the map. The note is yours when the breach ends, even if it's lost.
+- **The bot** follows a lead only with a script slot free; without that it kept re-imaging the drop's server and its win rate climbed past 90%.
+- **Not built in W0:** the editor tab for `content/room.mjs` (it is editor-format JSON, editable by hand), chips on the breach map beyond the gate's `dug in · ward` and the drop node's `D`.
+
+**The world in the bot's campaigns** (`node campaignsim.mjs 90 12 --world on`: 12 campaigns a class, 1,026 breaches after the first world turn):
+
+| Check (6.4) | Bound | Shipped |
+|---|---|---|
+| New events a breach | 0.4 to 0.7, never more than 1 | 0.31, never more than 1. Dead drops are W0's only event and one is on the map at a time, so the rate sits under the full world's band; leaks and crews (W2) fill it. |
+| Live events | Never more than 3, one a server | Never more than 1 |
+| Pressured servers | Never more than 2, a clean open server every turn | Most 2, mean 0.76 (breaches ending with 0, 1, 2: 293, 687, 46). A clean open server on 100% of turns. 0.16 new moves a breach. |
+| After a loss | No author move | 0 |
+| Win rate on pressured breaches | Within 10 points of clean ones at the same level band | First tries at your level: 77% of 22 pressured against 85% of 151 clean. One level over you: 57% of 90 against 69% of 232, 12 points, just outside the bound (a sample this size reads within about ±5). All breaches: 66% against 76%. The bot skips a pressured server half the time; the designer's playtest should say whether the pay is worth it. |
+| Dead drops | | 393 breaches carried one, 146 pulled. |
+| Breaches to level 10 | Within 10% of world off | Not worse (below). |
+
+Breaches to level 10, 12 campaigns a class, mean:
+
+| Class | World off | World on |
+|---|---:|---:|
+| Bastion | 9.3 | 9.3 |
+| Breaker | 10.5 | 9.8 |
+| Infiltrator | 11.3 | 11.0 |
+| Operator | 10.4 | 9.6 |
+
+The full campaign (`node campaignsim.mjs 90 12`) reaches level 20 in 22, 24, 23 and 22 breaches with the world off and 21, 25, 23 and 21 with it on (Breaker, Bastion, Infiltrator, Operator). Win rates rise 5 to 9 points with the world on, from the scripts drops pay and the held servers leads send the bot back to. `campaign.test.mjs`'s 22 breaches to level 10 still holds, and it now checks the world's rules in the same runs.

@@ -638,7 +638,7 @@ test('the save: a v2 campaign (drafting) migrates in place: the pool goes, held 
   delete s.breach.map.shortcuts;
   const back = restore(JSON.parse(JSON.stringify(s)));
   migrate(back);
-  assert.equal(back.camp.v, 3);
+  assert.equal(back.camp.v, CAMPAIGN.v); // 3, then on to the world's 4 (world.mjs)
   assert.ok(!('pool' in back.camp) && !('mods' in back.camp) && !('lastMods' in back.camp));
   assert.deepEqual(back.camp.scripts, ['spectre', 'ripple20', 'bluekeep'], 'held CVEs become their scripts, up to 3 slots');
   const b = back.breach;
@@ -650,7 +650,7 @@ test('the save: a v2 campaign (drafting) migrates in place: the pool goes, held 
   const t = camp();
   Object.assign(t.camp, { v: 1 }); delete t.camp.heat; delete t.camp.scripts;
   migrate(t);
-  assert.equal(t.camp.v, 3);
+  assert.equal(t.camp.v, CAMPAIGN.v);
   assert.deepEqual(t.camp.scripts, ['sasser']);
   assert.equal(t.camp.heat, 0);
 });

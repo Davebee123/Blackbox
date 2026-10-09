@@ -10,12 +10,14 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="breach.css">
   <link rel="stylesheet" href="campaign.css">
+  <link rel="stylesheet" href="room.css">
 </head>
 <body>
 <div class="app" id="app">
   <header class="topbar">
     <a href="./" class="brand" aria-label="BLACKBOX home"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">BLACKBOX</span></a>
     <nav class="modules" aria-label="Modules">
+      <button data-module="room" id="tab-room" hidden>Room</button>
       <button data-module="campaign" id="tab-campaign" hidden>Campaign</button>
       <button data-module="map">Map</button>
       <button data-module="mail">Mail<span id="mail-count" class="count" hidden></span><span id="mail-ready" class="ready-check" title="A contract is ready to deliver" hidden>✓</span></button>
