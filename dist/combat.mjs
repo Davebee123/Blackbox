@@ -27,7 +27,7 @@ import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
-import { TELL } from './data.mjs';
+import { TELL, ROOM_FAMILIES } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
 import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, RETIRED } from './progression.mjs';
@@ -206,7 +206,7 @@ export const usable = (s) => barKeys(s).map(([, id]) => id).filter((id) => ABILI
 export function defender(s) {
   return s.encounter?.mode === 'run' ? s.run : s.server;
 }
-export const familyInfo = (id) => FAMILIES[id] || GUARDS[id];
+export const familyInfo = (id) => FAMILIES[id] || GUARDS[id] || ROOM_FAMILIES[id];
 
 // Veiled parts hide their attack timers while they still have armor; Blind hides every timer for a
 // few cycles. A Tagged part's timer always shows.
@@ -1730,6 +1730,13 @@ export function finish(s, result) {
     hooks.breachEnd?.(s, result);
     return;
   }
+  // A server room (floorplan.mjs, the rooms playtest): the kill's XP here. Progress, loot and the pack are the room's.
+  if (e.rooms) {
+    emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'rooms' });
+    if (result === 'victory') payKill(s, e, e.roomsXp || 1, `${e.virus.name} neutralized`);
+    hooks.roomEnd?.(s, result);
+    return;
+  }
   // The rogue server: a kill pays like a home kill, straight away (nothing to lose in a pack),
   // and the folder fills again a while later.
   if (e.zone) {
@@ -2382,6 +2389,9 @@ export function hit(s, p, base, opts = {}) {
   e.lastCrit = !!crit && !!opts.mine;
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit });
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor });
+  // A server room's fight (floorplan.mjs): the interrupt ticks (interrupt.mjs), and the room bodies' own rules on a hit
+  // (families.mjs: a Trojan's Package unpacks). 'gone': the part left the board without breaking.
+  if (e.rooms && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
   if (dealt + soaked > 0 && e.virus.tells && e.commanding && !opts.dot) tellHit(s, p, { dealt: dealt + soaked }); // your command hit it: a tell on it may count it, a charge by the burst (tells.mjs; a Mutex lock soaking it still counts)
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
@@ -2489,6 +2499,7 @@ function breakPart(s, p) {
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
   if (hasTalent(s, 'cascade-failure') && !e.once.rampage) { e.once.rampage = true; e.readyAt = {}; emit(s, 'status', 'Cascade Failure resets your cooldowns.'); }
   classEach('broke', s, p);
+  if (e.rooms) hooks.roomBroke?.(s, p); // a room body's rule on a break (families.mjs)
   // Uniques that fire on a break (Cryptominer, Zero Cool).
   for (const x of fxFire(s, 'break', { crit: e.lastCrit, target: p })) {
     const who = x.name || x.it.name;
@@ -2806,7 +2817,8 @@ export function stretchBurns(s, t, cycles, label) {
 const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st || null;
 // How high healing can take you. In a breach, never past the Signal you brought into the fight (breach.mjs
 // fightFrom): heals and shields count inside a fight, defrag and patches between them. The bar marks it (healCap).
-export const healCap = (s) => { const d = defender(s); return s.run?.breach && s.breach?.fightFrom != null ? Math.min(d.max, s.breach.fightFrom) : d.max; };
+const fightFromOf = (s) => (s.run?.breach ? s.breach?.fightFrom : s.run?.rooms ? s.rooms?.fightFrom : null); // a breach's, or a server room's (floorplan.mjs)
+export const healCap = (s) => { const d = defender(s), from = fightFromOf(s); return from != null ? Math.min(d.max, from) : d.max; };
 // lift: a restore that counts like a patch (the Sasser script): it ignores the cap and raises it with you.
 export function heal(s, amount, label, { lift = false } = {}) {
   const d = defender(s);
@@ -2814,6 +2826,7 @@ export function heal(s, amount, label, { lift = false } = {}) {
   const cap = lift ? d.max : healCap(s), healed = Math.max(0, Math.min(amount, cap - d.integrity));
   d.integrity += healed;
   if (lift && s.run?.breach && s.breach?.fightFrom != null) s.breach.fightFrom = Math.max(s.breach.fightFrom, d.integrity);
+  if (lift && s.run?.rooms && s.rooms?.fightFrom != null) s.rooms.fightFrom = Math.max(s.rooms.fightFrom, d.integrity);
   emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Signal you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed });
 }
 
@@ -3033,6 +3046,7 @@ function landAttack(s, p) {
       emit(s, 'spawn', `Fragment ${n} spawns with ${hp} Integrity. It gnaws ${amount} every cycle.`, { source: p.id, target: 'frag' + n });
     }
   }
+  if (e.rooms) hooks.roomLanded?.(s, p, atk); // a room body's attack that got through (families.mjs: a Wiper's Wipe)
 }
 
 // One player's part of a cycle: their command (or auto-repeat), their daemons, then their burns,
@@ -3367,6 +3381,12 @@ function cycleClose(s, landed) {
     if (virusIntegrity(s).current === 0) return finish(s, 'victory');
     if (defender(s).integrity <= 0) return finish(s, 'crashed');
   }
+  // A server room's end of cycle (floorplan.mjs): an elite's enrage, a Lab's overheat, the room bodies' clocks.
+  if (hooks.roomCycle && e.rooms) {
+    hooks.roomCycle(s);
+    if (virusIntegrity(s).current === 0) return finish(s, 'victory');
+    if (defender(s).integrity <= 0) return finish(s, 'crashed');
+  }
 
   e.cycle++;
   e.elapsedMs = 0;
@@ -3559,6 +3579,7 @@ export function intents(s, columns = 4) {
   for (const decoy of livingParts(s).filter((x) => x.reflect)) for (let col = 0; col < columns; col++) if ((e.cycle + col + (decoy.reflectOff || 0)) % decoy.reflect === 0) out.push({ source: decoy.id, name: 'Mirror', effect: 'mirror', amount: Math.round(CONFIG.mirrorBounce * 100), col, hidden: timersHidden(s, decoy), kind: decoy.kind });
   for (const p of parts(s)) if (p.rebootAt && p.integrity === 0 && p.rebootAt - e.cycle >= 0 && p.rebootAt - e.cycle < columns) out.push({ source: p.id, name: 'Reboot', effect: 'reboot', amount: Math.round(p.max * CONFIG.twinReboot.at), col: p.rebootAt - e.cycle, hidden: false, kind: p.kind });
   out.push(...told);
+  if (e.rooms && hooks.roomIntents) out.push(...hooks.roomIntents(s, columns)); // a room body's other moves (families.mjs: a Courier's deliveries)
   return out.sort((a, b) => a.col - b.col);
 }
 

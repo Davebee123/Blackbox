@@ -1,6 +1,6 @@
 # Servers: rooms, floors and sockets
 
-This is a design for review. Nothing here is built. It replaces the breach campaign (docs/roguelite.md, docs/world.md) with a rebuild of the **old game**: the persistent network, your home server, runs into servers, invasions, hubs and factions. What changes is how a server plays. A server becomes a graph of **rooms**, the network becomes a stack of **floors**, and outpost buildings become **socket programs** you inject into rooms. Fights get one new universal rule (the **interrupt** at 50% and 25%), ten new virus families and **attack sets**, so the same family no longer fires on the same cycles every time.
+This is a design for review. Only R0, the first playable slice, is built (see 9.4). It replaces the breach campaign (docs/roguelite.md, docs/world.md) with a rebuild of the **old game**: the persistent network, your home server, runs into servers, invasions, hubs and factions. What changes is how a server plays. A server becomes a graph of **rooms**, the network becomes a stack of **floors**, and outpost buildings become **socket programs** you inject into rooms. Fights get one new universal rule (the **interrupt** at 50% and 25%), ten new virus families and **attack sets**, so the same family no longer fires on the same cycles every time.
 
 The designer's brief, in their words:
 
@@ -785,6 +785,46 @@ A naming note: `dist/room.mjs` and `room-view.mjs` today are LOWLIGHT's back roo
 ### 9.3 Migrating a save
 
 A version bump, in place. Every server you'd found becomes a room graph from its seed. A server you held starts with its vault opened and its Resident beaten (two rooms toward progress) and still held. Each building's plan becomes the matching program's codebase, and every building's cost comes back as code and components (salvage counts one for one). The Relay you'd placed becomes a Relay codebase. Services, the architecture and the dividend pay back what they cost, as save v34 did. A mail from wick says what changed, in one short paragraph.
+
+### 9.4 What shipped: R0
+
+**Play it:** `/?playtest=rooms&class=breaker&level=10&kind=Mailhub&seed=7&boss=a` (class `breaker|bastion|infiltrator|operator`; `&kind=Mailhub|Relay|Mirror|Archive|Lab`, `&size=small|medium|large`, `&boss=a|b|c`, `&hunter=patrol|track`, `&author=…`, `&floor=…`, `&sub=…`). A fresh character in blue gear on a server that is never saved; the clocks run ten times as fast. GAME_RULES.md and README.md ("Rooms playtest (R0)") describe the screen and the rules as built. Code: `dist/floorplan.mjs`, `dist/interrupt.mjs`, `dist/families.mjs`, `dist/floorplan-view.mjs`, `dist/floorplan.css`; the bot is `roomsim.mjs`; tests in `rooms.test.mjs`, `interrupt.test.mjs` and `families.test.mjs`. Nothing in the old game changed outside the playtest page: the room hooks in `combat.mjs` act only on fights flagged `e.rooms`, the new bodies live in `ROOM_FAMILIES` (never in `FAMILIES`), and the board's ticks and cut readout only draw in room fights.
+
+**In it:** the R0 row of 9.1. Room kinds process, elite, guard post with the key, vault, core, den, cache with bait, rest and junction, on a branching graph built from seed, size, kind and floor (a spine, branches of one to three, a loop on medium and two on large, a Relay's two hops). Walking costs 3% (4% from floor 5) for a room's first entry on a visit. Fog, respawn timers on the map and in `ls`, progress (Rooms n/N, the map drawn at half, Mapped at 100%). The key walk and the vault (one visit's key, force for 15%), the Patroller and the Tracker on every server kind (`&hunter=` overrides), the interrupt with its ticks on the bars, the *cut ▸ n* readout and the INTERRUPTED float, attack sets for the Ransomware, the Worm and the Ghostroot (and the new bodies), the Trojan, the Cryptominer and the Wiper, and DEADBOLT under rules a, b and c (the strip's switch, `&boss=`, `developer bossrule`). The terminal maps onto rooms (`ls`, `cd`, `cd ..`, `map`, `wait`, `back`, the verbs).
+
+**The sim** (`node roomsim.mjs 8 10 medium 60`): eight medium servers a class and rule, the five kinds in turn, level 10, the subclass a player picks first; the bot maps each server (or gives it up after four losses in one room), then farms its respawns for an hour. *Fights* is all room fights won; *boss* DEADBOLT's wins over tries; Signal lost is the share of the bar a fight cost; *to Mapped* is the first clear (dense in first-clear XP, decoding and the Mapped bonus), *session* the clear plus an hour's farming, the steady grind. Level 10 needs 2,040 XP, so the 6–10 band's target of 3 levels an hour (7.2) is about 6,100 XP an hour.
+
+| Class (subclass) | Rule | Mapped | Fights won | DEADBOLT (tries) | Signal lost: process / elite / guard / boss / hunter | Min to Mapped (visits) | To Mapped XP/h (lv/h) | Session XP/h (lv/h) | Cuts / wasted ticks a server |
+|---|---|---|---|---|---|---|---|---|---|
+| Breaker (Demolitionist) | a | 100% | 93% | 80% (2.5) | 19 / 27 / 17 / 42 / 31% | 59 (10.0) | 9,109 (4.5) | 5,149 (2.5) | 10.0 / 25.9 |
+| Bastion (Warden) | a | 100% | 99% | 94% (2.0) | 12 / 27 / 9 / 36 / 8% | 33 (3.8) | 10,970 (5.4) | 5,654 (2.8) | 12.1 / 48.6 |
+| Infiltrator (Payload) | a | 88% | 96% | 100% (1.5) | 22 / 35 / 19 / 34 / 29% | 38 (7.6) | 11,994 (5.9) | 5,864 (2.9) | 16.4 / 35.4 |
+| Operator (Herder) | a | 75% | 95% | 55% (2.5) | 18 / 21 / 19 / 58 / 21% | 48 (9.1) | 8,777 (4.3) | 5,276 (2.6) | 22.4 / 75.1 |
+| Breaker | b | 100% | 93% | 89% (2.3) | 19 / 33 / 16 / 47 / 30% | 59 (9.8) | 9,036 (4.4) | 5,128 (2.5) | 10.8 / 26.0 |
+| Bastion | b | 88% | 100% | 100% (1.8) | 12 / 25 / 10 / 19 / 8% | 56 (3.3) | 10,647 (5.2) | 5,205 (2.6) | 12.9 / 45.9 |
+| Infiltrator | b | 88% | 95% | 83% (1.5) | 23 / 33 / 20 / 27 / 24% | 40 (8.0) | 11,851 (5.8) | 5,834 (2.9) | 16.5 / 36.8 |
+| Operator | b | 38% | 87% | 16% (3.1) | 21 / 40 / 21 / 70 / 22% | 54 (10.6) | 6,836 (3.4) | 4,872 (2.4) | 19.0 / 63.5 |
+| Breaker | c | 100% | 93% | 89% (2.3) | 19 / 33 / 16 / 45 / 31% | 59 (9.8) | 9,031 (4.4) | 5,148 (2.5) | 10.6 / 25.1 |
+| Bastion | c | 88% | 97% | 92% (1.6) | 12 / 26 / 9 / 22 / 10% | 32 (3.8) | 11,039 (5.4) | 5,656 (2.8) | 12.9 / 48.3 |
+| Infiltrator | c | 88% | 96% | 92% (1.6) | 22 / 34 / 19 / 33 / 25% | 39 (7.9) | 12,102 (5.9) | 5,922 (2.9) | 17.0 / 38.0 |
+| Operator | c | 75% | 93% | 50% (3.0) | 19 / 25 / 19 / 61 / 21% | 50 (9.6) | 7,991 (3.9) | 5,171 (2.5) | 23.5 / 83.3 |
+
+DEADBOLT alone, from a full bar (twenty fresh level-10 characters a class, Mailhub, the same subclasses): rule a Breaker 17, Bastion 18, Infiltrator 20, Herder 2; rule b 18 / 20 / 20 / 0; rule c 16 / 20 / 19 / 3.
+
+What the numbers say: a process fight costs 12–23% of the bar (the doc's 20–30% for the Breaker and the Infiltrator, less for the Bastion); elites 21–40% (under the 45–60% target: elites were cut from 5.2× to 2.2× Integrity because solo bots lost too many). DEADBOLT is a near-sure win for the Bastion and the Infiltrator and a coin flip or worse for the Herder under every rule; rule b is the Herder's worst. The Payload Infiltrator struggles with an elite Trojan (its spreading burns open the Packages). The farming hour sits just under the XP target (about 2.4–2.9 levels an hour at 10 against 3); the first clear runs well over it. A medium server maps in 32–59 minutes over 3–11 visits. Between rules the gap is within the noise of eight servers. In the browser a URL without `&sub=` gets each class's default subclass, which fares worse than the sim's pick (the default Infiltrator won DEADBOLT 2 of 20).
+
+**Where R0 differs from the doc, and why:**
+- *No terminals, switches, sockets or nests* (not in R0's row). A socket room is a process's room first, so R0 keeps the process: a medium server is the entry, the vault, `/core`, a guard post, the den, an elite, the rest room, two caches and three processes, one fewer junction than "a fifth".
+- *`/core` comes back an hour after DEADBOLT falls* (like a lair's core), since R0 has no takeover; the designer can fight it under each rule again.
+- *Fight sizes are R0's own* (`ROOMS.size`, `eliteHp` 2.2 instead of the old 5.2): tuned by the sim for solo play. Elites carry one rolled mutation at most, like processes.
+- *The hunter* is a Bouncer body (Patroller) or a Tracer (Tracker), two levels over the server at about 1.3 times a guard's Integrity (twice cost the bots a server in three). It drops a script, not components (R2). An Infiltrator sees the whole loop, but only the Tracker's next room.
+- *Bait*: reading a cache doesn't defuse it. Pulling bait costs 10% of your max Signal and still pays what it holds, so 100% costs some Signal. Caches pay credits and code (components are R2). Vaults hold gear or a script (no codebase, `payload.bin` or `signal.trc` yet), and Mapped pays an item and 5 kills of XP (no codebase or `core.dump`).
+- *Tells* keep their old answers (the burst, SIGINT) beside the interrupt: the simplification is R1. Their counts follow 3.5 already (none to level 5, one from 6, two from 17, an elite one more). A cut answers a charge riding the cancelled move, and a cast or seal landing on that part that cycle.
+- *Attack sets are evened out*: each set's damage over 20 cycles is scaled to its Standard's (`SET_SCALE`; Lockout ×0.8, Bloom ×0.88, Ambush ×1.16, Hot rig ×2.06 on the Hash's base), so "×1.5" on the Hammer is a bit more in play. Its jitter is a cycle either way, never onto cycle 1.
+- *Rule (b)'s extra charge* is Full Disk, added to DEADBOLT's set (three charges and a cast). *Rule (c)'s budget* counts cancels; a tick crossed after the third is spent for nothing.
+- *Every verb works on the map and the prompt*, but there is no `scan <room>`, `ls -a` or Lock the den (no switches), and help requests are R4.
+- *The playtest's ×10 clock* also speeds the rest at home and the 30-second reconnect wait.
+- *Who writes a server*: by kind unless `&author=` says otherwise (Mailhub TOLLGATE, Relay SWARMLINE, Mirror PALEMASK, Archive GLASSJAW, Lab LANTERN). Every family the author writes and that is open at the server's level turns up in at least one room.
 
 ## 10. Open questions for the designer
 

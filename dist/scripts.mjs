@@ -37,11 +37,12 @@ export const slotsOf = (s) => SCRIPT.slots + (scriptHooks.slots?.(s) || 0);
 export function scriptsOf(s) {
   if (s.camp) return (s.camp.scripts ||= []);
   if (s.breach) return (s.breach.scripts ||= []);
+  if (s.rooms) return (s.rooms.scripts ||= []); // the rooms playtest (floorplan.mjs)
   return [];
 }
 // A line in the breach's tty too, when there is one.
 function log(s, type, text) {
-  const b = s.breach;
+  const b = s.breach || s.rooms;
   if (b?.log) { b.log.push(text); if (b.log.length > 40) b.log.shift(); }
   return emit(s, type, text);
 }
@@ -75,7 +76,7 @@ export const priceOf = (id) => SCRIPT.price[SCRIPTS[id].rarity];
 // Why you can't run a script now, or null.
 export function scriptBlock(s, i) {
   const e = s.encounter, id = scriptsOf(s)[i];
-  if (!active(s) || !e?.breach) return 'Scripts run in a breach fight.';
+  if (!active(s) || !(e?.breach || e?.rooms)) return 'Scripts run in a breach fight or a server room.';
   if (!id) return `No script in slot ${i + 1}.`;
   if (e.scriptUsed) return 'One script a fight: you ran one already.';
   return null;
@@ -91,7 +92,8 @@ export function runScript(s, i, target = null) {
   if (x.use(s, p) === false) { warn(s, `${x.name} would do nothing now. You keep it.`); return false; }
   bag.splice(i, 1);
   e.scriptUsed = x.id;
-  (s.breach.stats ||= {}).scripts = (s.breach.stats.scripts || 0) + 1;
+  const at = s.breach || s.rooms;
+  (at.stats ||= {}).scripts = (at.stats.scripts || 0) + 1;
   if (virusIntegrity(s).current === 0) finish(s, 'victory'); // it broke the last part
   return true;
 }

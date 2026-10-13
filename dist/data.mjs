@@ -507,7 +507,10 @@ export const FIXTURES = {
   tracer: { name: 'TRACER', family: 'tracer', mutation: null, threat: 13 },
 };
 
-const familyOf = (id) => FAMILIES[id] || GUARDS[id];
+// Bodies that live only in server rooms (dist/families.mjs registers the Trojan, the Cryptominer and the Wiper here for
+// the rooms playtest, docs/servers.md R0). They are kept out of FAMILIES so nothing in the old game rolls them.
+export const ROOM_FAMILIES = {};
+const familyOf = (id) => FAMILIES[id] || GUARDS[id] || ROOM_FAMILIES[id];
 
 export const TICKER = ['SCRAP 14.22 +1.8%', 'ZERO-DAY 441.08 −3.1%', 'KESSLER NETWORK DENIES BREACH', 'BOUNTY: VANTA NODE / 850C', 'SECTOR 07: RELAY TRAFFIC UNUSUAL'];
 

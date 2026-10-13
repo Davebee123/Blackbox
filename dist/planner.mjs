@@ -7,6 +7,7 @@ import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores } from './genes.mjs';
+import { interruptMove, saveTick } from './interrupt.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 const ok = (s, text) => !toIntent(s, text).error && !(TAUNTS.has(text) && noTaunt(s));
@@ -30,6 +31,9 @@ const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target ==
 const order = (s, p) => (p.deadman && !ignores('tripwire') && livingParts(s).some((x) => x !== p && x.kind === 'system') ? 0.05 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
+// A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
+const shunned = (s, p) => !!p?.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader');
+const shunning = (s) => livingParts(s).some((p) => shunned(s, p));
 const HITS = ['zero-day', 'retaliate', 'opening', 'chain-reaction', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'spike']; // the cheap core hits before key 1
 // A command that breaks this part right now, if there is one.
 // Flicker: the Shade is out of phase on odd cycles; a player hits something else then.
@@ -74,6 +78,14 @@ export function planner(s) {
   const at = livingParts(s).find((p) => plan && plan.endsWith(' ' + p.id)) || null;
   const told = tellMove(s, at, plan);
   if (told && ok(s, told)) return told;
+  // A server room (interrupt.mjs): take a part across a tick on the cycle its move is due (unless the plan breaks a
+  // part outright), and keep a tick for a charge that's coming.
+  if (s.encounter.rooms && !(plan && at && killing(s, plan, at))) {
+    const cut = interruptMove(s, plan);
+    if (cut && ok(s, cut)) return cut;
+    const keep = saveTick(s, plan);
+    if (keep && ok(s, keep)) return keep;
+  }
   // Scrambled (a Scramble, or a Possession that made it longer): a big hit may turn on you, so set up instead,
   // unless the hit breaks the part.
   const e = s.encounter;
@@ -95,7 +107,8 @@ function play(s) {
   // A tell (tells.mjs): a charge or cast whose wind-up it can reach, or a part about to seal.
   // A part left Open by a tell you read (tells.mjs): +50% from everyone for 2 cycles, so cash it in.
   const open = !raidFocus(s) && ['breaker', 'bastion'].includes(classOf(s)) && livingParts(s).find((p) => p.openUntil >= s.encounter.cycle && !p.deadman);
-  const t0 = raidFocus(s) || tellFocus(s) || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  let t0 = raidFocus(s) || tellFocus(s) || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
+  if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
   // Lockbox: a warded part soaks a burst, so break the Lockbox first. Mutex: its lock comes back while it lives,
   // so break it first too (a burn class chips under either anyway).
@@ -122,7 +135,7 @@ function play(s) {
   if (lit && bare(t) && (!lit.startsWith('shatter') || previewDamage(s, 'shatter', t) >= best)) return lit;
   // 1. Break a part that's about to fire, or a bare part before it patches.
   const urgent = [...new Set(now.map((i) => part(s, i.source)))].filter(alive);
-  for (const p of [...urgent, ...livingParts(s).filter(bare)]) {
+  for (const p of [...urgent, ...livingParts(s).filter(bare)].filter((x) => !shunned(s, x))) {
     if (doomed(s, p)) continue;
     // Kill Switch first when the helpers on a part break it: with Last Gasp in the cash-in it loses nothing, unless
     // some helpers still chip armor (cashed in on ◆ they break one each). On a part about to fire it's worth that.
@@ -162,8 +175,8 @@ function play(s) {
       killNow(s, t),
       // Fork Bomb strips one ◆ a part: worth it only when Crack is cooling. (Spamming it whenever two
       // parts wore armor kept the Demolitionist from its real strip, Shaped Charge into Shatter.)
-      armored(s).length >= 2 && !ok(s, 'crack ' + t.id) && !ok(s, 'shaped-charge ' + t.id) && 'fork-bomb',
-      armored(s).length >= 2 && livingParts(s).some((p) => p.kind === 'fragment') && 'garbage-collect', // its moment is fragments: as a strip it costs more than it breaks
+      armored(s).length >= 2 && !ok(s, 'crack ' + t.id) && !ok(s, 'shaped-charge ' + t.id) && !shunning(s) && 'fork-bomb',
+      armored(s).length >= 2 && livingParts(s).some((p) => p.kind === 'fragment') && !shunning(s) && 'garbage-collect', // its moment is fragments: as a strip it costs more than it breaks
       t.armor >= 2 && 'crack ' + t.id,
       t.armor >= 2 && 'botnet ' + t.id,
       !injected(s, t) && 'inject ' + t.id,
@@ -179,7 +192,7 @@ function play(s) {
   }
   return first(s, [
     killNow(s, t),
-    livingParts(s).filter(bare).length >= 3 && 'fork-bomb', // three bare parts: the area hit
+    livingParts(s).filter(bare).length >= 3 && !shunning(s) && 'fork-bomb', // three bare parts: the area hit
     t.integrity > 90 && readyIn(s, 'overload') <= 1 && ['overload', 'flood', 'shatter'].filter((id) => readyIn(s, id) === 0 && usable(s).includes(id)).length >= 1 && (t.patchAt == null || t.patchAt > s.encounter.cycle + 1) && 'exploit ' + t.id,
     burnsOn(s, t) >= 2 && 'detonate ' + t.id,
     t.integrity > 30 && 'tag ' + t.id,
