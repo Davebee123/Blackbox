@@ -125,7 +125,7 @@ test('each tell sits on a fixed part, shown on the chip and in the codex: the En
     }
   }
   const s = fight({ level: 12 });
-  assert.match(partAbout(part(s, 'encryptor'), s.encounter.virus), /Full Disk \(a charge\)/);
+  assert.match(partAbout(part(s, 'encryptor'), s.encounter.virus, s), /Charges Full Disk\./);
 });
 
 test('no pile-ups: a charge never lands with another part\'s heavy attack, and below 17 one tell is live at a time', () => {
@@ -509,20 +509,23 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   const html = boardMarkup(s, null);
   assert.match(html, /intent tell t-charge/);
   assert.match(html, /POSSESSION|Possession/);
-  assert.match(html, new RegExp(`▸ Burst ${t.need} or ◆2 in 2`), 'the burst, the ◆ that do it, and when');
+  assert.match(html, new RegExp(`▸ Burst ${t.need} or ◆2<`), 'the burst and the ◆ that do it (the kick line says when)');
+  assert.match(html, /<span class="tl-when">in 2<\/span>/);
   assert.doesNotMatch(html, /tl-win/, 'not open yet');
-  assert.match(html, /Only a command of yours aimed at it counts/);
+  assert.match(html, new RegExp(`title="Possession: [^"]*\nDeal ${t.need} to the Scrambler, or break 2 ◆ on it\. Window: in 2 cycles\."`), 'the tooltip: what it does, then how to stop it and when');
   hold(s, 2);
   const now = boardMarkup(s, null);
   assert.match(now, /intent tell t-charge now win/, 'open: the chip is lit');
   assert.match(now, /<b class="tl-win">NOW<\/b>/);
-  assert.match(now, new RegExp(`▸ Burst ${t.need} or ◆2 now`));
+  assert.match(now, new RegExp(`▸ Burst ${t.need} or ◆2<`));
+  assert.match(now, /Window: this cycle\."/);
   // A cast's window is two cycles: the cell before it lands is marked, lit while you're in it.
   const cast = fight({ level: 12 });
   quietParts(cast);
   tell(cast, 'extortion', 'encryptor', 1);
   const ch = boardMarkup(cast, null);
-  assert.match(ch, /Casting[\s\S]*SIGINT or hit ×2 now/);
+  assert.match(ch, /Casting[\s\S]*SIGINT or hit ×2</);
+  assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]*\nSIGINT, or hit the Encryptor twice\. Window: now until it lands next cycle\."/);
   assert.match(ch, /tl-window live[^>]*><span class="tw-word">Window · <\/span>now/, 'the window marked on the timeline');
 });
 

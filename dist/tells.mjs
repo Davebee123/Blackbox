@@ -685,6 +685,8 @@ export function tellIntents(s, columns = 4) {
       x.effect = atk.effect;
       x.amount = atk.effect === 'damage' ? Math.round(atk.amount * (p.enrage && p.integrity < p.max / 2 ? CONFIG.enrage : 1)) : atk.amount;
       if (atk.hit) x.hit = atk.hit;
+      if (atk.burst) x.burst = atk.burst; // Full Disk: its burst of encryption a cycle, on top
+      if (t.shred) x.shred = true; // Deep Shred: a file from your pack too
       if (t.spawn) x.spawn = t.spawn + 1;
       x.plain = p.attack.name;
     }

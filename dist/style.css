@@ -1455,8 +1455,6 @@ body.no-motion .sp-go { animation: none; opacity: 1; }
 .mrow.has-f .tag, .mrow.has-f .mexp { grid-column: 3; }
 /* The codex: ??? until broken */
 .part-name { position: relative; }
-.part-name[data-tip]::after { content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: max-content; max-width: 280px; padding: 6px 9px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--panel); color: var(--text); font: 400 12px/1.4 var(--sans); letter-spacing: 0; text-transform: none; white-space: normal; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); opacity: 0; visibility: hidden; transition: opacity 0.08s, visibility 0s linear 0.08s; pointer-events: none; }
-.bpart:hover .part-name[data-tip]::after { opacity: 1; visibility: visible; transition-delay: 0.15s, 0s; }
 .part-name .unk { margin-left: 3px; font-size: 10px; color: var(--dim); }
 .codex { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .cx-group b { display: block; font: 600 12px var(--mono); letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
@@ -3393,3 +3391,30 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* Breach healing cap: the bar past the Signal you came into the fight with is fenced off (hatched, a hard edge). */
 .bigbar { position: relative; }
 .bigbar .heal-cap { position: absolute; top: 0; bottom: 0; display: block; pointer-events: auto; border-left: 2px solid var(--bright); background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0 3px, rgba(255, 255, 255, 0.16) 3px 6px); }
+
+/* Fight readability (fightread.mjs). Your gear's conditional rules under Status: a chip each, lit (teal, a soft glow)
+   while its condition holds, dim while it doesn't, struck through once a once-a-fight rule is spent. The board marks
+   the columns a cycle rule is live in (a clock in the header) and the parts a part rule holds on (a chip by the name);
+   a decoded part whose rule reaches another row says so under its name (a lock: "locks Encryptor"). */
+.hud-gear { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3); margin-top: var(--s3); min-width: 0; }
+.hg-k { display: inline-flex; align-items: center; gap: var(--s1); flex: none; height: var(--h-chip); font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+.hg-k .glyph { width: 11px; height: 11px; margin: 0; }
+.gfx-list { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.gfx { display: inline-flex; align-items: center; gap: 4px; height: var(--h-chip); padding: 0 7px; border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--inset); color: var(--dim); font: 600 11px/1 var(--sans); max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help; transition: color 0.15s, border-color 0.15s, background 0.15s, box-shadow 0.15s; }
+.gfx .gfx-ico { flex: none; width: 11px; height: 11px; margin: 0; opacity: 0.7; }
+.gfx.lit { color: var(--you); border-color: rgba(127, 209, 199, 0.75); background: rgba(127, 209, 199, 0.12); box-shadow: 0 0 8px rgba(127, 209, 199, 0.3); }
+.gfx.lit .gfx-ico { opacity: 1; }
+.gfx.spent { text-decoration: line-through; opacity: 0.6; }
+.gfx.fx-gear { animation: fx-gear 0.7s ease-out; }
+@keyframes fx-gear { 0% { background: rgba(127, 209, 199, 0.45); box-shadow: 0 0 16px rgba(127, 209, 199, 0.8); color: var(--bright); } 100% { } }
+.fx-float.gear { color: var(--you); font: 600 calc(12px * var(--size)) var(--mono); letter-spacing: 1.5px; text-transform: uppercase; }
+.bhead .gcyc { display: inline-grid; place-items: center; margin-left: 4px; color: var(--you); vertical-align: middle; cursor: help; }
+.bhead .gcyc .glyph { width: 11px; height: 11px; margin: 0; }
+.bhead .bnow .gcyc { margin: 0; }
+.bhead .bcell.gear-cyc { box-shadow: inset 0 -2px 0 rgba(127, 209, 199, 0.55); }
+.gpart { display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; margin-left: 4px; border: 1px solid rgba(127, 209, 199, 0.75); border-radius: var(--r-btn); color: var(--you); background: rgba(127, 209, 199, 0.12); cursor: help; }
+.gpart .glyph { width: 11px; height: 11px; margin: 0; }
+.pcue { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; min-width: 0; padding: 1px 5px; border: 1px dashed var(--line-strong); border-radius: var(--r-tag); color: var(--amber); font: 600 10px/14px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; overflow-wrap: anywhere; }
+.pcue .pcue-ico { width: 10px; height: 10px; margin: 0; flex: none; }
+.board .bpart.linked { outline: 1px dashed var(--amber); outline-offset: -1px; }
+@media (prefers-reduced-motion: reduce) { .gfx.fx-gear { animation: none; } }

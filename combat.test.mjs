@@ -551,7 +551,7 @@ test('codex: a component says ??? until you break one, then what it does', async
   command(s, 'engage');
   const v = s.encounter.virus, p = v.parts.find((x) => x.id === 'pulse');
   assert.ok(!knowsPart(s, v, p));
-  assert.match(boardMarkup(s, null), /Unknown. Break one/);
+  assert.match(boardMarkup(s, null), /title="Pulse Node: \?\?\?\nBreak one to decode what it does\."/);
   Object.assign(p, { armor: 0, integrity: 1 });
   command(s, 'spike pulse');
   const ev = resolveCycle(s);

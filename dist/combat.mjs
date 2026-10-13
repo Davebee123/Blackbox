@@ -641,7 +641,12 @@ const uniqueFx = (s) => {
   if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100) * 10) / 10;
   return out.concat(Object.values(rules));
 };
+// The fight HUD's gear row reads the same list and conditions (fightread.mjs gearLive), so it lights exactly when they hold.
+export const gearFx = (s) => uniqueFx(s);
 const telling = (s, p) => !!tellsOf(s)?.list.some((t) => t.told && (!p || t.part === p.id));
+export const fxHolds = (s, fx, ctx = {}) => fxCond(s, fx, ctx);
+// An effect that fired, on its event: the HUD's gear chip flashes and its name floats off the board (app.js).
+const firedOf = (xs) => (xs.length ? { gear: xs.map((x) => ({ id: x.id, name: x.name || x.it.name })) } : {});
 function fxCond(s, fx, ctx = {}) {
   const e = s.encounter, p = ctx.target;
   const d = () => (e?.mode === 'run' || s.run ? s.run || { integrity: 1, max: 1 } : s.server);
@@ -708,9 +713,9 @@ export function fxAnswer(s, p = null) {
   for (const x of fxFire(s, 'answer')) {
     const who = x.name || x.it.name;
     if (x.fx.do === 'read-hit' && alive(p) && !e.reading) { e.reading = true; hit(s, p, x.value, { by: who }); e.reading = false; } // Ping of Death: the part you read takes it
-    if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who} reduces your cooldowns by ${x.value}.`); }
-    if (x.fx.do === 'heal') heal(s, x.value, who);
-    if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield' }); }
+    if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who} reduces your cooldowns by ${x.value}.`, firedOf([x])); }
+    if (x.fx.do === 'heal') heal(s, x.value, who, firedOf([x]));
+    if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${who} raises your shield to ${e.shield}.`, { mark: 'shield', ...firedOf([x]) }); }
   }
 }
 // How much one command counts toward calling off a tell (Double Tap, Spectre: twice).
@@ -2394,7 +2399,13 @@ export function hit(s, p, base, opts = {}) {
   // Race Window, Hot Reload: a crit from your command readies that skill again.
   if (crit && opts.mine && !opts.dot && dealt > 0 && e.commanding && e.lastSkill && e.readyAt[e.lastSkill] > e.cycle) for (const x of fxFire(s, 'crit', { do: 'refund-skill' })) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${x.name || x.it.name}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); break; }
   e.lastCrit = !!crit && !!opts.mine;
-  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts) });
+  // Your gear's conditional rules that went into this hit (a bonus to its damage, or the crit chance behind a crit).
+  const fired = opts.mine && !opts.server && raw > 0 ? [
+    ...fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null }, false),
+    ...(opts.dot ? [] : fxFire(s, 'hit', { target: p, do: 'damage+' }, false)),
+    ...(crit && !forced ? fxFire(s, 'hit', { target: p, do: 'crit%' }, false) : []),
+  ].filter((x) => x.fx.if) : [];
+  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired) });
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor });
   // A server room's fight (floorplan.mjs): the interrupt ticks (interrupt.mjs), and the room bodies' own rules on a hit
   // (families.mjs: a Trojan's Package unpacks). 'gone': the part left the board without breaking.
@@ -2827,14 +2838,14 @@ const allyOf = (s, who) => hooks.crewAllies?.(s)?.find((x) => x.who === who)?.st
 const fightFromOf = (s) => (s.run?.breach ? s.breach?.fightFrom : s.run?.rooms ? s.rooms?.fightFrom : null); // a breach's, or a server room's (floorplan.mjs)
 export const healCap = (s) => { const d = defender(s), from = fightFromOf(s); return from != null ? Math.min(d.max, from) : d.max; };
 // lift: a restore that counts like a patch (the Sasser script): it ignores the cap and raises it with you.
-export function heal(s, amount, label, { lift = false } = {}) {
+export function heal(s, amount, label, { lift = false, gear = null } = {}) {
   const d = defender(s);
   if (s.encounter?.virus?.raid) amount = raidAbsorb(s, amount); // encrypted sectors (raid.mjs)
   const cap = lift ? d.max : healCap(s), healed = Math.max(0, Math.min(amount, cap - d.integrity));
   d.integrity += healed;
   if (lift && s.run?.breach && s.breach?.fightFrom != null) s.breach.fightFrom = Math.max(s.breach.fightFrom, d.integrity);
   if (lift && s.run?.rooms && s.rooms?.fightFrom != null) s.rooms.fightFrom = Math.max(s.rooms.fightFrom, d.integrity);
-  emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Signal you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed });
+  emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Signal you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed, ...(gear ? { gear } : {}) });
 }
 
 // Bastion Uptime: once per fight, a blow that would drop you to 0 leaves you at 1.
@@ -2993,13 +3004,13 @@ function landAttack(s, p) {
     let crit = !atk.noCrit && (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit; // a tell never crits (tells.mjs): it's already as big as it gets
     if (crit && fxFire(s, 'struck', { do: 'crit-normal', atk }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have been a critical strike. It lands as a normal hit.`, { source: p.id }); }
     let half = fxFire(s, 'struck', { do: 'halve', atk })[0];
-    if (half) emit(s, 'blocked', `${half.name || half.it.name}: ${atk.name} deals half damage.`, { source: p.id });
+    if (half) emit(s, 'blocked', `${half.name || half.it.name}: ${atk.name} deals half damage.`, { source: p.id, ...firedOf([half]) });
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less damage.`, { source: p.id }); }
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
     const dealt = takeDamage(s, absorbed(s, spikeCapped(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p) * (e.virus.raid ? raidTaken(s) : 1)), atk), atk, p), p.id, atk.name);
     if (dealt) classEach('struck', s, atk, dealt, p);
-    for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%', atk }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.name || x.it.name);
+    for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%', atk }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.name || x.it.name, firedOf([x]));
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
     // Echo: while the Echo lives, the hit repeats next cycle at half.
     if (dealt && !atk.echoed && livingParts(s).some((x) => x.echo && !(x.echoCancelUntil >= e.cycle))) { // Echo Cancel: it stops repeating

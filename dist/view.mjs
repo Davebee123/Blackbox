@@ -39,7 +39,7 @@ import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
-import { partTells } from './tells.mjs';
+import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, GEAR_ICON } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { bodyTags } from './families.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, sigsOf, STREAK, SCOUT } from './invasion.mjs';
@@ -293,41 +293,38 @@ function statusPanel(s) {
   const timed = statusSpans(s).map((x) => ({ name: x.name, kind: x.kind, tip: `${x.value ? x.value + ' · ' : ''}${x.cycles} ${x.cycles === 1 ? 'cycle' : 'cycles'} left${x.title ? `\n${x.title}` : ''}` }));
   const all = [...timed, ...youStanding(s)];
   const chips = all.map((x) => `<span class="st ${x.kind}" data-tip="${esc(x.tip)}" tabindex="0">${esc(x.name)}</span>`).join('');
-  return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${chips || '<small class="quiet">nothing on you</small>'}</div></div>`;
+  return `<div class="hud-status"><div class="bar-top"><strong>Status</strong></div><div class="st-list">${chips || '<small class="quiet">nothing on you</small>'}</div>${gearRow(s)}</div>`;
+}
+// Your gear's conditional rules (fightread.mjs gearLive): a chip each, lit while its condition holds, dim while it
+// doesn't, struck through once a once-a-fight one is spent. Only what you have equipped; nothing when none wait on a
+// condition. app.js keeps a Sync Window rule lit while the bar is in the window, and flashes a chip when it fires.
+function gearRow(s) {
+  const live = gearLive(s);
+  if (!live.length) return '';
+  const chips = live.map((g) => `<span class="gfx k-${g.kind}${g.lit ? ' lit' : ''}${g.spent ? ' spent' : ''}" data-fx="${esc(g.id)}" data-if="${esc(g.cond)}" title="${esc(g.tip)}" tabindex="0">${glyph(GEAR_ICON[g.kind] || 'protocol', 'gfx-ico')}${esc(g.name)}</span>`).join('');
+  return `<div class="hud-gear" aria-label="Gear"><span class="hg-k">${glyph('protocol', 'hg-ico')}Gear</span><span class="gfx-list">${chips}</span></div>`;
 }
 
 
-// A tell (tells.mjs): on its part's row, in the column it lands, never hidden. It says what it is, what's coming
-// and what answers it, in a word or two; the hover has the whole of it. Its window (the cycles it can be answered
-// in) shows as NOW on the chip while it's open, and a longer window marks the cells before it (tellSpan).
+// A tell (tells.mjs): on its part's row, in the column it lands, never hidden. The chip is the glance: its kind and
+// when it lands (NOW while its window is open), its name and number, and the answer's verb. The tooltip says the rest
+// once each (fightread.mjs tellTip): what happens if it lands, and how to stop it and when. A longer window marks the
+// cells before it (tellSpan).
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
 const TELL_ICON = { charge: 'event-warning', cast: 'interrupt', seal: 'event-lock', mimic: 'scan', lock: 'event-lock' };
 function tellChip(s, i, c, k = '', to = null) {
   const p = part(s, i.source), left = i.left ?? Math.max(0, (i.need || 0) - (i.wound || 0));
-  const open = i.open ?? c === 0, opens = i.winFrom ?? c; // its window is open now; or opens in that many cycles
+  const open = i.open ?? c === 0;
   // What it does, as short as an attack chip's number.
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount} · burst` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
     : i.tell === 'cast' ? (i.does === 'loud' ? '+35% hits' : i.does === 'grow' ? '+25% hp' : i.does === 'overclock' ? '×2 both ways' : 'faster')
     : i.tell === 'seal' ? '+◆' : i.tell === 'lock' ? 'locks a key' : 'copies you';
-  // The answer as an order: what it takes, and now (its window is open) or when its window opens.
-  const at = open ? 'now' : `in ${opens}`;
-  const answer = i.tell === 'charge' ? `Burst ${left}${i.armored && i.chits ? ` or ◆${i.chits}` : ''} ${at}`
-    : i.tell === 'cast' ? (open ? `SIGINT or hit ×${left} now` : `SIGINT ${at}`)
-    : i.tell === 'seal' ? (c ? `Strip ◆${p?.armor || 0} first` : `Strip ◆${p?.armor || 0} now`) : i.tell === 'lock' ? 'Feed it a cooldown' : `Go quiet ${at}`;
+  // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
+  const answer = i.tell === 'charge' ? `Burst ${left}${i.armored && i.chits ? ` or ◆${i.chits}` : ''}`
+    : i.tell === 'cast' ? `SIGINT or hit ×${left}`
+    : i.tell === 'seal' ? `Strip ◆${p?.armor || 0}` : i.tell === 'lock' ? 'Feed it a cooldown' : 'Go quiet';
   const progress = i.wound && ['charge', 'cast'].includes(i.tell) ? `${i.wound}/${i.need}` : '';
-  const lands = c ? `in ${c}` : 'this cycle';
-  const window = !open ? `Its window opens ${opens === 1 ? 'next cycle' : `in ${opens} cycles`}, and hits before then don't count.` : c ? `Its window is open now and stays open until it lands.` : 'Its window is open now: this cycle is the last.';
-  const counts = 'Only a command of yours aimed at it counts, typed after it was said. Area hits, burns, helpers and auto-repeat don\'t.';
-  const pays = 'Answer it in full and the part staggers: +50% from everyone for 2 cycles, and its next attack lands a cycle later.';
-  const after = 'If it lands it leaves you Corrupted, knocks your last skill offline, and hangs your next command.';
-  const tip = i.tell === 'charge'
-    ? `${i.name}: the ${p?.name}'s ${i.plain || 'attack'} in this cell, charged (${what}). It lands ${lands}. ${window} To call it off, ${i.answer}. Each ◆ you break in the window counts as half the burst. Half the burst lands it plain and spares you what it leaves behind, and less takes its extra off in step. ${counts} ${pays} ${after}`
-    : i.tell === 'cast' && i.does === 'overclock' ? `The ${p?.name} is casting ${i.name}. It lands ${lands}: for 2 cycles every part takes double damage, and every attack comes a cycle sooner. ${window} To stop it, ${i.answer}. Or let it land, and spend your biggest cooldown into the doubled parts. ${counts}`
-    : i.tell === 'cast' ? `The ${p?.name} is casting ${i.name}. It lands ${lands}: ${i.does === 'loud' ? 'its attacks hit harder for a while' : i.does === 'grow' ? 'every part grows more Integrity' : 'its attacks come a cycle sooner for a while'}. ${window} To stop it, ${i.answer}. ${counts} ${pays} ${after}`
-    : i.tell === 'lock' ? `${i.name}: when it lands (${lands}), the first command you fire after it is locked for 3 cycles, key 1 included. Nothing answers it but breaking the ${p?.name}. Feed it a skill you just fired, or one with a long cooldown, and it costs you little.`
-    : i.tell === 'seal' ? `${i.name}: if the ${p?.name} still wears ◆ when it lands (${lands}), it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it before then, and the skill that takes its last ◆ is ready again.`
-    : `The Mimic plays back the command you fire ${lands}, at you${BOSSES[s.encounter?.virus?.boss]?.mimic > 1 ? ', twice over if you\'re Scrambled' : ''}. Fire something with no direct hit then (a debuff, a strip, a burn, a shield), and the Mimic is Open.`;
-  return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tip)}">`
+  return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
     + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
     + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what">${esc(what)}</small></div>`
     + `<div class="tl-ans">▸ ${esc(answer)}${progress ? `<span class="tl-prog">${esc(progress)}</span>` : ''}</div>`
@@ -373,6 +370,7 @@ export function codexMarkup(s) {
 }
 const an = (w) => (/^[aeiou]/i.test(w) ? 'An' : 'A');
 const list = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
+const list2 = list;
 // Who wrote it, after its name: · TOLLGATE, in its author's colour (authors.mjs). SPRAWL-00's strays have none.
 export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byline" style="--ac:${AUTHORS[v.author].colour}" title="${esc(AUTHORS[v.author].style)}">· ${esc(AUTHORS[v.author].name)}</span>` : '');
 // Its genes, as chips under its bar: the body's dim, what it rolled or was built with bright, ??? until seen. A
@@ -420,36 +418,10 @@ export function collectionMarkup(s) {
   return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div>${farm}<ul class="coll">${rows}</ul></section>`;
 }
 
-const partName = (id) => ({ encryptor: 'Encryptor', replicator: 'Replicator' }[id] || id);
-// What a component does, in a line (the codex). ??? until you've broken one.
-export function partAbout(p, v = null) {
-  const a = p.attack, out = [];
-  // The tells it carries (tells.mjs): a fixed part, so you know where to look.
-  const tl = v ? partTells(v, p) : [];
-  if (tl.length) out.push(`it powers up its tells: ${tl.map((x) => `${x.name} (a ${x.kind})`).join(' and ')}`);
-  if (a) {
-    const every = a.interval && a.interval < 900 ? ` every ${a.interval} ${a.interval === 1 ? 'cycle' : 'cycles'}` : '';
-    if (a.effect === 'damage') out.push(a.dump ? `${a.name}: a big hit once it has logged 3 keystrokes` : a.alarm ? `${a.name}: raises the alarm, then hits ${a.amount}${every}` : `${a.name}: hits you for ${a.amount}${every}${a.ramp ? ', more each time' : ''}${a.siphon ? ', and heals itself' : ''}${a.grow ? ', growing as the fight goes on' : ''}${a.windup ? `; enough damage while it winds up calls it off` : ''}`);
-    else if (a.effect === 'encrypt') out.push(`${a.name}: locks part of you, ${a.amount} more each time, until it breaks`);
-    else if (a.effect === 'scramble') out.push(`${a.name}: ${a.hit ? `hits ${a.hit} and ` : ''}scrambles you for ${a.amount} cycles: each of your attacks may hit you instead, at half${every}`);
-    else if (a.effect === 'heal') out.push(`${a.name}: repairs the most damaged part by ${a.amount}${every}`);
-    else if (a.effect === 'replicate') out.push(`${a.name}: spawns fragments that gnaw you${every}`);
-  }
-  if (p.veiled) out.push('hides its timers while it has armor');
-  if (p.phase) out.push('only there on even cycles');
-  if (p.syncOnly) out.push('only commands in a Sync Window hurt it');
-  if (p.tax) out.push('slows your cooldowns while it lives');
-  if (p.echo) out.push('every hit you take repeats at half');
-  if (p.rearm) out.push(`re-arms another part every ${p.rearm} cycles`);
-  if (p.overrun) out.push('its fragments overrun you');
-  if (p.ward) out.push(`wards the ${partName(p.ward)}: it loses at most ${Math.round(CONFIG.ward * 100)}% of itself a cycle while this lives`);
-  if (p.twin) out.push(`twinned with the ${partName(p.twin)}: break one while the other lives and it reboots, so break both`);
-  if (p.reflect) out.push(`every ${p.reflect} cycles it mirrors your commands: they do nothing, and some bounces back`);
-  if (p.lock) out.push(`holds a lock on the ${partName(p.lock)}: a shield of ${Math.round(CONFIG.mutex.share * 100)}% of it that comes back ${CONFIG.mutex.every} cycles after you break it, while this lives`);
-  if (p.deadman) out.push(`a tripwire: break it while the others stand and they go loud, ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% harder and a cycle sooner, so break it last`);
-  if (p.command) out.push(`commands the fragments: they gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder while it lives, and drop when it breaks`);
-  if (p.mimic) out.push('records you: on its beat it plays the command you fire back at you, so fire something with no direct hit then');
-  return out.map((x) => x.replace(/^./, (c) => c.toUpperCase())).join('. ') + (out.length ? '.' : '') || 'It has no attack of its own.'; // each its own sentence
+// What a component does and what answers it (fightread.mjs partRead), for the codex and the board. ??? until decoded.
+export function partAbout(p, v = null, s = null) {
+  const r = partRead(s, v || { parts: [p] }, p);
+  return `${r.does} ${r.answer}`;
 }
 function partTags(s, p) {
   const e = s.encounter, tags = [];
@@ -553,9 +525,12 @@ export function boardMarkup(s, selected, preview = null) {
   const hidden = fighting && timersHidden(s);
   const remaining = Math.max(0, (cycleLength(s) - e.elapsedMs) / 1000);
   const quietCol = (c) => fighting && !hidden && !list.some((i) => i.col === c);
+  // A rule of yours that holds on odd (or even) cycles marks the columns it is live in (fightread.mjs cycleGear).
+  const gearCyc = (c) => { const names = fighting ? cycleGear(s, e.cycle + c) : []; return names.length ? `<i class="gcyc" title="${esc(`${list2(names)}: live on cycle ${e.cycle + c}.`)}">${glyph('clock')}</i>` : ''; };
+  const live = fighting ? gearLive(s) : [], onParts = gearOnParts(live);
   const head = `<div class="brow bhead"><div class="bcell bname">Part</div>
-    <div class="bcell bnow"><span>Now <small class="cyc">cycle ${e.cycle}</small></span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
-    ${[1, 2, 3].map((c) => `<div class="bcell">+${c}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
+    <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
+    ${[1, 2, 3].map((c) => `<div class="bcell${gearCyc(c) ? ' gear-cyc' : ''}">+${c}${gearCyc(c)}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
   // Your row mirrors the parts: what you'll do in each upcoming cycle.
   const cutNote = (q) => { const x = q?.target && e.rooms ? crossBy(s, q.ability, part(s, q.target)) : null; return x === 'cut' ? ' <small class="cuts">cuts</small>' : x === 'both' ? ' <small class="cuts">cuts · −tick</small>' : x === 'waste' ? ' <small class="cuts waste">−tick</small>' : ''; };
   const nowChip = e.queue
@@ -621,8 +596,13 @@ export function boardMarkup(s, selected, preview = null) {
     const marks = partMarks(s, p);
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.
     const fade = dying(p) ? ` style="animation-delay:-${Math.max(0, 1000 - (p._dyingUntil - Date.now()))}ms"` : '';
-    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}${knowsPart(s, e.virus, p) ? '' : ' · what it does: ???'}">
-      <div class="bcell bname">${pips(p.id)}<span class="part-top"><span class="part-name" data-tip="${esc(knowsPart(s, e.virus, p) ? partAbout(p, e.virus) : 'Unknown. Break one to learn what it does.')}">${esc(p.name)}${knowsPart(s, e.virus, p) ? '' : '<sup class="unk">?</sup>'}</span>${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ticksMarkup(s, p)}</span><span class="part-tags">${partTags(s, p)}</span></div>
+    // Its name cell carries what it does (fightread.mjs partTip: ??? until decoded); the rest of the row, the target.
+    // A decoded part whose rule reaches another row shows it under its name (a Mutex: "locks Encryptor").
+    const known = knowsPart(s, e.virus, p), cue = known ? partCue(s, e.virus, p) : null;
+    const cueTag = cue ? `<span class="pcue"${cue.link ? ` data-link="${esc(cue.link)}"` : ''}>${glyph(cue.icon, 'pcue-ico')}${esc(cue.text)}</span>` : '';
+    const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
+    return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ticksMarkup(s, p)}</span><span class="part-tags">${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';

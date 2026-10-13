@@ -849,6 +849,9 @@ function react(events) {
       case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
+    // A conditional rule of your gear that fired (combat.mjs: e.gear): its chip on the HUD flashes, and its name floats
+    // off what it touched, the part it hit or your bar, on the event's own beat.
+    if (e.gear?.length && !e.who) e.gear.forEach((g, k) => feel.add('gear', `#hud .gfx[data-fx="${CSS.escape(g.id)}"]`, k ? null : e.gear.map((x) => x.name).join(' · '), { floatAt: e.type === 'damage' && e.target ? `${row(e.target)} .part-top` : BAR, x: e.type === 'damage' ? 0.3 : 0.5 }));
   }
   feel.beat(0);
   const after = barWas();
@@ -1686,7 +1689,10 @@ function tickUi() {
   if (sw) {
     const live = !s.encounter.paused && inSync(s, s.encounter.elapsedMs / cycleLength(s));
     if (live !== sw.classList.contains('live')) { sw.classList.toggle('live', live); if (live) feel.key('click'); }
+    // A gear rule that holds in a Sync Window (fightread.mjs gearLive) is lit while the bar is in it.
+    for (const g of document.querySelectorAll('#hud .gfx[data-if="synced"]:not(.spent)')) g.classList.toggle('lit', live || !!s.encounter.synced);
   }
+  ttTapTick();
   if (cd) cd.textContent = s.encounter.paused ? 'II' : Math.max(0, (cycleLength(s) - s.encounter.elapsedMs) / 1000).toFixed(1);
   // One warning per cycle when something is about to land on you.
   const left = cycleLength(s) - s.encounter.elapsedMs;
@@ -2468,3 +2474,28 @@ document.addEventListener('pointerover', (e) => {
 });
 document.addEventListener('pointerout', (e) => { if (tt.at && !tt.at.contains(e.relatedTarget)) ttHide(); });
 for (const ev of ['pointerdown', 'keydown', 'scroll', 'blur']) addEventListener(ev, ttHide, true);
+// Touch has no hover: a tap on a fight's reading (a part's name cell, a tell chip, a gear chip) shows its card for a
+// few seconds. The board redraws on the tap (it targets the part), so the card finds its element again by a selector.
+let ttTap = null, ttTouch = false;
+document.addEventListener('pointerdown', (e) => { ttTouch = e.pointerType === 'touch'; }, true);
+document.addEventListener('click', (e) => {
+  if (!ttTouch) return;
+  const a = e.target.closest?.('#board .bname[title], #board .bname[data-tt], #board .intent.tell, #hud .gfx');
+  if (!a) return;
+  const row = a.closest('[data-target]'), sel = a.matches('.gfx') ? `#hud .gfx[data-fx="${CSS.escape(a.dataset.fx)}"]` : a.matches('.intent.tell') ? `#board .intent.tell[data-k="${CSS.escape(a.dataset.k || '')}"]` : row ? `#board .bpart[data-target="${CSS.escape(row.dataset.target)}"] .bname` : null;
+  if (sel) { ttTap = { sel, until: performance.now() + 3500, at: null }; requestAnimationFrame(ttTapTick); }
+});
+function ttTapTick() {
+  if (!ttTap) return;
+  if (performance.now() > ttTap.until) { ttTap = null; return ttHide(); }
+  const a = document.querySelector(ttTap.sel);
+  if (!a || ttTap.at === a) return;
+  if (a.hasAttribute('title')) { const t = a.getAttribute('title'); a.removeAttribute('title'); if (t) a.dataset.tt = t; }
+  ttTap.at = a; tt.at = a; ttShow(a);
+}
+// A part's cue that names another part (a Mutex: "locks Encryptor"): hovering it lights the row it reaches.
+document.addEventListener('pointerover', (e) => {
+  const c = e.target.closest?.('#board .pcue[data-link]');
+  document.querySelectorAll('#board .bpart.linked').forEach((r) => { if (!c || r.dataset.target !== c.dataset.link) r.classList.remove('linked'); });
+  if (c) document.querySelector(`#board .bpart[data-target="${CSS.escape(c.dataset.link)}"]`)?.classList.add('linked');
+});

@@ -23,6 +23,8 @@ const SIGNS = {
   strike: { flash: 'fx-strike', float: 'atk' },
   // You damaged a part.
   hit: { flash: 'fx-hit', float: 'amber', voice: 'hit', buzz: 10 },
+  // A conditional rule of your gear fired (Clock Skew's crit): its HUD chip flashes and its name floats. No sound of its own.
+  gear: { flash: 'fx-gear', float: 'gear' },
   // You fired inside the Sync Window.
   sync: { flash: 'fx-sync', float: 'sync', voice: 'sync', buzz: [8, 18, 8] },
   surprise: { flash: 'fx-surprise', float: 'surprise', voice: 'sync', buzz: [8, 18, 8, 18, 8] },

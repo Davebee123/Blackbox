@@ -58,8 +58,10 @@ export function floatOf(e, ctx = {}) {
       const kind = partKind(e);
       const name = e.via || (e.skill && ctx.skillName?.(e.skill)) || (kind === 'spike' ? 'Spike' : 'Hit');
       const what = e.src === 'burn' ? `${name} burn` : e.src === 'daemon' ? `${name} daemon` : name;
+      // A conditional rule of your gear that went into it (combat.mjs hit: e.gear) says so: "Spike crit −40 on the Pulse Node · Clock Skew".
+      const gear = e.gear?.length ? ` · ${e.gear.map((g) => g.name).join(', ')}` : '';
       const label = `${what}${e.crit ? ' crit' : ''}${kind === 'reflect' ? ' (reflected)' : ''} ${minus(e.amount)}`;
-      return make(kind, minus(e.amount), on(label, part(e.target)), 'part', e.target);
+      return { ...make(kind, minus(e.amount), on(label, part(e.target)) + gear, 'part', e.target), ...(gear ? { gear: e.gear } : {}) };
     }
     case 'server-hit': {
       if (!e.amount) return null;
