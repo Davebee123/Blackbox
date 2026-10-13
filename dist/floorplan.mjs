@@ -3,7 +3,7 @@
 // on a fresh character that's never saved.
 //
 //   rooms       a fight (process ▣, elite ◆▣, guard post ⛨, the core ♛, the hunter's den ☠), an interactable (cache ▤,
-//               vault ▥, rest ☰) or an empty junction (·). A fight room's family, author and attack set are fixed by the
+//               vault ▥, rest ☰) or an empty junction (·). The marks are the terminal's; the page draws icons. A fight room's family, author and attack set are fixed by the
 //               server's seed, so a room is a place you learn. Its mutation rerolls with each respawn, and one respawn
 //               in ten is a rare spawn (★, two levels up, three loot rolls).
 //   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Signal; rooms you've walked
@@ -60,15 +60,15 @@ export const ROOMS = {
 };
 // The server kinds (2.2), as room themes: one rule each, the hunter they keep, and the directory names their rooms take.
 export const KINDS = {
-  Mailhub: { rule: 'Spam floods', text: 'The rooms on its mail queue (the hunter\'s loop) bring a weak, quick Spam Flood to every fight.', hunter: 'patrol', author: 'tollgate',
+  Mailhub: { rule: 'Spam floods', text: 'Fights on the Patroller\'s loop bring a weak, quick Spam Flood.', hunter: 'patrol', author: 'tollgate',
     dirs: ['spool', 'postfix', 'mqueue', 'smtpd', 'relay', 'aliases', 'maildrop', 'bounce', 'virtual', 'transport', 'lmtp', 'pickup', 'qmgr', 'cleanup', 'tlsmgr', 'anvil', 'scache', 'flush'] },
-  Relay: { rule: 'Hops', text: 'Two shortcut links each skip a room, drawn as curves. The hunter uses them too.', hunter: 'patrol', author: 'swarmline',
+  Relay: { rule: 'Hops', text: 'Two curved links skip a room. The hunter uses them too.', hunter: 'patrol', author: 'swarmline',
     dirs: ['bind', 'named', 'zones', 'resolv', 'forward', 'slave', 'keys', 'dyn', 'stats', 'hints', 'rndc', 'journal', 'views', 'acl', 'dnssec', 'notify', 'axfr', 'master'] },
-  Mirror: { rule: 'Mirrors', text: 'One cache is a mirror, with an elite behind it.', hunter: 'track', author: 'palemask',
+  Mirror: { rule: 'Mirrors', text: 'One cache is a mirror with an elite behind it.', hunter: 'track', author: 'palemask',
     dirs: ['www', 'private', 'html', 'assets', 'cdn', 'static', 'uploads', 'cgi-bin', 'logs', 'media', 'themes', 'vhosts', 'certs', 'cache', 'drafts', 'mirror', 'stage', 'public'] },
-  Archive: { rule: 'Deep storage', text: 'Two vaults and two guard posts, each with its own key. Only the vault on the way to the Core unseals it.', hunter: 'track', author: 'glassjaw',
+  Archive: { rule: 'Deep storage', text: 'Two vaults, each with its own key. Only the vault before the Core unseals it.', hunter: 'track', author: 'glassjaw',
     dirs: ['backups', 'srv', 'cold', 'dumps', 'snapshots', 'incr', 'full', 'catalog', 'index', 'offsite', 'restore', 'media', 'rotate', 'weekly', 'monthly', 'ledger', 'escrow', 'ltfs'] },
-  Lab: { rule: 'Overheat', text: 'From the 10th cycle of every fight, the rack burns you for 2% of your max Signal each cycle, and every part for 3% of its max Integrity. Its Tracker moves a room every move once awake.', hunter: 'track', fast: true, author: 'lantern',
+  Lab: { rule: 'Overheat', text: 'From cycle 10 of a fight, the rack burns you for 2% of your max Signal a cycle and every part for 3% of its max Integrity. Its Tracker moves every move once awake.', hunter: 'track', fast: true, author: 'lantern',
     dirs: ['lab', 'tmp', 'bench', 'rig', 'sandbox', 'builds', 'cores', 'gpu', 'scratch', 'fuzz', 'harness', 'probe', 'samples', 'jit', 'debug', 'trace', 'cold', 'kiln'] },
 };
 export const KIND_IDS = Object.keys(KINDS);
@@ -78,8 +78,8 @@ export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', 
 export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '⛨', core: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·' };
 export const FIGHTS = ['process', 'elite', 'guard', 'core'];
 export const HUNTERS = {
-  patrol: { name: 'Patroller', body: 'bouncer', text: 'It walks a fixed loop, a room for every 2 of your moves. Its loop is drawn as a dashed red line.' },
-  track: { name: 'Tracker', body: 'tracer', text: 'It sleeps in its den and wakes the first time you walk into a room next to it (those rooms carry a red edge). Awake, it follows you a room for every 2 of your moves, and loses you 5 rooms away.' },
+  patrol: { name: 'Patroller', body: 'bouncer', text: 'Walks a fixed loop, a room for every 2 of your moves.' },
+  track: { name: 'Tracker', body: 'tracer', text: 'Wakes when you walk next to its den, then follows you a room for every 2 of your moves. Loses you 5 rooms off.' },
 };
 const GUARD_POOL = ['watchdog', 'sentinel', 'crawler', 'shredder'], ICE_POOL = ['tracer', 'bouncer'];
 export const RESIDENT = 'nb-deadbolt';
@@ -300,7 +300,7 @@ export function startRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', lev
   s.run = null;
   s.rooms.xpStart = xpTotal(s);
   s.rooms.seen[graph.core] = 'kind';
-  say(s, `${s.rooms.name}: a ${author.toUpperCase()} ${kind}, level ${level}, ${Object.keys(graph.rooms).length} rooms. Its Resident is ${BOSSES[RESIDENT].name}.`);
+  say(s, `${s.rooms.name}: a ${author.toUpperCase()} ${kind}. ${BOSSES[RESIDENT].name} holds the Core.`);
   return s.rooms;
 }
 const NAMES = { Mailhub: 'MERIDIAN-MX', Relay: 'HALVARD-NS', Mirror: 'VANTA-WWW', Archive: 'MOTHWELL-BK', Lab: 'SABLE-LAB' };
@@ -354,13 +354,14 @@ export const fmtLeft = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); re
 
 // ---------- progress ----------
 export const progressOf = (s) => { const all = roomList(s); return { done: all.filter((x) => s.rooms.cleared[x.id]).length, total: all.length }; };
-function clear(s, room, why = '') {
+// (quiet: the entry, cleared as you connect, says nothing.)
+function clear(s, room, quiet = false) {
   const R = s.rooms;
   if (R.cleared[room.id]) return false;
   R.cleared[room.id] = nowOf();
   const p = progressOf(s);
-  say(s, `${room.path} cleared${why ? ` (${why})` : ''}. Rooms ${p.done}/${p.total}.`, 'rooms-good');
-  if (p.done * 2 >= p.total && !R.drawn) { R.drawn = true; for (const x of roomList(s)) R.seen[x.id] = 'kind'; say(s, 'Half the server cleared: the whole room graph is drawn.', 'rooms-good'); }
+  if (!quiet) say(s, `${room.path} cleared.`, 'rooms-good');
+  if (p.done * 2 >= p.total && !R.drawn) { R.drawn = true; for (const x of roomList(s)) R.seen[x.id] = 'kind'; say(s, 'Half cleared: the whole map is drawn.', 'rooms-good'); }
   if (p.done === p.total && !R.mapped) mapped(s);
   return true;
 }
@@ -372,7 +373,7 @@ function mapped(s) {
   if (it) R.banked.push(it.id);
   const xp = Math.round(xpFor(s, R.level, ROOMS.xp.mapped));
   gainXp(s, xp, `${R.name} Mapped`, 'fight');
-  say(s, `MAPPED. Every room of ${R.name} cleared. ${it ? `${itemLabel(it)} is yours, and ` : ''}+${xp} XP.`, 'rooms-good');
+  say(s, `MAPPED. ${it ? `${itemLabel(it)} goes in your bank. ` : ''}+${xp} XP.`, 'rooms-good');
 }
 
 // ---------- fog (2.6) ----------
@@ -421,7 +422,7 @@ function hunterMove(s) {
   if (h.held > 0) { h.held--; return false; }
   if (h.kind === 'track' && !h.awake && h.at === h.den && neighbours(g, h.den).includes(R.at)) {
     h.awake = true; h.count = 0;
-    say(s, `The Tracker in ${g.rooms[h.den].path} wakes. It follows you a room for every ${paceOf(s)} of your moves.`, 'rooms-bad');
+    say(s, 'The Tracker wakes.', 'rooms-bad');
     return false;
   }
   h.count++;
@@ -429,22 +430,22 @@ function hunterMove(s) {
   h.count = 0;
   if (h.kind === 'track' && h.awake && !h.returning && (distances(g, h.at)[R.at] ?? 99) >= ROOMS.hunter.lose) {
     h.returning = true;
-    say(s, `The Tracker loses you. It walks back to ${g.rooms[h.den].path}.`, 'rooms-good');
+    say(s, 'The Tracker loses you.', 'rooms-good');
   }
   const next = hunterNext(s, h);
   if (next) { h.at = next; if (h.kind === 'patrol') h.idx = (h.idx + 1) % g.route.length; }
-  if (h.kind === 'track' && h.returning && h.at === h.den) { h.returning = false; h.awake = false; say(s, 'The Tracker is back in its den, asleep.', 'rooms-good'); }
+  if (h.kind === 'track' && h.returning && h.at === h.den) { h.returning = false; h.awake = false; say(s, 'The Tracker is back in its den.', 'rooms-good'); }
   return h.at === R.at;
 }
-// Words for where it is (ls): "the hunter is two rooms off, in cron.d, heading for spool."
+// Words for where it is (ls, the room card): "The Patroller is 2 rooms off, in Cache 1, heading for Process 1."
 export function hunterLine(s) {
   const R = s.rooms, g = R.graph, h = hunterOf(s);
   if (!h) return '';
   if (h.down) return `The ${HUNTERS[h.kind].name} is down for this visit.`;
-  const d = distances(g, R.at)[h.at] ?? null, words = ['here', 'one room off', 'two rooms off', 'three rooms off'];
-  const where = d != null && d <= 3 ? words[d] : 'far off';
-  const next = hunterNext(s, h), state = h.kind === 'track' && !h.awake ? `asleep in ${g.rooms[h.den].path}` : `in ${g.rooms[h.at].path}${next ? `, heading for ${g.rooms[next].path}` : ''}`;
-  return `The ${HUNTERS[h.kind].name} is ${where}, ${state}. It moves in ${paceOf(s) - h.count}.`;
+  if (h.kind === 'track' && !h.awake) return `The ${HUNTERS[h.kind].name} is asleep in ${g.rooms[h.den].path}.`;
+  const d = distances(g, R.at)[h.at] ?? null, where = d == null || d > 3 ? 'far off' : d === 0 ? 'here' : `${d} ${d === 1 ? 'room' : 'rooms'} off`;
+  const next = hunterNext(s, h);
+  return `The ${HUNTERS[h.kind].name} is ${where}, in ${g.rooms[h.at].path}${next ? `, heading for ${g.rooms[next].path}` : ''}.`;
 }
 
 // ---------- a visit ----------
@@ -464,8 +465,8 @@ export function connect(s) {
   R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [], rested: false, moves: 0, hunter: newHunter(s), slipped: false, back: null, xp0: xpTotal(s) };
   R.screen = null;
   look(s);
-  clear(s, R.graph.rooms[R.graph.entry], 'the entry');
-  say(s, `CONNECTED to ${R.name}, visit ${R.visits}. Signal ${R.signal}/${R.max}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
+  clear(s, R.graph.rooms[R.graph.entry], true);
+  say(s, `CONNECTED to ${R.name}, visit ${R.visits}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
   return out(s, first);
 }
 // Jack out from any room: home, with the pack banked. A key you didn't use goes back to its post, guard and all.
@@ -475,12 +476,12 @@ export function jackOut(s, why = '') {
   if (!R?.at) { deny(s, 'You are not on the server.'); return out(s, first); }
   if (active(s)) { deny(s, 'No jacking out mid-fight. Win it, or lose the pack.'); return out(s, first); }
   for (const vid of R.visit.keys) { const post = roomList(s).find((x) => x.key === vid); if (post) delete R.down[post.id]; }
-  if (R.visit.keys.length) say(s, `The key goes back to its post, guard and all.`, 'rooms-bad');
+  if (R.visit.keys.length) say(s, 'Your key goes back to its guard post, guard and all.', 'rooms-bad');
   const banked = R.pack.length;
   R.banked.push(...R.pack); R.pack = [];
   R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked, visit: R.visit.n };
   goHome(s);
-  say(s, `${why ? `${why} ` : ''}JACKED OUT of ${R.name}. ${banked ? `${banked} ${banked === 1 ? 'item' : 'items'} banked. ` : ''}Signal ${R.signal}/${R.max}, resting.`, 'jacked-out');
+  say(s, `${why ? `${why} ` : ''}JACKED OUT of ${R.name}.${banked ? ` ${banked} ${banked === 1 ? 'item' : 'items'} banked.` : ''}`, 'jacked-out');
   return out(s, first);
 }
 function goHome(s) {
@@ -497,7 +498,7 @@ function disconnected(s, why) {
   R.last = { result: 'lost', why, lost, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n };
   R.signal = 0;
   goHome(s);
-  say(s, `DISCONNECTED. ${why}${lost.length ? ` ${lost.length} unbanked ${lost.length === 1 ? 'item' : 'items'} lost.` : ''} XP, banked gear and your scripts stay.`, 'rooms-bad');
+  say(s, `DISCONNECTED. ${why}${lost.length ? ` ${lost.length} unbanked ${lost.length === 1 ? 'item' : 'items'} lost.` : ''}`, 'rooms-bad');
 }
 
 // ---------- moving ----------
@@ -531,7 +532,7 @@ function step(s, room, opts) {
   R.inSince = nowOf();
   R.visit.walked[room.id] = true;
   R.visit.moves++; R.stats.moves++;
-  say(s, `→ ${room.path}${cost ? ` (−${cost} Signal, ${R.signal}/${R.max})` : ''}`, 'rooms-cmd');
+  say(s, `→ ${room.path}${cost ? ` (−${cost} Signal)` : ''}`, 'rooms-cmd');
   look(s);
   const h = hunterOf(s);
   if (h && !h.down && h.at === room.id) return meet(s, room, opts);
@@ -566,17 +567,13 @@ function arrive(s, room, opts = {}) {
   if (isUp(s, room)) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
-    say(s, `${name} holds ${room.path}. Level ${f.level} ${room.kind === 'guard' ? GUARDS[room.guard].name : familyName(v.family)}${v.author ? `, ${AUTHORS[v.author]?.name || v.author}` : ''}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
-    return;
+    say(s, `${name} holds ${room.path}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
   }
-  if (room.kind === 'cache' && cacheFull(s, room)) say(s, `${room.path}: a cache${room.mirror ? '. It reads back your own handle' : ''}.`);
-  if (room.kind === 'vault' && !R.opened[room.id]) say(s, `${room.path}: a vault door. ${R.visit.keys.includes(room.id) ? 'Your key fits it.' : 'You hold no key to it.'}`);
-  if (room.kind === 'rest') say(s, R.visit.rested ? `${room.path}: you rested here this visit.` : `${room.path}: a quiet room. The hunter stops at its door.`);
 }
 function meet(s, room, opts = {}) {
   const R = s.rooms, h = hunterOf(s);
   R.stats.hunted++;
-  say(s, `The ${HUNTERS[h.kind].name} is on you in ${room.path}.`, 'rooms-bad');
+  say(s, `The ${HUNTERS[h.kind].name} is on you.`, 'rooms-bad');
   if (classOf(s) === 'infiltrator' && !R.visit.slipped) { R.screen = { kind: 'hunter', room: room.id, pause: !!opts.pause }; return; }
   R.visit.pending = room.id;
   fight(s, room, { as: 'hunter', pause: !!opts.pause });
@@ -599,7 +596,7 @@ export function act(s, verb, arg = null, opts = {}) {
   if (active(s)) { deny(s, 'Finish the fight first.'); return out(s, first); }
   const sc = R.screen;
   if (sc?.kind === 'hunter') {
-    if (verb === 'slip') { R.visit.slipped = true; R.screen = null; say(s, `You slip past the ${HUNTERS[hunterOf(s).kind].name}. Once a visit.`, 'rooms-good'); hunterOf(s).held = 1; arrive(s, here, opts); }
+    if (verb === 'slip') { R.visit.slipped = true; R.screen = null; say(s, `You slip past the ${HUNTERS[hunterOf(s).kind].name}.`, 'rooms-good'); hunterOf(s).held = 1; arrive(s, here, opts); }
     else if (verb === 'engage' || verb === 'fight') { R.screen = null; R.visit.pending = here.id; fight(s, here, { as: 'hunter', pause: !!opts.pause || !!sc.pause }); }
     else deny(s, 'Fight it, or slip past it.');
     return out(s, first);
@@ -612,14 +609,14 @@ export function act(s, verb, arg = null, opts = {}) {
   if (sc?.kind === 'virus') { deny(s, `The ${sc.name} holds this room. Engage it, or step back.`); return out(s, first); }
   if (verb === 'cat' && here.kind === 'cache') {
     if (!cacheFull(s, here)) deny(s, `The cache is empty. It refills in ${fmtLeft(refillAt(s, here) - nowOf())}.`);
-    else { R.read = { ...(R.read || {}), [here.id]: R.spawns[here.id] || 0 }; say(s, here.mirror ? 'You read the cache: it reads back your own handle. It is a mirror, and something waits behind it.' : isBait(s, here) ? `cat cache.dat: a canary string in every block. Pulling it costs ${Math.round(ROOMS.bait * 100)}% of your max Signal.` : 'cat cache.dat: clean. Credits and code.', isBait(s, here) || here.mirror ? 'rooms-bad' : 'rooms'); }
+    else { R.read = { ...(R.read || {}), [here.id]: R.spawns[here.id] || 0 }; say(s, here.mirror ? "It's a mirror. An elite waits behind it." : isBait(s, here) ? `Bait: a canary in every block. Taking it costs ${Math.round(R.max * ROOMS.bait)} Signal.` : 'Clean: credits and code.', isBait(s, here) || here.mirror ? 'rooms-bad' : 'rooms'); }
     return out(s, first);
   }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'cache') { pull(s, here, opts); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
   if (verb === 'rest' && here.kind === 'rest') {
-    if (R.visit.rested) deny(s, 'You rested here this visit already.');
-    else { const n = Math.min(R.max - R.signal, Math.round(R.max * ROOMS.rest)); R.signal += n; R.visit.rested = true; clear(s, here, 'rested'); say(s, `Rest: +${n} Signal (${R.signal}/${R.max}).`, 'rooms-good'); }
+    if (R.visit.rested) deny(s, 'You already rested this visit.');
+    else { const n = Math.min(R.max - R.signal, Math.round(R.max * ROOMS.rest)); R.signal += n; R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
   }
   deny(s, `${verb}: nothing here takes that.`);
@@ -630,12 +627,12 @@ export function act(s, verb, arg = null, opts = {}) {
 function pull(s, room, opts) {
   const R = s.rooms;
   if (!cacheFull(s, room)) return deny(s, `The cache is empty. It refills in ${fmtLeft(refillAt(s, room) - nowOf())}.`);
-  if (room.mirror) { say(s, 'The mirror breaks. An elite steps out of it.', 'rooms-bad'); R.screen = null; return fight(s, room, { as: 'mirror', pause: !!opts.pause }); }
+  if (room.mirror) { say(s, 'The mirror breaks. An elite steps out.', 'rooms-bad'); R.screen = null; return fight(s, room, { as: 'mirror', pause: !!opts.pause }); }
   takeCache(s, room);
 }
 function takeCache(s, room) {
   const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, rich = 1;
-  if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); R.signal = Math.max(1, R.signal - lost); say(s, `The cache was bait. The canary costs you ${lost} Signal.`, 'rooms-bad'); }
+  if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); R.signal = Math.max(1, R.signal - lost); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
   const credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20));
   R.credits += credits; s.server.credits += credits;
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' }[fam] || 'cipher';
@@ -645,21 +642,21 @@ function takeCache(s, room) {
   if (r() < C.script) giveScript(s, rollScript(r), 'Cache: ');
   R.taken[room.id] = nowOf();
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
-  clear(s, room, 'taken');
+  clear(s, room);
 }
 function openVault(s, room, force) {
   const R = s.rooms;
-  if (R.opened[room.id]) return deny(s, 'The vault is open. It stays open.');
+  if (R.opened[room.id]) return deny(s, 'The vault is already open.');
   const has = R.visit.keys.indexOf(room.id);
-  if (!force && has < 0) return deny(s, `You hold no key to ${room.path}. It sits in a guard post on another branch, or force the door for ${Math.round(ROOMS.force * 100)}% of your max Signal.`);
-  if (force) { const lost = Math.round(R.max * ROOMS.force); R.signal = Math.max(1, R.signal - lost); say(s, `You force the door. It costs you ${lost} Signal.`, 'rooms-bad'); }
+  if (!force && has < 0) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'a guard post'}, or force the door for ${Math.round(R.max * ROOMS.force)} Signal.`);
+  if (force) { const lost = Math.round(R.max * ROOMS.force); R.signal = Math.max(1, R.signal - lost); say(s, `You force the door: −${lost} Signal.`, 'rooms-bad'); }
   else { R.visit.keys.splice(has, 1); say(s, 'The key opens the vault.', 'rooms-good'); }
   R.opened[room.id] = nowOf();
   const v = room.loot || { kind: 'gear', rarity: 'tuned' };
   if (v.kind === 'gear') { const it = addItem(s, rollItem(rnd(R, 5), { level: R.level, rarity: v.rarity, cls: classOf(s) }), 'Vault: '); if (it) { R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); } }
   else giveScript(s, v.script, 'Vault: ');
-  clear(s, room, 'opened');
-  if (room.id === R.graph.vaults[0]) say(s, `The Core unseals. ${BOSSES[RESIDENT].name} is waiting.`, 'rooms-bad');
+  clear(s, room);
+  if (room.id === R.graph.vaults[0]) say(s, 'The Core unseals.', 'rooms-bad');
 }
 
 // ---------- fights ----------
@@ -721,8 +718,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   e.roomsXp = ROOMS.xp.room * (as === 'hunter' ? ROOMS.xp.hunter : room.kind === 'core' ? ROOMS.xp.boss : f.rare ? ROOMS.xp.rare : 1);
   if (v.boss) R.stats.boss.tries++;
   R.stats.fights++;
-  const by = v.author ? ` ${AUTHORS[v.author]?.name || v.author.toUpperCase()}.` : '';
-  say(s, `You engage ${v.name}. Level ${v.level}.${by}${f.set ? ` ${setName(v.family, f.set)} set.` : ''}`, 'intrusion');
+  say(s, `You engage ${v.name}.${f.set ? ` ${setName(v.family, f.set)} set.` : ''}`, 'intrusion');
   command(s, 'engage');
   if (pause && s.encounter) s.encounter.paused = true;
 }
@@ -731,7 +727,7 @@ function spamFlood(s, e) {
   const total = e.virus.parts.reduce((n, p) => n + p.max, 0), hits = e.virus.parts.filter((p) => p.attack).map((p) => p.attack.amount || 0).filter(Boolean);
   const hp = Math.max(8, Math.round(total * 0.08)), dmg = Math.max(2, Math.round((hits.reduce((a, x) => a + x, 0) / Math.max(1, hits.length)) * 0.25));
   e.virus.parts.push({ id: 'spam', name: 'Spam Flood', kind: 'system', integrity: hp, max: hp, armor: 0, maxArmor: 0, patchAt: null, veiled: false, loot: null, special: false, spam: true, attack: { name: 'Junk Mail', effect: 'damage', amount: dmg, interval: 3, due: 2 }, exposedUntil: 0, lastDamaged: 0, boosted: false });
-  emit(s, 'status', `The mail queue floods the fight: a Spam Flood, ${hp} Integrity, ${dmg} damage every 3 cycles.`, { target: 'spam' });
+  emit(s, 'status', `A Spam Flood joins the fight: ${hp} Integrity, ${dmg} damage every 3 cycles.`, { target: 'spam' });
 }
 // After a fight: your Signal back on the server (never over what you started it with), and the fight cleared away.
 export function settle(s) {
@@ -763,7 +759,7 @@ hooks.roomEnd = (s, result) => {
     if (h) h.down = true;
     say(s, `${HUNTERS[h?.kind || 'track'].name} down for this visit.`, 'rooms-good');
     giveScript(s, rollScript(rnd(R, 17)), 'The hunter carried: ');
-    if (room.kind === 'den') clear(s, room, 'its hunter beaten');
+    if (room.kind === 'den') clear(s, room);
     const pending = R.visit.pending;
     R.visit.pending = null;
     if (pending) arrive(s, R.graph.rooms[pending]);
@@ -771,7 +767,7 @@ hooks.roomEnd = (s, result) => {
   }
   if (as === 'mirror') {
     drops(s, room, e, false);
-    say(s, 'The mirror is down. The cache behind it is yours.', 'rooms-good');
+    say(s, 'The mirror is down.', 'rooms-good');
     return takeCache(s, room);
   }
   R.down[room.id] = nowOf();
@@ -783,12 +779,12 @@ hooks.roomEnd = (s, result) => {
   if (!R.cleared[room.id]) {
     const xp = Math.round(xpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)));
     gainXp(s, xp, `${room.path} first clear`, 'fight');
-    clear(s, room, 'first clear');
+    clear(s, room);
   }
   // The key: beat the guard while its vault is shut and it goes in your pack, for this visit.
-  if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `The ${e.virus.name} carried the key to ${R.graph.rooms[room.key].path}. It lasts this visit.`, 'rooms-good'); }
+  if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good'); }
   drops(s, room, e, wasRare);
-  if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls. ${room.path} is quiet for ${fmtLeft(respawnMs(s, room))}.`, 'rooms-good');
+  if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls.`, 'rooms-good');
 };
 // XP the playtest character has earned in all (its level's bars and what's in the current one): the server card's
 // count is the difference since you started.
@@ -811,7 +807,7 @@ export function setBossRule(s, rule) {
   const R = s.rooms;
   if (!BOSS_RULES[rule]) return deny(s, 'bossrule: a, b or c.');
   R.bossRule = rule;
-  say(s, `Boss rule (${rule}): ${BOSS_RULES[rule].name}. ${BOSS_RULES[rule].text}`, 'rooms-good');
+  say(s, `Boss rule ${rule}: ${BOSS_RULES[rule].name}.`, 'rooms-good');
   return rule;
 }
 
@@ -851,7 +847,7 @@ export function roomsCommand(s, text) {
   if (word === 'connect' && !R.at) return connect(s);
   if (word === 'jack' && arg === 'out') return jackOut(s);
   if (word === 'ls') {
-    if (!R.at) { say(s, `You are home. ${R.name}: rooms ${progressOf(s).done}/${progressOf(s).total}. Type connect.`, 'rooms-out'); return out(s, first); }
+    if (!R.at) { say(s, 'You are home. Type connect.', 'rooms-out'); return out(s, first); }
     const here = hereOf(s), xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
     const lines = [`${here.path}  [${here.kind}]`, ...xs.map((x, i) => `${i + 1}  ${seenOf(s, x.id) === 'kind' ? x.path : '??'}  [${tagOf(s, x)}]${moveCost(s, x) ? '' : '  walked'}`)];
     const h = hunterLine(s);

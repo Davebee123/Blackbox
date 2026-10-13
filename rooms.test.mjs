@@ -444,6 +444,45 @@ test('the page draws home, a room, a fight room and the map in both orientations
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
+test('the map tiles: one mark language for state, countdowns that tick in place, tooltips that say each thing once', () => {
+  const s = server(), R = s.rooms, g = R.graph;
+  const tile = (html, id) => html.match(new RegExp(`<g class="fp-room[^"]*" data-room="${id}"[\\s\\S]*?</g>(?=<g class="fp-room|<line class="fp-hunt|</svg>)`))?.[0] || '';
+  const tip = (html, id) => tile(html, id).match(/title="([^"]*)"/)?.[1] || '';
+  let html = roomsMarkup(s);
+  // You: a teal ring and YOU on the entry; a room you can walk into carries its cost; the Core its lock.
+  assert.match(tile(html, g.entry), /class="fp-room k-entry here[^"]*"/);
+  assert.match(tile(html, g.entry), /fp-ring/);
+  assert.match(tile(html, g.entry), />YOU</);
+  const next = FP.exits(s)[0];
+  assert.match(tile(html, next.id), new RegExp(`data-rooms="go" data-arg="${next.id}"`));
+  assert.match(tile(html, next.id), new RegExp(`fp-pill cost[\\s\\S]*−${FP.moveCost(s, next)}<`));
+  assert.match(tile(html, g.core), /fp-i-lock/, 'the sealed Core wears a lock');
+  assert.match(tip(html, g.core), /^Core: Level \d+ DEADBOLT/);
+  // No legend, no "Next ↻" on the strip: the tiles carry it.
+  assert.doesNotMatch(html, /fp-legend|Next ↻/);
+  // A fallen room: its countdown is an empty slot the page fills, so the markup holds still while it ticks.
+  const p = FP.roomList(s).find((r) => r.kind === 'process');
+  R.down[p.id] = clock; R.cleared[p.id] = clock; R.seen[p.id] = 'kind';
+  html = roomsMarkup(s);
+  const at = FP.backAt(s, p);
+  assert.match(tile(html, p.id), new RegExp(`data-at="${at}" data-fmt="s"></tspan>`));
+  assert.match(tile(html, p.id), /fp-i-check/, 'cleared: a check');
+  tick(5000);
+  assert.equal(roomsMarkup(s), html, 'five seconds on, the same markup');
+  // Tooltips: the room's name as the title, at most two lines, never a countdown or the name again.
+  for (const room of FP.roomList(s)) {
+    const t = tip(html, room.id);
+    if (!t) continue;
+    const [head, ...body] = t.split(': ');
+    const lines = body.join(': ').split('\n').filter(Boolean);
+    assert.ok(lines.length <= 2, `${room.path}: ${t}`);
+    assert.doesNotMatch(t, /\d+:\d\d|comes back in|refills in/i, `${room.path}: no countdown in its tooltip`);
+    if (FP.seenOf(s, room.id) === 'kind') { assert.equal(head.replace(/\n.*/s, ''), room.path); assert.ok(!lines.join(' ').includes(room.path), `${room.path} says its name once`); }
+  }
+  // The log: no Signal readout the strip already shows.
+  assert.ok(!R.log.some((l) => new RegExp(`${R.max}\\b`).test(l) && /\/\d+/.test(l)), R.log.join(' | '));
+});
+
 test('the bot maps a medium server, the Resident and all', () => {
   const r = runServer({ cls: 'bastion', seed: 101, kind: 'Relay' });
   assert.equal(r.mapped, true);

@@ -32,7 +32,7 @@ import { roomMarkup } from './room-view.mjs';
 import { patchRules } from './skillrules.mjs';
 import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
-import { roomsMarkup, fpUi } from './floorplan-view.mjs';
+import { roomsMarkup, fpUi, fillClocks } from './floorplan-view.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -850,7 +850,7 @@ function run(raw) {
       if (w) notice(w.message, true); else if (ok) notice(ev.filter((e) => e.type !== 'rooms-cmd').map((e) => e.message).join(' '));
       dirty = true; return;
     }
-    if (text === 'help') return notice('On the server: click a room on the map (or go <room>, e.g. go guard post), ls lists the rooms next to you, go back, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect. developer bossrule a|b|c switches the boss rule. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, and script <n> runs a script.', false, null, true);
+    if (text === 'help') return notice('Click a room, or type go <room> (go guard post). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect, developer bossrule a|b|c. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, script <n> runs a script.', false, null, true);
     if (!active(campaign)) { const ev = FP.roomsCommand(campaign, text); if (ev) return roomsDone(ev); }
   }
   // A breach (breach.mjs): ls, cd, tree and the screen's verbs, out of a fight. Jacking out mid-fight isn't one.
@@ -1397,6 +1397,7 @@ function render(force = false) {
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     if (module === 'breach') breachScroll(keep);
+    if (module === 'rooms') fillClocks($('page-view')); // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {
@@ -1443,7 +1444,7 @@ function renderPrompt() {
     const R = campaign.rooms, sig = FP.signalNow(campaign), here = FP.hereOf(campaign);
     el.className = 'prompt run ' + V.signalLevel({ integrity: sig, max: R.max });
     el.innerHTML = `<span class="p-sig">[${sig}/${R.max}]</span> <span class="p-loc">${V.esc(R.name || R.id)} ›</span> <span class="p-cwd">${V.esc(here ? here.path : 'outside')}</span>`;
-    $('command-input').placeholder = here ? 'click a room on the map · or go <room> · wait' : 'connect';
+    $('command-input').placeholder = here ? 'go <room> · wait · ls' : 'connect';
   } else if (campaign.breach) {
     const b = campaign.breach, sig = BR.signalOf(campaign), max = BR.maxOf(campaign);
     el.className = 'prompt run ' + V.signalLevel({ integrity: sig, max });
