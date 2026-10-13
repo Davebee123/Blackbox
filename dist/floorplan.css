@@ -1,10 +1,10 @@
-/* The rooms page (floorplan-view.mjs, docs/servers.md R0): the server strip on top, the room map in the centre, and
-   beside it the room you're in with its verbs and exits. docs/ui.md tokens: amber is structure and what you can click,
+/* The rooms page (floorplan-view.mjs, docs/servers.md R0): the server strip on top (Wait and Jack out at its right), and
+   the room map filling the rest, with the network map's pop-up card (.map-pop, style.css) beside a room. docs/ui.md tokens: amber is structure and what you can click,
    teal is you, hot is what bites (a live virus, the hunter), gray is down or out of sight.
    A tile's role is its icon colour and fill (a fight hot, an interactable amber, the rest room teal); its border is
    your relation to it (amber: you can walk in, teal: you're in it). */
 .page:has(> .fp) { overflow: hidden; }
-.fp { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: var(--s5); height: 100%; min-height: 0; }
+.fp { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: var(--s5); height: 100%; min-height: 0; }
 .fp > * { min-width: 0; min-height: 0; }
 .fp > .fp-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .shell-on .page:has(> .fp) { padding-top: var(--s4); }
@@ -15,12 +15,12 @@
 .fp-ic.hot { color: var(--hot); }
 
 /* ---- the strip: the server | Signal | Rooms | keys, hunter, pack | boss rule, scripts ---- */
-.fp-hud { grid-column: 1 / -1; position: relative; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4) var(--s6); padding: var(--s4) var(--s6); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); }
+.fp-hud { grid-column: 1 / -1; position: relative; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4) var(--s5); padding: var(--s4) var(--s6); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-card); }
 .fp-id { display: inline-flex; align-items: baseline; gap: var(--s3); color: var(--amber-soft); cursor: help; min-width: 0; }
 .fp-id .ico { align-self: center; }
 .fp-id b { font: 600 13px var(--mono); letter-spacing: 1.5px; color: var(--bright); white-space: nowrap; }
 .fp-id small { font: 11px var(--mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.fp-sig { display: flex; align-items: center; gap: var(--s4); font-variant-numeric: tabular-nums; flex: 0 1 240px; min-width: 170px; cursor: help; }
+.fp-sig { display: flex; align-items: center; gap: var(--s4); font-variant-numeric: tabular-nums; flex: 0 1 200px; min-width: 170px; cursor: help; }
 .fp-sig .sigbar { flex: 1; width: auto; min-width: 60px; height: 10px; }
 .fp-sig strong { font: 600 18px var(--mono); color: var(--you); line-height: 1; }
 .fp-sig small { color: var(--muted); font-family: var(--mono); margin-left: calc(-1 * var(--s3)); }
@@ -38,7 +38,7 @@
 .fp-keys .fp-ic { color: var(--you); } .fp-keys b { color: var(--you); }
 .fp-hunt .fp-ic, .fp-hunt b { color: var(--hot); }
 .fp-hunt.out .fp-ic, .fp-hunt.out b { color: var(--gray); }
-.fp-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s4) var(--s6); min-width: 0; }
+.fp-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s4) var(--s5); min-width: 0; }
 .fp-rules { display: inline-flex; align-items: center; gap: var(--s2); }
 .fp-rules .lbl { margin-right: var(--s2); cursor: help; }
 .fp-rule { height: var(--h-chip); min-width: 22px; padding: 0 var(--s3); border: 1px solid var(--line-strong); border-radius: var(--r-tag); background: transparent; color: var(--muted); font: 600 11px var(--mono); cursor: pointer; }
@@ -48,6 +48,9 @@
 .fp-perks .lbl { margin-right: var(--s2); cursor: help; }
 .fp-perk { flex: none; display: inline-flex; align-items: center; height: var(--h-chip); padding: 0 var(--s3); border: 1px solid var(--line); border-left: 2px solid var(--r-stock); border-radius: var(--r-tag); font: 600 11px var(--mono); color: var(--bright); white-space: nowrap; cursor: help; }
 .fp-perk.r-tuned { border-left-color: var(--r-tuned); } .fp-perk.r-custom { border-left-color: var(--r-custom); }
+/* Wait and Jack out (Connect at home): the strip's last thing on a wide screen, beside the server's name on a phone */
+.fp-acts { display: inline-flex; gap: var(--s3); flex: none; }
+.fp-acts .btn { white-space: nowrap; }
 
 /* ---- the map ---- */
 .fp-map { position: relative; display: flex; flex-direction: column; overflow: visible; }
@@ -107,7 +110,10 @@
 /* fog: only the shape */
 .fp-room.shape .fp-body { fill: var(--panel); stroke: rgba(143, 119, 72, 0.5); stroke-dasharray: 4 4; }
 /* your relation to it: you can walk in (amber), you're in it (teal ring) */
-.fp-room.reach { cursor: pointer; }
+.fp-room.reach, .fp-room[data-fp-sel] { cursor: pointer; }
+.fp-room[data-fp-sel]:hover .fp-body, .fp-room[data-fp-sel]:focus-visible .fp-body { filter: brightness(1.4); }
+.fp-room[data-fp-sel]:focus-visible { outline: none; }
+.fp-room.sel:not(.here) .fp-body { stroke: var(--bright); stroke-width: 2.5; }
 .fp-room.reach .fp-body { stroke: var(--amber); stroke-width: 2; }
 .fp-room.reach:hover .fp-body, .fp-room.reach:focus-visible .fp-body { stroke-width: 3; filter: brightness(1.6); }
 .fp-room.reach:focus-visible { outline: none; }
@@ -129,9 +135,9 @@
 .fp-pill.cost rect { fill: var(--amber); stroke: none; }
 .fp-pill.cost text { fill: var(--bg); }
 
-/* ---- the room you're in, its exits, home ---- */
-.fp-side { display: flex; flex-direction: column; gap: var(--s5); overflow-y: auto; padding-right: 2px; }
-.fp-side > * { flex: none; }
+/* ---- the pop-up: the room you're in, a room you clicked, home ---- */
+.fp-map .fp-pop { z-index: 5; width: 320px; }
+.fp-pop .fp-screen > :first-child { padding-right: 34px; }
 .fp-screen { border-color: var(--line-strong); box-shadow: inset 0 2px 0 var(--amber); display: grid; gap: var(--s4); }
 .fp-screen.focus { box-shadow: inset 0 2px 0 var(--hot); }
 .fp-screen h1 { font: 600 21px/1.15 var(--sans); overflow-wrap: anywhere; }
@@ -151,41 +157,16 @@
 .fp-virus small { font: 11px var(--mono); color: var(--muted); }
 .fp-tag-inline { display: inline-flex; align-items: center; height: 16px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
 .fp-tag-inline.hot { color: var(--hot); } .fp-tag-inline.next { color: var(--next); }
-.fp-hunter-line { margin: 0; padding-top: var(--s3); border-top: 1px dashed var(--line); display: flex; gap: var(--s3); align-items: flex-start; font: 12px var(--mono); color: var(--hot); }
-.fp-hunter-line .fp-ic { width: 15px; height: 15px; color: var(--hot); margin-top: 1px; }
 .fp-sec { margin: 0; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); display: flex; gap: var(--s3); align-items: baseline; }
 .fp-sec small { font: 11px var(--mono); color: var(--dim); letter-spacing: 0; text-transform: none; }
-.fp-exits { display: grid; gap: var(--s3); }
-.fp-exits ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
-.fp-exit { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: var(--s4); width: 100%; height: auto; min-height: 38px; padding: var(--s3) var(--s5); text-align: left; border: 1px solid var(--line); border-left: 2px solid var(--amber-deep); border-radius: var(--r-btn); background: var(--inset); color: var(--text); font: inherit; cursor: pointer; }
-.fp-exit:hover:not(:disabled), .fp-exit:focus-visible { border-color: var(--amber); border-left-color: var(--amber); background: var(--amber-wash); }
-.fp-exit:disabled { cursor: default; opacity: 0.6; }
-.fp-exit.up { border-left-color: var(--hot); }
-.fp-exit.hunted { border-color: var(--hot); }
-.fp-exit-b { min-width: 0; display: flex; align-items: baseline; gap: var(--s4); }
-.fp-exit-b b { font: 600 13px var(--mono); color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; max-width: 60%; }
-.fp-exit-b small { font: 12px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.fp-exit-b small.hot { color: var(--hot); } .fp-exit-b small.you { color: var(--you); } .fp-exit-b small.dim { color: var(--dim); } .fp-exit-b small.next { color: var(--next); }
-.fp-exit-c { display: inline-flex; align-items: center; gap: var(--s3); font: 600 12px var(--mono); color: var(--amber); white-space: nowrap; }
-.fp-exit-c i { font-style: normal; font-weight: 400; color: var(--dim); }
-.fp-exits .row.acts { display: flex; flex-wrap: wrap; gap: var(--s3); }
-.fp-exits .row.acts .btn { flex: 1 1 auto; }
 .fp-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
 .fp-lines li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--s4); font-size: 13px; }
 .fp-lines li.hot span:last-child { color: var(--hot); }
 .fp-items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
 .fp-items li { display: grid; gap: 0; font-size: 13px; }
 .fp-items small { color: var(--muted); font-size: 12px; }
-.fp-log { margin-top: auto; display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line); }
-.fp-log-k { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); height: auto; padding: var(--s1) 0; border: 0; background: none; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); cursor: pointer; }
-.fp-log-k:hover { color: var(--amber-soft); }
-.fp-log-k .ico { width: 11px; height: 11px; }
-.fp-log-lines { display: grid; font: 11px/1.6 var(--mono); color: var(--muted); }
-.fp-log-lines > div { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fp-log-lines > div:last-child { color: var(--text); }
-.fp-log-lines > div.you { color: var(--you); }
-.fp-log.open .fp-log-lines { max-height: 260px; overflow-y: auto; }
-.fp-log.open .fp-log-lines > div { white-space: normal; }
+/* what happens goes up as a notice over the prompt; ls and map keep their lines */
+.rooms-mode .notice { white-space: pre-line; }
 
 /* ---- the interrupt on the fight board (view.mjs), room fights only ---- */
 .part-bar:has(.ptick) { overflow: visible; }
@@ -214,14 +195,15 @@
   .page:has(> .fp) { overflow: visible; }
   .fp { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; gap: var(--s4); }
   .fp-hud { position: sticky; top: 0; gap: var(--s3) var(--s5); padding: var(--s3) var(--s5); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55); }
-  .fp-id { flex: 1 1 100%; flex-wrap: wrap; row-gap: 0; }
+  .fp-id { order: -2; flex: 1 1 0; flex-wrap: wrap; row-gap: 0; }
+  .fp-acts { order: -1; }
   .fp-id small { overflow: visible; white-space: normal; }
   .fp-sig { flex: 1 1 100%; min-width: 0; }
-  .fp-tools { margin-left: 0; justify-content: flex-start; flex: 1 1 100%; }
+  .fp-tools { display: contents; }
   .fp-map { overflow: visible; }
   .fp-scroll { overflow: visible; padding: var(--s5) var(--s2); }
   .fp-svg.wide { height: auto; max-height: none; }
-  .fp-side { overflow: visible; }
+  .fp-map .fp-pop { width: auto; scroll-margin: 150px 0 90px; }
 }
 @media (max-width: 640px) {
   .fp-svg.wide { display: none; }

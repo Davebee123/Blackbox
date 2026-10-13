@@ -1,7 +1,11 @@
-// The rooms page (floorplan.mjs, docs/servers.md R0): a strip of the server across the top, the room map as a
-// drawing, and beside it the room you're in (or home) with its verbs and its exits, and a short tty under it.
+// The rooms page (floorplan.mjs, docs/servers.md R0): a strip of the server across the top (with Wait and Jack out,
+// or Connect at home), and the room map filling the rest. A pop-up card, like the network map's, sits beside a room:
+// it opens by itself on the room you're in when something there wants a decision (a live virus, a stocked cache, a
+// locked vault, the rest room, the Core, the hunter on you), and on any room you've seen when you click it. A room you
+// can walk into walks on one click; its cost is on its tile. There is no exits list (the lit tiles are the exits) and
+// no tty: what happens goes up as a notice, and the prompt still takes every verb.
 // docs/ui.md tokens: amber is structure and what you can click, teal is you, hot is what bites (a live virus, the
-// hunter), gray is down or out of sight. The map is the main screen; the prompt still takes every verb.
+// hunter), gray is down or out of sight.
 //
 // A tile says what a room is by its icon and shape (a chip for a process, a cut-corner chip for an elite, a shield
 // plate for a guard post, a double frame for the Core, a pill for the rest room, a dot for a junction) and its
@@ -24,7 +28,9 @@ import { BOSS_RULES } from './interrupt.mjs';
 import { familyName, setName } from './families.mjs';
 import { ROOMS, KINDS, HUNTERS, RESIDENT, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, cacheFull, refillAt, isBait, coreOpen, signalNow, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned } from './floorplan.mjs';
 
-export const fpUi = { log: false };
+// The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
+// or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
+export const fpUi = { sel: null, selAt: null, closed: null };
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const now = () => Date.now();
 const fightKind = (room) => ['process', 'elite', 'guard', 'core'].includes(room.kind);
@@ -40,7 +46,7 @@ export function fillClocks(root, t = now()) {
 }
 
 // ---------- icons ----------
-// One sprite of 20×20 line icons; the map and the side column <use> them, coloured by `color`.
+// One sprite of 20×20 line icons; the map, the strip and the pop-up <use> them, coloured by `color`.
 const ICONS = {
   process: '<rect x="6" y="6" width="8" height="8"/><path d="M8 3v3M12 3v3M8 14v3M12 14v3M3 8h3M3 12h3M14 8h3M14 12h3"/>',
   elite: '<rect x="5.5" y="5.5" width="9" height="9"/><path d="M8 2.5v3M12 2.5v3M8 14.5v3M12 14.5v3M2.5 8h3M2.5 12h3M14.5 8h3M14.5 12h3"/><path class="f" d="M10 7.3l2.7 2.7-2.7 2.7-2.7-2.7z"/>',
@@ -65,7 +71,7 @@ const sprite = () => `<svg class="fp-sprite" width="0" height="0" aria-hidden="t
   + '<marker id="fp-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="fp-arrowhead"/></marker>'
   + '</defs></svg>';
 const iconOf = (s, room) => (seenOf(s, room.id) !== 'kind' ? null : room.mirror ? 'mirror' : room.kind);
-// An icon in the side column (an exit, the room card).
+// An icon in the strip or the pop-up card.
 const ic = (name, cls = '') => `<svg class="fp-ic${cls ? ' ' + cls : ''}" viewBox="0 0 20 20" aria-hidden="true">${name ? `<use href="#fp-i-${name}"/>` : '<text x="10" y="15" text-anchor="middle">?</text>'}</svg>`;
 
 // ---------- what a room holds ----------
@@ -84,9 +90,16 @@ const guardOf = (s, vaultId) => roomList(s).find((x) => x.key === vaultId);
 const huntName = (h) => HUNTERS[h.kind].name;
 // A tile's tooltip: the room's name, what it holds (when the tile can't show it), and one rule.
 function tileTip(s, room) {
-  const R = s.rooms, g = R.graph, seen = seenOf(s, room.id), h = hunterOf(s);
+  const h = hunterOf(s), hunted = h && !h.down && h.at === room.id;
+  if (seenOf(s, room.id) !== 'kind') return hunted ? `Unseen: the ${huntName(h)} is here.` : 'Unseen';
+  const { who, rule } = aboutOf(s, room);
+  const body = [who, rule].filter(Boolean).join('\n');
+  return body ? `${room.path}: ${body}` : room.path;
+}
+// What a room you've seen holds, and the one rule that matters about it (the tooltip and the pop-up say the same).
+function aboutOf(s, room) {
+  const R = s.rooms, g = R.graph, h = hunterOf(s);
   const hunted = h && !h.down && h.at === room.id;
-  if (seen !== 'kind') return hunted ? `Unseen: the ${huntName(h)} is here.` : 'Unseen';
   let who = '';
   if (fightKind(room) || room.mirror) who = room.mirror ? mirrorLine(s, room) : whoOf(s, room).line;
   else if (room.kind === 'den') who = g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.';
@@ -104,10 +117,9 @@ function tileTip(s, room) {
                 : room.kind === 'cache' && !room.mirror ? 'One in four is bait: read it first.'
                   : room.kind === 'vault' && room.id === g.vaults[0] && !R.opened[room.id] ? 'Opening it unseals the Core.'
                     : ['rest', 'entry'].includes(room.kind) ? 'The hunter never comes in.' : '';
-  const body = [who, rule].filter(Boolean).join('\n');
-  return body ? `${room.path}: ${body}` : room.path;
+  return { who, rule };
 }
-// A room's state in a word or two (the card's kicker, an exit's line): a countdown, or a word.
+// A room's state in a word or two (the pop-up card's state line): a countdown, or a word.
 function stateOf(s, room) {
   const R = s.rooms, kind = seenOf(s, room.id) === 'kind';
   if (!kind) return { word: 'unseen', cls: 'dim' };
@@ -136,7 +148,7 @@ function huntStep(s) {
   const next = hunterNext(s, h), near = h.at === here || seenOf(s, h.at);
   return next && near && (seenOf(s, next) || classOf(s) === 'infiltrator') ? next : null;
 }
-function mapSvg(s, tall) {
+function mapSvg(s, tall, pop = null) {
   const R = s.rooms, g = R.graph, { at, C, width, height } = frame(s, tall), here = R.at, h = hunterOf(s);
   const reach = new Set(exits(s).map((x) => x.id)), walked = R.visit?.walked || {};
   const shown = (id) => !!seenOf(s, id);
@@ -162,7 +174,7 @@ function mapSvg(s, tall) {
     const p = at(g.rooms[h.at]), q = at(g.rooms[next]), dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1, trim = Math.abs(dx) > Math.abs(dy) ? C.bw / 2 + 10 : C.bh / 2 + 15, k = trim / d;
     arrow = `<line class="fp-hunt-arrow" x1="${p.x + dx * k}" y1="${p.y + dy * k}" x2="${q.x - dx * k}" y2="${q.y - dy * k}" marker-end="url(#fp-arrow)"/>`;
   }
-  const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), C, reach, next)).join('');
+  const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), C, reach, next, pop)).join('');
   // Out of sight but within two rooms: a red pulse at the edge of your fog.
   let pulse = '';
   if (h && !h.down && here && !seenOf(s, h.at)) {
@@ -185,7 +197,7 @@ function bodyOf(kind, x, y, w, h, p) {
 }
 const badge = (cx, cy, name, cls) => `<g class="fp-badge ${cls}"><circle cx="${cx}" cy="${cy}" r="9"/><use href="#fp-i-${name}" x="${cx - 6}" y="${cy - 6}" width="12" height="12"/></g>`;
 const pill = (x, y, w, inner, cls) => `<g class="fp-pill ${cls}"><rect x="${x}" y="${y - 8}" width="${w}" height="16" rx="2"/><text x="${x + w / 2}" y="${y + 3.5}" text-anchor="middle">${inner}</text></g>`;
-function roomSvg(s, room, p, C, reach, next) {
+function roomSvg(s, room, p, C, reach, next, pop) {
   const R = s.rooms, g = R.graph, seen = seenOf(s, room.id), kind = seen === 'kind', h = hunterOf(s);
   const here = R.at === room.id, can = reach.has(room.id), up = kind && fightKind(room) && isUp(s, room);
   const hunted = h && !h.down && h.at === room.id;
@@ -195,10 +207,11 @@ function roomSvg(s, room, p, C, reach, next) {
   const denEdge = kind && g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   const big = kind && room.kind === 'core' ? 8 : 0, w = (kind ? C.bw : C.bw - 14) + big, ht = (kind ? C.bh : C.bh - 12) + big;
   const x = p.x - w / 2, y = p.y - ht / 2;
-  const cls = ['fp-room', `k-${kind ? room.kind : 'fog'}`, here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', kind && fightKind(room) && !up && !sealed ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', next === room.id ? 'hunt-next' : ''].filter(Boolean).join(' ');
-  const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : '';
+  const cls = ['fp-room', `k-${kind ? room.kind : 'fog'}`, here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', kind && fightKind(room) && !up && !sealed ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', next === room.id ? 'hunt-next' : '', pop === room.id ? 'sel' : ''].filter(Boolean).join(' ');
+  // A room you can walk into walks on one click (Enter too); any other room you've seen opens its pop-up.
+  const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : kind || (!R.at && room.id === g.entry) ? ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"` : '';
   const jn = kind && room.kind === 'junction';
-  let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs} title="${esc(tileTip(s, room))}" aria-label="${esc(kind ? room.path : 'Unseen room')}">`;
+  let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room))}"`} aria-label="${esc(kind ? room.path : 'Unseen room')}">`;
   // Rings: you (teal), the hunter's next room (dashed hot).
   if (here || next === room.id) out += jn ? `<circle class="fp-ring" cx="${p.x}" cy="${p.y}" r="21"/>` : `<rect class="fp-ring" x="${x - 6}" y="${y - 6}" width="${w + 12}" height="${ht + 12}" rx="${room.kind === 'rest' && kind ? 20 : 7}"/>`;
   out += bodyOf(kind ? room.kind : 'fog', x, y, w, ht, p);
@@ -238,27 +251,83 @@ function hudMarkup(s) {
   const prog = progressOf(s), h = hunterOf(s), K = KINDS[R.kind], bag = scriptsOf(s), author = (AUTHORS[R.author]?.name || R.author).toUpperCase();
   const step = pctOf(s, R.floor >= 5 ? ROOMS.moveDeep : ROOMS.move);
   const scripts = bag.map((id) => `<li class="fp-perk r-${TIER[SCRIPTS[id].rarity]}" title="${esc(scriptTip(id))}">${esc(SCRIPTS[id].name)}</li>`).join('');
-  const hunt = R.at && h ? `<span class="fp-stat fp-hunt${h.down ? ' out' : ''}" title="${esc(`${huntName(h)}: ${HUNTERS[h.kind].text} It moves only when you walk or wait.`)}">${ic('den')}<span class="lbl">${esc(huntName(h))}</span><b>${h.down ? 'down' : h.kind === 'track' && !h.awake && !h.returning ? 'asleep' : `moves in ${paceOf(s) - h.count}`}</b></span>` : '';
+  const hunt = R.at && h ? `<span class="fp-stat fp-hunt${h.down ? ' out' : ''}" title="${esc(`${hunterLine(s)}\n${huntName(h)}: ${HUNTERS[h.kind].text} It moves only when you walk or wait.`)}">${ic('den')}<span class="lbl">${esc(huntName(h))}</span><b>${h.down ? 'down' : h.kind === 'track' && !h.awake && !h.returning ? 'asleep' : `moves in ${paceOf(s) - h.count}`}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to its guard post.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const pack = R.pack.length ? `<span class="fp-stat" title="${esc(`Pack: ${R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' })).join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${R.pack.length}</b></span>` : '';
   const rule = ['a', 'b', 'c'].map((k) => `<button type="button" class="fp-rule${R.bossRule === k ? ' on' : ''}" data-rooms="bossrule" data-arg="${k}" aria-pressed="${R.bossRule === k}" title="${esc(`Boss rule ${k}: ${BOSS_RULES[k].name}.\n${BOSS_RULES[k].text}`)}">${k}</button>`).join('');
+  // Wait and Jack out (Connect at home), always in reach at the strip's right.
+  const c = connectOf(s);
+  const acts = R.at
+    ? btn('wait', 'Wait', { small: true, disabled: !!R.screen || active(s), tip: R.screen ? 'Wait: finish what is in front of you first.' : 'Wait: the hunter takes its step. Costs nothing.' })
+      + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Signal rests at home.' })
+    : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Signal to connect.` });
   return `<header class="fp-hud" aria-label="The server">
     <span class="fp-id" title="${esc(`${R.name}: ${author} ${R.kind}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(`${R.kind} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${hunt}${pack}
     <span class="fp-tools"><span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>
-    <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul></span>
+    <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
+    <span class="fp-acts">${acts}</span></span>
   </header>`;
 }
+// Whether you can connect from home: Signal enough, and the reconnect wait over.
+function connectOf(s) {
+  const R = s.rooms, sig = signalNow(s), wait = R.reconnectAt - now(), need = Math.ceil(R.max * 0.25);
+  return { sig, wait, need, can: wait <= 0 && sig >= need };
+}
 
-// ---------- the room you're in ----------
-const btn = (verb, label, { arg = null, primary = false, hot = false, disabled = false, note = '', tip = '' } = {}) => `<button type="button" class="btn${primary ? ' primary' : ''}${hot ? ' hot-btn' : ''}" data-rooms="${verb}"${arg != null ? ` data-arg="${esc(arg)}"` : ''}${disabled ? ' disabled' : ''}${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}${note ? `<small>${esc(note)}</small>` : ''}</button>`;
+// ---------- the pop-up ----------
+// Where you stand: a step, a wait, a fight, a visit. A room you clicked stays up until this changes.
+const stampOf = (s) => `${s.rooms.visits}:${s.rooms.at || 'home'}:${s.rooms.visit?.moves ?? 0}:${s.rooms.stats.fights}`;
+// The decision the room you're in (or home) puts in front of you, as a key, or null when there is none.
+function needOf(s) {
+  const R = s.rooms;
+  if (!R) return null;
+  if (!R.at) return `home:${R.visits}`;
+  if (active(s)) return null;
+  const room = hereOf(s), v = R.visit;
+  const ask = !!R.screen || (room.kind === 'cache' && cacheFull(s, room)) || (room.kind === 'vault' && !R.opened[room.id]) || (room.kind === 'rest' && !v.rested && restGain(s) > 0);
+  return ask ? `${stampOf(s)}:${R.screen?.kind || room.kind}` : null;
+}
+// The room the pop-up is on: the one you clicked, or the one you're in when it wants a decision you haven't closed.
+// At home it sits on the entry.
+export function popOf(s, ui = fpUi) {
+  const R = s.rooms;
+  if (!R || active(s)) return null;
+  if (ui.sel && ui.selAt === stampOf(s) && R.graph.rooms[ui.sel] && (seenOf(s, ui.sel) === 'kind' || (!R.at && ui.sel === R.graph.entry))) return ui.sel;
+  const need = needOf(s);
+  return need && need !== ui.closed ? R.at || R.graph.entry : null;
+}
+// A click on a room you've seen: its pop-up (a second click closes it).
+export function pickRoom(s, id, ui = fpUi) {
+  if (popOf(s, ui) === id) return closePop(s, ui);
+  ui.sel = id; ui.selAt = stampOf(s);
+}
+// ×, Esc or the map's background: closed, and the decision in front of you stays closed until a new one.
+export function closePop(s, ui = fpUi) {
+  ui.sel = null; ui.selAt = null; ui.closed = needOf(s);
+}
+
+const btn = (verb, label, { arg = null, primary = false, hot = false, small = false, disabled = false, note = '', tip = '' } = {}) => `<button type="button" class="btn${small ? ' small' : ''}${primary ? ' primary' : ''}${hot ? ' hot-btn' : ''}" data-rooms="${verb}"${arg != null ? ` data-arg="${esc(arg)}"` : ''}${disabled ? ' disabled' : ''}${tip ? ` title="${esc(tip)}"` : ''}>${esc(label)}${note ? `<small>${esc(note)}</small>` : ''}</button>`;
 const note = (html, cls = '') => `<p class="fp-note${cls ? ' ' + cls : ''}">${html}</p>`;
 // What holds the room: its icon, its name, and its line.
 const holder = (name, title, sub, tip = '', cls = 'hot') => `<div class="fp-virus ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${ic(name)}<span><b>${esc(title)}</b><small>${esc(sub)}</small></span></div>`;
-const kicker = (st) => (st.word || st.at != null ? `<h2 class="fp-kick ${st.cls}">${esc(st.word)}${st.at != null ? ` · ↻ ${clock(st.at)}` : ''}</h2>` : '');
-function roomCard(s) {
+// The card's one state line: here, live, cleared ↻ 4:12, locked, stocked…
+const kicker = (st, here = false) => {
+  const words = [here ? 'you are here' : '', st.word].filter(Boolean).join(' · ');
+  return words || st.at != null ? `<h2 class="fp-kick ${st.cls}">${esc(words)}${st.at != null ? `${words ? ' · ' : ''}↻ ${clock(st.at)}` : ''}</h2>` : '';
+};
+const cardOf = (st, here, title, body, acts, focus = false) => `<section class="card fp-screen${focus ? ' focus' : ''}">${kicker(st, here)}<h1>${esc(title)}</h1>${body}${acts ? `<div class="row acts">${acts}</div>` : ''}</section>`;
+// The hunter, when it's about this room: in it, or stepping into it next.
+function hunterNote(s, room) {
+  const h = hunterOf(s);
+  if (!h || h.down || !s.rooms.at) return '';
+  if (h.at === room.id && room.id !== s.rooms.at) return '';
+  return huntStep(s) === room.id ? note(esc(`The ${huntName(h)} steps in here next.`), 'hot') : '';
+}
+// The room you're in: what holds it and its verbs.
+function hereCard(s) {
   const R = s.rooms, g = R.graph, room = hereOf(s), sc = R.screen, h = hunterOf(s);
   let st = stateOf(s, room), body = '', acts = '';
   if (sc?.kind === 'hunter') {
@@ -284,7 +353,7 @@ function roomCard(s) {
     const full = cacheFull(s, room), read = R.read?.[room.id] === (R.spawns[room.id] || 0), bait = read && isBait(s, room), lose = pctOf(s, ROOMS.bait);
     if (full) {
       body = note(esc(!read ? (room.mirror ? 'Unread.' : 'Unread. One cache in four is bait.') : room.mirror ? mirrorLine(s, room) : bait ? `Bait. Taking it costs ${lose} Signal.` : 'Clean: credits and code.'), bait || (read && room.mirror) ? 'hot' : '');
-      acts = btn('cat', 'Read', { disabled: read }) + btn('pull', room.mirror && read ? 'Break the mirror' : 'Take', { hot: true, note: bait ? `−${lose} Signal` : '' });
+      acts = btn('cat', 'Read it', { disabled: read }) + btn('pull', room.mirror && read ? 'Break the mirror' : 'Take it', { hot: true, note: bait ? `−${lose} Signal` : '' });
     } else body = note('Credits and code, sometimes a script.', 'dim');
   } else if (room.kind === 'vault') {
     const open = !!R.opened[room.id], has = R.visit.keys.includes(room.id), main = room.id === g.vaults[0], force = pctOf(s, ROOMS.force);
@@ -295,48 +364,46 @@ function roomCard(s) {
     acts = btn('rest', R.visit.rested ? 'Rested' : 'Rest', { primary: !R.visit.rested && restGain(s) > 0, disabled: R.visit.rested || !restGain(s), note: R.visit.rested ? 'once a visit' : restGain(s) ? `+${restGain(s)} Signal` : 'Signal full' });
   } else if (room.kind === 'entry') body = note('The hunter never comes in.', 'dim');
   else if (room.kind === 'den') body = note(g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.', 'dim');
-  const line = hunterLine(s);
-  const card = `<section class="card fp-screen${sc ? ' focus' : ''}">${kicker(st)}<h1>${esc(room.path)}</h1>${body}${acts ? `<div class="row acts">${acts}</div>` : ''}${line ? `<p class="fp-hunter-line">${ic('den')}<span>${esc(line)}</span></p>` : ''}</section>`;
-  return card + exitsMarkup(s);
+  return cardOf(st, true, room.path, body + hunterNote(s, room), acts, !!sc);
 }
-// Where you can go from here: each exit as a row, the whole row the move. Its name and one word; its cost on the right.
-function exitsMarkup(s) {
-  const R = s.rooms, g = R.graph, list = neighbours(g, R.at).map((id) => g.rooms[id]), h = hunterOf(s), open = new Set(exits(s).map((x) => x.id)), next = h && !h.down ? hunterNext(s, h) : null;
-  const rows = list.map((room) => {
-    const kind = seenOf(s, room.id) === 'kind', cost = moveCost(s, room), st = stateOf(s, room), up = kind && fightKind(room) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
-    const gain = room.kind === 'rest' && kind && !R.visit?.rested ? restGain(s) : 0;
-    const what = up ? esc(whoOf(s, room).fam) : st.at != null ? `↻ ${clock(st.at)}` : gain ? `+${gain} Signal` : esc(st.word);
-    const tag = h && !h.down ? (h.at === room.id ? 'hunter' : next === room.id ? 'hunter next' : '') : '';
-    const can = open.has(room.id);
-    return `<li><button type="button" class="fp-exit${up ? ' up' : ''}${tag ? ' hunted' : ''}" ${can ? `data-rooms="go" data-arg="${esc(room.id)}"` : 'disabled'}>${ic(iconOf(s, room), up || room.mirror ? 'hot' : '')}<span class="fp-exit-b"><b>${esc(kind ? room.path : 'Unseen')}</b>${what ? `<small class="${up ? 'hot' : gain ? 'you' : st.cls}">${what}</small>` : ''}</span><span class="fp-exit-c">${tag ? `<span class="fp-tag-inline hot">${tag}</span>` : ''}${!can ? '' : cost ? `−${cost}` : '<i>free</i>'}</span></button></li>`;
-  }).join('');
-  const more = `<div class="row acts">${btn('wait', 'Wait', { disabled: !!R.screen, tip: 'Wait: the hunter takes its step. Costs nothing.' })}${btn('jackout', 'Jack out', { hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Signal rests at home.' })}</div>`;
-  return `<section class="fp-exits"><h3 class="fp-sec">Exits</h3><ul>${rows}</ul>${more}</section>`;
+// A room you're not in: what holds it, its state and its one rule. Its verbs wait until you walk in.
+function farCard(s, room) {
+  const st = stateOf(s, room), { who, rule } = aboutOf(s, room);
+  let body = '';
+  if (fightKind(room) || room.mirror) {
+    const k = whoOf(s, room), up = isUp(s, room) && !(room.kind === 'core' && !coreOpen(s)), f = room.mirror ? fightOf(s, room, 'mirror') : null;
+    body = room.mirror ? holder('mirror', `Elite ${familyName(room.family)}`, `behind a mirror · lv ${f.level}`, '', cacheFull(s, room) ? 'hot' : 'down')
+      : holder(iconOf(s, room), k.short, k.sub, '', up ? 'hot' : 'down');
+  } else if (who) body = note(esc(who));
+  if (rule) body += note(esc(rule), /hunter is here|wakes the Tracker/.test(rule) ? 'hot' : 'dim');
+  return cardOf(st, false, room.path, body + hunterNote(s, room), '');
 }
 // Home: Signal resting, the reconnect wait, what the last visit did, and Connect.
 function homeCard(s) {
-  const R = s.rooms, sig = signalNow(s), t = now(), full = t + Math.max(0, Math.ceil(((R.max - sig) / (R.max * 0.2 * R.speed)) * 60000)), wait = R.reconnectAt - t, need = Math.ceil(R.max * 0.25);
+  const R = s.rooms, t = now(), { sig, wait, need, can } = connectOf(s), full = t + Math.max(0, Math.ceil(((R.max - sig) / (R.max * 0.2 * R.speed)) * 60000));
   const L = R.last;
   const last = L ? `<ul class="fp-lines">${L.result === 'lost' ? `<li class="hot"><span class="lbl">lost</span><span>${esc(`${L.why} ${L.lost?.length ? `${L.lost.length} unbanked ${L.lost.length === 1 ? 'item' : 'items'} lost: ${L.lost.join(', ')}.` : 'Nothing unbanked was lost.'}`)}</span></li>` : `<li><span class="lbl">banked</span><span>${L.banked} ${L.banked === 1 ? 'item' : 'items'}</span></li>`}<li><span class="lbl">xp</span><span>+${(L.xp || 0).toLocaleString('en-US')}</span></li></ul>` : '';
   const items = R.banked.map((id) => stashItem(s, id)).filter(Boolean);
   const loot = items.length ? `<h3 class="fp-sec">Banked <small>${items.length}</small></h3><ul class="fp-items">${items.slice(-6).map((it) => `<li data-ptip="${esc(it.id)}"><b class="iname r-${it.rarity}">${esc(itemLabel(it))}</b><small>${esc(statLine(it.stats))}</small></li>`).join('')}</ul>` : '';
-  const can = wait <= 0 && sig >= need;
   const lines = [sig < R.max ? `Full in ${clock(full)}.` : '', wait > 0 ? `Reconnect in ${clock(R.reconnectAt)}.` : '', sig < need ? esc(`You need ${need} Signal to connect.`) : ''].filter(Boolean).join(' ');
   return `<section class="card fp-screen fp-home"><h2>${R.visits ? `Home · visit ${R.visits}` : 'Home'}</h2><h1>${R.visits ? (L?.result === 'lost' ? 'Disconnected' : 'Jacked out') : 'Ready to connect'}</h1>
     ${lines ? note(lines) : ''}${last}<div class="row acts">${btn('connect', 'Connect', { primary: true, disabled: !can, note: can ? '' : wait > 0 ? 'wait' : `${need} Signal` })}</div>
     <p class="fp-note dim">${esc(`This session: +${xpEarned(s).toLocaleString('en-US')} XP · fights won ${R.stats.won}/${R.stats.fights} · ${BOSSES[RESIDENT].name} ${R.stats.boss.won}/${R.stats.boss.tries}`)}</p>${loot}</section>`;
 }
-function logMarkup(s) {
-  const all = s.rooms.log, lines = all.slice(fpUi.log ? -14 : -3);
-  return `<section class="fp-log${fpUi.log ? ' open' : ''}"><button type="button" class="fp-log-k" data-fp-ui="log" aria-expanded="${fpUi.log}"><span>tty</span><span class="ico" ${icon(fpUi.log ? 'collapse' : 'expand')}></span></button><div class="fp-log-lines">${lines.map((l) => `<div${l.startsWith('→') ? ' class="you"' : ''}>${esc(l)}</div>`).join('')}</div></section>`;
+function popCard(s, id) {
+  const R = s.rooms;
+  if (!R.at) return id === R.graph.entry ? homeCard(s) : farCard(s, R.graph.rooms[id]);
+  return id === R.at ? hereCard(s) : farCard(s, R.graph.rooms[id]);
 }
 
-export function roomsMarkup(s) {
+export function roomsMarkup(s, ui = fpUi) {
   const R = s.rooms;
   if (!R) return '<section class="card"><h2>Rooms</h2><h1>No server</h1></section>';
+  const id = popOf(s, ui);
+  // Placed beside its room by app.js (placeRoomsPop) once it's drawn: hidden until then.
+  const pop = id ? `<div class="map-pop fp-pop" id="fp-pop" data-pop="${esc(id)}" role="dialog" aria-label="${esc(R.at || id !== R.graph.entry ? R.graph.rooms[id].path : 'Home')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-fp-pop-close title="Close (Esc)" aria-label="Close">×</button>${popCard(s, id)}</div>` : '';
   return `<div class="fp${R.at ? '' : ' home'}">
     ${sprite()}${hudMarkup(s)}
-    <section class="panel fp-map" data-pane="map"><div class="fp-scroll">${mapSvg(s, false)}${mapSvg(s, true)}</div></section>
-    <aside class="fp-side">${R.at ? roomCard(s) : homeCard(s)}${logMarkup(s)}</aside>
+    <section class="panel fp-map" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div>${pop}</section>
   </div>`;
 }

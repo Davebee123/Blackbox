@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { fresh, hooks, active, finish, stashItem } from './dist/combat.mjs';
 import { CONFIG } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { roomsMarkup } from './dist/floorplan-view.mjs';
+import { roomsMarkup, popOf, pickRoom, closePop } from './dist/floorplan-view.mjs';
 import { runServer } from './roomsim.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
@@ -481,6 +481,64 @@ test('the map tiles: one mark language for state, countdowns that tick in place,
   }
   // The log: no Signal readout the strip already shows.
   assert.ok(!R.log.some((l) => new RegExp(`${R.max}\\b`).test(l) && /\/\d+/.test(l)), R.log.join(' | '));
+});
+
+test('the page is the map and a pop-up: it opens on a decision and on a click, closes until the next one, and Wait and Jack out sit on the strip', () => {
+  const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph, ui = { sel: null, selAt: null, closed: null };
+  const pop = (html) => html.match(/<div class="map-pop fp-pop" id="fp-pop" data-pop="([^"]+)"[\s\S]*$/);
+  let html = roomsMarkup(s, ui);
+  // No side column: no exits list, no tty. Wait and Jack out are on the strip.
+  assert.doesNotMatch(html, /fp-side|fp-exits|fp-log|Exits</);
+  assert.match(html, /class="fp-acts"><button[^>]*data-rooms="wait"[\s\S]*data-rooms="jackout"/);
+  // The entry wants nothing: no pop-up. Other rooms you've seen open one on a click; rooms you can walk into walk.
+  assert.equal(popOf(s, ui), null);
+  assert.equal(pop(html), null);
+  assert.match(html, new RegExp(`data-room="${g.core}" data-fp-sel="${g.core}" tabindex="0"`));
+  const p = FP.exits(s).find((x) => x.kind === 'process');
+  assert.match(html, new RegExp(`data-room="${p.id}" data-rooms="go" data-arg="${p.id}"`));
+  pickRoom(s, g.core, ui);
+  html = roomsMarkup(s, ui);
+  assert.equal(pop(html)[1], g.core);
+  assert.match(pop(html)[0], /sealed[\s\S]*<h1>Core<\/h1>[\s\S]*DEADBOLT[\s\S]*Sealed until you open the Vault/);
+  assert.doesNotMatch(pop(html)[0], /data-rooms=/, 'a far room has no verbs');
+  assert.doesNotMatch(html, new RegExp(`data-room="${g.core}"[^>]*title=`), 'no tooltip on the room the card is about');
+  pickRoom(s, g.core, ui);
+  assert.equal(popOf(s, ui), null, 'a second click closes it');
+  // Walk into a live virus: the card opens by itself, Engage and Step back.
+  pickRoom(s, g.core, ui);
+  FP.go(s, p.id);
+  assert.equal(popOf(s, ui), p.id, 'a step drops the room you clicked; the decision opens on yours');
+  html = roomsMarkup(s, ui);
+  assert.match(pop(html)[0], /you are here · live[\s\S]*data-rooms="engage"[\s\S]*data-rooms="back"/);
+  assert.doesNotMatch(pop(html)[0], /heading for/, 'no hunter line unless it is about this room');
+  // Closed, it stays closed through redraws and ticks; a far room can still be looked at.
+  closePop(s, ui);
+  tick(3000);
+  assert.equal(popOf(s, ui), null);
+  pickRoom(s, g.entry, ui);
+  assert.match(pop(roomsMarkup(s, ui))[0], /<h1>Entry<\/h1>/);
+  FP.act(s, 'back');
+  // A stocked cache, the rest room (when it can rest), a locked vault: each opens its card with its verbs.
+  const c = FP.roomList(s).find((x) => x.kind === 'cache' && !x.mirror);
+  place(s, c.id); R.visit.moves++;
+  assert.equal(popOf(s, ui), c.id);
+  assert.match(pop(roomsMarkup(s, ui))[0], /data-rooms="cat"[\s\S]*data-rooms="pull"/);
+  const rest = roomOfKind(s, 'rest');
+  place(s, rest.id); R.visit.moves++; R.signal = R.max;
+  assert.equal(popOf(s, ui), null, 'full Signal: nothing to decide');
+  R.signal = Math.round(R.max / 2);
+  assert.equal(popOf(s, ui), rest.id);
+  assert.match(pop(roomsMarkup(s, ui))[0], /data-rooms="rest"/);
+  const v = g.rooms[g.vaults[0]];
+  place(s, v.id); R.visit.moves++; R.visit.keys = [v.id];
+  assert.match(pop(roomsMarkup(s, ui))[0], /key fits[\s\S]*data-rooms="open"[\s\S]*data-rooms="force"/);
+  // Home: the card on the entry with Connect, and Connect on the strip.
+  FP.jackOut(s);
+  html = roomsMarkup(s, ui);
+  assert.equal(pop(html)[1], g.entry);
+  assert.match(pop(html)[0], /Jacked out[\s\S]*data-rooms="connect"/);
+  assert.match(html, /class="fp-acts"><button[^>]*data-rooms="connect"/);
+  assert.doesNotMatch(html, /undefined|NaN/);
 });
 
 test('the bot maps a medium server, the Resident and all', () => {

@@ -32,7 +32,7 @@ import { roomMarkup } from './room-view.mjs';
 import { patchRules } from './skillrules.mjs';
 import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
-import { roomsMarkup, fpUi, fillClocks } from './floorplan-view.mjs';
+import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-view.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -449,14 +449,75 @@ function roomsDone(events) {
   else if (module !== 'rooms' && !active(campaign)) go('rooms', true);
   dirty = true;
 }
+// What happens on the server goes up as a notice (there's no tty on the page): the last few lines of a batch (a move, a
+// respawn, a fight's end), ls and map in full. A step or a fight starting says nothing: the map and the pop-up show it.
+const ROOMS_SAY = ['rooms', 'rooms-good', 'rooms-bad', 'rooms-out', 'jacked-out'];
+function roomsSay(events) {
+  const said = events.filter((e) => ROOMS_SAY.includes(e.type));
+  if (!said.length) return;
+  const out = said.findLast((e) => e.type === 'rooms-out');
+  if (out) return notice(out.message, false, null, true);
+  notice(said.slice(-3).map((e) => e.message).join(' '), said.some((e) => e.type === 'rooms-bad'));
+}
+// The pop-up (floorplan-view.mjs): a room you've seen opens it; ×, Esc or the map's background closes it.
 document.addEventListener('click', (e) => {
-  const t = e.target.closest?.('[data-fp-ui]');
-  if (t) { fpUi[t.dataset.fpUi] = !fpUi[t.dataset.fpUi]; feel.key('click'); dirty = true; }
+  if (module !== 'rooms' || !campaign.rooms) return;
+  const t = e.target.closest?.('[data-fp-sel]');
+  if (t) { pickRoom(campaign, t.dataset.fpSel); feel.key('click'); dirty = true; return; }
+  const bg = e.target.closest?.('.fp-map') && !e.target.closest('.fp-pop, [data-rooms], [data-fp-sel]');
+  if ((e.target.closest?.('[data-fp-pop-close]') || bg) && popOf(campaign)) { closePop(campaign); dirty = true; }
 });
 document.addEventListener('keydown', (e) => {
   const g = e.target.closest?.('[data-rooms]');
   if (g && (e.key === 'Enter' || e.key === ' ') && g.tagName !== 'BUTTON') { e.preventDefault(); roomsClick(g.dataset.rooms, g.dataset.arg); }
+  const t = e.target.closest?.('[data-fp-sel]');
+  if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pickRoom(campaign, t.dataset.fpSel); dirty = true; }
+  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && popOf(campaign)) { closePop(campaign); dirty = true; }
 });
+// Put the pop-up beside its room: right, left, below or above, the first side where it fits whole on screen without
+// covering the room (on a phone it spans the map, so below or above). Measured again only when the room, the map's
+// size or the card's size changes, so a scroll or a redraw never moves it.
+let fpPopAt = null;
+function placeRoomsPop() {
+  const pop = $('fp-pop');
+  if (!pop) { fpPopAt = null; return; }
+  const box = pop.parentElement, id = pop.dataset.pop;
+  const tile = [...box.querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"]`)].map((t) => t.getBoundingClientRect()).find((r) => r.width > 0);
+  if (!tile) { pop.style.visibility = 'hidden'; return; }
+  const c = box.getBoundingClientRect(), t = { l: tile.left - c.left, t: tile.top - c.top, r: tile.right - c.left, b: tile.bottom - c.top };
+  pop.style.maxHeight = '';
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  const key = [id, Math.round(c.width), Math.round(c.height), Math.round(t.l), Math.round(t.t), w, h].join('|');
+  if (fpPopAt?.key === key) { pop.style.left = fpPopAt.left; pop.style.top = fpPopAt.top; pop.style.maxHeight = fpPopAt.maxHeight; pop.style.visibility = 'visible'; return; }
+  const m = 8, gap = 12, W = c.width, H = c.height;
+  // What you can see of the map: on a phone the strip sticks over its top and the prompt over its bottom.
+  const hud = box.parentElement.querySelector('.fp-hud')?.getBoundingClientRect(), form = $('command-form')?.getBoundingClientRect();
+  const seeTop = Math.max(m, (hud && getComputedStyle(box.parentElement.querySelector('.fp-hud')).position === 'sticky' ? hud.bottom : 0) - c.top + m);
+  const seeBot = Math.min(H - m, Math.min(innerHeight, form && form.top > 0 ? form.top : innerHeight) - c.top - m);
+  const clampX = (x) => Math.max(m, Math.min(W - w - m, x)), clampY = (y, lo, hi) => Math.max(lo, Math.min(hi - h, y));
+  const sides = (lo, hi) => [
+    { left: t.r + gap, top: clampY(t.t - 10, lo, hi), ok: t.r + gap + w <= W - m && h <= hi - lo },
+    { left: t.l - gap - w, top: clampY(t.t - 10, lo, hi), ok: t.l - gap - w >= m && h <= hi - lo },
+    { left: clampX((t.l + t.r) / 2 - w / 2), top: t.b + gap, ok: t.b + gap + h <= hi },
+    { left: clampX((t.l + t.r) / 2 - w / 2), top: t.t - gap - h, ok: t.t - gap - h >= lo },
+  ];
+  // Of the sides that fit, the one that hides the fewest other rooms you've seen (ties: right, left, below, above).
+  const tiles = [...box.querySelectorAll('.fp-room:not(.shape) .fp-body')].map((x) => x.getBoundingClientRect()).filter((r) => r.width > 0).map((r) => ({ l: r.left - c.left, t: r.top - c.top, r: r.right - c.left, b: r.bottom - c.top }));
+  const hides = (x) => tiles.filter((r) => !(x.left + w <= r.l || x.left >= r.r || x.top + h <= r.t || x.top >= r.b)).length;
+  const best = (list) => list.filter((x) => x.ok).map((x) => ({ ...x, n: hides(x) })).sort((p, q) => p.n - q.n)[0];
+  let at = best(sides(seeTop, seeBot)) || best(sides(m, H - m));
+  if (!at) { // no side holds it whole: the roomiest of below and above, and the card scrolls
+    const below = H - m - (t.b + gap), above = t.t - gap - m;
+    const room = Math.max(120, Math.max(below, above));
+    pop.style.maxHeight = room + 'px';
+    at = { left: clampX((t.l + t.r) / 2 - w / 2), top: below >= above ? t.b + gap : Math.max(m, t.t - gap - Math.min(h, room)) };
+  }
+  pop.style.left = Math.round(at.left) + 'px'; pop.style.top = Math.round(at.top) + 'px'; pop.style.visibility = 'visible';
+  const fresh = fpPopAt?.id !== id;
+  fpPopAt = { key, id, left: pop.style.left, top: pop.style.top, maxHeight: pop.style.maxHeight };
+  if (fresh) { const r = pop.getBoundingClientRect(); if (r.top < 0 || r.bottom > innerHeight) pop.scrollIntoView({ block: 'nearest' }); }
+}
+addEventListener('resize', () => { if (module === 'rooms') placeRoomsPop(); });
 // ---------- a breach (breach.mjs) ----------
 // A button on the breach page: a move on the map, or the screen's verb. A fight starts paused on the Fight page.
 function breachClick(verb, arg) {
@@ -758,6 +819,7 @@ function react(events) {
   // XP earned away from a fight (a vault, a sweep, a dead drop, a decode, a first craft): a quick card.
   const carded = events.some((e) => ['takeover', 'root', 'streak', 'contract-done', 'crafted', 'bought', 'harvester', 'service-done'].includes(e.type));
   const xpOut = !won && !ended && !active(campaign) && !carded && events.filter((e) => e.type === 'xp');
+  if (campaign.rooms) roomsSay(events); // the rooms playtest has no tty: what happens on the server goes up as a notice
   if (xpOut?.length) { const why = String(xpOut[0].message.split('·')[1] || '').trim().replace(/\.$/, ''); showGain(why ? why[0].toUpperCase() + why.slice(1) : 'XP', '', V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code', 'level-up'].includes(x.type))), !events.some((x) => x.type === 'level-up')); }
   if (events.length) dirty = true;
 }
@@ -1395,9 +1457,11 @@ function render(force = false) {
     const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
+    const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
+    if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
-    if (module === 'rooms') fillClocks($('page-view')); // the countdowns tick in place: the markup only changes with the server
+    if (module === 'rooms') { fillClocks($('page-view')); placeRoomsPop(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {
@@ -2250,7 +2314,7 @@ document.addEventListener('keydown', (e) => {
 
 // Typing anywhere goes to the prompt.
 document.addEventListener('keydown', (e) => {
-  if (e.target === $('command-input') || e.target.closest?.('[data-select]') || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target === $('command-input') || e.target.closest?.('[data-select], [data-rooms], [data-fp-sel]') || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key.length === 1 && !/input|textarea/i.test(e.target.tagName)) $('command-input').focus();
 });
 
