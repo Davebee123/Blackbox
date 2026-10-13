@@ -788,6 +788,8 @@ A version bump, in place. Every server you'd found becomes a room graph from its
 
 ## 10. Open questions for the designer
 
+**Designer's answers (decided):** 2 yes, burns, helpers and daemons trigger interrupts. 3 yes, a wasted tick stays spent. 4 and 5 yes, 8 floors and no gatekeeper. 6: a socket only ever applies to the server it's built on (read as: you can build in any server you're on, held or not; holding adds the core socket). 7: the dividend goes with production; a help reward for both players is the replacement idea. 15 yes, no tells at levels 1 to 5. 1: test all three boss options in R0 (`&boss=a|b|c`) and pick after playing. The rest stand as recommended.
+
 | # | Question | Options | Recommendation |
 |---:|---|---|---|
 | 1 | Bosses and ticks | (a) core ticks are phases, (b) every part interrupts and big moves are tells, (c) phases plus an interrupt budget | **(a)**, for the reasons in 3.4. All three ship switchable in R0, and the designer picks after playing them. |
