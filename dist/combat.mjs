@@ -2261,6 +2261,13 @@ export function stripMark(s, p) {
   const c = s.encounter?.commanding;
   if (c && c.id && !c.auto && c.target === p.id) p.strippedBy = { who: s.who || '', id: c.id, cycle: c.at ?? s.encounter.cycle };
 }
+// Where a hit came from, for its own number on screen (app.js, dmgfx.mjs): src 'burn' (a tick of damage over
+// time), 'helper', 'daemon' or 'reflect' (damage turned back on the virus), via the name it carries; your own
+// command's hit names its skill. Look only: nothing in play reads it.
+const srcOf = (e, opts) => ({
+  ...(opts.src || opts.dot ? { src: opts.src || 'burn' } : {}),
+  ...(opts.by ? { via: opts.by } : opts.mine && !opts.dot && e.commanding?.id ? { skill: e.commanding.id } : {}),
+});
 export function hit(s, p, base, opts = {}) {
   const e = s.encounter;
   if (!alive(p)) return { dealt: 0, overflow: 0 };
@@ -2387,7 +2394,7 @@ export function hit(s, p, base, opts = {}) {
   // Race Window, Hot Reload: a crit from your command readies that skill again.
   if (crit && opts.mine && !opts.dot && dealt > 0 && e.commanding && e.lastSkill && e.readyAt[e.lastSkill] > e.cycle) for (const x of fxFire(s, 'crit', { do: 'refund-skill' })) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${x.name || x.it.name}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); break; }
   e.lastCrit = !!crit && !!opts.mine;
-  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit });
+  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts) });
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor });
   // A server room's fight (floorplan.mjs): the interrupt ticks (interrupt.mjs), and the room bodies' own rules on a hit
   // (families.mjs: a Trojan's Package unpacks). 'gone': the part left the board without breaking.
@@ -2769,10 +2776,10 @@ function useAbility(s, intent, auto = false) {
   if (id === 'reroute') {
     // Every arrival counts as a hit from your command (tells.mjs): a swarm stops a cast in one go.
     let k = 0;
-    for (const h of e.helpers) { h.target = target.id; const was = [target.integrity, target.armor || 0]; hit(s, target, h.damage, { by: 'Helper', dot: true }); if (!alive(target)) break; tellHit(s, target, { cmd: { id, target: target.id, at: intent.at ?? e.cycle }, key: `rr:${e.cycle}:${s.who || ''}:${k++}`, dealt: was[0] - target.integrity, chits: was[1] - (target.armor || 0) }); }
+    for (const h of e.helpers) { h.target = target.id; const was = [target.integrity, target.armor || 0]; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; tellHit(s, target, { cmd: { id, target: target.id, at: intent.at ?? e.cycle }, key: `rr:${e.cycle}:${s.who || ''}:${k++}`, dealt: was[0] - target.integrity, chits: was[1] - (target.armor || 0) }); }
   }
   if (id === 'cron-storm') {
-    for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true }); if (virusIntegrity(s).current === 0) break; }
+    for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true, src: 'helper' }); if (virusIntegrity(s).current === 0) break; }
   }
   if (id === 'kill-switch') {
     // Supervisor (Operator talent): cashing in your helpers readies Deploy.
@@ -2783,7 +2790,7 @@ function useAbility(s, intent, auto = false) {
       // Last Gasp comes with it, so cashing in early loses nothing. On armor each hit it had left breaks a ◆ first,
       // as it would have, and the rest land at once.
       let n = h.left + (edge(s, 'operator') ? 1 : 0);
-      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true }); reached.add(t); }
+      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true, src: 'helper' }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true, src: 'helper' }); reached.add(t); }
     }
     // Each part it cashes in on takes it as a hit from your command (tells.mjs): it calls a charge off there.
     for (const t of reached) if (alive(t)) { const [hp, ar] = was.get(t.id) || [t.integrity, t.armor || 0]; tellHit(s, t, { cmd: { id, target: t.id, at: intent.at ?? e.cycle }, key: `ks:${e.cycle}:${s.who || ''}:${t.id}`, dealt: hp - t.integrity, chits: ar - (t.armor || 0) }); }
@@ -2870,7 +2877,7 @@ export function takeDamage(s, amount, source, label) {
     const soaked = Math.min(e.shield, amount);
     e.shield -= soaked;
     amount -= soaked;
-    emit(s, 'blocked', `Shield absorbs ${soaked} of ${label}${e.shield ? ` (${e.shield} left)` : ''}.`, { source, amount: soaked });
+    emit(s, 'blocked', `Shield absorbs ${soaked} of ${label}${e.shield ? ` (${e.shield} left)` : ''}.`, { source, amount: soaked, shield: true });
   }
   const dealt = survive(s, d, Math.min(d.integrity, amount));
   d.integrity -= dealt;
@@ -3015,7 +3022,7 @@ function landAttack(s, p) {
     if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit, ...(atk.tell ? { tell: atk.tell } : {}) });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
     const cm = e.mode === 'home' && gearStat(s, 'countermeasures', 'server');
-    if (cm && dealt && alive(p)) hit(s, p, cm, { by: 'Countermeasures', server: true });
+    if (cm && dealt && alive(p)) hit(s, p, cm, { by: 'Countermeasures', server: true, src: 'reflect' });
   }
   if (atk.effect === 'encrypt') {
     // Stacks: every Encrypt adds to the damage your server takes each cycle, until the Encryptor breaks.
@@ -3123,12 +3130,12 @@ export function playerPhase(s, phase = 'all') {
     if (virusIntegrity(s).current === 0) break;
     let t = part(s, h.target);
     if (!alive(t)) { t = soonestAttacker(s); if (t) h.target = t.id; }
-    const r = t ? hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced }) : null;
+    const r = t ? hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper' }) : null;
     h.left--;
     // Fork (Herder): a ◆ a helper breaks while it runs starts another helper on that part (up to the cap).
     if (t && r?.absorbed && !r.dealt && buffed(e, 'fork') && alive(t) && e.helpers.length < helperCap(s)) { e.helpers.push({ target: t.id, damage: h.damage, left: 3 }); emit(s, 'status', `Fork: a ◆ breaks, and a helper splits off on the ${t.name}.`, { target: t.id, mark: 'helper' }); }
     // Last Gasp (Operator's edge): one more hit as it expires.
-    if (!h.left && t && alive(t) && edge(s, 'operator')) hit(s, t, h.damage, { by: 'Last Gasp', dot: true, synced: h.synced });
+    if (!h.left && t && alive(t) && edge(s, 'operator')) hit(s, t, h.damage, { by: 'Last Gasp', dot: true, synced: h.synced, src: 'helper' });
   }
   e.helpers = e.helpers.filter((h) => h.left > 0);
   if (e.regen && e.regen.from <= e.cycle && e.regen.left > 0) { heal(s, e.regen.amount, e.regen.name || 'Patch'); e.regen.left--; }
@@ -3441,7 +3448,7 @@ function syncBonus(s, intent) {
   } else if (cls === 'bastion') { e.shield = (e.shield || 0) + b.amount; what = `+${b.amount} shield (${e.shield})`; }
   else if (cls === 'infiltrator') { if (stretchBurns(s, t, b.amount, 'Sync')) what = 'burns last longer'; }
   else if (cls === 'operator' && e.helpers.length) {
-    for (const h of [...e.helpers]) { const ht = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (ht) hit(s, ht, h.damage, { by: 'Helper', dot: true }); if (virusIntegrity(s).current === 0) break; }
+    for (const h of [...e.helpers]) { const ht = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (ht) hit(s, ht, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (virusIntegrity(s).current === 0) break; }
     what = 'helpers strike again';
   }
   const surprise = e.surprise && ['inject', 'tag', 'keepalive'].includes(intent?.ability);
@@ -3466,13 +3473,13 @@ function runDaemons(s) {
     if (d.once || !active(s) || virusIntegrity(s).current === 0 || daemonNext(s, id) > e.cycle) continue;
     const say = (text) => emit(s, 'resolved', `${d.name}: ${text}.`, { auto: 'daemon', daemon: id });
     let acted = true;
-    if (id === 'sweeper') { const t = soonestAttacker(s); if (t) { say(`hits ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name }); } else acted = false; }
-    else if (id === 'fuzzer') { const t = livingParts(s).filter((p) => p.armor > 0).sort((x, y) => y.armor - x.armor)[0]; if (t) { say(`fuzzes ${t.name}`); hit(s, t, 1, { by: d.name }); } else acted = false; }
+    if (id === 'sweeper') { const t = soonestAttacker(s); if (t) { say(`hits ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name, src: 'daemon' }); } else acted = false; }
+    else if (id === 'fuzzer') { const t = livingParts(s).filter((p) => p.armor > 0).sort((x, y) => y.armor - x.armor)[0]; if (t) { say(`fuzzes ${t.name}`); hit(s, t, 1, { by: d.name, src: 'daemon' }); } else acted = false; }
     else if (id === 'stall') { const t = soonestAttacker(s); if (t?.attack) { say(`stalls ${t.name}`); t.attack.due++; } else acted = false; }
     else if (id === 'mender') { const dd = defender(s); if (dd.integrity < dd.max) { say('patches you'); heal(s, daemonAmount(s, id), d.name); } else acted = false; }
     else if (id === 'spider') { const t = lastTarget(s) || soonestAttacker(s); if (t) { say(`bites ${t.name}`); e.burns.push({ id: 'spider', target: t.id, damage: daemonAmount(s, id), grow: 0, left: 3, name: d.name, drain: 0 }); } else acted = false; }
-    else if (id === 'mirror') { const t = lastTarget(s); if (t) { say(`echoes you on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name }); } else acted = false; }
-    else if (id === 'cron') { const t = livingParts(s).find((q) => q.kind === 'system' && telling(s, q)) || soonestAttacker(s); if (t) { say(`runs on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name }); } else acted = false; }
+    else if (id === 'mirror') { const t = lastTarget(s); if (t) { say(`echoes you on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name, src: 'daemon' }); } else acted = false; }
+    else if (id === 'cron') { const t = livingParts(s).find((q) => q.kind === 'system' && telling(s, q)) || soonestAttacker(s); if (t) { say(`runs on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name, src: 'daemon' }); } else acted = false; }
     if (!acted) continue;
     e.daemonReady[id] = e.cycle + d.cooldown;
     e.metrics.daemon = (e.metrics.daemon || 0) + 1;

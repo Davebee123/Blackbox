@@ -1,5 +1,5 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
-import { CONFIG, ABILITIES, FAMILIES, xpToNext } from './data.mjs';
+import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
 import { partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
@@ -21,6 +21,8 @@ import { createIntro } from './intro.mjs';
 import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
+import { plan as dmgPlan, queueAfter } from './dmgfx.mjs';
+import { createLash } from './lash.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
 import { tickPlay, behindOf } from './progression.mjs';
@@ -180,7 +182,7 @@ const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
 // Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
 const ticked = (e) => /^[A-Z][\w-]*( [A-Z][\w-]*)*: /.test(e.message) && !e.message.startsWith('Crack: ');
-function strikes(events) {
+function strikes(events, delayOf = () => 0) {
   if (module !== 'combat' || fxLevel() === 'minimal') return;
   const hits = new Map(); // who>part → the strongest result this batch
   const rank = { miss: 0, hit: 1, crit: 2, chit: 3 };
@@ -191,8 +193,10 @@ function strikes(events) {
     if (!was || rank[result] > rank[was.result]) hits.set(key, { e, result });
   }
   // Played once the board has redrawn (rows can shift as commands change), from render().
-  for (const { e, result } of hits.values()) pendingStrikes.push(() => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result }));
+  // Each lands with its own number (dmgfx.mjs: a cycle's hits come one after another).
+  for (const { e, result } of hits.values()) pendingStrikes.push(() => later(delayOf(e), () => hitfx.strike(partRow(e.target), { who: e.who || 'you', initials: initials(e.who || campaign.profile?.handle || 'you'), kind: e.who ? 'crew' : 'you', result })));
 }
+const later = (ms, f) => (ms > 0 ? setTimeout(f, ms) : f());
 let pendingStrikes = [];
 const DISSOLVE_MS = 1000; // a broken part's last moment on the board
 
@@ -293,6 +297,7 @@ const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: ()
 shell.mount();
 const row = (id) => `.board [data-target="${id}"]`;
 const MINE = '.hud-bar.mine';
+const BAR = MINE + ' .bigbar'; // where a number on you rises: off your bar, clear of the Signal figure
 
 // ---------- juice: how hits, broken shields and hurts land ----------
 // All fixed on the page (the board re-renders every cycle and would cut them short). Motion off: none.
@@ -381,6 +386,21 @@ const juice = {
     if (mine) { mine.classList.remove('fx-split'); void mine.offsetWidth; mine.classList.add('fx-split'); setTimeout(() => mine.classList.remove('fx-split'), 450); }
   },
 };
+// A virus attack on you lashes at the screen (lash.mjs): from the part on the render (or its row on the
+// board) into your Signal bar. Effects minimal or Motion off: none, a soft edge instead.
+const lash = createLash();
+function lashFrom(id) {
+  const a = id ? art.anchor(id) : null;
+  if (a) return a;
+  const r = id ? partRow(id)?.querySelector('.bname')?.getBoundingClientRect() : null;
+  return r?.width ? { x: r.left + r.width * 0.5, y: r.top + r.height / 2, chars: (part(campaign, id)?.name || '').replace(/\W/g, '') + '#%*+=' } : null;
+}
+function lashAt(e, mode, frac = 0, heavy = false) {
+  const full = fxLevel() === 'full', big = heavy || frac >= 0.15;
+  lash.lash({ from: mode === 'tick' ? null : lashFrom(e.source), bar: document.querySelector(MINE + ' .bigbar'), power: Math.min(1, frac * 5), heavy, mode, full, onImpact: mode === 'hit' && big ? () => juice.quake(frac, heavy) : null });
+}
+const LASH_TRAVEL = 140; // ms: a hit's number shows as the lash lands, not as it leaves the part
+let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
 // Health bars as they were before this batch (so a trail can show what went).
 const barWas = () => {
   const e = campaign.encounter;
@@ -590,9 +610,19 @@ function react(events) {
   const fx = canMove();
   if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
   if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
+  // Every damage instance gets its own number, with an icon for its source, one after another in the order
+  // they resolved (dmgfx.mjs). Effects minimal or Motion off: all at once, stacked.
+  const lvl0 = fxLevel(), stack = !fx || lvl0 === 'minimal', lashing = fx && lvl0 !== 'minimal';
+  const split = dmgPlan(events, {
+    partName: (id) => part(campaign, id)?.name,
+    attackName: (id) => part(campaign, id)?.attack?.name,
+    skillName: (id) => (id === 'spike' ? spikeOf(classOf(campaign)).name : ABILITIES[id]?.name),
+  }, { stagger: !stack, start: queueAfter(cueAt - performance.now()) });
+  if (split.count && !stack) cueAt = performance.now() + split.total;
+  const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
-  strikes(events);
+  strikes(events, split.delay);
   let hurtVoiced = events.some((e) => e.type === 'server-hit' && !e.who);
   // A part's attack: its row lunges and the attack's name comes off it, once per part per batch.
   const lunged = new Set();
@@ -600,14 +630,17 @@ function react(events) {
     if (!e.source || lunged.has(e.source) || !['server-hit', 'evaded', 'blocked', 'encrypt', 'blind'].includes(e.type) || !active(campaign)) continue;
     lunged.add(e.source);
     const p = part(campaign, e.source);
+    feel.beat(split.delay(e));
     if (p && fxLevel() !== 'minimal') feel.add('strike', row(e.source), p.attack?.name ? p.attack.name.toUpperCase() : null, { floatAt: `${row(e.source)} > .bcell:nth-child(2)` });
   }
   for (const e of events) {
+    feel.beat(split.delay(e));
+    const f = split.of(e), src = f ? { kind: f.kind + (f.at === 'you' ? ' at-you' : '') + (f.hostile ? ' hostile' : ''), icon: f.icon, label: f.label } : null;
     if (e.who) {
       const mate = `.pmate[data-mate="${e.who}"]`; // their line under your Signal (HUD)
       if (e.type === 'server-hit') {
-        art.hit(e.source, 'attack');
-        feel.add(e.crit ? 'hurtcrit' : 'hurt', mate, `${e.crit ? 'CRIT ' : ''}−${e.amount}`, { amount: e.amount, silent: hurtVoiced, noEdge: true });
+        artHit(e.source, 'attack');
+        feel.add(e.crit ? 'hurtcrit' : 'hurt', mate, f?.text || `−${e.amount}`, { amount: e.amount, silent: hurtVoiced, noEdge: true, src, stack });
         hurtVoiced = true;
         continue;
       }
@@ -618,13 +651,14 @@ function react(events) {
     switch (e.type) {
       case 'damage': {
         const lvl = fxLevel(), full = lvl === 'full', mate = !!e.who;
-        art.hit(e.target, e.crit ? 'crit' : 'hit');
+        artHit(e.target, e.crit ? 'crit' : 'hit');
         const pm = part(campaign, e.target)?.max || 50, big = Math.min(1, e.amount / pm);
         const size = (1 + big * 0.9 + (e.crit ? 0.35 : 0)) * (mate ? 0.8 : 1);
-        // On the part itself: calm flashes its name line; full, its whole cell (with the strike). The number rises off it.
+        // On the part itself: calm flashes its name line; full, its whole cell (with the strike). The number rises off
+        // it, with its source's icon (a burn's flame, a helper's, Spike's, a crit's star).
         const at = full ? `${row(e.target)} > .bcell:first-child` : `${row(e.target)} .part-top`;
-        const look = { amount: e.amount, size, noFlash: lvl === 'minimal' || (mate && !full), quiet: mate && !full, floatAt: `${row(e.target)} > .bcell:first-child` };
-        if (e.crit) feel.add('crit', at, `CRIT −${e.amount}`, look); else feel.add('hit', at, `−${e.amount}`, look);
+        const look = { amount: e.amount, size, noFlash: lvl === 'minimal' || (mate && !full), quiet: mate && !full, floatAt: `${row(e.target)} > .bcell:first-child`, src, stack };
+        feel.add(e.crit ? 'crit' : 'hit', at, f?.text || `−${e.amount}`, look);
         if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
         if (fx && !mate && e.crit) feel.add(() => juice.nudge(4.5)); // only a crit nudges the screen
@@ -634,16 +668,20 @@ function react(events) {
       case 'broken': {
         // It stays on the board a moment and dissolves into bits before it joins the broken list.
         const bp = part(campaign, e.target);
-        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, DISSOLVE_MS + 50); pendingStrikes.push(() => hitfx.dissolve(partRow(e.target))); }
+        // (It waits for the number of the hit that broke it.)
+        const wait = split.delay(e);
+        if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => hitfx.dissolve(partRow(e.target)))); }
       }
-        art.hit(e.target, 'break'); flash(e.message); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
+        artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
-        art.hit(e.source, 'attack');
+        artHit(e.source, 'attack');
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
-        const big = e.crit || frac >= 0.15; // only a big hit shakes the screen and flashes its edge
-        if (e.crit) { flash('CRITICAL HIT'); feel.add('hurtcrit', MINE, `CRIT −${e.amount}`, { amount: e.amount, frac, size: size + 0.3 }); } else feel.add('hurt', MINE, `−${e.amount}`, { amount: e.amount, frac, size, noEdge: !big });
+        const heavy = !!(e.crit || e.tell); // a crit or a charge whips harder (lashAt: a big one shakes the screen)
+        // Effects full or calm: the part lashes at your screen, and the number shows as it lands. Else a soft edge.
+        if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(split.delay(e) + LASH_TRAVEL); }
+        if (e.crit) feel.add(() => flash('CRITICAL HIT'));
+        feel.add(e.crit ? 'hurtcrit' : 'hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: size + (e.crit ? 0.3 : 0), src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 });
         holdThem(); sideFx(row(e.source), MINE, 'them');
-        if (fx && big) feel.add(() => juice.quake(frac, e.crit));
         break;
       }
       case 'drop': feel.add('pickup', null); if (['tuned', 'custom', 'zeroday'].includes(e.rarity) && !active(campaign) && !won && !ended && !campaign.breach) rewardCard('Found', e, [e], true); break; // a breach shows its own pack
@@ -667,14 +705,15 @@ function react(events) {
       case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
-      case 'encrypt': art.hit(e.source, 'attack'); flash('ENCRYPTED'); feel.add('encrypt', MINE, `+${e.amount}/cycle`); break;
-      case 'encrypted': feel.add('drain', MINE, `−${e.amount}`); break;
+      // The Encryptor's attack: a tendril of hex, and locks over your bar; each tick of it after: the locks only.
+      case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => lashAt(e, 'encrypt')); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
+      case 'encrypted': if (lashing) feel.add(() => lashAt(e, 'tick')); feel.add('drain', MINE, f?.text || `−${e.amount}`, { src, stack, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
-      case 'scrambled': flash('SCRAMBLED'); feel.add('hurt', MINE, `−${e.amount}`, { amount: e.amount, frac: e.amount / (defender(campaign).max || 100), size: 1.3 }); break;
-      case 'armor': { const lvl = fxLevel(); art.hit(e.target, 'chit'); feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
+      case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
+      case 'armor': { const lvl = fxLevel(); artHit(e.target, 'chit'); feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
-      case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`); if (e.from) art.hit(e.target, 'attack'); break;
+      case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`, { src }); if (e.from) artHit(e.target, 'attack'); break;
       case 'xp': if (!hush) feel.add('cycle', null, `+${e.amount} XP`); break;
       case 'status': if (e.mark) markFx(e, false); break;
       case 'fast-kill': feel.add('good', null); break;
@@ -688,10 +727,10 @@ function react(events) {
         break;
       }
       case 'behind-on': feel.add('good', null, 'BEHIND +50% XP'); break;
-      case 'heal': feel.add('good', MINE, e.amount ? `+${e.amount}` : null); break;
-      case 'blocked': feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
+      case 'heal': if (e.target) feel.add('patch', row(e.target), f?.text, { src, stack }); else feel.add('good', MINE, f?.text || null, { src, stack, floatAt: BAR, x: 0.5 }); break; // a part patched: on it
+      case 'blocked': if (e.shield) { feel.add('shield', MINE, f?.text || null, { src, stack, noFlash: true, floatAt: BAR, x: 0.5 }); break; } feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
-      case 'interrupt': feel.add('interrupt', row(e.target), e.tell ? 'STOPPED' : 'DELAYED'); break;
+      case 'interrupt': feel.add('interrupt', row(e.target), f?.text || (e.tell ? 'STOPPED' : 'DELAYED'), { src }); break;
       case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
       case 'warning': feel.add('nope', '#command-form'); break;
       case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
@@ -744,12 +783,13 @@ function react(events) {
         setTimeout(() => { ending = false; }, 900);
         break;
       case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign)) go('rooms'); }, 1600); } break;
-      case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'); break;
+      case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
       case 'tick-wasted': feel.add('chip', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, '−tick'); break;
       case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
   }
+  feel.beat(0);
   const after = barWas();
   if (fx && barsBefore && after) { const b = barsBefore; feel.add(() => { juice.trail('.hud-bar.enemy', b.enemy, after.enemy); juice.trail(MINE, b.mine, after.mine); }); }
   barsBefore = after;

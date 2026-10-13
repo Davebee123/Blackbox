@@ -106,6 +106,10 @@ const P = {
   node: '<rect x="1.5" y="3" width="13" height="10" rx="1"/><path d="M1.5 6.3h13M1.5 9.7h13M5.5 3v3.3M10.5 3v3.3M8 6.3v3.4"/>',
   ids: '<path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>',
   spike: '<path d="M8 1.5 10 8l-2 6.5L6 8z"/><path d="M3 8h10"/>',
+  // Damage numbers (dmgfx.mjs): encryption's lock, the interrupt's cut, a virus's claw lashing at you.
+  lock: '<rect x="3" y="7" width="10" height="7.5" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2M8 10v2"/>',
+  cut: '<circle cx="4" cy="4.5" r="2"/><circle cx="4" cy="11.5" r="2"/><path d="M5.7 5.7 14 12.5M5.7 10.3 14 3.5"/>',
+  claw: '<path d="M2.5 12.5 8 2M6 14 11.5 3.5M10 14.5l4-7.5"/>',
   // Faction marks: Halcyon's shield, GLASSJAW's cracked jaw, Kestrel's wings, LANTERN's lamp, NULL CHOIR's null.
   'f-halcyon': '<path d="M8 1.8 13 3.8v4c0 3.2-2.3 5.3-5 6.4-2.7-1.1-5-3.2-5-6.4v-4z"/><path d="M5 8.5h6"/>',
   'f-glassjaw': '<path d="M2.5 6c2 4.5 9 4.5 11 0"/><path d="M4.5 6.6v1.6M7 7.2v2M9.5 7.2v2M12 6.6v1.6"/><path d="M8.5 1.5 7 4l2 1-1.5 2"/>',
