@@ -23,7 +23,7 @@ const KIND = {
   core: { name: 'Core', word: "The Resident, the server's boss. Sealed until the vault is open." },
   den: { name: 'Den', word: "Where the server's hunter lives." },
   cache: { name: 'Cache', word: 'Credits and code, now and then a script. One in four is bait: read it first, or pulling it costs Signal. It refills 2 hours after you take it.' },
-  vault: { name: 'Vault', word: 'Open it with its key, or force it. Gear a third of the time, or a script. Opening the vault on the way to /core unseals it.' },
+  vault: { name: 'Vault', word: 'Open it with its key, or force it. Gear a third of the time, or a script. Opening the vault on the way to the Core unseals it.' },
   rest: { name: 'Rest room', word: 'Rest: restores 30% of your max Signal, once a visit. The hunter never comes in: it stops at the door.' },
   junction: { name: 'Junction', word: 'Nothing here but the walk, and the hunter walks it too.' },
 };
@@ -49,7 +49,7 @@ function roomTip(s, room) {
   const R = s.rooms, seen = seenOf(s, room.id), h = hunterOf(s);
   const hunt = h && !h.down && h.at === room.id ? ` The ${HUNTERS[h.kind].name} is here: walk in and you fight it.` : '';
   if (seen !== 'kind') return `Out of sight: a room you haven't seen yet.${hunt}`;
-  const K = KIND[room.kind], parts = [`${room.path}: ${K.name}.`];
+  const K = KIND[room.kind], parts = [`${room.path}:`];
   if (fightKind(room)) {
     const k = virusKnow(s, room);
     parts.push(isUp(s, room) ? `${k.title}, ${k.sub}. ${k.tip}` : `Its virus fell. It comes back in ${left(backAt(s, room))}.`);
@@ -118,7 +118,7 @@ function roomSvg(s, room, p, reach) {
   const cls = ['fp-room', `k-${kind ? room.kind : 'fog'}`, here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', kind && fightKind(room) && !up ? 'down' : '', R.cleared[room.id] ? 'cleared' : '', hunted ? 'hunted' : '', denEdge ? 'den-edge' : '', room.kind === 'core' && kind && !coreOpen(s) ? 'sealed' : '', room.queue && kind ? 'queue' : ''].filter(Boolean).join(' ');
   const x = p.x - CELL.bw / 2, y = p.y - CELL.bh / 2;
   const mark = kind ? (room.kind === 'cache' && room.mirror ? '◈' : MARKS[room.kind]) : '?';
-  let sub = kind ? (room.kind === 'entry' ? '/' : room.dir) : '';
+  let sub = kind ? room.path : '';
   let timer = '';
   if (kind && fightKind(room) && !up && R.down[room.id] != null) timer = `↻ ${left(backAt(s, room))}`;
   else if (kind && room.kind === 'cache' && !cacheFull(s, room)) timer = `↻ ${left(refillAt(s, room))}`;
@@ -131,7 +131,7 @@ function roomSvg(s, room, p, reach) {
   const attrs = can ? `data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : '';
   const cost = can && moveCost(s, room) ? `<text class="fp-cost" x="${p.x + CELL.bw / 2 - 4}" y="${y - 4}" text-anchor="end">−${moveCost(s, room)}</text>` : '';
   const tagSvg = tags.map(([t, c], i) => `<text class="${c}" x="${p.x}" y="${y + CELL.bh + 13 + i * 12}" text-anchor="middle">${esc(t)}</text>`).join('');
-  return `<g class="${cls}" ${attrs} title="${esc(roomTip(s, room))}" aria-label="${esc(kind ? `${KIND[room.kind].name} ${room.path}` : 'unknown room')}">`
+  return `<g class="${cls}" ${attrs} title="${esc(roomTip(s, room))}" aria-label="${esc(kind ? room.path : 'unknown room')}">`
     + `<rect x="${x}" y="${y}" width="${CELL.bw}" height="${CELL.bh}" rx="3"/>`
     + `<text class="fp-mark" x="${p.x}" y="${p.y + (sub || timer ? -2 : 6)}" text-anchor="middle">${esc(mark)}</text>`
     + (timer ? `<text class="fp-timer" x="${p.x}" y="${y + CELL.bh - 7}" text-anchor="middle">${esc(timer)}</text>` : sub ? `<text class="fp-dir" x="${p.x}" y="${y + CELL.bh - 7}" text-anchor="middle">${esc(sub.length > 9 ? sub.slice(0, 8) + '…' : sub)}</text>` : '')
@@ -169,7 +169,7 @@ const term = (lines) => `<pre class="fp-term">${lines.map((l) => (l.startsWith('
 function roomCard(s) {
   const R = s.rooms, room = hereOf(s), sc = R.screen, h = hunterOf(s);
   const K = KIND[room.kind];
-  const kicker = `${esc(room.path)} · ${esc(K.name.toLowerCase())}${R.cleared[room.id] ? ' · cleared' : ''}`;
+  const kicker = `${esc(room.path)}${R.cleared[room.id] ? ' · cleared' : ''}`;
   let title = K.name, body = '', acts = '';
   if (sc?.kind === 'hunter') {
     title = `The ${HUNTERS[h.kind].name}`;
@@ -185,12 +185,12 @@ function roomCard(s) {
     body = `<p class="fp-note">${esc(R.down[room.id] != null ? `Quiet. It comes back in ${left(backAt(s, room))}, once you've left the room.` : K.word)}</p>`;
   } else if (room.kind === 'cache') {
     const full = cacheFull(s, room), read = R.read?.[room.id] === (R.spawns[room.id] || 0);
-    const lines = [`$ ls -l ${room.path}`, full ? '-rw-------  1 ops ops  48k  cache.dat' : '(empty)', ...(read && full ? ['$ cat cache.dat', room.mirror ? 'FILE IS A MIRROR. YOUR HANDLE, REVERSED.' : isBait(s, room) ? 'CANARY CANARY CANARY CANARY (every block)' : 'credits, code'] : [])];
-    body = term(lines) + (full ? '' : `<p class="fp-note">${esc(`It refills in ${left(refillAt(s, room))}.`)}</p>`);
-    acts = full ? btn('cat', 'cat cache.dat', { disabled: read, tip: 'Read it first: one cache in four is bait.' }) + btn('pull', room.mirror && read ? 'Break the mirror' : 'pull', { hot: true, note: read && isBait(s, room) ? `bait · −${pct(ROOMS.bait)}` : room.mirror && read ? 'an elite' : '', tip: 'Take what it holds.' }) : '';
+    const said = !full ? 'Empty.' : !read ? 'Something is stored here. Read it before you take it.' : room.mirror ? 'It reads back your own handle. It is a mirror.' : isBait(s, room) ? 'Every block reads CANARY. It is bait.' : 'Credits and code.';
+    body = `<p class="fp-note">${esc(said)}</p>` + (full ? '' : `<p class="fp-note">${esc(`It refills in ${left(refillAt(s, room))}.`)}</p>`);
+    acts = full ? btn('cat', 'Read it', { disabled: read, tip: 'Read it first: one cache in four is bait.' }) + btn('pull', room.mirror && read ? 'Break the mirror' : 'Take it', { hot: true, note: read && isBait(s, room) ? `bait · −${pct(ROOMS.bait)}` : room.mirror && read ? 'an elite' : '', tip: 'Take what it holds.' }) : '';
   } else if (room.kind === 'vault') {
     const open = !!R.opened[room.id], has = R.visit.keys.includes(room.id);
-    body = open ? `<p class="fp-note">The vault is open. It stays open.${room.id === R.graph.vaults[0] ? ' /core is unsealed.' : ''}</p>` : term([`$ ls ${room.path}`, 'ls: cannot open directory: Permission denied', `# badge reader: ${has ? 'key on you' : 'no key'}`]);
+    body = open ? `<p class="fp-note">The vault is open. It stays open.${room.id === R.graph.vaults[0] ? ' The Core is unsealed.' : ''}</p>` : `<p class="fp-note">${has ? 'Locked. Your key fits it.' : 'Locked. Its key is held by a guard post on another branch.'}</p>`;
     acts = open ? '' : btn('open', 'Open', { primary: true, disabled: !has, note: has ? 'your key' : 'needs its key', tip: 'Its key sits in a guard post on another branch.' }) + btn('force', 'Force it', { hot: true, note: `−${pct(ROOMS.force)} Signal`, tip: `Force the door without its key, for ${pct(ROOMS.force)} of your max Signal.` });
   } else if (room.kind === 'rest') {
     const n = Math.min(R.max - R.signal, Math.round(R.max * ROOMS.rest));
@@ -206,9 +206,9 @@ function exitsMarkup(s) {
   const R = s.rooms, g = R.graph, list = neighbours(g, R.at).map((id) => g.rooms[id]), h = hunterOf(s), open = new Set(exits(s).map((x) => x.id));
   const rows = list.map((room) => {
     const kind = seenOf(s, room.id) === 'kind', cost = moveCost(s, room), up = kind && fightKind(room) && isUp(s, room);
-    const what = !kind ? '??' : fightKind(room) && up ? `${KIND[room.kind].name} · ${virusKnow(s, room).title}` : fightKind(room) && R.down[room.id] != null ? `${KIND[room.kind].name} · ↻ ${left(backAt(s, room))}` : room.kind === 'core' && !coreOpen(s) ? 'Core · sealed' : KIND[room.kind].name;
+    const what = !kind ? 'not seen yet' : fightKind(room) && up ? virusKnow(s, room).title : fightKind(room) && R.down[room.id] != null ? `cleared · back in ${left(backAt(s, room))}` : room.kind === 'core' && !coreOpen(s) ? 'sealed' : room.kind === 'vault' ? (R.opened[room.id] ? 'open' : 'locked') : room.kind === 'cache' ? (cacheFull(s, room) ? 'stocked' : `empty · refills in ${left(refillAt(s, room))}`) : '';
     const hunted = h && !h.down && (h.at === room.id || hunterNext(s, h) === room.id);
-    return `<li><button type="button" class="fp-exit${up ? ' up' : ''}${hunted ? ' hunted' : ''}" ${open.has(room.id) ? `data-rooms="go" data-arg="${esc(room.id)}"` : 'disabled'} title="${esc(roomTip(s, room))}"><span class="fp-mk">${esc(kind ? (room.mirror ? '◈' : MARKS[room.kind]) : '?')}</span><span class="fp-exit-b"><b>${esc(kind ? room.path : '??/')}</b><small>${esc(what)}</small></span><span class="fp-exit-c">${hunted ? '<span class="fp-tag-inline hot">hunter</span>' : ''}${cost ? `−${cost}` : 'walked'}</span></button></li>`;
+    return `<li><button type="button" class="fp-exit${up ? ' up' : ''}${hunted ? ' hunted' : ''}" ${open.has(room.id) ? `data-rooms="go" data-arg="${esc(room.id)}"` : 'disabled'} title="${esc(roomTip(s, room))}"><span class="fp-mk">${esc(kind ? (room.mirror ? '◈' : MARKS[room.kind]) : '?')}</span><span class="fp-exit-b"><b>${esc(kind ? room.path : 'Unknown room')}</b><small>${esc(what)}</small></span><span class="fp-exit-c">${hunted ? '<span class="fp-tag-inline hot">hunter</span>' : ''}${cost ? `−${cost}` : 'walked'}</span></button></li>`;
   }).join('');
   const more = `<div class="row acts">${btn('wait', 'Wait', { disabled: !!R.screen, tip: 'Stay where you are for one move: the hunter takes its step, and you spend nothing.' })}${btn('jackout', 'Jack out', { hot: true, disabled: active(s), tip: 'Home, with your pack banked. Signal rests back there.' })}</div>`;
   return `<section class="fp-exits"><h3 class="fp-sec">Exits <small>${list.length}</small></h3><ul>${rows}</ul>${more}</section>`;

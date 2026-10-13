@@ -850,7 +850,7 @@ function run(raw) {
       if (w) notice(w.message, true); else if (ok) notice(ev.filter((e) => e.type !== 'rooms-cmd').map((e) => e.message).join(' '));
       dirty = true; return;
     }
-    if (text === 'help') return notice('On the server: ls, cd <room> (or click it on the map), cd .., map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect. developer bossrule a|b|c switches the boss rule. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, and script <n> runs a script.', false, null, true);
+    if (text === 'help') return notice('On the server: click a room on the map (or go <room>, e.g. go guard post), ls lists the rooms next to you, go back, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect. developer bossrule a|b|c switches the boss rule. In a fight, key 1 is your plain hit, keys 2 to 0 fire your skills, - is SIGINT, and script <n> runs a script.', false, null, true);
     if (!active(campaign)) { const ev = FP.roomsCommand(campaign, text); if (ev) return roomsDone(ev); }
   }
   // A breach (breach.mjs): ls, cd, tree and the screen's verbs, out of a fight. Jacking out mid-fight isn't one.
@@ -1442,8 +1442,8 @@ function renderPrompt() {
   } else if (campaign.rooms) {
     const R = campaign.rooms, sig = FP.signalNow(campaign), here = FP.hereOf(campaign);
     el.className = 'prompt run ' + V.signalLevel({ integrity: sig, max: R.max });
-    el.innerHTML = `<span class="p-sig">[${sig}/${R.max}]</span> <span class="p-loc">${V.esc(R.id)}:</span><span class="p-cwd">${V.esc(here ? here.path : '~')}$</span>`;
-    $('command-input').placeholder = here ? 'ls · cd <room> · wait · map' : 'connect';
+    el.innerHTML = `<span class="p-sig">[${sig}/${R.max}]</span> <span class="p-loc">${V.esc(R.name || R.id)} ›</span> <span class="p-cwd">${V.esc(here ? here.path : 'outside')}</span>`;
+    $('command-input').placeholder = here ? 'click a room on the map · or go <room> · wait' : 'connect';
   } else if (campaign.breach) {
     const b = campaign.breach, sig = BR.signalOf(campaign), max = BR.maxOf(campaign);
     el.className = 'prompt run ' + V.signalLevel({ integrity: sig, max });

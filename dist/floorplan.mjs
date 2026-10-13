@@ -66,14 +66,16 @@ export const KINDS = {
     dirs: ['bind', 'named', 'zones', 'resolv', 'forward', 'slave', 'keys', 'dyn', 'stats', 'hints', 'rndc', 'journal', 'views', 'acl', 'dnssec', 'notify', 'axfr', 'master'] },
   Mirror: { rule: 'Mirrors', text: 'One cache is a mirror, with an elite behind it.', hunter: 'track', author: 'palemask',
     dirs: ['www', 'private', 'html', 'assets', 'cdn', 'static', 'uploads', 'cgi-bin', 'logs', 'media', 'themes', 'vhosts', 'certs', 'cache', 'drafts', 'mirror', 'stage', 'public'] },
-  Archive: { rule: 'Deep storage', text: 'Two vaults and two guard posts, each with its own key. Only the vault on the way to /core unseals it.', hunter: 'track', author: 'glassjaw',
+  Archive: { rule: 'Deep storage', text: 'Two vaults and two guard posts, each with its own key. Only the vault on the way to the Core unseals it.', hunter: 'track', author: 'glassjaw',
     dirs: ['backups', 'srv', 'cold', 'dumps', 'snapshots', 'incr', 'full', 'catalog', 'index', 'offsite', 'restore', 'media', 'rotate', 'weekly', 'monthly', 'ledger', 'escrow', 'ltfs'] },
   Lab: { rule: 'Overheat', text: 'From the 10th cycle of every fight, the rack burns you for 2% of your max Signal each cycle, and every part for 3% of its max Integrity. Its Tracker moves a room every move once awake.', hunter: 'track', fast: true, author: 'lantern',
     dirs: ['lab', 'tmp', 'bench', 'rig', 'sandbox', 'builds', 'cores', 'gpu', 'scratch', 'fuzz', 'harness', 'probe', 'samples', 'jit', 'debug', 'trace', 'cold', 'kiln'] },
 };
 export const KIND_IDS = Object.keys(KINDS);
 // Room kinds: their mark on the map, and what they are.
-export const MARKS = { entry: '/', process: '▣', elite: '◆▣', guard: '⛨', core: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·' };
+// What each room is called on the map, its card and in the log.
+export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Guard post', core: 'Core', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction' };
+export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '⛨', core: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·' };
 export const FIGHTS = ['process', 'elite', 'guard', 'core'];
 export const HUNTERS = {
   patrol: { name: 'Patroller', body: 'bouncer', text: 'It walks a fixed loop, a room for every 2 of your moves. Its loop is drawn as a dashed red line.' },
@@ -259,13 +261,16 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
     if (R[id].kind === 'cache') R[id].baitSeed = Math.floor(r() * 2 ** 31);
     if (R[id].kind === 'vault') R[id].loot = r() < ROOMS.vault.gear ? { kind: 'gear', rarity: r() < ROOMS.vault.custom ? 'custom' : 'tuned' } : { kind: 'script', script: rollScript(r, 'uncommon') };
   }
-  // Names: the kind's directories, the entry `/`, the vault and the core by what they are.
-  const dirs = [...KINDS[kind].dirs].sort(() => r() - 0.5);
-  let k = 0;
-  for (const id of all.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)))) {
-    const x = R[id];
-    x.dir = x.kind === 'entry' ? '' : x.kind === 'core' ? 'core' : x.kind === 'vault' ? (x.second ? 'tape' : 'vault') : x.kind === 'den' ? 'den' : x.kind === 'rest' ? 'idle' : dirs[k++ % dirs.length];
-    x.path = '/' + x.dir;
+  // Names: what each room is (Process 2, Guard post, Vault, Core), numbered when a kind repeats. path is the
+  // label every screen and line shows; dir is its slug, for typing (cd process-2).
+  const sorted = all.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+  const many = {}, nth = {};
+  for (const id of sorted) many[R[id].kind] = (many[R[id].kind] || 0) + 1;
+  for (const id of sorted) {
+    const x = R[id], base = ROOM_LABEL[x.kind] || x.kind;
+    nth[x.kind] = (nth[x.kind] || 0) + 1;
+    x.path = many[x.kind] > 1 ? `${base} ${nth[x.kind]}` : base;
+    x.dir = x.path.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
   return true;
 }
@@ -514,7 +519,7 @@ export function go(s, id, opts = {}) {
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
   else if (!room || !neighbours(R.graph, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
-  else if (room.kind === 'core' && !coreOpen(s)) deny(s, `/core is sealed. Open ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
+  else if (room.kind === 'core' && !coreOpen(s)) deny(s, `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
   else step(s, room, opts);
   return out(s, first);
 }
@@ -526,7 +531,7 @@ function step(s, room, opts) {
   R.inSince = nowOf();
   R.visit.walked[room.id] = true;
   R.visit.moves++; R.stats.moves++;
-  say(s, `cd ${room.path}${cost ? ` (−${cost} Signal, ${R.signal}/${R.max})` : ''}`, 'rooms-cmd');
+  say(s, `→ ${room.path}${cost ? ` (−${cost} Signal, ${R.signal}/${R.max})` : ''}`, 'rooms-cmd');
   look(s);
   const h = hunterOf(s);
   if (h && !h.down && h.at === room.id) return meet(s, room, opts);
@@ -564,7 +569,7 @@ function arrive(s, room, opts = {}) {
     say(s, `${name} holds ${room.path}. Level ${f.level} ${room.kind === 'guard' ? GUARDS[room.guard].name : familyName(v.family)}${v.author ? `, ${AUTHORS[v.author]?.name || v.author}` : ''}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
     return;
   }
-  if (room.kind === 'cache' && cacheFull(s, room)) say(s, `${room.path}: cache.dat${room.mirror ? '. The file reads back your own handle' : ''}.`);
+  if (room.kind === 'cache' && cacheFull(s, room)) say(s, `${room.path}: a cache${room.mirror ? '. It reads back your own handle' : ''}.`);
   if (room.kind === 'vault' && !R.opened[room.id]) say(s, `${room.path}: a vault door. ${R.visit.keys.includes(room.id) ? 'Your key fits it.' : 'You hold no key to it.'}`);
   if (room.kind === 'rest') say(s, R.visit.rested ? `${room.path}: you rested here this visit.` : `${room.path}: a quiet room. The hunter stops at its door.`);
 }
@@ -607,7 +612,7 @@ export function act(s, verb, arg = null, opts = {}) {
   if (sc?.kind === 'virus') { deny(s, `The ${sc.name} holds this room. Engage it, or step back.`); return out(s, first); }
   if (verb === 'cat' && here.kind === 'cache') {
     if (!cacheFull(s, here)) deny(s, `The cache is empty. It refills in ${fmtLeft(refillAt(s, here) - nowOf())}.`);
-    else { R.read = { ...(R.read || {}), [here.id]: R.spawns[here.id] || 0 }; say(s, here.mirror ? 'cat cache.dat: the file reads back your own handle. It is a mirror, and something waits behind it.' : isBait(s, here) ? `cat cache.dat: a canary string in every block. Pulling it costs ${Math.round(ROOMS.bait * 100)}% of your max Signal.` : 'cat cache.dat: clean. Credits and code.', isBait(s, here) || here.mirror ? 'rooms-bad' : 'rooms'); }
+    else { R.read = { ...(R.read || {}), [here.id]: R.spawns[here.id] || 0 }; say(s, here.mirror ? 'You read the cache: it reads back your own handle. It is a mirror, and something waits behind it.' : isBait(s, here) ? `cat cache.dat: a canary string in every block. Pulling it costs ${Math.round(ROOMS.bait * 100)}% of your max Signal.` : 'cat cache.dat: clean. Credits and code.', isBait(s, here) || here.mirror ? 'rooms-bad' : 'rooms'); }
     return out(s, first);
   }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'cache') { pull(s, here, opts); return out(s, first); }
@@ -636,7 +641,7 @@ function takeCache(s, room) {
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' }[fam] || 'cipher';
   const code = C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1));
   gainCode(s, { [kind]: code }, 'Cache: ');
-  say(s, `pull cache.dat: ${credits} credits and ${code} ${kind} code.`, 'rooms-good');
+  say(s, `You take the cache: ${credits} credits and ${code} ${kind} code.`, 'rooms-good');
   if (r() < C.script) giveScript(s, rollScript(r), 'Cache: ');
   R.taken[room.id] = nowOf();
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
@@ -654,7 +659,7 @@ function openVault(s, room, force) {
   if (v.kind === 'gear') { const it = addItem(s, rollItem(rnd(R, 5), { level: R.level, rarity: v.rarity, cls: classOf(s) }), 'Vault: '); if (it) { R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); } }
   else giveScript(s, v.script, 'Vault: ');
   clear(s, room, 'opened');
-  if (room.id === R.graph.vaults[0]) say(s, `/core unseals. ${BOSSES[RESIDENT].name} is waiting.`, 'rooms-bad');
+  if (room.id === R.graph.vaults[0]) say(s, `The Core unseals. ${BOSSES[RESIDENT].name} is waiting.`, 'rooms-bad');
 }
 
 // ---------- fights ----------
@@ -848,7 +853,7 @@ export function roomsCommand(s, text) {
   if (word === 'ls') {
     if (!R.at) { say(s, `You are home. ${R.name}: rooms ${progressOf(s).done}/${progressOf(s).total}. Type connect.`, 'rooms-out'); return out(s, first); }
     const here = hereOf(s), xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
-    const lines = [`${here.path}  [${here.kind}]`, ...xs.map((x, i) => `${i + 1}  ${seenOf(s, x.id) === 'kind' ? x.dir || '/' : '??'}/  [${tagOf(s, x)}]${moveCost(s, x) ? '' : '  walked'}`)];
+    const lines = [`${here.path}  [${here.kind}]`, ...xs.map((x, i) => `${i + 1}  ${seenOf(s, x.id) === 'kind' ? x.path : '??'}  [${tagOf(s, x)}]${moveCost(s, x) ? '' : '  walked'}`)];
     const h = hunterLine(s);
     say(s, [...lines, ...(h ? [h] : [])].join('\n'), 'rooms-out');
     return out(s, first);
@@ -858,7 +863,7 @@ export function roomsCommand(s, text) {
     const xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
     let room = null;
     if (arg === '..') { const d = distances(R.graph, R.graph.entry); room = xs.sort((a, b) => d[a.id] - d[b.id])[0]; }
-    else room = /^\d+$/.test(arg) ? xs[Number(arg) - 1] : xs.find((x) => x.dir === arg.replace(/^\//, '').replace(/\/$/, '') || x.id === arg);
+    else room = /^\d+$/.test(arg) ? xs[Number(arg) - 1] : xs.find((x) => x.dir === arg.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.id === arg);
     return room ? go(s, room.id) : (deny(s, `cd: ${arg || '?'}: not next to you. Type ls.`), out(s, first));
   }
   if (word === 'map' || word === 'tree') { say(s, treeLines(s).join('\n'), 'rooms-out'); return out(s, first); }
