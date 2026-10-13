@@ -616,6 +616,7 @@ export function act(s, verb, arg = null, opts = {}) {
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
   if (verb === 'rest' && here.kind === 'rest') {
     if (R.visit.rested) deny(s, 'You already rested this visit.');
+    else if (R.signal >= R.max) deny(s, 'Your Signal is full. Your rest keeps for later this visit.');
     else { const n = Math.min(R.max - R.signal, Math.round(R.max * ROOMS.rest)); R.signal += n; R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
   }

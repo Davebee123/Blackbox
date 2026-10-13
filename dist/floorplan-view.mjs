@@ -292,7 +292,7 @@ function roomCard(s) {
     acts = open ? '' : btn('open', 'Open', { primary: true, disabled: !has, note: has ? 'your key' : 'no key' }) + btn('force', 'Force it', { hot: true, note: `−${force} Signal` });
   } else if (room.kind === 'rest') {
     body = note('The hunter never comes in.', 'dim');
-    acts = btn('rest', R.visit.rested ? 'Rested' : 'Rest', { primary: !R.visit.rested && restGain(s) > 0, disabled: R.visit.rested, note: R.visit.rested ? 'once a visit' : restGain(s) ? `+${restGain(s)} Signal` : 'Signal full' });
+    acts = btn('rest', R.visit.rested ? 'Rested' : 'Rest', { primary: !R.visit.rested && restGain(s) > 0, disabled: R.visit.rested || !restGain(s), note: R.visit.rested ? 'once a visit' : restGain(s) ? `+${restGain(s)} Signal` : 'Signal full' });
   } else if (room.kind === 'entry') body = note('The hunter never comes in.', 'dim');
   else if (room.kind === 'den') body = note(g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.', 'dim');
   const line = hunterLine(s);
