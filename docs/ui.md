@@ -17,6 +17,7 @@ emoji markers, nothing centred that is meant to be scanned.
 | `--next` | lands next cycle |
 | `--you` (teal) | you: your command, your bars, your level, what is on and yours |
 | `--daemon` (violet) | your daemons and your crew acting for you |
+| `--steel` (steel teal) | what protects a virus part: a Mutex's lock on its partner's bar, a Lockbox's cap, the tethers between parts |
 | `--gray` / `--dim` | broken, unavailable, small print |
 
 A colour never means two things on one screen. A tag takes the colour of what it labels, not of the card
@@ -76,6 +77,21 @@ at half width with a gap beside it.
 **Hover tips** (`.tt`): every `title` in the game shows in the game's own card (amber top rule, mono title
 line). Never rely on the browser's default tooltip.
 
+**Tethers** (`.tether`, `view.mjs` `tethers`, `fightread.mjs` `partLinks`): one look for every rule that reaches
+from one virus part to another (a Mutex's lock, a Lockbox's ward, a Mirror's twin, a Keyring's re-arm, the Cooler
+on the Rig, the C2 Node over its fragments). A steel bracket in the board's left gutter runs from the part the rule
+sits on (a square) to the part it reaches (an arrow), drawn a piece per row so it follows any row height (dense, a
+phone). A round node mid-span carries the rule's icon (lock, ward, twin, re-arm), or **?** until the codex knows
+the part (its tooltip is *???* then), and a dashed **↻ N** beside it when the rule comes back or fires in N cycles.
+It glows while the rule holds, goes dashed while it's down, and snaps (a flash, the line pulling apart) as the part
+it hangs from dissolves. Hovering it lights both rows. The board's gutter widens when a fight has one (`--gut`:
+38px, 56px with one lane, 68px with two; 46/58px on a phone) and keeps it to the end of that fight. On the bar:
+a Mutex's lock is an absorb segment (`.lockseg`: hatched steel over the end of the fill, as wide as the lock on
+the bar's scale, a padlock at the edge hits drain it from; the preview slice blinks on it, white then bare, while a
+hit would only take lock); a Lockbox's ward is a cap line (`.wardcap`) at the most the part can still lose this
+cycle. The segment drains (a steel trail) and shatters (steel shards) with the hit (`app.js` `juice.lockDrain`).
+Effects minimal, Motion off or reduced motion: no glow pulse, no snap, no trail or shards; the static look stays.
+
 ## Layout rules
 
 - **No sideways scroll, ever.** `.app` clips horizontal overflow (`overflow-x: clip`: no scroll box, sticky and
@@ -130,6 +146,7 @@ line). Never rely on the browser's default tooltip.
 | 31 | Map list, phone | Layer, Explored and Status cut off; rows of different heights | Two lines per row: name, family, level; then progress and status |
 | 32 | Network natives | Three cramped columns broke names onto two lines beside "listen" | Wider columns |
 | 33 | Settings, desktop | "Speed: relaxed (12s per cycle)" ran out of its cell | Speed spans two cells; labels ellipsize |
+| 34 | Fight board, parts that protect parts | A *lock 12* tag and a cue under the Mutex's name; nothing joined the two rows | A tether between the rows, the lock as an absorb segment on the partner's bar, a ward's cap line |
 
 ## Rules for future UI work
 

@@ -1,7 +1,7 @@
 // BLACKBOX browser shell: modules, command line, clock, save, sound.
 import { CONFIG, ABILITIES, FAMILIES, xpToNext, spikeOf } from './data.mjs';
 const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) => [k, f.name]));
-import { partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
+import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { createArt } from './virus-art.mjs';
@@ -21,7 +21,7 @@ import { createIntro } from './intro.mjs';
 import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
-import { plan as dmgPlan, queueAfter } from './dmgfx.mjs';
+import { plan as dmgPlan, queueAfter, absorbOf } from './dmgfx.mjs';
 import { createLash } from './lash.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
@@ -133,7 +133,10 @@ function load() {
     if (['breaker', 'bastion', 'infiltrator', 'operator'].includes(params.get('cls'))) s.loadout.archetype = params.get('cls'); // ?playtest=cryptjack&cls=infiltrator
     const lv = Number(params.get('level')); // ?playtest=random&level=12: that level, and the virus at it (tells scale with it)
     if (lv >= 1 && lv <= 50) s.hackers = { [s.loadout.archetype]: { level: lv, xp: 0 } };
-    command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
+    // ?playtest=random&level=12&family=ransomware&seed=2: that family, that seed (a Mutex, a Lockbox, a Mirror on the board)
+    const fam = params.get('family'), seed = Number(params.get('seed')) >>> 0;
+    if (playtest === 'random' && (fam || seed)) selectEncounter(s, 'random', seed || 1, { ...(lv >= 1 && lv <= 50 ? { level: lv } : {}), ...(/^[a-z]+$/.test(fam || '') ? { family: fam } : {}), mutation: null });
+    else command(s, `encounter ${/^[a-z]+$/.test(playtest) ? playtest : 'cryptjack'}`); // any fixture or strain
     if (!s.encounter) command(s, 'encounter cryptjack');
     command(s, 'engage');
     s.encounter.paused = true;
@@ -366,6 +369,37 @@ const juice = {
     document.body.appendChild(ring); setTimeout(() => ring.remove(), 500);
     rowEl.classList.remove('fx-crack'); void rowEl.offsetWidth; rowEl.classList.add('fx-crack');
     setTimeout(() => rowEl.classList.remove('fx-crack'), 500);
+  },
+  // A Mutex's lock took a hit (view.mjs guardMarks): the slice it lost lingers on the part's bar and drains (a..b: where
+  // on the bar, 0-1). Broken whole: the segment shatters into steel shards instead.
+  lockDrain(id, a, b, broke) {
+    const bar = document.querySelector(row(id) + ' .part-bar');
+    if (!bar || b <= a) return;
+    const r = bar.getBoundingClientRect();
+    if (!r.width) return;
+    const t = document.createElement('i');
+    t.className = 'fx-trail lock';
+    t.style.left = r.left + r.width * a + 'px'; t.style.top = r.top - 1 + 'px'; t.style.height = r.height + 2 + 'px';
+    t.style.width = Math.max(2, r.width * (b - a)) + 'px';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 1000);
+    if (!broke) return;
+    const y = r.top + r.height / 2, glyphs = ['▰', '▱', '/', '◆', '▪', '\\'];
+    for (let i = 0; i < 10; i++) {
+      const sh = document.createElement('i');
+      const x = r.left + r.width * (a + (b - a) * Math.random()), ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.7, d = 18 + Math.random() * 40;
+      sh.className = 'fx-shard steel';
+      sh.textContent = glyphs[i % glyphs.length];
+      sh.style.left = x + 'px'; sh.style.top = y + 'px';
+      sh.style.setProperty('--tx', Math.cos(ang) * d + 'px');
+      sh.style.setProperty('--ty', Math.sin(ang) * d + 30 * Math.random() + 'px');
+      sh.style.setProperty('--rot', (Math.random() - 0.5) * 540 + 'deg');
+      document.body.appendChild(sh);
+      setTimeout(() => sh.remove(), 800);
+    }
+    const ring = document.createElement('i');
+    ring.className = 'fx-crackring steel'; ring.style.left = r.left + r.width * a + 'px'; ring.style.top = y + 'px';
+    document.body.appendChild(ring); setTimeout(() => ring.remove(), 500);
   },
   // Your hit landed: a small, quick shake of the screen (px), bigger for bigger hits and crits.
   nudge(px) {
@@ -720,6 +754,14 @@ function react(events) {
         const at = full ? `${row(e.target)} > .bcell:first-child` : `${row(e.target)} .part-top`;
         const look = { amount: e.amount, size, noFlash: lvl === 'minimal' || (mate && !full), quiet: mate && !full, floatAt: `${row(e.target)} > .bcell:first-child`, src, stack };
         feel.add(e.crit ? 'crit' : 'hit', at, f?.text || `−${e.amount}`, look);
+        // A Mutex's lock took some of it (combat.mjs hit: e.shield): the lock's number beside what got through (all of
+        // it: the number above is the lock's), and the slice it lost drains off its bar, or the segment shatters.
+        const ab = e.shield && e.amount ? absorbOf(e, { partName: (id) => part(campaign, id)?.name }) : null;
+        if (ab) feel.add('absorb', at, ab.text, { ...look, noFlash: true, silent: mate, size: size * 0.85, src: { kind: 'shield', icon: ab.icon, label: ab.label } });
+        if (e.shield && fx && lvl !== 'minimal') {
+          const pm2 = part(campaign, e.target)?.max || 1, before = (e.hp ?? 0) + e.amount, a = Math.max(0, before - e.lockWas) / pm2;
+          feel.add(() => juice.lockDrain(e.target, a, Math.min(1, a + e.shield / pm2), e.shield >= e.lockWas));
+        }
         if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
         if (fx && !mate && e.crit) feel.add(() => juice.nudge(4.5)); // only a crit nudges the screen
@@ -772,7 +814,7 @@ function react(events) {
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
       case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
-      case 'armor': { const lvl = fxLevel(); artHit(e.target, 'chit'); feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
+      case 'armor': { const lvl = fxLevel(); artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add('absorb', `${row(e.target)} .part-top`, 'LOCK BROKEN', { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`, { src }); if (e.from) artHit(e.target, 'attack'); break;
       case 'xp': if (!hush) feel.add('cycle', null, `+${e.amount} XP`); break;
@@ -792,7 +834,7 @@ function react(events) {
       case 'blocked': if (e.shield) { feel.add('shield', MINE, f?.text || null, { src, stack, noFlash: true, floatAt: BAR, x: 0.5 }); break; } feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
       case 'interrupt': feel.add('interrupt', row(e.target), f?.text || (e.tell ? 'STOPPED' : 'DELAYED'), { src }); break;
-      case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
+      case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), e.name || (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
       case 'warning': feel.add('nope', '#command-form'); break;
       case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
       case 'scan': art.hit(e.target); flash(e.message.split('.')[0].toUpperCase()); feel.add('good', row(e.target), 'WEAK'); break;
@@ -1397,6 +1439,7 @@ function renderMeters() {
   $('haptics').setAttribute('aria-pressed', String(!!campaign.settings.haptics));
   $('motion').setAttribute('aria-pressed', String(campaign.settings.motion));
   document.body.classList.toggle('no-motion', !campaign.settings.motion);
+  document.body.dataset.fx = fxLevel(); // Effects: style.css quiets what moves on the board (a tether's snap) at minimal
 }
 
 // The crew: a narrow side column on every page while you have a crew (none when solo).
@@ -2495,7 +2538,9 @@ function ttTapTick() {
 }
 // A part's cue that names another part (a Mutex: "locks Encryptor"): hovering it lights the row it reaches.
 document.addEventListener('pointerover', (e) => {
-  const c = e.target.closest?.('#board .pcue[data-link]');
-  document.querySelectorAll('#board .bpart.linked').forEach((r) => { if (!c || r.dataset.target !== c.dataset.link) r.classList.remove('linked'); });
-  if (c) document.querySelector(`#board .bpart[data-target="${CSS.escape(c.dataset.link)}"]`)?.classList.add('linked');
+  // A tether between rows (view.mjs tethers) lights both ends.
+  const c = e.target.closest?.('#board .pcue[data-link], #board .tether[data-links]');
+  const ids = c ? (c.dataset.link ? [c.dataset.link] : c.dataset.links.split(' ')) : [];
+  document.querySelectorAll('#board .bpart.linked').forEach((r) => { if (!ids.includes(r.dataset.target)) r.classList.remove('linked'); });
+  for (const id of ids) document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`)?.classList.add('linked');
 });

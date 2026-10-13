@@ -27,6 +27,8 @@
   --next: #ffd85c;
   --you: #7fd1c7;
   --daemon: #c3a6ff;
+  --steel: #86b6c6; /* what protects a virus part: a lock, a ward, the tethers between parts (docs/ui.md) */
+  --steel-glow: rgba(134, 182, 198, 0.6);
   --gray: #7d7362;
   --sans: 'Inter Tight', 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', ui-monospace, monospace;
@@ -597,7 +599,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
   .hud { grid-template-columns: 1fr 1fr; gap: 12px; }
   .hud-id { grid-column: 1 / -1; }
   .brow { grid-template-columns: minmax(96px, 1.2fr) repeat(4, minmax(0, 1fr)); padding: 0 6px; }
-  #board .brow { padding-left: 32px; }
+  #board .brow { padding-left: var(--gut, 32px); }
   .bname small { display: none; }
   .intent b { display: none; }
   .intent .code { display: inline; }
@@ -2072,7 +2074,8 @@ body:has(.stash-card .inv-row[data-kind="implant"]:hover) .inv.slots .inv-row[da
 
 /* Who's aiming at a part this cycle: round initials stacked in a rail down the row's left edge
    (you teal, crew violet). Every board row keeps the rail's width, so names line up. */
-#board .brow { padding-left: 38px; }
+#board { --gut: 38px; } /* the left gutter: the aim pips, and the tethers when parts protect each other */
+#board .brow { padding-left: var(--gut); }
 .bpart .bname { position: relative; }
 .aim-pips { position: absolute; left: -32px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column;  }
 .aim { cursor: help; } /* hover: the command (a click still goes to the part's row) */
@@ -3414,7 +3417,65 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .bhead .bcell.gear-cyc { box-shadow: inset 0 -2px 0 rgba(127, 209, 199, 0.55); }
 .gpart { display: inline-grid; place-items: center; flex: none; width: 16px; height: 16px; margin-left: 4px; border: 1px solid rgba(127, 209, 199, 0.75); border-radius: var(--r-btn); color: var(--you); background: rgba(127, 209, 199, 0.12); cursor: help; }
 .gpart .glyph { width: 11px; height: 11px; margin: 0; }
-.pcue { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; min-width: 0; padding: 1px 5px; border: 1px dashed var(--line-strong); border-radius: var(--r-tag); color: var(--amber); font: 600 10px/14px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; overflow-wrap: anywhere; }
+.pcue { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; min-width: 0; padding: 1px 5px; border: 1px dashed var(--line-strong); border-radius: var(--r-tag); color: var(--amber); font: 600 10px/14px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; overflow-wrap: break-word; min-width: 0; }
 .pcue .pcue-ico { width: 10px; height: 10px; margin: 0; flex: none; }
 .board .bpart.linked { outline: 1px dashed var(--amber); outline-offset: -1px; }
 @media (prefers-reduced-motion: reduce) { .gfx.fx-gear { animation: none; } }
+
+/* ---- What protects what (view.mjs guardMarks, tethers; fightread.mjs partLinks). One look for every rule that reaches
+   from one part to another: a steel tether in the board's left gutter, from the part the rule sits on (a square) to
+   the part it reaches (an arrow), with a node mid-span carrying the rule's icon (lock, ward, twin, re-arm; ? until
+   decoded) and its countdown (↻ N). Glowing while the rule holds, dashed while it's down, snapping as its part breaks.
+   A Mutex's lock sits on its partner's own bar as an absorb segment (hatched steel, a padlock where hits drain it);
+   a Lockbox's ward as a cap line at the most the part can still lose this cycle. ---- */
+
+#board:has(.tether) { --gut: 56px; }
+#board:has(.tether.lane1) { --gut: 68px; }
+@media (max-width: 480px) { #board:has(.tether) { --gut: 46px; } #board:has(.tether.lane1) { --gut: 58px; } }
+.tether { --x: 8px; position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gut)); width: var(--gut); pointer-events: none; z-index: 1; color: var(--steel); }
+.tether.lane1 { --x: 21px; }
+.tt-line { position: absolute; left: calc(var(--x) - 1px); width: 2px; background: var(--steel); pointer-events: auto; }
+.tt-line::before { content: ''; position: absolute; inset: 0 -4px; } /* a wider hover target than the line */
+.tether.stub .tt-line { top: 22% !important; bottom: 22% !important; }
+.tt-arm { position: absolute; top: calc(50% - 1px); left: var(--x); right: 6px; height: 2px; background: var(--steel); }
+.tt-arm.src::before { content: ''; position: absolute; left: -3px; top: -2px; width: 6px; height: 6px; background: var(--steel); }
+.tt-arm.dst::after { content: ''; position: absolute; right: -5px; top: -3px; border: 4px solid transparent; border-left: 5px solid var(--steel); border-right: 0; }
+.tt-node { position: absolute; left: var(--x); top: 50%; transform: translate(-50%, -50%); z-index: 2; display: grid; place-items: center; width: 16px; height: 16px; border: 1px solid var(--steel); border-radius: 50%; background: var(--panel); color: var(--steel); font: 700 10px/1 var(--mono); pointer-events: auto; cursor: help; }
+.tt-node.edge { top: 100%; }
+.tt-node .tt-ico { width: 10px; height: 10px; margin: 0; }
+.tt-count { position: absolute; left: 100%; top: 50%; transform: translateY(-50%); margin-left: 2px; padding: 0 3px; border: 1px dashed var(--steel); border-radius: var(--r-tag); background: var(--panel); color: var(--bright); font: 600 9px/12px var(--mono); white-space: nowrap; }
+.tether.up .tt-line, .tether.up .tt-arm { box-shadow: 0 0 5px var(--steel-glow); }
+.tether.up .tt-node { box-shadow: 0 0 7px var(--steel-glow); }
+.tether.up .tt-line { animation: tt-glow 2.4s ease-in-out infinite alternate; }
+@keyframes tt-glow { from { box-shadow: 0 0 3px var(--steel-glow); } to { box-shadow: 0 0 8px var(--steel); } }
+.tether.down .tt-line { background: repeating-linear-gradient(180deg, var(--steel) 0 3px, transparent 3px 6px); opacity: 0.75; }
+.tether.down .tt-arm { background: repeating-linear-gradient(90deg, var(--steel) 0 3px, transparent 3px 6px); opacity: 0.75; }
+.tether.down .tt-node { border-style: dashed; }
+.tether.unk .tt-node { color: var(--muted); border-color: var(--gray); }
+/* The part it hangs from breaks: the line flashes and pulls apart, the node bursts (a dissolving row; --snap picks the
+   animation up where it was after a redraw). Effects minimal, Motion off: it's simply gone. */
+.tether.snap .tt-line, .tether.snap .tt-arm { animation: tt-snap 0.7s ease-out var(--snap, 0ms) forwards; }
+.tether.snap .tt-node { animation: tt-node-snap 0.7s ease-out var(--snap, 0ms) forwards; }
+@keyframes tt-snap { 0% { background: #eefaff; box-shadow: 0 0 10px #eefaff; opacity: 1; } 35% { opacity: 1; transform: scale(1, 0.55); } 100% { opacity: 0; transform: scale(1, 0); } }
+@keyframes tt-node-snap { 0% { transform: translate(-50%, -50%) scale(1); color: #eefaff; box-shadow: 0 0 12px #eefaff; } 30% { transform: translate(-50%, -50%) scale(1.5) rotate(-20deg); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(0.3) rotate(40deg); opacity: 0; } }
+.no-motion .tether.up .tt-line, body[data-fx="minimal"] .tether.up .tt-line { animation: none; }
+.no-motion .tether.snap, body[data-fx="minimal"] .tether.snap { display: none; }
+@media (prefers-reduced-motion: reduce) { .tether.up .tt-line { animation: none; } .tether.snap { display: none; } }
+.part-bar.guarded { overflow: visible; }
+.part-bar.guarded .loss { z-index: 2; }
+.lockseg { position: absolute; top: -1px; bottom: -1px; z-index: 1; display: block; background: repeating-linear-gradient(-45deg, rgba(196, 232, 242, 0.95) 0 2px, rgba(70, 128, 148, 0.92) 2px 4px); box-shadow: 0 0 0 1px var(--steel), 0 0 6px var(--steel-glow); cursor: help; }
+.lockpad { position: absolute; left: -7px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 13px; height: 13px; border: 1px solid var(--steel); border-radius: var(--r-tag); background: var(--panel); color: var(--steel); }
+.lockpad .glyph { width: 9px; height: 9px; margin: 0; }
+.part-bar .loss.lockloss { top: -2px; bottom: -2px; background: #fff; box-shadow: 0 0 8px rgba(238, 250, 255, 0.95); animation: lockloss-blink 0.9s ease-in-out infinite; } /* white, then the bare bar: the lock this hit takes */
+@keyframes lockloss-blink { 50% { background: var(--inset); box-shadow: inset 0 0 0 1px #fff; opacity: 1; } }
+.no-motion .part-bar .loss.lockloss { animation: none; opacity: 1; }
+.wardcap { position: absolute; top: -3px; bottom: -3px; z-index: 2; width: 2px; margin-left: -1px; background: var(--steel); box-shadow: 0 0 4px var(--steel-glow); cursor: help; }
+.wardcap::before, .wardcap::after { content: ''; position: absolute; left: -2px; width: 6px; height: 2px; background: inherit; }
+.wardcap::before { top: 0; } .wardcap::after { bottom: 0; }
+.wardcap.spent { background: var(--bright); }
+.fx-float.k-shield:not(.at-you) { color: var(--steel); }
+.fx-trail.lock { background: #eefaff; box-shadow: 0 0 10px var(--steel); }
+.fx-shard.steel { color: #eefaff; text-shadow: 0 0 6px var(--steel), 0 0 2px #fff; }
+.fx-crackring.steel { border-color: #eefaff; box-shadow: 0 0 14px var(--steel); }
+.board .bpart.linked .bname { box-shadow: inset 0 0 0 1px var(--steel); }
+.fx-float.steel { color: var(--steel); }

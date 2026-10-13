@@ -158,3 +158,15 @@ test('a real fight: Inject burns, a Spike and helpers each get their own number'
   const dmg = evs2.filter((e) => e.type === 'damage' && e.src === 'helper');
   assert.equal(helpers.length, dmg.length, 'one number per helper hit');
 });
+
+test('a hit a Mutex\'s lock soaks: the lock\'s own number in the shield kind ("−12 absorbed"); one that breaks through shows the damage too', async () => {
+  const { absorbOf } = await import('./dist/dmgfx.mjs');
+  const ctx = { partName: () => 'Encryptor', skillName: (id) => (id === 'spike' ? 'Spike' : id) };
+  const whole = floatOf({ id: 1, type: 'damage', target: 'encryptor', amount: 0, shield: 12, lockWas: 20, skill: 'spike' }, ctx);
+  assert.deepEqual([whole.kind, whole.icon, whole.text, whole.at, whole.target], ['shield', KINDS.shield.icon, '−12 absorbed', 'part', 'encryptor']);
+  assert.equal(whole.label, 'Spike −12 absorbed by the lock on Encryptor');
+  const through = { id: 2, type: 'damage', target: 'encryptor', amount: 7, shield: 12, lockWas: 12, skill: 'spike' };
+  assert.equal(floatOf(through, ctx).text, '−7', 'what got past the lock');
+  assert.equal(absorbOf(through, ctx).text, '−12 absorbed', 'and the lock\'s number beside it');
+  assert.equal(absorbOf({ id: 3, type: 'damage', target: 'encryptor', amount: 9 }, ctx), null, 'no lock, no absorbed number');
+});

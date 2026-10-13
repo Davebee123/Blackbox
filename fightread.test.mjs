@@ -6,8 +6,8 @@ import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, l
 import { CONFIG } from './dist/data.mjs';
 import { RULES, uniqueItem, seeded } from './dist/gear.mjs';
 import { tellsOf, tellStart } from './dist/tells.mjs';
-import { boardMarkup, hudMarkup } from './dist/view.mjs';
-import { tellTip, gearLive, cycleGear, partTip, partCue, partRead } from './dist/fightread.mjs';
+import { boardMarkup, hudMarkup, forecast } from './dist/view.mjs';
+import { tellTip, gearLive, cycleGear, partTip, partCue, partRead, partLinks } from './dist/fightread.mjs';
 import { tellIntents } from './dist/tells.mjs';
 
 Object.assign(CONFIG, { enemyCrit: 0, misses: false });
@@ -212,4 +212,118 @@ test('part reads stay true to the code: a Lockbox\'s cap, a Mirror\'s reboot, a 
   }
   const tro = body('trojan', ROOM_FAMILIES.trojan.parts);
   assert.match(partRead(null, tro, tro.parts.find((p) => p.id === 'loader')).does, /any damage to a Package unpacks it into two Droppers/);
+});
+
+// ---------- what protects what: the tethers between rows, the lock on its partner's bar ----------
+const mutexFight = () => { for (let seed = 1; seed < 30; seed++) { const x = fight({ seed }); if (x.encounter.virus.parts.some((p) => p.lock)) return x; } };
+const tethersOf = (html, kind) => [...html.matchAll(new RegExp(`<span class="(tether k-${kind}[^"]*)" data-links="([^"]*)"[^>]*title="([^"]*)">([\\s\\S]*?)</span>(?=<span class="tether|<span class="aim-pips|<span class="part-top)`, 'g'))].map((m) => ({ cls: m[1], links: m[2], tip: m[3], inner: m[4] }));
+const segOf = (html, id) => { const row = html.split('data-target="').find((r) => r.startsWith(id + '"')) || ''; const m = row.match(/<i class="lockseg" data-lock="(\d+)" style="left:([\d.]+)%;width:([\d.]+)%"/); return m ? { lock: +m[1], left: +m[2], width: +m[3], row } : { row }; };
+
+test('the Mutex\'s lock on the Encryptor\'s own bar: a segment as wide as the lock, drained by a hit, previewed on the lock; the hit\'s number says absorbed', async () => {
+  const { floatOf } = await import('./dist/dmgfx.mjs');
+  const s = mutexFight();
+  quiet(s);
+  const enc = Object.assign(part(s, 'encryptor'), { armor: 0, maxArmor: 0, integrity: 200, max: 200, lockHp: 50, lockMax: 50 });
+  let seg = segOf(boardMarkup(s, null), 'encryptor');
+  assert.equal(seg.lock, 50);
+  assert.equal(seg.width, 25, 'the lock on the bar\'s scale: 50 of 200');
+  assert.equal(seg.left, 75, 'over the end of the fill, where hits land first');
+  assert.match(seg.row, /<i class="lockseg"[^>]*title="Shield 50\/50: \?\?\?\nBreak one Mutex to decode what it does\."><b class="lockpad">/, 'a padlock at its edge; ??? until the Mutex is decoded');
+  // Typing a Spike at it: the blinking slice sits on the lock, and none on the Integrity.
+  command(s, 'spike encryptor');
+  const html = boardMarkup(s, null), row = segOf(html, 'encryptor').row;
+  assert.match(row, /<i class="loss lockloss" style="left:75\.00%;width:[\d.]+%" title="−\d+ lock this cycle">/);
+  assert.doesNotMatch(row.replace(/<i class="loss lockloss"[^>]*>/, ''), /<i class="loss"/, 'the Integrity isn\'t previewed: the lock takes it');
+  const ev = resolveCycle(s), hitEv = ev.find((e) => e.type === 'damage' && e.target === 'encryptor');
+  assert.equal(hitEv.amount, 0); assert.ok(hitEv.shield > 0); assert.equal(hitEv.lockWas, 50);
+  assert.equal(enc.integrity, 200);
+  seg = segOf(boardMarkup(s, null), 'encryptor');
+  assert.equal(seg.lock, 50 - hitEv.shield, 'it drains');
+  assert.equal(seg.width, ((50 - hitEv.shield) / 200) * 100);
+  const f = floatOf(hitEv, { partName: () => 'Encryptor', skillName: () => 'Spike' });
+  assert.deepEqual([f.kind, f.text, f.at], ['shield', `−${hitEv.shield} absorbed`, 'part'], 'the number is the lock\'s');
+  // Decoded, the segment says whose it is.
+  s.codex = { [codexKey(s.encounter.virus, part(s, 'mutex'))]: true };
+  assert.match(segOf(boardMarkup(s, null), 'encryptor').row, /title="Lock \d+\/50: the Mutex&#39;s shield on the Encryptor\. Every hit on it drains the lock first\."/);
+});
+
+test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glowing while the lock stands, ↻ N once it breaks, snapping and gone with the Mutex', () => {
+  const s = mutexFight();
+  quiet(s);
+  const v = s.encounter.virus, enc = Object.assign(part(s, 'encryptor'), { armor: 0, maxArmor: 0, integrity: 200, max: 200, lockHp: 10, lockMax: 10 });
+  let html = boardMarkup(s, null), ts = tethersOf(html, 'lock');
+  const rows = v.parts.filter((p) => p.integrity > 0).map((p) => p.id), span = Math.abs(rows.indexOf('mutex') - rows.indexOf('encryptor')) + 1;
+  assert.equal(ts.length, span, 'a piece on every row it spans');
+  assert.ok(ts.every((t) => t.links === 'mutex encryptor' && /\bup\b/.test(t.cls) && /\bunk\b/.test(t.cls)), ts.map((t) => t.cls).join(' | '));
+  assert.ok(ts.every((t) => t.tip === 'Mutex: ???\nSomething on it reaches the Encryptor. Break one to decode what it does.'));
+  assert.equal(ts.filter((t) => /<b class="tt-node[^"]*">\?<\/b>/.test(t.inner)).length, 1, 'one node, with ? on it');
+  assert.equal(ts.filter((t) => /tt-arm src/.test(t.inner)).length, 1); assert.equal(ts.filter((t) => /tt-arm dst/.test(t.inner)).length, 1);
+  s.codex = { [codexKey(v, part(s, 'mutex'))]: true };
+  ts = tethersOf(boardMarkup(s, null), 'lock');
+  assert.ok(ts.every((t) => !/\bunk\b/.test(t.cls)));
+  assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, /<b class="tt-node[^"]*"><svg class="glyph tt-ico"/, 'decoded: its icon');
+  assert.match(ts[0].tip, /^Mutex lock: the Encryptor wears a 10\/10 shield that takes every hit first\./);
+  // Break the lock: dashed, with the cycles until it relocks.
+  command(s, 'overload encryptor'); resolveCycle(s);
+  assert.equal(enc.lockHp, 0);
+  ts = tethersOf(boardMarkup(s, null), 'lock');
+  const n = enc.lockAt - s.encounter.cycle;
+  assert.equal(n, CONFIG.mutex.every - 1);
+  assert.ok(ts.every((t) => /\bdown\b/.test(t.cls)));
+  assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`<span class="tt-count">↻${n}</span>`));
+  assert.match(ts[0].tip, new RegExp(`^Mutex lock: broken\\. The Mutex locks the Encryptor again in ${n} cycles\\.`));
+  assert.doesNotMatch(segOf(boardMarkup(s, null), 'encryptor').row, /lockseg/, 'no segment while it is broken');
+  // The Mutex breaks: while its row dissolves the tether snaps; then it's gone, and the lock with it for good.
+  const mx = Object.assign(part(s, 'mutex'), { integrity: 0 });
+  Object.defineProperty(mx, '_dyingUntil', { value: Date.now() + 600, writable: true, configurable: true, enumerable: false });
+  ts = tethersOf(boardMarkup(s, null), 'lock');
+  assert.ok(ts.length && ts.every((t) => /\bsnap\b/.test(t.cls)), 'it snaps as the Mutex dissolves');
+  mx._dyingUntil = 0;
+  html = boardMarkup(s, null);
+  assert.doesNotMatch(html, /class="tether k-/);
+  assert.match(html, /<i class="tether keep" hidden><\/i>/, "the gutter stays for the rest of the fight: the rows don't jump");
+  assert.doesNotMatch(html, /lockseg/);
+});
+
+test('one visual language for every relation: a Lockbox\'s ward (and a cap line on its partner\'s bar), a Mirror\'s twin, a Keyring re-arming its Gate', () => {
+  // The Lockbox, from level 3.
+  let s = null;
+  for (let seed = 1; seed < 40 && !s; seed++) { const x = fight({ level: 5, seed }); if (x.encounter.virus.parts.some((p) => p.ward)) s = x; }
+  quiet(s);
+  const enc = Object.assign(part(s, 'encryptor'), { armor: 0, maxArmor: 0, integrity: 100, max: 100 });
+  let html = boardMarkup(s, null);
+  const ward = tethersOf(html, 'ward');
+  assert.ok(ward.length >= 2 && ward.every((t) => t.links === 'lockbox encryptor' && /\bup\b/.test(t.cls)));
+  const cap = Math.round(100 * CONFIG.ward);
+  assert.match(segOf(html, 'encryptor').row, new RegExp(`<i class="wardcap" data-left="${cap}" style="left:${100 - cap}\\.00%"`), 'the cap: the most it can lose this cycle');
+  s.codex = { [codexKey(s.encounter.virus, part(s, 'lockbox'))]: true };
+  html = boardMarkup(s, null);
+  assert.match(tethersOf(html, 'ward')[0].tip, new RegExp(`^Lockbox ward: the Encryptor loses at most ${cap} Integrity a cycle \\(${cap} left this cycle\\)\\.`));
+  assert.match(html, new RegExp(`title="Ward cap: the Encryptor can lose ${cap} more this cycle`));
+  // The forecast stops at the cap.
+  command(s, 'overload encryptor');
+  assert.ok(forecast(s).parts.encryptor <= cap, 'the preview stops at the cap');
+  // The Mirror (worm, from level 3): twins, and a stub with the reboot countdown when one is down.
+  let w = null;
+  for (let seed = 1; seed < 40 && !w; seed++) { const x = fight({ level: 5, family: 'worm', seed }); if (x.encounter.virus.parts.some((p) => p.twin)) w = x; }
+  quiet(w);
+  const tw = tethersOf(boardMarkup(w, null), 'twin');
+  assert.ok(tw.length >= 2 && tw.every((t) => t.links === 'mirror replicator' && /\bup\b/.test(t.cls)));
+  const rep = part(w, 'replicator');
+  Object.assign(rep, { armor: 0, maxArmor: 0, integrity: 1 });
+  command(w, 'spike replicator'); resolveCycle(w);
+  assert.ok(rep.integrity === 0 && rep.rebootAt, 'down, rebooting');
+  const stub = tethersOf(boardMarkup(w, null), 'twin');
+  assert.equal(stub.length, 1);
+  assert.match(stub[0].cls, /\bstub\b/); assert.match(stub[0].cls, /\bdown\b/);
+  assert.match(stub[0].inner, new RegExp(`↻${rep.rebootAt - w.encounter.cycle}<`));
+  // The Bouncer's Keyring and its Gate: the re-arm countdown on the tether.
+  const b = at(12); selectEncounter(b, 'bouncer', 3); command(b, 'engage');
+  const k = part(b, 'encryptor'), n = (k.rearm - (b.encounter.cycle % k.rearm)) % k.rearm;
+  const ra = tethersOf(boardMarkup(b, null), 'rearm');
+  assert.ok(ra.length >= 2 && ra.every((t) => t.links === 'encryptor pulse' && /\bup\b/.test(t.cls)));
+  assert.match(ra.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`↻${n}<`));
+  assert.doesNotMatch(boardMarkup(b, null), /re-arms in/, 'the tether says it, not a tag');
+  // partLinks reads the same.
+  assert.deepEqual(partLinks(b).map((l) => [l.kind, l.from, l.to.join(), l.count]), [['rearm', 'encryptor', 'pulse', n]]);
 });

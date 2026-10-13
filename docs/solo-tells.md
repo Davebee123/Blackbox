@@ -4,7 +4,7 @@ Every virus that fights you alone announces its big moves. A part winds up, the 
 
 ## How a tell plays
 
-A tell is announced once in the log, for example *The Replicator charges its Replicate into MASS MAILER. It lands in 2 cycles. Deal 53 to the Replicator on the cycle it lands, or break 2 ◆ on it, to call it off. Hits before then don't count.* From then on its chip sits on the part's row. The chip has a kicker line (*Charged*, *Casting*, *Sealing*, *Recording*), the move's name, what it does, and a last line that says exactly what counts as an answer and when: *▸ Burst 53 or ◆2 in 2*, *▸ SIGINT in 1*, *▸ Strip ◆3 first*, *▸ Go quiet now*. When its window opens the log says so (*MASS MAILER's window is open. Deal 53 to the Replicator this cycle, or break 2 ◆ on it, to call it off.*) and the chip lights up with a NOW badge. Hovering the chip gives the whole rule, what reading it pays, and what it leaves behind if it lands. A veiled part's tell shows anyway. Breaking a tell's part always stops the tell.
+A tell is announced once in the log, as short as its chip's tooltip, for example *MASS MAILER in 2: the Replicator. Deal 53 or break 2 ◆ in its window.* From then on its chip sits on the part's row. The chip has a kicker line (*Charged*, *Casting*, *Sealing*, *Recording*), the move's name, what it does, and a last line that says exactly what counts as an answer and when: *▸ Burst 53 or ◆2 in 2*, *▸ SIGINT in 1*, *▸ Strip ◆3 first*, *▸ Go quiet now*. When its window opens the log says so (*MASS MAILER's window is open.*) and the chip lights up with a NOW badge. Hovering the chip gives the whole rule, what reading it pays, and what it leaves behind if it lands. A veiled part's tell shows anyway. Breaking a tell's part always stops the tell.
 
 ## The window and the burst
 
@@ -12,7 +12,7 @@ The designer's playtest found that answering at any time made tells a chore: you
 
 ### The window
 
-A charge or a cast can only be answered in its window. From level 6 a charge's window is the cycle it lands. At levels 1 to 5 it is the last two cycles. An elite's or a solo boss's charge gets one cycle more. A cast's window is two cycles at every level, so that its two hits fit. Hits before the window still do their damage, but they don't count toward the answer, and the log says so once a cycle: *Too early for MASS MAILER. Its window opens next cycle, and only hits in it count.* A tell said with less lead than its window is open from the moment it's said, so nothing is unanswerable. If you push a charge's attack back (Rate Limit, Jam, Suspend outside the window), its window moves with it.
+A charge or a cast can only be answered in its window. From level 6 a charge's window is the cycle it lands. At levels 1 to 5 it is the last two cycles. An elite's or a solo boss's charge gets one cycle more. A cast's window is two cycles at every level, so that its two hits fit. Hits before the window still do their damage, but they don't count toward the answer, and the log says so once a cycle: *Too early for MASS MAILER: its window opens next cycle.* A tell said with less lead than its window is open from the moment it's said, so nothing is unanswerable. If you push a charge's attack back (Rate Limit, Jam, Suspend outside the window), its window moves with it.
 
 Seals and the Mimic were already timed. A seal still fails if its part has no ◆ when it lands, so a strip at any time before then works, and its chip turns to NOW on the cycle it lands. The Mimic's beat is its own window.
 
@@ -39,7 +39,7 @@ Double Tap and Spectre count every command twice toward a burst, and Fuzz counts
 
 ### The payoff: the part staggers
 
-A charge, a cast or the Mimic's beat answered in full staggers its part. It's Open for 2 cycles (+50% from everyone), and its next attack lands a cycle later: *READ: the Replicator staggers. It takes +50% from everyone for 2 cycles, and its Replicate lands a cycle later.* A charge of another tell already riding that attack keeps its cycle, so the delay never piles a charge onto the Mimic's beat. A solo boss staggers Open but keeps its clock. With the delay too, the readers beat MIRRORSHADE 94% of the time, over its band. Reading still adds a tenth of the kill's XP for each read, and reading every tell in a fight rolls its loot once more.
+A charge, a cast or the Mimic's beat answered in full staggers its part. It's Open for 2 cycles (+50% from everyone), and its next attack lands a cycle later: *READ: the Replicator is Open, +50% for 2 cycles, its Replicate a cycle later.* A charge of another tell already riding that attack keeps its cycle, so the delay never piles a charge onto the Mimic's beat. A solo boss staggers Open but keeps its clock. With the delay too, the readers beat MIRRORSHADE 94% of the time, over its band. Reading still adds a tenth of the kill's XP for each read, and reading every tell in a fight rolls its loot once more.
 
 ### How it shows on the board
 
@@ -85,7 +85,7 @@ Some skills are built for a kind of tell and answer it outright when they land o
 
 ### Reading pays
 
-- **A stagger.** A charge, a cast or the Mimic's beat answered in its window staggers its part. It's Open, taking 50% more from everyone for 2 cycles, and its next attack lands a cycle later (a solo boss keeps its clock). The log says *READ: the Replicator staggers. It takes +50% from everyone for 2 cycles, and its Replicate lands a cycle later.* and the part flashes.
+- **A stagger.** A charge, a cast or the Mimic's beat answered in its window staggers its part. It's Open, taking 50% more from everyone for 2 cycles, and its next attack lands a cycle later (a solo boss keeps its clock). The log says *READ: the Replicator is Open, +50% for 2 cycles, its Replicate a cycle later.* and the part flashes.
 - **A ready key.** A seal stopped by a strip readies the skill that did it.
 - **XP.** Each read adds a tenth of the kill's XP to the kill, up to 40%: *Read 3 tells: +42 XP.*
 - **Loot.** Read every tell in a fight (two or more said, none landed) and its loot rolls once more.
@@ -192,7 +192,7 @@ A wild virus picks its third part from its family's pool, using its seed. Each p
 | Decoy (existing) | Ghostroot | 4 | 18, ◆, veiled | On every 4th cycle it mirrors your commands: they do nothing, and 30% bounces back | Don't fire into its beat, or break it |
 | **Mimic** (new) | Ghostroot | 8 | 18, ◆, veiled, no attack | Copies your last skill. It records you and on its beat plays your command's direct hit back at you. Its beat is always on the board, even while veiled | Go quiet on the beat, or break it |
 
-The board tags these parts: *lock N* and *relocks in N* on the Encryptor, *tripwire* and then *loud* on the others, *commands fragments* on the C2 Node, and the Mimic's beat chip. The part's hover text says the rule in a sentence.
+The board shows these parts: the Mutex's lock as a steel segment on the Encryptor's bar with a tether between the rows (↻ N while it relocks), *tripwire* and then *loud* on the others, *commands fragments* on the C2 Node, and the Mimic's beat chip. The part's hover text says the rule in a sentence.
 
 ## SIGINT in solo fights
 

@@ -8,7 +8,10 @@
 //   cycleGear(s, cycle)    the cycle-conditioned ones live on a cycle (the timeline's column headers)
 //   partRead(s, v, p)      what a part does, how to answer it, and its one-word cue, from its spec and its flags
 //   partTip(s, v, p)       the part's tooltip: ??? and how to decode it until the codex knows it (combat.mjs knowsPart)
-import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn } from './combat.mjs';
+//   partLinks(s, v)        what protects what: one link a rule that reaches from one part to another (a Mutex's lock, a
+//                          Lockbox's ward, a Mirror's twin, a Keyring's re-arm), for the board's tethers
+//   lockOf(s, v, p)        the lock shield a part wears now (its bar's absorb segment), wardOf the most a ward lets it lose
+import { part, livingParts, gearFx, fxHolds, blocked, attackAmount, knowsPart, usable, fxOn, alive, wards } from './combat.mjs';
 import { CONFIG, TELL, TELLS, BOSSES } from './data.mjs';
 import { fxText } from './content.mjs';
 import { tellsOf, tellIntents, partTells, NEW_TELLS } from './tells.mjs';
@@ -205,5 +208,90 @@ export const partCue = (s, v, p) => (knowsPart(s, v, p) ? partRead(s, v, p).cue 
 export function gearOnParts(live) {
   const out = {};
   for (const g of live) if (g.lit) for (const id of g.parts) (out[id] ||= []).push(g.name);
+  return out;
+}
+
+// ---------- what protects what ----------
+// One visual language for every rule that reaches from one part to another (view.mjs draws a tether between the rows
+// with a node on it, app.js plays its shatter and snap): the Mutex's lock on its partner, a Lockbox's ward, a Mirror's
+// twin, a Keyring re-arming its Gate, the Cryptominer's Cooler on its Rig, the C2 Node over its fragments. Linked
+// (v2 and up) has no partner (a broken part's hit goes to whichever attacks next), so it draws none.
+//   { kind, from, to: [ids], icon, known, up, count, snap, tip }
+//   known  the codex knows the part the rule sits on (its node shows its icon and its tooltip says the rule; before
+//          that the tether still shows, with ? on its node and ??? in its tooltip)
+//   up     the rule holds now (a lock standing, a ward, both twins up, re-arms left): the tether glows
+//   count  cycles until it comes back or fires (a broken lock relocking, the next re-arm, a broken twin's reboot), or null
+//   snap   the part it sits on just broke (a dissolving row: view.mjs passes stands): the tether snaps and goes
+export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router' };
+// The lock shield on p now: { cur, max, by } (the Mutex holding it), or null.
+export function lockOf(s, v, p) {
+  if (!alive(p) || !(p.lockHp > 0)) return null;
+  const by = v.parts.find((x) => alive(x) && x.lock === p.id);
+  return by ? { cur: p.lockHp, max: p.lockMax || p.lockHp, by } : null;
+}
+// A ward on p: { cap, left, by }: the most it loses a cycle, and what's left of it this cycle (combat.mjs hit).
+export function wardOf(s, v, p) {
+  const by = alive(p) ? v.parts.find((x) => alive(x) && wards(x, p)) : null;
+  if (!by) return null;
+  const crush = 1 + (fxOn(s, 'lock-crush')?.fx.value || 0) / 100, cap = Math.max(1, Math.round(p.max * CONFIG.ward * crush));
+  const used = p.wardAt === s.encounter?.cycle ? p.wardUsed || 0 : 0;
+  return { cap, left: Math.max(0, cap - used), by };
+}
+const upTo = (n) => (n <= 0 ? 'at the end of this cycle' : when(n));
+function linkTip(s, v, l) {
+  const p = part(s, l.from) || v.parts.find((x) => x.id === l.from), to = l.to.map((id) => v.parts.find((x) => x.id === id)).filter(Boolean);
+  const names = join(to.map((x) => `the ${x.name}`));
+  if (!l.known) return `${p.name}: ???\nSomething on it reaches ${names || 'another part'}. Break one to decode what it does.`;
+  if (l.snap) return `${p.name}: broken. Its hold on ${names} is gone.`;
+  if (l.kind === 'lock') {
+    const t = to[0], lk = t?.lockHp > 0 ? t.lockHp : 0;
+    return lk ? `${p.name} lock: ${names} wears a ${lk}/${t.lockMax || lk} shield that takes every hit first.\nBreak the ${p.name} and the lock is gone for good. Break the lock and it comes back ${cycles(CONFIG.mutex.every)} later.`
+      : `${p.name} lock: broken. The ${p.name} locks ${names} again ${upTo(l.count ?? CONFIG.mutex.every)}.\nFinish ${names} before then, or break the ${p.name}.`;
+  }
+  if (l.kind === 'ward') {
+    const w = to[0] ? wardOf(s, v, to[0]) : null;
+    return `${p.name} ward: ${names} loses at most ${w?.cap ?? '?'} Integrity a cycle${w ? ` (${w.left} left this cycle)` : ''}.${p.wardCommands ? ' Burns and helpers go through at full.' : ''}\nBreak the ${p.name} first, or wear ${names} down under the cap.`;
+  }
+  if (l.kind === 'twin') {
+    if (!to.length) { const down = v.parts.find((x) => (x.twin === p.id || p.twin === x.id) && !alive(x)); return `${p.name} twin: it reboots the ${down?.name || 'other twin'} ${upTo(l.count ?? 0)}, at ${pct(CONFIG.twinReboot.at)}.\nBreak the ${p.name} before then and it stays down.`; }
+    return `${p.name} twin: ${names}. Break one while the other stands and it reboots at ${pct(CONFIG.twinReboot.at)} ${cycles(CONFIG.twinReboot.in)} later, once.\nBreak both within ${cycles(CONFIG.twinReboot.in)} of each other.`;
+  }
+  if (l.kind === 'rearm') return l.up ? `${p.name} re-arm: ${names} back to full ◆ ${upTo(l.count)}. ${CONFIG.rearmMax - (p.rearms || 0)} of ${CONFIG.rearmMax} re-arms left.\nBreak ${names} between re-arms.` : `${p.name} re-arm: overheated. It can't re-arm ${names} again.`;
+  if (l.kind === 'command') return `${p.name} command: the fragments gnaw ${pct(CONFIG.c2.gnaw)} harder while it stands, and all of them drop when it breaks.\nBreak it once fragments are up.`;
+  const r = partRead(s, v, p);
+  return `${p.name}: ${r.does}\n${r.answer}`;
+}
+// stands(p): the parts a tether may hang from (the board passes its rows: the living and the dissolving).
+export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
+  if (!v?.parts) return [];
+  const cycle = s.encounter?.cycle || 0, out = [];
+  const add = (kind, p, to, o = {}) => out.push({ kind, from: p.id, to: to.map((x) => x.id), icon: LINK_ICON[kind], known: knowsPart(s, v, p), up: true, count: null, snap: !alive(p), ...o });
+  for (const p of v.parts.filter(stands)) {
+    if (p.lock) {
+      const t = v.parts.find((x) => x.id === p.lock);
+      if (alive(t)) add('lock', p, [t], { up: alive(p) && t.lockHp > 0, count: alive(p) && !(t.lockHp > 0) && t.lockAt != null ? Math.max(0, t.lockAt - cycle) : null });
+    }
+    if (p.ward || p.wardsToo?.length) { const to = v.parts.filter((x) => alive(x) && x !== p && wards(p, x)); if (to.length) add('ward', p, to, { up: alive(p) }); }
+    if (p.rearm) {
+      const to = v.parts.filter((x) => alive(x) && x !== p && x.kind !== 'fragment' && x.maxArmor > 0);
+      const left = alive(p) && (p.rearms || 0) < CONFIG.rearmMax;
+      if (to.length) add('rearm', p, to, { up: left, count: left ? (p.rearm - (cycle % p.rearm)) % p.rearm : null });
+    }
+    if (v.family === 'cryptominer' && p.id === 'cooler') { const t = v.parts.find((x) => x.id === 'rig'); if (alive(t)) add('cool', p, [t], { up: alive(p) }); }
+    if (p.command) { const to = v.parts.filter((x) => alive(x) && x.kind === 'fragment'); if (to.length) add('command', p, to, { up: alive(p) }); }
+  }
+  // Twins, by pair (either may be the one down): both up, a tether; one down with its reboot coming, a stub on the one
+  // standing with the countdown; one just broken for good (no reboot), the tether snaps.
+  for (const p of v.parts.filter((x) => x.twin)) {
+    const t = v.parts.find((x) => x.id === p.twin), known = knowsPart(s, v, p);
+    if (!t) continue;
+    if (alive(p) && alive(t)) { out.push({ kind: 'twin', from: p.id, to: [t.id], icon: LINK_ICON.twin, known, up: true, count: null, snap: false }); continue; }
+    for (const [up, down] of [[p, t], [t, p]]) {
+      if (!alive(up) || alive(down)) continue;
+      if (down.rebootAt && stands(up)) out.push({ kind: 'twin', from: up.id, to: [], icon: LINK_ICON.twin, known, up: false, count: Math.max(0, down.rebootAt - cycle), snap: false });
+      else if (!down.rebootAt && stands(down)) out.push({ kind: 'twin', from: down.id, to: [up.id], icon: LINK_ICON.twin, known, up: false, count: null, snap: true });
+    }
+  }
+  for (const l of out) l.tip = linkTip(s, v, l);
   return out;
 }

@@ -39,7 +39,7 @@ import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
-import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, GEAR_ICON } from './fightread.mjs';
+import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { bodyTags } from './families.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, sigsOf, STREAK, SCOUT } from './invasion.mjs';
@@ -207,12 +207,15 @@ export function timelineMarkup(s) {
 // crewmate's will do to each part (a hit on an armored part only breaks a chit), and the damage
 // the virus's visible attacks will do to you and the crew (after chits, shields and Block).
 // Crits and misses aren't guessed. Shown as a blinking white slice at the end of each bar.
+// A Mutex's lock takes the hit first (shield: the slice blinks on the lock's segment instead), and a Lockbox's ward
+// stops it at what the cap has left this cycle (combat.mjs hit).
 // preview: what you're typing (app.js), counted instead of your queued command while it would go through.
 export function forecast(s, preview = null) {
-  const e = s.encounter, out = { parts: {}, chits: {}, total: 0, you: 0, mates: {} };
+  const e = s.encounter, out = { parts: {}, chits: {}, shield: {}, total: 0, you: 0, mates: {} };
   if (!active(s)) return out;
   const crew = e.mode === 'run' ? matesOf(s).filter((m) => m.encounter && mateUp(m)) : [];
   const armor = Object.fromEntries(e.virus.parts.map((p) => [p.id, p.armor]));
+  const lockLeft = {}, wardLeft = {};
   const shoot = (st, q) => {
     const a = ABILITIES[q?.ability];
     if (!q?.target || !a) return;
@@ -226,7 +229,13 @@ export function forecast(s, preview = null) {
     if (!dmg && !a.tick) return; // Tag and the like: no hit, no chit
     // A hit (or a burn's first tick) on armor breaks one chit; a heavy hit (CONFIG.heavyHit) or a skill with chits: 2 (Rate Limit, Reclaim) two.
     if (armor[p.id] > 0 && !ignoresArmor(st, q.ability)) return breaks(a.chits > 1 || (!a.tick && skillBase(st, q.ability, p) >= CONFIG.heavyHit * powerOf(st) - 1e-9) ? 2 : 1);
-    out.parts[p.id] = Math.min(p.integrity, (out.parts[p.id] || 0) + dmg);
+    let n = dmg;
+    if (!(st.encounter?.buffs?.sudo >= e.cycle)) { // Sudo: the parts' rules don't hold you
+      const w = wardOf(st, e.virus, p), lk = lockOf(st, e.virus, p);
+      if (w) { wardLeft[p.id] ??= w.left; n = Math.min(n, wardLeft[p.id]); wardLeft[p.id] -= n; }
+      if (lk) { lockLeft[p.id] ??= lk.cur; const soak = Math.min(lockLeft[p.id], n); lockLeft[p.id] -= soak; n -= soak; if (soak) out.shield[p.id] = (out.shield[p.id] || 0) + soak; }
+    }
+    if (n > 0) out.parts[p.id] = Math.min(p.integrity, (out.parts[p.id] || 0) + n);
   };
   const auto = !e.queue && e.lastAttack ? { ability: e.lastAttack.split(' ')[0], target: e.lastAttack.split(' ')[1] } : null;
   shoot(s, preview?.ok && preview.ability ? preview : e.queue || auto);
@@ -435,7 +444,7 @@ function partTags(s, p) {
   if (p.phase && p.integrity > 0) tags.push(e.cycle % 2 ? '<span class="tag hot" title="Out of phase: hits pass through it this cycle, and 15% of your command bounces back at you">phased out</span>' : '<span class="tag you" title="In phase: hit it now">in phase</span>');
   if (p.attack?.windup && p.attack.due - e.cycle <= 2 && p.integrity > 0) tags.push(`<span class="tag hot" title="Winding up: deal ${p.attack.windup} damage before it lands to call it off">wind-up ${p.attack.wound || 0}/${p.attack.windup}</span>`);
   if (p.enrage && p.integrity > 0 && p.integrity < p.max / 2) tags.push('<span class="tag hot" title="Below half: its attacks deal 30% more damage">enraged</span>');
-  if (p.rearm && p.integrity > 0) { const n = (p.rearm - (e.cycle % p.rearm)) % p.rearm; tags.push(`<span class="tag hot" title="Re-arms the other part to full armor at the end of every ${p.rearm}th cycle">${n ? `re-arms in ${n}` : 're-arms now'}</span>`); }
+  // A Keyring's re-arm, a Mutex's lock and its relock: the tether between the rows says them (boardMarkup tethers).
   if (p.attack?.grow && p.integrity > 0) tags.push(`<span class="tag hot" title="Its Trace-back deals more damage every cycle the fight lasts">+${p.attack.bonus || 0}</span>`);
   if (p.echo && p.integrity > 0) tags.push('<span class="tag hot" title="While this lives, every hit you take repeats next cycle at half damage">echoing</span>');
   // A breach's rolled mutation lives on a part (breach.mjs): break the part and the rule ends.
@@ -443,9 +452,7 @@ function partTags(s, p) {
   // Mutations: an Adaptive part one more cycle of hits from hardening; damage a Rerouting virus moved here.
   if (mutated(s, 'adaptive') && p.integrity > 0 && p.adaptRun >= 2 && p.adaptAt === e.cycle - 1) tags.push('<span class="tag hot" title="Hit it again this cycle and it gains a ◆ at the end of the cycle">adapting</span>');
   if (p.rerouted && p.integrity > 0) tags.push(`<span class="tag hot" title="Rerouted from a broken part: its attack deals ${p.rerouted} more">+${p.rerouted} rerouted</span>`);
-  // Parts that change the fight (data.mjs FAMILIES): the Mutex's lock, a Tripwire, the C2 Node, the parts gone loud.
-  if (p.lockHp > 0 && p.integrity > 0) tags.push(`<span class="tag hot" title="Locked by the Mutex: hits land on the lock first. It comes back ${CONFIG.mutex.every} cycles after it breaks while the Mutex lives.">lock ${p.lockHp}</span>`);
-  else if (p.lockAt != null && p.integrity > 0) tags.push(`<span class="tag" title="Its lock is broken. The Mutex locks it again at the end of cycle ${p.lockAt} unless you break the Mutex.">relocks in ${Math.max(0, p.lockAt - e.cycle)}</span>`);
+  // Parts that change the fight (data.mjs FAMILIES): a Tripwire, the C2 Node, the parts gone loud.
   if (p.deadman && p.integrity > 0) tags.push(`<span class="tag hot" title="Break it while the others stand and they go loud, dealing ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacking a cycle sooner. Break it last.">tripwire</span>`);
   if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="The Tripwire set it off: its attacks deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage">loud</span>`);
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="While it lives, fragments gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder. Break it and every fragment drops with it.">commands fragments</span>`);
@@ -514,6 +521,58 @@ function cutChip(s, p) {
   return `<div class="intent cut${c.need == null || spent ? ' none' : ''}" title="${esc(tip)}"><b>cut ▸ ${esc(what)}</b></div>`;
 }
 
+// ---------- what protects what (fightread.mjs partLinks) ----------
+// A Mutex's lock on its partner's own bar, WoW absorb style: a hatched steel segment over the end of the fill, as wide as
+// the lock on the bar's scale, with a padlock at the edge hits drain it from and the number on hover. While a hit this
+// cycle would only take lock, the blinking preview slice sits on the segment, not the Integrity. A Lockbox's ward: a cap
+// line at the most the part can still lose this cycle. Both show before the protector is decoded (??? in the tooltip).
+const unknownTip = (what, by) => `${what}: ???\nBreak one ${by.name} to decode what it does.`;
+function guardMarks(s, v, p, fc) {
+  const max = p.max || 1, at = (n) => `${((Math.max(0, Math.min(max, n)) / max) * 100).toFixed(2)}%`;
+  const lk = lockOf(s, v, p), wd = wardOf(s, v, p);
+  let out = '';
+  if (lk) {
+    const from = Math.max(0, p.integrity - lk.cur), cur = Math.min(lk.cur, max - from), lose = Math.min(cur, fc.shield?.[p.id] || 0);
+    const tip = knowsPart(s, v, lk.by) ? `Lock ${lk.cur}/${lk.max}: the ${lk.by.name}'s shield on the ${p.name}. Every hit on it drains the lock first.` : unknownTip(`Shield ${lk.cur}/${lk.max}`, lk.by);
+    out += `<i class="lockseg" data-lock="${lk.cur}" style="left:${at(from)};width:${at(cur)}" title="${esc(tip)}"><b class="lockpad">${glyph('lock')}</b></i>`;
+    if (lose > 0) out += `<i class="loss lockloss" style="left:${at(from)};width:${at(lose)}" title="−${lose} lock this cycle"></i>`;
+  }
+  if (wd && wd.left < p.integrity) {
+    const tip = knowsPart(s, v, wd.by) ? `Ward cap: the ${p.name} can lose ${wd.left} more this cycle, at most ${wd.cap} a cycle while the ${wd.by.name} stands.` : unknownTip('Cap', wd.by);
+    out += `<i class="wardcap${wd.left ? '' : ' spent'}" data-left="${wd.left}" style="left:${at(p.integrity - wd.left)}" title="${esc(tip)}"></i>`;
+  }
+  return out;
+}
+// The tethers: a bracket in the board's left gutter from the part a rule sits on to each part it reaches, drawn a piece
+// a row (so it follows the rows at any height: dense, a phone), with a node at the middle of its span carrying the
+// rule's icon (? until the codex knows the part) and its countdown (↻ N). It glows while the rule holds, goes dashed
+// while it's down (a broken lock, an overheated Keyring), and snaps as the part it hangs from dissolves. Two lanes at most.
+function tethers(rows, links, dying) {
+  const idx = new Map(rows.map((p, i) => [p.id, i])), per = rows.map(() => '');
+  const spans = links.map((l) => {
+    const at = [l.from, ...l.to].map((id) => idx.get(id)).filter((i) => i != null);
+    return idx.has(l.from) ? { l, a: Math.min(...at), b: Math.max(...at), src: idx.get(l.from), ends: new Set(at) } : null;
+  }).filter(Boolean).sort((x, y) => x.a - y.a || y.b - y.a - (x.b - x.a));
+  const lanes = [];
+  for (const sp of spans) {
+    let k = lanes.findIndex((end) => end < sp.a);
+    if (k < 0) k = Math.min(lanes.length, 1);
+    lanes[k] = Math.max(lanes[k] ?? -1, sp.b); sp.lane = k;
+  }
+  for (const sp of spans) {
+    const { l } = sp, mid = (sp.a + sp.b) / 2, nodeRow = Math.floor(mid), edge = mid !== nodeRow; // an even span: on the line between two rows
+    const p = rows[sp.src], snap = l.snap ? ` style="--snap:-${dying(p)}ms"` : '';
+    const cls = `tether k-${l.kind} lane${sp.lane} ${l.up ? 'up' : 'down'}${l.known ? '' : ' unk'}${l.snap ? ' snap' : ''}${sp.a === sp.b ? ' stub' : ''}`;
+    for (let r = sp.a; r <= sp.b; r++) {
+      const top = r === sp.a ? '50%' : '-1px', bottom = r === sp.b ? '50%' : '0';
+      const arm = sp.ends.has(r) ? `<i class="tt-arm ${r === sp.src ? 'src' : 'dst'}"></i>` : '';
+      const node = r === nodeRow ? `<b class="tt-node${edge ? ' edge' : ''}">${l.known ? glyph(l.icon, 'tt-ico') : '?'}${l.count != null ? `<span class="tt-count">↻${l.count}</span>` : ''}</b>` : '';
+      per[r] += `<span class="${cls}" data-links="${esc([l.from, ...l.to].join(' '))}" data-kind="${l.kind}"${snap} title="${esc(l.tip)}"><i class="tt-line" style="top:${top};bottom:${bottom}"></i>${arm}${node}</span>`;
+    }
+  }
+  return per;
+}
+
 // Rows = parts, columns = cycles. Health and timing on the same line.
 export function boardMarkup(s, selected, preview = null) {
   const e = s.encounter;
@@ -568,7 +627,10 @@ export function boardMarkup(s, selected, preview = null) {
   const dying = (p) => !alive(p) && p._dyingUntil > Date.now();
   const living = e.virus.parts.filter((p) => alive(p) || dying(p)), broken = e.virus.parts.filter((p) => !alive(p) && !dying(p));
   const patchList = fighting ? patches(s, 4) : [];
-  const rows = living.map((p) => {
+  // What protects what, between the rows (a dissolving part's tether snaps with it).
+  const since = (p) => Math.max(0, Math.round(1000 - ((p._dyingUntil || 0) - Date.now())));
+  const ties = tethers(living, partLinks(s, e.virus, { stands: (p) => alive(p) || dying(p) }), since);
+  const rows = living.map((p, ri) => {
     const mine = list.filter((i) => i.source === p.id);
     const nowHit = mine.some((i) => i.col === 0);
     const pct = (p.integrity / p.max) * 100;
@@ -600,16 +662,19 @@ export function boardMarkup(s, selected, preview = null) {
     // A decoded part whose rule reaches another row shows it under its name (a Mutex: "locks Encryptor").
     const known = knowsPart(s, e.virus, p), cue = known ? partCue(s, e.virus, p) : null;
     const cueTag = cue ? `<span class="pcue"${cue.link ? ` data-link="${esc(cue.link)}"` : ''}>${glyph(cue.icon, 'pcue-ico')}${esc(cue.text)}</span>` : '';
+    const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${ticksMarkup(s, p)}</span><span class="part-tags">${cueTag}${partTags(s, p)}</span></div>
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${ticksMarkup(s, p)}</span><span class="part-tags">${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
+  // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
+  const keep = !ties.some(Boolean) && e.virus.parts.some((p) => p.lock || p.ward || p.wardsToo || p.twin || p.rearm || p.command) ? '<i class="tether keep" hidden></i>' : '';
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
   const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span></div>` : '';
-  return strip + head + you() + raidRow(s) + rows + gone;
+  return strip + head + you() + raidRow(s) + rows + gone + keep;
 }
 
 // A crew boss (raid.mjs): its mechanics on their own row, each chip on the cycle it lands, with who it's

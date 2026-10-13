@@ -2375,9 +2375,10 @@ export function hit(s, p, base, opts = {}) {
     if (dealt < was) notes.push(`warded: ${was - dealt} held back`);
   }
   // Mutex: while it lives, the part it locks carries a shield (its lock) that takes the hit first.
-  let unlocked = false, soaked = 0;
+  let unlocked = false, soaked = 0, lockWas = 0, lockLost = 0;
   if (dealt > 0 && !root && p.lockHp > 0 && livingParts(s).some((x) => x.lock === p.id)) {
     const soak = Math.min(p.lockHp, Math.ceil(dealt * crush)), spent = Math.min(dealt, Math.ceil(soak / crush));
+    lockWas = p.lockHp; lockLost = soak;
     p.lockHp -= soak; dealt -= spent; soaked = spent;
     notes.push(`lock: ${soak} held`);
     if (!p.lockHp) { p.lockAt = e.cycle + CONFIG.mutex.every; unlocked = true; }
@@ -2405,8 +2406,10 @@ export function hit(s, p, base, opts = {}) {
     ...(opts.dot ? [] : fxFire(s, 'hit', { target: p, do: 'damage+' }, false)),
     ...(crit && !forced ? fxFire(s, 'hit', { target: p, do: 'crit%' }, false) : []),
   ].filter((x) => x.fx.if) : [];
-  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired) });
-  if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor });
+  // shield: what the Mutex's lock took of it, from lockWas, with the part at hp after the hit (the board's lock segment
+  // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
+  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), ...(lockLost ? { shield: lockLost, lockWas, hp: p.integrity } : {}) });
+  if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
   // A server room's fight (floorplan.mjs): the interrupt ticks (interrupt.mjs), and the room bodies' own rules on a hit
   // (families.mjs: a Trojan's Package unpacks). 'gone': the part left the board without breaking.
   if (e.rooms && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
@@ -2560,7 +2563,8 @@ function breakPart(s, p) {
   if (e.virus.raid) raidBroke(s); // a crew boss's adds go down with it
   if (e.virus.tells) tellBroke(s, p); // its tells stop with it (tells.mjs)
   // Mutex: its lock goes with it.
-  if (p.lock) { const t = part(s, p.lock); if (t?.lockHp) { t.lockHp = 0; t.lockAt = null; emit(s, 'status', `The ${t.name}'s lock is gone with the Mutex.`, { target: t.id }); } }
+  // (A lock it had already lost doesn't come back either: its relock countdown goes too.)
+  if (p.lock) { const t = part(s, p.lock); if (t && !livingParts(s).some((x) => x.lock === t.id)) t.lockAt = null; if (t?.lockHp) { t.lockHp = 0; emit(s, 'status', `The ${t.name}'s lock is gone with the Mutex.`, { target: t.id, lock: 'gone', from: p.id }); } }
   // C2 Node: the fragments lose their command, and drop with it.
   if (p.command) {
     const frags = livingParts(s).filter((x) => x.kind === 'fragment');

@@ -121,7 +121,7 @@ function cancel(s, p, due, t) {
       const a = p.attack;
       // A charge riding this attack is answered by the cancel (tells.mjs): it rests as if called off.
       const charge = (tellsOf(s)?.list || []).find((x) => x.told && x.kind === 'charge' && x.part === p.id && x.n === (a.n || 0));
-      if (charge) { tellAnswer(s, charge, p, `You cut the ${p.name} on its cycle: ${charge.name.toUpperCase()} is called off.`, { stagger: false }); names.push(charge.name); }
+      if (charge) { tellAnswer(s, charge, p, `Cut: ${charge.name.toUpperCase()} called off.`, { stagger: false }); names.push(charge.name); }
       else names.push(a.name);
       a.due = e.cycle + a.interval;
       a.n = (a.n || 0) + 1;

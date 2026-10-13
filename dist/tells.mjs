@@ -209,7 +209,7 @@ function say(s, t, p, next, n) {
   Object.assign(t, { told: true, said: e.cycle, next, n, wound: 0, need: needOf(s, t, p), hitBy: [], chits: 0, opened: null, early: null });
   if (t.kind !== 'mimic') tally(s, t, 'said');
   seeGene(s.host || s, t.gene, e.virus.author); // the gene codex: a tell you've met is seen (genome.mjs)
-  emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next });
+  emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next, name: label(t) });
   const w = windowOf(s, t);
   if (w && w.from <= e.cycle) t.opened = e.cycle; // said inside its window: the line above says so
 }
@@ -217,7 +217,6 @@ function say(s, t, p, next, n) {
 const needOf = (s, t, p) => (t.kind === 'charge' ? Math.max(1, Math.round((tellsOf(s).tier.share || 0.5) * (p?.max || 1))) : t.kind === 'cast' ? tellsOf(s).tier.castHits : 0);
 const times = (n) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`);
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
-const upper = (x) => x.replace(/^./, (c) => c.toUpperCase());
 // The answer, exactly, for the chip's hover and the log: what counts, and when.
 export function answerOf(t, p, s = null) {
   const armored = p?.armor > 0, chits = s ? chitsLeft(s, t) : null;
@@ -230,31 +229,20 @@ export function answerOf(t, p, s = null) {
 }
 // When its window opens, as the log says it: 'now', or 'next cycle', 'in 2 cycles'.
 function windowWhen(s, t) { const w = windowOf(s, t); return w ? Math.max(0, w.from - s.encounter.cycle) : 0; }
-// What the log says when a tell is announced: what's coming, when, when its window opens and what answers it.
-function sayOf(s, t, p) {
-  const n = tellNext(s, t) - s.encounter.cycle, L = label(t), w = windowOf(s, t), opens = windowWhen(s, t);
-  // A one-cycle window is the cycle it lands; a longer one opens before it.
-  const single = opens === n;
-  const span = single ? (n ? 'on the cycle it lands' : 'this cycle') : w && w.to > Math.max(w.from, s.encounter.cycle) ? 'before it lands' : 'this cycle';
-  const window = single ? '' : opens ? `Its window opens ${when(opens)}. ` : 'Its window is open now. ';
-  const before = opens ? ' Hits before then don\'t count.' : '';
-  if (t.kind === 'charge') {
-    const or = p.armor > 0 ? `, or break ${chitsLeft(s, t)} ◆ on it,` : '';
-    return `The ${p.name} charges its ${p.attack?.name || 'attack'} into ${L}. It lands ${when(n)}. ${window}Deal ${t.need} to the ${p.name} ${span}${or} to call it off.${before}`;
-  }
-  if (t.kind === 'cast') return `The ${p.name} is compiling ${L}. It lands ${when(n)}. ${window}SIGINT interrupts it ${opens ? 'then' : 'now'}, and so does hitting the ${p.name} ${times(t.need)} ${opens ? 'in the window' : 'before it lands'}.${before}`;
-  if (t.kind === 'seal') return `The ${p.name} starts ${L}. If it still wears ◆ ${when(n)}, it re-arms with one ◆ more and every stripped part gets a ◆ back. Strip it before then.`;
-  if (t.kind === 'lock') return `The ${p.name} starts ${L}. It lands ${when(n)}. After that, the first command you fire is locked for ${cycles(t.cycles || 3)}, key 1 included. Feed it a skill that is cooling anyway, or break the ${p.name}.`;
-  return `The ${p.name} is recording you. ${upper(when(n))} it plays back whatever you fire, so fire something quiet then.`;
+// What the log says when a tell is announced, as short as its chip's tooltip (fightread.mjs tellTip): what, when, on
+// which part, and the answer in its window. FULL DISK in 3: the Encryptor. Deal 40 or break 2 ◆ in its window.
+export function sayOf(s, t, p = sourceOf(s, t)) {
+  const n = tellNext(s, t) - s.encounter.cycle, L = label(t), head = `${L} ${n > 0 ? `in ${n}` : 'now'}: the ${p.name}.`;
+  const win = `in its window${n > 0 && windowWhen(s, t) <= 0 ? ', open now' : ''}`; // said inside its window: it says so
+  if (t.kind === 'charge') return `${head} Deal ${t.need}${p.armor > 0 ? ` or break ${chitsLeft(s, t)} ◆` : ''} ${win}.`;
+  if (t.kind === 'cast') return `${head} SIGINT or hit it ${times(t.need)} ${win}.`;
+  if (t.kind === 'seal') return `${head} Strip its ${p.armor} ◆ before then, or it re-arms.`;
+  if (t.kind === 'lock') return `${head} It locks your next command for ${cycles(t.cycles || 3)}. Break it, or feed it a cooling skill.`;
+  return `${head} It plays back what you fire. Go quiet.`;
 }
-// A tell's window opens (a new cycle): the log says so, once, with what it takes now.
+// A tell's window opens (a new cycle): the log says so, once.
 function windowOpens(s, t, p) {
-  const left = burstLeft(s, t), last = tellNext(s, t) === s.encounter.cycle, L = label(t);
-  const span = last ? 'this cycle' : 'before it lands';
-  const text = t.kind === 'charge'
-    ? `${L}'s window is open. Deal ${left} to the ${p.name} ${span}${p.armor > 0 ? `, or break ${chitsLeft(s, t)} ◆ on it,` : ''} to call it off.`
-    : `${L}'s window is open. SIGINT interrupts it now, and so does hitting the ${p.name} ${times(left)} ${span}.`;
-  emit(s, 'telegraph', text, { source: p.id, tell: t.id, kind: t.kind, at: tellNext(s, t), window: true });
+  emit(s, 'telegraph', `${label(t)}'s window is open.`, { source: p.id, tell: t.id, kind: t.kind, at: tellNext(s, t), window: true, name: label(t) });
 }
 
 // A new cycle (after the old one closed): announcements. A charge whose attack went by without landing as a
@@ -298,16 +286,16 @@ export function tellHit(s, p, opts = {}) {
       const add = ((opts.dealt || 0) + (opts.chits || 0) * chitValue(s, t)) * x;
       if (add <= 0) continue;
       t.wound = Math.min(t.need, Math.round(t.wound + add));
-      if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound} of ${t.need}. ${t.need - t.wound} more ${last ? 'this cycle' : 'before it lands'} calls it off${p.armor > 0 ? `, or ${chitsLeft(s, t)} ◆` : ''}.`, { source: p.id, tell: t.id, burst: t.wound, need: t.need }); continue; }
-      emit(s, 'blocked', `You burst the ${p.name} in its window: ${label(t)} is called off.`, { source: p.id, target: p.id, tell: t.id, answered: true });
+      if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound}/${t.need}. ${t.need - t.wound} more${p.armor > 0 ? ` or ${chitsLeft(s, t)} ◆` : ''}${last ? ' this cycle' : ''}.`, { source: p.id, tell: t.id, burst: t.wound, need: t.need }); continue; }
+      emit(s, 'blocked', `${label(t)} called off.`, { source: p.id, target: p.id, tell: t.id, answered: true });
       read(s, t, p, { open: true });
     } else {
       const key = opts.key || `${e.cycle}:${s.who || ''}`, used = t.hitBy.filter((k) => k === key).length;
       if (used >= (cmd.counts || 1)) continue;
       t.hitBy.push(key);
       t.wound = Math.min(t.need, t.wound + tellWeight(s));
-      if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound} of ${t.need} hits. ${t.need - t.wound} more ${last ? 'this cycle' : 'before it lands'} interrupts it.`, { source: p.id, tell: t.id }); continue; }
-      emit(s, 'interrupt', `You hit the ${p.name} out of its compile: ${label(t)} is stopped.`, { source: p.id, target: p.id, tell: t.id, answered: true });
+      if (t.wound < t.need) { emit(s, 'status', `${label(t)}: ${t.wound}/${t.need} hits. ${t.need - t.wound} more${last ? ' this cycle' : ''}.`, { source: p.id, tell: t.id }); continue; }
+      emit(s, 'interrupt', `${label(t)} stopped.`, { source: p.id, target: p.id, tell: t.id, answered: true });
       read(s, t, p, { open: true });
     }
     rest(s, t, e.cycle, true);
@@ -318,7 +306,7 @@ function early(s, t, p) {
   const e = s.encounter;
   if (t.early === e.cycle) return;
   t.early = e.cycle;
-  emit(s, 'status', `Too early for ${label(t)}. Its window opens ${when(windowWhen(s, t))}, and only hits in it count.`, { source: p.id, tell: t.id, early: true });
+  emit(s, 'status', `Too early for ${label(t)}: its window opens ${when(windowWhen(s, t))}.`, { source: p.id, tell: t.id, early: true });
 }
 // A skill built for a tell answers it outright (Suspend drains a charge, Quarantine holds a cast, Hijack takes one
 // over, dist/classes/*.mjs), inside its window like any other answer: false (and nothing said) outside it, and the
@@ -347,7 +335,7 @@ function read(s, t, p, { open = false, skill = null, stagger = true } = {}) {
     const riding = (tellsOf(s)?.list || []).some((x) => x !== t && x.told && x.kind === 'charge' && x.part === p.id && x.n === (p.attack?.n || 0));
     const late = stagger && !riding && p.attack && p.attack.due < 900 && p.attack.due >= e.cycle ? (e.virus.boss ? TELL.boss.delay ?? TELL.open.delay : TELL.open.delay) || 0 : 0; // a solo boss keeps its clock (TELL.boss.delay)
     if (late) p.attack.due += late;
-    emit(s, 'read', `READ: the ${p.name} staggers. It takes +${Math.round((TELL.open.mult - 1) * 100)}% from everyone for ${cycles(n)}${late ? `, and its ${p.attack.name} lands ${late === 1 ? 'a cycle' : cycles(late)} later` : ''}.`, { target: p.id, tell: t.id, open: true, stagger: late });
+    emit(s, 'read', `READ: the ${p.name} is Open, +${Math.round((TELL.open.mult - 1) * 100)}% for ${cycles(n)}${late ? `, its ${p.attack.name} ${late === 1 ? 'a cycle' : cycles(late)} later` : ''}.`, { target: p.id, tell: t.id, open: true, stagger: late });
   } else if (skill && ABILITIES[skill]) {
     delete e.readyAt[skill];
     emit(s, 'read', `READ: ${ABILITIES[skill].name} is ready again.`, { target: p?.id, tell: t.id, ability: skill });
@@ -421,14 +409,14 @@ function corrupt(s, t, p) {
   if (!k || clean(s)) return;
   const amount = Math.max(1, Math.round(defender(s).max * k));
   s.encounter.corrupt = { name: t.name, amount, left: 3, source: p.id };
-  emit(s, 'status', `${label(t)} leaves you Corrupted. You take ${amount} damage every cycle for 3 cycles, unless Purge or Scrub cleanses it.`, { source: p.id, tell: t.id, mark: 'corrupt' });
+  emit(s, 'status', `${label(t)}: Corrupted, −${amount} a cycle for 3 cycles.`, { source: p.id, tell: t.id, mark: 'corrupt' });
 }
 // Your last skill (not Spike or SIGINT) is knocked offline: locked for that many cycles. From level 10 a charge or
 // a cast that lands hangs you too: your next command doesn't fire (tier.hang).
 function hang(s, t) {
   if (!tellsOf(s).tier.hang || clean(s)) return;
   s.encounter.hung = s.encounter.cycle + 1;
-  emit(s, 'status', `${label(t)} hangs your session. Your next command will not fire.`, { tell: t.id, mark: 'hung' });
+  emit(s, 'status', `${label(t)}: Hung. Your next command won't fire.`, { tell: t.id, mark: 'hung' });
 }
 function lockLast(s, t, why) {
   const e = s.encounter, n = tellsOf(s).tier.after;
@@ -466,13 +454,13 @@ export function tellLand(s) {
       if (p.blackhole) { delete p.blackhole; emit(s, 'blocked', `${label(t)} falls into the blackhole and does nothing.`, { source: p.id, tell: t.id, answered: true }); advance(p, e); tally(s, t, 'answered'); rest(s, t, e.cycle, false); continue; }
       const atk = chargeAttack(s, t, p), locked = s.encounter.encrypt || 0, shield = e.shield || 0;
       // A partial burst: it lands softer by the share you dealt in the window.
-      if (atk.soft < 1) emit(s, 'status', `You burst ${t.wound} of ${t.need} into the ${p.name}. ${label(t)} ${atk.soft <= 0 ? `lands plain${tellsOf(s).tier.after ? ' and leaves nothing behind' : ''}` : `lands ${Math.round((1 - atk.soft) * 100)}% softer`}.`, { source: p.id, tell: t.id, burst: t.wound, need: t.need, plain: atk.soft <= 0 });
+      if (atk.soft < 1) emit(s, 'status', `${label(t)} lands ${atk.soft <= 0 ? `plain${tellsOf(s).tier.after ? ', nothing left behind' : ''}` : `${Math.round((1 - atk.soft) * 100)}% softer`} (${t.wound}/${t.need}).`, { source: p.id, tell: t.id, burst: t.wound, need: t.need, plain: atk.soft <= 0 });
       if (strikeWith(s, p, atk)) return done(), true;
       advance(p, e);
       // Full Disk: a burst of encryption on top of its Encrypt, for TELL.burst cycles (it goes when the part breaks, or with Purge).
       if (atk.burst && (s.encounter.encrypt || 0) > locked) { // its Encrypt got through (a ◆, Null Route or Sanitize stops both)
         s.encounter.burst = { name: t.name, amount: atk.burst, left: TELL.burst, source: p.id };
-        emit(s, 'encrypt', `${label(t)} adds a burst of encryption, dealing ${atk.burst} damage every cycle for ${TELL.burst} cycles.`, { source: p.id, amount: atk.burst, tell: t.id, missed: true });
+        emit(s, 'encrypt', `${label(t)} lands: +${atk.burst} encryption a cycle for ${TELL.burst} cycles.`, { source: p.id, amount: atk.burst, tell: t.id, missed: true });
         tally(s, t, 'cost', atk.burst * TELL.burst);
       }
       // A brood: more spawns on top of the charged one (up to the usual limit).
@@ -487,7 +475,7 @@ export function tellLand(s) {
         emit(s, 'blocked', `${label(t)} fails: the ${p.name} is rotting.`, { source: p.id, tell: t.id, answered: true });
         read(s, t, p, { open: true });
       } else if (p.armor > 0 && p.poisonedUntil >= e.cycle) { // Cache Poison (Hijacker): the seal reads back poison
-        emit(s, 'blocked', `${label(t)} reads a poisoned cache and fails. It hits the ${p.name} instead.`, { source: p.id, tell: t.id, answered: true });
+        emit(s, 'blocked', `${label(t)} fails on a poisoned cache and hits the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
         tally(s, t, 'answered'); read(s, t, p, { open: true });
         hit(s, p, 2 * (p.poison || 15), { by: 'Cache Poison', pierce: true });
       } else if (p.armor > 0) {
@@ -496,12 +484,12 @@ export function tellLand(s) {
         const re = livingParts(s).filter((x) => x !== p && x.maxArmor > 0 && x.armor < x.maxArmor);
         for (const x of re) { x.armor++; x.patchAt = null; }
         const proof = !!fxOn(s, 'seal-proof'); // Write Blocker (a native unique): it writes nothing back to you
-        const mine = T.tier.after && !proof && (e.chits || e.shield) ? ' Your ◆ and shield go with it.' : '';
+        const mine = T.tier.after && !proof && (e.chits || e.shield) ? ' Your ◆ and shield go.' : '';
         if (mine) { e.chits = 0; e.shield = 0; }
         if (T.tier.after && !proof) corrupt(s, t, p);
-        emit(s, 'patch', `${label(t)} goes through while the ${p.name} still wears ◆. It re-arms to ${p.armor} ◆${re.length ? `, and ${re.map((x) => x.name).join(' and ')} ${re.length === 1 ? 'gets' : 'each get'} a ◆ back` : ''}.${mine}`, { target: p.id, tell: t.id, missed: true });
+        emit(s, 'patch', `${label(t)} lands: the ${p.name} re-arms to ${p.armor} ◆${re.length ? `, ${re.map((x) => x.name).join(' and ')} +1 ◆` : ''}.${mine}`, { target: p.id, tell: t.id, missed: true });
       } else {
-        emit(s, 'blocked', `${label(t)} fails. The ${p.name} has no ◆ left to seal with.`, { source: p.id, tell: t.id, answered: true });
+        emit(s, 'blocked', `${label(t)} fails: no ◆ to seal.`, { source: p.id, tell: t.id, answered: true });
         // The strip that did it, if it was a read (after the seal was said): that skill is ready again.
         const by = p.strippedBy;
         const who = by && by.cycle >= t.said ? [s, ...alliesOf(s).map((x) => x.st)].find((x) => (x.who || '') === by.who) : null;
@@ -515,7 +503,7 @@ export function tellLand(s) {
       if (t.does !== 'overclock') { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); } // Overclock's cost is the gamble itself
     } else if (t.kind === 'lock') {
       e.lockArmed = { at: e.cycle, name: t.name, cycles: t.cycles || 3, tell: t.id, source: p.id };
-      emit(s, 'status', `${label(t)} lands. The first command you fire next is locked for ${cycles(t.cycles || 3)}, key 1 included.`, { source: p.id, tell: t.id, missed: true, mark: 'lock' });
+      emit(s, 'status', `${label(t)} lands: your next command locks for ${cycles(t.cycles || 3)}.`, { source: p.id, tell: t.id, missed: true, mark: 'lock' });
     } else if (t.kind === 'mimic') {
       const r = mimicLands(s, t, p);
       if (r === true) return done(), true;
@@ -540,19 +528,19 @@ function castLands(s, t, p) {
   (v.buffs ||= {})[t.does] = until;
   if (t.does === 'loud') {
     if (fresh) for (const x of attackers(s)) boost(x, TELL.loud);
-    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every attack from ${v.name} deals ${Math.round((TELL.loud - 1) * 100)}% more damage.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles: +${Math.round((TELL.loud - 1) * 100)}% damage for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'grow') {
     const all = livingParts(s).filter((x) => x.kind === 'system' && !implanted(s, x)); // a Rootkit Implant stops it growing
     for (const x of all) { const n = Math.round(x.max * TELL.grow); x.max += n; x.integrity += n; }
-    emit(s, 'phase', `${label(t)} compiles. ${all.map((x) => x.name).join(', ')} ${all.length === 1 ? 'grows' : 'grow'} ${Math.round(TELL.grow * 100)}% more Integrity.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles: ${all.length === 1 ? `the ${all[0].name}` : 'every part'} +${Math.round(TELL.grow * 100)}% Integrity.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'overclock') {
     // Every attack still to come moves a cycle sooner (never onto this cycle, which is over), and every part takes double.
     if (fresh) for (const x of attackers(s)) if (x.attack.due < 900 && x.attack.due >= c + 2) x.attack.due--;
-    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every part of ${v.name} takes double damage, and every attack comes a cycle sooner.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles: ×2 damage both ways, attacks a cycle sooner, for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
   } else if (t.does === 'haste') {
     // What's on the timeline stays where it is (nothing lands unannounced); the repeats after it come sooner.
     if (fresh) for (const x of attackers(s)) if (x.attack.interval > 2) { x.attack.hasted = true; x.attack.interval--; }
-    emit(s, 'phase', `${label(t)} compiles. For ${cycles(lasts)}, every attack from ${v.name} repeats a cycle faster.`, { target: p.id, tell: t.id, missed: true });
+    emit(s, 'phase', `${label(t)} compiles: attacks repeat a cycle faster for ${cycles(lasts)}.`, { target: p.id, tell: t.id, missed: true });
   }
 }
 const boost = (x, k) => { const a = x.attack; if (!a) return; if (['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * k)); if (a.hit) a.hit = Math.max(1, Math.round(a.hit * k)); };
@@ -594,7 +582,7 @@ function mimicLands(s, t, p) {
   const id = last && last.cycle === e.cycle && !blind ? last.id : null, a = id && ABILITIES[id];
   const target = last && part(host, last.target);
   const direct = id ? mimicHit(host, id, target || p) / TELL.mimic : 0;
-  if (!direct) { emit(s, 'blocked', `The ${p.name} plays back ${a ? a.name : 'nothing'}, and there's no hit in it to copy.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
+  if (!direct) { emit(s, 'blocked', `The ${p.name} plays back ${a ? a.name : 'nothing'}: no hit to copy.`, { source: p.id, tell: t.id, answered: !!a }); return a ? 'quiet' : false; }
   // Reflector (a native unique): the playback lands on the Mimic instead, at a share of the hit. Echo Cancel: all of it.
   const turn = p.echoCancelUntil >= e.cycle ? { it: { name: 'Echo Cancel' }, fx: { value: 100 } } : fxOn(host, 'mimic-turn');
   if (turn) {

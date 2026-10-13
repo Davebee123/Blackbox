@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, active, intents, livingParts, keyMap, readyIn, previewDamage } from './dist/combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, ABILITIES, FAMILIES, createVirus } from './dist/data.mjs';
-import { tellsOf, tellIntents, tellLog } from './dist/tells.mjs';
+import { tellsOf, tellIntents, tellLog, sayOf, tellStart } from './dist/tells.mjs';
 import { boardMarkup, partAbout } from './dist/view.mjs';
 import { planner } from './dist/planner.mjs';
 import { raidOf } from './dist/raid.mjs';
@@ -240,7 +240,7 @@ test('a burst: damage in the window adds up, each ◆ broken counts as half; hal
   const before = hp(s);
   fire(s, 'spike encryptor');
   assert.equal(enc.armor, 4);
-  assert.ok(s.logs.some((e) => e.tell === t.id && e.burst === 20 && /lands plain and leaves nothing behind/.test(e.message)), 'half the burst: plain, nothing behind');
+  assert.ok(s.logs.some((e) => e.tell === t.id && e.burst === 20 && /lands plain, nothing left behind/.test(e.message)), 'half the burst: plain, nothing behind');
   const took = before - hp(s);
   assert.ok(took < full && took >= 20, `it landed plain (${took}, the charge was ${full})`);
   assert.ok(!s.encounter.corrupt && !s.logs.some((e) => e.type === 'locked'), 'no after-effect');
@@ -267,7 +267,7 @@ test('a burst: damage in the window adds up, each ◆ broken counts as half; hal
   bare(d, 'encryptor');
   const td = tell(d, 'fulldisk', 'encryptor', 0, 999);
   fire(d, 'spike encryptor');
-  assert.ok(d.logs.some((e) => e.tell === td.id && e.burst > 0 && /softer\./.test(e.message)), 'a little softer');
+  assert.ok(d.logs.some((e) => e.tell === td.id && e.burst > 0 && /^FULL DISK lands \d+% softer \(\d+\/999\)\.$/.test(e.message)), 'a little softer');
   assert.ok(d.encounter.corrupt || d.logs.some((e) => /Corrupted/.test(e.message)), 'and still Corrupted');
 });
 
@@ -725,4 +725,58 @@ test('a fight\'s metrics count what its tells did (the gap test reads them)', ()
   const r = s.reports.at(-1);
   assert.ok(r.tells && Object.values(r.tells).some((x) => x.said > 0));
   assert.ok(tellLog(s).length > 0);
+});
+
+test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on which part, and the answer in its window', () => {
+  // A charge on an armored part, said 3 ahead: its burst or its ◆, in its window (a one-cycle window: it opens later).
+  const s = fight({ level: 12 });
+  quietParts(s);
+  const enc = part(s, 'encryptor');
+  Object.assign(enc, { armor: 2, maxArmor: 2 });
+  const t = tell(s, 'fulldisk', 'encryptor', 3, 40);
+  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Deal 40 or break 2 ◆ in its window.');
+  enc.armor = 0;
+  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Deal 40 in its window.');
+  // A cast, a seal, the breach's Lock, and the Mimic's beat.
+  const c = fight({ level: 12 }); quietParts(c);
+  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 2)), 'DOUBLE EXTORTION in 2: the Encryptor. SIGINT or hit it twice in its window.');
+  const v = c.encounter.virus; v.tells = null; v.tellSet = ['fulldisk', 'extortion', 'keyrotation', 'lock']; v.extraTells = 4; tellStart(c); quietParts(c);
+  const armor = Object.assign(part(c, 'encryptor'), { armor: 3, maxArmor: 3 }).armor;
+  assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `KEY ROTATION in 2: the Encryptor. Strip its ${armor} ◆ before then, or it re-arms.`);
+  assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'LOCK in 2: the Encryptor. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
+  const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12 }).parts.some((p) => p.mimic));
+  const m = fight({ level: 12, family: 'ghostroot', seed }); quietParts(m);
+  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'MIMIC in 2: the Mimic. It plays back what you fire. Go quiet.');
+  // Said inside its window (levels 1 to 5, a cycle ahead): it says the window is open now.
+  const low = fight({ level: 4 }); quietParts(low); bare(low, 'encryptor');
+  assert.equal(sayOf(low, tell(low, 'fulldisk', 'encryptor', 1, 12)), 'FULL DISK in 1: the Encryptor. Deal 12 in its window, open now.');
+
+  // The lines that follow, in a fight: a hit too early, its window opening, a burst short of it, and the call-off.
+  const f = fight({ level: 12, cls: 'bastion' });
+  quietParts(f);
+  bare(f, 'encryptor');
+  const tf = tell(f, 'fulldisk', 'encryptor', 2, 999);
+  const early = fire(f, 'spike encryptor').find((e) => e.tell === tf.id && e.early);
+  assert.equal(early.message, 'Too early for FULL DISK: its window opens in 2 cycles.');
+  hold(f);
+  assert.equal(f.logs.findLast((e) => e.tell === tf.id && e.window).message, 'FULL DISK\'s window is open.');
+  const short = fire(f, 'spike encryptor').find((e) => e.tell === tf.id && e.burst != null && e.type === 'status' && e.message.includes('more'));
+  assert.match(short.message, /^FULL DISK: \d+\/999\. \d+ more this cycle\.$/);
+  const g = fight({ level: 12, cls: 'bastion' }); quietParts(g); bare(g, 'encryptor');
+  const tg = tell(g, 'fulldisk', 'encryptor', 0, 5);
+  assert.equal(fire(g, 'spike encryptor').find((e) => e.tell === tg.id && e.answered).message, 'FULL DISK called off.');
+  // Every announcement in real fights, every family: one short line (a tell's name, "in N", its part).
+  for (const [family, level] of [['ransomware', 12], ['worm', 17], ['ghostroot', 12], ['ransomware', 4]]) {
+    const r = fight({ level, family, seed: 3 });
+    for (let i = 0; i < 14 && active(r); i++) hold(r);
+    const said = r.logs.filter((e) => e.type === 'telegraph' && e.tell && !e.window);
+    assert.ok(said.length, `${family} ${level}: a tell was said`);
+    for (const e of said) {
+      assert.ok(e.message.length <= 100, `${family} ${level}: short (${e.message.length}): ${e.message}`);
+      assert.match(e.message, /^[A-Z][A-Z0-9' -]+ (in \d+|now): the [A-Za-z0-9 -]+\. /, e.message);
+      assert.doesNotMatch(e.message, /to call it off|Hits before then|Its window opens/, e.message);
+      assert.equal(e.name, e.message.split(/ (in \d+|now):/)[0], 'the event names the tell (app.js floats it)');
+    }
+    for (const e of r.logs.filter((x) => x.type === 'telegraph' && x.tell && x.window)) assert.match(e.message, /^[A-Z][A-Z0-9' -]+'s window is open\.$/);
+  }
 });

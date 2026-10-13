@@ -46,6 +46,8 @@ const SIGNS = {
   drain: { flash: 'fx-hurt', float: 'hot', voice: 'drain', buzz: 20 },
   // Your attack timers went dark.
   blind: { flash: 'fx-enrage', float: 'hot', voice: 'blind', buzz: [10, 20, 10, 20] },
+  // A Mutex's lock took (some of) your hit: the lock's number, in steel, beside the damage that got through.
+  absorb: { float: 'steel', voice: 'chit', buzz: 6 },
   // You broke an armor chit (no damage, but progress).
   chit: { flash: 'fx-hit', float: 'amber', voice: 'chit', buzz: 8 },
   // A part patched a chit back.

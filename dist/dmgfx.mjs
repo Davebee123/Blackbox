@@ -15,7 +15,7 @@ export const KINDS = {
   burn: { icon: 'burn', name: 'Burn' }, // a tick of damage over time (the flame)
   helper: { icon: 'daemon', name: 'Helper' }, // a helper's or a daemon's hit
   reflect: { icon: 'countermeasures', name: 'Reflected' }, // damage turned back or rerouted
-  shield: { icon: 'shield', name: 'Shield' }, // your shield soaking a hit
+  shield: { icon: 'shield', name: 'Shield' }, // your shield soaking a hit; a Mutex's lock soaking yours ("−12 absorbed")
   heal: { icon: 'heal', name: 'Heal' },
   encrypt: { icon: 'lock', name: 'Encryption' }, // encryption on you
   interrupt: { icon: 'cut', name: 'Interrupt' }, // you cut an attack
@@ -33,6 +33,19 @@ export function gapFor(n) {
 
 const minus = (n) => `−${n}`;
 const on = (label, where) => (where ? `${label} on ${where}` : label);
+const make = (kind, text, label, at, target = null, join = false) => ({ kind, icon: KINDS[kind].icon, text, label, at, target, join });
+const hitName = (e, ctx, kind = partKind(e)) => {
+  const name = e.via || (e.skill && ctx.skillName?.(e.skill)) || (kind === 'spike' ? 'Spike' : 'Hit');
+  return e.src === 'burn' ? `${name} burn` : e.src === 'daemon' ? `${name} daemon` : name;
+};
+// What a Mutex's lock took of a hit on its partner (combat.mjs hit: e.shield): its own number on the part, in the
+// shield's colour and with its icon ("−12 absorbed"). A hit the lock took whole is only this number (floatOf); one that
+// broke through shows it beside the damage that got past (app.js).
+export function absorbOf(e, ctx = {}) {
+  if (e.type !== 'damage' || !e.target || !(e.shield > 0)) return null;
+  const where = ctx.partName?.(e.target) || '';
+  return make('shield', `${minus(e.shield)} absorbed`, on(`${hitName(e, ctx)} ${minus(e.shield)} absorbed by the lock`, where), 'part', e.target);
+}
 // The kind a hit on a part is: a crit first (whatever made it), then where it came from.
 function partKind(e) {
   if (e.crit) return 'crit';
@@ -51,13 +64,12 @@ function partKind(e) {
 export function floatOf(e, ctx = {}) {
   const part = (id) => (id && ctx.partName?.(id)) || '';
   const atk = (id) => (id && ctx.attackName?.(id)) || 'Attack';
-  const make = (kind, text, label, at, target = null, join = false) => ({ kind, icon: KINDS[kind].icon, text, label, at, target, join });
   switch (e.type) {
     case 'damage': {
       if (!e.target || typeof e.amount !== 'number') return null;
+      if (!e.amount && e.shield > 0) return absorbOf(e, ctx); // all of it went into a Mutex's lock
       const kind = partKind(e);
-      const name = e.via || (e.skill && ctx.skillName?.(e.skill)) || (kind === 'spike' ? 'Spike' : 'Hit');
-      const what = e.src === 'burn' ? `${name} burn` : e.src === 'daemon' ? `${name} daemon` : name;
+      const what = hitName(e, ctx, kind);
       // A conditional rule of your gear that went into it (combat.mjs hit: e.gear) says so: "Spike crit −40 on the Pulse Node · Clock Skew".
       const gear = e.gear?.length ? ` · ${e.gear.map((g) => g.name).join(', ')}` : '';
       const label = `${what}${e.crit ? ' crit' : ''}${kind === 'reflect' ? ' (reflected)' : ''} ${minus(e.amount)}`;
