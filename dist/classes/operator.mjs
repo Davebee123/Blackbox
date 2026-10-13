@@ -122,7 +122,7 @@ function resolveHeld(s) {
         const to = !others.length ? [p] : hj.cross ? others : [soonestAttacker(s, p.id) || others[0]];
         const amount = Math.max(1, ch ? size : Math.min(hj.cap || Infinity, Math.round(size * hj.share)));
         emit(s, 'blocked', `${hj.takeover ? 'TAKEN OVER' : 'HIJACKED'}: ${p.name}'s ${atk.name} turns on ${to.length > 1 ? 'every other part' : to[0] === p ? 'itself' : 'the ' + to[0].name}.`, { source: p.id, target: to[0].id });
-        for (const x of to) if (alive(x)) hit(s, x, amount, { by: hj.takeover ? 'Takeover' : 'Hijack', pierce: true });
+        for (const x of to) if (alive(x)) hit(s, x, amount, { by: hj.takeover ? 'Takeover' : 'Hijack', pierce: true, src: 'reflect' });
       } else emit(s, 'blocked', `HIJACKED: ${p.name}'s ${atk.name} goes nowhere.`, { source: p.id });
       continue;
     }
@@ -300,7 +300,7 @@ export default {
       e.buffs.mesh = e.cycle + a.cycles - 1;
       emit(s, 'status', `Mesh for ${cycles(a.cycles)}. Every helper hit splashes half its damage onto every other part.`, { mark: 'buff', ability: 'mesh' });
       // Every helper hits once now, so the command is never wasted.
-      for (const h of [...e.helpers]) { let t = part(s, h.target); if (!alive(t)) t = soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced }); if (!livingParts(s).length) break; }
+      for (const h of [...e.helpers]) { let t = part(s, h.target); if (!alive(t)) t = soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Helper', dot: true, synced: h.synced, src: 'helper' }); if (!livingParts(s).length) break; }
     },
     'load-shed': (s, { e }) => {
       e.loadShed = true;
@@ -366,7 +366,7 @@ export default {
       const drained = riding && tellAnswer(s, ch.t, target, `Spoofed ACK: ${ch.t.name.toUpperCase()} acks into nothing. The ${target.name}'s ${target.attack.name} lands plain, a cycle later.`, { moved: a.delay, stagger: false }); // in its window only (tells.mjs)
       const back = clamp(Math.round(size * share), scaled(s, 8), scaled(s, a.cap) * (drained ? 1.5 : 1));
       jamMark(s, target);
-      hit(s, target, back, { mine: true, by: 'Spoofed ACK' });
+      hit(s, target, back, { mine: true, by: 'Spoofed ACK', src: 'reflect' });
     },
     hijack: (s, { a, target, e }) => {
       if (!alive(target)) return;
@@ -425,7 +425,7 @@ export default {
     if (!e) return;
     // Zombie Process (Herder talent): a helper that just ran out hits once more on top of Last Gasp.
     if (e.expiring && hasTalent(s, 'zombie-process') && subEdge(s, 'herder')) {
-      for (const h of e.expiring) { const p = part(s, h.target); if (h.left === 0 && alive(p)) hit(s, p, h.damage, { by: 'Zombie Process', dot: true, synced: h.synced }); }
+      for (const h of e.expiring) { const p = part(s, h.target); if (h.left === 0 && alive(p)) hit(s, p, h.damage, { by: 'Zombie Process', dot: true, synced: h.synced, src: 'helper' }); }
     }
     e.expiring = e.helpers.filter((h) => h.left === 1);
     for (const h of e.helpers) h.seen = true;
@@ -434,7 +434,7 @@ export default {
     if (ct && (e.cycle - ct.from) % 2 === 0 && livingParts(s).length) {
       let t = part(s, ct.target);
       if (!alive(t)) { t = soonestAttacker(s) || livingParts(s)[0]; if (t) ct.target = t.id; }
-      if (t) hit(s, t, ct.damage, { by: 'Crontab', dot: true });
+      if (t) hit(s, t, ct.damage, { by: 'Crontab', dot: true, src: 'helper' });
     }
     resolveHeld(s);
   },

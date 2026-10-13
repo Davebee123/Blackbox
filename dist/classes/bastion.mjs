@@ -176,7 +176,7 @@ const use = {
     if (!hasTalent(s, 'counterflow') || !alive(target) || !(e.ledger > 0)) return;
     const amount = blowbackOf(s);
     e.ledger = 0;
-    hit(s, target, amount, { mine: true, by: 'Counterflow' });
+    hit(s, target, amount, { mine: true, by: 'Counterflow', src: 'reflect' });
   },
   harden(s, { e }) {
     if (!hasTalent(s, 'write-protect')) return;

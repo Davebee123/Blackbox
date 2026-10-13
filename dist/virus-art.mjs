@@ -391,6 +391,7 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
       const age = h ? (now - h.time) / 900 : 0;
       ctx.globalAlpha = Math.min(1, depth * faded * (attacking && !flare ? pulse + 0.25 : 1) * (broken ? Math.max(0, 1 - age * 1.6) : 1) * (0.55 + lit * 0.6));
       ctx.fillText(ch, c.x, c.y);
+      c.ch = ch;
     }
 
     // Shards: characters thrown off a broken part, falling away.
@@ -426,6 +427,19 @@ export function createArt({ getState, canMove, getSelected, getNowSources }) {
 
   return {
     attach(el) { if (canvas !== el) { canvas = el; ctx = el.getContext('2d'); } },
+    // Where a part is drawn right now, on the page: { x, y } (its centre, in viewport px) and some of the
+    // characters it is drawn in (lash.mjs throws them at you). null when the render is off screen.
+    anchor(id) {
+      if (!lastFrame || !canvas?.isConnected) return null;
+      const r = canvas.getBoundingClientRect();
+      if (!r.width || !r.height || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) return null;
+      const mine = [...lastFrame.cells.values()].filter((c) => c.part?.id === id && c.ch && c.ch !== ' ');
+      if (!mine.length) return null;
+      const sx = r.width / (lastFrame.width || r.width), sy = r.height / (lastFrame.height || r.height);
+      const x = mine.reduce((a, c) => a + c.x, 0) / mine.length, y = mine.reduce((a, c) => a + c.y, 0) / mine.length;
+      const chars = mine.filter((_, i) => i % Math.max(1, Math.floor(mine.length / 24)) === 0).map((c) => c.ch).join('');
+      return { x: r.left + x * sx, y: r.top + y * sy, chars };
+    },
     // kind: 'hit' (you hit it), 'crit', 'chit' (an armor chit broke), 'attack' (its attack landed on you), 'break'.
     hit(id, kind = 'hit') {
       const t = performance.now();

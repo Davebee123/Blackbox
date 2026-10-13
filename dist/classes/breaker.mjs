@@ -289,7 +289,7 @@ const taken = (s) => (redline(s) && momentumStacks(s) > 0 ? subs.overclocker.edg
 function struck(s, atk, dealt, p) {
   if (!breaker(s) || !buffed(s.encounter, 'brace') || !alive(p) || !(dealt > 0)) return;
   const a = A('brace'), saved = Math.round((dealt * a.cut) / (1 - a.cut));
-  if (saved > 0) hit(s, p, saved * a.back, { mine: true, by: 'Brace' });
+  if (saved > 0) hit(s, p, saved * a.back, { mine: true, by: 'Brace', src: 'reflect' });
 }
 
 // Critical Heat: with 4 or more stacks, every hit you land crits. Fault Injection: every hit you land on its part.

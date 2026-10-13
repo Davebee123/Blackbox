@@ -487,6 +487,54 @@ details summary { font-size: 13px; }
 .fx-float.mark { color: var(--you); font-size: calc(14px * var(--size)); letter-spacing: 2px; }
 .fx-float.burn { color: #ff8c3d; font-size: calc(14px * var(--size)); letter-spacing: 2px; }
 .fx-float.helper { color: var(--daemon); font-size: calc(14px * var(--size)); letter-spacing: 2px; }
+/* Damage numbers, one per source (dmgfx.mjs): the kind's icon beside the number, in the kind's colour.
+   On a part: your hit and Spike amber, a crit gold and bigger (.crit above), a burn orange, a helper or daemon
+   violet, damage turned back teal; on you (.at-you): the virus's red, a shield or a heal teal. */
+.fx-float.src { display: inline-flex; align-items: center; gap: 0.18em; white-space: nowrap; }
+.fx-float .fx-ico { width: 0.82em; height: 0.82em; margin: 0; stroke-width: 1.9; filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.95)); }
+.fx-float.k-crit .fx-ico { width: 0.95em; height: 0.95em; stroke-width: 1.6; }
+.fx-float.k-hit, .fx-float.k-spike { color: var(--next); }
+.fx-float.k-spike .fx-ico { color: var(--bright); }
+.fx-float.k-burn { color: #ff8c3d; text-shadow: 0 0 8px rgba(255, 140, 61, 0.55), 0 0 8px rgba(0, 0, 0, 0.9); }
+.fx-float.k-helper { color: var(--daemon); }
+.fx-float.k-reflect, .fx-float.k-interrupt, .fx-float.k-shield, .fx-float.k-heal { color: var(--you); }
+.fx-float.k-interrupt { font-size: calc(15px * var(--size)); letter-spacing: 2px; }
+.fx-float.at-you { color: var(--hot); }
+.fx-float.at-you.k-shield, .fx-float.at-you.k-heal { color: var(--you); }
+.fx-float.at-you.k-crit { color: #ff7a52; font-size: calc(24px * var(--size)); text-shadow: 0 0 12px rgba(255, 91, 61, 0.75), 0 0 8px rgba(0, 0, 0, 0.9); }
+.fx-float.at-you.k-spike .fx-ico, .fx-float.at-you.k-crit .fx-ico { color: #fff2c8; }
+.fx-float.hostile { color: var(--hot); }
+/* A virus attack lashing at your screen (lash.mjs): its characters whip into your Signal bar, 1s and 0s burst
+   off it and fall, the screen glitches. Above the board, under the numbers; never takes input. */
+#lash { position: fixed; inset: 0; z-index: 46; pointer-events: none; overflow: hidden; }
+.lash-ch, .lash-bit, .lash-lock { position: absolute; opacity: 0; transform: translate(-50%, -50%); pointer-events: none; font: 700 14px/1 var(--mono); }
+.lash-ch { color: color-mix(in srgb, var(--hot) calc(var(--t) * 100%), var(--amber)); text-shadow: 0 0 6px rgba(255, 91, 61, 0.8), 0 0 2px rgba(0, 0, 0, 0.9); animation: lash-ch var(--life, 380ms) cubic-bezier(.2, .7, .3, 1) forwards; }
+.lash-ch.lash-head { color: var(--bright); font-size: 16px; text-shadow: 0 0 8px var(--hot), 0 0 3px #fff; }
+.lash-ch.heavy { font-size: 17px; color: color-mix(in srgb, #fff2c8 calc(var(--t) * 100%), var(--hot)); text-shadow: 0 0 10px rgba(255, 91, 61, 1), 0 0 2px rgba(0, 0, 0, 0.9); }
+.lash-ch.enc { color: color-mix(in srgb, var(--hot) calc(var(--t) * 100%), var(--next)); font-size: 12px; letter-spacing: 1px; }
+@keyframes lash-ch { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); } 10% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); } 55% { opacity: 0.9; } 100% { opacity: 0; transform: translate(calc(-50% + var(--jx)), calc(-50% + var(--jy))) scale(0.8); } }
+.lash-bit { color: var(--hot); text-shadow: 0 0 6px rgba(255, 91, 61, 0.9); animation: lash-bit var(--d, 600ms) cubic-bezier(.2, .6, .4, 1) forwards; }
+.lash-bit.heavy { color: var(--bright); font-size: 16px; text-shadow: 0 0 8px var(--hot), 0 0 2px #fff; }
+@keyframes lash-bit { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); } 40% { opacity: 1; transform: translate(calc(-50% + var(--tx) * 0.7), calc(-50% + var(--ty))) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty) + var(--fall))) scale(0.8); } }
+.lash-rain { position: absolute; opacity: 0; font: 600 12px/1.05 var(--mono); color: var(--hot); text-align: center; text-shadow: 0 0 4px rgba(255, 91, 61, 0.7); animation: lash-rain 600ms linear forwards; }
+@keyframes lash-rain { 0% { opacity: 0; transform: translateY(-16px); } 15% { opacity: 0.7; } 100% { opacity: 0; transform: translateY(var(--fall)); } }
+.lash-glitch { position: absolute; inset: 0; opacity: 0; background: repeating-linear-gradient(to bottom, rgba(255, 91, 61, 0.08) 0 1px, transparent 1px 3px); animation: lash-glitch var(--g, 300ms) steps(5) forwards; }
+.lash-glitch.heavy { background: repeating-linear-gradient(to bottom, rgba(255, 91, 61, 0.13) 0 1px, transparent 1px 3px), radial-gradient(ellipse 80% 70% at 50% 50%, transparent 55%, rgba(255, 91, 61, 0.22)); }
+.lash-glitch i { position: absolute; left: 0; right: 0; background: linear-gradient(90deg, transparent, rgba(255, 91, 61, 0.32) 18%, rgba(127, 209, 199, 0.2) 50%, rgba(255, 91, 61, 0.32) 82%, transparent); mix-blend-mode: screen; transform: translateX(var(--tx)); }
+@keyframes lash-glitch { 0% { opacity: 1; transform: translateX(-3px); } 20% { transform: translateX(4px); } 40% { opacity: 0.85; transform: translateX(-2px); } 70% { opacity: 0.5; transform: none; } 100% { opacity: 0; } }
+.lash-lock { color: var(--next); font-size: 12px; letter-spacing: 1px; text-shadow: 0 0 6px rgba(255, 216, 92, 0.7), 0 0 2px rgba(0, 0, 0, 0.9); animation: lash-lock var(--life, 520ms) ease-out forwards; }
+.lash-lock.shut { color: var(--hot); text-shadow: 0 0 8px rgba(255, 91, 61, 0.9); }
+.lash-lock .glyph { width: 18px; height: 18px; margin: 0; stroke-width: 2; }
+@keyframes lash-lock { 0% { opacity: 0; transform: translate(-50%, -110%); } 15% { opacity: 1; transform: translate(-50%, -50%); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -30%); } }
+/* Where it lands: your bar splits its colours and jitters; encryption hatches it for a moment. */
+.hud-bar.mine .bigbar.fx-lashed { animation: fx-lashed 0.42s steps(6) forwards; }
+@keyframes fx-lashed { 0% { box-shadow: -4px 0 0 rgba(255, 91, 61, 0.85), 4px 0 0 rgba(127, 209, 199, 0.6); filter: brightness(1.9); transform: translateX(-3px); } 35% { box-shadow: 3px 0 0 rgba(255, 91, 61, 0.7), -3px 0 0 rgba(127, 209, 199, 0.5); transform: translateX(2px); } 70% { filter: brightness(1.2); transform: translateX(-1px); } 100% { box-shadow: none; filter: none; transform: none; } }
+.hud-bar.mine .bigbar.fx-locked { animation: fx-locked 0.42s ease-out forwards; }
+@keyframes fx-locked { 0% { box-shadow: inset 0 0 0 1px var(--hot); background-image: repeating-linear-gradient(-45deg, rgba(255, 91, 61, 0.35) 0 2px, transparent 2px 5px); } 100% { box-shadow: none; background-image: none; } }
+/* Effects minimal or Motion off: no lash, a soft edge. */
+#fx-edge.soft.on { animation: fx-edge-soft 0.5s ease-out; }
+@keyframes fx-edge-soft { 0% { box-shadow: inset 0 0 28px 3px rgba(255, 91, 61, 0.24); } 100% { box-shadow: inset 0 0 0 0 rgba(255, 91, 61, 0); } }
+.no-motion #lash { display: none; }
 /* Marks on a part: an icon each by its name; Exposed hatches the bar (it's open). */
 .pmarks { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
 .pmark { display: inline-grid; place-items: center; width: 16px; height: 16px; border: 1px solid rgba(127, 209, 199, 0.55); border-radius: 3px; color: var(--you); background: rgba(127, 209, 199, 0.1); animation: pmark-in 0.35s ease-out; }

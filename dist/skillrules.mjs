@@ -61,7 +61,7 @@ export function onEvent(s, ev) {
   }
   if (ev.type === 'blocked' && has(s, 'reflective-acl') && /^Shield absorbs/.test(ev.message) && e.shield > 0 && ev.source) {
     const p = part(s, ev.source);
-    if (alive(p)) hit(s, p, Math.round((ev.amount * V(s, 'reflective-acl')) / 100), { by: 'Reflective ACL', pierce: true });
+    if (alive(p)) hit(s, p, Math.round((ev.amount * V(s, 'reflective-acl')) / 100), { by: 'Reflective ACL', pierce: true, src: 'reflect' });
   }
 }
 // After your command resolves: what the rule on that skill adds.
