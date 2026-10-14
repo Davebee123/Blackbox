@@ -24,7 +24,8 @@ const win = (s) => {
 // SPRAWL-00's folders are rooms (netrooms.mjs): cd walks there, beating what holds the way.
 const killInSprawl = (s, room) => {
   if (!s.run) { if (s.zone) s.zone.lockUntil = 0; play(s, 'connect sprawl'); } // skip the reconnect wait (rogue.mjs relockMs)
-  for (let i = 0; i < 4 && s.run.cwd !== room; i++) { play(s, 'cd ' + room); if (s.run.cwd !== room && s.rooms.screen) { play(s, 'attack'); win(s); } }
+  const at = () => FP.hereOf(s)?.path0; // the folder of the room you're in (rooms are named for what they are)
+  for (let i = 0; i < 4 && at() !== room; i++) { play(s, 'cd ' + room); if (at() !== room && s.rooms.screen) { play(s, 'attack'); win(s); } }
   play(s, 'attack');
   win(s);
   play(s, 'cd /');

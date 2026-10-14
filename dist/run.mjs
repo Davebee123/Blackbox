@@ -856,7 +856,8 @@ export function crewWander(s) {
 hooks.crewGuests = (s, room) => {
   const loc = currentLocation(s);
   if (!loc || !isGround(s, loc) || !simOn(s)) return [];
-  return at(s, loc.id, room).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
+  const folder = s.run?.rooms ? roomList(s).find((x) => x.path === room)?.path0 ?? room : room; // a room's folder (its name is what's shown)
+  return at(s, loc.id, folder).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
 };
 
 // The fight a folder's virus brings: [key, seed, opts] for selectEncounter, and for scan to read before it starts.

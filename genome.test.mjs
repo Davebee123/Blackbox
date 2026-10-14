@@ -158,7 +158,7 @@ test('HASHLORD and MIRRORSHADE hold /core from their floors: the lair opens at 8
   assert.ok(lair && lair.lair === boss);
   assert.equal(rogueSpawns(s, lair, Date.now())['/core'], undefined, 'no HASHLORD at 10');
   assert.ok(rogueSpawns(s, lair, Date.now())['/outer']?.alive, 'its folders are open');
-  assert.match(networkLines(s, 'you').join(' '), /holds \/core from level 16/);
+  assert.match(networkLines(s, 'you').join(' '), /holds the Core from level 16/);
   play(s, 'connect lair');
   const why = play(s, 'cd core').map((e) => e.message).join(' ');
   assert.match(why, /The Core is sealed\. HASHLORD holds it from level 16/); // its Core room (netrooms.mjs)

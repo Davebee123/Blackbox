@@ -9,6 +9,7 @@ import { dividendWaiting, dividendOf, rebooting, CONSORTIUM, memberServers, serv
 import { bandwidth, OUTPOST } from './dist/outpost.mjs';
 import { tickNetwork, ratioOf } from './dist/invasion.mjs';
 import { rogueSpawns } from './dist/rogue.mjs';
+import * as FP from './dist/floorplan.mjs';
 
 const world = () => { const s = fresh(); s.hackers = { breaker: { level: 6, xp: 0 } }; play(s, 'online sim'); return s; };
 const win = (s) => {
@@ -171,14 +172,16 @@ test('the crew strip: linked crew follow you, split crew wander, link follows th
   const s = world();
   play(s, 'crew sim bastion infiltrator');
   play(s, 'connect sprawl');
-  // Since R1 SPRAWL-00's folders are rooms (netrooms.mjs): the crew is in a room, by its name (/net), the entry Entry.
+  // Since R1 SPRAWL-00's folders are rooms (netrooms.mjs), named for what they are: the crew is in a room, by its name.
+  const named = (folder) => FP.roomList(s).find((r) => r.path0 === folder).path;
   assert.deepEqual(Object.values(s.run.crew).map((c) => c.cwd), ['Entry', 'Entry']);
   play(s, 'cd net');
-  assert.deepEqual(Object.values(s.run.crew).map((c) => c.cwd), ['/net', '/net'], 'linked: they follow');
+  assert.match(named('/net'), /^Process \d$/);
+  assert.deepEqual(Object.values(s.run.crew).map((c) => c.cwd), [named('/net'), named('/net')], 'linked: they follow');
   play(s, 'split kilo');
   assert.equal(s.run.crew.kilo.link, null);
   play(s, 'cd ..');
-  assert.equal(s.run.crew.kilo.cwd, '/net', 'split: kilo stays');
+  assert.equal(s.run.crew.kilo.cwd, named('/net'), 'split: kilo stays');
   assert.equal(s.run.crew.nyx.cwd, 'Entry');
   for (let i = 0; i < 20; i++) crewWander(s);
   play(s, 'link kilo');
@@ -187,7 +190,7 @@ test('the crew strip: linked crew follow you, split crew wander, link follows th
   play(s, 'regroup');
   assert.ok(Object.values(s.run.crew).every((c) => c.cwd === s.run.cwd && c.link === 'you'));
   // Kilo goes off; a fight here has only nyx.
-  play(s, 'split kilo'); s.run.crew.kilo.cwd = '/srv';
+  play(s, 'split kilo'); s.run.crew.kilo.cwd = named('/srv');
   play(s, 'cd /'); play(s, 'cd tmp'); play(s, 'attack');
   assert.ok(active(s));
   const fighting = matesOf(s).filter((m) => m.encounter).map((m) => m.who);

@@ -358,7 +358,7 @@ export function networkLines(s, who) {
   return [
     `${g.name} · ${whoLabel(who)}`,
     `Fought here: ${fam}.${knowsStrain(s, who) ? ` ${STRAINS[g.strain].name} turns up often.` : ''}`,
-    `Native boss: ${lair ? `${BOSSES[g.boss].name} in ${lair.name}` : '???'}.${lair && BOSSES[g.boss].floor > hackerLevel(s) ? ` It holds /core from level ${BOSSES[g.boss].floor}.` : ''}`,
+    `Native boss: ${lair ? `${BOSSES[g.boss].name} in ${lair.name}` : '???'}.${lair && BOSSES[g.boss].floor > hackerLevel(s) ? ` It holds the Core from level ${BOSSES[g.boss].floor}.` : ''}`,
     `Native uniques: ${nat}.`,
     ...(who === 'you' ? [`Events that come up often: ${events.length ? events.map((k) => k[0].toUpperCase() + k.slice(1)).join(' and ') : '???'}.`] : []),
     `Rich in: ${knowsRich(s, who) ? `${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'salvage' : 'Exploits'}` : '???'}.`,

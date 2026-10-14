@@ -11,6 +11,7 @@ import { planner } from './dist/planner.mjs';
 import { play } from './dist/run.mjs';
 import { openFarm } from './dist/rogue.mjs';
 import { matesOf } from './dist/crew.mjs';
+import * as FP from './dist/floorplan.mjs';
 import { RAID } from './dist/raid.mjs';
 
 // The crew dungeon (KESSLER-FARM-00): you (a subclass, played by the planner) and a sim crew, everyone in
@@ -39,7 +40,7 @@ export function farmScore(you, crew, level, { seeds = 12, rarity = 'tuned', mate
       const fight = (room, boss) => {
         back();
         s.run.integrity = s.run.max; for (const c of Object.values(s.run.crew || {})) delete c.signal; // rested
-        play(s, 'cd /'); play(s, 'cd ' + room); if (s.run?.cwd !== room) return false; play(s, 'attack');
+        play(s, 'cd /'); play(s, 'cd ' + room); if (!s.run || FP.hereOf(s)?.path0 !== room) return false; play(s, 'attack');
         let low = 1, n = 0;
         for (; n < 80 && active(s); n++) {
           command(s, planner(s) || 'hold');

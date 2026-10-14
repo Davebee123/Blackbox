@@ -79,7 +79,10 @@ export const at = (s, key, folder, deep = false, now = clock()) => online(s, now
 export const inFolder = (s, folder, now = clock()) => at(s, 'sprawl', folder, false, now);
 export const under = (s, folder, now = clock()) => at(s, 'sprawl', folder, true, now);
 export const inSprawl = (s, now = clock()) => online(s, now).filter((x) => x.place.kind === 'sprawl');
-export const whereText = (p) => (p.kind === 'sprawl' ? `SPRAWL-00 ${p.folder}${p.fighting ? ' · fighting' : ''}` : p.kind === 'consortium' ? `${p.locName} ${p.folder}` : p.kind === 'crew' ? `in your crew${p.folder ? ' · ' + p.folder : ''}` : p.kind === 'run' ? 'on a run' : p.kind === 'rogue' ? 'on a rogue server' : 'at home');
+// Where someone is, in words: SPRAWL-00's room by its name (netrooms.mjs: rooms are named for what they are, Process 3,
+// never by the folder they stand for); a member's server by its name.
+const roomName = (folder) => hooks.sprawlRoomName?.(folder) ?? folder;
+export const whereText = (p) => (p.kind === 'sprawl' ? `SPRAWL-00 · ${roomName(p.folder)}${p.fighting ? ' · fighting' : ''}` : p.kind === 'consortium' ? `${p.locName}` : p.kind === 'crew' ? 'in your crew' : p.kind === 'run' ? 'on a run' : p.kind === 'rogue' ? 'on a rogue server' : 'at home');
 
 // `online sim`, `online off`, `who`, `friends`, `friend add <handle>`, `friend remove <handle>`.
 export function presenceCommand(s, word, rest, emit, warn) {

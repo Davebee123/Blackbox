@@ -94,7 +94,7 @@ export function treeGraph(paths, { core = null, vaults = [], kinds = {}, labels 
     taken.add(`${at[0]},${at[1]}`);
     idOf[path] = id;
     const kind = path === core ? 'core' : vaults.includes(path) ? 'vault' : kinds[path] || 'process';
-    list.push({ id, kind, x: at[0], y: at[1], path0: path, seed, label: labels[path] || path, ...(kind === 'vault' ? { farm: true } : { wild: true }) }); // named by its folder: /var/log
+    list.push({ id, kind, x: at[0], y: at[1], path0: path, seed, label: labels[path] || null, ...(kind === 'vault' ? { farm: true } : { wild: true }) }); // named for what it is (Process 2, Core); its folder (path0) still answers cd var
     links.push([pid, id]);
   }
   const spine = [];
@@ -103,6 +103,9 @@ export function treeGraph(paths, { core = null, vaults = [], kinds = {}, labels 
 }
 // SPRAWL-00: its six folders, RELAY-KING's /net/relay the Core.
 export const sprawlGraph = () => treeGraph(zoneRooms(), { core: KING_ROOM });
+// A SPRAWL-00 folder's room by its name, for words about where someone is (presence.mjs).
+let sprawlNames = null;
+hooks.sprawlRoomName = (folder) => (sprawlNames ||= Object.fromEntries(Object.values(sprawlGraph().rooms).map((r) => [r.path0, r.path])))[folder];
 // KESSLER-FARM-00: the intake and cooling packs and their bosses (the Foreman, the Heatsink: crew boss rooms), the
 // ledger a vault, and the Coldwallet past it.
 export const farmGraph = () => treeGraph(['/ledger', ...Object.keys(FARM.rooms)], { core: '/ledger/core', vaults: ['/ledger'], kinds: Object.fromEntries(Object.entries(FARM.rooms).map(([p, d]) => [p, d.boss ? 'boss' : 'elite'])) });
@@ -398,6 +401,14 @@ export function summaryOf(s, loc) {
 // Resident beaten (two rooms toward progress), and stays held; its Root pips stay. A run in flight on an old server
 // is jacked out (what it carried banked). Buildings and outposts stay as they were (sockets are R2).
 export function roomsRestore(s, was) {
+  // A wild server's rooms were once named by their folders (/var/log): named for what they are now (Process 5).
+  for (const loc of [s.zone, ...(s.locations || [])]) {
+    const g = loc?.floorplan?.graph;
+    if (!g || !Object.values(g.rooms).some((r) => r.label?.startsWith('/'))) continue;
+    for (const r of Object.values(g.rooms)) if (r.label?.startsWith('/')) delete r.label;
+    FP.nameRooms(g);
+    if (s.run?.rooms && s.run.loc === loc.id) { const here = g.rooms[loc.floorplan.at]; if (here) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
+  }
   if (was >= 39) return;
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);

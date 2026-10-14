@@ -7,6 +7,7 @@ import { FARM, FARM_UNIQUES, farmOf, openFarm } from './dist/rogue.mjs';
 import { BOSSES } from './dist/data.mjs';
 import { tickEvents } from './dist/events.mjs';
 import { matesOf } from './dist/crew.mjs';
+import * as FP from './dist/floorplan.mjs';
 
 const at7 = () => { const s = fresh(); s.tutorialCompleted = true; s.hackers = { breaker: { level: 7, xp: 0 } }; return s; };
 const win = (s) => {
@@ -45,7 +46,8 @@ test('the farm: packs block the way, the first two bosses open the ledger, and t
   play(s, 'connect kessler');
   assert.ok(s.run?.rooms, 'the farm is rooms');
   play(s, 'cd intake/racks');
-  assert.equal(s.run.cwd, '/intake', 'the intake pack is in the way');
+  assert.equal(FP.hereOf(s).path0, '/intake', 'the intake pack is in the way');
+  assert.match(s.run.cwd, /^Elite \d$/, 'its room is named for what it is');
   assert.equal(s.rooms.screen?.kind, 'virus');
   play(s, 'attack');
   const pack = s.encounter.virus;

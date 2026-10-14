@@ -134,7 +134,7 @@ export const buildCost = (s, id, loc = null) => {
 export function buildBlock(s, loc, id, now = hooks.now?.() ?? Date.now()) {
   const b = BUILDINGS[id];
   if (!b) return 'No such building.';
-  if (!loc?.takenOver) return 'Take the server over first: beat the Resident in /core.';
+  if (!loc?.takenOver) return 'Take the server over first: beat the Resident in its Core.';
   if (!knowsPlan(s, id)) return `You need the ${planName(id)}.`;
   if (serverLevel(s) < b.lv) return `Needs server level ${b.lv}.`;
   if (has(loc, id) || loc.build?.id === id) return `${loc.name} already has one.`;

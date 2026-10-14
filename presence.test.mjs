@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, hooks } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
+import * as FP from './dist/floorplan.mjs';
 import { online, inFolder, PRESENCE, isFriend } from './dist/presence.mjs';
 import { peopleMarkup } from './dist/view.mjs';
 
@@ -48,11 +49,11 @@ test('SPRAWL-00 is shared: ls shows who is in each room, and arriving says who i
     const folder = who[0].place.folder;
     play(s, 'connect sprawl');
     for (const sp of Object.values(s.zone.spawns)) Object.assign(sp, { alive: false, respawnAt: t + 3600000 }); // a clear way
-    const top = '/' + folder.split('/')[1];
+    const top = '/' + folder.split('/')[1], named = (f) => FP.roomList(s).find((r) => r.path0 === f).path; // rooms are named for what they are; cd still takes the folder
     const ls = play(s, 'ls').find((e) => e.type === 'rooms-out').message;
-    if (top === folder) assert.match(ls, new RegExp(`${top}  \\[[^\\]]*\\][^\\n]*${who[0].handle}`), 'their room shows them');
+    if (top === folder) assert.match(ls, new RegExp(`${named(top)}  \\[[^\\]]*\\][^\\n]*${who[0].handle}`), 'their room shows them');
     const said = play(s, 'cd ' + folder).map((e) => e.message).join(' ');
-    assert.equal(s.run.cwd, folder);
+    assert.equal(s.run.cwd, named(folder));
     const here = inFolder(s, folder).map((x) => x.handle);
     assert.ok(here.includes(who[0].handle));
     for (const h of here) assert.match(said, new RegExp(h), 'arriving says who is here');

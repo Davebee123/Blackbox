@@ -24,7 +24,7 @@ const traced = (family = 'ransomware') => { const s = fresh(); s.tutorialComplet
 const near = (s, id) => FP.neighbours(s.rooms.graph, id)[0];
 const enterRoom = (s, id) => { const R = s.rooms; R.at = near(s, id); R.screen = null; FP.go(s, id); };
 
-test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its folders as the room tree, RELAY-KING\'s Core sealed until level 3', () => {
+test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its folders as the room tree (named for what they are), RELAY-KING\'s Core sealed until level 3', () => {
   const s = fresh();
   assert.equal(s.version, SAVE_VERSION);
   play(s, 'connect sprawl');
@@ -35,14 +35,18 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   for (const [a, b] of g.links) { const pa = g.rooms[a].path0, pb = g.rooms[b].path0; assert.ok(pb.startsWith(pa === '/' ? '/' : pa + '/'), `${pa} → ${pb}: a folder next to its parent`); }
   assert.deepEqual(sprawlGraph(), g, 'the same graph every time');
   const ls = play(s, 'ls').find((e) => e.type === 'rooms-out').message;
-  assert.match(ls, /\/net  \[fight · \w+ lv 1\]/);
-  assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), /SPLINTER-\d+ holds \/net|\w+-\d+ holds \/net/, 'what holds /net stops the walk');
+  const net = Object.values(g.rooms).find((r) => r.path0 === '/net');
+  assert.match(net.path, /^Process \d$/, 'named for what it is, never a folder');
+  assert.equal(g.rooms[g.core].path, 'Core');
+  assert.doesNotMatch(ls, /\/(net|var|tmp|srv)/, 'no folder names on screen');
+  assert.match(ls, new RegExp(`${net.path}  \\[fight · \\w+ lv 1\\]`));
+  assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), new RegExp(`\\w+-\\d+ holds ${net.path}`), 'what holds it stops the walk; cd still takes the folder');
   play(s, 'back');
   Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
   assert.match(play(s, 'cd /net/relay').map((e) => e.message).join(' '), /The Core is sealed\. RELAY-KING holds it from level 3/);
   // A stray: a fight, its first clear, its timer (90 seconds), then back.
   play(s, 'cd /'); play(s, 'cd tmp');
-  assert.equal(s.run.cwd, '/tmp');
+  assert.equal(s.run.cwd, Object.values(g.rooms).find((r) => r.path0 === '/tmp').path);
   play(s, 'attack');
   assert.ok(active(s) && s.encounter.rooms && s.encounter.ticked, 'a room fight, ticks and all');
   assert.equal(s.encounter.virus.author, null, 'SPRAWL-00\'s strays sign nothing');
@@ -247,4 +251,17 @@ test('an old save (v38) moves to rooms in place: every server it found becomes r
   const u = restore(JSON.parse(json));
   assert.ok(u.run?.rooms && u.rooms === u.locations.find((l) => l.id === h.id).floorplan, 'mid-run, on the same rooms');
   assert.equal(Object.keys(u.rooms.cleared).length, Object.keys(R.cleared).length);
+});
+
+test('a save whose wild rooms were named by their folders (/var/log) loads with them named for what they are', () => {
+  const s = fresh();
+  play(s, 'connect sprawl');
+  for (const r of Object.values(s.zone.floorplan.graph.rooms)) if (r.path0 !== '/') { r.label = r.path0; }
+  FP.nameRooms(s.zone.floorplan.graph);
+  s.run.cwd = '/net';
+  const t = restore(JSON.parse(JSON.stringify(s)));
+  const names = Object.values(t.zone.floorplan.graph.rooms).map((r) => r.path);
+  assert.ok(names.every((n) => !n.startsWith('/')), names.join(' '));
+  assert.ok(names.includes('Core') && names.includes('Process 1'));
+  assert.equal(t.run.cwd, 'Entry', 'where you stand, by its name');
 });
