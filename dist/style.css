@@ -3425,15 +3425,15 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 /* ---- What protects what (view.mjs guardMarks, tethers; fightread.mjs partLinks). One look for every rule that reaches
    from one part to another: a steel tether in the board's left gutter, from the part the rule sits on (a square) to
    the part it reaches (an arrow), with a node mid-span carrying the rule's icon (lock, ward, twin, re-arm; ? until
-   decoded) and its countdown (↻ N). Glowing while the rule holds, dashed while it's down, snapping as its part breaks.
+   decoded) and its countdown (↻ N). Glowing while the rule holds, grey while it's down (the countdown then is the node), snapping as its part breaks.
    A Mutex's lock sits on its partner's own bar as an absorb segment (hatched steel, a padlock where hits drain it);
    a Lockbox's ward as a cap line at the most the part can still lose this cycle. ---- */
 
-#board:has(.tether) { --gut: 56px; }
-#board:has(.tether.lane1) { --gut: 68px; }
-@media (max-width: 480px) { #board:has(.tether) { --gut: 46px; } #board:has(.tether.lane1) { --gut: 58px; } }
-.tether { --x: 8px; --tt: var(--steel); position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gut)); width: var(--gut); pointer-events: none; z-index: 1; color: var(--steel); }
-.tether.lane1 { --x: 21px; }
+#board:has(.tether) { --gut: 66px; }
+#board:has(.tether.lane1) { --gut: 80px; }
+@media (max-width: 480px) { #board:has(.tether) { --gut: 56px; } #board:has(.tether.lane1) { --gut: 70px; } }
+.tether { --x: 18px; --tt: var(--steel); position: absolute; top: 0; bottom: 0; left: calc(-1 * var(--gut)); width: var(--gut); pointer-events: none; z-index: 1; color: var(--steel); }
+.tether.lane1 { --x: 31px; }
 .tt-line { position: absolute; left: calc(var(--x) - 1px); width: 2px; background: var(--tt); pointer-events: auto; }
 .tt-line::before { content: ''; position: absolute; inset: 0 -4px; } /* a wider hover target than the line */
 .tether.stub .tt-line { top: 22% !important; bottom: 22% !important; }
@@ -3452,6 +3452,8 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
    countdown stays steel, so the one lit thing is how long you have. */
 .tether.down { --tt: var(--gray); }
 .tether.down .tt-line, .tether.down .tt-arm { opacity: 0.6; }
+.tt-node.clock { width: auto; height: auto; border: 0; border-radius: 0; background: none; }
+.tt-node.clock .tt-count { position: static; transform: none; margin: 0; padding: 0 4px; font: 700 12px/16px var(--mono); }
 .tether.unk .tt-node { color: var(--muted); border-color: var(--gray); }
 /* The part it hangs from breaks: the line flashes and pulls apart, the node bursts (a dissolving row; --snap picks the
    animation up where it was after a redraw). Effects minimal, Motion off: it's simply gone. */

@@ -270,7 +270,7 @@ test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glo
   const n = enc.lockAt - s.encounter.cycle;
   assert.equal(n, CONFIG.mutex.every - 1);
   assert.ok(ts.every((t) => /\bdown\b/.test(t.cls)));
-  assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`<span class="tt-count">↻${n}</span>`));
+  assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, new RegExp(`<b class="tt-node[^"]*\\bclock"><span class="tt-count">↻${n}</span></b>`), 'the countdown is the node, mid-span');
   assert.match(ts[0].tip, new RegExp(`^Mutex lock: broken\\. The Mutex locks the Encryptor again in ${n} cycles\\.`));
   assert.doesNotMatch(segOf(boardMarkup(s, null), 'encryptor').row, /lockseg/, 'no segment while it is broken');
   // The Mutex breaks: while its row dissolves the tether snaps; then it's gone, and the lock with it for good.

@@ -545,8 +545,8 @@ function guardMarks(s, v, p, fc) {
 }
 // The tethers: a bracket in the board's left gutter from the part a rule sits on to each part it reaches, drawn a piece
 // a row (so it follows the rows at any height: dense, a phone), with a node at the middle of its span carrying the
-// rule's icon (? until the codex knows the part) and its countdown (↻ N). It glows while the rule holds, goes dashed
-// while it's down (a broken lock, an overheated Keyring), and snaps as the part it hangs from dissolves. Two lanes at most.
+// rule's icon (? until the codex knows the part) and its countdown (↻ N). It glows while the rule holds, goes grey
+// while it's down (a broken lock, an overheated Keyring), its countdown taking the node's place, and snaps as the part it hangs from dissolves. Two lanes at most.
 function tethers(rows, links, dying) {
   const idx = new Map(rows.map((p, i) => [p.id, i])), per = rows.map(() => '');
   const spans = links.map((l) => {
@@ -566,7 +566,9 @@ function tethers(rows, links, dying) {
     for (let r = sp.a; r <= sp.b; r++) {
       const top = r === sp.a ? '50%' : '-1px', bottom = r === sp.b ? '50%' : '0';
       const arm = sp.ends.has(r) ? `<i class="tt-arm ${r === sp.src ? 'src' : 'dst'}"></i>` : '';
-      const node = r === nodeRow ? `<b class="tt-node${edge ? ' edge' : ''}">${l.known ? glyph(l.icon, 'tt-ico') : '?'}${l.count != null ? `<span class="tt-count">↻${l.count}</span>` : ''}</b>` : '';
+      // Down with a countdown, the countdown is the node: the one lit thing on the grey line is how long you have.
+      const clock = !l.up && l.count != null, count = l.count != null ? `<span class="tt-count">↻${l.count}</span>` : '';
+      const node = r === nodeRow ? `<b class="tt-node${edge ? ' edge' : ''}${clock ? ' clock' : ''}">${clock ? '' : l.known ? glyph(l.icon, 'tt-ico') : '?'}${count}</b>` : '';
       per[r] += `<span class="${cls}" data-links="${esc([l.from, ...l.to].join(' '))}" data-kind="${l.kind}"${snap} title="${esc(l.tip)}"><i class="tt-line" style="top:${top};bottom:${bottom}"></i>${arm}${node}</span>`;
     }
   }
