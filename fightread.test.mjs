@@ -263,7 +263,7 @@ test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glo
   assert.ok(ts.every((t) => !/\bunk\b/.test(t.cls)));
   assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, /<b class="tt-node[^"]*"><svg class="glyph tt-ico"/, 'decoded: its icon');
   assert.match(ts[0].tip, /^Mutex lock: the Encryptor wears a 10\/10 shield that takes every hit first\./);
-  // Break the lock: dashed, with the cycles until it relocks.
+  // Break the lock: grey, with the cycles until it relocks.
   command(s, 'overload encryptor'); resolveCycle(s);
   assert.equal(enc.lockHp, 0);
   ts = tethersOf(boardMarkup(s, null), 'lock');
