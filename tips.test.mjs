@@ -47,11 +47,18 @@ test('fight tips pause the fight and wait for what they explain', () => {
   const t = nextTip(s, 'combat', onPage(html));
   assert.equal(t.id, 'fight-timeline');
   assert.ok(t.pause);
-  assert.deepEqual(t.covers, ['fight-keys', 'fight-armor', 'sync'], 'the first fight is one pause: board, keys, armor and sync together');
-  assert.deepEqual(t.steps.map((x) => x.id), ['fight-timeline', 'fight-keys', 'fight-armor', 'sync'], 'clicked through in order, each step its own tip');
+  assert.deepEqual(t.covers, ['fight-keys', 'fight-ticks', 'fight-armor', 'sync'], 'the first fight is one pause: board, keys, the interrupt\'s ticks, armor and sync together');
+  assert.deepEqual(t.steps.map((x) => x.id), ['fight-timeline', 'fight-keys', 'fight-ticks', 'fight-armor', 'sync'], 'clicked through in order, each step its own tip');
+  assert.match(t.steps[2].text, /50% and 25%[\s\S]*cancelled/, 'the ticks step teaches the interrupt');
   for (const id of [t.id, ...t.covers]) markSeen(s, id);
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-keys');
   assert.notEqual(nextTip(s, 'combat', onPage(html))?.id, 'fight-quiet', 'no Trace tip before you have Trace');
+  // The cut readout gets its own tip the first time it's in Now; a tick crossed with nothing due gets one too.
+  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .intent.cut')?.id, 'fight-cut');
+  markSeen(s, 'fight-cut');
+  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent'), null, 'a tick spent on a cut is no mistake');
+  s.encounter.metrics.wasted = 1;
+  assert.equal(nextTip(s, 'combat', (sel) => sel === '.board .ptick.spent')?.id, 'fight-wasted');
 });
 
 test('tips off means none; seen tips survive a save and a new game keeps settings', () => {

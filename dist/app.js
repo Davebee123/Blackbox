@@ -1125,7 +1125,7 @@ function run(raw) {
   if ((wasAlert || events.some((e) => e.type === 'jack-in' || e.type === 'engage')) && active(campaign)) go('combat', events.some((e) => e.type === 'jack-in'));
   else if (events.some((e) => e.type === 'run-start')) go('net', true);
   else if (events.some((e) => e.type === 'jacked-out')) go('map', true);
-  else if (campaign.rooms && module !== 'rooms' && events.some((e) => e.type.startsWith('rooms') && e.type !== 'rooms-out')) go('rooms', true); // a move typed from another page
+  else if (campaign.rooms && module !== 'rooms' && !ended && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('rooms') && e.type !== 'rooms-out')) go('rooms', true); // a move typed from another page (a win stays on its kill screen)
   else if (campaign.run && module !== 'net' && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('net'))) go('net'); // a win stays on its kill screen (the folder listing waits in the terminal)
   else if (text.startsWith('encounter ') && campaign.encounter?.phase === 'alert') { mapSel = 'intrusion'; go('map'); }
   save();

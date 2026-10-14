@@ -1012,6 +1012,7 @@ export function runSuggestions(s, input) {
   const presets = loadoutSuggestions(s, input); // presets swap on runs too
   if (presets) return presets;
   const text = input.toLowerCase().trimStart();
+  if (s.run.rooms) return roomSuggestions(s, text);
   const loc = currentLocation(s);
   const here = layoutOf(loc)[s.run.cwd];
   const [word, arg = ''] = text.split(/ (.*)/);
@@ -1024,6 +1025,16 @@ export function runSuggestions(s, input) {
     return [];
   }
   return ['history', 'ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
+}
+
+// On rooms: the room verbs, and for cd/go/scan the rooms you've seen (by the slug you type).
+function roomSuggestions(s, text) {
+  const [word, arg = ''] = text.split(/ (.*)/);
+  if (text.includes(' ')) {
+    if (['cd', 'go', 'scan'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
+    return [];
+  }
+  return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'scan', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));
 }
 
 export { guarded, locked };
