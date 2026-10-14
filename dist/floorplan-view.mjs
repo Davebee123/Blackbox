@@ -1,5 +1,6 @@
-// The rooms page (floorplan.mjs, docs/servers.md R0): a strip of the server across the top (with Wait and Jack out,
-// or Connect at home), and the room map filling the rest. A pop-up card, like the network map's, sits beside a room:
+// The rooms page (floorplan.mjs, docs/servers.md R0 and R1): a strip of the server across the top (with Wait and Jack
+// out, or Connect at home on the playtest; on the network you connect from the network map), and the room map filling
+// the rest. A pop-up card, like the network map's, sits beside a room:
 // it opens by itself on the room you're in when something there wants a decision (a live virus, a stocked cache, a
 // locked vault, the rest room, the Core, the hunter on you), and on any room you've seen when you click it. A room you
 // can walk into walks on one click; its cost is on its chip. There is no exits list (the lit traces are the exits)
@@ -31,7 +32,7 @@ import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName, setName } from './families.mjs';
-import { ROOMS, KINDS, HUNTERS, RESIDENT, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, cacheFull, refillAt, isBait, coreOpen, signalNow, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned } from './floorplan.mjs';
+import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName } from './floorplan.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
 // or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
@@ -40,7 +41,11 @@ const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
 const now = () => Date.now();
 const fightKind = (room) => ['process', 'elite', 'guard', 'core'].includes(room.kind);
 const pctOf = (s, x) => Math.max(1, Math.round(s.rooms.max * x));
-const restGain = (s) => Math.min(s.rooms.max - s.rooms.signal, Math.round(s.rooms.max * ROOMS.rest));
+const restGain = (s) => Math.min(s.rooms.max - sigOf(s), Math.round(s.rooms.max * ROOMS.rest));
+// The network's words for a server and its rooms (netrooms.mjs fills WORLD.view; the playtest has none).
+const net = (s, what, ...a) => (s.rooms?.world && WORLD.view?.[what] ? WORLD.view[what](s, ...a) : undefined);
+// Why the Core is sealed, in one line.
+const sealedLine = (s) => net(s, 'sealed') ?? `Sealed until you open the ${s.rooms.graph.rooms[s.rooms.graph.vaults[0]]?.path || 'vault'}.`;
 
 // ---------- countdowns ----------
 // A chip's short form: m:ss under an hour, then 1h59.
@@ -89,7 +94,7 @@ const sprite = () => `<svg class="fp-sprite" width="0" height="0" aria-hidden="t
   + '<marker id="fp-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10Z" class="fp-arrowhead"/></marker>'
   + '</defs></svg>';
 // A room's icon: what it is (a guard post is an elite to you; a mirrored cache shows its mirror), once you've seen it.
-const iconOf = (s, room) => (seenOf(s, room.id) !== 'kind' ? null : room.mirror ? 'mirror' : room.kind === 'guard' ? 'elite' : room.kind);
+const iconOf = (s, room) => (seenOf(s, room.id) !== 'kind' ? null : room.mirror ? 'mirror' : room.kind === 'guard' ? 'elite' : room.kind === 'boss' ? 'core' : room.kind === 'stash' ? 'cache' : room.wild && room.kind === 'process' && net(s, 'elite', room) ? 'elite' : room.kind);
 // An icon in the strip or the pop-up card.
 const ic = (name, cls = '') => `<svg class="fp-ic${cls ? ' ' + cls : ''}" viewBox="0 0 20 20" aria-hidden="true">${name ? `<use href="#fp-i-${name}"/>` : '<text x="10" y="15" text-anchor="middle">?</text>'}</svg>`;
 
@@ -97,8 +102,14 @@ const ic = (name, cls = '') => `<svg class="fp-ic${cls ? ' ' + cls : ''}" viewBo
 // Its virus in one line: "Level 10 Wiper · TOLLGATE · Lockout set" (the set once you've fought it).
 function whoOf(s, room) {
   const R = s.rooms, f = fightOf(s, room, room.mirror ? 'mirror' : null);
+  if (room.wild) {
+    // A wild room's spawn (netrooms.mjs): the named ones by name (a boss, a bounty), the rest by family.
+    const name = f.name || (f.boss ? BOSSES[f.boss]?.name : null), fam = familyName(f.family) || f.family || '?', by = f.author ? (AUTHORS[f.author]?.name || f.author).toUpperCase() : '';
+    const short = name || `${f.elite ? 'Elite ' : ''}${fam}`;
+    return { short, fam, sub: `${name ? `${f.boss ? 'Boss' : 'Elite'} · ` : by ? `${by} · ` : ''}lv ${f.level}`, line: `Level ${f.level} ${name || fam}${by && !name ? ` · ${by}` : ''}` };
+  }
   if (room.kind === 'guard') { const G = GUARDS[room.guard]; return { short: G.name, fam: G.name, sub: `${G.ice ? 'Kestrel ICE' : 'Guard'} · lv ${f.level}`, line: `Level ${f.level} ${G.name}${G.ice ? ' · Kestrel ICE' : ''}` }; }
-  if (room.kind === 'core') return { short: BOSSES[RESIDENT].name, fam: BOSSES[RESIDENT].name, sub: `The Resident · lv ${f.level}`, line: `Level ${f.level} ${BOSSES[RESIDENT].name} · the Resident` };
+  if (room.kind === 'core') { const n = f.name || BOSSES[RESIDENT].name; return { short: n, fam: n, sub: `The Resident · lv ${f.level}`, line: `Level ${f.level} ${n} · the Resident` }; }
   const set = room.set ? (R.codex[`${room.family}:${room.set}`] ? setName(room.family, room.set) : '???') : '';
   const elite = room.kind === 'elite' || room.mirror;
   const by = (AUTHORS[room.author]?.name || '?').toUpperCase(), short = `${elite ? 'Elite ' : ''}${familyName(room.family)}`;
@@ -123,18 +134,20 @@ function aboutOf(s, room) {
   if (fightKind(room) || room.mirror) who = room.mirror ? mirrorLine(s, room) : whoOf(s, room).line;
   else if (room.kind === 'den') who = g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.';
   else if (room.kind === 'cache') who = 'Credits and code, sometimes a script.';
-  else if (room.kind === 'vault' && !R.opened[room.id]) who = R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id)?.path || 'an elite'}.`;
+  else if (room.kind === 'stash') who = 'The server\'s code, back every two hours.';
+  else if (room.kind === 'vault' && !opened(s, room)) who = room.farm ? 'Opens once the Foreman and the Heatsink are down.' : R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id)?.path || 'an elite'}.`;
   else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest)} Signal, once a visit.`;
   const denEdge = g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   const rule = hunted ? `The ${huntName(h)} is here: walk in and you fight it.`
     : denEdge ? 'Walking in wakes the Tracker.'
       : R.rare[room.id] && isUp(s, room) ? `Rare spawn: ${ROOMS.rareLevel} levels up, ${ROOMS.rareRolls} loot rolls.`
         : room.kind === 'guard' && room.key && !R.opened[room.key] ? `Carries the ${g.rooms[room.key].path} key.`
+          : room.kind === 'boss' ? 'A crew boss: built for a crew.'
           : room.queue && R.kind === 'Mailhub' && fightKind(room) ? 'A Spam Flood joins its fights.'
             : room.kind === 'elite' ? 'Enrages from cycle 9. Drops a blue or better.'
-              : room.kind === 'core' && !coreOpen(s) ? `Sealed until you open the ${g.rooms[g.vaults[0]].path}.`
+              : room.kind === 'core' && !coreOpen(s) ? sealedLine(s)
                 : room.kind === 'cache' && !room.mirror ? 'One in four is bait: you see which when you walk in.'
-                  : room.kind === 'vault' && room.id === g.vaults[0] && !R.opened[room.id] ? 'Opening it unseals the Core.'
+                  : room.kind === 'vault' && room.id === g.vaults[0] && !opened(s, room) ? 'Opening it unseals the Core.'
                     : ['rest', 'entry'].includes(room.kind) ? 'The hunter never comes in.' : '';
   return { who, rule };
 }
@@ -145,7 +158,8 @@ function stateOf(s, room) {
   if (room.kind === 'core' && !coreOpen(s)) return { word: 'sealed', cls: 'dim' };
   if (fightKind(room)) return isUp(s, room) ? { word: R.rare[room.id] ? '★ rare' : 'live', cls: R.rare[room.id] ? 'next' : 'hot' } : { word: 'cleared', cls: 'dim', at: backAt(s, room) };
   if (room.kind === 'cache') return cacheFull(s, room) ? (room.mirror ? { word: 'mirror', cls: 'hot' } : { word: 'stocked', cls: '' }) : { word: 'empty', cls: 'dim', at: refillAt(s, room) };
-  if (room.kind === 'vault') return R.opened[room.id] ? { word: 'open', cls: 'dim' } : R.visit?.keys.includes(room.id) ? { word: 'key fits', cls: 'next' } : { word: 'locked', cls: '' };
+  if (room.kind === 'vault') return opened(s, room) ? { word: 'open', cls: 'dim' } : R.visit?.keys.includes(room.id) ? { word: 'key fits', cls: 'next' } : { word: 'locked', cls: '' };
+  if (room.kind === 'stash') return cacheFull(s, room) ? { word: 'stocked', cls: '' } : { word: 'empty', cls: 'dim', at: refillAt(s, room) };
   if (room.kind === 'rest') return R.visit?.rested ? { word: 'rested', cls: 'dim' } : { word: '', cls: '' };
   return { word: '', cls: '' };
 }
@@ -260,8 +274,9 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
   const here = R.at === room.id, can = reach.has(room.id), fight = kind && fightKind(room), up = fight && isUp(s, room), down = fight && !up;
   const hunted = h && !h.down && h.at === room.id;
   const sealed = kind && room.kind === 'core' && !coreOpen(s);
-  const full = kind && room.kind === 'cache' && cacheFull(s, room), empty = kind && room.kind === 'cache' && !full;
-  const used = empty || (kind && room.kind === 'rest' && !!R.visit?.rested) || (kind && room.kind === 'vault' && !!R.opened[room.id]);
+  const stocked = room.kind === 'cache' || room.kind === 'stash';
+  const full = kind && stocked && cacheFull(s, room), empty = kind && stocked && !full;
+  const used = empty || (kind && room.kind === 'rest' && !!R.visit?.rested) || (kind && room.kind === 'vault' && opened(s, room));
   const live = up || (full && !!room.mirror);
   const denEdge = kind && g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   // Its colour: you, a live threat, used up (or a plain room you've cleared), or something there for you.
@@ -286,7 +301,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
   const tags = [];
   if (kind) {
     if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit?.keys.includes(room.key)) tags.push(['KEY', 'key']);
-    if (room.kind === 'vault' && !R.opened[room.id]) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
+    if (room.kind === 'vault' && !opened(s, room)) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
     if (denEdge) tags.push(['WAKES', 'hot']);
@@ -301,11 +316,11 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
   const cost = can ? moveCost(s, room) : 0;
   if (cost) { const t = `−${cost}`, w = tagW(t) - 6, rx = n1(x0 + G.nw + 4 - w); out += `<g class="fp-cost"><rect x="${rx}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 4)}" text-anchor="middle">${t}</text></g>`; }
   // Bottom right: the respawn ring (a fight down, a cache empty) fills back up, its countdown under it.
-  const from = down && R.down[room.id] != null ? R.down[room.id] : empty ? R.taken[room.id] : null;
+  const from = down && downAt(s, room) != null ? downAt(s, room) : empty ? R.taken[room.id] : null;
   const back = from == null ? null : down ? backAt(s, room) : refillAt(s, room);
   if (back != null) {
     const cx = n1(x0 + G.nw - 2), cy = n1(y0 + G.nh - 2), r = G.rr;
-    out += `<g class="fp-respawn ${room.kind === 'cache' && !room.mirror ? 'amber' : 'hot'}"><circle class="bg" cx="${cx}" cy="${cy}" r="${r + 3}"/><circle class="track" cx="${cx}" cy="${cy}" r="${r}"/>`
+    out += `<g class="fp-respawn ${stocked && !room.mirror ? 'amber' : 'hot'}"><circle class="bg" cx="${cx}" cy="${cy}" r="${r + 3}"/><circle class="track" cx="${cx}" cy="${cy}" r="${r}"/>`
       + `<circle class="arc" cx="${cx}" cy="${cy}" r="${r}" pathLength="100" transform="rotate(-90 ${cx} ${cy})" data-ring-from="${from}" data-ring-at="${back}"/>`
       + `<text x="${cx}" y="${n1(cy + r + 13)}" text-anchor="middle"><tspan data-at="${back}" data-fmt="s"></tspan></text></g>`;
   }
@@ -315,12 +330,13 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
 // ---------- the strip ----------
 function hudMarkup(s) {
   const R = s.rooms, sig = signalNow(s), max = R.max, f = max ? sig / max : 0, lvl = f <= 0.3 ? 'low' : f <= 0.6 ? 'mid' : 'ok';
-  const prog = progressOf(s), h = hunterOf(s), K = KINDS[R.kind], bag = scriptsOf(s), author = (AUTHORS[R.author]?.name || R.author).toUpperCase();
+  const prog = progressOf(s), h = hunterOf(s), K = net(s, 'kind') || KINDS[R.kind], bag = scriptsOf(s), author = (AUTHORS[R.author]?.name || R.author).toUpperCase();
   const step = pctOf(s, R.floor >= 5 ? ROOMS.moveDeep : ROOMS.move);
   const scripts = bag.map((id) => `<li class="fp-perk r-${TIER[SCRIPTS[id].rarity]}" title="${esc(scriptTip(id))}">${esc(SCRIPTS[id].name)}</li>`).join('');
   const hunt = R.at && h ? `<span class="fp-stat fp-hunt${h.down ? ' out' : ''}" title="${esc(`${hunterLine(s)}\n${huntName(h)}: ${HUNTERS[h.kind].text} It moves only when you walk or wait.`)}">${ic('den')}<span class="lbl">${esc(huntName(h))}</span><b>${h.down ? 'down' : h.kind === 'track' && !h.awake && !h.returning ? 'asleep' : `moves in ${paceOf(s) - h.count}`}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
-  const pack = R.pack.length ? `<span class="fp-stat" title="${esc(`Pack: ${R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' })).join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${R.pack.length}</b></span>` : '';
+  const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
+  const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
   const rule = ['a', 'b', 'c'].map((k) => `<button type="button" class="fp-rule${R.bossRule === k ? ' on' : ''}" data-rooms="bossrule" data-arg="${k}" aria-pressed="${R.bossRule === k}" title="${esc(`Boss rule ${k}: ${BOSS_RULES[k].name}.\n${BOSS_RULES[k].text}`)}">${k}</button>`).join('');
   // Wait and Jack out (Connect at home), always in reach at the strip's right.
   const c = connectOf(s);
@@ -329,11 +345,11 @@ function hudMarkup(s) {
       + btn('jackout', 'Jack out', { small: true, hot: true, disabled: active(s), tip: 'Jack out: banks your pack. Signal rests at home.' })
     : btn('connect', 'Connect', { small: true, primary: true, disabled: !c.can, tip: c.can ? `Connect to ${R.name}.` : c.wait > 0 ? `${R.name} takes you back in ${fmtLeft(c.wait)}.` : `You need ${c.need} Signal to connect.` });
   return `<header class="fp-hud" aria-label="The server">
-    <span class="fp-id" title="${esc(`${R.name}: ${author} ${R.kind}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(`${R.kind} · lv ${R.level} · ${K.rule}`)}</small></span>
+    <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${R.kind}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${R.kind} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
     ${keys}${hunt}${pack}
-    <span class="fp-tools"><span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>
+    <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
     <span class="fp-acts">${acts}</span></span>
   </header>`;
@@ -354,7 +370,7 @@ function needOf(s) {
   if (!R.at) return `home:${R.visits}`;
   if (active(s)) return null;
   const room = hereOf(s), v = R.visit;
-  const ask = !!R.screen || (room.kind === 'cache' && cacheFull(s, room)) || (room.kind === 'vault' && !R.opened[room.id]) || (room.kind === 'rest' && !v.rested && restGain(s) > 0);
+  const ask = !!R.screen || ((room.kind === 'cache' || room.kind === 'stash') && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !v.rested && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0);
   return ask ? `${stampOf(s)}:${R.screen?.kind || room.kind}` : null;
 }
 // The room the pop-up is on: the one you clicked, or the one you're in when it wants a decision you haven't closed.
@@ -399,18 +415,19 @@ function hereCard(s) {
   let st = stateOf(s, room), body = '', acts = '';
   if (sc?.kind === 'hunter') {
     st = { word: 'caught', cls: 'hot' };
-    body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${R.level + ROOMS.hunter.level} hunter`) + note('Beat it for a script. It stays down the rest of the visit.');
+    body = holder('den', `${huntName(h).toUpperCase()} ICE`, `Level ${fightOf(s, room, 'hunter').level} hunter`) + note('Beat it for a script. It stays down the rest of the visit.');
     acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: 'Slip past: once a visit.' });
   } else if (sc?.kind === 'virus') {
     const k = whoOf(s, room), G = room.kind === 'guard' ? GUARDS[room.guard] : null;
-    const tip = G ? `${G.name}: ${G.summary.split('. ').slice(1).join('. ') || G.summary}` : room.kind === 'core' ? `${BOSSES[RESIDENT].name}: ${BOSSES[RESIDENT].about}` : k.unknown ? '??? set: you learn it by fighting it.' : '';
-    body = holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core'].includes(room.kind) ? `${k.short} · ${k.sub}` : k.sub, tip);
+    const tip = G ? `${G.name}: ${G.summary.split('. ').slice(1).join('. ') || G.summary}` : room.kind === 'core' && !R.world ? `${BOSSES[RESIDENT].name}: ${BOSSES[RESIDENT].about}` : k.unknown ? '??? set: you learn it by fighting it.' : '';
+    body = holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip);
     const notes = [];
     if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, ${ROOMS.rareRolls} loot rolls.`);
     if (room.queue && R.kind === 'Mailhub') notes.push('A Spam Flood joins the fight.');
     if (room.kind === 'guard' && room.key && !R.opened[room.key]) notes.push(esc(`Carries the ${g.rooms[room.key].path} key.`));
     if (room.kind === 'elite') notes.push('Enrages from cycle 9. Drops a blue or better.');
-    if (room.kind === 'core') notes.push(esc(`Boss rule ${R.bossRule}: ${BOSS_RULES[R.bossRule].name}.`));
+    if (room.kind === 'core' && !R.world) notes.push(esc(`Boss rule ${R.bossRule}: ${BOSS_RULES[R.bossRule].name}.`));
+    if (R.world) { const extra = net(s, 'fightNote', room); if (extra) notes.push(esc(extra)); }
     body += notes.map((n) => note(n)).join('');
     acts = btn('engage', 'Engage', { primary: true }) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '');
   } else if (fightKind(room)) {
@@ -424,13 +441,26 @@ function hereCard(s) {
       acts = btn('pull', room.mirror ? 'Break the mirror' : 'Take it', { primary: !bait && !room.mirror, hot: bait || room.mirror, note: bait ? `−${lose} Signal` : '' }) + '<button type="button" class="btn" data-fp-pop-close>Leave it</button>';
     } else body = note('Credits and code, sometimes a script.', 'dim');
   } else if (room.kind === 'vault') {
-    const open = !!R.opened[room.id], has = R.visit.keys.includes(room.id), main = room.id === g.vaults[0], force = pctOf(s, ROOMS.force);
-    body = open ? (main ? note('The Core is unsealed.') : '') : note(esc(has ? `Your key fits.${main ? ' Opening it unseals the Core.' : ''}` : `Its key is in ${guardOf(s, room.id)?.path || 'an elite'}.${main ? ' Opening it unseals the Core.' : ''}`));
-    acts = open ? '' : btn('open', 'Open', { primary: true, disabled: !has, note: has ? 'your key' : 'no key' }) + btn('force', 'Force it', { hot: true, note: `−${force} Signal` });
+    const open = opened(s, room), has = R.visit.keys.includes(room.id), main = room.id === g.vaults[0], force = pctOf(s, ROOMS.force);
+    const left = open && R.world ? net(s, 'vaultLeft', room) || 0 : 0;
+    if (room.farm) {
+      body = note(esc(open ? 'The ledger is open. The Coldwallet waits past it.' : 'Opens on the Foreman\'s badge word and the Heatsink\'s cycle tag: beat them both.'));
+      acts = open ? '' : btn('open', 'Open', { primary: true });
+    } else {
+      body = open ? (main ? note('The Core is unsealed.') : '') + (left ? note(esc(`${left} ${left === 1 ? 'file' : 'files'} still in it.`)) : '') : note(esc(has ? `Your key fits.${main ? ' Opening it unseals the Core.' : ''}` : `Its key is in ${guardOf(s, room.id)?.path || 'an elite'}.${main ? ' Opening it unseals the Core.' : ''}`));
+      acts = open ? (left ? btn('pull', 'Take them', { primary: true }) : '') : btn('open', 'Open', { primary: true, disabled: !has, note: has ? 'your key' : 'no key' }) + btn('force', 'Force it', { hot: true, note: `−${force} Signal` });
+    }
+  } else if (room.kind === 'stash') {
+    body = note(cacheFull(s, room) ? 'The server\'s code, kept for its owner.' : 'Empty. It fills again in two hours.', cacheFull(s, room) ? '' : 'dim');
+    acts = cacheFull(s, room) ? btn('pull', 'Take it', { primary: true }) : '';
   } else if (room.kind === 'rest') {
     body = note('The hunter never comes in.', 'dim');
     acts = btn('rest', R.visit.rested ? 'Rested' : 'Rest', { primary: !R.visit.rested && restGain(s) > 0, disabled: R.visit.rested || !restGain(s), note: R.visit.rested ? 'once a visit' : restGain(s) ? `+${restGain(s)} Signal` : 'Signal full' });
-  } else if (room.kind === 'entry') body = note('The hunter never comes in.', 'dim');
+  } else if (room.kind === 'entry') {
+    const files = R.world ? net(s, 'entryFiles') || 0 : 0;
+    body = files ? note(esc(`${files} ${files === 1 ? 'file' : 'files'} left here for you.`)) : note('The hunter never comes in.', 'dim');
+    if (files) acts = btn('pull', 'Take', { primary: true });
+  }
   else if (room.kind === 'den') body = note(g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.', 'dim');
   return cardOf(st, true, room.path, body + hunterNote(s, room), acts, !!sc);
 }

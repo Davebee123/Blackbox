@@ -143,7 +143,7 @@ export const FX_DO = {
   shield: { when: ['start', 'answer'], label: 'shields you for X', value: true },
   'break-hit': { when: ['break'], label: 'deals X damage to the part winding up a tell, or else to the next part to attack,', value: true },
   shatter: { when: ['hit'], label: 'makes each hit on an armored part break 2 ◆' },
-  'tell-hits': { when: ['always'], label: 'makes each of your hits count as two against a tell' },
+  'tell-hits': { when: ['always'], label: 'leaves a part Open when you cut its move' },
   'leech-x': { when: ['crit'], label: 'makes Leech heal X times as much', value: true },
   halve: { when: ['struck'], label: 'halves the damage of an attack that lands on you', own: true },
   'crit-normal': { when: ['struck'], label: 'turns a critical strike against you into a normal hit', own: true },

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, part, active, hooks } from './dist/combat.mjs';
-import { play, connect, currentLocation, layoutOf, residentLevel, CORE } from './dist/run.mjs';
+import { play, connect, currentLocation, residentLevel } from './dist/run.mjs';
+import * as FP from './dist/floorplan.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
 import { regrow } from './dist/outpost.mjs';
 
@@ -13,18 +14,23 @@ const finishOff = (s, id) => {
   command(s, 'spike ' + id);
   resolveCycle(s);
 };
-const winFight = (s) => { command(s, 'engage'); finishOff(s, s.encounter.virus.parts[0].id); };
-// To the open vault: clear the relay guard, unlock, and come back to the root.
-const openVault = (s) => { const loc = currentLocation(s); say(s, 'cd relay'); winFight(s); say(s, `unlock vault ${loc.password}`); say(s, 'cd /'); return loc; };
+const winFight = (s) => { if (!active(s)) command(s, 'engage'); finishOff(s, s.encounter.virus.parts[0].id); FP.settle(s); };
+// Since R1 a server is rooms (netrooms.mjs): the vault's key is an elite's, the Resident waits in the Core.
+const at = (s, id) => { const R = s.rooms; R.at = id; R.visit.walked[id] = true; R.screen = null; FP.look(s); };
+// To the open vault: the key in hand (its elite beaten), the vault opened.
+const openVault = (s) => { const loc = currentLocation(s), R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); at(s, v); FP.act(s, 'open'); return loc; };
+const coreRoom = (s) => s.rooms.graph.rooms[s.rooms.graph.core];
+// Into the Core: the Resident's fight starts.
+const toCore = (s) => { const R = s.rooms; at(s, FP.neighbours(R.graph, R.graph.core)[0]); FP.go(s, R.graph.core); if (R.screen?.kind === 'virus') FP.act(s, 'engage'); };
 
-test('opening the vault no longer takes the server: it opens /core, where the Resident lives', () => {
+test('opening the vault no longer takes the server: it unseals the Core, where the Resident lives', () => {
   const s = onRun();
   const loc = currentLocation(s);
-  assert.ok(!layoutOf(loc)[CORE], 'no core before the vault opens');
+  assert.ok(s.run.rooms && !FP.coreOpen(s), 'the Core is sealed before the vault opens');
   openVault(s);
   assert.equal(loc.takenOver, undefined, 'not yours yet');
-  assert.ok(layoutOf(loc)[CORE]?.guard, 'the core is guarded');
-  say(s, 'cd core');
+  assert.ok(FP.coreOpen(s) && FP.isUp(s, coreRoom(s)), 'the Core is open, and the Resident holds it');
+  toCore(s);
   assert.ok(active(s) || s.encounter?.phase === 'alert', 'the Resident fight starts');
   assert.equal(s.encounter.virus.boss, 'resident');
   assert.equal(s.encounter.virus.level, residentLevel(loc));
@@ -33,10 +39,10 @@ test('opening the vault no longer takes the server: it opens /core, where the Re
 test('beating the Resident takes the server; the core goes quiet', () => {
   const s = onRun();
   const loc = openVault(s);
-  say(s, 'cd core');
+  toCore(s);
   winFight(s);
   assert.ok(loc.takenOver);
-  assert.ok(!layoutOf(loc)[CORE].guard, 'nothing guards the core of a server you hold');
+  assert.equal(FP.isUp(s, coreRoom(s)), false, 'nothing holds the Core of a server you hold');
 });
 
 test('a Resident that beats you is a level stronger for 6 hours, up to three', () => {
@@ -46,8 +52,7 @@ test('a Resident that beats you is a level stronger for 6 hours, up to three', (
     const s = onRun();
     const loc = openVault(s);
     const base = residentLevel(loc, t);
-    say(s, 'cd core');
-    command(s, 'engage');
+    toCore(s);
     s.run.integrity = 1;
     for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = s.encounter.cycle;
     for (let i = 0; i < 6 && active(s); i++) { command(s, 'hold'); resolveCycle(s); }
@@ -58,27 +63,30 @@ test('a Resident that beats you is a level stronger for 6 hours, up to three', (
   } finally { hooks.now = null; }
 });
 
-test('a boss has phases: at half its Integrity the Resident re-arms', () => {
+test('a boss has phases (docs/servers.md 3.4, rule a): taking the Resident\'s core part across its 50% tick re-arms every part', () => {
   const s = onRun();
   openVault(s);
-  say(s, 'cd core');
-  command(s, 'engage');
-  const v = s.encounter.virus;
+  toCore(s);
+  const e = s.encounter, v = e.virus;
   assert.ok(v.phases.length && v.enrageAt === BOSSES.resident.enrageAt);
-  const total = v.parts.reduce((n, p) => n + p.max, 0);
-  for (const p of v.parts) { p.armor = 0; p.integrity = Math.floor(p.max * 0.45); }
-  assert.ok(v.parts.reduce((n, p) => n + p.integrity, 0) < total / 2);
+  assert.equal(e.bossRule, 'a');
+  const core = v.parts.find((p) => p.core);
+  assert.ok(core && core.special && core.ticks.every((t) => t.phase != null), 'its ♛ part carries phase ticks');
+  // Its total under half alone starts nothing.
+  for (const p of v.parts) { p.armor = 0; if (p !== core) p.integrity = Math.floor(p.max * 0.3); }
   command(s, 'hold'); resolveCycle(s);
-  assert.ok(v.phases[0].done);
+  assert.ok(!v.phases[0].done, 'the total alone starts nothing');
+  core.integrity = Math.floor(core.max * 0.5) + 2; core.lockHp = 0;
+  command(s, 'spike ' + core.id); resolveCycle(s);
+  assert.ok(v.phases[0].done, 'across its tick: the phase');
   assert.ok(v.parts.filter((p) => p.id !== 'sentry' && p.integrity > 0).every((p) => p.armor >= 1), 're-armed');
-  assert.ok(s.logs.some((e) => e.type === 'phase'));
+  assert.ok(s.logs.some((e2) => e2.type === 'phase'));
 });
 
 test('a boss enrages: from its cycle every attack lands every cycle', () => {
   const s = onRun();
   openVault(s);
-  say(s, 'cd core');
-  command(s, 'engage');
+  toCore(s);
   const v = s.encounter.virus;
   s.run.integrity = s.run.max = 1e6;
   for (const p of v.parts) { p.max = p.integrity = 1e6; p.armor = 0; }
@@ -90,12 +98,12 @@ test('a boss enrages: from its cycle every attack lands every cycle', () => {
 test('the Resident regrows after two lockdowns left to run out: the core is guarded again', () => {
   const s = onRun();
   const loc = openVault(s);
-  say(s, 'cd core');
+  toCore(s);
   winFight(s);
   assert.ok(loc.takenOver);
   regrow(s, loc);
   assert.ok(!loc.takenOver);
-  assert.ok(layoutOf(loc)[CORE].guard);
+  assert.ok(FP.isUp(s, coreRoom(s)), 'the Resident holds its Core again');
 });
 
 test('early bosses: RELAY-KING holds /net/relay from level 3; the bounty is REPO MAN from 8; the Hollow Choir comes from 10', async () => {
@@ -130,7 +138,7 @@ test('boss uniques: each boss has two; a kill without one raises the next kill\'
     BOSS_LOOT.chance = -1; // a miss for sure
     const s = onRun();
     openVault(s);
-    say(s, 'cd core');
+    toCore(s);
     winFight(s);
     assert.equal(s.pity.resident, 1);
     assert.ok(s.logs.some((e) => /No unique from Resident this time\. The next kill has a -?\d+% chance/.test(e.message)));
@@ -142,7 +150,7 @@ test('boss uniques: each boss has two; a kill without one raises the next kill\'
     BOSS_LOOT.chance = 2;
     const t = onRun();
     openVault(t);
-    say(t, 'cd core');
+    toCore(t);
     winFight(t);
     assert.equal(t.pity.resident, 0);
     assert.ok(t.stash.some((it) => bossUniques('resident').some((u) => u.id === it.unique)));

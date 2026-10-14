@@ -22,7 +22,7 @@
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
 import { subOf, subEdge, hasTalent, rank, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
-import { tellHit, tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
+import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -75,7 +75,6 @@ function strip(s, p, n, label) {
   if (!k) return 0;
   p.armor -= k;
   p.lastDamaged = e.cycle;
-  if (label !== 'Bit Rot') tellHit(s, p, { chits: k }); // a command's strip hits it: a tell on it may count it (tells.mjs)
   if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); if (label !== 'Bit Rot') stripMark(s, p); openProc(s, 'stripped', { part: p.id }); }
   chipped(s, p, k); // Debris Field
   emit(s, 'armor', `${label}: ${p.name} loses ${k} ◆${p.armor ? ` (${p.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
@@ -238,11 +237,6 @@ function detonate(s, bomb) {
 function cycle(s) {
   if (!breaker(s)) return;
   const e = s.encounter;
-  // Thermal Runaway: each tick on a part compiling a cast counts as a hit on it (tells.mjs), once a cycle.
-  for (const b of e.burns.filter((x) => x.id === 'thermal-runaway' && x.who === who(s))) {
-    const p = part(s, b.target);
-    if (alive(p) && tellOn(s, p, 'cast')) tellHit(s, p, { cmd: { id: 'thermal-runaway', target: p.id, at: e.cycle }, key: `tr:${e.cycle}:${who(s)}` });
-  }
   // Logic Bombs whose fuse ran out.
   if (e.bkBombs?.length) {
     const due = e.bkBombs.filter((b) => b.at <= e.cycle && b.who === who(s));

@@ -11,8 +11,9 @@
 // beside the board and don't count toward the three.
 //
 // Contract types: kill (N of a family, or anything in the Sprawl), bounty (one named process in
-// a Sprawl folder), takeover (open a server's vault), materials (hand over code), item (a file
-// in a server's vault: pull it, bank it, deliver it). A takeover or item contract can point at
+// a SPRAWL-00 room), takeover (take a server over: its vault, then its Resident), materials (hand over code), item (a
+// file in a server's vault: open it, bank the file, deliver it), and since R1 (docs/servers.md 8.1) rooms (clear N
+// rooms on a server, first clears) and map (map a server: every room cleared). A takeover or item contract can point at
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
 // (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
 import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
@@ -122,6 +123,8 @@ function letter(s, msg, at = now()) {
 const STORY = STORY_TEXT.beats || [];
 const crewOf = (fam) => CREWS[fam] || 'an unlicensed crew';
 const lower = (x) => String(x || '').toLowerCase();
+// A SPRAWL-00 folder's room, by its name on the room map (netrooms.mjs: its rooms keep their folders as path0).
+export const sprawlRoom = (s, path) => Object.values(zoneOf(s).floorplan?.graph.rooms || {}).find((r) => r.path0 === path)?.path || path;
 // The blanks a letter or contract can use, from its job.
 function jobVars(s, j = {}) {
   const loc = j.loc && s.locations.find((l) => l.id === j.loc);
@@ -130,7 +133,7 @@ function jobVars(s, j = {}) {
   return {
     handle: s.profile?.handle || 'rookie', crewName: 'LOWLIGHT', took: took?.name || 'the server you took over',
     count: j.count, family: j.family ? lower(FAMILIES[j.family]?.name) : 'stray', crew: j.family ? crewOf(j.family) : 'the crews',
-    name: j.name, room: j.room, amount: j.amount, material: j.material ? lower(MATERIALS[j.material]?.name) : undefined,
+    name: j.name, room: j.room ? sprawlRoom(s, j.room) : j.room, amount: j.amount, material: j.material ? lower(MATERIALS[j.material]?.name) : undefined,
     server: loc?.name || (j.any ? 'any server you have traced' : 'a server you haven’t found yet'), owner: loc?.owner,
     file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', strain: j.strain ? STRAINS[j.strain]?.name : undefined,
   };
@@ -225,7 +228,8 @@ function arm(s, j) {
   if (j.type === 'takeover' && j.any && !j.took) { const mine = s.locations.find((l) => l.takenOver); if (mine) { j.took = mine.id; s.mail.took = mine.id; } }
   if (j.type === 'bounty') {
     const z = zoneOf(s);
-    const rooms = zoneRooms().filter((r) => !(s.encounter?.zone && s.encounter.room === r) && !z.spawns[r]?.bounty);
+    // Never RELAY-KING's /net/relay: on rooms it's SPRAWL-00's Core, sealed until level 3 (netrooms.mjs).
+    const rooms = zoneRooms().filter((r) => r !== '/net/relay' && !(s.encounter?.zone && s.encounter.room === r) && !z.spawns[r]?.bounty);
     const room = j.room && rooms.includes(j.room) ? j.room : rooms[Math.floor(rand(s) * rooms.length)] || zoneRooms()[0];
     j.room = room;
     // Two levels above the level it was posted at; a story bounty can set its own step and cap (claimjack: one up, never above 4) and come unmutated.
@@ -272,7 +276,8 @@ export function offer(s, at = now()) {
   const rivals = theirs ? rivalServers(s, faction).filter((l) => !targeted(s).has(l.id)) : [];
   const target = rivals.length && rand(s) < 0.6 ? { loc: pick(s, rivals).id } : pickTarget(s);
   // Named processes live in SPRAWL-00: posted only while it's still your level (it tops out at CONFIG.zone.maxLevel).
-  const kinds = (off ? ['materials', 'item', 'kill'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item']).filter((k) => (target || !['takeover', 'item'].includes(k)) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2));
+  const roomsAt = roomsTarget(s), mapAt = mapTarget(s);
+  const kinds = (off ? ['materials', 'item', 'kill', 'rooms'] : ['kill', 'kill', 'bounty', 'bounty', 'materials', 'takeover', 'item', 'item', 'rooms', 'rooms', 'map']).filter((k) => (target || !['takeover', 'item'].includes(k)) && (k !== 'bounty' || L <= CONFIG.zone.maxLevel + 2) && (k !== 'rooms' || roomsAt) && (k !== 'map' || mapAt));
   // Strain contracts (RuneScape Slayer): once strains are open at your level, a quarter of the board.
   const strainsOpen = Object.keys(STRAINS).filter((k) => STRAINS[k].from <= L && L >= CONFIG.zone.maxLevel + 2);
   const type = !off && strainsOpen.length && rand(s) < 0.25 ? 'strain' : pick(s, kinds);
@@ -295,6 +300,11 @@ export function offer(s, at = now()) {
   } else if (type === 'materials') {
     const m = pick(s, CODES), amount = 2 + Math.floor(L / 8);
     j = { type, material: m, amount, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 1, ...hit, ...repFor(5) } };
+  } else if (type === 'rooms') {
+    const count = 4 + Math.floor(L / 10);
+    j = { type, loc: roomsAt.id, count, reward: { credits: pay(35, 6), indemnity: ind(1), standing: 5, xp: 2, ...hit, ...repFor(5) } };
+  } else if (type === 'map') {
+    j = { type, loc: mapAt.id, reward: { credits: pay(60, 10), indemnity: ind(3), standing: 7, xp: 3, ...repFor(7) } };
   } else if (type === 'takeover') {
     j = { type, ...target, reward: { credits: pay(60, 10), indemnity: ind(4), standing: 8, xp: 3, ...repFor(8) } };
   } else {
@@ -321,6 +331,29 @@ export function offer(s, at = now()) {
   return o;
 }
 
+// A server with first clears left for a rooms job (yours, rogue or not, SPRAWL-00 aside), and one to map: a traced
+// server not Mapped yet, never a rogue server's (they keep up with you).
+const busyLoc = (s) => new Set([...jobs(s), ...offers(s)].filter((j) => !j.done).map((j) => j.loc).filter(Boolean));
+const roomsLeft = (l) => { const R = l.floorplan; return R ? Object.keys(R.graph.rooms).filter((id) => !R.cleared[id]).length : 6; };
+function roomsTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filter((l) => !l.member && !l.farm && !busy.has(l.id) && !(l.fresh && l.detached) && roomsLeft(l) >= 4); return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null; }
+function mapTarget(s) { const busy = busyLoc(s), pool = (s.locations || []).filter((l) => !l.rogue && !l.member && !busy.has(l.id) && !(l.fresh && l.detached) && !l.floorplan?.mapped); return pool.length ? pool[Math.floor(rand(s) * pool.length)] : null; }
+// A room cleared for the first time (netrooms.mjs): rooms jobs on that server count it.
+export function contractRooms(s, loc) {
+  for (const c of openContracts(s)) {
+    if (c.type !== 'rooms' || c.loc !== loc.id || c.got >= c.count) continue;
+    c.got++;
+    if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+  }
+}
+// A server Mapped (netrooms.mjs): its map job is done.
+export function contractMapped(s, loc) {
+  for (const c of openContracts(s)) {
+    if (c.type !== 'map' || c.loc !== loc.id || c.got) continue;
+    c.got = 1;
+    emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+  }
+}
+
 // ---------- progress ----------
 // A kill anywhere: { family, zone, bounty (spawn name) }.
 // The open contracts a kill would count for (the same test as contractKill): for the marker on
@@ -328,7 +361,7 @@ export function offer(s, at = now()) {
 // Strain contracts: every fifth one in a row pays double and rolls for the strain's trophy; dropping one resets it.
 export const SLAYER = { every: 5 };
 // What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
-const CONTRACT_KIND = { side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin' };
+const CONTRACT_KIND = { side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
@@ -393,7 +426,8 @@ export function changeStanding(s, f, delta, why) {
 
 export function ready(s, c) {
   if (c.done || !jobs(s).includes(c)) return false;
-  if (c.type === 'kill' || c.type === 'strain') return c.got >= c.count;
+  if (c.type === 'kill' || c.type === 'strain' || c.type === 'rooms') return c.got >= c.count;
+  if (c.type === 'map') return !!c.got;
   if (c.type === 'bounty') return !!c.got;
   if (c.type === 'takeover') return c.any ? !!c.took : !!s.locations.find((l) => l.id === c.loc)?.takenOver;
   if (c.type === 'materials') return (materialsOf(s)[c.material] || 0) >= c.amount;
@@ -406,6 +440,8 @@ export function title(s, c) {
   if (c.type === 'strain') return `Neutralize ${c.count} ${STRAINS[c.strain]?.name || ''}` + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
   if (c.type === 'kill') return (c.where === 'sprawl' ? `Kill ${c.count} viruses in SPRAWL-00` : `Kill ${c.count} ${FAMILIES[c.family]?.name || ''} viruses`) + (c.level > KILL_RANGE + 1 ? `, Lv ${c.level - KILL_RANGE}+` : '');
   if (c.type === 'bounty') return `Kill ${c.name}`;
+  if (c.type === 'rooms') return `Clear ${c.count} rooms on ${locName(s, c.loc) || 'a server'}`;
+  if (c.type === 'map') return `Map ${locName(s, c.loc) || 'a server'}`;
   if (c.type === 'takeover') return c.any ? 'Take over a server' : `Take over ${locName(s, c.loc) || 'an unknown server'}`;
   if (c.type === 'materials') return `Deliver ${c.amount} ${MATERIALS[c.material].name}`;
   if (c.type === 'item') return `Recover ${c.file}`;
@@ -423,12 +459,19 @@ function hunt(s, c) {
 export function progress(s, c) {
   if (c.done) return { text: 'Delivered', part: 1 };
   if (c.type === 'kill' || c.type === 'strain') return { text: `${c.got}/${c.count} neutralized`, part: c.got / c.count };
-  if (c.type === 'bounty') return { text: c.got ? 'Neutralized' : c.room ? `In SPRAWL-00, ${c.room}` : 'Somewhere in SPRAWL-00', part: c.got ? 1 : 0 };
+  if (c.type === 'bounty') return { text: c.got ? 'Neutralized' : c.room ? `In SPRAWL-00, ${sprawlRoom(s, c.room)}` : 'Somewhere in SPRAWL-00', part: c.got ? 1 : 0 };
+  if (c.type === 'rooms') return { text: `${c.got}/${c.count} rooms cleared`, part: c.got / c.count };
+  if (c.type === 'map') {
+    if (c.got) return { text: 'Mapped', part: 1 };
+    const R = s.locations.find((x) => x.id === c.loc)?.floorplan, n = R ? Object.keys(R.graph.rooms).length : 0, done = R ? Object.keys(R.graph.rooms).filter((id) => R.cleared[id]).length : 0;
+    return { text: R ? `Rooms ${done}/${n}` : 'Not connected yet', part: n ? done / n : 0 };
+  }
   if (c.type === 'takeover') {
     if (c.any) return c.took ? { text: `${locName(s, c.took)} is yours`, part: 1 } : { text: s.locations.length ? 'Open the vault of any server you have traced' : 'Trace a server first', part: 0 };
     if (!c.loc) return hunt(s, c);
     const l = s.locations.find((x) => x.id === c.loc);
-    return { text: l?.takenOver ? 'Vault opened' : l && Object.keys(l.state.cleared).length ? 'Guard beaten, vault still locked' : 'Guard up', part: l?.takenOver ? 1 : l && Object.keys(l.state.cleared).length ? 0.7 : 0.45 };
+    const R = l?.floorplan, vault = R?.graph.vaults[0] && R.opened[R.graph.vaults[0]];
+    return { text: l?.takenOver ? 'Taken over' : vault ? 'Vault open: the Resident waits in the Core' : 'Vault shut', part: l?.takenOver ? 1 : vault ? 0.7 : 0.45 };
   }
   if (c.type === 'materials') { const have = materialsOf(s)[c.material] || 0; return { text: `${Math.min(have, c.amount)}/${c.amount} in stock`, part: Math.min(1, have / c.amount) }; }
   if (c.type === 'item') {

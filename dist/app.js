@@ -501,7 +501,9 @@ function roomsDone(events) {
   const warning = events.findLast((e) => e.type === 'warning');
   if (warning) notice(warning.message, true);
   if (events.some((e) => e.type === 'engage') && active(campaign)) { go('combat'); notice('Fight paused. Any order starts it.'); }
+  else if (events.some((e) => e.type === 'jacked-out' || e.type === 'disconnected') && !campaign.roomsPlay) go('map', true); // the network: home is the map
   else if (module !== 'rooms' && !active(campaign)) go('rooms', true);
+  save(); // the network's rooms are on your save (the playtest's never are: save skips it)
   dirty = true;
 }
 // What happens on the server goes up as a notice (there's no tty on the page): the last few lines of a batch (a move, a
@@ -850,7 +852,8 @@ function react(events) {
       case 'wall-siege': feel.add('interrupt', '#meter-integrity', 'SIEGE'); notice(e.message); break;
       case 'jack-in': feel.add('jackin', null); shell.glitch?.(); break;
       case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
-      case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/^JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
+      case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
+      case 'rooms-good': if (e.gains?.length) { feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
       case 'world-event': if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
       case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
@@ -1032,10 +1035,11 @@ function run(raw) {
     if (o) return pickHub(o.key, text);
     if (['help', 'menu', 'ls', '?'].includes(text)) { hubEcho(text); hubLines.push(menuLine); dirty = true; return; }
   }
-  // The rooms playtest (floorplan.mjs): ls, cd, map and the room's verbs, out of a fight. Jacking out mid-fight isn't one.
+  // A server's rooms (floorplan.mjs): ls, cd, map and the room's verbs, out of a fight. On the playtest jacking out
+  // mid-fight isn't one; on the network it's the emergency escape (run.mjs play), and the verbs go through play too.
   if (campaign.rooms) {
     FP.settle(campaign); // a fight that ended: your Signal back on the server, and gear loads again
-    if (text === 'jack out' && active(campaign)) return notice('No jacking out mid-fight. Win it, or lose the pack.', true);
+    if (text === 'jack out' && active(campaign) && campaign.roomsPlay) return notice('No jacking out mid-fight. Win it, or lose the pack.', true);
     const sm = text.match(/^(?:script (\d)|run ([a-z0-9]+))(?: (\S+))?$/);
     if (sm && active(campaign) && campaign.encounter?.rooms) {
       const bag = scriptsOf(campaign), i = sm[1] ? Number(sm[1]) - 1 : bag.findIndex((id) => id === sm[2] || SCRIPTS[id].name.toLowerCase() === sm[2]);
@@ -1046,8 +1050,9 @@ function run(raw) {
       if (w) notice(w.message, true); else if (ok) notice(ev.filter((e) => e.type !== 'rooms-cmd').map((e) => e.message).join(' '));
       dirty = true; return;
     }
+    if (text === 'help' && !campaign.roomsPlay) return notice('Click a room, or type go <room> (go elite 2). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, pack, jack out. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, script <n> runs a script, jack out is the emergency escape.', false, null, true);
     if (text === 'help') return notice('Click a room, or type go <room> (go elite 2). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect, developer bossrule a|b|c. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, script <n> runs a script.', false, null, true);
-    if (!active(campaign)) { const ev = FP.roomsCommand(campaign, text); if (ev) return roomsDone(ev); }
+    if (!active(campaign) && campaign.roomsPlay) { const ev = FP.roomsCommand(campaign, text); if (ev) return roomsDone(ev); }
   }
   // A breach (breach.mjs): ls, cd, tree and the screen's verbs, out of a fight. Jacking out mid-fight isn't one.
   if (campaign.breach) {
@@ -1120,6 +1125,7 @@ function run(raw) {
   if ((wasAlert || events.some((e) => e.type === 'jack-in' || e.type === 'engage')) && active(campaign)) go('combat', events.some((e) => e.type === 'jack-in'));
   else if (events.some((e) => e.type === 'run-start')) go('net', true);
   else if (events.some((e) => e.type === 'jacked-out')) go('map', true);
+  else if (campaign.rooms && module !== 'rooms' && events.some((e) => e.type.startsWith('rooms') && e.type !== 'rooms-out')) go('rooms', true); // a move typed from another page
   else if (campaign.run && module !== 'net' && !events.some((e) => e.type === 'victory') && events.some((e) => e.type.startsWith('net'))) go('net'); // a win stays on its kill screen (the folder listing waits in the terminal)
   else if (text.startsWith('encounter ') && campaign.encounter?.phase === 'alert') { mapSel = 'intrusion'; go('map'); }
   save();
@@ -1170,7 +1176,7 @@ function go(name, quiet = false) {
   // Contextual tabs only exist while there is something there.
   if (name === 'combat' && !active(campaign) && !(campaign.encounter && campaign.encounter.mode === 'run')) name = 'map';
   if (name === 'net' && (!campaign.run || campaign.run.breach || campaign.run.rooms)) name = campaign.breach ? 'breach' : campaign.rooms ? 'rooms' : 'map';
-  if (campaign.rooms && name === 'map') name = 'rooms'; // the rooms playtest: its server is the page
+  if (campaign.roomsPlay && name === 'map') name = 'rooms'; // the rooms playtest: its server is the page
   if (name === 'rooms' && !campaign.rooms) name = 'map';
   if (CAMP && ['map', 'mail', 'server', 'craft', 'store', 'consortium', 'hub', 'net'].includes(name)) name = 'campaign'; // the old game's pages sit out
   if (!CAMP && ['campaign', 'room', 'archive'].includes(name)) name = 'map';
@@ -1441,7 +1447,8 @@ function renderMeters() {
   $('tab-breach').hidden = !campaign.breach;
   document.body.classList.toggle('rooms-page', !!campaign.rooms && module === 'rooms'); // its notices pop up mid-screen
   $('tab-rooms').hidden = !campaign.rooms;
-  document.body.classList.toggle('rooms-mode', !!campaign.rooms); // the rooms playtest: the old game's tabs and meters step aside
+  $('tab-rooms').textContent = campaign.roomsPlay ? 'Server' : 'Run'; // on the network a server's rooms are your run (the Server tab is your home server)
+  document.body.classList.toggle('rooms-mode', !!campaign.roomsPlay); // the rooms playtest: the old game's tabs and meters step aside
   $('tab-campaign').hidden = !CAMP;
   $('tab-archive').hidden = !CAMP;
   $('tab-room').hidden = !CAMP;
@@ -1644,7 +1651,7 @@ function renderPrompt() {
     const R = campaign.rooms, sig = FP.signalNow(campaign), here = FP.hereOf(campaign);
     el.className = 'prompt run ' + V.signalLevel({ integrity: sig, max: R.max });
     el.innerHTML = `<span class="p-sig">[${sig}/${R.max}]</span> <span class="p-loc">${V.esc(R.name || R.id)} ›</span> <span class="p-cwd">${V.esc(here ? here.path : 'outside')}</span>`;
-    $('command-input').placeholder = here ? 'go <room> · wait · ls' : 'connect';
+    $('command-input').placeholder = active(campaign) ? '' : here ? 'go <room> · wait · ls' : campaign.roomsPlay ? 'connect' : '';
   } else if (campaign.breach) {
     const b = campaign.breach, sig = BR.signalOf(campaign), max = BR.maxOf(campaign);
     el.className = 'prompt run ' + V.signalLevel({ integrity: sig, max });
@@ -1811,7 +1818,7 @@ function services() {
   const dt = Math.min(5000, now - lastTick); lastTick = now;
   if (!document.hidden && now - lastInput < 120000 && !playtest && !CAMP) tickPlay(campaign, dt); // and the clock of the level your class is on (Behind)
   const hp = campaign.server.integrity;
-  const events = campaign.breach || campaign.rooms ? [] : [...tickNetwork(campaign, now), ...tickServices(campaign, now)]; // a breach or rooms playtest has no network
+  const events = campaign.breach || campaign.roomsPlay ? [] : [...tickNetwork(campaign, now), ...tickServices(campaign, now)]; // a breach or rooms playtest has no network
   if (campaign.rooms) { const ev = FP.tick(campaign, now); if (ev.length) react(ev); if (module === 'rooms' || ev.length) dirty = true; } // respawn timers count down on the map
   if (events.length) { react(events); save(); }
   // A siege or breach took a bite: the meter says so.
@@ -2462,7 +2469,7 @@ if (CAMP) document.title = 'BLACKBOX · campaign';
 go(active(campaign) ? 'combat' : campaign.breach ? 'breach' : campaign.rooms ? 'rooms' : campaign.run ? 'net' : playtest === 'story' ? 'mail' : CAMP ? 'campaign' : 'map');
 // No intrusion waits at the gate any more: you go to the rogue server to find fights.
 if (campaign.encounter?.phase === 'alert' && campaign.encounter.mode === 'home' && !campaign.encounter.invader) campaign.encounter = null;
-if (!campaign.breach && !campaign.rooms && !CAMP) { const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
+if (!campaign.breach && !campaign.roomsPlay && !CAMP) { const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
 if (!playtest) { if (!campaign.profile || (CAMP && !campaign.camp)) firstLogin(); else shell.boot(); }
 requestAnimationFrame(frame);
 window.blackbox = { get state() { return campaign; }, run };

@@ -26,7 +26,8 @@ import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, i
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
-import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
+import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
+import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
@@ -44,7 +45,7 @@ import { partGenes } from './genes.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 38; // v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 39; // v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -105,6 +106,27 @@ export function fresh() {
     architecture: null, // fortress | hub | lab, picked at server level 20
   };
   initMail(s); // the first LOWLIGHT mail is waiting
+  return bindRooms(s);
+}
+// s.rooms: the server's rooms you're on (floorplan.mjs). On the real save it's the run's server's (netrooms.mjs keeps
+// each server's rooms on its location, loc.floorplan), so it's never saved twice: a getter, left out of the JSON. The
+// rooms playtest sets its own server on it (kept as s.roomsPlay, never saved).
+export function bindRooms(s) {
+  if (!s || Object.getOwnPropertyDescriptor(s, 'rooms')?.get) return s;
+  const own = s.rooms;
+  delete s.rooms;
+  Object.defineProperty(s, 'rooms', {
+    configurable: true, enumerable: false,
+    get() {
+      if (this.roomsPlay) return this.roomsPlay;
+      const r = this.run;
+      if (!r?.rooms || r.loc === 'rooms') return null;
+      const loc = r.loc === CONFIG.zone.id ? this.zone : findLocation(this, r.loc);
+      return loc?.floorplan || null;
+    },
+    set(v) { this.roomsPlay = v; },
+  });
+  if (own) s.roomsPlay = own;
   return s;
 }
 
@@ -719,7 +741,6 @@ export function fxAnswer(s, p = null) {
   }
 }
 // How much one command counts toward calling off a tell (Double Tap, Spectre: twice).
-export const tellWeight = (s) => (fxHas(s, 'tell-hits') ? 2 : 1);
 
 // ---------- blueprints ----------
 export const knows = (s, id) => (s.recipes || []).includes(id);
@@ -1665,6 +1686,7 @@ function engage(s) {
   // Mutex: the part it locks starts the fight behind its shield (sized once the crew has made the virus bigger).
   for (const m of livingParts(s).filter((x) => x.lock)) { const t = part(s, m.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } }
   seeGenes(s, e.virus); // the gene codex: what you fight, you've seen (genome.mjs)
+  prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
 
@@ -1704,7 +1726,41 @@ function payKill(s, e, base, why) {
   // Behind (progression.mjs): a level running past its target pays kills half again until it ends.
   const behind = behindBonus(s, xp);
   if (behind) emit(s, 'behind', `Behind: +${behind} XP.`, { amount: behind });
-  gainXp(s, xp + bonus + hot + read + rested + behind, why, 'fight');
+  gainXp(s, xp + bonus + hot + read + rested + behind, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+}
+
+// A room fight won on the network (netrooms.mjs, docs/servers.md R1): what the kill pays besides its XP. wild: SPRAWL-00
+// or a rogue server, straight into your bank as their folders always paid; otherwise a traced server's, into the run's
+// pack (banked when you jack out, lost if you're disconnected), like a guard's drops. guard: a guard post, an elite, a
+// boss: it rolls like a guard. family: the lineage the kill counts as (contracts, leads, code). Returns what a Pit's
+// second roll needs.
+export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null } = {}) {
+  const v = e.virus, lvl = v.level;
+  contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
+  huntKill(s, family);
+  // A lead toward its family's origin, falling with the level gap like XP (wild viruses and processes, not guards).
+  if (!guard && FAMILIES[family]) { const lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(lvl - hackerLevel(s))) * (v.strain && v.strain === hotStrain(s) ? 1 + HOT.bonus : 1)); if (lead) addLead(s, family, lead); }
+  if (wild) {
+    gainCode(s, codeFrom(s, family, lvl, 'home'), 'Code: ');
+    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: loc?.depth || 1, family, strain: v.strain, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : bounty ? LOOT.rolls.bounty : undefined };
+    const item = rollDrop(s, ctx, lvl);
+    if (item) addItem(s, item);
+    nativeDrop(s, e);
+    if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
+    if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
+    return { more: () => rollDrop(s, { ...ctx, strain: null }, lvl) };
+  }
+  if (!s.run) return {};
+  const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
+  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: loc?.depth || 1, family: loc?.family || family, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : undefined }, lvl);
+  if (item) { s.run.pack.push({ path: `${tag}/drop`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
+  nativeDrop(s, e, true);
+  if (rand(s) < (guard ? DAEMON_DROPS.guard : DAEMON_DROPS.home)) { s.run.pack.push({ path: `${tag}/dm`, name: 'daemon.exe', kind: 'daemon', size: '96k' }); emit(s, 'drop', `${v.name} dropped a daemon. In your pack until you jack out.`, { pack: true }); }
+  if (rand(s) < (guard ? BLUEPRINT_CHANCE.guard : BLUEPRINT_CHANCE.home)) { s.run.pack.push({ path: `${tag}/bp`, name: 'blueprint.bp', kind: 'blueprint', size: '64k' }); emit(s, 'drop', `${v.name} dropped a blueprint. In your pack until you jack out.`, { pack: true }); }
+  const gains = codeFrom(s, family, lvl, src);
+  for (const [m, n] of Object.entries(gains)) s.run.pack.push({ path: `${tag}/code-${m}`, name: `${m}.code`, kind: 'code', size: '8k', material: m, amount: n });
+  if (Object.keys(gains).length) emit(s, 'code', `${v.name} dropped ${Object.entries(gains).map(([m, n]) => `${n} ${MATERIALS[m].name}`).join(' and ')}. In your pack until you jack out.`, { gains, pack: true });
+  return {};
 }
 
 export function finish(s, result) {
@@ -2022,6 +2078,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.degraded = null;
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
+  } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)
+    s.bossRule = text.split(' ')[2];
+    emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
   } else if (/^developer outpost \S+/.test(text)) {
     devOutpost(s, text.split(' ')[2], text.split(' ').slice(3), now);
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
@@ -2335,7 +2394,6 @@ export function hit(s, p, base, opts = {}) {
     p.armor -= heavy ? 2 : 1;
     p.lastDamaged = e.cycle;
     if (!opts.server) classEach('chipped', s, p, heavy ? 2 : 1, opts); // Debris Field (dist/classes)
-    if (e.commanding && !opts.dot) tellHit(s, p, { chits: heavy ? 2 : 1 }); // your command hit it: a tell on it may count it (tells.mjs)
     if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); stripMark(s, p); if (!opts.server) openProc(s, 'stripped', { part: p.id }); }
     emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
     return { dealt: 0, overflow: 0, absorbed: true };
@@ -2410,10 +2468,10 @@ export function hit(s, p, base, opts = {}) {
   // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), ...(lockLost ? { shield: lockLost, lockWas, hp: p.integrity } : {}) });
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
-  // A server room's fight (floorplan.mjs): the interrupt ticks (interrupt.mjs), and the room bodies' own rules on a hit
-  // (families.mjs: a Trojan's Package unpacks). 'gone': the part left the board without breaking.
+  // A server room's bodies' own rules on a hit (families.mjs: a Trojan's Package unpacks). 'gone': the part left the
+  // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
   if (e.rooms && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
-  if (dealt + soaked > 0 && e.virus.tells && e.commanding && !opts.dot) tellHit(s, p, { dealt: dealt + soaked }); // your command hit it: a tell on it may count it, a charge by the burst (tells.mjs; a Mutex lock soaking it still counts)
+  if (e.ticked && dealt > 0) tickHit(s, p, p.integrity + dealt, dealt, opts);
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
   if (w && dealt > 0 && p.integrity > 0 && p.attack.due - e.cycle <= 2) {
@@ -2766,7 +2824,6 @@ function useAbility(s, intent, auto = false) {
   if (id === 'crack') {
     const n = Math.min(a.strip, target.armor);
     target.armor -= n;
-    tellHit(s, target, { chits: n });
     if (n) classEach('chipped', s, target, n, { mine: true });
     if (!target.armor) stripMark(s, target);
     emit(s, 'armor', `Crack: ${target.name} loses ${n} ◆${target.armor ? ` (${target.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: target.id, left: target.armor });
@@ -2789,9 +2846,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `Propagate: ${n} ${n === 1 ? 'burn' : 'burns'} copied to the other parts${livingParts(s).some((p) => p.kind === 'fragment') ? ', fragments at double' : ''}.`, { mark: 'burn', ability: id });
   }
   if (id === 'reroute') {
-    // Every arrival counts as a hit from your command (tells.mjs): a swarm stops a cast in one go.
-    let k = 0;
-    for (const h of e.helpers) { h.target = target.id; const was = [target.integrity, target.armor || 0]; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; tellHit(s, target, { cmd: { id, target: target.id, at: intent.at ?? e.cycle }, key: `rr:${e.cycle}:${s.who || ''}:${k++}`, dealt: was[0] - target.integrity, chits: was[1] - (target.armor || 0) }); }
+    for (const h of e.helpers) { h.target = target.id; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; }
   }
   if (id === 'cron-storm') {
     for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true, src: 'helper' }); if (virusIntegrity(s).current === 0) break; }
@@ -2799,16 +2854,13 @@ function useAbility(s, intent, auto = false) {
   if (id === 'kill-switch') {
     // Supervisor (Operator talent): cashing in your helpers readies Deploy.
     if (hasTalent(s, 'supervisor') && e.readyAt.deploy) { delete e.readyAt.deploy; emit(s, 'proc', 'Supervisor: Deploy is ready.', { ability: 'deploy' }); }
-    const reached = new Set(), was = new Map(livingParts(s).map((p) => [p.id, [p.integrity, p.armor || 0]])); // what it does to each part counts toward a burst there
     for (const h of e.helpers.splice(0)) {
       const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s);
       // Last Gasp comes with it, so cashing in early loses nothing. On armor each hit it had left breaks a ◆ first,
       // as it would have, and the rest land at once.
       let n = h.left + (edge(s, 'operator') ? 1 : 0);
-      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true, src: 'helper' }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true, src: 'helper' }); reached.add(t); }
+      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true, src: 'helper' }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true, src: 'helper' }); }
     }
-    // Each part it cashes in on takes it as a hit from your command (tells.mjs): it calls a charge off there.
-    for (const t of reached) if (alive(t)) { const [hp, ar] = was.get(t.id) || [t.integrity, t.armor || 0]; tellHit(s, t, { cmd: { id, target: t.id, at: intent.at ?? e.cycle }, key: `ks:${e.cycle}:${s.who || ''}:${t.id}`, dealt: hp - t.integrity, chits: ar - (t.armor || 0) }); }
   }
   if (id === 'keepalive') {
     // Every burn on it ticks once now (without using itself up), then runs longer.
@@ -3456,7 +3508,7 @@ function syncBonus(s, intent) {
   const t = intent?.target && part(s, intent.target);
   let what = '';
   if (cls === 'breaker' && alive(t) && t.armor > 0) {
-    t.armor--; t.lastDamaged = e.cycle; tellHit(s, t, { chits: 1 });
+    t.armor--; t.lastDamaged = e.cycle;
     if (!t.armor) t.patchAt = e.cycle + patchDelay(s);
     emit(s, 'armor', `Sync breaks 1 ◆ on the ${t.name}${t.armor ? ` (${t.armor} left)` : '. Its armor is broken'}.`, { target: t.id, left: t.armor });
     what = 'a ◆ cracks';
@@ -3748,9 +3800,9 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
-    const s = structuredClone(raw);
+    const s = bindRooms(structuredClone(raw));
     const was = s.version;
     // v23: the Sysadmin is the Bastion now. Its level, tree and bar come along.
     // Smash is Flood now: on the bar and anything keyed by it.
@@ -3891,6 +3943,7 @@ export function restore(raw) {
     if (!Number.isFinite(s.rng)) s.rng = 0x2545f491;
     s.loadout.equipped ||= {};
     for (const l of s.locations || []) { l.template ||= 'relay'; l.depth ||= 1; reclaimCheck(l); }
+    hooks.roomsRestore?.(s, was); // v39: every server you'd found is a room graph (netrooms.mjs)
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;

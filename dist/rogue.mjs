@@ -16,7 +16,7 @@ export const ROGUE = {
   share: 1 / 6, // of servers you trace
   pity: 5, // after this many in a row that aren't, the next one is
   firstTame: 2, // the first two servers you trace are never rogue
-  kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every folder in one run for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds /core, back an hour after it falls. Two folders of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
+  kinds: { nest: { name: 'Nest', rule: 'Holds one family only, and strains turn up twice as often.' }, pit: { name: 'Pit', rule: 'Holds mixed families 2 levels above the server, with better drops.' }, gauntlet: { name: 'Gauntlet', rule: 'Clear every room in one run for a bonus cache.' }, farm: { name: 'Crew dungeon', rule: 'Built for a crew. Three bosses, and the third behind a key the first two hold.' }, lair: { name: 'Lair', rule: "Its network's native boss holds the Core, back an hour after it falls. Two rooms of its family guard the way." } }, // farm: KESSLER-FARM-00 only; lair: a network's (network.mjs). Never rolled
   rooms: ['hive', 'pit', 'spool', 'cells', 'drain', 'nursery', 'crypt', 'sump', 'rack', 'void'],
   respawnMs: [180000, 300000], // 3–5 minutes
   pitLevels: 2,
@@ -97,7 +97,7 @@ export function rogueSpawns(s, loc, now = clock()) {
     if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37, native).strain; // twice the chances
     const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].stem.toLowerCase(); // a build's name or the body's stem, as the fight is named
     const elite = loc.rogue.kind === 'pit' && seeded(seed ^ 0x51ed)() < ELITE.share; // group content
-    loc.spawns[room] = { alive: true, family, level, seed, strain, grade, ...(elite ? { elite: true } : {}), name: `${elite ? 'elite ' : ''}${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+    loc.spawns[room] = { alive: true, bornAt: now, family, level, seed, strain, grade, ...(elite ? { elite: true } : {}), name: `${elite ? 'elite ' : ''}${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
 }
@@ -180,8 +180,8 @@ function farmSpawns(s, loc, now) {
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     if (d.boss === 'coldwallet') delete loc.state.unlocked['/ledger']; // the ledger locks again when its keeper is back
     loc.spawns[room] = d.boss
-      ? { alive: true, family: BOSSES[d.boss].family, boss: d.boss, level: loc.level, seed, elite: true, eliteHp: 1, name: d.name }
-      : { alive: true, family: d.family, level: loc.level, seed, elite: true, eliteHp: FARM.packHp, name: `elite ${d.name}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+      ? { alive: true, bornAt: now, family: BOSSES[d.boss].family, boss: d.boss, level: loc.level, seed, elite: true, eliteHp: 1, name: d.name }
+      : { alive: true, bornAt: now, family: d.family, level: loc.level, seed, elite: true, eliteHp: FARM.packHp, name: `elite ${d.name}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
 }

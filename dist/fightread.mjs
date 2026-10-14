@@ -36,11 +36,11 @@ function afterOf(s) {
   if (on.length) return ` Leaves you ${join(on)}.`;
   return off ? ` Takes ${off}.` : '';
 }
-// In a server room (interrupt.mjs): its part's next tick cancels the move on the cycle it lands.
+// The interrupt (interrupt.mjs): its part's next tick, crossed on the cycle it lands, cancels it.
 function cutOf(s, p) {
-  const e = s.encounter, t = e?.rooms && p && !p.core ? nextTick(p) : null;
-  if (!t || (e.cutBudget != null && e.cutBudget <= 0)) return '';
-  return `, or take it under ${pct(t.at)} the cycle it lands`;
+  const e = s.encounter, t = e?.ticked && p && !p.core ? nextTick(p) : null;
+  if (!t || (e.cutBudget != null && e.cutBudget <= 0)) return null;
+  return t;
 }
 // The window, in the board's words: this cycle, in 2 cycles, now until it lands, from next cycle until it lands.
 function windowWords(i, c) {
@@ -79,12 +79,13 @@ function landsLine(s, i, p, to) {
 }
 // Line 2: how to stop it, under the rule that applies here, and when.
 function stopLine(s, i, p, c) {
-  const name = p?.name || 'part', cut = cutOf(s, p);
-  if (i.tell === 'charge') return `Deal ${i.left ?? i.need} to the ${name}${i.chits ? `, or break ${i.chits} ◆ on it` : ''}${cut}. Window: ${windowWords(i, c)}.`;
-  if (i.tell === 'cast') return `SIGINT, or hit the ${name} ${times(Math.max(1, i.left ?? i.need ?? 2))}${cut}. Window: ${windowWords(i, c)}.`;
-  if (i.tell === 'seal') return p?.armor > 0 ? `Strip its ${p.armor} ◆ before it lands ${when(c)}${cut}.` : `It fails while the ${name} wears no ◆. Keep it stripped until it lands ${when(c)}.`;
+  const name = p?.name || 'part', t = cutOf(s, p), under = t ? `take the ${name} under ${pct(t.at)}` : '';
+  const armor = p?.armor > 0 ? ` (its ${p.armor} ◆ first, or pierce)` : '';
+  if (i.tell === 'charge') return t ? `Cut it: ${under} ${when(c)}${armor}.` : `No tick left on the ${name}: soften it with ◆, a shield or Brace, or break the ${name} first.`;
+  if (i.tell === 'cast') return `SIGINT${t ? `, or ${under}` : ''}. Window: ${windowWords(i, c)}.`;
+  if (i.tell === 'seal') return p?.armor > 0 ? `Strip its ${p.armor} ◆ before it lands ${when(c)}.` : `It fails while the ${name} wears no ◆. Keep it stripped until it lands ${when(c)}.`;
   if (i.tell === 'lock') return `Break the ${name} before it lands ${when(c)}, or feed it a skill that is cooling anyway.`;
-  return `Fire no direct hit on its beat (${when(c)}): a debuff, a strip, a burn or a shield${cut}.`;
+  return `Fire no direct hit on its beat (${when(c)}): a debuff, a strip, a burn or a shield${t ? `, or ${under} then` : ''}.`;
 }
 // The tooltip: "Name: line 1\nline 2". The chip itself carries the kind, the timing, the number and the answer's verb.
 export function tellTip(s, i, c = i.col, to = null) {

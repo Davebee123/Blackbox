@@ -2,8 +2,11 @@ import test from 'node:test';
 import { HIDDEN, hiddenNodes } from './dist/hidden.mjs';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, part } from './dist/combat.mjs';
-import { play, connect, currentLocation } from './dist/run.mjs';
+import { play, connect, currentLocation, LEGACY } from './dist/run.mjs';
 import * as runMod from './dist/run.mjs';
+// The old file-system run (layouts, passwords, Trace): since R1 nothing in the game reaches it (a connect plays the
+// server as rooms: netrooms.test.mjs), and R5 deletes it with these tests. Until then they keep it covered.
+LEGACY.files = true;
 import { CONFIG } from './dist/data.mjs';
 import { codeOf, vaultCode } from './dist/gear.mjs';
 import { FRESH as __FRESH } from './dist/combat.mjs';

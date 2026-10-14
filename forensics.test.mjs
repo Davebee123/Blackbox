@@ -7,6 +7,9 @@ import { sweepPuzzle, sweepKind, SWEEP } from './dist/forensics.mjs';
 const locAt = (depth, seed) => ({ seed, depth, owner: 'Vance', family: 'worm', deeper: 'ransomware', level: 5, state: {} });
 const col = (p, name) => p.cols.indexOf(name);
 
+// The old file-system run (run.mjs LEGACY.files): since R1 a connect plays the server as rooms, and nothing in the
+// game reaches the file system; R5 deletes it with these tests. Until then they keep it covered.
+const legacyRun = async (t) => { const { LEGACY } = await import('./dist/run.mjs'); LEGACY.files = true; t.after(() => { LEGACY.files = false; }); };
 test('about half the servers keep an incident file, of three kinds', () => {
   const kinds = {};
   for (let seed = 1; seed <= 400; seed++) { const k = sweepKind(locAt(1, seed)) || 'none'; kinds[k] = (kinds[k] || 0) + 1; }
@@ -42,7 +45,8 @@ test('every puzzle has one right answer among three suspects, and its trick hold
   assert.deepEqual(sweepPuzzle(locAt(2, 7)), sweepPuzzle(locAt(2, 7)));
 });
 
-test('sweeping on a run: wrong guesses shrink the lead, a right one lands once', () => {
+test('sweeping on a run: wrong guesses shrink the lead, a right one lands once', async (t) => {
+  await legacyRun(t);
   let s, loc;
   for (let k = 1; k < 50; k++) {
     s = fresh(); s.seed = k; s.tutorialCompleted = true;

@@ -20,12 +20,15 @@ export const TIME = { cycle: 8, move: 6, act: 4, home: 2 };
 export const NEED = { process: 0.32, elite: 0.6, guard: 0.38, core: 0.8, hunter: 0.6, margin: 0.06, low: 0.35 };
 
 // A room fight played out by the planner (and a script when it's worth it). Returns the cycles.
+export const TRACE = { fn: null }; // a sim's eye on each command (scratch tracing)
 export function fightOut(s, max = 90) {
   let n = 0;
   for (; n < max && active(s); n++) {
     botScript(s);
     if (!active(s)) break;
-    command(s, planner(s) || 'hold');
+    const text = planner(s) || 'hold';
+    TRACE.fn?.(s, text);
+    command(s, text);
     resolveCycle(s);
   }
   if (active(s)) finish(s, 'crashed'); // a stalemate counts as a loss
@@ -45,7 +48,7 @@ function botScript(s) {
   if (i < 0 && big && e.cycle >= 6) i = at(['conficker', 'meltdown', 'mirai', 'ripple20']);
   if (i >= 0) runScript(s, i);
 }
-const sig = (s) => s.rooms.signal / Math.max(1, s.rooms.max);
+const sig = (s) => FP.sigOf(s) / Math.max(1, s.rooms.max); // the playtest's Signal, or the run's on the network
 const needOf = (s, room) => (room.kind === 'core' ? NEED.core : room.kind === 'elite' || room.mirror ? NEED.elite : room.kind === 'guard' ? NEED.guard : NEED.process);
 // What the bot walks to next, and the path there. null: jack out.
 export function botTarget(s) {
@@ -75,6 +78,7 @@ export function botTarget(s) {
     else if (blockers.has(room.id) && up && can(room)) v = 8.5;
     else if (room.kind === 'vault' && !R.opened[room.id] && R.visit.keys.includes(room.id)) v = 10;
     else if (room.kind === 'core' && up && f >= NEED.core) v = 8;
+    else if (room.wild && up && can(room) && FP.WORLD.view?.fightNote?.(s, room)?.startsWith('A named')) v = 8; // a contract's named target (netrooms.mjs)
     else if (!R.cleared[room.id] && (!up || can(room)) && room.kind !== 'core') v = up ? 5 : 6;
     else if (room.kind === 'cache' && FP.cacheFull(s, room)) v = 3;
     else if (up && can(room) && room.kind !== 'core') v = 2;
@@ -95,7 +99,7 @@ export function botStep(s) {
     return true;
   }
   if (here.kind === 'cache' && FP.cacheFull(s, here) && !(here.mirror && sig(s) < NEED.elite + NEED.margin)) { FP.act(s, 'cat'); if (!(FP.isBait(s, here) && sig(s) < 0.5)) { FP.act(s, 'pull'); return true; } }
-  if (here.kind === 'vault' && !R.opened[here.id] && R.visit.keys.includes(here.id)) { FP.act(s, 'open'); return true; }
+  if (here.kind === 'vault' && !FP.opened(s, here) && R.visit.keys.includes(here.id)) { FP.act(s, 'open'); return true; }
   if (here.kind === 'rest' && !R.visit.rested && sig(s) < 0.85) { FP.act(s, 'rest'); return true; }
   const rest = FP.roomList(s).find((x) => x.kind === 'rest');
   if (sig(s) < NEED.low && (!rest || R.visit.rested)) return false;

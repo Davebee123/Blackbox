@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, selectEncounter, syncServer, part, knowsPart } from './dist/combat.mjs';
 import { play, layoutOf } from './dist/run.mjs';
+import * as FP from './dist/floorplan.mjs';
 import { createVirus, BOSSES } from './dist/data.mjs';
 import { GENES } from './dist/genes.mjs';
 import { geneState, codexCount, genomeCard, cardLines, virusGenes } from './dist/genome.mjs';
@@ -22,28 +23,29 @@ test('names and bylines: WARDED CRYPTJACK-4821 v2 · TOLLGATE, a named build kee
   assert.deepEqual(v.genes.map((g) => `${g.id}:${g.src}`), ['surge:core', 'encrypt:core', 'ward:rolled', 'hasty:rolled', 'linked:grade']);
   assert.equal(createVirus('hashrat', 193, { threat: 20, grade: 2, mutation: 'armored' }).name, 'HASHRAT-0193 v2');
   assert.equal(createVirus('random', 7, { family: 'worm', threat: 12, genes: [] }).name, 'SPLINTER-0007');
-  // The fight on a run carries its file's tag, and the HUD the byline in the author's colour.
+  // The fight on a run carries its spawn's tag (SPRAWL-00's rooms are its folders: netrooms.mjs), and the HUD the
+  // byline in the author's colour.
   const s = at(12);
   play(s, 'connect sprawl'); play(s, 'cd tmp');
-  const file = s.logs.findLast((e) => e.type === 'net-ls').entries.find((x) => x.kind === 'virus').name.replace(/\.exe$/, '');
+  const file = s.zone.spawns['/tmp'].name;
   assert.match(file, /^(cryptjack|splinter|ghostroot)-\d{4}$/);
   play(s, 'attack');
   assert.ok(s.encounter.virus.name.endsWith(file.toUpperCase()), `${s.encounter.virus.name} for ${file}`);
   assert.equal(s.encounter.virus.author, null, 'SPRAWL-00 is nobody\'s');
   assert.doesNotMatch(hudMarkup(s), /class="byline"/);
-  // A traced server's guard is its family's crew's; a faction's server is the faction's; ICE is Kestrel's.
+  // A traced server's guard post is its family's crew's; a faction's server is the faction's; ICE is Kestrel's.
   const t = at(12);
   command(t, 'developer location worm');
   const loc = t.locations.find((l) => !l.zone);
-  const guarded = Object.keys(layoutOf(loc)).find((k) => layoutOf(loc)[k].guard);
-  play(t, 'connect ' + loc.id); play(t, 'cd ' + guarded.slice(1));
+  const toGuard = () => { const R = t.rooms, g = R.graph, post = Object.values(g.rooms).find((r) => r.kind === 'guard'); R.at = FP.neighbours(g, post.id)[0]; R.screen = null; FP.go(t, post.id); FP.act(t, 'engage'); };
+  play(t, 'connect ' + loc.id); toGuard();
   assert.equal(t.encounter.virus.author, ['bouncer', 'tracer', 'sentinel'].includes(t.encounter.virus.family) ? 'kestrel' : 'swarmline');
   assert.match(hudMarkup(t), /class="byline"[^>]*>· (SWARMLINE|Kestrel)</);
   play(t, 'jack out');
   loc.faction = 'glassjaw'; loc.lockUntil = 0;
-  for (const k of Object.keys(loc.state.cleared || {})) delete loc.state.cleared[k];
+  for (const k of Object.keys(loc.floorplan.down)) delete loc.floorplan.down[k];
   t.encounter = null;
-  play(t, 'connect ' + loc.id); play(t, 'cd ' + guarded.slice(1));
+  play(t, 'connect ' + loc.id); toGuard();
   if (!['bouncer', 'tracer', 'sentinel'].includes(t.encounter.virus.family)) assert.equal(t.encounter.virus.author, 'glassjaw');
 });
 
@@ -101,17 +103,17 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
   assert.match(card.message, /Its body carries (two attack types you haven't seen|an attack type you haven't seen)/);
   assert.match(netTranscript(s), /class="scan-card"/);
   assert.equal(s.encounter, null, 'scanning starts nothing');
-  // Scan a folder next door on a traced server: its guard, and the Trace.
+  // Scan a room next door on a traced server (no Trace since R1: the break-in Trace is cut).
   const t = at(12);
   command(t, 'developer location ransomware');
   const loc = t.locations.find((l) => !l.zone);
   play(t, 'connect ' + loc.id);
-  const kid = layoutOf(loc)['/'].dirs.find((d) => layoutOf(loc)['/' + d]?.guard);
+  const R = t.rooms, kid = FP.neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).find((r) => FP.isUp(t, r) && r.kind !== 'core');
   if (kid) {
-    const trace = t.run.trace || 0;
-    play(t, 'scan ' + kid);
-    assert.ok(t.logs.findLast((e) => e.type === 'net-scan'), 'the guard\'s card');
-    assert.equal(t.run.trace, trace + 4);
+    const sig0 = t.run.integrity;
+    play(t, 'scan ' + kid.dir);
+    assert.ok(t.logs.findLast((e) => e.type === 'net-scan'), 'its card');
+    assert.equal(t.run.integrity, sig0 - 1);
   }
   // An Infiltrator: free and quiet, the rules of genes it hasn't decoded, and its inspect reads them in that fight.
   const i = at(12, 'infiltrator');
@@ -156,10 +158,10 @@ test('HASHLORD and MIRRORSHADE hold /core from their floors: the lair opens at 8
   assert.ok(lair && lair.lair === boss);
   assert.equal(rogueSpawns(s, lair, Date.now())['/core'], undefined, 'no HASHLORD at 10');
   assert.ok(rogueSpawns(s, lair, Date.now())['/outer']?.alive, 'its folders are open');
-  assert.match(networkLines(s, 'you').join(' '), /holds \/core from level 16/);
-  play(s, 'connect lair'); play(s, 'cd core');
-  const why = play(s, 'attack').map((e) => e.message).join(' ');
-  assert.match(why, /isn't in yet\. It holds \/core from level 16/);
+  assert.match(networkLines(s, 'you').join(' '), /holds the Core from level 16/);
+  play(s, 'connect lair');
+  const why = play(s, 'cd core').map((e) => e.message).join(' ');
+  assert.match(why, /The Core is sealed\. HASHLORD holds it from level 16/); // its Core room (netrooms.mjs)
   play(s, 'jack out');
   s.hackers.breaker.level = 16;
   assert.equal(rogueSpawns(s, lair, Date.now())['/core']?.boss, 'nb-hashlord');

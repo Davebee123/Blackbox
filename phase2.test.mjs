@@ -95,37 +95,40 @@ test('never-connected finds are capped at ten: the oldest drops off the map', as
   assert.equal(s.locations.filter((l) => l.fresh || l.unseen).length, FIND_CAP);
 });
 
-test('root access: log rotations bring a process and a cache; clearing them raises Root, which pays off', async () => {
+// Since R1 (docs/servers.md 2.8) respawns are what rotations were: Root counts the respawned fight rooms you clear on a
+// server you hold (5 for Root 2, 15, 30, 50), and a server on rooms never rotates.
+test('root access: respawned fight rooms cleared on a server you hold raise Root, which pays off', async () => {
   const R = await import('./dist/root.mjs');
-  const { play, layoutOf, fileInfo } = await import('./dist/run.mjs');
+  const FP = await import('./dist/floorplan.mjs');
+  const { play } = await import('./dist/run.mjs');
   const { liveCount } = await import('./dist/memory.mjs');
   const { slotsOf: outpostPorts } = await import('./dist/outpost.mjs');
-  const { effLevel } = await import('./dist/firewall.mjs');
-  const { tickServices, hooks } = await import('./dist/combat.mjs');
+  const { tickServices } = await import('./dist/combat.mjs');
   const s = at(8);
   const loc = addLocation(s, 'worm', 1); loc.detached = false; delete loc.fresh; loc.takenOver = true;
   assert.equal(R.rootOf(loc), 1);
-  const used = liveCount(s);
-  tickServices(s, 0); // arms the first rotation
-  assert.equal(loc.root.nextAt, R.ROOT.firstMs);
-  tickServices(s, R.ROOT.firstMs);
-  const p = R.procOf(loc, R.ROOT.firstMs + 1);
-  assert.ok(p && p.room !== '/', 'a process moved in');
-  assert.ok(layoutOf(loc)['/'].files.includes(R.CACHE_FILE), 'and a rotated cache');
-  assert.equal(fileInfo(loc, '/', R.CACHE_FILE).kind, 'credits');
-  // Clear it: Root 2, and /root opens.
-  hooks.now = () => R.ROOT.firstMs + 1;
-  s.run = { loc: loc.id, cwd: p.room, integrity: 999, max: 999, pack: [], visited: ['/'] };
-  play(s, 'attack'); assert.equal(s.encounter.process, loc.id);
-  win(s);
-  assert.equal(R.rootOf(loc), 2);
-  assert.ok(layoutOf(loc)['/root'], '/root opens at Root 2');
-  // Root 3: off your memory; Root 4: a port; Root 5: firewall +3.
-  const fw = effLevel(s, 0, null, loc), ports = outpostPorts(loc);
-  loc.root.level = 3; assert.equal(liveCount(s), used - 1);
+  assert.deepEqual(R.ROOT.need.slice(2), [5, 15, 30, 50]);
+  play(s, 'connect ' + loc.id);
+  tickServices(s, R.ROOT.firstMs + 1);
+  assert.equal(R.procOf(loc), null, 'no log rotation on rooms: its rooms respawn instead');
+  const Rm = s.rooms, g = Rm.graph, room = Object.values(g.rooms).find((x) => x.kind === 'process');
+  const clearIt = () => { delete Rm.down[room.id]; Rm.at = FP.neighbours(g, room.id)[0]; Rm.screen = null; FP.go(s, room.id); FP.act(s, 'engage'); win(s); FP.settle(s); s.run.integrity = s.run.max; };
+  clearIt();
+  assert.equal(loc.root?.cleared || 0, 0, 'a first clear is progress, not Root');
+  for (let k = 0; k < 5; k++) clearIt();
+  assert.equal(R.rootOf(loc), 2, 'five respawned rooms cleared: Root 2');
+  const stash = Object.values(g.rooms).find((x) => x.kind === 'stash');
+  assert.ok(stash && FP.neighbours(g, g.core).includes(stash.id), 'a stash room opens by the Core');
+  Rm.at = stash.id; Rm.screen = null;
+  const before = s.run.pack.length;
+  FP.act(s, 'pull');
+  assert.equal(s.run.pack.length, before + 1, 'its code into your pack');
+  assert.equal(FP.cacheFull(s, stash), false, 'and it fills again later');
+  // Root 3: off your memory, no invasions; Root 4: a port; Root 5: its rare spawns twice as often.
+  const ports = outpostPorts(loc), held = liveCount(s); // (its kills' leads may have found more servers by now)
+  loc.root.level = 3; assert.equal(liveCount(s), held - 1);
   loc.root.level = 4; assert.equal(outpostPorts(loc), Math.min(6, ports + 1));
-  loc.root.level = 5; assert.equal(effLevel(s, 0, null, loc), fw + 3);
-  delete hooks.now;
+  loc.root.level = 5; assert.equal(FP.WORLD.rare(s), 2);
 });
 
 test('Fresh: the first XP of a kind other than fighting that you haven\'t earned in 20 minutes of play pays half again (up to a kill); nothing fades', async () => {

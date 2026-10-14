@@ -826,6 +826,65 @@ What the numbers say: a process fight costs 12–23% of the bar (the doc's 20–
 - *The playtest's ×10 clock* also speeds the rest at home and the 30-second reconnect wait.
 - *Who writes a server*: by kind unless `&author=` says otherwise (Mailhub TOLLGATE, Relay SWARMLINE, Mirror PALEMASK, Archive GLASSJAW, Lab LANTERN). Every family the author writes and that is open at the server's level turns up in at least one room.
 
+### 9.5 What shipped: R1
+
+**Play it:** the real game. A new character connects to SPRAWL-00 from level 1 and every server plays as rooms on the **Run** tab (the strip, Schematic HD, the pop-up cards, Wait and Jack out); home, the network map, mail, the loadout, invasions, the firewall and hubs are as they were. `developer location ransomware` (with `?dev`) traces a server to try a traced one at once; `developer bossrule a|b|c` switches the boss rule. An existing save moves to rooms when it loads. `?playtest=rooms` stays as R0's dev page (its own server, never saved, clocks ×10). GAME_RULES.md ("Runs: servers as rooms (R1)", "Root access", "Tells") and README.md describe it as built. Code: `dist/netrooms.mjs` (new), `dist/floorplan.mjs` (its world mode: the `WORLD` hooks), `dist/run.mjs` (connect, the pack and `bank`, the terminal on rooms), `dist/interrupt.mjs` and `dist/tells.mjs` (3.5), `dist/root.mjs`, `dist/mail.mjs`; tests in `netrooms.test.mjs` (new) and the old files ported to rooms; the bots in `bot.mjs`, `roomsim.mjs` and `farmsim.mjs` walk rooms.
+
+**In it:** the R1 row of 9.1.
+- *Servers as rooms.* A traced server is the R0 generator's graph from its seed: its template is its kind (relay Relay, mailhub Mailhub, mirror Mirror, archive Archive, lab Lab), its family's crew (or its faction) the author, its layer the floor, its size its own. Its guard post holds the vault's key; the vault holds what its old vault did (a protocol kit, code, a trace record, plans, blueprints, source, a contract's planted file), all into the pack when it opens; the Resident waits in the Core. Beat it with the vault open and the server is taken over (teal on the map, its Core quiet for good). SPRAWL-00, rogue servers (Nest, Pit, Gauntlet), lairs and KESSLER-FARM-00 are their folders as rooms, linked as the folder tree and named for what they are (Process 2, Elite 1, Core; the folder still answers `cd`), every room a fight on its folder's own spawn and timer; RELAY-KING's `/net/relay` and a lair's `/core` are Cores; the farm's packs are elite rooms, its three crew bosses boss rooms (♛), its ledger a vault that opens once the Foreman and the Heatsink are down. Progress (Rooms n/N, Mapped and its reward, what's opened and taken) lives on the server in the save.
+- *Clocks* run at real speed: a process room 15 minutes, a guard post 20, an elite 45 (2.7, 10.8); a wild server keeps its folders' timers (SPRAWL-00 90 seconds, a rogue folder 3–5 minutes).
+- *Takeover and Root* (2.8). Root counts respawned fight rooms cleared on a held server: Root 2 after 5 (a stash room opens beside the Core), 3 after 15 (no memory, no invasions), 4 after 30, 5 after 50 (rare spawns twice as often). Root 4's "one more socket room" is R2: until then it's the old building slot.
+- *Tells simplified* (3.5): every solo fight carries the interrupt (crew bosses and the breach build keep their own rules); tells are the big moves (none to level 5, one from 6, two from 17, an elite one more); the burst, the windows by tier, landing plain and the bots' burst bookkeeping are gone; a charge is cut on its cycle, a cast SIGINTed or cut in its two-cycle window. The bots cut big moves first (never into a Mimic's beat) and leave a boss's ♛ part for last while its phases remain. Linked tells are R4.
+- *The boss rule* is (a) everywhere; `developer bossrule a|b|c` switches it.
+- *The terminal* on rooms: `ls`, `cd` (a room's name or slug, a folder path on a wild server: `cd var`, `cd /var/log`), `cd ..`, `map`, `go`, `wait`, `back`, `engage` (`attack`), `cat`, `pull`, `open`, `force`, `rest`, `slip`, `scan [room]`, `pack`, `help`, `jack out` (mid-fight the emergency escape, as before) and `connect`. The crew's `split`, `link`, `goto` and `regroup` walk rooms; SPRAWL-00's `ls` says who else is in each room.
+- *Contracts* point at rooms: clear N new rooms on a server, map a server, take one over, recover a vault's file. LOWLIGHT's initiate storyline plays from level 1: claimjack waits in a SPRAWL-00 room (never the sealed Core).
+- *The save* (v39), in place: every server you'd found becomes rooms from its seed; a held one starts with its vault opened and its Resident beaten, stays held, keeps its Root (counting from where its level begins) and gets its stash room at Root 2; a run in flight on the old file system banks its pack. Buildings and outposts stay as they are.
+
+**The level-1 sim** (`bot.mjs`, the pacing bot: a fresh character through the real commands, walking each server's rooms with the rooms bot, resting to full at home, six seeds a class; `node bot.mjs <class> 10 <seed>`). The 7.2 targets: 1 hour to level 5, 2.7 to 10, 9 to 20.
+
+| Class | Minutes a level, 1→2 … 9→10 | Hours to 5 | Hours to 10 | Room fights won | Time resting |
+|---|---|---:|---:|---:|---:|
+| Breaker | 5 / 12 / 10 / 11 / 18 / 18 / 20 / 30 / 29 | 0.63 | 2.52 | 96% | 30% |
+| Bastion | 5 / 13 / 15 / 22 / 24 / 15 / 16 / 25 / 22 | 0.91 | 2.58 | 96% | 28% |
+| Infiltrator | 3 / 9 / 11 / 17 / 21 / 30 / 24 / 28 / 40 | 0.67 | 3.04 | 96% | 38% |
+| Operator | 4 / 11 / 4 / 16 / 12 / 19 / 27 / 25 / 28 | 0.60 | 2.45 | 99% | 29% |
+
+To level 20 (three seeds): Breaker 5.9 hours, Bastion 11.7, Infiltrator 8.5, Operator 7.6: the Bastion slows from 13 (a Warden's kills are slow alone), twice the Breaker's time; an earlier three-seed run had it at 9.8. The XP mix to 20: fights 52–67%, break-ins (first clears, Mapped, first runs) 28–30%, intel 5–10%, build (a held server's respawns) 4–9%.
+
+Its room fights by kind (wins, and Signal lost a won fight), levels 1–5 and 6–10: SPRAWL-00's strays at your level 96–100% at 15–22% (a level over: 58–100% at 40–49%); a traced server's process rooms at 6–10 96–100% at 7–17%, its guard posts 97–100% at 7–26%, its elites 89–100% at 4–36%, the Resident 76–100% at 10–44%. Servers trail your level a little, so most of them cost less than a same-level fight.
+
+**The rooms sim** (`roomsim.mjs`, R0's: medium servers built at your level, six a class, rule a, the subclass a player picks first at 10): the same-level check of 9.1.
+
+| Level | Class | Mapped | Fights won | Signal lost: process / elite / guard / boss / hunter | Min to Mapped (visits) |
+|---|---|---:|---:|---|---|
+| 3 | Breaker | 100% | 91% | 17 / 50 / 22 / 19 / 42% | 54 (8.3) |
+| 3 | Bastion | 67% | 83% | 21 / 38 / 23 / 35 / 21% | 40 (6.0) |
+| 3 | Infiltrator | 100% | 97% | 26 / 36 / 25 / 26 / 27% | 33 (5.3) |
+| 3 | Operator | 83% | 88% | 24 / 44 / 25 / 38 / 25% | 43 (7.0) |
+| 6 | Breaker | 100% | 84% | 36 / 37 / 16 / 20 / 24% | 39 (6.5) |
+| 6 | Bastion | 100% | 92% | 27 / 20 / 4 / 7 / 15% | 29 (4.2) |
+| 6 | Infiltrator | 100% | 95% | 37 / 26 / 26 / 47 / 41% | 50 (7.7) |
+| 6 | Operator | 100% | 93% | 29 / 38 / 19 / 33 / 35% | 34 (5.7) |
+| 10 | Breaker (Demolitionist) | 100% | 86% | 37 / 35 / 18 / 32 / 38% | 56 (9.7) |
+| 10 | Bastion (Warden) | 100% | 96% | 20 / 26 / 10 / 24 / 16% | 27 (3.3) |
+| 10 | Infiltrator (Payload) | 100% | 100% | 21 / 41 / 14 / 26 / 22% | 23 (4.3) |
+| 10 | Operator (Herder) | 100% | 97% | 26 / 30 / 23 / 33 / 15% | 31 (5.0) |
+
+What the numbers say: the climb to 10 lands on 7.2 (2.5–3.0 hours against 2.7; level 5 a little early, 0.6–0.9 hours against 1), and in play nearly every fight is won. To 20 it spreads (5.9–11.7 hours against 9): the Bastion falls behind past 13. The same-level gate holds for the Bastion, the Infiltrator and the Operator at 10 (20–26% a process, 96–100% won, 3–5 visits), and for every class at 3. It doesn't for the Breaker at 6 and 10 (36–37% a process fight, 84–86% won, 7–10 visits) or the Infiltrator at 6 (37%); R0 had the Breaker at 28% at 6 and 27% at 10: the Breaker's base kit and the Demolitionist can't cut a charge on an Encryptor wearing ◆5 in time, and an Encrypt left to stack does the rest. R0 measured the Breaker at 9–10 visits too. A kit pass for the interrupt is the fix (below).
+
+**Balance tests re-baselined** to what the interrupt in every fight measures, each with its numbers in its test: the tells gap (`balance.test.mjs`: about 5 points of Signal at 10, 2 at 18, 1 at 30 now, since both bots cut the big attacks; it was 17 under the burst), HASHLORD and MIRRORSHADE's band (they hit harder: dmg 1.5 and 1.15), the kit spreads, core rotations and second presets (`kits-balance.test.mjs`), the natives' floor, the Hijacker in a crew, and the SPRAWL-only climb. Mass Mailer and Infest hatch one fewer, a charge rests 7 cycles, the after-effects are lighter (Offline 1 cycle, Corrupted 3–4%, Hung retired).
+
+**Where R1 differs from the doc, and why:**
+- *SPRAWL-00 has five rooms of strays and a Core, not "floor 1's entry"* (floors are R3). Its folders are the room tree, named for what each room is (Process 1–5, the Core: never a folder path on screen, in `ls`, the log, mail or presence), and `cd var`, `cd /var/log` and `cd ..` still walk them by their folders; its strays are a lighter room size (`ROOMS.size.stray`: a plain virus's Integrity, 80% of its hits) because levels 1–5 are where the ticks are learned.
+- *Wild servers keep their own timers and payouts* (straight into your bank, as their folders always paid); only traced servers' kills go in the pack.
+- *Root 4* is the old building slot until sockets (R2); Root 3 keeps "no memory" too, since memory is still on.
+- *The terminal* has no `ls -a`, `unlock`, `sweep`, `tap`, `spoof` or `pwd` on rooms: passwords, the Trace and quirk folders went with the file system; the log sweep comes back as a terminal room later; the run skills (Tap, Spoof, Ghost, Light footprint) sit out until they're re-pointed. The old file system stays behind `run.mjs` `LEGACY.files` for its tests until R5.
+- *First clears and Mapped count as break-in XP* in the mix (exploration), and a held server's respawned rooms as build: the kills pay the same.
+- *The bots*: below level 10 they don't strip a part ahead of its charge or hold a tick back for it (with three or four keys both cost more than the charge: the rooms sim at 6 went from 45/26/36/27% to 36/27/37/29% a process fight); `TELL.bots.bigCut` and `TELL.bots.save` switch the planner's big cut and its saved tick off for the sims.
+- *Not in R1:* sockets and codebases (R2), floors (R3), new families, nest rooms, Linked tells and help requests (R4), deleting the breach and campaign code (R5). No mail from wick about the move yet.
+
+**Known issues:** the Breaker's room fights at 6–10 (above); the Bastion's climb past level 13 (about twice the Breaker's hours to 20 in the pacing bot); at level 3 the Bastion maps two medium servers in three; the pacing bot never fights the farm or the lair; kit spreads and core rotations at 18–40 measure under their old lines (held in the tests), so the classes want a pass for the interrupt; a traced server's guard posts at 6–10 cost the Bastion almost nothing.
+
 ## 10. Open questions for the designer
 
 **Designer's answers (decided):** 2 yes, burns, helpers and daemons trigger interrupts. 3 yes, a wasted tick stays spent. 4 and 5 yes, 8 floors and no gatekeeper. 6: a socket only ever applies to the server it's built on (read as: you can build in any server you're on, held or not; holding adds the core socket). 7: the dividend goes with production; a help reward for both players is the replacement idea. 15 yes, no tells at levels 1 to 5. 1: test all three boss options in R0 (`&boss=a|b|c`) and pick after playing. The rest stand as recommended.

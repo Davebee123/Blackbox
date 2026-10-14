@@ -34,6 +34,9 @@ const start = (cls, bar, picks = [], id = 'cryptjack', ranks = {}) => {
 };
 
 // ---------- Breaker ----------
+// The old file-system run (run.mjs LEGACY.files): since R1 a connect plays the server as rooms, and nothing in the
+// game reaches the file system; R5 deletes it with these tests. Until then they keep it covered.
+const legacyRun = async (t) => { const { LEGACY } = await import('./dist/run.mjs'); LEGACY.files = true; t.after(() => { LEGACY.files = false; }); };
 test('Fork Bomb (fragments ×3); Thermal Runaway grows; Brace cuts a hit and sends back twice the cut; Sudo turns off the part rules; Zero-day once, through armor and locks', () => {
   const s = noArmor(quiet(start('breaker', ['exploit', 'fork-bomb', 'thermal-runaway', 'sudo', 'zero-day'])));
   big(s, 'pulse'); big(s, 'encryptor');
@@ -228,7 +231,8 @@ test('filler ranks change the numbers they say', () => {
   assert.equal(lost(r, 'pulse'), 60, 'Recon: Opening +10');
 });
 
-test('run skills: Tap maps everything; Spoof cloaks once a run, and an Infiltrator slips past one guard', async () => {
+test('run skills: Tap maps everything; Spoof cloaks once a run, and an Infiltrator slips past one guard', async (t) => {
+  await legacyRun(t);
   const { play, connect, slipsLeft } = await import('./dist/run.mjs');
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
@@ -249,7 +253,8 @@ test('run skills: Tap maps everything; Spoof cloaks once a run, and an Infiltrat
   assert.equal(slipsLeft(s), 1, 'one slip a run');
 });
 
-test('Infiltrator Ghost: slip past one guard a run, no fight, no reward; it is back next run', async () => {
+test('Infiltrator Ghost: slip past one guard a run, no fight, no reward; it is back next run', async (t) => {
+  await legacyRun(t);
   const { play, connect, slipsLeft } = await import('./dist/run.mjs');
   const s = fresh();
   s.loadout.archetype = 'infiltrator';

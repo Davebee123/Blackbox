@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, hooks } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
+import * as FP from './dist/floorplan.mjs';
 import { online, inFolder, PRESENCE, isFriend } from './dist/presence.mjs';
 import { peopleMarkup } from './dist/view.mjs';
 
@@ -37,23 +38,24 @@ test('friends: add, list first in the panel, remove; only real handles', () => {
   } finally { hooks.now = null; }
 });
 
-test('SPRAWL-00 is shared: ls shows who is in each folder, and who is here', () => {
+test('SPRAWL-00 is shared: ls shows who is in each room, and arriving says who is here', () => {
   const s = fresh();
   play(s, 'online sim');
-  // Find a moment when somebody is in a SPRAWL-00 folder.
+  // Find a moment when somebody is in a SPRAWL-00 folder (its rooms since R1: netrooms.mjs).
   let t = 1_800_000_000_000, who = [];
   for (let i = 0; i < 200; i++, t += PRESENCE.moveMs) { who = online(s, t).filter((x) => x.place.kind === 'sprawl'); if (who.length) break; }
   hooks.now = () => t;
   try {
     const folder = who[0].place.folder;
     play(s, 'connect sprawl');
-    const ls = s.logs.findLast((e) => e.type === 'net-ls');
-    const top = '/' + folder.split('/')[1];
-    const entry = ls.entries.find((x) => '/' + x.name === top);
-    if (top === folder) assert.ok(entry.people.some((p) => p.handle === who[0].handle), 'their folder shows them');
-    play(s, 'cd ' + folder.slice(1));
-    const here = s.logs.findLast((e) => e.type === 'net-ls').here;
-    assert.ok(here.some((p) => p.handle === who[0].handle), 'arriving says who is here');
-    assert.deepEqual(inFolder(s, folder).map((x) => x.handle).sort(), here.map((x) => x.handle).sort());
+    for (const sp of Object.values(s.zone.spawns)) Object.assign(sp, { alive: false, respawnAt: t + 3600000 }); // a clear way
+    const top = '/' + folder.split('/')[1], named = (f) => FP.roomList(s).find((r) => r.path0 === f).path; // rooms are named for what they are; cd still takes the folder
+    const ls = play(s, 'ls').find((e) => e.type === 'rooms-out').message;
+    if (top === folder) assert.match(ls, new RegExp(`${named(top)}  \\[[^\\]]*\\][^\\n]*${who[0].handle}`), 'their room shows them');
+    const said = play(s, 'cd ' + folder).map((e) => e.message).join(' ');
+    assert.equal(s.run.cwd, named(folder));
+    const here = inFolder(s, folder).map((x) => x.handle);
+    assert.ok(here.includes(who[0].handle));
+    for (const h of here) assert.match(said, new RegExp(h), 'arriving says who is here');
   } finally { hooks.now = null; }
 });

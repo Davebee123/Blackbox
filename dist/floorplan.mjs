@@ -1,6 +1,11 @@
-// A server as a graph of rooms (docs/servers.md 2, phase R0: "one server as a room graph"). Pure like the combat
-// engine: state in, events out. It lives on s.rooms, which only the rooms playtest carries (app.js ?playtest=rooms),
-// on a fresh character that's never saved.
+// A server as a graph of rooms (docs/servers.md 2). Pure like the combat engine: state in, events out. Two hosts:
+//   the playtest  (R0, app.js ?playtest=rooms): one server on a fresh character that's never saved, s.rooms its own,
+//                 its Signal and pack on it (R.signal, R.pack), its clocks ten times as fast.
+//   the network   (R1, netrooms.mjs): every server on the real save is a room graph, kept on its location
+//                 (loc.floorplan, R.world), s.rooms the one you're connected to. Signal is the run's (s.run.integrity,
+//                 resting at home as s.signal), the pack the run's files (banked by run.mjs when you jack out), and
+//                 the world's own rules (what a room spawns, the Resident, takeover, Root, contracts) come through
+//                 the WORLD hooks netrooms.mjs fills.
 //
 //   rooms       a fight (process ▣, elite ◆▣, guard post ◆▣, the core ♛, the hunter's den ☠), an interactable (cache ▤,
 //               vault ▥, rest ☰) or an empty junction (·). The marks are the terminal's; the page draws icons. A fight room's family, author and attack set are fixed by the
@@ -33,7 +38,6 @@ import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, ma
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
-import { tierOf } from './tells.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
@@ -53,7 +57,8 @@ export const ROOMS = {
   xp: { room: 1.25, first: 0.5, rare: 2, boss: 4, hunter: 2, mapped: 5 },
   // Each fight's size in a room, on top of the run sizes every Signal fight has (CONFIG.runHp, runDamage): a process at
   // your level costs 20–30% of your Signal, an elite 45–60%, the Resident wins about one fight in three (2.5).
-  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 } },
+  // stray: SPRAWL-00's strays (netrooms.mjs), the levels 1 to 5 where you learn the ticks: a plain virus's Integrity, lighter hits.
+  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 } },
   eliteHp: 2.2, // an elite's Integrity (of a plain virus's), before its size
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
@@ -74,11 +79,23 @@ export const KINDS = {
     dirs: ['lab', 'tmp', 'bench', 'rig', 'sandbox', 'builds', 'cores', 'gpu', 'scratch', 'fuzz', 'harness', 'probe', 'samples', 'jit', 'debug', 'trace', 'cold', 'kiln'] },
 };
 export const KIND_IDS = Object.keys(KINDS);
+// The network's rules (netrooms.mjs fills these; the playtest leaves them empty). Each returns undefined to leave a
+// room to the playtest's rules.
+//   up(s, room, now)        is its fight there (a wild server's spawns)        back(s, room) / from(s, room): its timer
+//   fight(s, room, as)      what its fight is                                    respawn(s, room): minutes
+//   coreOpen(s)             the Core unsealed                                   vaultOpen(s, room) / canOpen(s, room)
+//   won(s, room, e, how)    what a kill pays besides XP (contracts, leads, drops, Root, the takeover)
+//   lost(s, room, e)        a loss (a Resident grows)                           leave(s, how, why): the run ends
+//   cleared(s, room) / mapped(s)                                                 rare(s): rare spawns' odds
+//   cache(s, room, take) / vault(s, room) / pull(s, room) / drops(s, room, e, rare): what you take goes in the pack
+export const WORLD = {};
+const world = (s) => !!s.rooms?.world;
 // Room kinds: their mark on the map, and what they are.
 // What each room is called on the map, its card and in the log.
-export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction' };
-export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·' };
-export const FIGHTS = ['process', 'elite', 'guard', 'core'];
+// boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs).
+export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash' };
+export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤' };
+export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss'];
 export const HUNTERS = {
   patrol: { name: 'Patroller', body: 'bouncer', text: 'Walks a fixed loop, a room for every 2 of your moves.' },
   track: { name: 'Tracker', body: 'tracer', text: 'Wakes when you walk next to its den, then follows you a room for every 2 of your moves. Loses you 5 rooms off.' },
@@ -263,11 +280,14 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
     if (R[id].kind === 'cache') R[id].baitSeed = Math.floor(r() * 2 ** 31);
     if (R[id].kind === 'vault') R[id].loot = r() < ROOMS.vault.gear ? { kind: 'gear', rarity: r() < ROOMS.vault.custom ? 'custom' : 'tuned' } : { kind: 'script', script: rollScript(r, 'uncommon') };
   }
-  // Names: what each room is (Process 2, Elite 1, Vault, Core), numbered when a name repeats (a guard post is
-  // named and numbered with the elites). path is the label every screen and line shows; dir is its slug, for
-  // typing (cd process-2).
-  const sorted = all.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
-  const many = {}, nth = {}, base = (x) => ROOM_LABEL[x.kind] || x.kind;
+  nameRooms(g);
+  return true;
+}
+// Names: what each room is (Process 2, Elite 1, Vault, Core), numbered when a name repeats (a guard post is named and
+// numbered with the elites). path is the label every screen and line shows; dir is its slug, for typing (cd process-2).
+export function nameRooms(g) {
+  const R = g.rooms, sorted = Object.keys(R).sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+  const many = {}, nth = {}, base = (x) => x.label || ROOM_LABEL[x.kind] || x.kind;
   for (const id of sorted) many[base(R[id])] = (many[base(R[id])] || 0) + 1;
   for (const id of sorted) {
     const x = R[id], b = base(x);
@@ -275,12 +295,16 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
     x.path = many[b] > 1 ? `${b} ${nth[b]}` : b;
     x.dir = x.path.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
-  return true;
+  return g;
 }
 
 // ---------- the server on you ----------
 const nowOf = () => hooks.now?.() ?? Date.now();
 const mins = (s, m) => (m * 60000) / (s.rooms?.speed || ROOMS.speed);
+// Your Signal on the server: the playtest's own, or the run's on the network (and at home, what rests there).
+export const sigOf = (s) => (world(s) ? (s.run ? s.run.integrity : Math.min(maxSignal(s), s.signal ?? maxSignal(s))) : s.rooms.signal);
+function setSig(s, n) { if (!world(s)) s.rooms.signal = n; else if (s.run) s.run.integrity = n; }
+const ask = (fn, ...a) => { const f = WORLD[fn]; return f ? f(...a) : undefined; }; // a WORLD hook, on the network only
 export const roomOf = (s, id) => s.rooms?.graph.rooms[id] || null;
 export const hereOf = (s) => (s.rooms?.at ? roomOf(s, s.rooms.at) : null);
 export const roomList = (s) => Object.values(s.rooms.graph.rooms);
@@ -288,23 +312,30 @@ export const roomList = (s) => Object.values(s.rooms.graph.rooms);
 //   seed, size, kind, level, floor, author: the server. hunter: 'patrol' | 'track' (overrides its kind's). boss: a | b | c.
 //   speed: the clocks' speed (the playtest 10). name: shown on the card.
 export function startRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', level = hackerLevel(s), floor = 2, author = null, hunter = null, boss = 'a', speed = ROOMS.speed, name = null } = {}) {
+  s.rooms = newRooms(s, { seed, size, kind, level, floor, author, hunter, boss, speed, name });
+  s.run = null;
+  say(s, `${s.rooms.name}: a ${s.rooms.author.toUpperCase()} ${s.rooms.kind}. ${BOSSES[RESIDENT].name} holds the Core.`);
+  return s.rooms;
+}
+// A server's rooms, built and not yet anyone's: the playtest's (startRooms) or a location's (netrooms.mjs, with its
+// own graph and world: true). The room state a save keeps: what's cleared, seen, down, taken and opened, for good.
+export function newRooms(s, { seed = 1, size = 'medium', kind = 'Mailhub', level = hackerLevel(s), floor = 2, author = null, hunter = null, boss = 'a', speed = ROOMS.speed, name = null, graph = null, world = false, ...more } = {}) {
   kind = KINDS[kind] ? kind : 'Mailhub';
   author = AUTHOR_FAMILIES[author] ? author : KINDS[kind].author;
-  const graph = generate(seed, { size, kind, level, floor, author, hunter });
+  graph ||= generate(seed, { size, kind, level, floor, author, hunter });
   const max = maxSignal(s);
-  s.rooms = {
-    v: 1, seed, size, kind, level, floor, author, speed, bossRule: BOSS_RULES[boss] ? boss : 'a', graph,
+  const R = {
+    v: 1, seed, size, kind, level, floor, author, speed, bossRule: world ? null : BOSS_RULES[boss] ? boss : 'a', graph,
     id: (name || serverName(seed, kind)).toLowerCase(), name: name || serverName(seed, kind),
     at: null, visit: null, visits: 0, cleared: {}, seen: {}, down: {}, spawns: {}, rare: {}, taken: {}, opened: {},
     signal: max, max, homeAt: nowOf(), reconnectAt: 0, screen: null, pack: [], banked: [], credits: 0, xpStart: 0,
     log: [], scripts: [], codex: {}, mapped: false, last: null, rolls: 0,
     stats: { fights: 0, won: 0, lost: 0, cuts: 0, wasted: 0, ticks: 0, signalBy: {}, boss: { tries: 0, won: 0 }, hunted: 0, moves: 0, cycles: 0 },
+    ...(world ? { world: true } : {}), ...more,
   };
-  s.run = null;
-  s.rooms.xpStart = xpTotal(s);
-  s.rooms.seen[graph.core] = 'kind';
-  say(s, `${s.rooms.name}: a ${author.toUpperCase()} ${kind}. ${BOSSES[RESIDENT].name} holds the Core.`);
-  return s.rooms;
+  R.xpStart = xpTotal(s);
+  if (graph.core) R.seen[graph.core] = 'kind';
+  return R;
 }
 const NAMES = { Mailhub: 'MERIDIAN-MX', Relay: 'HALVARD-NS', Mirror: 'VANTA-WWW', Archive: 'MOTHWELL-BK', Lab: 'SABLE-LAB' };
 export const serverName = (seed, kind) => `${NAMES[kind] || 'KESSLER-SRV'}-${String(seed % 100).padStart(2, '0')}`;
@@ -320,25 +351,32 @@ const rnd = (R, salt = 0) => seeded((R.seed * 2654435761 + (++R.rolls) * 40503 +
 
 // ---------- time: respawns, refills, rest ----------
 // A fight room's virus is up: it never fell, or its timer ran out and you're not standing in it.
-export const respawnMs = (s, room) => mins(s, ROOMS.respawn[room.kind === 'core' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process']);
+export const respawnMs = (s, room) => mins(s, (world(s) ? ask('respawn', s, room) : undefined) ?? ROOMS.respawn[room.kind === 'core' || room.kind === 'boss' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process']);
 export function isUp(s, room, now = nowOf()) {
   const R = s.rooms, at = R.down[room.id];
   if (!FIGHTS.includes(room.kind)) return false;
+  const w = world(s) ? ask('up', s, room, now) : undefined;
+  if (w !== undefined) return w;
   if (room.kind === 'core' && !coreOpen(s)) return true; // sealed, with its Resident behind it
   if (at == null) return true;
   const back = at + respawnMs(s, room);
   return now >= back && !(R.at === room.id && (R.inSince ?? 0) < back); // it waits while you stand in it
 }
 // When a fallen room comes back (ms), or null.
-export const backAt = (s, room) => (s.rooms.down[room.id] != null ? s.rooms.down[room.id] + respawnMs(s, room) : null);
-export const cacheFull = (s, room, now = nowOf()) => room.kind === 'cache' && (s.rooms.taken[room.id] == null || now >= s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache));
+export const backAt = (s, room) => { const w = world(s) ? ask('back', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] != null ? s.rooms.down[room.id] + respawnMs(s, room) : null; };
+// When it fell (the respawn ring's start), or null.
+export const downAt = (s, room) => { const w = world(s) ? ask('from', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] ?? null; };
+export const cacheFull = (s, room, now = nowOf()) => (room.kind === 'cache' || room.kind === 'stash') && (s.rooms.taken[room.id] == null || now >= s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache));
 export const refillAt = (s, room) => (s.rooms.taken[room.id] != null ? s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache) : null);
 // Bait: one cache in four, fresh with each refill.
 export const isBait = (s, room) => room.kind === 'cache' && !room.mirror && seeded((room.baitSeed + (s.rooms.spawns[room.id] || 0) * 7919) >>> 0)() < 0.25;
-export const coreOpen = (s) => !!s.rooms.opened[s.rooms.graph.vaults[0]];
+export const coreOpen = (s) => { const w = world(s) ? ask('coreOpen', s) : undefined; return w !== undefined ? w : !!s.rooms.opened[s.rooms.graph.vaults[0]]; };
+// A vault opened (the farm's ledger locks again when its keeper is back: netrooms.mjs).
+export const opened = (s, room) => { const w = world(s) ? ask('vaultOpen', s, room) : undefined; return w !== undefined ? w : !!s.rooms.opened[room.id]; };
 // Your Signal at home rests back (CONFIG.signalRest of your max a minute, at the clock's speed).
 export function signalNow(s, now = nowOf()) {
   const R = s.rooms;
+  if (R.world) return s.run ? (active(s) ? s.run.integrity : Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max))) : sigOf(s);
   if (active(s) && s.run?.rooms) return s.run.integrity;
   // A fight that just ended (its run not settled yet): what it leaves you, on the server or home.
   if (R.at) return s.run?.rooms ? Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max)) : R.signal;
@@ -348,7 +386,7 @@ export function signalNow(s, now = nowOf()) {
 export function soonest(s, now = nowOf()) {
   let best = null;
   for (const room of roomList(s)) {
-    const at = room.kind === 'cache' ? (cacheFull(s, room, now) ? null : refillAt(s, room)) : FIGHTS.includes(room.kind) && !isUp(s, room, now) ? backAt(s, room) : null;
+    const at = room.kind === 'cache' || room.kind === 'stash' ? (cacheFull(s, room, now) ? null : refillAt(s, room)) : FIGHTS.includes(room.kind) && !isUp(s, room, now) ? backAt(s, room) : null;
     if (at != null && (!best || at < best.at)) best = { room, at };
   }
   return best;
@@ -366,6 +404,7 @@ function clear(s, room, quiet = false) {
   if (!quiet) say(s, `${room.path} cleared.`, 'rooms-good');
   if (p.done * 2 >= p.total && !R.drawn) { R.drawn = true; for (const x of roomList(s)) R.seen[x.id] = 'kind'; say(s, 'Half cleared: the whole map is drawn.', 'rooms-good'); }
   if (p.done === p.total && !R.mapped) mapped(s);
+  if (R.world) ask('cleared', s, room);
   return true;
 }
 // 100%: Mapped. An item roll two levels over the server, and 5 kills' worth of XP.
@@ -375,8 +414,9 @@ function mapped(s) {
   const it = addItem(s, rollItem(rnd(R, 77), { level: R.level + 2, rarity: rnd(R, 78)() < 0.35 ? 'custom' : 'tuned', cls: classOf(s) }), 'Mapped: ');
   if (it) R.banked.push(it.id);
   const xp = Math.round(xpFor(s, R.level, ROOMS.xp.mapped));
-  gainXp(s, xp, `${R.name} Mapped`, 'fight');
+  gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server
   say(s, `MAPPED. ${it ? `${itemLabel(it)} goes in your bank. ` : ''}+${xp} XP.`, 'rooms-good');
+  if (R.world) ask('mapped', s);
 }
 
 // ---------- fog (2.6) ----------
@@ -462,15 +502,22 @@ export function connect(s) {
   if (sig < Math.ceil(R.max * CONFIG.zone.minSignal)) { deny(s, `You need ${Math.ceil(R.max * CONFIG.zone.minSignal)} Signal to connect. You have ${sig}. It rests back at home.`); return out(s, first); }
   R.max = maxSignal(s);
   R.signal = Math.min(R.max, sig);
+  enter(s, now);
+  return out(s, first);
+}
+// In at the entry: a new visit (the network's connect sets up the run first, netrooms.mjs). keys: the vault keys you
+// walk in with (a key cracker's, netrooms.mjs).
+export function enter(s, now = nowOf(), { keys = [] } = {}) {
+  const R = s.rooms;
+  if (R.world) R.max = s.run.max;
   R.visits++;
   R.at = R.graph.entry;
   R.inSince = now;
-  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [], rested: false, moves: 0, hunter: newHunter(s), slipped: false, back: null, xp0: xpTotal(s) };
+  R.visit = { n: R.visits, walked: { [R.graph.entry]: true }, keys: [...keys], rested: false, moves: 0, hunter: newHunter(s), slipped: false, back: null, xp0: xpTotal(s) };
   R.screen = null;
   look(s);
   clear(s, R.graph.rooms[R.graph.entry], true);
   say(s, `CONNECTED to ${R.name}, visit ${R.visits}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
-  return out(s, first);
 }
 // Jack out from any room: home, with the pack banked. A key you didn't use goes back to its post, guard and all.
 export function jackOut(s, why = '') {
@@ -478,8 +525,13 @@ export function jackOut(s, why = '') {
   settle(s);
   if (!R?.at) { deny(s, 'You are not on the server.'); return out(s, first); }
   if (active(s)) { deny(s, 'No jacking out mid-fight. Win it, or lose the pack.'); return out(s, first); }
-  for (const vid of R.visit.keys) { const post = roomList(s).find((x) => x.key === vid); if (post) delete R.down[post.id]; }
-  if (R.visit.keys.length) say(s, `Your key goes back to ${R.visit.keys.map((vid) => roomList(s).find((x) => x.key === vid)?.path).filter(Boolean).join(' and ') || 'its elite'}, its guard up again.`, 'rooms-bad');
+  keysBack(s);
+  if (R.world) {
+    R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked: s.run.pack.length, visit: R.visit.n };
+    goHome(s);
+    ask('leave', s, 'out', why);
+    return out(s, first);
+  }
   const banked = R.pack.length;
   R.banked.push(...R.pack); R.pack = [];
   R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked, visit: R.visit.n };
@@ -487,17 +539,32 @@ export function jackOut(s, why = '') {
   say(s, `${why ? `${why} ` : ''}JACKED OUT of ${R.name}.${banked ? ` ${banked} ${banked === 1 ? 'item' : 'items'} banked.` : ''}`, 'jacked-out');
   return out(s, first);
 }
-function goHome(s) {
-  const R = s.rooms, now = nowOf();
+// A key you didn't use goes back to its post, guard and all.
+function keysBack(s) {
+  const R = s.rooms, keys = R.visit?.keys || [];
+  for (const vid of keys) { const post = roomList(s).find((x) => x.key === vid); if (post) delete R.down[post.id]; }
+  if (keys.length && !R.visit.cracked) say(s, `Your key goes back to ${keys.map((vid) => roomList(s).find((x) => x.key === vid)?.path).filter(Boolean).join(' and ') || 'its elite'}, its guard up again.`, 'rooms-bad');
+  if (R.visit) R.visit.keys = [];
+}
+function goHome(s, R = s.rooms) {
+  const now = nowOf();
   R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + ROOMS.reconnect / R.speed;
   R.visit = { ...R.visit, hunter: null };
 }
 // Lost a fight: disconnected. The unbanked pack is lost; XP, banked gear and your scripts stay.
 function disconnected(s, why) {
   const R = s.rooms, lost = [];
+  if (R.world) {
+    // The run's end is combat.mjs disconnect (the pack lost; Deadman's Switch jacks you out with it instead).
+    R.last = { result: 'lost', why, lost: (s.run?.pack || []).map((f) => f.label || f.name), xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n };
+    if (R.at) keysBack(s);
+    ask('leave', s, 'lost', why); // Deadman's Switch jacks you out instead (jackOut, home with the pack)
+    if (R.at) goHome(s, R);
+    return;
+  }
   for (const id of R.pack) { const it = stashItem(s, id); if (it) { lost.push(itemLabel(it)); for (const r of Object.values(s.gear?.rigs || {})) if (Array.isArray(r)) for (let i = 0; i < r.length; i++) if (r[i] === id) r[i] = null; s.stash = s.stash.filter((x) => x.id !== id); } }
   R.pack = [];
-  for (const vid of R.visit?.keys || []) { const post = roomList(s).find((x) => x.key === vid); if (post) delete R.down[post.id]; }
+  keysBack(s);
   R.last = { result: 'lost', why, lost, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n };
   R.signal = 0;
   goHome(s);
@@ -523,16 +590,17 @@ export function go(s, id, opts = {}) {
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
   else if (!room || !neighbours(R.graph, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
-  else if (room.kind === 'core' && !coreOpen(s)) deny(s, `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
+  else if (room.kind === 'core' && !coreOpen(s)) deny(s, R.world ? `The Core is sealed. ${WORLD.view?.sealed?.(s) || (R.graph.vaults[0] ? `Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.` : '')}`.trim() : `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
   else step(s, room, opts);
   return out(s, first);
 }
 function step(s, room, opts) {
   const R = s.rooms, cost = moveCost(s, room);
-  if (cost) R.signal = Math.max(1, R.signal - cost);
+  if (cost) setSig(s, Math.max(1, sigOf(s) - cost));
   R.visit.back = R.at;
   R.at = room.id;
   R.inSince = nowOf();
+  if (R.world && s.run) { s.run.cwd = room.path; for (const c of Object.values(s.run.crew || {})) if (c.link === 'you') c.cwd = room.path; } // the run (and your crew) where you are
   R.visit.walked[room.id] = true;
   R.visit.moves++; R.stats.moves++;
   say(s, `→ ${room.path}${cost ? ` (−${cost} Signal)` : ''}`, 'rooms-cmd');
@@ -566,6 +634,8 @@ export function back(s, opts = {}) {
 // What a room does when you walk in: a live virus holds it, the rest wait for your verbs.
 function arrive(s, room, opts = {}) {
   const R = s.rooms;
+  const people = R.world ? ask('people', s, room) || [] : [];
+  if (people.length) say(s, `${people.join(', ')} ${people.length === 1 ? 'is' : 'are'} here.`, 'rooms');
   if (['junction', 'den'].includes(room.kind)) clear(s, room);
   if (isUp(s, room)) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
@@ -616,11 +686,14 @@ export function act(s, verb, arg = null, opts = {}) {
     return out(s, first);
   }
   if ((verb === 'pull' || verb === 'pull all') && here.kind === 'cache') { pull(s, here, opts); return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'stash') { if (!cacheFull(s, here)) deny(s, `The stash is empty. It fills again in ${fmtLeft(refillAt(s, here) - nowOf())}.`); else { ask('stash', s, here); R.taken[here.id] = nowOf(); clear(s, here); } return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'vault' && R.world && opened(s, here)) { if (!ask('pull', s, here)) deny(s, 'Nothing left in the vault.'); return out(s, first); }
+  if ((verb === 'pull' || verb === 'pull all') && here.kind === 'entry' && R.world) { if (!ask('entryPull', s)) deny(s, 'Nothing here to take.'); return out(s, first); }
   if ((verb === 'open' || verb === 'force') && here.kind === 'vault') { openVault(s, here, verb === 'force'); return out(s, first); }
   if (verb === 'rest' && here.kind === 'rest') {
     if (R.visit.rested) deny(s, 'You already rested this visit.');
-    else if (R.signal >= R.max) deny(s, 'Your Signal is full. Your rest keeps for later this visit.');
-    else { const n = Math.min(R.max - R.signal, Math.round(R.max * ROOMS.rest)); R.signal += n; R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
+    else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. Your rest keeps for later this visit.');
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
   }
   deny(s, `${verb}: nothing here takes that.`);
@@ -635,13 +708,13 @@ function pull(s, room, opts) {
   takeCache(s, room);
 }
 function takeCache(s, room) {
-  const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, rich = 1;
-  if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); R.signal = Math.max(1, R.signal - lost); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
+  const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, rich = (R.world && ask('cacheMult', s, room)) || 1;
+  if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
   const credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20));
-  R.credits += credits; s.server.credits += credits;
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' }[fam] || 'cipher';
   const code = C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1));
-  gainCode(s, { [kind]: code }, 'Cache: ');
+  if (R.world) ask('cache', s, room, { credits, code, material: kind }); // into the pack: banked when you jack out
+  else { R.credits += credits; s.server.credits += credits; gainCode(s, { [kind]: code }, 'Cache: '); }
   say(s, `You take the cache: ${credits} credits and ${code} ${kind} code.`, 'rooms-good');
   if (r() < C.script) giveScript(s, rollScript(r), 'Cache: ');
   R.taken[room.id] = nowOf();
@@ -650,14 +723,17 @@ function takeCache(s, room) {
 }
 function openVault(s, room, force) {
   const R = s.rooms;
-  if (R.opened[room.id]) return deny(s, 'The vault is already open.');
-  const has = R.visit.keys.indexOf(room.id);
-  if (!force && has < 0) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'an elite'}, or force the door for ${Math.round(R.max * ROOMS.force)} Signal.`);
-  if (force) { const lost = Math.round(R.max * ROOMS.force); R.signal = Math.max(1, R.signal - lost); say(s, `You force the door: −${lost} Signal.`, 'rooms-bad'); }
+  if (opened(s, room)) return deny(s, 'The vault is already open.');
+  const has = R.visit.keys.indexOf(room.id), may = R.world ? ask('canOpen', s, room) : undefined;
+  if (may === false) return deny(s, room.locked || 'It won\'t open yet.');
+  if (!force && has < 0 && !may) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'an elite'}, or force the door for ${Math.round(R.max * ROOMS.force)} Signal.`);
+  if (force && !may) { const lost = Math.round(R.max * ROOMS.force); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `You force the door: −${lost} Signal.`, 'rooms-bad'); }
+  else if (may) say(s, 'The vault opens.', 'rooms-good');
   else { R.visit.keys.splice(has, 1); say(s, 'The key opens the vault.', 'rooms-good'); }
   R.opened[room.id] = nowOf();
   const v = room.loot || { kind: 'gear', rarity: 'tuned' };
-  if (v.kind === 'gear') { const it = addItem(s, rollItem(rnd(R, 5), { level: R.level, rarity: v.rarity, cls: classOf(s) }), 'Vault: '); if (it) { R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); } }
+  if (R.world && ask('vault', s, room)) { /* the server's own vault: its files go in the pack (netrooms.mjs) */ }
+  else if (v.kind === 'gear') { const it = addItem(s, rollItem(rnd(R, 5), { level: R.level, rarity: v.rarity, cls: classOf(s) }), 'Vault: '); if (it) { if (R.world) ask('packItem', s, it); else R.pack.push(it.id); say(s, `${itemLabel(it)} goes in your pack.`, 'rooms-good'); } }
   else giveScript(s, v.script, 'Vault: ');
   clear(s, room);
   if (room.id === R.graph.vaults[0]) say(s, 'The Core unseals.', 'rooms-bad');
@@ -666,7 +742,9 @@ function openVault(s, room, force) {
 // ---------- fights ----------
 // What a room's fight is: [key, seed, opts] for selectEncounter, and its name and kind of size.
 export function fightOf(s, room, as = null) {
-  const R = s.rooms, n = R.spawns[room.id] || 0, rare = !as && !!R.rare[room.id], level = R.level + (rare ? ROOMS.rareLevel : 0);
+  const w = world(s) && as !== 'hunter' ? ask('fight', s, room, as) : undefined;
+  if (w) return w;
+  const R = s.rooms, n = R.spawns[room.id] || 0, rare = !as && !!R.rare[room.id], level = (R.world ? ask('level', s) ?? R.level : R.level) + (rare ? ROOMS.rareLevel : 0);
   const seed = ((room.seed + n * 7919) >>> 0) || 1;
   if (as === 'hunter') {
     const body = HUNTERS[hunterOf(s)?.kind || R.graph.hunter]?.body || 'tracer';
@@ -690,19 +768,27 @@ export function virusName(s, room, as = null) {
 export function fight(s, room, { pause = false, as = null } = {}) {
   const R = s.rooms;
   s.encounter = null;
-  R.max = maxSignal(s);
-  R.signal = Math.min(R.signal, R.max);
-  R.fightFrom = R.signal;
-  s.run = { loc: 'rooms', rooms: true, cwd: room.path, integrity: R.signal, max: R.max, pack: [], visited: [room.path] };
+  if (R.world) {
+    // The run carries on: your Signal is its integrity (the heal cap at what you walked in with).
+    R.max = s.run.max;
+    s.run.integrity = Math.min(s.run.integrity, s.run.max);
+    R.fightFrom = s.run.integrity;
+    s.run.cwd = room.path;
+    for (const c of Object.values(s.run.crew || {})) if (c.link === 'you') c.cwd = room.path; // your crew is with you
+  } else {
+    R.max = maxSignal(s);
+    R.signal = Math.min(R.signal, R.max);
+    R.fightFrom = R.signal;
+    s.run = { loc: 'rooms', rooms: true, cwd: room.path, integrity: R.signal, max: R.max, pack: [], visited: [room.path] };
+  }
   const f = fightOf(s, room, as);
   selectEncounter(s, f.key, f.seed, { ...f.opts, quiet: true });
   const e = s.encounter;
   if (!e) return;
   const v = e.virus;
   e.rooms = { room: room.id, kind: R.kind, as, size: f.size, rare: !!f.rare };
-  // Its size in a room, its attack set, Spam on a Mailhub's queue, and its tells by level (3.5: none to level 5, one
-  // from 6, two from 17; an elite one more; a boss its own set).
-  const S = ROOMS.size[f.size] || ROOMS.size.process;
+  // Its size in a room, its attack set, Spam on a Mailhub's queue. Its tells come by level (tells.mjs, 3.5).
+  const S = f.size === 'raw' ? { hp: 1, dmg: 1 } : ROOMS.size[f.size] || ROOMS.size.process; // raw: a crew boss or its packs, sized for a crew already
   v.roomHp = S.hp; v.roomDmg = S.dmg;
   for (const p of v.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
@@ -713,13 +799,11 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   }
   if (f.set) { applySet(v, f.set, seeded((room.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${f.set}`] = true; }
   if (room.queue && R.kind === 'Mailhub' && as !== 'hunter') spamFlood(s, e);
-  const lvl = v.level, want = v.boss ? null : lvl <= 5 ? 0 : (lvl >= 17 ? 2 : 1) + (v.elite ? 1 : 0);
-  if (want === 0) v.tells = { list: [], tier: tierOf(lvl) };
-  else if (want != null) v.extraTells = (v.extraTells || 0) + want - tierOf(lvl).count - (v.elite ? 1 : 0);
-  if (v.boss) bossRule(s, R.bossRule);
+  if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   armTicks(s);
   if (v.elite && !v.boss) e.enrageAt = 9;
-  e.roomsXp = ROOMS.xp.room * (as === 'hunter' ? ROOMS.xp.hunter : room.kind === 'core' ? ROOMS.xp.boss : f.rare ? ROOMS.xp.rare : 1);
+  e.roomsXp = ROOMS.xp.room * (as === 'hunter' ? ROOMS.xp.hunter : room.kind === 'core' ? ROOMS.xp.boss : f.rare ? ROOMS.xp.rare : 1) * (f.xp || 1);
+  if (R.world && !as) e.xpKind = ask('xpKind', s, room); // what its XP counts as in your mix (netrooms.mjs)
   if (v.boss) R.stats.boss.tries++;
   R.stats.fights++;
   say(s, `You engage ${v.name}.${f.set ? ` ${setName(v.family, f.set)} set.` : ''}`, 'intrusion');
@@ -737,6 +821,14 @@ function spamFlood(s, e) {
 export function settle(s) {
   const R = s.rooms;
   if (!R || !s.run?.rooms || active(s)) return;
+  if (R.world) {
+    // A fight that ended: what it leaves you (never over what you walked in with), and the board cleared away.
+    if (R.fightFrom != null) s.run.integrity = Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom));
+    R.fightFrom = null;
+    R.max = s.run.max;
+    if (s.encounter?.rooms) s.encounter = null;
+    return;
+  }
   if (R.at) R.signal = Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max));
   R.max = s.run.max;
   s.run = null;
@@ -753,11 +845,17 @@ hooks.roomEnd = (s, result) => {
   (R.stats.signalBy[kind] ||= []).push(lost / Math.max(1, R.max));
   const fam = ((R.stats.fam ||= {})[as === 'hunter' ? 'hunter' : e.virus.boss ? 'boss' : (e.virus.elite ? 'elite ' : '') + e.virus.family] ||= { n: 0, won: 0, lost: 0, cycles: 0 });
   fam.n++; fam.won += result === 'victory' ? 1 : 0; fam.lost += lost / Math.max(1, R.max); fam.cycles += e.cycle;
-  if (result !== 'victory') { R.stats.lost++; if (as !== 'hunter') (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1; return disconnected(s, `${e.virus.name} took your Signal to 0 in ${room.path}.`); }
+  if (result !== 'victory') {
+    R.stats.lost++;
+    if (as !== 'hunter') (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
+    if (R.world) ask('lost', s, room, e, result);
+    if (result === 'fled') return; // jacked out mid-fight (the emergency escape): the run ends as a jack out
+    return disconnected(s, `${e.virus.name} took your Signal to 0 in ${room.path}.`);
+  }
   R.stats.won++;
   if (e.virus.boss) R.stats.boss.won++;
-  R.signal = Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max));
-  if (e.roomsLoot?.credits) { R.credits += e.roomsLoot.credits; s.server.credits += e.roomsLoot.credits; }
+  setSig(s, Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max)));
+  if (e.roomsLoot?.credits) { if (R.world) s.run.pack.push({ path: `${room.path}/#loot-${s.serial}`, name: 'loot.dat', kind: 'credits', amount: e.roomsLoot.credits }); else { R.credits += e.roomsLoot.credits; s.server.credits += e.roomsLoot.credits; } }
   if (as === 'hunter') {
     const h = hunterOf(s);
     if (h) h.down = true;
@@ -772,23 +870,25 @@ hooks.roomEnd = (s, result) => {
   if (as === 'mirror') {
     drops(s, room, e, false);
     say(s, 'The mirror is down.', 'rooms-good');
+    if (R.world) ask('won', s, room, e, { first: false, rare: false, mirror: true });
     return takeCache(s, room);
   }
   R.down[room.id] = nowOf();
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
-  const wasRare = !!R.rare[room.id];
-  // One respawn in ten is a rare spawn: it waits until you kill it.
-  R.rare[room.id] = FIGHTS.includes(room.kind) && room.kind !== 'core' && rnd(R, 31)() < ROOMS.rare;
+  const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
+  // One respawn in ten is a rare spawn: it waits until you kill it (a held server's Root 5, a Legacy server's twice).
+  R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
   // First clear: half that fight's XP again (7.2).
   if (!R.cleared[room.id]) {
     const xp = Math.round(xpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)));
-    gainXp(s, xp, `${room.path} first clear`, 'fight');
+    gainXp(s, xp, `${room.path} first clear`, 'breakin'); // progress on a server: exploration XP, like the old break-ins
     clear(s, room);
   }
   // The key: beat the guard while its vault is shut and it goes in your pack, for this visit.
   if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good'); }
   drops(s, room, e, wasRare);
-  if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls.`, 'rooms-good');
+  if (R.world) ask('won', s, room, e, { first, rare: wasRare });
+  else if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls.`, 'rooms-good');
 };
 // XP the playtest character has earned in all (its level's bars and what's in the current one): the server card's
 // count is the difference since you started.
@@ -798,6 +898,7 @@ export const xpEarned = (s) => xpTotal(s) - (s.rooms?.xpStart ?? xpTotal(s));
 // rolls), the Resident a blue or better and a script half the time.
 function drops(s, room, e, rare) {
   const R = s.rooms, lvl = e.virus.level;
+  if (R.world) return ask('drops', s, room, e, rare);
   let it = null;
   if (room.kind === 'core') {
     it = rollItem(rnd(R, 41), { level: lvl, rarity: rnd(R, 42)() < 0.25 ? 'custom' : 'tuned', cls: classOf(s) });
@@ -810,7 +911,8 @@ function drops(s, room, e, rare) {
 export function setBossRule(s, rule) {
   const R = s.rooms;
   if (!BOSS_RULES[rule]) return deny(s, 'bossrule: a, b or c.');
-  R.bossRule = rule;
+  if (R && !R.world) R.bossRule = rule;
+  else s.bossRule = rule; // the network: every boss fight from now on (interrupt.mjs prepareTicks), saved with you
   say(s, `Boss rule ${rule}: ${BOSS_RULES[rule].name}.`, 'rooms-good');
   return rule;
 }
@@ -836,12 +938,18 @@ export function tick(s, now = nowOf()) {
 const tagOf = (s, room) => {
   const seen = seenOf(s, room.id);
   if (seen !== 'kind') return '??';
-  const up = isUp(s, room);
+  const up = isUp(s, room), left = up ? '' : backAt(s, room) != null ? ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}` : '';
+  if (room.wild || room.kind === 'boss' || (room.kind === 'core' && s.rooms.world)) {
+    // On the network: who holds it, by name or family (netrooms.mjs), or that it's down.
+    const f = up && (room.kind !== 'core' || coreOpen(s)) ? fightOf(s, room) : null, who = f ? f.name || `${f.elite ? 'elite ' : ''}${familyName(f.family) || f.family}` : '';
+    return `${room.kind === 'boss' ? 'boss' : room.kind === 'core' ? 'core' : 'fight'}${who ? ` · ${who} lv ${f.level}` : ''}${room.kind === 'core' && !coreOpen(s) ? ' · sealed' : left}`;
+  }
+  if (room.kind === 'stash') return `stash${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
   if (room.kind === 'core') return `core · ${BOSSES[RESIDENT].name}${coreOpen(s) ? '' : ' · sealed'}`;
   if (room.kind === 'guard') return `elite · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (['process', 'elite'].includes(room.kind)) return `${room.kind} · ${familyName(room.family)} · ${(AUTHORS[room.author]?.name || '').toUpperCase()}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (room.kind === 'cache') return `cache${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
-  if (room.kind === 'vault') return `vault${s.rooms.opened[room.id] ? ' · open' : ''}`;
+  if (room.kind === 'vault') return `vault${opened(s, room) ? ' · open' : ''}`;
   return room.kind;
 };
 export function roomsCommand(s, text) {
@@ -853,7 +961,8 @@ export function roomsCommand(s, text) {
   if (word === 'ls') {
     if (!R.at) { say(s, 'You are home. Type connect.', 'rooms-out'); return out(s, first); }
     const here = hereOf(s), xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
-    const lines = [`${here.path}  [${here.kind}]`, ...xs.map((x, i) => `${i + 1}  ${seenOf(s, x.id) === 'kind' ? x.path : '??'}  [${tagOf(s, x)}]${moveCost(s, x) ? '' : '  walked'}`)];
+    const who = (x) => { const p = R.world ? ask('people', s, x) || [] : []; return p.length ? `  · ${p.join(', ')}` : ''; }; // who else is in there (SPRAWL-00 is shared)
+    const lines = [`${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${seenOf(s, x.id) === 'kind' ? x.path : '??'}  [${tagOf(s, x)}]${moveCost(s, x) ? '' : '  walked'}${seenOf(s, x.id) === 'kind' ? who(x) : ''}`)];
     const h = hunterLine(s);
     say(s, [...lines, ...(h ? [h] : [])].join('\n'), 'rooms-out');
     return out(s, first);
@@ -862,8 +971,12 @@ export function roomsCommand(s, text) {
     if (!R.at) { deny(s, 'Connect first.'); return out(s, first); }
     const xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
     let room = null;
+    if (arg === '..' && R.screen?.kind === 'virus') return back(s); // a virus holds the room: cd .. steps back out
     if (arg === '..') { const d = distances(R.graph, R.graph.entry); room = xs.sort((a, b) => d[a.id] - d[b.id])[0]; }
     else room = /^\d+$/.test(arg) ? xs[Number(arg) - 1] : xs.find((x) => x.dir === arg.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.id === arg);
+    // A wild server's rooms are its folders (netrooms.mjs): cd var, cd log, cd /var/log, cd ../tmp walk the tree, a room
+    // at a time, stopping where something holds the way.
+    if (!room && R.world) { const t = folderRoom(s, arg); if (t) return t.id === R.at ? out(s, first) : walkTo(s, t.id); }
     return room ? go(s, room.id) : (deny(s, `cd: ${arg || '?'}: not next to you. Type ls.`), out(s, first));
   }
   if (word === 'map' || word === 'tree') { say(s, treeLines(s).join('\n'), 'rooms-out'); return out(s, first); }
@@ -872,6 +985,31 @@ export function roomsCommand(s, text) {
   if (['engage', 'fight', 'cat', 'pull', 'open', 'force', 'rest', 'slip'].includes(word)) return act(s, word === 'pull' && arg === 'all' ? 'pull' : word);
   if (word === 'developer' && rest[0] === 'bossrule') { setBossRule(s, rest[1]); return out(s, first); }
   return null;
+}
+// A folder named as a path (absolute, or from the room you're in), for a wild server's rooms (room.path0).
+function folderRoom(s, arg) {
+  const here = hereOf(s), base = here?.path0 ?? '/';
+  const parts = (arg.startsWith('/') ? arg : `${base}/${arg}`).split('/').filter(Boolean), out = [];
+  for (const p of parts) { if (p === '..') out.pop(); else if (p !== '.') out.push(p); }
+  const want = '/' + out.join('/');
+  return roomList(s).find((x) => (x.path0 ?? (x.kind === 'entry' ? '/' : null)) === want) || null;
+}
+// Walk to a room by its name (a crewmate's room: run.mjs).
+export function walkToRoom(s, name) {
+  const R = s.rooms, room = roomList(s).find((x) => x.path === name);
+  if (!R?.at || !room || room.id === R.at) return [];
+  return walkTo(s, room.id);
+}
+// Walk to a room you've seen, a step at a time (each step a move: its Signal, the hunter, what holds the room).
+function walkTo(s, id) {
+  const R = s.rooms, first = s.serial, path = pathTo(R.graph, R.at, id, (x) => !!seenOf(s, x)) || [];
+  if (path.length < 2) { deny(s, `cd: no way to ${R.graph.rooms[id].path} from here that you've seen.`); return out(s, first); }
+  for (const next of path.slice(1)) {
+    const was = R.at;
+    go(s, next);
+    if (R.at !== next || R.at === was || R.screen || active(s)) break;
+  }
+  return out(s, first);
 }
 // The room graph you've seen, as lines: each room, its links.
 export function treeLines(s) {

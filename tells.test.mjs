@@ -24,18 +24,25 @@ function fight({ level = 12, family = 'ransomware', cls = 'breaker', seed = 7, k
   return s;
 }
 // Make one tell (by id) said now on a part, landing in n cycles; the rest stay quiet. A charge rides the part's
-// next attack: its timer is set to land then. need: a charge's burst (by default the tier's share of the part's max).
-function tell(s, id, partId, n = 2, need = null) {
+// next attack: its timer is set to land then.
+function tell(s, id, partId, n = 2) {
   const T = tellsOf(s), e = s.encounter;
   for (const t of T.list) { t.told = false; t.after = 999; }
   const t = T.list.find((x) => x.id === id);
   assert.ok(t, `${id} is one of this virus's tells (${T.list.map((x) => x.id).join(', ')})`);
   const p = part(s, partId);
   if (t.kind === 'charge') p.attack.due = e.cycle + n;
-  Object.assign(t, { part: partId, told: true, said: e.cycle, next: e.cycle + n, n: t.kind === 'charge' ? p.attack.n || 0 : null, wound: 0, hitBy: [], after: 999, opened: null, early: null,
-    need: t.kind === 'charge' ? need ?? Math.max(1, Math.round(T.tier.share * p.max)) : t.kind === 'cast' ? T.tier.castHits : 0 });
+  Object.assign(t, { part: partId, told: true, said: e.cycle, next: e.cycle + n, n: t.kind === 'charge' ? p.attack.n || 0 : null, after: 999, opened: null });
   return t;
 }
+// Deal a virus more tells than its level brings (a seal, a lock): its set dealt again with that many.
+function retell(s, extra, set = null) {
+  const v = s.encounter.virus;
+  v.tells = null; v.extraTells = extra; if (set) v.tellSet = set;
+  tellStart(s);
+}
+// A part a hit or two above its 50% tick, bare, both ticks fresh: one command takes it across (the interrupt).
+const edge = (s, id, max = 100) => Object.assign(part(s, id), { armor: 0, maxArmor: 0, max, integrity: Math.floor(max * 0.5) + 2, ticks: [{ at: 0.5, spent: false }, { at: 0.25, spent: false }] });
 const quietParts = (s) => { for (const p of s.encounter.virus.parts) if (p.attack) p.attack.due = 999; };
 const hold = (s, n = 1) => { for (let i = 0; i < n && active(s); i++) { command(s, 'hold'); resolveCycle(s); } };
 const fire = (s, text) => { const ev = command(s, text); assert.ok(!ev.some((e) => e.type === 'warning'), ev.at(-1)?.message); return resolveCycle(s); };
@@ -52,30 +59,23 @@ test('Flood cools down in 6 cycles, Crack in 2 (the Breaker retune)', () => {
   assert.equal(readyIn(s, 'flood'), 5, 'ready again 6 cycles after it fired');
 });
 
-test('tells scale with the level: one gentle charge to 5 (said 3 ahead, a two-cycle window), a cast from 10, a second charge from 17, and none in SPRAWL-00\'s first fights or at a crew boss', () => {
+test('tells scale with the level (docs/servers.md 3.5): none to 5 (the ticks are the lesson), one from 6, two from 17, an elite one more from 6; none in SPRAWL-00\'s first fights or at a crew boss', () => {
   const at = (level, opts = {}) => tellsOf(fight({ level, ...opts }));
-  const low = at(3);
-  assert.equal(low.list.filter((t) => t.kind !== 'mimic').length, 1);
-  assert.equal(low.tier.lead, 3, 'gentle: announced three cycles ahead');
-  assert.equal(low.tier.window, 2, 'and answerable in its last two');
-  assert.ok(low.tier.share < at(12).tier.share, 'with a smaller burst');
-  assert.equal(low.list[0].kind, 'charge');
-  assert.equal(low.tier.after, 0, 'and nothing lingers when one lands');
+  const kinds = (T) => T.list.filter((t) => t.kind !== 'mimic').map((t) => t.kind);
+  assert.deepEqual(kinds(at(3)), [], 'levels 1 to 5: none');
+  assert.deepEqual(kinds(at(3, { opts: { elite: true } })), [], 'not even on an elite');
   const mid = at(12);
-  assert.deepEqual(mid.list.filter((t) => t.kind !== 'mimic').map((t) => t.kind), ['charge', 'cast']);
-  assert.equal(mid.tier.lead, 2);
-  assert.equal(mid.tier.window, 1, 'from 6, the cycle it lands');
-  assert.equal(mid.tier.share, TELL.tiers.find((x) => x.to === 16).share);
+  assert.deepEqual(kinds(mid), ['charge'], 'from 6, one');
+  assert.equal(mid.tier.lead, 3, 'said three cycles ahead');
   assert.equal(mid.tier.live, 1, 'below 17, one live at a time');
-  assert.ok(!at(8).list.some((t) => t.kind === 'cast'), 'no casts before SIGINT (level 10)');
+  assert.equal(mid.tier.window, undefined, 'no windows by tier: a charge is answered on its cycle');
+  assert.equal(mid.tier.share, undefined, 'and no burst');
+  assert.deepEqual(kinds(at(12, { opts: { elite: true } })), ['charge', 'cast'], 'an elite one more');
+  assert.ok(!at(8, { opts: { elite: true } }).list.some((t) => t.kind === 'cast'), 'no casts before SIGINT (level 10)');
   const top = at(18);
-  assert.deepEqual(top.list.filter((t) => t.kind !== 'mimic').map((t) => t.id), ['fulldisk', 'extortion', 'overcharge']);
+  assert.deepEqual(top.list.filter((t) => t.kind !== 'mimic').map((t) => t.id), ['fulldisk', 'extortion']);
   assert.equal(top.tier.live, 2, 'from 17, two at most');
-  const elite = at(18, { opts: { elite: true } });
-  assert.equal(elite.list.filter((t) => t.kind !== 'mimic').length, 4, 'an elite brings one more, its seal');
-  assert.equal(elite.tier.window, 2, 'and its charges have a two-cycle window');
-  assert.equal(elite.tier.share, TELL.elite.share, 'for a burst sized to its bigger parts');
-  assert.equal(elite.tier.chits, 3, 'its ◆ count as a third of one each');
+  assert.equal(at(18, { opts: { elite: true } }).list.filter((t) => t.kind !== 'mimic').length, 3, 'an elite brings one more');
   // SPRAWL-00's first two kills (soft) bring none.
   const s = fresh(); s.hackers = { breaker: { level: 1, xp: 0 } };
   selectEncounter(s, 'random', 3, { mode: 'run', zone: true, room: '/tmp', level: 1 });
@@ -153,122 +153,91 @@ test('no pile-ups: a charge never lands with another part\'s heavy attack, and b
   }
 });
 
-test('a charge: its attack, much bigger; only a command of yours aimed at the part, typed after it was said, calls it off, and the part is Open', () => {
-  // Ignored: it lands bigger than the plain attack, and leaves you Corrupted, hung, and your last skill offline.
+test('a charge: its attack, much bigger; a cut on its part on its cycle calls it off (the interrupt), and the part is Open', () => {
+  // Ignored: it lands bigger than the plain attack, and leaves you Corrupted and your last skill offline (Hung from 17).
   const s = fight({ level: 12, cls: 'bastion' });
   quietParts(s);
   const enc = bare(s, 'encryptor');
   enc.attack = { name: 'Encrypt', effect: 'damage', amount: 20, interval: 5, due: 999 };
   const t = tell(s, 'fulldisk', 'encryptor', 1);
   const charged = tellIntents(s).find((x) => x.id === t.id);
-  assert.ok(charged.amount > 20, 'the board shows the charged hit');
+  assert.ok(charged.amount >= 20 * 2, `the board shows the charged hit (${charged.amount})`);
   const before = hp(s);
   fire(s, 'rate-limit pulse');
   hold(s);
   assert.ok(before - hp(s) >= charged.amount * 0.5 * 0.9, 'it landed at the charged size (Rate Limit throttled the Pulse, not this)');
   assert.ok(s.encounter.corrupt || s.logs.some((e) => /Corrupted/.test(e.message)), 'Corrupted');
   assert.ok(s.logs.some((e) => e.type === 'locked' && e.ability === 'rate-limit'), 'your last skill knocked offline');
-  assert.equal(s.encounter.hung, s.encounter.cycle, 'and this cycle\'s command hangs');
-  // Answered: a burst into it in its window, from a command typed after it was said. The part staggers: Open, +50%
-  // for 2 cycles, and its attack lands a cycle later.
+  assert.ok(!s.encounter.hung, 'no hang below 17');
+  // Answered: the Encryptor taken across its tick on the cycle the charge lands. The attack it rides is cancelled,
+  // the charge with it, and the part is Open, +50% for 2 cycles.
   const a = fight({ level: 12, cls: 'bastion' });
   quietParts(a);
-  bare(a, 'encryptor');
-  const ta = tell(a, 'fulldisk', 'encryptor', 0, 10);
-  const due = part(a, 'encryptor').attack.due;
+  edge(a, 'encryptor');
+  const ta = tell(a, 'fulldisk', 'encryptor', 0);
+  const was = hp(a);
   const ev = fire(a, 'spike encryptor');
+  assert.ok(ev.some((e) => e.type === 'cut' && e.cut && e.target === 'encryptor'), 'interrupted');
   assert.ok(ev.some((e) => e.tell === ta.id && e.answered), 'called off');
-  assert.ok(ev.some((e) => e.type === 'read' && e.open && e.stagger === 1), 'a read: the part staggers');
+  assert.ok(ev.some((e) => e.type === 'read' && e.open), 'a read: the part is Open');
   assert.ok(part(a, 'encryptor').openUntil >= a.encounter.cycle, 'still open next cycle');
-  assert.equal(part(a, 'encryptor').attack.due, due + 1, 'its attack waits a cycle');
-  // Area hits, burns and auto-repeat don't count, even in the window.
-  const noAnswer = (x, t) => !x.logs.some((e) => e.tell === t.id && (e.answered || e.burst));
-  const area = fight({ level: 16 });
-  quietParts(area);
-  bare(area, 'encryptor'); bare(area, 'pulse');
-  area.loadout.equipped.breaker = ['overload', 'flood', 'exploit', 'crack', 'fork-bomb'];
-  area.loadout.sub = { breaker: 'demolitionist' };
-  area.encounter.readyAt = {};
-  const tb = tell(area, 'fulldisk', 'encryptor', 0, 5);
-  command(area, 'fork-bomb'); resolveCycle(area);
-  assert.ok(noAnswer(area, tb), 'Fork Bomb hit it, but an area hit is not an answer');
-  const tc = tell(area, 'fulldisk', 'encryptor', 0, 5);
-  area.encounter.burns.push({ id: 'inject', target: 'encryptor', damage: 5, grow: 0, left: 9, name: 'Inject', drain: 0 });
-  hold(area);
-  assert.ok(noAnswer(area, tc), 'a burn ticking on it is not a command');
-  const td = tell(area, 'fulldisk', 'encryptor', 0, 5);
-  area.encounter.lastAttack = 'spike encryptor';
-  resolveCycle(area); // nothing typed: auto-repeat
-  assert.ok(noAnswer(area, td), 'auto-repeat is not an answer');
+  assert.equal(hp(a), was, 'nothing landed');
+  // A hit that doesn't cross a tick does its damage, and the charge stays.
+  const b = fight({ level: 12, cls: 'bastion' });
+  quietParts(b);
+  bare(b, 'encryptor');
+  const tb = tell(b, 'fulldisk', 'encryptor', 0);
+  fire(b, 'spike encryptor');
+  assert.ok(b.logs.some((e) => e.tell === tb.id && e.missed), 'not crossed: it lands');
+  // Any damage crosses, a burn too, and it still cuts the charge (no read XP: a burn isn't your command).
+  const c = fight({ level: 12, cls: 'bastion' });
+  quietParts(c);
+  edge(c, 'encryptor');
+  const tc = tell(c, 'fulldisk', 'encryptor', 0);
+  c.encounter.burns.push({ id: 'inject', target: 'encryptor', damage: 5, grow: 0, left: 9, name: 'Inject', drain: 0 });
+  hold(c);
+  assert.ok(c.logs.some((e) => e.tell === tc.id && e.answered), 'a burn crossing the tick on its cycle cuts it too');
 });
 
-test('the window: a charge can only be answered in its last cycle (its last two at levels 1 to 5); a hit before it does its damage but doesn\'t count, and the log says when it opens', () => {
+test('on its cycle: a cut before a charge lands spends the tick for nothing, and the charge stays; a cast\'s window is two cycles', () => {
   const s = fight({ level: 12, cls: 'bastion' });
   quietParts(s);
-  const enc = bare(s, 'encryptor');
-  const t = tell(s, 'fulldisk', 'encryptor', 2, 10);
-  const was = enc.integrity;
+  edge(s, 'encryptor');
+  const t = tell(s, 'fulldisk', 'encryptor', 2);
   const ev = fire(s, 'spike encryptor');
-  assert.ok(enc.integrity < was, 'the hit does its damage');
-  assert.equal(t.wound, 0, 'but it is too early to count');
-  assert.ok(ev.some((e) => e.tell === t.id && e.early && /Too early/.test(e.message)), 'and the log says so');
-  hold(s);
-  assert.ok(s.logs.some((e) => e.tell === t.id && e.window && /window is open/.test(e.message)), 'the log says when its window opens');
-  assert.equal(tellIntents(s).find((x) => x.id === t.id).open, true, 'the board shows it open');
-  const ev2 = fire(s, 'spike encryptor');
-  assert.ok(ev2.some((e) => e.tell === t.id && e.answered), 'in the window it counts');
-  // Levels 1 to 5: the last two cycles. A tell said with less lead than its window is open as soon as it's said.
-  const low = fight({ level: 4, cls: 'bastion' });
-  quietParts(low);
-  bare(low, 'encryptor');
-  const tl = tell(low, 'fulldisk', 'encryptor', 1, 4);
-  assert.equal(tellIntents(low).find((x) => x.id === tl.id).winFrom, 0, 'said a cycle ahead: open now');
-  fire(low, 'spike encryptor');
-  assert.ok(!tl.told, 'a cycle before it lands counts at level 4');
+  assert.ok(ev.some((e) => e.type === 'tick-wasted' && e.target === 'encryptor'), 'crossed with nothing due: the tick is spent');
+  assert.ok(t.told, 'and the charge still comes');
+  // A cast: answered on the cycle it lands or the one before, by a cut too.
+  const c = fight({ level: 12, opts: { elite: true } });
+  quietParts(c);
+  edge(c, 'encryptor');
+  const tc = tell(c, 'extortion', 'encryptor', 1);
+  assert.equal(tellIntents(c).find((x) => x.id === tc.id).winFrom, 0, 'a cycle ahead: open now');
+  const ev2 = fire(c, 'spike encryptor');
+  assert.ok(ev2.some((e) => e.type === 'cut' && e.cut) && !tc.told, 'a cut in its window stops the cast');
 });
 
-test('a burst: damage in the window adds up, each ◆ broken counts as half; half lands the charge plain with no after-effect, and less softens it in step', () => {
-  // ◆ count: a Spike on an armored part breaks one, half the burst; Crack breaks two or more, all of it.
+test('◆ guards the ticks: a hit on ◆ crosses nothing, so strip the charging part first, or pierce it', () => {
   const s = fight({ level: 12 });
   quietParts(s);
-  const enc = part(s, 'encryptor');
-  Object.assign(enc, { armor: 5, maxArmor: 5, integrity: 999, max: 999 });
-  enc.attack = { name: 'Encrypt', effect: 'damage', amount: 20, interval: 5, due: 999 };
-  const t = tell(s, 'fulldisk', 'encryptor', 0, 40);
-  const full = tellIntents(s).find((x) => x.id === t.id).amount;
-  assert.equal(tellIntents(s).find((x) => x.id === t.id).chits, 2, 'the board asks for ◆2');
-  const before = hp(s);
+  const enc = Object.assign(edge(s, 'encryptor'), { armor: 3, maxArmor: 3 });
+  const t = tell(s, 'fulldisk', 'encryptor', 0);
+  assert.match(tellIntents(s).find((x) => x.id === t.id).answer, /3 ◆ first, or pierce/);
   fire(s, 'spike encryptor');
-  assert.equal(enc.armor, 4);
-  assert.ok(s.logs.some((e) => e.tell === t.id && e.burst === 20 && /lands plain, nothing left behind/.test(e.message)), 'half the burst: plain, nothing behind');
-  const took = before - hp(s);
-  assert.ok(took < full && took >= 20, `it landed plain (${took}, the charge was ${full})`);
-  assert.ok(!s.encounter.corrupt && !s.logs.some((e) => e.type === 'locked'), 'no after-effect');
-  const c = fight({ level: 12 });
-  quietParts(c);
-  Object.assign(part(c, 'encryptor'), { armor: 5, maxArmor: 5 });
-  const tc = tell(c, 'fulldisk', 'encryptor', 0, 40);
-  c.encounter.readyAt = {};
-  const ev = fire(c, 'crack encryptor');
-  assert.ok(ev.some((e) => e.tell === tc.id && e.answered), 'Crack breaks three: the whole burst');
-  // The Bouncer's Battering Ram on its armored Gate: the same rule.
+  assert.equal(enc.armor, 2, 'the hit broke a ◆');
+  assert.ok(s.logs.some((e) => e.tell === t.id && e.missed), 'and crossed nothing: it lands');
+  // Stripped the cycle before, the cut lands on its cycle.
   const b = fresh(); b.hackers = { breaker: { level: 12, xp: 0 } };
   b.run = { loc: 'sim', cwd: '/srv', integrity: 3000, max: 3000, pack: [], visited: ['/'] };
   selectEncounter(b, 'bouncer', 3, { mode: 'run', room: '/srv', level: 12 });
   command(b, 'engage');
   quietParts(b);
-  Object.assign(part(b, 'pulse'), { armor: 5, maxArmor: 5 });
-  const tr = tell(b, 'ram', 'pulse', 0);
+  const gate = Object.assign(edge(b, 'pulse'), { armor: 2, maxArmor: 2 });
+  const tr = tell(b, 'ram', 'pulse', 1);
   b.encounter.readyAt = {};
-  assert.ok(fire(b, 'crack pulse').some((e) => e.tell === tr.id && e.answered), '◆2 or more off the Gate in its window');
-  // Below half: it lands softer in step with what you dealt, after-effects and all.
-  const d = fight({ level: 12, cls: 'bastion' });
-  quietParts(d);
-  bare(d, 'encryptor');
-  const td = tell(d, 'fulldisk', 'encryptor', 0, 999);
-  fire(d, 'spike encryptor');
-  assert.ok(d.logs.some((e) => e.tell === td.id && e.burst > 0 && /^FULL DISK lands \d+% softer \(\d+\/999\)\.$/.test(e.message)), 'a little softer');
-  assert.ok(d.encounter.corrupt || d.logs.some((e) => /Corrupted/.test(e.message)), 'and still Corrupted');
+  fire(b, 'crack pulse');
+  assert.equal(gate.armor, 0, 'Crack strips the Gate');
+  assert.ok(fire(b, 'spike pulse').some((e) => e.tell === tr.id && e.answered), 'then the cut on its cycle calls it off');
 });
 
 test('Full Disk: the Encrypt with a burst of encryption on top for 3 cycles, which goes when you break the Encryptor (or Purge, or Scrub)', () => {
@@ -292,8 +261,8 @@ test('Possession: its Scramble lasts two cycles longer', () => {
   assert.equal(s.encounter.scrambleUntil - (s.encounter.cycle - 1), sc.attack.amount + 2);
 });
 
-test('a cast: SIGINT in its window stops it and the part is Open; two command hits in it stop it too; ignored, it compiles a buff for 4 cycles', () => {
-  const s = fight({ level: 12 });
+test('a cast: SIGINT in its window stops it and the part is Open; a cut in it stops it too; ignored, it compiles a buff for 4 cycles', () => {
+  const s = fight({ level: 12, opts: { elite: true } });
   quietParts(s);
   const t = tell(s, 'extortion', 'encryptor', 2);
   assert.equal(keyMap(s)['-'], 'sigint');
@@ -302,17 +271,20 @@ test('a cast: SIGINT in its window stops it and the part is Open; two command hi
   const ev = fire(s, 'sigint');
   assert.ok(ev.some((e) => e.type === 'interrupt' && e.tell === t.id), 'SIGINT stops it');
   assert.ok(ev.some((e) => e.type === 'read' && e.open), 'read: the Encryptor is Open');
-  // Two command hits, in the window.
-  const s2 = fight({ level: 12 });
+  // Command hits alone don't stop it any more: only a cut (a tick crossed) does.
+  const s2 = fight({ level: 12, opts: { elite: true } });
   quietParts(s2);
   bare(s2, 'encryptor');
   const t2 = tell(s2, 'extortion', 'encryptor', 1);
   fire(s2, 'spike encryptor');
-  assert.ok(t2.told && t2.wound === 1);
-  const ev2 = fire(s2, 'spike encryptor');
-  assert.ok(ev2.some((e) => e.tell === t2.id && e.answered), 'hit out of its compile');
+  assert.ok(t2.told, 'a hit that crosses nothing');
+  const s3 = fight({ level: 12, opts: { elite: true } });
+  quietParts(s3);
+  edge(s3, 'encryptor');
+  const t3 = tell(s3, 'extortion', 'encryptor', 1);
+  assert.ok(fire(s3, 'spike encryptor').some((e) => e.tell === t3.id && e.answered), 'a cut out of its compile');
   // Ignored: Double Extortion, harder hits for 4 cycles, and back after.
-  const c = fight({ level: 12 });
+  const c = fight({ level: 12, opts: { elite: true } });
   quietParts(c);
   const pulse = part(c, 'pulse'), base = pulse.attack.amount;
   tell(c, 'extortion', 'encryptor', 0);
@@ -321,14 +293,15 @@ test('a cast: SIGINT in its window stops it and the part is Open; two command hi
   hold(c, TELL.castLasts);
   assert.equal(pulse.attack.amount, base, 'and back after it runs out');
   // Nothing compiling: SIGINT finds nothing.
-  const s3 = fight({ level: 12 });
-  quietParts(s3);
-  for (const x of tellsOf(s3).list) x.told = false;
-  assert.match(command(s3, 'sigint').at(-1).message, /Nothing is compiling/);
+  const s4 = fight({ level: 12 });
+  quietParts(s4);
+  for (const x of tellsOf(s4).list) x.told = false;
+  assert.match(command(s4, 'sigint').at(-1).message, /Nothing is compiling/);
 });
 
 test('a seal: if its part still wears ◆ when it lands it re-arms with one more and every stripped part gets one back; strip it first and the strip is ready again', () => {
   const s = fight({ level: 18, opts: { elite: true } });
+  retell(s, 2);
   quietParts(s);
   const enc = part(s, 'encryptor'), pulse = part(s, 'pulse');
   tell(s, 'keyrotation', 'encryptor', 1);
@@ -340,6 +313,7 @@ test('a seal: if its part still wears ◆ when it lands it re-arms with one more
   assert.equal(pulse.armor, 1, 'the stripped Pulse Node gets a ◆ back');
   // Stripped first, with Crack: the seal fails, and Crack is ready again.
   const s2 = fight({ level: 18, opts: { elite: true } });
+  retell(s2, 2);
   quietParts(s2);
   const e2 = part(s2, 'encryptor');
   const t2 = tell(s2, 'keyrotation', 'encryptor', 1);
@@ -500,7 +474,7 @@ test('C2 Node: fragments gnaw half again as hard while it lives, and drop when i
   assert.equal(part(s, 'frag9').integrity, 0, 'the fragment dropped with it');
 });
 
-test('the board shows a tell in its attack\'s cell even while the part is veiled, with exactly what answers it and when its window opens', () => {
+test('the board shows a tell in its attack\'s cell even while the part is veiled, with exactly what answers it and when', () => {
   const s = fight({ level: 12, family: 'ghostroot' });
   quietParts(s);
   const sc = part(s, 'scrambler');
@@ -509,41 +483,40 @@ test('the board shows a tell in its attack\'s cell even while the part is veiled
   const html = boardMarkup(s, null);
   assert.match(html, /intent tell t-charge/);
   assert.match(html, /POSSESSION|Possession/);
-  assert.match(html, new RegExp(`▸ Burst ${t.need} or ◆2<`), 'the burst and the ◆ that do it (the kick line says when)');
+  assert.match(html, new RegExp(`▸ Cut past ◆${sc.armor}<`), 'the cut, past its ◆ (the kick line says when)');
   assert.match(html, /<span class="tl-when">in 2<\/span>/);
-  assert.doesNotMatch(html, /tl-win/, 'not open yet');
-  assert.match(html, new RegExp(`title="Possession: [^"]*\nDeal ${t.need} to the Scrambler, or break 2 ◆ on it\. Window: in 2 cycles\."`), 'the tooltip: what it does, then how to stop it and when');
+  assert.doesNotMatch(html, /tl-win/, 'not on its cycle yet');
+  assert.match(html, new RegExp(`title="Possession: [^"]*\nCut it: take the Scrambler under 50% in 2 cycles \\(its ${sc.armor} ◆ first, or pierce\\)\\."`), 'the tooltip: what it does, then how to stop it and when');
   hold(s, 2);
   const now = boardMarkup(s, null);
-  assert.match(now, /intent tell t-charge now win/, 'open: the chip is lit');
+  assert.match(now, /intent tell t-charge now win/, 'its cycle: the chip is lit');
   assert.match(now, /<b class="tl-win">NOW<\/b>/);
-  assert.match(now, new RegExp(`▸ Burst ${t.need} or ◆2<`));
-  assert.match(now, /Window: this cycle\."/);
+  assert.match(now, /under 50% this cycle/);
   // A cast's window is two cycles: the cell before it lands is marked, lit while you're in it.
-  const cast = fight({ level: 12 });
+  const cast = fight({ level: 12, opts: { elite: true } });
   quietParts(cast);
   tell(cast, 'extortion', 'encryptor', 1);
   const ch = boardMarkup(cast, null);
-  assert.match(ch, /Casting[\s\S]*SIGINT or hit ×2</);
-  assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]*\nSIGINT, or hit the Encryptor twice\. Window: now until it lands next cycle\."/);
+  assert.match(ch, /Casting[\s\S]*SIGINT or cut</);
+  assert.match(ch, /title="Double Extortion: Every attack deals 35% more damage for 4 cycles\.[^"]*\nSIGINT, or take the Encryptor under 50%\. Window: now until it lands next cycle\."/);
   assert.match(ch, /tl-window live[^>]*><span class="tw-word">Window · <\/span>now/, 'the window marked on the timeline');
 });
 
-test('bots read tells: the planner hits a charging part on its last chance, SIGINTs a cast, and goes quiet on the Mimic\'s beat; one that ignores them doesn\'t', () => {
+test('bots read tells: the planner cuts a charging part on its cycle (before any other cut), SIGINTs a cast, and goes quiet on the Mimic\'s beat; one that ignores them doesn\'t', () => {
   const s = fight({ level: 12 });
   quietParts(s);
   for (const p of livingParts(s)) if (p.ward || p.lock) p.integrity = 0; // no Lockbox or Mutex to finish first
   s.server.max = s.server.integrity = 200;
-  bare(s, 'encryptor'); bare(s, 'pulse');
-  part(s, 'pulse').attack.due = s.encounter.cycle + 3; part(s, 'pulse').attack.amount = 40; // the bigger threat: where a bot that ignores tells works
+  edge(s, 'encryptor', 400); edge(s, 'pulse', 400); // nothing breaks this cycle
+  part(s, 'pulse').attack.due = s.encounter.cycle; part(s, 'pulse').attack.amount = 40; // the bigger plain attack, due now too
   part(s, 'encryptor').attack = { name: 'Encrypt', effect: 'damage', amount: 25, interval: 5, due: 999 };
-  tell(s, 'fulldisk', 'encryptor', 0, 60);
+  tell(s, 'fulldisk', 'encryptor', 0);
   TELL.bots.answer = false;
   let plain;
   try { plain = planner(s); } finally { TELL.bots.answer = true; }
-  assert.doesNotMatch(plain, / encryptor$/, `a bot that ignores tells works on its own target (${plain})`);
-  assert.match(planner(s), / encryptor$/, 'a bot that reads them bursts the charging Encryptor in its window');
-  const c = fight({ level: 12 });
+  assert.doesNotMatch(plain, / encryptor$/, `a bot that ignores tells cuts the bigger plain attack (${plain})`);
+  assert.match(planner(s), / encryptor$/, 'a bot that reads them cuts the charging Encryptor');
+  const c = fight({ level: 12, opts: { elite: true } });
   quietParts(c);
   c.server.max = c.server.integrity = 200;
   for (const p of livingParts(c)) if (p.ward || p.lock) p.integrity = 0;
@@ -583,61 +556,51 @@ test('the stagger: a solo boss stays Open but keeps its clock, and an attack ano
   assert.equal(enc.attack.due, due, 'Full Disk still lands when it was said to');
 });
 
-test('bots don\'t chip a charging part down to one ◆ before its window when ◆2 then is a whole burst', () => {
+test('bots strip a charging part the cycle before its charge, so the cut can land on its cycle', () => {
   const s = fight({ level: 16 });
   quietParts(s);
   for (const p of livingParts(s)) if (p.ward || p.lock || p.twin) p.integrity = 0;
-  const enc = part(s, 'encryptor');
-  Object.assign(enc, { armor: 2, maxArmor: 6, integrity: 400, max: 400 });
+  const enc = Object.assign(edge(s, 'encryptor', 400), { armor: 1, maxArmor: 6 });
   enc.attack = { name: 'Encrypt', effect: 'damage', amount: 30, interval: 6, due: 999 };
-  tell(s, 'fulldisk', 'encryptor', 1, 200);
-  s.encounter.readyAt = { crack: s.encounter.cycle + 1 }; // Crack is back for the window, not before
+  tell(s, 'fulldisk', 'encryptor', 1);
   const cmd = planner(s);
-  assert.ok(!(cmd.endsWith(' encryptor') && enc.armor > 0 && !/^(crack|shaped-charge)/.test(cmd)), `it leaves ◆2 for Crack in the window (${cmd})`);
+  assert.match(cmd, / encryptor$/, `it strips the Encryptor now (${cmd})`);
 });
 
-test('bots keep a burst for the window: the big hit stays off cooldown until the charge\'s window, then calls it off', () => {
+test('bots keep a tick for a charge: no cut wasted on the charging part before its cycle, then the cut on it', () => {
   const s = fight({ level: 12 });
   quietParts(s);
   for (const p of livingParts(s)) if (p.ward || p.lock || p.twin) p.integrity = 0;
-  const enc = bare(s, 'encryptor');
+  const enc = edge(s, 'encryptor');
   enc.attack = { name: 'Encrypt', effect: 'damage', amount: 30, interval: 6, due: 999 };
-  const spike = previewDamage(s, 'spike', enc);
-  const t = tell(s, 'fulldisk', 'encryptor', 2, spike + 5); // more than a Spike: it takes a big hit
+  bare(s, 'pulse');
+  const t = tell(s, 'fulldisk', 'encryptor', 2);
   const fired = [];
   for (let i = 0; i < 3 && t.told; i++) { const cmd = planner(s); fired.push(cmd); command(s, cmd); resolveCycle(s); }
-  assert.ok(s.logs.some((e) => e.tell === t.id && e.answered), `answered in its window (${fired.join(', ')})`);
-  assert.equal(fired.length, 3, `in the cycle it lands, not before (${fired.join(', ')})`);
-  assert.ok(fired.at(-1).endsWith(' encryptor') && !fired.at(-1).startsWith('spike'), `with a big hit (${fired.at(-1)})`);
+  assert.ok(!s.logs.some((e) => e.type === 'tick-wasted' && e.target === 'encryptor'), `no tick wasted on it (${fired.join(', ')})`);
+  assert.ok(s.logs.some((e) => e.tell === t.id && e.answered), `cut on its cycle (${fired.join(', ')})`);
+  assert.ok(fired.at(-1).endsWith(' encryptor'), `the cut (${fired.at(-1)})`);
 });
 
 // The situational skills are the natural answers to particular tells (docs/skills.md).
-test('situational answers: Segfault triples on a charging part, Suspend drains a charge, Quarantine and Overvolt stop a cast, Hijack steals a charge, Blackhole eats one', () => {
-  // Segfault: 30, ×3 on a part winding up a charge, and it calls it off.
+test('situational answers: Segfault triples on a charging part (and its hit cuts it), Suspend drains a charge, Quarantine stops a cast, Hijack steals a charge, Blackhole eats one', () => {
+  // Segfault: 30, ×3 on a part winding up a charge, and across its tick on that cycle it calls it off.
   const s = fight({ level: 18, cls: 'breaker' });
   s.loadout.sub = { [s.loadout.archetype]: 'overclocker' };
   quietParts(s);
-  bare(s, 'encryptor');
-  const t = tell(s, 'fulldisk', 'encryptor', 0, 60); // in its window, a burst Segfault's triple hit makes
+  const enc = edge(s, 'encryptor', 999);
+  enc.integrity = 560;
+  const t = tell(s, 'fulldisk', 'encryptor', 0);
   s.loadout.equipped.overclocker = ['overload', 'flood', 'exploit', 'crack', 'overvolt', 'segfault', 'thermal-throttle'];
-  const was = part(s, 'encryptor').integrity;
+  const was = enc.integrity;
   fire(s, 'segfault encryptor');
-  assert.ok(was - part(s, 'encryptor').integrity >= Math.floor(30 * 3 * 1.5), 'three times, and it is Open after');
+  assert.ok(was - enc.integrity >= 30 * 3, 'three times');
   assert.ok(!t.told, 'called off');
-  // Overvolt: two hits in one command stop a cast.
-  const o = fight({ level: 18, cls: 'breaker' });
-  o.loadout.sub = { [o.loadout.archetype]: 'overclocker' };
-  quietParts(o);
-  bare(o, 'encryptor');
-  o.loadout.equipped.overclocker = ['overload', 'flood', 'exploit', 'crack', 'overvolt', 'segfault', 'thermal-throttle'];
-  const to = tell(o, 'extortion', 'encryptor', 1); // in its window
-  fire(o, 'overvolt encryptor');
-  assert.ok(!to.told, 'one Overvolt, two hits: stopped');
   // Suspend (Warden): the charge drains out, and it lands plain later.
   const w = fight({ level: 18, cls: 'bastion' });
   w.loadout.sub = { [w.loadout.archetype]: 'warden' };
   quietParts(w);
-  const tw = tell(w, 'fulldisk', 'encryptor', 0); // in its window
+  const tw = tell(w, 'fulldisk', 'encryptor', 0); // on its cycle
   const ev = fire(w, 'suspend encryptor');
   assert.ok(ev.some((e) => e.tell === tw.id && e.answered) && !tw.told, 'drained');
   // Quarantine (Warden, 30) stops a cast.
@@ -677,8 +640,9 @@ test('situational answers: Segfault triples on a charging part, Suspend drains a
   assert.ok(hp(b) >= hb - 1 && !tb.told, 'into the blackhole');
 });
 
-test('situational answers to seals and casts: Bit Rot and Cache Poison fail a seal, Thermal Runaway\'s ticks stop a cast, Kill Switch and IRQ Storm count as your hits', () => {
+test('situational answers to seals and casts: Bit Rot and Cache Poison fail a seal; Thermal Runaway\'s burn and Kill Switch\'s helpers cut a tell like any damage', () => {
   const r = fight({ level: 34, opts: { elite: true } });
+  retell(r, 2);
   r.loadout.sub = { [r.loadout.archetype]: 'demolitionist' };
   quietParts(r);
   r.loadout.equipped.demolitionist = ['overload', 'flood', 'exploit', 'crack', 'bit-rot'];
@@ -689,6 +653,7 @@ test('situational answers to seals and casts: Bit Rot and Cache Poison fail a se
   hold(r, 2);
   assert.ok(r.logs.some((e) => e.tell === tr.id && /rotting/.test(e.message)), 'a rotting part can\'t seal');
   const c = fight({ level: 30, cls: 'operator', opts: { elite: true } });
+  retell(c, 2);
   c.loadout.sub = { [c.loadout.archetype]: 'hijacker' };
   quietParts(c);
   c.loadout.equipped.hijacker = ['deploy', 'hook', 'spawn', 'botnet', 'cache-poison'];
@@ -698,25 +663,26 @@ test('situational answers to seals and casts: Bit Rot and Cache Poison fail a se
   fire(c, 'cache-poison encryptor');
   hold(c, 2);
   assert.ok(c.logs.some((e) => e.tell === tc.id && /poisoned/.test(e.message)) && ce.integrity < 999, 'a poisoned seal fails and hurts');
-  // Thermal Runaway: each tick on a casting part is a hit on the cast.
+  // Thermal Runaway: its hit and its ticks cross the casting part's tick in the cast's window.
   const d = fight({ level: 22, cls: 'breaker' });
   d.loadout.sub = { [d.loadout.archetype]: 'demolitionist' };
   quietParts(d);
-  bare(d, 'encryptor');
+  edge(d, 'encryptor', 999);
   d.loadout.equipped.demolitionist = ['overload', 'flood', 'exploit', 'crack', 'thermal-runaway'];
   const td = tell(d, 'extortion', 'encryptor', 1); // its window: this cycle and next
   fire(d, 'thermal-runaway encryptor');
   hold(d);
-  assert.ok(!td.told, 'two ticks: stopped');
-  // Kill Switch: each part it cashes in on takes it as your hit.
+  assert.ok(!td.told, 'stopped');
+  // Kill Switch: the helpers it cashes in cross the charging part's tick on its cycle.
   const k = fight({ level: 18, cls: 'operator' });
   k.loadout.sub = { [k.loadout.archetype]: 'herder' };
   quietParts(k);
-  bare(k, 'encryptor');
-  const tk = tell(k, 'fulldisk', 'encryptor', 1, 10); // Kill Switch fires in its window
+  const ke = bare(k, 'encryptor');
+  const tk = tell(k, 'fulldisk', 'encryptor', 1);
   fire(k, 'deploy encryptor');
+  Object.assign(ke, { integrity: 505, ticks: [{ at: 0.5, spent: false }, { at: 0.25, spent: false }] });
   fire(k, 'kill-switch');
-  assert.ok(!tk.told, 'cashed in on the charging part: called off');
+  assert.ok(!tk.told, 'cashed in on its cycle: called off');
 });
 
 test('a fight\'s metrics count what its tells did (the gap test reads them)', () => {
@@ -727,46 +693,35 @@ test('a fight\'s metrics count what its tells did (the gap test reads them)', ()
   assert.ok(tellLog(s).length > 0);
 });
 
-test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on which part, and the answer in its window', () => {
-  // A charge on an armored part, said 3 ahead: its burst or its ◆, in its window (a one-cycle window: it opens later).
+test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on which part, and the answer', () => {
+  // A charge, said 3 ahead: cut it on that cycle (past its ◆ when it wears them).
   const s = fight({ level: 12 });
   quietParts(s);
   const enc = part(s, 'encryptor');
   Object.assign(enc, { armor: 2, maxArmor: 2 });
-  const t = tell(s, 'fulldisk', 'encryptor', 3, 40);
-  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Deal 40 or break 2 ◆ in its window.');
+  const t = tell(s, 'fulldisk', 'encryptor', 3);
+  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Cut it on that cycle, past its 2 ◆.');
   enc.armor = 0;
-  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Deal 40 in its window.');
+  assert.equal(sayOf(s, t), 'FULL DISK in 3: the Encryptor. Cut it on that cycle.');
   // A cast, a seal, the breach's Lock, and the Mimic's beat.
-  const c = fight({ level: 12 }); quietParts(c);
-  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 2)), 'DOUBLE EXTORTION in 2: the Encryptor. SIGINT or hit it twice in its window.');
-  const v = c.encounter.virus; v.tells = null; v.tellSet = ['fulldisk', 'extortion', 'keyrotation', 'lock']; v.extraTells = 4; tellStart(c); quietParts(c);
+  const c = fight({ level: 12, opts: { elite: true } }); quietParts(c);
+  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 2)), 'DOUBLE EXTORTION in 2: the Encryptor. SIGINT or cut it in its window.');
+  assert.equal(sayOf(c, tell(c, 'extortion', 'encryptor', 1)), 'DOUBLE EXTORTION in 1: the Encryptor. SIGINT or cut it in its window, open now.');
+  retell(c, 4, ['fulldisk', 'extortion', 'keyrotation', 'lock']); quietParts(c);
   const armor = Object.assign(part(c, 'encryptor'), { armor: 3, maxArmor: 3 }).armor;
   assert.equal(sayOf(c, tell(c, 'keyrotation', 'encryptor', 2)), `KEY ROTATION in 2: the Encryptor. Strip its ${armor} ◆ before then, or it re-arms.`);
   assert.equal(sayOf(c, tell(c, 'lock', 'encryptor', 2)), 'LOCK in 2: the Encryptor. It locks your next command for 3 cycles. Break it, or feed it a cooling skill.');
   const seed = Array.from({ length: 50 }, (_, i) => i + 1).find((x) => createVirus('random', x, { family: 'ghostroot', threat: 9 + 12 }).parts.some((p) => p.mimic));
   const m = fight({ level: 12, family: 'ghostroot', seed }); quietParts(m);
-  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'MIMIC in 2: the Mimic. It plays back what you fire. Go quiet.');
-  // Said inside its window (levels 1 to 5, a cycle ahead): it says the window is open now.
-  const low = fight({ level: 4 }); quietParts(low); bare(low, 'encryptor');
-  assert.equal(sayOf(low, tell(low, 'fulldisk', 'encryptor', 1, 12)), 'FULL DISK in 1: the Encryptor. Deal 12 in its window, open now.');
-
-  // The lines that follow, in a fight: a hit too early, its window opening, a burst short of it, and the call-off.
-  const f = fight({ level: 12, cls: 'bastion' });
-  quietParts(f);
-  bare(f, 'encryptor');
-  const tf = tell(f, 'fulldisk', 'encryptor', 2, 999);
-  const early = fire(f, 'spike encryptor').find((e) => e.tell === tf.id && e.early);
-  assert.equal(early.message, 'Too early for FULL DISK: its window opens in 2 cycles.');
-  hold(f);
-  assert.equal(f.logs.findLast((e) => e.tell === tf.id && e.window).message, 'FULL DISK\'s window is open.');
-  const short = fire(f, 'spike encryptor').find((e) => e.tell === tf.id && e.burst != null && e.type === 'status' && e.message.includes('more'));
-  assert.match(short.message, /^FULL DISK: \d+\/999\. \d+ more this cycle\.$/);
-  const g = fight({ level: 12, cls: 'bastion' }); quietParts(g); bare(g, 'encryptor');
-  const tg = tell(g, 'fulldisk', 'encryptor', 0, 5);
-  assert.equal(fire(g, 'spike encryptor').find((e) => e.tell === tg.id && e.answered).message, 'FULL DISK called off.');
+  assert.equal(sayOf(m, tell(m, 'mimic', 'mimic', 2)), 'MIMIC in 2: the Mimic. It plays back what you fire. Go quiet, or cut it.');
+  // The cut, in a fight: the interrupt's line and the call-off.
+  const g = fight({ level: 12, cls: 'bastion' }); quietParts(g); edge(g, 'encryptor');
+  const tg = tell(g, 'fulldisk', 'encryptor', 0);
+  const ev = fire(g, 'spike encryptor');
+  assert.equal(ev.find((e) => e.tell === tg.id && e.answered).message, 'Cut: FULL DISK called off.');
+  assert.match(ev.find((e) => e.type === 'cut').message, /^INTERRUPTED\. You take the Encryptor under half\. Its Full Disk is cancelled\.$/);
   // Every announcement in real fights, every family: one short line (a tell's name, "in N", its part).
-  for (const [family, level] of [['ransomware', 12], ['worm', 17], ['ghostroot', 12], ['ransomware', 4]]) {
+  for (const [family, level] of [['ransomware', 12], ['worm', 17], ['ghostroot', 12], ['ransomware', 8]]) {
     const r = fight({ level, family, seed: 3 });
     for (let i = 0; i < 14 && active(r); i++) hold(r);
     const said = r.logs.filter((e) => e.type === 'telegraph' && e.tell && !e.window);
@@ -774,9 +729,10 @@ test('the log\'s tell lines are as short as the chip\'s tooltip: what, when, on 
     for (const e of said) {
       assert.ok(e.message.length <= 100, `${family} ${level}: short (${e.message.length}): ${e.message}`);
       assert.match(e.message, /^[A-Z][A-Z0-9' -]+ (in \d+|now): the [A-Za-z0-9 -]+\. /, e.message);
-      assert.doesNotMatch(e.message, /to call it off|Hits before then|Its window opens/, e.message);
+      assert.doesNotMatch(e.message, /Deal \d+|break \d+ ◆ in its window|hit it twice/, e.message);
       assert.equal(e.name, e.message.split(/ (in \d+|now):/)[0], 'the event names the tell (app.js floats it)');
     }
     for (const e of r.logs.filter((x) => x.type === 'telegraph' && x.tell && x.window)) assert.match(e.message, /^[A-Z][A-Z0-9' -]+'s window is open\.$/);
   }
 });
+

@@ -111,7 +111,7 @@ test('every blue carries a minor rule and every yellow a major one; one number l
   assert.ok(blue.name.includes(RULES[blue.rule].of) || blue.affixes.some((a) => blue.name.includes(a === 'precise' ? 'Precise' : '')), `a blue's name carries its rule when it has no suffix: ${blue.name}`);
 });
 
-test('rules at work: Interrupt Handler on a part winding up a tell, Exception Handler and Abort Handler when you call one off, Double Tap counts a command twice', async () => {
+test('rules at work: Interrupt Handler on a part winding up a tell, Exception Handler and Abort Handler when you call one off, Double Tap opens a part you cut', async () => {
   const { damageMultiplier } = await import('./dist/combat.mjs');
   const s = fight(at({ breaker: 20 }), 20);
   const p = part(s, 'pulse');
@@ -135,15 +135,16 @@ test('rules at work: Interrupt Handler on a part winding up a tell, Exception Ha
   fxAnswer(t);
   assert.equal(t.encounter.shield, RULES['exception-handler'].value[1], 'a shield');
   assert.equal(t.server.integrity, 50 + RULES['abort-handler'].value[1], 'and a heal');
-  // Double Tap: a command counts twice toward a burst, so one Spike calls off a charge that needs more than a Spike.
+  // Double Tap: a move you cut leaves its part Open (+50% for 2 cycles).
   const u = at({ breaker: 20 });
   wear(u, rule('double-tap'));
   bare(fight(u, 20));
   const r = part(u, 'pulse');
-  Object.assign(r, { integrity: 500, max: 500 });
-  telling(u, r, { need: Math.round(previewDamage(u, 'spike', r) * 1.6), next: u.encounter.cycle, said: u.encounter.cycle }); // in its window
+  Object.assign(r, { integrity: 52, max: 100, ticks: [{ at: 0.5, spent: false }, { at: 0.25, spent: false }] });
+  r.attack.due = u.encounter.cycle;
   command(u, 'spike pulse'); const ev = resolveCycle(u);
-  assert.ok(ev.some((e) => e.tell === 't' && e.answered), 'called off with one command');
+  assert.ok(ev.some((e) => e.type === 'cut' && e.cut), 'cut');
+  assert.ok(r.openUntil >= u.encounter.cycle, 'and Open');
 });
 
 test('the new world uniques: Rowhammer, Slammer, Log4Shell, Shellshock, Blue Pill, Bulletproof Host, Ctrl-C, Interrupt Vector, Spectre, Hot Reload', async () => {

@@ -1,10 +1,10 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards } from './combat.mjs';
+import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
-import { tellMove, tellFocus, answers, QUIET } from './tells.mjs';
+import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores } from './genes.mjs';
 import { interruptMove, saveTick } from './interrupt.mjs';
@@ -12,6 +12,8 @@ import { interruptMove, saveTick } from './interrupt.mjs';
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
 const ok = (s, text) => !toIntent(s, text).error && !(TAUNTS.has(text) && noTaunt(s));
 const TAUNTS = new Set(['firewall', 'bulkhead']);
+// Skills built to answer a big move (tells.mjs BUILT, and Takeover): a class plan that fires one keeps it over a cut.
+const BUILT = new Set(['suspend', 'jam', 'spoofed-ack', 'hijack', 'blackhole', 'backfire', 'takeover', 'quarantine', 'revoke']);
 // Try commands in order; the first one that's valid right now wins.
 const first = (s, list) => list.find((c) => c && ok(s, c)) || null;
 // A bot that ignores tells (TELL.bots.answer false) reads the board as if they weren't there (tells.mjs).
@@ -27,8 +29,9 @@ const threatOf = (p) => { const a = p.attack; if (!a) return 0; const amt = a.ef
 // Burns and helpers already on a part count for it: switching away wastes them.
 const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target === p.id).length + 0.3 * s.encounter.helpers.filter((h) => h.target === p.id).length;
 // Parts that change the fight (data.mjs FAMILIES): a Tripwire sets the others off when it breaks, so it goes last;
-// a C2 Node takes its fragments with it, so it goes first once they pile up.
-const order = (s, p) => (p.deadman && !ignores('tripwire') && livingParts(s).some((x) => x !== p && x.kind === 'system') ? 0.05 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
+// a C2 Node takes its fragments with it, so it goes first once they pile up. A boss's ♛ part with a phase still to
+// come (interrupt.mjs, rule a) waits for the others: its phases start when you choose, after the add is down.
+const order = (s, p) => (p.core && p.ticks?.some((t) => !t.spent) && livingParts(s).some((x) => x !== p && x.attack) ? 0.4 : p.deadman && !ignores('tripwire') && livingParts(s).some((x) => x !== p && x.kind === 'system') ? 0.05 : p.command && !ignores('c2') && livingParts(s).filter((x) => x.kind === 'fragment').length >= 2 ? 4 : 1);
 export const mostThreat = (s) => livingParts(s).map((p) => ({ p, k: (threatOf(p) * invested(s, p) * order(s, p)) / (p.integrity + 10 * (p.armor || 0)) })).sort((a, b) => b.k - a.k || dueOf(s, a.p) - dueOf(s, b.p))[0]?.p || soonest(s);
 const bare = (p) => alive(p) && !p.armor;
 // A Trojan's Package while its Loader lives (families.mjs): any damage unpacks it, so a player leaves it alone.
@@ -74,16 +77,26 @@ function keyringNow(s) {
 export function planner(s) {
   const plan = play(s);
   // Tells it answers outright (tells.mjs): SIGINT a cast, go quiet on the Mimic's beat when the plan hits hard,
-  // strip a part about to seal.
+  // strip a part about to seal (or about to charge, so the cut can land).
   const at = livingParts(s).find((p) => plan && plan.endsWith(' ' + p.id)) || null;
+  // The interrupt (interrupt.mjs): take a part across a tick on the cycle its move is due, a tell's first. A plan that
+  // breaks a part beats a cut, unless the move the cut cancels is the bigger loss: a charge, or a hit of a tenth of
+  // your bar from another part while the virus has more than the one the plan breaks. A big cut comes before the rest.
+  const ticked = s.encounter.ticked, kill = plan && at && killing(s, plan, at);
+  const cut = ticked ? interruptMove(s, plan) : null, cp = cut && part(s, cut.split(' ')[1]);
+  const big = !!cp && (chargeNow(s, cp) || (cp.attack && attackAmount(cp) >= defender(s).max * 0.1));
+  const worth = !kill || (big && cp !== at && livingParts(s).length > 1);
+  const echo = cut && echoesNow(s, cut) && !(livingParts(s).length === 1 && killing(s, cut, cp)); // not into the Mimic's beat
+  if (TELL.bots.bigCut !== false && cut && big && worth && !echo && !BUILT.has((plan || '').split(' ')[0]) && ok(s, cut)) return cut; // a class's own answer to that move stays
+  // Tells it answers outright (tells.mjs): SIGINT a cast, go quiet on the Mimic's beat when the plan hits hard,
+  // strip a part about to seal (or about to charge, so the cut can land).
   const told = tellMove(s, at, plan);
   if (told && ok(s, told)) return told;
-  // A server room (interrupt.mjs): take a part across a tick on the cycle its move is due (unless the plan breaks a
-  // part outright), and keep a tick for a charge that's coming.
-  if (s.encounter.rooms && !(plan && at && killing(s, plan, at))) {
-    const cut = interruptMove(s, plan);
-    if (cut && ok(s, cut)) return cut;
-    const keep = saveTick(s, plan);
+  if (ticked) {
+    if (cut && worth && !echo && ok(s, cut)) return cut;
+    // Saving a tick for a charge pays from level 10; below it, with three or four keys, holding back cost more (the
+    // rooms sim at level 6). TELL.bots.save false: never (a sim switch).
+    const keep = !kill && TELL.bots.save !== false && s.encounter.virus.level >= TELL.castFrom && saveTick(s, plan);
     if (keep && ok(s, keep)) return keep;
   }
   // Scrambled (a Scramble, or a Possession that made it longer): a big hit may turn on you, so set up instead,

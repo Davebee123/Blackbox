@@ -1,4 +1,7 @@
-// Runs: exploring a traced location as a small file system with Unix commands.
+// Runs: connecting to a server, the pack, banking it at jack out, the crew on a run. Since R1 (docs/servers.md) every
+// connect plays the server as rooms (netrooms.mjs, floorplan.mjs): the terminal's ls, cd, map, go, wait, back,
+// engage, cat, pull, open, force, rest and slip work on its rooms. The old file system below (layouts, passwords,
+// Trace, quirk folders) no longer runs on the real game; phase R5 deletes it with the breach code.
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
@@ -21,6 +24,8 @@ import { strikeServer } from './factions.mjs';
 import { biasCode, netOf } from './network.mjs';
 import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
+import { enterRooms, roomsFor } from './netrooms.mjs';
+import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf } from './floorplan.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -83,8 +88,8 @@ export function zoneSpawns(s, now = clock()) {
     const family = pool[(n + room.length) % pool.length];
     const lvl = Math.min(CONFIG.zone.maxLevel, Math.max(1, hackerLevel(s) + (n % 4 === 0 ? 1 : 0))); // a starter area: never past CONFIG.zone.maxLevel
     // From level 3, /net/relay holds RELAY-KING, a boss (BOSSES.relayking), back half an hour after you beat it.
-    if (room === KING_ROOM && hackerLevel(s) >= 3) { z.spawns[room] = { alive: true, family: 'worm', level: Math.min(CONFIG.zone.maxLevel + 2, hackerLevel(s)), seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
-    z.spawns[room] = { alive: true, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` }; // the body's stem: the fight is CRYPTJACK-4821 (data.mjs stemOf)
+    if (room === KING_ROOM && hackerLevel(s) >= 3) { z.spawns[room] = { alive: true, bornAt: now, family: 'worm', level: Math.min(CONFIG.zone.maxLevel + 2, hackerLevel(s)), seed: (z.seed * 97 + n * 131) >>> 0, name: 'RELAY-KING', boss: 'relayking' }; continue; }
+    z.spawns[room] = { alive: true, bornAt: now, family, level: lvl, seed: (z.seed * 97 + n * 131) >>> 0, name: `${FAMILIES[family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` }; // the body's stem: the fight is CRYPTJACK-4821 (data.mjs stemOf)
   }
   return z.spawns;
 }
@@ -304,8 +309,10 @@ function decoy(loc, k) {
 }
 
 // How many of those you've banked (dead drops, route and contract files don't count toward it).
-export const takenOf = (loc) => takeable(loc).filter((f) => loc.state.taken[f]).length;
+// A server's progress for the map: on rooms (R1) its rooms cleared of all its rooms, else the old files taken.
+export const takenOf = (loc) => (loc.floorplan ? Object.keys(loc.floorplan.graph.rooms).filter((id) => loc.floorplan.cleared[id]).length : takeable(loc).filter((f) => loc.state.taken[f]).length);
 export function takeable(loc) {
+  if (loc.floorplan) return Object.keys(loc.floorplan.graph.rooms);
   const out = [];
   for (const [dir, d] of Object.entries(layoutOf(loc))) if (!d.drop) for (const f of d.files) if (!['text', 'trap', 'sweep'].includes(fileInfo(loc, dir, f).kind)) out.push(join(dir, f));
   return out;
@@ -367,6 +374,9 @@ const err = (s, text, detail = {}) => emit(s, 'net-err', text, detail);
 // A typo'd name: the error plus "did you mean" (clickable in the terminal).
 const near = (s, text, word, names, cmd) => { const n = closest(word, names); return err(s, n ? `${text} Did you mean ${n}?` : text, n ? { suggest: `${cmd} ${n}` } : {}); };
 
+// The old file-system run (layouts, passwords, Trace, run skills): nothing in the game reaches it since R1, and R5
+// deletes it. Its own tests switch it on (LEGACY.files) to keep covering it until then.
+export const LEGACY = { files: false };
 export function connect(s, id) {
   const first = s.serial;
   const LOUD = /\s(?:loud|\+loud|\+hot)$/; // connect <server> loud (HOT_RUN in data.mjs); +hot still works
@@ -393,11 +403,27 @@ export function connect(s, id) {
     if (s.encounter && s.encounter.phase !== 'active') s.encounter = null;
     arrive(s, loc, fileInfo); // a member's server: its natives come back after a while (consortium.mjs)
     const firstVisit = !loc.runs && !zone;
-    loc.runs++;
+    loc.runs = (loc.runs || 0) + 1;
+    if (LEGACY.files) connectFiles(s, loc, signal, hot, zone);
+    else {
+      // R1: the server's rooms (netrooms.mjs). Your crew comes along, linked to you.
+      const R = enterRooms(s, loc, { signal, hot });
+      const rooms = ` Rooms ${Object.values(R.graph.rooms).filter((x) => R.cleared[x.id]).length}/${Object.keys(R.graph.rooms).length}.`;
+      emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
+      if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
+    }
+    if (!zone && !loc.member) collect(s, loc, 'Collected from ');
+    if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
+    return since(s, first);
+  }
+  return since(s, first);
+}
+// The old file-system connect (LEGACY.files), kept for the code R5 deletes.
+function connectFiles(s, loc, signal, hot, zone) {
+  {
     if (zone) zoneSpawns(s);
     if (loc.rogue) rogueSpawns(s, loc);
     s.run = { loc: loc.id, cwd: '/', integrity: signal, max: maxSignal(s), pack: [], visited: ['/'] };
-    // Your crew comes along, linked to you (they follow where you go). See the crew strip.
     s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: '/', link: 'you' }]));
     if (hot) s.run.hot = true;
     const q = QUIRKS[loc.quirk];
@@ -407,10 +433,7 @@ export function connect(s, id) {
     else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     ls(s);
-    if (!zone && !loc.member) collect(s, loc, 'Collected from ');
-    if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
   }
-  return since(s, first);
 }
 
 // Signal carries between connections: what you left with, rested back up at home.
@@ -460,7 +483,7 @@ function ls(s, all = false) {
 
 // Who's in a folder: your crew (always), plus anyone online in a shared place (SPRAWL-00, the
 // consortium's ground). deep: or anywhere inside it, as ls shows next to a folder.
-function peopleIn(s, loc, folder, deep) {
+export function peopleIn(s, loc, folder, deep) {
   const inside = (p) => p === folder || (deep && p.startsWith(folder === '/' ? '/' : folder + '/'));
   const crew = Object.entries(s.run?.crew || {}).filter(([, c]) => inside(c.cwd)).map(([handle, c]) => ({ handle, crew: true, linked: c.link === 'you' }));
   const key = loc.zone ? 'sprawl' : isGround(s, loc) ? loc.id : null;
@@ -581,6 +604,8 @@ function pull(s, arg) {
   traceAdd(s, TRACE.pull);
 }
 
+// One pack file in a line (the pack command).
+const packLine = (f) => (f.kind === 'credits' ? f.amount + ' credits' : f.kind === 'item' ? f.item : f.kind === 'gear' ? itemLabel(f.item) : f.kind === 'code' ? `${f.amount} ${MATERIALS[f.material].name}` : f.kind === 'source' ? sourceName(f.zeroDay) + ' source' : f.kind === 'blueprint' ? 'blueprint' : f.kind === 'daemon' ? 'daemon' : f.kind === 'deeper' ? 'trace record (deeper node)' : f.label || f.kind);
 // One pack file as a row for the gain card (app.js): { label, qty, kind, rarity, sub, text }.
 // Same row shape as a fight's spoils (view.mjs spoilsOf), so the card looks the same.
 export function packGain(f, credits = null) {
@@ -636,11 +661,16 @@ function boost(s) {
 }
 
 export function jackOut(s) {
-  const loc = currentLocation(s), r0 = s.run;
+  if (s.run?.rooms) return roomsJackOut(s); // R1: floorplan.mjs (the keys go back), then bank below
+  return bank(s, currentLocation(s));
+}
+// Bank the run's pack and go home (a jack out, on rooms or the old file system). why: a line before the message.
+export function bank(s, loc, why = '') {
+  const r0 = s.run;
   const pack = s.run.pack;
   let credits = 0;
   for (const f of pack) {
-    loc.state.taken[f.path] = true;
+    (loc.state ||= { cleared: {}, unlocked: {}, taken: {} }).taken[f.path] = true;
     if (f.kind === 'credits') credits += f.amount;
     if (f.kind === 'item') s.salvage.push({ name: f.item, virus: loc.name, seed: loc.seed });
   }
@@ -666,7 +696,7 @@ export function jackOut(s) {
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
-  emit(s, 'jacked-out', `JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
+  emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...daemons.map(() => 'a daemon'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
   if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, xpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
@@ -679,7 +709,7 @@ export function jackOut(s) {
   for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
   for (const f of daemons) learnDaemon(s, 'Daemon banked: ');
-  for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: loc.id });
+  for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: f.loc || loc.id });
   // A trace record moves the trace on one of this server's hidden neighbours (a flagged one
   // first, else the one it names): part of the way, not the server itself.
   for (const f of pack.filter((x) => x.kind === 'deeper')) {
@@ -694,7 +724,7 @@ export function jackOut(s) {
 // One entry point for everything the player types on the campaign.
 // After a fight you win on a run: the folder you're in, listed again (what's left, one click away).
 hooks.runWon = (s) => {
-  if (!s.run) return;
+  if (!s.run || s.run.rooms) return;
   const e = s.encounter;
   if (e?.hunter) { s.run.hunter = false; s.run.trace = TRACE.after; emit(s, 'net-good', `Hunter down. Trace is at ${TRACE.after}%, and you can jack out.`); }
   else if (e && !e.zone && !e.wild && !e.process) traceAdd(s, TRACE.cycle * (e.cycle || 1)); // a guard fight is loud
@@ -715,6 +745,20 @@ export function play(s, input) {
   if (/^developer wall (\d+|off)$/.test(text)) { const first = s.serial; developerWall(s, text); return since(s, first); } // pin your wall's base (firewall.mjs)
   if (/^(install|uninstall) /.test(text)) { const first = s.serial; if (sabotageBlock(s, text)) return since(s, first); } // a saboteur holds a service (invasion.mjs)
   if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { const first = s.serial; deal(s, text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null)); return since(s, first); } // an event now
+  // On rooms (R1): ls, cd, map, go, wait, back, engage, cat, pull, open, force, rest, slip, jack out (floorplan.mjs).
+  // Mid-fight, jack out is the emergency escape, as on the old runs.
+  if (s.run?.rooms) {
+    if (active(s)) return word === 'jack' && rest === 'out' ? command(s, 'jack out') : command(s, input);
+    roomsSettle(s);
+    if (word === 'pack') { const first = s.serial; out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${packLine(f)}`).concat('unbanked until you jack out.') : 'pack is empty.', 'rooms-out'); return since(s, first); }
+    if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk (cd <room>, cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
+    if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) { const first = s.serial; crewMove(s, word, rest); return since(s, first); }
+    if (word === 'scan') { const first = s.serial; scanRoom(s, rest); return since(s, first); }
+    const ev = roomsCommand(s, text.replace(/^look$/, 'ls').replace(/^attack\b.*/, 'engage').replace(/^tree$/, 'map'));
+    if (ev) return ev;
+    if (RUN_COMMANDS.includes(word) && !['scan', 'boost', 'crew'].includes(word) && !(word === 'jack' && rest !== 'out')) { const first = s.serial; warn(s, `${word}: not on rooms. Type help.`); return since(s, first); }
+    return command(s, input);
+  }
   const isRun = RUN_COMMANDS.includes(word) && !(word === 'jack' && rest !== 'out') && !(word === 'scan' && active(s)); // scan mid-fight reads the fight (genome.mjs)
   if (!s.run || !isRun) return command(s, input);
   const first = s.serial;
@@ -753,9 +797,11 @@ export function play(s, input) {
 }
 
 // ---------- the crew on a run (the crew strip) ----------
-// Each crewmate has a folder. Linked to you, they follow you. Split, they look around on their own
-// (crewWander). You can go to one, or link to one and follow them; regroup brings everyone back.
+// Each crewmate has a folder (on rooms, a room: its name). Linked to you, they follow you. Split, they look around on
+// their own (crewWander). You can go to one, or link to one and follow them; regroup brings everyone back.
 const crewList = (s) => Object.entries(s.run?.crew || {});
+// Go where a crewmate is: on rooms a walk, a room at a time (what holds a room stops you), else cd.
+const goTo = (s, where, name) => (s.run.rooms ? walkToRoom(s, where) : cd(s, where, name));
 function crewMove(s, word, rest) {
   const crew = s.run.crew || {};
   const name = rest.trim();
@@ -772,21 +818,30 @@ function crewMove(s, word, rest) {
     for (const [n, c] of crewList(s)) if (all || n === name) c.link = null;
     return out(s, `${all ? 'The crew splits up' : `${name} splits off`} to look around.`);
   }
-  if (word === 'goto') return crew[name].cwd === s.run.cwd ? out(s, `${name} is right here.`) : cd(s, crew[name].cwd);
+  if (word === 'goto') return crew[name].cwd === s.run.cwd ? out(s, `${name} is right here.`) : goTo(s, crew[name].cwd);
   if (word === 'link') {
     s.run.linkedTo = name;
     crew[name].link = null; // they lead
     out(s, `Linked to ${name}: you follow where they go.`, 'net-good');
-    if (crew[name].cwd !== s.run.cwd) cd(s, crew[name].cwd, name);
+    if (crew[name].cwd !== s.run.cwd) goTo(s, crew[name].cwd, name);
   }
 }
 // Split crewmates move on now and then (the app calls this every few seconds). One you're linked
 // to pulls you along. They don't walk into a guard or a locked folder on their own.
 export function crewWander(s) {
   if (!s.run || active(s) || s.encounter?.phase === 'alert') return [];
-  const first = s.serial, loc = currentLocation(s), lay = layoutOf(loc);
+  const first = s.serial, loc = currentLocation(s), lay = s.run.rooms ? null : layoutOf(loc);
   for (const [name, c] of crewList(s)) {
     if (c.link === 'you' || Math.random() < 0.4) continue;
+    if (s.run.rooms) {
+      // On rooms: a room next to theirs that nothing holds (and never a sealed Core).
+      const R = s.rooms, g = R.graph, from = roomList(s).find((x) => x.path === c.cwd) || g.rooms[R.at];
+      const options = neighbours(g, from.id).map((id) => g.rooms[id]).filter((x) => !isUp(s, x) && !(x.kind === 'core' && !coreOpen(s))).map((x) => x.path);
+      if (!options.length) continue;
+      c.cwd = options[Math.floor(Math.random() * options.length)];
+      if (s.run.linkedTo === name) { out(s, `${name} pulls you to ${c.cwd}.`); walkToRoom(s, c.cwd); }
+      continue;
+    }
     const here = lay[c.cwd] || lay['/'];
     const up = c.cwd === '/' ? [] : [c.cwd.slice(0, c.cwd.lastIndexOf('/')) || '/'];
     const down = (here.dirs || []).map((d) => join(c.cwd, d)).filter((p) => !guarded(loc, p) && !locked(loc, p) && !hiddenName(p.split('/').pop()));
@@ -801,14 +856,15 @@ export function crewWander(s) {
 hooks.crewGuests = (s, room) => {
   const loc = currentLocation(s);
   if (!loc || !isGround(s, loc) || !simOn(s)) return [];
-  return at(s, loc.id, room).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
+  const folder = s.run?.rooms ? roomList(s).find((x) => x.path === room)?.path0 ?? room : room; // a room's folder (its name is what's shown)
+  return at(s, loc.id, folder).map((x) => ({ cls: x.cls, name: x.handle, level: x.level }));
 };
 
 // The fight a folder's virus brings: [key, seed, opts] for selectEncounter, and for scan to read before it starts.
 // A wild virus carries its file's four digits (WARDED CRYPTJACK-4821); a boss or a bounty keeps its name.
 const tagOf = (name) => (String(name).match(/(\d{4})$/) || [])[1];
 const procFight = (s, loc, proc, room) => ['random', proc.seed, { mode: 'run', room, level: proc.level, family: proc.family, zone: true, process: loc.id, tag: tagOf(proc.name), strain: proc.strain, grade: proc.grade }];
-const spawnFight = (s, loc, sp, room) => ['random', sp.seed, { mode: 'run', room, level: sp.level, family: sp.family, zone: true, ...(sp.bounty || sp.boss || !tagOf(sp.name) ? { name: sp.bounty ? sp.name : sp.name.toUpperCase() } : { tag: tagOf(sp.name) }), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {})}];
+export const spawnFight = (s, loc, sp, room) => ['random', sp.seed, { mode: 'run', room, level: sp.level, family: sp.family, zone: true, ...(sp.bounty || sp.boss || !tagOf(sp.name) ? { name: sp.bounty ? sp.name : sp.name.toUpperCase() } : { tag: tagOf(sp.name) }), ...(sp.boss ? { boss: sp.boss, mutation: null } : {}), ...(loc.rogue ? { wild: loc.id, strain: sp.strain, grade: sp.grade, elite: sp.elite, eliteHp: sp.eliteHp } : sp.grade ? { grade: sp.grade } : {}), ...(sp.calm ? { mutation: null } : {})}];
 // A traced server's guarded folder: its Resident in /core, or its guard.
 const guardFight = (s, loc, room) => (layoutOf(loc)[room].resident
   ? ['random', (loc.seed * 7 + 31) >>> 0, { mode: 'run', room, level: residentLevel(loc, hooks.now?.() ?? Date.now()), family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name: `RESIDENT · ${loc.name}` }]
@@ -860,6 +916,23 @@ function scan(s, arg) {
     if (s.run.integrity <= SCAN.signal) return err(s, 'Not enough Signal to scan.');
     s.run.integrity -= SCAN.signal;
     traceAdd(s, SCAN.trace);
+  } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
+  showCard(s, v, { deep, type: 'net-scan' });
+}
+
+// scan [room] on rooms: the genome card of what holds this room, or a room next to you that you can see holds a fight.
+// It costs SCAN.signal Signal (an Infiltrator scans quietly and for free, and reads deeper).
+function scanRoom(s, arg) {
+  const R = s.rooms, g = R.graph, a = (arg || '').toLowerCase();
+  const near = [R.at, ...neighbours(g, R.at)].map((id) => g.rooms[id]);
+  const room = a ? near.find((x) => x.dir === a.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.path0 === a || x.path0 === '/' + a || x.path.toLowerCase() === a) : g.rooms[R.at];
+  const fights = room && seenOf(s, room.id) === 'kind' && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
+  if (!fights) return err(s, a ? `Nothing to scan at ${arg}. Scan a room next to you that holds a fight.` : 'Nothing to scan here. scan <room> reads a fight next door.');
+  const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts);
+  const deep = classOf(s) === 'infiltrator';
+  if (!deep) {
+    if (s.run.integrity <= SCAN.signal) return err(s, 'Not enough Signal to scan.');
+    s.run.integrity -= SCAN.signal;
   } else (s.run.scanned ||= []).includes(v.id) || s.run.scanned.push(v.id);
   showCard(s, v, { deep, type: 'net-scan' });
 }
@@ -961,6 +1034,7 @@ hooks.foldersOf = (l) => Object.keys(layoutOf(l)).filter((p) => p !== '/' && !la
 hooks.jackOut = (s) => jackOut(s); // Deadman's Switch (combat.mjs)
 hooks.flee = (s) => {
   if (!s.run) return;
+  if (s.run.rooms) { s.encounter.phase = 'fled'; return jackOut(s); }
   if (s.encounter?.hunter) return warn(s, 'The hunter has your trace. You cannot jack out until it is down.');
   s.encounter.phase = 'fled';
   jackOut(s);

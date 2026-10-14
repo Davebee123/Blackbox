@@ -322,17 +322,17 @@ function gearRow(s) {
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
 const TELL_ICON = { charge: 'event-warning', cast: 'interrupt', seal: 'event-lock', mimic: 'scan', lock: 'event-lock' };
 function tellChip(s, i, c, k = '', to = null) {
-  const p = part(s, i.source), left = i.left ?? Math.max(0, (i.need || 0) - (i.wound || 0));
+  const p = part(s, i.source);
   const open = i.open ?? c === 0;
   // What it does, as short as an attack chip's number.
   const what = i.tell === 'charge' ? (i.effect === 'damage' ? `−${i.amount}` : i.effect === 'encrypt' ? `+${i.amount} · burst` : i.effect === 'replicate' ? `+${i.spawn || 2} frags` : i.effect === 'scramble' ? `−${i.hit || 0} · scramble` : `+${i.amount} hp`)
     : i.tell === 'cast' ? (i.does === 'loud' ? '+35% hits' : i.does === 'grow' ? '+25% hp' : i.does === 'overclock' ? '×2 both ways' : 'faster')
     : i.tell === 'seal' ? '+◆' : i.tell === 'lock' ? 'locks a key' : 'copies you';
   // The answer as an order, without its timing: the kick line has that (NOW, or when it lands).
-  const answer = i.tell === 'charge' ? `Burst ${left}${i.armored && i.chits ? ` or ◆${i.chits}` : ''}`
-    : i.tell === 'cast' ? `SIGINT or hit ×${left}`
+  const answer = i.tell === 'charge' ? `Cut${i.armored ? ` past ◆${p?.armor || 0}` : ''}`
+    : i.tell === 'cast' ? 'SIGINT or cut'
     : i.tell === 'seal' ? `Strip ◆${p?.armor || 0}` : i.tell === 'lock' ? 'Feed it a cooldown' : 'Go quiet';
-  const progress = i.wound && ['charge', 'cast'].includes(i.tell) ? `${i.wound}/${i.need}` : '';
+  const progress = '';
   return `<div class="intent tell t-${esc(i.tell)} ${c === 0 ? 'now' : ''} ${open ? 'win' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(tellTip(s, i, c, to))}">`
     + `<div class="tl-kick"><span class="ico" ${icon(TELL_ICON[i.tell])}></span><span class="tl-kind">${TELL_KICK[i.tell] || ''}</span>${open ? '<b class="tl-win">NOW</b>' : `<span class="tl-when">${c ? `in ${c}` : 'now'}</span>`}</div>`
     + `<div class="tl-main"><b>${esc(i.name)}</b><small class="tl-what">${esc(what)}</small></div>`
@@ -504,10 +504,10 @@ export function statusSpans(s) {
   return out;
 }
 
-// The interrupt (interrupt.mjs, a server room's fight): two ticks on a part's bar at 50% and 25%. A spent one goes
-// hollow; a boss's core part under rule (a) has phase ticks instead.
+// The interrupt (interrupt.mjs, every fight but a crew boss's): two ticks on a part's bar at 50% and 25%. A spent one
+// goes hollow; a boss's core part under rule (a) has phase ticks instead.
 function ticksMarkup(s, p) {
-  if (!s.encounter?.rooms || !p.ticks) return '';
+  if (!s.encounter?.ticked || !p.ticks) return '';
   return p.ticks.map((t) => `<i class="ptick${t.spent ? ' spent' : ''}${t.phase != null ? ' phase' : ''}" style="left:${t.at * 100}%" title="${esc(t.phase != null ? `Phase tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it and the boss starts its next phase.${t.spent ? ' Spent.' : ''}` : `Tick at ${Math.round(t.at * 100)}%: take the ${p.name} across it on a cycle its move is due and that move is cancelled. Each tick works once a fight.${t.spent ? ' Spent.' : ''}`)}"></i>`).join('');
 }
 // What crossing takes this cycle, in the Now column: cut ▸ 9 (deal 9), cut ▸ ◆1 + 9 when it still wears armor,
@@ -593,7 +593,7 @@ export function boardMarkup(s, selected, preview = null) {
     <div class="bcell bnow${gearCyc(0) ? ' gear-cyc' : ''}"><span>Now <small class="cyc">cycle ${e.cycle}</small>${gearCyc(0)}</span><span class="countdown" id="countdown">${!fighting ? '—' : e.paused ? 'II' : remaining.toFixed(1)}</span><div class="cyclebar">${e.sync && fighting ? `<i class="sync-win${e.sync.surprise ? ' surprise' : ''}" id="sync-win" style="left:${(e.sync.at * 100).toFixed(1)}%;width:${(e.sync.width * 100).toFixed(1)}%" title="${esc(e.sync.surprise ? `Surprise: fire while the bar is here. Inject ticks at once, Tag lasts ${CONFIG.surprise.tagCycles} cycles with burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%, Keepalive stretches burns ${CONFIG.surprise.keepalive} cycles.` : `Sync Window: fire your command while the bar is here for +${Math.round(CONFIG.sync.bonus * 100)}% damage. ${SYNC[classOf(s)]?.rule || ''}`)}"></i>` : ''}<span id="cyclebar" style="width:${(e.elapsedMs / cycleLength(s)) * 100}%"></span></div></div>
     ${[1, 2, 3].map((c) => `<div class="bcell${gearCyc(c) ? ' gear-cyc' : ''}">+${c}${gearCyc(c)}${quietCol(c) && !runMode ? '<small class="quiet">quiet</small>' : ''}</div>`).join('')}</div>`;
   // Your row mirrors the parts: what you'll do in each upcoming cycle.
-  const cutNote = (q) => { const x = q?.target && e.rooms ? crossBy(s, q.ability, part(s, q.target)) : null; return x === 'cut' ? ' <small class="cuts">cuts</small>' : x === 'both' ? ' <small class="cuts">cuts · −tick</small>' : x === 'waste' ? ' <small class="cuts waste">−tick</small>' : ''; };
+  const cutNote = (q) => { const x = q?.target && e.ticked ? crossBy(s, q.ability, part(s, q.target)) : null; return x === 'cut' ? ' <small class="cuts">cuts</small>' : x === 'both' ? ' <small class="cuts">cuts · −tick</small>' : x === 'waste' ? ' <small class="cuts waste">−tick</small>' : ''; };
   const nowChip = e.queue
     ? `<div class="intent mine" data-k="you@${e.cycle}" data-at="${esc(e.queue.target || '')}" title="Press Enter on an empty line to go now">${esc(e.queue.text)}${cutNote(e.queue)}</div>`
     : e.lastAttack
@@ -2304,11 +2304,11 @@ export function levelUpLines(e) {
 
 // An event on a server (events.mjs): a mark on the map node, and what's happening on its card.
 // Root access (root.mjs): five pips, the perks on hover; and the process a log rotation brought in.
-const rootPips = (l) => { const r = rootOf(l), p = rootProgress(l); return `<span class="root-pips" title="${esc(Array.from({ length: ROOT.max }, (_, i) => `${i < r ? '■' : '□'} Root ${i + 1}: ${ROOT_PERKS[i + 1]}`).join('\n') + (p ? `\n\n${p.have}/${p.need} processes cleared for Root ${r + 1}` : ''))}">${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`; };
+const rootPips = (l) => { const r = rootOf(l), p = rootProgress(l); return `<span class="root-pips" title="${esc(Array.from({ length: ROOT.max }, (_, i) => `${i < r ? '■' : '□'} Root ${i + 1}: ${ROOT_PERKS[i + 1]}`).join('\n') + (p ? `\n\n${p.have}/${p.need} respawned rooms cleared for Root ${r + 1}` : ''))}">${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`; };
 const rotMark = (l) => { const p = procOf(l); return p ? `<g class="rotmark${p.rare ? ' rare' : ''}" transform="translate(-13 -12)"><title>${esc(`${p.rare ? 'Rare virus' : 'Log rotation'}: ${p.name} lv ${p.level} in ${p.room}`)}</title><text>${p.rare ? '★' : '↻'}</text></g>` : ''; };
 const hm = (ms) => (ms >= 3600000 ? `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m` : fmtLeft(ms));
 const rotLine = (s, l) => {
-  if (!rootOf(l)) return '';
+  if (!rootOf(l) || l.floorplan) return ''; // a server on rooms doesn't rotate: its rooms respawn
   const p = procOf(l), next = l.root?.nextAt, now = Date.now();
   if (p) return `<p class="svc-line"><span class="tag ${p.rare ? 'hot' : 'you'}">${p.rare ? '★' : '↻'} ${esc(p.name)}</span> ${levelTag(s, p.level, `Lv ${p.level}`)} · ${esc(p.room)}${p.until ? ` · ${hm(p.until - now)}` : ''}</p>`;
   return next ? `<p class="svc-line dim" title="Its logs rotate every ${ROOT.rotateMs / 3600000} hours: a fresh virus, and a new cache">↻ ${hm(Math.max(0, next - now))}</p>` : '';
@@ -2484,10 +2484,15 @@ function mapSide(s, sel, node) {
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
   const taken = takenOf(l), total = takeable(l).length;
+  // On rooms (R1, netrooms.mjs): its rooms cleared, Mapped, and the vault; ??? until you've been in.
+  const R = l.floorplan, vaultId = R?.graph.vaults[0];
+  const roomsStat = R ? stat('Rooms', `${taken}/${total}${R.mapped ? ' ✓' : ''}`) : stat('Rooms', '???');
+  const vaultStat = l.takenOver ? stat('Root', rootPips(l)) : stat('Vault', R && vaultId && R.opened[vaultId] ? 'open' : R ? 'shut' : '???');
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     <p class="tagline">${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
-    <div class="stats">${stat('Files', `${taken}/${total}`)}${l.takenOver ? stat('Root', rootPips(l)) : stat('Guard', Object.keys(l.state.cleared).length ? 'beaten' : 'up')}${stat('Runs', l.runs || 0)}</div>
+    <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
+    ${R?.mapped ? '<p class="svc-line"><span class="tag you" title="Every room cleared at least once">Mapped</span></p>' : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))}</p>`).join('')}
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}

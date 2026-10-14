@@ -158,7 +158,7 @@ test('a v36 save: known skills stay known, untouched bars become the new default
   s.version = 36;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 38);
+  assert.equal(SAVE_VERSION, 39); // v39: servers as rooms (R1)
   assert.ok(knownSkills(t, 'bastion').includes('patch'), 'Patch kept');
   assert.deepEqual(t.loadout.kept.sysop, ['patch']);
   assert.deepEqual(t.loadout.equipped.sysop, presetBar('bastion', 'sysop', 13, SUBS.sysop.presets.rotation, knownSkills(t, 'bastion')), 'an untouched bar becomes the new rotation, with what it kept');
@@ -192,7 +192,7 @@ test('a v37 save: the Demolitionist\'s swarm preset becomes area and the Phantom
   s.loadout.follow = { demolitionist: 'swarm', phantom: 'rotation', payload: 'swarm' };
   s.version = 37;
   const t = restore(JSON.parse(JSON.stringify(s)));
-  assert.equal(t.version, 38);
+  assert.equal(t.version, SAVE_VERSION); // migrated all the way (v39: servers as rooms)
   assert.deepEqual(Object.keys(t.loadout.presets.demolitionist), ['rotation', 'area', 'mine']);
   assert.deepEqual(t.loadout.presets.demolitionist.mine, ['crack', 'shatter'], 'a saved preset is untouched');
   assert.deepEqual(Object.keys(t.loadout.presets.phantom), ['rotation', 'evasion']);

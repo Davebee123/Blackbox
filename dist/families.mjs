@@ -20,7 +20,6 @@
 //                (Targeted) or the one you used last (Rolling). Key 1 and SIGINT are never wiped.
 import { hooks, emit, alive, part, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity } from './combat.mjs';
 import { ROOM_FAMILIES, FAMILIES, ABILITIES, CONFIG } from './data.mjs';
-import { onHit as tickHit } from './interrupt.mjs';
 
 // ---------- the bodies (level 6 scale, like FAMILIES) ----------
 Object.assign(ROOM_FAMILIES, {
@@ -260,7 +259,6 @@ hooks.roomHit = (s, p, was, dealt, opts) => {
   const e = s.encounter;
   // A Package hit while the Loader lives unpacks, whatever hit it.
   if (p.pkg && !p.pkg.inert && livingParts(s).some((x) => x.id === 'loader')) return unpack(s, p, `as ${opts.by || 'your hit'} lands on it`);
-  tickHit(s, p, was, dealt, opts);
   if (p.pkg && p.integrity <= 0 && p.pkg.inert) {
     const [lo, hi] = BODY.payload.credits, n = lo + ((e.seed + e.cycle * 7) % (hi - lo + 1));
     (e.roomsLoot ||= { credits: 0 }).credits += n;

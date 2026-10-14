@@ -40,6 +40,9 @@ export const noArmor = (s) => { for (const p of s.encounter.virus.parts) Object.
 export const big = (s, id) => Object.assign(part(s, id), { integrity: 500, max: 500 });
 export const lost = (s, id) => part(s, id).max - part(s, id).integrity;
 
+// The old file-system run (run.mjs LEGACY.files): since R1 a connect plays the server as rooms, and nothing in the
+// game reaches the file system; R5 deletes it with these tests. Until then they keep it covered.
+const legacyRun = async (t) => { const { LEGACY } = await import('./dist/run.mjs'); LEGACY.files = true; t.after(() => { LEGACY.files = false; }); };
 test('every skill does one kind of thing', () => {
   const verbs = new Set(['hit', 'burn', 'stun', 'debuff', 'shield', 'heal', 'buff', 'util']);
   for (const [id, a] of Object.entries(ABILITIES)) assert.ok(verbs.has(a.verb), id);
@@ -279,7 +282,8 @@ test('Operator: Botnet sends three small helpers; Garbage Collect hits every par
 });
 
 // ---------- runs ----------
-test('Spoof slips past one guard for one file; Light footprint makes return trips free', async () => {
+test('Spoof slips past one guard for one file; Light footprint makes return trips free', async (t) => {
+  await legacyRun(t);
   const { play, connect } = await import('./dist/run.mjs');
   const s = fresh();
   s.loadout.archetype = 'infiltrator';
