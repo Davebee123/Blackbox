@@ -39,7 +39,7 @@ import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILI
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
-import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, familyName, setName } from './families.mjs';
+import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 
 // ---------- tuning ----------
@@ -757,8 +757,12 @@ export function fightOf(s, room, as = null) {
   const r = seeded((seed * 31 + 5) >>> 0), mut = level >= 4 && r() < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(r() * ROLLED_MUTATIONS.length)] : null;
   const genes = [room.third].filter(Boolean);
   const opts = { mode: 'run', room: room.path, level, family: room.family, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}) };
-  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: room.family, author: room.author, set: room.set, mutation: mut, elite, rare };
+  return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: room.family, author: room.author, set: room.pin || spawnSet(room.family, room.author, seed), mutation: mut, elite, rare };
 }
+// Each spawn rolls its own attack set (4.1: "every virus rolls one when it spawns"), weighted by its author, so the same
+// room can open with its Encryptor one visit and its Pulse Node the next. Seeded by the spawn: the card and the fight agree.
+// room.pin holds one set for every spawn (tests).
+export const spawnSet = (family, author, seed) => (setsOf(family) ? rollSet(family, author, seeded((seed ^ 0x5e75) >>> 0)) : null);
 // A virus's name before you fight it (the room card): the same build the fight makes, built and thrown away.
 export function virusName(s, room, as = null) {
   const f = fightOf(s, room, as);
@@ -797,7 +801,12 @@ export function fight(s, room, { pause = false, as = null } = {}) {
     if (a?.hit) a.hit = Math.max(1, Math.round(a.hit * S.dmg));
     if (a?.rampBy) a.rampBy = Math.max(1, Math.round(a.rampBy * S.dmg));
   }
-  if (f.set) { applySet(v, f.set, seeded((room.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${f.set}`] = true; }
+  // Its timing, fresh each fight (a boss's and crew content's stay fixed, so they can be learned): its set, if its family has them (a wild
+  // room's spawn rolls one here), and each part's first attack nudged up to a cycle either way.
+  const fresh = !v.boss && !v.raid && f.size !== 'raw'; // crew content (the farm's packs and bosses) is tuned on its own timing
+  const set = fresh ? (f.set !== undefined ? f.set : spawnSet(v.family, f.author, f.seed)) : null;
+  if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; }
+  else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
   if (room.queue && R.kind === 'Mailhub' && as !== 'hunter') spamFlood(s, e);
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   armTicks(s);
@@ -806,7 +815,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (R.world && !as) e.xpKind = ask('xpKind', s, room); // what its XP counts as in your mix (netrooms.mjs)
   if (v.boss) R.stats.boss.tries++;
   R.stats.fights++;
-  say(s, `You engage ${v.name}.${f.set ? ` ${setName(v.family, f.set)} set.` : ''}`, 'intrusion');
+  say(s, `You engage ${v.name}.${set ? ` ${setName(v.family, set)} set.` : ''}`, 'intrusion');
   command(s, 'engage');
   if (pause && s.encounter) s.encounter.paused = true;
 }

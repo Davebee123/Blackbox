@@ -20,7 +20,7 @@ function roomFight({ family = 'ransomware', set = 'standard', cls = 'breaker', l
   FP.startRooms(s, { seed: 5, kind: 'Mirror', size: 'medium', level });
   FP.connect(s);
   const R = s.rooms, room = FP.roomList(s).find((r) => r.kind === 'process');
-  Object.assign(room, { family, set, third: null, author });
+  Object.assign(room, { family, set, pin: set, third: null, author });
   R.at = room.id; R.screen = null;
   FP.fight(s, room);
   s.run.integrity = s.run.max = 5000; R.fightFrom = 5000;
@@ -84,6 +84,33 @@ test('a room\'s set is fixed by the seed; a virus fights to its set, a cycle of 
 test('the same family can be a different fight: two sets land their attacks on different cycles', () => {
   const landed = (set) => { const s = roomFight({ set }), out = []; for (let c = 1; c <= 12 && active(s); c++) { const first = s.serial; command(s, 'hold'); resolveCycle(s); for (const e of s.logs.filter((x) => x.id > first && ['server-hit', 'encrypt'].includes(x.type) && ['pulse', 'encryptor'].includes(x.source))) out.push(`${e.source}@${c}`); } return out.join(' '); };
   assert.notEqual(landed('standard'), landed('lockout'));
+});
+
+test('every fight is its own puzzle: the same room rolls its set and its first attacks fresh each respawn; a boss keeps its timing', () => {
+  const s = fresh();
+  s.rng = 99;
+  FP.outfit(s, { cls: 'breaker', level: 10, gearSeed: 2 });
+  FP.startRooms(s, { seed: 5, kind: 'Mirror', size: 'medium', level: 10 });
+  FP.connect(s);
+  const R = s.rooms, room = FP.roomList(s).find((r) => r.kind === 'process');
+  Object.assign(room, { family: 'ransomware', third: null, author: 'tollgate' });
+  const orders = new Set(), sets = new Set();
+  for (let n = 0; n < 16; n++) {
+    R.spawns[room.id] = n; R.at = room.id; R.screen = null;
+    const f = FP.fightOf(s, room);
+    FP.fight(s, room);
+    const due = Object.fromEntries(s.encounter.virus.parts.filter((p) => p.attack).map((p) => [p.id, p.attack.due]));
+    orders.add(due.encryptor < due.pulse ? 'encryptor first' : due.pulse < due.encryptor ? 'pulse first' : 'together');
+    sets.add(s.encounter.virus.attackSet);
+    assert.equal(s.encounter.virus.attackSet, f.set, 'the card names the set the fight brings');
+    s.encounter = null;
+  }
+  assert.ok(orders.has('encryptor first') && orders.has('pulse first'), `the Encryptor leads some fights and the Pulse Node others: ${[...orders]}`);
+  assert.ok(sets.size >= 2, 'more than one set over the respawns');
+  // The Resident: the same timing every time.
+  const core = FP.roomList(s).find((r) => r.kind === 'core'), dues = new Set();
+  for (let n = 0; n < 4; n++) { R.spawns[core.id] = n; R.at = core.id; R.screen = null; FP.fight(s, core); dues.add(JSON.stringify(s.encounter.virus.parts.map((p) => p.attack?.due ?? null))); s.encounter = null; }
+  assert.equal(dues.size, 1, 'a boss is learnable');
 });
 
 test('the new bodies stay out of the old game\'s families', () => {

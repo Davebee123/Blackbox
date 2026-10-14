@@ -110,7 +110,7 @@ function whoOf(s, room) {
   }
   if (room.kind === 'guard') { const G = GUARDS[room.guard]; return { short: G.name, fam: G.name, sub: `${G.ice ? 'Kestrel ICE' : 'Guard'} · lv ${f.level}`, line: `Level ${f.level} ${G.name}${G.ice ? ' · Kestrel ICE' : ''}` }; }
   if (room.kind === 'core') { const n = f.name || BOSSES[RESIDENT].name; return { short: n, fam: n, sub: `The Resident · lv ${f.level}`, line: `Level ${f.level} ${n} · the Resident` }; }
-  const set = room.set ? (R.codex[`${room.family}:${room.set}`] ? setName(room.family, room.set) : '???') : '';
+  const set = f.set ? (R.codex[`${room.family}:${f.set}`] ? setName(room.family, f.set) : '???') : ''; // this spawn's set
   const elite = room.kind === 'elite' || room.mirror;
   const by = (AUTHORS[room.author]?.name || '?').toUpperCase(), short = `${elite ? 'Elite ' : ''}${familyName(room.family)}`;
   return { short, sub: `${by} · lv ${f.level}${set ? ` · ${set} set` : ''}`, line: `Level ${f.level} ${familyName(room.family)} · ${by}${set && set !== '???' ? ` · ${set} set` : ''}`, fam: familyName(room.family), unknown: set === '???' };

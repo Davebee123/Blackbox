@@ -175,14 +175,18 @@ export function applySet(v, setId, jitter = null) {
     if (x?.spawns) a.spawns = x.spawns;
     if (x?.deliver) p.deliver = { ...x.deliver };
   }
-  for (const p of v.parts) {
-    if (!jitter) break;
-    if (p.attack && p.attack.due < 900) p.attack.due = Math.max(2, p.attack.due + Math.floor(jitter() * 3) - 1);
-    if (p.deliver) p.deliver.first = Math.max(2, p.deliver.first + Math.floor(jitter() * 3) - 1);
-  }
+  if (jitter) jitterFirst(v, jitter);
   for (const p of v.parts) if (p.deliver) p.deliver.due = p.deliver.first;
   if (set.heat) v.heatRate = set.heat;
   v.attackSet = setId;
+  return v;
+}
+// Each part's first attack (and a Courier's first delivery) moved by up to a cycle either way, never onto cycle 1.
+export function jitterFirst(v, r) {
+  for (const p of v.parts) {
+    if (p.attack && p.attack.due < 900) p.attack.due = Math.max(2, p.attack.due + Math.floor(r() * 3) - 1);
+    if (p.deliver) { p.deliver.first = Math.max(2, p.deliver.first + Math.floor(r() * 3) - 1); p.deliver.due = p.deliver.first; }
+  }
   return v;
 }
 export const setName = (family, id) => ATTACK_SETS[family]?.[id]?.name || null;
