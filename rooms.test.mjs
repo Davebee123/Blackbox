@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, hooks, active, finish, stashItem } from './dist/combat.mjs';
-import { CONFIG } from './dist/data.mjs';
+import { CONFIG, GUARDS } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { roomsMarkup, popOf, pickRoom, closePop } from './dist/floorplan-view.mjs';
 import { runServer } from './roomsim.mjs';
@@ -444,29 +444,37 @@ test('the page draws home, a room, a fight room and the map in both orientations
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
-test('the map tiles: one mark language for state, countdowns that tick in place, tooltips that say each thing once', () => {
+// One room's chip in the page's markup: from its <g> to the next room's, or to what follows the rooms.
+const chipOf = (html, id) => { const i = html.indexOf(`data-room="${id}"`); if (i < 0) return ''; const from = html.lastIndexOf('<g class="fp-room', i), rest = html.slice(i); const end = rest.search(/<g class="fp-room|<path class="fp-route|<g class="fp-bits|<\/svg>/); return html.slice(from, i + end); };
+const wideOf = (html) => html.match(/<svg class="fp-svg wide"[\s\S]*?<\/svg>/)[0];
+
+test('the map chips: one badge language for state, countdowns and rings that tick in place, tooltips that say each thing once', () => {
   const s = server(), R = s.rooms, g = R.graph;
-  const tile = (html, id) => html.match(new RegExp(`<g class="fp-room[^"]*" data-room="${id}"[\\s\\S]*?</g>(?=<g class="fp-room|<line class="fp-hunt|</svg>)`))?.[0] || '';
+  const tile = (html, id) => chipOf(wideOf(html), id);
   const tip = (html, id) => tile(html, id).match(/title="([^"]*)"/)?.[1] || '';
   let html = roomsMarkup(s);
-  // You: a teal ring and YOU on the entry; a room you can walk into carries its cost; the Core its lock.
-  assert.match(tile(html, g.entry), /class="fp-room k-entry here[^"]*"/);
-  assert.match(tile(html, g.entry), /fp-ring/);
+  // You: the only teal chip, its pulsing ring and YOU on the entry; a room you can walk into carries its cost; the
+  // Core is SEALED.
+  assert.match(tile(html, g.entry), /class="fp-room k-entry t-you here[^"]*"/);
+  assert.match(tile(html, g.entry), /fp-you-ring/);
   assert.match(tile(html, g.entry), />YOU</);
+  assert.equal((wideOf(html).match(/ t-you /g) || []).length, 1, 'only your room is teal');
   const next = FP.exits(s)[0];
   assert.match(tile(html, next.id), new RegExp(`data-rooms="go" data-arg="${next.id}"`));
-  assert.match(tile(html, next.id), new RegExp(`fp-pill cost[\\s\\S]*−${FP.moveCost(s, next)}<`));
-  assert.match(tile(html, g.core), /fp-i-lock/, 'the sealed Core wears a lock');
+  assert.match(tile(html, next.id), new RegExp(`fp-cost[\\s\\S]*−${FP.moveCost(s, next)}<`));
+  assert.match(tile(html, g.core), /fp-tag hot[\s\S]*>SEALED</, 'the sealed Core is SEALED');
   assert.match(tip(html, g.core), /^Core: Level \d+ DEADBOLT/);
-  // No legend, no "Next ↻" on the strip: the tiles carry it.
+  // No legend, no "Next ↻" on the strip: the chips carry it.
   assert.doesNotMatch(html, /fp-legend|Next ↻/);
-  // A fallen room: its countdown is an empty slot the page fills, so the markup holds still while it ticks.
+  // A fallen room: gray, and its countdown is an empty slot the page fills and its ring an arc the page sets, so the
+  // markup holds still while it ticks.
   const p = FP.roomList(s).find((r) => r.kind === 'process');
   R.down[p.id] = clock; R.cleared[p.id] = clock; R.seen[p.id] = 'kind';
   html = roomsMarkup(s);
   const at = FP.backAt(s, p);
+  assert.match(tile(html, p.id), /class="fp-room k-process t-gray/);
   assert.match(tile(html, p.id), new RegExp(`data-at="${at}" data-fmt="s"></tspan>`));
-  assert.match(tile(html, p.id), /fp-i-check/, 'cleared: a check');
+  assert.match(tile(html, p.id), new RegExp(`<circle class="arc"[^>]*data-ring-from="${clock}" data-ring-at="${at}"`), 'a respawn ring');
   tick(5000);
   assert.equal(roomsMarkup(s), html, 'five seconds on, the same markup');
   // Tooltips: the room's name as the title, at most two lines, never a countdown or the name again.
@@ -481,6 +489,84 @@ test('the map tiles: one mark language for state, countdowns that tick in place,
   }
   // The log: no Signal readout the strip already shows.
   assert.ok(!R.log.some((l) => new RegExp(`${R.max}\\b`).test(l) && /\/\d+/.test(l)), R.log.join(' | '));
+});
+
+test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter\'s skull and its one arrow, traces without vias', () => {
+  const s = server({ hunter: 'patrol' }), R = s.rooms, g = R.graph;
+  for (const id of Object.keys(g.rooms)) R.seen[id] = 'kind';
+  let html = roomsMarkup(s), wide = wideOf(html);
+  const tone = (id) => chipOf(wide, id).match(/class="fp-room k-(\w+) t-(\w+)/)?.slice(1);
+  // A chip for every room you've seen, with its kind and colour: teal only for you, a live fight red with its live
+  // light, the Core red, the vault, a stocked cache and the rest room amber (no steel blue on the map).
+  assert.equal((wide.match(/<g class="fp-room /g) || []).length, FP.roomList(s).length);
+  for (const room of FP.roomList(s)) {
+    const [k, t] = tone(room.id);
+    assert.equal(k, room.kind);
+    if (room.id === R.at) assert.equal(t, 'you');
+    else if (FP.FIGHTS.includes(room.kind)) { assert.equal(t, 'hot', room.path); assert.match(chipOf(wide, room.id), /class="fp-live"/, `${room.path}: a red live light`); }
+    else if (['vault', 'cache', 'rest'].includes(room.kind)) assert.equal(t, 'amber', room.path);
+  }
+  assert.doesNotMatch(wide, /steel|#86b6c6/i);
+  // The guard post is an Elite to you: named and numbered with the elites, the elite's icon, and KEY.
+  const post = FP.roomList(s).find((x) => x.kind === 'guard'), elites = FP.roomList(s).filter((x) => ['elite', 'guard'].includes(x.kind));
+  assert.match(post.path, /^Elite( \d+)?$/);
+  assert.deepEqual(elites.map((x) => x.path).sort(), elites.length > 1 ? elites.map((_, i) => `Elite ${i + 1}`).sort() : ['Elite']);
+  assert.doesNotMatch(html, /Guard post/);
+  assert.match(chipOf(wide, post.id), /href="#fp-i-elite"/);
+  assert.match(chipOf(wide, post.id), /fp-tag key[\s\S]*>KEY</);
+  const vault = g.rooms[g.vaults[0]];
+  assert.match(chipOf(wide, vault.id), /fp-tag lock[\s\S]*>LOCKED</);
+  assert.match(chipOf(wide, g.core), />SEALED</);
+  // Take the key: KEY leaves the elite and the vault says your key fits; open it and the Core unseals.
+  R.visit.keys = [vault.id];
+  wide = wideOf(roomsMarkup(s));
+  assert.doesNotMatch(chipOf(wide, post.id), />KEY</);
+  assert.match(chipOf(wide, vault.id), />KEY FITS</);
+  R.opened[vault.id] = clock;
+  wide = wideOf(roomsMarkup(s));
+  assert.equal(tone(vault.id)[1], 'gray', 'an opened vault is used');
+  assert.doesNotMatch(chipOf(wide, g.core), />SEALED</);
+  // A pop-up on the key's room calls it an elite and still names its enemy.
+  R.opened = {}; R.visit.keys = [];
+  const ui = { sel: null, selAt: null, closed: null };
+  pickRoom(s, post.id, ui);
+  const card = roomsMarkup(s, ui).match(/<div class="map-pop fp-pop"[\s\S]*$/)[0];
+  assert.match(card, new RegExp(`<h1>${post.path}</h1>`));
+  assert.match(card, new RegExp(GUARDS[post.guard].name));
+  assert.match(card, /Carries the Vault key/);
+  // Traces: a bed and a line for every link, no via dots; the links out of your room flow amber.
+  wide = wideOf(roomsMarkup(s));
+  assert.doesNotMatch(wide, /fp-via|fp-dot/);
+  assert.equal((wide.match(/class="fp-bed/g) || []).length, FP.linksOf(g).length);
+  assert.equal((wide.match(/class="fp-link live/g) || []).length, FP.exits(s).length);
+  // No SVG filter on a straight line (a zero-height box makes it vanish).
+  assert.doesNotMatch(wide, /<line[^>]*filter=/);
+  // The hunter: a skull on its room and one red arrow into the room it steps into next, nothing on that room.
+  const h = R.visit.hunter, nextId = FP.hunterNext(s, h);
+  assert.ok(nextId, 'the Patroller has a next room');
+  assert.equal((wide.match(/class="fp-skull/g) || []).length, 1);
+  assert.match(chipOf(wide, h.at), /class="fp-skull/);
+  assert.equal((wide.match(/class="fp-route"/g) || []).length, 1, 'one route path');
+  assert.match(wide, /<path class="fp-route" d="M[\d.-]+ [\d.-]+ Q[\d.-]+ [\d.-]+ [\d.-]+ [\d.-]+" marker-end="url\(#fp-arrow\)"\/>/);
+  assert.doesNotMatch(chipOf(wide, nextId), /hunt-next|fp-ring|NEXT/);
+  // The bits drift off your room only: twelve of them.
+  assert.equal((wide.match(/<g class="fp-bits"/g) || []).length, 1);
+  assert.equal((wide.match(/<g class="fp-bits"[\s\S]*?<\/g>/)[0].match(/<text /g) || []).length, 12);
+  // A cleared fight room wears a respawn ring; an emptied cache an amber one.
+  const p = FP.roomList(s).find((x) => x.kind === 'process' && x.id !== R.at), c = FP.roomList(s).find((x) => x.kind === 'cache' && !x.mirror);
+  R.down[p.id] = clock; R.cleared[p.id] = clock; R.taken[c.id] = clock;
+  wide = wideOf(roomsMarkup(s));
+  assert.match(chipOf(wide, p.id), /class="fp-respawn hot"/);
+  assert.match(chipOf(wide, c.id), /class="fp-respawn amber"/);
+  assert.equal(tone(c.id)[1], 'gray');
+  // A rare spawn: ★.
+  delete R.down[p.id]; R.rare[p.id] = true;
+  assert.match(chipOf(wideOf(roomsMarkup(s)), p.id), /fp-tag rare[\s\S]*>★</);
+  // The zoom: the map carries its own fit-the-server button, and its base view in data-vb.
+  html = roomsMarkup(s);
+  assert.match(html, /data-fp-zoom/);
+  assert.match(html, /<svg class="fp-svg wide" viewBox="([^"]+)" data-vb="\1"/);
+  assert.doesNotMatch(html, /undefined|NaN/);
 });
 
 test('the page is the map and a pop-up: it opens on a decision and on a click, closes until the next one, and Wait and Jack out sit on the strip', () => {

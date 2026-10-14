@@ -2,13 +2,15 @@
 // engine: state in, events out. It lives on s.rooms, which only the rooms playtest carries (app.js ?playtest=rooms),
 // on a fresh character that's never saved.
 //
-//   rooms       a fight (process ▣, elite ◆▣, guard post ⛨, the core ♛, the hunter's den ☠), an interactable (cache ▤,
+//   rooms       a fight (process ▣, elite ◆▣, guard post ◆▣, the core ♛, the hunter's den ☠), an interactable (cache ▤,
 //               vault ▥, rest ☰) or an empty junction (·). The marks are the terminal's; the page draws icons. A fight room's family, author and attack set are fixed by the
 //               server's seed, so a room is a place you learn. Its mutation rerolls with each respawn, and one respawn
 //               in ten is a rare spawn (★, two levels up, three loot rolls).
 //   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Signal; rooms you've walked
 //               this visit, and `wait`, are free. A live virus blocks its room: engage it, or step back.
-//   keys        the vault's key sits in a guard post on another branch, three or more rooms from the vault. Beat the
+//   keys        the vault's key sits in a guard post on another branch, three or more rooms from the vault. A guard
+//               post is an elite to the player (named Elite n with the others, the elite's icon and a KEY badge): its
+//               kind stays 'guard' here, and its enemy is a guard or Kestrel ICE. Beat the
 //               guard, walk the key back and open the vault (or force it for ROOMS.force of your max). A key lasts one
 //               visit: jack out with it and it goes back to its post, guard and all. The vault unseals /core.
 //   the hunter  on a medium or large server (from floor 2): a Patroller walks a fixed loop, a Tracker sleeps in its den
@@ -74,8 +76,8 @@ export const KINDS = {
 export const KIND_IDS = Object.keys(KINDS);
 // Room kinds: their mark on the map, and what they are.
 // What each room is called on the map, its card and in the log.
-export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Guard post', core: 'Core', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction' };
-export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '⛨', core: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·' };
+export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction' };
+export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·' };
 export const FIGHTS = ['process', 'elite', 'guard', 'core'];
 export const HUNTERS = {
   patrol: { name: 'Patroller', body: 'bouncer', text: 'Walks a fixed loop, a room for every 2 of your moves.' },
@@ -261,15 +263,16 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
     if (R[id].kind === 'cache') R[id].baitSeed = Math.floor(r() * 2 ** 31);
     if (R[id].kind === 'vault') R[id].loot = r() < ROOMS.vault.gear ? { kind: 'gear', rarity: r() < ROOMS.vault.custom ? 'custom' : 'tuned' } : { kind: 'script', script: rollScript(r, 'uncommon') };
   }
-  // Names: what each room is (Process 2, Guard post, Vault, Core), numbered when a kind repeats. path is the
-  // label every screen and line shows; dir is its slug, for typing (cd process-2).
+  // Names: what each room is (Process 2, Elite 1, Vault, Core), numbered when a name repeats (a guard post is
+  // named and numbered with the elites). path is the label every screen and line shows; dir is its slug, for
+  // typing (cd process-2).
   const sorted = all.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
-  const many = {}, nth = {};
-  for (const id of sorted) many[R[id].kind] = (many[R[id].kind] || 0) + 1;
+  const many = {}, nth = {}, base = (x) => ROOM_LABEL[x.kind] || x.kind;
+  for (const id of sorted) many[base(R[id])] = (many[base(R[id])] || 0) + 1;
   for (const id of sorted) {
-    const x = R[id], base = ROOM_LABEL[x.kind] || x.kind;
-    nth[x.kind] = (nth[x.kind] || 0) + 1;
-    x.path = many[x.kind] > 1 ? `${base} ${nth[x.kind]}` : base;
+    const x = R[id], b = base(x);
+    nth[b] = (nth[b] || 0) + 1;
+    x.path = many[b] > 1 ? `${b} ${nth[b]}` : b;
     x.dir = x.path.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
   return true;
@@ -476,7 +479,7 @@ export function jackOut(s, why = '') {
   if (!R?.at) { deny(s, 'You are not on the server.'); return out(s, first); }
   if (active(s)) { deny(s, 'No jacking out mid-fight. Win it, or lose the pack.'); return out(s, first); }
   for (const vid of R.visit.keys) { const post = roomList(s).find((x) => x.key === vid); if (post) delete R.down[post.id]; }
-  if (R.visit.keys.length) say(s, 'Your key goes back to its guard post, guard and all.', 'rooms-bad');
+  if (R.visit.keys.length) say(s, `Your key goes back to ${R.visit.keys.map((vid) => roomList(s).find((x) => x.key === vid)?.path).filter(Boolean).join(' and ') || 'its elite'}, its guard up again.`, 'rooms-bad');
   const banked = R.pack.length;
   R.banked.push(...R.pack); R.pack = [];
   R.last = { result: 'out', xp: xpTotal(s) - R.visit.xp0, banked, visit: R.visit.n };
@@ -649,7 +652,7 @@ function openVault(s, room, force) {
   const R = s.rooms;
   if (R.opened[room.id]) return deny(s, 'The vault is already open.');
   const has = R.visit.keys.indexOf(room.id);
-  if (!force && has < 0) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'a guard post'}, or force the door for ${Math.round(R.max * ROOMS.force)} Signal.`);
+  if (!force && has < 0) return deny(s, `No key. It's in ${roomList(s).find((x) => x.key === room.id)?.path || 'an elite'}, or force the door for ${Math.round(R.max * ROOMS.force)} Signal.`);
   if (force) { const lost = Math.round(R.max * ROOMS.force); R.signal = Math.max(1, R.signal - lost); say(s, `You force the door: −${lost} Signal.`, 'rooms-bad'); }
   else { R.visit.keys.splice(has, 1); say(s, 'The key opens the vault.', 'rooms-good'); }
   R.opened[room.id] = nowOf();
@@ -835,7 +838,7 @@ const tagOf = (s, room) => {
   if (seen !== 'kind') return '??';
   const up = isUp(s, room);
   if (room.kind === 'core') return `core · ${BOSSES[RESIDENT].name}${coreOpen(s) ? '' : ' · sealed'}`;
-  if (room.kind === 'guard') return `guard · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
+  if (room.kind === 'guard') return `elite · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (['process', 'elite'].includes(room.kind)) return `${room.kind} · ${familyName(room.family)} · ${(AUTHORS[room.author]?.name || '').toUpperCase()}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (room.kind === 'cache') return `cache${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
   if (room.kind === 'vault') return `vault${s.rooms.opened[room.id] ? ' · open' : ''}`;

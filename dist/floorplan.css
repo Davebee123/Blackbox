@@ -1,8 +1,7 @@
 /* The rooms page (floorplan-view.mjs, docs/servers.md R0): the server strip on top (Wait and Jack out at its right), and
    the room map filling the rest, with the network map's pop-up card (.map-pop, style.css) beside a room. docs/ui.md tokens: amber is structure and what you can click,
    teal is you, hot is what bites (a live virus, the hunter), gray is down or out of sight.
-   A tile's role is its icon colour and fill (a fight hot, an interactable amber, the rest room teal); its border is
-   your relation to it (amber: you can walk in, teal: you're in it). */
+   The map is Schematic HD: chips and traces, its tokens below. */
 .page:has(> .fp) { overflow: hidden; }
 .fp { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: var(--s5); height: 100%; min-height: 0; }
 .fp > * { min-width: 0; min-height: 0; }
@@ -35,7 +34,7 @@
 .fp-stat { display: inline-flex; align-items: center; gap: var(--s3); font-variant-numeric: tabular-nums; cursor: help; min-width: 0; }
 .fp-stat b { font: 600 13px var(--mono); color: var(--bright); white-space: nowrap; }
 .fp-stat .fp-ic { width: 15px; height: 15px; }
-.fp-keys .fp-ic { color: var(--you); } .fp-keys b { color: var(--you); }
+.fp-keys .fp-ic { color: var(--next); } .fp-keys b { color: var(--next); }
 .fp-hunt .fp-ic, .fp-hunt b { color: var(--hot); }
 .fp-hunt.out .fp-ic, .fp-hunt.out b { color: var(--gray); }
 .fp-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s4) var(--s5); min-width: 0; }
@@ -52,88 +51,87 @@
 .fp-acts { display: inline-flex; gap: var(--s3); flex: none; }
 .fp-acts .btn { white-space: nowrap; }
 
-/* ---- the map ---- */
+/* ---- the map: Schematic HD (floorplan-view.mjs). Rooms are chips, links are traces; teal is only ever you, red a live
+   threat, amber loot and structure, gray cleared or used. ---- */
 .fp-map { position: relative; display: flex; flex-direction: column; overflow: visible; }
-.fp-scroll { flex: 1; min-height: 0; overflow: auto; display: flex; align-items: center; justify-content: center; padding: var(--s6);
-  background: radial-gradient(circle at 1px 1px, rgba(241, 185, 47, 0.07) 1px, transparent 0) 0 0 / 18px 18px; }
-.fp-svg { flex: none; overflow: visible; }
-.fp-svg.wide { width: 100%; height: 100%; max-width: calc(var(--w) * 1.55); max-height: calc(var(--h) * 1.55); }
+.fp-scroll { position: relative; flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: var(--s5);
+  background: radial-gradient(circle at 1px 1px, rgba(241, 185, 47, 0.09) 0.8px, transparent 0) 0 0 / 14px 14px, #0a0703; }
+.fp-scroll::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.5)); }
+.fp-svg { flex: none; overflow: hidden; user-select: none; -webkit-user-select: none; }
+.fp-svg.wide { width: 100%; height: 100%; max-width: calc(var(--w) * 1.3); max-height: calc(var(--h) * 1.3); }
 .fp-svg.tall { display: none; }
-/* links: fog dotted, seen a hairline, walked this visit teal, a way you can walk now amber and moving */
-.fp-link { stroke-width: 2; stroke-linecap: round; fill: none; }
-.fp-link.fog { stroke: rgba(143, 119, 72, 0.35); stroke-dasharray: 1 6; }
-.fp-link.seen { stroke: var(--line-strong); }
-.fp-link.walked { stroke: var(--you); stroke-width: 3; opacity: 0.5; }
-.fp-link.live { stroke: var(--amber); stroke-width: 3; stroke-dasharray: 8 6; animation: fp-flow 1.2s linear infinite; }
-.fp-link.hop { stroke-dasharray: 1 6; stroke-width: 3; }
-.fp-link.hop.live { stroke-dasharray: 8 6; }
-@keyframes fp-flow { to { stroke-dashoffset: -28; } }
-.fp-loop { fill: none; stroke: var(--hot); stroke-width: 1.5; stroke-dasharray: 4 5; opacity: 0.45; pointer-events: stroke; cursor: help; }
-.fp-hunt-arrow { stroke: var(--hot); stroke-width: 3; stroke-linecap: round; }
+.fp-svg.zoomed { cursor: grab; touch-action: none; }
+.fp-zoom { position: absolute; right: var(--s5); top: var(--s5); z-index: 4; min-width: 30px; }
+/* traces: a dark bed and a thin line */
+.fp-bed { fill: none; stroke: #050302; stroke-width: 9; stroke-linecap: round; }
+.fp-bed.beat { stroke: #260b06; }
+.fp-under { fill: none; stroke: rgba(241, 185, 47, 0.25); stroke-width: 5; stroke-linecap: round; }
+.fp-link { fill: none; stroke-width: 1.6; }
+.fp-link.seen { stroke: rgba(241, 185, 47, 0.35); }
+.fp-link.walked { stroke: rgba(241, 185, 47, 0.5); }
+.fp-link.fog { stroke: #3a2c14; stroke-dasharray: 2 6; }
+.fp-link.live { stroke: var(--amber); stroke-width: 2.2; }
+/* the hunter's next step */
+.fp-route { fill: none; stroke: var(--hot); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 6 8; opacity: 0.9; pointer-events: none; }
 .fp-arrowhead { fill: var(--hot); }
-.fp-hatch { fill: var(--hot); opacity: 0.16; }
-.fp-pulse { fill: none; stroke: var(--hot); stroke-width: 2; opacity: 0.5; animation: fp-pulse 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; cursor: help; }
-@keyframes fp-pulse { from { opacity: 0.7; transform: scale(0.85); } to { opacity: 0; transform: scale(1.25); } }
-@media (prefers-reduced-motion: reduce) { .fp-link.live, .fp-pulse { animation: none; } }
-
-/* a tile: body (shape by kind), glyph, label; colour by role */
-.fp-room { color: var(--amber-soft); }
+/* a chip: --t is its colour */
+.fp-room { --t: var(--amber); }
+.fp-room.t-hot { --t: var(--hot); } .fp-room.t-gray { --t: var(--gray); } .fp-room.t-you { --t: var(--you); }
 .fp-room text { font-family: var(--mono); pointer-events: none; }
-.fp-body { fill: var(--inset); stroke: var(--line-strong); stroke-width: 1.5; }
-.fp-frame { fill: none; stroke: var(--hot); stroke-width: 1.5; opacity: 0.55; }
-.fp-inner { fill: none; stroke: var(--line); stroke-width: 1; }
-.fp-hatched { fill: url(#fp-hatch); stroke: none; pointer-events: none; }
-.fp-glyph { color: inherit; }
-.fp-dot { fill: currentColor; }
-.fp-label { font-size: 10px; fill: var(--muted); letter-spacing: -0.2px; }
-.fp-q { font-size: 18px; font-weight: 600; fill: var(--gray); }
-/* roles */
-.fp-room.up, .fp-room.k-den, .fp-room.mirror { color: var(--hot); }
-.fp-room.up .fp-body, .fp-room.mirror .fp-body { fill: #1d0c07; }
-.fp-room.up .fp-label { fill: var(--text); }
-.fp-room.k-elite.up .fp-body { stroke-width: 2.5; }
-.fp-room.k-core { color: var(--hot); }
-.fp-room.k-core .fp-body { fill: #1d0c07; stroke: var(--hot); }
-.fp-room.k-core .fp-label { fill: var(--text); }
-.fp-room.k-core.sealed { color: rgba(255, 91, 61, 0.55); }
-.fp-room.k-core.sealed .fp-body { stroke-dasharray: 3 3; fill: var(--inset); }
-.fp-room.k-core.sealed .fp-frame { stroke-dasharray: 3 3; opacity: 0.35; }
-.fp-room.k-rest { color: var(--you); }
-.fp-room.k-rest .fp-body { fill: #0b1412; stroke: rgba(127, 209, 199, 0.4); }
-.fp-room.k-vault, .fp-room.k-cache, .fp-room.k-entry, .fp-room.k-junction { color: var(--amber); }
-.fp-room.k-junction .fp-body { fill: var(--panel); }
-.fp-room.k-cache.mirror { color: var(--hot); }
-.fp-room.down, .fp-room.used { color: var(--gray); }
-.fp-room.down .fp-body, .fp-room.used .fp-body { fill: var(--inset); stroke: var(--line); }
-.fp-room.down .fp-label, .fp-room.used .fp-label { fill: var(--dim); }
-.fp-room.down .fp-frame { stroke: var(--gray); }
-/* fog: only the shape */
-.fp-room.shape .fp-body { fill: var(--panel); stroke: rgba(143, 119, 72, 0.5); stroke-dasharray: 4 4; }
-/* your relation to it: you can walk in (amber), you're in it (teal ring) */
+.fp-body { fill: url(#fp-g-node); stroke: var(--t); stroke-width: 1.4; }
+.fp-room.t-hot .fp-body { fill: url(#fp-g-hot); }
+.fp-room.t-you .fp-body { fill: url(#fp-g-here); stroke-width: 2.4; }
+.fp-room.shape .fp-body { fill: rgba(10, 7, 3, 0.6); stroke: #4a3c22; stroke-width: 1; stroke-dasharray: 4 5; }
+.fp-hair { fill: none; stroke: var(--t); stroke-width: 0.6; opacity: 0.35; pointer-events: none; }
+.fp-icon { color: var(--t); pointer-events: none; }
+.fp-room.t-gray .fp-icon { opacity: 0.6; }
+.fp-plate { fill: rgba(0, 0, 0, 0.45); pointer-events: none; }
+.fp-name { fill: var(--text); }
+.fp-room.t-gray .fp-name { fill: var(--gray); }
+.fp-q { font-size: 24px; fill: #5a4a2c; }
+/* you: a soft glow and a pulsing outline */
+.fp-you-glow { fill: none; stroke: var(--you); stroke-width: 6; opacity: 0.25; pointer-events: none; }
+.fp-you-ring { fill: none; stroke: var(--you); stroke-width: 2; pointer-events: none; }
+.fp-near { fill: none; stroke: var(--hot); stroke-width: 2; opacity: 0.7; pointer-events: stroke; cursor: help; }
+/* what you can click: a room you can walk into, a room you've seen */
 .fp-room.reach, .fp-room[data-fp-sel] { cursor: pointer; }
-.fp-room[data-fp-sel]:hover .fp-body, .fp-room[data-fp-sel]:focus-visible .fp-body { filter: brightness(1.4); }
-.fp-room[data-fp-sel]:focus-visible { outline: none; }
-.fp-room.sel:not(.here) .fp-body { stroke: var(--bright); stroke-width: 2.5; }
-.fp-room.reach .fp-body { stroke: var(--amber); stroke-width: 2; }
-.fp-room.reach:hover .fp-body, .fp-room.reach:focus-visible .fp-body { stroke-width: 3; filter: brightness(1.6); }
-.fp-room.reach:focus-visible { outline: none; }
-.fp-room.here .fp-body { stroke: var(--you); stroke-width: 2; }
-.fp-ring { fill: none; stroke: var(--you); stroke-width: 2; }
-.fp-room.hunt-next .fp-ring { stroke: var(--hot); stroke-dasharray: 5 4; }
-.fp-room.here.hunt-next .fp-ring { stroke: var(--hot); }
-/* marks */
-.fp-check { color: var(--you); }
-.fp-badge circle { fill: var(--bg); stroke: currentColor; stroke-width: 1.5; }
-.fp-badge.hot { color: var(--hot); } .fp-badge.next { color: var(--next); } .fp-badge.amber { color: var(--amber); }
-.fp-badge.you { color: var(--you); } .fp-badge.dim { color: var(--muted); }
-.fp-token { color: var(--bg); }
-.fp-token circle { fill: var(--hot); stroke: var(--bg); stroke-width: 2; }
-.fp-you-tag rect { fill: var(--you); }
-.fp-you-tag text { font-size: 8.5px; font-weight: 700; letter-spacing: 1px; fill: var(--bg); }
-.fp-pill rect { fill: var(--bg); stroke: var(--line-strong); stroke-width: 1; }
-.fp-pill text { font-size: 10px; font-weight: 600; fill: var(--muted); font-variant-numeric: tabular-nums; }
-.fp-pill.cost rect { fill: var(--amber); stroke: none; }
-.fp-pill.cost text { fill: var(--bg); }
+.fp-room.reach:hover .fp-body, .fp-room[data-fp-sel]:hover .fp-body, .fp-room:focus-visible .fp-body { filter: brightness(1.45); }
+.fp-room:focus-visible { outline: none; }
+.fp-room:focus-visible .fp-hair { stroke: var(--bright); opacity: 0.9; stroke-width: 1; }
+.fp-room.sel:not(.here) .fp-body { stroke: var(--bright); stroke-width: 2; }
+/* badges */
+.fp-tag rect { fill: #0a0703; stroke: var(--muted); stroke-width: 1; }
+.fp-tag text { font-size: 9px; letter-spacing: 0.5px; fill: var(--muted); }
+.fp-tag.key rect { fill: var(--next); stroke: none; }
+.fp-tag.key text { fill: #1a1400; font-weight: 700; }
+.fp-tag.hot rect { stroke: var(--hot); } .fp-tag.hot text { fill: var(--hot); }
+.fp-tag.rare rect { stroke: var(--next); } .fp-tag.rare text { fill: var(--next); font-size: 10px; }
+.fp-cost rect { fill: #0a0703; stroke: var(--amber); stroke-width: 1; }
+.fp-cost text { font-size: 10px; fill: var(--amber); font-variant-numeric: tabular-nums; }
+.fp-you-tab rect { fill: var(--you); }
+.fp-you-tab text { font-size: 10px; font-weight: 700; letter-spacing: 1px; fill: #06100e; }
+.fp-live { fill: var(--hot); }
+.fp-respawn .bg { fill: #0a0703; }
+.fp-respawn .track { fill: none; stroke: #3a2c14; stroke-width: 3; }
+.fp-respawn .arc { fill: none; stroke: var(--hot); stroke-width: 3; stroke-dasharray: 100; stroke-dashoffset: 100; }
+.fp-respawn.amber .arc { stroke: var(--amber); }
+.fp-respawn text { font-size: 10px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.fp-skull .bg { fill: #140503; stroke: var(--hot); stroke-width: 1.2; }
+.fp-skull .px { fill: var(--hot); }
+.fp-skull.asleep { opacity: 0.55; }
+/* the 1s and 0s drifting off your room: none with reduced motion */
+.fp-bits text { font-size: 8px; font-weight: 500; fill: var(--you); opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .fp-link.live { stroke-dasharray: 6 8; animation: fp-flow 1.2s linear infinite; }
+  .fp-route { animation: fp-flow 2.4s linear infinite; }
+  .fp-you-ring, .fp-near { animation: fp-ring 2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  .fp-live { animation: fp-blink 1.6s ease-in-out infinite; }
+  .fp-bits text { animation: fp-bit var(--t, 2.6s) linear infinite; animation-delay: var(--d, 0s); }
+}
+@keyframes fp-flow { to { stroke-dashoffset: -28; } }
+@keyframes fp-ring { 0% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.18); } }
+@keyframes fp-blink { 50% { opacity: 0.45; } }
+@keyframes fp-bit { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: 0.45; } 70% { opacity: 0.2; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
 
 /* ---- the pop-up: the room you're in, a room you clicked, home ---- */
 .fp-map .fp-pop { z-index: 5; width: 320px; }
@@ -201,13 +199,12 @@
   .fp-sig { flex: 1 1 100%; min-width: 0; }
   .fp-tools { display: contents; }
   .fp-map { overflow: visible; }
-  .fp-scroll { overflow: visible; padding: var(--s5) var(--s2); }
+  .fp-scroll { padding: var(--s4) var(--s2); }
   .fp-svg.wide { height: auto; max-height: none; }
   .fp-map .fp-pop { width: auto; scroll-margin: 150px 0 90px; }
 }
 @media (max-width: 640px) {
   .fp-svg.wide { display: none; }
   .fp-svg.tall { display: block; width: 100%; height: auto; max-width: calc(var(--w) * 1.2); }
-  .fp-svg.tall .fp-label { font-size: 11px; letter-spacing: -0.4px; }
   .fp-hud .fp-rules .lbl { display: none; }
 }

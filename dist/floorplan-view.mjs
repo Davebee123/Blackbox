@@ -2,22 +2,27 @@
 // or Connect at home), and the room map filling the rest. A pop-up card, like the network map's, sits beside a room:
 // it opens by itself on the room you're in when something there wants a decision (a live virus, a stocked cache, a
 // locked vault, the rest room, the Core, the hunter on you), and on any room you've seen when you click it. A room you
-// can walk into walks on one click; its cost is on its tile. There is no exits list (the lit tiles are the exits) and
-// no tty: what happens goes up as a notice, and the prompt still takes every verb.
-// docs/ui.md tokens: amber is structure and what you can click, teal is you, hot is what bites (a live virus, the
-// hunter), gray is down or out of sight.
+// can walk into walks on one click; its cost is on its chip. There is no exits list (the lit traces are the exits)
+// and no tty: what happens goes up as a notice, and the prompt still takes every verb.
 //
-// A tile says what a room is by its icon and shape (a chip for a process, a cut-corner chip for an elite, a shield
-// plate for a guard post, a double frame for the Core, a pill for the rest room, a dot for a junction) and its
-// colour by role (a fight hot, an interactable amber, the rest room teal). Its state is one language of marks:
-//   ring          teal: you are here. Dashed hot: the hunter steps in next. An amber border: you can walk in.
-//   top centre    the hunter's token (hot), or YOU.
-//   top right     one badge: a key, a lock, an open lock, ★ (rare spawn), or an eye (walking in wakes the Tracker).
-//   top left      ✓: cleared at least once (progress).
-//   bottom        ↻ and its countdown on the left (a fight down, a cache empty); the Signal a first step costs on
-//                 the right.
-// Countdowns are empty <… data-at> slots that fillClocks writes every second (app.js), so the markup only changes
-// when the server does and a hovered tile keeps its tooltip.
+// The map is "Schematic HD": the server drawn as a circuit. Each room is a chip (cut corners, a dark depth gradient,
+// a drop shadow, an inner hairline) with its icon, the largest thing on it, over a fixed-width name plate. Colour:
+// teal is only ever you (your chip, its pulsing ring, the YOU tab and the bits drifting off it); red is a live threat
+// (a fight room with its virus up, the Core, a mirror with its elite behind it, the hunter); amber is loot, what you
+// use and structure (a cache, the vault, the rest room, a room you haven't cleared); gray is cleared or used; an
+// unseen room is a dashed ghost chip with a "?". Links are traces (a dark bed and a thin line): the ones out of your
+// room run amber with a flowing current, links to unseen rooms are dotted, and a Patroller's beat tints the bed red.
+// State sits on a chip as badges:
+//   top left      tags: KEY (the elite holding the vault's key), LOCKED or KEY FITS (a shut vault), SEALED (the
+//                 Core), ★ (a rare spawn), WAKES (walking in wakes the Tracker).
+//   top centre    YOU, and the hunter: a glitched red pixel skull on the room it's in.
+//   top right     a red live light (inset), and the Signal a first step costs (−5) on a room you can walk into.
+//   bottom right  a respawn ring that fills back up as the room comes back, its m:ss under it.
+// One red dashed arrow curves from the hunter's room into the room it steps into next. Just out of sight within two
+// rooms, the room at the edge of your fog pulses red. The map zooms and pans (app.js): the wheel, a drag, a
+// double-click or ⤢ to fit the server again.
+// Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
+// the markup only changes when the server does and a hovered chip keeps its tooltip.
 import { esc } from './view.mjs';
 import { GUARDS, BOSSES } from './data.mjs';
 import { itemLabel, statLine } from './gear.mjs';
@@ -38,39 +43,53 @@ const pctOf = (s, x) => Math.max(1, Math.round(s.rooms.max * x));
 const restGain = (s) => Math.min(s.rooms.max - s.rooms.signal, Math.round(s.rooms.max * ROOMS.rest));
 
 // ---------- countdowns ----------
-// A tile's short form: m:ss under an hour, then 1h59.
+// A chip's short form: m:ss under an hour, then 1h59.
 const short = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return t >= 3600 ? `${Math.floor(t / 3600)}h${String(Math.floor((t % 3600) / 60)).padStart(2, '0')}` : fmtLeft(ms); };
 const clock = (at) => `<span class="fp-clock" data-at="${at}"></span>`;
+// The slots' text, and each respawn ring's arc (how far the room has come back, from 0 to the full circle).
 export function fillClocks(root, t = now()) {
   for (const el of root.querySelectorAll('[data-at]')) { const ms = Number(el.dataset.at) - t; el.textContent = el.dataset.fmt === 's' ? short(ms) : fmtLeft(ms); }
+  for (const el of root.querySelectorAll('[data-ring-at]')) {
+    const from = Number(el.dataset.ringFrom), to = Number(el.dataset.ringAt), f = to > from ? Math.max(0, Math.min(1, (t - from) / (to - from))) : 1;
+    el.style.strokeDashoffset = (100 * (1 - f)).toFixed(2);
+  }
 }
 
 // ---------- icons ----------
-// One sprite of 20×20 line icons; the map, the strip and the pop-up <use> them, coloured by `color`.
-const ICONS = {
-  process: '<rect x="6" y="6" width="8" height="8"/><path d="M8 3v3M12 3v3M8 14v3M12 14v3M3 8h3M3 12h3M14 8h3M14 12h3"/>',
-  elite: '<rect x="5.5" y="5.5" width="9" height="9"/><path d="M8 2.5v3M12 2.5v3M8 14.5v3M12 14.5v3M2.5 8h3M2.5 12h3M14.5 8h3M14.5 12h3"/><path class="f" d="M10 7.3l2.7 2.7-2.7 2.7-2.7-2.7z"/>',
-  guard: '<path d="M10 2.5l6.5 2.4v5.2c0 4-2.9 6.4-6.5 7.6-3.6-1.2-6.5-3.6-6.5-7.6V4.9z"/><path d="M10 6.5v7M7 9.5h6"/>',
-  core: '<path d="M3 16h14M3.7 13.4L2.6 6l4.5 3.5L10 3.8l2.9 5.7L17.4 6l-1.1 7.4z"/>',
-  den: '<path d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5S2 10 2 10z"/><circle class="f" cx="10" cy="10" r="2.4"/>',
-  cache: '<path d="M3 6.8l7-3.6 7 3.6v6.6l-7 3.6-7-3.6z"/><path d="M3 6.8l7 3.6 7-3.6M10 10.4v6.6"/>',
-  mirror: '<path d="M7.5 3.5L12 10l-4.5 6.5L3 10z"/><path d="M12.5 3.5L17 10l-4.5 6.5"/>',
-  vault: '<rect x="3" y="3" width="14" height="14" rx="1"/><circle cx="10" cy="10" r="3.6"/><path d="M10 6.4V8M10 12v1.6M6.4 10H8M12 10h1.6"/>',
-  rest: '<path d="M15 13.2A6.3 6.3 0 0 1 7.8 3.6a6.6 6.6 0 1 0 7.2 9.6z"/>',
-  entry: '<path d="M9 3.5h7.5v13H9"/><path d="M2.5 10H12M9 7l3 3-3 3"/>',
-  junction: '<circle class="f" cx="10" cy="10" r="3"/>',
+// One sprite: the rooms' line icons (24×24, drawn for the map at full size) and the small marks (20×20: a key, a
+// lock, a star, an eye for the hunter). The map, the strip and the pop-up <use> them, coloured by `color`.
+const ROOM_ICONS = {
+  entry: '<path d="M14 3h5v18h-5"/><path d="M3 12h11M10 8l4 4-4 4"/>',
+  process: '<rect x="6" y="6" width="12" height="12" rx="1"/><rect x="9.5" y="9.5" width="5" height="5"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>',
+  elite: '<path d="M12 1.5 22.5 12 12 22.5 1.5 12Z"/><rect x="8.5" y="8.5" width="7" height="7"/><path d="M12 5v3.5M12 15.5V19M5 12h3.5M15.5 12H19"/>',
+  guard: '<path d="M12 2 20 5v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5Z"/><path d="M12 8v8M8 12h8"/>',
+  vault: '<rect x="3" y="4" width="18" height="16" rx="1.5"/><circle cx="12" cy="12" r="4"/><path d="M12 8v1.5M12 14.5V16M8 12h1.5M14.5 12H16M5 20v2M19 20v2"/>',
+  core: '<path d="M3 18 5 7l4.5 5L12 5l2.5 7L19 7l2 11Z"/><path d="M3 21h18"/>',
+  cache: '<path d="M3 8h18v12H3Z"/><path d="M2 5h20v3H2Z"/><path d="M10 12h4"/>',
+  rest: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4 6.8 6.8 0 0 0 20 14.5Z"/>',
+  den: '<path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3.2"/>',
+  mirror: '<path d="M9 3.5 14.5 12 9 20.5 3.5 12Z"/><path d="M15 3.5 20.5 12 15 20.5"/>',
+  junction: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v6.5M12 15.5V22M2 12h6.5M15.5 12H22"/>',
+};
+const MARK_ICONS = {
   key: '<circle cx="6.5" cy="10" r="3.2"/><path d="M9.7 10h7.8M14.6 10v3M17.2 10v2.2"/>',
   lock: '<rect x="4.5" y="9" width="11" height="8" rx="1"/><path d="M7 9V6.8a3 3 0 0 1 6 0V9"/>',
-  unlock: '<rect x="4.5" y="9" width="11" height="8" rx="1"/><path d="M7 9V6.8a3 3 0 0 1 5.8-1.1"/>',
   star: '<path class="f" d="M10 2.8l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L2.8 8l5-.6z"/>',
-  check: '<path d="M4 10.5l4 4 8-9"/>',
 };
+const symbol = (k, body, vb, sw) => `<symbol id="fp-i-${k}" viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${body.replace(/class="f"/g, 'fill="currentColor" stroke="none"')}</symbol>`;
+// The sprite also holds the map's paints: the chips' gradients, the glow, the drop shadow, the hunter's arrowhead.
 const sprite = () => `<svg class="fp-sprite" width="0" height="0" aria-hidden="true" focusable="false"><defs>`
-  + Object.entries(ICONS).map(([k, b]) => `<symbol id="fp-i-${k}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${b.replace(/class="f"/g, 'fill="currentColor" stroke="none"')}</symbol>`).join('')
-  + '<pattern id="fp-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2" height="6" class="fp-hatch"/></pattern>'
-  + '<marker id="fp-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="fp-arrowhead"/></marker>'
+  + Object.entries(ROOM_ICONS).map(([k, b]) => symbol(k, b, 24, 1.6)).join('')
+  + Object.entries(MARK_ICONS).map(([k, b]) => symbol(k, b, 20, 1.7)).join('')
+  + '<linearGradient id="fp-g-node" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c1408"/><stop offset="1" stop-color="#0d0904"/></linearGradient>'
+  + '<linearGradient id="fp-g-here" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173a34"/><stop offset="1" stop-color="#0c1d1a"/></linearGradient>'
+  + '<linearGradient id="fp-g-hot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a0f09"/><stop offset="1" stop-color="#120705"/></linearGradient>'
+  + '<filter id="fp-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+  + '<filter id="fp-shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".7"/></filter>'
+  + '<marker id="fp-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10Z" class="fp-arrowhead"/></marker>'
   + '</defs></svg>';
-const iconOf = (s, room) => (seenOf(s, room.id) !== 'kind' ? null : room.mirror ? 'mirror' : room.kind);
+// A room's icon: what it is (a guard post is an elite to you; a mirrored cache shows its mirror), once you've seen it.
+const iconOf = (s, room) => (seenOf(s, room.id) !== 'kind' ? null : room.mirror ? 'mirror' : room.kind === 'guard' ? 'elite' : room.kind);
 // An icon in the strip or the pop-up card.
 const ic = (name, cls = '') => `<svg class="fp-ic${cls ? ' ' + cls : ''}" viewBox="0 0 20 20" aria-hidden="true">${name ? `<use href="#fp-i-${name}"/>` : '<text x="10" y="15" text-anchor="middle">?</text>'}</svg>`;
 
@@ -104,7 +123,7 @@ function aboutOf(s, room) {
   if (fightKind(room) || room.mirror) who = room.mirror ? mirrorLine(s, room) : whoOf(s, room).line;
   else if (room.kind === 'den') who = g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.';
   else if (room.kind === 'cache') who = 'Credits and code, sometimes a script.';
-  else if (room.kind === 'vault' && !R.opened[room.id]) who = R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id)?.path || 'a guard post'}.`;
+  else if (room.kind === 'vault' && !R.opened[room.id]) who = R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id)?.path || 'an elite'}.`;
   else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest)} Signal, once a visit.`;
   const denEdge = g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   const rule = hunted ? `The ${huntName(h)} is here: walk in and you fight it.`
@@ -124,21 +143,28 @@ function stateOf(s, room) {
   const R = s.rooms, kind = seenOf(s, room.id) === 'kind';
   if (!kind) return { word: 'unseen', cls: 'dim' };
   if (room.kind === 'core' && !coreOpen(s)) return { word: 'sealed', cls: 'dim' };
-  if (fightKind(room)) return isUp(s, room) ? { word: R.rare[room.id] ? '★ rare' : 'live', cls: R.rare[room.id] ? 'next' : 'hot' } : { word: 'cleared', cls: 'you', at: backAt(s, room) };
+  if (fightKind(room)) return isUp(s, room) ? { word: R.rare[room.id] ? '★ rare' : 'live', cls: R.rare[room.id] ? 'next' : 'hot' } : { word: 'cleared', cls: 'dim', at: backAt(s, room) };
   if (room.kind === 'cache') return cacheFull(s, room) ? (room.mirror ? { word: 'mirror', cls: 'hot' } : { word: 'stocked', cls: '' }) : { word: 'empty', cls: 'dim', at: refillAt(s, room) };
-  if (room.kind === 'vault') return R.opened[room.id] ? { word: 'open', cls: 'you' } : R.visit?.keys.includes(room.id) ? { word: 'key fits', cls: 'you' } : { word: 'locked', cls: '' };
+  if (room.kind === 'vault') return R.opened[room.id] ? { word: 'open', cls: 'dim' } : R.visit?.keys.includes(room.id) ? { word: 'key fits', cls: 'next' } : { word: 'locked', cls: '' };
   if (room.kind === 'rest') return R.visit?.rested ? { word: 'rested', cls: 'dim' } : { word: '', cls: '' };
   return { word: '', cls: '' };
 }
 
 // ---------- the map ----------
-const CELLS = { wide: { w: 120, h: 98, bw: 84, bh: 60, label: 13 }, tall: { w: 94, h: 102, bw: 80, bh: 60, label: 11 } };
-// Grid to pixels: wide (the spine runs left to right) or tall (top to bottom, for phones).
+// A chip's geometry, wide (the spine runs left to right) or tall (top to bottom, for phones: smaller chips, closer):
+// the grid cell (w, h), the chip and its cut corners (nw, nh, ch), the icon's scale and top (ic, icY), the name plate
+// and its type (plW, plH, plY, fs, ls), the respawn ring's radius (rr) and the skull's pixel (px).
+const GEO = {
+  wide: { w: 168, h: 150, nw: 112, nh: 92, ch: 10, ic: 1.7, icY: 13, plW: 88, plH: 17, plY: 62, fs: 10, ls: 1.2, rr: 13, px: 2.8 },
+  tall: { w: 112, h: 128, nw: 96, nh: 84, ch: 9, ic: 1.45, icY: 13, plW: 84, plH: 16, plY: 55, fs: 10, ls: 0.6, rr: 10, px: 2.4 },
+};
+const PAD = 24; // around the grid: room for the badges that sit on a chip's edge
+// Grid to pixels.
 function frame(s, tall) {
-  const C = CELLS[tall ? 'tall' : 'wide'], rooms = roomList(s), xs = rooms.map((r) => (tall ? -r.y : r.x)), ys = rooms.map((r) => (tall ? r.x : r.y));
+  const G = GEO[tall ? 'tall' : 'wide'], rooms = roomList(s), xs = rooms.map((r) => (tall ? -r.y : r.x)), ys = rooms.map((r) => (tall ? r.x : r.y));
   const x0 = Math.min(...xs), y0 = Math.min(...ys), cols = Math.max(...xs) - x0 + 1, rows = Math.max(...ys) - y0 + 1;
-  const at = (r) => ({ x: ((tall ? -r.y : r.x) - x0) * C.w + C.w / 2, y: ((tall ? r.x : r.y) - y0) * C.h + C.h / 2 });
-  return { at, C, width: cols * C.w, height: rows * C.h };
+  const at = (r) => ({ x: ((tall ? -r.y : r.x) - x0) * G.w + G.w / 2, y: ((tall ? r.x : r.y) - y0) * G.h + G.h / 2 });
+  return { at, G, width: cols * G.w, height: rows * G.h };
 }
 const distOf = (g, a, b) => { const d = { [a]: 0 }, q = [a]; while (q.length) { const x = q.shift(); if (x === b) return d[x]; for (const y of neighbours(g, x)) if (!(y in d)) { d[y] = d[x] + 1; q.push(y); } } return null; };
 // The hunter's next room, when you can see it go there.
@@ -148,100 +174,141 @@ function huntStep(s) {
   const next = hunterNext(s, h), near = h.at === here || seenOf(s, h.at);
   return next && near && (seenOf(s, next) || classOf(s) === 'infiltrator') ? next : null;
 }
+const n1 = (v) => +v.toFixed(1);
+// A chip's outline: a rectangle with its corners cut.
+const chipPts = (x, y, hw, hh, c) => [[x - hw + c, y - hh], [x + hw - c, y - hh], [x + hw, y - hh + c], [x + hw, y + hh - c], [x + hw - c, y + hh], [x - hw + c, y + hh], [x - hw, y + hh - c], [x - hw, y - hh + c]].map(([a, b]) => `${n1(a)},${n1(b)}`).join(' ');
+const hashOf = (str) => { let x = 7; for (const c of str) x = (x * 31 + c.charCodeAt(0)) % 233280; return x; };
 function mapSvg(s, tall, pop = null) {
-  const R = s.rooms, g = R.graph, { at, C, width, height } = frame(s, tall), here = R.at, h = hunterOf(s);
+  const R = s.rooms, g = R.graph, { at, G, width, height } = frame(s, tall), here = R.at, h = hunterOf(s);
   const reach = new Set(exits(s).map((x) => x.id)), walked = R.visit?.walked || {};
-  const shown = (id) => !!seenOf(s, id);
-  // Links: a line between two rooms you've seen at least the shape of. A hop (a Relay's) bows out.
+  const shown = (id) => !!seenOf(s, id), known = (id) => seenOf(s, id) === 'kind';
+  // A Patroller's beat, once you've seen any room of it (an Infiltrator sees all of it): its traces' beds run red.
+  const beat = new Set();
+  if (g.route && (classOf(s) === 'infiltrator' || g.route.some(known))) {
+    const ids = g.ping ? g.route : [...g.route, g.route[0]];
+    for (let i = 1; i < ids.length; i++) beat.add([ids[i - 1], ids[i]].sort().join('|'));
+  }
+  // Traces: a dark bed and a thin line between two rooms you've seen at least the shape of. Out of your room, amber
+  // and flowing over a faint wider glow; to an unseen room, dotted. A hop (a Relay's) bows out.
   const lines = linksOf(g).filter(([a, b]) => shown(a) && shown(b)).map(([a, b]) => {
     const p = at(g.rooms[a]), q = at(g.rooms[b]), hop = (g.hops || []).some(([x, y]) => (x === a && y === b) || (x === b && y === a));
-    const live = here && ((a === here && reach.has(b)) || (b === here && reach.has(a))), trod = R.at && walked[a] && walked[b];
-    const cls = `fp-link${live ? ' live' : trod ? ' walked' : seenOf(s, a) === 'kind' && seenOf(s, b) === 'kind' ? ' seen' : ' fog'}${hop ? ' hop' : ''}`;
-    if (hop) { const mx = (p.x + q.x) / 2 + (q.y - p.y) * 0.35, my = (p.y + q.y) / 2 - (q.x - p.x) * 0.35; return `<path class="${cls}" d="M${p.x} ${p.y} Q${mx} ${my} ${q.x} ${q.y}"/>`; }
-    return `<line class="${cls}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`;
+    const fog = !known(a) || !known(b), live = !fog && here && ((a === here && reach.has(b)) || (b === here && reach.has(a))), trod = R.at && walked[a] && walked[b];
+    const d = hop ? `M${p.x} ${p.y} Q${n1((p.x + q.x) / 2 + (q.y - p.y) * 0.35)} ${n1((p.y + q.y) / 2 - (q.x - p.x) * 0.35)} ${q.x} ${q.y}` : '';
+    const shape = (cls) => (hop ? `<path class="${cls}" d="${d}"/>` : `<line class="${cls}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`);
+    return shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`);
   }).join('');
-  // A Patroller's loop, dashed red, once you've seen any room of it (an Infiltrator sees all of it).
-  let loop = '';
-  if (g.route && (classOf(s) === 'infiltrator' || g.route.some((id) => seenOf(s, id) === 'kind'))) {
-    const all = classOf(s) === 'infiltrator', ids = g.ping ? g.route : [...g.route, g.route[0]], segs = [];
-    for (let i = 1; i < ids.length; i++) if (all || (shown(ids[i - 1]) && shown(ids[i]))) { const p = at(g.rooms[ids[i - 1]]), q = at(g.rooms[ids[i]]); segs.push(`M${p.x + 7} ${p.y + 7} L${q.x + 7} ${q.y + 7}`); }
-    if (segs.length) loop = `<path class="fp-loop" d="${segs.join(' ')}" title="The Patroller's loop"/>`;
-  }
-  // The hunter's next step: a red arrow, edge to edge.
+  // The hunter's next step: one red dashed arrow, bowed off the trace, from its room into the next.
   const next = huntStep(s);
   let arrow = '';
   if (next) {
-    const p = at(g.rooms[h.at]), q = at(g.rooms[next]), dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1, trim = Math.abs(dx) > Math.abs(dy) ? C.bw / 2 + 10 : C.bh / 2 + 15, k = trim / d;
-    arrow = `<line class="fp-hunt-arrow" x1="${p.x + dx * k}" y1="${p.y + dy * k}" x2="${q.x - dx * k}" y2="${q.y - dy * k}" marker-end="url(#fp-arrow)"/>`;
+    const p = at(g.rooms[h.at]), q = at(g.rooms[next]), dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len, ny = dx / len;
+    if (ny > 0 || (ny === 0 && nx > 0)) { nx = -nx; ny = -ny; } // over the top of a row, down the left of a column (the respawn ring is on the right)
+    // It leaves the hunter's chip from the face on the bow's side (beside the skull) and lands on the same face of the next.
+    const ux = dx / len, uy = dy / len, along = Math.abs(ux) > Math.abs(uy) ? G.nw / 2 : G.nh / 2, ext = Math.abs(ny) > Math.abs(nx) ? G.nh / 2 : G.nw / 2;
+    const bow = Math.min(48, Math.max(28, len * 0.22)), cx = n1((p.x + q.x) / 2 + nx * (ext + bow)), cy = n1((p.y + q.y) / 2 + ny * (ext + bow));
+    const a = { x: n1(p.x + ux * along * 0.45 + nx * (ext + 4)), y: n1(p.y + uy * along * 0.45 + ny * (ext + 4)) }, b = { x: n1(q.x - ux * along * 0.45 + nx * (ext + 7)), y: n1(q.y - uy * along * 0.45 + ny * (ext + 7)) };
+    arrow = `<path class="fp-route" d="M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y}" marker-end="url(#fp-arrow)"/>`;
   }
-  const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), C, reach, next, pop)).join('');
-  // Out of sight but within two rooms: a red pulse at the edge of your fog.
-  let pulse = '';
-  if (h && !h.down && here && !seenOf(s, h.at)) {
+  // Out of sight but within two rooms: the room at the edge of your fog pulses red.
+  let near = null;
+  if (h && !h.down && here && !shown(h.at)) {
     const d = distOf(g, here, h.at);
-    if (d != null && d <= 2) { const edge = neighbours(g, h.at).find((x) => seenOf(s, x)); if (edge) { const p = at(g.rooms[edge]); pulse = `<circle class="fp-pulse" cx="${p.x}" cy="${p.y}" r="${C.bw / 2 + 10}" title="${esc(`${huntName(h)}: just out of sight.`)}"/>`; } }
+    if (d != null && d <= 2) near = neighbours(g, h.at).find(shown) || null;
   }
-  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="-6 -10 ${width + 12} ${height + 20}" width="${width + 12}" height="${height + 20}" style="--w:${width}px;--h:${height}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${loop}${pulse}${rooms}${arrow}</svg>`;
+  const ctx = { reach, next, pop, near, G };
+  const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
+  const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
+  const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
+  return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${rooms}${arrow}${bits}</svg>`;
 }
-// A tile's outline by kind.
-function bodyOf(kind, x, y, w, h, p) {
-  const c = 11;
-  if (kind === 'junction') return `<circle class="fp-body" cx="${p.x}" cy="${p.y}" r="15"/>`;
-  if (kind === 'elite') return `<path class="fp-body" d="M${x + c} ${y}H${x + w - c}L${x + w} ${y + c}V${y + h - c}L${x + w - c} ${y + h}H${x + c}L${x} ${y + h - c}V${y + c}Z"/>`;
-  if (kind === 'guard') return `<path class="fp-body" d="M${x + 9} ${y}H${x + w - 9}L${x + w} ${y + h / 2}L${x + w - 9} ${y + h}H${x + 9}L${x} ${y + h / 2}Z"/>`;
-  if (kind === 'rest') return `<rect class="fp-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="16"/>`;
-  if (kind === 'core') return `<rect class="fp-frame" x="${x - 5}" y="${y - 5}" width="${w + 10}" height="${h + 10}" rx="6"/><rect class="fp-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/>`;
-  if (kind === 'vault') return `<rect class="fp-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="3"/><rect class="fp-inner" x="${x + 4}" y="${y + 4}" width="${w - 8}" height="${h - 8}" rx="2"/>`;
-  if (kind === 'den') return `<rect class="fp-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="4"/><rect class="fp-hatched" x="${x}" y="${y}" width="${w}" height="${h}" rx="4"/>`;
-  return `<rect class="fp-body" x="${x}" y="${y}" width="${w}" height="${h}" rx="4"/>`;
+// The 1s and 0s drifting off the room you're in: they start just outside its edge and drift 14 to 32 out.
+function bitsSvg(p, G, id) {
+  let seed = hashOf(id);
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280, hw = G.nw / 2, hh = G.nh / 2;
+  let out = '<g class="fp-bits" aria-hidden="true">';
+  for (let i = 0; i < 12; i++) {
+    const a = rnd() * Math.PI * 2, e = Math.min(hw / Math.max(1e-3, Math.abs(Math.cos(a))), hh / Math.max(1e-3, Math.abs(Math.sin(a)))) + 7, d = 14 + rnd() * 18;
+    out += `<text x="${n1(p.x + Math.cos(a) * e)}" y="${n1(p.y + Math.sin(a) * e + 3)}" text-anchor="middle" style="--dx:${n1(Math.cos(a) * d)}px;--dy:${n1(Math.sin(a) * d)}px;--d:${(-rnd() * 2.6).toFixed(2)}s;--t:${(2.2 + rnd() * 1.2).toFixed(2)}s">${rnd() < 0.5 ? '0' : '1'}</text>`;
+  }
+  return out + '</g>';
 }
-const badge = (cx, cy, name, cls) => `<g class="fp-badge ${cls}"><circle cx="${cx}" cy="${cy}" r="9"/><use href="#fp-i-${name}" x="${cx - 6}" y="${cy - 6}" width="12" height="12"/></g>`;
-const pill = (x, y, w, inner, cls) => `<g class="fp-pill ${cls}"><rect x="${x}" y="${y - 8}" width="${w}" height="16" rx="2"/><text x="${x + w / 2}" y="${y + 3.5}" text-anchor="middle">${inner}</text></g>`;
-function roomSvg(s, room, p, C, reach, next, pop) {
+// The hunter: a glitched red pixel skull (11×9: eye sockets, a nose gap, teeth; the jaw rows knocked sideways, a dark
+// scanline through it, a couple of stray pixels) in a small dark badge.
+const SKULL = ['..1111111..', '.111111111.', '11111111111', '11...1...11', '11...1...11', '11111111111', '.1111.1111.', '..1111111..', '..1.1.1.1..'];
+const skulls = {};
+function skullSvg(cx, cy, px, asleep) {
+  if (!skulls[px]) {
+    const shift = { 7: 1, 8: -1 };
+    let d = '';
+    SKULL.forEach((row, j) => [...row].forEach((c, i) => { if (c === '1') d += `M${n1((i + (shift[j] || 0)) * px)} ${n1(j * px)}h${px}v${px}h-${px}z`; }));
+    skulls[px] = `<rect class="bg" x="-4" y="-4" width="${n1(11 * px + 8)}" height="${n1(9 * px + 8)}" rx="2"/><path class="px" d="${d}"/>`
+      + `<rect x="-3" y="${n1(6.55 * px)}" width="${n1(11 * px + 6)}" height="1.4" fill="#140503"/><rect x="${n1(7.5 * px)}" y="${n1(0.4 * px)}" width="${n1(4 * px)}" height="${n1(0.5 * px)}" fill="#ffd2c8" opacity=".85"/><rect class="px" x="${n1(-1 * px)}" y="${n1(2.4 * px)}" width="${n1(2 * px)}" height="${n1(0.5 * px)}" opacity=".6"/>`;
+  }
+  return `<g class="fp-skull${asleep ? ' asleep' : ''}" transform="translate(${n1(cx - 5.5 * px)} ${n1(cy - 4.5 * px)})">${skulls[px]}</g>`;
+}
+// A name plate's type: its letter-spacing (then its size) gives way so a long name fits the plate.
+function plateType(name, G) {
+  const room = G.plW - 8, cw = 0.6, n = name.length;
+  if (n * (G.fs * cw + G.ls) <= room) return { fs: G.fs, ls: G.ls };
+  if (n * G.fs * cw <= room) return { fs: G.fs, ls: n1(room / n - G.fs * cw) };
+  return { fs: n1(room / n / cw), ls: 0 };
+}
+const tagW = (t) => 18 + t.length * 6;
+function roomSvg(s, room, p, { reach, next, pop, near, G }) {
   const R = s.rooms, g = R.graph, seen = seenOf(s, room.id), kind = seen === 'kind', h = hunterOf(s);
-  const here = R.at === room.id, can = reach.has(room.id), up = kind && fightKind(room) && isUp(s, room);
+  const here = R.at === room.id, can = reach.has(room.id), fight = kind && fightKind(room), up = fight && isUp(s, room), down = fight && !up;
   const hunted = h && !h.down && h.at === room.id;
   const sealed = kind && room.kind === 'core' && !coreOpen(s);
-  const empty = kind && room.kind === 'cache' && !cacheFull(s, room);
-  const used = empty || (kind && room.kind === 'rest' && R.visit?.rested);
+  const full = kind && room.kind === 'cache' && cacheFull(s, room), empty = kind && room.kind === 'cache' && !full;
+  const used = empty || (kind && room.kind === 'rest' && !!R.visit?.rested) || (kind && room.kind === 'vault' && !!R.opened[room.id]);
+  const live = up || (full && !!room.mirror);
   const denEdge = kind && g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
-  const big = kind && room.kind === 'core' ? 8 : 0, w = (kind ? C.bw : C.bw - 14) + big, ht = (kind ? C.bh : C.bh - 12) + big;
-  const x = p.x - w / 2, y = p.y - ht / 2;
-  const cls = ['fp-room', `k-${kind ? room.kind : 'fog'}`, here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', kind && fightKind(room) && !up && !sealed ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', next === room.id ? 'hunt-next' : '', pop === room.id ? 'sel' : ''].filter(Boolean).join(' ');
+  // Its colour: you, a live threat, used up (or a plain room you've cleared), or something there for you.
+  const tone = here ? 'you' : !kind ? 'fog' : live ? 'hot' : down || used || (['entry', 'junction', 'den'].includes(room.kind) && R.cleared[room.id]) ? 'gray' : 'amber';
+  const cls = ['fp-room', `k-${kind ? room.kind : 'fog'}`, `t-${tone}`, here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', down ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', pop === room.id ? 'sel' : ''].filter(Boolean).join(' ');
   // A room you can walk into walks on one click (Enter too); any other room you've seen opens its pop-up.
   const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : kind || (!R.at && room.id === g.entry) ? ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"` : '';
-  const jn = kind && room.kind === 'junction';
+  const hw = G.nw / 2, hh = G.nh / 2, x0 = n1(p.x - hw), y0 = n1(p.y - hh), pts = chipPts(p.x, p.y, hw, hh, G.ch);
   let out = `<g class="${cls}" data-room="${esc(room.id)}"${attrs}${pop === room.id ? '' : ` title="${esc(tileTip(s, room))}"`} aria-label="${esc(kind ? room.path : 'Unseen room')}">`;
-  // Rings: you (teal), the hunter's next room (dashed hot).
-  if (here || next === room.id) out += jn ? `<circle class="fp-ring" cx="${p.x}" cy="${p.y}" r="21"/>` : `<rect class="fp-ring" x="${x - 6}" y="${y - 6}" width="${w + 12}" height="${ht + 12}" rx="${room.kind === 'rest' && kind ? 20 : 7}"/>`;
-  out += bodyOf(kind ? room.kind : 'fog', x, y, w, ht, p);
-  const name = iconOf(s, room);
-  if (!kind) out += `<text class="fp-q" x="${p.x}" y="${p.y + 6}" text-anchor="middle">?</text>`;
-  else if (jn) out += `<circle class="fp-dot" cx="${p.x}" cy="${p.y}" r="3.5"/>`;
+  // You: a soft teal glow and a pulsing outline. The hunter just out of sight next door: a red pulse.
+  if (here) out += `<polygon class="fp-you-glow" points="${pts}" filter="url(#fp-glow)"/><polygon class="fp-you-ring" points="${pts}"/>`;
+  if (near === room.id) out += `<polygon class="fp-near" points="${pts}" title="${esc(`${huntName(h)}: just out of sight.`)}"/>`;
+  if (!kind) out += `<polygon class="fp-body" points="${pts}"/><text class="fp-q" x="${p.x}" y="${n1(p.y + 8)}" text-anchor="middle">?</text>`;
   else {
-    const label = room.path.length > C.label ? room.path.slice(0, C.label - 1) + '…' : room.path;
-    out += `<use class="fp-glyph" href="#fp-i-${name}" x="${p.x - 12}" y="${p.y - 24}" width="24" height="24"/>`;
-    out += `<text class="fp-label" x="${p.x}" y="${y + ht - 13}" text-anchor="middle">${esc(label)}</text>`;
+    // The chip, its hairline, the icon (the largest thing on it) and the name plate under it, centred as one block.
+    const sz = n1(24 * G.ic), name = room.path.toUpperCase(), t = plateType(name, G);
+    out += `<g filter="url(#fp-shadow)"><polygon class="fp-body" points="${pts}"/></g><polygon class="fp-hair" points="${chipPts(p.x, p.y, hw * 0.9, hh * 0.9, G.ch * 0.9)}"/>`;
+    out += `<use class="fp-icon" href="#fp-i-${iconOf(s, room)}" x="${n1(p.x - sz / 2)}" y="${n1(y0 + G.icY)}" width="${sz}" height="${sz}"${tone === 'gray' ? '' : ' filter="url(#fp-glow)"'}/>`;
+    out += `<rect class="fp-plate" x="${n1(p.x - G.plW / 2)}" y="${n1(y0 + G.plY)}" width="${G.plW}" height="${G.plH}" rx="1"/><text class="fp-name" x="${p.x}" y="${n1(y0 + G.plY + G.plH / 2 + t.fs * 0.36)}" text-anchor="middle" font-size="${t.fs}" letter-spacing="${t.ls}">${esc(name)}</text>`;
   }
-  if (kind && R.cleared[room.id] && !jn) out += `<use class="fp-check" href="#fp-i-check" x="${x + 4}" y="${y + 4}" width="11" height="11"/>`;
-  // Top right: one badge.
-  let b = null;
-  if (kind && !jn) {
-    if (denEdge) b = ['den', 'hot'];
-    else if (up && R.rare[room.id]) b = ['star', 'next'];
-    else if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit?.keys.includes(room.key)) b = ['key', 'amber'];
-    else if (room.kind === 'vault') b = R.opened[room.id] ? ['unlock', 'you'] : R.visit?.keys.includes(room.id) ? ['key', 'you'] : ['lock', 'dim'];
-    else if (sealed) b = ['lock', 'hot'];
+  // Top left: the tags.
+  const tags = [];
+  if (kind) {
+    if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit?.keys.includes(room.key)) tags.push(['KEY', 'key']);
+    if (room.kind === 'vault' && !R.opened[room.id]) tags.push(R.visit?.keys.includes(room.id) ? ['KEY FITS', 'key'] : ['LOCKED', 'lock']);
+    if (sealed) tags.push(['SEALED', 'hot']);
+    if (up && R.rare[room.id]) tags.push(['★', 'rare']);
+    if (denEdge) tags.push(['WAKES', 'hot']);
   }
-  if (b) out += badge(x + w - 2, y + 2, b[0], b[1]);
-  // Top centre: the hunter's token, or YOU.
-  if (hunted) out += `<g class="fp-token"><circle cx="${p.x}" cy="${y}" r="10"/><use href="#fp-i-den" x="${p.x - 7}" y="${y - 7}" width="14" height="14"/></g>`;
-  else if (here) out += `<g class="fp-you-tag"><rect x="${p.x - 15}" y="${(jn ? p.y - 15 : y) - 7}" width="30" height="14" rx="2"/><text x="${p.x}" y="${(jn ? p.y - 15 : y) + 3.5}" text-anchor="middle">YOU</text></g>`;
-  // Bottom: a countdown on the left, a first step's cost on the right.
-  const at = kind && fightKind(room) && !up && !sealed && R.down[room.id] != null ? backAt(s, room) : empty ? refillAt(s, room) : null;
-  if (at != null) out += pill(x - 3, y + ht, 46, `↻ <tspan data-at="${at}" data-fmt="s"></tspan>`, 'clock');
+  let tx = x0 - 6;
+  for (const [t, c] of tags) { const w = tagW(t); out += `<g class="fp-tag ${c}"><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/><text x="${n1(tx + w / 2)}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`; tx += w + 4; }
+  // Top centre: YOU, and the hunter's skull (beside YOU when it's on you).
+  if (here) { const ux = n1(Math.max(p.x, tx + 20)); out += `<g class="fp-you-tab"><rect x="${n1(ux - 20)}" y="${n1(y0 - 9)}" width="40" height="16" rx="2"/><text x="${ux}" y="${n1(y0 + 3)}" text-anchor="middle">YOU</text></g>`; tx = ux + 24; }
+  if (hunted) { const half = 5.5 * G.px + 4; out += skullSvg(n1(Math.max(p.x, tx + half)), n1(y0 - 2), G.px, h.kind === 'track' && !h.awake && !h.returning); }
+  // Top right: the live light, and what a first step in costs.
+  if (live && !here) out += `<circle class="fp-live" cx="${n1(x0 + G.nw - 18)}" cy="${n1(y0 + 16)}" r="3.5" filter="url(#fp-glow)"/>`;
   const cost = can ? moveCost(s, room) : 0;
-  if (cost) { const cw = 14 + String(cost).length * 6.4; out += pill(x + w + 3 - cw, y + ht, cw, `−${cost}`, 'cost'); }
+  if (cost) { const t = `−${cost}`, w = tagW(t) - 6, rx = n1(x0 + G.nw + 4 - w); out += `<g class="fp-cost"><rect x="${rx}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/><text x="${n1(rx + w / 2)}" y="${n1(y0 + 4)}" text-anchor="middle">${t}</text></g>`; }
+  // Bottom right: the respawn ring (a fight down, a cache empty) fills back up, its countdown under it.
+  const from = down && R.down[room.id] != null ? R.down[room.id] : empty ? R.taken[room.id] : null;
+  const back = from == null ? null : down ? backAt(s, room) : refillAt(s, room);
+  if (back != null) {
+    const cx = n1(x0 + G.nw - 2), cy = n1(y0 + G.nh - 2), r = G.rr;
+    out += `<g class="fp-respawn ${room.kind === 'cache' && !room.mirror ? 'amber' : 'hot'}"><circle class="bg" cx="${cx}" cy="${cy}" r="${r + 3}"/><circle class="track" cx="${cx}" cy="${cy}" r="${r}"/>`
+      + `<circle class="arc" cx="${cx}" cy="${cy}" r="${r}" pathLength="100" transform="rotate(-90 ${cx} ${cy})" data-ring-from="${from}" data-ring-at="${back}"/>`
+      + `<text x="${cx}" y="${n1(cy + r + 13)}" text-anchor="middle"><tspan data-at="${back}" data-fmt="s"></tspan></text></g>`;
+  }
   return out + '</g>';
 }
 
@@ -252,7 +319,7 @@ function hudMarkup(s) {
   const step = pctOf(s, R.floor >= 5 ? ROOMS.moveDeep : ROOMS.move);
   const scripts = bag.map((id) => `<li class="fp-perk r-${TIER[SCRIPTS[id].rarity]}" title="${esc(scriptTip(id))}">${esc(SCRIPTS[id].name)}</li>`).join('');
   const hunt = R.at && h ? `<span class="fp-stat fp-hunt${h.down ? ' out' : ''}" title="${esc(`${hunterLine(s)}\n${huntName(h)}: ${HUNTERS[h.kind].text} It moves only when you walk or wait.`)}">${ic('den')}<span class="lbl">${esc(huntName(h))}</span><b>${h.down ? 'down' : h.kind === 'track' && !h.awake && !h.returning ? 'asleep' : `moves in ${paceOf(s) - h.count}`}</b></span>` : '';
-  const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to its guard post.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
+  const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const pack = R.pack.length ? `<span class="fp-stat" title="${esc(`Pack: ${R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' })).join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${R.pack.length}</b></span>` : '';
   const rule = ['a', 'b', 'c'].map((k) => `<button type="button" class="fp-rule${R.bossRule === k ? ' on' : ''}" data-rooms="bossrule" data-arg="${k}" aria-pressed="${R.bossRule === k}" title="${esc(`Boss rule ${k}: ${BOSS_RULES[k].name}.\n${BOSS_RULES[k].text}`)}">${k}</button>`).join('');
   // Wait and Jack out (Connect at home), always in reach at the strip's right.
@@ -357,7 +424,7 @@ function hereCard(s) {
     } else body = note('Credits and code, sometimes a script.', 'dim');
   } else if (room.kind === 'vault') {
     const open = !!R.opened[room.id], has = R.visit.keys.includes(room.id), main = room.id === g.vaults[0], force = pctOf(s, ROOMS.force);
-    body = open ? (main ? note('The Core is unsealed.') : '') : note(esc(has ? `Your key fits.${main ? ' Opening it unseals the Core.' : ''}` : `Its key is in ${guardOf(s, room.id)?.path || 'a guard post'}.${main ? ' Opening it unseals the Core.' : ''}`));
+    body = open ? (main ? note('The Core is unsealed.') : '') : note(esc(has ? `Your key fits.${main ? ' Opening it unseals the Core.' : ''}` : `Its key is in ${guardOf(s, room.id)?.path || 'an elite'}.${main ? ' Opening it unseals the Core.' : ''}`));
     acts = open ? '' : btn('open', 'Open', { primary: true, disabled: !has, note: has ? 'your key' : 'no key' }) + btn('force', 'Force it', { hot: true, note: `−${force} Signal` });
   } else if (room.kind === 'rest') {
     body = note('The hunter never comes in.', 'dim');
@@ -404,6 +471,6 @@ export function roomsMarkup(s, ui = fpUi) {
   const pop = id ? `<div class="map-pop fp-pop" id="fp-pop" data-pop="${esc(id)}" role="dialog" aria-label="${esc(R.at || id !== R.graph.entry ? R.graph.rooms[id].path : 'Home')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-fp-pop-close title="Close (Esc)" aria-label="Close">×</button>${popCard(s, id)}</div>` : '';
   return `<div class="fp${R.at ? '' : ' home'}">
     ${sprite()}${hudMarkup(s)}
-    <section class="panel fp-map" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div>${pop}</section>
+    <section class="panel fp-map" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${pop}</section>
   </div>`;
 }

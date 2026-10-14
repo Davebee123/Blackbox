@@ -518,7 +518,7 @@ document.addEventListener('click', (e) => {
   if (module !== 'rooms' || !campaign.rooms) return;
   const t = e.target.closest?.('[data-fp-sel]');
   if (t) { pickRoom(campaign, t.dataset.fpSel); feel.key('click'); dirty = true; return; }
-  const bg = e.target.closest?.('.fp-map') && !e.target.closest('.fp-pop, [data-rooms], [data-fp-sel]');
+  const bg = e.target.closest?.('.fp-map') && !e.target.closest('.fp-pop, [data-rooms], [data-fp-sel], [data-fp-zoom]');
   if ((e.target.closest?.('[data-fp-pop-close]') || bg) && popOf(campaign)) { closePop(campaign); dirty = true; }
 });
 document.addEventListener('keydown', (e) => {
@@ -536,7 +536,7 @@ function placeRoomsPop() {
   const pop = $('fp-pop');
   if (!pop) { fpPopAt = null; return; }
   const box = pop.parentElement, id = pop.dataset.pop;
-  const tile = [...box.querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"]`)].map((t) => t.getBoundingClientRect()).find((r) => r.width > 0);
+  const tile = [...box.querySelectorAll(`.fp-room[data-room="${CSS.escape(id)}"] .fp-body`)].map((t) => t.getBoundingClientRect()).find((r) => r.width > 0); // the chip itself: its pulsing ring and badges move
   if (!tile) { pop.style.visibility = 'hidden'; return; }
   const c = box.getBoundingClientRect(), t = { l: tile.left - c.left, t: tile.top - c.top, r: tile.right - c.left, b: tile.bottom - c.top };
   pop.style.maxHeight = '';
@@ -571,7 +571,53 @@ function placeRoomsPop() {
   fpPopAt = { key, id, left: pop.style.left, top: pop.style.top, maxHeight: pop.style.maxHeight };
   if (fresh) { const r = pop.getBoundingClientRect(); if (r.top < 0 || r.bottom > innerHeight) pop.scrollIntoView({ block: 'nearest' }); }
 }
-addEventListener('resize', () => { if (module === 'rooms') placeRoomsPop(); });
+addEventListener('resize', () => { if (module === 'rooms') { applyFpZoom(); placeRoomsPop(); } });
+// The room map zooms and pans like the network map: the wheel zooms around the cursor (up to 4×), a drag pans, a
+// double-click on the map's background (or ⤢) fits the server again. One zoom for each way the map stands (wide and
+// tall); kept here, not on the save, and put back after every redraw.
+const fpZoom = { wide: { k: 1, cx: 0, cy: 0 }, tall: { k: 1, cx: 0, cy: 0 } };
+const fpZoomOf = (svg) => fpZoom[svg.classList.contains('tall') ? 'tall' : 'wide'];
+function applyFpZoom() {
+  for (const svg of $('page-view')?.querySelectorAll('.fp-svg') || []) {
+    const z = fpZoomOf(svg), [x, y, w, h] = baseVb(svg);
+    if (z.k <= 1) { z.k = 1; svg.setAttribute('viewBox', `${x} ${y} ${w} ${h}`); svg.classList.remove('zoomed'); continue; }
+    const zw = w / z.k, zh = h / z.k;
+    z.cx = Math.max(x + zw / 2, Math.min(x + w - zw / 2, z.cx));
+    z.cy = Math.max(y + zh / 2, Math.min(y + h - zh / 2, z.cy));
+    svg.setAttribute('viewBox', `${z.cx - zw / 2} ${z.cy - zh / 2} ${zw} ${zh}`);
+    svg.classList.add('zoomed');
+  }
+}
+function fpZoomReset() { fpZoom.wide.k = 1; fpZoom.tall.k = 1; applyFpZoom(); placeRoomsPop(); }
+document.addEventListener('wheel', (e) => {
+  const svg = e.target.closest?.('.fp-svg');
+  if (!svg) return;
+  e.preventDefault();
+  const z = fpZoomOf(svg), [x, y, w, h] = baseVb(svg);
+  if (z.k <= 1) { z.cx = x + w / 2; z.cy = y + h / 2; }
+  const p = svgPoint(svg, e), k0 = z.k, k = Math.max(1, Math.min(4, k0 * (e.deltaY < 0 ? 1.25 : 1 / 1.25)));
+  z.cx = p.x + (z.cx - p.x) * (k0 / k);
+  z.cy = p.y + (z.cy - p.y) * (k0 / k);
+  z.k = k;
+  applyFpZoom(); placeRoomsPop();
+}, { passive: false });
+let fpDrag = null;
+document.addEventListener('pointerdown', (e) => {
+  const svg = e.target.closest?.('.fp-svg');
+  if (svg && fpZoomOf(svg).k > 1 && e.button === 0) { const z = fpZoomOf(svg); fpDrag = { z, x: e.clientX, y: e.clientY, cx: z.cx, cy: z.cy, moved: false, scale: svg.getScreenCTM().a }; }
+});
+document.addEventListener('pointermove', (e) => {
+  if (!fpDrag) return;
+  const dx = e.clientX - fpDrag.x, dy = e.clientY - fpDrag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) fpDrag.moved = true;
+  if (!fpDrag.moved) return;
+  fpDrag.z.cx = fpDrag.cx - dx / fpDrag.scale;
+  fpDrag.z.cy = fpDrag.cy - dy / fpDrag.scale;
+  applyFpZoom(); placeRoomsPop();
+});
+document.addEventListener('pointerup', () => { if (fpDrag?.moved) { const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); }; document.addEventListener('click', stop, { capture: true, once: true }); setTimeout(() => document.removeEventListener('click', stop, { capture: true }), 0); } fpDrag = null; });
+document.addEventListener('dblclick', (e) => { if (e.target.closest?.('.fp-svg') && !e.target.closest('[data-rooms], [data-fp-sel]')) fpZoomReset(); });
+document.addEventListener('click', (e) => { if (e.target.closest?.('[data-fp-zoom]')) fpZoomReset(); });
 // ---------- a breach (breach.mjs) ----------
 // A button on the breach page: a move on the map, or the screen's verb. A fight starts paused on the Fight page.
 function breachClick(verb, arg) {
@@ -997,7 +1043,7 @@ function run(raw) {
       if (w) notice(w.message, true); else if (ok) notice(ev.filter((e) => e.type !== 'rooms-cmd').map((e) => e.message).join(' '));
       dirty = true; return;
     }
-    if (text === 'help') return notice('Click a room, or type go <room> (go guard post). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect, developer bossrule a|b|c. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, script <n> runs a script.', false, null, true);
+    if (text === 'help') return notice('Click a room, or type go <room> (go elite 2). Also: ls, map, wait, back, engage, cat, pull, open, force, rest, slip, jack out, connect, developer bossrule a|b|c. In a fight: 1 is your plain hit, 2 to 0 your skills, - is SIGINT, script <n> runs a script.', false, null, true);
     if (!active(campaign)) { const ev = FP.roomsCommand(campaign, text); if (ev) return roomsDone(ev); }
   }
   // A breach (breach.mjs): ls, cd, tree and the screen's verbs, out of a fight. Jacking out mid-fight isn't one.
@@ -1547,7 +1593,7 @@ function render(force = false) {
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
-    if (module === 'rooms') { fillClocks($('page-view')); placeRoomsPop(); } // the countdowns tick in place: the markup only changes with the server
+    if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {
