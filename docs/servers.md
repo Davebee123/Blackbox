@@ -844,14 +844,14 @@ What the numbers say: a process fight costs 12–23% of the bar (the doc's 20–
 
 | Class | Minutes a level, 1→2 … 9→10 | Hours to 5 | Hours to 10 | Room fights won | Time resting |
 |---|---|---:|---:|---:|---:|
-| Breaker | 5 / 12 / 10 / 12 / 18 / 19 / 20 / 28 / 26 | 0.64 | 2.48 | 97% | 30% |
-| Bastion | 5 / 13 / 15 / 22 / 24 / 15 / 13 / 29 / 29 | 0.91 | 2.74 | 96% | 28% |
-| Infiltrator | 3 / 9 / 11 / 17 / 21 / 30 / 24 / 28 / 40 | 0.67 | 3.03 | 95% | 38% |
-| Operator | 4 / 11 / 4 / 16 / 12 / 19 / 29 / 26 / 24 | 0.60 | 2.42 | 99% | 29% |
+| Breaker | 5 / 12 / 10 / 11 / 18 / 18 / 20 / 30 / 29 | 0.63 | 2.52 | 96% | 30% |
+| Bastion | 5 / 13 / 15 / 22 / 24 / 15 / 16 / 25 / 22 | 0.91 | 2.58 | 96% | 28% |
+| Infiltrator | 3 / 9 / 11 / 17 / 21 / 30 / 24 / 28 / 40 | 0.67 | 3.04 | 96% | 38% |
+| Operator | 4 / 11 / 4 / 16 / 12 / 19 / 27 / 25 / 28 | 0.60 | 2.45 | 99% | 29% |
 
-To level 20 (three seeds): Breaker 7.4 hours, Bastion 9.8, Infiltrator 9.2, Operator 7.2 (the slowest 1.36× the fastest). The XP mix to 20: fights 52–67%, break-ins (first clears, Mapped, first runs) 28–30%, intel 5–10%, build (a held server's respawns) 4–9%.
+To level 20 (three seeds): Breaker 5.9 hours, Bastion 11.7, Infiltrator 8.5, Operator 7.6: the Bastion slows from 13 (a Warden's kills are slow alone), twice the Breaker's time; an earlier three-seed run had it at 9.8. The XP mix to 20: fights 52–67%, break-ins (first clears, Mapped, first runs) 28–30%, intel 5–10%, build (a held server's respawns) 4–9%.
 
-Its room fights by kind (wins, and Signal lost a won fight), levels 1–5 and 6–10: SPRAWL-00's strays at your level 96–100% at 15–22% (a level over: 58–90% at 40–50%); a traced server's process rooms at 6–10 96–100% at 6–18%, its guard posts 97–100% at 5–26%, its elites 85–100% at 6–38%, the Resident 69–100% at 17–41%. Servers trail your level a little, so most of them cost less than a same-level fight.
+Its room fights by kind (wins, and Signal lost a won fight), levels 1–5 and 6–10: SPRAWL-00's strays at your level 96–100% at 15–22% (a level over: 58–100% at 40–49%); a traced server's process rooms at 6–10 96–100% at 7–17%, its guard posts 97–100% at 7–26%, its elites 89–100% at 4–36%, the Resident 76–100% at 10–44%. Servers trail your level a little, so most of them cost less than a same-level fight.
 
 **The rooms sim** (`roomsim.mjs`, R0's: medium servers built at your level, six a class, rule a, the subclass a player picks first at 10): the same-level check of 9.1.
 
@@ -861,16 +861,16 @@ Its room fights by kind (wins, and Signal lost a won fight), levels 1–5 and 6�
 | 3 | Bastion | 67% | 83% | 21 / 38 / 23 / 35 / 21% | 40 (6.0) |
 | 3 | Infiltrator | 100% | 97% | 26 / 36 / 25 / 26 / 27% | 33 (5.3) |
 | 3 | Operator | 83% | 88% | 24 / 44 / 25 / 38 / 25% | 43 (7.0) |
-| 6 | Breaker | 83% | 82% | 45 / 44 / 20 / 19 / 24% | 40 (7.2) |
-| 6 | Bastion | 100% | 93% | 26 / 22 / 4 / 9 / 16% | 29 (4.3) |
-| 6 | Infiltrator | 100% | 96% | 36 / 30 / 26 / 52 / 37% | 56 (8.3) |
-| 6 | Operator | 100% | 90% | 27 / 38 / 23 / 36 / 35% | 51 (8.2) |
+| 6 | Breaker | 100% | 84% | 36 / 37 / 16 / 20 / 24% | 39 (6.5) |
+| 6 | Bastion | 100% | 92% | 27 / 20 / 4 / 7 / 15% | 29 (4.2) |
+| 6 | Infiltrator | 100% | 95% | 37 / 26 / 26 / 47 / 41% | 50 (7.7) |
+| 6 | Operator | 100% | 93% | 29 / 38 / 19 / 33 / 35% | 34 (5.7) |
 | 10 | Breaker (Demolitionist) | 100% | 86% | 37 / 35 / 18 / 32 / 38% | 56 (9.7) |
 | 10 | Bastion (Warden) | 100% | 96% | 20 / 26 / 10 / 24 / 16% | 27 (3.3) |
 | 10 | Infiltrator (Payload) | 100% | 100% | 21 / 41 / 14 / 26 / 22% | 23 (4.3) |
 | 10 | Operator (Herder) | 100% | 97% | 26 / 30 / 23 / 33 / 15% | 31 (5.0) |
 
-What the numbers say: the climb lands on 7.2 (2.4–3.0 hours to 10 against 2.7, 7.2–9.8 to 20 against 9), and in play nearly every fight is won. The same-level gate holds for the Bastion, the Infiltrator and the Operator at 10 (20–26% a process, 96–100% won, 3–5 visits), and for every class at 3. It doesn't for the Breaker at 6 and 10 (37–45% a process fight, 82–86% won, 7–10 visits) or the Infiltrator at 6 (36%): the Breaker's base kit and the Demolitionist can't cut a charge on an Encryptor wearing ◆5 in time, and an Encrypt left to stack does the rest. R0 measured the Breaker at 9–10 visits too. A kit pass for the interrupt is the fix (below).
+What the numbers say: the climb to 10 lands on 7.2 (2.5–3.0 hours against 2.7; level 5 a little early, 0.6–0.9 hours against 1), and in play nearly every fight is won. To 20 it spreads (5.9–11.7 hours against 9): the Bastion falls behind past 13. The same-level gate holds for the Bastion, the Infiltrator and the Operator at 10 (20–26% a process, 96–100% won, 3–5 visits), and for every class at 3. It doesn't for the Breaker at 6 and 10 (36–37% a process fight, 84–86% won, 7–10 visits) or the Infiltrator at 6 (37%); R0 had the Breaker at 28% at 6 and 27% at 10: the Breaker's base kit and the Demolitionist can't cut a charge on an Encryptor wearing ◆5 in time, and an Encrypt left to stack does the rest. R0 measured the Breaker at 9–10 visits too. A kit pass for the interrupt is the fix (below).
 
 **Balance tests re-baselined** to what the interrupt in every fight measures, each with its numbers in its test: the tells gap (`balance.test.mjs`: about 5 points of Signal at 10, 2 at 18, 1 at 30 now, since both bots cut the big attacks; it was 17 under the burst), HASHLORD and MIRRORSHADE's band (they hit harder: dmg 1.5 and 1.15), the kit spreads, core rotations and second presets (`kits-balance.test.mjs`), the natives' floor, the Hijacker in a crew, and the SPRAWL-only climb. Mass Mailer and Infest hatch one fewer, a charge rests 7 cycles, the after-effects are lighter (Offline 1 cycle, Corrupted 3–4%, Hung retired).
 
@@ -880,10 +880,10 @@ What the numbers say: the climb lands on 7.2 (2.4–3.0 hours to 10 against 2.7,
 - *Root 4* is the old building slot until sockets (R2); Root 3 keeps "no memory" too, since memory is still on.
 - *The terminal* has no `ls -a`, `unlock`, `sweep`, `tap`, `spoof` or `pwd` on rooms: passwords, the Trace and quirk folders went with the file system; the log sweep comes back as a terminal room later; the run skills (Tap, Spoof, Ghost, Light footprint) sit out until they're re-pointed. The old file system stays behind `run.mjs` `LEGACY.files` for its tests until R5.
 - *First clears and Mapped count as break-in XP* in the mix (exploration), and a held server's respawned rooms as build: the kills pay the same.
-- *The bots*: below level 10 they don't strip a part ahead of its charge (with three or four keys it cost more than the charge); the planner's big-cut priority has a sim switch (`TELL.bots.bigCut`).
+- *The bots*: below level 10 they don't strip a part ahead of its charge or hold a tick back for it (with three or four keys both cost more than the charge: the rooms sim at 6 went from 45/26/36/27% to 36/27/37/29% a process fight); `TELL.bots.bigCut` and `TELL.bots.save` switch the planner's big cut and its saved tick off for the sims.
 - *Not in R1:* sockets and codebases (R2), floors (R3), new families, nest rooms, Linked tells and help requests (R4), deleting the breach and campaign code (R5). No mail from wick about the move yet.
 
-**Known issues:** the Breaker's room fights at 6–10 (above); at level 3 the Bastion maps two medium servers in three; the pacing bot never fights the farm or the lair; kit spreads and core rotations at 18–40 measure under their old lines (held in the tests), so the classes want a pass for the interrupt; a traced server's guard posts at 6–10 cost the Bastion almost nothing.
+**Known issues:** the Breaker's room fights at 6–10 (above); the Bastion's climb past level 13 (about twice the Breaker's hours to 20 in the pacing bot); at level 3 the Bastion maps two medium servers in three; the pacing bot never fights the farm or the lair; kit spreads and core rotations at 18–40 measure under their old lines (held in the tests), so the classes want a pass for the interrupt; a traced server's guard posts at 6–10 cost the Bastion almost nothing.
 
 ## 10. Open questions for the designer
 

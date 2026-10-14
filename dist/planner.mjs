@@ -94,7 +94,9 @@ export function planner(s) {
   if (told && ok(s, told)) return told;
   if (ticked) {
     if (cut && worth && !echo && ok(s, cut)) return cut;
-    const keep = !kill && saveTick(s, plan);
+    // Saving a tick for a charge pays from level 10; below it, with three or four keys, holding back cost more (the
+    // rooms sim at level 6). TELL.bots.save false: never (a sim switch).
+    const keep = !kill && TELL.bots.save !== false && s.encounter.virus.level >= TELL.castFrom && saveTick(s, plan);
     if (keep && ok(s, keep)) return keep;
   }
   // Scrambled (a Scramble, or a Possession that made it longer): a big hit may turn on you, so set up instead,
