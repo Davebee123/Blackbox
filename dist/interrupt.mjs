@@ -1,4 +1,5 @@
-// The interrupt (docs/servers.md 3): one rule for every fight in a server's rooms (floorplan.mjs). Every part has two
+// The interrupt (docs/servers.md 3): one rule for every fight (R1: not only a server room's; a crew boss keeps its own
+// framework, raid.mjs). Every part has two
 // ticks, at 50% and 25% of its max Integrity. When damage takes a part across a tick on a cycle that part's move is
 // due, its move this cycle is cancelled. Each tick works once a fight, whether or not anything was due.
 //
@@ -19,9 +20,10 @@
 //      other parts interrupt as usual, and its phases no longer follow its total Integrity.
 //   b  every part interrupts; phases stay on total Integrity; it brings one more charge.
 //   c  phases at 50% and 25% of total; ticks interrupt, but the fight has a budget of TICKS.budget cancels.
-import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn } from './combat.mjs';
+import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toIntent, usable, readyIn, fxOn } from './combat.mjs';
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
-import { tellsOf, tellAnswer, tellNext, tierOf } from './tells.mjs';
+import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
+import { raidDef } from './raid.mjs';
 
 export const TICKS = { at: [0.5, 0.25], small: 20, budget: 3 };
 export const BOSS_RULES = {
@@ -30,6 +32,17 @@ export const BOSS_RULES = {
   c: { name: 'Phases plus a budget', short: `${TICKS.budget} interrupts a fight`, text: `Phases come at 50% and 25% of total Integrity. Ticks interrupt, but only ${TICKS.budget} times a fight, shown as pips on its bar.` },
 };
 const pct = (at) => (at === 0.5 ? 'half' : `${Math.round(at * 100)}%`);
+// The fights the rule plays in: every one but a crew boss's (prepareTicks marks them as they start).
+export const ticked = (e) => !!e?.ticked;
+// As a fight is engaged (combat.mjs engage, before its tells are dealt): ticks on its parts, and a boss's rule (3.4: (a)
+// by default, `developer bossrule a|b|c` switches it; a server room sets its own first, floorplan.mjs).
+export function prepareTicks(s) {
+  const e = s.encounter, v = e?.virus;
+  if (!v || raidDef(v) || e.breach) return; // a crew boss keeps its framework; the breach build (R5 deletes it) its own rules
+  e.ticked = true;
+  armTicks(s);
+  if (v.boss && !e.bossRule) bossRule(s, s.bossRule || 'a');
+}
 
 // ---------- which parts carry ticks ----------
 // A part's Integrity at level 6 scale: its spec, wherever it was built from.
@@ -58,7 +71,7 @@ export function bossRule(s, rule = 'a') {
     core.ticks = TICKS.at.map((at, i) => ({ at, spent: false, phase: i }));
     for (const ph of v.phases || []) ph.at = -1; // never by its total: the ticks start them
   } else if (e.bossRule === 'b') {
-    v.tellSet = [...new Set([...(v.tellSet || []), 'deadbolt', 'extortion', 'overcharge', 'fulldisk'])];
+    if (v.boss === 'nb-deadbolt') v.tellSet = [...new Set([...(v.tellSet || []), 'deadbolt', 'extortion', 'overcharge', 'fulldisk'])];
     v.extraTells = TELL.boss.count + 1 - tierOf(v.level).count; // its set, and one more charge (a boss's count is at least TELL.boss.count)
   } else if (e.bossRule === 'c') {
     (v.phases || []).forEach((ph, i) => { ph.at = TICKS.at[i] ?? ph.at; });
@@ -73,7 +86,9 @@ export function dueOf(s, p) {
   if (!alive(p)) return out;
   if (p.attack && p.attack.due <= e.cycle && p.attack.due < 900) out.push({ kind: 'attack', name: p.attack.name });
   if (p.deliver && p.deliver.due <= e.cycle) out.push({ kind: 'deliver', name: 'Delivery' });
-  for (const t of tellsOf(s)?.list || []) if (t.told && t.part === p.id && t.kind !== 'charge' && tellNext(s, t) === e.cycle) out.push({ kind: 'tell', name: t.name, t });
+  // A tell on it: a cast compiling in its window (2 cycles), a seal or a Mimic's beat landing now (3.5). A charge rides
+  // its attack, so cancelling the attack calls it off.
+  for (const t of tellsOf(s)?.list || []) if (t.told && t.part === p.id && t.kind !== 'charge' && (t.kind === 'cast' ? inWindow(s, t) : tellNext(s, t) === e.cycle)) out.push({ kind: 'tell', name: t.name, t });
   return out;
 }
 // The next tick a part would cross, and the damage that takes it there (none: no tick left, or it can't be cut now).
@@ -82,7 +97,7 @@ export const toCross = (p, t = nextTick(p)) => (t ? Math.max(1, p.integrity - Ma
 // Damage landed on a part (combat.mjs hit, hooks.roomHit): the ticks it crossed, and what they do.
 export function onHit(s, p, was, dealt) {
   const e = s.encounter, v = e?.virus;
-  if (!e?.rooms || dealt <= 0) return;
+  if (!ticked(e) || dealt <= 0) return;
   if (!p.ticks && hasTicks(v, p)) p.ticks = fresh();
   if (!p.ticks) return;
   const crossed = p.ticks.filter((t) => !t.spent && was > t.at * p.max && p.integrity <= t.at * p.max);
@@ -131,6 +146,8 @@ function cancel(s, p, due, t) {
   }
   e.metrics.cuts = (e.metrics.cuts || 0) + 1;
   p.cutAt = e.cycle;
+  // Double Tap (gear: tell-hits): a move you cut leaves its part Open, +50% from everyone for 2 cycles.
+  if (fxOn(s, 'tell-hits') && alive(p)) p.openUntil = Math.max(p.openUntil || 0, e.cycle + TELL.open.cycles - 1);
   const what = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)} are` : `${names[0]} is`;
   emit(s, 'cut', `INTERRUPTED. You take the ${p.name} under ${pct(t.at)}. Its ${what} cancelled.${e.cutBudget != null ? ` ${e.cutBudget} of ${TICKS.budget} interrupts left this fight.` : ''}`, { target: p.id, tick: t.at, cut: true });
 }
@@ -140,13 +157,13 @@ function cancel(s, p, due, t) {
 // Returns [{ part, need, armor, verb }]; need null when no tick is left.
 export function cutsNow(s) {
   const e = s.encounter;
-  if (!e?.rooms) return [];
+  if (!ticked(e)) return [];
   return livingParts(s).filter((p) => p.ticks && dueOf(s, p).length && !p.core).map((p) => ({ part: p.id, need: toCross(p), armor: p.armor || 0, budget: e.cutBudget }));
 }
 // What a command would do to a part's ticks: 'cut' (crosses one on a cycle it has something due), 'waste', 'both'
 // (two at once, one wasted), or null.
 export function crossBy(s, id, p) {
-  if (!s.encounter?.rooms || !p?.ticks || !alive(p)) return null;
+  if (!ticked(s.encounter) || !p?.ticks || !alive(p)) return null;
   if (p.armor > 0 && !ignoresArmor(s, id)) return null;
   const dmg = previewDamage(s, id, p), left = p.ticks.filter((t) => !t.spent && p.integrity - dmg <= t.at * p.max && p.integrity - dmg > 0);
   if (!left.length) return null;
@@ -159,16 +176,21 @@ export function crossBy(s, id, p) {
 // wastes one). Burn classes' ticks count too, so a part already doomed to cross by its burns is left to them.
 const CUTTERS = ['spike', 'zero-day', 'retaliate', 'opening', 'segfault', 'overload', 'flood', 'shatter', 'backdoor', 'reclaim', 'rate-limit', 'reject', 'checksum', 'hot-loop', 'backstab', 'fingerprint', 'side-channel', 'unmask', 'nohup', 'sniff', 'jam', 'echo-cancel', 'revoke', 'throttle', 'hook', 'tag', 'chain-reaction', 'exploit', 'inject', 'deploy', 'spawn', 'thermal-runaway', 'purge', 'detonate'];
 const ok = (s, text) => !toIntent(s, text).error;
+// A part whose cut answers a tell now (a charge riding the attack due, a cast in its window, a beat or a seal landing)
+// goes first, for a bot that reads tells; then the biggest attack due.
+const telling = (s, p) => answers() && (dueOf(s, p).some((d) => d.kind === 'tell') || (tellsOf(s)?.list || []).some((t) => t.told && t.kind === 'charge' && t.part === p.id && p.attack && t.n === (p.attack.n || 0) && p.attack.due <= s.encounter.cycle));
 export function interruptMove(s, plan = null) {
   const e = s.encounter;
-  if (!e?.rooms) return null;
-  const targets = livingParts(s).filter((p) => p.ticks && !p.core && nextTick(p) && dueOf(s, p).length && (!(p.armor > 0)));
-  for (const p of targets.sort((a, b) => (b.attack?.amount || 0) - (a.attack?.amount || 0))) {
+  if (!ticked(e)) return null;
+  const targets = livingParts(s).filter((p) => p.ticks && !p.core && nextTick(p) && dueOf(s, p).length);
+  const rank = (p) => (telling(s, p) ? 1e6 : 0) + (p.attack?.amount || 0);
+  for (const p of targets.sort((a, b) => rank(b) - rank(a))) {
     const t = nextTick(p), need = toCross(p, t), second = p.ticks.find((x) => x !== t && !x.spent);
     const room = second ? p.integrity - Math.floor(second.at * p.max) : p.integrity; // more than this crosses the second too (or breaks it)
     // The plan already does it (or breaks the part, which stops the move too).
-    if (plan && plan.endsWith(' ' + p.id)) { const id = plan.split(' ')[0]; const d = ABILITIES[id] ? previewDamage(s, id, p) : 0; if (d >= need) return null; }
-    const fits = CUTTERS.filter((id) => usable(s).includes(id) && readyIn(s, id) === 0 && ABILITIES[id]?.damage && ok(s, `${id} ${p.id}`)).map((id) => ({ id, d: previewDamage(s, id, p) })).filter((x) => x.d >= need);
+    if (plan && plan.endsWith(' ' + p.id)) { const id = plan.split(' ')[0]; const d = ABILITIES[id] && (!(p.armor > 0) || ignoresArmor(s, id)) ? previewDamage(s, id, p) : 0; if (d >= need) return null; }
+    // On ◆ only a hit through armor crosses (3.2: strip first, or pierce).
+    const fits = CUTTERS.filter((id) => usable(s).includes(id) && readyIn(s, id) === 0 && ABILITIES[id]?.damage && (!(p.armor > 0) || ignoresArmor(s, id)) && ok(s, `${id} ${p.id}`)).map((id) => ({ id, d: previewDamage(s, id, p) })).filter((x) => x.d >= need);
     if (!fits.length) continue;
     // The smallest that crosses one tick, else the one that breaks it outright, else any.
     const one = fits.filter((x) => x.d < room).sort((a, b) => a.d - b.d)[0] || fits.filter((x) => x.d >= p.integrity).sort((a, b) => a.d - b.d)[0] || fits.sort((a, b) => a.d - b.d)[0];
@@ -176,15 +198,15 @@ export function interruptMove(s, plan = null) {
   }
   return null;
 }
-// Keep a tick for a charge (docs/servers.md 3.5): a plan that would cross a part's tick on a quiet cycle while a told
-// charge on it lands in the next 3 cycles goes at another part instead.
+// Keep a tick for a tell (docs/servers.md 3.5): a plan that would cross a part's tick on a quiet cycle while a told
+// charge (or a cast) on it lands in the next 3 cycles goes at another part instead.
 export function saveTick(s, plan) {
   const e = s.encounter;
-  if (!e?.rooms || !plan) return null;
+  if (!ticked(e) || !plan || !answers()) return null;
   const [id, target] = plan.split(' '), p = target && part(s, target);
   if (!p?.ticks || !ABILITIES[id] || crossBy(s, id, p) !== 'waste' || previewDamage(s, id, p) >= p.integrity) return null;
-  const charge = (tellsOf(s)?.list || []).find((t) => t.told && t.kind === 'charge' && t.part === p.id && tellNext(s, t) - e.cycle >= 1 && tellNext(s, t) - e.cycle <= 3);
-  if (!charge) return null;
+  const coming = (tellsOf(s)?.list || []).find((t) => t.told && ['charge', 'cast'].includes(t.kind) && t.part === p.id && tellNext(s, t) - e.cycle >= 1 && tellNext(s, t) - e.cycle <= 3);
+  if (!coming) return null;
   const other = livingParts(s).find((q) => q !== p && ok(s, `${id} ${q.id}`) && crossBy(s, id, q) !== 'waste');
   return other ? `${id} ${other.id}` : null;
 }

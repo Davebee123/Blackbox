@@ -1,7 +1,7 @@
 // The interrupt (docs/servers.md 3, interrupt.mjs) in the rooms playtest's fights: two ticks a part at 50% and 25%;
 // crossing one on a cycle the part's move is due cancels that move, once each; a wasted tick stays spent; burns,
 // helpers and daemons count; small parts have none; a charge riding the move is called off with it; and DEADBOLT under
-// the three boss rules (a, b, c). The old game's fights carry no ticks.
+// the three boss rules (a, b, c). Since R1 every fight carries them, but a crew boss's and a breach's.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, hooks, active, hit, part, livingParts, command, resolveCycle, selectEncounter, attackers } from './dist/combat.mjs';
@@ -157,16 +157,25 @@ test('the Now column says what crossing takes, and a queued command says whether
   assert.ok(move && move.endsWith(' pulse'), move);
 });
 
-test('the old game\'s fights carry no ticks', () => {
+test('every fight carries ticks now (R1): a home fight cuts too; a crew boss and a breach keep their own rules', () => {
   const s = fresh();
   s.rng = 1;
   selectEncounter(s, 'cryptjack', 7);
   command(s, 'engage');
-  assert.ok(active(s));
-  const p = livingParts(s)[0];
-  hit(s, p, Math.ceil(p.max * 0.6), { pierce: true, server: true });
-  assert.ok(livingParts(s).every((x) => x.ticks === undefined));
-  assert.ok(!s.logs.some((x) => x.type === 'cut' || x.type === 'tick-wasted'));
+  assert.ok(active(s) && s.encounter.ticked);
+  const p = livingParts(s).find((x) => x.attack);
+  assert.deepEqual(p.ticks.map((t) => t.at), TICKS.at);
+  park(s); bare(p); p.attack.due = s.encounter.cycle; above(p, 0.5);
+  const interval = p.attack.interval;
+  strike(s, p, 5);
+  assert.equal(p.attack.due, s.encounter.cycle + interval, 'its move is cancelled');
+  assert.ok(s.logs.some((x) => x.type === 'cut'));
+  // A crew boss (raid.mjs): no ticks on its parts.
+  const r = fresh(); r.hackers = { breaker: { level: 12, xp: 0 } };
+  r.run = { loc: 'kessler', cwd: '/intake/racks', integrity: 3000, max: 3000, pack: [], visited: ['/'] };
+  selectEncounter(r, 'random', 3, { mode: 'run', room: '/intake/racks', level: 12, family: 'ransomware', boss: 'foreman', elite: true, eliteHp: 1, mutation: null });
+  command(r, 'engage');
+  assert.ok(!r.encounter.ticked && livingParts(r).every((x) => x.ticks === undefined), 'a crew boss has none');
 });
 
 // ---------- DEADBOLT under the three boss rules ----------

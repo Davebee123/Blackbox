@@ -390,6 +390,8 @@ function sysopPlan(s, t) {
   const aimedAt = !solo && charge ? all.find((x) => !x.me && x.st.encounter.buffs?.sinkhole >= x.st.encounter.cycle) || all.find((x) => x.me) : all.find((x) => x.me);
   if (charge && !beating(aimedAt)) { const c = first(s, [aim(s, 'heartbeat', aimedAt.st)]); if (c) return c; }
   if (solo && e.virus?.tells && Object.values(e.virus.buffs || {}).some((u) => u >= e.cycle + 2)) { const c = first(s, ['rollback']); if (c) return c; }
+  // Alone, a charge that got through (it left you Corrupted): roll its hit back, and the Corruption with it.
+  if (solo && e.corrupt?.left >= 2 && e.undo?.type === 'damage' && e.undo.amount >= defender(s).max * 0.12) { const c = first(s, ['rollback']); if (c) return c; }
   const dirtyNow = all.find((x) => x.st.encounter.corrupt?.left >= 2);
   if (dirtyNow) { const c = first(s, [aim(s, 'scrub', dirtyNow.st), dirtyNow.me && 'purge ' + t.id]); if (c) return c; }
   { const read = readBoard(s); if (read && solo) return read; }

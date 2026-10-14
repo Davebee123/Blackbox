@@ -33,7 +33,6 @@ import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, ma
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
-import { tierOf } from './tells.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
@@ -700,8 +699,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   if (!e) return;
   const v = e.virus;
   e.rooms = { room: room.id, kind: R.kind, as, size: f.size, rare: !!f.rare };
-  // Its size in a room, its attack set, Spam on a Mailhub's queue, and its tells by level (3.5: none to level 5, one
-  // from 6, two from 17; an elite one more; a boss its own set).
+  // Its size in a room, its attack set, Spam on a Mailhub's queue. Its tells come by level (tells.mjs, 3.5).
   const S = ROOMS.size[f.size] || ROOMS.size.process;
   v.roomHp = S.hp; v.roomDmg = S.dmg;
   for (const p of v.parts) {
@@ -713,9 +711,6 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   }
   if (f.set) { applySet(v, f.set, seeded((room.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${f.set}`] = true; }
   if (room.queue && R.kind === 'Mailhub' && as !== 'hunter') spamFlood(s, e);
-  const lvl = v.level, want = v.boss ? null : lvl <= 5 ? 0 : (lvl >= 17 ? 2 : 1) + (v.elite ? 1 : 0);
-  if (want === 0) v.tells = { list: [], tier: tierOf(lvl) };
-  else if (want != null) v.extraTells = (v.extraTells || 0) + want - tierOf(lvl).count - (v.elite ? 1 : 0);
   if (v.boss) bossRule(s, R.bossRule);
   armTicks(s);
   if (v.elite && !v.boss) e.enrageAt = 9;

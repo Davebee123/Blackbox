@@ -23,7 +23,7 @@
 // hit), Log Wipe (Weak Spot fresh again). Weak Spot itself is in combat.mjs (edge(s, 'infiltrator')).
 import { CONFIG, ABILITIES } from '../data.mjs';
 import { soonest, doomed } from '../planner.mjs';
-import { tellOn, tellOpen, tellHit } from '../tells.mjs';
+import { tellOn, tellOpen } from '../tells.mjs';
 import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn, addBurn, mergeBurns, injectTicks, injectTick } from '../combat.mjs';
 
 const A = (id) => ABILITIES[id];
@@ -140,10 +140,7 @@ export default {
     'irq-storm'(s, { e }) {
       const all = [...e.burns, ...mine(s).poly];
       let n = 0;
-      const reached = new Set(), was = new Map(livingParts(s).map((p) => [p.id, [p.integrity, p.armor || 0]]));
-      for (const b of all) { if (virusIntegrity(s).current === 0) break; const t = part(s, b.target); if (alive(t)) { tick(s, b, t, `IRQ Storm (${b.name})`); n++; reached.add(t); } }
-      // Each part it reaches takes it as a hit from your command, and what it did there counts toward a burst (tells.mjs).
-      for (const t of reached) if (alive(t)) { const [hp, ar] = was.get(t.id) || [t.integrity, t.armor || 0]; tellHit(s, t, { cmd: { id: 'irq-storm', target: t.id, at: e.commanding?.at ?? e.cycle }, key: `irq:${e.cycle}:${s.who || ''}:${t.id}`, dealt: hp - t.integrity, chits: ar - (t.armor || 0) }); }
+      for (const b of all) { if (virusIntegrity(s).current === 0) break; const t = part(s, b.target); if (alive(t)) { tick(s, b, t, `IRQ Storm (${b.name})`); n++; } }
       emit(s, 'status', `IRQ Storm: ${plural(n, 'burn')} ticked at once.`, { mark: 'burn', ability: 'irq-storm' });
     },
     // Detonate and Keepalive reach Polymorph's burns too.

@@ -675,13 +675,15 @@ export const BOSSES = {
   // their network's native uniques (BOSS_LOOT odds and pity).
   'nb-deadbolt': { name: 'DEADBOLT', family: 'ransomware', third: 'mutex', native: true, lair: 'DEADBOLT-VAULT', hp: 1.25, dmg: 1, enrageAt: 18, about: 'A Mutex locks its Encryptor. At 60% Integrity it re-arms every part, and at 30% a second Mutex throws a fresh lock.', phases: [{ at: 0.6, do: ['rearm'], say: 'DEADBOLT re-arms every part.' }, { at: 0.3, do: ['spawn:mutex'], say: 'DEADBOLT throws a second Mutex. The Encryptor is locked again.' }] },
   'nb-tripmine': { name: 'TRIPMINE', family: 'ransomware', third: 'tripwire', native: true, lair: 'TRIPMINE-YARD', hp: 1.6, dmg: 1, enrageAt: 18, about: 'If its Tripwire breaks first, the other parts go loud. Below level 20 it brings a Lockbox instead. At half Integrity, every attack comes a cycle sooner.', phases: [{ at: 0.5, do: ['faster'], say: 'TRIPMINE arms the yard. Every attack comes a cycle sooner.' }] },
+  // Since R1 (docs/servers.md 3.5) the interrupt answers a charge for every class, and a boss's charges and casts sit off
+  // its ♛ part, so HASHLORD hits harder (dmg 1.5, was 1.1) and MIRRORSHADE too (1.15, was 0.9) to stay in the boss band.
   // HASHLORD, rebuilt (docs/genome.md 7.5): GLASSJAW's Hashrat build, from level 16. A Pool Lock wards its Miner, but only
   // against your commands: burns and helpers go through at full. Block Reward (a Self-Update on the Miner) and the Chain Fork
   // at half, when a second Miner spins up (the tax comes back if the first is gone, and the Pool Lock wards it too).
   'nb-hashlord': { name: 'HASHLORD', family: 'ransomware', strain: 'hashrat', native: true, lair: 'HASHLORD-RIG', charge: 'Difficulty Bomb', floor: 16, band: 'B',
     extra: [{ id: 'poollock', name: 'Pool Lock', integrity: 16, armor: 0, loot: 'Lock Pin', ward: 'miner', wardCommands: true }],
     signature: { name: 'Chain Fork', rule: 'At half Integrity, a second Miner spins up. Its cycle tax returns if the first Miner is gone, and the Pool Lock wards it too while the Lock stands.' },
-    hp: 3.9, dmg: 1.1, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner lives, your cooldowns tick down only every other cycle, and a Pool Lock wards the Miner against your commands. Burns and helpers get through at full. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
+    hp: 3.9, dmg: 1.5, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner lives, your cooldowns tick down only every other cycle, and a Pool Lock wards the Miner against your commands. Burns and helpers get through at full. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
   'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes a cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
   'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
   'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss. Its Flooder attacks every cycle, harder each time, and any delay resets it. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
@@ -693,7 +695,7 @@ export const BOSSES = {
   'nb-mirrorshade': { name: 'MIRRORSHADE', family: 'ghostroot', third: 'mimic', native: true, lair: 'MIRRORSHADE-HALL', floor: 12, band: 'A',
     trim: { below: 14, part: 'scrambler', armor: 3, interval: 5 },
     signature: { name: 'Doppelganger', rule: 'At half Integrity, the Mimic stops recording and takes the shape of the first part you broke, with its attack and its ◆. If you have not broken one, it takes the shape of the Pulse Node.' },
-    hp: 1.34, dmg: 0.9, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
+    hp: 1.34, dmg: 1.15, mimic: 2, enrageAt: 17, about: 'A Mimic plays your commands back at you on its beat, at double damage while you are Scrambled. At 60% Integrity it re-arms every part, and at half the Mimic stops recording and becomes a Doppelganger of the first part you broke.', phases: [{ at: 0.6, do: ['rearm'], say: 'MIRRORSHADE re-arms every part.' }, { at: 0.5, do: ['doppelganger'], say: 'MIRRORSHADE\'s Mimic stops recording and takes a shape.' }] },
   'nb-sleepwalker': { name: 'SLEEPWALKER', family: 'ghostroot', strain: 'sleeper', native: true, lair: 'SLEEPWALKER-WARD', charge: 'Night Terror', hp: 1.5, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Sleeper boss. It stays dormant until you hit it, then its Cell sounds the Alarm. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'SLEEPWALKER wakes all the way. Every part re-arms.' }] },
   'nb-echolalia': { name: 'ECHOLALIA', family: 'ghostroot', strain: 'echo', native: true, lair: 'ECHOLALIA-CHAMBER', charge: 'Last Word', hp: 1.6, dmg: 1, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'An Echo boss. Every hit that gets through to you repeats 1 cycle later at half damage. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'ECHOLALIA re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'ECHOLALIA starts talking over you. Every attack comes a cycle sooner.' }] },
 };
@@ -708,51 +710,44 @@ export const BOSS_LOOT = { chance: 0.3, pity: 0.1, once: ['resident'] }; // once
 export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // ---------- solo tells (tells.mjs) ----------
-// A tell is a move a part announces ahead, on its row of the board and in the log, that the player answers.
-// Solo fights only (wild viruses, guards, elites, strains, the solo bosses, home intrusions); crew bosses
-// have their own mechanics (raid.mjs). docs/solo-tells.md is the designer's review sheet. One clock: a tell
-// rides the timeline, it never runs on a timer of its own. Four kinds:
+// A tell is a big move a part announces ahead, on its row of the board and in the log, that you plan your interrupts
+// around (docs/servers.md 3.5). Solo fights only (wild viruses, guards, elites, strains, the solo bosses, home
+// intrusions); crew bosses have their own mechanics (raid.mjs). One clock: a tell rides the timeline, it never runs on
+// a timer of its own. Four kinds:
 //   charge  powers up one of its part's scheduled attacks (mult, capped). Its cell on the board turns into the
-//           charge at least `lead` cycles ahead, and it lands when that attack was due; delaying the attack moves
-//           it. A burst into the part inside its window calls it off: `share` of the part's max in damage from your
-//           commands, each ◆ broken counting as 1/`chits` of it. Half of it (`plain`) lands it plain with no
-//           after-effect, and less takes its extra off in step.
+//           charge `lead` cycles ahead, and it lands when that attack was due; delaying the attack moves it. An
+//           interrupt on its part on its cycle (interrupt.mjs) calls it off, or a skill built for it.
 //   cast    compiling a buff on the virus (does) for castLasts cycles, from level 10: a marked cell on its part's
-//           row. SIGINT in its window stops it; so do castHits command hits on its part in the window.
+//           row. SIGINT in its window (castWindow cycles, ending the cycle it lands) stops it, and so does an
+//           interrupt on its part in the window.
 //   seal    if the part still wears ◆ when it lands, it re-arms to full with one ◆ more, and every stripped part
 //           gets a ◆ back (and from level 6 your ◆ and shield go). Strip it before then.
-//   mimic   the Mimic plays the command you fire on its beat back at you (its direct damage). Go quiet then.
-// The window: a charge or a cast can only be answered in its last cycles, the cycle it lands and (`window` > 1) the
-// ones just before. Hits before the window don't count. A tell said with less lead than its window is open from the
-// moment it's said. Only deliberate answers count: your command aimed at the part, typed after the tell was said
-// (not area hits, burns, helpers, spills, auto-repeat or daemons). Breaking a tell's part always stops it.
+//   mimic   the Mimic plays the command you fire on its beat back at you (its direct damage). Go quiet then, or cut it.
+// Breaking a tell's part always stops it.
 export const TELL = {
-  // By the virus's level: how many tells it brings (count), how many can be live at once (live), how far ahead
-  // each shows at least (lead), how many cycles at the end of a charge can answer it (window), the burst that calls
-  // a charge off as a share of its part's max (share), how many command hits stop a cast (castHits, and its window
-  // is as many cycles), how much bigger a charge is (mult), the most a charge adds to the hit it rides on as a share
-  // of your max (cap; dot: Full Disk's burst a cycle), and the after-effect of a tell that lands (after: your last
-  // skill locked that many cycles). Gentle while you have three skills, in between to 9, full from 10.
+  // By the virus's level: how many tells it brings (count: none to level 5, the ticks are the lesson; one from 6;
+  // two from 17), how many can be live at once (live), how far ahead each shows (lead), how much bigger a charge is
+  // (mult), the most a charge adds to the hit it rides on as a share of your max (cap; dot: Full Disk's burst a
+  // cycle), and the after-effects of a tell that lands (after: your last skill locked that many cycles; burn:
+  // Corrupted, a share of your max a cycle for 3; hang: your next command doesn't fire).
   tiers: [
-    { to: 5, count: 1, live: 1, lead: 3, window: 2, share: 0.25, castHits: 2, mult: 2, cap: 0.1, dot: 0.03, after: 0, burn: 0, hang: 0 },
-    { to: 9, count: 1, live: 1, lead: 2, window: 1, share: 0.35, castHits: 2, mult: 2.3, cap: 0.15, dot: 0.04, after: 1, burn: 0.02, hang: 0 },
-    { to: 16, count: 2, live: 1, lead: 2, window: 1, share: 0.5, castHits: 2, mult: 2.8, cap: 0.25, dot: 0.06, after: 2, burn: 0.04, hang: 1 },
-    { to: 99, count: 3, live: 2, lead: 2, window: 1, share: 0.5, castHits: 2, mult: 3, cap: 0.25, dot: 0.06, after: 2, burn: 0.05, hang: 1 },
+    { to: 5, count: 0, live: 1, lead: 3, mult: 2.5, cap: 0.12, dot: 0.03, after: 0, burn: 0, hang: 0 },
+    { to: 9, count: 1, live: 1, lead: 3, mult: 2.5, cap: 0.12, dot: 0.03, after: 1, burn: 0, hang: 0 },
+    { to: 16, count: 1, live: 1, lead: 3, mult: 2.5, cap: 0.18, dot: 0.045, after: 1, burn: 0.03, hang: 0 },
+    { to: 99, count: 2, live: 2, lead: 3, mult: 3, cap: 0.25, dot: 0.06, after: 1, burn: 0.04, hang: 0 },
   ],
-  chits: 2, // ◆ broken in the window that make a whole burst (each one counts as half of it)
-  plain: 0.5, // a burst of this share of a charge's or more lands it plain (none of its extra) and leaves no after-effect; less takes its extra off in step
-  ceiling: 0.5, // a solo boss's tell never lands for more than this share of your max (or the plain hit, if that's bigger); a wild virus's stops at CONFIG.spikeCap.wild (tells.mjs ceilingOf)
-  // An elite brings one more tell, and each can cost 15% more (never past the ceiling). Its parts carry about five
-  // times the Integrity, so its burst is a smaller share of a much bigger part, over a window a cycle longer, and
-  // its ◆ count as a third each. A solo boss's the same, and it brings every tell open at its level. A boss staggers
-  // Open like any part, but keeps its clock (delay 0): with the delay too, the readers beat MIRRORSHADE 94% of the time.
-  elite: { count: 1, cap: 1.15, window: 1, share: 0.2, chits: 3 },
-  boss: { count: 3, cap: 1.1, window: 1, share: 0.2, chits: 3, delay: 0 },
+  castWindow: 2, // a cast can be answered on the cycle it lands and the one before
+  ceiling: 0.6, // a solo boss's tell never lands for more than this share of your max (or the plain hit, if that's bigger); a wild virus's stops at CONFIG.spikeCap.wild (tells.mjs ceilingOf)
+  // An elite brings one more tell (from level 6), and each can cost 15% more (never past the ceiling). A solo boss
+  // brings every tell open at its level, at least `count`. A boss staggers Open like any part, but keeps its clock
+  // (delay 0).
+  elite: { count: 1, cap: 1.15 },
+  boss: { count: 3, cap: 1.1, delay: 0 },
   champion: { cap: 1.1 }, // a champion invasion (elite-grade, but sized for one): the usual tells, its charges a little bigger
 
   castFrom: 10, // casts come with SIGINT
   first: 3, // the first tell lands no sooner than this cycle (a cast and a second charge one later, a seal three)
-  rest: { charge: 4, cast: 7, seal: 7 }, // after a tell lands or is answered, the next of its kind may land this many cycles on, plus a seeded 0..jitter
+  rest: { charge: 7, cast: 7, seal: 7 }, // after a tell lands or is answered, the next of its kind may land this many cycles on, plus a seeded 0..jitter (a charge 4 before R1: a cut answers it now, and a part has two ticks a fight)
   jitter: 2,
   heavy: 0.06, // another part's attack this big (a share of your max) on the same cycle: a charge waits for the next one
   burst: 3, // Full Disk: its burst of encryption lasts this many cycles
@@ -772,16 +767,16 @@ export const TELL = {
 // The library. part: the fixed part it sits on ('special', the family's signature part; 'basic'; or a part id),
 // shown on the chip and in the codex. gene: the tell gene it is (genes.mjs); a boss's or a guard's own name for one. A charge needs a part with an attack (it falls back to the other one).
 export const TELLS = {
-  // Charges: answer with a burst into the part in its window (◆ broken count toward it), or soften it.
+  // Charges: cut the part on its cycle (an interrupt), or soften it.
   fulldisk: { kind: 'charge', name: 'Full Disk', gene: 'fulldisk', part: 'special' }, // an Encrypt with a burst of encryption on top for 3 cycles
-  massmailer: { kind: 'charge', name: 'Mass Mailer', gene: 'massmailer', part: 'special', spawn: 1 }, // a Replicate that hatches two (up to the limit)
+  massmailer: { kind: 'charge', name: 'Mass Mailer', gene: 'massmailer', part: 'special', spawn: 0 }, // a Replicate that hatches two (up to the limit); one more on top before R1, when a burst could answer it
   possession: { kind: 'charge', name: 'Possession', gene: 'possession', part: 'special', longer: 2 }, // a Scramble that lasts two cycles longer (Scrub clears it)
   lockon: { kind: 'charge', name: 'Lock-on', gene: 'overcharge', part: 'special' }, // Watchdog, Tracer: the Tracker
-  infest: { kind: 'charge', name: 'Infest', gene: 'massmailer', part: 'special', spawn: 1 }, // Crawler: the Brood
+  infest: { kind: 'charge', name: 'Infest', gene: 'massmailer', part: 'special', spawn: 0 }, // Crawler: the Brood
   deepshred: { kind: 'charge', name: 'Deep Shred', gene: 'overcharge', part: 'special', shred: true }, // Shredder: it shreds a file in your pack too
   overcharge: { kind: 'charge', name: 'Overcharge', gene: 'overcharge', part: 'basic' }, // from level 17 (the tier's third tell): a second charge, on the other attacker
   ram: { kind: 'charge', name: 'Battering Ram', gene: 'batteringram', part: 'basic' }, // Bouncer (only its Gate attacks): the Gate wears ◆, so it mostly asks for ◆2 in the window
-  // Casts (from level 10): SIGINT or two hits in its window, or break the part.
+  // Casts (from level 10): SIGINT or a cut in its window, or break the part.
   extortion: { kind: 'cast', name: 'Double Extortion', gene: 'doubleextortion', part: 'special', does: 'loud' }, // its attacks hit 35% harder for 4 cycles
   selfupdate: { kind: 'cast', name: 'Self-Update', gene: 'selfupdate', part: 'special', does: 'grow' }, // every part grows a quarter more Integrity
   persistence: { kind: 'cast', name: 'Persistence', gene: 'persistence', part: 'special', does: 'haste' }, // its attacks repeat a cycle faster for 4 cycles

@@ -58,20 +58,25 @@ test('a Resident that beats you is a level stronger for 6 hours, up to three', (
   } finally { hooks.now = null; }
 });
 
-test('a boss has phases: at half its Integrity the Resident re-arms', () => {
+test('a boss has phases (docs/servers.md 3.4, rule a): taking the Resident\'s core part across its 50% tick re-arms every part', () => {
   const s = onRun();
   openVault(s);
   say(s, 'cd core');
   command(s, 'engage');
-  const v = s.encounter.virus;
+  const e = s.encounter, v = e.virus;
   assert.ok(v.phases.length && v.enrageAt === BOSSES.resident.enrageAt);
-  const total = v.parts.reduce((n, p) => n + p.max, 0);
-  for (const p of v.parts) { p.armor = 0; p.integrity = Math.floor(p.max * 0.45); }
-  assert.ok(v.parts.reduce((n, p) => n + p.integrity, 0) < total / 2);
+  assert.equal(e.bossRule, 'a');
+  const core = v.parts.find((p) => p.core);
+  assert.ok(core && core.special && core.ticks.every((t) => t.phase != null), 'its ♛ part carries phase ticks');
+  // Its total under half alone starts nothing.
+  for (const p of v.parts) { p.armor = 0; if (p !== core) p.integrity = Math.floor(p.max * 0.3); }
   command(s, 'hold'); resolveCycle(s);
-  assert.ok(v.phases[0].done);
+  assert.ok(!v.phases[0].done, 'the total alone starts nothing');
+  core.integrity = Math.floor(core.max * 0.5) + 2; core.lockHp = 0;
+  command(s, 'spike ' + core.id); resolveCycle(s);
+  assert.ok(v.phases[0].done, 'across its tick: the phase');
   assert.ok(v.parts.filter((p) => p.id !== 'sentry' && p.integrity > 0).every((p) => p.armor >= 1), 're-armed');
-  assert.ok(s.logs.some((e) => e.type === 'phase'));
+  assert.ok(s.logs.some((e2) => e2.type === 'phase'));
 });
 
 test('a boss enrages: from its cycle every attack lands every cycle', () => {

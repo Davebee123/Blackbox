@@ -26,7 +26,8 @@ import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, i
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
-import { tellStart, tellCycle, tellLand, tellHit, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
+import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
+import { prepareTicks, onHit as tickHit } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
@@ -719,7 +720,6 @@ export function fxAnswer(s, p = null) {
   }
 }
 // How much one command counts toward calling off a tell (Double Tap, Spectre: twice).
-export const tellWeight = (s) => (fxHas(s, 'tell-hits') ? 2 : 1);
 
 // ---------- blueprints ----------
 export const knows = (s, id) => (s.recipes || []).includes(id);
@@ -1665,6 +1665,7 @@ function engage(s) {
   // Mutex: the part it locks starts the fight behind its shield (sized once the crew has made the virus bigger).
   for (const m of livingParts(s).filter((x) => x.lock)) { const t = part(s, m.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } }
   seeGenes(s, e.virus); // the gene codex: what you fight, you've seen (genome.mjs)
+  prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
 
@@ -2335,7 +2336,6 @@ export function hit(s, p, base, opts = {}) {
     p.armor -= heavy ? 2 : 1;
     p.lastDamaged = e.cycle;
     if (!opts.server) classEach('chipped', s, p, heavy ? 2 : 1, opts); // Debris Field (dist/classes)
-    if (e.commanding && !opts.dot) tellHit(s, p, { chits: heavy ? 2 : 1 }); // your command hit it: a tell on it may count it (tells.mjs)
     if (!p.armor) { p.patchAt = e.cycle + patchDelay(s) + (p.phase ? 1 : 0); stripMark(s, p); if (!opts.server) openProc(s, 'stripped', { part: p.id }); }
     emit(s, 'armor', `${opts.by ? opts.by + ': ' : ''}${p.name} ${heavy ? 'two ◆ broken' : '◆ broken'}${p.armor ? ` (${p.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: p.id, left: p.armor });
     return { dealt: 0, overflow: 0, absorbed: true };
@@ -2410,10 +2410,10 @@ export function hit(s, p, base, opts = {}) {
   // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
   emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), ...(lockLost ? { shield: lockLost, lockWas, hp: p.integrity } : {}) });
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
-  // A server room's fight (floorplan.mjs): the interrupt ticks (interrupt.mjs), and the room bodies' own rules on a hit
-  // (families.mjs: a Trojan's Package unpacks). 'gone': the part left the board without breaking.
+  // A server room's bodies' own rules on a hit (families.mjs: a Trojan's Package unpacks). 'gone': the part left the
+  // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
   if (e.rooms && dealt > 0 && hooks.roomHit && hooks.roomHit(s, p, p.integrity + dealt, dealt, opts) === 'gone') return { dealt, overflow: 0, crit, broke: false };
-  if (dealt + soaked > 0 && e.virus.tells && e.commanding && !opts.dot) tellHit(s, p, { dealt: dealt + soaked }); // your command hit it: a tell on it may count it, a charge by the burst (tells.mjs; a Mutex lock soaking it still counts)
+  if (e.ticked && dealt > 0) tickHit(s, p, p.integrity + dealt, dealt, opts);
   // Extortion: damage dealt to a winding-up Demand in the 2 cycles before it lands calls it off.
   const w = p.attack?.windup;
   if (w && dealt > 0 && p.integrity > 0 && p.attack.due - e.cycle <= 2) {
@@ -2766,7 +2766,6 @@ function useAbility(s, intent, auto = false) {
   if (id === 'crack') {
     const n = Math.min(a.strip, target.armor);
     target.armor -= n;
-    tellHit(s, target, { chits: n });
     if (n) classEach('chipped', s, target, n, { mine: true });
     if (!target.armor) stripMark(s, target);
     emit(s, 'armor', `Crack: ${target.name} loses ${n} ◆${target.armor ? ` (${target.armor} left)` : `. Its armor is broken, and it patches in ${patchDelay(s)} ${patchDelay(s) === 1 ? 'cycle' : 'cycles'}`}.`, { target: target.id, left: target.armor });
@@ -2789,9 +2788,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', `Propagate: ${n} ${n === 1 ? 'burn' : 'burns'} copied to the other parts${livingParts(s).some((p) => p.kind === 'fragment') ? ', fragments at double' : ''}.`, { mark: 'burn', ability: id });
   }
   if (id === 'reroute') {
-    // Every arrival counts as a hit from your command (tells.mjs): a swarm stops a cast in one go.
-    let k = 0;
-    for (const h of e.helpers) { h.target = target.id; const was = [target.integrity, target.armor || 0]; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; tellHit(s, target, { cmd: { id, target: target.id, at: intent.at ?? e.cycle }, key: `rr:${e.cycle}:${s.who || ''}:${k++}`, dealt: was[0] - target.integrity, chits: was[1] - (target.armor || 0) }); }
+    for (const h of e.helpers) { h.target = target.id; hit(s, target, h.damage, { by: 'Helper', dot: true, src: 'helper' }); if (!alive(target)) break; }
   }
   if (id === 'cron-storm') {
     for (const h of [...e.helpers]) { const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s); if (t) hit(s, t, h.damage, { by: 'Cron Storm', dot: true, src: 'helper' }); if (virusIntegrity(s).current === 0) break; }
@@ -2799,16 +2796,13 @@ function useAbility(s, intent, auto = false) {
   if (id === 'kill-switch') {
     // Supervisor (Operator talent): cashing in your helpers readies Deploy.
     if (hasTalent(s, 'supervisor') && e.readyAt.deploy) { delete e.readyAt.deploy; emit(s, 'proc', 'Supervisor: Deploy is ready.', { ability: 'deploy' }); }
-    const reached = new Set(), was = new Map(livingParts(s).map((p) => [p.id, [p.integrity, p.armor || 0]])); // what it does to each part counts toward a burst there
     for (const h of e.helpers.splice(0)) {
       const t = alive(part(s, h.target)) ? part(s, h.target) : soonestAttacker(s);
       // Last Gasp comes with it, so cashing in early loses nothing. On armor each hit it had left breaks a ◆ first,
       // as it would have, and the rest land at once.
       let n = h.left + (edge(s, 'operator') ? 1 : 0);
-      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true, src: 'helper' }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true, src: 'helper' }); reached.add(t); }
+      if (t) { while (n > 0 && t.armor > 0 && alive(t)) { hit(s, t, h.damage, { by: 'Kill Switch', dot: true, src: 'helper' }); n--; } if (n > 0 && alive(t)) hit(s, t, Math.round(h.damage * n * (1 + 0.05 * rank(s, 'dead-mans-switch'))), { by: 'Kill Switch', dot: true, src: 'helper' }); }
     }
-    // Each part it cashes in on takes it as a hit from your command (tells.mjs): it calls a charge off there.
-    for (const t of reached) if (alive(t)) { const [hp, ar] = was.get(t.id) || [t.integrity, t.armor || 0]; tellHit(s, t, { cmd: { id, target: t.id, at: intent.at ?? e.cycle }, key: `ks:${e.cycle}:${s.who || ''}:${t.id}`, dealt: hp - t.integrity, chits: ar - (t.armor || 0) }); }
   }
   if (id === 'keepalive') {
     // Every burn on it ticks once now (without using itself up), then runs longer.
@@ -3456,7 +3450,7 @@ function syncBonus(s, intent) {
   const t = intent?.target && part(s, intent.target);
   let what = '';
   if (cls === 'breaker' && alive(t) && t.armor > 0) {
-    t.armor--; t.lastDamaged = e.cycle; tellHit(s, t, { chits: 1 });
+    t.armor--; t.lastDamaged = e.cycle;
     if (!t.armor) t.patchAt = e.cycle + patchDelay(s);
     emit(s, 'armor', `Sync breaks 1 ◆ on the ${t.name}${t.armor ? ` (${t.armor} left)` : '. Its armor is broken'}.`, { target: t.id, left: t.armor });
     what = 'a ◆ cracks';
