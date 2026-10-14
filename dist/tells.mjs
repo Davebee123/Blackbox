@@ -690,7 +690,8 @@ export function tellMove(s, t0 = null, planned = null) {
   }
   const echoes = (text) => !!(text && recording && mimicHit(s, text.split(' ')[0], part(s, text.split(' ')[1]) || sourceOf(s, recording)) > 0);
   // A charge whose part has to be stripped starting now to bare it for the cut (see below) comes before a kill.
-  const prep = soon(s, 3).filter((t) => t.kind === 'charge' && TELL.bots.strip !== false && alive(sourceOf(s, t)) && sourceOf(s, t).armor > 0 && sourceOf(s, t).ticks?.some((x) => !x.spent) && tellNext(s, t) > c)
+  // (Below level 10 a kit has three or four keys: stripping ahead costs more than the charge, so it doesn't.)
+  const prep = soon(s, 3).filter((t) => t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && alive(sourceOf(s, t)) && sourceOf(s, t).armor > 0 && sourceOf(s, t).ticks?.some((x) => !x.spent) && tellNext(s, t) > c)
     .map((t) => stripPlan(s, sourceOf(s, t), tellNext(s, t) - c)?.length === tellNext(s, t) - c && stripPlan(s, sourceOf(s, t), tellNext(s, t) - c)[0]).find(Boolean);
   if (prep && livingParts(s).length > 1 && !echoes(prep) && ok(s, prep)) return prep;
   // A kill comes first: a cast landing this cycle on another part is SIGINTed first, while the virus has more than it.
@@ -716,7 +717,7 @@ export function tellMove(s, t0 = null, planned = null) {
     }
     // A charge on an armored part: strip it over the lead, as late as it can be done, so the cut lands on its cycle
     // (◆ guards the ticks, 3.2). A part it can't bare in time is left to land (a shield, Brace, ◆ soften it).
-    if (t.kind === 'charge' && TELL.bots.strip !== false && next > c && p.armor > 0 && p.ticks?.some((x) => !x.spent)) {
+    if (t.kind === 'charge' && TELL.bots.strip !== false && s.encounter.virus.level >= TELL.castFrom && next > c && p.armor > 0 && p.ticks?.some((x) => !x.spent)) {
       const plan = stripPlan(s, p, next - c);
       if (plan && plan.length === next - c && !echoes(plan[0])) return plan[0];
     }
