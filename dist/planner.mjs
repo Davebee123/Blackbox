@@ -87,7 +87,7 @@ export function planner(s) {
   const big = !!cp && (chargeNow(s, cp) || (cp.attack && attackAmount(cp) >= defender(s).max * 0.1));
   const worth = !kill || (big && cp !== at && livingParts(s).length > 1);
   const echo = cut && echoesNow(s, cut) && !(livingParts(s).length === 1 && killing(s, cut, cp)); // not into the Mimic's beat
-  if (cut && big && worth && !echo && !BUILT.has((plan || '').split(' ')[0]) && ok(s, cut)) return cut; // a class's own answer to that move stays
+  if (TELL.bots.bigCut !== false && cut && big && worth && !echo && !BUILT.has((plan || '').split(' ')[0]) && ok(s, cut)) return cut; // a class's own answer to that move stays
   // Tells it answers outright (tells.mjs): SIGINT a cast, go quiet on the Mimic's beat when the plan hits hard,
   // strip a part about to seal (or about to charge, so the cut can land).
   const told = tellMove(s, at, plan);

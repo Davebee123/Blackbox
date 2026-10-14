@@ -2304,11 +2304,11 @@ export function levelUpLines(e) {
 
 // An event on a server (events.mjs): a mark on the map node, and what's happening on its card.
 // Root access (root.mjs): five pips, the perks on hover; and the process a log rotation brought in.
-const rootPips = (l) => { const r = rootOf(l), p = rootProgress(l); return `<span class="root-pips" title="${esc(Array.from({ length: ROOT.max }, (_, i) => `${i < r ? '■' : '□'} Root ${i + 1}: ${ROOT_PERKS[i + 1]}`).join('\n') + (p ? `\n\n${p.have}/${p.need} processes cleared for Root ${r + 1}` : ''))}">${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`; };
+const rootPips = (l) => { const r = rootOf(l), p = rootProgress(l); return `<span class="root-pips" title="${esc(Array.from({ length: ROOT.max }, (_, i) => `${i < r ? '■' : '□'} Root ${i + 1}: ${ROOT_PERKS[i + 1]}`).join('\n') + (p ? `\n\n${p.have}/${p.need} respawned rooms cleared for Root ${r + 1}` : ''))}">${'■'.repeat(r)}<i>${'□'.repeat(ROOT.max - r)}</i></span>`; };
 const rotMark = (l) => { const p = procOf(l); return p ? `<g class="rotmark${p.rare ? ' rare' : ''}" transform="translate(-13 -12)"><title>${esc(`${p.rare ? 'Rare virus' : 'Log rotation'}: ${p.name} lv ${p.level} in ${p.room}`)}</title><text>${p.rare ? '★' : '↻'}</text></g>` : ''; };
 const hm = (ms) => (ms >= 3600000 ? `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m` : fmtLeft(ms));
 const rotLine = (s, l) => {
-  if (!rootOf(l)) return '';
+  if (!rootOf(l) || l.floorplan) return ''; // a server on rooms doesn't rotate: its rooms respawn
   const p = procOf(l), next = l.root?.nextAt, now = Date.now();
   if (p) return `<p class="svc-line"><span class="tag ${p.rare ? 'hot' : 'you'}">${p.rare ? '★' : '↻'} ${esc(p.name)}</span> ${levelTag(s, p.level, `Lv ${p.level}`)} · ${esc(p.room)}${p.until ? ` · ${hm(p.until - now)}` : ''}</p>`;
   return next ? `<p class="svc-line dim" title="Its logs rotate every ${ROOT.rotateMs / 3600000} hours: a fresh virus, and a new cache">↻ ${hm(Math.max(0, next - now))}</p>` : '';
@@ -2484,10 +2484,15 @@ function mapSide(s, sel, node) {
   const layout = layoutName(l);
   const guard = Object.keys(l.state.cleared).length ? 'guard beaten' : 'guarded';
   const taken = takenOf(l), total = takeable(l).length;
+  // On rooms (R1, netrooms.mjs): its rooms cleared, Mapped, and the vault; ??? until you've been in.
+  const R = l.floorplan, vaultId = R?.graph.vaults[0];
+  const roomsStat = R ? stat('Rooms', `${taken}/${total}${R.mapped ? ' ✓' : ''}`) : stat('Rooms', '???');
+  const vaultStat = l.takenOver ? stat('Root', rootPips(l)) : stat('Vault', R && vaultId && R.opened[vaultId] ? 'open' : R ? 'shut' : '???');
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     <p class="tagline">${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
-    <div class="stats">${stat('Files', `${taken}/${total}`)}${l.takenOver ? stat('Root', rootPips(l)) : stat('Guard', Object.keys(l.state.cleared).length ? 'beaten' : 'up')}${stat('Runs', l.runs || 0)}</div>
+    <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
+    ${R?.mapped ? '<p class="svc-line"><span class="tag you" title="Every room cleared at least once">Mapped</span></p>' : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))}</p>`).join('')}
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}

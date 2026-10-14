@@ -27,7 +27,7 @@ import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
 import { tellStart, tellCycle, tellLand, tellBroke, chargeNow, tellIntents, tellSigint, tellSigintCheck, tellOn, tellsOf, overclockMult } from './tells.mjs';
-import { prepareTicks, onHit as tickHit } from './interrupt.mjs';
+import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
@@ -45,7 +45,7 @@ import { partGenes } from './genes.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 38; // v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 39; // v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -106,6 +106,27 @@ export function fresh() {
     architecture: null, // fortress | hub | lab, picked at server level 20
   };
   initMail(s); // the first LOWLIGHT mail is waiting
+  return bindRooms(s);
+}
+// s.rooms: the server's rooms you're on (floorplan.mjs). On the real save it's the run's server's (netrooms.mjs keeps
+// each server's rooms on its location, loc.floorplan), so it's never saved twice: a getter, left out of the JSON. The
+// rooms playtest sets its own server on it (kept as s.roomsPlay, never saved).
+export function bindRooms(s) {
+  if (!s || Object.getOwnPropertyDescriptor(s, 'rooms')?.get) return s;
+  const own = s.rooms;
+  delete s.rooms;
+  Object.defineProperty(s, 'rooms', {
+    configurable: true, enumerable: false,
+    get() {
+      if (this.roomsPlay) return this.roomsPlay;
+      const r = this.run;
+      if (!r?.rooms || r.loc === 'rooms') return null;
+      const loc = r.loc === CONFIG.zone.id ? this.zone : findLocation(this, r.loc);
+      return loc?.floorplan || null;
+    },
+    set(v) { this.roomsPlay = v; },
+  });
+  if (own) s.roomsPlay = own;
   return s;
 }
 
@@ -1705,7 +1726,41 @@ function payKill(s, e, base, why) {
   // Behind (progression.mjs): a level running past its target pays kills half again until it ends.
   const behind = behindBonus(s, xp);
   if (behind) emit(s, 'behind', `Behind: +${behind} XP.`, { amount: behind });
-  gainXp(s, xp + bonus + hot + read + rested + behind, why, 'fight');
+  gainXp(s, xp + bonus + hot + read + rested + behind, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+}
+
+// A room fight won on the network (netrooms.mjs, docs/servers.md R1): what the kill pays besides its XP. wild: SPRAWL-00
+// or a rogue server, straight into your bank as their folders always paid; otherwise a traced server's, into the run's
+// pack (banked when you jack out, lost if you're disconnected), like a guard's drops. guard: a guard post, an elite, a
+// boss: it rolls like a guard. family: the lineage the kill counts as (contracts, leads, code). Returns what a Pit's
+// second roll needs.
+export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null } = {}) {
+  const v = e.virus, lvl = v.level;
+  contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
+  huntKill(s, family);
+  // A lead toward its family's origin, falling with the level gap like XP (wild viruses and processes, not guards).
+  if (!guard && FAMILIES[family]) { const lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(lvl - hackerLevel(s))) * (v.strain && v.strain === hotStrain(s) ? 1 + HOT.bonus : 1)); if (lead) addLead(s, family, lead); }
+  if (wild) {
+    gainCode(s, codeFrom(s, family, lvl, 'home'), 'Code: ');
+    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: loc?.depth || 1, family, strain: v.strain, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : bounty ? LOOT.rolls.bounty : undefined };
+    const item = rollDrop(s, ctx, lvl);
+    if (item) addItem(s, item);
+    nativeDrop(s, e);
+    if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
+    if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
+    return { more: () => rollDrop(s, { ...ctx, strain: null }, lvl) };
+  }
+  if (!s.run) return {};
+  const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
+  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: loc?.depth || 1, family: loc?.family || family, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : undefined }, lvl);
+  if (item) { s.run.pack.push({ path: `${tag}/drop`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
+  nativeDrop(s, e, true);
+  if (rand(s) < (guard ? DAEMON_DROPS.guard : DAEMON_DROPS.home)) { s.run.pack.push({ path: `${tag}/dm`, name: 'daemon.exe', kind: 'daemon', size: '96k' }); emit(s, 'drop', `${v.name} dropped a daemon. In your pack until you jack out.`, { pack: true }); }
+  if (rand(s) < (guard ? BLUEPRINT_CHANCE.guard : BLUEPRINT_CHANCE.home)) { s.run.pack.push({ path: `${tag}/bp`, name: 'blueprint.bp', kind: 'blueprint', size: '64k' }); emit(s, 'drop', `${v.name} dropped a blueprint. In your pack until you jack out.`, { pack: true }); }
+  const gains = codeFrom(s, family, lvl, src);
+  for (const [m, n] of Object.entries(gains)) s.run.pack.push({ path: `${tag}/code-${m}`, name: `${m}.code`, kind: 'code', size: '8k', material: m, amount: n });
+  if (Object.keys(gains).length) emit(s, 'code', `${v.name} dropped ${Object.entries(gains).map(([m, n]) => `${n} ${MATERIALS[m].name}`).join(' and ')}. In your pack until you jack out.`, { gains, pack: true });
+  return {};
 }
 
 export function finish(s, result) {
@@ -2023,6 +2078,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.degraded = null;
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
+  } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)
+    s.bossRule = text.split(' ')[2];
+    emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
   } else if (/^developer outpost \S+/.test(text)) {
     devOutpost(s, text.split(' ')[2], text.split(' ').slice(3), now);
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
@@ -3742,9 +3800,9 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
-    const s = structuredClone(raw);
+    const s = bindRooms(structuredClone(raw));
     const was = s.version;
     // v23: the Sysadmin is the Bastion now. Its level, tree and bar come along.
     // Smash is Flood now: on the bar and anything keyed by it.
@@ -3885,6 +3943,7 @@ export function restore(raw) {
     if (!Number.isFinite(s.rng)) s.rng = 0x2545f491;
     s.loadout.equipped ||= {};
     for (const l of s.locations || []) { l.template ||= 'relay'; l.depth ||= 1; reclaimCheck(l); }
+    hooks.roomsRestore?.(s, was); // v39: every server you'd found is a room graph (netrooms.mjs)
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;

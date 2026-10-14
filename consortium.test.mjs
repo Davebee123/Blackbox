@@ -171,14 +171,15 @@ test('the crew strip: linked crew follow you, split crew wander, link follows th
   const s = world();
   play(s, 'crew sim bastion infiltrator');
   play(s, 'connect sprawl');
-  assert.deepEqual(Object.values(s.run.crew).map((c) => c.cwd), ['/', '/']);
+  // Since R1 SPRAWL-00's folders are rooms (netrooms.mjs): the crew is in a room, by its name (/net), the entry Entry.
+  assert.deepEqual(Object.values(s.run.crew).map((c) => c.cwd), ['Entry', 'Entry']);
   play(s, 'cd net');
   assert.deepEqual(Object.values(s.run.crew).map((c) => c.cwd), ['/net', '/net'], 'linked: they follow');
   play(s, 'split kilo');
   assert.equal(s.run.crew.kilo.link, null);
   play(s, 'cd ..');
   assert.equal(s.run.crew.kilo.cwd, '/net', 'split: kilo stays');
-  assert.equal(s.run.crew.nyx.cwd, '/');
+  assert.equal(s.run.crew.nyx.cwd, 'Entry');
   for (let i = 0; i < 20; i++) crewWander(s);
   play(s, 'link kilo');
   assert.equal(s.run.linkedTo, 'kilo');

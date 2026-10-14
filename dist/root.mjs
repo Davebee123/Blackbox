@@ -1,16 +1,15 @@
 // Root access: a server you've taken over keeps paying you back if you keep coming back to it
 // (RuneScape's player-owned house, WoW's dailies and rare spawns).
 //
-// Every few hours its logs rotate: a fresh process moves into one of its folders, and a rotated
-// cache of credits waits at the root. Clear the process and the server gives you more access:
+// Since R1 (docs/servers.md 2.8) a server is rooms, and respawns are what rotations were: Root counts the respawned
+// fight rooms you clear on a server you hold (netrooms.mjs rootClear), ROOT.need of them for each pip:
 //   Root 1  taken over
-//   Root 2  /root opens: a stash of the server's code, refilled every rotation
-//   Root 3  it stops costing memory
-//   Root 4  one more module port, and its harvester yields 25% more
-//   Root 5  its firewall +3, and its harvester works like two (yield doubled)
-// Sometimes a rotation brings a rare process instead: 2 levels up, three loot rolls, and it's gone
-// within the hour. Rotations run in real time, online or off (not while it's detached: frozen);
-// the map marks a waiting one with ↻.
+//   Root 2  (5 clears) a stash room opens by the Core: the server's code, refilled every two hours
+//   Root 3  (15) it stops sending invasions, and stops costing memory
+//   Root 4  (30) one more socket room once sockets come (R2); until then one more building slot
+//   Root 5  (50) its rare spawns come twice as often
+// The old log rotations (a process in a folder, a rotated cache) only ran on the file-system servers; nothing on rooms
+// rotates (tickRoot skips them).
 import { emit, hooks, hackerLevel, rollDrop, addItem, gainXp, xpFor } from './combat.mjs';
 import { FAMILIES, SERVER, variantFor, STRAINS } from './data.mjs';
 import { seeded } from './gear.mjs';
@@ -18,7 +17,7 @@ import { nativeStrain, leanPick } from './network.mjs';
 
 export const ROOT = {
   max: 5,
-  need: [0, 0, 1, 2, 4, 7], // processes cleared to reach Root N
+  need: [0, 0, 5, 15, 30, 50], // respawned fight rooms cleared on the server to reach Root N
   firstMs: 60 * 60000, // the first rotation, an hour after the takeover
   rotateMs: 2 * 3600000, // then every two hours
   rareChance: 0.25, rareMs: 60 * 60000, rareLevels: 2, rareRolls: 3,
@@ -41,8 +40,9 @@ export const freeOfMemory = (loc) => rootOf(loc) >= ROOT.freeMemory;
 // Root 3 (without memory): the server stops sending invasions at you.
 export const quietAtRoot = (loc) => rootOf(loc) >= ROOT.freeMemory;
 export const rootPorts = (loc) => (rootOf(loc) >= ROOT.portAt ? 1 : 0);
-export const rootYield = (loc) => (rootOf(loc) >= ROOT.doubleAt ? 2 : rootOf(loc) >= ROOT.yieldAt ? 1 + ROOT.yield : 1);
-export const rootWall = (loc) => (rootOf(loc) >= ROOT.wallAt ? ROOT.wallPlus : 0);
+// (Root 4's harvester +25% and Root 5's firewall +3 and doubled yield went with the R1 table: 2.8.)
+export const rootYield = () => 1;
+export const rootWall = () => 0;
 
 // The process waiting on a server right now (alive and, if rare, not gone yet).
 export function procOf(loc, at = now()) {
@@ -76,7 +76,7 @@ export function rootFileInfo(loc, path, name, codeName) {
 // The clock: rotate every owned server whose time has come (real time, online or off).
 export function tickRoot(s, at = now(), rooms = () => []) {
   for (const loc of (s.locations || []).filter(owned)) {
-    if (loc.detached) continue; // frozen (memory.mjs)
+    if (loc.detached || loc.floorplan) continue; // frozen (memory.mjs); a server on rooms doesn't rotate (its rooms respawn)
     const r = rootState(loc);
     if (r.nextAt == null) { r.nextAt = at + ROOT.firstMs; continue; }
     if (r.proc?.alive && r.proc.until && at >= r.proc.until) { r.proc.alive = false; emit(s, 'info', `The rare virus on ${loc.name} moved on.`, { location: loc.id }); }
@@ -121,4 +121,4 @@ export function processWon(s, e) {
     gainXp(s, xpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
   }
 }
-export const ROOT_PERKS = { 1: 'taken over', 2: '/root opens, with a stash of code', 3: 'it stops sending invasions', 4: '+1 module port, harvester +25%', 5: 'firewall +3, harvester doubled' };
+export const ROOT_PERKS = { 1: 'taken over', 2: 'a stash room opens by the Core, its code back every two hours', 3: 'it stops sending invasions', 4: 'one more building slot (a socket room, once sockets come)', 5: 'its rare spawns come twice as often' };

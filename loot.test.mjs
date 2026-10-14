@@ -35,14 +35,11 @@ test('pull says what you got; jack out lists everything banked', () => {
   assert.ok(loc.starter && hasKit(loc) && hasBlueprint(loc), 'your first vault has a protocol and a blueprint');
   Object.assign(loc, { template: 'relay', quirk: null });
   connect(s, loc.id);
-  play(s, 'cd relay');
-  command(s, 'engage');
-  win(s);
-  play(s, `unlock vault ${loc.password}`);
-  play(s, 'cd vault');
-  const pulled = play(s, 'pull kit.bin').find((e) => e.gain);
-  assert.equal(pulled.gain.kind, 'item');
-  play(s, 'pull blueprint.bp');
+  // Since R1 a server is rooms (netrooms.mjs): the vault, its key in hand, opens with every file into your pack.
+  const R = s.rooms, v = R.graph.vaults[0];
+  R.visit.keys.push(v); R.at = v; R.screen = null;
+  const pulled = play(s, 'open').find((e) => e.gains?.length);
+  assert.ok(pulled.gains.some((r) => r.kind === 'item') && pulled.gains.some((r) => r.kind === 'blueprint'), 'the vault says what you got');
   const out = play(s, 'jack out').find((e) => e.type === 'jacked-out');
   const kinds = out.gains.map((r) => r.kind);
   assert.ok(kinds.includes('blueprint') && kinds.includes('item')); // (and whatever the guard dropped)

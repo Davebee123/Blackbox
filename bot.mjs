@@ -3,7 +3,9 @@
 // each level takes, and where it runs dry. A policy, not a person: it plays the planner from
 // balance.mjs, explores every room, takes every file but bait, and opens every vault. It plays by
 // the current rules: it frees memory by detaching finished servers, waits out the reconnect timer,
-// jacks in to invasions that reach the wall, and installs relays on servers it takes over.
+// jacks in to invasions that reach the wall, and installs relays on servers it takes over. Since R1 every server is
+// rooms (netrooms.mjs): on a visit it walks them like the rooms sim's bot (roomsim.mjs botStep: the key, the vault,
+// the Core, rooms not cleared yet, caches, respawns), fights with the planner, and jacks out when its Signal runs low.
 // node bot.mjs [class] [targetLevel] [seed]
 import { topUpCost, installBlock, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
 import { RARITY_ORDER, SLOT_KINDS, groupOf, SERVICES } from './dist/gear.mjs';
@@ -19,8 +21,12 @@ import { tickNetwork } from './dist/invasion.mjs';
 import { tickPlay } from './dist/progression.mjs';
 import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
-import { CONFIG, STRAINS, FAMILIES, GUARDS, power } from './dist/data.mjs';
+import { botStep } from './roomsim.mjs';
+import * as FP from './dist/floorplan.mjs';
+import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, power } from './dist/data.mjs';
 
+// How full the bot rests its Signal before it goes back out (a share of your max): 1 waits for full.
+export const REST = { to: 1 };
 // gearRule: 'rarity' (the highest rarity, then the highest level) or 'stats' (what an item adds: its Damage
 // as a share of your hit, its Signal as a share of your max, small weights for the rest, 3% for an effect).
 // trace: per-level records for the progression measures (docs/progression.md): fights, wins, rest, XP by
@@ -60,16 +66,17 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   };
   const say = (text) => { const ev = play(s, text) || []; ev.forEach(note); t += cmdSec * 1000; return ev; };
   const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (trace) { const g = loaded(s), spike = 25 * power(l); (stats.worn_at ||= {})[l] = { uniques: g.filter((x) => x.unique).length, effects: g.filter(effectOf).length, slots: g.length, dmg: Math.round((g.reduce((n, x) => n + (x.stats.damage || 0), 0) / spike) * 100) / 100, sig: Math.round((g.reduce((n, x) => n + (x.stats.signal || 0), 0) / maxSignal(s)) * 100) / 100 }; } if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
-  const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family]).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
+  const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family] || { name: v.family }).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
   const fight = () => {
     if (!s.encounter || (s.encounter.phase !== 'alert' && !active(s))) return; // a finished fight still on screen
     if (s.encounter.phase === 'alert') command(s, 'engage');
     const key = fightKey(), where = s.run?.loc, v = s.encounter.virus, at = trace ? here() : null;
+    const sig0 = s.run ? s.run.integrity : null, L0 = hackerLevel(s), kind = s.encounter.rooms?.size || s.encounter.mode, gap = v.level - L0, inRoom = !!s.encounter.rooms, max0 = s.run?.max;
     if (at) at.fights++;
     stats.fights[key] = (stats.fights[key] || 0) + 1;
     // The fight mix by your level: grey (10+ levels under you) vs strains and ICE (the fights with a rule).
     const mix = ((stats.mix ||= {})[hackerLevel(s)] ||= { fights: 0, grey: 0, special: 0 });
-    mix.fights++; if (v.level - hackerLevel(s) <= -10) { mix.grey++; const k = (s.encounter.mode) + (s.encounter.zone ? ":zone" : "") + (s.encounter.wild ? ":wild" : "") + (s.encounter.outpost ? ":outpost" : "") + (s.encounter.infest ? ":infest" : "") + (s.encounter.fleet ? ":fleet" : "") + (s.encounter.invader ? ":inv" : "") + (s.run?.loc ? ":" + s.run.loc : ""); (stats.greyBy ||= {})[k] = ((stats.greyBy ||= {})[k] || 0) + 1; } if (v.strain || ['tracer', 'bouncer'].includes(v.family)) mix.special++;
+    mix.fights++; if (v.level - hackerLevel(s) <= -10) { mix.grey++; const k = (s.encounter.mode) + (s.encounter.zone ? ":zone" : "") + (s.encounter.wild ? ":wild" : "") + (s.encounter.outpost ? ":outpost" : "") + (s.encounter.infest ? ":infest" : "") + (s.encounter.fleet ? ":fleet" : "") + (s.encounter.invader ? ":inv" : "") + (s.run?.loc ? ":" + s.run.loc : ""); (stats.greyBy ||= {})[k] = ((stats.greyBy ||= {})[k] || 0) + 1; } if (v.strain || ['tracer', 'bouncer'].includes(v.family) || ROOM_FAMILIES[v.family]) mix.special++; // a rule of its own: a strain, ICE, or since R1 a room body (the Trojan, the Cryptominer, the Wiper)
     for (let n = 0; n < 80 && active(s); n++) {
       const text = policy(s) || 'hold';
       if (s.encounter.sync && s.encounter.virus.parts.some((p) => p.syncOnly && p.integrity > 0)) s.encounter.synced = text !== 'hold';
@@ -81,6 +88,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     }
     if (active(s)) finish(s, 'defeat');
     const r = s.reports.at(-1);
+    if (sig0 != null && inRoom) (stats.roomFights ||= []).push({ L: L0, kind, gap, won: r?.result === 'victory', lost: r ? (sig0 - Math.max(0, r.endIntegrity)) / Math.max(1, max0) : 1, cycles: r?.cycles || 0, key, where }); // room fights: for the R1 gate
     if (r?.result === 'victory') { stats.wins++; if (at) at.wins++; } else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
@@ -92,7 +100,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       if (s.server.integrity > 0 && s.server.integrity < s.server.max * 0.8 && s.server.credits >= topUpCost(s, 'server') + 50) command(s, 'repair');
       (stats.spent ||= {}).topup = (stats.spent.topup || 0) + before - s.server.credits;
     }
-    let n = 0; const t0 = t; while ((signalNow(s) < maxSignal(s) || s.server.integrity < s.server.max * 0.3) && n++ < 400) wait(10);
+    let n = 0; const t0 = t; while ((signalNow(s) < maxSignal(s) * (REST.to ?? 1) || s.server.integrity < s.server.max * 0.3) && n++ < 400) wait(10);
     stats.restMins = (stats.restMins || 0) + (t - t0) / 60000;
     if (trace) here().rest += (t - t0) / 60000;
     if (s.server.integrity <= 0) { stats.crashes++; command(s, 'reboot'); }
@@ -141,7 +149,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   // nothing left, no outpost, relay or contract on it?
   // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
   // A Resident that just beat it waits until it calms down (6 hours), like a player would.
-  const pending = (loc) => { for (const [d, x] of Object.entries(layoutOf(loc))) { if (x.guard && !loc.state.cleared[d] && !(d === CORE && residentBonus(loc, t) > 0)) return true; if (x.locked && !x.drop && !loc.state.unlocked[d]) return true; } return takeable(loc).some((f) => !loc.state.taken[f] && !/bait/.test(f)); };
+  // On rooms: not Mapped yet, or not taken over (a Resident that just beat it waits), and not outgrown (4 levels under
+  // you: a player moves on, and frees its memory).
+  const pending = (loc) => { const R = loc.floorplan; if (!R) return true; if ((loc.level || 1) <= hackerLevel(s) - 4) return false; return !R.mapped || (!loc.takenOver && !loc.member && !(residentBonus(loc, t) > 0)); };
   const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.buildings?.length && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
@@ -153,12 +163,23 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     }
     return true;
   };
+  // A visit on rooms: botStep's choices until it jacks out, its fights with the policy. A step is a command's time.
+  const visit = (only = null) => {
+    for (let k = 0; k < 300 && s.run; k++) {
+      if (active(s)) { fight(); FP.settle(s); continue; }
+      if (s.rooms?.screen?.kind === 'virus' && only && !only(FP.roomOf(s, s.rooms.screen.room))) { FP.act(s, 'back'); t += cmdSec * 1000; continue; }
+      if (!botStep(s)) break;
+      t += cmdSec * 1000;
+      if (active(s)) { fight(); FP.settle(s); }
+    }
+  };
   const runLoc = (loc) => {
     if (relocks(loc) && relockLeft(loc, t)) return false;
     if (!makeRoom(loc)) return false;
     say(`connect ${loc.id}`);
     if (!s.run) return false;
     stats.runs++;
+    if (s.run.rooms) { visit(); leave(); seen.add(loc.id); if (loc.takenOver && !loc.relay && items(s).relay) command(s, 'relay ' + loc.id); return true; }
     if (loc.rogue) {
       for (const room of Object.keys(layoutOf(loc)).filter((p) => p !== '/')) { if (!s.run) break; say(`cd ${room}`); say('attack'); fight(); if (s.run) say('cd /'); }
     } else {
@@ -195,6 +216,12 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (s.zone && relockLeft(s.zone, t)) return false;
     say('connect sprawl');
     if (!s.run) return false;
+    if (s.run.rooms) { // its rooms: outgrown, only the contract's named target
+      const grey = !sprawlWorth();
+      visit(grey ? (room) => !!s.zone?.spawns?.[room?.path0]?.bounty : null);
+      leave();
+      return true;
+    }
     const named = (p) => (s.zone?.spawns?.[p]?.bounty ? 0 : 1); // a contract's named target first
     const rooms = Object.keys(layoutOf(currentLocation(s))).filter((p) => p !== '/').sort((a, b) => named(a) - named(b));
     const grey = !sprawlWorth(); // outgrown: only the contract's named target
@@ -270,8 +297,10 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     restUp();
     const L = hackerLevel(s);
     const open = (l) => (isLive(s, l) || l.fresh) && !(relocks(l) && relockLeft(l, t));
-    const todo = s.locations.filter((l) => !l.rogue && !l.takenOver && open(l) && pending(l) && l.level <= L + 2).sort((a, b) => a.level - b.level)[0];
-    const rot = s.locations.filter((l) => procOf(l, t) && open(l) && procOf(l, t).level <= L + 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => procOf(b, t).level - procOf(a, t).level)[0];
+    const todo = s.locations.filter((l) => !l.rogue && open(l) && pending(l) && l.level <= L + 2 && (losses[l.id + '@' + L] || 0) < 3).sort((a, b) => a.level - b.level)[0];
+    // A server you hold, its rooms respawned (rotations before R1): their clears climb its Root (root.mjs, 2.8).
+    const respawned = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => FP.FIGHTS.includes(x.kind) && x.kind !== 'core' && R.down[x.id] != null && t >= R.down[x.id] + FP.ROOMS.respawn[x.kind === 'guard' ? 'guard' : x.kind === 'elite' ? 'elite' : 'process'] * 60000).length : 0; };
+    const rot = s.locations.filter((l) => (procOf(l, t) && procOf(l, t).level <= L + 3) || (l.floorplan && l.takenOver && !l.member && (l.root?.level || 1) < 5 && (l.level || 1) >= L - 3 && respawned(l) >= 3)).filter((l) => open(l) && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => (b.level || 1) - (a.level || 1))[0];
     const rogue = s.locations.filter((l) => l.rogue && !l.farm && open(l) && l.level <= L + 2 && l.level >= L - 3 && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => b.level - a.level)[0];
     const hunt = contracts && stats.bountyLosses < 2 && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;

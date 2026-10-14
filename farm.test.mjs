@@ -36,41 +36,39 @@ test('KESSLER-FARM-00 turns up on your map at level 7, and takes only a crew', (
   assert.ok(s.run);
 });
 
-test('the farm: packs block the way, the first two bosses hold the ledger key, and the crew regroups after each', () => {
+// Since R1 the farm's folders are rooms (netrooms.mjs farmGraph): cd walks them, a pack holds its room, and the ledger
+// is a vault that opens once the Foreman and the Heatsink are down (their badge word and cycle tag, no typing).
+test('the farm: packs block the way, the first two bosses open the ledger, and the crew regroups after each', () => {
   const s = at7();
   const loc = openFarm(s);
   play(s, 'crew sim bastion operator');
   play(s, 'connect kessler');
-  assert.match(s.logs.filter((e) => e.type === 'net-out' || e.type === 'error' || e.type === 'warning').map((e) => e.message).join(' ') + ' ok', /ok/);
+  assert.ok(s.run?.rooms, 'the farm is rooms');
   play(s, 'cd intake/racks');
-  assert.equal(s.run.cwd, '/', 'the intake pack is in the way');
-  play(s, 'cd intake'); play(s, 'attack');
+  assert.equal(s.run.cwd, '/intake', 'the intake pack is in the way');
+  assert.equal(s.rooms.screen?.kind, 'virus');
+  play(s, 'attack');
   const pack = s.encounter.virus;
   assert.ok(pack.elite);
   win(s);
-  play(s, 'cat manifest.txt');
-  play(s, 'cd racks'); play(s, 'cat shift.log');
-  assert.ok(!s.logs.some((e) => e.message?.includes(`word: ${loc.password.replace(/\d+$/, '')}`)), 'locked while the Foreman runs');
+  play(s, 'cd racks');
   play(s, 'attack');
   assert.equal(s.encounter.virus.boss, 'foreman');
   assert.ok(s.encounter.virus.elite, 'built for a crew');
   s.run.integrity = 1;
   win(s);
+  play(s, 'ls');
   assert.ok(s.run.integrity >= Math.round(s.run.max * FARM.regroup), 'regrouped');
   assert.ok(s.logs.some((e) => /Regroup/.test(e.message)));
   assert.ok(loc.spawns['/intake/racks'].respawnAt - Date.now() > FARM.bossMs - 60000, 'back in 6 hours');
-  play(s, 'cat shift.log');
-  const word = loc.password.replace(/\d+$/, ''), digits = loc.password.match(/\d+$/)[0];
-  assert.ok(s.logs.some((e) => (e.lines || [e.message]).join(' ').includes(word) || JSON.stringify(e).includes(`word: ${word}`)), 'the word');
+  play(s, 'cd /ledger'); play(s, 'open');
+  assert.ok(!loc.state.unlocked['/ledger'], 'locked while the Heatsink runs');
   play(s, 'cd /'); kill(s, 'cooling'); play(s, 'cd loop'); play(s, 'attack');
   assert.equal(s.encounter.virus.boss, 'heatsink');
   win(s);
-  play(s, 'cat temps.log');
-  assert.ok(s.logs.some((e) => JSON.stringify(e).includes(`cycle tag: ${digits}`)), 'the digits');
-  play(s, 'cd /');
-  play(s, `unlock ledger ${loc.password}`);
-  assert.ok(loc.state.unlocked['/ledger']);
-  play(s, 'cd ledger/core'); play(s, 'attack');
+  play(s, 'cd /ledger'); play(s, 'open');
+  assert.ok(loc.state.unlocked['/ledger'], 'the ledger opens');
+  play(s, 'cd core'); play(s, 'attack');
   assert.equal(s.encounter.virus.boss, 'coldwallet');
   win(s);
   assert.equal(Object.values(loc.spawns).filter((x) => x.boss && !x.alive).length, 3);

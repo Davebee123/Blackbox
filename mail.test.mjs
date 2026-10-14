@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, hooks, restore, tickServices } from './dist/combat.mjs';
 import { play, layoutOf } from './dist/run.mjs';
+import * as FP from './dist/floorplan.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { boardOpen, MAIL, STORY_LENGTH, standing, tierOf, openContracts, offers, heldCount, ready, tickMail, retainer, offer, indemnity } from './dist/mail.mjs';
@@ -20,29 +21,28 @@ const win = (s) => {
   for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });
   for (let i = 0; i < 30 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, "spike " + p.id); resolveCycle(s); }
 };
+// SPRAWL-00's folders are rooms (netrooms.mjs): cd walks there, beating what holds the way.
 const killInSprawl = (s, room) => {
   if (!s.run) { if (s.zone) s.zone.lockUntil = 0; play(s, 'connect sprawl'); } // skip the reconnect wait (rogue.mjs relockMs)
-  play(s, 'cd ' + room);
+  for (let i = 0; i < 4 && s.run.cwd !== room; i++) { play(s, 'cd ' + room); if (s.run.cwd !== room && s.rooms.screen) { play(s, 'attack'); win(s); } }
   play(s, 'attack');
   win(s);
   play(s, 'cd /');
 };
 const deliver = (s, j = job(s)) => command(s, `mail deliver ${j.id}`);
-// Beat a location's guard and open its vault; you're left standing next to the vault.
+// Take a server over on its rooms (netrooms.mjs): its vault's key in hand (its elite beaten), the vault opened (its
+// files into your pack), the Resident beaten in the Core. You're left in the Core, on the run.
 const takeOver = (s, loc) => {
   if (s.run) play(s, 'jack out');
+  loc.lockUntil = 0;
   play(s, 'connect ' + loc.id);
-  const layout = layoutOf(loc);
-  const guardDir = Object.keys(layout).find((k) => layout[k].guard);
-  const vault = Object.keys(layout).find((k) => layout[k].locked);
-  play(s, 'cd ' + guardDir);
-  if (s.encounter?.phase === 'alert' || active(s)) win(s);
-  play(s, 'cd ' + vault.slice(0, vault.lastIndexOf('/')));
-  play(s, `unlock vault ${loc.password}`);
-  // The Resident in /core (run.mjs): beat it to take the server, then come back to the vault.
-  play(s, 'cd /core');
-  if (s.encounter?.phase === 'alert' || active(s)) win(s);
-  play(s, 'cd ' + vault.slice(0, vault.lastIndexOf('/')));
+  const R = s.rooms, g = R.graph, vault = g.vaults[0];
+  R.visit.keys.push(vault); R.at = vault; R.screen = null;
+  play(s, 'open');
+  R.at = FP.neighbours(g, g.core)[0];
+  play(s, 'cd ' + g.rooms[g.core].dir);
+  if (s.rooms.screen) play(s, 'attack');
+  win(s);
   return vault;
 };
 // Straight to the end of the storyline, with the board open.
@@ -132,9 +132,8 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   const loc = s.locations.find((l) => l.id === j.loc);
   assert.ok(loc, 'traced: the contract follows it');
   assert.equal(loc.parent, home.id);
-  const vault = takeOver(s, loc);
-  play(s, 'cd ' + vault);
-  play(s, 'pull claims.db');
+  takeOver(s, loc);
+  assert.ok(s.run.pack.some((f) => f.name === 'claims.db'), 'the vault gave it up');
   assert.ok(!ready(s, j), 'not until it is banked');
   play(s, 'jack out');
   assert.ok(ready(s, j));
@@ -265,9 +264,7 @@ test('a vault’s trace record puts part of a trace on one of the server’s hid
   command(s, 'developer location ransomware');
   const loc = s.locations[0];
   const before = hiddenNodes(s).filter((n) => n.via === loc.id).map((n) => n.id);
-  const vault = takeOver(s, loc);
-  play(s, 'cd ' + vault);
-  play(s, 'pull signal.trc');
+  takeOver(s, loc); // the vault's files, the trace record among them, go in your pack
   play(s, 'jack out');
   assert.equal(s.locations.length, 1, 'no server located outright');
   assert.deepEqual(hiddenNodes(s).filter((n) => before.includes(n.id)).map((n) => n.lead).sort((a, b) => b - a)[0], HIDDEN.recordLead);

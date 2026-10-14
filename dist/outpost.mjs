@@ -279,7 +279,8 @@ export function regrow(s, loc) {
   loc.takenOver = false;
   loc.lapsed = [];
   delete loc.state.cleared['/core'];
-  emit(s, 'outpost-fell', `${loc.name}'s Resident regrew. The server isn't yours until you beat it in /core again. What you built there waits.`, { location: loc.id });
+  if (loc.floorplan) { const R = loc.floorplan; delete R.down[R.graph.core]; R.held = null; } // its Core holds the Resident again (netrooms.mjs)
+  emit(s, 'outpost-fell', `${loc.name}'s Resident regrew. The server isn't yours until you beat it in its Core again. What you built there waits.`, { location: loc.id });
 }
 
 // Builds run in real time, offline too; a lockdown or a swarm at the server holds them up.

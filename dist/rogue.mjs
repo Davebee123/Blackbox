@@ -97,7 +97,7 @@ export function rogueSpawns(s, loc, now = clock()) {
     if (!strain && loc.rogue.kind === 'nest') strain = variantFor(family, level, loc.depth || 1, seed ^ 0x9e37, native).strain; // twice the chances
     const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].stem.toLowerCase(); // a build's name or the body's stem, as the fight is named
     const elite = loc.rogue.kind === 'pit' && seeded(seed ^ 0x51ed)() < ELITE.share; // group content
-    loc.spawns[room] = { alive: true, family, level, seed, strain, grade, ...(elite ? { elite: true } : {}), name: `${elite ? 'elite ' : ''}${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+    loc.spawns[room] = { alive: true, bornAt: now, family, level, seed, strain, grade, ...(elite ? { elite: true } : {}), name: `${elite ? 'elite ' : ''}${label}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
 }
@@ -180,8 +180,8 @@ function farmSpawns(s, loc, now) {
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
     if (d.boss === 'coldwallet') delete loc.state.unlocked['/ledger']; // the ledger locks again when its keeper is back
     loc.spawns[room] = d.boss
-      ? { alive: true, family: BOSSES[d.boss].family, boss: d.boss, level: loc.level, seed, elite: true, eliteHp: 1, name: d.name }
-      : { alive: true, family: d.family, level: loc.level, seed, elite: true, eliteHp: FARM.packHp, name: `elite ${d.name}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+      ? { alive: true, bornAt: now, family: BOSSES[d.boss].family, boss: d.boss, level: loc.level, seed, elite: true, eliteHp: 1, name: d.name }
+      : { alive: true, bornAt: now, family: d.family, level: loc.level, seed, elite: true, eliteHp: FARM.packHp, name: `elite ${d.name}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
 }

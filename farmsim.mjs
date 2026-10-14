@@ -1,5 +1,6 @@
 // Crew balance in the crew dungeon (KESSLER-FARM-00): scripted players, like balance.mjs, but a crew.
-// Its own module: it loads run.mjs (connect, cd, the farm's rooms), whose hooks change how a bare sim
+// Its own module: it loads run.mjs (connect, cd, the farm's rooms: since R1 its folders are rooms, netrooms.mjs, and
+// cd walks them), whose hooks change how a bare sim
 // fight in balance.mjs runs. node farmsim.mjs [levels…] prints a table of crews: a full one (tank, healer,
 // two damage), and the same without its tank, its healer, its SIGINTs or a damage dealer, and smaller
 // crews. The bosses are crew bosses (raid.mjs): docs/bosses.md has what each role does in each phase.
@@ -58,7 +59,7 @@ export function farmScore(you, crew, level, { seeds = 12, rarity = 'tuned', mate
       go('/intake/racks', 'foreman');
       for (let i = 0; i < 4 && !fight('/cooling'); i++);
       go('/cooling/loop', 'heatsink');
-      back(); play(s, 'cd /'); play(s, 'unlock ledger ' + loc.password);
+      back(); play(s, 'cd /'); play(s, 'cd /ledger'); play(s, 'open'); // the ledger opens once the Foreman and the Heatsink are down
       go('/ledger/core', 'coldwallet');
       if (!only && ['foreman', 'heatsink', 'coldwallet'].every((b) => loc.spawns[{ foreman: '/intake/racks', heatsink: '/cooling/loop', coldwallet: '/ledger/core' }[b]]?.alive === false)) st.cleared++;
       t += 1e9; // the bosses are back

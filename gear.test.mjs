@@ -4,6 +4,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, serviceVersion, serviceValue, syncServer, installBlock, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
+import * as FP from './dist/floorplan.mjs';
+// Since R1 a server is rooms (netrooms.mjs): into the first room next to the entry that something holds, and engage.
+const roomFight = (s) => { const R = s.rooms, g = R.graph, room = FP.neighbours(g, R.at).map((id) => g.rooms[id]).find((r) => FP.isUp(s, r) && r.kind !== 'core'); FP.go(s, room.id); FP.act(s, 'engage'); };
+// The vault, its key in hand: opened, its files in your pack.
+const openVault = (s) => { const R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); R.at = v; R.screen = null; FP.act(s, 'open'); };
 import { CONFIG, power } from './dist/data.mjs';
 import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, VERSIONS, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, serviceCost } from './dist/gear.mjs';
 
@@ -188,8 +193,7 @@ test('your survival stats count on runs, the server\'s services at home', () => 
   command(s, 'developer location worm');
   Object.assign(s.locations[0], { template: 'relay', quirk: null });
   connect(s, s.locations[0].id);
-  play(s, 'cd relay');
-  command(s, 'engage');
+  roomFight(s);
   for (const p of s.encounter.virus.parts) p.attack = null;
   const sentry = s.encounter.virus.parts[0];
   sentry.attack = { name: 'Sweep', effect: 'damage', amount: 10, interval: 9, due: s.encounter.cycle };
@@ -449,18 +453,11 @@ test('runs: your first vault holds a protocol kit and a code cache; deeper vault
   const loc = s.locations[0];
   Object.assign(loc, { template: 'relay', quirk: null, depth: 2 });
   connect(s, loc.id);
-  play(s, 'cd relay');
-  command(s, 'engage');
-  finishOne(s);
-  play(s, `unlock vault ${loc.password}`);
-  play(s, 'cd vault');
-  const ls = play(s, 'ls').map((e) => e.message).join('\n');
-  assert.match(ls, /kit\.bin/);
+  openVault(s);
+  const names = s.run.pack.map((f) => f.name);
+  assert.ok(names.includes('kit.bin'), names.join(' '));
   const src = sourceOf(loc);
-  assert.match(ls, new RegExp(src + '\\.src'));
-  play(s, 'pull kit.bin');
-  play(s, 'pull payload.bin');
-  play(s, `pull ${src}.src`);
+  assert.ok(names.includes(`${src}.src`), 'and its source');
   const before = s.stash.length, worm = s.materials.worm;
   const packed = s.run.pack.filter((p) => p.kind === 'code' && p.material === 'worm').reduce((a, p) => a + p.amount, 0);
   play(s, 'jack out');

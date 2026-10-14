@@ -60,13 +60,44 @@ export default {
       }
     ]
   },
+  "rooms": {
+    "halcyon": [
+      {
+        "subject": "Survey: {server}",
+        "body": [
+          "We need eyes inside {server}. Clear {count} of its rooms you haven't cleared before.",
+          "Whatever lives there, we want to know how it's laid out."
+        ]
+      }
+    ],
+    "glassjaw": [
+      {
+        "subject": "Walk the floor",
+        "body": [
+          "Clear {count} new rooms on {server}. We are mapping it for a buyer.",
+          "Halcyon will not like it. That is why it pays."
+        ]
+      }
+    ]
+  },
+  "map": {
+    "halcyon": [
+      {
+        "subject": "Full survey: {server}",
+        "body": [
+          "Map {server}: every room of it cleared at least once.",
+          "Underwriting wants the whole floor plan before it prices the client."
+        ]
+      }
+    ]
+  },
   "takeover": {
     "halcyon": [
       {
         "subject": "Turf: {server}",
         "body": [
           "{owner} runs {server} for {crew}. We want it out of their hands.",
-          "Get past its guard, open its vault, and beat the Resident in /core."
+          "Open its vault, then beat the Resident in its Core."
         ]
       }
     ]
@@ -77,7 +108,7 @@ export default {
         "subject": "Turf: an unknown server",
         "body": [
           "One of the crews runs a server one hop past the ones you know. We have its signal and nothing else.",
-          "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in /core."
+          "A relay nearby will flag it. Trace it, open its vault, then beat the Resident in its Core."
         ]
       }
     ]

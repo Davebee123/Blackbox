@@ -296,9 +296,9 @@ export function lairSpawns(s, loc, now, variant) {
     if (sp?.alive || (sp && sp.respawnAt > now)) continue;
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
-    if (room === '/core') { if (!lairOpen(s, loc)) { loc.serial--; continue; } loc.spawns[room] = { alive: true, family: B.family, boss: loc.lair, level: loc.level, seed, strain: B.strain || null, name: B.name }; continue; }
+    if (room === '/core') { if (!lairOpen(s, loc)) { loc.serial--; continue; } loc.spawns[room] = { alive: true, bornAt: now, family: B.family, boss: loc.lair, level: loc.level, seed, strain: B.strain || null, name: B.name }; continue; }
     const { grade, strain } = variant(B.family, loc.level, loc.depth || 1, seed, nativeStrain(s, who));
-    loc.spawns[room] = { alive: true, family: B.family, level: loc.level, seed, strain, grade, name: `${strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[B.family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
+    loc.spawns[room] = { alive: true, bornAt: now, family: B.family, level: loc.level, seed, strain, grade, name: `${strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[B.family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }
   return loc.spawns;
 }
