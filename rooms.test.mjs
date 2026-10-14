@@ -608,7 +608,10 @@ test('the page is the map and a pop-up: it opens on a decision and on a click, c
   const c = FP.roomList(s).find((x) => x.kind === 'cache' && !x.mirror);
   place(s, c.id); R.visit.moves++;
   assert.equal(popOf(s, ui), c.id);
-  assert.match(pop(roomsMarkup(s, ui))[0], /data-rooms="cat"[\s\S]*data-rooms="pull"/);
+  html = pop(roomsMarkup(s, ui))[0];
+  assert.match(html, /data-rooms="pull"[^>]*>Take it[\s\S]*data-fp-pop-close>Leave it</, 'standing in it: take it or leave it');
+  assert.match(html, FP.isBait(s, c) ? /Bait\. Taking it costs \d+ Signal\./ : /Clean: credits and code\./, 'and you see what it is, nothing to read first');
+  assert.doesNotMatch(html, /data-rooms="cat"/);
   const rest = roomOfKind(s, 'rest');
   place(s, rest.id); R.visit.moves++; R.signal = R.max;
   assert.equal(popOf(s, ui), null, 'full Signal: nothing to decide');

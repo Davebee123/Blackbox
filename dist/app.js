@@ -492,6 +492,7 @@ function leaveFight() { const to = ended === 'breach' ? 'breach' : ended === 'ro
 // A button on the rooms page: a move on the map, or the room's verb. A fight starts paused on the Fight page.
 function roomsClick(verb, arg) {
   feel.key('click');
+  if ($('notice').classList.contains('sticky')) notice(''); // a long one (ls, map) goes with your next move
   roomsDone(FP.act(campaign, verb, arg, { pause: true }));
 }
 function roomsDone(events) {
@@ -515,6 +516,7 @@ function roomsSay(events) {
 }
 // The pop-up (floorplan-view.mjs): a room you've seen opens it; ×, Esc or the map's background closes it.
 document.addEventListener('click', (e) => {
+  if (campaign.rooms && e.target.closest?.('#notice.sticky') && !e.target.closest('button')) { notice(''); return; }
   if (module !== 'rooms' || !campaign.rooms) return;
   const t = e.target.closest?.('[data-fp-sel]');
   if (t) { pickRoom(campaign, t.dataset.fpSel); feel.key('click'); dirty = true; return; }
@@ -990,6 +992,7 @@ function notice(text, bad = false, suggest = null, sticky = false) {
   // A typo's best guess: click it to run it (or, ending in a space, to fill the prompt).
   if (suggest) { const b = document.createElement('button'); b.type = 'button'; b.className = 'tok act suggest'; b.dataset.prefill = suggest; b.textContent = suggest.trim(); el.append(' ', b); }
   el.classList.toggle('bad', bad);
+  el.classList.toggle('sticky', !!sticky);
   el.hidden = !text;
   clearTimeout(noticeTimer);
   if (text && !sticky) noticeTimer = setTimeout(() => (el.hidden = true), 4000); // sticky (help): stays until the next notice or command
@@ -1436,6 +1439,7 @@ function renderMeters() {
   $('tab-combat').hidden = !active(campaign);
   $('tab-net').hidden = !campaign.run || !!campaign.run.breach || !!campaign.run.rooms;
   $('tab-breach').hidden = !campaign.breach;
+  document.body.classList.toggle('rooms-page', !!campaign.rooms && module === 'rooms'); // its notices pop up mid-screen
   $('tab-rooms').hidden = !campaign.rooms;
   document.body.classList.toggle('rooms-mode', !!campaign.rooms); // the rooms playtest: the old game's tabs and meters step aside
   $('tab-campaign').hidden = !CAMP;

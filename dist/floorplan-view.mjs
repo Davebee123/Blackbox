@@ -133,7 +133,7 @@ function aboutOf(s, room) {
           : room.queue && R.kind === 'Mailhub' && fightKind(room) ? 'A Spam Flood joins its fights.'
             : room.kind === 'elite' ? 'Enrages from cycle 9. Drops a blue or better.'
               : room.kind === 'core' && !coreOpen(s) ? `Sealed until you open the ${g.rooms[g.vaults[0]].path}.`
-                : room.kind === 'cache' && !room.mirror ? 'One in four is bait: read it first.'
+                : room.kind === 'cache' && !room.mirror ? 'One in four is bait: you see which when you walk in.'
                   : room.kind === 'vault' && room.id === g.vaults[0] && !R.opened[room.id] ? 'Opening it unseals the Core.'
                     : ['rest', 'entry'].includes(room.kind) ? 'The hunter never comes in.' : '';
   return { who, rule };
@@ -417,10 +417,11 @@ function hereCard(s) {
     const k = whoOf(s, room);
     body = holder(iconOf(s, room), k.short, k.sub, '', 'down') + (R.down[room.id] != null ? note('Never respawns while you stand in it.', 'dim') : '');
   } else if (room.kind === 'cache') {
-    const full = cacheFull(s, room), read = R.read?.[room.id] === (R.spawns[room.id] || 0), bait = read && isBait(s, room), lose = pctOf(s, ROOMS.bait);
+    // Standing in it, you see what it is: take it or leave it.
+    const full = cacheFull(s, room), bait = !room.mirror && isBait(s, room), lose = pctOf(s, ROOMS.bait);
     if (full) {
-      body = note(esc(!read ? (room.mirror ? 'Unread.' : 'Unread. One cache in four is bait.') : room.mirror ? mirrorLine(s, room) : bait ? `Bait. Taking it costs ${lose} Signal.` : 'Clean: credits and code.'), bait || (read && room.mirror) ? 'hot' : '');
-      acts = btn('cat', 'Read it', { disabled: read }) + btn('pull', room.mirror && read ? 'Break the mirror' : 'Take it', { hot: true, note: bait ? `−${lose} Signal` : '' });
+      body = note(esc(room.mirror ? mirrorLine(s, room) : bait ? `Bait. Taking it costs ${lose} Signal.` : 'Clean: credits and code.'), bait || room.mirror ? 'hot' : '');
+      acts = btn('pull', room.mirror ? 'Break the mirror' : 'Take it', { primary: !bait && !room.mirror, hot: bait || room.mirror, note: bait ? `−${lose} Signal` : '' }) + '<button type="button" class="btn" data-fp-pop-close>Leave it</button>';
     } else body = note('Credits and code, sometimes a script.', 'dim');
   } else if (room.kind === 'vault') {
     const open = !!R.opened[room.id], has = R.visit.keys.includes(room.id), main = room.id === g.vaults[0], force = pctOf(s, ROOMS.force);

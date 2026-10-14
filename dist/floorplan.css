@@ -96,6 +96,7 @@
 /* what you can click: a room you can walk into, a room you've seen */
 .fp-room.reach, .fp-room[data-fp-sel] { cursor: pointer; }
 .fp-room.reach:hover .fp-body, .fp-room[data-fp-sel]:hover .fp-body, .fp-room:focus-visible .fp-body { filter: brightness(1.45); }
+.fp-room:focus { outline: none; } /* the browser's box: a focused room brightens instead */
 .fp-room:focus-visible { outline: none; }
 .fp-room:focus-visible .fp-hair { stroke: var(--bright); opacity: 0.9; stroke-width: 1; }
 .fp-room.sel:not(.here) .fp-body { stroke: var(--bright); stroke-width: 2; }
@@ -163,8 +164,12 @@
 .fp-items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
 .fp-items li { display: grid; gap: 0; font-size: 13px; }
 .fp-items small { color: var(--muted); font-size: 12px; }
-/* what happens goes up as a notice over the prompt; ls and map keep their lines */
-.rooms-mode .notice { white-space: pre-line; }
+/* What happens on the server pops up mid-screen (a fight keeps the corner toast, off the board): it lets clicks through,
+   and a long one (ls, map) that stays until your next move closes on a click. */
+.rooms-page .notice { position: fixed; top: 50%; left: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%); max-width: min(480px, calc(100vw - 32px)); padding: var(--s5) var(--s7); border-radius: var(--r-tag); background: var(--panel-2); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); font-size: 15px; line-height: 1.45; text-align: center; white-space: pre-line; z-index: 60; pointer-events: none; animation: fp-notice 0.18s ease-out; }
+.rooms-page .notice.sticky { pointer-events: auto; cursor: pointer; text-align: left; }
+@keyframes fp-notice { from { opacity: 0; transform: translate(-50%, -46%); } }
+.no-motion.rooms-page .notice { animation: none; }
 
 /* ---- the interrupt on the fight board (view.mjs), room fights only ---- */
 .part-bar:has(.ptick) { overflow: visible; }
