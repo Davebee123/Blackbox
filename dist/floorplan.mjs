@@ -1029,6 +1029,8 @@ export function virusName(s, room, as = null) {
   if (f.name) return f.name;
   return encounterVirus(s, f.key, f.seed, f.opts).name;
 }
+// The virus itself, built and thrown away the same way: what a contract asks of it (its family, strain, level, parts).
+export const virusOf = (s, room, as = null) => { const f = fightOf(s, room, as); return encounterVirus(s, f.key, f.seed, f.opts); };
 export function fight(s, room, { pause = false, as = null } = {}) {
   const R = s.rooms;
   s.encounter = null;

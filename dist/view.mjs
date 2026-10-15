@@ -19,7 +19,7 @@ import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAIN
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { chipOf, virusGenes, scannedDeep } from './genome.mjs';
-import { mastered, RESEARCH } from './research.mjs';
+import { mastered, RESEARCH, TIER } from './research.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
 const LOUD_TIP = `Go in loud: every fight on this run has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`;
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
@@ -371,7 +371,7 @@ export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byl
 // mutation's chip carries its tip (tips.mjs .tag-mut).
 export function geneChip(c, extra = '') {
   const ax = AXES[c.axis], what = `${an(c.catName).toLowerCase()} ${c.catName} that presses on ${ax.name}`;
-  const how = GENES[c.id]?.decode === 'part' ? 'Research a part that carries it to 5 to learn its rule.' : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
+  const how = GENES[c.id]?.decode === 'part' ? `Research a part that carries it to ${TIER.rule} to learn its rule.` : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
   const title = !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name} is ${what}. ${c.rule} ${c.answer}` : `${c.name} is ${what}. ${how}`;
   return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}" ${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
 }

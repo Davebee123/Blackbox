@@ -31,7 +31,7 @@ test('the rotation preset presses a spread of keys: at least 4.4 effective keys 
 // or its answers (Suspend, Harden, Bulkhead) misses more of them: the Overclocker's core measured 15 to 17 points over
 // the full build at 18, the Payload's 14 and 24, the Hijacker's 16 at 30, the Warden's 31 and 21. Each is held to what it
 // measures, so it can't drift further unnoticed, until the kit pass.
-const CORE_DRIFT = { overclocker: 18, payload: 25, hijacker: 17, warden: 32 };
+const CORE_DRIFT = { overclocker: 18, payload: 27, hijacker: 17, warden: 32 }; // payload 25 → 27: Backdoor's flat +12 on a burning part made its full build ~1.5 points better; its core (no Backdoor) is unchanged
 test('the core rotation alone is viable: within 12 points of the full rotation build (the Bastions 20) at Lv 18 and 30, with at least 90% of its wins', () => {
   const off = [];
   for (const sub of ALL) for (const L of [18, 30]) {

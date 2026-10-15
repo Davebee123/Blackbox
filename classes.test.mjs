@@ -207,7 +207,16 @@ test('Infiltrator: Inject is one heavy burn a part, and pressing it again refres
   big(b, 'pulse');
   b.encounter.burns.push({ id: 'inject', target: 'pulse', damage: 0, grow: 0, left: 5, name: 'Inject', drain: 0 });
   act(b, 'backdoor pulse');
-  assert.equal(lost(b, 'pulse'), 24 + ABILITIES.backdoor.perBurn, `24 + ${ABILITIES.backdoor.perBurn} for one burn`);
+  assert.equal(lost(b, 'pulse'), 24 + ABILITIES.backdoor.burning, `24 + ${ABILITIES.backdoor.burning} on a burning part`);
+  const b2 = quiet(start('infiltrator'));
+  big(b2, 'pulse');
+  for (let i = 0; i < 3; i++) b2.encounter.burns.push({ id: 'purge', target: 'pulse', damage: 0, grow: 0, left: 5, name: 'Purge', drain: 0 });
+  act(b2, 'backdoor pulse');
+  assert.equal(lost(b2, 'pulse'), 24 + ABILITIES.backdoor.burning, 'a flat bonus: three burns pay what one does');
+  const b3 = quiet(start('infiltrator'));
+  big(b3, 'pulse');
+  act(b3, 'backdoor pulse');
+  assert.equal(lost(b3, 'pulse'), 24, 'no burn: the base');
   const d = noArmor(quiet(start('infiltrator')));
   big(d, 'pulse');
   act(d, 'inject pulse');

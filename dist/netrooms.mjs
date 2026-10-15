@@ -507,9 +507,21 @@ FP.WORLD.view = {
   offNote: (s, room) => (room.extra === 'grid' ? 'A Grid consortium\'s socket: offline outside one.' : undefined),
   // Contracts on this server (mail.mjs): the item you carry for this room, the rooms a job marks, each job's progress.
   plantHere: (s, room) => { const loc = locOf(s); return loc ? payloadFor(s, loc, room) : null; },
-  marks: (s) => { const loc = locOf(s); return loc ? roomMarks(s, loc) : {}; },
+  marks: (s) => { const loc = locOf(s); return loc ? roomMarks(s, loc, liveFights(s, loc)) : {}; },
   jobs: (s) => { const loc = locOf(s); return loc ? jobsOn(s, loc) : []; },
 };
+
+// The live viruses in the rooms you know on this server, as a contract reads a kill (roomKill's terms): the marks.
+function liveFights(s, loc) {
+  const out = [];
+  for (const room of FP.roomList(s)) {
+    if (!['process', 'elite', 'guard', 'core'].includes(room.kind) || room.mirror || !FP.known(s, room.id) || !FP.isUp(s, room)) continue;
+    const v = FP.virusOf(s, room), sp = room.wild ? spawnOf(s, room, loc) : null;
+    out.push({ id: room.id, family: lineageOf(v.family), zone: !!loc.zone, name: sp?.bounty ? sp.name : null, level: v.level, strain: v.strain || null,
+      encrypts: v.parts.some((p) => p.attack?.effect === 'encrypt'), core: room.kind === 'core', server: s.rooms.type === 'server' });
+  }
+  return out;
+}
 
 // A respawned fight room on a server you hold: tending it (Root climbs on these) counts as building in your XP mix,
 // as the old log rotations did; the kill pays the same.

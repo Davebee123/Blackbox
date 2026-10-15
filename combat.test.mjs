@@ -544,7 +544,7 @@ test('level gap, WoW-style: one level up is about even; past that, it takes less
   } finally { CONFIG.gap = saved; }
 });
 
-test('codex: a component says ??? until you break one, then its numbers, and its rule at research 5', async () => {
+test('codex: a component says ??? until its research reaches 3, then its numbers, and its rule at research 15', async () => {
   const { knowsPart, codexKey } = await import('./dist/combat.mjs');
   const { boardMarkup } = await import('./dist/view.mjs');
   const s = fresh();
@@ -553,11 +553,12 @@ test('codex: a component says ??? until you break one, then its numbers, and its
   const v = s.encounter.virus, p = v.parts.find((x) => x.id === 'pulse');
   assert.ok(!knowsPart(s, v, p));
   assert.match(boardMarkup(s, null), /title="Pulse Node: \?\?\?\nBreak one, cut it or answer its tell to decode it\."/);
+  s.research[codexKey(v, p)] = 2; // two research in: this break decodes it
   Object.assign(p, { armor: 0, integrity: 1 });
   command(s, 'spike pulse');
   const ev = resolveCycle(s);
   assert.ok(ev.some((e) => e.type === 'codex'));
-  assert.equal(s.research[codexKey(v, p)], 1, 'research 1: decoded');
+  assert.equal(s.research[codexKey(v, p)], 3, 'research 3: decoded');
   // The next CRYPTJACK's Pulse Node is known on sight; a worm's is its own part, still ???.
   const t = fresh(); t.research = { ...s.research };
   command(t, 'encounter cryptjack'); command(t, 'engage');

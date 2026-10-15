@@ -94,7 +94,7 @@ test('walking into an unknown room that holds a virus still stops you at the doo
   assert.ok(FP.known(s, fight.id), 'and now you know it');
   const card = pop(roomsMarkup(s, ui));
   assert.match(card, /data-rooms="engage"[\s\S]*data-rooms="back"/);
-  assert.match(card, new RegExp(`<h1>${fight.path}</h1>`));
+  assert.match(card, new RegExp(`<h1>${FP.virusName(s, fight)}</h1>`), 'its card is titled by the virus in it');
 });
 
 test('a discovered room keeps its icon, name, badges, live light and ring from afar, across visits and at home', () => {
@@ -106,7 +106,7 @@ test('a discovered room keeps its icon, name, badges, live light and ring from a
   let chip = tile(s, post.id);
   assert.match(chip, /class="fp-room k-guard t-hot/);
   assert.match(chip, /href="#fp-i-elite"/);
-  assert.match(chip, />ELITE( \d)?</, 'its name plate');
+  assert.match(chip, new RegExp(`>${FP.virusName(s, post)}<`), 'its name plate: the guard in it');
   assert.match(chip, /fp-tag key[\s\S]*>KEY</);
   assert.match(chip, /class="fp-live"/, 'its live light');
   assert.match(tile(s, p.id), /class="fp-respawn hot"/, 'its respawn ring');

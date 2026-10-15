@@ -14,7 +14,7 @@ import { addrsOf, byAddr, sweepRooms } from './dist/address.mjs';
 import { roomsFor, rogueGraph, sprawlGraph, farmGraph, addRootSocket, addStash } from './dist/netrooms.mjs';
 import { ROGUE } from './dist/rogue.mjs';
 import { initMail, roomOffer, ROOM_JOBS, MAIL, offers, openContracts, ready, progress, title, tickMail, rewardLine } from './dist/mail.mjs';
-import { roomsMarkup, fpUi } from './dist/floorplan-view.mjs';
+import { roomsMarkup, fpUi, labelOf, pickRoom } from './dist/floorplan-view.mjs';
 import { mailMarkup, mapMarkup } from './dist/view.mjs';
 import { sizeOf } from './dist/sockets.mjs';
 
@@ -325,4 +325,73 @@ test('room contracts and addresses keep through a save: the job, its item in you
   assert.ok(back.mail.jobs.some((x) => x.type === 'defuse'));
   assert.match(mapMarkup(back, L.id, 'net'), new RegExp(`Install an? [^<]* at ${c.addr}`), 'the server card lists it');
   assert.match(mapMarkup(back, L.id, 'net'), /In your pack/, 'with its progress');
+});
+
+test('contract marks: the rooms you know whose live virus a kill, strain or bounty job would count, an Encryptor for a defuse job, the Core for a takeover', () => {
+  const { s, loc } = setup();
+  play(s, 'connect ' + loc.id);
+  const R = s.rooms, g = R.graph;
+  for (const id of Object.keys(g.rooms)) R.seen[id] = 'kind';
+  const marked = (html) => new Set([...html.matchAll(/<g class="fp-room[^"]*" data-room="([^"]+)"[\s\S]*?(?=<g class="fp-room|$)/g)].filter((m) => /class="fp-addr job"/.test(m[0])).map((m) => m[1]));
+  assert.equal(marked(roomsMarkup(s)).size, 0, 'no job, no mark');
+  const fights = FP.roomList(s).filter((r) => ['process', 'elite'].includes(r.kind) && !r.mirror && FP.isUp(s, r));
+  assert.ok(fights.length >= 2, 'live viruses to mark');
+  // A kill job for this server's family: every live one of it, and nothing else.
+  s.mail.jobs.push({ id: 'k1', type: 'kill', family: 'ransomware', count: 3, got: 0, level: 12, reward: { credits: 1 } });
+  const want = fights.filter((r) => FP.virusOf(s, r).family === 'ransomware').map((r) => r.id);
+  assert.ok(want.length, 'a ransomware room');
+  let m = marked(roomsMarkup(s));
+  for (const id of want) assert.ok(m.has(id), `${id} is marked`);
+  assert.ok(!m.has(g.entry), 'not the entry');
+  const tip = roomsMarkup(s).match(new RegExp(`data-room="${want[0]}"[^>]*title="([^"]*)"`))[1];
+  assert.match(tip, /Contract: Kill 3 Ransomware viruses, Lv 8\+\./, 'its tooltip names the job');
+  // Done: the marks go.
+  s.mail.jobs.at(-1).got = 3;
+  assert.equal(marked(roomsMarkup(s)).size, 0, 'a finished count marks nothing');
+  // A room you don't know isn't marked: its virus is fog.
+  s.mail.jobs.at(-1).got = 0;
+  R.seen[want[0]] = 'shape';
+  assert.ok(!marked(roomsMarkup(s)).has(want[0]), 'fog stays fog');
+  R.seen[want[0]] = 'kind';
+  s.mail.jobs.pop();
+  // A defuse job: the rooms with an Encryptor in them.
+  take(s, 'defuse');
+  const enc = fights.filter((r) => FP.virusOf(s, r).parts.some((p) => p.attack?.effect === 'encrypt')).map((r) => r.id);
+  m = marked(roomsMarkup(s));
+  assert.deepEqual([...m].filter((id) => fights.some((r) => r.id === id)).sort(), enc.sort());
+  s.mail.jobs = s.mail.jobs.filter((c) => c.type !== 'defuse');
+  // A takeover: the Core, while it isn't yours.
+  s.mail.jobs.push({ id: 't1', type: 'takeover', loc: loc.id, reward: { credits: 1 } });
+  assert.ok(marked(roomsMarkup(s)).has(g.core), 'the Core');
+  loc.takenOver = true;
+  assert.ok(!marked(roomsMarkup(s)).has(g.core), 'not once it is yours');
+});
+
+test('a fight room is named by the virus in it: on its plate (its stem and tag alone), its card and its tooltip; cleared, by its kind again', () => {
+  const { s, loc } = setup();
+  play(s, 'connect ' + loc.id);
+  const R = s.rooms;
+  for (const id of Object.keys(R.graph.rooms)) R.seen[id] = 'kind';
+  const room = FP.roomList(s).find((r) => r.kind === 'process' && !r.mirror && FP.isUp(s, r));
+  const elite = FP.roomList(s).find((r) => r.kind === 'elite' && !r.mirror && FP.isUp(s, r));
+  const name = FP.virusName(s, room);
+  assert.match(name, /^[A-Z][A-Z -]*-\d{4}$/, 'a virus name, not Process');
+  assert.equal(labelOf(s, room), name);
+  const chip = (html, id) => html.match(new RegExp(`data-room="${id}"[\\s\\S]*?(?=<g class="fp-room|$)`))[0];
+  let html = roomsMarkup(s);
+  assert.match(chip(html, room.id), new RegExp(`class="fp-name"[^>]*>${name.match(/\S+-\d{4}$/)[0]}</text>`), 'the plate: its stem and tag');
+  assert.match(chip(html, room.id), new RegExp(`title="${name}: `));
+  if (elite) {
+    const en = FP.virusName(s, elite);
+    assert.match(en, /^ELITE /);
+    assert.match(chip(html, elite.id), new RegExp(`class="fp-name"[^>]*>${en.match(/\S+-\d{4}$/)[0]}</text>`), 'the elite chip says Elite already');
+  }
+  const ui = { sel: null, selAt: null, closed: null };
+  pickRoom(s, room.id, ui);
+  assert.match(roomsMarkup(s, ui).match(/<div class="map-pop fp-pop"[\s\S]*$/)[0], new RegExp(`<h1>${name}</h1>`), 'its card');
+  // Beaten: no virus in it, so its kind names it.
+  reach(s, room.id);
+  assert.ok(!FP.isUp(s, room));
+  assert.equal(labelOf(s, room), room.path);
+  assert.match(chip(roomsMarkup(s), room.id), new RegExp(`class="fp-name"[^>]*>${room.path.toUpperCase()}</text>`));
 });

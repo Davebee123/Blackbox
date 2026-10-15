@@ -509,11 +509,19 @@ export function contractStood(s, loc, R) {
   }
 }
 // The rooms a job marks on its server's map (an Install's room, a heist's vault), with the job's title.
-export function roomMarks(s, loc) {
-  const out = {};
+// fights: the live viruses in the rooms you know on it ({ id, family, zone, name, level, strain, encrypts, core,
+// server }, netrooms.mjs): a kill, strain or bounty job marks the rooms whose virus would count, a defuse job the ones
+// with an Encryptor, a takeover the Core. Several jobs on one room read as one line.
+export function roomMarks(s, loc, fights = []) {
+  const out = {}, add = (id, c) => { if (id) out[id] = out[id] ? `${out[id]}; ${title(s, c)}` : title(s, c); };
   for (const c of openContracts(s).filter((x) => x.loc === loc.id)) {
-    if (c.type === 'install' && !c.got) out[c.room] = title(s, c);
-    if (c.type === 'heist' && !ready(s, c)) { const v = loc.floorplan?.graph.vaults?.[0]; if (v) out[v] = title(s, c); }
+    if (c.type === 'install' && !c.got) add(c.room, c);
+    if (c.type === 'heist' && !ready(s, c)) add(loc.floorplan?.graph.vaults?.[0], c);
+  }
+  for (const f of fights) {
+    for (const c of wantedBy(s, f)) add(f.id, c);
+    if (f.encrypts) for (const c of openContracts(s)) if (c.type === 'defuse' && c.got < c.count) add(f.id, c);
+    if (f.core && f.server && !loc.takenOver) for (const c of openContracts(s)) if (c.type === 'takeover' && !ready(s, c) && (c.any || c.loc === loc.id)) add(f.id, c);
   }
   return out;
 }

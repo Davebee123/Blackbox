@@ -50,25 +50,26 @@ test('names and bylines: WARDED CRYPTJACK-4821 v2 · TOLLGATE, a named build kee
   if (!['bouncer', 'tracer', 'sentinel'].includes(t.encounter.virus.family)) assert.equal(t.encounter.virus.author, 'glassjaw');
 });
 
-test('the rules\' chips: ??? until met, seen in a fight; a part\'s rule at its research 5, a mutation\'s at two kills', () => {
+test('the rules\' chips: ??? until met, seen in a fight; a part\'s rule at its research 15, a mutation\'s at two kills', () => {
   const s = at(12);
   assert.equal(geneState(s, 'surge'), 'unknown');
   selectEncounter(s, 'random', 5, { level: 12, family: 'ransomware', genes: ['ward'], mutation: 'armored' });
   command(s, 'engage');
   for (const id of ['surge', 'encrypt', 'ward', 'armored']) assert.equal(geneState(s, id), 'seen', id);
   assert.equal(geneState(s, 'mimic'), 'unknown');
-  // Break the Lockbox: it's decoded (research 1), but Ward's rule waits for research 5 on a part that carries it.
+  // Break the Lockbox from research 2: it's decoded (research 3), but Ward's rule waits for research 15 on a part that carries it.
   const lock = part(s, 'lockbox');
+  s.research['ransomware:lockbox'] = 2;
   Object.assign(lock, { armor: 0, integrity: 1 });
   command(s, 'spike lockbox');
   const ev = resolveCycle(s);
   const line = ev.find((e) => e.type === 'codex');
-  assert.equal(line?.message, 'Lockbox decoded: research 1. Hover it to see its numbers.');
+  assert.equal(line?.message, 'Lockbox decoded: research 3. Hover it to see its numbers.');
   assert.doesNotMatch(line.message, /gene|Ward/i, 'the decode names the part, nothing else');
-  assert.equal(s.research['ransomware:lockbox'], 1);
+  assert.equal(s.research['ransomware:lockbox'], 3);
   assert.equal(geneState(s, 'ward'), 'seen', 'a decode alone is not its rule');
-  s.research['ransomware:lockbox'] = 5;
-  assert.equal(geneState(s, 'ward'), 'decoded', 'research 5: its rule');
+  s.research['ransomware:lockbox'] = 15;
+  assert.equal(geneState(s, 'ward'), 'decoded', 'research 15: its rule');
   // Two kills of an Armored virus decode Armored (mutations stay as they were).
   win(s);
   assert.equal(s.geneCodex.armored.kills, 1);
@@ -80,7 +81,7 @@ test('the rules\' chips: ??? until met, seen in a fight; a part\'s rule at its r
   assert.equal(geneState(s, 'armored'), 'decoded');
 });
 
-test('knowledge stays on the part: a worm\'s Pulse Node is not known because you researched a ransomware one, and an older save\'s part codex is research 1', () => {
+test('knowledge stays on the part: a worm\'s Pulse Node is not known because you researched a ransomware one, and an older save\'s part codex is research 3', () => {
   const raw = JSON.parse(JSON.stringify(fresh()));
   delete raw.research;
   raw.codex = { 'ransomware:pulse': true, 'ransomware:lockbox': true, 'keylogger:logger': true };
@@ -88,9 +89,9 @@ test('knowledge stays on the part: a worm\'s Pulse Node is not known because you
   delete raw.geneCodex;
   const old = restore(raw);
   selectEncounter(old, 'cryptjack', 3, { level: 8 });
-  assert.deepEqual(old.research, { 'ransomware:pulse': 1, 'ransomware:lockbox': 1, 'keylogger:logger': 1 }, 'each part it decoded starts at 1');
+  assert.deepEqual(old.research, { 'ransomware:pulse': 3, 'ransomware:lockbox': 3, 'keylogger:logger': 3 }, 'each part it decoded starts at 3');
   assert.ok(knowsPart(old, old.encounter.virus, old.encounter.virus.parts.find((p) => p.id === 'pulse')));
-  for (const id of ['surge', 'ward', 'synclock', 'keystrokedump']) assert.notEqual(geneState(old, id), 'decoded', `${id}: research 1 is not its rule`);
+  for (const id of ['surge', 'ward', 'synclock', 'keystrokedump']) assert.notEqual(geneState(old, id), 'decoded', `${id}: research 3 is not its rule`);
   assert.equal(geneState(old, 'scramble'), 'seen', 'a family you met shows its body\'s rules as seen');
   assert.equal(geneState(old, 'decoymirror'), 'unknown', 'but not the third parts you never saw');
   old.encounter = null;
@@ -152,7 +153,7 @@ test('inspect: a part\'s rules, what each does once its research says so, and no
   command(s, 'inspect mirror');
   const say = s.logs.slice(n).map((e) => e.message).join('\n');
   assert.match(say, /The Mirror carries Twin/);
-  assert.match(say, /You haven't learned Twin yet\. Research the Mirror to 5 to learn what it does\./);
+  assert.match(say, /You haven't learned Twin yet\. Research the Mirror to 15 to learn what it does\./);
   assert.doesNotMatch(say, /gene/i);
   assert.equal(s.encounter.queue, null, 'no command queued');
   // A fight's card, free: scan mid-fight.

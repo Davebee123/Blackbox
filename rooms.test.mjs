@@ -549,12 +549,12 @@ test('Schematic HD: chips by kind and colour, KEY, LOCKED and SEALED, the hunter
   wide = wideOf(roomsMarkup(s));
   assert.equal(tone(vault.id)[1], 'gray', 'an opened vault is used');
   assert.doesNotMatch(chipOf(wide, g.core), />SEALED</);
-  // A pop-up on the key's room calls it an elite and still names its enemy.
+  // A pop-up on the key's room is titled by the guard in it (the room is an Elite by kind).
   R.opened = {}; R.visit.keys = [];
   const ui = { sel: null, selAt: null, closed: null };
   pickRoom(s, post.id, ui);
   const card = roomsMarkup(s, ui).match(/<div class="map-pop fp-pop"[\s\S]*$/)[0];
-  assert.match(card, new RegExp(`<h1>${post.path}</h1>`));
+  assert.match(card, new RegExp(`<h1>${GUARDS[post.guard].name.toUpperCase()}</h1>`));
   assert.match(card, new RegExp(GUARDS[post.guard].name));
   assert.match(card, /Carries the Vault key/);
   // Traces: a bed and a line for every link, no via dots; the links out of your room flow amber.

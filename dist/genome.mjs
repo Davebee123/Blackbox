@@ -5,7 +5,7 @@
 // What a rule's chip shows (chipOf):
 //   unknown  never met: ??? with its category
 //   seen     it was in a fight with you (a tell, once it was said): its name, axis and category
-//   decoded  its rule and its answer. A part's rule (decode 'part'): a part that carries it is at research 5
+//   decoded  its rule and its answer. A part's rule (decode 'part'): a part that carries it is at research 15
 //            (research.mjs). A tell's: you answered it once. A mutation's or a whole-virus rule's (decode 'kills'):
 //            you beat two viruses that carry it (the Codex's mutation page)
 // State lives in s.geneCodex ({ id: { seen, decoded, kills, by } }) for what isn't a part's, and s.research for a part's.
@@ -31,7 +31,7 @@ export const bylined = (v) => (v.author && AUTHORS[v.author] ? `${v.name} · ${A
 
 // ---------- the codex ----------
 // A family or strain met shows its core parts' rules as seen (a save from before the record). A part's rule is decoded
-// once any part that carries it is at research 5 (research.mjs).
+// once any part that carries it is at research 15 (research.mjs).
 const SPECS = Object.fromEntries([...Object.entries(FAMILIES), ...Object.entries(ROOM_FAMILIES), ...Object.entries(STRAINS), ...Object.entries(GUARDS)].map(([k, f]) => [k, f.parts]));
 const specAt = (key) => { const [k, pid] = key.split(':'); return SPECS[k]?.find((p) => p.id === pid) || null; };
 const ruleKnown = (s, id) => Object.entries(s.research || {}).some(([key, n]) => n >= TIER.rule && partGenes(specAt(key)).includes(id));

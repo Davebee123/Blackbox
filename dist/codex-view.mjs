@@ -1,6 +1,6 @@
 // The Codex tab (codex.mjs is the model): an index on the left, grouped, and the entry you picked on the right. Names,
 // numbers and terse lines in tooltip grammar (docs/style-guide.md); ??? for anything you haven't met or researched,
-// with what unlocks it. Each part card carries its research (research.mjs) as a bar with marks at 1, 5 and 20. Teal
+// with what unlocks it. Each part card carries its research (research.mjs) as a bar with marks at 3, 15 and 60. Teal
 // is only ever you: your kills, your level. On a phone the index folds into a bar over the entry (app.js codexIdx).
 // The entry's art is a canvas (#cx-canvas) that app.js draws with the fight board's renderer (virus-art.mjs).
 import { esc, masteredMark } from './view.mjs';
@@ -49,9 +49,9 @@ function hitsWord(p) {
   const what = { encrypt: 'encrypts you', replicate: 'spawns fragments', scramble: 'hits and scrambles you', heal: 'heals its parts' }[a.effect] || 'hits you';
   return `${a.name} · ${what}`;
 }
-// Its research: a bar of 20 with marks at 1, 5 and 20 (each lit once reached), and n/20.
+// Its research: a bar of 60 with marks at 3, 15 and 60 (each lit once reached), and n/60.
 function researchBar(n) {
-  const marks = RESEARCH.tiers.map((t) => `<i class="cxr-mk${n >= t ? ' on' : ''}" style="left:${(t / RESEARCH.max) * 100}%" title="${esc(t === TIER.decoded ? 'Research 1: its numbers' : t === TIER.rule ? `Research ${t}: its rule, its answer and its tells` : `Research ${t}: its loot and its mastery`)}"></i>`).join('');
+  const marks = RESEARCH.tiers.map((t) => `<i class="cxr-mk${n >= t ? ' on' : ''}" style="left:${(t / RESEARCH.max) * 100}%" title="${esc(t === TIER.decoded ? `Research ${t}: its numbers` : t === TIER.rule ? `Research ${t}: its rule, its answer and its tells` : `Research ${t}: its loot and its mastery`)}"></i>`).join('');
   return `<div class="cxp-res" title="${esc(`Research ${n}/${RESEARCH.max}. Break it +${RESEARCH.points.break}, cut its move with a tick +${RESEARCH.points.cut}, answer a tell it rides +${RESEARCH.points.tell}.`)}"><span class="cx-label">Research</span><span class="cxr-bar"><b style="width:${(Math.min(n, RESEARCH.max) / RESEARCH.max) * 100}%"></b>${marks}</span><small class="cxr-n${n >= RESEARCH.max ? ' full' : ''}">${n}/${RESEARCH.max}</small></div>`;
 }
 const locked = (text) => `<p class="cxp-lock"><span>${UNKNOWN}</span>${esc(text)}</p>`;
@@ -66,7 +66,7 @@ function partCard(level, x, tells = []) {
   const head = `<div class="cxp-head"><b>${esc(p?.name || x.spec.name)}${mast ? masteredMark(p || x.spec) : ''}</b>${p?.special ? '<span class="tag" title="Its family\'s signature part">signature</span>' : ''}${opens}</div>`;
   const bar = researchBar(n);
   if (!x.known) {
-    return `<div class="cx-part t0">${head}${bar}<p class="cxp-hits">${esc(hitsWord(p))}</p><div class="cxp-stats"><span>${UNKNOWN} Integrity</span><span>◆ ${UNKNOWN}</span></div>${locked('Research 1 to learn its numbers. Break one, cut it or answer its tell.')}</div>`;
+    return `<div class="cx-part t0">${head}${bar}<p class="cxp-hits">${esc(hitsWord(p))}</p><div class="cxp-stats"><span>${UNKNOWN} Integrity</span><span>◆ ${UNKNOWN}</span></div>${locked(`Research ${TIER.decoded} to learn its numbers. Break one, cut it or answer its tell.`)}</div>`;
   }
   const atk = a ? `<div class="cxp-atk"><b>${esc(a.name)}</b><span class="cxp-dmg">${esc(hitLine(p))}</span><span class="cxp-when">${esc(a.due >= 900 ? 'when it wakes' : `${every(a.interval)} · first on ${a.due}`)}</span></div>` : `<div class="cxp-atk none"><b>No attack</b></div>`;
   const stats = `<div class="cxp-stats"><span><b>${p.max}</b> Integrity</span><span title="${p.maxArmor ? `${p.maxArmor} ◆: each hit that lands breaks one before it does damage` : 'No armor'}">${p.maxArmor ? `◆ <b>${p.maxArmor}</b>` : 'no ◆'}</span>${p.veiled ? '<span class="tag dim" title="Hides its timers while it wears ◆">veiled</span>' : ''}</div>`;
@@ -114,7 +114,7 @@ function bodyPage(s, e) {
   return head + rule + parts + sets + tells + loot;
 }
 
-// The pieces its parts drop: each one ??? until that part is at research 20.
+// The pieces its parts drop: each one ??? until that part is at research 60 (mastered).
 const lootList = (parts) => `<ul class="cx-loot">${parts.filter((x) => x.spec.loot).map((x) => { const open = x.research >= RESEARCH.max; return `<li class="${open ? '' : 'unknown'}">${glyph('salvage')}<b>${esc(open ? x.spec.loot : UNKNOWN)}</b><small>${esc(x.named ? x.spec.name : UNKNOWN)}</small></li>`; }).join('')}</ul>`;
 const pctOf = (parts) => (parts.length ? Math.round((parts.reduce((n, x) => n + Math.min(x.research, RESEARCH.max) / RESEARCH.max, 0) / parts.length) * 100) : 0);
 

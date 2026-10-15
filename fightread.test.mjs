@@ -173,7 +173,7 @@ test('a conditional rule that fires names itself on the hit: a crit from Clock S
   } finally { delete CONFIG.baseCrit; }
 });
 
-test('part tooltips by research: ??? and how to decode it, then its attack and a cue on its row at 1, then what it does and how to answer it at 5', () => {
+test('part tooltips by research: ??? and how to decode it, then its attack and a cue on its row at 3, then what it does and how to answer it at 15', () => {
   let s = null;
   for (let seed = 1; seed < 20 && !s; seed++) { const x = fight({ seed }); if (x.encounter.virus.parts.some((p) => p.lock)) s = x; }
   const v = s.encounter.virus, mutex = part(s, 'mutex'), enc = part(s, 'encryptor');
@@ -183,10 +183,10 @@ test('part tooltips by research: ??? and how to decode it, then its attack and a
   let html = boardMarkup(s, null);
   assert.match(html, /<div class="bcell bname" title="Mutex: \?\?\?\nBreak one, cut it or answer its tell to decode it\.">/);
   assert.doesNotMatch(html, /class="pcue"/);
-  s.research = { [codexKey(v, mutex)]: 1 };
-  assert.equal(partTip(s, v, mutex), 'Mutex: It has no attack of its own.\nResearch 5 to learn its rule and answer.', 'decoded: its attack, its rule waits');
+  s.research = { [codexKey(v, mutex)]: 3 };
+  assert.equal(partTip(s, v, mutex), 'Mutex: It has no attack of its own.\nResearch 15 to learn its rule and answer.', 'decoded: its attack, its rule waits');
   assert.match(boardMarkup(s, null), /<span class="pcue" data-link="encryptor">[\s\S]*?locks Encryptor<\/span>/, 'and its cue on its row');
-  s.research = { [codexKey(v, mutex)]: 5 };
+  s.research = { [codexKey(v, mutex)]: 15 };
   assert.equal(partTip(s, v, mutex), `Mutex: Locks the Encryptor behind a ${enc.lockMax} shield that takes every hit first. While the Mutex stands, the lock comes back ${CONFIG.mutex.every} cycles after you break it.\nBreak the Mutex first, or break the lock and finish the Encryptor within ${CONFIG.mutex.every} cycles.`);
   html = boardMarkup(s, null);
   assert.match(html, /<span class="pcue" data-link="encryptor">[\s\S]*?locks Encryptor<\/span>/);
@@ -246,7 +246,7 @@ test('the Mutex\'s lock on the Encryptor\'s own bar: a segment as wide as the lo
   const f = floatOf(hitEv, { partName: () => 'Encryptor', skillName: () => 'Spike' });
   assert.deepEqual([f.kind, f.text, f.at], ['shield', `−${hitEv.shield} absorbed`, 'part'], 'the number is the lock\'s');
   // Decoded, the segment says whose it is.
-  s.research = { [codexKey(s.encounter.virus, part(s, 'mutex'))]: 1 };
+  s.research = { [codexKey(s.encounter.virus, part(s, 'mutex'))]: 3 };
   assert.match(segOf(boardMarkup(s, null), 'encryptor').row, /title="Lock \d+\/50: the Mutex&#39;s shield on the Encryptor\. Every hit on it drains the lock first\."/);
 });
 
@@ -261,7 +261,7 @@ test('a tether between the Mutex and the Encryptor: ? and ??? until decoded, glo
   assert.ok(ts.every((t) => t.tip === 'Mutex: ???\nSomething on it reaches the Encryptor. Break one to decode what it does.'));
   assert.equal(ts.filter((t) => /<b class="tt-node[^"]*">\?<\/b>/.test(t.inner)).length, 1, 'one node, with ? on it');
   assert.equal(ts.filter((t) => /tt-arm src/.test(t.inner)).length, 1); assert.equal(ts.filter((t) => /tt-arm dst/.test(t.inner)).length, 1);
-  s.research = { [codexKey(v, part(s, 'mutex'))]: 1 };
+  s.research = { [codexKey(v, part(s, 'mutex'))]: 3 };
   ts = tethersOf(boardMarkup(s, null), 'lock');
   assert.ok(ts.every((t) => !/\bunk\b/.test(t.cls)));
   assert.match(ts.find((t) => /tt-node/.test(t.inner)).inner, /<b class="tt-node[^"]*"><svg class="glyph tt-ico"/, 'decoded: its icon');
@@ -299,7 +299,7 @@ test('one visual language for every relation: a Lockbox\'s ward (and a cap line 
   assert.ok(ward.length >= 2 && ward.every((t) => t.links === 'lockbox encryptor' && /\bup\b/.test(t.cls)));
   const cap = Math.round(100 * CONFIG.ward);
   assert.match(segOf(html, 'encryptor').row, new RegExp(`<i class="wardcap" data-left="${cap}" style="left:${100 - cap}\\.00%"`), 'the cap: the most it can lose this cycle');
-  s.research = { [codexKey(s.encounter.virus, part(s, 'lockbox'))]: 1 };
+  s.research = { [codexKey(s.encounter.virus, part(s, 'lockbox'))]: 3 };
   html = boardMarkup(s, null);
   assert.match(tethersOf(html, 'ward')[0].tip, new RegExp(`^Lockbox ward: the Encryptor loses at most ${cap} Integrity a cycle \\(${cap} left this cycle\\)\\.`));
   assert.match(html, new RegExp(`title="Ward cap: the Encryptor can lose ${cap} more this cycle`));
@@ -347,7 +347,7 @@ test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier w
   let tt = tethersOf(boardMarkup(s, null), 'redeploy');
   assert.ok(tt.length >= 2 && tt.every((t) => t.links === 'loader courier' && /\bup\b/.test(t.cls)), 'Loader to Courier');
   assert.match(tt[0].tip, /^Loader: \?\?\?/, '??? until the Loader is decoded');
-  s.research = { [codexKey(v, part(s, 'loader'))]: 5 };
+  s.research = { [codexKey(v, part(s, 'loader'))]: 15 };
   tt = tethersOf(boardMarkup(s, null), 'redeploy');
   assert.match(tt[0].tip, /^Loader redeploy: break the Courier while the Loader stands and it comes back 4 cycles later at 50% Integrity, every time\./);
   Object.assign(courier, { armor: 0, integrity: 1 });
@@ -372,7 +372,7 @@ test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier w
   assert.match(partRead(c, cv, part(c, 'replicator')).does, /Break the Maw while the Brood stands and its Brood hits you for the Maw's Bite too\./);
   // A Bouncer's Keyring says it on its re-arm tether (no second tether to the same Gate), and the Patcher in its read.
   const b = at(12); selectEncounter(b, 'bouncer', 3); command(b, 'engage');
-  b.research = { [codexKey(b.encounter.virus, part(b, 'encryptor'))]: 5 };
+  b.research = { [codexKey(b.encounter.virus, part(b, 'encryptor'))]: 15 };
   assert.equal(tethersOf(boardMarkup(b, null), 'fallback').length, 0);
   assert.match(tethersOf(boardMarkup(b, null), 'rearm')[0].tip, /Break the Gate while the Keyring stands and the Keyring takes over its Ram\./);
   const p = at(12); selectEncounter(p, 'patchwork', 3, { level: 12, mutation: null }); command(p, 'engage');

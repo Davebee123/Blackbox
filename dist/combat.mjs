@@ -290,7 +290,7 @@ export function skillBase(s, id, p) {
   if (id === 'overload') base = (hasTalent(s, 'hair-trigger') ? 35 : base) + 4 * rank(s, 'heat-sink');
   const e = s.encounter;
   if (id === 'rate-limit') base += 4 * rank(s, 'token-bucket') + (p?.attack && p.attack.due <= e?.cycle ? a.due : 0); // choke it as it sends: more if its attack is due now
-  if (id === 'backdoor') base += 4 * rank(s, 'backchannel') + a.perBurn * burnsOn(s, p).length;
+  if (id === 'backdoor') base += 4 * rank(s, 'backchannel') + (burnsOn(s, p).length ? a.burning : 0); // a flat bonus on a burning part, however many burns
   if (id === 'opening') base += 5 * rank(s, 'recon');
   if (id === 'flood' && p && !(p.armor > 0)) base *= 2;
   if (id === 'exploit' && hasTalent(s, 'sharp-exploit')) base = 20;
@@ -2387,7 +2387,7 @@ export function hit(s, p, base, opts = {}) {
   ].filter((x) => x.fx.if) : [];
   // shield: what the Mutex's lock took of it, from lockWas, with the part at hp after the hit (the board's lock segment
   // drains by it: view.mjs, app.js; dmgfx.mjs's number says it was absorbed).
-  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), ...(lockLost ? { shield: lockLost, lockWas, hp: p.integrity } : {}) });
+  emit(s, 'damage', `${opts.by ? opts.by + ': ' : ''}${p.name} −${dealt}${notes.length ? ` (${notes.join(', ')})` : ''}. ${p.integrity}/${p.max}.`, { target: p.id, amount: dealt, crit, ...srcOf(e, opts), ...firedOf(fired), hp: p.integrity, ...(lockLost ? { shield: lockLost, lockWas } : {}) }); // hp: what's left after this hit (the board steps its bar down hit by hit)
   if (unlocked) emit(s, 'armor', `The ${p.name}'s lock breaks. The Mutex locks it again in ${CONFIG.mutex.every} cycles unless you break the Mutex.`, { target: p.id, left: p.armor, lock: 'broke' });
   // A server room's bodies' own rules on a hit (families.mjs: a Trojan's Package unpacks). 'gone': the part left the
   // board without breaking. Then the interrupt's ticks (interrupt.mjs), in every fight that has them.
@@ -3815,7 +3815,7 @@ export function restore(raw) {
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
     dexOf(s); // the Codex tab's record (genome.mjs): an older save starts it empty (its sets come from each server's floorplan codex)
-    researchOf(s); // part research (research.mjs): an older save's decoded parts start at 1
+    researchOf(s); // part research (research.mjs): an older save's decoded parts start decoded, and research on the old 1/5/20 scale is tripled once
     initMail(s);
     { const back = retireOutposts(s, was); const l = back && s.locations?.length ? retireLetter(back) : null; if (l) systemLetter(s, l); } // v40: outposts, services and the rest retire (sockets.mjs)
     syncFlags(s); // servers a relay already pings get their route files

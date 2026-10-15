@@ -531,7 +531,7 @@ test('genomes: a mutation lives on a part, and breaking that part ends the rule;
   const t = breach('breaker', 3), m = reachable(t)[0];
   Object.assign(m, { genes: ['ward'], third: 'ward', muts: [] });
   assert.match(breachMarkup(t), /gchip g-rolled unknown/);
-  t.research = { 'ransomware:lockbox': 5 }; // research 5 on the part that carries it: its rule (research.mjs)
+  t.research = { 'ransomware:lockbox': 15 }; // research 15 on the part that carries it: its rule (research.mjs)
   assert.match(breachMarkup(t), /gchip g-rolled[^"]*"[^>]*>[\s\S]*?ward/);
   assert.ok(!generateMap(5, 10).nodes.core.genes, 'the Resident rolls none');
 });

@@ -468,6 +468,41 @@ function lashAt(e, mode, frac = 0, heavy = false) {
 }
 const LASH_TRAVEL = 140; // ms: a hit's number shows as the lash lands, not as it leaves the part
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
+// A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
+// while a batch's numbers play out, each damaged part's bar and HP read what it had before that hit, and drop as its
+// number lands. held: part id → the HP shown now; every render re-applies it until the batch has played out.
+const held = new Map();
+function applyHeld() {
+  if (!campaign.encounter?.virus) { held.clear(); return; }
+  const parts = campaign.encounter.virus.parts;
+  for (const p of parts) {
+    const row = document.querySelector(`#board .bpart[data-target="${CSS.escape(p.id)}"]`);
+    if (!row) continue;
+    const hp = held.has(p.id) ? held.get(p.id) : p.integrity;
+    const bar = row.querySelector('.part-bar > span'), txt = row.querySelector('.part-hp');
+    if (bar) bar.style.width = `${Math.max(0, Math.min(100, (hp / (p.max || 1)) * 100))}%`;
+    if (txt) txt.textContent = `${hp}/${p.max}`;
+  }
+  // The virus's total in the HUD follows its parts.
+  const now = parts.reduce((n, p) => n + (held.has(p.id) ? held.get(p.id) : p.integrity), 0), max = parts.reduce((n, p) => n + p.max, 0) || 1;
+  const big = document.querySelector('#hud .hud-bar.enemy .bigbar > span'), num = document.querySelector('#hud .hud-bar.enemy .bar-top > span:last-child');
+  if (big) big.style.width = `${Math.max(0, Math.min(100, (now / max) * 100))}%`;
+  if (num) num.innerHTML = `${now}<small>/${max}</small>`;
+}
+// Hold the bars of every part this batch damages at their HP before it, then step each one at its hit's beat.
+function stepBars(events, delayOf) {
+  const hits = events.filter((e) => e.type === 'damage' && e.target && e.hp != null && campaign.encounter?.virus?.parts.some((p) => p.id === e.target));
+  if (!hits.length) return;
+  const seen = new Set();
+  for (const e of hits) if (!seen.has(e.target)) { seen.add(e.target); if (!held.has(e.target)) held.set(e.target, e.hp + (e.amount || 0)); }
+  const last = new Map(hits.map((e) => [e.target, e]));
+  for (const e of hits) setTimeout(() => {
+    held.set(e.target, e.hp);
+    if (last.get(e.target) === e) held.delete(e.target); // its last hit this batch: the bar is the real one again
+    applyHeld();
+  }, delayOf(e));
+  applyHeld();
+}
 // Health bars as they were before this batch (so a trail can show what went).
 const barWas = () => {
   const e = campaign.encounter;
@@ -798,6 +833,7 @@ function react(events) {
     skillName: (id) => (id === 'spike' ? spikeOf(classOf(campaign)).name : ABILITIES[id]?.name),
   }, { stagger: !stack, start: queueAfter(cueAt - performance.now()) });
   if (split.count && !stack) cueAt = performance.now() + split.total;
+  if (!stack) stepBars(events, split.delay); // the bars drop with the numbers, one hit at a time
   const artHit = (id, kind) => feel.add(() => art.hit(id, kind)); // the render reacts on the event's beat
   // Crewmates' events (crew.mjs). Their turns play a beat apart, so their hits sound like yours.
   // When the virus hits everyone at once, the hits show on each row, and only one of them sounds.
@@ -1595,6 +1631,7 @@ function render(force = false) {
     const turned = shownCycle && shownCycle !== cycleKey && shownCycle.startsWith(s.encounter.virus.id + ':') && canMove();
     const before = turned ? chipSnapshot() : null;
     put('board', (active(s) && s.encounter.paused ? '<div class="pause-strip" role="status">PAUSED · ANY ORDER RESUMES</div>' : '') + V.boardMarkup(s, selected, aimPreview));
+    if (held.size) applyHeld(); // a batch still playing: its bars hold until each hit lands
     $('board').classList.toggle('is-paused', !!(active(s) && s.encounter.paused));
     // Every part on screen: if the rows overflow the board, tighten them (style.css .dense) for the rest of the fight.
     { const bd = $('board'), key = s.encounter.virus.id; if (fitBoard.key !== key) { fitBoard.key = key; bd.classList.remove('dense'); } if (!bd.classList.contains('dense') && bd.scrollHeight > bd.clientHeight + 2) bd.classList.add('dense'); }

@@ -32,7 +32,7 @@ export const SKILL_TEXT = {
   // Infiltrator: know where to hit, and slip through runs.
   inject: { desc: 'Injects a payload into the target, burning it for 20 damage every cycle for 4 cycles. Injecting the same part again refreshes it.', lore: 'By the time it notices, it’s already inside.' },
   tag: { desc: 'Tags the target, dealing 10 damage. For 4 cycles, burns on it deal 50% more damage, and its attack timer shows through a veil.', lore: 'Once you’re tagged, there is nowhere dark enough.' },
-  backdoor: { desc: 'Slips in through a backdoor, dealing 24 damage to the target and ignoring armor. Deals 6 additional damage for each burn on it.', lore: 'Why knock when you left yourself a way in?' },
+  backdoor: { desc: 'Slips in through a backdoor, dealing 24 damage to the target and ignoring armor. Deals 12 additional damage if the target is burning.', lore: 'Why knock when you left yourself a way in?' },
   keepalive: { desc: 'Sends a heartbeat down the wire. Every burn on the target ticks once immediately and lasts 2 cycles longer.', lore: 'Send a heartbeat down the wire and the session never times out.' },
   detonate: { desc: 'Detonates every burn on the target, dealing all their remaining damage at once, increased by 50%.', lore: 'All that patient poison, cashed in at once.' },
   opening: { desc: 'Exploits an opening in the target, dealing 50 damage. Usable only the cycle after an attack misses you or is delayed.', lore: 'It swung and missed. Now it’s wide open.' },

@@ -9,7 +9,7 @@
 //
 // What unlocks what (the same rules as the fight board): an entry's name once you've met it (s.met, a boss once fought:
 // s.dex.fought); a part's name once you've fought its family (a third part: once you've met one), then by its research
-// (research.mjs): its numbers at 1, its rule, answer and tells at 5, its loot at 20; an attack set once you've faced it
+// (research.mjs): its numbers at 3, its rule, answer and tells at 15, its loot at 60; an attack set once you've faced it
 // in a room (s.dex.sets, and each server's floorplan codex); a tell once one was said in your fight (s.dex.tells); a
 // boss's phases once you've fought it.
 import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, BOSSES, MUTATIONS, ROLLED_MUTATIONS, TELLS, TELL, CONFIG, SERVER, createVirus } from './data.mjs';
@@ -125,8 +125,8 @@ export const validKey = (key) => {
 
 // ---------- a body's page ----------
 // Its parts, each with its sample at your level (or at the level it opens, if that's later): { spec, part, virus,
-// level, from, named (its name is yours to see), research (0 to 20, research.mjs), tier (0, 1, 5 or 20), known
-// (decoded: research 1, its numbers) }.
+// level, from, named (its name is yours to see), research (0 to 60, research.mjs), tier (0, 3, 15 or 60), known
+// (decoded: research 3, its numbers) }.
 export function partsOf(s, group, id) {
   const L = levelOf(s), specs = specsOf(group, id), thirds = specs.filter((x) => x.gene);
   const first = thirds.find((x) => x.from <= L)?.gene || null; // the core parts as a virus at your level brings them

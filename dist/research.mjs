@@ -11,30 +11,36 @@
 //             deals 3% more (combat.mjs damageMultiplier, so every preview on the board counts it too)
 //
 // State is s.research ({ key: n }, n capped at 20). fresh() starts it empty and the save restore adds it to an older
-// save (no SAVE_VERSION change, as the Codex's s.dex): every part that save had decoded (s.codex) starts at 1, and
+// save (no SAVE_VERSION change, as the Codex's s.dex): every part that save had decoded (s.codex) starts decoded (research 3), and
 // nothing else is granted.
 import { emit, gainXp, xpFor, DECODE_XP, codexKey as keyOf } from './combat.mjs';
 
 export const RESEARCH = {
-  max: 20,
-  tiers: [1, 5, 20], // decoded, rule, mastered
+  max: 60,
+  tiers: [3, 15, 60], // decoded, rule, mastered (the designer: "you should need to grind quite a few"; were 1, 5, 20)
   points: { break: 1, cut: 1, tell: 2 },
   perk: { drop: 1.25, dmg: 1.03 },
 };
-export const TIER = { decoded: 1, rule: 5, mastered: 20 };
+export const TIER = { decoded: 3, rule: 15, mastered: 60 };
+export const RESEARCH_SCALE = 3; // an older save's research (on the 1/5/20 scale) is tripled once, so nothing it had unlocked locks again
 
-// The record, made on first use: an older save's decoded parts start at research 1.
+// The record, made on first use: an older save's decoded parts start decoded (research 3).
 export function researchOf(s) {
   if (!s.research) {
     s.research = {};
-    for (const [k, on] of Object.entries(s.codex || {})) if (on) s.research[k] = 1;
+    for (const [k, on] of Object.entries(s.codex || {})) if (on) s.research[k] = TIER.decoded;
+    s.researchScale = RESEARCH_SCALE;
+  }
+  if (s.researchScale !== RESEARCH_SCALE) { // research earned on the old 1/5/20 scale: tripled once
+    for (const k of Object.keys(s.research)) s.research[k] = Math.min(RESEARCH.max, s.research[k] * RESEARCH_SCALE);
+    s.researchScale = RESEARCH_SCALE;
   }
   delete s.codex; // the part codex from before research: research holds it now
   return s.research;
 }
 export const researchAt = (s, key) => Math.min(RESEARCH.max, s?.research?.[key] || 0);
 export const partResearch = (s, v, p) => (p && v ? researchAt(s, keyOf(v, p)) : 0);
-// The tier a count reaches: 0, 1, 5 or 20.
+// The tier a count reaches: 0, 3, 15 or 60.
 export const tierAt = (n) => RESEARCH.tiers.filter((t) => n >= t).at(-1) || 0;
 export const knows = (s, v, p, tier) => p?.kind === 'fragment' || partResearch(s, v, p) >= tier;
 // The mastery perk: your hits on it and its drop. Never a crewmate's (s.who).
