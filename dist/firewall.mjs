@@ -17,7 +17,6 @@ import { items } from './hidden.mjs';
 import { filterStat } from './filters.mjs';
 import { FACTIONS } from './factions.mjs';
 import { rootWall } from './root.mjs';
-import { archWall } from './architecture.mjs';
 import { consortiumWall } from './consortium.mjs';
 import { isLive } from './memory.mjs';
 const HUB_LEVEL = (f) => FACTIONS[f].hub.level;
@@ -93,7 +92,7 @@ export const hardenLeft = (s, at = clock(), loc = null) => Math.max(0, fwAt(s, l
 // The wall is three knobs you turn (its tier, filters, harden.sh) on a base the network sets;
 // everything else that adds levels shows as one "+N": architecture and consortium at home, a
 // Firewall Node and Root 5 on an outpost.
-export const wallBonus = (s, loc = null) => (loc ? ((loc.buildings || []).includes('node') ? NODE_PLUS : 0) + ((loc.buildings || []).includes('citadel') ? 2 * NODE_PLUS : 0) + rootWall(loc) : archWall(s) + consortiumWall(s));
+export const wallBonus = (s, loc = null) => (loc ? ((loc.buildings || []).includes('node') ? NODE_PLUS : 0) + ((loc.buildings || []).includes('citadel') ? 2 * NODE_PLUS : 0) + rootWall(loc) : consortiumWall(s)); // (architecture went with outposts in R2)
 export function effLevel(s, at = clock(), family = null, loc = null) {
   const kit = loc ? 0 : filterStat(s, 'strength') + (family ? filterStat(s, family) : 0);
   return Math.max(0, fwLevel(s, loc) + kit + wallBonus(s, loc) - fragLevels(s, loc) - (defragging(s, at, loc) ? FIREWALL.defragLoss : 0) + (hardenLeft(s, at, loc) ? FIREWALL.harden.plus : 0));

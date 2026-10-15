@@ -5,7 +5,6 @@ import { play, layoutOf, takeable } from './dist/run.mjs';
 import { ROGUE, rogueRooms, rogueSpawns, relockLeft } from './dist/rogue.mjs';
 import { pickOrigin } from './dist/hidden.mjs';
 import { sweepKind } from './dist/forensics.mjs';
-import { tickOutposts } from './dist/outpost.mjs';
 import { MEMORY } from './dist/memory.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG } from './dist/data.mjs';

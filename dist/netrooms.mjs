@@ -18,7 +18,9 @@
 // for the Exfil (CONFIG.exfil, on your own cooldown), a loot mob smuggling a stolen archive out, that runs from you
 // (floorplan.mjs).
 // Root (2.8) counts respawned fight rooms you clear on a server you hold: Root 2 after 5, 3 after 15, 4 after 30, 5
-// after 50 (root.mjs ROOT.need). Root 2 adds a stash room by the Core. A run on rooms: s.run.rooms, Signal is the
+// after 50 (root.mjs ROOT.need). Root 2 adds a stash room by the Core, Root 4 one more socket room.
+// Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
+// a server you hold has its Core as its core socket. A Resident's first fall and Mapped each teach a codebase. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
 import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand } from './combat.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES } from './data.mjs';
@@ -29,7 +31,8 @@ import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
-import { sizeOf } from './outpost.mjs';
+import { sizeOf, learnCodebase, familyComponents, AUTHOR_CODEBASES } from './sockets.mjs';
+import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { contractTakeover, contractRooms, contractMapped } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
@@ -66,12 +69,14 @@ function build(s, loc) {
   const name = loc.name, base = { world: true, loc: loc.id, name, speed: 1 };
   if (!isWild(loc)) {
     const kind = KIND_OF[loc.template] || 'Relay', author = authorOf(loc), level = levelOf(loc), floor = loc.depth || 1, size = sizeOf(loc).id;
-    const graph = FP.generate(loc.seed || 1, { size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate' });
-    return FP.newRooms(s, { ...base, seed: loc.seed || 1, size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', graph, type: 'server' });
+    const graph = FP.generate(loc.seed || 1, { size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', sockets: socketsFor(loc, size) });
+    return FP.newRooms(s, { ...base, seed: loc.seed || 1, size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', graph, type: 'server', code: codeOf(loc.family) || 'cipher' });
   }
   const graph = loc.zone ? sprawlGraph() : loc.farm ? farmGraph() : wildGraph(loc);
   return FP.newRooms(s, { ...base, seed: loc.seed || 1, size: 'small', kind: 'Relay', level: loc.level || 1, floor: loc.depth || 1, author: 'tollgate', graph, type: 'wild' });
 }
+// A traced server's socket rooms: by its size, one more on a Backbone server (Root 4's and Grid's are rooms added later).
+const socketsFor = (loc, size = sizeOf(loc).id) => (FP.ROOMS.sockets[size] || 1) + (loc.trait === 'backbone' ? 1 : 0);
 const link = (g, a, b) => g.links.push([a, b]);
 function graphOf(list, links, { core = null, vaults = [], spine = [] } = {}) {
   const g = { rooms: {}, links: [], hops: [], loops: [], entry: 'r0', core, vaults, spine };
@@ -182,7 +187,7 @@ export function spawnOf(s, room, loc = locOf(s)) {
 export function enterRooms(s, loc, { signal, hot = false } = {}) {
   const R = roomsFor(s, loc);
   if (isWild(loc)) spawnsOf(s, loc);
-  if (!isWild(loc)) R.level = levelOf(loc);
+  if (!isWild(loc)) { R.level = levelOf(loc); extraSockets(s, loc); }
   s.run = { loc: loc.id, rooms: true, cwd: R.graph.rooms[R.graph.entry].path, integrity: signal, max: maxSignal(s), pack: [], visited: [] };
   s.run.crew = Object.fromEntries((s.crewSim || []).map((x) => [x.name, { cwd: s.run.cwd, link: 'you' }]));
   if (hot) s.run.hot = true;
@@ -222,6 +227,10 @@ WORLD_hook('respawn', (s, room) => {
   return loc?.trait === 'hostile' ? base * NET.hostile : base;
 });
 WORLD_hook('level', (s) => { const loc = locOf(s); return loc ? levelOf(loc) : undefined; });
+// A server you hold: its Core is its core socket (6.1). (Core programs come with R4; until then it takes any program.)
+WORLD_hook('coreSocket', (s) => { const loc = locOf(s); return !!loc && owned(loc) && s.rooms?.type === 'server'; });
+// A Grid socket outside a Grid consortium: its program waits, idle.
+WORLD_hook('socketOff', (s, room) => !!room && room.extra === 'grid' && !consortiumSockets(s));
 WORLD_hook('rare', (s) => { const loc = locOf(s); return (rootOf(loc) >= 5 ? 2 : 1) * (loc?.trait === 'legacy' ? 2 : 1); });
 WORLD_hook('coreOpen', (s) => {
   const loc = locOf(s), R = s.rooms;
@@ -299,6 +308,8 @@ function takeover(s, loc, room) {
   contractTakeover(s, loc); // takenOver, its XP and the event (mail.mjs)
   loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: null, proc: null };
   R.held = now();
+  // Its Resident's first fall: a codebase from its author's list (4 components if you know them all).
+  if (!loc.residentFell) { loc.residentFell = now(); learnCodebase(s, null, `${loc.name}'s Resident carried `, { from: AUTHOR_CODEBASES[R.author] || null, pool: familyComponents(loc.family), r: seeded(((loc.seed || 1) * 53 + 11) >>> 0) }); }
 }
 // Root: respawned fight rooms cleared on a server you hold climb its pips (root.mjs ROOT.need).
 export function rootClear(s, loc) {
@@ -309,7 +320,21 @@ export function rootClear(s, loc) {
     emit(s, 'root', `ROOT ${r.level} on ${loc.name}: ${ROOT_PERKS[r.level]}.`, { location: loc.id, root: r.level });
     gainXp(s, xpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
     if (r.level >= 2) addStash(loc);
+    if (r.level >= 4) addRootSocket(loc);
   }
+}
+// Root 4: one more socket room, beside the Core, open from the start (it replaced the old building slot).
+export function addRootSocket(loc) {
+  const R = loc.floorplan, room = R?.graph && FP.addSocketRoom(R.graph, 'root');
+  if (!room) return null;
+  R.cleared[room.id] = now(); R.seen[room.id] ||= 'shape';
+  return room;
+}
+// A Grid consortium's socket room on every traced server (offline when you're not in one: WORLD.socketOff).
+function extraSockets(s, loc) {
+  const R = loc.floorplan;
+  if (!R?.graph || R.type !== 'server') return;
+  if (consortiumSockets(s) && FP.addSocketRoom(R.graph, 'grid')) { const room = Object.values(R.graph.rooms).find((x) => x.extra === 'grid'); R.cleared[room.id] = now(); R.seen[room.id] ||= 'shape'; }
 }
 // Root 2: a stash room beside the Core (the old /root), its code refilled every two hours.
 export function addStash(loc) {
@@ -472,6 +497,7 @@ FP.WORLD.view = {
   vaultLeft: (s, room) => { const loc = locOf(s); if (!loc || room.id !== s.rooms.graph.vaults[0]) return 0; return vaultFiles(loc).filter(({ dir, name }) => { const info = fileInfo(loc, dir, name); return info && !['text', 'trap', 'sweep'].includes(info.kind) && !loc.state?.taken?.[`${dir}/${name}`] && !s.run?.pack.some((f) => f.path === `${dir}/${name}`); }).length; },
   entryFiles: (s) => entryFiles(s, locOf(s)).length,
   downNote: (s, room) => (room.wild && inRuns(locOf(s)) ? 'Down until the server reboots.' : undefined),
+  offNote: (s, room) => (room.extra === 'grid' ? 'A Grid consortium\'s socket: offline outside one.' : undefined),
 };
 
 // A respawned fight room on a server you hold: tending it (Root climbs on these) counts as building in your XP mix,
@@ -482,7 +508,12 @@ WORLD_hook('people', (s, room) => { const loc = locOf(s); return loc && room.pat
 
 // ---------- progress ----------
 WORLD_hook('cleared', (s, room) => { const loc = locOf(s); if (loc) contractRooms(s, loc, room); });
-WORLD_hook('mapped', (s) => { const loc = locOf(s); if (loc) contractMapped(s, loc); });
+WORLD_hook('mapped', (s) => {
+  const loc = locOf(s);
+  if (!loc) return;
+  contractMapped(s, loc);
+  if (s.rooms.type === 'server') learnCodebase(s, null, 'Mapped: ', { pool: familyComponents(loc.family), r: seeded(((loc.seed || 1) * 59 + 3) >>> 0) }); // a codebase you don't know
+});
 
 // ---------- reading a server (the network map's card) ----------
 // Rooms n/N, Mapped, the vault and the Core, without connecting.
@@ -511,7 +542,7 @@ export function roomsRestore(s, was) {
     if (s.run?.rooms && s.run.loc === loc.id) { const here = g.rooms[loc.floorplan.at]; if (here) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
   }
   rogueRestore(s);
-  if (was >= 39) return;
+  if (was >= 39) return socketRoomsRestore(s);
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);
     if (s.encounter?.mode === 'run') s.encounter = null;
@@ -531,6 +562,25 @@ export function roomsRestore(s, was) {
       // Root counts clears now: a server keeps its pips, and starts counting from where its level begins.
       loc.root = { ...(loc.root || {}), level: rootOf(loc) || 1, cleared: ROOT.need[rootOf(loc) || 1] || 0, proc: null };
     }
+  }
+  socketRoomsRestore(s);
+}
+// R2 (v40): a traced server's rooms from before sockets get them, from its seed (floorplan.mjs addSockets): its process
+// rooms at the ends of branches become socket rooms, one you'd already cleared open at once (its guard never comes
+// back). Root 4 adds its room. Every load, idempotent: g.sockets marks a graph done.
+export function socketRoomsRestore(s) {
+  for (const loc of s.locations || []) {
+    const R = loc.floorplan;
+    if (!R?.graph || R.type !== 'server') continue;
+    R.programs ||= {};
+    R.code ||= codeOf(loc.family) || 'cipher';
+    if (R.graph.sockets == null) {
+      const was = Object.fromEntries(Object.values(R.graph.rooms).map((x) => [x.id, x.path]));
+      FP.addSockets(R.graph, socketsFor(loc), loc.seed || 1);
+      for (const x of Object.values(R.graph.rooms)) if (x.kind === 'socket') { delete R.down[x.id]; delete R.rare[x.id]; }
+      if (s.run?.rooms && s.run.loc === loc.id && R.at) { const here = R.graph.rooms[R.at]; if (here && was[here.id] !== here.path) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
+    }
+    if (rootOf(loc) >= 4) addRootSocket(loc);
   }
 }
 hooks.roomsRestore = roomsRestore;

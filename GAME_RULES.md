@@ -124,6 +124,7 @@ Since R1 ([`docs/servers.md`](docs/servers.md) 9.5) every `connect` plays the se
 | Your crew | Comes along, linked to you: it follows you room to room and joins your fights. `split`, `link`, `goto` and `regroup` work on rooms; a split crewmate wanders into rooms nothing holds. On SPRAWL-00 `ls` and arriving in a room say who else is there. |
 | Contracts ready | A yellow **✓** by Mail on the top bar whenever a contract is ready to deliver (its hover says how many). |
 | Home while out | Intrusions wait. A waiting intrusion is parked when you connect and returns when you're back. |
+| Sockets (R2) | A traced server's socket rooms: guarded by a process once, then open for good; build a program in one for that server's rules (see Sockets and programs). Components drop 60% a part in a room fight. |
 
 ### Run commands (on rooms)
 
@@ -136,7 +137,8 @@ Since R1 ([`docs/servers.md`](docs/servers.md) 9.5) every `connect` plays the se
 | `engage` (`attack`), `back` | Fight what holds the room, or step back out |
 | `cat`, `pull` | Read a cache (bait shows), take it; `pull` in an open vault or at the entry takes what's waiting there |
 | `open`, `force` | The vault: with its key, or for 15% of your Signal |
-| `rest` | The rest room: 30% of your Signal, once a visit |
+| `rest` | The rest room: 30% of your Signal, once a visit (a Defrag Bay: 25%, once a visit) |
+| `build [program]`, `uninstall` | In a socket you've cleared (or a held server's Core): the Build list, build one (`install` too; `… pay a:1,b:2` picks the components), take it out (`remove`). See Sockets and programs |
 | `slip` | Slip past the hunter (an Infiltrator's) |
 | `scan [room]` | A scan card of what holds this room or one next to you that you've been in (an unknown room can't be read from outside; 1 Signal; an Infiltrator scans free and reads deeper) |
 | `pack` | What you're carrying, unbanked |
@@ -165,7 +167,7 @@ About 1 in 6 servers you trace is **rogue** (never your first two, and never mor
 - **The archive, recovered:** 10 Stashes' worth of credits, one item at the server's level (the best of two plain rolls, a white if they find nothing: about twice a kill's blue chance, never a guaranteed blue, and no loud-run, clean-read or Pit roll on top), and 5% one of the server's uniques (the ones its kind and layer drop; a world unique has no bad-luck protection, so neither has this). A process kill's XP. Less than an elite (three rolls, a blue floor, 8% unique), by design.
 - `developer exfil` (with `?dev`) sets one loose on the server you're on, cooldown or not.
 
-**Reconnect wait:** once you leave any server that isn't an outpost (SPRAWL-00, a rogue server, any server you've found or taken over), by jacking out or being thrown out, it won't take you back for 30 seconds (`CONFIG.relockMs`; its Connect button counts down). An outpost (a server running a harvester) takes you straight back. That stops the jack out, top up, go straight back loop. Kinds:
+**Reconnect wait:** once you leave any server (SPRAWL-00, a rogue server, any server you've found or taken over), by jacking out or being thrown out, it won't take you back for 30 seconds (`CONFIG.relockMs`; its Connect button counts down). An outpost (a server running a harvester) takes you straight back. That stops the jack out, top up, go straight back loop. Kinds:
 
 | Kind | Rule |
 |---|---|
@@ -232,9 +234,9 @@ About 1 in 6 servers you trace is **rogue** (never your first two, and never mor
 
 A trace record (`signal.trc`) you pull and bank puts **35%** on the trace to an unknown node **one layer deeper** (the one it names, or a flagged one first); kills, your relay's pings and trace injectors do the rest. On the Map it branches off the node it came from. Each layer sits in its own level band (see Level bands): a deeper one is ahead of you. Each layer down adds +25% to blue and yellow drop odds and 40% more credits per cache.
 
-## Protocols, services and code
+## Protocols, programs and code
 
-Two sides, two ways to get stronger. **You** run protocols: loot with rolled stats. **Your server** runs services: things you build from code. Neither is fiddly: a protocol goes in any slot, and a service is one rule. The fights at your server belong to its firewall (tiers and filters, see Invasions and the wall) and to your daemons.
+Two ways to get stronger. **You** run protocols: loot with rolled stats. **Servers** run your programs (see Sockets and programs): one rule each, built from components and code. Neither is fiddly: a protocol goes in any slot, a program is one rule. The fights at your server belong to its firewall (tiers and filters, see Invasions and the wall) and to your daemons.
 
 ### Items (you): loot, Diablo 2 style
 
@@ -344,11 +346,11 @@ There are no grey protocols. (Filters still come in Scrap, a grey.) Old saves' g
 - **Pace:** the System page shows your kills an hour of active play (the game open, used in the last 2 minutes). The odds assume 20; the pacing bot (`bot.mjs`, 6-second cycles, every reconnect wait and memory limit, skipping grey fights) measures 9–16 counting the time it waits for something on its level.
 - A good drop shows as a notice; whites drop quietly.
 
-**Deconstruct** (`deconstruct <id>`, or `scrap`): white 1–2 salvage, blue 2–3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits (an Indemnified protocol from Halcyon's store gives no Exploits back); +1 salvage per 10 item levels. The code is the family the item dropped from. A drop into a full stash (40) is deconstructed. Deconstructing (a protocol, or scrapping a filter) opens a card listing what you got (salvage, code, Exploits), like the one a jack-out shows; Enter or a click closes it.
+**Deconstruct** (`deconstruct <id>`, or `scrap`): white 1–2 components, blue 2–3 + 1 code, yellow 5 + 2 code + 1 Exploit, gold 10 + 4 code + 3 Exploits (an Indemnified protocol from Halcyon's store gives no Exploits back); +1 component per 10 item levels. The code is the family the item dropped from. A drop into a full stash (40) is deconstructed. Deconstructing (a protocol, or scrapping a filter) opens a card listing what you got (components, code, Exploits), like the one a jack-out shows; Enter or a click closes it.
 
-**Compile** at home with a recipe: `compile <stat> <slot>` gives a **blue** at your level, in the slot you name (Exploit, Proxy, Shell or Script, and Implant from level 15), with that stat as one of its affixes. The Craft page has a slot picker on each protocol recipe. With no slot named, the slot is rolled (60 + 15×level credits and 8 salvage); `compile <zero-day>` once you've banked its source. A Build Farm makes both cheaper. Halcyon's sealed item is a blue.
+**Compile** at home with a recipe: `compile <stat> <slot>` gives a **blue** at your level, in the slot you name (Exploit, Proxy, Shell or Script, and Implant from level 15), with that stat as one of its affixes. The Craft page has a slot picker on each protocol recipe. With no slot named, the slot is rolled (60 + 15×level credits and 8 components); `compile <zero-day>` once you've banked its source. Halcyon's sealed item is a blue.
 
-**Blueprints.** Nothing is buildable at the start. Every service (4) and every protocol recipe (17) is a blueprint you find once. A quarter of vaults hold a `blueprint.bp` (your first server's always does); a home kill drops one 0.8% of the time and a guard 2% (into your pack). Each one teaches something you don't have yet, at random, from **every kind of recipe**: protocol recipes and service blueprints, **filter recipes** (one per stat), harvester and module **plans**, and **config sources**. Once you know everything, one is 2 salvage.
+**Blueprints.** Nothing is compilable at the start. Every protocol recipe (17) is a blueprint you find once. A quarter of vaults hold a `blueprint.bp` (your first server's always does); a home kill drops one 0.8% of the time and a guard 2% (into your pack). Each one teaches something you don't have yet, at random: a protocol recipe or a **filter recipe** (one per stat). Once you know everything, one is 2 components. (Codebases, for programs, come their own ways: see Sockets and programs.)
 
 **The monster pass (friction, then relief).** Fights on your Signal (runs, SPRAWL-00, rogue servers) have enemies ×1.4 Integrity and ×2.1 damage (`CONFIG.runHp`, `runDamage`), and on top of that an early-game step by enemy level (`CONFIG.runEarly`: ×1.35 at 3, ×1.5 at 4, ×1.45 from 5 to 12, easing back to ×1 by 17), when you have the least gear. From level 10 a late step rides on top (`CONFIG.runLate`: ×1.1 at 10, ×1.12 at 18, ×1.35 from 30, linear between), because your subclass, talents and fifth and sixth protocol slots outgrow the 4% a level; bosses and elites skip it (crew content is tuned for crews). Encryption skips both steps, because it stacks. The game is meant to be hard: a fight at your level costs a good player 35–50% of their Signal, and one two levels up can beat you. Tuned with `node friction.mjs` against the gear you're likely to have (targets: nothing equipped 60–75%, whites 40–50%, blues 35–45%, yellows 20–30%). Health a same-level fight costs (scripted planner, levels 5–10, after the Ghostroot fix): nothing equipped ~70%, whites ~42%, blues ~28–33%, yellows ~19–22%; level 1 sits on target (53 / 31 / 25 / 16). With the late step and the gear each subclass chases (heals-and-burns pass, October 2026; all eight subclasses, three gear sets of 48 fights each): blues ~39% at 10 and 18 and ~37% at 30 (every subclass 30–47%, except the Demolitionist at 19% from level 29, whose flat Damage lands on every one of its many hits; the Sysop, weaker alone on purpose, 41–45% with 80–85% wins; docs/BALANCE.md); whites ~50% at 18 and ~54% at 30; yellows ~27% at 18 and ~22% at 30 (gear tiers spread apart faster than one curve can follow). Home fights on your server are unchanged. The Infiltrator is weakest before Backdoor (level 10) and mid-pack after it.
 
@@ -359,59 +361,28 @@ There are no grey protocols. (Filters still come in Scrap, a grey.) Old saves' g
 **Where they go.**
 - **Health (the everyday sink).** Signal rests back at 20% a minute and the server at 2% a minute (half that while an invasion is contested or breaching at your wall), offline too. Or pay to top up now: a full Signal bar costs 8 + 1.5×(class level) credits, a full server 10 + 2×(server level); less missing costs less (at least 1). Click the meter, or type `top up` / `repair [n]`. Short of credits, the rest comes out of your biggest pile of code, 8 credits a unit. On a run it's the store's Signal patch instead. A bot that always pays spends about a quarter to a third of its income on it and reaches level 10 two to three times sooner than one that always waits; the Bastion barely needs it.
 - **You start with 0 credits.** Caches, kills and contracts pay; topping up Signal or repairing costs credits from the first one you earn.
-- **Building (the big goals).** Services and buildings on your outposts cost credits, code and salvage, so deconstructed items feed your server and outposts. A v1 service is about ten minutes of income at level 5; a v2 about half an hour at level 15; a v3 is a long goal.
-- **Gear.** Compiling a blue costs 60 + 15×level credits and 8 salvage, cheaper than the store's sealed item (180 + 14×level).
+- **Building (the big goals).** Programs in a server's sockets cost components and that server's code (a medium one an Exploit too), never credits: what you fight for on a server builds there. Codebases at a hub cost credits.
+- **Gear.** Compiling a blue costs 60 + 15×level credits and 8 components, cheaper than the store's sealed item (180 + 14×level).
 
-| Sink | Credits | Code | Salvage | Other |
+| Sink | Credits | Code | Components | Other |
 |---|---|---|---|---|
 | Signal top-up (full) | 8 + 1.5L | | | |
 | Server repair (full) | 10 + 2 × server level | | | |
-| Service v1 / v2 / v3 | 120 / 600 / 2,000 | 12 / 40 / 100 | 6 / 15 / 40 | Exploits 0 / 1 / 3 |
+| A light / medium program (layer 1; ×1.25 a layer) | | 15 / 30 | 20 / 40 (10 named) | Exploit 0 / 1 |
+| A codebase at a hub, light / medium | 200 + 10L / 400 + 15L | | | |
 | Compile a blue | 60 + 15L | | 8 | its recipe |
 | Compile a Zero-day | 400 + 30L | | 16 (2 guard parts) | its source |
-| Outpost module (into your stock; needs its plan) | 150 | 8 | 5 | |
-| Architecture switch | 1,000 | | | |
 
 
 **Commands** (at home, between fights): `protocols`, `load <id>` (swaps a full slot), `unload <id|slot#>`, `deconstruct <id>`, `compile [stat] [slot]`, `compile <zero-day>`.
 
-### Services (your server)
+### Services (retired)
 
-The server has no items. It runs **services**, Master of Orion style: each service is one rule, built from code, and upgraded **v1 → v2 → v3**. There are four, and all of them work on the network around you. There are no ports: every service you hold the blueprint for can run. The Server page (type `server` or `services`) shows your server's level (your highest class level) and what the next level adds, code, the firewall, the install queue, what's running and what you can build.
-
-**The install queue.** One install at a time, in real time, and it keeps going while you fight, run or close the game. You can queue one from anywhere except mid-fight (on a run too: it's your server doing the work). `cancel install` refunds everything. `uninstall <service>` gives back half the code it cost (credits and salvage don't come back).
-
-| Version | Cost | Time | Needs |
-|---|---|---|---|
-| v1 | 12 code + 120 credits + 6 salvage | 15 min | its blueprint |
-| v2 | 40 code + 1 Exploit + 600 credits + 15 salvage | 1 hour | level 10 (your highest class) |
-| v3 | 100 code + 3 Exploits + 2,000 credits + 40 salvage | 4 hours | level 25 |
-
-| Service | Code | v1 / v2 / v3 |
-|---|---|---|
-| Route Logger | Cipher | route files (relay pings, trace records, injectors, log sweeps) trace 25 / 50 / 75% further |
-| Build Farm | Kernel | compiling costs 15 / 25 / 35% less |
-| Edge Router | Worm | +1 / 2 / 3 outpost bandwidth |
-| Scheduler | Kernel | collects every outpost every 60 / 30 / 15 minutes |
-
-**Where the other services went** (save v34). The home fight is the wall's job now, so the services that only acted there moved to it:
-
-| Was a service | Now |
-|---|---|
-| Filter Bay | The firewall has two filter slots of its own, and tiers +1, +3 and +5 add one each (five at +5, as a v3 Bay and the old tier slots gave) |
-| RAID Array | Firewall tiers +1, +3 and +5 each add 5% to your server's max Integrity (15% at +5, a v3 Array) |
-| Hardened Kernel | A filter stat, *Hardened*: 2–6 Block on hits at home, growing with the filter's item level |
-| Scrubber | A filter stat, *of the Scrubber*: home fights start behind a shield of 4–10% of max Integrity |
-| Hot-patcher | A filter stat, *Self-healing*: 0.3–1 Regen at home, per cycle in a fight and per minute between them |
-| Counter-intrusion | A filter stat, *of Barbs*: whatever hits your server takes 2–6 back (on armor it breaks a ◆) |
-| Cron Job | A daemon (see Daemons) |
-| Snapshot | A daemon (see Daemons) |
-
-A save that ran one of these got everything it cost back (each version's credits, code, Exploits and salvage), and the blueprint of a service that became a filter stat became that filter's recipe. A running Cron Job or Snapshot, or its source, became that daemon at the service's version instead.
+Services went with outposts in R2: a save that ran any (the Route Logger, Build Farm, Edge Router or Scheduler) got every version back (credits, code, Exploits, components). The server's own kit is its firewall and your daemons; what used to be a home-fight service moved there in save v34 (Filter Bay, RAID Array, Hardened Kernel, Scrubber, Hot-patcher and Counter-intrusion became firewall tiers and filter stats, Cron Job and Snapshot daemons).
 
 ### Code
 
-Services are built from **code**, one kind per virus family, plus rare **Exploits** (v3 needs 2).
+Programs and the firewall's tiers are built from **code**, one kind per virus family, plus rare **Exploits** (a medium program takes 1).
 
 | Code | Family | From |
 |---|---|---|
@@ -420,7 +391,7 @@ Services are built from **code**, one kind per virus family, plus rare **Exploit
 | Kernel code | Ghostroot | 〃 |
 | Exploits | any | 4% of home kills, 8% of guard kills |
 
-A kill drops 1 code at level 1 (+1 every 10 levels); a guard drops half again, into your pack. Every vault's `payload.bin` is a cache of 12 + half the location's level. Scavenge adds to all of it. Salvage stays generic: it's for compiling protocols.
+A kill drops 1 code at level 1 (+1 every 10 levels); a guard drops half again, into your pack. Every vault's `payload.bin` is a cache of 12 + half the location's level. Scavenge adds to all of it.
 
 **Old saves.** Server gear that was installed comes back as v1 of the matching service, free; the rest turns into code. Rig items become protocols, and Cron Job and Snapshot source becomes service source. The older Upgrades list came back the same way (Hardening as RAID Array, Amplifier as Route Logger, the Signal booster as a loaded Stock Relay). From save v34 those services go on as described above. Daemon slots come from your server's level (+1 at 10 and 20).
 
@@ -465,7 +436,7 @@ A takeover or recovery contract points at a server you've found and haven't take
 Every server you find is wired to two you haven't found yet, one layer deeper. They aren't on the map until you hear of them; then they show as **?** beside the server they hang off.
 
 - **Invasions** can come from them (two in five, when there are any), through the server they hang off: "origin unknown, past VANTA-SINK-36". They come at that server's level and layer, never above it (an unknown server is 3 levels up and a layer deeper, but what you've connected to sets what comes at you); the road is longer, so they take longer to arrive. Jack in and beat one: its server is 40% traced (plus the Route Logger's bonus). If your wall stops one: +10%.
-- **Relays** (Halcyon sells them; the storyline gives you one; or craft your own once you know the **Relay plan**: 60 credits, 6 Kernel code and 4 salvage on the Craft page) go on a server you've taken over (`relay <server>`, or its map card). Until you know it, one Halcyon server job at a time (take over a server, or recover a file) also pays the Relay plan. A server you own with no relay on it says on its card where to get one. A relay pings that server's unknown neighbours, and flags the one carrying the signal of a contract you've taken.
+- **Relays** (Halcyon sells them; the storyline gives you one; or craft your own once you know the **Relay plan**: 60 credits, 6 Kernel code and 4 components on the Craft page) go on a server you've taken over (`relay <server>`, or its map card). Until you know it, one Halcyon server job at a time (take over a server, or recover a file) also pays the Relay plan. A server you own with no relay on it says on its card where to get one. A relay pings that server's unknown neighbours, and flags the one carrying the signal of a contract you've taken.
 - **Hunting a pinged server** (any server a relay pings, contract or not): every kill of its family traces it 12% more (at home or in SPRAWL-00); the relay leaves a route file for each one on its own server (`ping-….trc` in /) worth 50% when you pull it and bank it; a trace injector (store, Kestrel, LANTERN) adds 30%. An unknown server's family stays hidden ("family ?" on its card, the Leads panel and the map's list) until a relay next to it pings it or it sends an invader at you. Its map card lists every way with what it adds, dim until it's open to you (a relay next to it; an injector in hand), struck through once done.
 - At 100% it's **located**: an ordinary server, with its own two unknown neighbours. Contracts aimed at it follow it there.
 - A vault's trace record (`signal.trc`) adds 35% to the trace on one of its server's unknown neighbours (a flagged one first). It never locates one outright.
@@ -483,22 +454,20 @@ Simulated until the server exists (developer mode only, `?dev`): `online sim` tu
 
 **A consortium** is hackers who merged their servers (simulated members for now). Everyone keeps their own home server and everything on it; merging runs a **trunk line** between home servers, so every member can reach every other member's servers.
 - **Joining.** `consortium create <name>` founds one; invite people from the people panel (*Invite to consortium*) or `consortium invite <handle>`, and their server merges in. While you're in none, someone online now and then invites you (a pager entry, and a card on the people panel's **Consortium** tab): *Merge* / `consortium accept`, or `consortium decline`. Invites lapse after 10 minutes. Anyone can invite; only the founder can kick (`consortium kick <handle>`). `consortium leave` cuts the trunk line. You lose nothing of your own either way. `consortium` alone sums it up. (`guild` still works as the old name, and an old guild becomes a consortium.)
-- **The map.** With a consortium, the Map has two views: *Your network* and the consortium's. The consortium's view has your home server in the middle, a trunk line out to each member's home server (their card lists their servers), and each member's servers branching off theirs: their outposts, servers they've traced and rogue servers (1–4 each, at the member's level, kept within 3 levels of yours while it's simulated).
-- **Members' networks.** Each member's network has its own signature (see Networks): their servers lean to their families and their native strain, their natives drop about ten times as often there as anywhere else, their lair holds their native boss from their level 8, and their dividend comes in their rich code.
+- **The map.** With a consortium, the Map has two views: *Your network* and the consortium's. The consortium's view has your home server in the middle, a trunk line out to each member's home server (their card lists their servers), and each member's servers branching off theirs: servers they've traced and rogue servers (1–4 each, at the member's level, kept within 3 levels of yours while it's simulated).
+- **Members' networks.** Each member's network has its own signature (see Networks): their servers lean to their families and their native strain, their natives drop about ten times as often there as anywhere else, and their lair holds their native boss from their level 8.
 - **Members' servers.** Connect to any of them like your own. Fights, files and drops are yours. Opening a member's vault doesn't take the server over: it stays theirs. Their natives and credit and code caches come back 20 minutes after your last run there; the vault stays open (its XP pays once) and other files you pulled stay pulled. Their home servers are theirs alone (home intrusions stay solo).
-- **Shared ground.** Every member's server, plus your own outposts and rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with their own loot. **XP for a drop-in is by damage:** a member who joined your fight takes the share of the kill's XP that matches the share of the virus's health they took off; you and your own crew split the rest evenly (the pool is the kill plus 10% per extra player, as in any party). Dropping into a fight you barely touched pays next to nothing. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
-- **Owner and dividend.** An outpost's owner keeps its whole stockpile, as always. On top of that, every member's outpost pays each other member a **dividend**: 25% of what it produces, in kind (a Siphon's or Tap's code of its family, a Scraper's finds: credits, code, salvage, now and then a protocol). It fills in real time (offline too), a small stock per outpost of up to 12 hours' worth. An invaded outpost pays nothing until the invasion is stopped. The Consortium page shows what comes in an hour and what's waiting: *Collect*, or `consortium collect`. Each member outpost's card shows its rate and what's waiting. (Your outposts pay the other members the same way, at no cost to you.)
-- **Invasions at members' outposts, and lockdowns.** Now and then (every 10–18 minutes of logged-on time) natives invade a member's outpost: a pager alert, and *Defend for a bounty* on its map card (`consortium defend <server>`). You have 8 minutes. Win for credits (30 + 8 × level), its family's code and XP. Nobody defends it: half the time a member deals with it; otherwise it goes into **lockdown** (pays no dividend for 2 hours). *Retake for a bounty* ends it.
+- **Shared ground.** Every member's server, plus the servers you hold and your rogue servers. Members online spend part of their time in its folders (yellow chips in `ls`), and when a fight starts in a folder they're in, they join it (up to three alongside you, counting your crew), each with their own loot. **XP for a drop-in is by damage:** a member who joined your fight takes the share of the kill's XP that matches the share of the virus's health they took off; you and your own crew split the rest evenly (the pool is the kill plus 10% per extra player, as in any party). Dropping into a fight you barely touched pays next to nothing. Nobody outside the consortium is there, so nobody can take your kills. A server you've only traced stays yours alone.
 - **Raids on members' walls and the trunk line are cut** for now (the threat merge): they come back when real players share a network.
-- **The Consortium page** (a top tab, there while you're in a consortium or have an invite; its badge counts what needs you). Left: **Needs you**, a card per alert (invasions at walls, at outposts and on the trunk line, lockdowns, crashed servers; yours first), each with what it is, a timer bar, the level and what it pays, and one button (Defend, Intercept, Connect, Retake); then the members (status, outposts, where they are; Map, Invite to crew, Kick). Right: the consortium and its size ladder, the dividend (*Collect*), and how your wall fares while you're away. The people panel's Consortium tab is a short summary that links to it.
+- **The Consortium page** (a top tab, there while you're in a consortium or have an invite; its badge counts what needs you). Left: **Needs you**, a card per alert (a crashed server; yours first), each with what it is, a timer bar, the level and what it pays, and one button; then the members (status, servers, where they are; Map, Invite to crew, Kick). Right: the consortium and its size ladder, and how your wall fares while you're away. The people panel's Consortium tab is a short summary that links to it.
 - **Size.** The more servers merged (yours included), the better for everyone:
 
 | Servers | Tier | Bonus |
 |---|---|---|
-| 3 | Linked | +10% outpost yield and dividend |
+| 3 | Linked | +10% components on members' servers |
 | 5 | Mesh | Invasion bounties doubled |
 | 8 | Backbone | A trunk rogue server (a Pit at your level) opens on the network |
-| 12 | Grid | +1 outpost slot and firewall +2 levels |
+| 12 | Grid | +1 socket room on every server and firewall +2 levels |
 
 Up to 20 servers. Crews of up to three are drawn from consortium members and friends (*Invite to crew*, `crew invite <name>`).
 
@@ -524,7 +493,7 @@ Every player's network has a **signature**, rolled from its **network seed**: th
 | Native boss | One of nine, in its **lair** (below) |
 | Native uniques | 3 to 5 of 27, at least one in each band (5–15, 16–28, 29–40). About ten times as likely on their network as anywhere else |
 | Event bias | Two of the director's cards come up 2.5 times as often |
-| Code bias | Its rich code: 30% of every other code dropped there comes as it (kills, guard drops and vault caches when banked, Code Siphons when collected, a member's dividend). Its rich material, salvage or Exploits, drops 1.5 times as often there |
+| Code bias | Its rich code: 30% of every other code dropped there comes as it (kills, guard drops and vault caches when banked, a Code Siphon's code). Its rich material, components or Exploits, drops 1.5 times as often there |
 
 **Whose network.** Your traced servers, rogue servers, home fights, events and lair are yours. A member's servers and lair are theirs. SPRAWL-00, KESSLER-FARM-00, the trunk server and the hubs are nobody's. Drops, code and strains read the network the fight is on.
 
@@ -663,19 +632,19 @@ The four chase protocols are **Indemnified**: rolled at your level with bigger s
 
 **Agency stock**, resold through Halcyon from other agencies (Kestrel Underwriting, Norrland Re, Blue Ledger Security, Mimir Actuarial, Quayside Claims, Vesper Risk): four slots, each turning over on its own clock (40–150 minutes), each with a supplier, a price that drifts up to 25% either way from its usual (▲ above, ▼ below) and a small quantity. Possible stock: refurbished relays, key crackers (reveal a found server's vault key, from its map card), trace injectors, Signal patches, hot-swap kits (full Integrity), code lots, Exploits, salvage, sealed Custom protocols, and from Contractor, sealed blueprints and daemon images.
 
-## Salvage
+## Components
 
-Salvage works like mana in Magic: most costs take **any** salvage, and a few also need a **specific** piece.
-- Breaking a part can drop its piece (Pulse Kernel, Cipher Seed, Signal Key, a guard's Sentry Lens…). Scrapping protocols, spare blueprints and daemons, and store lots give plain Scrap, which only ever pays the generic part.
-- Your salvage shows as stacks on the Craft page; pieces some recipe asks for by name are marked.
+Components (they were salvage) work like mana in Magic: most costs take **any** component, and a few also need **named** ones (a guard's, or a server's own for a medium program).
+- Breaking a part can drop its component (Pulse Kernel, Cipher Seed, Signal Key, a Heat Pipe, a guard's Sentry Lens…): **60% a part in a room fight** (any server's rooms), an elite's parts always and **one more** of the last part at the kill, **35% anywhere else** (home, invasions). A part you've mastered (research 20) drops its 25% more often, a network rich in components more, a Harvester one more on its server, and a Linked consortium 10% more on members' servers. Deconstructing, spare blueprints, sources and daemons, store and market lots give components too (the old three families'): plain Scrap is gone.
+- Your components show as stacks on the Craft page; ones some recipe asks for by name are marked.
 - Costs:
 
-  | Build | Salvage |
+  | Build | Components |
   |---|---|
-  | Protocol (compile) | 4 salvage |
-  | Zero-day (compile) | 6 salvage + 2 guard components (Sentry Lens, Tracker Core, Sentinel Lens, Lockout Relay, Crawler Maw, Brood Seed, Shredder Blade, Grinder Core) |
+  | Protocol (compile) | 4 components |
+  | Zero-day (compile) | 6 components + 2 guard components (Sentry Lens, Tracker Core, Sentinel Lens, Lockout Relay, Crawler Maw, Brood Seed, Shredder Blade, Grinder Core) |
 
-- **Choosing what pays.** Every build button opens a picker with the stacks and a − / + for each. It starts filled with a sensible default (plain Scrap first, then pieces no recipe asks for, then the most plentiful), and Build lights up once the payment covers the cost. On the command line: `compile crit pay scrap:2,pulse-kernel:2` (without `pay`, the default is used).
+- **Choosing what pays.** Every build button opens a picker with the stacks and a − / + for each. It starts filled with a sensible default (the named ones a cost asks for, then what no recipe asks for, then the most plentiful), and Build lights up once the payment covers the cost. On the command line: `compile crit pay scrap:2,pulse-kernel:2` (without `pay`, the default is used).
 
 ## Root access
 
@@ -686,61 +655,36 @@ A server you've taken over keeps paying you back if you keep coming back to it (
 | 1 | Taken over |
 | 2 | A **stash room** opens beside the Core: the server's code (4 + level/4), back every two hours |
 | 3 | It stops costing memory, and stops sending invasions |
-| 4 | One more building slot (one more socket room once sockets come, R2) |
+| 4 | One more **socket room**, beside the Core, open at once |
 | 5 | Its rare spawns come twice as often |
 
 The old perks for producers (+25% at Root 4, double at 5) and Root 5's firewall +3 went with the R1 table.
 
-## Outposts
+## Sockets and programs (R2)
 
-A server you hold (you beat its Resident in `/core`) is yours to build on, like a colony in Master of Orion 2. What you build decides what it does. Nothing costs upkeep and nothing switches itself off.
+Building is small and local now ([`docs/servers.md`](docs/servers.md) 6, `sockets.mjs`): a traced server has **socket rooms**, bus slots on its room map, and a **program** you build in one changes that server's rules and nothing else. Outposts, buildings, plans, slots, bandwidth, stores, services, architecture, natives, swarms at outposts, lockdowns, regrowth and the consortium dividend are gone (save v40 paid them back, below).
 
-- **Slots.** Each held server has 3, 4 or 5 building slots by its size (fixed by its seed: small 30%, medium 50%, large 20%), +1 on a Backbone site and +1 at Root 4, at most 6.
-- **Bandwidth** is yours, across your network: 3 + server level ÷ 4 (3 at level 1, 8 at level 20), plus the Edge Router, the Hub architecture and the consortium. Each building takes 1–3. You can't build everything everywhere.
-- **Building** runs in real time, offline too: one build per server and two across your network at once. It costs credits, the server's family code and salvage (you pick which salvage), and the specialisations take 3 Exploits too. A lockdown or a swarm at the server holds a build up. **Finish now** buys it out. Taking a building down (×) gives back half its credits.
-- **Plans.** You start knowing the Code Siphon. Every other building needs its **plan**: about 15% of vaults hold one (your first vault always does), and Halcyon's shop sells each once. A plan you already know banks as 2 salvage.
-- **Production** piles up in the server's store, up to 8 hours' worth (Storage Array 16, Refinery a day), and connecting to the server collects it (the Scheduler does it on its own). A lockdown stops production; what's stored stays.
-- **On the map card** a held server's outpost section has one header (Outpost, its slots used and your bandwidth used) and a labelled row for each part: **Buildings** (what's built, × to take one down, and the Build button), **Stored** (what's waiting, collected when you connect) and **Wall** (its firewall level and what it is vulnerable to).
+- **Socket rooms.** Small servers have 1, medium 2, large 3: leaves hung off the ends of branches (`floorplan.mjs` `addSockets`), each guarded on your first visit by a process of the server (one of its fight rooms' families). Beat it once and the socket is **open for good**: its guard never respawns. A **Backbone** server has one more; **Root 4** adds one more beside the Core, open at once; a **Grid** consortium adds one on every traced server (offline when you're not in one). A server you hold has its **Core** as its **core socket** (core programs come later; until then it takes any program).
+- **Codebases.** You need a program's codebase to build it, once, then anywhere. You start with the **Harvester**. A third of vaults hold a `codebase.cb` (your first always does): bank it and you learn one you don't know. A Resident's first fall teaches one from its author's list (TOLLGATE Code Siphon, Cron Spawner, Cache Mill; SWARMLINE Harvester, Cron Spawner, Tunnel; PALEMASK Snare, Tunnel, Defrag Bay; GLASSJAW Code Siphon, Cache Mill, Listening Post; LANTERN Listening Post, Tunnel, Defrag Bay; NULL CHOIR Cron Spawner, Snare, Listening Post). **Mapped** teaches one. Shops sell them by tier: Halcyon's store (Harvester and Defrag Bay at Probation, Cache Mill at Contractor), Kestrel (Snare), LANTERN (Listening Post, Tunnel), GLASSJAW (Code Siphon), NULL CHOIR (Cron Spawner); a light one costs 200 + 10×level credits, a medium one 400 + 15×level. One you already know banks as 4 components instead. Only codebases you know are ever listed.
+- **Costs.** Light: 20 components + 15 of the server's code. Medium: 40 components, 10 of them the server's own (a component of a family its rooms run), + 30 code + 1 Exploit. A quarter more a layer past the first (×1.25 on layer 2). The pay picker opens filled with the plain components first; Build lights up once it's covered.
+- **One of each a server**, injected at once (no queue, no timer). **Uninstall** (in its room, between fights) is free and gives back half the components and code. No upkeep, nothing breaks, nothing comes for it.
 
-| Building | Kind | Bandwidth | Cost (credits / code / salvage) | Time | Needs | What it does |
-|---|---|---|---|---|---|---|
-| Code Siphon | producer | 1 | 150 / 10 / 4 | 10 min | — | 1.5 + level/10 of the server's code an hour |
-| Credit Skimmer | producer | 1 | 300 / 15 / 8 | 30 min | plan | 20 + 3×level credits an hour; natives notice the server 50% more |
-| Scrap Mill | producer | 1 | 200 / 12 / 6 | 20 min | plan | 1 + level/15 salvage an hour |
-| Data Miner | producer | 2 | 500 / 25 / 12 | 1 h | plan, server lv 10 | A loot roll every 90 minutes (credits, code, salvage, now and then a protocol; better on Legacy) |
-| Firewall Node | defence | 1 | 200 / 12 / 6 | 20 min | plan | The server's firewall +3 levels |
-| IDS | defence | 1 | 350 / 18 / 8 | 40 min | plan | Natives notice it half as often; swarms heading here are seen sooner |
-| Sentry Daemon | defence | 2 | 600 / 30 / 15 | 2 h | plan, server lv 15 | Kills one virus of every swarm that reaches the server |
-| Storage Array | support | 1 | 250 / 12 / 6 | 20 min | plan | Stores twice as much |
-| Pipeline | support | 2 | 400 / 20 / 10 | 45 min | plan, server lv 10 | Producers here make 50% more |
-| Listening Post | support | 1 | 250 / 12 / 6 | 30 min | server lv 5 | Listens for the unique you name (`listen <unique>`, or **listen** on its Collection row): wherever it drops, it drops 25% more often, 25% more for each post. That counts its gold roll, a strain's trophy and a boss's chance. A native unique you've heard named also drops off its network 1 + 2 per post times as often (see Networks) |
-| Honeytoken | support | 1 | 250 / 12 / 6 | 30 min | plan | Draws trouble: noticed twice as often, swarms pick it first and come sooner; beating them here pays double |
-| Refinery | producer, specialisation | 3 | 2,500 / 120 / 50 + 3 Exploits | 6 h | plan, server lv 20, 3 producers here | Producers here make 50% more; stores a day's worth |
-| Citadel | defence, specialisation | 3 | 2,500 / 120 / 50 + 3 Exploits | 6 h | plan, server lv 20, 2 defences here | The firewall +6 levels; a lost defence never locks it down |
+| Program | Weight | On its server |
+|---|---|---|
+| Harvester | light | Every virus you kill drops 1 more component, from the part you broke last |
+| Cron Spawner | light | Fight rooms respawn twice as fast |
+| Code Siphon | light | Every fight room you clear pays 3 more of its code (into your pack) |
+| Cache Mill | light | Caches refill twice as fast and pay 50% more |
+| Defrag Bay | light | Its room is a rest room: 25% of your max Signal, once a visit (a Tracker won't walk in) |
+| Tunnel | medium | Its room and the entry are one free step apart; the hunter can't use the link |
+| Snare | medium | A hunter that walks into its room is held there 4 of your moves, once a visit |
+| Listening Post | medium | Kills here roll for the unique you name (`listen <unique>`) twice as often; `listen` needs one somewhere |
 
-One specialisation per server. A Legacy site takes a quarter off a specialisation.
-
-- **Site traits** are fixed when a server is found (45% have one): Rich (producers +50%), Legacy (better loot rolls, cheaper specialisations), Backbone (+1 slot), Hostile (natives come twice as often, producers +50%), Hardened (its Resident and natives are Armored).
-- **Its firewall.** Every outpost has its own (`firewall.mjs`). Its base is the server's own level, and you buy tiers on top like at home (`firewall upgrade|harden <server>`, or the row on its card): +1 to +6, the same prices on that base. Firewall Nodes and Citadels add to it.
-- **Natives.** A server with buildings is an **outpost**, and its natives notice it about every 6 hours of play, more often the more you build (15% more per building, times what each one draws). They come as a **small swarm** (1–2 viruses at the server's level, arriving in 3 minutes; `FLEET.nativeMs`). Like any swarm it meets the outpost's firewall: **blocked**, it bounces; **contested**, the firewall wears it down; **breached**, you have 8 minutes to **Defend**. Lose and:
-  - the outpost goes into **lockdown** for 2 real hours: it makes nothing, but what's stored is kept;
-  - the server and everything past it stay open (nothing is ever cut off).
-- **Retake** it (beat the natives there) to end a lockdown sooner.
-- **Regrowth.** Two lockdowns you let run out while you're logged on, within 24 hours, and the Resident regrows: the server isn't yours until you beat it in `/core` again. Its buildings wait. A lockdown that ends while you're away never counts.
-- **Home services for outposts:** Edge Router (+1 / 2 / 3 bandwidth, Worm code) and Scheduler (collects every outpost every 60 / 30 / 15 minutes, real time, offline too; Kernel code). Both are blueprints you find.
-- **Server architecture** (server level 20, like a Master of Orion 2 government). Free to pick the first time; rebuilding as another costs 1,000 credits, between fights.
-
-  | Architecture | Trade |
-  |---|---|
-  | Fortress | Firewall +5 levels; producers make 25% less |
-  | Hub | +2 bandwidth; firewall −3 levels |
-  | Lab | Crafting and building cost 30% fewer credits; outposts are noticed a quarter more often |
-
-- **Old saves.** Harvesters and modules became buildings: a Siphon or Tap became a Code Siphon, a Scraper a Data Miner, each installed module its building (what didn't fit came back as 150 credits). Harvesters in your rack came back as 200 credits each, modules in stock as 150. A Scraper plan became the Data Miner's, a Tap plan the Credit Skimmer's.
-
-**Building.** A held server's card has a **Build** button. It opens the Build panel over the map: every building as a card with what it does, what it costs, how long it takes, and what it still needs. Typing `build <server>` (or just `build` with a server selected) opens the same panel, and Esc closes it.
-
-Commands: `build [server]`, `outpost build <server> <building>`, `outpost demolish <server> <building>`, `outpost buyout|defend|retake <server>`, `buy plan-<building>`, `architecture fortress|hub|lab`, `developer outpost <server> [building…]` (testing).
+- **On the room map** a socket is a bus slot: red while its guard is up, amber once open (a dashed hairline while it's empty). A program takes the chip: its icon, its name on the plate, and a small slot badge bottom left; a held Core shows the program it runs as that badge. A Tunnel's link is a dashed amber arc to the entry. Walk into an open socket and its pop-up is the **Build** card: every codebase you know with its rule, what it costs here (each part red until you hold it) and **Build**; a socket with a program shows it with **Uninstall** (and **Rest** for a Defrag Bay).
+- **On the network map** a server's card shows *Sockets n/N* (open of all, its Core counted on a server you hold) and its programs as chips; a server running programs says how many under its name. The Server page lists the codebases you know and where each runs.
+- **Commands** (on a run, in the socket): `build` lists what you know and what it costs; `build <program>` (or `install`) builds it, `build <program> pay pulse-kernel:5,…` picks the components; `uninstall` (or `remove`) takes it out. `developer codebases` and `developer components <n>` (with `?dev`) for testing.
+- **Server traits** read in rooms: Rich (caches pay double), Legacy (rare spawns twice as often), Backbone (one more socket room), Hostile (fight rooms respawn twice as fast), Hardened (its Resident and guards are Armored).
+- **Old saves (v40).** Every building's cost (and a build in progress) came back as credits, its server's code, components one for one and its Exploits; an outpost's store paid out (a Data Miner's rolls as credits); harvesters and modules from before buildings likewise. Each plan, and each building's, became the matching codebase: Code Siphon to Code Siphon; Data Miner, Scrap Mill and Credit Skimmer to Cache Mill; IDS to Snare; Listening Post to Listening Post; and for programs still to come Firewall Node and Citadel to Bulkhead, Sentry Daemon to Sentry Turret, Honeytoken to Honeytoken, the Relay plan to Relay (it still crafts relays). Services paid back each version they ran or were installing (credits, code, Exploits, components); the architecture went. A swarm at an outpost was called off; a member's dividend waiting paid out. Plain salvage became components, one for one. Every traced server's room graph got its socket rooms from its seed (a process you'd already cleared next to one changes nothing; Root 4 adds its room), and wick sends one letter saying what changed.
 
 ## Configs (gone)
 
@@ -748,27 +692,25 @@ Services used to take a config, a side-grade per service. They're gone: services
 
 ## Swarms
 
-Once you run an outpost, the network organises against it.
-- The first swarm gathers about 45 minutes after your first outpost goes up; after that, one every 90–150 minutes (half that with a Honeytoken out). One swarm at a time. Everything runs on real time, online or off. At the outpost it meets the outpost's firewall: **blocked**, it bounces off; **contested**, the firewall kills a process now and then (each time its grind adds up to a whole one); a **breach** just runs the timer. The outpost produces nothing while a swarm sits at it.
-- A swarm is 2–4 processes of one family, two levels above the outpost it's after. It usually gathers on an unknown server hanging off that outpost.
-- You see it coming: the pager goes off, and the Map shows it moving in with its size and time to land (10 minutes).
-- **Intercept** on the way or **Defend** once it arrives (`swarm engage`): each fight kills one process, and the timer waits while you fight (a paused fight, or one left open over a reload, holds nothing).
-- Once it arrives, it gives you 8 minutes. Processes still there when that runs out put the outpost in lockdown: retake it to end it sooner.
-- Break the whole swarm for its haul: code from every process, a salvage core per process and bonus XP.
+A swarm only ever comes for a **hub you hold**, from its old owner (see Hubs you hold; `fleet.mjs`). Outposts and their natives are gone (R2), so nothing else sends one.
+- One at a time. It gathers and travels on real time, online or off, then meets the hub's firewall: **blocked**, it bounces off; **contested**, the firewall kills a process now and then; a **breach** just runs the timer.
+- **Intercept** on the way or **Defend** once it arrives (`hub defend <faction>`, or `swarm engage`): each fight kills one process, and the timer waits while you fight (a paused fight holds nothing).
+- Processes still there when its timer runs out put the hub in lockdown: retake it to end it.
+- Break the whole swarm for its haul: code from every process, a component a process and bonus XP.
 - Degraded mode pauses swarms like everything else on the network.
 
 ## Firewalls and the away rule (in progress)
 
 The plan the next changes build to; each part moves into the sections above as it lands.
 
-**One rule, online or off.** *(Done for home, outposts and hubs you hold; silos next.)* All PvE runs on real time. Whatever comes for something you hold meets that holding's **firewall**: **Blocked** (it bounces), **Contested** (the firewall and the threat wear each other down, each on its clock) or **Breach** (it gets through and the holding falls when its timer runs out: a crash at home, a lockdown at an outpost or a hub you hold, a silo lost). Being online only means you can jack in and fight it. No logged-on clocks, no "never while away" exceptions: the firewall is the guardrail, and you can see it.
+**One rule, online or off.** *(Done for home and hubs you hold; silos next.)* All PvE runs on real time. Whatever comes for something you hold meets that holding's **firewall**: **Blocked** (it bounces), **Contested** (the firewall and the threat wear each other down, each on its clock) or **Breach** (it gets through and the holding falls when its timer runs out: a crash at home, a lockdown at a hub you hold, a silo lost). Being online only means you can jack in and fight it. No logged-on clocks, no "never while away" exceptions: the firewall is the guardrail, and you can see it.
 
 **Threats come from what you've attached.** A threat's level comes from the server that sends it (or the holding it targets), never from your own level. Attach a level-20 server and level-20 things can find you; detach it and they can't. Your own power levels off; defence is what you build per holding.
 
-**The firewall** (every holding has one: home, outposts, hubs you hold, silos):
-- **Level:** it follows what it guards. At home, the base is your highest attached server's level less 2; at an outpost or a hub you hold, that holding's own level. Upgrades buy a margin of +1 to +6 on top.
+**The firewall** (every holding has one: home, hubs you hold, silos):
+- **Level:** it follows what it guards. At home, the base is your highest attached server's level less 2; at a hub you hold, the hub's own level. Upgrades buy a margin of +1 to +6 on top.
 - **Readout:** one line on each holding's card, *Vulnerable to lv N+* (teal *Safe* when nothing attached can get through), with a family note when a filter changes it.
-- **Fragmentation:** an invasion that gets past your home wall cracks it (contested: a block, a breach: two); an outpost's or hub's never fragments (it's a level and nothing more). Shown as a block grid; fragmented blocks cost it levels. Buying a tier leaves it whole; **Defrag** restores it without one, taking a few minutes at reduced strength.
+- **Fragmentation:** an invasion that gets past your home wall cracks it (contested: a block, a breach: two); a hub's never fragments (it's a level and nothing more). Shown as a block grid; fragmented blocks cost it levels. Buying a tier leaves it whole; **Defrag** restores it without one, taking a few minutes at reduced strength.
 - **Hardening scripts** (`harden.sh`): one-use, +3 levels for 8 hours. Bought at hub shops, or written from 6 signatures. *(Home: done; see Invasions and the wall.)*
 - **Filters:** firewall gear in slots, rolled like protocols (rarity, item level, stats): Strength, Strength against a family, slower fragmentation, faster defrag, more grind, less chip, Evasion and Sanitize at home, and rarer tar, sting and reflection. Home has the most slots; outposts and silos one or two. *(Home: done; see Invasions and the wall.)*
 
@@ -778,13 +720,13 @@ The plan the next changes build to; each part moves into the sections above as i
 
 ## Threats at a glance
 
-Three kinds of threat, two things they leave behind, four things you do. The specifics go in the name: *Invasion at your wall*, *Invasion at nyx's outpost on VANTA-RELAY-80*, *Swarm from LANTERN at your outpost on …*, *Swarm from Kestrel at KESTREL-DC-NORTH*.
+Three kinds of threat, two things they leave behind, four things you do. The specifics go in the name: *Invasion at your wall*, *Swarm from Kestrel at KESTREL-DC-NORTH*.
 
 | Word | Means |
 |---|---|
-| **Invasion** | One attacker comes for your wall (or a consortium member's outpost). It travels, then sits at its target on a timer. |
-| **Swarm** | One or more viruses come for an outpost or a hub you hold, one fight each. It travels, then sits at its target on a timer. Natives send small ones (1–2), servers past it bigger ones (2–4), and so does a Hostile faction. One swarm at a time. |
-| **Lockdown** | What an outpost or hub goes into when an invasion or swarm runs out its timer: it makes nothing until it ends. Never lost for good. |
+| **Invasion** | One attacker comes for your wall. It travels, then sits at its target on a timer. |
+| **Swarm** | Viruses from a hub's old owner come for the hub you hold, one fight each. It travels, then sits at the hub on a timer. One at a time. |
+| **Lockdown** | What a hub you hold goes into when a swarm runs out its timer: it earns nothing until you retake it. Never lost for good. |
 | **Crash** | What a server suffers when its wall falls: yours goes Degraded (rebooting); a member's is rebooting and open to clear. |
 | **Intercept** / **Defend** | Fight it on the way / at its target. |
 | **Retake** | End a lockdown sooner (one fight). |
@@ -792,7 +734,7 @@ Three kinds of threat, two things they leave behind, four things you do. The spe
 
 At a wall, an invasion is **Blocked**, **Contested** (the wall grinds it while it chips you) or a **Breach**, by your wall's strength.
 
-**Two kinds of threat** (the threat merge): an **invasion** at your wall (one virus; your server's firewall, Integrity chipped), and a **swarm** at a holding (one or more viruses, a fight each; an outpost's natives, servers past it, or a hub's old owner; the holding's firewall, then lockdown). One swarm at a time across your network.
+**Two kinds of threat** (the threat merge): an **invasion** at your wall (one virus; your server's firewall, Integrity chipped), and a **swarm** at a hub you hold (its old owner's, a fight a virus; the hub's firewall, then lockdown). One swarm at a time.
 
 Everything runs on real time, online or off: whatever comes meets that holding's **firewall** first (Blocked, Contested, Breach), and being online means you can step in and fight it. Threats come only from servers attached to your network, at their levels (or the holding's), never yours.
 
@@ -802,31 +744,17 @@ Everything runs on real time, online or off: whatever comes meets that holding's
 |---|---|---|---|---|---|---|
 | **Invasion at your wall** | A server attached to your network | First 3 min after your first find, then 20–30 min after the last (**Open ports**: 2.5× as often, +50% each); away, a long clock: one every 2–4 h | Travels 2 min + 1 a layer (a champion half again, a thief four times, a scout half), then Blocked (quietly), Contested or Breach | **Jack in** (`jack in`), **Intercept** a thief (`intercept`) | Contested and Breach chip your Integrity; at 0, a crash, and it leaves. Each kind adds its own cost (see Invasions) | A home kill per virus, and its bounty in signatures |
 
-### Your outposts
-
-| Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
-|---|---|---|---|---|---|---|
-| **Natives at your outpost** | That server's natives: a swarm of 1–2 at its level | About every 6 h | Arrives in 3 min, meets its firewall, then 8 min to defend; makes nothing meanwhile | **Defend**, a fight a virus | Lockdown | As a swarm |
-| **Swarm at your outpost** | 2–4 processes from past it, 2 levels above it | First 45 min after your first outpost, then 90–150 min | Travels 10 min, meets the outpost's firewall, then 8 min to defend; makes nothing meanwhile | **Intercept** / **Defend**, a fight a process (`swarm engage`) | Lockdown | Code, a salvage core a process, XP |
-| **Swarm from a faction at your outpost** | A Hostile faction you just struck | Once a strike | As a swarm, in the faction's colours | As a swarm | Lockdown | As a swarm |
-
-Lockdown here: 2 h, nothing made, what's stored kept, nothing past it cut off. **Retake** (`outpost retake`) ends it sooner.
-
 ### Hubs you hold
 
 | Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
 |---|---|---|---|---|---|---|
 | **Swarm from its old owner** | The faction, while Hostile, at the hub's level + 1 | 30 min after the capture, then 2–4 h | Travels 10 min, meets the hub's firewall, then 8 min to defend; earns nothing meanwhile | **Intercept** / **Defend**, a fight a process (`hub defend`) | Lockdown | Code, salvage, XP |
 
-Lockdown here: until you **Retake** it (one fight, `hub retake`). No income; the hub is still yours. The old owner's swarm is the same swarm as at an outpost (`fleet.mjs`, aimed at the hub), so only one swarm is ever out on your network: a hub's waits while an outpost's is out, and the other way round.
+Lockdown here: until you **Retake** it (one fight, `hub retake`). No income; the hub is still yours. One swarm is ever out on your network (`fleet.mjs`).
 
 ### Consortium members' servers
 
-| Threat | Comes from | How often | Its clock | You | Ignored | Beat it |
-|---|---|---|---|---|---|---|
-| **Invasion at a member's outpost** | Its natives | Every 10–18 min (logged-on) | 8 min | **Defend for a bounty** (`consortium defend <server>`) | Half the time a member stops it; else lockdown (no dividend, 2 h) | Bounty: credits, code, XP |
-
-A member's lockdown: **Retake for a bounty**. (Raids on members' walls and the trunk line's travelling virus are cut until real players share a network.)
+Nothing threatens them now (R2: their outposts, sieges, lockdowns and the dividend went with yours). Raids on members' walls and the trunk line's travelling virus stay cut until real players share a network.
 
 ## Invasions and the wall
 
@@ -842,8 +770,8 @@ The idle layer, built as events: fewer, bigger, and each one worth a look. The s
 | **Pack** | 16 | 3 | Three of the server's viruses. It counts 2 levels higher at your wall for each one still waiting behind the front one | *A pack of 3. It counts 4 levels higher at your wall until it thins out.* | jack in once per virus; the next steps up when the front one falls | chip, until it thins | 1 a virus (3) |
 | **Pair** | 12 | 4, two servers attached | Two viruses from two of your servers, arriving together. +2 levels at the wall while both stand | *X and Y came together…* | two fights | chip | 3 |
 | **Champion** | 12 | 8 | An elite-grade virus (elite armor and hits, elite flags: whatever answers elites in a fight answers it) a level over its server, 1.5× a normal virus's size. Counts 2 levels higher at the wall and travels half again as long | *A champion, built like an elite…* | jack in, or harden.sh to turn it away | chip | 5, and a **capture** when you kill it |
-| **Saboteur** | 10 | 4, a service running | A level over its server. If it gets past your wall (contested or breach), it shuts off your best running service until it's gone; nothing installs or uninstalls meanwhile | *If it gets past your wall, it shuts off your Edge Router until you kill it.* | your wall, or kill it | that service, off for as long as it stays | 3 |
-| **Thief** | 10 | 3, an outpost with 3+ stored, online only | Two levels over its server, heading for the outpost with the most stored, on a road four times as long (8 minutes from layer 1). It meets that outpost's firewall, not yours | *It is after the stores on X. Intercept it on the way, or it takes half of what is stored there.* | **Intercept** (`intercept`, or the card's button): a fight on its way | half of each stock on that outpost (the store refills) | 3 |
+| **Saboteur** (none since R2: services are gone, so it has nothing to shut off) | 10 | 4, a service running | A level over its server. If it gets past your wall (contested or breach), it shuts off your best running service until it's gone; nothing installs or uninstalls meanwhile | *If it gets past your wall, it shuts off your Edge Router until you kill it.* | your wall, or kill it | that service, off for as long as it stays | 3 |
+| **Thief** (none since R2: no outposts, no stores) | 10 | 3, an outpost with 3+ stored, online only | Two levels over its server, heading for the outpost with the most stored, on a road four times as long (8 minutes from layer 1). It meets that outpost's firewall, not yours | *It is after the stores on X. Intercept it on the way, or it takes half of what is stored there.* | **Intercept** (`intercept`, or the card's button): a fight on its way | half of each stock on that outpost (the store refills) | 3 |
 | **Scout** | 10 | 2, online only | Small (two levels under its server) and quick (half the travel). It doesn't chip and the wall doesn't grind it: it sits outside mapping your wall for 5 minutes, unless your wall clears its server's level by 3, when it's swatted quietly | *It is mapping your wall. Kill it in the next 5 min, or the next invasion counts 3 levels higher.* | jack in within 5 minutes, or harden for the next one | the next invasion counts 3 levels higher at your wall | 2 |
 
   **Quirks.** A raider, pack or champion carries its server's quirk three times in ten: from a **Hoard** it is Armored and its bounty is half again as big; from a **Nest** it brings a brood (one more virus, two levels under, behind it; +1 bounty); a **Hidden** one counts 2 levels higher at your wall. The quirk is a tag on its card.
@@ -886,8 +814,8 @@ You can still fight, explore and level. Crashing again restarts the 10 minutes. 
 
 **While you're logged off** (played out a minute at a time when you come back, up to a day), solo or in a consortium:
 - invasions keep coming on a long passive clock, one every 2–4 hours (no thieves or scouts), and your firewall meets them as usual: blocked, contested or breach. The Firewall card's *Vulnerable to lv N+* is the check before you go: a tier, a defrag or harden.sh;
-- swarms, your outposts' natives and your hubs' old owners keep coming too, and each meets that holding's firewall;
-- in a consortium, now and then a member steps in and stops one at your wall or outpost;
+- your hubs' old owners keep coming too, and each meets that hub's firewall;
+- in a consortium, now and then a member steps in and stops one at your wall;
 - a crash while away reboots the server for **2 hours** (Degraded, same rules), and the invasion **occupies** it: HOME shows on your server card with *Connect*. Its processes sit in six folders (services, daemons, vault, logs, cache, wall) and don't come back; clear them all to be back online at once. In a consortium, the virus then moves on along the trunk line.
 
 Testing: `developer invade [raider|pack|pair|champion|saboteur|thief|scout|hoard|nest|hidden]` (an invasion arrives now; a thief sets out), `developer wall <n>|off` (pins your wall's base, or lets it follow the network again), `developer crash`, `developer reboot` (ends Degraded mode).
@@ -901,7 +829,7 @@ A virus is its parts: a basic attacker and a signature part. Each part wears **a
 | Layer | Rule |
 |---|---|
 | Win | Reduce Virus Integrity (the sum of all parts) to zero. |
-| Parts | Two per virus, each with one attack shown on the timeline (rare and heavy: every 3–5 cycles). Breaking a part stops its attack; 35% of the time it leaves its loot as salvage. |
+| Parts | Two per virus, each with one attack shown on the timeline (rare and heavy: every 3–5 cycles). Breaking a part stops its attack, and it can leave its component (35% at home and in invasions, 60% in a room fight). |
 | Armor | Chits on a part (◆; a part wearing 2 or more wears half again: 2 → 3, 3 → 5). A hit on an armored part does no damage and breaks one chit; a heavy hit from your command (40+ base: Overload, a due Kill Process…) breaks two, and Kill Process always breaks two. Burn ticks, helper hits and each target of a spread hit count one chit each. A part with no chits left patches one back 5 cycles later (`CONFIG.patchDelay`), unless you break it first. Armor-piercing hits (Backdoor, Bypass) go straight through, at a longer cooldown. |
 | Patch | Two cycles after a part loses its last chit, it patches one chit back, unless you've broken it. The timeline shows the patch (◆ patch) in the column where it happens. |
 | Veiled | Ghostroot and the Sentinel hide a part's attack timers while it still has armor. Strip it, or Tag it, to see them. |
@@ -928,13 +856,13 @@ Two kinds, so a new player never faces everything at once.
 - **Behind (catch-up):** each level has a target of 6 + 2.2 × level minutes of active play (28 at 10, 50 at 20, 72 at 30, 92 at 39). Once the level you're on runs past 1.25 times its target, kills pay +50% XP until you reach the next level. Only time you played that class counts (the game open and used in the last 2 minutes), so there is nothing to miss by logging off. The log says so when it starts, the spoils card shows a *Behind* row, and the Loadout's XP bar carries a *Behind* tag and the top bar's XP line turns amber while it's on (`CATCHUP` in data.mjs, progression.mjs).
 - **Hot strain:** every 4 hours one strain open at your level runs hot: +50% XP and lead from it, on the pager when it changes. Fixed by the 4-hour window, so everyone with the same strains open sees the same one.
 - **Rested:** every safe hour you're logged off (no crash) banks a kill's worth of XP, up to 1.5 levels' worth. Kills spend it: each kill pays double until it runs out (a *Rested* row on the spoils card). It rewards building a safe period with your firewall.
-- **Varied play pays (Fresh).** XP comes in kinds: **Fights** (kills, invasions, swarms, outpost clears), **Break-ins** (a first run, a vault, a Resident beaten), **Intel** (log sweeps, LANTERN dead drops), **Building** (first crafts, installs, Root levels) and **Trading**. The first XP of a kind other than fighting that you haven't earned in 20 minutes of active play pays half again (at most a kill's worth); the gain shows a *FRESH* row. Nothing fades: doing one thing over and over just pays normally. Events under half a kill never count, so a free action can't farm it. Contracts get no bonus; they count as the activity behind them (a kill contract is fighting).
+- **Varied play pays (Fresh).** XP comes in kinds: **Fights** (kills, invasions, swarms), **Break-ins** (a first run, a vault, a Resident beaten), **Intel** (log sweeps, LANTERN dead drops), **Building** (first crafts, Root levels, a held server's respawned rooms) and **Trading**. The first XP of a kind other than fighting that you haven't earned in 20 minutes of active play pays half again (at most a kill's worth); the gain shows a *FRESH* row. Nothing fades: doing one thing over and over just pays normally. Events under half a kill never count, so a free action can't farm it. Contracts get no bonus; they count as the activity behind them (a kill contract is fighting).
 - **XP away from fighting:** a takeover 1.5 kills (on top of the vault's 1.5); each Root level ¾ of a kill; a cracked dead drop 1.5; a log sweep 1 on the first read (less for each wrong answer, like its lead); the first time you compile each protocol recipe, craft each filter, config, harvester or module, run each service version, or trade at each hub, half a kill (once each).
 - **Contracts pay at the level of the work:** a kill contract's XP is paid at the average level of the kills that filled it.
 - **Out of the starter area:** if you reach level 4 with no server traced, one is (the family you've chased most); at 5, wick pages you with one you haven't cracked yet (the pager; click it to see it on the map).
 - **The kit talent (level 5):** from level 5 one of your class's first-row talents is part of its kit, two free ranks on top of any you buy later: Breaker Overclocked Core (+6% damage), Bastion Patch Notes (Patch heals +6), Infiltrator Recon (Opening +10 damage), Operator Thread Pool (Deploy helpers +2). It shows under the passive on the Loadout page (`LOADOUT.kit`). It replaced the level-5 specialty pick. The Infiltrator's is Recon because two ranks of Heap Spray took a blue Payload from 34% to 21% of its Signal a fight at level 10, far past the few percent the others add.
 - **Talent points:** one every other level from 10 (21 by level 50, a full tree).
-- **Your server's level is your highest class level.** It has no XP of its own (save v34 dropped it, and banking loot no longer pays any). Its level sets its base Integrity (100, +4% a level), opens daemon slots (+1 at 10 and 20), service v2 (10) and v3 (25), outpost bandwidth (3 + level/4), memory (one more every 5 levels), buildings (by their level) and architecture (20).
+- **Your server's level is your highest class level.** It has no XP of its own (save v34 dropped it, and banking loot no longer pays any). Its level sets its base Integrity (100, +4% a level), opens daemon slots (+1 at 10 and 20) and memory (one more every 5 levels).
 - **The level-up banner covers every track.** It lists what the level brings: skills, your subclass, SIGINT, a talent point, a protocol slot, new protocol bases, a new layer, the kit talent, and when the level raises your server, a daemon slot, a service version, an outpost slot, buildings, memory and architecture. Under that it gives the power line (and the server's new Integrity) and a ghost line for the next level that brings something.
 - **Enemies have a level (1–60).** Home intrusions come in at your level (random ones sometimes one higher). A location keeps the level it was found at (see Level bands): its guards, vault protocols and code caches are that level, so old locations get easier as you outlevel them. Their size and damage grow 4% a level like yours (a level-1 virus is gentler: 80% of a level-1 match, ramping to 100% by level 6). Mutations from level 4, enemy crits from level 3; more armor chits at 5, 7 and 10. Enemy levels are colored WoW-style: red (5+ above you), orange (3–4 above), yellow (about even), green (below), grey (10+ below, no XP).
 - **Level bands.** Each layer of the net has a band (`BANDS` in data.mjs): layer 1 is levels 1–9, layer 2 7–18, layer 3 16–28, layer 4 26–40, layer 5 38–50. **Your layer** is the deepest band you've reached (layer 2 from 7, 3 from 16, 4 from 26, 5 from 38). A server found on a layer whose band holds your level is your level; otherwise 2 more per layer deeper (or less per layer shallower), kept inside the band. So kills trace servers on your layer at your level; trace records, relay route files, injectors and log sweeps lead to the next layer, which sits ahead of you. Rogue servers keep up with you inside their band, then top out.
@@ -1046,22 +974,22 @@ Pages show instead of explaining; the words are in the hover.
 - **Selecting:** click a node for its card (and the reticle round it); click empty map, the card's ×, or Esc to close the card and clear the selection.
 - **A crowded map:** servers that ask nothing of you right now (finished, detached, a rogue server you're not in, or yours and quiet) draw as dim dots without labels; hover one, select it, or zoom in and its name comes back. Servers under threat, with a contract, freshly found, unexplored or running an outpost keep their labels. Labels never overlap: where two would, the more important server keeps its label (selected, then under threat, then an outpost or where you are, then a contract or fresh find, then the rest) and the other's name waits for hover or zoom. Labels are small and keep their size on screen at any zoom. A **Show** picker at the top left, beside **Map · List**: a dropdown of checkboxes (**Mine**, **Targets**, **Threats**; tick any mix, none ticked shows all, **Show all** clears them) that dims everything outside the ticked groups: Mine is what you hold (taken over, outposts, a hub you hold), Targets is contracts, fresh finds, unexplored servers, leads and unknown servers, Threats is anything attacking you or yours (intrusions, invasions, swarms, sieges, lockdowns, infestations, dead drops).
 - **Traffic:** files moving on the net show as dots running along the links. Your market orders and payloads run between your server and the hub: an order is a teal file (a page with a folded corner), a payload a red spiked virus, each with an arrow ahead of it pointing the way it's going (out for a sale or a strike, home for a buy), each at its share of the transfer time. The hubs you've found are joined by a faint backbone on their ring, and their own trade runs along it as files in the sender's colour (not through a hub that's offline). That trade is real: each shipment is a ware going from the hub where it's cheaper to the neighbour that pays more for it, the biggest price gaps first, one per lap, so the traffic shows you where demand is. **Hover any moving file** for its card: the ware (or goods, or payload) and how many, its file name, from → to, and for hub trade the unit price at each end with the gap (▲%); for yours, the credits and the time left. The Show picker dims it; Mine keeps yours.
-- **The threat rail** (down the left of the map, under its toolbar): everything coming for you or under way, hottest first, then soonest: a breach or contested invasion, swarms (to an outpost or a hub you hold), natives at an outpost, lockdowns, infestations, a reboot, an open dead drop, and the next invasion's countdown. Each row has its name, where, its time left and a bar; red for what's hitting you, amber for what's on its way. Click one to select it on the map.
+- **The threat rail** (down the left of the map, under its toolbar): everything coming for you or under way, hottest first, then soonest: a breach or contested invasion, swarms at a hub you hold, lockdowns, infestations, a reboot, an open dead drop, and the next invasion's countdown. Each row has its name, where, its time left and a bar; red for what's hitting you, amber for what's on its way. Click one to select it on the map.
 - **List mode** (**Map · List** at the top of the map, MOO2's planets list): every server you've found as a row: name (with its faction's mark), family, level (coloured against yours), layer, how much you've explored, and its status (here, invasion, lockdown, infested, swarm, a contract, found, detached, your outpost's stock, yours, a rogue's kind). Click a column to sort (again to reverse); the Show picker applies; click a row and its card opens beside the list. Below the servers: **Hubs** you've found (with how you stand with each) and **Leads and unknown servers** (each trace with its percent, a contract's marker on flagged ones). Every row ends with a **locate** button: back to the map, zoomed in and centred on it, its card open. The same button on the map's toolbar zooms to whatever is selected.
 - **Map labels:** under each server's name, its level as `lv N` (coloured by how it compares to yours) and its status if it has one; the ring it sits on (labelled `layer 1`, `layer 2`…) is its layer. A server you've taken over shows only its name: its blue mark says it's yours.
 - **The top bar:** the pages on the left; in the middle who you are (handle · class · level, the class's XP as a thin bar under it); on the right the people button, the pager, then Integrity, Signal and credits.
 - **HOME on the map:** its name, then Integrity as a thin bar (teal, amber below 60%, red below 30%) with the number under it.
 - **A page that fails to draw** shows a red card with the error text and a Back to the map button, instead of freezing the game. Copy that text into a bug report.
-- **The map's server card:** the server's level (your highest class level) with that class's name as a tag (hover for what the next level adds), an Integrity bar, the wall, the services you run as a strip of tiles (shown only when you run one), and Memory, Bandwidth and Salvage as counts. Your packed harvesters are on the Craft page, not the server card. An install in progress shows as a small bar.
+- **The map's server card:** the server's level (your highest class level) with that class's name as a tag (hover for what the next level adds), an Integrity bar, the wall, and Memory and Components as counts.
 - **Craft:** every recipe shows what it takes as chips, an icon and *have/need* each (teal when you have it, red when you're short). Protocols and Harvesters each fold, a one-line purpose under each title; what you fold stays folded. Materials are a grid of counts (the Server page uses the same grid). The Server page's Blueprints card and every running service's next version show their cost the same way: a row each for credits, code, Exploits, salvage and the level it needs (your highest class's), *have/need*, red when short; the button carries the build time.
 - **Timeline chips** show an attack's name; where a long name won't fit the column, a three-letter code takes its place (Surge → SRG, Encrypt → ENC), never an ellipsis. Hover for the full name.
 - **On a phone** (under 480 px): the board shows Now, +1 and +2; chips drop their icon; the skill tray is three wide. Tap a skill to pick it and tap it again to fire it (tapping a part aims it); the keyboard stays down.
 - **Paused** shows as a strip across the top of the board (*PAUSED · any order resumes*), not a corner word.
 - **The crew column**: a narrow column on the left of every page while you have a crew (none when solo; `sidebar off|on` hides or shows it). Each row: name, then class and level flush with the right end of the Signal bar; it never shakes when they're hit, it outlines red. In a run fight it's the live party: bars, who's down, what each means to do this cycle. The combat log is a short strip under the timeline.
-- **Map cards pop up** beside the node you click (to its right, or its left when there's no room): the server card (Level, Integrity and the Wall as one line each; the running services as a strip of tiles; Memory, Bandwidth and Salvage), a location, a hub, an invasion (its own card: the virus, where it's from, what it's doing with a timer bar, one line on how your firewall meets it, Jack in once it's at your wall, and a link to the Firewall). `×`, Escape or a click on empty map closes it.
+- **Map cards pop up** beside the node you click (to its right, or its left when there's no room): the server card (Level, Integrity and the Wall as one line each; Memory and Components), a location, a hub, an invasion (its own card: the virus, where it's from, what it's doing with a timer bar, one line on how your firewall meets it, Jack in once it's at your wall, and a link to the Firewall). `×`, Escape or a click on empty map closes it.
 - **The expected damage and chits** (the white blink on a part's bar, the chit about to go) follow what you're typing: type a different skill at a part and the board shows what that one would do, before you press Enter. A heavy hit shows two chits going.
 - **Map:** a server's level is the big number under it in WoW colours (how hard it is for you), its layer a small teal tag (L2, L3); names can show only on hover (**Aa**, or `map names hover|on`). Scroll zooms around the cursor (up to 5×; labels stay readable), drag pans, double-click or ⤢ zooms out.
-- **Consortium:** members sit on one grid: online dot, name (a teal edge and a runner icon if they're in your crew, ★ for the founder), class and level, outposts, servers, and where they are (click it to see that server on the map). The dividend is a table, one row per member outpost: whose, which server, what it yields, how much an hour, and how full its share is.
+- **Consortium:** members sit on one grid: online dot, name (a teal edge and a runner icon if they're in your crew, ★ for the founder), class and level, servers, and where they are (click it to see that server on the map).
 
 ## Factions
 
@@ -1082,13 +1010,13 @@ Five PvE factions, companies and hacker crews, each with a colour, a mark and a 
 - **Rep** runs −100 to 100 with five tiers at 1/25/50/75 (each faction names its own: Kestrel's are Blacklisted, Prospect, Client, Account, Key account). Below 1 a faction is Hostile: its market is shut and it posts you no work. Hostility has depth: rep keeps falling under zero, down to −100, shown as a red segment before the tiers (Halcyon's standing stops at 0). Rep never comes back on its own: win a faction back by hitting its rivals (the ripple), working for its allies, or donating. Everyone starts at 10 (GLASSJAW at 5).
 - **Ripples:** whatever rep you gain or lose with a faction, its rivals move half the other way and its allies a quarter the same way. Only what actually changed ripples (a gain at 100 moves nobody). Halcyon's standing ripples too, but never pushes a rival below 0: doing your day job isn't picking a side.
 - **Hubs** appear on your map when the contract board opens, on a ring of their own between the first two layers (a diamond in the faction's colour with its mark; its rep tier under the name). Its card shows your rep as a five-step bar and its allies and rivals; **Connect** (or `connect <faction>`) jacks you into the hub's terminal, like any server: an ssh handshake, the hub's banner (its ASCII mark, name, level and your tier), one line from whoever answers (Halcyon's concierge, GLASSJAW's nameless broker, Kestrel's helpdesk, LANTERN's radio op, vesper of NULL CHOIR; your own root shell on a hub you hold) that changes with your rep, and its menu as tokens. Type a number or a word (or click a token): each choice opens its own window beside the terminal (Market, Work, Payloads, Donate, Their servers; Halcyon adds its Store; a hub you hold offers Your hub and Market; Hostile, only Payloads, Donate and Their servers). `menu` prints it again; `0` or `disconnect` closes it. The prompt reads `you@<hub>:~$` while you're in.
-- **One market per hub.** Its **wares** (code, Exploits, salvage) are bought and sold at moving prices (see Markets). Its **goods** are the specialty things only that hub sells: buy-only, a few of each, refilled every hour; better tiers buy 5% cheaper per tier from the third, and some goods wait for a tier. Priced at the hub's level or yours, whichever's higher. Everything bought at a hub comes by file transfer, goods included. `buy <faction> <good>` or `market buy <faction> <good>`. Halcyon is the exception: its goods are its store, delivered at once.
+- **One market per hub.** Its **wares** (code, Exploits, components) are bought and sold at moving prices (see Markets). Its **goods** are the specialty things only that hub sells: buy-only, a few of each, refilled every hour; better tiers buy 5% cheaper per tier from the third, and some goods wait for a tier. Priced at the hub's level or yours, whichever's higher. Everything bought at a hub comes by file transfer, goods included. `buy <faction> <good>` or `market buy <faction> <good>`. Halcyon is the exception: its goods are its store, delivered at once.
 - **Work:** once the hubs are up, about half the board (beyond GLASSJAW's off-the-books jobs) is Kestrel's, LANTERN's or NULL CHOIR's: the same kinds of contracts, paying 20% more credits and their own rep instead of Indemnity and Halcyon standing. Their takeover and recovery jobs often point at their rivals' servers. Each offer on the Mail board shows its faction's mark; Mail also shows your tier with each faction.
 - **Faction servers:** about one in eight of the servers you trace (never your first two, never rogue ones) belong to Kestrel, GLASSJAW, LANTERN or NULL CHOIR: their colour on the map node, their mark beside it. Opening one's vault takes the server from them: their rep −15, their rivals warm to you (+7).
 
 ### Markets
 
-Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 credits), Exploits (140) and salvage (7) (`market.mjs`). The Market card on each hub page shows, for each ware, what you hold (×N), what it pays here, and a chip for how that compares with the average across every hub (▲ green above, ▼ red below; hover it for the average and why), with Sell and Buy buttons. Transfers in progress show as bars that fill until they land.
+Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 credits), Exploits (140) and components (7) (`market.mjs`). The Market card on each hub page shows, for each ware, what you hold (×N), what it pays here, and a chip for how that compares with the average across every hub (▲ green above, ▼ red below; hover it for the average and why), with Sell and Buy buttons. Transfers in progress show as bars that fill until they land.
 
 - **Prices move on things you can't change.** Each hub has its own fixed condition, and one world event at a time touches every hub:
 
@@ -1096,9 +1024,9 @@ Every hub buys and sells what you farm: Cipher, Worm and Kernel code (base 14 cr
   |---|---|---|
   | Halcyon | Claims backlog | Cipher ×1.35 |
   | GLASSJAW | Black budget | Exploits ×1.5 |
-  | Kestrel | Overheating racks | Kernel ×1.8, salvage ×1.25 |
+  | Kestrel | Overheating racks | Kernel ×1.8, components ×1.25 |
   | LANTERN | Thin bandwidth | Worm ×1.45 |
-  | NULL CHOIR | Scrap economy | salvage ×0.6, Cipher ×1.15 |
+  | NULL CHOIR | Scrap economy | components ×0.6, Cipher ×1.15 |
 
   World events turn over every 4 hours, never the same twice running: Ransomware outbreak (Cipher ×1.5), Worm season (Worm ×1.5), Patch Tuesday (all code ×0.8), Zero-day rush (Exploits ×1.6), Grid blackout (salvage ×1.5, Kernel ×1.25), Quiet market.
 - **Trading: the order ticket.** A hub's market lists each ware once: what you hold, what it pays you (with ▲/▼ against the other hubs) and what it charges. Click a ware to open its ticket: **Sell** or **Buy**, a slider for how many (up to what you hold, or can afford), and a live preview: what you get or pay in total, the price of the first and last unit (each one moves the price), how that compares with the same order at the other hubs you can reach (*vs elsewhere*), and your credits after. Confirm sends it (it arrives after the transfer time).
@@ -1126,9 +1054,8 @@ Viruses you write to hit a faction hub (`payload.mjs`), compiled and deployed fr
 ### Hubs you hold
 
 - **Perks:** its market trades at the true price (no spread), its goods sell at 60% with no tier locks, and it earns you a cut of its trade: 10 + 3×hub level credits an hour, times how hot what it deals in is right now (its condition's wares). Real time, offline too; it holds a day's worth. Collect it on the hub page (`hub collect <faction>`). The old owner posts you no work.
-- **Swarms from the old owner:** while it's Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. Real time, online or off. The hub has its own firewall (at the hub's level to start; the Your hub window shows it, with Upgrade, Defrag and harden.sh, or `firewall upgrade|defrag|harden <faction>`), and the swarm meets it on arrival: blocked, it bounces; contested, the firewall kills a process now and then; a breach just runs the timer. The hub earns nothing while its swarm is out. 3 processes at the hub's level +1 (never yours), in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then 8 minutes to defend; Intercept or Defend one process a fight (`hub defend <faction>`), and the timer waits while you fight (not while the fight is paused). Break it for code, salvage and XP. The hub's map node flashes red with the timer.
+- **Swarms from the old owner:** while it's Hostile, it comes for the hub: 30 minutes after the capture, then every 2–4 hours, one at a time. Real time, online or off. The hub has its own firewall (at the hub's level to start; the Your hub window shows it, with Upgrade, Defrag and harden.sh, or `firewall upgrade|defrag|harden <faction>`), and the swarm meets it on arrival: blocked, it bounces; contested, the firewall kills a process now and then; a breach just runs the timer. The hub earns nothing while its swarm is out. 3 processes at the hub's level +1 (never yours), in the faction's virus family (GLASSJAW Ghostroot, NULL CHOIR Ransomware, the rest Worm). 10 minutes out, then 8 minutes to defend; Intercept or Defend one process a fight (`hub defend <faction>`), and the timer waits while you fight (not while the fight is paused). Break it for code, components and XP. The hub's map node flashes red with the timer.
 - **Lockdown:** if the timer runs out, the hub earns nothing until you retake it (one fight, `hub retake <faction>`). You never lose it for good.
-- **Striking a Hostile faction** (without holding its hub) gets one answer: a swarm in its colours at one of your outposts.
 
 ### Donations
 
@@ -1143,8 +1070,7 @@ Memory is how many servers your network holds at once (`MEMORY` in memory.mjs): 
 
 - **A find arrives off your network.** A server you trace lands on the map dimmed, marked *found*. Nothing is decided for you: its card shows your **free** memory as pips (free now → free after, e.g. *4 → 3/4 free*, the slot it would take blinking; red when there isn't enough). The server card and log messages count free memory the same way and a **Connect** button. Connect (or typing `connect <server>`) opens that prompt on its card first; **Connect · +N** commits it (N: it and anything found past it), **Cancel** backs out. The first connection costs memory only, no credits. With memory full, the pips show red and Connect waits until you detach something.
 - **Attach / detach** (a server that was already on your network) from its map card (or `attach <server>`, `detach <server>`): attaching costs 25 + 5 × its level credits, the same every time; detaching is free.
-- **Detaching freezes** the server and everything found through it: no runs, its outpost makes nothing, no invasions or swarms, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
-- Outpost slots still decide how many outposts run; memory decides how many servers you hold.
+- **Detaching freezes** the server and everything found through it: no runs, no invasions, its timers stop, and it frees their slots. Attach it again and it picks up exactly where it was (nothing is made for the frozen time). A server found through a detached one says so and waits for that one.
 
 ## The codex
 
@@ -1169,7 +1095,7 @@ A cut that calls off a charge counts as both (+3). A wasted tick earns nothing. 
 
 Each tier says so once, in the log and as a float on the part: *Encryptor decoded: research 1. Hover it to see its numbers.* (the float *DECODED*), *Encryptor research 5: its rule and answers are in the Codex.* (*RESEARCH 5*), and at 20 *Encryptor mastered: research 20. Its piece drops 25% more often, and you deal 3% more damage to it.* with a *MASTERED* flash.
 
-**Mastery** (that part only): its piece drops **25% more often** (the part's own drop chance ×1.25 when it breaks, on top of a network rich in salvage; the break that takes it to 20 already rolls with it), and **every hit of yours on it deals 3% more**: commands, burns, helpers, daemons and your server's hits. Every preview on the board counts it (*spike deals N*, the loss slice on its bar, whether a command cuts), so the numbers stay honest; the *cut ▸ N* readout is the damage a tick needs, which the perk doesn't change. A mastered part carries a small amber star by its name, on the board and in the Codex (never teal: teal is you). A crewmate gets none of it.
+**Mastery** (that part only): its **component** drops **25% more often** (the part's own drop chance ×1.25 when it breaks, on top of the room's 60% and a network rich in components; the break that takes it to 20 already rolls with it), and **every hit of yours on it deals 3% more**: commands, burns, helpers, daemons and your server's hits. Every preview on the board counts it (*spike deals N*, the loss slice on its bar, whether a command cuts), so the numbers stay honest; the *cut ▸ N* readout is the damage a tick needs, which the perk doesn't change. A mastered part carries a small amber star by its name, on the board and in the Codex (never teal: teal is you). A crewmate gets none of it.
 
 A save from before research keeps what it decoded: every part in its old part codex (`s.codex`) starts at research 1, and nothing else is granted. Research is `s.research`; `fresh()` starts it empty and the save restore adds it to an older save (no SAVE_VERSION change, as the Codex's record).
 
@@ -1211,12 +1137,9 @@ Every virus is a body (its family, or a guard's) plus rules, and a crew wrote it
 
 Every unique and strain trophy has a place in the **Collection** on the System page (`collectionMarkup`), sorted by level: the ones you've found by name, the rest as **???** with their level and where they come from (SPRAWL-00, a guard, a layer's vaults, a rogue server, the storyline, a contract, Halcyon's store, a boss; a strain's trophy names the strain only once you've met it). A missing boss unique also shows that boss's chance a kill, bad-luck protection included. A bar and *N/total* show how far you are. The card stays hidden until your first unique. A new one adds a *New in collection* row to the reward card. It counts the first time you get one, even if a full stash breaks it down; an old save counts what it already holds. A native unique is listed once it's yours, named, or native to a network you know (yours or a member's), with that network as its source.
 
-## Buyout
+## Buyout (gone)
 
-Timed builds can be finished now for credits, Master of Orion style (`BUYOUT` in combat.mjs): 3× the credit cost when the timer starts, falling with the time left, never under 20. *Finish now · N* sits by the timer.
-
-- **Installs and upgrades** (`buyout`): the service runs at once. Not while the server is degraded.
-- **Outposts** (`outpost buyout <server>`): a lockdown ends (base 250 credits), or a building finishes (base half its credits).
+Buyout (finishing a timed install or build for credits) went in R2 with installs and outposts: programs are instant, and nothing else runs on a build timer.
 
 ## The pager
 
@@ -1351,7 +1274,7 @@ Each network's **native boss** (nine templates, in its lair) is on the same syst
 | HOLLOW CHOIR | Choirboy (proxy, level 10) | Scrambles on you last one cycle less |
 | HOLLOW CHOIR | Hollow Note (exploit, level 10) | +30% damage on odd cycles |
 
-**Regrowth.** A held server whose lockdown runs out without you retaking it counts it. Two of those within 24 hours and the Resident regrows: the server isn't yours until you beat it in `/core` again. What you built there waits.
+**Regrowth** went with lockdowns (R2): a server you take over is yours for good.
 
 ## Tells (tells.mjs)
 
@@ -1494,7 +1417,7 @@ Mutations are always visible and each changes a decision:
 
 ## After a fight
 
-A win shows a card over the virus with what it gave you: XP (one bar, any level-up), drops, code, salvage, leads, located origins and bounties; the fight log has the same in words. Enter on an empty line takes you back to the map (home) or the run.
+A win shows a card over the virus with what it gave you: XP (one bar, any level-up), drops, code, components, leads, located origins and bounties; the fight log has the same in words. Enter on an empty line takes you back to the map (home) or the run.
 
 **Behind.** While the level you're on runs past 1.25 times its target (see Levels), kills pay +50% XP, a *Behind* row on the card.
 
@@ -1567,7 +1490,7 @@ Deeper servers also send bigger versions of the same viruses, named v2 and v3. O
 
 (Softened 2026-10-01: a deeper server is already 3 levels higher per layer, and the old numbers made same-level v3 fights on rogue servers unwinnable for some classes.)
 
-Strains are graded too. A swarm counts one layer deeper than the outpost it targets. Against your wall, a v2 invader counts as 2 levels higher and a v3 as 4: your firewall blocks a v1 at its level, a v2 at its level +2, a v3 at +4.
+Strains are graded too. A hub's swarm counts as layer 2. Against your wall, a v2 invader counts as 2 levels higher and a v3 as 4: your firewall blocks a v1 at its level, a v2 at its level +2, a v3 at +4.
 
 | Strain | Family | From (level, layer) | Parts | Rule |
 |---|---|---|---|---|
@@ -1606,13 +1529,12 @@ The System page has three sliders (0–100, default 80, the level the game was m
 
 Rules that keep timing, reloads and loops from paying:
 
-- **A paused fight holds no clock.** The timers on invasions and swarms (and on members' lockdowns) wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
-- **Away is played out, solo or not.** While you're logged off, the gap is played out a minute at a time: invasions every 2–4 hours, outposts noticed half as often, swarms and hubs' old owners at a quarter pace, each meeting that holding's firewall. In a consortium a member sometimes stops one. An invaded outpost makes nothing (as it pays no dividend).
-- **Threats run on real time, and your firewalls are the guard.** Invasions, swarms and hubs' old owners come whether you're logged on or not, and meet that holding's firewall; their timers run either way. What protects you while you're away is your network's base, the margin you bought on top, harden.sh and filters. Production stops while one sits at an outpost or hub.
-- **No store-to-market loop.** Hubs sell code, Exploits and salvage only as market wares. The Halcyon store never sells them for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
+- **A paused fight holds no clock.** The timers on invasions and swarms wait while you fight them, but only while the fight is running. A paused fight, or one left open over a reload (it comes back paused), holds nothing.
+- **Away is played out, solo or not.** While you're logged off, the gap is played out a minute at a time: invasions every 2–4 hours, hubs' old owners at a quarter pace, each meeting that holding's firewall. In a consortium a member sometimes stops one.
+- **Threats run on real time, and your firewalls are the guard.** Invasions, swarms and hubs' old owners come whether you're logged on or not, and meet that holding's firewall; their timers run either way. What protects you while you're away is your network's base, the margin you bought on top, harden.sh and filters. A hub earns nothing while one sits at it. Programs make nothing on their own, so nothing raids them.
+- **No store-to-market loop.** Hubs sell code, Exploits and components only as market wares. The Halcyon store never sells them for less than 10% over what the best hub market would pay for them right now. A round trip at one hub never profits (each unit of a lot is priced after its own push). Prices move between 35% and 160% on your own trading.
 - **Hub income reads outside factors only.** A held hub earns by its condition, the world event and wiped hubs elsewhere, not by your own trading there.
 - **What you compile breaks down without Exploits.**
-- **Detached servers make nothing.** Reattaching starts their outposts fresh.
 - **Developer commands** only work in tests, playtest pages and with `?dev` in the address.
 - **The game saves when the tab closes**, and every roll comes from the save's seed: reloading replays the same result.
 

@@ -2,7 +2,7 @@
 // compiling, scrapping, Zero-days, the install queue and save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, serviceVersion, serviceValue, syncServer, installBlock, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 // Since R1 a server is rooms (netrooms.mjs): into the first room next to the entry that something holds, and engage.
@@ -10,7 +10,7 @@ const roomFight = (s) => { const R = s.rooms, g = R.graph, room = FP.neighbours(
 // The vault, its key in hand: opened, its files in your pack.
 const openVault = (s) => { const R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); R.at = v; R.screen = null; FP.act(s, 'open'); };
 import { CONFIG, power } from './dist/data.mjs';
-import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, VERSIONS, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, serviceCost } from './dist/gear.mjs';
+import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode } from './dist/gear.mjs';
 
 // Exact numbers unless a test turns crits or misses on.
 CONFIG.baseCrit = 0;
@@ -394,14 +394,14 @@ test('home wins give the family\'s code, and can drop an item at the enemy\'s le
   LOOT.common = was;
 });
 
-test('compile: pick the stat, pay credits and salvage, get a protocol at your level; Build Farm makes it cheaper', () => {
+test('compile: pick the stat, pay credits and components, get a protocol at your level', () => {
   const s = fresh();
   command(s, 'developer level 3');
   s.server.credits = 1000;
   assert.match(command(s, 'compile crit').at(-1).message, /no protocol recipes/, 'compiling starts locked');
   s.recipes = ['recipe:crit'];
   assert.match(command(s, 'compile damage').at(-1).message, /recipe/, 'only recipes you have');
-  assert.match(command(s, 'compile crit').at(-1).message, /salvage/);
+  assert.match(command(s, 'compile crit').at(-1).message, /components/);
   for (let i = 0; i < 10; i++) s.salvage.push({ name: 'x' });
   command(s, 'compile crit');
   const it = s.stash.at(-1);
@@ -409,7 +409,6 @@ test('compile: pick the stat, pay credits and salvage, get a protocol at your le
   assert.equal(it.level, 3);
   assert.ok(it.stats.crit > 0, 'the stat you asked for');
   assert.match(command(s, 'compile integrity').at(-1).message, /server/, 'server stats come from the server');
-  assert.match(command(s, 'compile buildfarm').at(-1).message, /service/, 'a service isn\'t compiled');
   assert.notEqual(it.rarity, 'zeroday');
   assert.equal(s.server.credits, 1000 - COMPILE.cost(3).credits);
   assert.equal(s.salvage.length, 10 - COMPILE.cost(3).salvage);
@@ -420,8 +419,7 @@ test('compile: pick the stat, pay credits and salvage, get a protocol at your le
   s.salvage.push({ name: 'Tracker Core' }, { name: 'Sentry Lens' });
   command(s, 'compile rootkit');
   assert.equal(s.stash.at(-1).zeroDay, 'rootkit');
-  svc(s, { buildfarm: 3 });
-  assert.equal(compileCost(s).credits, Math.round(COMPILE.cost(3).credits * 0.65), '35% off at v3');
+  assert.equal(compileCost(s).credits, COMPILE.cost(3).credits, 'no Build Farm any more: the list price');
 });
 
 test('deconstruct: an item breaks into salvage, code and Exploits by rarity (a loaded one comes off first)', () => {
@@ -464,7 +462,8 @@ test('runs: your first vault holds a protocol kit and a code cache; deeper vault
   assert.ok(s.stash.length >= before + 1, 'the kit is banked into your stash');
   assert.ok(packed >= vaultCode(loc.level || 1));
   assert.equal(s.materials.worm - worm, packed, 'worm servers give Worm code');
-  assert.deepEqual(s.recipes, [src]);
+  assert.equal(s.recipes[0], src, 'the source banked');
+  assert.ok(s.recipes.slice(1).every((id) => id.startsWith('recipe:')), 'and the blueprint beside it taught a recipe');
 });
 
 test('Zero-days: Rootkit\'s first hit goes through armor; Race Condition refunds the first miss; Buffer Overflow crits after a break', () => {
@@ -536,53 +535,14 @@ test('Cron Job and Snapshot are daemons now: Cron hits every 3 cycles, the part 
   assert.equal(n.server.integrity, 100 - 60 + 16, 'dropped below half, restored 16%');
 });
 
-test('the install queue: code and credits, one at a time, in real time; versions gate on your level; no ports', () => {
+test('services are gone (R2): none to install, the commands say so, the world clock still runs', () => {
   const s = fresh();
-  assert.deepEqual(Object.keys(SERVICES), ['uplink', 'buildfarm', 'router', 'scheduler'], 'four services, all for the network around you');
-  assert.match(command(s, 'install router', 0).at(-1).message, /Edge Router blueprint/, 'every service starts as a blueprint to find');
-  assert.match(command(s, 'install raid', 0).at(-1).message, /isn't a service any more/, 'the home-fight ones went to the wall');
-  s.recipes = ['router', 'buildfarm'];
-  assert.match(command(s, 'install router', 0).at(-1).message, /needs 120c \+ 12 Worm \+ 6 salvage/);
-  s.materials.worm = 20; s.materials.kernel = 20; s.server.credits = 300;
-  assert.match(command(s, 'install router', 0).at(-1).message, /6 salvage/, 'salvage too');
-  command(s, 'developer salvage 12');
-  command(s, 'install router', 0);
-  assert.deepEqual({ ...s.install, pay: undefined }, { id: 'router', v: 1, startedAt: 0, doneAt: VERSIONS[0].minutes * 60000, pay: undefined });
-  assert.equal(s.materials.worm, 8);
-  assert.equal(s.server.credits, 180);
-  assert.equal(s.salvage.length, 6);
-  assert.match(command(s, 'install buildfarm', 1000).at(-1).message, /One install at a time/);
-  assert.equal(tickServices(s, 60000).length, 0, 'not yet');
-  const done = tickServices(s, VERSIONS[0].minutes * 60000);
-  assert.equal(done[0].type, 'service-done');
-  assert.equal(serviceVersion(s, 'router'), 1);
-  assert.match(installBlock(s, 'router'), /level 10/, 'v2 waits for level 10 (your highest class)');
-  command(s, 'install buildfarm', 0);
-  command(s, 'cancel install', 0);
+  assert.deepEqual(Object.keys(SERVICES), [], 'no services left');
+  assert.match(command(s, 'install router', 0).at(-1).message, /Services are gone/);
+  assert.match(command(s, 'uninstall router', 0).at(-1).message, /Services are gone/);
+  assert.match(command(s, 'cancel install', 0).at(-1).message, /Services are gone/);
   assert.equal(s.install, null);
-  assert.equal(s.materials.kernel, 20, 'cancelling refunds everything');
-  assert.equal(s.salvage.length, 6, 'salvage too');
-  command(s, 'uninstall router');
-  assert.equal(serviceVersion(s, 'router'), 0);
-  assert.equal(s.materials.worm, 14, 'half the code back');
-
-  const full = fresh();
-  command(full, 'developer code 500');
-  command(full, 'developer salvage 200');
-  command(full, 'developer blueprints');
-  full.server.credits = 9999;
-  svc(full, { uplink: 1, buildfarm: 1, router: 1 });
-  assert.equal(installBlock(full, 'scheduler'), null, 'no ports: every service you know can run');
-  assert.match(installBlock(full, 'router'), /level 10/);
-  full.hackers = { breaker: { level: 25, xp: 0 } };
-  command(full, 'install router', 0);
-  assert.equal(full.install.v, 2, 'your highest class level opens v2');
-  command(full, 'developer finish', 0);
-  command(full, 'install router', 0);
-  assert.equal(full.install.v, 3);
-  assert.deepEqual(serviceCost('router', 3), { credits: 2000, worm: 100, exploit: 3 });
-  fight(full);
-  assert.match(command(full, 'install scheduler').at(-1).message, /between fights/);
+  assert.deepEqual(tickServices(s, 60000).filter((e) => e.type === 'service-done'), [], 'nothing installs');
 });
 
 test('saves from before protocols: installed server gear becomes running services, the rest becomes code', () => {
@@ -617,10 +577,10 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   old.server.max = 140; old.server.integrity = 140;
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(s.upgrades, undefined);
-  assert.deepEqual(s.services, { uplink: 1 }, 'the RAID Array is the wall\'s now (v34)');
+  assert.deepEqual(s.services, {}, 'the RAID Array is the wall\'s now (v34), and the Route Logger went with services (v40)');
   assert.equal(s.server.max, Math.round(100 * power(serverLevel(s))));
   assert.equal(gearStat(s, 'signal'), 10);
-  assert.equal(gearStat(s, 'routeBoost'), 25, 'Route Logger v1: route files trace 25% further');
+  assert.equal(gearStat(s, 'routeBoost'), 0, 'no services: the Route Logger paid back what it cost');
   assert.equal(loaded(s)[0].rarity, 'stock');
   const t = fresh();
   assert.equal(daemonSlots(t), CONFIG.daemonSlots);
@@ -633,20 +593,18 @@ test('blueprints: nothing is buildable at first; each teaches something new; eve
   const { layoutOf } = await import('./dist/run.mjs');
   const { BLUEPRINTS } = await import('./dist/gear.mjs');
   const s = fresh();
-  assert.match(installBlock(s, 'uplink'), /blueprint/);
   assert.equal(knownRecipes(s).length, 0);
   learnBlueprint(s);
-  // The pool is every kind of recipe: protocol recipes and services, filter recipes, plans.
+  // The pool is every kind of recipe: protocol recipes and filter recipes (codebases come their own ways: sockets.mjs).
   const { CRAFTABLE, knowsFilter } = await import('./dist/filters.mjs');
-  const { OUTPOST, knowsPlan } = await import('./dist/outpost.mjs');
-  const all = BLUEPRINTS.length + CRAFTABLE.length + Object.keys(OUTPOST.plans).length;
+  const all = BLUEPRINTS.length + CRAFTABLE.length;
   for (let i = 1; i < all; i++) learnBlueprint(s);
   assert.ok(BLUEPRINTS.every((id) => knows(s, id)));
   assert.ok(CRAFTABLE.every((k) => knowsFilter(s, k)), 'filter recipes');
-  assert.ok(Object.keys(OUTPOST.plans).every((k) => knowsPlan(s, k)), 'plans');
   const salvage = s.salvage.length;
   learnBlueprint(s);
-  assert.equal(s.salvage.length, salvage + 2, 'one you know already is salvage');
+  assert.equal(s.salvage.length, salvage + 2, 'one you know already is 2 components');
+  assert.ok(s.salvage.slice(-2).every((p) => !/scrap/i.test(p.name)), 'components, not Scrap');
   command(s, 'developer location worm');
   const vault = Object.values(layoutOf(s.locations[0])).find((d) => d.locked);
   assert.ok(vault.files.includes('blueprint.bp'));
@@ -687,38 +645,17 @@ test('resting: between fights the server repairs 1% of its max every 10 seconds,
   CONFIG.restRegen = 0;
 });
 
-test('salvage pays like mana: generic pieces for the rest, a chosen payment is honoured', async () => {
+test('components pay like mana: any for the rest, named ones where a cost asks, a chosen payment is honoured', async () => {
   const { SALVAGE_COSTS, autoPay, payProblem, parsePay } = await import('./dist/salvage.mjs');
   const s = fresh();
-  s.salvage = [{ name: 'Scrap' }, { name: 'Scrap' }, { name: 'Signal Key' }, { name: 'Signal Key' }, { name: 'Mask Shard' }];
-  const cost = SALVAGE_COSTS['harvester-tap'](); // 5 any + a Signal Key
-  s.salvage.push({ name: 'Scrap' }, { name: 'Scrap' });
-  assert.deepEqual(autoPay(s, cost), { 'Signal Key': 1, Scrap: 4, 'Mask Shard': 1 }, 'plain scrap first, and it keeps the spare component');
-  assert.equal(payProblem(s, cost, { Scrap: 4, 'Mask Shard': 2 }), "You don't have 2 Mask Shard.");
-  assert.match(payProblem(s, cost, { Scrap: 4, 'Mask Shard': 1 }), /Signal Key/);
-  const mine = parsePay(s, 'signal-key:2,scrap:4,mask-shard:0');
+  s.salvage = [{ name: 'Pulse Kernel' }, { name: 'Pulse Kernel' }, { name: 'Sentry Lens' }, { name: 'Sentry Lens' }, { name: 'Sentry Lens' }, { name: 'Mask Shard' }];
+  const cost = SALVAGE_COSTS.zeroday(5); // 3 any + 2 guard components
+  s.salvage.push({ name: 'Pulse Kernel' }, { name: 'Pulse Kernel' });
+  assert.deepEqual(autoPay(s, cost), { 'Sentry Lens': 2, 'Pulse Kernel': 3 }, 'the named ones it asks for, then what no recipe names, and it keeps the spare guard component');
+  assert.equal(payProblem(s, cost, { 'Pulse Kernel': 3, 'Mask Shard': 2 }), "You don't have 2 Mask Shard.");
+  assert.match(payProblem(s, cost, { 'Pulse Kernel': 4, 'Mask Shard': 1 }), /guard component/);
+  const mine = parsePay(s, 'sentry-lens:2,pulse-kernel:2,mask-shard:1');
   assert.equal(payProblem(s, cost, mine), null);
-});
-
-test('buyout: finish an install now for credits, 3x its cost at the start and less as time runs down', async () => {
-  const { installBuyout, BUYOUT } = await import('./dist/combat.mjs');
-  const { outpostBuyout, OUTPOST } = await import('./dist/outpost.mjs');
-  const { VERSIONS } = await import('./dist/gear.mjs');
-  const s = fresh();
-  s.install = { id: 'uplink', v: 1, startedAt: 0, doneAt: 600000, pay: {} };
-  const full = installBuyout(s, 0), half = installBuyout(s, 300000);
-  assert.equal(full, Math.max(BUYOUT.min, 3 * VERSIONS[0].credits));
-  assert.ok(half <= full && half >= BUYOUT.min);
-  s.server.credits = full + 5;
-  command(s, 'buyout', 0);
-  assert.equal(s.install, null);
-  assert.equal(s.services.uplink, 1);
-  assert.equal(s.server.credits, 5);
-  // Outposts: a lockdown ends, a slot reset is skipped.
-  const loc = { id: 'x', name: 'X', outpost: { lockdown: { left: OUTPOST.lockdownMs / 2 } } };
-  assert.equal(outpostBuyout(loc, 0).what, 'lockdown');
-  assert.equal(outpostBuyout({ outpost: {}, build: { id: 'siphon', startedAt: 0, doneAt: 1000 } }, 0).what, 'build');
-  assert.equal(outpostBuyout({ outpost: {} }, 0), null);
 });
 
 test('Uplink trace is gone: old saves swap Traceroute for Keepalive and the Tracer daemon for Stall', () => {

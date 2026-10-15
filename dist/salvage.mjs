@@ -1,6 +1,6 @@
-// Salvage works like mana: most costs take ANY salvage (generic), and a few also need a
-// SPECIFIC piece (a Pulse Kernel, a guard's component). Pieces pile into named stacks. Plain
-// scrap (from scrapping protocols, spare blueprints, store lots) only ever pays the generic part.
+// Components (still s.salvage on a save) work like mana: most costs take ANY component, and a few also need a
+// SPECIFIC one (a Pulse Kernel, a guard's component, a server's own: sockets.mjs). They pile into named stacks.
+// (Plain Scrap went in R2: everything that gave it gives components.)
 //
 // A payment is { stackName: count }. You can choose it yourself (the picker, or `... pay
 // pulse-kernel:1,scrap:3` on the command line); otherwise autoPay spends plain scrap first, then
@@ -14,14 +14,8 @@ export const GUARD_PARTS = ['Sentry Lens', 'Tracker Core', 'Sentinel Lens', 'Loc
 export const SALVAGE_COSTS = {
   protocol: (n) => ({ any: n, need: [] }),
   zeroday: (n) => ({ any: Math.max(0, n - 2), need: [{ label: 'guard component', names: GUARD_PARTS, n: 2 }] }),
-  service: (n) => ({ any: n, need: [] }),
-  module: () => ({ any: 5, need: [] }),
-  building: (n) => ({ any: n, need: [] }), // outpost.mjs: a building's salvage
   filter: () => ({ any: 4, need: [] }),
   relay: () => ({ any: 4, need: [] }),
-  'harvester-siphon': () => ({ any: 5, need: [{ label: 'Replication Seed', names: ['Replication Seed'], n: 1 }] }),
-  'harvester-scraper': () => ({ any: 5, need: [{ label: 'Cipher Seed', names: ['Cipher Seed'], n: 1 }] }),
-  'harvester-tap': () => ({ any: 5, need: [{ label: 'Signal Key', names: ['Signal Key'], n: 1 }] }),
 };
 const WANTED = new Set(Object.values(SALVAGE_COSTS).flatMap((f) => f(4).need.flatMap((x) => x.names)));
 export const isComponent = (name) => WANTED.has(name);
@@ -29,7 +23,7 @@ export const isComponent = (name) => WANTED.has(name);
 const plural = (x) => (x.n > 1 && !/s$/.test(x.label) ? x.label + 's' : x.label);
 export const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 export const total = (cost) => cost.any + cost.need.reduce((n, x) => n + x.n, 0);
-export const costLabel = (cost) => [cost.any ? `${cost.any} salvage` : '', ...cost.need.map((x) => `${x.n} ${plural(x)}`)].filter(Boolean).join(' + ');
+export const costLabel = (cost) => [cost.any ? `${cost.any} components` : '', ...cost.need.map((x) => `${x.n} ${plural(x)}`)].filter(Boolean).join(' + ');
 
 // Your salvage as stacks, components first, then by size.
 export function stacks(s) {
@@ -53,7 +47,7 @@ export function payProblem(s, cost, pay) {
     for (const name of need.names) { const take = Math.min(left[name] || 0, need.n - got); got += take; left[name] = (left[name] || 0) - take; }
     if (got < need.n) return `Needs ${need.n} ${plural(need)}.`;
   }
-  if (count !== total(cost)) return count < total(cost) ? `Needs ${total(cost) - count} more salvage.` : `That's ${count - total(cost)} more salvage than it takes.`;
+  if (count !== total(cost)) return count < total(cost) ? `Needs ${total(cost) - count} more components.` : `That's ${count - total(cost)} more components than it takes.`;
   return null;
 }
 
@@ -90,7 +84,7 @@ export const splitPay = (text) => { const i = text.indexOf(' pay '); return i < 
 // Settle a cost: the chosen payment (checked) or the default. Returns the payment, or a string saying why not.
 export function settle(s, cost, payText) {
   const pay = payText != null ? parsePay(s, payText) : autoPay(s, cost);
-  if (!pay) return payText != null ? 'That payment names salvage you don\'t have.' : `Needs ${costLabel(cost)}.`;
+  if (!pay) return payText != null ? 'That payment names components you don\'t have.' : `Needs ${costLabel(cost)}.`;
   const why = payProblem(s, cost, pay);
   return why || pay;
 }

@@ -24,7 +24,7 @@
 import { emit, warn, hackerLevel, UNIQUES, addItem, findLocation, active, listenBoost } from './combat.mjs';
 import { CONFIG, FAMILIES, STRAINS, BOSSES, NATIVE_BOSSES, SERVER, createLocation, xpScale } from './data.mjs';
 import { seeded, uniqueItem, codeOf, MATERIALS } from './gear.mjs';
-import { postsOf } from './outpost.mjs';
+import { postsOf } from './sockets.mjs';
 import ITEMS from './content/items.mjs';
 
 export const NETWORK = {

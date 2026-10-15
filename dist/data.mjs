@@ -956,7 +956,7 @@ export const TEMPLATES = ['relay', 'mailhub', 'mirror', 'archive', 'lab'];
 // Every location carries its family's quirk: one visible rule, like a mutation.
 export const QUIRKS = {
   hoard: { family: 'ransomware', name: 'Hoard', rule: 'Caches pay 50% more, but the guards are Armored.' },
-  nest: { family: 'worm', name: 'Nest', rule: 'An extra /nest folder holds a Crawler and its brood. It is optional, and good for salvage.' },
+  nest: { family: 'worm', name: 'Nest', rule: 'An extra /nest folder holds a Crawler and its brood. It is optional, and good for components.' },
   hidden: { family: 'ghostroot', name: 'Hidden', rule: 'Something is stashed in a hidden folder. ls -a shows it.' },
 };
 export const quirkOf = (family) => Object.keys(QUIRKS).find((k) => QUIRKS[k].family === family) || null;

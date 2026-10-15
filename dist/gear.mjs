@@ -3,9 +3,8 @@
 //
 // You run PROTOCOLS: items with rolled stats in generic slots (any protocol in any slot),
 // like Corepunk. Loot and salvage build you.
-// Your server runs SERVICES: built with code materials, one install at a time, versions v1–v3,
-// one rule each (Master of Orion 2 style). Four of them, all for the network around you: the home
-// fight is the firewall's job (filters, tiers) and the daemons'. Code builds your base.
+// Your server runs no services any more (R2): the home fight is the firewall's job (filters, tiers) and the daemons',
+// and a server's programs (sockets.mjs) are the building. Code builds them, and the wall.
 import { power } from './data.mjs';
 
 // Slots by class level: 4 to start, 5 at 15, 6 at 30. Each slot takes one kind of item (SLOTS).
@@ -372,38 +371,11 @@ export const codeDrop = (level) => 1 + Math.floor(Math.max(1, level) / 10);
 export const EXPLOIT_CHANCE = { home: 0.04, guard: 0.08 };
 export const vaultCode = (level) => 12 + Math.floor(Math.max(1, level) / 2);
 
-// ---------- services ----------
-// No ports: every service you hold the blueprint for can run (there are four). What each version costs and takes (real time: 15 minutes, an hour, four hours). v2 needs
-// server level 10, v3 level 25. Salvage is any salvage (what deconstructing items gives).
-// Economy pass: a v1 is about 10 minutes of income at level 5, a v2 about half an hour at 15.
-export const VERSIONS = [
-  { v: 1, code: 12, exploit: 0, credits: 120, salvage: 6, minutes: 15, needs: 1 },
-  { v: 2, code: 40, exploit: 1, credits: 600, salvage: 15, minutes: 60, needs: 10 },
-  { v: 3, code: 100, exploit: 3, credits: 2000, salvage: 40, minutes: 240, needs: 25 },
-];
-// One rule per service. `stat`/`values`: what it adds per version (see serviceValue).
-// `code`: which code it's built from.
-// The home fight belongs to the wall now: what the Filter Bay, RAID Array, Hardened Kernel, Scrubber,
-// Hot-patcher and Counter-intrusion did comes from the firewall's tiers and its filters (firewall.mjs
-// TIER_PERKS, filters.mjs FILTER_STATS), and Cron Job and Snapshot are daemons (data.mjs DAEMONS).
-// Old saves: progression.mjs (v34).
-export const SERVICES = {
-  uplink: { name: 'Route Logger', code: 'cipher', stat: 'routeBoost', values: [25, 50, 75], unit: '% more from route files', about: 'Route files, trace records, injectors and log sweeps trace further, so you find the next layer sooner.' },
-  buildfarm: { name: 'Build Farm', code: 'kernel', stat: 'compileDiscount', values: [15, 25, 35], unit: '% off compiling', about: 'Compiling protocols costs less.' },
-  router: { name: 'Edge Router', code: 'worm', stat: 'bandwidth', values: [1, 2, 3], unit: ' outpost slots', about: 'Run more outposts at once.' },
-  scheduler: { name: 'Scheduler', code: 'kernel', stat: 'scheduler', values: [60, 30, 15], unit: '-minute collection', about: 'Collects every outpost on a timer, so you never have to visit.' },
-};
-export const SERVICE_SOURCES = Object.keys(SERVICES).filter((k) => SERVICES[k].special);
-// What a version of a service costs, as { credits, cipher, worm, kernel, exploit }.
-export function serviceCost(id, v) {
-  const d = SERVICES[id], x = VERSIONS[v - 1];
-  const cost = { credits: x.credits, exploit: x.exploit };
-  const codes = Array.isArray(d.code) ? d.code : [d.code];
-  for (const c of codes) cost[c] = Math.ceil(x.code / codes.length) + (codes.length > 1 ? Math.ceil(x.code / 4) : 0);
-  return cost;
-}
-export const costLine = (cost) => Object.entries(cost).filter(([, n]) => n).map(([k, n]) => (k === 'credits' ? `${n}c` : k === 'salvage' ? `${n} salvage` : `${n} ${MATERIALS[k].short}`)).join(' + ');
-export const serviceSalvage = (v) => VERSIONS[v - 1].salvage || 0;
+// ---------- services (retired) ----------
+// Services went with outposts in R2 (docs/servers.md 8.1): a save that ran one got what it cost back (sockets.mjs
+// retireOutposts). SERVICES stays, empty, for the old saves' migrations that still read it.
+export const SERVICES = {};
+export const SERVICE_SOURCES = [];
 
 // ---------- blueprints ----------
 // Nothing is buildable at the start. Every regular service, and every protocol recipe (compile a
@@ -413,6 +385,6 @@ export const serviceSalvage = (v) => VERSIONS[v - 1].salvage || 0;
 // Special services and Zero-days still come from source (.src) in deeper vaults.
 export const recipeId = (stat) => 'recipe:' + stat;
 export const recipeStat = (id) => (id?.startsWith('recipe:') ? id.slice(7) : null);
-export const BLUEPRINTS = [...Object.keys(SERVICES).filter((k) => !SERVICES[k].special), ...PROTOCOL_STATS.map(recipeId)];
+export const BLUEPRINTS = PROTOCOL_STATS.map(recipeId);
 export const BLUEPRINT_CHANCE = { home: 0.008, guard: 0.02 }; // the pool is every kind of recipe (combat.mjs learnBlueprint)
-export const blueprintName = (id) => (recipeStat(id) ? `${PROTOCOL_NAMES[recipeStat(id)]} recipe` : `${SERVICES[id]?.name || id} blueprint`);
+export const blueprintName = (id) => (recipeStat(id) ? `${PROTOCOL_NAMES[recipeStat(id)]} recipe` : `${id} blueprint`);

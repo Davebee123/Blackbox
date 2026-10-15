@@ -113,13 +113,13 @@ test('where a fight is: your servers and home are yours, a member\'s are theirs,
   assert.equal(fightNet(s), null, 'SPRAWL-00 belongs to nobody');
 });
 
-test('the solo routes: a Listening Post tunes to a native you have heard named; darknet listings name one and sell it', () => {
+test('the solo routes: a Listening Post (a program) tunes to a native you have heard named; darknet listings name one and sell it', () => {
   const s = at(24);
   const foreign = NATIVE_POOL.find((id) => !sigOf(s, 'you').uniques.includes(id) && UNIQUES[id].level <= 24);
   // No post, or not named yet: nothing to tune to.
   command(s, 'developer location ransomware');
   const loc = s.locations[0];
-  loc.takenOver = true; loc.buildings = ['post', 'post'];
+  loc.takenOver = true; loc.floorplan = { programs: { s1: 'post', s2: 'post' }, paid: {} }; // two Listening Posts in its sockets
   play(s, 'listen ' + foreign);
   assert.notEqual(s.listen, foreign, 'a native you have not heard of stays ???');
   s.netNamed = { [foreign]: true };

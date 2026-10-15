@@ -54,13 +54,6 @@ function win(s) {
   command(s, 'spike ' + last.id);
   return resolveCycle(s);
 }
-const outpost = (s) => {
-  const o = s.locations[0];
-  o.takenOver = true;
-  command(s, `developer outpost ${o.id}`);
-  o.outpost.stock = { code: 6, credits: 80 };
-  return o;
-};
 
 test('pacing: the first a few minutes after your first find, then one every 20-30 minutes online; open ports 8-12; away 2-4 hours', () => {
   assert.deepEqual(I.everyMs, [20 * MIN, 30 * MIN]);
@@ -204,51 +197,15 @@ test('a champion: elite-grade (the tells for elites apply), a level over its ser
   assert.ok(wallMarkup(s).includes('Firewall'));
 });
 
-test('a saboteur: through the wall, it shuts off a service until you kill it; nothing installs meanwhile', () => {
-  const s = world({ services: { router: 2, buildfarm: 1, uplink: 1 } });
-  invade(s, 'saboteur');
-  const inv = s.invasion;
-  assert.equal(inv.service, 'router', 'the best service you run');
-  assert.match(tellOf(s), /Edge Router/);
-  assert.equal(s.services.router, undefined, 'shut off');
-  assert.ok(s.logs.some((e) => e.type === 'sabotage'));
-  play(s, 'install buildfarm');
-  assert.match(s.logs.at(-1).message, /Get rid of it first/);
-  play(s, 'jack in');
-  win(s);
-  assert.equal(s.services.router, 2, 'back on, at its version');
-  // Blocked at the wall, it does nothing.
-  const t = world({ fw: 40, services: { router: 1 } });
-  invade(t, 'saboteur');
-  assert.equal(t.services.router, 1);
-});
-
-test('a thief: it heads for an outpost\'s stores; intercept it on the way, or it takes half', () => {
+test('no saboteur and no thief since R2: no services to shut off, no outpost stores to rob; asked for, one comes as a raider', () => {
   const s = world();
-  const o = outpost(s);
-  invade(s, 'thief');
-  const inv = s.invasion;
-  assert.equal(inv.target, o.id);
-  assert.notEqual(inv.from, o.id, 'from another of your servers');
-  assert.equal(inv.state, 'travel');
-  assert.ok(inv.total >= 2 * MIN * KINDS.thief.travel, 'a long road: time to catch it');
-  assert.ok(invaderStatus(s).intercept, 'the card offers Intercept');
-  wait(s, inv.total + 5000);
-  assert.equal(s.invasion, null);
-  assert.equal(Math.floor(o.outpost.stock.credits), 80 * (1 - THIEF.take));
-  assert.ok(s.logs.some((e) => e.type === 'theft'));
-  // Intercepted, nothing goes.
+  invade(s, 'saboteur');
+  assert.equal(s.invasion.kind, 'raider', 'nothing to shut off');
+  assert.ok(!s.logs.some((e) => e.type === 'sabotage'));
   const t = world();
-  const p = outpost(t);
   invade(t, 'thief');
-  wait(t, MIN);
-  play(t, 'intercept');
-  assert.ok(active(t));
-  const ev = win(t);
-  assert.ok(ev.some((e) => /before it reached/.test(e.message)));
-  assert.equal(p.outpost.stock.credits, 80);
-  assert.ok(t.sigs >= KINDS.thief.bounty);
-  // Only a thief is caught on the way.
+  assert.equal(t.invasion.kind, 'raider', 'nothing to rob');
+  // Only a thief was ever caught on the way.
   const u = world();
   play(u, 'developer invade raider');
   u.invasion.state = 'travel'; u.invasion.left = MIN;
@@ -315,7 +272,6 @@ test('fragmentation comes from events: contested cracks a block, a breach two, c
 
 test('away: no thieves or scouts while you are logged off', () => {
   const s = world({ fw: 40 });
-  outpost(s);
   const T0 = 1_800_000_000_000;
   s.net.wall = T0;
   tickNetwork(s, T0 + 48 * 3600000);

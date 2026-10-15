@@ -13,7 +13,7 @@ import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, learnDaemon, ma
 import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
-import { OUTPOST, knowsPlan, learnPlan, planName, planPrice } from './outpost.mjs';
+import { shopCodebases, learnCodebase, gainComponents } from './sockets.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 export const STORE = {
@@ -45,8 +45,8 @@ export const GOODS = {
   cipher: { name: 'Cipher code lot', code: 'cipher', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   worm: { name: 'Worm code lot', code: 'worm', credits: (L) => 45 + 5 * L, qty: [1, 3] },
   kernel: { name: 'Kernel code lot', code: 'kernel', credits: (L) => 45 + 5 * L, qty: [1, 3] },
-  exploit: { name: 'Exploit', about: 'Grants 1 Exploit. The top service versions need them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
-  salvage: { name: 'Salvage lot', about: 'Grants 5 pieces of salvage.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
+  exploit: { name: 'Exploit', about: 'Grants 1 Exploit. Medium programs and the wall\'s top tiers take them.', credits: (L) => 150 + 10 * L, qty: [1, 1] },
+  salvage: { name: 'Component lot', about: 'Grants 5 components.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
   crate: { name: 'Sealed item', about: 'Opens into a Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
   blueprint: { name: 'Sealed blueprint', about: 'Teaches you a blueprint you do not have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
   daemon: { name: 'Daemon image', about: 'Grants a daemon, or upgrades one you already have by a version.', credits: (L) => 300 + 20 * L, qty: [1, 1], tier: 2 },
@@ -104,16 +104,16 @@ export function buy(s, what) {
     items(s)[line.id] = (items(s)[line.id] || 0) + 1;
     return emit(s, 'bought', `Bought a ${lineName(line).toLowerCase()} for ${price} credits. You have ${items(s)[line.id]}.`, { item: line.id });
   }
-  // Plans: a harvester's or a module's, once each (outpost.mjs).
-  if (what?.startsWith('plan-')) {
-    const id = what.slice(5);
-    if (!OUTPOST.plans[id]) return warn(s, 'Halcyon has no such plan.');
-    if (knowsPlan(s, id)) return warn(s, `You already have the ${planName(id)}.`);
-    const price = planPrice(id, L);
-    if (s.server.credits < price) return warn(s, `The ${planName(id)} costs ${price} credits.`);
-    s.server.credits -= price;
-    emit(s, 'bought', `Bought the ${planName(id)} for ${price} credits.`, { plan: id });
-    return learnPlan(s, id);
+  // Codebases (sockets.mjs): Halcyon's own, once each, by standing.
+  if (what?.startsWith('codebase-')) {
+    const cb = shopCodebases(s, 'halcyon', L).find((x) => x.id === what.slice(9));
+    if (!cb) return warn(s, 'Halcyon has no such codebase.');
+    if (cb.known) return warn(s, `You already know the ${cb.name}.`);
+    if (tierIndex(s) < cb.tier) return warn(s, `The ${cb.name} is for ${TIERS[cb.tier].name} standing and up.`);
+    if (s.server.credits < cb.price) return warn(s, `The ${cb.name} costs ${cb.price} credits.`);
+    s.server.credits -= cb.price;
+    emit(s, 'bought', `Bought the ${cb.name} for ${cb.price} credits.`, { codebase: cb.id });
+    return learnCodebase(s, cb.id, 'Halcyon: ');
   }
   const slot = storeOf(s).slots.find((x) => x.key === what);
   if (!slot) return warn(s, 'That’s not on the shelf any more.');
@@ -131,7 +131,8 @@ export function deliverGoods(s, id, L) {
   if (['relay', 'cracker', 'injector', 'harden'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
   if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');
   if (id === 'exploit') return gainCode(s, { exploit: 1 }, 'Bought: ');
-  if (id === 'salvage') { for (let i = 0; i < 5; i++) s.salvage.push({ name: 'Agency salvage', virus: 'store', seed: 0 }); return; }
+  if (id === 'salvage') { gainComponents(s, 5, null, 'store'); return; }
+  if (GOODS[id]?.codebase) return learnCodebase(s, GOODS[id].codebase, 'Unsealed: ');
   if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
   if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
   if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned' }), 'Unsealed: ');

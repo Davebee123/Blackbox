@@ -77,7 +77,7 @@ function partCard(level, x, tells = []) {
     rule = `<p class="cxp-does">${esc(r.does)}</p><p class="cxp-answer">${esc(r.answer)}</p>${rides}`;
   } else rule = locked(`Research ${TIER.rule} to learn its rule, its answer and its tells.`);
   const loot = !p.loot ? '' : mast ? `<p class="cxp-loot">${glyph('salvage')}Drops ${esc(p.loot)}</p>` : locked(`Research ${RESEARCH.max} to learn its drop.`);
-  const perk = mast ? `<p class="cxp-perk">Mastered. Its piece drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
+  const perk = mast ? `<p class="cxp-perk">Mastered. Its component drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.</p>` : '';
   return `<div class="cx-part t${x.tier}${mast ? ' mastered' : ''}">${head}${bar}${stats}${atk}${rule}${loot}${perk}</div>`;
 }
 function setMarkup(x) {

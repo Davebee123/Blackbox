@@ -9,7 +9,7 @@ import BASTION_FX from './classes/bastion.mjs';
 import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
-import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts } from './mail.mjs';
+import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts, systemLetter } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
@@ -21,8 +21,7 @@ const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'st
 const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
 import { eventCommand, eventWon, outbreakMult } from './events.mjs';
-import { architectureCommand, archCredits } from './architecture.mjs';
-import { outpostCommand, outpostWon, siteTrait, OUTPOST, knowsPlan, learnPlan, isOutpost, retireHarvesters, devOutpost, postsOf, LISTEN } from './outpost.mjs';
+import { siteTrait, postsOf, listenBoost as postBoost, componentChance, gainComponents, retireOutposts, retireLetter, PROGRAM_IDS, codebasesOf } from './sockets.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
 import { raidStart, raidLand, raidCycle, raidShield, raidBroke, raidTaken, raidAbsorb, noteDealt, noteHeal, cleanse, attackTarget, sigint, sigintCheck } from './raid.mjs';
@@ -34,8 +33,8 @@ import { firewallCommand, wear, raidShare } from './firewall.mjs';
 import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, RETIRED } from './progression.mjs';
 import { portsCommand, invaderDown, invasionRestore } from './invasion.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
-import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags } from './hidden.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, SERVICES, SERVICE_SOURCES, VERSIONS, RULES, serviceCost, serviceSalvage, costLine, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
+import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, craftRelay } from './hidden.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
@@ -45,7 +44,7 @@ import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TI
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 39; // v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 40; // v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -379,26 +378,12 @@ export function loadedOn(s, id) {
   return null;
 }
 
-// ---------- services (the server) ----------
-export const serviceVersion = (s, id) => (s.services || {})[id] || 0;
+// ---------- the server ----------
+// (Services retired with outposts in save v40, docs/servers.md R2: a save that ran one got what it cost back, sockets.mjs
+// retireOutposts. The server runs no rules of its own; the firewall, its filters and the daemons are its kit.)
 const baseMax = (s) => Math.round(CONFIG.maxIntegrity * power(serverLevel(s)));
-// What a running service adds, in the stat's own terms.
-export function serviceValue(s, id, v = serviceVersion(s, id)) {
-  const d = SERVICES[id];
-  if (!d || !v) return 0;
-  const x = d.values[v - 1];
-  if (d.stat === 'integrity') return Math.round((baseMax(s) * x) / 100);
-  if (d.stat === 'shield') return Math.round((serverMax(s) * x) / 100);
-  if (d.flat) return STATS[d.stat]?.dp ? Math.round(x * power(serverLevel(s)) * 10) / 10 : Math.max(1, Math.round(x * power(serverLevel(s))));
-  return x;
-}
-export function serviceStat(s, stat) {
-  let n = 0;
-  for (const id of Object.keys(s.services || {})) if (SERVICES[id]?.stat === stat) n += serviceValue(s, id);
-  return n;
-}
 
-// A stat's total. side 'hacker': your protocols; 'server': the server's services; none: both.
+// A stat's total. side 'hacker': your protocols; 'server': the firewall's filters at home; none: both.
 // (Survival stats exist on both sides and count where that side is defending.)
 export function gearStat(s, stat, side = null) {
   let n = 0;
@@ -408,7 +393,7 @@ export function gearStat(s, stat, side = null) {
     const fx = it.unique && UNIQUES[it.unique]?.effect;
     if (fx?.when === 'always' && fx.do === 'stat-x2' && fx.stat === stat && !['signal', 'integrity'].includes(stat) && fxCond(s, fx)) n += it.stats[stat] || 0;
   }
-  if (side !== 'hacker') n += serviceStat(s, stat) + (FILTER_STATS[stat]?.home ? (FILTER_STATS[stat].pct ? Math.round((serverMax(s) * filterStat(s, stat)) / 100) : filterStat(s, stat)) : 0); // the firewall's filters for the fights at home: decoys, a sandbox, Block, a shield, Regen, barbs
+  if (side !== 'hacker') n += (FILTER_STATS[stat]?.home ? (FILTER_STATS[stat].pct ? Math.round((serverMax(s) * filterStat(s, stat)) / 100) : filterStat(s, stat)) : 0); // the firewall's filters for the fights at home: decoys, a sandbox, Block, a shield, Regen, barbs
   if (STATS[stat]?.dp) n = Math.round(n * 10) / 10;
   return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
 }
@@ -472,7 +457,7 @@ export function syncServer(s) {
   if (delta > 0 && s.server.integrity > 0) s.server.integrity += delta;
   s.server.integrity = Math.min(s.server.integrity, max);
 }
-// A new protocol into the stash. A full stash scraps it for salvage instead.
+// A new protocol into the stash. A full stash breaks it down for components instead.
 export function addItem(s, item, why = 'Loot: ') {
   s.stash ||= [];
   if (item.unique && !(s.collection ||= {})[item.unique]) { s.collection[item.unique] = hooks.now?.() ?? Date.now(); emit(s, 'collected', `Collection: ${item.name}.`, { unique: item.unique }); }
@@ -486,19 +471,19 @@ export function addItem(s, item, why = 'Loot: ') {
   emit(s, 'drop', `${why}${itemLabel(it)}${it.unique || it.zeroDay ? ' (Zero-day)' : ''}: ${statLine(it.stats)}.`, { item: it, rarity: it.rarity });
   return it;
 }
-// Break an item down: salvage, code (the family it dropped from) and Exploits. Returns a summary.
+// Break an item down: components, code (the family it dropped from) and Exploits. Returns a summary.
 // out (optional): rows for the gain card (app.js), { label, qty, kind, text }.
 export function deconstruct(s, item, out = null) {
   const d = DECONSTRUCT[item.rarity] || DECONSTRUCT.stock;
   const n = d.salvage[0] + Math.floor(rand(s) * (d.salvage[1] - d.salvage[0] + 1)) + Math.floor((item.level || 1) / 10);
-  for (let i = 0; i < n; i++) s.salvage.push({ name: 'Scrap', virus: itemLabel(item), seed: 0 });
+  gainComponents(s, n, null, itemLabel(item)); // components (sockets.mjs): Scrap is gone
   const code = item.from && codeOf(item.from) ? codeOf(item.from) : ['cipher', 'worm', 'kernel'][Math.floor(rand(s) * 3)];
   const mats = materialsOf(s);
   if (d.code) mats[code] = (mats[code] || 0) + d.code;
   const ex = item.compiled ? 0 : d.exploit; // what you compiled yourself gives no Exploits back
   if (ex) mats.exploit = (mats.exploit || 0) + ex;
-  if (out) out.push({ label: 'Salvage', qty: `+${n}`, kind: 'loot', text: `${n} salvage` }, ...(d.code ? [{ label: MATERIALS[code].name, qty: `+${d.code}`, kind: 'code', text: `${d.code} ${MATERIALS[code].name}` }] : []), ...(ex ? [{ label: 'Exploit', qty: `+${ex}`, kind: 'exploit', text: `${ex} Exploit` }] : []));
-  return [`${n} salvage`, d.code && `${d.code} ${MATERIALS[code].name}`, ex && `${ex} Exploit${ex > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+  if (out) out.push({ label: 'Components', qty: `+${n}`, kind: 'loot', text: `${n} components` }, ...(d.code ? [{ label: MATERIALS[code].name, qty: `+${d.code}`, kind: 'code', text: `${d.code} ${MATERIALS[code].name}` }] : []), ...(ex ? [{ label: 'Exploit', qty: `+${ex}`, kind: 'exploit', text: `${ex} Exploit` }] : []));
+  return [`${n} components`, d.code && `${d.code} ${MATERIALS[code].name}`, ex && `${ex} Exploit${ex > 1 ? 's' : ''}`].filter(Boolean).join(', ');
 }
 // ---------- drops ----------
 // Uniques written in content/items.mjs (the editor's Uniques page).
@@ -525,20 +510,20 @@ function pickUnique(s, pool) {
 // kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
 export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
 export const bossChance = (s, boss) => Math.min(1, (BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1) + (s.breach?.fx?.unique || 0)); // a breach's Listening Post (rewrites.mjs), and a dig in's +10% (world.mjs)
-// The Listening Post (outpost.mjs): the unique you listen for drops LISTEN.per more often per post, wherever it drops.
-export const listenBoost = (s) => (s.listen && postsOf(s) ? 1 + LISTEN.per * postsOf(s) : 1);
-const listened = (s) => (s.listen && postsOf(s) ? UNIQUES[s.listen] || null : null);
+// The Listening Post (a program, sockets.mjs): kills on a server running one roll for the unique you name twice as often.
+export const listenBoost = (s) => postBoost(s);
+const listened = (s) => (s.listen && listenBoost(s) > 1 ? UNIQUES[s.listen] || null : null);
 export function listenCommand(s, text) {
   const want = text.replace(/^listen\s*/, '').trim().toLowerCase();
-  if (!postsOf(s)) return warn(s, 'Listening needs a Listening Post on a server you hold (a support building, from level 5).');
-  if (!want) return emit(s, 'info', s.listen && UNIQUES[s.listen] ? `Listening for ${UNIQUES[s.listen].name}. It drops ${Math.round((listenBoost(s) - 1) * 100)}% more often wherever it can drop.` : 'Listening for nothing. Type listen <unique>, or pick one in the Collection.');
+  if (!postsOf(s)) return warn(s, 'Listening needs a Listening Post: a program you build in a server\'s socket.');
+  if (!want) return emit(s, 'info', s.listen && UNIQUES[s.listen] ? `Listening for ${UNIQUES[s.listen].name}. Kills on a server running a Listening Post roll for it twice as often.` : 'Listening for nothing. Type listen <unique>, or pick one in the Collection.');
   const u = UNIQUES[want] || Object.values(UNIQUES).find((x) => x.name.toLowerCase() === want);
   if (!u || (isNative(u.id) && !named(s, u.id))) return warn(s, `No unique called ${want}.`); // a native you haven't heard named stays ???
   if ((u.sources || []).every((src) => ['story', 'contract', 'store'].includes(src.kind))) return warn(s, `${u.name} is a reward, not a drop. Nothing to listen for.`);
   s.listen = u.id;
   // A native unique (network.mjs): on its own network the usual boost; anywhere else the post lifts it off its network too.
-  if (isNative(u.id)) return emit(s, 'info', `Listening for ${u.name}. It drops ${Math.round((listenBoost(s) - 1) * 100)}% more often on its network, and ${1 + postsOf(s)} times as often anywhere else.`);
-  return emit(s, 'info', `Listening for ${u.name}. It drops ${Math.round((listenBoost(s) - 1) * 100)}% more often wherever it can drop.`);
+  if (isNative(u.id)) return emit(s, 'info', `Listening for ${u.name}. Kills on a server running a Listening Post roll for it twice as often, and it drops ${1 + postsOf(s)} times as often off its network.`);
+  return emit(s, 'info', `Listening for ${u.name}. Kills on a server running a Listening Post roll for it twice as often.`);
 }
 function bossUnique(s, boss, level) {
   if (BOSSES[boss]?.native) return nativeBossUnique(s, boss, level);
@@ -751,25 +736,24 @@ export const knownRecipes = (s) => PROTOCOL_STATS.filter((k) => knows(s, recipeI
 // Learn a blueprint you don't have yet: the Firewall first, then any other. Every one known:
 // it's salvage instead.
 // A blueprint teaches something you don't know yet, from every kind of recipe: a protocol recipe or
-// a service source, a filter recipe, a harvester or module plan, a config source. The first is
+// a filter recipe. The first is
 // always the Firewall.
 export function learnBlueprint(s, why = '') {
   s.recipes ||= [];
   const left = BLUEPRINTS.filter((id) => !knows(s, id));
   const others = [
     ...CRAFTABLE.filter((k) => !knowsFilter(s, k)).map((k) => () => learnFilter(s, k, why)),
-    ...Object.keys(OUTPOST.plans).filter((k) => !knowsPlan(s, k)).map((k) => () => learnPlan(s, k, why)),
   ];
   if (!left.length && !others.length) {
-    for (let i = 0; i < 2; i++) s.salvage.push({ name: 'Blueprint scraps', virus: 'blueprint', seed: 0 });
-    return emit(s, 'info', `${why}a blueprint you already know: +2 salvage.`);
+    gainComponents(s, 2, null, 'blueprint');
+    return emit(s, 'info', `${why}a blueprint you already know: +2 components.`);
   }
   const k = Math.floor(rand(s) * (left.length + others.length));
   if (k >= left.length) return others[k - left.length]();
   const id = left[k];
   s.recipes.push(id);
   const stat = recipeStat(id);
-  return emit(s, 'drop', stat ? `${why}${blueprintName(id)}. You can compile ${STATS[stat].name} protocols.` : `${why}${blueprintName(id)}. You can install ${SERVICES[id].name}.`, { recipe: id });
+  return emit(s, 'drop', `${why}${blueprintName(id)}. You can compile ${STATS[stat]?.name || 'its'} protocols.`, { recipe: id });
 }
 
 // Code materials: kills, guards and vault caches give the family's code; Exploits are rare.
@@ -792,26 +776,13 @@ function codeFrom(s, family, level, source) {
   return source === 'guard' ? out : biasCode(s, who, out);
 }
 
-// ---------- buyout ----------
-// Master of Orion style: finish a timed build now for credits. 3× its credit cost when it starts,
-// falling with the time left (never under 20). Installs and upgrades here; outposts (a slot
-// resetting, a lockdown) in outpost.mjs.
-export const BUYOUT = { mult: 3, min: 20, lockdown: 250, reset: 80 };
-export const buyoutPrice = (base, left, total) => (left <= 0 ? 0 : Math.max(BUYOUT.min, Math.ceil(BUYOUT.mult * base * Math.min(1, left / total))));
-export const installBuyout = (s, now = Date.now()) => (s.install ? buyoutPrice(VERSIONS[s.install.v - 1].credits, s.install.doneAt - now, s.install.doneAt - s.install.startedAt) : 0);
+// (Buyout, finishing a timed build for credits, went with installs and outposts in R2: programs are instant.)
 
-// ---------- the install queue ----------
-// One install at a time, in real time. `now` comes from the caller (the engine keeps no clock).
+// ---------- the world's clock ----------
+// Mail, the store, markets, payloads, hubs, Root and the hot strain, in real time. `now` comes from the caller (the
+// engine keeps no clock). (The install queue it once ran went with services in R2.)
 export function tickServices(s, now = Date.now()) {
   const first = s.serial;
-  const job = s.install;
-  if (job && now >= job.doneAt && !s.degraded) {
-    s.install = null;
-    (s.services ||= {})[job.id] = job.v;
-    syncServer(s);
-    emit(s, 'service-done', `${SERVICES[job.id].name} v${job.v} is running.`, { service: job.id, v: job.v });
-    firstTime(s, `install-${job.id}-${job.v}`, `${SERVICES[job.id].name} v${job.v} running`);
-  }
   tickMail(s, now);
   tickStore(s, now);
   tickMarket(s, now);
@@ -1470,8 +1441,7 @@ export const maxSignal = (s) => Math.round(CONFIG.maxSignal * powerOf(s)) + gear
 // compile [stat] · compile <zero-day>.
 export const compileCost = (s, zd = false) => {
   const c = zd ? COMPILE.zeroDayCost(hackerLevel(s)) : COMPILE.cost(hackerLevel(s));
-  const off = serviceStat(s, 'compileDiscount') / 100;
-  return { credits: archCredits(s, Math.round(c.credits * (1 - off))), salvage: Math.max(1, Math.round(c.salvage * (1 - off))) };
+  return { credits: c.credits, salvage: Math.max(1, c.salvage) };
 };
 function protocolCommand(s, full) {
   const [text, payText] = splitPay(full);
@@ -1524,7 +1494,6 @@ function protocolCommand(s, full) {
     const what = slot ? words.slice(0, -1).join(' ') : arg; // the recipe, without the slot
     if (slot === 'implant' && hackerLevel(s) < 15) return warn(s, 'Implants compile from level 15.');
     const zd = ZERO_DAYS[what] && !ZERO_DAYS[what].chase ? what : Object.keys(ZERO_DAYS).find((z) => !ZERO_DAYS[z].chase && ZERO_DAYS[z].name.toLowerCase() === what);
-    if (SERVICES[what]) return warn(s, `${SERVICES[what].name} is a service. Install it on the Server page.`);
     let stat = !zd && what ? Object.keys(STATS).find((k) => k.toLowerCase() === what || STATS[k].name.toLowerCase() === what || PROTOCOL_NAMES[k]?.toLowerCase() === what) : null;
     const mine = knownRecipes(s);
     if (!zd && what && !stat) return warn(s, `compile <recipe>: ${mine.join(', ') || 'you have no recipes yet'}${(s.recipes || []).some((r) => ZERO_DAYS[r]) ? `, or a Zero-day you have source for: ${s.recipes.filter((r) => ZERO_DAYS[r]).join(', ')}` : ''}.`);
@@ -1547,76 +1516,9 @@ function protocolCommand(s, full) {
   }
 }
 
-// Services at home: services · install <service> (or upgrade it) · uninstall <service> · cancel install.
-const serviceId = (arg) => (SERVICES[arg] ? arg : Object.keys(SERVICES).find((k) => SERVICES[k].name.toLowerCase() === arg || SERVICES[k].name.toLowerCase().replace(/[^a-z]/g, '') === arg.replace(/[^a-z]/g, '')));
-// Why a service can't be installed (or upgraded) right now, or null.
-export function installBlock(s, id) {
-  const d = SERVICES[id];
-  if (!d) return 'No such service.';
-  const v = serviceVersion(s, id) + 1;
-  if (v > VERSIONS.length) return `${d.name} is at v${VERSIONS.length}, the top version.`;
-  if (s.install) return `Installing ${SERVICES[s.install.id].name} v${s.install.v}. One install at a time.`;
-  if (!knows(s, id)) return `You don't have the ${d.name} blueprint yet.`;
-  if (serverLevel(s) < VERSIONS[v - 1].needs) return `${d.name} v${v} needs level ${VERSIONS[v - 1].needs} (your highest class).`;
-  const cost = serviceCost(id, v), m = materialsOf(s);
-  const short = Object.entries(cost).filter(([k, n]) => n > (k === 'credits' ? s.server.credits : m[k] || 0));
-  if (short.length || !canAfford(s, SALVAGE_COSTS.service(serviceSalvage(v)))) return `${d.name} v${v} needs ${costLine({ ...cost, salvage: serviceSalvage(v) })}.`;
-  return null;
-}
-function serviceCommand(s, text, now) {
-  const [word, ...restWords] = text.split(' ');
-  const arg = restWords.join(' ').trim();
-  if (word === 'services') {
-    const on = Object.entries(s.services || {}).map(([id, v]) => `${SERVICES[id].name} v${v}`);
-    return emit(s, 'info', `Services: ${on.join(', ') || 'nothing running'}.${s.install ? ` Installing ${SERVICES[s.install.id].name} v${s.install.v}.` : ''}`);
-  }
-  if (active(s)) return warn(s, 'Change services between fights.');
-  if (text === 'buyout' || text === 'buyout install') {
-    if (!s.install) return warn(s, 'Nothing is installing.');
-    if (s.degraded) return warn(s, 'Installs wait while the server is degraded.');
-    const price = installBuyout(s, now);
-    if (s.server.credits < price) return warn(s, `Finishing it now costs ${price} credits. You have ${s.server.credits}.`);
-    s.server.credits -= price;
-    s.install.doneAt = now;
-    emit(s, 'bought', `Bought out: ${SERVICES[s.install.id].name} v${s.install.v} for ${price} credits.`, { amount: price });
-    return tickServices(s, now);
-  }
-  if (text === 'cancel install') {
-    const job = s.install;
-    if (!job) return warn(s, 'Nothing is installing.');
-    s.install = null;
-    const cost = serviceCost(job.id, job.v), m = materialsOf(s);
-    for (const [k, n] of Object.entries(cost)) if (k === 'credits') s.server.credits += n; else m[k] = (m[k] || 0) + n;
-    for (const [name, n] of Object.entries(job.pay || {})) for (let i = 0; i < n; i++) s.salvage.push({ name, virus: 'refund', seed: 0 });
-    return emit(s, 'service', `${SERVICES[job.id].name} v${job.v} cancelled. Everything refunded.`, { service: job.id });
-  }
-  const id = serviceId(arg);
-  if (word === 'install') {
-    if (!id) return warn(s, RETIRED[arg] ? `${RETIRED[arg].name} isn't a service any more. The firewall's tiers, its filters and the daemons do its job now.` : `install <service>: ${Object.keys(SERVICES).join(', ')}.`);
-    const why = installBlock(s, id);
-    if (why) return warn(s, why);
-    const v = serviceVersion(s, id) + 1, cost = serviceCost(id, v), m = materialsOf(s);
-    const pay = settle(s, SALVAGE_COSTS.service(serviceSalvage(v)), null);
-    if (typeof pay === 'string') return warn(s, `${SERVICES[id].name} v${v}: ${pay}`);
-    spend(s, pay);
-    for (const [k, n] of Object.entries(cost)) if (k === 'credits') s.server.credits -= n; else m[k] -= n;
-    const mins = VERSIONS[v - 1].minutes;
-    s.install = { id, v, startedAt: now, doneAt: now + mins * 60000, pay };
-    return emit(s, 'service', `${v > 1 ? 'Upgrading' : 'Installing'} ${SERVICES[id].name} to v${v}: ${mins} minute${mins === 1 ? '' : 's'}.`, { service: id, v });
-  }
-  if (word === 'uninstall') {
-    if (!id || !serviceVersion(s, id)) return warn(s, arg ? `${arg} isn't running.` : 'uninstall <service>.');
-    if (s.install?.id === id) return warn(s, `${SERVICES[id].name} is being upgraded. Type cancel install first.`);
-    const v = serviceVersion(s, id);
-    delete s.services[id];
-    // Half the code comes back; credits don't.
-    const back = {};
-    for (let k = 1; k <= v; k++) for (const [m, n] of Object.entries(serviceCost(id, k))) if (m !== 'credits') back[m] = (back[m] || 0) + n;
-    const refund = Object.fromEntries(Object.entries(back).map(([m, n]) => [m, Math.floor(n / 2)]));
-    for (const [m, n] of Object.entries(refund)) materialsOf(s)[m] += n;
-    syncServer(s);
-    return emit(s, 'service', `${SERVICES[id].name} uninstalled. Half its code came back: ${costLine(refund) || 'nothing'}.`, { service: id });
-  }
+// Services went with outposts (R2): the commands say where their jobs went.
+function serviceCommand(s) {
+  return warn(s, 'Services are gone. Programs in a server\'s sockets bend that server\'s rules: clear a socket room, then build.');
 }
 
 // Losing all Signal on a run: back home, pack lost, server untouched.
@@ -1636,11 +1538,11 @@ export function disconnect(s, reason) {
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
   s.signal = Math.max(0, run.integrity);
   s.run = null;
-  if (loc && !isOutpost(loc)) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // any server but an outpost: see rogue.mjs relocks/relockLeft
+  if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // every server: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc && !loc.outpost?.h ? CONFIG.relockMs : 0 });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc ? CONFIG.relockMs : 0 });
 }
 
 function newMetrics(s) {
@@ -1847,7 +1749,7 @@ export function finish(s, result) {
       const loc = findLocation(s, s.run?.loc);
       if (loc) { loc.state.cleared[e.room] = true; clearedFor(s, loc); } // a faction's server: they like that (factions.mjs)
       // The Resident (run.mjs /core): beat it and the server is yours.
-      if (loc && e.virus.boss === 'resident' && !loc.takenOver) { loc.resident = null; loc.regrow = null; strikeServer(s, loc, 'takeover'); contractTakeover(s, loc); }
+      if (loc && e.virus.boss === 'resident' && !loc.takenOver) { loc.resident = null; strikeServer(s, loc, 'takeover'); contractTakeover(s, loc); }
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
       payKill(s, e, XP.guard, `${e.virus.name} down`);
@@ -1897,7 +1799,6 @@ export function finish(s, result) {
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
     if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
     if (inv) invaderDown(s, inv); // the next of a pack steps up, or the bounty (invasion.mjs)
-    if (e.outpost) outpostWon(s, e);
     if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
     if (e.event) eventWon(s, e); // a courier or a bounty (events.mjs)
@@ -1955,7 +1856,7 @@ function distance(a, b) {
 }
 // A command that isn't one, with no fight running: a fight order says so; a run command says where it
 // works; anything else gets a "did you mean" (clickable in the notice).
-const HOME_WORDS = ['connect', 'jack', 'mail', 'outpost', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'compile', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'architecture', 'event', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
+const HOME_WORDS = ['connect', 'jack', 'mail', 'repair', 'top', 'install', 'uninstall', 'cancel', 'load', 'unload', 'compile', 'deconstruct', 'craft', 'filter', 'firewall', 'relay', 'use', 'detach', 'attach', 'encounter', 'status', 'daemon', 'speed', 'consortium', 'market', 'buy', 'sell', 'event', 'config', 'map', 'server', 'loadout', 'system', 'help', 'mail', 'equip', 'unequip', 'whoami'];
 const RUN_WORDS = ['ls', 'cd', 'cat', 'pull', 'unlock', 'attack', 'engage', 'slip', 'spoof', 'tap', 'sweep'];
 function unknownAtHome(s, text) {
   const [w, ...rest] = text.split(' ');
@@ -2087,8 +1988,9 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)
     s.bossRule = text.split(' ')[2];
     emit(s, 'info', `Boss rule ${s.bossRule}: ${BOSS_RULES[s.bossRule].name}. From your next boss fight.`);
-  } else if (/^developer outpost \S+/.test(text)) {
-    devOutpost(s, text.split(' ')[2], text.split(' ').slice(3), now);
+  } else if (/^developer (codebases|components \d+)$/.test(text)) { // sockets.mjs: every codebase, or components to build with
+    if (text.endsWith('codebases')) { for (const id of PROGRAM_IDS) if (!codebasesOf(s).includes(id)) codebasesOf(s).push(id); emit(s, 'info', 'Developer: every codebase learned.'); }
+    else { const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer'); emit(s, 'info', `Developer: +${n} components.`); }
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
     const had = new Set(s.locations.map((l) => l.id));
     addLead(s, text.split(' ')[2], 100, 'Developer: ');
@@ -2105,8 +2007,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     engage(s);
   } else if (/^(gear|protocols|load|unload|scrap|deconstruct|compile)( |$)/.test(text)) {
     protocolCommand(s, text);
-  } else if (/^(services|install|uninstall)( |$)/.test(text) || text === 'cancel install' || text === 'buyout' || text === 'buyout install') {
-    serviceCommand(s, text, now);
+  } else if (/^(services|install|uninstall)( |$)/.test(text) || text === 'cancel install' || text === 'buyout install') {
+    serviceCommand(s);
   } else if (/^(attach|detach) \S+$/.test(text)) {
     const [verb, id] = text.split(' ');
     memoryCommand(s, verb, id, now);
@@ -2121,16 +2023,12 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     const id = text.split(' ')[2];
     if (!isNative(id)) warn(s, `No native unique called ${id}.`);
     else { nameNative(s, id); giveUnique(s, id, 'Developer: '); }
-  } else if (text === 'developer finish') {
-    if (!s.install) warn(s, 'Nothing is installing.');
-    else { s.install.doneAt = now; tickServices(s, now); }
   } else if (text === 'developer blueprints') {
-    s.recipes = [...new Set([...(s.recipes || []), ...BLUEPRINTS, ...SERVICE_SOURCES])];
-    emit(s, 'info', 'Developer: every blueprint and service source learned.');
+    s.recipes = [...new Set([...(s.recipes || []), ...BLUEPRINTS])];
+    emit(s, 'info', 'Developer: every blueprint learned.');
   } else if (/^developer salvage \d+$/.test(text)) {
-    const n = Number(text.split(' ')[2]);
-    for (let i = 0; i < n; i++) s.salvage.push({ name: 'Scrap', virus: 'developer', seed: 0 });
-    emit(s, 'info', `Developer: +${n} salvage.`);
+    const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer');
+    emit(s, 'info', `Developer: +${n} components.`);
   } else if (/^developer code \d+$/.test(text)) {
     const n = Number(text.split(' ')[2]);
     gainCode(s, { cipher: n, worm: n, kernel: n, exploit: Math.ceil(n / 10) }, 'Developer: ');
@@ -2169,7 +2067,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^buy \S+$/.test(text)) {
     buy(s, text.split(' ')[1]);
   } else if (/^architecture( |$)/.test(text)) {
-    architectureCommand(s, text);
+    warn(s, 'Server architecture is gone. Programs in a server\'s sockets are the choices now.');
   } else if (/^(fleet|swarm)( |$)/.test(text)) {
     fleetCommand(s, text);
   } else if (/^event( |$)/.test(text)) {
@@ -2180,8 +2078,10 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     genomeCommand(s, text); // genome.mjs: a part's genes (free, no cycle), or the card of what you're facing
   } else if (text.startsWith('config ') || text.startsWith('craft config ')) {
     warn(s, 'Configs are gone: services run as they come.');
-  } else if (text.startsWith('outpost ')) {
-    outpostCommand(s, text, now);
+  } else if (/^(outpost build relay|relay craft)( pay .*)?$/.test(text)) {
+    craftRelay(s, splitPay(text)[1]);
+  } else if (text.startsWith('outpost ') || /^build( |$)/.test(text)) {
+    warn(s, 'Outposts are gone. Build in a server\'s socket rooms: connect, clear a socket, and build there.');
   } else if (/^craft( booster)?( pay .*)?$/.test(text)) {
     warn(s, 'Signal boosters are gone. Top up your Signal with credits at home.');
   } else if (/^relay \S+$/.test(text)) {
@@ -2609,7 +2509,10 @@ function breakPart(s, p) {
     if (next) { e.virus.weakPoint = next.id; e.virus.weakKnown = false; }
     if (wasKnown && next && usable(s).includes('scan')) emit(s, 'info', 'A new weak point formed. Scan to find it.');
   }
-  if (p.loot && rand(s) < CONFIG.salvageChance * richMult(s, fightNet(s), 'salvage') * masteryDrop(s, e.virus, p)) { // a network rich in salvage (network.mjs); a part you've mastered drops 25% more (research.mjs)
+  if (p.loot) e.lastLoot = p.loot; // the part you broke last (a Harvester's and an elite's one more: floorplan.mjs)
+  // Its component: 60% in a room fight, an elite's always, 35% elsewhere (sockets.mjs); a network rich in components
+  // (network.mjs) and a part you've mastered (research.mjs, 25% more) on top.
+  if (p.loot && rand(s) < componentChance(s, e, CONFIG.salvageChance) * richMult(s, fightNet(s), 'salvage') * masteryDrop(s, e.virus, p)) {
     s.salvage.push({ name: p.loot, virus: e.virus.name, seed: e.seed });
     e.metrics?.loot?.push(p.loot);
     emit(s, 'loot', `${p.loot} recovered.`, { target: p.id });
@@ -3747,7 +3650,7 @@ function migrateToProtocols(s) {
     if (it.kind === 'protocol') { keep.push(it); continue; }
     if (it.side === 'server') {
       const svc = it.zeroDay === 'cron-job' ? 'cron' : it.zeroDay === 'snapshot' ? 'snapshot' : OLD_SERVER_STAT[Object.keys(it.stats || {})[0]];
-      const def = SERVICES[svc] || RETIRED[svc]; // v34 retired most of these; progressionRestore converts them
+      const def = RETIRED[svc]; // v34 retired most of these; progressionRestore converts them
       if (svc && def?.daemon && !s.recipes.includes(svc)) s.recipes.push(svc);
       if (svc && def && running.has(it.id) && !s.services[svc]) s.services[svc] = 1;
       else {
@@ -3796,14 +3699,14 @@ function retireWall(s, was) {
   for (const [id, stat] of Object.entries(RETIRED_SERVICES)) {
     const v = s.services?.[id];
     if (v) { addFilter(s, rollFilter(seeded(L * 31 + v), { level: L, rarity: v >= 3 ? 'custom' : 'tuned', stat }), `${id[0].toUpperCase() + id.slice(1)} retired: `); delete s.services[id]; }
-    if (s.install?.id === id) { s.server.credits += VERSIONS[s.install.v - 1].credits; s.install = null; }
+    if (s.install?.id === id) { s.server.credits += [120, 600, 2000][s.install.v - 1] || 0; s.install = null; }
     if (s.configs) delete s.configs[id];
   }
   if (s.configs) delete s.configs.firewall;
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -3926,7 +3829,6 @@ export function restore(raw) {
     retireConfigs(s);
     memoryRestore(s);
     retireTraits(s);
-    retireHarvesters(s); // harvesters and modules are buildings now (outpost.mjs)
     // v32: Payload was flat (+1–2 a tick); it's a percentage now, about what the flat bonus was worth.
     if (was < 32) for (const it of s.stash || []) if (it.stats?.payload) it.stats.payload = Math.round(it.stats.payload * 7);
     retireClassTrees(s, was); // subclasses: each class's old tree moves to its default subclass
@@ -3942,6 +3844,7 @@ export function restore(raw) {
     dexOf(s); // the Codex tab's record (genome.mjs): an older save starts it empty (its sets come from each server's floorplan codex)
     researchOf(s); // part research (research.mjs): an older save's decoded parts start at 1
     initMail(s);
+    { const back = retireOutposts(s, was); const l = back && s.locations?.length ? retireLetter(back) : null; if (l) systemLetter(s, l); } // v40: outposts, services and the rest retire (sockets.mjs)
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;
     materialsOf(s);
@@ -3952,7 +3855,8 @@ export function restore(raw) {
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;
-  } catch {
+  } catch (err) {
+    hooks.restoreError?.(err); // a test or the console can see why a save fell back to fresh
     return fresh();
   }
 }
@@ -3974,7 +3878,7 @@ export function suggestions(s, input = '') {
   }
   const base = active(s)
     ? [...usable(s).map((id) => (id === 'spike' ? spikeWord(s) : id)), 'hold', 'pause', 'resume', 'cancel', 'status', 'scan', ...living.filter((p) => p.kind !== 'fragment').map((p) => `inspect ${p.id}`)]
-    : ['engage', 'jack in', 'mail', 'outpost', 'repair', 'top up', 'protocols', 'services', 'compile', 'install', 'uninstall', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
+    : ['engage', 'jack in', 'mail', 'repair', 'top up', 'protocols', 'compile', 'load', 'unload', 'encounter cryptjack', 'encounter splinter', 'encounter ghostroot', 'encounter random', 'status', 'developer reboot'];
   return base.filter((x) => x.startsWith(text));
 }
 

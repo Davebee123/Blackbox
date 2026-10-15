@@ -158,7 +158,7 @@ test('a v36 save: known skills stay known, untouched bars become the new default
   s.version = 36;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 39); // v39: servers as rooms (R1)
+  assert.equal(SAVE_VERSION, 40); // v40: sockets (R2)
   assert.ok(knownSkills(t, 'bastion').includes('patch'), 'Patch kept');
   assert.deepEqual(t.loadout.kept.sysop, ['patch']);
   assert.deepEqual(t.loadout.equipped.sysop, presetBar('bastion', 'sysop', 13, SUBS.sysop.presets.rotation, knownSkills(t, 'bastion')), 'an untouched bar becomes the new rotation, with what it kept');

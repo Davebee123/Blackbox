@@ -11,6 +11,7 @@ import { xpToNext } from './dist/data.mjs';
 import { planner } from './dist/planner.mjs';
 import { runScript, scriptsOf } from './dist/scripts.mjs';
 import * as FP from './dist/floorplan.mjs';
+import { buildBlock as programBlock } from './dist/sockets.mjs';
 
 export const CLASSES = ['breaker', 'bastion', 'infiltrator', 'operator'];
 export const PICK = { breaker: 'demolitionist', bastion: 'warden', infiltrator: 'payload', operator: 'herder' };
@@ -18,6 +19,9 @@ export const PICK = { breaker: 'demolitionist', bastion: 'warden', infiltrator: 
 export const TIME = { cycle: 8, move: 6, act: 4, home: 2 };
 // What the bot expects a fight to cost, of its max Signal, before it takes one on (and the margin it keeps).
 export const NEED = { process: 0.32, elite: 0.6, guard: 0.38, core: 0.8, hunter: 0.6, margin: 0.06, low: 0.35 };
+// What the bot builds in a socket it has cleared (sockets.mjs): the first of these it knows and can pay for. log: a
+// sim's eye on each build. (It only ever builds what pays as it plays: components, respawns, code, caches, a rest.)
+export const BUILD = { order: ['harvester', 'cron', 'siphon', 'mill', 'defrag', 'tunnel', 'snare'], log: null };
 
 // A room fight played out by the planner (and a script when it's worth it). Returns the cycles.
 export const TRACE = { fn: null }; // a sim's eye on each command (scratch tracing)
@@ -80,6 +84,7 @@ export function botTarget(s) {
     else if (room.kind === 'core' && up && f >= NEED.core) v = 8;
     else if (room.wild && up && can(room) && FP.WORLD.view?.fightNote?.(s, room)?.startsWith('A named')) v = 8; // a contract's named target (netrooms.mjs)
     else if (!R.cleared[room.id] && (!up || can(room)) && room.kind !== 'core') v = up ? 5 : 6;
+    else if (FP.socketOpen(s, room) && !FP.programIn(s, room.id) && !FP.socketOff(s, room) && !R.visit.built && BUILD.order.some((p) => !programBlock(s, R, room, p))) v = 4; // a program it can build there
     else if (room.kind === 'cache' && FP.cacheFull(s, room)) v = 3;
     else if (up && can(room) && room.kind !== 'core') v = 2;
     else if (room.kind === 'rest' && !R.visit.rested && f < 0.7) v = 7;
@@ -104,6 +109,13 @@ export function botStep(s) {
   if (here.kind === 'cache' && FP.cacheFull(s, here) && !(here.mirror && sig(s) < NEED.elite + NEED.margin)) { FP.act(s, 'cat'); if (!(FP.isBait(s, here) && sig(s) < 0.5)) { FP.act(s, 'pull'); return true; } }
   if (here.kind === 'vault' && !FP.opened(s, here) && R.visit.keys.includes(here.id)) { FP.act(s, 'open'); return true; }
   if (here.kind === 'rest' && !R.visit.rested && sig(s) < 0.85) { FP.act(s, 'rest'); return true; }
+  if (FP.roomRuns(s, here, 'defrag') && !R.visit.bays?.[here.id] && sig(s) < 0.85) { FP.act(s, 'rest'); return true; }
+  // A socket it has cleared, empty: build the first program it knows and can pay for (BUILD's order), once a visit.
+  if (FP.socketOpen(s, here) && !FP.programIn(s, here.id) && !FP.socketOff(s, here) && !R.visit.built) {
+    R.visit.built = true;
+    const id = BUILD.order.find((p) => !programBlock(s, R, here, p));
+    if (id) { FP.act(s, 'build', id); BUILD.log?.(s, id); return true; }
+  }
   const rest = FP.roomList(s).find((x) => x.kind === 'rest');
   if (sig(s) < NEED.low && (!rest || R.visit.rested)) return false;
   const t = botTarget(s);

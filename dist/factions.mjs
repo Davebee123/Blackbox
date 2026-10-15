@@ -12,6 +12,7 @@ import { emit, warn, rand, hackerLevel, materialsOf, hooks } from './combat.mjs'
 import { GOODS, codeAmount, priceNow } from './store.mjs';
 import { seeded } from './gear.mjs';
 import { sendGood } from './market.mjs';
+import { CODEBASE_SHOPS, PROGRAMS, SOCKET, knowsCodebase } from './sockets.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -32,7 +33,7 @@ export const FACTIONS = {
     tiers: ['Burned', 'Unknown', 'Asset', 'Partner', 'Inner circle'],
     allies: [], rivals: ['halcyon', 'lantern'],
     hub: { name: 'GLASSJAW-ANNEX-07', level: 8 },
-    shop: ['cracker', 'crate', 'blueprint'],
+    shop: ['cracker', 'crate', 'blueprint', 'cb-siphon'],
   },
   kestrel: {
     name: 'Kestrel Underwriting', short: 'Kestrel', kind: 'corp', color: '#8fd46b', start: 10,
@@ -40,7 +41,7 @@ export const FACTIONS = {
     tiers: ['Blacklisted', 'Prospect', 'Client', 'Account', 'Key account'],
     allies: ['halcyon'], rivals: ['nullchoir'],
     hub: { name: 'KESTREL-DC-NORTH', level: 4 },
-    shop: ['relay', 'injector', 'harden', 'daemon'],
+    shop: ['relay', 'injector', 'harden', 'daemon', 'cb-snare'],
   },
   lantern: {
     name: 'LANTERN', short: 'LANTERN', kind: 'crew', color: '#ffb347', start: 10,
@@ -48,7 +49,7 @@ export const FACTIONS = {
     tiers: ['Tuned out', 'Listener', 'Regular', 'Confidant', 'Signal'],
     allies: ['nullchoir'], rivals: ['glassjaw'],
     hub: { name: 'LANTERN-RELAY-88', level: 6 },
-    shop: ['bootleg', 'cracker', 'injector'],
+    shop: ['bootleg', 'cracker', 'injector', 'cb-post', 'cb-tunnel'],
   },
   nullchoir: {
     name: 'NULL CHOIR', short: 'NULL CHOIR', kind: 'crew', color: '#ff6f91', start: 10,
@@ -56,13 +57,15 @@ export const FACTIONS = {
     tiers: ['Marked', 'Outsider', 'Fellow', 'Choir', 'Cantor'],
     allies: ['lantern'], rivals: ['halcyon', 'kestrel'],
     hub: { name: 'NULLCHOIR-SQUAT-13', level: 12 },
-    shop: ['daemon', 'crate', 'cracker', 'harden'],
+    shop: ['daemon', 'crate', 'cracker', 'harden', 'cb-cron'],
   },
 };
 export const FACTION_IDS = Object.keys(FACTIONS);
 // Goods only factions sell (the rest are store.mjs GOODS).
 export const FACTION_GOODS = {
   bootleg: { name: 'Bootleg filter', about: 'A sealed firewall filter at your level, Stock or better.', credits: (L) => 90 + 8 * L },
+  // Codebases (sockets.mjs CODEBASE_SHOPS): once each, at a rep tier. Halcyon's are in its store.
+  ...Object.fromEntries(Object.entries(CODEBASE_SHOPS).filter(([f]) => f !== 'halcyon').flatMap(([, list]) => list.map(([id, tier]) => [`cb-${id}`, { name: `${PROGRAMS[id].name} codebase`, about: PROGRAMS[id].rule, credits: SOCKET.price[PROGRAMS[id].weight], tier, codebase: id }]))),
 };
 
 // ---------- rep ----------
@@ -149,7 +152,8 @@ export function shopOf(s, f, at = now()) {
   return FACTIONS[f].shop.map((id) => {
     const g = goodOf(id), need = g.tier || 0;
     const price = priceNow(s, id, Math.round(g.credits(L) * (mine ? SHOP.atCost : 1 - SHOP.discount * Math.max(0, t.i - 1))), L);
-    return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: h.stock[id] || 0, locked: !mine && t.i < Math.max(1, need), need: Math.max(1, need) };
+    const known = g.codebase && knowsCodebase(s, g.codebase); // a codebase you know: nothing to sell you
+    return { id, name: g.name, about: g.about || (g.code ? `${codeAmount(L)} of its code.` : ''), price, left: known ? 0 : g.codebase ? Math.min(1, h.stock[id] ?? 1) : h.stock[id] || 0, known, locked: !mine && t.i < Math.max(1, need), need: Math.max(1, need), codebase: g.codebase || null };
   });
 }
 // deliver: store.mjs's delivery for shared goods; faction goods handled here.

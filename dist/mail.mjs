@@ -24,7 +24,7 @@ import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from 
 import STORY_TEXT from './content/story.mjs';
 import CONTRACT_TEXT from './content/contracts.mjs';
 import { fill } from './content.mjs';
-import { learnPlan } from './outpost.mjs';
+import { learnRelayPlan } from './hidden.mjs';
 import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf, hubFound } from './factions.mjs';
 
 export const MAIL = {
@@ -104,6 +104,11 @@ function migrateMail(s, at) {
   return m;
 }
 
+// A letter about the game itself (a save migration's word: combat.mjs restore), from a contact by key (wick).
+export function systemLetter(s, { from, subject, body }, at = now()) {
+  if (!s.mail?.list) return null;
+  return letter(s, { from: SENDERS[from], subject, body, system: true }, at);
+}
 function letter(s, msg, at = now()) {
   const m = { id: s.mail.next++, at, read: false, ...msg };
   s.mail.list.unshift(m);
@@ -558,7 +563,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
   if (c.reward.rep && c.faction) changeRep(s, c.faction, c.reward.rep, 'Contract delivered');
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }
-  if (c.reward.plan) learnPlan(s, c.reward.plan, 'Halcyon bonus: ');
+  if (c.reward.plan) learnRelayPlan(s, 'Halcyon bonus: ');
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
   if (c.reward.daemon) learnDaemon(s, 'LOWLIGHT bonus: ');
   if (c.reward.drop) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < 0.25 ? 'custom' : 'tuned' }), 'GLASSJAW paid in kind: '); }

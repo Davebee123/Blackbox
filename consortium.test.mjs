@@ -5,8 +5,7 @@ import { play, crewWander, layoutOf, currentLocation } from './dist/run.mjs';
 import { online, PRESENCE } from './dist/presence.mjs';
 import { matesOf } from './dist/crew.mjs';
 import * as consortiumMod from './dist/consortium.mjs';
-import { dividendWaiting, dividendOf, rebooting, CONSORTIUM, memberServers, serversOf, sizeOf, tiersOf, tickConsortium, isGround, consortiumOf } from './dist/consortium.mjs';
-import { bandwidth, OUTPOST } from './dist/outpost.mjs';
+import { rebooting, CONSORTIUM, memberServers, serversOf, sizeOf, tiersOf, tickConsortium, isGround, consortiumOf, consortiumSockets, consortiumLinked } from './dist/consortium.mjs';
 import { tickNetwork, ratioOf } from './dist/invasion.mjs';
 import { rogueSpawns } from './dist/rogue.mjs';
 import * as FP from './dist/floorplan.mjs';
@@ -26,7 +25,7 @@ test('a consortium: create, invite merges their server in, only the founder kick
   play(s, 'consortium invite nyx'); play(s, 'consortium invite rook'); play(s, 'consortium invite nobody');
   assert.deepEqual(s.consortium.members, ['nyx', 'rook']);
   assert.ok(serversOf(s, 'nyx').length >= 1 && serversOf(s, 'rook').length >= 1, 'each member brings their network');
-  assert.ok(serversOf(s, 'nyx')[0].held, "a member's first server is an outpost");
+  assert.ok(serversOf(s, 'nyx').every((l) => !l.held), "a member's servers are just their servers (outposts went in R2)");
   assert.deepEqual(memberServers(s).map((l) => l.id), memberServers(s).map((l) => l.id).filter((id, i, a) => a.indexOf(id) === i), 'ids are unique');
   play(s, 'consortium kick rook');
   assert.deepEqual(s.consortium.members, ['nyx']);
@@ -85,59 +84,29 @@ test("members' servers: connect; the vault doesn't make it yours; natives come b
   assert.ok(!loc.takenOver);
 });
 
-test('a siege on a member outpost: defend it for a bounty; missing it costs you nothing', () => {
+test('nothing comes for a member\'s servers any more: no sieges, no lockdowns, no dividend (R2)', () => {
   const s = world();
   play(s, 'consortium create LOWLIGHT');
-  play(s, 'consortium invite nyx');
-  const loc = serversOf(s, 'nyx')[0];
-  tickConsortium(s, CONSORTIUM.siegeEveryMs[1]);
-  assert.ok(loc.held.siege, 'natives lay siege');
+  for (const h of ['nyx', 'ash', 'rook']) play(s, 'consortium invite ' + h);
+  for (let i = 0; i < 20; i++) tickConsortium(s, 30 * 60000);
+  assert.ok(memberServers(s).every((l) => !l.held), 'no outposts, no sieges');
   const credits = s.server.credits;
-  play(s, 'consortium defend ' + loc.id);
-  assert.equal(s.encounter.member, loc.id);
-  win(s);
-  assert.equal(loc.held.siege, null);
-  assert.equal(s.server.credits, credits + CONSORTIUM.bounty(loc.level).credits);
-  tickConsortium(s, CONSORTIUM.siegeEveryMs[1]);
-  const before = s.server.credits;
-  tickConsortium(s, CONSORTIUM.siegeMs + 1);
-  assert.equal(loc.held.siege, null, 'a member deals with it');
-  assert.equal(s.server.credits, before);
+  play(s, 'consortium collect');
+  assert.match(s.logs.at(-1).message, /dividend is gone/);
+  assert.equal(s.server.credits, credits);
+  assert.equal(CONSORTIUM.dividend, undefined);
 });
 
-test("the dividend: a share of what members' outposts produce, in kind, offline too, up to a cap; nothing while besieged", () => {
-  const s = world();
-  const t0 = 1_800_000_000_000;
-  hooks.now = () => t0;
-  try {
-    play(s, 'consortium create LOWLIGHT');
-    for (const h of ['nyx', 'ash', 'rook', 'byte']) play(s, 'consortium invite ' + h);
-    const held = memberServers(s).filter((l) => l.held);
-    assert.ok(held.length >= 3);
-    const siphon = held.find((l) => l.held.kind !== 'scraper');
-    assert.ok(Math.abs(dividendOf(s, siphon) - OUTPOST.kinds[siphon.held.kind].rate(siphon.level) * CONSORTIUM.dividend.share * 1.1) < 1e-9, 'a share of what it makes (+10%: Linked)');
-    tickConsortium(s, 1000, t0 + 6 * 3600000); // six hours away
-    const before = JSON.stringify(s.materials);
-    const waiting = dividendWaiting(s);
-    assert.ok(Object.keys(waiting.code).length, 'code waiting');
-    play(s, 'consortium collect');
-    assert.notEqual(JSON.stringify(s.materials), before, 'code collected');
-    assert.ok(held.every((l) => (l.held.share || 0) < 1), 'whole units taken');
-    tickConsortium(s, 1000, t0 + 200 * 3600000); // a long time away: it stops at the cap
-    assert.ok((siphon.held.share || 0) <= dividendOf(s, siphon) * CONSORTIUM.dividend.capHours + 1e-9);
-    siphon.held.siege = { left: CONSORTIUM.siegeMs, seed: 1 };
-    assert.equal(dividendOf(s, siphon), 0, 'a besieged outpost pays nothing');
-  } finally { hooks.now = null; }
-});
-
-test('size tiers: yield, doubled bounties, the trunk rogue server, bandwidth', () => {
+test('size tiers: components on members\' servers, doubled bounties, the trunk rogue server, a socket room on every server', () => {
   const s = world();
   play(s, 'consortium create LOWLIGHT');
-  const bw = bandwidth(s);
+  assert.equal(consortiumLinked(s), false);
+  assert.equal(consortiumSockets(s), 0);
   for (const h of PRESENCE.pool.slice(0, 11)) play(s, 'consortium invite ' + h);
   assert.equal(sizeOf(s), 12);
   assert.deepEqual(tiersOf(s).map((t) => t.at), [3, 5, 8, 12]);
-  assert.equal(bandwidth(s), bw + 1);
+  assert.equal(consortiumLinked(s), true, 'Linked: +10% components on members\' servers');
+  assert.equal(consortiumSockets(s), 1, 'Grid: a socket room on every server');
   const trunk = memberServers(s).find((l) => l.trunk);
   assert.ok(trunk?.rogue, 'the trunk rogue server is up');
   play(s, 'connect trunk');
@@ -155,7 +124,7 @@ test("the consortium's ground is shared: members turn up in its folders and join
   const mine = s.locations[0];
   assert.ok(!isGround(s, mine), 'a server you only traced is yours alone');
   mine.takenOver = true;
-  assert.ok(isGround(s, mine), 'your outposts are shared ground');
+  assert.ok(isGround(s, mine), 'the servers you hold are shared ground');
   let t = 1_800_000_000_000, there = [];
   for (let i = 0; i < 400; i++, t += PRESENCE.moveMs) { there = online(s, t).filter((x) => x.place.kind === 'consortium' && x.place.loc === mine.id); if (there.length) break; }
   assert.ok(there.length, 'members come by');
@@ -222,7 +191,8 @@ test('away, in a consortium: a weak wall gets crashed; the server reboots for ho
     const T0 = 1_800_000_000_000;
     tickNetwork(s, T0);
     s.server.integrity = 5;
-    tickNetwork(s, T0 + 8 * 3600000); // eight hours away
+    // Away, a half hour at a time, until the wall falls (the reboot after it runs 2 hours).
+    for (let h = 1; h <= 24 && !s.logs.some((e) => e.type === 'crashed'); h++) tickNetwork(s, T0 + h * 1800000);
     assert.ok(s.logs.some((e) => e.type === 'crashed' && /while you were away/.test(e.message)), 'crashed while away');
     assert.ok(s.occupation, 'occupied');
     // The reboot may already be over after eight hours; crash again to test clearing.
@@ -265,23 +235,6 @@ test('away, a strong wall holds: invaders are stopped and nothing crashes', () =
     assert.ok(s.logs.filter((e) => e.type === 'invader').length >= 2, 'invaders came');
     assert.ok(!s.logs.some((e) => e.type === 'crashed'));
     assert.ok(s.logs.some((e) => e.type === 'invasion-cleared'), 'the wall stopped them');
-  });
-});
-
-test("a lost siege on a member's outpost: lockdown, retake it for a bounty", () => {
-  helping(0, () => {
-    const s = world();
-    play(s, 'consortium create LOWLIGHT');
-    for (const h of ['nyx', 'ash', 'rook']) play(s, 'consortium invite ' + h);
-    const loc = serversOf(s, 'nyx').find((l) => l.held);
-    loc.held.siege = { left: 1000, seed: 3 };
-    tickConsortium(s, 2000);
-    assert.ok(loc.held.lockdown, 'lockdown');
-    assert.equal(dividendOf(s, loc), 0);
-    assert.ok(!s.consortium.roamer, 'trunk hops are cut: the virus stays put');
-    play(s, 'consortium defend ' + loc.id);
-    win(s);
-    assert.equal(loc.held.lockdown, null, 'retaken');
   });
 });
 

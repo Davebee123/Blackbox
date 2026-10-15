@@ -50,8 +50,8 @@ function rebootDue(s, loc, now) {
 }
 export const isRogue = (loc) => !!loc?.rogue;
 export const isWild = (loc) => !!(loc?.zone || loc?.rogue);
-// Which servers make you wait before reconnecting: every one but an outpost (one running a harvester).
-export const relocks = (loc) => !!loc && !(loc.takenOver && loc.buildings?.length); // an outpost (outpost.mjs) has no relock
+// Which servers make you wait before reconnecting: every one (the outposts that didn't went in R2).
+export const relocks = (loc) => !!loc;
 // Seconds until a wild server lets you reconnect (0 = now).
 export const clock = () => hooks.now?.() ?? Date.now();
 export const relockLeft = (loc, now = clock()) => Math.max(0, Math.ceil(((loc?.lockUntil || 0) - now) / 1000));
