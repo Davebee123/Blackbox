@@ -511,6 +511,8 @@ details summary { font-size: 13px; }
 /* A virus attack lashing at your screen (lash.mjs): its characters whip into your Signal bar, 1s and 0s burst
    off it and fall, the screen glitches. Above the board, under the numbers; never takes input. */
 #lash { position: fixed; inset: 0; z-index: 46; pointer-events: none; overflow: hidden; }
+/* GPU effects (pixifx.mjs): one canvas over the screen, above the lash, under the numbers and every tooltip; never takes input. */
+#pixi-fx { position: fixed; inset: 0; z-index: 48; pointer-events: none; }
 .lash-ch, .lash-bit, .lash-lock { position: absolute; opacity: 0; transform: translate(-50%, -50%); pointer-events: none; font: 700 14px/1 var(--mono); }
 .lash-ch { color: color-mix(in srgb, var(--hot) calc(var(--t) * 100%), var(--amber)); text-shadow: 0 0 6px rgba(255, 91, 61, 0.8), 0 0 2px rgba(0, 0, 0, 0.9); animation: lash-ch var(--life, 380ms) cubic-bezier(.2, .7, .3, 1) forwards; }
 .lash-ch.lash-head { color: var(--bright); font-size: 16px; text-shadow: 0 0 8px var(--hot), 0 0 3px #fff; }
