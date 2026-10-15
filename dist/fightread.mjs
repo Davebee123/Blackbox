@@ -165,7 +165,8 @@ function readOf(s, v, p) {
   if (p.twin) return [`Twinned with the ${other(p.twin)}. Break one while the other stands, and it reboots at ${pct(CONFIG.twinReboot.at)} ${cycles(CONFIG.twinReboot.in)} later, once.`, `Break both within ${cycles(CONFIG.twinReboot.in)} of each other.`, { text: `twin of ${other(p.twin)}`, icon: 'mirror', link: p.twin }];
   if (p.rearm) {
     const others = v.parts.filter((x) => x !== p && x.kind !== 'fragment'), t = others.length === 1 ? others[0] : null, who = t ? `the ${t.name}` : 'every other part';
-    return [`Re-arms ${who} to full ◆ every ${p.rearm} cycles, ${CONFIG.rearmMax} times. It has no attack.`, `Break ${who} between re-arms. Break the ${p.name} first only when its ◆ is too thick to get through in time.`, { text: `re-arms ${t ? t.name : 'the others'}`, icon: 'repair', link: t?.id || null }];
+    if (p.tookOver && p.attack) return [`${attackRead(s, v, p)[0]} It took over the ${other(p.tookOver)}'s ${p.attack.name} when the ${other(p.tookOver)} broke.`, 'Break it.', null];
+    return [`Re-arms ${who} to full ◆ every ${p.rearm} cycles, ${CONFIG.rearmMax} times. It has no attack of its own${p.fallback ? `, but ${fallbackLine(v, p).replace(/^B/, 'b').replace(/\.$/, '')}` : ''}.`, `Break ${who} between re-arms, or the ${p.name} first when its ◆ is too thick to get through in time.`, { text: `re-arms ${t ? t.name : 'the others'}`, icon: 'repair', link: t?.id || null }];
   }
   if (p.reflect) return [`Every ${p.reflect}th cycle it mirrors your commands: they deal no damage, and ${pct(p.bounce ?? CONFIG.mirrorBounce)} bounces back at you. Burns and helpers get through.`, 'Fire nothing direct on its beat, or break it.', { text: `mirrors every ${p.reflect}`, icon: 'mirror', link: null }];
   if (p.mimic) return [`Records you. Every ${TELLS.mimic.every} cycles it plays the command you fire back at you, its whole direct hit.`, 'On its beat, fire no direct hit: a debuff, a strip, a burn or a shield.', { text: 'copies you', icon: 'mirror', link: null }];
@@ -177,14 +178,16 @@ function readOf(s, v, p) {
   if (p.echo) return ['While it stands, every hit you take repeats 1 cycle later at half damage.', 'Break it early. Shields and Block shrink what repeats.', null];
   if (p.overrun) return [`Spawns fragments${p.attack ? ` ${every(p.attack.interval)}` : ''} whose bite deals 1 more damage every cycle they live.`, 'Clear fragments young, or break it.', null];
   // A server room's bodies (families.mjs).
-  if (fam === 'trojan' && p.deliver) return [`Hits you for ${p.attack ? hitOf(s, p) : 0} ${every(p.attack?.interval || 5)}, and delivers a Package ${every(p.deliver.interval)}. While the Loader stands, a Package unpacks into two Droppers when anything damages it, or on its own ${cycles(BODY.package.opens)} after delivery.`, 'Break the Loader first, and leave the Packages alone until then.', null];
-  if (fam === 'trojan' && p.id === 'loader') return [`While it stands, any damage to a Package unpacks it into two Droppers. Taking it across a tick delays the next delivery by ${cycles(BODY.loader)}.`, 'Break it first. Every Package is then an inert box with credits inside.', null];
+  if (fam === 'trojan' && p.id === 'courier') return [`Hits you for ${p.attack ? hitOf(s, p) : 0} ${every(p.attack?.interval || 5)}, and delivers a Package ${every((p.deliver || p.redeploy?.deliver)?.interval || 3)}. While the Loader stands, a Package unpacks into two Droppers when anything damages it, or on its own ${cycles(BODY.package.opens)} after delivery, and a broken Courier is redeployed ${cycles(BODY.redeploy.in)} later at ${pct(BODY.redeploy.at)} Integrity.`, 'Breaking it buys time. Break the Loader, and leave the Packages alone until then.', null];
+  if (fam === 'trojan' && p.id === 'loader') return [`While it stands, any damage to a Package unpacks it into two Droppers, and it redeploys a broken Courier ${cycles(BODY.redeploy.in)} later at ${pct(BODY.redeploy.at)} Integrity, every time. Taking it across a tick delays the next delivery (or the redeploy) by ${cycles(BODY.loader)}.`, 'Break it: the Courier then stays down, and every Package is an inert box with credits inside.', { text: 'redeploys Courier', icon: 'upload', link: 'courier' }];
   if (p.pkg) return p.pkg.inert ? ['An inert box.', 'Break it for a Payload Box of credits.', null] : [`Unpacks into two Droppers at the end of cycle ${p.pkg.opensAt}, or the moment anything damages it while the Loader stands.`, 'Leave it alone, or break the Loader first.', null];
   if (fam === 'cryptominer' && p.id === 'rig') return [`Hashes you for ${hitOf(s, p)} ${every(p.attack?.interval || 2)}, ${p.attack?.rampBy || 1} more each time it lands, and heats up every cycle. At ${BODY.heat.at} heat it overheats: it stops hashing and burns itself until it breaks.`, 'Take it across a tick to vent its heat and its climb, or let it cook.', null];
-  if (fam === 'cryptominer' && p.id === 'cooler') return [`Keeps the Rig cool. Break it and the Rig heats ${BODY.heat.hot} a cycle instead of ${BODY.heat.cooled}, and every Hash lands ${pct(BODY.heat.hard - 1)} harder.`, 'Leave it standing, or break it to make the Rig overheat sooner.', { text: 'cools the Rig', icon: 'scheduler', link: 'rig' }];
+  if (fam === 'cryptominer' && p.id === 'cooler' && p.tookOver && p.attack) return [`Runs the Rig's Hash uncooled: hashes you for ${hitOf(s, p)} ${every(p.attack.interval)}, ${p.attack.rampBy || 1} more each time it lands, and heats up ${BODY.heat.hot} a cycle. At ${BODY.heat.at} heat it overheats and burns itself until it breaks.`, 'Take it across a tick to vent it, or let it cook.', null];
+  if (fam === 'cryptominer' && p.id === 'cooler') return [`Keeps the Rig cool. Break it and the Rig heats ${BODY.heat.hot} a cycle instead of ${BODY.heat.cooled}, and every Hash lands ${pct(BODY.heat.hard - 1)} harder. Break the Rig first and the Cooler takes over its Hash, uncooled: it heats ${BODY.heat.hot} a cycle.`, 'Whichever part is left hashing runs hot. Vent it, or let it cook.', { text: 'cools the Rig', icon: 'scheduler', link: 'rig' }];
   if (p.kind === 'fragment' && p.attack && !p.raidAdd) return [`${String(p.id).startsWith('dropper') ? 'Sprays' : 'Gnaws'} you for ${hitOf(s, p)} ${every(p.attack.interval)}.`, String(p.id).startsWith('dropper') ? 'Break it, or clear it with a hit on every part.' : 'Clear it with a hit on every part, or break what spawns it.', null];
   if (p.raidFuse) return [`Goes off on everyone ${every(p.raidFuse.every)}${p.raidWard ? `, and the boss takes ${pct(p.raidWard)} less damage while it stands` : ''}.`, 'Break it before it goes off.', null];
   if (p.spam) return [...attackRead(s, v, p).slice(0, 1), 'Break it in a hit or two. It carries no ticks to interrupt.', null];
+  if (p.fallback && !p.tookOver) { const [does, answer] = p.attack ? attackRead(s, v, p) : ['It has no attack of its own.', 'Break it when the others are handled.']; return [`${does} ${fallbackLine(v, p)}`, answer, { text: `falls back on ${other(p.fallback)}`, icon: 'relay', link: p.fallback }]; }
   if (p.attack) return [...attackRead(s, v, p), null];
   return ['It has no attack of its own.', 'Break it when the others are handled.', null];
 }
@@ -230,7 +233,7 @@ export function gearOnParts(live) {
 //   up     the rule holds now (a lock standing, a ward, both twins up, re-arms left): the tether glows
 //   count  cycles until it comes back or fires (a broken lock relocking, the next re-arm, a broken twin's reboot), or null
 //   snap   the part it sits on just broke (a dissolving row: view.mjs passes stands): the tether snaps and goes
-export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router' };
+export const LINK_ICON = { lock: 'lock', ward: 'shield', twin: 'mirror', rearm: 'repair', cool: 'scheduler', command: 'router', redeploy: 'upload', fallback: 'relay' };
 // The lock shield on p now: { cur, max, by } (the Mutex holding it), or null.
 export function lockOf(s, v, p) {
   if (!alive(p) || !(p.lockHp > 0)) return null;
@@ -246,6 +249,14 @@ export function wardOf(s, v, p) {
   return { cap, left: Math.max(0, cap - used), by };
 }
 const upTo = (n) => (n <= 0 ? 'at the end of this cycle' : when(n));
+// A fallback part's line (combat.mjs breakPart): what it takes over when its partner breaks first.
+function fallbackLine(v, p) {
+  const t = v.parts.find((x) => x.id === p.fallback), a = t?.attack, name = t?.name || 'its partner';
+  if (!a) return `Break the ${name} while the ${p.name} stands and the ${p.name} takes over its attack.`;
+  if (p.attack?.effect === 'heal') return `Break the ${name} while the ${p.name} stands and the ${p.name} drops its ${p.attack.name} and takes over the ${a.name}.`;
+  if (!p.attack || p.attack.effect === 'damage') return `Break the ${name} while the ${p.name} stands and the ${p.name} takes over its ${a.name}${v.family === 'cryptominer' ? `, climb and heat as they were, and runs it uncooled: ${BODY.heat.hot} heat a cycle` : ''}.`;
+  return `Break the ${name} while the ${p.name} stands and its ${p.attack.name} hits you for the ${name}'s ${a.name} too.`;
+}
 function linkTip(s, v, l) {
   const p = part(s, l.from) || v.parts.find((x) => x.id === l.from), to = l.to.map((id) => v.parts.find((x) => x.id === id)).filter(Boolean);
   const names = join(to.map((x) => `the ${x.name}`));
@@ -264,7 +275,14 @@ function linkTip(s, v, l) {
     if (!to.length) { const down = v.parts.find((x) => (x.twin === p.id || p.twin === x.id) && !alive(x)); return `${p.name} twin: it reboots the ${down?.name || 'other twin'} ${upTo(l.count ?? 0)}, at ${pct(CONFIG.twinReboot.at)}.\nBreak the ${p.name} before then and it stays down.`; }
     return `${p.name} twin: ${names}. Break one while the other stands and it reboots at ${pct(CONFIG.twinReboot.at)} ${cycles(CONFIG.twinReboot.in)} later, once.\nBreak both within ${cycles(CONFIG.twinReboot.in)} of each other.`;
   }
-  if (l.kind === 'rearm') return l.up ? `${p.name} re-arm: ${names} back to full ◆ ${upTo(l.count)}. ${CONFIG.rearmMax - (p.rearms || 0)} of ${CONFIG.rearmMax} re-arms left.\nBreak ${names} between re-arms.` : `${p.name} re-arm: overheated. It can't re-arm ${names} again.`;
+  const fo = p.fallback && to.some((x) => x.id === p.fallback) ? fallbackLine(v, p) : '';
+  if (l.kind === 'fallback') return `${p.name} fallback: ${fo}\nBreak the ${p.name} first, or be ready for it.`;
+  if (l.kind === 'rearm') return l.up ? `${p.name} re-arm: ${names} back to full ◆ ${upTo(l.count)}. ${CONFIG.rearmMax - (p.rearms || 0)} of ${CONFIG.rearmMax} re-arms left.${fo ? ` ${fo}` : ''}\nBreak ${names} between re-arms.` : `${p.name} re-arm: overheated. It can't re-arm ${names} again.${fo ? ` ${fo}` : ''}`;
+  if (l.kind === 'redeploy') {
+    const c = v.parts.find((x) => x.id === 'courier'), at = pct(BODY.redeploy.at);
+    if (!to.length) return `${p.name} redeploy: the ${c?.name || 'Courier'} comes back ${upTo(l.count ?? 0)}, at ${at} Integrity.\nBreak the ${p.name} before then and it stays down.`;
+    return `${p.name} redeploy: break ${names} while the ${p.name} stands and it comes back ${cycles(BODY.redeploy.in)} later at ${at} Integrity, every time.\nBreaking ${names} buys time. Break the ${p.name} and it stays down.`;
+  }
   if (l.kind === 'command') return `${p.name} command: the fragments gnaw ${pct(CONFIG.c2.gnaw)} harder while it stands, and all of them drop when it breaks.\nBreak it once fragments are up.`;
   const r = partRead(s, v, p);
   return `${p.name}: ${r.does}\n${r.answer}`;
@@ -287,6 +305,13 @@ export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
     }
     if (v.family === 'cryptominer' && p.id === 'cooler') { const t = v.parts.find((x) => x.id === 'rig'); if (alive(t)) add('cool', p, [t], { up: alive(p) }); }
     if (p.command) { const to = v.parts.filter((x) => alive(x) && x.kind === 'fragment'); if (to.length) add('command', p, to, { up: alive(p) }); }
+    // A Trojan's Loader over its Courier: both up, a tether; the Courier down with its redeploy coming, a stub on the
+    // Loader with the countdown (the Mirror's twin reboot, drawn the same way).
+    if (v.family === 'trojan' && p.id === 'loader') {
+      const c = v.parts.find((x) => x.id === 'courier');
+      if (c && alive(c)) add('redeploy', p, [c], { up: alive(p) });
+      else if (c?.redeployAt != null && alive(p)) add('redeploy', p, [], { up: false, count: Math.max(0, c.redeployAt - cycle) });
+    }
   }
   // Twins, by pair (either may be the one down): both up, a tether; one down with its reboot coming, a stub on the one
   // standing with the countdown; one just broken for good (no reboot), the tether snaps.
@@ -299,6 +324,13 @@ export function partLinks(s, v = s.encounter?.virus, { stands = alive } = {}) {
       if (down.rebootAt && stands(up)) out.push({ kind: 'twin', from: up.id, to: [], icon: LINK_ICON.twin, known, up: false, count: Math.max(0, down.rebootAt - cycle), snap: false });
       else if (!down.rebootAt && stands(down)) out.push({ kind: 'twin', from: down.id, to: [up.id], icon: LINK_ICON.twin, known, up: false, count: null, snap: true });
     }
+  }
+  // Fallback (combat.mjs): a part that takes over its partner's attack when the partner breaks. Its own tether, unless
+  // a rule of its own already reaches the same partner (a Keyring's re-arm, a Cooler's cooling): that one says it.
+  for (const p of v.parts.filter((x) => x.fallback && stands(x))) {
+    const t = v.parts.find((x) => x.id === p.fallback);
+    if (!t || !alive(t) || out.some((l) => l.from === p.id && l.to.includes(t.id))) continue;
+    out.push({ kind: 'fallback', from: p.id, to: [t.id], icon: LINK_ICON.fallback, known: knowsPart(s, v, p), up: alive(p), count: null, snap: !alive(p) });
   }
   for (const l of out) l.tip = linkTip(s, v, l);
   return out;

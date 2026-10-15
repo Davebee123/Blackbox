@@ -110,7 +110,7 @@ export const GENES = {
     implicit: 'Playback on you deals less.', carried: (p) => !!p.mimic, bot: { quiet: 'beat' }, counter: 'handshake',
     parts: { ghostroot: { id: 'mimic', name: 'Mimic', integrity: 18, armor: 1, veiled: true, loot: 'Mimic Mask', mimic: true, from: 8, pool: 'third' } } },
   keyring: { name: 'Keyring', adj: 'Keyed', cat: 'part', axis: 'shell', role: 'primary', beat: 'part', cost: 2, opens: 1, decode: 'part', suits: 'ICE, Kestrel (the Bouncer)',
-    does: 'Re-arms its partner to full ◆ every 4 cycles, 3 times.', telegraph: 'A re-arm chip on the board.', answer: 'Break the partner between re-arms. Break the Keyring first only when you cannot get through the partner\'s armor before the next re-arm.',
+    does: 'Re-arms its partner to full ◆ every 4 cycles, 3 times. Break the partner first and it takes over the partner\'s attack.', telegraph: 'A re-arm chip on the board.', answer: 'Break the partner between re-arms, ready for the Keyring. Break the Keyring first when you cannot get through the partner\'s armor before the next re-arm.',
     implicit: 'Re-armed ◆ come back one fewer.', carried: (p) => !!p.rearm, bot: { focus: 'partner' } },
   cycletax: { name: 'Cycle tax', adj: 'Taxing', cat: 'part', axis: 'tempo', role: 'primary', cost: 2, opens: 5, decode: 'part', suits: 'Ransomware, GLASSJAW (the Hashrat)',
     does: 'While it lives, your cooldowns tick down only every other cycle. Its own attack fires only once it is the last part left.', telegraph: 'A tax status on you.', answer: 'Break it. Clock Speed and skills with short cooldowns soften the tax.',

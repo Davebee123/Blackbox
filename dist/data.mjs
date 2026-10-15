@@ -411,8 +411,8 @@ export const STRAINS = {
   // Wave 1b: six more for the early climb (levels 3–11), all from layer 2.
   patchwork: {
     lineage: 'worm', from: 3, depth: 2, name: 'Patchwork', genes: ['mend'], tell: { name: 'Hotfix', gene: 'hotfix' },
-    rule: 'Every 3 cycles, the Patcher heals the most damaged part for 12. Break it first, or burst the other part down between heals.',
-    parts: [PULSE(12, 4), { id: 'patcher', name: 'Patcher', integrity: 28, armor: 1, loot: 'Patch Kit', special: true, attack: { name: 'Patch', effect: 'heal', amount: 12, interval: 3, first: 3 } }],
+    rule: 'Every 3 cycles, the Patcher heals the most damaged part for 12. Break the Pulse Node first and the Patcher drops its Patch and takes over the Surge (Fallback). Break the Patcher first, or burst the other part down between heals.',
+    parts: [PULSE(12, 4), { id: 'patcher', name: 'Patcher', integrity: 28, armor: 1, loot: 'Patch Kit', special: true, fallback: 'pulse', attack: { name: 'Patch', effect: 'heal', amount: 12, interval: 3, first: 3 } }],
   },
   flicker: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker', genes: ['phaseshift'], tell: { name: 'Blink', gene: 'overcharge' },
@@ -494,10 +494,10 @@ export const GUARDS = {
     threatens: 'Signal',
     guard: true,
     art: 'worm',
-    summary: 'A nesting guard. The Brood spawns fragments that gnaw your Signal every cycle.',
+    summary: 'A nesting guard. The Brood spawns fragments that gnaw your Signal every cycle. Break the Maw first and the Brood takes over its Bite.',
     parts: [
       { id: 'pulse', name: 'Maw', integrity: 24, armor: 0, loot: 'Crawler Maw', attack: { name: 'Bite', effect: 'damage', amount: 7, interval: 3, first: 2 } },
-      { id: 'replicator', name: 'Brood', integrity: 28, armor: 1, loot: 'Brood Seed', special: true, attack: { name: 'Brood', effect: 'replicate', amount: 1, interval: 4, first: 3 } },
+      { id: 'replicator', name: 'Brood', integrity: 28, armor: 1, loot: 'Brood Seed', special: true, fallback: 'pulse', attack: { name: 'Brood', effect: 'replicate', amount: 1, interval: 4, first: 3 } },
     ],
   },
   // Ransomware-shaped guard: the Shredder winds up one heavy strike.
@@ -521,11 +521,11 @@ export const GUARDS = {
     guard: true,
     ice: true,
     art: 'ransomware',
-    rule: 'Every 4 cycles, the Keyring re-arms the Gate to full armor. After 3 re-arms it overheats. The Keyring has no attack. Break the Gate between re-arms, and break the Keyring first only when the Gate\'s armor is too thick to get through in time.',
-    summary: 'ICE on the door. The Keyring keeps re-arming the Gate.',
+    rule: 'Every 4 cycles, the Keyring re-arms the Gate to full armor. After 3 re-arms it overheats. The Keyring has no attack of its own, but break the Gate while it stands and the Keyring takes over its Ram (Fallback). Break the Gate between re-arms, or the Keyring first when the Gate\'s armor is too thick to get through in time.',
+    summary: 'ICE on the door. The Keyring keeps re-arming the Gate, and takes over its Ram if the Gate breaks first.',
     parts: [
       { id: 'pulse', name: 'Gate', integrity: 30, armor: 3, loot: 'Gate Hinge', attack: { name: 'Ram', effect: 'damage', amount: 10, interval: 3, first: 2 } },
-      { id: 'encryptor', name: 'Keyring', integrity: 22, armor: 1, loot: 'Keyring', special: true, rearm: 4 },
+      { id: 'encryptor', name: 'Keyring', integrity: 22, armor: 1, loot: 'Keyring', special: true, rearm: 4, fallback: 'pulse' },
     ],
   },
   // Watchdog-shaped: the longer the fight, the harder the Trace-back.
@@ -614,6 +614,7 @@ export function makePart(spec, kind, scale, extraArmor = 0) {
     deadman: !!spec.deadman, // Tripwire: break it while the others live and they go loud
     command: !!spec.command, // C2 Node: fragments gnaw harder while it lives, and drop when it breaks
     mimic: !!spec.mimic, // Mimic: plays your last command back at you (its tell)
+    fallback: spec.fallback || null, // Fallback (Keyring, Brood, Patcher, Cooler): the part whose attack it takes over when that part breaks
     ...(spec.wardCommands ? { wardCommands: true } : {}), // HASHLORD's Pool Lock: its ward holds back your commands only, not burns or helpers
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
@@ -749,7 +750,7 @@ export const BOSSES = {
     signature: { name: 'Chain Fork', rule: 'At half Integrity, a second Miner spins up. Its cycle tax returns if the first Miner is gone, and the Pool Lock wards it too while the Lock stands.' },
     hp: 3.9, dmg: 1.5, healerDmg: HASHLORD_LATE, enrageAt: 18, about: 'A Hashrat boss. While its Miner lives, your cooldowns tick down only every other cycle, and a Pool Lock wards the Miner against your commands. Burns and helpers get through at full. At 60% Integrity it re-arms every part, and at half the Chain Fork spins up a second Miner.', phases: [{ at: 0.6, do: ['rearm'], say: 'HASHLORD re-arms every part.' }, { at: 0.5, do: ['spawn:miner'], say: 'HASHLORD forks the chain. A second Miner spins up.' }] },
   'nb-backorifice': { name: 'BACK ORIFICE', family: 'worm', third: 'c2', native: true, lair: 'BACKORIFICE-C2', hp: 1.3, dmg: 0.95, enrageAt: 17, about: 'A C2 Node commands its fragments. At half Integrity, every attack comes a cycle sooner, and at 25% a Mirror twins the Replicator.', phases: [{ at: 0.5, do: ['faster'], say: 'BACK ORIFICE opens every port. Every attack comes a cycle sooner.' }, { at: 0.25, do: ['spawn:mirror'], say: 'BACK ORIFICE spins up a Mirror. Break it and the Replicator together.' }] },
-  'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
+  'nb-patchday': { name: 'PATCH TUESDAY', family: 'worm', strain: 'patchwork', native: true, lair: 'PATCHDAY-WSUS', charge: 'Rollup', hp: 2.2, dmg: 1.45, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Patchwork boss. Its Patcher heals the most damaged part, and takes over the Surge if its Pulse Node breaks first. At 60% Integrity it re-arms every part, and at 30% every attack comes a cycle sooner.', phases: [{ at: 0.6, do: ['rearm'], say: 'PATCH TUESDAY re-arms every part.' }, { at: 0.3, do: ['faster'], say: 'PATCH TUESDAY forces a reboot. Every attack comes a cycle sooner.' }] },
   'nb-floodwall': { name: 'FLOODWALL', family: 'worm', strain: 'floodgate', native: true, lair: 'FLOODWALL-SLUICE', charge: 'Storm Surge', hp: 1.6, dmg: 0.95, healerDmg: STRAIN_BOSS_LATE, enrageAt: 18, about: 'A Floodgate boss. Its Flooder attacks every cycle, harder each time, and any delay resets it. At half Integrity it re-arms every part.', phases: [{ at: 0.5, do: ['rearm'], say: 'FLOODWALL re-arms every part.' }] },
   // MIRRORSHADE, rebuilt (docs/genome.md 7.5): NULL CHOIR's, from level 12. One feedback amplifier (the Mimic) on its Scramble,
   // a plain charge (Glass Cut), and the Doppelganger at half: the Mimic stops recording and takes the shape of the first part

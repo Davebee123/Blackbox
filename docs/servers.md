@@ -366,21 +366,22 @@ Code stays three kinds, by lineage: Cipher for the leverage families, Worm for t
 | Part | Integrity | ◆ | Move |
 |---|---:|---:|---|
 | Courier | 34 | 1 | Drop 10, and delivers a Package |
-| Loader | 30 | 2 | none. While it lives, any damage to a Package unpacks it. |
-| Package | 16 | 0 | none. Unpacks on its own 5 cycles after delivery (a countdown on it). At most 3. |
-| Dropper (from an unpacked Package, two each) | 14 | 0 | Spray 5 every 2 |
+| Loader | 30 | 2 | none. While it lives, any damage to a Package unpacks it, and it redeploys a broken Courier 4 cycles later at half its Integrity, bare, every time. |
+| Package | 16 | 0 | none. Unpacks on its own 5 cycles after delivery (a countdown on it). At most 3. The fight opens with one on the board. |
+| Dropper (from an unpacked Package, two each) | 14 | 0 | Spray 2 every 2 (5 before the fight opened on a Package) |
 
 - Sets: **Express** (a Package every 3 from 2, Drop every 5) and **Freight** (a Package every 4 from 2, Drop every 3).
 - Once the Loader is broken, Packages are inert boxes: break one for a Payload Box (credits and a component).
 - Ticks: the Courier's cancel its Drop or that cycle's delivery. The Loader's each delay the next delivery by 2 cycles. Packages and Droppers have none.
 - The lesson: area hits and spreading burns unpack every box on the board. Kill the Loader first, or hit nothing but the Courier until you can.
+- The Courier broken first buys time, not the fight: the Loader redeploys it (a Redeploy chip on the Loader's row, a tether with ↻ N) until the Loader breaks. The opening Package makes the boxes part of every fight: race the Loader before it opens, or clear its Droppers.
 
 **2. Cryptominer. Let it cook, or vent it.**
 
 | Part | Integrity | ◆ | Move |
 |---|---:|---:|---|
 | Rig | 44 | 1 | Hash every 2 from 2: 4, then +2 each time it lands (the ramp) |
-| Cooler | 26 | 1 | none |
+| Cooler | 26 | 1 | none. Break the Rig first and it takes over the Hash (Fallback), uncooled |
 
 - **Heat.** The Rig gains 10 heat a cycle while the Cooler lives, 25 once it's broken (and every Hash lands 50% harder). At 100 it overheats: it stops hashing and burns itself for 12% of its max every cycle until it breaks.
 - Sets: **Cold rig** (ramp +3, heat ×0.8: burns out around cycle 13) and **Hot rig** (ramp +1, heat ×1.4: around cycle 8).

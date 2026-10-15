@@ -72,9 +72,21 @@ function keyringNow(s) {
   const strips = (ok(s, 'crack ' + gate.id) ? ABILITIES.crack.strip : 1) + Math.max(0, left - 2); // the last command is the kill
   return strips < gate.armor ? k : null;
 }
+// A Trojan's live Packages (families.mjs): any damage unpacks one, and a hit that splashes onto every part (shards, an
+// area hit, a bomb's blast) unpacks them all, so while they're on the board a player swaps either (a class's own plan
+// included) for a hit on a part that isn't a box.
+const AREA = new Set(['shatter', 'fork-bomb', 'garbage-collect', 'failover', 'multicast', 'rm-rf', 'logic-bomb', 'chain-reaction', 'mesh', 'outbreak', 'propagate', 'fan-out']);
+export function planner(s) {
+  const plan = plan0(s);
+  if (!plan || !shunning(s)) return plan;
+  const [id, at] = plan.split(' '), aim = part(s, at);
+  if (!AREA.has(id) && !shunned(s, aim)) return plan;
+  const t = (aim && !shunned(s, aim) ? aim : null) || livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0];
+  return (t && first(s, ['overload', 'flood', 'segfault', 'backdoor', 'reclaim', 'rate-limit', 'exploit', 'crack', 'inject', 'deploy', 'tag', 'spike'].map((id) => id + ' ' + t.id))) || 'hold';
+}
 // One planner for every class: finish what you can, answer what lands now, strip, then finish.
 // Commands a class doesn't have are skipped, so each class plays its own kit.
-export function planner(s) {
+function plan0(s) {
   const plan = play(s);
   // Tells it answers outright (tells.mjs): SIGINT a cast, go quiet on the Mimic's beat when the plan hits hard,
   // strip a part about to seal (or about to charge, so the cut can land).
@@ -122,6 +134,9 @@ function play(s) {
   const open = !raidFocus(s) && ['breaker', 'bastion'].includes(classOf(s)) && livingParts(s).find((p) => p.openUntil >= s.encounter.cycle && !p.deadman);
   let t0 = raidFocus(s) || tellFocus(s) || open || key || (classOf(s) === 'infiltrator' ? soonest(s) : mostThreat(s));
   if (shunned(s, t0)) t0 = livingParts(s).filter((p) => !shunned(s, p)).sort((a, b) => dueOf(s, a) - dueOf(s, b))[0] || t0;
+  // A Trojan's Loader (families.mjs): while a broken Courier waits on its redeploy, it's the part to break.
+  const loader = s.encounter.virus.parts.some((p) => p.redeployAt != null) ? livingParts(s).find((p) => p.id === 'loader' && s.encounter.virus.family === 'trojan') : null;
+  if (loader && !raidFocus(s) && !tellFocus(s)) t0 = loader;
   let t = phasedOut(s, t0) ? livingParts(s).find((p) => !phasedOut(s, p)) || t0 : t0;
   // Lockbox: a warded part soaks a burst, so break the Lockbox first. Mutex: its lock comes back while it lives,
   // so break it first too (a burn class chips under either anyway).

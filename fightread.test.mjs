@@ -330,3 +330,51 @@ test('one visual language for every relation: a Lockbox\'s ward (and a cap line 
   // partLinks reads the same.
   assert.deepEqual(partLinks(b).map((l) => [l.kind, l.from, l.to.join(), l.count]), [['rearm', 'encryptor', 'pulse', n]]);
 });
+
+test('the Trojan\'s redeploy and a fallback draw as tethers: Loader to Courier while both stand, a stub with ↻ N on the Loader while the Courier is down; a Brood to its Maw', async () => {
+  const FP = await import('./dist/floorplan.mjs');
+  const s = at(12);
+  FP.outfit(s, { cls: 'breaker', level: 12, gearSeed: 2 });
+  FP.startRooms(s, { seed: 5, kind: 'Mirror', size: 'medium', level: 12 });
+  FP.connect(s);
+  const room = FP.roomList(s).find((r) => r.kind === 'process');
+  Object.assign(room, { family: 'trojan', set: 'express', pin: 'express', third: null, author: 'swarmline' });
+  s.rooms.at = room.id; s.rooms.screen = null;
+  FP.fight(s, room);
+  s.run.integrity = s.run.max = 5000;
+  quiet(s);
+  const v = s.encounter.virus, courier = part(s, 'courier');
+  let tt = tethersOf(boardMarkup(s, null), 'redeploy');
+  assert.ok(tt.length >= 2 && tt.every((t) => t.links === 'loader courier' && /\bup\b/.test(t.cls)), 'Loader to Courier');
+  assert.match(tt[0].tip, /^Loader: \?\?\?/, '??? until the Loader is decoded');
+  s.research = { [codexKey(v, part(s, 'loader'))]: 5 };
+  tt = tethersOf(boardMarkup(s, null), 'redeploy');
+  assert.match(tt[0].tip, /^Loader redeploy: break the Courier while the Loader stands and it comes back 4 cycles later at 50% Integrity, every time\./);
+  Object.assign(courier, { armor: 0, integrity: 1 });
+  command(s, 'spike courier'); resolveCycle(s);
+  assert.equal(courier.integrity, 0);
+  const stub = tethersOf(boardMarkup(s, null), 'redeploy');
+  assert.equal(stub.length, 1);
+  assert.match(stub[0].cls, /\bstub\b/); assert.match(stub[0].cls, /\bdown\b/);
+  assert.match(stub[0].inner, new RegExp(`↻${courier.redeployAt - s.encounter.cycle}<`));
+  assert.match(stub[0].tip, /^Loader redeploy: the Courier comes back in \d cycles, at 50% Integrity\.\nBreak the Loader before then and it stays down\./);
+  // The Redeploy chip on the Loader's row, and its tag.
+  const html = boardMarkup(s, null);
+  assert.match(html.split('data-target="loader"')[1].split('data-target=')[0], /title="Redeploy: \d+ hp the Courier comes back, unless the Loader is broken first"/, 'on the Loader\'s row');
+  assert.match(html, /redeploys in \d/);
+  assert.match(partRead(s, v, part(s, 'loader')).does, /redeploys a broken Courier 4 cycles later at 50% Integrity, every time/);
+  // A Crawler's Brood falls back on its Maw: a tether of its own, a fallback tag, and the read says it.
+  const c = at(12); selectEncounter(c, 'crawler', 3); command(c, 'engage');
+  const fb = tethersOf(boardMarkup(c, null), 'fallback');
+  assert.ok(fb.length >= 2 && fb.every((t) => t.links === 'replicator pulse' && /\bup\b/.test(t.cls)));
+  assert.match(boardMarkup(c, null), /title="Fallback: break the Maw while the Brood stands and the Brood takes over its Bite\.">fallback</);
+  const cv = c.encounter.virus;
+  assert.match(partRead(c, cv, part(c, 'replicator')).does, /Break the Maw while the Brood stands and its Brood hits you for the Maw's Bite too\./);
+  // A Bouncer's Keyring says it on its re-arm tether (no second tether to the same Gate), and the Patcher in its read.
+  const b = at(12); selectEncounter(b, 'bouncer', 3); command(b, 'engage');
+  b.research = { [codexKey(b.encounter.virus, part(b, 'encryptor'))]: 5 };
+  assert.equal(tethersOf(boardMarkup(b, null), 'fallback').length, 0);
+  assert.match(tethersOf(boardMarkup(b, null), 'rearm')[0].tip, /Break the Gate while the Keyring stands and the Keyring takes over its Ram\./);
+  const p = at(12); selectEncounter(p, 'patchwork', 3, { level: 12, mutation: null }); command(p, 'engage');
+  assert.match(partRead(p, p.encounter.virus, part(p, 'patcher')).does, /Break the Pulse Node while the Patcher stands and the Patcher drops its Patch and takes over the Surge\./);
+});

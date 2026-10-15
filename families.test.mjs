@@ -4,7 +4,7 @@
 // rolls them.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, hooks, hit, part, livingParts, command, resolveCycle, attackers, readyIn, usable, active, toIntent } from './dist/combat.mjs';
+import { fresh, hooks, hit, part, livingParts, command, resolveCycle, attackers, readyIn, usable, active, toIntent, intents } from './dist/combat.mjs';
 import { CONFIG, FAMILIES, ROOM_FAMILIES, ABILITIES, createVirus } from './dist/data.mjs';
 import { seeded } from './dist/gear.mjs';
 import * as FP from './dist/floorplan.mjs';
@@ -122,6 +122,12 @@ test('the Trojan: the Courier delivers Packages; while the Loader lives, any dam
   const s = roomFight({ family: 'trojan', set: 'express' }), e = s.encounter, courier = part(s, 'courier');
   assert.ok(courier.deliver, 'the Courier delivers');
   assert.equal(courier.deliver.interval, 3);
+  // The fight opens on a Package already delivered: it unpacks at the end of cycle 5, like one delivered as it opened.
+  const opening = livingParts(s).filter((p) => p.pkg);
+  assert.equal(opening.length, BODY.package.opening, 'one Package on the board from the start');
+  assert.equal(opening[0].pkg.opensAt, BODY.package.opens);
+  assert.ok(!opening[0].pkg.inert, 'live while the Loader stands');
+  for (const b of opening) b.integrity = 0; // out of the way
   for (const p of attackers(s)) p.attack.due = 999;
   courier.deliver.due = e.cycle;
   hold(s);
@@ -165,12 +171,104 @@ test('the Trojan\'s ticks: the Courier\'s cancel a delivery due now, the Loader\
   courier.integrity = Math.floor(courier.max / 2) + 2;
   strike(s, courier, 4);
   assert.equal(courier.deliver.due, e.cycle + courier.deliver.interval, 'the delivery is cancelled');
+  const boxes = livingParts(s).filter((p) => p.pkg).length; // the one it opened on
   hold(s);
-  assert.ok(!livingParts(s).some((p) => p.pkg), 'nothing delivered');
+  assert.equal(livingParts(s).filter((p) => p.pkg).length, boxes, 'nothing delivered');
   const due = courier.deliver.due;
   loader.integrity = Math.floor(loader.max / 2) + 2;
   strike(s, loader, 4);
   assert.equal(courier.deliver.due, due + BODY.loader, 'the Loader\'s tick delays it 2 cycles');
+});
+
+test('the Trojan\'s Loader redeploys a broken Courier 4 cycles later at half its Integrity, as often as it breaks; break the Loader and it stays down', () => {
+  const s = roomFight({ family: 'trojan', set: 'express' }), e = s.encounter, courier = part(s, 'courier'), loader = part(s, 'loader');
+  for (const p of livingParts(s).filter((x) => x.pkg)) p.integrity = 0;
+  for (const p of attackers(s)) p.attack.due = 999;
+  const interval = courier.deliver.interval;
+  strike(s, courier, courier.integrity);
+  assert.equal(courier.integrity, 0);
+  assert.equal(courier.redeployAt, e.cycle + BODY.redeploy.in, 'redeployed 4 cycles later');
+  assert.ok(s.logs.some((x) => /will redeploy the Courier in 4 cycles/.test(x.message)));
+  // Its countdown rides the Loader's row (the Courier has none while it's down).
+  const chip = () => intents(s, 6).find((i) => i.effect === 'redeploy');
+  assert.equal(chip()?.source, 'loader');
+  assert.equal(chip().col, BODY.redeploy.in);
+  hold(s, BODY.redeploy.in);
+  assert.equal(courier.integrity, 0, 'still down through cycle +3');
+  hold(s);
+  assert.ok(courier.integrity > 0, 'back at the end of cycle +4, where its chip sat');
+  assert.equal(courier.integrity, Math.round(courier.max * BODY.redeploy.at), 'at half its max');
+  assert.equal(courier.armor, 0, 'bare: its ◆ patch back on the usual clock');
+  assert.ok(courier.deliver && courier.deliver.interval === interval, 'delivering again');
+  assert.ok(courier.attack.due > e.cycle && courier.attack.due < 900, 'its Drop on its clock again');
+  // Again: it comes back as often as it breaks while the Loader stands.
+  strike(s, courier, courier.integrity);
+  assert.equal(courier.redeployAt, e.cycle + BODY.redeploy.in);
+  // The Loader's tick, with the Courier down, delays the redeploy.
+  loader.armor = 0; loader.integrity = Math.floor(loader.max / 2) + 2;
+  strike(s, loader, 4);
+  assert.equal(courier.redeployAt, e.cycle + BODY.redeploy.in + BODY.loader, 'the Loader\'s tick delays the redeploy 2 cycles');
+  // Break the Loader: the Courier stays down, and the fight is won.
+  strike(s, loader, loader.integrity);
+  assert.equal(courier.redeployAt, null);
+  hold(s, BODY.redeploy.in + 3);
+  assert.equal(courier.integrity, 0, 'the Courier stays down');
+  assert.ok(livingParts(s).every((p) => p.pkg?.inert), 'nothing left but inert boxes');
+});
+
+test('a part that comes back in the same fight pays research for its first break only: a redeployed Courier, a rebooted Mirror twin; a cut still counts', async () => {
+  const { partResearch, gainResearch } = await import('./dist/research.mjs');
+  const s = roomFight({ family: 'trojan', set: 'express' }), v = s.encounter.virus, courier = part(s, 'courier');
+  for (const p of livingParts(s).filter((x) => x.pkg)) p.integrity = 0;
+  for (const p of attackers(s)) p.attack.due = 999;
+  const r0 = partResearch(s, v, courier);
+  strike(s, courier, courier.integrity);
+  assert.equal(partResearch(s, v, courier), r0 + 1, 'the first break');
+  hold(s, BODY.redeploy.in + 1);
+  assert.ok(courier.integrity > 0, 'redeployed');
+  strike(s, courier, courier.integrity);
+  hold(s, BODY.redeploy.in + 1);
+  strike(s, courier, courier.integrity);
+  assert.equal(partResearch(s, v, courier), r0 + 1, 'breaking it again pays nothing');
+  gainResearch(s, v, courier, 'cut');
+  assert.equal(partResearch(s, v, courier), r0 + 2, 'a cut on it still counts');
+  // A Mirror's twin, rebooted: the same.
+  checkTwin(roomFightThird('worm', 'twin'), partResearch);
+});
+function roomFightThird(family, third) {
+  const s = fresh();
+  s.rng = 99;
+  FP.outfit(s, { cls: 'breaker', level: 10, gearSeed: 2 });
+  FP.startRooms(s, { seed: 5, kind: 'Mirror', size: 'medium', level: 10 });
+  FP.connect(s);
+  const R = s.rooms, room = FP.roomList(s).find((r) => r.kind === 'process');
+  Object.assign(room, { family, set: 'standard', pin: 'standard', third, author: 'swarmline' });
+  R.at = room.id; R.screen = null;
+  FP.fight(s, room);
+  s.run.integrity = s.run.max = 5000;
+  return s;
+}
+function checkTwin(s, partResearch) {
+  const v = s.encounter.virus, rep = part(s, 'replicator');
+  assert.ok(v.parts.some((p) => p.twin), 'a Mirror on the board');
+  for (const p of attackers(s)) p.attack.due = 999;
+  const r0 = partResearch(s, v, rep);
+  strike(s, rep, rep.integrity);
+  assert.ok(rep.rebootAt, 'rebooting');
+  hold(s, 4);
+  assert.ok(rep.integrity > 0, 'rebooted');
+  strike(s, rep, rep.integrity);
+  assert.equal(partResearch(s, v, rep), r0 + 1, 'one break\'s research, not two');
+}
+
+test('a Courier broken after its Loader stays down; the opening Package goes inert with the Loader', () => {
+  const s = roomFight({ family: 'trojan', set: 'freight' }), courier = part(s, 'courier'), loader = part(s, 'loader');
+  for (const p of attackers(s)) p.attack.due = 999;
+  const box = livingParts(s).find((p) => p.pkg);
+  strike(s, loader, loader.integrity);
+  assert.ok(box.pkg.inert, 'inert with the Loader broken');
+  strike(s, courier, courier.integrity);
+  assert.equal(courier.redeployAt ?? null, null, 'no redeploy without the Loader');
 });
 
 // ---------- the Cryptominer ----------
@@ -216,6 +314,28 @@ test('the Cryptominer\'s ticks vent it: ramp and heat back to nothing, and an ov
   strike(s, rig, 4);
   assert.equal(v.overheated, false);
   assert.ok(rig.attack.due < 900, 'hashing again');
+});
+
+test('the Cryptominer\'s Cooler falls back on the Rig: break the Rig first and the Cooler takes over its Hash, climb and heat, uncooled', () => {
+  const s = roomFight({ family: 'cryptominer', set: 'cold' }), e = s.encounter, v = e.virus, rig = part(s, 'rig'), cooler = part(s, 'cooler');
+  s.run.integrity = 5000;
+  hold(s, 4);
+  assert.equal(cooler.attack, null, 'no attack of its own while the Rig stands');
+  const step = rig.attack.step, heat = v.heat;
+  strike(s, rig, rig.integrity);
+  assert.equal(cooler.attack?.name, 'Hash', 'it takes the Hash');
+  assert.equal(cooler.attack.step, step, 'with the climb the Rig had');
+  assert.ok(s.logs.some((x) => x.type === 'reroute' && x.fallback && /Cooler takes over the Rig's Hash/.test(x.message)));
+  hold(s);
+  assert.equal(v.heat, heat + Math.round(BODY.heat.hot * ATTACK_SETS.cryptominer.cold.heat), 'uncooled: 25 a cycle');
+  const first = s.serial;
+  hold(s, 2);
+  assert.ok(s.logs.some((x) => x.id > first && x.type === 'server-hit' && x.source === 'cooler'), 'it hashes you');
+  for (let i = 0; i < 10 && !v.overheated; i++) hold(s);
+  assert.ok(v.overheated, 'and cooks: it overheats');
+  assert.equal(cooler.attack.due, 999, 'it stops hashing');
+  // Its ticks vent it, as the Rig's did.
+  assert.equal(hooks.tickVerb(s, cooler), 'vent');
 });
 
 // ---------- the Wiper ----------

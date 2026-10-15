@@ -2483,7 +2483,10 @@ export const codexKey = (v, p) => `${v.strain || v.family}:${p.id}`;
 export const knowsPart = (s, v, p) => knowsAt(s, v, p, TIER.decoded);
 function breakPart(s, p) {
   const e = s.encounter;
-  gainResearch(s, e.virus, p, 'break'); // +1 research on the part (not a crewmate's break, not a fragment)
+  // +1 research on the part (not a crewmate's break, not a fragment), for its first break in the fight only: a part
+  // that comes back (a Trojan's redeployed Courier, a Mirror's rebooted twin) can't be farmed. Cuts and tells still count.
+  if (!p.brokeOnce) gainResearch(s, e.virus, p, 'break');
+  p.brokeOnce = true;
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
@@ -2570,13 +2573,25 @@ function breakPart(s, p) {
   // (Encrypt, Scramble, Replicate) gains a hit on top of what it does (landAttack's `hit`).
   const hitOf = (x) => (x.attack?.effect === 'damage' ? x.attack.amount : x.attack?.hit || 0);
   if ((e.virus.mutation === 'rerouting' || e.virus.grade >= 2 || e.virus.genes?.some((g) => g.id === 'linked')) && hitOf(p) > 0) {
-    const to = livingParts(s).filter((x) => x !== p && x.attack && x.attack.effect !== 'heal').sort((a, b) => a.attack.due - b.attack.due)[0];
+    const to = livingParts(s).filter((x) => x !== p && x.attack && x.attack.effect !== 'heal' && x.fallback !== p.id).sort((a, b) => a.attack.due - b.attack.due)[0]; // a fallback part takes it whole (below)
     const add = Math.max(1, Math.round(hitOf(p) * CONFIG.linked));
     if (to) {
       if (to.attack.effect === 'damage') to.attack.amount += add; else to.attack.hit = (to.attack.hit || 0) + add;
       to.rerouted = (to.rerouted || 0) + add;
       emit(s, 'reroute', `Linked: ${p.attack.name} passes to the ${to.name}, and its ${to.attack.name} ${to.attack.effect === 'damage' ? 'deals' : 'now hits for'} ${add} more.`, { target: to.id, from: p.id, amount: add });
     }
+  }
+  // Fallback (a Bouncer's Keyring, a Crawler's Brood, Patchwork's Patcher, a Cryptominer's Cooler): break its partner
+  // while it stands and it takes over the partner's attack, so breaking the part that attacks first doesn't leave the
+  // other harmless. A part with no attack (or a heal) takes it whole; one whose attack isn't a hit (a Brood's spawns)
+  // hits for it on top. Linked passes nothing to it (above): it takes the attack once, whole.
+  for (const f of livingParts(s).filter((x) => x.fallback === p.id && p.attack)) {
+    const a = p.attack;
+    // On its own clock: in place of its own next move (a Patcher's next Patch), or a full interval after the break.
+    if (!f.attack || f.attack.effect === 'heal') f.attack = { ...a, due: f.attack ? Math.max(e.cycle + 1, f.attack.due) : e.cycle + Math.max(2, a.interval || 2), n: 0, hasted: false };
+    else if (f.attack.effect !== 'damage') f.attack.hit = (f.attack.hit || 0) + (a.effect === 'damage' ? a.amount : a.hit || 0);
+    f.tookOver = p.id;
+    emit(s, 'reroute', `FALLBACK. The ${f.name} takes over the ${p.name}'s ${a.name}.`, { target: f.id, from: p.id, fallback: true });
   }
   if (zeroDay(s, 'buffer-overflow') && !e.forceCrit) { e.forceCrit = true; emit(s, 'status', 'Buffer Overflow makes your next hit a critical strike.'); }
   // Total Loss (Halcyon, Preferred): the wreck hits everything else. Chains through what it breaks.

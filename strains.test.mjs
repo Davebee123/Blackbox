@@ -145,6 +145,63 @@ test('Patchwork: the Patcher heals the most damaged part; nothing of yours stops
   assert.equal(s.encounter.chits, 3, 'and spends none of your armor');
 });
 
+// Fallback (combat.mjs breakPart): break the part that attacks first and the one left takes over its attack, so the
+// obvious first target never leaves the rest harmless.
+const breakNow = (s, p) => { Object.assign(p, { armor: 0, maxArmor: 0, patchAt: null }); p.integrity = 1; fire(s, 'spike ' + p.id); };
+test('Fallback: the Patcher drops its Patch and takes over the Surge when the Pulse Node breaks first; its Surge lands', () => {
+  const s = bare(start('patchwork', 'bastion'));
+  const pulse = part(s, 'pulse'), patcher = part(s, 'patcher'), surge = pulse.attack.amount;
+  assert.equal(patcher.fallback, 'pulse');
+  patcher.attack.due = s.encounter.cycle + 3;
+  const next = patcher.attack.due;
+  breakNow(s, pulse);
+  assert.equal(patcher.attack.due, next, 'in place of its next Patch');
+  assert.equal(pulse.integrity, 0);
+  assert.equal(patcher.attack.name, 'Surge', 'its Patch is gone: it Surges');
+  assert.equal(patcher.attack.effect, 'damage');
+  assert.equal(patcher.attack.amount, surge);
+  assert.equal(patcher.tookOver, 'pulse');
+  assert.ok(s.logs.some((x) => x.type === 'reroute' && x.fallback && /FALLBACK\. The Patcher takes over the Pulse Node's Surge/.test(x.message)));
+  const hp = s.server.integrity;
+  for (let i = 0; i < 6 && s.encounter; i++) fire(s, 'hold');
+  assert.ok(s.server.integrity < hp, 'it hits you');
+  // The other way round, nothing changes: the Pulse Node keeps its own Surge.
+  const t = bare(start('patchwork', 'bastion')), p2 = part(t, 'pulse'), a2 = { ...p2.attack };
+  breakNow(t, part(t, 'patcher'));
+  assert.equal(p2.attack.name, a2.name); assert.equal(p2.attack.amount, a2.amount);
+});
+
+test('Fallback: a Bouncer\'s Keyring takes over the Gate\'s Ram; a Crawler\'s Brood bites with each spawn once its Maw is down', () => {
+  const s = veteran();
+  s.run = { loc: 'x', cwd: '/', integrity: 500, max: 500, pack: [], visited: ['/'] };
+  selectEncounter(s, 'bouncer', 7, { level: 12, mode: 'run', room: '/x' });
+  command(s, 'engage');
+  const gate = part(s, 'pulse'), keyring = part(s, 'encryptor'), ram = gate.attack.amount;
+  assert.equal(keyring.attack, null, 'no attack of its own');
+  const at = s.encounter.cycle, every = gate.attack.interval;
+  breakNow(s, gate);
+  assert.equal(keyring.attack?.name, 'Ram');
+  assert.equal(keyring.attack.amount, ram);
+  assert.equal(keyring.attack.due, at + every, 'on the Ram\'s own clock: its first a full interval after the break');
+  const c = veteran();
+  c.run = { loc: 'x', cwd: '/', integrity: 500, max: 500, pack: [], visited: ['/'] };
+  selectEncounter(c, 'crawler', 7, { level: 12, mode: 'run', room: '/x' });
+  command(c, 'engage');
+  const maw = part(c, 'pulse'), brood = part(c, 'replicator'), bite = maw.attack.amount;
+  assert.equal(brood.attack.hit || 0, 0, 'the Brood only spawns while the Maw stands');
+  breakNow(c, maw);
+  assert.equal(brood.attack.effect, 'replicate', 'it still broods');
+  assert.equal(brood.attack.hit, bite, 'and bites with each spawn');
+  // Linked (v2 and up) doesn't stack on top: the fallback part takes the attack whole, once.
+  const v2 = veteran();
+  v2.run = { loc: 'x', cwd: '/', integrity: 500, max: 500, pack: [], visited: ['/'] };
+  selectEncounter(v2, 'random', 7, { level: 12, mode: 'run', room: '/x', family: 'worm', strain: 'patchwork', grade: 2, mutation: null });
+  command(v2, 'engage');
+  const pp = part(v2, 'pulse'), pa = part(v2, 'patcher'), amt = pp.attack.amount;
+  breakNow(v2, pp);
+  assert.equal(pa.attack.amount, amt, 'the Surge as it was, no Linked third on top');
+});
+
 test('Flicker: hits on the Shade pass through on odd cycles and land on even ones', () => {
   const s = bare(start('flicker'));
   for (const p of s.encounter.virus.parts) p.attack = null;
