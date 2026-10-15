@@ -31,7 +31,7 @@ import { stashItem, active, classOf } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
-import { familyName, setName } from './families.mjs';
+import { familyName } from './families.mjs';
 import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName } from './floorplan.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
@@ -110,10 +110,10 @@ function whoOf(s, room) {
   }
   if (room.kind === 'guard') { const G = GUARDS[room.guard]; return { short: G.name, fam: G.name, sub: `${G.ice ? 'Kestrel ICE' : 'Guard'} · lv ${f.level}`, line: `Level ${f.level} ${G.name}${G.ice ? ' · Kestrel ICE' : ''}` }; }
   if (room.kind === 'core') { const n = f.name || BOSSES[RESIDENT].name; return { short: n, fam: n, sub: `The Resident · lv ${f.level}`, line: `Level ${f.level} ${n} · the Resident` }; }
-  const set = f.set ? (R.codex[`${room.family}:${f.set}`] ? setName(room.family, f.set) : '???') : ''; // this spawn's set
   const elite = room.kind === 'elite' || room.mirror;
   const by = (AUTHORS[room.author]?.name || '?').toUpperCase(), short = `${elite ? 'Elite ' : ''}${familyName(room.family)}`;
-  return { short, sub: `${by} · lv ${f.level}${set ? ` · ${set} set` : ''}`, line: `Level ${f.level} ${familyName(room.family)} · ${by}${set && set !== '???' ? ` · ${set} set` : ''}`, fam: familyName(room.family), unknown: set === '???' };
+  // Never its attack set: you read that on the board once you engage (the Codex keeps the sets you've faced).
+  return { short, sub: `${by} · lv ${f.level}`, line: `Level ${f.level} ${familyName(room.family)} · ${by}`, fam: familyName(room.family) };
 }
 const mirrorLine = (s, room) => `A mirror. A level ${fightOf(s, room, 'mirror').level} elite ${familyName(room.family)} waits behind it.`;
 const guardOf = (s, vaultId) => roomList(s).find((x) => x.key === vaultId);
@@ -419,7 +419,7 @@ function hereCard(s) {
     acts = btn('engage', 'Fight it', { primary: true }) + btn('slip', 'Slip past', { tip: 'Slip past: once a visit.' });
   } else if (sc?.kind === 'virus') {
     const k = whoOf(s, room), G = room.kind === 'guard' ? GUARDS[room.guard] : null;
-    const tip = G ? `${G.name}: ${G.summary.split('. ').slice(1).join('. ') || G.summary}` : room.kind === 'core' && !R.world ? `${BOSSES[RESIDENT].name}: ${BOSSES[RESIDENT].about}` : k.unknown ? '??? set: you learn it by fighting it.' : '';
+    const tip = G ? `${G.name}: ${G.summary.split('. ').slice(1).join('. ') || G.summary}` : room.kind === 'core' && !R.world ? `${BOSSES[RESIDENT].name}: ${BOSSES[RESIDENT].about}` : '';
     body = holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip);
     const notes = [];
     if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, ${ROOMS.rareRolls} loot rolls.`);

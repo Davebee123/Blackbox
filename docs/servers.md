@@ -318,7 +318,7 @@ Every virus rolls an **attack set** when it spawns: when each part fires first, 
 
 - **Same pressure, different timing.** A set's damage over the first 20 cycles stays within 5% of its family's Standard set, so a set changes the plan, not the difficulty. Every set passes the spike cap (the worst three cycles at most 75% of a same-level player's max).
 - **Seeded jitter.** On top of the set, each part's first attack moves by up to a cycle either way (never onto cycle 1).
-- **Authors weight sets.** Each spawn rolls its set (and the nudge on its first attacks) fresh, weighted by the server's author, so a room is a new small puzzle every fight (designer, R1: "one fight an encryptor should fire before a pulse node"). The room card names this spawn's set once you've met it. Wild rooms (SPRAWL-00, rogue servers) roll sets too. Bosses and crew content (the farm) keep a fixed timing so they stay learnable.
+- **Authors weight sets.** Each spawn rolls its set (and the nudge on its first attacks) fresh, weighted by the server's author, so a room is a new small puzzle every fight (designer, R1: "one fight an encryptor should fire before a pulse node"). The room card never names the set: you read it on the board once you engage, and the Codex keeps every set you have faced. Wild rooms (SPRAWL-00, rogue servers) roll sets too. Bosses and crew content (the farm) keep a fixed timing so they stay learnable.
 - **SPRAWL-00** only rolls Standard sets, so the first fights teach one rhythm per family.
 
 | Family | Set | Pulse Node | Signature part | Leads | Favoured by |
