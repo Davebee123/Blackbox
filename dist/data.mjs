@@ -101,7 +101,7 @@ export const CONFIG = {
   surprise: { width: 0.15, injectNow: 1, tagCycles: 6, tagged: 1.75, keepalive: 4 },
   // Infiltrator Slip: walk past a guard without a fight, once a run (Leaked Creds: 3).
   slip: { perRun: 1 },
-  daemonSlots: 1, // +1 at server levels 10 and 20 (your highest class level); Operators +1
+  daemonSlots: 2, // +1 at server levels 15, 30 and 45 (your highest class level); Operators +1
   // Runs
   depthThreat: 3, // guard threat added per depth below the first
   depthLoot: 0.4, // caches hold 40% more credits per layer down
@@ -228,25 +228,83 @@ export const ABILITIES = {
 // The subclasses' own skills (dist/classes/<class>.data.mjs).
 for (const d of Object.values(CLASS_DATA)) Object.assign(ABILITIES, d.abilities);
 
-// Daemons: small programs you find (daemon.exe in vaults, now and then from guards and kills).
-// A slotted daemon acts on its own cooldown, in addition to your order. Finding one you have
-// upgrades it (v1 → v3): its numbers ×1, ×1.5, ×2 (and grow with your power). `once`: fires
-// by itself once per fight when its moment comes.
+// Daemons: small programs that fight beside you, and only invasions drop them (invasion.mjs daemonDrop).
+// Each belongs to a band (BANDS, below: an invasion drops its level's band, now and then an earlier one's)
+// and drops at the invasion's level, an item level: its number n grows with it like a protocol's stats
+// (×power(level)). A higher-level copy is just better and replaces yours; the lower one scraps for code.
+//   cd    acts on its own cooldown (cycles), right after your order. exfil: only in an Exfil fight.
+//   on    acts when something happens instead (once: once a fight):
+//         start (the fight starts) · half, quarter (you drop below half, a quarter) · crash (a hit would take
+//         you to 0) · big (a big attack is about to land) · cut (an interrupt cancels a move) · stripped (a
+//         part's last ◆ breaks) · told (a part starts winding up a tell) · charge (the same, a charge only) ·
+//         answered (you answer a tell) · soaked (your shield takes a hit) · burnout (one of your burns runs
+//         out) · crit (you land a crit) · broke (a part breaks) · low (a part drops below a quarter) · synced
+//         (you fire in a Sync Window)
+//   rule  one tooltip line; {n} is its number at its level (pct: a share of your max).
 export const DAEMONS = {
-  sweeper: { name: 'Sweeper', cooldown: 4, amount: 10, rule: 'Deals 10 damage to the part whose attack lands soonest.' },
-  fuzzer: { name: 'Fuzzer', cooldown: 5, rule: 'Breaks 1 ◆ on the most armored part.' },
-  stall: { name: 'Stall', cooldown: 6, rule: 'Delays the attack that lands soonest by 1 cycle.' },
-  mender: { name: 'Mender', cooldown: 5, amount: 8, rule: 'Heals you for 8.' },
-  spider: { name: 'Spider', cooldown: 5, amount: 4, rule: 'Burns the part you last attacked for 4 damage every cycle for 3 cycles.' },
-  mirror: { name: 'Mirror', cooldown: 3, amount: 12, rule: 'Deals 12 damage to the part you last attacked.' },
-  watchman: { name: 'Watchman', once: true, amount: 20, rule: 'Delays an attack of 20 or more damage by 1 cycle. Works once per fight. At v2 it delays the attack 2 cycles, and at v3 it works twice a fight.' },
-  canary: { name: 'Canary', once: true, amount: 15, rule: 'Shields you for 15 the first time you drop below half health. Works once per fight.' },
-  // Cron Job and Snapshot were home-fight services; as daemons they fight wherever you do.
-  cron: { name: 'Cron Job', cooldown: 3, amount: 8, rule: 'Deals 8 damage to the part winding up a tell, or else to the part whose attack lands soonest.' },
-  snapshot: { name: 'Snapshot', once: true, pct: 8, rule: 'Heals you for 8% of your max health the first time a hit drops you below half. Works once per fight. Heals 12% at v2 and 16% at v3.' },
+  // ---------- band 1 (levels 1–9): the old ten's first eight, about 60% of what they were ----------
+  sweeper: { name: 'Sweeper', band: 1, cd: 4, n: 6, rule: 'Deals {n} damage to the part whose attack lands soonest.' },
+  mirror: { name: 'Mirror', band: 1, cd: 3, n: 7, rule: 'Deals {n} damage to the part you last attacked.' },
+  spider: { name: 'Spider', band: 1, cd: 5, n: 2.5, rule: 'Burns the part you last attacked for {n} a cycle for 3 cycles.' },
+  mender: { name: 'Mender', band: 1, cd: 5, n: 5, rule: 'Heals you for {n}.' },
+  fuzzer: { name: 'Fuzzer', band: 1, cd: 6, n: 5, rule: 'Breaks 1 ◆ on the most armored part. With no ◆ left, deals {n} to the soonest attacker.' },
+  stall: { name: 'Stall', band: 1, cd: 7, n: 3, rule: 'Delays the attack that lands soonest by 1 cycle, and deals {n} to its part.' },
+  canary: { name: 'Canary', band: 1, on: 'half', once: true, n: 9, rule: 'The first time you drop below half health, shields you for {n}.' },
+  snapshot: { name: 'Snapshot', band: 1, on: 'half', once: true, n: 5, pct: true, rule: 'The first time you drop below half health, heals you for {n}% of your max.' },
+  // ---------- band 2 (7–18): tells and interrupts ----------
+  cron: { name: 'Cron Job', band: 2, cd: 3, n: 5, rule: 'Deals {n} damage to the part winding up a tell, or else to the soonest attacker.' },
+  watchman: { name: 'Watchman', band: 2, on: 'big', once: true, n: 6, rule: 'The first big attack about to land waits 1 cycle, and its part takes {n}.' },
+  breakpoint: { name: 'Breakpoint', band: 2, on: 'cut', n: 8, rule: 'When you interrupt a move, that part takes {n}.' },
+  nudge: { name: 'Nudge', band: 2, cd: 4, n: 6, rule: 'Deals {n} damage to the part closest to its next tick.' },
+  drain: { name: 'Drain', band: 2, cd: 5, n: 6, rule: 'Deals {n} damage to the soonest attacker and heals you for half that.' },
+  kindle: { name: 'Kindle', band: 2, cd: 4, n: 4, rule: 'Deals {n} damage to every burning part.' },
+  airbag: { name: 'Airbag', band: 2, on: 'start', n: 10, rule: 'Shields you for {n} as the fight starts.' },
+  crowbar: { name: 'Crowbar', band: 2, on: 'stripped', n: 8, rule: "When a part's last ◆ breaks, it takes {n}." },
+  // ---------- band 3 (16–28): shields, ◆ and the tells ----------
+  flare: { name: 'Flare', band: 3, cd: 6, n: 5, rule: 'Exposes the soonest attacker for 2 cycles and deals {n} damage to it.' },
+  wiretap: { name: 'Wiretap', band: 3, on: 'answered', n: 10, rule: 'When you answer a tell, shields you for {n}.' },
+  capacitor: { name: 'Capacitor', band: 3, cd: 5, n: 5, rule: 'Shields you for {n}.' },
+  backscatter: { name: 'Backscatter', band: 3, on: 'soaked', n: 4, rule: 'When your shield takes a hit, the attacker takes {n}. Once a cycle.' },
+  drill: { name: 'Drill', band: 3, cd: 5, n: 6, rule: 'Deals {n} damage to the most armored part, through its ◆.' },
+  afterburn: { name: 'Afterburn', band: 3, on: 'burnout', n: 6, rule: 'When one of your burns runs out, its part takes {n}.' },
+  lookout: { name: 'Lookout', band: 3, on: 'told', n: 7, rule: 'When a part starts winding up a tell, it takes {n}.' },
+  checkpoint: { name: 'Checkpoint', band: 3, on: 'quarter', once: true, n: 14, rule: 'The first time you drop below a quarter of your health, heals you for {n}.' },
+  // ---------- band 4 (26–40): breaks, crits, fragments and the Exfil ----------
+  leash: { name: 'Leash', band: 4, cd: 2, n: 8, exfil: true, rule: "An Exfil's upload takes 1 cycle longer, and it takes {n} every 2 cycles." },
+  sieve: { name: 'Sieve', band: 4, cd: 3, n: 5, rule: 'Deals {n} damage to every fragment.' },
+  ricochet: { name: 'Ricochet', band: 4, on: 'crit', n: 5, rule: 'When you land a critical strike, another part takes {n}. Once a cycle.' },
+  spite: { name: 'Spite', band: 4, on: 'half', once: true, n: 16, rule: 'The first time you drop below half health, the part that hit you takes {n}.' },
+  domino: { name: 'Domino', band: 4, on: 'broke', n: 9, rule: 'When a part breaks, the soonest attacker takes {n}.' },
+  rod: { name: 'Lightning Rod', band: 4, on: 'charge', n: 10, rule: 'When a part winds up a charge, shields you for {n}.' },
+  overseer: { name: 'Overseer', band: 4, cd: 2, n: 3, rule: 'Deals {n} damage to the soonest attacker.' },
+  reaper: { name: 'Reaper', band: 4, on: 'low', n: 8, rule: 'When a part drops below a quarter of its Integrity, it takes {n}.' },
+  // ---------- band 5 (38–50): wider reach ----------
+  broadcast: { name: 'Broadcast', band: 5, cd: 4, n: 3, rule: 'Deals {n} damage to every part.' },
+  void: { name: 'Void', band: 5, cd: 8, n: 6, rule: 'Pushes the attack that lands soonest back a full interval, and deals {n} to its part.' },
+  pendulum: { name: 'Pendulum', band: 5, on: 'synced', n: 7, rule: 'When you fire in a Sync Window, your target takes {n}.' },
+  sledge: { name: 'Sledge', band: 5, cd: 6, n: 4, rule: 'Breaks 1 ◆ on every armored part. Parts with none take {n}.' },
+  hotspare: { name: 'Hot Spare', band: 5, cd: 5, n: 5, rule: 'Heals you for {n}, or shields you for {n} when you are at full health.' },
+  lifeline: { name: 'Lifeline', band: 5, on: 'crash', once: true, n: 10, rule: 'The first hit that would take you to 0 leaves you at 1, and heals you for {n}.' },
+  tandem: { name: 'Tandem', band: 5, cd: 3, n: 4, rule: 'Deals {n} damage to the soonest attacker and {n} to the part you last attacked.' },
+  guillotine: { name: 'Guillotine', band: 5, on: 'cut', n: 5, rule: 'When you interrupt a move, every other part takes {n}.' },
 };
-export const DAEMON_VERSIONS = [1, 1.5, 2];
-export const DAEMON_DROPS = { vault: 0.1, guard: 0.01, home: 0.0025 };
+// Drops (invasion.mjs daemonDrop): the chance a stop leaves one, by how it was stopped, plus `pity` for every
+// stop in a row without one (BOSS_LOOT's bad-luck protection, reset by a drop). `earlier`: the share that comes
+// from an earlier band than the invasion's. A capture (a champion you kill, every fifth stop in a row) is a sure one.
+// What a kill's old daemon drop became (a daemon from a vault became a code cache, run.mjs backup.bin): an Exploit,
+// at the same odds, from a kill and from a guard.
+export const SPARE_EXPLOIT = { home: 0.0025, guard: 0.01 };
+export const DAEMON_DROP = { you: 0.35, intercept: 0.5, wall: 0.15, capture: 1, pity: 0.05, earlier: 0.25 };
+// A unit of code at a level: what a point of invasion bounty pays (invasion.mjs), what a scrapped daemon gives,
+// and what the wall's prices count in (firewall.mjs: its tiers from +3, harden.sh, a crafted filter).
+export const codeUnit = (level) => 4 + Math.floor(Math.max(1, level) / 3);
+export const daemonBand = (level) => layerFor(level); // an invasion's band: the deepest BANDS entry its level has reached
+export const bandDaemons = (band) => Object.keys(DAEMONS).filter((id) => DAEMONS[id].band === band);
+// A daemon's number at an item level, like a protocol's stats.
+export const daemonN = (id, level) => Math.max(1, Math.round(DAEMONS[id].n * power(level)));
+// When it acts, in words: "Every 4 cycles", "Once a fight", "On a cut".
+const ON_WORD = { start: 'As a fight starts', half: 'Below half', quarter: 'Below a quarter', crash: 'On a killing blow', big: 'On a big attack', cut: 'On an interrupt', stripped: 'On a stripped part', told: 'On a tell', charge: 'On a charge', answered: 'On an answered tell', soaked: 'On a shield hit', burnout: 'On a burn ending', crit: 'On a crit', broke: 'On a break', low: 'Below a quarter (a part)', synced: 'On a Sync Window' };
+export const daemonWhen = (id) => { const d = DAEMONS[id]; return d.cd ? `Every ${d.cd} cycles` : `${ON_WORD[d.on] || d.on}${d.once ? ' · once a fight' : ''}`; };
 
 // Shared numbers for statuses and passives.
 export const SKILLS = {
@@ -1008,7 +1066,7 @@ export const SERVER = {
   // How often a virus at a level is mutated: none below 4, a quarter to level 9, then 40% (wild ones,
   // invasions; swarms are a little under). The difficulty steps at level 3 no longer all land at once.
   mutationChance: (level) => (level < 4 ? 0 : level < 10 ? 0.25 : 0.4),
-  daemonSlotsAt: [10, 20], // +1 daemon slot at each of these server levels
+  daemonSlotsAt: [15, 30, 45], // +1 daemon slot at each of these server levels
   // Threat is the level on the internal scale that sizes a virus (4% per point from 15).
   threat: (mobLevel) => 9 + mobLevel,
 };

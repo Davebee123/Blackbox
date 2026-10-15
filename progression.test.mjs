@@ -3,7 +3,7 @@
 // migration that folded server XP, ports, the specialty, eight services and greys away.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonVersion, SAVE_VERSION, DECODE_XP, effectLine, previewDamage } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage } from './dist/combat.mjs';
 import { CONFIG, CATCHUP, levelTarget, xpToNext, killXp, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES, VERSIONS } from './dist/gear.mjs';
 import { tickPlay, behindOf } from './dist/progression.mjs';
@@ -30,7 +30,10 @@ test('one level: your server is at your highest class level, with no XP of its o
   gainXp(t, xpToNext(19), 'test');
   const up = t.logs.findLast((e) => e.type === 'level-up');
   assert.equal(up.level, 20);
-  assert.ok(up.gains.includes('a daemon slot') && up.gains.includes('a choice of architecture'), up.gains.join(', '));
+  assert.ok(up.gains.includes('a choice of architecture') && !up.gains.includes('a daemon slot'), up.gains.join(', '));
+  const f = at({ breaker: 14 });
+  gainXp(f, xpToNext(14), 'test');
+  assert.ok(f.logs.findLast((e) => e.type === 'level-up').gains.includes('a daemon slot'), 'a daemon slot at 15 (then 30 and 45)');
   assert.equal(t.server.max, Math.round(100 * power(20)), 'the server grew with it');
   assert.ok(up.next.level > 20 && up.next.gains.length, 'and the banner names the next level that brings something');
   // A class under your best one levels without moving the server: no server gains on its banner.
@@ -241,8 +244,8 @@ test('v34: server XP, ports, the specialty, eight services and grey protocols fo
   assert.equal(serverLevel(s), 26, 'your highest class level');
   assert.deepEqual(s.services, { uplink: 1 }, 'only the network services stay');
   assert.equal(s.install, null);
-  assert.equal(daemonVersion(s, 'cron'), 3, 'Cron Job is a daemon now, at its version');
-  assert.equal(daemonVersion(s, 'snapshot'), 1, 'a Snapshot source you held is the daemon too');
+  assert.equal(daemonLevel(s, 'cron'), 26, 'Cron Job is a daemon now, at a level from its version (v3: your level)');
+  assert.equal(daemonLevel(s, 'snapshot'), 22, 'a Snapshot source you held is the daemon too (as a v1: four under)');
   const paid = VERSIONS[0].credits * 3 + VERSIONS[1].credits * 2 + VERSIONS[0].credits; // Filter Bay v1–v2, RAID v1, Kernel v1–v2, the Scrubber's install
   assert.equal(s.server.credits, credits + paid, 'everything they cost, back');
   assert.equal(s.materials.worm, worm + VERSIONS[0].code, 'the RAID Array\'s Worm code');

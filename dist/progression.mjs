@@ -10,7 +10,8 @@
 //                Past CATCHUP.after times that, kills pay CATCHUP.bonus more until the level ends.
 //   v34          server XP, the specialty, ports, eight services and grey protocols are gone. What a save
 //                had in them comes back in kind (progressionRestore).
-import { emit, hackerOf, classOf, materialsOf, learnDaemon, daemonVersion, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
+import { emit, hackerOf, classOf, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
+import { versionLevel } from './daemons.mjs';
 import { CATCHUP, levelTarget, LOADOUT, SERVER, BANDS, ARCHETYPES } from './data.mjs';
 import { BASES, PROTOCOL_SLOTS, VERSIONS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES } from './gear.mjs';
 import { OUTPOST, BUILDINGS } from './outpost.mjs';
@@ -120,9 +121,9 @@ export function progressionRestore(s, was) {
     const v = s.services?.[id] || 0;
     const job = s.install?.id === id ? s.install : null;
     if (d.daemon && (v || s.recipes?.includes(id))) {
-      const want = Math.max(1, v);
-      while (daemonVersion(s, d.daemon) < want) learnDaemon(s, '', d.daemon);
-      became.push(`${d.name} is a daemon now (v${daemonVersion(s, d.daemon)})`);
+      const L = versionLevel(s, Math.max(1, v)); // a version became a level (daemons.mjs)
+      if (daemonLevel(s, d.daemon) < L) (s.daemonLv ||= {})[d.daemon] = L;
+      became.push(`${d.name} is a daemon now (lv ${daemonLevel(s, d.daemon)})`);
     } else for (let k = 1; k <= v; k++) payBack(s, retiredCost(id, k), back);
     if (job) { payBack(s, retiredCost(id, job.v), back); s.install = null; }
     if (d.filter && (v || s.recipes?.includes(id))) learnFilter(s, d.filter, '');

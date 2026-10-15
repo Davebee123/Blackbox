@@ -138,9 +138,11 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   assert.ok(!ready(s, j), 'not until it is banked');
   play(s, 'jack out');
   assert.ok(ready(s, j));
-  const daemons = Object.keys(s.daemonsOwned).length;
+  const had = s.stash.length;
   deliver(s, j);
-  assert.equal(Object.keys(s.daemonsOwned).length, daemons + 1);
+  assert.equal(Object.keys(s.daemonLv).length, 0, 'no daemon: only invasions drop them');
+  assert.equal(s.stash.length, had + 1, 'a protocol, Tuned or better, instead');
+  assert.ok(['tuned', 'custom'].includes(s.stash.at(-1).rarity));
   assert.equal(s.mail.story, STORY_LENGTH);
   assert.match(s.mail.list[0].subject, /Contractor/);
   assert.equal(tierOf(s).name, 'Contractor');

@@ -58,12 +58,12 @@ test('new badges: what arrived since you last opened the tab', () => {
   const s = fresh();
   assert.equal(newOn(s, 'loadout'), 0);
   s.stash.push({ id: 'g99' });
-  s.daemonsOwned = { mirror: 1 };
+  s.daemonLv = { mirror: 1 };
   assert.equal(newOn(s, 'loadout'), 1);
   assert.equal(newOn(s, 'daemons'), 1);
   sawTab(s, 'loadout');
   assert.equal(newOn(s, 'loadout'), 0);
-  s.daemonsOwned.mirror = 2; // an upgrade is new too
+  s.daemonLv.mirror = 2; // a better copy is new too
   assert.equal(newOn(s, 'daemons'), 1);
 });
 

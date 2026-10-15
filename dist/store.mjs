@@ -7,9 +7,9 @@
 //   Other agencies' stock, resold through Halcyon: four slots that turn over on their own uneven
 //     clocks. Each has a supplier, a price that drifts ±25% and a small quantity. This is where
 //     the exploring kit (key crackers, trace injectors, cheap relays), code, repairs and the odd
-//     blueprint or daemon turn up.
+//     blueprint turn up. (Daemons only come from invasions.)
 import { ZERO_DAYS, rollItem, MATERIALS } from './gear.mjs';
-import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, learnDaemon, materialsOf, gainCode, maxSignal, hooks } from './combat.mjs';
+import { emit, warn, rand, hackerLevel, addItem, learnBlueprint, materialsOf, gainCode, maxSignal, hooks } from './combat.mjs';
 import { tierIndex, TIERS, indemnity, boardOpen } from './mail.mjs';
 import { items } from './hidden.mjs';
 import { bestSell } from './market.mjs';
@@ -49,9 +49,9 @@ export const GOODS = {
   salvage: { name: 'Salvage lot', about: 'Grants 5 pieces of salvage.', credits: (L) => 30 + 3 * L, qty: [2, 4] },
   crate: { name: 'Sealed item', about: 'Opens into a Tuned (blue) item at your level.', credits: (L) => 180 + 14 * L, qty: [1, 1] },
   blueprint: { name: 'Sealed blueprint', about: 'Teaches you a blueprint you do not have yet.', credits: (L) => 250 + 15 * L, qty: [1, 1], tier: 2 },
-  daemon: { name: 'Daemon image', about: 'Grants a daemon, or upgrades one you already have by a version.', credits: (L) => 300 + 20 * L, qty: [1, 1], tier: 2 },
 };
-const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 1, blueprint: 1, daemon: 1 };
+// The daemon image's weight went to a second Sealed item.
+const WEIGHTS = { harden: 2, relay: 2, cracker: 3, injector: 3, signal: 3, repair: 2, cipher: 2, worm: 2, kernel: 2, exploit: 1, salvage: 2, crate: 2, blueprint: 1 };
 export const codeAmount = (L) => 3 + Math.floor(L / 5);
 // What a lot of tradeable goods (code, an Exploit, salvage) costs now: its shelf price, but never
 // less than 10% over what the best hub market would pay for its contents.
@@ -136,5 +136,4 @@ export function deliverGoods(s, id, L) {
   if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
   if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned' }), 'Unsealed: ');
   if (id === 'blueprint') return learnBlueprint(s, 'Unsealed: ');
-  if (id === 'daemon') return learnDaemon(s, 'Installed: ');
 }

@@ -38,11 +38,12 @@ import { previewDamage } from './combat.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
+import { daemonsOn } from './daemons.mjs';
 import { ignores } from './genes.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
 // of yours, not by breaking the part), landed, and the Signal (or Integrity) they cost you, by tell.
-const tally = (s, t, k, n = 1) => { const m = (s.host || s).encounter?.metrics; if (!m) return; const x = ((m.tells ||= {})[t.id] ||= { said: 0, answered: 0, read: 0, landed: 0, cost: 0 }); x[k] += n; if (k === 'read') m.reads = (m.reads || 0) + n; };
+const tally = (s, t, k, n = 1) => { if (k === 'answered') daemonsOn(s, 'answered', { part: t.part }); const m = (s.host || s).encounter?.metrics; if (!m) return; const x = ((m.tells ||= {})[t.id] ||= { said: 0, answered: 0, read: 0, landed: 0, cost: 0 }); x[k] += n; if (k === 'read') m.reads = (m.reads || 0) + n; };
 export const tierOf = (level) => TELL.tiers.find((t) => level <= t.to) || TELL.tiers.at(-1);
 export const tellsOf = (s) => s.encounter?.virus?.tells || null;
 const label = (t) => t.name.toUpperCase();
@@ -204,6 +205,8 @@ function say(s, t, p, next, n) {
   seeGene(s.host || s, t.gene, e.virus.author); // its chip: a tell you've met is seen (genome.mjs)
   logTell(s.host || s, t); // the Codex tab: this tell, by name
   emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next, name: label(t) });
+  daemonsOn(s, 'told', { part: p.id }); // Lookout
+  if (t.kind === 'charge') daemonsOn(s, 'charge', { part: p.id }); // Lightning Rod
   const w = windowOf(s, t);
   if (w && w.from <= e.cycle) t.opened = e.cycle; // said inside its window: the line above says so
 }

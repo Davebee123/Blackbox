@@ -233,7 +233,7 @@ test('burns and helpers break a chit per tick: small hits are how you strip armo
 // ---------- Operator ----------
 test('Operator: +1 daemon slot; Deploy helper; Hook hits 10 and adds 6 to every hit, helpers included; Kill Switch cashes in', () => {
   const s = noArmor(quiet(start('operator')));
-  assert.equal(daemonSlots(s), CONFIG.daemonSlots + 2 + 1, "a level-38 server (your highest class level) has both its daemon slots, and the Operator one more");
+  assert.equal(daemonSlots(s), CONFIG.daemonSlots + 1 + 1, "a level-22 server (your highest class level) has the slot from 15, and the Operator one more");
   big(s, 'pulse');
   act(s, 'hook pulse');
   assert.equal(lost(s, 'pulse'), 10, 'Hook hits for 10');

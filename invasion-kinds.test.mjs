@@ -1,12 +1,12 @@
 // Invasions, fewer and bigger (invasion.mjs): the pacing, the kinds and their warnings, the silent
-// block, signatures (the wall's currency), the bounty that grows while contested, the streak,
-// captures and the invasion-only uniques, and the lighter upkeep.
+// block, the bounty in code that grows while contested, the streak, captures (a sure daemon) and the
+// invasion-only uniques, and the lighter upkeep.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, restore, syncServer, uniqueFrom, UNIQUES, SAVE_VERSION } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
 import { tickNetwork, KINDS, BOUNTY, STREAK, SCOUT, THIEF, CHAMPION, PACK_PUSH, QUIRKED, AWAY, bountyOf, tellOf, pushOf, ratioOf, outcome, capture, captureChance, invasionUniques, streakMult } from './dist/invasion.mjs';
-import { CONFIG, ELITE } from './dist/data.mjs';
+import { CONFIG, ELITE, codeUnit } from './dist/data.mjs';
 import { fwOf } from './dist/firewall.mjs';
 import { vaultFilter, filtersOf } from './dist/filters.mjs';
 import { logComms } from './dist/comms.mjs';
@@ -17,6 +17,8 @@ CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
 const MIN = 60000;
 const I = CONFIG.invasion;
+const code = (s) => ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0);
+const bountyPaid = (s) => s.logs.filter((e) => /^Bounty: \+/.test(e.message)).reduce((n, e) => n + Object.values(e.gains).reduce((a, b) => a + b, 0), 0);
 
 // Two found servers (a worm and a ransomware one) at a level, a firewall level, the clock at 0.
 // The network has already sent one, so what comes next can be any kind.
@@ -92,7 +94,7 @@ test('the wall handles weak invasions quietly: no alert, no beep, a pager entry 
   const comms = logComms(s, ev).filter((c) => c.from === 'Wall');
   assert.ok(comms.length >= 1 && comms.every((c) => !c.beep && !c.alert), 'pager entries, without a beep');
   assert.ok(comms.some((c) => c.label === 'Blocked'));
-  assert.ok(s.sigs >= 1, 'a block pays signatures');
+  assert.ok(code(s) >= codeUnit(8), 'a block pays code');
   assert.equal(s.net.streak, 1, 'and counts toward the streak');
   assert.equal(fwOf(s).frag, 0, 'and fragments nothing');
   // One that gets through is loud: an alert on the pager.
@@ -106,18 +108,18 @@ test('the wall handles weak invasions quietly: no alert, no beep, a pager entry 
 test('the bounty grows while it sits contested, up to triple, and the growth is yours only if you kill it', () => {
   const s = world();
   invade(s, 'raider');
-  const inv = s.invasion, base = inv.bounty;
+  const inv = s.invasion, base = inv.bounty, u = codeUnit(inv.level);
   assert.equal(inv.state, 'breach');
-  assert.equal(bountyOf(s).now, base);
-  assert.equal(bountyOf(s).max, base * (1 + BOUNTY.cap), 'visible before the fight: what it can grow to');
+  assert.equal(bountyOf(s).code, inv.family === 'worm' ? 'worm' : 'cipher', 'its family\'s code');
+  assert.equal(bountyOf(s).now, base * u, 'a unit of code at its level for each point');
+  assert.equal(bountyOf(s).max, base * (1 + BOUNTY.cap) * u, 'visible before the fight: what it can grow to');
   wait(s, 4 * MIN);
-  assert.equal(bountyOf(s).now, base + Math.floor(base * BOUNTY.grow * 4), 'a quarter of the base a minute');
+  assert.equal(bountyOf(s).now, (base + Math.floor(base * BOUNTY.grow * 4)) * u, 'a quarter of the base a minute');
   wait(s, 20 * MIN);
-  assert.equal(bountyOf(s).now, base * (1 + BOUNTY.cap), 'capped');
+  assert.equal(bountyOf(s).now, base * (1 + BOUNTY.cap) * u, 'capped');
   play(s, 'jack in');
-  const before = s.sigs || 0;
   win(s);
-  assert.equal(s.sigs - before, base * (1 + BOUNTY.cap), 'paid on your kill');
+  assert.equal(bountyPaid(s), base * (1 + BOUNTY.cap) * u, 'paid on your kill');
   // The wall wearing one down pays only the base: no growth.
   const w = world({ level: 6, fw: 1 });
   invade(w, 'raider');
@@ -125,23 +127,23 @@ test('the bounty grows while it sits contested, up to triple, and the growth is 
   const b = w.invasion.bounty;
   wait(w, 15 * MIN);
   assert.equal(w.invasion, null, 'ground down');
-  assert.equal(w.sigs, b, 'the base, nothing grown');
+  assert.equal(code(w), b * codeUnit(6), 'the base, nothing grown');
 });
 
 test('the streak: each stop in a row pays 10% more (up to 50%), every fifth drops a capture, a crash ends it', () => {
   const s = world({ fw: 40 });
-  const items = () => (s.stash || []).length + filtersOf(s).length;
+  const caps = () => s.logs.filter((e) => e.daemon && /a capture\./.test(e.message)).length;
   const got = [];
   for (let i = 0; i < STREAK.capture; i++) {
-    const had = items();
+    const had = caps();
     s.net.next = 0;
     wait(s, 5000);
     for (let t = 0; t < 20 && s.invasion; t++) wait(s, MIN);
-    got.push(items() - had);
+    got.push(caps() - had);
   }
   assert.equal(s.net.streak, 5);
   assert.deepEqual(got.slice(0, 4), [0, 0, 0, 0]);
-  assert.equal(got[4], 1, 'the fifth in a row leaves a capture');
+  assert.equal(got[4], 1, 'the fifth in a row leaves a capture: a sure daemon');
   assert.equal(streakMult(s), 1 + STREAK.step * STREAK.max, '+50% at most');
   // A breach that crashes you ends it.
   s.firewall.pin = 0;
@@ -164,11 +166,11 @@ test('a pack: three that count 4 levels higher at the wall until it thins; one f
   const bounty = inv.bounty;
   for (let i = 0; i < 2; i++) { play(s, 'jack in'); win(s); assert.equal(s.invasion, inv, 'the next steps up'); }
   assert.equal(pushOf(inv), 0, 'the last one alone');
-  assert.equal(s.sigs || 0, 0, 'nothing paid yet');
+  assert.equal(bountyPaid(s), 0, 'nothing paid yet');
   play(s, 'jack in');
   win(s);
   assert.equal(s.invasion, null);
-  assert.ok(s.sigs >= bounty);
+  assert.ok(bountyPaid(s) >= bounty * codeUnit(8));
 });
 
 test('a pair: two viruses from two of your servers, arriving together', () => {
@@ -185,7 +187,7 @@ test('a pair: two viruses from two of your servers, arriving together', () => {
   assert.equal(s.invasion, null);
 });
 
-test('a champion: elite-grade (the tells for elites apply), a level over its server, sized for one, and a capture', () => {
+test('a champion: elite-grade (the tells for elites apply), a level over its server, sized for one, and a capture (a sure daemon)', () => {
   const s = world();
   invade(s, 'champion');
   const inv = s.invasion;
@@ -197,10 +199,10 @@ test('a champion: elite-grade (the tells for elites apply), a level over its ser
   const v = s.encounter.virus;
   assert.ok(v.elite && v.champion, 'elite-grade, marked as a champion');
   assert.ok(CHAMPION.hp < ELITE.hp, 'smaller than a crew elite');
-  const items = (s.stash || []).length + filtersOf(s).length;
   const ev = win(s);
-  assert.ok(ev.some((e) => /leaves a capture/.test(e.message)));
-  assert.ok((s.stash || []).length + filtersOf(s).length > items);
+  assert.ok(ev.some((e) => e.daemon && /leaves a capture/.test(e.message)));
+  assert.equal(Object.keys(s.daemonLv).length, 1, 'a daemon, every time');
+  assert.equal(Object.values(s.daemonLv)[0], inv.level, 'at the champion\'s level');
   assert.ok(wallMarkup(s).includes('Firewall'));
 });
 
@@ -247,7 +249,7 @@ test('a thief: it heads for an outpost\'s stores; intercept it on the way, or it
   const ev = win(t);
   assert.ok(ev.some((e) => /before it reached/.test(e.message)));
   assert.equal(p.outpost.stock.credits, 80);
-  assert.ok(t.sigs >= KINDS.thief.bounty);
+  assert.ok(bountyPaid(t) >= KINDS.thief.bounty);
   // Only a thief is caught on the way.
   const u = world();
   play(u, 'developer invade raider');
@@ -338,8 +340,9 @@ test('captures: an invasion-only unique, with pity; never anywhere else', () => 
   assert.ok(captureChance(s) > c0, 'pity raises the chance');
   // The world's drop tables never give them.
   for (const kind of ['sprawl', 'vault', 'guard', 'rogue', 'home']) for (let i = 0; i < 200; i++) assert.ok(!invasionUniques().some((u) => u.id === uniqueFrom(s, { kind }, 30)?.id));
-  // Custom filters only come from invasions now: a vault's is Tuned at best.
-  for (let seed = 1; seed < 400; seed++) { const f = vaultFilter({ seed, level: 20 }); if (f) assert.notEqual(f.rarity, 'custom'); }
+  // Custom filters come from vaults now (captures are daemons): now and then a vault's filter.flt is one.
+  const fs = Array.from({ length: 1200 }, (_, seed) => vaultFilter({ seed: seed + 1, level: 20 })).filter(Boolean);
+  assert.ok(fs.some((f) => f.rarity === 'custom') && fs.filter((f) => f.rarity === 'custom').length < fs.length / 6, 'Custom, now and then');
 });
 
 test('invasions: lists what is coming, what it does and what it pays', () => {
@@ -347,13 +350,13 @@ test('invasions: lists what is coming, what it does and what it pays', () => {
   invade(s, 'champion');
   const out = play(s, 'invasions').map((e) => e.message).join('\n');
   assert.match(out, /Champion: CHAMPION/);
-  assert.match(out, /signatures/);
-  assert.match(out, /capture comes with your kill/);
+  assert.match(out, /Kill it for \d+ (Cipher|Worm) code/);
+  assert.match(out, /daemon comes with your kill/);
   assert.match(out, /Streak 0/);
   assert.equal(threatsOf(s)[0].sel, 'invader');
 });
 
-test('saves from v32 load with their invasion as a raider and no signatures', () => {
+test('saves from v32 load with their invasion as a raider, and nothing of signatures', () => {
   const s = world();
   invade(s, 'raider');
   const old = JSON.parse(JSON.stringify(s));
@@ -366,7 +369,7 @@ test('saves from v32 load with their invasion as a raider and no signatures', ()
   assert.equal(r.invasion.kind, 'raider');
   assert.deepEqual(r.invasion.queue, []);
   assert.equal(r.invasion.bounty, KINDS.raider.bounty);
-  assert.equal(r.sigs, 0);
+  assert.equal(r.sigs, undefined, 'signatures are gone');
   assert.ok(Number.isFinite(ratioOf(r, r.invasion)));
   assert.equal(outcome(ratioOf(r, r.invasion)), 'breach');
 });
