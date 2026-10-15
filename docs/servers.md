@@ -932,7 +932,17 @@ What the numbers say: the climb to 10 lands on 7.2 (2.5–3.0 hours against 2.7;
 
 **The pacing bot** (`bot.mjs` to level 20, three seeds a class; the rooms bot now builds the first program it can pay for in a socket it clears, once a visit: Harvester, Cron Spawner, Code Siphon, Cache Mill, Defrag Bay, Tunnel, Snare):
 
-PACING
+| Class | Hours to 5 / 10 / 20, before | After | Room fights won, before / after | What it built (three characters) |
+|---|---|---|---|---|
+| Breaker | 0.72 / 3.42 / 7.74 | 0.72 / 2.93 / 7.45 | 94 / 96% | 49: Harvester 29, Cron Spawner 19, Code Siphon 1 |
+| Bastion | 0.81 / 3.44 / 10.47 | 0.81 / 3.38 / 12.72 | 92 / 93% | 40: 26, 13, 1 |
+| Infiltrator | 0.68 / 3.31 / 10.42 | 0.68 / 2.79 / 9.23 | 91 / 96% | 42: 26, 15, 1 |
+| Operator | 0.96 / 3.38 / 7.63 | 0.96 / 3.39 / 7.88 | 94 / 97% | 49: 29, 18, 2 |
+| All | 0.79 / 3.39 / 9.07 | 0.79 / 3.12 / 9.32 | 93 / 95% | 180: Harvester 110, Cron Spawner 65, Code Siphon 5 |
+
+The Bastion's three seeds swing (to 20: 9.5–11.4 before, 11.5–14.1 after); three more each (seeds 4–6) give 8.9–13.6 before and 7.6–13.9 after, so over six seeds it's 11.0 hours before and 11.7 after, inside its spread. The XP mix to 20 moves from fights 49% / break-ins 39% / decoding 7% / contracts 5% to 53 / 37 / 6 / 5: a socket's guard is one more first clear (about 790 XP a character to 20). Components on hand at 20 fall from 374 to 272 (they're spent now).
+
+**A held server doesn't out-earn fighting** (`roomsim.mjs`, a medium server mapped then farmed two hours at level 10, four classes, three seeds each; with programs the bot knew every codebase and paid no code, since the playtest drops little): over the whole session (mapping and the two hours), with no programs 4,357 XP and 34 components an hour; with a Harvester and a Cron Spawner in its two sockets 5,094 XP (+17%) and 43 components (+26%, after the 40 they cost) an hour. Mapping a fresh server pays about 7,000–12,000 XP an hour at 10 (9.4's sim), so moving on still beats farming one you've built up, and nothing is made while you're away.
 
 **Where R2 differs from the doc, and why:**
 - *Socket rooms are new rooms,* not a process room turned into one: a server grows by its sockets (a medium one is 14 rooms), so the R0/R1 layouts, keys and loops stay as tuned, and an older save's graph can get them from its seed without moving a room you'd cleared.
@@ -943,7 +953,7 @@ PACING
 - *The saboteur and the thief* never come now: no services to shut off, no stores to rob (asked for, one comes as a raider). Their code stays for the invasions rework.
 - *Not in R2:* the other eight programs and core programs, a lair boss's core codebase, help requests (R4); floors (R3), so costs grow by layer.
 
-**Known issues:** KNOWN
+**Known issues:** the Bastion's climb to 20 is the slowest and the most spread (above); the bot builds only what it meets first (mostly the Harvester and the Cron Spawner), so the Tunnel, the Snare, the Defrag Bay and the Listening Post are tested by `sockets.test.mjs` but not paced; programs read nothing on rogue servers, SPRAWL-00 or lairs (no sockets there yet); a held server's core socket takes any program until R4's core programs; the saboteur's and the thief's code is still in `invasion.mjs`, unreachable, left for the invasions rework.
 
 ## 10. Open questions for the designer
 
