@@ -2483,7 +2483,10 @@ export const codexKey = (v, p) => `${v.strain || v.family}:${p.id}`;
 export const knowsPart = (s, v, p) => knowsAt(s, v, p, TIER.decoded);
 function breakPart(s, p) {
   const e = s.encounter;
-  gainResearch(s, e.virus, p, 'break'); // +1 research on the part (not a crewmate's break, not a fragment)
+  // +1 research on the part (not a crewmate's break, not a fragment), for its first break in the fight only: a part
+  // that comes back (a Trojan's redeployed Courier, a Mirror's rebooted twin) can't be farmed. Cuts and tells still count.
+  if (!p.brokeOnce) gainResearch(s, e.virus, p, 'break');
+  p.brokeOnce = true;
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).

@@ -1132,7 +1132,7 @@ What you know about a virus is what you've done to its **parts** (`research.mjs`
 
 | You | Research |
 |---|---|
-| Break it | +1 |
+| Break it (the first time in a fight: a part that comes back, a Trojan's redeployed Courier or a Mirror's rebooted twin, pays for its first break only) | +1 |
 | Cut its move with a tick (an interrupt, *INTERRUPTED* in the log) | +1 |
 | Answer a tell it rides (a charge called off, a cast stopped, a seal failed), by any answer | +2 |
 

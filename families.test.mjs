@@ -216,6 +216,51 @@ test('the Trojan\'s Loader redeploys a broken Courier 4 cycles later at half its
   assert.ok(livingParts(s).every((p) => p.pkg?.inert), 'nothing left but inert boxes');
 });
 
+test('a part that comes back in the same fight pays research for its first break only: a redeployed Courier, a rebooted Mirror twin; a cut still counts', async () => {
+  const { partResearch, gainResearch } = await import('./dist/research.mjs');
+  const s = roomFight({ family: 'trojan', set: 'express' }), v = s.encounter.virus, courier = part(s, 'courier');
+  for (const p of livingParts(s).filter((x) => x.pkg)) p.integrity = 0;
+  for (const p of attackers(s)) p.attack.due = 999;
+  const r0 = partResearch(s, v, courier);
+  strike(s, courier, courier.integrity);
+  assert.equal(partResearch(s, v, courier), r0 + 1, 'the first break');
+  hold(s, BODY.redeploy.in + 1);
+  assert.ok(courier.integrity > 0, 'redeployed');
+  strike(s, courier, courier.integrity);
+  hold(s, BODY.redeploy.in + 1);
+  strike(s, courier, courier.integrity);
+  assert.equal(partResearch(s, v, courier), r0 + 1, 'breaking it again pays nothing');
+  gainResearch(s, v, courier, 'cut');
+  assert.equal(partResearch(s, v, courier), r0 + 2, 'a cut on it still counts');
+  // A Mirror's twin, rebooted: the same.
+  checkTwin(roomFightThird('worm', 'twin'), partResearch);
+});
+function roomFightThird(family, third) {
+  const s = fresh();
+  s.rng = 99;
+  FP.outfit(s, { cls: 'breaker', level: 10, gearSeed: 2 });
+  FP.startRooms(s, { seed: 5, kind: 'Mirror', size: 'medium', level: 10 });
+  FP.connect(s);
+  const R = s.rooms, room = FP.roomList(s).find((r) => r.kind === 'process');
+  Object.assign(room, { family, set: 'standard', pin: 'standard', third, author: 'swarmline' });
+  R.at = room.id; R.screen = null;
+  FP.fight(s, room);
+  s.run.integrity = s.run.max = 5000;
+  return s;
+}
+function checkTwin(s, partResearch) {
+  const v = s.encounter.virus, rep = part(s, 'replicator');
+  assert.ok(v.parts.some((p) => p.twin), 'a Mirror on the board');
+  for (const p of attackers(s)) p.attack.due = 999;
+  const r0 = partResearch(s, v, rep);
+  strike(s, rep, rep.integrity);
+  assert.ok(rep.rebootAt, 'rebooting');
+  hold(s, 4);
+  assert.ok(rep.integrity > 0, 'rebooted');
+  strike(s, rep, rep.integrity);
+  assert.equal(partResearch(s, v, rep), r0 + 1, 'one break\'s research, not two');
+}
+
 test('a Courier broken after its Loader stays down; the opening Package goes inert with the Loader', () => {
   const s = roomFight({ family: 'trojan', set: 'freight' }), courier = part(s, 'courier'), loader = part(s, 'loader');
   for (const p of attackers(s)) p.attack.due = 999;
