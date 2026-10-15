@@ -1,6 +1,7 @@
 // The Codex tab (dist/codex.mjs, dist/codex-view.mjs): an index of every kind of virus you can meet and an entry page
-// for each, with only what you've found out. ??? until met (a boss until fought), a part's numbers once decoded, an
-// attack set once faced in a room, a tell once one was said in your fight. The genes moved here from the System page.
+// for each, with only what you've found out. ??? until met (a boss until fought), a part's numbers once decoded (part
+// research 1, research.mjs; research.test.mjs has the tiers), an attack set once faced in a room, a tell once one was
+// said in your fight.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -8,7 +9,6 @@ import { fresh, hooks, finish, command, resolveCycle, restore, hackerLevel, sele
 import { CONFIG, BOSSES, STRAINS, GUARDS, FAMILIES, ROOM_FAMILIES, ROLLED_MUTATIONS } from './dist/data.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { ATTACK_SETS, setName } from './dist/families.mjs';
-import { CATS } from './dist/genes.mjs';
 import { entries, entryOf, sampleOf, partsOf, facedSet } from './dist/codex.mjs';
 import { codexPageMarkup } from './dist/codex-view.mjs';
 import { systemMarkup } from './dist/view.mjs';
@@ -27,7 +27,7 @@ const server = (seed = 7, author = null) => {
 };
 const place = (s, id) => { s.rooms.at = id; s.rooms.visit.walked[id] = true; s.rooms.screen = null; FP.look(s); };
 const win = (s) => { s.encounter.virus.parts.forEach((p) => { p.integrity = 0; }); finish(s, 'victory'); FP.settle(s); };
-const KEYS = [...[...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)].map((id) => `family:${id}`), ...Object.keys(STRAINS).map((id) => `strain:${id}`), ...Object.keys(GUARDS).map((id) => `guard:${id}`), ...Object.keys(BOSSES).map((id) => `boss:${id}`), ...ROLLED_MUTATIONS.map((id) => `mutation:${id}`), ...Object.keys(CATS).map((id) => `gene:${id}`)];
+const KEYS = [...[...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)].map((id) => `family:${id}`), ...Object.keys(STRAINS).map((id) => `strain:${id}`), ...Object.keys(GUARDS).map((id) => `guard:${id}`), ...Object.keys(BOSSES).map((id) => `boss:${id}`), ...ROLLED_MUTATIONS.map((id) => `mutation:${id}`)];
 const rowsOf = (html) => [...html.matchAll(/<button type="button" class="cx-row([^"]*)" data-codex="([^"]+)"[^>]*>.*?<span class="cx-name">([^<]*)<\/span>/g)].map(([, cls, key, name]) => ({ key, unknown: cls.includes('unknown'), on: cls.includes(' on'), name }));
 
 test('the Codex is a top-level tab between Loadout and System, and typing codex opens it', () => {
@@ -44,16 +44,16 @@ test('a fresh character: every entry ??? in its group, nothing spelled out, no u
   const s = fresh(), html = codexPageMarkup(s);
   const rows = rowsOf(html);
   assert.equal(rows.length, KEYS.length, 'one row an entry, every group');
-  for (const r of rows.filter((x) => !x.key.startsWith('gene:'))) { assert.ok(r.unknown, `${r.key} is ??? (greyed)`); assert.equal(r.name, '???'); }
-  for (const r of rows.filter((x) => x.key.startsWith('gene:'))) assert.equal(r.name, CATS[r.key.slice(5)].name, 'a gene category is named; its genes are ??? one by one');
-  for (const g of ['Families', 'Strains', 'Guards &amp; ICE', 'Bosses', 'Mutations', 'Genes']) assert.match(html, new RegExp(`<h3><span>${g}</span>`));
+  for (const r of rows) { assert.ok(r.unknown, `${r.key} is ??? (greyed)`); assert.equal(r.name, '???'); }
+  for (const g of ['Families', 'Strains', 'Guards &amp; ICE', 'Bosses', 'Mutations']) assert.match(html, new RegExp(`<h3><span>${g}</span>`));
+  assert.doesNotMatch(html, /<h3><span>Genes<\/span>/, 'no Genes group: a part\'s rules are its research');
   assert.match(html, /<h1 class="unknown">\?\?\?<\/h1>/, 'the entry it opens on is ??? too');
   assert.doesNotMatch(html, /Ransomware|Encryptor|Full Disk|DEADBOLT/, 'no names of what you have not met');
   for (const key of KEYS) { const h = codexPageMarkup(s, key); assert.doesNotMatch(h, /undefined|NaN/, key); }
   assert.doesNotMatch(codexPageMarkup(s, 'boss:nb-deadbolt'), /re-arms|Mutex/, "a boss's phases wait until you've fought it");
 });
 
-test('room fights fill it: the family, your kills, the set you faced (the others ???), parts ??? until decoded', () => {
+test('room fights fill it: the family, your kills, the set you faced (the others ???), parts ??? until researched', () => {
   const s = server(7);
   const room = FP.roomList(s).find((r) => r.kind === 'process' && FAMILIES[r.family] && !s.rooms.rare[r.id]);
   place(s, room.id); FP.fight(s, room);
@@ -71,11 +71,12 @@ test('room fights fill it: the family, your kills, the set you faced (the others
   assert.equal((html.match(/cx-set unknown/g) || []).length, sets.length - 1, 'the other sets are ???');
   assert.equal((html.match(/class="m( dlv)?"/g) || []).length > 0, true, 'a mark per cycle a part fires');
   assert.match(html, /Each fight rolls its set, and nudges every part's first attack by up to 1 cycle\./);
-  // Its parts: you broke none in this test, so the ones whose genes you haven't decoded are ??? with the hint.
+  // Its parts: you broke none in this test, so the ones you haven't researched show their name and what they hit, and ???
+  // for their numbers with what unlocks them.
   const e = entryOf(s, key);
   for (const x of e.parts.filter((p) => !p.known)) assert.ok(x.part, `${x.spec.id} is built`);
   assert.ok(e.parts.some((x) => !x.known), 'something left to decode');
-  assert.match(html, /cx-part unknown[\s\S]*?Break one to decode it\./);
+  assert.match(html, /cx-part t0[\s\S]*?<p class="cxp-hits">[^<]+ · [a-z ]+<\/p>[\s\S]*?Research 1 to learn its numbers\./);
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
@@ -89,20 +90,25 @@ test('a decoded part shows its numbers at your level, the same numbers a room fi
   // Break its Pulse Node for real: decoded in the codex.
   Object.assign(real, { armor: 0, integrity: 1 });
   command(s, 'spike pulse'); resolveCycle(s);
-  assert.ok(s.codex[`${v.family}:pulse`], 'decoded by breaking it');
+  assert.equal(s.research[`${v.family}:pulse`], 1, 'decoded by breaking it: research 1');
   const x = partsOf(s, 'family', v.family).find((p) => p.spec.id === 'pulse');
   assert.ok(x.known);
   const sample = sampleOf('family', v.family, L, room.third || null).parts.find((p) => p.id === 'pulse');
   assert.equal(sample.max, real.max, "its Integrity is a room fight's at your level");
   assert.equal(sample.maxArmor, real.maxArmor, 'and its ◆');
   const html = codexPageMarkup(s, `family:${v.family}`);
-  const card = html.split('<div class="cx-part">').find((c) => c.startsWith('<div class="cxp-head"><b>Pulse Node</b>'));
+  const cardOf = (h) => h.split(/<div class="cx-part t\d+[^"]*">/).find((c) => c.startsWith('<div class="cxp-head"><b>Pulse Node'));
+  const card = cardOf(html);
   assert.ok(card, 'the Pulse Node has its card');
   assert.match(card, new RegExp(`<b>${x.part.max}</b> Integrity`), 'Integrity at your level');
   assert.match(card, new RegExp(`◆ <b>${x.part.maxArmor}</b>`), '◆ at your level');
   assert.match(card, new RegExp(`<b>Surge</b><span class="cxp-dmg">${x.part.attack.amount} damage</span><span class="cxp-when">every ${x.part.attack.interval} cycles`), 'its attack, damage and interval');
-  assert.match(card, /cxp-answer">Break it, or delay its attack/, 'and what answers it (fightread partRead)');
-  assert.match(card, /Drops Pulse Kernel/, 'and what it drops');
+  assert.doesNotMatch(card, /cxp-answer/, 'its answer waits for research 5');
+  assert.match(card, /Research 5 to learn its rule, its answer and its tells\./);
+  s.research[`${v.family}:pulse`] = 5;
+  assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /cxp-answer">Break it, or delay its attack/, 'at 5, what answers it (fightread partRead)');
+  s.research[`${v.family}:pulse`] = 20;
+  assert.match(cardOf(codexPageMarkup(s, `family:${v.family}`)), /Drops Pulse Kernel/, 'at 20, what it drops');
   // The same part one level up hits harder: the numbers follow your level.
   const lower = sampleOf('family', v.family, 1, null).parts.find((p) => p.id === 'pulse');
   assert.ok(x.part.max > lower.max && x.part.attack.amount > lower.attack.amount, 'level 10 numbers, not level 1');
@@ -158,13 +164,12 @@ test('mutations: named with their rule once met, and where you saw them; the dec
   assert.ok(rowsOf(codexPageMarkup(s)).find((r) => r.key === 'mutation:adaptive').unknown, 'one you have not met stays ???');
 });
 
-test('the genes moved here from the System page', () => {
+test('no Genes group or gene card anywhere: the System page has none, and a gene key is no entry', () => {
   const s = fresh();
   assert.doesNotMatch(systemMarkup(s), /codex-card|cx-gene|Codex ·/, 'no gene card on System');
   const html = codexPageMarkup(s, 'gene:attack');
-  assert.match(html, /<h2>Genes<\/h2><h1>Attack types<\/h1>/);
-  assert.match(html, /An attack type you haven&#39;t met\./, 'its genes are ??? one by one');
-  assert.doesNotMatch(html.split('<article')[1], /Part behaviours/, 'one category at a time');
+  assert.doesNotMatch(html, /Genes|Attack types|cx-gene/i, 'an old gene key opens the first entry');
+  assert.match(html, /data-entry="family:ransomware"/);
 });
 
 test('every entry renders with no undefined or NaN, for a character who has met everything', () => {
@@ -173,9 +178,10 @@ test('every entry renders with no undefined or NaN, for a character who has met 
   for (const k of Object.keys(BOSSES)) { s.dex.fought[k] = 2; s.dex.won[k] = 1; }
   for (const k of ROLLED_MUTATIONS) s.dex.muts[k] = ['worm'];
   for (const [f, sets] of Object.entries(ATTACK_SETS)) for (const id of Object.keys(sets)) s.dex.sets[`${f}:${id}`] = 1;
-  s.codex = {};
-  for (const id of Object.keys(FAMILIES)) for (const p of FAMILIES[id].parts) s.codex[`${id}:${p.id}`] = true;
-  for (const id of Object.keys(ROOM_FAMILIES)) for (const p of ROOM_FAMILIES[id].parts) s.codex[`${id}:${p.id}`] = true;
+  s.research = {};
+  let k = 0;
+  for (const id of Object.keys(FAMILIES)) for (const p of FAMILIES[id].parts) s.research[`${id}:${p.id}`] = [1, 5, 20][k++ % 3];
+  for (const id of Object.keys(ROOM_FAMILIES)) for (const p of ROOM_FAMILIES[id].parts) s.research[`${id}:${p.id}`] = [1, 5, 20][k++ % 3];
   for (const key of KEYS) {
     const html = codexPageMarkup(s, key);
     assert.doesNotMatch(html, /undefined|NaN|\[object/, key);
@@ -209,20 +215,20 @@ test('the first-time tip points at the tab once you decode your first part, and 
   for (const t of TIPS) if (t.id !== 'codex') (s.settings.seen ||= {})[t.id] = 1;
   const visible = (sel) => sel === tip.at;
   assert.equal(nextTip(s, 'map', visible), null, 'nothing decoded yet');
-  s.codex = { 'ransomware:pulse': true };
+  s.research = { 'ransomware:pulse': 1 };
   assert.equal(nextTip(s, 'map', visible)?.id, 'codex');
   assert.equal(nextTip(s, 'codex', visible), null, 'not on the Codex itself');
   command(s, 'encounter cryptjack'); command(s, 'engage');
   assert.equal(nextTip(s, 'combat', visible), null, 'not mid-fight');
 });
 
-test('the index lists every family a player can meet, old and room bodies, with a decode count', () => {
+test('the index lists every family a player can meet, old and room bodies, with its research %', () => {
   const s = fresh();
   s.met = { trojan: true };
-  s.codex = { 'trojan:courier': true };
+  s.research = { 'trojan:courier': 1 };
   const fam = entries(s).find((g) => g.id === 'family');
   assert.deepEqual(fam.rows.map((r) => r.id), [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)]);
   const t = fam.rows.find((r) => r.id === 'trojan');
-  assert.deepEqual([t.name, t.count], ['Trojan', { n: 1, of: 2 }]);
-  assert.match(codexPageMarkup(s, 'family:trojan'), /<small class="cx-n" title="Parts decoded">1\/2<\/small>/);
+  assert.deepEqual([t.name, t.pct], ['Trojan', 3], 'two parts: 1 of 20 and 0 of 20, an average of 2.5%');
+  assert.match(codexPageMarkup(s, 'family:trojan'), /<small class="cx-n" title="The average research of its parts">3%<\/small>/);
 });

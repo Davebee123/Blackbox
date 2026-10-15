@@ -24,6 +24,7 @@ import { emit, alive, part, livingParts, hooks, previewDamage, ignoresArmor, toI
 import { FAMILIES, GUARDS, STRAINS, BOSSES, ROOM_FAMILIES, ABILITIES, TELL } from './data.mjs';
 import { tellsOf, tellAnswer, tellNext, tierOf, inWindow, answers } from './tells.mjs';
 import { raidDef } from './raid.mjs';
+import { gainResearch } from './research.mjs';
 
 export const TICKS = { at: [0.5, 0.25], small: 20, budget: 3 };
 export const BOSS_RULES = {
@@ -150,6 +151,7 @@ function cancel(s, p, due, t) {
   if (fxOn(s, 'tell-hits') && alive(p)) p.openUntil = Math.max(p.openUntil || 0, e.cycle + TELL.open.cycles - 1);
   const what = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)} are` : `${names[0]} is`;
   emit(s, 'cut', `INTERRUPTED. You take the ${p.name} under ${pct(t.at)}. Its ${what} cancelled.${e.cutBudget != null ? ` ${e.cutBudget} of ${TICKS.budget} interrupts left this fight.` : ''}`, { target: p.id, tick: t.at, cut: true });
+  gainResearch(s, e.virus, p, 'cut'); // +1 research on the part you cut (research.mjs; a crewmate's cut is theirs)
 }
 
 // ---------- reading it ----------

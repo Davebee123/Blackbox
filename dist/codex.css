@@ -45,7 +45,7 @@
 .cx-kick small { font: var(--label); letter-spacing: var(--label-track); color: var(--dim); }
 .cx-kick small b { font-weight: 600; }
 .cx-foot { font: 12px var(--sans); color: var(--dim); }
-.cxp-hint { font: 12px var(--sans); color: var(--dim); }
+.cx-entry .cxp-hint { font: 12px var(--sans); color: var(--dim); }
 
 /* A part: tooltip grammar. Name, then Integrity and ◆, the attack line (name, number, timing), what it does, the answer, the drop. */
 .cx-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s4); }
@@ -60,12 +60,31 @@
 .cxp-atk .cxp-dmg { color: var(--bright); }
 .cxp-atk .cxp-when { color: var(--dim); margin-left: auto; }
 .cxp-atk.none b { color: var(--dim); }
-.cxp-does { color: var(--text); font-size: 13px; line-height: 1.45; }
-.cxp-answer { color: var(--you); font-size: 13px; line-height: 1.45; }
-.cxp-tele { color: var(--muted); font-size: 12px; }
-.cxp-tele .glyph { width: 11px; height: 11px; margin: 0 var(--s2) 0 0; vertical-align: -1px; }
-.cxp-loot { display: flex; align-items: center; gap: var(--s2); font: 12px var(--mono); color: var(--muted); }
-.cxp-loot .glyph { width: 12px; height: 12px; margin: 0; color: var(--amber); }
+.cx-entry .cxp-does { color: var(--text); font-size: 13px; line-height: 1.45; }
+.cx-entry .cxp-answer { color: var(--you); font-size: 13px; line-height: 1.45; }
+.cx-entry .cxp-tele { color: var(--muted); font-size: 12px; }
+.cx-entry .cxp-tele .glyph { width: 11px; height: 11px; margin: 0 var(--s2) 0 0; vertical-align: -1px; }
+.cx-entry .cxp-loot { display: flex; align-items: center; gap: var(--s2); font: 12px var(--mono); color: var(--muted); }
+.cx-entry .cxp-loot .glyph { width: 12px; height: 12px; margin: 0; color: var(--amber); }
+/* Research (research.mjs): a bar of 20 with marks at 1, 5 and 20, lit once reached; what's locked reads ??? and what unlocks it. */
+.cxp-res { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s4); }
+.cxr-bar { position: relative; height: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 1px; }
+.cxr-bar > b { display: block; height: 100%; background: var(--amber-soft); }
+.cxr-mk { position: absolute; top: -4px; bottom: -4px; width: 1px; margin-left: -1px; background: var(--gray); }
+.cxr-mk.on { background: var(--amber); }
+.cxr-n { font: 500 11px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+.cxr-n.full { color: var(--amber); }
+.cx-entry .cxp-hits { font: 12px var(--mono); color: var(--muted); }
+.cx-entry .cxp-lock { font: 12px/1.4 var(--sans); color: var(--dim); }
+.cx-entry .cxp-lock > span { font: 12px var(--mono); letter-spacing: 1px; color: var(--gray); margin-right: var(--s3); }
+.cx-entry .cxp-rides { font-size: 12px; line-height: 1.45; color: var(--muted); }
+.cx-entry .cxp-rides b { color: var(--text); font-weight: 600; }
+.cx-entry .cxp-rides small { font: 11px var(--mono); color: var(--dim); }
+.cx-entry .cxp-perk { font-size: 12px; line-height: 1.45; color: var(--amber-soft); }
+.cx-part.t0 { border-top-width: 1px; }
+.cx-part.mastered { border-top-color: var(--amber-soft); }
+.cxp-head .pmast { margin-left: var(--s3); }
+.cx-entry .stat strong.full { color: var(--amber); }
 .cx-part.unknown { border-style: dashed; border-top-width: 1px; border-color: var(--line); }
 .cx-part.unknown .cxp-head b, .cx-part.unknown .cxp-stats, .cx-part.unknown .cxp-does { font-family: var(--mono); color: var(--gray); }
 
@@ -116,21 +135,6 @@
 .cx-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .cx-head .tag[style*='--ax'] { color: var(--ax); border-color: var(--ax); display: inline-flex; align-items: center; gap: var(--s2); }
 .cx-head .tag .glyph { width: 11px; height: 11px; margin: 0; }
-/* A gene category: the gene codex's card (view.mjs codexMarkup), its genes as cards in the part cards' grammar. */
-.cx-genes > h2, .cx-genes .cx-group > b { display: none; }
-.cx-genes .codex { display: block; }
-.cx-genes .cx-group ul { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s4); align-items: start; }
-.cx-genes .cx-group .cx-gene { gap: var(--s3); padding: var(--s5); font-size: 13px; line-height: 1.45; background: var(--inset); border: 1px solid var(--line); border-top: 2px solid var(--amber-deep); border-radius: var(--r-btn); }
-.cx-genes .cx-group .cx-gene > span { font: 600 15px var(--sans); color: var(--bright); }
-.cx-genes .cx-group .cx-gene small { font-size: 13px; color: var(--text); }
-.cx-genes .cx-group .cx-gene .cx-tele { font-size: 12px; color: var(--muted); }
-.cx-genes .cx-group .cx-gene.on .cx-answer { color: var(--you); }
-.cx-genes .cx-group .cx-gene.seen > span { color: var(--text); }
-.cx-genes .cx-group .cx-gene.seen small { color: var(--dim); }
-.cx-genes .cx-group .cx-gene.unknown { border-style: dashed; border-top-width: 1px; }
-.cx-genes .cx-group .cx-gene.unknown > span { font-family: var(--mono); color: var(--gray); }
-.cx-genes .cx-group .cx-gene.unknown small { color: var(--dim); }
-
 /* ---------- phone: the index folds into a bar above the entry ---------- */
 @media (max-width: 900px) {
   .cx-page { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
@@ -149,5 +153,5 @@
 @media (max-width: 480px) {
   .cxs-row { grid-template-columns: minmax(52px, 72px) repeat(12, minmax(0, 1fr)); }
 }
-/* A page with a tile or two (a boss, a mutation, a gene category): tiles keep a tile's width. */
+/* A page with a tile or two (a boss, a mutation): tiles keep a tile's width. */
 .cx-head.solo .stats > .stat { flex: 0 1 200px; }

@@ -48,7 +48,7 @@ function geneLine(s, n) {
   if (!n.genes) return '';
   const deep = !!s.breach.fx.audit, chips = n.genes.map((id) => geneChip(chipOf(s, id, 'rolled', deep)));
   const tells = s.breach.fx.audit === 2 ? (n.tells || []).map((id) => `<span class="tag" title="A tell it brings.">${esc(id)}</span>`) : [];
-  return chips.length || tells.length ? `<span class="gene-line bx-genes">${chips.join('')}${tells.join('')}</span>` : '<span class="gene-line bx-genes"><span class="gchip g-core" title="It rolled no genes: the body alone.">body only</span></span>';
+  return chips.length || tells.length ? `<span class="gene-line bx-genes">${chips.join('')}${tells.join('')}</span>` : '<span class="gene-line bx-genes"><span class="gchip g-core" title="It rolled nothing: the body alone.">body only</span></span>';
 }
 // Geometry: a gutter for the subsystem names, then four lanes. y in px, x in % of the board.
 const G = { gut: 21, row: 78, head: 46, gate: 84, pad: 34 };

@@ -37,6 +37,7 @@ import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES }
 import { previewDamage } from './combat.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
+import { gainResearch } from './research.mjs';
 import { ignores } from './genes.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
@@ -200,7 +201,7 @@ function say(s, t, p, next, n) {
   const e = s.encounter;
   Object.assign(t, { told: true, said: e.cycle, next, n, opened: null });
   if (t.kind !== 'mimic') tally(s, t, 'said');
-  seeGene(s.host || s, t.gene, e.virus.author); // the gene codex: a tell you've met is seen (genome.mjs)
+  seeGene(s.host || s, t.gene, e.virus.author); // its chip: a tell you've met is seen (genome.mjs)
   logTell(s.host || s, t); // the Codex tab: this tell, by name
   emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next, name: label(t) });
   const w = windowOf(s, t);
@@ -256,12 +257,16 @@ export function tellCycle(s) {
 // skill does only what it does anyway. It counts as a read when it's a command of yours, typed after the tell was
 // said. at: when the answer was typed, for one that resolves later (Hijack). moved: cycles the skill just pushed the
 // attack back. stagger false: the skill already delayed the attack itself (Suspend, Jam, Spoofed ACK).
+// Answering a charge, a cast or a seal is research on the part it rides (research.mjs: +2; a crewmate's answer is
+// theirs, so it never counts for you).
+const credit = (who, t, p) => { if (who && ['charge', 'cast', 'seal'].includes(t.kind)) gainResearch(who, who.encounter?.virus, p, 'tell'); };
 export function tellAnswer(s, t, p, msg, { open = t.kind !== 'seal', skill = null, at = null, moved = 0, stagger = TELL.open.built !== false } = {}) {
   const e = s.encounter, cmd = e.commanding;
   if (t.kind !== 'seal' && !inWindow(s, t, moved)) return false;
   emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', msg, { source: p.id, target: p.id, tell: t.id, answered: true });
   if (at != null ? at >= t.said : cmd && !cmd.auto && (cmd.at ?? e.cycle) >= t.said) read(s, t, p, { open, stagger, skill: skill || (open ? null : cmd?.id) });
   rest(s, t, e.cycle, true);
+  credit(s, t, p);
   return true;
 }
 // Reading pays. A charge, a cast or the Mimic answered staggers its part: it's Open (+50% from everyone for 2 cycles)
@@ -269,7 +274,7 @@ export function tellAnswer(s, t, p, msg, { open = t.kind !== 'seal', skill = nul
 function read(s, t, p, { open = false, skill = null, stagger = true } = {}) {
   const e = s.encounter;
   tally(s, t, 'read');
-  readGene(s.host || s, t); // the gene codex: a tell you read is decoded (genome.mjs)
+  readGene(s, t); // its chip shows its rule from now on (genome.mjs; a crewmate's read is theirs)
   if (open && alive(p)) {
     const n = TELL.open.cycles + (fxOn(s, 'open-long')?.fx.value || 0); // Read Receipt (a native unique): Open lasts longer
     p.openUntil = Math.max(p.openUntil || 0, e.cycle + n - 1);
@@ -306,6 +311,7 @@ export function tellCallOff(s, by) {
     const p = sourceOf(s, t);
     emit(s, t.kind === 'cast' ? 'interrupt' : 'blocked', `${by} calls off ${label(t)}.`, { source: p?.id, target: p?.id, tell: t.id, answered: true });
     rest(s, t, e.cycle, true);
+    if (p) credit(s, t, p);
     n++;
   }
   return n;
@@ -391,7 +397,7 @@ export function tellLand(s) {
     if (t.kind !== 'seal' || p.armor > 0) { if (t.kind !== 'mimic') tally(s, t, 'landed'); }
     if (t.kind === 'charge') {
       // Blackhole (Hijacker): the charged attack goes into it like any other.
-      if (p.blackhole) { delete p.blackhole; emit(s, 'blocked', `${label(t)} falls into the blackhole and does nothing.`, { source: p.id, tell: t.id, answered: true }); advance(p, e); tally(s, t, 'answered'); rest(s, t, e.cycle, false); continue; }
+      if (p.blackhole) { delete p.blackhole; emit(s, 'blocked', `${label(t)} falls into the blackhole and does nothing.`, { source: p.id, tell: t.id, answered: true }); advance(p, e); tally(s, t, 'answered'); credit(s, t, p); rest(s, t, e.cycle, false); continue; }
       const atk = chargeAttack(s, t, p), locked = s.encounter.encrypt || 0, shield = e.shield || 0;
       if (strikeWith(s, p, atk)) return done(), true;
       advance(p, e);
@@ -410,10 +416,10 @@ export function tellLand(s) {
     } else if (t.kind === 'seal') {
       if (p.armor > 0 && p.bkRot?.until >= e.cycle) { // Bit Rot (Demolitionist): a rotting part can't seal
         emit(s, 'blocked', `${label(t)} fails: the ${p.name} is rotting.`, { source: p.id, tell: t.id, answered: true });
-        read(s, t, p, { open: true });
+        read(s, t, p, { open: true }); credit(s, t, p);
       } else if (p.armor > 0 && p.poisonedUntil >= e.cycle) { // Cache Poison (Hijacker): the seal reads back poison
         emit(s, 'blocked', `${label(t)} fails on a poisoned cache and hits the ${p.name}.`, { source: p.id, tell: t.id, answered: true });
-        tally(s, t, 'answered'); read(s, t, p, { open: true });
+        tally(s, t, 'answered'); read(s, t, p, { open: true }); credit(s, t, p);
         hit(s, p, 2 * (p.poison || 15), { by: 'Cache Poison', pierce: true });
       } else if (p.armor > 0) {
         // It re-arms to full with one ◆ more for the rest of the fight, and every stripped part gets a ◆ back. Your ◆ and shield go too.
@@ -431,10 +437,11 @@ export function tellLand(s) {
         const by = p.strippedBy;
         const who = by && by.cycle >= t.said ? [s, ...alliesOf(s).map((x) => x.st)].find((x) => (x.who || '') === by.who) : null;
         if (who) read(who, t, p, { skill: by.id });
+        credit(who || (by ? null : s), t, p); // the strip was yours (a crewmate's counts for them)
       }
     } else if (t.kind === 'cast' && t.does === 'grow' && p.revokedUntil >= e.cycle) { // Revoke (Sysop): it can't sign the update
       emit(s, 'interrupt', `${label(t)} fails: the ${p.name} is revoked.`, { source: p.id, tell: t.id, answered: true });
-      read(s, t, p, { open: true });
+      read(s, t, p, { open: true }); credit(s, t, p);
     } else if (t.kind === 'cast') {
       castLands(s, t, p);
       if (t.does !== 'overclock') { lockLast(s, t, label(t)); corrupt(s, t, p); hang(s, t); } // Overclock's cost is the gamble itself
@@ -573,6 +580,7 @@ export function tellSigint(s) {
   emit(s, 'interrupt', `SIGINT stops ${label(t)}.`, { target: p?.id, tell: t.id, answered: true });
   if ((s.encounter.commanding?.at ?? s.encounter.cycle) >= t.said) read(s, t, p, { open: true });
   rest(s, t, s.encounter.cycle, true);
+  if (p) credit(s, t, p);
   return true;
 }
 // A charge riding the attack due now on p, and what it would hit for (Hijack, Replay: dist/classes/operator.mjs).

@@ -7,7 +7,8 @@
 //   gearLive(s)            your equipped rules and unique effects that have a condition, each lit when it holds now
 //   cycleGear(s, cycle)    the cycle-conditioned ones live on a cycle (the timeline's column headers)
 //   partRead(s, v, p)      what a part does, how to answer it, and its one-word cue, from its spec and its flags
-//   partTip(s, v, p)       the part's tooltip: ??? and how to decode it until the codex knows it (combat.mjs knowsPart)
+//   partTip(s, v, p)       the part's tooltip by its research (research.mjs): ??? until decoded, its attack at 1, its
+//                          rule and answer from 5
 //   partLinks(s, v)        what protects what: one link a rule that reaches from one part to another (a Mutex's lock, a
 //                          Lockbox's ward, a Mirror's twin, a Keyring's re-arm), for the board's tethers
 //   lockOf(s, v, p)        the lock shield a part wears now (its bar's absorb segment), wardOf the most a ward lets it lose
@@ -18,6 +19,7 @@ import { tellsOf, tellIntents, partTells, NEW_TELLS } from './tells.mjs';
 import { nextTick } from './interrupt.mjs';
 import { BODY } from './families.mjs';
 import { situationOf } from './situations.mjs';
+import { knows, TIER } from './research.mjs';
 
 const when = (n) => (n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`);
 const cycles = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
@@ -187,22 +189,27 @@ function readOf(s, v, p) {
   return ['It has no attack of its own.', 'Break it when the others are handled.', null];
 }
 // What a part does (one or two sentences, its tells and veil after), how to answer it, and its cue.
-export function partRead(s, v, p) {
+// tells false: leave its tells out (the Codex's part card lists them on their own line).
+export function partRead(s, v, p, { tells: withTells = true } = {}) {
   const [does, answer, cue] = readOf(s, v, p);
   // The tells it brings in this fight (or, with no fight, the ones its kind can bring), as what it does.
   const T = s?.encounter?.virus === v ? tellsOf(s) : null;
-  const tl = (T ? T.list.filter((t) => t.part === p.id).map((t) => ({ name: t.name, kind: t.kind })) : v ? partTells(v, p) : []).filter((x) => x.kind !== 'mimic');
+  const tl = !withTells ? [] : (T ?T.list.filter((t) => t.part === p.id).map((t) => ({ name: t.name, kind: t.kind })) : v ? partTells(v, p) : []).filter((x) => x.kind !== 'mimic');
   const VERB = { charge: 'Charges', cast: 'Casts', seal: 'Seals with', lock: 'Locks with' };
   const tells = tl.map((x) => `${VERB[x.kind] || 'Brings'} ${x.name}.`).join(' ');
   const more = [p.veiled ? 'Hides its timers while it wears ◆.' : '', p.enrage ? `Deals ${pct(CONFIG.enrage - 1)} more once it drops below half.` : '', tells].filter(Boolean).join(' ');
   return { does: more ? `${does} ${more}` : does, answer, cue };
 }
-// The part row's tooltip. Until the codex knows it: ??? and how to decode it.
+// The part row's tooltip, by its research (research.mjs). Until it's decoded: ??? and how to research it. At 1: its
+// attack and timing. From 5: what it does, its tells, and what answers it.
 export function partTip(s, v, p) {
-  if (!knowsPart(s, v, p)) return `${p.name}: ???\nBreak one to decode what it does.`;
+  if (!knowsPart(s, v, p)) return `${p.name}: ???\nBreak one, cut it or answer its tell to decode it.`;
+  if (!knows(s, v, p, TIER.rule)) return `${p.name}: ${partAttack(s, v, p)}\nResearch ${TIER.rule} to learn its rule and answer.`;
   const r = partRead(s, v, p);
   return `${p.name}: ${r.does}\n${r.answer}`;
 }
+// Its attack and timing alone (a part decoded but not yet researched to its rule).
+export const partAttack = (s, v, p) => (p.attack ? attackRead(s, v, p)[0] : 'It has no attack of its own.');
 // Its cue on the row, once decoded (a Mutex: "locks Encryptor"), or null.
 export const partCue = (s, v, p) => (knowsPart(s, v, p) ? partRead(s, v, p).cue : null);
 // The parts a live target condition holds on: { [part id]: [names] }, for the board's marks.

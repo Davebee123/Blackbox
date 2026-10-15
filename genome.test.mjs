@@ -1,14 +1,15 @@
-// The genome in play (genome.mjs, docs/genome.md phase 1): names and bylines, the gene codex, `scan` and `inspect`, and
+// The genome in play (genome.mjs, docs/genome.md phase 1): names and bylines, what the rules' chips know (a part's rule
+// by its research, research.mjs; a tell's once answered; a mutation's at two kills), `scan` and `inspect`, and
 // HASHLORD's and MIRRORSHADE's lairs opening at their floors.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, selectEncounter, syncServer, part, knowsPart } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, selectEncounter, syncServer, part, knowsPart, restore } from './dist/combat.mjs';
 import { play, layoutOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { createVirus, BOSSES } from './dist/data.mjs';
 import { GENES } from './dist/genes.mjs';
-import { geneState, codexCount, genomeCard, cardLines, virusGenes } from './dist/genome.mjs';
-import { hudMarkup, codexMarkup, netTranscript } from './dist/view.mjs';
+import { geneState, genomeCard, cardLines, virusGenes } from './dist/genome.mjs';
+import { hudMarkup, netTranscript } from './dist/view.mjs';
 import { signature, openLair, lairOf, networkLines } from './dist/network.mjs';
 import { rogueSpawns } from './dist/rogue.mjs';
 
@@ -49,24 +50,26 @@ test('names and bylines: WARDED CRYPTJACK-4821 v2 · TOLLGATE, a named build kee
   if (!['bouncer', 'tracer', 'sentinel'].includes(t.encounter.virus.family)) assert.equal(t.encounter.virus.author, 'glassjaw');
 });
 
-test('the gene codex: ??? until met, seen in a fight, decoded by breaking its part, reading its tell, or two kills of a rule', () => {
+test('the rules\' chips: ??? until met, seen in a fight; a part\'s rule at its research 5, a mutation\'s at two kills', () => {
   const s = at(12);
   assert.equal(geneState(s, 'surge'), 'unknown');
-  assert.match(codexMarkup(s), /Codex · 0\/41 decoded/);
-  assert.match(codexMarkup(s), /An attack type you haven&#39;t met/);
   selectEncounter(s, 'random', 5, { level: 12, family: 'ransomware', genes: ['ward'], mutation: 'armored' });
   command(s, 'engage');
   for (const id of ['surge', 'encrypt', 'ward', 'armored']) assert.equal(geneState(s, id), 'seen', id);
   assert.equal(geneState(s, 'mimic'), 'unknown');
-  // Break the Lockbox: Ward is decoded, and the codex says what it does.
+  // Break the Lockbox: it's decoded (research 1), but Ward's rule waits for research 5 on a part that carries it.
   const lock = part(s, 'lockbox');
   Object.assign(lock, { armor: 0, integrity: 1 });
   command(s, 'spike lockbox');
   const ev = resolveCycle(s);
-  assert.ok(ev.some((e) => e.type === 'codex' && /Ward/.test(e.message)));
-  assert.equal(geneState(s, 'ward'), 'decoded');
-  assert.match(codexMarkup(s), new RegExp(GENES.ward.does.slice(0, 30)));
-  // Two kills of an Armored virus decode Armored.
+  const line = ev.find((e) => e.type === 'codex');
+  assert.equal(line?.message, 'Lockbox decoded: research 1. Hover it to see its numbers.');
+  assert.doesNotMatch(line.message, /gene|Ward/i, 'the decode names the part, nothing else');
+  assert.equal(s.research['ransomware:lockbox'], 1);
+  assert.equal(geneState(s, 'ward'), 'seen', 'a decode alone is not its rule');
+  s.research['ransomware:lockbox'] = 5;
+  assert.equal(geneState(s, 'ward'), 'decoded', 'research 5: its rule');
+  // Two kills of an Armored virus decode Armored (mutations stay as they were).
   win(s);
   assert.equal(s.geneCodex.armored.kills, 1);
   assert.equal(geneState(s, 'armored'), 'seen');
@@ -75,20 +78,24 @@ test('the gene codex: ??? until met, seen in a fight, decoded by breaking its pa
   command(s, 'engage');
   win(s);
   assert.equal(geneState(s, 'armored'), 'decoded');
-  assert.ok(codexCount(s).decoded >= 2);
 });
 
-test('the codex carries across bodies, and a save from before genes reads its part codex as genes, with no migration', () => {
-  const old = fresh();
-  old.codex = { 'ransomware:pulse': true, 'ransomware:lockbox': true, 'keylogger:logger': true };
-  old.met = { ghostroot: true };
-  delete old.geneCodex;
-  for (const id of ['surge', 'ward', 'synclock', 'keystrokedump']) assert.equal(geneState(old, id), 'decoded', id);
-  assert.equal(geneState(old, 'scramble'), 'seen', 'a family you met shows its body\'s genes');
-  assert.equal(geneState(old, 'decoymirror'), 'unknown', 'but not the third parts you never saw');
-  // A worm's Pulse Node is known on sight: Surge is decoded.
-  selectEncounter(old, 'splinter', 3, { level: 8 });
+test('knowledge stays on the part: a worm\'s Pulse Node is not known because you researched a ransomware one, and an older save\'s part codex is research 1', () => {
+  const raw = JSON.parse(JSON.stringify(fresh()));
+  delete raw.research;
+  raw.codex = { 'ransomware:pulse': true, 'ransomware:lockbox': true, 'keylogger:logger': true };
+  raw.met = { ghostroot: true };
+  delete raw.geneCodex;
+  const old = restore(raw);
+  selectEncounter(old, 'cryptjack', 3, { level: 8 });
+  assert.deepEqual(old.research, { 'ransomware:pulse': 1, 'ransomware:lockbox': 1, 'keylogger:logger': 1 }, 'each part it decoded starts at 1');
   assert.ok(knowsPart(old, old.encounter.virus, old.encounter.virus.parts.find((p) => p.id === 'pulse')));
+  for (const id of ['surge', 'ward', 'synclock', 'keystrokedump']) assert.notEqual(geneState(old, id), 'decoded', `${id}: research 1 is not its rule`);
+  assert.equal(geneState(old, 'scramble'), 'seen', 'a family you met shows its body\'s rules as seen');
+  assert.equal(geneState(old, 'decoymirror'), 'unknown', 'but not the third parts you never saw');
+  old.encounter = null;
+  selectEncounter(old, 'splinter', 3, { level: 8 });
+  assert.ok(!knowsPart(old, old.encounter.virus, old.encounter.virus.parts.find((p) => p.id === 'pulse')), 'a worm\'s Pulse Node is its own part');
 });
 
 test('scan: the genome card before you engage costs 1 Signal (and Trace on a break-in); an Infiltrator scans free and reads deeper', () => {
@@ -115,7 +122,7 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
     assert.ok(t.logs.findLast((e) => e.type === 'net-scan'), 'its card');
     assert.equal(t.run.integrity, sig0 - 1);
   }
-  // An Infiltrator: free and quiet, the rules of genes it hasn't decoded, and its inspect reads them in that fight.
+  // An Infiltrator: free and quiet, the rules it hasn't learned, and its inspect reads them in that fight.
   const i = at(12, 'infiltrator');
   play(i, 'connect sprawl'); play(i, 'cd tmp');
   const sig = i.run.integrity;
@@ -130,7 +137,7 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
   assert.match(i.logs.slice(n).map((e) => e.message).join(' '), /Surge is an attack type that presses on Burst\. Deals a plain heavy hit/);
 });
 
-test('inspect: a part\'s genes, what each does once decoded, and nothing spent', () => {
+test('inspect: a part\'s rules, what each does once its research says so, and nothing spent', () => {
   const s = at(12);
   selectEncounter(s, 'random', 9, { level: 12, family: 'worm', genes: ['twin'], mutation: null });
   command(s, 'engage');
@@ -138,7 +145,8 @@ test('inspect: a part\'s genes, what each does once decoded, and nothing spent',
   command(s, 'inspect mirror');
   const say = s.logs.slice(n).map((e) => e.message).join('\n');
   assert.match(say, /The Mirror carries Twin/);
-  assert.match(say, /haven't decoded Twin yet/);
+  assert.match(say, /You haven't learned Twin yet\. Research the Mirror to 5 to learn what it does\./);
+  assert.doesNotMatch(say, /gene/i);
   assert.equal(s.encounter.queue, null, 'no command queued');
   // A fight's card, free: scan mid-fight.
   command(s, 'scan');

@@ -18,9 +18,10 @@ import { SKILL_TEXT } from './lore.mjs';
 import { ARCHITECTURES, ARCH_LEVEL, ARCH_SWITCH, archOf, archCredits } from './architecture.mjs';
 import { postsOf, LISTEN, schedulerEvery, outpostBuyout, knowsPlan, planName, planPrice, relayCost, canBuildRelay, OUTPOST, BUILDINGS, bandwidth, bandwidthUsed, stockOf, capOf, makes, siteLabel, slotsOf, sizeOf as serverSize, buildingsOf, buildBlock, buildCost, costLine, isOutpost, hasMod } from './outpost.mjs';
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE } from './data.mjs';
-import { GENES, GENE_IDS, CATS, AXES } from './genes.mjs';
+import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
-import { chipOf, virusGenes, geneState, codexCount, scannedDeep } from './genome.mjs';
+import { chipOf, virusGenes, scannedDeep } from './genome.mjs';
+import { mastered, RESEARCH } from './research.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
 const LOUD_TIP = `Go in loud: every fight on this run has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`;
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
@@ -363,21 +364,6 @@ export function partMarks(s, p) {
 }
 const marksMarkup = (marks) => (marks.length ? `<span class="pmarks">${marks.map((k) => `<span class="pmark m-${k}" title="${k}">${glyph(MARKS[k])}</span>`).join('')}</span>` : '');
 
-// The codex page card, gene by gene (genome.mjs): what you've never met is ??? with its category, what you've seen
-// has its name, its axis and who you've seen use it, and what you've decoded says what it does and what answers it.
-// cat: one category only (the Codex tab's Genes entries), its own count in the kicker.
-export function codexMarkup(s, cat = null) {
-  const n = cat ? { decoded: GENE_IDS.filter((id) => GENES[id].cat === cat && geneState(s, id) === 'decoded').length, total: GENE_IDS.filter((id) => GENES[id].cat === cat).length } : codexCount(s);
-  const row = (id) => {
-    const g = GENES[id], st = geneState(s, id), ax = AXES[g.axis];
-    if (st === 'unknown') return `<li class="cx-gene unknown"><span><i class="gax">${glyph(CATS[g.cat].icon)}</i>???</span><small>${esc(`${an(CATS[g.cat].one)} ${CATS[g.cat].one} you haven't met.`)}</small></li>`;
-    const by = (s.geneCodex?.[id]?.by || []).map((a) => AUTHORS[a]?.name).filter(Boolean);
-    const head = `<span><i class="gax" style="--ax:${ax.colour}" title="${esc(`${ax.name}: it punishes ${ax.punishes}.`)}">${glyph(ax.icon)}</i>${esc(g.name)}<em>${esc(ax.name)}</em></span>`;
-    if (st === 'seen') return `<li class="cx-gene seen">${head}<small>${esc(`${by.length ? `You've seen ${list(by)} use it. ` : ''}${g.decode === 'tell' ? 'Read it once to decode it.' : g.decode === 'kills' ? 'Beat two viruses that carry it to decode it.' : 'Break a part that carries it to decode it.'}`)}</small></li>`;
-    return `<li class="cx-gene on">${head}<small>${esc(g.does)}</small><small class="cx-tele" title="How you see it coming">${glyph('ids')}${esc(g.telegraph)}</small><small class="cx-answer">${esc(g.answer)}</small></li>`;
-  };
-  return `<section class="card codex-card"><h2>${cat ? esc(CATS[cat].name) : 'Codex'} · ${n.decoded}/${n.total} decoded</h2><div class="codex">${Object.entries(CATS).filter(([c]) => !cat || c === cat).map(([c, cat]) => `<div class="cx-group"><b>${esc(cat.name)}</b><ul>${GENE_IDS.filter((id) => GENES[id].cat === c).map(row).join('')}</ul></div>`).join('')}</div></section>`;
-}
 const an = (w) => (/^[aeiou]/i.test(w) ? 'An' : 'A');
 const list = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
 const list2 = list;
@@ -387,7 +373,8 @@ export const byline = (v) => (v?.author && AUTHORS[v.author] ? `<span class="byl
 // mutation's chip carries its tip (tips.mjs .tag-mut).
 export function geneChip(c, extra = '') {
   const ax = AXES[c.axis], what = `${an(c.catName).toLowerCase()} ${c.catName} that presses on ${ax.name}`;
-  const title = !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name} is ${what}. ${c.rule} ${c.answer}` : `${c.name} is ${what}. Decode it to learn its rule.`;
+  const how = GENES[c.id]?.decode === 'part' ? 'Research a part that carries it to 5 to learn its rule.' : GENES[c.id]?.decode === 'tell' ? 'Answer it once to learn its rule.' : 'Beat two viruses that carry it to learn its rule.';
+  const title = !c.name ? `${an(c.catName)} ${c.catName} you haven't seen.` : c.rule ? `${c.name} is ${what}. ${c.rule} ${c.answer}` : `${c.name} is ${what}. ${how}`;
   return `<span class="gchip g-${c.src}${c.name ? '' : ' unknown'}" ${c.name ? `style="--ax:${ax.colour}"` : ''} ${extra} title="${esc(title)}">${glyph(c.name ? ax.icon : CATS[c.cat].icon)}${esc(c.name ? c.name.toLowerCase() : '???')}</span>`;
 }
 function geneChips(s, v) {
@@ -400,7 +387,7 @@ function geneChips(s, v) {
 function scanMarkup(e) {
   const c = e.card, a = AUTHORS[c.author];
   const row = (label, chips) => (chips.length ? `<div class="sc-row"><span class="sc-k">${label}</span><span class="sc-chips">${chips.map((x) => geneChip(x)).join('')}</span></div>` : '');
-  return `<div class="scan-card"><div class="sc-head"><b>${esc(c.name)}</b>${a ? `<span class="byline" style="--ac:${a.colour}">· ${esc(a.name)}</span>` : '<span class="byline stray">· unsigned</span>'}<small>Lv ${c.level} · ${esc(c.strain || c.body)}${c.grade > 1 ? ` · v${c.grade}` : ''}</small></div>${a ? `<p class="sc-style">${esc(a.style)}</p>` : ''}${row('body', c.genes.filter((x) => x.src === 'core'))}${row('genes', c.genes.filter((x) => x.src !== 'core'))}${row('tells', c.tells)}${c.deep ? `<ul class="sc-deep">${[...c.genes, ...c.tells].filter((x) => x.rule && x.state !== 'decoded').map((x) => `<li><b>${esc(x.name)}</b> ${esc(x.rule)}</li>`).join('')}</ul>` : ''}</div>`;
+  return `<div class="scan-card"><div class="sc-head"><b>${esc(c.name)}</b>${a ? `<span class="byline" style="--ac:${a.colour}">· ${esc(a.name)}</span>` : '<span class="byline stray">· unsigned</span>'}<small>Lv ${c.level} · ${esc(c.strain || c.body)}${c.grade > 1 ? ` · v${c.grade}` : ''}</small></div>${a ? `<p class="sc-style">${esc(a.style)}</p>` : ''}${row('body', c.genes.filter((x) => x.src === 'core'))}${row('rolled', c.genes.filter((x) => x.src !== 'core'))}${row('tells', c.tells)}${c.deep ? `<ul class="sc-deep">${[...c.genes, ...c.tells].filter((x) => x.rule && x.state !== 'decoded').map((x) => `<li><b>${esc(x.name)}</b> ${esc(x.rule)}</li>`).join('')}</ul>` : ''}</div>`;
 }
 // The collection log: every unique and trophy, found or not. Hidden until your first one; one you
 // haven't found shows where it comes from (a strain's name only once you've met that strain).
@@ -527,6 +514,8 @@ function cutChip(s, p) {
 // the lock on the bar's scale, with a padlock at the edge hits drain it from and the number on hover. While a hit this
 // cycle would only take lock, the blinking preview slice sits on the segment, not the Integrity. A Lockbox's ward: a cap
 // line at the most the part can still lose this cycle. Both show before the protector is decoded (??? in the tooltip).
+// A part you've researched to 100% (research.mjs): a small amber star by its name, here and in the Codex.
+export const masteredMark = (p) => `<span class="pmast" title="${esc(`${p.name} mastered: research ${RESEARCH.max}. Its piece drops ${Math.round((RESEARCH.perk.drop - 1) * 100)}% more often, and you deal ${Math.round((RESEARCH.perk.dmg - 1) * 100)}% more damage to it.`)}">${glyph('mastered')}</span>`;
 const unknownTip = (what, by) => `${what}: ???\nBreak one ${by.name} to decode what it does.`;
 function guardMarks(s, v, p, fc) {
   const max = p.max || 1, at = (n) => `${((Math.max(0, Math.min(max, n)) / max) * 100).toFixed(2)}%`;
@@ -668,7 +657,7 @@ export function boardMarkup(s, selected, preview = null) {
     const guard = alive(p) ? guardMarks(s, e.virus, p, fc) : '';
     const gearMark = onParts[p.id] ? `<span class="gpart" title="${esc(`${list2(onParts[p.id])}: live on the ${p.name} now.`)}">${glyph('protocol')}</span>` : '';
     return `<button type="button"${fade} class="brow bpart ${dying(p) ? 'dying' : ''} ${selected === p.id ? 'selected' : ''} ${nowHit ? 'now' : ''} ${p.maxArmor && !p.armor ? 'cracked' : ''} ${marks.map((k) => 'm-' + k).join(' ')}" data-target="${esc(p.id)}" ${fighting ? '' : 'disabled'} title="Target ${esc(p.name)}: ${spike}">
-      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${ticksMarkup(s, p)}</span><span class="part-tags">${cueTag}${partTags(s, p)}</span></div>
+      <div class="bcell bname" title="${esc(partTip(s, e.virus, p))}">${ties[ri]}${pips(p.id)}<span class="part-top"><span class="part-name">${esc(p.name)}${known ? '' : '<sup class="unk">?</sup>'}${mastered(s, e.virus, p) ? masteredMark(p) : ''}</span>${gearMark}${marksMarkup(marks)}${chitsMarkup(p, fc.chits[p.id] || 0)}<span class="part-hp">${p.integrity}/${p.max}</span></span><span class="part-bar${guard ? ' guarded' : ''}"><span style="width:${pct}%"></span>${lossMark(p.integrity, p.max, fc.parts[p.id] || 0)}${guard}${ticksMarkup(s, p)}</span><span class="part-tags">${cueTag}${partTags(s, p)}</span></div>
       ${showCells ? cells : '<div class="bcell span4"></div>'}</button>`;
   }).join('');
   // A fight whose parts protect each other keeps the tethers' gutter after the last one goes, so the rows don't jump.
@@ -696,7 +685,7 @@ function raidRow(s) {
   return `<div class="brow braid"><div class="bcell bname"><b>${esc(s.encounter.virus.name)}</b><small class="quiet">${list.length ? 'what it does next' : 'nothing announced'}</small></div>${cells}</div>`;
 }
 
-const LOG_CLASS = { cut: 'you', 'tick-wasted': 'dim', telegraph: 'warn', reroute: 'bad', miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you' };
+const LOG_CLASS = { cut: 'you', 'tick-wasted': 'dim', telegraph: 'warn', reroute: 'bad', miss: 'warn', evaded: 'good', regen: 'dim', 'pack-hit': 'bad', heal: 'good',  resolved: 'you', 'server-hit': 'bad', encrypt: 'bad', encrypted: 'bad', decrypted: 'good', blind: 'bad', spawn: 'bad', crashed: 'bad', broken: 'good', loot: 'good', victory: 'good', scan: 'good', trace: 'good', armor: 'you', patch: 'warn', warning: 'warn', 'daemon-set': 'daemon', fled: 'warn', interrupt: 'you', status: 'you', vault: 'note', hold: '', 'trace-lost': 'warn', 'warning-soft': 'warn', blocked: 'note', intrusion: 'note', engage: 'note', damage: 'you', research: 'note', mastered: 'good' };
 
 // Whose half of the cycle is playing: 'you' (you and your crew), 'them' (the virus), or 'wait' (your move).
 export function phaseOf(s) {

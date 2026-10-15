@@ -1,19 +1,20 @@
-// A virus's genome in play (docs/genome.md): the gene codex, `scan` and `inspect`. genes.mjs is the library and
-// authors.mjs who writes them; data.mjs puts genes and an author on every virus it builds.
+// A virus's genome in play (docs/genome.md): `scan`, `inspect` and the rules' chips. genes.mjs is the library and
+// authors.mjs who writes them; data.mjs puts genes and an author on every virus it builds. "Gene" is a word for the
+// code only: the player reads rules, parts and mutations (the Codex's part research, research.mjs, is what decodes).
 //
-// The codex learns gene by gene, so knowing Ward on a ransomware virus means knowing it on a worm:
+// What a rule's chip shows (chipOf):
 //   unknown  never met: ??? with its category
-//   seen     it was in a fight with you (a tell, once it was said): its name, axis and category, and who used it
-//   decoded  you broke a part that carries it, read it (a tell, the Mimic's beat), or beat two viruses that carry it
-//            (a rule): its whole rule, its telegraph and its answers
-// State lives in s.geneCodex ({ id: { seen, decoded, kills, by } }). A save from before genes has none: what its
-// part codex (s.codex, kept as it was) and the families it met (s.met) say is read as genes, so nothing is lost and
-// nothing migrates.
-import { GENES, GENE_IDS, CATS, AXES, partGenes } from './genes.mjs';
+//   seen     it was in a fight with you (a tell, once it was said): its name, axis and category
+//   decoded  its rule and its answer. A part's rule (decode 'part'): a part that carries it is at research 5
+//            (research.mjs). A tell's: you answered it once. A mutation's or a whole-virus rule's (decode 'kills'):
+//            you beat two viruses that carry it (the Codex's mutation page)
+// State lives in s.geneCodex ({ id: { seen, decoded, kills, by } }) for what isn't a part's, and s.research for a part's.
+import { GENES, CATS, AXES, partGenes } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
-import { FAMILIES, STRAINS, GUARDS, genomeOf } from './data.mjs';
+import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, genomeOf } from './data.mjs';
 import { emit, warn, alive, familyInfo, classOf } from './combat.mjs';
 import { plannedTells } from './tells.mjs';
+import { RESEARCH, TIER } from './research.mjs';
 
 // ---------- a virus's genes ----------
 // Its genes (data.mjs createVirus), or, for a virus from a save before genes, read off its parts.
@@ -29,15 +30,16 @@ export const authorName = (id) => AUTHORS[id]?.name || null;
 export const bylined = (v) => (v.author && AUTHORS[v.author] ? `${v.name} · ${AUTHORS[v.author].name}` : v.name);
 
 // ---------- the codex ----------
-// What a save from before genes knew: each part it decoded (family or strain : part) decodes its genes, and each
-// family or strain it met shows its core parts' genes as seen.
-const SPECS = Object.fromEntries([...Object.entries(FAMILIES), ...Object.entries(STRAINS), ...Object.entries(GUARDS)].map(([k, f]) => [k, f.parts]));
-const legacyDecoded = (s, id) => Object.keys(s.codex || {}).some((key) => { const [k, pid] = key.split(':'); const spec = SPECS[k]?.find((p) => p.id === pid); return spec && partGenes(spec).includes(id); });
+// A family or strain met shows its core parts' rules as seen (a save from before the record). A part's rule is decoded
+// once any part that carries it is at research 5 (research.mjs).
+const SPECS = Object.fromEntries([...Object.entries(FAMILIES), ...Object.entries(ROOM_FAMILIES), ...Object.entries(STRAINS), ...Object.entries(GUARDS)].map(([k, f]) => [k, f.parts]));
+const specAt = (key) => { const [k, pid] = key.split(':'); return SPECS[k]?.find((p) => p.id === pid) || null; };
+const ruleKnown = (s, id) => Object.entries(s.research || {}).some(([key, n]) => n >= TIER.rule && partGenes(specAt(key)).includes(id));
 const legacySeen = (s, id) => Object.keys(s.met || {}).some((k) => (SPECS[k] || []).some((p) => !p.pool && partGenes(p).includes(id)));
 const entry = (s, id) => (s.geneCodex ||= {})[id] ||= { seen: 0, decoded: 0, kills: 0, by: [] };
 export function geneState(s, id) {
   const x = s.geneCodex?.[id];
-  if (x?.decoded || legacyDecoded(s, id)) return 'decoded';
+  if (GENES[id]?.decode === 'part' ? ruleKnown(s, id) : x?.decoded) return 'decoded';
   if (x?.seen || legacySeen(s, id)) return 'seen';
   return 'unknown';
 }
@@ -53,23 +55,19 @@ export function seeGene(s, id, author = null) {
   x.seen = 1;
   if (author && !x.by.includes(author)) x.by.push(author);
 }
-// Decode a gene (once). Returns true the first time.
+// Decode a rule that isn't a part's (once). Returns true the first time. A part's rule decodes by research only.
 export function decodeGene(s, id) {
-  if (!GENES[id] || s.who || decoded(s, id)) return false;
+  if (!GENES[id] || GENES[id].decode === 'part' || s.who || decoded(s, id)) return false;
   const x = entry(s, id);
   x.seen = 1; x.decoded = 1;
   return true;
 }
-// A part broke: the genes it carries are decoded. Returns their names, for the codex line.
-export function breakGenes(s, p) {
-  return partGenes(p).filter((id) => GENES[id].decode === 'part' && decodeGene(s, id)).map((id) => GENES[id].name);
-}
-// A tell was read (tells.mjs): its gene is decoded, said or not before.
+// A tell was read (tells.mjs): its chip shows its rule from now on. The part it rides earns the research (tells.mjs).
 export function readGene(s, t) {
   const id = t?.gene;
   if (!GENES[id] || s.who) return;
   seeGene(s, id, s.encounter?.virus?.author);
-  if (decodeGene(s, id)) emit(s, 'info', `${GENES[id].name} decoded. The codex has its rule now.`, { gene: id });
+  decodeGene(s, id);
 }
 // A win: a rule gene decodes once you've beaten two viruses that carry it.
 export function winGenes(s, v) {
@@ -78,10 +76,9 @@ export function winGenes(s, v) {
     if (GENES[g.id].decode !== 'kills' || decoded(s, g.id)) continue;
     const x = entry(s, g.id);
     x.kills = (x.kills || 0) + 1;
-    if (x.kills >= 2 && decodeGene(s, g.id)) emit(s, 'info', `${GENES[g.id].name} decoded: two kills of it. The codex has its rule now.`, { gene: g.id });
+    if (x.kills >= 2 && decodeGene(s, g.id) && GENES[g.id].mutation) emit(s, 'info', `${GENES[g.id].name} decoded: two kills of it. The Codex has its answer now.`, { mutation: g.id });
   }
 }
-export const codexCount = (s) => ({ decoded: GENE_IDS.filter((id) => decoded(s, id)).length, seen: GENE_IDS.filter((id) => geneState(s, id) !== 'unknown').length, total: GENE_IDS.length });
 
 // ---------- the Codex tab's record (codex.mjs reads it) ----------
 // s.dex: what you've met beyond the genes. kills { family, strain or guard: n }, fought and won { boss: n }, tells
@@ -161,11 +158,11 @@ export function inspect(s, arg) {
   const p = ps.find((x) => x.id === arg || x.name.toLowerCase() === arg) || ps.find((x) => x.id.startsWith(arg) || x.name.toLowerCase().startsWith(arg));
   if (!arg || !p) return warn(s, `inspect <part>: ${ps.map((x) => x.id).join(', ')}.`);
   const ids = partGenes(p), deep = scannedDeep(s, e.virus);
-  if (!ids.length) return emit(s, 'info', `The ${p.name} carries no gene of its own.`, { target: p.id, inspect: true });
+  if (!ids.length) return emit(s, 'info', `The ${p.name} carries no rule of its own.`, { target: p.id, inspect: true });
   const lines = ids.map((id) => {
     const c = chipOf(s, id, 'part', deep);
     if (c.rule) return `${c.name} is ${an(c.catName)} ${c.catName} that presses on ${c.axisName}. ${c.rule} ${c.answer}`;
-    return `You haven't decoded ${c.name || `this ${c.catName}`} yet. Break a part that carries it to learn what it does.`;
+    return `You haven't learned ${c.name || `this ${c.catName}`} yet. Research the ${p.name} to ${RESEARCH.tiers[1]} to learn what it does.`;
   });
   return emit(s, 'info', `The ${p.name}${alive(p) ? '' : ', broken,'} carries ${named(ids.map((id) => chipOf(s, id, 'part', deep)))}.\n${lines.join('\n')}`, { target: p.id, inspect: true });
 }

@@ -2,21 +2,23 @@
 // what you've found out about each. Pure: it reads the save and the content tables, and builds sample viruses that it
 // throws away.
 //
-//   entries(s)        the index: groups (Families, Strains, Guards & ICE, Bosses, Mutations, Genes), each row its name
-//                     (or ??? until met), its icon and a small count (parts decoded, wins, kills toward a decode)
+//   entries(s)        the index: groups (Families, Strains, Guards & ICE, Bosses, Mutations), each row its name (or
+//                     ??? until met), its icon and a small count (its research %, wins, kills toward a decode)
 //   entryOf(s, key)   one entry's page data: the sample virus at your level, its parts with what you know of each,
 //                     its attack sets (with their timing) and tells, each known or not, and its loot
 //
 // What unlocks what (the same rules as the fight board): an entry's name once you've met it (s.met, a boss once fought:
-// s.dex.fought); a part's name once you've fought its family or seen its gene, its numbers and rule once it's decoded
-// (combat.mjs knowsPart); an attack set once you've faced it in a room (s.dex.sets, and each server's floorplan
-// codex); a tell once one was said in your fight (s.dex.tells); a boss's phases once you've fought it.
+// s.dex.fought); a part's name once you've fought its family (a third part: once you've met one), then by its research
+// (research.mjs): its numbers at 1, its rule, answer and tells at 5, its loot at 20; an attack set once you've faced it
+// in a room (s.dex.sets, and each server's floorplan codex); a tell once one was said in your fight (s.dex.tells); a
+// boss's phases once you've fought it.
 import { FAMILIES, ROOM_FAMILIES, STRAINS, GUARDS, BOSSES, MUTATIONS, ROLLED_MUTATIONS, TELLS, TELL, CONFIG, SERVER, createVirus } from './data.mjs';
 import { ATTACK_SETS, AUTHOR_FAMILIES, OPENS, applySet } from './families.mjs';
-import { GENES, GENE_IDS, CATS, AXES, partGenes } from './genes.mjs';
+import { GENES, AXES } from './genes.mjs';
 import { AUTHORS, crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 import { geneState } from './genome.mjs';
-import { knowsPart, hackerLevel, bossUniques } from './combat.mjs';
+import { knowsPart, hackerLevel, bossUniques, codexKey } from './combat.mjs';
+import { researchAt, tierAt, pctOf } from './research.mjs';
 import { plannedTells, findSource, tierOf, answerOf } from './tells.mjs';
 import { ROOMS } from './floorplan.mjs';
 
@@ -26,7 +28,6 @@ export const GROUPS = [
   { id: 'guard', name: 'Guards & ICE' },
   { id: 'boss', name: 'Bosses' },
   { id: 'mutation', name: 'Mutations' },
-  { id: 'gene', name: 'Genes' },
 ];
 const FAMILY_ICON = { ransomware: 'lock', worm: 'worm', ghostroot: 'stealth', trojan: 'crate', cryptominer: 'kernel', wiper: 'scrubber' };
 const GUARD_ICON = { watchdog: 'watchman', sentinel: 'ids', crawler: 'spider', shredder: 'claw', bouncer: 'firewall', tracer: 'tracer' };
@@ -50,7 +51,7 @@ function met(s, group, id) {
   if (group === 'family' || group === 'strain' || group === 'guard') return !!s.met?.[id] || killsOf(s, id) > 0;
   if (group === 'boss') return bossFought(s, id);
   if (group === 'mutation') return geneState(s, MUTATIONS[id].gene) !== 'unknown' || !!dex(s).muts?.[id]?.length;
-  return true; // a gene category: its name is no secret, its genes are ??? one by one
+  return false;
 }
 
 // ---------- sample viruses ----------
@@ -92,7 +93,7 @@ function familyRow(s, group, id) {
   const known = met(s, group, id), body = group === 'strain' ? STRAINS[id] : bodyOf(id);
   const parts = known ? partsOf(s, group, id) : [];
   const icon = group === 'family' ? FAMILY_ICON[id] : group === 'guard' ? GUARD_ICON[id] : FAMILY_ICON[STRAINS[id].lineage];
-  return { key: `${group}:${id}`, group, id, name: known ? body.name : null, icon: icon || 'module', known, count: known ? { n: parts.filter((p) => p.known).length, of: parts.length } : null };
+  return { key: `${group}:${id}`, group, id, name: known ? body.name : null, icon: icon || 'module', known, count: null, pct: known ? pctOf(parts.map((p) => p.research)) : null };
 }
 export function entries(s) {
   const rows = [];
@@ -101,15 +102,12 @@ export function entries(s) {
   for (const id of Object.keys(GUARDS)) rows.push(familyRow(s, 'guard', id));
   for (const id of Object.keys(BOSSES)) {
     const known = bossFought(s, id), won = dex(s).won?.[id] || 0;
-    rows.push({ key: `boss:${id}`, group: 'boss', id, name: known ? BOSSES[id].name : null, icon: BOSSES[id].raid ? 'raid' : 'bounty', known, count: null, note: known ? (won ? `×${won}` : 'fought') : null });
+    const pct = known && !BOSSES[id].raid ? pctOf(bossParts(s, id).map((p) => p.research)) : null;
+    rows.push({ key: `boss:${id}`, group: 'boss', id, name: known ? BOSSES[id].name : null, icon: BOSSES[id].raid ? 'raid' : 'bounty', known, count: null, pct, note: known && pct == null ? (won ? `×${won}` : 'fought') : null });
   }
   for (const id of ROLLED_MUTATIONS) {
     const known = met(s, 'mutation', id), g = GENES[MUTATIONS[id].gene], st = geneState(s, g.id);
     rows.push({ key: `mutation:${id}`, group: 'mutation', id, name: known ? MUTATIONS[id].name : null, icon: AXES[g.axis].icon, known, count: known ? { n: st === 'decoded' ? 2 : Math.min(1, s.geneCodex?.[g.id]?.kills || 0), of: 2 } : null, decoded: st === 'decoded' });
-  }
-  for (const [c, cat] of Object.entries(CATS)) {
-    const ids = GENE_IDS.filter((id) => GENES[id].cat === c);
-    rows.push({ key: `gene:${c}`, group: 'gene', id: c, name: cat.name, icon: cat.icon, known: true, count: { n: ids.filter((id) => geneState(s, id) === 'decoded').length, of: ids.length } });
   }
   return GROUPS.map((g) => ({ ...g, rows: rows.filter((r) => r.group === g.id), met: rows.filter((r) => r.group === g.id && r.known).length }));
 }
@@ -117,21 +115,23 @@ export function entries(s) {
 export const firstKey = (s) => entries(s)[0].rows.find((r) => r.known)?.key || `family:${familyIds()[0]}`;
 export const validKey = (key) => {
   const [g, id] = String(key || '').split(':');
-  return (g === 'family' && !!bodyOf(id) && !GUARDS[id]) || (g === 'strain' && !!STRAINS[id]) || (g === 'guard' && !!GUARDS[id]) || (g === 'boss' && !!BOSSES[id]) || (g === 'mutation' && ROLLED_MUTATIONS.includes(id)) || (g === 'gene' && !!CATS[id]);
+  return (g === 'family' && !!bodyOf(id) && !GUARDS[id]) || (g === 'strain' && !!STRAINS[id]) || (g === 'guard' && !!GUARDS[id]) || (g === 'boss' && !!BOSSES[id]) || (g === 'mutation' && ROLLED_MUTATIONS.includes(id));
 };
 
 // ---------- a body's page ----------
 // Its parts, each with its sample at your level (or at the level it opens, if that's later): { spec, part, virus,
-// level, from, named (its name is yours to see), known (decoded: its numbers and rule) }.
+// level, from, named (its name is yours to see), research (0 to 20, research.mjs), tier (0, 1, 5 or 20), known
+// (decoded: research 1, its numbers) }.
 export function partsOf(s, group, id) {
   const L = levelOf(s), specs = specsOf(group, id), thirds = specs.filter((x) => x.gene);
   const first = thirds.find((x) => x.from <= L)?.gene || null; // the core parts as a virus at your level brings them
   return specs.map((x) => {
     const level = Math.max(L, x.from), v = sampleOf(group, id, level, x.gene || (x.from <= L ? first : null));
     const p = v.parts.find((q) => q.id === x.spec.id) || null;
-    const genes = partGenes(x.spec);
-    const named = met(s, group, id) && (!x.gene || genes.some((g) => geneState(s, g) !== 'unknown') || (p && knowsPart(s, v, p)));
-    return { spec: x.spec, part: p, virus: v, level, from: x.from, gene: x.gene, named: !!named, known: !!p && met(s, group, id) && knowsPart(s, v, p) };
+    // A third part: named once you've met one (its own rule seen in a fight), or researched it.
+    const named = met(s, group, id) && (!x.gene || geneState(s, x.gene) !== 'unknown' || (p && knowsPart(s, v, p)));
+    const n = p && met(s, group, id) ? researchAt(s, codexKey(v, p)) : 0;
+    return { spec: x.spec, part: p, virus: v, level, from: x.from, gene: x.gene, named: !!named, research: n, tier: tierAt(n), known: !!p && met(s, group, id) && knowsPart(s, v, p) };
   });
 }
 // The authors who write it: its family's crew and the authors whose servers field it, or a build's or a boss's own.
@@ -208,6 +208,35 @@ export function tellsOf(s, group, id) {
     return { name, kind: def.kind, part: p?.name || null, level, elite, seen: tellSeen(s, name), does: tellDoes(def, p, at), answer: cap(answerOf(def, p)) + '.' };
   });
 }
+// A solo boss as a fight builds it at your level (its floor, if that's later), sized as a boss room: its parts share
+// their research with its family's or strain's (combat.mjs codexKey).
+const bossBuilt = new Map();
+export function bossSample(s, id) {
+  const B = BOSSES[id], L = Math.max(levelOf(s), B.floor || 1), key = `${id}:${L}`;
+  if (bossBuilt.has(key)) return bossBuilt.get(key);
+  const st = B.strain && STRAINS[B.strain];
+  const v = createVirus(st ? B.strain : 'random', 4821, { family: B.family || 'ransomware', threat: SERVER.threat(L), run: true, mutation: null, boss: id, ...(B.strain ? { strain: B.strain } : {}) });
+  const S = ROOMS.size.boss;
+  for (const p of v.parts) {
+    p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
+    const a = p.attack;
+    if (a && ['damage', 'encrypt'].includes(a.effect)) a.amount = Math.max(1, Math.round(a.amount * S.dmg));
+    if (a?.hit) a.hit = Math.max(1, Math.round(a.hit * S.dmg));
+  }
+  v.id = `codex-boss-${id}-${L}`; v.author = null;
+  const out = { level: L, virus: v };
+  bossBuilt.set(key, out);
+  return out;
+}
+// Its parts, in a body's part shape (partsOf): every one is named once you've fought it.
+export function bossParts(s, id) {
+  if (BOSSES[id].raid) return [];
+  const { level, virus } = bossSample(s, id), fought = bossFought(s, id);
+  return virus.parts.filter((p) => p.kind !== 'fragment').map((p) => {
+    const n = fought ? researchAt(s, codexKey(virus, p)) : 0;
+    return { spec: p, part: p, virus, level, from: 1, gene: null, named: fought, research: n, tier: tierAt(n), known: fought && knowsPart(s, virus, p) };
+  });
+}
 // A solo boss brings every tell open at its level, at least three (TELL.boss.count): its own set, or its strain's with
 // the charge under its own name, or its family's.
 function bossTells(s, id) {
@@ -233,7 +262,7 @@ export function entryOf(s, key) {
     return {
       ...base, name: body.name, stem: body.stem || null, threatens: body.threatens || (lineage ? bodyOf(lineage)?.threatens : null), summary: body.summary || null,
       rule: body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
-      kills: killsOf(s, id), authors: authorsOf(group, id), parts, sets: group === 'family' ? setsOf(s, id) : [], tells: tellsOf(s, group, id),
+      kills: killsOf(s, id), authors: authorsOf(group, id), parts, research: pctOf(parts.map((p) => p.research)), sets: group === 'family' ? setsOf(s, id) : [], tells: tellsOf(s, group, id),
       art: parts.find((x) => !x.gene)?.virus || parts[0]?.virus,
     };
   }
@@ -244,6 +273,7 @@ export function entryOf(s, key) {
     return {
       ...base, name: B.name, family: B.family || null, strain: B.strain || null, raid: !!B.raid, about: B.about || null, signature: B.signature || null, hp: B.hp, enrageAt: B.enrageAt, floor: B.floor || null,
       lair: B.lair || null, fought: dex(s).fought?.[id] || 0, won: dex(s).won?.[id] || 0, authors: authorsOf('boss', id), phases, tells: tellsOf(s, 'boss', id), uniques,
+      parts: bossParts(s, id),
       enrage: B.raid ? B.raid.enrage?.name || null : null,
     };
   }
@@ -252,6 +282,5 @@ export function entryOf(s, key) {
     const on = (dex(s).muts?.[id] || []).map((k) => STRAINS[k]?.name || bodyOf(k)?.name || k);
     return { ...base, name: m.name, rule: m.rule, axis: AXES[g.axis], decoded: st === 'decoded', kills: Math.min(2, s.geneCodex?.[g.id]?.kills || 0), telegraph: g.telegraph, answer: g.answer, opens: g.opens, on };
   }
-  if (group === 'gene') return { ...base, name: CATS[id].name, cat: id };
   return base;
 }

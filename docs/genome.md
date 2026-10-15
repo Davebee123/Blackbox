@@ -1,5 +1,7 @@
 # Genome: authored viruses, built from genes
 
+> **Note: genes are cut from the player's view.** The designer: "Genes are not computer virus properties though." The player no longer reads genes, a genome or decoded genes anywhere (the Codex's Genes group and gene card, the decode lines, tooltips, tips and docs are gone). What you learn about a virus is **part research**: each part's own count, earned by breaking it, cutting its move and answering its tells, that reveals its numbers, then its rule and answer, then its loot and a mastery perk. See GAME_RULES.md *Part research* (and `dist/research.mjs`). The gene library stays in the code (`genes.mjs`, `genome.mjs`, gene ids) as the shape the content is built from; this sheet is the historical design.
+
 This began as a design for review. Phases 0 and 1 are now built, and section 15 says what shipped and what it measured. The rest is still design. It proposes one model for every virus in the game: a virus is a body (its family) plus a set of **genes**, and a hacker crew wrote it. Bosses are fixed gene sets with one signature mechanic each. Loot reads the genes too: what drops from a virus carries a line against what that virus did to you.
 
 The measurements in this sheet come from throwaway scripts run against the current code (the planner bot, Tuned gear, every subclass, six seeds a cell, run fights). Prototype numbers come from in-memory patches in those scripts. No game file was changed.

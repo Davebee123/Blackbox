@@ -40,8 +40,8 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 import { situationOf } from './situations.mjs';
-import { seeGenes, breakGenes, winGenes, genomeCommand, virusGenes, bylined, decoded, logFight, logWin, dexOf } from './genome.mjs';
-import { partGenes } from './genes.mjs';
+import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
+import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER } from './research.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
@@ -106,6 +106,7 @@ export function fresh() {
     architecture: null, // fortress | hub | lab, picked at server level 20
   };
   dexOf(s); // the Codex tab's record: kills, bosses fought, tells and sets met (genome.mjs)
+  researchOf(s); // part research (research.mjs): empty
   initMail(s); // the first LOWLIGHT mail is waiting
   return bindRooms(s);
 }
@@ -277,6 +278,7 @@ export function damageMultiplier(s, p, opts = {}) {
   }
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
   if (!opts.server) m *= classMult('dealt', s, p, opts);
+  m *= masteryDmg(s, e.virus, p); // a part you've mastered takes 3% more from all of yours (research.mjs; never a crewmate's)
   return m;
 }
 
@@ -1686,7 +1688,7 @@ function engage(s) {
   raidStart(s); // a crew boss (raid.mjs): its mechanics, once the crew is in
   // Mutex: the part it locks starts the fight behind its shield (sized once the crew has made the virus bigger).
   for (const m of livingParts(s).filter((x) => x.lock)) { const t = part(s, m.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } }
-  seeGenes(s, e.virus); // the gene codex: what you fight, you've seen (genome.mjs)
+  seeGenes(s, e.virus); // the rules' chips: what you fight, you've seen (genome.mjs)
   logFight(s, e.virus); // the Codex tab: a boss fought, a mutation and what it rode on (genome.mjs)
   prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
   tellStart(s); // a solo fight's tells (tells.mjs)
@@ -1782,7 +1784,7 @@ export function finish(s, result) {
   // Every tell in the fight read (two or more said, each answered by a command, none landed): a clean read (tells.mjs).
   if (result === 'victory' && e.metrics.tells) { const xs = Object.values(e.metrics.tells), said = xs.reduce((n, x) => n + x.said, 0); e.cleanRead = said >= TELL.read.min && xs.every((x) => x.read >= x.said && !x.landed); }
   if (result === 'victory' && e.virus.boss) bossUnique(s, e.virus.boss, e.virus.level);
-  if (result === 'victory') winGenes(s, e.virus); // the gene codex: rule genes decode at two kills (genome.mjs)
+  if (result === 'victory') winGenes(s, e.virus); // a mutation's rule decodes at two kills (genome.mjs)
   if (result === 'victory') logWin(s, e.virus); // the Codex tab's kill counts (genome.mjs)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
   s.reports.push(structuredClone(e.metrics));
@@ -2559,18 +2561,13 @@ export function soonestAttacker(s, except = null) {
   return attackers(s).filter((p) => p.id !== except).sort((a, b) => a.attack.due - b.attack.due || b.attack.amount - a.attack.amount)[0] || livingParts(s).find((p) => p.id !== except) || null;
 }
 
-// The codex: what a virus component does stays ??? until you've broken one (its name always shows,
-// so you can target it). Keyed by strain or family, and the part. The gene codex (genome.mjs) reads across bodies:
-// a part whose genes you've all decoded is known on sight, whatever virus carries it.
+// The codex: what a virus component does stays ??? until you've researched it (research.mjs: a break, a cut or a tell
+// answered; its name always shows, so you can target it). Keyed by strain or family, and the part.
 export const codexKey = (v, p) => `${v.strain || v.family}:${p.id}`;
-export const knowsPart = (s, v, p) => p.kind === 'fragment' || !!s.codex?.[codexKey(v, p)] || (partGenes(p).length > 0 && partGenes(p).every((id) => decoded(s, id)));
+export const knowsPart = (s, v, p) => knowsAt(s, v, p, TIER.decoded);
 function breakPart(s, p) {
   const e = s.encounter;
-  // The first time you break a part: it's decoded in the Codex, and that pays two kills of XP.
-  // Its genes go into the gene codex (genome.mjs); the XP stays with the part, as it was.
-  const genes = p.kind !== 'fragment' && !s.who ? breakGenes(s, p) : [];
-  if (p.kind !== 'fragment' && !s.codex?.[codexKey(e.virus, p)] && !s.who) { (s.codex ||= {})[codexKey(e.virus, p)] = true; emit(s, 'codex', `${p.name} decoded${genes.length ? `, and with it ${genes.join(' and ')}` : ''}. Hover it to see what it does.`, { target: p.id, genes }); gainXp(s, xpFor(s, e.virus.level, DECODE_XP), `${p.name} decoded`, 'intel'); }
-  else if (genes.length) emit(s, 'info', `${genes.join(' and ')} decoded. The codex has ${genes.length === 1 ? 'its rule' : 'their rules'} now.`, { target: p.id, genes });
+  gainResearch(s, e.virus, p, 'break'); // +1 research on the part (not a crewmate's break, not a fragment)
   e.metrics.breakOrder.push(p.id);
   if (p.kind !== 'fragment') e.breaks = (e.breaks || 0) + 1;
   // Mirror: break one twin while the other lives, and it reboots a few cycles later (at most twice).
@@ -2611,7 +2608,7 @@ function breakPart(s, p) {
     if (next) { e.virus.weakPoint = next.id; e.virus.weakKnown = false; }
     if (wasKnown && next && usable(s).includes('scan')) emit(s, 'info', 'A new weak point formed. Scan to find it.');
   }
-  if (p.loot && rand(s) < CONFIG.salvageChance * richMult(s, fightNet(s), 'salvage')) { // a network rich in salvage (network.mjs)
+  if (p.loot && rand(s) < CONFIG.salvageChance * richMult(s, fightNet(s), 'salvage') * masteryDrop(s, e.virus, p)) { // a network rich in salvage (network.mjs); a part you've mastered drops 25% more (research.mjs)
     s.salvage.push({ name: p.loot, virus: e.virus.name, seed: e.seed });
     e.metrics?.loot?.push(p.loot);
     emit(s, 'loot', `${p.loot} recovered.`, { target: p.id });
@@ -3940,6 +3937,7 @@ export function restore(raw) {
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
     dexOf(s); // the Codex tab's record (genome.mjs): an older save starts it empty (its sets come from each server's floorplan codex)
+    researchOf(s); // part research (research.mjs): an older save's decoded parts start at 1
     initMail(s);
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;
