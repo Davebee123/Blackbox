@@ -27,7 +27,7 @@ const server = (seed = 7, author = null) => {
 };
 const place = (s, id) => { s.rooms.at = id; s.rooms.visit.walked[id] = true; s.rooms.screen = null; FP.look(s); };
 const win = (s) => { s.encounter.virus.parts.forEach((p) => { p.integrity = 0; }); finish(s, 'victory'); FP.settle(s); };
-const KEYS = [...[...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)].map((id) => `family:${id}`), ...Object.keys(STRAINS).map((id) => `strain:${id}`), ...Object.keys(GUARDS).map((id) => `guard:${id}`), ...Object.keys(BOSSES).map((id) => `boss:${id}`), ...ROLLED_MUTATIONS.map((id) => `mutation:${id}`)];
+const KEYS = [...[...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)].map((id) => (ROOM_FAMILIES[id]?.runner ? `runner:${id}` : `family:${id}`)), ...Object.keys(STRAINS).map((id) => `strain:${id}`), ...Object.keys(GUARDS).map((id) => `guard:${id}`), ...Object.keys(BOSSES).map((id) => `boss:${id}`), ...ROLLED_MUTATIONS.map((id) => `mutation:${id}`)];
 const rowsOf = (html) => [...html.matchAll(/<button type="button" class="cx-row([^"]*)" data-codex="([^"]+)"[^>]*>.*?<span class="cx-name">([^<]*)<\/span>/g)].map(([, cls, key, name]) => ({ key, unknown: cls.includes('unknown'), on: cls.includes(' on'), name }));
 
 test('the Codex is a top-level tab between Loadout and System, and typing codex opens it', () => {
@@ -227,7 +227,8 @@ test('the index lists every family a player can meet, old and room bodies, with 
   s.met = { trojan: true };
   s.research = { 'trojan:courier': 1 };
   const fam = entries(s).find((g) => g.id === 'family');
-  assert.deepEqual(fam.rows.map((r) => r.id), [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)]);
+  assert.deepEqual(fam.rows.map((r) => r.id), [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES).filter((id) => !ROOM_FAMILIES[id].runner)]);
+  assert.deepEqual(entries(s).find((g) => g.id === 'runner').rows.map((r) => r.key), ['runner:mule'], 'the Mule has its own row (Runners)');
   const t = fam.rows.find((r) => r.id === 'trojan');
   assert.deepEqual([t.name, t.pct], ['Trojan', 3], 'two parts: 1 of 20 and 0 of 20, an average of 2.5%');
   assert.match(codexPageMarkup(s, 'family:trojan'), /<small class="cx-n" title="The average research of its parts">3%<\/small>/);

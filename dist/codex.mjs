@@ -2,7 +2,7 @@
 // what you've found out about each. Pure: it reads the save and the content tables, and builds sample viruses that it
 // throws away.
 //
-//   entries(s)        the index: groups (Families, Strains, Guards & ICE, Bosses, Mutations), each row its name (or
+//   entries(s)        the index: groups (Families, Strains, Guards & ICE, Runners, Bosses, Mutations), each row its name (or
 //                     ??? until met), its icon and a small count (its research %, wins, kills toward a decode)
 //   entryOf(s, key)   one entry's page data: the sample virus at your level, its parts with what you know of each,
 //                     its attack sets (with their timing) and tells, each known or not, and its loot
@@ -26,12 +26,15 @@ export const GROUPS = [
   { id: 'family', name: 'Families' },
   { id: 'strain', name: 'Strains' },
   { id: 'guard', name: 'Guards & ICE' },
+  { id: 'runner', name: 'Runners' }, // the Mule: a room body that runs (families.mjs, runner: true)
   { id: 'boss', name: 'Bosses' },
   { id: 'mutation', name: 'Mutations' },
 ];
 const FAMILY_ICON = { ransomware: 'lock', worm: 'worm', ghostroot: 'stealth', trojan: 'crate', cryptominer: 'kernel', wiper: 'scrubber' };
 const GUARD_ICON = { watchdog: 'watchman', sentinel: 'ids', crawler: 'spider', shredder: 'claw', bouncer: 'firewall', tracer: 'tracer' };
-const familyIds = () => [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES)];
+const familyIds = () => [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES).filter((id) => !ROOM_FAMILIES[id].runner)];
+const runnerIds = () => Object.keys(ROOM_FAMILIES).filter((id) => ROOM_FAMILIES[id].runner);
+const RUNNER_ICON = { mule: 'credits' };
 const bodyOf = (id) => FAMILIES[id] || ROOM_FAMILIES[id] || GUARDS[id] || null;
 export const SET_CYCLES = 12; // the attack sets' timing strip: cycles 1 to 12
 
@@ -48,7 +51,7 @@ export function facedSet(s, family, set) {
 export const tellSeen = (s, name) => !!dex(s).tells?.[String(name).toLowerCase()];
 export const bossFought = (s, id) => (dex(s).fought?.[id] || 0) > 0;
 function met(s, group, id) {
-  if (group === 'family' || group === 'strain' || group === 'guard') return !!s.met?.[id] || killsOf(s, id) > 0;
+  if (group === 'family' || group === 'strain' || group === 'guard' || group === 'runner') return !!s.met?.[id] || killsOf(s, id) > 0;
   if (group === 'boss') return bossFought(s, id);
   if (group === 'mutation') return geneState(s, MUTATIONS[id].gene) !== 'unknown' || !!dex(s).muts?.[id]?.length;
   return false;
@@ -65,7 +68,7 @@ export function sampleOf(group, id, level, gene = null, raw = false) {
   const threat = SERVER.threat(level), seed = 4821;
   const v = group === 'strain' ? createVirus(id, seed, { threat, run: true, mutation: null })
     : createVirus('random', seed, { family: id, threat, run: true, mutation: null, genes: gene ? [gene] : [] });
-  const S = ROOMS.size[group === 'guard' ? 'guard' : 'process'];
+  const S = ROOMS.size[group === 'guard' ? 'guard' : group === 'runner' ? 'mule' : 'process'];
   for (const p of v.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
     const a = p.attack;
@@ -74,6 +77,7 @@ export function sampleOf(group, id, level, gene = null, raw = false) {
     if (a?.rampBy) a.rampBy = Math.max(1, Math.round(a.rampBy * S.dmg));
   }
   if (group === 'family' && ATTACK_SETS[id] && !raw) applySet(v, Object.keys(ATTACK_SETS[id])[0], null); // its Standard set (a room body's Courier delivers by it)
+  if (group === 'runner') for (const p of v.parts) p.armor = p.maxArmor = Math.min(p.maxArmor, 1); // a runner wears 1 ◆ at most (floorplan.mjs fight)
   v.id = `codex-${group}-${id}-${gene || 'core'}-${level}${raw ? '-raw' : ''}`;
   v.author = null;
   built.set(key, v);
@@ -92,7 +96,7 @@ function specsOf(group, id) {
 function familyRow(s, group, id) {
   const known = met(s, group, id), body = group === 'strain' ? STRAINS[id] : bodyOf(id);
   const parts = known ? partsOf(s, group, id) : [];
-  const icon = group === 'family' ? FAMILY_ICON[id] : group === 'guard' ? GUARD_ICON[id] : FAMILY_ICON[STRAINS[id].lineage];
+  const icon = group === 'family' ? FAMILY_ICON[id] : group === 'guard' ? GUARD_ICON[id] : group === 'runner' ? RUNNER_ICON[id] : FAMILY_ICON[STRAINS[id].lineage];
   return { key: `${group}:${id}`, group, id, name: known ? body.name : null, icon: icon || 'module', known, count: null, pct: known ? pctOf(parts.map((p) => p.research)) : null };
 }
 export function entries(s) {
@@ -100,6 +104,7 @@ export function entries(s) {
   for (const id of familyIds()) rows.push(familyRow(s, 'family', id));
   for (const id of Object.keys(STRAINS)) rows.push(familyRow(s, 'strain', id));
   for (const id of Object.keys(GUARDS)) rows.push(familyRow(s, 'guard', id));
+  for (const id of runnerIds()) rows.push(familyRow(s, 'runner', id));
   for (const id of Object.keys(BOSSES)) {
     const known = bossFought(s, id), won = dex(s).won?.[id] || 0;
     const pct = known && !BOSSES[id].raid ? pctOf(bossParts(s, id).map((p) => p.research)) : null;
@@ -115,7 +120,7 @@ export function entries(s) {
 export const firstKey = (s) => entries(s)[0].rows.find((r) => r.known)?.key || `family:${familyIds()[0]}`;
 export const validKey = (key) => {
   const [g, id] = String(key || '').split(':');
-  return (g === 'family' && !!bodyOf(id) && !GUARDS[id]) || (g === 'strain' && !!STRAINS[id]) || (g === 'guard' && !!GUARDS[id]) || (g === 'boss' && !!BOSSES[id]) || (g === 'mutation' && ROLLED_MUTATIONS.includes(id));
+  return (g === 'family' && !!bodyOf(id) && !GUARDS[id] && !ROOM_FAMILIES[id]?.runner) || (g === 'runner' && !!ROOM_FAMILIES[id]?.runner) || (g === 'strain' && !!STRAINS[id]) || (g === 'guard' && !!GUARDS[id]) || (g === 'boss' && !!BOSSES[id]) || (g === 'mutation' && ROLLED_MUTATIONS.includes(id));
 };
 
 // ---------- a body's page ----------
@@ -256,12 +261,12 @@ export function entryOf(s, key) {
   const L = levelOf(s), known = met(s, group, id);
   const base = { key, group, id, level: L, known };
   if (!known) return base;
-  if (group === 'family' || group === 'strain' || group === 'guard') {
+  if (group === 'family' || group === 'strain' || group === 'guard' || group === 'runner') {
     const body = group === 'strain' ? STRAINS[id] : bodyOf(id), parts = partsOf(s, group, id);
     const lineage = group === 'strain' ? body.lineage : null;
     return {
-      ...base, name: body.name, stem: body.stem || null, threatens: body.threatens || (lineage ? bodyOf(lineage)?.threatens : null), summary: body.summary || null,
-      rule: body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
+      ...base, name: body.name, stem: body.stem || null, threatens: body.threatens || (lineage ? bodyOf(lineage)?.threatens : null), summary: body.summary || null, escape: group === 'runner' ? CONFIG.mule.escape : null,
+      rule: group === 'runner' ? `It runs from you, a room for each of your moves, and never through a live virus. Caught, it escapes after ${CONFIG.mule.escape} cycles.` : body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
       kills: killsOf(s, id), authors: authorsOf(group, id), parts, research: pctOf(parts.map((p) => p.research)), sets: group === 'family' ? setsOf(s, id) : [], tells: tellsOf(s, group, id),
       art: parts.find((x) => !x.gene)?.virus || parts[0]?.virus,
     };

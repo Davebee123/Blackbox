@@ -392,7 +392,7 @@ export function connect(s, id) {
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
-  else if (relocks(loc) && relockLeft(loc)) warn(s, `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
+  else if (relocks(loc) && relockLeft(loc)) warn(s, loc.rogueRun?.rebootAt > clock() ? `${loc.name} is rebooting. Back in ${relockLeft(loc)}s, every room fresh.` : `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
   else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first with crew sim <class> or crew invite <friend>.`);
   else {
     // A found server joins your network as you connect (the game asks first: app.js).

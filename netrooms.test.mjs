@@ -17,6 +17,7 @@ import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { mapMarkup } from './dist/view.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
+CONFIG.mule.chance = 0; // no Mule in these rooms (mule.test.mjs has it)
 let clock = 1_700_000_000_000;
 hooks.now = () => clock;
 const win = (s) => { for (let i = 0; i < 30 && active(s); i++) { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, attack: null }); const p = s.encounter.virus.parts.find((x) => x.integrity > 0); p.integrity = 1; command(s, 'spike ' + p.id); resolveCycle(s); } FP.settle(s); };
@@ -146,7 +147,7 @@ test('losing a fight on rooms disconnects you and loses the pack; progress stays
   assert.ok(loc.floorplan.opened[loc.floorplan.graph.vaults[0]], 'the vault stays open');
 });
 
-test('respawns run at real speed: a process room 15 minutes, a guard post 20, an elite 45; a rogue folder its 3 to 5', () => {
+test('respawns run at real speed: a process room 15 minutes, a guard post 20, an elite 45; a rogue room stays down for the run', () => {
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
   const kinds = Object.fromEntries(FP.roomList(s).filter((r) => FP.FIGHTS.includes(r.kind)).map((r) => [r.kind, FP.respawnMs(s, r)]));
@@ -154,20 +155,23 @@ test('respawns run at real speed: a process room 15 minutes, a guard post 20, an
   assert.equal(kinds.guard, 20 * 60000);
   if (kinds.elite) assert.equal(kinds.elite, 45 * 60000);
   play(s, 'jack out');
-  // A rogue server: every folder a fight, on its own timer.
+  // A rogue server: a fight room for every folder (and its quiet rooms: mule.test.mjs); a cleared one stays down for the run.
   for (let i = 0; i < 40 && !s.locations.some((l) => l.rogue && !l.farm); i++) { (s.net ||= {}).rogueDry = ROGUE.pity; command(s, 'developer location worm'); }
   const rogue = s.locations.find((l) => l.rogue && !l.farm);
   rogue.lockUntil = 0;
   play(s, 'connect ' + rogue.id);
-  const rooms = FP.roomList(s).filter((r) => r.kind !== 'entry');
-  assert.equal(rooms.length, rogueRooms(rogue).length);
-  assert.ok(rooms.every((r) => r.wild && r.kind === 'process'), 'all fights');
-  const r0 = rooms[0];
-  play(s, 'cd ' + r0.path0); play(s, 'attack'); win(s);
+  const fights = FP.roomList(s).filter((r) => r.wild);
+  assert.deepEqual(fights.map((r) => r.path0).sort(), [...rogueRooms(rogue)].sort(), 'every folder a fight room');
+  assert.ok(fights.every((r) => r.kind === 'process'));
+  const g = s.rooms.graph, quiet = (x) => !g.rooms[x].wild, way = (r) => FP.pathTo(g, s.rooms.at, r.id, quiet);
+  const r0 = fights.find(way);
+  for (const id of way(r0).slice(1)) FP.go(s, id); // through the quiet rooms, to the first fight
+  play(s, 'attack'); win(s);
   const sp = rogue.spawns[r0.path0];
   assert.equal(sp.alive, false);
-  const back = FP.backAt(s, r0) - clock;
-  assert.ok(back >= ROGUE.respawnMs[0] && back <= ROGUE.respawnMs[1], `${back}`);
+  assert.equal(FP.backAt(s, r0), null, 'no timer: it waits for the reboot');
+  clock += ROGUE.respawnMs[1] * 3;
+  assert.equal(FP.isUp(s, r0), false, 'still down this run');
 });
 
 test('root: respawned rooms cleared on a held server climb its pips (2.8); Root 4 says sockets come in R2', () => {

@@ -12,23 +12,27 @@
 //              crew rules. SPRAWL-00: five rooms of strays and RELAY-KING's Core (from level 3, 30 minutes). The farm:
 //              its packs and its three crew bosses, the ledger a vault that opens once the Foreman and the Heatsink
 //              are down.
+// A rogue server (Nest, Pit, Gauntlet: rogue.mjs inRuns) is laid out as a tree of rooms from its seed (rogueGraph): its
+// folders' fight rooms and 2 to 4 quiet rooms woven in (Empty, and Stash: a few credits), at least one of them between
+// the entry and a fight. It runs in clears (rogue.mjs): the full clear jacks you out and reboots it. Each run rolls once
+// for the Mule (CONFIG.mule, on your own cooldown), a loot mob that runs from you (floorplan.mjs).
 // Root (2.8) counts respawned fight rooms you clear on a server you hold: Root 2 after 5, 3 after 15, 4 after 30, 5
 // after 50 (root.mjs ROOT.need). Root 2 adds a stash room by the Core. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
-import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, addItem, findLocation, roomKill, classOf } from './combat.mjs';
+import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand } from './combat.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES } from './data.mjs';
 import { seeded, MATERIALS, codeOf, rollItem } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import * as FP from './floorplan.mjs';
 import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
-import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock } from './rogue.mjs';
+import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
 import { sizeOf } from './outpost.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { contractTakeover, contractRooms, contractMapped } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
-import { itemLabel } from './gear.mjs';
+import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
 import { zoneSpawns, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
 
@@ -36,6 +40,8 @@ export const KIND_OF = { relay: 'Relay', mailhub: 'Mailhub', mirror: 'Mirror', a
 export const NET = {
   hostile: 0.5, // a Hostile server's fight rooms come back twice as fast
   rich: 2, hoard: 1.5, // caches pay this much more on a Rich server, a Hoard
+  quiet: [2, 4], // a rogue server's quiet rooms (Empty and Stash), from its seed
+  purseCode: 0.2, // a Stash's 1 code of the server's family, one time in five
   wildXp: 1, // a wild room's kill: a room kill (ROOMS.xp.room), as a traced server's
   stash: 120, // Root 2's stash refills every two hours (minutes)
 };
@@ -109,8 +115,55 @@ hooks.sprawlRoomName = (folder) => (sprawlNames ||= Object.fromEntries(Object.va
 // KESSLER-FARM-00: the intake and cooling packs and their bosses (the Foreman, the Heatsink: crew boss rooms), the
 // ledger a vault, and the Coldwallet past it.
 export const farmGraph = () => treeGraph(['/ledger', ...Object.keys(FARM.rooms)], { core: '/ledger/core', vaults: ['/ledger'], kinds: Object.fromEntries(Object.entries(FARM.rooms).map(([p, d]) => [p, d.boss ? 'boss' : 'elite'])) });
-// A rogue server, a lair or an occupied server: its folders (a lair's /core its Core).
-export const wildGraph = (loc) => treeGraph(rogueRooms(loc), { core: loc.lair ? '/core' : null, seed: loc.seed || 1 });
+// A lair or an occupied server: its folders (a lair's /core its Core). A rogue server that runs in clears: rogueGraph.
+export const wildGraph = (loc) => (inRuns(loc) ? rogueGraph(loc) : treeGraph(rogueRooms(loc), { core: loc.lair ? '/core' : null, seed: loc.seed || 1 }));
+// A rogue server's rooms (Nest, Pit, Gauntlet), from its seed: a tree on the grid (straight links, nothing crossing) a few
+// rooms deep, its folders' fight rooms (r1… in the folder order treeGraph gives them, so an old save's rooms keep their
+// ids) and 2 to 4 quiet rooms (Empty and Stash) woven in: at least one between the entry and a fight, so routes matter.
+const isQuiet = (r) => r.kind === 'empty' || r.kind === 'purse';
+export function rogueGraph(loc) {
+  const folders = [...rogueRooms(loc)].sort((a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b));
+  for (let t = 0; t < 80; t++) { const g = tryRogue(loc, folders, t); if (g) return g; }
+  throw new Error('No rogue graph for seed ' + loc.seed);
+}
+function tryRogue(loc, folders, attempt) {
+  const r = seeded((((loc.seed || 1) * 7331 + attempt * 104729 + 17) >>> 0) || 1);
+  const F = folders.length, Q = NET.quiet[0] + Math.floor(r() * (NET.quiet[1] - NET.quiet[0] + 1)), N = 1 + F + Q;
+  const cells = [{ x: 0, y: 0, parent: null, depth: 0 }], taken = new Set(['0,0']), deg = [0];
+  for (let i = 1; i < N; i++) {
+    const opts = [];
+    cells.forEach((c, j) => { if (deg[j] >= (j ? 3 : 4) || c.depth >= 4) return; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = c.x + dx, y = c.y + dy; if (Math.abs(x) <= 3 && Math.abs(y) <= 2 && !taken.has(`${x},${y}`)) opts.push({ j, x, y, w: (1 + c.depth * 0.6) / (1 + deg[j]) }); } });
+    if (!opts.length) return null;
+    let k = r() * opts.reduce((a, o) => a + o.w, 0), o = opts[0];
+    for (const c of opts) if ((k -= c.w) < 0) { o = c; break; }
+    cells.push({ x: o.x, y: o.y, parent: o.j, depth: cells[o.j].depth + 1 }); taken.add(`${o.x},${o.y}`); deg[o.j]++; deg.push(1);
+  }
+  if (Math.max(...cells.map((c) => c.depth)) < 3 || deg[0] < 2) return null;
+  // The quiet rooms: an Empty first where the tree branches or runs on (a room between), then the rest by the dice.
+  const kids = (j) => cells.map((c, i) => (c.parent === j ? i : -1)).filter((i) => i >= 0);
+  const inner = cells.map((c, i) => i).filter((i) => i && kids(i).length), quiet = new Map();
+  if (!inner.length) return null;
+  const pick = (xs) => xs[Math.floor(r() * xs.length)];
+  quiet.set(pick(inner), 'empty');
+  const P = Q === 2 ? 1 : 1 + (r() < 0.5 ? 1 : 0);
+  while (quiet.size < Q) { const i = 1 + Math.floor(r() * (N - 1)); if (!quiet.has(i)) quiet.set(i, [...quiet.values()].filter((k) => k === 'purse').length < P ? 'purse' : 'empty'); }
+  // Between: a quiet room with a fight beyond it. Never a quiet room at the end of a quiet branch only.
+  if (![...quiet.keys()].some((i) => kids(i).some((c) => !quiet.has(c)))) return null;
+  if ([...quiet.keys()].some((i) => !kids(i).length && quiet.has(cells[i].parent) && !kids(cells[i].parent).some((c) => !quiet.has(c)))) return null;
+  // Ids: the fight rooms r1… in breadth-first order take the folders in order; the quiet rooms after them.
+  const order = [0], ids = { 0: 'r0' };
+  for (let q = 0; q < order.length; q++) for (const c of kids(order[q])) order.push(c);
+  let f = 0, n = F;
+  const list = [{ id: 'r0', kind: 'entry', x: 0, y: 0, path0: '/' }];
+  for (const i of order.slice(1)) {
+    if (quiet.has(i)) { ids[i] = `r${++n}`; list.push({ id: ids[i], kind: quiet.get(i), x: cells[i].x, y: cells[i].y, seed: loc.seed || 1 }); }
+    else { ids[i] = `r${++f}`; list.push({ id: ids[i], kind: 'process', x: cells[i].x, y: cells[i].y, path0: folders[f - 1], seed: loc.seed || 1, label: null, wild: true }); }
+  }
+  const links = order.slice(1).map((i) => [ids[cells[i].parent], ids[i]]);
+  const g = graphOf(list.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1))), links, { spine: ['r0'] });
+  g.quiet = 1; // laid out as a rogue server's rooms (the save migration looks for it)
+  return g;
+}
 
 // ---------- a wild room's spawn ----------
 // Its folder's spawn now (refilled first), or null.
@@ -141,8 +194,10 @@ export function enterRooms(s, loc, { signal, hot = false } = {}) {
 // The run ends (floorplan.mjs jackOut or disconnected): out banks the pack (run.mjs bank) and sends you home; lost
 // is a disconnect (the pack lost, combat.mjs disconnect: Deadman's Switch and all).
 WORLD_hook('leave', (s, how, why) => {
+  const at = locOf(s, roomsOfRun(s));
+  if (inRuns(at)) (at.rogueRun ||= { n: 1, at: now() }).leftAt = now(); // a run left half done reboots on its own later (rogue.mjs)
   if (how === 'lost') return disconnect(s, 'Signal lost');
-  const loc = locOf(s, roomsOfRun(s));
+  const loc = at;
   bank(s, loc, why);
 });
 function roomsOfRun(s) { const loc = s.run && (s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc)); return loc?.floorplan || null; }
@@ -278,7 +333,11 @@ function wildWon(s, loc, room, e) {
   const ctx = roomKill(s, e, { wild: true, sprawl: !!loc.zone, bounty: named, family: lineageOf(e.virus.family), loc, guard: !!(e.virus.elite || e.virus.boss) });
   if (sp) { sp.diedAt = t; if (named) delete sp.bounty; }
   if (loc.zone) { if (sp) { sp.alive = false; sp.respawnAt = t + (sp.boss ? CONFIG.zone.bossRespawnMs : CONFIG.zone.respawnMs); } }
-  else rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); });
+  else if (rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); }) && s.run) {
+    // The full clear: the server reboots. You're out with your pack, it's offline a minute, then every room is back fresh.
+    FP.jackOut(s, 'SERVER REBOOTING.');
+    loc.lockUntil = t + ROGUE.rebootMs;
+  }
 }
 // A wild room's loss: a named target or a boss stays put (a named one that beat you twice wears down to v1); a Pit
 // elite that beat you moves on.
@@ -288,6 +347,43 @@ function wildLost(s, loc, room, e) {
   if ((sp.bounty || sp.boss) && (sp.losses = (sp.losses || 0) + 1) >= 2 && sp.grade > 1 && sp.bounty) { delete sp.grade; emit(s, 'info', `${sp.name} is worn down and drops back to v1.`); }
   if (!loc.zone && !loc.farm && sp.elite && sp.alive && !sp.boss) { sp.alive = false; sp.diedAt = t; sp.respawnAt = t + 30 * 60000; emit(s, 'info', `${sp.name} moved on. The room fills again in about 30 minutes.`); }
 }
+
+// ---------- a rogue server's Stash and its Mule ----------
+// A Stash (a quiet room): a few credits straight into your bank, as a wild server's kills pay, and 1 code one time in five.
+WORLD_hook('purse', (s, room) => {
+  const loc = locOf(s), R = s.rooms, credits = FP.ROOMS.purse(loc?.level || 1), material = codeOf(loc?.family) || 'cipher';
+  const code = seeded(((room.seed || 1) * 31 + (R.spawns[room.id] || 0) * 7919) >>> 0)() < NET.purseCode ? 1 : 0;
+  s.server.credits += credits;
+  if (code) gainCode(s, { [material]: code }, 'Stash: ');
+  return { credits, code, material: MATERIALS[material].name.toLowerCase() };
+});
+// The Mule's roll: once a run on a rogue server that runs in clears (at its first connect), and never while your own
+// cooldown runs (s.mule, on your save: it blocks your Mules on every rogue server, never anyone else's). The seed, or 0.
+WORLD_hook('mule', (s, t) => {
+  const loc = locOf(s), M = CONFIG.mule;
+  if (!inRuns(loc) || !s.run) return 0;
+  const rr = (loc.rogueRun ||= { n: 1, at: t }), c = (s.mule ||= { at: null, n: 0 });
+  if (rr.rolled) return 0; // one roll a run: reconnecting mid-run never rolls again
+  rr.rolled = true;
+  if (c.at != null && t < c.at + M.cooldownMs) return 0;
+  const seed = (((loc.seed || 1) * 2654435761 + rr.n * 40503 + (c.n || 0) * 7919) >>> 0) || 1;
+  if (seeded(seed)() >= M.chance) return 0;
+  c.at = t; c.n = (c.n || 0) + 1; rr.mule = seed;
+  return seed;
+});
+// Its bag: CONFIG.mule.credits Stashes' worth of credits and one item at the server's level (the best of two flat
+// rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no loud run,
+// clean read or Pit roll), and now and then one of the server's uniques (its kind's and layer's, as its folders drop).
+// Under an elite's three rolls and blue floor, by design.
+WORLD_hook('muleWon', (s, room, e) => {
+  const loc = locOf(s), M = CONFIG.mule, lvl = e.virus.level, credits = M.credits * FP.ROOMS.purse(loc.level || 1);
+  const ctx = { kind: 'rogue', id: loc.rogue?.kind, layer: loc.depth || 1, family: loc.family };
+  s.server.credits += credits;
+  let item = rollDrop(s, { ...ctx, rolls: M.rolls, flat: true }, lvl) || rollItem(() => rand(s), { level: lvl, rarity: 'stock' }); // always an item: a white unless the rolls found better
+  if (rand(s) < M.unique) { const u = uniqueFrom(s, ctx, lvl); if (u) item = uniqueItem(u, lvl, () => rand(s)); }
+  const got = item ? addItem(s, item, 'The bag: ') : null;
+  emit(s, 'rooms-good', `The bag: +${credits} credits${got ? `, ${itemLabel(got)}` : ''}.`, { credits });
+});
 
 // ---------- what you take: into the pack ----------
 const packFile = (s, f) => { s.run.pack.push(f); return f; };
@@ -350,7 +446,7 @@ WORLD_hook('entryPull', (s) => {
 // ---------- the page's words (floorplan-view.mjs) ----------
 const RULES = {
   sprawl: { rule: 'Strays', text: 'Five rooms of strays at your level (to level 5) and RELAY-KING in the Core from level 3. They come back 90 seconds after they fall.' },
-  nest: { rule: 'Nest', text: ROGUE.kinds.nest.rule }, pit: { rule: 'Pit', text: ROGUE.kinds.pit.rule }, gauntlet: { rule: 'Gauntlet', text: 'Clear every room in one visit for a bonus cache.' },
+  nest: { rule: 'Nest', text: ROGUE.kinds.nest.rule }, pit: { rule: 'Pit', text: ROGUE.kinds.pit.rule }, gauntlet: { rule: 'Gauntlet', text: 'Clear every fight room for a bonus cache.' },
   lair: { rule: 'Lair', text: 'The network\'s native boss holds the Core, back an hour after it falls.' },
   farm: { rule: 'Crew dungeon', text: 'Built for a crew. Three crew bosses; the ledger opens once the Foreman and the Heatsink are down.' },
 };
@@ -364,7 +460,7 @@ FP.WORLD.view = {
   },
   idTip: (s) => {
     const loc = locOf(s), R = s.rooms, r = ruleOf(loc);
-    if (r) return `${loc.name}: ${r.rule}.\n${r.text}`;
+    if (r) return `${loc.name}: ${r.rule}.\n${r.text}${inRuns(loc) ? '\nCleared rooms stay down. Clear them all and it reboots: every room back fresh a minute later.' : ''}`;
     const K = FP.KINDS[R.kind], by = (AUTHORS[R.author]?.name || R.author).toUpperCase();
     return `${loc.name}: a ${by} ${R.kind}, level ${levelOf(loc)}, ${R.size}.\n${K.rule}: ${K.text}${loc.takenOver ? '\nYours: its Core is quiet.' : ''}`;
   },
@@ -374,6 +470,7 @@ FP.WORLD.view = {
   fightNote: (s, room) => { const sp = room.wild ? spawnOf(s, room) : null; return sp?.bounty ? 'A named target: a contract wants it.' : sp?.boss && BOSSES[sp.boss]?.raid ? 'A crew boss, sized for your crew.' : room.kind === 'core' && s.rooms.type === 'server' ? 'Beat it and the server is yours.' : ''; },
   vaultLeft: (s, room) => { const loc = locOf(s); if (!loc || room.id !== s.rooms.graph.vaults[0]) return 0; return vaultFiles(loc).filter(({ dir, name }) => { const info = fileInfo(loc, dir, name); return info && !['text', 'trap', 'sweep'].includes(info.kind) && !loc.state?.taken?.[`${dir}/${name}`] && !s.run?.pack.some((f) => f.path === `${dir}/${name}`); }).length; },
   entryFiles: (s) => entryFiles(s, locOf(s)).length,
+  downNote: (s, room) => (room.wild && inRuns(locOf(s)) ? 'Down until the server reboots.' : undefined),
 };
 
 // A respawned fight room on a server you hold: tending it (Root climbs on these) counts as building in your XP mix,
@@ -409,6 +506,7 @@ export function roomsRestore(s, was) {
     FP.nameRooms(g);
     if (s.run?.rooms && s.run.loc === loc.id) { const here = g.rooms[loc.floorplan.at]; if (here) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
   }
+  rogueRestore(s);
   if (was >= 39) return;
   if (s.run && !s.run.rooms) {
     const loc = s.run.loc === CONFIG.zone.id ? zoneOf(s) : findLocation(s, s.run.loc);
@@ -432,3 +530,16 @@ export function roomsRestore(s, was) {
   }
 }
 hooks.roomsRestore = roomsRestore;
+// A rogue server laid out before quiet rooms (its folders around the entry): its rooms again from its seed (rogueGraph),
+// the fight rooms on the same ids, so what you'd cleared and seen stays; the quiet rooms new, in the fog.
+export function rogueRestore(s) {
+  for (const loc of s.locations || []) {
+    const R = loc.floorplan;
+    if (!R?.graph || R.graph.quiet || !inRuns(loc)) continue;
+    let g;
+    try { g = rogueGraph(loc); } catch { continue; }
+    if (!Object.values(R.graph.rooms).every((x) => g.rooms[x.id] && g.rooms[x.id].kind === x.kind && g.rooms[x.id].path0 === x.path0)) continue;
+    R.graph = g;
+    if (s.run?.rooms && s.run.loc === loc.id) { const here = g.rooms[R.at]; if (here) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
+  }
+}

@@ -24,6 +24,12 @@
 //               walk or wait: never while you fight, loot, open or rest. It never enters the rest room or the entry.
 //   respawns    fight rooms come back on real time (ROOMS.respawn, ×ROOMS speed in the playtest), never while you stand
 //               in them; a cache refills. Nothing expires: a week away and the server is just full again.
+//   quiet rooms a rogue server's (netrooms.mjs rogueGraph): Empty (nothing in it, cleared as you walk in) and Stash
+//               (a few credits, taken as you walk in, full again when the server reboots: rogue.mjs rogueReboot).
+//   the Mule    a loot mob on a rogue server visit (CONFIG.mule; the world decides when one turns up, netrooms.mjs). It
+//               starts in a room away from you and flees after each of your moves to the neighbour farthest from you
+//               (never your room, never a room with a live virus); with no neighbour farther than where it stands it's
+//               cornered and stays. Walk into its room and you fight it; it escapes after CONFIG.mule.escape cycles.
 //   progress    rooms cleared at least once, for good: a fight room when you first beat it, an interactable when you
 //               first use it, a junction when you first walk it. At 50% the whole graph is drawn; at 100% the server
 //               is Mapped (an item roll two levels over it, and 5 kills' worth of XP).
@@ -59,10 +65,12 @@ export const ROOMS = {
   // Each fight's size in a room, on top of the run sizes every Signal fight has (CONFIG.runHp, runDamage): a process at
   // your level costs 20–30% of your Signal, an elite 45–60%, the Resident wins about one fight in three (2.5).
   // stray: SPRAWL-00's strays (netrooms.mjs), the levels 1 to 5 where you learn the ticks: a plain virus's Integrity, lighter hits.
-  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 } },
+  // mule: the Mule (a runner, quick to break): a plain virus's Integrity, light hits.
+  size: { process: { hp: 1.3, dmg: 0.9 }, elite: { hp: 0.9, dmg: 0.6 }, guard: { hp: 1.2, dmg: 0.85 }, hunter: { hp: 1.6, dmg: 0.7 }, boss: { hp: 1.25, dmg: 0.9 }, stray: { hp: 1, dmg: 0.8 }, mule: { hp: 1.5, dmg: 0.35 } },
   eliteHp: 2.2, // an elite's Integrity (of a plain virus's), before its size
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
+  purse: (level) => 4 + Math.floor(level / 2), // a rogue server's Stash: credits (and 1 code one time in five, netrooms.mjs)
   vault: { gear: 1 / 3, custom: 0.4 },
   junctions: 0.2, // about a fifth of the rooms
 };
@@ -93,9 +101,12 @@ export const WORLD = {};
 const world = (s) => !!s.rooms?.world;
 // Room kinds: their mark on the map, and what they are.
 // What each room is called on the map, its card and in the log.
-// boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs).
-export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash' };
-export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤' };
+// boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs);
+// empty, purse: a rogue server's quiet rooms (Empty, and a Stash of a few credits).
+export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash' };
+export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤' };
+// Rooms that hold something you take, and refill.
+export const STOCKED = ['cache', 'stash', 'purse'];
 export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss'];
 export const HUNTERS = {
   patrol: { name: 'Patroller', body: 'bouncer', text: 'Walks a fixed loop, a room for every 2 of your moves.' },
@@ -367,8 +378,9 @@ export function isUp(s, room, now = nowOf()) {
 export const backAt = (s, room) => { const w = world(s) ? ask('back', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] != null ? s.rooms.down[room.id] + respawnMs(s, room) : null; };
 // When it fell (the respawn ring's start), or null.
 export const downAt = (s, room) => { const w = world(s) ? ask('from', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] ?? null; };
-export const cacheFull = (s, room, now = nowOf()) => (room.kind === 'cache' || room.kind === 'stash') && (s.rooms.taken[room.id] == null || now >= s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache));
-export const refillAt = (s, room) => (s.rooms.taken[room.id] != null ? s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache) : null);
+// (A Stash has no timer: it's full again when its server reboots.)
+export const cacheFull = (s, room, now = nowOf()) => STOCKED.includes(room.kind) && (s.rooms.taken[room.id] == null || (room.kind !== 'purse' && now >= s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache)));
+export const refillAt = (s, room) => (s.rooms.taken[room.id] != null && room.kind !== 'purse' ? s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache) : null);
 // Bait: one cache in four, fresh with each refill.
 export const isBait = (s, room) => room.kind === 'cache' && !room.mirror && seeded((room.baitSeed + (s.rooms.spawns[room.id] || 0) * 7919) >>> 0)() < 0.25;
 export const coreOpen = (s) => { const w = world(s) ? ask('coreOpen', s) : undefined; return w !== undefined ? w : !!s.rooms.opened[s.rooms.graph.vaults[0]]; };
@@ -387,7 +399,7 @@ export function signalNow(s, now = nowOf()) {
 export function soonest(s, now = nowOf()) {
   let best = null;
   for (const room of roomList(s)) {
-    const at = room.kind === 'cache' || room.kind === 'stash' ? (cacheFull(s, room, now) ? null : refillAt(s, room)) : FIGHTS.includes(room.kind) && !isUp(s, room, now) ? backAt(s, room) : null;
+    const at = STOCKED.includes(room.kind) ? (cacheFull(s, room, now) ? null : refillAt(s, room)) : FIGHTS.includes(room.kind) && !isUp(s, room, now) ? backAt(s, room) : null;
     if (at != null && (!best || at < best.at)) best = { room, at };
   }
   return best;
@@ -492,6 +504,62 @@ export function hunterLine(s) {
   return `The ${HUNTERS[h.kind].name} is ${where}, in ${g.rooms[h.at].path}${next ? `, heading for ${g.rooms[next].path}` : ''}.`;
 }
 
+// ---------- the Mule ----------
+// A loot mob on a rogue server visit: the world says when one turns up (WORLD.mule, netrooms.mjs), it lives on the
+// visit (R.visit.mule: { at, seed, name, state: loose | down | gone, seen, cornered }) and is gone when you leave.
+export const muleOf = (s) => { const m = s.rooms?.visit?.mule; return m && m.state === 'loose' && s.rooms.at ? m : null; };
+// It goes through any room a live virus doesn't hold (a quiet room, a cleared one, the entry), never into yours.
+const muleCan = (s, id) => id !== s.rooms.at && !isUp(s, s.rooms.graph.rooms[id]);
+// Where it runs on your next move: the neighbour farthest from you (graph distance), if farther than where it stands.
+// null: cornered (or no Mule).
+export function muleNext(s, m = muleOf(s)) {
+  const R = s.rooms, g = R.graph;
+  if (!m || !R.at) return null;
+  const d = distances(g, R.at), cur = d[m.at] ?? 0;
+  return neighbours(g, m.at).filter((id) => muleCan(s, id) && (d[id] ?? 0) > cur).sort((a, b) => d[b] - d[a] || Number(a.slice(1)) - Number(b.slice(1)))[0] || null;
+}
+// You see it once its room is one you can see (the fog's rules).
+export const muleSeen = (s, m = muleOf(s)) => !!m && seenOf(s, m.at) === 'kind';
+// It turns up in the room farthest from you that no live virus holds (the dice among the farthest), named MULE-####.
+export function spawnMule(s, seed) {
+  const R = s.rooms, d = distances(R.graph, R.at), r = seeded((seed >>> 0) || 1);
+  const ok = roomList(s).filter((x) => x.id !== R.at && d[x.id] != null && !isUp(s, x));
+  if (!ok.length) return null;
+  const far = Math.max(...ok.map((x) => d[x.id])), pool = ok.filter((x) => d[x.id] === far).sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+  R.visit.mule = { at: pool[Math.floor(r() * pool.length)].id, seed: (seed >>> 0) || 1, name: `MULE-${1000 + Math.floor(r() * 9000)}`, state: 'loose', seen: false, cornered: false };
+  muleLook(s);
+  return R.visit.mule;
+}
+function muleLook(s) {
+  const m = muleOf(s);
+  if (!m || m.seen || !muleSeen(s, m)) return;
+  m.seen = true;
+  say(s, `A Mule hauls a stolen bag through ${s.rooms.graph.rooms[m.at].path}. It runs from you: corner it.`, 'rooms-good');
+}
+// After each move of yours it runs, or stays put once cornered.
+function muleMove(s) {
+  const m = muleOf(s);
+  if (!m) return;
+  const next = muleNext(s, m), was = m.seen;
+  if (next) { m.at = next; m.cornered = false; if (was) say(s, `The Mule runs to ${s.rooms.graph.rooms[next].path}.`, 'rooms-cmd'); }
+  else if (!m.cornered) { m.cornered = true; if (was) say(s, `The Mule is cornered in ${s.rooms.graph.rooms[m.at].path}.`, 'rooms-good'); }
+  muleLook(s);
+}
+// Words for where it is (ls): "The Mule is 2 rooms off, in Empty 1, running for Stash 2."
+export function muleLine(s) {
+  const R = s.rooms, m = muleOf(s);
+  if (!m || !muleSeen(s, m)) return '';
+  const d = distances(R.graph, R.at)[m.at], next = muleNext(s, m);
+  return `The Mule is ${d === 1 ? '1 room' : `${d} rooms`} off, in ${R.graph.rooms[m.at].path}${next ? `, running for ${R.graph.rooms[next].path}` : ': cornered'}.`;
+}
+// Caught: walk into its room and the fight starts. It never fights back hard; it runs out the clock.
+function catchMule(s, room, opts) {
+  const R = s.rooms, m = muleOf(s);
+  say(s, `You corner ${m.name}. Break it before it gets away.`, 'rooms-good');
+  R.visit.pending = room.id;
+  fight(s, room, { as: 'mule', pause: !!opts.pause });
+}
+
 // ---------- a visit ----------
 export function connect(s) {
   const R = s.rooms, first = s.serial, now = nowOf();
@@ -519,6 +587,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   look(s);
   clear(s, R.graph.rooms[R.graph.entry], true);
   say(s, `CONNECTED to ${R.name}, visit ${R.visits}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
+  if (R.world) { const seed = ask('mule', s, now); if (seed) spawnMule(s, seed); } // a Mule this visit (netrooms.mjs: rogue servers, your cooldown)
 }
 // Jack out from any room: home, with the pack banked. A key you didn't use goes back to its post, guard and all.
 export function jackOut(s, why = '') {
@@ -550,7 +619,7 @@ function keysBack(s) {
 function goHome(s, R = s.rooms) {
   const now = nowOf();
   R.at = null; R.screen = null; R.homeAt = now; R.reconnectAt = now + ROOMS.reconnect / R.speed;
-  R.visit = { ...R.visit, hunter: null };
+  R.visit = { ...R.visit, hunter: null, mule: R.visit?.mule?.state === 'loose' ? { ...R.visit.mule, state: 'gone' } : R.visit?.mule || null }; // a Mule you left is gone
 }
 // Lost a fight: disconnected. The unbanked pack is lost; XP, banked gear and your scripts stay.
 function disconnected(s, why) {
@@ -609,6 +678,8 @@ function step(s, room, opts) {
   const h = hunterOf(s);
   if (h && !h.down && h.at === room.id) return meet(s, room, opts);
   if (hunterMove(s)) return meet(s, room, opts);
+  if (muleOf(s)?.at === room.id) return catchMule(s, room, opts);
+  muleMove(s);
   arrive(s, room, opts);
 }
 // Stay a move: the hunter takes its step, and you spend nothing.
@@ -619,7 +690,7 @@ export function wait(s, opts = {}) {
   R.visit.moves++; R.stats.moves++;
   say(s, 'wait', 'rooms-cmd');
   if (hunterMove(s)) meet(s, hereOf(s), opts);
-  else { const line = hunterLine(s); if (line) say(s, line); }
+  else { muleMove(s); const line = hunterLine(s); if (line) say(s, line); }
   return out(s, first);
 }
 // Step back out of a fight room you walked into (the move in is spent).
@@ -637,7 +708,8 @@ function arrive(s, room, opts = {}) {
   const R = s.rooms;
   const people = R.world ? ask('people', s, room) || [] : [];
   if (people.length) say(s, `${people.join(', ')} ${people.length === 1 ? 'is' : 'are'} here.`, 'rooms');
-  if (['junction', 'den'].includes(room.kind)) clear(s, room);
+  if (['junction', 'den', 'empty'].includes(room.kind)) clear(s, room);
+  if (room.kind === 'purse' && cacheFull(s, room)) takePurse(s, room); // a rogue server's Stash: taken as you walk in
   if (isUp(s, room)) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
@@ -722,6 +794,15 @@ function takeCache(s, room) {
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   clear(s, room);
 }
+// A Stash (a rogue server's quiet room): a few credits, now and then a code, full again when the server reboots.
+function takePurse(s, room) {
+  const R = s.rooms, got = (R.world ? ask('purse', s, room) : null) || { credits: ROOMS.purse(R.level), code: 0 };
+  if (!R.world) { R.credits += got.credits; s.server.credits += got.credits; }
+  say(s, `Stash: +${got.credits} credits${got.code ? ` and ${got.code} ${got.material} code` : ''}.`, 'rooms-good');
+  R.taken[room.id] = nowOf();
+  R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
+  clear(s, room, true);
+}
 function openVault(s, room, force) {
   const R = s.rooms;
   if (opened(s, room)) return deny(s, 'The vault is already open.');
@@ -743,6 +824,7 @@ function openVault(s, room, force) {
 // ---------- fights ----------
 // What a room's fight is: [key, seed, opts] for selectEncounter, and its name and kind of size.
 export function fightOf(s, room, as = null) {
+  if (as === 'mule') return muleFight(s, room);
   const w = world(s) && as !== 'hunter' ? ask('fight', s, room, as) : undefined;
   if (w) return w;
   const R = s.rooms, n = R.spawns[room.id] || 0, rare = !as && !!R.rare[room.id], level = (R.world ? ask('level', s) ?? R.level : R.level) + (rare ? ROOMS.rareLevel : 0);
@@ -759,6 +841,11 @@ export function fightOf(s, room, as = null) {
   const genes = [room.third].filter(Boolean);
   const opts = { mode: 'run', room: room.path, level, family: room.family, author: room.author, mutation: mut, genes, ...(elite ? { elite: true, eliteHp: ROOMS.eliteHp } : {}) };
   return { key: 'random', seed, opts, size: elite ? 'elite' : 'process', name: null, level, family: room.family, author: room.author, set: room.pin || spawnSet(room.family, room.author, seed), mutation: mut, elite, rare };
+}
+// The Mule's fight: a weak, quick runner at the server's level, its name its own (MULE-####), no set, no mutation.
+function muleFight(s, room) {
+  const R = s.rooms, m = R.visit?.mule || { seed: room.seed, name: 'MULE' }, level = (R.world ? ask('level', s) ?? R.level : R.level);
+  return { key: 'random', seed: m.seed, opts: { mode: 'run', room: room.path, level, family: 'mule', mutation: null, genes: [], name: m.name, author: null }, size: 'mule', name: m.name, level, family: 'mule', author: null, set: null };
 }
 // Each spawn rolls its own attack set (4.1: "every virus rolls one when it spawns"), weighted by its author, so the same
 // room can open with its Encryptor one visit and its Pulse Node the next. Seeded by the spawn: the card and the fight agree.
@@ -808,7 +895,8 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   const set = fresh ? (f.set !== undefined ? f.set : spawnSet(v.family, f.author, f.seed)) : null;
   if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; logSet(s, v.family, set); }
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
-  if (room.queue && R.kind === 'Mailhub' && as !== 'hunter') spamFlood(s, e);
+  if (room.queue && R.kind === 'Mailhub' && as !== 'hunter' && as !== 'mule') spamFlood(s, e);
+  if (as === 'mule') { e.escapeAt = CONFIG.mule.escape; for (const p of v.parts) { p.armor = p.maxArmor = Math.min(p.maxArmor, 1); p.patchAt = null; } } // still up after its cycles: it gets away (combat.mjs cycleClose); a runner wears 1 ◆ at most
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');
   armTicks(s);
   if (v.elite && !v.boss) e.enrageAt = 9;
@@ -855,10 +943,21 @@ hooks.roomEnd = (s, result) => {
   (R.stats.signalBy[kind] ||= []).push(lost / Math.max(1, R.max));
   const fam = ((R.stats.fam ||= {})[as === 'hunter' ? 'hunter' : e.virus.boss ? 'boss' : (e.virus.elite ? 'elite ' : '') + e.virus.family] ||= { n: 0, won: 0, lost: 0, cycles: 0 });
   fam.n++; fam.won += result === 'victory' ? 1 : 0; fam.lost += lost / Math.max(1, R.max); fam.cycles += e.cycle;
+  if (as === 'mule') {
+    const m = R.visit?.mule;
+    if (m) m.state = result === 'victory' ? 'down' : 'gone';
+    if (result === 'escaped') {
+      say(s, `${e.virus.name} gets away with its bag.`, 'rooms-bad');
+      const pending = R.visit.pending;
+      R.visit.pending = null;
+      if (pending && R.at) arrive(s, R.graph.rooms[pending]);
+      return;
+    }
+  }
   if (result !== 'victory') {
     R.stats.lost++;
-    if (as !== 'hunter') (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
-    if (R.world) ask('lost', s, room, e, result);
+    if (as !== 'hunter' && as !== 'mule') (R.stats.lostAt ||= {})[room.id] = (R.stats.lostAt[room.id] || 0) + 1;
+    if (R.world && as !== 'mule') ask('lost', s, room, e, result);
     if (result === 'fled') return; // jacked out mid-fight (the emergency escape): the run ends as a jack out
     return disconnected(s, `${e.virus.name} took your Signal to 0 in ${room.path}.`);
   }
@@ -866,6 +965,14 @@ hooks.roomEnd = (s, result) => {
   if (e.virus.boss) R.stats.boss.won++;
   setSig(s, Math.max(1, Math.min(s.run.max, s.run.integrity, R.fightFrom ?? s.run.max)));
   if (e.roomsLoot?.credits) { if (R.world) s.run.pack.push({ path: `${room.path}/#loot-${s.serial}`, name: 'loot.dat', kind: 'credits', amount: e.roomsLoot.credits }); else { R.credits += e.roomsLoot.credits; s.server.credits += e.roomsLoot.credits; } }
+  if (as === 'mule') {
+    say(s, `${e.virus.name} is down. Its bag is yours.`, 'rooms-good');
+    if (R.world) ask('muleWon', s, room, e);
+    const pending = R.visit.pending;
+    R.visit.pending = null;
+    if (pending) arrive(s, R.graph.rooms[pending]);
+    return;
+  }
   if (as === 'hunter') {
     const h = hunterOf(s);
     if (h) h.down = true;
@@ -954,7 +1061,7 @@ const tagOf = (s, room) => {
     const f = up && (room.kind !== 'core' || coreOpen(s)) ? fightOf(s, room) : null, who = f ? f.name || `${f.elite ? 'elite ' : ''}${familyName(f.family) || f.family}` : '';
     return `${room.kind === 'boss' ? 'boss' : room.kind === 'core' ? 'core' : 'fight'}${who ? ` · ${who} lv ${f.level}` : ''}${room.kind === 'core' && !coreOpen(s) ? ' · sealed' : left}`;
   }
-  if (room.kind === 'stash') return `stash${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
+  if (room.kind === 'stash' || room.kind === 'purse') return `stash${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
   if (room.kind === 'core') return `core · ${BOSSES[RESIDENT].name}${coreOpen(s) ? '' : ' · sealed'}`;
   if (room.kind === 'guard') return `elite · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (['process', 'elite'].includes(room.kind)) return `${room.kind} · ${familyName(room.family)} · ${(AUTHORS[room.author]?.name || '').toUpperCase()}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
@@ -973,8 +1080,8 @@ export function roomsCommand(s, text) {
     const here = hereOf(s), xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
     const who = (x) => { const p = R.world ? ask('people', s, x) || [] : []; return p.length ? `  · ${p.join(', ')}` : ''; }; // who else is in there (SPRAWL-00 is shared)
     const lines = [`${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${seenOf(s, x.id) === 'kind' ? x.path : '??'}  [${tagOf(s, x)}]${moveCost(s, x) ? '' : '  walked'}${seenOf(s, x.id) === 'kind' ? who(x) : ''}`)];
-    const h = hunterLine(s);
-    say(s, [...lines, ...(h ? [h] : [])].join('\n'), 'rooms-out');
+    const h = hunterLine(s), mule = muleLine(s);
+    say(s, [...lines, ...(h ? [h] : []), ...(mule ? [mule] : [])].join('\n'), 'rooms-out');
     return out(s, first);
   }
   if (word === 'cd' || word === 'go') {
@@ -994,6 +1101,12 @@ export function roomsCommand(s, text) {
   if (word === 'back') return back(s);
   if (['engage', 'fight', 'cat', 'pull', 'open', 'force', 'rest', 'slip'].includes(word)) return act(s, word === 'pull' && arg === 'all' ? 'pull' : word);
   if (word === 'developer' && rest[0] === 'bossrule') { setBossRule(s, rest[1]); return out(s, first); }
+  if (word === 'developer' && rest[0] === 'mule') { // with ?dev (app.js): a Mule now, cooldown or not
+    if (!R.at || active(s) || muleOf(s)) deny(s, 'developer mule: on a server, out of a fight, with no Mule loose.');
+    else if (!spawnMule(s, ((R.seed * 31 + R.visits * 7919 + R.visit.moves) >>> 0) || 1)) deny(s, 'developer mule: no room for one.');
+    else say(s, `${muleOf(s).name} is in ${R.graph.rooms[muleOf(s).at].path}.`, 'rooms-good');
+    return out(s, first);
+  }
   return null;
 }
 // A folder named as a path (absolute, or from the room you're in), for a wild server's rooms (room.path0).
@@ -1026,7 +1139,7 @@ export function treeLines(s) {
   const R = s.rooms, lines = [`/ ${R.name} · rooms ${progressOf(s).done}/${progressOf(s).total}`];
   const d = distances(R.graph, R.graph.entry);
   for (const room of roomList(s).filter((x) => seenOf(s, x.id)).sort((a, b) => d[a.id] - d[b.id])) {
-    const mark = R.at === room.id ? '@' : hunterOf(s)?.at === room.id && !hunterOf(s).down ? 'H' : seenOf(s, room.id) === 'kind' ? MARKS[room.kind] : '?';
+    const mark = R.at === room.id ? '@' : hunterOf(s)?.at === room.id && !hunterOf(s).down ? 'H' : muleOf(s)?.at === room.id && muleSeen(s) ? 'M' : seenOf(s, room.id) === 'kind' ? MARKS[room.kind] : '?';
     const to = neighbours(R.graph, room.id).filter((x) => seenOf(s, x)).map((x) => R.graph.rooms[x].path);
     lines.push(`${'  '.repeat(Math.min(4, d[room.id]))}${mark} ${room.path}${R.cleared[room.id] ? ' ✓' : ''}  → ${to.join(' ')}`);
   }
