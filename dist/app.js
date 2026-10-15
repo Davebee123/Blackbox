@@ -36,7 +36,6 @@ import { patchRules } from './skillrules.mjs';
 import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
 import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-view.mjs';
-import { createPixiFx } from './pixifx.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -184,13 +183,6 @@ const fxLevel = () => (['full', 'minimal'].includes(campaign.settings.effects) ?
 // Hit effects (hitfx.mjs): when a command lands, it lands on the part's own cell in the shooter's
 // colour (flash, slash, jolt); a crit slashes twice; a miss shakes it; a broken chit flashes it white.
 const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove() });
-// GPU effects (pixifx.mjs, System: GPU effects): on top of the board's own, never instead of the numbers. On by default;
-// off with Motion off or Effects minimal. Loaded the first time a fight needs it; until then (or without WebGL) the
-// DOM effects play alone. gpu() is the gate every call site checks.
-const pfx = createPixiFx({ enabled: () => campaign.settings.gpu !== false && canMove() && fxLevel() !== 'minimal' });
-const gpu = () => pfx.live();
-if (params.has('dev')) window.__pfx = pfx; // dev only: fire an effect by hand
-const rectOf = (sel) => { const r = document.querySelector(sel)?.getBoundingClientRect(); return r?.width ? r : null; };
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
 // Only commands: burns, helpers and other ticks ("Inject: …") don't strike. Crack's chits do.
@@ -393,8 +385,7 @@ const juice = {
     const r = chits.getBoundingClientRect(), w = r.width / Math.max(1, p.maxArmor);
     const x = r.left + w * (p.armor + 0.5), y = r.top + r.height / 2;
     const glyphs = ['◆', '◇', '▴', '▾', '·', '◆'];
-    if (gpu()) pfx.chit(x, y); // the GPU's diamond shards instead of the DOM's
-    else for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 9; i++) {
       const sh = document.createElement('i');
       const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.6, d = 26 + Math.random() * 46;
       sh.className = 'fx-shard';
@@ -427,8 +418,7 @@ const juice = {
     setTimeout(() => t.remove(), 1000);
     if (!broke) return;
     const y = r.top + r.height / 2, glyphs = ['▰', '▱', '/', '◆', '▪', '\\'];
-    if (gpu()) for (let i = 0; i < 3; i++) pfx.chit(r.left + r.width * (a + (b - a) * (i + 0.5) / 3), y, true); // the lock's segment, in steel
-    else for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 10; i++) {
       const sh = document.createElement('i');
       const x = r.left + r.width * (a + (b - a) * Math.random()), ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.7, d = 18 + Math.random() * 40;
       sh.className = 'fx-shard steel';
@@ -477,20 +467,6 @@ function lashAt(e, mode, frac = 0, heavy = false) {
   lash.lash({ from: mode === 'tick' ? null : lashFrom(e.source), bar: document.querySelector(MINE + ' .bigbar'), power: Math.min(1, frac * 5), heavy, mode, full, onImpact: mode === 'hit' && big ? () => juice.quake(frac, heavy) : null });
 }
 const LASH_TRAVEL = 140; // ms: a hit's number shows as the lash lands, not as it leaves the part
-// The GPU's part of a hit on a part (pixifx.mjs): sparks where the damage came off the bar (its edge after the hit),
-// a burn's embers off what's left of it.
-function gpuHit(e, power, mate) {
-  const bar = rectOf(`${row(e.target)} .part-bar`), p = part(campaign, e.target);
-  if (!bar || !p) return;
-  const fill = Math.max(0, Math.min(1, (e.hp ?? p.integrity) / (p.max || 1)));
-  if (e.src === 'burn') return pfx.burn(bar, fill, power);
-  const kind = e.crit ? 'crit' : e.src === 'helper' || e.src === 'daemon' ? 'helper' : e.src === 'reflect' || e.skill === 'blowback' ? 'reflect' : 'hit';
-  pfx.hit(bar.left + bar.width * fill, bar.top + bar.height / 2, { power, kind, mate });
-}
-// A part's own cell (its name, bar and chits), for the GPU's break and cut: not the timeline beside it.
-const gpuRow = (id, f) => { const r = rectOf(`${row(id)} > .bcell:first-child`) || rectOf(row(id)); if (r) f(r); };
-// What hits you lands on your Signal bar as the lash arrives.
-const gpuOnYou = (f) => setTimeout(() => { const r = rectOf(BAR); if (r && gpu()) f(r); }, LASH_TRAVEL);
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
 // A part's bar steps down hit by hit (the designer: "each instance of damage tick separately on the enemy component bar"):
 // while a batch's numbers play out, each damaged part's bar and HP read what it had before that hit, and drop as its
@@ -846,7 +822,7 @@ function react(events) {
   // The wall stopping a weak invasion is quiet: a log line and a pager entry, no sound or float (invasion.mjs).
   const hush = !active(campaign) && events.some((e) => e.type === 'invasion-cleared' && e.quiet);
   const fx = canMove();
-  if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; pfx.warm(); }
+  if (events.some((e) => e.type === 'engage')) { barsBefore = null; hideSpoils(); fightFrom = events.find((e) => e.type === 'engage').id; }
   if (won) { const batch = [...campaign.logs.filter((e) => e.id >= fightFrom && e.id < events[0].id && (e.type === 'loot' || e.type === 'xp' || e.type === 'fresh')), ...events.filter((e) => e.id >= won.id || e.type === 'loot')]; setTimeout(() => { if (ended) { document.body.classList.add('fight-over'); showSpoils(batch); } }, 900); }
   // Every damage instance gets its own number, with an icon for its source, one after another in the order
   // they resolved (dmgfx.mjs). Effects minimal or Motion off: all at once, stacked.
@@ -906,8 +882,7 @@ function react(events) {
           const pm2 = part(campaign, e.target)?.max || 1, before = (e.hp ?? 0) + e.amount, a = Math.max(0, before - e.lockWas) / pm2;
           feel.add(() => juice.lockDrain(e.target, a, Math.min(1, a + e.shield / pm2), e.shield >= e.lockWas));
         }
-        if (fx && lvl !== 'minimal') feel.add(() => { if (gpu()) gpuHit(e, big, mate); });
-        if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); if (!gpu()) juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
+        if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
         if (fx && !mate && e.crit) feel.add(() => juice.nudge(4.5)); // only a crit nudges the screen
         if (!mate) { sideFx('.brow.byou', row(e.target), 'you'); holdYou(); }
@@ -920,13 +895,13 @@ function react(events) {
         const wait = split.delay(e);
         if (bp && canMove()) { Object.defineProperty(bp, '_dyingUntil', { value: Date.now() + wait + DISSOLVE_MS, writable: true, configurable: true, enumerable: false }); setTimeout(() => { dirty = true; }, wait + DISSOLVE_MS + 50); pendingStrikes.push(() => later(wait, () => hitfx.dissolve(partRow(e.target)))); }
       }
-        artHit(e.target, 'break'); feel.add(() => { if (gpu()) gpuRow(e.target, (r) => pfx.shatter(r)); }); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
+        artHit(e.target, 'break'); feel.add(() => flash(e.message)); feel.add('break', '.hud-bar.enemy', 'BROKEN'); if (selected === e.target) selected = null; break;
       case 'server-hit': {
         artHit(e.source, 'attack');
         const dm = defender(campaign).max || 100, frac = e.amount / dm, size = 1 + Math.min(1, frac * 5) * 0.8;
         const heavy = !!(e.crit || e.tell); // a crit or a charge whips harder (lashAt: a big one shakes the screen)
         // Effects full or calm: the part lashes at your screen, and the number shows as it lands. Else a soft edge.
-        if (lashing) { feel.add(() => { lashAt(e, 'hit', frac, heavy); if (gpu()) gpuOnYou((r) => pfx.hurt(r, frac, heavy)); }); feel.beat(split.delay(e) + LASH_TRAVEL); }
+        if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(split.delay(e) + LASH_TRAVEL); }
         if (e.crit) feel.add(() => flash('CRITICAL HIT'));
         feel.add(e.crit ? 'hurtcrit' : 'hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: size + (e.crit ? 0.3 : 0), src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 });
         holdThem(); sideFx(row(e.source), MINE, 'them');
@@ -955,11 +930,11 @@ function react(events) {
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
       case 'rebooted': feel.add('unlock', MINE); notice(e.message); break;
       // The Encryptor's attack: a tendril of hex, and locks over your bar; each tick of it after: the locks only.
-      case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => { lashAt(e, 'encrypt'); if (gpu()) gpuOnYou((r) => pfx.encrypt(r)); }); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
+      case 'encrypt': artHit(e.source, 'attack'); flash('ENCRYPTED'); if (lashing) { feel.add(() => lashAt(e, 'encrypt')); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('encrypt', MINE, f?.text || `+${e.amount}/cycle`, { src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
       case 'encrypted': if (lashing) feel.add(() => lashAt(e, 'tick')); feel.add('drain', MINE, f?.text || `−${e.amount}`, { src, stack, noFlash: lashing, floatAt: BAR, x: 0.5 }); break;
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
-      case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => { lashAt(e, 'hit', frac); if (gpu()) gpuOnYou((r) => pfx.hurt(r, frac)); }); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
+      case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
       case 'armor': { const lvl = fxLevel(); artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add('absorb', `${row(e.target)} .part-top`, 'LOCK BROKEN', { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`, { src }); if (e.from) artHit(e.target, 'attack'); break;
@@ -982,7 +957,7 @@ function react(events) {
       case 'heal': if (e.target) feel.add('patch', row(e.target), f?.text, { src, stack }); else feel.add('good', MINE, f?.text || null, { src, stack, floatAt: BAR, x: 0.5 }); break; // a part patched: on it
       case 'blocked': if (e.shield) { feel.add('shield', MINE, f?.text || null, { src, stack, noFlash: true, floatAt: BAR, x: 0.5 }); break; } feel.add('interrupt', e.tell && e.source ? row(e.source) : MINE, e.tell && e.answered ? 'CALLED OFF' : 'BLOCKED'); break;
       case 'trap': flash('CANARY TRIPPED'); feel.add('hurt', null, `−${e.amount}`); break;
-      case 'interrupt': feel.add('interrupt', row(e.target), f?.text || (e.tell ? 'STOPPED' : 'DELAYED'), { src }); if (e.target) feel.add(() => { if (gpu()) gpuRow(e.target, (r) => pfx.cut(r)); }); break;
+      case 'interrupt': feel.add('interrupt', row(e.target), f?.text || (e.tell ? 'STOPPED' : 'DELAYED'), { src }); break;
       case 'telegraph': if (e.source) feel.add('prewarn', row(e.source), e.name || (e.message.match(/ ([A-Z][A-Z' -]{2,})[. ]/) || [])[1] || null); break; // a tell (tells.mjs) or a crew boss's mechanic, announced
       case 'warning': feel.add('nope', '#command-form'); break;
       case 'phase': flash(e.enrage ? 'ENRAGED' : e.message.split('.')[0]); feel.add('hurt', null); break; // a boss changes phase (combat.mjs bossPhases)
@@ -1033,7 +1008,7 @@ function react(events) {
         setTimeout(() => { ending = false; }, 900);
         break;
       case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign)) go('rooms'); }, 1600); } break;
-      case 'cut': if (e.target) feel.add(() => { if (gpu()) gpuRow(e.target, (r) => pfx.cut(r)); }); feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
+      case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
       case 'escaped': flash('UPLOAD COMPLETE'); feel.add('nope', null); hideTip(false); setTimeout(() => { if (!active(campaign) && campaign.rooms) go('rooms', true); }, 1600); break; // a runner got away (the Exfil's upload completed): back to the rooms
       case 'tick-wasted': feel.add('chip', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, '−tick'); break;
       case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
@@ -1180,7 +1155,6 @@ function run(raw) {
     hideTip(false); save(); dirty = true;
     return notice(text === 'tips replay' ? 'Tips will show again as you meet things.' : `Tips ${campaign.settings.tips ? 'on' : 'off'}.`);
   }
-  if (/^gpu( (on|off))?$/.test(text)) { const w = text.split(' ')[1]; campaign.settings.gpu = w ? w === 'on' : campaign.settings.gpu === false; save(); dirty = true; if (campaign.settings.gpu) pfx.warm(); else pfx.clear(); return notice(`GPU effects ${campaign.settings.gpu ? 'on' : 'off'}.`); }
   if (/^effects( (full|calm|minimal|next))?$/.test(text)) { const order = ['calm', 'full', 'minimal'], w = text.split(' ')[1]; campaign.settings.effects = !w || w === 'next' ? order[(order.indexOf(fxLevel()) + 1) % 3] : w; save(); dirty = true; return notice(`Effects: ${fxLevel()}.`); }
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }

@@ -585,16 +585,6 @@ When a command lands (hitfx.mjs), it lands on the part itself: the part's cell f
 - **Full**: also the impact burst in the Now cell, sparks, the whole row flashing and a punch on every hit.
 - **Minimal**: numbers and bars only (no flashes, no strikes, no shards, no lash: a soft red edge when you're hit; a cycle's numbers show at once, stacked).
 
-**GPU effects** (System; `gpu on|off`, on by default) add a GPU-drawn layer over the fight (PixiJS, `pixifx.mjs`), above the lash and under every number and tooltip, on the same beat as each number:
-- **A hit** throws sparks off the part's bar at the point the damage came off it (amber; a helper's or daemon's violet; damage turned back teal; a crit gold, with streaks and a ring). A crewmate's throws half as many.
-- **A burn's tick** sends embers flickering up off what's left of the bar.
-- **A broken part** bursts into pixels from its cell, with a white flash, an RGB split that jitters and a ring.
-- **A cracked ◆ chit** throws diamond shards (steel for a Mutex's lock) in place of the plain effect's glyph shards.
-- **An interrupt you land** (a cut, a tell stopped or called off) sends a teal shockwave off the part and scan lines across its cell.
-- **A virus hit on you** bursts red sparks off your Signal bar and tears glitch bands across the screen as the lash lands (more and longer on a crit or a charge). **Encrypt** closes steel locks in on your bar.
-
-It is off with Motion off, reduced motion or Effects minimal; the plain effects play alone then, or if the browser has no WebGL. It loads the first time a fight starts and draws nothing between fights.
-
 At every Effects level, your own hits give the screen a small, quick shake (bigger for bigger hits and crits, a light one for a broken armor chit). Crewmates' hits don't. Motion off turns it off, like every other movement.
 
 **The ability tray** says what's ready: every key has a charge bar along its bottom, full amber when it's ready. On cooldown the key is striped and dimmed, its bar refills cycle by cycle, a big number counts the cycles to go and the line under the name reads *ready next cycle* / *ready in 3 cycles*. A key that comes off cooldown flashes once. A key waiting for its moment (a lit key's window, like Shatter's) has no bar until it lights.
