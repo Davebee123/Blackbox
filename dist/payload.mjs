@@ -65,7 +65,7 @@ export function compilePayload(s, kind, armed = false) {
   if (m.built.length >= PAYLOAD.maxBuilt) return warn(s, `You can hold ${PAYLOAD.maxBuilt} payloads. Deploy one first.`);
   if (s.server.credits < credits) return warn(s, `A ${P.name} costs ${credits} credits.`);
   if ((mats[P.code] || 0) < PAYLOAD.code) return warn(s, `A ${P.name} takes ${PAYLOAD.code} ${P.code} code.`);
-  if ((s.salvage || []).length < PAYLOAD.salvage) return warn(s, `A ${P.name} takes ${PAYLOAD.salvage} salvage.`);
+  if ((s.salvage || []).length < PAYLOAD.salvage) return warn(s, `A ${P.name} takes ${PAYLOAD.salvage} components.`);
   if (armed && (mats.exploit || 0) < 1) return warn(s, 'Arming it takes an Exploit.');
   s.server.credits -= credits; mats[P.code] -= PAYLOAD.code; s.salvage.splice(0, PAYLOAD.salvage);
   if (armed) mats.exploit -= 1;

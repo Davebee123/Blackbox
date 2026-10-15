@@ -361,7 +361,7 @@ export function networkLines(s, who) {
     `Native boss: ${lair ? `${BOSSES[g.boss].name} in ${lair.name}` : '???'}.${lair && BOSSES[g.boss].floor > hackerLevel(s) ? ` It holds the Core from level ${BOSSES[g.boss].floor}.` : ''}`,
     `Native uniques: ${nat}.`,
     ...(who === 'you' ? [`Events that come up often: ${events.length ? events.map((k) => k[0].toUpperCase() + k.slice(1)).join(' and ') : '???'}.`] : []),
-    `Rich in: ${knowsRich(s, who) ? `${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'salvage' : 'Exploits'}` : '???'}.`,
+    `Rich in: ${knowsRich(s, who) ? `${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'components' : 'Exploits'}` : '???'}.`,
   ];
 }
 export function networkCommand(s, text) {

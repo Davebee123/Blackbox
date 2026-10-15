@@ -18,7 +18,7 @@
 // (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
 import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
 import { MATERIALS, rollItem, seeded } from './gear.mjs';
-import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, learnDaemon, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
+import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
 import STORY_TEXT from './content/story.mjs';
@@ -494,7 +494,7 @@ export const rewardLine = (s, c) => [
   c.reward.xp ? `${xpFor(s, hackerLevel(s), c.reward.xp)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
-  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.daemon ? 'a daemon' : '',
+  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop || c.reward.daemon ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '',
 ].filter(Boolean).join(' · ');
 
 // ---------- commands ----------
@@ -552,9 +552,8 @@ export function mailCommand(s, text, at = now()) {
     c.reward.relay && { label: 'Relay', qty: `×${c.reward.relay}`, kind: 'item', text: 'a relay' },
     c.reward.plan && { label: 'Relay plan', qty: '', kind: 'blueprint', text: 'the Relay plan' },
     c.reward.blueprint && { label: 'Blueprint', qty: '', kind: 'blueprint', text: 'a blueprint' },
-    c.reward.daemon && { label: 'Daemon', qty: '', kind: 'daemon', text: 'a daemon' },
     c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
-    c.reward.drop && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
+    (c.reward.drop || c.reward.daemon) && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
   ].filter(Boolean);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
   if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
@@ -565,8 +564,8 @@ export function mailCommand(s, text, at = now()) {
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }
   if (c.reward.plan) learnRelayPlan(s, 'Halcyon bonus: ');
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
-  if (c.reward.daemon) learnDaemon(s, 'LOWLIGHT bonus: ');
-  if (c.reward.drop) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < 0.25 ? 'custom' : 'tuned' }), 'GLASSJAW paid in kind: '); }
+  // A protocol, Tuned or better (a contract that paid a daemon once pays this: daemons only come from invasions).
+  if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < 0.25 ? 'custom' : 'tuned' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }
   if (c.reward.item) giveUnique(s, c.reward.item, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `);
   if (c.story !== undefined) { s.mail.waiting = 'armed'; s.mail.waitFrom = at; const next = postStory(s, at); if (next) emit(s, 'mail', `New mail from ${next.from}: ${next.subject}.`, { letter: next.id, from: next.from, subject: next.subject }); }
 }

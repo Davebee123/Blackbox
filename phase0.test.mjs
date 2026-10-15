@@ -55,14 +55,15 @@ test('rep ripples use what actually changed, and Halcyon ripples never push a ri
   for (const f of ['glassjaw', 'nullchoir']) assert.ok(rep(s, f) >= 0, f);
 });
 
-test('the Watchman holds its bar when upgraded: v3 still fires, and twice a fight', async () => {
-  const { DAEMONS } = await import('./dist/data.mjs');
+test('the Watchman holds its bar at any level: a higher-level copy hits harder, the bar stays a big attack at your power', async () => {
+  const { DAEMONS, daemonN } = await import('./dist/data.mjs');
   const { watchmanBar } = await import('./dist/combat.mjs');
   const s = fresh();
   const bar1 = watchmanBar(s);
-  s.daemonsOwned = { watchman: 3 }; s.daemons = ['watchman'];
-  assert.equal(watchmanBar(s), bar1, 'the version doesn\'t raise the bar');
-  assert.match(DAEMONS.watchman.rule, /at v3 it works twice a fight/);
+  s.daemonLv = { watchman: 30 }; s.daemons = ['watchman'];
+  assert.equal(watchmanBar(s), bar1, 'its level doesn\'t raise the bar');
+  assert.ok(daemonN('watchman', 30) > daemonN('watchman', 10), 'it buys the hit');
+  assert.ok(DAEMONS.watchman.once && !/v\d/.test(DAEMONS.watchman.rule), 'once a fight, no versions');
 });
 
 test('Implants drop and compile from item level 15', () => {

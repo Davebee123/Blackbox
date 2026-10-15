@@ -544,7 +544,7 @@ test('saves from before the skill rework start each class on the new kit, and ol
   assert.deepEqual(equippedSkills(r, 'breaker'), defaultBar('breaker', 'demolitionist', 25), 'the default kit: the shipped rotation preset at its level (eight slots at 25)');
   assert.deepEqual(equippedSkills(r, 'breaker').slice(0, 4), ['crack', 'shatter', 'flood', 'overload']);
   assert.deepEqual(r.daemons, []);
-  assert.deepEqual(r.daemonsOwned, {});
+  assert.deepEqual(r.daemonLv, {});
 });
 
 test('Signal boosters are retired: no crafting (top up instead); one you still carry works on a run', () => {

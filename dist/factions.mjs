@@ -41,7 +41,7 @@ export const FACTIONS = {
     tiers: ['Blacklisted', 'Prospect', 'Client', 'Account', 'Key account'],
     allies: ['halcyon'], rivals: ['nullchoir'],
     hub: { name: 'KESTREL-DC-NORTH', level: 4 },
-    shop: ['relay', 'injector', 'harden', 'daemon', 'cb-snare'],
+    shop: ['relay', 'injector', 'harden', 'crate', 'cb-snare'],
   },
   lantern: {
     name: 'LANTERN', short: 'LANTERN', kind: 'crew', color: '#ffb347', start: 10,
@@ -57,7 +57,7 @@ export const FACTIONS = {
     tiers: ['Marked', 'Outsider', 'Fellow', 'Choir', 'Cantor'],
     allies: ['lantern'], rivals: ['halcyon', 'kestrel'],
     hub: { name: 'NULLCHOIR-SQUAT-13', level: 12 },
-    shop: ['daemon', 'crate', 'cracker', 'harden', 'cb-cron'],
+    shop: ['blueprint', 'crate', 'cracker', 'harden', 'cb-cron'],
   },
 };
 export const FACTION_IDS = Object.keys(FACTIONS);

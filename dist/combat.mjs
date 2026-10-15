@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, DAEMON_VERSIONS, DAEMON_DROPS, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -31,7 +31,9 @@ import { TELL, ROOM_FAMILIES } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
 import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, RETIRED } from './progression.mjs';
-import { portsCommand, invaderDown, invasionRestore } from './invasion.mjs';
+import { portsCommand, invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
+import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
+export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, craftRelay } from './hidden.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
@@ -71,7 +73,7 @@ export function fresh() {
     locations: [],
     run: null,
     daemons: [], // slotted daemon ids
-    daemonsOwned: {}, // daemon id → version (1–3)
+    daemonLv: {}, // daemon id → its level (invasions drop them: daemons.mjs)
     // Protocols: one shared stash; each class loads its own (gear.rigs[class] = protocol ids).
     stash: [],
     gear: { rigs: {} },
@@ -653,7 +655,7 @@ const uniqueFx = (s) => {
 };
 // The fight HUD's gear row reads the same list and conditions (fightread.mjs gearLive), so it lights exactly when they hold.
 export const gearFx = (s) => uniqueFx(s);
-const telling = (s, p) => !!tellsOf(s)?.list.some((t) => t.told && (!p || t.part === p.id));
+export const telling = (s, p) => !!tellsOf(s)?.list.some((t) => t.told && (!p || t.part === p.id));
 export const fxHolds = (s, fx, ctx = {}) => fxCond(s, fx, ctx);
 // An effect that fired, on its event: the HUD's gear chip flashes and its name floats off the board (app.js).
 const firedOf = (xs) => (xs.length ? { gear: xs.map((x) => ({ id: x.id, name: x.name || x.it.name })) } : {});
@@ -1434,7 +1436,6 @@ function loadoutCommand(s, text) {
 }
 
 // ---------- upgrades ----------
-export const daemonSlots = (s) => CONFIG.daemonSlots + SERVER.daemonSlotsAt.filter((l) => serverLevel(s) >= l).length + (classOf(s) === 'operator' ? 1 : 0);
 export const maxSignal = (s) => Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory');
 
 // Protocols at home: protocols · load <protocol> · unload <protocol|slot> · scrap <protocol> ·
@@ -1578,6 +1579,7 @@ function engage(s) {
   }
   // A filter of the Scrubber starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
+  daemonsOn(s, 'start'); // the Airbag, and the Leash on an Exfil (daemons.mjs)
   // Stealth: each part's first attack may come a cycle later.
   const st = gearStat(s, 'stealth');
   if (st) {
@@ -1640,6 +1642,11 @@ function payKill(s, e, base, why) {
 // pack (banked when you jack out, lost if you're disconnected), like a guard's drops. guard: a guard post, an elite, a
 // boss: it rolls like a guard. family: the lineage the kill counts as (contracts, leads, code). Returns what a Pit's
 // second roll needs.
+// A kill's rare Exploit (data.mjs SPARE_EXPLOIT: what its daemon drop became), into your pack on a run.
+function packExploit(s, path, who) {
+  s.run.pack.push({ path, name: 'exploit.bin', kind: 'code', size: '8k', material: 'exploit', amount: 1 });
+  emit(s, 'code', `${who} dropped an Exploit. In your pack until you jack out.`, { gains: { exploit: 1 }, pack: true });
+}
 export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null } = {}) {
   const v = e.virus, lvl = v.level;
   contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
@@ -1653,7 +1660,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
     if (item) addItem(s, item);
     nativeDrop(s, e);
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
-    if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
+    if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
     return { more: () => rollDrop(s, { ...ctx, strain: null }, lvl) };
   }
   if (!s.run) return {};
@@ -1661,7 +1668,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: loc?.depth || 1, family: loc?.family || family, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : undefined }, lvl);
   if (item) { s.run.pack.push({ path: `${tag}/drop`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   nativeDrop(s, e, true);
-  if (rand(s) < (guard ? DAEMON_DROPS.guard : DAEMON_DROPS.home)) { s.run.pack.push({ path: `${tag}/dm`, name: 'daemon.exe', kind: 'daemon', size: '96k' }); emit(s, 'drop', `${v.name} dropped a daemon. In your pack until you jack out.`, { pack: true }); }
+  if (rand(s) < (guard ? SPARE_EXPLOIT.guard : SPARE_EXPLOIT.home)) packExploit(s, `${tag}/xp`, v.name);
   if (rand(s) < (guard ? BLUEPRINT_CHANCE.guard : BLUEPRINT_CHANCE.home)) { s.run.pack.push({ path: `${tag}/bp`, name: 'blueprint.bp', kind: 'blueprint', size: '64k' }); emit(s, 'drop', `${v.name} dropped a blueprint. In your pack until you jack out.`, { pack: true }); }
   const gains = codeFrom(s, family, lvl, src);
   for (const [m, n] of Object.entries(gains)) s.run.pack.push({ path: `${tag}/code-${m}`, name: `${m}.code`, kind: 'code', size: '8k', material: m, amount: n });
@@ -1733,7 +1740,7 @@ export function finish(s, result) {
       if (item) addItem(s, item);
       nativeDrop(s, e); // network.mjs: its own dice
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
-      if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
+      if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
       if (lead) addLead(s, e.virus.family, lead);
       if (wild) rogueKill(s, wild, e.room, now, () => { const more = rollDrop(s, { ...ctx, strain: null }, e.virus.level); if (more) addItem(s, more, 'The Pit gives up more: '); });
       if (e.process) processWon(s, e); // root access grows (root.mjs)
@@ -1760,10 +1767,7 @@ export function finish(s, result) {
         emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true });
       }
       if (s.run) nativeDrop(s, e, true); // network.mjs: its own dice, into your pack
-      if (s.run && rand(s) < DAEMON_DROPS.guard) {
-        s.run.pack.push({ path: `${e.room}/#dm-${e.seed}-${s.serial}`, name: 'daemon.exe', kind: 'daemon', size: '96k' });
-        emit(s, 'drop', `${e.virus.name} dropped a daemon. In your pack until you jack out.`, { pack: true });
-      }
+      if (s.run && rand(s) < SPARE_EXPLOIT.guard) packExploit(s, `${e.room}/#xp-${e.seed}-${s.serial}`, e.virus.name);
       // A guard sometimes carries a blueprint, into your pack like the rest.
       if (s.run && rand(s) < BLUEPRINT_CHANCE.guard) {
         s.run.pack.push({ path: `${e.room}/#bp-${e.seed}-${s.serial}`, name: 'blueprint.bp', kind: 'blueprint', size: '64k' });
@@ -1797,7 +1801,7 @@ export function finish(s, result) {
     if (item) addItem(s, item);
     nativeDrop(s, e); // network.mjs: its own dice
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
-    if (rand(s) < DAEMON_DROPS.home) learnDaemon(s, 'Daemon recovered: ');
+    if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
     if (inv) invaderDown(s, inv); // the next of a pack steps up, or the bounty (invasion.mjs)
     if (e.member || e.raid || e.roamer) consortiumWon(s, e); // a fight for the consortium (consortium.mjs)
     if (e.fleet) fleetWon(s, e);
@@ -2029,6 +2033,12 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer salvage \d+$/.test(text)) {
     const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer');
     emit(s, 'info', `Developer: +${n} components.`);
+  } else if (/^developer daemon( |$)/.test(text)) {
+    // developer daemon <id|all> [level]: a daemon at a level (testing; only invasions drop them in play).
+    const [, , id, lv] = text.split(' '), L = Math.max(1, Number(lv) || hackerLevel(s));
+    const ids = id === 'all' ? Object.keys(DAEMONS) : DAEMONS[id] ? [id] : [];
+    if (!ids.length) warn(s, `developer daemon <${Object.keys(DAEMONS).join('|')}|all> [level]`);
+    for (const k of ids) gainDaemon(s, k, L, { why: 'Developer: ' });
   } else if (/^developer code \d+$/.test(text)) {
     const n = Number(text.split(' ')[2]);
     gainCode(s, { cipher: n, worm: n, kernel: n, exploit: Math.ceil(n / 10) }, 'Developer: ');
@@ -2228,6 +2238,7 @@ function topUp(s, what, wanted = null) {
 export const implanted = (s, p) => (s.encounter?.burns || []).some((b) => b.id === 'implant' && b.target === p.id) || alliesOf(s).some((x) => (x.st.encounter?.burns || []).some((b) => b.id === 'implant' && b.target === p.id));
 // A part's last ◆ broke under your command: who did it (a seal that fails then readies that skill, tells.mjs).
 export function stripMark(s, p) {
+  daemonsOn(s, 'stripped', { part: p.id }); // Crowbar
   const c = s.encounter?.commanding;
   if (c && c.id && !c.auto && c.target === p.id) p.strippedBy = { who: s.who || '', id: c.id, cycle: c.at ?? s.encounter.cycle };
 }
@@ -2354,7 +2365,10 @@ export function hit(s, p, base, opts = {}) {
   if (p.exposedUntil >= e.cycle) notes.push('exposed');
   if (p.taggedUntil >= e.cycle) notes.push('tagged');
   if (e.virus.weakKnown && e.virus.weakPoint === p.id) notes.push('weak point');
+  const above = p.integrity >= p.max / 4;
   p.integrity -= dealt;
+  if (above && p.integrity > 0 && p.integrity < p.max / 4) daemonsOn(s, 'low', { part: p.id }); // Reaper
+  if (crit && opts.mine && dealt > 0) daemonsOn(s, 'crit', { part: p.id }); // Ricochet
   if (dealt > 0 && s.encounter?.virus) { const d = (s.encounter.virus.dealt ||= {}); d[s.who || ''] = (d[s.who || ''] || 0) + dealt; } // who did the damage: drop-ins earn by it
   if (dealt > 0 && e.virus.raid && !opts.server) noteDealt(s, dealt); // aggro (raid.mjs)
   p.lastDamaged = e.cycle;
@@ -2479,6 +2493,7 @@ function breakPart(s, p) {
   // Breaker Cascade Failure talent: the first break resets your cooldowns.
   if (hasTalent(s, 'cascade-failure') && !e.once.rampage) { e.once.rampage = true; e.readyAt = {}; emit(s, 'status', 'Cascade Failure resets your cooldowns.'); }
   classEach('broke', s, p);
+  if (p.kind !== 'fragment') daemonsOn(s, 'broke', { part: p.id }); // Domino
   if (e.rooms) hooks.roomBroke?.(s, p); // a room body's rule on a break (families.mjs)
   // Uniques that fire on a break (Cryptominer, Zero Cool).
   for (const x of fxFire(s, 'break', { crit: e.lastCrit, target: p })) {
@@ -2817,6 +2832,7 @@ function survive(s, d, dmg) {
     return Math.max(0, d.integrity - 1);
   }
   if (d.integrity - dmg <= 0 && hooks.lastBlow) { const kept = hooks.lastBlow(s, d, dmg); if (kept != null) return kept; } // a breach's Restore Point (breach.mjs)
+  if (d.integrity - dmg <= 0) { const kept = lifeline(s, d, dmg); if (kept != null) return kept; } // the Lifeline daemon
   return dmg;
 }
 
@@ -2849,17 +2865,14 @@ export function takeDamage(s, amount, source, label) {
     e.shield -= soaked;
     amount -= soaked;
     emit(s, 'blocked', `Shield absorbs ${soaked} of ${label}${e.shield ? ` (${e.shield} left)` : ''}.`, { source, amount: soaked, shield: true });
+    if (soaked) daemonsOn(s, 'soaked', { source }); // Backscatter
   }
   const dealt = survive(s, d, Math.min(d.integrity, amount));
   d.integrity -= dealt;
   if (e.mode === 'home' && dealt) wear(s, dealt); // your server's Integrity: it wears your firewall
   e.metrics.attackDamage += dealt;
-  if (dealt) canary(s);
-  // Snapshot (a daemon): once per fight, dropping below half restores a share of your max.
-  if (dealt && !e.once.snapshot && d.integrity > 0 && d.integrity < d.max / 2 && slottedDaemons(s).includes('snapshot')) {
-    e.once.snapshot = true;
-    heal(s, Math.max(1, Math.round((d.max * snapshotPct(s)) / 100)), 'Snapshot restored');
-  }
+  lifelineHeal(s); // a Lifeline that just held you at 1 (daemons.mjs)
+  if (dealt) daemonsHurt(s, source); // below half, below a quarter: Canary, Snapshot, Spite, Checkpoint
   return dealt;
 }
 
@@ -3050,7 +3063,7 @@ export function playerPhase(s, phase = 'all') {
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
     e.commanding = { id: q.ability, target: q.target || null, at: q.at ?? e.cycle, auto: false }; // your command: a tell on its part may count it (tells.mjs)
     try { useAbility(s, q); } finally { e.commanding = false; }
-    if (e.synced && active(s) && q.ability !== 'hold') syncBonus(s, q);
+    if (e.synced && active(s) && q.ability !== 'hold') { syncBonus(s, q); daemonsOn(s, 'synced', { part: q.target }); } // Pendulum
     e.surprise = false;
   }
   else if (e.lastAttack) {
@@ -3073,6 +3086,7 @@ export function playerPhase(s, phase = 'all') {
     else if (e.keylog < 3) emit(s, 'status', `The ${logger.name} logs a keystroke (${e.keylog}/3).`, { target: logger.id });
   }
   e.synced = false;
+  flushDaemons(s); // what your command set off (daemons.mjs)
   }
   if (phase === 'command') return active(s);
   // 1a. Slotted daemons act too, each on its own cooldown.
@@ -3095,6 +3109,7 @@ export function playerPhase(s, phase = 'all') {
     }
     b.damage += b.grow || 0;
     b.left--;
+    if (!b.left && alive(t)) daemonsOn(s, 'burnout', { part: t.id }); // Afterburn
   }
   e.burns = e.burns.filter((b) => b.left > 0 && alive(part(s, b.target)));
   for (const h of [...e.helpers]) {
@@ -3109,6 +3124,7 @@ export function playerPhase(s, phase = 'all') {
     if (!h.left && t && alive(t) && edge(s, 'operator')) hit(s, t, h.damage, { by: 'Last Gasp', dot: true, synced: h.synced, src: 'helper' });
   }
   e.helpers = e.helpers.filter((h) => h.left > 0);
+  flushDaemons(s);
   if (e.regen && e.regen.from <= e.cycle && e.regen.left > 0) { heal(s, e.regen.amount, e.regen.name || 'Patch'); e.regen.left--; }
   classEach('cycle', s); // class modules: the end of this player's turn
   // Leech pays out; Regen ticks (the rig's on runs, the server's at home).
@@ -3277,6 +3293,7 @@ function strike(s, p) {
     for (const m of crew) landAttack(m, { ...p, attack: { ...p.attack } }); // a copy each, so its timer and ramp move once
     landAttack(s, p);
   }
+  flushDaemons(s); // what it set off: Spite, Backscatter, a Watchman's hit
   hooks.crewHurt?.(s);
   if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   if (virusIntegrity(s).current === 0) { finish(s, 'victory'); return true; }
@@ -3372,7 +3389,7 @@ function cycleClose(s, landed) {
   e.elapsedMs = 0;
   rollSync(s);
   if (e.virus.raid) raidCycle(s); // a crew boss: its phase, then what it announces (raid.mjs)
-  if (e.virus.tells) tellCycle(s); // a solo fight's tells: what it announces now (tells.mjs)
+  if (e.virus.tells) { tellCycle(s); flushDaemons(s); } // a solo fight's tells: what it announces now (tells.mjs); a Lookout's hit
 }
 function endCycle(s, first) {
   if (cycleStart(s)) return since(s, first);
@@ -3428,83 +3445,20 @@ function syncBonus(s, intent) {
   emit(s, 'synced', `${surprise ? 'SURPRISE' : 'SYNCED'}: +${Math.round(CONFIG.sync.bonus * 100)}% damage${what ? `, ${what}` : ''}${surprise ? `, ${{ inject: 'Inject ticks at once', tag: `Tag for ${CONFIG.surprise.tagCycles} cycles, burns +${Math.round((CONFIG.surprise.tagged - 1) * 100)}%`, keepalive: `burns +${CONFIG.surprise.keepalive} cycles` }[intent.ability]}` : ''}.`, { target: intent?.target || null, surprise, bonus: what ? b.tag : '' });
 }
 
-// ---------- daemons ----------
-// Found programs. A slotted daemon acts on its own cooldown after your order, every cycle it's
-// ready; the once-per-fight ones wait for their moment (see landAttack and takeDamage).
-export const daemonVersion = (s, id) => (s.daemonsOwned || {})[id] || 0;
-export const slottedDaemons = (s) => (s.daemons || []).filter((id) => DAEMONS[id] && daemonVersion(s, id));
-export const daemonAmount = (s, id) => scaled(s, (DAEMONS[id].amount || 0) * DAEMON_VERSIONS[daemonVersion(s, id) - 1]);
-export const snapshotPct = (s) => Math.round(DAEMONS.snapshot.pct * (DAEMON_VERSIONS[daemonVersion(s, 'snapshot') - 1] || 1)); // 8, 12, 16
-// When a daemon acts next (a cycle number), or null for the once-per-fight ones.
-export const daemonNext = (s, id) => (DAEMONS[id].once ? null : Math.max(s.encounter.cycle, s.encounter.daemonReady?.[id] || s.encounter.cycle));
+// The part your last command hit, if it still stands.
 const lastTarget = (s) => { const t = s.encounter.lastAttack && part(s, s.encounter.lastAttack.split(' ')[1]); return alive(t) ? t : null; };
-function runDaemons(s) {
-  const e = s.encounter;
-  e.daemonReady ||= {};
-  for (const id of slottedDaemons(s)) {
-    const d = DAEMONS[id];
-    if (d.once || !active(s) || virusIntegrity(s).current === 0 || daemonNext(s, id) > e.cycle) continue;
-    const say = (text) => emit(s, 'resolved', `${d.name}: ${text}.`, { auto: 'daemon', daemon: id });
-    let acted = true;
-    if (id === 'sweeper') { const t = soonestAttacker(s); if (t) { say(`hits ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name, src: 'daemon' }); } else acted = false; }
-    else if (id === 'fuzzer') { const t = livingParts(s).filter((p) => p.armor > 0).sort((x, y) => y.armor - x.armor)[0]; if (t) { say(`fuzzes ${t.name}`); hit(s, t, 1, { by: d.name, src: 'daemon' }); } else acted = false; }
-    else if (id === 'stall') { const t = soonestAttacker(s); if (t?.attack) { say(`stalls ${t.name}`); t.attack.due++; } else acted = false; }
-    else if (id === 'mender') { const dd = defender(s); if (dd.integrity < dd.max) { say('patches you'); heal(s, daemonAmount(s, id), d.name); } else acted = false; }
-    else if (id === 'spider') { const t = lastTarget(s) || soonestAttacker(s); if (t) { say(`bites ${t.name}`); e.burns.push({ id: 'spider', target: t.id, damage: daemonAmount(s, id), grow: 0, left: 3, name: d.name, drain: 0 }); } else acted = false; }
-    else if (id === 'mirror') { const t = lastTarget(s); if (t) { say(`echoes you on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name, src: 'daemon' }); } else acted = false; }
-    else if (id === 'cron') { const t = livingParts(s).find((q) => q.kind === 'system' && telling(s, q)) || soonestAttacker(s); if (t) { say(`runs on ${t.name}`); hit(s, t, daemonAmount(s, id), { by: d.name, src: 'daemon' }); } else acted = false; }
-    if (!acted) continue;
-    e.daemonReady[id] = e.cycle + d.cooldown;
-    e.metrics.daemon = (e.metrics.daemon || 0) + 1;
-
-  }
-}
-// Watchman: once per fight, a big attack about to land waits a cycle.
-// Watchman: its bar (a big attack) scales with your power, never with its version; a version buys a
-// longer delay (v2: two cycles) and a second use a fight (v3).
-export const watchmanBar = (s) => scaled(s, DAEMONS.watchman.amount);
+// ---------- daemons (daemons.mjs) ----------
+// Watchman: once a fight, the first big attack about to land waits a cycle, and its part takes the Watchman's hit
+// (after the attacks, flushDaemons). The bar is a big attack at your power.
 function watchman(s, p) {
-  const e = s.encounter, v = daemonVersion(s, 'watchman');
-  if (!slottedDaemons(s).includes('watchman') || p.attack.tell || (e.once.watchman || 0) >= (v >= 3 ? 2 : 1) || p.attack.effect !== 'damage' || p.attack.amount < watchmanBar(s)) return false;
-  e.once.watchman = (e.once.watchman || 0) + 1;
-  const n = v >= 2 ? 2 : 1;
-  p.attack.due = e.cycle + n;
-  emit(s, 'interrupt', `Watchman delays ${p.attack.name} ${n === 1 ? 'a cycle' : `${n} cycles`}.`, { target: p.id, auto: 'daemon' });
+  const e = s.encounter;
+  if (!slottedDaemons(s).includes('watchman') || e.inDaemon || p.attack.tell || e.once['dmn-watchman'] || p.attack.effect !== 'damage' || p.attack.amount < watchmanBar(s)) return false;
+  e.once['dmn-watchman'] = true;
+  p.attack.due = e.cycle + 1;
+  emit(s, 'interrupt', `Watchman delays ${p.attack.name} a cycle.`, { target: p.id, auto: 'daemon' });
+  (e.daemonQueue ||= []).push({ id: 'watchman', x: { part: p.id } });
   openProc(s, 'slipped');
   return true;
-}
-// Canary: once per fight, dropping below half raises a shield.
-function canary(s) {
-  const e = s.encounter, d = defender(s);
-  if (!slottedDaemons(s).includes('canary') || e.once.canary || d.integrity <= 0 || d.integrity >= d.max / 2) return;
-  e.once.canary = true;
-  e.shield = (e.shield || 0) + daemonAmount(s, 'canary');
-  emit(s, 'status', `Canary raises your shield to ${e.shield}.`, { auto: 'daemon' });
-}
-// A found daemon: a new one at v1, or an upgrade to one you have (v3 is the top: salvage instead).
-export function learnDaemon(s, why = '', id = null) {
-  s.daemonsOwned ||= {};
-  id ||= Object.keys(DAEMONS)[Math.floor(rand(s) * Object.keys(DAEMONS).length)];
-  const v = daemonVersion(s, id);
-  if (v >= DAEMON_VERSIONS.length) { for (let i = 0; i < 3; i++) s.salvage.push({ name: 'Daemon scraps', virus: 'daemon', seed: 0 }); return emit(s, 'info', `${why}${DAEMONS[id].name} v3 again: +3 salvage.`); }
-  s.daemonsOwned[id] = v + 1;
-  // Not slotted for you: you choose (Daemons page).
-  return emit(s, 'drop', `${why}${DAEMONS[id].name} ${v ? `v${v + 1}` : 'daemon'}. ${DAEMONS[id].rule}`, { daemon: id });
-}
-function daemonCommand(s, text) {
-  const [, word, arg] = text.match(/^daemons?(?: (\w+))?(?: (\S+))?$/) || [];
-  const id = arg && Object.keys(DAEMONS).find((k) => k === arg || DAEMONS[k].name.toLowerCase() === arg);
-  if (!word || word === 'list') return emit(s, 'info', `Daemons (${slottedDaemons(s).length}/${daemonSlots(s)} slotted): ${Object.keys(s.daemonsOwned || {}).map((k) => `${DAEMONS[k].name} v${daemonVersion(s, k)}${slottedDaemons(s).includes(k) ? ' (slotted)' : ''}`).join(', ') || 'none found yet'}.`);
-  if (active(s)) return warn(s, 'Change daemons between fights.');
-  if (!id || !daemonVersion(s, id)) return warn(s, arg ? `You don't have a daemon called ${arg}.` : 'daemon slot <name> · daemon unslot <name>.');
-  if (word === 'slot') {
-    if (slottedDaemons(s).includes(id)) return warn(s, `${DAEMONS[id].name} is already slotted.`);
-    if (slottedDaemons(s).length >= daemonSlots(s)) return warn(s, `All ${daemonSlots(s)} daemon slots are full. Unslot one first.`);
-    s.daemons = [...slottedDaemons(s), id];
-    return emit(s, 'daemon-set', `${DAEMONS[id].name} slotted.`);
-  }
-  if (word === 'unslot') { s.daemons = slottedDaemons(s).filter((k) => k !== id); return emit(s, 'daemon-set', `${DAEMONS[id].name} unslotted.`); }
-  return warn(s, 'daemon slot <name> · daemon unslot <name>.');
 }
 
 export function advance(s, deltaMs) {
@@ -3788,7 +3742,6 @@ export function restore(raw) {
     // v19: skills reworked and daemons are found programs. Old daemon rules and old skill picks
     // go; each class re-fills its bar from the new kit.
     if (was < 19) { s.daemons = []; s.daemonsOwned = {}; s.loadout.equipped = {}; s.loadout.picks = {}; if (s.encounter) s.encounter = null; }
-    s.daemonsOwned ||= {};
     // v20: Mail, contracts and the Halcyon retainer. A server whose vault you already opened is yours.
     if (was < 20) for (const l of s.locations || []) if (Object.keys(l.state?.unlocked || {}).length) l.takenOver = true;
     // v21: the hidden network, the contract board and Indemnity. Found servers get their unknown neighbours.
@@ -3838,6 +3791,8 @@ export function restore(raw) {
     kitRestore(s, was); // v37: 15-key pools, reordered lines, presets
     presetRenameRestore(s, was); // v38: swarm is area (Demolitionist), ghostroot is evasion (Phantom)
     networkRestore(s, was); // v36: every save's network gets a seed (network.mjs)
+    daemonRestore(s); // daemons have levels, not versions (daemons.mjs); keyed on the old field, not the version
+    signatureRestore(s); // signatures are gone: what you held becomes code (invasion.mjs)
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts

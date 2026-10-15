@@ -508,22 +508,22 @@ test('Zero-days: Rootkit\'s first hit goes through armor; Race Condition refunds
   assert.equal(resolveCycle(b).find((e) => e.type === 'damage').crit, false, 'just the one');
 });
 
-test('Cron Job and Snapshot are daemons now: Cron hits every 3 cycles, the part winding up a tell first; Snapshot restores once below half', () => {
+test('Cron Job and Snapshot are daemons now: Cron hits every 3 cycles, the part winding up a tell first; Snapshot restores once below half', async () => {
   const c = fresh();
-  c.daemonsOwned = { cron: 1 }; c.daemons = ['cron'];
+  c.daemonLv = { cron: 1 }; c.daemons = ['cron'];
   bare(fight(c));
   c.encounter.virus.tells = null;
   for (const p of c.encounter.virus.parts) { p.attack = null; p.integrity = p.max = 200; }
   part(c, 'pulse').attack = { name: 'x', effect: 'damage', amount: 0, interval: 99, due: 99 };
   command(c, 'hold'); resolveCycle(c);
-  assert.equal(part(c, 'pulse').integrity, 200 - 8, 'cycle 1: it runs on the next to attack, for 8');
+  assert.equal(part(c, 'pulse').integrity, 200 - 5, 'cycle 1: it runs on the next to attack, for 5 (lv 1)');
   command(c, 'hold'); resolveCycle(c); command(c, 'hold'); resolveCycle(c);
-  assert.equal(part(c, 'pulse').integrity, 192, 'then it waits 3 cycles');
+  assert.equal(part(c, 'pulse').integrity, 195, 'then it waits 3 cycles');
   command(c, 'hold'); resolveCycle(c);
-  assert.equal(part(c, 'pulse').integrity, 184, 'and runs again');
+  assert.equal(part(c, 'pulse').integrity, 190, 'and runs again');
 
   const n = fresh();
-  n.daemonsOwned = { snapshot: 3 }; n.daemons = ['snapshot'];
+  n.daemonLv = { snapshot: 26 }; n.daemons = ['snapshot']; // its share grows with its level (5% at lv 1)
   syncServer(n);
   fight(n);
   n.encounter.hardened = 0;
@@ -532,7 +532,8 @@ test('Cron Job and Snapshot are daemons now: Cron hits every 3 cycles, the part 
   pulse.attack.amount = 60;
   n.encounter.cycle = pulse.attack.due;
   command(n, 'hold'); resolveCycle(n);
-  assert.equal(n.server.integrity, 100 - 60 + 16, 'dropped below half, restored 16%');
+  const { daemonN } = await import('./dist/data.mjs');
+  assert.equal(n.server.integrity, 100 - 60 + daemonN('snapshot', 26), 'dropped below half, restored its share of your max');
 });
 
 test('services are gone (R2): none to install, the commands say so, the world clock still runs', () => {
@@ -559,7 +560,7 @@ test('saves from before protocols: installed server gear becomes running service
   old.recipes = ['cron-job'];
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.deepEqual(s.services, {}, 'v34: the RAID Array went to the wall, the Cron Job became a daemon');
-  assert.equal(s.daemonsOwned.cron, 1);
+  assert.equal(s.daemonLv.cron, 1, 'a level-1 save: its Cron Job is a level-1 daemon');
   assert.equal(s.materials.kernel, 5, 'the uninstalled Firewall came back as Kernel code');
   assert.equal(s.materials.worm, 12, 'and the RAID Array as what it cost');
   assert.deepEqual(s.recipes, [], 'no blueprints left for services that are gone');
@@ -584,8 +585,8 @@ test('the old Upgrades come back as running services and a loaded protocol; daem
   assert.equal(loaded(s)[0].rarity, 'stock');
   const t = fresh();
   assert.equal(daemonSlots(t), CONFIG.daemonSlots);
-  t.hackers = { operator: { level: 9, xp: 0 }, bastion: { level: 20, xp: 0 } };
-  assert.equal(daemonSlots(t), CONFIG.daemonSlots + 2, 'your highest class level opens them, whichever class you play');
+  t.hackers = { operator: { level: 9, xp: 0 }, bastion: { level: 30, xp: 0 } };
+  assert.equal(daemonSlots(t), CONFIG.daemonSlots + 2, 'your highest class level opens them (15 and 30), whichever class you play');
 });
 
 test('blueprints: nothing is buildable at first; each teaches something new; every vault holds one', async () => {
@@ -661,10 +662,12 @@ test('components pay like mana: any for the rest, named ones where a cost asks, 
 test('Uplink trace is gone: old saves swap Traceroute for Keepalive and the Tracer daemon for Stall', () => {
   const old = fresh();
   old.loadout.equipped = { infiltrator: ['inject', 'tag', 'traceroute'] };
+  delete old.daemonLv;
   old.daemonsOwned = { tracer: 2 }; old.daemons = ['tracer'];
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.deepEqual(s.loadout.equipped.infiltrator, ['inject', 'tag', 'keepalive']);
-  assert.deepEqual(s.daemonsOwned, { stall: 2 });
+  assert.deepEqual(s.daemonLv, { stall: 1 }, 'a Stall, at a level from its version and yours');
+  assert.equal(s.daemonsOwned, undefined);
   assert.deepEqual(s.daemons, ['stall']);
 });
 
