@@ -10,12 +10,16 @@
 // to a cycle either way on top (seeded jitter, never onto cycle 1). Authors weight the sets they favour.
 //
 // The bodies are kept out of FAMILIES (data.mjs ROOM_FAMILIES), so the old game never rolls them.
-//   Trojan       Don't hit the box. The Courier drops a hit and delivers Packages; while the Loader lives, any damage to
-//                a Package unpacks it into two Droppers, and an unopened one unpacks on its own 5 cycles after
-//                delivery. Once the Loader is broken, a Package is an inert box: break it for a Payload Box.
+//   Trojan       Don't hit the box. The Courier drops a hit and delivers Packages (one is on the board when the fight
+//                opens); while the Loader lives, any damage to a Package unpacks it into two Droppers, and an unopened
+//                one unpacks on its own 5 cycles after delivery. The Loader redeploys a broken Courier 4 cycles later at
+//                half its Integrity, as often as it breaks: the Loader is the real target. Once the Loader is broken, the
+//                Courier stays down and a Package is an inert box: break it for a Payload Box.
 //   Cryptominer  Let it cook, or vent it. The Rig's Hash ramps every time it lands, and it heats up every cycle (faster
 //                once the Cooler is broken, and every Hash lands 50% harder then). At 100 heat it overheats: it stops
-//                hashing and burns itself until it breaks. Its ticks vent (ramp and heat back to nothing).
+//                hashing and burns itself until it breaks. Its ticks vent (ramp and heat back to nothing). Break the
+//                Rig first and the Cooler falls back on it (combat.mjs fallback): it takes over the Hash, climb and heat as
+//                they were, and runs it uncooled (25 a cycle). Whichever part is left hashing cooks.
 //   Wiper        Hold your big key. The Degausser's Wipe hits and takes a key off your bar: your strongest ready skill
 //                (Targeted) or the one you used last (Rolling). Key 1 and SIGINT are never wiped.
 import { hooks, emit, alive, part, livingParts, attackers, defender, hit, usable, readyIn, strikeWith, virusIntegrity } from './combat.mjs';
@@ -25,7 +29,7 @@ import { ROOM_FAMILIES, FAMILIES, ABILITIES, CONFIG } from './data.mjs';
 Object.assign(ROOM_FAMILIES, {
   trojan: {
     name: 'Trojan', stem: 'TROJAN', threatens: 'Signal', art: 'worm', opens: 4, code: 'worm',
-    summary: "The Courier delivers Packages. While the Loader lives, any damage to a Package unpacks it into two Droppers, and an unopened one unpacks on its own 5 cycles after delivery. Break the Loader and they're inert boxes.",
+    summary: "The Courier delivers Packages, and one is already on the board. While the Loader lives, any damage to a Package unpacks it into two Droppers, an unopened one unpacks on its own 5 cycles after delivery, and a broken Courier is redeployed 4 cycles later at half its Integrity. Break the Loader and the Courier stays down, and the Packages are inert boxes.",
     parts: [
       { id: 'courier', name: 'Courier', integrity: 34, armor: 1, loot: 'Courier Packet', special: true, attack: { name: 'Drop', effect: 'damage', amount: 10, interval: 5, first: 3 }, deliver: { interval: 3, first: 2 } },
       { id: 'loader', name: 'Loader', integrity: 30, armor: 2, loot: 'Loader Stub' },
@@ -33,10 +37,10 @@ Object.assign(ROOM_FAMILIES, {
   },
   cryptominer: {
     name: 'Cryptominer', stem: 'XMRIG', threatens: 'Signal', art: 'ransomware', opens: 6, code: 'cipher',
-    summary: 'The Rig hashes every 2 cycles, 2 harder each time it lands, and heats up every cycle. At 100 heat it overheats: it stops hashing and burns itself every cycle until it breaks. Break the Cooler and it heats two and a half times as fast, and every Hash lands 50% harder.',
+    summary: 'The Rig hashes every 2 cycles, 2 harder each time it lands, and heats up every cycle. At 100 heat it overheats: it stops hashing and burns itself every cycle until it breaks. Break the Cooler and it heats two and a half times as fast, and every Hash lands 50% harder. Break the Rig first and the Cooler takes over its Hash, uncooled.',
     parts: [
       { id: 'rig', name: 'Rig', integrity: 44, armor: 1, loot: 'ASIC Die', special: true, attack: { name: 'Hash', effect: 'damage', amount: 4, interval: 2, first: 2, ramp: 2 } },
-      { id: 'cooler', name: 'Cooler', integrity: 26, armor: 1, loot: 'Heat Pipe' },
+      { id: 'cooler', name: 'Cooler', integrity: 26, armor: 1, loot: 'Heat Pipe', fallback: 'rig' }, // break the Rig first and the Cooler takes over its Hash, uncooled (Fallback)
     ],
   },
   wiper: {
@@ -60,8 +64,9 @@ Object.assign(ROOM_FAMILIES, {
   },
 });
 export const BODY = {
-  package: { integrity: 16, opens: 5, cap: 3 }, // a Trojan's Package: unpacks 5 cycles after delivery, at most 3 on the board
-  dropper: { integrity: 14, amount: 5, interval: 2 }, // two from each unpacked Package
+  package: { integrity: 16, opens: 5, cap: 3, opening: 1 }, // a Trojan's Package: unpacks 5 cycles after delivery, at most 3 on the board, 1 there when the fight opens
+  redeploy: { in: 4, at: 0.5 }, // the Loader redeploys a broken Courier 4 cycles later at half its max Integrity, bare (its ◆ patch back on the usual clock), while it stands
+  dropper: { integrity: 14, amount: 3, interval: 2 }, // two from each unpacked Package (3: was 5 before a fight opened on a Package, which kept the Trojan's pressure in line)
   payload: { credits: [12, 24] }, // a Payload Box from an inert Package
   heat: { cooled: 10, hot: 25, at: 100, burn: 0.12, hard: 1.5 }, // the Rig's heat a cycle (Cooler alive, broken), overheat, its burnout, Hash once the Cooler is gone
   loader: 2, // a Loader's tick delays the Courier's next delivery this many cycles
@@ -142,6 +147,7 @@ export function pressureOf(family, setId, cycles = 20, amounts = null) {
     }
     const d = x.deliver || spec.deliver;
     if (d) for (let c = d.first; c <= cycles - BODY.package.opens; c += d.interval) n += 2 * BODY.dropper.amount * 2;
+    if (d && family === 'trojan') n += BODY.package.opening * 2 * BODY.dropper.amount * 2; // the Package on the board when it opens
   }
   return n;
 }
@@ -188,6 +194,8 @@ export function applySet(v, setId, jitter = null) {
   }
   if (jitter) jitterFirst(v, jitter);
   for (const p of v.parts) if (p.deliver) p.deliver.due = p.deliver.first;
+  // A Trojan opens with a Package already delivered (so the boxes are never optional), unpacking on the usual clock.
+  if (v.family === 'trojan' && !v.parts.some((p) => p.pkg)) for (let k = 0; k < BODY.package.opening; k++) addPackage(v, 0, true);
   if (set.heat) v.heatRate = set.heat;
   v.attackSet = setId;
   return v;
@@ -210,16 +218,31 @@ function fragment(v, id, name, hp, extra = {}) {
   v.parts.push(p);
   return p;
 }
+// A Package on the board, delivered on this cycle (it unpacks BODY.package.opens later, unless it's inert).
+function addPackage(v, cycle, loader) {
+  const id = nextId(v, 'pkg'), hp = Math.max(1, Math.round(BODY.package.integrity * scaleOf(v) * (v.roomHp || 1)));
+  return fragment(v, id, `Package ${id.slice(3)}`, hp, { pkg: { opensAt: cycle + BODY.package.opens, inert: !loader } });
+}
 // A Courier delivers a Package (at most BODY.package.cap on the board).
 function deliver(s, p) {
   const e = s.encounter, v = e.virus;
   p.deliver.due = e.cycle + p.deliver.interval;
   const boxes = livingParts(s).filter((x) => x.pkg);
   if (boxes.length >= BODY.package.cap) return emit(s, 'info', `The ${p.name} has no room for another Package. ${BODY.package.cap} are on the board.`, { source: p.id });
-  const id = nextId(v, 'pkg'), hp = Math.max(1, Math.round(BODY.package.integrity * scaleOf(v) * (v.roomHp || 1)));
-  const loader = livingParts(s).some((x) => x.id === 'loader');
-  fragment(v, id, `Package ${id.slice(3)}`, hp, { pkg: { opensAt: e.cycle + BODY.package.opens, inert: !loader } });
-  emit(s, 'spawn', loader ? `The ${p.name} delivers Package ${id.slice(3)}. It unpacks in ${BODY.package.opens} cycles, or the moment anything damages it while the Loader lives.` : `The ${p.name} delivers Package ${id.slice(3)}. With the Loader broken, it's an inert box.`, { source: p.id, target: id });
+  const loader = livingParts(s).some((x) => x.id === 'loader'), box = addPackage(v, e.cycle, loader), n = box.id.slice(3);
+  emit(s, 'spawn', loader ? `The ${p.name} delivers Package ${n}. It unpacks in ${BODY.package.opens} cycles, or the moment anything damages it while the Loader lives.` : `The ${p.name} delivers Package ${n}. With the Loader broken, it's an inert box.`, { source: p.id, target: box.id });
+}
+// The Loader redeploys a broken Courier: back at half its max Integrity, bare (a ◆ patches back on the usual clock), its
+// Drop and its deliveries on their own clocks again (a Mirror's twin reboot, but as often as it breaks, while the
+// Loader stands).
+const redeployOf = (s) => (s.encounter?.virus?.family === 'trojan' ? s.encounter.virus.parts.find((x) => x.id === 'courier' && !alive(x) && x.redeployAt != null) || null : null);
+function redeploy(s, p) {
+  const e = s.encounter, d = p.redeploy || {};
+  p.redeployAt = null;
+  Object.assign(p, { integrity: Math.max(1, Math.round(p.max * BODY.redeploy.at)), armor: 0, patchAt: e.cycle + CONFIG.patchDelay, redeploys: (p.redeploys || 0) + 1 });
+  if (p.attack) p.attack.due = e.cycle + 2;
+  if (d.deliver) p.deliver = { ...d.deliver, due: e.cycle + 1 + d.deliver.interval };
+  emit(s, 'patch', `The Loader REDEPLOYS the ${p.name} at ${p.integrity}/${p.max}. Break the Loader and it stays down.`, { target: p.id, reboot: true, redeploy: true });
 }
 // A Package unpacks: it leaves the board, and two Droppers take its place.
 function unpack(s, box, why) {
@@ -241,11 +264,14 @@ function vent(s, p) {
   emit(s, 'cut', `VENTED. You take the ${p.name} across a tick: its Hash drops back to ${p.attack ? p.attack.amount : 0}, and its heat from ${was} to 0.`, { target: p.id, vent: true });
 }
 // What a tick does on a part whose body has its own verb (interrupt.mjs): vent, or delay the next delivery.
-hooks.tickVerb = (s, p) => (s.encounter.virus.family === 'cryptominer' && p.id === 'rig' ? 'vent' : s.encounter.virus.family === 'trojan' && p.id === 'loader' ? 'delay' : 'cancel');
+// The part hashing: the Rig, or the Cooler once it has failed over.
+const hasherOf = (s) => (s.encounter?.virus?.family === 'cryptominer' ? livingParts(s).find((x) => x.id === 'rig' || (x.tookOver === 'rig' && x.attack)) || null : null);
+hooks.tickVerb = (s, p) => (s.encounter.virus.family === 'cryptominer' && p === hasherOf(s) ? 'vent' : s.encounter.virus.family === 'trojan' && p.id === 'loader' ? 'delay' : 'cancel');
 hooks.tickDo = (s, p, verb) => {
   if (verb === 'vent') return vent(s, p);
   if (verb === 'delay') {
-    const c = livingParts(s).find((x) => x.deliver);
+    const c = livingParts(s).find((x) => x.deliver), down = redeployOf(s);
+    if (!c && down) { down.redeployAt += BODY.loader; return emit(s, 'cut', `DELAYED. You take the ${p.name} across a tick: it redeploys the ${down.name} ${BODY.loader} cycles later.`, { target: p.id, delay: true }); }
     if (!c) return emit(s, 'tick-wasted', `The ${p.name} crosses a tick, but nothing is left to deliver.`, { target: p.id, wasted: true });
     c.deliver.due += BODY.loader;
     emit(s, 'cut', `DELAYED. You take the ${p.name} across a tick: the ${c.name}'s next delivery comes ${BODY.loader} cycles later.`, { target: p.id, delay: true });
@@ -285,7 +311,15 @@ hooks.roomBroke = (s, p) => {
   const e = s.encounter, v = e.virus;
   if (v.family === 'trojan' && p.id === 'loader') {
     for (const box of livingParts(s).filter((x) => x.pkg)) box.pkg.inert = true;
-    emit(s, 'status', 'With the Loader broken, every Package is an inert box. Break one for a Payload Box.', { target: p.id });
+    const down = redeployOf(s);
+    if (down) down.redeployAt = null;
+    emit(s, 'status', `With the Loader broken, every Package is an inert box. Break one for a Payload Box.${down ? ` The ${down.name} stays down.` : ''}`, { target: p.id });
+  }
+  // The Courier breaks while the Loader stands: it's redeployed BODY.redeploy.in cycles later.
+  if (v.family === 'trojan' && p.id === 'courier' && livingParts(s).some((x) => x.id === 'loader')) {
+    p.redeployAt = e.cycle + BODY.redeploy.in;
+    p.redeploy = { deliver: p.deliver ? { ...p.deliver } : p.redeploy?.deliver || null };
+    emit(s, 'status', `The Loader will redeploy the ${p.name} in ${BODY.redeploy.in} cycles at half its Integrity. Break the Loader before then and it stays down.`, { target: p.id });
   }
   if (v.family === 'cryptominer' && p.id === 'cooler') {
     const rig = livingParts(s).find((x) => x.id === 'rig');
@@ -304,6 +338,9 @@ hooks.roomIntents = (s, columns) => {
     if (p.deliver) for (let due = p.deliver.due; due - e.cycle < columns; due += p.deliver.interval) if (due - e.cycle >= 0) out.push({ source: p.id, name: 'Deliver', effect: 'deliver', amount: 0, col: due - e.cycle, hidden: false, kind: p.kind });
     if (p.pkg && !p.pkg.inert && p.pkg.opensAt - e.cycle >= 0 && p.pkg.opensAt - e.cycle < columns) out.push({ source: p.id, name: 'Unpack', effect: 'unpack', amount: 2, col: p.pkg.opensAt - e.cycle, hidden: false, kind: p.kind });
   }
+  // A broken Courier's redeploy sits on the Loader's row (the Courier has none while it's down).
+  const down = redeployOf(s);
+  if (down && livingParts(s).some((x) => x.id === 'loader') && down.redeployAt - e.cycle >= 0 && down.redeployAt - e.cycle < columns) out.push({ source: 'loader', name: 'Redeploy', effect: 'redeploy', amount: Math.max(1, Math.round(down.max * BODY.redeploy.at)), col: down.redeployAt - e.cycle, hidden: false, kind: 'system' });
   return out;
 };
 // The end of a room fight's cycle: deliveries and unpacking, a Rig's heat, an elite's enrage, a Lab's overheat.
@@ -313,11 +350,20 @@ export const ROOM_RULES = {
 };
 hooks.roomCycle = (s) => {
   const e = s.encounter, v = e.virus;
+  const down = redeployOf(s);
+  if (down && down.redeployAt <= e.cycle) { if (livingParts(s).some((x) => x.id === 'loader')) redeploy(s, down); else down.redeployAt = null; }
   for (const p of livingParts(s).filter((x) => x.deliver && x.deliver.due <= e.cycle)) deliver(s, p);
   for (const box of livingParts(s).filter((x) => x.pkg && !x.pkg.inert && x.pkg.opensAt <= e.cycle)) unpack(s, box, 'on its own');
-  const rig = livingParts(s).find((x) => x.id === 'rig' && v.family === 'cryptominer');
+  const rig = hasherOf(s);
+  // The Cooler took over the Hash this cycle (combat.mjs fallback): it runs it uncooled, with the climb and the heat
+  // the Rig had (an overheated rig stays overheated).
+  if (rig && rig.id !== 'rig' && !rig.uncooled) {
+    rig.uncooled = true;
+    if (v.overheated) rig.attack.due = 999;
+    emit(s, 'status', `The ${rig.name} runs the Hash uncooled: it heats up ${BODY.heat.hot} a cycle until it overheats.`, { target: rig.id });
+  }
   if (rig) {
-    const cooler = livingParts(s).some((x) => x.id === 'cooler');
+    const cooler = livingParts(s).some((x) => x.id === 'cooler' && x !== rig);
     if (!v.overheated) {
       v.heat = Math.min(BODY.heat.at, (v.heat || 0) + Math.round((cooler ? BODY.heat.cooled : BODY.heat.hot) * (v.heatRate || 1)));
       if (v.heat >= BODY.heat.at) { v.overheated = true; if (rig.attack) rig.attack.due = 999; emit(s, 'phase', `The ${rig.name} OVERHEATS. It stops hashing and burns itself every cycle until it breaks.`, { target: rig.id }); }
@@ -342,8 +388,8 @@ export function bodyTags(s, p) {
   const e = s.encounter, v = e?.virus, out = [];
   if (!v || !alive(p)) return out;
   if (p.pkg) out.push(p.pkg.inert ? ['inert', 'An inert box: break it for a Payload Box.', ''] : [`opens ${Math.max(0, p.pkg.opensAt - e.cycle)}`, `Unpacks into two Droppers at the end of cycle ${p.pkg.opensAt}, or the moment anything damages it while the Loader lives.`, 'hot']);
-  if (p.id === 'loader' && v.family === 'trojan') out.push(['loader', 'While it lives, any damage to a Package unpacks it. Its ticks delay the next delivery by 2 cycles.', 'hot']);
-  if (p.id === 'rig' && v.family === 'cryptominer') out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'It burns itself every cycle until it breaks. Venting it starts it hashing again.' : `At ${BODY.heat.at} it overheats: it stops hashing and burns itself until it breaks. Its ticks vent it: heat and ramp back to nothing.`, v.overheated ? 'you' : 'hot']);
+  if (p.id === 'loader' && v.family === 'trojan') { const down = redeployOf(s); out.push(down ? [`redeploys in ${Math.max(0, down.redeployAt - e.cycle)}`, `It redeploys the ${down.name} at the end of cycle ${down.redeployAt}, at half its Integrity. Break the Loader before then and the ${down.name} stays down. Its ticks delay the redeploy by ${BODY.loader} cycles.`, 'hot'] : ['loader', `While it lives, any damage to a Package unpacks it, and a broken Courier is redeployed ${BODY.redeploy.in} cycles later at half its Integrity. Its ticks delay the next delivery by ${BODY.loader} cycles.`, 'hot']); }
+  if (p === hasherOf(s)) out.push([v.overheated ? 'overheated' : `heat ${v.heat || 0}/${BODY.heat.at}`, v.overheated ? 'It burns itself every cycle until it breaks. Venting it starts it hashing again.' : `At ${BODY.heat.at} it overheats: it stops hashing and burns itself until it breaks. Its ticks vent it: heat and ramp back to nothing.`, v.overheated ? 'you' : 'hot']);
   if (p.attack?.wipe) out.push([p.attack.wipe === 'last' ? 'wipes your last skill' : 'wipes your strongest', p.attack.wipe === 'last' ? `Its Wipe takes the skill you used last off your bar for ${p.attack.wipeFor} cycles.` : `Its Wipe takes your strongest ready skill off your bar for ${p.attack.wipeFor} cycles.`, 'hot']);
   return out;
 }

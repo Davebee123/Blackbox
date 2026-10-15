@@ -97,10 +97,10 @@ function strainTags(s, v) {
 }
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield', mirror: 'interrupt', reboot: 'pulse-node', deliver: 'loot', unpack: 'mutation' };
+const ICON = { damage: 'server', encrypt: 'event-lock', scramble: 'scan', replicate: 'mutation', heal: 'shell-shield', mirror: 'interrupt', reboot: 'pulse-node', deliver: 'loot', unpack: 'mutation', redeploy: 'pulse-node' };
 const icon = (name) => `style="--icon:url('ui/icons/${name}.svg')"`;
-const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : i.effect === 'mirror' ? `${i.amount}% back` : i.effect === 'reboot' ? `${i.amount} hp` : i.effect === 'deliver' ? '+box' : i.effect === 'unpack' ? `${i.amount} drop` : '+frag'));
-const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command does nothing this cycle, and some bounces back', reboot: 'comes back, unless its twin is broken first', deliver: 'a Package on the board', unpack: 'two Droppers' };
+const effectLabel = (i) => (i.effect === 'damage' ? `−${i.amount}` : (i.hit ? `−${i.hit} · ` : '') + (i.effect === 'encrypt' ? `+${i.amount}` : i.effect === 'scramble' ? `${i.amount} cyc` : i.effect === 'heal' ? `+${i.amount} hp` : i.effect === 'mirror' ? `${i.amount}% back` : i.effect === 'reboot' || i.effect === 'redeploy' ? `${i.amount} hp` : i.effect === 'deliver' ? '+box' : i.effect === 'unpack' ? `${i.amount} drop` : '+frag'));
+const TARGETS = { damage: 'Integrity', encrypt: 'damage every cycle, stacking, until it breaks', scramble: 'your attacks may hit you', replicate: 'spawns a fragment', heal: 'to its most damaged part', mirror: 'your command does nothing this cycle, and some bounces back', reboot: 'comes back, unless its twin is broken first', deliver: 'a Package on the board', unpack: 'two Droppers', redeploy: 'the Courier comes back, unless the Loader is broken first' };
 let runMode = false;
 const effectTarget = new Proxy(TARGETS, { get: (t, k) => (k === 'damage' && runMode ? 'Signal' : t[k]) });
 
@@ -444,6 +444,8 @@ function partTags(s, p) {
   // Parts that change the fight (data.mjs FAMILIES): a Tripwire, the C2 Node, the parts gone loud.
   if (p.deadman && p.integrity > 0) tags.push(`<span class="tag hot" title="Break it while the others stand and they go loud, dealing ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage and attacking a cycle sooner. Break it last.">tripwire</span>`);
   if (p.loud && p.integrity > 0) tags.push(`<span class="tag hot" title="The Tripwire set it off: its attacks deal ${Math.round((CONFIG.tripwire.loud - 1) * 100)}% more damage">loud</span>`);
+  // Fallback (combat.mjs): the part that takes over its partner's attack when the partner breaks first.
+  if (p.fallback && p.integrity > 0) { const t = e.virus.parts.find((x) => x.id === p.fallback); if (p.tookOver) tags.push(`<span class="tag hot" title="${esc(`It took over the ${t?.name || 'broken part'}'s ${t?.attack?.name || 'attack'} when the ${t?.name || 'other part'} broke.`)}">took over</span>`); else if (t && t.integrity > 0 && t.attack) tags.push(`<span class="tag hot" title="${esc(`Fallback: break the ${t.name} while the ${p.name} stands and the ${p.name} takes over its ${t.attack.name}.`)}">fallback</span>`); }
   if (p.command && p.integrity > 0) tags.push(`<span class="tag hot" title="While it lives, fragments gnaw ${Math.round(CONFIG.c2.gnaw * 100)}% harder. Break it and every fragment drops with it.">commands fragments</span>`);
   const burn = (e.burns || []).filter((b) => b.target === p.id);
   // Burns, one tag per kind: the damage a cycle in all, and how many when there's more than one of a kind

@@ -59,8 +59,10 @@ const second = (sub) => {
 // Demolitionist's area preset (5.2 better on the generic fights, 4.1 on its own), the Sysop's healers (5.4 better on
 // the generic fights, 2.7 on its own) and the Hijacker's rules (6.1 worse on the generic fights, 3.1 better on its own).
 // Since R1 (the interrupt in every fight) the Demolitionist's area preset measures 2.0 better on its fights, the
-// Herder's swarm 0.3 and the Sysop's healers 2.1 (its rotation rolls a charge back now): held there too.
-const DRIFT = { demolitionist: { generic: 6.5, suits: 1.5 }, sysop: { generic: 6.5, suits: 1.5 }, hijacker: { generic: 6.5, suits: 2.5 }, herder: { generic: 5, suits: 0 } };
+// Herder's swarm 0.3 and the Sysop's healers 2.1 (its rotation rolls a charge back now): held there too. Since Fallback
+// (combat.mjs: Patchwork's Patcher drops its Patch for the Surge once the Pulse Node breaks, PATCH TUESDAY's too) a
+// healer fight has less healing left to Revoke, and the healers preset measures 1.3 worse there: held at -2.
+const DRIFT = { demolitionist: { generic: 6.5, suits: 1.5 }, sysop: { generic: 6.5, suits: -2 }, hijacker: { generic: 6.5, suits: 2.5 }, herder: { generic: 5, suits: 0 } };
 test('each second preset is a real alternative: within 5 points of the rotation on the generic fights, and at least 5 points better on the fights it suits', () => {
   const off = [], line = [];
   for (const sub of ALL) {

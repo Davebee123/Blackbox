@@ -114,7 +114,7 @@ export const TIPS = [
     echo: 'This is an Echo. While the Echo lives, every hit you take repeats a cycle later at half damage. Break it early.',
     bricker: 'This is a Bricker. Each part hits 30% harder once it drops below half health. Finish a part quickly once you start on it.',
     overrun: 'This is an Overrun. Its fragments bite harder every cycle they live. Clear them while they are young, or break the Hive.',
-    bouncer: 'This is Bouncer ICE. Its Keyring re-arms the Gate every 4 cycles but never attacks. Break the Gate between re-arms, and break the Keyring first only if the Gate\'s armor is too thick.',
+    bouncer: 'Bouncer ICE: its Keyring re-arms the Gate every 4 cycles, and takes over the Gate\'s Ram if the Gate breaks first. Break the Gate between re-arms, then the Keyring.',
     tracer: 'This is Tracer ICE. Its Trace-back deals more damage every cycle the fight lasts, so finish it fast.',
   }).filter(([id]) => STRAINS[id] || GUARDS[id]).map(([id, text]) => ({ id: 'strain-' + id, page: 'combat', pause: true, at: `.tag-strain[data-strain="${id}"]`, text })),
   ...Object.entries(MUTATIONS).map(([id, m]) => ({ id: 'mut-' + id, page: '*', pause: true, at: `.tag-mut[data-mut="${id}"]`, text: `This virus is ${m.name}. ${m.rule}` })),

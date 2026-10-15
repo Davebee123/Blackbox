@@ -81,7 +81,7 @@ const STRAINS = {
   patchwork: {
     lineage: 'worm', from: 3, depth: 2, name: 'Patchwork', tell: { name: 'Hotfix' },
     rule: 'Every 3 cycles the Patcher heals the most damaged part by 12. Kill it first, or burst the other one down between patches.',
-    parts: [PULSE(12, 4), { id: 'patcher', name: 'Patcher', integrity: 28, armor: 1, loot: 'Patch Kit', special: true, attack: { name: 'Patch', effect: 'heal', amount: 12, interval: 3, first: 3 } }],
+    parts: [PULSE(12, 4), { id: 'patcher', name: 'Patcher', integrity: 28, armor: 1, loot: 'Patch Kit', special: true, fallback: 'pulse', attack: { name: 'Patch', effect: 'heal', amount: 12, interval: 3, first: 3 } }],
   },
   flicker: {
     lineage: 'ghostroot', from: 4, depth: 2, name: 'Flicker', tell: { name: 'Blink' },
@@ -142,7 +142,7 @@ const GUARDS = {
     summary: 'Nesting guard. The Brood spawns fragments that gnaw your Signal every cycle.',
     parts: [
       { id: 'pulse', name: 'Maw', integrity: 24, armor: 0, loot: 'Crawler Maw', attack: { name: 'Bite', effect: 'damage', amount: 7, interval: 3, first: 2 } },
-      { id: 'replicator', name: 'Brood', integrity: 28, armor: 1, loot: 'Brood Seed', special: true, attack: { name: 'Brood', effect: 'replicate', amount: 1, interval: 4, first: 3 } },
+      { id: 'replicator', name: 'Brood', integrity: 28, armor: 1, loot: 'Brood Seed', special: true, fallback: 'pulse', attack: { name: 'Brood', effect: 'replicate', amount: 1, interval: 4, first: 3 } },
     ],
   },
   // Ransomware-shaped guard: the Shredder winds up one heavy strike.
@@ -170,7 +170,7 @@ const GUARDS = {
     summary: 'ICE on the door. The Keyring keeps re-arming the Gate.',
     parts: [
       { id: 'pulse', name: 'Gate', integrity: 30, armor: 3, loot: 'Gate Hinge', attack: { name: 'Ram', effect: 'damage', amount: 10, interval: 3, first: 2 } },
-      { id: 'encryptor', name: 'Keyring', integrity: 22, armor: 1, loot: 'Keyring', special: true, rearm: 4 },
+      { id: 'encryptor', name: 'Keyring', integrity: 22, armor: 1, loot: 'Keyring', special: true, rearm: 4, fallback: 'pulse' },
     ],
   },
   // Watchdog-shaped: the longer the fight, the harder the Trace-back.
@@ -247,6 +247,7 @@ function makePart(spec, kind, scale, extraArmor = 0) {
     deadman: !!spec.deadman, // Tripwire: break it while the others live and they go loud
     command: !!spec.command, // C2 Node: fragments gnaw harder while it lives, and drop when it breaks
     mimic: !!spec.mimic, // Mimic: plays your last command back at you (its tell)
+    fallback: spec.fallback || null, // Fallback (Keyring, Brood, Patcher, Cooler): the part whose attack it takes over when that part breaks
     attack: spec.attack ? { ...spec.attack, due: spec.attack.first, amount: spec.attack.amount } : null,
     exposedUntil: 0,
     lastDamaged: 0,
