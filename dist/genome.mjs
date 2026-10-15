@@ -83,6 +83,37 @@ export function winGenes(s, v) {
 }
 export const codexCount = (s) => ({ decoded: GENE_IDS.filter((id) => decoded(s, id)).length, seen: GENE_IDS.filter((id) => geneState(s, id) !== 'unknown').length, total: GENE_IDS.length });
 
+// ---------- the Codex tab's record (codex.mjs reads it) ----------
+// s.dex: what you've met beyond the genes. kills { family, strain or guard: n }, fought and won { boss: n }, tells
+// { tell name, lower case: 1 } (a tell you've seen said), sets { 'family:set': 1 } (an attack set you've faced in a
+// room; each server's floorplan codex keeps its own too), muts { mutation: [families you've seen it on] }.
+export const dexOf = (s) => (s.dex ||= { kills: {}, fought: {}, won: {}, tells: {}, sets: {}, muts: {} });
+const bump = (o, k) => { o[k] = (o[k] || 0) + 1; };
+// A fight starts: a boss you've now fought, a mutation and the family it rode on.
+export function logFight(s, v) {
+  if (!v || s.who) return;
+  const d = dexOf(s);
+  if (v.boss) bump(d.fought ||= {}, v.boss);
+  if (v.mutation) { const on = ((d.muts ||= {})[v.mutation] ||= []), k = v.strain || v.family; if (k && !on.includes(k)) on.push(k); }
+}
+// A win: a kill of its family, strain or guard, and of its boss.
+export function logWin(s, v) {
+  if (!v || s.who) return;
+  const d = dexOf(s);
+  if (v.strain || v.family) bump(d.kills ||= {}, v.strain || v.family);
+  if (v.boss) bump(d.won ||= {}, v.boss);
+}
+// A tell was said in your fight (tells.mjs say).
+export function logTell(s, t) {
+  if (!t?.name || s.who) return;
+  (dexOf(s).tells ||= {})[t.name.toLowerCase()] = 1;
+}
+// An attack set you faced in a room (floorplan.mjs fight).
+export function logSet(s, family, set) {
+  if (!family || !set || s.who) return;
+  (dexOf(s).sets ||= {})[`${family}:${set}`] = 1;
+}
+
 // ---------- the genome card (scan) ----------
 // What you can tell about a virus: its author, body, grade and every gene chip, named if you've seen it, ??? with its
 // category otherwise. deep: an Infiltrator's scan, which shows the rule of genes you haven't decoded, for that fight.

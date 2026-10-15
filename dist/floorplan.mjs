@@ -41,6 +41,7 @@ import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
+import { logSet } from './genome.mjs';
 
 // ---------- tuning ----------
 export const ROOMS = {
@@ -805,7 +806,7 @@ export function fight(s, room, { pause = false, as = null } = {}) {
   // room's spawn rolls one here), and each part's first attack nudged up to a cycle either way.
   const fresh = !v.boss && !v.raid && f.size !== 'raw'; // crew content (the farm's packs and bosses) is tuned on its own timing
   const set = fresh ? (f.set !== undefined ? f.set : spawnSet(v.family, f.author, f.seed)) : null;
-  if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; }
+  if (set) { applySet(v, set, seeded((f.seed ^ 0x5e7) >>> 0)); R.codex[`${v.family}:${set}`] = true; logSet(s, v.family, set); }
   else if (fresh) jitterFirst(v, seeded((f.seed ^ 0x5e7) >>> 0));
   if (room.queue && R.kind === 'Mailhub' && as !== 'hunter') spamFlood(s, e);
   if (v.boss && !v.raid) bossRule(s, R.bossRule || s.bossRule || 'a');

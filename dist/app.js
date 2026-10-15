@@ -5,6 +5,7 @@ import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, ha
 import * as V from './view.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
 import { createArt } from './virus-art.mjs';
+import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { createFeel } from './feel.mjs';
 import { createShell } from './shell.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
@@ -55,6 +56,7 @@ let nag = {}; // when the pager last shook for an alert, and the breach last pin
 let wasCooling = new Set(); // abilities on cooldown at the last render (the tray flashes the ones that come back)
 let mapView = 'mine'; // the Map: 'mine' (your network) or 'consortium' (the merged servers)
 let mailSel = null; // the open item on the Mail page: 'l<id>' a letter, 'j<id>' a contract
+let codexSel = null, codexIdx = false; // the Codex tab: the entry open ('family:worm'), and the phone's index unfolded
 let history = [];
 let historyIndex = -1;
 let suggestionList = [];
@@ -213,6 +215,37 @@ const art = createArt({
   },
 });
 art.attach($('virus-canvas'));
+// The Codex tab's art: the fight board's renderer on a sample virus of the entry (codex.mjs sampleOf), standing still.
+let codexArtVirus = null;
+const codexArt = createArt({
+  getState: () => (codexArtVirus ? { encounter: { virus: codexArtVirus, phase: 'idle', paused: true, cycle: 2 } } : null),
+  canMove: () => canMove(),
+  getSelected: () => null,
+  getNowSources: () => new Set(),
+});
+// After the Codex page draws: its art on the new canvas, and focus back on the row (or the fold) that had it.
+function codexDrawn(focusKey) {
+  const c = $('cx-canvas');
+  if (c) { codexArtVirus = codexEntry(campaign, c.closest('[data-entry]')?.dataset.entry)?.art || null; codexArt.attach(c); }
+  if (focusKey && !document.activeElement?.closest?.('[data-codex], [data-codex-fold]')) {
+    const el = focusKey === 'fold' ? document.querySelector('[data-codex-fold]') : [...document.querySelectorAll(`.cx-index [data-codex="${CSS.escape(focusKey)}"]`)].find((x) => x.getClientRects().length);
+    el?.focus({ preventScroll: true });
+  }
+}
+document.addEventListener('click', (e) => {
+  const row = e.target.closest?.('[data-codex]');
+  if (row) { codexSel = row.dataset.codex; codexIdx = false; if (module !== 'codex') go('codex'); else { dirty = true; $('page-view').scrollTop = 0; } return; }
+  if (e.target.closest?.('[data-codex-fold]')) { codexIdx = !codexIdx; dirty = true; }
+});
+// The index by keyboard: ↑ and ↓ walk its rows (Tab reaches them too), Enter or Space opens one.
+document.addEventListener('keydown', (e) => {
+  const row = e.target.closest?.('.cx-index [data-codex]');
+  if (!row || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+  const rows = [...document.querySelectorAll('.cx-index [data-codex]')].filter((x) => x.getClientRects().length), i = rows.indexOf(row);
+  const to = e.key === 'Home' ? 0 : e.key === 'End' ? rows.length - 1 : Math.max(0, Math.min(rows.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
+  e.preventDefault();
+  rows[to]?.focus();
+});
 
 // ---------- events → feedback ----------
 // A breach: a ring fires out of the pager's lamp (twice, a beat apart), so you notice it.
@@ -1002,8 +1035,8 @@ function notice(text, bad = false, suggest = null, sticky = false) {
 }
 
 // ---------- commands ----------
-const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 'system', 'campaign', 'room', 'archive'];
-const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', crafting: 'craft', workbench: 'craft', build: 'craft', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', fight: 'combat', run: 'net' };
+const NAV = ['map', 'combat', 'net', 'server', 'craft', 'loadout', 'daemons', 'codex', 'system', 'campaign', 'room', 'archive'];
+const ALIAS = { vault: 'loadout', gear: 'loadout', protocols: 'loadout', stash: 'loadout', inventory: 'loadout', crafting: 'craft', workbench: 'craft', build: 'craft', services: 'server', ports: 'server', wall: 'server', talents: 'loadout', skills: 'loadout', archetypes: 'loadout', home: 'map', trace: 'map', leads: 'map', logs: 'system', settings: 'system', bestiary: 'codex', fight: 'combat', run: 'net' };
 
 function run(raw) {
   let text = raw.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1597,13 +1630,16 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, system: V.systemMarkup };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
+    const focusCx = module === 'codex' ? document.activeElement?.closest?.('[data-codex], [data-codex-fold]') : null; // and a Codex row its focus
+    const focusCxKey = focusCx ? (focusCx.dataset.codex ?? 'fold') : null;
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
+    if (module === 'codex') codexDrawn(focusCxKey);
     if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
@@ -2402,6 +2438,8 @@ let fitKey = '';
 function fitTopbar() {
   const bar = document.querySelector('.topbar');
   if (!bar.clientWidth) return; // not laid out yet (the casing boots)
+  const tabs = document.querySelector('.modules'), n = String([...tabs.children].filter((b) => !b.hidden).length);
+  if (tabs.dataset.tabs !== n) tabs.dataset.tabs = n; // how many tabs show: a phone sizes them down from seven (style.css)
   // Refit when the tabs, the width, or what the bar holds changes (a breach adds a chip, the pager an alert):
   // the bar's height after the last fit is part of the key, so growing onto a second row refits it.
   const sig = () => [...document.querySelectorAll('.modules button')].map((b) => (b.hidden ? 0 : 1)).join('') + ':' + bar.clientWidth + ':' + bar.offsetHeight + ':' + ($('integrity-note')?.hidden ? 0 : $('integrity-note')?.textContent) + ':' + $('people')?.hidden;

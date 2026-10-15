@@ -1,0 +1,153 @@
+/* The Codex tab (codex-view.mjs): an index on the left, the entry on the right. Tokens from style.css (docs/ui.md).
+   Teal only for you (your kills, your level); ??? in dim gray, dashed. On a phone the index folds into a bar over the entry. */
+.cx-page { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: var(--s5); align-items: start; }
+.cx-page > * { min-width: 0; }
+
+/* ---------- index ---------- */
+.cx-index { padding: var(--s5) var(--s4); gap: var(--s5); position: sticky; top: 0; max-height: calc(100dvh - 210px); overflow-y: auto; }
+.cx-fold { display: none; }
+.cx-groups { display: grid; gap: var(--s5); }
+.cx-grp h3 { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); margin: 0 0 var(--s2); padding: 0 var(--s3); font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); }
+.cx-grp h3 small { font: var(--label); letter-spacing: var(--label-track); color: var(--dim); }
+.cx-grp ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.cx-row { width: 100%; display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); min-height: var(--h-btn-sm); padding: var(--s2) var(--s3); text-align: left; color: var(--text); font: 500 13px var(--sans); border: 1px solid transparent; border-radius: var(--r-btn); }
+.cx-row:hover:not(:disabled) { border-color: var(--line); background: var(--inset); }
+.cx-row.on { border-color: var(--line-strong); background: var(--amber-wash); color: var(--bright); }
+.cx-row .cx-ico { display: inline-flex; color: var(--amber); }
+.cx-row .cx-ico .glyph { width: 14px; height: 14px; margin: 0; }
+.cx-row .cx-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-row .cx-n { font: 500 11px var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.cx-row .cx-n.full { color: var(--amber); }
+.cx-row.unknown { color: var(--gray); }
+.cx-row.unknown .cx-name { font-family: var(--mono); letter-spacing: 1px; }
+.cx-none { display: block; width: 8px; height: 8px; margin: 0 auto; transform: rotate(45deg); border: 1px solid var(--dim); opacity: 0.7; }
+
+/* ---------- entry ---------- */
+.cx-entry { gap: var(--s6); }
+.cx-head { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--s6); align-items: start; }
+.cx-head.solo { grid-template-columns: minmax(0, 1fr); }
+.cx-art { height: 180px; background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn); overflow: hidden; }
+.cx-art canvas { display: block; width: 100%; height: 100%; }
+.cx-title { display: grid; gap: var(--s4); align-content: start; min-width: 0; }
+.cx-title h2 { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); }
+.cx-title h1 { font-size: 26px; line-height: 1.1; color: var(--bright); letter-spacing: 1px; overflow-wrap: anywhere; }
+.cx-title h1.unknown { font-family: var(--mono); color: var(--gray); }
+.cx-entry .you { color: var(--you); }
+.cx-by { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); color: var(--muted); max-width: none; }
+.cx-by .byline { margin: 0; }
+.cx-label { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+.cx-link { display: inline-flex; align-items: center; min-height: var(--h-chip); padding: 0 var(--s3); font: 600 11px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--amber); border: 1px solid var(--line-strong); border-radius: var(--r-tag); }
+.cx-link:hover { background: var(--amber-wash); }
+.cx-rule { color: var(--text); max-width: 72ch; padding: var(--s4) var(--s5); border-left: 2px solid var(--amber-deep); background: var(--inset); }
+
+.cx-sec { display: grid; gap: var(--s4); }
+.cx-kick { display: flex; align-items: baseline; gap: var(--s3); margin: 0; padding-bottom: var(--s2); border-bottom: 1px solid var(--line); font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--muted); }
+.cx-kick small { font: var(--label); letter-spacing: var(--label-track); color: var(--dim); }
+.cx-kick small b { font-weight: 600; }
+.cx-foot { font: 12px var(--sans); color: var(--dim); }
+.cxp-hint { font: 12px var(--sans); color: var(--dim); }
+
+/* A part: tooltip grammar. Name, then Integrity and ◆, the attack line (name, number, timing), what it does, the answer, the drop. */
+.cx-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s4); }
+.cx-part { display: grid; gap: var(--s3); align-content: start; padding: var(--s5); background: var(--inset); border: 1px solid var(--line); border-top: 2px solid var(--amber-deep); border-radius: var(--r-btn); min-width: 0; }
+.cx-part p { margin: 0; max-width: none; }
+.cxp-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
+.cxp-head b { font: 600 15px var(--sans); color: var(--bright); margin-right: auto; }
+.cxp-stats { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); font: 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.cxp-stats b { color: var(--bright); font-weight: 600; }
+.cxp-atk { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); padding: var(--s2) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: 12px var(--mono); }
+.cxp-atk b { color: var(--amber); font-weight: 600; }
+.cxp-atk .cxp-dmg { color: var(--bright); }
+.cxp-atk .cxp-when { color: var(--dim); margin-left: auto; }
+.cxp-atk.none b { color: var(--dim); }
+.cxp-does { color: var(--text); font-size: 13px; line-height: 1.45; }
+.cxp-answer { color: var(--you); font-size: 13px; line-height: 1.45; }
+.cxp-tele { color: var(--muted); font-size: 12px; }
+.cxp-tele .glyph { width: 11px; height: 11px; margin: 0 var(--s2) 0 0; vertical-align: -1px; }
+.cxp-loot { display: flex; align-items: center; gap: var(--s2); font: 12px var(--mono); color: var(--muted); }
+.cxp-loot .glyph { width: 12px; height: 12px; margin: 0; color: var(--amber); }
+.cx-part.unknown { border-style: dashed; border-top-width: 1px; border-color: var(--line); }
+.cx-part.unknown .cxp-head b, .cx-part.unknown .cxp-stats, .cx-part.unknown .cxp-does { font-family: var(--mono); color: var(--gray); }
+
+/* Attack sets: a strip a set, a row a part, a mark on each cycle it fires (1 to 12). */
+.cx-sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--s4); align-items: start; }
+.cx-set { display: grid; gap: var(--s3); padding: var(--s4) var(--s5); background: var(--inset); border: 1px solid var(--line); border-radius: var(--r-btn); min-width: 0; }
+.cx-set.unknown { border-style: dashed; }
+.cxs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); }
+.cxs-head b { font: 600 14px var(--sans); color: var(--bright); }
+.cx-set.unknown .cxs-head b { font-family: var(--mono); color: var(--gray); }
+.cxs-head small { font: 12px var(--sans); color: var(--muted); }
+.cx-set.unknown .cxs-head small { color: var(--dim); }
+.cxs-by { margin-left: auto; display: flex; gap: var(--s3); }
+.cxs-by .byline { margin: 0; }
+.cxs-strip { display: grid; gap: 2px; }
+.cxs-row { display: grid; grid-template-columns: minmax(64px, 96px) repeat(12, minmax(0, 1fr)); gap: 2px; align-items: center; }
+.cxs-name { font: 11px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: var(--s2); }
+.cxs-name em { font-style: normal; color: var(--next); margin-left: var(--s2); }
+.cxs-row i { display: block; height: 14px; border: 1px solid var(--line); border-radius: 1px; background: transparent; }
+.cxs-row i.m { background: var(--amber); border-color: var(--amber); }
+.cxs-row i.m.dlv { background: transparent; border: 1px dashed var(--amber); }
+.cxs-cycles i { height: auto; border: 0; font: 9px var(--mono); font-style: normal; color: var(--dim); text-align: center; }
+
+/* Tells and loot: rows. */
+.cx-tells { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s4); align-items: start; }
+.cx-tell { display: grid; gap: var(--s3); align-content: start; padding: var(--s4) var(--s5); background: var(--inset); border: 1px solid var(--line); border-left: 2px solid var(--hot); border-radius: var(--r-btn); }
+.cx-tell p { margin: 0; }
+.cx-tell.unknown { border-left: 1px dashed var(--line); border-style: dashed; }
+.cxt-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
+.cxt-head b { font: 600 14px var(--sans); color: var(--bright); }
+.cx-tell.unknown .cxt-head b { font-family: var(--mono); color: var(--gray); }
+.cxt-head small { font: 12px var(--sans); color: var(--muted); }
+.cxt-head .tag.dim { margin-left: auto; }
+.cx-loot { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--s2) var(--s4); }
+.cx-loot li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.cx-loot .glyph { width: 13px; height: 13px; margin: 0; color: var(--amber); }
+.cx-loot b { font: 600 13px var(--sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cx-loot small { font: 11px var(--mono); color: var(--dim); }
+.cx-loot li.unknown b { font-family: var(--mono); color: var(--gray); }
+.cx-loot li.unknown .glyph { color: var(--dim); }
+
+/* A boss's phases. */
+.cx-phases { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); }
+.cx-phases li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: var(--s4); align-items: start; padding: var(--s3) 0; border-bottom: 1px solid var(--line); }
+.cx-phases p { margin: 0; color: var(--text); font-size: 13px; }
+.cxph-at { font: 600 13px var(--mono); color: var(--amber); }
+.cxph-mechs { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s2) !important; }
+.cx-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.cx-head .tag[style*='--ax'] { color: var(--ax); border-color: var(--ax); display: inline-flex; align-items: center; gap: var(--s2); }
+.cx-head .tag .glyph { width: 11px; height: 11px; margin: 0; }
+/* A gene category: the gene codex's card (view.mjs codexMarkup), its genes as cards in the part cards' grammar. */
+.cx-genes > h2, .cx-genes .cx-group > b { display: none; }
+.cx-genes .codex { display: block; }
+.cx-genes .cx-group ul { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--s4); align-items: start; }
+.cx-genes .cx-group .cx-gene { gap: var(--s3); padding: var(--s5); font-size: 13px; line-height: 1.45; background: var(--inset); border: 1px solid var(--line); border-top: 2px solid var(--amber-deep); border-radius: var(--r-btn); }
+.cx-genes .cx-group .cx-gene > span { font: 600 15px var(--sans); color: var(--bright); }
+.cx-genes .cx-group .cx-gene small { font-size: 13px; color: var(--text); }
+.cx-genes .cx-group .cx-gene .cx-tele { font-size: 12px; color: var(--muted); }
+.cx-genes .cx-group .cx-gene.on .cx-answer { color: var(--you); }
+.cx-genes .cx-group .cx-gene.seen > span { color: var(--text); }
+.cx-genes .cx-group .cx-gene.seen small { color: var(--dim); }
+.cx-genes .cx-group .cx-gene.unknown { border-style: dashed; border-top-width: 1px; }
+.cx-genes .cx-group .cx-gene.unknown > span { font-family: var(--mono); color: var(--gray); }
+.cx-genes .cx-group .cx-gene.unknown small { color: var(--dim); }
+
+/* ---------- phone: the index folds into a bar above the entry ---------- */
+@media (max-width: 900px) {
+  .cx-page { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+  .cx-index { position: static; max-height: none; overflow: visible; padding: var(--s3); gap: var(--s4); }
+  .cx-fold { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s4); width: 100%; min-height: var(--h-btn); padding: var(--s3) var(--s4); text-align: left; border: 1px solid var(--line-strong); border-radius: var(--r-btn); }
+  .cx-fold b { color: var(--bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cx-fold .cx-caret { color: var(--amber); }
+  .cx-page:not(.idx-open) .cx-groups { display: none; }
+  .cx-groups { gap: var(--s4); }
+  .cx-grp ul { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: var(--s3); }
+  .cx-head { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+  .cx-art { height: 150px; }
+  .cx-entry { padding: var(--s5) var(--s4); }
+  .cx-parts, .cx-sets, .cx-tells { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 480px) {
+  .cxs-row { grid-template-columns: minmax(52px, 72px) repeat(12, minmax(0, 1fr)); }
+}
+/* A page with a tile or two (a boss, a mutation, a gene category): tiles keep a tile's width. */
+.cx-head.solo .stats > .stat { flex: 0 1 200px; }

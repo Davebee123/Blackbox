@@ -365,8 +365,9 @@ const marksMarkup = (marks) => (marks.length ? `<span class="pmarks">${marks.map
 
 // The codex page card, gene by gene (genome.mjs): what you've never met is ??? with its category, what you've seen
 // has its name, its axis and who you've seen use it, and what you've decoded says what it does and what answers it.
-export function codexMarkup(s) {
-  const n = codexCount(s);
+// cat: one category only (the Codex tab's Genes entries), its own count in the kicker.
+export function codexMarkup(s, cat = null) {
+  const n = cat ? { decoded: GENE_IDS.filter((id) => GENES[id].cat === cat && geneState(s, id) === 'decoded').length, total: GENE_IDS.filter((id) => GENES[id].cat === cat).length } : codexCount(s);
   const row = (id) => {
     const g = GENES[id], st = geneState(s, id), ax = AXES[g.axis];
     if (st === 'unknown') return `<li class="cx-gene unknown"><span><i class="gax">${glyph(CATS[g.cat].icon)}</i>???</span><small>${esc(`${an(CATS[g.cat].one)} ${CATS[g.cat].one} you haven't met.`)}</small></li>`;
@@ -375,7 +376,7 @@ export function codexMarkup(s) {
     if (st === 'seen') return `<li class="cx-gene seen">${head}<small>${esc(`${by.length ? `You've seen ${list(by)} use it. ` : ''}${g.decode === 'tell' ? 'Read it once to decode it.' : g.decode === 'kills' ? 'Beat two viruses that carry it to decode it.' : 'Break a part that carries it to decode it.'}`)}</small></li>`;
     return `<li class="cx-gene on">${head}<small>${esc(g.does)}</small><small class="cx-tele" title="How you see it coming">${glyph('ids')}${esc(g.telegraph)}</small><small class="cx-answer">${esc(g.answer)}</small></li>`;
   };
-  return `<section class="card codex-card"><h2>Codex · ${n.decoded}/${n.total} decoded</h2><div class="codex">${Object.entries(CATS).map(([c, cat]) => `<div class="cx-group"><b>${esc(cat.name)}</b><ul>${GENE_IDS.filter((id) => GENES[id].cat === c).map(row).join('')}</ul></div>`).join('')}</div></section>`;
+  return `<section class="card codex-card"><h2>${cat ? esc(CATS[cat].name) : 'Codex'} · ${n.decoded}/${n.total} decoded</h2><div class="codex">${Object.entries(CATS).filter(([c]) => !cat || c === cat).map(([c, cat]) => `<div class="cx-group"><b>${esc(cat.name)}</b><ul>${GENE_IDS.filter((id) => GENES[id].cat === c).map(row).join('')}</ul></div>`).join('')}</div></section>`;
 }
 const an = (w) => (/^[aeiou]/i.test(w) ? 'An' : 'A');
 const list = (xs) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`);
@@ -2608,7 +2609,6 @@ export function systemMarkup(s) {
     </div>
     <div class="row sound-test"><span class="next-label">Sound test</span>${[['hit', 'Hit'], ['break', 'Break'], ['hurt', 'Hurt'], ['unlock', 'Unlock'], ['pickup', 'Pickup'], ['good', 'Good news'], ['win', 'Win / level'], ['chit', 'Armor ◆'], ['patch', 'Patch'], ['interrupt', 'Interrupt'], ['nope', 'Refused'], ['prewarn', 'Warning'], ['daemon', 'Daemon'], ['channel', 'Channel change'], ['jackin', 'Connect'], ['hangup', 'Hang up'], ['lose', 'Crash'], ['mark', 'Mark'], ['burn', 'Burn'], ['helper', 'Helper'], ['shield', 'Shield'], ['buff', 'Buff']].map(([id, name]) => `<button type="button" class="btn" data-sound="${id}">${name}</button>`).join('')}</div></section>
     ${collectionMarkup(s)}
-    ${codexMarkup(s)}
     <section class="card"><h2>New game</h2><div class="row"><button type="button" class="btn" data-run="reset game">Reset game</button></div></section>
     <section class="card"><h2>Wire</h2><div class="ticker"><span>${(TICKER.map(esc).join('  //  ') + '  //  ').repeat(2)}</span></div></section>
     <section class="card"><h2>Fight reports</h2>${s.reports.length ? `<details><summary>${s.reports.length} report(s)</summary><pre>${esc(JSON.stringify(s.reports.slice(-5), null, 1))}</pre></details>` : '<p>None yet.</p>'}</section></div>

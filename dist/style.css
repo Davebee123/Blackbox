@@ -3289,7 +3289,11 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .slot b { overflow-wrap: break-word; hyphens: auto; max-width: 100%; }
 /* Phone, seven tabs or more (Consortium, Store, Fight or Run up): a size down so every tab stays on screen. */
 @media (max-width: 900px) {
-  .modules:has(#tab-consortium:not([hidden])) button, .modules:has(#tab-store:not([hidden])) button, .modules:has(#tab-combat:not([hidden])):has(#tab-net:not([hidden])) button { padding: 6px 2px; font-size: 12px; }
+  .modules:has(#tab-consortium:not([hidden])) button, .modules:has(#tab-store:not([hidden])) button, .modules:has(#tab-combat:not([hidden])):has(#tab-net:not([hidden])) button, .modules[data-tabs='7'] button { padding: 6px 2px; font-size: 12px; }
+  /* Eight or more (the Codex, Craft and a Run or Fight tab up together): two even rows, so none runs off the screen. */
+  .modules[data-tabs='8'], .modules[data-tabs='9'], .modules[data-tabs='10'] { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; }
+  .modules[data-tabs='9'], .modules[data-tabs='10'] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .modules[data-tabs='8'] button, .modules[data-tabs='9'] button, .modules[data-tabs='10'] button { padding: 5px 2px; font-size: 13px; text-align: center; }
   .modules .count { margin-left: 2px; }
 }
 
