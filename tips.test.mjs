@@ -96,9 +96,10 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-memory', 'its card: what joining costs');
   command(s, 'attach ' + loc.id);
   loc.takenOver = true;
+  (await import('./dist/netrooms.mjs')).roomsFor(s, loc); // traced: its sockets show
   assert.equal(nextTip(s, 'craft', onPage(craftMarkup(s))).id, 'craft-plans', 'where recipes come from');
   markSeen(s, 'map-memory'); markSeen(s, 'map-owned');
-  // Other tips about this server (its quirk, its trait) may come first; the build tip follows.
+  // Other tips about this server (its quirk, its trait) may come first; the build tip (its sockets) follows.
   let t = null;
   for (let i = 0; i < 6; i++) { t = nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))); if (!t || t.id === 'map-build') break; markSeen(s, t.id); }
   assert.equal(t?.id, 'map-build');
@@ -130,8 +131,8 @@ test('the market teaches itself in order: rows, ▲/▼, the news, then the tick
   assert.equal(nextTip(t, 'hub', (sel) => !sel.includes('mk-ticket') && !sel.includes('mk-xfers') && sel.includes('mk-')), null);
 });
 
-test('every threat on the map has a tip, and none says a lost outpost is gone for good', () => {
+test('every threat on the map has a tip, and none speaks of outposts (gone in R2)', () => {
   const has = (sel) => TIPS.some((t) => t.page === 'map' && t.at === sel);
-  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.besieged', '.mnode.locked', '.mnode.fleet', '.mnode.hub.yours.threat', '.mnode.member.besieged']) assert.ok(has(sel), sel);
-  for (const t of TIPS) assert.doesNotMatch(t.text, /take (it|the outpost) back|take the outpost|cut off/, t.id);
+  for (const sel of ['.mnode.intrusion', '.mnode.invader[data-select="invader"]', '.mnode.invader.siege[data-select="invader"]', '.mnode.invader.breach', '.mnode.hub.yours.threat']) assert.ok(has(sel), sel);
+  for (const t of TIPS) assert.doesNotMatch(t.text, /outpost|bandwidth|salvage|take (it|the outpost) back|cut off/i, t.id);
 });

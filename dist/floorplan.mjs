@@ -51,6 +51,7 @@ import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
+import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 
 // ---------- tuning ----------
 export const ROOMS = {
@@ -77,6 +78,7 @@ export const ROOMS = {
   purse: (level) => 4 + Math.floor(level / 2), // a rogue server's Stash: credits (and 1 code one time in five, netrooms.mjs)
   vault: { gear: 1 / 3, custom: 0.4 },
   junctions: 0.2, // about a fifth of the rooms
+  sockets: { small: 1, medium: 2, large: 3 }, // socket rooms by size (6.1), a process's room first: clear it and it's yours to build in
 };
 // The server kinds (2.2), as room themes: one rule each, the hunter they keep, and the directory names their rooms take.
 export const KINDS = {
@@ -107,11 +109,11 @@ const world = (s) => !!s.rooms?.world;
 // What each room is called on the map, its card and in the log.
 // boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs);
 // empty, purse: a rogue server's quiet rooms (Empty, and a Stash of a few credits).
-export const ROOM_LABEL = { entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash' };
-export const MARKS = { entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤' };
+export const ROOM_LABEL = { socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash' };
+export const MARKS = { socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤' };
 // Rooms that hold something you take, and refill.
 export const STOCKED = ['cache', 'stash', 'purse'];
-export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss'];
+export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss', 'socket']; // a socket: guarded by a process until its first clear, then never again
 export const HUNTERS = {
   patrol: { name: 'Patroller', body: 'bouncer', text: 'Walks a fixed loop, a room for every 2 of your moves.' },
   track: { name: 'Tracker', body: 'tracer', text: 'Wakes when you walk next to its den, then follows you a room for every 2 of your moves. Loses you 5 rooms off.' },
@@ -142,10 +144,57 @@ export function pathTo(g, from, to, can = () => true) {
 //   1 a spine from the entry to /core (ROOMS.spine long), the vault the room before /core
 //   2 branches of 1 to 3 rooms off the spine, on a grid so the map draws without crossings
 //   3 a loop on a medium server (two branches joined), two on a large; a Relay's two hops
-//   4 the rooms' kinds (the table in 2.2, R0's subset), then what each fight room spawns
-export function generate(seed, { size = 'medium', kind = 'Mailhub', level = 10, floor = 2, author = null, hunter = null } = {}) {
-  for (let t = 0; t < 60; t++) { const g = tryGenerate(seed, t, { size, kind, level, floor, author, hunter }); if (g) return g; }
+//   4 the rooms' kinds (the table in 2.2), then what each fight room spawns
+//   5 its socket rooms (ROOMS.sockets by size, or `sockets`: a Backbone server's one more), at the ends of branches
+export function generate(seed, { size = 'medium', kind = 'Mailhub', level = 10, floor = 2, author = null, hunter = null, sockets = null } = {}) {
+  for (let t = 0; t < 60; t++) { const g = tryGenerate(seed, t, { size, kind, level, floor, author, hunter }); if (g) { addSockets(g, sockets ?? ROOMS.sockets[size] ?? 1, seed); return g; } }
   throw new Error('No room graph for seed ' + seed);
+}
+// Socket rooms (6.1, 2.2: at the end of a branch): n new rooms, each a leaf hung off the deepest branch rooms with a free
+// cell beside them (never the entry, the vault, the Core, the den or the spine), each guarded on your first visit by a
+// process of the server (a fight room's family, author and third part). Clear it once and it's a socket for good. Also
+// an older save's graph (netrooms.mjs socketRoomsRestore): g.sockets marks it done. The same graph and seed always add
+// the same rooms.
+export function addSockets(g, n, seed) {
+  if (g.sockets != null) return g;
+  const r = seeded(((seed || 1) * 6151 + 97) >>> 0), R = g.rooms, spine = new Set(g.spine);
+  const taken = new Set(Object.values(R).map((x) => `${x.x},${x.y}`));
+  const fights = Object.values(R).filter((x) => ['process', 'elite'].includes(x.kind) && x.family).sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+  const bad = new Set([g.entry, g.core, g.den, ...(g.vaults || [])]);
+  const free = (p) => [[0, -1], [0, 1], [1, 0], [-1, 0]].map(([dx, dy]) => [p.x + dx, p.y + dy]).filter(([x, y]) => !taken.has(`${x},${y}`) && !(x < 0 && y === 0) && !(y === 0 && x >= 0 && x < g.spine.length));
+  let placed = 0;
+  for (let i = 0; i < n; i++) {
+    const anchors = Object.values(R).filter((x) => !bad.has(x.id) && !spine.has(x.id) && x.kind !== 'socket' && free(x).length)
+      .map((x) => ({ x, k: [-(x.depth || 0), neighbours(g, x.id).length, r()] })).sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1] || a.k[2] - b.k[2]);
+    const a = anchors[0]?.x || Object.values(R).filter((x) => !bad.has(x.id) && x.kind !== 'socket' && free(x).length).sort((p, q) => Number(p.id.slice(1)) - Number(q.id.slice(1)))[0];
+    if (!a) break;
+    const [cx, cy] = free(a)[Math.floor(r() * free(a).length)], id = `r${Math.max(...Object.keys(R).map((k) => Number(k.slice(1)))) + 1}`;
+    const like = fights.length ? fights[Math.floor(r() * fights.length)] : null;
+    R[id] = { id, kind: 'socket', x: cx, y: cy, depth: (a.depth || 0) + 1, branch: a.branch || a.id, seed: Math.floor(r() * 2 ** 31), ...(like ? { family: like.family, author: like.author, third: like.third || null } : {}) };
+    g.links.push([a.id, id]);
+    taken.add(`${cx},${cy}`);
+    placed++;
+  }
+  g.sockets = placed;
+  return nameRooms(g);
+}
+// One more socket room (Root 4, a Grid consortium: netrooms.mjs), beside the Core or the spine: open from the start
+// (nothing guards it), tagged with what added it.
+export function addSocketRoom(g, tag) {
+  if (Object.values(g.rooms).some((x) => x.kind === 'socket' && x.extra === tag)) return null;
+  const taken = new Set(Object.values(g.rooms).map((x) => `${x.x},${x.y}`)), around = [g.core, ...[...g.spine].reverse()].filter(Boolean);
+  let at = null, by = null;
+  for (const id of around) {
+    const c = g.rooms[id];
+    at = [[c.x, c.y - 1], [c.x, c.y + 1], [c.x + 1, c.y]].find(([x, y]) => !taken.has(`${x},${y}`));
+    if (at) { by = id; break; }
+  }
+  if (!at) return null;
+  const id = `r${Math.max(...Object.keys(g.rooms).map((k) => Number(k.slice(1)))) + 1}`;
+  g.rooms[id] = { id, kind: 'socket', x: at[0], y: at[1], depth: 0, seed: 0, extra: tag, open: true };
+  g.links.push([by, id]);
+  nameRooms(g);
+  return g.rooms[id];
 }
 function tryGenerate(seed, attempt, { size, kind, level, floor, author, hunter }) {
   const r = seeded((seed * 7919 + attempt * 104729 + 13) >>> 0);
@@ -367,13 +416,14 @@ const rnd = (R, salt = 0) => seeded((R.seed * 2654435761 + (++R.rolls) * 40503 +
 
 // ---------- time: respawns, refills, rest ----------
 // A fight room's virus is up: it never fell, or its timer ran out and you're not standing in it.
-export const respawnMs = (s, room) => mins(s, (world(s) ? ask('respawn', s, room) : undefined) ?? ROOMS.respawn[room.kind === 'core' || room.kind === 'boss' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process']);
+export const respawnMs = (s, room) => mins(s, ((world(s) ? ask('respawn', s, room) : undefined) ?? ROOMS.respawn[room.kind === 'core' || room.kind === 'boss' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process']) * (runs(s, 'cron') && !['core', 'boss'].includes(room.kind) ? 0.5 : 1)); // a Cron Spawner: twice as fast
 export function isUp(s, room, now = nowOf()) {
   const R = s.rooms, at = R.down[room.id];
   if (!FIGHTS.includes(room.kind)) return false;
   const w = world(s) ? ask('up', s, room, now) : undefined;
   if (w !== undefined) return w;
   if (room.kind === 'core' && !coreOpen(s)) return true; // sealed, with its Resident behind it
+  if (room.kind === 'socket') return !R.cleared[room.id] && !room.open; // guarded until its first clear, then a socket for good
   if (at == null) return true;
   const back = at + respawnMs(s, room);
   return now >= back && !(R.at === room.id && (R.inSince ?? 0) < back); // it waits while you stand in it
@@ -383,8 +433,9 @@ export const backAt = (s, room) => { const w = world(s) ? ask('back', s, room) :
 // When it fell (the respawn ring's start), or null.
 export const downAt = (s, room) => { const w = world(s) ? ask('from', s, room) : undefined; return w !== undefined ? w : s.rooms.down[room.id] ?? null; };
 // (A Stash has no timer: it's full again when its server reboots.)
-export const cacheFull = (s, room, now = nowOf()) => STOCKED.includes(room.kind) && (s.rooms.taken[room.id] == null || (room.kind !== 'purse' && now >= s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache)));
-export const refillAt = (s, room) => (s.rooms.taken[room.id] != null && room.kind !== 'purse' ? s.rooms.taken[room.id] + mins(s, ROOMS.respawn.cache) : null);
+const refillMs = (s, room) => mins(s, ROOMS.respawn.cache) * (room.kind === 'cache' && runs(s, 'mill') ? 0.5 : 1); // a Cache Mill: twice as fast
+export const cacheFull = (s, room, now = nowOf()) => STOCKED.includes(room.kind) && (s.rooms.taken[room.id] == null || (room.kind !== 'purse' && now >= s.rooms.taken[room.id] + refillMs(s, room)));
+export const refillAt = (s, room) => (s.rooms.taken[room.id] != null && room.kind !== 'purse' ? s.rooms.taken[room.id] + refillMs(s, room) : null);
 // Bait: one cache in four, fresh with each refill.
 export const isBait = (s, room) => room.kind === 'cache' && !room.mirror && seeded((room.baitSeed + (s.rooms.spawns[room.id] || 0) * 7919) >>> 0)() < 0.25;
 export const coreOpen = (s) => { const w = world(s) ? ask('coreOpen', s) : undefined; return w !== undefined ? w : !!s.rooms.opened[s.rooms.graph.vaults[0]]; };
@@ -409,6 +460,28 @@ export function soonest(s, now = nowOf()) {
   return best;
 }
 export const fmtLeft = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return t >= 3600 ? `${Math.floor(t / 3600)}:${String(Math.floor((t % 3600) / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}` : `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+
+// ---------- sockets and programs (6, R2: sockets.mjs has the catalogue, codebases and costs) ----------
+// R.programs: { roomId: program }. A socket room is a bus slot: guarded by its process until its first clear, then
+// open for good. A held server's Core is its core socket (WORLD.coreSocket). A socket the world switches off (a Grid
+// socket outside a Grid consortium: WORLD.socketOff) holds its program, idle.
+export const isSocket = (s, room) => !!room && (room.kind === 'socket' || (room.kind === 'core' && !!(world(s) && ask('coreSocket', s))));
+export const socketOpen = (s, room) => isSocket(s, room) && (room.kind === 'core' || room.open || !!s.rooms.cleared[room.id]);
+export const socketOff = (s, room) => !!(world(s) && ask('socketOff', s, room));
+export const programIn = (s, id) => s.rooms?.programs?.[id] || null;
+// Whether this server runs a program (in a socket that isn't switched off).
+export const runs = (s, prog) => { const P = s.rooms?.programs; if (!P) return false; for (const [id, p] of Object.entries(P)) if (p === prog && !socketOff(s, s.rooms.graph.rooms[id])) return true; return false; };
+export const roomRuns = (s, room, prog) => !!room && programIn(s, room.id) === prog && !socketOff(s, room);
+// A Tunnel's link: its room and the entry, walked free, never by the hunter.
+export const tunnelOf = (s) => { const P = s.rooms?.programs || {}; const id = Object.keys(P).find((k) => P[k] === 'tunnel' && !socketOff(s, s.rooms.graph.rooms[k])); return id && id !== s.rooms.graph.entry ? id : null; };
+const tunnelLink = (s, a, b) => { const t = tunnelOf(s), e = s.rooms?.graph.entry; return !!t && ((a === t && b === e) || (a === e && b === t)); };
+// Where you can walk from a room: its links (a Relay's hops too) and a Tunnel's.
+export function walkable(s, id) {
+  const g = s.rooms.graph, out = neighbours(g, id), t = tunnelOf(s);
+  if (t && id === g.entry && !out.includes(t)) out.push(t);
+  if (t && id === t && !out.includes(g.entry)) out.push(g.entry);
+  return out;
+}
 
 // ---------- progress ----------
 export const progressOf = (s) => { const all = roomList(s); return { done: all.filter((x) => s.rooms.cleared[x.id]).length, total: all.length }; };
@@ -485,7 +558,7 @@ export function fogRestore(R) {
 }
 
 // ---------- the hunter (2.5) ----------
-const forbidden = (g, id) => id === g.entry || g.rooms[id]?.kind === 'rest' || g.vaults.includes(id) || id === g.core;
+const forbidden = (s, g, id) => id === g.entry || g.rooms[id]?.kind === 'rest' || g.vaults.includes(id) || id === g.core || roomRuns(s, g.rooms[id], 'defrag'); // a Defrag Bay is a rest room
 function newHunter(s) {
   const g = s.rooms.graph;
   if (!g.den) return null;
@@ -503,9 +576,9 @@ export function hunterNext(s, h = hunterOf(s)) {
   if (!h.awake) return null;
   const to = h.returning ? h.den : R.at;
   if (!to || to === h.at) return null;
-  const p = pathTo(g, h.at, to, (x) => !forbidden(g, x));
+  const p = pathTo(g, h.at, to, (x) => !forbidden(s, g, x));
   const next = p?.[1];
-  return next && !forbidden(g, next) ? next : null;
+  return next && !forbidden(s, g, next) ? next : null;
 }
 // What a move of yours does to it: a Tracker wakes when you walk next to its den, then it counts your moves and steps.
 // Returns true if it walked into you.
@@ -527,6 +600,8 @@ function hunterMove(s) {
   }
   const next = hunterNext(s, h);
   if (next) { h.at = next; if (h.kind === 'patrol') h.idx = (h.idx + 1) % g.route.length; }
+  // A Snare holds it where it stepped, once a visit.
+  if (next && roomRuns(s, g.rooms[next], 'snare') && !R.visit.snared) { R.visit.snared = true; h.held = SOCKET.snare; say(s, `The Snare in ${nameOf(s, next)} holds the ${HUNTERS[h.kind].name} for ${SOCKET.snare} moves.`, 'rooms-good'); }
   if (h.kind === 'track' && h.returning && h.at === h.den) { h.returning = false; h.awake = false; say(s, 'The Tracker is back in its den.', 'rooms-good'); }
   return h.at === R.at;
 }
@@ -687,11 +762,12 @@ function disconnected(s, why) {
 export function exits(s) {
   const R = s.rooms;
   if (!R?.at || R.screen || active(s)) return [];
-  return neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).filter((x) => x.kind !== 'core' || coreOpen(s));
+  return walkable(s, R.at).map((id) => R.graph.rooms[id]).filter((x) => x.kind !== 'core' || coreOpen(s));
 }
 export const moveCost = (s, room) => {
   const R = s.rooms, deep = R.floor >= 5;
   if (R.visit?.walked[room.id]) return 0; // walked this visit: free to cross again
+  if (tunnelLink(s, R.at, room.id)) return 0; // a Tunnel: free both ways
   const crew = Object.values(R.graph.rooms).some((x) => x.farm); // the crew dungeon is tuned on its flat cost (its attrition carries fight to fight)
   const k = crew || known(s, room.id) ? (deep ? ROOMS.moveDeep : ROOMS.move) : (deep ? ROOMS.moveNewDeep : ROOMS.moveNew);
   return Math.max(1, Math.round(R.max * k));
@@ -706,7 +782,7 @@ export function go(s, id, opts = {}) {
   else if (active(s)) deny(s, 'Finish the fight first.');
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
   else if (R.screen?.kind === 'hunter') deny(s, 'The hunter is on you.');
-  else if (!room || !neighbours(R.graph, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
+  else if (!room || !walkable(s, R.at).includes(room.id)) deny(s, room ? `${room.path} is not next to ${hereOf(s).path}.` : `No room ${id}.`);
   else if (room.kind === 'core' && !coreOpen(s)) deny(s, R.world ? `The Core is sealed. ${WORLD.view?.sealed?.(s) || (R.graph.vaults[0] ? `Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.` : '')}`.trim() : `The Core is sealed. Open the ${R.graph.rooms[R.graph.vaults[0]].path} first.`);
   else step(s, room, opts);
   return out(s, first);
@@ -816,6 +892,23 @@ export function act(s, verb, arg = null, opts = {}) {
     else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * ROOMS.rest)); setSig(s, sigOf(s) + n); R.visit.rested = true; clear(s, here); say(s, `You rest: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
   }
+  // A Defrag Bay: a rest room of your own, once a visit.
+  if (verb === 'rest' && roomRuns(s, here, 'defrag')) {
+    const bays = (R.visit.bays ||= {});
+    if (bays[here.id]) deny(s, 'You already used this Defrag Bay this visit.');
+    else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. The bay keeps for later this visit.');
+    else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest)); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Signal.`, 'rooms-good'); }
+    return out(s, first);
+  }
+  // A socket you've cleared: build a program in it (its codebase known, paid from what you carry), or take it out.
+  if ((verb === 'build' || verb === 'install') && isSocket(s, here)) {
+    if (!socketOpen(s, here)) deny(s, 'Clear the socket first.');
+    else if (socketOff(s, here)) deny(s, WORLD.view?.offNote?.(s, here) || 'This socket is offline.');
+    else if (!arg) say(s, buildLines(s, here).join('\n'), 'rooms-out');
+    else { const id = progId(arg); if (buildProgram(s, R, here, id, opts.pay ?? null)) clear(s, here); }
+    return out(s, first);
+  }
+  if ((verb === 'uninstall' || verb === 'remove') && isSocket(s, here)) { uninstallProgram(s, R, here); return out(s, first); }
   deny(s, `${verb}: nothing here takes that.`);
   return out(s, first);
 }
@@ -828,11 +921,11 @@ function pull(s, room, opts) {
   takeCache(s, room);
 }
 function takeCache(s, room) {
-  const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, rich = (R.world && ask('cacheMult', s, room)) || 1;
+  const R = s.rooms, r = rnd(R, 21), C = ROOMS.cache, mill = runs(s, 'mill') ? 1.5 : 1, rich = ((R.world && ask('cacheMult', s, room)) || 1) * mill; // a Cache Mill: half again
   if (isBait(s, room)) { const lost = Math.round(R.max * ROOMS.bait); setSig(s, Math.max(1, sigOf(s) - lost)); say(s, `The canary costs you ${lost} Signal.`, 'rooms-bad'); }
   const credits = Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + R.level / 20));
   const fam = roomList(s).find((x) => x.family)?.family, kind = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' }[fam] || 'cipher';
-  const code = C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1));
+  const code = Math.round((C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1))) * mill);
   if (R.world) ask('cache', s, room, { credits, code, material: kind }); // into the pack: banked when you jack out
   else { R.credits += credits; s.server.credits += credits; gainCode(s, { [kind]: code }, 'Cache: '); }
   say(s, `You take the cache: ${credits} credits and ${code} ${kind} code.`, 'rooms-good');
@@ -866,6 +959,17 @@ function openVault(s, room, force) {
   else giveScript(s, v.script, 'Vault: ');
   clear(s, room);
   if (room.id === R.graph.vaults[0]) say(s, 'The Core unseals.', 'rooms-bad');
+}
+
+// A program by its id or name (harvester, cron-spawner, Cron Spawner, cron).
+export const progId = (arg) => { const a = String(arg || '').toLowerCase().trim(), slug = a.replace(/[^a-z0-9]+/g, '-'); return PROGRAMS[a] ? a : Object.keys(PROGRAMS).find((k) => PROGRAMS[k].name.toLowerCase().replace(/[^a-z0-9]+/g, '-') === slug || PROGRAMS[k].name.toLowerCase().split(' ')[0] === a) || a; };
+// The Build list in words (`build` with no program): every codebase you know, what it costs here, what it does.
+export function buildLines(s, room) {
+  const R = s.rooms, here = programIn(s, room.id);
+  const known = codebasesOf(s).filter((id) => PROGRAMS[id]);
+  return [here ? `${room.path}: ${PROGRAMS[here].name} runs here. uninstall takes it out (half back).` : `${room.path}: an open socket.`,
+    ...known.map((id) => { const why = programBlock(s, R, room, id); return `${PROGRAMS[id].name.padEnd(15)} ${programCostLine(programCost(R, id))}${why && !/costs/.test(why) ? `  · ${why}` : why ? '  · short' : ''}\n  ${PROGRAMS[id].rule}`; }),
+    known.length ? 'build <program> builds it here.' : 'You know no codebase yet.'];
 }
 
 // ---------- fights ----------
@@ -1037,11 +1141,12 @@ hooks.roomEnd = (s, result) => {
     if (R.world) ask('won', s, room, e, { first: false, rare: false, mirror: true });
     return takeCache(s, room);
   }
-  R.down[room.id] = nowOf();
+  if (room.kind !== 'socket') R.down[room.id] = nowOf(); // a socket's guard never comes back
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
   // One respawn in ten is a rare spawn: it waits until you kill it (a held server's Root 5, a Legacy server's twice).
-  R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
+  R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
+  programsPay(s, room, e);
   // First clear: half that fight's XP again (7.2).
   if (!R.cleared[room.id]) {
     const xp = Math.round(xpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)));
@@ -1050,6 +1155,7 @@ hooks.roomEnd = (s, result) => {
   }
   // The key: beat the guard while its vault is shut and it goes in your pack, for this visit.
   if (room.kind === 'guard' && room.key && !R.opened[room.key] && !R.visit.keys.includes(room.key)) { R.visit.keys.push(room.key); say(s, `You take the ${R.graph.rooms[room.key].path} key.`, 'rooms-good'); }
+  if (room.kind === 'socket' && first) say(s, `${room.path} is open: a socket. Build a program in it.`, 'rooms-good');
   drops(s, room, e, wasRare);
   if (R.world) ask('won', s, room, e, { first, rare: wasRare });
   else if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls.`, 'rooms-good');
@@ -1058,6 +1164,22 @@ hooks.roomEnd = (s, result) => {
 // count is the difference since you started.
 export const xpTotal = (s) => { const h = hackerOf(s); let n = h.xp; for (let l = 1; l < h.level; l++) n += xpToNext(l); return n; };
 export const xpEarned = (s) => xpTotal(s) - (s.rooms?.xpStart ?? xpTotal(s));
+// What a kill in a fight room pays besides its own drops: an elite's one more component, a Harvester's one more (each
+// from the part you broke last), a Code Siphon's 3 of the server's code (into the pack on the network).
+function programsPay(s, room, e) {
+  const R = s.rooms, last = e.lastLoot;
+  const elite = !!e.virus.elite || ['elite', 'guard'].includes(e.rooms?.size);
+  const more = (elite ? 1 : 0) + (runs(s, 'harvester') ? 1 : 0);
+  if (last && more) { gainComponents(s, more, [last], e.virus.name); emit(s, 'loot', `${last} ×${more} recovered${runs(s, 'harvester') ? ' (Harvester)' : ''}.`, { harvest: more }); }
+  if (runs(s, 'siphon') && FIGHTS.includes(room.kind)) {
+    const material = R.code || serverCodeOf(s), n = SOCKET.siphon;
+    if (R.world && s.run) s.run.pack.push({ path: `${room.path}/#siphon-${s.serial}`, name: `${material}.code`, kind: 'code', material, amount: n });
+    else gainCode(s, { [material]: n }, 'Code Siphon: ');
+    say(s, `Code Siphon: +${n} ${material} code${R.world ? ' into your pack' : ''}.`, 'rooms-good');
+  }
+}
+const FAM_CODE = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' };
+const serverCodeOf = (s) => FAM_CODE[roomList(s).find((x) => x.family)?.family] || 'cipher';
 // What a won fight drops into the pack: gear now and then (an elite always a blue or better, a rare spawn three
 // rolls), the Resident a blue or better and a script half the time.
 function drops(s, room, e, rare) {
@@ -1108,6 +1230,7 @@ const tagOf = (s, room) => {
     const f = up && (room.kind !== 'core' || coreOpen(s)) ? fightOf(s, room) : null, who = f ? f.name || `${f.elite ? 'elite ' : ''}${familyName(f.family) || f.family}` : '';
     return `${room.kind === 'boss' ? 'boss' : room.kind === 'core' ? 'core' : 'fight'}${who ? ` · ${who} lv ${f.level}` : ''}${room.kind === 'core' && !coreOpen(s) ? ' · sealed' : left}`;
   }
+  if (isSocket(s, room) && room.kind === 'socket') { const p = programIn(s, room.id); return !socketOpen(s, room) ? `socket · guarded · ${familyName(room.family) || 'process'}` : p ? `socket · ${PROGRAMS[p].name}${socketOff(s, room) ? ' · offline' : ''}` : 'socket · open'; }
   if (room.kind === 'stash' || room.kind === 'purse') return `stash${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
   if (room.kind === 'core') return `core · ${BOSSES[RESIDENT].name}${coreOpen(s) ? '' : ' · sealed'}`;
   if (room.kind === 'guard') return `elite · ${GUARDS[room.guard].name}${room.key && !s.rooms.opened[room.key] ? ' · key' : ''}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
@@ -1124,7 +1247,7 @@ export function roomsCommand(s, text) {
   if (word === 'jack' && arg === 'out') return jackOut(s);
   if (word === 'ls') {
     if (!R.at) { say(s, 'You are home. Type connect.', 'rooms-out'); return out(s, first); }
-    const here = hereOf(s), xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
+    const here = hereOf(s), xs = walkable(s, R.at).map((id) => R.graph.rooms[id]);
     const who = (x) => { const p = R.world ? ask('people', s, x) || [] : []; return p.length ? `  · ${p.join(', ')}` : ''; }; // who else is in there (SPRAWL-00 is shared)
     const lines = [`${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${known(s, x.id) ? x.path : '?'}  [${tagOf(s, x)}]${moveCost(s, x) ? `  −${moveCost(s, x)} Signal` : '  walked'}${who(x)}`)]; // who's in a room next door shows, known or not (people, not what the room is)
     const h = hunterLine(s), exfil = exfilLine(s);
@@ -1133,7 +1256,7 @@ export function roomsCommand(s, text) {
   }
   if (word === 'cd' || word === 'go') {
     if (!R.at) { deny(s, 'Connect first.'); return out(s, first); }
-    const xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
+    const xs = walkable(s, R.at).map((id) => R.graph.rooms[id]);
     let room = null;
     if (arg === '..' && R.screen?.kind === 'virus') return back(s); // a virus holds the room: cd .. steps back out
     if (arg === '..') { const d = distances(R.graph, R.graph.entry); room = xs.sort((a, b) => d[a.id] - d[b.id])[0]; }
@@ -1147,6 +1270,10 @@ export function roomsCommand(s, text) {
   if (word === 'wait') return wait(s);
   if (word === 'back') return back(s);
   if (['engage', 'fight', 'cat', 'pull', 'open', 'force', 'rest', 'slip'].includes(word)) return act(s, word === 'pull' && arg === 'all' ? 'pull' : word);
+  if (['build', 'install', 'uninstall', 'remove'].includes(word) && R.at) {
+    const i = arg.indexOf(' pay '), what = i < 0 ? arg : arg.slice(0, i), pay = i < 0 ? null : arg.slice(i + 5);
+    return act(s, word === 'install' ? 'build' : word === 'remove' ? 'uninstall' : word, what || null, { pay });
+  }
   if (word === 'developer' && rest[0] === 'bossrule') { setBossRule(s, rest[1]); return out(s, first); }
   if (word === 'developer' && rest[0] === 'exfil') { // with ?dev (app.js): an Exfil now, cooldown or not
     if (!R.at || active(s) || exfilOf(s)) deny(s, 'developer exfil: on a server, out of a fight, with no Exfil loose.');

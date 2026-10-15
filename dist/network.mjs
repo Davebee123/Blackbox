@@ -24,7 +24,7 @@
 import { emit, warn, hackerLevel, UNIQUES, addItem, findLocation, active, listenBoost } from './combat.mjs';
 import { CONFIG, FAMILIES, STRAINS, BOSSES, NATIVE_BOSSES, SERVER, createLocation, xpScale } from './data.mjs';
 import { seeded, uniqueItem, codeOf, MATERIALS } from './gear.mjs';
-import { postsOf } from './outpost.mjs';
+import { postsOf } from './sockets.mjs';
 import ITEMS from './content/items.mjs';
 
 export const NETWORK = {
@@ -361,7 +361,7 @@ export function networkLines(s, who) {
     `Native boss: ${lair ? `${BOSSES[g.boss].name} in ${lair.name}` : '???'}.${lair && BOSSES[g.boss].floor > hackerLevel(s) ? ` It holds the Core from level ${BOSSES[g.boss].floor}.` : ''}`,
     `Native uniques: ${nat}.`,
     ...(who === 'you' ? [`Events that come up often: ${events.length ? events.map((k) => k[0].toUpperCase() + k.slice(1)).join(' and ') : '???'}.`] : []),
-    `Rich in: ${knowsRich(s, who) ? `${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'salvage' : 'Exploits'}` : '???'}.`,
+    `Rich in: ${knowsRich(s, who) ? `${MATERIALS[g.code.rich].name} and ${g.code.extra === 'salvage' ? 'components' : 'Exploits'}` : '???'}.`,
   ];
 }
 export function networkCommand(s, text) {

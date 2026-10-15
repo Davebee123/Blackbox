@@ -4,7 +4,8 @@ import { fresh, command, resolveCycle, active, hooks, restore, SAVE_VERSION } fr
 import { play, layoutOf } from './dist/run.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { tickNetwork, ratioOf, travelMs } from './dist/invasion.mjs';
-import { FLEET, launch } from './dist/fleet.mjs';
+import { launch } from './dist/fleet.mjs';
+import { HUBS as FLEET } from './dist/hubs.mjs'; // a swarm's clock is a hub's
 CONFIG.baseCrit = 0;
 CONFIG.enemyCrit = 0;
 CONFIG.misses = false;
@@ -31,7 +32,7 @@ const takeOver = (s, loc) => {
   play(s, 'cd vault');
 };
 const withFirewall = () => { const s = fresh(); s.services = { firewall: 1, tarpit: 1, honeypot: 1, hotpatch: 1 }; return s; };
-const { VERSIONS } = await import('./dist/gear.mjs');
+const FILTER_BAY = 120; // a v1 service's credits (the retired VERSIONS table)
 
 test('configs are gone (a save that owned one gets its credits back), and the wall is three knobs', async () => {
   const { restore, SAVE_VERSION } = await import('./dist/combat.mjs');
@@ -44,42 +45,47 @@ test('configs are gone (a save that owned one gets its credits back), and the wa
   assert.deepEqual(t.configsOwned, []); assert.deepEqual(t.configsKnown, [], 'configs are gone, Triage too');
   assert.deepEqual(t.configs, {});
   assert.ok(!t.services.tarpit && !t.services.honeypot);
-  assert.equal(t.server.credits, credits + 2 * 250 + 2 * VERSIONS[0].credits, 'stateful and triage refunded, and (v34) the Filter Bay and the Hot-patcher come back as what they cost');
+  assert.equal(t.server.credits, credits + 2 * 250 + 2 * FILTER_BAY, 'stateful and triage refunded, and (v34) the Filter Bay and the Hot-patcher come back as what they cost');
   const stats = t.filters.held.map((f) => Object.keys(f.stats));
   assert.ok(stats.some((k) => k.includes('tarpit')) && stats.some((k) => k.includes('evasion')), 'each retired service comes back as a filter');
 });
 
-test('a fleet sets out for an outpost, sieges it, and breaks when every ship is down', () => {
+// A hub you hold, its firewall pinned low so the swarm breaches (the wall's own tests are in firewall.test.mjs).
+const hubHeld = async (s) => {
+  const { hubWall } = await import('./dist/hubs.mjs');
+  const { fwAt } = await import('./dist/firewall.mjs');
+  (s.hubs ||= {}).kestrel = { id: 'hub-kestrel', faction: 'kestrel', stock: {}, restockAt: 0, captured: { at: 0, bank: 0 } };
+  fwAt(s, hubWall(s, 'kestrel')).pin = 1;
+};
+
+test('a swarm only comes for a hub you hold (a held server has nothing to steal since R2); it sieges, and breaks when every ship is down', async () => {
   const s = fresh();
   command(s, 'developer location worm');
-  const a = s.locations[0];
-  a.takenOver = true;
-  command(s, `developer outpost ${a.id}`, T0);
-  const f = launch(s);
-  assert.ok(f && f.target === a.id && f.ships >= 2);
+  s.locations[0].takenOver = true;
+  assert.equal(launch(s), null, 'a held server is never a target');
+  await hubHeld(s);
+  const f = launch(s, T0, null, { hub: 'kestrel' });
+  assert.ok(f && f.hub === 'kestrel' && f.ships >= 2);
   s.net.next = 1e12;
   let t = T0; s.net.wall = t;
   for (let i = 0; i < FLEET.travelMs / 1000 + 5; i++) tickNetwork(s, (t += 1000));
   assert.equal(s.fleet.state, 'siege');
-  const n = s.fleet.ships;
+  const n = s.fleet.ships, had = s.salvage.length;
   for (let i = 0; i < n; i++) { command(s, 'swarm engage'); win(s); }
   assert.equal(s.fleet, null);
-  assert.equal(a.outpost.lockdown, null);
-  assert.ok(s.salvage.length >= n);
+  assert.ok(!s.hubs.kestrel.captured.lockdown);
+  assert.ok(s.salvage.length >= had + n, 'a component a process');
 });
 
-test('an undefended fleet puts the outpost in lockdown', () => {
+test('an undefended swarm puts the hub in lockdown', async () => {
   const s = fresh();
-  command(s, 'developer location worm');
-  const a = s.locations[0];
-  a.takenOver = true;
-  command(s, `developer outpost ${a.id}`, T0);
-  launch(s);
+  await hubHeld(s);
+  launch(s, T0, null, { hub: 'kestrel' });
   s.net.next = 1e12;
   let t = T0; s.net.wall = t;
   for (let i = 0; i < (FLEET.travelMs + FLEET.siegeMs) / 1000 + 10; i++) tickNetwork(s, (t += 1000));
   assert.equal(s.fleet, null);
-  assert.ok(a.outpost.lockdown);
+  assert.ok(s.hubs.kestrel.captured.lockdown);
 });
 
 test('a v24 save loads with configs and no fleet', () => {
@@ -91,43 +97,23 @@ test('a v24 save loads with configs and no fleet', () => {
   assert.equal(back.fleet, null);
 });
 
-test('Edge Router adds bandwidth; the Scheduler collects outposts on its own', async () => {
-  const { bandwidth, stockOf } = await import('./dist/outpost.mjs');
-  const s = fresh();
-  const bw = bandwidth(s);
-  s.services = { router: 2 };
-  assert.equal(bandwidth(s), bw + 2);
+test('services, outposts and architecture are gone (R2): their commands say where the choices went, and a held server stores nothing while you are away', () => {
+  const s = withFirewall();
+  command(s, 'install router');
+  assert.match(s.logs.at(-1).message, /Services are gone/);
   command(s, 'developer location worm');
   const a = s.locations[0];
   a.takenOver = true;
-  command(s, `developer outpost ${a.id}`, T0);
-  s.services.scheduler = 3; // every 15 minutes
+  command(s, `outpost ${a.id}`);
+  assert.match(s.logs.at(-1).message, /Outposts are gone/);
+  command(s, 'developer server 20');
+  command(s, 'architecture fortress');
+  assert.match(s.logs.at(-1).message, /architecture is gone/);
+  assert.equal(s.architecture ?? null, null);
   s.net.next = 1e12;
   tickNetwork(s, T0);
-  const before = s.materials.worm;
-  tickNetwork(s, T0 + 60 * 60000); // an hour of production, and the Scheduler is due
-  assert.ok(s.materials.worm > before, 'collected without a visit');
-  assert.equal(stockOf(a), 0);
-});
-
-test('architecture: picked at server level 20; Fortress walls, Hub bandwidth, Lab crafting', async () => {
-  const { bandwidth } = await import('./dist/outpost.mjs');
-  const { compileCost } = await import('./dist/combat.mjs');
-  const s = withFirewall();
-  command(s, 'architecture fortress');
-  assert.equal(s.architecture, null, 'too early');
-  command(s, 'developer server 20');
-  const inv = { level: 20, mutation: null, family: 'worm' };
-  const base = ratioOf(s, inv), bw = bandwidth(s), cc = compileCost(s).credits;
-  const { effLevel } = await import('./dist/firewall.mjs');
-  const lv = effLevel(s, 0);
-  command(s, 'architecture fortress');
-  assert.equal(effLevel(s, 0), lv + 5, 'Fortress: firewall +5');
-  s.server.credits = 1500;
-  command(s, 'architecture hub');
-  assert.equal(s.server.credits, 500, 'switching costs 1000');
-  assert.equal(bandwidth(s), bw + 2);
-  s.server.credits = 1000;
-  command(s, 'architecture lab');
-  assert.equal(compileCost(s).credits, Math.round(cc * 0.7));
+  const before = JSON.stringify(s.materials);
+  tickNetwork(s, T0 + 60 * 60000);
+  assert.equal(JSON.stringify(s.materials), before, 'nothing produces on its own: programs pay as you clear rooms');
+  assert.ok(!a.outpost && !a.buildings);
 });

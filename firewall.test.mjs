@@ -161,34 +161,31 @@ test('a filter pulled from a vault is banked when you jack out', async () => {
   assert.equal(filtersOf(s)[0].name, 'Packet Filter');
 });
 
-test('every outpost has its own firewall based on its server\'s level; natives it blocks bounce, ones it contests are worn down', async () => {
-  const { fwAt } = await import('./dist/firewall.mjs');
-  const { OUTPOST, startSiege } = await import('./dist/outpost.mjs');
+test('a hub you hold has its own firewall at the hub\'s level; a swarm it blocks bounces, one it contests is worn down (outposts\' went in R2)', async () => {
+  const { fwAt, fwLevel: lvAt } = await import('./dist/firewall.mjs');
+  const { launch, tickFleet } = await import('./dist/fleet.mjs');
+  const { hubWall, HUBS } = await import('./dist/hubs.mjs');
+  const { FACTIONS } = await import('./dist/factions.mjs');
   const s = fresh();
-  command(s, 'developer location worm');
-  const a = s.locations[0];
-  a.level = 8; a.takenOver = true;
-  command(s, `developer outpost ${a.id}`, 0);
-  s.materials = { kernel: 20 };
-  const { fwLevel: lvAt } = await import('./dist/firewall.mjs');
-  assert.equal(lvAt(s, a), 8, 'it comes with the server, at its level');
-  const { tickFleet } = await import('./dist/fleet.mjs');
-  const arrive = () => { startSiege(s, a); tickFleet(s, 0, false, s.fleet.arriveAt); };
+  (s.hubs ||= {}).kestrel = { id: 'hub-kestrel', faction: 'kestrel', stock: {}, restockAt: 0, captured: { at: 0, bank: 0 } };
+  const wall = hubWall(s, 'kestrel'), L = FACTIONS.kestrel.hub.level;
+  assert.equal(lvAt(s, wall), L, 'it comes with the hub, at its level');
+  const arrive = () => { launch(s, 0, null, { hub: 'kestrel' }); tickFleet(s, 0, false, s.fleet.arriveAt); };
+  fwAt(s, wall).pin = L + 12;
   arrive();
-  assert.equal(s.fleet, null, 'natives at its level bounce off its firewall');
-  fwAt(s, a).pin = 3;
+  assert.equal(s.fleet, null, 'a swarm well under it bounces off');
+  fwAt(s, wall).pin = L + HUBS.levelUp - 1;
   arrive();
-  assert.ok(s.fleet?.state === 'siege', 'a weaker firewall lets them in');
+  assert.equal(s.fleet?.state, 'siege', 'a weaker firewall lets it in');
   const ships = s.fleet.ships;
-  command(s, `firewall upgrade ${a.id}`);
   s.server.credits = 9999; s.materials = { cipher: 999, worm: 999, kernel: 999 };
-  for (let i = 0; i < 4; i++) command(s, `firewall upgrade ${a.id}`);
-  assert.equal(fwAt(s, a).plus, 4);
-  assert.equal(lvAt(s, a), 7, 'its base and four tiers');
+  for (let i = 0; i < 4; i++) command(s, 'firewall upgrade kestrel'); // priced in code since signatures went
+  assert.equal(fwAt(s, wall).plus, 4);
   s.fleet.siegeLeft = 60 * 60000; // time enough to see the wearing down
   for (let t = 1; t < 60 && s.fleet; t++) tickFleet(s, 60000, false, s.fleet?.arriveAt + t * 60000);
   assert.equal(s.fleet, null, `contested: the firewall wore all ${ships} down`);
-  assert.ok(!a.outpost.lockdown, 'the firewall wore them down before the timer ran out');
+  assert.ok(!s.hubs.kestrel.captured.lockdown, 'before the timer ran out');
+
 });
 
 test('a hub you hold: its swarm comes at the hub\'s level, never yours', async () => {

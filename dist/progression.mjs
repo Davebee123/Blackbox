@@ -2,8 +2,7 @@
 // runs long, and the save migration that folded the extra tracks away (v34). docs/progression.md is the
 // review sheet.
 //   one level    your server's level is your highest class level (combat.mjs serverLevel). It has no XP
-//                of its own. Every gate it had (daemon slots, service versions, bandwidth, buildings,
-//                architecture, memory, base Integrity) reads that.
+//                of its own. Its gates (daemon slots, memory, base Integrity) read that.
 //   the banner   a level-up lists everything the level brings, on every track, and the next level that
 //                brings something (levelGains, nextGains; app.js levelUp).
 //   Behind       a level gets a target of CATCHUP.base + CATCHUP.per × level minutes of active play.
@@ -13,9 +12,7 @@
 import { emit, hackerOf, classOf, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
 import { versionLevel } from './daemons.mjs';
 import { CATCHUP, levelTarget, LOADOUT, SERVER, BANDS, ARCHETYPES } from './data.mjs';
-import { BASES, PROTOCOL_SLOTS, VERSIONS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES } from './gear.mjs';
-import { OUTPOST, BUILDINGS } from './outpost.mjs';
-import { ARCH_LEVEL } from './architecture.mjs';
+import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES } from './gear.mjs';
 import { MEMORY } from './memory.mjs';
 import { learnFilter } from './filters.mjs';
 
@@ -34,12 +31,6 @@ export function levelGains(arch, L, top = 0) {
   if (L === LOADOUT.specFrom) out.push(`${kitTalent(arch).name} in your kit`);
   if (L > top) {
     if (SERVER.daemonSlotsAt.includes(L)) out.push('a daemon slot');
-    const v = VERSIONS.find((x) => x.needs === L && x.v > 1);
-    if (v) out.push(`service v${v.v}`);
-    if (OUTPOST.bandwidth(L) > OUTPOST.bandwidth(L - 1)) out.push('an outpost slot');
-    const built = Object.values(BUILDINGS).filter((b) => b.lv === L && L > 1);
-    if (built.length) out.push(`${built.length === 1 ? 'a building' : 'buildings'}: ${built.map((b) => b.name).join(', ')}`);
-    if (L === ARCH_LEVEL) out.push('a choice of architecture');
     if (MEMORY.on && Math.floor(L / MEMORY.per) > Math.floor((L - 1) / MEMORY.per)) out.push('server memory +1');
   }
   return out;
@@ -93,8 +84,9 @@ export const RETIRED = {
   snapshot: { name: 'Snapshot', code: ['cipher', 'kernel'], daemon: 'snapshot' },
 };
 // What version v of a retired service cost (as gear.mjs serviceCost did): credits, code, Exploits, salvage.
+const OLD_VERSIONS = [{ code: 12, exploit: 0, credits: 120, salvage: 6 }, { code: 40, exploit: 1, credits: 600, salvage: 15 }, { code: 100, exploit: 3, credits: 2000, salvage: 40 }];
 function retiredCost(id, v) {
-  const d = RETIRED[id], x = VERSIONS[v - 1], codes = Array.isArray(d.code) ? d.code : [d.code];
+  const d = RETIRED[id], x = OLD_VERSIONS[v - 1], codes = Array.isArray(d.code) ? d.code : [d.code];
   const c = { credits: x.credits, exploit: x.exploit, salvage: x.salvage };
   for (const k of codes) c[k] = Math.ceil(x.code / codes.length) + (codes.length > 1 ? Math.ceil(x.code / 4) : 0);
   return c;
@@ -104,11 +96,11 @@ function payBack(s, c, into) {
     if (!n) continue;
     into[k] = (into[k] || 0) + n;
     if (k === 'credits') s.server.credits += n;
-    else if (k === 'salvage') for (let i = 0; i < n; i++) (s.salvage ||= []).push({ name: 'Scrap', virus: 'refund', seed: 0 });
+    else if (k === 'salvage') for (let i = 0; i < n; i++) (s.salvage ||= []).push({ name: 'Scrap', virus: 'refund', seed: 0 }); // components since v40 (sockets.mjs)
     else materialsOf(s)[k] = (materialsOf(s)[k] || 0) + n;
   }
 }
-const line = (c) => Object.entries(c).filter(([, n]) => n).map(([k, n]) => (k === 'credits' ? `${n} credits` : k === 'salvage' ? `${n} salvage` : `${n} ${MATERIALS[k]?.name || k}`)).join(', ');
+const line = (c) => Object.entries(c).filter(([, n]) => n).map(([k, n]) => (k === 'credits' ? `${n} credits` : k === 'salvage' ? `${n} components` : `${n} ${MATERIALS[k]?.name || k}`)).join(', ');
 const hash = (str) => [...String(str)].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
 export function progressionRestore(s, was) {
   if (was >= 34) return;

@@ -107,7 +107,7 @@ test('tiers: a log line and a float event at 1, 5 and 20, nothing in between', (
   gainResearch(s, v, p, 'tell');
   const last = lines().at(-1);
   assert.equal(last.type, 'mastered');
-  assert.equal(last.message, 'Encryptor mastered: research 20. Its piece drops 25% more often, and you deal 3% more damage to it.');
+  assert.equal(last.message, 'Encryptor mastered: research 20. Its component drops 25% more often, and you deal 3% more damage to it.');
   assert.equal(last.target, 'encryptor', 'on the part: the board floats it there');
 });
 
@@ -133,7 +133,7 @@ test('the Codex reveals by tier: name and what it hits, then numbers, then rule,
   assert.match(c5, /Research 20 to learn its drop\./); assert.doesNotMatch(c5, /Drops /); assert.doesNotMatch(c5, /pmast/);
   const c20 = card(20);
   assert.match(c20, /cx-part t20 mastered/); assert.match(c20, /class="pmast"/); assert.match(c20, /Drops Cipher Seed/);
-  assert.match(c20, /Mastered\. Its piece drops 25% more often, and you deal 3% more damage to it\./);
+  assert.match(c20, /Mastered\. Its component drops 25% more often, and you deal 3% more damage to it\./);
   assert.match(c20, /<small class="cxr-n full">20\/20<\/small>/);
   // The loot list opens at 20 too.
   assert.match(codexPageMarkup(s, 'family:ransomware'), /<li class=""><svg[^>]*>[\s\S]*?<\/svg><b>Cipher Seed<\/b><small>Encryptor<\/small><\/li>/);
@@ -175,7 +175,7 @@ test('the board by tier: ??? then its attack and cue at 1, then its rule and ans
   assert.doesNotMatch(boardMarkup(s, null), /pmast/);
   s.research = { [key]: 20 };
   const html = boardMarkup(s, null), row = html.split('data-target="').find((r) => r.startsWith('encryptor"'));
-  assert.match(row, /<span class="pmast" title="Encryptor mastered: research 20\. Its piece drops 25% more often, and you deal 3% more damage to it\.">/);
+  assert.match(row, /<span class="pmast" title="Encryptor mastered: research 20\. Its component drops 25% more often, and you deal 3% more damage to it\.">/);
   assert.equal((html.match(/class="pmast"/g) || []).length, 1, 'only on the part you mastered');
   const css = readFileSync('./dist/style.css', 'utf8').match(/\.pmast \{[^}]*\}/)[0];
   assert.match(css, /color: var\(--amber-soft\)/);
@@ -204,7 +204,7 @@ test('the perk: +3% from all your damage on that part only, in every preview on 
   assert.equal(was - p.integrity, d20);
 });
 
-test('the perk: its piece drops 25% more often (×1.25 on whatever the chance is)', () => {
+test('the perk: its component drops 25% more often (×1.25 on whatever the chance is)', () => {
   // A roll between the plain chance and the mastered one: no drop at research 0, a drop at 20.
   let rng = 1;
   const roll = (x) => { const t = { rng: x }; let v = (t.rng = ((t.rng >>> 0) + 0x6d2b79f5) >>> 0); v = Math.imul(v ^ (v >>> 15), v | 1); v ^= v + Math.imul(v ^ (v >>> 7), v | 61); return ((v ^ (v >>> 14)) >>> 0) / 4294967296; };

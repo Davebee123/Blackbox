@@ -1,4 +1,4 @@
-// Markets: each faction hub buys and sells what you farm (the three codes, Exploits, salvage).
+// Markets: each faction hub buys and sells what you farm (the three codes, Exploits, components).
 // Prices move on things you can't change: each hub's own condition (Kestrel's data centre runs
 // hot, so it pays well for Kernel code to tune its racks), a world event that rotates every few
 // hours, and how much has been sold there lately (you selling a lot drives the price down; it
@@ -13,6 +13,7 @@ import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './faction
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
 import { deal } from './events.mjs';
+import { learnCodebase, gainComponents } from './sockets.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
 
@@ -22,7 +23,7 @@ export const WARES = {
   worm: { name: 'Worm code', base: 14 },
   kernel: { name: 'Kernel code', base: 14 },
   exploit: { name: 'Exploits', base: 140 },
-  salvage: { name: 'Salvage', base: 7 },
+  salvage: { name: 'Components', base: 7 }, // (its id stays salvage: the market's history on a save)
 };
 export const WARE_IDS = Object.keys(WARES);
 
@@ -31,9 +32,9 @@ export const WARE_IDS = Object.keys(WARES);
 export const CONDITIONS = {
   claims: { name: 'Claims backlog', about: 'Halcyon is buried in ransomware claims and pays to study the code.', mult: { cipher: 1.35 } },
   blackbudget: { name: 'Black budget', about: 'GLASSJAW buys every Exploit it can, no questions.', mult: { exploit: 1.5 } },
-  hotracks: { name: 'Overheating racks', about: 'Kestrel’s north data centre runs hot. Kernel code tunes the CPUs, and salvage patches the cooling.', mult: { kernel: 1.8, salvage: 1.25 } },
+  hotracks: { name: 'Overheating racks', about: 'Kestrel’s north data centre runs hot. Kernel code tunes the CPUs, and components patch the cooling.', mult: { kernel: 1.8, salvage: 1.25 } },
   thinpipe: { name: 'Thin bandwidth', about: 'LANTERN’s relay is starved, and Worm code carries its traffic.', mult: { worm: 1.45 } },
-  scrapyard: { name: 'Scrap economy', about: 'NULL CHOIR lives on salvage and has more than it needs.', mult: { salvage: 0.6, cipher: 1.15 } },
+  scrapyard: { name: 'Scrap economy', about: 'NULL CHOIR lives on components and has more than it needs.', mult: { salvage: 0.6, cipher: 1.15 } },
 };
 export const HUB_CONDITION = { halcyon: 'claims', glassjaw: 'blackbudget', kestrel: 'hotracks', lantern: 'thinpipe', nullchoir: 'scrapyard' };
 export const EVENTS = {
@@ -41,7 +42,7 @@ export const EVENTS = {
   wormseason: { name: 'Worm season', about: 'A worm tears through the backbone, and Worm code is in demand.', mult: { worm: 1.5 } },
   patchday: { name: 'Patch Tuesday', about: 'Everyone patched last night, so code is cheap for a while.', mult: { cipher: 0.8, worm: 0.8, kernel: 0.8 } },
   zerorush: { name: 'Zero-day rush', about: 'A zero-day panic grips the market, and Exploits fetch a fortune.', mult: { exploit: 1.6 } },
-  blackout: { name: 'Grid blackout', about: 'A city grid failed, and salvage and Kernel code go to rebuilding it.', mult: { salvage: 1.5, kernel: 1.25 } },
+  blackout: { name: 'Grid blackout', about: 'A city grid failed, and components and Kernel code go to rebuilding it.', mult: { salvage: 1.5, kernel: 1.25 } },
   calm: { name: 'Quiet market', about: 'Nothing is moving. Prices sit near normal.', mult: {} },
 };
 export const MARKET = {
@@ -163,13 +164,14 @@ export function tickMarket(s, at = now()) {
     if (t.side === 'good') {
       emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: ${t.name}.`, { faction: t.f });
       if (t.good === 'tip') deal(s, 'courier'); // a broadcast schedule bought before LANTERN dropped it
+      else if (t.good.startsWith('cb-')) learnCodebase(s, t.good.slice(3), 'Unsealed: ');
       else if (t.good === 'bootleg') addFilter(s, rollFilter(() => rand(s), { level: t.L, rarity: rand(s) < 0.7 ? 'stock' : 'tuned' }), 'Unsealed: ');
       else deliverGoods(s, t.good, t.L);
       continue;
     }
     if (t.side === 'sell') { s.server.credits += t.credits; emit(s, 'transfer-in', `Transfer complete to ${FACTIONS[t.f].short}: +${t.credits} credits for ${t.n} ${WARES[t.w].name}.`, { faction: t.f }); }
     else {
-      if (t.w === 'salvage') for (let i = 0; i < t.n; i++) s.salvage.push({ name: `${FACTIONS[t.f].short} salvage`, virus: 'market', seed: 0 });
+      if (t.w === 'salvage') gainComponents(s, t.n, null, 'market');
       else materialsOf(s)[t.w] = (materialsOf(s)[t.w] || 0) + t.n;
       emit(s, 'transfer-in', `Transfer complete from ${FACTIONS[t.f].short}: +${t.n} ${WARES[t.w].name}.`, { faction: t.f });
     }

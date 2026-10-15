@@ -9,15 +9,13 @@
 // you're logged on: you're never locked down while away. A hub earns nothing while a retake is
 // out for it (on the way, waiting at the hub, or a fight against it left open). Intercept or
 // defend, a process a fight. If the siege runs out, the hub goes into lockdown: its income stops
-// until you clear it. You never lose it for good. A Hostile faction you strike without losing a hub answers once with a swarm at one
-// of your outposts.
+// until you clear it. You never lose it for good. (A Hostile faction's answer at one of your outposts went with outposts in R2.)
 import { CONFIG, variantFor } from './data.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hackerLevel, hooks } from './combat.mjs';
 import { FACTIONS, rep, REP_TIERS, captured, donate } from './factions.mjs';
 import { CONDITIONS, HUB_CONDITION, outsideMult } from './market.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
 import { launch, fleetOf, fleetLeft, fleetCommand } from './fleet.mjs';
-import { outposts } from './outpost.mjs';
 import { ratingAt, fragment } from './firewall.mjs';
 import { strength, outcome, grindRate } from './invasion.mjs';
 
@@ -79,15 +77,7 @@ export const retakeLeft = (s, at = now()) => (s.fleet?.hub ? fleetLeft(s, at) : 
 export const hubWall = (s, f) => (hub(s, f).captured.wall ||= { level: FACTIONS[f].hub.level });
 export function tickRetake(s, dt, paused = false, at = now()) {
   const net = (s.net ||= {});
-  // A Hostile faction answers a fresh strike once, at one of your outposts (as an ordinary swarm, in its colours).
-  for (const f of Object.keys(s.hubs || {})) {
-    const h = s.hubs[f];
-    if (!h.grudgeAt || h.grudgeAt <= (h.grudgeSent || 0) || captured(s, f) || heldOf(s).length) continue;
-    if (!angry(s, f) || at - h.grudgeAt > HUBS.grudgeMs) { h.grudgeSent = h.grudgeAt; continue; }
-    if (paused || fleetOf(s) || !outposts(s).some((l) => !l.outpost.lockdown)) continue;
-    h.grudgeSent = h.grudgeAt;
-    launch(s, at, f);
-  }
+  for (const f of Object.keys(s.hubs || {})) { const h = s.hubs[f]; if (h.grudgeAt) h.grudgeSent = h.grudgeAt; } // (a strike's answer at an outpost: gone with outposts)
   if (s.retake) s.retake = null; // retakes are swarms now (fleet.mjs)
   if (retakeOf(s)) return; // one is out: fleet.mjs runs it
   const targets = heldOf(s).filter((f) => angry(s, f) && !lockedDown(s, f));

@@ -722,7 +722,7 @@ test('a relay’s pinged neighbours get route files and count kills of their fam
   assert.equal(n.lead, was + 12);
 });
 
-test('every server but an outpost makes you wait 30 seconds before reconnecting', async () => {
+test('every server makes you wait 30 seconds before reconnecting, one you hold too (outposts went in R2)', async () => {
   const { CONFIG } = await import('./dist/data.mjs');
   const s = located();
   const loc = s.locations[0];
@@ -730,10 +730,10 @@ test('every server but an outpost makes you wait 30 seconds before reconnecting'
   assert.match(play(s, 'connect ' + loc.id).at(-1).message, /Reconnect in \d+s/);
   assert.equal(s.run, null);
   loc.lockUntil = 0;
-  loc.takenOver = true; loc.buildings = ['siphon']; loc.outpost = { stock: {} }; // an outpost: no wait
+  loc.takenOver = true;
   connect(s, loc.id); play(s, 'jack out');
-  connect(s, loc.id);
-  assert.ok(s.run, 'an outpost takes you straight back');
+  assert.match(play(s, 'connect ' + loc.id).at(-1).message, /Reconnect in \d+s/, 'held: the same wait');
+  assert.equal(s.run, null);
   assert.equal(CONFIG.relockMs, 30000);
 });
 
