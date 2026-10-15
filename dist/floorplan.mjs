@@ -11,7 +11,7 @@
 //               vault ▥, rest ☰) or an empty junction (·). The marks are the terminal's; the page draws icons. A fight room's family, author and attack set are fixed by the
 //               server's seed, so a room is a place you learn. Its mutation rerolls with each respawn, and one respawn
 //               in ten is a rare spawn (★, two levels up, three loot rolls).
-//   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Signal; rooms you've walked
+//   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Signal (ROOMS.moveNew into one you've never been in); rooms you've walked
 //               this visit, and `wait`, are free. A live virus blocks its room: engage it, or step back.
 //   keys        the vault's key sits in a guard post on another branch, three or more rooms from the vault. A guard
 //               post is an elite to the player (named Elite n with the others, the elite's icon and a KEY badge): its
@@ -56,7 +56,8 @@ import { logSet } from './genome.mjs';
 export const ROOMS = {
   sizes: { small: 8, medium: 12, large: 16 },
   spine: { small: 4, medium: 5, large: 6 }, // entry to /core, both counted
-  move: 0.03, moveDeep: 0.04, // a room's first entry on a visit, of your max Signal (from floor 5: 4%)
+  move: 0.03, moveDeep: 0.04, // a room's first entry on a visit, of your max Signal, a room you've been in (from floor 5: 4%)
+  moveNew: 0.05, moveNewDeep: 0.06, // and one you never have: stepping into the unknown costs more
   force: 0.15, bait: 0.1, rest: 0.3, // forcing a vault, pulling bait, the rest room
   respawn: { process: 15, elite: 45, guard: 20, core: 60, cache: 120 }, // minutes (the core: R0 has no takeover, so it comes back like a lair's)
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
@@ -688,7 +689,13 @@ export function exits(s) {
   if (!R?.at || R.screen || active(s)) return [];
   return neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).filter((x) => x.kind !== 'core' || coreOpen(s));
 }
-export const moveCost = (s, room) => (s.rooms.visit?.walked[room.id] ? 0 : Math.max(1, Math.round(s.rooms.max * (s.rooms.floor >= 5 ? ROOMS.moveDeep : ROOMS.move))));
+export const moveCost = (s, room) => {
+  const R = s.rooms, deep = R.floor >= 5;
+  if (R.visit?.walked[room.id]) return 0; // walked this visit: free to cross again
+  const crew = Object.values(R.graph.rooms).some((x) => x.farm); // the crew dungeon is tuned on its flat cost (its attrition carries fight to fight)
+  const k = crew || known(s, room.id) ? (deep ? ROOMS.moveDeep : ROOMS.move) : (deep ? ROOMS.moveNewDeep : ROOMS.moveNew);
+  return Math.max(1, Math.round(R.max * k));
+};
 // Walk into a room. opts.pause: a fight starts paused (the browser).
 export function go(s, id, opts = {}) {
   const R = s.rooms, first = s.serial;
@@ -1119,7 +1126,7 @@ export function roomsCommand(s, text) {
     if (!R.at) { say(s, 'You are home. Type connect.', 'rooms-out'); return out(s, first); }
     const here = hereOf(s), xs = neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]);
     const who = (x) => { const p = R.world ? ask('people', s, x) || [] : []; return p.length ? `  · ${p.join(', ')}` : ''; }; // who else is in there (SPRAWL-00 is shared)
-    const lines = [`${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${known(s, x.id) ? x.path : '?'}  [${tagOf(s, x)}]${moveCost(s, x) ? (known(s, x.id) ? '' : `  −${moveCost(s, x)} Signal`) : '  walked'}${who(x)}`)]; // who's in a room next door shows, known or not (people, not what the room is)
+    const lines = [`${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${known(s, x.id) ? x.path : '?'}  [${tagOf(s, x)}]${moveCost(s, x) ? `  −${moveCost(s, x)} Signal` : '  walked'}${who(x)}`)]; // who's in a room next door shows, known or not (people, not what the room is)
     const h = hunterLine(s), exfil = exfilLine(s);
     say(s, [...lines, ...(h ? [h] : []), ...(exfil ? [exfil] : [])].join('\n'), 'rooms-out');
     return out(s, first);
