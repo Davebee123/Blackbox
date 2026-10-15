@@ -940,6 +940,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .install-bar { height: 8px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--inset); overflow: hidden; }
 .install-bar span { display: block; height: 100%; background: var(--you); box-shadow: 0 0 10px rgba(127, 209, 199, 0.5); transition: width 0.9s linear; }
 .svc-line { margin: 8px 0 0; font: 12px var(--mono); color: var(--muted); }
+.svc-line .svc-prog { color: var(--dim); font-size: 11px; }
 .op-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 @media (max-width: 640px) { .svc { flex-direction: column; align-items: stretch; } .gslot { grid-template-columns: 70px minmax(0, 1fr); } .gslot .btn { grid-column: 2; justify-self: start; } .gitem { flex-direction: column; align-items: stretch; } }
 /* First-time tips: one coach mark at a time, pointing at the thing it explains. */

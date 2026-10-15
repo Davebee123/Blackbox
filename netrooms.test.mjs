@@ -42,7 +42,7 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.doesNotMatch(ls, /\/(net|var|tmp|srv)/, 'no folder names on screen');
   // A fresh visit: every room but the entry unknown, the ones next to you listed as ? with their cost.
   assert.ok(Object.values(g.rooms).every((r) => (r.id === g.entry) === FP.known(s, r.id)), 'all unknown but the entry');
-  assert.match(ls, /\n1  \?  \[\?\]  −\d+ Signal/);
+  assert.match(ls, /\n1  [A-Z]+\d+  \?  \[\?\]  −\d+ Signal/); // its address, and nothing about what it is
   assert.doesNotMatch(ls, /fight|Process/, 'nothing about what they are');
   assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), new RegExp(`\\w+-\\d+ holds ${net.path}`), 'what holds it stops the walk; cd still takes the folder');
   assert.equal(s.rooms.screen?.kind, 'virus', 'an unknown room\'s virus still asks: Engage or Step back');
@@ -79,7 +79,7 @@ test('the terminal on rooms: ls, cd, cd .., map, go, wait, back, engage, pack, h
   play(s, 'connect ' + loc.id);
   const R = s.rooms;
   const said = (t) => play(s, t).map((e) => e.message).join('\n');
-  assert.match(said('ls'), /^Entry  \[entry\]/);
+  assert.match(said('ls'), /^[A-Z]+\d+  Entry  \[entry\]/); // your room's address first
   assert.match(said('map'), new RegExp(`/ ${loc.name} · rooms 1/${Object.keys(R.graph.rooms).length}`));
   assert.match(said('help'), /go <room>[\s\S]*jack out/);
   assert.match(said('pack'), /pack is empty/);

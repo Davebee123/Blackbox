@@ -51,6 +51,7 @@ import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
+import { addrsOf, byAddr } from './address.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 
 // ---------- tuning ----------
@@ -362,6 +363,9 @@ export function nameRooms(g) {
   }
   return g;
 }
+// Addresses: every room's grid address (C2), address.mjs.
+export { addrsOf, byAddr };
+export const addrOf = (s, id) => (s.rooms ? addrsOf(s.rooms.graph)[id] : null) || '';
 
 // ---------- the server on you ----------
 const nowOf = () => hooks.now?.() ?? Date.now();
@@ -702,6 +706,7 @@ export function enter(s, now = nowOf(), { keys = [] } = {}) {
   R.screen = null;
   look(s);
   clear(s, R.graph.rooms[R.graph.entry], true);
+  stood(s, R.graph.rooms[R.graph.entry]);
   say(s, `CONNECTED to ${R.name}, visit ${R.visits}.${R.visit.hunter ? ` A ${HUNTERS[R.visit.hunter.kind].name} walks this server.` : ''}`);
   if (R.world) { const seed = ask('exfil', s, now); if (seed) spawnExfil(s, seed); } // an Exfil this visit (netrooms.mjs: rogue servers, your cooldown)
 }
@@ -777,7 +782,7 @@ export function go(s, id, opts = {}) {
   const R = s.rooms, first = s.serial;
   if (!R) return [];
   settle(s);
-  const room = R.graph.rooms[id] || roomList(s).find((x) => x.dir === id || x.path === id);
+  const room = R.graph.rooms[id] || roomList(s).find((x) => x.dir === id || x.path === id) || R.graph.rooms[byAddr(R.graph, id)];
   if (!R.at) deny(s, 'You are not on the server. Connect first.');
   else if (active(s)) deny(s, 'Finish the fight first.');
   else if (R.screen?.kind === 'virus') deny(s, `The ${R.screen.name} holds ${hereOf(s).path}. Engage it, or step back.`);
@@ -837,11 +842,20 @@ function arrive(s, room, opts = {}) {
     const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts), name = f.name || v.name;
     R.screen = { kind: 'virus', room: room.id, name, pause: !!opts.pause };
     say(s, `${name} holds ${room.path}.${R.rare[room.id] ? ' A rare spawn.' : ''}`, 'intrusion');
-  }
+  } else stood(s, room);
+}
+// You stand in a room with nothing live in it (walked in, or what held it beaten): this visit's tally (a no-rest map
+// contract counts it: mail.mjs).
+function stood(s, room) {
+  const R = s.rooms;
+  if (!R.visit || R.at !== room.id) return;
+  (R.visit.stood ||= {})[room.id] = true;
+  if (R.world) ask('stood', s, room);
 }
 function meet(s, room, opts = {}) {
   const R = s.rooms, h = hunterOf(s);
   R.stats.hunted++;
+  R.visit.caught = true; // the hunter reached you this visit (a contract's file past a Tracker: mail.mjs)
   say(s, `The ${HUNTERS[h.kind].name} is on you.`, 'rooms-bad');
   if (classOf(s) === 'infiltrator' && !R.visit.slipped) { R.screen = { kind: 'hunter', room: room.id, pause: !!opts.pause }; return; }
   R.visit.pending = room.id;
@@ -899,6 +913,13 @@ export function act(s, verb, arg = null, opts = {}) {
     else if (sigOf(s) >= R.max) deny(s, 'Your Signal is full. The bay keeps for later this visit.');
     else { const n = Math.min(R.max - sigOf(s), Math.round(R.max * SOCKET.rest)); setSig(s, sigOf(s) + n); bays[here.id] = true; say(s, `The Defrag Bay: +${n} Signal.`, 'rooms-good'); }
     return out(s, first);
+  }
+  // A contract's item (mail.mjs: an Install job's, in your pack on its server): install it in its room. `install` is
+  // the item's here when you carry one for this server (`install <program>` still builds); `plant` is only ever the item.
+  if (verb === 'install' || verb === 'plant') {
+    const done = R.world ? ask('plant', s, here, arg) : undefined;
+    if (done !== undefined) return out(s, first);
+    if (verb === 'plant') { deny(s, 'plant: you carry nothing to install here.'); return out(s, first); }
   }
   // A socket you've cleared: build a program in it (its codebase known, paid from what you carry), or take it out.
   if ((verb === 'build' || verb === 'install') && isSocket(s, here)) {
@@ -1139,7 +1160,8 @@ hooks.roomEnd = (s, result) => {
     drops(s, room, e, false);
     say(s, 'The mirror is down.', 'rooms-good');
     if (R.world) ask('won', s, room, e, { first: false, rare: false, mirror: true });
-    return takeCache(s, room);
+    takeCache(s, room);
+    return stood(s, room);
   }
   if (room.kind !== 'socket') R.down[room.id] = nowOf(); // a socket's guard never comes back
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
@@ -1159,6 +1181,7 @@ hooks.roomEnd = (s, result) => {
   drops(s, room, e, wasRare);
   if (R.world) ask('won', s, room, e, { first, rare: wasRare });
   else if (room.kind === 'core') say(s, `${BOSSES[RESIDENT].name} falls.`, 'rooms-good');
+  if (R.at === room.id && !R.screen) stood(s, room);
 };
 // XP the playtest character has earned in all (its level's bars and what's in the current one): the server card's
 // count is the difference since you started.
@@ -1249,7 +1272,8 @@ export function roomsCommand(s, text) {
     if (!R.at) { say(s, 'You are home. Type connect.', 'rooms-out'); return out(s, first); }
     const here = hereOf(s), xs = walkable(s, R.at).map((id) => R.graph.rooms[id]);
     const who = (x) => { const p = R.world ? ask('people', s, x) || [] : []; return p.length ? `  · ${p.join(', ')}` : ''; }; // who else is in there (SPRAWL-00 is shared)
-    const lines = [`${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${known(s, x.id) ? x.path : '?'}  [${tagOf(s, x)}]${moveCost(s, x) ? `  −${moveCost(s, x)} Signal` : '  walked'}${who(x)}`)]; // who's in a room next door shows, known or not (people, not what the room is)
+    const at = addrsOf(R.graph); // every room's grid address, unknown ones too (it says where, never what)
+    const lines = [`${at[here.id]}  ${here.path}  [${here.kind}]${who(here)}`, ...xs.map((x, i) => `${i + 1}  ${at[x.id]}  ${known(s, x.id) ? x.path : '?'}  [${tagOf(s, x)}]${moveCost(s, x) ? `  −${moveCost(s, x)} Signal` : '  walked'}${who(x)}`)]; // who's in a room next door shows, known or not (people, not what the room is)
     const h = hunterLine(s), exfil = exfilLine(s);
     say(s, [...lines, ...(h ? [h] : []), ...(exfil ? [exfil] : [])].join('\n'), 'rooms-out');
     return out(s, first);
@@ -1264,15 +1288,18 @@ export function roomsCommand(s, text) {
     // A wild server's rooms are its folders (netrooms.mjs): cd var, cd log, cd /var/log, cd ../tmp walk the tree, a room
     // at a time, stopping where something holds the way.
     if (!room && R.world) { const t = folderRoom(s, arg); if (t) return t.id === R.at ? out(s, first) : walkTo(s, t.id); }
+    // An address (cd C2): next door, or a walk there through the rooms you've seen. One not on your map yet says only that.
+    const a = !room && byAddr(R.graph, arg);
+    if (a) return a === R.at ? out(s, first) : xs.some((x) => x.id === a) ? go(s, a) : seenOf(s, a) ? walkTo(s, a) : (deny(s, `cd: ${arg.toUpperCase()}: not on your map yet.`), out(s, first));
     return room ? go(s, room.id) : (deny(s, `cd: ${arg || '?'}: not next to you. Type ls.`), out(s, first));
   }
   if (word === 'map' || word === 'tree') { say(s, treeLines(s).join('\n'), 'rooms-out'); return out(s, first); }
   if (word === 'wait') return wait(s);
   if (word === 'back') return back(s);
   if (['engage', 'fight', 'cat', 'pull', 'open', 'force', 'rest', 'slip'].includes(word)) return act(s, word === 'pull' && arg === 'all' ? 'pull' : word);
-  if (['build', 'install', 'uninstall', 'remove'].includes(word) && R.at) {
+  if (['build', 'install', 'plant', 'uninstall', 'remove'].includes(word) && R.at) {
     const i = arg.indexOf(' pay '), what = i < 0 ? arg : arg.slice(0, i), pay = i < 0 ? null : arg.slice(i + 5);
-    return act(s, word === 'install' ? 'build' : word === 'remove' ? 'uninstall' : word, what || null, { pay });
+    return act(s, word === 'remove' ? 'uninstall' : word, what || null, { pay }); // install: a contract's item here, else a program (act)
   }
   if (word === 'developer' && rest[0] === 'bossrule') { setBossRule(s, rest[1]); return out(s, first); }
   if (word === 'developer' && rest[0] === 'exfil') { // with ?dev (app.js): an Exfil now, cooldown or not
@@ -1310,12 +1337,13 @@ function walkTo(s, id) {
 }
 // The room graph you've seen, as lines: each room, its links.
 export function treeLines(s) {
-  const R = s.rooms, lines = [`/ ${R.name} · rooms ${progressOf(s).done}/${progressOf(s).total}`];
+  const R = s.rooms, lines = [`/ ${R.name} · rooms ${progressOf(s).done}/${progressOf(s).total}`], at = addrsOf(R.graph);
   const d = distances(R.graph, R.graph.entry);
-  for (const room of roomList(s).filter((x) => seenOf(s, x.id)).sort((a, b) => d[a.id] - d[b.id])) {
+  // Each room you've seen: its mark, its address and name (? for one you haven't been in), and its links by address.
+  for (const room of roomList(s).filter((x) => seenOf(s, x.id)).sort((a, b) => d[a.id] - d[b.id] || Number(a.id.slice(1)) - Number(b.id.slice(1)))) {
     const mark = R.at === room.id ? '@' : hunterOf(s)?.at === room.id && hunterSeen(s) ? 'H' : exfilOf(s)?.at === room.id && exfilSeen(s) ? 'X' : known(s, room.id) ? MARKS[room.kind] : '?';
-    const to = neighbours(R.graph, room.id).filter((x) => seenOf(s, x)).map((x) => (known(s, x) ? R.graph.rooms[x].path : '?'));
-    lines.push(`${'  '.repeat(Math.min(4, d[room.id]))}${mark} ${known(s, room.id) ? room.path : '?'}${R.cleared[room.id] ? ' ✓' : ''}  → ${to.join(' ')}`);
+    const to = neighbours(R.graph, room.id).filter((x) => seenOf(s, x)).map((x) => at[x]);
+    lines.push(`${'  '.repeat(Math.min(4, d[room.id]))}${mark} ${at[room.id]}  ${known(s, room.id) ? room.path : '?'}${R.cleared[room.id] ? ' ✓' : ''}  → ${to.join(' ')}`);
   }
   return lines;
 }
