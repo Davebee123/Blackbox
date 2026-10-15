@@ -14,6 +14,11 @@ export const JOB_VARS = {
   'takeover-unknown': {},
   item: { file: 'the file name (policy.db)', label: 'what it is, lower case (a stolen policy database)', Label: 'the same, capitalised', server: 'the server it sits on' },
   'item-unknown': { file: 'the file name', label: 'what it is, lower case', Label: 'the same, capitalised' },
+  install: { server: 'the server it goes on', addr: 'the room\'s grid address (C2)', file: 'the item\'s file name (canary.ko)', label: 'what it is, lower case (a Halcyon canary)', Label: 'the same, capitalised' },
+  defuse: { count: 'how many Encryptors to break' },
+  sweep: { server: 'the server to walk' },
+  exfil: {},
+  heist: { server: 'the server with the Tracker', file: 'the file name', label: 'what it is, lower case', Label: 'the same, capitalised' },
 };
 // Story beats also know the server you took over in the Turf job.
 export const STORY_VARS = { took: 'the server you took over (once you have one)' };
@@ -28,6 +33,11 @@ export const CONTRACT_KINDS = {
   'takeover-unknown': { name: 'Take over an unknown server', sides: ['halcyon'] },
   item: { name: 'Recover a file (known server)', sides: ['halcyon', 'glassjaw'] },
   'item-unknown': { name: 'Recover a file (unknown server)', sides: ['halcyon', 'glassjaw'] },
+  install: { name: 'Install an item at an address', sides: ['halcyon'] },
+  defuse: { name: 'Break Encryptors before they Encrypt', sides: ['halcyon'] },
+  sweep: { name: 'Map a server without resting', sides: ['halcyon'] },
+  exfil: { name: 'Catch an Exfil', sides: ['halcyon'] },
+  heist: { name: 'A vault file past the Tracker', sides: ['halcyon'] },
 };
 export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)' };
 export const REWARDS = { credits: 'Credits', indemnity: 'Indemnity', standing: 'Standing', xp: 'XP (kills’ worth)', relay: 'Relays', blueprint: 'A blueprint', drop: 'A protocol, Tuned or better' };

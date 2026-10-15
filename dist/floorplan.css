@@ -138,6 +138,19 @@
 .fp-room.prog.off .fp-icon, .fp-room.prog.off .fp-name { opacity: 0.45; }
 .fp-room.k-socket.open:not(.prog) .fp-hair { stroke-dasharray: 3 3; }
 .fp-tunnel { fill: none; stroke: var(--amber); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; opacity: 0.85; }
+/* a room's grid address (C2): a dim corner label on every chip, an unknown one too; amber with a contract's mark when a
+   job points at the room. Never teal (teal is you). */
+.fp-addr rect { fill: #0a0703; }
+.fp-addr text { fill: var(--dim); letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
+.fp-room.k-fog .fp-addr text { fill: #806b42; }
+.fp-addr.job rect { stroke: var(--amber); stroke-width: 1; }
+.fp-addr.job text { fill: var(--amber); font-weight: 700; }
+.fp-addr.job use { color: var(--amber); }
+.fp-kick .fp-at { color: var(--dim); }
+.fp-note.fp-job { display: flex; gap: var(--s3); align-items: flex-start; color: var(--amber); }
+.fp-note.fp-job .fp-ic { flex: none; width: 16px; height: 16px; color: var(--amber); margin-top: 1px; }
+.fp-jobs .fp-ic { color: var(--amber); }
+.fp-jobs.ready b { color: var(--next); }
 /* an Empty room: a hollow mark, quieter than anything else on the map */
 .fp-room.k-empty .fp-icon { opacity: 0.7; }
 /* the 1s and 0s drifting off your room: none with reduced motion */

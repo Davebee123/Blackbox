@@ -34,7 +34,7 @@ import { lairOpen, NETWORK } from './network.mjs';
 import { sizeOf, learnCodebase, familyComponents, AUTHOR_CODEBASES } from './sockets.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
-import { contractTakeover, contractRooms, contractMapped } from './mail.mjs';
+import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
@@ -65,6 +65,7 @@ export function roomsFor(s, loc) {
   if (!loc.floorplan) loc.floorplan = build(s, loc);
   return loc.floorplan;
 }
+hooks.roomsFor = roomsFor; // a contract aimed at a room or a vault reads the server's rooms (mail.mjs)
 function build(s, loc) {
   const name = loc.name, base = { world: true, loc: loc.id, name, speed: 1 };
   if (!isWild(loc)) {
@@ -195,6 +196,7 @@ export function enterRooms(s, loc, { signal, hot = false } = {}) {
   const keys = loc.passwordKnown && R.graph.vaults[0] && !FP.opened(s, R.graph.rooms[R.graph.vaults[0]]) ? [R.graph.vaults[0]] : [];
   FP.enter(s, now(), { keys });
   if (keys.length) R.visit.cracked = true;
+  contractConnect(s, loc); // an Install job's item goes in your pack on its server (mail.mjs)
   return R;
 }
 // The run ends (floorplan.mjs jackOut or disconnected): out banks the pack (run.mjs bank) and sends you home; lost
@@ -409,7 +411,12 @@ WORLD_hook('exfilWon', (s, room, e) => {
   if (rand(s) < M.unique) { const u = uniqueFrom(s, ctx, lvl); if (u) item = uniqueItem(u, lvl, () => rand(s)); }
   const got = item ? addItem(s, item, 'The archive: ') : null;
   emit(s, 'rooms-good', `The archive: +${credits} credits${got ? `, ${itemLabel(got)}` : ''}.`, { credits });
+  contractExfil(s); // a Catch an Exfil job (mail.mjs)
 });
+// A contract's item installed in its room (an Install job, mail.mjs): undefined when you carry none for this server.
+WORLD_hook('plant', (s, room, arg) => { const loc = locOf(s); return loc ? contractInstall(s, loc, room, arg) : undefined; });
+// You stand in a room with nothing live in it: a no-rest map job counts the visit's rooms (mail.mjs).
+WORLD_hook('stood', (s) => { const loc = locOf(s); if (loc) contractStood(s, loc, s.rooms); });
 
 // ---------- what you take: into the pack ----------
 const packFile = (s, f) => { s.run.pack.push(f); return f; };
@@ -498,6 +505,10 @@ FP.WORLD.view = {
   entryFiles: (s) => entryFiles(s, locOf(s)).length,
   downNote: (s, room) => (room.wild && inRuns(locOf(s)) ? 'Down until the server reboots.' : undefined),
   offNote: (s, room) => (room.extra === 'grid' ? 'A Grid consortium\'s socket: offline outside one.' : undefined),
+  // Contracts on this server (mail.mjs): the item you carry for this room, the rooms a job marks, each job's progress.
+  plantHere: (s, room) => { const loc = locOf(s); return loc ? payloadFor(s, loc, room) : null; },
+  marks: (s) => { const loc = locOf(s); return loc ? roomMarks(s, loc) : {}; },
+  jobs: (s) => { const loc = locOf(s); return loc ? jobsOn(s, loc) : []; },
 };
 
 // A respawned fight room on a server you hold: tending it (Root climbs on these) counts as building in your XP mix,

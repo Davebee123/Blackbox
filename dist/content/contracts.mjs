@@ -153,6 +153,86 @@ export default {
       }
     ]
   },
+  "install": {
+    "halcyon": [
+      {
+        "subject": "Install: {server}",
+        "body": [
+          "We need {label} running inside {server}, at {addr}. It goes in your pack when you connect there.",
+          "Install it in that room. Lose your Signal with it on you and it's gone, and so is the job."
+        ]
+      },
+      {
+        "subject": "A quiet fit at {addr}",
+        "body": [
+          "{Label} for {server}: the room at {addr}, nowhere else. Our people say you haven't been in it yet. That's fine. The address is enough.",
+          "Jack out with it and it keeps. Drop to zero and it doesn't."
+        ]
+      }
+    ]
+  },
+  "defuse": {
+    "halcyon": [
+      {
+        "subject": "Encryptor drill",
+        "body": [
+          "TOLLGATE's Encryptors keep locking our clients out. Break {count} of them before they land a single Encrypt.",
+          "Anywhere. One you cut off mid-Encrypt still counts."
+        ]
+      }
+    ]
+  },
+  "sweep": {
+    "halcyon": [
+      {
+        "subject": "Walkthrough: {server}",
+        "body": [
+          "Underwriting wants {server} walked end to end in one go: every room but the Core, in one visit, nothing left running in any room you stand in.",
+          "No rest room, no Defrag Bay. Jack out and the next visit starts again. No hurry."
+        ]
+      }
+    ]
+  },
+  "exfil": {
+    "halcyon": [
+      {
+        "subject": "Catch an Exfil",
+        "body": [
+          "Exfils are smuggling client archives off the rogue servers. Catch one and break its Uplink before the upload lands.",
+          "Any rogue server. They don't turn up every run. The job keeps."
+        ]
+      }
+    ]
+  },
+  "heist": {
+    "halcyon": [
+      {
+        "subject": "Past the Tracker: {server}",
+        "body": [
+          "{Label} sits in the vault on {server}, as {file}. Its Tracker walks the way there.",
+          "Bank it from a visit the Tracker never reaches you. If it does, the file is flagged: it goes back, and you try again."
+        ]
+      }
+    ]
+  },
+  "installs": [
+    {
+      "file": "canary.ko",
+      "label": "a Halcyon canary"
+    },
+    {
+      "file": "tap.so",
+      "label": "a logging tap"
+    },
+    {
+      "file": "patch.sh",
+      "label": "a patch script"
+    },
+    {
+      "file": "beacon.bin",
+      "label": "a claims beacon"
+    }
+  ],
   "files": [
     {
       "file": "policy.db",
