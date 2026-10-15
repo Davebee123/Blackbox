@@ -9,7 +9,7 @@
 // all and the server reboots: you're jacked out with your pack, it's offline for ROGUE.rebootMs, then
 // every room is back fresh (its Stash rooms full) and a new run starts. A run you leave half done
 // keeps its progress, and reboots on its own ROGUE.idleMs after you last left. loc.rogueRun holds the
-// run (on your save: your runs are your own): { n, at, leftAt, rebootAt, rolled, mule, paid }.
+// run (on your save: your runs are your own): { n, at, leftAt, rebootAt, rolled, exfil, paid }.
 import { emit, rand, gainCode, gainXp, xpFor, hooks, hackerLevel, giveUnique } from './combat.mjs';
 import { FAMILIES, variantFor, STRAINS, CONFIG, ELITE, SERVER, BOSSES, createLocation } from './data.mjs';
 import { seeded, codeOf } from './gear.mjs';
@@ -32,7 +32,7 @@ export const ROGUE = {
 export const inRuns = (loc) => !!loc?.rogue && ['nest', 'pit', 'gauntlet'].includes(loc.rogue.kind) && !loc.occupied && !loc.lair && !loc.farm;
 // Every fight room down this run.
 export const runCleared = (loc) => inRuns(loc) && rogueRooms(loc).every((p) => loc.spawns?.[p] && !loc.spawns[p].alive);
-// A new run: every folder fresh (rogueSpawns fills them), the Stash rooms full, the Mule's roll to come.
+// A new run: every folder fresh (rogueSpawns fills them), the Stash rooms full, the Exfil's roll to come.
 export function rogueReboot(s, loc, now = clock()) {
   loc.spawns = {};
   loc.rogueRun = { n: (loc.rogueRun?.n || 0) + 1, at: now };

@@ -622,7 +622,7 @@ function rollOnce(s, ctx, level) {
 export function rollDrop(s, ctx, level) {
   if (typeof ctx === 'string') ctx = { kind: ctx === 'guard' ? 'guard' : 'home' };
   const rolls = (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.virus?.hot && s.encounter.phase !== 'active' ? HOT_RUN.rolls : 0) // a hot run's kill rolls once more
-    + (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Mule's)
+    + (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Exfil's)
   let best = null;
   for (let i = 0; i < rolls; i++) {
     const it = rollOnce(s, ctx, level);
@@ -1798,7 +1798,7 @@ export function finish(s, result) {
   }
   // A server room (floorplan.mjs, the rooms playtest): the kill's XP here. Progress, loot and the pack are the room's.
   if (e.rooms) {
-    if (result === 'escaped') emit(s, 'escaped', `${e.virus.name} escapes after ${e.cycle} cycles.`, { mode: 'rooms' }); // a runner got away (the Mule)
+    if (result === 'escaped') emit(s, 'escaped', 'Upload complete. The archive is gone.', { mode: 'rooms', cycles: e.cycle }); // a runner got away (the Exfil: its upload completed)
     else emit(s, result === 'victory' ? 'victory' : 'crashed', result === 'victory' ? `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.` : `${e.virus.name} burned your Signal to zero.`, { mode: 'rooms' });
     if (result === 'victory') payKill(s, e, e.roomsXp || 1, `${e.virus.name} neutralized`);
     hooks.roomEnd?.(s, result);
@@ -3462,7 +3462,7 @@ function cycleClose(s, landed) {
     if (virusIntegrity(s).current === 0) return finish(s, 'victory');
     if (defender(s).integrity <= 0) return finish(s, 'crashed');
   }
-  // A runner (the Mule, floorplan.mjs): still up when its cycles run out, it gets away.
+  // A runner (the Exfil, floorplan.mjs): still up when its cycles run out, its upload completes and it gets away.
   if (e.escapeAt && e.rooms && e.cycle >= e.escapeAt) return finish(s, 'escaped');
 
   e.cycle++;

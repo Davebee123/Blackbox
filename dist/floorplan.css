@@ -37,7 +37,7 @@
 .fp-keys .fp-ic { color: var(--next); } .fp-keys b { color: var(--next); }
 .fp-hunt .fp-ic, .fp-hunt b { color: var(--hot); }
 .fp-hunt.out .fp-ic, .fp-hunt.out b { color: var(--gray); }
-.fp-mulestat .fp-ic, .fp-mulestat b { color: var(--next); }
+.fp-exfilstat .fp-ic, .fp-exfilstat b { color: var(--next); }
 .fp-tools { margin-left: auto; display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s4) var(--s5); min-width: 0; }
 .fp-rules { display: inline-flex; align-items: center; gap: var(--s2); }
 .fp-rules .lbl { margin-right: var(--s2); cursor: help; }
@@ -75,9 +75,9 @@
 /* the hunter's next step */
 .fp-route { fill: none; stroke: var(--hot); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 6 8; opacity: 0.9; pointer-events: none; }
 .fp-arrowhead { fill: var(--hot); }
-/* the Mule's next step: amber, never the hunter's red */
-.fp-route.mule { stroke: var(--amber); }
-.fp-arrowhead.mule { fill: var(--amber); }
+/* the Exfil's next step: amber, never the hunter's red */
+.fp-route.exfil { stroke: var(--amber); }
+.fp-arrowhead.exfil { fill: var(--amber); }
 /* a chip: --t is its colour */
 .fp-room { --t: var(--amber); }
 .fp-room.t-hot { --t: var(--hot); } .fp-room.t-gray { --t: var(--gray); } .fp-room.t-you { --t: var(--you); }
@@ -85,7 +85,10 @@
 .fp-body { fill: url(#fp-g-node); stroke: var(--t); stroke-width: 1.4; }
 .fp-room.t-hot .fp-body { fill: url(#fp-g-hot); }
 .fp-room.t-you .fp-body { fill: url(#fp-g-here); stroke-width: 2.4; }
-.fp-room.shape .fp-body { fill: rgba(10, 7, 3, 0.6); stroke: #4a3c22; stroke-width: 1; stroke-dasharray: 4 5; }
+/* an unknown room (never been in): a ghost, no kind colour; one you can walk into a touch brighter, its cost badge on it */
+.fp-room.k-fog .fp-body { fill: #0b0804; stroke: #4a3c22; stroke-width: 1; stroke-dasharray: 4 5; }
+.fp-room.k-fog.reach .fp-body { stroke: #8a7346; stroke-width: 1.3; }
+.fp-room.k-fog.reach .fp-q { fill: #8a7346; }
 .fp-hair { fill: none; stroke: var(--t); stroke-width: 0.6; opacity: 0.35; pointer-events: none; }
 .fp-icon { color: var(--t); pointer-events: none; }
 .fp-room.t-gray .fp-icon { opacity: 0.6; }
@@ -124,10 +127,10 @@
 .fp-skull .bg { fill: #140503; stroke: var(--hot); stroke-width: 1.2; }
 .fp-skull .px { fill: var(--hot); }
 .fp-skull.asleep { opacity: 0.55; }
-/* the Mule: a gold sack in a small dark badge */
-.fp-mule .bg { fill: #1a1404; stroke: var(--next); stroke-width: 1.2; }
-.fp-mule use { color: var(--next); }
-.fp-mule.cornered .bg { fill: var(--next); } .fp-mule.cornered use { color: #1a1404; }
+/* the Exfil: a gold archive with an upload arrow in a small dark badge (filled once cornered) */
+.fp-exfil .bg { fill: #1a1404; stroke: var(--next); stroke-width: 1.2; }
+.fp-exfil use { color: var(--next); }
+.fp-exfil.cornered .bg { fill: var(--next); } .fp-exfil.cornered use { color: #1a1404; }
 /* an Empty room: a hollow mark, quieter than anything else on the map */
 .fp-room.k-empty .fp-icon { opacity: 0.7; }
 /* the 1s and 0s drifting off your room: none with reduced motion */
@@ -162,7 +165,7 @@
 .fp-virus[title] { cursor: help; }
 .fp-virus .fp-ic { width: 24px; height: 24px; color: var(--hot); }
 .fp-virus.down { border-left-color: var(--gray); } .fp-virus.down .fp-ic { color: var(--gray); }
-.fp-virus.mule { border-left-color: var(--next); } .fp-virus.mule .fp-ic { color: var(--next); }
+.fp-virus.exfil { border-left-color: var(--next); } .fp-virus.exfil .fp-ic { color: var(--next); }
 .fp-virus b { display: block; font: 600 15px var(--sans); color: var(--bright); overflow-wrap: anywhere; }
 .fp-virus small { font: 11px var(--mono); color: var(--muted); }
 .fp-tag-inline { display: inline-flex; align-items: center; height: 16px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }

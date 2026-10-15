@@ -117,6 +117,13 @@ test('scan: the genome card before you engage costs 1 Signal (and Trace on a bre
   play(t, 'connect ' + loc.id);
   const R = t.rooms, kid = FP.neighbours(R.graph, R.at).map((id) => R.graph.rooms[id]).find((r) => FP.isUp(t, r) && r.kind !== 'core');
   if (kid) {
+    // Unknown until you've been in it (floorplan.mjs fog): nothing to read from outside, and nothing spent.
+    const sig1 = t.run.integrity, cards = t.logs.filter((e) => e.type === 'net-scan').length;
+    play(t, 'scan ' + kid.dir);
+    assert.equal(t.logs.filter((e) => e.type === 'net-scan').length, cards, 'no card for an unknown room');
+    assert.match(t.logs.at(-1).message, /haven't been in that room/);
+    assert.equal(t.run.integrity, sig1);
+    R.seen[kid.id] = 'kind'; // discovered (as if you'd been in and stepped back)
     const sig0 = t.run.integrity;
     play(t, 'scan ' + kid.dir);
     assert.ok(t.logs.findLast((e) => e.type === 'net-scan'), 'its card');

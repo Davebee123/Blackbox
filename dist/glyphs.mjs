@@ -75,6 +75,8 @@ const P = {
   // ---------- contracts ----------
   kill: '<circle cx="8" cy="8" r="5.5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/>',
   contract: '<path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3"/><path d="M5.5 9.5l1.8 1.8 3.4-3.6"/>',
+  // An archive on its way out (the Exfil, a runner in the Codex): a file with an upload arrow.
+  upload: '<path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3"/><path d="M8 12.5V7.2M5.9 9.3 8 7.2l2.1 2.1"/>',
   // Signatures: the wall's currency (invasion.mjs), a captured waveform.
   sigs: '<path d="M1.5 9h2l1.5-4.5 2 9 2-7 1.5 4 1-1.5h3"/>',
   // A capture: a packet held in brackets.

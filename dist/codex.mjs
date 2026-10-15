@@ -26,7 +26,7 @@ export const GROUPS = [
   { id: 'family', name: 'Families' },
   { id: 'strain', name: 'Strains' },
   { id: 'guard', name: 'Guards & ICE' },
-  { id: 'runner', name: 'Runners' }, // the Mule: a room body that runs (families.mjs, runner: true)
+  { id: 'runner', name: 'Exfils' }, // the Exfil: a room body that runs (families.mjs, runner: true)
   { id: 'boss', name: 'Bosses' },
   { id: 'mutation', name: 'Mutations' },
 ];
@@ -34,7 +34,7 @@ const FAMILY_ICON = { ransomware: 'lock', worm: 'worm', ghostroot: 'stealth', tr
 const GUARD_ICON = { watchdog: 'watchman', sentinel: 'ids', crawler: 'spider', shredder: 'claw', bouncer: 'firewall', tracer: 'tracer' };
 const familyIds = () => [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES).filter((id) => !ROOM_FAMILIES[id].runner)];
 const runnerIds = () => Object.keys(ROOM_FAMILIES).filter((id) => ROOM_FAMILIES[id].runner);
-const RUNNER_ICON = { mule: 'credits' };
+const RUNNER_ICON = { exfil: 'upload' };
 const bodyOf = (id) => FAMILIES[id] || ROOM_FAMILIES[id] || GUARDS[id] || null;
 export const SET_CYCLES = 12; // the attack sets' timing strip: cycles 1 to 12
 
@@ -68,7 +68,7 @@ export function sampleOf(group, id, level, gene = null, raw = false) {
   const threat = SERVER.threat(level), seed = 4821;
   const v = group === 'strain' ? createVirus(id, seed, { threat, run: true, mutation: null })
     : createVirus('random', seed, { family: id, threat, run: true, mutation: null, genes: gene ? [gene] : [] });
-  const S = ROOMS.size[group === 'guard' ? 'guard' : group === 'runner' ? 'mule' : 'process'];
+  const S = ROOMS.size[group === 'guard' ? 'guard' : group === 'runner' ? 'exfil' : 'process'];
   for (const p of v.parts) {
     p.max = p.integrity = Math.max(1, Math.round(p.max * S.hp));
     const a = p.attack;
@@ -265,8 +265,8 @@ export function entryOf(s, key) {
     const body = group === 'strain' ? STRAINS[id] : bodyOf(id), parts = partsOf(s, group, id);
     const lineage = group === 'strain' ? body.lineage : null;
     return {
-      ...base, name: body.name, stem: body.stem || null, threatens: body.threatens || (lineage ? bodyOf(lineage)?.threatens : null), summary: body.summary || null, escape: group === 'runner' ? CONFIG.mule.escape : null,
-      rule: group === 'runner' ? `It runs from you, a room for each of your moves, and never through a live virus. Caught, it escapes after ${CONFIG.mule.escape} cycles.` : body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
+      ...base, name: body.name, stem: body.stem || null, threatens: body.threatens || (lineage ? bodyOf(lineage)?.threatens : null), summary: body.summary || null, escape: group === 'runner' ? CONFIG.exfil.escape : null,
+      rule: group === 'runner' ? `It runs from you, a room for each of your moves, and never through a live virus. Caught, its upload completes after ${CONFIG.exfil.escape} cycles and the archive is gone, unless you break it first.` : body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
       kills: killsOf(s, id), authors: authorsOf(group, id), parts, research: pctOf(parts.map((p) => p.research)), sets: group === 'family' ? setsOf(s, id) : [], tells: tellsOf(s, group, id),
       art: parts.find((x) => !x.gene)?.virus || parts[0]?.virus,
     };

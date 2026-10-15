@@ -185,7 +185,9 @@ test('progress: rooms cleared at least once, for good; it never goes down', () =
   for (const x of FP.roomList(s)) if (FP.progressOf(s).done < Math.ceil(total / 2) - 1 && x.id !== c.id) R.cleared[x.id] ||= clock;
   assert.ok(FP.roomList(s).some((x) => !R.seen[x.id]), 'some rooms out of sight');
   place(s, c.id); FP.act(s, 'pull');
-  assert.ok(FP.roomList(s).every((x) => R.seen[x.id] === 'kind'), 'the whole graph is drawn');
+  assert.ok(FP.roomList(s).every((x) => R.seen[x.id]), 'the whole graph is drawn');
+  // Drawn, not discovered: a room you've never been in is still an unknown shape.
+  for (const x of FP.roomList(s)) if (!R.cleared[x.id] && x.id !== R.at) assert.equal(R.seen[x.id], 'shape', `${x.path}: unknown`);
 });
 
 test('the key walk: beat the guard post for the key, walk it to the vault, open it, and /core unseals', () => {
@@ -283,18 +285,24 @@ test('home: Signal rests back at 20% a minute (the clock\'s speed in the playtes
   assert.equal(R.signal, 0);
 });
 
-test('fog: you see the kind of the rooms next to you, the shape one further, and /core always', () => {
+test('fog: a room is unknown until you have been in it; you see the shapes next to you and one further, and the Core\'s chip', () => {
   const s = server({ size: 'large', hunter: 'track', kind: 'Lab' }), R = s.rooms, g = R.graph;
   const d = FP.distances(g, R.at);
   for (const [id, n] of Object.entries(d)) {
-    if (id === g.core) assert.equal(R.seen[id], 'kind');
-    else if (n <= 1) assert.equal(R.seen[id], 'kind', `next to you: ${id}`);
-    else if (n === 2) assert.equal(R.seen[id], 'shape', `two off: ${id}`);
+    if (id === R.at) assert.equal(R.seen[id], 'kind', 'the room you are in is discovered');
+    else if (id === g.core || n <= 2) assert.equal(R.seen[id], 'shape', `drawn, unknown: ${id} (${n} off)`);
     else assert.equal(R.seen[id], undefined, `out of sight: ${id}`);
   }
-  // An Infiltrator sees kinds one link further.
+  // Walk in: discovered for good, and still discovered from afar, a visit later.
+  const next = FP.exits(s)[0];
+  FP.go(s, next.id);
+  assert.equal(R.seen[next.id], 'kind');
+  if (R.screen?.kind === 'virus') FP.act(s, 'back');
+  FP.jackOut(s); tick(60000); FP.connect(s);
+  assert.ok(FP.known(s, next.id), 'remembered on the server');
+  // An Infiltrator sees shapes one link further, and kinds no sooner.
   const i = server({ cls: 'infiltrator', size: 'large', hunter: 'track', kind: 'Lab' }), di = FP.distances(i.rooms.graph, i.rooms.at);
-  for (const [id, n] of Object.entries(di)) if (n === 2) assert.equal(i.rooms.seen[id], 'kind');
+  for (const [id, n] of Object.entries(di)) if (n >= 1 && n <= 3) assert.equal(i.rooms.seen[id], 'shape', `${id} (${n} off)`);
 });
 
 test('the hunter moves only when you walk or wait, never while you fight, loot, open or rest', () => {
@@ -462,6 +470,10 @@ test('the map chips: one badge language for state, countdowns and rings that tic
   const next = FP.exits(s)[0];
   assert.match(tile(html, next.id), new RegExp(`data-rooms="go" data-arg="${next.id}"`));
   assert.match(tile(html, next.id), new RegExp(`fp-cost[\\s\\S]*−${FP.moveCost(s, next)}<`));
+  // The Core you've never been in is an unknown chip; once discovered it is SEALED, from afar.
+  assert.doesNotMatch(tile(html, g.core), /SEALED|fp-icon/);
+  R.seen[g.core] = 'kind';
+  html = roomsMarkup(s);
   assert.match(tile(html, g.core), /fp-tag hot[\s\S]*>SEALED</, 'the sealed Core is SEALED');
   assert.match(tip(html, g.core), /^Core: Level \d+ DEADBOLT/);
   // No legend, no "Next ↻" on the strip: the chips carry it.
@@ -582,6 +594,13 @@ test('the page is the map and a pop-up: it opens on a decision and on a click, c
   assert.match(html, new RegExp(`data-room="${g.core}" data-fp-sel="${g.core}" tabindex="0"`));
   const p = FP.exits(s).find((x) => x.kind === 'process');
   assert.match(html, new RegExp(`data-room="${p.id}" data-rooms="go" data-arg="${p.id}"`));
+  // The Core, never been in: its card says only that it's unknown.
+  pickRoom(s, g.core, ui);
+  html = roomsMarkup(s, ui);
+  assert.match(pop(html)[0], /unknown[\s\S]*<h1>Unknown room<\/h1>/);
+  assert.doesNotMatch(pop(html)[0], /DEADBOLT|Sealed|Core/);
+  closePop(s, ui);
+  R.seen[g.core] = 'kind'; // discovered (as if you'd been in): its card from afar
   pickRoom(s, g.core, ui);
   html = roomsMarkup(s, ui);
   assert.equal(pop(html)[1], g.core);

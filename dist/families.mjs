@@ -47,14 +47,15 @@ Object.assign(ROOM_FAMILIES, {
       { id: 'degausser', name: 'Degausser', integrity: 38, armor: 2, loot: 'Degauss Coil', special: true, attack: { name: 'Wipe', effect: 'damage', amount: 6, interval: 5, first: 4, wipe: 'strongest', wipeFor: 3 } },
     ],
   },
-  // The Mule (floorplan.mjs MULE): a money mule hauling a stolen bag off a rogue server. A runner, not a fighter: it
-  // flees room to room, and once caught it slips away after 6 cycles. Never rolled anywhere (runner: the Codex's own row).
-  mule: {
-    name: 'Mule', stem: 'MULE', threatens: 'Signal', art: 'worm', opens: 1, code: 'worm', runner: true,
-    summary: 'A money mule hauling a stolen bag off the server. It runs from you; corner it and break it before it escapes.',
+  // The Exfil (floorplan.mjs, EXFIL-####): a process smuggling a stolen archive off a rogue server. A runner, not a
+  // fighter: it flees room to room, and once caught its upload completes after 6 cycles. Its Uplink carries the
+  // upload, its Archive what it stole. Never rolled anywhere (runner: the Codex's own row).
+  exfil: {
+    name: 'Exfil', stem: 'EXFIL', threatens: 'Signal', art: 'worm', opens: 1, code: 'worm', runner: true,
+    summary: 'A process uploading a stolen archive off the server. It runs from you; corner it and break its Uplink before the upload finishes.',
     parts: [
-      { id: 'runner', name: 'Runner', integrity: 16, armor: 0, loot: 'Worn Sole', attack: { name: 'Kick', effect: 'damage', amount: 4, interval: 2, first: 2 } },
-      { id: 'bag', name: 'Bag', integrity: 20, armor: 1, loot: 'Bag Tag', special: true, attack: { name: 'Swing', effect: 'damage', amount: 5, interval: 3, first: 3 } },
+      { id: 'uplink', name: 'Uplink', integrity: 16, armor: 0, loot: 'Uplink Socket', attack: { name: 'Backchannel', effect: 'damage', amount: 4, interval: 2, first: 2 } },
+      { id: 'archive', name: 'Archive', integrity: 20, armor: 1, loot: 'Archive Index', special: true, attack: { name: 'Checksum', effect: 'damage', amount: 5, interval: 3, first: 3 } },
     ],
   },
 });

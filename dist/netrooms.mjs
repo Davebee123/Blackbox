@@ -15,7 +15,8 @@
 // A rogue server (Nest, Pit, Gauntlet: rogue.mjs inRuns) is laid out as a tree of rooms from its seed (rogueGraph): its
 // folders' fight rooms and 2 to 4 quiet rooms woven in (Empty, and Stash: a few credits), at least one of them between
 // the entry and a fight. It runs in clears (rogue.mjs): the full clear jacks you out and reboots it. Each run rolls once
-// for the Mule (CONFIG.mule, on your own cooldown), a loot mob that runs from you (floorplan.mjs).
+// for the Exfil (CONFIG.exfil, on your own cooldown), a loot mob smuggling a stolen archive out, that runs from you
+// (floorplan.mjs).
 // Root (2.8) counts respawned fight rooms you clear on a server you hold: Root 2 after 5, 3 after 15, 4 after 30, 5
 // after 50 (root.mjs ROOT.need). Root 2 adds a stash room by the Core. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
@@ -321,7 +322,7 @@ export function addStash(loc) {
   g.rooms[id] = { id, kind: 'stash', x: at[0], y: at[1], depth: 0, seed: ((loc.seed || 1) * 131) >>> 0, label: 'Stash' };
   g.links.push([g.core, id]);
   g.rooms[id].path = 'Stash'; g.rooms[id].dir = 'stash';
-  R.seen[id] = 'kind';
+  R.seen[id] ||= 'shape'; // a new room: unknown until you walk in
 }
 
 // A wild room's kill: its folder goes quiet on its own timer (rogue.mjs rogueKill: a Pit's second drop, a Gauntlet's
@@ -348,7 +349,7 @@ function wildLost(s, loc, room, e) {
   if (!loc.zone && !loc.farm && sp.elite && sp.alive && !sp.boss) { sp.alive = false; sp.diedAt = t; sp.respawnAt = t + 30 * 60000; emit(s, 'info', `${sp.name} moved on. The room fills again in about 30 minutes.`); }
 }
 
-// ---------- a rogue server's Stash and its Mule ----------
+// ---------- a rogue server's Stash and its Exfil ----------
 // A Stash (a quiet room): a few credits straight into your bank, as a wild server's kills pay, and 1 code one time in five.
 WORLD_hook('purse', (s, room) => {
   const loc = locOf(s), R = s.rooms, credits = FP.ROOMS.purse(loc?.level || 1), material = codeOf(loc?.family) || 'cipher';
@@ -357,32 +358,32 @@ WORLD_hook('purse', (s, room) => {
   if (code) gainCode(s, { [material]: code }, 'Stash: ');
   return { credits, code, material: MATERIALS[material].name.toLowerCase() };
 });
-// The Mule's roll: once a run on a rogue server that runs in clears (at its first connect), and never while your own
-// cooldown runs (s.mule, on your save: it blocks your Mules on every rogue server, never anyone else's). The seed, or 0.
-WORLD_hook('mule', (s, t) => {
-  const loc = locOf(s), M = CONFIG.mule;
+// The Exfil's roll: once a run on a rogue server that runs in clears (at its first connect), and never while your own
+// cooldown runs (s.exfil, on your save: it blocks your Exfils on every rogue server, never anyone else's). The seed, or 0.
+WORLD_hook('exfil', (s, t) => {
+  const loc = locOf(s), M = CONFIG.exfil;
   if (!inRuns(loc) || !s.run) return 0;
-  const rr = (loc.rogueRun ||= { n: 1, at: t }), c = (s.mule ||= { at: null, n: 0 });
+  const rr = (loc.rogueRun ||= { n: 1, at: t }), c = (s.exfil ||= { at: null, n: 0 });
   if (rr.rolled) return 0; // one roll a run: reconnecting mid-run never rolls again
   rr.rolled = true;
   if (c.at != null && t < c.at + M.cooldownMs) return 0;
   const seed = (((loc.seed || 1) * 2654435761 + rr.n * 40503 + (c.n || 0) * 7919) >>> 0) || 1;
   if (seeded(seed)() >= M.chance) return 0;
-  c.at = t; c.n = (c.n || 0) + 1; rr.mule = seed;
+  c.at = t; c.n = (c.n || 0) + 1; rr.exfil = seed;
   return seed;
 });
-// Its bag: CONFIG.mule.credits Stashes' worth of credits and one item at the server's level (the best of two flat
+// Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits and one item at the server's level (the best of two flat
 // rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no loud run,
 // clean read or Pit roll), and now and then one of the server's uniques (its kind's and layer's, as its folders drop).
 // Under an elite's three rolls and blue floor, by design.
-WORLD_hook('muleWon', (s, room, e) => {
-  const loc = locOf(s), M = CONFIG.mule, lvl = e.virus.level, credits = M.credits * FP.ROOMS.purse(loc.level || 1);
+WORLD_hook('exfilWon', (s, room, e) => {
+  const loc = locOf(s), M = CONFIG.exfil, lvl = e.virus.level, credits = M.credits * FP.ROOMS.purse(loc.level || 1);
   const ctx = { kind: 'rogue', id: loc.rogue?.kind, layer: loc.depth || 1, family: loc.family };
   s.server.credits += credits;
   let item = rollDrop(s, { ...ctx, rolls: M.rolls, flat: true }, lvl) || rollItem(() => rand(s), { level: lvl, rarity: 'stock' }); // always an item: a white unless the rolls found better
   if (rand(s) < M.unique) { const u = uniqueFrom(s, ctx, lvl); if (u) item = uniqueItem(u, lvl, () => rand(s)); }
-  const got = item ? addItem(s, item, 'The bag: ') : null;
-  emit(s, 'rooms-good', `The bag: +${credits} credits${got ? `, ${itemLabel(got)}` : ''}.`, { credits });
+  const got = item ? addItem(s, item, 'The archive: ') : null;
+  emit(s, 'rooms-good', `The archive: +${credits} credits${got ? `, ${itemLabel(got)}` : ''}.`, { credits });
 });
 
 // ---------- what you take: into the pack ----------
@@ -498,6 +499,9 @@ export function summaryOf(s, loc) {
 // Resident beaten (two rooms toward progress), and stays held; its Root pips stay. A run in flight on an old server
 // is jacked out (what it carried banked). Buildings and outposts stay as they were (sockets are R2).
 export function roomsRestore(s, was) {
+  exfilRestore(s);
+  // Rooms are unknown until you've been in them (floorplan.mjs fogRestore): an older save keeps what it can't rule out.
+  for (const loc of [s.zone, ...(s.locations || [])]) if (loc?.floorplan) FP.fogRestore(loc.floorplan);
   // A wild server's rooms were once named by their folders (/var/log): named for what they are now (Process 5).
   for (const loc of [s.zone, ...(s.locations || [])]) {
     const g = loc?.floorplan?.graph;
@@ -520,7 +524,7 @@ export function roomsRestore(s, was) {
     try { R = roomsFor(s, loc); } catch { continue; }
     if (loc.takenOver && R.type === 'server') {
       const v = R.graph.vaults[0];
-      if (v) { R.opened[v] = t; R.cleared[v] = t; }
+      if (v) { R.opened[v] = t; R.cleared[v] = t; R.seen[v] = 'kind'; }
       R.cleared[R.graph.core] = t; R.down[R.graph.core] = t; R.held = t;
       R.seen[R.graph.core] = 'kind';
       if (rootOf(loc) >= 2) addStash(loc);
@@ -530,6 +534,32 @@ export function roomsRestore(s, was) {
   }
 }
 hooks.roomsRestore = roomsRestore;
+// The Mule is the Exfil now (its Runner the Uplink, its Bag the Archive): the cooldown (s.mule), the Codex's record
+// of it (met, kills, research), its tip, a run's roll, a visit's chase and a fight in flight carry over. Twice is once.
+const PART_IDS = { runner: 'uplink', bag: 'archive' }, PART_NAMES = { Runner: 'Uplink', Bag: 'Archive' };
+export function exfilRestore(s) {
+  const mv = (o, a, b) => { if (o && o[a] !== undefined) { if (o[b] === undefined) o[b] = o[a]; delete o[a]; } };
+  mv(s, 'mule', 'exfil');
+  mv(s.met, 'mule', 'exfil');
+  for (const k of ['kills', 'fought', 'won']) mv(s.dex?.[k], 'mule', 'exfil');
+  for (const o of [s.research, s.codex]) if (o) for (const [old, id] of Object.entries(PART_IDS)) mv(o, `mule:${old}`, `exfil:${id}`);
+  mv(s.settings?.seen, 'mule', 'exfil');
+  for (const loc of [s.zone, ...(s.locations || [])]) {
+    if (!loc) continue;
+    mv(loc.rogueRun, 'mule', 'exfil');
+    const v = loc.floorplan?.visit;
+    mv(v, 'mule', 'exfil');
+    if (v?.exfil?.name?.startsWith('MULE-')) v.exfil.name = v.exfil.name.replace(/^MULE-/, 'EXFIL-');
+  }
+  const e = s.encounter;
+  if (e?.rooms?.as === 'mule') e.rooms.as = 'exfil';
+  if (e?.rooms?.size === 'mule') e.rooms.size = 'exfil';
+  if (e?.virus?.family === 'mule') {
+    e.virus.family = 'exfil';
+    if (e.virus.name?.startsWith('MULE-')) e.virus.name = e.virus.name.replace(/^MULE-/, 'EXFIL-');
+    for (const p of e.virus.parts || []) { if (PART_IDS[p.id]) p.id = PART_IDS[p.id]; if (PART_NAMES[p.name]) p.name = PART_NAMES[p.name]; }
+  }
+}
 // A rogue server laid out before quiet rooms (its folders around the entry): its rooms again from its seed (rogueGraph),
 // the fight rooms on the same ids, so what you'd cleared and seen stays; the quiet rooms new, in the fog.
 export function rogueRestore(s) {

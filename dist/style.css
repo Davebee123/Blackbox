@@ -2365,7 +2365,7 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 /* Whose half of the cycle: a strip across the top of the board names it; only the virus's half turns the board red. */
 .phase-strip { display: flex; align-items: center; gap: 10px; padding: 6px 14px; margin: -4px 0 4px; font: 600 11px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--line); }
 .phase-strip i { font-style: normal; opacity: 0.6; }
-/* a runner's countdown (the Mule): its own board row; on a phone, where rows are dear, on the strip instead */
+/* a runner's countdown (the Exfil's upload): its own board row; on a phone, where rows are dear, on the strip instead */
 .phase-strip .ps-esc { display: none; margin-left: auto; color: var(--next); font-weight: 700; letter-spacing: 0.08em; }
 @media (max-width: 640px) { .board .bescape { display: none; } .phase-strip .ps-esc { display: inline; } }
 .phase-strip span { padding: 2px 8px; border-radius: 2px; border: 1px solid transparent; }

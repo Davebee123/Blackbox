@@ -920,13 +920,15 @@ function scan(s, arg) {
   showCard(s, v, { deep, type: 'net-scan' });
 }
 
-// scan [room] on rooms: the genome card of what holds this room, or a room next to you that you can see holds a fight.
+// scan [room] on rooms: the genome card of what holds this room, or a room next to you that you've discovered (been in:
+// floorplan.mjs fog) and holds a fight. An unknown room can't be read from outside.
 // It costs SCAN.signal Signal (an Infiltrator scans quietly and for free, and reads deeper).
 function scanRoom(s, arg) {
   const R = s.rooms, g = R.graph, a = (arg || '').toLowerCase();
   const near = [R.at, ...neighbours(g, R.at)].map((id) => g.rooms[id]);
   const room = a ? near.find((x) => x.dir === a.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || x.path0 === a || x.path0 === '/' + a || x.path.toLowerCase() === a) : g.rooms[R.at];
-  const fights = room && seenOf(s, room.id) === 'kind' && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
+  if (room && seenOf(s, room.id) !== 'kind') return err(s, `scan: you haven't been in that room. You can't read what's in it from outside.`);
+  const fights = room && FIGHTS.includes(room.kind) && isUp(s, room) && !(room.kind === 'core' && !coreOpen(s));
   if (!fights) return err(s, a ? `Nothing to scan at ${arg}. Scan a room next to you that holds a fight.` : 'Nothing to scan here. scan <room> reads a fight next door.');
   const f = fightOf(s, room), v = encounterVirus(s, f.key, f.seed, f.opts);
   const deep = classOf(s) === 'infiltrator';
@@ -1027,11 +1029,11 @@ export function runSuggestions(s, input) {
   return ['history', 'ls', 'ls -a', 'cd ', 'cat ', ...(canCloak(s) ? ['spoof'] : []), ...(equipped(s, 'tap') ? ['tap'] : []), ...(slipsLeft(s) > 0 ? ['slip'] : []), 'pull ', 'unlock ', 'jack out', 'tree', 'pack', 'help', 'engage'].filter((c) => c.startsWith(text));
 }
 
-// On rooms: the room verbs, and for cd/go/scan the rooms you've seen (by the slug you type).
+// On rooms: the room verbs, and for cd/go/scan the rooms you've discovered (by the slug you type; never an unknown one).
 function roomSuggestions(s, text) {
   const [word, arg = ''] = text.split(/ (.*)/);
   if (text.includes(' ')) {
-    if (['cd', 'go', 'scan'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
+    if (['cd', 'go', 'scan'].includes(word)) return [...(word === 'cd' ? ['..'] : []), ...roomList(s).filter((x) => seenOf(s, x.id) === 'kind' && x.dir).map((x) => x.dir)].filter((d) => d.startsWith(arg)).map((d) => `${word} ${d}`);
     return [];
   }
   return ['ls', 'map', 'cd ', 'go ', 'wait', 'back', 'engage', 'cat', 'pull', 'open', 'force', 'rest', 'slip', 'scan', 'pack', 'help', 'jack out'].filter((c) => c.startsWith(text));

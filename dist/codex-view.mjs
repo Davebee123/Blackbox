@@ -99,7 +99,7 @@ function tellMarkup(t) {
 const section = (title, body, extra = '') => `<section class="cx-sec"><h3 class="cx-kick">${title}${extra}</h3>${body}</section>`;
 const stat = (label, value, cls = '', title = '') => `<div class="stat"${title ? ` title="${esc(title)}"` : ''}><span>${esc(label)}</span><strong class="${cls}">${value}</strong></div>`;
 function bodyPage(s, e) {
-  const groupName = { family: 'Family', strain: 'Strain', guard: e.ice ? 'ICE' : 'Guard', runner: 'Runner' }[e.group];
+  const groupName = { family: 'Family', strain: 'Strain', guard: e.ice ? 'ICE' : 'Guard', runner: 'Exfil' }[e.group];
   const tags = [e.stem ? `<span class="tag" title="Its viruses' names">${esc(e.stem)}</span>` : '', e.threatens ? `<span class="tag" title="What it hits">hits ${esc(e.threatens)}</span>` : '', e.opens ? `<span class="tag dim" title="It comes at level ${e.opens} and up${e.depth ? `, on servers ${e.depth} layers deep and deeper` : ''}">Lv ${e.opens}+${e.depth ? ` · layer ${e.depth}+` : ''}</span>` : '', e.lineage ? link(`family:${e.lineage}`, `${famName(e.lineage)} lineage`) : ''].filter(Boolean).join('');
   const faced = e.sets.filter((x) => x.faced).length;
   const head = `<header class="cx-head"><div class="cx-art" aria-hidden="true"><canvas id="cx-canvas" data-art="${esc(e.art?.id || '')}"></canvas></div><div class="cx-title"><h2>${groupName}</h2><h1>${esc(e.name)}</h1><p class="tagline">${tags}</p>
@@ -144,7 +144,7 @@ function mutationPage(s, e) {
 function entryMarkup(s, key) {
   const e = entryOf(s, key);
   if (!e.known) {
-    const g = { family: 'Family', strain: 'Strain', guard: 'Guard', runner: 'Runner', boss: 'Boss', mutation: 'Mutation' }[e.group] || '';
+    const g = { family: 'Family', strain: 'Strain', guard: 'Guard', runner: 'Exfil', boss: 'Boss', mutation: 'Mutation' }[e.group] || '';
     const how = e.group === 'boss' ? 'Fight it to fill this page.' : 'Meet one to fill this page.';
     return `<header class="cx-head solo"><div class="cx-title"><h2>${g}</h2><h1 class="unknown">${UNKNOWN}</h1><p class="cxp-hint">${how}</p></div></header>`;
   }
