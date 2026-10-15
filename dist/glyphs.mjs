@@ -78,7 +78,6 @@ const P = {
   // An archive on its way out (the Exfil, a runner in the Codex): a file with an upload arrow.
   upload: '<path d="M3.5 1.5h6l3 3v10h-9z"/><path d="M9.5 1.5v3h3"/><path d="M8 12.5V7.2M5.9 9.3 8 7.2l2.1 2.1"/>',
   // Signatures: the wall's currency (invasion.mjs), a captured waveform.
-  sigs: '<path d="M1.5 9h2l1.5-4.5 2 9 2-7 1.5 4 1-1.5h3"/>',
   // A capture: a packet held in brackets.
   capture: '<path d="M4.5 3H2.5v10h2M11.5 3h2v10h-2"/><rect x="5.5" y="6" width="5" height="4" rx=".5"/>',
   bounty: '<path d="M4 7.5a4 4 0 1 1 8 0v2.5l-1.3 1v2.5H5.3V11L4 10z"/><circle cx="6.3" cy="7.5" r="1"/><circle cx="9.7" cy="7.5" r="1"/>',

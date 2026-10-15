@@ -350,10 +350,10 @@ test('a plan queues up to three cycles and shows in order', () => {
   assert.equal(s.encounter.plan.length, 0);
 });
 
-test('daemons are found; a slotted one acts on its own cooldown, on top of your order', async () => {
-  const { learnDaemon, daemonSlots } = await import('./dist/combat.mjs');
+test('daemons: a slotted one acts on its own cooldown, on top of your order', async () => {
+  const { gainDaemon, daemonSlots } = await import('./dist/combat.mjs');
   const s = start();
-  learnDaemon(s, '', 'sweeper');
+  gainDaemon(s, 'sweeper', 1);
   assert.deepEqual(s.daemons, [], 'found, not slotted: you choose');
   s.encounter.paused = true; s.daemons = ['sweeper']; s.encounter.paused = false;
   const pulse = part(s, 'pulse');
@@ -361,28 +361,29 @@ test('daemons are found; a slotted one acts on its own cooldown, on top of your 
   part(s, 'encryptor').attack = null;
   pulse.attack.due = s.encounter.cycle + 1;
   act(s, 'spike encryptor');
-  assert.equal(pulse.max - pulse.integrity, 10, 'Sweeper hit the part attacking soonest');
+  assert.equal(pulse.max - pulse.integrity, 6, 'Sweeper (lv 1) hit the part attacking soonest');
   assert.equal(part(s, 'encryptor').max - part(s, 'encryptor').integrity, 25, 'and your Spike still fired');
   act(s, 'spike encryptor');
-  assert.equal(pulse.max - pulse.integrity, 10, 'then it cools down (4 cycles)');
-  learnDaemon(s, '', 'sweeper');
-  assert.equal(s.daemonsOwned.sweeper, 2, 'finding it again upgrades it');
-  assert.equal(daemonSlots(s), CONFIG.daemonSlots + 2, 'a veteran: your server is your highest class level, past both daemon slot levels');
+  assert.equal(pulse.max - pulse.integrity, 6, 'then it cools down (4 cycles)');
+  gainDaemon(s, 'sweeper', 9);
+  assert.equal(s.daemonLv.sweeper, 9, 'a higher-level copy replaces yours');
+  assert.equal(daemonSlots(s), CONFIG.daemonSlots + 3, 'a veteran: your server is your highest class level, past all three daemon slot levels');
 });
 
 test('daemon slots: slot and unslot between fights; the slot count is the limit', async () => {
-  const { learnDaemon } = await import('./dist/combat.mjs');
+  const { gainDaemon } = await import('./dist/combat.mjs');
   const s = fresh();
-  learnDaemon(s, '', 'mender');
-  learnDaemon(s, '', 'fuzzer');
+  for (const id of ['mender', 'fuzzer', 'mirror']) gainDaemon(s, id, 1);
   assert.deepEqual(s.daemons, [], 'nothing slots itself');
   command(s, 'daemon slot mender');
-  assert.deepEqual(s.daemons, ['mender'], 'one slot to start');
-  assert.match(command(s, 'daemon slot fuzzer').at(-1).message, /slots are full/);
-  command(s, 'daemon unslot mender');
   command(s, 'daemon slot fuzzer');
-  assert.deepEqual(s.daemons, ['fuzzer']);
+  assert.deepEqual(s.daemons, ['mender', 'fuzzer'], 'two slots to start');
+  assert.match(command(s, 'daemon slot mirror').at(-1).message, /slots are full/);
+  command(s, 'daemon unslot mender');
+  command(s, 'daemon slot mirror');
+  assert.deepEqual(s.daemons, ['fuzzer', 'mirror']);
   assert.match(command(s, 'daemon slot sweeper').at(-1).message, /don't have/);
+  assert.match(command(s, 'daemon list').at(-1).message, /Mirror lv 1 \(slotted\)/);
 });
 
 test('enemies have a level: home intrusions come in at your level, and grow with you', async () => {

@@ -7,8 +7,8 @@
 //   within 20%: contested. The wall wears it down while it chips your server.
 //   20% or more weaker: a breach. It chips your server (1% of max a minute) until you deal with it.
 // Only what gets past the wall asks for you. Jack in to fight it at the wall: it's as worn down as
-// the wall left it, its armor is intact, it's worth a full kill, and its bounty in signatures (the
-// wall's currency, from invasions only) grows the longer it's contested before you do.
+// the wall left it, its armor is intact, it's worth a full kill, and its bounty (its family's code, lots of it)
+// grows the longer it's contested before you do. Invasions are the only thing that drops daemons (daemons.mjs).
 // A crash puts the server in Degraded mode (see crashServer in combat.mjs); the network waits.
 import { tickOutposts, outposts, stockOf } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
@@ -16,10 +16,11 @@ import { tickRetake } from './hubs.mjs';
 import { tickEvents } from './events.mjs';
 import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } from './consortium.mjs';
 import { isLive } from './memory.mjs';
-import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore } from './firewall.mjs';
-import { filterStat, addFilter, rollFilter } from './filters.mjs';
-import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, killXp, xpToNext } from './data.mjs';
-import { SERVICES, codeOf, rollItem, uniqueItem } from './gear.mjs';
+import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore, baseOf } from './firewall.mjs';
+import { filterStat } from './filters.mjs';
+import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, killXp, xpToNext, codeUnit, DAEMON_DROP } from './data.mjs';
+import { gainDaemon, rollDaemon } from './daemons.mjs';
+import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost } from './combat.mjs';
 import { nativeStrain } from './network.mjs';
@@ -30,8 +31,8 @@ const since = (s, first) => s.logs.filter((e) => e.id > first);
 export const INVADER = { ransomware: 'cryptjack', worm: 'splinter', ghostroot: 'ghostroot' };
 
 // ---------- what comes ----------
-// w: its weight in the roll. from: the sending server's level it needs. bounty: signatures (a pack's
-// is per virus). lvl: levels over its server it comes at. push: levels it counts higher at your wall.
+// w: its weight in the roll. from: the sending server's level it needs. bounty: points, each paying a unit of its
+// family's code at its level (data.mjs codeUnit; a pack's is per virus). lvl: levels over its server it comes at. push: levels it counts higher at your wall.
 // travel: × the usual travel time. online: never rolled while you're away (you couldn't answer it).
 export const KINDS = {
   raider: { name: 'Raider', w: 30, from: 1, bounty: 2 },
@@ -48,19 +49,18 @@ export const QUIRKED = { chance: 0.3, kinds: ['raider', 'pack', 'champion'], hoa
 export const CHAMPION = { hp: 1.5 }; // elite-grade (elite armor and hits, triple XP), sized for one player: a crew elite is ELITE.hp. About 25–50% of your server's health at levels 10–18 (the scripted planner in blues)
 export const SCOUT = { mapMs: 5 * 60000, mark: 3 }; // how long it takes to map your wall; what the next one counts higher
 export const THIEF = { take: 0.5, min: 3 }; // the share of each store it takes; the store it needs to be worth the trip
-// Bounty: signatures. It grows by grow × base a minute while it's contested or breaching (you
+// Bounty: code. It grows by grow × base a minute while it's contested or breaching (you
 // not on it), up to cap × base more, and that growth is yours only if you kill it. An outright block pays blocked × base.
 export const BOUNTY = { grow: 0.25, cap: 2, blocked: 0.5 };
 // Streak: invasions stopped in a row (by your wall or by you). Each one in it pays step more (up to
 // max steps); every capture-th in a row drops a capture. A crash, a theft or a scout's map ends it.
 export const STREAK = { step: 0.1, max: 5, capture: 5 };
-// A capture (what a champion, or a streak, leaves behind): a protocol or a filter, Custom filters
-// with the rare affixes only come from here, and a chance at an invasion-only unique (BOSS_LOOT's
-// pattern: chance, plus pity for every capture without one).
-export const CAPTURE = { chance: 0.2, pity: 0.1, filter: 0.4, custom: 0.3 };
+// A capture (what a champion you kill, or a streak, leaves behind): a sure daemon, and a chance at an
+// invasion-only unique on top (BOSS_LOOT's pattern: chance, plus pity for every capture without one).
+// Every other stop rolls for a daemon (data.mjs DAEMON_DROP, with its own pity).
+export const CAPTURE = { chance: 0.2, pity: 0.1 };
 
 const kindOf = (inv) => KINDS[inv?.kind] || KINDS.raider;
-export const sigsOf = (s) => s.sigs || 0;
 export const streakOf = (s) => s.net?.streak || 0;
 export const streakMult = (s) => 1 + STREAK.step * Math.min(streakOf(s), STREAK.max);
 
@@ -113,13 +113,17 @@ export const fmtLeft = (ms) => (ms >= 60000 ? `${Math.ceil(ms / 60000)} min` : `
 const pct = (x) => `${Math.round(x * 10) / 10}%`;
 
 // ---------- the bounty ----------
-// What it pays now if you kill it, the most it can grow to, and whether a capture comes with it.
+// What it pays now if you kill it, the most it can grow to, and whether a capture comes with it: code of its
+// family (code: which), a unit of it at its level (data.mjs codeUnit) for each point of bounty.
+export const bountyCode = (inv) => codeOf(inv?.family) || 'cipher';
 export function bountyOf(s, inv = s.invasion) {
   if (!inv) return null;
-  const base = inv.bounty ?? kindOf(inv).bounty, mult = streakMult(s) * (inv.open ? I().open.reward : 1);
-  const r = (n) => Math.max(1, Math.round(n * mult));
-  return { base, now: r(base + Math.floor(inv.grown || 0)), max: r(base * (1 + BOUNTY.cap)), blocked: r(Math.ceil(base * BOUNTY.blocked)), wall: r(base), capture: !!kindOf(inv).capture, streakCapture: (streakOf(s) + 1) % STREAK.capture === 0, mult };
+  const base = inv.bounty ?? kindOf(inv).bounty, mult = streakMult(s) * (inv.open ? I().open.reward : 1), unit = codeUnit(inv.level);
+  const r = (n) => Math.max(1, Math.round(n * mult * unit));
+  return { base, code: bountyCode(inv), now: r(base + Math.floor(inv.grown || 0)), max: r(base * (1 + BOUNTY.cap)), blocked: r(Math.ceil(base * BOUNTY.blocked)), wall: r(base), capture: !!kindOf(inv).capture, streakCapture: (streakOf(s) + 1) % STREAK.capture === 0, mult };
 }
+// "13 Worm code"
+export const codeText = (n, k) => `${n} ${MATERIALS[k]?.name || k}`;
 // One plain sentence on what this invasion does, beyond chipping at your wall (the map and the Firewall card show it).
 export function tellOf(s, inv = s.invasion) {
   if (!inv) return '';
@@ -128,7 +132,7 @@ export function tellOf(s, inv = s.invasion) {
     raider: '',
     pack: inv.queue?.length ? `A pack of ${inv.queue.length + 1}. It counts ${PACK_PUSH * inv.queue.length} levels higher at your wall until it thins out.` : 'The last of its pack.',
     pair: inv.queue?.length ? `${inv.name} and ${inv.queue[0].name} came together. The pair counts ${PACK_PUSH} levels higher at your wall until one of them falls.` : 'The other half of a pair.',
-    champion: `A champion, built like an elite. It counts ${KINDS.champion.push} levels higher at your wall and leaves a capture when you kill it.`,
+    champion: `A champion, built like an elite. It counts ${KINDS.champion.push} levels higher at your wall and leaves a daemon when you kill it.`,
     saboteur: inv.sabotaged ? `It shut off your ${svc}. Kill it to bring it back.` : `If it gets past your wall, it shuts off your ${svc} until you kill it.`,
     thief: `It is after the stores on ${tgt?.name || 'your outpost'}. Intercept it on the way, or it takes half of what is stored there.`,
     scout: inv.state === 'watch' ? `It is mapping your wall. Kill it in the next ${fmtLeft(inv.mapLeft)}, or the next invasion counts ${SCOUT.mark} levels higher.` : `It wants to map your wall. If your wall doesn't stop it, kill it within ${fmtLeft(SCOUT.mapMs)} or the next invasion counts ${SCOUT.mark} levels higher.`,
@@ -394,22 +398,32 @@ function arrive(s) {
   inv.state = o;
   crack(s, inv);
   sabotage(s, inv);
-  const b = bountyOf(s, inv), pay = ` Bounty ${b.now} signatures, up to ${b.max} if you let it sit.`;
+  const b = bountyOf(s, inv), pay = ` Bounty ${codeText(b.now, b.code)}, up to ${b.max} if you let it sit.`;
   if (o === 'siege') emit(s, 'wall-siege', `Invasion at your wall: ${inv.name}, contested. −${pct(chipRate(r))} Integrity a minute.${pay}`, { invader: inv.id });
   else emit(s, 'wall-breach', `${inv.name} BREACHED your wall. −${pct(chipRate(r))} Integrity a minute.${pay}`, { invader: inv.id });
 }
 
-// Pay the bounty in signatures (and a capture, if it comes with one). how: 'blocked' (outright),
-// 'wall' (worn down), 'you' (your kill: the growth too). Returns the signatures.
-function payOut(s, inv, how) {
+// Pay the bounty in its family's code, and roll for a daemon (a capture brings a sure one). how: 'blocked'
+// (outright), 'wall' (worn down), 'you' (your kill: the growth too); intercepted: a thief caught on its road.
+// Returns the code paid.
+function payOut(s, inv, how, intercepted = false) {
   const b = bountyOf(s, inv);
   const n = how === 'blocked' ? b.blocked : how === 'wall' ? b.wall : b.now;
-  s.sigs = sigsOf(s) + n;
+  (s.materials ||= {})[b.code] = (s.materials[b.code] || 0) + n;
   s.net.streak = streakOf(s) + 1;
-  const L = Math.max(inv.level, hackerLevel(s) - 2);
-  if (b.capture && how === 'you') capture(s, L, `${inv.name} leaves a capture: `);
-  if (s.net.streak % STREAK.capture === 0) capture(s, L, `Streak of ${s.net.streak}: a capture. `);
+  const caps = [b.capture && how === 'you' && `${inv.name} leaves a capture: `, s.net.streak % STREAK.capture === 0 && `Streak of ${s.net.streak}: a capture. `].filter(Boolean);
+  for (const why of caps) { daemonDrop(s, inv, 'capture', why); capture(s, Math.max(inv.level, hackerLevel(s) - 2), why); }
+  if (!caps.length) daemonDrop(s, inv, how === 'you' ? (intercepted ? 'intercept' : 'you') : 'wall', `${inv.name} leaves a daemon: `);
   return n;
+}
+// The chance a stop leaves a daemon: by how it was stopped, plus the pity of every stop in a row without one.
+export const daemonChance = (s, how) => Math.min(1, (DAEMON_DROP[how] ?? DAEMON_DROP.wall) + DAEMON_DROP.pity * (s.pity?.daemon || 0));
+// A daemon of the invasion's band at its level, or a miss (the next chance is better). Returns gainDaemon's result.
+export function daemonDrop(s, inv, how, why = '') {
+  const p = (s.pity ||= {});
+  if (rand(s) >= daemonChance(s, how)) { p.daemon = (p.daemon || 0) + 1; return null; }
+  p.daemon = 0;
+  return gainDaemon(s, rollDaemon(s, inv.level), inv.level, { why, family: inv.family });
 }
 export function breakStreak(s, why) {
   const n = streakOf(s);
@@ -425,10 +439,10 @@ function stopped(s, inv, how) {
   // A filter of Reflection: it drops some of its family's code.
   const k = filterStat(s, 'reflect') && codeOf(inv.family);
   if (k) gainCode(s, { [k]: filterStat(s, 'reflect') }, 'Reflection: ');
-  const n = payOut(s, inv, blocked ? 'blocked' : 'wall');
   const where = inv.kind === 'thief' ? `The firewall on ${targetOf(s, inv)?.name || 'your outpost'}` : 'Your wall';
   const kind = inv.kind && inv.kind !== 'raider' ? `, ${inv.kind === 'pack' ? `a pack of ${inv.size}` : `a ${kindOf(inv).name.toLowerCase()}`}` : '';
-  endInvasion(s, `${blocked ? `${where} stopped ${inv.name} (level ${inv.level}${kind}) from ${inv.fromName}` : `${where} wore ${inv.name} down to nothing`}: +${n} ${n === 1 ? 'signature' : 'signatures'}, +1 salvage.`, { blocked, quiet, sigs: n });
+  const bk = bountyCode(inv), n = payOut(s, inv, blocked ? 'blocked' : 'wall');
+  endInvasion(s, `${blocked ? `${where} stopped ${inv.name} (level ${inv.level}${kind}) from ${inv.fromName}` : `${where} wore ${inv.name} down to nothing`}: +${codeText(n, bk)}, +1 salvage.`, { blocked, quiet, gains: { [bk]: n } });
   unsabotage(s);
   gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`, 'fight');
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');
@@ -438,9 +452,10 @@ function stopped(s, inv, how) {
 export function invaderDown(s, inv) {
   inv.mine = (inv.mine || 0) + 1;
   if (nextUp(s, inv, 'You took down')) return;
-  const intercepted = inv.state === 'travel';
-  const n = payOut(s, inv, 'you');
-  endInvasion(s, `${inv.name} is gone ${intercepted ? `before it reached ${targetOf(s, inv)?.name || 'your outpost'}` : 'from your wall'}: +${n} ${n === 1 ? 'signature' : 'signatures'}.`, { sigs: n });
+  const intercepted = inv.state === 'travel', k = bountyCode(inv), n = bountyOf(s, inv).now;
+  emit(s, 'code', `Bounty: +${codeText(n, k)}.`, { gains: { [k]: n } }); // its row on the fight's card
+  payOut(s, inv, 'you', intercepted);
+  endInvasion(s, `${inv.name} is gone ${intercepted ? `before it reached ${targetOf(s, inv)?.name || 'your outpost'}` : 'from your wall'}: +${codeText(n, k)}.`, {});
   unsabotage(s);
 }
 
@@ -496,18 +511,18 @@ export function sabotageBlock(s, text) {
 // Invasion-only uniques (content/items.mjs, source kind 'invasion').
 export const invasionUniques = () => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'invasion'));
 export const captureChance = (s) => Math.min(1, (CAPTURE.chance + CAPTURE.pity * (s.pity?.invasion || 0)) * (invasionUniques().some((u) => u.id === s.listen) ? listenBoost(s) : 1));
+// A capture's extra roll: one of the invasion-only uniques, one you don't have first. Nothing more when it misses:
+// the sure daemon is the capture.
 export function capture(s, level, why) {
   const pool = invasionUniques().filter((u) => u.level <= level + 2);
-  if (pool.length) {
-    if (rand(s) < captureChance(s)) {
-      (s.pity ||= {}).invasion = 0;
-      const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen), from = heard.length ? heard : fresh.length ? fresh : pool;
-      return addItem(s, uniqueItem(from[Math.floor(rand(s) * from.length)], level, () => rand(s)), why);
-    }
-    (s.pity ||= {}).invasion = (s.pity.invasion || 0) + 1;
+  if (!pool.length) return null;
+  if (rand(s) < captureChance(s)) {
+    (s.pity ||= {}).invasion = 0;
+    const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen), from = heard.length ? heard : fresh.length ? fresh : pool;
+    return addItem(s, uniqueItem(from[Math.floor(rand(s) * from.length)], level, () => rand(s)), why);
   }
-  if (rand(s) < CAPTURE.filter) return addFilter(s, rollFilter(() => rand(s), { level, rarity: 'custom' }), why);
-  return addItem(s, rollItem(() => rand(s), { level, rarity: rand(s) < CAPTURE.custom ? 'custom' : 'tuned' }), why);
+  (s.pity ||= {}).invasion = (s.pity.invasion || 0) + 1;
+  return null;
 }
 
 // Open ports: online only, invasions come 2.5× as often and each is worth +50%. Closes when you log off.
@@ -548,7 +563,7 @@ export function jackIn(s, verb = 'jack in') {
   return since(s, first);
 }
 
-// invasions: what's coming, what it does, what it pays; your streak and signatures.
+// invasions: what's coming, what it does, what it pays; your streak.
 export function invasionsCommand(s) {
   const first = s.serial, inv = s.invasion, lines = [];
   if (!s.locations?.length) lines.push('Nothing comes for your wall until you find a location.');
@@ -557,9 +572,9 @@ export function invasionsCommand(s) {
     const where = inv.state === 'travel' ? `on its way, ${fmtLeft(inv.left)} out, and ${at} will ${v === 'blocked' ? 'stop it' : v === 'siege' ? 'contest it' : 'not hold it'}` : inv.state === 'watch' ? 'mapping your wall' : inv.state === 'siege' ? `contested at your wall, ${Math.round(inv.hp * 100)}% left` : 'breaching your wall';
     lines.push(`${labelOf(inv)}: ${inv.name}, level ${inv.level}, from ${inv.fromName}. It is ${where}.`);
     if (tellOf(s, inv)) lines.push(tellOf(s, inv));
-    lines.push(`Kill it for ${b.now} ${b.now === 1 ? 'signature' : 'signatures'} (up to ${b.max} if it sits contested). The wall alone gets ${b.wall}, an outright block ${b.blocked}.${b.capture ? ' A capture comes with your kill.' : ''}`);
+    lines.push(`Kill it for ${codeText(b.now, b.code)} (up to ${b.max} if it sits contested). The wall alone gets ${b.wall}, an outright block ${b.blocked}.${b.capture ? ' A daemon comes with your kill.' : ''}`);
   } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next * (s.net.open ? I().open.pace : 1))}.${s.net.mark ? ` A scout mapped your wall, so it counts ${s.net.mark} levels higher.` : ''}`);
-  lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more, and a capture comes every ${STREAK.capture} in a row. You hold ${sigsOf(s)} ${sigsOf(s) === 1 ? 'signature' : 'signatures'}.`);
+  lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more, and a capture comes every ${STREAK.capture} in a row.`);
   for (const l of lines) emit(s, 'info', l);
   return since(s, first);
 }
@@ -570,8 +585,19 @@ export function invasionRestore(s, was) {
   if (was >= 33) return;
   const inv = s.invasion;
   if (inv) { inv.kind ||= 'raider'; inv.queue ||= []; inv.size ||= 1; inv.bounty ??= KINDS.raider.bounty; inv.grown ||= 0; inv.push ||= 0; }
-  s.sigs ||= 0; // the streak starts at nothing (streakOf)
   firewallRestore(s, was); // the firewall follows the network: an old wall becomes a tier, any excess refunded
+}
+
+// Signatures were the wall's currency; they're gone. What you held becomes code, a unit (codeUnit at your wall's
+// base) for each, split over Cipher, Worm and Kernel as the wall's prices are. Keyed on the old field.
+export function signatureRestore(s) {
+  if (!('sigs' in s)) return;
+  const n = Math.max(0, Math.floor(s.sigs || 0));
+  delete s.sigs;
+  if (!n) return;
+  const each = Math.ceil((n * codeUnit(baseOf(s))) / 3), m = (s.materials ||= {});
+  for (const k of ['cipher', 'worm', 'kernel']) m[k] = (m[k] || 0) + each;
+  emit(s, 'firewall', `Signatures are gone: the wall takes code now. Your ${n} became ${each} each of Cipher, Worm and Kernel code.`);
 }
 
 // ---------- testing ----------

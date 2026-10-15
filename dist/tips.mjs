@@ -152,7 +152,7 @@ export const TIPS = [
   { id: 'loadout-talents', page: 'loadout', at: '.ttree', when: (s) => hackerLevel(s) >= 10, text: 'From level 10 you earn a talent point every other level. Ranks add small bonuses, and each tier asks you to pick one of two. You can change picks at home for free.' },
 
   // ---------- daemons ----------
-  { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons are programs you find on runs. A slotted daemon fights beside you on its own cooldown, and finding the same one again upgrades it.' },
+  { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons come from invasions. A slotted one fights beside you, on its own cooldown or when its moment comes. A higher-level copy replaces yours.' },
   { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade, so pick the one that fits how you play. You can rebuild later for credits.' },
   { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'A module you crafted, ready for this outpost\'s ports. It bends how the outpost works. Take it out and it goes back to your stock for another outpost.' },
   // The Codex tab, once there's something in it: your first decoded part (and never mid-fight).

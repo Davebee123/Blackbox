@@ -30,7 +30,7 @@ export const CONTRACT_KINDS = {
   'item-unknown': { name: 'Recover a file (unknown server)', sides: ['halcyon', 'glassjaw'] },
 };
 export const SIDES = { halcyon: 'Halcyon (on the books)', glassjaw: 'GLASSJAW (off the books)' };
-export const REWARDS = { credits: 'Credits', indemnity: 'Indemnity', standing: 'Standing', xp: 'XP (kills’ worth)', relay: 'Relays', blueprint: 'A blueprint', daemon: 'A daemon' };
+export const REWARDS = { credits: 'Credits', indemnity: 'Indemnity', standing: 'Standing', xp: 'XP (kills’ worth)', relay: 'Relays', blueprint: 'A blueprint', drop: 'A protocol, Tuned or better' };
 
 // Fill {blanks}. Unknown ones are left as typed so they're easy to spot.
 export const fill = (text, vars) => String(text ?? '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m));

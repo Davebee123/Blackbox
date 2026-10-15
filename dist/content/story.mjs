@@ -126,7 +126,7 @@ export default {
         "indemnity": 4,
         "standing": 4,
         "xp": 3,
-        "daemon": true
+        "drop": true
       }
     },
     {

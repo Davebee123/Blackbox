@@ -33,14 +33,18 @@ test('the base follows your network: the highest attached server less 2; tiers b
   assert.equal(wallBands(s).blocks, effLevel(s), 'it blocks its own level');
 });
 
-test('tier prices: cheap at first, a goal at the top, signatures from +3; +6 is the most', () => {
+test('tier prices: cheap at first, a goal at the top, more code from +3 (what invasions pay); +6 is the most', async () => {
+  const { codeUnit } = await import('./dist/data.mjs');
   const B = 10, total = (n) => Array.from({ length: n }, (_, i) => tierCost(i + 1, B).credits).reduce((a, b) => a + b, 0);
   assert.equal(tierCost(1, B).credits, 85);
   assert.ok(total(2) < 300, 'a margin of 2 is about an hour of income at level 10');
   assert.ok(total(TIERS) > 1500, 'the full margin is a long goal');
-  assert.equal(tierCost(2, B).sigs, undefined);
-  assert.equal(tierCost(3, B).sigs, 3);
-  assert.equal(tierCost(6, B).sigs, 12);
+  for (let t = 1; t <= TIERS; t++) assert.equal(tierCost(t, B).sigs, undefined, 'no signatures: they are gone');
+  const plain = (t) => Math.ceil(t * (1 + B / 10));
+  assert.equal(tierCost(2, B).worm, plain(2), 'the first two: the old code');
+  assert.equal(tierCost(3, B).worm, plain(3) + codeUnit(B), '+3: a unit more of each code');
+  assert.equal(tierCost(6, B).kernel, plain(6) + 4 * codeUnit(B), '+6: four units more');
+  assert.equal(tierCost(6, B).cipher, Math.round((2 + B / 3) * 6) + 4 * codeUnit(B));
   assert.ok(tierCost(1, 30).credits > tierCost(1, 10).credits, 'a tier on a bigger base costs more');
   const s = fresh();
   fwOf(s).plus = TIERS;
@@ -178,7 +182,6 @@ test('every outpost has its own firewall based on its server\'s level; natives i
   const ships = s.fleet.ships;
   command(s, `firewall upgrade ${a.id}`);
   s.server.credits = 9999; s.materials = { cipher: 999, worm: 999, kernel: 999 };
-  s.sigs = 99;
   for (let i = 0; i < 4; i++) command(s, `firewall upgrade ${a.id}`);
   assert.equal(fwAt(s, a).plus, 4);
   assert.equal(lvAt(s, a), 7, 'its base and four tiers');
@@ -219,21 +222,25 @@ test('fragmentation comes from events: Integrity lost wears nothing, an upgrade 
   hooks.now = null;
 });
 
-test('harden.sh can be written from 6 signatures when you hold no script', async () => {
+test('harden.sh can be written from code when you hold no script: two units of each code at the base', async () => {
+  const { hardenCost } = await import('./dist/firewall.mjs');
+  const { codeUnit } = await import('./dist/data.mjs');
   const s = fresh(); at(0);
   fwOf(s).pin = 4;
-  s.sigs = 5;
+  const c = hardenCost(s), n = 2 * codeUnit(4);
+  assert.deepEqual(c, { cipher: n, worm: n, kernel: n });
+  s.materials = { cipher: n, worm: n, kernel: n - 1, exploit: 0 };
   command(s, 'firewall harden', 0);
-  assert.equal(effLevel(s, 0), 4, 'not enough signatures');
-  assert.match(s.logs.at(-1).message, /6 signatures/);
-  s.sigs = 7;
+  assert.equal(effLevel(s, 0), 4, 'not enough code');
+  assert.match(s.logs.at(-1).message, new RegExp(`${n} Cipher, ${n} Worm, ${n} Kernel code`));
+  s.materials.kernel = n + 1;
   command(s, 'firewall harden', 0);
-  assert.equal(s.sigs, 1);
+  assert.deepEqual([s.materials.cipher, s.materials.worm, s.materials.kernel], [0, 0, 1]);
   assert.equal(effLevel(s, 0), 7);
   items(s).harden = 1;
   command(s, 'firewall harden', 0);
   assert.equal(items(s).harden, 0, 'a script you hold goes first');
-  assert.equal(s.sigs, 1);
+  assert.equal(s.materials.kernel, 1);
   hooks.now = null;
 });
 
@@ -275,13 +282,14 @@ test('tier perks: +1, +3 and +5 a filter slot and +5% max Integrity each, +2 def
   assert.equal(fwOf(s).plus, 2);
   assert.ok(s.logs.at(-1).message.includes('30% faster defrag'));
   assert.equal(defragMs(s), Math.round(FIREWALL.defragMs * 0.7), '+2: defrag 30% faster');
-  s.sigs = 2;
+  const c3 = upgradeCost(s);
+  s.materials = { cipher: c3.cipher, worm: c3.worm, kernel: c3.kernel - 1, exploit: 0 };
   command(s, 'firewall upgrade');
-  assert.equal(fwOf(s).plus, 2, '+3 takes signatures, which only invasions pay');
-  s.sigs = 3;
+  assert.equal(fwOf(s).plus, 2, '+3 takes more code, which invasions pay');
+  s.materials.kernel += 1;
   command(s, 'firewall upgrade');
   assert.equal(fwOf(s).plus, 3);
-  assert.equal(s.sigs, 0);
+  assert.deepEqual([s.materials.cipher, s.materials.worm, s.materials.kernel], [0, 0, 0]);
   assert.equal(slotsOf(s), 4, '+3: one more');
   fwOf(s).plus = 6;
   assert.equal(slotsOf(s), 5);
@@ -295,9 +303,9 @@ test('crafting a filter: a Tuned one at your level, built around the stat you pi
   const s = fresh();
   command(s, 'developer level 10');
   const c = filterCost(10);
-  s.server.credits = c.credits; s.materials = { cipher: c.code.cipher };
-  assert.equal(c.sigs, 3);
-  s.sigs = 3;
+  s.server.credits = c.credits; s.materials = { ...c.code };
+  assert.equal(c.sigs, undefined, 'no signatures');
+  assert.ok(c.code.worm > 0 && c.code.kernel > 0 && c.code.cipher > c.code.worm, 'Cipher, and a unit of each code');
   command(s, 'filter craft grind');
   assert.equal(filtersOf(s).length, 0, 'not without salvage');
   command(s, 'developer salvage 4');
@@ -309,10 +317,10 @@ test('crafting a filter: a Tuned one at your level, built around the stat you pi
   const f = filtersOf(s)[0];
   assert.equal(f.rarity, 'tuned'); assert.equal(f.level, 10);
   assert.ok(f.stats.grind > 0, 'built around the stat you picked');
-  assert.equal(s.server.credits, 0); assert.equal(s.materials.cipher, 0); assert.equal(s.salvage.length, 0); assert.equal(s.sigs, 0);
+  assert.equal(s.server.credits, 0); assert.deepEqual([s.materials.cipher, s.materials.worm, s.materials.kernel], [0, 0, 0]); assert.equal(s.salvage.length, 0);
   s.server.credits = c.credits; s.materials.cipher = c.code.cipher; command(s, 'developer salvage 4');
   command(s, 'filter craft grind');
-  assert.equal(filtersOf(s).length, 1, 'not without signatures');
+  assert.equal(filtersOf(s).length, 1, 'not without the Worm and Kernel');
 });
 
 test('the threat rail lists what is coming, hottest and soonest first', async () => {

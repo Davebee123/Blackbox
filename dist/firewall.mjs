@@ -8,11 +8,13 @@
 //   fragments  an invasion that gets past it (contested: a block, a breach: two) fragments it (a
 //              16-block grid); each 4 fragmented blocks cost it a level. Buying a tier leaves it
 //              whole; Defrag restores it without one, running weaker for a few minutes meanwhile.
-//   hardening  harden.sh (a hub-shop consumable, or written from signatures): +3 levels for 8 hours.
+//   hardening  harden.sh (a hub-shop consumable, or written from code): +3 levels for 8 hours.
+//   prices     credits and code; from +3 a tier, and a harden.sh you write, take code in units (data.mjs codeUnit)
+//              at the base: what invasions pay in, so the wall is where their code goes.
 // Filters and the +N chip (architecture, the consortium's Grid, a Firewall Node, Root 5) add on top.
 // Its effective level is what it blocks outright: an invader at or under it bounces.
 import { emit, warn, hooks, syncServer } from './combat.mjs';
-import { CONFIG, power } from './data.mjs';
+import { CONFIG, power, codeUnit } from './data.mjs';
 import { items } from './hidden.mjs';
 import { filterStat } from './filters.mjs';
 import { FACTIONS } from './factions.mjs';
@@ -27,7 +29,7 @@ export const FIREWALL = {
   perLevel: 4, // fragmented blocks per level lost
   frag: { blocked: 0, siege: 1, breach: 2 }, // blocks fragmented by a threat it meets (invasion.mjs cracks a block at a time)
   defragMs: 3 * 60000, defragLoss: 2, // a defrag's time, and the levels it runs down meanwhile
-  harden: { plus: 3, ms: 8 * 3600000, sigs: 6 }, // sigs: what writing a harden.sh costs when you hold none
+  harden: { plus: 3, ms: 8 * 3600000, units: 2 }, // units: what writing a harden.sh costs when you hold none, in units of each of Cipher, Worm and Kernel at the base
 };
 export const BASE_GAP = 2; // your home wall's base: your highest attached server's level, less this (never under 1)
 export const TIERS = 6; // +1 to +6 on top of the base
@@ -73,15 +75,18 @@ export const fwLevel = (s, loc = null) => baseOf(s, loc) + tierOf(s, loc);
 
 // What tier t costs (from t − 1), on a base of B: credits and code that grow with the base and the
 // tier, so a margin is a choice (the first two are cheap, the last a goal), never a toll you pay to
-// keep up. Tiers 3 and up also take signatures, which only invasions pay.
+// keep up. Tiers 3 and up take t − 2 units more of each code (codeUnit at the base): invasions' code.
 export const tierCost = (t, B) => {
-  const L = Math.max(1, B);
-  return { credits: Math.round((25 + 6 * L) * t), cipher: Math.round((2 + L / 3) * t), worm: Math.ceil(t * (1 + L / 10)), kernel: Math.ceil(t * (1 + L / 10)), ...(t >= 3 ? { sigs: 3 * (t - 2) } : {}) };
+  const L = Math.max(1, B), more = t >= 3 ? (t - 2) * codeUnit(L) : 0;
+  return { credits: Math.round((25 + 6 * L) * t), cipher: Math.round((2 + L / 3) * t) + more, worm: Math.ceil(t * (1 + L / 10)) + more, kernel: Math.ceil(t * (1 + L / 10)) + more };
 };
+// What writing a harden.sh takes when you hold none: code, a couple of units of each at this firewall's base.
+export const hardenCost = (s, loc = null) => { const n = FIREWALL.harden.units * codeUnit(baseOf(s, loc)); return { cipher: n, worm: n, kernel: n }; };
 // The next tier's price for this firewall (null at +6).
 export const upgradeCost = (s, loc = null) => (tierOf(s, loc) >= TIERS ? null : tierCost(tierOf(s, loc) + 1, baseOf(s, loc)));
 const MATS = ['cipher', 'worm', 'kernel', 'exploit'];
-export const canPay = (s, c) => !!c && s.server.credits >= c.credits && MATS.every((m) => (s.materials?.[m] || 0) >= (c[m] || 0)) && (s.sigs || 0) >= (c.sigs || 0);
+export const canPay = (s, c) => !!c && s.server.credits >= (c.credits || 0) && MATS.every((m) => (s.materials?.[m] || 0) >= (c[m] || 0));
+const codeLine = (c) => ['cipher', 'worm', 'kernel'].filter((m) => c[m]).map((m) => `${c[m]} ${m[0].toUpperCase() + m.slice(1)}`).join(', ');
 // A defrag: credits for every fragmented block, more on a bigger firewall.
 export const defragCost = (s, loc = null) => Math.max(5, Math.round(fwAt(s, loc).frag * (3 + fwLevel(s, loc))));
 
@@ -135,9 +140,8 @@ export function firewallCommand(s, text, at = clock()) {
   if (verb === 'upgrade') {
     const c = upgradeCost(s, loc), t = tierOf(s, loc) + 1;
     if (!c) return warn(s, `${where} is at +${TIERS}, the most a firewall takes over its base.`);
-    if (!canPay(s, c)) return warn(s, `+${t} takes ${c.credits} credits, ${c.cipher} Cipher, ${c.worm} Worm and ${c.kernel} Kernel code${c.sigs ? ` and ${c.sigs} signatures` : ''}.`);
+    if (!canPay(s, c)) return warn(s, `+${t} takes ${c.credits} credits, ${c.cipher} Cipher, ${c.worm} Worm and ${c.kernel} Kernel code.`);
     s.server.credits -= c.credits; for (const m of MATS) if (c[m]) s.materials[m] -= c[m];
-    if (c.sigs) s.sigs -= c.sigs;
     f.plus = t;
     // An upgrade rebuilds it whole: fragmentation (and a defrag running) are gone with it.
     const mended = f.frag > 0 || f.defragUntil > at;
@@ -157,12 +161,12 @@ export function firewallCommand(s, text, at = clock()) {
     return emit(s, 'firewall', `${where}: defragmenting for ${price} credits, ${Math.round(ms / 6000) / 10} minutes, ${FIREWALL.defragLoss} levels down meanwhile.`, loc ? { location: loc.id } : {});
   }
   if (verb === 'harden') {
-    // No script on hand: write one from signatures (the answer to a big invasion you can see coming).
-    const write = !items(s).harden;
-    if (write && (s.sigs || 0) < FIREWALL.harden.sigs) return warn(s, `You have no hardening script. Hub shops sell harden.sh, or you can write one from ${FIREWALL.harden.sigs} signatures (you hold ${s.sigs || 0}).`);
-    if (write) s.sigs -= FIREWALL.harden.sigs; else items(s).harden--;
+    // No script on hand: write one from code (the answer to a big invasion you can see coming).
+    const write = !items(s).harden, hc = hardenCost(s, loc);
+    if (write && !canPay(s, hc)) return warn(s, `You have no hardening script. Hub shops sell harden.sh, or you can write one from ${codeLine(hc)} code.`);
+    if (write) { for (const m of MATS) if (hc[m]) s.materials[m] -= hc[m]; } else items(s).harden--;
     f.hardenUntil = Math.max(at, f.hardenUntil) + FIREWALL.harden.ms * (tierPerk(s, 'harden', loc) ? 2 : 1);
-    return emit(s, 'firewall', `harden.sh${write ? `, written from ${FIREWALL.harden.sigs} signatures` : ''}: ${where} +${FIREWALL.harden.plus} levels for ${Math.round(hardenLeft(s, at, loc) / 3600000)} hours.`, loc ? { location: loc.id } : {});
+    return emit(s, 'firewall', `harden.sh${write ? `, written from ${codeLine(hc)} code` : ''}: ${where} +${FIREWALL.harden.plus} levels for ${Math.round(hardenLeft(s, at, loc) / 3600000)} hours.`, loc ? { location: loc.id } : {});
   }
   return warn(s, 'firewall upgrade|defrag|harden [server]');
 }
