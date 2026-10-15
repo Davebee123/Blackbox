@@ -119,7 +119,7 @@ test('a discovered room keeps its icon, name, badges, live light and ring from a
   // The terminal agrees: map names a discovered room, and a ? for an unknown one.
   const map = FP.roomsCommand(s, 'map').find((e) => e.type === 'rooms-out').message;
   assert.match(map, new RegExp(post.path));
-  assert.match(map, /\n\s*\? \?/, 'an unknown room as ?');
+  assert.match(map, /\n\s*\? [A-Z]+\d+  \?/, 'an unknown room as ?, with its address');
   const unknown = FP.roomList(s).filter((x) => FP.seenOf(s, x.id) === 'shape');
   for (const x of unknown) assert.ok(!map.includes(x.path + ' ') && !map.endsWith(x.path), `${x.path}: never named`);
 });
@@ -129,7 +129,7 @@ test('ls: the rooms next to you as ? with their cost until you have been in them
   const ls = FP.roomsCommand(s, 'ls').find((e) => e.type === 'rooms-out').message;
   const lines = ls.split('\n').slice(1).filter((l) => /^\d+ /.test(l));
   assert.equal(lines.length, FP.exits(s).length);
-  for (const l of lines) assert.match(l, /^\d+  \?  \[\?\]  −\d+ Signal$/);
+  for (const l of lines) assert.match(l, /^\d+  [A-Z]+\d+  \?  \[\?\]  −\d+ Signal$/); // its address: where, never what
   for (const x of FP.exits(s)) assert.ok(!ls.includes(x.path), `${x.path} not named`);
   const first = FP.exits(s)[0];
   FP.go(s, first.id);

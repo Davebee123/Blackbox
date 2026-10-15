@@ -759,6 +759,7 @@ function lossCard(e) {
   const rows = [
     { kind: 'lost', label: e.by ? `Taken out by ${e.by}` : (e.reason || 'Signal lost'), qty: '', text: 'Signal lost' },
     ...(e.lost ? [{ kind: 'lost', label: 'Unbanked files', qty: `−${e.lost}`, text: `${e.lost} files lost` }] : []),
+    ...(e.failed || []).map((t) => ({ kind: 'lost', label: `Contract failed: ${t}`, qty: '', text: `Contract failed: ${t}` })), // an Install job's item went with the pack (mail.mjs)
   ];
   // One clock: you can go back once both the reconnect wait and your Signal allow it, so the later of the two.
   const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);

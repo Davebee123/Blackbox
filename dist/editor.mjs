@@ -166,7 +166,7 @@ function sampleVars(job = {}) {
   return { handle: 'dave', crewName: 'LOWLIGHT', took: 'KESSLER-RELAY-22', count: job.count ?? 4, family: job.type === 'kill' && !job.family ? 'stray' : FAMILIES[fam].toLowerCase(), crew: job.type === 'kill' && !job.family ? 'the crews' : CREWS[fam],
     name: job.name || `${contracts.bountyNames[sampleSeed % contracts.bountyNames.length] || 'rider'}-4821`, room: job.room || '/tmp', amount: job.amount ?? 3, material: CODES[job.material || 'worm'].toLowerCase(),
     server: job.any ? 'any server you have traced' : 'VANTA-MIRROR-41', owner: 'VANTA', file: job.file || contracts.files[sampleSeed % contracts.files.length]?.file, label: job.label || contracts.files[sampleSeed % contracts.files.length]?.label || '',
-    get Label() { return this.label ? this.label[0].toUpperCase() + this.label.slice(1) : ''; } };
+    addr: 'C2', get Label() { return this.label ? this.label[0].toUpperCase() + this.label.slice(1) : ''; } };
 }
 const letterCard = (from, subject, body, extra = '') => `<section class="card mread"><h2>${esc(from)}</h2><h1>${esc(subject)}</h1><div class="mbody">${(body || []).filter((x) => String(x).trim()).map((l) => `<p>${esc(l)}</p>`).join('')}</div>${extra}</section>`;
 function jobLine(b) {

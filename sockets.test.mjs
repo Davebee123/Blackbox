@@ -77,7 +77,7 @@ test('socket rooms: small 1, medium 2, large 3, leaves at the ends of branches, 
   assert.equal(FP.backAt(s, sock), null);
   assert.match(s.logs.map((e) => e.message).join(' '), /Socket( \d)? is open: a socket/);
   const ls = FP.roomsCommand(s, 'ls').find((e) => e.type === 'rooms-out').message;
-  assert.match(ls, /^Socket( \d)?  \[socket\]/);
+  assert.match(ls, /^[A-Z]+\d+  Socket( \d)?  \[socket\]/);
 });
 
 test('codebases: you start with the Harvester; the Build list shows only what you know; a known one banks as 4 components', () => {

@@ -16,6 +16,11 @@
 // rooms on a server, first clears) and map (map a server: every room cleared). A takeover or item contract can point at
 // a server you haven't found: a relay on its neighbour flags it, and you trace it yourself
 // (see hidden.mjs). Contracts pay credits and Indemnity, Halcyon's store scrip.
+//
+// Room contracts (ROOM_JOBS): install (carry Halcyon's item to a room's grid address on a server and install it there;
+// lose your Signal while it's in your pack and it's gone, the job with it), defuse (break N Encryptors before they
+// Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
+// Tracker). No clock: one waits on the board at a time until you take it, outside the five.
 import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
 import { MATERIALS, rollItem, seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
@@ -26,6 +31,8 @@ import CONTRACT_TEXT from './content/contracts.mjs';
 import { fill } from './content.mjs';
 import { learnRelayPlan } from './hidden.mjs';
 import { FACTIONS, changeRep, rippleRep, hostile, captured, rivalServers, hubsOf, hubFound } from './factions.mjs';
+import { addrsOf, sweepRooms } from './address.mjs';
+import { learnCodebase, familyComponents } from './sockets.mjs';
 
 export const MAIL = {
   periodMs: 30 * 60 * 1000, // the retainer pays every 30 minutes, offline too
@@ -44,6 +51,7 @@ export const MAIL = {
   factionShare: 0.5, // of the rest of the board, once the hubs are up: other factions' work
   factionPay: 1.2, // they pay a little better than Halcyon, in credits and their own rep (no Indemnity)
   startStanding: 10,
+  roomEvery: [8 * 60 * 1000, 20 * 60 * 1000], // a room contract arrives somewhere in here after the last one was taken
 };
 
 export { FACTIONS }; // the factions live in factions.mjs now (Halcyon is the first of them)
@@ -141,6 +149,7 @@ function jobVars(s, j = {}) {
     name: j.name, room: j.room ? sprawlRoom(s, j.room) : j.room, amount: j.amount, material: j.material ? lower(MATERIALS[j.material]?.name) : undefined,
     server: loc?.name || (j.any ? 'any server you have traced' : 'a server you haven’t found yet'), owner: loc?.owner,
     file: j.file, label, Label: label ? label[0].toUpperCase() + label.slice(1) : '', strain: j.strain ? STRAINS[j.strain]?.name : undefined,
+    addr: j.addr,
   };
 }
 // Turn a written beat into a letter and its job.
@@ -241,7 +250,8 @@ function arm(s, j) {
     if (!j.spawnSet) { j.level = Math.min(j.maxLevel || Infinity, CONFIG.zone.maxLevel + 2, (j.level ?? hackerLevel(s)) + (j.plus ?? 2)); j.spawnSet = true; }
     z.spawns[room] = { alive: true, family: j.family, level: j.level, seed: (z.seed * 97 + j.id * 977) >>> 0, name: j.name, bounty: true, ...(j.grade ? { grade: j.grade } : {}), ...(j.calm ? { calm: true } : {}) }; // a story bounty can be an elite (grade 2+)
   }
-  if (j.type === 'item' && j.loc) plant(s, j);
+  if ((j.type === 'item' || j.type === 'heist') && j.loc) plant(s, j);
+  if (j.type === 'install' && s.run?.rooms && s.run.loc === j.loc) contractConnect(s, s.locations.find((l) => l.id === j.loc)); // taken on its server: in your pack at once
   syncFlags(s);
 }
 function plant(s, j) {
@@ -250,7 +260,8 @@ function plant(s, j) {
 }
 function disarm(s, j) {
   const loc = s.locations.find((l) => l.id === j.loc);
-  if (loc?.extraFiles && j.type === 'item') loc.extraFiles = loc.extraFiles.filter((f) => f.name !== j.file);
+  if (loc?.extraFiles && (j.type === 'item' || j.type === 'heist')) loc.extraFiles = loc.extraFiles.filter((f) => f.name !== j.file);
+  if (j.type === 'install' && s.run?.pack) s.run.pack = s.run.pack.filter((f) => !(f.kind === 'payload' && f.contract === j.id)); // dropped: its item goes with it
   if (j.type === 'bounty') { const sp = zoneOf(s).spawns[j.room]; if (sp?.name === j.name) delete sp.bounty; }
 }
 
@@ -359,6 +370,157 @@ export function contractMapped(s, loc) {
   }
 }
 
+// ---------- room contracts ----------
+// No clock: one waits on the board at a time (it doesn't count toward the five), from its level, until you take it; a
+// new one comes MAIL.roomEvery after. Halcyon's work. Each kind once at a time (none you already hold).
+//   install  Halcyon's item (content/contracts.mjs installs), for a room's grid address on a traced server (often one you
+//            haven't been in yet: the address is the point). It waits in your stash and goes in your pack when you
+//            connect to that server; install it in that room (`install`, or the room card's button). Jacking out
+//            brings it home; losing your Signal with it in the pack loses it, and the job fails.
+//   defuse   break N Encryptors (ransomware's) before they land an Encrypt, in any fight. A cut Encrypt never landed.
+//   sweep    one visit to a server at or under your level, small or medium: stand in every room but the Core (and any
+//            only the Core leads to) with nothing live in it, and never rest (no rest room, no Defrag Bay). Jack out
+//            and the next visit starts again.
+//   exfil    catch an Exfil on any rogue server: break its Uplink before its upload lands.
+//   heist    a file planted in the vault of a server with a Tracker: bank it from a visit the Tracker never reached
+//            you. If it did, the file is flagged and goes back to the vault for another try.
+export const ROOM_JOBS = { defuse: { from: 4 }, install: { from: 5 }, exfil: { from: 6 }, sweep: { from: 8 }, heist: { from: 8 } };
+const ROOM_FROM = Math.min(...Object.values(ROOM_JOBS).map((j) => j.from));
+const INSTALLS = [{ file: 'canary.ko', label: 'a Halcyon canary' }, { file: 'tap.so', label: 'a logging tap' }, { file: 'patch.sh', label: 'a patch script' }];
+const tracedOf = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && !l.farm && !l.lair && !l.zone && !(l.fresh && l.detached));
+const roomsOfLoc = (s, l) => { try { return l.floorplan || hooks.roomsFor?.(s, l) || null; } catch { return null; } };
+const inRunsLoc = (l) => !!l.rogue && ['nest', 'pit', 'gauntlet'].includes(l.rogue.kind) && !l.occupied && !l.lair && !l.farm;
+function roomJob(s, kind) {
+  const L = hackerLevel(s), pay = (base, per) => Math.round(base + per * L), ind = (n) => n + Math.floor(L / 12), busy = busyLoc(s), T = CONTRACT_TEXT;
+  const free = tracedOf(s).filter((l) => !busy.has(l.id));
+  if (kind === 'install') {
+    const pool = free.map((l) => ({ l, R: roomsOfLoc(s, l) })).filter((x) => x.R?.graph);
+    if (!pool.length) return null;
+    const { l, R } = pick(s, pool), g = R.graph, ok = sweepRooms(g).filter((id) => id !== g.entry && !['stash', 'core'].includes(g.rooms[id].kind) && !g.rooms[id].extra);
+    if (!ok.length) return null;
+    const room = pick(s, ok), it = pick(s, T.installs?.length ? T.installs : INSTALLS);
+    return { type: kind, loc: l.id, room, addr: addrsOf(g)[room], file: it.file, label: it.label, carry: 'stash', reward: { credits: pay(55, 9), indemnity: ind(3), standing: 7, xp: 3, ...(rand(s) < 1 / 3 ? { codebase: true } : {}) } };
+  }
+  if (kind === 'defuse') return { type: kind, count: 3 + (L >= 20 ? 1 : 0), reward: { credits: pay(40, 7), indemnity: ind(2), standing: 6, xp: 2.5 } };
+  if (kind === 'exfil') return (s.locations || []).some(inRunsLoc) ? { type: kind, reward: { credits: pay(45, 7), indemnity: ind(2), standing: 6, xp: 2.5 } } : null;
+  if (kind === 'sweep') {
+    const pool = free.filter((l) => (l.level || 1) <= L).map((l) => ({ l, R: roomsOfLoc(s, l) })).filter((x) => x.R?.graph && ['small', 'medium'].includes(x.R.size));
+    if (!pool.length) return null;
+    const { l, R } = pick(s, pool), k = R.size === 'medium' ? 1.3 : 1;
+    return { type: kind, loc: l.id, reward: { credits: Math.round(pay(70, 11) * k), indemnity: ind(3), standing: 8, xp: Math.round(4 * k * 10) / 10, drop: true } };
+  }
+  if (kind === 'heist') {
+    const pool = free.filter((l) => { const g = roomsOfLoc(s, l)?.graph; return g?.hunter === 'track' && g.vaults?.[0]; });
+    if (!pool.length) return null;
+    const l = pick(s, pool), f = pick(s, T.files?.length ? T.files : [{ file: 'policy.db', label: 'a stolen policy database', line: 'binary: policy records.' }]);
+    return { type: kind, loc: l.id, file: f.file, label: f.label, text: [f.line, 'past the Tracker: bank it from a visit it never reached you.'], reward: { credits: pay(65, 10), indemnity: ind(3), standing: 8, xp: 3.5, ...(rand(s) < 0.5 ? { drop: true } : {}) } };
+  }
+  return null;
+}
+// One room contract on the board: a kind open at your level (want: that kind only), or null when none fits now.
+export function roomOffer(s, at = now(), want = null) {
+  const L = hackerLevel(s), held = new Set(openContracts(s).map((c) => c.type));
+  const kinds = Object.keys(ROOM_JOBS).filter((k) => L >= ROOM_JOBS[k].from && !held.has(k) && (!want || k === want)).sort(() => rand(s) - 0.5);
+  for (const kind of kinds) {
+    const j = roomJob(s, kind);
+    if (!j) continue;
+    const v = pick(s, CONTRACT_TEXT[kind]?.halcyon?.length ? CONTRACT_TEXT[kind].halcyon : [{ subject: kind, body: [''] }]), vars = jobVars(s, j);
+    const o = { id: s.mail.next++, from: v.from ? SENDERS[v.from] : SENDERS.claims, got: 0, at, level: L, expiresAt: at + 10 * 365 * 24 * 3600000, waits: true, faction: 'halcyon',
+      subject: fill(v.subject, vars), body: (v.body || []).map((p) => fill(p, vars)).filter(Boolean), ...j };
+    s.mail.offers.push(o);
+    return o;
+  }
+  return null;
+}
+// A waiting offer whose target is gone (its server lost, its Tracker gone) leaves the board.
+function roomJobOk(s, o) {
+  if (!o.loc) return o.type !== 'exfil' || (s.locations || []).some(inRunsLoc);
+  const l = tracedOf(s).find((x) => x.id === o.loc), g = l && roomsOfLoc(s, l)?.graph;
+  return !!g && (o.type !== 'install' || !!g.rooms[o.room]) && (o.type !== 'heist' || g.hunter === 'track');
+}
+// The item you carry for this room (an Install job's label), or null.
+export function payloadFor(s, loc, room) {
+  const c = openContracts(s).find((x) => x.type === 'install' && !x.got && x.loc === loc.id && x.room === room?.id);
+  return c && s.run?.pack?.some((f) => f.kind === 'payload' && f.contract === c.id) ? c.label : null;
+}
+// Connected to a server: an Install job's item goes from your stash into your pack.
+export function contractConnect(s, loc) {
+  for (const c of openContracts(s)) {
+    if (c.type !== 'install' || c.got || c.loc !== loc.id || !s.run || s.run.pack.some((f) => f.kind === 'payload' && f.contract === c.id)) continue;
+    s.run.pack.push({ path: `#payload-${c.id}`, name: c.file, kind: 'payload', contract: c.id, label: c.label, loc: loc.id });
+    c.carry = 'pack';
+    emit(s, 'rooms-good', `${cap(c.label)} is in your pack. Install it at ${c.addr}.`, { contract: c.id });
+  }
+}
+// Jacked out with it (run.mjs bank): back in your stash for the next run.
+export function payloadHome(s, f) {
+  const c = openContracts(s).find((x) => x.id === f.contract);
+  if (c && !c.got) { c.carry = 'stash'; emit(s, 'info', `${cap(c.label)} goes back in your stash for next time.`, { contract: c.id }); }
+}
+// Disconnected (combat.mjs disconnect, past Deadman's Switch): an item in the pack is lost, and its job fails. It can
+// come round again later.
+// Returns the failed jobs' titles (the Disconnected card lists them).
+export function contractPackLost(s, run) {
+  const failed = [];
+  for (const f of (run?.pack || []).filter((x) => x.kind === 'payload')) {
+    const c = openContracts(s).find((x) => x.id === f.contract);
+    if (!c) continue;
+    s.mail.jobs.splice(s.mail.jobs.indexOf(c), 1);
+    failed.push(title(s, c));
+    emit(s, 'warning', `Contract failed: ${title(s, c)}. ${cap(c.label)} went down with your Signal.`, { contract: c.id, failed: true });
+  }
+  return failed;
+}
+// `install` (or `plant`) in a room on a server you carry an item for: undefined if you carry none for this server or
+// you named a program (install <program> builds); true when it's said its piece.
+export function contractInstall(s, loc, room, arg = null) {
+  const mine = openContracts(s).filter((c) => c.type === 'install' && !c.got && c.loc === loc.id && s.run?.pack?.some((f) => f.kind === 'payload' && f.contract === c.id));
+  const named = (c) => !arg || [c.file, c.file.split('.')[0], c.label, c.label.replace(/^an? /, '')].some((x) => x.toLowerCase() === String(arg).toLowerCase());
+  const want = mine.filter(named);
+  if (!want.length) return undefined;
+  const c = want.find((x) => x.room === room.id);
+  if (!c) { warn(s, `${cap(want[0].label)} goes in ${want[0].addr}, not here (${addrsOf(s.rooms.graph)[room.id]}).`); return true; }
+  s.run.pack = s.run.pack.filter((f) => !(f.kind === 'payload' && f.contract === c.id));
+  c.got = 1; c.carry = 'done';
+  emit(s, 'rooms-good', `${cap(c.label)} installed at ${c.addr}.`, { contract: c.id });
+  emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+  return true;
+}
+// An Encryptor broken before it encrypted you (combat.mjs).
+export function contractDefuse(s) {
+  if (!s.mail?.jobs) return;
+  for (const c of openContracts(s)) {
+    if (c.type !== 'defuse' || c.got >= c.count) continue;
+    c.got++;
+    if (c.got === c.count) emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id });
+  }
+}
+// An Exfil's archive recovered (netrooms.mjs).
+export function contractExfil(s) {
+  for (const c of openContracts(s)) if (c.type === 'exfil' && !c.got) { c.got = 1; emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id }); }
+}
+const rested = (R) => !!R?.visit?.rested || Object.keys(R?.visit?.bays || {}).length > 0;
+// You stood in a room clear (floorplan.mjs): a sweep of this server is done when this visit has stood in every room
+// but the Core, and never rested.
+export function contractStood(s, loc, R) {
+  for (const c of openContracts(s)) {
+    if (c.type !== 'sweep' || c.got || c.loc !== loc.id || rested(R)) continue;
+    if (sweepRooms(R.graph).every((id) => R.visit?.stood?.[id])) { c.got = 1; emit(s, 'contract-ready', `Contract ready: ${title(s, c)}. Deliver it from Mail.`, { contract: c.id }); }
+  }
+}
+// The rooms a job marks on its server's map (an Install's room, a heist's vault), with the job's title.
+export function roomMarks(s, loc) {
+  const out = {};
+  for (const c of openContracts(s).filter((x) => x.loc === loc.id)) {
+    if (c.type === 'install' && !c.got) out[c.room] = title(s, c);
+    if (c.type === 'heist' && !ready(s, c)) { const v = loc.floorplan?.graph.vaults?.[0]; if (v) out[v] = title(s, c); }
+  }
+  return out;
+}
+// The jobs on a server and how far along each is (the room page's strip).
+export const jobsOn = (s, loc) => openContracts(s).filter((c) => c.loc === loc.id).map((c) => ({ id: c.id, title: title(s, c), text: progress(s, c).text, ready: ready(s, c) }));
+const cap = (x) => (x ? x[0].toUpperCase() + x.slice(1) : '');
+
 // ---------- progress ----------
 // A kill anywhere: { family, zone, bounty (spawn name) }.
 // The open contracts a kill would count for (the same test as contractKill): for the marker on
@@ -366,7 +528,7 @@ export function contractMapped(s, loc) {
 // Strain contracts: every fifth one in a row pays double and rolls for the strain's trophy; dropping one resets it.
 export const SLAYER = { every: 5 };
 // What a contract's XP counts as in the XP mix (combat.mjs gainXp): the activity behind it.
-const CONTRACT_KIND = { side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin' };
+const CONTRACT_KIND = { side: null, strain: 'fight', kill: 'fight', bounty: 'fight', materials: 'fight', takeover: 'breakin', item: 'breakin', rooms: 'fight', map: 'breakin', install: 'breakin', defuse: 'fight', sweep: 'breakin', exfil: 'fight', heist: 'breakin' };
 // A kill contract counts kills no more than 4 levels under the level it was posted at.
 export const KILL_RANGE = 4;
 const inRange = (c, level) => level == null || c.level == null || level >= c.level - KILL_RANGE;
@@ -409,7 +571,13 @@ export function contractLocated(s, n, loc) {
 }
 // A contract file banked on jack-out.
 export function bankCargo(s, f) {
-  const c = openContracts(s).find((x) => x.type === 'item' && x.file === f.name && x.loc === f.loc);
+  const c = openContracts(s).find((x) => (x.type === 'item' || x.type === 'heist') && x.file === f.name && x.loc === f.loc);
+  // Past the Tracker: a visit it reached you, the file is flagged. It goes back to the vault for another try.
+  const loc = c?.type === 'heist' && s.locations.find((l) => l.id === f.loc);
+  if (loc && loc.floorplan?.visit?.caught) {
+    if (f.path && loc.state?.taken) delete loc.state.taken[f.path];
+    return emit(s, 'warning', `The Tracker reached you: ${f.name} is flagged. It goes back to the vault on ${loc.name}.`, { contract: c.id });
+  }
   cargo(s).push({ contract: c?.id ?? null, name: f.name, label: f.label });
   if (c) emit(s, 'contract-ready', `Contract ready: ${f.label} banked. Deliver it from Mail.`, { contract: c.id });
 }
@@ -436,7 +604,9 @@ export function ready(s, c) {
   if (c.type === 'bounty') return !!c.got;
   if (c.type === 'takeover') return c.any ? !!c.took : !!s.locations.find((l) => l.id === c.loc)?.takenOver;
   if (c.type === 'materials') return (materialsOf(s)[c.material] || 0) >= c.amount;
-  if (c.type === 'item') return cargo(s).some((x) => x.contract === c.id);
+  if (c.type === 'item' || c.type === 'heist') return cargo(s).some((x) => x.contract === c.id);
+  if (c.type === 'defuse') return c.got >= c.count;
+  if (['install', 'sweep', 'exfil'].includes(c.type)) return !!c.got;
   if (c.type === 'side') return true; // picking a side is the whole job
   return false;
 }
@@ -451,6 +621,11 @@ export function title(s, c) {
   if (c.type === 'materials') return `Deliver ${c.amount} ${MATERIALS[c.material].name}`;
   if (c.type === 'item') return `Recover ${c.file}`;
   if (c.type === 'side') return `Side with ${FACTIONS[c.faction].short}`;
+  if (c.type === 'install') return `Install ${c.label} at ${c.addr} on ${locName(s, c.loc) || 'a server'}`;
+  if (c.type === 'defuse') return `Break ${c.count} Encryptors before they Encrypt`;
+  if (c.type === 'sweep') return `Map ${locName(s, c.loc) || 'a server'} without resting`;
+  if (c.type === 'exfil') return 'Catch an Exfil';
+  if (c.type === 'heist') return `Recover ${c.file} past the Tracker`;
   return 'Contract';
 }
 // Where an unknown target stands: not heard yet, flagged (with its trace), or found.
@@ -486,6 +661,22 @@ export function progress(s, c) {
     return { text: inPack ? 'In your pack. Jack out to bank it.' : `In the vault on ${locName(s, c.loc)}`, part: inPack ? 0.85 : 0.5 };
   }
   if (c.type === 'side') return { text: `${FACTIONS[c.faction].short} +${c.reward.rep}, ${FACTIONS[c.against].short} turns against you`, part: 1 };
+  if (c.type === 'install') return c.got ? { text: 'Installed', part: 1 } : c.carry === 'pack' && s.run?.loc === c.loc ? { text: `In your pack. Install it at ${c.addr}.`, part: 0.6 } : { text: `In your stash. It goes in your pack on ${locName(s, c.loc)}.`, part: 0.25 };
+  if (c.type === 'defuse') return { text: `${c.got}/${c.count} broken before they Encrypt`, part: c.got / c.count };
+  if (c.type === 'exfil') return c.got ? { text: 'Archive recovered', part: 1 } : { text: 'Any rogue server: break its Uplink before the upload lands', part: 0 };
+  if (c.type === 'sweep') {
+    if (c.got) return { text: 'Mapped without a rest', part: 1 };
+    const l = s.locations.find((x) => x.id === c.loc), R = l?.floorplan, on = !!R?.at && s.run?.loc === c.loc;
+    if (!on || !R) return { text: 'One visit: every room but the Core, nothing live, no rest', part: 0 };
+    if (rested(R)) return { text: 'You rested this visit. Next visit starts again.', part: 0 };
+    const all = sweepRooms(R.graph), n = all.filter((id) => R.visit?.stood?.[id]).length;
+    return { text: `${n}/${all.length} rooms this visit, no rest`, part: n / all.length };
+  }
+  if (c.type === 'heist') {
+    if (ready(s, c)) return { text: 'Banked', part: 1 };
+    const l = s.locations.find((x) => x.id === c.loc), inPack = s.run?.loc === c.loc && s.run.pack.some((f) => f.kind === 'contract' && f.name === c.file), caught = s.run?.loc === c.loc && !!l?.floorplan?.visit?.caught;
+    return { text: inPack ? (caught ? 'The Tracker reached you: it goes back on jack out' : 'In your pack. Jack out unseen.') : caught ? 'The Tracker reached you this visit' : `In the vault on ${locName(s, c.loc)}, past its Tracker`, part: inPack && !caught ? 0.85 : 0.4 };
+  }
   return { text: '', part: 0 };
 }
 export const rewardLine = (s, c) => [
@@ -494,7 +685,7 @@ export const rewardLine = (s, c) => [
   c.reward.xp ? `${xpFor(s, hackerLevel(s), c.reward.xp)} XP` : '',
   c.reward.standing > 0 ? `Halcyon +${c.reward.standing}` : c.reward.standing < 0 ? `Halcyon ${c.reward.standing}` : '',
   c.reward.rep && c.faction ? `${FACTIONS[c.faction].short} +${c.reward.rep}` : '',
-  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop || c.reward.daemon ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '',
+  c.reward.relay ? 'a relay' : '', c.reward.plan ? 'the Relay plan' : '', c.reward.drop || c.reward.daemon ? 'a protocol, Tuned or better' : '', c.reward.blueprint ? 'a blueprint' : '', c.reward.codebase ? 'a codebase' : '',
 ].filter(Boolean).join(' · ');
 
 // ---------- commands ----------
@@ -527,7 +718,7 @@ export function mailCommand(s, text, at = now()) {
   if (word !== 'deliver') return warn(s, 'Try mail accept, mail deliver or mail drop.');
   if (!ready(s, c)) return warn(s, `Not done yet: ${progress(s, c).text}.`);
   if (c.type === 'materials') materialsOf(s)[c.material] -= c.amount;
-  if (c.type === 'item') { cargo(s).splice(cargo(s).findIndex((x) => x.contract === c.id), 1); disarm(s, c); }
+  if (c.type === 'item' || c.type === 'heist') { cargo(s).splice(cargo(s).findIndex((x) => x.contract === c.id), 1); disarm(s, c); }
   c.done = true;
   c.doneAt = at;
   // Delivered ones stay for the Completed list: every LOWLIGHT job, and the last 15 others.
@@ -552,6 +743,7 @@ export function mailCommand(s, text, at = now()) {
     c.reward.relay && { label: 'Relay', qty: `×${c.reward.relay}`, kind: 'item', text: 'a relay' },
     c.reward.plan && { label: 'Relay plan', qty: '', kind: 'blueprint', text: 'the Relay plan' },
     c.reward.blueprint && { label: 'Blueprint', qty: '', kind: 'blueprint', text: 'a blueprint' },
+    c.reward.codebase && { label: 'Codebase', qty: '', kind: 'blueprint', text: 'a codebase' },
     c.reward.item && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
     (c.reward.drop || c.reward.daemon) && { label: 'Protocol', qty: '', kind: 'item', text: 'a protocol' },
   ].filter(Boolean);
@@ -564,6 +756,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.reward.relay) { items(s).relay += c.reward.relay; emit(s, 'drop', 'Halcyon sent a relay. Install it on a server you’ve taken over (its map card).'); }
   if (c.reward.plan) learnRelayPlan(s, 'Halcyon bonus: ');
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
+  if (c.reward.codebase) learnCodebase(s, null, 'Halcyon bonus: ', { pool: familyComponents(s.locations.find((l) => l.id === c.loc)?.family || 'ransomware') }); // one you don't know (4 components if you know them all)
   // A protocol, Tuned or better (a contract that paid a daemon once pays this: daemons only come from invasions).
   if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < 0.25 ? 'custom' : 'tuned' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }
   if (c.reward.item) giveUnique(s, c.reward.item, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `);
@@ -596,15 +789,21 @@ export function tickMail(s, at = now()) {
   postSides(s, at); // once; a save whose board opened before sides existed gets them here
   // Offers nobody took run out.
   const before = m.offers.length;
-  m.offers = m.offers.filter((o) => o.type === 'side' || o.expiresAt > at); // a side to pick waits
+  m.offers = m.offers.filter((o) => o.type === 'side' || (o.waits ? roomJobOk(s, o) : o.expiresAt > at)); // a side to pick waits, and a room contract (while its target stands)
+  const onBoard = () => m.offers.filter((o) => o.type !== 'side' && !o.waits).length;
   let added = 0;
   if (m.nextOfferAt == null) m.nextOfferAt = at;
-  while (m.offers.filter((o) => o.type !== 'side').length < MAIL.offers && at >= m.nextOfferAt && added < MAIL.offers) {
+  while (onBoard() < MAIL.offers && at >= m.nextOfferAt && added < MAIL.offers) {
     offer(s, at);
     added++;
     m.nextOfferAt = rand(s) < MAIL.burst ? m.nextOfferAt : at + gap(s);
   }
-  if (m.offers.filter((o) => o.type !== 'side').length >= MAIL.offers && at >= m.nextOfferAt) m.nextOfferAt = at + gap(s);
+  if (onBoard() >= MAIL.offers && at >= m.nextOfferAt) m.nextOfferAt = at + gap(s);
+  // A room contract: one waits at a time, a while after the last was taken (or tried again later when none fits yet).
+  if (hackerLevel(s) >= ROOM_FROM && !m.offers.some((o) => o.waits)) {
+    m.nextRoomAt ??= at + between(s, MAIL.roomEvery);
+    if (at >= m.nextRoomAt) { m.nextRoomAt = null; if (roomOffer(s, at)) added++; else m.nextRoomAt = at + between(s, MAIL.roomEvery); }
+  }
   if (added) emit(s, 'board', added === 1 ? `New offer on the board: ${m.offers.at(-1).subject}.` : `${added} new offers on the board.`, { offer: m.offers.at(-1).id });
   else if (m.offers.length !== before) emit(s, 'board-expired', 'An offer on the board expired.', { quiet: true });
 }

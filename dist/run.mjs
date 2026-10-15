@@ -12,7 +12,7 @@ import { findLocation, closest, command, selectEncounter, encounterVirus, active
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
-import { contractTakeover, bankCargo, wantedBy, title as contractTitle } from './mail.mjs';
+import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTitle } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { deal } from './events.mjs';
@@ -666,7 +666,9 @@ export function jackOut(s) {
 // Bank the run's pack and go home (a jack out, on rooms or the old file system). why: a line before the message.
 export function bank(s, loc, why = '') {
   const r0 = s.run;
-  const pack = s.run.pack;
+  // A contract's item you carried (mail.mjs, an Install job): back in your stash for the next run, not banked loot.
+  for (const f of s.run.pack.filter((x) => x.kind === 'payload')) payloadHome(s, f);
+  const pack = s.run.pack.filter((x) => x.kind !== 'payload');
   let credits = 0;
   for (const f of pack) {
     (loc.state ||= { cleared: {}, unlocked: {}, taken: {} }).taken[f.path] = true;
@@ -709,7 +711,7 @@ export function bank(s, loc, why = '') {
   for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
 
-  for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: f.loc || loc.id });
+  for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: f.loc || loc.id, path: f.path });
   // A trace record moves the trace on one of this server's hidden neighbours (a flagged one
   // first, else the one it names): part of the way, not the server itself.
   for (const f of pack.filter((x) => x.kind === 'deeper')) {
@@ -751,7 +753,7 @@ export function play(s, input) {
     if (active(s)) return word === 'jack' && rest === 'out' ? command(s, 'jack out') : command(s, input);
     roomsSettle(s);
     if (word === 'pack') { const first = s.serial; out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${packLine(f)}`).concat('unbanked until you jack out.') : 'pack is empty.', 'rooms-out'); return since(s, first); }
-    if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk (cd <room>, cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
+    if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk: a name or an address (cd C2; cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'install       a contract\'s item, in its room (plant)', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
     if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) { const first = s.serial; crewMove(s, word, rest); return since(s, first); }
     if (word === 'scan') { const first = s.serial; scanRoom(s, rest); return since(s, first); }
     const ev = roomsCommand(s, text.replace(/^look$/, 'ls').replace(/^attack\b.*/, 'engage').replace(/^tree$/, 'map'));

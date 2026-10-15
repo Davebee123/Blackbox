@@ -9,7 +9,7 @@ import BASTION_FX from './classes/bastion.mjs';
 import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
-import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts, systemLetter } from './mail.mjs';
+import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
@@ -1535,6 +1535,7 @@ export function disconnect(s, reason) {
     return hooks.jackOut(s);
   }
   const loc = run.loc === CONFIG.zone.id ? s.zone : findLocation(s, run.loc);
+  const failed = s.mail?.jobs ? contractPackLost(s, run) : []; // a contract's item in the pack goes with it, and its contract fails (mail.mjs)
   const lost = run.pack.length;
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
   s.signal = Math.max(0, run.integrity);
@@ -1543,7 +1544,7 @@ export function disconnect(s, reason) {
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc ? CONFIG.relockMs : 0 });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc ? CONFIG.relockMs : 0, failed });
 }
 
 function newMetrics(s) {
@@ -2537,6 +2538,7 @@ function breakPart(s, p) {
     e.autoStopped = true;
   }
   emit(s, 'broken', `${p.name.toUpperCase()} BROKEN${p.attack ? `. ${p.attack.name} stops` : ''}.`, { target: p.id });
+  if (p.attack?.effect === 'encrypt' && !p.encrypted) contractDefuse(s); // broken before it ever encrypted you (a contract counts it: mail.mjs)
   if (e.virus.raid) raidBroke(s); // a crew boss's adds go down with it
   if (e.virus.tells) tellBroke(s, p); // its tells stop with it (tells.mjs)
   // Mutex: its lock goes with it.
@@ -3012,6 +3014,7 @@ function landAttack(s, p) {
     // Stacks: every Encrypt adds to the damage your server takes each cycle, until the Encryptor breaks.
     const add = Math.max(1, Math.round(power * (fxHas(s, 'encrypt-half') ? 0.5 : 1)));
     e.encrypt = (e.encrypt || 0) + add;
+    p.encrypted = true;
     emit(s, 'encrypt', `${atk.name} lands, and your ${e.mode === 'run' ? 'Signal' : 'server'} is encrypted. You take ${e.encrypt} damage every cycle until you break the ${p.name}.`, { source: p.id, amount: add, total: e.encrypt });
   }
   if (atk.effect === 'scramble' && e.buffs?.honeypot >= e.cycle) {

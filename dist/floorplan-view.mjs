@@ -23,6 +23,9 @@
 //                 you and in a discovered room (floorplan.mjs inSight), never deeper in the fog.
 //   top right     a red live light (inset), and the Signal a first step costs (−5) on a room you can walk into.
 //   bottom right  a respawn ring that fills back up as the room comes back, its m:ss under it.
+//   bottom left   the room's grid address (C2), a small dim plate on the edge, on every chip, an unknown one too (it says
+//                 where, never what); amber with a contract's mark when a job points at the room (an Install's room, a
+//                 heist's vault).
 // One red dashed arrow curves from the hunter's room into the room it steps into next (an amber one from the Exfil's
 // room to where it runs next). A rogue server's quiet rooms: Empty (a hollow mark) and Stash (a small cache). Just out of sight within two
 // rooms, the room at the edge of your fog pulses red. The map zooms and pans (app.js): the wheel, a drag, a
@@ -42,7 +45,7 @@ import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
-import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, STOCKED, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf } from './floorplan.mjs';
+import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, STOCKED, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, addrOf } from './floorplan.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
 import { MATERIALS } from './gear.mjs';
@@ -109,6 +112,8 @@ const MARK_ICONS = {
   star: '<path class="f" d="M10 2.8l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L2.8 8l5-.6z"/>',
   // The Exfil's stolen archive: a file, its corner folded, an upload arrow through it.
   archive: '<path d="M4.5 2.5h7l4 4v11h-11Z"/><path d="M11.5 2.5v4h4"/><path d="M10 15.5v-6M7.4 12 10 9.4l2.6 2.6"/>',
+  // A contract's mark (the mail's): a page with a tick, on a room a job points at.
+  contract: '<path d="M4.5 2.5h7.5l3.5 3.5v11.5h-11Z"/><path d="M12 2.5V6h3.5"/><path d="M7 11.8l2 2 4-4.3"/>',
 };
 const symbol = (k, body, vb, sw) => `<symbol id="fp-i-${k}" viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${body.replace(/class="f"/g, 'fill="currentColor" stroke="none"')}</symbol>`;
 // The sprite also holds the map's paints: the chips' gradients, the glow, the drop shadow, the hunter's arrowhead.
@@ -154,13 +159,14 @@ const huntName = (h) => HUNTERS[h.kind].name;
 // A tile's tooltip: the room's name, what it holds (when the tile can't show it), and one rule.
 function tileTip(s, room) {
   const h = hunterOf(s), hunted = hunterSeen(s) && h.at === room.id, x = exfilShown(s)?.at === room.id ? exfilShown(s) : null;
+  const job = (net(s, 'marks') || {})[room.id]; // the address is on the chip itself: the tooltip says the job, once
   if (!known(s, room.id)) {
     const cost = stepCost(s, room);
-    return ['Unknown room', cost ? `A first step in costs ${cost} Signal.` : '', hunted ? `The ${huntName(h)} is here.` : '', x ? `${x.name}, an Exfil, is here.` : ''].filter(Boolean).join('\n');
+    return ['Unknown room', job ? `Contract: ${job}.` : '', cost ? `A first step in costs ${cost} Signal.` : '', hunted ? `The ${huntName(h)} is here.` : '', x ? `${x.name}, an Exfil, is here.` : ''].filter(Boolean).join('\n');
   }
   if (x) return `${room.path}: ${x.name}, an Exfil uploading a stolen archive.\n${exfilNext(s) ? 'It runs from you. Corner it.' : 'Cornered: walk in and break its Uplink.'}`;
   const { who, rule } = aboutOf(s, room);
-  const body = [who, rule].filter(Boolean).join('\n');
+  const body = [who, rule, job ? `Contract: ${job}.` : ''].filter(Boolean).join('\n');
   return body ? `${room.path}: ${body}` : room.path;
 }
 // What a room can cost you to walk into: its badge's −N, on a room you can walk into, else 0.
@@ -214,8 +220,8 @@ function stateOf(s, room) {
 // the grid cell (w, h), the chip and its cut corners (nw, nh, ch), the icon's scale and top (ic, icY), the name plate
 // and its type (plW, plH, plY, fs, ls), the respawn ring's radius (rr) and the skull's pixel (px).
 const GEO = {
-  wide: { w: 168, h: 150, nw: 112, nh: 92, ch: 10, ic: 1.7, icY: 13, plW: 88, plH: 17, plY: 62, fs: 10, ls: 1.2, rr: 13, px: 2.8 },
-  tall: { w: 112, h: 128, nw: 96, nh: 84, ch: 9, ic: 1.45, icY: 13, plW: 84, plH: 16, plY: 55, fs: 10, ls: 0.6, rr: 10, px: 2.4 },
+  wide: { w: 168, h: 150, nw: 112, nh: 92, ch: 10, ic: 1.7, icY: 13, plW: 88, plH: 17, plY: 62, fs: 10, ls: 1.2, rr: 13, px: 2.8, afs: 13 },
+  tall: { w: 112, h: 128, nw: 96, nh: 84, ch: 9, ic: 1.45, icY: 13, plW: 84, plH: 16, plY: 55, fs: 10, ls: 0.6, rr: 10, px: 2.4, afs: 16 },
 };
 const PAD = 24; // around the grid: room for the badges that sit on a chip's edge
 // Grid to pixels.
@@ -269,7 +275,7 @@ function mapSvg(s, tall, pop = null) {
     const d = distOf(g, here, h.at);
     if (d != null && d <= 2) near = neighbours(g, h.at).filter((id) => shown(id) && id !== here).sort((a, b) => (distOf(g, here, a) ?? 9) - (distOf(g, here, b) ?? 9))[0] || null;
   }
-  const ctx = { reach, next, pop, near, G };
+  const ctx = { reach, next, pop, near, G, marks: net(s, 'marks') || {} };
   const rooms = roomList(s).filter((r) => shown(r.id)).map((room) => roomSvg(s, room, at(room), ctx)).join('');
   const bits = here ? bitsSvg(at(g.rooms[here]), G, here) : '';
   const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
@@ -321,7 +327,7 @@ function plateType(name, G) {
   return { fs: n1(room / n / cw), ls: 0 };
 }
 const tagW = (t) => 18 + t.length * 6;
-function roomSvg(s, room, p, { reach, next, pop, near, G }) {
+function roomSvg(s, room, p, { reach, next, pop, near, G, marks }) {
   const R = s.rooms, g = R.graph, kind = known(s, room.id), h = hunterOf(s);
   const sock = kind && isSocket(s, room) && socketOpen(s, room), prog = sock ? programIn(s, room.id) : null; // an open socket (a held server's Core too) and what runs in it
   const here = R.at === room.id, can = reach.has(room.id), fight = kind && fightKind(room) && !sock, up = fight && isUp(s, room), down = fight && !up;
@@ -375,6 +381,14 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
   // Bottom left: a program's badge: the slot it sits in (a socket room's chip shows the program itself), or, on a held
   // server's Core, the program it runs.
   if (prog) { const k = 18, bx = n1(x0 - 4), by = n1(y0 + G.nh - k + 4); out += `<g class="fp-prog"><rect x="${bx}" y="${by}" width="${k}" height="${k}" rx="2"/><use href="#fp-i-${room.kind === 'socket' ? 'socket' : prog}" x="${n1(bx + 2)}" y="${n1(by + 2)}" width="${k - 4}" height="${k - 4}"/></g>`; }
+  // Bottom left: its address (C2), a small plate on the chip's bottom edge (clear of a program's badge), dim; amber with
+  // the contract's mark when a job points here.
+  const addr = addrOf(s, room.id), job = marks[room.id];
+  if (addr) {
+    const fs = G.afs, ph = fs + 4, mark = job ? fs + 1 : 0, pw = n1(addr.length * fs * 0.62 + 8 + (mark ? mark + 2 : 0)), px = n1(x0 + (prog ? 20 : 10)), py = n1(y0 + G.nh - ph / 2);
+    out += `<g class="fp-addr${job ? ' job' : ''}"><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="2"/><text x="${n1(px + 4)}" y="${n1(py + ph / 2 + fs * 0.36)}" font-size="${fs}">${esc(addr)}</text>`
+      + (mark ? `<use href="#fp-i-contract" x="${n1(px + pw - mark - 3)}" y="${n1(py + (ph - mark) / 2)}" width="${mark}" height="${mark}"/>` : '') + '</g>';
+  }
   // Bottom right: the respawn ring (a fight down, a cache empty) fills back up, its countdown under it.
   const from = down && downAt(s, room) != null ? downAt(s, room) : empty ? R.taken[room.id] : null;
   const back = from == null ? null : down ? backAt(s, room) : refillAt(s, room);
@@ -398,6 +412,9 @@ function hudMarkup(s) {
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
   const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
+  // Contracts on this server, and how far along each is.
+  const jobs = net(s, 'jobs') || [];
+  const job = jobs.length ? `<span class="fp-stat fp-jobs${jobs.some((j) => j.ready) ? ' ready' : ''}" title="${esc(jobs.map((j) => `${j.title}: ${j.text}`).join('\n'))}">${ic('contract')}<span class="lbl">Contract${jobs.length > 1 ? 's' : ''}</span><b>${jobs.length > 1 ? jobs.length : esc(jobs[0].ready ? 'ready' : jobs[0].text.split('.')[0].slice(0, 28))}</b></span>` : '';
   const rule = ['a', 'b', 'c'].map((k) => `<button type="button" class="fp-rule${R.bossRule === k ? ' on' : ''}" data-rooms="bossrule" data-arg="${k}" aria-pressed="${R.bossRule === k}" title="${esc(`Boss rule ${k}: ${BOSS_RULES[k].name}.\n${BOSS_RULES[k].text}`)}">${k}</button>`).join('');
   // Wait and Jack out (Connect at home), always in reach at the strip's right.
   const c = connectOf(s);
@@ -409,7 +426,7 @@ function hudMarkup(s) {
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${R.kind}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${R.kind} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}, or ${stepNew} into one you've never been in.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
-    ${keys}${hunt}${ml}${pack}
+    ${keys}${hunt}${ml}${pack}${job}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
     <span class="fp-acts">${acts}</span></span>
@@ -431,7 +448,7 @@ function needOf(s) {
   if (!R.at) return `home:${R.visits}`;
   if (active(s)) return null;
   const room = hereOf(s), v = R.visit;
-  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash') && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !v.rested && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0);
+  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash') && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !v.rested && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0) || !!net(s, 'plantHere', room);
   return ask ? `${stampOf(s)}:${R.screen?.kind || room.kind}` : null;
 }
 // The room the pop-up is on: the one you clicked, or the one you're in when it wants a decision you haven't closed.
@@ -457,12 +474,15 @@ const btn = (verb, label, { arg = null, primary = false, hot = false, small = fa
 const note = (html, cls = '') => `<p class="fp-note${cls ? ' ' + cls : ''}">${html}</p>`;
 // What holds the room: its icon, its name, and its line.
 const holder = (name, title, sub, tip = '', cls = 'hot') => `<div class="fp-virus ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${ic(name)}<span><b>${esc(title)}</b><small>${esc(sub)}</small></span></div>`;
-// The card's one state line: here, live, cleared ↻ 4:12, locked, stocked…
-const kicker = (st, here = false) => {
-  const words = [here ? 'you are here' : '', st.word].filter(Boolean).join(' · ');
-  return words || st.at != null ? `<h2 class="fp-kick ${st.cls}">${esc(words)}${st.at != null ? `${words ? ' · ' : ''}↻ ${clock(st.at)}` : ''}</h2>` : '';
+// The card's one state line: the room's address (dim, first, like a number on a door), here, live, cleared ↻ 4:12,
+// locked, stocked…
+const kicker = (st, here = false, at = '') => {
+  const words = [here ? 'you are here' : '', st.word].filter(Boolean).join(' · '), lead = at ? `<span class="fp-at">${esc(at)}</span>${words || st.at != null ? ' · ' : ''}` : '';
+  return words || st.at != null || at ? `<h2 class="fp-kick ${st.cls}">${lead}${esc(words)}${st.at != null ? `${words ? ' · ' : ''}↻ ${clock(st.at)}` : ''}</h2>` : '';
 };
-const cardOf = (st, here, title, body, acts, focus = false) => `<section class="card fp-screen${focus ? ' focus' : ''}">${kicker(st, here)}<h1>${esc(title)}</h1>${body}${acts ? `<div class="row acts">${acts}</div>` : ''}</section>`;
+const cardOf = (st, here, title, body, acts, focus = false, at = '') => `<section class="card fp-screen${focus ? ' focus' : ''}">${kicker(st, here, at)}<h1>${esc(title)}</h1>${body}${acts ? `<div class="row acts">${acts}</div>` : ''}</section>`;
+// A contract that points at this room (an Install's room, a heist's vault): its line, with the mark.
+const jobNote = (s, room) => { const job = (net(s, 'marks') || {})[room.id]; return job ? `<p class="fp-note fp-job">${ic('contract')}<span>${esc(job)}</span></p>` : ''; };
 // The hunter, when it's about this room: in it, or stepping into it next.
 function hunterNote(s, room) {
   const h = hunterOf(s);
@@ -527,7 +547,10 @@ function hereCard(s) {
   else if (room.kind === 'den') body = note(g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.', 'dim');
   else if (room.kind === 'empty') body = note('Nothing here.', 'dim');
   else if (room.kind === 'purse') body = note(cacheFull(s, room) ? 'A few credits.' : 'Taken. It fills again when the server reboots.', 'dim');
-  return cardOf(st, true, room.path, body + hunterNote(s, room), acts, !!sc);
+  // An Install job's item, carried for this room: Install it (nothing holds the room).
+  const item = !sc && net(s, 'plantHere', room);
+  if (item) acts = btn('install', 'Install', { primary: true, note: item, tip: `Install ${item} here. The contract is then ready to deliver.` }) + acts;
+  return cardOf(st, true, room.path, jobNote(s, room) + body + hunterNote(s, room), acts, !!sc, addrOf(s, room.id));
 }
 // A socket you stand in (sockets.mjs): what runs in it, or the Build card. Each codebase you know is a row: its icon and
 // name, its rule in a line, what it costs here (each part lit when you hold it), and Build (the pay picker).
@@ -565,7 +588,7 @@ function farCard(s, room) {
   if (isSocket(s, room) && socketOpen(s, room)) {
     const p = programIn(s, room.id);
     body += p ? holder(p, PROGRAMS[p].name, `Program · ${PROGRAMS[p].weight}${socketOff(s, room) ? ' · offline' : ''}`, '', 'prog') + note(esc(PROGRAMS[p].rule), 'dim') : note(room.kind === 'core' ? 'The core socket. Walk in to build.' : 'An open socket. Walk in to build.');
-    return cardOf(st, false, room.path, body + hunterNote(s, room), '');
+    return cardOf(st, false, room.path, jobNote(s, room) + body + hunterNote(s, room), '', false, addrOf(s, room.id));
   }
   if (fightKind(room) || room.mirror) {
     const k = whoOf(s, room), up = isUp(s, room) && !(room.kind === 'core' && !coreOpen(s)), f = room.mirror ? fightOf(s, room, 'mirror') : null;
@@ -573,7 +596,7 @@ function farCard(s, room) {
       : holder(iconOf(s, room), k.short, k.sub, '', up ? 'hot' : 'down');
   } else if (who) body += note(esc(who));
   if (rule) body += note(esc(rule), /hunter is here|wakes the Tracker/.test(rule) ? 'hot' : 'dim');
-  return cardOf(st, false, room.path, body + hunterNote(s, room), '');
+  return cardOf(st, false, room.path, jobNote(s, room) + body + hunterNote(s, room), '', false, addrOf(s, room.id));
 }
 // The Exfil, when it's in this room and you can see it: its name, running or cornered, and where it runs next.
 function exfilNote(s, room) {
@@ -590,7 +613,7 @@ function unknownCard(s, room) {
   body += exfilNote(s, room);
   if (hunterSeen(s) && h.at === room.id) body += note(esc(`The ${huntName(h)} is here: walk in and you fight it.`), 'hot');
   if (!body) body = note("You haven't been in it.", 'dim');
-  return cardOf({ word: 'unknown', cls: 'dim' }, false, 'Unknown room', body + hunterNote(s, room), '');
+  return cardOf({ word: 'unknown', cls: 'dim' }, false, 'Unknown room', jobNote(s, room) + body + hunterNote(s, room), '', false, addrOf(s, room.id));
 }
 // Home: Signal resting, the reconnect wait, what the last visit did, and Connect.
 function homeCard(s) {

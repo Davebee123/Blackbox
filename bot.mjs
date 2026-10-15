@@ -256,7 +256,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       if (ready(s, c)) say('mail deliver ' + c.id);
       else if (c.story === undefined && t - (taken[c.id] ?? t) > 90 * 60000) say('mail drop ' + c.id);
     }
-    for (const o of [...offers(s)].filter((o) => !o.offBooks && (['kill', 'materials'].includes(o.type) || o.loc || (o.type === 'bounty' && stats.bountyLosses < 2)))) {
+    // (A room contract waits on the board, mail.mjs ROOM_JOBS: the bot leaves those.)
+    for (const o of [...offers(s)].filter((o) => !o.offBooks && !o.waits &&(['kill', 'materials'].includes(o.type) || o.loc || (o.type === 'bounty' && stats.bountyLosses < 2)))) {
       if (heldCount(s) >= MAIL.take) break;
       say('mail accept ' + o.id); taken[o.id] = t;
     }
