@@ -3032,6 +3032,12 @@ details.map-pick { pointer-events: auto; }
 .sp-card { display: flex; flex-direction: column; }
 .sp-card > .sp-head, .sp-card > .sp-xp, .sp-card > .sp-level, .sp-card > .sp-go { flex: none; }
 .sp-card > .sp-rows { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+/* On a phone the virus panel is a strip: the win card lifts out of it to the whole screen, so its rows (loot, XP, a
+   daemon) are never squeezed to nothing. */
+@media (max-width: 640px) {
+  .spoils { position: fixed; inset: 0; z-index: 70; padding: 16px; }
+  .spoils .sp-card { width: 100%; max-height: calc(100dvh - 32px); }
+}
 
 /* A page that failed to draw (app.js pageOrError): the error, selectable, and a way back. */
 .page-error { max-width: 720px; margin: 24px auto; border-color: var(--hot); }
