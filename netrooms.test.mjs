@@ -17,7 +17,7 @@ import { roomsMarkup } from './dist/floorplan-view.mjs';
 import { mapMarkup } from './dist/view.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
-CONFIG.mule.chance = 0; // no Mule in these rooms (mule.test.mjs has it)
+CONFIG.exfil.chance = 0; // no Exfil in these rooms (exfil.test.mjs has it)
 let clock = 1_700_000_000_000;
 hooks.now = () => clock;
 const win = (s) => { for (let i = 0; i < 30 && active(s); i++) { for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, attack: null }); const p = s.encounter.virus.parts.find((x) => x.integrity > 0); p.integrity = 1; command(s, 'spike ' + p.id); resolveCycle(s); } FP.settle(s); };
@@ -40,9 +40,14 @@ test('a fresh level-1 character: connect sprawl plays SPRAWL-00 as rooms, its fo
   assert.match(net.path, /^Process \d$/, 'named for what it is, never a folder');
   assert.equal(g.rooms[g.core].path, 'Core');
   assert.doesNotMatch(ls, /\/(net|var|tmp|srv)/, 'no folder names on screen');
-  assert.match(ls, new RegExp(`${net.path}  \\[fight · \\w+ lv 1\\]`));
+  // A fresh visit: every room but the entry unknown, the ones next to you listed as ? with their cost.
+  assert.ok(Object.values(g.rooms).every((r) => (r.id === g.entry) === FP.known(s, r.id)), 'all unknown but the entry');
+  assert.match(ls, /\n1  \?  \[\?\]  −\d+ Signal/);
+  assert.doesNotMatch(ls, /fight|Process/, 'nothing about what they are');
   assert.match(play(s, 'cd net/relay').map((e) => e.message).join(' '), new RegExp(`\\w+-\\d+ holds ${net.path}`), 'what holds it stops the walk; cd still takes the folder');
+  assert.equal(s.rooms.screen?.kind, 'virus', 'an unknown room\'s virus still asks: Engage or Step back');
   play(s, 'back');
+  assert.match(play(s, 'ls').find((e) => e.type === 'rooms-out').message, new RegExp(`${net.path}  \\[fight · \\w+ lv 1\\]`), 'been in: discovered');
   Object.assign(s.zone.spawns['/net'], { alive: false, respawnAt: clock + 3600000 });
   assert.match(play(s, 'cd /net/relay').map((e) => e.message).join(' '), /The Core is sealed\. RELAY-KING holds it from level 3/);
   // A stray: a fight, its first clear, its timer (90 seconds), then back.
@@ -155,7 +160,7 @@ test('respawns run at real speed: a process room 15 minutes, a guard post 20, an
   assert.equal(kinds.guard, 20 * 60000);
   if (kinds.elite) assert.equal(kinds.elite, 45 * 60000);
   play(s, 'jack out');
-  // A rogue server: a fight room for every folder (and its quiet rooms: mule.test.mjs); a cleared one stays down for the run.
+  // A rogue server: a fight room for every folder (and its quiet rooms: exfil.test.mjs); a cleared one stays down for the run.
   for (let i = 0; i < 40 && !s.locations.some((l) => l.rogue && !l.farm); i++) { (s.net ||= {}).rogueDry = ROGUE.pity; command(s, 'developer location worm'); }
   const rogue = s.locations.find((l) => l.rogue && !l.farm);
   rogue.lockUntil = 0;

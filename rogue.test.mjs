@@ -9,7 +9,7 @@ import { tickOutposts } from './dist/outpost.mjs';
 import { MEMORY } from './dist/memory.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG } from './dist/data.mjs';
-CONFIG.mule.chance = 0; // no Mule in these rooms (mule.test.mjs has it)
+CONFIG.exfil.chance = 0; // no Exfil in these rooms (exfil.test.mjs has it)
 MEMORY.base = 99; // these tests trace dozens of servers to find each kind
 
 const world = () => { const s = fresh(); s.tutorialCompleted = true; s.hackers = { breaker: { level: 12, xp: 0 } }; return s; };

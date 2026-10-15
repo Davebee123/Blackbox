@@ -665,16 +665,18 @@ export function boardMarkup(s, selected, preview = null) {
   const gone = broken.length ? `<div class="brow bbroken"><div class="bcell span5">Broken: ${broken.map((p) => esc(p.name)).join(', ')}</div></div>` : '';
   // Whose half is playing, across the top of the board (the board itself takes its colour: style.css).
   const ph = fighting ? phaseOf(s) : null, who = esc(e.virus.name.split('-')[0]);
-  const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.escapeAt ? `<b class="ps-esc">Escapes in ${e.escapeAt - e.cycle + 1}</b>` : ''}</div>` : '';
+  const strip = ph ? `<div class="phase-strip ph-${ph}" title="Each cycle, you move first, then the virus"><span class="ps-you">${ph === 'wait' ? 'Your move' : 'You'}</span><i>▸</i><span class="ps-them">${who}</span>${e.escapeAt ? `<b class="ps-esc" title="${esc(uploadTip(e))}">${uploadText(e)}</b>` : ''}</div>` : '';
   return strip + head + you() + raidRow(s) + escapeRow(s) + rows + gone + keep;
 }
-// A runner (the Mule): its own row, "Escapes in 3", the fuse on the cycle it gets away.
+// A runner (the Exfil): its own row, "Upload 2/6", the fuse on the cycle its upload completes.
+const uploadText = (e) => `Upload ${Math.max(0, Math.min(e.escapeAt, e.cycle - 1))}/${e.escapeAt}`;
+const uploadTip = (e) => `Still up at the end of cycle ${e.escapeAt}, its upload completes and the archive is gone. Break its Uplink first.`;
 function escapeRow(s) {
   const e = s.encounter;
   if (!e?.escapeAt || !active(s)) return '';
-  const left = e.escapeAt - e.cycle + 1, col = e.escapeAt - e.cycle;
-  const cells = [0, 1, 2, 3].map((c) => `<div class="bcell">${c === col ? `<div class="intent raid fuse escape${c === 0 ? ' now' : ''}" title="${esc(`Still up at the end of cycle ${e.escapeAt}, it gets away with its bag.`)}"><b>Escapes</b><small>${c === 0 ? 'this cycle' : `cycle ${e.escapeAt}`}</small></div>` : ''}</div>`).join('');
-  return `<div class="brow braid bescape"><div class="bcell bname"><b>${esc(e.virus.name)}</b><small class="esc-left">Escapes in ${left}</small></div>${cells}</div>`;
+  const col = e.escapeAt - e.cycle;
+  const cells = [0, 1, 2, 3].map((c) => `<div class="bcell">${c === col ? `<div class="intent raid fuse escape${c === 0 ? ' now' : ''}" title="${esc(uploadTip(e))}"><b>Upload done</b><small>${c === 0 ? 'this cycle' : `cycle ${e.escapeAt}`}</small></div>` : ''}</div>`).join('');
+  return `<div class="brow braid bescape"><div class="bcell bname"><b>${esc(e.virus.name)}</b><small class="esc-left">${uploadText(e)}</small></div>${cells}</div>`;
 }
 
 // A crew boss (raid.mjs): its mechanics on their own row, each chip on the cycle it lands, with who it's

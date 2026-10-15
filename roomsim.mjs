@@ -1,6 +1,6 @@
 // Rooms sim (docs/servers.md 9, R0): a bot plays one server as a room graph, visit by visit, until it's Mapped (every
 // room cleared, the Resident beaten). It walks to what's worth doing (the key, then the vault, then /core; uncleared
-// rooms; caches; respawns for XP; a Mule 2 rooms off or nearer; a Stash it walks through pays as it goes), keeps clear of the hunter, rests in the rest room or jacks out when its Signal runs
+// rooms; caches; respawns for XP; an Exfil 2 rooms off or nearer; a Stash it walks through pays as it goes), keeps clear of the hunter, rests in the rest room or jacks out when its Signal runs
 // low, rests at home and comes back. It fights with the planner (planner.mjs, which crosses ticks on due cycles,
 // interrupt.mjs interruptMove) and runs a script when one fits. Time is simulated: a move, a fight's cycles, the rest at
 // home and the reconnect wait, with the respawns on their real clocks.
@@ -86,9 +86,9 @@ export function botTarget(s) {
     if (!v) continue;
     options.push({ room, v: v - 0.35 * (d[room.id] ?? 9) });
   }
-  // A Mule you can see, 2 rooms off or nearer: chase it (a dozen moves at most a visit), through what it can't hide behind.
-  const m = FP.muleOf(s);
-  if (m && FP.muleSeen(s, m) && (d[m.at] ?? 9) <= 2 && (R.visit.chased || 0) < 12) { const p = route(m.at); if (p && p.length > 1) { R.visit.chased = (R.visit.chased || 0) + 1; options.push({ room: g.rooms[m.at], v: 12 }); } }
+  // An Exfil you can see, 2 rooms off or nearer: chase it (a dozen moves at most a visit), through what it can't hide behind.
+  const m = FP.exfilOf(s);
+  if (m && FP.exfilSeen(s, m) && (d[m.at] ?? 9) <= 2 && (R.visit.chased || 0) < 12) { const p = route(m.at); if (p && p.length > 1) { R.visit.chased = (R.visit.chased || 0) + 1; options.push({ room: g.rooms[m.at], v: 12 }); } }
   for (const o of options.sort((a, b) => b.v - a.v)) { const p = route(o.room.id); if (p && p.length > 1) return { room: o.room, path: p }; }
   return null;
 }

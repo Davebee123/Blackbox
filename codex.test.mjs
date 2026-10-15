@@ -228,7 +228,7 @@ test('the index lists every family a player can meet, old and room bodies, with 
   s.research = { 'trojan:courier': 1 };
   const fam = entries(s).find((g) => g.id === 'family');
   assert.deepEqual(fam.rows.map((r) => r.id), [...Object.keys(FAMILIES), ...Object.keys(ROOM_FAMILIES).filter((id) => !ROOM_FAMILIES[id].runner)]);
-  assert.deepEqual(entries(s).find((g) => g.id === 'runner').rows.map((r) => r.key), ['runner:mule'], 'the Mule has its own row (Runners)');
+  assert.deepEqual(entries(s).find((g) => g.id === 'runner').rows.map((r) => r.key), ['runner:exfil'], 'the Exfil has its own row (Exfils)');
   const t = fam.rows.find((r) => r.id === 'trojan');
   assert.deepEqual([t.name, t.pct], ['Trojan', 3], 'two parts: 1 of 20 and 0 of 20, an average of 2.5%');
   assert.match(codexPageMarkup(s, 'family:trojan'), /<small class="cx-n" title="The average research of its parts">3%<\/small>/);

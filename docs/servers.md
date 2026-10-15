@@ -112,7 +112,7 @@ The generator works from the server's seed, size, kind and floor, the same seed 
 | Mirror | `/srv/www`, `/private` | *Mirrors*: one cache is a mirror, with an elite behind it | Tracker |
 | Archive | `/backups`, `/srv/tape` | *Deep storage*: two vaults and two guard posts with keys | Tracker, in the tape vault |
 | Lab | `/lab`, `/tmp` | *Overheat*: from a fight's 10th cycle the rack burns you for 2% of your max a cycle and every part for 3% of its max | Tracker, faster (a room every move) once awake |
-| Nest, Pit, Gauntlet (rogue) | as today | A tree of fight rooms with 2–4 quiet rooms (Empty, Stash) woven in; no vault, no core, nothing to take over. It runs in clears: nothing respawns until the full clear reboots it (9.6), and each run may bring the Mule. Nest: one family, strains twice as often. Pit: two levels up, a third elites, loot rolls twice. Gauntlet: the full clear pays a bonus cache. | None |
+| Nest, Pit, Gauntlet (rogue) | as today | A tree of fight rooms with 2–4 quiet rooms (Empty, Stash) woven in; no vault, no core, nothing to take over. It runs in clears: nothing respawns until the full clear reboots it (9.6), and each run may bring an Exfil. Nest: one family, strains twice as often. Pit: two levels up, a third elites, loot rolls twice. Gauntlet: the full clear pays a bonus cache. | None |
 | Lair | the network's | A rogue server whose core is the floor's native boss, back an hour after it falls | None |
 | Kestrel's servers | its data centres | Every guard post is ICE | Always one, on any size and any floor (where floor 1 meets its first) |
 
@@ -162,7 +162,7 @@ The danger between rooms is a hunter ICE that moves through the room graph as yo
 | **Patroller** (Mailhubs, Relays) | Awake from the start. It walks a fixed loop of 4 to 7 rooms, one room for every 2 of your moves. Its loop is drawn on the map as a dashed red line once you've seen any room of it. |
 | **Tracker** (Mirrors, Archives, Labs, Kestrel) | Asleep in its den. It wakes the first time you walk into a room next to the den (those rooms carry a red edge, so you always know). Awake, it follows you by the shortest path, one room for every 2 of your moves (every move in a Lab). It loses you when you're 5 rooms away, and walks back to its den. |
 | When it moves | Only when you walk into a room or `wait`. Never during a fight, a pull, an open, a read, a rest or a build, so looting costs it nothing and nothing is on a clock. |
-| How it shows | Its glyph in its room, a red arrow to the room it steps into next, and a counter on the server strip (*hunter moves in 1*). Outside what you can see, you still see a red pulse at the edge of your fog when it's within two rooms. `ls` says it in words: *the hunter is two rooms off, in cron.d, heading for spool.* |
+| How it shows | Its glyph in its room, a red arrow to the room it steps into next, and a counter on the server strip (*hunter moves in 1*). You see it in your room, a room next to you and a discovered room (2.6); outside that, a red pulse at the edge of your fog when it's within two rooms. `ls` says it in words, naming only discovered rooms: *the hunter is two rooms off, in Cache 1, heading for an unknown room.* |
 | Meeting it | If it steps into your room, or you step into its, you fight it. No back-off. Beat it and it drops a script and two components, and it's down for the rest of the visit. Lose and you're disconnected, as usual. |
 | Rooms it won't enter | The rest room (it waits at the door), the entry, and a room with a Bulkhead (6.4). A Snare (6.4) holds it for 4 of your moves. A switch's **Lock the den** keeps a Tracker asleep, or a Patroller in its den, for the visit. |
 | Respawns, keys, sockets | It isn't a room, so it never counts toward progress and doesn't respawn with the rooms: it's simply back at its den at the start of every visit. It never fights the viruses or clears rooms. Socket rooms you've built in are ordinary rooms to it, so a socket on its loop is one you'll meet it near. |
@@ -174,10 +174,14 @@ The plan it asks for is the route: the key is past the den, the elite is on the 
 
 ### 2.6 Fog
 
-- You see the room you're in, the kind of every room next to it, and the shape (boxes and links, no kinds) one link further. An Infiltrator sees kinds one link further.
-- `/core` always shows, with its Resident's name: bosses stay predictable.
-- A fight room's family and author show once it's next to you. Its genes and attack set read ??? until you've met them (the codex, 4.1).
-- What you've seen stays seen across visits. A `topology.map` terminal, or reaching 50% progress, draws the whole server.
+- **A room is unknown until you've been in it** (the designer's call: *I wouldn't label a room as empty until you discover it; that's how all rooms should be*). The rooms next to you and one link further show as shapes (an Infiltrator's two further): an unknown chip with a ?, no icon, name, kind colour, tags (KEY, LOCKED, SEALED, ★, WAKES, mirror), live light, respawn ring or state. A room you can walk into still shows its Signal cost, so you can plan moves.
+- Once you've stood in it, it's **discovered** for good on that server: its icon, name, kind, state, badges, live light and respawn ring show from then on, from anywhere. Mapped (100%) means every room discovered.
+- The Core's chip always shows, as a shape: you know where it is, not what waits there, until you've been in.
+- A virus in an unknown room still stops you at its door with the usual screen (Engage / Step back); it never starts a fight by itself. A fight room's family and author show once you've been in it. Its genes and attack set read ??? until you've met them (the codex, 4.1).
+- The hunter and the Exfil show in your room, a room next to you (an Infiltrator's two off) and a discovered room, with their arrows; deeper in the fog they're out of sight (the hunter's red pulse still warns within two rooms).
+- The pop-up card on an unknown room says *Unknown room*, with its cost if you can walk in; `ls` and `map` list it as ?, the log names it *an unknown room*.
+- What you've seen stays seen across visits. A `topology.map` terminal, or reaching 50% progress, draws the whole server, as unknown shapes.
+- An older save (before R.fog 2): a room it showed by kind stays discovered unless the save can tell you were never in it (a junction, an Empty, a Stash or the den that walking in would have cleared, never cleared). Nothing it knew is taken away.
 - Nothing shows a percentage or a hint. You find out by going there.
 
 ### 2.7 Respawns and timers
@@ -195,7 +199,7 @@ Respawns run on real time, online or off. A room never respawns while you stand 
 | Progress | What it gives |
 |---|---|
 | Each first clear | +50% of that fight's XP (a *First clear* row), and toward the server's trace links (section 5.4) |
-| 50% | The whole room graph is drawn |
+| 50% | The whole room graph is drawn (the rooms you haven't been in as unknown shapes) |
 | Vault and core | **Taken over**: the server is yours (teal on the map), its core becomes a core socket (6.3) |
 | 100%, **Mapped** | Once: an item roll two levels over the server, a codebase you don't have (6.2), its Resident's `core.dump` if you don't have it, and 5 kills' worth of XP. The server's node gets a solid ring. |
 
@@ -885,15 +889,20 @@ What the numbers say: the climb to 10 lands on 7.2 (2.5–3.0 hours against 2.7;
 
 **Known issues:** the Breaker's room fights at 6–10 (above); the Bastion's climb past level 13 (about twice the Breaker's hours to 20 in the pacing bot); at level 3 the Bastion maps two medium servers in three; the pacing bot never fights the farm or the lair; kit spreads and core rotations at 18–40 measure under their old lines (held in the tests), so the classes want a pass for the interrupt; a traced server's guard posts at 6–10 cost the Bastion almost nothing.
 
-### 9.6 What shipped: quiet rooms, runs and the Mule
+### 9.6 What shipped: quiet rooms, runs and the Mule (now the Exfil, 9.7)
 
-**Play it:** any rogue server (`developer location worm` with `?dev` until one turns up; `developer mule` sets a Mule loose on the server you're on). GAME_RULES.md "Rogue servers" has the rules as built. Code: `dist/netrooms.mjs` (`rogueGraph`, `rogueRestore`, the Mule's roll and bag, a Stash's pay), `dist/rogue.mjs` (`inRuns`, `runCleared`, `rogueReboot`), `dist/floorplan.mjs` (the quiet rooms, the Mule: `spawnMule`, `muleNext`, its fight and escape), `dist/families.mjs` (the Mule's body), `dist/floorplan-view.mjs`, `dist/codex.mjs` (Runners); tests in `mule.test.mjs`.
+**Play it:** any rogue server (`developer location worm` with `?dev` until one turns up; `developer exfil` sets an Exfil loose on the server you're on). GAME_RULES.md "Rogue servers" has the rules as built. Code: `dist/netrooms.mjs` (`rogueGraph`, `rogueRestore`, the Exfil's roll and archive, a Stash's pay), `dist/rogue.mjs` (`inRuns`, `runCleared`, `rogueReboot`), `dist/floorplan.mjs` (the quiet rooms, the Exfil: `spawnExfil`, `exfilNext`, its fight and upload), `dist/families.mjs` (the Exfil's body), `dist/floorplan-view.mjs`, `dist/codex.mjs` (Exfils); tests in `exfil.test.mjs`.
 
 - *Quiet rooms.* A rogue server is laid out from its seed as a tree on the grid (straight links, nothing crossing, three or four rooms deep): a fight room for each folder (r1… in the old folder order, so an old save's rooms keep their ids and what you cleared) and 2–4 quiet rooms, at least one between the entry and a fight. **Empty**: nothing, cleared as you walk in. **Stash**: 4 + level/2 credits (1 code one time in five), taken as you walk in, full again on the reboot.
 - *Runs, not respawns.* A rogue server's cleared rooms stay down for the run. The full clear jacks you out (SERVER REBOOTING, the pack banked), it's offline a minute, then every room is back fresh. A half-done run reboots on its own 30 minutes after you last left. The Gauntlet's cache pays on the full clear, once a run; the Pit's second roll is per kill, as before. Lairs, the farm and occupied servers keep their timers.
-- *The Mule.* One roll a run (25%), at its first connect, never again until a reboot; then 45 minutes of your own cooldown (on your save, across every rogue server you visit; a crewmate's or a member's are theirs). It runs one room per move of yours to the neighbour farthest from you, never into your room or through a live virus; cornered when nothing is farther. Caught: MULE-####, a Runner and a Bag (1 ◆ at most each, a plain virus's Integrity ×1.5, 35% of its hits), escapes after 6 cycles. Its bag: 10 Stashes of credits, one item at the server's level (best of two flat rolls, a white otherwise), 5% a unique of the server's; a process kill's XP.
-- *Its fight, measured* (the planner, 12 fights a class, levels 3 to 30, `CONFIG.mule`): 83–100% broken in time, 3–5 cycles, 1–3% of your Signal; the Bastion slowest (4.9–5.3 cycles, 83–100%). Left alone it lands about a third of your Signal over its 6 cycles.
-- *The bots* take a Stash they walk through and chase a Mule 2 rooms off or nearer (a dozen moves at most a visit). The pacing bot (`bot.mjs`, four classes, six seeds each, to level 20): hours to 10 unchanged at 2.81, to 20 8.49 before and 8.36 after (both on 7.2's 9); it plays a rogue server rarely (31 runs in 24 characters before, 30 after) and caught one Mule.
+- *The Exfil (the Mule then).* One roll a run (25%), at its first connect, never again until a reboot; then 45 minutes of your own cooldown (on your save, across every rogue server you visit; a crewmate's or a member's are theirs). It runs one room per move of yours to the neighbour farthest from you, never into your room or through a live virus; cornered when nothing is farther. Caught: EXFIL-####, an Uplink and an Archive (1 ◆ at most each, a plain virus's Integrity ×1.5, 35% of its hits), its upload completes after 6 cycles. Its archive, recovered: 10 Stashes of credits, one item at the server's level (best of two flat rolls, a white otherwise), 5% a unique of the server's; a process kill's XP.
+- *Its fight, measured* (the planner, 12 fights a class, levels 3 to 30, `CONFIG.exfil`): 83–100% broken in time, 3–5 cycles, 1–3% of your Signal; the Bastion slowest (4.9–5.3 cycles, 83–100%). Left alone it lands about a third of your Signal over its 6 cycles.
+- *The bots* take a Stash they walk through and chase an Exfil 2 rooms off or nearer (a dozen moves at most a visit). The pacing bot (`bot.mjs`, four classes, six seeds each, to level 20): hours to 10 unchanged at 2.81, to 20 8.49 before and 8.36 after (both on 7.2's 9); it plays a rogue server rarely (31 runs in 24 characters before, 30 after) and caught one Exfil (a Mule then).
+
+### 9.7 What shipped: unknown rooms, and the Mule becomes the Exfil
+
+- *Unknown until discovered* (2.6). `R.seen[id]` is `'kind'` only for a room you've stood in (`look`; `known`), `'shape'` for one drawn but unknown: the rooms next to you and one further, the Core's chip, every room at 50%. The hunter and the Exfil show where `inSight` says (your room, next to you, a discovered room). The page draws an unknown room as a ? ghost chip with only its cost badge, its card as *Unknown room*; the terminal lists it as ?, the log as *an unknown room* (`nameOf`). Everywhere rooms show: traced servers, rogue servers, SPRAWL-00, the farm and `?playtest=rooms`. An older save is migrated on load (`fogRestore`, `R.fog = 2`).
+- *The Exfil* (the designer: *these are programs and viruses, so a mule stealing a bag makes no sense*). The Mule is now the **Exfil**, a process smuggling a stolen archive off the server: EXFIL-####, its parts the **Uplink** (was Runner) and the **Archive** (was Bag). Caught, the board counts **Upload n/6**; at 6, *Upload complete. The archive is gone.*; broken in time, *Archive recovered.* The map's glyph is a gold archive with an upload arrow (filled once cornered), its flee arrow still dashed amber; the Codex group is *Exfils*. Every number stays (25% a run, 45 minutes of your own cooldown, the loot). `CONFIG.exfil`, `s.exfil` and `developer exfil`; `exfilRestore` carries an older save's `s.mule` cooldown, its Codex record, tip and any chase or fight in flight over. (The switched-off Exfil payload, payload.mjs, is a different thing and keeps its name.)
 
 ## 10. Open questions for the designer
 
