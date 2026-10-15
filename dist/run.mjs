@@ -4,12 +4,12 @@
 // Trace, quirk folders) no longer runs on the real game; phase R5 deletes it with the breach code.
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
-import { collect, vaultPlan, planName, learnPlan } from './outpost.mjs';
+import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from './sockets.mjs';
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
-import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, SERVICES, SERVICE_SOURCES, MATERIALS, codeOf, vaultCode } from './gear.mjs';
+import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
 import { contractTakeover, bankCargo, wantedBy, title as contractTitle } from './mail.mjs';
@@ -112,7 +112,7 @@ export function layoutOf(loc) {
   // harvester or a config: fixed by its seed (LOOT.vault*). Your first server's has a protocol and a blueprint.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
-  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(vaultPlan(loc) ? ['plan.pln'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
+  if (vault && loc) out = { ...out, [vault]: { ...out[vault], files: [...out[vault].files, ...(hasKit(loc) ? ['kit.bin'] : []), ...(hasBlueprint(loc) ? ['blueprint.bp'] : []), ...(hasBackup(loc) ? ['backup.bin'] : []), ...(sourceOf(loc) ? [sourceOf(loc) + '.src'] : []), ...(vaultCodebase(loc) ? ['codebase.cb'] : []), ...(vaultFilter(loc) ? ['filter.flt'] : [])] } };
   // About half the found servers keep an incident file at the root (a Log sweep, see forensics.mjs).
   const incident = sweepFile(loc);
   if (incident && out['/'] && !out['/'].files.includes(incident)) out = { ...out, '/': { ...out['/'], files: [...out['/'].files, incident] } };
@@ -183,9 +183,9 @@ export function vaultItem(loc) {
   return { ...rollItem(r, { level, rarity }), from: loc.family };
 }
 // Source in deeper vaults: a Zero-day protocol to compile, or a special service to install.
-const SOURCES = [...Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase), ...SERVICE_SOURCES];
+const SOURCES = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 export const sourceOf = (loc) => ((loc.depth || 1) >= 2 && seeded(loc.seed * 47 + 13)() < LOOT.vaultSource ? SOURCES[loc.seed % SOURCES.length] : null);
-const sourceName = (id) => (ZERO_DAYS[id] ? ZERO_DAYS[id].name : SERVICES[id].name);
+const sourceName = (id) => ZERO_DAYS[id]?.name || id;
 
 const hiddenName = (name) => name.startsWith('.');
 const guardName = (loc, path) => (layoutOf(loc)[path]?.resident ? 'Resident' : GUARDS[layoutOf(loc)[path]?.guard]?.name.toLowerCase() || 'guard');
@@ -272,7 +272,7 @@ export function fileInfo(loc, path, name) {
     },
   };
   const extras = {
-    '/nest/brood.dat': { kind: 'item', size: '12k', item: 'Brood sample', text: ['binary: a live worm brood, sealed.', 'pull it to take it. good salvage.'] },
+    '/nest/brood.dat': { kind: 'item', size: '12k', item: 'Brood sample', text: ['binary: a live worm brood, sealed.', 'pull it to take it. good components.'] },
     '/nest/shed.log': { kind: 'text', size: '2k', text: ['the crawler sheds a fragment every few cycles.', 'kill the brood first or the fragments bleed you.'] },
     '/.ghost/stash.dat': credits(cash, 'a ghost stash'),
     '/.ghost/.key': { kind: 'text', size: '1k', text: [`vault key, kept where plain ls won't show it: ${loc.password}`] },
@@ -289,14 +289,12 @@ export function fileInfo(loc, path, name) {
   const planted = loc.extraFiles?.find((f) => f.name === name && (f.dir || vaultPath) === path);
   if (planted) return { kind: planted.kind || 'contract', size: planted.kind === 'route' ? '6k' : '40k', label: planted.label, hidden: planted.hidden, text: planted.text };
   if (name === 'filter.flt' && vaultFilter(loc) && layoutOf(loc)[path]?.locked) { const f = vaultFilter(loc); return { kind: 'filter', size: '24k', filter: f, text: [`firewall filter: ${f.name} (${RARITIES[f.rarity].name.toLowerCase()}, lv ${f.level}).`, `${filterLine(f)}.`, 'bank it, then put it in your firewall at home (Server page).'] }; }
-  if (name === 'plan.pln' && vaultPlan(loc) && layoutOf(loc)[path]?.locked) return { kind: 'plan', size: '48k', plan: vaultPlan(loc), text: [`plan: ${planName(vaultPlan(loc))}.`, 'bank it to learn it, then build it on a server you hold (its map card).'] };
+  if (name === 'codebase.cb' && vaultCodebase(loc) && layoutOf(loc)[path]?.locked) return { kind: 'codebase', size: '48k', text: ['codebase: a program\'s source, one you don\'t know yet.', 'bank it to learn it, then build it in a socket.'] };
   if (name === 'backup.bin' && hasBackup(loc) && layoutOf(loc)[path]?.locked) return { ...payload, size: '40k', text: [`binary: ${payload.amount} ${MATERIALS[code].name.toLowerCase()}, a backup of the vault's cache.`, 'pull it and bank it.'] };
   if (name === 'blueprint.bp' && layoutOf(loc)[path]?.locked) return { kind: 'blueprint', size: '64k', text: ['blueprint: plans for a service or a protocol recipe.', 'bank it to learn it.'] };
   if (name.endsWith('.src') && sourceOf(loc) + '.src' === name) {
     const id = sourceOf(loc);
-    return ZERO_DAYS[id]
-      ? { kind: 'source', size: '120k', zeroDay: id, text: [`source: ${ZERO_DAYS[id].name}, a Zero-day protocol.`, ZERO_DAYS[id].effect, 'bank it, then compile it at home (Craft page).'] }
-      : { kind: 'source', size: '120k', zeroDay: id, text: [`source: ${SERVICES[id].name}, a special service.`, SERVICES[id].about, 'bank it, then install it on your server (Server page).'] };
+    return { kind: 'source', size: '120k', zeroDay: id, text: [`source: ${sourceName(id)}, a Zero-day protocol.`, ZERO_DAYS[id]?.effect || '', 'bank it, then compile it at home (Craft page).'] };
   }
   const info = (files[loc.template] || files.relay)[full] || extras[full];
   // The hidden quirk leaves one hint in the first file at the root.
@@ -414,7 +412,6 @@ export function connect(s, id) {
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
       if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     }
-    if (!zone && !loc.member) collect(s, loc, 'Collected from ');
     if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
     return since(s, first);
   }
@@ -614,14 +611,14 @@ export function packGain(f, credits = null) {
   const row = (label, qty, kind, extra = {}) => ({ label, qty, kind, pack: false, ...extra, text: qty ? `${qty} ${label}` : label });
   switch (f.kind) {
     case 'credits': return row('Credits', `+${credits ?? f.amount}`, 'credits');
-    case 'item': return row(f.item, '', 'loot', { sub: 'salvage' });
+    case 'item': return row(f.item, '', 'loot', { sub: 'component' });
     case 'gear': return row(itemLabel(f.item), '', 'item', { rarity: f.item.rarity, sub: statLine(f.item.stats) });
     case 'code': return row(MATERIALS[f.material]?.name || f.material, `+${f.amount}`, f.material === 'exploit' ? 'exploit' : 'code');
     case 'source': return row(`${sourceName(f.zeroDay)} source`, '', 'blueprint', { rarity: 'zeroday' });
     case 'blueprint': return row('Blueprint', '', 'blueprint', { sub: '???' });
 
     case 'deeper': return row('Trace record', '', 'found');
-    case 'plan': return row(planName(f.plan), '', 'blueprint', { rarity: 'tuned' });
+    case 'codebase': return row('Codebase', '', 'blueprint', { sub: '???', rarity: 'tuned' });
     case 'filter': return row(f.filter.name, '', 'item', { rarity: f.filter.rarity, sub: filterLine(f.filter) });
     default: return row(f.label || f.name, '', 'found');
   }
@@ -674,7 +671,7 @@ export function bank(s, loc, why = '') {
   for (const f of pack) {
     (loc.state ||= { cleared: {}, unlocked: {}, taken: {} }).taken[f.path] = true;
     if (f.kind === 'credits') credits += f.amount;
-    if (f.kind === 'item') s.salvage.push({ name: f.item, virus: loc.name, seed: loc.seed });
+    if (f.kind === 'item') gainComponents(s, 1, familyComponents(loc.family), loc.name); // an old file system's salvage file: a component
   }
   const gear = pack.filter((f) => f.kind === 'gear');
   const sources = pack.filter((f) => f.kind === 'source');
@@ -699,16 +696,16 @@ export function bank(s, loc, why = '') {
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
-  emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'plan').map((f) => planName(f.plan)), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
+  emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'codebase').map(() => 'a codebase'), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
   if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, xpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
   for (const f of sources) {
     s.recipes ||= [];
-    if (s.recipes.includes(f.zeroDay)) { for (let i = 0; i < 3; i++) s.salvage.push({ name: 'Source scraps', virus: loc.name, seed: loc.seed }); emit(s, 'info', `You already have ${sourceName(f.zeroDay)} source: +3 salvage.`); }
-    else { s.recipes.push(f.zeroDay); emit(s, 'drop', ZERO_DAYS[f.zeroDay] ? `Source banked. You can compile ${ZERO_DAYS[f.zeroDay].name} at home, on the Craft page.` : `Source banked. You can install ${SERVICES[f.zeroDay].name} on your server, on the Server page.`, { recipe: f.zeroDay }); }
+    if (s.recipes.includes(f.zeroDay)) { gainComponents(s, 3, familyComponents(loc.family), loc.name); emit(s, 'info', `You already have ${sourceName(f.zeroDay)} source: +3 components.`); }
+    else { s.recipes.push(f.zeroDay); emit(s, 'drop', `Source banked. You can compile ${sourceName(f.zeroDay)} at home, on the Craft page.`, { recipe: f.zeroDay }); }
   }
-  for (const f of pack.filter((x) => x.kind === 'plan')) learnPlan(s, f.plan, 'Plan banked: ');
+  for (const f of pack.filter((x) => x.kind === 'codebase')) learnCodebase(s, null, 'Codebase banked: ', { pool: familyComponents(loc.family) }); // one you don't know (sockets.mjs)
   for (const f of pack.filter((x) => x.kind === 'filter')) addFilter(s, f.filter, 'Filter banked: ');
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
 

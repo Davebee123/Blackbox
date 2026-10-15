@@ -102,7 +102,7 @@ test('root access: respawned fight rooms cleared on a server you hold raise Root
   const FP = await import('./dist/floorplan.mjs');
   const { play } = await import('./dist/run.mjs');
   const { liveCount } = await import('./dist/memory.mjs');
-  const { slotsOf: outpostPorts } = await import('./dist/outpost.mjs');
+  const { rootClear } = await import('./dist/netrooms.mjs');
   const { tickServices } = await import('./dist/combat.mjs');
   const s = at(8);
   const loc = addLocation(s, 'worm', 1); loc.detached = false; delete loc.fresh; loc.takenOver = true;
@@ -124,10 +124,19 @@ test('root access: respawned fight rooms cleared on a server you hold raise Root
   FP.act(s, 'pull');
   assert.equal(s.run.pack.length, before + 1, 'its code into your pack');
   assert.equal(FP.cacheFull(s, stash), false, 'and it fills again later');
-  // Root 3: off your memory, no invasions; Root 4: a port; Root 5: its rare spawns twice as often.
-  const ports = outpostPorts(loc), held = liveCount(s); // (its kills' leads may have found more servers by now)
+  // Root 3: off your memory, no invasions; Root 4: one more socket room, by the Core and open; Root 5: rare spawns twice as often.
+  const held = liveCount(s); // (its kills' leads may have found more servers by now)
   loc.root.level = 3; assert.equal(liveCount(s), held - 1);
-  loc.root.level = 4; assert.equal(outpostPorts(loc), Math.min(6, ports + 1));
+  const sockets = () => Object.values(g.rooms).filter((x) => x.kind === 'socket');
+  const n = sockets().length;
+  loc.root.cleared = R.ROOT.need[4] - 1;
+  rootClear(s, loc);
+  assert.equal(R.rootOf(loc), 4);
+  const extra = sockets().find((x) => x.extra === 'root');
+  assert.equal(sockets().length, n + 1, 'Root 4: a socket room');
+  assert.ok(extra && FP.neighbours(g, g.core).includes(extra.id) && Rm.cleared[extra.id], 'beside the Core, open from the start');
+  rootClear(s, loc);
+  assert.equal(sockets().length, n + 1, 'only the one');
   loc.root.level = 5; assert.equal(FP.WORLD.rare(s), 2);
 });
 

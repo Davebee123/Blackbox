@@ -29,7 +29,7 @@ export function createShell({ getState, isOn, canMove, tick }) {
       { t: dots('integrity', `${s.server.integrity}/${s.server.max}`, s.server.integrity / s.server.max <= 0.25 ? 'crit' : 'ok'), c: s.server.integrity / s.server.max <= 0.25 ? 'h' : '' },
       { t: dots(`loading kit: ${cls}`, `lv ${lvl}`) },
       { t: dots('origins traced', String(s.locations?.length || 0), '') },
-      { t: dots('services', `${Object.keys(s.services || {}).length} running`, s.install ? 'installing' : 'ok') },
+      { t: dots('programs', `${(s.locations || []).reduce((n, l) => n + Object.keys(l.floorplan?.programs || {}).length, 0)} running`, 'ok') },
     ];
     const who = s.profile?.handle || 'rookie';
     if (s.run) lines.push({ t: `resuming session: ssh ${who}@${s.run.loc}`, c: 'y' });

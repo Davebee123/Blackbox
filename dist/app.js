@@ -19,7 +19,7 @@ import { nextTip, markSeen } from './tips.mjs';
 import { createRain } from './rain.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
-import { SALVAGE_COSTS, autoPay } from './salvage.mjs';
+import { autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf } from './dmgfx.mjs';
@@ -954,12 +954,10 @@ function react(events) {
       case 'fleet-hit': feel.add('good', null); notice(e.message); break;
       case 'fleet-broken': flash('SWARM BROKEN'); feel.add('win', null); notice(e.message); break;
       case 'config': feel.add('unlock', null); notice(e.message); break;
-      case 'architecture': flash('REBUILT'); feel.add('win', null); notice(e.message); break;
-      case 'outpost-up': feel.add('unlock', null); notice(e.message); break;
+      case 'program': feel.add(e.off ? 'click' : 'unlock', null); if (!e.off) flash('INJECTED'); break;
       case 'harvester': feel.add('pickup', null); rewardCard('Compiled', e, events, true); break;
       case 'harvest': feel.add('pickup', null); break;
-      case 'outpost-siege': case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
-      case 'outpost-fell': flash('OUTPOST LOST'); feel.add('lose', null); break;
+      case 'consortium-siege': case 'consortium-raid': case 'consortium-roam': feel.add('prewarn', null); break;
       case 'outpost-held': feel.add('good', null); notice(e.message); break;
       case 'takeover': flash('TAKEN OVER'); feel.add('win', null); rewardCard('Taken over', e, events); break;
       case 'root': feel.add('unlock', null); rewardCard(`Root ${e.root}`, e, events); break;
@@ -1053,13 +1051,6 @@ function run(raw) {
   const join = text.match(/^connect (\S+)(?: (?:loud|\+loud|\+hot))?$/);
   const found = join && campaign.locations?.find((l) => (l.id === join[1] || l.name.toLowerCase() === join[1]) && l.fresh && l.detached);
   if (found && memYes !== found.id) { mapSel = found.id; mapPop = true; V.setMemAsk(found.id); go('map'); dirty = true; return; }
-  // build [server]: the Build panel for a server you hold (the one selected on the map, if you name none).
-  const bw = text.match(/^build(?: (\S+))?$/);
-  if (bw) {
-    const want = bw[1] ? campaign.locations?.find((l) => l.id === bw[1] || l.name.toLowerCase() === bw[1]) : campaign.locations?.find((l) => l.id === mapSel);
-    if (want?.takenOver) { buildFor = want.id; mapSel = want.id; mapList = false; go('map'); dirty = true; return; }
-    notice(want ? `${want.name} isn't yours yet. Beat its Resident first.` : 'build <server>: name a server you hold.', true); return;
-  }
   // Hub sessions: connect <hub> opens one; inside it, a number or a word picks from its menu.
   const dial = text.match(/^(?:connect|dial) (halcyon|glassjaw|kestrel|lantern|nullchoir)$/);
   if (dial && V.hubOptions(campaign, dial[1]).length) return openHub(dial[1]);
@@ -1562,7 +1553,6 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-cw-toggl
 addEventListener('resize', () => placeCrewWin());
 // The map's selection card pops up beside the node you clicked.
 let mapPop = false;
-let buildFor = null; // the held server whose Build panel is open over the map (V.buildPanelMarkup)
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
 let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
@@ -1623,7 +1613,7 @@ function render(force = false) {
   } else if (combatLike && (campaign.breach || CAMP)) {
     return go(campaign.breach ? 'breach' : 'campaign', true); // a breach fight that's over: back to its page, never the old map
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -1634,7 +1624,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, build: buildFor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2145,7 +2135,7 @@ document.querySelector('.modules').addEventListener('click', (e) => {
 let payState = null; // { cmd, key, title, pay }
 function payOpen(btn) {
   const key = btn.dataset.pay, [id, n] = key.split(':');
-  const cost = SALVAGE_COSTS[id](Number(n) || 0);
+  const cost = V.payCost(campaign, key);
   payState = { cmd: btn.dataset.command, key, title: btn.dataset.payTitle || 'Build', pay: autoPay(campaign, cost) || {} };
   payDraw();
 }
@@ -2266,12 +2256,8 @@ document.addEventListener('click', (e) => {
   if (yes) { const id = yes.dataset.memYes; V.setMemAsk(null); memYes = id; run('connect ' + id); memYes = null; dirty = true; return; }
   if (e.target.closest('[data-mem-no]')) { V.setMemAsk(null); dirty = true; return; }
   const node = e.target.closest('[data-select]');
-  if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; buildFor = null; dirty = true; return; } // picking a server closes any Build panel
+  if (node) { if (node.dataset.select !== mapSel) V.setMemAsk(null); mapSel = node.dataset.select; mapPop = true; dirty = true; return; }
   // Clicking away (empty map, or the card's ×) closes the card and clears the selection too.
-  const bopen = e.target.closest('[data-build-open]');
-  if (bopen) { buildFor = bopen.dataset.buildOpen; mapList = false; if (module !== 'map') go('map'); dirty = true; return; }
-  if (e.target.closest('[data-build-close]')) { buildFor = null; dirty = true; return; }
-  if (buildFor && e.target.closest('.build-panel')) return; // clicks inside the panel don't reach the map under it
   if (e.target.closest('[data-map-pop-close]') || (e.target.closest('.map-svg') && !e.target.closest('.mnode'))) { if (mapPop || mapSel) { mapPop = false; mapSel = null; V.setMemAsk(null); dirty = true; } }
   const mail = e.target.closest('[data-mail]');
   if (mail) {
@@ -2495,8 +2481,6 @@ document.addEventListener('change', (e) => {
 document.addEventListener('keydown', (e) => {
   const node = e.target.closest?.('[data-select]');
   if (node && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); mapSel = node.dataset.select; mapPop = true; dirty = true; }
-  if (e.key === 'Escape' && buildFor && module === 'map') { buildFor = null; dirty = true; return; }
-  if (node && (e.key === 'Enter' || e.key === ' ')) buildFor = null;
   if (e.key === 'Escape' && (mapPop || mapSel) && module === 'map') { mapPop = false; mapSel = null; dirty = true; }
 });
 

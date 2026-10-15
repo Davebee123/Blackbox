@@ -2,8 +2,7 @@
 // (rogue ones too); when memory is full, a new find arrives detached: on the map, not on your
 // network. Attaching a server costs credits (detaching is free), more for a higher-level one, the same
 // every time (no penalty for swapping back). Detaching freezes that server and everything found
-// through it: no runs, no harvesting, no sieges, timers stopped. Attach it again and it picks up
-// where it was. Outpost slots (bandwidth) still decide how many outposts run.
+// through it: no runs, timers stopped. Attach it again and it picks up where it was.
 import { emit, warn, serverLevel, active } from './combat.mjs';
 import { freeOfMemory } from './root.mjs';
 
@@ -76,7 +75,5 @@ export function memoryCommand(s, verb, id, now = Date.now()) {
   loc.detached = false;
   const first = loc.fresh;
   delete loc.fresh;
-  // Unfreeze: its outposts' clocks start again from now (nothing is made while frozen).
-  for (const l of branchOf(s, loc)) if (l.outpost && isLive(s, l)) l.outpost.at = now;
   emit(s, 'info', first ? `${loc.name} is on your network. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.` : `${loc.name} attached for ${fee} credits. Free memory ${memoryCap(s) - liveCount(s)}/${memoryCap(s)}.`, { location: loc.id });
 }

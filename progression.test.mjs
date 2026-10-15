@@ -5,7 +5,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage } from './dist/combat.mjs';
 import { CONFIG, CATCHUP, levelTarget, xpToNext, killXp, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
-import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES, VERSIONS } from './dist/gear.mjs';
+import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
+const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
 import { tickPlay, behindOf } from './dist/progression.mjs';
 import { levelUpLines } from './dist/view.mjs';
 import { knowsFilter } from './dist/filters.mjs';
@@ -30,7 +31,7 @@ test('one level: your server is at your highest class level, with no XP of its o
   gainXp(t, xpToNext(19), 'test');
   const up = t.logs.findLast((e) => e.type === 'level-up');
   assert.equal(up.level, 20);
-  assert.ok(up.gains.includes('a choice of architecture') && !up.gains.includes('a daemon slot'), up.gains.join(', '));
+  assert.ok(!up.gains.includes('a choice of architecture') && !up.gains.includes('a daemon slot'), up.gains.join(', ')); // architecture went in R2
   const f = at({ breaker: 14 });
   gainXp(f, xpToNext(14), 'test');
   assert.ok(f.logs.findLast((e) => e.type === 'level-up').gains.includes('a daemon slot'), 'a daemon slot at 15 (then 30 and 45)');
@@ -224,7 +225,7 @@ test('the new world uniques: Rowhammer, Slammer, Log4Shell, Shellshock, Blue Pil
   assert.equal(g.encounter.readyAt.firewall, g.encounter.cycle + 1, 'every cooldown 2 sooner');
 });
 
-test('v34: server XP, ports, the specialty, eight services and grey protocols fold away, refunded in kind', () => {
+test('v34: server XP, ports, the specialty, eight services and grey protocols fold away, refunded in kind (and v40 the last four)', () => {
   const old = at({ breaker: 26, bastion: 9 });
   Object.assign(old, { version: 33, serverXp: 123456 });
   old.services = { firewall: 2, raid: 1, kernel: 2, cron: 3, uplink: 1 };
@@ -242,15 +243,15 @@ test('v34: server XP, ports, the specialty, eight services and grey protocols fo
   assert.ok(SAVE_VERSION >= 34);
   assert.equal(s.serverXp, undefined);
   assert.equal(serverLevel(s), 26, 'your highest class level');
-  assert.deepEqual(s.services, { uplink: 1 }, 'only the network services stay');
+  assert.deepEqual(s.services, {}, 'v34 kept the network services; v40 (R2, sockets) retired them too');
   assert.equal(s.install, null);
   assert.equal(daemonLevel(s, 'cron'), 26, 'Cron Job is a daemon now, at a level from its version (v3: your level)');
   assert.equal(daemonLevel(s, 'snapshot'), 22, 'a Snapshot source you held is the daemon too (as a v1: four under)');
-  const paid = VERSIONS[0].credits * 3 + VERSIONS[1].credits * 2 + VERSIONS[0].credits; // Filter Bay v1–v2, RAID v1, Kernel v1–v2, the Scrubber's install
+  const paid = VERSIONS[0].credits * 3 + VERSIONS[1].credits * 2 + VERSIONS[0].credits + VERSIONS[0].credits; // Filter Bay v1–v2, RAID v1, Kernel v1–v2, the Scrubber's install; v40 the Uplink v1
   assert.equal(s.server.credits, credits + paid, 'everything they cost, back');
   assert.equal(s.materials.worm, worm + VERSIONS[0].code, 'the RAID Array\'s Worm code');
   assert.ok(knowsFilter(s, 'reduction') && knowsFilter(s, 'shield') && knowsFilter(s, 'regen'), 'their blueprints are filter recipes now');
-  assert.deepEqual(s.recipes, ['uplink']);
+  assert.deepEqual(s.recipes, [], 'the Uplink\'s blueprint went with it');
   assert.equal(s.loadout.spec, undefined, 'the specialty is gone');
   const grey = s.stash.find((x) => x.id === 'g1');
   assert.equal(grey.rarity, 'stock');
@@ -259,7 +260,7 @@ test('v34: server XP, ports, the specialty, eight services and grey protocols fo
   assert.ok(RULES[s.stash.find((x) => x.id === 'g3').rule]?.tier === 'minor', 'the blue got its rule');
   assert.equal(s.stash.find((x) => x.id === 'g3').stats.crit, 4, 'and kept its numbers');
   assert.ok(s.logs.some((e) => /Refunded/.test(e.message)) && s.logs.some((e) => /specialty is gone/.test(e.message)));
-  assert.deepEqual(Object.keys(SERVICES), ['uplink', 'buildfarm', 'router', 'scheduler']);
+  assert.deepEqual(Object.keys(SERVICES), [], 'no services since R2: programs in sockets');
   assert.ok(Object.values(BASES).some((b) => b.level === 34) && Object.values(BASES).some((b) => b.level === 42), 'and two new base tiers');
   assert.equal(baseFor('exploit', 42), 'hypervisor-escape');
   assert.equal(LOADOUT.specRanks, 2);

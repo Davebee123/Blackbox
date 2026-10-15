@@ -131,6 +131,13 @@
 .fp-exfil .bg { fill: #1a1404; stroke: var(--next); stroke-width: 1.2; }
 .fp-exfil use { color: var(--next); }
 .fp-exfil.cornered .bg { fill: var(--next); } .fp-exfil.cornered use { color: #1a1404; }
+/* sockets (R2): a program's badge bottom left (the slot it sits in, or on a held Core the program), a Tunnel's arc */
+.fp-prog rect { fill: #0a0703; stroke: var(--amber); stroke-width: 1.2; }
+.fp-prog use { color: var(--amber); }
+.fp-room.prog .fp-icon { color: var(--bright); }
+.fp-room.prog.off .fp-icon, .fp-room.prog.off .fp-name { opacity: 0.45; }
+.fp-room.k-socket.open:not(.prog) .fp-hair { stroke-dasharray: 3 3; }
+.fp-tunnel { fill: none; stroke: var(--amber); stroke-width: 2; stroke-dasharray: 2 5; stroke-linecap: round; opacity: 0.85; }
 /* an Empty room: a hollow mark, quieter than anything else on the map */
 .fp-room.k-empty .fp-icon { opacity: 0.7; }
 /* the 1s and 0s drifting off your room: none with reduced motion */
@@ -166,6 +173,29 @@
 .fp-virus .fp-ic { width: 24px; height: 24px; color: var(--hot); }
 .fp-virus.down { border-left-color: var(--gray); } .fp-virus.down .fp-ic { color: var(--gray); }
 .fp-virus.exfil { border-left-color: var(--next); } .fp-virus.exfil .fp-ic { color: var(--next); }
+.fp-virus.prog { border-left-color: var(--amber); } .fp-virus.prog .fp-ic { color: var(--amber); }
+/* the Build card: a row a codebase you know (its icon, name, rule, what it costs here and what you hold), and Build */
+.bp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s3); max-height: min(52vh, 420px); overflow-y: auto; }
+.bp-prog { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: var(--s4); padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-btn); background: var(--inset); }
+.bp-prog .bp-ic .fp-ic { width: 20px; height: 20px; color: var(--amber); }
+.bp-prog.short .bp-ic .fp-ic { color: var(--gray); }
+.bp-txt { display: grid; gap: 1px; min-width: 0; }
+.bp-txt b { font: 600 13px var(--sans); color: var(--bright); }
+.bp-txt small { font-size: 11px; line-height: 1.3; color: var(--muted); }
+.bp-cost { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s3); margin-top: var(--s1); }
+.bp-cost .bc { display: inline-flex; align-items: center; gap: 2px; font: 600 10px var(--mono); color: var(--hot); cursor: help; }
+.bp-cost .bc.ok { color: var(--amber-soft); }
+/* The Server page's codebases (view.mjs programsCard): one tight row each, its rule under it. */
+.cb-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+.cb-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: baseline; gap: 0 var(--s3); padding: var(--s2) var(--s4); border-left: 2px solid var(--line); background: var(--inset); }
+.cb-row.on { border-left-color: var(--amber); }
+.cb-name { display: inline-flex; align-items: center; gap: var(--s2); font-size: 13px; color: var(--text); }
+.cb-name .glyph { width: 13px; height: 13px; color: var(--dim); }
+.cb-row.on .cb-name .glyph { color: var(--amber); }
+.cb-w { font: 600 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.cb-at { font: 600 11px var(--mono); color: var(--amber); cursor: help; }
+.cb-rule { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.bp-cost .bc .glyph, .bp-cost .bc svg { width: 11px; height: 11px; }
 .fp-virus b { display: block; font: 600 15px var(--sans); color: var(--bright); overflow-wrap: anywhere; }
 .fp-virus small { font: 11px var(--mono); color: var(--muted); }
 .fp-tag-inline { display: inline-flex; align-items: center; height: 16px; padding: 0 4px; border: 1px solid currentColor; border-radius: var(--r-tag); font: 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }

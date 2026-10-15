@@ -227,23 +227,18 @@ test('crash: a breach chips you to zero, the server reboots at half and runs deg
   assert.ok(t.server.integrity < hp, 'and keeps on');
 });
 
-test('Degraded mode pauses the install queue', () => {
+test('Degraded mode pauses the network: a hub\'s swarm waits while the server reboots (the install queue went in R2)', async () => {
+  const { launch } = await import('./dist/fleet.mjs');
   const s = world();
-  s.materials.worm = 20;
-  s.server.credits = 500;
-  command(s, 'developer salvage 10');
-  s.recipes.push('router');
-  command(s, 'install router', 0);
-  assert.equal(s.install.doneAt, 15 * MIN);
+  (s.hubs ||= {}).kestrel = { id: 'hub-kestrel', faction: 'kestrel', stock: {}, restockAt: 0, captured: { at: 0, bank: 0 } };
   play(s, 'developer crash');
   wait(s, 5000); // the clock starts
-  wait(s, 10 * MIN);
-  assert.equal(s.degraded, null);
-  assert.equal(s.install.doneAt, 15 * MIN + 10 * MIN, 'pushed back by the time spent degraded');
-  tickServices(s, 16 * MIN + 5000);
-  assert.ok(s.install, 'not done at the old time');
-  tickServices(s, 25 * MIN + 5000);
-  assert.equal(s.services.router, 1);
+  launch(s, 5000, null, { hub: 'kestrel' });
+  const f = s.fleet;
+  wait(s, 5 * MIN);
+  assert.ok(s.degraded, 'still rebooting');
+  assert.equal(s.fleet?.state, 'travel', 'it waits: nothing lands while degraded');
+  assert.equal(f.ships, f.total);
 });
 
 test('losing a home fight reboots into Degraded mode too; losing to an invader leaves it at the wall', () => {

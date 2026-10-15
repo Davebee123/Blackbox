@@ -10,7 +10,6 @@
 // the wall left it, its armor is intact, it's worth a full kill, and its bounty (its family's code, lots of it)
 // grows the longer it's contested before you do. Invasions are the only thing that drops daemons (daemons.mjs).
 // A crash puts the server in Degraded mode (see crashServer in combat.mjs); the network waits.
-import { tickOutposts, outposts, stockOf } from './outpost.mjs';
 import { tickFleet } from './fleet.mjs';
 import { tickRetake } from './hubs.mjs';
 import { tickEvents } from './events.mjs';
@@ -161,7 +160,6 @@ export function tickNetwork(s, now = Date.now()) {
   unsabotage(s); // a saboteur that's gone gives your service back
   const gap = Math.max(0, now - prev), dt = Math.min(gap, I().maxTickMs);
   if (gap > dt) away(s, prev, now - dt); // logged off: the network plays on (firewall.mjs is the guard)
-  tickOutposts(s, now, dt, !!s.degraded); // degraded mode pauses outposts too
   tickFleet(s, dt, !!s.degraded, now);
   tickRetake(s, dt, !!s.degraded, now); // hubs you hold, and the factions that want them back
   tickFirewall(s, now); // a defrag that's done
@@ -186,7 +184,6 @@ export function tickNetwork(s, now = Date.now()) {
 function away(s, from, to) {
   if (s.net.open) { s.net.open = false; emit(s, 'firewall', 'Ports closed while you were away.'); } // Open ports is an online thing
   for (let t = Math.max(from, to - AWAY.maxMs) + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
-    tickOutposts(s, t, AWAY.stepMs, !!s.degraded, true);
     const d = s.degraded;
     if (d) {
       if (d.until == null) { d.since = t; d.until = t + (d.ms ?? CONFIG.degradedMs); }
@@ -322,7 +319,7 @@ function serviceTarget(s) {
   return best[Math.floor(rand(s) * best.length)];
 }
 // An outpost a thief can rob: the one with the most in its store.
-const richest = (s) => outposts(s).filter((l) => !l.outpost?.lockdown && stockOf(l) >= THIEF.min).sort((a, b) => stockOf(b) - stockOf(a))[0] || null;
+const richest = () => null; // outposts and their stores are gone (R2, sockets): a thief has nothing to rob, so none comes
 // Which kind comes: weighted, by what the sending server's level allows and what you have for it to go after.
 function rollKind(s, loc, awayRoll) {
   if (!s.net.seq) return 'raider'; // the first one is plain
@@ -442,7 +439,7 @@ function stopped(s, inv, how) {
   const where = inv.kind === 'thief' ? `The firewall on ${targetOf(s, inv)?.name || 'your outpost'}` : 'Your wall';
   const kind = inv.kind && inv.kind !== 'raider' ? `, ${inv.kind === 'pack' ? `a pack of ${inv.size}` : `a ${kindOf(inv).name.toLowerCase()}`}` : '';
   const bk = bountyCode(inv), n = payOut(s, inv, blocked ? 'blocked' : 'wall');
-  endInvasion(s, `${blocked ? `${where} stopped ${inv.name} (level ${inv.level}${kind}) from ${inv.fromName}` : `${where} wore ${inv.name} down to nothing`}: +${codeText(n, bk)}, +1 salvage.`, { blocked, quiet, gains: { [bk]: n } });
+  endInvasion(s, `${blocked ? `${where} stopped ${inv.name} (level ${inv.level}${kind}) from ${inv.fromName}` : `${where} wore ${inv.name} down to nothing`}: +${codeText(n, bk)}, +1 component.`, { blocked, quiet, gains: { [bk]: n } });
   unsabotage(s);
   gainXp(s, xpFor(s, inv.level, I().blockedXp * (inv.open ? I().open.reward : 1)), `${inv.name} stopped at the wall`, 'fight');
   if (inv.hidden) hiddenLead(s, hiddenNode(s, inv.hidden), HIDDEN.blockLead, 'Its route: ');

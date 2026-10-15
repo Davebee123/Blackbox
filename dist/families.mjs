@@ -66,7 +66,7 @@ Object.assign(ROOM_FAMILIES, {
 export const BODY = {
   package: { integrity: 16, opens: 5, cap: 3, opening: 1 }, // a Trojan's Package: unpacks 5 cycles after delivery, at most 3 on the board, 1 there when the fight opens
   redeploy: { in: 4, at: 0.5 }, // the Loader redeploys a broken Courier 4 cycles later at half its max Integrity, bare (its ◆ patch back on the usual clock), while it stands
-  dropper: { integrity: 14, amount: 3, interval: 2 }, // two from each unpacked Package (3: was 5 before a fight opened on a Package, which kept the Trojan's pressure in line)
+  dropper: { integrity: 14, amount: 2, interval: 2 }, // two from each unpacked Package (2: was 5 before a fight opened on a Package, which kept the Trojan's pressure in line)
   payload: { credits: [12, 24] }, // a Payload Box from an inert Package
   heat: { cooled: 10, hot: 25, at: 100, burn: 0.12, hard: 1.5 }, // the Rig's heat a cycle (Cooler alive, broken), overheat, its burnout, Hash once the Cooler is gone
   loader: 2, // a Loader's tick delays the Courier's next delivery this many cycles

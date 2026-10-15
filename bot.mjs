@@ -7,8 +7,8 @@
 // rooms (netrooms.mjs): on a visit it walks them like the rooms sim's bot (roomsim.mjs botStep: the key, the vault,
 // the Core, rooms not cleared yet, caches, respawns), fights with the planner, and jacks out when its Signal runs low.
 // node bot.mjs [class] [targetLevel] [seed]
-import { topUpCost, installBlock, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
-import { RARITY_ORDER, SLOT_KINDS, groupOf, SERVICES } from './dist/gear.mjs';
+import { topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
+import { RARITY_ORDER, SLOT_KINDS, groupOf } from './dist/gear.mjs';
 import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
@@ -16,12 +16,11 @@ import { items } from './dist/hidden.mjs';
 import { procOf, procIn } from './dist/root.mjs';
 import { sweepPuzzle, sweepFile } from './dist/forensics.mjs';
 import { eventsOf, CARDS } from './dist/events.mjs';
-import { BUILDINGS, buildBlock } from './dist/outpost.mjs';
 import { tickNetwork } from './dist/invasion.mjs';
 import { tickPlay } from './dist/progression.mjs';
 import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
-import { botStep } from './roomsim.mjs';
+import { botStep, BUILD } from './roomsim.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, power } from './dist/data.mjs';
 
@@ -42,6 +41,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];
   const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
   const seen = new Set(), losses = {};
+  BUILD.log = (x, id) => { (stats.built ||= []).push(`${id}@lv${hackerLevel(x)}`); }; // what it builds in the sockets it clears (sockets.mjs)
   // The ledger: what came in, by where it came from (positive changes only; the bot spends nothing but code on contracts).
   const purse = () => ({ credits: s.server.credits, code: ['cipher', 'worm', 'kernel'].reduce((n, k) => n + (s.materials?.[k] || 0), 0), exploit: s.materials?.exploit || 0, salvage: (s.salvage || []).length });
   const ledger = (stats.ledger = {}), byLevel = (stats.byLevel = {});
@@ -152,7 +152,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   // On rooms: not Mapped yet, or not taken over (a Resident that just beat it waits), and not outgrown (4 levels under
   // you: a player moves on, and frees its memory).
   const pending = (loc) => { const R = loc.floorplan; if (!R) return true; if ((loc.level || 1) <= hackerLevel(s) - 4) return false; return !R.mapped || (!loc.takenOver && !loc.member && !(residentBonus(loc, t) > 0)); };
-  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !loc.buildings?.length && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
+  const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !Object.keys(loc.floorplan?.programs || {}).length && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
     if (!loc.fresh || !loc.detached) return true;
@@ -286,13 +286,6 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (book('runs', deadDrop)) continue;
     tickPlay(s, t - 1_700_000_000_000 - (s.pace?.ms || 0)); // the bot's whole session is active play (Fresh and Behind use it)
     mailWork();
-    if (spend === 'all' && !s.run && !active(s) && !s.install) { // build: the cheapest service you can install
-      for (const id of Object.keys(SERVICES)) if (!installBlock(s, id)) { const c = s.server.credits; command(s, 'install ' + id); (stats.spent ||= {}).services = (stats.spent.services || 0) + c - s.server.credits; break; }
-    }
-    if (spend === 'all' && !s.run && !active(s)) { // and a building on a server it holds (outpost.mjs): producers first, the cheapest that fits
-      const order = Object.keys(BUILDINGS).sort((x, y) => (BUILDINGS[x].kind === 'producer' ? 0 : 1) - (BUILDINGS[y].kind === 'producer' ? 0 : 1) || BUILDINGS[x].cost.credits - BUILDINGS[y].cost.credits);
-      outer: for (const l of s.locations.filter((x) => x.takenOver && !x.build)) for (const id of order) if (!buildBlock(s, l, id, t)) { const c = s.server.credits; command(s, `outpost build ${l.id} ${id}`, t); (stats.spent ||= {}).buildings = (stats.spent.buildings || 0) + c - s.server.credits; break outer; }
-    }
     book('deconstruct', gearUp);
     restUp();
     const L = hackerLevel(s);
@@ -322,6 +315,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   stats.mail = (s.mail || []).length;
   stats.credits = s.server.credits;
   delete hooks.now;
+  BUILD.log = null;
   return { s, stats };
 }
 

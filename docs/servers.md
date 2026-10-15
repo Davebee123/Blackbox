@@ -368,7 +368,7 @@ Code stays three kinds, by lineage: Cipher for the leverage families, Worm for t
 | Courier | 34 | 1 | Drop 10, and delivers a Package |
 | Loader | 30 | 2 | none. While it lives, any damage to a Package unpacks it, and it redeploys a broken Courier 4 cycles later at half its Integrity, bare, every time. |
 | Package | 16 | 0 | none. Unpacks on its own 5 cycles after delivery (a countdown on it). At most 3. The fight opens with one on the board. |
-| Dropper (from an unpacked Package, two each) | 14 | 0 | Spray 3 every 2 (5 before the fight opened on a Package) |
+| Dropper (from an unpacked Package, two each) | 14 | 0 | Spray 2 every 2 (5 before the fight opened on a Package) |
 
 - Sets: **Express** (a Package every 3 from 2, Drop every 5) and **Freight** (a Package every 4 from 2, Drop every 3).
 - Once the Loader is broken, Packages are inert boxes: break one for a Payload Box (credits and a component).
@@ -761,7 +761,7 @@ About 50 hours to level 50, and every class within 1.25× the fastest's time to 
 |---|---|---|
 | **R0, the slice** | One server as a room graph, behind `/?playtest=rooms&class=…&level=…&kind=…&seed=…` with a fresh character that's never saved. Room kinds: process, elite, guard post and key, vault, core, den, cache with bait, rest, junction. Fog, the key walk, a Patroller and a Tracker (`&hunter=patrol|track`), respawn timers (×10 speed in the playtest), progress. A Resident in `/core` with the boss rule on a switch (`&boss=a|b|c`, and `developer bossrule a|b|c` mid-session) so the designer can play DEADBOLT under each option and pick (3.4). The interrupt rule with its ticks and readout. Attack sets for the three families. The Trojan, the Cryptominer and the Wiper. `roomsim.mjs`: a bot that walks a server visit by visit. | A playtest page |
 | **R1, into the old game** | Traced servers become room graphs. SPRAWL-00, rogue servers and KESSLER-FARM-00 as rooms. Takeover, the new Root. Tells simplified (3.5). Terminal commands on rooms. Contracts re-pointed. A save migration (9.3). | The real save |
-| **R2, sockets** | Socket rooms, codebases, components and the drop rates, the first eight programs (Harvester, Cron Spawner, Code Siphon, Cache Mill, Defrag Bay, Tunnel, Snare, Listening Post). Outposts, swarms and services go. | |
+| **R2, sockets** | Socket rooms, codebases, components and the drop rates, the first eight programs (Harvester, Cron Spawner, Code Siphon, Cache Mill, Defrag Bay, Tunnel, Snare, Listening Post). Outposts, swarms and services go. | The real save (9.8) |
 | **R3, floors** | Floor diagrams and their generator, exits, the floor panel, floors replacing `BANDS`, hubs and lairs on floors, invasions by floor. | |
 | **R4, depth** | The other seven families, nest rooms, Linked tells, boss phases on core ticks (option a), help requests, the other eight programs. | |
 | **R5, the cut** | Delete the breach and campaign code and tests, and the GAME_RULES and README sections for them. | |
@@ -904,6 +904,57 @@ What the numbers say: the climb to 10 lands on 7.2 (2.5–3.0 hours against 2.7;
 
 - *Unknown until discovered* (2.6). `R.seen[id]` is `'kind'` only for a room you've stood in (`look`; `known`), `'shape'` for one drawn but unknown: the rooms next to you and one further, the Core's chip, every room at 50%. The hunter and the Exfil show where `inSight` says (your room, next to you, a discovered room). The page draws an unknown room as a ? ghost chip with only its cost badge, its card as *Unknown room*; the terminal lists it as ?, the log as *an unknown room* (`nameOf`). Everywhere rooms show: traced servers, rogue servers, SPRAWL-00, the farm and `?playtest=rooms`. An older save is migrated on load (`fogRestore`, `R.fog = 2`).
 - *The Exfil* (the designer: *these are programs and viruses, so a mule stealing a bag makes no sense*). The Mule is now the **Exfil**, a process smuggling a stolen archive off the server: EXFIL-####, its parts the **Uplink** (was Runner) and the **Archive** (was Bag). Caught, the board counts **Upload n/6**; at 6, *Upload complete. The archive is gone.*; broken in time, *Archive recovered.* The map's glyph is a gold archive with an upload arrow (filled once cornered), its flee arrow still dashed amber; the Codex group is *Exfils*. Every number stays (25% a run, 45 minutes of your own cooldown, the loot). `CONFIG.exfil`, `s.exfil` and `developer exfil`; `exfilRestore` carries an older save's `s.mule` cooldown, its Codex record, tip and any chase or fight in flight over. (The switched-off Exfil payload, payload.mjs, is a different thing and keeps its name.)
+
+### 9.8 What shipped: R2, sockets
+
+**Play it:** the real game. Connect to any traced server: its socket rooms sit at the ends of branches. Clear one's guard and walk in; its pop-up is the **Build** card. `developer location worm`, `developer codebases` and `developer components 100` (with `?dev`) set up a test at once; `?playtest=rooms` has socket rooms too. An older save is moved over when it loads (wick's letter *Outposts are gone. Sockets are in.*). GAME_RULES.md ("Sockets and programs (R2)") and README.md describe it as built. Code: `dist/sockets.mjs` (new: the catalogue, codebases, components, costs, the save's retirement of outposts), `dist/floorplan.mjs` (socket rooms on the graph, every program's effect, `build` and `uninstall`), `dist/floorplan-view.mjs` and `dist/floorplan.css` (the chips, the Build card), `dist/netrooms.mjs` (the core socket, Root 4, Grid, codebases from a Resident and Mapped, the old graphs' sockets); tests in `sockets.test.mjs` (new) and the old outpost, service and architecture tests rewritten to the new rules. `outpost.mjs` and `architecture.mjs` are deleted; `fleet.mjs` is hubs only.
+
+**In it:** the R2 row of 9.1.
+- *Socket rooms* (6.1): small 1, medium 2, large 3, each a new leaf off the deepest branch rooms (never the entry, a vault, the Core, the den or the spine), guarded on your first visit by a process of one of the server's fight-room families. Cleared once, it's open for good. Backbone +1; Root 4 +1 beside the Core, open from the start; a held server's Core is its **core socket**.
+- *Codebases* (6.2): you start with the Harvester. A third of vaults hold `codebase.cb` (your first server's always); a Resident's first fall teaches one from its author's list; Mapped teaches one; hub shops sell them (Halcyon's store Harvester, Defrag Bay and Cache Mill; Kestrel Snare; LANTERN Listening Post and Tunnel; GLASSJAW Code Siphon; NULL CHOIR Cron Spawner) at 200 + 10×level credits light, 400 + 15×level medium. A known one banks as 4 components. The Build card and the Server page list only codebases you know.
+- *Components* (7.1): a part's piece is a component now. A room fight's part drops one 60% of the time, an elite's or a guard's always, and an elite gives one more at the kill; elsewhere (invasions, SPRAWL-00's strays, rogue folders) the old 35%. A mastered part's chance is ×1.25 (research). Deconstructing pays components. They live in `s.salvage`, so every cost that took salvage takes them.
+- *Costs* (6.3): light 20 components + 15 of the server's code; medium 40 components (10 of them a component of the server's own families) + 30 code + 1 Exploit; ×1.25 a layer past the first. One of each program a server, built at once, uninstalled for free with half the components and code back.
+- *The eight programs*, on their server only:
+
+| Program | Weight | Exactly |
+|---|---|---|
+| Harvester | light | Every kill drops 1 more of the component of the part you broke last |
+| Cron Spawner | light | Fight rooms respawn in half the time (not the Core or a boss room) |
+| Code Siphon | light | Every fight room cleared pays 3 more of its code (into the pack) |
+| Cache Mill | light | Caches refill in half the time and pay ×1.5 credits and code |
+| Defrag Bay | light | Its room rests 25% of your max Signal once a visit; a Tracker won't path into it |
+| Tunnel | medium | Its room and the entry are linked: no Signal to walk it, and the hunter can't use it |
+| Snare | medium | A hunter walking in is held 4 of your moves, once a visit |
+| Listening Post | medium | Kills here roll for the unique you `listen` for twice as often; `listen` needs a Post somewhere |
+
+- *Retired* (8.1, 6.5): outposts, buildings, plans, slots, bandwidth, stores and collecting, the Scheduler, every service (the network four too), the install queue and its buyout, the architecture, natives noticing outposts, swarms at outposts, lockdowns, regrowth and Retake, outpost firewalls, and the dividend. The consortium stays: **Linked** gives +10% components on members' servers, **Grid** one more socket room on every traced server (offline when you're not in one). Swarms only come for hubs you hold. Relays stay items (`relay craft` with the Relay plan).
+- *The save* (v40, 9.3): every building (and a build in progress, harvesters and modules from before buildings) pays back its credits, its server's code, its salvage as components and its Exploits; an outpost's store pays out; services pay each version they ran; a waiting dividend pays; plain salvage becomes components. Plans, and each building, become codebases (Code Siphon, Cache Mill for the Data Miner, Scrap Mill and Credit Skimmer, Snare for the IDS, Listening Post; Bulkhead, Sentry Turret, Honeytoken and Relay kept for R4). Every traced graph gets its socket rooms from its seed; Root 4 adds its room. One letter from wick says so.
+- *The UI*: a socket chip is red while guarded, amber once open (a dashed hairline while empty); a program takes the chip (its icon and name, a slot badge bottom left); a Tunnel draws a dashed amber arc to the entry. The Build card lists each codebase with its rule and cost chips (red until held). The network map's card reads *Sockets n/N* with the programs as chips; the Server page lists **Codebases** and where each runs. Terminal: `build`, `build <program> [pay …]` (or `install`), `uninstall` (or `remove`).
+
+**The pacing bot** (`bot.mjs` to level 20, three seeds a class; the rooms bot now builds the first program it can pay for in a socket it clears, once a visit: Harvester, Cron Spawner, Code Siphon, Cache Mill, Defrag Bay, Tunnel, Snare):
+
+| Class | Hours to 5 / 10 / 20, before | After | Room fights won, before / after | What it built (three characters) |
+|---|---|---|---|---|
+| Breaker | 0.72 / 3.42 / 7.74 | 0.72 / 2.93 / 7.45 | 94 / 96% | 49: Harvester 29, Cron Spawner 19, Code Siphon 1 |
+| Bastion | 0.81 / 3.44 / 10.47 | 0.81 / 3.38 / 12.72 | 92 / 93% | 40: 26, 13, 1 |
+| Infiltrator | 0.68 / 3.31 / 10.42 | 0.68 / 2.79 / 9.23 | 91 / 96% | 42: 26, 15, 1 |
+| Operator | 0.96 / 3.38 / 7.63 | 0.96 / 3.39 / 7.88 | 94 / 97% | 49: 29, 18, 2 |
+| All | 0.79 / 3.39 / 9.07 | 0.79 / 3.12 / 9.32 | 93 / 95% | 180: Harvester 110, Cron Spawner 65, Code Siphon 5 |
+
+The Bastion's three seeds swing (to 20: 9.5–11.4 before, 11.5–14.1 after); three more each (seeds 4–6) give 8.9–13.6 before and 7.6–13.9 after, so over six seeds it's 11.0 hours before and 11.7 after, inside its spread. The XP mix to 20 moves from fights 49% / break-ins 39% / decoding 7% / contracts 5% to 53 / 37 / 6 / 5: a socket's guard is one more first clear (about 790 XP a character to 20). Components on hand at 20 fall from 374 to 272 (they're spent now).
+
+**A held server doesn't out-earn fighting** (`roomsim.mjs`, a medium server mapped then farmed two hours at level 10, four classes, three seeds each; with programs the bot knew every codebase and paid no code, since the playtest drops little): over the whole session (mapping and the two hours), with no programs 4,357 XP and 34 components an hour; with a Harvester and a Cron Spawner in its two sockets 5,094 XP (+17%) and 43 components (+26%, after the 40 they cost) an hour. Mapping a fresh server pays about 7,000–12,000 XP an hour at 10 (9.4's sim), so moving on still beats farming one you've built up, and nothing is made while you're away.
+
+**Where R2 differs from the doc, and why:**
+- *Socket rooms are new rooms,* not a process room turned into one: a server grows by its sockets (a medium one is 14 rooms), so the R0/R1 layouts, keys and loops stay as tuned, and an older save's graph can get them from its seed without moving a room you'd cleared.
+- *The core socket takes any program* until core programs exist (R4).
+- *Code drops are as they were*; only components got the room rates.
+- *The Defrag Bay keeps a Tracker out* (a rest room never had a hunter in it); the Bulkhead's wall is R4.
+- *Every server, a held one too, makes you wait 30 seconds to reconnect* (only outposts skipped it).
+- *The saboteur and the thief* never come now: no services to shut off, no stores to rob (asked for, one comes as a raider). Their code stays for the invasions rework.
+- *Not in R2:* the other eight programs and core programs, a lair boss's core codebase, help requests (R4); floors (R3), so costs grow by layer.
+
+**Known issues:** the Bastion's climb to 20 is the slowest and the most spread (above); the bot builds only what it meets first (mostly the Harvester and the Cron Spawner), so the Tunnel, the Snare, the Defrag Bay and the Listening Post are tested by `sockets.test.mjs` but not paced; programs read nothing on rogue servers, SPRAWL-00 or lairs (no sockets there yet); a held server's core socket takes any program until R4's core programs; the saboteur's and the thief's code is still in `invasion.mjs`, unreachable, left for the invasions rework.
 
 ## 10. Open questions for the designer
 

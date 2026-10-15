@@ -16,8 +16,8 @@ const home = (s) => s.encounter?.mode !== 'run';
 
 export const TIPS = [
   // ---------- anywhere ----------
-  { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, and your installs and outposts are paused.' },
-  { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'Kills drop code. Spend it on the Server page to build services.' },
+  { id: 'degraded', page: '*', at: '#integrity-note.degraded', text: 'Your server crashed and rebooted at half Integrity. For the next 10 minutes your wall is down, and a swarm at a hub you hold waits.' },
+  { id: 'code', page: '*', at: '.modules [data-module="server"]', when: (s, m) => m !== 'server' && Object.values(s.materials || {}).some((n) => n > 0), text: 'Kills drop code. Programs in a server\'s sockets and your firewall\'s tiers take it.' },
   // Your first protocol: Loadout → the Protocols tab → Load. Three short steps, each pointing at the next click.
   { id: 'protocol', page: '*', at: '.modules [data-module="loadout"]', when: (s, m) => m !== 'loadout' && spare(s), text: 'You have a protocol to equip. Open Loadout. You can only equip at home, not on a run or mid-fight.' },
   { id: 'protocol-tab', page: 'loadout', at: '[data-ltab="protocols"][aria-selected="false"]', when: (s) => spare(s), text: 'Your protocols are on this tab.' },
@@ -31,6 +31,7 @@ export const TIPS = [
   { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. Viruses that attack it show up next to it. Kill enough of one family and you find the server that sent them.' },
   { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is a rogue server. Viruses gather in its folders. Connect, find them with ls and cd, and attack the ones you want to fight.' },
   // ---------- the rooms (the Run tab) ----------
+  { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'A socket room. Clear its guard once and it\'s yours to build in: a program here bends this server\'s rules, and only this server\'s.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive off this server. It runs from you: corner it and break its Uplink before the upload finishes.' },
   { id: 'net-sweep', page: 'net', at: '.sweep:not(.past):not(.solved)', text: 'Click a line to light up every line it shares a source with, and filter out the noise. A right answer pushes your lead toward the next server. A wrong one only shrinks the push.' },
   { id: 'net-hostile', page: 'net', at: '.term .tok.virus', text: 'A virus is running in this folder. Click it, or type attack, when you are ready. It comes back a while after you kill it.' },
@@ -39,15 +40,10 @@ export const TIPS = [
   { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You found a server. Select it and press Connect to hack in. It takes memory while it is on your network. Its ring fills as you explore it.' },
   { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your free memory. They show how many more servers your network can hold. The blinking one is what this server takes. Detach a server you are done with to get one back.' },
   { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'An invasion is heading for your wall. How strong your Firewall is decides whether it is blocked, contested, or breaks through.' },
-  { id: 'map-outpost', page: 'map', when: (s) => (s.locations || []).some((l) => l.takenOver && l.buildings?.length), at: '.outpost .op-store', text: 'What your buildings make piles up here while you are away, up to what the server can store. Connect to the server to collect it.' },
-  { id: 'map-besieged', page: 'map', when: (s) => s.fleet?.state === 'siege', at: '.mnode.besieged', text: 'A swarm is at this outpost, and it makes nothing meanwhile. Defend it before the timer runs out, or it goes into lockdown. Its stockpile stays yours.' },
-  { id: 'map-lockdown', page: 'map', when: (s) => (s.locations || []).some((l) => l.outpost?.lockdown), at: '.mnode.locked', text: 'This outpost is in lockdown. It harvests nothing for a while, but its stockpile is safe. Retake it with a fight to end it sooner.' },
-  { id: 'map-fleet', page: 'map', when: (s) => !!s.fleet, at: '.mnode.fleet', text: 'A swarm is coming for one of your outposts. Each fight kills one virus. Intercept the swarm on the way, or defend once it lands. Any left when its timer runs out put the outpost in lockdown.' },
   { id: 'map-contested', page: 'map', at: '.mnode.invader.siege[data-select="invader"]', text: 'Your wall is wearing this invasion down, but it costs you Integrity. Jack in to finish it now, or raise the wall to block it next time.' },
   { id: 'map-breach', page: 'map', at: '.mnode.invader.breach', text: 'A breach takes some of your Integrity every minute. You can jack in to fight it yourself, and it counts as a full kill.' },
   { id: 'map-hub-swarm', page: 'map', when: (s) => !!retakeOf(s), at: '.mnode.hub.yours.threat', text: 'The old owner is sending viruses to take this hub back. The timer is under its name. The hub earns nothing until you beat them, one fight per virus.' },
   { id: 'map-hub-lockdown', page: 'map', when: (s) => !retakeOf(s), at: '.mnode.hub.yours.threat', text: 'This hub is in lockdown. It earns nothing until you retake it with one fight. It is still yours, and stays yours.' },
-  { id: 'map-member-raid', page: 'map', at: '.mnode.member.besieged', text: 'A member\'s outpost is under invasion. Select it and Defend for a bounty. Left alone, it may hold or go into lockdown, at no cost to you.' },
   { id: 'map-contract', page: 'map', at: '.mnode.job', text: 'A contract points at this server. Open its vault and beat the Resident in /core to take it over, or open the vault to find the file you were sent for.' },
   { id: 'pager', page: '*', at: '#pager .led.on', text: 'This is your pager. New mail, offers, finished contracts, the retainer and anything moving on the network land here. Click it for the list.' },
   { id: 'mail', page: '*', at: '.modules [data-module="mail"]', when: (s, m) => m !== 'mail' && (s.mail?.list || []).some((x) => !x.read), text: 'You have mail. Your crew, LOWLIGHT, and Halcyon Mutual send you contracts here.' },
@@ -58,7 +54,7 @@ export const TIPS = [
   { id: 'mail-board', page: 'mail', at: '.mlist.mboard', text: 'This is Halcyon\'s board. Offers come and go on their own, and you can take up to three at a time. Only a contract you have taken counts.' },
   { id: 'store', page: 'hub', at: '.hub-win .store-page', text: 'Halcyon\'s store is its hub\'s Shop. Its own line is always there, and other agencies\' stock changes through the day.' },
   { id: 'hub-shop', page: 'hub', at: '.hub-win .ptiles.stash .ptile', text: 'Every hub has a Shop with that faction\'s own goods. Better rep unlocks more of the shelf and trims the price.' },
-  { id: 'store-plans', page: 'hub', at: '.plan-shelf', text: 'These are plans for harvesters and outpost modules. Buy one once and you can craft that kind on the Craft page for good.' },
+  { id: 'store-codebases', page: 'hub', at: '.plan-shelf', text: 'Codebases. Buy one once and you can build its program in any socket you have cleared.' },
   // ---------- hub sessions ----------
   { id: 'hub-menu', page: 'hub', at: '.hub-row', text: 'You are connected to a faction hub. Pick a line (click it, or type its number) to open that window, such as its market, its work or payloads.' },
   // The market, one step per tip in the order you meet it: rows, ▲/▼, the news, then the ticket.
@@ -73,7 +69,7 @@ export const TIPS = [
   { id: 'store-chase', page: 'hub', at: '.ptile.chase', text: 'These are Halcyon\'s own protocols. They cost Indemnity, which only contracts pay, and your standing decides which ones you can buy.' },
   { id: 'map-drop', page: 'map', at: '.mnode.drop', text: 'Something is happening on this server. Its card says what, and how long you have to act.' },
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server. Nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },
-  { id: 'map-build', page: 'map', at: '.op-build-open', text: 'Build on a server you hold. Each building takes one of its slots and some of your bandwidth, costs credits, code and salvage, and builds in real time. What it makes piles up while you are away.' },
+  { id: 'map-build', page: 'map', at: '.prog-row', text: 'Its sockets, and what runs in them. Clear a socket room on a run, then build in it from its pop-up. A program works on this server only, while you are in it.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },
   { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'This is an unknown server. Beat the viruses it sends at you to trace it. A vault\'s trace record traces it too. Once a relay flags it, kills of any virus from its family count as well.' },
 
@@ -129,11 +125,10 @@ export const TIPS = [
   { id: 'net-pack', page: 'net', at: '.net-pack', when: (s) => (s.run?.pack.length || 0) > 0, text: 'Files you pull wait in your pack. Jack out to bank them and keep them.' },
 
   // ---------- server ----------
-  { id: 'server-level', page: 'server', at: '.server-head', text: 'Your server is at the level of your highest class. Its services cost code from the viruses you kill, and take real time to install.' },
+  { id: 'server-level', page: 'server', at: '.server-head', text: 'Your server is at the level of your highest class. Its wall holds invasions back; your codebases build programs out on the servers.' },
   { id: 'server-wall', page: 'server', at: '.wall-card .fw-lv', text: 'Your firewall stops invasions up to its level. Servers on your network send them, even while you are away. Amber or red up top means one of them can get past.' },
   { id: 'fw-upgrade', page: 'server', at: '.fw-up', text: 'Your firewall keeps up with the servers on your network by itself. An upgrade buys a margin on top, up to +6, for credits and code.' },
   { id: 'fw-frag', page: 'server', at: '.fw-grid i.frag', text: 'Each invasion breaks some blocks. Every 4 broken blocks cost a level. Defrag repairs them for credits, and the wall is weaker while it runs.' },
-  { id: 'server-queue', page: 'server', at: '.install', text: 'Installs run one at a time in real time. They keep going while you fight, go on runs, or close the game.' },
   { id: 'server-blueprints', page: 'server', at: '.blueprint-card', text: 'You can only build a service once you have its blueprint. Blueprints wait in vaults, and a kill drops one now and then.' },
 
   // ---------- protocols ----------
@@ -142,8 +137,7 @@ export const TIPS = [
   { id: 'protocols-zeroday', page: 'loadout', at: '.gitem.r-zeroday', text: 'This is a Zero-day. It has a special effect on top of its stats, and you can run one of each kind.' },
 
   // ---------- craft ----------
-  { id: 'craft-plans', page: 'craft', at: '.craft-cats .craft-cat', text: 'Only what you know shows here. New recipes come as blueprints: viruses drop them, vaults hold them, and Halcyon sells plans.' },
-  { id: 'craft-modules', page: 'craft', at: '.craft-cat[data-craft-cat="modules"]', when: (s) => (s.plans || []).some((id) => ['pipeline', 'storage', 'node', 'ids', 'lure'].includes(id)), text: 'Modules you craft go into your stock (×n on the row). Install them from an outpost\'s card on the map.' },
+  { id: 'craft-plans', page: 'craft', at: '.craft-cats .craft-cat', text: 'Only what you know shows here. New recipes come as blueprints: viruses drop them, vaults hold them, and the Halcyon store sells sealed ones.' },
 
   // ---------- loadout ----------
   { id: 'loadout-status', page: 'loadout', at: '.status-line .status', text: 'Your skills put this status on parts. Hover it to see what it does.' },
@@ -153,8 +147,6 @@ export const TIPS = [
 
   // ---------- daemons ----------
   { id: 'daemons', page: 'loadout', at: '.daemon-slots', text: 'Daemons come from invasions. A slotted one fights beside you, on its own cooldown or when its moment comes. A higher-level copy replaces yours.' },
-  { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade, so pick the one that fits how you play. You can rebuild later for credits.' },
-  { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'A module you crafted, ready for this outpost\'s ports. It bends how the outpost works. Take it out and it goes back to your stock for another outpost.' },
   // The Codex tab, once there's something in it: your first decoded part (and never mid-fight).
   { id: 'codex', page: '*', at: '.modules [data-module="codex"]', when: (s, m) => m !== 'codex' && s.encounter?.phase !== 'active' && Object.values(s.research || {}).some((n) => n > 0), text: 'You decoded your first part. The Codex keeps each part\'s research: break it, cut it and answer its tells to learn its rule.' },
 ];

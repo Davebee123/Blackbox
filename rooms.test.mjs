@@ -41,7 +41,16 @@ test('the generator: the same seed builds the same server, and other seeds build
 test('every server is connected, sized by the table, and laid out as the doc asks', () => {
   for (const kind of FP.KIND_IDS) for (const size of SIZES) for (let seed = 1; seed <= 25; seed++) {
     const g = FP.generate(seed, { size, kind, level: 10, floor: 2, author: FP.KINDS[kind].author }), ids = Object.keys(g.rooms), tag = `${kind} ${size} seed ${seed}`;
-    assert.equal(ids.length, FP.ROOMS.sizes[size], tag);
+    assert.equal(ids.length, FP.ROOMS.sizes[size] + FP.ROOMS.sockets[size], `${tag}: its rooms and (R2) its socket rooms`);
+    // Socket rooms: at the end of a branch, never by the entry, a vault, the Core or the den, each guarded by a process.
+    const sockets = ids.filter((id) => g.rooms[id].kind === 'socket');
+    assert.equal(sockets.length, FP.ROOMS.sockets[size], tag);
+    for (const id of sockets) {
+      const by = FP.neighbours(g, id);
+      assert.equal(by.length, 1, `${tag}: a socket is a leaf`);
+      assert.ok(![g.entry, g.core, g.den, ...g.vaults].includes(by[0]) && !g.spine.includes(by[0]), `${tag}: off a branch`);
+      assert.ok(g.rooms[id].family, `${tag}: a process of the server guards it`);
+    }
     const d = FP.distances(g, g.entry);
     assert.equal(Object.keys(d).length, ids.length, `${tag}: every room reachable from the entry`);
     // The spine: entry to /core, the vault the room before it, /core only behind the vault.
@@ -433,7 +442,7 @@ test('the terminal: ls names the exits and the hunter, cd moves, map draws what 
   assert.equal(R.at, first.id);
   if (R.screen?.kind === 'virus') FP.roomsCommand(s, 'back');
   const map = FP.roomsCommand(s, 'map').find((e) => e.type === 'rooms-out').message;
-  assert.match(map, /rooms \d+\/12/);
+  assert.match(map, new RegExp(`rooms \\d+/${12 + FP.ROOMS.sockets.medium}`), 'twelve rooms and two socket rooms');
   FP.roomsCommand(s, 'developer bossrule c');
   assert.equal(R.bossRule, 'c');
   FP.roomsCommand(s, 'jack out');

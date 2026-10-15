@@ -5,7 +5,7 @@ import { fresh, command, rank, kitTalent, active, listenBoost, bossChance, UNIQU
 import { play } from './dist/run.mjs';
 import { LOADOUT, HOT_RUN, ARCHETYPES } from './dist/data.mjs';
 import { deal, eventText } from './dist/events.mjs';
-import { BUILDINGS } from './dist/outpost.mjs';
+import { PROGRAMS } from './dist/sockets.mjs';
 
 test('the kit talent: from level 5 every class has the first of its first-row talents at two ranks; there is no specialty to pick', () => {
   const s = fresh();
@@ -34,18 +34,24 @@ test('a loud run: connect <server> loud makes every fight tougher and every kill
   assert.ok(hot.encounter.virus.hot);
 });
 
-test('the Listening Post: listen <unique> makes it 25% likelier per post wherever it drops, bosses included', () => {
-  assert.ok(BUILDINGS.post);
+test('the Listening Post (a program): listen <unique> makes it twice as likely on the post\'s server, bosses included', () => {
+  assert.ok(PROGRAMS.post);
   const s = fresh();
   s.hackers = { breaker: { level: 8, xp: 0 } };
   command(s, 'developer location worm');
   assert.match(command(s, 'listen crown-packet').at(-1).message, /needs a Listening Post/);
-  Object.assign(s.locations[0], { takenOver: true, buildings: ['post', 'post'] });
+  const loc = s.locations[0];
+  loc.lockUntil = 0;
+  play(s, 'connect ' + loc.id);
+  const sock = Object.values(loc.floorplan.graph.rooms).find((x) => x.kind === 'socket');
+  loc.floorplan.programs = { [sock.id]: 'post' };
   const base = bossChance(s, 'relayking');
   command(s, 'listen Crown Packet');
   assert.equal(s.listen, 'crown-packet');
-  assert.equal(listenBoost(s), 1.5);
-  assert.ok(Math.abs(bossChance(s, 'relayking') - base * 1.5) < 1e-9);
+  assert.equal(listenBoost(s), 2, 'on its server');
+  assert.ok(Math.abs(bossChance(s, 'relayking') - Math.min(1, base * 2)) < 1e-9);
+  play(s, 'jack out');
+  assert.equal(listenBoost(s), 1, 'off it');
   assert.match(command(s, "listen wick's old toolkit").at(-1).message, /a reward, not a drop/);
 });
 

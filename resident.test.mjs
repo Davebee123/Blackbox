@@ -4,7 +4,7 @@ import { fresh, command, resolveCycle, part, active, hooks } from './dist/combat
 import { play, connect, currentLocation, residentLevel } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG, BOSSES } from './dist/data.mjs';
-import { regrow } from './dist/outpost.mjs';
+import { tickNetwork } from './dist/invasion.mjs';
 
 const say = (s, t) => play(s, t);
 const onRun = () => { const s = fresh(); command(s, 'developer location ransomware'); connect(s, s.locations[0].id); return s; };
@@ -95,15 +95,16 @@ test('a boss enrages: from its cycle every attack lands every cycle', () => {
   assert.ok(v.parts.filter((p) => p.attack).every((p) => p.attack.interval === 1));
 });
 
-test('the Resident regrows after two lockdowns left to run out: the core is guarded again', () => {
+test('a server you hold stays yours: no lockdowns, and the Resident never regrows (R2: outposts and their retakes are gone)', () => {
   const s = onRun();
   const loc = openVault(s);
   toCore(s);
   winFight(s);
   assert.ok(loc.takenOver);
-  regrow(s, loc);
-  assert.ok(!loc.takenOver);
-  assert.ok(FP.isUp(s, coreRoom(s)), 'the Resident holds its Core again');
+  const t0 = Date.now();
+  for (let h = 1; h <= 48; h++) tickNetwork(s, t0 + h * 3600000);
+  assert.ok(loc.takenOver && !loc.outpost, 'two days on, still yours');
+  assert.ok(!FP.isUp(s, coreRoom(s)), 'and its Core stays empty');
 });
 
 test('early bosses: RELAY-KING holds /net/relay from level 3; the bounty is REPO MAN from 8; the Hollow Choir comes from 10', async () => {

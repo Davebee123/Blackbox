@@ -156,7 +156,7 @@ test('the spoils card lists what a won fight gave you', async () => {
   const html = spoilsMarkup({ name: 'CRYPTJACK', level: 1, family: 'Ransomware', cycles: 2, damage: 0, clean: true }, spoilsOf([{ type: 'xp', amount: 30 }, { type: 'loot' }]), { level: 1, from: 0, to: 0.3 });
   assert.match(html, /CRYPTJACK/);
   assert.match(html, /\+30/);
-  assert.deepEqual(lines, ['2 salvage', '+30 XP', '+2 Cipher code', 'Blueprint (pack)', 'Level 4']);
+  assert.deepEqual(lines, ['2 components', '+30 XP', '+2 Cipher code', 'Blueprint (pack)', 'Level 4']);
 });
 
 test('Status in the HUD: timed effects on you with the cycles they have left (Momentum, buffs, Scrambled)', async () => {
@@ -213,18 +213,20 @@ test('the forecast: what your command will cost a part, and what the virus will 
   assert.equal(forecast(s).you, e.encrypt || 0, 'an armor chit takes the hit');
 });
 
-test('an outpost card renders its slots, what is built, and a Build list', async () => {
+test('a server card shows its sockets and the programs it runs (no outpost card, no Build panel)', async () => {
   const { mapMarkup } = await import('./dist/view.mjs');
   const { play } = await import('./dist/run.mjs');
   const s = fresh();
   command(s, 'developer location worm');
   const l = s.locations[0];
-  l.takenOver = true;
-  play(s, `developer outpost ${l.id}`);
-  const html = mapMarkup(s, l.id);
-  assert.match(html, /Building slots/);
-  assert.match(html, /Code Siphon/);
-  assert.match(html, /data-build-open=/, "a Build button that opens the Build panel");
+  l.lockUntil = 0;
+  play(s, `connect ${l.id}`); play(s, 'jack out');
+  const sock = Object.values(l.floorplan.graph.rooms).find((x) => x.kind === 'socket');
+  l.floorplan.programs = { [sock.id]: 'harvester' };
+  const html = mapMarkup(s, l.id, 'mine', { pop: true });
+  assert.match(html, /Sockets 0\/\d/);
+  assert.match(html, /Harvester/);
+  assert.doesNotMatch(html, /data-build-open=|Building slots/);
 });
 
 test('what you type changes the expected damage on the board before you press Enter', async () => {
