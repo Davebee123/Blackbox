@@ -154,7 +154,7 @@ export const TIPS = [
   { id: 'server-arch', page: 'server', when: (s) => !s.architecture, at: '.arch-card:not(.locked)', text: 'Your server is big enough to choose what it is built around. Each architecture is a trade, so pick the one that fits how you play. You can rebuild later for credits.' },
   { id: 'map-mods', page: 'map', at: '.mods .mod.add', text: 'A module you crafted, ready for this outpost\'s ports. It bends how the outpost works. Take it out and it goes back to your stock for another outpost.' },
   // The Codex tab, once there's something in it: your first decoded part (and never mid-fight).
-  { id: 'codex', page: '*', at: '.modules [data-module="codex"]', when: (s, m) => m !== 'codex' && s.encounter?.phase !== 'active' && Object.keys(s.codex || {}).length > 0, text: 'You decoded your first part. The Codex tab keeps what you learn about every virus: its parts, their numbers and what answers them.' },
+  { id: 'codex', page: '*', at: '.modules [data-module="codex"]', when: (s, m) => m !== 'codex' && s.encounter?.phase !== 'active' && Object.values(s.research || {}).some((n) => n > 0), text: 'You decoded your first part. The Codex keeps each part\'s research: break it, cut it and answer its tells to learn its rule.' },
 ];
 
 // The next tip to show on this page, or null. `visible(selector)` says whether an element is on

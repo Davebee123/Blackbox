@@ -4,7 +4,7 @@ How every line a player reads is written: tooltips, item effects, log lines, mai
 
 ## 1. Two voices
 
-**Tooltip grammar** is for anything that describes a mechanic: skills, talents, edges, statuses, item effects, rule affixes, zero-days, stats, daemons, filters, firewall tiers, buildings, architectures, genes, strains, guards, bosses and tells.
+**Tooltip grammar** is for anything that describes a mechanic: skills, talents, edges, statuses, item effects, rule affixes, zero-days, stats, daemons, filters, firewall tiers, buildings, architectures, a part's rules, strains, guards, bosses and tells.
 
 **Plain sentences** are for everything else: log lines, mail, contracts, story, tips, tutorial steps, warnings and hover text.
 
@@ -63,6 +63,8 @@ Both voices share the glossary (section 4) and the general rules (section 3).
 | **shield** | Damage absorbed before Signal or Integrity. "Shields you for 16." | barrier (except the skill) |
 | **delay** | Pushing an attack later. "Delays the attack by 1 cycle." | push back, stall (except the daemon) |
 | **Mimic** | The part that plays your command back at you. | copycat |
+| **research** | What you've learned about one part, 0 to 20: "Encryptor research 5." **Decoded** is research 1; **mastered** is 20. | gene, genome (never in player text), study, XP (for research) |
+| **rule** | What a part, a mutation or a strain does that changes the fight (Ward, Armored, a tell). | gene |
 
 ## 5. Before and after
 

@@ -1458,6 +1458,9 @@ body.no-motion .sp-go { animation: none; opacity: 1; }
 /* The codex: ??? until broken */
 .part-name { position: relative; }
 .part-name .unk { margin-left: 3px; font-size: 10px; color: var(--dim); }
+/* A part researched to 100% (research.mjs): a small amber star by its name, never teal (teal is you). */
+.pmast { display: inline-flex; vertical-align: -1px; margin-left: 4px; color: var(--amber-soft); cursor: help; }
+.pmast .glyph { width: 11px; height: 11px; margin: 0; }
 .codex { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .cx-group b { display: block; font: 600 12px var(--mono); letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; }
 .cx-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }

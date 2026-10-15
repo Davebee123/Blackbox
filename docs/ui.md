@@ -92,6 +92,11 @@ hit would only take lock); a Lockbox's ward is a cap line (`.wardcap`) at the mo
 cycle. The segment drains (a steel trail) and shatters (steel shards) with the hit (`app.js` `juice.lockDrain`).
 Effects minimal, Motion off or reduced motion: no glow pulse, no snap, no trail or shards; the static look stays.
 
+**Part research** (`codex-view.mjs` researchBar, `research.mjs`): a part card's research is a thin bar of 20 with a
+tick at 1, 5 and 20 (gray, amber once reached) and *n/20* in mono beside it; what a tier still hides reads **???** in
+gray mono with what unlocks it in `--dim`. A part researched to 100% carries the **mastered mark** (`.pmast`): a small
+star glyph in `--amber-soft` by its name, on the fight board and in the Codex, never teal (teal is you).
+
 ## Layout rules
 
 - **No sideways scroll, ever.** `.app` clips horizontal overflow (`overflow-x: clip`: no scroll box, sticky and

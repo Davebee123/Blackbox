@@ -11,6 +11,8 @@ const P = {
   damage: '<path d="M9.5 1.5 3.5 9h4l-1 5.5 6-7.5h-4z"/>',
   crit: '<circle cx="8" cy="8" r="2"/><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3M3.4 3.4l2 2M10.6 10.6l2 2M12.6 3.4l-2 2M5.4 10.6l-2 2"/>',
   critDamage: '<path d="M8 1.5l1.6 4.9 4.9 1.6-4.9 1.6L8 14.5l-1.6-4.9L1.5 8l4.9-1.6z"/>',
+  // A part you've researched to 100% (research.mjs): a small star with a ring.
+  mastered: '<path d="M8 3.2l1.1 3.7 3.7 1.1-3.7 1.1L8 12.8l-1.1-3.7L3.2 8l3.7-1.1z"/><circle cx="8" cy="8" r="6.5" opacity=".55"/>',
   accuracy: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><circle cx="8" cy="8" r=".6"/>',
   echo: '<path d="M6 5.5a3.5 3.5 0 0 1 0 5M9 3.5a6.5 6.5 0 0 1 0 9M12 1.8a9 9 0 0 1 0 12.4"/><circle cx="3" cy="8" r="1"/>',
   payload: '<path d="M8 1.8c2.8 3.6 4.2 5.8 4.2 7.9a4.2 4.2 0 0 1-8.4 0C3.8 7.6 5.2 5.4 8 1.8z"/>',

@@ -543,31 +543,27 @@ test('level gap, WoW-style: one level up is about even; past that, it takes less
   } finally { CONFIG.gap = saved; }
 });
 
-test('codex: a component says ??? until you break one, then what it does', async () => {
+test('codex: a component says ??? until you break one, then its numbers, and its rule at research 5', async () => {
   const { knowsPart, codexKey } = await import('./dist/combat.mjs');
-  const { boardMarkup, codexMarkup } = await import('./dist/view.mjs');
+  const { boardMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   command(s, 'encounter cryptjack');
   command(s, 'engage');
   const v = s.encounter.virus, p = v.parts.find((x) => x.id === 'pulse');
   assert.ok(!knowsPart(s, v, p));
-  assert.match(boardMarkup(s, null), /title="Pulse Node: \?\?\?\nBreak one to decode what it does\."/);
+  assert.match(boardMarkup(s, null), /title="Pulse Node: \?\?\?\nBreak one, cut it or answer its tell to decode it\."/);
   Object.assign(p, { armor: 0, integrity: 1 });
   command(s, 'spike pulse');
   const ev = resolveCycle(s);
   assert.ok(ev.some((e) => e.type === 'codex'));
-  assert.ok(s.codex[codexKey(v, p)]);
-  // The codex learns gene by gene: the Pulse Node's Surge is decoded, with its rule and its answer.
-  assert.match(codexMarkup(s), /cx-gene on"><span>.*Surge.*Deals a plain heavy hit every 3 to 5 cycles/);
-  assert.match(codexMarkup(s), /Codex · 1\/41 decoded/);
-  // The next CRYPTJACK's Pulse Node is known on sight, and so is a worm's: the gene carries across bodies.
-  const t = fresh(); t.codex = s.codex;
+  assert.equal(s.research[codexKey(v, p)], 1, 'research 1: decoded');
+  // The next CRYPTJACK's Pulse Node is known on sight; a worm's is its own part, still ???.
+  const t = fresh(); t.research = { ...s.research };
   command(t, 'encounter cryptjack'); command(t, 'engage');
   assert.ok(knowsPart(t, t.encounter.virus, t.encounter.virus.parts.find((x) => x.id === 'pulse')));
-  const w = fresh(); w.geneCodex = s.geneCodex;
+  const w = fresh(); w.research = { ...s.research }; w.geneCodex = s.geneCodex;
   command(w, 'encounter splinter'); command(w, 'engage');
-  assert.ok(knowsPart(w, w.encounter.virus, w.encounter.virus.parts.find((x) => x.id === 'pulse')), 'Surge is known on a worm too');
-  assert.ok(!knowsPart(w, w.encounter.virus, w.encounter.virus.parts.find((x) => x.id === 'replicator')), 'Replicate is not');
+  assert.ok(!knowsPart(w, w.encounter.virus, w.encounter.virus.parts.find((x) => x.id === 'pulse')), 'research stays on the part it was earned on');
 });
 
 test('a paused fight resumes on any order, and typos at home get a did-you-mean', async () => {

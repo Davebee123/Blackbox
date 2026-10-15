@@ -12,7 +12,6 @@ import { SCRIPTS, SCRIPT, scriptsOf, slotsOf, runScript, giveScript } from './di
 import { RULES, rollItem, seeded, rulePool } from './dist/gear.mjs';
 import { skillRules } from './dist/skillrules.mjs';
 import { HEAT, MAX_HEAT, heatRules } from './dist/heat.mjs';
-import { decodeGene } from './dist/genome.mjs';
 import { breachMarkup, scriptTray } from './dist/breach-view.mjs';
 import { newCampaign, launch, leave, recOf, migrate, heatOpen, cardFor, SERVER, CAMPAIGN, BOUNTIES, bountiesOn } from './dist/campaign.mjs';
 import { campaignMarkup, campUi } from './dist/campaign-view.mjs';
@@ -532,12 +531,12 @@ test('genomes: a mutation lives on a part, and breaking that part ends the rule;
   const t = breach('breaker', 3), m = reachable(t)[0];
   Object.assign(m, { genes: ['ward'], third: 'ward', muts: [] });
   assert.match(breachMarkup(t), /gchip g-rolled unknown/);
-  t.geneCodex = {}; decodeGene(t, 'ward');
+  t.research = { 'ransomware:lockbox': 5 }; // research 5 on the part that carries it: its rule (research.mjs)
   assert.match(breachMarkup(t), /gchip g-rolled[^"]*"[^>]*>[\s\S]*?ward/);
   assert.ok(!generateMap(5, 10).nodes.core.genes, 'the Resident rolls none');
 });
 
-test('Sinkhole and Testbed shape the roll: only decoded genes, or one more point', () => {
+test('Sinkhole and Testbed shape the roll: only rules you have learned, or one more point', () => {
   const known = new Set(['hasty']);
   for (let i = 0; i < 30; i++) for (const id of rollGenome({ rand: seeded(i), level: 14, family: 'ransomware', known })) assert.equal(id, 'hasty');
   const pts = (bonus) => Array.from({ length: 40 }, (_, i) => genomeOfNode(seeded(i), 9, 'worm', 'swarmline', false, false, { bonus }).genes.reduce((k, id) => k + GENES[id].cost, 0)).reduce((a, x) => a + x, 0);

@@ -906,6 +906,9 @@ function react(events) {
       case 'fast-kill': feel.add('good', null); break;
       case 'fresh': feel.add('good', null, `FRESH +${e.amount}`); break; // stepping away from fighting paid half again
       case 'codex': feel.add('mark', '.hud-bar.enemy', 'DECODED', { noFlash: true }); break;
+      // Part research reaching a tier (research.mjs): a small float on the part; 100% flashes too.
+      case 'research': feel.add('mark', `${row(e.target)} .part-top`, `RESEARCH ${e.tier}`, { noFlash: true, floatAt: `${row(e.target)} > .bcell:first-child` }); break;
+      case 'mastered': flash('MASTERED'); feel.add('good', `${row(e.target)} .part-top`, 'MASTERED', { floatAt: `${row(e.target)} > .bcell:first-child` }); break;
       case 'level-up': {
         if (won) break;
         // One banner for every track: what the level brings, and the next level that brings something.
