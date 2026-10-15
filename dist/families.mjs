@@ -47,6 +47,16 @@ Object.assign(ROOM_FAMILIES, {
       { id: 'degausser', name: 'Degausser', integrity: 38, armor: 2, loot: 'Degauss Coil', special: true, attack: { name: 'Wipe', effect: 'damage', amount: 6, interval: 5, first: 4, wipe: 'strongest', wipeFor: 3 } },
     ],
   },
+  // The Mule (floorplan.mjs MULE): a money mule hauling a stolen bag off a rogue server. A runner, not a fighter: it
+  // flees room to room, and once caught it slips away after 6 cycles. Never rolled anywhere (runner: the Codex's own row).
+  mule: {
+    name: 'Mule', stem: 'MULE', threatens: 'Signal', art: 'worm', opens: 1, code: 'worm', runner: true,
+    summary: 'A money mule hauling a stolen bag off the server. It runs from you; corner it and break it before it escapes.',
+    parts: [
+      { id: 'runner', name: 'Runner', integrity: 16, armor: 0, loot: 'Worn Sole', attack: { name: 'Kick', effect: 'damage', amount: 4, interval: 2, first: 2 } },
+      { id: 'bag', name: 'Bag', integrity: 20, armor: 1, loot: 'Bag Tag', special: true, attack: { name: 'Swing', effect: 'damage', amount: 5, interval: 3, first: 3 } },
+    ],
+  },
 });
 export const BODY = {
   package: { integrity: 16, opens: 5, cap: 3 }, // a Trojan's Package: unpacks 5 cycles after delivery, at most 3 on the board

@@ -150,6 +150,11 @@ export const CONFIG = {
   // (and rests back up like the server); you need a quarter of it to connect.
   zone: { id: 'sprawl', name: 'SPRAWL-00', respawnMs: 90000, minSignal: 0.25, maxLevel: 5, starterKills: 2, starterHit: 0.6, bossRespawnMs: 30 * 60000 }, // your first two kills: SPRAWL's hits land at 60% while you learn the board // SPRAWL follows you up to level 5 (a spawn now and then one higher); past that it's grey-ish filler
   relockMs: 30000, // any server but an outpost won't take you back for 30 seconds after you leave: no jack out, top up, return
+  // The Mule (floorplan.mjs, netrooms.mjs): a loot mob on a rogue server. One roll a run (rogue.mjs: a run lasts until
+  // the server reboots), chance of a Mule; after one turns up, none on any of your rogue servers for cooldownMs (yours:
+  // it lives on your save). Caught, it escapes after `escape` cycles. Beaten: one item roll (rolls: the best of two,
+  // never a guaranteed blue), `credits` Stashes' worth of credits, one of the server's uniques at `unique`.
+  mule: { chance: 0.25, cooldownMs: 45 * 60000, escape: 6, credits: 10, rolls: 2, unique: 0.05 },
   // Crash: the server reboots at half Integrity and runs degraded for 10 real minutes.
   reboot: 0.5,
   degradedMs: 10 * 60000,

@@ -30,6 +30,8 @@ export const TIPS = [
   // ---------- map ----------
   { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. Viruses that attack it show up next to it. Kill enough of one family and you find the server that sent them.' },
   { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is a rogue server. Viruses gather in its folders. Connect, find them with ls and cd, and attack the ones you want to fight.' },
+  // ---------- the rooms (the Run tab) ----------
+  { id: 'mule', page: 'rooms', at: '.fp-mule', text: 'A Mule, hauling a stolen bag. Each time you move it runs away from you. Corner it where it can\'t run, walk in, and break it within 6 cycles.' },
   { id: 'net-sweep', page: 'net', at: '.sweep:not(.past):not(.solved)', text: 'Click a line to light up every line it shares a source with, and filter out the noise. A right answer pushes your lead toward the next server. A wrong one only shrinks the push.' },
   { id: 'net-hostile', page: 'net', at: '.term .tok.virus', text: 'A virus is running in this folder. Click it, or type attack, when you are ready. It comes back a while after you kill it.' },
   { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready. Nothing happens until you do.' },

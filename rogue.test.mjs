@@ -7,6 +7,9 @@ import { pickOrigin } from './dist/hidden.mjs';
 import { sweepKind } from './dist/forensics.mjs';
 import { tickOutposts } from './dist/outpost.mjs';
 import { MEMORY } from './dist/memory.mjs';
+import * as FP from './dist/floorplan.mjs';
+import { CONFIG } from './dist/data.mjs';
+CONFIG.mule.chance = 0; // no Mule in these rooms (mule.test.mjs has it)
 MEMORY.base = 99; // these tests trace dozens of servers to find each kind
 
 const world = () => { const s = fresh(); s.tutorialCompleted = true; s.hackers = { breaker: { level: 12, xp: 0 } }; return s; };
@@ -56,7 +59,7 @@ test('kinds: a Nest is one family, a Pit runs 2 levels hot', () => {
   for (const sp of Object.values(rogueSpawns(s, pit))) assert.equal(sp.level, pit.level + ROGUE.pitLevels);
 });
 
-test('a kill empties the folder for 3–5 minutes; a Gauntlet cleared in one run pays once', () => {
+test('a kill empties the room for the rest of the run; the full clear pays the Gauntlet once and reboots the server', () => {
   let t = 1_000_000;
   hooks.now = () => t;
   try {
@@ -67,20 +70,33 @@ test('a kill empties the folder for 3–5 minutes; a Gauntlet cleared in one run
     assert.ok(s.run);
     const credits0 = s.server.credits;
     const rooms = rogueRooms(loc);
-    for (const room of rooms) {
-      play(s, `cd ${room}`);
+    // Each fight in turn, nearest first: walk there through what's quiet or cleared.
+    for (let n = 0; n < rooms.length; n++) {
+      const g = s.rooms.graph, live = (id) => g.rooms[id].wild && loc.spawns[g.rooms[id].path0]?.alive;
+      const d = FP.distances(g, s.rooms.at), next = Object.values(g.rooms).filter((r) => live(r.id) && FP.pathTo(g, s.rooms.at, r.id, (id) => !live(id))).sort((a, b) => d[a.id] - d[b.id])[0];
+      for (const id of FP.pathTo(g, s.rooms.at, next.id, (x) => !live(x)).slice(1)) FP.go(s, id);
       play(s, 'attack');
       assert.equal(s.encounter.wild, loc.id);
       winFight(s);
-      const sp = loc.spawns[room];
+      FP.settle(s);
+      const sp = loc.spawns[next.path0];
       assert.equal(sp.alive, false);
-      assert.ok(sp.respawnAt - t >= ROGUE.respawnMs[0] && sp.respawnAt - t <= ROGUE.respawnMs[1]);
-      play(s, 'cd ..');
+      assert.equal(sp.respawnAt, null, 'no timer: down until the reboot');
+      if (n < rooms.length - 1) { t += ROGUE.respawnMs[1] + 1; assert.equal(rogueSpawns(s, loc, t)[next.path0].alive, false, 'still down this run'); }
     }
-    assert.ok(s.run.gauntletPaid);
+    assert.ok(loc.rogueRun.paid, 'the Gauntlet paid');
     assert.ok(s.server.credits > credits0);
-    t += ROGUE.respawnMs[1] + 1;
-    assert.ok(Object.values(rogueSpawns(s, loc, t)).every((x) => x.alive), 'they come back');
+    assert.equal(s.run, null, 'the full clear jacks you out');
+    assert.ok(s.logs.some((e) => e.type === 'jacked-out' && /SERVER REBOOTING/.test(e.message)));
+    assert.equal(relockLeft(loc, t), ROGUE.rebootMs / 1000, 'offline a minute');
+    play(s, `connect ${loc.id}`);
+    assert.ok(!s.run, 'still rebooting');
+    t += ROGUE.rebootMs;
+    play(s, `connect ${loc.id}`);
+    assert.ok(s.run, 'back up');
+    assert.ok(Object.values(rogueSpawns(s, loc, t)).every((x) => x.alive), 'every room fresh');
+    assert.equal(loc.rogueRun.n, 2, 'a new run');
+    assert.ok(!loc.rogueRun.paid, 'its Gauntlet cache to pay again');
   } finally { delete hooks.now; }
 });
 

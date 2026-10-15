@@ -16,23 +16,25 @@
 // State sits on a chip as badges:
 //   top left      tags: KEY (the elite holding the vault's key), LOCKED or KEY FITS (a shut vault), SEALED (the
 //                 Core), ★ (a rare spawn), WAKES (walking in wakes the Tracker).
-//   top centre    YOU, and the hunter: a glitched red pixel skull on the room it's in.
+//   top centre    YOU, and the hunter: a glitched red pixel skull on the room it's in; the Mule: a gold sack (its
+//                 badge filled gold once it's cornered).
 //   top right     a red live light (inset), and the Signal a first step costs (−5) on a room you can walk into.
 //   bottom right  a respawn ring that fills back up as the room comes back, its m:ss under it.
-// One red dashed arrow curves from the hunter's room into the room it steps into next. Just out of sight within two
+// One red dashed arrow curves from the hunter's room into the room it steps into next (an amber one from the Mule's
+// room to where it runs next). A rogue server's quiet rooms: Empty (a hollow mark) and Stash (a small cache). Just out of sight within two
 // rooms, the room at the edge of your fog pulses red. The map zooms and pans (app.js): the wheel, a drag, a
 // double-click or ⤢ to fit the server again.
 // Countdowns are empty <… data-at> slots (and rings with data-ring-*) that fillClocks writes every second (app.js), so
 // the markup only changes when the server does and a hovered chip keeps its tooltip.
 import { esc } from './view.mjs';
-import { GUARDS, BOSSES } from './data.mjs';
+import { GUARDS, BOSSES, CONFIG } from './data.mjs';
 import { itemLabel, statLine } from './gear.mjs';
 import { stashItem, active, classOf } from './combat.mjs';
 import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
-import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName } from './floorplan.mjs';
+import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, STOCKED, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, muleOf, muleNext, muleSeen, muleLine } from './floorplan.mjs';
 
 // The pop-up's state, a view (never saved): the room you clicked, and where you stood when you clicked it (a step
 // or a wait drops it), and the decision you closed (it stays closed until a new one comes up).
@@ -75,11 +77,14 @@ const ROOM_ICONS = {
   den: '<path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3.2"/>',
   mirror: '<path d="M9 3.5 14.5 12 9 20.5 3.5 12Z"/><path d="M15 3.5 20.5 12 15 20.5"/>',
   junction: '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v6.5M12 15.5V22M2 12h6.5M15.5 12H22"/>',
+  empty: '<rect x="5" y="5" width="14" height="14" rx="1.5" stroke-dasharray="3 3"/>',
+  purse: '<path d="M5 10h14v9H5Z"/><path d="M4 7.5h16V10H4Z"/><path d="M10.5 13.5h3"/>',
 };
 const MARK_ICONS = {
   key: '<circle cx="6.5" cy="10" r="3.2"/><path d="M9.7 10h7.8M14.6 10v3M17.2 10v2.2"/>',
   lock: '<rect x="4.5" y="9" width="11" height="8" rx="1"/><path d="M7 9V6.8a3 3 0 0 1 6 0V9"/>',
   star: '<path class="f" d="M10 2.8l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5L2.8 8l5-.6z"/>',
+  bag: '<path d="M7.2 5.2h5.6l-1.4 2.3c3.3 1.4 5.1 4.2 5.1 7 0 2-1.6 3.2-6.5 3.2S3.5 16.5 3.5 14.5c0-2.8 1.8-5.6 5.1-7Z"/><path d="M8.6 7.5h2.8M10 10.5v5M8.4 11.6c0-.8 3.2-.8 3.2.6s-3.2.9-3.2 2.3 3.2 1.1 3.2.2"/>',
 };
 const symbol = (k, body, vb, sw) => `<symbol id="fp-i-${k}" viewBox="0 0 ${vb} ${vb}" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${body.replace(/class="f"/g, 'fill="currentColor" stroke="none"')}</symbol>`;
 // The sprite also holds the map's paints: the chips' gradients, the glow, the drop shadow, the hunter's arrowhead.
@@ -92,9 +97,13 @@ const sprite = () => `<svg class="fp-sprite" width="0" height="0" aria-hidden="t
   + '<filter id="fp-glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
   + '<filter id="fp-shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity=".7"/></filter>'
   + '<marker id="fp-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10Z" class="fp-arrowhead"/></marker>'
+  + '<marker id="fp-arrow-mule" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 10 5 0 10Z" class="fp-arrowhead mule"/></marker>'
   + '</defs></svg>';
 // A room's icon: what it is (a guard post is an elite to you; a mirrored cache shows its mirror), once you've seen it.
 const iconOf = (s, room) => (seenOf(s, room.id) !== 'kind' ? null : room.mirror ? 'mirror' : room.kind === 'guard' ? 'elite' : room.kind === 'boss' ? 'core' : room.kind === 'stash' ? 'cache' : room.wild && room.kind === 'process' && net(s, 'elite', room) ? 'elite' : room.kind);
+// The Mule where you can see it, and the room it runs to next (when you can see that too).
+const muleShown = (s) => { const m = muleOf(s); return m && muleSeen(s, m) ? m : null; };
+const muleStep = (s) => { const m = muleShown(s), next = m && muleNext(s, m); return next && seenOf(s, next) ? next : null; };
 // An icon in the strip or the pop-up card.
 const ic = (name, cls = '') => `<svg class="fp-ic${cls ? ' ' + cls : ''}" viewBox="0 0 20 20" aria-hidden="true">${name ? `<use href="#fp-i-${name}"/>` : '<text x="10" y="15" text-anchor="middle">?</text>'}</svg>`;
 
@@ -122,6 +131,7 @@ const huntName = (h) => HUNTERS[h.kind].name;
 function tileTip(s, room) {
   const h = hunterOf(s), hunted = h && !h.down && h.at === room.id;
   if (seenOf(s, room.id) !== 'kind') return hunted ? `Unseen: the ${huntName(h)} is here.` : 'Unseen';
+  if (muleShown(s)?.at === room.id) return `${room.path}: ${muleShown(s).name}, a Mule with a stolen bag.\n${muleNext(s) ? 'It runs from you. Corner it.' : 'Cornered: walk in and fight it.'}`;
   const { who, rule } = aboutOf(s, room);
   const body = [who, rule].filter(Boolean).join('\n');
   return body ? `${room.path}: ${body}` : room.path;
@@ -135,6 +145,8 @@ function aboutOf(s, room) {
   else if (room.kind === 'den') who = g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.';
   else if (room.kind === 'cache') who = 'Credits and code, sometimes a script.';
   else if (room.kind === 'stash') who = 'The server\'s code, back every two hours.';
+  else if (room.kind === 'purse') who = cacheFull(s, room) ? `A few credits. Taken as you walk in.` : 'Taken. It fills again when the server reboots.';
+  else if (room.kind === 'empty') who = 'Nothing here.';
   else if (room.kind === 'vault' && !opened(s, room)) who = room.farm ? 'Opens once the Foreman and the Heatsink are down.' : R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id)?.path || 'an elite'}.`;
   else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest)} Signal, once a visit.`;
   const denEdge = g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
@@ -160,6 +172,8 @@ function stateOf(s, room) {
   if (room.kind === 'cache') return cacheFull(s, room) ? (room.mirror ? { word: 'mirror', cls: 'hot' } : { word: 'stocked', cls: '' }) : { word: 'empty', cls: 'dim', at: refillAt(s, room) };
   if (room.kind === 'vault') return opened(s, room) ? { word: 'open', cls: 'dim' } : R.visit?.keys.includes(room.id) ? { word: 'key fits', cls: 'next' } : { word: 'locked', cls: '' };
   if (room.kind === 'stash') return cacheFull(s, room) ? { word: 'stocked', cls: '' } : { word: 'empty', cls: 'dim', at: refillAt(s, room) };
+  if (room.kind === 'purse') return cacheFull(s, room) ? { word: 'stocked', cls: '' } : { word: 'taken', cls: 'dim' };
+  if (room.kind === 'empty') return { word: s.rooms.cleared[room.id] ? 'empty' : '', cls: 'dim' };
   if (room.kind === 'rest') return R.visit?.rested ? { word: 'rested', cls: 'dim' } : { word: '', cls: '' };
   return { word: '', cls: '' };
 }
@@ -211,19 +225,10 @@ function mapSvg(s, tall, pop = null) {
     const shape = (cls) => (hop ? `<path class="${cls}" d="${d}"/>` : `<line class="${cls}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"/>`);
     return shape(`fp-bed${beat.has([a, b].sort().join('|')) ? ' beat' : ''}`) + (live ? shape('fp-under') : '') + shape(`fp-link ${fog ? 'fog' : live ? 'live' : trod ? 'walked' : 'seen'}${hop ? ' hop' : ''}`);
   }).join('');
-  // The hunter's next step: one red dashed arrow, bowed off the trace, from its room into the next.
-  const next = huntStep(s);
-  let arrow = '';
-  if (next) {
-    const p = at(g.rooms[h.at]), q = at(g.rooms[next]), dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 1;
-    let nx = -dy / len, ny = dx / len;
-    if (ny > 0 || (ny === 0 && nx > 0)) { nx = -nx; ny = -ny; } // over the top of a row, down the left of a column (the respawn ring is on the right)
-    // It leaves the hunter's chip from the face on the bow's side (beside the skull) and lands on the same face of the next.
-    const ux = dx / len, uy = dy / len, along = Math.abs(ux) > Math.abs(uy) ? G.nw / 2 : G.nh / 2, ext = Math.abs(ny) > Math.abs(nx) ? G.nh / 2 : G.nw / 2;
-    const bow = Math.min(48, Math.max(28, len * 0.22)), cx = n1((p.x + q.x) / 2 + nx * (ext + bow)), cy = n1((p.y + q.y) / 2 + ny * (ext + bow));
-    const a = { x: n1(p.x + ux * along * 0.45 + nx * (ext + 4)), y: n1(p.y + uy * along * 0.45 + ny * (ext + 4)) }, b = { x: n1(q.x - ux * along * 0.45 + nx * (ext + 7)), y: n1(q.y - uy * along * 0.45 + ny * (ext + 7)) };
-    arrow = `<path class="fp-route" d="M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y}" marker-end="url(#fp-arrow)"/>`;
-  }
+  // The hunter's next step: one red dashed arrow, bowed off the trace, from its room into the next; the Mule's, amber.
+  const next = huntStep(s), mule = muleShown(s), flee = muleStep(s);
+  let arrow = next ? routeSvg(at(g.rooms[h.at]), at(g.rooms[next]), G, '') : '';
+  if (flee) arrow += routeSvg(at(g.rooms[mule.at]), at(g.rooms[flee]), G, 'mule');
   // Out of sight but within two rooms: the room at the edge of your fog pulses red.
   let near = null;
   if (h && !h.down && here && !shown(h.at)) {
@@ -236,6 +241,19 @@ function mapSvg(s, tall, pop = null) {
   const vw = width + 2 * PAD, vh = height + 2 * PAD, vb = `${-PAD} ${-PAD} ${vw} ${vh}`;
   return `<svg class="fp-svg ${tall ? 'tall' : 'wide'}" viewBox="${vb}" data-vb="${vb}" width="${vw}" height="${vh}" preserveAspectRatio="xMidYMid meet" style="--w:${vw}px;--h:${vh}px" role="group" aria-label="Room map of ${esc(R.name)}">${lines}${rooms}${arrow}${bits}</svg>`;
 }
+// A dashed arrow, bowed off the trace, from one room into the next (the hunter's red, the Mule's amber).
+function routeSvg(p, q, G, kind) {
+  const dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len, ny = dx / len;
+  if (ny > 0 || (ny === 0 && nx > 0)) { nx = -nx; ny = -ny; } // over the top of a row, down the left of a column (the respawn ring is on the right)
+  // It leaves the chip from the face on the bow's side (beside the skull) and lands on the same face of the next.
+  const ux = dx / len, uy = dy / len, along = Math.abs(ux) > Math.abs(uy) ? G.nw / 2 : G.nh / 2, ext = Math.abs(ny) > Math.abs(nx) ? G.nh / 2 : G.nw / 2;
+  const bow = Math.min(48, Math.max(28, len * 0.22)), cx = n1((p.x + q.x) / 2 + nx * (ext + bow)), cy = n1((p.y + q.y) / 2 + ny * (ext + bow));
+  const a = { x: n1(p.x + ux * along * 0.45 + nx * (ext + 4)), y: n1(p.y + uy * along * 0.45 + ny * (ext + 4)) }, b = { x: n1(q.x - ux * along * 0.45 + nx * (ext + 7)), y: n1(q.y - uy * along * 0.45 + ny * (ext + 7)) };
+  return `<path class="fp-route${kind ? ' ' + kind : ''}" d="M${a.x} ${a.y} Q${cx} ${cy} ${b.x} ${b.y}" marker-end="url(#fp-arrow${kind ? '-' + kind : ''})"/>`;
+}
+// The Mule: a gold sack in a small dark badge (filled gold once it's cornered).
+const muleSvg = (cx, cy, k, cornered) => `<g class="fp-mule${cornered ? ' cornered' : ''}" transform="translate(${n1(cx - 10 * k)} ${n1(cy - 10 * k)}) scale(${k})"><rect class="bg" x="0" y="0" width="20" height="20" rx="2"/><use href="#fp-i-bag" x="1.5" y="1" width="17" height="17"/></g>`;
 // The 1s and 0s drifting off the room you're in: they start just outside its edge and drift 14 to 32 out.
 function bitsSvg(p, G, id) {
   let seed = hashOf(id);
@@ -274,13 +292,14 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
   const here = R.at === room.id, can = reach.has(room.id), fight = kind && fightKind(room), up = fight && isUp(s, room), down = fight && !up;
   const hunted = h && !h.down && h.at === room.id;
   const sealed = kind && room.kind === 'core' && !coreOpen(s);
-  const stocked = room.kind === 'cache' || room.kind === 'stash';
+  const stocked = STOCKED.includes(room.kind);
+  const mule = muleShown(s)?.at === room.id;
   const full = kind && stocked && cacheFull(s, room), empty = kind && stocked && !full;
   const used = empty || (kind && room.kind === 'rest' && !!R.visit?.rested) || (kind && room.kind === 'vault' && opened(s, room));
   const live = up || (full && !!room.mirror);
   const denEdge = kind && g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   // Its colour: you, a live threat, used up (or a plain room you've cleared), or something there for you.
-  const tone = here ? 'you' : !kind ? 'fog' : live ? 'hot' : down || used || (['entry', 'junction', 'den'].includes(room.kind) && R.cleared[room.id]) ? 'gray' : 'amber';
+  const tone = here ? 'you' : !kind ? 'fog' : live ? 'hot' : down || used || (['entry', 'junction', 'den', 'empty'].includes(room.kind) && R.cleared[room.id]) ? 'gray' : 'amber';
   const cls = ['fp-room', `k-${kind ? room.kind : 'fog'}`, `t-${tone}`, here ? 'here' : can ? 'reach' : kind ? 'seen' : 'shape', up ? 'up' : '', down ? 'down' : '', used ? 'used' : '', room.mirror && kind ? 'mirror' : '', sealed ? 'sealed' : '', hunted ? 'hunted' : '', pop === room.id ? 'sel' : ''].filter(Boolean).join(' ');
   // A room you can walk into walks on one click (Enter too); any other room you've seen opens its pop-up.
   const attrs = can ? ` data-rooms="go" data-arg="${esc(room.id)}" tabindex="0" role="button"` : kind || (!R.at && room.id === g.entry) ? ` data-fp-sel="${esc(room.id)}" tabindex="0" role="button" aria-haspopup="dialog"` : '';
@@ -294,7 +313,9 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
     // The chip, its hairline, the icon (the largest thing on it) and the name plate under it, centred as one block.
     const sz = n1(24 * G.ic), name = room.path.toUpperCase(), t = plateType(name, G);
     out += `<g filter="url(#fp-shadow)"><polygon class="fp-body" points="${pts}"/></g><polygon class="fp-hair" points="${chipPts(p.x, p.y, hw * 0.9, hh * 0.9, G.ch * 0.9)}"/>`;
-    out += `<use class="fp-icon" href="#fp-i-${iconOf(s, room)}" x="${n1(p.x - sz / 2)}" y="${n1(y0 + G.icY)}" width="${sz}" height="${sz}"${tone === 'gray' ? '' : ' filter="url(#fp-glow)"'}/>`;
+    // A Stash is a minor thing: a smaller mark, lower on the chip.
+    const isz = room.kind === 'purse' ? n1(sz * 0.62) : sz, iy = room.kind === 'purse' ? n1(y0 + G.icY + (sz - isz) * 0.7) : n1(y0 + G.icY);
+    out += `<use class="fp-icon" href="#fp-i-${iconOf(s, room)}" x="${n1(p.x - isz / 2)}" y="${iy}" width="${isz}" height="${isz}"${tone === 'gray' || room.kind === 'empty' ? '' : ' filter="url(#fp-glow)"'}/>`;
     out += `<rect class="fp-plate" x="${n1(p.x - G.plW / 2)}" y="${n1(y0 + G.plY)}" width="${G.plW}" height="${G.plH}" rx="1"/><text class="fp-name" x="${p.x}" y="${n1(y0 + G.plY + G.plH / 2 + t.fs * 0.36)}" text-anchor="middle" font-size="${t.fs}" letter-spacing="${t.ls}">${esc(name)}</text>`;
   }
   // Top left: the tags.
@@ -311,6 +332,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G }) {
   // Top centre: YOU, and the hunter's skull (beside YOU when it's on you).
   if (here) { const ux = n1(Math.max(p.x, tx + 20)); out += `<g class="fp-you-tab"><rect x="${n1(ux - 20)}" y="${n1(y0 - 9)}" width="40" height="16" rx="2"/><text x="${ux}" y="${n1(y0 + 3)}" text-anchor="middle">YOU</text></g>`; tx = ux + 24; }
   if (hunted) { const half = 5.5 * G.px + 4; out += skullSvg(n1(Math.max(p.x, tx + half)), n1(y0 - 2), G.px, h.kind === 'track' && !h.awake && !h.returning); }
+  if (mule) { const k = G.px / 2.2, half = 10 * k; out += muleSvg(n1(Math.max(p.x, tx + half + 2)), n1(y0 + 1), k, !muleNext(s)); }
   // Top right: the live light, and what a first step in costs.
   if (live && !here) out += `<circle class="fp-live" cx="${n1(x0 + G.nw - 18)}" cy="${n1(y0 + 16)}" r="3.5" filter="url(#fp-glow)"/>`;
   const cost = can ? moveCost(s, room) : 0;
@@ -334,6 +356,7 @@ function hudMarkup(s) {
   const step = pctOf(s, R.floor >= 5 ? ROOMS.moveDeep : ROOMS.move);
   const scripts = bag.map((id) => `<li class="fp-perk r-${TIER[SCRIPTS[id].rarity]}" title="${esc(scriptTip(id))}">${esc(SCRIPTS[id].name)}</li>`).join('');
   const hunt = R.at && h ? `<span class="fp-stat fp-hunt${h.down ? ' out' : ''}" title="${esc(`${hunterLine(s)}\n${huntName(h)}: ${HUNTERS[h.kind].text} It moves only when you walk or wait.`)}">${ic('den')}<span class="lbl">${esc(huntName(h))}</span><b>${h.down ? 'down' : h.kind === 'track' && !h.awake && !h.returning ? 'asleep' : `moves in ${paceOf(s) - h.count}`}</b></span>` : '';
+  const ml = R.at && muleShown(s) ? `<span class="fp-stat fp-mulestat" title="${esc(`${muleLine(s)}\nA Mule runs from you, a room for each of your moves. Corner it where it can't run, then walk in. It escapes after ${CONFIG.mule.escape} cycles.`)}">${ic('bag')}<span class="lbl">Mule</span><b>${muleNext(s) ? 'running' : 'cornered'}</b></span>` : '';
   const keys = R.at && R.visit?.keys.length ? `<span class="fp-stat fp-keys" title="Keys: each opens its vault, this visit only. Jack out and it goes back to the elite that held it.">${ic('key')}<b>${R.visit.keys.length}</b></span>` : '';
   const packed = R.world ? (s.run?.pack || []).map((f) => net(s, 'packLine', f)) : R.pack.map((id) => itemLabel(stashItem(s, id) || { name: '?' }));
   const pack = packed.length ? `<span class="fp-stat" title="${esc(`Pack: ${packed.join(', ')}.\nBanks when you jack out. Lost if your Signal hits 0.`)}"><span class="lbl">Pack</span><b>${packed.length}</b></span>` : '';
@@ -348,7 +371,7 @@ function hudMarkup(s) {
     <span class="fp-id" title="${esc(net(s, 'idTip') ?? `${R.name}: ${author} ${R.kind}, level ${R.level}, floor ${R.floor}.\n${K.rule}: ${K.text}`)}"><span class="ico" ${icon('server')}></span><b>${esc(R.name)}</b><small>${esc(net(s, 'idLine') ?? `${R.kind} · lv ${R.level} · ${K.rule}`)}</small></span>
     <div class="fp-sig ${lvl}" title="${esc(`Signal: carries from fight to fight and rests back at home.\nA room's first step each visit costs ${step}.`)}"><span class="lbl">Signal</span><span class="sigbar"><span style="width:${(f * 100).toFixed(1)}%"></span></span><strong>${sig}</strong><small>/${max}</small></div>
     <div class="fp-prog" title="${esc(`Rooms cleared for good: at ${Math.ceil(prog.total / 2)} the whole map is drawn, at ${prog.total} the server is Mapped.`)}"><span class="lbl">Rooms</span><span class="pbar"><span style="width:${(prog.done / prog.total) * 100}%"></span><i style="left:50%"></i></span><b>${prog.done}/${prog.total}</b>${R.mapped ? '<small class="fp-mapped">MAPPED</small>' : ''}</div>
-    ${keys}${hunt}${pack}
+    ${keys}${hunt}${ml}${pack}
     <span class="fp-tools">${R.world ? '' : `<span class="fp-rules" role="group" aria-label="Boss rule"><span class="lbl" title="${esc(`Boss rule: how ${BOSSES[RESIDENT].name}'s ticks work. It applies to your next fight with it.`)}">Boss</span>${rule}</span>`}
     <ul class="fp-perks" aria-label="Scripts"><li class="lbl" title="Scripts: run one a fight, from the fight's tray. It takes no cycle.">Scripts ${bag.length}/${slotsOf(s)}</li>${scripts}</ul>
     <span class="fp-acts">${acts}</span></span>
@@ -432,7 +455,7 @@ function hereCard(s) {
     acts = btn('engage', 'Engage', { primary: true }) + (R.visit.back ? btn('back', 'Step back', { tip: `Step back: to ${g.rooms[R.visit.back].path}. The move in stays spent.` }) : '');
   } else if (fightKind(room)) {
     const k = whoOf(s, room);
-    body = holder(iconOf(s, room), k.short, k.sub, '', 'down') + (R.down[room.id] != null ? note('Never respawns while you stand in it.', 'dim') : '');
+    body = holder(iconOf(s, room), k.short, k.sub, '', 'down') + (R.down[room.id] != null ? note(esc(net(s, 'downNote', room) || 'Never respawns while you stand in it.'), 'dim') : '');
   } else if (room.kind === 'cache') {
     // Standing in it, you see what it is: take it or leave it.
     const full = cacheFull(s, room), bait = !room.mirror && isBait(s, room), lose = pctOf(s, ROOMS.bait);
@@ -462,17 +485,19 @@ function hereCard(s) {
     if (files) acts = btn('pull', 'Take', { primary: true });
   }
   else if (room.kind === 'den') body = note(g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.', 'dim');
+  else if (room.kind === 'empty') body = note('Nothing here.', 'dim');
+  else if (room.kind === 'purse') body = note(cacheFull(s, room) ? 'A few credits.' : 'Taken. It fills again when the server reboots.', 'dim');
   return cardOf(st, true, room.path, body + hunterNote(s, room), acts, !!sc);
 }
 // A room you're not in: what holds it, its state and its one rule. Its verbs wait until you walk in.
 function farCard(s, room) {
   const st = stateOf(s, room), { who, rule } = aboutOf(s, room);
-  let body = '';
+  let body = muleShown(s)?.at === room.id ? holder('bag', muleShown(s).name, `Mule · ${muleNext(s) ? 'running' : 'cornered'}`, '', 'mule') + note(esc(muleNext(s) ? `It runs to ${s.rooms.graph.rooms[muleNext(s)].path} on your next move. Corner it.` : `Cornered. Walk in and break it within ${CONFIG.mule.escape} cycles.`), muleNext(s) ? 'dim' : '') : '';
   if (fightKind(room) || room.mirror) {
     const k = whoOf(s, room), up = isUp(s, room) && !(room.kind === 'core' && !coreOpen(s)), f = room.mirror ? fightOf(s, room, 'mirror') : null;
-    body = room.mirror ? holder('mirror', `Elite ${familyName(room.family)}`, `behind a mirror · lv ${f.level}`, '', cacheFull(s, room) ? 'hot' : 'down')
+    body += room.mirror ? holder('mirror', `Elite ${familyName(room.family)}`, `behind a mirror · lv ${f.level}`, '', cacheFull(s, room) ? 'hot' : 'down')
       : holder(iconOf(s, room), k.short, k.sub, '', up ? 'hot' : 'down');
-  } else if (who) body = note(esc(who));
+  } else if (who) body += note(esc(who));
   if (rule) body += note(esc(rule), /hunter is here|wakes the Tracker/.test(rule) ? 'hot' : 'dim');
   return cardOf(st, false, room.path, body + hunterNote(s, room), '');
 }

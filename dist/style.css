@@ -200,6 +200,8 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.raid.cast { border-style: dashed; }
 .intent.raid .compiling { color: var(--hot); font-style: italic; opacity: 1; }
 .intent.raid.fuse { border-color: var(--amber); color: var(--amber); }
+.bescape .esc-left { color: var(--next); font-weight: 600; }
+.intent.raid.fuse.escape.now { background: rgba(255, 216, 92, 0.12); border-color: var(--next); color: var(--next); }
 /* A solo tell (tells.mjs): an attack chip, charged. A kicker strip (what kind, when), the name and what it does,
    then the answer as an order on its own line. Charges and casts are hot; seals and the Mimic are amber. */
 .intent.tell { --tc: var(--hot); --tc-soft: var(--hot-soft); display: grid; gap: 0; padding: 0; border: 1px solid var(--tc); color: var(--text); overflow: hidden; }
@@ -2363,6 +2365,9 @@ body.with-sidebar .workspace { grid-template-columns: 200px minmax(0, 1fr); }
 /* Whose half of the cycle: a strip across the top of the board names it; only the virus's half turns the board red. */
 .phase-strip { display: flex; align-items: center; gap: 10px; padding: 6px 14px; margin: -4px 0 4px; font: 600 11px var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--line); }
 .phase-strip i { font-style: normal; opacity: 0.6; }
+/* a runner's countdown (the Mule): its own board row; on a phone, where rows are dear, on the strip instead */
+.phase-strip .ps-esc { display: none; margin-left: auto; color: var(--next); font-weight: 700; letter-spacing: 0.08em; }
+@media (max-width: 640px) { .board .bescape { display: none; } .phase-strip .ps-esc { display: inline; } }
 .phase-strip span { padding: 2px 8px; border-radius: 2px; border: 1px solid transparent; }
 .phase-strip.ph-wait .ps-you { color: var(--you); border-color: color-mix(in srgb, var(--you) 50%, transparent); }
 .phase-strip.ph-you .ps-you { color: var(--bg); background: var(--you); }

@@ -112,7 +112,7 @@ The generator works from the server's seed, size, kind and floor, the same seed 
 | Mirror | `/srv/www`, `/private` | *Mirrors*: one cache is a mirror, with an elite behind it | Tracker |
 | Archive | `/backups`, `/srv/tape` | *Deep storage*: two vaults and two guard posts with keys | Tracker, in the tape vault |
 | Lab | `/lab`, `/tmp` | *Overheat*: from a fight's 10th cycle the rack burns you for 2% of your max a cycle and every part for 3% of its max | Tracker, faster (a room every move) once awake |
-| Nest, Pit, Gauntlet (rogue) | as today | Every room is a fight (no vault, no core, nothing to take over). Nest: one family, strains twice as often. Pit: two levels up, a third elites, loot rolls twice. Gauntlet: clear every room in one visit for a bonus cache. Respawns in half the time. | None |
+| Nest, Pit, Gauntlet (rogue) | as today | A tree of fight rooms with 2–4 quiet rooms (Empty, Stash) woven in; no vault, no core, nothing to take over. It runs in clears: nothing respawns until the full clear reboots it (9.6), and each run may bring the Mule. Nest: one family, strains twice as often. Pit: two levels up, a third elites, loot rolls twice. Gauntlet: the full clear pays a bonus cache. | None |
 | Lair | the network's | A rogue server whose core is the floor's native boss, back an hour after it falls | None |
 | Kestrel's servers | its data centres | Every guard post is ICE | Always one, on any size and any floor (where floor 1 meets its first) |
 
@@ -884,6 +884,16 @@ What the numbers say: the climb to 10 lands on 7.2 (2.5–3.0 hours against 2.7;
 - *Not in R1:* sockets and codebases (R2), floors (R3), new families, nest rooms, Linked tells and help requests (R4), deleting the breach and campaign code (R5). No mail from wick about the move yet.
 
 **Known issues:** the Breaker's room fights at 6–10 (above); the Bastion's climb past level 13 (about twice the Breaker's hours to 20 in the pacing bot); at level 3 the Bastion maps two medium servers in three; the pacing bot never fights the farm or the lair; kit spreads and core rotations at 18–40 measure under their old lines (held in the tests), so the classes want a pass for the interrupt; a traced server's guard posts at 6–10 cost the Bastion almost nothing.
+
+### 9.6 What shipped: quiet rooms, runs and the Mule
+
+**Play it:** any rogue server (`developer location worm` with `?dev` until one turns up; `developer mule` sets a Mule loose on the server you're on). GAME_RULES.md "Rogue servers" has the rules as built. Code: `dist/netrooms.mjs` (`rogueGraph`, `rogueRestore`, the Mule's roll and bag, a Stash's pay), `dist/rogue.mjs` (`inRuns`, `runCleared`, `rogueReboot`), `dist/floorplan.mjs` (the quiet rooms, the Mule: `spawnMule`, `muleNext`, its fight and escape), `dist/families.mjs` (the Mule's body), `dist/floorplan-view.mjs`, `dist/codex.mjs` (Runners); tests in `mule.test.mjs`.
+
+- *Quiet rooms.* A rogue server is laid out from its seed as a tree on the grid (straight links, nothing crossing, three or four rooms deep): a fight room for each folder (r1… in the old folder order, so an old save's rooms keep their ids and what you cleared) and 2–4 quiet rooms, at least one between the entry and a fight. **Empty**: nothing, cleared as you walk in. **Stash**: 4 + level/2 credits (1 code one time in five), taken as you walk in, full again on the reboot.
+- *Runs, not respawns.* A rogue server's cleared rooms stay down for the run. The full clear jacks you out (SERVER REBOOTING, the pack banked), it's offline a minute, then every room is back fresh. A half-done run reboots on its own 30 minutes after you last left. The Gauntlet's cache pays on the full clear, once a run; the Pit's second roll is per kill, as before. Lairs, the farm and occupied servers keep their timers.
+- *The Mule.* One roll a run (25%), at its first connect, never again until a reboot; then 45 minutes of your own cooldown (on your save, across every rogue server you visit; a crewmate's or a member's are theirs). It runs one room per move of yours to the neighbour farthest from you, never into your room or through a live virus; cornered when nothing is farther. Caught: MULE-####, a Runner and a Bag (1 ◆ at most each, a plain virus's Integrity ×1.5, 35% of its hits), escapes after 6 cycles. Its bag: 10 Stashes of credits, one item at the server's level (best of two flat rolls, a white otherwise), 5% a unique of the server's; a process kill's XP.
+- *Its fight, measured* (the planner, 12 fights a class, levels 3 to 30, `CONFIG.mule`): 83–100% broken in time, 3–5 cycles, 1–3% of your Signal; the Bastion slowest (4.9–5.3 cycles, 83–100%). Left alone it lands about a third of your Signal over its 6 cycles.
+- *The bots* take a Stash they walk through and chase a Mule 2 rooms off or nearer (a dozen moves at most a visit). The pacing bot (`bot.mjs`, four classes, six seeds each, to level 20): hours to 10 unchanged at 2.81, to 20 8.49 before and 8.36 after (both on 7.2's 9); it plays a rogue server rarely (31 runs in 24 characters before, 30 after) and caught one Mule.
 
 ## 10. Open questions for the designer
 
