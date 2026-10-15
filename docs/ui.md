@@ -147,6 +147,7 @@ Effects minimal, Motion off or reduced motion: no glow pulse, no snap, no trail 
 | 32 | Network natives | Three cramped columns broke names onto two lines beside "listen" | Wider columns |
 | 33 | Settings, desktop | "Speed: relaxed (12s per cycle)" ran out of its cell | Speed spans two cells; labels ellipsize |
 | 34 | Fight board, parts that protect parts | A *lock 12* tag and a cue under the Mutex's name; nothing joined the two rows | A tether between the rows, the lock as an absorb segment on the partner's bar, a ward's cap line |
+| 35 | Top tabs, phone, eight tabs (the Codex, Craft and Run up together) | System ran off the screen's right edge | Two even rows of four (`.modules[data-tabs]`, set by app.js fitTopbar) |
 
 ## Rules for future UI work
 

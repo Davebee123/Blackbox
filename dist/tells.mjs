@@ -36,7 +36,7 @@ import { hit, implanted, emit, alive, part, livingParts, attackers, defender, ha
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
 import { previewDamage } from './combat.mjs';
 import { raidDef } from './raid.mjs';
-import { readGene, seeGene } from './genome.mjs';
+import { readGene, seeGene, logTell } from './genome.mjs';
 import { ignores } from './genes.mjs';
 
 // What a fight's tells did, on its metrics (the gap test reads them): said, answered, read (answered by a command
@@ -53,7 +53,7 @@ const cycles = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
 // part (interrupt.mjs, rule a: its ticks start phases and cut nothing) while another part can carry it.
 const isSystem = (x) => x.kind === 'system' || !x.kind; // a part, or a part's spec (the codex)
 const isBasic = (x) => isSystem(x) && !x.special && !x.ward && !x.lock && !x.twin && !x.reflect && !x.mimic && !x.command && !x.deadman;
-function findSource(v, def) {
+export function findSource(v, def) {
   const sys = v.parts.filter((x) => isSystem(x) && !x.mimic && !x.from);
   const pick = def.part === 'special' ? sys.find((x) => x.special) : def.part === 'basic' ? sys.find(isBasic) : sys.find((x) => x.id === def.part);
   const can = (p) => !!p && (def.kind === 'charge' ? !!p.attack : def.kind === 'seal' ? (p.maxArmor ?? p.armor) > 0 : true);
@@ -201,6 +201,7 @@ function say(s, t, p, next, n) {
   Object.assign(t, { told: true, said: e.cycle, next, n, opened: null });
   if (t.kind !== 'mimic') tally(s, t, 'said');
   seeGene(s.host || s, t.gene, e.virus.author); // the gene codex: a tell you've met is seen (genome.mjs)
+  logTell(s.host || s, t); // the Codex tab: this tell, by name
   emit(s, 'telegraph', sayOf(s, t, p), { source: p.id, tell: t.id, kind: t.kind, at: next, name: label(t) });
   const w = windowOf(s, t);
   if (w && w.from <= e.cycle) t.opened = e.cycle; // said inside its window: the line above says so

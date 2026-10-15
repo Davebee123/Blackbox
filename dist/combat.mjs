@@ -40,7 +40,7 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
 import { situationOf } from './situations.mjs';
-import { seeGenes, breakGenes, winGenes, genomeCommand, virusGenes, bylined, decoded } from './genome.mjs';
+import { seeGenes, breakGenes, winGenes, genomeCommand, virusGenes, bylined, decoded, logFight, logWin, dexOf } from './genome.mjs';
 import { partGenes } from './genes.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
@@ -105,6 +105,7 @@ export function fresh() {
     fleet: null, // a virus fleet on its way to one of your outposts
     architecture: null, // fortress | hub | lab, picked at server level 20
   };
+  dexOf(s); // the Codex tab's record: kills, bosses fought, tells and sets met (genome.mjs)
   initMail(s); // the first LOWLIGHT mail is waiting
   return bindRooms(s);
 }
@@ -1686,6 +1687,7 @@ function engage(s) {
   // Mutex: the part it locks starts the fight behind its shield (sized once the crew has made the virus bigger).
   for (const m of livingParts(s).filter((x) => x.lock)) { const t = part(s, m.lock); if (alive(t)) { t.lockMax = t.lockHp = Math.max(1, Math.round(t.max * CONFIG.mutex.share)); t.lockAt = null; } }
   seeGenes(s, e.virus); // the gene codex: what you fight, you've seen (genome.mjs)
+  logFight(s, e.virus); // the Codex tab: a boss fought, a mutation and what it rode on (genome.mjs)
   prepareTicks(s); // the interrupt's ticks on every part, and a boss's rule (interrupt.mjs; not a crew boss or a breach)
   tellStart(s); // a solo fight's tells (tells.mjs)
 }
@@ -1781,6 +1783,7 @@ export function finish(s, result) {
   if (result === 'victory' && e.metrics.tells) { const xs = Object.values(e.metrics.tells), said = xs.reduce((n, x) => n + x.said, 0); e.cleanRead = said >= TELL.read.min && xs.every((x) => x.read >= x.said && !x.landed); }
   if (result === 'victory' && e.virus.boss) bossUnique(s, e.virus.boss, e.virus.level);
   if (result === 'victory') winGenes(s, e.virus); // the gene codex: rule genes decode at two kills (genome.mjs)
+  if (result === 'victory') logWin(s, e.virus); // the Codex tab's kill counts (genome.mjs)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
   s.reports.push(structuredClone(e.metrics));
   if (s.reports.length > 50) s.reports.shift();
@@ -3936,6 +3939,7 @@ export function restore(raw) {
     for (const l of [s.zone, ...(s.locations || [])].filter(Boolean)) delete l.drop; // dead drops became courier events (events.mjs)
     delete s.station;
     s.collection ||= {}; for (const it of s.stash || []) if (it.unique) s.collection[it.unique] ||= 1; // what you already hold counts
+    dexOf(s); // the Codex tab's record (genome.mjs): an older save starts it empty (its sets come from each server's floorplan codex)
     initMail(s);
     syncFlags(s); // servers a relay already pings get their route files
     s.version = SAVE_VERSION;
