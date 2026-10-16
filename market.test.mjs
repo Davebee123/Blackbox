@@ -100,7 +100,7 @@ test('traffic on the map: the hubs trade along their backbone, and your orders r
   const at = Date.now();
   let html = mapMarkup(s, 'server');
   const arcs = html.match(/class="mbone"/g) || [];
-  assert.equal(arcs.length, (html.match(/class="mnode hub/g) || []).length, 'one arc per hub, round the ring');
+  assert.equal(arcs.length, (html.match(/class="mnode hub/g) || []).length - 1, 'a curve between each hub on this floor and the next (Halcyon and Kestrel stand on floor 1)');
   assert.match(html, /class="mpkt amb"/);
   assert.doesNotMatch(html, /mpkt you/, 'nothing of yours in flight yet');
   s.market ||= {}; s.market.transfers = [{ id: 1, side: 'sell', f: 'kestrel', w: 'kernel', n: 4, credits: 60, sentAt: at, landsAt: at + 60000 }];

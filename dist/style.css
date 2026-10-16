@@ -1233,7 +1233,8 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 @media (max-width: 900px) { .mail-page { grid-template-columns: 1fr; } }
 .modules .count.new { background: var(--you); }
 .modules .count { display: inline-block; min-width: 16px; padding: 0 4px; margin-left: 6px; border-radius: 8px; background: var(--amber); color: var(--bg); font: 600 10px/16px var(--mono); text-align: center; vertical-align: middle; }
-.mnode.hidden .qmark { fill: var(--muted); font: 600 11px var(--mono); }
+.mnode.hidden .qmark { fill: var(--muted); font: 600 13px var(--mono); }
+.mnode.hidden .marc-bg.lead { stroke: rgba(241, 185, 47, 0.3); }
 .mnode.hidden .mhit + * { opacity: 0.7; }
 .mnode.hidden.job .qmark { fill: var(--next); }
 .mnode.hidden.job .mlabel { fill: var(--next); }
@@ -3506,3 +3507,51 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .fx-crackring.steel { border-color: #eefaff; box-shadow: 0 0 14px var(--steel); }
 .board .bpart.linked .bname { box-shadow: inset 0 0 0 1px var(--steel); }
 .fx-float.steel { color: var(--steel); }
+
+/* ---------- floors (floors.mjs, docs/servers.md 5) ---------- */
+/* The floor panel: a lift's buttons down the right of the map. Reached floors lit, the next dim, the rest dark. */
+.floor-lift { position: absolute; top: 44px; right: 10px; z-index: 3; display: grid; gap: 3px; width: 168px; pointer-events: auto; }
+.floor-lift::before { content: ''; position: absolute; left: 14px; top: 10px; bottom: 10px; width: 1px; background: var(--line); z-index: -1; }
+.fl-btn { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; background: rgba(12, 10, 6, 0.88); border: 1px solid var(--line); border-radius: 3px; color: var(--text); font: 12px var(--mono); text-align: left; cursor: pointer; position: relative; backdrop-filter: blur(2px); }
+.fl-btn .fl-n { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--line-strong); border-radius: 2px; font: 600 11px var(--mono); color: var(--amber); background: var(--inset); }
+.fl-btn .fl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fl-btn small { font: 10px var(--mono); color: var(--muted); white-space: nowrap; }
+.fl-btn small b { font-weight: 600; }
+.fl-btn:hover:not(:disabled) { border-color: var(--line-strong); }
+.fl-btn.on { border-color: var(--amber); background: rgba(40, 30, 10, 0.92); }
+.fl-btn.on .fl-n { background: var(--amber); color: #120f0a; border-color: var(--amber); }
+.fl-btn.next { opacity: 0.6; cursor: default; }
+.fl-btn.next .fl-name { color: var(--muted); }
+.fl-btn.dark { opacity: 0.32; cursor: default; padding-top: 2px; padding-bottom: 2px; }
+.fl-btn.dark .fl-n { color: var(--muted); border-color: var(--line); height: 16px; }
+.fl-btn .fl-you { position: absolute; left: -4px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: var(--you); box-shadow: 0 0 6px var(--you); }
+@media (max-width: 900px) {
+  .floor-lift { position: static; width: auto; margin: 6px 8px 0; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px; }
+  .floor-lift::before { display: none; }
+  .fl-btn { grid-template-columns: 1fr; justify-items: center; padding: 3px 2px; gap: 0; }
+  .fl-btn .fl-name, .fl-btn small { display: none; }
+  .fl-btn.on { grid-column: span 3; grid-template-columns: auto 1fr; justify-items: start; gap: 6px; padding-right: 6px; }
+  .fl-btn.on .fl-name { display: block; font-size: 11px; }
+  .fl-btn.dark .fl-n { height: 20px; }
+  .fl-btn .fl-you { left: 50%; top: -3px; margin: 0 0 0 -3.5px; }
+  /* The tools row flows above the rail and the floor strip instead of floating over them (it wrapped off the right edge). */
+  .map-tools { position: static; flex-wrap: wrap; row-gap: 6px; padding: 8px 8px 0; }
+  .map-tools .breach-try { margin-left: 0; }
+  .threat-rail { margin-top: 6px; }
+}
+/* An exit (▼) and an up-link (▲): lit through the fog. Its label carries the floor's band in WoW colours. */
+.mnode.exit .exit-mark, .mnode.entry .exit-mark { fill: rgba(241, 185, 47, 0.12); stroke: var(--amber); stroke-width: 1.4; stroke-linejoin: round; }
+.mnode.exit .exit-glow, .mnode.entry .exit-glow { fill: none; stroke: rgba(241, 185, 47, 0.18); stroke-width: 1; stroke-dasharray: 2 4; }
+.mnode.exit.open .exit-mark { fill: var(--amber); }
+.mnode.exit.open .exit-glow { stroke: rgba(241, 185, 47, 0.45); animation: exit-spin 14s linear infinite; transform-box: fill-box; transform-origin: center; }
+.mnode.exit.been .exit-glow { animation: none; }
+.mnode.entry .exit-mark { fill: rgba(241, 185, 47, 0.35); }
+@keyframes exit-spin { to { transform: rotate(360deg); } }
+.no-motion .mnode.exit .exit-glow { animation: none; }
+@media (prefers-reduced-motion: reduce) { .mnode.exit .exit-glow { animation: none; } }
+.floor-card h1 { letter-spacing: 1px; }
+.floor-card .tagline b { font: 600 15px var(--mono); }
+.floor-card .fl-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 10px; padding: 8px 0; border-top: 1px solid var(--line); font: 12px var(--mono); }
+.floor-card .fl-k { color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-size: 10px; }
+.floor-card .fl-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floor-card .fl-v b { font-weight: 600; }

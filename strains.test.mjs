@@ -47,7 +47,7 @@ test('grades: deeper servers send the same virus with bigger numbers', () => {
   assert.equal(v3.parts.find((p) => !p.special).maxArmor, v1.parts.find((p) => !p.special).maxArmor, 'only the numbers grow');
   assert.equal(v1.name, 'CRYPTJACK');
   assert.equal(v2.name, 'CRYPTJACK v2');
-  assert.deepEqual([1, 2, 3, 5].map(gradeFor), [1, 2, 3, 3]);
+  assert.deepEqual([1, 2, 3, 4, 8].map(gradeFor), [1, 2, 2, 3, 3], 'by floor: 1, then 2-3, then 4 and down');
 });
 
 test('Keylogger: the Logger only feels synced commands, and three unsynced ones come back as a Dump', () => {

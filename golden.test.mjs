@@ -74,7 +74,7 @@ test('golden: the same fights end the same way, wild, strain, grade, guard and b
   for (const b of BRACKETS.slice(0, 4)) {
     for (const policy of ['Breaker', 'Bastion', 'Infiltrator', 'Operator']) {
       for (let i = 0; i < 12; i++) { same(`${policy} ${b.name} wild ${i}`, () => fight(policy, 'random', b, { seed: i + 1, mode: 'run', zone: true })); n++; }
-      for (const g of ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer']) { same(`${policy} ${b.name} ${g}`, () => fight(policy, g, b, { mode: 'run', depth: b.depth })); n++; }
+      for (const g of ['watchdog', 'sentinel', 'crawler', 'shredder', 'bouncer', 'tracer']) { same(`${policy} ${b.name} ${g}`, () => fight(policy, g, b, { mode: 'run', guard: b.guard })); n++; }
       for (const [k, strain] of strainsAt(b.level).entries()) { same(`${policy} ${b.name} ${strain}`, () => fight(policy, 'random', b, { seed: 100 + k, mode: 'run', zone: true, strain })); n++; }
       for (let i = 0; i < 3; i++) { same(`${policy} ${b.name} v2 ${i}`, () => fight(policy, 'random', b, { seed: 200 + i, mode: 'run', zone: true, grade: 2 })); n++; }
     }

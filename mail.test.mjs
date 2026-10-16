@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, active, hooks, restore, tickServices } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, active, hooks, restore, tickServices, addLocation } from './dist/combat.mjs';
+import { graphOf, locAt, neighbours, hiddenNear } from './dist/floors.mjs';
 import { play, layoutOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG } from './dist/data.mjs';
@@ -101,10 +102,11 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   j = job(s);
   assert.ok(boardOpen(s) && offers(s).length >= 3, 'the board opens with the turf letter');
   assert.equal(j.type, 'takeover');
-  assert.equal(s.locations.length, 0, 'no server was handed to you');
+  assert.equal(j.loc, undefined, 'no server was handed to you');
   play(s, 'jack out');
-  command(s, 'developer location ransomware');
-  const home = s.locations[0];
+  // You trace one yourself: a floor-1 server with unknown servers linked to it.
+  const g = graphOf(s, 1), at = g.order.find((x) => !locAt(s, x) && neighbours(s, x).some((y) => g.nodes[y].kind === 'server' && !locAt(s, y)));
+  const home = addLocation(s, 'ransomware', 1, null, at);
   takeOver(s, home);
   play(s, 'jack out');
   assert.ok(ready(s, j));
@@ -124,7 +126,7 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   const route = home.extraFiles.find((f) => f.kind === 'route' && f.hidden === n.id);
   play(s, 'pull ' + route.name);
   play(s, 'jack out');
-  assert.equal(n.lead, HIDDEN.routeLead);
+  assert.ok(!hiddenNodes(s).includes(n) || n.lead >= HIDDEN.routeLead, 'the route file traces most of the way (its server\'s first clears did some)');
   while (hiddenNodes(s).includes(n)) {
     s.zone.spawns['/tmp'] = { alive: true, family: n.family, level: 1, seed: 7 + n.lead, name: 'x-0001' };
     killInSprawl(s, '/tmp');
@@ -239,11 +241,12 @@ test('GLASSJAW pays for the risk (2.5x credits, 1.5x XP, a protocol; no Indemnit
 
 test('the hidden network: invaders from servers you haven’t found, traced back when you beat them', () => {
   const s = fresh();
-  command(s, 'developer location worm');
-  const found = s.locations[0];
-  const near = hiddenNodes(s).filter((n) => n.via === found.id);
-  assert.equal(near.length, HIDDEN.perServer);
-  assert.ok(near.every((n) => n.depth === 2 && n.lead === 0 && !n.pinged));
+  const g = graphOf(s, 1), at = g.order.find((x) => neighbours(s, x).some((y) => g.nodes[y].kind === 'server'));
+  const found = addLocation(s, 'worm', 1, null, at); // a server with unknown servers linked to it
+  found.runs = 1; // connected: only through those do they come
+  const near = hiddenNear(s, found, { junction: false });
+  assert.ok(near.length >= 1, 'the servers linked to it on its floor show as ?');
+  assert.ok(near.every((n) => n.depth === 1 && n.lead === 0 && !n.pinged));
   const share = HIDDEN.invaderShare;
   HIDDEN.invaderShare = 1;
   s.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // nothing blocks it at the wall
@@ -252,7 +255,7 @@ test('the hidden network: invaders from servers you haven’t found, traced back
   const inv = s.invasion;
   assert.ok(inv.hidden);
   assert.equal(inv.level, found.level, 'it comes at the level of the server it routes through');
-  assert.equal(inv.grade || 1, 1, 'and that server\'s layer');
+  assert.equal(inv.grade || 1, 1, 'and that server\'s floor');
   assert.match(inv.fromName, /unknown server past/);
   const n = hiddenNodes(s).find((x) => x.id === inv.hidden);
   play(s, 'jack in');
@@ -262,13 +265,17 @@ test('the hidden network: invaders from servers you haven’t found, traced back
   assert.equal(s.invasion, null);
 });
 
-test('a vault’s trace record puts part of a trace on one of the server’s hidden neighbours', () => {
+test('a vault’s trace record puts part of a trace on one of the ? servers linked to its server', () => {
   const s = fresh();
   command(s, 'developer location ransomware');
   const loc = s.locations[0];
-  const before = hiddenNodes(s).filter((n) => n.via === loc.id).map((n) => n.id);
-  takeOver(s, loc); // the vault's files, the trace record among them, go in your pack
-  play(s, 'jack out');
+  const before = hiddenNear(s, loc).map((n) => n.id);
+  const fc = HIDDEN.firstClear;
+  HIDDEN.firstClear = 0; // the record alone (first clears trace them too: floors.test.mjs)
+  try {
+    takeOver(s, loc); // the vault's files, the trace record among them, go in your pack
+    play(s, 'jack out');
+  } finally { HIDDEN.firstClear = fc; }
   assert.equal(s.locations.length, 1, 'no server located outright');
   assert.deepEqual(hiddenNodes(s).filter((n) => before.includes(n.id)).map((n) => n.lead).sort((a, b) => b - a)[0], HIDDEN.recordLead);
 });
@@ -328,7 +335,8 @@ test('an old save keeps its open contracts and gets a hidden network', () => {
   const r = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(r.mail.jobs.length, 1);
   assert.equal(r.mail.jobs[0].got, 1);
-  assert.equal(hiddenNodes(r).length, HIDDEN.perServer);
+  assert.ok(hiddenNear(r, r.locations[0]).length >= 1, 'its server on a floor, the ones linked to it as ?');
+  assert.ok(hiddenNodes(r).every((n) => n.slot));
 });
 
 test('Total Loss, the Preferred weapon: breaking a part hits every other part for a quarter of its max', () => {

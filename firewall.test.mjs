@@ -5,6 +5,8 @@ import { fresh, command, hooks } from './dist/combat.mjs';
 import { FIREWALL, fwOf, effLevel, fragment, tickFirewall, upgradeCost, tierCost, baseOf, fwLevel, BASE_GAP, TIERS } from './dist/firewall.mjs';
 import { wallBands } from './dist/invasion.mjs';
 import { items } from './dist/hidden.mjs';
+// A server found and connected to (only those send invasions, and the wall follows them: docs/servers.md 5.3).
+const found = (s, family) => { command(s, `developer location ${family}`); s.locations.at(-1).runs = 1; return s.locations.at(-1); };
 
 const MIN = 60000;
 const at = (t) => { hooks.now = () => t; };
@@ -12,8 +14,8 @@ const at = (t) => { hooks.now = () => t; };
 test('the base follows your network: the highest attached server less 2; tiers buy +1 to +6 on top', () => {
   const s = fresh();
   assert.equal(baseOf(s), 1, 'nothing attached: level 1, never less');
-  command(s, 'developer location worm');
-  command(s, 'developer location ransomware');
+  found(s, 'worm');
+  found(s, 'ransomware');
   s.locations[0].level = 12; s.locations[1].level = 7;
   assert.equal(baseOf(s), 12 - BASE_GAP);
   command(s, 'developer server 20');
@@ -56,7 +58,7 @@ test('tier prices: cheap at first, a goal at the top, more code from +3 (what in
 test('old saves: a climbed wall becomes the tier nearest its margin over the new base, and the excess comes back', async () => {
   const { restore } = await import('./dist/combat.mjs');
   const s = fresh();
-  command(s, 'developer location worm');
+  found(s, 'worm');
   s.locations[0].level = 12;
   const old = JSON.parse(JSON.stringify(s));
   old.version = 32;
@@ -153,7 +155,7 @@ test('a filter pulled from a vault is banked when you jack out', async () => {
   const { filtersOf } = await import('./dist/filters.mjs');
   const { play } = await import('./dist/run.mjs');
   const s = fresh();
-  command(s, 'developer location worm');
+  found(s, 'worm');
   play(s, 'connect ' + s.locations[0].id);
   s.run.pack.push({ kind: 'filter', name: 'filter.flt', filter: { kind: 'filter', rarity: 'stock', level: 3, name: 'Packet Filter', stats: { strength: 1 } } });
   play(s, 'jack out');
@@ -245,7 +247,7 @@ test('away: a long passive clock (one invasion every 2-4 hours); open ports spee
   const { tickNetwork, AWAY } = await import('./dist/invasion.mjs');
   const T0 = 1_800_000_000_000;
   const s = fresh();
-  command(s, 'developer location worm');
+  found(s, 'worm');
   fwOf(s).pin = 30;
   tickNetwork(s, T0);
   tickNetwork(s, T0 + 8 * 3600000);
@@ -253,7 +255,7 @@ test('away: a long passive clock (one invasion every 2-4 hours); open ports spee
   assert.ok(n >= 2 && n <= 4, `2-4 in eight hours away (${n})`);
   // Open ports: online, the next one comes 2.5× sooner; logging off closes them.
   const o = fresh();
-  command(o, 'developer location worm');
+  found(o, 'worm');
   tickNetwork(o, T0);
   o.net.next = 10 * 60000;
   command(o, 'open ports');
@@ -323,7 +325,7 @@ test('crafting a filter: a Tuned one at your level, built around the stat you pi
 test('the threat rail lists what is coming, hottest and soonest first', async () => {
   const { threatsOf } = await import('./dist/view.mjs');
   const s = fresh();
-  command(s, 'developer location worm');
+  found(s, 'worm');
   assert.deepEqual(threatsOf(s), [], 'nothing yet');
   s.net.next = 5 * 60000;
   assert.equal(threatsOf(s)[0].name, 'Next invasion');

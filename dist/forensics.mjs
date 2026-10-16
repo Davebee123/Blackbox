@@ -8,7 +8,7 @@
 // name your answer (`sweep <answer>`). A right answer pushes the lead toward the next server;
 // wrong answers cost nothing but shrink it. Skipping changes nothing.
 //
-// Each kind has three tricks, by layer (1, 2, 3+): the obvious one, a decoy, and one that
+// Each kind has three tricks, by floor (1, 2, 3+): the obvious one, a decoy, and one that
 // needs the note at the top of the log. The log comes from the server's seed: the same every
 // visit, different everywhere.
 import { emit, warn, addLead, gainXp, xpFor } from './combat.mjs';
@@ -213,6 +213,6 @@ export function sweepCommand(s, loc, arg) {
   st.solved = arg;
   const amount = SWEEP.rewards[Math.min(st.tries, SWEEP.rewards.length - 1)];
   emit(s, 'net-good', `SWEPT: ${arg}${st.tries ? '' : ', first read'}.`);
-  addLead(s, loc.deeper || loc.family, routed(s, amount), 'Log sweep: ', true); // a route file: the next layer
+  addLead(s, loc.deeper || loc.family, routed(s, amount), 'Log sweep: ', loc); // a route file: one of its ? neighbours (floors.mjs)
   gainXp(s, xpFor(s, loc.level || 1, SWEEP.xpShare * amount / SWEEP.rewards[0]), 'log sweep', 'intel'); // guessing pays less, like the lead
 }

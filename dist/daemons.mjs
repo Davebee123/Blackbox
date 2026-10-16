@@ -7,7 +7,7 @@
 // trigger (on) acts when its moment comes (daemonsOn, called where it happens). A shield or a heal lands at once;
 // a hit waits for the end of the step it came in (flushDaemons), so it never lands inside another hit. Daemons
 // never set off daemons.
-import { DAEMONS, daemonN, daemonWhen, bandDaemons, daemonBand, DAEMON_DROP, BANDS, codeUnit, CONFIG, SERVER } from './data.mjs';
+import { DAEMONS, daemonN, daemonWhen, bandDaemons, daemonBand, DAEMON_DROP, DAEMON_BANDS, codeUnit, CONFIG, SERVER } from './data.mjs';
 import { emit, warn, active, alive, part, livingParts, soonestAttacker, defender, virusIntegrity, hit, heal, rand, serverLevel, classOf, telling, gainCode, scaled } from './combat.mjs';
 import { codeOf } from './gear.mjs';
 
@@ -220,4 +220,4 @@ export function daemonRestore(s) {
   ownedOf(s);
   s.daemons = [...new Set((s.daemons || []).filter((id) => typeof id === 'string' && DAEMONS[id]))];
 }
-export { daemonWhen, BANDS };
+export { daemonWhen, DAEMON_BANDS };

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { fresh, command } from './dist/combat.mjs';
 import { play } from './dist/run.mjs';
 import { sweepPuzzle, sweepKind, SWEEP } from './dist/forensics.mjs';
+import { hiddenNear } from './dist/floors.mjs';
 
 const locAt = (depth, seed) => ({ seed, depth, owner: 'Vance', family: 'worm', deeper: 'ransomware', level: 5, state: {} });
 const col = (p, name) => p.cols.indexOf(name);
@@ -60,11 +61,12 @@ test('sweeping on a run: wrong guesses shrink the lead, a right one lands once',
   const events = play(s, `cat ${p.file}`);
   assert.ok(events.some((e) => e.type === 'net-sweep' && e.sweep.rows.length >= 8));
   const wrong = p.suspects.find((a) => a !== p.answer);
-  const before = s.leadProgress[loc.deeper] || 0;
+  const lead = () => hiddenNear(s, loc).reduce((n, h) => n + h.lead, 0); // its trace goes to a ? linked to the server (floors.mjs)
+  const before = lead();
   play(s, `sweep ${wrong}`);
-  assert.equal(s.leadProgress[loc.deeper] || 0, before, 'a wrong guess gives nothing');
+  assert.equal(lead(), before, 'a wrong guess gives nothing');
   play(s, `sweep ${p.answer}`);
-  assert.equal(((s.leadProgress[loc.deeper] || 0) - before + 100) % 100, SWEEP.rewards[1]);
+  assert.equal(lead() - before, SWEEP.rewards[1]);
   assert.ok(play(s, `sweep ${p.answer}`).some((e) => /Already swept/.test(e.message)));
   assert.ok(play(s, `pull ${p.file}`).some((e) => /cat it to sweep/.test(e.message)));
 });

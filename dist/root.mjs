@@ -97,8 +97,8 @@ export function rotate(s, loc, at, rooms) {
   const rare = rnd() < ROOT.rareChance;
   const fams = Object.keys(FAMILIES);
   const family = rnd() < 0.5 ? loc.family : leanPick(s, 'you', rnd()); // the other half leans with your network (network.mjs)
-  // It keeps up with you inside the server's layer band (like a rogue server), rare ones 2 levels up.
-  const level = Math.max(loc.level || 1, SERVER.locationLevel(hackerLevel(s), loc.depth || 1)) + (rare ? ROOT.rareLevels : 0);
+  // It keeps up with you inside the server's floor band (like a rogue server), rare ones 2 levels up.
+  const level = Math.max(loc.level || 1, SERVER.keepUp(hackerLevel(s), loc.depth || 1)) + (rare ? ROOT.rareLevels : 0);
   const { grade, strain } = variantFor(family, level, loc.depth || 1, seed, nativeStrain(s, 'you'));
   const room = rooms.length ? rooms[Math.floor(rnd() * rooms.length)] : '/';
   const label = strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[family].stem.toLowerCase();

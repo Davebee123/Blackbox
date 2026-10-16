@@ -53,7 +53,7 @@ test('every subclass is viable alone at Lv 10, 18 and 30: at least 85% wins, ins
 // SUBS.sysop.alone), while it still loses little Signal: 15% a fight at most, its heals drawn from its full hits.
 // Carrying a crew: farm.test.mjs.
 const wide = (c, b, sub) => {
-  const rs = [0, 1, 2].flatMap((gearSeed) => [...Array.from({ length: 40 }, (_, i) => fight(c, 'random', b, { sub, gearSeed, seed: 500 + i, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].flatMap((g) => [1, 2].map((seed) => fight(c, g, b, { sub, gearSeed, seed, mode: 'run', depth: b.depth })))]);
+  const rs = [0, 1, 2].flatMap((gearSeed) => [...Array.from({ length: 40 }, (_, i) => fight(c, 'random', b, { sub, gearSeed, seed: 500 + i, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].flatMap((g) => [1, 2].map((seed) => fight(c, g, b, { sub, gearSeed, seed, mode: 'run', guard: b.guard })))]);
   return { lost: rs.reduce((a, r) => a + r.lostPct, 0) / rs.length, wins: rs.filter((r) => r.win).length / rs.length, cycles: rs.reduce((a, r) => a + r.cycles, 0) / rs.length };
 };
 test('the Bastions alone are the slow ones: the Warden at least 1.4 times the damage dealers\' median cycles a fight at Lv 18 and 30, the Sysop at least twice, both winning 85% and the Sysop losing 15% or less', () => {

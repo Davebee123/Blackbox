@@ -18,7 +18,7 @@ const I = CONFIG.invasion;
 function world({ level = 1, family = 'worm', depth = 1, services = {}, fw = 0 } = {}) {
   const s = fresh();
   command(s, `developer location ${family}`);
-  Object.assign(s.locations[0], { level, depth });
+  Object.assign(s.locations[0], { level, depth, runs: 1 }); // connected: only servers you've connected to send invasions (docs/servers.md 5.3)
   s.services = { ...services };
   s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   syncServer(s);
@@ -44,7 +44,7 @@ function atWall(s) {
 }
 const types = (events) => events.map((e) => e.type);
 
-test('invaders only come from locations you have found; the network plays on while you are away', () => {
+test('invaders only come from servers you have connected to; the network plays on while you are away', () => {
   const s = fresh();
   s.clock = 0;
   tickNetwork(s, 0);
@@ -52,10 +52,13 @@ test('invaders only come from locations you have found; the network plays on whi
   wait(s, 20 * MIN);
   assert.equal(s.invasion, null, 'nothing found, nothing comes');
   command(s, 'developer location worm');
+  wait(s, 20 * MIN);
+  assert.equal(s.invasion, null, 'found but never connected to: nothing comes (docs/servers.md 5.3)');
+  s.locations[0].runs = 1;
   wait(s, I.firstMs - 5000);
   assert.equal(s.invasion, null);
   const ev = wait(s, 5000);
-  assert.ok(types(ev).includes('invader'), 'the first one sets out 3 logged-on minutes after the first find');
+  assert.ok(types(ev).includes('invader'), 'the first one sets out 3 logged-on minutes after the first connection');
   assert.equal(s.invasion.state, 'travel');
   s.clock += 60 * MIN; // the game was closed for an hour
   tickNetwork(s, s.clock);

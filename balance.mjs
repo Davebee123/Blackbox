@@ -15,16 +15,17 @@ export const POLICIES = {
   Operator: planner,
 };
 const CLASS = { Breaker: 'breaker', Bastion: 'bastion', Infiltrator: 'infiltrator', Operator: 'operator', 'Spike only': 'breaker' };
-
+// Points on the curve: hacker level, the guards' level (what the old layer bands gave these brackets, kept so the class bands
+// measure the same fights), and whether the tree is filled. The server's
 // Points on the curve: hacker level, deepest guard layer, and whether the tree is filled. The server's
 // level is the class's (your highest class level); the home-fight services are gone (filters and tiers
 // do that job, and these fights are all on your Signal).
 export const BRACKETS = [
-  { name: 'Lv 1', level: 1, server: 1, depth: 1 },
-  { name: 'Lv 10', level: 10, server: 10, depth: 1 },
-  { name: 'Lv 18', level: 18, server: 18, depth: 2 },
-  { name: 'Lv 30', level: 30, server: 30, depth: 2 },
-  { name: 'Lv 50', level: 50, server: 50, depth: 3 },
+  { name: 'Lv 1', level: 1, server: 1, guard: 1 },
+  { name: 'Lv 10', level: 10, server: 10, guard: 9 },
+  { name: 'Lv 18', level: 18, server: 18, guard: 18 },
+  { name: 'Lv 30', level: 30, server: 30, guard: 18 },
+  { name: 'Lv 50', level: 50, server: 50, guard: 28 },
 ];
 
 // Talents as a player would have them: a point at 10 and every 2 levels after (LOADOUT), spent in a
@@ -79,7 +80,7 @@ export function fight(policy, key, b, opts = {}) {
   const guard = opts.mode === 'run';
   if (guard) s.run = { loc: 'sim', cwd: '/', integrity: maxSignal(s), max: maxSignal(s), pack: [], visited: ['/'] };
   const startHp = guard ? s.run.max : s.server.max; // health lost is a share of your own max
-  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}) } : guard ? { mode: 'run', room: '/sim', level: SERVER.locationLevel(b.level, opts.depth || 1) } : {});
+  selectEncounter(s, key, opts.seed ?? 42, opts.zone ? { mode: 'run', room: '/sim', level: b.level + (opts.levelUp || 0), zone: true, family: opts.family, grade: opts.grade, strain: opts.strain, ...(opts.mutation !== undefined ? { mutation: opts.mutation } : {}), ...(opts.elite ? { elite: true } : {}), ...(opts.boss ? { boss: opts.boss } : {}) } : guard ? { mode: 'run', room: '/sim', level: opts.guard || b.guard || b.level } : {});
   if (s.encounter) s.encounter.soft = 1; // measure the class, not SPRAWL's mercy for new players (CONFIG.zone.starterHit)
   command(s, 'engage');
   const uses = {};
@@ -103,7 +104,7 @@ export function fight(policy, key, b, opts = {}) {
 export function score(policy, b, opts = {}) {
   const runs = [
     ...Array.from({ length: 20 }, (_, i) => fight(policy, 'random', b, { ...opts, seed: i + 1, mode: 'run', zone: true })),
-    ...['watchdog', 'sentinel', 'crawler', 'shredder'].map((g) => fight(policy, g, b, { ...opts, mode: 'run', depth: b.depth })),
+    ...['watchdog', 'sentinel', 'crawler', 'shredder'].map((g) => fight(policy, g, b, { ...opts, mode: 'run', guard: b.guard })),
   ];
   const uses = {};
   for (const r of runs) for (const [k, v] of Object.entries(r.uses)) uses[k] = (uses[k] || 0) + v;
@@ -129,7 +130,7 @@ export function presses(rs) {
 }
 // The class-balance fights (score) as a list, for press shares: 20 wilds and the four guards.
 export function generic(policy, b, opts = {}) {
-  return [...Array.from({ length: 20 }, (_, i) => fight(policy, 'random', b, { ...opts, seed: i + 1, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].map((g) => fight(policy, g, b, { ...opts, mode: 'run', depth: b.depth }))];
+  return [...Array.from({ length: 20 }, (_, i) => fight(policy, 'random', b, { ...opts, seed: i + 1, mode: 'run', zone: true })), ...['watchdog', 'sentinel', 'crawler', 'shredder'].map((g) => fight(policy, g, b, { ...opts, mode: 'run', guard: b.guard }))];
 }
 // The fights each shipped conditional build is for (docs/kits.md section 4, "For"), and a generic set of wilds.
 const bossFight = (id) => ({ boss: id, family: BOSSES[id].family, strain: BOSSES[id].strain });
@@ -156,7 +157,7 @@ export function setScore(sub, b, bar, set, seeds = [1, 2]) {
   const pol = policyOf(sub), rs = [];
   for (const f of set) for (const sd of seeds) {
     const { guard, seed = 0, ...rest } = f;
-    rs.push(guard ? fight(pol, guard, b, { sub, bar, seed: seed + sd, mode: 'run', depth: b.depth }) : fight(pol, 'random', b, { sub, bar, mode: 'run', zone: true, mutation: null, ...rest, seed: seed + sd }));
+    rs.push(guard ? fight(pol, guard, b, { sub, bar, seed: seed + sd, mode: 'run', guard: b.guard }) : fight(pol, 'random', b, { sub, bar, mode: 'run', zone: true, mutation: null, ...rest, seed: seed + sd }));
   }
   return { lost: rs.reduce((a, r) => a + Math.min(100, r.lostPct), 0) / rs.length, wins: rs.filter((r) => r.win).length, total: rs.length, rs };
 }

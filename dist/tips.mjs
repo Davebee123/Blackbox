@@ -28,15 +28,15 @@ export const TIPS = [
   { id: 'level', page: '*', at: '#whoami', when: (s) => hackerLevel(s) >= 2, text: 'This is you: your handle, the class you play and its level. Each level makes you 4% stronger, and some unlock new skills.' },
 
   // ---------- map ----------
-  { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. Viruses that attack it show up next to it. Kill enough of one family and you find the server that sent them.' },
-  { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is a rogue server. Viruses gather in its folders. Connect, find them with ls and cd, and attack the ones you want to fight.' },
+  { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. It sits above the net. Viruses that attack it show up next to it.' },
+  { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is a rogue server, the way into the net. Viruses gather in its folders. Each one you kill traces a ? linked to it.' },
   // ---------- the rooms (the Run tab) ----------
   { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'A socket room. Clear its guard once and it\'s yours to build in: a program here bends this server\'s rules, and only this server\'s.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive off this server. It runs from you: corner it and break its Uplink before the upload finishes.' },
   { id: 'net-sweep', page: 'net', at: '.sweep:not(.past):not(.solved)', text: 'Click a line to light up every line it shares a source with, and filter out the noise. A right answer pushes your lead toward the next server. A wrong one only shrinks the push.' },
   { id: 'net-hostile', page: 'net', at: '.term .tok.virus', text: 'A virus is running in this folder. Click it, or type attack, when you are ready. It comes back a while after you kill it.' },
   { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready. Nothing happens until you do.' },
-  { id: 'map-lead', page: 'map', at: '.mnode.lead', text: 'This is a lead. Each kill of this family fills it. At 100% you find the server that sent them.' },
+  { id: 'map-exit', page: 'map', at: '.mnode.exit', text: 'The way down to the next floor. Locate the server it hangs off to open it. The floor below runs higher levels.' },
   { id: 'map-origin', page: 'map', at: '.mnode.loc', text: 'You found a server. Select it and press Connect to hack in. It takes memory while it is on your network. Its ring fills as you explore it.' },
   { id: 'map-memory', page: 'map', at: '.mem-join', text: 'These pips are your free memory. They show how many more servers your network can hold. The blinking one is what this server takes. Detach a server you are done with to get one back.' },
   { id: 'map-invader', page: 'map', at: '.mnode.invader[data-select="invader"]', text: 'An invasion is heading for your wall. How strong your Firewall is decides whether it is blocked, contested, or breaks through.' },
@@ -71,7 +71,7 @@ export const TIPS = [
   { id: 'map-rogue', page: 'map', at: '.mnode.rogue', text: 'This is a rogue server. Nobody has ever taken it over. Viruses sit in its folders and come back a few minutes after you kill them.' },
   { id: 'map-build', page: 'map', at: '.prog-row', text: 'Its sockets, and what runs in them. Clear a socket room on a run, then build in it from its pop-up. A program works on this server only, while you are in it.' },
   { id: 'map-owned', page: 'map', at: '.mnode.loc.owned', text: 'This server is yours now. Put a relay on it from its card, and it pings the unknown servers next to it.' },
-  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'This is an unknown server. Beat the viruses it sends at you to trace it. A vault\'s trace record traces it too. Once a relay flags it, kills of any virus from its family count as well.' },
+  { id: 'map-hidden', page: 'map', at: '.mnode.hidden', text: 'An unknown server. Clear the servers linked to it to trace it: a first clear, a Mapped server, a vault\'s trace record. Once a relay flags it, kills of its family count too.' },
 
   // ---------- fight ----------
   // Your first fight: one pause, not four. The board, the keys, armor and the Sync Window are
