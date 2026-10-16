@@ -22,7 +22,7 @@ import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
 import { botStep, BUILD } from './roomsim.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, power, bandOf } from './dist/data.mjs';
+import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, BOSSES, power, bandOf } from './dist/data.mjs';
 import { canDescend, floorsOf, hiddenNear } from './dist/floors.mjs';
 
 // How full the bot rests its Signal before it goes back out (a share of your max): 1 waits for full.
@@ -63,6 +63,20 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       collected = null;
     }
     if (e.type === 'drop' && (e.item || e.rarity)) { const r = e.rarity || e.item.rarity; stats.drops[r] = (stats.drops[r] || 0) + 1; stats.firstAt[r] ??= Math.round((t - 1_700_000_000_000) / 60000); }
+    // Where each drop came from, by rarity (lootsim.mjs): each item once. A room fight's drop goes in your pack and comes
+    // back as Banked when you jack out; that second line is the same item. Kills are split into plain, elite and guard.
+    if (e.type === 'drop' && e.item) {
+      const it = e.item, key = it.name + JSON.stringify(it.stats), packs = (stats.packKeys ||= new Set());
+      let src = (e.message.match(/^([^:]{1,40}):/)?.[1] || '').trim();
+      const kill = e.message.match(/^(.+?) dropped /);
+      if (kill) { const who = kill[1]; src = /RESIDENT/.test(who) ? 'Kill: Resident (Core)' : Object.values(BOSSES).some((b) => b.name.toUpperCase() === who) ? 'Kill: boss' : /^ELITE /.test(who) ? 'Kill: elite' : Object.values(GUARDS).some((g) => g.name.toUpperCase() === who) ? 'Kill: guard' : /^[A-Z][A-Z -]*-\d{3,}$/.test(who) || /-\d{4}/.test(who) ? 'Kill: room' : `Kill: ${who}`; if (/In your pack/.test(e.message)) packs.add(key); }
+      if (src === 'Banked' && packs.has(key)) packs.delete(key);
+      else {
+        const r = it.unique ? 'unique' : it.rarity;
+        ((stats.dropFrom ||= {})[src || 'other'] ||= {})[r] = (stats.dropFrom[src || 'other'][r] || 0) + 1;
+        (stats.dropLevels ||= []).push([hackerLevel(s), r, Math.round((t - 1_700_000_000_000) / 60000), src || 'other', e.message.slice(0, 90)]);
+      }
+    }
     if (e.type === 'xp') { const why = (e.message.split('·')[1] || 'other').trim().replace(/[0-9]+/g, '#').replace(/ on .*/, '').replace(/\.$/, ''); stats.xp[why] = (stats.xp[why] || 0) + e.amount; }
   };
   const say = (text) => { const ev = play(s, text) || []; ev.forEach(note); t += cmdSec * 1000; return ev; };
