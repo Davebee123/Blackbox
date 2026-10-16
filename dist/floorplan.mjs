@@ -43,7 +43,7 @@
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
-import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, rollDrop } from './combat.mjs';
+import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
@@ -564,7 +564,7 @@ function mapped(s) {
   for (const x of roomList(s)) R.seen[x.id] = 'kind'; // Mapped: every room discovered (one cleared from afar, too)
   const r = rnd(R, 77), it = addItem(s, rollItem(r, { level: R.level + 2, rarity: r() < LOOT.minor ? 'tuned' : 'stock', cls: classOf(s) }), 'Mapped: ');
   if (it) R.banked.push(it.id);
-  const xp = Math.round(xpFor(s, R.level, ROOMS.xp.mapped));
+  const xp = Math.round(deedXpFor(s, R.level, ROOMS.xp.mapped));
   gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server
   say(s, `MAPPED. ${it ? `${itemLabel(it)} goes in your bank. ` : ''}+${xp} XP.`, 'rooms-good');
   if (R.world) ask('mapped', s);
@@ -1097,7 +1097,7 @@ function finishPuzzle(s, room, b, opts = {}) {
   if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
   if (R.world) ask('puzzlePay', s, room, pay); // into the pack (credits, code), components at once (netrooms.mjs)
   else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts, null, room.path); }
-  const xp = won ? Math.round(xpFor(s, L, P.xp)) : 0;
+  const xp = won ? Math.round(deedXpFor(s, L, P.xp)) : 0; // a board takes minutes: it pays like the fights it stands in for
   if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');
   const first = clear(s, room, true);
   const h = hunterOf(s), caught = room.kind === 'chase' && !won && !!h && !h.down; // a lost chase with the Tracker up: its fight, here
@@ -1309,7 +1309,7 @@ hooks.roomEnd = (s, result) => {
   programsPay(s, room, e);
   // First clear: half that fight's XP again (7.2).
   if (!R.cleared[room.id]) {
-    const xp = Math.round(xpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)));
+    const xp = Math.round(deedXpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)));
     gainXp(s, xp, `${room.path} first clear`, 'breakin'); // progress on a server: exploration XP, like the old break-ins
     clear(s, room);
   }

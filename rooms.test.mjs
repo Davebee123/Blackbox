@@ -660,11 +660,13 @@ test('the page is the map and a pop-up: it opens on a decision and on a click, c
   assert.doesNotMatch(html, /undefined|NaN/);
 });
 
-test('the bot maps a medium server, the Resident and all (two times in three: stepping into the unknown costs 5%)', () => {
+test('the bot maps a medium server, the Resident and all (five times in twelve at its own level since the long climb: stepping into the unknown costs 5%)', () => {
   // Twelve seeds: on four it swung between 2 and 3 with the loot rolls' share of the dice (about 70% over 24).
+  // Since the long climb (v42) it stays at level 10 the whole way: before, the server's own XP took it to 12 or 13 while it
+  // mapped and it mapped 8 of these 12; at its own level the elites (a Worm, a Trojan) stop it on 7, so it maps 5.
   const runs = [101, 7, 23, 58, ...Array.from({ length: 8 }, (_, i) => 200 + i * 37)].map((seed) => runServer({ cls: 'bastion', seed, kind: 'Relay' }));
   const mapped = runs.filter((r) => r.mapped);
-  assert.ok(mapped.length >= 8, `${mapped.length}/12 mapped`);
+  assert.ok(mapped.length >= 5, `${mapped.length}/12 mapped`);
   for (const r of mapped) { assert.equal(r.progress.done, r.progress.total); assert.ok(r.bossWon >= 1); }
 });
 

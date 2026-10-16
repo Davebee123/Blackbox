@@ -23,7 +23,7 @@
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
 import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
-import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
+import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, deedXpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
@@ -564,7 +564,7 @@ export function contractKill(s, { family, zone, bounty: tag, level = null, strai
 export function contractTakeover(s, loc) {
   if (loc.takenOver) return;
   loc.takenOver = true;
-  gainXp(s, xpFor(s, loc.level || 1, 1.5), `${loc.name} taken over`, 'breakin');
+  gainXp(s, deedXpFor(s, loc.level || 1, 1.5), `${loc.name} taken over`, 'breakin');
   emit(s, 'takeover', `${loc.name} TAKEN OVER. ${CREWS[loc.family] || loc.owner} just lost a server.`, { location: loc.id });
   for (const c of openContracts(s)) {
     if (c.type !== 'takeover') continue;

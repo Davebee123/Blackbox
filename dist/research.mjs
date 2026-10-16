@@ -13,7 +13,7 @@
 // State is s.research ({ key: n }, n capped at 20). fresh() starts it empty and the save restore adds it to an older
 // save (no SAVE_VERSION change, as the Codex's s.dex): every part that save had decoded (s.codex) starts decoded (research 3), and
 // nothing else is granted.
-import { emit, gainXp, xpFor, DECODE_XP, codexKey as keyOf } from './combat.mjs';
+import { emit, gainXp, deedXpFor, DECODE_XP, codexKey as keyOf } from './combat.mjs';
 
 export const RESEARCH = {
   max: 60,
@@ -70,7 +70,7 @@ export function gainResearch(s, v, p, how) {
   for (const t of hit) {
     const type = t === TIER.decoded ? 'codex' : t === TIER.mastered ? 'mastered' : 'research';
     emit(s, type, tierLine(p.name, t), { target: p.id, research: now, tier: t, how });
-    if (t === TIER.decoded && s.encounter) gainXp(s, xpFor(s, v.level, DECODE_XP), `${p.name} decoded`, 'intel');
+    if (t === TIER.decoded && s.encounter) gainXp(s, deedXpFor(s, v.level, DECODE_XP), `${p.name} decoded`, 'intel');
   }
   return hit.at(-1) || 0;
 }

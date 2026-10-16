@@ -6,9 +6,15 @@
 // jacks in to invasions that reach the wall, and installs relays on servers it takes over. Since R1 every server is
 // rooms (netrooms.mjs): on a visit it walks them like the rooms sim's bot (roomsim.mjs botStep: the key, the vault,
 // the Core, rooms not cleared yet, caches, respawns), fights with the planner, and jacks out when its Signal runs low.
+// Two clocks: the bot's own (`t`: 12-second cycles, 3 seconds a command, every reconnect wait and rest; levelAt,
+// in minutes) and real play (`real`; realAt, in minutes), a model of a person at the keyboard: a fight is
+// 3600 / LOOT.killsPerHour seconds, the walk to it included (won or lost: 24 seconds at 150 kills an hour), a puzzle
+// board REAL.puzzle and a log sweep REAL.sweep; the rest (mail, connecting, resting, gearing) is inside the walk. The
+// world's timers (respawns, refills, the Resident, invasions) run on the bot's clock, the play clock (`tickPlay`:
+// Behind, Fresh) on real play. pacing.mjs prints both.
 // node bot.mjs [class] [targetLevel] [seed]
 import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
-import { RARITY_ORDER, SLOT_KINDS, groupOf } from './dist/gear.mjs';
+import { RARITY_ORDER, SLOT_KINDS, groupOf, LOOT } from './dist/gear.mjs';
 import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
 import { joinCost, memoryCost, isLive } from './dist/memory.mjs';
@@ -27,11 +33,15 @@ import { canDescend, floorsOf, hiddenNear } from './dist/floors.mjs';
 
 // How full the bot rests its Signal before it goes back out (a share of your max): 1 waits for full.
 export const REST = { to: 1 };
+// Real play, in milliseconds (see the header): a fight with its walk, a puzzle board, a log sweep.
+export const REAL = { fight: 3600000 / LOOT.killsPerHour, puzzle: 2 * 60000, sweep: 60000 };
 // gearRule: 'rarity' (the highest rarity, then the highest level) or 'stats' (what an item adds: its Damage
 // as a share of your hit, its Signal as a share of your max, small weights for the rest, 3% for an effect).
+// capHours, capRealHours: where a climb gives up, on the bot's clock and in real play (the bot's runs about 20 times
+// slower than real play on the long climb: 100 real hours to 50 are about 2,000 of its own).
 // trace: per-level records for the progression measures (docs/progression.md): fights, wins, rest, XP by
 // kind, drops, gold repeats, upgrades and their size, what is worn at each level, and how long uniques stay on.
-export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = null, cycleSec = 12, cmdSec = 3, log = false, contracts = true, spend = 'none', gearRule = 'rarity', trace = false, capHours = 72 } = {}) {
+export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = null, cycleSec = 12, cmdSec = 3, log = false, contracts = true, spend = 'none', gearRule = 'rarity', trace = false, capHours = 20000, capRealHours = 150 } = {}) {
   let t = 1_700_000_000_000;
   hooks.now = () => t;
   const s = fresh();
@@ -40,7 +50,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   s.tutorialCompleted = true;
   s.loadout.archetype = cls;
   const policy = POLICIES[cls[0].toUpperCase() + cls.slice(1)];
-  const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
+  const stats = { fights: {}, wins: 0, losses: 0, xp: {}, levelAt: { 1: 0 }, realAt: { 1: 0 }, fightsAt: { 1: 0 }, puzzles: 0, runs: 0, vaults: 0, events: {}, crashes: 0, mins: 0, drops: {}, firstAt: {}, bountyLosses: 0, did: { run: 0, rogue: 0, sprawl: 0, sprawlOverLevel: 0 } };
+  let real = 0; // real play so far, ms (REAL)
   const seen = new Set(), losses = {}, lostIn = {}; // lostIn: fights lost in each room, by server and your level: a room that beat it twice is walked around until it levels
   BUILD.log = (x, id) => { (stats.built ||= []).push(`${id}@lv${hackerLevel(x)}`); }; // what it builds in the sockets it clears (sockets.mjs)
   // The ledger: what came in, by where it came from (positive changes only; the bot spends nothing but code on contracts).
@@ -84,7 +95,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (e.type === 'xp') { const why = (e.message.split('·')[1] || 'other').trim().replace(/[0-9]+/g, '#').replace(/ on .*/, '').replace(/\.$/, ''); stats.xp[why] = (stats.xp[why] || 0) + e.amount; }
   };
   const say = (text) => { const ev = play(s, text) || []; ev.forEach(note); t += cmdSec * 1000; return ev; };
-  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (trace) { const g = loaded(s), spike = 25 * power(l); (stats.worn_at ||= {})[l] = { uniques: g.filter((x) => x.unique).length, effects: g.filter(effectOf).length, slots: g.length, dmg: Math.round((g.reduce((n, x) => n + (x.stats.damage || 0), 0) / spike) * 100) / 100, sig: Math.round((g.reduce((n, x) => n + (x.stats.signal || 0), 0) / maxSignal(s)) * 100) / 100 }; } if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
+  const lvlCheck = () => { const L = hackerLevel(s); for (let l = 2; l <= L; l++) if (stats.levelAt[l] == null) { stats.levelAt[l] = Math.round((t - 1_700_000_000_000) / 60000); stats.realAt[l] = Math.round(real / 60000); stats.fightsAt[l] = stats.wins + stats.losses; byLevel[l] = JSON.parse(JSON.stringify(ledger)); if (trace) { const g = loaded(s), spike = 25 * power(l); (stats.worn_at ||= {})[l] = { uniques: g.filter((x) => x.unique).length, effects: g.filter(effectOf).length, slots: g.length, dmg: Math.round((g.reduce((n, x) => n + (x.stats.damage || 0), 0) / spike) * 100) / 100, sig: Math.round((g.reduce((n, x) => n + (x.stats.signal || 0), 0) / maxSignal(s)) * 100) / 100 }; } if (log) console.log(`level ${l} at ${stats.levelAt[l]} min`); } };
   const fightKey = () => { const v = s.encounter.virus; return (v.strain ? STRAINS[v.strain].name : (FAMILIES[v.family] || GUARDS[v.family] || { name: v.family }).name) + (v.grade > 1 ? ` v${v.grade}` : ''); };
   const fight = () => {
     if (!s.encounter || (s.encounter.phase !== 'alert' && !active(s))) return; // a finished fight still on screen
@@ -106,6 +117,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       t += cycleSec * 1000;
     }
     if (active(s)) finish(s, 'defeat');
+    real += REAL.fight;
     const r = s.reports.at(-1);
     if (sig0 != null && inRoom) (stats.roomFights ||= []).push({ L: L0, kind, gap, won: r?.result === 'victory', lost: r ? (sig0 - Math.max(0, r.endIntegrity)) / Math.max(1, max0) : 1, cycles: r?.cycles || 0, key, where, rare, boss: v.boss || null }); // room fights: for the R1 gate
     if (r?.result === 'victory') { stats.wins++; (stats.winsAt ||= {})[L0] = (stats.winsAt[L0] || 0) + 1; if (at) at.wins++; } else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (where && roomId) { const x = (lostIn[where + '@' + hackerLevel(s)] ||= {}); x[roomId] = (x[roomId] || 0) + 1; } if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
@@ -187,7 +199,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     for (let k = 0; k < 300 && s.run; k++) {
       if (active(s)) { fight(); FP.settle(s); continue; }
       if (s.rooms?.screen?.kind === 'virus' && only && !only(FP.roomOf(s, s.rooms.screen.room))) { FP.act(s, 'back'); t += cmdSec * 1000; continue; }
+      const board = FP.puzzleReady(s, FP.hereOf(s)); // a puzzle board it is about to play (botStep plays it to its end)
       if (!botStep(s)) break;
+      if (board && !FP.puzzleReady(s, FP.hereOf(s))) { real += REAL.puzzle; stats.puzzles++; }
       t += cmdSec * 1000;
       if (active(s)) { fight(); FP.settle(s); }
     }
@@ -198,7 +212,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     say(`connect ${loc.id}`);
     if (!s.run) return false;
     stats.runs++;
-    if (s.run.rooms) { const lost = Object.entries(lostIn[loc.id + '@' + hackerLevel(s)] || {}).filter(([, n]) => n >= 2); if (lost.length && s.rooms?.visit) s.rooms.visit.avoid = { ...(s.rooms.visit.avoid || {}), ...Object.fromEntries(lost.map(([id]) => [id, true])) }; visit(); leave(); seen.add(loc.id); if (loc.takenOver && !loc.relay && items(s).relay) command(s, 'relay ' + loc.id); return true; }
+    // A visit that fights nothing (every room it could take is down or walked around) counts as a loss there at this
+    // level, so it moves on instead of reconnecting forever (the long climb outlasts a floor's first clears).
+    if (s.run.rooms) { const lost = Object.entries(lostIn[loc.id + '@' + hackerLevel(s)] || {}).filter(([, n]) => n >= 2); if (lost.length && s.rooms?.visit) s.rooms.visit.avoid = { ...(s.rooms.visit.avoid || {}), ...Object.fromEntries(lost.map(([id]) => [id, true])) }; const f0 = stats.wins + stats.losses, key = loc.id + '@' + hackerLevel(s); visit(); leave(); if (stats.wins + stats.losses === f0) { losses[key] = (losses[key] || 0) + 1; stats.dry = (stats.dry || 0) + 1; } seen.add(loc.id); if (loc.takenOver && !loc.relay && items(s).relay) command(s, 'relay ' + loc.id); return true; }
     if (loc.rogue) {
       for (const room of Object.keys(layoutOf(loc)).filter((p) => p !== '/')) { if (!s.run) break; say(`cd ${room}`); say('attack'); fight(); if (s.run) say('cd /'); }
     } else {
@@ -218,7 +234,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
         // second try 70% of the time and gives up otherwise.
         if (d === '/' && sweepFile(loc) && !loc.state.sweep?.solved && !sweeps[loc.id]) {
           sweeps[loc.id] = true; const p = sweepPuzzle(loc);
-          say(`cat ${sweepFile(loc)}`); t += 60000;
+          say(`cat ${sweepFile(loc)}`); t += 60000; real += REAL.sweep;
           if (p && rnd() < 0.7) { const wrong = p.suspects.find((x) => x !== p.answer); if (wrong) say(`sweep ${wrong}`); say(`sweep ${p.answer}`); stats.sweeps = (stats.sweeps || 0) + 1; }
         }
         if (L[d].locked) stats.vaults++;
@@ -296,7 +312,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     return true;
   };
   let guard = 0, tickAt = t;
-  while (hackerLevel(s) < target && guard++ < 20000 && t - 1_700_000_000_000 < capHours * 3600000) {
+  while (hackerLevel(s) < target && guard++ < 1_000_000 && t - 1_700_000_000_000 < capHours * 3600000 && real < capRealHours * 3600000) {
     book('home', homeFight);
     // The world's clock catches up after each thing it did, in 30-second steps (a logged-on player's
     // ticks: one big jump would play out as time away, with rested XP and away-pace invasions).
@@ -304,7 +320,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     tickAt = t;
     if (book('invasion', invasion)) continue;
     if (book('runs', deadDrop)) continue;
-    tickPlay(s, t - 1_700_000_000_000 - (s.pace?.ms || 0)); // the bot's whole session is active play (Fresh and Behind use it)
+    tickPlay(s, real - (s.pace?.ms || 0)); // the play clock is real play (Fresh and Behind use it)
     mailWork();
     book('deconstruct', gearUp);
     restUp();
@@ -338,6 +354,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   }
   if (trace) { const L = hackerLevel(s); for (const w of Object.values(wornSince)) (stats.wornOpen ||= []).push({ levels: L - w.L, mins: Math.round((t - w.t) / 60000) }); }
   stats.mins = Math.round((t - 1_700_000_000_000) / 60000);
+  stats.realMins = Math.round(real / 60000);
   stats.killsPerHour = Math.round(stats.wins / (stats.mins / 60));
   stats.gear = loaded(s).map((it) => `${it.rarity}:${it.name} v${it.level}`);
   stats.level = hackerLevel(s);

@@ -31,7 +31,19 @@ export function stacks(s) {
   for (const p of s.salvage || []) m.set(p.name, (m.get(p.name) || 0) + 1);
   return [...m].map(([name, n]) => ({ name, n, component: isComponent(name) })).sort((a, b) => b.component - a.component || b.n - a.n || a.name.localeCompare(b.name));
 }
-const have = (s) => Object.fromEntries(stacks(s).map((x) => [x.name, x.n]));
+// Counts by name, in stacks' order (a fresh copy each time: autoPay spends from it). A long climb holds thousands of
+// pieces and a socket's cost is checked every step, so the count is kept until the pile changes (every change to it
+// is a push or a splice, so its length or its last piece moves).
+const counted = new WeakMap();
+const have = (s) => {
+  const pile = s.salvage || [], last = pile[pile.length - 1], c = counted.get(pile);
+  if (c && c.n === pile.length && c.first === pile[0] && c.last === last) return { ...c.h };
+  const m = new Map();
+  for (const p of pile) m.set(p.name, (m.get(p.name) || 0) + 1);
+  const h = Object.fromEntries([...m].sort((a, b) => isComponent(b[0]) - isComponent(a[0]) || b[1] - a[1] || a[0].localeCompare(b[0])));
+  if (s.salvage) counted.set(pile, { n: pile.length, first: pile[0], last, h });
+  return { ...h };
+};
 
 // Does this payment cover the cost with pieces you actually have? Returns null if so, or what's wrong.
 export function payProblem(s, cost, pay) {

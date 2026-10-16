@@ -386,7 +386,8 @@ test('the Sysadmin is the Bastion now: old saves carry its level, tree and bar a
   s.loadout.equipped = { sysadmin: ['kill-process', 'firewall'] };
   const r = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(r.loadout.archetype, 'bastion');
-  assert.deepEqual(r.hackers.bastion, { level: 12, xp: 5 });
+  const { xpToNext, v41XpToNext } = await import('./dist/data.mjs');
+  assert.deepEqual(r.hackers.bastion, { level: 12, xp: Math.round((5 / v41XpToNext(12)) * xpToNext(12)) }, 'its level, and its XP into it as a share (v42)');
   assert.deepEqual(r.loadout.equipped.bastion, ['rate-limit', 'firewall'], 'Kill Process is Rate Limit now');
   assert.equal(command(r, 'archetype sysadmin').at(-1).type, 'loadout', 'the old name still works');
 });

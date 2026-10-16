@@ -68,7 +68,6 @@ export const CONFIG = {
   // it a same-level fight cost blues 30% at 10 and only 22–30% at 18–30. Bosses and elites keep their own
   // numbers (crew content is tuned for crews).
   runLate: [[9, 1], [10, 0.95], [18, 1], [30, 1.2]], // lower than it was (1.1, 1.12, 1.35): a tell you let land costs more now (TELL)
-  xpEarly: { bonus: 0, full: 10, gone: 15 }, // the early bump is gone (it was 15% more XP to level 10, easing back by 15): decoding pays less instead
   // A broken part leaves salvage behind only sometimes.
   salvageChance: 0.35,
   maxMobLevel: 60,
@@ -1109,19 +1108,46 @@ export const UNLOCKS = [
   { level: 7, what: 3 }, { level: 10, what: 'edge' }, // the edge comes with your subclass; its skills at SUBCLASS.unlocks
   { level: 10, what: 'sigint' }, // everyone's interrupt, for casts: a crew boss's (raid.mjs), a solo tell's (tells.mjs)
 ];
-// XP: a kill is worth 20 + 10 per enemy level. Level L to L+1 takes about 5 + 1.2×L kills of
-// your own level (6 at level 1, 27 at 18, 64 at 49): an MMO-length climb, 1,700 fights to 50.
+// XP: a kill is worth 20 + 10 per enemy level. The climb is long: about 100 hours of real play to 50 at
+// LOOT.killsPerHour (150 kills an hour), front-loaded (an hour to 5, 4 to 10, 15 to 20, 35 to 30, 65 to 40): a sandbox,
+// not a storyline. CLIMB.kills is what level L to L+1 takes, in kills of your own level (straight between its points):
+// 30 at level 1 (minutes), 210 at 4, 215 at 10, 575 at 20, 900 at 30, 1,120 at 40, 1,330 at 49: about 35,000 to 50 on
+// paper. The pacing bot earns about 2.3 kills of XP a fight (rooms pay 1.25, elites, first clears, Mapped servers,
+// contracts), so it fights about 15,000 times on the way (pacing.mjs). CLIMB.minutes is the real play a level should
+// take (5 at level 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40, 220 at 49): Behind's target, and the table's sum.
+// Before save v42 a level took 5 + 1.2 × L kills (V41_KILLS): about 1,700 to 50, 7 hours of real play.
+export const CLIMB = {
+  kills: [[1, 30], [2, 80], [3, 170], [4, 210], [5, 210], [10, 215], [15, 410], [20, 575], [25, 740], [30, 900], [35, 1000], [40, 1120], [45, 1250], [49, 1330]],
+  minutes: [[1, 5], [4, 27], [5, 28], [9, 44], [10, 48], [19, 84], [20, 95], [29, 145], [30, 160], [39, 200], [49, 220]],
+};
+const along = (pts, L) => {
+  if (L <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) if (L <= pts[i][0]) { const [a, x] = pts[i - 1], [b, y] = pts[i]; return x + ((y - x) * (L - a)) / (b - a); }
+  return pts.at(-1)[1];
+};
 export const killXp = (level) => 20 + 10 * Math.max(1, level);
-const early = (c, L) => 1 + c.bonus * Math.min(1, Math.max(0, (c.gone - L) / (c.gone - c.full)));
-export const xpToNext = (level) => Math.round(killXp(level) * (5 + 1.2 * level) * early(CONFIG.xpEarly, level));
+export const killsToNext = (level) => along(CLIMB.kills, Math.max(1, level));
+export const xpToNext = (level) => Math.round(killXp(level) * killsToNext(level));
+export const V41_KILLS = (level) => 5 + 1.2 * Math.max(1, level);
+export const v41XpToNext = (level) => Math.round(killXp(level) * V41_KILLS(level)); // the curve before save v42 (its migration)
+// One-off deeds (a first clear, a Mapped server, a takeover, a Root level, a decode, a puzzle board, a first craft) grow
+// with the climb, so exploring still pays its part: their kill shares (ROOMS.xp, XP, ...) are the old curve's times
+// DEED.share of how much longer the level is than before v42 (climbStretch): about 8.6 at level 4, 5.4 at 9, 7.8 at 19,
+// 8.7 at 29, 8.3 at 49. A full share kept deeds' part of a level, but the long climb finishes every floor where the old
+// one outgrew half of it, so deeds came to 80% of the XP; at 0.4 they are about a quarter (pacing.mjs). Kills, and
+// work that is so many kills (contracts), are not scaled.
+export const climbStretch = (level) => killsToNext(level) / V41_KILLS(level); // how much longer a level is than before v42
+export const DEED = { share: 0.4 };
+export const deedScale = (level) => Math.max(1, DEED.share * climbStretch(level));
 // WoW-style: enemies above you give a little more, ones below give less, 10 levels below nothing.
 export const xpScale = (gap) => (gap >= 0 ? 1 + 0.05 * Math.min(gap, 5) : Math.max(0, 1 + 0.1 * gap));
 // Other XP, as shares of a kill at that level.
 export const XP = { home: 1, guard: 0.8, vault: 1.5, newLocation: 0.7 };
-// Catch-up (Behind): each level has a target of base + per × level minutes of active play. Once a level
-// runs past `after` times its target, kills pay +bonus until the level ends. Only time you played counts.
-export const CATCHUP = { base: 6, per: 2.2, after: 1.25, bonus: 0.5 };
-export const levelTarget = (level) => (CATCHUP.base + CATCHUP.per * Math.max(1, level)) * 60000;
+// Catch-up (Behind): each level has a target of CLIMB.minutes of active play (28 at 5, 48 at 10, 95 at 20, 160 at
+// 30, 200 at 40). Once a level runs past `after` times its target, kills pay +bonus until the level ends. Only time
+// you played counts.
+export const CATCHUP = { after: 1.25, bonus: 0.5 };
+export const levelTarget = (level) => Math.round(along(CLIMB.minutes, Math.max(1, level)) * 60000);
 // The talent tree, top to bottom: filler rows (ranked, up to 3 each) between the
 // three choice tiers. A row opens once you've spent `need` points in the rows above it.
 export const TREE = [
@@ -1183,10 +1209,16 @@ const skillsOf = (ids) => ids.map((id) => RUN_SKILLS[id] || card(id));
 // A subclass's line: its eleven bar skills at SUBCLASS.unlocks, and its run skills (`run`) at their own levels,
 // in unlock order.
 export const SUBCLASS = { from: 10, unlocks: [10, 12, 14, 16, 18, 20, 22, 26, 30, 34, 38] };
+// Lines and unlock levels are fixed once the classes load, and a fight asks for them on every command:
+// both are worked out once (the pacing bot's long climbs spent a third of their time here).
+const LINES = new WeakMap();
 function lineOf(x) {
+  if (LINES.has(x)) return LINES.get(x);
   const out = x.skills.map((id, i) => ({ id, level: SUBCLASS.unlocks[i] ?? Infinity }));
   for (const [id, level] of Object.entries(x.run || {})) out.push({ id, level });
-  return out.sort((a, b) => a.level - b.level);
+  out.sort((a, b) => a.level - b.level);
+  LINES.set(x, out);
+  return out;
 }
 const lineIds = (x) => lineOf(x).map((y) => y.id);
 export { lineOf };
@@ -1252,7 +1284,17 @@ export const isRunSkill = (id) => !!RUN_SKILLS[id];
 export const startingSkills = (arch) => skillOrder(arch).filter((id) => !isRunSkill(id)).slice(0, barSlots(1));
 // Level at which a class learns a skill or cantrip. A subclass skill: at its place in that subclass's
 // line (with no subclass named, the first of the class's lines that has it).
+const UNLOCK_AT = new Map();
 export function unlockLevel(arch, id, sub = null) {
+  let byArch = UNLOCK_AT.get(arch);
+  if (!byArch) UNLOCK_AT.set(arch, (byArch = new Map()));
+  let bySub = byArch.get(sub);
+  if (!bySub) byArch.set(sub, (bySub = new Map()));
+  let at = bySub.get(id);
+  if (at === undefined) bySub.set(id, (at = unlockAt(arch, id, sub)));
+  return at;
+}
+function unlockAt(arch, id, sub) {
   const i = ARCHETYPES[arch].core.indexOf(id);
   const u = UNLOCKS.find((x) => (i >= 0 ? x.what === i : x.what === id)); // the core, the cantrips, the edge
   if (u) return u.level;

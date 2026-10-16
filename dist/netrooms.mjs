@@ -22,7 +22,7 @@
 // Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
 // a server you hold has its Core as its core socket. A Resident's first fall and Mapped each teach a codebase. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
-import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand } from './combat.mjs';
+import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand } from './combat.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, layerOf } from './data.mjs';
 import { seeded, MATERIALS, codeOf, rollItem } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
@@ -332,7 +332,7 @@ export function rootClear(s, loc) {
   while (r.level < ROOT.max && r.cleared >= ROOT.need[r.level + 1]) {
     r.level++;
     emit(s, 'root', `ROOT ${r.level} on ${loc.name}: ${ROOT_PERKS[r.level]}.`, { location: loc.id, root: r.level });
-    gainXp(s, xpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
+    gainXp(s, deedXpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
     if (r.level >= 2) addStash(loc);
     if (r.level >= 4) addRootSocket(loc);
   }

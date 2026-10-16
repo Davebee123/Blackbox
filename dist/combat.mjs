@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -30,7 +30,7 @@ import { prepareTicks, onHit as tickHit, BOSS_RULES } from './interrupt.mjs';
 import { TELL, ROOM_FAMILIES } from './data.mjs';
 import { tickRoot, processWon } from './root.mjs';
 import { firewallCommand, wear, raidShare } from './firewall.mjs';
-import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, RETIRED } from './progression.mjs';
+import { levelGains, nextGains, behindBonus, levelStarted, progressionRestore, climbRestore, RETIRED } from './progression.mjs';
 import { portsCommand, invaderDown, invasionRestore, signatureRestore } from './invasion.mjs';
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
@@ -47,7 +47,7 @@ import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TI
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 41; // v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 42; // v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -117,7 +117,7 @@ export function fresh() {
 // rooms playtest sets its own server on it (kept as s.roomsPlay, never saved).
 export function bindRooms(s) {
   if (!s || Object.getOwnPropertyDescriptor(s, 'rooms')?.get) return s;
-  const own = s.rooms;
+  const own = s.rooms, at = { i: -1 };
   delete s.rooms;
   Object.defineProperty(s, 'rooms', {
     configurable: true, enumerable: false,
@@ -125,7 +125,10 @@ export function bindRooms(s) {
       if (this.roomsPlay) return this.roomsPlay;
       const r = this.run;
       if (!r?.rooms || r.loc === 'rooms') return null;
-      const loc = r.loc === CONFIG.zone.id ? this.zone : findLocation(this, r.loc);
+      if (r.loc === CONFIG.zone.id) return this.zone?.floorplan || null;
+      // The server you're on, by id: where it was last time if it's still there (the pacing bot asks thousands of times a visit).
+      let loc = this.locations?.[at.i];
+      if (loc?.id !== r.loc) { at.i = this.locations?.findIndex((l) => l.id === r.loc) ?? -1; loc = at.i >= 0 ? this.locations[at.i] : findLocation(this, r.loc); }
       return loc?.floorplan || null;
     },
     set(v) { this.roomsPlay = v; },
@@ -982,6 +985,9 @@ export const hackerLevel = (s, arch = classOf(s)) => hackerOf(s, arch).level;
 export const classTrial = (s) => !Object.values(s.hackers || {}).some((h) => h.level >= LOADOUT.trialUntil);
 // XP for something at an enemy/location level: a share of a kill, scaled by the level gap.
 export const xpFor = (s, level, share = 1) => Math.round(killXp(level) * share * xpScale(level - hackerLevel(s)));
+// XP for a one-off deed (a first clear, Mapped, a takeover, a Root level, a decode, a first craft): its share of a
+// kill on the old curve, scaled with the climb at your level (deedScale in data.mjs), so it stays a share of a level.
+export const deedXpFor = (s, level, share = 1) => xpFor(s, level, share * deedScale(hackerLevel(s)));
 export const gainsTalent = (level) => level >= LOADOUT.talentFrom && (level - LOADOUT.talentFrom) % LOADOUT.talentEvery === 0;
 // The first time you make or do something (a recipe crafted, a service installed, a trade at a hub):
 // half a kill of XP, once. id: what it was, so it never pays twice.
@@ -989,7 +995,7 @@ export function firstTime(s, id, why, kind = 'build', share = 0.5) {
   const done = (s.firsts ||= []);
   if (done.includes(id)) return;
   done.push(id);
-  gainXp(s, xpFor(s, hackerLevel(s), share), why, kind);
+  gainXp(s, deedXpFor(s, hackerLevel(s), share), why, kind);
 }
 // Out of SPRAWL-00 (WoW's starter-zone breadcrumb): by level 4 you've traced a server (the family
 // you've chased most), and at 5 wick points you at one you haven't cracked yet.
@@ -3716,7 +3722,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -3843,6 +3849,7 @@ export function restore(raw) {
     retireClassTrees(s, was); // subclasses: each class's old tree moves to its default subclass
     invasionRestore(s, was); // v33: invasion kinds, bounties, signatures
     progressionRestore(s, was); // v34: one level; services, the specialty and greys folded away
+    climbRestore(s, was); // v42: the long climb (data.mjs CLIMB): levels kept, XP into a level kept as its share
     barRestore(s, was); // v35: the nine-key bar, and tells on one clock
     kitRestore(s, was); // v37: 15-key pools, reordered lines, presets
     presetRenameRestore(s, was); // v38: swarm is area (Demolitionist), ghostroot is evasion (Phantom)

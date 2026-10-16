@@ -496,11 +496,12 @@ test('levels: each class starts at 1 with Spike and one skill; skills and cantri
 });
 
 test('XP: fights, vaults and new locations level you up; the server has no XP of its own (its level is your highest class level)', async () => {
-  const { hackerOf, serverLevel } = await import('./dist/combat.mjs');
+  const { hackerOf, serverLevel, deedXpFor } = await import('./dist/combat.mjs');
   const { XP, killXp, xpToNext } = await import('./dist/data.mjs');
   const s = withTemplate('relay');
   const loc = currentLocation(s);
-  assert.equal(hackerOf(s).xp, Math.round(killXp(1) * XP.newLocation), 'first run on a location');
+  assert.equal(hackerOf(s).xp, deedXpFor(s, 1, XP.newLocation), 'first run on a location: a deed, its share of a kill scaled with the climb');
+  assert.ok(hackerOf(s).xp > Math.round(killXp(1) * XP.newLocation), 'more than its share of a kill (v42)');
   say(s, 'cd relay'); clear(s);
   say(s, `unlock vault ${loc.password}`);
   assert.ok(hackerOf(s).xp > 0 || hackerOf(s).level > 1, 'a guard and a vault give XP');

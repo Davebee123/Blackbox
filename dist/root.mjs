@@ -10,7 +10,7 @@
 //   Root 5  (50) its rare spawns come twice as often
 // The old log rotations (a process in a folder, a rotated cache) only ran on the file-system servers; nothing on rooms
 // rotates (tickRoot skips them).
-import { emit, hooks, hackerLevel, rollDrop, addItem, gainXp, xpFor } from './combat.mjs';
+import { emit, hooks, hackerLevel, rollDrop, addItem, gainXp, xpFor, deedXpFor } from './combat.mjs';
 import { FAMILIES, SERVER, variantFor, STRAINS } from './data.mjs';
 import { seeded } from './gear.mjs';
 import { nativeStrain, leanPick } from './network.mjs';
@@ -118,7 +118,7 @@ export function processWon(s, e) {
   while (r.level < ROOT.max && r.cleared >= ROOT.need[r.level + 1]) {
     r.level++;
     emit(s, 'root', `ROOT ${r.level} on ${loc.name}: ${ROOT_PERKS[r.level]}.`, { location: loc.id, root: r.level });
-    gainXp(s, xpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
+    gainXp(s, deedXpFor(s, loc.level || 1, ROOT.levelXp), `Root ${r.level} on ${loc.name}`, 'build');
   }
 }
 export const ROOT_PERKS = { 1: 'taken over', 2: 'a stash room opens by the Core, its code back every two hours', 3: 'it stops sending invasions', 4: 'one more building slot (a socket room, once sockets come)', 5: 'its rare spawns come twice as often' };

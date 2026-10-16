@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage } from './dist/combat.mjs';
-import { CONFIG, CATCHUP, levelTarget, xpToNext, killXp, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
+import { CONFIG, CATCHUP, CLIMB, levelTarget, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
 import { tickPlay, behindOf } from './dist/progression.mjs';
@@ -49,15 +49,47 @@ test('one level: your server is at your highest class level, with no XP of its o
   assert.ok(lines.length >= 3 && lines.at(-1).ghost, 'the banner: what it brings, the power line, then a ghost line for the next');
 });
 
-test('decoding pays one kill, and the first levels have no extra XP to climb', () => {
-  assert.equal(DECODE_XP, 1);
-  for (const L of [1, 5, 9, 12]) assert.equal(xpToNext(L), Math.round(killXp(L) * (5 + 1.2 * L)), `level ${L}`);
+test('the long climb: a level is CLIMB.kills kills of your level (straight between its points), always longer than the last; one-off deeds keep their share of a level', () => {
+  for (const [L, k] of CLIMB.kills) assert.equal(xpToNext(L), Math.round(killXp(L) * k), `level ${L}`);
+  const [[a, x], [b, y]] = [CLIMB.kills.find((p) => p[0] === 10), CLIMB.kills.find((p) => p[0] === 15)];
+  assert.equal(killsToNext(12), x + ((y - x) * (12 - a)) / (b - a), 'straight between 10 and 15');
+  for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(xpToNext(L) > xpToNext(L - 1), `level ${L} takes more than ${L - 1}`);
+  for (let L = 2; L < LOADOUT.maxLevel; L++) assert.ok(levelTarget(L) >= levelTarget(L - 1), `Behind's target at ${L}`);
+  // About 100 hours of real play to 50 (CLIMB.minutes, Behind's targets), front-loaded: the table pacing.test.mjs holds the bot to.
+  const hours = (to) => { let m = 0; for (let L = 1; L < to; L++) m += levelTarget(L) / 60000; return m / 60; };
+  for (const [L, h] of [[5, 1], [10, 4], [20, 15], [30, 35], [40, 65], [50, 100]]) assert.ok(Math.abs(hours(L) - h) / h < 0.1, `level ${L}: ${hours(L).toFixed(1)} hours of targets`);
+  assert.ok(levelTarget(1) <= 5 * 60000, 'the first level comes in minutes');
+  // A deed (first clear, Mapped, takeover, Root, decode, a puzzle board) is its old share of a kill times DEED.share of
+  // how much longer the level is than it was, never less than a kill's share.
+  assert.equal(deedScale(1), Math.max(1, DEED.share * (killsToNext(1) / 6.2)));
+  assert.ok(deedScale(30) > 5 && deedScale(30) < 12, `level 30: ${deedScale(30)}`);
+  assert.equal(DECODE_XP, 1, 'decoding is one kill on the old curve');
+});
+
+test('v42: an older save keeps every class\'s level, and its XP into the level keeps its share of the new, longer level', () => {
+  const old = at({ breaker: 12, bastion: 30, operator: 50, infiltrator: 1 });
+  old.version = 41;
+  Object.assign(old.hackers.breaker, { xp: Math.round(v41XpToNext(12) * 2 / 3) });
+  Object.assign(old.hackers.bastion, { xp: v41XpToNext(30) - 1 });
+  Object.assign(old.hackers.infiltrator, { xp: 0 });
+  old.rested = 500;
+  const s = restore(JSON.parse(JSON.stringify(old)));
+  assert.equal(s.version, SAVE_VERSION);
+  assert.deepEqual(Object.fromEntries(Object.entries(s.hackers).map(([c, h]) => [c, h.level])), { breaker: 12, bastion: 30, operator: 50, infiltrator: 1 }, 'nobody loses a level');
+  assert.ok(Math.abs(s.hackers.breaker.xp / xpToNext(12) - 2 / 3) < 0.001, `two thirds of the way to 13 is still two thirds (${s.hackers.breaker.xp} of ${xpToNext(12)})`);
+  assert.ok(s.hackers.bastion.xp < xpToNext(30) && s.hackers.bastion.xp > xpToNext(30) * 0.99, 'a point short of 31 stays just short');
+  assert.equal(s.hackers.infiltrator.xp, 0);
+  assert.equal(s.hackers.operator.level, 50, 'the cap stays the cap');
+  assert.equal(s.rested, 500, 'rested XP is kills banked: kept');
+  // A save already on v42 is left alone.
+  const again = restore(JSON.parse(JSON.stringify(s)));
+  assert.equal(again.hackers.breaker.xp, s.hackers.breaker.xp);
 });
 
 test('Behind: once a level runs past 1.25× its target of play, kills pay +50% until the level ends', () => {
   const kill = (s) => { fight(s); for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1 }); const ev = []; for (const p of s.encounter.virus.parts) if (s.encounter.phase === 'active') { command(s, 'spike ' + p.id); ev.push(...resolveCycle(s)); } return ev; };
   const s = at({ breaker: 10 }), t = at({ breaker: 10 });
-  assert.equal(levelTarget(10), (CATCHUP.base + CATCHUP.per * 10) * 60000, '28 minutes at level 10');
+  assert.equal(levelTarget(10), 48 * 60000, '48 minutes at level 10 (CLIMB.minutes)');
   tickPlay(s, levelTarget(10) * CATCHUP.after - 60000);
   assert.equal(behindOf(s).on, false, 'not yet');
   tickPlay(s, 120000);

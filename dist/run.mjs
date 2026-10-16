@@ -8,7 +8,7 @@ import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from '
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -414,7 +414,7 @@ export function connect(s, id) {
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
       if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     }
-    if (firstVisit) gainXp(s, xpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
+    if (firstVisit) gainXp(s, deedXpFor(s, levelOf(loc), XP.newLocation), `first run on ${loc.name}`, 'breakin');
     return since(s, first);
   }
   return since(s, first);
@@ -644,7 +644,7 @@ function unlock(s, rest) {
   loc.state.unlocked[target] = true;
   out(s, `${dir}/ unlocked.`, 'net-good');
   s.run.cracked = true;
-  gainXp(s, xpFor(s, levelOf(loc), XP.vault), 'vault cracked', 'breakin');
+  gainXp(s, deedXpFor(s, levelOf(loc), XP.vault), 'vault cracked', 'breakin');
   if (loc.farm) return out(s, `The ledger is open. The Coldwallet waits in ${target}/core.`, 'net-good');
   if (loc.member) return out(s, `The vault is open, but ${loc.name} stays ${loc.member}'s.`); // a consortium member's: no takeover
   if (!loc.takenOver) out(s, `The vault is open. ${CORE}/ is open now too: the Resident lives there. Beat it and ${loc.name} is yours.`, 'net-good');
@@ -701,7 +701,7 @@ export function bank(s, loc, why = '') {
   // The card: credits as one row (after Scavenge), everything else as it came.
   const banked = [...(credits ? [packGain({ kind: 'credits' }, credits)] : []), ...pack.filter((f) => f.kind !== 'credits' && f.kind !== 'code').map((f) => packGain(f)), ...Object.entries(code).map(([material, amount]) => packGain({ kind: 'code', material, amount }))];
   emit(s, 'jacked-out', `${why ? why + ' ' : ''}JACKED OUT of ${loc.name}. Banked: ${pack.length ? [credits ? credits + ' credits' : '', ...items, ...gear.map((f) => itemLabel(f.item)), ...Object.entries(code).map(([m, n]) => `${n} ${MATERIALS[m].name}`), ...sources.map((f) => sourceName(f.zeroDay) + ' source'), ...blueprints.map(() => 'a blueprint'), ...pack.filter((f) => f.kind === 'deeper').map(() => 'a trace record'), ...pack.filter((f) => f.kind === 'harvester').map((f) => harvesterName(f.harvester)), ...pack.filter((f) => f.kind === 'codebase').map(() => 'a codebase'), ...pack.filter((f) => f.kind === 'filter').map((f) => f.filter.name), ...pack.filter((f) => f.kind === 'contract' || f.kind === 'route').map((f) => f.label)].filter(Boolean).join(', ') : 'nothing'}.`, { gains: banked });
-  if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, xpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
+  if (clean) { emit(s, 'clean-job', `Clean job: in and out at ${Math.round(r0.trace || 0)}% trace.`); gainXp(s, deedXpFor(s, levelOf(loc), TRACE.cleanXp), 'clean job', 'breakin'); }
   gainCode(s, code, 'Banked: ');
   for (const f of gear) addItem(s, f.item, 'Banked: ');
   for (const f of sources) {
