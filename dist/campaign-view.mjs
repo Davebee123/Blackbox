@@ -110,7 +110,7 @@ function collection(s, srv) {
   const got = s.collection || {}, have = ids.filter((id) => got[id]).length;
   const odds = Math.round((B.native ? lairChance(s, 'you') : bossChance(s, srv.resident)) * 100);
   const items = ids.map((id) => got[id] ? `<li class="on" title="${esc(UNIQUES[id]?.flavour || '')}"><b class="iname r-zeroday">${esc(UNIQUES[id].name)}</b></li>` : `<li><span class="coll-q" title="${esc(B.native ? 'A native of your network. It drops from the native Residents.' : `One of ${B.name}'s own.`)}">???</span></li>`).join('');
-  return `<div class="cp-coll"><span class="cp-coll-n">${have}/${ids.length}</span><span class="coll-odds" title="${esc(`The chance a kill drops one. Each kill that drops none adds ${Math.round(BOSS_LOOT.pity * 100)}%.`)}">${odds}% a kill</span><ul>${items}</ul></div>`;
+  return `<div class="cp-coll"><span class="cp-coll-n">${have}/${ids.length}</span><span class="coll-odds" title="${esc(`The chance a kill drops one. Each kill that drops none adds ${Math.round((B.raid ? BOSS_LOOT.raid : BOSS_LOOT).pity * 100)}%.`)}">${odds}% a kill</span><ul>${items}</ul></div>`;
 }
 function runsLine(srv) {
   return srv.subsystems.map((pair, i) => `<span class="cp-act" title="${esc(`${ACTS[i].name}: act ${i + 1}${i ? `, level ${srv.level + i}` : ''}. Win a fight on a subsystem's row to rewrite it.`)}">/${ACTS[i].dir} <b>${pair.map(esc).join(', ')}</b></span>`).join('');

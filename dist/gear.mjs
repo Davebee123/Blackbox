@@ -220,25 +220,36 @@ export const ZERO_DAYS = {
 };
 export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);
 
-// Drops: set in play time, then turned into odds per kill with the measured pace (kills an
-// hour). A blue about every 25 minutes, a yellow every two hours, a gold about every 11 hours;
-// most kills drop nothing. Grindy on purpose. See the items design doc.
+// Drops: World of Warcraft's model, a kill at a time (WoW green = our blue, WoW blue = our yellow, epic = gold).
+// Trash pays code and components and only now and then an item; elites and guards better; a rare spawn usually
+// something good; a boss always drops one item and rolls for its uniques (BOSS_LOOT in data.mjs); quests (contracts,
+// Mapped, the storyline, dead drops) pay what they say. lootsim.mjs checks it against `per`.
 export const LOOT = {
-  killsPerHour: 20, // measured: what the pacing bot averages (bot.mjs, about 10-18 with its waits); the System page shows yours
-  // Per kill (vaults and double rolls on guards add the rest, to land near the targets:
-  // a blue every 20–30 min, a yellow about two hours, a gold every 10–12 hours).
-  minutes: { tuned: 36, custom: 180, zeroday: 900 },
-  common: 0.65 / 6, // share of kills that drop a white (about one in nine; there are no greys)
-  trophy: 200, // a strain's own unique: 1 in this many kills of that strain
-  vault: { stock: 80, tuned: 16, custom: 3.5, zeroday: 0.5 }, // a vault's protocol (kit.bin), white or better
+  killsPerHour: 150, // real play: 10–15 seconds a mob and the walk between rooms (the pacing bot's clock is far slower, about 22); the System page shows yours
+  // The targets over everything you do, a kill at a time: a blue in about 85 kills (30–40 minutes), a yellow in about
+  // 500 (3–4 hours), a gold outside bosses and the farm under 1 in 4,500 (30+ hours).
+  per: { tuned: 85, custom: 500, zeroday: 4500 },
+  // One roll's odds by what you killed. trash: a plain process, a SPRAWL stray, a home invader. elite: an elite, a guard,
+  // a mirror. rare: a ★ rare spawn. A gold is a unique that drops there (an elite's or a rare's: any world unique),
+  // else a yellow. Most trash drops no item at all.
+  odds: {
+    trash: { stock: 0.04, tuned: 0.0012, custom: 0.0001, zeroday: 0.000005 },
+    elite: { stock: 0.15, tuned: 0.005, custom: 0.0006, zeroday: 0.00005 },
+    rare: { stock: 0.6, tuned: 0.12, custom: 0.03, zeroday: 0.0005 },
+  },
+  trophy: 10000, // a strain's own unique: 1 in this many kills of that strain
+  vault: { stock: 94, tuned: 6, custom: 0.4, zeroday: 0.03 }, // a vault's protocol (kit.bin), white or better: a treasure chest
   vaultKit: 0.5, // share of vaults holding a protocol (kit.bin)
   vaultBlueprint: 0.25, // share holding a blueprint (blueprint.bp)
   vaultSource: 0.25, // share of layer-2+ vaults holding source (.src)
-  rolls: { home: 1, guard: 2, pit: 2, bounty: 2 },
+  quest: 0.1, // a quest's item (Mapped, a contract's bonus, a dead drop) is a yellow this often, else a blue
+  rolls: { bounty: 2 }, // a contract's named target rolls twice (the best kept), the rest once (a Pit's folders roll again after: rogue.mjs)
   depthBonus: 0.25, // per old layer past the first (layerOf), on blue and yellow odds
 };
-// Odds per kill for each rarity, from the time targets and the pace.
-export const lootOdds = (kph = LOOT.killsPerHour) => Object.fromEntries(Object.entries(LOOT.minutes).map(([r, m]) => [r, 60 / (m * kph)]));
+// One roll's odds for a tier (trash, elite, rare).
+export const lootOdds = (tier = 'trash') => LOOT.odds[tier] || LOOT.odds.trash;
+// A target as minutes of real play, at LOOT.killsPerHour.
+export const lootMinutes = (r) => Math.round((LOOT.per[r] / LOOT.killsPerHour) * 60);
 // Scavenge is magic find, with diminishing returns: +50% Scavenge is +33% better odds.
 export const magicFind = (scavenge) => { const x = Math.max(0, scavenge) / 100; return 1 + x / (1 + x); };
 // Compiling at home: a blue with the stat you chose. A Zero-day needs its source first.
@@ -267,6 +278,8 @@ const pickWeighted = (rand, weights) => {
   for (const [k, w] of entries) if ((r -= w) < 0) return k;
   return entries.at(-1)[0];
 };
+// A treasure chest's rarity (LOOT.vault).
+export const vaultRarity = (rand) => pickWeighted(rand, LOOT.vault);
 const pick = (rand, list) => list[Math.floor(rand() * list.length)];
 
 export function statValue(stat, level, mult, rand) {

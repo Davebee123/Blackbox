@@ -45,7 +45,7 @@ import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
 import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER } from './research.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
-import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
+import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
 export const SAVE_VERSION = 41; // v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
@@ -509,10 +509,37 @@ function pickUnique(s, pool) {
   for (const u of pool) { r -= w(u); if (r < 0) return u; }
   return pool.at(-1);
 }
-// A boss's own uniques (sources kind 'boss'): BOSS_LOOT.chance a kill, BOSS_LOOT.pity more for every
-// kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
+// A boss's own uniques (sources kind 'boss'): its odds a kill (BOSS_LOOT, a crew boss's BOSS_LOOT.raid), its pity more
+// for every kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
 export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
-export const bossChance = (s, boss) => Math.min(1, (BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1) + (s.breach?.fx?.unique || 0)); // a breach's Listening Post (rewrites.mjs), and a dig in's +10% (world.mjs)
+export const bossOdds = (boss) => (BOSSES[boss]?.raid ? BOSS_LOOT.raid : BOSS_LOOT);
+export const bossChance = (s, boss) => Math.min(1, (bossOdds(boss).chance + bossOdds(boss).pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1) + (s.breach?.fx?.unique || 0)); // a breach's Listening Post (rewrites.mjs), and a dig in's +10% (world.mjs)
+// Does this boss always drop an item (BOSS_LOOT.resident: the Resident's switch)?
+export const sureDrop = (boss) => !!BOSSES[boss] && (boss !== 'resident' || BOSS_LOOT.resident === 'boss');
+// What a boss kill drops (WoW's dungeon boss): one item at its level from its table (a blue, or a yellow BOSS_LOOT.yellow
+// of the time; a crew boss a yellow, and BOSS_LOOT.raid.gold a world unique on top), then the roll for its uniques.
+function bossLoot(s, boss, level) {
+  const B = BOSSES[boss], name = B?.name || boss;
+  if (sureDrop(boss)) {
+    const rarity = B.raid || rand(s) < BOSS_LOOT.yellow ? 'custom' : 'tuned';
+    const it = rollItem(() => rand(s), { level, rarity, cls: classOf(s) });
+    if (B.family) it.from = B.family;
+    addItem(s, it, `${name} drops: `);
+    if (B.raid && rand(s) < BOSS_LOOT.raid.gold) { const u = eliteUnique(s, level); if (u) addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `); }
+  }
+  bossUnique(s, boss, level);
+}
+// A boss's loot table, as its Codex page shows it (WoW's dungeon journal): its sure item, its uniques (??? until you
+// find one; a native boss's once its first fall names them) and the chance the next kill drops one.
+export function bossTable(s, boss) {
+  const B = BOSSES[boss], native = !!B?.native, raid = !!B?.raid, odds = native ? BOSS_LOOT : bossOdds(boss);
+  const ids = native ? (lairBoss(s, 'you') === boss ? mine(s)?.uniques || [] : []) : bossUniques(boss).map((u) => u.id);
+  return {
+    sure: sureDrop(boss) ? (raid ? 'custom' : 'tuned') : null, yellow: BOSS_LOOT.yellow, raid, native, gold: raid ? BOSS_LOOT.raid.gold : 0,
+    chance: native ? lairChance(s, 'you') : bossChance(s, boss), base: odds.chance, pity: odds.pity,
+    uniques: ids.map((id) => ({ id, name: named(s, id) ? UNIQUES[id].name : null, level: UNIQUES[id].level, got: !!s.collection?.[id] })).sort((a, b) => a.level - b.level),
+  };
+}
 // The Listening Post (a program, sockets.mjs): kills on a server running one roll for the unique you name twice as often.
 export const listenBoost = (s) => postBoost(s);
 const listened = (s) => (s.listen && listenBoost(s) > 1 ? UNIQUES[s.listen] || null : null);
@@ -586,40 +613,36 @@ function eliteUnique(s, level) {
   const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind)));
   return pickUnique(s, pool);
 }
-// One roll: maybe nothing, mostly grey or white, now and then blue, rarely yellow or gold. Odds come
-// from time targets and the pace (LOOT.killsPerHour); Scavenge is magic find; depth helps a little.
-function rollOnce(s, ctx, level) {
+// One roll at a tier's odds (LOOT.odds: trash, elite, rare): mostly nothing, now and then a white, rarely better.
+// Scavenge is magic find; depth helps a little. A gold is a unique that drops here (an elite's or a rare's: any world
+// unique), else a yellow.
+function rollOnce(s, ctx, level, tier) {
   const lu = listened(s), heard = lu && lu.level <= level + 2 && dropsHere(lu, ctx) ? listenBoost(s) : 1; // a Listening Post's unique drops here
-  const odds = lootOdds(), mf = magicFind(gearStat(s, 'scavenge')), deep = 1 + LOOT.depthBonus * Math.max(0, (ctx.layer || 1) - 1);
+  const odds = lootOdds(tier), mf = magicFind(gearStat(s, 'scavenge')), deep = 1 + LOOT.depthBonus * Math.max(0, (ctx.layer || 1) - 1);
+  const gold = odds.zeroday * heard * mf, yellow = gold + odds.custom * deep * mf, blue = yellow + odds.tuned * deep * mf;
   const r = rand(s);
-  let rarity = null;
-  if (r < odds.zeroday * mf * heard) rarity = 'zeroday';
-  else if (r < (odds.zeroday + odds.custom * deep) * mf) rarity = 'custom';
-  else if (r < (odds.zeroday + (odds.custom + odds.tuned) * deep) * mf) rarity = 'tuned';
-  else if (r < LOOT.common) rarity = rand(s) < LOOT.greyShare ? 'scrap' : 'stock';
+  let rarity = r < gold ? 'zeroday' : r < yellow ? 'custom' : r < blue ? 'tuned' : r < blue + odds.stock ? 'stock' : null;
   if (!rarity) return null;
   if (rarity === 'zeroday') {
-    const u = uniqueFrom(s, ctx, level);
+    const u = uniqueFrom(s, ctx, level) || (tier !== 'trash' ? eliteUnique(s, level) : null);
     if (u) return uniqueItem(u, level, () => rand(s));
     rarity = 'custom';
   }
   return rollItem(() => rand(s), { level, rarity });
 }
-// What a fight drops, or null: the best of its rolls (guards, Pits and bounties roll twice).
-// A strain also has its own trophy: 1 in LOOT.trophy kills of that strain.
+// A kill's tier: a ★ rare spawn, an elite (elite rooms, Pit elites, guards, mirrors, a boss without a sure drop), or trash.
+export const tierOf = (ctx) => ctx.tier || (ctx.rare ? 'rare' : ctx.elite || ctx.boss || ctx.kind === 'guard' ? 'elite' : 'trash');
+// What a fight drops, or null: the best of its rolls (Pits and bounties roll twice, LOOT.rolls). A boss with a sure
+// drop rolls none here: bossLoot gives its item. A strain also has its own trophy: 1 in LOOT.trophy kills of that strain.
 export function rollDrop(s, ctx, level) {
   if (typeof ctx === 'string') ctx = { kind: ctx === 'guard' ? 'guard' : 'home' };
-  const rolls = (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.virus?.hot && s.encounter.phase !== 'active' ? HOT_RUN.rolls : 0) // a hot run's kill rolls once more
+  const rolls = ctx.boss && sureDrop(ctx.boss) ? 0 : (ctx.rolls || LOOT.rolls[ctx.kind] || 1) + (ctx.flat ? 0 : (s.encounter?.virus?.hot && s.encounter.phase !== 'active' ? HOT_RUN.rolls : 0) // a hot run's kill rolls once more
     + (s.encounter?.cleanRead && s.encounter.phase !== 'active' ? TELL.read.rolls : 0)); // every tell in the fight read: once more (tells.mjs). flat: its rolls and no more (the Exfil's)
+  const tier = tierOf(ctx);
   let best = null;
   for (let i = 0; i < rolls; i++) {
-    const it = rollOnce(s, ctx, level);
+    const it = rollOnce(s, ctx, level, tier);
     if (it && (!best || RARITY_ORDER.indexOf(it.rarity) > RARITY_ORDER.indexOf(best.rarity))) best = it;
-  }
-  // An elite (a crew room): never less than a blue, and now and then a unique.
-  if (ctx.elite) {
-    if (rand(s) < ELITE.unique) { const u = eliteUnique(s, level); if (u) best = uniqueItem(u, level, () => rand(s)); }
-    if (!best || RARITY_ORDER.indexOf(best.rarity) < RARITY_ORDER.indexOf(ELITE.floor)) best = rollItem(() => rand(s), { level, rarity: ELITE.floor });
   }
   const trophyOf = (st) => Object.values(UNIQUES).find((u) => (u.sources || []).some((src) => src.kind === 'strain' && src.id === st));
   if (ctx.strain && (ctx.trophy || rand(s) < (trophyOf(ctx.strain)?.id === s.listen ? listenBoost(s) : 1) / LOOT.trophy)) { // a streak reward rolls for it outright
@@ -629,7 +652,7 @@ export function rollDrop(s, ctx, level) {
   if (best && ctx.family) best.from = ctx.family;
   return best;
 }
-// Your pace: kills an hour of active play (the System page shows it; drop odds assume LOOT.killsPerHour).
+// Your pace: kills an hour of active play (the System page shows it; loot targets assume LOOT.killsPerHour; the odds are a kill at a time).
 export const paceOf = (s) => { const p = s.pace || { kills: 0, ms: 0 }; return { kills: p.kills, minutes: p.ms / 60000, perHour: p.ms > 5 * 60000 ? Math.round(p.kills / (p.ms / 3600000)) : null }; };
 // A unique by id, as a reward (story beats, contracts).
 export function giveUnique(s, id, why = 'Reward: ') {
@@ -1657,14 +1680,14 @@ function payKill(s, e, base, why) {
 // A room fight won on the network (netrooms.mjs, docs/servers.md R1): what the kill pays besides its XP. wild: SPRAWL-00
 // or a rogue server, straight into your bank as their folders always paid; otherwise a traced server's, into the run's
 // pack (banked when you jack out, lost if you're disconnected), like a guard's drops. guard: a guard post, an elite, a
-// boss: it rolls like a guard. family: the lineage the kill counts as (contracts, leads, code). Returns what a Pit's
+// boss: an elite's odds (a boss with a sure drop rolls none: bossLoot). rare: a ★ rare spawn's. family: the lineage the kill counts as (contracts, leads, code). Returns what a Pit's
 // second roll needs.
 // A kill's rare Exploit (data.mjs SPARE_EXPLOIT: what its daemon drop became), into your pack on a run.
 function packExploit(s, path, who) {
   s.run.pack.push({ path, name: 'exploit.bin', kind: 'code', size: '8k', material: 'exploit', amount: 1 });
   emit(s, 'code', `${who} dropped an Exploit. In your pack until you jack out.`, { gains: { exploit: 1 }, pack: true });
 }
-export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null } = {}) {
+export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null, rare = false } = {}) {
   const v = e.virus, lvl = v.level;
   contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
   huntKill(s, family);
@@ -1673,7 +1696,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   if (sprawl && !guard && FAMILIES[family]) addLead(s, family, leadOf(s, lvl, !!v.strain && v.strain === hotStrain(s)), '', { id: CONFIG.zone.id });
   if (wild) {
     gainCode(s, codeFrom(s, family, lvl, 'home'), 'Code: ');
-    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: layerOf(loc?.depth || 1), family, strain: v.strain, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : bounty ? LOOT.rolls.bounty : undefined };
+    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: layerOf(loc?.depth || 1), family, strain: v.strain, elite: !!v.elite || guard, boss: v.boss || null, rare, rolls: bounty ? LOOT.rolls.bounty : undefined };
     const item = rollDrop(s, ctx, lvl);
     if (item) addItem(s, item);
     nativeDrop(s, e);
@@ -1683,7 +1706,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   }
   if (!s.run) return {};
   const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
-  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family || family, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : undefined }, lvl);
+  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
   if (item) { s.run.pack.push({ path: `${tag}/drop`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   nativeDrop(s, e, true);
   if (rand(s) < (guard ? SPARE_EXPLOIT.guard : SPARE_EXPLOIT.home)) packExploit(s, `${tag}/xp`, v.name);
@@ -1710,7 +1733,7 @@ export function finish(s, result) {
   if (result === 'victory') { (s.pace ||= { kills: 0, ms: 0 }).kills++; e.fast = fastKill(s, e); } // for kills an hour (System page)
   // Every tell in the fight read (two or more said, each answered by a command, none landed): a clean read (tells.mjs).
   if (result === 'victory' && e.metrics.tells) { const xs = Object.values(e.metrics.tells), said = xs.reduce((n, x) => n + x.said, 0); e.cleanRead = said >= TELL.read.min && xs.every((x) => x.read >= x.said && !x.landed); }
-  if (result === 'victory' && e.virus.boss) bossUnique(s, e.virus.boss, e.virus.level);
+  if (result === 'victory' && e.virus.boss) bossLoot(s, e.virus.boss, e.virus.level); // its sure item and its uniques' roll
   if (result === 'victory') winGenes(s, e.virus); // a mutation's rule decodes at two kills (genome.mjs)
   if (result === 'victory') logWin(s, e.virus); // the Codex tab's kill counts (genome.mjs)
   Object.assign(e.metrics, { cycles: e.cycle, endIntegrity: d.integrity, endCredits: s.server.credits, lead, result });
@@ -1753,7 +1776,7 @@ export function finish(s, result) {
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: layerOf(wild?.depth || findLocation(s, e.process)?.depth || 1), family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite, rolls: e.virus.elite || e.virus.boss ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
+      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: layerOf(wild?.depth || findLocation(s, e.process)?.depth || 1), family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite || !!e.virus.boss, boss: e.virus.boss || null, rolls: named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
       nativeDrop(s, e); // network.mjs: its own dice
@@ -1779,7 +1802,7 @@ export function finish(s, result) {
       contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
       payKill(s, e, XP.guard, `${e.virus.name} down`);
       // A guard's drop goes in your pack: it's yours once you jack out.
-      const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family }, e.virus.level);
+      const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family, boss: e.virus.boss || null }, e.virus.level);
       if (item) {
         s.run.pack.push({ path: `${e.room}/#drop-${e.seed}-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item });
         emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true });
@@ -1815,7 +1838,7 @@ export function finish(s, result) {
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
     if (inv?.open) { const k = codeOf(e.virus.family); if (k) gainCode(s, { [k]: Math.max(1, Math.round(codeDrop(e.virus.level) * (CONFIG.invasion.open.reward - 1) * 2)) }, 'Open ports bonus: '); gainXp(s, xpFor(s, e.virus.level, CONFIG.invasion.open.reward - 1), 'open ports', 'fight'); }
-    const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1 }, e.virus.level);
+    const item = rollDrop(s, { kind: 'home', family: e.virus.family, strain: e.virus.strain, layer: e.virus.grade || 1, elite: !!e.virus.elite, boss: e.virus.boss || null }, e.virus.level);
     if (item) addItem(s, item);
     nativeDrop(s, e); // network.mjs: its own dice
     if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');

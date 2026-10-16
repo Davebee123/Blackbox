@@ -705,8 +705,8 @@ const COLDWALLET = {
   ],
 };
 // Elites: group content (a third of a Pit's folders, the trunk server's too). Much bigger, harder
-// hitting and better armored; they pay three times the XP and roll for drops three times.
-// Elites are crew rooms (WoW elites): very unlikely solo, three loot rolls, a blue at least, a small
+// hitting and better armored; they pay three times the XP and drop better (LOOT.odds.elite in gear.mjs).
+// Elites are crew rooms (WoW elites): very unlikely solo, better loot odds than trash and a small
 // unique chance. Only in Pit folders, never on the way to anything you need.
 // Bosses: a solo fight with phases. hp and dmg scale the whole virus; at each phase's share of its
 // total Integrity it does something (re-arm every part, call in a Sentry, attack faster), and from
@@ -769,10 +769,14 @@ export const ENRAGE = { dmg: 1.25, warn: 3 };
 // A loud run (connect <server> loud; called a hot run in the code): friction you choose. Every fight on it has more Integrity and hits
 // harder; every kill pays more XP and rolls for loot once more.
 export const HOT_RUN = { hp: 1.25, dmg: 1.2, xp: 1.25, rolls: 1 };
-// Each boss has two uniques of its own (content/items.mjs, source kind 'boss'): this chance a kill, and
-// this much more for every kill that gave none (shown in the log and the collection).
-export const BOSS_LOOT = { chance: 0.3, pity: 0.1, once: ['resident'] }; // once: bosses that drop each of their own uniques only once (combat.mjs bossUnique)
-export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, rolls: 3, share: 1 / 3, floor: 'tuned', unique: 0.08, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
+// A boss's loot (WoW's dungeon bosses, combat.mjs bossLoot): one item every kill, a blue at its level or a yellow
+// `yellow` of the time, and its uniques (two each, content/items.mjs source kind 'boss'; a native boss, its network's):
+// `chance` a kill, `pity` more for each kill that gave none, back to `chance` on a drop (the log, the Collection and
+// the Codex show it). A crew boss (raid.mjs) is better: always a yellow, its uniques at `raid`'s odds, and `raid.gold`
+// a kill for a world unique too. once: bosses that drop each of their own uniques only once (bossUnique).
+// resident: 'elite' rolls the Resident like an elite (no sure item: one is met on every takeover), 'boss' like the rest.
+export const BOSS_LOOT = { chance: 0.15, pity: 0.05, yellow: 0.25, raid: { chance: 0.3, pity: 0.1, gold: 0.1 }, once: ['resident'], resident: 'elite' };
+export const ELITE = { hp: 5.2, dmg: 1.3, armor: 1, xp: 3, share: 1 / 3, goneMs: 30 * 60000 }; // goneMs: an elite that beats you moves on, and its folder fills again this much later
 
 // ---------- solo tells (tells.mjs) ----------
 // A tell is a big move a part announces ahead, on its row of the board and in the log, that you plan your interrupts

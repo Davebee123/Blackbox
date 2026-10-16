@@ -48,7 +48,7 @@ import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKIL
 import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { lairChance, presetsOf, presetKeys, followOf, spikeName, said, mutated } from './combat.mjs';
+import { lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
 import { daemonText } from './daemons.mjs';
 
@@ -279,7 +279,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const fc = forecast(s, preview);
   // No title of its own: the virus's name labels its health bar, its tags sit under the bar with
   // its armor. Your bar and the crew's window come first; the virus's bar is at the right.
-  const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. It is much tougher, gives three times the XP, and rolls for loot three times, a blue at least.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
+  const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. It is much tougher, gives three times the XP, and drops better loot.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
   return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}</div></div></div>${statusPanel(s)}</div>
@@ -407,7 +407,7 @@ export function collectionMarkup(s) {
     const boss = (u.sources || []).find((x) => x.kind === 'boss')?.id;
     return got[u.id]
       ? `<li class="on" title="${esc(UNIQUES[u.id].flavour || '')}"><b class="iname r-zeroday">${esc(u.name)}</b><small>Lv ${u.level} · ${esc(src)}</small></li>`
-      : `<li${s.listen === u.id && posts ? ' class="heard"' : ''}><span class="coll-q">???</span><small>Lv ${u.level} · ${esc(src)}${boss ? ` · <span class="coll-odds" title="Each kill that drops none of its uniques adds 10%">${Math.round(bossChance(s, boss) * 100)}% a kill</span>` : ''}</small>${posts && listenable(u) ? (s.listen === u.id ? `<span class="tag hot coll-listen" title="Kills on a server running a Listening Post roll for it twice as often">listening</span>` : `<button type="button" class="act dim coll-listen" data-run="listen ${esc(u.id)}" title="Listen for it: twice as often on a server running a Listening Post">listen</button>`) : ''}</li>`;
+      : `<li${s.listen === u.id && posts ? ' class="heard"' : ''}><span class="coll-q">???</span><small>Lv ${u.level} · ${esc(src)}${boss ? ` · <span class="coll-odds" title="Each kill that drops none of its uniques adds ${Math.round(bossOdds(boss).pity * 100)}%">${Math.round(bossChance(s, boss) * 100)}% a kill</span>` : ''}</small>${posts && listenable(u) ? (s.listen === u.id ? `<span class="tag hot coll-listen" title="Kills on a server running a Listening Post roll for it twice as often">listening</span>` : `<button type="button" class="act dim coll-listen" data-run="listen ${esc(u.id)}" title="Listen for it: twice as often on a server running a Listening Post">listen</button>`) : ''}</li>`;
   }).join('');
   // A set: the crew dungeon's eight, once it's on your map.
   const farm = (s.locations || []).some((l) => l.farm) ? `<p class="coll-set">KESSLER-FARM-00 · ${FARM_UNIQUES.filter((id) => got[id]).length}/${FARM_UNIQUES.length}</p>` : '';
@@ -1320,7 +1320,7 @@ const peopleChips = (list = []) => (list.length ? `<span class="ls-people" title
 function lsMarkup(e) {
   const pulls = e.entries.filter((x) => x.pull).length;
   return `${e.here?.length ? `<div class="ls-here">here ${peopleChips(e.here)}</div>` : ''}<div class="ls">${pulls >= 2 ? `<div class="ls-all"><button type="button" class="tok act" data-run="pull all" title="Every file here into your pack">pull all · ${pulls}</button></div>` : ''}${e.entries.map((x) => {
-    const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => t === 'crew' ? '<span class="tag tag-crew" title="Crew room: an elite, built for a party. It is very hard to beat alone, and rolls for loot three times, a blue at least.">◆ CREW</span>' : `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'virus' ? 'warn' : 'dim'}">${esc(t)}</span>`).join('');
+    const tags = x.tags.filter((t) => !(t === 'pull' && x.pull)).map((t) => t === 'crew' ? '<span class="tag tag-crew" title="Crew room: an elite, built for a party. It is very hard to beat alone, and drops better loot.">◆ CREW</span>' : `<span class="tag tag-${esc(t)} ${t === 'guarded' || t === 'virus' ? 'warn' : 'dim'}">${esc(t)}</span>`).join('');
     const name = x.kind === 'dir' ? (x.name === '..' ? '..' : x.name + '/') : x.name;
     const main = x.cmd.endsWith(' ') ? `data-prefill="${esc(x.cmd)}"` : `data-run="${esc(x.cmd)}"`;
     // Counts for a contract: a small marker, the contract(s) on hover.
@@ -2472,7 +2472,7 @@ function volumeCard(s) {
 function paceCard(s) {
   const p = paceOf(s);
   const line = p.perHour == null ? `Not enough play yet: ${p.kills} ${p.kills === 1 ? 'kill' : 'kills'} in ${Math.round(p.minutes)} min.` : `<b>${p.perHour}</b> kills an hour (${p.kills} in ${p.minutes >= 90 ? (p.minutes / 60).toFixed(1) + ' h' : Math.round(p.minutes) + ' min'} of play).`;
-  return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Drop odds assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
+  return `<section class="card"><h2>Pace</h2><p class="svc-line" title="Counts time while the game is open and you've used it in the last 2 minutes. Loot targets assume ${LOOT.killsPerHour} kills an hour.">${line}</p></section>`;
 }
 
 export function systemMarkup(s) {

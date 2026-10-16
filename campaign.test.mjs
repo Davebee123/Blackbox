@@ -274,7 +274,7 @@ test('the card: Resident and Collection, subsystems by act, best result, bountie
   let html = campaignMarkup(s);
   assert.match(html, /<h1>COLDSTORE-3<\/h1>/);
   assert.match(html, /VAULT WARDEN/);
-  assert.match(html, /0\/2[\s\S]*30% a kill/, 'its Collection');
+  assert.match(html, /0\/2[\s\S]*15% a kill/, 'its Collection');
   assert.match(html, /\/perimeter <b>smtpd, backup<\/b>/);
   assert.match(html, /Rule[\s\S]*Deep storage[\s\S]*two vaults and two keycards/, 'its kind\'s rule');
   assert.match(html, /Slush Fund/, 'what your network brings to it');

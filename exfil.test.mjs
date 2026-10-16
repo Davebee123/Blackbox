@@ -19,7 +19,6 @@ import { boardMarkup } from './dist/view.mjs';
 import { TIPS } from './dist/tips.mjs';
 import { entries, entryOf, GROUPS } from './dist/codex.mjs';
 import { RARITY_ORDER } from './dist/gear.mjs';
-import { ELITE } from './dist/data.mjs';
 import { rollDrop, rand } from './dist/combat.mjs';
 
 CONFIG.enemyCrit = 0; CONFIG.misses = false;
@@ -200,19 +199,18 @@ test('break it in time: archive recovered, 10 Stashes of credits and 10 Stashes 
   assert.equal(FP.exfilOf(s), null);
 });
 
-test('its item never beats an elite\'s: the best of two plain rolls (a white otherwise), against an elite\'s three and blue floor', () => {
+test('its item is sure but plain: the best of two trash rolls (a white otherwise), its blues under a rare spawn\'s', () => {
   const s = fresh(); s.rng = 99;
-  let exfil = 0, elite = 0, blues = 0;
+  let blues = 0, rareBlues = 0;
   const rank = (it) => (it ? RARITY_ORDER.indexOf(it.rarity) : -1);
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < 2000; i++) {
     const m = rollDrop(s, { kind: 'rogue', id: 'nest', layer: 2, rolls: M.rolls, flat: true }, 12);
-    exfil += Math.max(rank(m), RARITY_ORDER.indexOf('stock'));
     if (rank(m) >= RARITY_ORDER.indexOf('tuned')) blues++;
-    elite += rank(rollDrop(s, { kind: 'rogue', id: 'pit', layer: 2, elite: true, rolls: ELITE.rolls }, 12));
+    if (rank(rollDrop(s, { kind: 'rogue', id: 'pit', layer: 2, rare: true }, 12)) >= RARITY_ORDER.indexOf('tuned')) rareBlues++;
   }
-  assert.ok(exfil < elite, `${exfil} < ${elite}`);
-  assert.ok(blues < 400 * 0.5, 'never a guaranteed blue');
-  assert.ok(M.unique <= 0.05 && ELITE.rolls > M.rolls);
+  assert.ok(blues < rareBlues, `${blues} < ${rareBlues}`);
+  assert.ok(blues < 2000 * 0.05, 'never a guaranteed blue');
+  assert.ok(M.unique <= 0.05 && M.rolls === 2);
   // A loud run or a clean read adds a roll to a kill, never to its archive.
   s.encounter = { virus: { hot: true }, phase: 'victory', cleanRead: true };
   let more = 0; for (let i = 0; i < 400; i++) more += rank(rollDrop(s, { kind: 'rogue', rolls: 2, flat: true }, 12)) >= 0 ? 1 : 0;

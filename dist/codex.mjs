@@ -17,7 +17,7 @@ import { ATTACK_SETS, AUTHOR_FAMILIES, OPENS, applySet } from './families.mjs';
 import { GENES, AXES } from './genes.mjs';
 import { AUTHORS, crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 import { geneState } from './genome.mjs';
-import { knowsPart, hackerLevel, bossUniques, codexKey } from './combat.mjs';
+import { knowsPart, hackerLevel, bossTable, codexKey } from './combat.mjs';
 import { researchAt, tierAt, pctOf } from './research.mjs';
 import { plannedTells, findSource, tierOf, answerOf } from './tells.mjs';
 import { ROOMS } from './floorplan.mjs';
@@ -274,10 +274,10 @@ export function entryOf(s, key) {
   if (group === 'boss') {
     const B = BOSSES[id];
     const phases = B.raid ? B.raid.phases.map((ph) => ({ at: ph.from, name: ph.name, say: ph.say || null, mechs: ph.mechs.map((m) => m.name) })) : B.phases.map((ph) => ({ at: ph.at, say: ph.say }));
-    const uniques = bossUniques(id).map((u) => ({ name: s.collection?.[u.id] ? u.name : null, level: u.level }));
+    const loot = bossTable(s, id), uniques = loot.uniques; // its loot table (combat.mjs bossTable): the sure item, its uniques, the chance and pity
     return {
       ...base, name: B.name, family: B.family || null, strain: B.strain || null, raid: !!B.raid, about: B.about || null, signature: B.signature || null, hp: B.hp, enrageAt: B.enrageAt, floor: B.floor || null,
-      lair: B.lair || null, fought: dex(s).fought?.[id] || 0, won: dex(s).won?.[id] || 0, authors: authorsOf('boss', id), phases, tells: tellsOf(s, 'boss', id), uniques,
+      lair: B.lair || null, fought: dex(s).fought?.[id] || 0, won: dex(s).won?.[id] || 0, authors: authorsOf('boss', id), phases, tells: tellsOf(s, 'boss', id), uniques, loot,
       parts: bossParts(s, id),
       enrage: B.raid ? B.raid.enrage?.name || null : null,
     };

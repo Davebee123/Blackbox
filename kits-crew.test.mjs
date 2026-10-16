@@ -10,7 +10,8 @@ import { SUBS } from './dist/data.mjs';
 test('crew-leaning damage dealers carry a crew: over Lv 18 and 30, more boss tries won and a higher low point than any solo-leaning one', () => {
   const dps = Object.keys(SUBS).filter((sub) => SUBS[sub].cls !== 'bastion');
   const r = Object.fromEntries(dps.map((sub) => {
-    const xs = [18, 30].map((L) => farmScore('demolitionist', ['warden', 'sysop', sub], L, { seeds: 6 }));
+    // 12 seeds a level: on 6 the Herder swung 92% to 88% with the loot rolls' share of the dice (94% on 18, before and after).
+    const xs = [18, 30].map((L) => farmScore('demolitionist', ['warden', 'sysop', sub], L, { seeds: 12 }));
     return [sub, { won: xs.reduce((a, x) => a + x.wins / x.tries, 0) / 2, low: xs.reduce((a, x) => a + x.low, 0) / 2 }];
   }));
   const line = Object.entries(r).map(([sub, x]) => `${sub} ${Math.round(x.won * 100)}% low ${x.low.toFixed(0)}%`).join(' / ');
