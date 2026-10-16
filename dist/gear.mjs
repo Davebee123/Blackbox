@@ -223,7 +223,7 @@ export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z
 // Drops: World of Warcraft's model, a kill at a time (WoW green = our blue, WoW blue = our yellow, epic = gold).
 // Trash pays code and components and only now and then an item; elites and guards better; a rare spawn usually
 // something good; a boss always drops one item and rolls for its uniques (BOSS_LOOT in data.mjs); quests (contracts,
-// Mapped, the storyline, dead drops) pay what they say. lootsim.mjs checks it against `per`.
+// the storyline; Mapped and dead drops white or blue) pay what they say. lootsim.mjs checks it against `per`.
 export const LOOT = {
   killsPerHour: 150, // real play: 10–15 seconds a mob and the walk between rooms (the pacing bot's clock is far slower, about 22); the System page shows yours
   // The targets over everything you do, a kill at a time: a blue in about 85 kills (30–40 minutes), a yellow in about
@@ -242,7 +242,8 @@ export const LOOT = {
   vaultKit: 0.5, // share of vaults holding a protocol (kit.bin)
   vaultBlueprint: 0.25, // share holding a blueprint (blueprint.bp)
   vaultSource: 0.25, // share of layer-2+ vaults holding source (.src)
-  quest: 0.1, // a quest's item (Mapped, a contract's bonus, a dead drop) is a yellow this often, else a blue
+  quest: 0.1, // a quest's item (a contract's bonus, the storyline) is a yellow this often, else a blue
+  minor: 0.5, // a small reward's item (Mapped, a dead drop) is a blue this often, else a white
   rolls: { bounty: 2 }, // a contract's named target rolls twice (the best kept), the rest once (a Pit's folders roll again after: rogue.mjs)
   depthBonus: 0.25, // per old layer past the first (layerOf), on blue and yellow odds
 };

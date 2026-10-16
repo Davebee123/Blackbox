@@ -562,7 +562,7 @@ function mapped(s) {
   const R = s.rooms;
   R.mapped = nowOf();
   for (const x of roomList(s)) R.seen[x.id] = 'kind'; // Mapped: every room discovered (one cleared from afar, too)
-  const r = rnd(R, 77), it = addItem(s, rollItem(r, { level: R.level + 2, rarity: r() < LOOT.quest ? 'custom' : 'tuned', cls: classOf(s) }), 'Mapped: ');
+  const r = rnd(R, 77), it = addItem(s, rollItem(r, { level: R.level + 2, rarity: r() < LOOT.minor ? 'tuned' : 'stock', cls: classOf(s) }), 'Mapped: ');
   if (it) R.banked.push(it.id);
   const xp = Math.round(xpFor(s, R.level, ROOMS.xp.mapped));
   gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server

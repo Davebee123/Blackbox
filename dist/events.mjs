@@ -45,7 +45,7 @@ export const CARDS = {
     won: (s, ev) => {
       s.server.credits += credits(ev.level);
       if (ev.unique) { giveUnique(s, ev.unique, 'Dead drop: '); return `You took the dead drop: ${credits(ev.level)} credits and ${UNIQUES[ev.unique].name}.`; }
-      const r = seeded(ev.seed), item = rollItem(r, { level: ev.level, rarity: r() < LOOT.quest ? 'custom' : 'tuned' }); // fixed by the event
+      const r = seeded(ev.seed), item = rollItem(r, { level: ev.level, rarity: r() < LOOT.minor ? 'tuned' : 'stock' }); // fixed by the event
       addItem(s, item, 'Dead drop: ');
       return `You took the dead drop: ${credits(ev.level)} credits and a protocol.`;
     },

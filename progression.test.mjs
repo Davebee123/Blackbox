@@ -86,7 +86,7 @@ test('uniques keep up: their primaries are the best base at their item level tim
   assert.ok(wifi.stats.signal >= 18, 'an early unique whose own numbers are higher keeps them');
 });
 
-test('the Resident drops each of its uniques once, then a world unique you lack (or a yellow)', () => {
+test('the Resident drops each of its uniques once, then a yellow', () => {
   const was = BOSS_LOOT.chance;
   BOSS_LOOT.chance = 1;
   const boss = (s) => { const mark = s.serial; selectEncounter(s, 'random', 7, { level: 12, boss: 'resident' }); command(s, 'engage'); finish(s, 'victory'); return s.logs.find((e) => e.id > mark && e.type === 'drop' && /Resident drops/i.test(e.message))?.item || s.logs.find((e) => e.id > mark && e.type === 'drop' && /drops: /.test(e.message))?.item; };
@@ -95,10 +95,7 @@ test('the Resident drops each of its uniques once, then a world unique you lack 
   const a = boss(s), b = boss(s);
   assert.deepEqual([a.unique, b.unique].sort(), own.sort(), 'both of its own, one each');
   const c = boss(s);
-  assert.ok(c.unique && !own.includes(c.unique), `then a world unique: ${c.unique}`);
-  assert.ok(UNIQUES[c.unique].sources.some((x) => ['sprawl', 'vault', 'guard', 'rogue'].includes(x.kind)));
-  for (const u of Object.values(UNIQUES)) s.collection[u.id] = 1;
-  assert.equal(boss(s).rarity, 'custom', 'and with nothing left to find, a yellow');
+  assert.ok(!c.unique && c.rarity === 'custom', 'then a yellow, never a world unique');
   BOSS_LOOT.chance = was;
 });
 

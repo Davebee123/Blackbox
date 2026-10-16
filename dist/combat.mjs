@@ -564,12 +564,8 @@ function bossUnique(s, boss, level) {
     (s.pity ||= {})[boss] = 0;
     const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s));
     // A boss that drops each of its own once (BOSS_LOOT.once: the Resident, met on every takeover): once you
-    // hold them all, its roll gives a world unique you don't have, or a yellow.
-    if (!fresh.length && BOSS_LOOT.once.includes(boss)) {
-      const lack = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !s.collection?.[u.id] && (u.sources || []).some((src) => WORLD.includes(src.kind)));
-      const w = pickUnique(s, lack);
-      return addItem(s, w ? uniqueItem(w, level, () => rand(s)) : rollItem(() => rand(s), { level, rarity: 'custom' }), `${name} drops: `);
-    }
+    // hold them all, its roll gives a yellow.
+    if (!fresh.length && BOSS_LOOT.once.includes(boss)) return addItem(s, rollItem(() => rand(s), { level, rarity: 'custom' }), `${name} drops: `);
     const from = heard.length ? heard : fresh.length ? fresh : pool;
     const u = from[Math.floor(rand(s) * from.length)];
     addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `);

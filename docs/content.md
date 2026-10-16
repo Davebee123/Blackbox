@@ -29,7 +29,7 @@ in docs/economy.md: **credits**, **code** (Cipher, Worm, Kernel) **and Exploits*
 | What carries a floor? | A new cast, its own named bosses and lair, a faction thread, a puzzle twist, a signature server kind, and something worth coming back for. Section 3 sets one of each per floor, most of them already designed elsewhere. |
 | What's the loop with no story? | A menu of about a dozen activities, each refilling on its own clock and waiting for you. You pick what's ready and what pays the currency you're short of (section 1). |
 | The long chase at 50? | The collection log, Codex mastery, patches, consortium projects, faction tiers, boss uniques and sets, daemons at their best level, and Bedrock's flash ranks (section 4). |
-| Cosmetics? | A **Desk**: stickers on the monitor's bezel from bosses' first falls, casing finishes from the collection, phosphor tints from the Codex, props from factions' top tiers. Earned only, never bought, never timed. About 28 to earn in the first pass (section 5). |
+| Cosmetics? | A **Desk**: stickers on the monitor's bezel from bosses' first falls, casing finishes from the collection, phosphor tints from the Codex, props from factions' top tiers. Earned only, never bought, never timed. About 29 to earn in the first pass (section 5). |
 | What first? | Lairs by floor, floor holders, Botnet and Logic Bomb, the log sweep as a terminal room, and the floor 2–4 bosses already designed (section 6). |
 
 ## 1. The sandbox loop
@@ -364,10 +364,10 @@ the card.
 |---|---|---|---|---:|
 | **Stickers** (3 on the bezel) | The monitor's bezel | none | A named boss's first fall, one each: RELAY-KING, REPO MAN, HOLLOW CHOIR, a first takeover (*VOID IF REMOVED*), the nine native bosses (your network's and members'), THE FOREMAN, HEATSINK, COLDWALLET. Every new boss adds one. | 16 |
 | **Casing** | The monitor's finish and its badge plate | MODEL 7, black | Collection milestones: 25 uniques (yellowed beige), 50 (brushed aluminium), 75 (smoked acrylic, the tube showing through), INIT's first fall (the Bedrock plate) | 4 |
-| **Phosphor** | The tube's tint (amber family only) | P3 amber | Codex: every family mastered (P4 paper white), every strain mastered (sodium) | 2 |
+| **Phosphor** | The tube's tint | P3 amber | Codex: every family mastered (P4 paper white), every strain mastered (sodium), every part mastered (P1 green) | 3 |
 | **Desk props** (left, right) | What stands beside the monitor | mug, notepad | A faction's top tier: Halcyon a claims binder, Kestrel a visitor lanyard, LANTERN a shortwave set (the radio chatter's source), NULL CHOIR a stack of zines, GLASSJAW a burner phone; KESSLER-FARM-00's ledger opened: a dead hashboard | 6 |
 
-That's 28 to earn in the first pass, most of them stickers, so the list grows with every boss section 6 builds.
+That's 29 to earn in the first pass, most of them stickers, so the list grows with every boss section 6 builds.
 
 **Second pass** (the same card, three more slots):
 
@@ -419,16 +419,15 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 
 *Proposed, S, anywhere in the list:* the **Ready** section in the map's List mode (1.3).
 
-## 7. Open questions for the designer
+## 7. Decided (October 2026)
 
-1. **Lairs by floor.** One lair a floor, its boss from that floor's band and weighted by your network, with your native
-   boss on its own band's floor: yes? Or keep your native boss in every lair and add a second boss room?
-2. **Floor holders.** Rolled per network from its roster (two networks' floor 2s differ), or fixed per floor for
-   everyone (each floor always the same crew)? The sheet recommends rolled, with floor 5 always ACTUARY's.
-3. **Bedrock.** INIT and flash ranks as the endgame, with the reflash optional once Bedrock is Mapped: is that the
-   bottom of the tower? Should flash ranks pay gear past level 50 (up to 55), or stop at 50?
-4. **ACTUARY's repricing.** Every 300 kills on its floor instead of weekly, so it never moves on a calendar: agreed?
-5. **Cosmetics.** Is a first takeover worth a sticker, and should faction props need the top tier (75) or the one
-   below (50)? Green phosphor is left out because it sits too near teal: agreed?
-6. **Uniques for 40–50.** Write about ten for layer 5 vaults and rogue servers, or leave 40–50 to boss uniques and set
-   pieces?
+1. **Lairs by floor**: one lair a floor, its boss from that floor's band, your native boss on its own band's floor.
+2. **Floor holders**: rolled per network from its roster; floor 5 is always ACTUARY's.
+3. **Bedrock**: INIT and flash ranks, to try. Flash ranks pay gear past 50, up to 55.
+4. **ACTUARY** reprices every 300 kills on its floor, never on a calendar.
+5. **Cosmetics**: a first takeover earns a sticker (*VOID IF REMOVED*). Faction props need the top tier (75), like a
+   skill cape. Green phosphor (P1) is in, from the Codex with the other two.
+6. **Uniques for 40–50**: write about ten, for layer 5 vaults and rogue servers, and the sets (docs/genome.md 9) with
+   them.
+7. **Loot** (from the lootsim report): Mapped and dead drops pay a white or a blue (`LOOT.minor`), and the Resident's
+   roll, once you hold its two, pays a yellow, never a world unique. *Built.*
