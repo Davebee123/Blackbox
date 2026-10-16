@@ -2,14 +2,14 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
 import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
 
-import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse } from './mail.mjs';
+import { contractKill, contractTakeover, standingCrash, mailCommand, tickMail, initMail, openContracts, systemLetter, contractPackLost, contractDefuse, contractLocated } from './mail.mjs';
 import { tickStore, buy } from './store.mjs';
 import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer } from './factions.mjs';
 import { tickMarket, marketCommand } from './market.mjs';
@@ -35,7 +35,8 @@ import { portsCommand, invaderDown, invasionRestore, signatureRestore } from './
 import { runDaemons, daemonsOn, daemonsHurt, flushDaemons, lifeline, lifelineHeal, daemonCommand, daemonRestore, slottedDaemons, daemonAmount, watchmanBar, gainDaemon } from './daemons.mjs';
 export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, watchmanBar, gainDaemon } from './daemons.mjs';
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
-import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, craftRelay } from './hidden.mjs';
+import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, craftRelay, traceNear, leadOf } from './hidden.mjs';
+import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
@@ -46,7 +47,7 @@ import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TI
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 40; // v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 41; // v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -889,38 +890,53 @@ function placeAuthor(s, mode, opts) {
   return loc.faction ? factionAuthor(loc.faction) ?? crewOf(loc.family) : crewOf(loc.family);
 }
 
-// Every neutralized virus moves you toward its origin. 100 = a location.
-// `next`: a route file's lead (a log sweep) locates on the layer past yours; a kill's, on yours.
-export function addLead(s, family, amount, why = '', next = false) {
-  s.leadProgress[family] = (s.leadProgress[family] || 0) + amount;
-  emit(s, 'lead', `${why}${FAMILIES[family].name} lead +${amount}% (${Math.min(100, s.leadProgress[family])}%).`, { family });
-  while (s.leadProgress[family] >= 100) {
-    s.leadProgress[family] -= 100;
-    addLocation(s, family, SERVER.layerFor(hackerLevel(s)) + (next ? 1 : 0)); // kills trace your own layer
-  }
+// A lead toward a server: since R3 (floors.mjs) every trace runs along a floor's links, so a lead from a place goes to
+// one of the ? servers linked to it (its family's first): SPRAWL-00's strays, an invader beaten, a log sweep. Family
+// leads that located a server anywhere on your layer are gone. at: where it came from (a location, or SPRAWL-00).
+export function addLead(s, family, amount, why = '', at = null) {
+  if (!(amount > 0)) return [];
+  return traceNear(s, at || { id: CONFIG.zone.id }, amount, why, { one: true, family });
 }
 
 // A server by id: one you've traced, or a consortium member's (consortium.mjs).
 export const findLocation = (s, id) => s.locations.find((l) => l.id === id) || s.consortium?.servers?.find((l) => l.id === id) || (s.occupation?.id === id ? s.occupation : null);
 
-// Templates rotate so consecutive locations play differently.
-export function addLocation(s, family, depth = 1, parent = null) {
-  s.foundSeq = Math.max(s.foundSeq || 0, s.locations.length) + 1; // a running count: dropped finds (FIND_CAP) don't come back
+// A server located on a floor (floors.mjs): at a slot (a ? traced to 100%, a floor's landing server), or, when no slot
+// is named (a developer find, a story's server), the next free slot on that floor (pickSlot: a ? of its family first).
+// Its level and kind are its slot's: fixed when the floor was generated. A lair's slot holds the network's lair.
+export function addLocation(s, family, depth = 1, parent = null, slot = null) {
+  const node = slot ? slotNode(s, slot) : pickSlot(s, depth, family);
+  const hid = node ? hiddenAt(s, node.id) : null;
+  if (hid) s.hidden.splice(s.hidden.indexOf(hid), 1);
+  if (node) depth = floorOfSlot(node.id);
+  if (node?.kind === 'lair') {
+    const lair = lairAt(s, node, parent);
+    if (lair) {
+      s.locations.push(lair);
+      spawnHidden(s, lair);
+      if (hid) contractLocated(s, hid, lair);
+      emit(s, 'located', `LOCATED on floor ${depth}: ${lair.name}. Something lives in its Core.`, { location: lair.id, floor: depth });
+      return lair;
+    }
+  }
+  s.foundSeq = Math.max(s.foundSeq || 0, s.locations.length) + 1; // a running count
   let seed = s.seed * 31 + (s.foundSeq - 1) * 7 + 5;
   let loc = createLocation(family, seed, depth);
   while (s.locations.some((l) => l.id === loc.id)) loc = createLocation(family, ++seed, depth);
-  loc.template = TEMPLATES[s.locations.filter((l) => !l.rogue).length % TEMPLATES.length]; // rogue servers don't take a turn
-  loc.level = SERVER.locationLevel(hackerLevel(s), depth); // fixed when found: its guards' level, and its vault gear's
+  loc.template = node?.template || TEMPLATES[s.locations.filter((l) => !l.rogue).length % TEMPLATES.length]; // its slot's kind
+  loc.level = node ? node.level : SERVER.keepUp(hackerLevel(s), depth); // fixed when its floor was generated: its guards' level, and its vault gear's
+  if (node) loc.slot = node.id;
   if (parent) loc.parent = parent;
   if (!s.locations.some((l) => !l.rogue && !l.zone)) loc.starter = true; // your first server's vault: a protocol and a blueprint
   loc.trait = siteTrait(loc);
-  rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken
+  if (!node || (node.d > 1 && !node.main)) rollRogue(s, loc); // about 1 in 6 is a rogue server: wild, respawning, never taken (never beside a floor's entry or on its main road: floors.mjs)
   claimServer(s, loc); // about one in eight belongs to a faction (factions.mjs)
   s.locations.push(loc);
   spawnHidden(s, loc);
+  if (hid) contractLocated(s, hid, loc); // contracts aimed at the ? follow it
   onFound(s, loc); // memory full: it arrives detached (memory.mjs)
   dropStaleFinds(s);
-  emit(s, 'located', `${depth > 1 ? `DEEPER NODE (layer ${depth})` : 'ORIGIN LOCATED'}: ${loc.name}.`, { location: loc.id });
+  emit(s, 'located', `LOCATED on floor ${depth}: ${loc.name}.`, { location: loc.id, floor: depth });
   return loc;
 }
 
@@ -930,7 +946,7 @@ export const FIND_CAP = 10;
 function dropStaleFinds(s) {
   const busy = new Set(openContracts(s).flatMap((c) => [c.loc, (s.hidden || []).find((n) => n.id === c.hidden)?.via]).filter(Boolean));
   const never = (l) => (l.fresh && l.detached) || l.unseen; // found, never connected (unseen: memory off)
-  const unused = (l) => never(l) && !busy.has(l.id) && !s.locations.some((x) => x.parent === l.id);
+  const unused = (l) => never(l) && !l.slot && !busy.has(l.id) && !s.locations.some((x) => x.parent === l.id); // a floor's servers stay: the floor bounds them
   while (s.locations.filter(never).length > FIND_CAP) {
     const old = s.locations.find(unused);
     if (!old) break;
@@ -960,7 +976,7 @@ export function firstTime(s, id, why, kind = 'build', share = 0.5) {
 // you've chased most), and at 5 wick points you at one you haven't cracked yet.
 function breadcrumb(s, level) {
   const tame = (s.locations || []).filter((l) => !l.rogue && !l.member);
-  if (level === 4 && !tame.length) addLocation(s, Object.entries(s.leadProgress || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || 'worm', 1);
+  if (level === 4 && !tame.length) { const h = hiddenNear(s, { id: CONFIG.zone.id }).sort((a, b) => b.lead - a.lead || a.level - b.level)[0]; addLocation(s, h?.family || 'worm', 1, h?.via || null, h?.slot || null); }
   const open = (s.locations || []).find((l) => !l.rogue && !l.member && !l.takenOver);
   if (level === 5 && open && !tame.some((l) => Object.keys(l.state?.unlocked || {}).length)) emit(s, 'breadcrumb', `wick: strays won't feed you forever. ${open.name} has a vault. go open it.`, { location: open.id });
 }
@@ -1021,8 +1037,8 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     levelStarted(s, h); // Behind: the new level's clock
     if (h.level > top) syncServer(s); // the server's level is your highest class level
     breadcrumb(s, h.level);
-    // Rogue servers keep up with you inside their layer's band (rogue.mjs does it on a visit too).
-    for (const l of s.locations || []) if (l.rogue && !l.member) l.level = Math.max(l.level || 1, SERVER.locationLevel(h.level, l.depth || 1));
+    // Rogue servers keep up with you inside their floor's band (rogue.mjs does it on a visit too).
+    for (const l of s.locations || []) if (l.rogue && !l.member) l.level = Math.max(l.level || 1, SERVER.keepUp(h.level, l.depth || 1));
     const sub = subOf(s, arch);
     // Reaching your subclass level: the bar you had carries into the subclass's own bar.
     if (sub && !s.loadout.equipped[sub]) { s.loadout.equipped[sub] = [...(s.loadout.equipped[arch] || equippedSkills(s, arch))]; (s.loadout.follow ||= {})[sub] = 'rotation'; }
@@ -1652,11 +1668,12 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   const v = e.virus, lvl = v.level;
   contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
   huntKill(s, family);
-  // A lead toward its family's origin, falling with the level gap like XP (wild viruses and processes, not guards).
-  if (!guard && FAMILIES[family]) { const lead = Math.round(CONFIG.leadBase * Math.min(1, xpScale(lvl - hackerLevel(s))) * (v.strain && v.strain === hotStrain(s) ? 1 + HOT.bonus : 1)); if (lead) addLead(s, family, lead); }
+  // SPRAWL-00's strays trace one of its ? servers (floors.mjs), falling with the level gap like XP (not guards or bosses).
+  // Everywhere else a trace comes from first clears (netrooms.mjs), the vault's record and the rest (hidden.mjs).
+  if (sprawl && !guard && FAMILIES[family]) addLead(s, family, leadOf(s, lvl, !!v.strain && v.strain === hotStrain(s)), '', { id: CONFIG.zone.id });
   if (wild) {
     gainCode(s, codeFrom(s, family, lvl, 'home'), 'Code: ');
-    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: loc?.depth || 1, family, strain: v.strain, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : bounty ? LOOT.rolls.bounty : undefined };
+    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: layerOf(loc?.depth || 1), family, strain: v.strain, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : bounty ? LOOT.rolls.bounty : undefined };
     const item = rollDrop(s, ctx, lvl);
     if (item) addItem(s, item);
     nativeDrop(s, e);
@@ -1666,7 +1683,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   }
   if (!s.run) return {};
   const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
-  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: loc?.depth || 1, family: loc?.family || family, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : undefined }, lvl);
+  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family || family, elite: !!v.elite, rolls: v.elite || v.boss ? ELITE.rolls : undefined }, lvl);
   if (item) { s.run.pack.push({ path: `${tag}/drop`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   nativeDrop(s, e, true);
   if (rand(s) < (guard ? SPARE_EXPLOIT.guard : SPARE_EXPLOIT.home)) packExploit(s, `${tag}/xp`, v.name);
@@ -1736,13 +1753,13 @@ export function finish(s, result) {
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
-      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: wild?.depth || findLocation(s, e.process)?.depth || 1, family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite, rolls: e.virus.elite || e.virus.boss ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
+      const ctx = { kind: wild || e.process ? 'rogue' : 'sprawl', id: wild?.rogue?.kind, layer: layerOf(wild?.depth || findLocation(s, e.process)?.depth || 1), family: e.virus.family, strain: e.virus.strain, elite: !!e.virus.elite, rolls: e.virus.elite || e.virus.boss ? ELITE.rolls : named ? LOOT.rolls.bounty : undefined };
       const item = rollDrop(s, ctx, e.virus.level);
       if (item) addItem(s, item);
       nativeDrop(s, e); // network.mjs: its own dice
       if (rand(s) < BLUEPRINT_CHANCE.home) learnBlueprint(s, 'Blueprint recovered: ');
       if (rand(s) < SPARE_EXPLOIT.home) gainCode(s, { exploit: 1 }, 'Exploit recovered: ');
-      if (lead) addLead(s, e.virus.family, lead);
+      if (lead && !wild && !e.process) addLead(s, e.virus.family, lead, '', { id: CONFIG.zone.id }); // SPRAWL-00's strays trace its ? servers
       if (wild) rogueKill(s, wild, e.room, now, () => { const more = rollDrop(s, { ...ctx, strain: null }, e.virus.level); if (more) addItem(s, more, 'The Pit gives up more: '); });
       if (e.process) processWon(s, e); // root access grows (root.mjs)
       hooks.runWon?.(s);
@@ -1762,7 +1779,7 @@ export function finish(s, result) {
       contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
       payKill(s, e, XP.guard, `${e.virus.name} down`);
       // A guard's drop goes in your pack: it's yours once you jack out.
-      const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: loc?.depth || 1, family: loc?.family }, e.virus.level);
+      const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family }, e.virus.level);
       if (item) {
         s.run.pack.push({ path: `${e.room}/#drop-${e.seed}-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item });
         emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true });
@@ -1815,7 +1832,7 @@ export function finish(s, result) {
   }
   // Beating an invader from an unknown server traces most of the way back to it.
   if (lead && hid) hiddenLead(s, hid, HIDDEN.winLead + (lead - CONFIG.leadBase));
-  else if (lead) addLead(s, e.virus.family, lead);
+  else if (lead && inv) addLead(s, e.virus.family, lead, 'Its route: ', findLocation(s, inv.from)); // the road back: a ? next to the server it came from
 }
 
 // ---------- crashes and invasions (engine side; the network lives in invasion.mjs) ----------
@@ -1998,7 +2015,7 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     else { const n = gainComponents(s, Number(text.split(' ')[2]), null, 'developer'); emit(s, 'info', `Developer: +${n} components.`); }
   } else if (/^developer location (ransomware|worm|ghostroot)$/.test(text)) {
     const had = new Set(s.locations.map((l) => l.id));
-    addLead(s, text.split(' ')[2], 100, 'Developer: ');
+    addLocation(s, text.split(' ')[2], Math.min(reached(s), SERVER.floorFor(hackerLevel(s)))); // the next ? of that family on your floor (floors.mjs pickSlot)
     for (const l of s.locations) if (!had.has(l.id) && l.fresh && joinCost(s, l).fits) memoryCommand(s, 'attach', l.id); // developer finds join your network
   } else if (/^repair( \d+)?$/.test(text)) {
     topUp(s, 'server', text.split(' ')[1] ? Number(text.split(' ')[1]) : null);
@@ -2083,6 +2100,8 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
     fleetCommand(s, text);
   } else if (/^event( |$)/.test(text)) {
     eventCommand(s, text);
+  } else if (/^(floors?|descend)( |$)/.test(text)) {
+    floorCommand(s, text); // floors.mjs: the floors you've reached, the map's floor, the way down
   } else if (/^network( |$)/.test(text)) {
     networkCommand(s, text); // network.mjs: your network's signature, or a member's
   } else if (/^(inspect|scan)( |$)/.test(text)) {
@@ -3678,7 +3697,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -3824,6 +3843,7 @@ export function restore(raw) {
     if (!Number.isFinite(s.rng)) s.rng = 0x2545f491;
     s.loadout.equipped ||= {};
     for (const l of s.locations || []) { l.template ||= 'relay'; l.depth ||= 1; reclaimCheck(l); }
+    { const back = floorsRestore(s, was); const l = back && was < 41 ? floorsLetter(back) : null; if (l) systemLetter(s, l); } // v41: layers become floors (floors.mjs)
     hooks.roomsRestore?.(s, was); // v39: every server you'd found is a room graph (netrooms.mjs)
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab

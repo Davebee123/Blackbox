@@ -104,7 +104,7 @@ export const CONFIG = {
   daemonSlots: 2, // +1 at server levels 15, 30 and 45 (your highest class level); Operators +1
   // Runs
   depthThreat: 3, // guard threat added per depth below the first
-  depthLoot: 0.4, // caches hold 40% more credits per layer down
+  depthLoot: 0.4, // caches hold 40% more credits per old layer down (layerOf: floors 1, 2, 3–4, 5–6, 7–8)
   maxSignal: 100, // your health out in the net (it carries between connections and rests back up)
   cdCost: 1, // Signal spent per move between directories
   leadBase: 25, // lead progress every neutralized virus gives (four kills; a Route Logger adds more)
@@ -126,8 +126,8 @@ export const CONFIG = {
   invasion: {
     firstMs: 3 * 60000, // after your first location is found
     everyMs: [20 * 60000, 30 * 60000], // between one invasion clearing and the next setting out (fewer, bigger: invasion.mjs KINDS)
-    travelMs: 2 * 60000, // from a layer-1 location; +1 minute per layer deeper
-    perLayerMs: 60000,
+    travelMs: 2 * 60000, // from a floor-1 server; +1 minute per floor down (perFloorMs)
+    perFloorMs: 60000,
     maxTickMs: 5000, // a long gap (closed tab, sleep) counts as this much
     // The wall: your Firewall rating vs the invader's strength (both 100 × power(level)).
     wall: 0.75, // rating with no Firewall service (the Firewall's versions set 1, 1.2, 1.45)
@@ -229,7 +229,7 @@ export const ABILITIES = {
 for (const d of Object.values(CLASS_DATA)) Object.assign(ABILITIES, d.abilities);
 
 // Daemons: small programs that fight beside you, and only invasions drop them (invasion.mjs daemonDrop).
-// Each belongs to a band (BANDS, below: an invasion drops its level's band, now and then an earlier one's)
+// Each belongs to a band (DAEMON_BANDS, below: an invasion drops its level's band, now and then an earlier one's)
 // and drops at the invasion's level, an item level: its number n grows with it like a protocol's stats
 // (×power(level)). A higher-level copy is just better and replaces yours; the lower one scraps for code.
 //   cd    acts on its own cooldown (cycles), right after your order. exfil: only in an Exfil fight.
@@ -298,7 +298,7 @@ export const DAEMON_DROP = { you: 0.35, intercept: 0.5, wall: 0.15, capture: 1, 
 // A unit of code at a level: what a point of invasion bounty pays (invasion.mjs), what a scrapped daemon gives,
 // and what the wall's prices count in (firewall.mjs: its tiers from +3, harden.sh, a crafted filter).
 export const codeUnit = (level) => 4 + Math.floor(Math.max(1, level) / 3);
-export const daemonBand = (level) => layerFor(level); // an invasion's band: the deepest BANDS entry its level has reached
+export const daemonBand = (level) => DAEMON_BANDS.reduce((d, [lo], i) => (level >= lo ? i + 1 : d), 1); // an invasion's band: the deepest DAEMON_BANDS entry its level has reached
 export const bandDaemons = (band) => Object.keys(DAEMONS).filter((id) => DAEMONS[id].band === band);
 // A daemon's number at an item level, like a protocol's stats.
 export const daemonN = (id, level) => Math.max(1, Math.round(DAEMONS[id].n * power(level)));
@@ -441,15 +441,15 @@ export const STRAINS = {
   },
 };
 for (const [k, st] of Object.entries(STRAINS)) st.author = buildAuthor(k);
-// The strains a family can field at a level, on a server this many layers deep.
+// The strains a family can field at a level, on a server this many floors down.
 export const strainsFor = (family, level, depth = 99) => Object.keys(STRAINS).filter((k) => STRAINS[k].lineage === family && level >= STRAINS[k].from && depth >= (STRAINS[k].depth || 2));
 export const STRAIN_SHARE = 0.5;
 
-// Grades: the same virus, bigger. Layer 1 servers send v1 (the starter numbers), layer 2 v2,
-// layer 3 and deeper v3. Only the stats change: Integrity, attack damage, and at v3 one more
-// armor chit on the basic part. (On top of the level a deeper server already adds.)
+// Grades: the same virus, bigger. Floor 1 servers send v1 (the starter numbers), floors 2 and 3 v2,
+// floor 4 and deeper v3 (where the old layer 3 began, by level). Only the stats change: Integrity, attack damage, and at
+// v3 one more armor chit on the basic part. (On top of the level a deeper server already adds.)
 export const GRADES = { 1: { hp: 1, dmg: 1, armor: 0 }, 2: { hp: 1.15, dmg: 1.1, armor: 0 }, 3: { hp: 1.35, dmg: 1.25, armor: 0 } };
-export const gradeFor = (depth) => Math.min(3, Math.max(1, depth || 1));
+export const gradeFor = (floor) => ((floor || 1) <= 1 ? 1 : floor <= 3 ? 2 : 3);
 // What a server this deep sends: its grade, and maybe a strain (fixed by the seed).
 // native: the network's native strain (network.mjs), STRAIN_NATIVE times as likely as its family's others there.
 export const STRAIN_NATIVE = 5;
@@ -1047,21 +1047,38 @@ export function createLocation(family, seed, depth = 1) {
 // Your server's level is your highest class level (combat.mjs serverLevel): it has no XP of its own.
 // It sets its base Integrity and opens daemon slots, service versions, outpost bandwidth, buildings
 // and architecture.
-// Each layer of the net has a level band: servers found there sit inside it (EverQuest/WoW zone ranges).
-export const BANDS = [[1, 9], [7, 18], [16, 28], [26, 40], [38, 50]];
-// Your layer: the deepest one whose band you've reached.
-export const layerFor = (level) => BANDS.reduce((d, [lo], i) => (level >= lo ? i + 1 : d), 1);
+// The network is a stack of eight floors going down (docs/servers.md 5, R3): each its own diagram (floors.mjs), with its
+// own level band, shape and size. A server's level is fixed when its floor is generated: the near side of a floor sits
+// at the band's floor, the exit's neighbours at its top (EverQuest/WoW zone ranges, each a step down the tower).
+export const FLOORS = [
+  { name: 'The Sprawl', band: [1, 8], shape: 'star', servers: 10, exits: 1 },
+  { name: 'Backhaul', band: [7, 14], shape: 'trunk', servers: 12, exits: 1 },
+  { name: 'The Stacks', band: [13, 20], shape: 'lattice', servers: 14, exits: 1 },
+  { name: 'Coldline', band: [19, 26], shape: 'ring', servers: 14, exits: 2 },
+  { name: 'Deep Core', band: [25, 32], shape: 'bridge', servers: 16, exits: 2 },
+  { name: 'Kernel Space', band: [31, 38], shape: 'tree', servers: 16, exits: 2 },
+  { name: 'The Sink', band: [37, 44], shape: 'funnel', servers: 18, exits: 2 },
+  { name: 'Bedrock', band: [43, 50], shape: 'islands', servers: 18, exits: 0 },
+];
+const fl = (floor) => FLOORS[Math.min(FLOORS.length, Math.max(1, floor || 1)) - 1];
+export const bandOf = (floor) => fl(floor).band;
+// Your floor: the deepest one whose band your level has reached (it replaced "your layer").
+export const floorFor = (level) => FLOORS.reduce((d, f, i) => (level >= f.band[0] ? i + 1 : d), 1);
+// Daemons keep their own five bands (an invasion drops its level's band, daemons.mjs): the old layers' bands.
+export const DAEMON_BANDS = [[1, 9], [7, 18], [16, 28], [26, 40], [38, 50]];
+// Content still names the five old layers (an item's vault or rogue source, `layer`; loot's depth bonus): a floor reads
+// as the old layer its band's middle sat in (1, 2, 3, 3, 4, 4, 5, 5), so drops by level are as they were.
+export const layerOf = (floor) => DAEMON_BANDS.reduce((d, [lo], i) => ((bandOf(floor)[0] + bandOf(floor)[1]) / 2 >= lo ? i + 1 : d), 1);
+// The first floor whose band reads as an old layer (for words: "Floor 3 vaults").
+export const floorOfLayer = (layer) => FLOORS.findIndex((_, i) => layerOf(i + 1) >= layer) + 1 || FLOORS.length;
 export const SERVER = {
   maxLevel: 50,
-  // Enemies have a level. Home intrusions come in at your level; a location keeps the level
-  // it was found at: your level on any layer whose band holds it, otherwise 2 more per layer
-  // deeper, kept inside the layer's band (a deeper layer sits ahead of you, a shallower one behind).
-  layerFor,
-  locationLevel: (hackerLevel, depth) => {
-    const [lo, hi] = BANDS[Math.min(BANDS.length, Math.max(1, depth || 1)) - 1];
-    if (hackerLevel >= lo && hackerLevel <= hi) return hackerLevel;
-    return Math.min(hi, Math.max(lo, hackerLevel + 2 * ((depth || 1) - layerFor(hackerLevel))));
-  },
+  // Enemies have a level. Home intrusions come in at your level. A server's level is its place on its floor (place:
+  // 0 by the entry, 1 by the exit), fixed when the floor is generated.
+  floorFor,
+  locationLevel: (floor, place = 0) => { const [lo, hi] = bandOf(floor); return Math.round(lo + Math.max(0, Math.min(1, place)) * (hi - lo)); },
+  // What keeps up with you (a rogue server, a held server's root processes, the farm): your level, kept inside its floor's band.
+  keepUp: (hackerLevel, floor) => { const [lo, hi] = bandOf(floor); return Math.min(hi, Math.max(lo, hackerLevel)); },
   guardLevel: (level, depth) => level + 3 * (depth - 1), // (old saves without a location level)
   mutationsFrom: 3, // enemy crits start here
   // How often a virus at a level is mutated: none below 4, a quarter to level 9, then 40% (wild ones,

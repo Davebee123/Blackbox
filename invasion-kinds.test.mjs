@@ -24,10 +24,11 @@ const bountyPaid = (s) => s.logs.filter((e) => /^Bounty: \+/.test(e.message)).re
 // The network has already sent one, so what comes next can be any kind.
 function world({ level = 8, fw = 0, services = { raid: 1, firewall: 1 } } = {}) {
   const s = fresh();
-  command(s, 'developer level ' + level);
   command(s, 'developer location worm');
   command(s, 'developer location ransomware');
-  for (const l of s.locations) Object.assign(l, { level, depth: 1 });
+  command(s, 'developer level ' + level); // after the finds, so the level-4 breadcrumb doesn't add a third
+  for (const l of s.locations) Object.assign(l, { level, depth: 1, runs: 1 }); // connected: they send invasions
+  s.hidden = []; // just the two: no unknown servers behind them (floors.mjs links each to its ?s)
   s.services = { ...services };
   s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   syncServer(s);
@@ -253,7 +254,7 @@ test('quirks: a Hoard invasion is Armored and pays half again; a Nest one brings
   assert.equal(n.invasion.queue.length, 1, 'one more behind it');
   const g = world();
   command(g, 'developer location ghostroot');
-  g.locations.at(-1).level = 8;
+  Object.assign(g.locations.at(-1), { level: 8, runs: 1, template: 'relay' }); delete g.locations.at(-1).rogue; // a tame ghostroot server (a third find can be the early Nest)
   invade(g, 'hidden');
   assert.equal(g.invasion.quirk, 'hidden');
   assert.equal(pushOf(g.invasion), QUIRKED.hiddenPush);

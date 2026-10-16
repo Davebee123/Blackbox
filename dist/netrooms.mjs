@@ -2,7 +2,7 @@
 // the rooms of floorplan.mjs, kept on its location for good (loc.floorplan). Two shapes:
 //   a server   a traced server (yours, a member's, a faction's): the R0 generator from its seed, its template's kind
 //              (relay Relay, mailhub Mailhub, mirror Mirror, archive Archive, lab Lab), its size, its family's crew as
-//              author, its layer as the floor (no hunter on layer 1). Its guard post holds the vault's key; the vault
+//              author, its floor (floors.mjs) the rooms' floor (no hunter on floor 1). Its guard post holds the vault's key; the vault
 //              holds what its old vault did (the same files: gear, code, the trace record, plans, blueprints, a
 //              contract's file), into your pack; the Resident waits in /core. Beat it with the vault open and the
 //              server is yours: taken over (teal on the network map), its Core quiet for good.
@@ -23,7 +23,7 @@
 // a server you hold has its Core as its core socket. A Resident's first fall and Mapped each teach a codebase. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
 import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand } from './combat.mjs';
-import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES } from './data.mjs';
+import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, layerOf } from './data.mjs';
 import { seeded, MATERIALS, codeOf, rollItem } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import * as FP from './floorplan.mjs';
@@ -38,6 +38,8 @@ import { contractTakeover, contractRooms, contractMapped, contractConnect, contr
 import { giveScript, rollScript } from './scripts.mjs';
 import { itemLabel, uniqueItem } from './gear.mjs';
 import { strikeServer, clearedFor } from './factions.mjs';
+import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
+import { hiddenNear } from './floors.mjs';
 import { zoneSpawns, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
 
 export const KIND_OF = { relay: 'Relay', mailhub: 'Mailhub', mirror: 'Mirror', archive: 'Archive', lab: 'Lab' };
@@ -281,6 +283,8 @@ WORLD_hook('drops', () => {}); // what a kill drops comes with what it pays (won
 WORLD_hook('won', (s, room, e, { first = false, mirror = false } = {}) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc) return;
+  // A first clear on a server traces the ? servers linked to it on its floor (floors.mjs, docs/servers.md 5.3).
+  if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `);
   if (room.wild) return wildWon(s, loc, room, e);
   const guard = room.kind === 'guard' || room.kind === 'elite' || room.kind === 'core' || mirror || !!e.virus.elite;
   roomKill(s, e, { pack: true, guard, family: lineageOf(e.virus.family), loc });
@@ -364,6 +368,7 @@ function wildWon(s, loc, room, e) {
   else if (rogueKill(s, loc, room.path0, t, () => { const more = ctx?.more?.(); if (more) addItem(s, more, 'The Pit gives up more: '); }) && s.run) {
     // The full clear: the server reboots. You're out with your pack, it's offline a minute, then every room is back fresh.
     FP.jackOut(s, 'SERVER REBOOTING.');
+    if (!loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Full clear: '); // a full clear opens its links, as Mapped does
     loc.lockUntil = t + ROGUE.rebootMs;
   }
 }
@@ -401,11 +406,11 @@ WORLD_hook('exfil', (s, t) => {
 });
 // Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits and one item at the server's level (the best of two flat
 // rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no loud run,
-// clean read or Pit roll), and now and then one of the server's uniques (its kind's and layer's, as its folders drop).
+// clean read or Pit roll), and now and then one of the server's uniques (its kind's and floor's, as its folders drop).
 // Under an elite's three rolls and blue floor, by design.
 WORLD_hook('exfilWon', (s, room, e) => {
   const loc = locOf(s), M = CONFIG.exfil, lvl = e.virus.level, credits = M.credits * FP.ROOMS.purse(loc.level || 1);
-  const ctx = { kind: 'rogue', id: loc.rogue?.kind, layer: loc.depth || 1, family: loc.family };
+  const ctx = { kind: 'rogue', id: loc.rogue?.kind, layer: layerOf(loc.depth || 1), family: loc.family };
   s.server.credits += credits;
   let item = rollDrop(s, { ...ctx, rolls: M.rolls, flat: true }, lvl) || rollItem(() => rand(s), { level: lvl, rarity: 'stock' }); // always an item: a white unless the rolls found better
   if (rand(s) < M.unique) { const u = uniqueFrom(s, ctx, lvl); if (u) item = uniqueItem(u, lvl, () => rand(s)); }
@@ -489,7 +494,7 @@ FP.WORLD.view = {
   idLine: (s) => {
     const loc = locOf(s), R = s.rooms, r = ruleOf(loc);
     if (r) return `${r.rule} · lv ${loc.zone ? `1–${CONFIG.zone.maxLevel}` : levelOf(loc)}`;
-    return `${R.kind} · lv ${levelOf(loc)}${loc.depth > 1 ? ` · layer ${loc.depth}` : ''}${rootOf(loc) ? ` · Root ${rootOf(loc)}` : ''}${loc.takenOver ? ' · yours' : ''}`;
+    return `${R.kind} · lv ${levelOf(loc)}${loc.depth > 1 ? ` · floor ${loc.depth}` : ''}${rootOf(loc) ? ` · Root ${rootOf(loc)}` : ''}${loc.takenOver ? ' · yours' : ''}`;
   },
   idTip: (s) => {
     const loc = locOf(s), R = s.rooms, r = ruleOf(loc);
@@ -535,6 +540,8 @@ WORLD_hook('mapped', (s) => {
   const loc = locOf(s);
   if (!loc) return;
   contractMapped(s, loc);
+  // Mapped: every ? linked to it is traced the rest of the way (floors.mjs), so a floor always opens outward.
+  if (!loc.zone && !loc.member && HIDDEN.opens) for (const n of hiddenNear(s, loc)) hiddenLead(s, n, 100 - n.lead, 'Mapped: ');
   if (s.rooms.type === 'server') learnCodebase(s, null, 'Mapped: ', { pool: familyComponents(loc.family), r: seeded(((loc.seed || 1) * 59 + 3) >>> 0) }); // a codebase you don't know
 });
 

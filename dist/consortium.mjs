@@ -92,10 +92,11 @@ function buildNet(s, h) {
   for (let i = 0; i < n; i++) {
     let seed = strSeed(h, 10 + i) % 100000;
     const family = leanPick(s, h, r()); // their network's lean (network.mjs)
-    let loc = createLocation(family, seed, 1);
-    while (taken.has(loc.id)) loc = createLocation(family, ++seed, 1);
+    const floor = SERVER.floorFor(L); // a member's servers sit on their own floors (docs/servers.md 5.3)
+    let loc = createLocation(family, seed, floor);
+    while (taken.has(loc.id)) loc = createLocation(family, ++seed, floor);
     taken.add(loc.id);
-    loc.level = SERVER.locationLevel(L, 1);
+    loc.level = SERVER.keepUp(L, floor);
     loc.member = h;
     loc.trait = null;
     const roll = i === 0 ? 0 : r();
@@ -125,7 +126,7 @@ export function buildNets(s) {
   if (perk(s, 'trunk', false) && !trunk) {
     let seed = strSeed(c.name, 7) % 100000, loc = createLocation('worm', seed, 1);
     while ([...(s.locations || []), ...c.servers].some((l) => l.id === loc.id)) loc = createLocation('worm', ++seed, 1);
-    Object.assign(loc, { id: 'trunk', name: 'TRUNK', trunk: true, level: SERVER.locationLevel(hackerLevel(s), 1), trait: null, quirk: null, template: 'rogue', rogue: { kind: 'pit' }, spawns: {}, serial: 0 });
+    Object.assign(loc, { id: 'trunk', name: 'TRUNK', trunk: true, level: SERVER.keepUp(hackerLevel(s), 1), trait: null, quirk: null, template: 'rogue', rogue: { kind: 'pit' }, spawns: {}, serial: 0 });
     c.servers.push(loc);
   } else if (!perk(s, 'trunk', false) && trunk && s.run?.loc !== trunk.id) c.servers = c.servers.filter((l) => l !== trunk);
 }

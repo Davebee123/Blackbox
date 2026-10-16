@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { floorsOf } from './dist/floors.mjs';
 import assert from 'node:assert/strict';
 import { fresh, command, hooks, active, resolveCycle } from './dist/combat.mjs';
 import { play, crewWander, layoutOf, currentLocation } from './dist/run.mjs';
@@ -11,6 +12,8 @@ import { rogueSpawns } from './dist/rogue.mjs';
 import * as FP from './dist/floorplan.mjs';
 
 const world = () => { const s = fresh(); s.hackers = { breaker: { level: 6, xp: 0 } }; play(s, 'online sim'); return s; };
+// A server found and connected to (only those send invasions: docs/servers.md 5.3).
+const found = (s, family) => { command(s, `developer location ${family}`); s.locations.at(-1).runs = 1; return s.locations.at(-1); };
 const win = (s) => {
   for (const p of s.encounter.virus.parts) Object.assign(p, { armor: 0, integrity: 1, attack: null });
   for (let i = 0; i < 6 && active(s); i++) { const p = s.encounter.virus.parts.find((x) => x.integrity > 0); command(s, 'spike ' + p.id); resolveCycle(s); }
@@ -71,6 +74,7 @@ test("members' servers: connect; the vault doesn't make it yours; natives come b
   play(s, 'consortium create LOWLIGHT');
   play(s, 'consortium invite rook');
   const loc = serversOf(s, 'rook').find((l) => !l.rogue);
+  if (loc.depth > 1) { assert.match(play(s, 'connect ' + loc.id).map((e) => e.message).join(' '), /Reach that floor yourself first/, 'a member\'s server on a floor you haven\'t reached waits'); floorsOf(s).reached = loc.depth; }
   play(s, 'connect ' + loc.id);
   assert.equal(currentLocation(s), loc);
   assert.ok(isGround(s, loc));
@@ -120,7 +124,7 @@ test("the consortium's ground is shared: members turn up in its folders and join
   const s = world();
   play(s, 'consortium create LOWLIGHT');
   for (const h of PRESENCE.pool.slice(0, 10)) play(s, 'consortium invite ' + h);
-  command(s, 'developer location ransomware');
+  found(s, 'ransomware');
   const mine = s.locations[0];
   assert.ok(!isGround(s, mine), 'a server you only traced is yours alone');
   mine.takenOver = true;
@@ -185,7 +189,7 @@ const clearOut = (s, loc) => {
 test('away, in a consortium: a weak wall gets crashed; the server reboots for hours, occupied; clearing it brings it back', () => {
   helping(0, () => {
     const s = world();
-    command(s, 'developer location ransomware');
+    found(s, 'ransomware');
     play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
     s.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; // a weak wall
     const T0 = 1_800_000_000_000;
@@ -208,14 +212,14 @@ test('away, in a consortium: a weak wall gets crashed; the server reboots for ho
 test('away, solo too: the network plays on, and your firewall decides', () => {
   const T0 = 1_800_000_000_000;
   const weak = world();
-  command(weak, 'developer location ransomware');
+  found(weak, 'ransomware');
   weak.firewall = { pin: 0, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   tickNetwork(weak, T0);
   tickNetwork(weak, T0 + 8 * 3600000);
   assert.ok(weak.logs.some((e) => e.type === 'invader'), 'invaders came while you were away');
   assert.ok(weak.logs.some((e) => e.type === 'crashed'), 'nothing stopped them');
   const strong = world();
-  command(strong, 'developer location ransomware');
+  found(strong, 'ransomware');
   strong.firewall = { pin: 30, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   tickNetwork(strong, T0);
   tickNetwork(strong, T0 + 8 * 3600000);
@@ -226,7 +230,7 @@ test('away, solo too: the network plays on, and your firewall decides', () => {
 test('away, a strong wall holds: invaders are stopped and nothing crashes', () => {
   helping(0, () => {
     const s = world();
-    command(s, 'developer location ransomware');
+    found(s, 'ransomware');
     play(s, 'consortium create LOWLIGHT'); play(s, 'consortium invite nyx');
     s.hackers = { breaker: { level: 50, xp: 0 } }; // a high-level server (your highest class level)
     const T0 = 1_800_000_000_000;
@@ -241,7 +245,7 @@ test('away, a strong wall holds: invaders are stopped and nothing crashes', () =
 test('Grid: firewall +2 levels', async () => {
   const { effLevel } = await import('./dist/firewall.mjs');
   const s = world();
-  command(s, 'developer location ransomware');
+  found(s, 'ransomware');
   const base = effLevel(s, 0);
   play(s, 'consortium create LOWLIGHT');
   for (const h of PRESENCE.pool.slice(0, 11)) play(s, 'consortium invite ' + h);
@@ -253,7 +257,7 @@ test('a member server reset brings fights and caches back, not vault loot or vau
   const { arrive, CONSORTIUM } = await import('./dist/consortium.mjs');
   const { takeable, fileInfo } = await import('./dist/run.mjs');
   const s = fresh();
-  command(s, 'developer location worm');
+  found(s, 'worm');
   const loc = s.locations[0];
   loc.member = 'k1ra';
   const files = takeable(loc);

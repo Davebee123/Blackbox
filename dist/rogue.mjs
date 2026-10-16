@@ -109,8 +109,8 @@ export function rogueSpawns(s, loc, now = clock()) {
   loc.spawns ||= {};
   if (loc.lair) return lairSpawns(s, loc, now, variantFor); // a network's lair (network.mjs)
   if (inRuns(loc) && rebootDue(s, loc, now)) rogueReboot(s, loc, now);
-  // A rogue server keeps up with you inside its layer's band, then tops out (you've outgrown it).
-  if (!loc.member && !loc.trunk) loc.level = Math.max(loc.level || 1, SERVER.locationLevel(hackerLevel(s), loc.depth || 1));
+  // A rogue server keeps up with you inside its floor's band, then tops out (you've outgrown it).
+  if (!loc.member && !loc.trunk) loc.level = Math.max(loc.level || 1, SERVER.keepUp(hackerLevel(s), loc.depth || 1));
   const who = netOf(s, loc), native = nativeStrain(s, who); // its network's lean and native strain (network.mjs)
   for (const room of rogueRooms(loc)) {
     const sp = loc.spawns[room];
@@ -195,7 +195,7 @@ export const farmOf = (s) => (s.locations || []).find((l) => l.farm) || null;
 export function openFarm(s) {
   if (farmOf(s) || hackerLevel(s) < FARM.from) return null;
   const seed = ((s.seed || 1) * 977 + 31) >>> 0, r = seeded(seed);
-  const loc = Object.assign(createLocation('worm', seed, 1), { id: FARM.id, name: FARM.name, level: hackerLevel(s), farm: true, rogue: { kind: 'farm' }, template: 'rogue', quirk: null, trait: null,
+  const loc = Object.assign(createLocation('worm', seed, 1), { id: FARM.id, name: FARM.name, level: hackerLevel(s), farm: true, slot: 'f1farm', rogue: { kind: 'farm' }, template: 'rogue', quirk: null, trait: null,
     password: FARM.words[Math.floor(r() * FARM.words.length)] + String(10 + Math.floor(r() * 90)), state: { cleared: {}, unlocked: {}, taken: {} }, runs: 0, spawns: {}, serial: 0 });
   s.locations.push(loc);
   emit(s, 'located', `${FARM.name} is on your map: a crew dungeon. Bring a crew (crew sim <class>, or crew invite <friend>).`, { location: loc.id });

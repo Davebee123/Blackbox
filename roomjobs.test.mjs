@@ -219,7 +219,7 @@ test('Map without resting: one visit, every room but the Core stood in with noth
   else R.visit.rested = true;
   for (const id of need) reach(s, id);
   assert.ok(!ready(s, c), 'a rest spoils the visit');
-  play(s, 'jack out'); clock += 60000;
+  play(s, 'jack out'); clock += 60000; s.signal = null; // (rested back up at home)
   play(s, 'connect ' + loc.id);
   assert.match(progress(s, c).text, new RegExp(`1/${need.length} rooms this visit`), 'a new visit starts again');
   for (const id of need) { if (s.run) { s.run.integrity = s.run.max; reach(s, id); } }
@@ -329,6 +329,7 @@ test('room contracts and addresses keep through a save: the job, its item in you
 
 test('contract marks: the rooms you know whose live virus a kill, strain or bounty job would count, an Encryptor for a defuse job, the Core for a takeover', () => {
   const { s, loc } = setup();
+  loc.level = 12; // a server at your level (a floor's servers sit where their slot puts them: floors.mjs), so a Lv 8+ job counts its viruses
   play(s, 'connect ' + loc.id);
   const R = s.rooms, g = R.graph;
   for (const id of Object.keys(g.rooms)) R.seen[id] = 'kind';

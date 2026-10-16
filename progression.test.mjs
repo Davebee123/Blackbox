@@ -38,12 +38,12 @@ test('one level: your server is at your highest class level, with no XP of its o
   assert.equal(t.server.max, Math.round(100 * power(20)), 'the server grew with it');
   assert.ok(up.next.level > 20 && up.next.gains.length, 'and the banner names the next level that brings something');
   // A class under your best one levels without moving the server: no server gains on its banner.
-  const u = at({ breaker: 20, bastion: 15 });
+  const u = at({ breaker: 20, bastion: 12 });
   u.loadout.archetype = 'bastion';
-  gainXp(u, xpToNext(15), 'test');
+  gainXp(u, xpToNext(12), 'test');
   const b = u.logs.findLast((e) => e.type === 'level-up');
-  assert.equal(b.level, 16);
-  assert.ok(b.gains.some((g) => /^layer 3/.test(g)), 'its own tracks still count: a layer');
+  assert.equal(b.level, 13);
+  assert.ok(b.gains.some((g) => /\(floor 3\)$/.test(g)), 'its own tracks still count: a floor');
   assert.ok(!b.gains.includes('an outpost slot') && b.server === null, 'not the server\'s');
   const lines = levelUpLines(up);
   assert.ok(lines.length >= 3 && lines.at(-1).ghost, 'the banner: what it brings, the power line, then a ghost line for the next');

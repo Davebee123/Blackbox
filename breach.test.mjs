@@ -382,7 +382,7 @@ test('the breach is a playtest only: a fresh campaign has none, and the save ver
   const s = fresh();
   assert.equal(s.breach, undefined);
   const { SAVE_VERSION } = await import('./dist/combat.mjs');
-  assert.equal(SAVE_VERSION, 40); // v40: sockets (R2), not the breach
+  assert.equal(SAVE_VERSION, 41); // v41: floors (R3), not the breach
   assert.ok(maxSignal(s) > 0);
 });
 

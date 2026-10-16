@@ -33,6 +33,10 @@ test('one tip at a time, in order, only on its page and only once', () => {
   markSeen(s, 'map-zone');
   assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-intrusion');
   markSeen(s, 'map-intrusion');
+  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-exit', 'floor 1\'s way down');
+  markSeen(s, 'map-exit');
+  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-hidden', 'and the ? servers around SPRAWL-00');
+  markSeen(s, 'map-hidden');
   assert.equal(nextTip(s, 'map', onPage(map)), null, 'nothing else on this map yet');
   assert.equal(nextTip(s, 'server', onPage(map)), null, 'map tips stay on the map');
   command(s, 'developer location worm');
@@ -90,7 +94,7 @@ test('the newer systems have their tips: a found server’s memory, plans on Cra
   const s = fresh();
   s.tutorialCompleted = true;
   const loc = addLocation(s, 'worm', 1); // found: not on your network yet
-  for (const id of ['map-server', 'map-zone']) markSeen(s, id);
+  for (const id of ['map-server', 'map-zone', 'map-exit']) markSeen(s, id);
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id))).id, 'map-origin');
   markSeen(s, 'map-origin');
   assert.equal(nextTip(s, 'map', onPage(mapMarkup(s, loc.id, undefined, { side: true }))).id, 'map-memory', 'its card: what joining costs');

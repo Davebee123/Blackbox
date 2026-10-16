@@ -8,6 +8,7 @@ import { sweepKind } from './dist/forensics.mjs';
 import { MEMORY } from './dist/memory.mjs';
 import * as FP from './dist/floorplan.mjs';
 import { CONFIG } from './dist/data.mjs';
+import { slotNode } from './dist/floors.mjs';
 CONFIG.exfil.chance = 0; // no Exfil in these rooms (exfil.test.mjs has it)
 MEMORY.base = 99; // these tests trace dozens of servers to find each kind
 
@@ -22,16 +23,19 @@ const rogueOf = (s, kind = null) => {
 };
 const winFight = (s) => { command(s, 'engage'); finish(s, 'victory'); };
 
-test('about 1 in 6 servers is rogue, never the first two, and never six tame in a row', () => {
+test('about 1 in 6 servers off a floor\'s road is rogue, never the first two, never six tame in a row, and never the road', () => {
   const s = world();
-  let dry = 0, maxDry = 0, rogues = 0;
-  for (let i = 0; i < 120; i++) {
+  let dry = 0, maxDry = 0, rogues = 0, side = 0;
+  for (let i = 0; i < 100; i++) { // (a hundred: the eight floors hold 118)
     const loc = addLocation(s, ['worm', 'ransomware', 'ghostroot'][i % 3], 1);
+    const node = slotNode(s, loc.slot);
     if (i < ROGUE.firstTame) assert.ok(!loc.rogue, 'the first two are tame');
+    if (node.d <= 1 || node.main) { assert.ok(!loc.rogue, 'beside the entry or on the road to the exit: always tame'); continue; }
+    side++;
     if (loc.rogue) { rogues++; dry = 0; } else if (i >= ROGUE.firstTame) maxDry = Math.max(maxDry, ++dry);
   }
   assert.ok(maxDry <= ROGUE.pity, `longest tame run ${maxDry}`);
-  assert.ok(rogues >= 15 && rogues <= 40, `rogues: ${rogues}/120`);
+  assert.ok(rogues >= side / 8 && rogues <= side / 3, `rogues: ${rogues}/${side}`);
 });
 
 test('a rogue server is wild: folders of viruses, no vault, nothing to take, no invaders, no incident log', () => {

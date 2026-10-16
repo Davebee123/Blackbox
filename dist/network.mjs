@@ -7,7 +7,7 @@
 //   lean     family weights: its mixed rogue folders, hidden neighbours, root rotations and the director's
 //            couriers, bounties and outbreaks lean toward them
 //   strain   its native strain: STRAIN_NATIVE times as likely as its family's other strains there
-//   boss     its native boss (BOSSES nb-*), in a lair of its own (a rogue server) from NETWORK.lairFrom
+//   boss     its native boss (BOSSES nb-*), in a lair (a rogue server) on every floor from floor 2 (floors.mjs)
 //   uniques  3 to 5 native uniques from the pool (sources kind 'native' in content/items.mjs): about ten times
 //            as likely on their network as anywhere else, with pity on their network like a boss's
 //   events   two event-director cards that come up more often there
@@ -21,7 +21,8 @@
 //
 // The native roll uses its own dice (s.netDice), so it never shifts the rest of the game's rolls. A save with no
 // seed (a bare engine state in tests) has no network: no natives, no lean, no lair.
-import { emit, warn, hackerLevel, UNIQUES, addItem, findLocation, active, listenBoost } from './combat.mjs';
+import { emit, warn, hackerLevel, UNIQUES, addItem, findLocation, active, listenBoost, addLocation } from './combat.mjs';
+import { floorsOf, graphOf, locAt } from './floors.mjs';
 import { CONFIG, FAMILIES, STRAINS, BOSSES, NATIVE_BOSSES, SERVER, createLocation, xpScale } from './data.mjs';
 import { seeded, uniqueItem, codeOf, MATERIALS } from './gear.mjs';
 import { postsOf } from './sockets.mjs';
@@ -41,7 +42,7 @@ export const NETWORK = {
   codeShare: 0.3, // on its network, this share of every other code comes as its rich code
   richIn: { salvage: 1.5, exploit: 1.5 }, // its rich material: part salvage, or Exploit drops, this much likelier there
   eventBoost: 2.5, // its two favoured cards come up this much more often
-  lairFrom: 8, lairFinds: 3, // the lair turns up at this level, once you've found this many servers
+  lairFrom: 8, // a consortium member's lair, from this level (yours are on your floors: floors.mjs)
   lairMs: 60 * 60000, // its boss comes back an hour after it falls
   lairPackMs: 30 * 60000, // the two folders guarding it, half an hour: a lair is a visit, not a farm
   lairRooms: ['outer', 'den', 'core'],
@@ -263,25 +264,27 @@ export const richMult = (s, who, what) => (sigOf(s, who)?.code.extra === what ? 
 export const eventMult = (s, card) => (mine(s)?.events.includes(card) ? NETWORK.eventBoost : 1);
 
 // ---------- the lair ----------
+// One on every floor from floor 2 (floors.mjs): a slot on the floor's diagram, found by tracing like any server, its
+// native boss at the slot's level. lairOf: your first one found.
 export const lairOf = (s) => (s.locations || []).find((l) => l.lair && !l.member) || null;
+export const lairsOf = (s) => (s.locations || []).filter((l) => l.lair && !l.member);
 export const lairBoss = (s, who) => sigOf(s, who)?.boss || null;
 // A lair on a network: a rogue server of its own, its native boss in /core, its family in the other two folders.
 export function makeLair(s, who, level, id, name) {
   const boss = lairBoss(s, who);
   if (!boss) return null;
-  const B = BOSSES[boss], seed = (seedOf(s, who) % 99991) + 7;
-  const loc = createLocation(B.family, seed, SERVER.layerFor(level));
+  const B = BOSSES[boss], seed = ((seedOf(s, who) % 99991) + 7 + (id === 'lair' ? 0 : strSeed(id) % 997)) >>> 0;
+  const loc = createLocation(B.family, seed, SERVER.floorFor(level));
   return Object.assign(loc, { id, name, family: B.family, level, lair: boss, rogue: { kind: 'lair' }, template: 'rogue', quirk: null, trait: null, spawns: {}, serial: 0, rooms: NETWORK.lairRooms });
 }
-// Yours turns up once you're NETWORK.lairFrom and have found NETWORK.lairFinds servers.
-// force: developer lair (now, whatever your level).
+// developer lair (force): the lair on the deepest floor you've reached (floor 2 at least), located at once. Without
+// force nothing: a lair is found by tracing it on its floor.
 export function openLair(s, force = false) {
-  if (!netSeedOf(s) || lairOf(s)) return null;
-  if (!force && (hackerLevel(s) < NETWORK.lairFrom || (s.locations || []).filter((l) => !l.zone && !l.farm && !l.lair).length < NETWORK.lairFinds)) return null;
-  const B = BOSSES[lairBoss(s, 'you')];
-  const loc = makeLair(s, 'you', hackerLevel(s), 'lair', B.lair);
-  s.locations.push(loc);
-  emit(s, 'located', `${B.lair} is on your map: the lair of ${B.name}, your network's native boss. What it guards is native to ${mine(s).name}.`, { location: loc.id });
+  if (!netSeedOf(s) || !force) return null;
+  const n = Math.max(2, floorsOf(s).reached), id = graphOf(s, n).lair;
+  if (!id || locAt(s, id)) return null;
+  const loc = addLocation(s, BOSSES[lairBoss(s, 'you')].family, n, null, id);
+  if (loc?.lair) emit(s, 'info', `The lair of ${BOSSES[loc.lair].name}, your network's native boss. What it guards is native to ${mine(s).name}.`, { location: loc.id });
   return loc;
 }
 // A boss with a floor (BOSSES floor: HASHLORD 16, MIRRORSHADE 12) holds /core only once you've reached it: until then the
@@ -290,13 +293,13 @@ export const lairOpen = (s, loc) => loc.member || !BOSSES[loc.lair]?.floor || ha
 // What a lair's folders hold: its family (its network's native strain more often) and, in /core, its boss.
 export function lairSpawns(s, loc, now, variant) {
   const who = netOf(s, loc), B = BOSSES[loc.lair];
-  if (!loc.member) loc.level = Math.max(loc.level || 1, hackerLevel(s));
+  if (!loc.member && !loc.slot) loc.level = Math.max(loc.level || 1, hackerLevel(s)); // a lair on a floor keeps its slot's level
   for (const room of NETWORK.lairRooms.map((x) => '/' + x)) {
     const sp = loc.spawns[room];
     if (sp?.alive || (sp && sp.respawnAt > now)) continue;
     const n = (loc.serial = (loc.serial || 0) + 1);
     const seed = ((loc.seed || 1) * 131 + n * 7919) >>> 0;
-    if (room === '/core') { if (!lairOpen(s, loc)) { loc.serial--; continue; } loc.spawns[room] = { alive: true, bornAt: now, family: B.family, boss: loc.lair, level: loc.level, seed, strain: B.strain || null, name: B.name }; continue; }
+    if (room === '/core') { if (!lairOpen(s, loc)) { loc.serial--; continue; } loc.spawns[room] = { alive: true, bornAt: now, family: B.family, boss: loc.lair, level: Math.max(loc.level || 1, B.floor || 1), seed, strain: B.strain || null, name: B.name }; continue; }
     const { grade, strain } = variant(B.family, loc.level, loc.depth || 1, seed, nativeStrain(s, who));
     loc.spawns[room] = { alive: true, bornAt: now, family: B.family, level: loc.level, seed, strain, grade, name: `${strain ? STRAINS[strain].name.toLowerCase() : FAMILIES[B.family].stem.toLowerCase()}-${String(1000 + ((n * 7919) % 9000)).slice(-4)}` };
   }

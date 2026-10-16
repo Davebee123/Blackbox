@@ -11,7 +11,7 @@
 //                had in them comes back in kind (progressionRestore).
 import { emit, hackerOf, classOf, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
 import { versionLevel } from './daemons.mjs';
-import { CATCHUP, levelTarget, LOADOUT, SERVER, BANDS, ARCHETYPES } from './data.mjs';
+import { CATCHUP, levelTarget, LOADOUT, SERVER, FLOORS, ARCHETYPES } from './data.mjs';
 import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES } from './gear.mjs';
 import { MEMORY } from './memory.mjs';
 import { learnFilter } from './filters.mjs';
@@ -26,8 +26,8 @@ export function levelGains(arch, L, top = 0) {
   if (slot && L > 1) out.push(L === 15 ? 'a protocol slot (Implant), and Implants start to drop' : 'a protocol slot');
   const bases = Object.values(BASES).filter((b) => b.level === L && L > 1 && !b.uniqueOnly);
   if (bases.length) out.push(`new protocol bases: ${bases.map((b) => b.name).join(', ')}`);
-  const layer = BANDS.findIndex(([lo]) => lo === L);
-  if (layer > 0) out.push(`layer ${layer + 1} (your finds trace there)`);
+  const floor = FLOORS.findIndex((f) => f.band[0] === L);
+  if (floor > 0) out.push(`${FLOORS[floor].name} (floor ${floor + 1})`);
   if (L === LOADOUT.specFrom) out.push(`${kitTalent(arch).name} in your kit`);
   if (L > top) {
     if (SERVER.daemonSlotsAt.includes(L)) out.push('a daemon slot');
