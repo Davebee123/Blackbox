@@ -14,7 +14,7 @@ export const COMMS = {
 const NEWS = new Set(['paid', 'standing', 'store', 'net']);
 
 // Filters on the list, and which kinds sit under each.
-export const GROUPS = { Contracts: ['offer', 'ready'], Mail: ['mail'], Network: ['net', 'alert'], Money: ['paid', 'standing', 'store'] };
+export const GROUPS = { Contracts: ['offer', 'ready', 'thread'], Mail: ['mail'], Network: ['net', 'alert'], Money: ['paid', 'standing', 'store'] };
 export const groupOf = (kind) => Object.keys(GROUPS).find((g) => GROUPS[g].includes(kind)) || 'Network';
 
 // event type → { kind, label, from, beep }. beep: whether the pager beeps (quiet ones only light up).
@@ -56,6 +56,11 @@ const MAP = {
   infest: (e) => ({ kind: 'net', label: 'Infested', from: 'Outpost', text: e.message.replace(/^INFESTED: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   harvest: (e) => ({ kind: 'paid', label: 'Harvest', from: 'Outpost', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'hot-strain': (e) => ({ kind: 'net', label: 'Hot', from: 'Network', text: e.message, go: 'map', beep: true }),
+  // Threads (threads.mjs): found, each step on, a temporary server raised, the end. A step's line replaces the last.
+  'thread-start': (e) => ({ kind: 'thread', label: 'Thread', from: 'Thread', text: e.message.replace(/^THREAD: /, ''), go: e.thread ? `mail:${e.thread}` : 'mail', beep: true }),
+  thread: (e) => ({ ref: e.thread, kind: 'thread', label: 'Thread', from: 'Thread', text: e.message, go: e.thread ? `mail:${e.thread}` : 'mail', beep: false }),
+  'thread-temp': (e) => ({ kind: 'thread', label: 'Appears', from: 'Network', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true }),
+  'thread-done': (e) => ({ ref: e.thread, kind: 'thread', label: 'Done', from: 'Thread', text: e.message.replace(/^THREAD DONE: /, ''), go: e.thread ? `mail:${e.thread}` : 'mail', beep: true }),
   breadcrumb: (e) => ({ kind: 'mail', label: 'wick', from: 'wick', text: e.message.replace(/^wick: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'world-event': (e) => ({ event: e.event, kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', choir: 'Boss', outbreak: 'Outbreak', leak: 'Leak' }[e.card] || 'Event', from: e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : e.card === 'choir' ? 'Hollow Choir' : 'Network', text: e.message, go: e.location ? `map:${e.location}` : e.card === 'outbreak' ? null : 'map', beep: true }),
   'consortium-invite': (e) => ({ kind: 'net', label: 'Invite', from: 'Consortium', text: e.message.replace(/ consortium accept, or consortium decline\.$/, ''), go: 'people:consortium', beep: true }),

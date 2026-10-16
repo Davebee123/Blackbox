@@ -544,7 +544,7 @@ export function walkable(s, id) {
 }
 
 // ---------- progress ----------
-export const progressOf = (s) => { const all = roomList(s); return { done: all.filter((x) => s.rooms.cleared[x.id]).length, total: all.length }; };
+export const progressOf = (s) => { const all = roomList(s).filter((x) => !x.nook); return { done: all.filter((x) => s.rooms.cleared[x.id]).length, total: all.length }; };
 // (quiet: the entry, cleared as you connect, says nothing.)
 function clear(s, room, quiet = false) {
   const R = s.rooms;
@@ -864,6 +864,7 @@ function step(s, room, opts) {
   if (hunterMove(s)) return meet(s, room, opts);
   if (exfilOf(s)?.at === room.id) return catchExfil(s, room, opts);
   exfilMove(s);
+  if (R.world) ask('moved', s); // a thread's file walks (threads.mjs)
   arrive(s, room, opts);
 }
 // Stay a move: the hunter takes its step, and you spend nothing.
@@ -874,7 +875,7 @@ export function wait(s, opts = {}) {
   R.visit.moves++; R.stats.moves++;
   say(s, 'wait', 'rooms-cmd');
   if (hunterMove(s)) meet(s, hereOf(s), opts);
-  else { exfilMove(s); const line = hunterLine(s); if (line) say(s, line); }
+  else { exfilMove(s); if (R.world) ask('moved', s); const line = hunterLine(s); if (line) say(s, line); }
   return out(s, first);
 }
 // Step back out of a fight room you walked into (the move in is spent).
@@ -987,6 +988,8 @@ export function act(s, verb, arg = null, opts = {}) {
   }
   if ((verb === 'uninstall' || verb === 'remove') && isSocket(s, here)) { uninstallProgram(s, R, here); return out(s, first); }
   if (verb === 'play') { if (isPuzzle(here.kind)) playPuzzle(s, here, arg, opts); else deny(s, 'play: nothing here to play.'); return out(s, first); }
+  // A thread's room (threads.mjs): talk to who's in it, read its log, sweep a process log.
+  if (R.world && ask('verb', s, here, verb, arg) !== undefined) return out(s, first);
   deny(s, `${verb}: nothing here takes that.`);
   return out(s, first);
 }
@@ -1434,6 +1437,8 @@ export function roomsCommand(s, text) {
   if (word === 'back') return back(s);
   if (['engage', 'fight', 'cat', 'pull', 'open', 'force', 'rest', 'slip'].includes(word)) return act(s, word === 'pull' && arg === 'all' ? 'pull' : word);
   if (word === 'play' && R.at) return act(s, 'play', arg || null); // a puzzle room's board: play draws it, play wall c4 / up / tap b2 / ping d4 moves
+  if (['talk', 'read', 'take'].includes(word) && R.at && R.world) return act(s, word, arg || null); // a thread's room (threads.mjs): talk, talk 1, read
+  if (word === 'sweep' && R.at && R.world && hereOf(s)?.log === 'sweep') return act(s, 'sweep', arg || null); // a process log's answer (a temporary server's)
   if (['build', 'install', 'plant', 'uninstall', 'remove'].includes(word) && R.at) {
     const i = arg.indexOf(' pay '), what = i < 0 ? arg : arg.slice(0, i), pay = i < 0 ? null : arg.slice(i + 5);
     return act(s, word === 'remove' ? 'uninstall' : word, what || null, { pay }); // install: a contract's item here, else a program (act)

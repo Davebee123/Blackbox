@@ -68,6 +68,7 @@ done; each one's reward waits.
 | Daemons and code | Open ports and jack in at the wall | 5 min an invasion | Lots of code, daemons (the only source) | Every 20–30 min (8–12 with ports open) |
 | Credits and standing | Contracts, room contracts, supply orders *(planned)* | 10–30 min | Credits, standing, XP, protocols | Offers every 1–3 min; a room contract 8–20 min after you take one; a supply order an hour after you deliver |
 | A break between fights | A puzzle room | 1–3 min | Code, components, a cache, the Tracker off your trail | 2 h |
+| A story | A thread: an amber ! in a room you've found (docs/threads.md, **Built**) | 20–45 min a chain | Deed XP, pick one of three items, standing, a lore line | Found as you connect, at most one a server; never timed |
 | Knowledge | Fight what you haven't mastered | as it comes | Research to 60: a part's numbers, rule, loot, +3% damage and +25% component drops | Never runs out |
 | To build | Home: programs, patches *(planned)*, the wall, the market | 5 min | Your servers' rules | When you have the materials |
 
