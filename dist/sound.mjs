@@ -241,6 +241,41 @@ export const VOICES = {
     osc(ctx, lp, t, { type: 'sawtooth', f0: 330, f1: 30, glide: 0.8, a: 0.005, peak: 0.45, d: 0.85 });
     noise(ctx, lp, t, { type: 'lowpass', f0: 4000, a: 0.005, peak: 0.2, d: 0.7 });
   },
+  // The puzzle rooms. A firewall going up: a low clunk and a steel ring.
+  firewall(ctx, out, t) {
+    osc(ctx, out, t, { type: 'square', f0: 140, f1: 90, glide: 0.06, a: 0.002, peak: 0.16, d: 0.09 });
+    osc(ctx, out, t + 0.02, { type: 'triangle', f0: 1180, f1: 1180, glide: 0, a: 0.002, peak: 0.08, d: 0.22, detune: 6 });
+  },
+  // The worm copying into a node: a wet, rising slither.
+  spread(ctx, out, t) {
+    noise(ctx, out, t, { type: 'bandpass', f0: 600, f1: 2200, q: 3, glide: 0.16, a: 0.01, peak: 0.22, d: 0.18 });
+    osc(ctx, out, t, { type: 'sawtooth', f0: 110, f1: 220, glide: 0.16, a: 0.01, peak: 0.07, d: 0.18 });
+  },
+  // A node discharging: a short electric snap.
+  zap(ctx, out, t) {
+    zap(ctx, out, t, { dur: 0.08, peak: 0.22, f0: 4200, f1: 900 });
+    noise(ctx, out, t, { type: 'highpass', f0: 5000, a: 0.001, peak: 0.12, d: 0.05 });
+  },
+  // A ping going out: a sonar blip with a faint return.
+  ping(ctx, out, t) {
+    osc(ctx, out, t, { type: 'sine', f0: 1480, f1: 1460, glide: 0.2, a: 0.003, peak: 0.16, d: 0.32 });
+    osc(ctx, out, t + 0.22, { type: 'sine', f0: 1480, f1: 1470, glide: 0.1, a: 0.003, peak: 0.04, d: 0.2 });
+  },
+  // A dig: a thump into the floor.
+  dig(ctx, out, t) {
+    osc(ctx, out, t, { type: 'sine', f0: 180, f1: 60, glide: 0.1, a: 0.002, peak: 0.34, d: 0.16 });
+    noise(ctx, out, t, { type: 'lowpass', f0: 1400, a: 0.002, peak: 0.18, d: 0.1 });
+  },
+  // The Tracker's step: a dull, heavy tick.
+  step(ctx, out, t) {
+    osc(ctx, out, t, { type: 'triangle', f0: 95, f1: 70, glide: 0.05, a: 0.002, peak: 0.22, d: 0.08 });
+    noise(ctx, out, t, { type: 'bandpass', f0: 900, q: 1.4, a: 0.001, peak: 0.08, d: 0.04 });
+  },
+  // A board lost: two falling tones, nothing broken.
+  fizzle(ctx, out, t) {
+    osc(ctx, out, t, { type: 'triangle', f0: 523, f1: 494, glide: 0.1, a: 0.004, peak: 0.12, d: 0.18 });
+    osc(ctx, out, t + 0.16, { type: 'triangle', f0: 392, f1: 330, glide: 0.2, a: 0.004, peak: 0.12, d: 0.32 });
+  },
 };
 
 // ---------- the samples ----------
@@ -464,6 +499,15 @@ export const RECIPES = {
     S('subdrop', 0, { gain: 0.8 });
     S('glitch', 0.05, { gain: 0.3 });
   } },
+  // The puzzle rooms: a firewall slams in (a plate, a relay), the worm slithers on, a node snaps, a ping goes out over
+  // glass, a dig thumps, the Tracker steps, a lost board fizzles out.
+  firewall: { room: 0.12, play(ctx, out, t, o, S) { S('plate-l', 0, { gain: 0.35, rate: 1.3 }); S('relay', 0.01, { gain: 0.4, rate: 0.75 }); VOICES.firewall(ctx, out, t); } },
+  spread: { room: 0.1, play(ctx, out, t, o, S) { S('scratch', 0, { gain: 0.3, rate: 0.7, lp: 3000 }); VOICES.spread(ctx, out, t); } },
+  zap: { room: 0.08, play(ctx, out, t, o, S) { S('glitch', 0, { gain: 0.22, rate: 1.4 }); VOICES.zap(ctx, lifted(ctx, out, 1.3), t); } },
+  ping: { room: 0.28, play(ctx, out, t, o, S) { S('glassui', 0, { gain: 0.3, rate: 1.5 }); VOICES.ping(ctx, out, t); } },
+  dig: { room: 0.1, play(ctx, out, t, o, S) { S('soft-h', 0, { gain: 0.5, rate: 0.8 }); VOICES.dig(ctx, out, t); } },
+  step: { room: 0.06, play(ctx, out, t, o, S) { S('metal-l', 0, { gain: 0.25, rate: 0.6, lp: 1600 }); VOICES.step(ctx, out, t); } },
+  fizzle: { room: 0.2, play(ctx, out, t, o, S) { S('error', 0, { gain: 0.3, rate: 0.8 }); VOICES.fizzle(ctx, out, t); } },
 };
 
 // Keys on the prompt: a mechanical board, and a heavier Enter.

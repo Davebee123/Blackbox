@@ -84,6 +84,15 @@ const SIGNS = {
   win: { flash: 'fx-win', voice: 'win', buzz: [30, 60, 90] },
   // Crash or disconnect.
   lose: { flash: 'fx-hurt', edge: true, voice: 'lose', buzz: [250] },
+  // A puzzle room's board (puzzle-view.mjs): a firewall going up, the worm copying into a node, a node discharging, a
+  // ping going out, a dig, the Tracker's step, and a board lost (lighter than a disconnect).
+  pzwall: { voice: 'firewall', buzz: 10 },
+  pzspread: { voice: 'spread', buzz: [6, 20, 6] },
+  pzzap: { voice: 'zap', buzz: 8 },
+  pzping: { voice: 'ping', buzz: 6 },
+  pzdig: { voice: 'dig', buzz: 14 },
+  pzstep: { voice: 'step', buzz: 5 },
+  pzfail: { voice: 'fizzle', buzz: [30, 40, 60] },
 };
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);

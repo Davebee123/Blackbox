@@ -126,6 +126,7 @@ Since R1 ([`docs/servers.md`](docs/servers.md) 9.5) every `connect` plays the se
 | Contracts ready | A yellow **✓** by Mail on the top bar whenever a contract is ready to deliver (its hover says how many). |
 | Home while out | Intrusions wait. A waiting intrusion is parked when you connect and returns when you're back. |
 | Sockets (R2) | A traced server's socket rooms: guarded by a process once, then open for good; build a program in one for that server's rules (see Sockets and programs). Components drop 60% a part in a room fight. |
+| Puzzle rooms | One or two rooms on a traced server that aren't fights: Quarantine, Hunter chase, Cascade, Ping sweep (see Puzzle rooms below). |
 
 ### Run commands (on rooms)
 
@@ -142,12 +143,30 @@ Since R1 ([`docs/servers.md`](docs/servers.md) 9.5) every `connect` plays the se
 | `build [program]`, `uninstall` | In a socket you've cleared (or a held server's Core): the Build list, build one (`install` too; `… pay a:1,b:2` picks the components), take it out (`remove`). See Sockets and programs |
 | `install` (`plant`) | A contract's item, in its room (an Install job, see Mail and contracts; the room's card has the button too). `install` with no program is the item when you carry one for this server, `install <program>` still builds; `plant` is only ever the item |
 | `slip` | Slip past the hunter (an Infiltrator's) |
+| `play` | In a puzzle room: draws its board as text. `play wall c4` (Quarantine), `play up`/`down`/`left`/`right`/`wait`/`undo`/`restart` (the chase), `play tap b2` (Cascade), `play ping d4` / `play dig d4` (Ping sweep): a cell by its column letter and row number, as the board labels it |
 | `scan [room]` | A scan card of what holds this room or one next to you that you've been in (an unknown room can't be read from outside; 1 Signal; an Infiltrator scans free and reads deeper) |
 | `pack` | What you're carrying, unbanked |
 | `jack out` | Home, banking the pack |
 | `help` | These commands |
 
 `developer bossrule a|b|c` (with `?dev`) switches the boss rule for every boss fight. The old verbs (`unlock`, `sweep`, `tap`, `spoof`, `pwd`, `history`) say they're not on rooms.
+
+### Puzzle rooms
+
+Rooms that aren't fights (`puzzles.mjs`, their rooms in `floorplan.mjs` and `netrooms.mjs`, the board in `puzzle-view.mjs`; docs/servers.md 9.11). Every traced server has one, or two (a quarter of small servers, half of medium ones, three in four large ones), from its seed: never two of a kind, each a new room at the end of a branch (never the entry, the Core, a vault, a guard post, the den or a socket, never beside the Core). **Quarantine** turns up three times as often on a Worm-family server, the **Hunter chase** only beside a sleeping Tracker's den (a room off a room next to it), **Cascade** and **Ping sweep** anywhere. SPRAWL-00, rogue servers, lairs and KESSLER-FARM-00 have none.
+
+- **Fog.** An unknown puzzle room is a ? like any other. Once you've been in it its chip has its own icon (a brick wall, a door, a charged node, a ping's rings) and its state: amber when its board is fresh, **IN PLAY** once you've started it, **SOLVED** or **FAILED** with its refill ring when it's done.
+- **Play.** Walking in opens its board over the room map (on a phone, in its place); × or Esc puts it away, **Play** on the room's card brings it back, and walking out and back opens it again. A board is the same until it refills (the server's seed, the room's and its refill count), kept as you left it if you walk out mid-play. One line of rule under its title; the board shows the rest. Every board is also `play` in the terminal.
+- **One rule for all four:** played to its end, won or lost, the room is **done until it refills**, a cache's two hours (the Cache Mill doesn't touch it), then a new board. Its first end counts as the room cleared (Rooms n/N). It pays once, at its end. A win pays half a kill's XP (intel; a loss none).
+
+| Room | The board | Win, and what it pays | Deeper (floor 4 and down) |
+|---|---|---|---|
+| Quarantine, *Wall it in* | A 7×9 node grid with a Worm outbreak, ★ data nodes and dead slots. Click a node to firewall it; the worm then copies into **one** open node, the open node on its frontier with the most open neighbours (ties: the first in reading order), always marked in advance. It ends when the worm can't spread. A firewall uses up its node. | Every node it never reached pays this server's code, a ★ data node three: the whole board is worth 6 + level/2 code, each saved node its share (into the pack). Half or more saved is a win (**Contained**), less **Overrun** (it still pays what you saved). | Two outbreaks, or a worm that copies twice a turn (both marked) |
+| Hunter chase, *Reach the door* | A 5×5 den, walls on edges, a door in its frame. You move a room or wait; the Tracker then takes two steps, each across toward you if that's open, else up or down toward you if that's open, else it stands (it never goes around a wall). It catches you if it lands on you on either step. Rooms you could step into show red where it would catch you; hovering (or focusing) one draws where it would end up. Undo and Restart; arrow keys move, space waits. Every den is searched first: it can be won, its fewest moves are 5 to 12, and walking straight at the door loses. | Through the door: the real Tracker loses your trail for the rest of the visit (it walks back to its den and stays asleep), and half a cache (credits and code, into the pack). **Caught:** the hunter fight starts right there (no slipping past it). | — |
+| Cascade, *Bring it all down* | A 5×5 rack, nodes charged 1 to 3, some slots empty. A tap discharges a node: it's gone and every node beside it gains 1; one pushed past 3 discharges too, wave by wave. Clear the rack within the fewest taps (found by search, 3 to 5) + 1. | Components of this server's families: 3, and 2 more for the tap left over (5 for the fewest). Out of taps with nodes up: lost, nothing. | — |
+| Ping sweep, *Find the cache* | A 7×7 dark room, a cache in one cell. **Ping** reads its steps away (across plus down) and lights the ring of cells that far, faintly; **Dig** digs. Pings and digs share a budget of 5; a pinged cell can still be dug. | A cache's credits and code (Rich and Hoard count), a quarter more for each of the budget left. Out of budget: lost, nothing, and it shows where the cache was. | Two caches (a ping reads the nearer one still buried; a budget of 8), or four noisy cells (static on them) that read one off |
+
+- **The look.** The board is drawn like the room map (chips and traces on the dot grid): the worm and the Tracker red, firewalls steel, data nodes and caches gold, you teal. It boots in with a line (`> isolate /dev/seg0 · worm loose · 9×7`) and the board drawing in; the worm runs down a trace into its next node, a firewall goes up with a steel ring, the cascade's waves go off with sparks, a ping's ring opens out, a dig thumps, the Tracker takes its two steps. Each has its sound (System: Sound). Motion off or reduced motion: no animation, the board just changes. The end is a card like a reward's, with what you got. A first-time tip for each.
 
 ### Rogue servers
 

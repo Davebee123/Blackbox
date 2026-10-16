@@ -31,7 +31,7 @@ import { AUTHOR_FAMILIES, familyName } from './families.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { ROGUE, FARM, rogueRooms, rogueSpawns, rogueKill, relocks, clock, inRuns } from './rogue.mjs';
 import { lairOpen, NETWORK } from './network.mjs';
-import { sizeOf, learnCodebase, familyComponents, AUTHOR_CODEBASES } from './sockets.mjs';
+import { sizeOf, learnCodebase, familyComponents, gainComponents, AUTHOR_CODEBASES } from './sockets.mjs';
 import { consortiumSockets } from './consortium.mjs';
 import { owned, rootOf, ROOT, ROOT_PERKS } from './root.mjs';
 import { contractTakeover, contractRooms, contractMapped, contractConnect, contractInstall, contractStood, contractExfil, payloadFor, roomMarks, jobsOn } from './mail.mjs';
@@ -73,10 +73,18 @@ function build(s, loc) {
   if (!isWild(loc)) {
     const kind = KIND_OF[loc.template] || 'Relay', author = authorOf(loc), level = levelOf(loc), floor = loc.depth || 1, size = sizeOf(loc).id;
     const graph = FP.generate(loc.seed || 1, { size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', sockets: socketsFor(loc, size) });
+    placePuzzles(loc, graph, size);
     return FP.newRooms(s, { ...base, seed: loc.seed || 1, size, kind, level, floor, author: AUTHOR_FAMILIES[author] ? author : 'tollgate', graph, type: 'server', code: codeOf(loc.family) || 'cipher' });
   }
   const graph = loc.zone ? sprawlGraph() : loc.farm ? farmGraph() : wildGraph(loc);
   return FP.newRooms(s, { ...base, seed: loc.seed || 1, size: 'small', kind: 'Relay', level: loc.level || 1, floor: loc.depth || 1, author: 'tollgate', graph, type: 'wild' });
+}
+// A traced server's puzzle rooms (9.11, floorplan.mjs addPuzzles): one or two from its seed, Quarantine leaning to a
+// Worm-family server, the chase only beside a Tracker's den. SPRAWL-00, rogue servers, lairs and the farm have none.
+const wormy = (loc) => lineageOf(loc.family) === 'worm';
+export function placePuzzles(loc, g, size = sizeOf(loc).id) {
+  if (!g || g.puzzles != null) return [];
+  return FP.addPuzzles(g, FP.puzzleKinds(g, loc.seed || 1, { size, worm: wormy(loc) }), loc.seed || 1, ['cascade', 'sweep', 'quarantine']);
 }
 // A traced server's socket rooms: by its size, one more on a Backbone server (Root 4's and Grid's are rooms added later).
 const socketsFor = (loc, size = sizeOf(loc).id) => (FP.ROOMS.sockets[size] || 1) + (loc.trait === 'backbone' ? 1 : 0);
@@ -425,6 +433,14 @@ WORLD_hook('stood', (s) => { const loc = locOf(s); if (loc) contractStood(s, loc
 
 // ---------- what you take: into the pack ----------
 const packFile = (s, f) => { s.run.pack.push(f); return f; };
+// A puzzle room's pay (floorplan.mjs finishPuzzle): credits and code into the pack, like a cache's; components at once,
+// of the server's own families.
+WORLD_hook('puzzlePay', (s, room, { credits = 0, code = 0, parts = 0, material = 'cipher' } = {}) => {
+  const loc = locOf(s), n = s.serial;
+  if (credits) packFile(s, { path: `${room.path}/#puzzle-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
+  if (code) packFile(s, { path: `${room.path}/#puzzle-code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
+  if (parts) gainComponents(s, parts, familyComponents(loc?.family), room.path);
+});
 WORLD_hook('cache', (s, room, { credits, code, material }) => {
   const n = s.serial;
   packFile(s, { path: `${room.path}/#cache-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
@@ -611,6 +627,17 @@ export function socketRoomsRestore(s) {
       if (s.run?.rooms && s.run.loc === loc.id && R.at) { const here = R.graph.rooms[R.at]; if (here && was[here.id] !== here.path) { s.run.cwd = here.path; for (const c of Object.values(s.run.crew || {})) c.cwd = here.path; } }
     }
     if (rootOf(loc) >= 4) addRootSocket(loc);
+  }
+  puzzleRoomsRestore(s);
+}
+// Puzzle rooms (9.11) on a traced server's graph from before them: added from its seed as new leaf rooms (nothing you'd
+// cleared, held, built or been given moves: every room keeps its id, name and address), unknown until you walk in (a
+// ? at once on a server already half cleared). Every load, idempotent: g.puzzles marks a graph done.
+export function puzzleRoomsRestore(s) {
+  for (const loc of s.locations || []) {
+    const R = loc.floorplan;
+    if (!R?.graph || R.type !== 'server' || R.graph.puzzles != null) continue;
+    for (const x of placePuzzles(loc, R.graph, R.size || sizeOf(loc).id)) if (R.drawn || R.mapped) R.seen[x.id] ||= 'shape';
   }
 }
 hooks.roomsRestore = roomsRestore;

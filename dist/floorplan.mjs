@@ -45,7 +45,7 @@
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, rollDrop } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
-import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
+import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
@@ -53,6 +53,7 @@ import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
+import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
 
 // ---------- tuning ----------
 export const ROOMS = {
@@ -80,6 +81,13 @@ export const ROOMS = {
   vault: { gear: 1 / 3, custom: 0.4 },
   junctions: 0.2, // about a fifth of the rooms
   sockets: { small: 1, medium: 2, large: 3 }, // socket rooms by size (6.1), a process's room first: clear it and it's yours to build in
+  // Puzzle rooms (9.11): one, and a second this often by size; what each pays (L: the server's level). A board played
+  // to its end (won or lost) stays done until it refills, a cache's two hours. XP: half a kill for a win (intel).
+  puzzles: { second: { small: 0.25, medium: 0.5, large: 0.75 }, worm: 3, chase: 2, xp: 0.5,
+    code: (L) => 6 + Math.floor(L / 2), // Quarantine: the whole board's worth of the server's code (a node's share of it, ★ three)
+    parts: 3, spare: 2, // Cascade: components, and this many more for each tap left over
+    cache: 1, budget: 0.25, // Ping sweep: a cache's credits and code, a quarter more for each of the budget left
+    trail: 0.5 }, // the chase: half a cache, and the Tracker loses your trail for the visit
 };
 // The server kinds (2.2), as room themes: one rule each, the hunter they keep, and the directory names their rooms take.
 export const KINDS = {
@@ -110,10 +118,11 @@ const world = (s) => !!s.rooms?.world;
 // What each room is called on the map, its card and in the log.
 // boss: a crew boss's room (KESSLER-FARM-00's three); stash: Root 2's /root on a server you hold (netrooms.mjs);
 // empty, purse: a rogue server's quiet rooms (Empty, and a Stash of a few credits).
-export const ROOM_LABEL = { socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash' };
-export const MARKS = { socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤' };
-// Rooms that hold something you take, and refill.
-export const STOCKED = ['cache', 'stash', 'purse'];
+export const ROOM_LABEL = { socket: 'Socket', entry: 'Entry', process: 'Process', elite: 'Elite', guard: 'Elite', core: 'Core', boss: 'Boss', den: "Hunter's den", cache: 'Cache', vault: 'Vault', rest: 'Rest room', junction: 'Junction', stash: 'Stash', empty: 'Empty', purse: 'Stash', quarantine: 'Quarantine', chase: 'Hunter chase', cascade: 'Cascade', sweep: 'Ping sweep' };
+export const MARKS = { socket: '⊕', entry: '⌂', process: '▣', elite: '◆▣', guard: '◆▣', core: '♛', boss: '♛', den: '☠', cache: '▤', vault: '▥', rest: '☰', junction: '·', stash: '▤', empty: '·', purse: '¤', quarantine: '⊞', chase: '⇥', cascade: '≋', sweep: '◎' };
+// Rooms that hold something you take, and refill (a puzzle room's board, played to its end, refills like a cache).
+export const STOCKED = ['cache', 'stash', 'purse', ...PUZZLE_KINDS];
+export { PUZZLES, PUZZLE_KINDS, isPuzzle };
 export const FIGHTS = ['process', 'elite', 'guard', 'core', 'boss', 'socket']; // a socket: guarded by a process until its first clear, then never again
 export const HUNTERS = {
   patrol: { name: 'Patroller', body: 'bouncer', text: 'Walks a fixed loop, a room for every 2 of your moves.' },
@@ -196,6 +205,53 @@ export function addSocketRoom(g, tag) {
   g.links.push([by, id]);
   nameRooms(g);
   return g.rooms[id];
+}
+// Puzzle rooms (9.11), a server's from its seed: kinds, each a new leaf room on a free cell off a branch room (never off
+// the entry, a vault, the Core, the den, a guard post or a socket, never beside the Core, never left of the entry or above
+// the top row, so no address moves). The chase only beside the den (off a room next to it). g.puzzles marks it done
+// (also an older save's graph: netrooms.mjs puzzleRoomsRestore). The same graph, seed and kinds always add the same rooms.
+export function addPuzzles(g, kinds, seed, spare = []) {
+  if (g.puzzles != null) return [];
+  const r = seeded(((seed || 1) * 7411 + 313) >>> 0), R = g.rooms, spine = new Set(g.spine || []), added = [];
+  const all = () => Object.values(R), taken = new Set(all().map((x) => `${x.x},${x.y}`));
+  const x0 = Math.min(0, ...all().map((x) => x.x)), y0 = Math.min(...all().map((x) => x.y), ...(g.sockets != null ? [-1] : []));
+  const core = g.core && R[g.core], bad = new Set([g.entry, g.core, g.den, ...(g.vaults || [])]);
+  const nearCore = (x, y) => !!core && Math.abs(core.x - x) + Math.abs(core.y - y) <= 1;
+  const free = (p) => [[0, -1], [0, 1], [1, 0], [-1, 0]].map(([dx, dy]) => [p.x + dx, p.y + dy]).filter(([x, y]) => !taken.has(`${x},${y}`) && x >= x0 && y >= y0 && !(y === 0 && x < (g.spine || []).length) && !nearCore(x, y));
+  const okAnchor = (x) => !bad.has(x.id) && !['guard', 'socket', 'vault', 'core', 'entry', 'den', ...PUZZLE_KINDS].includes(x.kind) && free(x).length;
+  const queue = [...kinds], more = spare.filter((k) => !kinds.includes(k));
+  for (let q = 0; q < queue.length; q++) {
+    const kind = queue[q];
+    if (all().some((x) => x.kind === kind)) continue; // never two of a kind on a server
+    let pool = kind === 'chase' ? (g.den ? neighbours(g, g.den).map((id) => R[id]).filter((x) => x && okAnchor(x)) : []) : all().filter((x) => okAnchor(x) && !spine.has(x.id));
+    if (!pool.length && kind !== 'chase') pool = all().filter(okAnchor);
+    if (!pool.length) { if (more.length) queue.push(more.shift()); continue; } // no room for it: another kind in its place
+    pool.sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+    const a = pool[Math.floor(r() * pool.length)], cells = free(a), [cx, cy] = cells[Math.floor(r() * cells.length)];
+    const id = `r${Math.max(...Object.keys(R).map((k) => Number(k.slice(1)))) + 1}`;
+    R[id] = { id, kind, x: cx, y: cy, depth: (a.depth || 0) + 1, branch: a.branch || a.id, seed: Math.floor(r() * 2 ** 31) };
+    g.links.push([a.id, id]);
+    taken.add(`${cx},${cy}`);
+    added.push(R[id]);
+  }
+  g.puzzles = added.length;
+  nameRooms(g);
+  return added;
+}
+// Which puzzles a server gets, from its seed: one, two this often by its size (ROOMS.puzzles.second), never two of a
+// kind. Quarantine leans to Worm-family servers, the chase comes only where a Tracker sleeps; Cascade and Ping sweep
+// anywhere.
+export function puzzleKinds(g, seed, { size = 'medium', worm = false } = {}) {
+  const P = ROOMS.puzzles, r = seeded(((seed || 1) * 9173 + 41) >>> 0);
+  const n = 1 + (r() < (P.second[size] ?? 0.5) ? 1 : 0), w = { quarantine: worm ? P.worm : 1, chase: g.hunter === 'track' && g.den ? P.chase : 0, cascade: 1, sweep: 1 }, out = [];
+  while (out.length < n) {
+    const left = PUZZLE_KINDS.filter((k) => w[k] > 0 && !out.includes(k)), sum = left.reduce((a, k) => a + w[k], 0);
+    if (!left.length) break;
+    let x = r() * sum, k = left[0];
+    for (const c of left) if ((x -= w[c]) < 0) { k = c; break; }
+    out.push(k);
+  }
+  return out;
 }
 function tryGenerate(seed, attempt, { size, kind, level, floor, author, hunter }) {
   const r = seeded((seed * 7919 + attempt * 104729 + 13) >>> 0);
@@ -590,7 +646,7 @@ function hunterMove(s) {
   const R = s.rooms, g = R.graph, h = hunterOf(s);
   if (!h || h.down) return false;
   if (h.held > 0) { h.held--; return false; }
-  if (h.kind === 'track' && !h.awake && h.at === h.den && neighbours(g, h.den).includes(R.at)) {
+  if (h.kind === 'track' && !h.awake && !h.lost && h.at === h.den && neighbours(g, h.den).includes(R.at)) {
     h.awake = true; h.count = 0;
     say(s, 'The Tracker wakes.', 'rooms-bad');
     return false;
@@ -614,7 +670,7 @@ export function hunterLine(s) {
   const R = s.rooms, g = R.graph, h = hunterOf(s);
   if (!h) return '';
   if (h.down) return `The ${HUNTERS[h.kind].name} is down for this visit.`;
-  if (h.kind === 'track' && !h.awake) return `The ${HUNTERS[h.kind].name} is asleep in ${known(s, h.den) ? g.rooms[h.den].path : 'its den'}.`;
+  if (h.kind === 'track' && !h.awake) return `The ${HUNTERS[h.kind].name} is asleep in ${known(s, h.den) ? g.rooms[h.den].path : 'its den'}${h.lost ? ': it lost your trail' : ''}.`;
   if (!hunterSeen(s, h)) return `The ${HUNTERS[h.kind].name} is out of sight.`;
   const d = distances(g, R.at)[h.at] ?? null, where = d == null || d > 3 ? 'far off' : d === 0 ? 'here' : `${d} ${d === 1 ? 'room' : 'rooms'} off`;
   const next = hunterNext(s, h);
@@ -930,6 +986,7 @@ export function act(s, verb, arg = null, opts = {}) {
     return out(s, first);
   }
   if ((verb === 'uninstall' || verb === 'remove') && isSocket(s, here)) { uninstallProgram(s, R, here); return out(s, first); }
+  if (verb === 'play') { if (isPuzzle(here.kind)) playPuzzle(s, here, arg, opts); else deny(s, 'play: nothing here to play.'); return out(s, first); }
   deny(s, `${verb}: nothing here takes that.`);
   return out(s, first);
 }
@@ -980,6 +1037,85 @@ function openVault(s, room, force) {
   else giveScript(s, v.script, 'Vault: ');
   clear(s, room);
   if (room.id === R.graph.vaults[0]) say(s, 'The Core unseals.', 'rooms-bad');
+}
+
+// ---------- puzzle rooms (9.11, puzzles.mjs) ----------
+// R.puzzles[id]: { n: the refill its board is from, board, at: when it ended, won }. A board is the same until it refills
+// (the server's seed, the room's and its refill count), kept as you left it if you walk out mid-play. Played to its end,
+// won or lost, the room is done until it refills (a cache's two hours): one rule for all four.
+export const puzzleSeed = (R, room, n) => (((Math.imul(R.seed || 1, 2654435761) ^ Math.imul(room.seed || 1, 40503) ^ Math.imul(n + 1, 0x9e3779b1)) >>> 0) || 1);
+export const puzzleReady = (s, room) => !!room && isPuzzle(room.kind) && cacheFull(s, room);
+// The room's board: the one in play, the last one until it refills, or a new one (built the first time it's asked for).
+export function boardOf(s, room) {
+  const R = s.rooms;
+  if (!room || !isPuzzle(room.kind)) return null;
+  const n = R.spawns[room.id] || 0, P = (R.puzzles ||= {}), had = P[room.id];
+  if (had && (had.n === n || !cacheFull(s, room))) return had.board;
+  P[room.id] = { n, board: newPuzzle(room.kind, puzzleSeed(R, room, n), { floor: R.floor || 1 }) };
+  return P[room.id].board;
+}
+// Its state in a word: ready (a fresh board), live (one you've started), won or lost (done until it refills).
+export function puzzleState(s, room) {
+  const R = s.rooms, had = R.puzzles?.[room.id];
+  if (!cacheFull(s, room)) return had?.won ? 'won' : 'lost';
+  return had && had.n === (R.spawns[room.id] || 0) && puzzleStarted(had.board) ? 'live' : 'ready';
+}
+// A move on the board you stand in (the card's verbs, the terminal's play): wall 23, up, tap 7, ping 12, dig 30. With
+// nothing to play, the terminal draws the board.
+function playPuzzle(s, room, text, opts = {}) {
+  const R = s.rooms, P = PUZZLES[room.kind];
+  if (!cacheFull(s, room)) return deny(s, `${room.path} is done. A fresh board in ${fmtLeft(refillAt(s, room) - nowOf())}.`);
+  const b = boardOf(s, room);
+  if (!text) return say(s, [`${P.name}: ${P.title}. ${P.rule}`, ...boardLines(b)].join('\n'), 'rooms-out');
+  const [verb, ...more] = String(text).trim().toLowerCase().split(/\s+/), cell = more.length ? cellOf(b, more.join(' ')) : null;
+  const did = puzzleMove(b, cell == null ? verb : `${verb} ${cell}`);
+  if (!did) return deny(s, `${P.name}: that move doesn't go.`);
+  emit(s, 'puzzle', moveLine(b, did), { room: room.id, kind: room.kind, last: did, done: b.done });
+  if (b.done) finishPuzzle(s, room, b, opts);
+  return did;
+}
+// The end of a board: done until it refills, its first end counts as the room cleared, and it pays once.
+//   Quarantine  the server's code for the nodes it never reached (the whole board ROOMS.puzzles.code(L), a ★ three
+//               shares); half or more saved is a win.
+//   Cascade     components (ROOMS.puzzles.parts, +spare for each tap left over), on a win.
+//   Ping sweep  a cache (credits and code) for the caches found, a quarter more for each of the budget left.
+//   The chase   a win: half a cache, and the Tracker loses your trail for the rest of the visit. A loss: it's on you, and
+//               the fight starts here.
+// A win pays half a kill's XP (intel).
+function finishPuzzle(s, room, b, opts = {}) {
+  const R = s.rooms, P = ROOMS.puzzles, L = (R.world ? ask('level', s) : undefined) ?? R.level, sc = puzzleScore(b), won = b.done === 'won', now = nowOf();
+  const had = R.puzzles[room.id];
+  had.at = now; had.won = won;
+  R.taken[room.id] = now;
+  R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
+  const r = rnd(R, 61), C = ROOMS.cache, rich = (R.world && ask('cacheMult', s, room)) || 1;
+  const cache = () => ({ credits: Math.round((C.credits[0] + Math.floor(r() * (C.credits[1] - C.credits[0] + 1))) * rich * (1 + L / 20)), code: C.code[0] + Math.floor(r() * (C.code[1] - C.code[0] + 1)) });
+  const pay = { credits: 0, code: 0, parts: 0, material: R.code || serverCodeOf(s) };
+  if (room.kind === 'quarantine') pay.code = Math.round((P.code(L) * sc.saved) / Math.max(1, sc.total));
+  if (room.kind === 'cascade' && won) pay.parts = P.parts + P.spare * sc.spare;
+  if (room.kind === 'sweep' && sc.found) { const c = cache(), k = (sc.found / sc.caches) * P.cache * (1 + P.budget * sc.left); pay.credits = Math.round(c.credits * k); pay.code = Math.max(1, Math.round(c.code * k)); }
+  if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
+  if (R.world) ask('puzzlePay', s, room, pay); // into the pack (credits, code), components at once (netrooms.mjs)
+  else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts, null, room.path); }
+  const xp = won ? Math.round(xpFor(s, L, P.xp)) : 0;
+  if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');
+  const first = clear(s, room, true);
+  const h = hunterOf(s), caught = room.kind === 'chase' && !won && !!h && !h.down; // a lost chase with the Tracker up: its fight, here
+  const head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught' }[room.kind];
+  const line = { quarantine: `${sc.saved} of ${sc.total} saved`, cascade: won ? `${sc.used} taps, fewest ${sc.best}` : `${sc.left} nodes still up`, sweep: `${sc.found} of ${sc.caches} found, ${sc.left} of the budget left`, chase: won ? `${sc.moves} moves, fewest ${sc.best}` : `after ${sc.moves} moves` }[room.kind];
+  const rows = [{ label: line, qty: '', kind: won ? 'score' : 'lost' },
+    ...(pay.code ? [{ label: MATERIALS[pay.material]?.name || pay.material, qty: `+${pay.code}`, kind: 'code', pack: !!R.world }] : []),
+    ...(pay.credits ? [{ label: 'Credits', qty: `+${pay.credits}`, kind: 'credits', pack: !!R.world }] : []),
+    ...(pay.parts ? [{ label: 'Components', qty: `+${pay.parts}`, kind: 'loot' }] : []),
+    ...(room.kind === 'chase' && won && h && !h.down ? [{ label: 'The Tracker loses your trail', sub: 'for the rest of this visit', qty: '', kind: 'score' }] : [])].map((x) => ({ ...x, text: `${x.qty ? `${x.qty} ` : ''}${x.label}` }));
+  R.log.push(`${room.path}: ${head}. ${line}.`);
+  emit(s, 'puzzle-end', `${head.toUpperCase()} · ${line}.`, { room: room.id, kind: room.kind, won, head, line, rows, pay, xp, first, name: room.path, fight: caught });
+  if (room.kind !== 'chase' || !h || h.down) return;
+  if (won) { h.lost = true; if (h.awake) h.returning = true; return; }
+  // Caught: the Tracker is on you, here, and the fight starts (no slipping past it: it has you).
+  h.at = room.id; h.awake = true; h.returning = false;
+  R.stats.hunted++; R.visit.caught = true; R.visit.pending = room.id;
+  fight(s, room, { as: 'hunter', pause: !!opts.pause });
 }
 
 // A program by its id or name (harvester, cron-spawner, Cron Spawner, cron).
@@ -1262,6 +1398,7 @@ const tagOf = (s, room) => {
   if (['process', 'elite'].includes(room.kind)) return `${room.kind} · ${familyName(room.family)} · ${(AUTHORS[room.author]?.name || '').toUpperCase()}${up ? '' : ` · ↻ ${fmtLeft(backAt(s, room) - nowOf())}`}`;
   if (room.kind === 'cache') return `cache${cacheFull(s, room) ? '' : ` · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`;
   if (room.kind === 'vault') return `vault${opened(s, room) ? ' · open' : ''}`;
+  if (isPuzzle(room.kind)) { const st = puzzleState(s, room); return `puzzle · ${PUZZLES[room.kind].name}${st === 'ready' ? '' : st === 'live' ? ' · in play' : ` · ${st === 'won' ? 'solved' : 'failed'} · ↻ ${fmtLeft(refillAt(s, room) - nowOf())}`}`; }
   return room.kind;
 };
 export function roomsCommand(s, text) {
@@ -1299,6 +1436,7 @@ export function roomsCommand(s, text) {
   if (word === 'wait') return wait(s);
   if (word === 'back') return back(s);
   if (['engage', 'fight', 'cat', 'pull', 'open', 'force', 'rest', 'slip'].includes(word)) return act(s, word === 'pull' && arg === 'all' ? 'pull' : word);
+  if (word === 'play' && R.at) return act(s, 'play', arg || null); // a puzzle room's board: play draws it, play wall c4 / up / tap b2 / ping d4 moves
   if (['build', 'install', 'plant', 'uninstall', 'remove'].includes(word) && R.at) {
     const i = arg.indexOf(' pay '), what = i < 0 ? arg : arg.slice(0, i), pay = i < 0 ? null : arg.slice(i + 5);
     return act(s, word === 'remove' ? 'uninstall' : word, what || null, { pay }); // install: a contract's item here, else a program (act)
