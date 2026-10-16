@@ -1,6 +1,6 @@
 # Progression: what the numbers say, and a proposal
 
-This is a review sheet for the progression pass. It measures the four things that feel odd (leveling pace, gear, the number of tracks, and unlocks), ranks what causes each, and proposes changes with numbers. The designer approved the package in section 4 with the decisions listed at the top of section 6, and section 6 (What changed) gives what was built and the same measures before and after it. Sections 1 to 5 are the review as it was written.
+This is a review sheet for the progression pass. Section 7 is a later pass: the long climb (save v42), about 100 hours of real play to level 50, measured in real play rather than on the pacing bot's clock. The hours in sections 1 to 6 are the bot's own. It measures the four things that feel odd (leveling pace, gear, the number of tracks, and unlocks), ranks what causes each, and proposes changes with numbers. The designer approved the package in section 4 with the decisions listed at the top of section 6, and section 6 (What changed) gives what was built and the same measures before and after it. Sections 1 to 5 are the review as it was written.
 
 Everything below was measured on commit 16ca6f3, before the solo combat rework that is in progress. Fight lengths, loss rates and some press shares will move when that lands, so the press tables in section 1.4 should be rerun afterwards. The structure of the findings (which track gates what, how gear scales, when unlocks arrive and whether they reach the bar) does not depend on combat tuning.
 
@@ -512,3 +512,123 @@ Section 4 asked for six things.
 7. **Behind counts resting at the terminal.** A player who rests with the game open and keeps typing builds Behind time, and the bot shows it on for most levels of a climb that never pays. Counting only time in fights and runs would make it a pure stall catcher.
 8. **Level 6** still takes 1.8 times as long as level 5 (25 minutes against 14). Halving decoding moved most of the gap. Most of the rest is that the early decodes are all spent by level 5.
 9. **A merge note for the class tests.** The kit talent changes exact skill numbers from level 5. Eight test files that check exact numbers (the four subclass files, classes, combat, skills2 and gear) got one line in their header that sets `LOADOUT.specRanks = 0`. Two assertions about daemon slots changed, because a level-38 or level-50 test server now has both of its daemon slots.
+
+## 7. The long climb (save v42)
+
+The designer wants levelling to slow right down: about 100 hours of real play to level 50, front-loaded, so the game works as a long sandbox (Warframe, Starsector, Terraria: many activities, no concentrated storyline). Real players take 10 to 15 seconds a mob, about 150 kills an hour with the walking between rooms (`LOOT.killsPerHour`). The curve in sections 1 to 6 was tuned on the pacing bot's clock, about 20 kills an hour, so in real play it reached level 30 in about 3 hours and 50 in about 7.
+
+### How it is measured now
+
+`bot.mjs` keeps two clocks. Its own (`levelAt`: 12-second cycles, 3 seconds a step through a server's rooms, every rest and reconnect wait) is the one the world's timers run on. Beside it is **real play** (`realAt`, `REAL`): 3600 / `LOOT.killsPerHour` seconds a fight with the walk to it (24 seconds), won or lost, 2 minutes a puzzle board and 1 a log sweep. Mail, connecting, resting and gearing are taken to be inside the walk. The bot's play clock (`tickPlay`: Behind and Fresh) now runs on real play. Before, it counted the bot's slow clock as play, which put almost every level of a climb Behind. On the long climb the bot's own clock runs about 20 times slower than real play, about 7 kills an hour, so its hours are only a secondary column.
+
+The bot also moves on from a server where a visit fought nothing (it counts as a loss there at that level). Without that, the long climb sometimes reconnected forever to a server whose live rooms it was walking around.
+
+`node pacing.mjs [level] [seeds] [classes]` climbs each class on a few seeds, one core each, and prints real hours (bot hours and fights beside them) to 5, 10, 20, 30, 40 and 50 against `PACE_TARGET`, with the XP mix by kind and by source. A climb to 50 takes about 12 minutes. loop.test.mjs holds levels 5 to 30 to the table on seed 7 for the four classes. The median has to be within 15%, and from level 10 every class within 30%.
+
+### The curve
+
+`CLIMB.kills` gives the kills of your own level that level L to L+1 takes, straight between its points. `CLIMB.minutes` gives the real play that level should take: its sum is the table, and it is Behind's target. One-off deeds grow with the climb (`deedScale`), and kills and contracts do not. In the table below, "old" is the v41 curve (5 + 1.2 × L kills) measured with the same bot and real-play clock, and "new" is v42. Fights and minutes are medians of three seeds for each of the four classes.
+
+| Level | XP to next | Kills of your level for it | Bot fights for it | Real minutes for it | Fights to reach it | Real hours to reach it |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 186 → 900 | 6 → 30 | 3 → 9 | 1 → 4 | — | — |
+| 5 | 770 → 14,700 | 11 → 210 | 7 → 79 | 3 → 37 | 17 → 119 | 0.1 → 0.9 |
+| 10 | 2,040 → 25,800 | 17 → 215 | 13 → 46 | 6 → 26 | 70 → 575 | 0.5 → 4.2 |
+| 20 | 6,380 → 126,500 | 29 → 575 | 16 → 227 | 8 → 102 | 208 → 2,135 | 1.5 → 15.3 |
+| 30 | 13,120 → 288,000 | 41 → 900 | 19 → 361 | 10 → 149 | 390 → 4,809 | 3.0 → 34.3 |
+| 40 | 22,260 → 470,400 | 53 → 1,120 | 28 → 657 | 14 → 263 | 633 → 9,474 | 4.8 → 65.4 |
+| 49 | 32,538 → 678,300 | 64 → 1,330 | 33 → 814 | 16 → 325 | 881 → 14,367 | 6.8 → 99.2 |
+| To 50 | 580,650 → 12.1 million | 1,715 → 34,870 | | | 912 → 15,184 | 7.0 → 104 |
+
+The bot earns about 2.3 kills of XP a fight. Room kills pay 1.25, elites more, and on top come first clears, Mapped servers and contracts. A single level is noisy from one to the next (medians of 12 climbs: level 10 takes 26 minutes, 15 takes 102 and 21 takes 147, while the target runs 48 to 101), because deeds bunch where a floor opens. The milestones land on the table.
+
+### Real hours, by class
+
+`node pacing.mjs 50 3` (seeds 7, 20 and 33; median of three; the bot's own hours in brackets):
+
+| Class | Lv 5 | Lv 10 | Lv 20 | Lv 30 | Lv 40 | Lv 50 |
+|---|---:|---:|---:|---:|---:|---:|
+| Target | 1 | 4 | 15 | 35 | 65 | 100 |
+| Breaker | 0.9 (21) | 4.3 (77) | 15 (309) | 32 (1,147) | 66 (2,350) | 105 (3,861) |
+| Bastion | 1.0 (12) | 3.9 (66) | 15 (301) | 37 (935) | 65 (1,553) | 107 (2,690) |
+| Infiltrator | 0.9 (5) | 4.2 (48) | 15 (230) | 34 (764) | 64 (1,609) | 102 (2,848) |
+| Operator | 0.9 (9) | 4.1 (87) | 15 (362) | 36 (1,009) | 65 (1,965) | 104 (3,224) |
+| All four | 0.9 (−7%) | 4.2 (+4%) | 15 (+1%) | 35 (+1%) | 65 (+1%) | 105 (+5%) |
+
+The four classes stay close: 3.9 to 4.3 hours to 10, 32 to 37 to 30 and 102 to 107 to 50. Fights won or lost cost the same real time, and Behind runs on real play, so a slow class gets its +50% when a level runs past 1.25 times its target. 2% of fights were lost.
+
+### The XP mix
+
+By source over the whole climb, old → new (pacing.mjs, three seeds a class):
+
+| Class | Kills | Deeds | Contracts |
+|---|---:|---:|---:|
+| Breaker | 74% → 70% | 22% → 24% | 4% → 5% |
+| Bastion | 78% → 75% | 19% → 21% | 3% → 4% |
+| Infiltrator | 72% → 72% | 25% → 23% | 3% → 5% |
+| Operator | 74% → 72% | 24% → 23% | 2% → 5% |
+
+Deeds are first clears, Mapped servers, takeovers, Root levels, decodes, puzzle boards and first crafts. Each pays its old kill share times `deedScale` = `DEED.share` (0.4) × how much longer the level is than before v42. That is 8.6× at level 4, 5.4× at 9, 7.8× at 19, 8.7× at 29 and 8.3× at 49. A Mapped server pays about 25 kills at level 10 and 44 at 30, and a first clear about four times the fight. With the full stretch (×1) deeds came to 80% of the XP and fights fell to under a fifth. The long climb finishes every server on a floor where the old one outgrew half of them, so a deed's count per level rose as well as its size. Contracts are so many kills of work and are not scaled. Their share rose a little anyway, because the bot holds more of them per level.
+
+By kind (`s.xpMix`, what loop.test.mjs checks), fights are 18–27% now, against 66–76% on the old curve. That is not because kills pay less. A held server's respawns tally as building, and the long climb farms them: building is 52–59%, break-ins 19–23% and intel 1–2%. loop.test.mjs keeps its check that fights stay under 76% and that break-ins, intel and building all pay. It adds that kills are 50–85% of the XP and deeds 15% or more, measured to level 30 (fewer respawns are farmed by then).
+
+### Things that run on time, at the new pace
+
+None of these were retuned. A real player at 150 kills an hour meets them about 20 times less often for each fight than the bot does, so the bot overstates whatever they gate.
+
+| Timer | Value | At the new pace |
+|---|---|---|
+| Room respawns | a fight room 15 min, a guard 20, an elite 45, the core 60 | **Out of proportion.** A medium server's 10 or so fights take a player about 4 minutes, and then nothing is up for 15. Farming one server, or climbing a held server's Root by its respawns, means waiting. A player has to rotate 3 or 4 servers at their level, which a floor can give, but servers 3 levels under you are grey-ish. The bot never sees this: on its clock a fight takes about 9 minutes. |
+| Cache and puzzle board refills | 2 hours | **Out of proportion, the other way.** A player sees each puzzle room's board once every 2 real hours. The bot played 117 boards a climb, about one every 50 minutes of real play, which a player can't do. Puzzles are a small share of the XP (under 2%), so the hours barely move. |
+| Rested | a kill's XP an hour away, up to 1.5 levels | **Out of proportion.** A night away (8 hours) is 8 kills, about 3 minutes of play. The cap (1.5 levels, about 1,350 kills at 30) takes some 1,300 hours away to fill. It used to fill in about 60. |
+| Fresh | +50% of a non-fight gain after 20 minutes without one, at most a kill | Shrunk: deeds are now 5 to 9 kills, so the one-kill cap makes Fresh a few percent of a deed. |
+| The Resident's grudge | a level stronger for 6 hours after it beats you, up to three | Now about 2 levels of play late in the climb, where before 6 hours was dozens of levels. More proportionate than before. |
+| Hot strain | 4 hours | About 1 to 2 levels from 20 up. More proportionate than before. |
+| Lairs, the farm | a lair boss 1 hour, its packs 30 min; KESSLER-FARM's boss 6 hours, its packs 30 min | Unchanged per hour. A lair boss is still a visit an hour, while a level takes 1.5 to 3.5 hours from 20 up. |
+| SPRAWL-00 | strays every 90 seconds, RELAY-KING every 30 min | A player on SPRAWL-00 alone waits on its strays (the slow road, now 1.26–1.44× in real play). |
+| Invasions | one every 20–30 min online, 2–4 hours away | Same per hour. Late in the climb that is 5 to 10 a level, where before it was under one. Their XP is kill XP, so the share holds. |
+| Mail | an offer every 1–3 min (15 min life), the retainer every 30 min up to 8 hours | Unchanged. Retainer credits are per hour, so they are worth less against a level's prices. |
+| Behind | the level's `CLIMB.minutes` | **Retuned with the curve** (it is the curve's own clock). The old 6 + 2.2 × level minutes would have put every level of the long climb Behind. |
+
+**Money and loot per level.** Credits, code, components and drops all come a kill at a time, so a level now brings about 15 to 20 times as much of each. Prices that follow your level (top-ups, programs, filters), and gear at your level, will feel cheap and plentiful within a level. Per hour nothing changed (`LOOT.per` is a kill at a time, at 150 an hour). The bot holds about 13,000 salvage pieces by level 30. Counting them was a third of its run time until `have` in salvage.mjs kept the count while the pile is unchanged.
+
+### Level gates at the new pace
+
+Real hours at each gate, from `CLIMB.minutes`:
+
+| Gate | Level | Hours |
+|---|---:|---:|
+| Kit talent, third skill; class trial ends (`trialUntil`); wick's breadcrumb | 4–5 | 0.6–1.1 |
+| Fourth skill (the armor answer) | 7 | 2.1 |
+| Subclass, edge, SIGINT, first talent point | 10 | 4.1 |
+| Implant slot, Implants drop, a daemon slot | 15 | 8.7 |
+| Crew bosses (tuned at 18) | 18 | 12.3 |
+| Eighth bar slot | 22 | 18.3 |
+| Ninth bar slot, sixth protocol slot, a daemon slot | 30 | 35 |
+| Base tiers | 34, 42 | 46, 72 |
+| Last subclass skill | 38 | 58.5 |
+| Last daemon slot | 45 | 82 |
+| Floors open at | 7, 13, 19, 25, 31, 37, 43 | 2.1, 6.7, 13.7, 23.9, 37.7, 55.3, 75.3 |
+
+Gates that land at an awkward hour:
+
+- **The back third is thin.** After the last skill at 38 (about 58 hours), 42 hours bring no new skill: a talent point every 6.6 to 7.3 hours, a base tier at 42 and a daemon slot at 45.
+- **Talent points spread out.** One every 2 levels is 2 to 3 hours apart in the teens and about 7 hours apart from 38.
+- **Floors are uneven.** In hours from one floor's band to the next: the Sprawl 2.1, Backhaul 4.6, the Stacks 7.0, Coldline 10.2, Deep Core 13.8, Kernel Space 17.6, the Sink 20.0 and Bedrock 25 (43 to 50). The 10 to 15 hours a floor hoped for holds only for floors 4 and 5. The table is front-loaded, so the first three are short and the last three long.
+- **SPRAWL-00 is your home for 4 hours** (it pays to level 10). Before, that was 30 minutes of real play.
+- **Mapping at your own level.** You no longer level while you map a server. The rooms sim's level-10 Bastion on a level-10 medium Relay maps 5 of 12 (rooms.test.mjs), where before it reached 12 or 13 on the way and mapped 8. Elites (a Worm, a Trojan) stop it. The pacing bot copes, since it comes back as it levels, and lost 2% of its fights.
+
+### The save (v42)
+
+`climbRestore` in progression.mjs: every class keeps its level, so nobody loses one. Its XP into the level keeps its share of the level: two thirds of the way to 13 on the old curve is two thirds of the way on the new one, never quite a level-up. The cap stays the cap, and Rested (a count of kills banked) is kept. progression.test.mjs tests it. The breach campaign (`?campaign=breach`, its own save) keeps its own pace of about ten breaches to level 10: its kills, and the capture's third of them, grow with `climbStretch`.
+
+### Decisions for the designer
+
+1. **Respawn timers against 150 kills an hour.** A server's rooms are back in 15 minutes, and a player clears them in about 4. Shorter respawns (5 to 8 minutes), or more fight rooms on a server, would let one server carry a session.
+2. **Rested** is worthless at this pace (a night is 3 minutes). It could bank a share of a level an hour, for example 2% of the level's XP.
+3. **Fresh's one-kill cap.** Should it follow the deed scale?
+4. **The floor spread.** Bands could widen late (Bedrock 43 to 50 is 25 hours) or narrow early. The alternative is to accept the front-loaded table.
+5. **The back third.** 42 hours after the last skill. Move skills later (the subclass line ends at 38), or add rewards from 40.
+6. **Deeds at 0.4.** At 1.0 they keep their old share of a level, and exploring pays four fifths of the climb. At 0.4 kills stay about 70%. Exploration XP is the lever if the sandbox should push wandering over farming.
+7. **Money and loot per level** are 15 to 20 times what they were. Per hour nothing changed, but a level-priced economy may want prices per hour instead.
+8. **The rooms sim's Bastion maps 5 servers in 12 at its own level** (8 before). Same-level elites may want a look now that nobody outlevels a server while mapping it.

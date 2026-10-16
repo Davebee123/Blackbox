@@ -43,8 +43,9 @@ test('strains and ICE are at least 15% of fights from level 12', () => {
 // Fights were held under 70% before R3. A floor holds a fixed set of servers at fixed levels (floors.mjs), so a climb
 // finds fewer new ones than the old endless traces did and outgrows the ones it holds: more of its XP is respawns
 // (the pacing bot over six seeds a class: 63-72% fights, the Bastion highest; docs/servers.md 9.10). On the long climb
-// a held server's respawns (tallied as building) carry more of it again: fights are 17-44% of the XP kind to 30, and
-// kills (fights and those respawns) 70-75% by source, with one-off deeds (DEED in data.mjs) about a quarter.
+// a held server's respawns (tallied as building) carry more of it again: on seed 7 to 30 fights are 18-30% by kind and
+// building 34-51%, and by source kills (fights and those respawns) are 55-71%, one-off deeds (DEED in data.mjs) 24-41%
+// (to 50 on three seeds: kills 70-75%, deeds 21-24%).
 test('no one kind of play carries the climb: fights stay under 76% of XP (the bot never crafts or trades), with break-ins, intel and building all paying; kills are at least half of it, deeds 15% or more', () => {
   for (const cls of CLASSES) {
     const mix = mixes[cls].mix, total = Object.values(mix).reduce((a, b) => a + b, 0);

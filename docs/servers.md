@@ -31,7 +31,7 @@ A word on words. The designer's *component* (a piece of a virus) is a **part** h
 | Variety? | Ten new families (Trojan, Cryptominer, Wiper, Logic Bomb, Polymorph, Botnet, Rootkit, RAT, Stealer, Fileless) opening from level 4 to 26, each with two attack sets and its own threshold verb. Every virus rolls an **attack set** (when each part fires and which leads), weighted by its author. |
 | The network? | Eight **floors**, each its own diagram with its own level band, shape, server mix and author. Each floor has an **exit node** that opens the floor below. You can go back up. Layers and `BANDS` become floors. |
 | Buildings? | **Sockets**: rooms in a server where you inject a **program** whose codebase you know, paid in components, code and Exploits. Each program changes its own server's rules (16 in the catalogue). Outposts, plans, slots, bandwidth, stores and swarms go. |
-| Materials and XP? | Parts drop their component 60% of the time on a server (35% at home), code drops double, and room kills pay 25% more XP. Levels per hour by band are targeted so 50 takes about 50 hours. |
+| Materials and XP? | Parts drop their component 60% of the time on a server (35% at home), code drops double, and room kills pay 25% more XP. Levels per hour by band are targeted so 50 takes about 50 hours (on the pacing bot's clock; since v42 about 100 hours of real play, 7.2). |
 | Breach build? | Kept: scripts, keys and vaults, switches, the hunter (reworked), server-kind rules (as room themes), caches and bait, the rest room, elites, rolled genomes, the heal cap, skill rules on gear. Cut: Trace, the breach mode and campaign, acts and gates, rewrites, heat, brokers and tokens. Parked: LOWLIGHT's room and the world turn. |
 | First build? | One server as a room graph behind `?playtest=rooms`, with respawns, progress, keys, a hunter, the interrupt rule, attack sets for the three families, the Trojan, the Cryptominer and the Wiper, and a Resident whose boss rule switches between options (a), (b) and (c) so the designer can play each (section 9). |
 
@@ -665,7 +665,7 @@ The designer: more XP an hour from enemies, but *still a grind*. The plan is to 
 | Home and invasion kills | As today |
 | Reading tells, Behind, Rested, Fresh, Hot strain, Fast kill | As today |
 
-Level L to L+1 stays at 5 + 1.2 × L kills of your level. At about 30 room fights an hour (a fight is 1 to 2 minutes, and walking and resting fill the rest), that lands on these targets:
+Level L to L+1 was 5 + 1.2 × L kills of your level. The table below was this section's first plan, in the pacing bot's hours (its clock: about 30 room fights an hour, a fight 1 to 2 minutes with walking and resting):
 
 | Levels | Levels an hour | Minutes a level | Hours to the band's top |
 |---|---:|---:|---:|
@@ -676,7 +676,15 @@ Level L to L+1 stays at 5 + 1.2 × L kills of your level. At about 30 room fight
 | 31–40 | 0.7 | 86 | 33 |
 | 41–50 | 0.5 | 120 | 51 |
 
-About 50 hours to level 50, and every class within 1.25× the fastest's time to 30 (the progression target). Today's climb reaches 30 in 17 to 35 hours by class, so the curve stays as long while the hour feels fuller. The catch-up target (6 + 2.2 × level minutes) already matches this table, so *Behind* needs no change. `roomsim.mjs` checks it (section 9).
+**The long climb (save v42, 9.12).** Real players take 10 to 15 seconds a mob, about 150 kills an hour with the walking (`LOOT.killsPerHour`), so on that curve level 30 was about 2.5 hours of real play and 50 about 7. The designer wants about 100 hours to 50, front-loaded, so the game works as a long sandbox (many activities, no concentrated storyline). The targets are now in **real play** (bot.mjs's second clock: 24 seconds a fight with its walk, won or lost, 2 minutes a puzzle board):
+
+| Level | 5 | 10 | 20 | 30 | 40 | 50 |
+|---|---:|---:|---:|---:|---:|---:|
+| Hours of real play | 1 | 4 | 15 | 35 | 65 | 100 |
+| Minutes for that level (`CLIMB.minutes`, Behind's target) | 28 | 48 | 95 | 160 | 200 | 220 (at 49) |
+| Kills of your level for that level (`CLIMB.kills`) | 210 | 215 | 575 | 900 | 1,120 | 1,330 (at 49) |
+
+The room bonus above stays. One-off deeds (first clears, Mapped, takeovers, Root levels, decodes, puzzle boards, first crafts) keep their kill shares from this table and grow with the climb (`deedScale`: 0.4 of how much longer the level is, about 5 to 9 times), so exploring still pays about a quarter of the XP; kills and contracts are not scaled. Behind's target is the real-play minutes of each level. `pacing.mjs` measures it (9.12), and loop.test.mjs holds levels 5 to 30 to the table.
 
 ## 8. Keep, cut or change
 
@@ -1059,6 +1067,32 @@ The climb is where it was (seed to seed swings are wider than the change); puzzl
 - *Not in it:* a chase variant for deep floors and a deeper Cascade (the brief named deeper boards for Quarantine and Ping sweep only); puzzle rooms on rogue servers, lairs, SPRAWL-00 or the farm; the playtest's own server (`?playtest=rooms`) has none.
 
 **Known issues:** a puzzle room counts toward Rooms n/N, so a server Mapped before them reads, say, 16/18 with MAPPED until you play them (nothing is lost or paid twice). The chase's Tracker is the den's (asleep on the map while you play its den); winning makes the real one lose your trail even if it was awake and chasing you. Two-cache sweeps are the hardest board (the bot wins about 60%).
+
+### 9.12 What shipped: the long climb
+
+The designer wants levelling to slow right down: about 100 hours of real play to level 50, front-loaded, so the game works as a long sandbox (7.2). Save v42. docs/progression.md section 7 has the full review: the model, the curve before and after, the timers and gates at the new pace, and the decisions.
+
+- *Real play, measured.* `bot.mjs` keeps a second clock beside its own. Real play (`REAL`) is 24 seconds a fight with its walk (`LOOT.killsPerHour`, 150), won or lost, plus 2 minutes a puzzle board and 1 a log sweep. The play clock (Behind, Fresh) runs on it. The bot's own clock runs about 20 times slower on the long climb, about 7 kills an hour. `pacing.mjs` prints both for the four classes on a few seeds, in parallel.
+- *The curve* (`CLIMB` in data.mjs). Kills of your level for a level, straight between points: 30 at 1, 210 at 4, 215 at 10, 575 at 20, 900 at 30, 1,120 at 40 and 1,330 at 49, where it was 5 + 1.2 × L. Real minutes for a level are Behind's target: 5 at 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40 and 220 at 49, where it was 6 + 2.2 × L.
+- *Deeds* (`deedXpFor` in combat.mjs): first clears, Mapped, takeovers, Root levels, decodes, puzzle boards, log sweeps, first runs and vaults, and first crafts. Each pays its kill share above times `deedScale`, 0.4 of how much longer the level is (5 to 9 times). Kills, the room bonus and contracts are as they were.
+- *The bot* moves on from a server where a visit fought nothing (counted as a loss there at that level), and gives up at 150 hours of real play instead of 72 of its own. `unlockLevel` and `lineOf` (data.mjs), the salvage count (salvage.mjs) and the rooms getter's server lookup (combat.mjs) are kept between calls: about a third of a long climb's time went there.
+- *The breach campaign* keeps its own pace (about ten breaches to 10): its kills grow with `climbStretch`.
+
+**The pacing bot** (`node pacing.mjs 50 3`; seeds 7, 20 and 33; real hours, the bot's own in brackets):
+
+| Class | Lv 5 | Lv 10 | Lv 20 | Lv 30 | Lv 40 | Lv 50 |
+|---|---:|---:|---:|---:|---:|---:|
+| Target | 1 | 4 | 15 | 35 | 65 | 100 |
+| Breaker | 0.9 (21) | 4.3 (77) | 15 (309) | 32 (1,147) | 66 (2,350) | 105 (3,861) |
+| Bastion | 1.0 (12) | 3.9 (66) | 15 (301) | 37 (935) | 65 (1,553) | 107 (2,690) |
+| Infiltrator | 0.9 (5) | 4.2 (48) | 15 (230) | 34 (764) | 64 (1,609) | 102 (2,848) |
+| Operator | 0.9 (9) | 4.1 (87) | 15 (362) | 36 (1,009) | 65 (1,965) | 104 (3,224) |
+
+On the old curve the same bot reached 30 in 3.0 hours of real play and 50 in 7.0 (912 fights). It now takes 4,809 fights to 30 and 15,184 to 50. Kills are 70–75% of the XP, deeds 21–24% and contracts 4–5% (old: 72–78%, 19–25% and 2–4%).
+
+**What the numbers say:** every milestone lands within 7% of the table, and the four classes stay close (32 to 37 hours to 30). Respawns (15 minutes for a fight room) now run behind a player who clears a server's fights in about 4 minutes. Cache and puzzle refills, Rested and Fresh are out of proportion too. They were not retuned: docs/progression.md section 7 lists them.
+
+**Known issues:** the rooms sim's level-10 Bastion maps a level-10 medium Relay 5 times in 12, where it mapped 8 when it levelled to 12 or 13 on the way (rooms.test.mjs holds 5). A single level's time swings with where deeds bunch (level 10 takes 26 minutes, 15 takes 102). Floors run from 2 hours (the Sprawl) to 25 (Bedrock).
 
 ## 10. Open questions for the designer
 
