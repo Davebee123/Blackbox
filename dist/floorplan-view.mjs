@@ -525,7 +525,7 @@ function hereCard(s) {
     body = fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild && labelOf(s, room) === sc.name ? holder(iconOf(s, room), k.short, k.sub, tip)
       : holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip);
     const notes = [];
-    if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, usually a blue or better.`);
+    if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, better loot.`);
     if (room.queue && R.kind === 'Mailhub') notes.push('A Spam Flood joins the fight.');
     if (room.kind === 'guard' && room.key && !R.opened[room.key]) notes.push(esc(`Carries the ${g.rooms[room.key].path} key.`));
     if (room.kind === 'elite') notes.push('Enrages from cycle 9. Drops a blue or better.');
