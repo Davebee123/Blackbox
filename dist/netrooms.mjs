@@ -288,14 +288,14 @@ WORLD_hook('fight', (s, room, as) => {
 
 // ---------- after a fight ----------
 WORLD_hook('drops', () => {}); // what a kill drops comes with what it pays (won)
-WORLD_hook('won', (s, room, e, { first = false, mirror = false } = {}) => {
+WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } = {}) => {
   const loc = locOf(s), R = s.rooms;
   if (!loc) return;
   // A first clear on a server traces the ? servers linked to it on its floor (floors.mjs, docs/servers.md 5.3).
   if (first && !loc.zone && !loc.member) traceNear(s, loc, HIDDEN.firstClear, `${room.path} cleared: `);
   if (room.wild) return wildWon(s, loc, room, e);
   const guard = room.kind === 'guard' || room.kind === 'elite' || room.kind === 'core' || mirror || !!e.virus.elite;
-  roomKill(s, e, { pack: true, guard, family: lineageOf(e.virus.family), loc });
+  roomKill(s, e, { pack: true, guard, family: lineageOf(e.virus.family), loc, rare });
   if (room.kind === 'guard') clearedFor(s, loc); // a faction's server: they notice (factions.mjs)
   if (e.virus.elite && seeded((e.seed * 31 + R.stats.fights) >>> 0)() < 0.25) giveScript(s, rollScript(seeded((e.seed * 17 + 3) >>> 0)), 'The elite carried: ');
   if (room.kind === 'core') takeover(s, loc, room);
@@ -415,7 +415,7 @@ WORLD_hook('exfil', (s, t) => {
 // Its archive, recovered: CONFIG.exfil.credits Stashes' worth of credits and one item at the server's level (the best of two flat
 // rolls, else a white: about twice a kill's blue chance, never a guaranteed blue, nothing else stacked on: no loud run,
 // clean read or Pit roll), and now and then one of the server's uniques (its kind's and floor's, as its folders drop).
-// Under an elite's three rolls and blue floor, by design.
+// A trash kill's odds (LOOT.odds.trash) and a sure white: plain loot, under a rare spawn's, by design.
 WORLD_hook('exfilWon', (s, room, e) => {
   const loc = locOf(s), M = CONFIG.exfil, lvl = e.virus.level, credits = M.credits * FP.ROOMS.purse(loc.level || 1);
   const ctx = { kind: 'rogue', id: loc.rogue?.kind, layer: layerOf(loc.depth || 1), family: loc.family };

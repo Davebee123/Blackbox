@@ -206,7 +206,7 @@ function aboutOf(s, room) {
   const denEdge = g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   const rule = hunted ? `The ${huntName(h)} is here: walk in and you fight it.`
     : denEdge ? 'Walking in wakes the Tracker.'
-      : R.rare[room.id] && isUp(s, room) ? `Rare spawn: ${ROOMS.rareLevel} levels up, ${ROOMS.rareRolls} loot rolls.`
+      : R.rare[room.id] && isUp(s, room) ? `Rare spawn: ${ROOMS.rareLevel} levels up. It usually drops a blue or better.`
         : room.kind === 'guard' && room.key && !R.opened[room.key] ? `Carries the ${g.rooms[room.key].path} key.`
           : room.kind === 'boss' ? 'A crew boss: built for a crew.'
           : room.queue && R.kind === 'Mailhub' && fightKind(room) ? 'A Spam Flood joins its fights.'
@@ -525,7 +525,7 @@ function hereCard(s) {
     body = fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild && labelOf(s, room) === sc.name ? holder(iconOf(s, room), k.short, k.sub, tip)
       : holder(iconOf(s, room), sc.name, fightKind(room) && !['guard', 'core', 'boss'].includes(room.kind) && !room.wild ? `${k.short} · ${k.sub}` : k.sub, tip);
     const notes = [];
-    if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, ${ROOMS.rareRolls} loot rolls.`);
+    if (R.rare[room.id]) notes.push(`<span class="fp-tag-inline next">★ rare</span> ${ROOMS.rareLevel} levels up, usually a blue or better.`);
     if (room.queue && R.kind === 'Mailhub') notes.push('A Spam Flood joins the fight.');
     if (room.kind === 'guard' && room.key && !R.opened[room.key]) notes.push(esc(`Carries the ${g.rooms[room.key].path} key.`));
     if (room.kind === 'elite') notes.push('Enrages from cycle 9. Drops a blue or better.');

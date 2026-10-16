@@ -201,12 +201,15 @@ test('Phase 3: every v2 virus is Linked; Rerouting is no longer rolled; no strai
   for (const id of ['echo', 'hashrat', 'keylogger']) assert.ok(STRAINS[id].parts.every((p) => p.attack), `${id}: every part can hurt you`);
 });
 
-test('Phase 3: elites are crew rooms (a blue at least); Hardened halves the first hit; Null Route dodges one attack; uniques sit near a yellow', async () => {
+test('Phase 3: elites are crew rooms (better loot than trash, no sure drop); Hardened halves the first hit; Null Route dodges one attack; uniques sit near a yellow', async () => {
   const { rollDrop } = await import('./dist/combat.mjs');
   const { RARITY_ORDER, ITEM_SCALE } = await import('./dist/gear.mjs');
   const { SKILLS, ABILITIES } = await import('./dist/data.mjs');
   const s = at(12);
-  for (let i = 0; i < 20; i++) { const it = rollDrop(s, { kind: 'rogue', elite: true, rolls: 3 }, 12); assert.ok(it && RARITY_ORDER.indexOf(it.rarity) >= RARITY_ORDER.indexOf('tuned'), 'never under a blue'); }
+  const count = (elite) => { let items = 0, blues = 0; for (let i = 0; i < 3000; i++) { const it = rollDrop(s, { kind: 'rogue', elite }, 12); if (it) { items++; if (RARITY_ORDER.indexOf(it.rarity) >= RARITY_ORDER.indexOf('tuned')) blues++; } } return { items, blues }; };
+  const el = count(true), tr = count(false);
+  assert.ok(el.items > 2 * tr.items && el.blues > tr.blues, `elite ${JSON.stringify(el)} vs trash ${JSON.stringify(tr)}`);
+  assert.ok(el.items < 3000 * 0.25, 'no guaranteed blue: most elite kills drop nothing');
   assert.equal(SKILLS.hardened, 1);
   assert.equal(ABILITIES['null-route'].cooldown, 6);
   assert.equal(ABILITIES['zero-day'].damage, 65);
@@ -274,11 +277,16 @@ test('the leads list shows at most HIDDEN.shown unknown servers: flagged and mos
 
 test('review fixes: elites can drop a unique; rested pays whole XP only', async () => {
   const { rollDrop, fresh: f2, UNIQUES } = await import('./dist/combat.mjs');
-  const { ELITE } = await import('./dist/data.mjs');
+  const { LOOT } = await import('./dist/gear.mjs');
   const s = f2();
-  let uniques = 0;
-  for (let i = 0; i < 400; i++) { const it = rollDrop(s, { kind: 'rogue', id: 'pit', elite: true }, 12); if (it?.unique || UNIQUES[it?.id]) uniques++; }
-  assert.ok(uniques > 0 && uniques < 400 * ELITE.unique * 3, `elite uniques in 400 kills: ${uniques}`);
+  // An elite's gold is any world unique up to its level, even where none is written to drop; trash's falls back to a yellow.
+  const was = { ...LOOT.odds.elite }, wasT = { ...LOOT.odds.trash };
+  Object.assign(LOOT.odds.elite, { zeroday: 1 }); Object.assign(LOOT.odds.trash, { zeroday: 1 });
+  try {
+    const it = rollDrop(s, { kind: 'home', elite: true }, 12);
+    assert.ok(it?.unique && UNIQUES[it.unique].level <= 14 && UNIQUES[it.unique].sources.some((x) => ['sprawl', 'vault', 'guard', 'rogue'].includes(x.kind)), `an elite's world unique: ${it?.unique}`);
+    assert.equal(rollDrop(s, { kind: 'home' }, 12).rarity, 'custom', 'trash where no unique drops: a yellow');
+  } finally { Object.assign(LOOT.odds.elite, was); Object.assign(LOOT.odds.trash, wasT); }
   const r = f2();
   r.rested = 0.5;
   command(r, 'encounter cryptjack'); command(r, 'engage');

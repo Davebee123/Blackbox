@@ -53,7 +53,12 @@ test('the pool: 27 native uniques across every slot and levels 5–40, each nati
   for (const [id, n] of Object.entries(count)) assert.ok(n >= 0.08 * 2000 && n <= 0.4 * 2000, `${id} is native to ${n} of 2000 networks`);
 });
 
-test('native drops: about ten times as likely on their home network, pity like a boss, one you lack first, and nothing from grey kills', () => {
+test('native drops: about ten times as likely on their home network, pity like a boss, one you lack first, and nothing from grey kills', (ctx) => {
+  // A native off its lair boss is a world drop (very rare): the samples below run at 1,000 times the rates, which keeps the ratios.
+  const was = { ...NETWORK };
+  for (const k of ['home', 'pity', 'awayEach', 'away']) NETWORK[k] *= 1000;
+  ctx.after(() => Object.assign(NETWORK, was));
+  assert.ok(was.home <= 1 / 4500, 'off its boss, rarer than the world-gold target');
   const s = at(30);
   const home = sigOf(s, 'you').uniques.filter((id) => UNIQUES[id].level <= 32);
   assert.ok(home.length >= 2);

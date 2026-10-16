@@ -74,7 +74,7 @@ test('items: a base for its slot (primaries), affixes by rarity (one prefix and 
   CONFIG.powerPerLevel = 0;
 });
 
-test('uniques: fixed name and stats, scaled up from their own level; drop odds come from time targets', () => {
+test('uniques: fixed name and stats, scaled up from their own level; drop odds by tier, trash under elites under rare spawns', () => {
   CONFIG.powerPerLevel = 0.04;
   const u = { id: 'x', name: 'Test Unique', base: 'weaponized-exploit', level: 5, primary: { damage: 10 }, secondary: { crit: 5 }, downside: { reduction: -1 } };
   const a = uniqueItem(u, 5, seeded(1)), b = uniqueItem(u, 15, seeded(1));
@@ -84,9 +84,13 @@ test('uniques: fixed name and stats, scaled up from their own level; drop odds c
   assert.equal(a.stats.reduction, -1, 'the downside');
   assert.ok(b.stats.damage > a.stats.damage, 'found later, it is bigger');
   CONFIG.powerPerLevel = 0;
-  const o = lootOdds(60);
-  assert.ok(Math.abs(o.tuned - 1 / LOOT.minutes.tuned) < 1e-9 && Math.abs(o.custom - 1 / LOOT.minutes.custom) < 1e-9, 'odds per kill from minutes per drop, at 60 kills an hour');
-  assert.ok(lootOdds(600).custom < o.custom / 9, 'faster fights, rarer per kill');
+  // The loot model (WoW's): trash rarely drops an item, an elite better, a rare spawn better still, at every rarity.
+  const [trash, elite, rare] = ['trash', 'elite', 'rare'].map(lootOdds);
+  for (const r of ['stock', 'tuned', 'custom', 'zeroday']) assert.ok(trash[r] < elite[r] && elite[r] < rare[r], r);
+  assert.ok(trash.stock + trash.tuned + trash.custom < 0.05, 'most trash drops no item');
+  assert.ok(rare.stock + rare.tuned + rare.custom > 0.5, 'a rare spawn usually drops one');
+  assert.ok(trash.zeroday < 1 / LOOT.per.zeroday && elite.zeroday < 1 / LOOT.per.zeroday, 'a world gold is very rare');
+  assert.equal(lootOdds('nonsense'), trash);
   assert.ok(Math.abs(magicFind(50) - 4 / 3) < 1e-9, '+50% Scavenge is +33%');
 });
 
@@ -374,8 +378,8 @@ test('a filter of Barbs (Counter-intrusion that was): whatever hits your server 
 });
 
 test('home wins give the family\'s code, and can drop an item at the enemy\'s level', () => {
-  const was = LOOT.common;
-  LOOT.common = 1; // every kill drops something
+  const was = LOOT.odds.trash.stock;
+  LOOT.odds.trash.stock = 1; // every kill drops something
   const s = fresh();
   bare(quiet(fight(s, 'cryptjack', 4)));
   for (const p of s.encounter.virus.parts) p.integrity = 1;
@@ -391,7 +395,7 @@ test('home wins give the family\'s code, and can drop an item at the enemy\'s le
   const k = codeOf(s.encounter.virus.family);
   assert.equal(k, 'cipher', 'ransomware drops Cipher code');
   assert.equal(s.materials[k], codeDrop(4));
-  LOOT.common = was;
+  LOOT.odds.trash.stock = was;
 });
 
 test('compile: pick the stat, pay credits and components, get a protocol at your level', () => {

@@ -96,9 +96,9 @@ test('at level 18 a full crew wins at least 95% of boss tries under pressure; wi
   const full = farmScore('demolitionist', ['warden', 'sysop', 'payload'], 18, { seeds: 8 });
   assert.ok(full.wins >= 0.95 * full.tries, `full crew: ${full.wins}/${full.tries}`);
   assert.ok(full.low < 50 && full.heals > 30, `pressure: lowest ${full.low.toFixed(0)}%, healing ${full.heals.toFixed(0)}% of cycles`);
-  const one = (crew, boss, bots = {}) => farmScore('demolitionist', crew, 18, { seeds: 16, only: boss, tries: 1, bots }).by[boss];
+  const one = (crew, boss, bots = {}, seeds = 16) => farmScore('demolitionist', crew, 18, { seeds, only: boss, tries: 1, bots }).by[boss];
   const tank = one(['sysop', 'payload', 'herder'], 'foreman'), healer = one(['warden', 'payload', 'herder'], 'heatsink');
-  const sigint = one(['warden', 'sysop', 'payload'], 'foreman', { interrupt: false }), damage = one(['warden', 'sysop', 'sysop'], 'coldwallet');
+  const sigint = one(['warden', 'sysop', 'payload'], 'foreman', { interrupt: false }), damage = one(['warden', 'sysop', 'sysop'], 'coldwallet', {}, 48); // 48 seeds: on 16 it swung 3 to 6 wins with the loot rolls' share of the dice (19–22% on 64)
   assert.ok(tank.wins <= 0.5 * tank.tries, `no tank, the Foreman: ${tank.wins}/${tank.tries}`);
   assert.ok(healer.wins <= 0.6 * healer.tries, `no healer, the Heatsink: ${healer.wins}/${healer.tries}`);
   assert.ok(sigint.wins <= 0.3 * sigint.tries, `no SIGINT, the Foreman: ${sigint.wins}/${sigint.tries}`);

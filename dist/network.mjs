@@ -33,10 +33,10 @@ export const NETWORK = {
   bands: [[5, 15], [16, 28], [29, 40]], // one from each band at least, so there's always one to chase
   tagWeight: { lean: 2, second: 1.25 }, // a native tied to its lean family is likelier to be one of its own
   lean: [3, 1.5, 0.5], // family weights, first to last
-  home: 0.005, // the native roll on its network, per kill (elites and bosses roll three times)
-  pity: 0.0001, // and this much more for every kill on that network without one (BOSS_LOOT's pity, per kill)
-  awayEach: 0.0002, // each foreign native you know of (named, or native to a network you know), per kill: a tenth of a native's share at home, no pity
-  away: 0.0005, // one you've never heard of (any other network's), per kill: it turns up rarely, and that names it
+  home: 0.000005, // the native roll on its network, per kill (elites and bosses roll three times): a world drop, so very rare; its lair boss is the way (BOSS_LOOT)
+  pity: 0.0000001, // and this much more for every kill on that network without one (BOSS_LOOT's pity, per kill)
+  awayEach: 0.0000002, // each foreign native you know of (named, or native to a network you know), per kill: a tenth of a native's share at home, no pity
+  away: 0.0000005, // one you've never heard of (any other network's), per kill: it turns up rarely, and that names it
   listenAway: 2, // a Listening Post tuned to a foreign native you know: awayEach × (1 + this × posts) for it
   rolls: 3, // elites and bosses
   codeShare: 0.3, // on its network, this share of every other code comes as its rich code

@@ -7,7 +7,7 @@
 // rooms (netrooms.mjs): on a visit it walks them like the rooms sim's bot (roomsim.mjs botStep: the key, the vault,
 // the Core, rooms not cleared yet, caches, respawns), fights with the planner, and jacks out when its Signal runs low.
 // node bot.mjs [class] [targetLevel] [seed]
-import { topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
+import { UNIQUES, topUpCost, tickServices, fresh, command, resolveCycle, active, hooks, hackerLevel, idleRegen, maxSignal, addLocation, finish, loaded, rigOf, stashItem, slotCount, loadedOn } from './dist/combat.mjs';
 import { RARITY_ORDER, SLOT_KINDS, groupOf } from './dist/gear.mjs';
 import { play, layoutOf, currentLocation, signalNow, takeable, CORE, residentBonus } from './dist/run.mjs';
 import { relockLeft, relocks } from './dist/rogue.mjs';
@@ -68,8 +68,12 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (e.type === 'drop' && e.item) {
       const it = e.item, key = it.name + JSON.stringify(it.stats), packs = (stats.packKeys ||= new Set());
       let src = (e.message.match(/^([^:]{1,40}):/)?.[1] || '').trim();
-      const kill = e.message.match(/^(.+?) dropped /);
-      if (kill) { const who = kill[1]; src = /RESIDENT/.test(who) ? 'Kill: Resident (Core)' : Object.values(BOSSES).some((b) => b.name.toUpperCase() === who) ? 'Kill: boss' : /^ELITE /.test(who) ? 'Kill: elite' : Object.values(GUARDS).some((g) => g.name.toUpperCase() === who) ? 'Kill: guard' : /^[A-Z][A-Z -]*-\d{3,}$/.test(who) || /-\d{4}/.test(who) ? 'Kill: room' : `Kill: ${who}`; if (/In your pack/.test(e.message)) packs.add(key); }
+      const kill = e.message.match(/^(.+?) dropped /), v = s.encounter?.virus, won = s.encounter && !active(s) && s.encounter.phase === 'victory';
+      if (kill) { const who = kill[1]; src = s.encounter?.rooms?.rare ? 'Kill: ★ rare' : /RESIDENT/.test(who) ? 'Kill: Resident (Core)' : Object.values(BOSSES).some((b) => b.name.toUpperCase() === who) ? 'Kill: boss' : /^ELITE /.test(who) ? 'Kill: elite' : Object.values(GUARDS).some((g) => g.name.toUpperCase() === who) ? 'Kill: guard' : /^[A-Z][A-Z -]*-\d{3,}$/.test(who) || /-\d{4}/.test(who) ? 'Kill: room' : `Kill: ${who}`; if (/In your pack/.test(e.message)) packs.add(key); }
+      else if (src === 'Loot' && won) src = v.boss ? 'Kill: boss' : v.elite ? 'Kill: elite' : 'Kill: room'; // a wild kill (SPRAWL-00, rogue servers, lairs), straight into the stash
+      if (src === 'Vault') packs.add(key); // a second vault's item: added, then into the pack (banked again on the way out)
+      if (it.home && !/ drops$/.test(src)) src = 'Native unique'; // network.mjs: a world drop of its own (a lair boss's is its loot)
+      else if (it.unique && !/ drops$/.test(src) && !/^(Mapped|LOWLIGHT|Streak|Contract|Dead drop|GLASSJAW)/.test(src) && UNIQUES[it.unique]?.sources?.some((x) => x.kind === 'strain')) src = 'Strain trophy';
       if (src === 'Banked' && packs.has(key)) packs.delete(key);
       else {
         const r = it.unique ? 'unique' : it.rarity;
@@ -86,7 +90,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     if (!s.encounter || (s.encounter.phase !== 'alert' && !active(s))) return; // a finished fight still on screen
     if (s.encounter.phase === 'alert') command(s, 'engage');
     const key = fightKey(), where = s.run?.loc, v = s.encounter.virus, at = trace ? here() : null, roomId = s.encounter.rooms?.room || null;
-    const sig0 = s.run ? s.run.integrity : null, L0 = hackerLevel(s), kind = s.encounter.rooms?.size || s.encounter.mode, gap = v.level - L0, inRoom = !!s.encounter.rooms, max0 = s.run?.max;
+    const sig0 = s.run ? s.run.integrity : null, L0 = hackerLevel(s), kind = s.encounter.rooms?.size || s.encounter.mode, gap = v.level - L0, inRoom = !!s.encounter.rooms, max0 = s.run?.max, rare = !!s.encounter.rooms?.rare;
     if (at) at.fights++;
     stats.fights[key] = (stats.fights[key] || 0) + 1;
     // The fight mix by your level: grey (10+ levels under you) vs strains and ICE (the fights with a rule).
@@ -103,8 +107,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     }
     if (active(s)) finish(s, 'defeat');
     const r = s.reports.at(-1);
-    if (sig0 != null && inRoom) (stats.roomFights ||= []).push({ L: L0, kind, gap, won: r?.result === 'victory', lost: r ? (sig0 - Math.max(0, r.endIntegrity)) / Math.max(1, max0) : 1, cycles: r?.cycles || 0, key, where }); // room fights: for the R1 gate
-    if (r?.result === 'victory') { stats.wins++; if (at) at.wins++; } else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (where && roomId) { const x = (lostIn[where + '@' + hackerLevel(s)] ||= {}); x[roomId] = (x[roomId] || 0) + 1; } if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
+    if (sig0 != null && inRoom) (stats.roomFights ||= []).push({ L: L0, kind, gap, won: r?.result === 'victory', lost: r ? (sig0 - Math.max(0, r.endIntegrity)) / Math.max(1, max0) : 1, cycles: r?.cycles || 0, key, where, rare, boss: v.boss || null }); // room fights: for the R1 gate
+    if (r?.result === 'victory') { stats.wins++; (stats.winsAt ||= {})[L0] = (stats.winsAt[L0] || 0) + 1; if (at) at.wins++; } else { stats.losses++; if (where) losses[where + '@' + hackerLevel(s)] = (losses[where + '@' + hackerLevel(s)] || 0) + 1; if (where && roomId) { const x = (lostIn[where + '@' + hackerLevel(s)] ||= {}); x[roomId] = (x[roomId] || 0) + 1; } if (openContracts(s).some((c) => c.type === 'bounty' && c.name === v.name)) stats.bountyLosses++; if (log) console.log('lost to', key); }
     if (s.encounter && !active(s)) command(s, '');
     lvlCheck();
   };

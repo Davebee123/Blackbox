@@ -10,7 +10,7 @@
 //   rooms       a fight (process ▣, elite ◆▣, guard post ◆▣, the core ♛, the hunter's den ☠), an interactable (cache ▤,
 //               vault ▥, rest ☰) or an empty junction (·). The marks are the terminal's; the page draws icons. A fight room's family, author and attack set are fixed by the
 //               server's seed, so a room is a place you learn. Its mutation rerolls with each respawn, and one respawn
-//               in ten is a rare spawn (★, two levels up, three loot rolls).
+//               in ten is a rare spawn (★, two levels up, better loot: LOOT.odds.rare).
 //   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Signal (ROOMS.moveNew into one you've never been in); rooms you've walked
 //               this visit, and `wait`, are free. A live virus blocks its room: engage it, or step back.
 //   keys        the vault's key sits in a guard post on another branch, three or more rooms from the vault. A guard
@@ -45,7 +45,7 @@
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
 import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, rollDrop } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
-import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
+import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
 import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
@@ -65,7 +65,7 @@ export const ROOMS = {
   respawn: { process: 15, elite: 45, guard: 20, core: 60, cache: 120 }, // minutes (the core: R0 has no takeover, so it comes back like a lair's)
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
   reconnect: 30000, // after you leave, the server takes you back this much later
-  rare: 0.1, rareLevel: 2, rareRolls: 3,
+  rare: 0.1, rareLevel: 2,
   // XP (7.2): a room kill pays 1.25 kills (an elite three times that, via ELITE.xp), a first clear half again, a rare
   // spawn twice, the Resident four times, the hunter twice; Mapped pays 5 kills.
   xp: { room: 1.25, first: 0.5, rare: 2, boss: 4, hunter: 2, mapped: 5 },
@@ -78,7 +78,7 @@ export const ROOMS = {
   hunter: { pace: 2, lose: 5, level: 2 }, // a room per 2 of your moves; a Tracker loses you 5 rooms away; 2 levels over the server (its size: twice a guard's Integrity)
   cache: { credits: [18, 36], code: [2, 4], script: 0.15 },
   purse: (level) => 4 + Math.floor(level / 2), // a rogue server's Stash: credits (and 1 code one time in five, netrooms.mjs)
-  vault: { gear: 1 / 3, custom: 0.4 },
+  vault: { gear: 1 / 3 }, // a second vault's loot: a protocol this often (a treasure chest's rarity, LOOT.vault), else a script
   junctions: 0.2, // about a fifth of the rooms
   sockets: { small: 1, medium: 2, large: 3 }, // socket rooms by size (6.1), a process's room first: clear it and it's yours to build in
   // Puzzle rooms (9.11): one, and a second this often by size; what each pays (L: the server's level). A board played
@@ -400,7 +400,7 @@ function assign(g, r, { size, kind, level, floor, author, hunter, N, L }) {
     R[id].seed = Math.floor(r() * 2 ** 31);
     if (R[id].kind === 'guard') R[id].guard = floor >= 2 && r() < 0.5 ? pick(r, ICE_POOL) : pick(r, GUARD_POOL);
     if (R[id].kind === 'cache') R[id].baitSeed = Math.floor(r() * 2 ** 31);
-    if (R[id].kind === 'vault') R[id].loot = r() < ROOMS.vault.gear ? { kind: 'gear', rarity: r() < ROOMS.vault.custom ? 'custom' : 'tuned' } : { kind: 'script', script: rollScript(r, 'uncommon') };
+    if (R[id].kind === 'vault') R[id].loot = r() < ROOMS.vault.gear ? { kind: 'gear', rarity: vaultRarity(r) } : { kind: 'script', script: rollScript(r, 'uncommon') };
   }
   nameRooms(g);
   return true;
@@ -562,7 +562,7 @@ function mapped(s) {
   const R = s.rooms;
   R.mapped = nowOf();
   for (const x of roomList(s)) R.seen[x.id] = 'kind'; // Mapped: every room discovered (one cleared from afar, too)
-  const it = addItem(s, rollItem(rnd(R, 77), { level: R.level + 2, rarity: rnd(R, 78)() < 0.35 ? 'custom' : 'tuned', cls: classOf(s) }), 'Mapped: ');
+  const r = rnd(R, 77), it = addItem(s, rollItem(r, { level: R.level + 2, rarity: r() < LOOT.quest ? 'custom' : 'tuned', cls: classOf(s) }), 'Mapped: ');
   if (it) R.banked.push(it.id);
   const xp = Math.round(xpFor(s, R.level, ROOMS.xp.mapped));
   gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server
@@ -1341,16 +1341,13 @@ function programsPay(s, room, e) {
 }
 const FAM_CODE = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel', trojan: 'worm', cryptominer: 'cipher', wiper: 'cipher' };
 const serverCodeOf = (s) => FAM_CODE[roomList(s).find((x) => x.family)?.family] || 'cipher';
-// What a won fight drops into the pack: gear now and then (an elite always a blue or better, a rare spawn three
-// rolls), the Resident a blue or better and a script half the time.
+// What a won fight drops into the pack: gear now and then at its tier's odds (trash, an elite, a ★ rare spawn: LOOT.odds),
+// a boss its sure item (bossLoot), and the Resident a script half the time.
 function drops(s, room, e, rare) {
   const R = s.rooms, lvl = e.virus.level;
   if (R.world) return ask('drops', s, room, e, rare);
-  let it = null;
-  if (room.kind === 'core') {
-    it = rollItem(rnd(R, 41), { level: lvl, rarity: rnd(R, 42)() < 0.25 ? 'custom' : 'tuned', cls: classOf(s) });
-    if (rnd(R, 43)() < 0.5) giveScript(s, rollScript(rnd(R, 44), 'uncommon'), `${BOSSES[RESIDENT].name} drops: `);
-  } else it = rollDrop(s, { kind: room.kind === 'guard' ? 'guard' : 'home', family: e.virus.family, elite: !!e.virus.elite, rolls: rare ? ROOMS.rareRolls : undefined }, lvl);
+  if (room.kind === 'core' && rnd(R, 43)() < 0.5) giveScript(s, rollScript(rnd(R, 44), 'uncommon'), `${BOSSES[RESIDENT].name} drops: `);
+  const it = rollDrop(s, { kind: room.kind === 'guard' || room.kind === 'core' ? 'guard' : 'home', family: e.virus.family, elite: !!e.virus.elite, boss: e.virus.boss || null, rare }, lvl); // a boss's sure item: bossLoot (combat.mjs)
   if (it) { const x = addItem(s, it, 'Dropped: '); if (x) { R.pack.push(x.id); say(s, `${itemLabel(x)} goes in your pack.`, 'rooms-good'); } }
   if (e.virus.elite && rnd(R, 45)() < 0.25) giveScript(s, rollScript(rnd(R, 46)), 'The elite carried: ');
 }

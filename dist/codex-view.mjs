@@ -118,6 +118,19 @@ function bodyPage(s, e) {
 const lootList = (parts) => `<ul class="cx-loot">${parts.filter((x) => x.spec.loot).map((x) => { const open = x.research >= RESEARCH.max; return `<li class="${open ? '' : 'unknown'}">${glyph('salvage')}<b>${esc(open ? x.spec.loot : UNKNOWN)}</b><small>${esc(x.named ? x.spec.name : UNKNOWN)}</small></li>`; }).join('')}</ul>`;
 const pctOf = (parts) => (parts.length ? Math.round((parts.reduce((n, x) => n + Math.min(x.research, RESEARCH.max) / RESEARCH.max, 0) / parts.length) * 100) : 0);
 
+// A boss's loot table (the dungeon journal): what every kill drops, its uniques (??? until found, a native boss's until
+// its first fall names them), and their odds with the bad-luck protection: the next kill's chance, in amber.
+const pc = (x) => `${Math.round(x * 100)}%`;
+function lootTable(t) {
+  const sure = t.sure === 'custom' ? `<li>${glyph('item')}<b class="iname r-custom">Custom</b><small>every kill, at its level</small></li>`
+    : t.sure ? `<li>${glyph('item')}<b class="iname r-tuned">Tuned</b><small>every kill, at its level · Custom ${pc(t.yellow)}</small></li>`
+    : `<li>${glyph('item')}<b>Like an elite</b><small>no sure drop</small></li>`;
+  const gold = t.gold ? `<li>${glyph('item')}<b class="iname r-zeroday">A world unique</b><small>${pc(t.gold)} a kill</small></li>` : '';
+  const own = t.uniques.map((u) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b${u.name ? ' class="iname r-zeroday"' : ''}>${esc(u.name || UNKNOWN)}</b><small>Lv ${u.level}${u.got ? ' · found' : ''}</small></li>`).join('');
+  const odds = t.uniques.length || t.native ? `<p class="cx-foot" title="${esc(`${pc(t.base)} a kill, +${pc(t.pity)} for each kill without one, back to ${pc(t.base)} when one drops.`)}">${t.native ? 'Native uniques' : 'Uniques'}: ${pc(t.base)} a kill, +${pc(t.pity)} a miss. Next kill <b class="you">${pc(t.chance)}</b>.</p>` : '';
+  return `<ul class="cx-loot">${sure}${gold}${own}</ul>${odds}`;
+}
+
 // ---------- the other pages ----------
 function bossPage(s, e) {
   const fam = e.strain ? link(`strain:${e.strain}`, STRAINS[e.strain].name) : e.family ? link(`family:${e.family}`, famName(e.family)) : '<span class="tag dim">the server\'s family</span>';
@@ -130,7 +143,7 @@ function bossPage(s, e) {
   const tells = e.raid ? '' : section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>', ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const lv = e.parts[0]?.level || e.level, rides = (x) => e.tells.filter((t) => t.part === x.part.name).map((t) => ({ name: t.name, kind: t.kind }));
   const parts = e.parts.length ? section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(lv, x, rides(x))).join('')}</div><p class="cx-foot">Its parts share their research with its ${e.strain ? 'strain' : 'family'}.</p>`, ` <small>at <b class="you">Lv ${lv}</b></small>`) : '';
-  const loot = e.uniques.length ? section('Loot', `<ul class="cx-loot">${e.uniques.map((u) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b>${esc(u.name || UNKNOWN)}</b><small>Lv ${u.level}</small></li>`).join('')}</ul>`) : '';
+  const loot = section('Loot', lootTable(e.loot));
   return head + about + sig + phases + parts + tells + loot;
 }
 function mutationPage(s, e) {

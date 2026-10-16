@@ -20,7 +20,7 @@ export const ROOT = {
   need: [0, 0, 5, 15, 30, 50], // respawned fight rooms cleared on the server to reach Root N
   firstMs: 60 * 60000, // the first rotation, an hour after the takeover
   rotateMs: 2 * 3600000, // then every two hours
-  rareChance: 0.25, rareMs: 60 * 60000, rareLevels: 2, rareRolls: 3,
+  rareChance: 0.25, rareMs: 60 * 60000, rareLevels: 2,
   levelXp: 0.75, // kills of XP for each Root level
   freeMemory: 3, portAt: 4, yieldAt: 4, yield: 0.25, wallAt: 5, wallPlus: 3, doubleAt: 5,
   cache: (level, root) => Math.round((20 + 4 * level) * (1 + 0.25 * (root - 1))), // credits in a rotated cache
@@ -114,7 +114,7 @@ export function processWon(s, e) {
   p.alive = false;
   const r = loc.root;
   r.cleared++;
-  if (p.rare) { const more = rollDrop(s, { kind: 'rogue', family: p.family, strain: p.strain, rolls: ROOT.rareRolls }, p.level); if (more) addItem(s, more, 'Rare virus: '); }
+  if (p.rare) { const more = rollDrop(s, { kind: 'rogue', family: p.family, strain: p.strain, rare: true }, p.level); if (more) addItem(s, more, 'Rare virus: '); }
   while (r.level < ROOT.max && r.cleared >= ROOT.need[r.level + 1]) {
     r.level++;
     emit(s, 'root', `ROOT ${r.level} on ${loc.name}: ${ROOT_PERKS[r.level]}.`, { location: loc.id, root: r.level });

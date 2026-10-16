@@ -22,7 +22,7 @@
 // Encrypt), sweep (one visit, every room but the Core, no rest), exfil (catch an Exfil) and heist (a vault's file past a
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
 import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
-import { MATERIALS, rollItem, seeded } from './gear.mjs';
+import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
@@ -769,7 +769,7 @@ export function mailCommand(s, text, at = now()) {
   if (c.reward.blueprint) learnBlueprint(s, 'Halcyon bonus: ');
   if (c.reward.codebase) learnCodebase(s, null, 'Halcyon bonus: ', { pool: familyComponents(s.locations.find((l) => l.id === c.loc)?.family || 'ransomware') }); // one you don't know (4 components if you know them all)
   // A protocol, Tuned or better (a contract that paid a daemon once pays this: daemons only come from invasions).
-  if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < 0.25 ? 'custom' : 'tuned' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }
+  if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < LOOT.quest ? 'custom' : 'tuned' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }
   if (c.reward.item) giveUnique(s, c.reward.item, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `);
   if (c.story !== undefined) { s.mail.waiting = 'armed'; s.mail.waitFrom = at; const next = postStory(s, at); if (next) emit(s, 'mail', `New mail from ${next.from}: ${next.subject}.`, { letter: next.id, from: next.from, subject: next.subject }); }
 }
