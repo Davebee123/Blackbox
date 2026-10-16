@@ -45,7 +45,8 @@ import { AUTHORS } from './authors.mjs';
 import { SCRIPTS, TIER, scriptsOf, slotsOf, scriptTip } from './scripts.mjs';
 import { BOSS_RULES } from './interrupt.mjs';
 import { familyName } from './families.mjs';
-import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, STOCKED, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, addrOf } from './floorplan.mjs';
+import { ROOMS, KINDS, HUNTERS, RESIDENT, WORLD, STOCKED, roomList, hereOf, neighbours, linksOf, seenOf, isUp, backAt, downAt, cacheFull, refillAt, isBait, coreOpen, opened, signalNow, sigOf, progressOf, fmtLeft, hunterOf, hunterNext, paceOf, moveCost, fightOf, exits, hunterLine, xpEarned, virusName, exfilOf, exfilNext, exfilSeen, exfilLine, known, nameOf, hunterSeen, isSocket, socketOpen, socketOff, programIn, roomRuns, tunnelOf, addrOf, PUZZLES, isPuzzle, puzzleState } from './floorplan.mjs';
+import { puzzlePanel } from './puzzle-view.mjs';
 import { PROGRAMS, SOCKET, programCost, buildBlock, codebasesOf, costLine as programCostLine } from './sockets.mjs';
 import { materialsOf } from './combat.mjs';
 import { MATERIALS } from './gear.mjs';
@@ -114,6 +115,12 @@ const ROOM_ICONS = {
   tunnel: '<path d="M3 20v-8a9 9 0 0 1 18 0v8"/><path d="M8 20v-7a4 4 0 0 1 8 0v7"/><path d="M2 20h20"/>',
   snare: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 3.5v17M3.5 12h17"/>',
   post: '<path d="M12 12v9"/><circle cx="12" cy="10" r="1.8"/><path d="M8.3 6.3a5.2 5.2 0 0 0 0 7.4M15.7 6.3a5.2 5.2 0 0 1 0 7.4M5.4 3.4a9.4 9.4 0 0 0 0 13.2M18.6 3.4a9.4 9.4 0 0 1 0 13.2"/><path d="M9 21h6"/>',
+  // The puzzle rooms (puzzles.mjs): a firewall's bricks walling a node in; a door and the way out; a charged node's
+  // bolt; a ping's rings.
+  quarantine: '<path d="M3 5h18v14H3Z"/><path d="M3 9.7h18M3 14.3h18M8 5v4.7M16 5v4.7M12 9.7v4.6M6 14.3V19M18 14.3V19"/>',
+  chase: '<path d="M4 21V3h10v18"/><path d="M2.5 21h19"/><path d="M11 12.5h.01"/><path d="M14.5 9h7M18.5 6l3 3-3 3"/>',
+  cascade: '<path d="M4 4h16v16H4Z"/><path d="M13.2 6.5 8.6 13.1h3.6l-1.3 4.4 4.6-6.6h-3.6Z"/>',
+  sweep: '<circle cx="12" cy="12" r="1.8"/><path d="M12 6.5a5.5 5.5 0 0 1 5.5 5.5M12 2.5a9.5 9.5 0 0 1 9.5 9.5"/><path d="M6.5 12A5.5 5.5 0 0 0 12 17.5M2.5 12a9.5 9.5 0 0 0 9.5 9.5" stroke-dasharray="2 2.4"/>',
 };
 const MARK_ICONS = {
   key: '<circle cx="6.5" cy="10" r="3.2"/><path d="M9.7 10h7.8M14.6 10v3M17.2 10v2.2"/>',
@@ -194,6 +201,7 @@ function aboutOf(s, room) {
   else if (room.kind === 'empty') who = 'Nothing here.';
   else if (room.kind === 'vault' && !opened(s, room)) who = room.farm ? 'Opens once the Foreman and the Heatsink are down.' : R.visit?.keys.includes(room.id) ? 'Your key fits.' : `Its key is in ${guardOf(s, room.id) ? labelOf(s, guardOf(s, room.id)) : 'an elite'}.`;
   else if (room.kind === 'rest') who = `Restores ${Math.round(R.max * ROOMS.rest)} Signal, once a visit.`;
+  else if (isPuzzle(room.kind)) who = `${PUZZLES[room.kind].title}. ${PUZZLES[room.kind].rule}`;
   if (isSocket(s, room) && socketOpen(s, room)) { const p = programIn(s, room.id); who = p ? `${PROGRAMS[p].name}: ${PROGRAMS[p].rule}${socketOff(s, room) ? ' (offline)' : ''}` : room.kind === 'core' ? 'The core socket: build a program here.' : 'An open socket: build a program here.'; }
   const denEdge = g.hunter === 'track' && g.den && neighbours(g, g.den).includes(room.id) && h && !h.awake && !h.down;
   const rule = hunted ? `The ${huntName(h)} is here: walk in and you fight it.`
@@ -215,6 +223,7 @@ function stateOf(s, room) {
   if (!kind) return { word: 'unknown', cls: 'dim' };
   if (room.kind === 'core' && !coreOpen(s)) return { word: 'sealed', cls: 'dim' };
   if (isSocket(s, room) && socketOpen(s, room)) { const p = programIn(s, room.id); return p ? { word: socketOff(s, room) ? 'offline' : 'running', cls: socketOff(s, room) ? 'dim' : '' } : { word: room.kind === 'core' ? 'core socket' : 'open socket', cls: '' }; }
+  if (isPuzzle(room.kind)) { const st = puzzleState(s, room); return st === 'ready' ? { word: 'ready', cls: '' } : st === 'live' ? { word: 'in play', cls: 'next' } : { word: st === 'won' ? 'solved' : 'failed', cls: st === 'won' ? 'dim' : 'hot', at: refillAt(s, room) }; }
   if (fightKind(room)) return isUp(s, room) ? { word: R.rare[room.id] ? '★ rare' : 'live', cls: R.rare[room.id] ? 'next' : 'hot' } : { word: 'cleared', cls: 'dim', at: backAt(s, room) };
   if (room.kind === 'cache') return cacheFull(s, room) ? (room.mirror ? { word: 'mirror', cls: 'hot' } : { word: 'stocked', cls: '' }) : { word: 'empty', cls: 'dim', at: refillAt(s, room) };
   if (room.kind === 'vault') return opened(s, room) ? { word: 'open', cls: 'dim' } : R.visit?.keys.includes(room.id) ? { word: 'key fits', cls: 'next' } : { word: 'locked', cls: '' };
@@ -377,6 +386,7 @@ function roomSvg(s, room, p, { reach, next, pop, near, G, marks }) {
     if (sealed) tags.push(['SEALED', 'hot']);
     if (up && R.rare[room.id]) tags.push(['★', 'rare']);
     if (denEdge) tags.push(['WAKES', 'hot']);
+    if (isPuzzle(room.kind)) { const st = puzzleState(s, room); if (st === 'live') tags.push(['IN PLAY', 'rare']); else if (st === 'won') tags.push(['SOLVED', 'done']); else if (st === 'lost') tags.push(['FAILED', 'hot']); }
   }
   let tx = x0 - 6;
   for (const [t, c] of tags) { const w = tagW(t); out += `<g class="fp-tag ${c}"><rect x="${n1(tx)}" y="${n1(y0 - 8)}" width="${w}" height="16" rx="2"/><text x="${n1(tx + w / 2)}" y="${n1(y0 + 3.5)}" text-anchor="middle">${t}</text></g>`; tx += w + 4; }
@@ -458,7 +468,7 @@ function needOf(s) {
   if (!R.at) return `home:${R.visits}`;
   if (active(s)) return null;
   const room = hereOf(s), v = R.visit;
-  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash') && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !v.rested && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0) || !!net(s, 'plantHere', room);
+  const ask = !!R.screen || (isSocket(s, room) && socketOpen(s, room) && !programIn(s, room.id) && !socketOff(s, room)) || (roomRuns(s, room, 'defrag') && !v.bays?.[room.id] && sigOf(s) < R.max) || ((room.kind === 'cache' || room.kind === 'stash' || isPuzzle(room.kind)) && cacheFull(s, room)) || (room.kind === 'vault' && (!opened(s, room) || (net(s, 'vaultLeft', room) || 0) > 0)) || (room.kind === 'rest' && !v.rested && restGain(s) > 0) || (room.kind === 'entry' && (net(s, 'entryFiles') || 0) > 0) || !!net(s, 'plantHere', room);
   return ask ? `${stampOf(s)}:${R.screen?.kind || room.kind}` : null;
 }
 // The room the pop-up is on: the one you clicked, or the one you're in when it wants a decision you haven't closed.
@@ -556,6 +566,12 @@ function hereCard(s) {
     body = files ? note(esc(`${files} ${files === 1 ? 'file' : 'files'} left here for you.`)) : note('The hunter never comes in.', 'dim');
     if (files) acts = btn('pull', 'Take', { primary: true });
   }
+  else if (isPuzzle(room.kind)) {
+    // A puzzle room: its board opens over the map as you walk in (puzzle-view.mjs); closed, Play opens it again.
+    const pst = puzzleState(s, room), M = PUZZLES[room.kind];
+    body = holder(room.kind, M.title, M.name, '', 'pz') + note(esc(M.rule), 'dim');
+    acts = `<button type="button" class="btn${pst === 'ready' || pst === 'live' ? ' primary' : ''}" data-pz-open>${pst === 'live' ? 'Resume' : pst === 'ready' ? 'Play' : 'The board'}</button>`;
+  }
   else if (room.kind === 'den') body = note(g.hunter === 'track' ? 'The Tracker sleeps here.' : 'The Patroller walks its loop from here.', 'dim');
   else if (room.kind === 'empty') body = note('Nothing here.', 'dim');
   else if (room.kind === 'purse') body = note(cacheFull(s, room) ? 'A few credits.' : 'Taken. It fills again when the server reboots.', 'dim');
@@ -648,11 +664,11 @@ function popCard(s, id) {
 export function roomsMarkup(s, ui = fpUi) {
   const R = s.rooms;
   if (!R) return '<section class="card"><h2>Rooms</h2><h1>No server</h1></section>';
-  const id = popOf(s, ui);
+  const pz = puzzlePanel(s), id = pz ? null : popOf(s, ui); // a puzzle room's board, over the map: the pop-up stands aside
   // Placed beside its room by app.js (placeRoomsPop) once it's drawn: hidden until then.
   const pop = id ? `<div class="map-pop fp-pop" id="fp-pop" data-pop="${esc(id)}" role="dialog" aria-label="${esc(R.at || id !== R.graph.entry ? (known(s, id) ? labelOf(s, R.graph.rooms[id]) : 'Unknown room') : 'Home')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-fp-pop-close title="Close (Esc)" aria-label="Close">×</button>${popCard(s, id)}</div>` : '';
   return `<div class="fp${R.at ? '' : ' home'}">
     ${sprite()}${hudMarkup(s)}
-    <section class="panel fp-map" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${pop}</section>
+    <section class="panel fp-map${pz ? ' pz-on' : ''}" data-pane="map"><div class="fp-scroll">${mapSvg(s, false, id)}${mapSvg(s, true, id)}</div><button type="button" class="btn small fp-zoom" data-fp-zoom title="Fit the server (double-click the map too). Scroll to zoom, drag to pan." aria-label="Fit the server">⤢</button>${pop}${pz}</section>
   </div>`;
 }

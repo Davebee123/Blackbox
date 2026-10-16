@@ -36,6 +36,8 @@ import { patchRules } from './skillrules.mjs';
 import { runScript, scriptsOf, SCRIPTS } from './scripts.mjs';
 import * as FP from './floorplan.mjs';
 import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-view.mjs';
+import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
+import { PUZZLES } from './puzzles.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -262,6 +264,8 @@ function flash(text) {
   flash.t = setTimeout(() => (el.textContent = ''), 1600);
 }
 const feel = createFeel({ settings: () => campaign.settings, reducedMotion: () => !campaign.settings.motion || reducedMotion.matches });
+// A puzzle room's board: what a move did, played over it once it renders (puzzle-view.mjs), its sounds on their beats.
+const pzFx = createPuzzleFx({ canMove: () => canMove(), sound: (sign, ms) => { feel.beat(ms); feel.add(sign, null); feel.beat(0); } });
 // The immersive shell (CRT, boot, status line). `?shell=plain` or `shell plain` turns it off.
 const shellParam = params.get('shell');
 const shellOn = () => (shellParam || campaign.settings.shell || 'immersive') !== 'plain';
@@ -588,16 +592,26 @@ function roomsSay(events) {
 document.addEventListener('click', (e) => {
   if (campaign.rooms && e.target.closest?.('#notice.sticky') && !e.target.closest('button')) { notice(''); return; }
   if (module !== 'rooms' || !campaign.rooms) return;
+  // A puzzle room's board (puzzle-view.mjs): × or Close puts it away, Play on the room's card brings it back, the
+  // sweep's Ping and Dig switch what a click on a cell does.
+  if (e.target.closest?.('[data-pz-close]')) { closePanel(campaign); feel.key('click'); dirty = true; return; }
+  if (e.target.closest?.('[data-pz-open]')) { openPanel(); closePop(campaign); feel.key('click'); dirty = true; return; }
+  const mode = e.target.closest?.('[data-pz-mode]');
+  if (mode && !mode.disabled) { pzUi.mode = mode.dataset.pzMode; feel.key('click'); dirty = true; return; }
   const t = e.target.closest?.('[data-fp-sel]');
   if (t) { pickRoom(campaign, t.dataset.fpSel); feel.key('click'); dirty = true; return; }
-  const bg = e.target.closest?.('.fp-map') && !e.target.closest('.fp-pop, [data-rooms], [data-fp-sel], [data-fp-zoom]');
+  const bg = e.target.closest?.('.fp-map') && !e.target.closest('.fp-pop, .pz-panel, [data-rooms], [data-fp-sel], [data-fp-zoom]');
   if ((e.target.closest?.('[data-fp-pop-close]') || bg) && popOf(campaign)) { closePop(campaign); dirty = true; }
 });
+// The chase's keys: the arrows move, space waits (not while you type).
+const CHASE_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', ' ': 'wait' };
 document.addEventListener('keydown', (e) => {
   const g = e.target.closest?.('[data-rooms]');
-  if (g && (e.key === 'Enter' || e.key === ' ') && g.tagName !== 'BUTTON') { e.preventDefault(); roomsClick(g.dataset.rooms, g.dataset.arg); }
+  if (g && (e.key === 'Enter' || e.key === ' ') && g.tagName !== 'BUTTON') { e.preventDefault(); roomsClick(g.dataset.rooms, g.dataset.arg); return; }
   const t = e.target.closest?.('[data-fp-sel]');
   if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pickRoom(campaign, t.dataset.fpSel); dirty = true; }
+  if (module === 'rooms' && campaign.rooms && CHASE_KEYS[e.key] && !e.target.closest?.('input, textarea, button') && panelRoom(campaign)?.kind === 'chase' && !document.querySelector('#pz-panel.pz-busy')) { e.preventDefault(); roomsClick('play', CHASE_KEYS[e.key]); return; }
+  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && panelRoom(campaign) && !gainOpen()) { closePanel(campaign); dirty = true; return; }
   if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && popOf(campaign)) { closePop(campaign); dirty = true; }
 });
 // Put the pop-up beside its room: right, left, below or above, the first side where it fits whole on screen without
@@ -924,6 +938,14 @@ function react(events) {
       case 'run-start': feel.add('jackin', null); shell.glitch?.(); break;
       case 'jacked-out': feel.add('hangup', null); if (e.gains?.length) { const name = e.message.match(/JACKED OUT of (.+?)\. Banked/)?.[1] || ''; setTimeout(() => showGain('Banked', name, e.gains, false), 350); } break;
       case 'rooms-good': if (e.gains?.length) { feel.add('pickup', null); showGain('Pulled', '', e.gains, true); } break; // a vault's files into your pack (netrooms.mjs)
+      case 'puzzle': feel.add(() => pzFx.move(e)); break; // a move on a puzzle room's board: it plays over the board once drawn
+      case 'puzzle-end': { // how a puzzle room's board went: a card like a reward's, once the move has played (a lost chase is a fight instead)
+        if (e.fight) { flash('CAUGHT'); break; }
+        const rows = [...e.rows, ...V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'level-up'].includes(x.type) && x.id < e.id))];
+        feel.beat(canMove() ? 700 : 0); feel.add(e.won ? 'win' : 'pzfail', null); feel.beat(0);
+        setTimeout(() => showGain(e.head, PUZZLES[e.kind]?.name || '', rows, false), canMove() ? 800 : 0);
+        break;
+      }
       case 'world-event': if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
       case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
@@ -1679,7 +1701,7 @@ function render(force = false) {
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
     if (module === 'codex') codexDrawn(focusCxKey);
-    if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); } // the countdowns tick in place: the markup only changes with the server
+    if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {

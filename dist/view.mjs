@@ -2564,6 +2564,7 @@ const SPOIL_ICON = {
   level: '<path d="M8 1.5l1.9 4 4.4.5-3.3 3 .9 4.4L8 11.2 4.1 13.4l.9-4.4-3.3-3 4.4-.5z"/>',
   credits: '<ellipse cx="8" cy="5" rx="5" ry="2"/><path d="M3 5v6c0 1.1 2.2 2 5 2s5-.9 5-2V5M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>',
   fast: '<path d="M9 1.5L3.5 9H8l-1 5.5L12.5 7H8z"/>',
+  score: '<rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M5 8.2l2 2 4-4.4"/>', // a puzzle room's board, how it went
 };
 const spIcon = (k) => `<svg class="sp-ico" viewBox="0 0 16 16" aria-hidden="true">${SPOIL_ICON[k] || SPOIL_ICON.item}</svg>`;
 const spRow = (r, i) => `<li class="sp-row k-${r.kind}${r.rarity ? ' r-' + r.rarity : ''}" style="--i:${i}">${spIcon(r.kind)}<span class="sp-lbl"><span class="sp-t" data-decode="${esc(r.label)}">${esc(r.label)}</span>${r.sub ? `<small>${esc(r.sub)}</small>` : ''}${r.pct != null ? `<span class="sp-bar lead"><span class="sp-was" style="width:${r.from}%"></span><span class="sp-now" style="--from:${r.from}%;--to:${r.pct}%"></span></span>` : ''}</span>${r.pack ? '<span class="sp-pack">pack</span>' : ''}<b class="sp-qty">${esc(r.qty)}</b></li>`;

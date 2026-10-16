@@ -33,6 +33,11 @@ export const TIPS = [
   // ---------- the rooms (the Run tab) ----------
   { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'A socket room. Clear its guard once and it\'s yours to build in: a program here bends this server\'s rules, and only this server\'s.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive off this server. It runs from you: corner it and break its Uplink before the upload finishes.' },
+  // A puzzle room's board, the first time you see each one (puzzle-view.mjs). One go a board: played to its end, it refills in two hours.
+  { id: 'pz-quarantine', page: 'rooms', at: '.pz-panel.k-quarantine .pz-well', text: 'The worm copies into the marked node after every firewall you place. Wall it in early, against an edge: every node it never reaches pays this server\'s code.' },
+  { id: 'pz-chase', page: 'rooms', at: '.pz-panel.k-chase .pz-well', text: 'The Tracker always steps the same way: across toward you, then up or down. It never goes around a wall. Walk it into one. Red rooms are where it would catch you.' },
+  { id: 'pz-cascade', page: 'rooms', at: '.pz-panel.k-cascade .pz-well', text: 'A node pushed past 3 discharges too, and that can chain. Find the tap that brings half the rack down.' },
+  { id: 'pz-sweep', page: 'rooms', at: '.pz-panel.k-sweep .pz-well', text: 'A ping reads how many steps away the cache is, across plus down. The faint ring is every cell that far: where rings cross, dig.' },
   { id: 'net-sweep', page: 'net', at: '.sweep:not(.past):not(.solved)', text: 'Click a line to light up every line it shares a source with, and filter out the noise. A right answer pushes your lead toward the next server. A wrong one only shrinks the push.' },
   { id: 'net-hostile', page: 'net', at: '.term .tok.virus', text: 'A virus is running in this folder. Click it, or type attack, when you are ready. It comes back a while after you kill it.' },
   { id: 'map-intrusion', page: 'map', at: '.mnode.intrusion', text: 'An intrusion is waiting at your gate. Select it and press Engage when you are ready. Nothing happens until you do.' },

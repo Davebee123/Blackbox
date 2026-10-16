@@ -106,7 +106,7 @@ test('a traced server is the R0 generator\'s graph from its seed: the key, the v
   const R = loc.floorplan, g = R.graph;
   assert.ok(R && s.rooms === R, 'its rooms live on it');
   assert.equal(R.kind, 'Mailhub');
-  assert.deepEqual(FP.generate(loc.seed, { size: R.size, kind: 'Mailhub', level: R.level, floor: R.floor, author: R.author }).links, g.links, 'from its seed');
+  assert.deepEqual(FP.generate(loc.seed, { size: R.size, kind: 'Mailhub', level: R.level, floor: R.floor, author: R.author }).links, g.links.filter((l) => !l.some((id) => FP.isPuzzle(g.rooms[id].kind))), 'from its seed (its puzzle rooms hang off it, docs/servers.md 9.11)');
   assert.equal(FP.coreOpen(s), false);
   // The guard post holds the key: beat it, take the key, open the vault.
   const post = Object.values(g.rooms).find((r) => r.kind === 'guard' && r.key === g.vaults[0]);

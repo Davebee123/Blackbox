@@ -251,6 +251,157 @@
 .rooms-mode .modules button[data-module="map"], .rooms-mode .modules button[data-module="mail"], .rooms-mode .modules button[data-module="server"], .rooms-mode .modules button[data-module="craft"],
 .rooms-mode #meter-integrity, .rooms-mode .meter:has(#vault-value), .rooms-mode #meter-signal { display: none; }
 
+/* ---- puzzle rooms (puzzle-view.mjs): the board over the map, in the map's own look. Amber structure and what you can
+   use, red what bites (the worm, the Tracker, a charge about to go), steel what protects (a firewall), gold what you're
+   after (a cache, a reading), teal only you. ---- */
+.fp-map.pz-on .fp-scroll { filter: saturate(0.5) brightness(0.38); transition: filter 0.25s; }
+.fp-map.pz-on .fp-zoom { visibility: hidden; }
+.pz-panel { position: absolute; inset: var(--s4); z-index: 7; display: grid; place-items: center; pointer-events: none; container-type: size; }
+.pz-card { position: relative; pointer-events: auto; width: min(760px, 100%); max-height: 100%; overflow: auto; display: grid; gap: var(--s4); padding: var(--s5) var(--s6) var(--s6);
+  background: linear-gradient(180deg, rgba(22, 15, 6, 0.97), rgba(11, 7, 3, 0.97)); border: 1px solid var(--line-strong);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 18px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(241, 185, 47, 0.1), inset 0 2px 0 var(--amber); }
+.pz-panel.k-chase .pz-card { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 18px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 91, 61, 0.1), inset 0 2px 0 var(--hot); }
+.pz-head { position: relative; display: grid; gap: var(--s1); padding-right: 36px; }
+.pz-kick { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber-soft); }
+.pz-kick .pz-at { color: var(--dim); } .pz-kick .pz-var { color: var(--hot); }
+.pz-head h1 { font: 600 22px/1.15 var(--sans); color: var(--bright); letter-spacing: 0.2px; }
+.pz-rule { font-size: 13px; color: var(--muted); max-width: 64ch; }
+.pz-x { position: absolute; right: 0; top: 0; min-width: 30px; }
+.pz-boot { font: 11px var(--mono); color: var(--dim); letter-spacing: 0.4px; min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pz-boot.ok::after { content: ' · ok'; color: var(--amber); }
+.pz-stats { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4) var(--s6); min-height: var(--h-btn-sm); }
+.pz-stat { display: inline-flex; align-items: center; gap: var(--s3); font-variant-numeric: tabular-nums; cursor: default; }
+.pz-stat[title] { cursor: help; }
+.pz-stat .lbl { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+.pz-stat b { font: 600 15px var(--mono); color: var(--bright); }
+.pz-stat b small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.pz-stat.steel b { color: var(--steel); } .pz-stat.dim b { color: var(--muted); }
+.pz-safe .pz-bar { position: relative; width: 96px; height: 8px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--inset); overflow: hidden; }
+.pz-safe .pz-bar span { position: absolute; inset: 0 auto 0 0; background: var(--amber); transition: width 0.4s; }
+.pz-safe .pz-bar i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--bright); opacity: 0.7; }
+.pz-safe.low .pz-bar span { background: var(--hot); } .pz-safe.low b { color: var(--hot); }
+.pz-pips { display: inline-flex; gap: 3px; }
+.pz-pips i { width: 10px; height: 10px; border: 1px solid var(--line-strong); border-radius: 1px; background: var(--inset); }
+.pz-pips i.on { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.45); }
+.pz-pips.hot i.on { background: var(--hot); border-color: var(--hot); box-shadow: 0 0 6px rgba(255, 91, 61, 0.5); }
+.pz-ctrls { display: inline-flex; gap: var(--s3); margin-left: auto; }
+.pz-seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-btn); overflow: hidden; }
+.pz-seg .btn { border: 0; border-radius: 0; min-width: 58px; color: var(--muted); }
+.pz-seg .btn.on { background: var(--amber); color: #140d02; font-weight: 600; }
+.pz-well { position: relative; padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-card);
+  background: radial-gradient(circle at 1px 1px, rgba(241, 185, 47, 0.09) 0.8px, transparent 0) 0 0 / 14px 14px, #0a0703; }
+.pz-well::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55)); }
+.pz-svg { display: block; width: 100%; height: auto; max-height: min(540px, calc(100cqh - 250px)); margin: 0 auto; touch-action: manipulation; user-select: none; -webkit-user-select: none; overflow: visible; }
+.pz-q.tall { display: none; }
+.pz-busy .pz-well { pointer-events: none; }
+.pz-svg text { font-family: var(--mono); pointer-events: none; }
+.pz-hit { fill: transparent; }
+.pz-n { transform-box: fill-box; transform-origin: center; }
+.pz-n .pz-chip { fill: url(#fp-g-node); stroke: #5a4420; stroke-width: 1.4; transition: stroke 0.15s, filter 0.15s; }
+.pz-n .pz-hair { fill: none; stroke: var(--amber-soft); stroke-width: 0.6; opacity: 0.3; pointer-events: none; }
+.pz-n[data-rooms] { cursor: pointer; }
+.pz-n[data-rooms]:hover .pz-chip, .pz-n[data-rooms]:focus-visible .pz-chip { stroke: var(--amber); filter: brightness(1.5); }
+.pz-n:focus { outline: none; }
+.pz-n:focus-visible .pz-hair { stroke: var(--bright); opacity: 0.95; stroke-width: 1.2; }
+.pz-bed { stroke: #050302; stroke-width: 8; stroke-linecap: round; }
+.pz-bed.hot { stroke: #2a0c06; }
+.pz-trace { stroke: rgba(241, 185, 47, 0.3); stroke-width: 1.6; }
+.pz-trace.hot { stroke: var(--hot); opacity: 0.75; }
+.pz-trace.cut { stroke: rgba(134, 182, 198, 0.22); stroke-dasharray: 2 5; }
+/* Quarantine */
+.pz-q .s-open.data .pz-chip { stroke: var(--amber); }
+.pz-star { fill: var(--amber); filter: url(#fp-glow); pointer-events: none; }
+.pz-q .s-inf .pz-chip { fill: url(#fp-g-hot); stroke: var(--hot); stroke-width: 1.8; }
+.pz-q .s-inf .pz-hair { stroke: var(--hot); }
+.pz-q .s-inf .pz-star { fill: #a8402a; filter: none; }
+.pz-core { fill: var(--hot); filter: url(#fp-glow); pointer-events: none; }
+.pz-halo { fill: none; stroke: var(--hot); stroke-width: 1.2; opacity: 0.3; pointer-events: none; }
+.pz-q .s-wall .pz-chip { fill: #0c181c; stroke: var(--steel); stroke-width: 1.8; }
+.pz-q .s-wall .pz-hair { stroke: var(--steel); }
+.pz-brick { fill: none; stroke: var(--steel); stroke-width: 1.8; stroke-linecap: round; filter: url(#fp-glow); pointer-events: none; }
+.pz-q .s-dead .pz-chip { fill: none; stroke: #2a2010; stroke-dasharray: 3 3; }
+.pz-next polygon { fill: none; stroke: var(--hot); stroke-width: 2.2; stroke-dasharray: 6 5; pointer-events: none; }
+.pz-next text { font-size: 12px; font-weight: 700; fill: var(--hot); }
+/* The chase */
+.pz-frame { fill: none; stroke: var(--amber-deep); stroke-width: 3; }
+.pz-room .pz-chip { fill: #0d0904; stroke: #2a2010; stroke-width: 1; }
+.pz-room.reach .pz-chip { fill: url(#fp-g-node); stroke: var(--amber-soft); stroke-width: 1.4; }
+.pz-room.reach.danger .pz-chip { fill: url(#fp-g-hot); stroke: rgba(255, 91, 61, 0.75); }
+.pz-room.reach.danger:hover .pz-chip { stroke: var(--hot); }
+.pz-wall { stroke: var(--amber); stroke-width: 5; stroke-linecap: square; }
+.pz-wallglow { stroke: rgba(241, 185, 47, 0.22); stroke-width: 14; stroke-linecap: round; }
+.pz-doorway { fill: rgba(241, 185, 47, 0.06); stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 4 4; pointer-events: none; }
+.pz-gap { stroke: #0a0703; stroke-width: 9; }
+.pz-door { stroke: var(--amber); stroke-width: 2.2; stroke-dasharray: 4 4; }
+.pz-doorword { font-size: 11px; font-weight: 700; letter-spacing: 2px; fill: var(--amber); }
+.pz-you { pointer-events: none; }
+.pz-you .body { fill: url(#fp-g-here); stroke: var(--you); stroke-width: 2; }
+.pz-you .ring { fill: none; stroke: var(--you); stroke-width: 1.6; opacity: 0.45; }
+.pz-you text { font-size: 12px; font-weight: 700; letter-spacing: 1px; fill: var(--you); }
+.pz-trk { pointer-events: none; }
+.pz-trk .bg { fill: #140503; stroke: var(--hot); stroke-width: 1.4; }
+.pz-trk .px { fill: var(--hot); }
+.pz-trk.caught .bg { filter: url(#fp-glow); stroke-width: 2.4; }
+.pz-trail { fill: none; stroke: var(--hot); stroke-width: 2; stroke-dasharray: 3 5; opacity: 0.5; pointer-events: none; }
+.pz-ghostpath { fill: none; stroke: var(--hot); stroke-width: 2; stroke-dasharray: 4 4; opacity: 0.9; pointer-events: none; }
+.pz-ghostbox { fill: none; stroke: var(--hot); stroke-width: 2; stroke-dasharray: 4 3; pointer-events: none; }
+.pz-ghostbox.caught { stroke-dasharray: none; stroke-width: 3; filter: url(#fp-glow); }
+.pz-keys { font: 11px var(--mono); color: var(--dim); display: flex; gap: var(--s2); align-items: center; }
+.pz-keys kbd { font: 11px var(--mono); border: 1px solid var(--line-strong); color: var(--muted); border-radius: 2px; padding: 0 5px; }
+/* The cascade */
+.pz-c .v1 .pz-chip { stroke: #6a5224; }
+.pz-c .v2 .pz-chip { stroke: var(--amber-soft); fill: #20160a; }
+.pz-c .v3 .pz-chip { stroke: var(--hot); fill: url(#fp-g-hot); stroke-width: 1.8; }
+.pz-c .v3 .pz-hair { stroke: var(--hot); }
+.pz-num { font-size: 19px; font-weight: 700; fill: var(--bright); }
+.pz-c .v3 .pz-num { fill: #ffd2c8; }
+.pz-pip { fill: #2a2011; pointer-events: none; }
+.pz-pip.on { fill: var(--amber); }
+.pz-c .v3 .pz-pip.on { fill: var(--hot); }
+.pz-slot { fill: #120d07; stroke: #2a2010; }
+/* The ping sweep */
+.pz-cell .pz-chip { fill: #0c0905; stroke: #241b0e; stroke-width: 1; }
+.pz-cell[data-rooms]:hover .pz-chip { stroke: var(--amber); filter: none; fill: #1a1309; }
+.pz-static { fill: none; stroke: #5a4a2c; stroke-width: 1.4; stroke-dasharray: 2 2; pointer-events: none; }
+.pz-ring { fill: rgba(255, 216, 92, 0.06); stroke: rgba(255, 216, 92, 0.16); stroke-width: 1; pointer-events: none; }
+.pz-ring.last { fill: rgba(255, 216, 92, 0.1); stroke: rgba(255, 216, 92, 0.32); }
+.pz-ping { pointer-events: none; transform-box: fill-box; transform-origin: center; }
+.pz-ping rect { fill: #1d1606; stroke: var(--next); stroke-width: 1.5; }
+.pz-ping text { font-size: 21px; font-weight: 700; fill: var(--next); }
+.pz-dug, .pz-cache { pointer-events: none; transform-box: fill-box; transform-origin: center; }
+.pz-dug rect { fill: #140806; stroke: rgba(255, 91, 61, 0.6); stroke-width: 1.2; }
+.pz-dug path { stroke: var(--hot); stroke-width: 2.6; stroke-linecap: round; }
+.pz-cache path { fill: var(--next); stroke: #2a1d03; stroke-width: 1; }
+.pz-cache .glow { fill: rgba(255, 216, 92, 0.16); filter: url(#fp-glow); }
+.pz-cache.missed path { fill: none; stroke: var(--next); stroke-dasharray: 3 3; opacity: 0.7; }
+/* what just happened (createPuzzleFx) */
+.pz-fx { pointer-events: none; }
+.pz-burst { fill: none; stroke-width: 2.5; transform-box: fill-box; transform-origin: center; }
+.pz-spark { stroke-width: 2; stroke-linecap: round; }
+.pz-burst.steel, .pz-spark.steel { stroke: var(--steel); }
+.pz-burst.hot, .pz-spark.hot { stroke: var(--hot); }
+.pz-burst.amber, .pz-spark.amber { stroke: var(--bright); }
+.pz-burst.gold, .pz-spark.gold { stroke: var(--next); }
+.pz-runner { fill: var(--hot); filter: url(#fp-glow); }
+.pz-wave { fill: none; stroke: var(--next); stroke-width: 2; }
+/* how it went */
+.pz-result { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); padding: var(--s4) var(--s5); border: 1px solid; border-radius: var(--r-btn); }
+.pz-result b { font: 700 13px var(--mono); letter-spacing: 2px; text-transform: uppercase; }
+.pz-result span { font: 12px var(--mono); color: var(--muted); }
+.pz-result .btn { margin-left: auto; }
+.pz-result.win { border-color: var(--amber); background: var(--amber-wash); } .pz-result.win b { color: var(--amber); text-shadow: 0 0 12px rgba(241, 185, 47, 0.4); }
+.pz-result.lose { border-color: var(--hot); background: var(--hot-soft); } .pz-result.lose b { color: var(--hot); }
+.fp-virus.pz { border-left-color: var(--amber); } .fp-virus.pz .fp-ic { color: var(--amber); }
+.fp-tag.done text { fill: var(--gray); } .fp-tag.done rect { stroke: var(--gray); }
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.no-motion) .pz-next polygon { animation: fp-flow 1.1s linear infinite; }
+  body:not(.no-motion) .pz-halo { animation: pz-pulse 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  body:not(.no-motion) .pz-you .ring { animation: fp-ring 2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  body:not(.no-motion) .pz-c .v3 .pz-chip { animation: pz-hum 1.4s ease-in-out infinite; }
+}
+@keyframes pz-pulse { 0% { opacity: 0.55; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes pz-hum { 50% { stroke: #ff8a6e; } }
+
 /* ---- phone: one column; the map stands up (the spine runs top to bottom) ---- */
 @media (max-width: 900px) {
   .page:has(> .fp) { overflow: visible; }
@@ -265,9 +416,21 @@
   .fp-scroll { padding: var(--s4) var(--s2); }
   .fp-svg.wide { height: auto; max-height: none; }
   .fp-map .fp-pop { width: auto; scroll-margin: 150px 0 90px; }
+  /* a puzzle's board takes the map's place: in the page's flow, full width */
+  .fp-map.pz-on .fp-scroll { display: none; }
+  .pz-panel { position: static; inset: auto; display: block; container-type: normal; }
+  .pz-card { width: 100%; max-height: none; overflow: visible; padding: var(--s4) var(--s4) var(--s5); }
+  .pz-svg { max-height: none; }
 }
 @media (max-width: 640px) {
   .fp-svg.wide { display: none; }
   .fp-svg.tall { display: block; width: 100%; height: auto; max-width: calc(var(--w) * 1.2); }
   .fp-hud .fp-rules .lbl { display: none; }
+  /* Quarantine stands on its side: 7 nodes across, bigger under a thumb */
+  .pz-q.wide { display: none; } .pz-q.tall { display: block; }
+  .pz-well { padding: var(--s2); }
+  .pz-head h1 { font-size: 19px; }
+  .pz-stats { gap: var(--s3) var(--s5); }
+  .pz-ctrls { margin-left: 0; width: 100%; } .pz-ctrls .btn { flex: 1; min-height: 36px; }
+  .pz-seg .btn { min-height: 34px; min-width: 70px; }
 }
