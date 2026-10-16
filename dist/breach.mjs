@@ -31,7 +31,7 @@
 // (enrage, overheat) hooks.cycleEnd. Between fights s.run is null, so gear loads as at home; during one it holds your
 // Signal, as on any run.
 import { hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, subOf, addItem, stashItem, rigOf, attackers, gainXp, part, livingParts, defender, hit } from './combat.mjs';
-import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf, makePart } from './data.mjs';
+import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf, makePart, climbStretch } from './data.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { SUBSYSTEMS, REWRITES } from './rewrites.mjs';
 import { GENES, rollGenome, partGenes, compatible } from './genes.mjs';
@@ -694,7 +694,9 @@ export function fight(s, n, { pause = false, sample = null, as = null } = {}) {
   const rage = BREACH.enrage[as === 'mirror' ? 'elite' : as ? null : n.kind];
   if (typeof rage === 'number') e.enrageAt = rage;
   // A campaign kill pays its own XP (campaign.mjs CAMPAIGN.xp): the Resident three times over, a gate half again.
-  if (b.xpMult) e.breachXp = b.xpMult * (n.kind === 'boss' && !as ? 3 : (n.kind === 'gate' && !as) || as === 'hunter' ? 1.5 : 1);
+  // The campaign keeps its own pace (about ten breaches to level 10, docs/roguelite.md 11): its kills grow with the long
+  // climb (climbStretch), and so does the capture's third of them.
+  if (b.xpMult) e.breachXp = b.xpMult * (n.kind === 'boss' && !as ? 3 : (n.kind === 'gate' && !as) || as === 'hunter' ? 1.5 : 1) * climbStretch(hackerLevel(s));
   const by = e.virus.author ? ` ${e.virus.author.toUpperCase()}.` : '';
   say(s, `${e.virus.name} holds ${n.path}. Level ${e.virus.level}.${by}`, 'intrusion');
   command(s, 'engage');

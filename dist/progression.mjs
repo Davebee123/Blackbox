@@ -11,7 +11,7 @@
 //                had in them comes back in kind (progressionRestore).
 import { emit, hackerOf, classOf, materialsOf, daemonLevel, UNIQUES, gainsTalent, kitTalent } from './combat.mjs';
 import { versionLevel } from './daemons.mjs';
-import { CATCHUP, levelTarget, LOADOUT, SERVER, FLOORS, ARCHETYPES } from './data.mjs';
+import { CATCHUP, levelTarget, LOADOUT, SERVER, FLOORS, ARCHETYPES, xpToNext, v41XpToNext } from './data.mjs';
 import { BASES, PROTOCOL_SLOTS, MATERIALS, primaries, uniqueItem, seeded, RULES, ruleValue, RARITIES } from './gear.mjs';
 import { MEMORY } from './memory.mjs';
 import { learnFilter } from './filters.mjs';
@@ -102,6 +102,20 @@ function payBack(s, c, into) {
 }
 const line = (c) => Object.entries(c).filter(([, n]) => n).map(([k, n]) => (k === 'credits' ? `${n} credits` : k === 'salvage' ? `${n} components` : `${n} ${MATERIALS[k]?.name || k}`)).join(', ');
 const hash = (str) => [...String(str)].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+// v42: the long climb (CLIMB in data.mjs, about 100 hours of real play to 50 where it was 7). Every class keeps its
+// level (nobody loses one), and its XP into the level keeps its share of it: two thirds of the way to 13 on the old
+// curve is two thirds of the way on the new one. Rested XP is a count of kills banked and stays as it is.
+export function climbRestore(s, was) {
+  if (was >= 42) return false;
+  let moved = false;
+  for (const h of Object.values(s.hackers || {})) {
+    if (!h || !(h.level >= 1) || h.level >= LOADOUT.maxLevel) continue;
+    const share = Math.min(1, Math.max(0, (h.xp || 0) / v41XpToNext(h.level)));
+    const xp = Math.min(xpToNext(h.level) - 1, Math.round(share * xpToNext(h.level)));
+    if (xp !== h.xp) { h.xp = xp; moved = true; }
+  }
+  return moved;
+}
 export function progressionRestore(s, was) {
   if (was >= 34) return;
   // One level: the server's XP goes. Its level is your highest class level from now on.

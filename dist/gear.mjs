@@ -225,7 +225,7 @@ export const FOUND_ZERO_DAYS = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z
 // something good; a boss always drops one item and rolls for its uniques (BOSS_LOOT in data.mjs); quests (contracts,
 // Mapped, the storyline, dead drops) pay what they say. lootsim.mjs checks it against `per`.
 export const LOOT = {
-  killsPerHour: 150, // real play: 10–15 seconds a mob and the walk between rooms (the pacing bot's clock is far slower, about 22); the System page shows yours
+  killsPerHour: 150, // real play: 10–15 seconds a mob and the walk between rooms (the pacing bot's own clock is far slower, about 7 on the long climb; bot.mjs keeps real play beside it); the System page shows yours
   // The targets over everything you do, a kill at a time: a blue in about 85 kills (30–40 minutes), a yellow in about
   // 500 (3–4 hours), a gold outside bosses and the farm under 1 in 4,500 (30+ hours).
   per: { tuned: 85, custom: 500, zeroday: 4500 },

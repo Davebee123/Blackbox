@@ -1,7 +1,7 @@
 // The loot check: the pacing bot (bot.mjs) plays each class to a level on a few seeds and reports what it found, a kill
 // at a time: how many kills each rarity takes to drop (against LOOT.per in gear.mjs), the same as minutes of real play
 // at LOOT.killsPerHour, by level band, and by source (trash, elites and guards, rare spawns, bosses, vaults, quests).
-// The bot's own clock runs far slower than a player (about 22 kills an hour), so its minutes are a secondary column.
+// The bot's own clock runs far slower than a player (about 7 kills an hour on the long climb), so its minutes are a secondary column.
 // node lootsim.mjs [targetLevel] [seeds] [classes, comma-separated]
 import { simulate } from './bot.mjs';
 import { LOOT } from './dist/gear.mjs';
