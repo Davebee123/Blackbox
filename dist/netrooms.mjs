@@ -41,6 +41,7 @@ import { strikeServer, clearedFor } from './factions.mjs';
 import { traceNear, hiddenLead, HIDDEN } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
 import { zoneSpawns, spawnFight, levelOf, layoutOf, fileInfo, residentLevel, RESIDENT, bank, KING_ROOM, packGain, peopleIn } from './run.mjs';
+import { threadsConnect, threadsMoved, threadsStood, threadVerb, tempCoreOpen, tempKilled, threadsRestore } from './threads.mjs';
 
 export const KIND_OF = { relay: 'Relay', mailhub: 'Mailhub', mirror: 'Mirror', archive: 'Archive', lab: 'Lab' };
 export const NET = {
@@ -204,6 +205,7 @@ export function enterRooms(s, loc, { signal, hot = false } = {}) {
   if (hot) s.run.hot = true;
   // A key cracker on this server (hidden.mjs): you walk in holding its vault's key, this visit.
   const keys = loc.passwordKnown && R.graph.vaults[0] && !FP.opened(s, R.graph.rooms[R.graph.vaults[0]]) ? [R.graph.vaults[0]] : [];
+  threadsConnect(s, loc); // threads (threads.mjs): this server's start pinned, a file in transit at its entry, a temporary server grown
   FP.enter(s, now(), { keys });
   if (keys.length) R.visit.cracked = true;
   contractConnect(s, loc); // an Install job's item goes in your pack on its server (mail.mjs)
@@ -250,6 +252,7 @@ WORLD_hook('coreOpen', (s) => {
   if (loc.zone) return hackerLevel(s) >= 3; // RELAY-KING holds the Core from level 3
   if (loc.farm) return !!loc.state?.unlocked?.['/ledger'];
   if (loc.lair) return lairOpen(s, loc);
+  if (loc.temp) return tempCoreOpen(loc); // a temporary server's kill switch: once you know it (threads.mjs)
   if (isWild(loc)) return true;
   return R.graph.vaults[0] ? !!R.opened[R.graph.vaults[0]] : true;
 });
@@ -276,7 +279,7 @@ WORLD_hook('fight', (s, room, as) => {
     return { key, seed, opts: { ...opts, room: room.path, author: loc.zone ? null : opts.author }, size: crew ? 'raw' : sp.boss ? 'boss' : sp.elite ? 'elite' : loc.zone ? 'stray' : 'process', name: sp.boss || sp.bounty ? sp.name.toUpperCase?.() === sp.name ? sp.name : opts.name || sp.name : null, level: sp.level, family: fam, elite: !!sp.elite, boss: sp.boss || null, bounty: !!sp.bounty, author: loc.zone ? null : authorOf(loc), xp: NET.wildXp, wild: true };
   }
   if (room.kind === 'core' && R.type === 'server') {
-    const level = residentLevel(loc, now()), name = `RESIDENT · ${loc.name}`;
+    const level = residentLevel(loc, now()), name = `${loc.temp ? 'KILL SWITCH' : 'RESIDENT'} · ${loc.name}`;
     return { key: 'random', seed: (((loc.seed || 1) * 7 + 31) >>> 0) + (R.spawns[room.id] || 0) * 7919, opts: { mode: 'run', room: room.path, level, family: loc.family, boss: 'resident', ...(loc.starter ? { bossHp: RESIDENT.starterHp } : {}), mutation: loc.trait === 'hardened' ? 'armored' : null, name, author: R.author }, size: 'boss', name, level, family: loc.family, author: R.author };
   }
   if (room.kind === 'guard' && (loc.quirk === 'hoard' || loc.trait === 'hardened')) {
@@ -298,7 +301,7 @@ WORLD_hook('won', (s, room, e, { first = false, mirror = false, rare = false } =
   roomKill(s, e, { pack: true, guard, family: lineageOf(e.virus.family), loc, rare });
   if (room.kind === 'guard') clearedFor(s, loc); // a faction's server: they notice (factions.mjs)
   if (e.virus.elite && seeded((e.seed * 31 + R.stats.fights) >>> 0)() < 0.25) giveScript(s, rollScript(seeded((e.seed * 17 + 3) >>> 0)), 'The elite carried: ');
-  if (room.kind === 'core') takeover(s, loc, room);
+  if (room.kind === 'core') { if (loc.temp) tempKilled(s, loc); else takeover(s, loc, room); } // a temporary server's kill switch: dark for good (threads.mjs)
   // Root (2.8): a respawned fight room cleared on a server you hold.
   if (!first && owned(loc) && FP.FIGHTS.includes(room.kind) && room.kind !== 'core') rootClear(s, loc);
 });
@@ -429,7 +432,11 @@ WORLD_hook('exfilWon', (s, room, e) => {
 // A contract's item installed in its room (an Install job, mail.mjs): undefined when you carry none for this server.
 WORLD_hook('plant', (s, room, arg) => { const loc = locOf(s); return loc ? contractInstall(s, loc, room, arg) : undefined; });
 // You stand in a room with nothing live in it: a no-rest map job counts the visit's rooms (mail.mjs).
-WORLD_hook('stood', (s) => { const loc = locOf(s); if (loc) contractStood(s, loc, s.rooms); });
+WORLD_hook('stood', (s, room) => { const loc = locOf(s); if (loc) { contractStood(s, loc, s.rooms); threadsStood(s, loc, room); } }); // and a thread's goto (threads.mjs)
+// Threads (threads.mjs): a file walking after each of your moves; talk, read and sweep in a thread's room.
+WORLD_hook('moved', (s) => threadsMoved(s));
+WORLD_hook('verb', (s, room, verb, arg) => { const loc = locOf(s); return loc ? threadVerb(s, loc, room, verb, arg) : undefined; });
+hooks.threadsRestore = threadsRestore;
 
 // ---------- what you take: into the pack ----------
 const packFile = (s, f) => { s.run.pack.push(f); return f; };
@@ -566,7 +573,7 @@ WORLD_hook('mapped', (s) => {
 export function summaryOf(s, loc) {
   const R = loc?.floorplan;
   if (!R) return null;
-  const all = Object.values(R.graph.rooms), done = all.filter((x) => R.cleared[x.id]).length;
+  const all = Object.values(R.graph.rooms).filter((x) => !x.nook), done = all.filter((x) => R.cleared[x.id]).length; // a thread's room never counts (threads.mjs)
   const vault = R.graph.vaults[0] ? !!R.opened[R.graph.vaults[0]] || (loc.farm && !!loc.state?.unlocked?.['/ledger']) : null;
   return { done, total: all.length, mapped: !!R.mapped, vault, visits: R.visits, kind: R.type === 'server' ? R.kind : null, size: R.size };
 }

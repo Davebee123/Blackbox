@@ -434,3 +434,62 @@
   .pz-ctrls { margin-left: 0; width: 100%; } .pz-ctrls .btn { flex: 1; min-height: 36px; }
   .pz-seg .btn { min-height: 34px; min-width: 70px; }
 }
+
+/* ---- Threads (threads-view.mjs): quests found in rooms. Amber is a thread's colour; teal is only ever you. ---- */
+/* the mark over a room: a filled amber badge, ! where one starts, ? where the step you're on sends you */
+.fp-quest { pointer-events: auto; cursor: help; }
+.fp-quest .bg { fill: var(--amber); stroke: #2a1b04; stroke-width: 1.2; filter: drop-shadow(0 0 4px rgba(241, 185, 47, 0.75)); }
+.fp-quest text { font: 700 13px var(--mono); fill: #1a1002; }
+.fp-quest.m-goal .bg { fill: #1a1103; stroke: var(--amber); stroke-width: 1.6; }
+.fp-quest.m-goal text { fill: var(--amber); }
+@media (prefers-reduced-motion: no-preference) {
+  .fp-quest.m-start { animation: th-bob 2.4s ease-in-out infinite; transform-box: fill-box; }
+  .fp-file.waits .bg { animation: th-wait 1.2s ease-in-out infinite; }
+}
+@keyframes th-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -2px; } }
+@keyframes th-wait { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.35; } }
+/* a file walking: its badge on the room's bottom edge and its Integrity under it */
+.fp-file { pointer-events: auto; cursor: help; }
+.fp-file .bg { fill: #1a1103; stroke: var(--amber); stroke-width: 1.4; }
+.fp-file use { color: var(--amber); }
+.fp-file .hpbg { fill: #0a0703; stroke: rgba(241, 185, 47, 0.35); stroke-width: 0.8; }
+.fp-file .hp { fill: var(--amber); }
+.fp-file.low .hp { fill: var(--hot); } .fp-file.low .bg { stroke: var(--hot); } .fp-file.low use { color: var(--hot); }
+/* a thread's room (a nook): its icon amber while it has something for you, gray once it's done */
+.fp-room.k-empty.t-amber .fp-body { stroke-dasharray: none; }
+/* the strip: the thread you track, and a file walking here */
+.fp-qmini { display: inline-grid; place-items: center; width: 15px; height: 17px; clip-path: polygon(50% 0, 100% 24%, 100% 76%, 50% 100%, 0 76%, 0 24%); background: var(--amber); color: #1a1002; font: 700 11px var(--mono); flex: none; }
+.fp-thread b { color: var(--amber); max-width: 18ch; overflow: hidden; text-overflow: ellipsis; }
+.fp-thread small, .fp-filestat small { font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30ch; }
+.fp-filestat .fp-ic { color: var(--amber); }
+.fp-filestat .lbl { font: var(--label); letter-spacing: var(--label-track); text-transform: none; color: var(--dim); }
+.fp-filestat .fbar { position: relative; width: 44px; height: 6px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--inset); overflow: hidden; }
+.fp-filestat .fbar span { position: absolute; inset: 0 auto 0 0; background: var(--amber); }
+.fp-filestat.low .fbar span { background: var(--hot); } .fp-filestat.low b { color: var(--hot); }
+/* the room's card */
+.fp-virus.th { border-left-color: var(--amber); } .fp-virus.th .fp-ic { color: var(--amber); }
+.fp-note.th-note { display: flex; gap: var(--s3); align-items: flex-start; color: var(--amber); }
+.fp-note.th-note .fp-ic { flex: none; width: 16px; height: 16px; color: var(--amber); margin-top: 1px; }
+/* the dialogue, over the map like a puzzle's board */
+.th-panel .pz-card.th-card { width: min(560px, 100%); gap: var(--s5); }
+.th-head h1 { display: flex; align-items: center; gap: var(--s4); font: 600 18px/1.2 var(--mono); letter-spacing: 0.4px; }
+.th-head .th-who { width: 26px; height: 26px; color: var(--amber); flex: none; }
+.th-head .th-title { color: var(--amber); }
+.th-lines { display: grid; gap: var(--s3); padding: var(--s5) var(--s5); border: 1px solid var(--line); border-left: 2px solid var(--amber); border-radius: var(--r-card); background: #0a0703; font: 14px/1.5 var(--sans); color: var(--text); }
+.th-line { margin: 0; }
+.th-line.sys { font: 12.5px/1.5 var(--mono); color: var(--muted); letter-spacing: 0.3px; }
+.th-line.quote { font-style: italic; color: var(--bright); }
+.th-panel.k-log .th-line { font: 12.5px/1.55 var(--mono); color: var(--text); white-space: pre-wrap; }
+.th-panel.k-log .th-line.sys { color: var(--amber-soft); }
+@media (prefers-reduced-motion: no-preference) {
+  .th-line { animation: th-in 0.35s ease-out both; animation-delay: calc(var(--i) * 0.42s); }
+}
+@keyframes th-in { from { opacity: 0; translate: 0 4px; clip-path: inset(0 100% 0 0); } to { opacity: 1; translate: 0 0; clip-path: inset(0 0 0 0); } }
+.th-choices { display: grid; gap: var(--s3); }
+.th-choice { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--s4); text-align: left; min-height: var(--h-btn); border: 1px solid var(--line-strong); background: var(--inset); }
+.th-choice:hover:not(:disabled) { border-color: var(--amber); background: var(--amber-wash); }
+.th-choice kbd { display: inline-grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--amber); border-radius: 2px; font: 600 11px var(--mono); color: var(--amber); }
+.th-acts { justify-content: flex-end; }
+.th-panel .sweep { margin: 0; }
+@media (max-width: 980px) { .th-panel .pz-card.th-card { width: 100%; } }
+@media (max-width: 640px) { .fp-thread small, .fp-filestat .lbl, .fp-filestat small { display: none; } .fp-thread b { max-width: 14ch; } }

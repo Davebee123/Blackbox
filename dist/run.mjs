@@ -27,6 +27,7 @@ import { showCard } from './genome.mjs';
 import { owned, procIn, procOf, rootFileInfo, rootFiles, rootOf, CACHE_FILE, STASH_DIR, STASH_FILE } from './root.mjs';
 import { enterRooms, roomsFor } from './netrooms.mjs';
 import { roomsCommand, jackOut as roomsJackOut, settle as roomsSettle, hereOf, FIGHTS, roomList, neighbours, isUp, coreOpen, walkToRoom, seenOf, fightOf } from './floorplan.mjs';
+import { threadCommand, developerThread, isDark } from './threads.mjs';
 export { zoneOf, zoneRooms };
 
 const since = (s, first) => s.logs.filter((e) => e.id > first);
@@ -311,9 +312,9 @@ function decoy(loc, k) {
 
 // How many of those you've banked (dead drops, route and contract files don't count toward it).
 // A server's progress for the map: on rooms (R1) its rooms cleared of all its rooms, else the old files taken.
-export const takenOf = (loc) => (loc.floorplan ? Object.keys(loc.floorplan.graph.rooms).filter((id) => loc.floorplan.cleared[id]).length : takeable(loc).filter((f) => loc.state.taken[f]).length);
+export const takenOf = (loc) => (loc.floorplan ? Object.keys(loc.floorplan.graph.rooms).filter((id) => loc.floorplan.cleared[id] && !loc.floorplan.graph.rooms[id].nook).length : takeable(loc).filter((f) => loc.state.taken[f]).length);
 export function takeable(loc) {
-  if (loc.floorplan) return Object.keys(loc.floorplan.graph.rooms);
+  if (loc.floorplan) return Object.keys(loc.floorplan.graph.rooms).filter((id) => !loc.floorplan.graph.rooms[id].nook); // a thread's room never counts (threads.mjs)
   const out = [];
   for (const [dir, d] of Object.entries(layoutOf(loc))) if (!d.drop) for (const f of d.files) if (!['text', 'trap', 'sweep'].includes(fileInfo(loc, dir, f).kind)) out.push(join(dir, f));
   return out;
@@ -390,6 +391,7 @@ export function connect(s, id) {
   else if (!s.run && signal < Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)) warn(s, `Your Signal (${signal}/${maxSignal(s)}) is too weak to connect. Let it rest back up to ${Math.ceil(maxSignal(s) * CONFIG.zone.minSignal)}.`);
   else if (s.run) warn(s, 'Already connected. Type jack out first.');
   else if (!loc) warn(s, `No server called "${id}" on your map.`);
+  else if (isDark(loc)) warn(s, `${loc.name} is dark. Nothing answers.`); // a thread's temporary server, shut down for good (threads.mjs)
   else if (s.server.integrity <= 0) warn(s, 'Your server crashed. Reboot before running.');
   else if (loc.fresh && loc.detached && !joinCost(s, loc).fits) warn(s, `${loc.name} needs ${joinCost(s, loc).add} memory; ${memoryCap(s) - liveCount(s)} free (${liveCount(s)}/${memoryCap(s)}). Detach something first.`);
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
@@ -410,7 +412,7 @@ export function connect(s, id) {
     else {
       // R1: the server's rooms (netrooms.mjs). Your crew comes along, linked to you.
       const R = enterRooms(s, loc, { signal, hot });
-      const rooms = ` Rooms ${Object.values(R.graph.rooms).filter((x) => R.cleared[x.id]).length}/${Object.keys(R.graph.rooms).length}.`;
+      const counted = Object.values(R.graph.rooms).filter((x) => !x.nook), rooms = ` Rooms ${counted.filter((x) => R.cleared[x.id]).length}/${counted.length}.`;
       emit(s, 'run-start', `CONNECTED to ${loc.name}${zone ? ', a rogue server' : loc.member ? `, ${loc.member}'s server` : loc.rogue ? `, a rogue server (${ROGUE.kinds[loc.rogue.kind].name})` : ''}.${rooms}${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}`, { location: loc.id, rooms: true });
       if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     }
@@ -748,6 +750,8 @@ export function play(s, input) {
   if (/^developer invade( \w+)?$/.test(text) || text === 'developer crash') return developerNetwork(s, text);
   if (/^developer wall (\d+|off)$/.test(text)) { const first = s.serial; developerWall(s, text); return since(s, first); } // pin your wall's base (firewall.mjs)
   if (/^(install|uninstall) /.test(text)) { const first = s.serial; if (sabotageBlock(s, text)) return since(s, first); } // a saboteur holds a service (invasion.mjs)
+  if (/^threads?\b/.test(text)) return threadCommand(s, text); // threads, thread <id>, thread track|abandon|resume <id>, thread take <n> (threads.mjs)
+  if (/^developer thread\b/.test(text)) return developerThread(s, text.replace(/^developer thread\s*/, ''));
   if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { const first = s.serial; deal(s, text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null)); return since(s, first); } // an event now
   // On rooms (R1): ls, cd, map, go, wait, back, engage, cat, pull, open, force, rest, slip, jack out (floorplan.mjs).
   // Mid-fight, jack out is the emergency escape, as on the old runs.
@@ -755,7 +759,7 @@ export function play(s, input) {
     if (active(s)) return word === 'jack' && rest === 'out' ? command(s, 'jack out') : command(s, input);
     roomsSettle(s);
     if (word === 'pack') { const first = s.serial; out(s, s.run.pack.length ? s.run.pack.map((f) => `${f.name.padEnd(14)} ${packLine(f)}`).concat('unbanked until you jack out.') : 'pack is empty.', 'rooms-out'); return since(s, first); }
-    if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk: a name or an address (cd C2; cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'install       a contract\'s item, in its room (plant)', 'play          a puzzle room\'s board (play wall c4, play up, play tap b2, play ping d4)', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
+    if (word === 'help') { const first = s.serial; out(s, ['ls            this room and its exits', 'go <room>     walk: a name or an address (cd C2; cd .. toward the entry)', 'map           the rooms you have seen', 'wait          stay a move', 'engage, back  fight what holds the room, or step back', 'cat, pull     read and take a cache (pull in an open vault)', 'open, force   the vault', 'rest          the rest room', 'install       a contract\'s item, in its room (plant)', 'play          a puzzle room\'s board (play wall c4, play up, play tap b2, play ping d4)', 'talk          who waits in a thread\'s room (talk 1, talk 2 to choose; read a log)', 'threads       your threads (thread <id>, thread abandon <id>)', 'slip          past the hunter (Infiltrator)', 'pack          what you carry', 'jack out      home, banking the pack'], 'rooms-out'); return since(s, first); }
     if (['split', 'link', 'goto', 'regroup', 'unlink'].includes(word)) { const first = s.serial; crewMove(s, word, rest); return since(s, first); }
     if (word === 'scan') { const first = s.serial; scanRoom(s, rest); return since(s, first); }
     const ev = roomsCommand(s, text.replace(/^look$/, 'ls').replace(/^attack\b.*/, 'engage').replace(/^tree$/, 'map'));

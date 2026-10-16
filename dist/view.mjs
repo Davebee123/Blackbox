@@ -51,6 +51,8 @@ import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, name
 import { lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
 import { daemonText } from './daemons.mjs';
+import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
+import { threadById, serverMarks } from './threads.mjs';
 
 // WoW-style level colors: how an enemy's level compares with yours.
 export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange' : gap >= -2 ? 'con-yellow' : gap > -10 ? 'con-green' : 'con-gray');
@@ -1337,7 +1339,11 @@ function sweepMarkup(s, e, live) {
   const loc = s.locations.find((l) => l.id === e.location);
   const solved = loc?.state?.sweep?.solved || p.solved;
   if (!live) return `<div class="sweep past">${esc(e.message)}${solved ? ` <span class="tag you">swept</span>` : ''}</div>`;
-  const key = e.location;
+  return sweepBlock(p, { solved, tries: loc?.state?.sweep?.tries || 0, key: e.location });
+}
+// The sweep itself (its log, the filters, the suspects): the old runs' incident file, and a thread's process log on a
+// temporary server (threads-view.mjs). solved: the answer once found; tries: wrong answers so far.
+export function sweepBlock(p, { solved = null, tries = 0, key = '' } = {}) {
   if (sweepUi.key !== key) { sweepUi.key = key; sweepUi.flags = new Map(); sweepUi.filter = 'all'; }
   const f = sweepUi.filter;
   const shown = p.rows.filter((x) => f === 'all' || x.kind === f);
@@ -1349,7 +1355,6 @@ function sweepMarkup(s, e, live) {
     return x.flag ? `<button type="button" class="sw-line${c}${x.tone === 'dim' ? ' dimmed' : ''}" ${grid} data-sweep-flag="${esc(x.flag)}">${body}</button>` : `<div class="sw-line quiet" ${grid}>${body}</div>`;
   };
   const filt = (id, label) => `<button type="button" class="sw-filter${f === id ? ' on' : ''}" data-sweep-filter="${id}">${esc(label)}</button>`;
-  const tries = loc?.state?.sweep?.tries || 0;
   const suspects = p.suspects.map((a) => (solved ? `<span class="sw-suspect${a === solved ? ' guilty' : ' cleared'}">${esc(a)}</span>` : `<button type="button" class="sw-suspect" data-run="sweep ${esc(a)}">${esc(a)}</button>`)).join('');
   return `<div class="sweep${solved ? ' solved' : ''}"><div class="sw-head"><b>${glyph('ids')}${esc(p.file)}</b><span class="sw-q">${esc(p.question)}</span><span class="sw-filters">${filt('all', 'All')}${filt('a', p.filters[0])}${filt('b', p.filters[1])}</span></div>${p.note ? `<div class="sw-note">${esc(p.note)}</div>` : ''}<div class="sw-cols sw-line" ${grid}>${p.cols.map((c) => `<span>${esc(c)}</span>`).join('')}</div><div class="sw-log">${shown.map(row).join('') || '<div class="sw-line quiet">nothing matches</div>'}</div><div class="sw-foot"><span class="sw-label">${solved ? 'Swept' : 'Your answer'}</span>${suspects}${!solved && tries ? `<small class="sw-tries">${tries} wrong</small>` : ''}</div></div>`;
 }
@@ -1454,6 +1459,7 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
   const pickSel = () => {
     if (sel?.[0] === 'l') { const l = letters.find((m) => m.id === Number(sel.slice(1))); if (l) return { letter: l }; }
     if (sel?.[0] === 'j') { const j = findJob(s, Number(sel.slice(1))); if (j) return { job: j }; }
+    if (sel?.[0] === 't') { const t = threadById(s, sel); if (t) return { thread: t }; } // a thread (threads.mjs)
     const l = letters.find((m) => !m.read);
     if (l && l.job != null && jobs.has(l.job)) { const j = findJob(s, l.job); if (j) return { job: j }; } // shown as its contract
     if (l) return { letter: l };
@@ -1483,13 +1489,15 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
     ${met.length ? `<div class="reps">${met.map((f) => `<button type="button" class="rep-chip" style="--fc:${FX[f].color}" data-go="hub:${f}" title="${esc(FX[f].name)}: ${rep(s, f)} · ${esc(repTier(s, f).name)}">${glyph('f-' + f)}<span>${esc(repTier(s, f).name)}</span></button>`).join('')}</div>` : ''}`;
   let reader = '<section class="card mread"><p class="quiet">No mail.</p></section>';
   const item = open.letter || open.job;
-  if (item) {
+  if (open.thread) reader = threadReader(s, open.thread);
+  else if (item) {
     const j = open.job || (open.letter.job != null ? findJob(s, open.letter.job) : null);
     const body = item.body?.length ? item.body : letters.find((m) => m.job === item.id)?.body || []; // a contract reads as its letter
     reader = `<section class="card mread"><h2>${esc(item.from)}</h2><h1>${esc(item.subject)}</h1><div class="mbody">${body.filter(Boolean).map((l) => `<p>${esc(l)}</p>`).join('')}</div>${j ? jobBox(s, j, now) : ''}</section>`;
   }
   return `<div class="page-grid mail-page"><section class="card inbox">${head}
     <h2>Contracts · ${heldCount(s)}/${MAIL.take}</h2>${heldRows ? `<ul class="mlist">${heldRows}</ul>` : '<p class="quiet">None taken.</p>'}
+    ${threadRows(s, open.thread?.id || null)}
     ${boardOpen(s) ? `<h2>Board · ${board.length}</h2>${boardRows ? `<ul class="mlist mboard">${boardRows}</ul>` : '<p class="quiet">Nothing on offer right now.</p>'}` : ''}
     ${letterRows ? `<h2>Letters${unreadLetters ? ` · ${unreadLetters} unread` : ''}</h2><ul class="mlist">${letterRows}</ul>` : ''}
     ${done.length ? `<h2 class="mdone-head">Completed · ${done.length}</h2><ul class="mlist mdone">${doneRows}</ul>` : ''}</section>${reader}</div>`;
@@ -1809,6 +1817,8 @@ export function floorOfSel(s, sel) {
   if (sel.startsWith('hub-')) return FLOOR.hubs[sel.slice(4)] || null;
   const l = (s.locations || []).find((x) => x.id === sel);
   if (l) return l.slot ? l.depth || 1 : null;
+  const tl = (s.threads?.servers || []).find((x) => x.id === sel); // a thread's temporary server (threads.mjs)
+  if (tl) return tl.depth || 1;
   const h = (s.hidden || []).find((x) => x.id === sel);
   return h?.depth || null;
 }
@@ -1843,6 +1853,8 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
     const h = hiddenAt(s, x.id);
     if (h) put({ id: h.id, kind: 'hidden', hidden: h, x: x.x, y: x.y }, x.id);
   }
+  // A thread's temporary servers on this floor (threads.mjs): beside the server they grew from, a dashed link to it.
+  for (const t of tempNodes(s, n)) { const node = put(portrait ? { ...t, x: t.y, y: t.x } : t); const host = byId[t.host]; if (host) links.push({ from: host.id, to: node.id, ghost: true, temp: true }); }
   // Links between what's drawn: solid between found places, a ghost line to a ? or an exit you can't take yet.
   for (const [a, b] of g.links) {
     const A = byId[idOf[a]], B = byId[idOf[b]];
@@ -1850,6 +1862,8 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
     const ghost = [A, B].some((x) => x.kind === 'hidden' || (x.kind === 'exit' && !x.open) || x.kind === 'hub');
     links.push({ from: A.id, to: B.id, ghost });
   }
+  // A thread's file in transit between two servers here: on the way between them (threads.mjs).
+  for (const t of transitNodes(s, byId, idOf, portrait ? { links: g.links } : g)) put(t);
   // The invader: from its server when it's on this floor, else up through the entry; it stops just outside home.
   const inv = s.invasion, src = inv && (byId[inv.from] || byId[idOf[g.entry]]);
   if (src) {
@@ -2059,7 +2073,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>` : '';
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
-    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''}"/>`;
+    return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''} ${k.temp ? 'tlink' : ''}"/>`;
   }).join('');
   // Labels that would overlap: the more important one keeps its label, the other's comes back on
   // hover, selection or zoom. Importance: selected, under threat, a contract or fresh find, an
@@ -2082,6 +2096,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       if (off || boxes.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) crowded.add(n.id); else boxes.push(box);
     }
   }
+  const thMarks = serverMarks(s); // the servers a thread marks (threads.mjs)
   const draw = nodes.map((n) => {
     const on = !none && n.id === sel ? ' selected' : '';
     const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
@@ -2122,6 +2137,8 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const p = labelAt(n, 12), shape = n.kind === 'exit' ? 'M-9 -6 L9 -6 L0 9 Z' : 'M0 -9 L9 6 L-9 6 Z';
       return `<g class="mnode ${n.kind}${n.open || been ? ' open' : ''}${been ? ' been' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${n.kind === 'exit' ? 'Exit to' : 'Up to'} floor ${to}"><circle r="18" class="mhit"/><circle r="14" class="exit-glow"/><path d="${shape}" class="exit-mark"/>${pick}<text x="${p.x}" y="${p.y}" class="mlabel" text-anchor="${p.a}">Floor ${to}</text><text x="${p.x}" y="${p.y}" dy="1.45em" class="msub" text-anchor="${p.a}">${band}</text></g>`;
     }
+    if (n.kind === 'temp') return tempNodeSvg(s, n, on + (crowded.has(n.id) ? ' crowded' : '') + (s.run?.loc === n.id ? ' here' : ''), (nn, r, name, sub, cls) => (pick || '') + label(nn, r, name, sub, cls));
+    if (n.kind === 'transit') return transitSvg(n, s.settings?.motion !== false);
     if (n.kind === 'hidden') {
       const h = n.hidden, flag = hiddenFlagged(s, h);
       return `<g class="mnode hidden f-target${flag ? ' job' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${h.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Unknown server"><circle r="18" class="mhit"/>${arc(8, h.lead / 100, 'lead')}<text class="qmark" text-anchor="middle" y="4">?</text>${pick}${label(n, 9, flag ? 'Flagged' : h.lead ? `${h.lead}%` : '', flag && h.lead ? `${h.lead}%` : '', 'dim')}</g>`;
@@ -2136,7 +2153,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const live = Object.values(l.spawns || {}).filter((x) => x.alive).length;
       return `<g class="mnode rogue${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${st === 'here' ? ' here' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}, rogue server"><circle r="18" class="mhit"/><path d="M0 -10 L9 -5 L9 5 L0 10 L-9 5 L-9 -5 Z"/><path d="M-4 -3 L4 3 M4 -3 L-4 3" class="rx"/>${pick}${lvLabel(s, n, 12, l.name, l.level || 1, l.depth || 1, l.occupied ? `rebooting · ${live}` : `${ROGUE.kinds[l.rogue.kind].name.toLowerCase()}${st === 'here' ? ' · here' : live ? ` · ${live} hostile` : ''}`)}</g>`;
     }
-    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
+    return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${serverMarkSvg(s, l.id, thMarks)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${draw}</svg>`;
@@ -2380,6 +2397,7 @@ function mapSide(s, sel, node) {
       ${kit.injector ? `<div class="row"><button type="button" class="btn" data-command="use injector ${h.id}">${glyph('injector')}Trace injector · ${kit.injector}</button></div>` : ''}</section>`;
   }
   if (node.kind === 'exit' || node.kind === 'entry') return floorCard(s, node);
+  if (node.kind === 'temp') return tempCard(s, node.loc, { here: s.run?.loc === node.loc.id, busy, relock: relockLeft(node.loc), btn }); // a thread's temporary server (threads-view.mjs)
   const l = node.loc, st = nodeState(s, l);
   // A server you found but never connected: Connect asks first, showing the memory it takes.
   if (l.fresh && l.detached && s.locations.includes(l)) {
