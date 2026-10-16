@@ -26,6 +26,7 @@ import { MATERIALS, rollItem, seeded } from './gear.mjs';
 import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
+import { hiddenNear } from './floors.mjs';
 import STORY_TEXT from './content/story.mjs';
 import CONTRACT_TEXT from './content/contracts.mjs';
 import { fill } from './content.mjs';
@@ -156,10 +157,12 @@ function jobVars(s, j = {}) {
 function beatLetter(s, beat, k) {
   const job = beat.job ? JSON.parse(JSON.stringify(beat.job)) : null;
   if (job?.type === 'item' && job.near === 'took') {
-    // The file sits on an unknown server next to the one you took over.
+    // The file sits on an unknown server linked to the one you took over (or, with none left, on its floor).
     const took = s.locations.find((l) => l.id === s.mail.took) || s.locations.find((l) => l.takenOver);
-    if (took && !hiddenNodes(s).some((n) => n.via === took.id)) spawnHidden(s, took); // all traced already: new ones
-    const near = took ? hiddenNodes(s).filter((n) => n.via === took.id) : [];
+    if (took) spawnHidden(s, took);
+    let near = took ? hiddenNear(s, took, { junction: false }) : []; // linked to it: a relay on it can flag it
+    if (!near.length && took) near = hiddenNear(s, took);
+    if (!near.length) near = hiddenNodes(s).filter((n) => n.depth === (took?.depth || 1) && s.locations.some((l) => l.id === n.via));
     const n = near.find((x) => x.family === job.family) || near[0] || null;
     job.hidden = n?.id || null; job.loc = null;
     delete job.near;

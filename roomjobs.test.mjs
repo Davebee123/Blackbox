@@ -219,7 +219,7 @@ test('Map without resting: one visit, every room but the Core stood in with noth
   else R.visit.rested = true;
   for (const id of need) reach(s, id);
   assert.ok(!ready(s, c), 'a rest spoils the visit');
-  play(s, 'jack out'); clock += 60000;
+  play(s, 'jack out'); clock += 60000; s.signal = null; // (rested back up at home)
   play(s, 'connect ' + loc.id);
   assert.match(progress(s, c).text, new RegExp(`1/${need.length} rooms this visit`), 'a new visit starts again');
   for (const id of need) { if (s.run) { s.run.integrity = s.run.max; reach(s, id); } }

@@ -162,13 +162,13 @@ test('inspect: a part\'s rules, what each does once its research says so, and no
   assert.ok(virusGenes(s.encounter.virus).some((g) => g.id === 'twin'));
 });
 
-test('HASHLORD and MIRRORSHADE hold /core from their floors: the lair opens at 8, its boss when you reach 16 or 12', () => {
+test('HASHLORD and MIRRORSHADE hold /core from their floors: a lair stands on floor 2 and deeper, its boss when you reach 16 or 12', () => {
   let seed = 1, boss = null;
   for (; seed < 5000; seed++) if (signature(seed).boss === 'nb-hashlord') { boss = 'nb-hashlord'; break; }
   const s = at(10);
   s.netSeed = seed;
   for (const f of ['ransomware', 'worm', 'ghostroot']) command(s, 'developer location ' + f);
-  openLair(s);
+  openLair(s, true); // developer lair: the lair on floor 2, located now (a player traces it, floors.mjs)
   const lair = lairOf(s);
   assert.ok(lair && lair.lair === boss);
   assert.equal(rogueSpawns(s, lair, Date.now())['/core'], undefined, 'no HASHLORD at 10');
@@ -180,5 +180,6 @@ test('HASHLORD and MIRRORSHADE hold /core from their floors: the lair opens at 8
   play(s, 'jack out');
   s.hackers.breaker.level = 16;
   assert.equal(rogueSpawns(s, lair, Date.now())['/core']?.boss, 'nb-hashlord');
+  assert.equal(lair.spawns['/core'].level, 16, 'never under its floor');
   assert.equal(BOSSES['nb-mirrorshade'].floor, 12);
 });

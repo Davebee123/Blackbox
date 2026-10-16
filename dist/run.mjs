@@ -5,7 +5,7 @@
 // Pure like the combat engine: state in, events out.
 import { vaultFilter, addFilter, filterLine } from './filters.mjs';
 import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from './sockets.mjs';
-import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES } from './data.mjs';
+import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
 import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, xpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
@@ -14,6 +14,7 @@ import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './inv
 import { developerWall } from './firewall.mjs';
 import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTitle } from './mail.mjs';
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
+import { hiddenNear, reached as floorsReached } from './floors.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
 import { deal } from './events.mjs';
 import { crewCommand } from './crew.mjs';
@@ -108,7 +109,7 @@ export function layoutOf(loc) {
   const extra = QUIRK_ROOMS[loc?.quirk];
   let out = iced(loc, base);
   if (extra) out = Object.assign({ ...out, '/': { ...out['/'], dirs: [...out['/'].dirs, ...Object.keys(extra).map((k) => k.slice(1))] } }, extra);
-  // A vault holds a code cache, and maybe a protocol, a blueprint, a second cache, source (layer 2+), a
+  // A vault holds a code cache, and maybe a protocol, a blueprint, a second cache, source (floor 2+), a
   // harvester or a config: fixed by its seed (LOOT.vault*). Your first server's has a protocol and a blueprint.
   const vault = Object.keys(out).find((k) => out[k].locked && !out[k].drop);
   // Contracts plant files in vaults too (see mail.mjs).
@@ -130,7 +131,7 @@ export function layoutOf(loc) {
   }
   return out;
 }
-// ICE: on layer 2 and deeper, about half the servers swap their Watchdog or Sentinel for ICE
+// ICE: on floor 2 and deeper, about half the servers swap their Watchdog or Sentinel for ICE
 // (fixed by the seed): a Watchdog becomes a Tracer, a Sentinel a Bouncer.
 const ICE = { watchdog: 'tracer', sentinel: 'bouncer' };
 export const iceOf = (loc) => ((loc?.depth || 1) >= 2 && seeded((loc.seed || 1) * 29 + 11)() < 0.5);
@@ -147,7 +148,7 @@ export const hasBackup = (loc) => seeded(loc.seed * 13 + 5)() < VAULT_BACKUP;
 export const hasKit = (loc) => !!loc.starter || seeded(loc.seed * 41 + 7)() < LOOT.vaultKit;
 export const hasBlueprint = (loc) => !!loc.starter || seeded(loc.seed * 43 + 9)() < LOOT.vaultBlueprint;
 // The protocol waiting in a location's vault: the same every time you look.
-export const levelOf = (loc) => loc.level || SERVER.locationLevel(1, loc.depth || 1);
+export const levelOf = (loc) => loc.level || SERVER.locationLevel(loc.depth || 1, 0);
 
 // Trace: how loud a break-in has been. Moves, pulls, wrong passwords and guard fights raise it; Spoof
 // lowers it, and an Infiltrator raises it half as fast. At 100 a hunter ICE comes for you and you can't
@@ -176,7 +177,7 @@ export function vaultItem(loc) {
   let x = r() * total, rarity = 'stock';
   for (const [k, v] of Object.entries(w)) if ((x -= v) < 0) { rarity = k; break; }
   if (rarity === 'zeroday') {
-    const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && (u.sources || []).some((src) => src.kind === 'vault' && (src.layer || 1) <= depth));
+    const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && (u.sources || []).some((src) => src.kind === 'vault' && (src.layer || 1) <= layerOf(depth)));
     if (pool.length) return uniqueItem(pool[Math.floor(r() * pool.length)], level, r);
     rarity = 'custom';
   }
@@ -211,14 +212,14 @@ export function fileInfo(loc, path, name) {
   if (rooted) return rooted;
   const fam = FAMILIES[loc.family].name;
   const deeper = FAMILIES[loc.deeper].name;
-  const cash = Math.round(CONFIG.cacheCredits * (1 + CONFIG.depthLoot * ((loc.depth || 1) - 1)) * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1));
+  const cash = Math.round(CONFIG.cacheCredits * (1 + CONFIG.depthLoot * (layerOf(loc.depth || 1) - 1)) * (loc.quirk === 'hoard' ? 1 + CONFIG.hoardBonus : 1));
   const owner = loc.owner.toLowerCase();
   const month = loc.month || 'mar';
   const credits = (amount, what) => ({ kind: 'credits', size: '6k', amount, text: [`binary: ${what}, about ${amount} credits.`, 'pull it to take it.'] });
   // The vault's payload: a cache of the family's code (materials for your server's services).
   const code = codeOf(loc.family);
   const payload = { kind: 'code', size: '48k', material: code, amount: vaultCode(levelOf(loc)), text: [`binary: ${vaultCode(levelOf(loc))} ${MATERIALS[code].name.toLowerCase()}, lifted from the ${fam.toLowerCase()} that hit you.`, 'pull it and bank it: services on your server are built from code.'] };
-  const signal = { kind: 'deeper', size: '3k', family: loc.deeper, text: [`trace record: this node forwards to a ${deeper.toLowerCase()} node one layer deeper.`, 'pull it and bank it: part of the trace to that node.'] };
+  const signal = { kind: 'deeper', size: '3k', family: loc.deeper, text: [`trace record: this node forwards to a ${deeper.toLowerCase()} node one hop out.`, 'pull it and bank it: part of the trace to that node.'] };
   const files = {
     sprawl: {
       '/motd.txt': { kind: 'text', size: '1k', text: ['SPRAWL-00. nobody runs this box and everybody uses it.', 'stray processes gather in the folders. they come back after you kill them.', 'what you trace from them leads to the servers that sent them.'] },
@@ -394,6 +395,7 @@ export function connect(s, id) {
   else if (!loc.fresh && (loc.detached || (s.locations.includes(loc) && !isLive(s, loc)))) warn(s, `${loc.name} is detached from your network. Attach it first (its map card).`);
   else if (relocks(loc) && relockLeft(loc)) warn(s, loc.rogueRun?.rebootAt > clock() ? `${loc.name} is rebooting. Back in ${relockLeft(loc)}s, every room fresh.` : `${loc.name} is still tracing your last connection. Reconnect in ${relockLeft(loc)}s.`);
   else if (loc.farm && !(s.crewSim || []).length) warn(s, `${loc.name} is built for a crew. Bring one first with crew sim <class> or crew invite <friend>.`);
+  else if (loc.member && (loc.depth || 1) > floorsReached(s)) warn(s, `${loc.name} is on floor ${loc.depth}. Reach that floor yourself first.`); // a member's servers: on floors you've opened (docs/servers.md 5.3)
   else {
     // A found server joins your network as you connect (the game asks first: app.js).
     if (loc.fresh && loc.detached) memoryCommand(s, 'attach', loc.id);
@@ -429,7 +431,7 @@ function connectFiles(s, loc, signal, hot, zone) {
     if (zone) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server. ${liveSpawns(s)} ${liveSpawns(s) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
     else if (loc.occupied) emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ', your server'}, rebooting and occupied by ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} in its folders. Clear them all to bring it back up.`, { location: loc.id });
     else if (loc.rogue) emit(s, 'run-start', `CONNECTED to ${loc.name}, a rogue server (${ROGUE.kinds[loc.rogue.kind].name}): ${ROGUE.kinds[loc.rogue.kind].rule} ${liveRogue(loc)} ${liveRogue(loc) === 1 ? 'virus' : 'viruses'} running.`, { location: loc.id });
-    else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (layer ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
+    else emit(s, 'run-start', `CONNECTED to ${loc.name}${loc.member ? `, ${loc.member}'s server` : ''}${loc.depth > 1 ? ` (floor ${loc.depth})` : ''}.${rootOf(loc) ? ` Root ${rootOf(loc)}.` : ''}${procOf(loc) ? ` ${procOf(loc).rare ? '★' : '↻'} ${procOf(loc).name} in ${procOf(loc).room}.` : ''}${q ? ` ${q.name}: ${q.rule}` : ''}${loc.passwordKnown ? ` Vault key (Perfect Trace): ${loc.password}.` : ''}`, { location: loc.id });
     if (hot) emit(s, 'warning', `LOUD RUN. You went in loud: every fight here has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`);
     ls(s);
   }
@@ -712,11 +714,11 @@ export function bank(s, loc, why = '') {
   for (const f of blueprints) learnBlueprint(s, 'Blueprint banked: ');
 
   for (const f of pack.filter((x) => x.kind === 'contract')) bankCargo(s, { name: f.name, label: f.label, loc: f.loc || loc.id, path: f.path });
-  // A trace record moves the trace on one of this server's hidden neighbours (a flagged one
-  // first, else the one it names): part of the way, not the server itself.
+  // A trace record moves the trace on one of the ? servers linked to this one (a flagged one first, else one of its
+  // family): part of the way, not the server itself.
   for (const f of pack.filter((x) => x.kind === 'deeper')) {
     spawnHidden(s, loc);
-    const near = hiddenNodes(s).filter((n) => n.via === loc.id);
+    const near = hiddenNear(s, loc);
     const n = near.find((x) => flagged(s, x)) || near.find((x) => x.family === f.family) || near[0];
     if (n) hiddenLead(s, n, routed(s, HIDDEN.recordLead), 'Trace record: ');
   }

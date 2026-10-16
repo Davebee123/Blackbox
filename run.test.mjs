@@ -1,5 +1,6 @@
 import test from 'node:test';
 import { HIDDEN, hiddenNodes } from './dist/hidden.mjs';
+import { hiddenNear, slotNode, floorGraph, graphOf, neighbours } from './dist/floors.mjs';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, part } from './dist/combat.mjs';
 import { play, connect, currentLocation, LEGACY } from './dist/run.mjs';
@@ -22,6 +23,7 @@ const say = (s, t) => play(s, t);
 const located = (family = 'ransomware') => {
   const s = fresh();
   command(s, `developer location ${family}`);
+  s.locations[0].template = 'relay'; // the old layouts' tests read the Relay layout (a slot's kind is its floor's: floors.mjs)
   return s;
 };
 const onRun = () => {
@@ -41,19 +43,15 @@ const winFight = (s) => {
   finishOff(s, s.encounter.virus.parts[0].id);
 };
 
-test('every home victory gives a lead; four plain kills of one family locate it', () => {
+test('a home victory traces nothing: leads come from rooms (SPRAWL-00\'s strays, first clears: floors.mjs)', () => {
   const s = fresh();
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     command(s, 'encounter cryptjack');
     command(s, 'engage');
     finishOff(s, 'pulse');
   }
-  assert.equal(s.locations.length, 0, 'not after three');
-  command(s, 'encounter cryptjack');
-  command(s, 'engage');
-  finishOff(s, 'pulse');
-  assert.equal(s.locations.length, 1);
-  assert.equal(s.locations[0].family, 'ransomware');
+  assert.equal(s.locations.length, 0, 'four home kills find nothing');
+  assert.ok(hiddenNodes(s).every((n) => n.lead === 0));
 });
 
 test('connect starts a run with full Signal and parks the home intrusion', () => {
@@ -213,7 +211,7 @@ test('the rogue server: viruses sit in its folders; attack one for a home-style 
   const events = (command(s, 'spike ' + s.encounter.virus.parts[1].id), resolveCycle(s));
   assert.ok(events.some((e) => e.type === 'victory'));
   assert.ok(events.some((e) => e.type === 'xp'), 'XP right away');
-  assert.ok(s.leadProgress[s.encounter.virus.family] > 0, 'a lead toward its origin');
+  assert.ok(hiddenNear(s, { id: 'sprawl' }).some((n) => n.lead > 0), 'a lead toward one of its ? servers');
   assert.equal(liveSpawns(s), 5);
   zoneSpawns(s, 1000 + CONFIG.zone.respawnMs + 1);
   assert.equal(liveSpawns(s), 6, 'it came back');
@@ -294,13 +292,15 @@ const withTemplate = (template, depth = 1, extra = {}) => {
 };
 const clear = (s) => { command(s, 'engage'); finishOff(s, s.encounter.virus.parts.at(-1).id); };
 
-test('locations rotate through templates', () => {
+test('a server\'s kind is its slot\'s on its floor (Mailhubs and Relays near the top, Archives and Labs deeper); rogue servers are rogue', () => {
   const s = fresh();
-  for (const f of ['worm', 'ransomware', 'ghostroot']) command(s, `developer location ${f}`);
-  for (const f of ['worm', 'ransomware']) command(s, `developer location ${f}`);
-  // rogue servers take no turn in the rotation
-  assert.deepEqual(s.locations.filter((l) => !l.rogue).map((l) => l.template), ['relay', 'mailhub', 'mirror', 'archive', 'lab'].slice(0, s.locations.filter((l) => !l.rogue).length));
+  for (const f of ['worm', 'ransomware', 'ghostroot', 'worm', 'ransomware']) command(s, `developer location ${f}`);
+  for (const l of s.locations.filter((x) => !x.rogue)) assert.equal(l.template, slotNode(s, l.slot).template);
   assert.ok(s.locations.filter((l) => l.rogue).every((l) => l.template === 'rogue'));
+  const kinds = (n) => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].flatMap((seed) => Object.values(floorGraph(seed, n).nodes).filter((x) => x.template).map((x) => x.template));
+  const share = (n, ks) => kinds(n).filter((k) => ks.includes(k)).length / kinds(n).length;
+  assert.ok(share(1, ['relay', 'mailhub']) > share(8, ['relay', 'mailhub']), 'Relays and Mailhubs near the top');
+  assert.ok(share(8, ['archive', 'lab']) > share(1, ['archive', 'lab']), 'Archives and Labs deeper');
 });
 
 test('mailhub: the password is split across the mail and the guarded spool log', () => {
@@ -711,10 +711,12 @@ test('a server’s file count only counts its own files: dead drops and route fi
 
 test('a relay’s pinged neighbours get route files and count kills of their family, contract or not', async () => {
   const { installRelay, items, hiddenNodes, huntKill } = await import('./dist/hidden.mjs');
-  const s = located('worm');
+  const s = fresh(), g = graphOf(s, 1), at = g.order.find((x) => neighbours(s, x).some((y) => g.nodes[y].kind === 'server')); // a server with ? servers linked to it
+  const { addLocation } = await import('./dist/combat.mjs');
+  addLocation(s, 'worm', 1, null, at);
   const loc = s.locations[0]; loc.takenOver = true; items(s).relay = 1;
   installRelay(s, loc.id);
-  const near = hiddenNodes(s).filter((n) => n.via === loc.id);
+  const near = hiddenNear(s, loc, { junction: false });
   assert.ok(near.length && near.every((n) => n.pinged));
   assert.deepEqual((loc.extraFiles || []).filter((f) => f.kind === 'route').map((f) => f.hidden).sort(), near.map((n) => n.id).sort());
   const n = near[0], was = n.lead;

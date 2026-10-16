@@ -22,7 +22,8 @@ import { offers, openContracts, heldCount, ready, MAIL } from './dist/mail.mjs';
 import { POLICIES } from './balance.mjs';
 import { botStep, BUILD } from './roomsim.mjs';
 import * as FP from './dist/floorplan.mjs';
-import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, power } from './dist/data.mjs';
+import { CONFIG, STRAINS, FAMILIES, GUARDS, ROOM_FAMILIES, power, bandOf } from './dist/data.mjs';
+import { canDescend, floorsOf, hiddenNear } from './dist/floors.mjs';
 
 // How full the bot rests its Signal before it goes back out (a share of your max): 1 waits for full.
 export const REST = { to: 1 };
@@ -149,9 +150,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   // nothing left, no outpost, relay or contract on it?
   // (A LANTERN dead drop needs the broadcast's key: the bot doesn't listen, so it doesn't count.)
   // A Resident that just beat it waits until it calms down (6 hours), like a player would.
-  // On rooms: not Mapped yet, or not taken over (a Resident that just beat it waits), and not outgrown (4 levels under
+  // On rooms: not Mapped yet, or not taken over (a Resident that just beat it waits), and not outgrown (3 levels under
   // you: a player moves on, and frees its memory).
-  const pending = (loc) => { const R = loc.floorplan; if (!R) return true; if ((loc.level || 1) <= hackerLevel(s) - 4) return false; return !R.mapped || (!loc.takenOver && !loc.member && !(residentBonus(loc, t) > 0)); };
+  const pending = (loc) => { const R = loc.floorplan; if (!R) return true; if ((loc.level || 1) <= hackerLevel(s) - 3) return false; return !R.mapped || (!loc.takenOver && !loc.member && !(residentBonus(loc, t) > 0)); };
   const finished = (loc) => (loc.rogue ? (loc.level || 1) < hackerLevel(s) - 3 : !pending(loc) && !(loc.takenOver && procOf(loc, t))) && isLive(s, loc) && !Object.keys(loc.floorplan?.programs || {}).length && !openContracts(s).some((c) => c.loc === loc.id); // a relay has done its pinging: fine to detach
   // A fresh find needs memory: detach the lowest finished server until it fits (or give up).
   const makeRoom = (loc) => {
@@ -290,8 +291,16 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     book('deconstruct', gearUp);
     restUp();
     const L = hackerLevel(s);
+    // Floors (floors.mjs): it takes an exit once its level reaches the floor below's band, like a player stepping down the tower.
+    if (canDescend(s) && !s.run && L >= bandOf(floorsOf(s).reached + 1)[0]) { say('descend'); stats.exits = (stats.exits || 0) + 1; (stats.exitAt ||= []).push(L); }
     const open = (l) => (isLive(s, l) || l.fresh) && !(relocks(l) && relockLeft(l, t));
     const todo = s.locations.filter((l) => !l.rogue && open(l) && pending(l) && l.level <= L + 2 && (losses[l.id + '@' + L] || 0) < 3).sort((a, b) => a.level - b.level)[0];
+    // A floor is walked outward (floors.mjs): with nothing at its level it clears rooms on a server linked to an unknown one
+    // (each first clear traces it), the one whose unknown neighbours are deepest first, as a player pushes toward the exit.
+    const deep = (l) => Math.max(0, ...hiddenNear(s, l).map((h) => h.level));
+    // Once the floor below fits, it pushes for the exit first: the server whose unknown neighbours are deepest.
+    const push = L >= bandOf(floorsOf(s).reached + 1)[0] && !canDescend(s);
+    const scout = (push || !todo) && s.locations.filter((l) => !l.rogue && !l.member && l.slot && l.depth === floorsOf(s).reached && open(l) && !l.floorplan?.mapped && deep(l) && l.level <= L + 2 && (losses[l.id + '@' + L] || 0) < 3).sort((a, b) => deep(b) - deep(a))[0];
     // A server you hold, its rooms respawned (rotations before R1): their clears climb its Root (root.mjs, 2.8).
     const respawned = (l) => { const R = l.floorplan; return R ? Object.values(R.graph.rooms).filter((x) => FP.FIGHTS.includes(x.kind) && x.kind !== 'core' && R.down[x.id] != null && t >= R.down[x.id] + FP.ROOMS.respawn[x.kind === 'guard' ? 'guard' : x.kind === 'elite' ? 'elite' : 'process'] * 60000).length : 0; };
     const rot = s.locations.filter((l) => (procOf(l, t) && procOf(l, t).level <= L + 3) || (l.floorplan && l.takenOver && !l.member && (l.root?.level || 1) < 5 && (l.level || 1) >= L - 3 && respawned(l) >= 3)).filter((l) => open(l) && (losses[l.id + '@' + L] || 0) < 2).sort((a, b) => (b.level || 1) - (a.level || 1))[0];
@@ -299,7 +308,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     const hunt = contracts && stats.bountyLosses < 2 && openContracts(s).some((c) => c.type === 'bounty' && !c.got);
     let did = false;
     if (hunt) { did = book('sprawl', sprawl); if (did) stats.did.sprawl++; }
+    if (!did && push && scout) { did = book('runs', () => runLoc(scout)); if (did) stats.did.push = (stats.did.push || 0) + 1; }
     if (!did && todo) { did = book('runs', () => runLoc(todo)); if (did) stats.did.run++; }
+    if (!did && scout) { did = book('runs', () => runLoc(scout)); if (did) stats.did.scout = (stats.did.scout || 0) + 1; }
     if (!did && rot) { did = book('rotation', () => runLoc(rot)); if (did) stats.did.rotation = (stats.did.rotation || 0) + 1; }
     if (!did && rogue) { did = book('rogue', () => runLoc(rogue)); if (did) stats.did.rogue++; }
     // SPRAWL-00 once you've outgrown it is grey: a player waits out a reconnect timer instead.
@@ -312,7 +323,8 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   stats.killsPerHour = Math.round(stats.wins / (stats.mins / 60));
   stats.gear = loaded(s).map((it) => `${it.rarity}:${it.name} v${it.level}`);
   stats.level = hackerLevel(s);
-  stats.locations = s.locations.map((l) => `${l.name} L${l.depth} lv${l.level}${l.rogue ? ' rogue ' + l.rogue.kind : ''}`);
+  stats.locations = s.locations.map((l) => `${l.name} F${l.depth} lv${l.level}${l.rogue ? ' rogue ' + l.rogue.kind : ''}`);
+  stats.reached = floorsOf(s).reached;
   stats.mail = (s.mail || []).length;
   stats.credits = s.server.credits;
   delete hooks.now;

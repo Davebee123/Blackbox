@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, addLocation } from './dist/combat.mjs';
+import { graphOf } from './dist/floors.mjs';
 import { boardMarkup, hudMarkup, trayMarkup, mapMarkup, mapLayout } from './dist/view.mjs';
 import { CONFIG } from './dist/data.mjs';
 import { FRESH as __FRESH } from './dist/combat.mjs';
@@ -74,34 +75,40 @@ test('a mutation is a tag, its rule on hover (and in a first-time tip); the gate
   assert.doesNotMatch(mapMarkup(h, 'intrusion'), /Neutralize it/);
 });
 
-test('the map puts the server at the centre and origins around it', () => {
+test('the map shows a floor: home above it, SPRAWL-00 its entry, found servers at their places, the intrusion beside home', () => {
   const s = fresh();
   selectEncounter(s, 'cryptjack', 1);
   command(s, 'developer location worm');
   command(s, 'developer location ransomware');
-  const { nodes, links } = mapLayout(s);
-  assert.deepEqual(nodes.find((n) => n.id === 'server'), { id: 'server', kind: 'server', x: 0, y: 0, angle: 0, r: 0 });
+  const { nodes, links, floor } = mapLayout(s);
+  assert.equal(floor, 1);
+  const home = nodes.find((n) => n.id === 'server'), zone = nodes.find((n) => n.kind === 'zone');
+  assert.ok(home && zone && home.y < Math.min(...nodes.filter((n) => n !== home).map((n) => n.y)), 'home above the floor');
   assert.ok(nodes.some((n) => n.kind === 'intrusion'));
   assert.equal(nodes.filter((n) => n.kind === 'location').length, 2);
+  assert.ok(nodes.some((n) => n.kind === 'exit'), 'the way down, through the fog');
   assert.ok(links.every((l) => nodes.some((n) => n.id === l.from) && nodes.some((n) => n.id === l.to)));
 });
 
-test('deeper layers branch from the node that pointed to them', () => {
+test('a server on another floor shows on its own floor\'s map, and selecting it shows that floor', () => {
   const s = fresh();
   command(s, 'developer location worm');
-  const root = s.locations[0];
-  s.locations.push({ ...root, id: 'deep-1', name: 'DEEP-1', depth: 2, parent: root.id, state: { cleared: {}, unlocked: {}, taken: {} } });
-  const { nodes, links } = mapLayout(s);
-  const a = nodes.find((n) => n.id === root.id), b = nodes.find((n) => n.id === 'deep-1');
-  assert.ok(b.r > a.r);
-  assert.ok(links.some((l) => l.from === root.id && l.to === 'deep-1'));
+  s.floors.reached = 2;
+  const g = graphOf(s, 2), two = addLocation(s, 'worm', 2, null, g.order[0]);
+  assert.equal(two.depth, 2);
+  assert.ok(!mapLayout(s, 1).nodes.some((n) => n.id === two.id), 'floor 1 shows floor 1');
+  assert.ok(mapLayout(s, 2).nodes.some((n) => n.id === two.id), 'floor 2 shows it');
+  assert.match(mapMarkup(s, two.id), /aria-label="Floor 2, Backhaul"/, 'selecting it shows its floor');
 });
 
-test('leads in progress show as ghost nodes', () => {
+test('unknown servers linked to one you found show as ? with their trace', () => {
   const s = fresh();
-  s.leadProgress.ghostroot = 50;
-  assert.ok(mapLayout(s).nodes.some((n) => n.kind === 'lead' && n.family === 'ghostroot'));
-  assert.match(mapMarkup(s, 'lead-ghostroot'), /Ghostroot · 50%/);
+  command(s, 'developer location ghostroot');
+  const h = s.hidden.find((x) => x.depth === 1);
+  h.lead = 50;
+  assert.ok(mapLayout(s).nodes.some((x) => x.kind === 'hidden' && x.hidden === h), 'on the map');
+  assert.match(mapMarkup(s, h.id), /Unknown server · floor 1/);
+  assert.match(mapMarkup(s, h.id), /50% traced/);
 });
 
 test('the Now header shows the cycle number', () => {
@@ -126,7 +133,7 @@ test('run skills (Spoof, Tap) take no slot: the tray leaves them out, and equipp
   assert.doesNotMatch(trayMarkup(s), /Spoof/);
 });
 
-test('a win writes what it gave you into the log: damage taken, XP (one line; the server has no XP of its own), salvage, lead', () => {
+test('a win writes what it gave you into the log: damage taken, XP (one line; the server has no XP of its own), salvage; no lead (leads come from rooms since floors)', () => {
   const s = fresh();
   selectEncounter(s, 'cryptjack', 7, { level: 1 });
   command(s, 'engage');
@@ -142,7 +149,7 @@ test('a win writes what it gave you into the log: damage taken, XP (one line; th
   assert.doesNotMatch(text, /Server \+30 XP/, 'no second line for the server');
   assert.equal(s.serverXp, undefined, 'the server has no XP: its level is your highest class level');
   assert.match(text, /Cipher Seed recovered/);
-  assert.match(text, /Ransomware lead/);
+  assert.doesNotMatch(text, /lead|traced/i, 'a home kill traces nothing');
 });
 
 test('the spoils card lists what a won fight gave you', async () => {

@@ -974,10 +974,12 @@ function react(events) {
       case 'crashed': flash(e.mode === 'run' || e.mode === 'breach' || e.mode === 'rooms' ? 'SIGNAL LOST' : 'SERVER CRASHED'); feel.add('lose', MINE); if (e.invader && !active(campaign)) notice(e.message, true); if (e.mode === 'breach') { hideTip(false); setTimeout(() => go('breach'), 1600); } if (e.mode === 'rooms') { hideTip(false); setTimeout(() => { if (!active(campaign)) go('rooms'); }, 1600); } break;
       case 'cut': feel.add('good', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, f?.text || (e.phase ? 'PHASE' : e.vent ? 'VENTED' : e.delay ? 'DELAYED' : 'INTERRUPTED'), { src }); break;
       case 'escaped': flash('UPLOAD COMPLETE'); feel.add('nope', null); hideTip(false); setTimeout(() => { if (!active(campaign) && campaign.rooms) go('rooms', true); }, 1600); break; // a runner got away (the Exfil's upload completed): back to the rooms
+      case 'floor': flash(`FLOOR ${e.floor}`); notice(e.message); break; // floors.mjs: you took an exit
       case 'tick-wasted': feel.add('chip', e.target ? `#board .bpart[data-target="${CSS.escape(e.target)}"]` : null, '−tick'); break;
       case 'disconnected': feel.add('lose', null); hideTip(false); tipWait = performance.now() + 5000; setTimeout(() => { go('map'); lossCard(e); }, 1600); break; // a card like a win's, and no tip over it
     }
     if (e.type === 'located') { notice(e.message); mapSel = e.location; }
+    if (typeof e.floor === 'number' && ['floor', 'info', 'located'].includes(e.type)) { mapFloor = e.floor; mapZoom.k = 1; } // floors.mjs: the floor you went to, or asked the map for
     // A conditional rule of your gear that fired (combat.mjs: e.gear): its chip on the HUD flashes, and its name floats
     // off what it touched, the part it hit or your bar, on the event's own beat.
     if (e.gear?.length && !e.who) e.gear.forEach((g, k) => feel.add('gear', `#hud .gfx[data-fx="${CSS.escape(g.id)}"]`, k ? null : e.gear.map((x) => x.name).join(' · '), { floatAt: e.type === 'damage' && e.target ? `${row(e.target)} .part-top` : BAR, x: e.type === 'damage' ? 0.3 : 0.5 }));
@@ -1232,6 +1234,10 @@ function go(name, quiet = false) {
 
 // Fill the prompt the way a hotkey would; the player still presses Enter.
 const touch = () => matchMedia('(pointer: coarse)').matches;
+// The phone layout draws a floor on its side (view.mjs mapLayout): the way down at the bottom.
+const portraitQ = matchMedia('(max-width: 900px)');
+V.setMapPortrait(portraitQ.matches);
+portraitQ.addEventListener?.('change', (e) => { if (V.setMapPortrait(e.matches)) dirty = true; });
 function prepare(abilityId) {
   const a = ABILITIES[abilityId];
   const s = shown();
@@ -1556,6 +1562,7 @@ addEventListener('resize', () => placeCrewWin());
 let mapPop = false;
 let mapList = false, mapSort = 'status', pendingLocate = null; // the map's List mode (MOO2's planets list), its sort column, and a Locate waiting for the map to draw
 let mapFilter = []; // the map's Show picker: any of mine · targets · threats (none = all; the rest dims)
+let mapFloor = null; // the floor the map shows (floors.mjs): the floor panel's pick; a selection on another floor shows that one
 let mapPickOpen = false; // whether the picker's menu is open (it survives redraws)
 let leadsOpen = false; // a run's Leads panel (the run header's toggle)
 let memYes = null; // the found server you just said yes to (its connect goes through)
@@ -1614,7 +1621,7 @@ function render(force = false) {
   } else if (combatLike && (campaign.breach || CAMP)) {
     return go(campaign.breach ? 'breach' : 'campaign', true); // a breach fight that's over: back to its page, never the old map
   } else if (combatLike) {
-    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }));
+    put('page-view', V.mapMarkup(campaign, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }));
     applyMapZoom();
   } else if (module === 'net') {
     const before = cache.get('page-view');
@@ -1625,7 +1632,7 @@ function render(force = false) {
       $('term').scrollTop = $('term').scrollHeight;
     }
   } else {
-    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
+    const pages = { rooms: (x) => roomsMarkup(x), campaign: (x) => campaignMarkup(x), room: (x) => roomMarkup(x), archive: (x) => archiveMarkup(x), breach: (x) => breachMarkup(x), map: (x) => V.mapMarkup(x, mapSel, mapView, { side: false, pop: mapPop, filter: mapFilter, list: mapList, sort: mapSort, pickOpen: mapPickOpen, floor: mapFloor }), loadout: (x) => V.loadoutMarkup(x, archView, loadoutTab), craft: (x) => V.craftMarkup(x, craftUi), mail: (x) => V.mailMarkup(x, mailSel), store: (x) => V.storeMarkup(x, Date.now()), consortium: (x) => V.consortiumMarkup(x, Date.now()), hub: (x) => V.hubTerminalMarkup(x, hubSel, hubLines, hubWin, Date.now()), server: (x) => V.serverMarkup(x, Date.now()), daemons: V.daemonsMarkup, codex: (x) => codexPageMarkup(x, codexSel, codexIdx), system: V.systemMarkup };
     // A page that throws shows what broke (and a way back) instead of stopping every render after it.
     const keep = module === 'breach' ? $('bx-scroll')?.scrollTop : null;
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
@@ -2200,6 +2207,8 @@ document.addEventListener('click', (e) => {
   if (mf) { mapFilter = mf.dataset.mapfilter === 'all' ? [] : [mf.dataset.mapfilter]; dirty = true; return; }
   const mv = e.target.closest('[data-mapview]');
   if (mv) { mapView = mv.dataset.mapview; mapSel = 'server'; feel.add('channel', null); dirty = true; return; }
+  const fb = e.target.closest('[data-floor]');
+  if (fb) { mapFloor = Number(fb.dataset.floor) || 1; mapSel = null; mapPop = false; mapList = false; mapZoom.k = 1; mapView = 'mine'; if (module !== 'map') go('map'); feel.add('channel', null); dirty = true; return; }
   if (e.target.closest('[data-leads]')) { leadsOpen = !leadsOpen; dirty = true; return; }
   const lt = e.target.closest('[data-ltab]');
   if (lt) { loadoutTab = lt.dataset.ltab; feel.add('channel', null); dirty = true; return; }

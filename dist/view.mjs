@@ -15,7 +15,7 @@ import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, sh
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
 import { postsOf, siteLabel, sizeOf as serverSize, PROGRAMS, programsOn, codebasesOf, shopCodebases, codebaseName, programCost } from './sockets.mjs';
-import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE, BANDS, bandDaemons, daemonWhen, daemonBand } from './data.mjs';
+import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { chipOf, virusGenes, scannedDeep } from './genome.mjs';
@@ -32,7 +32,8 @@ import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serve
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
-import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, knowsRelay, relayCost, canBuildRelay } from './hidden.mjs';
+import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, knowsRelay, relayCost, canBuildRelay, connectedTo, viaName } from './hidden.mjs';
+import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend } from './floors.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel, hardenCost } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
@@ -1082,7 +1083,7 @@ export function wallRuler(s, compact = false, bands = wallBands(s)) {
   </div>`;
 }
 // The highest level any server attached to your network sends: what your firewall is up against.
-export const threatTop = (s) => Math.max(0, ...(s.locations || []).filter((l) => !l.rogue && isLive(s, l)).map((l) => l.level || 1));
+export const threatTop = (s) => Math.max(0, ...(s.locations || []).filter((l) => !l.rogue && isLive(s, l) && connectedTo(l)).map((l) => l.level || 1));
 // "Vulnerable to lv 9+" (amber if it would be contested, red if it would break through), or teal
 // "Not vulnerable" when nothing attached gets past it.
 export function vulnLine(s, b = wallBands(s)) {
@@ -1375,11 +1376,11 @@ export const signalLevel = (run) => (run.integrity / run.max <= 0.3 ? 'low' : ru
 // lead (kills of it), and each unknown server you can see (where it hangs off, its layer), with its
 // percent; a contract's marker on the flagged ones. Click one to see it on the map.
 function leadsPanel(s) {
-  const fams = Object.entries(s.leadProgress || {}).filter(([f, n]) => FAMILIES[f] && n > 0).sort((a, b) => b[1] - a[1]);
+  const fams = [];
   const nodes = shownHidden(s);
   const bar = (n) => `<span class="ld-bar"><span style="width:${Math.min(100, n)}%"></span></span><b class="ld-n">${Math.floor(n)}%</b>`;
   const famRows = fams.map(([f, n]) => `<li class="ld-row" data-go="map:lead-${esc(f)}" title="${esc(FAMILIES[f].name)} lead">${glyph(f)}<span class="ld-name">${esc(FAMILIES[f].name)}</span>${bar(n)}</li>`).join('');
-  const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${n.pinged || n.seen ? esc(FAMILIES[n.family].name.toLowerCase()) + ' ' : ''}server past ${esc(via?.name || '?')}">${glyph('trace')}<span class="ld-name">? <small>${esc(via?.name || '')} · L${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('contract')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
+  const nodeRows = nodes.map((n) => { const via = s.locations.find((l) => l.id === n.via); const flag = hiddenFlagged(s, n); return `<li class="ld-row${flag ? ' wanted' : ''}" data-go="map:${esc(n.id)}" title="Unknown ${n.pinged || n.seen ? esc(FAMILIES[n.family].name.toLowerCase()) + ' ' : ''}server past ${esc(viaName(s, n))}">${glyph('trace')}<span class="ld-name">? <small>${esc(viaName(s, n))} · F${n.depth}</small></span>${flag ? `<span class="ls-job">${glyph('contract')}</span>` : ''}${bar(n.lead)}</li>`; }).join('');
   // Faction hubs you haven't located (once the board is open): their trace, from their servers.
   const hubRows = (hubsOf(s).length ? FACTION_IDS.filter((f) => !hubFound(s, f)) : []).map((f) => `<li class="ld-row" style="--fc:${FX[f].color}" title="${esc(FX[f].hub.name)}">${fIcon(f)}<span class="ld-name">${esc(FX[f].short)} <small>hub</small></span>${bar(hubTraceOf(s, f))}</li>`).join('');
   return `<aside class="net-leads"><h3>${glyph('trace')}Leads</h3>${famRows || nodeRows || hubRows ? `${famRows ? `<ul class="ld-list">${famRows}</ul>` : ''}${nodeRows ? `<h4>Unknown servers</h4><ul class="ld-list">${nodeRows}</ul>` : ''}${hubRows ? `<h4>Faction hubs</h4><ul class="ld-list">${hubRows}</ul>` : ''}` : '<p class="quiet">none</p>'}</aside>`;
@@ -1420,7 +1421,7 @@ export function daemonsMarkup(s) {
   const slots = Array.from({ length: n }, (_, i) => slotted[i]).map((id, i) => id
     ? `<li class="ptile"><span class="ptile-slot">${i + 1}</span>${daemonBody(s, id)}<button type="button" class="ptile-x" data-command="daemon unslot ${id}" ${busy ? 'disabled' : ''} title="Unslot" aria-label="Unslot ${esc(DAEMONS[id].name)}">×</button></li>`
     : `<li class="ptile empty"><span class="ptile-slot">${i + 1}</span><span class="ptile-empty">empty</span></li>`).join('');
-  const bands = BANDS.map(([lo, hi], i) => {
+  const bands = DAEMON_BANDS.map(([lo, hi], i) => {
     const ids = bandDaemons(i + 1), found = ids.filter((id) => daemonLevel(s, id)), unknown = ids.length - found.length;
     const tiles = found.map((id) => `<li class="ptile stash${slotted.includes(id) ? ' on' : ''}">${daemonBody(s, id)}<div class="ptile-acts">${slotted.includes(id) ? '<span class="tag you">slotted</span>' : `<button type="button" class="btn primary small" data-command="daemon slot ${id}" ${busy || slotted.length >= n ? 'disabled' : ''}>Slot</button>`}</div></li>`).join('');
     const hidden = unknown ? `<ul class="dmn-unknown" aria-label="${unknown} not found yet">${'<li>???</li>'.repeat(unknown)}</ul>` : '';
@@ -1786,13 +1787,11 @@ function homeBars(s) {
   const srv = s.server, f = Math.max(0, Math.min(1, srv.integrity / srv.max)), hue = f <= 0.3 ? 'low' : f <= 0.6 ? 'mid' : '';
   return `<g transform="translate(0 50)"><g class="mbars"><g class="hb hp ${hue}"><title>Integrity ${srv.integrity}/${srv.max}</title><rect x="-28" y="-2" width="56" height="4" rx="1" class="hb-track"/><rect x="-28" y="-2" width="${(56 * f).toFixed(1)}" height="4" rx="1" class="hb-fill"/></g></g></g>`;
 }
-// Your server sits at the centre. Each virus family owns a direction; its
-// origins sit on the first ring, and deeper layers branch outward from the
-// node that pointed to them. Leads in progress are ghost nodes.
-
-const SECTOR = { ransomware: -10, worm: 90, ghostroot: 195 };
-const GATE = -90;
-const R1 = 230, R2 = 150, SPREAD = 38;
+// The network map is one floor at a time (floors.mjs, docs/servers.md 5): that floor's diagram, at its slots' places.
+// Home sits above the stack, over the floor's entry (floor 1's is SPRAWL-00, the rest an up-link ▲), and every
+// connection starts there. Servers you've located sit at their slots; a server linked to one you've found shows as ?;
+// exits (▼) always show, through the fog. Hubs you've found stand on their floors. Labels go outward from the floor's
+// middle.
 const rad = (d) => (d * Math.PI) / 180;
 const at = (angle, r) => ({ x: Math.round(Math.cos(rad(angle)) * r), y: Math.round(Math.sin(rad(angle)) * r), angle, r });
 
@@ -1802,74 +1801,66 @@ export function gateOf(s) {
   if (e && e.mode !== 'run' && !e.invader && (e.phase === 'alert' || e.phase === 'active')) return e;
   return s.gate || null;
 }
-// Where invaders stop: just outside the server, further out below it (clear of its labels).
-const wallR = (angle) => (Math.abs(((angle % 360) + 360) % 360 - 90) <= 45 ? 150 : 105);
-export function mapLayout(s) {
-  const nodes = [{ id: 'server', kind: 'server', ...at(0, 0) }];
-  const links = [];
-  // The rogue server: always there, straight up from home.
+// The floor a map selection sits on (a server, a ?, an exit, a hub), or null (home, the threat rail's).
+export function floorOfSel(s, sel) {
+  if (!sel || sel === 'server' || sel === 'invader' || sel === 'intrusion') return null;
+  if (sel === CONFIG.zone.id) return 1;
+  if (floorOfSlot(sel)) return floorOfSlot(sel);
+  if (sel.startsWith('hub-')) return FLOOR.hubs[sel.slice(4)] || null;
+  const l = (s.locations || []).find((x) => x.id === sel);
+  if (l) return l.slot ? l.depth || 1 : null;
+  const h = (s.hidden || []).find((x) => x.id === sel);
+  return h?.depth || null;
+}
+// The floor the map shows: the selection's, else the one asked for, else the one you last went to.
+export const mapFloorOf = (s, sel, floor = null) => Math.min(floorsOf(s).reached, floorOfSel(s, sel) || floor || floorsOf(s).at || 1);
+// A tall screen (the phone layout) turns a floor on its side: the entry at the top, the way down at the bottom.
+let mapPortrait = false;
+export const setMapPortrait = (on) => { const was = mapPortrait; mapPortrait = !!on; return was !== mapPortrait; };
+export function mapLayout(s, floor = null, portrait = mapPortrait) {
+  const F = floorsOf(s), n = Math.max(1, Math.min(F.reached, floor || F.at || 1)), g = graphOf(s, n);
   zoneSpawns(s);
-  nodes.push({ id: CONFIG.zone.id, kind: 'zone', ...at(GATE, 175) });
-  links.push({ from: 'server', to: CONFIG.zone.id });
+  const nodes = [], links = [], byId = {}, idOf = {};
+  const all = Object.values(g.nodes).map((x) => (portrait ? { ...x, x: x.y, y: x.x } : x)), cx = (Math.min(...all.map((x) => x.x)) + Math.max(...all.map((x) => x.x))) / 2, cy = (Math.min(...all.map((x) => x.y)) + Math.max(...all.map((x) => x.y))) / 2;
+  const put = (node, slot) => { node.angle ??= Math.atan2(node.y - cy, node.x - cx) * 180 / Math.PI; nodes.push(node); byId[node.id] = node; if (slot) idOf[slot] = node.id; return node; };
+  // Home, above the floor (the stack hangs under it), linked to the entry.
+  const entry = all.find((x) => x.id === g.entry), top = Math.min(...all.map((x) => x.y));
+  const home = put({ id: 'server', kind: 'server', x: Math.round(cx), y: top - 150, angle: -90, r: 0 });
+  if (n === 1) put({ id: CONFIG.zone.id, kind: 'zone', x: entry.x, y: entry.y }, g.entry);
+  else put({ id: g.entry, kind: 'entry', floor: n, x: entry.x, y: entry.y }, g.entry);
+  if (Math.abs(entry.x - cx) < 60) links.push({ from: 'server', to: idOf[g.entry], ghost: true }); // straight down to an entry under it (SPRAWL-00), never across the floor
   const e = gateOf(s);
-  if (e) {
-    nodes.push({ id: 'intrusion', kind: 'intrusion', ...at(GATE + 28, 120), virus: e.virus, fighting: e.phase === 'active' });
-    links.push({ from: 'server', to: 'intrusion', hot: true });
+  if (e) { put({ id: 'intrusion', kind: 'intrusion', x: home.x + 64, y: home.y + 34, angle: 0, virus: e.virus, fighting: e.phase === 'active' }); links.push({ from: 'server', to: 'intrusion', hot: true }); }
+  // The floor's slots: located servers, ?s, exits, hubs you've found.
+  const hubs = new Set(hubsOf(s).map((h) => h.faction));
+  for (const x of all) {
+    if (x.kind === 'entry') continue;
+    if (x.kind === 'exit') { put({ id: x.id, kind: 'exit', to: x.to, open: exitOpen(s, x.id), x: x.x, y: x.y }, x.id); continue; }
+    if (x.kind === 'hub') { if (hubs.has(x.hub)) put({ id: 'hub-' + x.hub, kind: 'hub', hub: hubsOf(s).find((h) => h.faction === x.hub), x: x.x, y: x.y }, x.id); continue; }
+    const l = locAt(s, x.id);
+    if (l) { put({ id: l.id, kind: 'location', loc: l, x: x.x, y: x.y }, x.id); continue; }
+    const h = hiddenAt(s, x.id);
+    if (h) put({ id: h.id, kind: 'hidden', hidden: h, x: x.x, y: x.y }, x.id);
   }
-  const byId = {};
-  const roots = s.locations.filter((l) => !l.parent || !s.locations.some((p) => p.id === l.parent));
-  for (const fam of Object.keys(SECTOR)) {
-    const mine = roots.filter((l) => l.family === fam);
-    const lead = s.leadProgress?.[fam] || 0;
-    const count = mine.length + (lead > 0 ? 1 : 0);
-    mine.forEach((l, i) => {
-      const n = { id: l.id, kind: 'location', loc: l, flip: i % 2 === 1, ...at(SECTOR[fam] + (i - (count - 1) / 2) * SPREAD, R1) };
-      nodes.push(n); byId[l.id] = n;
-      links.push({ from: 'server', to: l.id });
-    });
-    if (lead > 0) {
-      nodes.push({ id: 'lead-' + fam, kind: 'lead', family: fam, progress: lead, ...at(SECTOR[fam] + (count - 1 - (count - 1) / 2) * SPREAD, R1) });
-      links.push({ from: 'server', to: 'lead-' + fam, ghost: true });
-    }
+  // Links between what's drawn: solid between found places, a ghost line to a ? or an exit you can't take yet.
+  for (const [a, b] of g.links) {
+    const A = byId[idOf[a]], B = byId[idOf[b]];
+    if (!A || !B) continue;
+    const ghost = [A, B].some((x) => x.kind === 'hidden' || (x.kind === 'exit' && !x.open) || x.kind === 'hub');
+    links.push({ from: A.id, to: B.id, ghost });
   }
-  // Deeper layers, parents before children (locations are stored in creation order). Unknown
-  // servers you've heard of (a lead, a relay ping) sit among them as "?".
-  const shown = shownHidden(s);
-  const kids = (id) => [...s.locations.filter((x) => x.parent === id), ...shown.filter((n) => n.via === id)];
-  for (const l of s.locations) {
-    if (byId[l.id]) continue;
-    const parent = byId[l.parent];
-    if (!parent) continue;
-    const siblings = kids(l.parent);
-    const k = siblings.indexOf(l);
-    const n = { id: l.id, kind: 'location', loc: l, flip: k % 2 === 1, ...at(parent.angle + (k - (siblings.length - 1) / 2) * 20, parent.r + R2) };
-    nodes.push(n); byId[l.id] = n;
-    links.push({ from: l.parent, to: l.id });
-  }
-  for (const h of shown) {
-    const parent = byId[h.via];
-    if (!parent) continue;
-    const siblings = kids(h.via), k = siblings.indexOf(h);
-    const n = { id: h.id, kind: 'hidden', hidden: h, flip: k % 2 === 1, ...at(parent.angle + (k - (siblings.length - 1) / 2) * 20, parent.r + R2) };
-    nodes.push(n); byId[h.id] = n;
-    links.push({ from: h.via, to: h.id, ghost: true });
-  }
-  // Faction hubs: the public net, on a ring of their own between the first two layers.
-  const HUB_ANGLE = { halcyon: -50, kestrel: 40, lantern: 142, glassjaw: 220, nullchoir: 250 };
-  for (const h of hubsOf(s)) {
-    nodes.push({ id: h.id, kind: 'hub', hub: h, ...at(HUB_ANGLE[h.faction] ?? 0, R1 + 78) });
-    links.push({ from: 'server', to: h.id, ghost: true });
-  }
-  // The invader: moving in from its location, then at your wall.
-  const inv = s.invasion, src = inv && byId[inv.from];
+  // The invader: from its server when it's on this floor, else up through the entry; it stops just outside home.
+  const inv = s.invasion, src = inv && (byId[inv.from] || byId[idOf[g.entry]]);
   if (src) {
-    const tgt = inv.target && byId[inv.target]; // a thief heads for an outpost, not your wall
-    const wall = tgt ? { x: Math.round(src.x + (tgt.x - src.x) * 0.85), y: Math.round(src.y + (tgt.y - src.y) * 0.85) } : at(src.angle, wallR(src.angle)), start = tgt ? src : at(src.angle, src.r - 52); // sets out from just inside its location
+    const tgt = inv.target && byId[inv.target];
+    const dx = src.x - home.x, dy = src.y - home.y, len = Math.hypot(dx, dy) || 1;
+    const wall = tgt ? { x: Math.round(src.x + (tgt.x - src.x) * 0.85), y: Math.round(src.y + (tgt.y - src.y) * 0.85) } : { x: Math.round(home.x + (dx / len) * 70), y: Math.round(home.y + (dy / len) * 70) };
+    const start = tgt ? src : { x: src.x - (dx / len) * 30, y: src.y - (dy / len) * 30 };
     const p = inv.state === 'travel' ? Math.round((1 - inv.left / inv.total) * 50) / 50 : 1; // 2% steps
     nodes.push({ id: 'invader', kind: 'invader', inv, x: Math.round(start.x + (wall.x - start.x) * p), y: Math.round(start.y + (wall.y - start.y) * p) });
-    links.push({ from: inv.from, to: 'invader', hot: inv.state === 'breach', ghost: inv.state === 'travel' });
+    links.push({ from: src.id, to: 'invader', hot: inv.state === 'breach', ghost: inv.state === 'travel' });
   }
-  return { nodes, links };
+  return { nodes, links, floor: n };
 }
 
 // The consortium's network: your home server in the middle, a trunk line out to each member's
@@ -1988,14 +1979,14 @@ export function trafficMarkup(s, nodes) {
   const hubs = nodes.filter((n) => n.kind === 'hub'), home = nodes.find((n) => n.id === 'server');
   const byF = Object.fromEntries(hubs.map((n) => [n.hub.faction, n]));
   const routes = [], dots = [];
-  // The backbone: an arc on the hubs' ring between each found hub and the next one round.
-  const live = hubs.filter((n) => !offline(s, n.hub.faction)).sort((a, b) => ((a.angle + 360) % 360) - ((b.angle + 360) % 360));
+  // The backbone: a curve between each found hub on this floor and the next along.
+  const live = hubs.filter((n) => !offline(s, n.hub.faction)).sort((a, b) => a.x - b.x); // the hubs on this floor, left to right
   if (live.length >= 2) {
     live.forEach((a, i) => {
       const b = live[(i + 1) % live.length];
-      if (live.length === 2 && i === 1) return; // two hubs: one arc, not a circle
-      const sweep = ((b.angle - a.angle) % 360 + 360) % 360, r = a.r, id = `bb-${a.hub.faction}-${b.hub.faction}`;
-      routes.push(`<path class="mbone" data-rid="${id}" d="M${a.x} ${a.y} A${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${b.x} ${b.y}"/>`);
+      if (i === live.length - 1) return; // a chain, not a circle
+      const id = `bb-${a.hub.faction}-${b.hub.faction}`, bow = Math.max(40, Math.hypot(b.x - a.x, b.y - a.y) * 0.25); // a curve between two hubs on the floor
+      routes.push(`<path class="mbone" data-rid="${id}" d="M${a.x} ${a.y} Q${Math.round((a.x + b.x) / 2)} ${Math.round(Math.min(a.y, b.y) - bow)} ${b.x} ${b.y}"/>`);
       const h = hash(id), period = 26000 + (h % 5) * 5000;
       const fa = FX[a.hub.faction].color, fb = FX[b.hub.faction].color;
       // What actually moves: each ware goes from the hub where it's cheap to the one that pays more
@@ -2035,21 +2026,21 @@ export const setMapScale = (z) => { const was = mapScale; mapScale = z; return M
 // Map filters: any mix of mine · targets · threats (none = everything). Old callers pass one string.
 const MAP_FILTERS = [['mine', 'Mine', 'f-mine'], ['targets', 'Targets', 'f-target'], ['threats', 'Threats', 'f-threat']];
 const filterList = (f) => (Array.isArray(f) ? f : !f || f === 'all' ? [] : [f]).filter((k) => MAP_FILTERS.some(([x]) => x === k));
-export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null } = {}) {
+export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop = false, filter = 'all', list = false, sort = 'status', pickOpen = false, build = null, floor = null } = {}) {
   const none = !sel; // nothing selected (you clicked away): no reticle, and the side card shows your server
   sel ||= 'server';
   filter = filterList(filter);
   // A member's server (or home) shows on the consortium's map, whichever view was asked for.
   const con = !!consortiumOf(s) && (view === 'consortium' || sel === 'roamer' || sel.startsWith('member-') || memberServers(s).some((l) => l.id === sel));
-  const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s);
+  const fl = con ? null : mapFloorOf(s, sel, floor);
+  const { nodes, links } = con ? consortiumLayout(s) : mapLayout(s, fl);
   const find = (id) => nodes.find((n) => n.id === id);
   if (!find(sel)) sel = 'server';
   // A steady scale: the scope is at least this big, so a young network isn't blown up huge.
   const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
-  const mx = con ? 190 : 130, my = con ? 56 : 52; // the consortium's outer ring carries long labels; hubs sit near the top and bottom edges
-  const minX = Math.min(...xs, -250) - mx, maxX = Math.max(...xs, 250) + mx, minY = Math.min(...ys, -240) - my, maxY = Math.max(...ys, 240) + my + 4;
-  const deepest = Math.max(1, ...s.locations.map((l) => l.depth || 1));
-  const rings = con ? [{ r: RM, t: 'trunk', cls: 'trunk' }] : [{ r: 120, t: 'wall', cls: 'wall' }, ...Array.from({ length: deepest }, (_, i) => ({ r: R1 + i * R2, t: `layer ${i + 1}` }))];
+  const mx = con ? 190 : 140, my = con ? 56 : 60; // the consortium's outer ring carries long labels
+  const minX = Math.min(...xs, -250) - mx, maxX = Math.max(...xs, 250) + mx, minY = Math.min(...ys, -240) - my, maxY = Math.max(...ys, con ? 240 : 0) + my + 4;
+  const rings = con ? [{ r: RM, t: 'trunk', cls: 'trunk' }] : [];
   // A ring's name sits on the ring, near the top right, but clear of every server on the map.
   // A server takes its marker plus the name to its right; the gap is measured between the two boxes.
   const room = (x, y) => Math.min(...nodes.map((n) => Math.hypot(Math.max(x - n.x - 130, 0, n.x - 14 - x - 64), Math.max(y - 12 - n.y - 22, 0, n.y - 14 - y - 2))));
@@ -2063,8 +2054,8 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     }
     return best;
   };
-  const scope = `<g class="mscope">${rings.map((g) => { const [x, y] = ringAt(g.r); return `<circle r="${g.r}" class="mring-range ${g.cls || ''}"/><text text-anchor="start" x="${x}" y="${y}" class="mring-label">${g.t}</text>`; }).join('')}
-    <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>`;
+  const scope = con ? `<g class="mscope">${rings.map((g) => { const [x, y] = ringAt(g.r); return `<circle r="${g.r}" class="mring-range ${g.cls || ''}"/><text text-anchor="start" x="${x}" y="${y}" class="mring-label">${g.t}</text>`; }).join('')}
+    <line x1="${minX}" y1="0" x2="${maxX}" y2="0" class="maxis"/><line x1="0" y1="${minY}" x2="0" y2="${maxY}" class="maxis"/></g>` : '';
   const lines = links.map((k) => {
     const a2 = find(k.from), b2 = find(k.to);
     return `<line x1="${a2.x}" y1="${a2.y}" x2="${b2.x}" y2="${b2.y}" class="mlink ${k.hot ? 'hot' : ''} ${k.ghost ? 'ghost' : ''} ${k.trunk ? 'trunk' : ''}"/>`;
@@ -2077,11 +2068,11 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const z = mapScale || 1, CH = (11 * 0.62 + 1) / z, H = 30 / z, boxes = []; // text keeps its on-screen size: its width in map units grows as the map shrinks
     const rank = (n) => { if (n.id === sel) return 0; const tags = mapTags(s, n.loc, nodeState(s, n.loc), openContracts(s).some((c) => c.loc === n.loc.id)); return tags.includes('minor') ? 9 : tags.includes('f-threat') ? 1 : tags.includes('f-target') && !tags.includes(' f-mine') ? 3 : n.loc.outpost?.h || s.run?.loc === n.loc.id ? 2 : 4; };
     // Every labelled node takes part, not only servers: a lead, an unknown server or a swarm's label can sit on a server's name too.
-    const OTHER = { invader: 1, roamer: 1, intrusion: 1, fleet: 1, zone: 2, member: 2, hub: 3, hidden: 5, lead: 5 };
+    const OTHER = { invader: 1, roamer: 1, intrusion: 1, fleet: 1, zone: 2, member: 2, exit: 2, entry: 3, hub: 3, hidden: 5 };
     const SUB = { zone: 24, hub: 15, fleet: 12, invader: 14, roamer: 14, member: 12 }; // the line under the name, where it's the longer one
-    const nameOf = (n) => n.loc?.name || n.inv?.name || n.roamer?.name || n.virus?.name || (n.hub ? FX[n.hub.faction]?.short : '') || (n.fleet ? `Swarm ×${n.fleet.ships}` : '') || n.handle || (n.kind === 'lead' ? `${FAMILIES[n.family]?.name || ''} lead` : n.kind === 'zone' ? CONFIG.zone.name : '');
+    const nameOf = (n) => n.loc?.name || n.inv?.name || n.roamer?.name || n.virus?.name || (n.hub ? FX[n.hub.faction]?.short : '') || (n.fleet ? `Swarm ×${n.fleet.ships}` : '') || n.handle || (n.kind === 'exit' || n.kind === 'entry' ? 'Floor 8' : n.kind === 'zone' ? CONFIG.zone.name : '');
     const cands = nodes.filter((n) => (n.kind === 'location' && n.loc) || OTHER[n.kind]).map((n) => ({ n, r: n.kind === 'location' ? rank(n) : n.id === sel ? 0 : OTHER[n.kind] })).filter((c) => c.r < 9).sort((a, b) => a.r - b.r);
-    boxes.push([-5 * CH, 26 / z, 5 * CH, 26 / z + H]); // HOME's label, under the server
+    { const h = find('server'); boxes.push([h.x - 5 * CH, h.y + 26 / z, h.x + 5 * CH, h.y + 26 / z + H]); } // HOME's label, under the server
     for (const { n } of cands) {
       const p = labelAt(n, 12), w = Math.max(nameOf(n).length, 10, (SUB[n.kind] || 0) * 0.86) * CH;
       const x0 = n.x + p.x - (p.a === 'end' ? w : p.a === 'middle' ? w / 2 : 0), y0 = n.y + p.y - 11 / z;
@@ -2095,7 +2086,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
     if (n.kind === 'server') {
       const srv = s.server;
-      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME</text>${homeBars(s)}<text y="68" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
+      return `<g class="mnode server${on}" data-select="server" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME</text>${homeBars(s)}<text y="68" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
     }
     if (n.kind === 'zone') {
       const live = liveSpawns(s), here = s.run?.loc === CONFIG.zone.id;
@@ -2123,12 +2114,16 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
       const f = n.hub.faction, F = FX[f], t = repTier(s, f);
       return `<g class="mnode hub${hostile(s, f) ? ' hostile' : ''}${offline(s, f) ? ' offline' : ''}${captured(s, f) ? ' yours f-mine' : ''}${lockedDown(s, f) || retakeOf(s)?.f === f ? ' threat f-threat' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" style="--fc:${captured(s, f) ? 'var(--you)' : F.color}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(F.name)} hub"><circle r="18" class="mhit"/><path d="M0 -13 L13 0 L0 13 L-13 0 Z" class="hub-frame"/><g class="hub-mark" transform="translate(-8 -8)">${GLYPHS['f-' + f]}</g>${pick}${label(n, 14, F.short, lockedDown(s, f) ? 'lockdown' : retakeOf(s)?.f === f ? `swarm · ${fmtLeft(retakeLeft(s))}` : offline(s, f) ? 'hub · offline' : captured(s, f) ? 'your hub' : `hub · ${t.name}`, lockedDown(s, f) || retakeOf(s)?.f === f ? 'hot' : '')}</g>`;
     }
+    if (n.kind === 'exit' || n.kind === 'entry') {
+      // ▼ the way down (lit through the fog), ▲ the way back up. Its band in WoW colours: what waits there for you.
+      const to = n.kind === 'exit' ? n.to : n.floor - 1, [lo, hi] = bandOf(to), L = hackerLevel(s), been = to <= floorsOf(s).reached;
+      const band = `<tspan class="mlv ${conClass(lo - L)}">lv ${lo}</tspan><tspan class="mlv ${conClass(hi - L)}">–${hi}</tspan>`;
+      const p = labelAt(n, 12), shape = n.kind === 'exit' ? 'M-9 -6 L9 -6 L0 9 Z' : 'M0 -9 L9 6 L-9 6 Z';
+      return `<g class="mnode ${n.kind}${n.open || been ? ' open' : ''}${been ? ' been' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${esc(n.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${n.kind === 'exit' ? 'Exit to' : 'Up to'} floor ${to}"><circle r="18" class="mhit"/><circle r="14" class="exit-glow"/><path d="${shape}" class="exit-mark"/>${pick}<text x="${p.x}" y="${p.y}" class="mlabel" text-anchor="${p.a}">Floor ${to}</text><text x="${p.x}" y="${p.y + 16}" class="msub" text-anchor="${p.a}">${band}</text></g>`;
+    }
     if (n.kind === 'hidden') {
       const h = n.hidden, flag = hiddenFlagged(s, h);
-      return `<g class="mnode hidden f-target${flag ? ' job' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${h.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Unknown server"><circle r="18" class="mhit"/>${arc(8, h.lead / 100, 'lead')}<text class="qmark" text-anchor="middle" y="4">?</text>${pick}${label(n, 9, flag ? 'Flagged' : 'Unknown', `${h.lead ? h.lead + '% traced' : 'pinged'}`, 'dim')}</g>`;
-    }
-    if (n.kind === 'lead') {
-      return `<g class="mnode lead f-target${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${n.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(FAMILIES[n.family].name)} lead"><circle r="18" class="mhit"/>${arc(8, n.progress / 100, 'lead')}${pick}${label(n, 9, `${FAMILIES[n.family].name} lead`, `${Math.min(99, n.progress)}%`, 'dim')}</g>`;
+      return `<g class="mnode hidden f-target${flag ? ' job' : ''}${on}${crowded.has(n.id) ? ' crowded' : ''}" data-select="${h.id}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Unknown server"><circle r="18" class="mhit"/>${arc(8, h.lead / 100, 'lead')}<text class="qmark" text-anchor="middle" y="4">?</text>${pick}${label(n, 9, flag ? 'Flagged' : h.lead ? `${h.lead}%` : '', flag && h.lead ? `${h.lead}%` : '', 'dim')}</g>`;
     }
     const l = n.loc, st = nodeState(s, l);
     const taken = takenOf(l), total = takeable(l).length;
@@ -2143,7 +2138,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     return `<g ${l.faction ? `style="--fc:${FX[l.faction].color}" ` : ''}class="mnode loc ${st}${mapTags(s, l, st, job)}${crowded.has(n.id) ? ' crowded' : ''}${l.faction ? ' fowned' : ''}${l.takenOver ? ' owned' : ''}${s.locations.includes(l) && !isLive(s, l) ? ' detached' : ''}${op}${job ? ' job' : ''}${eventsAt(s, l.id).length ? ' drop' : ''}${on}" data-select="${esc(l.id)}" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="${esc(l.name)}"><circle r="18" class="mhit"/>${st === 'new' ? '<circle r="11" class="ring"/>' : arc(10, total ? taken / total : 0, st)}<circle r="5" class="core"/>${rotMark(l)}${l.faction ? `<g class="fmark" transform="translate(9 -17) scale(0.62)">${GLYPHS['f-' + l.faction]}</g>` : ''}${dropMark(s, l)}${pick}${lvLabel(s, n, 12, l.name, l.takenOver ? null : l.level || 1, l.depth || 1, rest)}</g>`;
   }).join('');
   const hoverNames = s.settings?.mapNames === 'hover';
-  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Map of your server and traced locations">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${draw}</svg>`;
+  const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
   const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><a class="btn small breach-try" href="?playtest=breach&class=${classOf(s)}&level=${Math.max(10, hackerLevel(s))}" target="_blank" rel="noopener" title="The roguelite prototype: one breach of MERIDIAN-MX-14 as your class, in a new tab. Your save is not touched.">Try a breach</a><a class="btn small breach-try" href="?campaign=breach" target="_blank" rel="noopener" title="Breach campaign: the roguelite from level 1, in a new tab, with its own save. This save is not touched.">Breach campaign</a><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
@@ -2151,9 +2146,20 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
   // selected one's card sits beside the list.
   if (list && !con) return `<div class="map-page map-list-page"><section class="panel map-canvas map-list">${tabs}${serverList(s, sel, filter, sort)}</section><aside class="map-side">${mapSide(s, sel, find(sel))}</aside></div>`;
-  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
+  return `<div class="map-page${side ? '' : ' no-side'}"><section class="panel map-canvas">${tabs}${con ? '' : threatRail(s)}${con ? '' : floorLift(s, fl)}${svg}${card}</section>${side ? `<aside class="map-side">${mapSide(s, sel, find(sel))}</aside>` : ''}</div>`;
 }
-const LIST_COLS = [['name', 'Server'], ['family', 'Family'], ['level', 'Lv'], ['layer', 'Layer'], ['explored', 'Explored'], ['status', 'Status']];
+// The floor panel, a lift's buttons down the side of the map: the floors you've reached lit (the one on the map marked),
+// the next one dim with its band, the rest dark. A teal pip on the floor you're connected to.
+function floorLift(s, n) {
+  const F = floorsOf(s), L = hackerLevel(s), here = s.run ? (s.run.loc === CONFIG.zone.id ? 1 : s.locations.find((l) => l.id === s.run.loc)?.depth || null) : null;
+  const rows = FLOORS.map((f, i) => {
+    const k = i + 1, [lo, hi] = f.band, open = k <= F.reached, next = k === F.reached + 1;
+    const band = open || next ? `<small><b class="${conClass(lo - L)}">${lo}</b>–<b class="${conClass(hi - L)}">${hi}</b></small>` : '';
+    return `<button type="button" class="fl-btn ${open ? 'open' : next ? 'next' : 'dark'}${k === n ? ' on' : ''}" ${open ? `data-floor="${k}" title="${esc(`${f.name} · lv ${lo}–${hi}`)}"` : 'disabled'} aria-label="Floor ${k}"><b class="fl-n">${k}</b><span class="fl-name">${open ? esc(f.name) : next ? '???' : ''}</span>${band}${here === k ? '<i class="fl-you" title="You are here"></i>' : ''}</button>`;
+  });
+  return `<nav class="floor-lift" aria-label="Floors">${rows.join('')}</nav>`;
+}
+const LIST_COLS = [['name', 'Server'], ['family', 'Family'], ['level', 'Lv'], ['layer', 'Floor'], ['explored', 'Explored'], ['status', 'Status']];
 function serverList(s, sel, filter, sort) {
   const [key, dir] = sort.startsWith('-') ? [sort.slice(1), -1] : [sort, 1];
   const rows = (s.locations || []).map((l) => {
@@ -2190,14 +2196,12 @@ function listHubs(s, sel, filter) {
   return `<h4 class="sl-sec">Hubs</h4>${hubs.map((h) => { const f = h.faction, chips = [captured(s, f) ? '<span class="tag you">yours</span>' : '', hostile(s, f) ? '<span class="tag hot">hostile</span>' : '', offline(s, f) ? '<span class="tag dim">offline</span>' : '', lockedDown(s, f) ? '<span class="tag hot">lockdown</span>' : '', retakeOf(s)?.f === f ? '<span class="tag hot">swarm</span>' : ''].join('');
     return `<button type="button" class="sl-row${h.id === sel ? ' on' : ''}" data-select="${esc(h.id)}"><span class="sl-name">${fIcon(f)}<b>${esc(h.name)}</b></span><span class="sl-fam">${esc(FX[f].short)}</span><span class="sl-lv">${h.level}</span><span class="sl-num">—</span><span class="sl-exp"><small>${esc(repTier(s, f).name)}</small></span><span class="sl-status">${chips}${locBtn(h.id)}</span></button>`; }).join('')}`;
 }
-// Traces in progress: a family's lead, and the unknown servers you can see.
+// Traces in progress: the unknown servers along your floors' links.
 function listLeads(s, sel, filter) {
   if (filter.length && !filter.includes('targets')) return '';
-  const fams = Object.entries(s.leadProgress || {}).filter(([f, n]) => FAMILIES[f] && n > 0).map(([f, n]) => ({ id: 'lead-' + f, name: `${FAMILIES[f].name} lead`, fam: f, pct: n, depth: '1', flag: false }));
-  const nodes = shownHidden(s).map((n) => ({ id: n.id, name: `? past ${s.locations.find((l) => l.id === n.via)?.name || '?'}`, fam: n.pinged || n.seen ? n.family : null, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
-  const rows = [...fams, ...nodes].sort((a, b) => b.pct - a.pct);
+  const rows = shownHidden(s).map((n) => ({ id: n.id, name: `? past ${viaName(s, n)}`, fam: n.pinged || n.seen ? n.family : null, pct: n.lead, depth: String(n.depth), flag: hiddenFlagged(s, n) }));
   if (!rows.length) return '';
-  return `<h4 class="sl-sec">Leads and unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${r.fam ? glyph(r.fam) + esc(FAMILIES[r.fam]?.name || '') : '?'}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
+  return `<h4 class="sl-sec">Unknown servers</h4>${rows.map((r) => `<button type="button" class="sl-row${r.id === sel ? ' on' : ''}" data-select="${esc(r.id)}"><span class="sl-name">${glyph('trace')}<b>${esc(r.name)}</b></span><span class="sl-fam">${r.fam ? glyph(r.fam) + esc(FAMILIES[r.fam]?.name || '') : '?'}</span><span class="sl-lv">—</span><span class="sl-num">${r.depth}</span><span class="sl-exp"><span class="ld-bar"><span style="width:${Math.min(100, r.pct)}%"></span></span><small>${Math.floor(r.pct)}%</small></span><span class="sl-status">${r.flag ? `<span class="ls-job" title="A contract">${glyph('contract')}</span>` : ''}${locBtn(r.id)}</span></button>`).join('')}`;
 }
 // The map's selection card on its own (the sidebar carries it when it's on).
 export function mapSelection(s, sel = 'server', view = 'mine') {
@@ -2286,6 +2290,15 @@ function zoneCard(s) {
 // The server card's lines: icon and name, then what it is (a bar or pips), then its number.
 const srvLine = (icon, name, body, value, tip = '') => `<div class="srv-line"${tip ? ` title="${esc(tip)}"` : ''}><span class="srv-k">${glyph(icon)}${esc(name)}</span><span class="srv-v">${body}</span><b class="srv-n">${value}</b></div>`;
 // The services, left to right: what runs (icon and version), then what's installing.
+// An exit's card (▼): the floor below, its band in WoW colours against your level, its name ??? until you've been. Go
+// down once a server it hangs off is located; a floor you've reached is a click away. An up-link's (▲): back up.
+function floorCard(s, node) {
+  const up = node.kind === 'entry', to = up ? node.floor - 1 : node.to, been = to <= floorsOf(s).reached, [lo, hi] = bandOf(to), L = hackerLevel(s);
+  const band = `<b class="${conClass(lo - L)}">Lv ${lo}</b> – <b class="${conClass(hi - L)}">${hi}</b>`;
+  const go = up || been ? `<button type="button" class="btn primary" data-floor="${to}">${up ? 'Go up' : 'Go down'}</button>`
+    : `<button type="button" class="btn primary" data-command="descend" ${node.open && !active(s) ? '' : `disabled title="${active(s) ? 'Finish the fight first' : 'Locate a server it hangs off'}"`}>Go down</button>`;
+  return `<section class="card floor-card"><h2>${up ? 'Up' : 'Exit'} · floor ${up ? node.floor : to - 1}</h2><h1>Floor ${to}${been ? ` · ${esc(floorName(to))}` : ''}</h1><p class="tagline">${band}</p><div class="row">${go}</div></section>`;
+}
 function mapSide(s, sel, node) {
   const e = gateOf(s), srv = s.server;
   const busy = active(s) || s.run;
@@ -2349,25 +2362,22 @@ function mapSide(s, sel, node) {
   if (node.kind === 'hidden') {
     const h = node.hidden, via = s.locations.find((x) => x.id === h.via), flag = hiddenFlagged(s, h), kit = kitOf(s);
     const job = openContracts(s).find((c) => c.hidden === h.id && !c.loc);
-    return `<section class="card${flag ? ' alert' : ''}"><h2>Unknown server · layer ${h.depth}</h2><h1>?</h1>
-      <p class="svc-line">past ${esc(via?.name || '?')} · signal <span class="sigbars">${'▮'.repeat(h.signal)}${'▯'.repeat(5 - h.signal)}</span></p>
+    return `<section class="card${flag ? ' alert' : ''}"><h2>Unknown server · floor ${h.depth}</h2><h1>?</h1>
+      <p class="svc-line">past ${esc(viaName(s, h))} · signal <span class="sigbars">${'▮'.repeat(h.signal)}${'▯'.repeat(5 - h.signal)}</span></p>
       <p class="svc-line">${h.pinged || h.seen ? `<span class="tag fam-tag" title="Its virus family. Kills of this family trace it once a relay pings it.">${glyph(FAM_GLYPH[h.family] || 'kill')}${esc(FAMILIES[h.family]?.name || h.family)}</span>` : `<span class="tag dim" title="A relay on ${esc(via?.name || 'the server next to it')} reads its family (so does an invader from it)">${glyph('kill')}family ?</span>`}</p>
       ${flag && job ? `<p class="svc-line"><span class="tag">Contract</span> ${esc(contractTitle(s, job))}</p>` : ''}
       <div class="lvl-row"><span class="lvl-bar"><span style="width:${h.lead}%"></span></span><small>${h.lead}% traced</small></div>
       ${traceWays(s, h, via, kit)}
       ${kit.injector ? `<div class="row"><button type="button" class="btn" data-command="use injector ${h.id}">${glyph('injector')}Trace injector · ${kit.injector}</button></div>` : ''}</section>`;
   }
-  if (node.kind === 'lead') {
-    const f = FAMILIES[node.family];
-    return `<section class="card"><h2>Lead</h2><h1>${esc(f.name)} · ${node.progress}%</h1><div class="lvl-row"><span class="lvl-bar"><span style="width:${Math.min(100, node.progress)}%"></span></span></div><p class="op-hint">This traces the server that sends ${esc(f.name.toLowerCase())} viruses. Each one you kill fills it, and at 100% that server shows up on your map.</p></section>`;
-  }
+  if (node.kind === 'exit' || node.kind === 'entry') return floorCard(s, node);
   const l = node.loc, st = nodeState(s, l);
   // A server you found but never connected: Connect asks first, showing the memory it takes.
   if (l.fresh && l.detached && s.locations.includes(l)) {
     const j = joinCost(s, l), asking = memAsk === l.id, after = j.used + j.add;
     const pips = memPips(j);
     const why = busy ? 'Finish what you are doing first' : relockLeft(l) ? 'Still tracing your last connection' : !j.fits ? 'Not enough memory. Detach another server first.' : '';
-    return `<section class="card mem-card${asking ? ' asking' : ''}"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · found</h2><h1>${esc(l.name)}</h1>
+    return `<section class="card mem-card${asking ? ' asking' : ''}"><h2>Floor ${l.depth || 1} · found</h2><h1>${esc(l.name)}</h1>
       <p class="tagline">${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${l.faction ? ` · <span class="tag" style="--fc:${FX[l.faction].color}">${esc(FX[l.faction].short)}</span>` : ''}${l.rogue ? ' · <span class="tag hot">rogue</span>' : ''}</p>
       <div class="srv-slots">${pips}</div>
       ${asking
@@ -2377,7 +2387,7 @@ function mapSide(s, sel, node) {
   // Memory (memory.mjs): a detached server is frozen; its card is just that and Attach.
   if (s.locations.includes(l) && !isLive(s, l)) {
     const up = l.detached ? null : (() => { let p = l; while (p && !p.detached) p = s.locations.find((x) => x.id === p.parent); return p; })();
-    return `<section class="card mem-card"><h2>${l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · detached</h2><h1>${esc(l.name)}</h1>
+    return `<section class="card mem-card"><h2>Floor ${l.depth || 1} · detached</h2><h1>${esc(l.name)}</h1>
       <p class="tagline">${levelTag(s, l.level || 1)} ${esc(FAMILIES[l.family].name)}${programsOn(l).length ? ` · ${glyph('module')}programs frozen` : ''}</p>
       <div class="srv-slots">${memPips(joinCost(s, l))}</div>
       <div class="row">${up ? `<button type="button" class="btn" data-select="${esc(up.id)}">${esc(up.name)} is detached</button>` : `<button type="button" class="btn primary" data-command="attach ${esc(l.id)}" ${busy || s.server.credits < memoryCost(l) || !joinCost(s, l).fits ? 'disabled' : ''} title="${!joinCost(s, l).fits ? 'Not enough free memory. Detach another server first.' : 'Back on your network, as it was'}">${glyph('credits')}Attach · ${memoryCost(l)}</button>`}</div></section>`;
@@ -2392,7 +2402,7 @@ function mapSide(s, sel, node) {
   }
   if (l.rogue) {
     const k = ROGUE.kinds[l.rogue.kind], live = Object.values(rogueSpawns(s, l)).filter((x) => x.alive).length;
-    return `<section class="card"><h2>${l.trunk ? 'Trunk server' : l.member ? `${esc(l.member)}'s rogue server` : 'Rogue server'}${l.depth > 1 ? ` · layer ${l.depth}` : ''}</h2><h1>${esc(l.name)}</h1>
+    return `<section class="card"><h2>${l.trunk ? 'Trunk server' : l.member ? `${esc(l.member)}'s rogue server` : 'Rogue server'}${` · floor ${l.depth || 1}`}</h2><h1>${esc(l.name)}</h1>
       <p class="tagline">${levelTag(s, (l.level || 1) + (l.rogue.kind === 'pit' ? ROGUE.pitLevels : 0))} <span class="tag tag-rogue" title="${esc(k.rule)}">${esc(k.name)}</span>${l.rogue.kind === 'nest' ? ` ${esc(FAMILIES[l.family].name)}` : ''}</p>
       <div class="stats">${stat('Hostile', `${live}/${rogueRooms(l).length}`)}${stat('Runs', l.runs || 0)}</div>
       <p class="svc-line"><span class="tag dim" title="Can't be taken over; never sends invasions">wild</span></p>
@@ -2407,7 +2417,7 @@ function mapSide(s, sel, node) {
   const roomsStat = R ? stat('Rooms', `${taken}/${total}${R.mapped ? ' ✓' : ''}`) : stat('Rooms', '???');
   const vaultStat = l.takenOver ? stat('Root', rootPips(l)) : stat('Vault', R && vaultId && R.opened[vaultId] ? 'open' : R ? 'shut' : '???');
   const parent = l.parent && s.locations.find((x) => x.id === l.parent);
-  return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : l.depth > 1 ? `Layer ${l.depth}` : 'Origin'} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
+  return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : `Floor ${l.depth || 1}`} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     <p class="tagline">${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
     <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
     ${R?.mapped ? '<p class="svc-line"><span class="tag you" title="Every room cleared at least once">Mapped</span></p>' : ''}

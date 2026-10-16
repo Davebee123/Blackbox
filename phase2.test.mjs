@@ -6,6 +6,7 @@ import { CONFIG, SERVER, THREAT_STEPS } from './dist/data.mjs';
 import { planner } from './dist/planner.mjs';
 import { offer, contractKill, openContracts, title as contractTitle } from './dist/mail.mjs';
 import { rogueSpawns } from './dist/rogue.mjs';
+import { graphOf, locAt, slotNode } from './dist/floors.mjs';
 
 const at = (L) => { const s = fresh(); hackerOf(s).level = L; return s; };
 const win = (s) => { command(s, 'engage'); for (let n = 0; n < 200 && active(s); n++) { s.server.integrity = s.server.max; if (s.run) s.run.integrity = s.run.max; command(s, planner(s) || 'hold'); resolveCycle(s); } };
@@ -23,10 +24,10 @@ test('grey kills trace nothing: lead falls with the level gap like XP', () => {
   assert.equal(leadFrom(15, 3), 0);
 });
 
-test('kills trace your own layer, inside its band', () => {
+test('a server found on your floor sits at its slot\'s level, inside the floor\'s band', () => {
   const s = at(12);
-  for (let i = 0; i < 4; i++) addLocation(s, 'worm', SERVER.layerFor(12));
-  assert.ok(s.locations.every((l) => l.depth === 2 && l.level === 12));
+  for (let i = 0; i < 4; i++) addLocation(s, 'worm', SERVER.floorFor(12));
+  assert.ok(s.locations.every((l) => l.depth === 2 && l.level >= 7 && l.level <= 14 && l.level === slotNode(s, l.slot).level));
 });
 
 test('kill contracts count kills within 4 levels of where they were posted, and pay XP at that level', () => {
@@ -48,16 +49,17 @@ test('SPRAWL-00 eases you in: the first armor step lands at level 5, and its vir
   assert.equal(CONFIG.zone.maxLevel, 5);
 });
 
-test('the first rogue server is a Nest of the family that traced it, and it keeps up with you inside its band', () => {
+test('the first rogue server is a Nest of the family that traced it, and it keeps up with you inside its floor\'s band', () => {
   const s = at(4);
+  const g = graphOf(s, 1), side = g.order.filter((id) => g.nodes[id].d > 1 && !g.nodes[id].main && g.nodes[id].level <= 7);
   addLocation(s, 'worm', 1); addLocation(s, 'worm', 1);
-  const nest = addLocation(s, 'ghostroot', 1);
+  const nest = addLocation(s, 'ghostroot', 1, null, side.find((id) => !locAt(s, id))); // off the main road: a floor's road is never rogue
   assert.equal(nest.rogue?.kind, 'nest'); assert.equal(nest.family, 'ghostroot');
   hackerOf(s).level = 7; rogueSpawns(s, nest, 0);
   assert.equal(nest.level, 7);
   hackerOf(s).level = 20; for (const sp of Object.values(nest.spawns)) sp.alive = false, sp.respawnAt = 0;
   rogueSpawns(s, nest, 1);
-  assert.equal(nest.level, 9, 'layer 1 tops out at 9');
+  assert.equal(nest.level, 8, 'floor 1 tops out at 8');
 });
 
 test('claimjack is capped at level 4 and unmutated, wears down to v1 after two losses, and the board opens after an hour regardless', async () => {
@@ -88,11 +90,14 @@ test('a v2 invader is blocked at its level +2, a v3 at +4', async () => {
   assert.equal(strength(10, null, 3), strength(14));
 });
 
-test('never-connected finds are capped at ten: the oldest drops off the map', async () => {
+test('a floor\'s finds stay on it: the floor bounds them, and a full floor spills to the next', async () => {
   const { FIND_CAP } = await import('./dist/combat.mjs');
   const s = at(5);
   for (let i = 0; i < FIND_CAP + 4; i++) addLocation(s, 'worm', 1);
-  assert.equal(s.locations.filter((l) => l.fresh || l.unseen).length, FIND_CAP);
+  assert.equal(s.locations.length, FIND_CAP + 4, 'nothing drops off the map');
+  assert.ok(s.locations.every((l) => l.slot));
+  assert.equal(s.locations.filter((l) => l.depth === 1).length, 10, 'floor 1 holds ten');
+  assert.equal(new Set(s.locations.map((l) => l.slot)).size, s.locations.length, 'one a slot');
 });
 
 // Since R1 (docs/servers.md 2.8) respawns are what rotations were: Root counts the respawned fight rooms you clear on a
@@ -255,17 +260,16 @@ test('Phase 4: when the board opens, KESTREL and NULL CHOIR each ask you to pick
   assert.ok(rep(s, 'kestrel') > before.k && rep(s, 'nullchoir') < before.n, 'one up, its rival down');
 });
 
-test('the map shows at most HIDDEN.shown unknown servers: flagged and most traced first', async () => {
+test('the leads list shows at most HIDDEN.shown unknown servers: flagged and most traced first', async () => {
   const { shownHidden, HIDDEN, hiddenNodes } = await import('./dist/hidden.mjs');
   const { fresh } = await import('./dist/combat.mjs');
   const s = fresh();
+  hiddenNodes(s).length = 0; // (SPRAWL-00's own ?s aside)
   for (let i = 1; i <= 20; i++) hiddenNodes(s).push({ id: 'h' + i, family: 'worm', via: 'x', depth: 2, level: 1, lead: i === 3 ? 60 : 0, pinged: true, signal: 1 });
-  hiddenNodes(s).push({ id: 'h21', family: 'worm', via: 'x', depth: 2, level: 1, lead: 0, pinged: false, signal: 1 });
   const shown = shownHidden(s);
   assert.equal(shown.length, HIDDEN.shown);
   assert.equal(shown[0].id, 'h3', 'the most traced leads');
-  assert.equal(shown[1].id, 'h20', 'then the newest ping');
-  assert.ok(!shown.some((n) => n.id === 'h21'), 'never one you have not heard of');
+  assert.equal(shown[1].id, 'h20', 'then the newest');
 });
 
 test('review fixes: elites can drop a unique; rested pays whole XP only', async () => {

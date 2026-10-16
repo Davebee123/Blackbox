@@ -1,5 +1,6 @@
-// Invasions: the idle layer. While you're logged on, locations you've found send an invasion back
-// along the network to your server about every 20–30 minutes. Each one is an event of a kind
+// Invasions: the idle layer. While you're logged on, servers you've connected to send an invasion back
+// along the network to your server about every 20–30 minutes, at their level (docs/servers.md 5.3): 2 minutes on the
+// road from floor 1, a minute more a floor down, and a deeper floor's servers send bigger grades and strains. Each one is an event of a kind
 // (KINDS): a raider, a pack, a pair, a champion, a saboteur, a thief or a scout, sometimes carrying
 // its server's quirk. Your wall (the firewall) meets it, comparing its rating with the invasion's
 // strength (its level plus what its kind adds at the wall, pushOf):
@@ -20,7 +21,7 @@ import { filterStat } from './filters.mjs';
 import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, killXp, xpToNext, codeUnit, DAEMON_DROP } from './data.mjs';
 import { gainDaemon, rollDaemon } from './daemons.mjs';
 import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
-import { pickOrigin, hiddenNode, hiddenLead, HIDDEN } from './hidden.mjs';
+import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, crashServer, endInvasion, gainXp, xpFor, command, gainCode, hackerLevel, syncServer, addItem, UNIQUES, listenBoost } from './combat.mjs';
 import { nativeStrain } from './network.mjs';
 
@@ -103,8 +104,8 @@ export function wallBands(s, rating = wallRating(s)) {
   }
   return { blocks, holds };
 }
-// Travel time from a location: longer from deeper layers, longer still behind a Tarpit.
-export const travelMs = (s, depth = 1) => Math.round((I().travelMs + I().perLayerMs * (Math.max(1, depth) - 1)) * (1 + filterStat(s, 'tarpit') / 100));
+// Travel time from a server: 2 minutes from floor 1, a minute more a floor down (docs/servers.md 5.3), longer still behind a Tarpit.
+export const travelMs = (s, floor = 1) => Math.round((I().travelMs + I().perFloorMs * (Math.max(1, floor) - 1)) * (1 + filterStat(s, 'tarpit') / 100));
 export const fighting = (s, inv = s.invasion) => !!inv && active(s) && s.encounter.invader === inv.id;
 export const degradedLeft = (s, now = Date.now()) => (s.degraded ? (s.degraded.until ? Math.max(0, s.degraded.until - now) : CONFIG.degradedMs) : 0);
 // "2 min", "40s"
@@ -213,7 +214,7 @@ function crashCheck(s) {
 function stepInvasion(s, dt, at = null) {
   const net = s.net, inv = s.invasion;
   if (!inv) {
-    if (!s.locations?.length) return;
+    if (!(s.locations || []).some(connectedTo)) return; // nothing sends one until you've connected to a server
     if (at != null) {
       // Away: the long passive clock.
       if (net.awayNext == null) net.awayNext = awayGap(s);
@@ -305,12 +306,12 @@ function unit(s, loc, level, mutation) {
   const seed = (Math.floor(rand(s) * 2 ** 31) >>> 0) || 1;
   if (mutation === undefined) mutation = rand(s) < SERVER.mutationChance(level) ? ROLLED_MUTATIONS[Math.floor(rand(s) * ROLLED_MUTATIONS.length)] : null;
   const key = INVADER[loc.family];
-  const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed, nativeStrain(s, 'you')); // deeper servers send bigger viruses, and strains
+  const { strain, grade } = variantFor(loc.family, level, loc.depth || 1, seed, nativeStrain(s, 'you')); // deeper floors send bigger viruses, and strains
   const virus = createVirus(key, seed, { threat: SERVER.threat(level), mutation, strain, grade });
   return { key, seed, level, mutation, strain, grade, family: loc.family, name: virus.name };
 }
 const clampLv = (L) => Math.max(1, Math.min(CONFIG.maxMobLevel, L));
-const tame = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && !l.zone);
+const tame = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && !l.zone && connectedTo(l));
 // A service a saboteur can shut off: the best one you run.
 function serviceTarget(s) {
   const ids = Object.keys(s.services || {}).filter((id) => SERVICES[id] && s.services[id] > 0);
@@ -336,13 +337,13 @@ function rollKind(s, loc, awayRoll) {
 // want: { kind, away } (developer invade <kind>, the away clock).
 function depart(s, want = {}) {
   let o = want.from ? { loc: want.from } : pickOrigin(s);
-  // Half the time it's the strongest server you're attached to that sends it.
+  // Half the time it's the strongest server you've connected to that sends it.
   if (o.loc && !want.from && rand(s) < 0.5) o = { loc: tame(s).sort((a, b) => (b.level || 1) - (a.level || 1))[0] || o.loc };
   const h = o.hidden || null;
   const via = h && s.locations.find((l) => l.id === h.via);
   if (h) h.seen = true; // an invader from it shows its family
-  // From a server you haven't found, it comes through one you're attached to: at that server's
-  // level and layer (what you've connected to sets what comes at you), on the longer road.
+  // From a server you haven't found, it comes through the one it hangs off: at that server's level and floor (what
+  // you've connected to sets what comes at you).
   let loc = h ? { id: h.via, name: 'an unknown server', family: h.family, level: Math.min(h.level, via?.level || h.level), depth: via?.depth || 1, road: h.depth } : o.loc;
   if (!loc) return null;
   const net = s.net;
@@ -525,7 +526,7 @@ export function capture(s, level, why) {
 // Open ports: online only, invasions come 2.5× as often and each is worth +50%. Closes when you log off.
 export function portsCommand(s, text) {
   const on = text === 'open ports';
-  if (on && !(s.locations || []).some((l) => !l.rogue && isLive(s, l))) return warn(s, 'Nothing is attached. Invasions come from servers on your network.');
+  if (on && !(s.locations || []).some((l) => !l.rogue && isLive(s, l) && connectedTo(l))) return warn(s, 'Nothing sends them yet. Invasions come from servers you have connected to.');
   if (!!s.net?.open === on) return warn(s, on ? 'Your ports are already open.' : 'Your ports are closed.');
   (s.net ||= {}).open = on;
   if (on && s.net.next > 0) s.net.next = Math.round(s.net.next * I().open.pace);
@@ -609,7 +610,7 @@ export function developerNetwork(s, text) {
     else {
       const q = QUIRKS[kind] ? kind : null, from = q ? tame(s).find((l) => quirkOf(l.family) === q) : null;
       if (q && !from) warn(s, `None of your servers has the ${QUIRKS[q].name} quirk.`);
-      else { const inv = depart(s, q ? { kind: 'raider', quirk: q, from } : { kind }); if (inv && inv.kind !== 'thief') arrive(s); }
+      else { const any = !q && !tame(s).length ? [...(s.locations || [])].filter((l) => !l.rogue && !l.member && !l.zone).sort((a, b) => (b.level || 1) - (a.level || 1))[0] : null; const inv = depart(s, q ? { kind: 'raider', quirk: q, from } : { kind, ...(any ? { from: any } : {}) }); if (inv && inv.kind !== 'thief') arrive(s); } // a developer's comes even from a server you've only found
     }
   } else if (text === 'developer crash') {
     if (active(s)) warn(s, 'Not mid-fight.');

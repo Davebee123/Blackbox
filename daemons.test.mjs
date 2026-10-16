@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, resolveCycle, active, restore, selectEncounter, part, syncServer, daemonSlots, gainDaemon, daemonLevel } from './dist/combat.mjs';
-import { DAEMONS, DAEMON_DROP, BANDS, bandDaemons, daemonN, daemonBand, codeUnit, CONFIG, power } from './dist/data.mjs';
+import { DAEMONS, DAEMON_DROP, DAEMON_BANDS as BANDS, bandDaemons, daemonN, daemonBand, codeUnit, CONFIG, power } from './dist/data.mjs';
 import { rollDaemon, daemonText } from './dist/daemons.mjs';
 import { tickNetwork, daemonChance, daemonDrop, bountyOf } from './dist/invasion.mjs';
 import { tierCost, hardenCost, fwOf, TIERS } from './dist/firewall.mjs';
@@ -27,10 +27,11 @@ const owned = (s) => Object.keys(s.daemonLv || {}).filter((id) => s.daemonLv[id]
 // Two servers at a level, a wall pinned at fw, the clock at 0 (invasion-kinds.test.mjs's world).
 function world({ level = 8, fw = 0 } = {}) {
   const s = fresh();
-  command(s, 'developer level ' + level);
   command(s, 'developer location worm');
   command(s, 'developer location ransomware');
-  for (const l of s.locations) Object.assign(l, { level, depth: 1 });
+  command(s, 'developer level ' + level); // after the finds, so the level-4 breadcrumb doesn't add a third
+  for (const l of s.locations) Object.assign(l, { level, depth: 1, runs: 1 }); // connected: they send invasions
+  s.hidden = []; // just the two: no unknown servers behind them (floors.mjs links each to its ?s)
   s.firewall = { pin: fw, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
   syncServer(s);
   s.server.integrity = s.server.max;
@@ -273,7 +274,7 @@ test('old saves: versioned daemons become levels from their version and yours; s
   old.sigs = 10;
   old.materials = { cipher: 0, worm: 0, kernel: 0, exploit: 0 };
   command(old, 'developer location worm');
-  old.locations[0].level = 14;
+  Object.assign(old.locations[0], { level: 14, runs: 1 }); // connected: the wall's base follows it
   const r = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(r.daemonsOwned, undefined, 'the old field is gone');
   assert.deepEqual(r.daemonLv, { sweeper: 16, cron: 20, watchman: 18, stall: 16 }, 'v3 your level, v2 two under, v1 four under (the Tracer was the Stall)');

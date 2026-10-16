@@ -21,6 +21,7 @@ import { FACTIONS } from './factions.mjs';
 import { rootWall } from './root.mjs';
 import { consortiumWall } from './consortium.mjs';
 import { isLive } from './memory.mjs';
+import { connectedTo } from './hidden.mjs';
 const HUB_LEVEL = (f) => FACTIONS[f].hub.level;
 
 export const FIREWALL = {
@@ -48,8 +49,8 @@ export const TIER_PERKS = [
 ];
 export const perksAt = (tier) => TIER_PERKS.filter((p) => p.tier <= tier);
 
-// The highest level any server attached to your network sends (rogue servers and members' don't).
-export const netTop = (s) => Math.max(0, ...(s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l)).map((l) => l.level || 1));
+// The highest level any server you've connected to sends (rogue servers and members' don't).
+export const netTop = (s) => Math.max(0, ...(s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && connectedTo(l)).map((l) => l.level || 1));
 
 const clock = () => hooks.now?.() ?? Date.now();
 export const fwOf = (s) => (s.firewall ||= { plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 });

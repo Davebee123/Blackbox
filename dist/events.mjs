@@ -18,7 +18,7 @@ import { FAMILIES, CONFIG } from './data.mjs';
 import { rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
-import { eventMult, noteEvent, leanPick, openLair, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
+import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -128,7 +128,6 @@ export const outbreakMult = (s, family) => (eventsOf(s).some((e) => e.card === '
 
 export function tickEvents(s, dt) {
   openFarm(s); // KESSLER-FARM-00 turns up at level 7 (rogue.mjs)
-  openLair(s); // your network's lair, from level 8 (network.mjs)
   const d = (s.director ||= { next: null, n: 0, last: null });
   for (const ev of [...eventsOf(s)]) {
     if (s.encounter?.event === ev.id && active(s)) continue; // the one you're fighting waits for you

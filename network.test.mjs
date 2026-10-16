@@ -4,7 +4,7 @@
 // unique does, and that native uniques keep the class bands.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, resolveCycle, part, active, addItem, loaded, restore, SAVE_VERSION, UNIQUES, selectEncounter, syncServer, damageMultiplier, fxAnswer, hit, finish, patchDelay } from './dist/combat.mjs';
+import { fresh, command, resolveCycle, part, active, addItem, loaded, restore, SAVE_VERSION, UNIQUES, selectEncounter, syncServer, damageMultiplier, fxAnswer, hit, finish, patchDelay, addLocation } from './dist/combat.mjs';
 import { play, connect, currentLocation, layoutOf } from './dist/run.mjs';
 import { CONFIG, BOSSES, NATIVE_BOSSES, STRAINS, variantFor, STRAIN_NATIVE, BOSS_LOOT, TELL } from './dist/data.mjs';
 import { uniqueItem, seeded, RULES, MATERIALS } from './dist/gear.mjs';
@@ -14,6 +14,7 @@ import { rogueSpawns, ROGUE } from './dist/rogue.mjs';
 import { networkCardMarkup, itemTipMarkup, consortiumMarkup, collectionMarkup, mapMarkup } from './dist/view.mjs';
 import { serversOf } from './dist/consortium.mjs';
 import { BASES } from './dist/gear.mjs';
+import { graphOf } from './dist/floors.mjs';
 
 const at = (level, netSeed = 4242) => { const s = fresh(); s.netSeed = netSeed; s.hackers = { breaker: { level, xp: 0 } }; syncServer(s); s.server.integrity = s.server.max; return s; };
 const wear = (s, id, level = 30) => { const it = addItem(s, uniqueItem(UNIQUES[id], level, seeded(1))); command(s, 'load ' + it.id); assert.ok(loaded(s).some((x) => x.id === it.id), `${id} loaded`); return it; };
@@ -144,15 +145,19 @@ test('the solo routes: a Listening Post (a program) tunes to a native you have h
   assert.ok(it.home?.name, 'it carries its home network');
 });
 
-test('the native boss: a lair turns up at level 8 with three finds, its boss in /core, its drops its network\'s natives at BOSS_LOOT odds with pity', () => {
+test('the native boss: a lair on every floor from 2, found by tracing, its boss in /core, its drops its network\'s natives at BOSS_LOOT odds with pity', () => {
   const s = at(7);
   for (const f of ['ransomware', 'worm', 'ghostroot']) command(s, 'developer location ' + f);
   openLair(s);
-  assert.equal(lairOf(s), null, 'not before level 8');
+  assert.equal(lairOf(s), null, 'nothing turns up on its own: a lair is a slot on its floor (floors.mjs)');
+  assert.equal(graphOf(s, 1).lair, null, 'none on floor 1');
   s.hackers.breaker.level = 18;
-  openLair(s);
+  const slot = graphOf(s, 2).lair;
+  const found = addLocation(s, 'worm', 2, null, slot); // traced to 100% on floor 2
   const lair = lairOf(s), g = sigOf(s, 'you'), B = BOSSES[g.boss];
-  assert.ok(lair && lair.lair === g.boss && lair.name === B.lair && lair.rogue.kind === 'lair');
+  assert.equal(found, lair);
+  assert.ok(lair && lair.lair === g.boss && lair.name === `${B.lair}-02` && lair.rogue.kind === 'lair' && lair.slot === slot);
+  lair.level = 18; // (its slot's level is 7-14; this test fights the boss at 18)
   assert.ok(ROGUE.kinds.lair, 'a kind of its own, never rolled');
   const sp = rogueSpawns(s, lair, Date.now());
   assert.equal(sp['/core'].boss, g.boss);
