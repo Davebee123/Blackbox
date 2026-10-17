@@ -111,6 +111,8 @@ const P = {
   spike: '<path d="M8 1.5 10 8l-2 6.5L6 8z"/><path d="M3 8h10"/>',
   // Damage numbers (dmgfx.mjs): encryption's lock, the interrupt's cut, a virus's claw lashing at you.
   lock: '<rect x="3" y="7" width="10" height="7.5" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2M8 10v2"/>',
+  // The same lock, its shackle up: open (a leaked vault, event-cards.mjs).
+  unlock: '<rect x="3" y="7" width="10" height="7.5" rx="1"/><path d="M5.5 7V4.5a2.5 2.5 0 0 1 5 0M8 10v2"/>',
   cut: '<circle cx="4" cy="4.5" r="2"/><circle cx="4" cy="11.5" r="2"/><path d="M5.7 5.7 14 12.5M5.7 10.3 14 3.5"/>',
   claw: '<path d="M2.5 12.5 8 2M6 14 11.5 3.5M10 14.5l4-7.5"/>',
   // Faction marks: Halcyon's shield, GLASSJAW's cracked jaw, Kestrel's wings, LANTERN's lamp, NULL CHOIR's null.

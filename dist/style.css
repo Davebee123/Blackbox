@@ -1302,6 +1302,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .citem .act { grid-column: 1 / -1; justify-self: start; }
 .comms .k { font: 600 9px var(--mono); letter-spacing: 1.2px; text-transform: uppercase; padding: 1px 5px; border: 1px solid currentColor; border-radius: 2px; white-space: nowrap; }
 .comms .k.offer { color: var(--amber); } .comms .k.mail { color: var(--bright); } .comms .k.ready { color: var(--you); } .comms .k.paid { color: var(--next); }
+.comms .k .glyph, .sb-alerts .k .glyph { width: 10px; height: 10px; margin: 0 4px 0 0; vertical-align: -1px; } /* an event's card icon (event-cards.mjs) */
 .comms .k.net { color: var(--daemon); } .comms .k.alert { color: var(--hot); } .comms .k.store { color: var(--muted); } .comms .k.standing { color: var(--you); }
 .comms .act { font: 600 11px var(--mono); color: var(--amber); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .comms .quiet { padding: 12px; }
@@ -3120,19 +3121,194 @@ details.map-pick { pointer-events: auto; }
 /* A contract ready to deliver: a yellow check by Mail. */
 .modules .ready-check { display: inline-block; margin-left: 5px; color: var(--amber); font: 700 13px var(--mono); }
 
-.event-line { margin-top: 8px; }
-.event-line .row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-/* The newer event cards (events.mjs): a feud's two sides in their colours, a hunt's hop pips, a shock's ▲/▼ chip. */
-.event-line .tagline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin: 0; }
-.event-line .tag .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
-.event-line .row.acts .btn { flex: 1 1 0; min-width: 0; }
-.btn.fside { color: var(--fc); border-color: var(--fc); }
-.btn.fside:hover:not(:disabled) { background: color-mix(in srgb, var(--fc) 14%, transparent); }
-.btn.fside .fmark-i .glyph { margin-right: 0; }
-.hop-pips { font: 12px var(--mono); letter-spacing: 1px; color: var(--daemon, #c3a6ff); cursor: help; }
-.hop-pips i { font-style: normal; opacity: 0.35; }
-.ev-pay { display: inline-flex; align-items: center; gap: 2px; cursor: help; }
-.ev-pay .glyph { width: 12px; height: 12px; margin-right: 2px; }
+/* Event cards (event-cards.mjs, docs/ui.md): one shell for every card, a kicker strip (the card's icon and name, its level or
+   mark, a ring of the time left), then the card's own body. Event violet on the strip and frame (the map's antenna); factions
+   in their colours; you in teal. The action is the design: a faction's half, a target tile, a price tile. Motion is locked to
+   the clock (--ph, so a redraw doesn't restart it) and stops with Motion off or reduced motion. */
+@media (min-width: 901px) { .map-pop:has(.evc) { width: 376px; } } /* a phone's pop-up is the screen's width already */
+.evc { --ec: var(--daemon); position: relative; display: grid; margin-top: var(--s2); background: var(--inset); border: 1px solid color-mix(in srgb, var(--ec) 34%, transparent); border-radius: var(--r-card); overflow: hidden; }
+.evc + .evc { margin-top: var(--s4); }
+.evc-head { display: flex; align-items: center; gap: var(--s3); min-height: 26px; padding: 3px 6px 3px 9px; background: color-mix(in srgb, var(--ec) 12%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--ec) 26%, transparent); color: var(--ec); font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; cursor: help; }
+.evc-head > .glyph { width: 13px; height: 13px; margin: 0; }
+.evc-head > b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.evc-sub { display: inline-flex; align-items: center; gap: var(--s3); margin-left: auto; font: 600 12px var(--mono); letter-spacing: 0.5px; text-transform: none; }
+.evc-ring { display: inline-grid; flex: none; width: 18px; height: 18px; }
+.evc-ring svg { width: 18px; height: 18px; }
+.evc-ring circle { fill: none; stroke-width: 2.4; }
+.evc-ring .bg { stroke: color-mix(in srgb, var(--ec) 22%, transparent); }
+.evc-ring .fg { stroke: var(--ec); stroke-linecap: round; }
+.evc-ring.low .fg { stroke: var(--amber); }
+.evc-body { display: grid; gap: var(--s4); padding: var(--s4); }
+/* Rewards: an icon and a number. */
+.evc-rw { display: inline-flex; align-items: center; gap: 3px; font: 600 12px var(--mono); color: var(--text); white-space: nowrap; cursor: help; }
+.evc-rw > .glyph { width: 13px; height: 13px; margin: 0; color: var(--amber); }
+.evc-rw.r-tuned > .glyph { color: var(--r-tuned); } .evc-rw.r-custom > .glyph { color: var(--r-custom); } .evc-rw.r-zeroday > .glyph { color: var(--r-zeroday); }
+.evc-fm { display: inline-flex; color: var(--fc); } .evc-fm .glyph { width: 13px; height: 13px; margin: 0; }
+.evc-sub .evc-fm .glyph { width: 15px; height: 15px; }
+/* A target tile: the virus framed, its name and level, its pay. The whole tile is the button; a reticle closes on hover. */
+.evc-target { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: center; gap: var(--s5); width: 100%; margin: 0; padding: 7px 10px 7px 7px; text-align: left; color: var(--text); background: linear-gradient(90deg, color-mix(in srgb, var(--ec) 10%, transparent), transparent 70%); border: 1px solid var(--line-strong); border-radius: var(--r-btn); transition: border-color 0.12s, box-shadow 0.12s, background-color 0.12s; }
+.evc-target:hover:not(:disabled), .evc-target:focus-visible { border-color: var(--amber); background-color: rgba(241, 185, 47, 0.05); box-shadow: inset 0 0 0 1px var(--amber), 0 0 14px rgba(241, 185, 47, 0.14); outline: none; }
+.evc-target:active:not(:disabled) { transform: translateY(1px); box-shadow: inset 0 0 0 1px var(--amber); }
+.evc-face { position: relative; display: grid; place-items: center; width: 46px; height: 46px; box-sizing: border-box; color: var(--ec); background: #0c0905; border: 1px solid color-mix(in srgb, var(--ec) 40%, transparent); border-radius: 2px; }
+.evc-face > .glyph { width: 26px; height: 26px; margin: 0; stroke-width: 1.25; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--ec) 45%, transparent)); }
+/* The reticle: four corners that close in on hover or focus. */
+.evc-face::before { content: ''; position: absolute; inset: -4px; opacity: 0; transform: scale(1.18); transition: opacity 0.14s, transform 0.14s; background: linear-gradient(var(--amber), var(--amber)) 0 0 / 9px 2px, linear-gradient(var(--amber), var(--amber)) 0 0 / 2px 9px, linear-gradient(var(--amber), var(--amber)) 100% 0 / 9px 2px, linear-gradient(var(--amber), var(--amber)) 100% 0 / 2px 9px, linear-gradient(var(--amber), var(--amber)) 0 100% / 9px 2px, linear-gradient(var(--amber), var(--amber)) 0 100% / 2px 9px, linear-gradient(var(--amber), var(--amber)) 100% 100% / 9px 2px, linear-gradient(var(--amber), var(--amber)) 100% 100% / 2px 9px; background-repeat: no-repeat; pointer-events: none; }
+.evc-target:hover:not(:disabled) .evc-face::before, .evc-target:focus-visible .evc-face::before { opacity: 1; transform: none; }
+.evc-who { display: grid; gap: 3px; min-width: 0; }
+.evc-who > b { overflow: hidden; font: 600 14px var(--mono); letter-spacing: 0.5px; color: var(--bright); white-space: nowrap; text-overflow: ellipsis; }
+.evc-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--s3); min-width: 0; font: 600 12px var(--mono); }
+.evc-tags .tag { padding: 0 4px; font-size: 10px; line-height: 15px; }
+.evc-tags .iname { overflow: hidden; max-width: 100%; font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.evc-at { overflow: hidden; max-width: 100%; color: var(--dim); font: 11px var(--mono); white-space: nowrap; text-overflow: ellipsis; }
+.evc-pay { display: grid; justify-items: end; gap: 4px; }
+/* Bounty: a pinned poster. Hollow Choir: a boss frame. */
+.evc-target.poster .evc-face { color: var(--amber); border-color: var(--line-strong); outline: 1px dashed rgba(241, 185, 47, 0.3); outline-offset: -5px; }
+.evc-target.poster .evc-face::after { content: ''; position: absolute; top: -3px; left: 50%; width: 5px; height: 5px; margin-left: -3px; border-radius: 50%; background: var(--amber-soft); box-shadow: 0 0 4px rgba(241, 185, 47, 0.5); }
+.evc-target.boss { border-color: color-mix(in srgb, var(--hot) 45%, transparent); }
+.evc-target.boss .evc-face { color: var(--hot); border-color: var(--hot); box-shadow: 0 0 0 2px #0c0905, 0 0 0 3px color-mix(in srgb, var(--hot) 55%, transparent), 0 0 14px rgba(255, 91, 61, 0.3); }
+.evc-target.boss .evc-face > .glyph { filter: drop-shadow(0 0 5px rgba(255, 91, 61, 0.6)); animation: evc-pulse 2.4s ease-in-out infinite var(--ph, 0s); }
+.evc-target.courier .evc-face { color: var(--r-tuned); }
+.evc-target.courier.unique .evc-face { overflow: hidden; border-color: color-mix(in srgb, var(--r-zeroday) 50%, transparent); }
+.evc-face .pglyph { padding: 0; }
+
+/* Feud: two halves facing off over a stacked bar in the factions' colours. */
+.fd-arena { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px 6px; }
+.fd-half { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'mark pct' 'name name' 'foe foe'; align-items: center; gap: 3px var(--s4); min-width: 0; margin: 0; padding: 8px 10px 7px; text-align: left; color: var(--text); background: linear-gradient(180deg, color-mix(in srgb, var(--fc) 13%, transparent), transparent 75%); border: 1px solid color-mix(in srgb, var(--fc) 42%, transparent); border-radius: var(--r-btn); transition: border-color 0.12s, box-shadow 0.12s, background-color 0.12s; }
+.fd-half.fd-a { grid-area: 1 / 1; } .fd-half.fd-b { grid-area: 1 / 2; }
+.fd-rw.fd-a { grid-area: 3 / 1; } .fd-rw.fd-b { grid-area: 3 / 2; }
+.fd-half.fd-b { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'pct mark' 'name name' 'foe foe'; text-align: right; }
+.fd-half:hover:not(:disabled), .fd-half:focus-visible { border-color: var(--fc); background-color: color-mix(in srgb, var(--fc) 9%, transparent); box-shadow: inset 0 0 0 1px var(--fc), 0 0 16px color-mix(in srgb, var(--fc) 22%, transparent); outline: none; }
+.fd-half:active:not(:disabled) { transform: translateY(1px); }
+.fd-half.on { border-color: var(--fc); box-shadow: inset 0 0 0 1px var(--fc), 0 0 18px color-mix(in srgb, var(--fc) 24%, transparent); }
+.fd-half.off:disabled { opacity: 0.38; filter: saturate(0.35); }
+.fd-mark { grid-area: mark; display: grid; color: var(--fc); }
+.fd-mark .glyph { width: 26px; height: 26px; margin: 0; stroke-width: 1.3; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--fc) 50%, transparent)); }
+.fd-pct { grid-area: pct; justify-self: end; font: 600 24px/1 var(--mono); color: var(--fc); font-variant-numeric: tabular-nums; }
+.fd-b .fd-pct { justify-self: start; }
+.fd-pct small { margin-left: 1px; font-size: 12px; opacity: 0.7; }
+.fd-name { grid-area: name; overflow: hidden; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--fc); white-space: nowrap; text-overflow: ellipsis; }
+.fd-foe { grid-area: foe; display: flex; align-items: center; gap: 4px; min-width: 0; font: 11px var(--mono); color: var(--muted); }
+.fd-b .fd-foe { flex-direction: row-reverse; }
+.fd-foe .glyph { width: 11px; height: 11px; margin: 0; flex: none; }
+.fd-foe span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* Your side: a teal lamp, and a tick a runner you've beaten. */
+.fd-you { position: absolute; bottom: 9px; display: flex; gap: 2px; align-items: center; }
+.fd-a .fd-you { right: 8px; } .fd-b .fd-you { left: 8px; flex-direction: row-reverse; }
+.fd-you::before { content: ''; width: 7px; height: 7px; margin: 0 3px; border-radius: 50%; background: var(--you); box-shadow: 0 0 6px var(--you); }
+.fd-a .fd-you::before { order: 1; }
+.fd-you i { width: 3px; height: 9px; background: var(--you); opacity: 0.85; }
+.fd-vs { grid-row: 1; grid-column: 1 / -1; z-index: 1; place-self: center; display: grid; place-items: center; width: 24px; height: 24px; box-sizing: border-box; font: italic 600 10px var(--mono); letter-spacing: 0.5px; text-transform: uppercase; color: var(--bright); background: var(--inset); border: 1px solid var(--line-strong); border-radius: 50%; box-shadow: 0 0 0 3px var(--inset); pointer-events: none; }
+.fd-bar { --p: 50%; position: relative; grid-area: 2 / 1 / 3 / -1; height: 12px; margin: 2px 0; background: #0c0905; border-radius: 2px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6); }
+.fd-seg { position: absolute; top: 0; bottom: 0; background-size: 12px 12px; }
+.fd-seg.sa { left: 0; width: var(--p); border-radius: 2px 0 0 2px; background-color: var(--ca); background-image: repeating-linear-gradient(-55deg, rgba(0, 0, 0, 0.22) 0 3px, transparent 3px 6px); animation: fd-flow-a 1.2s linear infinite var(--ph, 0s); }
+.fd-seg.sb { left: var(--p); right: 0; border-radius: 0 2px 2px 0; background-color: var(--cb); background-image: repeating-linear-gradient(55deg, rgba(0, 0, 0, 0.22) 0 3px, transparent 3px 6px); animation: fd-flow-b 1.2s linear infinite var(--ph, 0s); }
+.fd-bar.lead-a .sb, .fd-bar.lead-b .sa { filter: brightness(0.7); }
+.fd-mid { position: absolute; left: 50%; top: -4px; bottom: -4px; width: 1px; background: var(--bright); opacity: 0.35; }
+.fd-edge { position: absolute; left: var(--p); top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: #fff3c4; border-radius: 1px; box-shadow: 0 0 6px 2px rgba(255, 243, 196, 0.55); animation: fd-clash 1.2s ease-in-out infinite var(--ph, 0s); }
+.fd-edge.up::before, .fd-edge.down::before { content: ''; position: absolute; top: -6px; border: 3px solid transparent; }
+.fd-edge.up::before { left: 3px; border-left: 5px solid #fff3c4; border-right-width: 0; }
+.fd-edge.down::before { right: 3px; border-right: 5px solid #fff3c4; border-left-width: 0; }
+.fd-rw { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; gap: 5px var(--s4); min-width: 0; }
+.fd-rw.fd-b { justify-content: end; }
+.fd-rw.off { opacity: 0.35; }
+.fd-won { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 5px; justify-self: start; padding-top: 5px; border-top: 1px dashed var(--line); cursor: help; }
+.fd-rw.fd-b .fd-won { justify-self: end; }
+.fd-won > .glyph { width: 12px; height: 12px; margin: 0; color: var(--muted); }
+@keyframes fd-clash { 0%, 100% { box-shadow: 0 0 4px 1px rgba(255, 243, 196, 0.45); } 50% { box-shadow: 0 0 12px 4px rgba(255, 243, 196, 0.9); } }
+@keyframes fd-flow-a { to { background-position: 12px 0; } }
+@keyframes fd-flow-b { to { background-position: -12px 0; } }
+
+/* Bounty hunt: its route, a dot a server (past dim, the quarry's ringed, the next dashed), the pay rung and level under each. */
+.hn-route { list-style: none; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); margin: 0; padding: 2px 0 0; }
+.hn-stop { position: relative; display: grid; justify-items: center; gap: 2px; min-width: 0; font: 11px var(--mono); color: var(--dim); cursor: help; }
+.hn-stop::before { content: ''; position: absolute; top: 10px; left: 50%; width: 100%; height: 2px; margin-top: -1px; background: var(--line-strong); }
+.hn-stop:last-child::before { display: none; }
+.hn-stop.past::before { background: color-mix(in srgb, var(--ec) 45%, transparent); }
+.hn-stop.here::before { background: repeating-linear-gradient(90deg, var(--ec) 0 5px, transparent 5px 9px); background-size: 9px 2px; animation: hn-flow 0.8s linear infinite var(--ph, 0s); }
+.hn-dot { position: relative; z-index: 1; display: grid; place-items: center; width: 20px; height: 20px; box-sizing: border-box; border: 2px solid var(--line-strong); border-radius: 50%; background: var(--inset); transform: scale(0.6); }
+.hn-stop.past .hn-dot { background: color-mix(in srgb, var(--ec) 45%, var(--inset)); border-color: transparent; }
+.hn-stop.next .hn-dot { border-style: dashed; border-color: var(--ec); transform: scale(0.75); }
+.hn-stop.here .hn-dot { transform: none; color: var(--ec); border-color: var(--ec); box-shadow: 0 0 10px color-mix(in srgb, var(--ec) 55%, transparent); animation: evc-glow 2.4s ease-in-out infinite var(--ph, 0s); }
+.hn-dot .glyph { width: 12px; height: 12px; margin: 0; }
+.hn-stop b { font-weight: 600; color: var(--muted); }
+.hn-stop.past b, .hn-stop.past small { opacity: 0.6; }
+.hn-stop.here b { color: var(--bright); font-size: 13px; }
+.hn-stop.here small { color: var(--ec); }
+.hn-stop small { font-size: 10px; }
+@keyframes hn-flow { to { background-position: 9px 0; } }
+
+/* Courier: the packet on its line through your server, as far along as its time is gone. */
+.cr-line { --at: 0%; position: relative; height: 26px; margin: 0 4px; cursor: help; }
+.cr-track { position: absolute; left: 0; right: 0; top: 12px; height: 2px; background: repeating-linear-gradient(90deg, var(--line-strong) 0 6px, transparent 6px 10px); }
+.cr-track::after { content: ''; position: absolute; right: -2px; top: -3px; border: 4px solid transparent; border-left: 6px solid var(--line-strong); border-right-width: 0; }
+.cr-line::before { content: ''; position: absolute; left: 0; top: 12px; width: var(--at); height: 2px; background: color-mix(in srgb, var(--ec) 60%, transparent); }
+.cr-srv { position: absolute; left: 50%; top: 3px; display: grid; place-items: center; width: 20px; height: 20px; margin-left: -10px; box-sizing: border-box; color: var(--muted); background: var(--inset); border: 1px solid var(--line-strong); border-radius: 2px; }
+.cr-srv .glyph, .cr-pkt .glyph { width: 12px; height: 12px; margin: 0; }
+.cr-pkt { position: absolute; z-index: 1; top: 2px; left: clamp(0px, calc(var(--at) - 11px), calc(100% - 22px)); display: grid; place-items: center; width: 22px; height: 22px; box-sizing: border-box; color: var(--ec); background: var(--inset); border: 1px solid var(--ec); border-radius: 3px; box-shadow: 0 0 10px color-mix(in srgb, var(--ec) 55%, transparent); animation: evc-glow 2.4s ease-in-out infinite var(--ph, 0s); }
+
+/* Spotter: its tile; the next invasion a silhouette (?) until it's down, then its kind, −2 lv in teal (yours). */
+.spt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s4); align-items: stretch; }
+.spt-next { display: grid; justify-items: center; align-content: center; gap: 1px; min-width: 66px; padding: 5px 8px; color: var(--muted); border: 1px dashed var(--line-strong); border-radius: var(--r-btn); cursor: help; }
+.spt-next > .glyph { width: 13px; height: 13px; margin: 0; color: var(--you); }
+.spt-sil { font: 600 20px/1.1 var(--mono); color: var(--muted); }
+.spt-next small { font: 600 11px var(--mono); color: var(--you); }
+.spt-next.known { grid-template-columns: auto auto auto; justify-content: start; justify-items: start; align-items: center; gap: 2px var(--s4); border-style: solid; border-color: color-mix(in srgb, var(--you) 45%, transparent); }
+.spt-next.known .spt-sil { font-size: 14px; color: var(--bright); }
+.spt-next.known .spt-from { grid-column: 1 / -1; color: var(--dim); font-weight: 400; }
+.evc-told { --ec: var(--you); }
+
+/* Market shock: the price tile. ▲ sell there, ▼ buy there. */
+.evc-shock.up { --sc: #8fd46b; } .evc-shock.down { --sc: #ff6f91; }
+.sh-tile { display: grid; grid-template-columns: 40px auto minmax(0, 1fr) auto; grid-template-areas: 'ware mult spark act' 'ware name name act'; align-items: center; gap: 2px var(--s5); width: 100%; margin: 0; padding: 7px 10px 7px 7px; text-align: left; color: var(--text); border: 1px solid color-mix(in srgb, var(--sc) 40%, transparent); border-radius: var(--r-btn); background: linear-gradient(90deg, color-mix(in srgb, var(--sc) 9%, transparent), transparent 70%); transition: border-color 0.12s, box-shadow 0.12s; }
+.sh-tile:hover, .sh-tile:focus-visible { border-color: var(--sc); box-shadow: inset 0 0 0 1px var(--sc), 0 0 14px color-mix(in srgb, var(--sc) 20%, transparent); outline: none; }
+.sh-tile:active { transform: translateY(1px); }
+.sh-ware { grid-area: ware; display: grid; place-items: center; width: 40px; height: 40px; box-sizing: border-box; color: var(--sc); background: #0c0905; border: 1px solid color-mix(in srgb, var(--sc) 40%, transparent); border-radius: 2px; }
+.sh-ware .glyph { width: 22px; height: 22px; margin: 0; }
+.sh-mult { grid-area: mult; font: 600 24px/1 var(--mono); color: var(--sc); white-space: nowrap; }
+.sh-spark { grid-area: spark; width: 46px; height: 16px; }
+.sh-spark polyline { fill: none; stroke: var(--sc); stroke-width: 1.5; stroke-linejoin: round; opacity: 0.85; }
+.sh-name { grid-area: name; overflow: hidden; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--muted); white-space: nowrap; text-overflow: ellipsis; }
+.sh-act { grid-area: act; padding: 3px 8px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--sc); border: 1px solid color-mix(in srgb, var(--sc) 55%, transparent); border-radius: var(--r-tag); }
+
+/* Outbreak: the family's code, ×2. */
+.ob-tile { display: flex; align-items: center; gap: var(--s5); cursor: help; }
+.ob-glyph { display: grid; place-items: center; width: 40px; height: 40px; box-sizing: border-box; color: var(--amber); background: #0c0905; border: 1px solid var(--line-strong); border-radius: 2px; }
+.ob-glyph .glyph { width: 22px; height: 22px; margin: 0; }
+.ob-mult { font: 600 26px/1 var(--mono); color: var(--amber); text-shadow: 0 0 10px rgba(241, 185, 47, 0.35); }
+.ob-name { display: grid; gap: 1px; min-width: 0; }
+.ob-name b { font: 600 13px var(--mono); color: var(--bright); }
+.ob-name small { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); }
+
+/* Darknet listing: the unique's glyph and name, its network, a price tag you buy with. */
+.dk-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s5); }
+.dk-glyph { display: grid; place-items: center; width: 46px; height: 46px; box-sizing: border-box; overflow: hidden; background: #0c0905; border: 1px solid color-mix(in srgb, var(--r-zeroday) 45%, transparent); border-radius: 2px; }
+.dk-glyph .pglyph { padding: 0; }
+.dk-who { display: grid; gap: 3px; min-width: 0; }
+.dk-who b { overflow: hidden; font: 600 13px var(--mono); white-space: nowrap; text-overflow: ellipsis; }
+.dk-who small { display: flex; align-items: center; gap: 4px; overflow: hidden; font: 11px var(--mono); color: var(--dim); white-space: nowrap; }
+.dk-who small .glyph { width: 11px; height: 11px; margin: 0; }
+.dk-price { display: grid; justify-items: end; gap: 2px; margin: 0; padding: 5px 9px; font: 600 12px var(--mono); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-btn); background: rgba(241, 185, 47, 0.05); transition: border-color 0.12s, box-shadow 0.12s; }
+.dk-price span { display: inline-flex; align-items: center; gap: 4px; }
+.dk-price .glyph { width: 12px; height: 12px; margin: 0; color: var(--amber); }
+.dk-price small { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
+.dk-price:hover:not(:disabled), .dk-price:focus-visible { border-color: var(--amber); box-shadow: inset 0 0 0 1px var(--amber); outline: none; }
+.dk-price:active:not(:disabled) { transform: translateY(1px); }
+
+/* Leak: the vault key, as a tile, until the vault's open. */
+.lk-tile { display: flex; align-items: center; gap: var(--s5); cursor: help; }
+.lk-key { display: grid; place-items: center; width: 34px; height: 34px; box-sizing: border-box; color: var(--amber); background: #0c0905; border: 1px solid var(--line-strong); border-radius: 2px; }
+.lk-key .glyph { width: 18px; height: 18px; margin: 0; }
+.lk-tile code { padding: 3px 8px; font: 600 15px var(--mono); letter-spacing: 1px; border: 1px dashed var(--line-strong); border-radius: var(--r-tag); }
+.lk-vault { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--you); }
+.lk-vault .glyph { width: 13px; height: 13px; margin: 0; }
+.lk-vault small { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; }
+
+@keyframes evc-pulse { 50% { opacity: 0.55; } }
+@keyframes evc-glow { 50% { box-shadow: 0 0 2px color-mix(in srgb, var(--ec) 30%, transparent); } }
+.no-motion .evc, .no-motion .evc * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .evc, .evc * { animation: none !important; transition: none !important; } }
+/* A feud on the map: its bar, small, under the antenna. */
+.feudmark rect { stroke: rgba(9, 6, 3, 0.9); stroke-width: 0.5; }
 .tag.shock { cursor: help; }
 .tag.shock.up { color: #8fd46b; border-color: currentColor; }
 .tag.shock.down { color: #ff6f91; border-color: currentColor; }
@@ -3251,9 +3427,6 @@ details.map-pick { pointer-events: auto; }
 .net-native small { font-size: 11px; color: var(--dim); }
 .net-native .coll-q { color: var(--gray); letter-spacing: 2px; }
 .net-native .act, .net-native .tag { justify-self: start; }
-.net-dark { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 10px 0 0; padding: 8px 10px; border: 1px dashed var(--line-strong); border-radius: 4px; background: var(--inset); }
-.net-dark span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
-.net-dark small { color: var(--dim); font-size: 11px; }
 .ptip-body .tag.native { justify-self: start; color: var(--r-zeroday); border-color: rgba(212, 166, 74, 0.5); }
 /* Genes (genome.mjs): a virus's byline, its gene chips, the scan card and the codex by gene */
 .byline { margin-left: 6px; font: 600 11px var(--mono); letter-spacing: 1px; color: var(--ac, var(--muted)); white-space: nowrap; }

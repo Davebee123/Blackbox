@@ -27,7 +27,8 @@ import { mastered, RESEARCH, TIER } from './research.mjs';
 const LOUD_TIP = `Go in loud: every fight on this run has ${Math.round((HOT_RUN.hp - 1) * 100)}% more Integrity and hits ${Math.round((HOT_RUN.dmg - 1) * 100)}% harder. Every kill pays ${Math.round((HOT_RUN.xp - 1) * 100)}% more XP and rolls for loot once more.`;
 import { currentLocation, takeable, takenOf, liveSpawns, zoneRooms, signalNow, zoneSpawns, TRACE } from './run.mjs';
 import { ROGUE, rogueSpawns, rogueRooms, relockLeft, FARM_UNIQUES, clock as rogueClock } from './rogue.mjs';
-import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT, huntPay, shockOf } from './events.mjs';
+import { eventsAt, eventsOf, eventText, eventMinutes, CARDS as EVENT_CARDS, HUNT, shockOf, hopLeft, feudShare } from './events.mjs';
+import { eventCard, leakCard, toldCard, darknetCard, EVENT_ICON, FAM_GLYPH } from './event-cards.mjs';
 import { matesOf, mateUp, mateSignal } from './crew.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { online, inSprawl, whereText, simOn, friends, profileOf } from './presence.mjs';
@@ -66,7 +67,7 @@ export const conClass = (gap) => (gap >= 5 ? 'con-red' : gap >= 3 ? 'con-orange'
 // Name and effect together too wide for a narrow cell: show the code instead of clipping the name.
 const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(i)).length > 14;
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
-const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
+export const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
 // Skill text with this level's numbers: every level adds 4% to damage and shields. Heals you cast and
 // damage over time (burn ticks, helpers) take CONFIG.healLevel / dotLevel of that; heals times Restore, and
 // Payload adds its flat number to every burn tick and helper hit.
@@ -1445,7 +1446,7 @@ export function networkCardMarkup(s, who = 'you', opts = {}) {
       : '<li class="net-native" title="Not seen or named yet"><span class="coll-q">???</span></li>';
   }).join('');
   const dark = who === 'you' ? eventsOf(s).filter((ev) => ev.card === 'darknet') : [];
-  const darkRows = dark.map((ev) => `<div class="net-dark" title="${esc(effectLine({ unique: ev.unique }))}"><span>${glyph('item')}<b class="iname r-zeroday">${esc(UNIQUES[ev.unique].name)}</b><small>${esc(ev.net)} · ${fmtTime(ev.left)}</small></span><button type="button" class="btn primary small" data-command="event buy ${ev.id}" ${s.server.credits < ev.credits || (materialsOf(s).exploit || 0) < ev.exploits ? 'disabled' : ''} title="${ev.credits} credits and ${ev.exploits} Exploits">Buy · ${ev.credits}c + ${ev.exploits}${glyph('exploit')}</button></div>`).join('');
+  const darkRows = dark.map((ev) => darknetCard(s, ev)).join(''); // a darknet listing (event-cards.mjs)
   return `<section class="card net-card" data-net="${esc(who)}"><h2 title="A network's signature comes from its seed">Network · ${esc(whoLabel(who))}</h2><h1>${esc(g.name)}</h1>
     ${lean}<dl class="net-rows">${rows}</dl>
     <h3 class="net-sub">Native</h3><ul class="net-natives">${natives}</ul>${darkRows}${opts.extra || ''}</section>`;
@@ -1686,7 +1687,7 @@ const GO_LABEL = { mail: 'Open', store: 'Store', map: 'Map', jack: 'Jack in' };
 export function commsMarkup(s, filter = 'all', now = Date.now()) {
   const all = commsOf(s);
   const shown = all.filter((c) => filter === 'all' || commsGroup(c.kind) === filter);
-  const rows = shown.map((c) => `<li class="citem ${c.kind}${c.seen ? '' : ' unseen'}${c.done ? ' done' : ''}"><span class="k ${c.kind}">${esc(c.label)}</span><span class="cfrom">${esc(c.from)}</span><span class="cage">${agoShort(now - c.t)}</span><p>${esc(c.text)}</p>${c.go ? `<button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}">${GO_LABEL[c.go.split(':')[0]] || 'Open'}</button>` : ''}<button type="button" class="act dim cclear" data-cclear="${c.id}" title="Clear">×</button></li>`).join('');
+  const rows = shown.map((c) => `<li class="citem ${c.kind}${c.seen ? '' : ' unseen'}${c.done ? ' done' : ''}"><span class="k ${c.kind}">${c.card && EVENT_ICON[c.card] ? glyph(EVENT_ICON[c.card]) : ''}${esc(c.label)}</span><span class="cfrom">${esc(c.from)}</span><span class="cage">${agoShort(now - c.t)}</span><p>${esc(c.text)}</p>${c.go ? `<button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}">${GO_LABEL[c.go.split(':')[0]] || 'Open'}</button>` : ''}<button type="button" class="act dim cclear" data-cclear="${c.id}" title="Clear">×</button></li>`).join('');
   return `<div class="comms-head"><span>Comms</span><span class="p-acts"><button type="button" class="act dim" data-comms-clear title="Clear everything you've seen">Clear</button><button type="button" class="act" data-comms-close>Close</button></span></div>
     <div class="comms-filters" role="group" aria-label="Show">${['all', ...Object.keys(COMMS_GROUPS)].map((f) => `<button type="button" data-cfilter="${f}" aria-pressed="${filter === f}">${f === 'all' ? 'All' : f}</button>`).join('')}</div>
     <ul class="comms-list">${rows || '<li class="quiet">Quiet.</li>'}</ul>`;
@@ -2162,22 +2163,23 @@ export function threatsOf(s, now = Date.now()) {
   const r = retakeOf(s);
   if (r) add({ cls: r.state === 'siege' ? 'hot' : 'warn', icon: 'kill', name: `Swarm ×${r.ships}`, where: `${r.state === 'siege' ? 'at' : '→'} your ${FX[r.f].short} hub`, tag: `lv ${r.level}`, left: retakeLeft(s, now), total: r.state === 'travel' ? HUBS.travelMs : HUBS.siegeMs, sel: 'hub-' + r.f, verb: r.state === 'travel' ? 'arrives' : 'falls' });
   for (const h of Object.values(s.hubs || {})) if (h.captured?.lockdown) add({ cls: 'hot', icon: 'takeover', name: 'Lockdown', where: `your ${FX[h.faction].short} hub`, sel: h.id });
-  for (const ev of eventsOf(s)) { const c = EVENT_CARDS[ev.card], l = s.locations.find((x) => x.id === ev.loc), mine = railOf(s, ev, l); if (mine) { add({ cls: 'drop', left: ev.left, total: c.ms, ...mine }); continue; } add({ cls: 'drop', icon: c.fight ? 'kill' : ev.card === 'darknet' ? 'item' : 'signal', name: c.fight ? ev.name : ev.card === 'darknet' ? `Darknet: ${UNIQUES[ev.unique]?.name || '?'}` : `${c.name}: ${FAMILIES[ev.family]?.name || ''}`, where: l ? l.name : ev.card === 'darknet' ? `${ev.credits}c · ${ev.net}` : 'double code', left: ev.left, total: c.ms, sel: l ? l.id : 'server', verb: c.fight ? 'leaves' : ev.card === 'darknet' ? 'closes' : 'ends' }); }
+  for (const ev of eventsOf(s)) { const c = EVENT_CARDS[ev.card], l = s.locations.find((x) => x.id === ev.loc); add({ cls: 'drop', icon: EVENT_ICON[ev.card] || 'signal', left: ev.left, total: c.ms, sel: l ? l.id : 'server', verb: c.fight ? 'leaves' : 'ends', ...railOf(s, ev, l) }); }
   const sc = s.net?.scouted, scFrom = sc && s.locations.find((l) => l.id === sc.from);
   if (sc) { const row = out.find((x) => x.name === 'Next invasion'); if (row) Object.assign(row, { name: scFrom ? `Next: ${INV_KINDS[sc.kind].name}` : 'Next invasion', tag: `−${sc.levels} lv`, where: scFrom ? `from ${scFrom.name}` : row.where }); }
   const rank = { hot: 0, warn: 1, drop: 2, dim: 3 };
   return out.sort((a, b) => rank[a.cls] - rank[b.cls] || (a.left ?? 0) - (b.left ?? 0));
 }
-// The newer event cards' rows on the rail (events.mjs): null for the rest.
+// An event's row on the rail (events.mjs), in the cards' terms: a short name, a tag, where. The icon is its card's.
 function railOf(s, ev, l) {
-  if (ev.card === 'feud') return { icon: 'kill', name: 'Feud', tag: ev.sides.map((f) => FX[f].short).join(' · '), where: l?.name || 'the net', sel: l ? l.id : 'server', verb: 'ends' };
-  if (ev.card === 'hunt') return { icon: 'kill', name: ev.name, tag: `lv ${ev.level}`, where: `${l?.name || 'the net'} · hop ${ev.hop}/${HUNT.hops}`, sel: l ? l.id : 'server', verb: 'leaves', left: hopLeft(ev), total: HUNT.hopMs };
-  if (ev.card === 'shock') return { icon: 'credits', name: `${ev.mult > 1 ? '▲' : '▼'} ${WARES[ev.ware].name.replace(/ code$/, '')} ×${ev.mult}`, where: `${FX[ev.hub].short} market`, sel: 'hub-' + ev.hub, verb: 'ends' };
-  if (ev.card === 'spotter') return { icon: 'kill', name: ev.name, tag: `lv ${ev.level}`, where: 'spotter · your wall', sel: 'server', verb: 'leaves' };
-  return null;
+  const where = l?.name || 'the net', lv = `lv ${ev.level}`;
+  if (ev.card === 'feud') return { name: ev.sides.map((f) => `${FX[f].short} ${Math.round(feudShare(ev, f) * 100)}%`).join(' · '), where, verb: 'ends' };
+  if (ev.card === 'hunt') return { name: ev.name, tag: lv, where: `${where} · ×${HUNT.mult[ev.hop]}`, left: hopLeft(ev), total: HUNT.hopMs };
+  if (ev.card === 'shock') return { name: `${ev.mult > 1 ? '▲' : '▼'} ${WARES[ev.ware].name.replace(/ code$/, '')} ×${ev.mult}`, where: `${FX[ev.hub].short} market`, sel: 'hub-' + ev.hub };
+  if (ev.card === 'outbreak') return { name: `${FAMILIES[ev.family]?.name || ''} ×2`, where: 'code drops' };
+  if (ev.card === 'darknet') return { name: UNIQUES[ev.unique]?.name || '?', where: `${ev.credits}c · ${ev.net}`, verb: 'closes' };
+  if (ev.card === 'spotter') return { name: ev.name, tag: lv, where: 'your wall' };
+  return { name: ev.name, tag: lv, where };
 }
-// A hunt's time to its next hop (or to leaving, after the last).
-const hopLeft = (ev) => Math.max(0, ev.left - (HUNT.hops - ev.hop) * HUNT.hopMs);
 function threatRail(s) {
   const list = threatsOf(s);
   if (!list.length) return '';
@@ -2476,46 +2478,29 @@ const rotLine = (s, l) => {
   if (p) return `<p class="svc-line"><span class="tag ${p.rare ? 'hot' : 'you'}">${p.rare ? '★' : '↻'} ${esc(p.name)}</span> ${levelTag(s, p.level, `Lv ${p.level}`)} · ${esc(p.room)}${p.until ? ` · ${hm(p.until - now)}` : ''}</p>`;
   return next ? `<p class="svc-line dim" title="Its logs rotate every ${ROOT.rotateMs / 3600000} hours: a fresh virus, and a new cache">↻ ${hm(Math.max(0, next - now))}</p>` : '';
 };
-const dropMark = (s, l) => (eventsAt(s, l.id).length ? '<g class="dropmark" transform="translate(12 -12) scale(1.4)"><path d="M0 4 L0 -3 M-3 -5 Q0 -8 3 -5 M-5 -7 Q0 -12 5 -7"/></g>' : '');
-// An event on this server (events.mjs): what's happening, how long it stays, and a way in.
+const dropMark = (s, l) => { const evs = eventsAt(s, l.id), fd = evs.find((e) => e.card === 'feud'); return evs.length ? `<g class="dropmark" transform="translate(12 -12) scale(1.4)"><path d="M0 4 L0 -3 M-3 -5 Q0 -8 3 -5 M-5 -7 Q0 -12 5 -7"/></g>${fd ? feudMark(fd) : ''}` : ''; };
+// A feud's tug-of-war under the antenna: its bar in the two factions' colours.
+const feudMark = (ev) => { const [a, b] = ev.sides, w = 18, x = (w * feudShare(ev, a)).toFixed(1); return `<g class="feudmark" transform="translate(3 -33)"><title>${esc(ev.sides.map((f) => `${FX[f].short} ${Math.round(feudShare(ev, f) * 100)}%`).join(', '))}</title><rect width="${x}" height="3" style="fill:${FX[a].color}"/><rect x="${x}" width="${(w - x).toFixed(1)}" height="3" style="fill:${FX[b].color}"/></g>`; };
+// An event on this server (events.mjs): its card (event-cards.mjs); a leaked key as a tile until its vault is open.
 function dropLine(s, l) {
   if (!l) return '';
-  return eventsAt(s, l.id).map((ev) => { const c = EVENT_CARDS[ev.card], busy = active(s) || s.run;
-    if (ev.card === 'feud' || ev.card === 'hunt') return eventLine(s, ev);
-    return `<div class="event-line"><p class="op-hint"><span class="tag tag-drop">${esc(c.name)} · ${eventMinutes(ev)} min</span> ${esc(eventText(s, ev))}</p>${c.fight ? `<div class="row"><button type="button" class="btn primary" data-command="event fight ${ev.id}" ${busy ? 'disabled title="Finish what you are doing first"' : ''}>Intercept ${esc(ev.name)} · Lv ${ev.level}</button><small class="quiet">${esc(c.reward(ev))}</small></div>` : ''}</div>`; }).join('');
+  return (leakShown(l) ? leakCard(s, l) : '') + eventsAt(s, l.id).map((ev) => eventCard(s, ev)).join('');
 }
-
-// The newer cards (events.mjs), shown not told: a chip with the minutes, the marks, pips; the sentence is the tooltip.
-const evChip = (s, ev, label, ms = ev.left) => `<span class="tag tag-drop" title="${esc(eventText(s, ev))}">${glyph(EVENT_CARDS[ev.card].fight ? 'kill' : 'signal')}${esc(label)} · ${Math.max(1, Math.ceil(ms / 60000))} min</span>`;
-const busyAttr = (s) => (active(s) || s.run ? 'disabled title="Finish what you are doing first"' : '');
-function eventLine(s, ev) {
-  const c = EVENT_CARDS[ev.card], busy = active(s) || s.run;
-  if (ev.card === 'feud') {
-    const side = (f) => `<button type="button" class="btn fside" style="--fc:${FX[f].color}" data-command="event fight ${ev.id} ${f}" ${busy ? busyAttr(s) : `title="${esc(`Side with ${FX[f].short}: fight ${ev.runners[ev.sides.find((x) => x !== f)]}, lv ${ev.level}. ${c.reward(ev, f)}.`)}"`}>${fIcon(f)}${esc(FX[f].short)}</button>`;
-    return `<div class="event-line ev-feud"><p class="tagline">${evChip(s, ev, c.name)}${levelTag(s, ev.level, `Lv ${ev.level}`)}</p><div class="row acts">${ev.sides.map(side).join('')}</div></div>`;
-  }
-  if (ev.card === 'hunt') {
-    const pips = `<span class="hop-pips" title="${esc(`Hop ${ev.hop} of ${HUNT.hops}: pay ×${HUNT.mult[ev.hop]}${ev.hop < HUNT.hops ? `, ×${HUNT.mult[ev.hop + 1]} next` : ''}`)}">${'■'.repeat(ev.hop)}<i>${'□'.repeat(HUNT.hops - ev.hop)}</i></span>`;
-    return `<div class="event-line ev-hunt"><p class="tagline">${evChip(s, ev, 'Hunt', hopLeft(ev))}${levelTag(s, ev.level, `Lv ${ev.level}`)}${pips}</p><div class="row"><button type="button" class="btn primary" data-command="event fight ${ev.id}" ${busyAttr(s)}>Intercept ${esc(ev.name)}</button><small class="quiet ev-pay" title="${esc(c.reward(ev))}">${glyph('credits')}${huntPay(ev)} ${fIcon(ev.hunter)}+${HUNT.rep}</small></div></div>`;
-  }
-  if (ev.card === 'spotter') return `<div class="event-line ev-spotter"><p class="tagline">${evChip(s, ev, c.name)}${levelTag(s, ev.level, `Lv ${ev.level}`)}<span class="tag you" title="${esc(`Win: the next invasion comes ${SCOUTED.levels} levels weaker, and you see where from and what kind`)}">${glyph('firewall')}−${SCOUTED.levels} lv</span></p><div class="row"><button type="button" class="btn primary" data-command="event fight ${ev.id}" ${busyAttr(s)}>Fight ${esc(ev.name)}</button></div></div>`;
-  return '';
-}
-// Your server's card: a spotter at your wall, and what a killed one told you about the next invasion.
+const leakShown = (l) => l.leaked && l.passwordKnown && !l.takenOver && !(l.floorplan?.graph.vaults[0] && l.floorplan.opened?.[l.floorplan.graph.vaults[0]]);
+// Your server's card: the spotter at your wall and the net-wide cards (an outbreak, a darknet listing), then what a
+// killed spotter told you about the next invasion.
 function homeEvents(s) {
-  const sc = s.net?.scouted, from = sc && s.locations.find((l) => l.id === sc.from);
-  const told = sc && !s.invasion ? `<p class="svc-line"><span class="tag you" title="${esc(scoutedLine(s).trim())}">${glyph('firewall')}${from ? `${esc(INV_KINDS[sc.kind].name)} · ` : ''}−${sc.levels} lv</span>${from ? ` <small>${esc(from.name)}</small>` : ''}</p>` : '';
-  return eventsOf(s).filter((ev) => EVENT_CARDS[ev.card].home).map((ev) => eventLine(s, ev)).join('') + told;
+  return eventsOf(s).filter((ev) => EVENT_CARDS[ev.card].home || (!ev.loc && !ev.hub)).map((ev) => eventCard(s, ev)).join('') + (s.net?.scouted && !s.invasion ? toldCard(s) : '');
 }
 // A market shock at a hub (events.mjs): ▲ (it pays more: sell) or ▼ (it's cheap: buy), the ware, the minutes left.
 function shockTag(s, f) {
   const ev = shockOf(s, f);
-  return ev ? `<span class="tag shock ${ev.mult > 1 ? 'up' : 'down'}" title="${esc(eventText(s, ev))}">${ev.mult > 1 ? '▲' : '▼'}${glyph(GLYPH_OF_GOOD[ev.ware])}×${ev.mult} · ${eventMinutes(ev)} min</span>` : '';
+  return ev ? `<span class="tag shock ${ev.mult > 1 ? 'up' : 'down'}" title="${esc(`${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}">${ev.mult > 1 ? '▲' : '▼'}${glyph(GLYPH_OF_GOOD[ev.ware])}×${ev.mult}</span>` : '';
 }
 function shockSvg(s, f) {
   const ev = shockOf(s, f);
   // Sized for the screen, not the map (--z, like the labels): it sits above the hub's mark at any zoom.
-  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(eventText(s, ev))}</title><g class="hs-in"><rect x="0" y="-15" width="50" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">${eventMinutes(ev)}m</text></g></g>` : '';
+  return ev ? `<g class="hub-shock ${ev.mult > 1 ? 'up' : 'down'}" transform="translate(10 -14)"><title>${esc(`${eventText(s, ev)} ${eventMinutes(ev)} min left.`)}</title><g class="hs-in"><rect x="0" y="-15" width="56" height="15" rx="2"/><text x="4" y="-4">${ev.mult > 1 ? '▲' : '▼'}</text><g class="hs-ware" transform="translate(14 -13.5) scale(0.75)">${GLYPHS[GLYPH_OF_GOOD[ev.ware]]}</g><text x="28" y="-4">×${ev.mult}</text></g></g>` : '';
 }
 
 // In a consortium, your wall meets invaders while you're logged off: what it stops.
@@ -2698,7 +2683,7 @@ function mapSide(s, sel, node) {
     ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small></p>` : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))} <small class="svc-prog">· ${esc(contractProgress(s, c).text)}</small></p>`).join('')}
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
-    ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}
+    ${l.passwordKnown && !leakShown(l) ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}
     ${l.relay ? '<p class="svc-line"><span class="tag you">Relay up</span></p>' : ''}
     ${rotLine(s, l)}
     ${rareLine(s, l)}
@@ -2982,7 +2967,7 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
     ctx = `<div class="sb-select">${mapSelection(s, mapSel, mapView)}</div>`;
   } else {
     const al = commsOf(s).filter((c) => !c.done && c.go).slice(0, 4);
-    ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${esc(c.label)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
+    ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${c.card && EVENT_ICON[c.card] ? glyph(EVENT_ICON[c.card]) : ''}${esc(c.label)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
   }
   // No health block: Integrity and Signal live on the top bar (and the HUD in a fight).
   return fighting && module === 'combat' ? crew : `${crew}${ctx}`;
@@ -3002,7 +2987,7 @@ const relations = (f) => `<div class="frel">${FX[f].allies.length ? `<span class
 function hubCard(s, f) {
   const F = FX[f], h = hubOf(s, f);
   return `<section class="card fcard" style="--fc:${F.color}"><h2>${F.kind === 'corp' ? 'Company' : 'Hacker crew'} · hub</h2><h1>${fIcon(f, 'big')}${esc(F.name)}</h1>
-    <p class="svc-line">${esc(h.name)} · lv ${h.level}</p>${repBar(s, f)}${relations(f)}${shockOf(s, f) ? `<p class="svc-line">${shockTag(s, f)}</p>` : ''}
+    <p class="svc-line">${esc(h.name)} · lv ${h.level}</p>${repBar(s, f)}${relations(f)}${shockOf(s, f) ? eventCard(s, shockOf(s, f)) : ''}
     <div class="row"><button type="button" class="btn primary" data-go="hub:${f}">Connect</button></div></section>`;
 }
 // The hub page: who they are, your rep, their shop, their work, their servers on your map.

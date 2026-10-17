@@ -8,7 +8,8 @@
 //   outbreak  One family surges for a while: its kills drop double code.
 //   leak      Someone leaks the vault key of a server you've found but not taken.
 //   darknet   A broker lists a native unique from another network (network.mjs) for credits and Exploits.
-//   feud      Two rival factions (located hubs) clash over one of your servers. Pick a side: fight the other's runner.
+//   feud      Two rival factions (located hubs) clash over one of your servers: a tug-of-war bar that drifts on its own.
+//             Pick a side and beat the other's runners, each win a push; take the bar to 100% (or lead at the end) for the bonus.
 //   hunt      A named elite that hops server to server every 5 minutes, a level tougher and better paid each hop.
 //   shock     One hub's price for one ware jumps ×2.5 (or crashes ×0.4) for 15 minutes (market.mjs outsideMult).
 //   spotter   A spotter watches your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
@@ -41,14 +42,31 @@ export const DIRECTOR = {
 // lair's, the farm's, a story's or a strain's trophy, nor a set piece): what a courier can be carrying.
 const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && !isPiece(u.id) && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD_SOURCES.includes(src.kind))).map((u) => u.id); // a set piece drops off its own table (sets.mjs)
 const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f));
-// The newer cards' numbers. FEUD: rep to your side, from level 8 (no loss: its rivals never mind, its allies warm a little). HUNT: a hop every hopMs, hops of them,
+// The newer cards' numbers. FEUD, from level 8: a bar (sides[0]'s share) that starts within ±start of even and drifts a step of
+// drift every driftMs on the director's dice, never past hold on its own; each runner you beat pushes your side by push and pays
+// pay × a bounty's credits and +rep; 100%, or the lead when time's up, wins the feud: your side's good and +bonusRep (its allies a
+// quarter of a win and the bonus). Never a loss with anyone. A runner is sized for one (hp: invasion.mjs CHAMPION's). HUNT: a hop every hopMs, hops of them,
 // a level a hop (up to your level + cap), pay × mult[hop]. SHOCK: a hub's ware ×up, or ×down one time in crash.
-export const FEUD = { from: 8, rep: 4, ms: 20 * 60000 };
+export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drift: [0.02, 0.05], hold: [0.2, 0.8], push: 0.25, pay: 0.5, rep: 2, bonusRep: 2, hp: 1.5 };
 export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
 export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3, wares: ['cipher', 'worm', 'kernel', 'salvage'] }; // not Exploits: the wall's and the programs' currency stays steady
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
 // A faction's runner in a feud: a name of its own.
 const RUNNER = { halcyon: 'ADJUSTER', glassjaw: 'FACET', kestrel: 'TALON', lantern: 'BEACON', nullchoir: 'DISSONANCE' };
+// How much of a feud's bar is this side's (0–1), and its pay a win.
+export const feudShare = (ev, f) => (f === ev.sides[0] ? ev.bar ?? 0.5 : 1 - (ev.bar ?? 0.5));
+export const feudPay = (level) => Math.round(bountyPay(level) * FEUD.pay);
+const rival = (ev, f) => ev.sides.find((x) => x !== f);
+const runnerName = (s, f) => `${RUNNER[f]}-${1000 + Math.floor(roll(s) * 9000)}`;
+// The feud won for your side: its good (fixed by the event), +bonusRep, its allies a quarter of a win and the bonus. No ripple.
+function feudBonus(s, ev) {
+  const f = ev.side, r = seeded(ev.seed), good = feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter';
+  changeRep(s, f, FEUD.bonusRep, `You won the feud for ${FACTIONS[f].short}`, { ripple: false });
+  for (const a of FACTIONS[f].allies) changeRep(s, a, Math.round((FEUD.rep + FEUD.bonusRep) * RIPPLE.ally), `${FACTIONS[f].short}'s ally noticed`, { ripple: false });
+  if (feudGood(f) === 'crate') addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned' }), `${FACTIONS[f].short}: `);
+  else addFilter(s, rollFilter(r, { level: ev.level, rarity: r() < 0.7 ? 'stock' : 'tuned' }), `${FACTIONS[f].short}: `);
+  return good;
+}
 // Two located hubs that are rivals (factions.mjs), each pair once.
 export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
 const markets = (s) => hubsOf(s).filter((h) => !hostile(s, h.faction) && (h.offlineUntil || 0) <= (hooks.now?.() ?? Date.now())).map((h) => h.faction); // hubs you can trade at
@@ -109,7 +127,7 @@ export const CARDS = {
     name: 'Leak', weight: 1, ms: 10 * 60000,
     where: (s) => (s.locations || []).filter((l) => !l.rogue && !l.takenOver && !l.passwordKnown && !l.member),
     make: () => ({}),
-    start: (s, ev, loc) => { loc.passwordKnown = true; },
+    start: (s, ev, loc) => { loc.passwordKnown = true; loc.leaked = true; }, // leaked: its card shows the key as a tile until the vault's open
     text: (ev, where) => `Someone leaked the vault key of ${where}. Its vault opens without the password now.`,
   },
   // A native unique from another network, for sale (network.mjs): one of the slow ways to one that isn't yours.
@@ -122,25 +140,40 @@ export const CARDS = {
     text: (ev) => `A broker on a darknet channel lists ${UNIQUES[ev.unique].name}, native to ${ev.net}, for ${ev.credits} credits and ${ev.exploits} Exploits. Type event buy ${ev.id} to buy it.`,
     reward: (ev) => UNIQUES[ev.unique].name,
   },
-  // Two rival factions clash over one of your servers: one card, two sides. event fight <id> <faction> sides with
-  // that faction, against the other's runner (an elite of its family, hubs.mjs FACTION_FAMILY, at your level).
+  // Two rival factions clash over one of your servers: one card, two sides, a tug-of-war bar (ev.bar, sides[0]'s share). event
+  // fight <id> <faction> sides with that faction against the other's runner (an elite of its family, hubs.mjs FACTION_FAMILY, at
+  // your level, sized for one); your side locks with your first fight. Each win pushes it, pays, and brings a fresh runner.
   feud: {
-    name: 'Feud', weight: 1, ms: FEUD.ms, fight: true, from: FEUD.from,
+    name: 'Feud', weight: 1, ms: FEUD.ms, fight: true, again: true, from: FEUD.from,
     where: (s) => (hackerLevel(s) >= FEUD.from && feuds(s).length ? places(s) : []),
-    make: (s) => { const sides = pick(s, feuds(s)); return { sides, level: hackerLevel(s), name: sides.map((f) => FACTIONS[f].short).join(' vs '), runners: Object.fromEntries(sides.map((f) => [f, `${RUNNER[f]}-${1000 + Math.floor(roll(s) * 9000)}`])) }; },
-    foe: (ev, f) => { const o = ev.sides.find((x) => x !== f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true }; },
-    text: (ev, where) => `${FACTIONS[ev.sides[0]].short} and ${FACTIONS[ev.sides[1]].short} are fighting over ${where}. Pick a side.`,
-    reward: (ev, f = ev.side) => `${bountyPay(ev.level)} credits, ${FACTIONS[f].short} +${FEUD.rep} and ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'}`,
+    make: (s) => { const sides = pick(s, feuds(s)); return { sides, level: hackerLevel(s), name: sides.map((f) => FACTIONS[f].short).join(' vs '), bar: Math.round((0.5 + (roll(s) * 2 - 1) * FEUD.start) * 100) / 100, steps: 0, wins: 0, runners: Object.fromEntries(sides.map((f) => [f, runnerName(s, f)])) }; },
+    foe: (ev, f) => { const o = rival(ev, f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true, eliteHp: FEUD.hp }; },
+    text: (ev, where) => `${FACTIONS[ev.sides[0]].short} and ${FACTIONS[ev.sides[1]].short} are fighting over ${where}. Pick a side and push its bar to 100%.`,
+    reward: (ev, f = ev.side) => `Each win pays ${feudPay(ev.level)} credits and ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
     gone: (ev, where) => `The feud over ${where} is over.`,
+    // The world moves without you: a step every driftMs, on the director's dice. Outward only inside hold; inward always.
+    tick: (s, ev) => {
+      ev.bar ??= 0.5; ev.steps ??= 0;
+      const want = Math.floor((FEUD.ms - ev.left) / FEUD.driftMs), [lo, hi] = FEUD.hold;
+      while (ev.steps < want) {
+        ev.steps++;
+        const d = (FEUD.drift[0] + roll(s) * (FEUD.drift[1] - FEUD.drift[0])) * (roll(s) < 0.5 ? -1 : 1), nb = Math.round((ev.bar + d) * 1000) / 1000;
+        if ((nb >= lo && nb <= hi) || Math.abs(nb - 0.5) < Math.abs(ev.bar - 0.5)) { ev.bar = nb; ev.trend = Math.sign(d); } // trend: which way sides[0]'s share last moved (the card's arrow)
+      }
+    },
+    // Time's up with your side ahead: the feud is yours.
+    timeout: (s, ev, where) => (ev.side && feudShare(ev, ev.side) > 0.5 ? `${FACTIONS[ev.side].short} held ${where}. You won the feud: ${feudBonus(s, ev)}.` : null),
     won: (s, ev) => {
-      const f = ev.side, r = seeded(ev.seed); // fixed by the event
-      s.server.credits += bountyPay(ev.level);
-      // Picking a side never costs you: no ripple onto its rivals (the other side's rep stays put), its allies' quarter only.
-      changeRep(s, f, FEUD.rep, `You won the feud for ${FACTIONS[f].short}`, { ripple: false });
-      for (const a of FACTIONS[f].allies) changeRep(s, a, Math.round(FEUD.rep * RIPPLE.ally), `${FACTIONS[f].short}'s ally noticed`, { ripple: false });
-      if (feudGood(f) === 'crate') addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned' }), `${FACTIONS[f].short}: `);
-      else addFilter(s, rollFilter(r, { level: ev.level, rarity: r() < 0.7 ? 'stock' : 'tuned' }), `${FACTIONS[f].short}: `);
-      return `You won the feud for ${FACTIONS[f].short}: ${bountyPay(ev.level)} credits and ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'}.`;
+      const f = ev.side, o = rival(ev, f), beat = ev.runners[o];
+      s.server.credits += feudPay(ev.level);
+      // Picking a side never costs you: no ripple onto its rivals (the other side's rep stays put).
+      changeRep(s, f, FEUD.rep, `You beat ${beat} for ${FACTIONS[f].short}`, { ripple: false });
+      ev.wins = (ev.wins || 0) + 1;
+      ev.trend = f === ev.sides[0] ? 1 : -1;
+      ev.bar = Math.max(0, Math.min(1, Math.round(((ev.bar ?? 0.5) + ev.trend * FEUD.push) * 1000) / 1000));
+      ev.runners[o] = runnerName(s, o); // a fresh runner
+      if (feudShare(ev, f) >= 1) { ev.over = true; return `You beat ${beat} and won the feud for ${FACTIONS[f].short}: ${feudPay(ev.level)} credits and ${feudBonus(s, ev)}.`; }
+      return `You beat ${beat}: ${feudPay(ev.level)} credits. ${FACTIONS[f].short} holds ${Math.round(feudShare(ev, f) * 100)}%.`;
     },
   },
   // A named elite that moves: every HUNT.hopMs it hops to another of your servers (its path is set when it's dealt, so
@@ -206,7 +239,10 @@ const placeName = (s, id) => (s.locations || []).find((l) => l.id === id)?.name 
 // A family for an event on your network: its lean (network.mjs), on the director's own dice.
 const fam = (s) => leanPick(s, 'you', roll(s));
 const credits = (level) => 40 + 12 * level; // about two ordinary caches
-const bountyPay = (level) => 80 + 15 * level;
+export const courierPay = credits;
+export const bountyPay = (level) => 80 + 15 * level;
+// A hunt's time to its next hop (or to leaving, after the last).
+export const hopLeft = (ev) => Math.max(0, ev.left - (HUNT.hops - ev.hop) * HUNT.hopMs);
 // The director rolls its own dice (mulberry32 on the save), so dealing an event never shifts the
 // rest of the game's rolls.
 function roll(s) {
@@ -240,7 +276,7 @@ export function tickEvents(s, dt) {
     ev.left -= dt;
     const c = CARDS[ev.card];
     if (ev.left > 0) c.tick?.(s, ev); // a hunt hops
-    else end(s, ev, c.gone ? c.gone(ev, placeName(s, ev.loc)) : c.fight ? `${ev.name} left ${placeName(s, ev.loc)}.` : null);
+    else { const won = c.timeout?.(s, ev, placeName(s, ev.loc)); end(s, ev, won || (c.gone ? c.gone(ev, placeName(s, ev.loc)) : c.fight ? `${ev.name} left ${placeName(s, ev.loc)}.` : null), won ? 'world-event-won' : 'world-event-end'); }
   }
   if (hackerLevel(s) < DIRECTOR.from) return;
   if (d.next == null) d.next = between(s, DIRECTOR.firstMs);
@@ -271,12 +307,13 @@ export function deal(s, card = null) {
   return ev;
 }
 
-function end(s, ev, message) {
+function end(s, ev, message, type = 'world-event-end') {
   s.events = eventsOf(s).filter((e) => e !== ev);
-  if (message) emit(s, 'world-event-end', message, { card: ev.card, location: ev.loc });
+  if (message) emit(s, type, message, { card: ev.card, location: ev.loc });
 }
 
-// event fight <id>: go after a courier or a bounty, from its server's map card. event fight <id> <faction>: a feud's side.
+// event fight <id>: go after a courier or a bounty, from its server's map card. event fight <id> <faction>: a feud's side
+// (it locks with your first fight; after that the faction can be left off).
 export function eventCommand(s, text) {
   const b = text.match(/^event buy (\d+)$/);
   if (b) { // a darknet listing (network.mjs)
@@ -289,14 +326,16 @@ export function eventCommand(s, text) {
   if (!m) return warn(s, 'usage: event fight <id> [faction], or event buy <id>');
   const ev = eventById(s, m[1]), c = ev && CARDS[ev.card];
   if (!ev || !c.fight) return warn(s, 'That event is over.');
-  if (c.foe && !ev.sides.includes(m[2])) return warn(s, `Pick a side: event fight ${ev.id} ${ev.sides.join('|')}.`);
+  const f = c.foe ? m[2] || ev.side : null;
+  if (c.foe && !ev.sides.includes(f)) return warn(s, `Pick a side: event fight ${ev.id} ${ev.sides.join('|')}.`);
+  if (c.foe && ev.side && f !== ev.side) return warn(s, `You fight for ${FACTIONS[ev.side].short} in this feud.`);
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
-  const foe = c.foe ? c.foe(ev, m[2]) : { family: ev.family, name: ev.name, elite: !!ev.elite, boss: ev.boss };
+  const foe = c.foe ? c.foe(ev, f) : { family: ev.family, name: ev.name, elite: !!ev.elite, boss: ev.boss };
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(m[2]) * 7919 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.boss ? { boss: foe.boss } : {}), mutation: null, quiet: true });
+  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(f) * 7919 + (ev.wins || 0) * 104729 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.eliteHp ? { eliteHp: foe.eliteHp } : {}), ...(foe.boss ? { boss: foe.boss } : {}), mutation: null, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
-  if (c.foe) ev.side = m[2]; // the side you fight for (the last one you picked)
+  if (c.foe) ev.side = f; // the side you fight for: locked from here
   s.gate = gate && gate !== s.encounter ? gate : null;
   s.encounter.event = ev.id;
   emit(s, 'jack-in', `Intercepting ${foe.name}.`, { location: ev.loc });
@@ -308,6 +347,6 @@ export function eventWon(s, e) {
   const ev = eventById(s, e.event);
   if (!ev) return;
   const said = CARDS[ev.card].won?.(s, ev);
-  end(s, ev, null);
+  if (!CARDS[ev.card].again || ev.over) end(s, ev, null); // a feud stays up for the next runner until it's won
   if (said) emit(s, 'world-event-won', said, { card: ev.card, location: ev.loc });
 }

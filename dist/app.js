@@ -1983,6 +1983,8 @@ function services() {
     if (now - netSaved > 10000) { netSaved = now; save(); }
   }
   if (module === 'mail' && $('pay-left')) $('pay-left').textContent = V.fmtTime(nextPayIn(campaign, now));
+  // An event up (events.mjs): its card's ring drains and a feud's bar drifts, so the map redraws now and then.
+  if (module === 'map' && campaign.events?.length && now - (services.ev || 0) > 5000) { services.ev = now; dirty = true; }
   // Offers and shelves count down: refresh those pages now and then.
   if ((module === 'mail' || module === 'store') && now - (services.page || 0) > 15000) { services.page = now; dirty = true; }
   const job = campaign.install;
@@ -2577,12 +2579,12 @@ document.fonts?.ready.then(() => { fitKey = ''; fitTopbar(); });
 
 // "where:what" from a pager entry or a button elsewhere: a page, and what to show on it.
 function goTo(target) {
-  const [where, what] = target.split(':');
+  const [where, what, sub] = target.split(':');
   if (where === 'mail') { if (what) mailSel = what; go('mail'); }
   else if (where === 'store') go('store');
   else if (where === 'server') go('server');
   else if (where === 'craft') { craftUi = { cat: what || null, pick: null }; go('craft'); }
-  else if (where === 'hub') openHub(what);
+  else if (where === 'hub') { openHub(what); if (sub) pickHub(sub); } // hub:<faction>:<window> opens straight to it (a market shock's tile)
   else if (where === 'map') { if (what === 'consortium') { mapView = 'consortium'; mapSel = 'server'; } else if (what?.startsWith('con=')) { mapView = 'consortium'; mapSel = what.slice(4); } else if (what) { mapSel = what; mapPop = true; } go('map'); }
   else if (where === 'consortium' || where === 'people') { peopleOpen = false; go('consortium'); }
   else if (where === 'jack') run('jack in');

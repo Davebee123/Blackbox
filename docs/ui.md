@@ -44,6 +44,17 @@ switches its border and kicker to `--hot`. On a map pop-up the close button is t
 card or chip, mono caps, an icon on the left and the timing on the right. Use it when the block is an event
 with a time attached; don't use it for static cards.
 
+**Event cards** (`.evc`, `event-cards.mjs`): every event (events.mjs) is one small panel on a kicker strip: the card's
+icon and name in event violet, its level or a faction mark, and a ring that drains with the time left (the minutes on
+hover). The card's sentence is the strip's tooltip; nothing on the card is a sentence. Its body is a picture with the
+action built in, always a real button with hover, focus and pressed states: a **target tile** (a framed portrait, the
+name and level, the pay as icons; a reticle closes on the portrait on hover) for a courier, a bounty (a pinned poster)
+and the Hollow Choir (a boss frame); a feud's two **faction halves** over its stacked bar; a market shock's **price
+tile**; a darknet listing's **price tag**. Rewards are an icon and a number (credits, a faction mark and +rep, an item's
+glyph in its rarity's colour). Its motion (a feud's clash, a hunt's quarry, a courier's packet) is locked to the clock
+(`--ph`) so a redraw never restarts it, and stops with Motion off or reduced motion. The map pop-up widens to 376px
+while it holds one (desktop only).
+
 **Labelled rows** (`.op-row`, `.net-row`, `.srv-line`): a fixed label column (`--label` type, `--dim`) and the
 value beside it. Every row in a block uses the same label width. This is the pattern for any "what is on this
 thing" section (the outpost on the map card, a network's signature, the server card).
@@ -154,6 +165,7 @@ star glyph in `--amber-soft` by its name, on the fight board and in the Codex, n
 | 33 | Settings, desktop | "Speed: relaxed (12s per cycle)" ran out of its cell | Speed spans two cells; labels ellipsize |
 | 34 | Fight board, parts that protect parts | A *lock 12* tag and a cue under the Mutex's name; nothing joined the two rows | A tether between the rows, the lock as an absorb segment on the partner's bar, a ward's cap line |
 | 35 | Top tabs, phone, eight tabs (the Codex, Craft and Run up together) | System ran off the screen's right edge | Two even rows of four (`.modules[data-tabs]`, set by app.js fitTopbar) |
+| 36 | Event cards on the map cards | A sentence per event and a row of plain buttons (Intercept, a button a faction) | One shell (kicker strip, time ring), each card its own picture with its action built in; the sentence is a tooltip |
 
 ## Rules for future UI work
 

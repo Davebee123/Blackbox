@@ -1,8 +1,9 @@
-// The newer event cards (events.mjs): feud, bounty hunt, market shock, spotter.
+// The newer event cards (events.mjs): feud (a tug-of-war), bounty hunt, market shock, spotter; and every card's look (event-cards.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation } from './dist/combat.mjs';
-import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, SHOCK, huntPay, feuds } from './dist/events.mjs';
+import { deal, eventsOf, tickEvents, CARDS, FEUD, HUNT, SHOCK, huntPay, feuds, feudShare, feudPay } from './dist/events.mjs';
+import { filtersOf } from './dist/filters.mjs';
 import { rep, FACTIONS } from './dist/factions.mjs';
 import { FACTION_FAMILY } from './dist/hubs.mjs';
 import { priceOf, WARE_IDS } from './dist/market.mjs';
@@ -52,43 +53,163 @@ test('each new card deals only when its conditions hold', () => {
   for (const c of ['feud', 'hunt', 'shock', 'spotter']) assert.equal(deal(world({ hubs: ['glassjaw'] }), c)?.card, c);
 });
 
-test('a feud: pick a side, fight the other side\'s runner; the win pays your side and costs no one any rep', () => {
+// A feud between GLASSJAW and LANTERN (on the director's dice), and the rep of every faction as it stands.
+const glassLantern = () => {
   const s = world({ hubs: ['glassjaw', 'kestrel', 'lantern'] });
   s.director.r = 1;
   let ev; for (let i = 0; i < 20 && !(ev?.sides.includes('glassjaw') && ev.sides.includes('lantern')); i++) { s.events = []; ev = deal(s, 'feud'); }
   assert.deepEqual([...ev.sides].sort(), ['glassjaw', 'lantern']);
-  assert.match(mapMarkup(s, ev.loc), new RegExp(`event fight ${ev.id} glassjaw`), 'a button a side');
-  assert.match(mapMarkup(s, ev.loc), new RegExp(`event fight ${ev.id} lantern`));
+  return { s, ev };
+};
+const reps = (s) => Object.fromEntries(Object.keys(FACTIONS).map((f) => [f, rep(s, f)]));
+
+test('a feud: pick a side by its half of the card, fight the other side\'s runner; a win pushes your side, pays, and costs no one any rep', () => {
+  const { s, ev } = glassLantern();
+  assert.ok(Math.abs(ev.bar - 0.5) <= FEUD.start + 1e-9, 'starts near even');
+  const card = mapMarkup(s, ev.loc);
+  for (const f of ev.sides) assert.match(card, new RegExp(`class="fd-half[^"]*"[^>]*data-command="event fight ${ev.id} ${f}"`), `${f}'s half is its button`);
+  assert.match(card, /class="fd-bar/, 'the stacked bar');
   command(s, `event fight ${ev.id}`);
   assert.ok(!active(s), 'no side, no fight');
   command(s, `event fight ${ev.id} kestrel`);
   assert.ok(!active(s), 'not a side in this feud');
-  const was = Object.fromEntries(Object.keys(FACTIONS).map((f) => [f, rep(s, f)])), credits = s.server.credits, stash = s.stash.length;
+  const was = reps(s), credits = s.server.credits, bar = feudShare(ev, 'glassjaw'), runner = ev.runners.lantern;
   command(s, `event fight ${ev.id} glassjaw`);
   assert.ok(active(s));
   assert.equal(s.encounter.virus.family, FACTION_FAMILY.lantern, 'LANTERN\'s runner');
-  assert.equal(s.encounter.virus.name, ev.runners.lantern);
+  assert.equal(s.encounter.virus.name, runner);
   assert.ok(s.encounter.virus.elite);
   win(s);
+  assert.ok(Math.abs(feudShare(ev, 'glassjaw') - (bar + FEUD.push)) < 1e-9, 'a win pushes your side');
   assert.equal(rep(s, 'glassjaw'), was.glassjaw + FEUD.rep, 'your side');
-  assert.equal(rep(s, 'lantern'), was.lantern, 'the other side: unchanged');
-  for (const r of FACTIONS.glassjaw.rivals) assert.equal(rep(s, r), was[r], `its rival ${r}: unchanged`);
   for (const f of Object.keys(FACTIONS)) if (f !== 'glassjaw') assert.equal(rep(s, f), was[f], `${f}: nobody loses`);
-  assert.ok(s.server.credits - credits >= 80 + 15 * ev.level, 'a bounty');
-  assert.ok(s.stash.length > stash, 'GLASSJAW\'s sealed item');
-  assert.equal(eventsOf(s).length, 0, 'over');
-  // LANTERN sells no sealed item: its bootleg filter.
-  const t = world({ hubs: ['glassjaw'] });
-  t.director.r = 1;
-  const e2 = deal(t, 'feud'), first = t.serial;
-  command(t, `event fight ${e2.id} halcyon`);
-  assert.equal(t.encounter.virus.family, FACTION_FAMILY.glassjaw);
-  const was2 = Object.fromEntries(Object.keys(FACTIONS).map((f) => [f, rep(t, f)]));
-  win(t);
-  assert.equal(rep(t, 'halcyon'), was2.halcyon + FEUD.rep);
-  assert.equal(rep(t, 'kestrel'), was2.kestrel + 1, 'Halcyon\'s ally warms a little');
-  for (const f of ['glassjaw', 'nullchoir', 'lantern']) assert.equal(rep(t, f), was2[f], `${f} unchanged (GLASSJAW the other side, NULL CHOIR a rival)`);
-  assert.ok(t.logs.some((e) => e.id > first && e.type === 'world-event-won'));
+  assert.ok(s.server.credits - credits >= feudPay(ev.level), 'a win pays on its own');
+  assert.equal(feudPay(ev.level), Math.round((80 + 15 * ev.level) / 2), 'half a bounty\'s credits');
+  assert.ok(eventsOf(s).includes(ev), 'still up: fight again');
+  assert.notEqual(ev.runners.lantern, runner, 'a fresh runner');
+  assert.match(mapMarkup(s, ev.loc), /class="fd-half fd-[ab] on"/, 'your side lit');
+});
+
+test('a feud\'s side locks with your first fight; after that the faction can be left off', () => {
+  const { s, ev } = glassLantern();
+  command(s, `event fight ${ev.id} lantern`);
+  assert.ok(active(s));
+  s.encounter = null; // the fight lost or left
+  assert.equal(ev.side, 'lantern', 'locked, won or not');
+  const first = s.serial;
+  command(s, `event fight ${ev.id} glassjaw`);
+  assert.ok(!active(s), 'the other side is shut');
+  assert.ok(s.logs.some((e) => e.id > first && e.type === 'warning' && /LANTERN/.test(e.message)));
+  assert.match(mapMarkup(s, ev.loc), new RegExp(`class="fd-half fd-[ab] off"[^>]*data-command="event fight ${ev.id} glassjaw"[^>]*disabled`), 'its half locked on the card');
+  command(s, `event fight ${ev.id}`);
+  assert.ok(active(s), 'your side by default');
+  assert.equal(s.encounter.virus.family, FACTION_FAMILY.glassjaw);
+});
+
+test('a feud drifts on the director\'s dice, never the game\'s, and never past its hold on its own', () => {
+  const { s, ev } = glassLantern();
+  const rng = s.rng, seen = new Set([ev.bar]);
+  for (let i = 0; i < FEUD.ms / FEUD.driftMs - 1; i++) {
+    tickEvents(s, FEUD.driftMs);
+    seen.add(ev.bar);
+    assert.ok(ev.bar >= FEUD.hold[0] - 1e-9 && ev.bar <= FEUD.hold[1] + 1e-9, 'inside its hold');
+  }
+  assert.equal(ev.steps, FEUD.ms / FEUD.driftMs - 1, 'a step a minute');
+  assert.ok(seen.size > 5, 'it moves');
+  assert.equal(s.rng, rng, 'the game\'s dice untouched');
+  // The same save drifts the same way.
+  const a = glassLantern(), b = glassLantern();
+  tickEvents(a.s, 7 * FEUD.driftMs); tickEvents(b.s, 7 * FEUD.driftMs);
+  assert.equal(a.ev.bar, b.ev.bar);
+  // Past the hold (your pushes), drift only brings it back toward even.
+  const t = glassLantern(); t.ev.bar = 0.95;
+  for (let i = 0; i < 10; i++) { tickEvents(t.s, FEUD.driftMs); assert.ok(t.ev.bar <= 0.95 + 1e-9); }
+});
+
+test('taking the bar to 100% wins the feud: the bonus, once', () => {
+  const { s, ev } = glassLantern();
+  ev.bar = ev.sides[0] === 'glassjaw' ? 0.5 : 0.5; // even
+  const was = reps(s), stash = s.stash.length, credits = s.server.credits, mine = 'glassjaw';
+  command(s, `event fight ${ev.id} ${mine}`); win(s);
+  assert.ok(eventsOf(s).includes(ev));
+  assert.equal(s.stash.length, stash, 'no bonus at 75%');
+  const first = s.serial;
+  command(s, `event fight ${ev.id}`); win(s);
+  assert.ok(!eventsOf(s).includes(ev), 'won: over');
+  assert.equal(s.stash.length, stash + 1, 'GLASSJAW\'s sealed item, once');
+  assert.equal(rep(s, mine), was[mine] + 2 * FEUD.rep + FEUD.bonusRep);
+  for (const f of Object.keys(FACTIONS)) if (f !== mine) assert.ok(rep(s, f) >= was[f], `${f}: never a loss`);
+  assert.ok(s.server.credits - credits >= 2 * feudPay(ev.level));
+  assert.ok(s.logs.some((e) => e.id > first && e.type === 'world-event-won'));
+  command(s, `event fight ${ev.id}`);
+  assert.ok(!active(s), 'nothing more to fight');
+  // LANTERN sells no sealed item: its bootleg filter. Halcyon's ally Kestrel warms a little.
+  const t = world({ hubs: ['glassjaw'] }); t.director.r = 1;
+  const e2 = deal(t, 'feud'), filters = filtersOf(t).length, w2 = reps(t);
+  e2.bar = 0.5;
+  command(t, `event fight ${e2.id} halcyon`); win(t); command(t, `event fight ${e2.id}`); win(t);
+  assert.equal(rep(t, 'kestrel'), w2.kestrel + Math.round((FEUD.rep + FEUD.bonusRep) * 0.25), 'Halcyon\'s ally warms a little');
+  for (const f of ['glassjaw', 'nullchoir', 'lantern']) assert.equal(rep(t, f), w2[f], `${f} unchanged (GLASSJAW the other side, NULL CHOIR a rival)`);
+  const u = glassLantern(); u.ev.bar = 0.5;
+  const uf = filtersOf(u.s).length;
+  command(u.s, `event fight ${u.ev.id} lantern`); win(u.s); command(u.s, `event fight ${u.ev.id}`); win(u.s);
+  assert.equal(filtersOf(u.s).length, uf + 1, 'LANTERN\'s bootleg filter');
+  assert.equal(filters, filtersOf(t).length, 'Halcyon gives a sealed item, not a filter');
+});
+
+test('when a feud\'s time runs out: ahead, the bonus; behind, you keep what each fight paid and lose nothing', () => {
+  // Ahead at the end.
+  const a = glassLantern();
+  command(a.s, `event fight ${a.ev.id} glassjaw`); win(a.s);
+  a.ev.bar = a.ev.sides[0] === 'glassjaw' ? 0.6 : 0.4;
+  const stash = a.s.stash.length, ra = rep(a.s, 'glassjaw');
+  FEUD.drift = [0, 0]; // hold the bar still while the clock runs out
+  try { tickEvents(a.s, FEUD.ms); } finally { FEUD.drift = [0.02, 0.05]; }
+  assert.ok(!eventsOf(a.s).includes(a.ev), 'over');
+  assert.equal(a.s.stash.length, stash + 1, 'the bonus');
+  assert.equal(rep(a.s, 'glassjaw'), ra + FEUD.bonusRep);
+  // Behind at the end: what the win paid stays, nobody's rep moves, nothing more.
+  const b = glassLantern();
+  command(b.s, `event fight ${b.ev.id} glassjaw`); win(b.s);
+  b.ev.bar = b.ev.sides[0] === 'glassjaw' ? 0.3 : 0.7;
+  const was = reps(b.s), credits = b.s.server.credits, st = b.s.stash.length;
+  FEUD.drift = [0, 0];
+  try { tickEvents(b.s, FEUD.ms); } finally { FEUD.drift = [0.02, 0.05]; }
+  assert.ok(!eventsOf(b.s).includes(b.ev), 'over');
+  assert.deepEqual(reps(b.s), was, 'no rep lost (or won) with anyone');
+  assert.equal(b.s.server.credits, credits, 'what the win paid stays');
+  assert.equal(b.s.stash.length, st, 'no bonus');
+  // Never picked a side: it just ends.
+  const c = glassLantern(), wc = reps(c.s);
+  tickEvents(c.s, FEUD.ms);
+  assert.ok(!eventsOf(c.s).includes(c.ev));
+  assert.deepEqual(reps(c.s), wc);
+});
+
+test('event cards are shown, not told: no sentence on any card, its action a button, its sentence a tooltip', () => {
+  const s = world({ level: 14, hubs: ['glassjaw', 'kestrel'] });
+  addLocation(s, 'ghostroot'); s.locations.forEach((l) => { l.rogue = false; l.runs = 1; });
+  s.netSeed = 777;
+  const cards = [];
+  for (const c of ['courier', 'bounty', 'choir', 'feud', 'hunt', 'spotter', 'outbreak', 'shock', 'darknet', 'leak']) {
+    s.events = []; s.director.last = null;
+    const ev = deal(s, c);
+    assert.ok(ev, c);
+    if (c === 'shock') ev.hub = 'halcyon'; // a hub on this floor's map
+    const where = c === 'leak' ? ev.loc || s.locations.find((l) => l.leaked)?.id : ev.loc || (ev.hub ? 'hub-' + ev.hub : 'server');
+    const html = mapMarkup(s, where);
+    const m = html.match(new RegExp(`<section class="evc evc-${c}[\\s\\S]*?</section>`));
+    assert.ok(m, `${c}: its card`);
+    cards.push([c, m[0]]);
+  }
+  for (const [c, html] of cards) {
+    assert.ok(!/<p[\s>]/.test(html), `${c}: no paragraph`);
+    assert.match(html, /class="evc-head" title="[^"]+\."/, `${c}: the sentence is the strip's tooltip`);
+    const text = html.replace(/<span class="pglyph[^>]*>[\s\S]*?<\/span>/g, ' ').replace(/<[^>]*>/g, ' ').replace(/&#39;|&amp;|&quot;/g, '').replace(/\s+/g, ' ').trim();
+    assert.ok(!/[a-z]\.(\s|$)/.test(text), `${c}: no sentence on the card: "${text}"`);
+    assert.ok(text.split(' ').length <= 30, `${c}: labels and numbers, not prose: "${text}"`);
+    if (!['outbreak', 'leak'].includes(c)) assert.match(html, /<button type="button"/, `${c}: its action is a button`);
+  }
 });
 
 test('a bounty hunt hops three times, a level and more pay each hop, then it\'s gone; the kill pays Kestrel', () => {
