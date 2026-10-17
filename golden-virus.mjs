@@ -296,7 +296,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   const strainId = forced || overrides.strain || null;
   const strain = strainId ? STRAINS[strainId] : null;
   const grade = GRADES[overrides.grade] ? overrides.grade : 1, g = GRADES[grade];
-  const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp : 1);
+  const scale = mobPower(level) * (mutation === 'hasty' ? 0.9 : 1) * (overrides.run ? CONFIG.runHp * (overrides.boss || overrides.elite ? 1 : runLate(level, CONFIG.runLateHp)) : 1);
 
   // Tougher viruses wear more armor and strike sooner (see THREAT_STEPS).
   const extra = (spec) => (mutation === 'armored' ? 1 : 0) + THREAT_STEPS.armor.filter((x) => threat >= x.threat && (x.part === 'any' || (x.part === 'special') === !!spec.special)).length;

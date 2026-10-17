@@ -10,7 +10,7 @@ const roomFight = (s) => { const R = s.rooms, g = R.graph, room = FP.neighbours(
 // The vault, its key in hand: opened, its files in your pack.
 const openVault = (s) => { const R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); R.at = v; R.screen = null; FP.act(s, 'open'); };
 import { CONFIG, power } from './dist/data.mjs';
-import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, SCAVENGE_COST } from './dist/gear.mjs';
+import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, baseFor, SCAVENGE_COST } from './dist/gear.mjs';
 
 // Exact numbers unless a test turns crits or misses on.
 CONFIG.baseCrit = 0;
@@ -67,7 +67,9 @@ test('items: a base for its slot (primaries), affixes by rarity (one prefix and 
   const tier = rollItem(seeded(3), { level: 11, rarity: 'stock', slot: 'exploit' });
   assert.ok(hi > lo, 'higher level, bigger primaries');
   assert.equal(tier.base, 'exploit-chain', 'a new tier at 11');
-  assert.ok(tier.stats.damage > hi, 'and a jump');
+  // No jump: the new base starts at the power the old one had (gear.mjs ITEM_CURVE), so level 11 is a level's growth on 10.
+  const at = (id, L) => primaries(id, L, 1000, () => 0.5).damage;
+  assert.ok(at('exploit-chain', 11) > at('weaponized-exploit', 10) && at('exploit-chain', 11) < at('weaponized-exploit', 10) * 1.1, 'and no jump');
   const asked = rollItem(seeded(5), { level: 6, stat: 'crit', source: 'compile' });
   assert.equal(asked.rarity, 'tuned');
   assert.ok(asked.stats.crit > 0, 'compiling a stat: it has that affix');
@@ -113,6 +115,28 @@ test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low
     assert.ok(it.stats.scavenge > 0, id);
     for (const st of Object.keys(bare.stats)) if (!(st in (u.secondary || {}))) assert.equal(it.stats[st], bare.stats[st], `${id}: ${st}`);
   }
+  CONFIG.powerPerLevel = 0;
+});
+
+// Base power follows item level (gear.mjs ITEM_CURVE): no step where a base unlocks, and level 50 where the tiers left it.
+test('item power: in every slot the best base\'s primaries rise level by level from 1 to 50, with no step where a base unlocks; level 50 rolls what it did', () => {
+  CONFIG.powerPerLevel = 0.04;
+  // A base's power at a level: the geometric mean of its primaries, rolled mid-range, big enough that rounding is noise.
+  const size = (id, L) => { const p = Object.values(primaries(id, L, 1000, () => 0.5)); return Math.exp(p.reduce((n, x) => n + Math.log(x), 0) / p.length); };
+  for (const slot of ['exploit', 'proxy', 'shell', 'script', 'implant']) {
+    const from = slot === 'implant' ? 15 : 1, grow = [];
+    for (let L = from + 1; L <= 50; L++) grow[L] = size(baseFor(slot, L), L) / size(baseFor(slot, L - 1), L - 1);
+    for (let L = from + 1; L <= 50; L++) {
+      assert.ok(grow[L] > 1 && grow[L] < 1.11, `${slot} at ${L}: ×${grow[L].toFixed(3)} on ${L - 1}`);
+      // An unlock grows like the levels beside it, within a few percent.
+      if (baseFor(slot, L) !== baseFor(slot, L - 1)) assert.ok(grow[L] < Math.max(grow[L - 1] || 0, grow[L + 1] || 0) * 1.03, `${slot}: ${BASES[baseFor(slot, L)].name} at ${L} steps ×${grow[L].toFixed(3)}`);
+    }
+  }
+  // The level cap: each slot's last base rolls what it rolled when bases came in tiers.
+  const mid = (id) => primaries(id, 50, 1, () => 0.5);
+  assert.deepEqual([mid('hypervisor-escape'), mid('covert-channel'), mid('firmware-shell'), mid('metamorphic-engine'), mid('firmware-rootkit')], [
+    { damage: 44 }, { signal: 170, reduction: 5 }, { signal: 85, regen: 18, restore: 37 }, { damage: 16, signal: 67, payload: 8 }, { damage: 9, signal: 47 },
+  ]);
   CONFIG.powerPerLevel = 0;
 });
 

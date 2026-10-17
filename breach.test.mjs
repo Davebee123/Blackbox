@@ -399,7 +399,9 @@ test('healing cap: heals in a breach fight stop at the Signal you came in with, 
   assert.equal(s.run.integrity, came, 'a big heal stops at the cap');
   heal(s, 10, 'Test');
   assert.equal(s.run.integrity, came, 'at the cap, nothing more heals');
-  assert.match(hudMarkup(s), /class="heal-cap" style="left:60(\.\d+)?%/, 'the bar marks the cap where it sits');
+  // Where it sits: the Signal brought in over your max, 60% give or take the rounding of a whole-number Signal.
+  assert.ok(Math.abs(came / s.run.max - 0.6) < 0.01, 'about 60% brought in');
+  assert.ok(hudMarkup(s).includes(`class="heal-cap" style="left:${(came / s.run.max) * 100}%`), 'the bar marks the cap where it sits');
 });
 
 test('healing cap: Sasser restores like a patch, past the cap, and raises it', async () => {
