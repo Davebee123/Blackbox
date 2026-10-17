@@ -121,7 +121,7 @@ export const ITEM_SCALE = { primary: 0.42, unique: 0.5, uniqueBase: 1.2 };
 export const baseFor = (slot, level) => Object.entries(BASES).filter(([, b]) => b.slot === slot && !b.uniqueOnly && b.level <= Math.max(1, level)).sort((a, b) => b[1].level - a[1].level)[0]?.[0] || null;
 
 // Affixes: secondaries. A prefix adds offense, a suffix defense or utility. Value at item level 1
-// and 20 (linear between, on past 20). `from`: the item level it can first roll at.
+// and 20 (linear between, on past 20). `from`: the item level it can first roll at. `cap`: the most it ever rolls.
 export const AFFIXES = {
   weaponized: { kind: 'prefix', name: 'Weaponized', stat: 'damage', lo: 1, hi: 4, from: 1 },
   precise: { kind: 'prefix', name: 'Precise', stat: 'crit', lo: 3, hi: 5, from: 1 },
@@ -133,7 +133,7 @@ export const AFFIXES = {
   bunker: { kind: 'suffix', name: 'of the Bunker', stat: 'signal', lo: 6, hi: 20, from: 1 },
   mending: { kind: 'suffix', name: 'of Mending', stat: 'regen', lo: 1.5, hi: 5, from: 1 }, // Regen over 5 cycles (STATS.regen.every)
   restoration: { kind: 'suffix', name: 'of Restoration', stat: 'restore', lo: 4, hi: 10, from: 3 }, // Restore is a percentage. It lands on every heal you cast.
-  scavenger: { kind: 'suffix', name: 'of the Scavenger', stat: 'scavenge', lo: 6, hi: 12, from: 1 },
+  scavenger: { kind: 'suffix', name: 'of the Scavenger', stat: 'scavenge', lo: 3, hi: 6, cap: 10, from: 1 }, // magic find, and it costs the item's primaries (SCAVENGE_COST): 3 at 1, 6 at 20, 10 by about 45
   ghost: { kind: 'suffix', name: 'of the Ghost', stat: 'evasion', lo: 2, hi: 4, from: 3 },
   leeching: { kind: 'suffix', name: 'of Leeching', stat: 'leech', lo: 1, hi: 2, from: 5 },
   silence: { kind: 'suffix', name: 'of Silence', stat: 'stealth', lo: 6, hi: 10, from: 5 },
@@ -188,7 +188,7 @@ export const ruleValue = (id, level, roll = 0.5) => {
 export const affixValue = (id, level, roll = 0.5) => {
   const a = AFFIXES[id], t = Math.max(0, (Math.max(1, level) - 1) / 19);
   const v = (a.lo + (a.hi - a.lo) * t) * (0.85 + 0.3 * roll);
-  return Math.max(1, Math.round(v)); // every stat is a whole number
+  return Math.max(1, Math.min(a.cap ?? Infinity, Math.round(v))); // every stat is a whole number
 };
 const NAME_A = ['Ghost', 'Null', 'Black', 'Silent', 'Hollow', 'Iron', 'Glass', 'Static', 'Dead', 'Pale', 'Burnt', 'Cold', 'Feral', 'Rust', 'Neon', 'Grey'];
 const NAME_B = { exploit: ['Fang', 'Needle', 'Spike', 'Wedge', 'Payload', 'Lance'], proxy: ['Veil', 'Lattice', 'Bastion', 'Shroud', 'Bulwark', 'Mesh'], shell: ['Den', 'Cradle', 'Hollow', 'Burrow', 'Root', 'Nest'], script: ['Loop', 'Hook', 'Thread', 'Whisper', 'Daemon', 'Trick'], implant: ['Seed', 'Heart', 'Core', 'Tick', 'Ghost', 'Knot'] };
@@ -261,6 +261,10 @@ export const lootOdds = (tier = 'trash') => LOOT.odds[tier] || LOOT.odds.trash;
 export const lootMinutes = (r) => Math.round((LOOT.per[r] / LOOT.killsPerHour) * 60);
 // Scavenge is magic find, with diminishing returns: +50% Scavenge is +33% better odds.
 export const magicFind = (scavenge) => { const x = Math.max(0, scavenge) / 100; return 1 + x / (1 + x); };
+// And it costs stats, as magic find did in Diablo 2: a rolled item's primaries are 1% lower for each point of Scavenge
+// it carries, at most 15% (rollItem). Uniques and set pieces keep theirs: they are the deliberate magic-find pieces.
+export const SCAVENGE_COST = { per: 1, max: 15 };
+export const scavengeCut = (scavenge) => Math.min(SCAVENGE_COST.max, Math.max(0, scavenge || 0) * SCAVENGE_COST.per);
 // Compiling at home: a blue with the stat you chose. A Zero-day needs its source first.
 export const COMPILE = {
   cost: (level) => ({ credits: 60 + 15 * level, salvage: 8 }),
@@ -321,7 +325,7 @@ export function rollItem(rand, opts = {}) {
   const zSlot = zeroDay ? OLD_SLOT[ZERO_DAYS[zeroDay].group] || 'script' : null;
   const slot = SLOTS[opts.slot] ? opts.slot : OLD_SLOT[opts.group] || (SLOTS[opts.group] ? opts.group : null) || zSlot || pick(rand, ['exploit', 'proxy', 'shell', 'script', ...(level >= 15 ? ['implant'] : [])]);
   const base = baseFor(slot, level) || baseFor(slot === 'implant' ? 'script' : slot, level) || 'proof-of-concept';
-  const stats = primaries(base, level, r.mult, rand);
+  const prim = primaries(base, level, r.mult, rand), stats = { ...prim };
   // Affixes: at most one prefix and one suffix on a blue, up to three of each on a yellow.
   const affixes = [];
   const pool = Object.keys(AFFIXES).filter((k) => AFFIXES[k].from <= level);
@@ -338,6 +342,10 @@ export function rollItem(rand, opts = {}) {
     if (!ok.length) break;
     take(pick(rand, ok));
   }
+  // Scavenge costs the base's primaries (SCAVENGE_COST), so the tooltip shows the lower numbers. An affix's own stat
+  // keeps its roll.
+  const cut = scavengeCut(stats.scavenge);
+  if (cut) for (const [k, v] of Object.entries(prim)) stats[k] -= v - Math.max(1, Math.round((v * (100 - cut)) / 100));
   // Its rule: a minor one on a blue, a major one on a yellow (RULES).
   const tier = !zeroDay && r.rule;
   const rule = tier ? pick(rand, rulePool(tier, opts.cls)) : null;

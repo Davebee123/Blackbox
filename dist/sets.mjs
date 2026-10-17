@@ -10,16 +10,19 @@
 //   setCard(id, have)             one set as a tooltip or a Collection row reads it: its pieces (worn, held, missing,
 //                                 never found) and its bonus lines, each open or not, a class set's subclass lines too
 //   SET_LOOT, sourcePool          each source's set pieces and its odds (combat.mjs setDrop: BOSS_LOOT's pattern)
+//   tierLine(id)                  a class set's tier line ("Breaker tier set, level 50"), or null for a general set
 //   SET_HOOKS                     what the bonuses do in a fight (the codes below), and setCredits, restFast, seesRare
 //                                 for the ones that act outside it
 // Every piece has its own bonus (its unique effect, worn alone) and a green line (u.green), a second small stat that
 // counts while two or more pieces of its set are worn. A class set's 4-piece adds a line for each of its subclasses
-// (bonuses[4].subs): the base line works for anyone, each subclass line only for that subclass.
+// (bonuses[4].subs): the base line works for anyone, each subclass line only for that subclass. The class sets are the
+// end-game tier sets (set.tier: 50, like World of Warcraft's): every piece level 50 with the best stats for its slot
+// there, from the crew bosses and the Bedrock lair boss, their bonuses stronger than a general set's.
 import SET_TEXT from './content/sets.mjs';
 import ITEMS from './content/items.mjs';
 import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf } from './combat.mjs';
 import { momentumCap } from './classes/breaker.mjs';
-import { ABILITIES, SKILLS } from './data.mjs';
+import { ABILITIES, SKILLS, ARCHETYPES } from './data.mjs';
 
 export const SETS = Object.fromEntries((SET_TEXT.sets || []).map((x) => [x.id, x]));
 const UNIQ = Object.fromEntries((ITEMS.uniques || []).map((u) => [u.id, u]));
@@ -34,6 +37,7 @@ export const piecesOf = (id) => (SETS[id]?.pieces || []).filter((p) => UNIQ[p]);
 export const BONUS_AT = [2, 3, 4];
 export const GREEN_AT = 2;
 export const bonusesOf = (id) => BONUS_AT.filter((n) => SETS[id]?.bonuses?.[n]).map((n) => ({ at: n, ...SETS[id].bonuses[n] }));
+export const tierLine = (id) => (SETS[id]?.tier ? `${ARCHETYPES[SETS[id].cls]?.name || SETS[id].cls} tier set, level ${SETS[id].tier}` : null);
 
 // ---------- drops ----------
 // Each source's set pieces (a piece's sources, each { kind, ... }): BOSS_LOOT's pattern, one roll an event (a kill, a
@@ -43,8 +47,9 @@ export const bonusesOf = (id) => BONUS_AT.filter((n) => SETS[id]?.bonuses?.[n]).
 // and set pieces together stay under one an hour of play (lootsim.mjs measures it).
 //   guard     a guard post's own (Kestrel Clearance): { id, layer }
 //   boss      a named boss: { id } (RELAY-KING, REPO MAN, the Hollow Choir)
-//   lair      a floor's lair boss: { floor } (the floor 3–8 bosses' pieces, until those bosses are built)
-//   crew      a crew boss (KESSLER-FARM-00's three)
+//   lair      a floor's lair boss: { floor } (the floor 3–8 bosses' pieces, until those bosses are built; Bedrock's
+//             also drops the tier sets, beside the crew bosses, and flash ranks join them once built: planned)
+//   crew      a crew boss (KESSLER-FARM-00's three): Mesh, and the tier sets
 //   rare      a ★ rare spawn: { floor: [lo, hi] } or any floor
 //   strain    a strain kill: { lineage } or any strain
 //   author    a crew's bosses and elites: { id } (GLASSJAW)
@@ -67,6 +72,9 @@ export const SET_LOOT = {
   courier: { chance: 0.006, pity: 0.001, found: 0.002 },
   takeover: { chance: 0.02, pity: 0.005, found: 0.004 },
 };
+// A tier set's piece (a class set's) comes up this many times as often for its own class as another class's piece
+// (combat.mjs setWeight); pieces you lack still come first.
+export const CLASS_SET = 3;
 // What one roll is called in the log's next-chance line ("The next kill has a 6% chance").
 export const SET_EVENT = { vault: 'vault', puzzle: 'board', thread: 'thread', courier: 'courier', takeover: 'takeover' };
 const inFloor = (src, f) => src.floor == null || (Array.isArray(src.floor) ? f >= src.floor[0] && f <= src.floor[1] : f === src.floor);

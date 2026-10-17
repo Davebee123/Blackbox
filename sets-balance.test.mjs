@@ -43,23 +43,22 @@ test('Kestrel Clearance (3) keeps every band, and moves the average no more than
   assert.deepEqual(off, []);
 });
 
-// The loot plan's sets (docs/loot-plan.md), each worn whole in place of the blues in its slots, at the bracket that
-// covers its last piece (10, 18, 30 for pieces up to 32, else 50), on every subclass. A full set is the payoff, and a
+// The loot plan's general sets (docs/loot-plan.md), each worn whole in place of the blues in its slots, at the bracket
+// that covers its last piece (10, 18, 30 for pieces up to 32, else 50), on every subclass. A full set is the payoff, and a
 // general set leans to some classes and costs others the stats they chase, so the bound is the measure (October 2026,
-// points of a fight's Signal, easier negative): Strongbox 9.8 easier at Lv 30 (the Vault Door's half first hit is two
-// thirds of it), Wrecking Crew 7.0, Cold Storage 5.4, Load Balanced 4.2, Boot Disk 3.5 at 10, Patchwork 3.4 at 18 and
-// Palemask 3.4; the rest 0.8 to 3.1 easier, and Lantern Route, a farming set, 2.3 harder at 18 (its Scavenge in place of
-// a Phantom's chased stats: 16% to 30%). Its subclass extremes: Burst Buffer takes the Phantom from 17% to 4% at 30, and
-// Wrecking Crew the Overclocker from 33% to 17%. Every subclass keeps 80% wins with every set; whether a set may move one
-// that far is the designer's call (GAME_RULES.md Sets).
+// points of a fight's Signal, easier negative): Cold Storage 5.4 easier at Lv 30, Boot Disk 3.5 at 10, Patchwork 3.4 at
+// 18; the rest 0.8 to 3.1 easier, and Lantern Route, a farming set, 2.3 harder at 18 (its Scavenge in place of a
+// Phantom's chased stats: 16% to 30%). Its subclass extreme: Burst Buffer takes the Phantom from 17% to 4% at 30. Every
+// subclass keeps 80% wins with every set; whether a set may move one that far is the designer's call (GAME_RULES.md
+// Sets). The class sets are the end-game tier sets, held to their own check below.
 const AT50 = BRACKETS.find((b) => b.level === 50);
 const bracket = (L) => (L <= 10 ? 10 : L <= 18 ? 18 : L <= 32 ? 30 : 50);
-test('the loot plan\'s sets, worn whole: every subclass keeps 80% wins, and no set moves the average past its measure', async () => {
+test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, and no set moves the average past its measure', async () => {
   const { SETS } = await import('./dist/sets.mjs');
   const { UNIQUES } = await import('./dist/combat.mjs');
   AT[50] ||= AT50;
   const off = [], moved = {};
-  for (const set of Object.values(SETS).filter((x) => !['kestrel', 'lowlight'].includes(x.id))) {
+  for (const set of Object.values(SETS).filter((x) => !['kestrel', 'lowlight'].includes(x.id) && !x.tier)) {
     const L = bracket(Math.max(...set.pieces.map((p) => UNIQUES[p].level)));
     let d = 0;
     for (const [c, sub] of SUBS) {
@@ -72,4 +71,36 @@ test('the loot plan\'s sets, worn whole: every subclass keeps 80% wins, and no s
     if (d / SUBS.length < -11 || d / SUBS.length > 4) off.push(`${set.name} Lv ${L} moves the average ${(d / SUBS.length).toFixed(1)} (bounds -11 to 4)`);
   }
   assert.deepEqual(off, [], JSON.stringify(moved));
+});
+
+// The class sets are the end-game tier sets (World of Warcraft's): every piece level 50 with the best stats for its slot
+// there, their bonuses as strong as designed, so they are not held to the general sets' bounds. Each, worn whole at Lv 50
+// on every subclass: its own class's two subclasses lose less Signal than without it, no subclass loses a fight it wins
+// without it, and every subclass stays under its ceiling (balance.mjs soloBand). What they measure (October 2026, Signal
+// lost a fight, without the set and with it): Wrecking Crew, the Demolitionist 13.4% to 7.8% and the Overclocker 31.0% to
+// 16.7%; Strongbox, the Warden 15.1% to 7.3% and the Sysop 4.5% to 2.8%; Palemask, the Payload 15.1% to 13.4% and the
+// Phantom 1.3% to 1.1%; Load Balanced, the Herder 9.7% to 7.1% and the Hijacker 16.3% to 12.2%. Over all eight subclasses
+// the average moves 4.3 easier (Wrecking Crew), 6.9 (Strongbox), 2.3 (Palemask) and 2.7 (Load Balanced); the largest
+// off-class move is Strongbox on an Overclocker, 31.0% to 17.5%, and the one harder is Wrecking Crew on a Warden, 15.1%
+// to 18.4% (the set in place of the stats a Warden chases). The Overclocker loses one fight of 24 at 50 with or without a
+// set (a zone fight that ends it in 6 or 7 cycles), so the check is no fight lost that it wins without.
+test('the tier sets (the class sets, level 50): stronger for their own class, no fight lost, every subclass under its ceiling', async () => {
+  const { SETS } = await import('./dist/sets.mjs');
+  const { UNIQUES } = await import('./dist/combat.mjs');
+  AT[50] ||= AT50;
+  const tiers = Object.values(SETS).filter((x) => x.tier);
+  assert.deepEqual(tiers.map((x) => x.cls).sort(), ['bastion', 'breaker', 'infiltrator', 'operator']);
+  const off = [], measured = {};
+  for (const set of tiers) {
+    assert.ok(set.pieces.every((p) => UNIQUES[p].level === 50), `${set.name}: level 50`);
+    for (const [c, sub] of SUBS) {
+      const r = score(c, AT[50], { sub, uniques: set.pieces }), bare = baseOf(50)[sub];
+      const own = c.toLowerCase() === set.cls;
+      measured[`${set.id} ${sub}`] = `${bare.lost.toFixed(1)}->${r.lost.toFixed(1)}`;
+      if (own && !(r.lost < bare.lost)) off.push(`${set.name} ${sub}: ${bare.lost.toFixed(1)}% to ${r.lost.toFixed(1)}%, no help to its own class`);
+      if (r.wins < bare.wins) off.push(`${set.name} ${sub}: ${r.wins}/${r.total} wins, ${bare.wins} without it`);
+      if (r.lost > soloBand(sub)[1]) off.push(`${set.name} ${sub}: ${r.lost.toFixed(0)}%, over its ceiling`);
+    }
+  }
+  assert.deepEqual(off, [], JSON.stringify(measured));
 });

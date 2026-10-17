@@ -623,12 +623,12 @@ export default {
       "id": "crowbar",
       "name": "Crowbar",
       "set": "wrecking",
-      "base": "exploit-chain",
-      "level": 15,
+      "base": "hypervisor-escape",
+      "level": 50,
       "primary": {
         "damage": [
-          15,
-          19
+          102,
+          128
         ]
       },
       "effect": {
@@ -647,8 +647,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 3
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "breaker"
@@ -657,12 +661,12 @@ export default {
       "id": "det-cord",
       "name": "Det Cord",
       "set": "wrecking",
-      "base": "loader",
-      "level": 20,
+      "base": "metamorphic-engine",
+      "level": 50,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 3.8
+        "damage": 42,
+        "signal": 175,
+        "payload": 21
       },
       "effect": {
         "when": "break",
@@ -678,8 +682,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 4
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "breaker"
@@ -688,12 +696,12 @@ export default {
       "id": "hard-hat",
       "name": "Hard Hat",
       "set": "wrecking",
-      "base": "ghost-shell",
-      "level": 26,
+      "base": "firmware-shell",
+      "level": 50,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 223,
+        "regen": 48,
+        "restore": 96
       },
       "effect": {
         "when": "always",
@@ -710,8 +718,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 5
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "breaker"
@@ -720,11 +732,11 @@ export default {
       "id": "blast-map",
       "name": "Blast Map",
       "set": "wrecking",
-      "base": "implant",
-      "level": 32,
+      "base": "firmware-rootkit",
+      "level": 50,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 25,
+        "signal": 123
       },
       "effect": {
         "when": "always",
@@ -742,8 +754,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 6
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "breaker"
@@ -752,11 +768,11 @@ export default {
       "id": "drill",
       "name": "Drill",
       "set": "strongbox",
-      "base": "vpn-cascade",
-      "level": 15,
+      "base": "covert-channel",
+      "level": 50,
       "primary": {
-        "signal": 70,
-        "reduction": 2
+        "signal": 446,
+        "reduction": 12
       },
       "effect": {
         "when": "always",
@@ -773,8 +789,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 3
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "bastion"
@@ -783,12 +803,12 @@ export default {
       "id": "combination",
       "name": "Combination",
       "set": "strongbox",
-      "base": "loader",
-      "level": 20,
+      "base": "metamorphic-engine",
+      "level": 50,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 3.8
+        "damage": 42,
+        "signal": 175,
+        "payload": 21
       },
       "effect": {
         "when": "custom",
@@ -805,8 +825,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 4
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "bastion"
@@ -815,12 +839,12 @@ export default {
       "id": "vault-door",
       "name": "Vault Door",
       "set": "strongbox",
-      "base": "ghost-shell",
-      "level": 26,
+      "base": "firmware-shell",
+      "level": 50,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 223,
+        "regen": 48,
+        "restore": 96
       },
       "effect": {
         "when": "struck",
@@ -837,8 +861,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 5
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "bastion"
@@ -847,11 +875,11 @@ export default {
       "id": "tumbler",
       "name": "Tumbler",
       "set": "strongbox",
-      "base": "implant",
-      "level": 32,
+      "base": "firmware-rootkit",
+      "level": 50,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 25,
+        "signal": 123
       },
       "effect": {
         "when": "always",
@@ -867,8 +895,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 6
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "bastion"
@@ -877,12 +909,12 @@ export default {
       "id": "exit",
       "name": "Exit",
       "set": "palemask",
-      "base": "exploit-chain",
-      "level": 15,
+      "base": "hypervisor-escape",
+      "level": 50,
       "primary": {
         "damage": [
-          15,
-          19
+          102,
+          128
         ]
       },
       "effect": {
@@ -900,8 +932,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 3
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "infiltrator"
@@ -910,11 +946,11 @@ export default {
       "id": "veil",
       "name": "Veil",
       "set": "palemask",
-      "base": "onion-circuit",
-      "level": 20,
+      "base": "covert-channel",
+      "level": 50,
       "primary": {
-        "signal": 100,
-        "reduction": 3
+        "signal": 446,
+        "reduction": 12
       },
       "effect": {
         "when": "always",
@@ -932,8 +968,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 4
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "infiltrator"
@@ -942,12 +982,12 @@ export default {
       "id": "pillow",
       "name": "Pillow",
       "set": "palemask",
-      "base": "ghost-shell",
-      "level": 26,
+      "base": "firmware-shell",
+      "level": 50,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 223,
+        "regen": 48,
+        "restore": 96
       },
       "effect": {
         "when": "always",
@@ -964,8 +1004,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 5
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "infiltrator"
@@ -974,11 +1018,11 @@ export default {
       "id": "mask",
       "name": "Mask",
       "set": "palemask",
-      "base": "implant",
-      "level": 32,
+      "base": "firmware-rootkit",
+      "level": 50,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 25,
+        "signal": 123
       },
       "effect": {
         "when": "custom",
@@ -995,8 +1039,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 6
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "infiltrator"
@@ -1005,12 +1053,12 @@ export default {
       "id": "cron",
       "name": "Cron",
       "set": "load-balanced",
-      "base": "dropper",
-      "level": 15,
+      "base": "metamorphic-engine",
+      "level": 50,
       "primary": {
-        "damage": 6,
-        "signal": 28,
-        "payload": 2.9
+        "damage": 42,
+        "signal": 175,
+        "payload": 21
       },
       "effect": {
         "when": "custom",
@@ -1027,8 +1075,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 3
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "operator"
@@ -1037,11 +1089,11 @@ export default {
       "id": "relay",
       "name": "Relay",
       "set": "load-balanced",
-      "base": "onion-circuit",
-      "level": 20,
+      "base": "covert-channel",
+      "level": 50,
       "primary": {
-        "signal": 100,
-        "reduction": 3
+        "signal": 446,
+        "reduction": 12
       },
       "effect": {
         "when": "always",
@@ -1058,8 +1110,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 4
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "operator"
@@ -1068,12 +1124,12 @@ export default {
       "id": "parasite",
       "name": "Parasite",
       "set": "load-balanced",
-      "base": "ghost-shell",
-      "level": 26,
+      "base": "firmware-shell",
+      "level": 50,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 223,
+        "regen": 48,
+        "restore": 96
       },
       "effect": {
         "when": "always",
@@ -1090,8 +1146,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 5
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "operator"
@@ -1100,11 +1160,11 @@ export default {
       "id": "core",
       "name": "Core",
       "set": "load-balanced",
-      "base": "implant",
-      "level": 32,
+      "base": "firmware-rootkit",
+      "level": 50,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 25,
+        "signal": 123
       },
       "effect": {
         "when": "always",
@@ -1121,8 +1181,12 @@ export default {
       },
       "sources": [
         {
+          "kind": "crew"
+        },
+        {
           "kind": "lair",
-          "floor": 6
+          "floor": 8,
+          "planned": "flash ranks"
         }
       ],
       "lean": "operator"

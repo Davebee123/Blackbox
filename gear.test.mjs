@@ -10,7 +10,7 @@ const roomFight = (s) => { const R = s.rooms, g = R.graph, room = FP.neighbours(
 // The vault, its key in hand: opened, its files in your pack.
 const openVault = (s) => { const R = s.rooms, v = R.graph.vaults[0]; R.visit.keys.push(v); R.at = v; R.screen = null; FP.act(s, 'open'); };
 import { CONFIG, power } from './dist/data.mjs';
-import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode } from './dist/gear.mjs';
+import { STATS, RARITIES, LOOT, BASES, AFFIXES, SLOTS, DECONSTRUCT, uniqueItem, lootOdds, magicFind, COMPILE, STASH_CAP, SERVICES, PROTOCOL_STATS, protocolSlots, RULES, rollItem, seeded, codeOf, codeDrop, vaultCode, affixValue, primaries, scavengeCut, SCAVENGE_COST } from './dist/gear.mjs';
 
 // Exact numbers unless a test turns crits or misses on.
 CONFIG.baseCrit = 0;
@@ -71,6 +71,48 @@ test('items: a base for its slot (primaries), affixes by rarity (one prefix and 
   const asked = rollItem(seeded(5), { level: 6, stat: 'crit', source: 'compile' });
   assert.equal(asked.rarity, 'tuned');
   assert.ok(asked.stats.crit > 0, 'compiling a stat: it has that affix');
+  CONFIG.powerPerLevel = 0;
+});
+
+test('Scavenge is magic find, and it costs stats: the Scavenger suffix rolls low, and a rolled item carrying it has lower primaries', async () => {
+  CONFIG.powerPerLevel = 0.04;
+  const { UNIQUES } = await import('./dist/combat.mjs');
+  // The suffix: 3 at item level 1, 5 to 7 at 20, about 10 at 50 and never over it (it was 5 to 7, 10 to 14 and 18 to 25).
+  const rolls = (L) => [0, 0.25, 0.5, 0.75, 1].map((r) => affixValue('scavenger', L, r));
+  assert.deepEqual(rolls(1), [3, 3, 3, 3, 3]);
+  assert.deepEqual(rolls(20), [5, 6, 6, 6, 7]);
+  assert.deepEqual(rolls(50), [9, 10, 10, 10, 10]);
+  assert.ok([60, 80].every((L) => affixValue('scavenger', L, 1) === 10), 'capped at 10');
+  assert.deepEqual([AFFIXES.scavenger.lo, AFFIXES.scavenger.hi, AFFIXES.scavenger.cap], [3, 6, 10]);
+  // Every other affix is as it was, with no cap: of the Bunker still grows past 20.
+  assert.ok(Object.entries(AFFIXES).every(([id, a]) => id === 'scavenger' || a.cap === undefined));
+  assert.deepEqual([1, 20, 50].map((L) => affixValue('bunker', L, 0.5)), [6, 20, 42]);
+  // The cost: 1% of the base's primaries a point of Scavenge, at most 15%, in whole numbers.
+  assert.deepEqual([0, 3, 10, 15, 30].map(scavengeCut), [0, 3, 10, 15, 15]);
+  assert.deepEqual(SCAVENGE_COST, { per: 1, max: 15 });
+  const seen = { tuned: 0, custom: 0 };
+  for (const rarity of ['tuned', 'custom']) for (const slot of ['exploit', 'proxy', 'shell', 'script', 'implant']) for (const L of [20, 50]) for (let k = 0; k < 40; k++) {
+    const it = rollItem(seeded(k * 31 + L), { level: L, rarity, slot, stat: rarity === 'tuned' ? 'scavenge' : undefined });
+    const raw = primaries(it.base, L, RARITIES[rarity].mult, seeded(k * 31 + L)); // the same dice: primaries roll first
+    const extra = Object.fromEntries(it.affixes.map((a) => [AFFIXES[a].stat, true]));
+    if (!it.stats.scavenge) { for (const [st, v] of Object.entries(raw)) if (!extra[st]) assert.equal(it.stats[st], v, `${it.name}: no Scavenge, no cost`); continue; }
+    seen[rarity]++;
+    const cut = Math.min(15, it.stats.scavenge);
+    for (const [st, v] of Object.entries(raw)) if (!extra[st]) assert.equal(it.stats[st], Math.max(1, Math.round((v * (100 - cut)) / 100)), `${it.name} (${it.stats.scavenge}% Scavenge): ${st} ${v} less ${cut}%`);
+  }
+  assert.ok(seen.tuned >= 300 && seen.custom >= 20, JSON.stringify(seen));
+  // A Scavenger blue at 50 against the same roll without it: its Signal 10% lower.
+  const blue = rollItem(seeded(7), { level: 50, rarity: 'tuned', slot: 'proxy', stat: 'scavenge' });
+  const raw = primaries(blue.base, 50, RARITIES.tuned.mult, seeded(7));
+  assert.equal(blue.stats.scavenge, 10);
+  assert.equal(blue.stats.signal, Math.round(raw.signal * 0.9));
+  assert.ok(blue.stats.signal < raw.signal);
+  // Uniques and set pieces keep theirs: Neighbour's Wifi and the Silt Map carry Scavenge at full stats.
+  for (const id of ['neighbours-wifi', 'silt-map']) {
+    const u = UNIQUES[id], it = uniqueItem(u, u.level, seeded(3)), bare = uniqueItem({ ...u, secondary: {} }, u.level, seeded(3));
+    assert.ok(it.stats.scavenge > 0, id);
+    for (const st of Object.keys(bare.stats)) if (!(st in (u.secondary || {}))) assert.equal(it.stats[st], bare.stats[st], `${id}: ${st}`);
+  }
   CONFIG.powerPerLevel = 0;
 });
 

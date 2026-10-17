@@ -11,7 +11,7 @@ Sets and uniques follow the same rules, taken from Diablo 2: modest items, gener
 - **Modest on their own.** A set piece or a unique is a sidegrade, about a good blue. Every set piece has a small bonus of its own, worn alone, and gains a second small stat line in green while two or more pieces of its set are worn. A full set is the payoff.
 - **Clock Speed caps at 25%.** It fills a meter each cycle; at 100% every cooldown ticks one extra cycle. At the cap it pays out every 4th cycle. The meter starts empty every fight. Like faster cast rate in Diablo 2, it's a number worth chasing to the cap, so the Clock Speed lines on sets and uniques stay small (4–10%).
 - **General, with a lean.** Effects work in every fight and never name a virus, gene, guard or boss. Most suit any class; some clearly favour one, the way Sigon's suited melee without requiring it.
-- **Class sets are the exception.** Four sets, one per class, like Tal Rasha's. They work for both of a class's subclasses, and their 4-piece adds a line for each subclass.
+- **Class sets are the exception.** Four sets, one per class, like Tal Rasha's. They work for both of a class's subclasses, and their 4-piece adds a line for each subclass. They are the end-game tier sets (World of Warcraft's): level 50, strong on purpose.
 - **Every band has something.** Sets and uniques are spread from level 1 to 50, weighted by how long players spend in each band.
 - **Sources are activities.** Pieces and uniques drop from bosses and lairs, vaults, rare spawns, strains, threads, puzzle boards, crew bosses and Bedrock, so the chase pulls you through the whole sandbox.
 - **The drop rate doesn't rise.** Uniques and set pieces stay under one an hour of play. A bigger pool means each drop is more likely new, and the collection log becomes a chase that outlasts level 50.
@@ -19,7 +19,7 @@ Sets and uniques follow the same rules, taken from Diablo 2: modest items, gener
 
 ## Class sets
 
-One four-piece set per class, collected on floors 3–6 (levels 15–38), one piece per lair or named boss. The 2- and 3-piece bonuses help both subclasses; the 4-piece adds a line for each.
+One four-piece set per class: the end-game tier sets, like World of Warcraft's. Every piece is level 50 with the best stats for its slot at 50 (the slot's best base, primaries ×1.1, as the Bedrock uniques are statted), and the bonuses stay as strong as designed: they are the payoff at the top, held to their own end-game check rather than the general sets' bounds. One tier. They drop from the end-game bosses, KESSLER-FARM-00's crew bosses and the Bedrock (floor 8) lair boss, and from flash ranks once those are built (planned). A drop is a piece of a class set, three times as likely to be your own class's, pieces you lack first, with visible pity. They no longer drop on floors 3–6; those floors' lair bosses keep their other drops, and a later content batch fills the gap. The 2- and 3-piece bonuses help both subclasses; the 4-piece adds a line for each.
 
 | Set | Class | 2 pieces | 3 pieces | 4 pieces |
 | --- | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ One four-piece set per class, collected on floors 3–6 (levels 15–38), one pi
 | Palemask | Infiltrator | +5% crit | Your first hit on each part deals 15% more | When a part drops below half, your next hit on it crits. Phantom: Weak Spot resets on that part. Payload: your burns on it tick 20% harder. |
 | Load Balanced | Operator | Your helpers deal 10% more | Your helpers last 1 cycle longer | Every third helper you call arrives as two. Herder: Last Gasp strikes deal 25% more. Hijacker: the extra helper plants a foothold. |
 
-Pieces: each set takes four of the five slot kinds, so a class set and a general set can be worn together (4 + 1 before level 30, 4 + 2 after).
+Pieces: each set takes four of the five slot kinds, so a class set and a general set can be worn together (4 + 2 at level 50). Pieces found before the change, on floors 3–6, keep their item level and stats and still count toward the set.
 
 ## General sets
 
@@ -225,6 +225,8 @@ Leans: 14 any class, 7 Bastion, 3 Breaker, 3 Infiltrator, 3 Operator. Breaker, I
 ## Decisions
 
 - **Sources before the bosses exist.** Until a floor 3–8 boss is built, its pieces and uniques drop from that floor's lair boss.
+- **Class sets as tier sets (October 17).** The four class sets moved to level 50 as the end-game tier sets: the crew bosses and the Bedrock lair boss drop them (flash ranks planned), weighted 3× to your own class's set (it was 2×), and floors 3–6 no longer do.
+- **Scavenge costs stats (October 17).** Scavenge is magic find, and in Diablo 2 magic find was a trade-off. The of the Scavenger suffix is lower (3% at item level 1, 6% at 20, about 10% at 50 and never more; it was 6% and 12%, about 21% at 50), and a rolled blue or yellow carrying Scavenge has its primaries 1% lower a point, at most 15%. Uniques and set pieces with Scavenge keep their values: they are the deliberate magic-find pieces. Saved items keep their stats.
 - **Off-class wear of class sets.** Anyone can wear the pieces and get the 2- and 3-piece bonuses; the 4-piece's subclass lines only apply to that class's subclasses.
 - **Existing Kestrel and LOWLIGHT pieces.** Kestrel Clearance's bonuses change to the ones above (+8% max Signal, then the big-hit cap); pieces players already hold keep working.
 - **Build order.** The set rework and Batch 1 first, so levels 39–50 get content; then the thin middle (levels 15–20 and 33–38).

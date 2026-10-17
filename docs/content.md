@@ -314,7 +314,7 @@ networks' floors differ, and a consortium member's floor is worth visiting. Floo
 | **Consortium projects** | Size tiers (*Built*) | Trunk Relay to Grid, funded together (*Planned*) | — |
 | **Faction standing** | Five factions, tiers at 1/25/50/75, ripples (*Built*) | Rivals pull against each other, so every top tier at once is a long swing | Supply orders as the steady climb (*Planned*); a desk prop at each top tier, kept once earned |
 | **Boss uniques** | Two each on 7 bosses and the farm's three; natives on the nine native bosses (*Built*) | 15% + 5% a miss (crew 30% + 10%) | The 14 designed bosses; each native boss's own two uniques from docs/genome.md 7.4 (Bump Key, Deadlatch…) once lairs move by floor |
-| **Sets** | The loot plan's 21 sets (*Built*: docs/loot-plan.md, sets.mjs, the Collection's Sets) | 21 sets, four of them class sets | The floor 3–8 bosses' pieces move to those bosses once they exist (a floor's lair boss drops them until then) |
+| **Sets** | The loot plan's 21 sets (*Built*: docs/loot-plan.md, sets.mjs, the Collection's Sets) | 21 sets, four of them class sets (the level-50 tier sets, from the crew bosses and the Bedrock lair boss) | The floor 3–8 bosses' pieces move to those bosses once they exist (a floor's lair boss drops them until then); flash ranks join the tier sets' sources once built |
 | **KESSLER-FARM-00** | Three crew bosses, 8 uniques, keeping up to 50 (*Built*) | Every 6 hours, with a crew | *Proposed:* a second crew dungeon on floor 6 (crew bosses are data on raid.mjs) |
 | **Daemons** | 40, one copy each at its level; invasions only (*Built*) | A copy of each at 50: a long tail | — |
 | **Bedrock's endgame** | Nothing (open question 9) | — | 4.2 |

@@ -7,15 +7,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fresh, command, selectEncounter, resolveCycle, finish, addItem, loaded, hackerOf, roomKill, uniqueFrom, guardSetChance, guardSetTable, setDeliver, maxSignal, restore, gearFx, fxHolds, gearStat, damageMultiplier, takeDamage, momentumStacks, setDrop, setDropPool, setChance, bossUniques, hooks, UNIQUES, SAVE_VERSION } from './dist/combat.mjs';
-import { SETS, setOf, isPiece, piecesOf, activeSets, setFx, setCard, greenOf, SET_LOOT, SET_HOOKS, setPool, setCredits, BADGE_BEAT } from './dist/sets.mjs';
-import { uniqueItem, seeded, BASES, RARITIES, STATS } from './dist/gear.mjs';
+import { SETS, setOf, isPiece, piecesOf, activeSets, setFx, setCard, greenOf, SET_LOOT, CLASS_SET, SET_HOOKS, setPool, setCredits, BADGE_BEAT } from './dist/sets.mjs';
+import { uniqueItem, seeded, BASES, RARITIES, STATS, baseFor } from './dist/gear.mjs';
 import { itemTipMarkup, collectionSets, collectionMarkup, protocolSlotsCard, protocolStashCard, rareLine } from './dist/view.mjs';
 import { CARDS } from './dist/events.mjs';
 import { PUZZLE_KINDS } from './dist/puzzles.mjs';
 import { STORY_LENGTH, openContracts, tickMail, ready } from './dist/mail.mjs';
 import { entryOf } from './dist/codex.mjs';
 import { codexPageMarkup } from './dist/codex-view.mjs';
-import { CONFIG, GUARDS, BOSSES } from './dist/data.mjs';
+import { CONFIG, GUARDS, BOSSES, power } from './dist/data.mjs';
 import STORY from './dist/content/story.mjs';
 import ITEMS from './dist/content/items.mjs';
 
@@ -311,7 +311,12 @@ test('the Collection: a Sets section, a row a set, its pieces found (with where 
   assert.match(html, /Kestrel Clearance <span>0\/3<\/span>/);
   assert.match(html, /LOWLIGHT Kit <span>1\/2<\/span>/);
   assert.equal((html.match(/coll-q">\?\?\?/g) || []).length, Object.values(SETS).flatMap((x) => x.pieces).length - 1, 'every piece but the Toolkit');
-  assert.match(html, /Wrecking Crew <span>0\/4<\/span>/);
+  assert.match(html, /Wrecking Crew <span>0\/4<\/span><\/b><small class="set-tier">Breaker tier set, level 50<\/small>/);
+  // The class sets sit apart, under Tier sets, after every general set; a general set carries no tier line.
+  const [general, tiers] = html.split('<h3 class="coll-sets-h">Tier sets · level 50</h3>');
+  assert.ok(tiers && ['Wrecking Crew', 'Strongbox', 'Palemask', 'Load Balanced'].every((n) => tiers.includes(`${n} <span>`) && !general.includes(`${n} <span>`)), 'the tier sets under their own heading');
+  assert.equal((tiers.match(/set-tier/g) || []).length, 4);
+  assert.doesNotMatch(general, /set-tier/);
   assert.doesNotMatch(html, /Bouncer guard/, 'where a piece drops shows once you have found it');
   assert.match(html, /wick&#39;s Old Toolkit|wick's Old Toolkit/);
   assert.match(html, /Exploit · Storyline · Lv 1/);
@@ -321,7 +326,7 @@ test('the Collection: a Sets section, a row a set, its pieces found (with where 
   // A piece of the plan's sets says where it drops once found.
   s.collection.crowbar = 1; s.collection.floppy = 1;
   html = collectionSets(s);
-  assert.match(html, /Crowbar<\/b><small>Exploit · Floor 3 lair boss · Lv 15\+<\/small>/);
+  assert.match(html, /Crowbar<\/b><small>Exploit · Crew bosses, Floor 8 lair boss · Lv 50\+<\/small>/);
   assert.match(html, /Floppy<\/b><small>Shell · RELAY-KING, ★ rare spawns, floor 1 · Lv 1\+<\/small>/);
   delete s.collection.crowbar; delete s.collection.floppy;
   // In the whole log: the pieces sit under Sets, not in the main grid, and still count in its total.
@@ -338,7 +343,7 @@ test('the tooltip and the stash and slot rows: the set, its pieces and each bonu
   const token = give(s, 'kestrel-token');
   s.collection['kestrel-lanyard'] = 1; // found once, gone
   let tip = itemTipMarkup(s, badge.id);
-  assert.match(tip, /<b class="set-name">Kestrel Clearance \(1\/3\)<\/b>/);
+  assert.match(tip, /<b class="set-name">Kestrel Clearance \(1\/3\)<\/b><span class="set-pieces">/, 'a general set: no tier line');
   assert.match(tip, /<span class="sp worn"[^>]*>Kestrel Badge<\/span>/);
   assert.match(tip, /<span class="sp held"[^>]*>Kestrel Token<\/span>/);
   assert.match(tip, /<span class="sp missing"[^>]*>Kestrel Lanyard<\/span>/);
@@ -615,6 +620,8 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
   }
   // The tooltip lists both lines under the 4-piece, yours lit once it is on.
   const tip = itemTipMarkup(demo, loaded(demo)[0].id);
+  assert.match(tip, /<b class="set-name">Wrecking Crew \(4\/4\)<\/b><small class="set-tier">Breaker tier set, level 50<\/small>/, 'the tooltip calls it the tier set for level 50');
+  assert.doesNotMatch(protocolSlotsCard(demo), /set-tier/, 'a row keeps to one line of pieces');
   assert.match(tip, /<span class="sb sub on"[^>]*>Demolitionist: Overkill spills 20 more\.<\/span>/);
   assert.match(tip, /<span class="sb sub"[^>]*>Overclocker: You gain 1 Momentum\.<\/span>/);
   assert.match(protocolSlotsCard(demo), /<span class="sb sub on">Demolitionist: Overkill spills 20 more\.<\/span>/);
@@ -650,25 +657,27 @@ test('every piece has a source that rolls; a source rolls the pieces you lack fi
   const reach = new Set(ROLLS.flatMap(([kind, x]) => setDropPool({ kind, layer: 9, ...x }).map((u) => u.id)));
   for (const id of Object.values(SETS).flatMap((x) => x.pieces).filter((p) => !UNIQUES[p].sources.every((x) => x.kind === 'story'))) assert.ok(reach.has(id), `${id} drops from somewhere`);
   for (const [kind, o] of Object.entries(SET_LOOT)) assert.ok(o.chance > 0 && o.pity > 0 && o.found > 0 && o.found <= o.chance, kind);
-  // The floor 3 lair boss: a piece of each class set, and On-Call's.
-  assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), ['cron', 'crowbar', 'drill', 'exit', 'pager', 'runbook']);
+  // The floor 3 lair boss: On-Call's alone (the class sets are the level-50 tier sets now).
+  assert.deepEqual(setDropPool({ kind: 'lair', floor: 3 }, 20).map((u) => u.id).sort(), ['pager', 'runbook']);
   const was = structuredClone(SET_LOOT);
   try {
     const s = at(20);
     SET_LOOT.lair.chance = 0;
     setDrop(s, { kind: 'lair', floor: 3 }, 20, 'DEADBOLT');
     assert.equal(s.pity['set:lair:3'], 1);
-    assert.ok(s.logs.some((l) => new RegExp(`No set piece from DEADBOLT this time\\. The next kill has a ${Math.round(SET_LOOT.lair.pity * 100)}% chance\\.`).test(l.message)), 'the next chance, said');
-    SET_LOOT.lair.chance = 2;
+    assert.ok(s.logs.some((l) => new RegExp(`No On-Call piece from DEADBOLT this time\\. The next kill has a ${Math.round(SET_LOOT.lair.pity * 100)}% chance\\.`).test(l.message)), 'the next chance, said');
+    // A crew boss at 50: Mesh's three and the tier sets' sixteen, the pieces you lack first, then the flat chance.
+    const t = at(50);
+    SET_LOOT.crew.chance = 0;
+    setDrop(t, { kind: 'crew', id: 'foreman' }, 50, 'THE FOREMAN');
+    assert.equal(t.pity['set:crew:foreman'], 1);
+    assert.ok(t.logs.some((l) => new RegExp(`No set piece from THE FOREMAN this time\\. The next kill has a ${Math.round(SET_LOOT.crew.pity * 100)}% chance\\.`).test(l.message)), 'the next chance, said');
+    SET_LOOT.crew.chance = 2;
     const got = [];
-    for (let i = 0; i < 6; i++) got.push(setDrop(s, { kind: 'lair', floor: 3 }, 20, 'DEADBOLT').unique);
-    assert.equal(new Set(got).size, 6, 'the pieces you lack first');
-    assert.equal(s.pity['set:lair:3'], 0);
-    assert.equal(setChance(s, { kind: 'lair', floor: 3 }, 20), Math.min(1, SET_LOOT.lair.found), 'all found: the flat chance');
-    // The lean: a Breaker's own class set piece comes up more often than another class's.
-    let mine = 0, theirs = 0;
-    for (let i = 0; i < 400; i++) { const t = at(16); t.rng = i * 7919; const u = setDrop(t, { kind: 'lair', floor: 3 }, 16, 'X').unique; if (u === 'crowbar') mine++; if (u === 'drill') theirs++; }
-    assert.ok(mine > theirs * 1.4, `${mine} against ${theirs}`);
+    for (let i = 0; i < 19; i++) got.push(setDrop(t, { kind: 'crew', id: 'foreman' }, 50, 'THE FOREMAN').unique);
+    assert.equal(new Set(got).size, 19, 'the pieces you lack first');
+    assert.equal(t.pity['set:crew:foreman'], 0);
+    assert.equal(setChance(t, { kind: 'crew', id: 'foreman' }, 50), Math.min(1, SET_LOOT.crew.found), 'all found: the flat chance');
     // The deepest vaults: Deep Archive's, beside Cold Storage's (any vault); floor 4's, Cold Storage's alone.
     assert.deepEqual(setDropPool({ kind: 'vault', floor: 7 }, 44).map((u) => setOf(u.id).id).sort(), ['coldstorage', 'coldstorage', 'coldstorage', 'deeparchive', 'deeparchive', 'deeparchive', 'deeparchive']);
     assert.ok(setDropPool({ kind: 'vault', floor: 4 }, 44).every((u) => setOf(u.id).id === 'coldstorage'));
@@ -690,6 +699,79 @@ test('every piece has a source that rolls; a source rolls the pieces you lack fi
     assert.ok(!bossUniques('relayking').some((u) => isPiece(u.id)));
     assert.ok(!bossUniques('choir').some((u) => isPiece(u.id)));
   } finally { for (const k of Object.keys(was)) Object.assign(SET_LOOT[k], was[k]); }
+});
+
+// ---------- the tier sets ----------
+const TIERS = ['wrecking', 'strongbox', 'palemask', 'load-balanced'];
+test('the class sets are the end-game tier sets: every piece level 50, the best stats for its slot there, from the crew bosses and the Bedrock lair boss', () => {
+  assert.deepEqual(Object.values(SETS).filter((x) => x.tier).map((x) => x.id), TIERS);
+  for (const id of TIERS) {
+    const set = SETS[id];
+    assert.equal(set.tier, 50);
+    assert.deepEqual(set.levels, [50, 50]);
+    for (const p of set.pieces) {
+      const u = UNIQUES[p], slot = BASES[u.base].slot, best = baseFor(slot, 50);
+      assert.equal(u.level, 50, `${p}: level 50`);
+      assert.equal(u.base, best, `${p}: the best ${slot} base at 50`);
+      // As the Bedrock uniques are statted: the base's primaries grown to 50, times 1.1.
+      const k = (power(50) / power(BASES[best].level)) * 1.1;
+      assert.deepEqual(u.primary, Object.fromEntries(Object.entries(BASES[best].primary).map(([st, v]) => [st, Array.isArray(v) ? v.map((x) => Math.round(x * k)) : Math.round(v * k)])), `${p}: its primaries`);
+      assert.deepEqual(u.sources, [{ kind: 'crew' }, { kind: 'lair', floor: 8, planned: 'flash ranks' }], `${p}: the crew bosses and the Bedrock lair boss, flash ranks once built`);
+    }
+  }
+  // Every crew boss and the Bedrock lair boss drop them at 50 (with Mesh's and Bedrock's), none before 48.
+  const tierIds = TIERS.flatMap((id) => SETS[id].pieces).sort();
+  for (const boss of ['foreman', 'heatsink', 'coldwallet']) {
+    assert.deepEqual(setDropPool({ kind: 'crew', id: boss }, 50).filter((u) => setOf(u.id).tier).map((u) => u.id).sort(), tierIds, boss);
+    assert.ok(setDropPool({ kind: 'crew', id: boss }, 47).every((u) => !setOf(u.id).tier), `${boss}: not under 48`);
+  }
+  assert.deepEqual(setDropPool({ kind: 'lair', floor: 8 }, 50).map((u) => u.id).filter((p) => !tierIds.includes(p)).sort(), ['bedrock-plate', 'core-sample', 'pick', 'survey']);
+  assert.deepEqual(setDropPool({ kind: 'lair', floor: 8 }, 50).filter((u) => setOf(u.id).tier).map((u) => u.id).sort(), tierIds);
+  // Floors 3 to 6 no longer drop them: their lair bosses keep their other pieces (On-Call on 3 and 4), and 5 and 6 none.
+  for (const floor of [3, 4, 5, 6]) assert.ok(setDropPool({ kind: 'lair', floor }, 50).every((u) => !setOf(u.id).tier), `floor ${floor}`);
+  assert.deepEqual([3, 4, 5, 6].map((floor) => setDropPool({ kind: 'lair', floor }, 50).map((u) => u.id).sort()), [['pager', 'runbook'], ['failover', 'pager', 'runbook'], [], []]);
+  // No other source reaches them.
+  for (const [kind, ctx] of [['vault', { floor: 8 }], ['rare', { floor: 8 }], ['thread', { floor: 8 }], ['boss', { id: 'relayking' }], ['strain', {}], ['takeover', {}], ['courier', {}]]) assert.ok(setDropPool({ kind, ...ctx }, 50).every((u) => !setOf(u.id).tier), kind);
+});
+
+test('a tier set drop comes up three times as often for your own class, pieces you lack first', () => {
+  assert.equal(CLASS_SET, 3);
+  const was = structuredClone(SET_LOOT);
+  try {
+    SET_LOOT.crew.chance = 2; SET_LOOT.lair.chance = 2;
+    for (const [cls, own] of [['breaker', 'wrecking'], ['operator', 'load-balanced']]) {
+      const n = { own: 0, other: 0, general: 0 };
+      for (let i = 0; i < 900; i++) {
+        const s = at(50); s.loadout.archetype = cls; s.hackers = { [cls]: { level: 50, xp: 0 } }; s.rng = i * 7919 + 1;
+        const set = setOf(setDrop(s, { kind: 'crew', id: 'heatsink' }, 50, 'HEATSINK').unique);
+        n[set.id === own ? 'own' : set.tier ? 'other' : 'general']++;
+      }
+      // Its four pieces at 3 each, the other twelve tier pieces and Mesh's three at 1: 12 in 27, 12 in 27, 3 in 27.
+      const ratio = n.own / (n.other / 3);
+      assert.ok(ratio > 2.5 && ratio < 3.5, `${cls}: ${JSON.stringify(n)}, ${ratio.toFixed(2)} times another class's set`);
+      assert.ok(n.general > 50 && n.general < 160, `${cls}: Mesh still drops (${n.general})`);
+    }
+    // Pieces you lack come first: with your own set found, the next drops are the others', and Bedrock's.
+    const s = at(50); s.loadout.archetype = 'breaker';
+    s.collection = Object.fromEntries(SETS.wrecking.pieces.map((p) => [p, 1]));
+    for (let i = 0; i < 16; i++) assert.notEqual(setOf(setDrop(s, { kind: 'lair', floor: 8 }, 50, 'X').unique).id, 'wrecking');
+    assert.equal(setChance(s, { kind: 'lair', floor: 8 }, 50), SET_LOOT.lair.found, 'the other sixteen found: the flat chance');
+  } finally { for (const k of Object.keys(was)) Object.assign(SET_LOOT[k], was[k]); }
+});
+
+test('tier pieces held from the floor 3 to 6 version keep their item level and stats, and work as the set', () => {
+  assert.equal(SAVE_VERSION, 45, 'no save bump: a held piece keeps its stats and reads its bonuses from its unique and its set');
+  // A Wrecking Crew found before, at its old levels and bases.
+  const OLD = { crowbar: ['exploit-chain', 15, { damage: [15, 19] }], 'det-cord': ['loader', 20, { damage: 9, signal: 40, payload: 4 }], 'hard-hat': ['ghost-shell', 26, { signal: 70, regen: 15, restore: 30 }], 'blast-map': ['implant', 32, { damage: 6, signal: 30 }] };
+  const s = as('breaker', 'demolitionist', 32);
+  const held = Object.entries(OLD).map(([id, [base, level, primary]]) => { const it = addItem(s, uniqueItem({ ...UNIQUES[id], base, level, primary }, level, seeded(3))); command(s, 'load ' + it.id); return it; });
+  assert.deepEqual(held.map((x) => x.level), [15, 20, 26, 32]);
+  const r = restore(structuredClone(s));
+  const back = r.stash.filter((x) => isPiece(x.unique));
+  assert.deepEqual(back.map((x) => [x.unique, x.level, x.stats]), held.map((x) => [x.unique, x.level, x.stats]), 'the same item level and stats');
+  assert.deepEqual(activeSets(loaded(r))[0].open, [2, 3, 4]);
+  assert.ok(gearFx(r).some((x) => x.fx.do === 'break-splash') && gearFx(r).some((x) => x.fx.do === 'spill+' && fxHolds(r, x.fx, {})));
+  assert.equal(gearStat(r, 'reduction'), held.reduce((n, x) => n + (x.stats.reduction || 0), 0) + 2, 'the Hard Hat\'s own +2 Block');
 });
 
 test('the Antenna shows a server\'s rare spawn on its map card; Lantern Route (3) pays caches and vaults more', () => {
