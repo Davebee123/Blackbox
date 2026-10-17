@@ -1,6 +1,7 @@
 // Markup builders. Pure functions of state; they never change it.
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
+import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
 let memAsk = null;
@@ -814,8 +815,8 @@ export function nativeHome(s, it) {
   const who = homeOf(s, it.unique), h = who ? { name: nameOf(s, who), who } : it.home || homeName(s, it.unique);
   return `${h.name}${h.who ? ` (${whoLabel(h.who)})` : ''}`;
 }
-// The hover card for an item (app.js shows it, and spins its model): a rotating ASCII wireframe
-// for its kind, in its rarity colour, over its name, rarity, kind, level, stats and effect.
+// The hover card for an item (app.js shows it): a protocol's glyph (protocol-glyphs.mjs; a filter's rotating ASCII
+// wireframe, which app.js spins), in its rarity colour, over its name, rarity, kind, level, stats one a line and effect.
 export function itemTipMarkup(s, ref) {
   const f = ref?.startsWith('f:') ? filtersOf(s)[Number(ref.slice(2))] : null;
   const it = f || stashItem(s, ref);
@@ -826,8 +827,10 @@ export function itemTipMarkup(s, ref) {
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
   const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
-  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
+  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
 }
+// The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
+const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
 // Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
 function swapCompare(s, it) {
   const kind = groupOf(it), same = SLOT_KINDS.slice(0, slotCount(s)).indexOf(kind);
@@ -836,19 +839,16 @@ function swapCompare(s, it) {
   const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
   const rows = keys.map((k) => [k, (it.stats[k] || 0) - (out?.stats?.[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
     .map(([k, d]) => `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmtStat(k, Math.abs(d))} ${esc(STATS[k].name)}</span>`);
-  const fx = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
-  if (fx(out) && fx(out) !== fx(it)) rows.push(`<span class="down">▼ ${esc(fx(out))}</span>`);
+  if (fxName(out) && fxName(out) !== fxName(it)) rows.push(`<span class="down">▼ ${esc(fxName(out))}</span>`);
   return `<div class="ptip-vs"><small>${out ? `vs ${esc(itemLabel(out))}` : 'into an empty slot'}</small>${rows.length ? rows.join('') : '<span class="dim">no change</span>'}</div>`;
 }
 
-// The stash's filter (screen state only).
-export const stashUi = { filter: 'all' };
-// One item as an inventory row: rarity edge (CSS), slot glyph, name and level, then its stats in one line.
+// The stash's filter and the board's pick (screen state only). sel: 'slot:<i>', or a stash item's id (silkPick).
+export const stashUi = { filter: 'all', sel: null };
+// An item's stats, one a line.
 const invStats = (it) => Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}"><b>${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
-function invBody(it, extra = '', s = null) {
-  const fx = it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it) : '';
-  return `<span class="inv-icon" aria-hidden="true">${glyph(leadStat(it))}</span><span class="inv-main" data-ptip="${esc(it.id || '')}"><span class="inv-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${extra}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}${s && it.unique && setOf(it.unique) ? setLines(s, it.unique, true) : ''}</span>`;
-}
+// An item's effect as a line: its Zero-day's, the unique's own or its rule's ('' for none).
+const fxText = (it) => (it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it) : '');
 
 // ---------- sets (sets.mjs) ----------
 // What you have of each set: the pieces loaded, held in the stash, ever found (the Collection), and the active rows.
@@ -904,32 +904,12 @@ function statSheet(s, side) {
 function protocolsParts(s, focus = null) {
   const srv = s.server, lvl = hackerLevel(s), busy = active(s) || !!s.run;
   const cls = ARCHETYPES[classOf(s)].name;
-  const n = slotCount(s), on = loaded(s), stash = s.stash || [];
-  const slotList = Array.from({ length: PROTOCOL_SLOTS.at(-1).slots }, (_, i) => {
-    const kind = SLOTS[SLOT_KINDS[i]]?.name || SLOT_KINDS[i];
-    const label = `<span class="inv-slot"><b>${i + 1}</b>${esc(kind)}</span>`;
-    const k = `data-kind="${SLOT_KINDS[i]}"`; // hovering a stash item lights the slot it goes in (style.css)
-    if (i >= n) return `<li class="inv-row locked" ${k}>${label}<span class="inv-empty">opens at Lv ${PROTOCOL_SLOTS.find((x) => x.slots > i).level}</span></li>`;
-    const it = rigOf(s)[i] && stashItem(s, rigOf(s)[i]);
-    return it
-      ? `<li class="inv-row ${rarityClass(it)}" ${k}>${label}${invBody(it, '', s)}<span class="inv-acts"><button type="button" class="inv-btn" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button></span></li>`
-      : `<li class="inv-row empty" ${k}>${label}<span class="inv-empty">empty</span></li>`;
-  }).join('');
-  const sort = (a, b) => (loadedOn(s, b.id) === classOf(s)) - (loadedOn(s, a.id) === classOf(s)) || RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || b.level - a.level;
-  // The stash lists what isn't in your slots (loaded items live in the slots above it).
+  const stash = s.stash || [], pick = silkPick(s);
+  const sort = (a, b) => RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || b.level - a.level;
+  // The stash lists what isn't in your slots (loaded items live on the board above it).
   const spare = stash.filter((it) => loadedOn(s, it.id) !== classOf(s));
   const shown = spare.filter((it) => stashUi.filter === 'all' || groupOf(it) === stashUi.filter);
-  const rows = shown.sort(sort).map((it) => {
-    const where = loadedOn(s, it.id);
-    const whereTag = where ? `<span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : '';
-    const dupe = (it.zeroDay && zeroDay(s, it.zeroDay)) || (it.unique && loaded(s).some((x) => x.unique === it.unique));
-    const full = !SLOT_KINDS.slice(0, slotCount(s)).includes(groupOf(it)); // a full slot swaps
-    const confirm = ['custom', 'zeroday', 'indemnified'].includes(it.rarity) ? ' data-confirm="Sure? Deconstruct"' : '';
-    const swap = freeSlot(s, groupOf(it)) < 0 && !full;
-    const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" data-ptip="${esc(it.id)}" ${busy || full || dupe ? 'disabled' : ''} title="${busy ? 'At home only' : full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
-    const scrap = where ? '' : `<button type="button" class="inv-btn" data-command="deconstruct ${it.id}"${confirm} ${busy ? 'disabled' : ''} title="Deconstruct it for salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}</button>`;
-    return `<li class="inv-row ${rarityClass(it)}" data-kind="${groupOf(it)}">${invBody(it, whereTag, s)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
-  }).join('');
+  const tiles = shown.sort(sort).map((it) => stashTile(s, it, pick, busy)).join('');
   const counts = Object.fromEntries(SLOT_KINDS.filter((k, i, a) => a.indexOf(k) === i).map((k) => [k, spare.filter((it) => groupOf(it) === k).length]));
   const filters = `<div class="inv-filters" role="group" aria-label="Show">${[['all', 'All', spare.length], ...Object.entries(counts).map(([k, c]) => [k, SLOTS[k]?.name || k, c])].map(([k, l, c]) => `<button type="button" data-stash-filter="${k}" aria-pressed="${stashUi.filter === k}" ${c || k === 'all' ? '' : 'disabled'}>${esc(l)} <span>${c}</span></button>`).join('')}</div>`;
   const c = compileCost(s), zc = compileCost(s, true);
@@ -942,19 +922,124 @@ function protocolsParts(s, focus = null) {
   const group = (g, title) => { const ks = mine.filter((k) => STATS[k].group === g); return ks.length ? `<optgroup label="${esc(title)}">${ks.map(opt).join('')}</optgroup>` : ''; };
   const picker = `<label class="fpick"><span>Recipe</span><select data-focus-select>${mine.length > 1 ? '<option value="">Any of mine</option>' : ''}${group('offense', 'Offense')}${group('survival', 'Defense')}${group('utility', 'Utility')}</select></label>`;
   const recipes = (s.recipes || []).filter((z) => ZERO_DAYS[z]).map((z) => `<li><span><b class="iname r-zeroday">${esc(ZERO_DAYS[z].name)}</b><br><small>${esc(ZERO_DAYS[z].effect)} · ${zc.credits}c + ${esc(salvageLabel(zcost))}</small></span><button type="button" class="btn primary small" data-command="compile ${z}" data-pay="zeroday:${zc.salvage}" data-pay-title="${esc(ZERO_DAYS[z].name)}" ${can(zc) ? '' : 'disabled'}>Compile</button></li>`).join('');
-  return { slotList, rows, filters, spare, stash, cls, lvl, busy, c, zc, ccost, zcost, can, picker, mine, recipes, focus };
+  return { tiles, filters, spare, stash, cls, lvl, busy, pick, c, zc, ccost, zcost, can, picker, mine, recipes, focus };
 }
 
-// Protocols you run (slots, stats, stash): part of the Loadout page, for the class in use.
+// ---------- the protocol board (Loadout → Protocols) ----------
+// The rig's board, silkscreened: the rig in the middle and its slots as labelled footprints, three a side (exploit,
+// shell and script left; proxy and the two implants right), each traced to the rig. Protocols are software: a footprint
+// is a place on the board with the protocol's glyph and name on it, never a part plugged in. Beside it, the datasheet
+// for the pick (a slot, or a stash item, which lights the slot it would go in); under them, the stash.
+const SLOT_REFS = ['U1', 'J1', 'SH1', 'U2', 'IC5', 'IC6']; // each slot's designator on the board
+const BOARD_AT = [[0, 0], [1, 0], [0, 1], [0, 2], [1, 1], [1, 2]]; // each slot's side (0 left, 1 right) and row
+const slotItem = (s, i) => (i < slotCount(s) && rigOf(s)[i] ? stashItem(s, rigOf(s)[i]) : null);
+const opensAt = (i) => PROTOCOL_SLOTS.find((x) => x.slots > i)?.level;
+// Where loading it goes: a free slot of its kind, else the first of its kind (a swap); -1 with none open yet.
+const loadSlot = (s, it) => { const free = freeSlot(s, groupOf(it)); return free >= 0 ? free : SLOT_KINDS.slice(0, slotCount(s)).indexOf(groupOf(it)); };
+// Why it can't load now, or ''.
+const loadBlock = (s, it, busy) => (busy ? 'At home only' : loadSlot(s, it) < 0 ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet`
+  : (it.zeroDay && zeroDay(s, it.zeroDay)) || (it.unique && loaded(s).some((x) => x.unique === it.unique)) ? 'You already run this one' : '');
+// Load (or Swap, when its slot is full). long: the datasheet's, which names the slot.
+function loadButton(s, it, busy, long = false) {
+  const why = loadBlock(s, it, busy), at = loadSlot(s, it), swap = at >= 0 && freeSlot(s, groupOf(it)) < 0;
+  const label = `${swap ? 'Swap' : 'Load'}${long && at >= 0 ? ` into ${SLOT_REFS[at]}` : ''}`;
+  return `<button type="button" class="${long ? 'btn primary' : 'inv-btn'} load" data-command="load ${it.id}"${long ? '' : ` data-ptip="${esc(it.id)}"`} ${why ? 'disabled' : ''} title="${esc(why || (swap ? `Swap it in for what ${SLOT_REFS[at]} runs now` : `Load it into ${SLOT_REFS[at]}`))}">${label}</button>`;
+}
+const scrapButton = (s, it, busy, long = false) => (loadedOn(s, it.id) ? '' : `<button type="button" class="${long ? 'btn' : 'inv-btn'}" data-command="deconstruct ${it.id}"${['custom', 'zeroday', 'indemnified'].includes(it.rarity) ? ' data-confirm="Sure? Deconstruct"' : ''} ${busy ? 'disabled' : ''} title="Deconstruct it for salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}${long ? ' Deconstruct' : ''}</button>`);
+
+// The pick the datasheet reads: { slot } or { item, at } (at: the slot it would go in, or -1). An item loaded since
+// shows as its slot; one that's gone falls back to the first slot.
+function silkPick(s) {
+  const sel = stashUi.sel || 'slot:0';
+  if (sel.startsWith('slot:')) { const i = Number(sel.slice(5)); return { slot: i >= 0 && i < SLOT_KINDS.length ? i : 0 }; }
+  const on = rigOf(s).indexOf(sel), it = stashItem(s, sel);
+  if (on >= 0 && on < slotCount(s)) return { slot: on };
+  return it ? { item: it, at: loadSlot(s, it) } : { slot: 0 };
+}
+
+// The board. Traces are drawn in percent of the board (style.css lays the columns out to match: footprints 36%,
+// a 6% run, the rig 16%), and the picked slot's, or the one a picked stash item would go in, is live.
+function silkBoard(s, p) {
+  const n = slotCount(s), { pick, busy } = p, target = pick.item ? pick.at : -1;
+  const traces = [], fps = [];
+  SLOT_KINDS.forEach((kind, i) => {
+    const [side, row] = BOARD_AT[i], ref = SLOT_REFS[i], name = SLOTS[kind]?.name || kind, it = slotItem(s, i), locked = i >= n;
+    const y = ((row + 0.5) * 100) / 3, py = 50 + (row - 1) * 11, [x0, x1, x2, x3] = side ? [64, 62, 59.5, 58] : [36, 38, 40.5, 42];
+    traces.push(`<polyline points="${x0},${y.toFixed(2)} ${x1},${y.toFixed(2)} ${x2},${py} ${x3},${py}" class="silk-trace${locked ? ' off' : pick.slot === i || target === i ? ' live' : ''}" vector-effect="non-scaling-stroke"/>`);
+    const label = `<span class="silk-ref"><i class="silk-led" aria-hidden="true"></i><b>${ref}</b>${esc(name)}</span>`;
+    const state = `${pick.slot === i ? ' sel' : ''}${target === i ? ' target' : ''}${locked ? ' locked' : it ? ` ${rarityClass(it)}` : ' empty'}`;
+    let body;
+    if (locked) body = `<div class="silk-pick"><span class="silk-hole" aria-hidden="true"></span><span class="silk-name"><span class="silk-none">Lv ${opensAt(i)}</span></span>${label}</div>`;
+    else {
+      // With a stash item picked, its slot takes it in one click.
+      const put = pick.item && target === i && !loadBlock(s, pick.item, busy);
+      const attrs = put ? `data-command="load ${pick.item.id}" aria-label="${esc(`${it ? 'Swap' : 'Load'} ${itemLabel(pick.item)} into ${ref}`)}"`
+        : `data-silk-sel="slot:${i}" aria-pressed="${pick.slot === i}" aria-label="${esc(`${ref} ${name}: ${it ? itemLabel(it) : 'empty'}`)}"`;
+      // A set piece carries its set and count in set green (the datasheet has the rest).
+      const set = it?.unique && setOf(it.unique) ? setCard(setOf(it.unique).id, setHave(s)) : null;
+      body = `<button type="button" class="silk-pick" ${attrs}>${it ? glyphMarkup(it, 'md') : '<span class="silk-hole" aria-hidden="true"></span>'}<span class="silk-name">${it ? `<b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b>${set ? `<small class="silk-set">${esc(set.name)} (${set.n}/${set.total})</small>` : ''}` : '<span class="silk-none">Empty</span>'}</span>${label}</button>${it ? `<button type="button" class="inv-btn silk-out" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button>` : ''}`;
+    }
+    fps.push(`<div class="silk-fp at-${side ? 'r' : 'l'}${row}${state}" data-kind="${kind}" style="--i:${i}">${body}</div>`);
+  });
+  return `<div class="silk-board"><svg class="silk-traces" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${traces.join('')}</svg>
+    <div class="silk-rig"><i class="silk-pin1" aria-hidden="true"></i><b>${esc(s.profile?.handle || 'you')}</b><small>${esc(p.cls)} · ${p.lvl}</small></div>${fps.join('')}</div>`;
+}
+
+// An item in full: its glyph, name, rarity, kind and level, stats one a line (against vs.out when it's set: ▲ ▼), its
+// effect, its set, its flavour.
+function itemSheet(s, it, vs = null) {
+  const where = loadedOn(s, it.id), home = it.unique && isNative(it.unique) ? nativeHome(s, it) : null, out = vs?.out;
+  const flavour = it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour;
+  const keys = [...new Set([...Object.keys(it.stats || {}), ...Object.keys(out?.stats || {})])].filter((k) => STATS[k]);
+  const signed = (k, v) => (v < 0 ? '−' : '+') + fmtStat(k, Math.abs(v));
+  const rows = keys.map((k) => {
+    const v = it.stats[k] || 0, d = v - (out?.stats?.[k] || 0);
+    return `<div class="${v < 0 ? 'neg' : v ? '' : 'zero'}"><dt>${glyph(k)}${esc(STATS[k].name)}</dt><dd>${v ? signed(k, v) : '—'}</dd>${vs ? `<dd class="silk-d ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${Math.abs(d) > 1e-9 ? `${d > 0 ? '▲' : '▼'} ${fmtStat(k, Math.abs(d))}` : ''}</dd>` : ''}</div>`;
+  }).join('');
+  const lost = fxName(out) && fxName(out) !== fxName(it) ? `<p class="silk-lost">▼ ${esc(fxName(out))}</p>` : '';
+  const [fxHead, ...fxRest] = fxText(it).split(' — ');
+  const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>` : '';
+  return `<div class="silk-plate">${glyphMarkup(it, 'lg')}</div><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
+    <p class="silk-sub">${esc(RARITIES[it.rarity]?.name || '')} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>
+    <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats · into an empty slot') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
+}
+
+// The datasheet: a slot (its item, Unload; empty, the stash's of its kind) or a stash item against its slot (Load or
+// Swap, Deconstruct).
+function silkSheet(s, p) {
+  const { pick, busy } = p;
+  if (pick.item) {
+    const it = pick.item, at = pick.at, out = at >= 0 && freeSlot(s, groupOf(it)) < 0 ? slotItem(s, at) : null;
+    return `<aside class="card silk-sheet ${rarityClass(it)}" aria-label="Datasheet"><h2>Stash · ${esc(SLOTS[groupOf(it)]?.name || '')}</h2>${itemSheet(s, it, at >= 0 ? { out } : null)}<div class="silk-acts">${loadButton(s, it, busy, true)}${scrapButton(s, it, busy, true)}</div></aside>`;
+  }
+  const i = pick.slot, kind = SLOT_KINDS[i], name = SLOTS[kind]?.name || kind, it = slotItem(s, i);
+  const head = `<h2>${SLOT_REFS[i]} · ${esc(name)}</h2>`;
+  if (i >= slotCount(s)) return `<aside class="card silk-sheet" aria-label="Datasheet">${head}<h3 class="silk-title silk-none">Opens at Lv ${opensAt(i)}</h3></aside>`;
+  const spare = (s.stash || []).filter((x) => groupOf(x) === kind && loadedOn(s, x.id) !== classOf(s)).length;
+  const show = spare ? `<button type="button" class="btn" data-stash-filter="${kind}" aria-pressed="${stashUi.filter === kind}">${esc(name)} in the stash · ${spare}</button>` : '';
+  if (!it) return `<aside class="card silk-sheet" aria-label="Datasheet">${head}<div class="silk-plate"><span class="silk-hole pg-lg" aria-hidden="true"></span></div><h3 class="silk-title silk-none">Empty</h3>${show ? `<div class="silk-acts">${show}</div>` : ''}</aside>`;
+  return `<aside class="card silk-sheet ${rarityClass(it)}" aria-label="Datasheet">${head}${itemSheet(s, it)}<div class="silk-acts"><button type="button" class="btn" data-command="unload ${it.id}" ${busy ? 'disabled title="At home only"' : ''}>Unload</button>${show}</div></aside>`;
+}
+
+// A stash item as a tile: its glyph, name, kind and level, stats one a line, effect and set; click it for the
+// datasheet. Load (or Swap) and Deconstruct on it too.
+function stashTile(s, it, pick, busy) {
+  const where = loadedOn(s, it.id), fx = fxText(it), on = pick.item?.id === it.id;
+  return `<li class="silk-tile ${rarityClass(it)}${on ? ' on' : ''}" data-kind="${groupOf(it)}"><button type="button" class="silk-pick" data-silk-sel="${esc(it.id)}" aria-pressed="${on}" data-ptip="${esc(it.id)}">${glyphMarkup(it, 'sm')}<span class="silk-tile-main"><span class="silk-tile-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${where ? `<span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}${it.unique && setOf(it.unique) ? setLines(s, it.unique, true) : ''}</span></button><span class="inv-acts">${loadButton(s, it, busy)}${scrapButton(s, it, busy)}</span></li>`;
+}
+
+// Protocols you run, for the class in use (the Loadout's Protocols tab): the board with your set bonuses and stat sheet,
+// its datasheet, and the stash.
 export function protocolSlotsCard(s) {
   const p = protocolsParts(s);
-  return `<section class="card"><h2>Protocols · ${esc(p.cls)} Lv ${p.lvl}</h2><ul class="inv slots">${p.slotList}</ul>${setBonusCard(s)}${statSheet(s, 'hacker')}</section>`;
+  return `<section class="card silk-card"><h2>Protocols · ${esc(p.cls)} Lv ${p.lvl}</h2>${silkBoard(s, p)}${setBonusCard(s)}${statSheet(s, 'hacker')}</section>`;
 }
+export const protocolSheetCard = (s) => silkSheet(s, protocolsParts(s));
 export function protocolStashCard(s) {
   const p = protocolsParts(s);
-  return `<section class="card stash-card"><h2>Stash · ${p.stash.length}/${STASH_CAP}</h2>${p.spare.length ? `${p.filters}<ul class="inv">${p.rows || '<li class="inv-row empty"><span class="inv-empty">none of these</span></li>'}</ul>` : `<p class="svc-line">${p.stash.length ? 'all loaded' : 'empty'}</p>`}</section>`;
+  return `<section class="card stash-card silk-stash"><h2>Stash · ${p.stash.length}/${STASH_CAP}</h2>${p.spare.length ? `${p.filters}<ul class="silk-tiles">${p.tiles || '<li class="silk-none">none of these</li>'}</ul>` : `<p class="svc-line">${p.stash.length ? 'all loaded' : 'empty'}</p>`}</section>`;
 }
-export const protocolGearMarkup = (s) => protocolSlotsCard(s) + protocolStashCard(s);
+export const protocolGearMarkup = (s) => protocolSlotsCard(s) + protocolSheetCard(s) + protocolStashCard(s);
 export const protocolsMarkup = (s) => `<div class="page-grid gear-page"><div style="display:grid;gap:12px;align-content:start">${protocolGearMarkup(s)}</div></div>`;
 
 // ---------- crafting: everything you build at home, in one place ----------
@@ -1876,7 +1961,7 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
         ${spent && !locked ? `<p class="tfoot">${btn(`talent reset ${id}`, 'Clear picks')}</p>` : ''}
       </section>
     </div>` : id === equippedArch ? `
-    <div class="loadout-protocols">${protocolStashCard(s)}${protocolSlotsCard(s)}</div>` : `
+    <div class="loadout-protocols silk">${protocolGearMarkup(s)}</div>` : `
     <div class="loadout-protocols one"><section class="card"><h2>Protocols</h2><p class="svc-line"><span class="tag dim" title="Protocols belong to the class in use">${esc(a.name)} only</span></p></section></div>`}
     </div>`;
 }

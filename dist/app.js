@@ -4,6 +4,7 @@ const FAMILY_NAMES = Object.fromEntries(Object.entries(FAMILIES).map(([k, f]) =>
 import { selectEncounter, partKey, parse, validate, hooks, stepCycle, keyMap, hackerOf, classOf, cycleLength, fresh, restore, command, advance, active, alive, part, intents, suggestions, idleRegen, tickServices, topUpCost, defender, maxSignal, inSync } from './combat.mjs';
 import * as V from './view.mjs';
 import { SHAPES, render as ascii3d } from './ascii3d.mjs';
+import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { createFeel } from './feel.mjs';
@@ -69,6 +70,7 @@ let noticeTimer = 0;
 let dirty = true;
 let archView = null; // archetype shown on the Loadout page (defaults to the equipped one)
 let loadoutTab = 'protocols'; // Loadout page: 'protocols' or 'skills' (skills and talents)
+let silkShow = false; // a stash tile was just picked: bring its datasheet into view (render)
 let compileFocus = null; // (old) the recipe picked on the Craft page's Protocols card
 let craftUi = { cat: null, pick: null }; // the Craft page: the category, and the recipe in it
 
@@ -1744,10 +1746,14 @@ function render(force = false) {
     const focusRoom = module === 'rooms' ? document.activeElement?.closest?.('.fp-room')?.dataset.room : null; // a redraw keeps a focused room focused
     const focusCx = module === 'codex' ? document.activeElement?.closest?.('[data-codex], [data-codex-fold]') : null; // and a Codex row its focus
     const focusCxKey = focusCx ? (focusCx.dataset.codex ?? 'fold') : null;
+    const focusSilk = module === 'loadout' ? document.activeElement?.closest?.('[data-silk-sel]')?.dataset.silkSel : null; // and the board its pick
     if (!(module === 'hub' && mkDrag)) put('page-view', pageOrError(() => (pages[module] || pages.map)(campaign))); // not while you drag a ticket's slider
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
     if (module === 'codex') codexDrawn(focusCxKey);
+    // A stash tile picked where the datasheet sits above the stash (one column): bring the datasheet up.
+    if (silkShow) { silkShow = false; const sh = $('page-view').querySelector('.silk-sheet'), st = $('page-view').querySelector('.silk-stash'); if (sh && st && sh.offsetWidth >= st.offsetWidth - 2) sh.scrollIntoView({ block: 'nearest', behavior: canMove() ? 'smooth' : 'auto' }); }
+    if (focusSilk && !document.activeElement?.closest?.('[data-silk-sel]')) $('page-view').querySelector(`[data-silk-sel="${CSS.escape(focusSilk)}"]`)?.focus({ preventScroll: true });
     if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); renderOffer(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
@@ -2331,6 +2337,8 @@ document.addEventListener('click', (e) => {
   }
   const stf = e.target.closest('[data-stash-filter]');
   if (stf) { V.stashUi.filter = stf.dataset.stashFilter; feel.key('click'); dirty = true; return; }
+  const silk = e.target.closest('[data-silk-sel]'); // the protocol board's pick: a slot or a stash item, for its datasheet
+  if (silk) { V.stashUi.sel = silk.dataset.silkSel; silkShow = !!silk.closest('.silk-tile'); feel.key('click'); dirty = true; return; }
   const sf = e.target.closest('[data-sweep-filter]');
   if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
   const bx = e.target.closest('[data-breach]');
@@ -2648,7 +2656,11 @@ document.addEventListener('keydown', (e) => {
   if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); m.click(); }
 });
 
-// Item hover cards (view.mjs itemTipMarkup): a protocol or filter's card beside it, its ASCII model
+// Protocol glyphs (protocol-glyphs.mjs): a Zero-day's scanline and a unique's flicker, wherever one is drawn (the
+// Loadout's board, datasheet and stash, the hover cards). Still with motion off.
+(function glyphLoop(t) { glyphMotion(document, t, !canMove()); requestAnimationFrame(glyphLoop); })(performance.now());
+
+// Item hover cards (view.mjs itemTipMarkup): a protocol or filter's card beside it, a filter's ASCII model
 // spinning while it's up. Follows the row through redraws; goes when the pointer leaves it.
 let ptip = null; // { ref, anchor, el, raf }
 function showPtip(anchor) {

@@ -442,12 +442,12 @@ test('talent tree: points come from levels, ranks open the tiers, swapping is fr
   assert.match(command(s, `talent add ${a.id}`).at(-1).message, /at home/);
 });
 
-test('the loadout page: Protocols (stash left, slots right), then Skills and talents, picks locked during a fight', async () => {
+test('the loadout page: Protocols (the board and its datasheet, then the stash), then Skills and talents, picks locked during a fight', async () => {
   const { loadoutMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   let html = loadoutMarkup(s, 'breaker');
   assert.match(html, /data-ltab="protocols" aria-selected="true">Protocols<.*data-ltab="skills"[^>]*>Skills and talents/s, 'Protocols first, then skills and talents together');
-  assert.match(html, /class="loadout-protocols"><section class="card stash-card"><h2>Stash · .*<h2>Protocols · Breaker/s, 'the stash, then the slots and stats');
+  assert.match(html, /class="loadout-protocols silk"><section class="card silk-card"><h2>Protocols · Breaker.*class="silk-board".*<aside class="card silk-sheet[^"]*" aria-label="Datasheet"><h2>U1 · Exploit<\/h2>.*<section class="card stash-card silk-stash"><h2>Stash · /s, 'the board and the first slot\'s datasheet, then the stash');
   assert.match(loadoutMarkup(s, 'operator'), /Protocols belong to the class in use/, 'another class: no protocol slots to change');
   html = loadoutMarkup(s, 'operator', 'skills');
   assert.match(html, /<h1>Operator<\/h1><div class="class-xp"><b>Lv 1<\/b>/, 'level and XP under the class name');
@@ -777,7 +777,7 @@ test('attack <name> matches in any case: attack relay-king finds RELAY-KING.exe'
   assert.ok(!s.logs.some((e) => /No relay-king here/.test(e.message)));
 });
 
-test('protocols: stash items and slots share a data-kind, so hovering an item lights its slot', async () => {
+test('protocols: stash tiles and the board\'s footprints share a data-kind, so hovering an item lights its slot', async () => {
   const { protocolGearMarkup } = await import('./dist/view.mjs');
   const { rollItem } = await import('./dist/gear.mjs');
   const s = fresh();
@@ -785,6 +785,6 @@ test('protocols: stash items and slots share a data-kind, so hovering an item li
   let seed = 3; const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const it = rollItem(rand, { level: 10 }); it.id = 'hv1'; s.stash.push(it);
   const html = protocolGearMarkup(s);
-  const kind = html.match(/class="inv-row [^"]*" data-kind="([a-z]+)">/)[1];
-  assert.match(html, new RegExp(`<ul class="inv slots">.*data-kind="${kind}"`, 's'));
+  const kind = html.match(/class="silk-tile [^"]*" data-kind="([a-z]+)">/)[1];
+  assert.match(html, new RegExp(`<div class="silk-fp [^"]*" data-kind="${kind}"`));
 });

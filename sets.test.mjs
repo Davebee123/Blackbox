@@ -358,8 +358,8 @@ test('the tooltip and the stash and slot rows: the set, its pieces and each bonu
   assert.match(tip, /<span class="sb on"[^>]*>\(2\) Set:/);
   assert.doesNotMatch(tip, /<span class="sb on"[^>]*>\(3\) Set:/);
   assert.match(tip, /<span class="sg on"[^>]*>With 2 pieces: \+5% Clock Speed<\/span>/, 'lit with two loaded');
-  // The rows: a compact copy under the piece, in the slots and the stash.
-  assert.match(protocolSlotsCard(s), /set-lines compact/);
+  // On the board: the set and its count on the piece's footprint; the stash tile carries a compact copy.
+  assert.match(protocolSlotsCard(s), /<small class="silk-set">Kestrel Clearance \(2\/3\)<\/small>/);
   give(s, 'kestrel-lanyard');
   assert.match(protocolStashCard(s), /set-lines compact[^]*Kestrel Clearance \(2\/3\)/);
   // The Loadout: the active bonuses.
