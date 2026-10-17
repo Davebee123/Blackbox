@@ -221,6 +221,7 @@
 .fp-items { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
 .fp-items li { display: grid; gap: 0; font-size: 13px; }
 .fp-items small { color: var(--muted); font-size: 12px; }
+.fp-items .fp-stats { display: grid; } /* one stat a line */
 /* What happens on the server pops up in the map's bottom-right corner, over the command line (a fight keeps the corner
    toast, off the board): clear of the rooms you're reading, it lets clicks through, and a long one (ls, map) that stays
    until your next move closes on a click. */

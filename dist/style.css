@@ -1897,7 +1897,7 @@ body:has(.stash-card .inv-row[data-kind="implant"]:hover) .inv.slots .inv-row[da
 .inv-name .iname { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .inv-name small { flex: none; font: 11px var(--mono); color: var(--dim); }
 .inv-name .tag { flex: none; }
-.inv-stats { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: var(--muted); }
+.inv-stats { display: grid; gap: 1px; font-size: 12px; color: var(--muted); } /* one stat a line */
 .inv-stats b { color: var(--text); font: 600 12px var(--mono); }
 .inv-stats .neg, .inv-stats .neg b { color: var(--hot); }
 .inv-fx { font-size: 12px; color: var(--r-zeroday); }
@@ -3586,7 +3586,7 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .th-item b { font: 600 14px var(--sans); overflow-wrap: anywhere; padding-right: 14px; }
 .th-item small { font: 11px var(--mono); color: var(--muted); }
 .th-item small i { color: var(--amber); font-style: normal; }
-.th-item .th-stats { font: 12px var(--mono); color: var(--text); }
+.th-item .th-stats { display: grid; gap: 1px; font: 12px var(--mono); color: var(--text); } /* one stat a line */
 .th-item .th-rule { font: 11px var(--mono); color: var(--amber-soft); }
 .th-item .th-take { position: absolute; left: 12px; bottom: 10px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
 .th-later { opacity: 0.8; }
