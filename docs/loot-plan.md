@@ -193,7 +193,7 @@ Thirty uniques named for the bottom of the machine: boot, firmware and bedrock. 
 | Bootstrap | Script | 45 | flash ranks | Any | Your cooldowns start each fight 1 cycle shorter |
 | Bedframe | Shell | 45 | Bedrock vaults | Bastion | +12% max Signal; heals you receive are 5% larger |
 | Init Vector | Implant | 45 | INIT | Any | Every 5th cycle, your next skill repeats at 30% |
-| Bitrot Ward | Proxy | 45 | strain kills | Bastion | You start each fight with 1 ◆ |
+| Bitrot Ward | Proxy | 45 | strain kills | Bastion | When a break leaves only one part, you gain a ◆ for 2 cycles (once a fight) |
 | Firmware | Implant | 46 | flash ranks | Any | +4% damage, +4% max Signal, +4% Clock Speed |
 | Read-Only | Shell | 46 | Bedrock lair boss | Bastion | Once a fight, the first hit that would take you below half is cut by 40% |
 | Watchdog Timer | Script | 46 | puzzle boards | Operator | Every 6 cycles, if you have no helper out, a free one joins for 2 cycles |
@@ -210,14 +210,14 @@ Thirty uniques named for the bottom of the machine: boot, firmware and bedrock. 
 | Wire Wrap | Exploit | 48 | Bedrock lair boss | Breaker | At 5 Momentum, your next skill also hits every other part for 40% |
 | Dead Reckoning | Proxy | 48 | Threads, floor 8 | Infiltrator | Your first hit on each part ignores ◆ |
 | Ground Plane | Implant | 49 | Bedrock rare spawns | Any | Hits on you can't be critical strikes |
-| Clock Tree | Script | 49 | puzzle boards | Any | Every 4th cycle, your cooldowns tick twice |
+| Clock Tree | Script | 49 | puzzle boards | Any | +8% Clock Speed; your Clock Speed meter starts each fight half full |
 | Quarry | Exploit | 49 | Bedrock bosses | Any | +15% damage to the last part standing |
 | Strata | Shell | 49 | Bedrock vaults | Bastion | Each 10% of Signal you're missing cuts damage to you by 2%, up to 10% |
 | Load Order | Script | 49 | strain kills | Operator | Your helpers act first in the cycle you call them |
 | Undervolt | Proxy | 49 | Bedrock rare spawns | Breaker | Holding Momentum no longer raises the damage you take |
 | Keystone | Implant | 50 | INIT | Any | +3% damage for each set bonus you have active |
 | Signal Floor | Proxy | 50 | flash ranks | Any | Regen heals double while below 25% Signal |
-| Cold Boot | Shell | 50 | Bedrock bosses | Bastion | You start each fight shielded for 15% of max Signal |
+| Warm Reset | Shell | 50 | Bedrock bosses | Bastion | You start each fight shielded for 8% of max Signal |
 | Root of Trust | Exploit | 50 | INIT | Any | Critical strikes heal 2% of max Signal |
 
 Leans: 14 any class, 7 Bastion, 3 Breaker, 3 Infiltrator, 3 Operator. Breaker, Infiltrator and Operator are thin here; the next batch evens it out.
@@ -230,3 +230,4 @@ Leans: 14 any class, 7 Bastion, 3 Breaker, 3 Infiltrator, 3 Operator. Breaker, I
 - **Build order.** The set rework and Batch 1 first, so levels 39–50 get content; then the thin middle (levels 15–20 and 33–38).
 - **Measuring the unique rate.** The simulation bot's clock overcounts invasions and couriers. Fix it before tuning drop odds against the bigger pool.
 - **Glyphs.** Each item's glyph comes from its kind, a hash of its name, its main stat and its rarity (the ASCII glyph system), so new items need no art of their own.
+- **After the build (October 17).** Bitrot Ward's ◆ now comes when a break leaves one part and lasts 2 cycles (a ◆ at the start was worth about 10 points of Signal a fight), and its stats came down; the Bedrock Cold Boot became Warm Reset with an 8% shield (the name was taken by a level-16 unique); Clock Tree starts the Clock Speed meter half full instead of ticking cooldowns twice, so it no longer goes past the 25% cap.

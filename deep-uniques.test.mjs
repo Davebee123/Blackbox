@@ -35,7 +35,7 @@ const BEDROCK = [
   ['wire-wrap', 'Wire Wrap', 'exploit', 48, 'lair', 8, 'breaker'], ['dead-reckoning', 'Dead Reckoning', 'proxy', 48, 'thread', 8, 'infiltrator'], ['ground-plane', 'Ground Plane', 'implant', 49, 'rare', 8, null],
   ['clock-tree', 'Clock Tree', 'script', 49, 'puzzle', 8, null], ['quarry', 'Quarry', 'exploit', 49, 'lair', 8, null, 'Bedrock bosses'], ['strata', 'Strata', 'shell', 49, 'vault', 8, 'bastion'],
   ['load-order', 'Load Order', 'script', 49, 'strain', null, 'operator'], ['undervolt', 'Undervolt', 'proxy', 49, 'rare', 8, 'breaker'], ['keystone', 'Keystone', 'implant', 50, 'lair', 8, null, 'INIT'],
-  ['signal-floor', 'Signal Floor', 'proxy', 50, 'lair', 8, null, 'flash ranks'], ['cold-boot-bedrock', 'Cold Boot', 'shell', 50, 'lair', 8, 'bastion', 'Bedrock bosses'], ['root-of-trust', 'Root of Trust', 'exploit', 50, 'lair', 8, null, 'INIT'],
+  ['signal-floor', 'Signal Floor', 'proxy', 50, 'lair', 8, null, 'flash ranks'], ['warm-reset', 'Warm Reset', 'shell', 50, 'lair', 8, 'bastion', 'Bedrock bosses'], ['root-of-trust', 'Root of Trust', 'exploit', 50, 'lair', 8, null, 'INIT'],
 ];
 const ALL = [...SINK, ...BEDROCK];
 
@@ -219,10 +219,10 @@ test('Seawall stacks Block for the fight as your Block meets hits; Weir\'s helpe
   assert.ok(u.run.integrity < 200, 'once a fight');
 });
 
-test('shields: Cold Boot starts you behind 15% of your max, Bedrock Seal\'s shields absorb 15% more, Anchor Chain makes the next one larger', () => {
-  const s = vet(); wear(s, 'cold-boot-bedrock');
+test('shields: Warm Reset starts you behind 8% of your max, Bedrock Seal\'s shields absorb 15% more, Anchor Chain makes the next one larger', () => {
+  const s = vet(); wear(s, 'warm-reset');
   const e = fight(s);
-  assert.equal(e.shield, Math.round(s.run.max * 0.15));
+  assert.equal(e.shield, Math.round(s.run.max * 0.08));
   const t = vet(); wear(t, 'bedrock-seal'); const f = fight(t), b = gearStat(t, 'reduction', 'hacker');
   f.shield = 100;
   assert.equal(takeDamage(t, 400, null, 'test'), 400 - b - 115, '100 shield takes 115');
@@ -450,7 +450,7 @@ test('burns: Burn-In ticks a new burn once at once; Bilge weakens the part each 
 });
 
 // ---------- cooldowns ----------
-test('cooldowns: Bootstrap\'s first one shorter, Microcode\'s shortest skill, Clock Tree\'s extra tick every 4th cycle', () => {
+test('cooldowns: Bootstrap\'s first one shorter, Microcode\'s shortest skill, Clock Tree\'s meter starts half full', () => {
   const s = vet(); wear(s, 'bootstrap'); const e = fight(s); tough(e);
   command(s, 'overload pulse'); resolveCycle(s);
   assert.equal(e.readyAt.overload, 1 + cooldownOf(s, 'overload') - 1, 'Bootstrap: its first cooldown a cycle shorter');
@@ -462,11 +462,28 @@ test('cooldowns: Bootstrap\'s first one shorter, Microcode\'s shortest skill, Cl
   wear(t, 'microcode');
   assert.equal(cooldownOf(t, 'crack'), was.crack - 1, 'Microcode: the shortest cooldown over 1 on your bar');
   assert.equal(cooldownOf(t, 'overload'), was.overload, 'and no other');
-  const u = vet(); wear(u, 'clock-tree'); const f = fight(u);
-  const v = vet(); const g = fight(v);
-  f.readyAt = { overload: 20 }; g.readyAt = { overload: 20 };
-  for (let k = 0; k < 4; k++) { command(u, 'hold'); resolveCycle(u); command(v, 'hold'); resolveCycle(v); }
-  assert.equal(f.readyAt.overload, g.readyAt.overload - 1, 'Clock Tree: one extra tick after the 4th cycle');
+  const u = vet(); wear(u, 'clock-tree'); const f = fight(u), rate = gearStat(u, 'clock');
+  assert.equal(f.clock, 50, 'Clock Tree: the meter starts half full');
+  command(u, 'hold'); resolveCycle(u);
+  assert.equal(f.clock, 50 + rate, 'then fills at your Clock Speed, which counts toward its cap');
+  assert.ok(rate <= STATS.clock.cap);
+});
+
+test('Bitrot Ward: when a break leaves one part, a ◆ for 2 cycles, once a fight', () => {
+  const s = vet(); wear(s, 'bitrot-ward'); const e = fight(s);
+  for (const q of e.virus.parts) if (q.attack) q.attack.due = 99;
+  assert.equal(e.chits, 0, 'nothing at the start');
+  const alive = () => e.virus.parts.filter((q) => q.integrity > 0);
+  while (alive().length > 2) { const q = alive()[0]; q.armor = 0; q.integrity = 1; hit(s, q, 100, { mine: true }); }
+  assert.equal(e.chits, 0, 'two parts left: not yet');
+  const q = alive()[0]; q.armor = 0; q.integrity = 1; hit(s, q, 100, { mine: true });
+  assert.equal(alive().length, 1);
+  assert.equal(e.chits, 1, 'one part left: a ◆');
+  command(s, 'hold'); resolveCycle(s);
+  assert.equal(e.chits, 1, 'held through its first cycle');
+  command(s, 'hold'); resolveCycle(s);
+  assert.equal(e.chits, 0, 'gone after 2 cycles');
+  assert.ok(s.logs.some((l) => /Bitrot Ward: your ◆ fades/.test(l.message)));
 });
 
 // ---------- Momentum ----------

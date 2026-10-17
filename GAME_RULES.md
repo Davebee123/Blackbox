@@ -384,7 +384,7 @@ There are no grey protocols. (Filters still come in Scrap, a grey.) Old saves' g
 | Bootstrap | Script, 45 | Bedrock's lair boss (flash ranks' once they are built) | Each skill's first cooldown in a fight is a cycle shorter |
 | Bedframe | Shell, 45 (leans Bastion) | Bedrock's vaults | +12% max Signal; heals you receive are 5% larger |
 | Init Vector | Implant, 45 | Bedrock's lair boss (INIT's) | After every 5th cycle, your next damaging skill hits again for 30% |
-| Bitrot Ward | Proxy, 45 (leans Bastion) | Strain kills | You start each fight with 1 ◆ |
+| Bitrot Ward | Proxy, 45 (leans Bastion) | Strain kills | When a break leaves only one part, you gain a ◆ for 2 cycles (once a fight) |
 | Firmware | Implant, 46 | Bedrock's lair boss (flash ranks') | +4% damage, +4% max Signal, +4% Clock Speed |
 | Read-Only | Shell, 46 (leans Bastion) | Bedrock's lair boss | Once a fight, the first attack that would take you below half deals 40% less |
 | Watchdog Timer | Script, 46 (leans Operator) | Bedrock's puzzle boards | Every 6 cycles, if you have no helper out, a free one (a Deploy helper's size) joins for 2 cycles |
@@ -401,14 +401,14 @@ There are no grey protocols. (Filters still come in Scrap, a grey.) Old saves' g
 | Wire Wrap | Exploit, 48 (leans Breaker) | Bedrock's lair boss | A break that leaves your Momentum full arms your next skill to hit every other part for 40% of its damage |
 | Dead Reckoning | Proxy, 48 (leans Infiltrator) | Threads on Bedrock | Your first hit on each part goes through its ◆ |
 | Ground Plane | Implant, 49 | Bedrock's rare spawns | Hits on you can't be critical strikes |
-| Clock Tree | Script, 49 | Bedrock's puzzle boards | Every 4th cycle, your cooldowns tick twice |
+| Clock Tree | Script, 49 | Bedrock's puzzle boards | Your Clock Speed meter starts each fight half full (its own +8% Clock Speed counts toward the 25% cap) |
 | Quarry | Exploit, 49 | Bedrock's lair boss (Bedrock bosses') | +15% damage to the last part standing |
 | Strata | Shell, 49 (leans Bastion) | Bedrock's vaults | Each 10% of Signal you're missing cuts damage to you by 2%, up to 10% |
 | Load Order | Script, 49 (leans Operator) | Strain kills | Each helper you call hits once as it arrives, before its ticks start |
 | Undervolt | Proxy, 49 (leans Breaker) | Bedrock's rare spawns | Holding Momentum no longer raises the damage you take (Redline) |
 | Keystone | Implant, 50 | Bedrock's lair boss (INIT's) | +3% damage for each set bonus you have active |
 | Signal Floor | Proxy, 50 | Bedrock's lair boss (flash ranks') | Regen heals double below 25% Signal |
-| Cold Boot | Shell, 50 (leans Bastion) | Bedrock's lair boss (Bedrock bosses') | You start each fight shielded for 15% of your max Signal |
+| Warm Reset | Shell, 50 (leans Bastion) | Bedrock's lair boss (Bedrock bosses') | You start each fight shielded for 8% of your max Signal |
 | Root of Trust | Exploit, 50 | Bedrock's lair boss (INIT's) | Critical strikes heal 2% of your max Signal |
 
 - **Where they drop, at each source's own odds** (a bigger pool, never more drops): a floor's **lair boss** rolls its floor's own in the same roll as its network's natives (`BOSS_LOOT`, its pity, one you lack first); a **★ rare spawn**'s gold, a **vault**'s gold and an **elite**'s are as before, a rare spawn's and a vault's from its floor's own there; a **thread** that starts on The Sink or Bedrock offers one of its floor's own in place of an item one time in ten (`LOOT.quest`); a **puzzle board** you win there rolls an elite's odds of a gold for one of its floor's own, into your pack; **strain kills** share the strain's trophy roll (1 in 10,000) with the strain uniques open at your level; **crew bosses**' world unique (10% a kill) can be Wake. Couriers carry the rare-spawn, vault, thread and puzzle-board ones (not a lair's or a strain's). GOLDEN PARACHUTE, INIT, Bedrock's other bosses and flash ranks aren't built yet: until they are, theirs drop from their floor's lair boss (each carries `planned`, the source it moves to).

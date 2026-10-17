@@ -863,6 +863,7 @@ function fxCond(s, fx, ctx = {}) {
     case 'target-jammed': return !!p && !!e && p.jammedUntil >= e.cycle;
     case 'target-armored': return !!p && p.maxArmor > 0;
     case 'target-last': return alive(p) && livingParts(s).length === 1;
+    case 'one-left': return !!e && livingParts(s).length === 1; // after a break: one part still standing
     case 'below-25': return d().integrity < d().max * 0.25;
     case 'shielded': return (e?.shield || 0) > 0;
     case 'momentum-full': return !!e && classOf(s) === 'breaker' && momentumStacks(s) >= momentumCap(s);
@@ -931,7 +932,7 @@ function fxSpend(s, fx, id) {
 // The deep uniques' effect kinds (content.mjs FX_DO, levels 39-50): their hooks run on every hit, heal and cycle, and
 // nearly every fight carries none of them, so a kind you don't wear answers at once (fxKinds: the kinds on your rig,
 // kept while the rig is the same).
-const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'cd-tick', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'rewind']);
+const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'chit-fade', 'clock-start', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'rewind']);
 const KINDS = new WeakMap();
 function fxKinds(s) {
   const key = hooks.extraFx ? null : `${classOf(s)}|${hackerLevel(s)}|${rigOf(s).join(',')}|${(s.stash || []).length}|${s.equipN || 0}|${Object.keys(SETS).length}`; // what is loaded, and the sets
@@ -1878,6 +1879,8 @@ function engage(s) {
   // Uniques that fire as a fight starts (Gate Bypass, Cell Key).
   for (const x of fxFire(s, 'start')) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with a ◆.`); }
+    if (x.fx.do === 'chit-fade') fadingChit(s, x);
+    if (x.fx.do === 'clock-start' && gearStat(s, 'clock')) e.clock = Math.max(e.clock || 0, Number(x.fx.value) || 0); // Clock Tree: the meter starts part full
     if (x.fx.do === 'force-crit') e.forceCrit = true;
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${x.value} shield.`, { mark: 'shield' }); }
     if (x.fx.do === 'shield%') { const n = Math.max(1, Math.round((defender(s).max * x.value) / 100)); e.shield = (e.shield || 0) + n; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${n} shield.`, { mark: 'shield', ...firedOf([x]) }); } // Cold Boot
@@ -2847,6 +2850,7 @@ function breakPart(s, p) {
   // Uniques that fire on a break (Cryptominer, Zero Cool).
   for (const x of fxFire(s, 'break', { crit: e.lastCrit, target: p })) {
     const who = x.name || x.it.name;
+    if (x.fx.do === 'chit-fade') fadingChit(s, x); // Bitrot Ward: down to the last part
     // Kill Chain (a native unique): the next part to attack is Open, as if you'd read it.
     if (x.fx.do === 'break-open') { const t = soonestAttacker(s, p.id); if (alive(t) && t !== p && t.kind === 'system') { t.openUntil = Math.max(t.openUntil || 0, e.cycle + x.value); emit(s, 'read', `${who} leaves the ${t.name} Open.`, { target: t.id, open: true }); } }
     if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who} reduces your cooldowns by ${x.value}.`); }
@@ -3795,18 +3799,21 @@ export function strikeWith(s, p, atk) {
   p.attack = { ...atk, due: s.encounter.cycle };
   try { return strike(s, p); } finally { p.attack = real; }
 }
-// Your gear at the end of a cycle, on its beat (value: every that many cycles). Clock Tree (cd-tick): every cooldown
-// ticks once more, as a full Clock Speed meter does. Init Vector (repeat): your next damaging skill is armed to hit
+// A ◆ that fades after its cycles if you still hold it (Bitrot Ward: when a break leaves one part). cycleFx takes it away.
+function fadingChit(s, x) {
+  const e = s.encounter, n = Number(x.fx.value) || 2;
+  e.chits++;
+  fxState(e).chitFade = e.cycle + n - 1;
+  emit(s, 'status', `${x.name || x.it.name}: you gain a ◆ for ${n} cycles.`, { mark: 'shield', ...firedOf([x]) });
+}
+// Your gear at the end of a cycle, on its beat (value: every that many cycles). Bitrot Ward (chit-fade): its ◆, if you
+// still hold it, fades after its cycles. Init Vector (repeat): your next damaging skill is armed to hit
 // again. Watchdog Timer (free-helper): with no helper of yours out, one joins for a few cycles, a Deploy helper's size.
 // Then the Signal you end it on (Last Known Good).
 function cycleFx(s) {
   const e = s.encounter, st = fxState(e), beat = (x) => e.cycle % Math.max(1, Number(x.fx.value) || 1) === 0;
-  for (const x of fxFire(s, 'cycle', { do: 'cd-tick' })) {
-    if (!beat(x)) continue;
-    const cooling = Object.keys(e.readyAt).filter((k) => e.readyAt[k] > e.cycle + 1);
-    for (const k of cooling) e.readyAt[k] -= 1;
-    if (cooling.length) emit(s, 'status', `${x.name || x.it.name}: your cooldowns tick one extra cycle.`, firedOf([x]));
-  }
+  if (st.chitFade && !(e.chits > 0)) delete st.chitFade; // the ◆ was spent
+  if (st.chitFade && e.cycle >= st.chitFade) { delete st.chitFade; e.chits--; emit(s, 'status', 'Bitrot Ward: your ◆ fades.'); }
   for (const x of fxFire(s, 'cycle', { do: 'repeat' })) if (beat(x)) st.repeat = { share: Number(x.fx.share) || 0, name: x.name || x.it.name };
   for (const x of fxFire(s, 'cycle', { do: 'free-helper' })) {
     const t = soonestAttacker(s);

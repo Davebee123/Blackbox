@@ -5589,16 +5589,20 @@ export default {
       "level": 45,
       "lean": "bastion",
       "primary": {
-        "signal": 416,
-        "reduction": 12
+        "signal": 375,
+        "reduction": 10
       },
       "secondary": {
         "reduction": 4,
         "regen": 16
       },
       "effect": {
-        "when": "start",
-        "do": "chit"
+        "when": "break",
+        "if": "one-left",
+        "do": "chit-fade",
+        "value": 2,
+        "limit": "fight",
+        "text": "When a break leaves only one part, you gain a ◆ for 2 cycles. Works once per fight."
       },
       "sources": [
         {
@@ -6117,10 +6121,9 @@ export default {
         "damage": 12
       },
       "effect": {
-        "when": "cycle",
-        "do": "cd-tick",
-        "value": 4,
-        "text": "Makes your cooldowns tick twice every 4th cycle."
+        "when": "start",
+        "do": "clock-start",
+        "value": 50
       },
       "sources": [
         {
@@ -6301,8 +6304,8 @@ export default {
       "flavour": "It never drops under this."
     },
     {
-      "id": "cold-boot-bedrock",
-      "name": "Cold Boot",
+      "id": "warm-reset",
+      "name": "Warm Reset",
       "base": "firmware-shell",
       "level": 50,
       "lean": "bastion",
@@ -6318,7 +6321,7 @@ export default {
       "effect": {
         "when": "start",
         "do": "shield%",
-        "value": 15
+        "value": 8
       },
       "sources": [
         {
@@ -6327,7 +6330,7 @@ export default {
           "planned": "Bedrock bosses"
         }
       ],
-      "flavour": "Cut the power, and it is the first thing back."
+      "flavour": "A restart that keeps the lights on."
     },
     {
       "id": "root-of-trust",

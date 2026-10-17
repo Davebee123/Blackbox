@@ -147,6 +147,7 @@ export const FX_IF = {
   'target-jammed': 'the target is Jammed',
   'target-armored': 'the target is an armored part',
   'target-last': 'the target is the last part standing',
+  'one-left': 'only one part is left',
   'below-25': 'you are below 25% health',
   shielded: 'you hold a shield',
   'momentum-full': 'your Momentum is full',
@@ -218,6 +219,7 @@ export const FX_DO = {
   'helper-soak': { when: ['struck'], label: 'turns an attack on you onto one of your helpers, which takes it and expires', own: true },
   'next-boost': { when: ['struck'], label: 'makes your next heal or shield X% larger', value: true },
   'shield%': { when: ['start'], label: 'shields you for X% of your max health', value: true },
+  'chit-fade': { when: ['start', 'break'], label: 'gives you a ◆ that fades after X cycles if you still hold it', value: true },
   'shield-absorb': { when: ['custom'], label: 'makes each point of your shields absorb X% more damage', value: true },
   'block-dot': { when: ['custom'], label: 'lets your Block take its full amount off damage over time on you (encryption, Corrupted and echoes), not just down to half' },
   // The hits you land.
@@ -240,7 +242,7 @@ export const FX_DO = {
   // Cooldowns.
   'first-cd': { when: ['custom'], label: "makes each skill's first cooldown in a fight X cycles shorter (never under 1)", value: true },
   'shortest-cd': { when: ['custom'], label: 'makes the shortest cooldown on your bar (over 1 cycle) X cycles shorter', value: true },
-  'cd-tick': { when: ['cycle'], label: 'ticks your cooldowns once more every Xth cycle', value: true, own: true },
+  'clock-start': { when: ['start'], label: 'starts your Clock Speed meter X% full each fight', value: true },
   // Momentum (the Breaker's).
   momentum: { when: ['break'], label: 'gives you X more Momentum', value: true },
   'spend%': { when: ['custom'], label: 'adds X% to a skill for each Momentum stack it spends', value: true },
