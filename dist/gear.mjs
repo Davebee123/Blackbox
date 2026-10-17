@@ -32,14 +32,22 @@ export const STATS = {
   // Offense (rig, everywhere)
   damage: { side: 'hacker', group: 'offense', name: 'Damage', unit: '', base: 2, flat: true, about: 'Adds this much damage to every skill hit you land.' },
   crit: { side: 'hacker', group: 'offense', name: 'Crit', unit: '%', base: 4, about: 'Increases the chance that a damaging hit is a critical strike. Everyone starts at 5%.' },
-  critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Adds this much damage to every critical strike, on top of ×1.5.' },
+  critDamage: { side: 'hacker', group: 'offense', name: 'Crit Damage', unit: '', base: 6, flat: true, about: 'Adds this much damage to every critical strike, on top of the half again a crit deals.' },
   accuracy: { side: 'hacker', group: 'offense', name: 'Accuracy', unit: '%', base: 2.5, about: 'Offsets the enemy\'s evasion, so your damaging skills miss less often. A miss still spends the cooldown.' },
   echo: { side: 'hacker', group: 'offense', name: 'Echo', unit: '%', base: 5, cap: 40, about: 'Gives each skill hit a chance to repeat for half damage. Against an armored part, the echo breaks another ◆.' },
-  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '%', base: 6, about: 'Increases the damage of your burns and helpers by this percentage.' }, // Damage over time keeps only part of the level growth (CONFIG.dotLevel), and Payload makes up the rest.
+  // Payload is Damage for the hits you don't land yourself: flat, on every burn tick and helper hit (combat.mjs dotHit).
+  // A budget point is 60% of Damage's (base 1.2 to its 2): a burn or helper build lands about twice as many of them as
+  // skill hits, most of them smaller. Its numbers on the bases, the Loaded affix and uniques are what the old percentage
+  // added to a 12 tick at their level, a tick keeping half the level growth (save v44, statsRestore). Damage over time
+  // keeps only part of the level growth (CONFIG.dotLevel), and Payload makes up the rest.
+  payload: { side: 'hacker', group: 'offense', name: 'Payload', unit: '', base: 1.2, flat: true, about: 'Adds this much damage to every burn tick and helper hit.' },
   // Defense (health on its side; the rest on both sides)
   signal: { side: 'hacker', group: 'survival', name: 'Signal', unit: '', base: 10, flat: true, about: 'Increases your max Signal on runs.' },
   integrity: { side: 'server', group: 'survival', name: 'Integrity', unit: '', base: 20, flat: true, about: 'Increases your server\'s max Integrity.' },
-  regen: { side: 'both', group: 'survival', name: 'Regen', unit: '', dp: 1, base: 0.5, flat: true, about: 'Heals this much every cycle in a fight. On your rig, it also heals you on every move during a run. On your server, it also heals slowly between fights, every minute.' },
+  // Regen is a whole number, counted over 5 (WoW's mana per 5): Regen R heals R every 5 cycles, a fifth of it each cycle
+  // (combat.mjs regenRate). Its numbers are five times what they were when it healed every cycle (save v44), so an item's
+  // healing is the same.
+  regen: { side: 'both', group: 'survival', name: 'Regen', unit: '', base: 2.5, flat: true, every: 5, about: 'Heals this much every 5 cycles in a fight. On your rig, it also heals this much every 5 moves on a run; on your server, this much every 5 minutes between fights.' },
   reduction: { side: 'both', group: 'survival', name: 'Block', unit: '', base: 1, flat: true, about: 'Reduces the damage of every hit against you by this much, but never below half.' },
   evasion: { side: 'both', group: 'survival', name: 'Evasion', unit: '%', base: 2.5, cap: 20, about: 'Gives each enemy damage attack a chance to miss you, up to 20%.' },
   sanitize: { side: 'both', group: 'survival', name: 'Sanitize', unit: '%', base: 8, cap: 50, about: 'Gives each Encrypt, Scramble or Replicate against you a chance to fail, up to 50%.' },
@@ -86,20 +94,20 @@ export const BASES = {
   mixnet: { slot: 'proxy', name: 'Mixnet', level: 26, primary: { signal: 140, reduction: 4 }, flavour: 'Your packets, shuffled with ten thousand others.' },
   'domain-front': { slot: 'proxy', name: 'Domain Front', level: 34, primary: { signal: 227, reduction: 6 }, flavour: 'Every request looks like it went to someone too big to block.' },
   'covert-channel': { slot: 'proxy', name: 'Covert Channel', level: 42, primary: { signal: 362, reduction: 10 }, flavour: 'Hidden in the timing between packets nobody reads.' },
-  'reverse-shell': { slot: 'shell', name: 'Reverse Shell', level: 1, primary: { signal: 12, regen: 0.5, restore: 12 }, flavour: 'It called home. You answered.' },
-  'tty-upgrade': { slot: 'shell', name: 'TTY Upgrade', level: 5, primary: { signal: 22, regen: 1, restore: 16 }, flavour: 'Tab completion. History. Civilisation.' },
-  'root-shell': { slot: 'shell', name: 'Root Shell', level: 11, primary: { signal: 35, regen: 1.5, restore: 20 }, flavour: '#' },
-  'restricted-shell-escape': { slot: 'shell', name: 'Restricted Shell Escape', level: 18, primary: { signal: 50, regen: 2, restore: 24 }, flavour: 'They boxed you in. Cute.' },
-  'ghost-shell': { slot: 'shell', name: 'Ghost Shell', level: 26, primary: { signal: 70, regen: 3, restore: 30 }, flavour: 'No process name. No parent. No logs.' },
-  'ring-zero-shell': { slot: 'shell', name: 'Ring 0 Shell', level: 34, primary: { signal: 114, regen: 4.9, restore: 49 }, flavour: 'Below the kernel, nothing asks who you are.' },
-  'firmware-shell': { slot: 'shell', name: 'Firmware Shell', level: 42, primary: { signal: 181, regen: 7.8, restore: 78 }, flavour: 'Reinstall the OS. It is still there.' },
-  'one-liner': { slot: 'script', name: 'One-liner', level: 1, primary: { damage: 2, signal: 10, payload: 12 }, flavour: 'Pipes all the way down.' },
-  'cron-job': { slot: 'script', name: 'Cron Job', level: 5, primary: { damage: 4, signal: 18, payload: 16 }, flavour: "Runs at 3 a.m. whether you're awake or not." },
-  dropper: { slot: 'script', name: 'Dropper', level: 11, primary: { damage: 6, signal: 28, payload: 20 }, flavour: 'Small, polite, carries something worse.' },
-  loader: { slot: 'script', name: 'Loader', level: 18, primary: { damage: 9, signal: 40, payload: 24 }, flavour: 'Unpacks in memory. Leaves nothing on disk.' },
-  'polymorphic-engine': { slot: 'script', name: 'Polymorphic Engine', level: 26, primary: { damage: 13, signal: 55, payload: 30 }, flavour: 'Never the same twice.' },
-  'living-off-the-land': { slot: 'script', name: 'Living off the Land', level: 34, primary: { damage: 21, signal: 89, payload: 49 }, flavour: 'Every tool it needs was already installed.' },
-  'metamorphic-engine': { slot: 'script', name: 'Metamorphic Engine', level: 42, primary: { damage: 34, signal: 142, payload: 78 }, flavour: 'It rewrites itself, and the rewrite rewrites itself.' },
+  'reverse-shell': { slot: 'shell', name: 'Reverse Shell', level: 1, primary: { signal: 12, regen: 2.5, restore: 12 }, flavour: 'It called home. You answered.' },
+  'tty-upgrade': { slot: 'shell', name: 'TTY Upgrade', level: 5, primary: { signal: 22, regen: 5, restore: 16 }, flavour: 'Tab completion. History. Civilisation.' },
+  'root-shell': { slot: 'shell', name: 'Root Shell', level: 11, primary: { signal: 35, regen: 7.5, restore: 20 }, flavour: '#' },
+  'restricted-shell-escape': { slot: 'shell', name: 'Restricted Shell Escape', level: 18, primary: { signal: 50, regen: 10, restore: 24 }, flavour: 'They boxed you in. Cute.' },
+  'ghost-shell': { slot: 'shell', name: 'Ghost Shell', level: 26, primary: { signal: 70, regen: 15, restore: 30 }, flavour: 'No process name. No parent. No logs.' },
+  'ring-zero-shell': { slot: 'shell', name: 'Ring 0 Shell', level: 34, primary: { signal: 114, regen: 24.5, restore: 49 }, flavour: 'Below the kernel, nothing asks who you are.' },
+  'firmware-shell': { slot: 'shell', name: 'Firmware Shell', level: 42, primary: { signal: 181, regen: 39, restore: 78 }, flavour: 'Reinstall the OS. It is still there.' },
+  'one-liner': { slot: 'script', name: 'One-liner', level: 1, primary: { damage: 2, signal: 10, payload: 1.4 }, flavour: 'Pipes all the way down.' },
+  'cron-job': { slot: 'script', name: 'Cron Job', level: 5, primary: { damage: 4, signal: 18, payload: 2.0 }, flavour: "Runs at 3 a.m. whether you're awake or not." },
+  dropper: { slot: 'script', name: 'Dropper', level: 11, primary: { damage: 6, signal: 28, payload: 2.9 }, flavour: 'Small, polite, carries something worse.' },
+  loader: { slot: 'script', name: 'Loader', level: 18, primary: { damage: 9, signal: 40, payload: 3.8 }, flavour: 'Unpacks in memory. Leaves nothing on disk.' },
+  'polymorphic-engine': { slot: 'script', name: 'Polymorphic Engine', level: 26, primary: { damage: 13, signal: 55, payload: 5.4 }, flavour: 'Never the same twice.' },
+  'living-off-the-land': { slot: 'script', name: 'Living off the Land', level: 34, primary: { damage: 21, signal: 89, payload: 9.7 }, flavour: 'Every tool it needs was already installed.' },
+  'metamorphic-engine': { slot: 'script', name: 'Metamorphic Engine', level: 42, primary: { damage: 34, signal: 142, payload: 17.0 }, flavour: 'It rewrites itself, and the rewrite rewrites itself.' },
   implant: { slot: 'implant', name: 'Implant', level: 15, primary: { damage: 6, signal: 30 }, flavour: 'Resident. Quiet. Yours.' }, // drops and compiles from item level 15 (the first Implant slot)
   bootkit: { slot: 'implant', name: 'Bootkit', level: 34, primary: { damage: 12.5, signal: 62 }, flavour: 'Loads before anything that could notice it.' },
   'firmware-rootkit': { slot: 'implant', name: 'Firmware Rootkit', level: 42, primary: { damage: 20, signal: 100 }, flavour: 'Lives in the chip. Survives the disk.' },
@@ -118,12 +126,12 @@ export const AFFIXES = {
   weaponized: { kind: 'prefix', name: 'Weaponized', stat: 'damage', lo: 1, hi: 4, from: 1 },
   precise: { kind: 'prefix', name: 'Precise', stat: 'crit', lo: 3, hi: 5, from: 1 },
   calibrated: { kind: 'prefix', name: 'Calibrated', stat: 'accuracy', lo: 3, hi: 5, from: 1 },
-  loaded: { kind: 'prefix', name: 'Loaded', stat: 'payload', lo: 4, hi: 10, from: 3 }, // Payload is a percentage. It lands on every helper hit and burn tick.
+  loaded: { kind: 'prefix', name: 'Loaded', stat: 'payload', lo: 0.5, hi: 1.7, from: 3 }, // Payload is flat: it lands on every helper hit and burn tick (1 to about 15, 2 by 25, 4 by 50)
   multithreaded: { kind: 'prefix', name: 'Multithreaded', stat: 'clock', lo: 6, hi: 10, from: 6 },
   brutal: { kind: 'prefix', name: 'Brutal', stat: 'critDamage', lo: 4, hi: 10, from: 8 },
   recursive: { kind: 'prefix', name: 'Recursive', stat: 'echo', lo: 4, hi: 8, from: 10 },
   bunker: { kind: 'suffix', name: 'of the Bunker', stat: 'signal', lo: 6, hi: 20, from: 1 },
-  mending: { kind: 'suffix', name: 'of Mending', stat: 'regen', lo: 0.3, hi: 1, from: 1 },
+  mending: { kind: 'suffix', name: 'of Mending', stat: 'regen', lo: 1.5, hi: 5, from: 1 }, // Regen over 5 cycles (STATS.regen.every)
   restoration: { kind: 'suffix', name: 'of Restoration', stat: 'restore', lo: 4, hi: 10, from: 3 }, // Restore is a percentage. It lands on every heal you cast.
   scavenger: { kind: 'suffix', name: 'of the Scavenger', stat: 'scavenge', lo: 6, hi: 12, from: 1 },
   ghost: { kind: 'suffix', name: 'of the Ghost', stat: 'evasion', lo: 2, hi: 4, from: 3 },
@@ -180,7 +188,7 @@ export const ruleValue = (id, level, roll = 0.5) => {
 export const affixValue = (id, level, roll = 0.5) => {
   const a = AFFIXES[id], t = Math.max(0, (Math.max(1, level) - 1) / 19);
   const v = (a.lo + (a.hi - a.lo) * t) * (0.85 + 0.3 * roll);
-  return STATS[a.stat]?.dp || Math.abs(a.hi) < 2 ? Math.round(v * 10) / 10 : Math.round(v);
+  return Math.max(1, Math.round(v)); // every stat is a whole number
 };
 const NAME_A = ['Ghost', 'Null', 'Black', 'Silent', 'Hollow', 'Iron', 'Glass', 'Static', 'Dead', 'Pale', 'Burnt', 'Cold', 'Feral', 'Rust', 'Neon', 'Grey'];
 const NAME_B = { exploit: ['Fang', 'Needle', 'Spike', 'Wedge', 'Payload', 'Lance'], proxy: ['Veil', 'Lattice', 'Bastion', 'Shroud', 'Bulwark', 'Mesh'], shell: ['Den', 'Cradle', 'Hollow', 'Burrow', 'Root', 'Nest'], script: ['Loop', 'Hook', 'Thread', 'Whisper', 'Daemon', 'Trick'], implant: ['Seed', 'Heart', 'Core', 'Tick', 'Ghost', 'Knot'] };
@@ -286,15 +294,15 @@ const pick = (rand, list) => list[Math.floor(rand() * list.length)];
 export function statValue(stat, level, mult, rand) {
   const st = STATS[stat];
   const raw = st.base * (st.flat ? power(level) : 1 + level / 25) * mult * (0.85 + 0.3 * rand());
-  return st.dp ? Math.max(0.1, Math.round(raw * 10) / 10) : Math.max(1, Math.round(raw));
+  return Math.max(1, Math.round(raw));
 }
-const round = (stat, v) => (STATS[stat]?.dp ? Math.round(v * 10) / 10 : Math.round(v));
+const round = (stat, v) => Math.round(v); // every stat is a whole number
 // A base's primaries at an item level, times a multiplier (rarity), each rolled ±10%.
 export function primaries(baseId, level, mult, rand) {
   const b = BASES[baseId], k = (power(Math.max(1, level)) / power(b.level)) * ITEM_SCALE.primary, out = {};
   for (const [stat, v] of Object.entries(b.primary)) {
     const x = Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v * (0.9 + 0.2 * rand());
-    out[stat] = round(stat, x * k * mult) || (STATS[stat]?.dp ? 0.1 : 1);
+    out[stat] = round(stat, x * k * mult) || 1;
   }
   return out;
 }
@@ -361,13 +369,37 @@ export function uniqueItem(u, level, rand) {
   const fromBase = BASES[best] ? primaries(best, L, ITEM_SCALE.uniqueBase, rand) : {};
   for (const [stat, v] of Object.entries(u.primary || {})) stats[stat] = round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * k * q) || 1;
   for (const [stat, v] of Object.entries(fromBase)) stats[stat] = Math.max(stats[stat] || 0, v);
-  for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Math.max(STATS[stat]?.dp ? 0.1 : 1, round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * q)) });
+  for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Math.max(1, round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * q)) });
   addStats(stats, u.downside);
   return { kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name };
 }
 
+// Save v44: whole-number stats. Regen counts over 5 cycles now (STATS.regen.every), so every Regen on a protocol or a
+// filter is five times what it was; Payload is flat, so an old percentage becomes what it added to a typical tick at the
+// item's level (pct/100 of a 12 tick, which keeps half the level growth: 12 × (1 + 2% a level)), the same rule the
+// bases, the Loaded affix and the uniques were converted by. Any other stat left with a decimal is rounded. It walks the
+// whole save (the stash, the pack, a breach's draft, a thread's offer, the market), and reads nothing outside it.
+export function statsRestore(s, was) {
+  if (!(was < 44)) return;
+  const whole = (v) => (v < 0 ? Math.min(-1, Math.round(v)) : Math.max(1, Math.round(v)));
+  const seen = new Set();
+  const walk = (x) => {
+    if (!x || typeof x !== 'object' || seen.has(x)) return;
+    seen.add(x);
+    const st = (x.kind === 'protocol' || x.kind === 'filter') && x.stats && typeof x.stats === 'object' ? x.stats : null;
+    if (st) {
+      if (typeof st.regen === 'number' && st.regen) st.regen = whole(st.regen * 5);
+      if (x.kind === 'protocol' && typeof st.payload === 'number' && st.payload) st.payload = whole((st.payload / 100) * 12 * (1 + 0.02 * (Math.max(1, x.level || 1) - 1)));
+      for (const k of Object.keys(st)) if (typeof st[k] === 'number' && st[k] && !Number.isInteger(st[k])) st[k] = whole(st[k]);
+      return;
+    }
+    for (const v of Array.isArray(x) ? x : Object.values(x)) walk(v);
+  };
+  walk(s);
+}
+
 // "+6% Damage · +2% Crit"
-export const fmtStat = (k, v) => `${STATS[k].dp ? Math.round(v * 10) / 10 : v}${STATS[k].unit}`;
+export const fmtStat = (k, v) => `${Math.round(v)}${STATS[k].unit}`; // whole numbers only
 export const statLine = (stats) => Object.entries(stats).filter(([k]) => STATS[k]).map(([k, v]) => `${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)} ${STATS[k].name}`).join(' · ');
 export const itemLabel = (item) => `${item.name} v${item.level}`;
 

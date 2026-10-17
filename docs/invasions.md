@@ -67,9 +67,9 @@ Rolled by weight when it sets out, from what the sending server's level allows a
 
 On a base of 18 (unit 10) the four upper tiers take 300 code more than before, on top of the 290-odd code the six tiers already took.
 
-**The streak.** Invasions stopped in a row, by your wall or by you. It pays more per stop (above) and every fifth stop in a row leaves a **capture**. A crash, a theft or a finished scout map ends it.
+**The streak.** Invasions stopped in a row, by your wall or by you. It pays more per stop (above) and every tenth stop in a row leaves a **capture** (every fifth until October 2026). A crash, a theft or a finished scout map ends it.
 
-**Captures** come from champions you kill and from every fifth stop in a row. A capture is now a **sure daemon** (at the invasion's level, from its band), plus the old roll for one of the three **invasion-only uniques** (Tripwire, Honeynet, Sinkhole: 20% a capture and 10% more for every capture without one, back to 20% when one drops; one you don't have comes first; a Listening Post helps). Captures no longer give protocols or filters: **Custom filters come from vaults** now (a vault's `filter.flt` is Custom one time in twelve), with their rare stats (Tar, Hive, Reflection).
+**Captures** come from champions you kill and from every tenth stop in a row. A capture is now a **sure daemon** (at the invasion's level, from its band), plus the old roll for one of the three **invasion-only uniques** (Tripwire, Honeynet, Sinkhole: 10% a capture and 5% more for every capture without one, back to 10% when one drops (20% and 10% until October 2026); one you don't have comes first; a Listening Post helps). Captures no longer give protocols or filters: **Custom filters come from vaults** now (a vault's `filter.flt` is Custom one time in twelve), with their rare stats (Tar, Hive, Reflection).
 
 **Old saves.** Signatures you held become code: a unit at your wall's base for each, split evenly over Cipher, Worm and Kernel (ten signatures on a base of 12 is 27 of each).
 
@@ -138,7 +138,7 @@ On a base of 18 (unit 10) the four upper tiers take 300 code more than before, o
 | Your kill at the wall (jack in) | **35%** |
 | A thief you intercept on its road | **50%** |
 | The wall (blocked outright or worn down) | **15%**: upgrading the wall never costs you daemons |
-| A capture (a champion you kill, every fifth stop in a row) | **100%** |
+| A capture (a champion you kill, every tenth stop in a row) | **100%** |
 | Bad-luck protection | **+5%** for every stop in a row without one, back to the base when one drops (15% reaches certain by the 18th) |
 
 - One roll per invasion stopped (a pack or a pair rolls once, at the end).

@@ -10,7 +10,7 @@
 //   rooms       a fight (process ▣, elite ◆▣, guard post ◆▣, the core ♛, the hunter's den ☠), an interactable (cache ▤,
 //               vault ▥, rest ☰) or an empty junction (·). The marks are the terminal's; the page draws icons. A fight room's family, author and attack set are fixed by the
 //               server's seed, so a room is a place you learn. Its mutation rerolls with each respawn, and one respawn
-//               in ten is a rare spawn (★, two levels up, better loot: LOOT.odds.rare).
+//               in 25 is a rare spawn (★, two levels up, better loot: LOOT.odds.rare).
 //   moving      the first time you walk into a room on a visit costs ROOMS.move of your max Signal (ROOMS.moveNew into one you've never been in); rooms you've walked
 //               this visit, and `wait`, are free. A live virus blocks its room: engage it, or step back.
 //   keys        the vault's key sits in a guard post on another branch, three or more rooms from the vault. A guard
@@ -71,10 +71,11 @@ export const ROOMS = {
   respawnNew: { process: 15, elite: 45, guard: 20, core: 60 },
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
   reconnect: 30000, // after you leave, the server takes you back this much later
-  rare: 0.1, rareLevel: 2,
+  rare: 0.04, rareLevel: 2, // one respawn in 25 is a ★ rare spawn (it was one in ten: 11% of all kills on the long climb and 70% of the blues)
   // XP (7.2): a room kill pays 1.25 kills (an elite three times that, via ELITE.xp), a first clear half again, a rare
-  // spawn twice, the Resident four times, the hunter twice; Mapped pays 5 kills.
-  xp: { room: 1.25, first: 0.5, rare: 2, boss: 4, hunter: 2, mapped: 5 },
+  // spawn five times (twice when one respawn in ten was one: fewer of them, each worth more, the climb's pace kept), the
+  // Resident four times, the hunter twice; Mapped pays 5 kills.
+  xp: { room: 1.25, first: 0.5, rare: 5, boss: 4, hunter: 2, mapped: 5 },
   // Each fight's size in a room, on top of the run sizes every Signal fight has (CONFIG.runHp, runDamage): a process at
   // your level costs 20–30% of your Signal, an elite 45–60%, the Resident wins about one fight in three (2.5).
   // stray: SPRAWL-00's strays (netrooms.mjs), the levels 1 to 5 where you learn the ticks: a plain virus's Integrity, lighter hits.
@@ -1319,7 +1320,7 @@ hooks.roomEnd = (s, result) => {
   if (room.kind !== 'socket') R.down[room.id] = nowOf(); // a socket's guard never comes back
   R.spawns[room.id] = (R.spawns[room.id] || 0) + 1;
   const wasRare = !!R.rare[room.id], first = !R.cleared[room.id];
-  // One respawn in ten is a rare spawn: it waits until you kill it (a held server's Root 5, a Legacy server's twice).
+  // One respawn in 25 is a rare spawn (ROOMS.rare): it waits until you kill it (a held server's Root 5, a Legacy server's twice).
   R.rare[room.id] = FIGHTS.includes(room.kind) && !['core', 'boss', 'socket'].includes(room.kind) && !room.wild && rnd(R, 31)() < ROOMS.rare * ((R.world && ask('rare', s)) || 1);
   programsPay(s, room, e);
   // First clear: half that fight's XP again (7.2).

@@ -17,7 +17,8 @@ const KPH = LOOT.killsPerHour;
 const BOSS_NAMES = Object.values(BOSSES).map((b) => b.name);
 const sourceOf = (src) => /^Kill: ★ rare|^Rare virus|^The archive/.test(src) ? 'Rare spawns' : /^Kill: (elite|guard)/.test(src) ? 'Elites and guards'
   : /Resident/.test(src) ? 'Resident (Core)' : src === 'Kill: boss' || BOSS_NAMES.some((n) => src === `${n} drops`) ? 'Bosses' : /^KESSLER/.test(src) ? 'The farm'
-  : /^Kill: /.test(src) ? 'Trash' : /^(Banked|Vault)/.test(src) ? 'Vaults' : /^(Native unique|Strain trophy)$/.test(src) ? 'World uniques' : 'Quests';
+  : /^Kill: /.test(src) ? 'Trash' : /^(Banked|Vault)/.test(src) ? 'Vaults' : /^(Native unique|Strain trophy)$/.test(src) ? 'World uniques'
+  : /^Streak of|leaves a capture$/.test(src) ? 'Invasion captures' : /^Dead drop/.test(src) ? 'Couriers, dead drops' : 'Quests';
 const WORLD = ['Trash', 'Elites and guards', 'Rare spawns', 'Vaults', 'World uniques']; // a gold from these is a world drop
 
 const total = { mins: 0, wins: 0, drops: {}, from: {}, cat: {}, kills: {}, bossKills: {}, band: BANDS.map(() => ({ kills: 0, drops: {} })), world: 0 };
@@ -62,14 +63,16 @@ const rnd = (r) => ['Trash', 'Elites and guards', 'Rare spawns', 'Vaults'].reduc
 console.log(`random sources (trash, elites, rares, vaults): ${rnd('tuned')} blue (${oneIn(rnd('tuned'))}), ${rnd('custom')} yellow (${oneIn(rnd('custom'))})`);
 console.log('\nBy level band (kills a drop)');
 console.log('Band     |  kills | ' + RAR.map((r) => NAME[r].split(' ')[0].padStart(10)).join(' | '));
-BANDS.forEach(([a, b], i) => { const x = total.band[i]; if (!x.kills) return; console.log(`${`${a}–${b}`.padEnd(8)} | ${String(x.kills).padStart(6)} | ${RAR.map((r) => oneIn(x.drops[r] || 0, x.kills).padStart(10)).join(' | ')}`); });
+BANDS.forEach(([a, b], i) => { const x = total.band[i]; if (!x.kills) return; console.log(`${`${a}–${b}`.padEnd(8)} | ${String(x.kills).padStart(6)} | ${RAR.map((r) => oneIn(x.drops[r] || 0, x.kills).padStart(10)).join(' | ')} | ${((x.drops.unique || 0) / (x.kills / KPH)).toFixed(2)} uniques an hour`); });
 console.log('\nBy source (drops; a kill source also its kills and odds a kill)');
-const order = ['Trash', 'Elites and guards', 'Rare spawns', 'Resident (Core)', 'Bosses', 'The farm', 'Vaults', 'Quests', 'World uniques'];
+const order = ['Trash', 'Elites and guards', 'Rare spawns', 'Resident (Core)', 'Bosses', 'The farm', 'Vaults', 'Quests', 'Couriers, dead drops', 'Invasion captures', 'World uniques'];
 for (const c of order) {
   const by = total.cat[c] || {}, k = total.kills[c];
   const list = RAR.filter((r) => by[r]).map((r) => `${by[r]} ${NAME[r].split(' ')[0]}${k ? ` (1 in ${Math.round(k / by[r])})` : ''}`).join(', ') || 'nothing';
   console.log(`${c.padEnd(18)} ${k ? `${String(k).padStart(5)} kills · ` : '              '}${list}`);
 }
+// Uniques an hour of real play (LOOT.killsPerHour): the designer's rule is never more than one an hour, about one every two.
+console.log(`\nUniques: ${total.drops.unique || 0} in ${(K / KPH).toFixed(0)} hours, ${((total.drops.unique || 0) / (K / KPH)).toFixed(2)} an hour (never over 1 in a band; aim 0.5): ${order.filter((c) => total.cat[c]?.unique).map((c) => `${c} ${total.cat[c].unique}`).join(', ')}`);
 console.log('\nBoss kills: ' + Object.entries(total.bossKills).map(([b, n]) => `${BOSSES[b]?.name || b} ${n}`).join(', '));
 console.log('\nWhere they came from');
 const srcs = Object.entries(total.from).sort((a, b) => Object.values(b[1]).reduce((x, y) => x + y, 0) - Object.values(a[1]).reduce((x, y) => x + y, 0));

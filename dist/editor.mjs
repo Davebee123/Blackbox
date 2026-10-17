@@ -220,7 +220,7 @@ const UNIQUE_TEMPLATES = {
   plain: { label: 'Big numbers, no effect', hint: 'A simple early unique', u: { base: 'proof-of-concept', level: 3, primary: { damage: [9, 11], signal: 12 }, secondary: { crit: 4 } } },
   hit: { label: 'Bonus damage on a condition', hint: 'When you hit a part, if …', u: { base: 'weaponized-exploit', level: 8, primary: { damage: [13, 16] }, secondary: { crit: 4 }, effect: { when: 'hit', if: 'target-below-half', do: 'damage%', value: 30 } } },
   start: { label: 'Something at the start of each fight', hint: 'A chit, or a guaranteed first crit', u: { base: 'socks-tunnel', level: 8, primary: { signal: 65, reduction: 2 }, effect: { when: 'start', do: 'chit' } } },
-  struck: { label: 'When you get hit', hint: 'Halve it, restore, once per fight or run', u: { base: 'tty-upgrade', level: 10, primary: { signal: 32, regen: 2 }, effect: { when: 'struck', if: 'below-20', do: 'restore%', value: 25, limit: 'run' } } },
+  struck: { label: 'When you get hit', hint: 'Halve it, restore, once per fight or run', u: { base: 'tty-upgrade', level: 10, primary: { signal: 32, regen: 10 }, effect: { when: 'struck', if: 'below-20', do: 'restore%', value: 25, limit: 'run' } } },
   stat: { label: 'A stat that doubles', hint: 'While a condition holds', u: { base: 'cron-job', level: 8, primary: { damage: 6, signal: 22 }, secondary: { evasion: 4 }, effect: { when: 'always', if: 'even-cycle', do: 'stat-x2', stat: 'evasion' } } },
   tradeoff: { label: 'Huge numbers with a downside', hint: 'GLASSJAW style', u: { base: 'weaponized-exploit', level: 10, primary: { damage: [20, 24] }, downside: { reduction: -2 } } },
 };

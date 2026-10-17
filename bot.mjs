@@ -78,7 +78,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     // back as Banked when you jack out; that second line is the same item. Kills are split into plain, elite and guard.
     if (e.type === 'drop' && e.item) {
       const it = e.item, key = it.name + JSON.stringify(it.stats), packs = (stats.packKeys ||= new Set());
-      let src = (e.message.match(/^([^:]{1,40}):/)?.[1] || '').trim();
+      let src = (e.message.match(/^([^:]{1,60}):/)?.[1] || '').trim(); // 60: a champion's capture (CHAMPION SLEEPER-4903 v2 leaves a capture) is a long one
       const kill = e.message.match(/^(.+?) dropped /), v = s.encounter?.virus, won = s.encounter && !active(s) && s.encounter.phase === 'victory';
       if (kill) { const who = kill[1]; src = s.encounter?.rooms?.rare ? 'Kill: ★ rare' : /RESIDENT/.test(who) ? 'Kill: Resident (Core)' : Object.values(BOSSES).some((b) => b.name.toUpperCase() === who) ? 'Kill: boss' : /^ELITE /.test(who) ? 'Kill: elite' : Object.values(GUARDS).some((g) => g.name.toUpperCase() === who) ? 'Kill: guard' : /^[A-Z][A-Z -]*-\d{3,}$/.test(who) || /-\d{4}/.test(who) ? 'Kill: room' : `Kill: ${who}`; if (/In your pack/.test(e.message)) packs.add(key); }
       else if (src === 'Loot' && won) src = v.boss ? 'Kill: boss' : v.elite ? 'Kill: elite' : 'Kill: room'; // a wild kill (SPRAWL-00, rogue servers, lairs), straight into the stash
@@ -139,7 +139,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   // Gear like a player: the best item in each slot (rarity, then level); deconstruct the rest.
   const effectOf = (it) => !!(it.unique || it.zeroDay || it.rule);
   const hitNow = () => 25 * power(hackerLevel(s)) + loaded(s).reduce((n, x) => n + (x.stats.damage || 0), 0);
-  const W = { crit: 0.004, critDamage: 0.001, accuracy: 0.002, echo: 0.004, payload: 0.001, regen: 0.01, reduction: 0.01, evasion: 0.004, sanitize: 0.001, restore: 0.001, leech: 0.005, clock: 0.002, stealth: 0.001, sync: 0.001, scavenge: 0.0005 };
+  const W = { crit: 0.004, critDamage: 0.001, accuracy: 0.002, echo: 0.004, payload: 0.007, regen: 0.002, reduction: 0.01, evasion: 0.004, sanitize: 0.001, restore: 0.001, leech: 0.005, clock: 0.002, stealth: 0.001, sync: 0.001, scavenge: 0.0005 }; // Payload flat (about a seventh of the old percentage), Regen over 5 cycles (five times the number): the same worth
   const worth = (it, hit = hitNow(), sig = maxSignal(s)) => (it.stats.damage || 0) / hit + (it.stats.signal || 0) / sig + Object.entries(it.stats).reduce((n, [k, v]) => n + (W[k] || 0) * v, 0) + (effectOf(it) ? 0.03 : 0);
   const value = gearRule === 'stats' ? (it) => worth(it) : (it) => RARITY_ORDER.indexOf(it.rarity) * 100 + it.level;
   const judged = new Set(), wornSince = {};

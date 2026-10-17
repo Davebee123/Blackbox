@@ -2,7 +2,7 @@
 // Archive. docs/ui.md tokens and components, in the breach screen's style: amber is what you can click, teal is yours,
 // gray is out of reach or outgrown.
 import { esc, conClass } from './view.mjs';
-import { hackerLevel, UNIQUES, bossUniques, bossChance, lairChance } from './combat.mjs';
+import { hackerLevel, UNIQUES, bossUniques, bossChance, bossDone, lairChance } from './combat.mjs';
 import { lairUniques } from './network.mjs';
 import { BOSSES, BOSS_LOOT } from './data.mjs';
 import { AUTHORS } from './authors.mjs';
@@ -110,6 +110,7 @@ function collection(s, srv) {
   const got = s.collection || {}, have = ids.filter((id) => got[id]).length;
   const odds = Math.round((B.native ? lairChance(s, 'you') : bossChance(s, srv.resident)) * 100);
   const items = ids.map((id) => got[id] ? `<li class="on" title="${esc(UNIQUES[id]?.flavour || '')}"><b class="iname r-zeroday">${esc(UNIQUES[id].name)}</b></li>` : `<li><span class="coll-q" title="${esc(B.native ? 'A native of your network. It drops from the native Residents.' : `One of ${B.name}'s own.`)}">???</span></li>`).join('');
+  if (!B.native && bossDone(s, srv.resident)) return `<div class="cp-coll"><span class="cp-coll-n">${have}/${ids.length}</span><span class="coll-odds" title="It drops each of its own only once: from now on it drops only as an elite.">all found</span><ul>${items}</ul></div>`;
   return `<div class="cp-coll"><span class="cp-coll-n">${have}/${ids.length}</span><span class="coll-odds" title="${esc(`The chance a kill drops one. Each kill that drops none adds ${Math.round((B.raid ? BOSS_LOOT.raid : BOSS_LOOT).pity * 100)}%.`)}">${odds}% a kill</span><ul>${items}</ul></div>`;
 }
 function runsLine(srv) {

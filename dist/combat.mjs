@@ -37,7 +37,7 @@ export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, wat
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, craftRelay, traceNear, leadOf } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded } from './gear.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { fxText } from './content.mjs';
@@ -47,7 +47,7 @@ import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TI
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 43; // v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 44; // v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -402,7 +402,6 @@ export function gearStat(s, stat, side = null) {
     if (fx?.when === 'always' && fx.do === 'stat-x2' && fx.stat === stat && !['signal', 'integrity'].includes(stat) && fxCond(s, fx)) n += it.stats[stat] || 0;
   }
   if (side !== 'hacker') n += (FILTER_STATS[stat]?.home ? (FILTER_STATS[stat].pct ? Math.round((serverMax(s) * filterStat(s, stat)) / 100) : filterStat(s, stat)) : 0); // the firewall's filters for the fights at home: decoys, a sandbox, Block, a shield, Regen, barbs
-  if (STATS[stat]?.dp) n = Math.round(n * 10) / 10;
   return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
 }
 // Who's being defended right now: your rig on a run, the server at home.
@@ -417,8 +416,11 @@ export const scaled = (s, n) => Math.max(1, Math.round(n * powerOf(s)));
 export const restoreMult = (s) => 1 + gearStat(s, 'restore') / 100;
 export const healScaled = (s, n) => Math.max(1, Math.round(n * (1 + (powerOf(s) - 1) * CONFIG.healLevel) * restoreMult(s)));
 // Damage over time (burn ticks, helper hits): built with scaled(), it keeps CONFIG.dotLevel of the level
-// growth at the hit, times Payload.
-export const dotMult = (s) => ((1 + (powerOf(s) - 1) * CONFIG.dotLevel) / powerOf(s)) * (1 + gearStat(s, 'payload') / 100);
+// growth at the hit (dotMult), and Payload adds its flat number to each one (dotHit), as Damage does to a skill hit.
+export const dotMult = (s) => (1 + (powerOf(s) - 1) * CONFIG.dotLevel) / powerOf(s);
+export const dotHit = (s, base) => base * dotMult(s) + gearStat(s, 'payload');
+// Regen a cycle (or a move, or a minute at home): Regen counts over STATS.regen.every of them.
+export const regenRate = (n) => n / (STATS.regen.every || 1);
 // The level gap to the enemy you're fighting (positive: it's above you).
 export const levelGap = (s) => (s.encounter?.virus?.level || hackerLevel(s)) - hackerLevel(s);
 // Classic-style misses: 5% against a same-level target, +1% per level it's above you, −1% per
@@ -426,8 +428,8 @@ export const levelGap = (s) => (s.encounter?.virus?.level || hackerLevel(s)) - h
 const gapMiss = (gap) => Math.min(CONFIG.maxMiss, Math.max(0, CONFIG.baseMiss + gap));
 export const missChance = (s) => (CONFIG.misses ? Math.max(0, gapMiss(levelGap(s)) - gearStat(s, 'accuracy')) : 0);
 export const enemyMissChance = (s) => (CONFIG.misses ? Math.min(75, gapMiss(-levelGap(s)) + defense(s, 'evasion')) : defense(s, 'evasion'));
-// Server Regen between fights: very slow (its per-cycle value, per real minute).
-// Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen, per minute.
+// Server Regen between fights: very slow (its number every 5 real minutes, as in a fight it is every 5 cycles).
+// Between fights: resting (see CONFIG.restRegen) plus any Self-healing filter's Regen.
 const maxSignalOf = (s) => maxSignal(s);
 export function idleRegen(s, ms) {
   // Signal rests back up while you're not connected.
@@ -443,7 +445,7 @@ export function idleRegen(s, ms) {
   }
   if (active(s) || s.server.integrity <= 0 || s.server.integrity >= s.server.max) return changed;
   const besieged = s.invasion && ['siege', 'breach'].includes(s.invasion.state);
-  const rate = gearStat(s, 'regen', 'server') + CONFIG.restRegen * s.server.max * (besieged ? 0.5 : 1); // half rate while an invasion is at the wall
+  const rate = regenRate(gearStat(s, 'regen', 'server')) + CONFIG.restRegen * s.server.max * (besieged ? 0.5 : 1); // half rate while an invasion is at the wall
   if (!rate) return changed;
   s.server.regenAcc = (s.server.regenAcc || 0) + (rate * ms) / 60000;
   if (s.server.regenAcc < 1 - 1e-9) return changed;
@@ -518,6 +520,9 @@ function pickUnique(s, pool) {
 // for every kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
 export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
 export const bossOdds = (boss) => (BOSSES[boss]?.raid ? BOSS_LOOT.raid : BOSS_LOOT);
+// A boss that drops each of its own only once (BOSS_LOOT.once: the Resident, met on every takeover) is done once you
+// hold them all: no more roll for them, and nothing in its place (it drops only as an elite).
+export const bossDone = (s, boss) => BOSS_LOOT.once.includes(boss) && bossUniques(boss).every((u) => s.collection?.[u.id]);
 export const bossChance = (s, boss) => Math.min(1, (bossOdds(boss).chance + bossOdds(boss).pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1) + (s.breach?.fx?.unique || 0)); // a breach's Listening Post (rewrites.mjs), and a dig in's +10% (world.mjs)
 // Does this boss always drop an item (BOSS_LOOT.resident: the Resident's switch)?
 export const sureDrop = (boss) => !!BOSSES[boss] && (boss !== 'resident' || BOSS_LOOT.resident === 'boss');
@@ -541,7 +546,7 @@ export function bossTable(s, boss) {
   const ids = native ? (lairBoss(s, 'you') === boss ? mine(s)?.uniques || [] : []) : bossUniques(boss).map((u) => u.id);
   return {
     sure: sureDrop(boss) ? (raid ? 'custom' : 'tuned') : null, yellow: BOSS_LOOT.yellow, raid, native, gold: raid ? BOSS_LOOT.raid.gold : 0,
-    chance: native ? lairChance(s, 'you') : bossChance(s, boss), base: odds.chance, pity: odds.pity,
+    chance: native ? lairChance(s, 'you') : bossDone(s, boss) ? 0 : bossChance(s, boss), base: odds.chance, pity: odds.pity, done: !native && bossDone(s, boss),
     uniques: ids.map((id) => ({ id, name: named(s, id) ? UNIQUES[id].name : null, level: UNIQUES[id].level, got: !!s.collection?.[id] })).sort((a, b) => a.level - b.level),
   };
 }
@@ -565,12 +570,10 @@ function bossUnique(s, boss, level) {
   const pool = bossUniques(boss);
   if (!pool.length) return;
   const name = BOSSES[boss]?.name || boss;
+  if (bossDone(s, boss)) return; // the Resident with both of its own found: no roll at all (it drops as an elite)
   if (rand(s) < bossChance(s, boss)) {
     (s.pity ||= {})[boss] = 0;
     const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s));
-    // A boss that drops each of its own once (BOSS_LOOT.once: the Resident, met on every takeover): once you
-    // hold them all, its roll gives a yellow.
-    if (!fresh.length && BOSS_LOOT.once.includes(boss)) return addItem(s, rollItem(() => rand(s), { level, rarity: 'custom' }), `${name} drops: `);
     const from = heard.length ? heard : fresh.length ? fresh : pool;
     const u = from[Math.floor(rand(s) * from.length)];
     addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `);
@@ -675,7 +678,7 @@ const uniqueFx = (s) => {
   }
   out.push(...(hooks.extraFx?.(s) || [])); // more effect blocks from outside the engine (none today)
   const amp = out.find((x) => x.fx.do === 'rule-amp');
-  if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100) * 10) / 10;
+  if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100)); // a whole number, as every rule's is
   return out.concat(Object.values(rules));
 };
 // The fight HUD's gear row reads the same list and conditions (fightread.mjs gearLive), so it lights exactly when they hold.
@@ -2381,7 +2384,7 @@ export function hit(s, p, base, opts = {}) {
   // A crew boss's firewall phase (raid.mjs): while its shield is up, every hit on the boss lands on the shield,
   // armor or not.
   if (base > 0 && e.virus.raid?.shield && !p.raidAdd) {
-    const n = Math.floor((opts.dot ? base * dotMult(s) : base + (opts.mine && !opts.server ? gearStat(s, 'damage') : 0)) * damageMultiplier(s, p, opts) + 1e-9);
+    const n = Math.floor((opts.dot ? dotHit(s, base) : base + (opts.mine && !opts.server ? gearStat(s, 'damage') : 0)) * damageMultiplier(s, p, opts) + 1e-9);
     raidShield(s, p, n, true);
     if (!opts.server) noteDealt(s, n); // it still draws aggro
     return { dealt: 0, overflow: 0, absorbed: true };
@@ -2407,7 +2410,7 @@ export function hit(s, p, base, opts = {}) {
   }
   // Flat gear: Damage on your skill hits, Payload on burn ticks and helper hits.
   if (base > 0 && !opts.server) {
-    if (opts.dot) base *= dotMult(s); // Payload, and damage over time's share of level growth
+    if (opts.dot) base = dotHit(s, base); // damage over time's share of level growth, plus Payload
     else if (opts.mine) base += gearStat(s, 'damage') + fxFire(s, 'hit', { target: p, do: 'damage+' }).reduce((n, x) => n + x.value, 0);
   }
   let raw = Math.floor(base * damageMultiplier(s, p, opts) + 1e-9); // tolerance: 25 × 1.5 × 1.2 is 45, not 44.999…
@@ -2859,9 +2862,9 @@ function useAbility(s, intent, auto = false) {
     // A Rootkit Implant burns until the part breaks: it has no "rest" to cash in, so it keeps burning
     // (cashing in its 99-tick timer one-shot any part).
     const mine = burnsOn(s, target).filter((b) => b.id !== 'implant');
-    let total = 0;
-    for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; e.burns.splice(e.burns.indexOf(b), 1); }
-    hit(s, target, Math.round(total * dotMult(s) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
+    let total = 0, ticks = 0;
+    for (const b of mine) { for (let k = 0; k < b.left; k++) total += b.damage + (b.grow || 0) * k; ticks += b.left; e.burns.splice(e.burns.indexOf(b), 1); }
+    hit(s, target, Math.round((total * dotMult(s) + ticks * gearStat(s, 'payload')) * a.mult * (hasTalent(s, 'assassinate') && on(s, target, 'tagged') ? 2 : 1)), { by: 'Detonate', pierce: true }); // burns' worth, Payload included
   }
   if (id === 'propagate') {
     // Fragments catch the copies at double.
@@ -3236,10 +3239,10 @@ export function playerPhase(s, phase = 'all') {
   classEach('cycle', s); // class modules: the end of this player's turn
   // Leech pays out; Regen ticks (the rig's on runs, the server's at home).
   if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech'); }
-  const rg = defense(s, 'regen');
+  const rg = regenRate(defense(s, 'regen')); // Regen R: R every 5 cycles
   if (rg) {
     e.regenAcc = (e.regenAcc || 0) + rg;
-    const n = Math.floor(e.regenAcc);
+    const n = Math.floor(e.regenAcc + 1e-9);
     if (n) { e.regenAcc -= n; const d = defender(s); const got = Math.max(0, Math.min(n, healCap(s) - d.integrity)); d.integrity += got; if (got) emit(s, 'regen', `Regen +${got}.`, { amount: got }); }
   }
 
@@ -3767,7 +3770,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -3917,6 +3920,7 @@ export function restore(raw) {
     { const back = floorsRestore(s, was); const l = back && was < 41 ? floorsLetter(back) : null; if (l) systemLetter(s, l); } // v41: layers become floors (floors.mjs)
     hooks.roomsRestore?.(s, was); // v39: every server you'd found is a room graph (netrooms.mjs)
     hooks.threadsRestore?.(s, was); // v43: threads (threads.mjs): an older save starts with none
+    statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;

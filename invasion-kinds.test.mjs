@@ -124,7 +124,7 @@ test('the bounty grows while it sits contested, up to triple, and the growth is 
   assert.equal(code(w), b * codeUnit(6), 'the base, nothing grown');
 });
 
-test('the streak: each stop in a row pays 10% more (up to 50%), every fifth drops a capture, a crash ends it', () => {
+test('the streak: each stop in a row pays 10% more (up to 50%), every tenth drops a capture, a crash ends it', () => {
   const s = world({ fw: 40 });
   const caps = () => s.logs.filter((e) => e.daemon && /a capture\./.test(e.message)).length;
   const got = [];
@@ -135,9 +135,10 @@ test('the streak: each stop in a row pays 10% more (up to 50%), every fifth drop
     for (let t = 0; t < 20 && s.invasion; t++) wait(s, MIN);
     got.push(caps() - had);
   }
-  assert.equal(s.net.streak, 5);
-  assert.deepEqual(got.slice(0, 4), [0, 0, 0, 0]);
-  assert.equal(got[4], 1, 'the fifth in a row leaves a capture: a sure daemon');
+  assert.equal(STREAK.capture, 10);
+  assert.equal(s.net.streak, STREAK.capture);
+  assert.deepEqual(got.slice(0, -1), Array(STREAK.capture - 1).fill(0));
+  assert.equal(got.at(-1), 1, 'the tenth in a row leaves a capture: a sure daemon');
   assert.equal(streakMult(s), 1 + STREAK.step * STREAK.max, '+50% at most');
   // A breach that crashes you ends it.
   s.firewall.pin = 0;
@@ -146,7 +147,7 @@ test('the streak: each stop in a row pays 10% more (up to 50%), every fifth drop
   wait(s, 2 * MIN);
   assert.ok(s.degraded);
   assert.equal(s.net.streak, 0);
-  assert.ok(s.logs.some((e) => /streak of 5 ended/.test(e.message)));
+  assert.ok(s.logs.some((e) => new RegExp(`streak of ${STREAK.capture} ended`).test(e.message)));
 });
 
 test('a pack: three that count 4 levels higher at the wall until it thins; one fight each, the bounty at the end', () => {

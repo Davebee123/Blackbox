@@ -112,4 +112,11 @@ test('the Codex: a boss\'s page lists its loot table, the odds and the next kill
   assert.match(codexPageMarkup(s, 'boss:relayking'), /Crown Packet/);
   assert.match(codexPageMarkup(s, 'boss:foreman'), /Custom<\/b><small>every kill/);
   assert.equal(bossTable(s, 'resident').sure, BOSS_LOOT.resident === 'boss' ? 'tuned' : null);
+  // The Resident drops each of its own once: with both found, no odds and no next kill's chance.
+  s.dex.fought.resident = 1;
+  assert.match(codexPageMarkup(s, 'boss:resident'), /Next kill/);
+  for (const u of Object.values(UNIQUES).filter((x) => x.sources?.some((src) => src.kind === 'boss' && src.id === 'resident'))) s.collection[u.id] = 1;
+  const done = codexPageMarkup(s, 'boss:resident');
+  assert.match(done, /Uniques: both found/);
+  assert.doesNotMatch(done, /Next kill/);
 });

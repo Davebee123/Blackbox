@@ -154,7 +154,7 @@ test('respawns: a fallen room comes back on its timer (never while you stand in 
   assert.equal(FP.respawnMs(s, roomOfKind(s, 'guard')), 3 * 60000);
   assert.equal(FP.respawnMs(s, roomOfKind(s, 'core')), 10 * 60000);
   assert.equal(FP.ROOMS.respawn.cache, 120, 'caches and puzzle boards: 2 hours either way');
-  assert.equal(FP.ROOMS.rare, 0.1, 'one respawn in ten is a rare spawn');
+  assert.equal(FP.ROOMS.rare, 0.04, 'one respawn in 25 is a rare spawn');
   R.mapped = null;
   tick(T + 1000);
   assert.equal(FP.isUp(s, room), false, 'never while you stand in it');

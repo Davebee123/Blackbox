@@ -63,22 +63,23 @@ const longChip = (i) => i.name.length > 6 || i.name.length + String(effectLabel(
 export const attackCode = (name = '') => (name[0] + name.slice(1).replace(/[aeiou\s'-]/gi, '')).slice(0, 3).toUpperCase();
 const levelTag = (s, level, label = `Level ${level}`) => `<b class="${conClass(level - hackerLevel(s))}" title="${level > hackerLevel(s) ? `${level - hackerLevel(s)} levels above you` : level < hackerLevel(s) ? `${hackerLevel(s) - level} levels below you` : 'your level'}">${label}</b>`;
 // Skill text with this level's numbers: every level adds 4% to damage and shields. Heals you cast and
-// damage over time (burn ticks, helpers) take CONFIG.healLevel / dotLevel of that, times Restore / Payload.
+// damage over time (burn ticks, helpers) take CONFIG.healLevel / dotLevel of that; heals times Restore, and
+// Payload adds its flat number to every burn tick and helper hit.
 export function scaledText(s, id, text, arch = null) {
   const a = ABILITIES[id];
   const k = arch ? power(hackerLevel(s, arch)) : powerOf(s);
   const kHeal = (1 + (k - 1) * CONFIG.healLevel) * (1 + gearStat(s, 'restore') / 100);
-  const kDot = (1 + (k - 1) * CONFIG.dotLevel) * (1 + gearStat(s, 'payload') / 100);
-  if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1)) return text;
+  const kDot = 1 + (k - 1) * CONFIG.dotLevel, pay = gearStat(s, 'payload');
+  if (!a || !text || (k === 1 && kHeal === 1 && kDot === 1 && !pay)) return text;
   const healing = a.verb === 'heal' || id === 'patch';
-  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot };
+  const factor = { heal: kHeal, drain: kHeal, tick: healing ? kHeal : kDot, helper: kDot }, plus = { tick: healing ? 0 : pay, helper: pay }; // Payload: flat, on each tick and helper hit
   // a.scales: the extra numbers a subclass skill writes in its text (dist/classes), as fields to scale.
-  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k]).filter(([n]) => typeof n === 'number' && n > 1);
-  if (id === 'counter') nums.push([SKILLS.fixedCounter, k]);
-  if (id === 'hook') nums.push([SKILLS.hooked, k]);
+  const nums = ['damage', 'heal', 'shield', 'tick', 'helper', 'all', 'cap', 'floor', ...(a.scales || [])].map((f) => [a[f], factor[f] ?? k, plus[f] || 0]).filter(([n]) => typeof n === 'number' && n > 1);
+  if (id === 'counter') nums.push([SKILLS.fixedCounter, k, 0]);
+  if (id === 'hook') nums.push([SKILLS.hooked, k, 0]);
   let out = text;
   const seen = new Set();
-  for (const [n, f] of nums) if (!seen.has(n) && seen.add(n)) out = out.replace(new RegExp(`(^|[^\\d.×])${n}(?![\\d%]| cycles)`, 'g'), (m, pre) => `${pre}${Math.max(1, Math.round(n * f))}`); // not a count of cycles (Heartbeat: 4 a cycle for 4 cycles)
+  for (const [n, f, add] of nums) if (!seen.has(n) && seen.add(n)) out = out.replace(new RegExp(`(^|[^\\d.×])${n}(?![\\d%]| cycles)`, 'g'), (m, pre) => `${pre}${Math.max(1, Math.round(n * f + add))}`); // not a count of cycles (Heartbeat: 4 a cycle for 4 cycles)
   return out;
 }
 
@@ -820,7 +821,7 @@ function statSheet(s, side) {
   const total = (k) => {
     const v = gearStat(s, k, side);
     if (k === 'crit') return { v: critChance(s), text: `${critChance(s)}%`, base: true };
-    if (k === 'critDamage') return { v, text: v ? `×1.5 +${v}` : '×1.5', base: true };
+    if (k === 'critDamage') return { v, text: v ? `+50% +${v}` : '+50%', base: true }; // a crit's half again (CRIT.multiplier), and Crit Damage on top: no decimals
     if (k === 'signal') return { v, text: String(maxSignal(s)), base: true };
     if (k === 'integrity') return { v, text: String(s.server.max), base: true };
     return { v, text: (v ? '+' : '') + fmtStat(k, v) + (STATS[k].cap && v >= STATS[k].cap ? ' (max)' : '') };
@@ -948,7 +949,7 @@ export function craftCats(s, ui = {}) {
   return cats;
 }
 // What comes out: rarity and level as chips, stats as icon rows, then any rule text and a footer.
-const filterStatRow = (k) => { const x = FILTER_STATS[k], [a, b] = x.range; return x.family ? [{ ransomware: 'cipher', ghostroot: 'kernel' }[k] || k, `+${a}–${b}`, x.name.replace(/^ lv /, 'lv '), `More levels against ${x.name.replace(/^ lv vs /, '')} invaders only`] : [{ frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike' }[k] || 'item', `${a}–${b}%`, x.name.replace(/^% /, ''), '']; };
+const filterStatRow = (k) => { const x = FILTER_STATS[k], [a, b] = x.range; return x.family ? [{ ransomware: 'cipher', ghostroot: 'kernel' }[k] || k, `+${a}–${b}`, x.name.replace(/^ lv /, 'lv '), `More levels against ${x.name.replace(/^ lv vs /, '')} invaders only`] : [{ frag: 'scrap', defrag: 'repair', grind: 'damage', chip: 'shield', tarpit: 'tarpit', sting: 'spike' }[k] || 'item', `${Math.max(1, Math.round(a))}–${Math.round(b)}${/^%/.test(x.name) ? '%' : ''}`, x.name.replace(/^% /, '').trim(), '']; }; // whole numbers, and % only on a percentage
 function outBody(o) {
   const tags = [o.rarity && `<span class="tag cd-rar r-${o.rarity}">${esc(RARITIES[o.rarity]?.name || o.rarity)}</span>`, o.level && `<span class="tag dim" title="Item level">Lv ${o.level}</span>`, ...(o.tags || []).map(([ic, txt, tip]) => `<span class="tag dim" title="${esc(tip || '')}">${glyph(ic)}${esc(txt)}</span>`)].filter(Boolean).join('');
   const stats = (o.stats || []).map(([ic, v, name, tip]) => `<li title="${esc(tip || '')}">${glyph(ic)}${v ? `<b>${esc(v)}</b>` : ''}<span>${esc(name)}</span></li>`).join('');
@@ -1180,7 +1181,7 @@ function filterChips(s, f, on) {
   const lv = fwLevel(s);
   return Object.entries(f.stats).map(([k, v]) => {
     const x = FILTER_STATS[k], fam = x?.family;
-    const label = k === 'strength' ? `+${v} lv` : fam ? `+${v} lv` : `${v}%`, what = k === 'strength' ? 'firewall levels' : x.name.replace(/^ lv /, 'levels ').replace(/^% /, '');
+    const label = k === 'strength' ? `+${v} lv` : fam ? `+${v} lv` : /^%/.test(x.name) ? `${v}%` : `+${v}`, what = k === 'strength' ? 'firewall levels' : x.name.replace(/^ lv /, 'levels ').replace(/^% /, '');
     const tip = k === 'strength' ? `+${v} firewall levels${on ? '' : `: lv ${lv} → ${lv + v} with it in`}` : `${v}${x.name}${fam ? '' : ''}`;
     return `<span class="fchip" title="${esc(tip)}">${glyph(FILTER_ICON[k] || 'item')}<b>${esc(label)}</b><small>${esc(k === 'strength' ? '' : what)}</small></span>`;
   }).join('');
