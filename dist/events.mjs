@@ -11,7 +11,7 @@
 //   feud      Two rival factions (located hubs) clash over one of your servers. Pick a side: fight the other's runner.
 //   hunt      A named elite that hops server to server every 5 minutes, a level tougher and better paid each hop.
 //   shock     One hub's price for one ware jumps ×2.5 (or crashes ×0.4) for 15 minutes (market.mjs outsideMult).
-//   scout     A scout probes your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
+//   spotter   A spotter watches your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
 //
 // Your network's signature (network.mjs) leans the deck: its two favoured cards come up more often, and the
 // families of couriers, bounties and outbreaks lean toward its own.
@@ -125,7 +125,7 @@ export const CARDS = {
   // Two rival factions clash over one of your servers: one card, two sides. event fight <id> <faction> sides with
   // that faction, against the other's runner (an elite of its family, hubs.mjs FACTION_FAMILY, at your level).
   feud: {
-    name: 'Feud', weight: 0.25, ms: FEUD.ms, fight: true, from: FEUD.from,
+    name: 'Feud', weight: 1, ms: FEUD.ms, fight: true, from: FEUD.from,
     where: (s) => (hackerLevel(s) >= FEUD.from && feuds(s).length ? places(s) : []),
     make: (s) => { const sides = pick(s, feuds(s)); return { sides, level: hackerLevel(s), name: sides.map((f) => FACTIONS[f].short).join(' vs '), runners: Object.fromEntries(sides.map((f) => [f, `${RUNNER[f]}-${1000 + Math.floor(roll(s) * 9000)}`])) }; },
     foe: (ev, f) => { const o = ev.sides.find((x) => x !== f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true }; },
@@ -146,7 +146,7 @@ export const CARDS = {
   // A named elite that moves: every HUNT.hopMs it hops to another of your servers (its path is set when it's dealt, so
   // the map shows where it goes next), a level up each time and better paid. Kestrel are the hunters.
   hunt: {
-    name: 'Bounty hunt', weight: 0.25, ms: (HUNT.hops + 1) * HUNT.hopMs, fight: true, from: HUNT.from,
+    name: 'Bounty hunt', weight: 1.5, ms: (HUNT.hops + 1) * HUNT.hopMs, fight: true, from: HUNT.from,
     where: (s) => (hackerLevel(s) >= HUNT.from && places(s).length >= 2 ? places(s) : []),
     make: (s, loc) => {
       const path = [loc.id];
@@ -176,19 +176,19 @@ export const CARDS = {
   },
   // A price spike (or crash) at one hub for one ware: market.mjs multiplies it in (shockMult). No fight.
   shock: {
-    name: 'Market shock', weight: 0.25, ms: SHOCK.ms, from: SHOCK.from,
+    name: 'Market shock', weight: 1, ms: SHOCK.ms, from: SHOCK.from,
     where: (s) => (hackerLevel(s) >= SHOCK.from && markets(s).length ? [null] : []),
     make: (s) => { const hub = pick(s, markets(s)), ware = pick(s, SHOCK.wares), down = roll(s) < SHOCK.crash; return { hub, ware, mult: down ? SHOCK.down : SHOCK.up }; },
     text: (ev) => (ev.mult > 1 ? `${FACTIONS[ev.hub].short} pays ${ev.mult} times the usual for ${WARE_NAME[ev.ware]} for the next ${SHOCK.ms / 60000} minutes.` : `${cap(WARE_NAME[ev.ware])} sells at ${FACTIONS[ev.hub].short} for ${Math.round(ev.mult * 100)}% of the usual for the next ${SHOCK.ms / 60000} minutes.`),
     gone: (ev) => `${FACTIONS[ev.hub].short}'s price for ${WARE_NAME[ev.ware]} is back to normal.`,
   },
-  // A scout virus probing your wall: a quick fight at home. Win and the next invasion comes SCOUTED.levels weaker, and
+  // A spotter watching your wall (not the invasion kind Scout, invasion.mjs): a quick fight at home. Win and the next invasion comes SCOUTED.levels weaker, and
   // you know where from and what kind (invasion.mjs scoutNext). Let it go and nothing changes.
-  scout: {
-    name: 'Scout', weight: 0.25, ms: SCOUT_EVENT.ms, fight: true, from: SCOUT_EVENT.from, home: true,
+  spotter: {
+    name: 'Spotter', weight: 1, ms: SCOUT_EVENT.ms, fight: true, from: SCOUT_EVENT.from, home: true,
     where: (s) => (hackerLevel(s) >= SCOUT_EVENT.from && invasionsLive(s) && !s.net?.scouted && !s.degraded ? [null] : []),
-    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `SCOUT-${1000 + Math.floor(roll(s) * 9000)}` }),
-    text: (ev) => `A scout, ${ev.name}, is probing your wall. Kill it and the next invasion comes ${SCOUTED.levels} levels weaker.`,
+    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `SPOTTER-${1000 + Math.floor(roll(s) * 9000)}` }),
+    text: (ev) => `A spotter, ${ev.name}, is watching your wall. Kill it and the next invasion comes ${SCOUTED.levels} levels weaker.`,
     reward: () => `the next invasion −${SCOUTED.levels} levels, and its kind`,
     gone: (ev) => `${ev.name} left your wall.`,
     won: (s, ev) => {

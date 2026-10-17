@@ -1,4 +1,4 @@
-// The newer event cards (events.mjs): feud, bounty hunt, market shock, scout.
+// The newer event cards (events.mjs): feud, bounty hunt, market shock, spotter.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, command, active, resolveCycle, addLocation } from './dist/combat.mjs';
@@ -43,13 +43,13 @@ test('each new card deals only when its conditions hold', () => {
   assert.ok(!can(world({ level: 4 }), 'shock'));
   { const s = world({ level: 5 }); assert.ok(can(s, 'shock')); s.standing = { halcyon: 0 }; assert.ok(!can(s, 'shock'), 'every hub hostile'); }
   { const s = world({ level: 5 }); s.mail.boardOpen = false; s.mail.story = 0; assert.ok(!can(s, 'shock'), 'no hubs'); }
-  // Scout: level 6, invasions live (a server you've connected to), none scouted already.
-  assert.ok(!can(world({ level: 5 }), 'scout'));
-  { const s = world({ level: 6 }); assert.ok(can(s, 'scout')); s.locations.forEach((l) => { l.runs = 0; }); assert.ok(!can(s, 'scout'), 'nothing connected sends invasions'); }
-  { const s = world({ level: 6 }); s.net = { scouted: { levels: 2 } }; assert.ok(!can(s, 'scout'), 'one scouted already'); }
+  // Spotter: level 6, invasions live (a server you've connected to), none scouted already.
+  assert.ok(!can(world({ level: 5 }), 'spotter'));
+  { const s = world({ level: 6 }); assert.ok(can(s, 'spotter')); s.locations.forEach((l) => { l.runs = 0; }); assert.ok(!can(s, 'spotter'), 'nothing connected sends invasions'); }
+  { const s = world({ level: 6 }); s.net = { scouted: { levels: 2 } }; assert.ok(!can(s, 'spotter'), 'one scouted already'); }
   // And dealt by name only when they fit.
   assert.equal(deal(world({ level: 7, hubs: ['glassjaw'] }), 'feud'), null);
-  for (const c of ['feud', 'hunt', 'shock', 'scout']) assert.equal(deal(world({ hubs: ['glassjaw'] }), c)?.card, c);
+  for (const c of ['feud', 'hunt', 'shock', 'spotter']) assert.equal(deal(world({ hubs: ['glassjaw'] }), c)?.card, c);
 });
 
 test('a feud: pick a side, fight the other side\'s runner; the win pays your side and costs no one any rep', () => {
@@ -148,10 +148,10 @@ test('a market shock moves exactly that hub\'s ware, and ends', () => {
   assert.deepEqual([...dirs].sort(), [SHOCK.down, SHOCK.up]);
 });
 
-test('a scout: kill it and the next invasion comes weaker, its kind known; ignore it and nothing changes', () => {
+test('a spotter: kill it and the next invasion comes weaker, its kind known; ignore it and nothing changes', () => {
   const base = () => { const s = world({ level: 9 }); s.locations.forEach((l, i) => { l.level = 8 + i; }); s.net = { wall: 0, next: 9e9, seq: 3 }; s.director = { next: 9e9, n: 0, last: null }; return s; };
   // Kill it.
-  const s = base(), ev = deal(s, 'scout');
+  const s = base(), ev = deal(s, 'spotter');
   assert.equal(ev.loc, null, 'at home');
   assert.match(mapMarkup(s, 'server'), new RegExp(`event fight ${ev.id}`), 'on your server\'s card');
   command(s, `event fight ${ev.id}`);
@@ -169,8 +169,8 @@ test('a scout: kill it and the next invasion comes weaker, its kind known; ignor
   assert.equal(s.net.scouted, null, 'once');
   // Ignore it: the next invasion is the one it would have been.
   const a = base(), b = base();
-  const e2 = deal(b, 'scout');
-  tickEvents(b, CARDS.scout.ms);
+  const e2 = deal(b, 'spotter');
+  tickEvents(b, CARDS.spotter.ms);
   assert.ok(!eventsOf(b).includes(e2), 'it left');
   assert.ok(!b.net.scouted);
   play(a, 'developer invade'); play(b, 'developer invade');
@@ -183,7 +183,7 @@ test('the director\'s rolls (dealing, hops, endings) never shift the game\'s rng
   addLocation(s, 'ghostroot'); s.locations.forEach((l) => { l.rogue = false; l.runs = 1; });
   s.director = { next: 9e9, n: 0, last: null };
   const rng = s.rng;
-  for (const c of ['feud', 'hunt', 'shock', 'scout']) assert.ok(deal(s, c), c);
+  for (const c of ['feud', 'hunt', 'shock', 'spotter']) assert.ok(deal(s, c), c);
   for (let i = 0; i < 6; i++) tickEvents(s, HUNT.hopMs);
   assert.equal(eventsOf(s).length, 0, 'all over');
   assert.equal(s.rng, rng);
@@ -198,7 +198,7 @@ test('a hunt\'s pager line follows it; developer event names the new cards', () 
   assert.equal(mine.length, 1, 'one line, replaced');
   assert.equal(mine[0].go, `map:${ev.path[1]}`);
   assert.equal(mine[0].from, 'Kestrel');
-  for (const c of ['feud', 'hunt', 'shock', 'scout']) {
+  for (const c of ['feud', 'hunt', 'shock', 'spotter']) {
     const t = world({ hubs: ['glassjaw'] });
     play(t, `developer event ${c}`);
     assert.equal(eventsOf(t)[0]?.card, c, c);

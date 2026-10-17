@@ -48,7 +48,7 @@ export const PACK_PUSH = 2; // every virus waiting behind the front adds this ma
 export const QUIRKED = { chance: 0.3, kinds: ['raider', 'pack', 'champion'], hoard: 1.5, hiddenPush: 2, brood: -2 };
 export const CHAMPION = { hp: 1.5 }; // elite-grade (elite armor and hits, triple XP), sized for one player: a crew elite is ELITE.hp. About 25–50% of your server's health at levels 10–18 (the scripted planner in blues)
 export const SCOUT = { mapMs: 5 * 60000, mark: 3 }; // how long it takes to map your wall; what the next one counts higher
-// A scout you killed first (events.mjs, the Scout card): the next invasion comes this many levels lower (a grade's worth,
+// A spotter you killed first (events.mjs, the Spotter card): the next invasion comes this many levels lower (a grade's worth,
 // GRADE_LEVELS), and you know its server and kind before it sets out (net.scouted).
 export const SCOUTED = { levels: 2 };
 export const THIEF = { take: 0.5, min: 3 }; // the share of each store it takes; the store it needs to be worth the trip
@@ -142,7 +142,7 @@ export function tellOf(s, inv = s.invasion) {
   }[inv.kind || 'raider'] || '';
   const q = { hoard: `It carries its server's hoard, so it is Armored and its bounty is 50% bigger.`, nest: 'It brings a brood from its Nest, one more virus behind it.', hidden: `It hides like its server does, so it counts ${QUIRKED.hiddenPush} levels higher at your wall.` }[inv.quirk] || '';
   const m = inv.marked ? `A scout mapped your wall for it, so it counts ${inv.marked} levels higher.` : '';
-  const w = inv.scouted ? `You killed its scout, so it comes ${inv.scouted} levels weaker.` : '';
+  const w = inv.scouted ? `You killed its spotter, so it comes ${inv.scouted} levels weaker.` : '';
   return [say, q, m, w].filter(Boolean).join(' ');
 }
 export const labelOf = (inv) => (inv ? kindOf(inv).name + (inv.kind === 'pack' && inv.queue?.length ? ` ×${inv.queue.length + 1}` : '') : '');
@@ -598,7 +598,7 @@ export function jackIn(s, verb = 'jack in') {
 // What a killed scout told you about the next one (scoutNext), as a sentence: '' when nothing.
 export function scoutedLine(s) {
   const sc = s.net?.scouted, from = sc && (s.locations || []).find((l) => l.id === sc.from);
-  return sc ? ` You killed its scout: ${from ? `a ${KINDS[sc.kind].name.toLowerCase()} from ${from.name}, ` : ''}${sc.levels} levels weaker.` : '';
+  return sc ? ` You killed its spotter: ${from ? `a ${KINDS[sc.kind].name.toLowerCase()} from ${from.name}, ` : ''}${sc.levels} levels weaker.` : '';
 }
 // invasions: what's coming, what it does, what it pays; your streak.
 export function invasionsCommand(s) {

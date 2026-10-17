@@ -2173,7 +2173,7 @@ function railOf(s, ev, l) {
   if (ev.card === 'feud') return { icon: 'kill', name: 'Feud', tag: ev.sides.map((f) => FX[f].short).join(' · '), where: l?.name || 'the net', sel: l ? l.id : 'server', verb: 'ends' };
   if (ev.card === 'hunt') return { icon: 'kill', name: ev.name, tag: `lv ${ev.level}`, where: `${l?.name || 'the net'} · hop ${ev.hop}/${HUNT.hops}`, sel: l ? l.id : 'server', verb: 'leaves', left: hopLeft(ev), total: HUNT.hopMs };
   if (ev.card === 'shock') return { icon: 'credits', name: `${ev.mult > 1 ? '▲' : '▼'} ${WARES[ev.ware].name.replace(/ code$/, '')} ×${ev.mult}`, where: `${FX[ev.hub].short} market`, sel: 'hub-' + ev.hub, verb: 'ends' };
-  if (ev.card === 'scout') return { icon: 'kill', name: ev.name, tag: `lv ${ev.level}`, where: 'scout · your wall', sel: 'server', verb: 'leaves' };
+  if (ev.card === 'spotter') return { icon: 'kill', name: ev.name, tag: `lv ${ev.level}`, where: 'spotter · your wall', sel: 'server', verb: 'leaves' };
   return null;
 }
 // A hunt's time to its next hop (or to leaving, after the last).
@@ -2314,7 +2314,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
     const pick = on ? reticle(n.kind === 'server' ? 13 : 9) : '';
     if (n.kind === 'server') {
       const srv = s.server;
-      const homeEv = eventsOf(s).some((ev) => EVENT_CARDS[ev.card].home); // a scout at your wall (events.mjs): the antenna
+      const homeEv = eventsOf(s).some((ev) => EVENT_CARDS[ev.card].home); // a spotter at your wall (events.mjs): the antenna
       return `<g class="mnode server${on}${homeEv ? ' drop' : ''}" data-select="server" tabindex="0" role="button" transform="translate(${n.x} ${n.y})" aria-label="Your server"><circle r="26" class="mhit"/><circle r="24" class="halo"/><g class="srv-glyph" transform="translate(-14 -14) scale(1.75)">${GLYPHS.integrity}</g>${homeEv ? '<g class="dropmark" transform="translate(22 -22) scale(1.4)"><path d="M0 4 L0 -3 M-3 -5 Q0 -8 3 -5 M-5 -7 Q0 -12 5 -7"/></g>' : ''}${pick}<text y="38" class="mlabel home" text-anchor="middle">HOME</text>${homeBars(s, 38 + 12 / (mapScale || 1))}<text y="38" dy="2.75em" class="msub" text-anchor="middle">${srv.integrity}/${srv.max}</text></g>`;
     }
     if (n.kind === 'zone') {
@@ -2498,10 +2498,10 @@ function eventLine(s, ev) {
     const pips = `<span class="hop-pips" title="${esc(`Hop ${ev.hop} of ${HUNT.hops}: pay ×${HUNT.mult[ev.hop]}${ev.hop < HUNT.hops ? `, ×${HUNT.mult[ev.hop + 1]} next` : ''}`)}">${'■'.repeat(ev.hop)}<i>${'□'.repeat(HUNT.hops - ev.hop)}</i></span>`;
     return `<div class="event-line ev-hunt"><p class="tagline">${evChip(s, ev, 'Hunt', hopLeft(ev))}${levelTag(s, ev.level, `Lv ${ev.level}`)}${pips}</p><div class="row"><button type="button" class="btn primary" data-command="event fight ${ev.id}" ${busyAttr(s)}>Intercept ${esc(ev.name)}</button><small class="quiet ev-pay" title="${esc(c.reward(ev))}">${glyph('credits')}${huntPay(ev)} ${fIcon(ev.hunter)}+${HUNT.rep}</small></div></div>`;
   }
-  if (ev.card === 'scout') return `<div class="event-line ev-scout"><p class="tagline">${evChip(s, ev, c.name)}${levelTag(s, ev.level, `Lv ${ev.level}`)}<span class="tag you" title="${esc(`Win: the next invasion comes ${SCOUTED.levels} levels weaker, and you see where from and what kind`)}">${glyph('firewall')}−${SCOUTED.levels} lv</span></p><div class="row"><button type="button" class="btn primary" data-command="event fight ${ev.id}" ${busyAttr(s)}>Fight ${esc(ev.name)}</button></div></div>`;
+  if (ev.card === 'spotter') return `<div class="event-line ev-spotter"><p class="tagline">${evChip(s, ev, c.name)}${levelTag(s, ev.level, `Lv ${ev.level}`)}<span class="tag you" title="${esc(`Win: the next invasion comes ${SCOUTED.levels} levels weaker, and you see where from and what kind`)}">${glyph('firewall')}−${SCOUTED.levels} lv</span></p><div class="row"><button type="button" class="btn primary" data-command="event fight ${ev.id}" ${busyAttr(s)}>Fight ${esc(ev.name)}</button></div></div>`;
   return '';
 }
-// Your server's card: a scout at your wall, and what a killed one told you about the next invasion.
+// Your server's card: a spotter at your wall, and what a killed one told you about the next invasion.
 function homeEvents(s) {
   const sc = s.net?.scouted, from = sc && s.locations.find((l) => l.id === sc.from);
   const told = sc && !s.invasion ? `<p class="svc-line"><span class="tag you" title="${esc(scoutedLine(s).trim())}">${glyph('firewall')}${from ? `${esc(INV_KINDS[sc.kind].name)} · ` : ''}−${sc.levels} lv</span>${from ? ` <small>${esc(from.name)}</small>` : ''}</p>` : '';
