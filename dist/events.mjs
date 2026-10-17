@@ -14,13 +14,19 @@
 //   shock     One hub's price for one ware jumps ×2.5 (or crashes ×0.4) for 15 minutes (market.mjs outsideMult).
 //   spotter   A spotter watches your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
 //
+// Chains (docs/director.md section 2): what you did with one card deals the next, a follow-up with a link to its cause.
+//   counter   after a feud you won a fight in: the side you fought sends a runner at a server you hold.
+//   returning a bounty hunt that got away comes back, the same name, tougher; after two escapes once more, marked.
+//   lantern   after 3 couriers you intercepted: LANTERN's own courier (an Escort in D3).
+//   zero      15 kills of an outbreak's family during it: its source, an elite; kill it and the outbreak ends.
+//
 // Your network's signature (network.mjs) leans the deck: its two favoured cards come up more often, and the
 // families of couriers, bounties and outbreaks lean toward its own.
 //
 // Pure: state in, events out.
-import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks } from './combat.mjs';
-import { FAMILIES, CONFIG } from './data.mjs';
-import { LOOT, rollItem, seeded } from './gear.mjs';
+import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks, gainCode } from './combat.mjs';
+import { FAMILIES, CONFIG, ROLLED_MUTATIONS, MUTATIONS } from './data.mjs';
+import { LOOT, rollItem, seeded, uniqueItem, codeOf, vaultCode, MATERIALS } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
@@ -40,7 +46,7 @@ export const DIRECTOR = {
 };
 // Uniques you haven't found that drop out in the world at about your level (combat.mjs WORLD_SOURCES: not a boss's or a
 // lair's, the farm's, a story's or a strain's trophy, nor a set piece): what a courier can be carrying.
-const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && !isPiece(u.id) && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD_SOURCES.includes(src.kind))).map((u) => u.id); // a set piece drops off its own table (sets.mjs)
+export const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && !isPiece(u.id) && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD_SOURCES.includes(src.kind))).map((u) => u.id); // a set piece drops off its own table (sets.mjs)
 const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f));
 // The newer cards' numbers. FEUD, from level 8: a bar (sides[0]'s share) that starts within ±start of even and drifts a step of
 // drift every driftMs on the director's dice, never past hold on its own; each runner you beat pushes your side by push and pays
@@ -51,6 +57,18 @@ export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drif
 export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
 export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3, wares: ['cipher', 'worm', 'kernel', 'salvage'] }; // not Exploits: the wall's and the programs' currency stays steady
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
+// Chains: at most max follow-ups pending, one per kind, each dropped quietly if it isn't dealt within expireMs of logged-on
+// time. COUNTER: delay after the feud, a runner sized like a feud's, pay × a bounty's credits, +rep with your side. RETURNING:
+// delay after the escape, +lv levels a return (to your level + cap), the bounty × mult per escape; marked after marked escapes,
+// its drop a unique you're missing from DIRECTOR.namedFrom (else a Custom protocol). LANTERN: after `at` couriers, +rep. ZERO:
+// after `at` kills of the family in its outbreak; pays a vault's code cache of the family (gear.mjs vaultCode).
+export const CHAIN = {
+  max: 3, expireMs: 3 * 3600000,
+  counter: { delay: [20 * 60000, 40 * 60000], ms: 15 * 60000, pay: 0.5, rep: 2 },
+  returning: { delay: [30 * 60000, 60 * 60000], ms: 20 * 60000, lv: 2, cap: 3, mult: 1.5, marked: 2, rep: 2 },
+  lantern: { at: 3, ms: 15 * 60000, rep: 5 },
+  zero: { at: 15, ms: 15 * 60000 },
+};
 // A faction's runner in a feud: a name of its own.
 const RUNNER = { halcyon: 'ADJUSTER', glassjaw: 'FACET', kestrel: 'TALON', lantern: 'BEACON', nullchoir: 'DISSONANCE' };
 // How much of a feud's bar is this side's (0–1), and its pay a win.
@@ -229,6 +247,81 @@ export const CARDS = {
       return `${ev.name} is down. The next invasion${next ? `, a ${next.name.toLowerCase()} from ${next.from},` : ''} comes ${SCOUTED.levels} levels weaker.`;
     },
   },
+  // ---------- follow-ups (chains): dealt only from the follow-up list (tickChains), never from the deck ----------
+  // Counter-raid: the side you fought in a feud sends a runner at a server you hold (home if you hold none). Ignore it
+  // and it leaves; nobody's rep moves. Beat it: credits and your side +rep, no ripple.
+  counter: {
+    name: 'Counter-raid', chain: true, weight: 0, ms: CHAIN.counter.ms, fight: true, where: () => [],
+    spots: (s) => { const held = places(s).filter((l) => (l.runs || 0) > 0 || l.takenOver); return held.length ? held : [null]; },
+    make: (s, loc, f) => ({ side: f.data.side, foe: f.data.foe, family: FACTION_FAMILY[f.data.foe], level: hackerLevel(s), name: runnerName(s, f.data.foe), elite: true, eliteHp: FEUD.hp }),
+    from: (ev) => FACTIONS[ev.foe].short,
+    text: (ev, where) => `${FACTIONS[ev.foe].short} sends ${ev.name} at ${ev.loc ? where : 'your server'} for the feud you fought for ${FACTIONS[ev.side].short}. Beat it before it leaves.`,
+    reward: (ev) => `${counterPay(ev.level)} credits and ${FACTIONS[ev.side].short} +${CHAIN.counter.rep}`,
+    gone: (ev) => `${ev.name} pulled back.`,
+    won: (s, ev) => {
+      s.server.credits += counterPay(ev.level);
+      changeRep(s, ev.side, CHAIN.counter.rep, `You beat ${FACTIONS[ev.foe].short}'s counter-raid`, { ripple: false }); // never a loss with anyone
+      return `You beat ${ev.name}: ${counterPay(ev.level)} credits. The feud is settled.`;
+    },
+  },
+  // Returning bounty: a hunt that got away, back with the same name, +2 levels and one mutation; its card counts the
+  // escapes. After CHAIN.returning.marked escapes it comes once more, marked, with a named drop; then the chain ends.
+  returning: {
+    name: 'Returning bounty', chain: true, weight: 0, ms: CHAIN.returning.ms, fight: true, where: () => [],
+    spots: (s) => places(s),
+    make: (s, loc, f) => {
+      const d = f.data, L = hackerLevel(s), marked = d.escapes >= CHAIN.returning.marked;
+      const pool = marked && L >= DIRECTOR.namedFrom ? missing(s) : [], near = pool.filter((id) => UNIQUES[id].level >= L - 5);
+      return { family: d.family, name: d.name, hunter: d.hunter, escapes: d.escapes, mutation: d.mutation, elite: true, level: Math.min(CONFIG.maxMobLevel, d.level + CHAIN.returning.lv, L + CHAIN.returning.cap), ...(marked ? { marked: true } : {}), ...(pool.length ? { unique: pick(s, near.length ? near : pool) } : {}) };
+    },
+    from: (ev) => FACTIONS[ev.hunter].short,
+    text: (ev, where) => `${ev.name} is back on ${where}, a level ${ev.level} ${MUTATIONS[ev.mutation] ? MUTATIONS[ev.mutation].name.toLowerCase() + ' ' : ''}${FAMILIES[ev.family].name.toLowerCase()} virus that got away ${ev.escapes === 1 ? 'once' : 'twice'}.${ev.marked ? ` It's marked: it carries ${ev.unique ? UNIQUES[ev.unique].name : 'a Custom protocol'}.` : ''}`,
+    reward: (ev) => `${returnPay(ev)} credits and ${FACTIONS[ev.hunter].short} +${CHAIN.returning.rep}${ev.marked ? `, and ${ev.unique ? UNIQUES[ev.unique].name : 'a Custom protocol'}` : ''}`,
+    gone: (ev) => `${ev.name} got away again.`,
+    won: (s, ev) => {
+      s.server.credits += returnPay(ev);
+      changeRep(s, ev.hunter, CHAIN.returning.rep, 'Bounty collected', { ripple: false });
+      if (ev.marked) {
+        const r = seeded(ev.seed); // fixed by the event
+        if (ev.unique && !s.collection?.[ev.unique]) addItem(s, uniqueItem(UNIQUES[ev.unique], hackerLevel(s), r), `${ev.name}: `);
+        else addItem(s, rollItem(r, { level: ev.level, rarity: 'custom' }), `${ev.name}: `);
+      }
+      return `Bounty collected on ${ev.name}: ${returnPay(ev)} credits${ev.marked ? `. It won't be back` : ''}.`;
+    },
+  },
+  // LANTERN's offer: after CHAIN.lantern.at couriers you intercepted, LANTERN's own courier crosses one of your servers.
+  // A stand-in: it becomes an Escort (docs/director.md section 4) in D3; until then a fight like a courier's.
+  lantern: {
+    name: "LANTERN's offer", chain: true, weight: 0, ms: CHAIN.lantern.ms, fight: true, where: () => [],
+    spots: (s) => places(s),
+    make: (s) => ({ family: FACTION_FAMILY.lantern, level: hackerLevel(s), name: `${RUNNER.lantern}-${1000 + Math.floor(roll(s) * 9000)}`, ally: hubFound(s, 'lantern') ? 'lantern' : 'halcyon' }),
+    from: () => 'LANTERN',
+    text: (ev, where) => `LANTERN noticed the couriers you took. Its own courier ${ev.name} crosses ${where}: intercept it for a Custom protocol.`,
+    reward: (ev) => `a Custom protocol and ${FACTIONS[ev.ally].short} +${CHAIN.lantern.rep}`,
+    won: (s, ev) => {
+      addItem(s, rollItem(seeded(ev.seed), { level: ev.level, rarity: 'custom' }), "LANTERN's offer: ");
+      changeRep(s, ev.ally, CHAIN.lantern.rep, "LANTERN's offer", { ripple: false });
+      return `You took ${ev.name}'s package: a Custom protocol.`;
+    },
+  },
+  // Patient zero: CHAIN.zero.at kills of the family during its outbreak deal the outbreak's source, an elite of that
+  // family on one of your servers. Kill it and the outbreak ends early.
+  zero: {
+    name: 'Patient zero', chain: true, weight: 0, ms: CHAIN.zero.ms, fight: true, where: () => [],
+    spots: (s) => places(s),
+    make: (s, loc, f) => ({ family: f.data.family, outbreak: f.data.outbreak, level: hackerLevel(s), name: `${FAMILIES[f.data.family].name.toUpperCase()}-0`, elite: true }),
+    from: () => 'Network',
+    text: (ev, where) => `The ${FAMILIES[ev.family].name.toLowerCase()} outbreak's source, ${ev.name}, is on ${where}. Kill it and the outbreak ends.`,
+    reward: (ev) => `${zeroCode(ev)} ${MATERIALS[codeOf(ev.family)]?.name || 'code'} and an elite's loot`,
+    gone: (ev) => `${ev.name} went quiet.`,
+    won: (s, ev) => {
+      const k = codeOf(ev.family);
+      if (k) gainCode(s, { [k]: zeroCode(ev) }, `${ev.name}'s cache: `);
+      const ob = eventsOf(s).find((e) => e.card === 'outbreak' && e.id === ev.outbreak);
+      if (ob) end(s, ob, `The ${FAMILIES[ob.family].name.toLowerCase()} outbreak is over: its source is down.`);
+      return `${ev.name} is down.`;
+    },
+  },
 };
 const WARE_NAME = { cipher: 'Cipher code', worm: 'Worm code', kernel: 'Kernel code', salvage: 'components', exploit: 'Exploits' };
 const cap = (x) => x[0].toUpperCase() + x.slice(1);
@@ -243,6 +336,10 @@ export const courierPay = credits;
 export const bountyPay = (level) => 80 + 15 * level;
 // A hunt's time to its next hop (or to leaving, after the last).
 export const hopLeft = (ev) => Math.max(0, ev.left - (HUNT.hops - ev.hop) * HUNT.hopMs);
+// A counter-raid's pay: part of a bounty's credits (a feud runner's). A returning bounty's pay: the bounty, ×CHAIN.returning.mult for each escape. Patient zero's cache: a vault's code.
+export const counterPay = (level) => Math.round(bountyPay(level) * CHAIN.counter.pay);
+export const returnPay = (ev) => Math.round(bountyPay(ev.level) * CHAIN.returning.mult ** (ev.escapes || 1));
+export const zeroCode = (ev) => vaultCode(ev.level);
 // The director rolls its own dice (mulberry32 on the save), so dealing an event never shifts the
 // rest of the game's rolls.
 function roll(s) {
@@ -271,6 +368,7 @@ export const shockOf = (s, f) => (s.events || []).find((e) => e.card === 'shock'
 export function tickEvents(s, dt) {
   openFarm(s); // KESSLER-FARM-00 turns up at level 7 (rogue.mjs)
   const d = (s.director ||= { next: null, n: 0, last: null });
+  tickChains(s, dt); // before the cards end: a follow-up one of them schedules now starts its delay from here
   for (const ev of [...eventsOf(s)]) {
     if (s.encounter?.event === ev.id && active(s)) continue; // the one you're fighting waits for you
     ev.left -= dt;
@@ -278,6 +376,7 @@ export function tickEvents(s, dt) {
     if (ev.left > 0) c.tick?.(s, ev); // a hunt hops
     else { const won = c.timeout?.(s, ev, placeName(s, ev.loc)); end(s, ev, won || (c.gone ? c.gone(ev, placeName(s, ev.loc)) : c.fight ? `${ev.name} left ${placeName(s, ev.loc)}.` : null), won ? 'world-event-won' : 'world-event-end'); }
   }
+  dealDue(s); // and into the slots the cards just freed
   if (hackerLevel(s) < DIRECTOR.from) return;
   if (d.next == null) d.next = between(s, DIRECTOR.firstMs);
   d.next -= dt;
@@ -307,9 +406,100 @@ export function deal(s, card = null) {
   return ev;
 }
 
-function end(s, ev, message, type = 'world-event-end') {
+function end(s, ev, message, type = 'world-event-end', how = 'gone') {
   s.events = eventsOf(s).filter((e) => e !== ev);
   if (message) emit(s, type, message, { card: ev.card, location: ev.loc });
+  chainAfter(s, ev, how);
+}
+
+// ---------- chains (docs/director.md section 2) ----------
+// The follow-up list: { kind, cause, dueIn, expiresIn, data } on s.director.chain (an older save just starts empty). cause
+// names what happened and where (its card, name, server), for the card's link mark and the pager.
+export const chainOf = (s) => ((s.director ||= { next: null, n: 0, last: null }).chain ||= []);
+// Schedule a follow-up. A kind already pending doesn't stack, and the list holds CHAIN.max at most. The delay is on the
+// director's dice (none for one that's dealt at once).
+export function schedule(s, kind, cause, data, delay = CHAIN[kind].delay) {
+  const list = chainOf(s);
+  if (list.length >= CHAIN.max || list.some((f) => f.kind === kind) || eventsOf(s).some((e) => e.card === kind)) return null;
+  const f = { kind, cause, dueIn: delay ? between(s, delay) : 0, expiresIn: CHAIN.expireMs, data };
+  list.push(f);
+  return f;
+}
+// What an ended card schedules. Only from what you did: a feud you won a fight in, a hunt you let go after a fight (or that
+// finished its hops while you ran on its floor), couriers you took, kills in an outbreak. Ignoring a card starts nothing.
+function chainAfter(s, ev, how) {
+  const cause = { card: ev.card, id: ev.id, name: ev.name, loc: ev.loc || null };
+  if (ev.card === 'feud' && ev.wins > 0 && ev.side) schedule(s, 'counter', { ...cause, side: ev.side }, { side: ev.side, foe: rival(ev, ev.side) });
+  if ((ev.card === 'hunt' || (ev.card === 'returning' && !ev.marked)) && how === 'gone' && gotAway(s, ev)) {
+    const n = (ev.escapes || 0) + 1;
+    schedule(s, 'returning', { ...cause, escapes: n }, { family: ev.family, name: ev.name, hunter: ev.hunter, level: ev.level, escapes: n, mutation: ev.mutation || pick(s, ROLLED_MUTATIONS) });
+  }
+  if (ev.card === 'courier' && how === 'won') {
+    const d = s.director;
+    d.couriers = (d.couriers || 0) + 1;
+    if (d.couriers >= CHAIN.lantern.at) schedule(s, 'lantern', { card: 'courier', id: ev.id, name: ev.name, loc: ev.loc || null, count: d.couriers }, {}, null);
+  }
+}
+// A hunt got away if you fought it and it left, or it made all its hops while you were on a run on its floor.
+const floorOf = (s, id) => (s.locations || []).find((l) => l.id === id)?.depth || 1;
+const gotAway = (s, ev) => !!ev.fought || (ev.card === 'hunt' && ev.hop >= HUNT.hops && !!s.run && floorOf(s, s.run.loc) === floorOf(s, ev.loc)) || (ev.card === 'returning' && !!s.run && floorOf(s, s.run.loc) === floorOf(s, ev.loc));
+// A kill of a family (combat.mjs, every kill): it counts toward an outbreak's source. Kills only, nothing else read.
+export function eventKill(s, family) {
+  for (const ob of eventsOf(s).filter((e) => e.card === 'outbreak' && e.family === family && !e.zero)) {
+    ob.kills = (ob.kills || 0) + 1;
+    if (ob.kills >= CHAIN.zero.at) { ob.zero = true; schedule(s, 'zero', { card: 'outbreak', id: ob.id, name: FAMILIES[family].name, loc: null, kills: ob.kills }, { family, outbreak: ob.id }, null); }
+  }
+}
+// The list on logged-on time only: its delays and expiries run down, an expired one goes without a word.
+function tickChains(s, dt) {
+  for (const f of chainOf(s)) { f.dueIn -= dt; f.expiresIn -= dt; }
+  s.director.chain = chainOf(s).filter((f) => f.expiresIn > 0);
+}
+// Due: dealt into a free slot, else it waits (its expiry still running). Patient zero waits only while its outbreak is up.
+function dealDue(s) {
+  for (const f of [...chainOf(s)]) {
+    if (f.kind === 'zero' && !eventsOf(s).some((e) => e.id === f.data.outbreak)) { s.director.chain = chainOf(s).filter((x) => x !== f); continue; }
+    if (f.dueIn > 0 || eventsOf(s).length >= DIRECTOR.max || eventsOf(s).some((e) => e.card === f.kind)) continue;
+    if (dealChain(s, f)) s.director.chain = chainOf(s).filter((x) => x !== f);
+  }
+}
+// Deal a follow-up as a card (its cause on it, for the link). Returns the event, or null when it has nowhere to go yet.
+export function dealChain(s, f) {
+  const d = s.director, c = CARDS[f.kind], spots = c.spots(s, f).filter((l) => !l || !eventsAt(s, l.id).length);
+  if (!spots.length) return null;
+  const loc = pick(s, spots);
+  const ev = { id: ++d.n, card: f.kind, loc: loc?.id || null, left: c.ms, seed: (d.n * 7919 + (loc?.seed || 1) * 31) >>> 0, cause: f.cause, ...c.make(s, loc, f) };
+  if (f.kind === 'lantern') d.couriers = 0; // the count starts over once LANTERN's offer is dealt
+  eventsOf(s).push(ev);
+  emit(s, 'world-event', eventText(s, ev), { card: f.kind, event: ev.id, location: ev.loc, from: c.from(ev), chain: causeText(s, f.cause) });
+  return ev;
+}
+// developer chain [counter|returning|marked|lantern|zero]: a follow-up now, with a made-up cause (for tests and screenshots).
+export function developerChain(s, kind) {
+  const L = hackerLevel(s), at = places(s)[0]?.id || null, ob = eventsOf(s).find((e) => e.card === 'outbreak');
+  const sides = feuds(s)[0] || ['halcyon', 'glassjaw'], family = ob?.family || fam(s);
+  const fake = {
+    counter: () => ({ cause: { card: 'feud', id: 0, name: sides.map((f) => FACTIONS[f].short).join(' vs '), loc: at, side: sides[0] }, data: { side: sides[0], foe: sides[1] } }),
+    returning: (n = 1) => ({ cause: { card: 'hunt', id: 0, name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, loc: at, escapes: n }, data: { family, hunter: hunters(s), level: L, escapes: n, mutation: pick(s, ROLLED_MUTATIONS) } }),
+    marked: () => fake.returning(CHAIN.returning.marked),
+    lantern: () => ({ cause: { card: 'courier', id: 0, name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, loc: at, count: CHAIN.lantern.at }, data: {} }),
+    zero: () => ({ cause: { card: 'outbreak', id: ob?.id || 0, name: FAMILIES[family].name, loc: null, kills: CHAIN.zero.at }, data: { family, outbreak: ob?.id || 0 } }),
+  };
+  if (!fake[kind]) return warn(s, `developer chain [${Object.keys(fake).join('|')}]`);
+  const f = fake[kind](), k = kind === 'marked' ? 'returning' : kind;
+  if (f.data.name == null && k === 'returning') f.data.name = f.cause.name;
+  if (eventsOf(s).some((e) => e.card === k)) return warn(s, `A ${CARDS[k].name.toLowerCase()} is up already.`);
+  if (!dealChain(s, { kind: k, ...f })) warn(s, `No ${CARDS[k].name.toLowerCase()} fits now: it needs a traced server.`);
+}
+// The cause, as a sentence for the link mark's tooltip and the pager.
+export function causeText(s, c) {
+  if (!c) return '';
+  const where = c.loc ? ` on ${placeName(s, c.loc)}` : '';
+  if (c.card === 'feud') return `Follows the feud ${c.name}${where}, where you fought for ${FACTIONS[c.side]?.short || 'a side'}.`;
+  if (c.card === 'hunt' || c.card === 'returning') return `Follows ${c.name}'s ${c.escapes > 1 ? 'second ' : ''}escape${where}.`;
+  if (c.card === 'courier') return `Follows the ${c.count || CHAIN.lantern.at} couriers you intercepted, the last ${c.name}${where}.`;
+  if (c.card === 'outbreak') return `Follows the ${c.name.toLowerCase()} outbreak: you made ${c.kills || CHAIN.zero.at} kills of it.`;
+  return `Follows ${c.name || 'an event'}${where}.`;
 }
 
 // event fight <id>: go after a courier or a bounty, from its server's map card. event fight <id> <faction>: a feud's side
@@ -331,11 +521,12 @@ export function eventCommand(s, text) {
   if (c.foe && ev.side && f !== ev.side) return warn(s, `You fight for ${FACTIONS[ev.side].short} in this feud.`);
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
-  const foe = c.foe ? c.foe(ev, f) : { family: ev.family, name: ev.name, elite: !!ev.elite, boss: ev.boss };
+  const foe = c.foe ? c.foe(ev, f) : { family: ev.family, name: ev.name, elite: !!ev.elite, boss: ev.boss, eliteHp: ev.eliteHp };
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(f) * 7919 + (ev.wins || 0) * 104729 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.eliteHp ? { eliteHp: foe.eliteHp } : {}), ...(foe.boss ? { boss: foe.boss } : {}), mutation: null, quiet: true });
+  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(f) * 7919 + (ev.wins || 0) * 104729 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.eliteHp ? { eliteHp: foe.eliteHp } : {}), ...(foe.boss ? { boss: foe.boss } : {}), mutation: ev.mutation ?? null, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
   if (c.foe) ev.side = f; // the side you fight for: locked from here
+  ev.fought = true; // a hunt you fought and let go got away (chains)
   s.gate = gate && gate !== s.encounter ? gate : null;
   s.encounter.event = ev.id;
   emit(s, 'jack-in', `Intercepting ${foe.name}.`, { location: ev.loc });
@@ -347,6 +538,6 @@ export function eventWon(s, e) {
   const ev = eventById(s, e.event);
   if (!ev) return;
   const said = CARDS[ev.card].won?.(s, ev);
-  if (!CARDS[ev.card].again || ev.over) end(s, ev, null); // a feud stays up for the next runner until it's won
+  if (!CARDS[ev.card].again || ev.over) end(s, ev, null, 'world-event-end', 'won'); // a feud stays up for the next runner until it's won
   if (said) emit(s, 'world-event-won', said, { card: ev.card, location: ev.loc });
 }

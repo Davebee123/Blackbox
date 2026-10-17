@@ -16,7 +16,7 @@ import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTi
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { hiddenNear, reached as floorsReached } from './floors.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
-import { deal, CARDS as EVENT_CARDS } from './events.mjs';
+import { deal, developerChain, CARDS as EVENT_CARDS } from './events.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
@@ -754,10 +754,11 @@ export function play(s, input) {
   if (/^developer thread\b/.test(text)) return developerThread(s, text.replace(/^developer thread\s*/, ''));
   if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { // an event now
     const first = s.serial, card = text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null);
-    if (card && !EVENT_CARDS[card]) warn(s, `developer event [${Object.keys(EVENT_CARDS).join('|')}]`);
+    if (card && (!EVENT_CARDS[card] || EVENT_CARDS[card].chain)) warn(s, `developer event [${Object.keys(EVENT_CARDS).filter((k) => !EVENT_CARDS[k].chain).join('|')}]`);
     else if (!deal(s, card)) warn(s, card ? `No ${EVENT_CARDS[card].name.toLowerCase()} fits now${EVENT_CARDS[card].from ? ` (from level ${EVENT_CARDS[card].from})` : ''}, or one is up already.` : 'No event fits now.');
     return since(s, first);
   }
+  if (/^developer chain( \w+)?$/.test(text)) { const first = s.serial; developerChain(s, text.split(' ')[2] || 'counter'); return since(s, first); } // a follow-up now (events.mjs chains)
   // On rooms (R1): ls, cd, map, go, wait, back, engage, cat, pull, open, force, rest, slip, jack out (floorplan.mjs).
   // Mid-fight, jack out is the emergency escape, as on the old runs.
   if (s.run?.rooms) {

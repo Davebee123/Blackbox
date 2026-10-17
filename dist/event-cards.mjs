@@ -8,16 +8,16 @@
 import { glyph } from './glyphs.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { FACTIONS as FX } from './factions.mjs';
-import { FAMILIES, CONFIG } from './data.mjs';
+import { FAMILIES, CONFIG, MUTATIONS } from './data.mjs';
 import { UNIQUES, hackerLevel, active, materialsOf } from './combat.mjs';
-import { CARDS, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD } from './events.mjs';
+import { CARDS, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
 import { SCOUTED, KINDS as INV_KINDS } from './invasion.mjs';
 import { WARES } from './market.mjs';
 import { codeOf } from './gear.mjs';
 import { esc, levelTag } from './view.mjs';
 
 // Each card's icon (the strip, the threat list, the pager), and a family's: its code's glyph.
-export const EVENT_ICON = { courier: 'upload', bounty: 'bounty', choir: 'echo', outbreak: 'spider', leak: 'cracker', darknet: 'item', feud: 'mirror', hunt: 'kill', shock: 'sync', spotter: 'watchman' };
+export const EVENT_ICON = { courier: 'upload', bounty: 'bounty', choir: 'echo', outbreak: 'spider', leak: 'cracker', darknet: 'item', feud: 'mirror', hunt: 'kill', shock: 'sync', spotter: 'watchman', counter: 'claw', returning: 'bounty', lantern: 'upload', zero: 'accuracy' };
 export const FAM_GLYPH = { ransomware: 'cipher', worm: 'worm', ghostroot: 'kernel' };
 const WARE_GLYPH = { cipher: 'cipher', worm: 'worm', kernel: 'kernel', salvage: 'salvage', exploit: 'exploit' };
 const mins = (ms) => Math.max(1, Math.ceil(ms / 60000));
@@ -35,9 +35,16 @@ function ring(left, total, tip) {
   const r = 6.5, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, left / Math.max(1, total)));
   return `<span class="evc-ring${f < 0.25 ? ' low' : ''}" title="${esc(tip)}" role="img" aria-label="${esc(tip)}"><svg viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="${r}" class="bg"/><circle cx="9" cy="9" r="${r}" class="fg" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 9 9)"/></svg></span>`;
 }
-// The shell. sub: what sits in the strip after the name (a level, a mark); left/total: the ring (none for a card with no clock).
-function shell(s, ev, { body, foot = '', sub = '', left = ev.left, total = CARDS[ev.card].ms, tip = `${mins(left)} min left`, cls = '', name = CARDS[ev.card].name } = {}) {
-  return `<section class="evc evc-${ev.card}${cls ? ' ' + cls : ''}" style="--ph:-${Date.now() % 2400}ms" aria-label="${esc(name)}"><header class="evc-head" title="${esc(eventText(s, ev))}">${glyph(EVENT_ICON[ev.card])}<b>${esc(name)}</b><span class="evc-sub">${sub}</span>${left != null ? ring(left, total, tip) : ''}</header><div class="evc-body">${body}</div>${foot ? `<footer class="evc-foot">${foot}</footer>` : ''}</section>`;
+// A follow-up's link (events.mjs chains): a chain mark in the strip, the event that caused it on hover. A button to its
+// server while that server's on your map.
+function chainMark(s, ev) {
+  const tip = causeText(s, ev.cause), at = ev.cause.loc && placeOf(s, ev.cause.loc);
+  return at ? `<button type="button" class="evc-link" data-select="${esc(at.id)}" title="${esc(tip)}" aria-label="${esc(tip)}">${glyph('chain')}</button>` : `<span class="evc-link" title="${esc(tip)}" role="img" aria-label="${esc(tip)}">${glyph('chain')}</span>`;
+}
+// The shell. sub: what sits in the strip after the name (a level, a mark); left/total: the ring (none for a card with no clock);
+// ec: the card's colour, when it isn't the event violet (a faction's).
+function shell(s, ev, { body, foot = '', sub = '', left = ev.left, total = CARDS[ev.card].ms, tip = `${mins(left)} min left`, cls = '', name = CARDS[ev.card].name, ec = '' } = {}) {
+  return `<section class="evc evc-${ev.card}${ev.cause ? ' chained' : ''}${cls ? ' ' + cls : ''}" style="--ph:-${Date.now() % 2400}ms${ec ? `;--ec:${ec}` : ''}" aria-label="${esc(name)}"><header class="evc-head" title="${esc(eventText(s, ev))}">${glyph(EVENT_ICON[ev.card])}<b>${esc(name)}</b>${ev.cause ? chainMark(s, ev) : ''}<span class="evc-sub">${sub}</span>${left != null ? ring(left, total, tip) : ''}</header><div class="evc-body">${body}</div>${foot ? `<footer class="evc-foot">${foot}</footer>` : ''}</section>`;
 }
 // A target tile: the virus as a framed portrait, its name and level, what it pays. The tile is the button.
 function target(s, ev, { face, name = ev.name, tags = '', pay = '', tip, cls = '', cmd = `event fight ${ev.id}` }) {
@@ -132,6 +139,48 @@ export function toldCard(s) {
   return sc ? `<section class="evc evc-told" aria-label="Next invasion"><header class="evc-head" title="${esc(`You killed its spotter. The next invasion comes ${sc.levels} levels weaker.`)}">${glyph('firewall')}<b>Next invasion</b><span class="evc-sub"></span></header><div class="evc-body">${nextTile(s, sc)}</div></section>` : '';
 }
 
-const BUILD = { feud, hunt, bounty, choir, courier, spotter, shock, outbreak, darknet: darknetCard };
+// ---------- follow-ups (chains): each a card of its own in the same shell, its link mark in the strip ----------
+// Counter-raid: the side you fought swings back. Its mark, an arc of the blow landing on your server (your side's mark
+// on it: you hold it for them), and the runner's tile in its colour.
+function counter(s, ev) {
+  const to = ev.loc ? placeOf(s, ev.loc)?.name || 'A server' : 'Your server';
+  const blow = `<div class="cx-blow" style="--fc:${FX[ev.foe].color};--yc:${FX[ev.side].color}" title="${esc(`${FX[ev.foe].short} strikes back at ${to}`)}"><span class="cx-from">${glyph('f-' + ev.foe)}</span><i class="cx-arc"></i><span class="cx-to">${glyph(ev.loc ? 'integrity' : 'firewall')}<i class="cx-hit"></i><span class="cx-mine">${glyph('f-' + ev.side)}</span></span></div>`;
+  return shell(s, ev, {
+    sub: fmark(ev.foe), ec: FX[ev.foe].color,
+    body: `${blow}${target(s, ev, { cls: 'runner', face: glyph(FAM_GLYPH[ev.family] || 'claw'), tags: `<span class="tag">elite</span><small class="evc-at">${esc(to)}</small>`, pay: `${credits(counterPay(ev.level))}${repOf(ev.side, CHAIN.counter.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.counter.reward(ev)}.` })}`,
+  });
+}
+// Returning bounty: the wanted tile again, its escapes as pips, its mutation as a tag. Marked: a gold frame and the
+// unique it carries (its glyph and gold name), or a Custom protocol when none is missing.
+function returning(s, ev) {
+  const n = ev.escapes || 1, mut = MUTATIONS[ev.mutation];
+  const pips = `<span class="rt-esc" title="${esc(`Got away ${n === 1 ? 'once' : 'twice'}`)}" role="img" aria-label="${esc(`Got away ${n === 1 ? 'once' : 'twice'}`)}">${Array.from({ length: CHAIN.returning.marked }, (_, i) => `<i${i < n ? ' class="on"' : ''}></i>`).join('')}</span>`;
+  const drop = !ev.marked ? '' : ev.unique
+    ? `<div class="rt-drop" title="${esc(`${UNIQUES[ev.unique].name}: a unique you haven't found`)}"><span class="rt-dg">${uniqueGlyph(ev.unique)}</span><b class="iname r-zeroday">${esc(UNIQUES[ev.unique].name)}</b>${glyph('item')}</div>`
+    : `<div class="rt-drop custom" title="A Custom protocol"><span class="rt-dg">${glyph('protocol')}</span><b class="r-custom">Custom</b>${glyph('item')}</div>`;
+  return shell(s, ev, {
+    sub: `<span class="rt-mult" title="${esc(`The bounty ×${CHAIN.returning.mult} for each escape`)}">×${+(CHAIN.returning.mult ** n).toFixed(2)}</span>${fmark(ev.hunter)}`, cls: ev.marked ? 'marked' : '', ec: ev.marked ? 'var(--r-zeroday)' : '',
+    body: `${target(s, ev, { cls: `poster returning${ev.marked ? ' marked' : ''}`, face: glyph(FAM_GLYPH[ev.family] || 'bounty'), tags: `${pips}${mut ? `<span class="tag" title="${esc(mut.rule)}">${esc(mut.name)}</span>` : ''}`, pay: `${credits(returnPay(ev))}${repOf(ev.hunter, CHAIN.returning.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.returning.reward(ev)}.` })}${drop}`,
+  });
+}
+// LANTERN's offer: the courier's packet line in LANTERN's colour, its lamp as the packet; a Custom protocol aboard.
+// (A stand-in until the Escort, docs/director.md section 4.)
+function lantern(s, ev) {
+  const gone = 1 - ev.left / CARDS.lantern.ms;
+  return shell(s, ev, {
+    sub: fmark('lantern'), ec: FX.lantern.color,
+    body: `<div class="cr-line" style="--at:${(gone * 100).toFixed(1)}%" title="${esc(`It leaves in ${mins(ev.left)} min`)}"><i class="cr-track"></i><i class="cr-srv">${glyph('integrity')}</i><span class="cr-pkt">${glyph('f-lantern')}</span></div>${target(s, ev, { cls: 'courier lantern', face: glyph('protocol'), tags: '<span class="tag r-custom">Custom</span>', pay: `${rw(glyph('protocol'), null, 'A Custom protocol', 'r-custom')}${repOf(ev.ally, CHAIN.lantern.rep)}`, tip: `Intercept ${ev.name}. ${CARDS.lantern.reward(ev)}.` })}`,
+  });
+}
+// Patient zero: the family's code glyph at an epicentre (rings out from it), the outbreak's ×2 struck through (it ends
+// with the kill), and the code cache it pays.
+function zero(s, ev) {
+  const code = codeOf(ev.family), n = zeroCode(ev);
+  return shell(s, ev, {
+    body: target(s, ev, { cls: 'zero', face: `${glyph(FAM_GLYPH[ev.family] || 'spider')}<i class="zr-ring"></i><i class="zr-ring r2"></i>`, tags: `<span class="tag">elite</span><span class="zr-end" title="${esc(`Kill it and the ${FAMILIES[ev.family].name.toLowerCase()} outbreak ends`)}">${glyph('spider')}<s>×2</s></span>`, pay: `${rw(glyph(FAM_GLYPH[ev.family] || 'materials'), n, `${n} ${WARES[code]?.name || 'code'}`)}${rw(glyph('item'), null, "An elite's loot", 'r-tuned')}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.zero.reward(ev)}.` }),
+  });
+}
+
+const BUILD = { feud, hunt, bounty, choir, courier, spotter, shock, outbreak, darknet: darknetCard, counter, returning, lantern, zero };
 // An event's card, or '' for one with none (a leak is shown on its server: leakCard).
 export const eventCard = (s, ev) => BUILD[ev.card]?.(s, ev) || '';

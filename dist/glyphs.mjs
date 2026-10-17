@@ -121,6 +121,8 @@ const P = {
   'f-kestrel': '<path d="M1.5 9.5c3-3.5 4.5-3.5 6.5 0 2-3.5 3.5-3.5 6.5 0"/><path d="M8 9.5v3.5"/>',
   'f-lantern': '<path d="M6 2.5h4M5.5 4h5l1 7h-7z"/><path d="M6.5 11v2.5h3V11M8 6.2v2.6"/>',
   'f-nullchoir': '<circle cx="8" cy="8" r="5.8"/><path d="M3.9 12.1 12.1 3.9"/>',
+  // A chain's link (events.mjs chains): two links, on a follow-up's card and its pager line.
+  chain: '<path d="M6.6 9.4l2.8-2.8"/><path d="M7.4 4.6l1.5-1.5a2.6 2.6 0 0 1 3.7 3.7l-1.5 1.5M8.6 11.4l-1.5 1.5a2.6 2.6 0 0 1-3.7-3.7l1.5-1.5"/>',
   // Memory: a chip with pins.
   memory: '<rect x="4" y="4" width="8" height="8" rx="1"/><path d="M6 2v2M8 2v2M10 2v2M6 12v2M8 12v2M10 12v2M2 6h2M2 10h2M12 6h2M12 10h2"/>',
   // Honeytoken: a jar with a drip, bait for trouble.

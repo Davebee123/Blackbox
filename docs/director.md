@@ -24,25 +24,29 @@ What it does **not** do: read how you're doing. It never looks at your Signal, d
 
 ## 2. Chains
 
+**Built (D1).** `dist/events.mjs` (`CHAIN`, the follow-up cards `counter`, `returning`, `lantern` and `zero`, `schedule`, `dealChain`, `eventKill`), their cards in `dist/event-cards.mjs`, tests in `chains.test.mjs`. `developer chain [counter|returning|marked|lantern|zero]` deals one now with a made-up cause.
+
 A chain is a follow-up card that one outcome schedules. The director keeps a short list of pending follow-ups on the save, each with what caused it, a delay and an expiry. When a follow-up is due, it is dealt like any card (it takes one of the two event slots) and its card shows a small link icon; hovering it names the event that caused it.
 
 ### The first chains
 
 | Cause | Follow-up | Delay | What it is | Pays |
 |---|---|---|---|---|
-| You won a **Feud** for one side | **Counter-raid** | 20–40 min | The side you beat sends a runner at a server you hold, or your home if you hold none. A fight at your level, in that side's colour. Ignoring it costs nothing: the runner leaves, and nobody's rep moves. | Credits, +2 rep with the side you backed, and the grudge ends |
-| A **Bounty hunt** got away | **Returning bounty** | 30–60 min | The same name, back with +2 levels and one mutation. Its card shows how many times it has escaped. After two escapes it comes back once more as a **marked** elite with a named drop (a unique you haven't found, at about your level), then the chain ends. | The bounty, ×1.5 for each escape |
-| You killed 3 **Couriers** | **LANTERN's offer** | at once | LANTERN's courier crosses one of your servers and wants an Escort through it (section 4). | LANTERN rep and a Custom protocol |
-| You won a **Scout** fight | **Invasion foreshadowed** | (the invasion's own clock) | The next invasion's kind shows on the wall and the pager ahead of time, and it comes in weaker. (Built with the Scout card.) | — |
-| 15 kills of the family in an **Outbreak** | **Patient zero** | at once | The outbreak's source, an elite of that family, turns up on one of your servers. Kill it and the outbreak ends early. | A code cache of that family and the elite's loot |
+| You won at least one fight in a **Feud** (for the side you backed) | **Counter-raid** | 20–40 min | The side you fought sends a runner at a server you hold (a traced server you've been on), or your home if you hold none. A fight at your level in that side's colour and family, sized like a feud's runner (an elite, ×1.5 Integrity). Ignoring it costs nothing: the runner leaves (15 min), and nobody's rep moves. | Half a bounty's credits (40 + 7.5×level), +2 rep with the side you backed (no ripple), and the grudge ends |
+| A **Bounty hunt** got away | **Returning bounty** | 30–60 min | The same name, back with +2 levels (up to your level + 3) and one mutation, on one of your servers for 20 min. Its card shows its escapes as pips. If it gets away again (the same rule), after that second escape it comes back once more as a **marked** elite whose kill drops a named unique you haven't found (one that drops in the world, up to two levels over you, nearest your level first; from level 10, as couriers' named drops), then the chain ends. Below level 10, or with none missing, a Custom protocol instead. | The bounty ×1.5 for each escape (×1.5, then ×2.25), and +2 rep with its hunter |
+| You killed 3 **Couriers** (a running count, reset when the offer is dealt) | **LANTERN's offer** | at once | For now a special courier in LANTERN's colour and mark (a fight like a courier's, 15 min). It becomes LANTERN's courier asking for an Escort through one of your servers (section 4) in D3. | +5 LANTERN rep (Halcyon standing until LANTERN's hub is located) and a Custom protocol |
+| You won a **Spotter** fight | **Invasion foreshadowed** | (the invasion's own clock) | The next invasion's kind shows on the wall and the pager ahead of time, and it comes in weaker. Already built with the Spotter card (invasion.mjs `scoutNext`); not on the follow-up list. | — |
+| 15 kills of the family during an **Outbreak** | **Patient zero** | at once | The outbreak's source, an elite of that family at your level, turns up on one of your servers for 15 min. Kill it and the outbreak ends early. If the outbreak ends before it's dealt, it goes too. | A code cache of that family (a vault's: 12 + level/2) and the elite's loot |
 
-Ignoring a card never starts a chain. A bounty hunt that "got away" counts only if you fought it at least once and left, or it had made all three hops while you were on a run on its floor. Otherwise it simply leaves.
+Ignoring a card never starts a chain. A bounty hunt that "got away" counts only if you fought it at least once and left, or it had made all three hops while you were on a run on its floor. Otherwise it simply leaves. A returning bounty gets away the same way: you fought it and left, or it left while you were on a run on its floor. Ignoring a follow-up costs nothing and starts nothing.
+
+Each follow-up's card shows a chain-link mark in its strip (a button to the server the cause happened on, while it's on your map), and its pager line the same mark; hovering either names the event that caused it. The follow-ups roll only the director's dice (delays, servers, names, the marked bounty's unique) and pay from the event's own seed.
 
 ### Limits
 
 - At most 3 pending follow-ups, one per chain kind. A new cause for a chain that's already pending doesn't stack.
-- A follow-up expires if it isn't dealt within 3 hours of logged-on time.
-- Chains don't pay more than the cards they come from, except the marked bounty's one named drop (which counts toward the uniques-under-one-an-hour budget).
+- A follow-up expires quietly if it isn't dealt within 3 hours of logged-on time (counted from when it was scheduled). When it's due and both event slots are full, it waits for one to free while its expiry runs. The list ticks on logged-on time only, so offline time never piles follow-ups up.
+- Chains don't pay more than the cards they come from, except the marked bounty (its ×2.25, two levels and two escapes past the hunt's ×2, and its one named drop, which counts toward the uniques-under-one-an-hour budget). It is rare by construction: a hunt (about one card in ten) has to get away, and then its return has to get away too, before the marked one is dealt, and only from level 10 with a unique still missing. Even a player who flees every hunt on purpose gets at most one per hunt dealt (one returning bounty pending at a time), well under one an hour.
 
 ## 3. Three sizes
 
@@ -98,7 +102,7 @@ It never reads your Signal, deaths, win streaks, gear or play time per session. 
 
 ## 7. Build order
 
-1. **D1: chains**, after the four new cards land: the follow-up list, the link icon, and the five chains above.
+1. **D1: chains** (built): the follow-up list, the link icon, and the five chains above (LANTERN's offer as a courier until D3's Escort).
 2. **D2: blips**, all four, and the history list.
 3. **D3: run cards**: the Surge room first, then Escort, then hunter packs.
 4. **D4: crises**: Strain bloom first (strains already exist), then Turf war, then Blackout.

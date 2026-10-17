@@ -1682,12 +1682,14 @@ export function mailMarkup(s, sel = null, now = Date.now()) {
 }
 
 // ---------- the pager's list (Comms) ----------
+// A follow-up's line (events.mjs chains): the chain mark, the event that caused it on hover.
+const chainMk = (c) => (c.chain ? `<i class="cchain" title="${esc(c.chain)}" role="img" aria-label="${esc(c.chain)}">${glyph('chain')}</i>` : '');
 const agoShort = (ms) => (ms < 60000 ? `${Math.max(0, Math.round(ms / 1000))}s` : ms < 3600000 ? `${Math.floor(ms / 60000)}m` : ms < 86400000 ? `${Math.floor(ms / 3600000)}h` : `${Math.floor(ms / 86400000)}d`);
 const GO_LABEL = { mail: 'Open', store: 'Store', map: 'Map', jack: 'Jack in' };
 export function commsMarkup(s, filter = 'all', now = Date.now()) {
   const all = commsOf(s);
   const shown = all.filter((c) => filter === 'all' || commsGroup(c.kind) === filter);
-  const rows = shown.map((c) => `<li class="citem ${c.kind}${c.seen ? '' : ' unseen'}${c.done ? ' done' : ''}"><span class="k ${c.kind}">${c.card && EVENT_ICON[c.card] ? glyph(EVENT_ICON[c.card]) : ''}${esc(c.label)}</span><span class="cfrom">${esc(c.from)}</span><span class="cage">${agoShort(now - c.t)}</span><p>${esc(c.text)}</p>${c.go ? `<button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}">${GO_LABEL[c.go.split(':')[0]] || 'Open'}</button>` : ''}<button type="button" class="act dim cclear" data-cclear="${c.id}" title="Clear">×</button></li>`).join('');
+  const rows = shown.map((c) => `<li class="citem ${c.kind}${c.seen ? '' : ' unseen'}${c.done ? ' done' : ''}"><span class="k ${c.kind}">${c.card && EVENT_ICON[c.card] ? glyph(EVENT_ICON[c.card]) : ''}${esc(c.label)}${chainMk(c)}</span><span class="cfrom">${esc(c.from)}</span><span class="cage">${agoShort(now - c.t)}</span><p>${esc(c.text)}</p>${c.go ? `<button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}">${GO_LABEL[c.go.split(':')[0]] || 'Open'}</button>` : ''}<button type="button" class="act dim cclear" data-cclear="${c.id}" title="Clear">×</button></li>`).join('');
   return `<div class="comms-head"><span>Comms</span><span class="p-acts"><button type="button" class="act dim" data-comms-clear title="Clear everything you've seen">Clear</button><button type="button" class="act" data-comms-close>Close</button></span></div>
     <div class="comms-filters" role="group" aria-label="Show">${['all', ...Object.keys(COMMS_GROUPS)].map((f) => `<button type="button" data-cfilter="${f}" aria-pressed="${filter === f}">${f === 'all' ? 'All' : f}</button>`).join('')}</div>
     <ul class="comms-list">${rows || '<li class="quiet">Quiet.</li>'}</ul>`;
@@ -2967,7 +2969,7 @@ export function sidebarMarkup(s, { module = 'map', mapSel = 'server', mapView = 
     ctx = `<div class="sb-select">${mapSelection(s, mapSel, mapView)}</div>`;
   } else {
     const al = commsOf(s).filter((c) => !c.done && c.go).slice(0, 4);
-    ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${c.card && EVENT_ICON[c.card] ? glyph(EVENT_ICON[c.card]) : ''}${esc(c.label)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
+    ctx = al.length ? `<section class="sb-block sb-alerts"><div class="sb-head"><b>Needs you</b><small>${al.length}</small></div><ul>${al.map((c) => `<li><button type="button" class="act" data-go="${esc(c.go)}" data-cid="${c.id}" title="${esc(c.text)}"><span class="k ${c.kind}">${c.card && EVENT_ICON[c.card] ? glyph(EVENT_ICON[c.card]) : ''}${esc(c.label)}${chainMk(c)}</span>${esc(c.text.length > 60 ? c.text.slice(0, 58) + '…' : c.text)}</button></li>`).join('')}</ul></section>` : '';
   }
   // No health block: Integrity and Signal live on the top bar (and the HUD in a fight).
   return fighting && module === 'combat' ? crew : `${crew}${ctx}`;

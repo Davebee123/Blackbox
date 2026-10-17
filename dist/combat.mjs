@@ -20,7 +20,7 @@ import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs
 const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
 const CONFIG_REFUND = 250;
 import { fleetCommand, fleetWon } from './fleet.mjs';
-import { eventCommand, eventWon, outbreakMult } from './events.mjs';
+import { eventCommand, eventWon, outbreakMult, eventKill } from './events.mjs';
 import { siteTrait, postsOf, listenBoost as postBoost, componentChance, gainComponents, retireOutposts, retireLetter, PROGRAM_IDS, codebasesOf } from './sockets.mjs';
 import { consortiumWon } from './consortium.mjs';
 import { rollRogue, rogueKill } from './rogue.mjs';
@@ -1996,6 +1996,7 @@ function packExploit(s, path, who) {
 export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bounty = null, family = e.virus.family, loc = null, rare = false } = {}) {
   const v = e.virus, lvl = v.level;
   contractKill(s, { family, zone: sprawl, bounty, level: lvl, strain: v.strain });
+  eventKill(s, family); // an outbreak's source (events.mjs chains)
   huntKill(s, family);
   // SPRAWL-00's strays trace one of its ? servers (floors.mjs), falling with the level gap like XP (not guards or bosses).
   // Everywhere else a trace comes from first clears (netrooms.mjs), the vault's record and the rest (hidden.mjs).
@@ -2081,6 +2082,7 @@ export function finish(s, result) {
     if (result === 'victory') {
       emit(s, 'victory', `${e.virus.name} neutralized in ${e.cycle} cycles. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: true, bounty: named, level: e.virus.level, strain: e.virus.strain });
+      eventKill(s, e.virus.family); // an outbreak's source (events.mjs chains)
       huntKill(s, e.virus.family);
       payKill(s, e, XP.home, `${e.virus.name} neutralized`);
       gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
@@ -2108,6 +2110,7 @@ export function finish(s, result) {
       if (loc && e.virus.boss === 'resident' && !loc.takenOver) { loc.resident = null; strikeServer(s, loc, 'takeover'); contractTakeover(s, loc); }
       emit(s, 'victory', `${e.virus.name} down. ${e.room} is open. ${!e.metrics.attackDamage ? 'Nothing got through.' : `Took ${e.metrics.attackDamage} damage.`} Signal ${d.integrity}/${d.max}.`, { mode: 'run' });
       contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
+      eventKill(s, e.virus.family); // an outbreak's source (events.mjs chains)
       payKill(s, e, XP.guard, `${e.virus.name} down`);
       // A guard's drop goes in your pack: it's yours once you jack out.
       const item = s.run && rollDrop(s, { kind: 'guard', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family, boss: e.virus.boss || null }, e.virus.level);
@@ -2143,6 +2146,7 @@ export function finish(s, result) {
   const hid = inv?.hidden ? hiddenNode(s, inv.hidden) : null; // an invader from a server you haven't found
   if (result === 'victory') {
     contractKill(s, { family: e.virus.family, zone: false, level: e.virus.level, strain: e.virus.strain });
+    eventKill(s, e.virus.family); // an outbreak's source (events.mjs chains)
     if (!hid) huntKill(s, e.virus.family);
     payKill(s, e, XP.home, `${e.virus.name} neutralized`);
     gainCode(s, codeFrom(s, e.virus.family, e.virus.level, 'home'), 'Code: ');
