@@ -62,7 +62,9 @@ const MAP = {
   'thread-temp': (e) => ({ kind: 'thread', label: 'Appears', from: 'Network', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: true }),
   'thread-done': (e) => ({ ref: e.thread, kind: 'thread', label: 'Done', from: 'Thread', text: e.message.replace(/^THREAD DONE: /, ''), go: e.thread ? `mail:${e.thread}` : 'mail', beep: true }),
   breadcrumb: (e) => ({ kind: 'mail', label: 'wick', from: 'wick', text: e.message.replace(/^wick: /, ''), go: e.location ? `map:${e.location}` : 'map', beep: true }),
-  'world-event': (e) => ({ event: e.event, kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', choir: 'Boss', outbreak: 'Outbreak', leak: 'Leak' }[e.card] || 'Event', from: e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : e.card === 'choir' ? 'Hollow Choir' : 'Network', text: e.message, go: e.location ? `map:${e.location}` : e.card === 'outbreak' ? null : 'map', beep: true }),
+  'world-event': (e) => ({ event: e.event, kind: 'net', label: { courier: 'Courier', bounty: 'Bounty', choir: 'Boss', outbreak: 'Outbreak', leak: 'Leak', feud: 'Feud', hunt: 'Hunt', shock: 'Market', scout: 'Scout' }[e.card] || 'Event', from: e.from || (e.card === 'courier' ? 'LANTERN' : e.card === 'bounty' ? 'Halcyon' : e.card === 'choir' ? 'Hollow Choir' : e.card === 'scout' ? 'Wall' : 'Network'), text: e.message, go: e.location ? `map:${e.location}` : e.hub ? `map:hub-${e.hub}` : e.card === 'scout' ? 'map:server' : e.card === 'outbreak' ? null : 'map', beep: true }),
+  // A hunt's quarry moved (events.mjs): its pager line follows it (the event's line is replaced, not added to).
+  'world-event-hop': (e) => ({ event: e.event, kind: 'net', label: 'Hunt', from: e.from || 'Network', text: e.message, go: e.location ? `map:${e.location}` : 'map', beep: false }),
   'consortium-invite': (e) => ({ kind: 'net', label: 'Invite', from: 'Consortium', text: e.message.replace(/ consortium accept, or consortium decline\.$/, ''), go: 'people:consortium', beep: true }),
   'consortium-merged': (e) => ({ kind: 'net', label: 'Merged', from: 'Consortium', text: e.message.replace(/ See the Map\.$/, ''), go: 'map:consortium', beep: false }),
   'consortium-tier': (e) => ({ kind: 'net', label: 'Consortium', from: 'Consortium', text: e.message, go: 'map:consortium', beep: true }),
@@ -87,7 +89,7 @@ export function logComms(s, events, now = Date.now()) {
     if (!f) continue;
     const c = { id: (s.commsSeq = (s.commsSeq || 0) + 1), t: now, seen: false, ...f(e) };
     // The same news again (a restock, the next harvest, another swarm alert) replaces the old line.
-    const twin = list.findIndex((x) => x.label === c.label && x.from === c.from && x.go === c.go && (x.kind !== 'offer' && x.kind !== 'ready'));
+    const twin = list.findIndex((x) => ((x.label === c.label && x.from === c.from && x.go === c.go) || (c.event != null && x.event === c.event)) && (x.kind !== 'offer' && x.kind !== 'ready'));
     if (twin >= 0) list.splice(twin, 1);
     list.unshift(c);
     added.push(c);

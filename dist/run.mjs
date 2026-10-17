@@ -16,7 +16,7 @@ import { contractTakeover, bankCargo, payloadHome, wantedBy, title as contractTi
 import { hiddenNodes, locate, flagged, bankRoute, hiddenLead, spawnHidden, HIDDEN, routed } from './hidden.mjs';
 import { hiddenNear, reached as floorsReached } from './floors.mjs';
 import { SPRAWL, zoneOf, zoneRooms } from './zone.mjs';
-import { deal } from './events.mjs';
+import { deal, CARDS as EVENT_CARDS } from './events.mjs';
 import { crewCommand } from './crew.mjs';
 import { presenceCommand, at, simOn, PRESENCE, online } from './presence.mjs';
 import { consortiumCommand, isGround, arrive, memberServers } from './consortium.mjs';
@@ -752,7 +752,12 @@ export function play(s, input) {
   if (/^(install|uninstall) /.test(text)) { const first = s.serial; if (sabotageBlock(s, text)) return since(s, first); } // a saboteur holds a service (invasion.mjs)
   if (/^threads?\b/.test(text)) return threadCommand(s, text); // threads, thread <id>, thread track|abandon|resume <id>, thread take <n> (threads.mjs)
   if (/^developer thread\b/.test(text)) return developerThread(s, text.replace(/^developer thread\s*/, ''));
-  if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { const first = s.serial; deal(s, text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null)); return since(s, first); } // an event now
+  if (/^developer event( \w+)?$/.test(text) || text === 'developer station') { // an event now
+    const first = s.serial, card = text.split(' ')[2] || (text.endsWith('station') ? 'courier' : null);
+    if (card && !EVENT_CARDS[card]) warn(s, `developer event [${Object.keys(EVENT_CARDS).join('|')}]`);
+    else if (!deal(s, card)) warn(s, card ? `No ${EVENT_CARDS[card].name.toLowerCase()} fits now${EVENT_CARDS[card].from ? ` (from level ${EVENT_CARDS[card].from})` : ''}, or one is up already.` : 'No event fits now.');
+    return since(s, first);
+  }
   // On rooms (R1): ls, cd, map, go, wait, back, engage, cat, pull, open, force, rest, slip, jack out (floorplan.mjs).
   // Mid-fight, jack out is the emergency escape, as on the old runs.
   if (s.run?.rooms) {

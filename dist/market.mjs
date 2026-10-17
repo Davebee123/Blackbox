@@ -12,7 +12,7 @@ import { addFilter, rollFilter } from './filters.mjs';
 import { FACTIONS, hubsOf, hostile, repTier, buyFrom, hubFound } from './factions.mjs';
 import { seeded } from './gear.mjs';
 import { deliverGoods } from './store.mjs';
-import { deal } from './events.mjs';
+import { deal, shockMult } from './events.mjs';
 import { learnCodebase, gainComponents } from './sockets.mjs';
 
 const now = () => hooks.now?.() ?? Date.now();
@@ -59,11 +59,12 @@ export const MARKET = {
 const marketOf = (s) => (s.market ||= { pressure: {}, transfers: [], serial: 0, event: 'calm', eventUntil: 0, at: null });
 export const eventOf = (s) => EVENTS[marketOf(s).event] || EVENTS.calm;
 
-// What moves a hub's price that you can't: its condition × the world event × a wiped hub elsewhere.
+// What moves a hub's price that you can't: its condition × the world event × a wiped hub elsewhere × a market shock
+// on this hub's ware (events.mjs, the Market shock card).
 export function outsideMult(s, f, w) {
   const cond = CONDITIONS[HUB_CONDITION[f]]?.mult[w] ?? 1, ev = eventOf(s).mult[w] ?? 1;
   const t = now(), gap = Object.entries(s.hubs || {}).some(([g, h]) => g !== f && (h.offlineUntil || 0) > t && (CONDITIONS[HUB_CONDITION[g]]?.mult[w] || 0) > 1) ? MARKET.wiperBoost : 1;
-  return cond * ev * gap;
+  return cond * ev * gap * shockMult(s, f, w);
 }
 // The price at a hub for one unit, before the spread: base × outside factors × your own pressure
 // (selling pushes it down to 35% at most, buying up to 160%).

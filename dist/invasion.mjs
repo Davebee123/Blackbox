@@ -48,6 +48,9 @@ export const PACK_PUSH = 2; // every virus waiting behind the front adds this ma
 export const QUIRKED = { chance: 0.3, kinds: ['raider', 'pack', 'champion'], hoard: 1.5, hiddenPush: 2, brood: -2 };
 export const CHAMPION = { hp: 1.5 }; // elite-grade (elite armor and hits, triple XP), sized for one player: a crew elite is ELITE.hp. About 25–50% of your server's health at levels 10–18 (the scripted planner in blues)
 export const SCOUT = { mapMs: 5 * 60000, mark: 3 }; // how long it takes to map your wall; what the next one counts higher
+// A scout you killed first (events.mjs, the Scout card): the next invasion comes this many levels lower (a grade's worth,
+// GRADE_LEVELS), and you know its server and kind before it sets out (net.scouted).
+export const SCOUTED = { levels: 2 };
 export const THIEF = { take: 0.5, min: 3 }; // the share of each store it takes; the store it needs to be worth the trip
 // Bounty: code. It grows by grow × base a minute while it's contested or breaching (you
 // not on it), up to cap × base more, and that growth is yours only if you kill it. An outright block pays blocked × base.
@@ -139,7 +142,8 @@ export function tellOf(s, inv = s.invasion) {
   }[inv.kind || 'raider'] || '';
   const q = { hoard: `It carries its server's hoard, so it is Armored and its bounty is 50% bigger.`, nest: 'It brings a brood from its Nest, one more virus behind it.', hidden: `It hides like its server does, so it counts ${QUIRKED.hiddenPush} levels higher at your wall.` }[inv.quirk] || '';
   const m = inv.marked ? `A scout mapped your wall for it, so it counts ${inv.marked} levels higher.` : '';
-  return [say, q, m].filter(Boolean).join(' ');
+  const w = inv.scouted ? `You killed its scout, so it comes ${inv.scouted} levels weaker.` : '';
+  return [say, q, m, w].filter(Boolean).join(' ');
 }
 export const labelOf = (inv) => (inv ? kindOf(inv).name + (inv.kind === 'pack' && inv.queue?.length ? ` ×${inv.queue.length + 1}` : '') : '');
 
@@ -320,6 +324,8 @@ function unit(s, loc, level, mutation) {
 }
 const clampLv = (L) => Math.max(1, Math.min(CONFIG.maxMobLevel, L));
 const tame = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member && isLive(s, l) && !l.zone && connectedTo(l));
+// Whether invasions come for your wall at all: a server attached to your network that sends them.
+export const invasionsLive = (s) => tame(s).length > 0;
 // A service a saboteur can shut off: the best one you run.
 function serviceTarget(s) {
   const ids = Object.keys(s.services || {}).filter((id) => SERVICES[id] && s.services[id] > 0);
@@ -330,20 +336,40 @@ function serviceTarget(s) {
 // An outpost a thief can rob: the one with the most in its store.
 const richest = () => null; // outposts and their stores are gone (R2, sockets): a thief has nothing to rob, so none comes
 // Which kind comes: weighted, by what the sending server's level allows and what you have for it to go after.
-function rollKind(s, loc, awayRoll) {
+// r: the dice (the game's; a killed scout's own, scoutNext).
+function rollKind(s, loc, awayRoll, r0 = () => rand(s)) {
   if (!s.net.seq) return 'raider'; // the first one is plain
   const ok = Object.entries(KINDS).filter(([k, K]) => (loc.level || 1) >= K.from && !(awayRoll && K.online)
     && (k !== 'pair' || tame(s).length >= 2) && (k !== 'saboteur' || serviceTarget(s)) && (k !== 'thief' || richest(s)));
-  const roll = () => { let r = rand(s) * ok.reduce((n, [, K]) => n + K.w, 0); for (const [k, K] of ok) { r -= K.w; if (r < 0) return k; } return ok.at(-1)[0]; };
+  const roll = () => { let r = r0() * ok.reduce((n, [, K]) => n + K.w, 0); for (const [k, K] of ok) { r -= K.w; if (r < 0) return k; } return ok.at(-1)[0]; };
   let k = roll();
   if (k !== 'raider' && k === s.net.lastKind) k = roll(); // the same special twice in a row is rarer
   return k;
+}
+
+// A scout killed at home (events.mjs): the next invasion's server and kind, rolled now on r (the event's own dice, so
+// the game's rolls don't move), and SCOUTED.levels off it when it sets out. Returns { name, from } or null.
+export function scoutNext(s, r) {
+  const net = (s.net ||= { wall: null, next: null }), all = tame(s);
+  if (!all.length) return null;
+  const loc = r() < 0.5 ? [...all].sort((a, b) => (b.level || 1) - (a.level || 1))[0] : all[Math.floor(r() * all.length)]; // half the time your strongest, as ever
+  const kind = rollKind(s, loc, false, r);
+  net.scouted = { levels: SCOUTED.levels, from: loc.id, kind };
+  return { name: KINDS[kind].name, from: loc.name, kind };
 }
 
 // One invasion sets out from a location you've found, at that location's level.
 // Sometimes it comes from a server you haven't found, through the one it hangs off.
 // want: { kind, away } (developer invade <kind>, the away clock).
 function depart(s, want = {}) {
+  // Scouted (scoutNext): from that server, of that kind, and weaker. A server since detached: just weaker.
+  const sc = s.net?.scouted || null;
+  if (sc) {
+    s.net.scouted = null;
+    const from = !want.from && !want.kind && tame(s).find((l) => l.id === sc.from);
+    if (from) want = { ...want, from, ...(want.away && KINDS[sc.kind]?.online ? {} : { kind: sc.kind }) };
+  }
+  const weak = sc?.levels || 0;
   let o = want.from ? { loc: want.from } : pickOrigin(s);
   // Half the time it's the strongest server you've connected to that sends it.
   if (o.loc && !want.from && rand(s) < 0.5) o = { loc: tame(s).sort((a, b) => (b.level || 1) - (a.level || 1))[0] || o.loc };
@@ -362,11 +388,11 @@ function depart(s, want = {}) {
   // A thief comes from somewhere else than the outpost it robs, when there's anywhere else.
   if (kind === 'thief' && loc.id === target.id) { const others = tame(s).filter((l) => l.id !== target.id); if (others.length) loc = others[Math.floor(rand(s) * others.length)]; }
   const K = KINDS[kind];
-  const level = clampLv((loc.level || 1) + (KINDS[kind].lvl || 0));
+  const level = clampLv((loc.level || 1) + (KINDS[kind].lvl || 0) - weak);
   const front = unit(s, loc, level, quirk === 'hoard' ? 'armored' : undefined);
   const queue = [];
   if (kind === 'pack') for (let i = 1; i < K.size; i++) { const u = unit(s, loc, level); if (u.name === front.name) u.name += ` #${i + 1}`; queue.push(u); }
-  if (kind === 'pair') { const others = tame(s).filter((l) => l.id !== loc.id), b = others[Math.floor(rand(s) * others.length)] || loc; queue.push(unit(s, b, clampLv(b.level || 1))); }
+  if (kind === 'pair') { const others = tame(s).filter((l) => l.id !== loc.id), b = others[Math.floor(rand(s) * others.length)] || loc; queue.push(unit(s, b, clampLv((b.level || 1) - weak))); }
   if (quirk === 'nest') queue.push(unit(s, loc, clampLv(level + QUIRKED.brood)));
   const mark = net.mark || 0;
   net.mark = 0;
@@ -378,7 +404,7 @@ function depart(s, want = {}) {
   const fromName = h && loc.name === 'an unknown server' ? `an unknown server past ${via?.name}` : loc.name;
   s.invasion = { id: 'inv' + net.seq, kind, quirk, from: loc.id, fromName, hidden: h?.id || null, ...front, name: kind === 'champion' ? `CHAMPION ${front.name}` : front.name,
     queue, size: queue.length + 1, push: (KINDS[kind].push || 0) + (quirk === 'hidden' ? QUIRKED.hiddenPush : 0) + mark, marked: mark || 0,
-    service, target: target?.id || null, state: 'travel', left: total, total, hp: 1, chipAcc: 0, bounty, grown: 0 };
+    service, target: target?.id || null, state: 'travel', left: total, total, hp: 1, chipAcc: 0, bounty, grown: 0, ...(weak ? { scouted: weak } : {}) };
   const inv = s.invasion;
   // Weak ones, the wall handles quietly: a log line and a pager entry, no alert.
   inv.quiet = verdictOf(s, inv) === 'blocked';
@@ -569,6 +595,11 @@ export function jackIn(s, verb = 'jack in') {
   return since(s, first);
 }
 
+// What a killed scout told you about the next one (scoutNext), as a sentence: '' when nothing.
+export function scoutedLine(s) {
+  const sc = s.net?.scouted, from = sc && (s.locations || []).find((l) => l.id === sc.from);
+  return sc ? ` You killed its scout: ${from ? `a ${KINDS[sc.kind].name.toLowerCase()} from ${from.name}, ` : ''}${sc.levels} levels weaker.` : '';
+}
 // invasions: what's coming, what it does, what it pays; your streak.
 export function invasionsCommand(s) {
   const first = s.serial, inv = s.invasion, lines = [];
@@ -579,7 +610,7 @@ export function invasionsCommand(s) {
     lines.push(`${labelOf(inv)}: ${inv.name}, level ${inv.level}, from ${inv.fromName}. It is ${where}.`);
     if (tellOf(s, inv)) lines.push(tellOf(s, inv));
     lines.push(`Kill it for ${codeText(b.now, b.code)} (up to ${b.max} if it sits contested). The wall alone gets ${b.wall}, an outright block ${b.blocked}.${b.capture ? ' A daemon comes with your kill.' : ''}`);
-  } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next * (s.net.open ? I().open.pace : 1))}.${s.net.mark ? ` A scout mapped your wall, so it counts ${s.net.mark} levels higher.` : ''}`);
+  } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next * (s.net.open ? I().open.pace : 1))}.${s.net.mark ? ` A scout mapped your wall, so it counts ${s.net.mark} levels higher.` : ''}${scoutedLine(s)}`);
   lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more.`);
   for (const l of lines) emit(s, 'info', l);
   return since(s, first);

@@ -8,18 +8,26 @@
 //   outbreak  One family surges for a while: its kills drop double code.
 //   leak      Someone leaks the vault key of a server you've found but not taken.
 //   darknet   A broker lists a native unique from another network (network.mjs) for credits and Exploits.
+//   feud      Two rival factions (located hubs) clash over one of your servers. Pick a side: fight the other's runner.
+//   hunt      A named elite that hops server to server every 5 minutes, a level tougher and better paid each hop.
+//   shock     One hub's price for one ware jumps ×2.5 (or crashes ×0.4) for 15 minutes (market.mjs outsideMult).
+//   scout     A scout probes your wall. Kill it at home and the next invasion comes weaker, its kind known (invasion.mjs).
 //
 // Your network's signature (network.mjs) leans the deck: its two favoured cards come up more often, and the
 // families of couriers, bounties and outbreaks lean toward its own.
 //
 // Pure: state in, events out.
-import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES } from './combat.mjs';
+import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks } from './combat.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { LOOT, rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
 import { isPiece } from './sets.mjs';
+import { FACTIONS, hubsOf, hostile, changeRep, hubFound, RIPPLE } from './factions.mjs';
+import { FACTION_FAMILY } from './hubs.mjs';
+import { addFilter, rollFilter } from './filters.mjs';
+import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -33,6 +41,19 @@ export const DIRECTOR = {
 // lair's, the farm's, a story's or a strain's trophy, nor a set piece): what a courier can be carrying.
 const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && !isPiece(u.id) && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD_SOURCES.includes(src.kind))).map((u) => u.id); // a set piece drops off its own table (sets.mjs)
 const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f));
+// The newer cards' numbers. FEUD: rep to your side, from level 8 (no loss: its rivals never mind, its allies warm a little). HUNT: a hop every hopMs, hops of them,
+// a level a hop (up to your level + cap), pay × mult[hop]. SHOCK: a hub's ware ×up, or ×down one time in crash.
+export const FEUD = { from: 8, rep: 4, ms: 20 * 60000 };
+export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
+export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3, wares: ['cipher', 'worm', 'kernel', 'salvage'] }; // not Exploits: the wall's and the programs' currency stays steady
+export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
+// A faction's runner in a feud: a name of its own.
+const RUNNER = { halcyon: 'ADJUSTER', glassjaw: 'FACET', kestrel: 'TALON', lantern: 'BEACON', nullchoir: 'DISSONANCE' };
+// Two located hubs that are rivals (factions.mjs), each pair once.
+export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
+const markets = (s) => hubsOf(s).filter((h) => !hostile(s, h.faction) && (h.offlineUntil || 0) <= (hooks.now?.() ?? Date.now())).map((h) => h.faction); // hubs you can trade at
+// What your side gives from its goods: a sealed item (Tuned, at your level), or LANTERN's bootleg filter (it sells no crate).
+export const feudGood = (f) => (f === 'halcyon' || FACTIONS[f].shop.includes('crate') ? 'crate' : 'bootleg');
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
 
 export const CARDS = {
@@ -101,7 +122,87 @@ export const CARDS = {
     text: (ev) => `A broker on a darknet channel lists ${UNIQUES[ev.unique].name}, native to ${ev.net}, for ${ev.credits} credits and ${ev.exploits} Exploits. Type event buy ${ev.id} to buy it.`,
     reward: (ev) => UNIQUES[ev.unique].name,
   },
+  // Two rival factions clash over one of your servers: one card, two sides. event fight <id> <faction> sides with
+  // that faction, against the other's runner (an elite of its family, hubs.mjs FACTION_FAMILY, at your level).
+  feud: {
+    name: 'Feud', weight: 0.25, ms: FEUD.ms, fight: true, from: FEUD.from,
+    where: (s) => (hackerLevel(s) >= FEUD.from && feuds(s).length ? places(s) : []),
+    make: (s) => { const sides = pick(s, feuds(s)); return { sides, level: hackerLevel(s), name: sides.map((f) => FACTIONS[f].short).join(' vs '), runners: Object.fromEntries(sides.map((f) => [f, `${RUNNER[f]}-${1000 + Math.floor(roll(s) * 9000)}`])) }; },
+    foe: (ev, f) => { const o = ev.sides.find((x) => x !== f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true }; },
+    text: (ev, where) => `${FACTIONS[ev.sides[0]].short} and ${FACTIONS[ev.sides[1]].short} are fighting over ${where}. Pick a side.`,
+    reward: (ev, f = ev.side) => `${bountyPay(ev.level)} credits, ${FACTIONS[f].short} +${FEUD.rep} and ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'}`,
+    gone: (ev, where) => `The feud over ${where} is over.`,
+    won: (s, ev) => {
+      const f = ev.side, r = seeded(ev.seed); // fixed by the event
+      s.server.credits += bountyPay(ev.level);
+      // Picking a side never costs you: no ripple onto its rivals (the other side's rep stays put), its allies' quarter only.
+      changeRep(s, f, FEUD.rep, `You won the feud for ${FACTIONS[f].short}`, { ripple: false });
+      for (const a of FACTIONS[f].allies) changeRep(s, a, Math.round(FEUD.rep * RIPPLE.ally), `${FACTIONS[f].short}'s ally noticed`, { ripple: false });
+      if (feudGood(f) === 'crate') addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned' }), `${FACTIONS[f].short}: `);
+      else addFilter(s, rollFilter(r, { level: ev.level, rarity: r() < 0.7 ? 'stock' : 'tuned' }), `${FACTIONS[f].short}: `);
+      return `You won the feud for ${FACTIONS[f].short}: ${bountyPay(ev.level)} credits and ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'}.`;
+    },
+  },
+  // A named elite that moves: every HUNT.hopMs it hops to another of your servers (its path is set when it's dealt, so
+  // the map shows where it goes next), a level up each time and better paid. Kestrel are the hunters.
+  hunt: {
+    name: 'Bounty hunt', weight: 0.25, ms: (HUNT.hops + 1) * HUNT.hopMs, fight: true, from: HUNT.from,
+    where: (s) => (hackerLevel(s) >= HUNT.from && places(s).length >= 2 ? places(s) : []),
+    make: (s, loc) => {
+      const path = [loc.id];
+      for (let i = 0; i < HUNT.hops; i++) path.push(pick(s, places(s).filter((l) => l.id !== path.at(-1))).id);
+      return { family: fam(s), base: hackerLevel(s), level: hackerLevel(s), hop: 0, path, next: path[1], name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, elite: true, hunter: hunters(s) };
+    },
+    text: (ev, where) => `${FACTIONS[ev.hunter].short} is hunting ${ev.name}, a level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus, on ${where}. It moves every ${HUNT.hopMs / 60000} minutes, tougher and better paid each time.`,
+    reward: (ev) => `${huntPay(ev)} credits and ${FACTIONS[ev.hunter].short} +${HUNT.rep}`,
+    gone: (ev) => `${ev.name} got away.`,
+    // A hop: on to the next server on its path, a level up (to your level + HUNT.cap at most). Not while you fight it.
+    tick: (s, ev) => {
+      const want = Math.min(HUNT.hops, Math.floor((CARDS.hunt.ms - ev.left) / HUNT.hopMs));
+      while (ev.hop < want) {
+        ev.hop++;
+        if ((s.locations || []).some((l) => l.id === ev.path[ev.hop])) ev.loc = ev.path[ev.hop]; // a server that's gone: it stays put
+        ev.next = ev.hop < HUNT.hops ? ev.path[ev.hop + 1] : null;
+        ev.level = Math.min(CONFIG.maxMobLevel, ev.base + ev.hop, hackerLevel(s) + HUNT.cap);
+        emit(s, 'world-event-hop', `${ev.name} moved to ${placeName(s, ev.loc)}: level ${ev.level}.`, { card: 'hunt', event: ev.id, location: ev.loc, from: FACTIONS[ev.hunter].short });
+      }
+    },
+    won: (s, ev) => {
+      s.server.credits += huntPay(ev);
+      if (ev.hunter === 'halcyon') changeStanding(s, 'halcyon', HUNT.rep, 'Bounty collected');
+      else changeRep(s, ev.hunter, HUNT.rep, 'Bounty collected');
+      return `Bounty collected on ${ev.name}: ${huntPay(ev)} credits.`;
+    },
+  },
+  // A price spike (or crash) at one hub for one ware: market.mjs multiplies it in (shockMult). No fight.
+  shock: {
+    name: 'Market shock', weight: 0.25, ms: SHOCK.ms, from: SHOCK.from,
+    where: (s) => (hackerLevel(s) >= SHOCK.from && markets(s).length ? [null] : []),
+    make: (s) => { const hub = pick(s, markets(s)), ware = pick(s, SHOCK.wares), down = roll(s) < SHOCK.crash; return { hub, ware, mult: down ? SHOCK.down : SHOCK.up }; },
+    text: (ev) => (ev.mult > 1 ? `${FACTIONS[ev.hub].short} pays ${ev.mult} times the usual for ${WARE_NAME[ev.ware]} for the next ${SHOCK.ms / 60000} minutes.` : `${cap(WARE_NAME[ev.ware])} sells at ${FACTIONS[ev.hub].short} for ${Math.round(ev.mult * 100)}% of the usual for the next ${SHOCK.ms / 60000} minutes.`),
+    gone: (ev) => `${FACTIONS[ev.hub].short}'s price for ${WARE_NAME[ev.ware]} is back to normal.`,
+  },
+  // A scout virus probing your wall: a quick fight at home. Win and the next invasion comes SCOUTED.levels weaker, and
+  // you know where from and what kind (invasion.mjs scoutNext). Let it go and nothing changes.
+  scout: {
+    name: 'Scout', weight: 0.25, ms: SCOUT_EVENT.ms, fight: true, from: SCOUT_EVENT.from, home: true,
+    where: (s) => (hackerLevel(s) >= SCOUT_EVENT.from && invasionsLive(s) && !s.net?.scouted && !s.degraded ? [null] : []),
+    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `SCOUT-${1000 + Math.floor(roll(s) * 9000)}` }),
+    text: (ev) => `A scout, ${ev.name}, is probing your wall. Kill it and the next invasion comes ${SCOUTED.levels} levels weaker.`,
+    reward: () => `the next invasion −${SCOUTED.levels} levels, and its kind`,
+    gone: (ev) => `${ev.name} left your wall.`,
+    won: (s, ev) => {
+      const next = scoutNext(s, seeded(ev.seed)); // on the event's own dice
+      return `${ev.name} is down. The next invasion${next ? `, a ${next.name.toLowerCase()} from ${next.from},` : ''} comes ${SCOUTED.levels} levels weaker.`;
+    },
+  },
 };
+const WARE_NAME = { cipher: 'Cipher code', worm: 'Worm code', kernel: 'Kernel code', salvage: 'components', exploit: 'Exploits' };
+const cap = (x) => x[0].toUpperCase() + x.slice(1);
+// Kestrel are the hunters; until you've located their hub, Halcyon posts it.
+const hunters = (s) => (hubFound(s, 'kestrel') && hubsOf(s).length ? 'kestrel' : 'halcyon');
+export const huntPay = (ev) => Math.round(bountyPay(ev.level) * HUNT.mult[ev.hop || 0]);
+const placeName = (s, id) => (s.locations || []).find((l) => l.id === id)?.name || 'the net';
 // A family for an event on your network: its lean (network.mjs), on the director's own dice.
 const fam = (s) => leanPick(s, 'you', roll(s));
 const credits = (level) => 40 + 12 * level; // about two ordinary caches
@@ -123,10 +224,13 @@ const places = (s) => (s.locations || []).filter((l) => !l.rogue && !l.member);
 export const eventsOf = (s) => (s.events ||= []);
 export const eventsAt = (s, id) => eventsOf(s).filter((e) => e.loc === id);
 export const eventById = (s, id) => eventsOf(s).find((e) => e.id === Number(id));
-export const eventText = (s, ev) => CARDS[ev.card].text(ev, (s.locations || []).find((l) => l.id === ev.loc)?.name || 'the net');
+export const eventText = (s, ev) => CARDS[ev.card].text(ev, placeName(s, ev.loc));
 export const eventMinutes = (ev) => Math.max(1, Math.ceil(ev.left / 60000));
 // Kills of a family in an outbreak drop this much more code.
 export const outbreakMult = (s, family) => (eventsOf(s).some((e) => e.card === 'outbreak' && e.family === family) ? 2 : 1);
+// A market shock on this hub's ware (market.mjs outsideMult): ×SHOCK.up, ×SHOCK.down, or 1.
+export const shockMult = (s, f, w) => (s.events || []).find((e) => e.card === 'shock' && e.hub === f && e.ware === w)?.mult ?? 1;
+export const shockOf = (s, f) => (s.events || []).find((e) => e.card === 'shock' && e.hub === f) || null;
 
 export function tickEvents(s, dt) {
   openFarm(s); // KESSLER-FARM-00 turns up at level 7 (rogue.mjs)
@@ -134,7 +238,9 @@ export function tickEvents(s, dt) {
   for (const ev of [...eventsOf(s)]) {
     if (s.encounter?.event === ev.id && active(s)) continue; // the one you're fighting waits for you
     ev.left -= dt;
-    if (ev.left <= 0) end(s, ev, CARDS[ev.card].fight ? `${ev.name} left ${(s.locations || []).find((l) => l.id === ev.loc)?.name || 'the net'}.` : null);
+    const c = CARDS[ev.card];
+    if (ev.left > 0) c.tick?.(s, ev); // a hunt hops
+    else end(s, ev, c.gone ? c.gone(ev, placeName(s, ev.loc)) : c.fight ? `${ev.name} left ${placeName(s, ev.loc)}.` : null);
   }
   if (hackerLevel(s) < DIRECTOR.from) return;
   if (d.next == null) d.next = between(s, DIRECTOR.firstMs);
@@ -161,7 +267,7 @@ export function deal(s, card = null) {
   d.last = id;
   noteEvent(s, id); // your network's favoured cards show on its card once each has come up twice (network.mjs)
   if (c.ms && id !== 'leak') eventsOf(s).push(ev);
-  emit(s, 'world-event', eventText(s, ev), { card: id, event: c.ms && id !== 'leak' ? ev.id : null, location: ev.loc });
+  emit(s, 'world-event', eventText(s, ev), { card: id, event: c.ms && id !== 'leak' ? ev.id : null, location: ev.loc, ...(ev.hub ? { hub: ev.hub, from: FACTIONS[ev.hub].short } : {}), ...(ev.hunter ? { from: FACTIONS[ev.hunter].short } : {}) });
   return ev;
 }
 
@@ -170,7 +276,7 @@ function end(s, ev, message) {
   if (message) emit(s, 'world-event-end', message, { card: ev.card, location: ev.loc });
 }
 
-// event fight <id>: go after a courier or a bounty, from its server's map card.
+// event fight <id>: go after a courier or a bounty, from its server's map card. event fight <id> <faction>: a feud's side.
 export function eventCommand(s, text) {
   const b = text.match(/^event buy (\d+)$/);
   if (b) { // a darknet listing (network.mjs)
@@ -179,18 +285,21 @@ export function eventCommand(s, text) {
     if (darknetBuy(s, ev)) end(s, ev, null);
     return;
   }
-  const m = text.match(/^event fight (\d+)$/);
-  if (!m) return warn(s, 'usage: event fight <id>, or event buy <id>');
-  const ev = eventById(s, m[1]);
-  if (!ev || !CARDS[ev.card].fight) return warn(s, 'That event is over.');
+  const m = text.match(/^event fight (\d+)(?: (\w+))?$/);
+  if (!m) return warn(s, 'usage: event fight <id> [faction], or event buy <id>');
+  const ev = eventById(s, m[1]), c = ev && CARDS[ev.card];
+  if (!ev || !c.fight) return warn(s, 'That event is over.');
+  if (c.foe && !ev.sides.includes(m[2])) return warn(s, `Pick a side: event fight ${ev.id} ${ev.sides.join('|')}.`);
   if (s.run) return warn(s, 'Jack out first.');
   if (active(s)) return warn(s, 'Finish the fight first.');
+  const foe = c.foe ? c.foe(ev, m[2]) : { family: ev.family, name: ev.name, elite: !!ev.elite, boss: ev.boss };
   const gate = s.encounter?.phase === 'alert' && s.encounter.mode !== 'run' ? s.encounter : s.gate;
-  selectEncounter(s, 'random', ev.seed, { level: ev.level, family: ev.family, name: ev.name, elite: !!ev.elite, ...(ev.boss ? { boss: ev.boss } : {}), mutation: null, quiet: true });
+  selectEncounter(s, 'random', (ev.seed + (c.foe ? ev.sides.indexOf(m[2]) * 7919 : 0)) >>> 0, { level: ev.level, family: foe.family, name: foe.name, elite: !!foe.elite, ...(foe.boss ? { boss: foe.boss } : {}), mutation: null, quiet: true });
   if (!s.encounter || s.encounter.phase === 'active') return;
+  if (c.foe) ev.side = m[2]; // the side you fight for (the last one you picked)
   s.gate = gate && gate !== s.encounter ? gate : null;
   s.encounter.event = ev.id;
-  emit(s, 'jack-in', `Intercepting ${ev.name}.`, { location: ev.loc });
+  emit(s, 'jack-in', `Intercepting ${foe.name}.`, { location: ev.loc });
   command(s, 'engage');
 }
 
