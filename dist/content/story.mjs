@@ -140,6 +140,30 @@ export default {
         "Your retainer grows with your standing. A breach on your own server costs standing, and so does working for our competitors."
       ],
       "opensBoard": true
+    },
+    {
+      "id": "badge",
+      "from": "wick",
+      "subject": "crew colours",
+      "when": {
+        "level": 22
+      },
+      "body": [
+        "you have been carrying LOWLIGHT's name around for a while. time you wore it.",
+        "take one more server for the crew. any one you have traced: vault, core, the usual.",
+        "do that and the badge is yours. leave the old toolkit with me too. i will rebuild it while you are out."
+      ],
+      "job": {
+        "type": "takeover",
+        "any": true
+      },
+      "reward": {
+        "credits": 400,
+        "standing": 4,
+        "xp": 3,
+        "item": "lowlight-badge",
+        "items": ["wicks-old-toolkit"]
+      }
     }
   ]
 };

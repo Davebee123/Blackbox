@@ -304,14 +304,14 @@ networks' floors differ, and a consortium member's floor is worth visiting. Floo
 
 | Goal | Today | What it asks | Add |
 |---|---|---|---|
-| **Collection log** | 95 uniques up to level 40 and 11 strain trophies, sorted by level, ??? until found; natives once known (*Built*) | Hundreds of hours: trophies are 1 in 10,000 kills of their strain | The 14 designed bosses' 30-odd uniques and the ten sets (docs/genome.md); about ten uniques for 40–50; a page a boss with your kills and its table, as the Codex has |
+| **Collection log** | 98 uniques up to level 40 (two sets' five pieces under Sets) and 11 strain trophies, sorted by level, ??? until found; natives once known (*Built*) | Hundreds of hours: trophies are 1 in 10,000 kills of their strain | The 14 designed bosses' 30-odd uniques and the ten sets (docs/genome.md); about ten uniques for 40–50; a page a boss with your kills and its table, as the Codex has |
 | **Codex mastery** | About 55 parts, research 60 each: +3% damage, +25% component drops, an amber star (*Built*) | About 30 fights a part you meet often, far more for a rare one | The seven families' 20-odd parts; a group finished (every family, every strain) earns a phosphor (section 5) |
 | **Patches** | — | v2 and v3 of every program, over 100 hours of code (*Planned*, docs/economy.md) | Nothing more: installs and supply orders keep taking code after the last patch |
 | **Root on held servers** | Root 1–5 by cleared respawns (*Built*; 4 ranks under docs/economy.md) | About 50 clears a server | The root prompt (section 5) for the top rank on ten servers |
 | **Consortium projects** | Size tiers (*Built*) | Trunk Relay to Grid, funded together (*Planned*) | — |
 | **Faction standing** | Five factions, tiers at 1/25/50/75, ripples (*Built*) | Rivals pull against each other, so every top tier at once is a long swing | Supply orders as the steady climb (*Planned*); a desk prop at each top tier, kept once earned |
 | **Boss uniques** | Two each on 7 bosses and the farm's three; natives on the nine native bosses (*Built*) | 15% + 5% a miss (crew 30% + 10%) | The 14 designed bosses; each native boss's own two uniques from docs/genome.md 7.4 (Bump Key, Deadlatch…) once lairs move by floor |
-| **Sets** | — | Ten sets, most pieces one per boss of an author's line (*Planned*, docs/genome.md 9) | Build them once the bosses that drop them exist |
+| **Sets** | Kestrel Clearance and LOWLIGHT Kit (*Built*: the Collection's Sets, sets.mjs) | Ten sets, most pieces one per boss of an author's line (docs/genome.md 9) | The other eight once the bosses that drop them exist |
 | **KESSLER-FARM-00** | Three crew bosses, 8 uniques, keeping up to 50 (*Built*) | Every 6 hours, with a crew | *Proposed:* a second crew dungeon on floor 6 (crew bosses are data on raid.mjs) |
 | **Daemons** | 40, one copy each at its level; invasions only (*Built*) | A copy of each at 50: a long tail | — |
 | **Bedrock's endgame** | Nothing (open question 9) | — | 4.2 |
@@ -413,7 +413,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 | 13 | **Floors 5–7 bosses**: EXIT NODE, PARASITE, RING ZERO, BRICKWALL, BLACKOUT, GOLDEN PARACHUTE | L | Floors 5–7 (52 h) | Designed |
 | 14 | **ACTUARY and UNDERWRITER** | L | Floor 5 (14 h) | Needs the first unwired rules |
 | 15 | **New boards**: Defrag, Deadlock, Bit flip | M each | Floors 5, 6, 8 | Each needs a generator and a solver, as the four had |
-| 16 | **Sets** | L | All | After the bosses that drop them |
+| 16 | **Sets** | L | All | After the bosses that drop them. *Started:* the set system and the two sets whose pieces drop today, Kestrel Clearance (the Bouncer, the Tracer and the Sentinel, floor 2 and below) and LOWLIGHT Kit (the storyline), are built (sets.mjs, docs/genome.md 9.2); the other eight wait on their bosses |
 | 17 | **Bedrock**: INIT, flash ranks, Firmware; then the reflash | L | Floor 8 and after | Needs a decision first (section 7) |
 | 18 | **The Desk, second pass**: keyboards, shells, window signs | M | All | Needs key-sound takes and window art |
 | 19 | **A second crew dungeon** | M–L | Floor 6 | Crew bosses are data on raid.mjs; worth it once crews are real |

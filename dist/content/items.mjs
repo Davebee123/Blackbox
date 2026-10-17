@@ -4,6 +4,7 @@ export default {
     {
       "id": "wicks-old-toolkit",
       "name": "wick's Old Toolkit",
+      "set": "lowlight",
       "base": "proof-of-concept",
       "level": 1,
       "primary": {
@@ -581,6 +582,7 @@ export default {
     {
       "id": "lowlight-badge",
       "name": "LOWLIGHT Badge",
+      "set": "lowlight",
       "base": "implant",
       "level": 22,
       "primary": {
@@ -2416,6 +2418,80 @@ export default {
         }
       ],
       "flavour": "Every mirror in here faces your way."
+    },
+    {
+      "id": "kestrel-badge",
+      "name": "Kestrel Badge",
+      "set": "kestrel",
+      "base": "socks-tunnel",
+      "level": 7,
+      "primary": {
+        "signal": 46,
+        "reduction": 1
+      },
+      "effect": {
+        "when": "answer",
+        "do": "shield",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "guard",
+          "id": "bouncer",
+          "layer": 2
+        }
+      ],
+      "flavour": "Door clearance. The Keyring waves it through."
+    },
+    {
+      "id": "kestrel-token",
+      "name": "Kestrel Token",
+      "set": "kestrel",
+      "base": "cron-job",
+      "level": 7,
+      "primary": {
+        "damage": 4,
+        "signal": 18
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-signature",
+        "do": "damage%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "guard",
+          "id": "tracer",
+          "layer": 2
+        }
+      ],
+      "flavour": "A one-time code that never quite expired."
+    },
+    {
+      "id": "kestrel-lanyard",
+      "name": "Kestrel Lanyard",
+      "set": "kestrel",
+      "base": "tty-upgrade",
+      "level": 7,
+      "primary": {
+        "signal": 24,
+        "regen": 5
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-bare",
+        "do": "crit%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "guard",
+          "id": "sentinel",
+          "layer": 2
+        }
+      ],
+      "flavour": "The photo is of nobody. The Sentinel never looks."
     }
   ]
 };

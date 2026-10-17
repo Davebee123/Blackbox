@@ -19,6 +19,7 @@ emoji markers, nothing centred that is meant to be scanned.
 | `--daemon` (violet) | your daemons and your crew acting for you |
 | `--steel` (steel teal) | what protects a virus part: a Mutex's lock on its partner's bar, a Lockbox's cap, the tethers between parts |
 | `--gray` / `--dim` | broken, unavailable, small print |
+| `--r-set` (set green) | a set (sets.mjs): its name, its lit pieces and its bonuses once on, under a piece in its tooltip and rows, the Loadout's Set bonuses and the Collection's Sets. It sits with the rarity colours (`--r-stock` … `--r-indemnified`, D2's white, blue, yellow, gold and orange): D2's set green, warmed to the amber screen (`#b6cf55`). A piece's own name stays gold (it is a unique); greyed lines are `--gray`. Never teal: teal is only ever you. |
 
 A colour never means two things on one screen. A tag takes the colour of what it labels, not of the card
 it sits on.

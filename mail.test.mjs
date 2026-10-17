@@ -145,7 +145,7 @@ test('the storyline: kills, code, a named process, a takeover, then a ledger on 
   assert.equal(Object.keys(s.daemonLv).length, 0, 'no daemon: only invasions drop them');
   assert.equal(s.stash.length, had + 1, 'a protocol, Tuned or better, instead');
   assert.ok(['tuned', 'custom'].includes(s.stash.at(-1).rarity));
-  assert.equal(s.mail.story, STORY_LENGTH);
+  assert.equal(s.mail.story, STORY_LENGTH - 1, 'every initiate beat; the LOWLIGHT Badge waits for level 22 (sets.test.mjs)');
   assert.match(s.mail.list[0].subject, /Contractor/);
   assert.equal(tierOf(s).name, 'Contractor');
   assert.equal(offers(s).filter((o) => o.type !== 'side').length, 3, 'the board opens');

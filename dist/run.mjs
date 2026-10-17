@@ -8,7 +8,7 @@ import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from '
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { fxOn, findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -160,7 +160,8 @@ const traced = (loc) => !!loc && !loc.zone && !loc.rogue;
 export function traceAdd(s, n) {
   const r = s.run, loc = currentLocation(s);
   if (!r || r.hunter || !traced(loc) || !n) return;
-  r.trace = Math.max(0, Math.min(100, (r.trace || 0) + Math.round(n * (n > 0 && classOf(s) === 'infiltrator' ? 0.5 : 1))));
+  const slow = n > 0 ? fxOn(s, 'trace-slow') : null; // Kestrel Clearance (2): trace grows 25% slower (sets.mjs)
+  r.trace = Math.max(0, Math.min(100, (r.trace || 0) + Math.round(n * (n > 0 && classOf(s) === 'infiltrator' ? 0.5 : 1) * (slow ? 1 - slow.fx.value / 100 : 1))));
   if (r.trace >= 100 && !active(s)) hunt(s);
 }
 function hunt(s) {

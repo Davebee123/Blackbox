@@ -852,7 +852,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .tag.stag.verb-shield, .tag.stag.verb-heal, .tag.stag.verb-buff { color: var(--you); border-color: rgba(127, 209, 199, 0.5); }
 .tag.stag.verb-util, .tag.stag.verb-run { color: var(--muted); }
 /* Gear. Rarity colors: Stock grey, Tuned green, Custom blue, Zero-day violet. */
-:root { --r-scrap: #7d766a; --r-stock: #e8e0cc; --r-tuned: #6c9cff; --r-custom: #ffe14d; --r-zeroday: #d4a64a; --r-indemnified: #ff8a3d; } /* D2 colours: grey, white, blue, yellow, gold, orange */
+:root { --r-scrap: #7d766a; --r-stock: #e8e0cc; --r-tuned: #6c9cff; --r-custom: #ffe14d; --r-zeroday: #d4a64a; --r-indemnified: #ff8a3d; --r-set: #b6cf55; } /* D2 colours: grey, white, blue, yellow, gold, orange; and D2's set green, warmed to the amber screen: a set's name, its lit pieces and its bonuses once on (docs/ui.md) */
 .iname.r-scrap { color: var(--r-scrap); } .iname.r-stock { color: var(--r-stock); } .iname.r-tuned { color: var(--r-tuned); } .iname.r-custom { color: var(--r-custom); } .iname.r-zeroday { color: var(--r-zeroday); }
 .ptile small .neg { color: var(--hot); }
 .gear-page .gnote { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
@@ -2944,6 +2944,34 @@ details.map-pick { pointer-events: auto; }
 .coll li small { font-size: 11px; color: var(--dim); }
 .coll .coll-q { color: var(--gray); letter-spacing: 2px; }
 .coll .coll-odds { color: var(--amber, #e0b050); }
+
+/* Sets (sets.mjs): under a piece in its tooltip and its stash or slot row, WoW's grammar. The set's name and count, its
+   pieces (loaded and held lit, missing dim, ??? until found), each bonus greyed until it's on. Set green is the set's
+   own colour, never teal: teal is only ever you. */
+.set-lines { display: grid; gap: 1px; margin-top: 6px; font-size: 12px; }
+.set-lines .set-name { color: var(--r-set); font: 600 12px var(--mono); letter-spacing: 0.3px; }
+.set-pieces { display: grid; gap: 0; padding-left: 10px; }
+.set-pieces .sp.worn { color: var(--r-set); }
+.set-pieces .sp.held { color: var(--text); }
+.set-pieces .sp.missing { color: var(--dim); }
+.set-pieces .sp.unknown { color: var(--gray); letter-spacing: 2px; }
+.set-bonuses { display: grid; gap: 1px; margin-top: 3px; }
+.sb { color: var(--gray); }
+.sb.on { color: var(--r-set); }
+.sb.blocked em { font-style: normal; color: var(--dim); }
+.set-lines.compact { margin-top: 2px; font-size: 11px; }
+.set-lines.compact .set-pieces { display: flex; flex-wrap: wrap; gap: 0 8px; padding-left: 0; }
+.set-lines.compact .set-pieces .sp:not(:last-child)::after { content: ' ·'; color: var(--gray); }
+.set-bonus-card { margin: 10px 0 2px; padding: 8px 10px; border: 1px solid var(--line); border-left: 2px solid var(--r-set); border-radius: var(--r-card); background: var(--inset); }
+.set-bonus-card h3 { margin: 0 0 4px; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--r-set); }
+.set-bonus-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.set-bonus-card li { display: grid; gap: 1px; font-size: 12px; }
+.set-bonus-card .set-name { color: var(--r-set); font: 600 12px var(--mono); }
+.coll-sets-h { margin: 14px 0 6px; font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--r-set); }
+.coll-sets { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.coll-set-row > .set-name { display: block; margin-bottom: 2px; color: var(--r-set); font: 600 12px var(--mono); }
+.coll-set-row > .set-name span { color: var(--dim); font-weight: 400; }
+.coll-set-row.done > .set-name span { color: var(--r-set); }
 
 /* Trace on a break-in: beside Signal in the run header. */
 .net-trace { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }

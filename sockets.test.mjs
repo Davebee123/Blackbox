@@ -385,7 +385,7 @@ test('the save (v40): outposts, buildings, plans, services, architecture and the
   s.version = 39;
   const t = restore(JSON.parse(JSON.stringify(s)));
   assert.equal(t.version, SAVE_VERSION);
-  assert.equal(SAVE_VERSION, 44); // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats
+  assert.equal(SAVE_VERSION, 45); // v41: floors (R3) came after, v42 the long climb, v43 threads, v44 whole-number stats, v45 sets
   const l2 = t.locations.find((x) => x.id === loc.id);
   for (const k of ['buildings', 'build', 'outpost']) assert.equal(l2[k], undefined, `${k} gone`);
   assert.ok(l2.takenOver, 'still yours');
