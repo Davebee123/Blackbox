@@ -25,6 +25,7 @@ import { autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
 import { plan as dmgPlan, queueAfter, absorbOf } from './dmgfx.mjs';
+import { recapMarkup } from './recap.mjs';
 import { createLash } from './lash.mjs';
 import { online, simOn } from './presence.mjs';
 import { matesOf } from './crew.mjs';
@@ -809,13 +810,13 @@ let bxScreen = null;
 let gainTimer = 0;
 // Rewards land in one place: a centred card (a toast for small things). A card already up queues the next.
 let gainQueue = [];
-function showGain(kicker, name, rows, toast) {
+function showGain(kicker, name, rows, toast, lead = '') {
   const el = $('gain');
   if (!el) return;
-  if (gainOpen()) { gainQueue.push([kicker, name, rows, toast]); return; } // never over a card that waits for Enter
+  if (gainOpen()) { gainQueue.push([kicker, name, rows, toast, lead]); return; } // never over a card that waits for Enter
   clearTimeout(gainTimer);
   el.className = `gain${toast ? ' toast' : ''}`;
-  el.innerHTML = V.gainMarkup(kicker, name, rows, !toast);
+  el.innerHTML = V.gainMarkup(kicker, name, rows, !toast, lead);
   el.hidden = false;
   const motion = campaign.settings.motion !== false;
   el.querySelectorAll('.sp-row').forEach((node, i) => setTimeout(() => {
@@ -831,7 +832,8 @@ function rewardCard(kicker, e, events, toast = false) {
   const rows = [{ label: String(e.message || '').replace(/^[A-Z ]+: /, '').replace(/\.$/, ''), qty: '', kind: 'found', text: e.message || '' }, ...V.spoilsOf(events.filter((x) => ['xp', 'fresh', 'code'].includes(x.type) && x.id > e.id - 6))];
   showGain(kicker, name, rows, toast);
 }
-// Losing a run: what took you out, what it cost, and when you can go back.
+// Losing a run: how it went (the death recap over the last cycles: recap.mjs), what took you out, what it cost, and
+// when you can go back.
 function lossCard(e) {
   const clock = (ms) => `${Math.floor(ms / 60000)}:${String(Math.ceil((ms % 60000) / 1000) % 60).padStart(2, '0')}`;
   const max = maxSignal(campaign), sig = signalNow(campaign), need = Math.ceil(max * CONFIG.zone.minSignal);
@@ -843,7 +845,7 @@ function lossCard(e) {
   // One clock: you can go back once both the reconnect wait and your Signal allow it, so the later of the two.
   const wait = Math.max(e.relockMs || 0, sig < need ? ((need - sig) / (CONFIG.signalRest * max)) * 60000 : 0);
   if (wait > 0) rows.push({ kind: 'time', label: 'Reconnection possible in', qty: clock(wait), text: `Reconnection possible in ${clock(wait)}` });
-  showGain('Disconnected', e.where || '', rows, false);
+  showGain('Disconnected', e.where || '', rows, false, recapMarkup(e.recap));
   $('gain').classList.add('loss');
 }
 function hideGain() { clearTimeout(gainTimer); const el = $('gain'); if (el && !el.hidden) { el.hidden = true; el.innerHTML = ''; } const next = gainQueue.shift(); if (next) setTimeout(() => showGain(...next), 120); }

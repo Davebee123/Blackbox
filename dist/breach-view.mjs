@@ -13,6 +13,7 @@ import { SUBSYSTEMS, REWRITES, outputLine } from './rewrites.mjs';
 import { chipOf } from './genome.mjs';
 import { geneChip } from './view.mjs';
 import { HEAT, heatList, heatPay } from './heat.mjs';
+import { recapMarkup } from './recap.mjs';
 
 // What the page shows that the breach doesn't keep: the pack's pop-over, the tty opened up, and the gear you've seen
 // in the pack (new gear marks the Pack button until you open it).
@@ -300,7 +301,7 @@ function resultMarkup(s) {
   }
   if (b.result === 'lost') {
     const L = b.lost || { items: [] };
-    return `<section class="card bx-capture lost"><div class="cap-kick"><span>SIGNAL LOST</span><span>${esc(card.name)}</span></div><h1>Disconnected</h1><p class="svc-line">${esc(L.why || '')}</p>
+    return `<section class="card bx-capture lost"><div class="cap-kick"><span>SIGNAL LOST</span><span>${esc(card.name)}</span></div><h1>Disconnected</h1><p class="svc-line">${esc(L.why || '')}</p>${recapMarkup(L.recap)}
       <ul class="cap-lines"><li><span class="cap-sub">lost</span><b>${L.items.length} unbanked</b><span>${esc(L.items.join(', ') || 'nothing in the pack')}</span></li><li><span class="cap-sub">kept</span><b>+${b.xp.toLocaleString('en-US')} XP</b><span>${b.banked.length} banked ${b.banked.length === 1 ? 'item' : 'items'}, and your scripts. The server stays uncaptured.</span></li></ul>${reportMarkup(b)}${again}</section>`;
   }
   return `<section class="card bx-capture"><div class="cap-kick"><span>JACKED OUT</span><span>${esc(card.name)}</span></div><h1>Out with the pack</h1><p class="svc-line">${b.banked.length} ${b.banked.length === 1 ? 'item' : 'items'} banked, +${b.xp.toLocaleString('en-US')} XP. The server stays uncaptured.</p>${reportMarkup(b)}${again}</section>`;

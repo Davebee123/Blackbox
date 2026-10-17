@@ -3501,6 +3501,42 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .gain.loss .sp-card { border-color: rgba(255, 91, 61, 0.55); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 36px rgba(255, 91, 61, 0.14); }
 .gain.loss .sp-card::before { background: linear-gradient(180deg, rgba(255, 91, 61, 0.08), transparent); }
 .gain.loss .sp-corner { border-color: var(--hot); }
+/* ---- The death recap (recap.mjs) over a loss card's rows: your Signal over the last cycles as bars (teal what you
+   kept, hot what each cycle took, the last one empty), the hits that did it (the biggest lit, the last tagged, a
+   tell's icon on a charge), then what you took, healed and shielded. Numbers and marks; the words are in the tips. */
+.recap { display: grid; gap: var(--s4); margin-bottom: var(--s5); padding-bottom: var(--s5); border-bottom: 1px dashed var(--line); animation: sp-line 0.34s ease-out both; animation-delay: 160ms; }
+.sp-card > .recap { flex: none; }
+.rc-strip { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s4); }
+.rc-k, .rc-tot i { font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--dim); font-style: normal; white-space: nowrap; }
+.rc-bars { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 3px; height: 30px; }
+.rc-bar { position: relative; background: rgba(241, 185, 47, 0.06); border-bottom: 1px solid var(--line); }
+.rc-bar i { position: absolute; left: 0; right: 0; }
+.rc-kept { bottom: 0; background: var(--you); opacity: 0.8; }
+.rc-lost { background: var(--hot); box-shadow: 0 0 6px rgba(255, 91, 61, 0.45); }
+.rc-bar.end { border-bottom-color: var(--hot); }
+.rc-ends { font: 600 11px var(--mono); color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rc-ends b { color: var(--you); } .rc-ends .rc-zero { color: var(--hot); }
+.rc-hits { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.rc-hit { display: flex; align-items: center; gap: var(--s3); min-width: 0; padding: 4px 8px 4px 6px; border-left: 2px solid var(--line); background: rgba(255, 91, 61, 0.04); }
+.rc-hit .rc-ico { width: 14px; height: 14px; margin: 0; color: var(--muted); }
+.rc-hit.k-crit .rc-ico, .rc-hit.k-spike .rc-ico { color: var(--hot); }
+.rc-name { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.rc-name b, .rc-name small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-name b { font-weight: 600; color: var(--text); }
+.rc-name small { font-size: 10px; color: var(--dim); }
+.rc-tell { flex: none; width: 12px; height: 12px; background: var(--hot); -webkit-mask: var(--icon) center/contain no-repeat; mask: var(--icon) center/contain no-repeat; }
+.rc-tell.t-seal, .rc-tell.t-mimic { background: var(--amber); }
+.rc-n { flex: none; font: 500 11px var(--mono); color: var(--muted); }
+.rc-last { flex: none; font-size: 9px; padding: 0 4px; }
+.rc-dmg { flex: none; min-width: 4ch; text-align: right; font: 700 13px var(--mono); color: var(--bright); font-variant-numeric: tabular-nums; }
+.rc-hit.top { border-left-color: var(--hot); background: linear-gradient(90deg, rgba(255, 91, 61, 0.16), rgba(255, 91, 61, 0.03)); }
+.rc-hit.top .rc-dmg { color: var(--hot); font-size: 15px; }
+.rc-tots { display: flex; gap: var(--s3); }
+.rc-tot { flex: 1; min-width: 0; display: grid; gap: 1px; padding: 3px 6px; border: 1px solid var(--line); }
+.rc-tot b { font: 700 13px var(--mono); font-variant-numeric: tabular-nums; color: var(--you); }
+.rc-tot.k-took b { color: var(--hot); } .rc-tot.none b { color: var(--gray); }
+@media (prefers-reduced-motion: reduce) { .recap { animation: none; } }
+body.no-motion .recap { animation: none; }
 
 /* Firewall upgrade buttons carry their costs: they keep their padding, and in a narrow column (an outpost's Wall
    row) the costs drop under the label instead of running out of the card. */

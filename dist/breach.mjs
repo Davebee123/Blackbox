@@ -38,6 +38,7 @@ import { GENES, rollGenome, partGenes, compatible } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
 import { decoded } from './genome.mjs';
 import { heatRules } from './heat.mjs';
+import { deathRecap } from './recap.mjs';
 import { patchRules, unpatchRules, onEvent as ruleEvent, afterCommand as ruleCommand } from './skillrules.mjs';
 import { SCRIPTS, giveScript, rollScript, scriptStock, priceOf as scriptPrice, scriptsOf, slotsOf, runScript } from './scripts.mjs';
 
@@ -747,7 +748,7 @@ hooks.cycleEnd = (s) => {
     const d = defender(s), you = Math.min(d.integrity, Math.max(1, Math.round(d.max * OVERHEAT.you)));
     d.integrity -= you;
     for (const p of livingParts(s)) hit(s, p, Math.max(1, Math.round(p.max * OVERHEAT.share)), { by: 'Overheat', pierce: true, server: true });
-    emit(s, 'server-hit', `Overheat: the rack burns you for ${you}, and every part with you. Signal ${d.integrity}/${d.max}.`, { amount: you });
+    emit(s, 'server-hit', `Overheat: the rack burns you for ${you}, and every part with you. Signal ${d.integrity}/${d.max}.`, { amount: you, atk: 'Overheat' });
   }
 };
 
@@ -1055,7 +1056,8 @@ function lose(s, why) {
   b.result = 'lost';
   const lost = [];
   for (const id of b.pack) { const it = stashItem(s, id); if (it) { lost.push(itemLabel(it)); for (const r of Object.values(s.gear?.rigs || {})) if (Array.isArray(r)) for (let i = 0; i < r.length; i++) if (r[i] === id) r[i] = null; s.stash = s.stash.filter((x) => x.id !== id); } }
-  b.lost = { why, items: lost };
+  const recap = s.encounter?.metrics ? deathRecap(s) : null; // the fight's last cycles, for the card (recap.mjs)
+  b.lost = { why, items: lost, ...(recap ? { recap } : {}) };
   b.pack = []; b.tokens = 0; b.queue = []; b.hunter = null;
   b.screen = { kind: 'result' };
   unpatchRules();
