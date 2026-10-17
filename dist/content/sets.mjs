@@ -1,16 +1,18 @@
 // Sets (docs/genome.md 9): written by hand for now. Safe to edit: it's JSON after 'export default'.
 // A piece is a unique in content/items.mjs carrying "set": <id>; its set lists its pieces in order. A bonus opens at its
 // piece count (2, 3, 4) and is one line of text plus the effect blocks the fight engine runs (combat.mjs uniqueFx). Only
-// one 4-piece bonus is active at a time (sets.mjs activeSets: the set that reached four first keeps it).
+// one 4-piece bonus is active at a time (sets.mjs activeSets: the set that reached four first keeps it). A class set
+// carries its class ("cls") and its tier ("tier": 50): the end-game tier sets, every piece level 50.
 export default {
   "sets": [
     {
       "id": "wrecking",
       "name": "Wrecking Crew",
       "cls": "breaker",
+      "tier": 50,
       "levels": [
-        15,
-        38
+        50,
+        50
       ],
       "pieces": [
         "crowbar",
@@ -78,9 +80,10 @@ export default {
       "id": "strongbox",
       "name": "Strongbox",
       "cls": "bastion",
+      "tier": 50,
       "levels": [
-        15,
-        38
+        50,
+        50
       ],
       "pieces": [
         "drill",
@@ -150,9 +153,10 @@ export default {
       "id": "palemask",
       "name": "Palemask",
       "cls": "infiltrator",
+      "tier": 50,
       "levels": [
-        15,
-        38
+        50,
+        50
       ],
       "pieces": [
         "exit",
@@ -218,9 +222,10 @@ export default {
       "id": "load-balanced",
       "name": "Load Balanced",
       "cls": "operator",
+      "tier": 50,
       "levels": [
-        15,
-        38
+        50,
+        50
       ],
       "pieces": [
         "cron",

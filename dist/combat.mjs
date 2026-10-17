@@ -40,7 +40,7 @@ import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached,
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
-import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
+import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
 import { fxText, fxList } from './content.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
@@ -550,10 +550,13 @@ export function uniqueFrom(s, ctx, level) {
 }
 // One of a pool, a unique that leans toward your class (its lean) LEAN times as likely.
 const LEAN = 3;
-function pickUnique(s, pool) {
+// A lean to your subclass counts in full; to your class (or the other subclass of it), two thirds.
+const leanWeight = (s, u) => (!u.lean ? 1 : u.lean === subOf(s) ? LEAN : u.lean === classOf(s) || SUBS[u.lean]?.cls === classOf(s) ? LEAN * 2 / 3 : 1);
+// A set piece's: a class set's (a tier set) comes up CLASS_SET times as often for its own class, any other by its lean.
+const setWeight = (s, u) => { const cls = setOf(u.id)?.cls; return cls ? (cls === classOf(s) ? CLASS_SET : 1) : leanWeight(s, u); };
+function pickUnique(s, pool, weight = leanWeight) {
   if (!pool.length) return null;
-  // A lean to your subclass counts in full; to your class (or the other subclass of it), two thirds.
-  const w = (u) => (!u.lean ? 1 : u.lean === subOf(s) ? LEAN : u.lean === classOf(s) || SUBS[u.lean]?.cls === classOf(s) ? LEAN * 2 / 3 : 1) * (u.id === s.listen ? listenBoost(s) : 1);
+  const w = (u) => weight(s, u) * (u.id === s.listen ? listenBoost(s) : 1);
   let r = rand(s) * pool.reduce((n, u) => n + w(u), 0);
   for (const u of pool) { r -= w(u); if (r < 0) return u; }
   return pool.at(-1);
@@ -580,8 +583,8 @@ function bossLoot(s, boss, level) {
     if (B.raid && rand(s) < BOSS_LOOT.raid.gold) { const u = eliteUnique(s, level, ['raid']); if (u) addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `); }
   }
   bossUnique(s, boss, level);
-  // Its set pieces (sets.mjs): a crew boss's, a lair boss's (by its floor: the floor 3–8 bosses' pieces until they are
-  // built), or a named boss's own.
+  // Its set pieces (sets.mjs): a crew boss's (Mesh, and the class sets: the level-50 tier sets), a lair boss's (by its
+  // floor: the floor 3–8 bosses' pieces until they are built, and on Bedrock the tier sets too), or a named boss's own.
   const lair = B?.native && s.run && findLocation(s, s.run.loc);
   const why = `${name} drops: `;
   if (B?.raid) setDrop(s, { kind: 'crew', id: boss }, level, name, { why });
@@ -658,8 +661,9 @@ function nativeBossUnique(s, boss, level) {
 // Set pieces (sets.mjs SET_LOOT): each source rolls once an event for the pieces it drops, at its kind's odds. Its
 // chance, plus its pity for every event of that source without one while you lack a piece it drops (s.pity, keyed by
 // sets.mjs sourceKey, back to nothing on a drop); once you've found them all, a flat `found` and no pity. A piece you
-// lack comes first, a class set's leans to its class (pickUnique), and a Listening Post listening for one lifts it like
-// a boss's. ctx: { kind, id, floor, layer, lineage } (sets.mjs fromHere); level: the piece's item level.
+// lack comes first, a class set's comes up CLASS_SET times as often for its class (setWeight), and a Listening Post
+// listening for one lifts it like a boss's. ctx: { kind, id, floor, layer, lineage } (sets.mjs fromHere); level: the
+// piece's item level.
 export const setDropPool = (ctx, level = 99) => sourcePool(ctx).filter((u) => u.level <= level + 2);
 export function setChance(s, ctx, level = 99) {
   const pool = setDropPool(ctx, level), odds = SET_LOOT[ctx.kind];
@@ -677,7 +681,7 @@ export function setDrop(s, ctx, level, who, { pack = false, path = null, why = `
   if (rand(s) < setChance(s, ctx, level)) {
     (s.pity ||= {})[key] = 0;
     const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s));
-    const it = uniqueItem(pickUnique(s, heard.length ? heard : fresh.length ? fresh : pool), level, () => rand(s));
+    const it = uniqueItem(pickUnique(s, heard.length ? heard : fresh.length ? fresh : pool, setWeight), level, () => rand(s));
     const set = setOf(it.unique);
     if (pack && s.run) {
       s.run.pack.push({ path: path || `#set-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item: it });

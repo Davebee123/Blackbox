@@ -39,7 +39,7 @@ import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel, hardenCost } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
-import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare } from './sets.mjs';
+import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare, tierLine } from './sets.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { bodyTags } from './families.mjs';
@@ -438,15 +438,18 @@ const pieceSource = (s, u) => {
   return `${esc((u.sources || []).map((x) => sourceText(x, SOURCE_NAMES)).join(', '))} · Lv ${u.level}+`; // the loot plan's sources (sets.mjs)
 };
 const SOURCE_NAMES = { boss: (id) => BOSSES[id]?.name || id, lineage: (id) => FAMILIES[id]?.name || id, author: (id) => AUTHORS[id]?.name || id, puzzle: (id) => PUZZLES[id]?.name || id };
-// The Collection's Sets (sets.mjs): one row a set, its pieces found (with where each drops) or ???.
+// The Collection's Sets (sets.mjs): one row a set, its pieces found (with where each drops) or ???. The general sets
+// first, then the class sets under Tier sets, each row saying it is its class's tier set for level 50.
 export function collectionSets(s) {
   const got = s.collection || {};
-  const rows = Object.values(SETS).map((set) => {
+  const row = (set) => {
     const ids = piecesOf(set.id), have = ids.filter((id) => got[id]).length;
     const pieces = ids.map((id) => (got[id] ? `<li class="on"><b class="iname r-zeroday">${esc(UNIQUES[id].name)}</b><small>${esc(SLOTS[BASES[UNIQUES[id].base]?.slot]?.name || '')} · ${pieceSource(s, UNIQUES[id])}</small></li>` : '<li><span class="coll-q">???</span></li>')).join('');
-    return `<li class="coll-set-row${have === ids.length ? ' done' : ''}"><b class="set-name">${esc(set.name)} <span>${have}/${ids.length}</span></b><ul class="coll">${pieces}</ul></li>`;
-  }).join('');
-  return rows ? `<h3 class="coll-sets-h">Sets</h3><ul class="coll-sets">${rows}</ul>` : '';
+    const tier = tierLine(set.id);
+    return `<li class="coll-set-row${have === ids.length ? ' done' : ''}"><b class="set-name">${esc(set.name)} <span>${have}/${ids.length}</span></b>${tier ? `<small class="set-tier">${esc(tier)}</small>` : ''}<ul class="coll">${pieces}</ul></li>`;
+  };
+  const all = Object.values(SETS), general = all.filter((x) => !x.tier).map(row).join(''), tiers = all.filter((x) => x.tier).map(row).join('');
+  return (general ? `<h3 class="coll-sets-h">Sets</h3><ul class="coll-sets">${general}</ul>` : '') + (tiers ? `<h3 class="coll-sets-h">Tier sets · level 50</h3><ul class="coll-sets">${tiers}</ul>` : '');
 }
 
 // What a component does and what answers it (fightread.mjs partRead), for the codex and the board. ??? until decoded.
@@ -853,7 +856,8 @@ const setHave = (s) => { const on = loaded(s); return { worn: on.map((x) => x.un
 const subLines = (b) => (b.subs || []).map((x) => `<span class="sb sub${x.on ? ' on' : ''}" title="${esc(x.on ? 'On' : x.mine ? `Wear ${b.at} pieces` : `${SUBS[x.id]?.name || x.id} only`)}">${esc(SUBS[x.id]?.name || x.id)}: ${esc(x.text)}</span>`).join('');
 const SET_PIECE_TIP = { worn: 'Loaded', held: 'In your stash', missing: 'Found once; not in your stash now', unknown: 'Not found yet' };
 // A set under a piece, WoW's tooltip grammar: its name and count, its pieces (loaded and held lit, missing dim, ??? until
-// found), then each bonus, lit once it's on. compact: one line of pieces, for a stash or slot row.
+// found), then each bonus, lit once it's on; a class set's name carries its tier line. compact: one line of pieces, for
+// a stash or slot row.
 export function setLines(s, uniqueId, compact = false) {
   const set = setOf(uniqueId);
   if (!set) return '';
@@ -862,7 +866,8 @@ export function setLines(s, uniqueId, compact = false) {
   const green = g ? `<span class="sg${g.on ? ' on' : ''}" title="${esc(g.on ? 'On' : `Load it with another ${c.name} piece`)}">With ${g.at} pieces: ${esc(g.text)}</span>` : '';
   const pieces = c.pieces.map((p) => `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`).join('');
   const bonuses = c.bonuses.map((b) => `<span class="sb${b.on ? ' on' : ''}${b.blocked ? ' blocked' : ''}" title="${esc(b.blocked ? `Only one 4-piece bonus at a time: ${b.blocked} reached four first and keeps it.` : b.on ? 'On' : `Wear ${b.at} pieces`)}">(${b.at}) Set: ${esc(b.text)}${b.blocked ? ` <em>${esc(b.blocked)} holds it</em>` : ''}</span>${compact ? '' : subLines(b)}`).join('');
-  return `<span class="set-lines${compact ? ' compact' : ''}">${green}<b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b><span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
+  const tier = tierLine(set.id);
+  return `<span class="set-lines${compact ? ' compact' : ''}">${green}<b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b>${tier && !compact ? `<small class="set-tier">${esc(tier)}</small>` : ''}<span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
 }
 // The Loadout's set bonuses: each set you wear two or more of, its open bonuses, and the 4-piece rule when it bites.
 function setBonusCard(s) {

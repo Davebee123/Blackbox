@@ -2950,6 +2950,7 @@ details.map-pick { pointer-events: auto; }
    own colour, never teal: teal is only ever you. */
 .set-lines { display: grid; gap: 1px; margin-top: 6px; font-size: 12px; }
 .set-lines .set-name { color: var(--r-set); font: 600 12px var(--mono); letter-spacing: 0.3px; }
+.set-tier { display: block; color: var(--dim); font-size: 11px; } /* a class set: its class's tier set, level 50 */
 .set-pieces { display: grid; gap: 0; padding-left: 10px; }
 .set-pieces .sp.worn { color: var(--r-set); }
 .set-pieces .sp.held { color: var(--text); }
