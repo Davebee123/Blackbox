@@ -1238,7 +1238,7 @@ export { lineOf };
 const subsOf = (cls) => Object.fromEntries(Object.entries(CLASS_DATA[cls].subs).map(([id, x]) => [id, { ...x, id, cls, cards: skillsOf(lineIds(x)) }]));
 export const ARCHETYPES = {
   breaker: {
-    name: 'Breaker', role: ['DPS', 'Burst'], idea: 'Break it before it breaks you.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
+    name: 'Breaker', role: ['DPS', 'Burst'], idea: 'Break it before it breaks you.', does: 'Kills fastest. Its burst damage breaks armor and opens damage windows for the crew.', solo: 'Fastest kills.', crew: 'Opens damage windows for everyone.',
     status: 'exposed',
     passive: { name: 'Momentum', rule: 'Each part you break increases your damage by 10% for 2 cycles, stacking up to 3 times. Another break refreshes the duration.' },
     core: ['overload', 'flood', 'exploit', 'crack'], // levels 1–7; the rest of a kit is its subclass's (subs)
@@ -1247,7 +1247,7 @@ export const ARCHETYPES = {
     skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
   bastion: {
-    name: 'Bastion', role: ['Tank', 'Healer'], idea: 'Nothing lands unless you allow it.', solo: 'Survives anything.', crew: 'The tank and healer.',
+    name: 'Bastion', role: ['Tank', 'Healer'], idea: 'Nothing lands unless you allow it.', does: 'Survives the most. It tanks and heals for the crew.', solo: 'Survives anything.', crew: 'The tank and healer.',
     status: 'throttled',
     passive: { name: 'Hardened', rule: 'The first hit that damages you in each fight deals 25% less damage.' },
     core: ['rate-limit', 'firewall', 'purge', 'retaliate'], // levels 1–7; the rest of a kit is its subclass's (subs)
@@ -1256,7 +1256,7 @@ export const ARCHETYPES = {
     skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
   infiltrator: {
-    name: 'Infiltrator', role: ['DPS', 'Damage over time', 'Stealth runs'], idea: 'Know where to hit, and slip through runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
+    name: 'Infiltrator', role: ['DPS', 'Damage over time', 'Stealth runs'], idea: 'Know where to hit, and slip through runs.', does: 'Deals precise damage and damage over time. It gets the crew past guards on runs.', solo: 'Precision damage and the easiest runs.', crew: 'Tags targets and gets the crew past guards.',
     status: 'tagged',
     passive: { name: 'Ghost', rule: 'Slips you past one guard per run without a fight. Every fight opens with a blue Surprise window, and Inject, Tag and Keepalive fired in it are stronger. Return trips on runs are free.' },
     core: ['inject', 'backdoor', 'keepalive', 'tag'], // levels 1–7; the rest of a kit is its subclass's (subs)
@@ -1265,7 +1265,7 @@ export const ARCHETYPES = {
     skills: [], // every skill the class can have, core and both subclasses (filled in below)
   },
   operator: {
-    name: 'Operator', role: ['Support', 'Summoner'], idea: 'Write the script, let it run.', solo: 'Steady damage without constant input.', crew: 'Makes everyone’s hits count for more.',
+    name: 'Operator', role: ['Support', 'Summoner'], idea: 'Write the script, let it run.', does: 'Deals steady damage through helpers. It makes the crew’s hits count for more.', solo: 'Steady damage without constant input.', crew: 'Makes everyone’s hits count for more.',
     status: 'hooked',
     passive: { name: 'Extra thread', rule: 'Grants 1 extra daemon slot.' },
     core: ['deploy', 'hook', 'spawn', 'botnet'], // levels 1–7; the rest of a kit is its subclass's (subs)

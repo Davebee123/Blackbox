@@ -14,11 +14,11 @@ test('every class has an emblem, 19 by 8, mirror-symmetric', () => {
   }
 });
 
-test('the class picker shows each class with its emblem, idea and starting skills, and a Start button', () => {
+test('the class picker shows each class with its emblem, what it does and its starting skills, and a Start button', () => {
   const html = classPickMarkup();
   for (const [k, a] of Object.entries(ARCHETYPES)) {
     assert.ok(html.includes(`data-pick-class="${k}"`), k);
-    assert.ok(html.includes(a.idea.replace(/'/g, '&#39;')) || html.includes(a.idea), `${k}: idea`);
+    assert.ok(html.includes(a.does.replace(/'/g, '&#39;')), `${k}: what it does`);
     for (const x of a.skills.slice(0, 2)) assert.ok(html.includes(x.name), `${k}: ${x.name}`);
   }
   assert.ok(html.includes('class="btn primary pk-go" disabled'));
