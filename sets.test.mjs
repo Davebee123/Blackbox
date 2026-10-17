@@ -628,7 +628,7 @@ test('Kestrel pieces held from save v45 keep working, as the retuned set', () =>
   const r = restore(structuredClone(s));
   assert.deepEqual(r.stash.filter((x) => isPiece(x.unique)).map((x) => [x.unique, x.stats]), items.map((x) => [x.unique, x.stats]));
   assert.deepEqual(activeSets(loaded(r))[0].open, [2, 3]);
-  assert.ok(gearFx(r).some((x) => x.fx.do === 'hit-cap') && gearFx(r).some((x) => x.fx.do === 'signal%' && x.fx.value === 8));
+  assert.ok(gearFx(r).some((x) => x.fx.do === 'big-hit-cap') && gearFx(r).some((x) => x.fx.do === 'signal%' && x.fx.value === 8));
   assert.ok(!gearFx(r).some((x) => ['trace-slow', 'guard-late', 'chit-every'].includes(x.fx.do)), 'the old bonuses are gone');
   assert.equal(maxSignal(r), maxSignal(s));
   assert.equal(r.pity['set:bouncer'], 3, 'a guard\'s pity keeps its key');

@@ -43,7 +43,7 @@
 // Fights are ordinary run fights (combat.mjs selectEncounter, mode 'run') flagged e.rooms: combat.mjs finish hands the
 // end back here (hooks.roomEnd), and families.mjs and interrupt.mjs play the room rules (attack sets, the new bodies,
 // the interrupt). The Resident is DEADBOLT, under the boss rule the playtest switches (interrupt.mjs BOSS_RULES).
-import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop } from './combat.mjs';
+import { hooks, emit, warn, active, selectEncounter, encounterVirus, command, maxSignal, hackerOf, hackerLevel, classOf, addItem, stashItem, gainXp, gainCode, xpFor, deedXpFor, rollDrop, fxPct, puzzleUnique } from './combat.mjs';
 import { GUARDS, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, CONFIG, ELITE, ROLLED_MUTATIONS, SERVER, xpToNext } from './data.mjs';
 import { LOOT, vaultRarity, seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat, MATERIALS } from './gear.mjs';
 import { AUTHORS } from './authors.mjs';
@@ -569,6 +569,8 @@ function clear(s, room, quiet = false) {
   if (R.world) ask('cleared', s, room);
   return true;
 }
+// Silt Map (a unique, explore-xp%): first clears and Mapped servers pay more XP.
+const exploreMult = (s) => 1 + fxPct(s, 'explore-xp%') / 100;
 // 100%: Mapped. An item roll two levels over the server, and 5 kills' worth of XP.
 function mapped(s) {
   const R = s.rooms;
@@ -576,7 +578,7 @@ function mapped(s) {
   for (const x of roomList(s)) R.seen[x.id] = 'kind'; // Mapped: every room discovered (one cleared from afar, too)
   const r = rnd(R, 77), it = addItem(s, rollItem(r, { level: R.level + 2, rarity: r() < LOOT.minor ? 'tuned' : 'stock', cls: classOf(s) }), 'Mapped: ');
   if (it) R.banked.push(it.id);
-  const xp = Math.round(deedXpFor(s, R.level, ROOMS.xp.mapped));
+  const xp = Math.round(deedXpFor(s, R.level, ROOMS.xp.mapped) * exploreMult(s));
   gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server
   say(s, `MAPPED. ${it ? `${itemLabel(it)} goes in your bank. ` : ''}+${xp} XP.`, 'rooms-good');
   say(s, `${R.name}'s rooms now respawn fast: a fight room in ${ROOMS.respawn.process} minutes, a guard post in ${ROOMS.respawn.guard}, an elite in ${ROOMS.respawn.elite}.`, 'rooms-good');
@@ -1115,6 +1117,9 @@ function finishPuzzle(s, room, b, opts = {}) {
   else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts, null, room.path); }
   const xp = won ? Math.round(deedXpFor(s, L, P.xp)) : 0; // a board takes minutes: it pays like the fights it stands in for
   if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');
+  // A won board deep down may hold one of its floor's uniques (combat.mjs puzzleUnique): into the pack, as a vault's item.
+  const gold = won && R.world ? puzzleUnique(s, R.floor || 1, L) : null, got = gold ? addItem(s, gold, `${room.path}: `) : null;
+  if (got) { ask('packItem', s, got); say(s, `${itemLabel(got)} goes in your pack.`, 'rooms-good'); }
   const first = clear(s, room, true);
   const h = hunterOf(s), caught = room.kind === 'chase' && !won && !!h && !h.down; // a lost chase with the Tracker up: its fight, here
   const head = { quarantine: won ? 'Contained' : 'Overrun', cascade: won ? 'Rack down' : 'Out of taps', sweep: won ? 'Cache found' : 'Out of budget', chase: won ? 'Through the door' : 'Caught' }[room.kind];
@@ -1325,7 +1330,7 @@ hooks.roomEnd = (s, result) => {
   programsPay(s, room, e);
   // First clear: half that fight's XP again (7.2).
   if (!R.cleared[room.id]) {
-    const xp = Math.round(deedXpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)));
+    const xp = Math.round(deedXpFor(s, e.virus.level, (e.roomsXp || 1) * ROOMS.xp.first * (e.virus.elite ? ELITE.xp : 1)) * exploreMult(s));
     gainXp(s, xp, `${room.path} first clear`, 'breakin'); // progress on a server: exploration XP, like the old break-ins
     clear(s, room);
   }

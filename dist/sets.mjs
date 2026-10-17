@@ -187,7 +187,7 @@ export function setsRestore(s, was) {
 // The codes (content/sets.mjs and the pieces' blocks):
 //   stat, signal%          a stat and max Signal (combat.mjs gearStat, maxSignal)
 //   dmg%                   all your damage, skill hits, burns and helpers (when 'hit', its condition on the part)
-//   burn%, helper%, dot%   your burns, your helpers, both (dot%: combat.mjs damageMultiplier)
+//   burn+%, helper+%, dot% your burns, your helpers, both (dot%: combat.mjs damageMultiplier)
 //   first-hit%             your first skill hit on each part         opener%   your first skills each fight (n of them)
 //   skills%                each different skill used, up to its cap  under%    parts under your burns or helpers
 //   break-rush             a break: more damage for some cycles      break-splash  a break: your next damaging skill
@@ -197,13 +197,13 @@ export function setsRestore(s, was) {
 //                                                                    mark-heal: the Warden's and the Sysop's lines)
 //   half-crit              a part dropping below half: your next hit on it crits (half-weak, half-burn: subclasses)
 //   dot-long, helper-twin  burns and helpers last longer; every third helper comes as two (gasp%, twin-foothold)
-//   hit-cap, last-stand    once a fight: a big hit capped; a killing hit leaves you at 1 with a shield
+//   big-hit-cap, last-stand   once a fight: a big hit capped; a killing hit leaves you at 1 with a shield
 //   low-heal, comeback     once a fight, dropping low: a heal (and more damage)
-//   taken%, crit-more%     less damage taken; crits deal more
+//   taken-cut%, crit-more% less damage taken; crits deal more
 //   jam-long               jams and delays you apply last a cycle longer
 //   first-heal%, heal+%, overheal, crew%, crew-share   heals: the first larger, every cast larger, past full a shield,
 //                          more with a crew, a crewmate's share on you
-//   late-tick, repeat, cd-start   the cycles: an extra cooldown tick, a skill repeating, the first cooldowns shorter
+//   late-tick, repeat-every, cd-start   the cycles: an extra cooldown tick, a skill repeating, the first cooldowns shorter
 //   rest-fast, credits%, see-rare   outside a fight: resting, caches and vaults, the map card
 const who = (s) => s.who || '';
 const pct = (n) => 1 + n / 100;
@@ -261,8 +261,8 @@ export const SET_HOOKS = {
     const dot = !!opts.dot, helper = opts.src === 'helper', skill = !!opts.mine && !dot && !opts.by;
     let m = 1;
     for (const f of custom(s, 'dmg%', { target: p })) m *= pct(f.value);
-    if (dot && !helper) for (const f of custom(s, 'burn%')) m *= pct(f.value);
-    if (helper) for (const f of custom(s, 'helper%')) m *= pct(f.value);
+    if (dot && !helper) for (const f of custom(s, 'burn+%')) m *= pct(f.value);
+    if (helper) for (const f of custom(s, 'helper+%')) m *= pct(f.value);
     if (helper && opts.by === 'Last Gasp') for (const f of custom(s, 'gasp%')) m *= pct(f.value);
     if (skill && !x.first[p.id]) for (const f of custom(s, 'first-hit%')) m *= pct(f.value);
     if (skill) for (const f of custom(s, 'opener%')) if (x.n < (f.fx.n || 1)) m *= pct(f.value);
@@ -278,12 +278,12 @@ export const SET_HOOKS = {
   // Palemask (4): your next hit on a part that dropped below half is a critical strike.
   crit(s, p, opts = {}) { return sxOf(s) && opts.mine && !opts.dot && mineOn(p, 'sxCrit', s) ? 1000 : 0; },
   critDealt(s) { return sxOf(s) ? custom(s, 'crit-more%').reduce((m, x) => m * pct(x.value), 1) : 1; },
-  taken(s) { return sxOf(s) ? custom(s, 'taken%').reduce((m, x) => m * (1 - x.value / 100), 1) : 1; },
+  taken(s) { return sxOf(s) ? custom(s, 'taken-cut%').reduce((m, x) => m * (1 - x.value / 100), 1) : 1; },
   // Kestrel Clearance (3): once a fight, a hit for more than its share of your max deals that share.
   absorb(s, n, atk) {
     const x = sxOf(s);
     if (!x || x.once.cap || !atk) return n;
-    for (const f of custom(s, 'hit-cap')) {
+    for (const f of custom(s, 'big-hit-cap')) {
       const cap = Math.floor((max(s) * f.value) / 100);
       if (n > cap) { x.once.cap = true; emit(s, 'blocked', `${f.name}: ${atk.name} would take more than ${f.value}% of your max Signal. It deals ${cap}.`, gear(f)); return cap; }
     }
@@ -347,7 +347,7 @@ export const SET_HOOKS = {
     }
     // Deep Archive (4): every 4th cycle, the next skill repeats.
     if (skill && x.repeat && !x.busy) {
-      const f = custom(s, 'repeat')[0];
+      const f = custom(s, 'repeat-every')[0];
       x.repeat = false;
       if (f && alive(p)) { x.busy = true; try { hit(s, p, Math.max(1, Math.round((res.dealt * f.value) / 100)), { by: f.name }); } finally { x.busy = false; } }
     }
@@ -363,7 +363,7 @@ export const SET_HOOKS = {
       e.bkMomentum = { ...e.momentum };
     }
     // Det Cord: a break heals a share of your max.
-    for (const f of custom(s, 'heal%', { target: p })) heal(s, pctOf(s, f.value), f.name);
+    for (const f of custom(s, 'break-heal%', { target: p })) heal(s, pctOf(s, f.value), f.name);
   },
   struck(s, atk, dealt, p) {
     const e = s.encounter, x = sxOf(s);
@@ -397,7 +397,7 @@ export const SET_HOOKS = {
       for (const k of cooling) e.readyAt[k] -= f.value;
       if (cooling.length) emit(s, 'status', `${f.name}: your cooldowns tick one extra cycle.`, gear(f));
     }
-    for (const f of custom(s, 'repeat')) if (e.cycle % (f.fx.every || 4) === 0) x.repeat = true;
+    for (const f of custom(s, 'repeat-every')) if (e.cycle % (f.fx.every || 4) === 0) x.repeat = true;
   },
   // After a skill resolves (combat.mjs useAbility). before: the shield, the parts' jams and timers, the helpers and
   // burns and the crew's Signal and shields, from before it.

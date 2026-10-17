@@ -234,7 +234,7 @@ export default {
           "fx": [
             {
               "when": "custom",
-              "do": "helper%",
+              "do": "helper+%",
               "value": 10
             }
           ]
@@ -417,7 +417,7 @@ export default {
           "fx": [
             {
               "when": "custom",
-              "do": "hit-cap",
+              "do": "big-hit-cap",
               "value": 30
             }
           ]
@@ -708,7 +708,7 @@ export default {
           "fx": [
             {
               "when": "custom",
-              "do": "taken%",
+              "do": "taken-cut%",
               "value": 8,
               "if": "above-75"
             }
@@ -903,7 +903,7 @@ export default {
           "fx": [
             {
               "when": "custom",
-              "do": "repeat",
+              "do": "repeat-every",
               "value": 40,
               "every": 4
             }

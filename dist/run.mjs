@@ -171,14 +171,14 @@ function hunt(s) {
   emit(s, 'warning', 'TRACED. A hunter ICE found you. Beat it before you can jack out.');
 }
 // A vault always holds one item, white or better (LOOT.vault), fixed by its seed. A gold is a
-// unique that drops from vaults this deep.
+// unique that drops from vaults this deep (a source's floor: that floor's vaults only, The Sink's or Bedrock's).
 export function vaultItem(loc) {
   const r = seeded(loc.seed * 7 + 3), level = levelOf(loc), depth = loc.depth || 1;
   const w = LOOT.vault, total = Object.values(w).reduce((a, b) => a + b, 0);
   let x = r() * total, rarity = 'stock';
   for (const [k, v] of Object.entries(w)) if ((x -= v) < 0) { rarity = k; break; }
   if (rarity === 'zeroday') {
-    const pool = Object.values(UNIQUES).filter((u) => !u.set && u.level <= level + 2 && (u.sources || []).some((src) => src.kind === 'vault' && (src.layer || 1) <= layerOf(depth))); // a set piece drops off its own table (sets.mjs)
+    const pool = Object.values(UNIQUES).filter((u) => !u.set && u.level <= level + 2 && (u.sources || []).some((src) => src.kind === 'vault' && (src.layer || 1) <= layerOf(depth) && (!src.floor || src.floor === depth))); // a set piece drops off its own table (sets.mjs)
     if (pool.length) return uniqueItem(pool[Math.floor(r() * pool.length)], level, r);
     rarity = 'custom';
   }

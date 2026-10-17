@@ -26,9 +26,9 @@
 //              for good, greyed on the map, a record.
 // State: s.threads (threadsOf). The view: threads-view.mjs. The room engine calls in through netrooms.mjs's WORLD hooks
 // (connect, moved, stood, verb, coreOpen, won); the save's v43 adds it (threadsRestore).
-import { hooks, emit, warn, hackerLevel, classOf, subOf, addItem, gainXp, deedXpFor, findLocation, active, setDrop } from './combat.mjs';
+import { hooks, emit, warn, hackerLevel, classOf, subOf, addItem, gainXp, deedXpFor, findLocation, active, setDrop, floorUniques, floorUnique } from './combat.mjs';
 import { SUBS, defaultSub, createLocation, bandOf, FLOORS, CONFIG, SERVER } from './data.mjs';
-import { seeded, rollItem, itemLabel, LOOT, codeOf } from './gear.mjs';
+import { seeded, rollItem, itemLabel, LOOT, codeOf, uniqueItem } from './gear.mjs';
 import * as FP from './floorplan.mjs';
 import { addrsOf } from './address.mjs';
 import { graphOf, floorsOf } from './floors.mjs';
@@ -388,7 +388,9 @@ function finish(s, t) {
 }
 // Three items to pick from, WoW's quest reward: one for your class and the stat your subclass chases, two leaning to
 // other stats, each a different slot. A chain's are blues, one a yellow one time in ten (LOOT.quest); a one-off's blues
-// half the time (LOOT.minor), else whites. At the thread's level, never over yours + 1.
+// half the time (LOOT.minor), else whites. At the thread's level, never over yours + 1. A thread that starts on a floor
+// with uniques of its own (source kind 'thread': The Sink's, Bedrock's) offers one of them in the yellow's place, or
+// the last item's, one time in ten too (LOOT.quest), one you lack first.
 export function offerItems(s, t) {
   const r = seeded(mix(t.seed, 'reward')), c = chainOf(t), cls = classOf(s);
   const L = Math.max(1, Math.min(hackerLevel(s) + 1, Math.max(t.level || 1, ...Object.values(t.places || {}).map((p) => locById(s, p.loc)?.level || 1))));
@@ -396,11 +398,17 @@ export function offerItems(s, t) {
   const stats = [mine, ...shuffled(r, THREAD.stats.filter((x) => x !== mine)).slice(0, 2)];
   const slots = shuffled(r, ['exploit', 'proxy', 'shell', 'script', ...(L >= 15 ? ['implant'] : [])]).slice(0, 3);
   const gold = !c.short && r() < LOOT.quest ? Math.floor(r() * 3) : -1;
-  return stats.map((stat, i) => {
+  const items = stats.map((stat, i) => {
     const it = rollItem(r, { level: L, rarity: i === gold ? 'custom' : c.short ? (r() < LOOT.minor ? 'tuned' : 'stock') : 'tuned', stat, slot: slots[i], ...(i === 0 ? { cls } : {}) });
     it.name = it.name.replace(/\b(\w+) \1\b/g, '$1'); // an affix named like its base (Weaponized Weaponized Exploit) reads once
     return it;
   });
+  const floor = locById(s, t.places?.start?.loc)?.depth;
+  if (floor && floorUniques('thread', floor, L).length && r() < LOOT.quest) {
+    const u = floorUnique(s, 'thread', floor, L, r);
+    if (u) items[gold >= 0 ? gold : items.length - 1] = uniqueItem(u, L, r);
+  }
+  return items;
 }
 // thread take <n>: the item you picked, into your stash.
 export function takeReward(s, n) {

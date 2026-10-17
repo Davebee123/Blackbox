@@ -405,7 +405,9 @@ function scanMarkup(e) {
 }
 // The collection log: every unique and trophy, found or not. Hidden until your first one; one you
 // haven't found shows where it comes from (a strain's name only once you've met that strain).
-const collSource = (s, src) => !src ? '' : src.kind === 'sprawl' ? 'SPRAWL-00' : src.kind === 'vault' ? `Layer ${src.layer || 1} vaults`
+const collSource = (s, src) => !src ? '' : src.kind === 'sprawl' ? 'SPRAWL-00' : src.kind === 'vault' ? (src.floor ? `${floorName(src.floor)} vaults` : `Layer ${src.layer || 1} vaults`)
+  : src.kind === 'lair' ? `${floorName(src.floor)} lair boss` : src.kind === 'rare' ? `${floorName(src.floor)} rare spawns` : src.kind === 'thread' ? `Threads on ${floorName(src.floor)}` : src.kind === 'puzzle' ? `${floorName(src.floor)} puzzle boards`
+  : src.kind === 'raid' ? 'Crew bosses' : src.kind === 'strain' && !src.id ? 'Strain trophies'
   : src.kind === 'guard' ? `${GUARDS[src.id]?.name || src.id} guard` : src.kind === 'strain' ? (s.met?.[src.id] ? `${STRAINS[src.id]?.name} trophy` : '???')
   : src.kind === 'rogue' ? `${ROGUE.kinds[src.id]?.name || 'Rogue'} servers` : src.kind === 'story' ? 'Storyline' : src.kind === 'contract' ? 'Contract reward' : src.kind === 'store' ? 'Halcyon store'
   : src.kind === 'boss' ? (src.id === 'resident' ? 'A Resident' : BOSSES[src.id]?.name || src.id) : src.kind === 'farm' ? 'KESSLER-FARM-00 packs' : src.kind === 'invasion' ? 'Invasion captures' : '';

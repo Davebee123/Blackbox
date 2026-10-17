@@ -24,7 +24,7 @@
 //   blackhole              its next attack does nothing (Blackhole).
 //   poisonedUntil, poison  Cache Poison: its patches and heals turn into damage.
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
-import { alliesOf, subOf, subEdge, hasTalent, rank, capValue, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers } from '../combat.mjs';
+import { alliesOf, subOf, subEdge, hasTalent, rank, capValue, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers, fxOn } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
 import { chargeNow, tellOn, tellOpen, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
 
@@ -47,6 +47,9 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 function jamMark(s, p) {
   const e = s.encounter;
   if (!alive(p)) return;
+  // Bus Fault (a unique, jam-delay): a Jam your command applies also pushes its next attack back, and holds until it goes off.
+  const push = e.commanding && fxOn(s, 'jam-delay');
+  if (push && p.attack && p.attack.due >= e.cycle && p.attack.due < 900) { p.attack.due += Number(push.fx.value) || 1; emit(s, 'interrupt', `${push.it?.name || push.name}: ${p.attack.name} comes ${Number(push.fx.value) || 1} ${(Number(push.fx.value) || 1) === 1 ? 'cycle' : 'cycles'} later.`, { target: p.id }); }
   const until = Math.max(e.cycle + 1, p.attack?.due ?? e.cycle + 1);
   p.jammedUntil = Math.max(p.jammedUntil || 0, until);
   if (subEdge(s, 'hijacker')) {
