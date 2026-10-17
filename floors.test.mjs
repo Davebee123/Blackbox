@@ -97,18 +97,19 @@ test('tracing along a floor\'s links: SPRAWL-00\'s ? servers from the start, its
   for (const id of ids) assert.ok(locAt(s, id), `${id} located by Mapped`);
 });
 
-test('exits: lit from the start, taken once a server they hang off is located; the floor below opens at its landing server; back up is always open', () => {
+test('exits: hidden until a server they hang off is located, then shown and taken; the floor below opens at its landing server; back up is always open', () => {
   const s = mk(9);
   const g = graphOf(s, 1), ex = g.exits[0];
   const layout = mapLayout(s, 1);
-  assert.ok(layout.nodes.some((n) => n.kind === 'exit' && n.id === ex && !n.open), 'the exit shows on the map before anything near it is found');
-  assert.match(mapMarkup(s, ex), /Floor 2/);
-  assert.match(mapMarkup(s, ex), /con-(red|orange|yellow|green|gray)">Lv 7<\/b>/, 'its card: the band below, coloured against your level');
+  assert.ok(!layout.nodes.some((n) => n.kind === 'exit'), 'no way down on the map before anything near it is found');
   assert.equal(canDescend(s), false);
   assert.match(command(s, 'descend').map((e) => e.message).join(' '), /No way down yet/);
   const host = adj(g, ex)[0];
   addLocation(s, g.nodes[host].family, 1, null, host);
   assert.ok(exitOpen(s, ex) && canDescend(s), 'a server it hangs off, located: the way down is open');
+  assert.ok(mapLayout(s, 1).nodes.some((n) => n.kind === 'exit' && n.id === ex && n.open), 'and now it shows on the map');
+  assert.match(mapMarkup(s, ex), /Floor 2/);
+  assert.match(mapMarkup(s, ex), /con-(red|orange|yellow|green|gray)">Lv 7<\/b>/, 'its card: the band below, coloured against your level');
   const ev = command(s, 'descend');
   assert.ok(ev.some((e) => e.type === 'floor' && e.floor === 2 && /FLOOR 2 · BACKHAUL · lv 7–14/.test(e.message)));
   assert.equal(floorsOf(s).reached, 2);

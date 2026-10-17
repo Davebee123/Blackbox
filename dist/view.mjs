@@ -33,7 +33,7 @@ import { consortiumOf, isGround, sizeOf, tiersOf, nextTier as nextConTier, serve
 import { FACTIONS, MAIL, TIERS, openContracts, doneContracts, offers as mailOffers, findJob, heldCount, boardOpen, indemnity, tierIndex, standing, tierOf, nextTier, retainer, unread, title as contractTitle, progress as contractProgress, rewardLine, ready as contractReady, nextPayIn } from './mail.mjs';
 import { commsOf, GROUPS as COMMS_GROUPS, groupOf as commsGroup } from './comms.mjs';
 import { LINE, GOODS, storeOf, lineName, lineAbout, goodsAbout, priceNow } from './store.mjs';
-import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, knowsRelay, relayCost, canBuildRelay, connectedTo, viaName } from './hidden.mjs';
+import { shownHidden, flagged as hiddenFlagged, items as kitOf, HIDDEN, leadOf, knowsRelay, relayCost, canBuildRelay, connectedTo, viaName } from './hidden.mjs';
 import { floorsOf, graphOf, locAt, hiddenAt, exitOpen, floorOfSlot, floorName, FLOOR, canDescend, waypointOf } from './floors.mjs';
 import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './root.mjs';
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel, hardenCost } from './firewall.mjs';
@@ -46,6 +46,7 @@ import { bodyTags } from './families.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, STREAK, SCOUT, daemonChance } from './invasion.mjs';
 import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
+import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, defaultSub, skillOrder, barSlots, isRunSkill } from './data.mjs';
 import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
 import { behindOf } from './progression.mjs';
@@ -1248,18 +1249,30 @@ function filterChips(s, f, on) {
     return `<span class="fchip" title="${esc(tip)}">${glyph(FILTER_ICON[k] || 'item')}<b>${esc(label)}</b><small>${esc(k === 'strength' ? '' : what)}</small></span>`;
   }).join('');
 }
-// How to trace an unknown server: each way, what it adds, and whether it's open to you yet.
-const FAM_GLYPH = { worm: 'worm', ransomware: 'cipher', ghostroot: 'kernel' };
+// How to trace an unknown server. First what is tracing it now (the kills or clears next to it, with what each adds
+// and about how many are left), then the extra ways, only those open to you; the rest folds into one line.
 function traceWays(s, h, via, kit) {
-  const relay = !!h.pinged, known = relay || !!h.seen, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route];
-  const row = (ic, label, gain, state, tip) => `<li class="tw ${state}" title="${esc(tip)}">${glyph(ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
-  const needRelay = `Needs a relay on ${via?.name || 'the server next to it'}`;
-  return `<ul class="trace-ways">
-    ${row('spike', 'Beat its invader', `+${HIDDEN.winLead}%`, 'on', `When it sends an invasion, jack in and win: +${HIDDEN.winLead}%. Your wall stopping it: +${HIDDEN.blockLead}%.`)}
-    ${row(known ? FAM_GLYPH[h.family] || 'kill' : 'kill', known ? `Kill ${FAMILIES[h.family]?.name || '?'}` : 'Kill ?', `+${HIDDEN.killLead}%`, relay ? 'on' : 'off', relay ? `Every ${FAMILIES[h.family]?.name || ''} you kill, at home or in SPRAWL-00` : `${needRelay} for kills to count${known ? '' : ' (it also reads the family; so does an invader from it)'}`)}
-    ${row('relay', route, `+${HIDDEN.routeLead}%`, banked ? 'done' : relay ? 'on' : 'off', banked ? 'Banked' : relay ? `In / on ${via?.name || '?'}: pull it and bank it` : needRelay)}
-    ${row('injector', 'Trace injector', '+30%', kit.injector ? 'on' : 'off', kit.injector ? 'Use it below' : 'Halcyon’s store, Kestrel and LANTERN sell them')}
-  </ul>`;
+  const relay = !!h.pinged, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route], left = 100 - h.lead;
+  const fam = FAMILIES[h.family]?.name || '?', at = viaName(s, h);
+  const row = (ic, label, gain, tip, state = 'on') => `<li class="tw ${state}" title="${esc(tip)}">${glyph(ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
+  // The main way: SPRAWL-00's kills (the ? closest to done goes first), or first clears of the server it hangs off.
+  let main;
+  if (h.via === CONFIG.zone.id) {
+    const per = leadOf(s, Math.min(hackerLevel(s), CONFIG.zone.maxLevel));
+    main = per > 0
+      ? `<p class="tw-main">${glyph('kill')}<span><b>Kill viruses in ${esc(at)}.</b> Each kill traces the unknown server beside it that is furthest along${left > 0 ? `, about ${Math.ceil(left / per)} more for this one` : ''}.</span><em>+${per}%</em></p>`
+      : `<p class="tw-main dim">${glyph('kill')}<span>${esc(at)}'s viruses are too far below your level to trace it now. Use the ways below.</span></p>`;
+  } else {
+    main = `<p class="tw-main">${glyph('kill')}<span><b>Clear rooms on ${esc(at)}.</b> Each room's first clear traces the servers beside it${left > 0 ? `, about ${Math.ceil(left / HIDDEN.firstClear)} more for this one` : ''}. Mapping ${esc(at)} traces it the rest of the way.</span><em>+${HIDDEN.firstClear}%</em></p>`;
+  }
+  const ways = [
+    row('spike', 'Beat an invader it sends', `+${HIDDEN.winLead}%`, `If it sends an invasion, jack in and win: +${HIDDEN.winLead}%. Your wall stopping it: +${HIDDEN.blockLead}%.`),
+    relay && row(FAM_GLYPH[h.family] || 'kill', `Kill ${fam} anywhere`, `+${HIDDEN.killLead}%`, `Your relay on ${at} hears every ${fam} you kill, at home or on a run.`),
+    relay && row('relay', route, banked ? 'banked' : `+${HIDDEN.routeLead}%`, banked ? 'Banked' : `Pull it from ${at} and bank it.`, banked ? 'done' : 'on'),
+    kit.injector && row('injector', `Trace injector · ${kit.injector}`, '+30%', 'Use it below.'),
+  ].filter(Boolean).join('');
+  const more = [!relay && `a relay on ${at} (each ${h.pinged || h.seen ? fam : 'kill of its family'} +${HIDDEN.killLead}%, and its route file +${HIDDEN.routeLead}%)`, !kit.injector && 'trace injectors (+30%, sold by Halcyon, Kestrel and LANTERN)'].filter(Boolean);
+  return `${main}<p class="tw-k">Other ways</p><ul class="trace-ways">${ways}</ul>${more.length ? `<p class="tw-more">Also: ${esc(more.join('; '))}.</p>` : ''}`;
 }
 // The firewall's filters: its slots (two, and one more at each of tiers +1, +3 and +5), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
@@ -1925,7 +1938,8 @@ export function mapLayout(s, floor = null, portrait = mapPortrait) {
   const hubs = new Set(hubsOf(s).map((h) => h.faction));
   for (const x of all) {
     if (x.kind === 'entry') continue;
-    if (x.kind === 'exit') { put({ id: x.id, kind: 'exit', to: x.to, open: exitOpen(s, x.id), x: x.x, y: x.y }, x.id); continue; }
+    // An exit stays off the map until a server beside it is found (or you've been below): no floor below shows at the start.
+    if (x.kind === 'exit') { const open = exitOpen(s, x.id); if (open || x.to <= floorsOf(s).reached) put({ id: x.id, kind: 'exit', to: x.to, open, x: x.x, y: x.y }, x.id); continue; }
     if (x.kind === 'hub') { if (hubs.has(x.hub)) put({ id: 'hub-' + x.hub, kind: 'hub', hub: hubsOf(s).find((h) => h.faction === x.hub), x: x.x, y: x.y }, x.id); continue; }
     const l = locAt(s, x.id);
     if (l) { put({ id: l.id, kind: 'location', loc: l, x: x.x, y: x.y }, x.id); continue; }
@@ -2237,7 +2251,7 @@ export function mapMarkup(s, sel = 'server', view = 'mine', { side = true, pop =
   const hoverNames = s.settings?.mapNames === 'hover';
   const svg = `<svg class="map-svg${hoverNames ? ' names-hover' : ''}${filter.length ? ' mf' + filter.map((k) => ' mf-' + k).join('') : ''}" viewBox="${minX} ${minY} ${maxX - minX} ${maxY - minY}" data-vb="${minX} ${minY} ${maxX - minX} ${maxY - minY}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${con ? 'Map of your consortium' : `Floor ${fl}, ${esc(floorName(fl))}`}">${scope}${lines}${con ? '' : trafficMarkup(s, nodes)}${draw}</svg>`;
   // Top corner: which map, and the map's own controls (names on hover, zoom back out).
-  const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><a class="btn small breach-try" href="?playtest=breach&class=${classOf(s)}&level=${Math.max(10, hackerLevel(s))}" target="_blank" rel="noopener" title="The roguelite prototype: one breach of MERIDIAN-MX-14 as your class, in a new tab. Your save is not touched.">Try a breach</a><a class="btn small breach-try" href="?campaign=breach" target="_blank" rel="noopener" title="Breach campaign: the roguelite from level 1, in a new tab, with its own save. This save is not touched.">Breach campaign</a><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
+  const tabs = `<div class="map-tools"><div class="map-left">${consortiumOf(s) ? `<div class="map-tabs comms-filters" role="group" aria-label="Show"><button type="button" data-mapview="mine" aria-pressed="${!con}">Your network</button><button type="button" data-mapview="consortium" aria-pressed="${con}">${esc(consortiumOf(s).name)}</button></div>` : ''}<div class="map-ctl comms-filters map-mode" role="group" aria-label="View"><button type="button" data-maplist="0" aria-pressed="${!list}">Map</button><button type="button" data-maplist="1" aria-pressed="${list}">List</button></div><details class="map-pick${filter.length ? ' on' : ''}"${pickOpen ? ' open' : ''}><summary data-mapfilter-toggle aria-label="Show">${filter.length ? filter.map((k) => MAP_FILTERS.find(([x]) => x === k)[1]).join(' + ') : 'All'}</summary><div class="map-pick-menu">${MAP_FILTERS.map(([k, l]) => `<label><input type="checkbox" data-mapfilter-check="${k}"${filter.includes(k) ? ' checked' : ''}><span>${l}</span></label>`).join('')}${filter.length ? '<button type="button" data-mapfilter-clear>Show all</button>' : ''}</div></details></div><div class="map-ctl comms-filters"><button type="button" data-run="map names ${hoverNames ? 'on' : 'hover'}" aria-pressed="${!hoverNames}" title="${hoverNames ? 'Names show on hover. Click to always show them.' : 'Show names only on hover'}">Aa</button><button type="button" data-locate="__sel" title="Zoom to the selected one">${glyph('trace')}</button><button type="button" data-map-zoom="reset" title="Zoom back out (double-click the map too). Scroll to zoom, drag to pan.">⤢</button></div></div>`;
   // pop: the selected node's card, popped up beside the node (app.js places it once the map is drawn).
   const card = pop ? `<div class="map-pop" id="map-pop" data-keep="${esc(sel || '')}" style="visibility:hidden"><button type="button" class="btn small map-pop-x" data-map-pop-close title="Close">×</button>${mapSide(s, sel, find(sel))}</div>` : '';
   // List mode (MOO2's planets list): every server as a row, sortable, the filters apply; the
@@ -3037,12 +3051,28 @@ function marketMarkup(s, f, now) {
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
 
-// Your first class, picked right after you log in: what each one is for, its passive and its first
-// two skills. Switching is free until a class reaches LOADOUT.trialUntil (your level comes along).
-export function classPickMarkup(s) {
-  const cards = Object.entries(ARCHETYPES).map(([k, a]) => {
-    const first = a.skills.slice(0, 2).map((x) => `<li title="${esc(x.rule || '')}"><b>${esc(x.name)}</b> <small>${esc(ABILITIES[x.id]?.short || '')}</small></li>`).join('');
-    return `<button type="button" class="cp-card" data-pick-class="${k}"><span class="cp-name">${esc(a.name)}</span><span class="cp-role">${a.role.map((r) => `<span class="tag you">${esc(r)}</span>`).join('')}</span><span class="cp-passive" title="${esc(a.passive.rule)}">${esc(a.passive.name)}</span><span class="cp-sync"><b>Sync</b> ${esc(SYNC[k].rule)}</span><ul class="cp-skills">${first}</ul></button>`;
+// Your first class, picked right after you log in: a full-screen choice of four, each with its emblem, its idea,
+// its passive and Sync, the two skills it starts with and the subclasses it opens. Pick one, then start
+// (app.js pickClass). Switching is free until a class reaches LOADOUT.trialUntil (your level comes along).
+export function classPickMarkup() {
+  const cards = Object.entries(ARCHETYPES).map(([k, a], i) => {
+    const first = a.skills.slice(0, 2).map((x) => `<li title="${esc(x.rule || '')}"><b>${esc(x.name)}</b><small>${esc(ABILITIES[x.id]?.short || '')}</small></li>`).join('');
+    const subs = Object.values(a.subs || {}).map((x) => esc(x.name)).join(' <i>or</i> ');
+    return `<button type="button" class="pk-card" data-pick-class="${k}" role="radio" aria-checked="false" style="--i:${i}">
+      <span class="pk-num">0${i + 1}</span>
+      <span class="pk-plate"><pre class="pk-art" aria-hidden="true">${esc(EMBLEMS[k].join('\n'))}</pre></span>
+      <span class="pk-name">${esc(a.name)}</span>
+      <span class="pk-idea">${esc(a.idea)}</span>
+      <span class="pk-role">${a.role.map((r) => `<span>${esc(r)}</span>`).join('')}</span>
+      <span class="pk-sec"><span class="pk-k">Passive</span><b>${esc(a.passive.name)}</b><small>${esc(a.passive.rule)}</small></span>
+      <span class="pk-sec"><span class="pk-k">Sync</span><small>${esc(SYNC[k].rule)}</small></span>
+      <span class="pk-sec"><span class="pk-k">Starts with</span><ul class="pk-skills">${first}</ul></span>
+      <span class="pk-sec pk-later"><span class="pk-k">Level ${SUBCLASS.from}</span><small>${subs}</small></span>
+    </button>`;
   }).join('');
-  return `<div class="cp-box" role="dialog" aria-label="Pick your class"><h2>Pick your class</h2><div class="cp-grid">${cards}</div><p class="cp-note">Switch on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></div>`;
+  return `<div class="pk-scene" role="dialog" aria-label="Choose your class">
+    <header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Choose your class</h2><p>Switch freely on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></header>
+    <div class="pk-grid" role="radiogroup" aria-label="Classes">${cards}</div>
+    <footer class="pk-foot"><span class="pk-hint">1–4 or click to choose · Enter to start</span><button type="button" class="btn primary pk-go" disabled>Choose a class</button></footer>
+  </div>`;
 }

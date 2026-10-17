@@ -86,7 +86,7 @@ test('the map shows a floor: home above it, SPRAWL-00 its entry, found servers a
   assert.ok(home && zone && home.y < Math.min(...nodes.filter((n) => n !== home).map((n) => n.y)), 'home above the floor');
   assert.ok(nodes.some((n) => n.kind === 'intrusion'));
   assert.equal(nodes.filter((n) => n.kind === 'location').length, 2);
-  assert.ok(nodes.some((n) => n.kind === 'exit'), 'the way down, through the fog');
+  assert.ok(nodes.filter((n) => n.kind === 'exit').every((n) => n.open), 'the way down shows only once a server beside it is found');
   assert.ok(links.every((l) => nodes.some((n) => n.id === l.from) && nodes.some((n) => n.id === l.to)));
 });
 

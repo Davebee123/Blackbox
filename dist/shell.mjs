@@ -4,11 +4,13 @@
 // glitches when something hits you. Pure presentation: no rules live here.
 // Everything that moves is skipped when Motion is off; `shell plain` turns it all off.
 
+import { powerOn } from './poweron.mjs';
+
 const BOOTED_KEY = 'blackbox-booted';
 const SPARK = '▁▂▃▄▅▆▇█';
 const PATHS = { map: '~/map', server: '/srv', vault: '~/protocols', loadout: '/etc/loadout', daemons: '/etc/daemons', system: '/sys', net: '~/net', combat: '/proc/intrusion' };
 
-export function createShell({ getState, isOn, canMove, tick }) {
+export function createShell({ getState, isOn, canMove, tick, sound }) {
   const $ = (id) => document.getElementById(id);
   let traffic = Array.from({ length: 16 }, () => 0.2 + Math.random() * 0.2);
   let energy = 0;
@@ -42,6 +44,12 @@ export function createShell({ getState, isOn, canMove, tick }) {
   function boot(force = false) {
     if (!isOn() || !canMove()) return;
     try { if (!force && sessionStorage.getItem(BOOTED_KEY)) return; sessionStorage.setItem(BOOTED_KEY, '1'); } catch { /* storage blocked: boot every load */ }
+    // The monitor comes on first (poweron.mjs); the boot lines run once a key starts it.
+    $('boot').hidden = false;
+    booting = true; // tips and the like hold off from the power-up on
+    powerOn({ sound, reducedMotion: () => !canMove() }).then(bootLinesRun);
+  }
+  function bootLinesRun() {
     const el = $('boot');
     const lines = bootLines(getState());
     el.innerHTML = `<pre></pre><small>${matchMedia('(pointer: coarse)').matches ? 'tap' : 'any key'} to skip</small>`;

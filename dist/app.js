@@ -19,6 +19,7 @@ import { nextTip, markSeen } from './tips.mjs';
 import { createRain } from './rain.mjs';
 import { createWindow } from './window.mjs';
 import { createIntro } from './intro.mjs';
+import { powerOn } from './poweron.mjs';
 import { autoPay } from './salvage.mjs';
 import { relockLeft } from './rogue.mjs';
 import { createHitFx } from './hitfx.mjs';
@@ -280,7 +281,7 @@ let introOn = false;
 function firstLogin() {
   if (CAMP) return firstCampaign();
   introOn = true;
-  intro.run().then(({ handle, pwLen }) => {
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(() => intro.run()).then(({ handle, pwLen }) => {
     campaign.profile = { handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
@@ -303,7 +304,7 @@ const CAMPAIGN_LETTER = (handle) => [
 ];
 function firstCampaign() {
   introOn = true;
-  intro.run({ letter: CAMPAIGN_LETTER }).then(({ handle, pwLen }) => {
+  powerOn({ sound: (v) => { feel.add(v, null); feel.flush(); }, reducedMotion: () => !canMove() }).then(() => intro.run({ letter: CAMPAIGN_LETTER })).then(({ handle, pwLen }) => {
     campaign.profile = { handle, pwLen, since: Date.now() };
     return pickClass();
   }).then(() => {
@@ -317,24 +318,48 @@ function firstCampaign() {
     notice('SPRAWL-00 is open. Breach it.');
   });
 }
-// Your first class: four cards, pick one (switching stays free for a while; see LOADOUT.trialUntil).
+// Your first class: four cards. Click (or 1–4, or the arrows) chooses one; Start, Enter or a double-click takes it.
+// Switching stays free for a while (see LOADOUT.trialUntil).
 function pickClass() {
   return new Promise((done) => {
     const el = document.createElement('div');
     el.className = 'class-pick';
     el.innerHTML = V.classPickMarkup(campaign);
     document.body.append(el);
-    el.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-pick-class]');
-      if (!b) return;
-      command(campaign, `archetype ${b.dataset.pickClass}`);
+    const cards = [...el.querySelectorAll('[data-pick-class]')], go = el.querySelector('.pk-go');
+    let pick = null;
+    const choose = (b) => {
+      pick = b.dataset.pickClass;
+      for (const c of cards) c.setAttribute('aria-checked', String(c === b));
+      go.disabled = false;
+      go.textContent = `Start as ${b.querySelector('.pk-name').textContent}`;
+      b.focus();
+      feel.key('char');
+    };
+    const start = () => {
+      if (!pick) return;
+      removeEventListener('keydown', keys, true);
+      command(campaign, `archetype ${pick}`);
       feel.add('unlock', null);
       el.remove();
       done();
-    });
+    };
+    const keys = (e) => {
+      const i = cards.findIndex((c) => c.dataset.pickClass === pick);
+      if (/^[1-4]$/.test(e.key)) choose(cards[+e.key - 1]);
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') choose(cards[(i + 1) % cards.length]);
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') choose(cards[(i - 1 + cards.length) % cards.length]);
+      else if (e.key === 'Enter' && pick) start();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    addEventListener('keydown', keys, true);
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-pick-class]'); if (b) choose(b); else if (e.target.closest('.pk-go')) start(); });
+    el.addEventListener('dblclick', (e) => { if (e.target.closest('[data-pick-class]')) start(); });
   });
 }
-const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: () => canMove(), tick: () => feel.key('char') });
+const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: () => canMove(), tick: () => feel.key('char'), sound: (v) => { feel.add(v, null); feel.flush(); } });
 shell.mount();
 const row = (id) => `.board [data-target="${id}"]`;
 const MINE = '.hud-bar.mine';

@@ -33,9 +33,7 @@ test('one tip at a time, in order, only on its page and only once', () => {
   markSeen(s, 'map-zone');
   assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-intrusion');
   markSeen(s, 'map-intrusion');
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-exit', 'floor 1\'s way down');
-  markSeen(s, 'map-exit');
-  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-hidden', 'and the ? servers around SPRAWL-00');
+  assert.equal(nextTip(s, 'map', onPage(map)).id, 'map-hidden', 'the ? servers around SPRAWL-00 (floor 1\'s way down stays hidden until a server beside it is found)');
   markSeen(s, 'map-hidden');
   assert.equal(nextTip(s, 'map', onPage(map)), null, 'nothing else on this map yet');
   assert.equal(nextTip(s, 'server', onPage(map)), null, 'map tips stay on the map');
