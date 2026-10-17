@@ -3122,6 +3122,29 @@ details.map-pick { pointer-events: auto; }
 
 .event-line { margin-top: 8px; }
 .event-line .row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+/* The newer event cards (events.mjs): a feud's two sides in their colours, a hunt's hop pips, a shock's ▲/▼ chip. */
+.event-line .tagline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); margin: 0; }
+.event-line .tag .glyph { width: 12px; height: 12px; margin-right: 4px; vertical-align: -2px; }
+.event-line .row.acts .btn { flex: 1 1 0; min-width: 0; }
+.btn.fside { color: var(--fc); border-color: var(--fc); }
+.btn.fside:hover:not(:disabled) { background: color-mix(in srgb, var(--fc) 14%, transparent); }
+.btn.fside .fmark-i .glyph { margin-right: 0; }
+.hop-pips { font: 12px var(--mono); letter-spacing: 1px; color: var(--daemon, #c3a6ff); cursor: help; }
+.hop-pips i { font-style: normal; opacity: 0.35; }
+.ev-pay { display: inline-flex; align-items: center; gap: 2px; cursor: help; }
+.ev-pay .glyph { width: 12px; height: 12px; margin-right: 2px; }
+.tag.shock { cursor: help; }
+.tag.shock.up { color: #8fd46b; border-color: currentColor; }
+.tag.shock.down { color: #ff6f91; border-color: currentColor; }
+.tag.shock .glyph { width: 12px; height: 12px; margin: 0 2px; vertical-align: -2px; }
+.mnode .hub-shock rect { fill: rgba(9, 6, 3, 0.9); stroke: currentColor; stroke-width: 1; }
+.mnode .hub-shock text { fill: currentColor; font: 600 10px var(--mono); }
+.mnode .hub-shock .hs-in { transform: scale(calc(1 / var(--z, 1))); }
+.mnode .hub-shock .hs-ware { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mnode .hub-shock.up { color: #8fd46b; } .mnode .hub-shock.down { color: #ff6f91; }
+.mhunt line { stroke: var(--daemon, #c3a6ff); stroke-width: 1.4; stroke-dasharray: 4 4; animation: mflow 1.6s linear infinite; }
+.mhunt path { fill: var(--daemon, #c3a6ff); }
+.no-motion .mhunt line { animation: none; }
 
 /* Buildings on a held server (outpost.mjs): slots and bandwidth, what's built, the build, the store, the Build list. */
 .outpost .op-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
