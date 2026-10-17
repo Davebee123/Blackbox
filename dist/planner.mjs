@@ -1,7 +1,7 @@
 // The scripted fight player: one planner for every class (finish what you can, answer what lands
 // now, strip, then finish), playing that class's own kit. Used by the balance scripts and by
 // simulated crewmates (crew.mjs). It reads the fight through the engine's own functions.
-import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount } from './combat.mjs';
+import { classPlan, classFill, hooks, classOf, subOf, toIntent, intents, attackers, livingParts, alive, part, defender, previewDamage, ignoresArmor, readyIn, mirrorOn, usable, hookHit, wards, attackAmount, delayHeld } from './combat.mjs';
 import { ABILITIES, TELL, CONFIG } from './data.mjs';
 import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow } from './tells.mjs';
@@ -177,14 +177,15 @@ function play(s) {
   if (big) {
     // A Tripwire's own hit: soften it, but don't break it while the others stand.
     const trip = part(s, big.source)?.deadman && !ignores('tripwire') && livingParts(s).some((x) => x.id !== big.source && x.kind === 'system');
+    const delayable = !delayHeld(part(s, big.source)); // already delayed once, a delay does nothing (combat.mjs delayAttack)
     const answer = first(s, trip ? ['harden', 'firewall', 'null-route', 'throttle ' + big.source, 'brace'] : [
       big.effect === 'damage' && s.encounter.chits === 0 && 'harden',
       big.effect === 'damage' && 'rate-limit ' + big.source, // hits harder when its attack is due, and halves it
-      'suspend ' + big.source,
-      helpersOn(s, part(s, big.source)) && 'jam ' + big.source,
+      delayable && 'suspend ' + big.source,
+      delayable && helpersOn(s, part(s, big.source)) && 'jam ' + big.source,
       big.effect === 'damage' && 'firewall',
       big.effect === 'damage' && 'null-route',
-      'quarantine ' + big.source,
+      delayable && 'quarantine ' + big.source,
       big.effect === 'damage' && 'throttle ' + big.source,
       big.effect === 'damage' && 'brace',
       big.effect === 'damage' && helpersOn(s, part(s, big.source)) && 'barrier ' + big.source,

@@ -8,7 +8,7 @@
 // rest act on what the fight emits (onEvent, through combat.mjs hooks.emitted) or after the command they change
 // (afterCommand, through hooks.commanded).
 import { ABILITIES } from './data.mjs';
-import { part, alive, livingParts, hit, emit, powerOf, scaled, classOf, loaded } from './combat.mjs';
+import { part, alive, livingParts, hit, emit, powerOf, scaled, classOf, loaded, delayAttack } from './combat.mjs';
 import { RULES } from './gear.mjs';
 
 const cyc = (n) => `${n} ${n === 1 ? 'cycle' : 'cycles'}`;
@@ -45,9 +45,9 @@ export function patchRules(s) {
     for (const [k, x] of Object.entries({ ...r.patch(v), ...(r.short ? { short: r.short(v) } : {}) })) { if (!(k in was)) was[k] = a[k]; a[k] = x; }
   }
 }
+// Backpressure and Snare: one delay a wind-up, as any (combat.mjs delayAttack).
 function delay(s, p, n, by) {
-  if (!alive(p) || !p.attack || p.attack.due >= 900) return;
-  p.attack.due += n;
+  if (!alive(p) || !delayAttack(s, p, n)) return;
   emit(s, 'interrupt', `${by}: the ${p.name}'s ${p.attack.name} is delayed ${cyc(n)}.`, { target: p.id });
 }
 const chitsIn = (ev) => { const m = /loses (\d+) ◆/.exec(ev.message); return m ? Number(m[1]) : /two ◆ broken/.test(ev.message) ? 2 : /◆ broken/.test(ev.message) ? 1 : 0; };

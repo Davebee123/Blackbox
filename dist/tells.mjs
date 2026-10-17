@@ -34,7 +34,7 @@
 //         boss's extra cap
 import { hit, implanted, emit, alive, part, livingParts, attackers, defender, hackerLevel, skillBase, gearStat, attackAmount, strikeWith, toIntent, usable, readyIn, alliesOf, fxAnswer, fxOn, cooldownOf } from './combat.mjs';
 import { CONFIG, TELL, TELLS, TELL_SETS, SEAL_FROM, STRAINS, ABILITIES, BOSSES } from './data.mjs';
-import { previewDamage } from './combat.mjs';
+import { previewDamage, delayAttack } from './combat.mjs';
 import { raidDef } from './raid.mjs';
 import { readGene, seeGene, logTell } from './genome.mjs';
 import { gainResearch } from './research.mjs';
@@ -284,8 +284,9 @@ function read(s, t, p, { open = false, skill = null, stagger = true } = {}) {
     // A charge of another tell already riding that attack keeps its cycle (it was said clear of the Mimic's beat and of
     // other tells): no delay then.
     const riding = (tellsOf(s)?.list || []).some((x) => x !== t && x.told && x.kind === 'charge' && x.part === p.id && x.n === (p.attack?.n || 0));
-    const late = stagger && !riding && p.attack && p.attack.due < 900 && p.attack.due >= e.cycle ? (e.virus.boss ? TELL.boss.delay ?? TELL.open.delay : TELL.open.delay) || 0 : 0; // a solo boss keeps its clock (TELL.boss.delay)
-    if (late) p.attack.due += late;
+    // One delay a wind-up (combat.mjs delayAttack): the stagger adds to a delay the answering command just set (Quarantine),
+    // and does nothing to one from before.
+    const late = stagger && !riding && p.attack && p.attack.due >= e.cycle ? delayAttack(s, p, (e.virus.boss ? TELL.boss.delay ?? TELL.open.delay : TELL.open.delay) || 0, { extend: true }) : 0; // a solo boss keeps its clock (TELL.boss.delay)
     emit(s, 'read', `READ: the ${p.name} is Open, +${Math.round((TELL.open.mult - 1) * 100)}% for ${cycles(n)}${late ? `, its ${p.attack.name} ${late === 1 ? 'a cycle' : cycles(late)} later` : ''}.`, { target: p.id, tell: t.id, open: true, stagger: late });
   } else if (skill && ABILITIES[skill]) {
     delete e.readyAt[skill];

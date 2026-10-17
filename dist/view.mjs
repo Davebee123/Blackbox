@@ -194,7 +194,7 @@ export function timelineMarkup(s) {
   const cols = [0, 1, 2, 3].map((c) => {
     const items = hidden ? [] : list.filter((i) => i.col === c);
     const chips = items
-      .map((i) => `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" title="${esc(i.name)} from ${esc(part(s, i.source)?.name)}: ${effectLabel(i)} ${effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small></div>`)
+      .map((i) => `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}" title="${esc(i.name)} from ${esc(part(s, i.source)?.name)}: ${effectLabel(i)} ${effectTarget[i.effect]}${heldTip(i)}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small></div>`)
       .join('');
     const quiet = !hidden && !items.length ? `<span class="quiet">${runMode ? 'quiet' : 'quiet · trace lands'}</span>` : '';
     const head = c === 0
@@ -362,8 +362,11 @@ function tellSpan(s, i, c) {
   const now = c === 0;
   return `<div class="tl-window ${now ? 'live' : ''}" title="${esc(`${i.name}'s window${now ? ' is open now' : ` opens ${c === 1 ? 'next cycle' : `in ${c} cycles`}`}. It lands ${i.col === 1 ? 'next cycle' : `in ${i.col} cycles`}, and every cycle until then counts toward the answer.`)}">${now ? '<span class="tw-word">Window · </span>now' : 'Window'}</div>`;
 }
+// An attack already delayed once (combat.mjs delayAttack) wears a pause mark: no other delay moves it.
+const heldTip = (i) => (i.held ? '. It is already delayed, and no other delay moves it.' : '');
+const heldMark = (i) => (i.held ? `<i class="held">${glyph('stall')}</i>` : '');
 function attackChip(i, c, k = '', to = null) {
-  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}"><span class="ico" ${icon(ICON[i.effect])}></span><b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
+  return `<div class="intent ${c === 0 ? 'now' : c === 1 ? 'next' : ''}${i.held ? ' held' : ''}" ${k ? `data-k="${esc(k)}"` : ''} title="${esc(i.name)}: ${effectLabel(i)} ${to ? `at ${esc(to)}` : effectTarget[i.effect]}${heldTip(i)}"><span class="ico" ${icon(ICON[i.effect])}></span>${heldMark(i)}<b${longChip(i) ? ' class="long"' : ''}>${esc(i.name)}</b><i class="code${longChip(i) ? ' long' : ''}">${esc(attackCode(i.name))}</i><small>${effectLabel(i)}</small>${to ? `<small class="at">→ ${esc(to)}</small>` : ''}</div>`;
 }
 
 // What you've put on a part, as marks by its name (an icon each) and a class on its row, so a

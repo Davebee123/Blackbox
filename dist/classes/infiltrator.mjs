@@ -24,7 +24,7 @@
 import { CONFIG, ABILITIES } from '../data.mjs';
 import { soonest, doomed } from '../planner.mjs';
 import { tellOn, tellOpen } from '../tells.mjs';
-import { subOf, subEdge, hasTalent, rank, capValue, heal, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn, addBurn, mergeBurns, injectTicks, injectTick } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, capValue, heal, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn, addBurn, mergeBurns, injectTicks, injectTick, delayAttack } from '../combat.mjs';
 
 const A = (id) => ABILITIES[id];
 const isInf = (s) => classOf(s) === 'infiltrator';
@@ -176,7 +176,7 @@ export default {
     'null-route'(s, { e }) {
       if (!talent(s, 'ghost-route')) return;
       const q = soonestAttacker(s);
-      if (q?.attack && q.attack.due < 900) { q.attack.due += 2; emit(s, 'interrupt', `Ghost Route: the ${q.name}'s ${q.attack.name} is delayed 2 cycles.`, { target: q.id }); }
+      if (delayAttack(s, q, 2)) { emit(s, 'interrupt', `Ghost Route: the ${q.name}'s ${q.attack.name} is delayed 2 cycles.`, { target: q.id }); }
     },
     'log-wipe'(s, { e }) {
       e.weakHit = {};
@@ -293,10 +293,11 @@ export default {
   },
   broke(s, p) {
     for (const st of everyone(s)) bloom(st, p);
-    // Ghost Step (Phantom capstone): a break buys time: the attack that lands soonest comes later.
+    // Ghost Step (Phantom capstone): a break buys time: the attack that lands soonest comes later, unless it's already
+    // delayed (one delay a wind-up, combat.mjs delayAttack).
     const step = isInf(s) ? capValue(s, 'ghost-step') : 0;
     const next = step && virusIntegrity(s).current > 0 ? soonestAttacker(s, p.id) : null;
-    if (next?.attack && next !== p) { next.attack.due += step; emit(s, 'status', `Ghost Step: the ${next.name} loses you, and attacks ${step === 1 ? 'a cycle' : step + ' cycles'} later.`, { target: next.id }); }
+    if (next !== p && delayAttack(s, next, step)) { emit(s, 'status', `Ghost Step: the ${next.name} loses you, and attacks ${step === 1 ? 'a cycle' : step + ' cycles'} later.`, { target: next.id }); }
     // Tracking Pixel (Phantom talent): a Tag on a part that breaks moves on to the part attacking soonest.
     const e = s.encounter;
     if (talent(s, 'tracking-pixel') && p.taggedUntil >= e.cycle && virusIntegrity(s).current > 0) {

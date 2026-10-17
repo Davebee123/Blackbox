@@ -175,11 +175,11 @@ const use = {
     emit(s, 'status', `DMZ: attacks deal ${Math.round(a.cut * 100)}% less to ${alliesOf(s).length ? 'the whole crew' : s.who || 'you'} for ${a.cycles} cycles.`, { mark: 'buff', ability: 'dmz' });
   },
   // Warden talents on old skills
-  suspend(s, { a, target, e }) {
+  suspend(s, { a, target, e, moved }) {
     // A charge on the attack it pushed back drains out in its window: it lands plain (a read, tells.mjs). Before the
     // window the charge rides the attack it pushed back.
     const ch = alive(target) && target.attack && tellOn(s, target, 'charge');
-    if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `SIGSTOP: ${ch.name.toUpperCase()} drains out of the ${target.name}. Its ${target.attack.name} lands plain, ${a.delay} cycles later.`, { moved: a.delay, stagger: false });
+    if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `SIGSTOP: ${ch.name.toUpperCase()} drains out of the ${target.name}. Its ${target.attack.name} lands plain${moved ? `, ${moved} cycles later` : ''}.`, { moved, stagger: false });
     if (!hasTalent(s, 'tarpit') || !alive(target) || !target.attack) return;
     target.throttledUntil = Math.max(target.throttledUntil || 0, target.attack.due);
     emit(s, 'status', `Tarpit: ${target.name} is Throttled until its attack lands, and its attacks deal half damage.`, { target: target.id, mark: 'throttled' });

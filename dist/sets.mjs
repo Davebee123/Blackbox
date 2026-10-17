@@ -20,7 +20,7 @@
 // there, from the crew bosses and the Bedrock lair boss, their bonuses stronger than a general set's.
 import SET_TEXT from './content/sets.mjs';
 import ITEMS from './content/items.mjs';
-import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf } from './combat.mjs';
+import { fxHolds, gearFx, active, loaded, emit, hit, heal, alive, parts, livingParts, defender, burnsOn, helpersOn, helperCap, alliesOf, momentumStacks, classOf, delayAttack } from './combat.mjs';
 import { momentumCap } from './classes/breaker.mjs';
 import { ABILITIES, SKILLS, ARCHETYPES } from './data.mjs';
 
@@ -380,8 +380,7 @@ export const SET_HOOKS = {
     // Strongbox (4): a big hit marks the part that dealt it.
     for (const f of custom(s, 'big-mark')) if (live && dealt > (d.max * (f.fx.over || 15)) / 100) {
       mark(p, 'sxMark', s, { until: e.cycle + (f.fx.cycles || 3), value: f.value });
-      const late = total(custom(s, 'mark-late'));
-      if (late && p.attack) p.attack.due += late;
+      const late = delayAttack(s, p, total(custom(s, 'mark-late'))); // one delay a wind-up, as any (combat.mjs)
       heal(s, pctOf(s, (f.fx.heal || 3) * custom(s, 'mark-heal').reduce((m, y) => m * y.value, 1)), f.name);
       emit(s, 'status', `${f.name}: the ${p.name} is marked. It takes ${f.value}% more from you for ${f.fx.cycles || 3} cycles${late ? ', and its next attack comes a cycle later' : ''}.`, { target: p.id, ...gear(f) });
     }
@@ -432,13 +431,14 @@ export const SET_HOOKS = {
     // Strongbox (3), the Combination: a shield you raised is larger.
     const grew = (e.shield || 0) - before.shield, big = custom(s, 'shield+%');
     if (grew > 0 && big.length) e.shield = before.shield + Math.round(grew * big.reduce((m, f) => m * pct(f.value), 1));
-    // Choirbook (3): a jam or a delay you applied holds a cycle longer.
+    // Choirbook (3): a jam or a delay you applied holds a cycle longer. It lengthens this command's delay (or makes the
+    // jam one): another delay already holding the attack keeps it (combat.mjs delayAttack).
     const jam = total(custom(s, 'jam-long'));
     if (jam) for (const p of livingParts(s)) {
       const was = before.parts[p.id];
       if (!was) continue;
-      if ((p.jammedUntil || 0) > was.jam) { p.jammedUntil += jam; if (p.attack && p.attack.due <= p.jammedUntil) p.attack.due += jam; }
-      else if (p === target && ABILITIES[id]?.delay && p.attack && p.attack.due > was.due) p.attack.due += jam;
+      if ((p.jammedUntil || 0) > was.jam) { p.jammedUntil += jam; if (p.attack && p.attack.due <= p.jammedUntil) delayAttack(s, p, jam, { extend: true }); }
+      else if (p === target && ABILITIES[id]?.delay && p.attack && p.attack.due > was.due) delayAttack(s, p, jam, { extend: true });
     }
     // Mesh (3): what you put on a crewmate lands on you at a share.
     const share = total(custom(s, 'crew-share'));

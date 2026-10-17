@@ -2,7 +2,7 @@
 // load run.mjs, whose hooks change how a bare balance fight runs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { score, BRACKETS, soloBand } from './balance.mjs';
+import { score, fight, BRACKETS, soloBand } from './balance.mjs';
 import { ARCHETYPES } from './dist/data.mjs';
 
 // Each piece in place of the blue in its slot (balance.mjs opts.uniques), on every subclass, and the sets together with
@@ -78,12 +78,22 @@ test('the loot plan\'s general sets, worn whole: every subclass keeps 80% wins, 
 // on every subclass: its own class's two subclasses lose less Signal than without it, no subclass loses a fight it wins
 // without it, and every subclass stays under its ceiling (balance.mjs soloBand). What they measure (October 2026, Signal
 // lost a fight, without the set and with it): Wrecking Crew, the Demolitionist 13.4% to 7.8% and the Overclocker 31.0% to
-// 16.7%; Strongbox, the Warden 15.1% to 7.3% and the Sysop 4.5% to 2.8%; Palemask, the Payload 15.1% to 13.4% and the
-// Phantom 1.3% to 1.1%; Load Balanced, the Herder 9.7% to 7.1% and the Hijacker 16.3% to 12.2%. Over all eight subclasses
+// 16.7%; Strongbox, the Warden 17.8% to 8.3% and the Sysop 4.5% to 2.8%; Palemask, the Payload 15.1% to 13.4% and the
+// Phantom 3.5% to 4.5%; Load Balanced, the Herder 9.7% to 7.1% and the Hijacker 16.1% to 11.8%. "Less for its own class"
+// is read on those 24 fights and 56 more wilds (80): a subclass near its floor moves by a single fight's luck on 24 (since
+// one delay a wind-up, the Phantom's 3.5% to 4.5% is one Scramble that missed without the set and hit with it; on 80 fights
+// Palemask takes it from 5.3% to 4.2%, and the Payload from 14.9% to 14.6%). Over all eight subclasses
 // the average moves 4.3 easier (Wrecking Crew), 6.9 (Strongbox), 2.3 (Palemask) and 2.7 (Load Balanced); the largest
 // off-class move is Strongbox on an Overclocker, 31.0% to 17.5%, and the one harder is Wrecking Crew on a Warden, 15.1%
 // to 18.4% (the set in place of the stats a Warden chases). The Overclocker loses one fight of 24 at 50 with or without a
 // set (a zone fight that ends it in 6 or 7 cycles), so the check is no fight lost that it wins without.
+// A score() result and 56 more wilds at Lv 50 (seeds 101-156): the average Signal lost over all 80.
+const wide = {};
+function wider(c, sub, r, opts) {
+  const key = `${sub} ${JSON.stringify(opts)}`;
+  wide[key] ??= Array.from({ length: 56 }, (_, i) => fight(c, 'random', AT50, { sub, ...opts, seed: 101 + i, mode: 'run', zone: true }).lostPct).reduce((a, n) => a + n, 0);
+  return (r.lost * r.total + wide[key]) / (r.total + 56);
+}
 test('the tier sets (the class sets, level 50): stronger for their own class, no fight lost, every subclass under its ceiling', async () => {
   const { SETS } = await import('./dist/sets.mjs');
   const { UNIQUES } = await import('./dist/combat.mjs');
@@ -97,7 +107,11 @@ test('the tier sets (the class sets, level 50): stronger for their own class, no
       const r = score(c, AT[50], { sub, uniques: set.pieces }), bare = baseOf(50)[sub];
       const own = c.toLowerCase() === set.cls;
       measured[`${set.id} ${sub}`] = `${bare.lost.toFixed(1)}->${r.lost.toFixed(1)}`;
-      if (own && !(r.lost < bare.lost)) off.push(`${set.name} ${sub}: ${bare.lost.toFixed(1)}% to ${r.lost.toFixed(1)}%, no help to its own class`);
+      if (own) {
+        const was = wider(c, sub, bare, {}), now = wider(c, sub, r, { uniques: set.pieces });
+        measured[`${set.id} ${sub} (80)`] = `${was.toFixed(1)}->${now.toFixed(1)}`;
+        if (!(now < was)) off.push(`${set.name} ${sub}: ${was.toFixed(1)}% to ${now.toFixed(1)}% on 80 fights, no help to its own class`);
+      }
       if (r.wins < bare.wins) off.push(`${set.name} ${sub}: ${r.wins}/${r.total} wins, ${bare.wins} without it`);
       if (r.lost > soloBand(sub)[1]) off.push(`${set.name} ${sub}: ${r.lost.toFixed(0)}%, over its ceiling`);
     }

@@ -24,7 +24,7 @@
 //   blackhole              its next attack does nothing (Blackhole).
 //   poisonedUntil, poison  Cache Poison: its patches and heals turn into damage.
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
-import { alliesOf, subOf, subEdge, hasTalent, rank, capValue, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers, fxOn } from '../combat.mjs';
+import { alliesOf, subOf, subEdge, hasTalent, rank, capValue, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers, fxOn, delayAttack, delayHeld, heldNote } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
 import { chargeNow, tellOn, tellOpen, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
 
@@ -48,8 +48,10 @@ function jamMark(s, p) {
   const e = s.encounter;
   if (!alive(p)) return;
   // Bus Fault (a unique, jam-delay): a Jam your command applies also pushes its next attack back, and holds until it goes off.
+  // It lengthens the delay the same command set (Jam's own), but not one from before (combat.mjs delayAttack).
   const push = e.commanding && fxOn(s, 'jam-delay');
-  if (push && p.attack && p.attack.due >= e.cycle && p.attack.due < 900) { p.attack.due += Number(push.fx.value) || 1; emit(s, 'interrupt', `${push.it?.name || push.name}: ${p.attack.name} comes ${Number(push.fx.value) || 1} ${(Number(push.fx.value) || 1) === 1 ? 'cycle' : 'cycles'} later.`, { target: p.id }); }
+  const n = push && p.attack && p.attack.due >= e.cycle ? delayAttack(s, p, Number(push.fx.value) || 1, { extend: true }) : 0;
+  if (n) emit(s, 'interrupt', `${push.it?.name || push.name}: ${p.attack.name} comes ${n} ${n === 1 ? 'cycle' : 'cycles'} later.`, { target: p.id });
   const until = Math.max(e.cycle + 1, p.attack?.due ?? e.cycle + 1);
   p.jammedUntil = Math.max(p.jammedUntil || 0, until);
   if (subEdge(s, 'hijacker')) {
@@ -332,12 +334,14 @@ export default {
         e.helpers.splice(e.helpers.indexOf(h), 1);
         // A charge on the attack you jammed loses its signal: it lands plain, a cycle later (a read, tells.mjs).
         const ch = tellOn(s, target, 'charge');
-        if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `JAMMED: ${ch.name.toUpperCase()} loses its signal. The ${target.name}'s ${target.attack.name} lands plain, a cycle later.`, { stagger: false });
-        target.attack.due += 1 + (hasTalent(s, 'long-jam') ? 1 : 0); // Long Jam: a second cycle
-        if (target.attack.ramp && target.attack.step) target.attack.step = 0;
-        e.metrics.interrupts++;
-        emit(s, 'interrupt', `Jam pulls your helper off the ${target.name}, and its ${target.attack.name} waits ${hasTalent(s, 'long-jam') ? '2 cycles' : 'a cycle'}.`, { target: target.id });
-        openProc(s, 'slipped');
+        if (ch && ch.n === (target.attack.n || 0)) tellAnswer(s, ch, target, `JAMMED: ${ch.name.toUpperCase()} loses its signal. The ${target.name}'s ${target.attack.name} lands plain${delayHeld(target) ? '' : ', a cycle later'}.`, { stagger: false });
+        const n = delayAttack(s, target, 1 + (hasTalent(s, 'long-jam') ? 1 : 0)); // Long Jam: a second cycle
+        if (n) {
+          if (target.attack.ramp && target.attack.step) target.attack.step = 0;
+          e.metrics.interrupts++;
+          emit(s, 'interrupt', `Jam pulls your helper off the ${target.name}, and its ${target.attack.name} waits ${n === 2 ? '2 cycles' : 'a cycle'}.`, { target: target.id });
+          openProc(s, 'slipped');
+        } else { emit(s, 'status', `Jam pulls your helper off the ${target.name}.`, { target: target.id }); heldNote(s, target); }
         loopback(s, target);
       }
       jamMark(s, target);
@@ -361,13 +365,13 @@ export default {
       const r = recalled(s, target), k = 0.1 * rank(s, 'cold-storage');
       if (r && k) { const more = Math.round(r.damage * r.left * k); e.shield = (e.shield || 0) + more; emit(s, 'status', `Cold Storage: +${more} shield (${e.shield}).`, { mark: 'shield' }); }
     },
-    'spoofed-ack': (s, { a, target }) => {
+    'spoofed-ack': (s, { a, target, moved }) => {
       if (!alive(target)) return;
       const share = a.share + 0.1 * rank(s, 'ack-flood');
       // A charge on the attack it fakes out: the ACK takes the charge's size, and the charge drains (a read, tells.mjs).
       const ch = chargeSize(s, target), riding = ch && target.attack && ch.t.n === (target.attack.n || 0);
       const size = riding ? ch.amount : attackSize(s, target);
-      const drained = riding && tellAnswer(s, ch.t, target, `Spoofed ACK: ${ch.t.name.toUpperCase()} acks into nothing. The ${target.name}'s ${target.attack.name} lands plain, a cycle later.`, { moved: a.delay, stagger: false }); // in its window only (tells.mjs)
+      const drained = riding && tellAnswer(s, ch.t, target, `Spoofed ACK: ${ch.t.name.toUpperCase()} acks into nothing. The ${target.name}'s ${target.attack.name} lands plain${moved ? ', a cycle later' : ''}.`, { moved, stagger: false }); // in its window only (tells.mjs)
       const back = clamp(Math.round(size * share), scaled(s, 8), scaled(s, a.cap) * (drained ? 1.5 : 1));
       jamMark(s, target);
       hit(s, target, back, { mine: true, by: 'Spoofed ACK', src: 'reflect' });

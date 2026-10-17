@@ -8,7 +8,7 @@
 // a hit waits for the end of the step it came in (flushDaemons), so it never lands inside another hit. Daemons
 // never set off daemons.
 import { DAEMONS, daemonN, daemonWhen, bandDaemons, daemonBand, DAEMON_DROP, DAEMON_BANDS, codeUnit, CONFIG, SERVER } from './data.mjs';
-import { emit, warn, active, alive, part, livingParts, soonestAttacker, defender, virusIntegrity, hit, heal, rand, serverLevel, classOf, telling, gainCode, scaled } from './combat.mjs';
+import { emit, warn, active, alive, part, livingParts, soonestAttacker, defender, virusIntegrity, hit, heal, rand, serverLevel, classOf, telling, gainCode, scaled, delayAttack } from './combat.mjs';
 import { codeOf } from './gear.mjs';
 
 // ---------- what you hold ----------
@@ -46,7 +46,7 @@ const ACT = {
   spider: (s, id) => { const t = lastTarget(s) || soonestAttacker(s); if (!t) return false; say(s, id, `bites ${t.name}`); s.encounter.burns.push({ id: 'spider', target: t.id, damage: daemonAmount(s, id), grow: 0, left: 3, name: DAEMONS[id].name, drain: 0 }); },
   mender: (s, id) => { const d = defender(s); if (d.integrity >= d.max) return false; say(s, id, 'patches you'); heal(s, daemonAmount(s, id), DAEMONS[id].name); },
   fuzzer: (s, id) => { const a = armored(s)[0], t = a || soonestAttacker(s); if (!t) return false; say(s, id, `fuzzes ${t.name}`); strikeAt(s, id, t, a ? 1 : daemonAmount(s, id)); },
-  stall: (s, id) => { const t = soonestAttacker(s); if (!t?.attack) return false; say(s, id, `stalls ${t.name}`); t.attack.due++; strikeAt(s, id, t); },
+  stall: (s, id) => { const t = soonestAttacker(s); if (!t?.attack) return false; say(s, id, delayAttack(s, t, 1) ? `stalls ${t.name}` : `hits ${t.name}`); strikeAt(s, id, t); },
   cron: (s, id) => { const t = livingParts(s).find((q) => q.kind === 'system' && telling(s, q)) || soonestAttacker(s); if (!t) return false; say(s, id, `runs on ${t.name}`); strikeAt(s, id, t); },
   nudge: (s, id) => { const t = nearTick(s); if (!t) return false; say(s, id, `nudges ${t.name}`); strikeAt(s, id, t); },
   drain: (s, id) => { const t = soonestAttacker(s); if (!t) return false; say(s, id, `drains ${t.name}`); const r = strikeAt(s, id, t); if (r?.dealt) heal(s, Math.max(1, Math.round(r.dealt / 2)), DAEMONS[id].name); },
@@ -58,7 +58,7 @@ const ACT = {
   sieve: (s, id) => { const fr = livingParts(s).filter((p) => p.kind === 'fragment'); if (!fr.length) return false; say(s, id, `sifts ${fr.length === 1 ? 'a fragment' : `${fr.length} fragments`}`); for (const p of fr) strikeAt(s, id, p); },
   overseer: (s, id) => { const t = soonestAttacker(s); if (!t) return false; say(s, id, `hits ${t.name}`); strikeAt(s, id, t); },
   broadcast: (s, id) => { say(s, id, 'hits every part'); for (const p of livingParts(s)) strikeAt(s, id, p); },
-  void: (s, id) => { const t = soonestAttacker(s); if (!t?.attack) return false; say(s, id, `pushes ${t.attack.name} back`); t.attack.due += Math.max(1, t.attack.interval || 1); strikeAt(s, id, t); },
+  void: (s, id) => { const t = soonestAttacker(s); if (!t?.attack) return false; say(s, id, delayAttack(s, t, Math.max(1, t.attack.interval || 1)) ? `pushes ${t.attack.name} back` : `hits ${t.name}`); strikeAt(s, id, t); },
   sledge: (s, id) => { say(s, id, 'hammers every part'); for (const p of livingParts(s)) strikeAt(s, id, p, p.armor > 0 ? 1 : daemonAmount(s, id)); },
   hotspare: (s, id) => { const d = defender(s); if (d.integrity < d.max) { say(s, id, 'patches you'); heal(s, daemonAmount(s, id), DAEMONS[id].name); } else shield(s, id); },
   tandem: (s, id) => { const a = soonestAttacker(s), b = lastTarget(s); if (!a && !b) return false; say(s, id, 'strikes twice'); strikeAt(s, id, a); strikeAt(s, id, b); },

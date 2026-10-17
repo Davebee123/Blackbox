@@ -361,6 +361,25 @@ export function openProc(s, kind, extra = {}) {
   (e.procs ||= {})[kind] = { until: e.cycle + a.window + (longer ? 1 : 0), ...extra };
   emit(s, 'proc', `${a.name} is usable now.`, { ability: ids[0] });
 }
+// One delay a wind-up: the first thing that pushes a part's attack later (a skill, a talent, a unique, a set bonus, a
+// daemon, Stealth, a read, a script) holds its timer, and every other delay does nothing until it lands, so it always
+// lands in the end. The hold is the timer it set (attack.late): landing, a cut or anything else that moves the timer
+// lets it go. extend: a push that lengthens the delay this same command just set (Bus Fault, Choirbook, the stagger of
+// a tell it answers) adds to it. Every player delay in a fight goes through here; the part's own timing (a Miner
+// waiting, a Sleeper) and a breach's head start, set before the fight (breach.mjs), don't. The cycles it moved the
+// attack: 0 if it was held.
+export const delayHeld = (p) => p?.attack?.late != null && p.attack.late.due === p.attack.due;
+export function delayAttack(s, p, n, { extend = false } = {}) {
+  const e = s.encounter, atk = p?.attack;
+  if (!atk || !(n > 0) || atk.due >= 900) return 0;
+  const by = e?.commanding ? `${e.cycle}:${s.who || ''}` : null;
+  if (delayHeld(p) && !(extend && by && atk.late.by === by)) return 0;
+  atk.due += n;
+  atk.late = { due: atk.due, by };
+  return n;
+}
+// A skill whose delay found the attack held says so (the other sources just don't move it).
+export const heldNote = (s, p) => emit(s, 'status', `The ${p.name}'s ${p.attack.name} is already delayed. It lands on cycle ${p.attack.due}.`, { target: p.id, held: true });
 // Armor-piercing: goes straight through armor chits (Backdoor, Bypass; Overload with Piercing).
 // Piercing (Breaker talent): only a fight's first Overload goes through armor.
 export const ignoresArmor = (s, id) => !!ABILITIES[id]?.pierce || (id === 'overload' && hasTalent(s, 'piercing') && !s.encounter?.once?.pierced);
@@ -1894,11 +1913,10 @@ function engage(s) {
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
   daemonsOn(s, 'start'); // the Airbag, and the Leash on an Exfil (daemons.mjs)
   if (fxHas(s, 'rewind')) noteSignal(s, e.cycle - 1); // Last Known Good: the Signal you came in with, as the cycle before the first
-  // Stealth: each part's first attack may come a cycle later.
+  // Stealth: each part's first attack may come a cycle later (a delay like any, delayAttack).
   const st = gearStat(s, 'stealth');
   if (st) {
-    const late = attackers(s).filter((p) => rand(s) * 100 < st);
-    for (const p of late) p.attack.due += 1;
+    const late = attackers(s).filter((p) => rand(s) * 100 < st && delayAttack(s, p, 1));
     if (late.length) emit(s, 'status', `Stealth: ${late.map((p) => p.name).join(' and ')} ${late.length === 1 ? 'attacks' : 'attack'} a cycle later.`);
   }
   emit(s, 'engage', `Engaged ${e.virus.name}.`);
@@ -3109,13 +3127,13 @@ function useAbility(s, intent, auto = false) {
     e.helpers.splice(e.helpers.indexOf(h), 1);
     if (id === 'barrier') { const amount = h.damage * h.left; e.shield = (e.shield || 0) + amount; emit(s, 'status', `Barrier turns a helper into a ${amount} shield (${e.shield} in all).`, { mark: 'shield', ability: id }); }
   }
-  if (a.delay && target) {
-    target.attack.due += a.delay;
+  const moved = a.delay && target ? delayAttack(s, target, a.delay) : 0; // a class hook answering a tell needs it (Suspend, Spoofed ACK)
+  if (moved) {
     if (target.attack.ramp && target.attack.step) { target.attack.step = 0; emit(s, 'status', `${target.attack.name} resets, and its ramp starts over.`, { target: target.id }); }
     e.metrics.interrupts++;
-    emit(s, 'interrupt', `${target.attack.name} delayed ${a.delay} ${a.delay === 1 ? 'cycle' : 'cycles'}.`, { target: target.id });
+    emit(s, 'interrupt', `${target.attack.name} delayed ${moved} ${moved === 1 ? 'cycle' : 'cycles'}.`, { target: target.id });
     openProc(s, 'slipped');
-  }
+  } else if (a.delay && target?.attack) heldNote(s, target);
   if (['brace', 'sudo', 'fork'].includes(id)) {
     e.buffs[id] = e.cycle + a.cycles - 1;
     emit(s, 'status', `${a.name} for ${a.cycles} cycles.`, { mark: 'buff', ability: id });
@@ -3184,7 +3202,7 @@ function useAbility(s, intent, auto = false) {
     stretchBurns(s, target, e.surprise ? CONFIG.surprise.keepalive : a.cycles, 'Keepalive');
   }
   // A subclass skill's own effect (dist/classes/<class>.mjs). to: the crewmate an ally skill was aimed at.
-  classUse(id)?.(s, { a, id, target, to: (intent.ally && allyOf(s, intent.ally)) || s, res, base, intent, auto, e });
+  classUse(id)?.(s, { a, id, target, to: (intent.ally && allyOf(s, intent.ally)) || s, res, base, intent, auto, e, moved });
   classEach('used', s, { id, target, res, before }); // set bonuses on what the skill did (sets.mjs)
   hooks.commanded?.(s, { id, target, res, auto }); // a skill rule acts after the command it changes (skillrules.mjs)
 }
@@ -3387,13 +3405,13 @@ function landAttack(s, p) {
   // Stealth from a timed buff (Turbidity): while it runs, each attack on you may come a cycle later, as a fight's first
   // attacks may with Stealth (engage). Not a tell's (its own clock, tells.mjs).
   const lurk = !atk.tell && buffStat(s, 'stealth');
-  if (lurk && rand(s) * 100 < lurk) { atk.due = e.cycle + 1; return emit(s, 'status', `Stealth: ${p.name}'s ${atk.name} comes a cycle later.`, { source: p.id }); }
+  if (lurk && rand(s) * 100 < lurk && delayAttack(s, p, e.cycle + 1 - atk.due)) return emit(s, 'status', `Stealth: ${p.name}'s ${atk.name} comes a cycle later.`, { source: p.id });
+  if (watchman(s, p)) return; // before the landing: the attack it holds lands next cycle, as its own landing
   p.lastLanded = e.cycle;
-  atk.due = e.cycle + atk.interval;
+  atk.due = e.cycle + atk.interval; // it lands: the next attack can be delayed again
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
   if (atk.ramp) atk.step = (atk.step || 0) + 1; // Floodgate: one harder each time
   if (atk.dump) e.keylog = 0; // Keylogger: the log empties into the Dump
-  if (watchman(s, p)) return;
   // Null Route: this cycle's attacks miss (and Opening lights up).
   if (e.nullRoute > 0 || e.buffs['null-route'] >= e.cycle) { dodged(e); emit(s, 'blocked', `${atk.name} misses. You null-routed it.`, { source: p.id }); openProc(s, 'slipped'); return slipLonger(s); }
   // Retaliate lights up when a damage attack reaches you, whatever soaks it.
@@ -3976,9 +3994,9 @@ const lastTarget = (s) => { const t = s.encounter.lastAttack && part(s, s.encoun
 // (after the attacks, flushDaemons). The bar is a big attack at your power.
 function watchman(s, p) {
   const e = s.encounter;
-  if (!slottedDaemons(s).includes('watchman') || e.inDaemon || p.attack.tell || e.once['dmn-watchman'] || p.attack.effect !== 'damage' || p.attack.amount < watchmanBar(s)) return false;
+  if (!slottedDaemons(s).includes('watchman') || e.inDaemon || p.attack.tell || e.once['dmn-watchman'] || p.attack.effect !== 'damage' || p.attack.amount < watchmanBar(s) || delayHeld(p)) return false;
   e.once['dmn-watchman'] = true;
-  p.attack.due = e.cycle + 1;
+  delayAttack(s, p, e.cycle + 1 - p.attack.due);
   emit(s, 'interrupt', `Watchman delays ${p.attack.name} a cycle.`, { target: p.id, auto: 'daemon' });
   (e.daemonQueue ||= []).push({ id: 'watchman', x: { part: p.id } });
   openProc(s, 'slipped');
@@ -4024,7 +4042,7 @@ export function intents(s, columns = 4) {
     while (due - e.cycle < columns) {
       const col = due - e.cycle;
       if (a.grow) a.bonus = (bonus0 || 0) + a.grow * Math.max(0, col);
-      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind });
+      if (col >= 0 && !charged.has(`${p.id}@${col}`)) out.push({ source: p.id, name: a.name, effect: a.effect, amount: Math.round(attackAmount(p) * c2Gnaw(s, p) * (boosted ? CONFIG.reactiveBonus : 1)), ...(a.hit ? { hit: Math.round(a.hit * (boosted ? CONFIG.reactiveBonus : 1)) } : {}), col, hidden, kind: p.kind, ...(due === a.due && delayHeld(p) ? { held: true } : {}) }); // held: already delayed, it lands there
       if (a.ramp) a.step = (a.step || 0) + 1;
       boosted = false;
       due += a.interval;

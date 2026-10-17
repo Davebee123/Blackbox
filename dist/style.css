@@ -192,6 +192,10 @@ code { font-family: var(--mono); color: var(--amber); }
 .intent.mine { border-color: var(--you); color: var(--you); }
 .intent.mine.plan { border-style: dashed; opacity: 0.85; }
 .intent.mine.auto { opacity: 0.8; }
+/* an attack already delayed once: a teal pause mark (you did it), and no other delay moves it */
+.intent.held { box-shadow: inset 2px 0 0 var(--you); }
+.intent .held { display: inline-grid; flex: none; color: var(--you); }
+.intent .held .glyph { width: 11px; height: 11px; margin: 0; }
 .intent.daemon { border-color: var(--daemon); color: var(--daemon); }
 .intent.patch { margin-top: 4px; padding: 2px 7px; font: 600 11px var(--mono); letter-spacing: 1px; border-style: dashed; border-color: var(--line-strong); color: var(--amber-soft); background: transparent; }
 /* Encryption: the damage you take every cycle until the Encryptor breaks. On the Encryptor's row, in every column. */
