@@ -380,7 +380,7 @@ hooks.roomCycle = (s) => {
     const d = defender(s), you = Math.min(d.integrity, Math.max(1, Math.round(d.max * ROOM_RULES.overheat.you)));
     d.integrity -= you;
     for (const p of livingParts(s)) hit(s, p, Math.max(1, Math.round(p.max * ROOM_RULES.overheat.parts)), { by: 'Overheat', pierce: true, server: true });
-    emit(s, 'server-hit', `Overheat: the rack burns you for ${you}, and every part with you. Signal ${d.integrity}/${d.max}.`, { amount: you });
+    emit(s, 'server-hit', `Overheat: the rack burns you for ${you}, and every part with you. Signal ${d.integrity}/${d.max}.`, { amount: you, atk: 'Overheat' });
   }
 };
 // What a room body's part says under its name on the board (view.mjs partTags), as [text, tip, kind].

@@ -42,6 +42,7 @@ import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, un
 import ITEMS from './content/items.mjs';
 import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
 import { fxText, fxList } from './content.mjs';
+import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
 import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER } from './research.mjs';
@@ -1874,13 +1875,14 @@ export function disconnect(s, reason) {
   const failed = s.mail?.jobs ? contractPackLost(s, run) : []; // a contract's item in the pack goes with it, and its contract fails (mail.mjs)
   const lost = run.pack.length;
   const by = s.encounter?.mode === 'run' ? s.encounter.virus?.name : null; // what took you out, for the card
+  const recap = s.encounter?.mode === 'run' ? deathRecap(s) : null; // how: the last cycles' Signal and hits (recap.mjs)
   s.signal = Math.max(0, run.integrity);
   s.run = null;
   if (loc) loc.lockUntil = (hooks.now?.() ?? Date.now()) + CONFIG.relockMs; // every server: see rogue.mjs relocks/relockLeft
   if (s.encounter?.mode === 'run' && s.encounter.phase !== 'active') s.encounter = null;
   if (s.parked) { s.encounter = s.parked; s.parked = null; }
   if (s.gate && s.encounter?.phase !== 'alert') { s.encounter = s.gate; s.gate = null; }
-  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc ? CONFIG.relockMs : 0, failed });
+  emit(s, 'disconnected', `DISCONNECTED${reason ? ': ' + reason : ''}. ${lost ? `${lost} unbanked ${lost === 1 ? 'file' : 'files'} lost.` : ''} Your server is untouched.`, { by, reason: reason || '', lost, where: loc?.name || '', relockMs: loc ? CONFIG.relockMs : 0, failed, ...(recap ? { recap } : {}) });
 }
 
 function newMetrics(s) {
@@ -1921,7 +1923,7 @@ function engage(s) {
   // A filter of the Scrubber starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
   daemonsOn(s, 'start'); // the Airbag, and the Leash on an Exfil (daemons.mjs)
-  if (fxHas(s, 'rewind')) noteSignal(s, e.cycle - 1); // Last Known Good: the Signal you came in with, as the cycle before the first
+  noteSignal(s, e.cycle - 1); // the Signal you came in with, as the cycle before the first (Last Known Good, the death recap)
   // Stealth: each part's first attack may come a cycle later (a delay like any, delayAttack).
   const st = gearStat(s, 'stealth');
   if (st) {
@@ -3326,7 +3328,8 @@ function rewind(s) {
   d.integrity += got;
   emit(s, 'heal', `${x.name || x.it.name}: your Signal goes back to where it was ${Number(x.fx.value) || 3} cycles ago, +${got}. Signal ${d.integrity}/${d.max}.`, { amount: got, ...firedOf([x]) });
 }
-// The Signal you held at the end of each recent cycle (and as the fight started, as the cycle before its first), for rewind.
+// The Signal you held at the end of each recent cycle (and as the fight started, as the cycle before its first), for
+// rewind and the death recap's strip (recap.mjs).
 function noteSignal(s, at = s.encounter.cycle) {
   const st = fxState(s.encounter);
   st.sig = { ...(st.sig || {}), [at]: defender(s).integrity };
@@ -3490,7 +3493,7 @@ function landAttack(s, p) {
     }
     if (dealt && zeroDay(s, 'subrogation')) e.subro = p.id;
     const verb = crit ? 'CRITS' : 'hits';
-    if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit, ...(atk.tell ? { tell: atk.tell } : {}) });
+    if (dealt) emit(s, 'server-hit', e.mode === 'run' ? `${atk.name} ${verb} your Signal: −${dealt}.` : `${atk.name} ${verb} the server: −${dealt} Integrity.`, { source: p.id, amount: dealt, crit, atk: atk.name, ...(atk.tell ? { tell: atk.tell } : {}) });
     // Countermeasures (server gear): whatever hits your server takes a hit back.
     const cm = e.mode === 'home' && gearStat(s, 'countermeasures', 'server');
     if (cm && dealt && alive(p)) hit(s, p, cm, { by: 'Countermeasures', server: true, src: 'reflect' });
@@ -3787,7 +3790,7 @@ function cycleStart(s) {
     for (const x of due) {
       if (!src) break;
       const dealt = takeDamage(s, x.amount, src.id, x.name + ' echo', { dot: true });
-      if (dealt) emit(s, 'server-hit', `${x.name} echoes: −${dealt}.`, { source: src.id, amount: dealt });
+      if (dealt) emit(s, 'server-hit', `${x.name} echoes: −${dealt}.`, { source: src.id, amount: dealt, atk: `${x.name} echo` });
       if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
     }
   }
@@ -3840,7 +3843,7 @@ function fadingChit(s, x) {
 // Your gear at the end of a cycle, on its beat (value: every that many cycles). Bitrot Ward (chit-fade): its ◆, if you
 // still hold it, fades after its cycles. Init Vector (repeat): your next damaging skill is armed to hit
 // again. Watchdog Timer (free-helper): with no helper of yours out, one joins for a few cycles, a Deploy helper's size.
-// Then the Signal you end it on (Last Known Good).
+// Then the Signal you end it on (Last Known Good, the death recap).
 function cycleFx(s) {
   const e = s.encounter, st = fxState(e), beat = (x) => e.cycle % Math.max(1, Number(x.fx.value) || 1) === 0;
   if (st.chitFade && !(e.chits > 0)) delete st.chitFade; // the ◆ was spent
@@ -3853,7 +3856,7 @@ function cycleFx(s) {
     e.helpers.push({ target: t.id, damage: dmg, left: n, synced: false });
     emit(s, 'status', `${x.name || x.it.name}: a helper joins you on the ${t.name}, dealing ${dmg} every cycle for ${n} cycles.`, { target: t.id, mark: 'helper', ...firedOf([x]) });
   }
-  if (fxHas(s, 'rewind')) noteSignal(s);
+  noteSignal(s);
 }
 // The end of a cycle once the attacks are in: patches, cooldown effects, the turn over.
 function cycleClose(s, landed) {

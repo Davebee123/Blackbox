@@ -1,6 +1,7 @@
 // Markup builders. Pure functions of state; they never change it.
 import { SALVAGE_COSTS, stacks as salvageStacks, canAfford, costLabel as salvageLabel, payProblem, total as salvageTotal, slug } from './salvage.mjs';
 import { glyph } from './glyphs.mjs';
+import { TELL_ICON } from './recap.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { isLive, liveCount, memoryCap, memoryCost, joinCost, MEMORY } from './memory.mjs';
 // The server whose Connect is waiting on a yes (app.js): its card shows the memory it takes.
@@ -337,7 +338,6 @@ function gearRow(s) {
 // once each (fightread.mjs tellTip): what happens if it lands, and how to stop it and when. A longer window marks the
 // cells before it (tellSpan).
 const TELL_KICK = { charge: 'Charged', cast: 'Casting', seal: 'Sealing', mimic: 'Recording', lock: 'Locking' };
-const TELL_ICON = { charge: 'event-warning', cast: 'interrupt', seal: 'event-lock', mimic: 'scan', lock: 'event-lock' };
 function tellChip(s, i, c, k = '', to = null) {
   const p = part(s, i.source);
   const open = i.open ?? c === 0;
@@ -2806,10 +2806,12 @@ export function spoilsMarkup(head, rows, xp, goLabel = 'Continue') {
 
 // What a pull or a jack-out gave you, in the same card. kicker: 'Pulled' | 'Banked'.
 // A pull is one row and goes away on its own; Banked waits for Enter.
-export function gainMarkup(kicker, name, rows, go = true) {
+// lead: a block over the rows (the Disconnected card's death recap, recap.mjs), as markup.
+export function gainMarkup(kicker, name, rows, go = true, lead = '') {
   return `<div class="sp-card gain-card" role="status" aria-label="${esc(kicker)}: ${esc(rows.map((r) => r.text).join(', ') || 'nothing')}">
     <i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
     <header class="sp-head"><span class="sp-kicker">${esc(kicker)}</span>${name ? `<strong class="sp-name">${esc(name)}</strong>` : ''}</header>
+    ${lead}
     <ul class="sp-rows">${rows.length ? rows.map((r, i) => spRow(r, i)).join('') : '<li class="sp-row k-none" style="--i:0"><span class="sp-lbl">—</span></li>'}</ul>
     ${go ? `<button type="button" class="sp-go" data-gain-go style="--i:${rows.length + 1}">Continue <kbd>Enter</kbd></button>` : ''}</div>`;
 }

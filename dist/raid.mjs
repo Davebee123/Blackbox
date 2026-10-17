@@ -246,7 +246,7 @@ export function raidLand(s) {
     for (const d of fx.dots) {
       if (d.left <= 0) continue;
       const dealt = mechanicHit(st, d.amount, d.name, 'raid', { dot: true });
-      if (dealt) emit(st, 'server-hit', `${d.name} burns ${st === hostOf(s) ? 'you' : whoOf(st)} for ${dealt}.`, { amount: dealt, raid: true });
+      if (dealt) emit(st, 'server-hit', `${d.name} burns ${st === hostOf(s) ? 'you' : whoOf(st)} for ${dealt}.`, { amount: dealt, raid: true, atk: d.name });
       d.left--;
       if (d.spread && e.cycle >= d.spreadAt) {
         d.spreadAt = e.cycle + d.spread;
@@ -307,7 +307,7 @@ const ended = (s) => {
 };
 function hitOne(s, st, amount, name) {
   const dealt = mechanicHit(st, amount, name, 'raid');
-  if (dealt) emit(st, 'server-hit', `${name} hits ${st === hostOf(s) ? 'you' : whoOf(st)} for ${dealt}.`, { amount: dealt, raid: true });
+  if (dealt) emit(st, 'server-hit', `${name} hits ${st === hostOf(s) ? 'you' : whoOf(st)} for ${dealt}.`, { amount: dealt, raid: true, atk: name });
   return dealt;
 }
 function land(s, def, m) {

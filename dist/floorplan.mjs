@@ -51,6 +51,7 @@ import { giveScript, rollScript } from './scripts.mjs';
 import { AUTHOR_FAMILIES, OPENS, rollSet, applySet, jitterFirst, setsOf, familyName, setName } from './families.mjs';
 import { armTicks, bossRule, BOSS_RULES } from './interrupt.mjs';
 import { logSet } from './genome.mjs';
+import { deathRecap } from './recap.mjs';
 import { addrsOf, byAddr } from './address.mjs';
 import { PROGRAMS, SOCKET, buildProgram, uninstallProgram, gainComponents, programCost, buildBlock as programBlock, costLine as programCostLine, codebasesOf } from './sockets.mjs';
 import { PUZZLES, PUZZLE_KINDS, isPuzzle, newPuzzle, puzzleMove, puzzleScore, puzzleStarted, cellOf, boardLines, moveLine } from './puzzles.mjs';
@@ -815,10 +816,10 @@ function goHome(s, R = s.rooms) {
 }
 // Lost a fight: disconnected. The unbanked pack is lost; XP, banked gear and your scripts stay.
 function disconnected(s, why) {
-  const R = s.rooms, lost = [];
+  const R = s.rooms, lost = [], rc = s.encounter?.metrics ? deathRecap(s) : null, recap = rc ? { recap: rc } : {}; // the fight's last cycles (recap.mjs)
   if (R.world) {
     // The run's end is combat.mjs disconnect (the pack lost; Deadman's Switch jacks you out with it instead).
-    R.last = { result: 'lost', why, lost: (s.run?.pack || []).map((f) => f.label || f.name), xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n };
+    R.last = { result: 'lost', why, lost: (s.run?.pack || []).map((f) => f.label || f.name), xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, ...recap };
     if (R.at) keysBack(s);
     ask('leave', s, 'lost', why); // Deadman's Switch jacks you out instead (jackOut, home with the pack)
     if (R.at) goHome(s, R);
@@ -827,7 +828,7 @@ function disconnected(s, why) {
   for (const id of R.pack) { const it = stashItem(s, id); if (it) { lost.push(itemLabel(it)); for (const r of Object.values(s.gear?.rigs || {})) if (Array.isArray(r)) for (let i = 0; i < r.length; i++) if (r[i] === id) r[i] = null; s.stash = s.stash.filter((x) => x.id !== id); } }
   R.pack = [];
   keysBack(s);
-  R.last = { result: 'lost', why, lost, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n };
+  R.last = { result: 'lost', why, lost, xp: xpTotal(s) - (R.visit?.xp0 ?? xpTotal(s)), visit: R.visit?.n, ...recap };
   R.signal = 0;
   goHome(s);
   say(s, `DISCONNECTED. ${why}${lost.length ? ` ${lost.length} unbanked ${lost.length === 1 ? 'item' : 'items'} lost.` : ''}`, 'rooms-bad');
