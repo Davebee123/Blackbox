@@ -76,9 +76,9 @@ export const PROTOCOL_NAMES = {
   evasion: 'Jitter', sanitize: 'Sanitizer', scavenge: 'Scavenger', sync: 'Phaselock',
 };
 
-// Base items: seven per slot (the Implant three), a tier every few levels. The last two, at 34 and 42,
-// each give about 1.4 times what the tier before gives at their level, so a new base is a moment. Primary stats at the tier's own level
-// (Damage as a range), scaled by item level from there. See the items design doc.
+// Base items: seven per slot (the Implant three), a tier every few levels. A base's primaries are its stat mix
+// (Damage as a range); how big they are comes from the item level alone (ITEM_CURVE), so a new base changes the
+// name and the mix, never the power. See the items design doc.
 export const BASES = {
   'proof-of-concept': { slot: 'exploit', name: 'Proof of Concept', level: 1, primary: { damage: [5, 7] }, flavour: 'Works on the third try.' },
   'weaponized-exploit': { slot: 'exploit', name: 'Weaponized Exploit', level: 5, primary: { damage: [9, 12] }, flavour: "Somebody else's research, your target." },
@@ -119,6 +119,20 @@ export const PRIMARY_STATS = ['damage', 'signal', 'reduction', 'regen', 'restore
 export const ITEM_SCALE = { primary: 0.42, unique: 0.5, uniqueBase: 1.2 };
 // The best base of a slot at an item level (the highest tier unlocked).
 export const baseFor = (slot, level) => Object.entries(BASES).filter(([, b]) => b.slot === slot && !b.uniqueOnly && b.level <= Math.max(1, level)).sort((a, b) => b[1].level - a[1].level)[0]?.[0] || null;
+// Item power by item level: one smooth curve for every slot, with no step where a base unlocks (power spikes come
+// from skills, talents, capstones, uniques and sets, never from a base). It follows the enemies' hits, which grow
+// with power(L) and the enemy ramp (`ramp`, CONFIG.enemyRamp's number, kept here so a test that zeroes the ramp
+// doesn't move the gear), to the power `n`: the rest of you grows only 4% a level, so plain gear has to outgrow the
+// hits to keep a same-level fight costing the same share of your Signal. Level `top` (the level cap) is the anchor:
+// there each slot's last base rolls what it rolled when bases came in tiers.
+export const ITEM_CURVE = { n: 1.4, ramp: 0.03, top: 50 };
+const hits = (level) => power(level) * (1 + ITEM_CURVE.ramp * (Math.max(1, level) - 1));
+export const itemPower = (level) => (hits(level) / hits(ITEM_CURVE.top)) ** ITEM_CURVE.n;
+// A base's size against its slot's last base: the geometric mean of its primaries over the last base's, so a
+// new base starts at the power the one before it had (its stats can shift between themselves, not grow).
+const lastBase = (slot) => BASES[baseFor(slot, Infinity)];
+const mean = (v) => (Array.isArray(v) ? (v[0] + v[1]) / 2 : v);
+const sizeOf = (b) => { const top = lastBase(b.slot), ks = Object.keys(top.primary).filter((k) => b.primary[k]); return Math.exp(ks.reduce((n, k) => n + Math.log(mean(b.primary[k]) / mean(top.primary[k])), 0) / ks.length); };
 
 // Affixes: secondaries. A prefix adds offense, a suffix defense or utility. Value at item level 1
 // and 20 (linear between, on past 20). `from`: the item level it can first roll at.
@@ -297,9 +311,12 @@ export function statValue(stat, level, mult, rand) {
   return Math.max(1, Math.round(raw));
 }
 const round = (stat, v) => Math.round(v); // every stat is a whole number
+// What a base's listed primaries are multiplied by at an item level (before ITEM_SCALE and rarity): its mix at the
+// size of the slot's last base, the size that base had at the level cap (grown 4% a level from its own), along ITEM_CURVE.
+export const baseScale = (baseId, level) => { const b = BASES[baseId], top = lastBase(b.slot); return (power(ITEM_CURVE.top) / power(top.level)) / sizeOf(b) * (itemPower(level) / itemPower(ITEM_CURVE.top)); };
 // A base's primaries at an item level, times a multiplier (rarity), each rolled ±10%.
 export function primaries(baseId, level, mult, rand) {
-  const b = BASES[baseId], k = (power(Math.max(1, level)) / power(b.level)) * ITEM_SCALE.primary, out = {};
+  const b = BASES[baseId], k = baseScale(baseId, level) * ITEM_SCALE.primary, out = {};
   for (const [stat, v] of Object.entries(b.primary)) {
     const x = Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v * (0.9 + 0.2 * rand());
     out[stat] = round(stat, x * k * mult) || 1;

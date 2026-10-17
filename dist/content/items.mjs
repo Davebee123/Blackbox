@@ -12,7 +12,7 @@ export default {
           5,
           6
         ],
-        "signal": 10
+        "signal": 11
       },
       "green": {
         "when": "always",
@@ -35,7 +35,7 @@ export default {
       "base": "open-proxy",
       "level": 2,
       "primary": {
-        "signal": 40,
+        "signal": 35,
         "reduction": 2
       },
       "secondary": {
@@ -54,8 +54,8 @@ export default {
       "base": "reverse-shell",
       "level": 3,
       "primary": {
-        "signal": 22,
-        "regen": 5
+        "signal": 20,
+        "regen": 4
       },
       "secondary": {
         "crit": 4
@@ -74,8 +74,8 @@ export default {
       "base": "one-liner",
       "level": 4,
       "primary": {
-        "damage": 5,
-        "signal": 16
+        "damage": 6,
+        "signal": 19
       },
       "secondary": {
         "crit": 5
@@ -95,8 +95,8 @@ export default {
       "level": 5,
       "primary": {
         "damage": [
-          12,
-          15
+          11,
+          13
         ]
       },
       "secondary": {
@@ -122,7 +122,7 @@ export default {
       "base": "socks-tunnel",
       "level": 5,
       "primary": {
-        "signal": 60,
+        "signal": 54,
         "reduction": 1
       },
       "secondary": {
@@ -150,8 +150,8 @@ export default {
       "base": "tty-upgrade",
       "level": 5,
       "primary": {
-        "signal": 30,
-        "regen": 10
+        "signal": 20,
+        "regen": 7
       },
       "effect": {
         "when": "always",
@@ -173,8 +173,8 @@ export default {
       "base": "cron-job",
       "level": 6,
       "primary": {
-        "damage": 6,
-        "signal": 24
+        "damage": 5,
+        "signal": 21
       },
       "secondary": {
         "payload": 2
@@ -199,8 +199,8 @@ export default {
       "base": "tty-upgrade",
       "level": 6,
       "primary": {
-        "signal": 30,
-        "regen": 5
+        "signal": 21,
+        "regen": 4
       },
       "secondary": {
         "evasion": 4
@@ -255,7 +255,7 @@ export default {
       "primary": {
         "damage": [
           13,
-          17
+          18
         ]
       },
       "secondary": {
@@ -283,7 +283,7 @@ export default {
       "base": "socks-tunnel",
       "level": 8,
       "primary": {
-        "signal": 65,
+        "signal": 67,
         "reduction": 2
       },
       "effect": {
@@ -306,8 +306,8 @@ export default {
       "level": 11,
       "primary": {
         "damage": [
-          20,
-          25
+          18,
+          22
         ]
       },
       "secondary": {
@@ -333,8 +333,8 @@ export default {
       "base": "dropper",
       "level": 11,
       "primary": {
-        "damage": 8,
-        "signal": 36
+        "damage": 7,
+        "signal": 32
       },
       "secondary": {
         "echo": 10
@@ -357,8 +357,8 @@ export default {
       "base": "dropper",
       "level": 12,
       "primary": {
-        "damage": 8,
-        "signal": 38
+        "damage": 7,
+        "signal": 35
       },
       "secondary": {
         "payload": 2
@@ -386,8 +386,8 @@ export default {
       "level": 13,
       "primary": {
         "damage": [
-          21,
-          27
+          20,
+          26
         ]
       },
       "secondary": {
@@ -411,7 +411,7 @@ export default {
       "base": "vpn-cascade",
       "level": 14,
       "primary": {
-        "signal": 95,
+        "signal": 88,
         "reduction": 3
       },
       "effect": {
@@ -432,8 +432,8 @@ export default {
       "base": "root-shell",
       "level": 14,
       "primary": {
-        "signal": 48,
-        "regen": 10
+        "signal": 41,
+        "regen": 9
       },
       "secondary": {
         "accuracy": 5
@@ -459,8 +459,8 @@ export default {
       "base": "root-shell",
       "level": 16,
       "primary": {
-        "signal": 52,
-        "regen": 10
+        "signal": 48,
+        "regen": 9
       },
       "secondary": {
         "sanitize": 8
@@ -487,8 +487,8 @@ export default {
       "level": 18,
       "primary": {
         "damage": [
-          29,
-          36
+          28,
+          34
         ]
       },
       "secondary": {
@@ -517,8 +517,8 @@ export default {
       "base": "implant",
       "level": 22,
       "primary": {
-        "damage": 8,
-        "signal": 45
+        "damage": 7,
+        "signal": 41
       },
       "secondary": {
         "sanitize": 8
@@ -542,8 +542,8 @@ export default {
       "base": "loader",
       "level": 22,
       "primary": {
-        "damage": 13,
-        "signal": 55
+        "damage": 15,
+        "signal": 63
       },
       "secondary": {
         "sync": 6
@@ -567,8 +567,8 @@ export default {
       "base": "restricted-shell-escape",
       "level": 22,
       "primary": {
-        "signal": 70,
-        "regen": 15
+        "signal": 74,
+        "regen": 16
       },
       "secondary": {
         "evasion": 5
@@ -593,8 +593,8 @@ export default {
       "base": "implant",
       "level": 22,
       "primary": {
-        "damage": 10,
-        "signal": 40
+        "damage": 9,
+        "signal": 36
       },
       "secondary": {
         "crit": 5
@@ -627,8 +627,8 @@ export default {
       "level": 15,
       "primary": {
         "damage": [
-          15,
-          19
+          16,
+          20
         ]
       },
       "effect": {
@@ -660,9 +660,9 @@ export default {
       "base": "loader",
       "level": 20,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 3.8
+        "damage": 10,
+        "signal": 43,
+        "payload": 4.1
       },
       "effect": {
         "when": "break",
@@ -691,9 +691,9 @@ export default {
       "base": "ghost-shell",
       "level": 26,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 73,
+        "regen": 16,
+        "restore": 31
       },
       "effect": {
         "when": "always",
@@ -723,8 +723,8 @@ export default {
       "base": "implant",
       "level": 32,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 7,
+        "signal": 37
       },
       "effect": {
         "when": "always",
@@ -755,7 +755,7 @@ export default {
       "base": "vpn-cascade",
       "level": 15,
       "primary": {
-        "signal": 70,
+        "signal": 67,
         "reduction": 2
       },
       "effect": {
@@ -786,9 +786,9 @@ export default {
       "base": "loader",
       "level": 20,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 3.8
+        "damage": 10,
+        "signal": 43,
+        "payload": 4.1
       },
       "effect": {
         "when": "custom",
@@ -818,9 +818,9 @@ export default {
       "base": "ghost-shell",
       "level": 26,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 73,
+        "regen": 16,
+        "restore": 31
       },
       "effect": {
         "when": "struck",
@@ -850,8 +850,8 @@ export default {
       "base": "implant",
       "level": 32,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 7,
+        "signal": 37
       },
       "effect": {
         "when": "always",
@@ -881,8 +881,8 @@ export default {
       "level": 15,
       "primary": {
         "damage": [
-          15,
-          19
+          16,
+          20
         ]
       },
       "effect": {
@@ -913,7 +913,7 @@ export default {
       "base": "onion-circuit",
       "level": 20,
       "primary": {
-        "signal": 100,
+        "signal": 95,
         "reduction": 3
       },
       "effect": {
@@ -945,9 +945,9 @@ export default {
       "base": "ghost-shell",
       "level": 26,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 73,
+        "regen": 16,
+        "restore": 31
       },
       "effect": {
         "when": "always",
@@ -977,8 +977,8 @@ export default {
       "base": "implant",
       "level": 32,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 7,
+        "signal": 37
       },
       "effect": {
         "when": "custom",
@@ -1009,8 +1009,8 @@ export default {
       "level": 15,
       "primary": {
         "damage": 6,
-        "signal": 28,
-        "payload": 2.9
+        "signal": 29,
+        "payload": 3
       },
       "effect": {
         "when": "custom",
@@ -1040,7 +1040,7 @@ export default {
       "base": "onion-circuit",
       "level": 20,
       "primary": {
-        "signal": 100,
+        "signal": 95,
         "reduction": 3
       },
       "effect": {
@@ -1071,9 +1071,9 @@ export default {
       "base": "ghost-shell",
       "level": 26,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 73,
+        "regen": 16,
+        "restore": 31
       },
       "effect": {
         "when": "always",
@@ -1103,8 +1103,8 @@ export default {
       "base": "implant",
       "level": 32,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 7,
+        "signal": 37
       },
       "effect": {
         "when": "always",
@@ -1134,9 +1134,9 @@ export default {
       "base": "reverse-shell",
       "level": 1,
       "primary": {
-        "signal": 12,
-        "regen": 2.5,
-        "restore": 12
+        "signal": 10,
+        "regen": 2,
+        "restore": 10
       },
       "effect": {
         "when": "always",
@@ -1173,8 +1173,8 @@ export default {
       "level": 3,
       "primary": {
         "damage": 2,
-        "signal": 10,
-        "payload": 1.4
+        "signal": 11,
+        "payload": 1.6
       },
       "effect": {
         "when": "always",
@@ -1211,8 +1211,8 @@ export default {
       "level": 6,
       "primary": {
         "damage": [
-          9,
-          12
+          8,
+          11
         ]
       },
       "effect": {
@@ -1273,9 +1273,9 @@ export default {
       "base": "root-shell",
       "level": 12,
       "primary": {
-        "signal": 35,
-        "regen": 7.5,
-        "restore": 20
+        "signal": 28,
+        "regen": 5.9,
+        "restore": 16
       },
       "effect": {
         "when": "always",
@@ -1304,8 +1304,8 @@ export default {
       "base": "implant",
       "level": 15,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 4,
+        "signal": 21
       },
       "effect": {
         "when": "always",
@@ -1334,7 +1334,7 @@ export default {
       "level": 8,
       "primary": {
         "damage": 4,
-        "signal": 18,
+        "signal": 17,
         "payload": 2
       },
       "effect": {
@@ -1367,7 +1367,7 @@ export default {
       "base": "vpn-cascade",
       "level": 11,
       "primary": {
-        "signal": 70,
+        "signal": 57,
         "reduction": 2
       },
       "effect": {
@@ -1399,8 +1399,8 @@ export default {
       "base": "implant",
       "level": 15,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 4,
+        "signal": 21
       },
       "effect": {
         "when": "always",
@@ -1434,7 +1434,7 @@ export default {
       "level": 10,
       "primary": {
         "damage": 4,
-        "signal": 18,
+        "signal": 19,
         "payload": 2
       },
       "effect": {
@@ -1468,9 +1468,9 @@ export default {
       "base": "root-shell",
       "level": 13,
       "primary": {
-        "signal": 35,
-        "regen": 7.5,
-        "restore": 20
+        "signal": 29,
+        "regen": 6.2,
+        "restore": 16
       },
       "effect": {
         "when": "always",
@@ -1505,8 +1505,8 @@ export default {
       "level": 16,
       "primary": {
         "damage": [
-          15,
-          19
+          16,
+          21
         ]
       },
       "effect": {
@@ -1542,8 +1542,8 @@ export default {
       "level": 10,
       "primary": {
         "damage": [
-          9,
-          12
+          10,
+          14
         ]
       },
       "effect": {
@@ -1573,7 +1573,7 @@ export default {
       "base": "vpn-cascade",
       "level": 12,
       "primary": {
-        "signal": 70,
+        "signal": 59,
         "reduction": 2
       },
       "effect": {
@@ -1603,9 +1603,9 @@ export default {
       "base": "root-shell",
       "level": 14,
       "primary": {
-        "signal": 35,
-        "regen": 7.5,
-        "restore": 20
+        "signal": 30,
+        "regen": 6.4,
+        "restore": 17
       },
       "effect": {
         "when": "always",
@@ -1634,8 +1634,8 @@ export default {
       "base": "implant",
       "level": 15,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 4,
+        "signal": 21
       },
       "effect": {
         "when": "always",
@@ -1663,7 +1663,7 @@ export default {
       "base": "vpn-cascade",
       "level": 12,
       "primary": {
-        "signal": 70,
+        "signal": 59,
         "reduction": 2
       },
       "effect": {
@@ -1724,8 +1724,8 @@ export default {
       "base": "implant",
       "level": 15,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 4,
+        "signal": 21
       },
       "effect": {
         "when": "custom",
@@ -1784,7 +1784,7 @@ export default {
       "base": "vpn-cascade",
       "level": 17,
       "primary": {
-        "signal": 70,
+        "signal": 73,
         "reduction": 2
       },
       "effect": {
@@ -1814,9 +1814,9 @@ export default {
       "base": "loader",
       "level": 20,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 3.8
+        "damage": 10,
+        "signal": 43,
+        "payload": 4.1
       },
       "effect": {
         "when": "always",
@@ -1846,7 +1846,7 @@ export default {
       "level": 23,
       "primary": {
         "damage": 6,
-        "signal": 30
+        "signal": 28
       },
       "effect": {
         "when": "custom",
@@ -1876,7 +1876,7 @@ export default {
       "base": "onion-circuit",
       "level": 18,
       "primary": {
-        "signal": 100,
+        "signal": 88,
         "reduction": 3
       },
       "effect": {
@@ -1911,9 +1911,9 @@ export default {
       "base": "loader",
       "level": 22,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 3.8
+        "damage": 10,
+        "signal": 46,
+        "payload": 4.4
       },
       "effect": {
         "when": "custom",
@@ -1945,9 +1945,9 @@ export default {
       "base": "ghost-shell",
       "level": 26,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 73,
+        "regen": 16,
+        "restore": 31
       },
       "effect": {
         "when": "always",
@@ -1977,9 +1977,9 @@ export default {
       "base": "restricted-shell-escape",
       "level": 19,
       "primary": {
-        "signal": 50,
-        "regen": 10,
-        "restore": 24
+        "signal": 47,
+        "regen": 9,
+        "restore": 23
       },
       "effect": {
         "when": "always",
@@ -2007,8 +2007,8 @@ export default {
       "base": "implant",
       "level": 22,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 5,
+        "signal": 27
       },
       "effect": {
         "when": "always",
@@ -2035,7 +2035,7 @@ export default {
       "base": "onion-circuit",
       "level": 25,
       "primary": {
-        "signal": 100,
+        "signal": 113,
         "reduction": 3
       },
       "effect": {
@@ -2066,9 +2066,9 @@ export default {
       "base": "loader",
       "level": 22,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 3.8
+        "damage": 10,
+        "signal": 46,
+        "payload": 4.4
       },
       "effect": {
         "when": "always",
@@ -2098,7 +2098,7 @@ export default {
       "level": 24,
       "primary": {
         "damage": 6,
-        "signal": 30
+        "signal": 29
       },
       "effect": {
         "when": "always",
@@ -2127,7 +2127,7 @@ export default {
       "base": "mixnet",
       "level": 26,
       "primary": {
-        "signal": 140,
+        "signal": 142,
         "reduction": 4
       },
       "effect": {
@@ -2159,8 +2159,8 @@ export default {
       "level": 28,
       "primary": {
         "damage": [
-          32,
-          40
+          35,
+          44
         ]
       },
       "effect": {
@@ -2190,8 +2190,8 @@ export default {
       "level": 25,
       "primary": {
         "damage": [
-          22,
-          28
+          27,
+          34
         ]
       },
       "effect": {
@@ -2220,9 +2220,9 @@ export default {
       "base": "polymorphic-engine",
       "level": 28,
       "primary": {
-        "damage": 13,
-        "signal": 55,
-        "payload": 5.4
+        "damage": 15,
+        "signal": 65,
+        "payload": 6.4
       },
       "effect": {
         "when": "custom",
@@ -2251,8 +2251,8 @@ export default {
       "base": "implant",
       "level": 31,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 7,
+        "signal": 36
       },
       "effect": {
         "when": "always",
@@ -2280,9 +2280,9 @@ export default {
       "base": "ghost-shell",
       "level": 28,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 77,
+        "regen": 17,
+        "restore": 33
       },
       "effect": {
         "when": "always",
@@ -2310,8 +2310,8 @@ export default {
       "base": "implant",
       "level": 32,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 7,
+        "signal": 37
       },
       "effect": {
         "when": "always",
@@ -2339,8 +2339,8 @@ export default {
       "base": "mixnet",
       "level": 31,
       "primary": {
-        "signal": 140,
-        "reduction": 4
+        "signal": 166,
+        "reduction": 5
       },
       "effect": {
         "when": "always",
@@ -2368,9 +2368,9 @@ export default {
       "base": "living-off-the-land",
       "level": 34,
       "primary": {
-        "damage": 21,
-        "signal": 89,
-        "payload": 9.7
+        "damage": 20,
+        "signal": 87,
+        "payload": 9.5
       },
       "effect": {
         "when": "custom",
@@ -2397,8 +2397,8 @@ export default {
       "base": "bootkit",
       "level": 37,
       "primary": {
-        "damage": 12.5,
-        "signal": 62
+        "damage": 12.8,
+        "signal": 64
       },
       "effect": {
         "when": "hit",
@@ -2426,9 +2426,9 @@ export default {
       "base": "living-off-the-land",
       "level": 37,
       "primary": {
-        "damage": 21,
-        "signal": 89,
-        "payload": 9.7
+        "damage": 22,
+        "signal": 94,
+        "payload": 10.3
       },
       "effect": {
         "when": "always",
@@ -2460,9 +2460,9 @@ export default {
       "base": "ring-zero-shell",
       "level": 39,
       "primary": {
-        "signal": 114,
-        "regen": 24.5,
-        "restore": 49
+        "signal": 122,
+        "regen": 26.3,
+        "restore": 53
       },
       "effect": {
         "when": "always",
@@ -2495,8 +2495,8 @@ export default {
       "level": 41,
       "primary": {
         "damage": [
-          52,
-          65
+          59,
+          74
         ]
       },
       "effect": {
@@ -2529,8 +2529,8 @@ export default {
       "base": "firmware-rootkit",
       "level": 43,
       "primary": {
-        "damage": 20,
-        "signal": 100
+        "damage": 17,
+        "signal": 85
       },
       "effect": {
         "when": "always",
@@ -2562,9 +2562,9 @@ export default {
       "base": "firmware-shell",
       "level": 43,
       "primary": {
-        "signal": 181,
-        "regen": 39,
-        "restore": 78
+        "signal": 154,
+        "regen": 33,
+        "restore": 66
       },
       "effect": {
         "when": "always",
@@ -2593,8 +2593,8 @@ export default {
       "base": "firmware-rootkit",
       "level": 45,
       "primary": {
-        "damage": 20,
-        "signal": 100
+        "damage": 18,
+        "signal": 89
       },
       "effect": {
         "when": "always",
@@ -2624,8 +2624,8 @@ export default {
       "level": 47,
       "primary": {
         "damage": [
-          83,
-          104
+          78,
+          97
         ]
       },
       "effect": {
@@ -2655,7 +2655,7 @@ export default {
       "base": "covert-channel",
       "level": 49,
       "primary": {
-        "signal": 362,
+        "signal": 354,
         "reduction": 10
       },
       "effect": {
@@ -2684,7 +2684,7 @@ export default {
       "base": "onion-circuit",
       "level": 24,
       "primary": {
-        "signal": 150,
+        "signal": 164,
         "reduction": 4
       },
       "effect": {
@@ -2706,8 +2706,8 @@ export default {
       "level": 24,
       "primary": {
         "damage": [
-          42,
-          50
+          49,
+          59
         ]
       },
       "downside": {
@@ -2729,7 +2729,7 @@ export default {
       "level": 26,
       "primary": {
         "damage": 12,
-        "signal": 50
+        "signal": 52
       },
       "secondary": {
         "critDamage": 6
@@ -2754,7 +2754,7 @@ export default {
       "base": "mixnet",
       "level": 28,
       "primary": {
-        "signal": 180,
+        "signal": 195,
         "reduction": 5
       },
       "effect": {
@@ -2778,8 +2778,8 @@ export default {
       "level": 30,
       "primary": {
         "damage": [
-          46,
-          56
+          54,
+          66
         ]
       },
       "secondary": {
@@ -2804,8 +2804,8 @@ export default {
       "base": "ghost-shell",
       "level": 32,
       "primary": {
-        "signal": 90,
-        "regen": 20
+        "signal": 112,
+        "regen": 25
       },
       "secondary": {
         "clock": 12
@@ -2835,8 +2835,8 @@ export default {
       "level": 3,
       "primary": {
         "damage": [
-          7,
-          8
+          8,
+          10
         ]
       },
       "effect": {
@@ -2859,8 +2859,8 @@ export default {
       "base": "reverse-shell",
       "level": 3,
       "primary": {
-        "signal": 16,
-        "regen": 3.5
+        "signal": 14,
+        "regen": 3.1
       },
       "effect": {
         "when": "struck",
@@ -2881,7 +2881,7 @@ export default {
       "base": "open-proxy",
       "level": 4,
       "primary": {
-        "signal": 32,
+        "signal": 31,
         "reduction": 1
       },
       "effect": {
@@ -2903,8 +2903,8 @@ export default {
       "level": 4,
       "primary": {
         "damage": [
-          8,
-          9
+          10,
+          11
         ]
       },
       "secondary": {
@@ -2930,7 +2930,7 @@ export default {
       "level": 8,
       "primary": {
         "damage": 4,
-        "signal": 20
+        "signal": 19
       },
       "effect": {
         "when": "hit",
@@ -2952,8 +2952,8 @@ export default {
       "base": "tty-upgrade",
       "level": 8,
       "primary": {
-        "signal": 26,
-        "regen": 6
+        "signal": 20,
+        "regen": 5
       },
       "effect": {
         "when": "custom",
@@ -2973,7 +2973,7 @@ export default {
       "base": "socks-tunnel",
       "level": 10,
       "primary": {
-        "signal": 55,
+        "signal": 63,
         "reduction": 2
       },
       "effect": {
@@ -2995,8 +2995,8 @@ export default {
       "level": 10,
       "primary": {
         "damage": [
-          12,
-          15
+          14,
+          17
         ]
       },
       "effect": {
@@ -3021,7 +3021,7 @@ export default {
       "lean": "phantom",
       "primary": {
         "damage": 2,
-        "signal": 10
+        "signal": 11
       },
       "secondary": {
         "accuracy": 3
@@ -3051,8 +3051,8 @@ export default {
       "lean": "payload",
       "primary": {
         "damage": [
-          7,
-          8
+          9,
+          10
         ]
       },
       "effect": {
@@ -3111,8 +3111,8 @@ export default {
       "lean": "demolitionist",
       "primary": {
         "damage": [
-          11,
-          13
+          10,
+          12
         ]
       },
       "effect": {
@@ -3140,7 +3140,7 @@ export default {
       "lean": "overclocker",
       "primary": {
         "damage": 4,
-        "signal": 18
+        "signal": 17
       },
       "effect": {
         "when": "break",
@@ -3164,7 +3164,7 @@ export default {
       "level": 6,
       "lean": "warden",
       "primary": {
-        "signal": 48,
+        "signal": 45,
         "reduction": 1
       },
       "effect": {
@@ -3192,7 +3192,7 @@ export default {
       "level": 4,
       "lean": "sysop",
       "primary": {
-        "signal": 14,
+        "signal": 13,
         "regen": 3
       },
       "effect": {
@@ -3215,8 +3215,8 @@ export default {
       "level": 5,
       "lean": "herder",
       "primary": {
-        "damage": 3,
-        "signal": 18
+        "damage": 2,
+        "signal": 15
       },
       "effect": {
         "when": "custom",
@@ -3241,8 +3241,8 @@ export default {
       "level": 9,
       "lean": "hijacker",
       "primary": {
-        "signal": 26,
-        "regen": 5
+        "signal": 21,
+        "regen": 4
       },
       "effect": {
         "when": "always",
@@ -3291,7 +3291,7 @@ export default {
       "level": 7,
       "primary": {
         "damage": 4,
-        "signal": 18
+        "signal": 16
       },
       "effect": {
         "when": "hit",
@@ -3339,8 +3339,8 @@ export default {
       "base": "tty-upgrade",
       "level": 8,
       "primary": {
-        "signal": 24,
-        "regen": 6
+        "signal": 19,
+        "regen": 5
       },
       "effect": {
         "when": "custom",
@@ -3361,7 +3361,7 @@ export default {
       "base": "socks-tunnel",
       "level": 9,
       "primary": {
-        "signal": 50,
+        "signal": 54,
         "reduction": 2
       },
       "effect": {
@@ -3382,8 +3382,8 @@ export default {
       "base": "tty-upgrade",
       "level": 9,
       "primary": {
-        "signal": 26,
-        "regen": 5
+        "signal": 21,
+        "regen": 4
       },
       "secondary": {
         "evasion": 4
@@ -3407,7 +3407,7 @@ export default {
       "level": 7,
       "primary": {
         "damage": 5,
-        "signal": 16
+        "signal": 15
       },
       "effect": {
         "when": "break",
@@ -3450,8 +3450,8 @@ export default {
       "base": "reverse-shell",
       "level": 6,
       "primary": {
-        "signal": 18,
-        "regen": 4
+        "signal": 13,
+        "regen": 3
       },
       "secondary": {
         "evasion": 3
@@ -3500,8 +3500,8 @@ export default {
       "level": 24,
       "primary": {
         "damage": [
-          22,
-          28
+          26,
+          33
         ]
       },
       "secondary": {
@@ -3527,8 +3527,8 @@ export default {
       "lean": "breaker",
       "primary": {
         "damage": [
-          22,
-          28
+          21,
+          27
         ]
       },
       "secondary": {
@@ -3557,8 +3557,8 @@ export default {
       "base": "loader",
       "level": 20,
       "primary": {
-        "damage": 9,
-        "signal": 40,
+        "damage": 10,
+        "signal": 43,
         "payload": 4
       },
       "secondary": {
@@ -3588,9 +3588,9 @@ export default {
       "level": 22,
       "lean": "payload",
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 5.2
+        "damage": 10,
+        "signal": 46,
+        "payload": 6
       },
       "effect": {
         "when": "custom",
@@ -3616,8 +3616,8 @@ export default {
       "lean": "demolitionist",
       "primary": {
         "damage": [
-          22,
-          28
+          26,
+          33
         ]
       },
       "secondary": {
@@ -3646,9 +3646,9 @@ export default {
       "base": "restricted-shell-escape",
       "level": 26,
       "primary": {
-        "signal": 50,
+        "signal": 52,
         "regen": 10,
-        "restore": 24
+        "restore": 25
       },
       "secondary": {
         "evasion": 3
@@ -3679,7 +3679,7 @@ export default {
       "level": 28,
       "lean": "bastion",
       "primary": {
-        "signal": 140,
+        "signal": 152,
         "reduction": 4
       },
       "effect": {
@@ -3707,8 +3707,8 @@ export default {
       "level": 30,
       "lean": "overclocker",
       "primary": {
-        "damage": 8,
-        "signal": 40
+        "damage": 9,
+        "signal": 47
       },
       "secondary": {
         "crit": 4
@@ -3739,9 +3739,9 @@ export default {
       "level": 32,
       "lean": "warden",
       "primary": {
-        "damage": 13,
-        "signal": 55,
-        "payload": 5.9
+        "damage": 17,
+        "signal": 73,
+        "payload": 7.8
       },
       "secondary": {
         "reduction": 2
@@ -3769,9 +3769,9 @@ export default {
       "base": "ghost-shell",
       "level": 34,
       "primary": {
-        "signal": 70,
-        "regen": 15,
-        "restore": 30
+        "signal": 66,
+        "regen": 14,
+        "restore": 28
       },
       "secondary": {
         "sanitize": 8
@@ -3801,8 +3801,8 @@ export default {
       "lean": "breaker",
       "primary": {
         "damage": [
-          32,
-          40
+          34,
+          42
         ]
       },
       "downside": {
@@ -3831,8 +3831,8 @@ export default {
       "level": 5,
       "primary": {
         "damage": [
-          10,
-          13
+          9,
+          12
         ]
       },
       "secondary": {
@@ -3858,8 +3858,8 @@ export default {
       "base": "tty-upgrade",
       "level": 6,
       "primary": {
-        "signal": 24,
-        "regen": 5
+        "signal": 17,
+        "regen": 4
       },
       "secondary": {
         "sync": 3
@@ -3884,7 +3884,7 @@ export default {
       "level": 7,
       "primary": {
         "damage": 4,
-        "signal": 18
+        "signal": 16
       },
       "effect": {
         "when": "answer",
@@ -3906,7 +3906,7 @@ export default {
       "level": 8,
       "primary": {
         "damage": 4,
-        "signal": 18
+        "signal": 17
       },
       "secondary": {
         "accuracy": 3
@@ -3930,8 +3930,8 @@ export default {
       "base": "tty-upgrade",
       "level": 9,
       "primary": {
-        "signal": 26,
-        "regen": 5
+        "signal": 21,
+        "regen": 4
       },
       "effect": {
         "when": "custom",
@@ -3953,8 +3953,8 @@ export default {
       "level": 10,
       "primary": {
         "damage": [
-          12,
-          15
+          14,
+          17
         ]
       },
       "effect": {
@@ -3977,7 +3977,7 @@ export default {
       "base": "vpn-cascade",
       "level": 11,
       "primary": {
-        "signal": 70,
+        "signal": 57,
         "reduction": 2
       },
       "effect": {
@@ -4002,7 +4002,7 @@ export default {
       "level": 12,
       "primary": {
         "damage": 6,
-        "signal": 28
+        "signal": 26
       },
       "secondary": {
         "clock": 4
@@ -4027,8 +4027,8 @@ export default {
       "base": "root-shell",
       "level": 13,
       "primary": {
-        "signal": 35,
-        "regen": 7.5
+        "signal": 29,
+        "regen": 6.2
       },
       "effect": {
         "when": "custom",
@@ -4075,8 +4075,8 @@ export default {
       "base": "implant",
       "level": 15,
       "primary": {
-        "damage": 6,
-        "signal": 30
+        "damage": 4,
+        "signal": 21
       },
       "effect": {
         "when": "hit",
@@ -4148,7 +4148,7 @@ export default {
       "base": "onion-circuit",
       "level": 20,
       "primary": {
-        "signal": 100,
+        "signal": 95,
         "reduction": 3
       },
       "secondary": {
@@ -4173,8 +4173,8 @@ export default {
       "level": 21,
       "primary": {
         "damage": [
-          22,
-          28
+          23,
+          30
         ]
       },
       "effect": {
@@ -4197,8 +4197,8 @@ export default {
       "base": "implant",
       "level": 22,
       "primary": {
-        "damage": 7,
-        "signal": 35
+        "damage": 6,
+        "signal": 32
       },
       "effect": {
         "when": "custom",
@@ -4219,9 +4219,9 @@ export default {
       "base": "loader",
       "level": 23,
       "primary": {
-        "damage": 9,
-        "signal": 40,
-        "payload": 4.2
+        "damage": 11,
+        "signal": 48,
+        "payload": 5
       },
       "effect": {
         "when": "break",
@@ -4245,8 +4245,8 @@ export default {
       "level": 24,
       "primary": {
         "damage": [
-          22,
-          28
+          26,
+          33
         ]
       },
       "secondary": {
@@ -4272,8 +4272,8 @@ export default {
       "base": "ghost-shell",
       "level": 26,
       "primary": {
-        "signal": 70,
-        "regen": 15
+        "signal": 73,
+        "regen": 16
       },
       "secondary": {
         "sync": 5
@@ -4298,7 +4298,7 @@ export default {
       "base": "mixnet",
       "level": 28,
       "primary": {
-        "signal": 140,
+        "signal": 152,
         "reduction": 4
       },
       "secondary": {
@@ -4324,8 +4324,8 @@ export default {
       "base": "implant",
       "level": 30,
       "primary": {
-        "damage": 8,
-        "signal": 40
+        "damage": 9,
+        "signal": 47
       },
       "effect": {
         "when": "break",
@@ -4346,9 +4346,9 @@ export default {
       "base": "polymorphic-engine",
       "level": 32,
       "primary": {
-        "damage": 13,
-        "signal": 55,
-        "payload": 5.9
+        "damage": 17,
+        "signal": 73,
+        "payload": 7.8
       },
       "effect": {
         "when": "hit",
@@ -4371,8 +4371,8 @@ export default {
       "level": 33,
       "primary": {
         "damage": [
-          32,
-          40
+          41,
+          51
         ]
       },
       "secondary": {
@@ -4398,8 +4398,8 @@ export default {
       "base": "bootkit",
       "level": 34,
       "primary": {
-        "damage": 12.5,
-        "signal": 62
+        "damage": 11.8,
+        "signal": 59
       },
       "effect": {
         "when": "break",
@@ -4422,8 +4422,8 @@ export default {
       "base": "ring-zero-shell",
       "level": 36,
       "primary": {
-        "signal": 114,
-        "regen": 24.5
+        "signal": 113,
+        "regen": 24.3
       },
       "downside": {
         "regen": -10
@@ -4447,8 +4447,8 @@ export default {
       "level": 38,
       "primary": {
         "damage": [
-          52,
-          65
+          55,
+          68
         ]
       },
       "downside": {
@@ -4475,8 +4475,8 @@ export default {
       "base": "domain-front",
       "level": 40,
       "primary": {
-        "signal": 227,
-        "reduction": 6
+        "signal": 256,
+        "reduction": 7
       },
       "effect": {
         "when": "custom",
@@ -4531,7 +4531,7 @@ export default {
       "level": 7,
       "primary": {
         "damage": 4,
-        "signal": 18
+        "signal": 16
       },
       "effect": {
         "when": "hit",
@@ -4563,8 +4563,8 @@ export default {
       "base": "tty-upgrade",
       "level": 7,
       "primary": {
-        "signal": 24,
-        "regen": 5
+        "signal": 18,
+        "regen": 4
       },
       "effect": {
         "when": "hit",
@@ -4595,8 +4595,8 @@ export default {
       "level": 39,
       "lean": "bastion",
       "primary": {
-        "signal": 247,
-        "reduction": 7
+        "signal": 271,
+        "reduction": 8
       },
       "secondary": {
         "reduction": 4,
@@ -4626,8 +4626,8 @@ export default {
       "level": 39,
       "primary": {
         "damage": [
-          56,
-          71
+          60,
+          76
         ]
       },
       "secondary": {
@@ -4655,9 +4655,9 @@ export default {
       "level": 39,
       "lean": "bastion",
       "primary": {
-        "signal": 124,
-        "regen": 27,
-        "restore": 53
+        "signal": 133,
+        "regen": 29,
+        "restore": 57
       },
       "secondary": {
         "signal": 48,
@@ -4686,9 +4686,9 @@ export default {
       "level": 40,
       "lean": "operator",
       "primary": {
-        "damage": 23,
-        "signal": 98,
-        "payload": 11
+        "damage": 26,
+        "signal": 112,
+        "payload": 13
       },
       "secondary": {
         "payload": 6,
@@ -4713,8 +4713,8 @@ export default {
       "base": "bootkit",
       "level": 40,
       "primary": {
-        "damage": 14,
-        "signal": 68
+        "damage": 16,
+        "signal": 76
       },
       "secondary": {
         "signal": 40,
@@ -4742,8 +4742,8 @@ export default {
       "level": 40,
       "lean": "infiltrator",
       "primary": {
-        "signal": 250,
-        "reduction": 7
+        "signal": 282,
+        "reduction": 8
       },
       "secondary": {
         "evasion": 8,
@@ -4767,9 +4767,9 @@ export default {
       "base": "living-off-the-land",
       "level": 40,
       "primary": {
-        "damage": 23,
-        "signal": 98,
-        "payload": 11
+        "damage": 26,
+        "signal": 112,
+        "payload": 13
       },
       "secondary": {
         "damage": 8,
@@ -4796,9 +4796,9 @@ export default {
       "level": 41,
       "lean": "bastion",
       "primary": {
-        "signal": 128,
-        "regen": 27,
-        "restore": 55
+        "signal": 144,
+        "regen": 30,
+        "restore": 62
       },
       "secondary": {
         "regen": 16,
@@ -4825,8 +4825,8 @@ export default {
       "lean": "breaker",
       "primary": {
         "damage": [
-          58,
-          73
+          66,
+          83
         ]
       },
       "secondary": {
@@ -4856,9 +4856,9 @@ export default {
       "level": 41,
       "lean": "infiltrator",
       "primary": {
-        "damage": 24,
-        "signal": 100,
-        "payload": 11
+        "damage": 28,
+        "signal": 117,
+        "payload": 13
       },
       "secondary": {
         "payload": 8,
@@ -4884,8 +4884,8 @@ export default {
       "base": "bootkit",
       "level": 41,
       "primary": {
-        "damage": 14,
-        "signal": 69
+        "damage": 16,
+        "signal": 79
       },
       "secondary": {
         "signal": 48,
@@ -4910,9 +4910,9 @@ export default {
       "base": "ring-zero-shell",
       "level": 41,
       "primary": {
-        "signal": 128,
-        "regen": 27,
-        "restore": 55
+        "signal": 144,
+        "regen": 30,
+        "restore": 62
       },
       "secondary": {
         "restore": 16,
@@ -4940,8 +4940,8 @@ export default {
       "level": 42,
       "lean": "operator",
       "primary": {
-        "signal": 362,
-        "reduction": 10
+        "signal": 300,
+        "reduction": 8
       },
       "secondary": {
         "payload": 8,
@@ -4969,9 +4969,9 @@ export default {
       "level": 42,
       "lean": "bastion",
       "primary": {
-        "signal": 181,
-        "regen": 39,
-        "restore": 78
+        "signal": 150,
+        "regen": 32,
+        "restore": 65
       },
       "secondary": {
         "reduction": 4,
@@ -4999,8 +4999,8 @@ export default {
       "level": 42,
       "lean": "breaker",
       "primary": {
-        "damage": 20,
-        "signal": 100
+        "damage": 17,
+        "signal": 83
       },
       "secondary": {
         "damage": 10,
@@ -5027,8 +5027,8 @@ export default {
       "level": 42,
       "primary": {
         "damage": [
-          83,
-          104
+          69,
+          86
         ]
       },
       "secondary": {
@@ -5055,9 +5055,9 @@ export default {
       "base": "metamorphic-engine",
       "level": 42,
       "primary": {
-        "damage": 34,
-        "signal": 142,
-        "payload": 17
+        "damage": 28,
+        "signal": 118,
+        "payload": 14
       },
       "secondary": {
         "scavenge": 16,
@@ -5083,8 +5083,8 @@ export default {
       "level": 43,
       "lean": "infiltrator",
       "primary": {
-        "signal": 367,
-        "reduction": 10
+        "signal": 311,
+        "reduction": 8
       },
       "secondary": {
         "payload": 8,
@@ -5110,8 +5110,8 @@ export default {
       "level": 43,
       "lean": "bastion",
       "primary": {
-        "damage": 20,
-        "signal": 102
+        "damage": 17,
+        "signal": 87
       },
       "secondary": {
         "signal": 60,
@@ -5137,8 +5137,8 @@ export default {
       "level": 43,
       "primary": {
         "damage": [
-          84,
-          106
+          71,
+          90
         ]
       },
       "secondary": {
@@ -5165,9 +5165,9 @@ export default {
       "level": 43,
       "lean": "operator",
       "primary": {
-        "damage": 35,
-        "signal": 144,
-        "payload": 17
+        "damage": 30,
+        "signal": 122,
+        "payload": 14
       },
       "secondary": {
         "payload": 8,
@@ -5194,9 +5194,9 @@ export default {
       "base": "firmware-shell",
       "level": 43,
       "primary": {
-        "signal": 184,
-        "regen": 40,
-        "restore": 79
+        "signal": 156,
+        "regen": 34,
+        "restore": 67
       },
       "secondary": {
         "restore": 20,
@@ -5233,8 +5233,8 @@ export default {
       "level": 43,
       "primary": {
         "damage": [
-          84,
-          106
+          71,
+          90
         ]
       },
       "secondary": {
@@ -5264,8 +5264,8 @@ export default {
       "level": 44,
       "lean": "breaker",
       "primary": {
-        "signal": 373,
-        "reduction": 10
+        "signal": 324,
+        "reduction": 9
       },
       "secondary": {
         "crit": 8,
@@ -5292,8 +5292,8 @@ export default {
       "level": 44,
       "lean": "infiltrator",
       "primary": {
-        "damage": 21,
-        "signal": 103
+        "damage": 18,
+        "signal": 90
       },
       "secondary": {
         "crit": 8,
@@ -5326,9 +5326,9 @@ export default {
       "level": 44,
       "lean": "bastion",
       "primary": {
-        "signal": 186,
-        "regen": 40,
-        "restore": 80
+        "signal": 162,
+        "regen": 35,
+        "restore": 70
       },
       "secondary": {
         "reduction": 4,
@@ -5354,9 +5354,9 @@ export default {
       "base": "metamorphic-engine",
       "level": 44,
       "primary": {
-        "damage": 35,
-        "signal": 146,
-        "payload": 18
+        "damage": 30,
+        "signal": 127,
+        "payload": 16
       },
       "secondary": {
         "leech": 4,
@@ -5384,8 +5384,8 @@ export default {
       "lean": "breaker",
       "primary": {
         "damage": [
-          86,
-          107
+          75,
+          93
         ]
       },
       "secondary": {
@@ -5412,8 +5412,8 @@ export default {
       "level": 44,
       "lean": "infiltrator",
       "primary": {
-        "signal": 373,
-        "reduction": 10
+        "signal": 324,
+        "reduction": 9
       },
       "secondary": {
         "crit": 8,
@@ -5442,8 +5442,8 @@ export default {
       "level": 44,
       "lean": "operator",
       "primary": {
-        "damage": 21,
-        "signal": 103
+        "damage": 18,
+        "signal": 90
       },
       "secondary": {
         "payload": 8,
@@ -5471,8 +5471,8 @@ export default {
       "level": 45,
       "primary": {
         "damage": [
-          95,
-          120
+          85,
+          107
         ]
       },
       "secondary": {
@@ -5497,9 +5497,9 @@ export default {
       "base": "metamorphic-engine",
       "level": 45,
       "primary": {
-        "damage": 39,
-        "signal": 163,
-        "payload": 20
+        "damage": 35,
+        "signal": 145,
+        "payload": 18
       },
       "secondary": {
         "clock": 8,
@@ -5526,9 +5526,9 @@ export default {
       "level": 45,
       "lean": "bastion",
       "primary": {
-        "signal": 208,
-        "regen": 45,
-        "restore": 90
+        "signal": 185,
+        "regen": 40,
+        "restore": 80
       },
       "secondary": {
         "reduction": 4,
@@ -5560,8 +5560,8 @@ export default {
       "base": "firmware-rootkit",
       "level": 45,
       "primary": {
-        "damage": 23,
-        "signal": 115
+        "damage": 20,
+        "signal": 102
       },
       "secondary": {
         "damage": 12,
@@ -5589,8 +5589,8 @@ export default {
       "level": 45,
       "lean": "bastion",
       "primary": {
-        "signal": 375,
-        "reduction": 10
+        "signal": 334,
+        "reduction": 9
       },
       "secondary": {
         "reduction": 4,
@@ -5617,8 +5617,8 @@ export default {
       "base": "firmware-rootkit",
       "level": 46,
       "primary": {
-        "damage": 23,
-        "signal": 117
+        "damage": 21,
+        "signal": 107
       },
       "secondary": {
         "signal": 40,
@@ -5658,9 +5658,9 @@ export default {
       "level": 46,
       "lean": "bastion",
       "primary": {
-        "signal": 211,
-        "regen": 46,
-        "restore": 91
+        "signal": 192,
+        "regen": 42,
+        "restore": 83
       },
       "secondary": {
         "reduction": 6,
@@ -5689,9 +5689,9 @@ export default {
       "level": 46,
       "lean": "operator",
       "primary": {
-        "damage": 40,
-        "signal": 166,
-        "payload": 20
+        "damage": 36,
+        "signal": 151,
+        "payload": 18
       },
       "secondary": {
         "payload": 10,
@@ -5719,8 +5719,8 @@ export default {
       "lean": "breaker",
       "primary": {
         "damage": [
-          97,
-          121
+          88,
+          110
         ]
       },
       "secondary": {
@@ -5758,8 +5758,8 @@ export default {
       "level": 46,
       "lean": "infiltrator",
       "primary": {
-        "signal": 422,
-        "reduction": 12
+        "signal": 385,
+        "reduction": 11
       },
       "secondary": {
         "payload": 10,
@@ -5785,8 +5785,8 @@ export default {
       "lean": "infiltrator",
       "primary": {
         "damage": [
-          98,
-          123
+          92,
+          115
         ]
       },
       "secondary": {
@@ -5813,8 +5813,8 @@ export default {
       "level": 47,
       "lean": "operator",
       "primary": {
-        "damage": 24,
-        "signal": 118
+        "damage": 22,
+        "signal": 110
       },
       "secondary": {
         "payload": 10,
@@ -5839,9 +5839,9 @@ export default {
       "base": "firmware-shell",
       "level": 47,
       "primary": {
-        "signal": 214,
-        "regen": 46,
-        "restore": 92
+        "signal": 200,
+        "regen": 43,
+        "restore": 86
       },
       "secondary": {
         "regen": 20,
@@ -5867,9 +5867,9 @@ export default {
       "base": "metamorphic-engine",
       "level": 47,
       "primary": {
-        "damage": 40,
-        "signal": 168,
-        "payload": 20
+        "damage": 37,
+        "signal": 157,
+        "payload": 19
       },
       "secondary": {
         "signal": 48,
@@ -5904,8 +5904,8 @@ export default {
       "level": 47,
       "lean": "bastion",
       "primary": {
-        "signal": 428,
-        "reduction": 12
+        "signal": 400,
+        "reduction": 11
       },
       "secondary": {
         "reduction": 4,
@@ -5931,8 +5931,8 @@ export default {
       "base": "firmware-rootkit",
       "level": 48,
       "primary": {
-        "damage": 24,
-        "signal": 120
+        "damage": 23,
+        "signal": 115
       },
       "secondary": {
         "damage": 12,
@@ -5964,9 +5964,9 @@ export default {
       "base": "metamorphic-engine",
       "level": 48,
       "primary": {
-        "damage": 41,
-        "signal": 170,
-        "payload": 20
+        "damage": 39,
+        "signal": 162,
+        "payload": 19
       },
       "secondary": {
         "signal": 60,
@@ -5997,9 +5997,9 @@ export default {
       "level": 48,
       "lean": "bastion",
       "primary": {
-        "signal": 217,
-        "regen": 47,
-        "restore": 94
+        "signal": 207,
+        "regen": 45,
+        "restore": 90
       },
       "secondary": {
         "regen": 20,
@@ -6033,8 +6033,8 @@ export default {
       "lean": "breaker",
       "primary": {
         "damage": [
-          100,
-          125
+          96,
+          119
         ]
       },
       "secondary": {
@@ -6061,8 +6061,8 @@ export default {
       "level": 48,
       "lean": "infiltrator",
       "primary": {
-        "signal": 434,
-        "reduction": 12
+        "signal": 415,
+        "reduction": 11
       },
       "secondary": {
         "crit": 10,
@@ -6086,8 +6086,8 @@ export default {
       "base": "firmware-rootkit",
       "level": 49,
       "primary": {
-        "damage": 24,
-        "signal": 122
+        "damage": 23,
+        "signal": 119
       },
       "secondary": {
         "signal": 60,
@@ -6112,8 +6112,8 @@ export default {
       "base": "metamorphic-engine",
       "level": 49,
       "primary": {
-        "damage": 41,
-        "signal": 173,
+        "damage": 40,
+        "signal": 169,
         "payload": 21
       },
       "secondary": {
@@ -6140,8 +6140,8 @@ export default {
       "level": 49,
       "primary": {
         "damage": [
-          101,
-          127
+          99,
+          124
         ]
       },
       "secondary": {
@@ -6170,9 +6170,9 @@ export default {
       "level": 49,
       "lean": "bastion",
       "primary": {
-        "signal": 220,
-        "regen": 47,
-        "restore": 95
+        "signal": 215,
+        "regen": 46,
+        "restore": 93
       },
       "secondary": {
         "reduction": 6,
@@ -6200,8 +6200,8 @@ export default {
       "level": 49,
       "lean": "operator",
       "primary": {
-        "damage": 41,
-        "signal": 173,
+        "damage": 40,
+        "signal": 169,
         "payload": 21
       },
       "secondary": {
@@ -6226,7 +6226,7 @@ export default {
       "level": 49,
       "lean": "breaker",
       "primary": {
-        "signal": 440,
+        "signal": 430,
         "reduction": 12
       },
       "secondary": {

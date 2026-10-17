@@ -2,7 +2,7 @@
 // through serve.mjs. Templates start every new piece with working text to overwrite. The checker
 // (content.mjs) runs as you type; Play from here opens the game at a beat on a test save.
 import { check, checkItems, fxText, fill, beatVars, JOB_VARS, COMMON, JOB_TYPES, JOB_NAMES, CONTRACT_KINDS, SIDES, REWARDS, FX_WHEN, FX_IF, FX_DO, FX_SCALE, FX_LIMIT, SOURCE_KINDS, CLASSES } from './content.mjs';
-import { BASES, STATS, SLOTS, RARITIES, uniqueItem, statLine, seeded } from './gear.mjs';
+import { BASES, STATS, SLOTS, RARITIES, uniqueItem, statLine, seeded, baseScale } from './gear.mjs';
 import { STRAINS, GUARDS, BOSSES, ABILITIES } from './data.mjs';
 const ROGUE = { kinds: { nest: { name: 'Nest' }, pit: { name: 'Pit' }, gauntlet: { name: 'Gauntlet' } } }; // (rogue.mjs pulls in the whole engine)
 import { zoneRooms } from './zone.mjs';
@@ -238,7 +238,7 @@ function uniqueAct(what, at) {
   const u = items.uniques[sel.i];
   if (what === 'dup') { const c = clone(u); c.id = u.id + '-copy'; c.name = u.name + ' (copy)'; items.uniques.push(c); sel.i = items.uniques.length - 1; }
   if (what === 'del' && confirmDelete(`“${u.name}”`)) { items.uniques.splice(sel.i, 1); sel.i = Math.max(0, sel.i - 1); }
-  if (what === 'base') { const b = BASES[u.base]; u.primary = {}; for (const [k, v] of Object.entries(b.primary)) u.primary[k] = Array.isArray(v) ? v.map((x) => Math.round(x * 1.3 * (1 + 0.04 * (u.level - b.level)))) : Math.round(v * 1.3 * (1 + 0.04 * (u.level - b.level)) * 10) / 10; }
+  if (what === 'base') { const b = BASES[u.base], k = 1.3 * baseScale(u.base, u.level); u.primary = {}; for (const [st, v] of Object.entries(b.primary)) u.primary[st] = Array.isArray(v) ? v.map((x) => Math.round(x * k)) : Math.round(v * k * 10) / 10; }
   if (what === 'stat-add') { const part = (u[at] ||= {}); const k = Object.keys(STAT_OPTS).find((x) => !(x in part)); part[k] = at === 'downside' ? -1 : 1; }
   if (what === 'stat-del') { const [part, k] = at.split(':'); delete u[part][k]; if (!Object.keys(u[part]).length) delete u[part]; }
   if (what === 'fx-add') u.effect = { when: 'hit', do: 'damage%', value: 20 };

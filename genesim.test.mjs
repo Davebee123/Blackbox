@@ -19,7 +19,10 @@ const SEEDS12 = Array.from({ length: 12 }, (_, i) => i + 1);
 // charge rides), and the bosses' charges sit off their ♛ parts: HASHLORD (dmg 1.5) measured read 86%, blind 75%;
 // MIRRORSHADE (dmg 1.15) read 91%, blind 65%, its worst three cycles 86% (a Scramble crit after a mimicked hit). The
 // band is held at read 55–92%, the blind bot 8 points under the reader, and the worst three cycles under 90%, until
-// the boss pass the interrupt asks for (3.4).
+// the boss pass the interrupt asks for (3.4). Since gear follows one smooth curve (gear.mjs ITEM_CURVE) a player at
+// 12 and 16 carries less Signal than the tiers gave there, so HASHLORD is dmg 1.45 and MIRRORSHADE 1.08: read 89% and
+// blind 80%, read 88% and blind 66% with its worst three cycles 89%. (On 48 seeds HASHLORD's reader is only about 5
+// points ahead of the blind bot, before the curve and after it: the 12 seeds here sit at the top of that.)
 const FLAGGED = { 'nb-mirrorshade': ['sysop'] };
 const bands = {};
 const band = (id) => (bands[id] ||= bossBand(id, BOSSES[id].floor, undefined, SEEDS12));
