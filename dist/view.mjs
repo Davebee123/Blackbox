@@ -1086,8 +1086,8 @@ function invTags(s, inv) {
 function bountyChips(s, inv) {
   const b = bountyOf(s, inv), n = streakOf(s), name = MATERIALS[b.code]?.name || b.code;
   const chip = (ic, v, tip, cls = '') => `<span class="rw ${cls}" title="${esc(tip)}">${glyph(ic)}<b>${esc(String(v))}</b></span>`;
-  const sure = b.capture || b.streakCapture, odds = Math.round(daemonChance(s, inv.kind === 'thief' && inv.state === 'travel' ? 'intercept' : 'you') * 100);
-  return `<div class="rw-chips inv-pay">${chip(b.code, b.now >= b.max ? b.now : `${b.now} → ${b.max}`, `${name} for your kill: ${b.now} now, up to ${b.max} the longer it sits contested. If the wall wears it down, ${b.wall}. An outright block pays ${b.blocked}.`)}${chip('daemon', sure ? 'daemon' : `${odds}%`, sure ? `Your kill leaves a capture: a daemon of band ${daemonBand(inv.level)}, at level ${inv.level}${b.streakCapture ? ` (${n + 1} in a row)` : ''}, and a chance at a unique only invasions carry` : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)}, level ${inv.level}). Every stop without one raises it.`, sure ? 'you' : '')}${n ? chip('xp', `+${Math.round((streakMult(s) - 1) * 100)}%`, `A streak of ${n}: each stop pays more`) : ''}</div>`;
+  const sure = b.capture, odds = Math.round(daemonChance(s, inv.kind === 'thief' && inv.state === 'travel' ? 'intercept' : 'you') * 100);
+  return `<div class="rw-chips inv-pay">${chip(b.code, b.now >= b.max ? b.now : `${b.now} → ${b.max}`, `${name} for your kill: ${b.now} now, up to ${b.max} the longer it sits contested. If the wall wears it down, ${b.wall}. An outright block pays ${b.blocked}.`)}${chip('daemon', sure ? 'daemon' : `${odds}%`, sure ? `Your kill leaves a capture: a daemon of band ${daemonBand(inv.level)}, at level ${inv.level}, and a chance at a unique only invasions carry` : `The chance your kill leaves a daemon (band ${daemonBand(inv.level)}, level ${inv.level}). Every stop without one raises it.`, sure ? 'you' : '')}${n ? chip('xp', `+${Math.round((streakMult(s) - 1) * 100)}%`, `A streak of ${n}: each stop pays more`) : ''}</div>`;
 }
 // harden.sh as the answer to what's coming: shown when +3 levels would turn it into a block.
 function hardenAnswer(s, inv) {
@@ -1100,8 +1100,8 @@ function hardenAnswer(s, inv) {
 // Your streak, one line on the Firewall card.
 function streakRow(s) {
   if (!Object.keys(s.net?.seen || {}).length) return '';
-  const n = streakOf(s), to = STREAK.capture - (n % STREAK.capture);
-  return `<div class="svc-line inv-streak"><span class="tag ${n ? 'you' : 'dim'}" title="Invasions stopped in a row, by your wall or by you. Each pays ${Math.round(STREAK.step * 100)}% more, up to ${Math.round(STREAK.step * STREAK.max * 100)}%. A crash, a theft or a scout's map ends it.">streak ${n}</span><span class="tag dim" title="A capture every ${STREAK.capture} in a row: a sure daemon">${glyph('daemon')}in ${to}</span>${s.net?.mark ? `<span class="tag hot" title="A scout mapped your wall: the next invasion counts ${s.net.mark} levels higher">mapped +${s.net.mark}</span>` : ''}${s.net?.sabotage ? `<span class="tag hot" title="A saboteur shut it off">${glyph(s.net.sabotage.id)}${esc(SERVICES[s.net.sabotage.id]?.name || '')} off</span>` : ''}</div>`;
+  const n = streakOf(s);
+  return `<div class="svc-line inv-streak"><span class="tag ${n ? 'you' : 'dim'}" title="Invasions stopped in a row, by your wall or by you. Each pays ${Math.round(STREAK.step * 100)}% more, up to ${Math.round(STREAK.step * STREAK.max * 100)}%. A crash, a theft or a scout's map ends it.">streak ${n}</span>${s.net?.mark ? `<span class="tag hot" title="A scout mapped your wall: the next invasion counts ${s.net.mark} levels higher">mapped +${s.net.mark}</span>` : ''}${s.net?.sabotage ? `<span class="tag hot" title="A saboteur shut it off">${glyph(s.net.sabotage.id)}${esc(SERVICES[s.net.sabotage.id]?.name || '')} off</span>` : ''}</div>`;
 }
 // Finish a timed build now (credit buyout): the price on the button, off if you can't pay.
 // Slots as pips: filled for used, hollow for free, with an icon and the name on hover.

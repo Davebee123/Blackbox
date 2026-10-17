@@ -54,7 +54,7 @@ export const THIEF = { take: 0.5, min: 3 }; // the share of each store it takes;
 export const BOUNTY = { grow: 0.25, cap: 2, blocked: 0.5 };
 // Streak: invasions stopped in a row (by your wall or by you). Each one in it pays step more (up to
 // max steps); every capture-th in a row drops a capture. A crash, a theft or a scout's map ends it.
-export const STREAK = { step: 0.1, max: 5, capture: 10 }; // a capture every 10 stops in a row (it was 5: captures gave two uniques in three on the long climb)
+export const STREAK = { step: 0.1, max: 5 }; // a streak pays more code a stop; it no longer leaves a capture (invasions supply daemons already)
 // A capture (what a champion you kill, or a streak, leaves behind): a sure daemon, and a chance at an
 // invasion-only unique on top (BOSS_LOOT's pattern: chance, plus pity for every capture without one).
 // Every other stop rolls for a daemon (data.mjs DAEMON_DROP, with its own pity).
@@ -120,7 +120,7 @@ export function bountyOf(s, inv = s.invasion) {
   if (!inv) return null;
   const base = inv.bounty ?? kindOf(inv).bounty, mult = streakMult(s) * (inv.open ? I().open.reward : 1), unit = codeUnit(inv.level);
   const r = (n) => Math.max(1, Math.round(n * mult * unit));
-  return { base, code: bountyCode(inv), now: r(base + Math.floor(inv.grown || 0)), max: r(base * (1 + BOUNTY.cap)), blocked: r(Math.ceil(base * BOUNTY.blocked)), wall: r(base), capture: !!kindOf(inv).capture, streakCapture: (streakOf(s) + 1) % STREAK.capture === 0, mult };
+  return { base, code: bountyCode(inv), now: r(base + Math.floor(inv.grown || 0)), max: r(base * (1 + BOUNTY.cap)), blocked: r(Math.ceil(base * BOUNTY.blocked)), wall: r(base), capture: !!kindOf(inv).capture, mult };
 }
 // "13 Worm code"
 export const codeText = (n, k) => `${n} ${MATERIALS[k]?.name || k}`;
@@ -417,7 +417,7 @@ function payOut(s, inv, how, intercepted = false) {
   const n = how === 'blocked' ? b.blocked : how === 'wall' ? b.wall : b.now;
   (s.materials ||= {})[b.code] = (s.materials[b.code] || 0) + n;
   s.net.streak = streakOf(s) + 1;
-  const caps = [b.capture && how === 'you' && `${inv.name} leaves a capture: `, s.net.streak % STREAK.capture === 0 && `Streak of ${s.net.streak}: a capture. `].filter(Boolean);
+  const caps = [b.capture && how === 'you' && `${inv.name} leaves a capture: `].filter(Boolean);
   for (const why of caps) { daemonDrop(s, inv, 'capture', why); capture(s, Math.max(inv.level, hackerLevel(s) - 2), why); }
   if (!caps.length) daemonDrop(s, inv, how === 'you' ? (intercepted ? 'intercept' : 'you') : 'wall', `${inv.name} leaves a daemon: `);
   return n;
@@ -580,7 +580,7 @@ export function invasionsCommand(s) {
     if (tellOf(s, inv)) lines.push(tellOf(s, inv));
     lines.push(`Kill it for ${codeText(b.now, b.code)} (up to ${b.max} if it sits contested). The wall alone gets ${b.wall}, an outright block ${b.blocked}.${b.capture ? ' A daemon comes with your kill.' : ''}`);
   } else if (s.net?.next > 0) lines.push(`The next invasion sets out in about ${fmtLeft(s.net.next * (s.net.open ? I().open.pace : 1))}.${s.net.mark ? ` A scout mapped your wall, so it counts ${s.net.mark} levels higher.` : ''}`);
-  lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more, and a capture comes every ${STREAK.capture} in a row.`);
+  lines.push(`Streak ${streakOf(s)}. The next stop pays ${Math.round((streakMult(s) - 1) * 100)}% more.`);
   for (const l of lines) emit(s, 'info', l);
   return since(s, first);
 }

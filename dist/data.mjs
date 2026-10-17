@@ -289,7 +289,7 @@ export const DAEMONS = {
 };
 // Drops (invasion.mjs daemonDrop): the chance a stop leaves one, by how it was stopped, plus `pity` for every
 // stop in a row without one (BOSS_LOOT's bad-luck protection, reset by a drop). `earlier`: the share that comes
-// from an earlier band than the invasion's. A capture (a champion you kill, every tenth stop in a row, STREAK.capture) is a sure one.
+// from an earlier band than the invasion's. A capture (a champion you kill) is a sure one.
 // What a kill's old daemon drop became (a daemon from a vault became a code cache, run.mjs backup.bin): an Exploit,
 // at the same odds, from a kill and from a guard.
 export const SPARE_EXPLOIT = { home: 0.0025, guard: 0.01 };
