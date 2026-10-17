@@ -182,7 +182,10 @@ const BUILD = { auth, exfil, proc };
 // The puzzle for a server (null if it keeps no incident file).
 export function sweepPuzzle(loc) {
   const kind = sweepKind(loc);
-  if (!kind) return null;
+  return kind ? sweepFor(loc, kind) : null;
+}
+// A sweep of a given kind for any server (a thread's log room, threads.mjs): the same log from the same seed.
+export function sweepFor(loc, kind = 'proc') {
   const tier = sweepTier(loc);
   const p = BUILD[kind](seeded((loc.seed || 1) * 41 + 29), tier, loc);
   const r = seeded((loc.seed || 1) * 47 + 3);

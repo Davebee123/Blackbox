@@ -1899,7 +1899,7 @@ body:has(.stash-card .inv-row[data-kind="implant"]:hover) .inv.slots .inv-row[da
 .inv-name .iname { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .inv-name small { flex: none; font: 11px var(--mono); color: var(--dim); }
 .inv-name .tag { flex: none; }
-.inv-stats { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12px; color: var(--muted); }
+.inv-stats { display: grid; gap: 1px; font-size: 12px; color: var(--muted); } /* one stat a line */
 .inv-stats b { color: var(--text); font: 600 12px var(--mono); }
 .inv-stats .neg, .inv-stats .neg b { color: var(--hot); }
 .inv-fx { font-size: 12px; color: var(--r-zeroday); }
@@ -3557,3 +3557,61 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .floor-card .fl-k { color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-size: 10px; }
 .floor-card .fl-v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .floor-card .fl-v b { font-weight: 600; }
+
+/* ---- Threads (threads-view.mjs): the Threads list in Mail, a thread read, the reward card, the floor map's marks. ---- */
+.mrow .th-f { display: inline-grid; place-items: center; width: 17px; height: 19px; clip-path: polygon(50% 0, 100% 24%, 100% 76%, 50% 100%, 0 76%, 0 24%); background: var(--amber); color: #1a1002; font: 700 11px var(--mono); }
+.mrow.th-row.done .th-f { background: var(--gray); }
+.mrow.th-row.done { opacity: 0.55; }
+.mrow.th-row.done:hover, .mrow.th-row.done.open { opacity: 0.85; }
+.tag.th-tag { color: var(--amber); border-color: var(--amber); }
+.th-read .th-arc { color: var(--amber); }
+.th-read .th-reason { margin: 6px 0 12px; color: var(--muted); font-style: italic; }
+.th-steps { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.th-step { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; align-items: baseline; color: var(--text); }
+.th-step .th-dot { width: 9px; height: 9px; border: 1px solid var(--amber); transform: rotate(45deg); translate: 0 -1px; }
+.th-step.done { color: var(--dim); text-decoration: line-through; text-decoration-color: rgba(185, 157, 97, 0.6); }
+.th-step.done .th-dot { background: var(--dim); border-color: var(--dim); }
+.th-step.now { color: var(--bright); }
+.th-step.now .th-dot { background: var(--amber); box-shadow: 0 0 6px rgba(241, 185, 47, 0.6); }
+.th-step.fog { color: var(--dim); font-family: var(--mono); }
+.th-lore { margin: 4px 0 10px; color: var(--bright); font-style: italic; }
+/* the reward: pick one of three */
+.gain.th-offer { z-index: 41; }
+.gain.th-offer .sp-card { width: min(720px, 100%); }
+.th-offer-card .th-lore { margin: 2px 0 6px; }
+.th-offer-card .th-pick { font: var(--kicker); letter-spacing: var(--kicker-track); text-transform: uppercase; color: var(--amber-soft); margin-bottom: 8px; }
+.th-items { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.th-item { position: relative; display: grid; align-content: start; gap: 4px; padding: 12px 12px 34px; text-align: left; border: 1px solid var(--line-strong); border-top: 2px solid var(--amber-deep); border-radius: var(--r-card); background: var(--inset); cursor: pointer; }
+.th-item.r-tuned { border-top-color: #4f8fd6; } .th-item.r-custom { border-top-color: #e2c14a; } .th-item.r-stock { border-top-color: var(--gray); }
+.th-item:hover { border-color: var(--amber); background: var(--amber-wash); }
+.th-item .th-n { position: absolute; top: 8px; right: 10px; font: 600 11px var(--mono); color: var(--dim); }
+.th-item b { font: 600 14px var(--sans); overflow-wrap: anywhere; padding-right: 14px; }
+.th-item small { font: 11px var(--mono); color: var(--muted); }
+.th-item small i { color: var(--amber); font-style: normal; }
+.th-item .th-stats { display: grid; gap: 1px; font: 12px var(--mono); color: var(--text); } /* one stat a line */
+.th-item .th-rule { font: 11px var(--mono); color: var(--amber-soft); }
+.th-item .th-take { position: absolute; left: 12px; bottom: 10px; font: var(--label); letter-spacing: var(--label-track); text-transform: uppercase; color: var(--amber); }
+.th-later { opacity: 0.8; }
+.th-later small { color: var(--dim); font-size: 11px; margin-left: 6px; }
+@media (max-width: 640px) { .th-items { grid-template-columns: minmax(0, 1fr); } .th-item { padding-bottom: 30px; } }
+/* the floor map: a temporary server (an amber ?, gray once dark), its dashed link, a file in transit, a server's mark */
+.mnode.temp .tframe { fill: rgba(241, 185, 47, 0.06); stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 3 2.5; }
+.mnode.temp .tq { fill: var(--amber); font: 700 13px var(--mono); }
+.mnode.temp.here .tframe { stroke: var(--you); }
+.mnode.temp.dark .tframe { fill: rgba(125, 115, 98, 0.08); stroke: var(--gray); stroke-dasharray: none; }
+.mnode.temp.dark .tq { fill: var(--gray); }
+.mnode.temp .mlabel.th { fill: var(--amber); }
+.mnode.temp.dark .mlabel { fill: var(--gray); }
+.mlink.tlink { stroke: rgba(241, 185, 47, 0.45); stroke-dasharray: 3 4; }
+.mnode.transit { pointer-events: none; }
+.mnode.transit .troute { fill: none; stroke: var(--amber); stroke-width: 1.4; stroke-dasharray: 5 6; opacity: 0.65; }
+.mnode.transit .tbg { fill: #1a1103; stroke: var(--amber); stroke-width: 1.2; }
+.mnode.transit .tfile { fill: none; stroke: var(--amber); stroke-width: 1.2; stroke-linejoin: round; }
+@media (prefers-reduced-motion: no-preference) { .mnode.transit .tmover { animation: th-transit 1.6s ease-in-out infinite; } }
+@keyframes th-transit { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.mquest path { fill: var(--amber); stroke: #2a1b04; stroke-width: 1; }
+.mquest text { font: 700 9px var(--mono); fill: #1a1002; }
+.mquest.m-goal path { fill: #1a1103; stroke: var(--amber); }
+.mquest.m-goal text { fill: var(--amber); }
+.th-temp .th-line-svc b { color: var(--amber); }
+.th-temp.dark h1 { color: var(--gray); }

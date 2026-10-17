@@ -38,6 +38,7 @@ import * as FP from './floorplan.mjs';
 import { roomsMarkup, fillClocks, popOf, pickRoom, closePop } from './floorplan-view.mjs';
 import { createPuzzleFx, panelRoom, closePanel, openPanel, pzUi } from './puzzle-view.mjs';
 import { PUZZLES } from './puzzles.mjs';
+import { threadPanel, thUi, offerMarkup as thOfferMarkup } from './threads-view.mjs';
 
 const SAVE_KEY = 'blackbox-v6';
 const $ = (id) => document.getElementById(id);
@@ -580,7 +581,7 @@ function roomsDone(events) {
 }
 // What happens on the server goes up as a notice (there's no tty on the page): the last few lines of a batch (a move, a
 // respawn, a fight's end), ls and map in full. A step or a fight starting says nothing: the map and the pop-up show it.
-const ROOMS_SAY = ['rooms', 'rooms-good', 'rooms-bad', 'rooms-out', 'jacked-out'];
+const ROOMS_SAY = ['rooms', 'rooms-good', 'rooms-bad', 'rooms-out', 'jacked-out', 'thread', 'thread-temp', 'thread-dark', 'thread-done']; // a thread's lines too (threads.mjs; what's said goes in its own panel)
 function roomsSay(events) {
   const said = events.filter((e) => ROOMS_SAY.includes(e.type));
   if (!said.length) return;
@@ -595,6 +596,7 @@ document.addEventListener('click', (e) => {
   // A puzzle room's board (puzzle-view.mjs): × or Close puts it away, Play on the room's card brings it back, the
   // sweep's Ping and Dig switch what a click on a cell does.
   if (e.target.closest?.('[data-pz-close]')) { closePanel(campaign); feel.key('click'); dirty = true; return; }
+  if (e.target.closest?.('[data-th-close]')) { thUi.closed = campaign.threads?.said?.n ?? null; feel.key('click'); dirty = true; return; } // a thread's dialogue (threads-view.mjs)
   if (e.target.closest?.('[data-pz-open]')) { openPanel(); closePop(campaign); feel.key('click'); dirty = true; return; }
   const mode = e.target.closest?.('[data-pz-mode]');
   if (mode && !mode.disabled) { pzUi.mode = mode.dataset.pzMode; feel.key('click'); dirty = true; return; }
@@ -612,6 +614,7 @@ document.addEventListener('keydown', (e) => {
   if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pickRoom(campaign, t.dataset.fpSel); dirty = true; }
   if (module === 'rooms' && campaign.rooms && CHASE_KEYS[e.key] && !e.target.closest?.('input, textarea, button') && panelRoom(campaign)?.kind === 'chase' && !document.querySelector('#pz-panel.pz-busy')) { e.preventDefault(); roomsClick('play', CHASE_KEYS[e.key]); return; }
   if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && panelRoom(campaign) && !gainOpen()) { closePanel(campaign); dirty = true; return; }
+  if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && document.getElementById('th-panel') && !gainOpen()) { thUi.closed = campaign.threads?.said?.n ?? null; dirty = true; return; } // a thread's dialogue (threads-view.mjs)
   if (e.key === 'Escape' && module === 'rooms' && campaign.rooms && popOf(campaign)) { closePop(campaign); dirty = true; }
 });
 // Put the pop-up beside its room: right, left, below or above, the first side where it fits whole on screen without
@@ -1000,6 +1003,14 @@ function react(events) {
       // Mail: contracts and the Halcyon retainer.
       // Mail, the board, contracts ready, the retainer and flags go to the pager (see pagerReact).
       case 'contract-done': feel.add('unlock', null); showGain('Contract delivered', e.name || '', e.gains || [], false); break;
+      // Threads (threads.mjs): found, a step on, a temporary server raised or dark, the end, the reward taken.
+      case 'thread-talk': feel.add('pickup', null); break;
+      case 'thread-start': feel.add('unlock', null); break;
+      case 'thread': feel.add('good', null); if (module !== 'rooms') notice(e.message); break;
+      case 'thread-temp': feel.add('jackin', null); break;
+      case 'thread-dark': feel.add('break', null); break;
+      case 'thread-done': feel.add('win', null); thOffer.later = null; break;
+      case 'thread-reward': feel.add('pickup', null); if (e.name) showGain('Thread reward', '', [{ kind: 'item', label: e.name, qty: '', text: e.name }], true); break;
       case 'standing-down': feel.add('nope', null); break;
       case 'contract-taken': feel.add('good', null); notice(e.message); break;
       case 'bought': feel.add('pickup', null); rewardCard('Bought', e, events, true); break;
@@ -1635,9 +1646,20 @@ function pageOrError(draw) {
   }
 }
 const fitBoard = { key: null }; // the fight whose board went dense (render)
+// A thread's reward (threads.mjs): pick one of three, over the page until you pick one or put it off (Later; it waits
+// in Mail, where Pick your reward brings it back).
+const thOffer = { later: null };
+function renderOffer() {
+  const el = $('th-offer'), o = campaign.threads?.offer;
+  const want = !!o && thOffer.later !== o.tid && module !== 'combat' && !active(campaign) && !gainOpen() && !CAMP && !campaign.roomsPlay && !document.getElementById('th-panel'); // the last lines first: it comes up once you close them
+  if (!el) return;
+  el.hidden = !want;
+  if (want) put('th-offer', thOfferMarkup(campaign)); else if (cache.get('th-offer')) { cache.delete('th-offer'); el.innerHTML = ''; }
+}
 function render(force = false) {
   if (force) cache.clear();
   renderMeters();
+  renderOffer();
   shell.apply(module);
   const combatLike = module === 'combat';
   const s = shown();
@@ -1701,7 +1723,7 @@ function render(force = false) {
     if (focusRoom && !document.activeElement?.closest?.('.fp-room')) [...$('page-view').querySelectorAll(`.fp-room[data-room="${CSS.escape(focusRoom)}"][tabindex]`)].find((t) => t.getBoundingClientRect().width)?.focus({ preventScroll: true });
     if (module === 'breach') breachScroll(keep);
     if (module === 'codex') codexDrawn(focusCxKey);
-    if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); } // the countdowns tick in place: the markup only changes with the server
+    if (module === 'rooms') { applyFpZoom(); fillClocks($('page-view')); placeRoomsPop(); pzFx.mounted(); renderOffer(); } // the countdowns tick in place: the markup only changes with the server
     // The Mail page opens the first unread item by itself: showing it in full counts as reading it.
     if (module === 'mail') { const o = $('page-view').querySelector('.mrow.open.unread'); if (o) { const k = o.dataset.mail, id = k[0] === 'l' ? k.slice(1) : campaign.mail?.list?.find((m) => m.job === Number(k.slice(1)))?.id; if (id != null) { command(campaign, 'mail read ' + id); save(); dirty = true; } } }
     if (module === 'hub' && $('hubterm')) {
@@ -2288,6 +2310,8 @@ document.addEventListener('click', (e) => {
   if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
   const bx = e.target.closest('[data-breach]');
   if (bx && !bx.disabled) { breachClick(bx.dataset.breach, bx.dataset.arg); return; }
+  if (e.target.closest('[data-th-later]')) { thOffer.later = campaign.threads?.offer?.tid ?? null; feel.key('click'); dirty = true; return; } // a thread's reward, put off (threads-view.mjs)
+  if (e.target.closest('[data-th-offer]')) { thOffer.later = null; feel.key('click'); dirty = true; return; }
   const rm = e.target.closest('[data-rooms]');
   if (rm && !rm.disabled) { roomsClick(rm.dataset.rooms, rm.dataset.arg); return; }
   const direct = e.target.closest('[data-run]');
