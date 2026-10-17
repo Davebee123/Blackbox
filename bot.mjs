@@ -83,9 +83,9 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
       if (kill) { const who = kill[1]; src = s.encounter?.rooms?.rare ? 'Kill: ★ rare' : /RESIDENT/.test(who) ? 'Kill: Resident (Core)' : Object.values(BOSSES).some((b) => b.name.toUpperCase() === who) ? 'Kill: boss' : /^ELITE /.test(who) ? 'Kill: elite' : Object.values(GUARDS).some((g) => g.name.toUpperCase() === who) ? 'Kill: guard' : /^[A-Z][A-Z -]*-\d{3,}$/.test(who) || /-\d{4}/.test(who) ? 'Kill: room' : `Kill: ${who}`; if (/In your pack/.test(e.message)) packs.add(key); }
       else if (src === 'Loot' && won) src = v.boss ? 'Kill: boss' : v.elite ? 'Kill: elite' : 'Kill: room'; // a wild kill (SPRAWL-00, rogue servers, lairs), straight into the stash
       if (src === 'Vault') packs.add(key); // a second vault's item: added, then into the pack (banked again on the way out)
-      if (kill && e.set) src = 'Set piece'; // a guard's own set piece (combat.mjs guardSet): a unique off its own table
+      if (e.set && !/^(LOWLIGHT|Reward)/.test(src) && !(src === 'Banked' && packs.has(key))) { src = 'Set piece'; if (e.pack) packs.add(key); (stats.setPieces ||= {})[e.set] = (stats.setPieces[e.set] || 0) + 1; } // a set piece off its source's own table (combat.mjs setDrop): a unique
       if (it.home && !/ drops$/.test(src)) src = 'Native unique'; // network.mjs: a world drop of its own (a lair boss's is its loot)
-      else if (it.unique && !/ drops$/.test(src) && !/^(Mapped|LOWLIGHT|Streak|Contract|Dead drop|GLASSJAW)/.test(src) && UNIQUES[it.unique]?.sources?.some((x) => x.kind === 'strain')) src = 'Strain trophy';
+      else if (it.unique && src !== 'Set piece' && !/ drops$/.test(src) && !/^(Mapped|LOWLIGHT|Streak|Contract|Dead drop|GLASSJAW)/.test(src) && UNIQUES[it.unique]?.sources?.some((x) => x.kind === 'strain')) src = 'Strain trophy';
       if (src === 'Banked' && packs.has(key)) packs.delete(key);
       else {
         const r = it.unique ? 'unique' : it.rarity;

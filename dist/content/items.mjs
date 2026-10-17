@@ -14,6 +14,13 @@ export default {
         ],
         "signal": 10
       },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
       "sources": [
         {
           "kind": "story",
@@ -598,6 +605,12 @@ export default {
         "value": 5,
         "scale": "contracts"
       },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
       "sources": [
         {
           "kind": "story",
@@ -605,6 +618,2065 @@ export default {
         }
       ],
       "flavour": "Crew first. Always."
+    },
+    {
+      "id": "crowbar",
+      "name": "Crowbar",
+      "set": "wrecking",
+      "base": "exploit-chain",
+      "level": 15,
+      "primary": {
+        "damage": [
+          15,
+          19
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "if": "target-below-half",
+        "text": "+5% damage to parts below half"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 3
+        }
+      ],
+      "lean": "breaker"
+    },
+    {
+      "id": "det-cord",
+      "name": "Det Cord",
+      "set": "wrecking",
+      "base": "loader",
+      "level": 20,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "break",
+        "do": "heal%",
+        "value": 2,
+        "text": "Breaking a part heals 2% of max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 4
+        }
+      ],
+      "lean": "breaker"
+    },
+    {
+      "id": "hard-hat",
+      "name": "Hard Hat",
+      "set": "wrecking",
+      "base": "ghost-shell",
+      "level": 26,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5
+        }
+      ],
+      "lean": "breaker"
+    },
+    {
+      "id": "blast-map",
+      "name": "Blast Map",
+      "set": "wrecking",
+      "base": "implant",
+      "level": 32,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6
+        }
+      ],
+      "lean": "breaker"
+    },
+    {
+      "id": "drill",
+      "name": "Drill",
+      "set": "strongbox",
+      "base": "vpn-cascade",
+      "level": 15,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 3
+        }
+      ],
+      "lean": "bastion"
+    },
+    {
+      "id": "combination",
+      "name": "Combination",
+      "set": "strongbox",
+      "base": "loader",
+      "level": 20,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "shield+%",
+        "value": 10,
+        "text": "Shields you raise are 10% larger"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 4
+        }
+      ],
+      "lean": "bastion"
+    },
+    {
+      "id": "vault-door",
+      "name": "Vault Door",
+      "set": "strongbox",
+      "base": "ghost-shell",
+      "level": 26,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "effect": {
+        "when": "struck",
+        "do": "halve",
+        "limit": "fight",
+        "text": "The first hit on you each fight deals half"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5
+        }
+      ],
+      "lean": "bastion"
+    },
+    {
+      "id": "tumbler",
+      "name": "Tumbler",
+      "set": "strongbox",
+      "base": "implant",
+      "level": 32,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6
+        }
+      ],
+      "lean": "bastion"
+    },
+    {
+      "id": "exit",
+      "name": "Exit",
+      "set": "palemask",
+      "base": "exploit-chain",
+      "level": 15,
+      "primary": {
+        "damage": [
+          15,
+          19
+        ]
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 3
+        }
+      ],
+      "lean": "infiltrator"
+    },
+    {
+      "id": "veil",
+      "name": "Veil",
+      "set": "palemask",
+      "base": "onion-circuit",
+      "level": 20,
+      "primary": {
+        "signal": 100,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "stealth",
+        "value": 5,
+        "text": "+5% Stealth"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 4
+        }
+      ],
+      "lean": "infiltrator"
+    },
+    {
+      "id": "pillow",
+      "name": "Pillow",
+      "set": "palemask",
+      "base": "ghost-shell",
+      "level": 26,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5
+        }
+      ],
+      "lean": "infiltrator"
+    },
+    {
+      "id": "mask",
+      "name": "Mask",
+      "set": "palemask",
+      "base": "implant",
+      "level": 32,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "custom",
+        "do": "first-hit%",
+        "value": 8,
+        "text": "Your first hit on each part deals 8% more"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6
+        }
+      ],
+      "lean": "infiltrator"
+    },
+    {
+      "id": "cron",
+      "name": "Cron",
+      "set": "load-balanced",
+      "base": "dropper",
+      "level": 15,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "effect": {
+        "when": "custom",
+        "do": "helper%",
+        "value": 5,
+        "text": "Your helpers deal 5% more"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 3
+        }
+      ],
+      "lean": "operator"
+    },
+    {
+      "id": "relay",
+      "name": "Relay",
+      "set": "load-balanced",
+      "base": "onion-circuit",
+      "level": 20,
+      "primary": {
+        "signal": 100,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 4
+        }
+      ],
+      "lean": "operator"
+    },
+    {
+      "id": "parasite",
+      "name": "Parasite",
+      "set": "load-balanced",
+      "base": "ghost-shell",
+      "level": 26,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 5
+        }
+      ],
+      "lean": "operator"
+    },
+    {
+      "id": "core",
+      "name": "Core",
+      "set": "load-balanced",
+      "base": "implant",
+      "level": 32,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 6
+        }
+      ],
+      "lean": "operator"
+    },
+    {
+      "id": "floppy",
+      "name": "Floppy",
+      "set": "bootdisk",
+      "base": "reverse-shell",
+      "level": 1,
+      "primary": {
+        "signal": 12,
+        "regen": 2.5,
+        "restore": 12
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "relayking"
+        },
+        {
+          "kind": "rare",
+          "floor": [
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "boot-sector",
+      "name": "Boot Sector",
+      "set": "bootdisk",
+      "base": "one-liner",
+      "level": 3,
+      "primary": {
+        "damage": 2,
+        "signal": 10,
+        "payload": 1.4
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "regen",
+        "value": 1,
+        "text": "+1 Regen"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "relayking"
+        },
+        {
+          "kind": "rare",
+          "floor": [
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "seed",
+      "name": "Seed",
+      "set": "hivemind",
+      "base": "weaponized-exploit",
+      "level": 6,
+      "primary": {
+        "damage": [
+          9,
+          12
+        ]
+      },
+      "effect": {
+        "when": "custom",
+        "do": "burn%",
+        "value": 5,
+        "text": "Your burns deal 5% more"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "swarm",
+      "name": "Swarm",
+      "set": "hivemind",
+      "base": "cron-job",
+      "level": 9,
+      "primary": {
+        "damage": 4,
+        "signal": 18,
+        "payload": 2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "helper%",
+        "value": 5,
+        "text": "Your helpers deal 5% more"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "carapace",
+      "name": "Carapace",
+      "set": "hivemind",
+      "base": "root-shell",
+      "level": 12,
+      "primary": {
+        "signal": 35,
+        "regen": 7.5,
+        "restore": 20
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "queen",
+      "name": "Queen",
+      "set": "hivemind",
+      "base": "implant",
+      "level": 15,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 2
+        }
+      ]
+    },
+    {
+      "id": "timecard",
+      "name": "Timecard",
+      "set": "nightshift",
+      "base": "cron-job",
+      "level": 8,
+      "primary": {
+        "damage": 4,
+        "signal": 18,
+        "payload": 2
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "restore",
+        "value": 5,
+        "text": "+5% Restore"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "night-light",
+      "name": "Night Light",
+      "set": "nightshift",
+      "base": "vpn-cascade",
+      "level": 11,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "thermos",
+      "name": "Thermos",
+      "set": "nightshift",
+      "base": "implant",
+      "level": 15,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "regen",
+        "value": 1,
+        "text": "+1 Regen"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": [
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "psalter",
+      "name": "Psalter",
+      "set": "choirbook",
+      "base": "cron-job",
+      "level": 10,
+      "primary": {
+        "damage": 4,
+        "signal": 18,
+        "payload": 2
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "choir"
+        },
+        {
+          "kind": "boss",
+          "id": "repoman"
+        }
+      ]
+    },
+    {
+      "id": "mirror",
+      "name": "Mirror",
+      "set": "choirbook",
+      "base": "root-shell",
+      "level": 13,
+      "primary": {
+        "signal": 35,
+        "regen": 7.5,
+        "restore": 20
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "choir"
+        },
+        {
+          "kind": "boss",
+          "id": "repoman"
+        }
+      ]
+    },
+    {
+      "id": "keys",
+      "name": "Keys",
+      "set": "choirbook",
+      "base": "exploit-chain",
+      "level": 16,
+      "primary": {
+        "damage": [
+          15,
+          19
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "if": "target-jammed",
+        "text": "+5% damage to jammed parts"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "boss",
+          "id": "choir"
+        },
+        {
+          "kind": "boss",
+          "id": "repoman"
+        }
+      ]
+    },
+    {
+      "id": "stitch",
+      "name": "Stitch",
+      "set": "patchwork",
+      "base": "weaponized-exploit",
+      "level": 10,
+      "primary": {
+        "damage": [
+          9,
+          12
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "strain",
+          "lineage": "ransomware"
+        }
+      ]
+    },
+    {
+      "id": "darn",
+      "name": "Darn",
+      "set": "patchwork",
+      "base": "vpn-cascade",
+      "level": 12,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "strain",
+          "lineage": "worm"
+        }
+      ]
+    },
+    {
+      "id": "hem",
+      "name": "Hem",
+      "set": "patchwork",
+      "base": "root-shell",
+      "level": 14,
+      "primary": {
+        "signal": 35,
+        "regen": 7.5,
+        "restore": 20
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "strain",
+          "lineage": "ghostroot"
+        }
+      ]
+    },
+    {
+      "id": "seam",
+      "name": "Seam",
+      "set": "patchwork",
+      "base": "implant",
+      "level": 15,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "strain"
+        }
+      ]
+    },
+    {
+      "id": "shortwave",
+      "name": "Shortwave",
+      "set": "lantern",
+      "base": "vpn-cascade",
+      "level": 12,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "scavenge",
+        "value": 5,
+        "text": "+5% Scavenge"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "courier"
+        }
+      ]
+    },
+    {
+      "id": "logbook",
+      "name": "Logbook",
+      "set": "lantern",
+      "base": "dropper",
+      "level": 14,
+      "primary": {
+        "damage": 6,
+        "signal": 28,
+        "payload": 2.9
+      },
+      "effect": {
+        "when": "custom",
+        "do": "credits%",
+        "value": 10,
+        "of": [
+          "cache"
+        ],
+        "text": "Caches you take pay 10% more credits"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "courier"
+        }
+      ]
+    },
+    {
+      "id": "antenna",
+      "name": "Antenna",
+      "set": "lantern",
+      "base": "implant",
+      "level": 15,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "custom",
+        "do": "see-rare",
+        "text": "You see a server's rare spawn on its map card"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "scavenge",
+        "value": 5,
+        "text": "+5% Scavenge"
+      },
+      "sources": [
+        {
+          "kind": "courier"
+        }
+      ]
+    },
+    {
+      "id": "rotor",
+      "name": "Rotor",
+      "set": "glassceiling",
+      "base": "exploit-chain",
+      "level": 14,
+      "primary": {
+        "damage": [
+          15,
+          19
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "author",
+          "id": "glassjaw"
+        }
+      ]
+    },
+    {
+      "id": "quorum",
+      "name": "Quorum",
+      "set": "glassceiling",
+      "base": "vpn-cascade",
+      "level": 17,
+      "primary": {
+        "signal": 70,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "author",
+          "id": "glassjaw"
+        }
+      ]
+    },
+    {
+      "id": "ledger",
+      "name": "Ledger",
+      "set": "glassceiling",
+      "base": "loader",
+      "level": 20,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "author",
+          "id": "glassjaw"
+        }
+      ]
+    },
+    {
+      "id": "parachute",
+      "name": "Parachute",
+      "set": "glassceiling",
+      "base": "implant",
+      "level": 23,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "custom",
+        "do": "low-heal",
+        "value": 5,
+        "at": 25,
+        "text": "Once a fight, below 25% Signal, heal 5% of max"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "author",
+          "id": "glassjaw"
+        }
+      ]
+    },
+    {
+      "id": "pager",
+      "name": "Pager",
+      "set": "oncall",
+      "base": "onion-circuit",
+      "level": 18,
+      "primary": {
+        "signal": 100,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "restore",
+        "value": 5,
+        "text": "+5% Restore"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 3
+        },
+        {
+          "kind": "lair",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "runbook",
+      "name": "Runbook",
+      "set": "oncall",
+      "base": "loader",
+      "level": 22,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "first-heal%",
+        "value": 15,
+        "text": "Your first heal each fight is 15% larger"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 3
+        },
+        {
+          "kind": "lair",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "failover",
+      "name": "Failover",
+      "set": "oncall",
+      "base": "ghost-shell",
+      "level": 26,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 4
+        }
+      ]
+    },
+    {
+      "id": "freezer",
+      "name": "Freezer",
+      "set": "coldstorage",
+      "base": "restricted-shell-escape",
+      "level": 19,
+      "primary": {
+        "signal": 50,
+        "regen": 10,
+        "restore": 24
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "vault"
+        }
+      ]
+    },
+    {
+      "id": "cold-cache",
+      "name": "Cold Cache",
+      "set": "coldstorage",
+      "base": "implant",
+      "level": 22,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "vault"
+        }
+      ]
+    },
+    {
+      "id": "frost-line",
+      "name": "Frost Line",
+      "set": "coldstorage",
+      "base": "onion-circuit",
+      "level": 25,
+      "primary": {
+        "signal": 100,
+        "reduction": 3
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 1,
+        "if": "above-75",
+        "text": "+1 Block while above 75% Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "vault"
+        }
+      ]
+    },
+    {
+      "id": "punch-card",
+      "name": "Punch Card",
+      "set": "overtime",
+      "base": "loader",
+      "level": 22,
+      "primary": {
+        "damage": 9,
+        "signal": 40,
+        "payload": 3.8
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "quarantine"
+        }
+      ]
+    },
+    {
+      "id": "time-clock",
+      "name": "Time Clock",
+      "set": "overtime",
+      "base": "implant",
+      "level": 24,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "cascade"
+        }
+      ]
+    },
+    {
+      "id": "late-pass",
+      "name": "Late Pass",
+      "set": "overtime",
+      "base": "mixnet",
+      "level": 26,
+      "primary": {
+        "signal": 140,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "sweep"
+        }
+      ]
+    },
+    {
+      "id": "coffee-run",
+      "name": "Coffee Run",
+      "set": "overtime",
+      "base": "wormable",
+      "level": 28,
+      "primary": {
+        "damage": [
+          32,
+          40
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "id": "chase"
+        }
+      ]
+    },
+    {
+      "id": "cache-line",
+      "name": "Cache Line",
+      "set": "burstbuffer",
+      "base": "zero-click",
+      "level": 25,
+      "primary": {
+        "damage": [
+          22,
+          28
+        ]
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "rare"
+        }
+      ]
+    },
+    {
+      "id": "prefetch",
+      "name": "Prefetch",
+      "set": "burstbuffer",
+      "base": "polymorphic-engine",
+      "level": 28,
+      "primary": {
+        "damage": 13,
+        "signal": 55,
+        "payload": 5.4
+      },
+      "effect": {
+        "when": "custom",
+        "do": "opener%",
+        "value": 8,
+        "n": 1,
+        "text": "Your first skill each fight deals 8% more"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "rare"
+        }
+      ]
+    },
+    {
+      "id": "flush",
+      "name": "Flush",
+      "set": "burstbuffer",
+      "base": "implant",
+      "level": 31,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "rare"
+        }
+      ]
+    },
+    {
+      "id": "standby",
+      "name": "Standby",
+      "set": "hotspare",
+      "base": "ghost-shell",
+      "level": 28,
+      "primary": {
+        "signal": 70,
+        "regen": 15,
+        "restore": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "takeover"
+        }
+      ]
+    },
+    {
+      "id": "failback",
+      "name": "Failback",
+      "set": "hotspare",
+      "base": "implant",
+      "level": 32,
+      "primary": {
+        "damage": 6,
+        "signal": 30
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "takeover"
+        }
+      ]
+    },
+    {
+      "id": "node",
+      "name": "Node",
+      "set": "mesh",
+      "base": "mixnet",
+      "level": 31,
+      "primary": {
+        "signal": 140,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "crew"
+        }
+      ]
+    },
+    {
+      "id": "link",
+      "name": "Link",
+      "set": "mesh",
+      "base": "living-off-the-land",
+      "level": 34,
+      "primary": {
+        "damage": 21,
+        "signal": 89,
+        "payload": 9.7
+      },
+      "effect": {
+        "when": "custom",
+        "do": "heal+%",
+        "value": 5,
+        "text": "Heals you cast are 5% larger"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "crew"
+        }
+      ]
+    },
+    {
+      "id": "hub",
+      "name": "Hub",
+      "set": "mesh",
+      "base": "bootkit",
+      "level": 37,
+      "primary": {
+        "damage": 12.5,
+        "signal": 62
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 4,
+        "text": "+4% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "crew"
+        }
+      ]
+    },
+    {
+      "id": "index",
+      "name": "Index",
+      "set": "deeparchive",
+      "base": "living-off-the-land",
+      "level": 37,
+      "primary": {
+        "damage": 21,
+        "signal": 89,
+        "payload": 9.7
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 4,
+        "text": "+4% Clock Speed"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": [
+            7,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spine",
+      "name": "Spine",
+      "set": "deeparchive",
+      "base": "ring-zero-shell",
+      "level": 39,
+      "primary": {
+        "signal": 114,
+        "regen": 24.5,
+        "restore": 49
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": [
+            7,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "folio",
+      "name": "Folio",
+      "set": "deeparchive",
+      "base": "sandbox-escape",
+      "level": 41,
+      "primary": {
+        "damage": [
+          52,
+          65
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": [
+            7,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vellum",
+      "name": "Vellum",
+      "set": "deeparchive",
+      "base": "firmware-rootkit",
+      "level": 43,
+      "primary": {
+        "damage": 20,
+        "signal": 100
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": [
+            7,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bedrock-plate",
+      "name": "Bedrock Plate",
+      "set": "bedrock",
+      "base": "firmware-shell",
+      "level": 43,
+      "primary": {
+        "signal": 181,
+        "regen": 39,
+        "restore": 78
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "reduction",
+        "value": 2,
+        "text": "+2 Block"
+      },
+      "green": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "core-sample",
+      "name": "Core Sample",
+      "set": "bedrock",
+      "base": "firmware-rootkit",
+      "level": 45,
+      "primary": {
+        "damage": 20,
+        "signal": 100
+      },
+      "effect": {
+        "when": "always",
+        "do": "signal%",
+        "value": 6,
+        "text": "+6% max Signal"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "pick",
+      "name": "Pick",
+      "set": "bedrock",
+      "base": "hypervisor-escape",
+      "level": 47,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ]
+    },
+    {
+      "id": "survey",
+      "name": "Survey",
+      "set": "bedrock",
+      "base": "covert-channel",
+      "level": 49,
+      "primary": {
+        "signal": 362,
+        "reduction": 10
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ]
     },
     {
       "id": "underwriters-seal",
@@ -2432,7 +4504,15 @@ export default {
       "effect": {
         "when": "answer",
         "do": "shield",
-        "value": 10
+        "value": 10,
+        "text": "Answering a tell shields you for 10"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "clock",
+        "value": 5,
+        "text": "+5% Clock Speed"
       },
       "sources": [
         {
@@ -2457,7 +4537,15 @@ export default {
         "when": "hit",
         "if": "target-signature",
         "do": "damage%",
-        "value": 15
+        "value": 10,
+        "text": "+10% damage on the signature part"
+      },
+      "green": {
+        "when": "always",
+        "do": "stat",
+        "stat": "crit",
+        "value": 5,
+        "text": "+5% crit"
       },
       "sources": [
         {
@@ -2482,7 +4570,14 @@ export default {
         "when": "hit",
         "if": "target-bare",
         "do": "crit%",
-        "value": 15
+        "value": 10,
+        "text": "+10% crit on a part with no ◆"
+      },
+      "green": {
+        "when": "hit",
+        "do": "dmg%",
+        "value": 5,
+        "text": "+5% damage"
       },
       "sources": [
         {

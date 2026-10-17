@@ -8,7 +8,7 @@ import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from '
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { fxOn, findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -160,8 +160,7 @@ const traced = (loc) => !!loc && !loc.zone && !loc.rogue;
 export function traceAdd(s, n) {
   const r = s.run, loc = currentLocation(s);
   if (!r || r.hunter || !traced(loc) || !n) return;
-  const slow = n > 0 ? fxOn(s, 'trace-slow') : null; // Kestrel Clearance (2): trace grows 25% slower (sets.mjs)
-  r.trace = Math.max(0, Math.min(100, (r.trace || 0) + Math.round(n * (n > 0 && classOf(s) === 'infiltrator' ? 0.5 : 1) * (slow ? 1 - slow.fx.value / 100 : 1))));
+  r.trace = Math.max(0, Math.min(100, (r.trace || 0) + Math.round(n * (n > 0 && classOf(s) === 'infiltrator' ? 0.5 : 1))));
   if (r.trace >= 100 && !active(s)) hunt(s);
 }
 function hunt(s) {
@@ -179,7 +178,7 @@ export function vaultItem(loc) {
   let x = r() * total, rarity = 'stock';
   for (const [k, v] of Object.entries(w)) if ((x -= v) < 0) { rarity = k; break; }
   if (rarity === 'zeroday') {
-    const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && (u.sources || []).some((src) => src.kind === 'vault' && (src.layer || 1) <= layerOf(depth)));
+    const pool = Object.values(UNIQUES).filter((u) => !u.set && u.level <= level + 2 && (u.sources || []).some((src) => src.kind === 'vault' && (src.layer || 1) <= layerOf(depth))); // a set piece drops off its own table (sets.mjs)
     if (pool.length) return uniqueItem(pool[Math.floor(r() * pool.length)], level, r);
     rarity = 'custom';
   }

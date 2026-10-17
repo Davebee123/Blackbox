@@ -22,7 +22,9 @@
 // Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
 // a server you hold has its Core as its core socket. A Resident's first fall and Mapped each teach a codebase. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
-import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand } from './combat.mjs';
+import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, setDrop } from './combat.mjs';
+import { setCredits } from './sets.mjs';
+import { PUZZLES } from './puzzles.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, layerOf } from './data.mjs';
 import { seeded, MATERIALS, codeOf, rollItem } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
@@ -325,6 +327,7 @@ function takeover(s, loc, room) {
   loc.resident = null; loc.regrow = null;
   strikeServer(s, loc, 'takeover');
   contractTakeover(s, loc); // takenOver, its XP and the event (mail.mjs)
+  setDrop(s, { kind: 'takeover' }, levelOf(loc), loc.name, { pack: true, path: `${room.path}/#set-${s.serial}` }); // Hot Spare's pieces (sets.mjs)
   loc.root ||= { level: 1, cleared: 0, n: 0, nextAt: null, proc: null };
   R.held = now();
   // Its Resident's first fall: a codebase from its author's list (4 components if you know them all).
@@ -444,8 +447,9 @@ hooks.threadsRestore = threadsRestore;
 const packFile = (s, f) => { s.run.pack.push(f); return f; };
 // A puzzle room's pay (floorplan.mjs finishPuzzle): credits and code into the pack, like a cache's; components at once,
 // of the server's own families.
-WORLD_hook('puzzlePay', (s, room, { credits = 0, code = 0, parts = 0, material = 'cipher' } = {}) => {
+WORLD_hook('puzzlePay', (s, room, { credits = 0, code = 0, parts = 0, material = 'cipher', won = false } = {}) => {
   const loc = locOf(s), n = s.serial;
+  if (won) setDrop(s, { kind: 'puzzle', id: room.kind }, levelOf(loc), `the ${PUZZLES[room.kind]?.name || room.kind} board`, { pack: true, path: `${room.path}/#set-${n}` }); // Overtime's pieces (sets.mjs), a board won
   if (credits) packFile(s, { path: `${room.path}/#puzzle-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   if (code) packFile(s, { path: `${room.path}/#puzzle-code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
   if (parts) gainComponents(s, parts, familyComponents(loc?.family), room.path);
@@ -455,7 +459,7 @@ WORLD_hook('cache', (s, room, { credits, code, material }) => {
   packFile(s, { path: `${room.path}/#cache-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   packFile(s, { path: `${room.path}/#code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
 });
-WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.trait === 'rich' ? NET.rich : 1) * (loc?.quirk === 'hoard' ? NET.hoard : 1); });
+WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.trait === 'rich' ? NET.rich : 1) * (loc?.quirk === 'hoard' ? NET.hoard : 1) * setCredits(s, 'cache'); }); // setCredits: Lantern Route, the Logbook (sets.mjs)
 WORLD_hook('packItem', (s, it) => {
   // An item already added to your stash (floorplan.mjs): it goes back out and into the pack, banked when you jack out.
   s.stash = s.stash.filter((x) => x.id !== it.id);
@@ -476,7 +480,7 @@ function takeVault(s, loc) {
   for (const { dir, name } of vaultFiles(loc)) {
     const full = `${dir}/${name}`, info = fileInfo(loc, dir, name);
     if (!info || ['text', 'trap', 'sweep'].includes(info.kind) || loc.state?.taken?.[full] || s.run.pack.some((f) => f.path === full)) continue;
-    got.push(packFile(s, { path: full, name, ...info, loc: loc.id }));
+    got.push(packFile(s, { path: full, name, ...info, ...(info.kind === 'credits' && info.amount ? { amount: Math.round(info.amount * setCredits(s, 'vault')) } : {}), loc: loc.id })); // Lantern Route (3): a vault's credits (sets.mjs)
   }
   return got;
 }
@@ -486,6 +490,7 @@ WORLD_hook('vault', (s, room) => {
   if (!loc || R.type !== 'server' || room.id !== R.graph.vaults[0]) return false;
   const got = takeVault(s, loc), n = got.length;
   emit(s, 'rooms-good', n ? `The vault: ${n} ${n === 1 ? 'file' : 'files'} into your pack.` : 'The vault is bare.', { gains: gainsOf(got) });
+  setDrop(s, { kind: 'vault', floor: loc.depth || 1 }, levelOf(loc), `${loc.name}'s vault`, { pack: true, path: `vault/#set-${s.serial}` }); // Cold Storage's and Deep Archive's pieces (sets.mjs)
   if (loc.member) { R.cleared[R.graph.core] ||= now(); }
   return true;
 });

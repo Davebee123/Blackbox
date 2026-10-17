@@ -13,7 +13,7 @@
 // families of couriers, bounties and outbreaks lean toward its own.
 //
 // Pure: state in, events out.
-import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique } from './combat.mjs';
+import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop } from './combat.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { LOOT, rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
@@ -46,6 +46,7 @@ export const CARDS = {
     reward: (ev) => `${credits(ev.level)} credits and ${ev.unique ? UNIQUES[ev.unique].name : 'a protocol'}`,
     won: (s, ev) => {
       s.server.credits += credits(ev.level);
+      setDrop(s, { kind: 'courier' }, ev.level, ev.name); // Lantern Route's pieces (sets.mjs): one roll a courier intercepted
       if (ev.unique) { giveUnique(s, ev.unique, 'Dead drop: '); return `You took the dead drop: ${credits(ev.level)} credits and ${UNIQUES[ev.unique].name}.`; }
       const r = seeded(ev.seed), item = rollItem(r, { level: ev.level, rarity: r() < LOOT.minor ? 'tuned' : 'stock' }); // fixed by the event
       addItem(s, item, 'Dead drop: ');

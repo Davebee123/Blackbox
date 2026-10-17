@@ -30,7 +30,7 @@
 // the end back here (hooks.breachEnd), skill rules ride hooks.emitted and hooks.commanded, and the end of each cycle
 // (enrage, overheat) hooks.cycleEnd. Between fights s.run is null, so gear loads as at home; during one it holds your
 // Signal, as on any run.
-import { fxOn, hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, subOf, addItem, stashItem, rigOf, attackers, gainXp, part, livingParts, defender, hit } from './combat.mjs';
+import { hooks, emit, warn, active, selectEncounter, command, maxSignal, hackerOf, hackerLevel, classOf, subOf, addItem, stashItem, rigOf, attackers, gainXp, part, livingParts, defender, hit } from './combat.mjs';
 import { GUARDS, STRAINS, TELL, SUBS, LOADOUT, SUBCLASS, defaultSub, ARCHETYPES, BOSSES, FAMILIES, TELL_SETS, stemOf, makePart, climbStretch } from './data.mjs';
 import { seeded, rollItem, itemLabel, protocolSlots, SLOT_KINDS, chaseStat } from './gear.mjs';
 import { SUBSYSTEMS, REWRITES } from './rewrites.mjs';
@@ -551,8 +551,7 @@ export function reachable(s) {
 export function trace(s, n, why = '') {
   const b = s.breach;
   if (!b || !n) return;
-  const slow = n > 0 ? fxOn(s, 'trace-slow') : null; // Kestrel Clearance (2): Trace grows 25% slower (sets.mjs)
-  const k = n > 0 ? (classOf(s) === 'infiltrator' ? 0.5 : 1) * (b.rules?.tripwire || 1) * (slow ? 1 - slow.fx.value / 100 : 1) : 1;
+  const k = n > 0 ? (classOf(s) === 'infiltrator' ? 0.5 : 1) * (b.rules?.tripwire || 1) : 1;
   const was = b.trace;
   b.trace = Math.max(0, Math.min(100, Math.round(b.trace + n * k)));
   b.tracePeak = Math.max(b.tracePeak || 0, b.trace);

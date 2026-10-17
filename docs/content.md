@@ -311,7 +311,7 @@ networks' floors differ, and a consortium member's floor is worth visiting. Floo
 | **Consortium projects** | Size tiers (*Built*) | Trunk Relay to Grid, funded together (*Planned*) | — |
 | **Faction standing** | Five factions, tiers at 1/25/50/75, ripples (*Built*) | Rivals pull against each other, so every top tier at once is a long swing | Supply orders as the steady climb (*Planned*); a desk prop at each top tier, kept once earned |
 | **Boss uniques** | Two each on 7 bosses and the farm's three; natives on the nine native bosses (*Built*) | 15% + 5% a miss (crew 30% + 10%) | The 14 designed bosses; each native boss's own two uniques from docs/genome.md 7.4 (Bump Key, Deadlatch…) once lairs move by floor |
-| **Sets** | Kestrel Clearance and LOWLIGHT Kit (*Built*: the Collection's Sets, sets.mjs) | Ten sets, most pieces one per boss of an author's line (docs/genome.md 9) | The other eight once the bosses that drop them exist |
+| **Sets** | The loot plan's 21 sets (*Built*: docs/loot-plan.md, sets.mjs, the Collection's Sets) | 21 sets, four of them class sets | The floor 3–8 bosses' pieces move to those bosses once they exist (a floor's lair boss drops them until then) |
 | **KESSLER-FARM-00** | Three crew bosses, 8 uniques, keeping up to 50 (*Built*) | Every 6 hours, with a crew | *Proposed:* a second crew dungeon on floor 6 (crew bosses are data on raid.mjs) |
 | **Daemons** | 40, one copy each at its level; invasions only (*Built*) | A copy of each at 50: a long tail | — |
 | **Bedrock's endgame** | Nothing (open question 9) | — | 4.2 |
@@ -413,7 +413,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 | 13 | **Floors 5–7 bosses**: EXIT NODE, PARASITE, RING ZERO, BRICKWALL, BLACKOUT, GOLDEN PARACHUTE | L | Floors 5–7 (52 h) | Designed |
 | 14 | **ACTUARY and UNDERWRITER** | L | Floor 5 (14 h) | Needs the first unwired rules |
 | 15 | **New boards**: Defrag, Deadlock, Bit flip | M each | Floors 5, 6, 8 | Each needs a generator and a solver, as the four had |
-| 16 | **Sets** | L | All | After the bosses that drop them. *Started:* the set system and the two sets whose pieces drop today, Kestrel Clearance (the Bouncer, the Tracer and the Sentinel, floor 2 and below) and LOWLIGHT Kit (the storyline), are built (sets.mjs, docs/genome.md 9.2); the other eight wait on their bosses |
+| 16 | **Sets** | L | All | *Built:* the loot plan's 21 sets (docs/loot-plan.md, sets.mjs, GAME_RULES.md *Sets*); the floor 3–8 bosses' pieces drop from those floors' lair bosses until the bosses exist |
 | 17 | **Bedrock**: INIT, flash ranks, Firmware; then the reflash | L | Floor 8 and after | Needs a decision first (section 7) |
 | 18 | **The Desk, second pass**: keyboards, shells, window signs | M | All | Needs key-sound takes and window art |
 | 19 | **A second crew dungeon** | M–L | Floor 6 | Crew bosses are data on raid.mjs; worth it once crews are real |

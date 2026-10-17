@@ -138,6 +138,10 @@ export const FX_IF = {
   'target-loud': 'the target has gone loud (a Tripwire set off, a Bricker\'s rage)',
   'target-fragment': 'the target is a fragment',
   moment: "the skill's moment is on the board",
+  // Set pieces (sets.mjs): their own bonuses and green lines.
+  'target-jammed': 'the target is Jammed',
+  'above-75': 'you are above 75% health',
+  late: "the fight has reached its 6th cycle",
 };
 // What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
 // tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
@@ -183,6 +187,22 @@ export const FX_DO = {
   'cast-short': { when: ['custom'], label: "shortens a compiled cast's effect by X cycles", value: true },
   'no-after': { when: ['custom'], label: 'stops a tell that lands from taking a skill offline, Corrupting you or leaving you Hung' },
   'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's mirror at X% of their damage, and nothing bounces back", value: true },
+  // Set pieces (sets.mjs runs them): a piece's own bonus and its green line, the line that counts with two or more of
+  // its set worn. Each piece writes its own text, in the plan's words.
+  stat: { when: ['always'], label: 'adds X to one of your stats', value: true, stat: true },
+  'signal%': { when: ['always'], label: 'increases your max Signal by X%', value: true },
+  'dmg%': { when: ['hit'], label: 'increases all your damage (skill hits, burns and helpers) by X%', value: true },
+  'burn%': { when: ['custom'], label: 'increases the damage of your burns by X%', value: true },
+  'helper%': { when: ['custom'], label: 'increases the damage of your helpers by X%', value: true },
+  'heal%': { when: ['break'], label: 'heals you for X% of your max health', value: true },
+  'shield+%': { when: ['custom'], label: 'makes the shields you raise X% larger', value: true },
+  'first-hit%': { when: ['custom'], label: 'makes your first hit on each part deal X% more', value: true },
+  'opener%': { when: ['custom'], label: 'makes your first skills each fight deal X% more', value: true },
+  'first-heal%': { when: ['custom'], label: 'makes your first heal each fight X% larger', value: true },
+  'heal+%': { when: ['custom'], label: 'makes the heals you cast X% larger', value: true },
+  'low-heal': { when: ['custom'], label: 'heals you for X% of your max health once a fight, when you drop low', value: true },
+  'credits%': { when: ['custom'], label: 'makes caches pay X% more credits', value: true },
+  'see-rare': { when: ['custom'], label: "shows a server's rare spawn on its map card" },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
@@ -190,7 +210,9 @@ export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once 
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
   demolitionist: 'Breaker: Demolitionist', overclocker: 'Breaker: Overclocker', warden: 'Bastion: Warden', sysop: 'Bastion: Sysop',
   payload: 'Infiltrator: Payload', phantom: 'Infiltrator: Phantom', herder: 'Operator: Herder', hijacker: 'Operator: Hijacker' }; // a subclass lean: three times as likely for it, twice for its class
-export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)', native: 'Native to a network (network.mjs: about ten times as likely on its home network, its lair boss, the Listening Post and darknet listings)' };
+export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)', native: 'Native to a network (network.mjs: about ten times as likely on its home network, its lair boss, the Listening Post and darknet listings)',
+  // Set pieces only (sets.mjs SET_LOOT: each its own table, its pieces you lack first, with pity).
+  lair: "A floor's lair boss", rare: '★ rare spawns', thread: 'Threads', courier: "LANTERN's couriers", author: "A crew's bosses and elites", puzzle: 'Puzzle boards', takeover: 'Resident takeovers', crew: 'Crew bosses (KESSLER-FARM-00)' };
 
 // One sentence for an effect, in the tooltip style: the effect first (a third-person verb), then when it happens.
 // "Increases your damage by 25% when you fire in a Sync Window." "Heals you for 6 when you land a critical strike."
@@ -232,8 +254,8 @@ export function checkItems(items, bases, stats) {
     if (!Object.keys(u.primary || {}).length) say(where, u.id, 'It has no primary stats.');
     for (const part of ['primary', 'secondary', 'downside']) for (const k of Object.keys(u[part] || {})) if (!stats[k]) say(where, u.id, `Unknown stat "${k}" in ${part}.`);
     for (const k of Object.keys(u.downside || {})) if (!(u.downside[k] < 0)) say(where, u.id, `A downside should be negative (${k}).`, false);
-    const fx = u.effect;
-    if (fx) {
+    // A set piece's green line (sets.mjs) is an effect block too, checked the same way.
+    for (const fx of [u.effect, u.green].filter(Boolean)) {
       const d = FX_DO[fx.do];
       if (!FX_WHEN[fx.when]) say(where, u.id, `Unknown "when": ${fx.when}.`);
       if (!d) say(where, u.id, `Unknown effect "${fx.do}".`);

@@ -18,6 +18,7 @@ import { postsOf, siteLabel, sizeOf as serverSize, PROGRAMS, programsOn, codebas
 import { ABILITIES, CONFIG, FAMILIES, MUTATIONS, TICKER, QUIRKS, DAEMONS, STRAINS, GUARDS, BOSSES, HOT_RUN, STRAIN_NATIVE, DAEMON_BANDS, bandDaemons, daemonWhen, daemonBand, FLOORS, bandOf, floorOfLayer } from './data.mjs';
 import { GENES, CATS, AXES } from './genes.mjs';
 import { AUTHORS } from './authors.mjs';
+import { PUZZLES } from './puzzles.mjs';
 import { chipOf, virusGenes, scannedDeep } from './genome.mjs';
 import { mastered, RESEARCH, TIER } from './research.mjs';
 // A loud run (connect <server> loud): what the button and the run tag say on hover.
@@ -38,7 +39,7 @@ import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel, hardenCost } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
-import { SETS, setOf, setCard, activeSets, piecesOf } from './sets.mjs';
+import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRare } from './sets.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { bodyTags } from './families.mjs';
@@ -431,8 +432,10 @@ export function collectionMarkup(s) {
 const pieceSource = (s, u) => {
   const src = (u.sources || [])[0];
   if (src?.kind === 'guard') return `${collSource(s, src)} · floor ${floorOfLayer(src.layer || 1)}+ · <span class="coll-odds" title="${esc('The chance its next kill drops it. Each kill without one adds to it while you lack its piece.')}">${Math.round(guardSetChance(s, src.id) * 100)}% a kill</span>`;
-  return `${esc(collSource(s, src))}${src?.kind === 'story' ? ` · Lv ${u.level}` : ''}`;
+  if (src?.kind === 'story') return `${esc(collSource(s, src))} · Lv ${u.level}`;
+  return `${esc((u.sources || []).map((x) => sourceText(x, SOURCE_NAMES)).join(', '))} · Lv ${u.level}+`; // the loot plan's sources (sets.mjs)
 };
+const SOURCE_NAMES = { boss: (id) => BOSSES[id]?.name || id, lineage: (id) => FAMILIES[id]?.name || id, author: (id) => AUTHORS[id]?.name || id, puzzle: (id) => PUZZLES[id]?.name || id };
 // The Collection's Sets (sets.mjs): one row a set, its pieces found (with where each drops) or ???.
 export function collectionSets(s) {
   const got = s.collection || {};
@@ -843,23 +846,28 @@ function invBody(it, extra = '', s = null) {
 
 // ---------- sets (sets.mjs) ----------
 // What you have of each set: the pieces loaded, held in the stash, ever found (the Collection), and the active rows.
-const setHave = (s) => { const on = loaded(s); return { worn: on.map((x) => x.unique).filter(Boolean), held: new Set((s.stash || []).map((x) => x.unique).filter(Boolean)), found: new Set(Object.keys(s.collection || {})), active: activeSets(on) }; };
+const setHave = (s) => { const on = loaded(s); return { worn: on.map((x) => x.unique).filter(Boolean), held: new Set((s.stash || []).map((x) => x.unique).filter(Boolean)), found: new Set(Object.keys(s.collection || {})), active: activeSets(on), sub: subOf(s) }; };
+// A class set's subclass line, under its 4-piece bonus: lit once the bonus is on and the subclass is yours.
+const subLines = (b) => (b.subs || []).map((x) => `<span class="sb sub${x.on ? ' on' : ''}" title="${esc(x.on ? 'On' : x.mine ? `Wear ${b.at} pieces` : `${SUBS[x.id]?.name || x.id} only`)}">${esc(SUBS[x.id]?.name || x.id)}: ${esc(x.text)}</span>`).join('');
 const SET_PIECE_TIP = { worn: 'Loaded', held: 'In your stash', missing: 'Found once; not in your stash now', unknown: 'Not found yet' };
 // A set under a piece, WoW's tooltip grammar: its name and count, its pieces (loaded and held lit, missing dim, ??? until
 // found), then each bonus, lit once it's on. compact: one line of pieces, for a stash or slot row.
 export function setLines(s, uniqueId, compact = false) {
   const set = setOf(uniqueId);
   if (!set) return '';
-  const c = setCard(set.id, setHave(s));
+  const have = setHave(s), c = setCard(set.id, have), g = greenOf(uniqueId, have.worn);
+  // The piece's green line (Diablo 2's): a second small stat, grey until this piece and another of its set are loaded.
+  const green = g ? `<span class="sg${g.on ? ' on' : ''}" title="${esc(g.on ? 'On' : `Load it with another ${c.name} piece`)}">With ${g.at} pieces: ${esc(g.text)}</span>` : '';
   const pieces = c.pieces.map((p) => `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`).join('');
-  const bonuses = c.bonuses.map((b) => `<span class="sb${b.on ? ' on' : ''}${b.blocked ? ' blocked' : ''}" title="${esc(b.blocked ? `Only one 4-piece bonus at a time: ${b.blocked} reached four first and keeps it.` : b.on ? 'On' : `Wear ${b.at} pieces`)}">(${b.at}) Set: ${esc(b.text)}${b.blocked ? ` <em>${esc(b.blocked)} holds it</em>` : ''}</span>`).join('');
-  return `<span class="set-lines${compact ? ' compact' : ''}"><b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b><span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
+  const bonuses = c.bonuses.map((b) => `<span class="sb${b.on ? ' on' : ''}${b.blocked ? ' blocked' : ''}" title="${esc(b.blocked ? `Only one 4-piece bonus at a time: ${b.blocked} reached four first and keeps it.` : b.on ? 'On' : `Wear ${b.at} pieces`)}">(${b.at}) Set: ${esc(b.text)}${b.blocked ? ` <em>${esc(b.blocked)} holds it</em>` : ''}</span>${compact ? '' : subLines(b)}`).join('');
+  return `<span class="set-lines${compact ? ' compact' : ''}">${green}<b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b><span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
 }
 // The Loadout's set bonuses: each set you wear two or more of, its open bonuses, and the 4-piece rule when it bites.
 function setBonusCard(s) {
   const rows = activeSets(loaded(s)).filter((r) => r.open.length || r.blocked);
   if (!rows.length) return '';
-  const line = (r) => `<li><b class="set-name">${esc(r.name)} (${r.n}/${r.total})</b>${r.open.map((n) => `<span class="sb on">(${n}) Set: ${esc(SETS[r.id].bonuses[n].text)}</span>`).join('')}${r.blocked ? `<span class="sb blocked" title="Only one 4-piece bonus at a time: the set that reached four first keeps it.">(4) Set: ${esc(SETS[r.id].bonuses[4].text)} <em>${esc(r.blocked.by)} holds it</em></span>` : ''}</li>`;
+  const sub = subOf(s); // a class set's 4-piece: your subclass's line under it
+  const line = (r) => `<li><b class="set-name">${esc(r.name)} (${r.n}/${r.total})</b>${r.open.map((n) => `<span class="sb on">(${n}) Set: ${esc(SETS[r.id].bonuses[n].text)}</span>${Object.entries(SETS[r.id].bonuses[n].subs || {}).filter(([k]) => k === sub).map(([k, x]) => `<span class="sb sub on">${esc(SUBS[k]?.name || k)}: ${esc(x.text)}</span>`).join('')}`).join('')}${r.blocked ? `<span class="sb blocked" title="Only one 4-piece bonus at a time: the set that reached four first keeps it.">(4) Set: ${esc(SETS[r.id].bonuses[4].text)} <em>${esc(r.blocked.by)} holds it</em></span>` : ''}</li>`;
   return `<div class="set-bonus-card"><h3>Set bonuses</h3><ul>${rows.map(line).join('')}</ul></div>`;
 }
 
@@ -2517,6 +2525,7 @@ function mapSide(s, sel, node) {
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}
     ${l.relay ? '<p class="svc-line"><span class="tag you">Relay up</span></p>' : ''}
     ${rotLine(s, l)}
+    ${rareLine(s, l)}
     ${consortiumLine(s, l)}
     ${l.faction ? `<p class="svc-line fline" style="--fc:${FX[l.faction].color}">${fIcon(l.faction)}<b>${esc(FX[l.faction].short)}</b> runs it · beating its Resident takes it: ${esc(FX[l.faction].short)} −${OWNED.takeoverHit}${FX[l.faction].rivals.length ? `, ${FX[l.faction].rivals.map((r) => esc(FX[r].short)).join(' and ')} +${Math.round(OWNED.takeoverHit * 0.5)}` : ''}</p>` : ''}
     ${dropLine(s, l)}
@@ -2525,6 +2534,11 @@ function mapSide(s, sel, node) {
     <div class="row">${l.takenOver && !l.relay ? `<button type="button" class="btn" data-command="relay ${esc(l.id)}" ${kitOf(s).relay ? '' : 'disabled title="You have no relay yet."'}>Install relay${kitOf(s).relay ? ` (${kitOf(s).relay})` : ''}</button>` : ''}${!l.takenOver && !l.member && !l.passwordKnown && kitOf(s).cracker ? `<button type="button" class="btn" data-command="use cracker ${esc(l.id)}">Key cracker (${kitOf(s).cracker})</button>` : ''}${st === 'here' ? btn('net', 'Back to the run', true) : `<button type="button" class="btn ${st !== 'done' ? 'primary' : ''}" data-command="connect ${esc(l.id)}" ${busy ? 'disabled title="Finish what you are doing first"' : relockLeft(l) ? 'disabled title="Still tracing your last connection"' : ''}>${relockLeft(l) ? `Connect · ${relockLeft(l)}s` : 'Connect'}</button>${st !== 'done' ? `<button type="button" class="btn hot-btn" data-command="connect ${esc(l.id)} loud" ${busy || relockLeft(l) ? 'disabled' : ''} title="${esc(LOUD_TIP)}"><span class="loud-ico" aria-hidden="true"></span>Go loud</button>` : ''}`}${!l.member && !l.trunk && s.locations.includes(l) && MEMORY.on && !freeOfMemory(l) ? `<button type="button" class="btn small mem-x" data-command="detach ${esc(l.id)}" data-confirm="Click again to detach" ${busy ? 'disabled' : ''} title="Free a memory slot. Frozen until you attach it again.">${glyph('memory')}Detach · ${memoryCost(l)}</button>` : ''}</div></section>`;
 }
 
+// The Antenna (a Lantern Route piece, sets.mjs): a server's ★ rare spawn on its map card, the room it waits in.
+export function rareLine(s, l) {
+  const R = l.floorplan, rooms = R?.rare && seesRare(s) ? Object.keys(R.rare).filter((id) => R.rare[id] && R.graph?.rooms?.[id]) : [];
+  return rooms.length ? `<p class="svc-line"><span class="tag" title="The Antenna shows it: a rare spawn waits there until you kill it">★ Rare spawn</span> <small>${rooms.map((id) => esc(R.graph.rooms[id].path || R.graph.rooms[id].label || id)).join(', ')}</small></p>` : '';
+}
 // A server's programs (sockets.mjs) on its map card: each by name, its rule on hover, and its socket rooms.
 function programsLine(s, l) {
   const R = l.floorplan;
