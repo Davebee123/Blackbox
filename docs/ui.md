@@ -157,6 +157,8 @@ star glyph in `--amber-soft` by its name, on the fight board and in the Codex, n
 
 ## Rules for future UI work
 
+- **Show it, don't explain it** (docs/style-guide.md section 0, the designer's foundational rule). Cards are icons, numbers, bars, pips and states. Explanations go in tooltips, never in a paragraph on the card.
+
 1. Use the tokens. A new padding or gap comes from the spacing scale; a new label uses `--label` or `--kicker`.
 2. Reach for an existing component before writing a new one: card, labelled rows, item row with action,
    tag line, tiles, `.row.acts`, toggles.

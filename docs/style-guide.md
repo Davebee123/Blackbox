@@ -2,6 +2,18 @@
 
 How every line a player reads is written: tooltips, item effects, log lines, mail, tips and labels. The model is the skill tooltip the designer approved (the `help` and `short` of every ability in `dist/data.mjs` and `dist/classes/*.data.mjs`, and the key-1 rules in `SPIKE`). New text follows this page. When a rule here and a line in the game disagree, fix the line.
 
+## 0. The mantra: show it, don't explain it
+
+**The designer's rule, and it outranks everything below.** The screen shows; it does not explain. If a player has to read a paragraph to understand a card, the card is wrong.
+
+- **No explanatory nuggets.** No "Also: …", no "(each kill +12%, sold by …)", no sentence that walks the player through a mechanic on the card itself.
+- **Use the visual vocabulary first:** an icon, a number, a bar, pips, a state (lit, dim, locked, done), a colour, a position. *What adds how much* is an icon and a number on one row. *How many are left* is pips or a bar. *Not available yet* is a dim, locked row.
+- **Words are labels, not instructions:** a short name for a row ("Relay", "Trace injector"), not a sentence about it.
+- **The detail lives one step away:** a hover tooltip (or a tap on a phone), in the plain-sentence voice below. The card stays readable at a glance without it.
+- **A sentence on the card is the last resort**, used only when nothing visual can carry it, and then it is one short line.
+
+Everything below (tooltip grammar, plain sentences) is how the text in tooltips, logs, mail and tips is written. It is not a licence to put that text on the card.
+
 ## 1. Two voices
 
 **Tooltip grammar** is for anything that describes a mechanic: skills, talents, edges, statuses, item effects, rule affixes, zero-days, stats, daemons, filters, firewall tiers, buildings, architectures, a part's rules, strains, guards, bosses and tells.

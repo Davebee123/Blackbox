@@ -29,7 +29,7 @@ export const TIPS = [
 
   // ---------- map ----------
   { id: 'map-server', page: 'map', at: '.mnode.server', text: 'This is your server. It sits above the net. Viruses that attack it show up next to it.' },
-  { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is a rogue server, the way into the net. Viruses gather in its folders. Each one you kill traces a ? linked to it.' },
+  { id: 'map-zone', page: 'map', at: '.mnode.zone', text: 'This is SPRAWL-00, a rogue server where your work starts. Viruses gather in its folders. Each one you kill traces a ? server linked to it.' },
   // ---------- the rooms (the Run tab) ----------
   { id: 'socket', page: 'rooms', at: '.fp-room.k-socket', text: 'A socket room. Clear its guard once and it\'s yours to build in: a program here bends this server\'s rules, and only this server\'s.' },
   { id: 'exfil', page: 'rooms', at: '.fp-exfil', text: 'An Exfil is uploading a stolen archive off this server. It runs from you: corner it and break its Uplink before the upload finishes.' },

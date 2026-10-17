@@ -1346,30 +1346,30 @@ function filterChips(s, f, on) {
     return `<span class="fchip" title="${esc(tip)}">${glyph(FILTER_ICON[k] || 'item')}<b>${esc(label)}</b><small>${esc(k === 'strength' ? '' : what)}</small></span>`;
   }).join('');
 }
-// How to trace an unknown server. First what is tracing it now (the kills or clears next to it, with what each adds
-// and about how many are left), then the extra ways, only those open to you; the rest folds into one line.
+// How to trace an unknown server, shown rather than explained (docs/style-guide.md section 0): the way that is
+// tracing it now on top, with pips for the kills or clears still needed; then every other way as an icon, a label and
+// what it adds, dim and locked until you have it. The sentences live in the rows' tooltips.
 function traceWays(s, h, via, kit) {
   const relay = !!h.pinged, route = `ping-${h.id}.trc`, banked = !!via?.state?.taken?.['/' + route], left = 100 - h.lead;
   const fam = FAMILIES[h.family]?.name || '?', at = viaName(s, h);
   const row = (ic, label, gain, tip, state = 'on') => `<li class="tw ${state}" title="${esc(tip)}">${glyph(ic)}<span>${esc(label)}</span><b>${esc(gain)}</b></li>`;
-  // The main way: SPRAWL-00's kills (the ? closest to done goes first), or first clears of the server it hangs off.
-  let main;
-  if (h.via === CONFIG.zone.id) {
-    const per = leadOf(s, Math.min(hackerLevel(s), CONFIG.zone.maxLevel));
-    main = per > 0
-      ? `<p class="tw-main">${glyph('kill')}<span><b>Kill viruses in ${esc(at)}.</b> Each kill traces the unknown server beside it that is furthest along${left > 0 ? `, about ${Math.ceil(left / per)} more for this one` : ''}.</span><em>+${per}%</em></p>`
-      : `<p class="tw-main dim">${glyph('kill')}<span>${esc(at)}'s viruses are too far below your level to trace it now. Use the ways below.</span></p>`;
-  } else {
-    main = `<p class="tw-main">${glyph('kill')}<span><b>Clear rooms on ${esc(at)}.</b> Each room's first clear traces the servers beside it${left > 0 ? `, about ${Math.ceil(left / HIDDEN.firstClear)} more for this one` : ''}. Mapping ${esc(at)} traces it the rest of the way.</span><em>+${HIDDEN.firstClear}%</em></p>`;
-  }
+  const pips = (n) => (n > 0 ? `<span class="tw-pips" aria-label="${n} more">${'<i></i>'.repeat(Math.min(n, 10))}${n > 10 ? '<small>+</small>' : ''}</span>` : '');
+  // The main way: SPRAWL-00's kills (the ? closest to being found goes first), or first clears of the server it hangs off.
+  const zone = h.via === CONFIG.zone.id, per = zone ? leadOf(s, Math.min(hackerLevel(s), CONFIG.zone.maxLevel)) : HIDDEN.firstClear;
+  const need = per > 0 ? Math.ceil(left / per) : 0;
+  const tip = zone
+    ? (per > 0 ? `Each kill in ${at} traces the unknown server closest to being found. About ${need} more will finish this one.` : `${at}'s viruses are too far below your level to trace it.`)
+    : `The first clear of each room on ${at} traces the servers beside it. About ${need} more will finish this one. Mapping ${at} traces it the rest of the way.`;
+  const main = `<div class="tw-main${per > 0 ? '' : ' dim'}" title="${esc(tip)}">${glyph('kill')}<span class="tw-what"><b>${esc(zone ? `Kills in ${at}` : `First clears on ${at}`)}</b>${pips(need)}</span><em>${per > 0 ? `+${per}%` : '—'}</em></div>`;
   const ways = [
-    row('spike', 'Beat an invader it sends', `+${HIDDEN.winLead}%`, `If it sends an invasion, jack in and win: +${HIDDEN.winLead}%. Your wall stopping it: +${HIDDEN.blockLead}%.`),
-    relay && row(FAM_GLYPH[h.family] || 'kill', `Kill ${fam} anywhere`, `+${HIDDEN.killLead}%`, `Your relay on ${at} hears every ${fam} you kill, at home or on a run.`),
-    relay && row('relay', route, banked ? 'banked' : `+${HIDDEN.routeLead}%`, banked ? 'Banked' : `Pull it from ${at} and bank it.`, banked ? 'done' : 'on'),
-    kit.injector && row('injector', `Trace injector · ${kit.injector}`, '+30%', 'Use it below.'),
+    row('spike', 'Beat its invader', `+${HIDDEN.winLead}%`, `If it sends an invasion, jack in and win to trace it ${HIDDEN.winLead}%. If your wall stops the invasion, it traces it ${HIDDEN.blockLead}%.`),
+    relay
+      ? row(FAM_GLYPH[h.family] || 'kill', `Kill any ${fam}`, `+${HIDDEN.killLead}%`, `Your relay on ${at} hears every ${fam} you kill, at home or on a run.`)
+      : row('relay', 'Relay', `+${HIDDEN.killLead}% · +${HIDDEN.routeLead}%`, `A relay on ${at} adds ${HIDDEN.killLead}% for each kill of its family and ${HIDDEN.routeLead}% for its route file.`, 'off'),
+    relay && row('relay', route, banked ? 'Banked' : `+${HIDDEN.routeLead}%`, banked ? 'Banked.' : `Pull it from ${at} and bank it.`, banked ? 'done' : 'on'),
+    row('injector', kit.injector ? `Trace injector ×${kit.injector}` : 'Trace injector', '+30%', kit.injector ? 'Use it below.' : 'Halcyon, Kestrel and LANTERN sell them.', kit.injector ? 'on' : 'off'),
   ].filter(Boolean).join('');
-  const more = [!relay && `a relay on ${at} (each ${h.pinged || h.seen ? fam : 'kill of its family'} +${HIDDEN.killLead}%, and its route file +${HIDDEN.routeLead}%)`, !kit.injector && 'trace injectors (+30%, sold by Halcyon, Kestrel and LANTERN)'].filter(Boolean);
-  return `${main}<p class="tw-k">Other ways</p><ul class="trace-ways">${ways}</ul>${more.length ? `<p class="tw-more">Also: ${esc(more.join('; '))}.</p>` : ''}`;
+  return `${main}<ul class="trace-ways">${ways}</ul>`;
 }
 // The firewall's filters: its slots (two, and one more at each of tiers +1, +3 and +5), then what you hold. Equip and
 // scrap at home; each one's stats on one line, its rarity in its colour.
@@ -2579,8 +2579,8 @@ function mapSide(s, sel, node) {
     const h = node.hidden, via = s.locations.find((x) => x.id === h.via), flag = hiddenFlagged(s, h), kit = kitOf(s);
     const job = openContracts(s).find((c) => c.hidden === h.id && !c.loc);
     return `<section class="card${flag ? ' alert' : ''}"><h2>Unknown server · floor ${h.depth}</h2><h1>?</h1>
-      <p class="svc-line">past ${esc(viaName(s, h))} · signal <span class="sigbars">${'▮'.repeat(h.signal)}${'▯'.repeat(5 - h.signal)}</span></p>
-      <p class="svc-line">${h.pinged || h.seen ? `<span class="tag fam-tag" title="Its virus family. Kills of this family trace it once a relay pings it.">${glyph(FAM_GLYPH[h.family] || 'kill')}${esc(FAMILIES[h.family]?.name || h.family)}</span>` : `<span class="tag dim" title="A relay on ${esc(via?.name || 'the server next to it')} reads its family (so does an invader from it)">${glyph('kill')}family ?</span>`}</p>
+      <p class="svc-line">Past ${esc(viaName(s, h))} · Signal <span class="sigbars">${'▮'.repeat(h.signal)}${'▯'.repeat(5 - h.signal)}</span></p>
+      <p class="svc-line">${h.pinged || h.seen ? `<span class="tag fam-tag" title="Its virus family. Kills of this family trace it once a relay pings it.">${glyph(FAM_GLYPH[h.family] || 'kill')}${esc(FAMILIES[h.family]?.name || h.family)}</span>` : `<span class="tag dim" title="A relay on ${esc(via?.name || 'the server next to it')} reveals its family. So does an invader it sends.">${glyph('kill')}Family unknown</span>`}</p>
       ${flag && job ? `<p class="svc-line"><span class="tag">Contract</span> ${esc(contractTitle(s, job))}</p>` : ''}
       <div class="lvl-row"><span class="lvl-bar"><span style="width:${h.lead}%"></span></span><small>${h.lead}% traced</small></div>
       ${traceWays(s, h, via, kit)}
@@ -3148,7 +3148,7 @@ function marketMarkup(s, f, now) {
 }
 const GLYPH_OF_GOOD = { relay: 'relay', cracker: 'cracker', injector: 'injector', signal: 'signal', repair: 'repair', cipher: 'cipher', worm: 'worm', kernel: 'kernel', exploit: 'exploit', salvage: 'salvage', crate: 'crate', blueprint: 'blueprint' };
 
-// Your first class, picked right after you log in: a full-screen choice of four, each with its emblem, its idea,
+// Your first class, picked right after you log in: a full-screen choice of four, each with its emblem, what it does,
 // its passive and Sync, the two skills it starts with and the subclasses it opens. Pick one, then start
 // (app.js pickClass). Switching is free until a class reaches LOADOUT.trialUntil (your level comes along).
 export function classPickMarkup() {
@@ -3159,7 +3159,7 @@ export function classPickMarkup() {
       <span class="pk-num">0${i + 1}</span>
       <span class="pk-plate"><pre class="pk-art" aria-hidden="true">${esc(EMBLEMS[k].join('\n'))}</pre></span>
       <span class="pk-name">${esc(a.name)}</span>
-      <span class="pk-idea">${esc(a.idea)}</span>
+      <span class="pk-does">${esc(a.does)}</span>
       <span class="pk-role">${a.role.map((r) => `<span>${esc(r)}</span>`).join('')}</span>
       <span class="pk-sec"><span class="pk-k">Passive</span><b>${esc(a.passive.name)}</b><small>${esc(a.passive.rule)}</small></span>
       <span class="pk-sec"><span class="pk-k">Sync</span><small>${esc(SYNC[k].rule)}</small></span>
@@ -3170,6 +3170,6 @@ export function classPickMarkup() {
   return `<div class="pk-scene" role="dialog" aria-label="Choose your class">
     <header class="pk-head"><span class="bb-logo pk-logo" aria-hidden="true"></span><h2>Choose your class</h2><p>Switch freely on the Loadout page until level ${LOADOUT.trialUntil}. Your level comes with you.</p></header>
     <div class="pk-grid" role="radiogroup" aria-label="Classes">${cards}</div>
-    <footer class="pk-foot"><span class="pk-hint">1–4 or click to choose · Enter to start</span><button type="button" class="btn primary pk-go" disabled>Choose a class</button></footer>
+    <footer class="pk-foot"><span class="pk-hint">Press 1–4 or click a class to choose it. Press Enter to start.</span><button type="button" class="btn primary pk-go" disabled>Choose a class</button></footer>
   </div>`;
 }
