@@ -234,8 +234,10 @@ WORLD_hook('up', (s, room, at) => {
 });
 WORLD_hook('back', (s, room) => { if (!room.wild) return undefined; const sp = spawnOf(s, room); return sp && !sp.alive ? sp.respawnAt ?? null : null; });
 WORLD_hook('from', (s, room) => { if (!room.wild) return undefined; const sp = spawnOf(s, room); return sp && !sp.alive ? sp.diedAt ?? (sp.respawnAt - 180000) : null; });
+// A server you hold is on the farm timers like a Mapped one (FP.farmed).
+WORLD_hook('held', (s) => !!locOf(s)?.takenOver);
 WORLD_hook('respawn', (s, room) => {
-  const loc = locOf(s), base = FP.ROOMS.respawn[room.kind === 'core' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process'];
+  const loc = locOf(s), base = FP.respawnBase(s, room);
   return loc?.trait === 'hostile' ? base * NET.hostile : base;
 });
 WORLD_hook('level', (s) => { const loc = locOf(s); return loc ? levelOf(loc) : undefined; });

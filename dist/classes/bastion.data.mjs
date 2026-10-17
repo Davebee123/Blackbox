@@ -6,7 +6,7 @@
 // at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree has the same shape as
 // before: three filler rows of two ranked nodes, and three tiers of two picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t } from './kit.mjs';
+import { f, t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // Fields the engine reads generically: taunt (draw fire in a crew), once, ally. The rest (cut, cap,
@@ -84,6 +84,11 @@ export const subs = {
       [t('counterflow', 'Counterflow', 'Retaliate also sends back everything Blowback has stored.'), t('write-protect', 'Write Protect', 'Harden grants 2 ◆, but costs 10% of your max Signal.')],
       [t('uptime', 'Uptime', 'A hit that would drop you to 0 leaves you at 1 instead. Works once per fight.'), t('kernel-panic', 'Kernel Panic', 'Your hits deal 30% more damage while you are below a third of your max Signal.')],
     ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('iron-curtain', 'Iron Curtain', ['The part that last hit you deals 15% less damage to you.', 'The part that last hit you deals 30% less damage to you.'], [0.15, 0.3]),
+      c('eye-for-an-eye', 'Eye for an Eye', ['Each attack that hits you deals 40% of its damage back to the part that made it.', 'Each attack that hits you deals 80% of its damage back to the part that made it.'], [0.4, 0.8]),
+    ],
   },
   sysop: {
     name: 'Sysop', role: ['Healer', 'Support'], idea: 'Keep everyone up, and the logs clean.', solo: 'Slow alone. Its hits are small, but it keeps itself standing.', crew: 'The healer: keeps the crew standing and undoes what the virus does.', lean: 'crew',
@@ -107,6 +112,11 @@ export const subs = {
       [t('service-pack', 'Service Pack', 'Patch heals for 10 up front, instead of 4.'), t('ping-flood', 'Ping Flood', 'Multicast also deals damage to every part equal to what it heals.')],
       [t('critical-path', 'Critical Path', 'Your heals on anyone below a third of their max Signal heal 50% more.'), t('redistribute', 'Redistribute', 'Reclaim heals the lowest crewmate as much as it heals you. Alone, it heals you twice as much.')],
       [t('overcommit', 'Overcommit', 'Overprovision holds twice as much shield.'), t('loopback', 'Loopback', 'Every heal you cast also heals you for a third of it.')],
+    ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('root-cause', 'Root Cause', ['Your heals also deal 15% of their size as damage to the part that last hit you.', 'Your heals also deal 30% of their size as damage to the part that last hit you.'], [0.15, 0.3]),
+      c('warm-standby', 'Warm Standby', ['You start each fight with a shield of 10% of your max Signal.', 'You start each fight with a shield of 20% of your max Signal.'], [0.1, 0.2]),
     ],
   },
 };

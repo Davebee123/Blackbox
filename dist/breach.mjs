@@ -421,6 +421,7 @@ export function spendTalents(s, { cls = classOf(s), level = hackerLevel(s), sub 
       if (!n) { picks[+id[1]] = tp[+id[1]]; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
     }
     s.loadout.picks[key] = picks; s.loadout.ranks[key] = ranks;
+    if (level >= LOADOUT.capstoneAt[0]) (s.loadout.caps ||= {})[key] = 0; // the first capstone
   }
   return kit || null;
 }

@@ -22,6 +22,8 @@ import { learnFilter } from './filters.mjs';
 export function levelGains(arch, L, top = 0) {
   const out = [];
   if (gainsTalent(L)) out.push('a talent point');
+  if (L === LOADOUT.capstoneAt[0]) out.push('a capstone point (pick one of two capstones)');
+  if (L === LOADOUT.capstoneAt[1]) out.push("your capstone's second rank");
   const slot = PROTOCOL_SLOTS.find((x) => x.level === L);
   if (slot && L > 1) out.push(L === 15 ? 'a protocol slot (Implant), and Implants start to drop' : 'a protocol slot');
   const bases = Object.values(BASES).filter((b) => b.level === L && L > 1 && !b.uniqueOnly);

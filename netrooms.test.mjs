@@ -152,13 +152,21 @@ test('losing a fight on rooms disconnects you and loses the pack; progress stays
   assert.ok(loc.floorplan.opened[loc.floorplan.graph.vaults[0]], 'the vault stays open');
 });
 
-test('respawns run at real speed: a process room 15 minutes, a guard post 20, an elite 45; a rogue room stays down for the run', () => {
+test('respawns run at real speed: a process room 15 minutes, a guard post 20, an elite 45 while you explore; 2, 3, 5 and the Core 10 once it is Mapped or yours; a rogue room stays down for the run', () => {
   const { s, loc } = traced();
   play(s, 'connect ' + loc.id);
   const kinds = Object.fromEntries(FP.roomList(s).filter((r) => FP.FIGHTS.includes(r.kind)).map((r) => [r.kind, FP.respawnMs(s, r)]));
   assert.equal(kinds.process, 15 * 60000);
   assert.equal(kinds.guard, 20 * 60000);
   if (kinds.elite) assert.equal(kinds.elite, 45 * 60000);
+  // Held: the farm timers.
+  loc.takenOver = true;
+  const held = Object.fromEntries(FP.roomList(s).filter((r) => FP.FIGHTS.includes(r.kind)).map((r) => [r.kind, FP.respawnMs(s, r)]));
+  assert.equal(held.process, 2 * 60000);
+  assert.equal(held.guard, 3 * 60000);
+  if (held.elite) assert.equal(held.elite, 5 * 60000);
+  if (held.core) assert.equal(held.core, 10 * 60000);
+  loc.takenOver = false;
   play(s, 'jack out');
   // A rogue server: a fight room for every folder (and its quiet rooms: exfil.test.mjs); a cleared one stays down for the run.
   for (let i = 0; i < 40 && !s.locations.some((l) => l.rogue && !l.farm); i++) { (s.net ||= {}).rogueDry = ROGUE.pity; command(s, 'developer location worm'); }

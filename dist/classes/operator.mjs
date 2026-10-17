@@ -24,7 +24,7 @@
 //   blackhole              its next attack does nothing (Blackhole).
 //   poisonedUntil, poison  Cache Poison: its patches and heals turn into damage.
 // Held attacks resolve in cycle(), which runs after a player's turn and before the virus attacks.
-import { alliesOf, subOf, subEdge, hasTalent, rank, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers } from '../combat.mjs';
+import { alliesOf, subOf, subEdge, hasTalent, rank, capValue, emit, hit, heal, part, alive, livingParts, helpersOn, helperCap, on, buffed, scaled, soonestAttacker, classOf, attackAmount, toIntent, usable, intents, defender, previewDamage, readyIn, patchDelay, restoreMult, openProc, attackers } from '../combat.mjs';
 import { ABILITIES } from '../data.mjs';
 import { chargeNow, tellOn, tellOpen, landsAt, tellAnswer, chargeSize } from '../tells.mjs';
 
@@ -341,10 +341,11 @@ export default {
     },
     takeover: (s, { a, target, e }) => {
       if (!alive(target)) return;
-      target.takeoverUntil = e.cycle + a.cycles - 1;
+      const n = a.cycles + capValue(s, 'puppet-master'); // Puppet Master (Hijacker capstone): it holds longer
+      target.takeoverUntil = e.cycle + n - 1;
       target.takeoverAt = e.commanding?.at ?? e.cycle;
       jamMark(s, target);
-      emit(s, 'status', `${target.name} is taken over for ${cycles(a.cycles)}. Its attacks land on its own side at full damage.`, { target: target.id, ability: 'takeover' });
+      emit(s, 'status', `${target.name} is taken over for ${cycles(n)}. Its attacks land on its own side at full damage.`, { target: target.id, ability: 'takeover' });
     },
     'echo-cancel': (s, { a, target, e }) => {
       if (!alive(target)) return;
@@ -439,10 +440,18 @@ export default {
     resolveHeld(s);
   },
   // Cache Poison (Hijacker): a poisoned part's attacks deal less, on anyone.
-  taken(s, atk, p) { return p && on(s, p, 'poisoned') ? 1 - A('cache-poison').weaken : 1; },
+  // Dead Air (Hijacker capstone): a Jammed part's attacks land softer on you.
+  taken(s, atk, p) { return (p && on(s, p, 'poisoned') ? 1 - A('cache-poison').weaken : 1) * (p?.jammedUntil >= s.encounter?.cycle ? 1 - capValue(s, 'dead-air') : 1); },
   // Load Shed (Herder): the next attack is split over your helpers; each loses that much of what it had left.
   absorb(s, amount, atk, p) {
     const e = s.encounter;
+    // Sandbox (Herder capstone): your oldest helper takes a share of the hit and ends.
+    const box = e && amount > 0 && classOf(s) === 'operator' && e.helpers?.length ? capValue(s, 'sandbox') : 0;
+    if (box) {
+      const took = Math.round(amount * box), h = e.helpers.shift();
+      emit(s, 'blocked', `Sandbox: your helper on the ${part(s, h.target)?.name || 'virus'} takes ${took} of ${atk?.name || 'the attack'} and ends.`, { source: p?.id, mark: 'helper' });
+      amount -= took;
+    }
     if (!e?.loadShed || classOf(s) !== 'operator' || !(amount > 0)) return amount;
     e.loadShed = false;
     const hs = e.helpers;
@@ -467,6 +476,9 @@ export default {
   },
   hit(s, p, res, opts) {
     const e = s.encounter;
+    // Thundering Herd (Herder capstone): every helper hit lands a share on every other part, past armor.
+    const herd = res.dealt > 0 && ['Helper', 'Last Gasp', 'Zombie Process'].includes(opts.by) && classOf(s) === 'operator' ? capValue(s, 'thundering-herd') : 0;
+    if (herd) { const n = Math.max(1, Math.round(res.dealt * herd)); for (const x of livingParts(s)) if (x !== p && alive(x)) hit(s, x, n, { by: 'Thundering Herd', pierce: true, noHook: true, server: true }); }
     // Mesh (Herder): a helper hit that does damage splashes half onto every other part.
     if (res.dealt > 0 && (opts.by === 'Helper' || opts.by === 'Last Gasp') && buffed(e, 'mesh') && classOf(s) === 'operator') {
       const half = Math.max(1, Math.round(res.dealt * A('mesh').share));

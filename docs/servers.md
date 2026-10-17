@@ -62,10 +62,10 @@ A room is a fight or an interactable, or empty. Each kind has a mark on the room
 
 | Room | Mark | Kind | What happens | Respawns |
 |---|---|---|---|---|
-| Process | ▣ | fight | A wild virus of the server's author at the server's level, rolled genome and attack set (4.1). | 15 min after it falls |
+| Process | ▣ | fight | A wild virus of the server's author at the server's level, rolled genome and attack set (4.1). | 15 min after it falls (2 once the server is Mapped or yours: docs/progression.md 7) |
 | Nest | ▦ | fight | A group: two viruses of the author, or one Botnet, as one fight (section 4.4). Pays 1.5× a kill. | 20 min |
-| Elite | ◆▣ | fight | An elite (5.2× Integrity, two mutations, an extra tell). | 45 min |
-| Guard post | ⛨ | fight | A guard or Kestrel ICE (Watchdog, Sentinel, Crawler, Shredder, Tracer, Bouncer). While the vault is shut, it holds the vault's **key** (2.4). | 20 min |
+| Elite | ◆▣ | fight | An elite (5.2× Integrity, two mutations, an extra tell). | 45 min (5 once Mapped or yours) |
+| Guard post | ⛨ | fight | A guard or Kestrel ICE (Watchdog, Sentinel, Crawler, Shredder, Tracer, Bouncer). While the vault is shut, it holds the vault's **key** (2.4). | 20 min (3 once Mapped or yours) |
 | Core | ♛ | fight | The Resident: the server's boss. Sealed until the vault is open. | Never on a held server |
 | Den | ☠ | fight | Where the server's **hunter** lives (2.5). Some hunters sleep here, others start their patrol from it. | Its hunter is back every visit |
 | Cache | ▤ | interactable | Credits, code and components, now and then a script. One in four is **bait**: `cat` it first, or pulling it costs 10% of your max Signal (the old `bait.dat`). | Refills 2 h after you take it |
@@ -845,7 +845,7 @@ What the numbers say: a process fight costs 12–23% of the bar (the doc's 20–
 
 **In it:** the R1 row of 9.1.
 - *Servers as rooms.* A traced server is the R0 generator's graph from its seed: its template is its kind (relay Relay, mailhub Mailhub, mirror Mirror, archive Archive, lab Lab), its family's crew (or its faction) the author, its layer the floor, its size its own. Its guard post holds the vault's key; the vault holds what its old vault did (a protocol kit, code, a trace record, plans, blueprints, source, a contract's planted file), all into the pack when it opens; the Resident waits in the Core. Beat it with the vault open and the server is taken over (teal on the map, its Core quiet for good). SPRAWL-00, rogue servers (Nest, Pit, Gauntlet), lairs and KESSLER-FARM-00 are their folders as rooms, linked as the folder tree and named for what they are (Process 2, Elite 1, Core; the folder still answers `cd`), every room a fight on its folder's own spawn and timer; RELAY-KING's `/net/relay` and a lair's `/core` are Cores; the farm's packs are elite rooms, its three crew bosses boss rooms (♛), its ledger a vault that opens once the Foreman and the Heatsink are down. Progress (Rooms n/N, Mapped and its reward, what's opened and taken) lives on the server in the save.
-- *Clocks* run at real speed: a process room 15 minutes, a guard post 20, an elite 45 (2.7, 10.8); a wild server keeps its folders' timers (SPRAWL-00 90 seconds, a rogue folder 3–5 minutes).
+- *Clocks* run at real speed: a process room 15 minutes, a guard post 20, an elite 45 (2.7, 10.8), and 2, 3 and 5 once the server is Mapped or yours (docs/progression.md 7); a wild server keeps its folders' timers (SPRAWL-00 90 seconds, a rogue folder 3–5 minutes).
 - *Takeover and Root* (2.8). Root counts respawned fight rooms cleared on a held server: Root 2 after 5 (a stash room opens beside the Core), 3 after 15 (no memory, no invasions), 4 after 30, 5 after 50 (rare spawns twice as often). Root 4's "one more socket room" is R2: until then it's the old building slot.
 - *Tells simplified* (3.5): every solo fight carries the interrupt (crew bosses and the breach build keep their own rules); tells are the big moves (none to level 5, one from 6, two from 17, an elite one more); the burst, the windows by tier, landing plain and the bots' burst bookkeeping are gone; a charge is cut on its cycle, a cast SIGINTed or cut in its two-cycle window. The bots cut big moves first (never into a Mimic's beat) and leave a boss's ♛ part for last while its phases remain. Linked tells are R4.
 - *The boss rule* is (a) everywhere; `developer bossrule a|b|c` switches it.

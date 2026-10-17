@@ -126,3 +126,22 @@ const band = () => () => {
   assert.deepEqual(off, []);
 };
 test('target band: a fight at your level costs every subclass 35–45% at Lv 10, 18 and 30 (the Sysop 45–55% from Lv 18; 28–55% at Lv 1), within about 10 points', { todo: 'with the gear each subclass chases: Lv 1 Bastion, Infiltrator and Operator run 15–21%; the Phantom 29% at Lv 10, 32% at 18 and 28% at 30; the Payload 34% at Lv 10 and 49% at 30; the Warden (Signal on its gear) 29% at Lv 18 and 34% at 30, the Hijacker 34% at 18 and 46% at 30; the Demolitionist 28% at Lv 18 and 27% at 30; the Sysop 41–46% on these 24 fights' }, band());
+
+// The capstone row (levels 45 and 50, docs/progression.md 7): at Lv 50, with either capstone at rank 2, every subclass
+// still wins 85% and stays under its solo ceiling; neither pick is a trap (no more than 3 points worse than none) or a
+// must (the two within 8 points of each other). Most pairs are a pace pick against a safety pick, so one cuts cycles
+// and the other Signal. (At Lv 50 the Phantom, Herder, Sysop and Warden already sit under the solo band's floor of
+// 15 with no capstone: the floor is held from 10 to 30.)
+test('capstones at Lv 50: either pick keeps every subclass winning and under its ceiling, neither a trap nor a must', () => {
+  const b = BRACKETS.at(-1), off = [];
+  for (const [c, sub] of SUBS) {
+    const [none, a, z] = [null, 0, 1].map((capstone) => score(c, b, { sub, capstone }));
+    for (const [r, k] of [[a, 'a'], [z, 'b']]) {
+      if (r.wins < 0.85 * r.total) off.push(`${sub} ${k}: ${r.wins}/${r.total}`);
+      if (r.lost > soloBand(sub)[1]) off.push(`${sub} ${k}: ${r.lost.toFixed(0)}% lost`);
+      if (r.lost > none.lost + 3) off.push(`${sub} ${k}: ${r.lost.toFixed(1)}% against ${none.lost.toFixed(1)}% with none`);
+    }
+    if (Math.abs(a.lost - z.lost) > 8) off.push(`${sub}: ${a.lost.toFixed(1)}% against ${z.lost.toFixed(1)}%`);
+  }
+  assert.deepEqual(off, []);
+});

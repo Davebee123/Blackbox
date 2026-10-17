@@ -54,6 +54,7 @@ Ranked rows take up to 3 points each. Each tier asks you to pick one of two tale
 | Tier 2 | Hive: you can run 9 helpers at once. | Hydra: when a part breaks, each of your helpers on it moves to the next part and splits in two, up to your cap. |
 | Ranks 3 | Load Balancer: you take 3% less damage from attacks per rank. | GC Tuning: Garbage Collect deals 30% more per rank. |
 | Tier 3 | Zombie Process: Last Gasp hits twice, so each helper hits two more times as it expires. | Supervisor: Kill Switch makes Deploy ready again. |
+| Capstone (45, rank 2 at 50) | Thundering Herd: your helper hits also deal 15% of their damage to every other part (30%). | Sandbox: when an attack hits you, your oldest helper takes 15% of it and ends (30%). |
 
 Hive and Hydra pull the swarm in different directions. Hive lets you stack more helpers on one part, and Hydra rewards spreading them and finishing parts one at a time. Zombie Process suits long-running helpers that you let expire, and Supervisor suits a Deploy and Kill Switch rhythm.
 
@@ -95,6 +96,7 @@ A Hijacker needs a helper on the right part at the right time. Spawn is the chea
 | Tier 2 | Double Agent: Hijack takes the part's next two attacks. | Crosstalk: a hijacked hit lands on every other part, not just one. |
 | Ranks 3 | Load Balancer: you take 3% less damage from attacks per rank. | Packet Capture: Replay hits 5 harder per rank. |
 | Tier 3 | Full Duplex: Jammed parts take 40% more from everyone instead of 20%. | Kill Chain: breaking a Jammed part makes Jam, Spoofed ACK and Hijack ready again. |
+| Capstone (45, rank 2 at 50) | Puppet Master: Takeover lasts 1 cycle longer (2). | Dead Air: Jammed parts deal 25% less damage to you (50%). |
 
 Long Jam holds one attack for longer, and Loopback lets you Jam every other cycle without feeding the part new helpers. Double Agent is the safer pick against one big hitter. Crosstalk pays off against viruses with three or more parts. Full Duplex makes the whole crew hit a Jammed part harder, and Kill Chain keeps the control skills turning over when you break what you Jam.
 

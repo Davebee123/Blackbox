@@ -50,6 +50,8 @@ export function build(s, cls, b, opts) {
   }
   if (opts.picks) s.loadout.picks[key] = opts.picks;
   if (opts.ranks) s.loadout.ranks[key] = opts.ranks;
+  // The capstone (from level 45, rank 2 at 50): opts.capstone 0 or 1, the first by default; null for none.
+  if (kit && b.level >= LOADOUT.capstoneAt[0] && opts.capstone !== null) s.loadout.caps = { [key]: opts.capstone ?? 0 };
   if (opts.extra) s.loadout.equipped[key] = [...skillOrder(cls).slice(0, 4), opts.extra];
   if (opts.bar) s.loadout.equipped[key] = [...opts.bar]; // a bar of your own (the press-diversity test puts each unlock on it)
   // Protocols: a Tuned one in every open slot at the bracket's level, except an implant slot below

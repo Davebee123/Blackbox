@@ -62,7 +62,13 @@ export const ROOMS = {
   move: 0.03, moveDeep: 0.04, // a room's first entry on a visit, of your max Signal, a room you've been in (from floor 5: 4%)
   moveNew: 0.05, moveNewDeep: 0.06, // and one you never have: stepping into the unknown costs more
   force: 0.15, bait: 0.1, rest: 0.3, // forcing a vault, pulling bait, the rest room
-  respawn: { process: 15, elite: 45, guard: 20, core: 60, cache: 120 }, // minutes (the core: R0 has no takeover, so it comes back like a lair's)
+  // Respawns, in minutes. A server you've Mapped or hold is a farm: at real play's 150 kills an hour (LOOT.killsPerHour)
+  // a medium server's fights take about 4 minutes, so its rooms are back as you finish (respawn). Until then it keeps
+  // the slow timers (respawnNew): a rest at home takes 3 to 5 minutes, and on the farm timers every visit would fight its
+  // way back down the spine (the rooms sim mapped 0 servers in 12). Caches and puzzle boards: 2 hours either way. The
+  // core: R0 has no takeover, so it comes back on its own.
+  respawn: { process: 2, elite: 5, guard: 3, core: 10, cache: 120 },
+  respawnNew: { process: 15, elite: 45, guard: 20, core: 60 },
   speed: 1, // the playtest runs the clocks ten times as fast (app.js)
   reconnect: 30000, // after you leave, the server takes you back this much later
   rare: 0.1, rareLevel: 2,
@@ -476,7 +482,12 @@ const rnd = (R, salt = 0) => seeded((R.seed * 2654435761 + (++R.rolls) * 40503 +
 
 // ---------- time: respawns, refills, rest ----------
 // A fight room's virus is up: it never fell, or its timer ran out and you're not standing in it.
-export const respawnMs = (s, room) => mins(s, ((world(s) ? ask('respawn', s, room) : undefined) ?? ROOMS.respawn[room.kind === 'core' || room.kind === 'boss' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process']) * (runs(s, 'cron') && !['core', 'boss'].includes(room.kind) ? 0.5 : 1)); // a Cron Spawner: twice as fast
+// A server on the farm timers (ROOMS.respawn): Mapped, or yours (the network says: netrooms.mjs 'held').
+export const farmed = (s) => !!s.rooms?.mapped || !!(world(s) && ask('held', s));
+const respawnKind = (room) => (room.kind === 'core' || room.kind === 'boss' ? 'core' : room.kind === 'guard' ? 'guard' : room.kind === 'elite' ? 'elite' : 'process');
+// A room's respawn in minutes, before a Cron Spawner or a Hostile server: the farm timers once farmed, else the slow ones.
+export const respawnBase = (s, room) => (farmed(s) ? ROOMS.respawn : ROOMS.respawnNew)[respawnKind(room)];
+export const respawnMs = (s, room) => mins(s, ((world(s) ? ask('respawn', s, room) : undefined) ?? respawnBase(s, room)) * (runs(s, 'cron') && !['core', 'boss'].includes(room.kind) ? 0.5 : 1)); // a Cron Spawner: twice as fast
 export function isUp(s, room, now = nowOf()) {
   const R = s.rooms, at = R.down[room.id];
   if (!FIGHTS.includes(room.kind)) return false;
@@ -567,6 +578,7 @@ function mapped(s) {
   const xp = Math.round(deedXpFor(s, R.level, ROOMS.xp.mapped));
   gainXp(s, xp, `${R.name} Mapped`, 'breakin'); // exploration XP (the old break-ins' share): finishing a server
   say(s, `MAPPED. ${it ? `${itemLabel(it)} goes in your bank. ` : ''}+${xp} XP.`, 'rooms-good');
+  say(s, `${R.name}'s rooms now respawn fast: a fight room in ${ROOMS.respawn.process} minutes, a guard post in ${ROOMS.respawn.guard}, an elite in ${ROOMS.respawn.elite}.`, 'rooms-good');
   if (R.world) ask('mapped', s);
 }
 
@@ -1503,6 +1515,7 @@ export function outfit(s, { cls = 'breaker', level = 10, sub = null, rarity = 't
       if (!n) { picks[+id[1]] = 0; left--; } else { const k = Math.min(n, left); ranks[id] = (ranks[id] || 0) + k; left -= k; }
     }
     s.loadout.picks[pickSub] = picks; s.loadout.ranks[pickSub] = ranks;
+    if (level >= LOADOUT.capstoneAt[0]) (s.loadout.caps ||= {})[pickSub] = 0; // the first capstone
   }
   for (let i = 0; i < protocolSlots(level); i++) {
     if (SLOT_KINDS[i] === 'implant' && level < 15) continue;

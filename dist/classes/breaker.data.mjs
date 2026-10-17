@@ -6,7 +6,7 @@
 // at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree has the same shape as
 // before: three filler rows of two ranked nodes, and three tiers of two picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t } from './kit.mjs';
+import { f, t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // damage 0 with a number in the help: breaker.mjs deals it (it depends on armor, Momentum or a timer).
@@ -125,6 +125,11 @@ export const subs = {
       [t('cascade-failure', 'Cascade Failure', 'The first part you break in each fight resets all your cooldowns.'), t('meltdown', 'Meltdown', 'Thermal Runaway also burns every other part for half damage.')],
       [t('total-overkill', 'Total Overkill', 'Overkill spills onto every other part, not just the next one.'), t('scorched-earth', 'Scorched Earth', 'Parts cannot patch their ◆ back while you are in the fight.')],
     ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('structural-failure', 'Structural Failure', ['When you break a part, every other part loses 1 ◆.', 'When you break a part, every other part loses 2 ◆.'], [1, 2]),
+      c('load-bearing-wall', 'Load-Bearing Wall', ['The last part standing deals 30% less damage to you.', 'The last part standing deals 60% less damage to you.'], [0.3, 0.6]),
+    ],
   },
   overclocker: {
     name: 'Overclocker', role: ['DPS', 'Burst'], idea: 'Run it hot until something melts.', solo: 'The biggest single hits in the game.', crew: 'Deletes the part that matters.', lean: 'solo',
@@ -147,6 +152,11 @@ export const subs = {
       [t('hair-trigger', 'Hair Trigger', 'Overload deals 35 damage, and its cooldown is 2 cycles.'), t('feedback-loop', 'Feedback Loop', 'Each critical strike you land grants you 1 Momentum.')],
       [t('core-dump', 'Core Dump', 'Segfault also deals triple damage to a part below 30% Integrity.'), t('burn-in', 'Burn-in', 'Thermal Throttle spends only half your Momentum stacks.')],
       [t('unsafe-mode', 'Unsafe Mode', 'You deal 30% more damage and take 20% more.'), t('critical-heat', 'Critical Heat', 'Every hit you land is a critical strike while you have 4 or more Momentum stacks.')],
+    ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('arc-flash', 'Arc Flash', ['Thermal Throttle also deals 25% of its damage to the part whose attack lands soonest.', 'Thermal Throttle also deals 50% of its damage to the part whose attack lands soonest.'], [0.25, 0.5]),
+      c('thermal-paste', 'Thermal Paste', ['Each Momentum stack you spend heals you for 1% of your max Signal.', 'Each Momentum stack you spend heals you for 2% of your max Signal.'], [0.01, 0.02]),
     ],
   },
 };

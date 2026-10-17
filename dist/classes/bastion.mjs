@@ -23,7 +23,7 @@
 //              [{ id, name, amount, left, from, cap, crit, loop }] (cap: the healer's Overprovision cap,
 //              0 without the edge; crit: Critical Path; loop: the healer's name, for Loopback)
 //   e.standby  Hot Standby: the next attack that would drop this player to 0 leaves them at 1
-import { slotsOf, subOf, subEdge, hasTalent, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
+import { slotsOf, subOf, subEdge, hasTalent, capValue, soonestAttacker, rank, emit, heal, hit, alive, part, livingParts, defender, alliesOf, buffed, on, scaled, attackAmount, gapTaken, levelGap, classOf, usable, intents, toIntent, readyIn, knownSkills, healScaled, restoreMult, previewDamage, attackers, openProc } from '../combat.mjs';
 import { ABILITIES, SKILLS } from '../data.mjs';
 import { tankMove, healMove, cleanse, savePatch, saveBulkhead } from '../raid.mjs';
 import { tellOn, tellOpen, tellAnswer, undoCast, landsAt } from '../tells.mjs';
@@ -70,9 +70,21 @@ function mend(s, to, amount, label, opts = {}) {
   const room = d.max - d.integrity;
   heal(to, amount, label);
   overprovision(to, amount - Math.min(amount, room), opts.cap ?? capOf(s));
+  if (!opts.looped) rootCause(s, amount);
   const loop = 'loop' in opts ? opts.loop : hasTalent(s, 'loopback') ? s : null;
   if (loop && !opts.looped && amount > 0) mend(loop, loop, Math.max(1, Math.round(amount / 3)), 'Loopback', { looped: true, crit: false, cap: opts.cap ?? capOf(loop), loop: null });
   return amount;
+}
+// Root Cause (Sysop capstone): each heal you cast also hits the part that last hit you (else the one attacking soonest)
+// for a share of its size, past armor. A heal that hit causes (Maintenance Window's) doesn't hit again.
+let rooting = false;
+function rootCause(s, amount) {
+  const v = capValue(s, 'root-cause'), e = s.encounter;
+  if (!v || !e || rooting || !(amount > 0)) return;
+  const t = alive(part(s, e.grudge)) ? part(s, e.grudge) : soonestAttacker(s);
+  if (!t) return;
+  rooting = true;
+  try { hit(s, t, Math.max(1, Math.round(amount * v)), { mine: true, by: 'Root Cause', pierce: true, noHook: true }); } finally { rooting = false; }
 }
 // The heal event a generic heal just wrote for this player (Patch's, Reclaim's): how much it healed.
 function lastHeal(to, label) {
@@ -451,6 +463,9 @@ export default {
   start(s) {
     const e = s.encounter;
     e.ledger = 0; e.hots = []; e.standby = false;
+    // Warm Standby (Sysop capstone): every fight starts behind a shield.
+    const warm = capValue(s, 'warm-standby');
+    if (warm) { const n = Math.max(1, Math.round(defender(s).max * warm)); e.shield = (e.shield || 0) + n; emit(s, 'status', `Warm Standby: you start shielded for ${n}.`, { mark: 'shield' }); }
     const sub = classOf(s) === 'bastion' && s.who && s.host && !s.guest ? subOf(s) : null;
     if (BOT_BAR[sub]) { const known = knownSkills(s, 'bastion'); s.loadout.equipped[sub] = BOT_BAR[sub].filter((id) => known.includes(id)).slice(0, slotsOf(s, 'bastion')); }
   },
@@ -480,6 +495,9 @@ export default {
     // Heartbeat (Sysop) running on you: a charged hit deals half.
     if (atk.tell && e.hots?.some((h) => h.id === 'heartbeat' && h.left > 0)) m *= 0.75;
     if (classOf(s) === 'bastion' && subOf(s) === 'warden' && usable(s).includes('blowback')) e.ledger = (e.ledger || 0) + attackSize(s, atk, p);
+    // Iron Curtain (Warden capstone): the part that last hit you hits you softer.
+    const curtain = capValue(s, 'iron-curtain');
+    if (curtain && p && e.grudge === p.id) m *= 1 - curtain;
     return m;
   },
   // Circuit Breaker caps a hit at a tenth of your max (the rest goes to Blowback); Honeypot takes some off the next.
@@ -498,6 +516,9 @@ export default {
   // Hot Standby: an attack that drops a player on standby to 0 leaves them at 1.
   struck(s, atk, dealt, p) {
     const e = s.encounter, d = defender(s);
+    // Eye for an Eye (Warden capstone): a share of what lands goes back into the part that sent it.
+    const eye = capValue(s, 'eye-for-an-eye');
+    if (eye && dealt > 0 && alive(p) && livingParts(s).includes(p)) hit(s, p, Math.max(1, Math.round(dealt * eye)), { by: 'Eye for an Eye', pierce: true, noHook: true, src: 'reflect' });
     if (e.standby && d.integrity <= 0) {
       e.standby = false;
       d.integrity = 1;
