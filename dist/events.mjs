@@ -19,6 +19,7 @@ import { LOOT, rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
+import { isPiece } from './sets.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -29,9 +30,9 @@ export const DIRECTOR = {
   namedFrom: 10, // and only from this level: below it the storyline and the Resident's own two already give nearly one an hour
 };
 // Uniques you haven't found that drop out in the world at about your level (not a boss's, the farm's,
-// a story's or a strain's trophy): what a courier can be carrying.
+// a story's or a strain's trophy, nor a set piece): what a courier can be carrying.
 const WORLD = ['sprawl', 'vault', 'guard', 'rogue'];
-const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind))).map((u) => u.id);
+const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && !isPiece(u.id) && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind))).map((u) => u.id); // a set piece drops off its own table (sets.mjs)
 const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f));
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
 

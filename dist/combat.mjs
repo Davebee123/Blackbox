@@ -2,7 +2,7 @@
 // Rendering never advances the simulation. This file is written so it can
 // later run on a shared server unchanged.
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
-import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
+import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
 import BREAKER_FX from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
@@ -40,6 +40,7 @@ import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached,
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
+import { setFx, isPiece, setPool, SET_LOOT, setPityKey, setOf, setsRestore } from './sets.mjs';
 import { fxText } from './content.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
@@ -47,7 +48,7 @@ import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TI
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
-export const SAVE_VERSION = 44; // v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
+export const SAVE_VERSION = 45; // v45: sets, each loaded protocol stamped with when it went on and the storyline's LOWLIGHT Badge beat armed (sets.mjs setsRestore); v44: whole-number stats, Regen over 5 cycles and Payload flat (gear.mjs statsRestore); v43: threads, quests found in rooms (threads.mjs threadsRestore); v42: the long climb, XP into a level keeps its share (progression.mjs climbRestore); v41: layers become floors (floors.mjs floorsRestore, docs/servers.md R3); v40: outposts, buildings, plans, services, architecture and the dividend retire for sockets (sockets.mjs retireOutposts, netrooms.mjs socketRoomsRestore, docs/servers.md R2); v39: every server is a room graph (netrooms.mjs roomsRestore, docs/servers.md R1); v38: two shipped presets renamed (presetRenameRestore); v37: 15-key pools, reordered lines and presets (kitRestore); v36: networks (network.mjs networkRestore: a network seed for every save); v31: subclasses (retireClassTrees); v32: Payload is a percentage; v33: invasion kinds, bounties, signatures, and the firewall follows the network (invasionRestore, firewallRestore); v34: one level, no server XP, specialty, ports, home-fight services or greys (progression.mjs progressionRestore); v35: the nine-key bar, run skills off it, one-clock tells (barRestore)
 
 // run.mjs registers callbacks here (it imports this file, so we can't import it).
 export const hooks = { flee: null, now: null };
@@ -503,7 +504,7 @@ const uniqueById = (id) => UNIQUES[id] || null;
 const dropsHere = (u, ctx) => (u.sources || []).some((src) => src.kind === ctx.kind && (!src.id || src.id === ctx.id) && (!src.layer || (ctx.layer || 1) >= src.layer)
   || (src.kind === 'sprawl' && ctx.kind === 'sprawl') || (src.kind === 'guard' && ctx.kind === 'guard' && src.id === ctx.id));
 export function uniqueFrom(s, ctx, level) {
-  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && dropsHere(u, ctx) && !['story', 'contract', 'store'].includes(ctx.kind));
+  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && dropsHere(u, ctx) && !['story', 'contract', 'store'].includes(ctx.kind)); // a set piece drops off its own table (guardSet)
   return pickUnique(s, pool);
 }
 // One of a pool, a unique that leans toward your class (its lean) LEAN times as likely.
@@ -602,6 +603,51 @@ function nativeBossUnique(s, boss, level) {
     emit(s, 'info', `No native unique from ${name} this time. The next kill has a ${Math.round(lairChance(s, who) * 100)}% chance.`);
   }
 }
+// A guard's own set pieces (sets.mjs SET_LOOT: a set piece whose source is that guard, on floors deep enough): BOSS_LOOT's
+// pattern at a guard's pace. Its chance a kill, plus its pity for every kill of it without one while you lack a piece it
+// drops (s.pity['set:<guard>'], back to nothing on a drop); once you've found them all, a flat SET_LOOT.found and no
+// pity. A Listening Post listening for one of them lifts it like a boss's.
+const setSource = (u, guard) => (u.sources || []).find((x) => x.kind === 'guard' && x.id === guard);
+export const guardSetPool = (guard, layer = 99, level = 99) => setPool(guard).filter((u) => (setSource(u, guard).layer || 1) <= layer && u.level <= level + 2);
+export function guardSetChance(s, guard) {
+  const pool = setPool(guard);
+  if (!pool.length) return 0;
+  const lacking = pool.some((u) => !s.collection?.[u.id]);
+  const base = lacking ? SET_LOOT.chance + SET_LOOT.pity * (s.pity?.[setPityKey(guard)] || 0) : SET_LOOT.found;
+  return Math.min(1, base * (pool.some((u) => u.id === s.listen) ? listenBoost(s) : 1));
+}
+// A guard's set table, as its Codex page shows it (the dungeon journal, like bossTable): its pieces (??? until found), the
+// floor they start on, and the next kill's chance with its pity. null for a guard with no set piece.
+export function guardSetTable(s, guard) {
+  const pool = setPool(guard);
+  if (!pool.length) return null;
+  const set = setOf(pool[0].id), layer = Math.max(...pool.map((u) => setSource(u, guard).layer || 1));
+  return {
+    set: set.id, name: set.name, floor: floorOfLayer(layer), chance: guardSetChance(s, guard), base: SET_LOOT.chance, pity: SET_LOOT.pity, found: SET_LOOT.found,
+    lacking: pool.some((u) => !s.collection?.[u.id]), pieces: pool.map((u) => ({ id: u.id, name: s.collection?.[u.id] ? u.name : null, level: u.level, got: !!s.collection?.[u.id] })),
+  };
+}
+// The roll after a guard kill (roomKill, the old runs): a piece, or null. A miss while you lack one says the next chance.
+function guardSet(s, guard, layer, level, who) {
+  const pool = guardSetPool(guard, layer, level);
+  if (!pool.length) return null;
+  const key = setPityKey(guard), lacking = pool.some((u) => !s.collection?.[u.id]);
+  if (rand(s) < guardSetChance(s, guard)) {
+    (s.pity ||= {})[key] = 0;
+    const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s));
+    const from = heard.length ? heard : fresh.length ? fresh : pool;
+    return uniqueItem(from[Math.floor(rand(s) * from.length)], level, () => rand(s));
+  }
+  if (!lacking) return null;
+  (s.pity ||= {})[key] = (s.pity[key] || 0) + 1;
+  emit(s, 'info', `No ${setOf(pool[0].id)?.name || 'set'} piece from ${who} this time. The next kill has a ${Math.round(guardSetChance(s, guard) * 100)}% chance.`, { set: setOf(pool[0].id)?.id || null });
+  return null;
+}
+// A set piece from a guard goes in your pack, like the rest of its drops.
+function packSetPiece(s, it, path, who) {
+  s.run.pack.push({ path, name: 'protocol.bin', kind: 'gear', size: '32k', item: it });
+  emit(s, 'drop', `${who} dropped ${itemLabel(it)}, a ${setOf(it.unique)?.name || 'set'} piece: ${statLine(it.stats)}. In your pack until you jack out.`, { item: it, pack: true, rarity: it.rarity, set: setOf(it.unique)?.id || null });
+}
 // After a kill on a network: maybe one of its native uniques (network.mjs, on its own dice). A guard's goes in your pack.
 function nativeDrop(s, e, pack = false) {
   noteKill(s, e); // what you learn about the network by fighting on it (network.mjs intelOf)
@@ -614,7 +660,7 @@ function nativeDrop(s, e, pack = false) {
 // it was written to drop. Story, contract, store and strain uniques stay where they belong.
 const WORLD = ['sprawl', 'vault', 'guard', 'rogue'];
 function eliteUnique(s, level) {
-  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind)));
+  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && (u.sources || []).some((src) => WORLD.includes(src.kind)));
   return pickUnique(s, pool);
 }
 // One roll at a tier's odds (LOOT.odds: trash, elite, rare): mostly nothing, now and then a white, rarely better.
@@ -664,6 +710,18 @@ export function giveUnique(s, id, why = 'Reward: ') {
   if (!u) return null;
   return addItem(s, uniqueItem(u, hackerLevel(s), () => rand(s)), why);
 }
+// A contract delivered (mail.mjs): what your set bonuses do then (LOWLIGHT Kit: your Signal full, and the next kill's
+// XP up by its value, kept in s.killXp until a kill spends it).
+export function setDeliver(s) {
+  for (const x of fxFire(s, 'deliver')) {
+    if (x.fx.do === 'fill-signal') {
+      if (s.run) s.run.integrity = Math.max(s.run.integrity, s.run.max || maxSignal(s));
+      else s.signal = null; // full: whatever your max is
+      emit(s, 'net-good', `${x.name}: your Signal is full.`, firedOf([x]));
+    }
+    if (x.fx.do === 'kill-xp') { s.killXp = Math.max(s.killXp || 0, x.value); s.killXpFrom = x.name; emit(s, 'status', `${x.name}: your next kill pays ${x.value}% more XP.`, firedOf([x])); }
+  }
+}
 
 // ---------- unique effects ----------
 // Each loaded unique's effect (blocks from content/items.mjs). fxCond: does its condition hold now?
@@ -676,6 +734,7 @@ const uniqueFx = (s) => {
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
   }
+  out.push(...setFx(loaded(s))); // set bonuses (sets.mjs): the bonuses your worn pieces open, as effect blocks
   out.push(...(hooks.extraFx?.(s) || [])); // more effect blocks from outside the engine (none today)
   const amp = out.find((x) => x.fx.do === 'rule-amp');
   if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100)); // a whole number, as every rule's is
@@ -712,6 +771,7 @@ function fxCond(s, fx, ctx = {}) {
     case 'target-loud': return !!p && (!!p.loud || (!!p.enrage && p.integrity < p.max / 2) || (e?.virus.buffs?.loud ?? -1) >= (e?.cycle ?? 0));
     case 'target-fragment': return !!p && p.kind === 'fragment';
     case 'moment': return !!ctx.cmd && !!situationOf(s, ctx.cmd);
+    case 'no-chit': return !!e && !(e.chits > 0);
     default: return false;
   }
 }
@@ -1559,6 +1619,7 @@ function protocolCommand(s, full) {
     // One place at a time: loading it here takes it off any other class.
     unslot(s, it.id);
     rig[slot] = it.id;
+    it.on = s.equipN = (s.equipN || 0) + 1; // when it went on: the 4-piece set rule keeps the set that reached four first (sets.mjs)
     return emit(s, 'gear', `${itemLabel(it)} loaded in slot ${slot + 1} (${loaded(s).length}/${slotCount(s)}).`, { item: it.id });
   }
   if (word === 'unload') {
@@ -1666,6 +1727,12 @@ function engage(s) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with a ◆.`); }
     if (x.fx.do === 'force-crit') e.forceCrit = true;
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${x.value} shield.`, { mark: 'shield' }); }
+    // Kestrel Clearance (2): a guard's (or ICE's) first attack waits a cycle (sets.mjs).
+    if (x.fx.do === 'guard-late' && GUARDS[e.virus.family]) {
+      const late = attackers(s);
+      for (const p of late) p.attack.due += x.value || 1;
+      if (late.length) emit(s, 'status', `${x.name}: the ${GUARDS[e.virus.family].name}'s first attack waits a cycle.`, firedOf([x]));
+    }
   }
   // A filter of the Scrubber starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
@@ -1724,7 +1791,10 @@ function payKill(s, e, base, why) {
   // Behind (progression.mjs): a level running past its target pays kills half again until it ends.
   const behind = behindBonus(s, xp);
   if (behind) emit(s, 'behind', `Behind: +${behind} XP.`, { amount: behind });
-  gainXp(s, xp + bonus + hot + read + rested + behind, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
+  // LOWLIGHT Kit (2): the kill after a delivered contract pays more (s.killXp, a percentage; setDeliver).
+  const kit = s.killXp ? Math.max(1, Math.round((xp * s.killXp) / 100)) : 0;
+  if (kit) { emit(s, 'set-xp', `${s.killXpFrom || 'Set bonus'}: +${kit} XP.`, { amount: kit }); delete s.killXp; delete s.killXpFrom; }
+  gainXp(s, xp + bonus + hot + read + rested + behind + kit, why, 'fight', e.xpKind || 'fight'); // xpKind: what it tallies as (a held server's respawns: build, netrooms.mjs)
 }
 
 // A room fight won on the network (netrooms.mjs, docs/servers.md R1): what the kill pays besides its XP. wild: SPRAWL-00
@@ -1758,6 +1828,8 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
   const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
   if (item) { s.run.pack.push({ path: `${tag}/drop`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
+  const piece = guard && guardSet(s, e.key, layerOf(loc?.depth || 1), lvl, v.name); // a guard's own set pieces (sets.mjs)
+  if (piece) packSetPiece(s, piece, `${tag}/set`, v.name);
   nativeDrop(s, e, true);
   if (rand(s) < (guard ? SPARE_EXPLOIT.guard : SPARE_EXPLOIT.home)) packExploit(s, `${tag}/xp`, v.name);
   if (rand(s) < (guard ? BLUEPRINT_CHANCE.guard : BLUEPRINT_CHANCE.home)) { s.run.pack.push({ path: `${tag}/bp`, name: 'blueprint.bp', kind: 'blueprint', size: '64k' }); emit(s, 'drop', `${v.name} dropped a blueprint. In your pack until you jack out.`, { pack: true }); }
@@ -1857,6 +1929,8 @@ export function finish(s, result) {
         s.run.pack.push({ path: `${e.room}/#drop-${e.seed}-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item });
         emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true });
       }
+      const piece = s.run && guardSet(s, e.key, layerOf(loc?.depth || 1), e.virus.level, e.virus.name); // a guard's own set pieces (sets.mjs)
+      if (piece) packSetPiece(s, piece, `${e.room}/#set-${e.seed}-${s.serial}`, e.virus.name);
       if (s.run) nativeDrop(s, e, true); // network.mjs: its own dice, into your pack
       if (s.run && rand(s) < SPARE_EXPLOIT.guard) packExploit(s, `${e.room}/#xp-${e.seed}-${s.serial}`, e.virus.name);
       // A guard sometimes carries a blueprint, into your pack like the rest.
@@ -3480,6 +3554,8 @@ function cycleClose(s, landed) {
     for (const k of cooling) e.readyAt[k] += 1;
     if (cooling.length && !e.once.taxed) { e.once.taxed = true; emit(s, 'status', 'The Miner is eating your cycles. Your cooldowns run at half speed while it lives.'); }
   }
+  // Kestrel Clearance (3): every 5th cycle, a ◆ if you have none (sets.mjs).
+  for (const x of fxFire(s, 'cycle', { do: 'chit-every' })) if (e.cycle % (x.fx.value || 5) === 0 && !(e.chits > 0)) { e.chits = 1; emit(s, 'status', `${x.name}: you gain a ◆.`, { mark: 'shield', ...firedOf([x]) }); }
   // A breach's end of cycle (breach.mjs): an enrage, a Lab's overheat. It can end the fight either way.
   if (hooks.cycleEnd && e.breach) {
     hooks.cycleEnd(s);
@@ -3770,7 +3846,7 @@ function retireWall(s, was) {
   if (s.recipes) s.recipes = s.recipes.filter((k) => !RETIRED_SERVICES[k]);
 }
 export function restore(raw) {
-  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, SAVE_VERSION].includes(raw.version)) return fresh();
+  if (!raw || ![6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, SAVE_VERSION].includes(raw.version)) return fresh();
   try {
     const s = bindRooms(structuredClone(raw));
     const was = s.version;
@@ -3921,6 +3997,7 @@ export function restore(raw) {
     hooks.roomsRestore?.(s, was); // v39: every server you'd found is a room graph (netrooms.mjs)
     hooks.threadsRestore?.(s, was); // v43: threads (threads.mjs): an older save starts with none
     statsRestore(s, was); // v44: whole-number stats: Regen five times over 5 cycles, Payload flat at each item's level (gear.mjs)
+    setsRestore(s, was); // v45: sets: loaded protocols stamped in slot order, set pieces you hold found, the Badge beat armed (sets.mjs)
     if (s.encounter) s.encounter.plan ||= [];
     if (active(s)) { s.encounter.paused = true; s.encounter.autoPaused = true; } // resumes on the next order, or opening the Fight tab
     return s;

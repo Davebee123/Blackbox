@@ -38,6 +38,7 @@ import { ROOT, ROOT_PERKS, rootOf, rootProgress, procOf, freeOfMemory } from './
 import { FIREWALL, fwOf, fwAt, ratingAt, effLevel, wallBonus, fragLevels, defragging, hardenLeft, upgradeCost, canPay, defragMs, defragCost, perksAt, TIER_PERKS, BASE_GAP, baseOf, tierOf as fwTierOf, fwLevel, hardenCost } from './firewall.mjs';
 import { filtersOf, equipped as filtersOn, slotsOf as filterSlots, filterLine, FILTER_STATS, CRAFTABLE, filterCost, FILTER_CAP, baseName as filterBase, filterRecipes } from './filters.mjs';
 import { situationOf } from './situations.mjs';
+import { SETS, setOf, setCard, activeSets, piecesOf } from './sets.mjs';
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { bodyTags } from './families.mjs';
@@ -48,7 +49,7 @@ import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKIL
 import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
+import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
 import { daemonText } from './daemons.mjs';
 import { ROOMS as ROOMS_FP } from './floorplan.mjs'; // a server card's respawn timers
@@ -406,7 +407,7 @@ export function collectionMarkup(s) {
   const n = all.filter((u) => got[u.id]).length;
   if (!n) return '';
   const posts = postsOf(s), listenable = (u) => (u.sources || []).some((src) => !['story', 'contract', 'store'].includes(src.kind)) && (!isNative(u.id) || named(s, u.id));
-  const rows = all.slice().sort((a, b) => a.level - b.level).map((u) => {
+  const rows = all.filter((u) => !setOf(u.id)).sort((a, b) => a.level - b.level).map((u) => { // set pieces list under Sets
     const src = (isNative(u.id) ? nativeSource(s, u.id) : collSource(s, (u.sources || [])[0])) + (u.lean ? ` · ${ARCHETYPES[u.lean]?.name || SUBS[u.lean]?.name || u.lean}` : '');
     const boss = (u.sources || []).find((x) => x.kind === 'boss')?.id;
     return got[u.id]
@@ -415,7 +416,23 @@ export function collectionMarkup(s) {
   }).join('');
   // A set: the crew dungeon's eight, once it's on your map.
   const farm = (s.locations || []).some((l) => l.farm) ? `<p class="coll-set">KESSLER-FARM-00 · ${FARM_UNIQUES.filter((id) => got[id]).length}/${FARM_UNIQUES.length}</p>` : '';
-  return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div>${farm}<ul class="coll">${rows}</ul></section>`;
+  return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div>${farm}<ul class="coll">${rows}</ul>${collectionSets(s)}</section>`;
+}
+// Where a set piece drops, once you've found it: its source, and a guard's floor and next-kill chance (its pity).
+const pieceSource = (s, u) => {
+  const src = (u.sources || [])[0];
+  if (src?.kind === 'guard') return `${collSource(s, src)} · floor ${floorOfLayer(src.layer || 1)}+ · <span class="coll-odds" title="${esc('The chance its next kill drops it. Each kill without one adds to it while you lack its piece.')}">${Math.round(guardSetChance(s, src.id) * 100)}% a kill</span>`;
+  return `${esc(collSource(s, src))}${src?.kind === 'story' ? ` · Lv ${u.level}` : ''}`;
+};
+// The Collection's Sets (sets.mjs): one row a set, its pieces found (with where each drops) or ???.
+export function collectionSets(s) {
+  const got = s.collection || {};
+  const rows = Object.values(SETS).map((set) => {
+    const ids = piecesOf(set.id), have = ids.filter((id) => got[id]).length;
+    const pieces = ids.map((id) => (got[id] ? `<li class="on"><b class="iname r-zeroday">${esc(UNIQUES[id].name)}</b><small>${esc(SLOTS[BASES[UNIQUES[id].base]?.slot]?.name || '')} · ${pieceSource(s, UNIQUES[id])}</small></li>` : '<li><span class="coll-q">???</span></li>')).join('');
+    return `<li class="coll-set-row${have === ids.length ? ' done' : ''}"><b class="set-name">${esc(set.name)} <span>${have}/${ids.length}</span></b><ul class="coll">${pieces}</ul></li>`;
+  }).join('');
+  return rows ? `<h3 class="coll-sets-h">Sets</h3><ul class="coll-sets">${rows}</ul>` : '';
 }
 
 // What a component does and what answers it (fightread.mjs partRead), for the codex and the board. ??? until decoded.
@@ -792,7 +809,7 @@ export function itemTipMarkup(s, ref) {
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
   const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
-  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
+  return `<div class="ptip-card r-${r}"><pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre><div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
 }
 // Loading a stash protocol: what changes against what's in that slot now (▲ gains, ▼ losses).
 function swapCompare(s, it) {
@@ -811,9 +828,31 @@ function swapCompare(s, it) {
 export const stashUi = { filter: 'all' };
 // One item as an inventory row: rarity edge (CSS), slot glyph, name and level, then its stats in one line.
 const invStats = (it) => Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}"><b>${v < 0 ? '−' + fmtStat(k, -v) : '+' + fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
-function invBody(it, extra = '') {
+function invBody(it, extra = '', s = null) {
   const fx = it.zeroDay ? ZERO_DAYS[it.zeroDay].effect : it.unique || it.rule ? effectLine(it) : '';
-  return `<span class="inv-icon" aria-hidden="true">${glyph(leadStat(it))}</span><span class="inv-main" data-ptip="${esc(it.id || '')}"><span class="inv-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${extra}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}</span>`;
+  return `<span class="inv-icon" aria-hidden="true">${glyph(leadStat(it))}</span><span class="inv-main" data-ptip="${esc(it.id || '')}"><span class="inv-name"><b class="iname ${rarityClass(it)}">${esc(itemLabel(it))}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${extra}</span><span class="inv-stats">${invStats(it)}</span>${fx ? `<span class="inv-fx">${esc(fx)}</span>` : ''}${s && it.unique && setOf(it.unique) ? setLines(s, it.unique, true) : ''}</span>`;
+}
+
+// ---------- sets (sets.mjs) ----------
+// What you have of each set: the pieces loaded, held in the stash, ever found (the Collection), and the active rows.
+const setHave = (s) => { const on = loaded(s); return { worn: on.map((x) => x.unique).filter(Boolean), held: new Set((s.stash || []).map((x) => x.unique).filter(Boolean)), found: new Set(Object.keys(s.collection || {})), active: activeSets(on) }; };
+const SET_PIECE_TIP = { worn: 'Loaded', held: 'In your stash', missing: 'Found once; not in your stash now', unknown: 'Not found yet' };
+// A set under a piece, WoW's tooltip grammar: its name and count, its pieces (loaded and held lit, missing dim, ??? until
+// found), then each bonus, lit once it's on. compact: one line of pieces, for a stash or slot row.
+export function setLines(s, uniqueId, compact = false) {
+  const set = setOf(uniqueId);
+  if (!set) return '';
+  const c = setCard(set.id, setHave(s));
+  const pieces = c.pieces.map((p) => `<span class="sp ${p.state}" title="${esc(SET_PIECE_TIP[p.state])}">${esc(p.name || '???')}</span>`).join('');
+  const bonuses = c.bonuses.map((b) => `<span class="sb${b.on ? ' on' : ''}${b.blocked ? ' blocked' : ''}" title="${esc(b.blocked ? `Only one 4-piece bonus at a time: ${b.blocked} reached four first and keeps it.` : b.on ? 'On' : `Wear ${b.at} pieces`)}">(${b.at}) Set: ${esc(b.text)}${b.blocked ? ` <em>${esc(b.blocked)} holds it</em>` : ''}</span>`).join('');
+  return `<span class="set-lines${compact ? ' compact' : ''}"><b class="set-name">${esc(c.name)} (${c.n}/${c.total})</b><span class="set-pieces">${pieces}</span><span class="set-bonuses">${bonuses}</span></span>`;
+}
+// The Loadout's set bonuses: each set you wear two or more of, its open bonuses, and the 4-piece rule when it bites.
+function setBonusCard(s) {
+  const rows = activeSets(loaded(s)).filter((r) => r.open.length || r.blocked);
+  if (!rows.length) return '';
+  const line = (r) => `<li><b class="set-name">${esc(r.name)} (${r.n}/${r.total})</b>${r.open.map((n) => `<span class="sb on">(${n}) Set: ${esc(SETS[r.id].bonuses[n].text)}</span>`).join('')}${r.blocked ? `<span class="sb blocked" title="Only one 4-piece bonus at a time: the set that reached four first keeps it.">(4) Set: ${esc(SETS[r.id].bonuses[4].text)} <em>${esc(r.blocked.by)} holds it</em></span>` : ''}</li>`;
+  return `<div class="set-bonus-card"><h3>Set bonuses</h3><ul>${rows.map(line).join('')}</ul></div>`;
 }
 
 // A character sheet for one side: every stat it can have, grouped, with totals (bases included).
@@ -849,7 +888,7 @@ function protocolsParts(s, focus = null) {
     if (i >= n) return `<li class="inv-row locked" ${k}>${label}<span class="inv-empty">opens at Lv ${PROTOCOL_SLOTS.find((x) => x.slots > i).level}</span></li>`;
     const it = rigOf(s)[i] && stashItem(s, rigOf(s)[i]);
     return it
-      ? `<li class="inv-row ${rarityClass(it)}" ${k}>${label}${invBody(it)}<span class="inv-acts"><button type="button" class="inv-btn" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button></span></li>`
+      ? `<li class="inv-row ${rarityClass(it)}" ${k}>${label}${invBody(it, '', s)}<span class="inv-acts"><button type="button" class="inv-btn" data-command="unload ${it.id}" ${busy ? 'disabled' : ''} title="Unload" aria-label="Unload ${esc(it.name)}">×</button></span></li>`
       : `<li class="inv-row empty" ${k}>${label}<span class="inv-empty">empty</span></li>`;
   }).join('');
   const sort = (a, b) => (loadedOn(s, b.id) === classOf(s)) - (loadedOn(s, a.id) === classOf(s)) || RARITY_ORDER.indexOf(b.rarity) - RARITY_ORDER.indexOf(a.rarity) || b.level - a.level;
@@ -865,7 +904,7 @@ function protocolsParts(s, focus = null) {
     const swap = freeSlot(s, groupOf(it)) < 0 && !full;
     const loadBtn = `<button type="button" class="inv-btn load" data-command="load ${it.id}" data-ptip="${esc(it.id)}" ${busy || full || dupe ? 'disabled' : ''} title="${busy ? 'At home only' : full ? `No ${SLOTS[groupOf(it)]?.name || ''} slot yet` : dupe ? 'You already run this one' : swap ? 'Swap it in for what you run now' : 'Load it into a free slot'}">${swap ? 'Swap' : 'Load'}</button>`;
     const scrap = where ? '' : `<button type="button" class="inv-btn" data-command="deconstruct ${it.id}"${confirm} ${busy ? 'disabled' : ''} title="Deconstruct it for salvage, code and Exploits" aria-label="Deconstruct ${esc(it.name)}">${glyph('scrap')}</button>`;
-    return `<li class="inv-row ${rarityClass(it)}" data-kind="${groupOf(it)}">${invBody(it, whereTag)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
+    return `<li class="inv-row ${rarityClass(it)}" data-kind="${groupOf(it)}">${invBody(it, whereTag, s)}<span class="inv-acts">${loadBtn}${scrap}</span></li>`;
   }).join('');
   const counts = Object.fromEntries(SLOT_KINDS.filter((k, i, a) => a.indexOf(k) === i).map((k) => [k, spare.filter((it) => groupOf(it) === k).length]));
   const filters = `<div class="inv-filters" role="group" aria-label="Show">${[['all', 'All', spare.length], ...Object.entries(counts).map(([k, c]) => [k, SLOTS[k]?.name || k, c])].map(([k, l, c]) => `<button type="button" data-stash-filter="${k}" aria-pressed="${stashUi.filter === k}" ${c || k === 'all' ? '' : 'disabled'}>${esc(l)} <span>${c}</span></button>`).join('')}</div>`;
@@ -885,7 +924,7 @@ function protocolsParts(s, focus = null) {
 // Protocols you run (slots, stats, stash): part of the Loadout page, for the class in use.
 export function protocolSlotsCard(s) {
   const p = protocolsParts(s);
-  return `<section class="card"><h2>Protocols · ${esc(p.cls)} Lv ${p.lvl}</h2><ul class="inv slots">${p.slotList}</ul>${statSheet(s, 'hacker')}</section>`;
+  return `<section class="card"><h2>Protocols · ${esc(p.cls)} Lv ${p.lvl}</h2><ul class="inv slots">${p.slotList}</ul>${setBonusCard(s)}${statSheet(s, 'hacker')}</section>`;
 }
 export function protocolStashCard(s) {
   const p = protocolsParts(s);
@@ -2552,6 +2591,7 @@ export function spoilsOf(events) {
     else if (e.type === 'xp' && / decoded$/.test(e.message?.split(' · ')[1]?.replace(/\.$/, '') || '')) add(`Decoded: ${e.message.split(' · ')[1].replace(/ decoded\.?$/, '')}`, `+${e.amount} XP`, 'fast', { text: `${e.message.split(' · ')[1]} +${e.amount} XP` });
     else if (e.type === 'rested') add('Rested', `+${e.amount} XP`, 'fast', { text: `Rested +${e.amount} XP` });
     else if (e.type === 'behind') add('Behind', `+${e.amount} XP`, 'fast', { text: `Behind +${e.amount} XP`, sub: 'this level is running long' });
+    else if (e.type === 'set-xp') { const who = String(e.message || '').split(':')[0].replace(/ \(\d\)$/, ''); add(who, `+${e.amount} XP`, 'fast', { text: `${who} +${e.amount} XP`, sub: 'the kill after a delivery' }); } // a set bonus (sets.mjs)
     else if (e.type === 'fresh') add(`Fresh: ${XP_KINDS[e.kind] || ''}`, `+${e.amount} XP`, 'fast', { text: `Fresh ${XP_KINDS[e.kind] || ''} +${e.amount} XP` });
     else if (e.type === 'level-up') add(`Level ${e.level}`, '', 'level', { sub: e.unlocked?.length ? 'New skill unlocked' : 'Power +4%' });
     else if (e.type === 'server-level') add(`Server level ${e.level}`, '', 'level');

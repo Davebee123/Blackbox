@@ -23,7 +23,7 @@
 // Tracker). No clock: one waits on the board at a time until you take it, outside the five.
 import { FAMILIES, CONFIG, STRAINS } from './data.mjs';
 import { LOOT, MATERIALS, rollItem, seeded } from './gear.mjs';
-import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, deedXpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem } from './combat.mjs';
+import { emit, warn, hackerLevel, serverLevel, gainXp, xpFor, deedXpFor, learnBlueprint, materialsOf, rand, hooks, addLocation, giveUnique, rollDrop, addItem, setDeliver } from './combat.mjs';
 import { zoneOf, zoneRooms } from './zone.mjs';
 import { hiddenNodes, hiddenNode, syncFlags, items, flagged, spawnHidden } from './hidden.mjs';
 import { hiddenNear } from './floors.mjs';
@@ -760,6 +760,7 @@ export function mailCommand(s, text, at = now()) {
   ].filter(Boolean);
   emit(s, 'contract-done', `DELIVERED: ${title(s, c)}. +${c.reward.credits} credits${c.reward.indemnity ? `, +${c.reward.indemnity} Indemnity` : ''}.`, { contract: c.id, credits: c.reward.credits, gains, name: title(s, c) });
   if (xp) gainXp(s, xp, 'contract', null, CONTRACT_KIND[c.type] || 'fight'); // no Fresh bonus: it counts as the work behind it
+  setDeliver(s); // set bonuses on a delivery (LOWLIGHT Kit: your Signal full, the next kill's XP up; sets.mjs)
   if (fifth) { emit(s, 'streak', `Streak ${s.slayer.streak}. ${title(s, c)} pays double.`, { streak: s.slayer.streak }); const it = rollDrop(s, { kind: 'rogue', strain: c.strain, rolls: 3, trophy: true }, paidAt); if (it) addItem(s, it, 'Streak reward: '); }
   if (c.reward.standing) changeStanding(s, 'halcyon', c.reward.standing, c.offBooks ? 'Halcyon heard about the GLASSJAW job' : 'Contract delivered');
   if (c.offBooks) changeRep(s, 'glassjaw', 5, 'GLASSJAW job delivered', { ripple: false }); // Halcyon's hit is the standing above
@@ -771,6 +772,7 @@ export function mailCommand(s, text, at = now()) {
   // A protocol, Tuned or better (a contract that paid a daemon once pays this: daemons only come from invasions).
   if (c.reward.drop || c.reward.daemon) { const r = seeded((c.id * 7919 + paidAt) >>> 0); addItem(s, rollItem(r, { level: paidAt, rarity: r() < LOOT.quest ? 'custom' : 'tuned' }), c.offBooks ? 'GLASSJAW paid in kind: ' : c.story !== undefined ? 'LOWLIGHT bonus: ' : 'Contract bonus: '); }
   if (c.reward.item) giveUnique(s, c.reward.item, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `);
+  for (const id of c.reward.items || []) giveUnique(s, id, `${c.story !== undefined ? 'LOWLIGHT' : 'Contract'} reward: `); // more than one (the Badge's beat: the Badge and wick's Old Toolkit rebuilt at your level)
   if (c.story !== undefined) { s.mail.waiting = 'armed'; s.mail.waitFrom = at; const next = postStory(s, at); if (next) emit(s, 'mail', `New mail from ${next.from}: ${next.subject}.`, { letter: next.id, from: next.from, subject: next.subject }); }
 }
 

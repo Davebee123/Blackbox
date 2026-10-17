@@ -1,6 +1,7 @@
 // The loot check: the pacing bot (bot.mjs) plays each class to a level on a few seeds and reports what it found, a kill
 // at a time: how many kills each rarity takes to drop (against LOOT.per in gear.mjs), the same as minutes of real play
-// at LOOT.killsPerHour, by level band, and by source (trash, elites and guards, rare spawns, bosses, vaults, quests).
+// at LOOT.killsPerHour, by level band, and by source (trash, elites and guards, rare spawns, bosses, vaults, quests, a
+// guard's own set pieces: uniques, counted in the uniques an hour).
 // The bot's own clock runs far slower than a player (about 7 kills an hour on the long climb), so its minutes are a secondary column.
 // node lootsim.mjs [targetLevel] [seeds] [classes, comma-separated]
 import { simulate } from './bot.mjs';
@@ -15,7 +16,7 @@ const BANDS = [[1, 10], [11, 20], [21, 30], [31, 50]].filter(([a]) => a <= +targ
 const KPH = LOOT.killsPerHour;
 // Where a drop came from (bot.mjs dropFrom's labels), as the loot model's sources.
 const BOSS_NAMES = Object.values(BOSSES).map((b) => b.name);
-const sourceOf = (src) => /^Kill: ★ rare|^Rare virus|^The archive/.test(src) ? 'Rare spawns' : /^Kill: (elite|guard)/.test(src) ? 'Elites and guards'
+const sourceOf = (src) => src === 'Set piece' ? 'Set pieces' : /^Kill: ★ rare|^Rare virus|^The archive/.test(src) ? 'Rare spawns' : /^Kill: (elite|guard)/.test(src) ? 'Elites and guards'
   : /Resident/.test(src) ? 'Resident (Core)' : src === 'Kill: boss' || BOSS_NAMES.some((n) => src === `${n} drops`) ? 'Bosses' : /^KESSLER/.test(src) ? 'The farm'
   : /^Kill: /.test(src) ? 'Trash' : /^(Banked|Vault)/.test(src) ? 'Vaults' : /^(Native unique|Strain trophy)$/.test(src) ? 'World uniques'
   : /^Streak of|leaves a capture$/.test(src) ? 'Invasion captures' : /^Dead drop/.test(src) ? 'Couriers, dead drops' : 'Quests';
@@ -65,7 +66,7 @@ console.log('\nBy level band (kills a drop)');
 console.log('Band     |  kills | ' + RAR.map((r) => NAME[r].split(' ')[0].padStart(10)).join(' | '));
 BANDS.forEach(([a, b], i) => { const x = total.band[i]; if (!x.kills) return; console.log(`${`${a}–${b}`.padEnd(8)} | ${String(x.kills).padStart(6)} | ${RAR.map((r) => oneIn(x.drops[r] || 0, x.kills).padStart(10)).join(' | ')} | ${((x.drops.unique || 0) / (x.kills / KPH)).toFixed(2)} uniques an hour`); });
 console.log('\nBy source (drops; a kill source also its kills and odds a kill)');
-const order = ['Trash', 'Elites and guards', 'Rare spawns', 'Resident (Core)', 'Bosses', 'The farm', 'Vaults', 'Quests', 'Couriers, dead drops', 'Invasion captures', 'World uniques'];
+const order = ['Trash', 'Elites and guards', 'Rare spawns', 'Resident (Core)', 'Bosses', 'The farm', 'Vaults', 'Quests', 'Couriers, dead drops', 'Invasion captures', 'World uniques', 'Set pieces']; // set pieces: a guard's own (sets.mjs), counted as uniques
 for (const c of order) {
   const by = total.cat[c] || {}, k = total.kills[c];
   const list = RAR.filter((r) => by[r]).map((r) => `${by[r]} ${NAME[r].split(' ')[0]}${k ? ` (1 in ${Math.round(k / by[r])})` : ''}`).join(', ') || 'nothing';

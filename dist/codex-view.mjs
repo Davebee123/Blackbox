@@ -110,8 +110,17 @@ function bodyPage(s, e) {
   const parts = section('Parts', `<div class="cx-parts">${e.parts.map((x) => partCard(e.level, x, ridesOf(x))).join('')}</div>`, ` <small>at <b class="you">Lv ${e.level}</b></small>`);
   const sets = e.sets.length ? section('Attack sets', `<div class="cx-sets">${e.sets.map(setMarkup).join('')}</div><p class="cx-foot">Each fight rolls its set, and nudges every part's first attack by up to 1 cycle.</p>`) : '';
   const tells = section('Tells', e.tells.length ? `<ul class="cx-tells">${e.tells.map(tellMarkup).join('')}</ul>` : '<p class="cx-foot">Brings no tells.</p>');
-  const loot = section('Loot', lootList(e.parts), ` <small>at research ${RESEARCH.max}</small>`);
+  const loot = section('Loot', lootList(e.parts) + (e.setLoot ? setLootTable(e.setLoot) : ''), ` <small>at research ${RESEARCH.max}</small>`);
   return head + rule + parts + sets + tells + loot;
+}
+// A guard's set pieces (sets.mjs, combat.mjs guardSetTable): ??? until found, on its floors, and the next kill's chance
+// with its pity while you lack one (BOSS_LOOT's pattern, in the boss's words), a flat chance once you have them all.
+function setLootTable(t) {
+  const rows = t.pieces.map((u) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b${u.name ? ' class="iname r-zeroday"' : ''}>${esc(u.name || UNKNOWN)}</b><small>floor ${t.floor}+${u.got ? ' · found' : ''}</small></li>`).join('');
+  const odds = t.lacking
+    ? `<p class="cx-foot" title="${esc(`A ${t.name} piece: ${pc(t.base)} a kill on floor ${t.floor} and below, +${pc(t.pity)} for each kill without one, back to ${pc(t.base)} when one drops.`)}">${esc(t.name)}: ${pc(t.base)} a kill, +${pc(t.pity)} a miss. Next kill <b class="you">${pc(t.chance)}</b>.</p>`
+    : `<p class="cx-foot" title="Found. It still drops now and then, at your level.">${esc(t.name)}: found. ${pc(t.found)} a kill.</p>`;
+  return `<ul class="cx-loot">${rows}</ul>${odds}`;
 }
 
 // The pieces its parts drop: each one ??? until that part is at research 60 (mastered).

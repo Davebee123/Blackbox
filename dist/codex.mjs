@@ -17,7 +17,7 @@ import { ATTACK_SETS, AUTHOR_FAMILIES, OPENS, applySet } from './families.mjs';
 import { GENES, AXES } from './genes.mjs';
 import { AUTHORS, crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 import { geneState } from './genome.mjs';
-import { knowsPart, hackerLevel, bossTable, codexKey } from './combat.mjs';
+import { knowsPart, hackerLevel, bossTable, guardSetTable, codexKey } from './combat.mjs';
 import { researchAt, tierAt, pctOf } from './research.mjs';
 import { plannedTells, findSource, tierOf, answerOf } from './tells.mjs';
 import { ROOMS } from './floorplan.mjs';
@@ -269,6 +269,7 @@ export function entryOf(s, key) {
       rule: group === 'runner' ? `It runs from you, a room for each of your moves, and never through a live virus. Caught, its upload completes after ${CONFIG.exfil.escape} cycles and the archive is gone, unless you break it first.` : body.rule || null, ice: !!body.ice, lineage, opens: group === 'strain' ? body.from : group === 'family' ? OPENS[id] || 1 : null, depth: group === 'strain' ? body.depth || 2 : null,
       kills: killsOf(s, id), authors: authorsOf(group, id), parts, research: pctOf(parts.map((p) => p.research)), sets: group === 'family' ? setsOf(s, id) : [], tells: tellsOf(s, group, id),
       art: parts.find((x) => !x.gene)?.virus || parts[0]?.virus,
+      setLoot: group === 'guard' ? guardSetTable(s, id) : null, // its set pieces (sets.mjs), ??? until found, with their odds and pity
     };
   }
   if (group === 'boss') {
