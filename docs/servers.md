@@ -78,7 +78,7 @@ A room is a fight or an interactable, or empty. Each kind has a mark on the room
 
 Empty rooms earn their place because moving costs Signal (2.4) and gives the hunter its moves (2.5): a junction is distance, and distance is risk. A server is about a fifth junctions.
 
-**Rooms spawn the same thing.** A fight room's family, author and attack set are fixed by the server's seed, so `/var/spool` on MERIDIAN-MX-14 is always a TOLLGATE ransomware on the Lockout set. Its mutation rerolls with every respawn (one at most, the designer's cap; two on an elite). One respawn in ten is a **rare spawn** (★): two levels up, three loot rolls, and it waits until you kill it.
+**Rooms spawn the same thing.** A fight room's family, author and attack set are fixed by the server's seed, so `/var/spool` on MERIDIAN-MX-14 is always a TOLLGATE ransomware on the Lockout set. Its mutation rerolls with every respawn (one at most, the designer's cap; two on an elite). One respawn in 25 is a **rare spawn** (★): two levels up, three loot rolls, and it waits until you kill it.
 
 ### 2.2 How a server is built
 

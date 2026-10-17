@@ -78,7 +78,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
     // back as Banked when you jack out; that second line is the same item. Kills are split into plain, elite and guard.
     if (e.type === 'drop' && e.item) {
       const it = e.item, key = it.name + JSON.stringify(it.stats), packs = (stats.packKeys ||= new Set());
-      let src = (e.message.match(/^([^:]{1,40}):/)?.[1] || '').trim();
+      let src = (e.message.match(/^([^:]{1,60}):/)?.[1] || '').trim(); // 60: a champion's capture (CHAMPION SLEEPER-4903 v2 leaves a capture) is a long one
       const kill = e.message.match(/^(.+?) dropped /), v = s.encounter?.virus, won = s.encounter && !active(s) && s.encounter.phase === 'victory';
       if (kill) { const who = kill[1]; src = s.encounter?.rooms?.rare ? 'Kill: ★ rare' : /RESIDENT/.test(who) ? 'Kill: Resident (Core)' : Object.values(BOSSES).some((b) => b.name.toUpperCase() === who) ? 'Kill: boss' : /^ELITE /.test(who) ? 'Kill: elite' : Object.values(GUARDS).some((g) => g.name.toUpperCase() === who) ? 'Kill: guard' : /^[A-Z][A-Z -]*-\d{3,}$/.test(who) || /-\d{4}/.test(who) ? 'Kill: room' : `Kill: ${who}`; if (/In your pack/.test(e.message)) packs.add(key); }
       else if (src === 'Loot' && won) src = v.boss ? 'Kill: boss' : v.elite ? 'Kill: elite' : 'Kill: room'; // a wild kill (SPRAWL-00, rogue servers, lairs), straight into the stash

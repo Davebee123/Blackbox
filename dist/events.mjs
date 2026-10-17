@@ -25,7 +25,8 @@ export const DIRECTOR = {
   firstMs: [4 * 60000, 8 * 60000], // logged-on time to the first event
   everyMs: [15 * 60000, 30 * 60000], // and between events
   max: 2, // events up at once
-  named: 6, // one courier in this many carries a unique you're missing, by name
+  named: 20, // one courier in this many carries a unique you're missing, by name (it was 6: a fifth of all uniques on the long climb; uniques stay under one an hour)
+  namedFrom: 10, // and only from this level: below it the storyline and the Resident's own two already give nearly one an hour
 };
 // Uniques you haven't found that drop out in the world at about your level (not a boss's, the farm's,
 // a story's or a strain's trophy): what a courier can be carrying.
@@ -38,8 +39,8 @@ export const CARDS = {
   courier: {
     name: 'Courier', weight: 3, ms: 15 * 60000, fight: true,
     where: (s) => places(s),
-    // About one courier in DIRECTOR.named carries a unique you haven't found, by name: a lucky shot.
-    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
+    // About one courier in DIRECTOR.named carries a unique you haven't found, by name, from level DIRECTOR.namedFrom: a lucky shot.
+    make: (s) => ({ family: fam(s), level: hackerLevel(s), name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, ...(roll(s) * DIRECTOR.named < 1 && hackerLevel(s) >= DIRECTOR.namedFrom && missing(s).length ? { unique: pick(s, missing(s)) } : {}) }),
     text: (ev, where) => `LANTERN's courier ${ev.name} is carrying ${ev.unique ? `${UNIQUES[ev.unique].name}, a unique you haven't found,` : 'a dead drop'} through ${where}. Intercept it before it leaves to take ${ev.unique ? 'it' : 'the drop'}.`,
     reward: (ev) => `${credits(ev.level)} credits and ${ev.unique ? UNIQUES[ev.unique].name : 'a protocol'}`,
     won: (s, ev) => {

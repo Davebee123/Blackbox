@@ -127,7 +127,7 @@ function lootTable(t) {
     : `<li>${glyph('item')}<b>Like an elite</b><small>no sure drop</small></li>`;
   const gold = t.gold ? `<li>${glyph('item')}<b class="iname r-zeroday">A world unique</b><small>${pc(t.gold)} a kill</small></li>` : '';
   const own = t.uniques.map((u) => `<li class="${u.name ? '' : 'unknown'}">${glyph('item')}<b${u.name ? ' class="iname r-zeroday"' : ''}>${esc(u.name || UNKNOWN)}</b><small>Lv ${u.level}${u.got ? ' · found' : ''}</small></li>`).join('');
-  const odds = t.uniques.length || t.native ? `<p class="cx-foot" title="${esc(`${pc(t.base)} a kill, +${pc(t.pity)} for each kill without one, back to ${pc(t.base)} when one drops.`)}">${t.native ? 'Native uniques' : 'Uniques'}: ${pc(t.base)} a kill, +${pc(t.pity)} a miss. Next kill <b class="you">${pc(t.chance)}</b>.</p>` : '';
+  const odds = t.done ? `<p class="cx-foot">Uniques: both found. It drops each only once, so it drops only as an elite now.</p>` : t.uniques.length || t.native ? `<p class="cx-foot" title="${esc(`${pc(t.base)} a kill, +${pc(t.pity)} for each kill without one, back to ${pc(t.base)} when one drops.`)}">${t.native ? 'Native uniques' : 'Uniques'}: ${pc(t.base)} a kill, +${pc(t.pity)} a miss. Next kill <b class="you">${pc(t.chance)}</b>.</p>` : '';
   return `<ul class="cx-loot">${sure}${gold}${own}</ul>${odds}`;
 }
 

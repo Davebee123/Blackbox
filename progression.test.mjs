@@ -3,7 +3,7 @@
 // migration that folded server XP, ports, the specialty, eight services and greys away.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, addItem, loaded, restore, serverLevel, syncServer, gainXp, hackerOf, finish, UNIQUES, fxAnswer, patchDelay, gearStat, daemonLevel, SAVE_VERSION, DECODE_XP, effectLine, previewDamage, bossTable } from './dist/combat.mjs';
 import { CONFIG, CATCHUP, CLIMB, levelTarget, xpToNext, killXp, killsToNext, v41XpToNext, deedScale, DEED, power, LOADOUT, BOSS_LOOT } from './dist/data.mjs';
 import { uniqueItem, rollItem, seeded, RULES, RARITIES, BASES, baseFor, primaries, SERVICES } from './dist/gear.mjs';
 const VERSIONS = [{ code: 12, credits: 120 }, { code: 40, credits: 600 }]; // what a service's v1 and v2 cost (the retired table)
@@ -118,7 +118,7 @@ test('uniques keep up: their primaries are the best base at their item level tim
   assert.ok(wifi.stats.signal >= 18, 'an early unique whose own numbers are higher keeps them');
 });
 
-test('the Resident drops each of its uniques once, then a yellow', () => {
+test('the Resident drops each of its uniques once, then no unique roll at all (it drops only as an elite)', () => {
   const was = BOSS_LOOT.chance;
   BOSS_LOOT.chance = 1;
   const boss = (s) => { const mark = s.serial; selectEncounter(s, 'random', 7, { level: 12, boss: 'resident' }); command(s, 'engage'); finish(s, 'victory'); return s.logs.find((e) => e.id > mark && e.type === 'drop' && /Resident drops/i.test(e.message))?.item || s.logs.find((e) => e.id > mark && e.type === 'drop' && /drops: /.test(e.message))?.item; };
@@ -126,8 +126,12 @@ test('the Resident drops each of its uniques once, then a yellow', () => {
   const own = Object.values(UNIQUES).filter((u) => u.sources?.some((x) => x.kind === 'boss' && x.id === 'resident')).map((u) => u.id);
   const a = boss(s), b = boss(s);
   assert.deepEqual([a.unique, b.unique].sort(), own.sort(), 'both of its own, one each');
-  const c = boss(s);
-  assert.ok(!c.unique && c.rarity === 'custom', 'then a yellow, never a world unique');
+  const mark = s.serial, pity = s.pity?.resident || 0;
+  assert.equal(boss(s), undefined, 'then nothing from its roll: no yellow, no world unique');
+  assert.ok(!s.logs.some((e) => e.id > mark && /Resident drops|No unique from Resident/i.test(e.message)), 'and no message');
+  assert.equal(s.pity?.resident || 0, pity, 'its pity stays put');
+  assert.equal(bossTable(s, 'resident').done, true);
+  assert.equal(bossTable(s, 'resident').chance, 0);
   BOSS_LOOT.chance = was;
 });
 

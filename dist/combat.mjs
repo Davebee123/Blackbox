@@ -518,6 +518,9 @@ function pickUnique(s, pool) {
 // for every kill that gave none (s.pity[boss]), back to the base on a drop. One you haven't found comes first.
 export const bossUniques = (boss) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'boss' && src.id === boss));
 export const bossOdds = (boss) => (BOSSES[boss]?.raid ? BOSS_LOOT.raid : BOSS_LOOT);
+// A boss that drops each of its own only once (BOSS_LOOT.once: the Resident, met on every takeover) is done once you
+// hold them all: no more roll for them, and nothing in its place (it drops only as an elite).
+export const bossDone = (s, boss) => BOSS_LOOT.once.includes(boss) && bossUniques(boss).every((u) => s.collection?.[u.id]);
 export const bossChance = (s, boss) => Math.min(1, (bossOdds(boss).chance + bossOdds(boss).pity * (s.pity?.[boss] || 0)) * (bossUniques(boss).some((u) => u.id === s.listen) ? listenBoost(s) : 1) * (s.breach?.fx?.listen || 1) + (s.breach?.fx?.unique || 0)); // a breach's Listening Post (rewrites.mjs), and a dig in's +10% (world.mjs)
 // Does this boss always drop an item (BOSS_LOOT.resident: the Resident's switch)?
 export const sureDrop = (boss) => !!BOSSES[boss] && (boss !== 'resident' || BOSS_LOOT.resident === 'boss');
@@ -541,7 +544,7 @@ export function bossTable(s, boss) {
   const ids = native ? (lairBoss(s, 'you') === boss ? mine(s)?.uniques || [] : []) : bossUniques(boss).map((u) => u.id);
   return {
     sure: sureDrop(boss) ? (raid ? 'custom' : 'tuned') : null, yellow: BOSS_LOOT.yellow, raid, native, gold: raid ? BOSS_LOOT.raid.gold : 0,
-    chance: native ? lairChance(s, 'you') : bossChance(s, boss), base: odds.chance, pity: odds.pity,
+    chance: native ? lairChance(s, 'you') : bossDone(s, boss) ? 0 : bossChance(s, boss), base: odds.chance, pity: odds.pity, done: !native && bossDone(s, boss),
     uniques: ids.map((id) => ({ id, name: named(s, id) ? UNIQUES[id].name : null, level: UNIQUES[id].level, got: !!s.collection?.[id] })).sort((a, b) => a.level - b.level),
   };
 }
@@ -565,12 +568,10 @@ function bossUnique(s, boss, level) {
   const pool = bossUniques(boss);
   if (!pool.length) return;
   const name = BOSSES[boss]?.name || boss;
+  if (bossDone(s, boss)) return; // the Resident with both of its own found: no roll at all (it drops as an elite)
   if (rand(s) < bossChance(s, boss)) {
     (s.pity ||= {})[boss] = 0;
     const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s));
-    // A boss that drops each of its own once (BOSS_LOOT.once: the Resident, met on every takeover): once you
-    // hold them all, its roll gives a yellow.
-    if (!fresh.length && BOSS_LOOT.once.includes(boss)) return addItem(s, rollItem(() => rand(s), { level, rarity: 'custom' }), `${name} drops: `);
     const from = heard.length ? heard : fresh.length ? fresh : pool;
     const u = from[Math.floor(rand(s) * from.length)];
     addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `);

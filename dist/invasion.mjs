@@ -54,11 +54,11 @@ export const THIEF = { take: 0.5, min: 3 }; // the share of each store it takes;
 export const BOUNTY = { grow: 0.25, cap: 2, blocked: 0.5 };
 // Streak: invasions stopped in a row (by your wall or by you). Each one in it pays step more (up to
 // max steps); every capture-th in a row drops a capture. A crash, a theft or a scout's map ends it.
-export const STREAK = { step: 0.1, max: 5, capture: 5 };
+export const STREAK = { step: 0.1, max: 5, capture: 10 }; // a capture every 10 stops in a row (it was 5: captures gave two uniques in three on the long climb)
 // A capture (what a champion you kill, or a streak, leaves behind): a sure daemon, and a chance at an
 // invasion-only unique on top (BOSS_LOOT's pattern: chance, plus pity for every capture without one).
 // Every other stop rolls for a daemon (data.mjs DAEMON_DROP, with its own pity).
-export const CAPTURE = { chance: 0.2, pity: 0.1 };
+export const CAPTURE = { chance: 0.1, pity: 0.05 }; // was 20% +10%: uniques stay under one an hour of real play (docs/progression.md)
 
 const kindOf = (inv) => KINDS[inv?.kind] || KINDS.raider;
 export const streakOf = (s) => s.net?.streak || 0;
