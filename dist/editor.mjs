@@ -266,9 +266,10 @@ const sourceIds = (kind) => ({
 function uniqueForm(i) {
   const u = items.uniques[i], p = `items.uniques.${i}`, fx = u.effect, b = BASES[u.base];
   const baseOpts = Object.fromEntries(Object.entries(BASES).map(([k, x]) => [k, `${SLOTS[x.slot].name}: ${x.name} (lv ${x.level})`]));
-  const doOpts = fx ? Object.fromEntries(Object.entries(FX_DO).filter(([, d]) => d.when.includes(fx.when)).map(([k, d]) => [k, d.label])) : {};
-  const d = fx && FX_DO[fx.do];
-  const fxHtml = fx ? `<div class="ed-row">${field('When', select(p + '.effect.when', fx.when, FX_WHEN))}${field('If', select(p + '.effect.if', fx.if || '', FX_IF))}${field('Does', select(p + '.effect.do', fx.do, doOpts))}</div>
+  const doOpts = fx && !Array.isArray(fx) ? Object.fromEntries(Object.entries(FX_DO).filter(([, d]) => d.when.includes(fx.when)).map(([k, d]) => [k, d.label])) : {};
+  const d = fx && !Array.isArray(fx) && FX_DO[fx.do];
+  const fxHtml = Array.isArray(fx) ? `<p class="ed-hint">${fx.length} effects. Several effects are written by hand in content/items.mjs (effect: [ ... ]); the lines above are what they say.</p>`
+    : fx ? `<div class="ed-row">${field('When', select(p + '.effect.when', fx.when, FX_WHEN))}${field('If', select(p + '.effect.if', fx.if || '', FX_IF))}${field('Does', select(p + '.effect.do', fx.do, doOpts))}</div>
       <div class="ed-row">${d?.value ? field('X', num(p + '.effect.value', fx.value, 'min="0" step="any"')) : ''}${d?.stat ? field('Which stat', select(p + '.effect.stat', fx.stat || '', { '': 'Pick one', ...STAT_OPTS })) : ''}${d?.skill ? field('Which skill', select(p + '.effect.skill', fx.skill || '', { '': 'Pick one', ...SKILL_OPTS })) : ''}${d?.value ? field('Scales', select(p + '.effect.scale', fx.scale || '', FX_SCALE)) : ''}${fx.scale ? field('Up to', num(p + '.effect.cap', fx.cap, 'min="0" step="any" placeholder="no cap"')) : ''}</div>
       <div class="ed-row">${field('How often', select(p + '.effect.limit', fx.limit || '', FX_LIMIT))}${fx.limit === 'cooldown' ? field('Minutes', num(p + '.effect.cooldown', fx.cooldown, 'min="1"')) : ''}</div>
       ${field('Wording (optional)', input(p + '.effect.text', fx.text, `placeholder="${esc(fxText(fx, STAT_NAME))}"`), 'Leave empty to use the generated line shown above the box.')}
@@ -276,7 +277,7 @@ function uniqueForm(i) {
     : '<p class="ed-hint">No effect: just numbers. Early uniques are often like this.</p><button type="button" class="btn small" data-act="u-fx-add">+ Effect</button>';
   const srcs = (u.sources || []).map((src, n) => {
     const ids = sourceIds(src.kind);
-    return `<div class="ed-row">${field('From', select(`${p}.sources.${n}.kind`, src.kind, SOURCE_KINDS))}${ids ? field('Which', select(`${p}.sources.${n}.id`, src.id || '', ids)) : ''}${['vault', 'rogue'].includes(src.kind) ? field('From layer', num(`${p}.sources.${n}.layer`, src.layer, 'min="1" max="6" placeholder="1"')) : ''}<div class="ed-f"><span>&nbsp;</span><button type="button" class="btn small danger" data-act="u-src-del" data-at="${n}">Remove</button></div></div>`;
+    return `<div class="ed-row">${field('From', select(`${p}.sources.${n}.kind`, src.kind, SOURCE_KINDS))}${ids ? field('Which', select(`${p}.sources.${n}.id`, src.id || '', ids)) : ''}${['vault', 'rogue'].includes(src.kind) ? field('From layer', num(`${p}.sources.${n}.layer`, src.layer, 'min="1" max="6" placeholder="1"')) : ''}${['vault', 'lair', 'rare', 'thread', 'puzzle'].includes(src.kind) ? field('On floor', num(`${p}.sources.${n}.floor`, src.floor, 'min="1" max="8" placeholder="any"')) : ''}<div class="ed-f"><span>&nbsp;</span><button type="button" class="btn small danger" data-act="u-src-del" data-at="${n}">Remove</button></div></div>`;
   }).join('');
   return `<h1 style="color:var(--r-zeroday)">${esc(u.name || 'Unique')}</h1><p class="lede">A gold Zero-day: fixed name, stats and effect. Its numbers grow when it drops at a higher level; its downside doesn't.</p>
     <div class="ed-acts"><button type="button" class="btn" data-act="u-dup">Duplicate</button><button type="button" class="btn danger" data-act="u-del">Delete</button></div>

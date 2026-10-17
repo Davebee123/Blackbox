@@ -2,6 +2,7 @@
 // editor.html). This module knows what each kind of text can say ({blanks}), fills them in, and
 // checks a draft for mistakes. mail.mjs uses it in the game; the editor and content.test.mjs use
 // the checker.
+import { STATS } from './gear.mjs';
 
 // The blanks each kind of text can use. The game fills them; anything else shows up as typed.
 export const COMMON = { handle: 'your handle (the name you logged in with)', crewName: 'your crew: LOWLIGHT' };
@@ -113,6 +114,9 @@ export const FX_WHEN = {
   always: 'Always (a stat bonus)',
   disconnect: 'When your Signal hits 0 on a run',
   answer: 'When you answer a tell',
+  cycle: 'At the end of a cycle',
+  helper: 'When you call a helper',
+  expire: 'When one of your helpers expires',
   custom: 'Custom rule',
 };
 // Each condition reads after "when" or "while" in the effect's sentence: "Increases your damage by 50% when the target is below half Integrity."
@@ -138,6 +142,20 @@ export const FX_IF = {
   'target-loud': 'the target has gone loud (a Tripwire set off, a Bricker\'s rage)',
   'target-fragment': 'the target is a fragment',
   moment: "the skill's moment is on the board",
+  'target-attacked': 'the target attacked last cycle',
+  'target-healthiest': 'the target has the most Integrity left of any part',
+  'target-jammed': 'the target is Jammed',
+  'target-armored': 'the target is an armored part',
+  'target-last': 'the target is the last part standing',
+  'below-25': 'you are below 25% health',
+  shielded: 'you hold a shield',
+  'momentum-full': 'your Momentum is full',
+  'helper-out': 'you have a helper out',
+  'no-helper': 'you have no helper out',
+  blocked: 'your Block reduces it',
+  'big-hit': 'it would take more than X% of your max health', // X: the effect's `over`
+  'to-below-half': 'it would take you below half health',
+  'first-use': "it is the skill's first use in the fight",
 };
 // What each block does, which "when" it fits, and what it needs (value, stat). label: the effect, a verb phrase in the
 // tooltip style ("heals you for X"); fxText adds its trigger and condition after it. own: the label already says when.
@@ -157,7 +175,7 @@ export const FX_DO = {
   'leech-x': { when: ['crit'], label: 'makes Leech heal X times as much', value: true },
   halve: { when: ['struck'], label: 'halves the damage of an attack that lands on you', own: true },
   'crit-normal': { when: ['struck'], label: 'turns a critical strike against you into a normal hit', own: true },
-  'restore%': { when: ['struck'], label: 'heals you for X% of your max health', value: true },
+  'restore%': { when: ['struck', 'crit'], label: 'heals you for X% of your max health', value: true },
   'stat-x2': { when: ['always'], label: 'doubles one of your stats', stat: true },
   'skill-cd': { when: ['always'], label: "reduces one skill's cooldown by X cycles (never under 1)", value: true, skill: true },
   jackout: { when: ['disconnect'], label: 'jacks you out with your pack instead of losing it' },
@@ -183,34 +201,97 @@ export const FX_DO = {
   'cast-short': { when: ['custom'], label: "shortens a compiled cast's effect by X cycles", value: true },
   'no-after': { when: ['custom'], label: 'stops a tell that lands from taking a skill offline, Corrupting you or leaving you Hung' },
   'decoy-pass': { when: ['custom'], label: "lets your commands through the Decoy's mirror at X% of their damage, and nothing bounces back", value: true },
+  // The deep uniques (levels 39-50, docs/loot-plan.md Batch 1). Stats first: what they add, and to what.
+  'stat+': { when: ['always'], label: 'adds X to your stat', value: true, stat: true },
+  'stat%': { when: ['always'], label: 'increases your stat by X%', value: true, stat: true },
+  'max-signal%': { when: ['always'], label: 'increases your max Signal by X%', value: true },
+  'heal%': { when: ['always'], label: 'increases the healing you receive by X%', value: true },
+  stack: { when: ['struck'], label: 'adds X to your stat for the rest of the fight', value: true, stat: true },
+  buff: { when: ['break', 'crit'], label: 'increases your damage by X% for N cycles', value: true },
+  // The hits you take.
+  'taken%': { when: ['always', 'struck'], label: 'reduces the damage you take by X%', value: true },
+  rewind: { when: ['struck'], label: 'resets your Signal to what it was X cycles earlier', value: true },
+  'hit-cap': { when: ['struck'], label: 'stops any single attack from taking more than X% of your max health', value: true, own: true },
+  'helper-soak': { when: ['struck'], label: 'turns an attack on you onto one of your helpers, which takes it and expires', own: true },
+  'next-boost': { when: ['struck'], label: 'makes your next heal or shield X% larger', value: true },
+  'shield%': { when: ['start'], label: 'shields you for X% of your max health', value: true },
+  'shield-absorb': { when: ['custom'], label: 'makes each point of your shields absorb X% more damage', value: true },
+  'block-dot': { when: ['custom'], label: 'lets your Block take its full amount off damage over time on you (encryption, Corrupted and echoes), not just down to half' },
+  // The hits you land.
+  'burn%': { when: ['hit'], label: 'increases the damage of your burns by X%', value: true },
+  'helper%': { when: ['hit'], label: 'increases the damage of your helpers by X%', value: true },
+  'crit-damage%': { when: ['hit'], label: 'increases the damage of your critical strikes by X%', value: true },
+  'crit-double': { when: ['crit'], label: 'makes every Xth critical strike you land in a fight deal double its bonus damage', value: true, own: true },
+  'first-skill-crit': { when: ['start'], label: 'makes every hit of your first damaging skill in each fight a critical strike', own: true },
+  'first-pierce': { when: ['custom'], label: 'makes your first hit on each part go through its ◆' },
+  spill: { when: ['custom'], label: 'carries up to X leftover damage from a hit that breaks a part onto the next part to attack', value: true },
+  repeat: { when: ['cycle'], label: 'makes your next damaging skill hit again for N% of its damage after every Xth cycle', value: true, own: true },
+  // Burns and helpers.
+  'burn-now': { when: ['custom'], label: 'makes each burn you start tick once immediately, without using up a tick' },
+  'burn-sap': { when: ['custom'], label: "makes each burn you start lower its part's damage to you by X%", value: true },
+  'helper-long': { when: ['helper'], label: 'makes your first helper each fight last X cycles longer', value: true, own: true },
+  'helper-now': { when: ['helper'], label: 'makes each helper you call hit its target once as it arrives, before its ticks start', own: true },
+  'helper-cd': { when: ['expire'], label: 'makes the next helper skill you use cool down X cycles faster', value: true },
+  'free-helper': { when: ['cycle'], label: 'sends a free helper at the next part to attack for N cycles every X cycles, if you have no helper out', value: true, own: true },
+  'jam-delay': { when: ['custom'], label: "makes your Jams also push that part's next attack back X cycles", value: true },
+  // Cooldowns.
+  'first-cd': { when: ['custom'], label: "makes each skill's first cooldown in a fight X cycles shorter (never under 1)", value: true },
+  'shortest-cd': { when: ['custom'], label: 'makes the shortest cooldown on your bar (over 1 cycle) X cycles shorter', value: true },
+  'cd-tick': { when: ['cycle'], label: 'ticks your cooldowns once more every Xth cycle', value: true, own: true },
+  // Momentum (the Breaker's).
+  momentum: { when: ['break'], label: 'gives you X more Momentum', value: true },
+  'spend%': { when: ['custom'], label: 'adds X% to a skill for each Momentum stack it spends', value: true },
+  'momentum-cleave': { when: ['custom'], label: 'makes your next skill after your Momentum fills also hit every other part for X% of its damage', value: true },
+  'momentum-safe': { when: ['custom'], label: 'stops Momentum from raising the damage you take' },
+  // What you see, and what you earn.
+  unveil: { when: ['custom'], label: "shows a Veiled part's next attack once it is X cycles away", value: true },
+  'explore-xp%': { when: ['custom'], label: 'increases the XP from first clears and Mapped servers by X%', value: true },
+  'cache%': { when: ['custom'], label: 'increases the credits caches pay by X%', value: true },
 };
-export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight' };
+export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
+  chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active' };
 export const FX_LIMIT = { '': 'every time', fight: 'once per fight', run: 'once per run', cooldown: 'then a real-time cooldown' };
 // A unique can lean toward a class: it drops three times as often for that class (combat.mjs uniqueFrom).
 export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion', infiltrator: 'Infiltrator', operator: 'Operator',
   demolitionist: 'Breaker: Demolitionist', overclocker: 'Breaker: Overclocker', warden: 'Bastion: Warden', sysop: 'Bastion: Sysop',
   payload: 'Infiltrator: Payload', phantom: 'Infiltrator: Phantom', herder: 'Operator: Herder', hijacker: 'Operator: Hijacker' }; // a subclass lean: three times as likely for it, twice for its class
-export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)', native: 'Native to a network (network.mjs: about ten times as likely on its home network, its lair boss, the Listening Post and darknet listings)' };
+export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain (no strain named: any strain kill, as a trophy)', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)', native: 'Native to a network (network.mjs: about ten times as likely on its home network, its lair boss, the Listening Post and darknet listings)',
+  lair: "A floor's lair boss (floor: the floor; its network's native boss, on that floor's lair)", rare: '★ rare spawns on a floor (floor)', thread: 'A thread finished on a floor (floor: its reward offer)', puzzle: 'Puzzle boards won on a floor (floor)', raid: 'Crew bosses (KESSLER-FARM-00: their world unique roll)' };
+// A source can name the floor it drops on (floor: 7 is The Sink): a vault, a lair, a rare spawn, a thread or a puzzle
+// board there and nowhere else. planned: the source it moves to once that is built (docs/loot-plan.md Decisions).
 
 // One sentence for an effect, in the tooltip style: the effect first (a third-person verb), then when it happens.
 // "Increases your damage by 25% when you fire in a Sync Window." "Heals you for 6 when you land a critical strike."
-const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you break a part', start: 'at the start of each fight', struck: 'when an attack lands on you', disconnect: 'when your Signal hits 0 on a run', answer: 'when you answer a tell' };
-export function fxText(fx, statName = (k) => k) {
+// A unique with several effects (effect: [...]) reads as one sentence each, unless one is quiet (its line is part of
+// the text the one before it carries).
+const FX_TRIGGER = { crit: 'when you land a critical strike', break: 'when you break a part', start: 'at the start of each fight', struck: 'when an attack lands on you', disconnect: 'when your Signal hits 0 on a run', answer: 'when you answer a tell', helper: 'when you call a helper', expire: 'when one of your helpers expires' };
+// The effect blocks a unique carries: its effect, or each of its effects.
+export const fxList = (u) => (Array.isArray(u?.effect) ? u.effect : u?.effect ? [u.effect] : []);
+const STAT_NAME = (k) => STATS[k]?.name || k;
+const PCT = ['damage%', 'crit%', 'taken%', 'burn-sap', 'stat%', 'heal%'];
+export function fxText(fx, statName = STAT_NAME) {
+  if (Array.isArray(fx)) return fx.filter((x) => !x.quiet).map((x) => fxText(x, statName)).filter(Boolean).join(' '); // quiet: the one before it says it too
   if (!fx?.do) return '';
   if (fx.text) return fx.text;
   const d = FX_DO[fx.do];
-  let what = (d?.label || fx.do).replace('X', fx.value ?? 'X').replace(/\b1 cycles\b/, '1 cycle');
+  const unit = STATS[fx.stat]?.unit || '', name = statName(fx.stat);
+  let what = (d?.label || fx.do).replace(/\bXth\b/, `${fx.value}th`).replace(/\bX\b/, fx.value ?? 'X').replace(/\bN\b/, fx.cycles ?? fx.share ?? 'N');
   if (fx.do === 'stat-x2') what = `doubles your ${statName(fx.stat)}`;
   if (fx.do === 'skill-cd') what = `reduces the cooldown of ${statName(fx.skill)} by ${fx.value} ${fx.value === 1 ? 'cycle' : 'cycles'}`;
+  if (fx.do === 'stat+') what = `adds ${fx.value}${unit} ${name}`;
+  if (fx.do === 'stat%') what = `increases your ${name} by ${fx.value}%`;
+  if (fx.do === 'stack') what = `adds ${fx.value}${unit} ${name} for the rest of the fight`;
+  if (fx.do === 'buff') what = `${fx.stat ? `adds ${fx.value}${unit} ${name}` : `increases your damage by ${fx.value}%`} for ${fx.cycles || 1} cycles${fx.stacks > 1 ? `, stacking up to ${fx.stacks} times` : ''}`;
+  what = what.replace(/\b1 cycles\b/g, '1 cycle');
   const scale = fx.scale ? ` ${FX_SCALE[fx.scale]}` : '';
-  const cap = fx.cap ? `, up to ${fx.do === 'damage%' || fx.do === 'crit%' ? fx.cap + '%' : fx.cap}` : '';
+  const cap = fx.cap ? `, up to ${PCT.includes(fx.do) ? fx.cap + '%' : fx.cap}` : '';
   // The trigger, and its condition after it. A few pairs read better as one clause.
   let when = d?.own ? '' : FX_TRIGGER[fx.when] || '';
-  let cond = fx.if ? FX_IF[fx.if] : '';
+  let cond = fx.if ? (FX_IF[fx.if] || '').replace(/\bX\b/, fx.over ?? 'X') : '';
   if (fx.when === 'break' && fx.if === 'crit') { when = 'when you break a part with a critical strike'; cond = ''; }
   if (fx.when === 'break' && fx.if === 'target-fragment') { when = 'when you break a fragment'; cond = ''; }
   if (fx.when === 'struck' && fx.if === 'charged') { if (d?.own) what = what.replace('an attack', 'a tell'); else when = 'when a tell lands on you'; cond = ''; }
-  const tail = [when, cond && (when || d?.own ? `while ${cond}` : `when ${cond}`)].filter(Boolean).join(' ');
+  const tail = [when, cond && (when || d?.own || fx.when === 'always' ? `while ${cond}` : `when ${cond}`)].filter(Boolean).join(' '); // a stat bonus holds while its condition does
   if (!tail) what = what.replace(/,$/, '');
   const limit = fx.limit === 'cooldown' ? ` Works again ${fx.cooldown || 60} minutes later.` : fx.limit === 'fight' ? ' Works once per fight.' : fx.limit === 'run' ? ' Works once per run.' : '';
   const t = `${what}${scale}${cap}${tail ? ' ' + tail : ''}.${limit}`;
@@ -232,16 +313,17 @@ export function checkItems(items, bases, stats) {
     if (!Object.keys(u.primary || {}).length) say(where, u.id, 'It has no primary stats.');
     for (const part of ['primary', 'secondary', 'downside']) for (const k of Object.keys(u[part] || {})) if (!stats[k]) say(where, u.id, `Unknown stat "${k}" in ${part}.`);
     for (const k of Object.keys(u.downside || {})) if (!(u.downside[k] < 0)) say(where, u.id, `A downside should be negative (${k}).`, false);
-    const fx = u.effect;
-    if (fx) {
+    for (const fx of fxList(u)) {
       const d = FX_DO[fx.do];
       if (!FX_WHEN[fx.when]) say(where, u.id, `Unknown "when": ${fx.when}.`);
       if (!d) say(where, u.id, `Unknown effect "${fx.do}".`);
       else if (!d.when.includes(fx.when)) say(where, u.id, `"${d.label}" can't fire "${(FX_WHEN[fx.when] || fx.when).toLowerCase()}". It fits: ${d.when.map((w) => FX_WHEN[w].toLowerCase()).join(', ')}.`);
       if (d?.value && !(Number(fx.value) > 0)) say(where, u.id, 'This effect needs a value above 0.');
-      if (d?.stat && !stats[fx.stat]) say(where, u.id, 'Pick which stat counts double.');
+      if (d?.stat && !stats[fx.stat] && fx.do !== 'buff') say(where, u.id, 'Pick which stat it changes.');
+      if (fx.do === 'buff' && fx.stat && !stats[fx.stat]) say(where, u.id, `Unknown stat "${fx.stat}" for the buff.`);
       if (d?.skill && !fx.skill) say(where, u.id, 'Pick which skill cools down faster.');
       if (fx.if && FX_IF[fx.if] === undefined) say(where, u.id, `Unknown condition "${fx.if}".`);
+      if (fx.if === 'big-hit' && !(fx.over > 0)) say(where, u.id, '"It would take more than X%" needs its share (over).');
       if (fx.if === 'crit' && fx.when !== 'break') say(where, u.id, '"It was a crit" only works with "when you break a part".');
       if (/^target-/.test(fx.if || '') && !(fx.when === 'hit' || (fx.when === 'break' && fx.if === 'target-fragment'))) say(where, u.id, 'Target conditions only work with "when you hit a part" (and "the target is a fragment" with "when you break a part").');
       if (fx.limit === 'cooldown' && !(fx.cooldown > 0)) say(where, u.id, 'A cooldown needs minutes.');
@@ -250,6 +332,7 @@ export function checkItems(items, bases, stats) {
     if (u.lean && !CLASSES[u.lean]) say(where, u.id, `Unknown class "${u.lean}" to lean toward.`);
     if (!(u.sources || []).length) say(where, u.id, 'No sources: it can never drop.', false);
     for (const src of u.sources || []) if (!SOURCE_KINDS[src.kind]) say(where, u.id, `Unknown source "${src.kind}".`);
+    for (const src of u.sources || []) if (['lair', 'rare', 'thread', 'puzzle'].includes(src.kind) && !(src.floor >= 1 && src.floor <= 8)) say(where, u.id, `A ${src.kind} source needs its floor (1 to 8).`);
   }
   return out;
 }

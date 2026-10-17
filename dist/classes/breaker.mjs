@@ -16,11 +16,12 @@
 //   broke(s, p)            this player broke part p
 //   struck(s, atk, dealt, p) an attack landed on this player
 //   plan(s, t)             a command for the planner (bots, crewmates, balance scripts), or null to fall through
+//   gain(s, n, who)        Momentum from your gear (a unique's momentum effect), up to your cap
 //
 // State: fight state this module keeps lives on the encounter under bk* names, created when first
 // needed (a crewmate's encounter is a copy of the leader's at engage, so nothing is made at start).
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
-import { subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled, fxOn } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
@@ -48,6 +49,15 @@ function addMomentum(s, n, cycles = SKILLS.momentumCycles) {
   const cur = momentumStacks(s);
   setMomentum(s, Math.min(momentumCap(s), cur + n), Math.max(e.momentum?.until ?? 0, e.cycle + lasts(s, cycles)));
 }
+
+// Momentum from your gear (a unique's momentum effect: Fuse Map), on top of a break's own stack, up to your cap.
+function gain(s, n, who) {
+  if (!breaker(s) || !(n > 0) || momentumStacks(s) >= momentumCap(s)) return;
+  addMomentum(s, n);
+  emit(s, 'status', `${who}: +${n} Momentum (${momentumStacks(s)}).`, { mark: 'buff' });
+}
+// Pumphouse (spend%): a skill that spends Momentum gets this much more for each stack it spent.
+const spendMult = (s, n) => 1 + ((fxOn(s, 'spend%')?.fx.value || 0) * n) / 100;
 
 // ---------- shared helpers ----------
 // A damaging skill whose damage this module deals: it can miss like any other (combat.mjs useAbility
@@ -176,7 +186,7 @@ const use = {
     setMomentum(s, keep, e.momentum?.until ?? e.cycle);
     if (stacks) emit(s, 'status', `Thermal Throttle spends ${stacks - keep} Momentum ${stacks - keep === 1 ? 'stack' : 'stacks'}${keep ? ` (${keep} kept)` : ''}.`, { ability: id });
     thermalPaste(s, stacks - keep);
-    const r = hit(s, target, (a.base + a.perStack * stacks) * powerOf(s), { mine: true, pierce: stacks >= (a.pierceAt || 1), unlock: stacks >= (a.pierceAt || 1) });
+    const r = hit(s, target, (a.base + a.perStack * stacks) * powerOf(s) * spendMult(s, stacks - keep), { mine: true, pierce: stacks >= (a.pierceAt || 1), unlock: stacks >= (a.pierceAt || 1) });
     // Arc Flash (Overclocker capstone): the heat jumps to the part whose attack lands soonest.
     const arc = isOC(s) ? capValue(s, 'arc-flash') : 0, next = arc && (r.dealt + (r.overflow || 0)) > 0 ? soonestAttacker(s, target.id) : null;
     if (next && next !== target && alive(next)) hit(s, next, Math.max(1, Math.round((r.dealt + (r.overflow || 0)) * arc)), { by: 'Arc Flash', pierce: stacks >= (a.pierceAt || 1), noHook: true });
@@ -196,7 +206,7 @@ const use = {
     if (e.corrupt) { e.corrupt = null; cleared.push('Corrupted'); }
     if (e.scrambleUntil >= e.cycle) { e.scrambleUntil = 0; cleared.push('Scrambled'); }
     emit(s, 'status', `Vent: ${stacks ? `${stacks} Momentum ${stacks === 1 ? 'stack' : 'stacks'} dumped` : 'nothing to dump'}${cleared.length ? `, and ${cleared.join(' and ')} cleared` : ''}.`, { ability: 'vent' });
-    heal(s, healScaled(s, a.heal * Math.max(1, stacks)), 'Vent');
+    heal(s, Math.round(healScaled(s, a.heal * Math.max(1, stacks)) * spendMult(s, stacks)), 'Vent');
     if (d.integrity > d.max) d.integrity = d.max;
     thermalPaste(s, stacks);
   },
@@ -303,8 +313,8 @@ function dealt(s, p, opts) {
   return m;
 }
 
-// Redline: 10% more damage taken while you have Momentum. Brace: 30% less, and what it saved goes back (struck).
-const taken = (s) => (redline(s) && momentumStacks(s) > 0 ? subs.overclocker.edge.taken : 1) * (breaker(s) && buffed(s.encounter, 'brace') ? 1 - A('brace').cut : 1) * wallCut(s);
+// Redline: 10% more damage taken while you have Momentum (none with Undervolt: momentum-safe). Brace: 30% less, and what it saved goes back (struck).
+const taken = (s) => (redline(s) && momentumStacks(s) > 0 && !fxOn(s, 'momentum-safe') ? subs.overclocker.edge.taken : 1) * (breaker(s) && buffed(s.encounter, 'brace') ? 1 - A('brace').cut : 1) * wallCut(s);
 function struck(s, atk, dealt, p) {
   if (!breaker(s) || !buffed(s.encounter, 'brace') || !alive(p) || !(dealt > 0)) return;
   const a = A('brace'), saved = Math.round((dealt * a.cut) / (1 - a.cut));
@@ -535,4 +545,4 @@ function fill(s, t) {
   return [];
 }
 
-export default { use, validate, cycle, dealt, taken, struck, crit, hit: onHit, broke, chipped, plan, fill };
+export default { use, validate, cycle, dealt, taken, struck, crit, hit: onHit, broke, chipped, plan, fill, gain };

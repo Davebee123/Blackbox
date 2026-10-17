@@ -2492,6 +2492,1776 @@ export default {
         }
       ],
       "flavour": "The photo is of nobody. The Sentinel never looks."
+    },
+    {
+      "id": "seawall",
+      "name": "Seawall",
+      "base": "domain-front",
+      "level": 39,
+      "lean": "bastion",
+      "primary": {
+        "signal": 247,
+        "reduction": 7
+      },
+      "secondary": {
+        "reduction": 4,
+        "regen": 12
+      },
+      "effect": {
+        "when": "struck",
+        "if": "blocked",
+        "do": "stack",
+        "stat": "reduction",
+        "value": 1,
+        "cap": 5,
+        "text": "Adds 1 Block for the rest of the fight each time your Block reduces a hit, up to 5."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ],
+      "flavour": "Every wave that breaks on it leaves it a little higher."
+    },
+    {
+      "id": "undertow",
+      "name": "Undertow",
+      "base": "sandbox-escape",
+      "level": 39,
+      "primary": {
+        "damage": [
+          56,
+          71
+        ]
+      },
+      "secondary": {
+        "crit": 8,
+        "accuracy": 8
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-attacked",
+        "do": "damage%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "It pulls hardest just after the wave goes out."
+    },
+    {
+      "id": "drain-plug",
+      "name": "Drain Plug",
+      "base": "ring-zero-shell",
+      "level": 39,
+      "lean": "bastion",
+      "primary": {
+        "signal": 124,
+        "regen": 27,
+        "restore": 53
+      },
+      "secondary": {
+        "signal": 48,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "struck",
+        "if": "big-hit",
+        "over": 20,
+        "do": "halve",
+        "limit": "fight",
+        "text": "Halves the first attack on you that would take more than 20% of your max health. Works once per fight."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "Pull it and the worst of it goes down the drain."
+    },
+    {
+      "id": "backwash",
+      "name": "Backwash",
+      "base": "living-off-the-land",
+      "level": 40,
+      "lean": "operator",
+      "primary": {
+        "damage": 23,
+        "signal": 98,
+        "payload": 11
+      },
+      "secondary": {
+        "payload": 6,
+        "clock": 8
+      },
+      "effect": {
+        "when": "expire",
+        "do": "helper-cd",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ],
+      "flavour": "What flows out comes back in."
+    },
+    {
+      "id": "siltstone",
+      "name": "Siltstone",
+      "base": "bootkit",
+      "level": 40,
+      "primary": {
+        "damage": 14,
+        "signal": 68
+      },
+      "secondary": {
+        "signal": 40,
+        "regen": 8
+      },
+      "effect": {
+        "when": "always",
+        "do": "stat+",
+        "stat": "reduction",
+        "value": 1,
+        "scale": "chits"
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "Layer on layer, pressed hard."
+    },
+    {
+      "id": "low-tide",
+      "name": "Low Tide",
+      "base": "domain-front",
+      "level": 40,
+      "lean": "infiltrator",
+      "primary": {
+        "signal": 250,
+        "reduction": 7
+      },
+      "secondary": {
+        "evasion": 8,
+        "stealth": 16
+      },
+      "effect": {
+        "when": "start",
+        "do": "force-crit"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 7
+        }
+      ],
+      "flavour": "Everything it hid is showing now."
+    },
+    {
+      "id": "brine",
+      "name": "Brine",
+      "base": "living-off-the-land",
+      "level": 40,
+      "primary": {
+        "damage": 23,
+        "signal": 98,
+        "payload": 11
+      },
+      "secondary": {
+        "damage": 8,
+        "crit": 8
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-healthiest",
+        "do": "damage%",
+        "value": 8
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "Salt works on whatever is still whole."
+    },
+    {
+      "id": "sump-pump",
+      "name": "Sump Pump",
+      "base": "ring-zero-shell",
+      "level": 41,
+      "lean": "bastion",
+      "primary": {
+        "signal": 128,
+        "regen": 27,
+        "restore": 55
+      },
+      "secondary": {
+        "regen": 16,
+        "restore": 20
+      },
+      "effect": {
+        "when": "always",
+        "if": "below-half",
+        "do": "heal%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "strain"
+        }
+      ],
+      "flavour": "It only runs when the water is rising."
+    },
+    {
+      "id": "floodgate",
+      "name": "Floodgate",
+      "base": "sandbox-escape",
+      "level": 41,
+      "lean": "breaker",
+      "primary": {
+        "damage": [
+          58,
+          73
+        ]
+      },
+      "secondary": {
+        "crit": 8,
+        "critDamage": 24
+      },
+      "effect": {
+        "when": "break",
+        "do": "buff",
+        "value": 6,
+        "cycles": 3,
+        "stacks": 2,
+        "text": "Increases your damage by 6% for 3 cycles when you break a part. Stacks up to 2 times."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ],
+      "flavour": "Open one and the rest follow."
+    },
+    {
+      "id": "brackish",
+      "name": "Brackish",
+      "base": "living-off-the-land",
+      "level": 41,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": 24,
+        "signal": 100,
+        "payload": 11
+      },
+      "secondary": {
+        "payload": 8,
+        "crit": 8
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-below-half",
+        "do": "burn%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "floor": 7
+        }
+      ],
+      "flavour": "Half salt, half fresh, all of it corrosive."
+    },
+    {
+      "id": "mooring",
+      "name": "Mooring",
+      "base": "bootkit",
+      "level": 41,
+      "primary": {
+        "damage": 14,
+        "signal": 69
+      },
+      "secondary": {
+        "signal": 48,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "struck",
+        "do": "hit-cap",
+        "value": 35
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "Whatever the current does, it holds."
+    },
+    {
+      "id": "depth-gauge",
+      "name": "Depth Gauge",
+      "base": "ring-zero-shell",
+      "level": 41,
+      "primary": {
+        "signal": 128,
+        "regen": 27,
+        "restore": 55
+      },
+      "secondary": {
+        "restore": 16,
+        "evasion": 6
+      },
+      "effect": {
+        "when": "always",
+        "if": "below-half",
+        "do": "stat+",
+        "stat": "regen",
+        "value": 4
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 7
+        }
+      ],
+      "flavour": "The needle only moves one way down here."
+    },
+    {
+      "id": "riptide",
+      "name": "Riptide",
+      "base": "covert-channel",
+      "level": 42,
+      "lean": "operator",
+      "primary": {
+        "signal": 362,
+        "reduction": 10
+      },
+      "secondary": {
+        "payload": 8,
+        "clock": 8
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-jammed",
+        "do": "helper%",
+        "value": 8
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "GOLDEN PARACHUTE"
+        }
+      ],
+      "flavour": "It drags anything that stops moving."
+    },
+    {
+      "id": "pressure-hull",
+      "name": "Pressure Hull",
+      "base": "firmware-shell",
+      "level": 42,
+      "lean": "bastion",
+      "primary": {
+        "signal": 181,
+        "regen": 39,
+        "restore": 78
+      },
+      "secondary": {
+        "reduction": 4,
+        "restore": 20
+      },
+      "effect": {
+        "when": "always",
+        "if": "shielded",
+        "do": "stat%",
+        "stat": "reduction",
+        "value": 25
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "Built for the weight of everything above it."
+    },
+    {
+      "id": "ballast",
+      "name": "Ballast",
+      "base": "firmware-rootkit",
+      "level": 42,
+      "lean": "breaker",
+      "primary": {
+        "damage": 20,
+        "signal": 100
+      },
+      "secondary": {
+        "damage": 10,
+        "crit": 8
+      },
+      "effect": {
+        "when": "always",
+        "if": "momentum-full",
+        "do": "taken%",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "Heavy enough to keep you steady at speed."
+    },
+    {
+      "id": "deepwater",
+      "name": "Deepwater",
+      "base": "hypervisor-escape",
+      "level": 42,
+      "primary": {
+        "damage": [
+          83,
+          104
+        ]
+      },
+      "secondary": {
+        "crit": 10,
+        "critDamage": 20
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-armored",
+        "do": "crit-damage%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "Pressure finds every seam in the armor."
+    },
+    {
+      "id": "silt-map",
+      "name": "Silt Map",
+      "base": "metamorphic-engine",
+      "level": 42,
+      "primary": {
+        "damage": 34,
+        "signal": 142,
+        "payload": 17
+      },
+      "secondary": {
+        "scavenge": 16,
+        "signal": 40
+      },
+      "effect": {
+        "when": "custom",
+        "do": "explore-xp%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 7
+        }
+      ],
+      "flavour": "Every channel sounded and marked."
+    },
+    {
+      "id": "bilge",
+      "name": "Bilge",
+      "base": "covert-channel",
+      "level": 43,
+      "lean": "infiltrator",
+      "primary": {
+        "signal": 367,
+        "reduction": 10
+      },
+      "secondary": {
+        "payload": 8,
+        "evasion": 8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "burn-sap",
+        "value": 3,
+        "cap": 9
+      },
+      "sources": [
+        {
+          "kind": "strain"
+        }
+      ],
+      "flavour": "What collects at the bottom eats through slowly."
+    },
+    {
+      "id": "anchor-chain",
+      "name": "Anchor Chain",
+      "base": "firmware-rootkit",
+      "level": 43,
+      "lean": "bastion",
+      "primary": {
+        "damage": 20,
+        "signal": 102
+      },
+      "secondary": {
+        "signal": 60,
+        "reduction": 2
+      },
+      "effect": {
+        "when": "struck",
+        "do": "next-boost",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ],
+      "flavour": "Every pull on it sets it deeper."
+    },
+    {
+      "id": "wake",
+      "name": "Wake",
+      "base": "hypervisor-escape",
+      "level": 43,
+      "primary": {
+        "damage": [
+          84,
+          106
+        ]
+      },
+      "secondary": {
+        "crit": 8,
+        "accuracy": 8
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 5,
+        "scale": "crew"
+      },
+      "sources": [
+        {
+          "kind": "raid"
+        }
+      ],
+      "flavour": "Every hull behind you makes it bigger."
+    },
+    {
+      "id": "ebb",
+      "name": "Ebb",
+      "base": "metamorphic-engine",
+      "level": 43,
+      "lean": "operator",
+      "primary": {
+        "damage": 35,
+        "signal": 144,
+        "payload": 17
+      },
+      "secondary": {
+        "payload": 8,
+        "signal": 40
+      },
+      "effect": {
+        "when": "helper",
+        "do": "helper-long",
+        "value": 2,
+        "limit": "fight",
+        "text": "Makes your first helper each fight last 2 cycles longer."
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "floor": 7
+        }
+      ],
+      "flavour": "It goes out slowly, and it takes its time."
+    },
+    {
+      "id": "flotsam",
+      "name": "Flotsam",
+      "base": "firmware-shell",
+      "level": 43,
+      "primary": {
+        "signal": 184,
+        "regen": 40,
+        "restore": 79
+      },
+      "secondary": {
+        "restore": 20,
+        "evasion": 6
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "scavenge",
+          "value": 10,
+          "text": "Adds 10% Scavenge and 2 Regen."
+        },
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "regen",
+          "value": 2,
+          "quiet": true
+        }
+      ],
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "Everything washes up somewhere."
+    },
+    {
+      "id": "outfall",
+      "name": "Outfall",
+      "base": "hypervisor-escape",
+      "level": 43,
+      "primary": {
+        "damage": [
+          84,
+          106
+        ]
+      },
+      "secondary": {
+        "crit": 8,
+        "damage": 8
+      },
+      "effect": {
+        "when": "hit",
+        "if": "first-use",
+        "do": "damage%",
+        "value": 10,
+        "text": "Increases the damage of each skill's first use in a fight by 10%."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "GOLDEN PARACHUTE"
+        }
+      ],
+      "flavour": "The first rush out is the strongest."
+    },
+    {
+      "id": "pumphouse",
+      "name": "Pumphouse",
+      "base": "covert-channel",
+      "level": 44,
+      "lean": "breaker",
+      "primary": {
+        "signal": 373,
+        "reduction": 10
+      },
+      "secondary": {
+        "crit": 8,
+        "critDamage": 20
+      },
+      "effect": {
+        "when": "custom",
+        "do": "spend%",
+        "value": 5
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7,
+          "planned": "GOLDEN PARACHUTE"
+        }
+      ],
+      "flavour": "It runs on what you have built up."
+    },
+    {
+      "id": "sounding-line",
+      "name": "Sounding Line",
+      "base": "firmware-rootkit",
+      "level": 44,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": 21,
+        "signal": 103
+      },
+      "secondary": {
+        "crit": 8,
+        "stealth": 16
+      },
+      "effect": [
+        {
+          "when": "custom",
+          "do": "warn-early",
+          "value": 1
+        },
+        {
+          "when": "custom",
+          "do": "unveil",
+          "value": 1
+        }
+      ],
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 7
+        }
+      ],
+      "flavour": "Drop it, count the knots, and know what is coming."
+    },
+    {
+      "id": "cofferdam",
+      "name": "Cofferdam",
+      "base": "firmware-shell",
+      "level": 44,
+      "lean": "bastion",
+      "primary": {
+        "signal": 186,
+        "regen": 40,
+        "restore": 80
+      },
+      "secondary": {
+        "reduction": 4,
+        "regen": 16
+      },
+      "effect": {
+        "when": "always",
+        "if": "shielded",
+        "do": "taken%",
+        "value": 5
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "It keeps the water out while the work goes on."
+    },
+    {
+      "id": "siphon-tube",
+      "name": "Siphon Tube",
+      "base": "metamorphic-engine",
+      "level": 44,
+      "primary": {
+        "damage": 35,
+        "signal": 146,
+        "payload": 18
+      },
+      "secondary": {
+        "leech": 4,
+        "signal": 40
+      },
+      "effect": {
+        "when": "always",
+        "if": "below-half",
+        "do": "stat%",
+        "stat": "leech",
+        "value": 50
+      },
+      "sources": [
+        {
+          "kind": "strain"
+        }
+      ],
+      "flavour": "Start the flow and it keeps itself going."
+    },
+    {
+      "id": "spillway",
+      "name": "Spillway",
+      "base": "hypervisor-escape",
+      "level": 44,
+      "lean": "breaker",
+      "primary": {
+        "damage": [
+          86,
+          107
+        ]
+      },
+      "secondary": {
+        "crit": 8,
+        "critDamage": 24
+      },
+      "effect": {
+        "when": "custom",
+        "do": "spill",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 7
+        }
+      ],
+      "flavour": "When it overflows, it goes somewhere."
+    },
+    {
+      "id": "turbidity",
+      "name": "Turbidity",
+      "base": "covert-channel",
+      "level": 44,
+      "lean": "infiltrator",
+      "primary": {
+        "signal": 373,
+        "reduction": 10
+      },
+      "secondary": {
+        "crit": 8,
+        "evasion": 8
+      },
+      "effect": {
+        "when": "crit",
+        "do": "buff",
+        "stat": "stealth",
+        "value": 5,
+        "cycles": 2,
+        "text": "Adds 5% Stealth for 2 cycles when you land a critical strike. In that time, each attack on you has that chance to come 1 cycle later."
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 7
+        }
+      ],
+      "flavour": "Stir it up and nothing sees through."
+    },
+    {
+      "id": "weir",
+      "name": "Weir",
+      "base": "firmware-rootkit",
+      "level": 44,
+      "lean": "operator",
+      "primary": {
+        "damage": 21,
+        "signal": 103
+      },
+      "secondary": {
+        "payload": 8,
+        "signal": 40
+      },
+      "effect": {
+        "when": "struck",
+        "if": "helper-out",
+        "do": "helper-soak",
+        "limit": "fight",
+        "text": "Turns the first attack on you while you have a helper out onto that helper, which expires. Works once per fight."
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 7
+        }
+      ],
+      "flavour": "It holds the flow back, once."
+    },
+    {
+      "id": "post-code",
+      "name": "POST Code",
+      "base": "hypervisor-escape",
+      "level": 45,
+      "primary": {
+        "damage": [
+          95,
+          120
+        ]
+      },
+      "secondary": {
+        "crit": 12,
+        "critDamage": 24
+      },
+      "effect": {
+        "when": "start",
+        "do": "first-skill-crit"
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 8
+        }
+      ],
+      "flavour": "Every check passed. Go."
+    },
+    {
+      "id": "bootstrap",
+      "name": "Bootstrap",
+      "base": "metamorphic-engine",
+      "level": 45,
+      "primary": {
+        "damage": 39,
+        "signal": 163,
+        "payload": 20
+      },
+      "secondary": {
+        "clock": 8,
+        "damage": 10
+      },
+      "effect": {
+        "when": "custom",
+        "do": "first-cd",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "flash ranks"
+        }
+      ],
+      "flavour": "It pulls itself up before anything else loads."
+    },
+    {
+      "id": "bedframe",
+      "name": "Bedframe",
+      "base": "firmware-shell",
+      "level": 45,
+      "lean": "bastion",
+      "primary": {
+        "signal": 208,
+        "regen": 45,
+        "restore": 90
+      },
+      "secondary": {
+        "reduction": 4,
+        "regen": 16
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "max-signal%",
+          "value": 12
+        },
+        {
+          "when": "always",
+          "do": "heal%",
+          "value": 5
+        }
+      ],
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Everything else rests on it."
+    },
+    {
+      "id": "init-vector",
+      "name": "Init Vector",
+      "base": "firmware-rootkit",
+      "level": 45,
+      "primary": {
+        "damage": 23,
+        "signal": 115
+      },
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      },
+      "effect": {
+        "when": "cycle",
+        "do": "repeat",
+        "value": 5,
+        "share": 30
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "INIT"
+        }
+      ],
+      "flavour": "The same seed, the same start, every time."
+    },
+    {
+      "id": "bitrot-ward",
+      "name": "Bitrot Ward",
+      "base": "covert-channel",
+      "level": 45,
+      "lean": "bastion",
+      "primary": {
+        "signal": 416,
+        "reduction": 12
+      },
+      "secondary": {
+        "reduction": 4,
+        "regen": 16
+      },
+      "effect": {
+        "when": "start",
+        "do": "chit"
+      },
+      "sources": [
+        {
+          "kind": "strain"
+        }
+      ],
+      "flavour": "Old bits that refuse to flip."
+    },
+    {
+      "id": "firmware",
+      "name": "Firmware",
+      "base": "firmware-rootkit",
+      "level": 46,
+      "primary": {
+        "damage": 23,
+        "signal": 117
+      },
+      "secondary": {
+        "signal": 40,
+        "regen": 8
+      },
+      "effect": [
+        {
+          "when": "hit",
+          "do": "damage%",
+          "value": 4
+        },
+        {
+          "when": "always",
+          "do": "max-signal%",
+          "value": 4
+        },
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "clock",
+          "value": 4
+        }
+      ],
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "flash ranks"
+        }
+      ],
+      "flavour": "Under the operating system, over the metal."
+    },
+    {
+      "id": "read-only",
+      "name": "Read-Only",
+      "base": "firmware-shell",
+      "level": 46,
+      "lean": "bastion",
+      "primary": {
+        "signal": 211,
+        "regen": 46,
+        "restore": 91
+      },
+      "secondary": {
+        "reduction": 6,
+        "restore": 24
+      },
+      "effect": {
+        "when": "struck",
+        "if": "to-below-half",
+        "do": "taken%",
+        "value": 40,
+        "limit": "fight",
+        "text": "Reduces the damage of the first attack that would take you below half health by 40%. Works once per fight."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ],
+      "flavour": "Nothing gets written here."
+    },
+    {
+      "id": "watchdog-timer",
+      "name": "Watchdog Timer",
+      "base": "metamorphic-engine",
+      "level": 46,
+      "lean": "operator",
+      "primary": {
+        "damage": 40,
+        "signal": 166,
+        "payload": 20
+      },
+      "secondary": {
+        "payload": 10,
+        "clock": 8
+      },
+      "effect": {
+        "when": "cycle",
+        "do": "free-helper",
+        "value": 6,
+        "cycles": 2
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "floor": 8
+        }
+      ],
+      "flavour": "If nothing answers, it sends something."
+    },
+    {
+      "id": "fuse-map",
+      "name": "Fuse Map",
+      "base": "hypervisor-escape",
+      "level": 46,
+      "lean": "breaker",
+      "primary": {
+        "damage": [
+          97,
+          121
+        ]
+      },
+      "secondary": {
+        "crit": 10,
+        "critDamage": 28
+      },
+      "effect": [
+        {
+          "when": "break",
+          "do": "momentum",
+          "value": 1,
+          "text": "Gives you 1 more Momentum and increases your damage by 5% for 2 cycles when you break a part."
+        },
+        {
+          "when": "break",
+          "do": "buff",
+          "value": 5,
+          "cycles": 2,
+          "quiet": true
+        }
+      ],
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "Bedrock bosses"
+        }
+      ],
+      "flavour": "Every fuse on the board, and which one to pull."
+    },
+    {
+      "id": "burn-in",
+      "name": "Burn-In",
+      "base": "covert-channel",
+      "level": 46,
+      "lean": "infiltrator",
+      "primary": {
+        "signal": 422,
+        "reduction": 12
+      },
+      "secondary": {
+        "payload": 10,
+        "crit": 8
+      },
+      "effect": {
+        "when": "custom",
+        "do": "burn-now"
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 8
+        }
+      ],
+      "flavour": "Run it hot from the first second."
+    },
+    {
+      "id": "bit-flip",
+      "name": "Bit Flip",
+      "base": "hypervisor-escape",
+      "level": 47,
+      "lean": "infiltrator",
+      "primary": {
+        "damage": [
+          98,
+          123
+        ]
+      },
+      "secondary": {
+        "crit": 12,
+        "critDamage": 24
+      },
+      "effect": {
+        "when": "crit",
+        "do": "crit-double",
+        "value": 4
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "floor": 8
+        }
+      ],
+      "flavour": "One bit, and everything changes."
+    },
+    {
+      "id": "bus-fault",
+      "name": "Bus Fault",
+      "base": "firmware-rootkit",
+      "level": 47,
+      "lean": "operator",
+      "primary": {
+        "damage": 24,
+        "signal": 118
+      },
+      "secondary": {
+        "payload": 10,
+        "signal": 48
+      },
+      "effect": {
+        "when": "custom",
+        "do": "jam-delay",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Hold the line and nothing else can talk."
+    },
+    {
+      "id": "brownout",
+      "name": "Brownout",
+      "base": "firmware-shell",
+      "level": 47,
+      "primary": {
+        "signal": 214,
+        "regen": 46,
+        "restore": 92
+      },
+      "secondary": {
+        "regen": 20,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "always",
+        "if": "below-25",
+        "do": "taken%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 8
+        }
+      ],
+      "flavour": "Low power, still running."
+    },
+    {
+      "id": "golden-image",
+      "name": "Golden Image",
+      "base": "metamorphic-engine",
+      "level": 47,
+      "primary": {
+        "damage": 40,
+        "signal": 168,
+        "payload": 20
+      },
+      "secondary": {
+        "signal": 48,
+        "payload": 8
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "scavenge",
+          "value": 10
+        },
+        {
+          "when": "custom",
+          "do": "cache%",
+          "value": 10
+        }
+      ],
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "flash ranks"
+        }
+      ],
+      "flavour": "The clean copy everything is restored from."
+    },
+    {
+      "id": "bedrock-seal",
+      "name": "Bedrock Seal",
+      "base": "covert-channel",
+      "level": 47,
+      "lean": "bastion",
+      "primary": {
+        "signal": 428,
+        "reduction": 12
+      },
+      "secondary": {
+        "reduction": 4,
+        "regen": 20
+      },
+      "effect": {
+        "when": "custom",
+        "do": "shield-absorb",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "INIT"
+        }
+      ],
+      "flavour": "Sealed at the factory. Still sealed."
+    },
+    {
+      "id": "microcode",
+      "name": "Microcode",
+      "base": "firmware-rootkit",
+      "level": 48,
+      "primary": {
+        "damage": 24,
+        "signal": 120
+      },
+      "secondary": {
+        "damage": 12,
+        "crit": 8
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "clock",
+          "value": 6
+        },
+        {
+          "when": "custom",
+          "do": "shortest-cd",
+          "value": 1
+        }
+      ],
+      "sources": [
+        {
+          "kind": "strain"
+        }
+      ],
+      "flavour": "The instructions under the instructions."
+    },
+    {
+      "id": "last-known-good",
+      "name": "Last Known Good",
+      "base": "metamorphic-engine",
+      "level": 48,
+      "primary": {
+        "damage": 41,
+        "signal": 170,
+        "payload": 20
+      },
+      "secondary": {
+        "signal": 60,
+        "regen": 16
+      },
+      "effect": {
+        "when": "struck",
+        "if": "below-20",
+        "do": "rewind",
+        "value": 3,
+        "cap": 30,
+        "limit": "fight",
+        "text": "Resets your Signal to what it was 3 cycles earlier when you fall below 20% health, healing up to 30% of your max health. Works once per fight."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "Bedrock bosses"
+        }
+      ],
+      "flavour": "Boot from the last version that worked."
+    },
+    {
+      "id": "cold-iron",
+      "name": "Cold Iron",
+      "base": "firmware-shell",
+      "level": 48,
+      "lean": "bastion",
+      "primary": {
+        "signal": 217,
+        "regen": 47,
+        "restore": 94
+      },
+      "secondary": {
+        "regen": 20,
+        "restore": 24
+      },
+      "effect": [
+        {
+          "when": "always",
+          "do": "stat+",
+          "stat": "reduction",
+          "value": 3
+        },
+        {
+          "when": "custom",
+          "do": "block-dot"
+        }
+      ],
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Nothing that seeps gets past it."
+    },
+    {
+      "id": "wire-wrap",
+      "name": "Wire Wrap",
+      "base": "hypervisor-escape",
+      "level": 48,
+      "lean": "breaker",
+      "primary": {
+        "damage": [
+          100,
+          125
+        ]
+      },
+      "secondary": {
+        "crit": 10,
+        "critDamage": 28
+      },
+      "effect": {
+        "when": "custom",
+        "do": "momentum-cleave",
+        "value": 40
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8
+        }
+      ],
+      "flavour": "Every pin tied to every other pin."
+    },
+    {
+      "id": "dead-reckoning",
+      "name": "Dead Reckoning",
+      "base": "covert-channel",
+      "level": 48,
+      "lean": "infiltrator",
+      "primary": {
+        "signal": 434,
+        "reduction": 12
+      },
+      "secondary": {
+        "crit": 10,
+        "stealth": 20
+      },
+      "effect": {
+        "when": "custom",
+        "do": "first-pierce"
+      },
+      "sources": [
+        {
+          "kind": "thread",
+          "floor": 8
+        }
+      ],
+      "flavour": "No map, no stars, still on target."
+    },
+    {
+      "id": "ground-plane",
+      "name": "Ground Plane",
+      "base": "firmware-rootkit",
+      "level": 49,
+      "primary": {
+        "damage": 24,
+        "signal": 122
+      },
+      "secondary": {
+        "signal": 60,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "struck",
+        "do": "crit-normal",
+        "text": "Turns every critical strike against you into a normal hit."
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 8
+        }
+      ],
+      "flavour": "Everything drains to it, and nothing spikes."
+    },
+    {
+      "id": "clock-tree",
+      "name": "Clock Tree",
+      "base": "metamorphic-engine",
+      "level": 49,
+      "primary": {
+        "damage": 41,
+        "signal": 173,
+        "payload": 21
+      },
+      "secondary": {
+        "clock": 8,
+        "damage": 12
+      },
+      "effect": {
+        "when": "cycle",
+        "do": "cd-tick",
+        "value": 4,
+        "text": "Makes your cooldowns tick twice every 4th cycle."
+      },
+      "sources": [
+        {
+          "kind": "puzzle",
+          "floor": 8
+        }
+      ],
+      "flavour": "One edge, sent everywhere at once."
+    },
+    {
+      "id": "quarry",
+      "name": "Quarry",
+      "base": "hypervisor-escape",
+      "level": 49,
+      "primary": {
+        "damage": [
+          101,
+          127
+        ]
+      },
+      "secondary": {
+        "crit": 10,
+        "damage": 16
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-last",
+        "do": "damage%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "Bedrock bosses"
+        }
+      ],
+      "flavour": "Dig until there is nothing left."
+    },
+    {
+      "id": "strata",
+      "name": "Strata",
+      "base": "firmware-shell",
+      "level": 49,
+      "lean": "bastion",
+      "primary": {
+        "signal": 220,
+        "regen": 47,
+        "restore": 95
+      },
+      "secondary": {
+        "reduction": 6,
+        "regen": 20
+      },
+      "effect": {
+        "when": "always",
+        "do": "taken%",
+        "value": 2,
+        "scale": "missing",
+        "cap": 10
+      },
+      "sources": [
+        {
+          "kind": "vault",
+          "floor": 8
+        }
+      ],
+      "flavour": "Pressed flat by everything above it."
+    },
+    {
+      "id": "load-order",
+      "name": "Load Order",
+      "base": "metamorphic-engine",
+      "level": 49,
+      "lean": "operator",
+      "primary": {
+        "damage": 41,
+        "signal": 173,
+        "payload": 21
+      },
+      "secondary": {
+        "payload": 12,
+        "clock": 8
+      },
+      "effect": {
+        "when": "helper",
+        "do": "helper-now"
+      },
+      "sources": [
+        {
+          "kind": "strain"
+        }
+      ],
+      "flavour": "First in line, every time."
+    },
+    {
+      "id": "undervolt",
+      "name": "Undervolt",
+      "base": "covert-channel",
+      "level": 49,
+      "lean": "breaker",
+      "primary": {
+        "signal": 440,
+        "reduction": 12
+      },
+      "secondary": {
+        "crit": 10,
+        "critDamage": 28
+      },
+      "effect": {
+        "when": "custom",
+        "do": "momentum-safe"
+      },
+      "sources": [
+        {
+          "kind": "rare",
+          "floor": 8
+        }
+      ],
+      "flavour": "Less power, same speed, no heat."
+    },
+    {
+      "id": "keystone",
+      "name": "Keystone",
+      "base": "firmware-rootkit",
+      "level": 50,
+      "primary": {
+        "damage": 25,
+        "signal": 123
+      },
+      "secondary": {
+        "damage": 12,
+        "signal": 48
+      },
+      "effect": {
+        "when": "hit",
+        "do": "damage%",
+        "value": 3,
+        "scale": "sets"
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "INIT"
+        }
+      ],
+      "flavour": "Pull it and the arch comes down."
+    },
+    {
+      "id": "signal-floor",
+      "name": "Signal Floor",
+      "base": "covert-channel",
+      "level": 50,
+      "primary": {
+        "signal": 446,
+        "reduction": 12
+      },
+      "secondary": {
+        "regen": 20,
+        "reduction": 4
+      },
+      "effect": {
+        "when": "always",
+        "if": "below-25",
+        "do": "stat%",
+        "stat": "regen",
+        "value": 100,
+        "text": "Doubles your Regen while you are below 25% health."
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "flash ranks"
+        }
+      ],
+      "flavour": "It never drops under this."
+    },
+    {
+      "id": "cold-boot-bedrock",
+      "name": "Cold Boot",
+      "base": "firmware-shell",
+      "level": 50,
+      "lean": "bastion",
+      "primary": {
+        "signal": 223,
+        "regen": 48,
+        "restore": 96
+      },
+      "secondary": {
+        "reduction": 6,
+        "restore": 24
+      },
+      "effect": {
+        "when": "start",
+        "do": "shield%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "Bedrock bosses"
+        }
+      ],
+      "flavour": "Cut the power, and it is the first thing back."
+    },
+    {
+      "id": "root-of-trust",
+      "name": "Root of Trust",
+      "base": "hypervisor-escape",
+      "level": 50,
+      "primary": {
+        "damage": [
+          102,
+          128
+        ]
+      },
+      "secondary": {
+        "crit": 12,
+        "critDamage": 24
+      },
+      "effect": {
+        "when": "crit",
+        "do": "restore%",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "lair",
+          "floor": 8,
+          "planned": "INIT"
+        }
+      ],
+      "flavour": "Everything above it is only as sound as this."
     }
   ]
 };

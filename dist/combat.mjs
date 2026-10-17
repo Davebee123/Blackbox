@@ -4,7 +4,7 @@
 import { onFound, memoryCommand, isLive, joinCost, memoryRestore } from './memory.mjs';
 import { barSlots, isRunSkill, SUBCLASS, SUBS, defaultSub, HOT_RUN, ELITE, BOSS_LOOT, BOSSES, ENRAGE, makePart, EDGE, SYNC, CONFIG, ABILITIES, SKILLS, DAEMONS, SPARE_EXPLOIT, FAMILIES, FIXTURES, GUARDS, MUTATIONS, STRAINS, SERVER, TEMPLATES, layerOf, floorOfLayer, createVirus, createLocation, ARCHETYPES, CANTRIPS, LOADOUT, TREE, UNLOCKS, XP, xpToNext, killXp, xpScale, deedScale, power, mobPower, skillOrder, unlockLevel, lineOf, presetBar, shippedPresets, spikeOf, SPIKE } from './data.mjs';
 // The subclasses' engine side (dist/classes/<class>.mjs): what their skills, talents and edges do.
-import BREAKER_FX from './classes/breaker.mjs';
+import BREAKER_FX, { momentumCap } from './classes/breaker.mjs';
 import BASTION_FX from './classes/bastion.mjs';
 import INFILTRATOR_FX from './classes/infiltrator.mjs';
 import OPERATOR_FX from './classes/operator.mjs';
@@ -40,8 +40,8 @@ import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached,
 import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
-import { setFx, isPiece, setPool, SET_LOOT, setPityKey, setOf, setsRestore } from './sets.mjs';
-import { fxText } from './content.mjs';
+import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, setPityKey, setOf, setsRestore } from './sets.mjs';
+import { fxText, fxList } from './content.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
 import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER } from './research.mjs';
@@ -205,13 +205,22 @@ export function hasTalent(s, id) {
   return kit.talents.some((pair, i) => (picks[i] === 0 || picks[i] === 1) && pair[picks[i]].id === id);
 }
 // Cooldowns after talents.
-export function cooldownOf(s, id) {
+function talentCooldown(s, id) {
   if (id === 'overload' && hasTalent(s, 'hair-trigger')) return 2;
   if (id === 'suspend' && hasTalent(s, 'preemption')) return 2;
   let base = ABILITIES[id]?.cooldown || 0;
   for (const h of classHooks()) if (h.cooldown) base = h.cooldown(s, id, base);
-  // A unique that shortens one skill's cooldown (effect skill-cd), never under 1.
-  const off = fxFire(s, 'always', { do: 'skill-cd' }, false).filter((x) => x.fx.skill === id).reduce((n, x) => n + x.value, 0);
+  return base;
+}
+// The skill on your bar with the shortest cooldown over 1 cycle (the first of a tie), for Microcode (shortest-cd).
+const shortestSkill = (s) => usable(s).map((id) => [id, talentCooldown(s, id)]).filter(([, c]) => c > 1).sort((a, b) => a[1] - b[1])[0]?.[0] || null;
+export function cooldownOf(s, id) {
+  const base = talentCooldown(s, id);
+  if ((id === 'overload' && hasTalent(s, 'hair-trigger')) || (id === 'suspend' && hasTalent(s, 'preemption'))) return base;
+  // A unique that shortens one skill's cooldown (effect skill-cd), never under 1; or the shortest on your bar (shortest-cd).
+  let off = fxFire(s, 'always', { do: 'skill-cd' }, false).filter((x) => x.fx.skill === id).reduce((n, x) => n + x.value, 0);
+  const short = fxHas(s, 'shortest-cd');
+  if (short && base > 1 && shortestSkill(s) === id) off += Number(short.fx.value) || 0;
   return off && base ? Math.max(1, base - off) : base;
 }
 // The bar in key order: [[key, id], …] (keyMap is the same as an object; '0' would sort first in it).
@@ -245,7 +254,8 @@ export const familyInfo = (id) => FAMILIES[id] || GUARDS[id] || ROOM_FAMILIES[id
 export function timersHidden(s, p = null) {
   const c = s.encounter.cycle;
   // Actuarial Model (Halcyon): nothing hides its timers from you.
-  const hides = (x) => alive(x) && !(x.taggedUntil >= c) && !(x.seenUntil >= c) && x.veiled && x.armor > 0 && !zeroDay(s, 'actuarial'); // seenUntil: Side Channel, Unmask
+  const near = fxHas(s, 'unveil'), soon = (x) => !!near && !!x.attack && x.attack.due - c <= (Number(near.fx.value) || 0); // Sounding Line: its next attack shows once it is close
+  const hides = (x) => alive(x) && !(x.taggedUntil >= c) && !(x.seenUntil >= c) && x.veiled && x.armor > 0 && !zeroDay(s, 'actuarial') && !soon(x); // seenUntil: Side Channel, Unmask
   return p ? hides(p) : livingParts(s).some(hides);
 }
 
@@ -283,8 +293,11 @@ export function damageMultiplier(s, p, opts = {}) {
     if (hasTalent(s, 'unsafe-mode')) m *= 1.3;
     if (e.synced) m *= 1 + CONFIG.sync.bonus;
     for (const x of fxFire(s, 'hit', { target: p, do: 'damage%', cmd: !opts.dot && !opts.by ? e.commanding?.id : null })) m *= 1 + x.value / 100;
+    m *= buffMult(s); // a timed buff from a break (Floodgate, Fuse Map)
   }
   if (opts.dot) for (const x of fxFire(s, 'custom', { do: 'dot%' })) m *= 1 + x.value / 100;
+  // Burns or helpers alone, on a part that meets the condition (Brackish, Riptide). A helper's hit carries src 'helper'.
+  if (opts.dot && !opts.server) for (const x of fxFire(s, 'hit', { target: p, do: opts.src === 'helper' ? 'helper%' : 'burn%' })) m *= 1 + x.value / 100;
   if (!opts.server) m *= classMult('dealt', s, p, opts);
   m *= masteryDmg(s, e.virus, p); // a part you've mastered takes 3% more from all of yours (research.mjs; never a crewmate's)
   return m;
@@ -396,12 +409,22 @@ const baseMax = (s) => Math.round(CONFIG.maxIntegrity * power(serverLevel(s)));
 // (Survival stats exist on both sides and count where that side is defending.)
 export function gearStat(s, stat, side = null) {
   let n = 0;
+  let pct = 0;
   if (side !== 'server') for (const it of loaded(s)) {
     n += it.stats[stat] || 0;
-    // A unique whose stat counts double while its condition holds (Hotfix, Shade Filter…).
-    const fx = it.unique && UNIQUES[it.unique]?.effect;
-    if (fx?.when === 'always' && fx.do === 'stat-x2' && fx.stat === stat && !['signal', 'integrity'].includes(stat) && fxCond(s, fx)) n += it.stats[stat] || 0;
+    const u = it.unique && UNIQUES[it.unique];
+    if (!u?.effect) continue;
+    fxList(u).forEach((fx, i) => {
+      if (fx.stat !== stat || ['signal', 'integrity'].includes(stat)) return;
+      // A unique whose stat counts double while its condition holds (Hotfix, Shade Filter…).
+      if (fx.when === 'always' && fx.do === 'stat-x2' && fxCond(s, fx)) n += it.stats[stat] || 0;
+      // One that adds to a stat, or raises it by a share, while its condition holds (Siltstone, Depth Gauge, Pressure Hull…).
+      if (fx.when === 'always' && fx.do === 'stat+' && fxCond(s, fx)) n += fxScale(s, fx);
+      if (fx.when === 'always' && fx.do === 'stat%' && fxCond(s, fx)) pct += Number(fx.value) || 0;
+      n += fightStat(s, u.id, fx, i, stat); // its stacks and timed buffs in this fight (Seawall, Turbidity)
+    });
   }
+  if (pct) n = Math.round(n * (1 + pct / 100));
   if (side !== 'hacker') n += (FILTER_STATS[stat]?.home ? (FILTER_STATS[stat].pct ? Math.round((serverMax(s) * filterStat(s, stat)) / 100) : filterStat(s, stat)) : 0); // the firewall's filters for the fights at home: decoys, a sandbox, Block, a shield, Regen, barbs
   return STATS[stat]?.cap ? Math.min(STATS[stat].cap, n) : n;
 }
@@ -500,9 +523,20 @@ export function deconstruct(s, item, out = null) {
 // Uniques written in content/items.mjs (the editor's Uniques page).
 export const UNIQUES = Object.fromEntries((ITEMS.uniques || []).map((u) => [u.id, u]));
 const uniqueById = (id) => UNIQUES[id] || null;
-// Does a unique drop from here? ctx: { kind: sprawl|home|guard|rogue|vault, id, layer, strain }.
-const dropsHere = (u, ctx) => (u.sources || []).some((src) => src.kind === ctx.kind && (!src.id || src.id === ctx.id) && (!src.layer || (ctx.layer || 1) >= src.layer)
-  || (src.kind === 'sprawl' && ctx.kind === 'sprawl') || (src.kind === 'guard' && ctx.kind === 'guard' && src.id === ctx.id));
+// Does a unique drop from here? ctx: { kind: sprawl|home|guard|rogue|vault, id, layer, floor, rare, strain }.
+// A source with a floor (floor: 7, The Sink) drops on that floor only. A ★ rare spawn's (kind rare) whatever room it is in.
+const onFloor = (src, ctx) => !src.floor || src.floor === ctx.floor;
+const dropsHere = (u, ctx) => (u.sources || []).some((src) => (src.kind === ctx.kind && (!src.id || src.id === ctx.id) && (!src.layer || (ctx.layer || 1) >= src.layer) && onFloor(src, ctx))
+  || (src.kind === 'sprawl' && ctx.kind === 'sprawl') || (src.kind === 'guard' && ctx.kind === 'guard' && src.id === ctx.id) || (src.kind === 'rare' && !!ctx.rare && onFloor(src, ctx)));
+// The uniques a source kind drops on a floor (a lair's, a thread's, a puzzle board's), open at a level: one you lack first.
+export const floorUniques = (kind, floor, level) => Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && (u.sources || []).some((src) => src.kind === kind && src.floor === floor));
+export function floorUnique(s, kind, floor, level, pick = () => rand(s)) {
+  const pool = floorUniques(kind, floor, level);
+  if (!pool.length) return null;
+  const fresh = pool.filter((u) => !s.collection?.[u.id]), heard = fresh.filter((u) => u.id === s.listen && postsOf(s));
+  const from = heard.length ? heard : fresh.length ? fresh : pool;
+  return from[Math.floor(pick() * from.length)];
+}
 export function uniqueFrom(s, ctx, level) {
   const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && dropsHere(u, ctx) && !['story', 'contract', 'store'].includes(ctx.kind)); // a set piece drops off its own table (guardSet)
   return pickUnique(s, pool);
@@ -536,7 +570,7 @@ function bossLoot(s, boss, level) {
     const it = rollItem(() => rand(s), { level, rarity, cls: classOf(s) });
     if (B.family) it.from = B.family;
     addItem(s, it, `${name} drops: `);
-    if (B.raid && rand(s) < BOSS_LOOT.raid.gold) { const u = eliteUnique(s, level); if (u) addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `); }
+    if (B.raid && rand(s) < BOSS_LOOT.raid.gold) { const u = eliteUnique(s, level, ['raid']); if (u) addItem(s, uniqueItem(u, level, () => rand(s)), `${name} drops: `); }
   }
   bossUnique(s, boss, level);
 }
@@ -587,8 +621,12 @@ function bossUnique(s, boss, level) {
 // (kept per network), one you haven't found first. The first time it falls it names them all.
 export const lairKey = (s, who) => 'lair:' + (who || '');
 export const lairChance = (s, who) => Math.min(1, BOSS_LOOT.chance + BOSS_LOOT.pity * (s.pity?.[lairKey(s, who)] || 0));
+// On a floor whose lair has uniques of its own (source kind 'lair': The Sink's, Bedrock's), they join the natives in
+// the same roll, at the same odds: a bigger table, not more drops. They carry no network.
+const fightFloor = (s, e = s.encounter) => findLocation(s, e?.wild || e?.process || s.run?.loc)?.depth || null;
 function nativeBossUnique(s, boss, level) {
-  const who = fightNet(s), name = BOSSES[boss].name, pool = lairUniques(s, who, level), key = lairKey(s, who);
+  const who = fightNet(s), name = BOSSES[boss].name, key = lairKey(s, who), floor = fightFloor(s);
+  const pool = [...lairUniques(s, who, level), ...(floor ? floorUniques('lair', floor, level).map((u) => u.id) : [])];
   lairFell(s, who);
   if (!pool.length) return;
   const heard = pool.includes(s.listen) && postsOf(s) ? listenBoost(s) : 1;
@@ -596,11 +634,11 @@ function nativeBossUnique(s, boss, level) {
     (s.pity ||= {})[key] = 0;
     const fresh = pool.filter((id) => !s.collection?.[id]), from = fresh.includes(s.listen) ? [s.listen] : fresh.length ? fresh : pool;
     const it = uniqueItem(UNIQUES[from[Math.floor(rand(s) * from.length)]], level, () => rand(s));
-    it.home = { name: nameOf(s, who), who };
+    if (isNative(it.unique)) it.home = { name: nameOf(s, who), who };
     addItem(s, it, `${name} drops: `);
   } else {
     (s.pity ||= {})[key] = (s.pity[key] || 0) + 1;
-    emit(s, 'info', `No native unique from ${name} this time. The next kill has a ${Math.round(lairChance(s, who) * 100)}% chance.`);
+    emit(s, 'info', `No ${pool.some((id) => !isNative(id)) ? '' : 'native '}unique from ${name} this time. The next kill has a ${Math.round(lairChance(s, who) * 100)}% chance.`);
   }
 }
 // A guard's own set pieces (sets.mjs SET_LOOT: a set piece whose source is that guard, on floors deep enough): BOSS_LOOT's
@@ -656,11 +694,23 @@ function nativeDrop(s, e, pack = false) {
   if (pack && s.run) { s.run.pack.push({ path: `${e.room}/#native-${e.seed}-${s.serial}`, name: 'protocol.bin', kind: 'gear', size: '32k', item: it }); emit(s, 'drop', `${e.virus.name} dropped ${itemLabel(it)}, native to ${it.home?.name || 'another network'}. In your pack until you jack out.`, { item: it, pack: true, rarity: it.rarity }); }
   else addItem(s, it, `Native to ${it.home?.name || 'another network'}: `);
 }
-// An elite's unique: any world drop (SPRAWL, vaults, guards, rogue servers) up to its level, wherever
-// it was written to drop. Story, contract, store and strain uniques stay where they belong.
-const WORLD = ['sprawl', 'vault', 'guard', 'rogue'];
-function eliteUnique(s, level) {
-  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && (u.sources || []).some((src) => WORLD.includes(src.kind)));
+// A puzzle board won on a floor with uniques of its own (source kind 'puzzle', floorplan.mjs finishPuzzle): a board
+// stands in for the fights around it, so it rolls an elite's odds of a gold (LOOT.odds.elite, Scavenge as magic find, a
+// Listening Post on the one you want), for one of them, one you lack first. Returns the item, or null.
+export function puzzleUnique(s, floor, level) {
+  const pool = floorUniques('puzzle', floor, level);
+  if (!pool.length) return null;
+  const heard = pool.some((u) => u.id === s.listen) ? listenBoost(s) : 1;
+  if (!(rand(s) < lootOdds('elite').zeroday * magicFind(gearStat(s, 'scavenge')) * heard)) return null;
+  const u = floorUnique(s, 'puzzle', floor, level);
+  return u ? uniqueItem(u, level, () => rand(s)) : null;
+}
+// An elite's unique: any world drop (SPRAWL, vaults, guards, rogue servers, rare spawns, threads, puzzle boards) up to its
+// level, wherever it was written to drop. Story, contract, store, lair and strain uniques stay where they belong. A crew
+// boss's (more: 'raid') adds its own.
+export const WORLD_SOURCES = ['sprawl', 'vault', 'guard', 'rogue', 'rare', 'thread', 'puzzle'];
+function eliteUnique(s, level, more = []) {
+  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && (u.sources || []).some((src) => WORLD_SOURCES.includes(src.kind) || more.includes(src.kind)));
   return pickUnique(s, pool);
 }
 // One roll at a tier's odds (LOOT.odds: trash, elite, rare): mostly nothing, now and then a white, rarely better.
@@ -694,14 +744,18 @@ export function rollDrop(s, ctx, level) {
     const it = rollOnce(s, ctx, level, tier);
     if (it && (!best || RARITY_ORDER.indexOf(it.rarity) > RARITY_ORDER.indexOf(best.rarity))) best = it;
   }
-  const trophyOf = (st) => Object.values(UNIQUES).find((u) => (u.sources || []).some((src) => src.kind === 'strain' && src.id === st));
-  if (ctx.strain && (ctx.trophy || rand(s) < (trophyOf(ctx.strain)?.id === s.listen ? listenBoost(s) : 1) / LOOT.trophy)) { // a streak reward rolls for it outright
-    const t = Object.values(UNIQUES).find((u) => (u.sources || []).some((src) => src.kind === 'strain' && src.id === ctx.strain));
+  // Its trophies: the strain's own, and any unique that drops from strain kills (no strain named) open at the level, in the
+  // same roll (a bigger table, not more drops). One you lack first.
+  const trophies = ctx.strain ? strainTrophies(ctx.strain, level) : [];
+  if (ctx.strain && (ctx.trophy || rand(s) < (trophies.some((u) => u.id === s.listen) ? listenBoost(s) : 1) / LOOT.trophy)) { // a streak reward rolls for it outright
+    const fresh = trophies.filter((u) => !s.collection?.[u.id]), from = fresh.length ? fresh : trophies;
+    const t = from.length > 1 ? from[Math.floor(rand(s) * from.length)] : from[0];
     if (t) best = uniqueItem(t, level, () => rand(s));
   }
   if (best && ctx.family) best.from = ctx.family;
   return best;
 }
+export const strainTrophies = (strain, level) => Object.values(UNIQUES).filter((u) => (u.sources || []).some((src) => src.kind === 'strain' && (src.id === strain || (!src.id && u.level <= level + 2))));
 // Your pace: kills an hour of active play (the System page shows it; loot targets assume LOOT.killsPerHour; the odds are a kill at a time).
 export const paceOf = (s) => { const p = s.pace || { kills: 0, ms: 0 }; return { kills: p.kills, minutes: p.ms / 60000, perHour: p.ms > 5 * 60000 ? Math.round(p.kills / (p.ms / 3600000)) : null }; };
 // A unique by id, as a reward (story beats, contracts).
@@ -727,10 +781,13 @@ export function setDeliver(s) {
 // Each loaded unique's effect (blocks from content/items.mjs). fxCond: does its condition hold now?
 // A blue's or a yellow's rule (gear.mjs RULES) runs the same way, at its item's value; the same rule twice counts once, at its best.
 // Policy Engine (a native unique, rule-amp): every rule's number counts that much more.
+// A unique with several effects (effect: [...]) lists each; the second and later carry ids of their own (<id>:1…),
+// so each keeps its own once-a-fight.
+const fxIdOf = (uid, i) => (i ? `${uid}:${i}` : uid);
 const uniqueFx = (s) => {
   const out = [], rules = {};
   for (const it of loaded(s)) {
-    if (it.unique && UNIQUES[it.unique]?.effect) out.push({ it, fx: UNIQUES[it.unique].effect, id: it.unique });
+    if (it.unique) fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx, id: fxIdOf(it.unique, i) }));
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
   }
@@ -772,15 +829,63 @@ function fxCond(s, fx, ctx = {}) {
     case 'target-fragment': return !!p && p.kind === 'fragment';
     case 'moment': return !!ctx.cmd && !!situationOf(s, ctx.cmd);
     case 'no-chit': return !!e && !(e.chits > 0);
+    // The deep uniques' (levels 39-50).
+    case 'target-attacked': return !!p && !!e && p.lastLanded === e.cycle - 1; // the players act first: its attack last cycle came after your command
+    case 'target-healthiest': return !!p && alive(p) && livingParts(s).every((x) => x.integrity <= p.integrity);
+    case 'target-jammed': return !!p && !!e && p.jammedUntil >= e.cycle;
+    case 'target-armored': return !!p && p.maxArmor > 0;
+    case 'target-last': return alive(p) && livingParts(s).length === 1;
+    case 'below-25': return d().integrity < d().max * 0.25;
+    case 'shielded': return (e?.shield || 0) > 0;
+    case 'momentum-full': return !!e && classOf(s) === 'breaker' && momentumStacks(s) >= momentumCap(s);
+    case 'helper-out': return (e?.helpers?.length || 0) > 0;
+    case 'no-helper': return !!e && !e.helpers?.length;
+    case 'blocked': return blockOf(s) > 0;
+    case 'big-hit': return ctx.amount > (d().max * (fx.over || 0)) / 100; // the attack's size as it reaches you, before Block
+    case 'to-below-half': return ctx.lands != null && d().integrity >= d().max / 2 && d().integrity - ctx.lands < d().max / 2; // what would get through to your Signal
+    case 'first-use': return !!ctx.cmd && !!e && (e.metrics?.actions?.[ctx.cmd] || 0) <= 1;
     default: return false;
   }
 }
+// The set bonuses open on what you wear (sets.mjs activeSets: each piece count's bonus counts once).
+export const setBonusCount = (s) => activeSets(loaded(s)).reduce((n, r) => n + r.open.length, 0);
 const fxScale = (s, fx) => {
   const e = s.encounter;
-  const k = fx.scale === 'cycles' ? Math.max(0, (e?.cycle || 1) - 1) : fx.scale === 'contracts' ? (s.mail?.jobs || []).filter((j) => !j.done).length : fx.scale === 'broken' ? e?.breaks || 0 : fx.scale === 'reads' ? e?.metrics?.reads || 0 : 1;
+  const d = () => defender(s) || { integrity: 1, max: 1 };
+  const k = fx.scale === 'cycles' ? Math.max(0, (e?.cycle || 1) - 1) : fx.scale === 'contracts' ? (s.mail?.jobs || []).filter((j) => !j.done).length : fx.scale === 'broken' ? e?.breaks || 0 : fx.scale === 'reads' ? e?.metrics?.reads || 0
+    : fx.scale === 'chits' ? e?.chits || 0 : fx.scale === 'crew' ? (e ? alliesOf(s).length : 0) : fx.scale === 'missing' ? Math.max(0, Math.floor((1 - d().integrity / Math.max(1, d().max)) * 10 + 1e-9)) : fx.scale === 'sets' ? setBonusCount(s) : 1;
   const v = (Number(fx.value) || 0) * k;
   return fx.cap ? Math.min(fx.cap, v) : v;
 };
+// The fight state your gear's effects keep (e.fxs): stacks for the fight, timed buffs, boosts banked for later, counts.
+// Each player keeps their own (crew.mjs gives each crewmate a fresh one).
+const fxState = (e) => (e.fxs ||= {});
+// A stat your effects add to for a while in a fight: the stacks (stack, Seawall) and the timed buffs (buff with a stat, Turbidity).
+function fightStat(s, uid, fx, i, stat) {
+  const e = s.encounter;
+  if (!e || !active(s) || fx.stat !== stat) return 0;
+  const st = fxState(e), id = fxIdOf(uid, i);
+  if (fx.do === 'stack') return st.stack?.[id] || 0;
+  if (fx.do === 'buff') { const b = st.buff?.[id]; return b && b.until >= e.cycle ? b.stacks * (Number(fx.value) || 0) : 0; }
+  return 0;
+}
+// The damage your timed buffs add now (buff without a stat: Floodgate, Fuse Map), as a multiplier.
+function buffMult(s) {
+  const e = s.encounter, b = e?.fxs?.buff;
+  if (!b || !wears(s, 'buff')) return 1;
+  let m = 1;
+  for (const x of uniqueFx(s)) if (x.fx.do === 'buff' && !x.fx.stat && b[x.id]?.until >= e.cycle) m *= 1 + (b[x.id].stacks * (Number(x.fx.value) || 0)) / 100;
+  return m;
+}
+// A timed buff's stack: one more (up to its stacks) and its timer refreshed.
+function addBuff(s, x) {
+  const e = s.encounter, b = (fxState(e).buff ||= {}), was = b[x.id]?.until >= e.cycle ? b[x.id].stacks : 0;
+  b[x.id] = { stacks: Math.min(x.fx.stacks || 1, was + 1), until: e.cycle + (x.fx.cycles || 1) };
+  emit(s, 'status', `${x.name || x.it.name}: ${x.fx.stat ? `+${b[x.id].stacks * x.value}${STATS[x.fx.stat]?.unit || ''} ${STATS[x.fx.stat]?.name || x.fx.stat}` : `+${b[x.id].stacks * x.value}% damage`} for ${x.fx.cycles || 1} ${(x.fx.cycles || 1) === 1 ? 'cycle' : 'cycles'}.`, { mark: 'buff', ...firedOf([x]) });
+}
+// The sum of the values of your effects of one kind that hold now (heal%, taken%, cache%…).
+const fxSum = (s, when, what, ctx = {}, spend = false) => fxFire(s, when, { ...ctx, do: what }, spend).reduce((n, x) => n + x.value, 0);
+export const fxPct = (s, what) => fxSum(s, 'custom', what); // cache% (netrooms.mjs), explore-xp% (floorplan.mjs)
 function fxReady(s, fx, id) {
   const e = s.encounter;
   if (fx.limit === 'fight') return !e?.once?.['fx:' + id];
@@ -793,9 +898,24 @@ function fxSpend(s, fx, id) {
   if (fx.limit === 'run' && s.run) (s.run.fx ||= {})[id] = true;
   if (fx.limit === 'cooldown') (s.fxCooldown ||= {})[id] = (hooks.now?.() ?? Date.now()) + (fx.cooldown || 60) * 60000;
 }
+// The deep uniques' effect kinds (content.mjs FX_DO, levels 39-50): their hooks run on every hit, heal and cycle, and
+// nearly every fight carries none of them, so a kind you don't wear answers at once (fxKinds: the kinds on your rig,
+// kept while the rig is the same).
+const DEEP = new Set(['stat+', 'stat%', 'max-signal%', 'heal%', 'stack', 'buff', 'taken%', 'hit-cap', 'helper-soak', 'next-boost', 'shield%', 'shield-absorb', 'block-dot', 'burn%', 'helper%', 'crit-damage%', 'crit-double', 'first-skill-crit', 'first-pierce', 'spill', 'repeat', 'burn-now', 'burn-sap', 'helper-long', 'helper-now', 'helper-cd', 'free-helper', 'jam-delay', 'first-cd', 'shortest-cd', 'cd-tick', 'momentum', 'spend%', 'momentum-cleave', 'momentum-safe', 'unveil', 'explore-xp%', 'cache%', 'rewind']);
+const KINDS = new WeakMap();
+function fxKinds(s) {
+  const key = hooks.extraFx ? null : `${classOf(s)}|${hackerLevel(s)}|${rigOf(s).join(',')}|${(s.stash || []).length}|${s.equipN || 0}|${Object.keys(SETS).length}`; // what is loaded, and the sets
+  const was = key !== null && KINDS.get(s);
+  if (was && was.key === key) return was.kinds;
+  const kinds = new Set(uniqueFx(s).map((x) => x.fx.do));
+  if (key !== null) KINDS.set(s, { key, kinds });
+  return kinds;
+}
+const wears = (s, what) => !DEEP.has(what) || fxKinds(s).has(what);
 // Effects firing now: [{ fx, it, id, value }]. spend: use up their limits.
 export function fxFire(s, when, ctx = {}, spend = true) {
   const out = [];
+  if (ctx.do && !wears(s, ctx.do)) return out;
   for (const x of uniqueFx(s)) {
     if (x.fx.when !== when || (ctx.do && x.fx.do !== ctx.do) || !fxCond(s, x.fx, ctx) || !fxReady(s, x.fx, x.id)) continue;
     if (spend) fxSpend(s, x.fx, x.id);
@@ -803,9 +923,9 @@ export function fxFire(s, when, ctx = {}, spend = true) {
   }
   return out;
 }
-const fxHas = (s, what) => uniqueFx(s).find((x) => x.fx.do === what) || null;
+const fxHas = (s, what) => (wears(s, what) && uniqueFx(s).find((x) => x.fx.do === what)) || null;
 export const fxOn = fxHas; // tells.mjs: Canary Token, Read Receipt, Reflector, Write Blocker, Hush Money, Sandman
-export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(UNIQUES[it.unique].effect, (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
+export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(fxList(UNIQUES[it.unique]), (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
 // What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).
 export function fxAnswer(s, p = null) {
   const e = s.encounter;
@@ -1585,7 +1705,9 @@ function loadoutCommand(s, text) {
 }
 
 // ---------- upgrades ----------
-export const maxSignal = (s) => Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory');
+// Max Signal% (Bedframe, Firmware: max-signal%) raises the whole of it.
+const signalOf = (s) => Math.round(CONFIG.maxSignal * powerOf(s)) + gearStat(s, 'signal') + 4 * rank(s, 'redundancy') + 3 * rank(s, 'onion-routing') + 3 * rank(s, 'extra-memory');
+export const maxSignal = (s) => { const n = signalOf(s), pct = fxSum(s, 'always', 'max-signal%'); return pct ? Math.round(n * (1 + pct / 100)) : n; };
 
 // Protocols at home: protocols · load <protocol> · unload <protocol|slot> · scrap <protocol> ·
 // compile [stat] · compile <zero-day>.
@@ -1727,6 +1849,8 @@ function engage(s) {
     if (x.fx.do === 'chit') { e.chits++; emit(s, 'status', `${x.it.name}: you start with a ◆.`); }
     if (x.fx.do === 'force-crit') e.forceCrit = true;
     if (x.fx.do === 'shield') { e.shield = (e.shield || 0) + x.value; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${x.value} shield.`, { mark: 'shield' }); }
+    if (x.fx.do === 'shield%') { const n = Math.max(1, Math.round((defender(s).max * x.value) / 100)); e.shield = (e.shield || 0) + n; emit(s, 'status', `${x.name || x.it.name}: you start behind a ${n} shield.`, { mark: 'shield', ...firedOf([x]) }); } // Cold Boot
+    if (x.fx.do === 'first-skill-crit') fxState(e).critSkill = true; // POST Code: spent by your first skill that hits (playerPhase)
     // Kestrel Clearance (2): a guard's (or ICE's) first attack waits a cycle (sets.mjs).
     if (x.fx.do === 'guard-late' && GUARDS[e.virus.family]) {
       const late = attackers(s);
@@ -1737,6 +1861,7 @@ function engage(s) {
   // A filter of the Scrubber starts every home fight shielded.
   if (e.mode === 'home' && gearStat(s, 'shield', 'server')) e.shield = (e.shield || 0) + gearStat(s, 'shield', 'server');
   daemonsOn(s, 'start'); // the Airbag, and the Leash on an Exfil (daemons.mjs)
+  if (fxHas(s, 'rewind')) noteSignal(s, e.cycle - 1); // Last Known Good: the Signal you came in with, as the cycle before the first
   // Stealth: each part's first attack may come a cycle later.
   const st = gearStat(s, 'stealth');
   if (st) {
@@ -1816,7 +1941,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   if (sprawl && !guard && FAMILIES[family]) addLead(s, family, leadOf(s, lvl, !!v.strain && v.strain === hotStrain(s)), '', { id: CONFIG.zone.id });
   if (wild) {
     gainCode(s, codeFrom(s, family, lvl, 'home'), 'Code: ');
-    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: layerOf(loc?.depth || 1), family, strain: v.strain, elite: !!v.elite || guard, boss: v.boss || null, rare, rolls: bounty ? LOOT.rolls.bounty : undefined };
+    const ctx = { kind: sprawl ? 'sprawl' : 'rogue', id: loc?.rogue?.kind, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family, strain: v.strain, elite: !!v.elite || guard, boss: v.boss || null, rare, rolls: bounty ? LOOT.rolls.bounty : undefined };
     const item = rollDrop(s, ctx, lvl);
     if (item) addItem(s, item);
     nativeDrop(s, e);
@@ -1826,7 +1951,7 @@ export function roomKill(s, e, { wild = false, sprawl = false, guard = false, bo
   }
   if (!s.run) return {};
   const tag = `${e.room}/#${e.seed}-${s.serial}`, src = guard ? 'guard' : 'home';
-  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
+  const item = rollDrop(s, { kind: guard ? 'guard' : 'home', id: e.key, layer: layerOf(loc?.depth || 1), floor: loc?.depth || null, family: loc?.family || family, elite: !!v.elite, boss: v.boss || null, rare }, lvl);
   if (item) { s.run.pack.push({ path: `${tag}/drop`, name: 'protocol.bin', kind: 'gear', size: '32k', item }); emit(s, 'drop', `${v.name} dropped ${itemLabel(item)}: ${statLine(item.stats)}. In your pack until you jack out.`, { item, pack: true }); }
   const piece = guard && guardSet(s, e.key, layerOf(loc?.depth || 1), lvl, v.name); // a guard's own set pieces (sets.mjs)
   if (piece) packSetPiece(s, piece, `${tag}/set`, v.name);
@@ -2463,6 +2588,11 @@ export function hit(s, p, base, opts = {}) {
     if (!opts.server) noteDealt(s, n); // it still draws aggro
     return { dealt: 0, overflow: 0, absorbed: true };
   }
+  // Dead Reckoning (first-pierce): your first hit on each part this fight goes through its ◆.
+  if (opts.mine && !opts.dot && !opts.server && base > 0 && fxHas(s, 'first-pierce')) {
+    const seen = (fxState(e).touched ||= {});
+    if (!seen[p.id]) { seen[p.id] = true; if (p.armor > 0 && !opts.pierce) opts = { ...opts, pierce: true }; }
+  }
   // Armor chits: a hit on an armored part does no damage and breaks one chit.
   // Burn ticks, helpers and every target of a spread hit count, one chit each.
   // Sudo (Overclocker): your hits go through ◆, and each still breaks one on the way.
@@ -2498,12 +2628,24 @@ export function hit(s, p, base, opts = {}) {
   if (weak) e.weakHit[p.id] = true;
   // Crits: a roll on every hit that does damage.
   // Buffer Overflow (Zero-day): after you break a part, your next damaging hit crits.
-  const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit);
+  // POST Code (first-skill-crit): every hit of your first damaging skill each fight.
+  const first = raw > 0 && opts.mine && !opts.dot && !opts.server && !!e.commanding && !!e.fxs?.critSkill;
+  if (first) e.fxs.critHit = true;
+  const forced = raw > 0 && !opts.server && (weak || e.forceCrit || opts.crit || first);
   if (forced && e.forceCrit) e.forceCrit = false;
   // Exposed: every hit on it, from anyone, has a better crit chance.
   const chance = critChance(s) + (opts.server ? 0 : classSum('crit', s, p, opts)) + (on(s, p, 'exposed') ? SKILLS.exposed + 5 * rank(s, 'exploit-kit') : 0) + (opts.mine ? fxFire(s, 'hit', { target: p, do: 'crit%' }).reduce((n, x) => n + x.value, 0) : 0);
   const crit = forced || (raw > 0 && chance > 0 && rand(s) * 100 < chance);
-  if (crit) raw = Math.floor(raw * critMultiplier(s)) + (opts.server ? 0 : gearStat(s, 'critDamage'));
+  let doubled = false;
+  if (crit) {
+    let mult = critMultiplier(s), flat = opts.server ? 0 : gearStat(s, 'critDamage');
+    // Bit Flip (crit-double): every Nth critical strike of yours in a fight deals its bonus twice over.
+    const dbl = opts.mine && !opts.server && fxHas(s, 'crit-double');
+    if (dbl) { const n = (fxState(e).crits = (fxState(e).crits || 0) + 1); if (n % (Number(dbl.fx.value) || 4) === 0) { mult = 1 + 2 * (mult - 1); flat *= 2; doubled = true; } }
+    raw = Math.floor(raw * mult) + flat;
+    // Deepwater (crit-damage%): more on a part that meets its condition.
+    if (opts.mine && !opts.server) for (const x of fxFire(s, 'hit', { target: p, do: 'crit-damage%' })) raw = Math.floor(raw * (1 + x.value / 100));
+  }
   let dealt = Math.min(p.integrity, raw);
   const notes = [];
   // Lockbox: while it lives, the part it wards loses at most a quarter of its max a cycle, from everything. HASHLORD's Pool
@@ -2527,7 +2669,7 @@ export function hit(s, p, base, opts = {}) {
   }
   // A crew boss (raid.mjs): a firewall phase's shield takes the hit first, a priority add's ward cuts it.
   if (dealt > 0 && e.virus.raid) { const was = dealt; dealt = raidShield(s, p, dealt); if (dealt < was && !dealt) notes.push('shielded'); }
-  if (crit) notes.push('CRIT');
+  if (crit) notes.push(doubled ? 'CRIT, doubled' : 'CRIT');
   if (opts.pierce && p.armor > 0) notes.push('through armor');
   if (p.exposedUntil >= e.cycle) notes.push('exposed');
   if (p.taggedUntil >= e.cycle) notes.push('tagged');
@@ -2542,6 +2684,8 @@ export function hit(s, p, base, opts = {}) {
   // Leech: a share of what you deal heals you (paid out once per cycle).
   if (!opts.server && opts.mine && dealt > 0) e.leechAcc = (e.leechAcc || 0) + gearStat(s, 'leech') * (crit ? Math.max(1, ...fxFire(s, 'crit', { do: 'leech-x' }).map((x) => x.value)) : 1);
   if (crit && opts.mine && dealt > 0) for (const x of fxFire(s, 'crit', { do: 'heal' })) heal(s, x.value, x.name || x.it.name);
+  if (crit && opts.mine && dealt > 0) for (const x of fxFire(s, 'crit', { do: 'restore%' })) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.name || x.it.name, firedOf([x])); // Root of Trust
+  if (crit && opts.mine && dealt > 0) for (const x of fxFire(s, 'crit', { do: 'buff' })) addBuff(s, x); // Turbidity
   // Race Window, Hot Reload: a crit from your command readies that skill again.
   if (crit && opts.mine && !opts.dot && dealt > 0 && e.commanding && e.lastSkill && e.readyAt[e.lastSkill] > e.cycle) for (const x of fxFire(s, 'crit', { do: 'refund-skill' })) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${x.name || x.it.name}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); break; }
   e.lastCrit = !!crit && !!opts.mine;
@@ -2574,7 +2718,18 @@ export function hit(s, p, base, opts = {}) {
     // Overkill (Breaker's edge): what was left over spills onto the next part.
     const spill = Math.min(EDGE.breaker.cap, raw - dealt), next = spill > 0 && opts.mine && !opts.overkill && edge(s, 'breaker') ? soonestAttacker(s) : null;
     if (next) hit(s, next, spill, { by: 'Overkill', overkill: true, pierce: true, noHook: true });
+    // Spillway (spill): up to its number (a skill's number, grown with your level) of what was left after that.
+    const sw = opts.mine && !opts.overkill ? fxHas(s, 'spill') : null, more = sw ? Math.min(scaled(s, Number(sw.fx.value) || 0), raw - dealt - (next ? spill : 0)) : 0, to = more > 0 ? soonestAttacker(s) : null;
+    if (to && alive(to)) hit(s, to, more, { by: sw.it?.name || sw.name, overkill: true, pierce: true, noHook: true });
   } else if (on(s, p, 'hooked') && !opts.noHook) hit(s, p, scaled(s, SKILLS.hooked + rank(s, 'kernel-hook')), { by: 'Hook', noHook: true });
+  // Wire Wrap (momentum-cleave): armed by a break that left your Momentum full, your next skill's hit lands on every other part too.
+  const wrap = e.fxs?.cleave;
+  if (wrap && wrap.at < e.cycle && raw > 0 && opts.mine && !opts.dot && !opts.by && e.commanding) {
+    e.fxs.cleave = null;
+    const n = Math.max(1, Math.round((raw * wrap.value) / 100)), rest = livingParts(s).filter((x) => x !== p);
+    if (rest.length) emit(s, 'status', `${wrap.name}: the hit carries to ${rest.length === 1 ? 'the other part' : `the other ${rest.length} parts`}.`, { target: p.id, gear: [{ id: wrap.id, name: wrap.name }] });
+    for (const x of rest) if (alive(x)) hit(s, x, n, { by: wrap.name, overkill: true, noHook: true });
+  }
   const out = { dealt, overflow: Math.max(0, raw - dealt), crit, broke: p.integrity === 0 };
   if (!opts.server) classEach('hit', s, p, out, opts);
   return out;
@@ -2673,11 +2828,19 @@ function breakPart(s, p) {
     if (x.fx.do === 'refund') { for (const k of Object.keys(e.readyAt)) e.readyAt[k] = Math.max(e.cycle, e.readyAt[k] - x.value); emit(s, 'status', `${who} reduces your cooldowns by ${x.value}.`); }
     if (x.fx.do === 'refund-skill' && e.lastSkill) { delete e.readyAt[e.lastSkill]; emit(s, 'status', `${who}: ${ABILITIES[e.lastSkill]?.name || e.lastSkill} is ready again.`); }
     if (x.fx.do === 'heal') heal(s, x.value, who);
+    if (x.fx.do === 'buff') addBuff(s, x); // Floodgate, Fuse Map: more damage for a few cycles
+    if (x.fx.do === 'momentum' && p.kind !== 'fragment') classEach('gain', s, x.value, who); // Fuse Map: a Breaker's Momentum (classes/breaker.mjs)
     // Daisy Chain, Log4Shell: the part winding up a tell takes a hit (or the next to attack). Not from a hit it set off.
     if (x.fx.do === 'break-hit' && !e.chaining) {
       const t = livingParts(s).find((q) => q !== p && q.kind === 'system' && telling(s, q)) || soonestAttacker(s, p.id);
       if (alive(t) && t !== p) { e.chaining = true; hit(s, t, x.value, { by: who }); e.chaining = false; }
     }
+  }
+  // Wire Wrap (momentum-cleave): a break that leaves your Momentum full arms your next skill.
+  const wrap = p.kind !== 'fragment' && fxHas(s, 'momentum-cleave');
+  if (wrap && classOf(s) === 'breaker' && momentumStacks(s) >= momentumCap(s)) {
+    if (!e.fxs?.cleave) emit(s, 'status', `${wrap.it?.name || wrap.name}: your Momentum is full. Your next skill also hits every other part for ${wrap.fx.value}%.`, { mark: 'buff', ...firedOf([wrap]) });
+    fxState(e).cleave = { at: e.cycle, value: Number(wrap.fx.value) || 0, name: wrap.it?.name || wrap.name, id: wrap.id };
   }
   // Slammer: burns on the part you broke jump to the next part, with what they had left.
   if (fxHas(s, 'burn-jump')) {
@@ -2777,6 +2940,17 @@ function breakPart(s, p) {
   }
 }
 
+// The cooldown a skill you just used starts: its own (cooldownOf), less what your gear takes off this once. Bootstrap
+// (first-cd): each skill's first in the fight. Backwash (helper-cd): the next helper skill after a helper expired.
+// Never under 1, and a skill with none keeps none.
+function fxCooldown(s, id, a) {
+  const e = s.encounter, cd = cooldownOf(s, id);
+  if (!(cd > 1)) return cd;
+  let off = (e.metrics?.actions?.[id] || 0) <= 1 ? fxSum(s, 'custom', 'first-cd') : 0;
+  const st = e.fxs;
+  if (a?.helper && st?.helperCd) { off += st.helperCd; st.helperCd = 0; }
+  return off ? Math.max(1, cd - off) : cd;
+}
 function useAbility(s, intent, auto = false) {
   const e = s.encounter;
   if (intent.ability === 'hold') {
@@ -2801,7 +2975,7 @@ function useAbility(s, intent, auto = false) {
   e.metrics.actions[id] = (e.metrics.actions[id] || 0) + 1;
   if (auto === 'daemon') e.metrics.daemon = (e.metrics.daemon || 0) + 1;
   else if (auto) e.metrics.auto++;
-  if (!intent.ignoreCooldown) e.readyAt[id] = e.cycle + cooldownOf(s, id);
+  if (!intent.ignoreCooldown) e.readyAt[id] = e.cycle + fxCooldown(s, id, a);
   if (a.once) e.once[id] = true;
   emit(s, 'resolved', `${auto === 'daemon' ? `Daemon ${intent.daemon}: ` : ''}${said(s, intent.text)}${auto && auto !== 'daemon' ? ' (timer ran out)' : ''}.`, { ability: id, target: intent.target, auto });
   const base = target ? skillBase(s, id, target) : 0;
@@ -2836,6 +3010,9 @@ function useAbility(s, intent, auto = false) {
   if (id === 'overload' && hasTalent(s, 'piercing')) e.once.pierced = true;
   // Echo: the hit may repeat for half (on armor, it breaks another chit).
   if (base && alive(target) && gearStat(s, 'echo') && rand(s) * 100 < gearStat(s, 'echo')) hit(s, target, Math.max(1, Math.round(base * (fxHas(s, 'echo-full') ? 1 : ECHO.share))), { mine: true, by: 'Echo' });
+  // Init Vector (repeat): armed every few cycles (cycleClose), your next damaging skill hits again for its share.
+  const rep = base && alive(target) && e.fxs?.repeat;
+  if (rep) { e.fxs.repeat = null; hit(s, target, Math.max(1, Math.round((base * rep.share) / 100)), { mine: true, by: rep.name }); }
   // Overload: a crit resets its cooldown.
   if (id === 'overload' && res?.crit) { delete e.readyAt.overload; emit(s, 'proc', 'Overload lands a critical strike and is ready again.', { ability: 'overload' }); }
   if (a.proc) delete e.procs[a.proc]; // Shatter, Retaliate, Opening spend their window
@@ -2998,9 +3175,12 @@ export const healCap = (s) => { const d = defender(s), from = fightFromOf(s); re
 // lift: a restore that counts like a patch (the Sasser script): it ignores the cap and raises it with you.
 export function heal(s, amount, label, { lift = false, gear = null } = {}) {
   const d = defender(s);
+  const more = s.encounter ? fxSum(s, 'always', 'heal%') : 0; // the healing you receive (Sump Pump, Bedframe)
+  if (more) amount = Math.max(1, Math.round(amount * (1 + more / 100)));
   if (s.encounter?.virus?.raid) amount = raidAbsorb(s, amount); // encrypted sectors (raid.mjs)
   const cap = lift ? d.max : healCap(s), healed = Math.max(0, Math.min(amount, cap - d.integrity));
   d.integrity += healed;
+  if (s.encounter?.commanding && healed) fxState(s.encounter).healed = (fxState(s.encounter).healed || 0) + healed; // what your command healed (Anchor Chain's next heal)
   if (lift && s.run?.breach && s.breach?.fightFrom != null) s.breach.fightFrom = Math.max(s.breach.fightFrom, d.integrity);
   if (lift && s.run?.rooms && s.rooms?.fightFrom != null) s.rooms.fightFrom = Math.max(s.rooms.fightFrom, d.integrity);
   emit(s, 'heal', `${label} +${healed}${healed < amount && cap < d.max ? ` (capped at ${cap}, the Signal you came in with)` : ''}. ${s.encounter.mode === 'run' ? 'Signal' : 'Server'} ${d.integrity}/${d.max}.`, { amount: healed, ...(gear ? { gear } : {}) });
@@ -3038,14 +3218,20 @@ export const blocked = (s, amount) => (blockOf(s) ? Math.max(Math.ceil(amount / 
 const SPECIALS = ['encrypt', 'scramble', 'replicate'];
 
 // Damage from an attack or from encryption: your shield soaks it first.
-export function takeDamage(s, amount, source, label) {
+// dot: damage over time on you (encryption, a Full Disk burst, Corrupted, an Echo's repeat).
+export function takeDamage(s, amount, source, label, { dot = false } = {}) {
   const e = s.encounter;
   const d = defender(s);
-  // Reduction: the rig's on runs, the server's at home.
-  amount = blocked(s, amount);
+  // Your gear's cut to the damage you take while its condition holds (Ballast, Brownout, Cofferdam, Strata).
+  const less = fxSum(s, 'always', 'taken%');
+  if (less) amount = Math.max(0, Math.round(amount * Math.max(0, 1 - less / 100)));
+  // Reduction: the rig's on runs, the server's at home. Cold Iron (block-dot): all of it off damage over time.
+  amount = dot && blockOf(s) && fxHas(s, 'block-dot') ? Math.max(0, amount - blockOf(s)) : blocked(s, amount);
   if (e.shield > 0) {
-    const soaked = Math.min(e.shield, amount);
-    e.shield -= soaked;
+    // Bedrock Seal (shield-absorb): each point of shield takes more than one point of damage.
+    const k = 1 + fxSum(s, 'custom', 'shield-absorb') / 100;
+    const soaked = Math.min(k > 1 ? Math.floor(e.shield * k + 1e-9) : e.shield, amount);
+    e.shield -= k > 1 ? Math.min(e.shield, Math.ceil(soaked / k - 1e-9)) : soaked;
     amount -= soaked;
     emit(s, 'blocked', `Shield absorbs ${soaked} of ${label}${e.shield ? ` (${e.shield} left)` : ''}.`, { source, amount: soaked, shield: true });
     if (soaked) daemonsOn(s, 'soaked', { source }); // Backscatter
@@ -3056,7 +3242,27 @@ export function takeDamage(s, amount, source, label) {
   e.metrics.attackDamage += dealt;
   lifelineHeal(s); // a Lifeline that just held you at 1 (daemons.mjs)
   if (dealt) daemonsHurt(s, source); // below half, below a quarter: Canary, Snapshot, Spite, Checkpoint
+  if (dealt && d.integrity > 0) rewind(s);
   return dealt;
+}
+// Last Known Good (rewind): once a fight, below 20% your Signal goes back to what it was `value` cycles ago (the end of
+// that cycle: cycleClose keeps the last few), healing at most `cap`% of your max. Never down, and never past the heal cap.
+function rewind(s) {
+  const e = s.encounter, d = defender(s), x = fxFire(s, 'struck', { do: 'rewind' }, false)[0];
+  if (!x) return;
+  const was = fxState(e).sig || {}, at = e.cycle - (Number(x.fx.value) || 3), keys = Object.keys(was).map(Number).filter((c) => c <= at);
+  const then = keys.length ? was[Math.max(...keys)] : was[Math.min(...Object.keys(was).map(Number))] ?? d.integrity;
+  const got = Math.max(0, Math.min(then - d.integrity, Math.round((d.max * (x.fx.cap || 100)) / 100), healCap(s) - d.integrity));
+  if (!got) return; // nothing to go back to: it waits for a fall that it can undo
+  fxSpend(s, x.fx, x.id);
+  d.integrity += got;
+  emit(s, 'heal', `${x.name || x.it.name}: your Signal goes back to where it was ${Number(x.fx.value) || 3} cycles ago, +${got}. Signal ${d.integrity}/${d.max}.`, { amount: got, ...firedOf([x]) });
+}
+// The Signal you held at the end of each recent cycle (and as the fight started, as the cycle before its first), for rewind.
+function noteSignal(s, at = s.encounter.cycle) {
+  const st = fxState(s.encounter);
+  st.sig = { ...(st.sig || {}), [at]: defender(s).integrity };
+  for (const c of Object.keys(st.sig)) if (Number(c) < at - 6) delete st.sig[c];
 }
 
 // A crew boss's mechanic landing on one player (raid.mjs): a buster, a pulse, a burst, a tick of
@@ -3105,6 +3311,18 @@ export const spikeCap = (s, atk = null) => {
   return share ? Math.max(1, Math.floor(defender(s).max * share)) : Infinity;
 };
 const spikeCapped = (s, n, atk) => Math.min(n, spikeCap(s, atk));
+// Mooring (hit-cap): no single attack takes more than its share of your max.
+const hitCapped = (s, n) => { const x = fxHas(s, 'hit-cap'); return x ? Math.min(n, Math.max(1, Math.floor((defender(s).max * (Number(x.fx.value) || 100)) / 100))) : n; };
+// Bilge (burn-sap): each burn you started on a part this fight takes a share off its hits on you, up to the cap.
+const sapOf = (s, p) => { const x = fxHas(s, 'burn-sap'), n = s.encounter?.fxs?.burned?.[p.id] || 0; return x && n ? 1 - Math.min(x.fx.cap || 100, n * (Number(x.fx.value) || 0)) / 100 : 1; };
+// After an attack reaches you, hit or soaked: what your gear stacks or banks on it (Seawall's Block, Anchor Chain's next heal).
+function struckFx(s, atk) {
+  const st = fxState(s.encounter);
+  for (const x of fxFire(s, 'struck', { do: 'stack', atk })) { const had = (st.stack ||= {})[x.id] || 0; st.stack[x.id] = Math.min(x.fx.cap || Infinity, had + x.value); if (st.stack[x.id] > had) emit(s, 'status', `${x.name || x.it.name}: +${st.stack[x.id] - had} ${STATS[x.fx.stat]?.name || x.fx.stat} for the fight (${st.stack[x.id]}).`, { mark: 'shield', ...firedOf([x]) }); }
+  for (const x of fxFire(s, 'struck', { do: 'next-boost', atk })) st.boost = { value: Math.max(st.boost?.value || 0, x.value), name: x.name || x.it.name, id: x.id };
+}
+// A timed buff of a stat your gear runs now (Turbidity's Stealth).
+const buffStat = (s, stat) => (!s.encounter?.fxs?.buff ? 0 : uniqueFx(s).reduce((n, x) => n + (x.fx.do === 'buff' && x.fx.stat === stat && x.it?.unique ? fightStat(s, x.it.unique, x.fx, Number(x.id.split(':')[1] || 0), stat) : 0), 0));
 function landAttack(s, p) {
   const e = s.encounter;
   const atk = p.attack;
@@ -3125,6 +3343,10 @@ function landAttack(s, p) {
     hurt.integrity += got;
     return emit(s, 'heal', `${p.name} patches ${hurt.name}: +${got}. ${hurt.integrity}/${hurt.max}.`, { target: hurt.id, amount: got });
   }
+  // Stealth from a timed buff (Turbidity): while it runs, each attack on you may come a cycle later, as a fight's first
+  // attacks may with Stealth (engage). Not a tell's (its own clock, tells.mjs).
+  const lurk = !atk.tell && buffStat(s, 'stealth');
+  if (lurk && rand(s) * 100 < lurk) { atk.due = e.cycle + 1; return emit(s, 'status', `Stealth: ${p.name}'s ${atk.name} comes a cycle later.`, { source: p.id }); }
   p.lastLanded = e.cycle;
   atk.due = e.cycle + atk.interval;
   atk.n = (atk.n || 0) + 1; // its landings: a charge rides one of them (tells.mjs)
@@ -3158,13 +3380,27 @@ function landAttack(s, p) {
     const tough = 1 - 0.03 * (rank(s, 'failsafe') + rank(s, 'hardened-kernel') + rank(s, 'low-profile') + rank(s, 'load-balancer'));
     // Enemy crits: a roll on every damage attack (from enemy level 3).
     let crit = !atk.noCrit && (e.virus.crit || 0) > 0 && rand(s) < e.virus.crit; // a tell never crits (tells.mjs): it's already as big as it gets
-    if (crit && fxFire(s, 'struck', { do: 'crit-normal', atk }).length) { crit = false; emit(s, 'blocked', `Underwritten: ${atk.name} would have been a critical strike. It lands as a normal hit.`, { source: p.id }); }
-    let half = fxFire(s, 'struck', { do: 'halve', atk })[0];
+    const normal = crit && fxFire(s, 'struck', { do: 'crit-normal', atk })[0]; // Underwriter's Seal, Cold Wallet, Ground Plane
+    if (normal) { crit = false; emit(s, 'blocked', `${normal.name || normal.it.name}: ${atk.name} would have been a critical strike. It lands as a normal hit.`, { source: p.id, ...firedOf([normal]) }); }
+    // A helper takes it (Weir): the hit lands on it instead of you, and it expires.
+    const soak = fxFire(s, 'struck', { do: 'helper-soak', atk })[0];
+    if (soak) {
+      const h = [...e.helpers].sort((a, b) => a.left - b.left)[0];
+      e.helpers.splice(e.helpers.indexOf(h), 1);
+      return emit(s, 'blocked', `${soak.name || soak.it.name}: a helper takes ${atk.name} for you, and expires.`, { source: p.id, ...firedOf([soak]) });
+    }
+    // Its size as it reaches you, before any cut (Drain Plug's big hit), and what would get through to your Signal (Read-Only).
+    const sap = sapOf(s, p), took = classMult('taken', s, atk, p);
+    const pre = Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * took * (e.virus.raid ? raidTaken(s) : 1));
+    const lands = Math.max(0, blocked(s, pre) - (e.shield || 0));
+    let half = fxFire(s, 'struck', { do: 'halve', atk, amount: pre, lands })[0];
     if (half) emit(s, 'blocked', `${half.name || half.it.name}: ${atk.name} deals half damage.`, { source: p.id, ...firedOf([half]) });
     let cut = half ? 0.5 : 1;
     if (!half && e.hardened > 0) { e.hardened--; cut = 1 - SKILLS.hardenedCut; emit(s, 'blocked', `Hardened: ${atk.name} deals ${Math.round(SKILLS.hardenedCut * 100)}% less damage.`, { source: p.id }); }
+    for (const x of fxFire(s, 'struck', { do: 'taken%', atk, amount: pre, lands })) { cut *= Math.max(0, 1 - x.value / 100); emit(s, 'blocked', `${x.name || x.it.name}: ${atk.name} deals ${x.value}% less damage.`, { source: p.id, ...firedOf([x]) }); } // Read-Only
     // Blindside (Ghostroot): a hit you couldn't see coming lands harder.
-    const dealt = takeDamage(s, absorbed(s, spikeCapped(s, Math.round(hitPower * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * classMult('taken', s, atk, p) * (e.virus.raid ? raidTaken(s) : 1)), atk), atk, p), p.id, atk.name);
+    const dealt = takeDamage(s, absorbed(s, hitCapped(s, spikeCapped(s, Math.round(hitPower * sap * (hasTalent(s, 'unsafe-mode') ? 1.2 : 1) * tough * (crit ? CRIT.multiplier : 1) * cut * took * (e.virus.raid ? raidTaken(s) : 1)), atk)), atk, p), p.id, atk.name);
+    struckFx(s, atk);
     if (dealt) classEach('struck', s, atk, dealt, p);
     for (const x of dealt ? fxFire(s, 'struck', { do: 'restore%', atk }) : []) heal(s, Math.max(1, Math.round((defender(s).max * x.value) / 100)), x.name || x.it.name, firedOf([x]));
     if (dealt) { e.undo = { type: 'damage', amount: dealt }; e.grudge = p.id; } // Grudge (Bastion): it last hit you
@@ -3229,6 +3465,37 @@ function landAttack(s, p) {
 // on their own state against the shared virus (crew.mjs).
 // phase: 'all' (solo), or 'command' (your turn in a crew cycle) and 'after' (once everyone has gone:
 // daemons, burns, helpers, regen).
+// What your command started, healed or shielded (commandFx reads it after): the burns and helpers there were, and the shield.
+const beforeCommand = (e) => { if (e.fxs) e.fxs.healed = 0; return { burns: new Set(e.burns), helpers: new Set(e.helpers), shield: e.shield || 0 }; };
+// What your gear does with your command once it has gone: the burns it started (Burn-In ticks each once, Bilge counts
+// them on their part), the helpers it called (Ebb, Load Order), a banked boost to what it healed or shielded (Anchor
+// Chain), and your first damaging skill's crits spent (POST Code).
+function commandFx(s, before) {
+  const e = s.encounter;
+  if (!e || !active(s)) return;
+  const st = fxState(e);
+  if (st.critHit) { st.critSkill = false; st.critHit = false; }
+  const burns = e.burns.filter((b) => !before.burns.has(b));
+  if (burns.length && fxHas(s, 'burn-sap')) for (const b of burns) (st.burned ||= {})[b.target] = (st.burned[b.target] || 0) + 1;
+  const now = burns.length && fxHas(s, 'burn-now');
+  if (now) for (const b of burns) { const t = part(s, b.target); if (alive(t) && e.burns.includes(b)) hit(s, t, b.damage + (b.fxGrow || 0), { by: `${b.name} (${now.it?.name || now.name})`, dot: true, synced: b.synced }); }
+  const called = e.helpers.filter((h) => !before.helpers.has(h));
+  if (called.length) {
+    for (const x of fxFire(s, 'helper', { do: 'helper-long' })) { called[0].left += x.value; emit(s, 'status', `${x.name || x.it.name}: your first helper runs ${x.value} ${x.value === 1 ? 'cycle' : 'cycles'} longer.`, { mark: 'helper', ...firedOf([x]) }); }
+    for (const x of fxFire(s, 'helper', { do: 'helper-now' })) for (const h of called) { const t = part(s, h.target); if (alive(t)) hit(s, t, h.damage, { by: x.name || x.it.name, dot: true, synced: h.synced, src: 'helper' }); }
+  }
+  const boost = st.boost, shielded = (e.shield || 0) - before.shield;
+  if (boost && (st.healed > 0 || shielded > 0)) {
+    st.boost = null;
+    if (st.healed > 0) heal(s, Math.max(1, Math.round((st.healed * boost.value) / 100)), boost.name, firedOf([boost]));
+    if (shielded > 0) { const add = Math.max(1, Math.round((shielded * boost.value) / 100)); e.shield += add; emit(s, 'status', `${boost.name}: +${add} shield (${e.shield}).`, { mark: 'shield', ...firedOf([boost]) }); }
+  }
+}
+// One of your helpers ran out (playerPhase): Backwash banks a shorter cooldown for your next helper skill (helper-cd).
+function helperGone(s) {
+  const e = s.encounter;
+  for (const x of fxFire(s, 'expire', { do: 'helper-cd' })) fxState(e).helperCd = Math.max(fxState(e).helperCd || 0, x.value);
+}
 export function playerPhase(s, phase = 'all') {
   const e = s.encounter;
   if (phase !== 'after') {
@@ -3246,7 +3513,9 @@ export function playerPhase(s, phase = 'all') {
     const q = e.queue;
     e.surprise = !!(e.synced && e.sync?.surprise && q.ability !== 'hold'); // Infiltrator Surprise (see CONFIG.surprise)
     e.commanding = { id: q.ability, target: q.target || null, at: q.at ?? e.cycle, auto: false }; // your command: a tell on its part may count it (tells.mjs)
+    const before = beforeCommand(e);
     try { useAbility(s, q); } finally { e.commanding = false; }
+    commandFx(s, before);
     if (e.synced && active(s) && q.ability !== 'hold') { syncBonus(s, q); daemonsOn(s, 'synced', { part: q.target }); } // Pendulum
     e.surprise = false;
   }
@@ -3256,7 +3525,9 @@ export function playerPhase(s, phase = 'all') {
     else {
       intent.text = `${intent.ability} ${intent.target}`;
       e.commanding = { id: intent.ability, target: intent.target || null, auto: true }; // auto-repeat never answers a tell
+      const before = beforeCommand(e);
       try { useAbility(s, intent, true); } finally { e.commanding = false; }
+      commandFx(s, before);
     }
   } else {
     e.metrics.holds++;
@@ -3306,6 +3577,7 @@ export function playerPhase(s, phase = 'all') {
     if (t && r?.absorbed && !r.dealt && buffed(e, 'fork') && alive(t) && e.helpers.length < helperCap(s)) { e.helpers.push({ target: t.id, damage: h.damage, left: 3 }); emit(s, 'status', `Fork: a ◆ breaks, and a helper splits off on the ${t.name}.`, { target: t.id, mark: 'helper' }); }
     // Last Gasp (Operator's edge): one more hit as it expires.
     if (!h.left && t && alive(t) && edge(s, 'operator')) hit(s, t, h.damage, { by: 'Last Gasp', dot: true, synced: h.synced, src: 'helper' });
+    if (!h.left) helperGone(s);
   }
   e.helpers = e.helpers.filter((h) => h.left > 0);
   flushDaemons(s);
@@ -3313,7 +3585,7 @@ export function playerPhase(s, phase = 'all') {
   classEach('cycle', s); // class modules: the end of this player's turn
   // Leech pays out; Regen ticks (the rig's on runs, the server's at home).
   if (e.leechAcc >= 1) { const n = Math.floor(e.leechAcc); e.leechAcc -= n; heal(s, n, 'Leech'); }
-  const rg = regenRate(defense(s, 'regen')); // Regen R: R every 5 cycles
+  const rg = regenRate(defense(s, 'regen')) * (1 + fxSum(s, 'always', 'heal%') / 100); // Regen R: R every 5 cycles (more with Sump Pump, Bedframe: heal%)
   if (rg) {
     e.regenAcc = (e.regenAcc || 0) + rg;
     const n = Math.floor(e.regenAcc + 1e-9);
@@ -3398,7 +3670,7 @@ function cycleStart(s) {
   // 1c. Encryption eats your server every cycle until the Encryptor breaks.
   if (e.encrypt > 0) {
     const src = livingParts(s).find((x) => x.attack?.effect === 'encrypt');
-    const dealt = takeDamage(s, e.encrypt, src?.id, 'the encryption');
+    const dealt = takeDamage(s, e.encrypt, src?.id, 'the encryption', { dot: true });
     e.metrics.encrypted += dealt;
     if (dealt) emit(s, 'encrypted', `Encrypted: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: src?.id, amount: dealt });
     if (defender(s).integrity <= 0) {
@@ -3409,7 +3681,7 @@ function cycleStart(s) {
 
   // Full Disk (a tell, tells.mjs): a burst of encryption on top of the stack, for a few cycles.
   if (e.burst?.left > 0) {
-    const burst = e.burst, dealt = takeDamage(s, burst.amount, burst.source, burst.name); // (what reacts to the hit can clear it: a breach's Reflective ACL breaking the Encryptor)
+    const burst = e.burst, dealt = takeDamage(s, burst.amount, burst.source, burst.name, { dot: true }); // (what reacts to the hit can clear it: a breach's Reflective ACL breaking the Encryptor)
     burst.left--;
     e.metrics.encrypted += dealt;
     if (dealt) emit(s, 'encrypted', `${burst.name}: −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: burst.source, amount: dealt });
@@ -3420,7 +3692,7 @@ function cycleStart(s) {
   // Corrupted (a tell that landed, tells.mjs): a few cycles of damage on you, until it runs out or you cleanse it
   // (Purge, Scrub, Rollback).
   if (e.corrupt?.left > 0) {
-    const dealt = takeDamage(s, e.corrupt.amount, e.corrupt.source, 'Corrupted');
+    const dealt = takeDamage(s, e.corrupt.amount, e.corrupt.source, 'Corrupted', { dot: true });
     e.corrupt.left--;
     if (dealt) emit(s, 'encrypted', `Corrupted (${e.corrupt.name}): −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: e.corrupt.source, amount: dealt, corrupt: true });
     if (!e.corrupt.left) e.corrupt = null;
@@ -3446,7 +3718,7 @@ function cycleStart(s) {
     const src = livingParts(s).find((x) => x.echo);
     for (const x of due) {
       if (!src) break;
-      const dealt = takeDamage(s, x.amount, src.id, x.name + ' echo');
+      const dealt = takeDamage(s, x.amount, src.id, x.name + ' echo', { dot: true });
       if (dealt) emit(s, 'server-hit', `${x.name} echoes: −${dealt}.`, { source: src.id, amount: dealt });
       if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
     }
@@ -3489,6 +3761,28 @@ export function strikeWith(s, p, atk) {
   const real = p.attack;
   p.attack = { ...atk, due: s.encounter.cycle };
   try { return strike(s, p); } finally { p.attack = real; }
+}
+// Your gear at the end of a cycle, on its beat (value: every that many cycles). Clock Tree (cd-tick): every cooldown
+// ticks once more, as a full Clock Speed meter does. Init Vector (repeat): your next damaging skill is armed to hit
+// again. Watchdog Timer (free-helper): with no helper of yours out, one joins for a few cycles, a Deploy helper's size.
+// Then the Signal you end it on (Last Known Good).
+function cycleFx(s) {
+  const e = s.encounter, st = fxState(e), beat = (x) => e.cycle % Math.max(1, Number(x.fx.value) || 1) === 0;
+  for (const x of fxFire(s, 'cycle', { do: 'cd-tick' })) {
+    if (!beat(x)) continue;
+    const cooling = Object.keys(e.readyAt).filter((k) => e.readyAt[k] > e.cycle + 1);
+    for (const k of cooling) e.readyAt[k] -= 1;
+    if (cooling.length) emit(s, 'status', `${x.name || x.it.name}: your cooldowns tick one extra cycle.`, firedOf([x]));
+  }
+  for (const x of fxFire(s, 'cycle', { do: 'repeat' })) if (beat(x)) st.repeat = { share: Number(x.fx.share) || 0, name: x.name || x.it.name };
+  for (const x of fxFire(s, 'cycle', { do: 'free-helper' })) {
+    const t = soonestAttacker(s);
+    if (!beat(x) || e.helpers.length || !alive(t)) continue;
+    const n = Math.max(1, Number(x.fx.cycles) || 2), dmg = scaled(s, ABILITIES.deploy.helper);
+    e.helpers.push({ target: t.id, damage: dmg, left: n, synced: false });
+    emit(s, 'status', `${x.name || x.it.name}: a helper joins you on the ${t.name}, dealing ${dmg} every cycle for ${n} cycles.`, { target: t.id, mark: 'helper', ...firedOf([x]) });
+  }
+  if (fxHas(s, 'rewind')) noteSignal(s);
 }
 // The end of a cycle once the attacks are in: patches, cooldown effects, the turn over.
 function cycleClose(s, landed) {
@@ -3557,6 +3851,7 @@ function cycleClose(s, landed) {
   }
   // Kestrel Clearance (3): every 5th cycle, a ◆ if you have none (sets.mjs).
   for (const x of fxFire(s, 'cycle', { do: 'chit-every' })) if (e.cycle % (x.fx.value || 5) === 0 && !(e.chits > 0)) { e.chits = 1; emit(s, 'status', `${x.name}: you gain a ◆.`, { mark: 'shield', ...firedOf([x]) }); }
+  cycleFx(s);
   // A breach's end of cycle (breach.mjs): an enrage, a Lab's overheat. It can end the fight either way.
   if (hooks.cycleEnd && e.breach) {
     hooks.cycleEnd(s);

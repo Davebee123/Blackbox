@@ -115,7 +115,7 @@ hooks.crewEngage = (s) => {
     // Signal carries between fights on a run; guests (consortium drop-ins) come in rested.
     m.run.max = maxSignal(m);
     m.run.integrity = mateSignal(s, m);
-    m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null,
+    m.encounter = { ...e, virus: e.virus, queue: null, plan: [], lastAttack: null, readyAt: {}, buffs: {}, burns: [], helpers: [], shield: 0, encrypt: 0, scrambleUntil: 0, echoes: [], once: {}, momentum: null, synced: false, keylog: 0, regenAcc: 0, leechAcc: 0, clock: 0, trace: 0, pendingTrace: 0, breaks: 0, undo: null, fxs: {},
       chits: 0, hardened: classOf(m) === 'bastion' ? SKILLS.hardened : 0, metrics: structuredClone(e.metrics), down: false };
     classEach('start', m); // subclass modules (dist/classes)
     decide(m);

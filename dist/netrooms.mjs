@@ -22,7 +22,7 @@
 // Sockets (R2, sockets.mjs): a traced server's socket rooms (by size, +1 Backbone, +1 Root 4, +1 in a Grid consortium);
 // a server you hold has its Core as its core socket. A Resident's first fall and Mapped each teach a codebase. A run on rooms: s.run.rooms, Signal is the
 // run's, the pack the run's files (run.mjs bank). The save migration (v39) builds every found server's rooms.
-import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand } from './combat.mjs';
+import { hooks, emit, warn, active, hackerLevel, maxSignal, disconnect, gainXp, xpFor, deedXpFor, addItem, findLocation, roomKill, classOf, gainCode, rollDrop, uniqueFrom, rand, fxPct } from './combat.mjs';
 import { CONFIG, BOSSES, FAMILIES, GUARDS, ROOM_FAMILIES, layerOf } from './data.mjs';
 import { seeded, MATERIALS, codeOf, rollItem } from './gear.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
@@ -455,7 +455,7 @@ WORLD_hook('cache', (s, room, { credits, code, material }) => {
   packFile(s, { path: `${room.path}/#cache-${n}`, name: 'cache.dat', kind: 'credits', amount: credits });
   packFile(s, { path: `${room.path}/#code-${n}`, name: `${material}.code`, kind: 'code', material, amount: code });
 });
-WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.trait === 'rich' ? NET.rich : 1) * (loc?.quirk === 'hoard' ? NET.hoard : 1); });
+WORLD_hook('cacheMult', (s) => { const loc = locOf(s); return (loc?.trait === 'rich' ? NET.rich : 1) * (loc?.quirk === 'hoard' ? NET.hoard : 1) * (1 + fxPct(s, 'cache%') / 100); }); // Golden Image (cache%): more credits
 WORLD_hook('packItem', (s, it) => {
   // An item already added to your stash (floorplan.mjs): it goes back out and into the pack, banked when you jack out.
   s.stash = s.stash.filter((x) => x.id !== it.id);

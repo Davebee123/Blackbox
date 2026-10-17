@@ -13,7 +13,7 @@
 // families of couriers, bounties and outbreaks lean toward its own.
 //
 // Pure: state in, events out.
-import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique } from './combat.mjs';
+import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, WORLD_SOURCES } from './combat.mjs';
 import { FAMILIES, CONFIG } from './data.mjs';
 import { LOOT, rollItem, seeded } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
@@ -29,10 +29,9 @@ export const DIRECTOR = {
   named: 20, // one courier in this many carries a unique you're missing, by name (it was 6: a fifth of all uniques on the long climb; uniques stay under one an hour)
   namedFrom: 10, // and only from this level: below it the storyline and the Resident's own two already give nearly one an hour
 };
-// Uniques you haven't found that drop out in the world at about your level (not a boss's, the farm's,
-// a story's or a strain's trophy, nor a set piece): what a courier can be carrying.
-const WORLD = ['sprawl', 'vault', 'guard', 'rogue'];
-const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && !isPiece(u.id) && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD.includes(src.kind))).map((u) => u.id); // a set piece drops off its own table (sets.mjs)
+// Uniques you haven't found that drop out in the world at about your level (combat.mjs WORLD_SOURCES: not a boss's or a
+// lair's, the farm's, a story's or a strain's trophy, nor a set piece): what a courier can be carrying.
+const missing = (s) => Object.values(UNIQUES).filter((u) => !s.collection?.[u.id] && !isPiece(u.id) && u.level <= hackerLevel(s) + 2 && (u.sources || []).some((src) => WORLD_SOURCES.includes(src.kind))).map((u) => u.id); // a set piece drops off its own table (sets.mjs)
 const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostroot'].includes(f));
 const NAMES = ['lapsejack', 'deductible', 'subrogate', 'rider', 'lossrun', 'waiver', 'binder', 'tallow', 'cinder', 'quarry'];
 

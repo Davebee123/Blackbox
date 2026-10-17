@@ -25,7 +25,7 @@ in docs/economy.md: **credits**, **code** (Cipher, Worm, Kernel) **and Exploits*
 
 | Question | Answer |
 |---|---|
-| Is there enough to do? | Floors 1 and 2 are full. From level 20 nothing new is introduced: no family, strain, third part, mutation, guard or boss opens past the Tripwire at 20, no unique sits above level 40, every floor's lair holds the same boss, and no hub stands below floor 3. Floors 4 to 8 are about 85 of the 100 hours. |
+| Is there enough to do? | Floors 1 and 2 are full. From level 20 nothing new is introduced: no family, strain, third part, mutation, guard or boss opens past the Tripwire at 20, no unique sat above level 40 until the loot plan's Batch 1 (60 for 39–50, The Sink and Bedrock), every floor's lair holds the same boss, and no hub stands below floor 3. Floors 4 to 8 are about 85 of the 100 hours. |
 | What carries a floor? | A new cast, its own named bosses and lair, a faction thread, a puzzle twist, a signature server kind, and something worth coming back for. Section 3 sets one of each per floor, most of them already designed elsewhere. |
 | What's the loop with no story? | A menu of about a dozen activities, each refilling on its own clock and waiting for you. You pick what's ready and what pays the currency you're short of (section 1). |
 | The long chase at 50? | The collection log, Codex mastery, patches, consortium projects, faction tiers, boss uniques and sets, daemons at their best level, and Bedrock's flash ranks (section 4). |
@@ -120,7 +120,7 @@ button. A list, never a chirp or a pager line.
 | Halcyon's store | Chase protocols, agency stock | Four Indemnified protocols | All | Four items | Built |
 | Payloads, held hubs | Strike a hub, take it, defend it | Hub income | 1–3 | — | Off |
 | Codex research | Break, cut and answer parts | A part's numbers (3), rule (15), loot and mastery (60) | All | About 55 parts, 30 fights each to master | Built |
-| Collection log | Find uniques and strain trophies | The list itself | All | 95 uniques today, natives on top | Built |
+| Collection log | Find uniques and strain trophies | The list itself | All | 158 uniques today (60 of them Batch 1, for 39–50), natives on top | Built |
 | Crafting | Zero-days, relays, filters (random-stat compiling goes under docs/economy.md) | Gear for the wall, relays | Home | Short | Built |
 | Consortium | Merge servers, size tiers, members' networks | Components, bounties, a trunk Pit, sockets | All | Simulated members | Built |
 | Loud runs | `connect <server> loud` | +25% XP, a loot roll more | All | A knob, not an activity | Built |
@@ -261,8 +261,9 @@ networks' floors differ, and a consortium member's floor is worth visiting. Floo
 - *Come back:* RING ZERO's uniques, Blue Pill and Shellshock.
 
 **Floor 7 · The Sink** (37–44, about 20 hours). Where stolen data ends up.
-- *Today:* the 42 base tiers and daemon band 5. No vault or rogue unique sits in layer 5, and no unique of any kind
-  above level 40.
+- *Today:* the 42 base tiers and daemon band 5. The loot plan's Batch 1 (docs/loot-plan.md): 30 uniques for 39–44,
+  from its lair boss, rare spawns, vaults, threads, puzzle boards, strain kills and crew bosses (GOLDEN PARACHUTE's three
+  from the lair boss until it is built).
 - *Cast:* two Stealer strains, and Exfiltrate and Bad Sectors wired.
 - *Bosses:* **GOLDEN PARACHUTE** (38, GLASSJAW) and one boss to write at 42. *Suggested:* **BIT BUCKET**: the first share
   of your damage each cycle goes to `/dev/null`, more of it while it has ◆.
@@ -270,10 +271,12 @@ networks' floors differ, and a consortium member's floor is worth visiting. Floo
 - *Puzzle:* every server has two puzzle rooms, both on their deepest boards.
 - *Signature:* **Sinkhole**, a server kind. *Drain: every kill here drains its code into the Core. The Resident grows a
   level for every 10 kills, up to 3, and pays all of it when it falls.*
-- *Come back:* about five layer 5 uniques to write (vaults and rogue servers, 40–50), GOLDEN PARACHUTE's.
+- *Come back:* The Sink's 30 uniques (Batch 1), GOLDEN PARACHUTE's.
 
 **Floor 8 · Bedrock** (43–50, about 21 hours, and the endgame). Firmware: what's under everything.
-- *Today:* the lair. Bedrock has no exit and nothing at the bottom (docs/servers.md 10, question 9).
+- *Today:* the lair, and Batch 1's 30 uniques for 45–50 (the strongest in the game): from its lair boss (INIT's, the flash
+  ranks' and its bosses' too until they are built), rare spawns, vaults, threads, puzzle boards and strain kills. Bedrock
+  has no exit and nothing at the bottom (docs/servers.md 10, question 9).
 - *Cast:* the three crews' home ground: TOLLGATE, SWARMLINE and PALEMASK each own a third of its servers, each with a
   strain of its own written for 43–50, and Zip Bomb, Hot Spare and Rate cap wired.
 - *Bosses:* one to write at 46 (*suggested:* **HALT AND CATCH FIRE**, a Cryptominer line that runs hotter the longer
@@ -295,7 +298,7 @@ networks' floors differ, and a consortium member's floor is worth visiting. Floo
 | 4 | 12 | *thin*: Tripwire, v3 → Stealer, Fileless | ✗ the same boss → TRIPMINE, CAMSWARM, BYZANTINE | ✗ → Kestrel's ground | ✓ deeper Quarantine, Ping sweep | ✗ → Cold storage | *thin*: layer 3 uniques → BYZANTINE, CAMSWARM |
 | 5 | 14 | ✗ → ACTUARY's portfolio | ✗ → EXIT NODE, PARASITE, UNDERWRITER (sealed to 40) | ✗ → Halcyon, the Claims desk | ✗ → Defrag | ✗ → the bridge | *thin*: layer 4 uniques → UNDERWRITER |
 | 6 | 18 | ✗ → two strains, Front End, Clock glitch | ✗ → RING ZERO, BRICKWALL, BLACKOUT | ✗ → NULL CHOIR, deeper | ✗ → Deadlock | ✗ → Domain Controller | *thin*: Blue Pill, Shellshock → RING ZERO |
-| 7 | 20 | ✗ → two Stealer strains, Exfiltrate, Bad Sectors | ✗ → GOLDEN PARACHUTE, one to write | ✗ → GLASSJAW | ✗ → two deep boards a server | ✗ → Sinkhole | ✗ → layer 5 uniques to write |
+| 7 | 20 | ✗ → two Stealer strains, Exfiltrate, Bad Sectors | ✗ → GOLDEN PARACHUTE, one to write | ✗ → GLASSJAW | ✗ → two deep boards a server | ✗ → Sinkhole | ✓ Batch 1's 30 uniques (39–44) |
 | 8 | 21+ | ✗ → three crew strains, three rules | ✗ → one to write, INIT | ✗ → the three crews | ✗ → Bit flip | ✗ → Firmware, flash ranks | ✗ → the endgame ladder |
 
 ## 4. Long goals: the chase
@@ -304,7 +307,7 @@ networks' floors differ, and a consortium member's floor is worth visiting. Floo
 
 | Goal | Today | What it asks | Add |
 |---|---|---|---|
-| **Collection log** | 98 uniques up to level 40 (two sets' five pieces under Sets) and 11 strain trophies, sorted by level, ??? until found; natives once known (*Built*) | Hundreds of hours: trophies are 1 in 10,000 kills of their strain | The 14 designed bosses' 30-odd uniques and the ten sets (docs/genome.md); about ten uniques for 40–50; a page a boss with your kills and its table, as the Codex has |
+| **Collection log** | 158 uniques up to level 50 (two sets' five pieces under Sets; Batch 1's 60 for 39–50) and 11 strain trophies, sorted by level, ??? until found; natives once known (*Built*) | Hundreds of hours: trophies are 1 in 10,000 kills of their strain | The 14 designed bosses' 30-odd uniques and the sets (docs/loot-plan.md); the plan's next batches (the thin middle, 15–20 and 33–38); a page a boss with your kills and its table, as the Codex has |
 | **Codex mastery** | About 55 parts, research 60 each: +3% damage, +25% component drops, an amber star (*Built*) | About 30 fights a part you meet often, far more for a rare one | The seven families' 20-odd parts; a group finished (every family, every strain) earns a phosphor (section 5) |
 | **Patches** | — | v2 and v3 of every program, over 100 hours of code (*Planned*, docs/economy.md) | Nothing more: installs and supply orders keep taking code after the last patch |
 | **Root on held servers** | Root 1–5 by cleared respawns (*Built*; 4 ranks under docs/economy.md) | About 50 clears a server | The root prompt (section 5) for the top rank on ten servers |
@@ -409,7 +412,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 | 9 | **Deeper chase and Cascade boards** | S | Floors 3–8 | The two boards with no deep version |
 | 10 | **Faction ground and the LANTERN–GLASSJAW side pair**; supply orders | S, then M | Floors 2–7 | Weights and one list; supply orders are docs/economy.md step 3 |
 | 11 | **Stealer and Fileless** | L | Floor 4 (12 h) | Designed; Fileless needs possession of room processes |
-| 12 | **Uniques for 40–50** (layer 5 vaults and rogue servers) | M | Floors 7–8 | Data only; nothing drops above 40 today |
+| 12 | **Uniques for 40–50** (the loot plan's Batch 1) | M | Floors 7–8 | Built: 60 for 39–50 (docs/loot-plan.md) |
 | 13 | **Floors 5–7 bosses**: EXIT NODE, PARASITE, RING ZERO, BRICKWALL, BLACKOUT, GOLDEN PARACHUTE | L | Floors 5–7 (52 h) | Designed |
 | 14 | **ACTUARY and UNDERWRITER** | L | Floor 5 (14 h) | Needs the first unwired rules |
 | 15 | **New boards**: Defrag, Deadlock, Bit flip | M each | Floors 5, 6, 8 | Each needs a generator and a solver, as the four had |
@@ -428,7 +431,7 @@ Ordered for the most variety per hour of work, floors 2–4 first. S is a day or
 4. **ACTUARY** reprices every 300 kills on its floor, never on a calendar.
 5. **Cosmetics**: a first takeover earns a sticker (*VOID IF REMOVED*). Faction props need the top tier (75), like a
    skill cape. Green phosphor (P1) is in, from the Codex with the other two.
-6. **Uniques for 40–50**: write about ten, for layer 5 vaults and rogue servers, and the sets (docs/genome.md 9) with
-   them.
+6. **Uniques for 40–50**: the loot plan's Batch 1 (docs/loot-plan.md), 60 for 39–50. *Built.* The sets are reworked
+   beside them.
 7. **Loot** (from the lootsim report): Mapped and dead drops pay a white or a blue (`LOOT.minor`), and the Resident's
    roll, once you hold its two, pays a yellow, never a world unique. *Built.*
