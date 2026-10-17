@@ -1455,6 +1455,15 @@ function presetRenameRestore(s, was) {
     }
   }
 }
+// A rank node a subclass's tree swapped for another: the ranks a save put in the old one move to the new one,
+// in the same row. Keyed on what's saved, so it runs on every load. Phantom's Backchannel became Log Rotation.
+export const NODE_SWAPS = { phantom: { backchannel: 'log-rotation' } };
+function nodeSwapRestore(s) {
+  for (const [sub, swaps] of Object.entries(NODE_SWAPS)) {
+    const r = s.loadout?.ranks?.[sub];
+    if (r) for (const [from, to] of Object.entries(swaps)) if (r[from]) { r[to] = Math.min(3, (r[to] || 0) + r[from]); delete r[from]; }
+  }
+}
 // ---------- talents ----------
 // Talent points: one every other level from 10 (21 by level 50). Per class; changing picks is free.
 export const talentPoints = (s, arch = classOf(s)) => { const l = hackerLevel(s, arch); return l < LOADOUT.talentFrom ? 0 : Math.floor((l - LOADOUT.talentFrom) / LOADOUT.talentEvery) + 1; };
@@ -4333,6 +4342,7 @@ export function restore(raw) {
     barRestore(s, was); // v35: the nine-key bar, and tells on one clock
     kitRestore(s, was); // v37: 15-key pools, reordered lines, presets
     presetRenameRestore(s, was); // v38: swarm is area (Demolitionist), ghostroot is evasion (Phantom)
+    nodeSwapRestore(s); // talent nodes a tree swapped out: their ranks go to the node in their place
     networkRestore(s, was); // v36: every save's network gets a seed (network.mjs)
     daemonRestore(s); // daemons have levels, not versions (daemons.mjs); keyed on the old field, not the version
     signatureRestore(s); // signatures are gone: what you held becomes code (invasion.mjs)

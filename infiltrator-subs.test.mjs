@@ -2,7 +2,7 @@
 // edges (Bloom, Weak Spot) and every new talent does what its card says; the planner plays both.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, procOpen, active, subOf, hasTalent } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, keyMap, knownSkills, readyIn, procOpen, active, subOf, hasTalent, cooldownOf, restore } from './dist/combat.mjs';
 import { CONFIG, ABILITIES, ARCHETYPES, SUBS, SUBCLASS, unlockLevel } from './dist/data.mjs';
 import { play } from './dist/run.mjs';
 import { matesOf } from './dist/crew.mjs';
@@ -399,4 +399,20 @@ test('the planner plays both subclasses: their own skills show up, and they win 
   assert.ok(uses.payload.wormable && uses.payload.polymorph, JSON.stringify(uses.payload));
   assert.ok(uses.phantom.backstab, JSON.stringify(uses.phantom));
   assert.equal(INFIL.plan(fresh(), null), null, 'another class falls through');
+});
+
+test('Log Rotation: the Phantom\'s rank node where Backchannel was; Log Wipe comes back sooner', () => {
+  const ids = (sub) => SUBS[sub].fillers.flat().map((n) => n.id);
+  assert.ok(!ids('phantom').includes('backchannel') && ids('phantom').includes('log-rotation'), 'Phantom: no Backchannel');
+  assert.ok(ids('payload').includes('backchannel'), 'Payload keeps Backchannel');
+  const cd = ABILITIES['log-wipe'].cooldown;
+  assert.equal(cooldownOf(start('phantom', { ranks: { 'log-rotation': 2 } }), 'log-wipe'), cd - 2);
+  assert.equal(cooldownOf(start('phantom', { ranks: { 'log-rotation': 3 } }), 'null-route'), ABILITIES['null-route'].cooldown, 'only Log Wipe');
+  assert.equal(cooldownOf(start('phantom'), 'log-wipe'), cd);
+  // A save with Phantom ranks in Backchannel gets them back in Log Rotation, in the same row.
+  const s = fresh();
+  s.loadout.ranks = { phantom: { backchannel: 2, 'low-profile': 1 }, payload: { backchannel: 3 } };
+  const r = restore(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(r.loadout.ranks.phantom, { 'low-profile': 1, 'log-rotation': 2 });
+  assert.deepEqual(r.loadout.ranks.payload, { backchannel: 3 });
 });

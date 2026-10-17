@@ -193,6 +193,8 @@ export default {
     'irq-storm': (s) => (s.encounter.burns.length || mine(s).poly.length ? null : 'No burns running.'),
   },
   start(s) { if (isInf(s)) mine(s); },
+  // Log Rotation (Phantom filler): Log Wipe's cooldown 1 shorter a rank.
+  cooldown(s, id, cd) { return id === 'log-wipe' && ranked(s, 'log-rotation') ? Math.max(1, cd - ranked(s, 'log-rotation')) : cd; },
   // Siphon (Payload capstone): your burn ticks bank a share of what they deal, paid out as a heal at the end of your turn.
   // Pandemic (Payload capstone): each tick also lands a share on every other part, past armor.
   hit(s, p, res, opts) {

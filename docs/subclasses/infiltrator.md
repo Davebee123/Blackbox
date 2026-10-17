@@ -96,7 +96,7 @@ Shadow Copy only takes a hit. An Encrypt or a Replicate that does no damage goes
 | Tier 1 | 3 points | Fast Hands: Opening stays lit for 2 cycles. | Blind Spot: Weak Spot also crits your first burn tick on each part. |
 | Ranks | 4 points | Pivot: Backstab deals +10% per rank. | Onion Routing: +3 max Signal on runs per rank. |
 | Tier 2 | 8 points | Kill Chain: breaking a part readies Backstab and lights Opening. | Rotating Proxies: Spoof twice per run. |
-| Ranks | 9 points | Low Profile: take 3% less damage from attacks per rank. | Backchannel: Backdoor +4 damage per rank. |
+| Ranks | 9 points | Low Profile: take 3% less damage from attacks per rank. | Log Rotation: Log Wipe's cooldown is 1 cycle shorter per rank. |
 | Tier 3 | 14 points | Deep Cover: Log Wipe also readies Null Route and Shadow Copy. | Leaked Creds: slip past 3 guards a run instead of 1. |
 | Capstone | 15 points; 45, rank 2 at 50 | Ghost Step: when you break a part, the attack that lands soonest comes 1 cycle later (2), unless it is already delayed. | Smoke and Mirrors: the first attack that hits you each fight deals 50% less damage (none). |
 
@@ -110,4 +110,4 @@ Open on the part that hurts most. In the Surprise window, Inject ticks at once, 
 
 Rootkit Implant is in both lines, at level 18 for Payload and level 38 for Phantom.
 
-The old Infiltrator talents keep their ids in the new trees. Heap Spray, Persistent Tag, Backchannel, Low Profile, Supercookie and Assassinate went to Payload. Polymorphic is now called Long Fuse and also went to Payload. Recon, Onion Routing, Low Profile, Backchannel, Fast Hands, Rotating Proxies and Leaked Creds went to Phantom. A save from before subclasses keeps its ranks in the nodes Phantom still has, and the tier picks come back as free points.
+The old Infiltrator talents keep their ids in the new trees. Heap Spray, Persistent Tag, Backchannel, Low Profile, Supercookie and Assassinate went to Payload. Polymorphic is now called Long Fuse and also went to Payload. Recon, Onion Routing, Low Profile, Backchannel, Fast Hands, Rotating Proxies and Leaked Creds went to Phantom. A save from before subclasses keeps its ranks in the nodes Phantom still has, and the tier picks come back as free points. Backchannel later left the Phantom's tree for Log Rotation, because its Backdoor broke a part on the first cycle too often: ranks a save had in it move to Log Rotation.

@@ -1506,7 +1506,7 @@ Class skills, in the order they unlock. Since subclasses (level 10) this table i
 | Infiltrator | Heap Spray: Inject +3 per tick per rank · Recon: Opening +5 damage per rank | Backchannel: Backdoor +4 damage per rank · Onion Routing: +3 max Signal on runs per rank | Persistent Tag: Tagged burns tick +10% more per rank · Low Profile: Take 3% less damage from attacks per rank |
 | Operator | Thread Pool: Deploy helpers deal +1 per rank · Kernel Hook: Hooked parts take +1 more per hit per rank | Node Pool: Botnet helpers deal +1 per rank · Dead Man’s Switch: Kill Switch cashes in +5% per rank | Load Balancer: Take 3% less damage from attacks per rank · Extra Memory: +3 max Signal on runs per rank |
 
-All numbers are per rank.
+All numbers are per rank. Since subclasses each subclass has its own tree (docs/subclasses/). The Phantom's has Log Rotation (Log Wipe's cooldown is 1 cycle shorter per rank) where Backchannel was, so its Backdoor gains nothing from ranks. Backchannel's flat damage let a level 44–50 Phantom break a hard-hitting part on the first cycle and lose about 4% of its Signal a fight. Now it loses about 13%, against the Payload's 17–19%. A save's Phantom ranks in Backchannel move to Log Rotation.
 
 ### Talent choices
 

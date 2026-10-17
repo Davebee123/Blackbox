@@ -8,7 +8,7 @@ One scripted planner for every class (it finishes bare or about-to-fire parts, a
 | Lv 10 | 3/24 · 1 clean · 93% · 7.5c | 9/24 · 0 clean · 87% · 9.0c | 24/24 · 1 clean · 32% · 8.6c | 24/24 · 0 clean · 25% · 11.9c | 24/24 · 0 clean · 35% · 9.1c | 24/24 · 0 clean · 33% · 7.6c |
 | Lv 18 | 0/24 · 0 clean · 100% · 5.9c | 3/24 · 0 clean · 98% · 8.2c | 24/24 · 1 clean · 20% · 5.6c | 24/24 · 0 clean · 18% · 14.0c | 24/24 · 6 clean · 18% · 8.0c | 24/24 · 1 clean · 20% · 7.7c |
 | Lv 30 | 3/24 · 0 clean · 95% · 5.3c | 4/24 · 0 clean · 90% · 7.6c | 24/24 · 0 clean · 24% · 6.8c | 24/24 · 1 clean · 29% · 14.0c | 24/24 · 8 clean · 17% · 7.3c | 24/24 · 0 clean · 16% · 6.0c |
-| Lv 50 | 2/24 · 0 clean · 94% · 4.0c | 8/24 · 0 clean · 81% · 7.8c | 24/24 · 4 clean · 13% · 4.9c | 24/24 · 3 clean · 18% · 14.2c | 24/24 · 14 clean · 4% · 6.1c | 24/24 · 6 clean · 10% · 4.3c |
+| Lv 50 | 2/24 · 0 clean · 94% · 4.0c | 8/24 · 0 clean · 81% · 7.8c | 24/24 · 4 clean · 13% · 4.9c | 24/24 · 3 clean · 18% · 14.2c | 24/24 · 9 clean · 12% · 7.0c | 24/24 · 6 clean · 10% · 4.3c |
 
 Cells: wins · clean kills (nothing got through: no damage, encryption included) · average health lost · average cycles.
 
@@ -22,7 +22,7 @@ Every strain open at the level, six grade 2 wilds and six wilds two levels up.
 | Lv 10 | 22/22 · 27% · 7.7c | 20/22 · 41% · 11.1c | 20/22 · 54% · 8.9c | 22/22 · 32% · 7.5c |
 | Lv 18 | 23/23 · 23% · 5.0c | 22/23 · 31% · 14.2c | 23/23 · 28% · 8.1c | 23/23 · 31% · 8.0c |
 | Lv 30 | 22/23 · 41% · 6.3c | 23/23 · 29% · 13.2c | 23/23 · 22% · 6.7c | 22/23 · 23% · 6.3c |
-| Lv 50 | 23/23 · 27% · 4.9c | 23/23 · 26% · 12.4c | 23/23 · 19% · 7.0c | 23/23 · 22% · 4.5c |
+| Lv 50 | 23/23 · 27% · 4.9c | 23/23 · 26% · 12.4c | 23/23 · 19% · 6.9c | 23/23 · 22% · 4.5c |
 
 ## By subclass
 
@@ -33,7 +33,7 @@ The same fights for each of the eight subclasses (blues and the bracket's talent
 | Lv 10 | 32% · 24/24 | 33% · 24/24 | 25% · 24/24 | 40% · 24/24 | 17% · 24/24 | 35% · 24/24 | 33% · 24/24 | 33% · 24/24 |
 | Lv 18 | 20% · 24/24 | 34% · 23/24 | 18% · 24/24 | 4% · 24/24 | 23% · 24/24 | 18% · 24/24 | 20% · 24/24 | 42% · 24/24 |
 | Lv 30 | 24% · 24/24 | 33% · 23/24 | 29% · 24/24 | 3% · 24/24 | 21% · 24/24 | 17% · 24/24 | 16% · 24/24 | 30% · 23/24 |
-| Lv 50 | 13% · 24/24 | 31% · 23/24 | 18% · 24/24 | 4% · 24/24 | 15% · 24/24 | 4% · 24/24 | 10% · 24/24 | 16% · 24/24 |
+| Lv 50 | 13% · 24/24 | 31% · 23/24 | 18% · 24/24 | 4% · 24/24 | 15% · 24/24 | 12% · 24/24 | 10% · 24/24 | 16% · 24/24 |
 
 ## Tells: reading them or not
 
@@ -51,7 +51,7 @@ Target (friction.mjs; a `todo` test in balance.test.mjs): a blue-geared fight at
 
 - **Breaker:** shatter 37% · crack 27% · overload 9% · sigint 8% · thermal-runaway 7% · shaped-charge 4% · rm-rf 3% · backfire 3% · logic-bomb 1% · flood 1% · spike 1%
 - **Bastion:** rate-limit 22% · purge 19% · reject 17% · quarantine 9% · blowback 8% · harden 6% · spike 6% · suspend 5% · bulkhead 3% · circuit-breaker 3% · sigint 1%
-- **Infiltrator:** backdoor 25% · opening 22% · side-channel 14% · sigint 12% · unmask 10% · inject 6% · spike 6% · fingerprint 5% · backstab 1%
+- **Infiltrator:** backdoor 22% · side-channel 22% · opening 17% · sigint 11% · unmask 9% · inject 6% · spike 4% · fingerprint 4% · shadow-copy 2% · backstab 2%
 - **Operator:** botnet 23% · hook 20% · nohup 18% · mesh 11% · fan-out 7% · spike 7% · sigint 6% · deploy 6% · spawn 2% · load-shed 1%
 
 ## Unlockable skills (level 50, whole tree)
@@ -80,17 +80,17 @@ Each one swapped into the fifth slot. Change vs the first five.
 | Bastion | DMZ | 24/24 | 35% | +17 | 13.3 | -0.9 |
 | Bastion | Honeypot | 24/24 | 28% | +11 | 13.4 | -0.8 |
 | Bastion | Failover | 24/24 | 32% | +15 | 12.7 | -1.5 |
-| Infiltrator | Null Route | 24/24 | 15% | +12 | 8.3 | +2.1 |
-| Infiltrator | Opening | 24/24 | 14% | +11 | 8.0 | +1.9 |
-| Infiltrator | Backstab | 24/24 | 16% | +13 | 8.5 | +2.4 |
-| Infiltrator | Side Channel | 24/24 | 10% | +6 | 6.3 | +0.2 |
-| Infiltrator | Shadow Copy | 24/24 | 13% | +9 | 8.3 | +2.1 |
-| Infiltrator | Spoof | 24/24 | 17% | +13 | 8.3 | +2.2 |
-| Infiltrator | Rotate Keys | 24/24 | 10% | +7 | 8.5 | +2.4 |
-| Infiltrator | Log Wipe | 24/24 | 14% | +11 | 8.3 | +2.2 |
-| Infiltrator | Unmask | 24/24 | 10% | +7 | 6.2 | +0.0 |
-| Infiltrator | Vanish | 24/24 | 11% | +7 | 8.3 | +2.2 |
-| Infiltrator | Rootkit Implant | 24/24 | 23% | +19 | 9.2 | +3.0 |
+| Infiltrator | Null Route | 24/24 | 26% | +14 | 9.7 | +2.7 |
+| Infiltrator | Opening | 24/24 | 42% | +30 | 9.8 | +2.7 |
+| Infiltrator | Backstab | 24/24 | 35% | +23 | 9.3 | +2.3 |
+| Infiltrator | Side Channel | 24/24 | 13% | +1 | 6.7 | -0.3 |
+| Infiltrator | Shadow Copy | 24/24 | 26% | +14 | 9.7 | +2.6 |
+| Infiltrator | Spoof | 24/24 | 34% | +22 | 9.5 | +2.5 |
+| Infiltrator | Rotate Keys | 24/24 | 32% | +20 | 10.0 | +2.9 |
+| Infiltrator | Log Wipe | 23/24 | 33% | +21 | 9.5 | +2.5 |
+| Infiltrator | Unmask | 24/24 | 17% | +5 | 7.4 | +0.4 |
+| Infiltrator | Vanish | 24/24 | 26% | +14 | 9.5 | +2.5 |
+| Infiltrator | Rootkit Implant | 24/24 | 24% | +12 | 9.0 | +2.0 |
 | Operator | nohup | 24/24 | 8% | -2 | 5.0 | +0.7 |
 | Operator | Kill Switch | 24/24 | 9% | -1 | 5.5 | +1.2 |
 | Operator | Load Shed | 24/24 | 8% | -2 | 5.5 | +1.2 |
@@ -108,7 +108,7 @@ Each one swapped into the fifth slot. Change vs the first five.
 |---|---|---:|---|---:|
 | Breaker | Cluster Charge / Meltdown / Total Overkill | 12% · 4.5 | Exposed Wiring / Cascade Failure / Scorched Earth | 16% · 5.3 |
 | Bastion | Tarpit / Counterflow / Uptime | 18% · 14.2 | Deep Packet Inspection / Write Protect / Kernel Panic | 27% · 14.2 |
-| Infiltrator | Blind Spot / Kill Chain / Deep Cover | 3% · 5.8 | Blind Spot / Ghost Route / Tracking Pixel | 6% · 5.8 |
+| Infiltrator | Fast Hands / Ghost Route / Deep Cover | 10% · 6.0 | Fast Hands / Kill Chain / Tracking Pixel | 12% · 7.0 |
 | Operator | Big Process / Hive / Zombie Process | 10% · 4.3 | Long-running / Hydra / Supervisor | 10% · 3.8 |
 
 ## Crews in the farm (KESSLER-FARM-00)

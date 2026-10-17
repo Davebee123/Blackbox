@@ -157,7 +157,7 @@ export const subs = {
     fillers: [
       [f('cold-open', 'Cold Open', 'Increases the damage of Weak Spot hits by 5% per rank.', 0.05), f('recon', 'Recon', 'Increases the damage of Opening by 5 per rank.', 5)],
       [f('pivot', 'Pivot', 'Increases the damage of Backstab by 10% per rank.', 0.1), f('onion-routing', 'Onion Routing', 'Increases your max Signal on runs by 3 per rank.', 3)],
-      [f('low-profile', 'Low Profile', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('backchannel', 'Backchannel', 'Increases the damage of Backdoor by 4 per rank.', 4)],
+      [f('low-profile', 'Low Profile', 'Reduces the damage you take from attacks by 3% per rank.', 0.03), f('log-rotation', 'Log Rotation', 'Reduces the cooldown of Log Wipe by 1 cycle per rank.', 1)],
     ],
     talents: [
       [t('fast-hands', 'Fast Hands', 'Opening stays usable for 2 cycles.'), t('blind-spot', 'Blind Spot', 'Weak Spot also makes your first burn tick on each part a critical strike.')],
