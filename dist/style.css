@@ -2959,6 +2959,9 @@ details.map-pick { pointer-events: auto; }
 .sb { color: var(--gray); }
 .sb.on { color: var(--r-set); }
 .sb.blocked em { font-style: normal; color: var(--dim); }
+.sb.sub { padding-left: 10px; } /* a class set's subclass line, under its 4-piece bonus */
+.sg { color: var(--gray); } /* a piece's green line: set green once it and another piece of its set are loaded */
+.sg.on { color: var(--r-set); }
 .set-lines.compact { margin-top: 2px; font-size: 11px; }
 .set-lines.compact .set-pieces { display: flex; flex-wrap: wrap; gap: 0 8px; padding-left: 0; }
 .set-lines.compact .set-pieces .sp:not(:last-child)::after { content: ' ·'; color: var(--gray); }

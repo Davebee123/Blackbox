@@ -1111,7 +1111,7 @@ function finishPuzzle(s, room, b, opts = {}) {
   if (room.kind === 'cascade' && won) pay.parts = P.parts + P.spare * sc.spare;
   if (room.kind === 'sweep' && sc.found) { const c = cache(), k = (sc.found / sc.caches) * P.cache * (1 + P.budget * sc.left); pay.credits = Math.round(c.credits * k); pay.code = Math.max(1, Math.round(c.code * k)); }
   if (room.kind === 'chase' && won) { const c = cache(); pay.credits = Math.round(c.credits * P.trail); pay.code = Math.max(1, Math.round(c.code * P.trail)); }
-  if (R.world) ask('puzzlePay', s, room, pay); // into the pack (credits, code), components at once (netrooms.mjs)
+  if (R.world) ask('puzzlePay', s, room, { ...pay, won }); // into the pack (credits, code), components at once, and a won board's set roll (netrooms.mjs)
   else { R.credits += pay.credits; s.server.credits += pay.credits; if (pay.code) gainCode(s, { [pay.material]: pay.code }, `${room.path}: `); if (pay.parts) gainComponents(s, pay.parts, null, room.path); }
   const xp = won ? Math.round(deedXpFor(s, L, P.xp)) : 0; // a board takes minutes: it pays like the fights it stands in for
   if (xp) gainXp(s, xp, `${room.path} solved`, 'intel');

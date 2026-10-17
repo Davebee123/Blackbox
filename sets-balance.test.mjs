@@ -8,10 +8,10 @@ import { ARCHETYPES } from './dist/data.mjs';
 // Each piece in place of the blue in its slot (balance.mjs opts.uniques), on every subclass, and the sets together with
 // their bonuses: a piece is a sidegrade (held to the natives' bounds: no subclass leaves its band, 4 points of slack
 // under its floor as natives.test.mjs has, at least 80% wins, and the average moves no more than 4.5 points), and so are
-// the two-piece bonuses. The Kestrel 3-piece (a ◆ every 5 cycles you have none) changes how a fight plays, as the doc
-// means a 3-piece to: it keeps every band but moves the average further, 6.2 points easier at Lv 10 (the Sysop, with no
-// heal before 12, 18 points), 3.4 at 18 and 4.0 at 30 (October 2026). Its bound here is that measure; whether a set's
-// 3-piece may be that strong is the designer's call (GAME_RULES.md Sets, docs/genome.md 9.2).
+// the two-piece bonuses. The Kestrel 3-piece (once a fight, a hit for more than 30% of your max Signal deals 30%) keeps
+// every band and moves the average 3.0 points easier at Lv 10, 0.9 at 18 and 3.0 at 30 (October 2026, retuned by the
+// loot plan; the old 3-piece, a ◆ every 5 cycles you had none, measured 6.2, 3.4 and 4.0). Its bound stays the old
+// measure; whether a set's 3-piece may be that strong is the designer's call (GAME_RULES.md Sets, docs/genome.md 9.2).
 const SLACK = 4;
 const SUBS = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'].flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));
 const AT = Object.fromEntries(BRACKETS.filter((b) => [10, 18, 30].includes(b.level)).map((b) => [b.level, b]));
@@ -41,4 +41,35 @@ test('Kestrel Clearance (3) keeps every band, and moves the average no more than
   const off = [];
   for (const L of [10, 18, 30]) check(L, ['kestrel-badge', 'kestrel-token', 'kestrel-lanyard'], 7, off);
   assert.deepEqual(off, []);
+});
+
+// The loot plan's sets (docs/loot-plan.md), each worn whole in place of the blues in its slots, at the bracket that
+// covers its last piece (10, 18, 30 for pieces up to 32, else 50), on every subclass. A full set is the payoff, and a
+// general set leans to some classes and costs others the stats they chase, so the bound is the measure (October 2026,
+// points of a fight's Signal, easier negative): Strongbox 9.8 easier at Lv 30 (the Vault Door's half first hit is two
+// thirds of it), Wrecking Crew 7.0, Cold Storage 5.4, Load Balanced 4.2, Boot Disk 3.5 at 10, Patchwork 3.4 at 18 and
+// Palemask 3.4; the rest 0.8 to 3.1 easier, and Lantern Route, a farming set, 2.3 harder at 18 (its Scavenge in place of
+// a Phantom's chased stats: 16% to 30%). Its subclass extremes: Burst Buffer takes the Phantom from 17% to 4% at 30, and
+// Wrecking Crew the Overclocker from 33% to 17%. Every subclass keeps 80% wins with every set; whether a set may move one
+// that far is the designer's call (GAME_RULES.md Sets).
+const AT50 = BRACKETS.find((b) => b.level === 50);
+const bracket = (L) => (L <= 10 ? 10 : L <= 18 ? 18 : L <= 32 ? 30 : 50);
+test('the loot plan\'s sets, worn whole: every subclass keeps 80% wins, and no set moves the average past its measure', async () => {
+  const { SETS } = await import('./dist/sets.mjs');
+  const { UNIQUES } = await import('./dist/combat.mjs');
+  AT[50] ||= AT50;
+  const off = [], moved = {};
+  for (const set of Object.values(SETS).filter((x) => !['kestrel', 'lowlight'].includes(x.id))) {
+    const L = bracket(Math.max(...set.pieces.map((p) => UNIQUES[p].level)));
+    let d = 0;
+    for (const [c, sub] of SUBS) {
+      const r = score(c, AT[L], { sub, uniques: set.pieces });
+      d += r.lost - baseOf(L)[sub].lost;
+      if (r.wins < 0.8 * r.total) off.push(`${set.name} ${sub} Lv ${L} ${r.wins}/${r.total}`);
+      if (r.lost > 52) off.push(`${set.name} ${sub} Lv ${L} ${r.lost.toFixed(0)}%`);
+    }
+    moved[set.id] = Math.round((d / SUBS.length) * 10) / 10;
+    if (d / SUBS.length < -11 || d / SUBS.length > 4) off.push(`${set.name} Lv ${L} moves the average ${(d / SUBS.length).toFixed(1)} (bounds -11 to 4)`);
+  }
+  assert.deepEqual(off, [], JSON.stringify(moved));
 });

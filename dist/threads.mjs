@@ -26,8 +26,8 @@
 //              for good, greyed on the map, a record.
 // State: s.threads (threadsOf). The view: threads-view.mjs. The room engine calls in through netrooms.mjs's WORLD hooks
 // (connect, moved, stood, verb, coreOpen, won); the save's v43 adds it (threadsRestore).
-import { hooks, emit, warn, hackerLevel, classOf, subOf, addItem, gainXp, deedXpFor, findLocation, active } from './combat.mjs';
-import { SUBS, defaultSub, createLocation, bandOf, FLOORS, CONFIG } from './data.mjs';
+import { hooks, emit, warn, hackerLevel, classOf, subOf, addItem, gainXp, deedXpFor, findLocation, active, setDrop } from './combat.mjs';
+import { SUBS, defaultSub, createLocation, bandOf, FLOORS, CONFIG, SERVER } from './data.mjs';
 import { seeded, rollItem, itemLabel, LOOT, codeOf } from './gear.mjs';
 import * as FP from './floorplan.mjs';
 import { addrsOf } from './address.mjs';
@@ -382,6 +382,9 @@ function finish(s, t) {
   T.offer = { tid: t.id, items: offerItems(s, t) };
   if (T.track === t.id) T.track = activeThreads(s).at(-1)?.id || null;
   emit(s, 'thread-done', `THREAD DONE: ${c.title}. ${t.lore}`, { thread: t.id });
+  // Its set roll (sets.mjs: Night Shift's pieces), by the deepest floor it ran on, at the thread's level.
+  const floors = Object.values(t.places || {}).map((p) => locById(s, p.loc)?.depth || 1), L = Math.max(1, Math.min(hackerLevel(s) + 1, t.level || hackerLevel(s)));
+  setDrop(s, { kind: 'thread', floor: floors.length ? Math.max(...floors) : SERVER.floorFor(L) }, L, c.title);
 }
 // Three items to pick from, WoW's quest reward: one for your class and the stat your subclass chases, two leaning to
 // other stats, each a different slot. A chain's are blues, one a yellow one time in ten (LOOT.quest); a one-off's blues
