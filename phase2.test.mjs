@@ -145,9 +145,9 @@ test('root access: respawned fight rooms cleared on a server you hold raise Root
   loc.root.level = 5; assert.equal(FP.WORLD.rare(s), 2);
 });
 
-test('Fresh: the first XP of a kind other than fighting that you haven\'t earned in 20 minutes of play pays half again (up to a kill); nothing fades', async () => {
-  const { gainXp, FRESH } = await import('./dist/combat.mjs');
-  const { killXp } = await import('./dist/data.mjs');
+test('Fresh: the first XP of a kind other than fighting that you haven\'t earned in 20 minutes of play pays half again (up to a kill scaled like deeds); nothing fades', async () => {
+  const { gainXp, FRESH, freshCap } = await import('./dist/combat.mjs');
+  const { killXp, deedScale, climbStretch, DEED } = await import('./dist/data.mjs');
   const s = at(10); s.pace = { kills: 0, ms: 0 };
   const k = killXp(10), xp = () => hackerOf(s).xp;
   let x = xp(); gainXp(s, k, 'a kill', 'fight'); assert.equal(xp() - x, k, 'fighting is the default: no bonus');
@@ -155,7 +155,12 @@ test('Fresh: the first XP of a kind other than fighting that you haven\'t earned
   x = xp(); gainXp(s, k, 'another sweep', 'intel'); assert.equal(xp() - x, k, 'again: plain, never less');
   x = xp(); gainXp(s, Math.round(k / 4), 'a trickle', 'build'); assert.equal(xp() - x, Math.round(k / 4), 'under half a kill: never fresh');
   s.pace.ms += FRESH.gapMs;
-  x = xp(); gainXp(s, 4 * k, 'a vault', 'intel'); assert.equal(xp() - x, 5 * k, '20 minutes on: fresh again, capped at a kill');
+  x = xp(); gainXp(s, 4 * k, 'a vault', 'intel'); assert.equal(xp() - x, 6 * k, '20 minutes on: fresh again, half again (a deed is under its cap)');
+  // The cap: a kill's worth times deedScale (DEED.share x the level's stretch), the scale deeds pay on.
+  assert.equal(freshCap(10), k * deedScale(10));
+  assert.ok(Math.abs(deedScale(10) - DEED.share * climbStretch(10)) < 1e-9 && deedScale(10) > 4, `about 5 kills at level 10 (${deedScale(10).toFixed(2)})`);
+  s.pace.ms += FRESH.gapMs;
+  x = xp(); gainXp(s, 30 * k, 'a big haul', 'intel'); assert.equal(xp() - x, 30 * k + Math.round(freshCap(10)), 'a gain past twice the cap: the cap');
   x = xp(); gainXp(s, k, 'contract', null, 'breakin'); assert.equal(xp() - x, k, 'contracts: no bonus');
   assert.ok(s.xpMix.intel > s.xpMix.fight && s.xpMix.breakin === k, 'the mix tallies what it counted as');
 });
@@ -226,9 +231,36 @@ test('Phase 4: a hot strain every 4 hours (the same for everyone), first decodes
   assert.equal(hotStrain(a, T), hotStrain(b, T + 1000), 'everyone sees the same one');
   assert.equal(HOT.everyMs, 4 * 3600000);
   assert.equal(DECODE_XP, 1, 'a first decode pays one kill (it was two, and paid half the XP of levels 1–5)');
+  const { xpToNext } = await import('./dist/data.mjs');
   const r = at(10); r.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 };
-  tickNetwork(r, T); tickNetwork(r, T + 3 * 3600000);
-  assert.ok(Math.abs(r.rested - 3 * killXp(10)) <= 2, `three safe hours: three kills banked (${r.rested})`);
+  tickNetwork(r, T); tickNetwork(r, T + 8 * 3600000);
+  assert.ok(Math.abs(r.rested / (0.05 * xpToNext(10)) - 1) < 0.01, `a safe night away (8 hours): 5% of the level banked (${r.rested}, ${(r.rested / killXp(10)).toFixed(1)} kills)`);
+});
+
+test('Rested is World of Warcraft\'s rule: 5% of a level every 8 hours safely away, of the level you are on, up to 1.5 levels; kills spend it at double', async () => {
+  const { tickNetwork } = await import('./dist/invasion.mjs');
+  const { xpToNext, RESTED, restedCap, restedGain } = await import('./dist/data.mjs');
+  const { gainXp } = await import('./dist/combat.mjs');
+  assert.deepEqual(RESTED, { share: 0.05, everyMs: 8 * 3600000, cap: 1.5 });
+  const T = 1_800_000_000_000, safe = (s) => { s.firewall = { pin: 60, plus: 0, frag: 0, defragUntil: 0, hardenUntil: 0 }; return s; };
+  // A day away: three nights' worth, 15% of the level (the day is played out a minute at a time).
+  const a = safe(at(20)); tickNetwork(a, T); tickNetwork(a, T + 24 * 3600000);
+  assert.ok(Math.abs(a.rested / (0.15 * xpToNext(20)) - 1) < 0.01, `a day: 15% of level 20 (${a.rested})`);
+  // Past a day nothing is played out, but it still banks: 4 days is 12 eight-hour blocks, 60% of a level.
+  const b = safe(at(20)); tickNetwork(b, T); tickNetwork(b, T + 4 * 24 * 3600000);
+  assert.ok(Math.abs(b.rested / (0.6 * xpToNext(20)) - 1) < 0.01, `four days: 60% of level 20 (${b.rested})`);
+  // Ten days fill it, and it stops at 1.5 levels.
+  const c = safe(at(20)); tickNetwork(c, T); tickNetwork(c, T + 14 * 24 * 3600000);
+  assert.equal(c.rested, restedCap(20)); assert.equal(restedCap(20), Math.round(1.5 * xpToNext(20)));
+  // (the last few minutes before you came back are online time: tickNetwork's own step)
+  // It banks shares of the level you're on when it banks: higher levels bank more.
+  assert.ok(restedGain(40, 8 * 3600000) > restedGain(20, 8 * 3600000));
+  assert.equal(Math.round(restedGain(30, 8 * 3600000)), Math.round(0.05 * xpToNext(30)));
+  // A crash away banks nothing while it lasts.
+  const d = safe(at(20)); tickNetwork(d, T); d.degraded = { until: null, ms: 1e12 }; tickNetwork(d, T + 8 * 3600000);
+  assert.ok(!(d.rested > 0), `crashed: nothing banked (${d.rested})`);
+  // Spent the way it always was: a kill pays double until it runs out (the spend is payKill's; here the bank is kept whole).
+  gainXp(c, 1, 'x', 'fight'); assert.equal(c.rested, restedCap(20), 'only kills spend it');
 });
 
 test('Phase 4: strain contracts count only their strain, and every fifth in a row pays double', async () => {

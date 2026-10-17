@@ -18,7 +18,7 @@ import { tickConsortium, consortiumOf, memberHelp, occupy, roam, CONSORTIUM } fr
 import { isLive } from './memory.mjs';
 import { effLevel, tickFirewall, fragment, ratingAt, firewallRestore, baseOf } from './firewall.mjs';
 import { filterStat } from './filters.mjs';
-import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, killXp, xpToNext, codeUnit, DAEMON_DROP } from './data.mjs';
+import { CONFIG, SERVER, MUTATIONS, ROLLED_MUTATIONS, QUIRKS, quirkOf, createVirus, power, variantFor, codeUnit, DAEMON_DROP, restedGain, restedCap } from './data.mjs';
 import { gainDaemon, rollDaemon } from './daemons.mjs';
 import { SERVICES, codeOf, uniqueItem, MATERIALS } from './gear.mjs';
 import { pickOrigin, hiddenNode, hiddenLead, HIDDEN, connectedTo } from './hidden.mjs';
@@ -181,10 +181,18 @@ export function tickNetwork(s, now = Date.now()) {
   return since(s, first);
 }
 
-// The time you were logged off, a minute at a time (up to a day).
+// Rested (RESTED in data.mjs): safe time away banks a share of the level you're on, up to the cap.
+function rest(s, ms) {
+  if (ms <= 0) return;
+  const L = hackerLevel(s), cap = restedCap(L);
+  if ((s.rested || 0) < cap) s.rested = Math.min(cap, (s.rested || 0) + restedGain(L, ms));
+}
+// The time you were logged off, a minute at a time (up to a day; Rested banks for all of it).
 function away(s, from, to) {
   if (s.net.open) { s.net.open = false; emit(s, 'firewall', 'Ports closed while you were away.'); } // Open ports is an online thing
-  for (let t = Math.max(from, to - AWAY.maxMs) + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
+  const start = Math.max(from, to - AWAY.maxMs);
+  if (!s.degraded) rest(s, start - from); // past a day: nothing is played out, and nothing crashed you
+  for (let t = start + AWAY.stepMs; t <= to; t += AWAY.stepMs) {
     const d = s.degraded;
     if (d) {
       if (d.until == null) { d.since = t; d.until = t + (d.ms ?? CONFIG.degradedMs); }
@@ -199,8 +207,8 @@ function away(s, from, to) {
     tickRetake(s, AWAY.stepMs, false, t);
     stepInvasion(s, AWAY.stepMs, t);
     unsabotage(s);
-    // Rested: every safe hour away (no crash) banks a kill's worth of XP, up to 1.5 levels.
-    if (!s.degraded) { const L = hackerLevel(s); s.rested = Math.min(Math.round(1.5 * xpToNext(L)), (s.rested || 0) + killXp(L) / 60); }
+    // Rested: every safe minute away (no crash) banks its share of 5% of a level every 8 hours, up to 1.5 levels.
+    if (!s.degraded) rest(s, AWAY.stepMs);
   }
 }
 

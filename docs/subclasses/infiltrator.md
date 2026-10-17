@@ -50,6 +50,7 @@ Talent points come at level 10 and every two levels after. The filler rows take 
 | Tier 2 | 8 points | Contagion: each Inject also starts a copy on the part whose attack lands soonest, or refreshes the one there. | Assassinate: Detonate on a Tagged part deals double. |
 | Ranks | 9 points | Low Profile: take 3% less damage from attacks per rank. | Virulence: Wormable, Skim and Polymorph +2 per tick per rank. |
 | Tier 3 | 14 points | Superspreader: Bloom also copies the burns to every other part, not just the next one. | Persistence: Rootkit Implant can be used twice a fight. |
+| Capstone | 15 points; 45, rank 2 at 50 | Pandemic: your burn ticks also deal 25% of their damage to every other part (50%). | Siphon: your burn ticks heal you for 5% of the damage they deal (10%). |
 
 Each tier is a real choice. Contagion and Superspreader spread your damage wide, which is how a Payload clears worms and their fragments. Assassinate and Persistence keep it on one target, which is how a Payload takes down a boss.
 
@@ -97,6 +98,7 @@ Shadow Copy only takes a hit. An Encrypt or a Replicate that does no damage goes
 | Tier 2 | 8 points | Kill Chain: breaking a part readies Backstab and lights Opening. | Rotating Proxies: Spoof twice per run. |
 | Ranks | 9 points | Low Profile: take 3% less damage from attacks per rank. | Backchannel: Backdoor +4 damage per rank. |
 | Tier 3 | 14 points | Deep Cover: Log Wipe also readies Null Route and Shadow Copy. | Leaked Creds: slip past 3 guards a run instead of 1. |
+| Capstone | 15 points; 45, rank 2 at 50 | Ghost Step: when you break a part, the attack that lands soonest comes 1 cycle later (2). | Smoke and Mirrors: the first attack that hits you each fight deals 50% less damage (none). |
 
 The tiers ask what kind of Phantom you are. Fast Hands, Kill Chain and Deep Cover make a duelist who chains crits and dodges through a fight. Blind Spot crits the first tick of each Inject, the heaviest burn there is. Rotating Proxies and Leaked Creds make a ghost who barely fights on runs at all.
 

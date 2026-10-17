@@ -1100,7 +1100,7 @@ export const SERVER = {
 // kit: from level 5 (specFrom) one of a class's two first-row talents (ARCHETYPES[cls].spec) is part of its base kit, specRanks
 // free ranks: the level-5 specialty pick is gone. The Infiltrator's is Recon: two ranks of Heap Spray took a blue Payload from
 // 34% to 21% of its Signal a fight at level 10 (docs/progression.md), far past the few percent the others add.
-export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], maxLevel: 50, talentFrom: 10, talentEvery: 2, trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
+export const LOADOUT = { equipSlots: 9, bar: [[1, 7], [22, 8], [30, 9]], keys: ['2', '3', '4', '5', '6', '7', '8', '9', '0'], maxLevel: 50, talentFrom: 10, talentEvery: 2, capstoneAt: [45, 50], trialUntil: 5, specFrom: 5, specRanks: 2, kit: { breaker: 'overclocked', bastion: 'patch-notes', infiltrator: 'recon', operator: 'thread-pool' } }; // trialUntil: until a class reaches it, switching carries your level over
 // What unlocks at each hacker level (same shape for every class; `order` fills the skill steps).
 export const UNLOCKS = [
   { level: 1, what: 'spike' }, { level: 1, what: 0 }, { level: 3, what: 1 }, { level: 5, what: 2 },
@@ -1111,13 +1111,15 @@ export const UNLOCKS = [
 // XP: a kill is worth 20 + 10 per enemy level. The climb is long: about 100 hours of real play to 50 at
 // LOOT.killsPerHour (150 kills an hour), front-loaded (an hour to 5, 4 to 10, 15 to 20, 35 to 30, 65 to 40): a sandbox,
 // not a storyline. CLIMB.kills is what level L to L+1 takes, in kills of your own level (straight between its points):
-// 30 at level 1 (minutes), 210 at 4, 215 at 10, 575 at 20, 900 at 30, 1,120 at 40, 1,330 at 49: about 35,000 to 50 on
-// paper. The pacing bot earns about 2.3 kills of XP a fight (rooms pay 1.25, elites, first clears, Mapped servers,
-// contracts), so it fights about 15,000 times on the way (pacing.mjs). CLIMB.minutes is the real play a level should
+// 23 at level 1 (minutes), 160 at 4, 172 at 10, 523 at 20, 818 at 30, 1,000 at 40, 1,137 at 49: about 31,000 to 50 on
+// paper. The pacing bot earns about 2 kills of XP a fight (rooms pay 1.25, elites, first clears, Mapped servers,
+// contracts), so it fights about 15,000 times on the way (pacing.mjs). The points were cut 10-23% when a Mapped or held
+// server's rooms began to respawn in minutes (docs/progression.md 7): the bot farms them, which pays less a fight than
+// exploring did, and the climb ran 11-33% long. CLIMB.minutes is the real play a level should
 // take (5 at level 1, 48 at 10, 95 at 20, 160 at 30, 200 at 40, 220 at 49): Behind's target, and the table's sum.
 // Before save v42 a level took 5 + 1.2 × L kills (V41_KILLS): about 1,700 to 50, 7 hours of real play.
 export const CLIMB = {
-  kills: [[1, 30], [2, 80], [3, 170], [4, 210], [5, 210], [10, 215], [15, 410], [20, 575], [25, 740], [30, 900], [35, 1000], [40, 1120], [45, 1250], [49, 1330]],
+  kills: [[1, 23], [2, 62], [3, 130], [4, 160], [5, 170], [10, 172], [15, 366], [20, 523], [25, 673], [30, 818], [35, 909], [40, 1000], [45, 1068], [49, 1137]],
   minutes: [[1, 5], [4, 27], [5, 28], [9, 44], [10, 48], [19, 84], [20, 95], [29, 145], [30, 160], [39, 200], [49, 220]],
 };
 const along = (pts, L) => {
@@ -1132,8 +1134,8 @@ export const V41_KILLS = (level) => 5 + 1.2 * Math.max(1, level);
 export const v41XpToNext = (level) => Math.round(killXp(level) * V41_KILLS(level)); // the curve before save v42 (its migration)
 // One-off deeds (a first clear, a Mapped server, a takeover, a Root level, a decode, a puzzle board, a first craft) grow
 // with the climb, so exploring still pays its part: their kill shares (ROOMS.xp, XP, ...) are the old curve's times
-// DEED.share of how much longer the level is than before v42 (climbStretch): about 8.6 at level 4, 5.4 at 9, 7.8 at 19,
-// 8.7 at 29, 8.3 at 49. A full share kept deeds' part of a level, but the long climb finishes every floor where the old
+// DEED.share of how much longer the level is than before v42 (climbStretch): about 6.5 at level 4, 4.3 at 9, 7.1 at 19,
+// 7.9 at 29, 7.1 at 49. A full share kept deeds' part of a level, but the long climb finishes every floor where the old
 // one outgrew half of it, so deeds came to 80% of the XP; at 0.4 they are about a quarter (pacing.mjs). Kills, and
 // work that is so many kills (contracts), are not scaled.
 export const climbStretch = (level) => killsToNext(level) / V41_KILLS(level); // how much longer a level is than before v42
@@ -1148,8 +1150,17 @@ export const XP = { home: 1, guard: 0.8, vault: 1.5, newLocation: 0.7 };
 // you played counts.
 export const CATCHUP = { after: 1.25, bonus: 0.5 };
 export const levelTarget = (level) => Math.round(along(CLIMB.minutes, Math.max(1, level)) * 60000);
+// Rested (World of Warcraft's rule): time safely away (no crash) banks 5% of a level every 8 hours, of the level you're on
+// when it banks, up to 1.5 levels (10 days away from empty). Kills spend it: each pays double until it runs out
+// (combat.mjs payKill). A night away is about 5% of a level, a weekend about 30%.
+export const RESTED = { share: 0.05, everyMs: 8 * 3600000, cap: 1.5 };
+export const restedGain = (level, ms) => (xpToNext(level) * RESTED.share * ms) / RESTED.everyMs;
+export const restedCap = (level) => Math.round(RESTED.cap * xpToNext(level));
 // The talent tree, top to bottom: filler rows (ranked, up to 3 each) between the
 // three choice tiers. A row opens once you've spent `need` points in the rows above it.
+// The capstone row under them (each subclass's `capstones`, two of them) has its own points, one at each
+// LOADOUT.capstoneAt level (45 and 50): the first picks one, the second gives it its second rank. Talent points
+// never reach it, and its points go nowhere else. It opens with 15 points spent above it (the third tier picked).
 export const TREE = [
   { kind: 'filler', row: 0, need: 0 },
   { kind: 'choice', tier: 0, need: 3 },
@@ -1157,6 +1168,7 @@ export const TREE = [
   { kind: 'choice', tier: 1, need: 8 },
   { kind: 'filler', row: 2, need: 9 },
   { kind: 'choice', tier: 2, need: 14 },
+  { kind: 'capstone', need: 15 },
 ];
 const f = (id, name, rule, per) => ({ id, name, rule, per, max: 3 });
 // Key 1, the plain hit every class has: a plain 25 with no cooldown, the filler under every rotation. Each class

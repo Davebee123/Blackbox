@@ -7,7 +7,7 @@
 // (`run`: Spoof and Tap) take no slot and come at levels of their own. Its talent tree has the same shape as
 // before: three filler rows of two ranked nodes, and three tiers of two picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t } from './kit.mjs';
+import { f, t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // Numbers that grow with your level sit in damage/tick fields (the library scales them on screen).
@@ -135,6 +135,11 @@ export const subs = {
       [t('contagion', 'Contagion', 'Each Inject also starts a copy of itself on the part whose attack lands soonest, or refreshes the one there.'), t('assassinate', 'Assassinate', 'Detonate deals double damage to a Tagged part.')],
       [t('superspreader', 'Superspreader', 'Bloom copies the burns to every other part, not only the next one.'), t('persistence', 'Persistence', 'Rootkit Implant can be used twice per fight.')],
     ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('pandemic', 'Pandemic', ['Your burn ticks also deal 25% of their damage to every other part.', 'Your burn ticks also deal 50% of their damage to every other part.'], [0.25, 0.5]),
+      c('siphon', 'Siphon', ['Your burn ticks heal you for 5% of the damage they deal.', 'Your burn ticks heal you for 10% of the damage they deal.'], [0.05, 0.1]),
+    ],
   },
   phantom: {
     name: 'Phantom', role: ['DPS', 'Burst', 'Stealth runs'], idea: 'In, out, and never seen.', solo: 'Critical strikes, and the easiest runs.', crew: 'Gets the crew past guards and picks off parts.', lean: 'solo',
@@ -158,6 +163,11 @@ export const subs = {
       [t('fast-hands', 'Fast Hands', 'Opening stays usable for 2 cycles.'), t('blind-spot', 'Blind Spot', 'Weak Spot also makes your first burn tick on each part a critical strike.')],
       [t('kill-chain', 'Kill Chain', 'Breaking a part resets the cooldown of Backstab and makes Opening usable.'), t('ghost-route', 'Ghost Route', 'Null Route also delays the attack that lands soonest by 2 cycles.')],
       [t('deep-cover', 'Deep Cover', 'Log Wipe also resets the cooldowns of Null Route and Shadow Copy.'), t('tracking-pixel', 'Tracking Pixel', 'When a Tagged part breaks, Tag moves to the part whose attack lands soonest, with the cycles it had left.')],
+    ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('ghost-step', 'Ghost Step', ['When you break a part, the attack that lands soonest comes 1 cycle later.', 'When you break a part, the attack that lands soonest comes 2 cycles later.'], [1, 2]),
+      c('smoke-and-mirrors', 'Smoke and Mirrors', ['The first attack that hits you each fight deals 50% less damage.', 'The first attack that hits you each fight deals no damage.'], [0.5, 1]),
     ],
   },
 };

@@ -20,7 +20,7 @@
 // State: fight state this module keeps lives on the encounter under bk* names, created when first
 // needed (a crewmate's encounter is a copy of the leader's at engage, so nothing is made at start).
 // Part state (Bit Rot, Exposed Wiring) lives on the shared parts and remembers whose it is.
-import { subOf, subEdge, hasTalent, rank, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, capValue, emit, hit, rand, part, alive, livingParts, attackers, soonestAttacker, on, buffed, openProc, scaled, powerOf, defender, momentumStacks, classOf, missChance, patchDelay, toIntent, readyIn, damageMultiplier, gearStat, edge, previewDamage, ignoresArmor, usable, stripMark, mirrorOn, intents, heal, healScaled } from '../combat.mjs';
 import { ABILITIES, SKILLS, EDGE } from '../data.mjs';
 import { tellOn, tellOpen, tellAnswer, chargeSize } from '../tells.mjs';
 import { subs } from './breaker.data.mjs';
@@ -175,7 +175,11 @@ const use = {
     const keep = hasTalent(s, 'burn-in') ? Math.floor(stacks / 2) : 0;
     setMomentum(s, keep, e.momentum?.until ?? e.cycle);
     if (stacks) emit(s, 'status', `Thermal Throttle spends ${stacks - keep} Momentum ${stacks - keep === 1 ? 'stack' : 'stacks'}${keep ? ` (${keep} kept)` : ''}.`, { ability: id });
-    hit(s, target, (a.base + a.perStack * stacks) * powerOf(s), { mine: true, pierce: stacks >= (a.pierceAt || 1), unlock: stacks >= (a.pierceAt || 1) });
+    thermalPaste(s, stacks - keep);
+    const r = hit(s, target, (a.base + a.perStack * stacks) * powerOf(s), { mine: true, pierce: stacks >= (a.pierceAt || 1), unlock: stacks >= (a.pierceAt || 1) });
+    // Arc Flash (Overclocker capstone): the heat jumps to the part whose attack lands soonest.
+    const arc = isOC(s) ? capValue(s, 'arc-flash') : 0, next = arc && (r.dealt + (r.overflow || 0)) > 0 ? soonestAttacker(s, target.id) : null;
+    if (next && next !== target && alive(next)) hit(s, next, Math.max(1, Math.round((r.dealt + (r.overflow || 0)) * arc)), { by: 'Arc Flash', pierce: stacks >= (a.pierceAt || 1), noHook: true });
     e.lastAttack = `spike ${target.id}`;
   },
   'stack-smash'(s, { a, target, res, base }) {
@@ -194,6 +198,7 @@ const use = {
     emit(s, 'status', `Vent: ${stacks ? `${stacks} Momentum ${stacks === 1 ? 'stack' : 'stacks'} dumped` : 'nothing to dump'}${cleared.length ? `, and ${cleared.join(' and ')} cleared` : ''}.`, { ability: 'vent' });
     heal(s, healScaled(s, a.heal * Math.max(1, stacks)), 'Vent');
     if (d.integrity > d.max) d.integrity = d.max;
+    thermalPaste(s, stacks);
   },
   'fault-injection'(s, { a, target, e }) {
     if (!alive(target)) return;
@@ -219,6 +224,26 @@ const validate = {
   'turbo-boost': (s) => (defender(s).integrity < defender(s).max / 2 ? null : afford(s, 'turbo-boost')) || (momentumStacks(s) >= momentumCap(s) ? 'Your Momentum is already full.' : null),
   'thermal-throttle': (s) => (momentumStacks(s) ? null : 'Thermal Throttle needs Momentum. Break a part first.'),
 };
+
+// ---------- capstones (levels 45 and 50: capValue in combat.mjs) ----------
+// Thermal Paste (Overclocker): each Momentum stack you spend heals you for a share of your max Signal.
+function thermalPaste(s, spent) {
+  const v = isOC(s) ? capValue(s, 'thermal-paste') : 0;
+  if (v && spent > 0) heal(s, Math.max(1, Math.round(defender(s).max * v * spent)), 'Thermal Paste');
+}
+// Load-Bearing Wall (Demolitionist): the last part standing hits you softer.
+const wallCut = (s) => { const v = isDemo(s) ? capValue(s, 'load-bearing-wall') : 0; return v && livingParts(s).length === 1 ? 1 - v : 1; };
+// Structural Failure (Demolitionist): a part you break shakes ◆ off every other part (1, 2 at rank 2).
+function collapse(s, p) {
+  const e = s.encounter, v = isDemo(s) ? capValue(s, 'structural-failure') : 0;
+  if (!v || e.bkCollapse) return;
+  const rest = livingParts(s).filter((x) => x !== p);
+  if (!rest.length) return;
+  if (!rest.some((x) => x.armor > 0)) return;
+  emit(s, 'status', `Structural Failure: the ${p.name} comes down, and shakes the armor off every other part.`, { target: p.id });
+  e.bkCollapse = true;
+  try { for (const x of rest) if (alive(x) && x.armor > 0) strip(s, x, v, 'Structural Failure'); } finally { e.bkCollapse = false; }
+}
 
 // ---------- the rest of the hooks ----------
 // A Logic Bomb goes off: the part it was planted in (or the next one, if that broke), then the rest.
@@ -279,7 +304,7 @@ function dealt(s, p, opts) {
 }
 
 // Redline: 10% more damage taken while you have Momentum. Brace: 30% less, and what it saved goes back (struck).
-const taken = (s) => (redline(s) && momentumStacks(s) > 0 ? subs.overclocker.edge.taken : 1) * (breaker(s) && buffed(s.encounter, 'brace') ? 1 - A('brace').cut : 1);
+const taken = (s) => (redline(s) && momentumStacks(s) > 0 ? subs.overclocker.edge.taken : 1) * (breaker(s) && buffed(s.encounter, 'brace') ? 1 - A('brace').cut : 1) * wallCut(s);
 function struck(s, atk, dealt, p) {
   if (!breaker(s) || !buffed(s.encounter, 'brace') || !alive(p) || !(dealt > 0)) return;
   const a = A('brace'), saved = Math.round((dealt * a.cut) / (1 - a.cut));
@@ -323,6 +348,7 @@ function onHit(s, p, res, opts) {
 function broke(s, p) {
   if (!breaker(s)) return;
   const e = s.encounter;
+  collapse(s, p);
   // Redline (and Heat Spreader): the break's stack goes past 3, and lasts longer per rank.
   if (p.kind !== 'fragment') {
     const prev = e.bkMomentum && e.bkMomentum.until >= e.cycle ? e.bkMomentum.stacks : 0;

@@ -6,7 +6,7 @@
 // at SUBCLASS.unlocks in data.mjs (levels 10 to 38), in the order written here (eleven skills). Its talent tree has the same shape as
 // before: three filler rows of two ranked nodes, and three tiers of two picks.
 // edge.legacy: the class's old edge (EDGE in data.mjs), now this subclass's.
-import { f, t } from './kit.mjs';
+import { f, t, c } from './kit.mjs';
 
 // New skills (ABILITIES entries, same fields as data.mjs). Give each a cls and a sub.
 // Numbers the engine reads from here (operator.mjs): helper/ticks (Fan-out), cycles (Mesh, Cache
@@ -55,6 +55,11 @@ export const subs = {
       [t('hive', 'Hive', 'Raises your helper cap to 9.'), t('hydra', 'Hydra', 'When a part breaks, each of your helpers on it splits in two on the next part, up to your helper cap.')],
       [t('zombie-process', 'Zombie Process', 'Last Gasp strikes twice.'), t('supervisor', 'Supervisor', 'Kill Switch resets the cooldown of Deploy.')],
     ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('thundering-herd', 'Thundering Herd', ['Your helper hits also deal 15% of their damage to every other part.', 'Your helper hits also deal 30% of their damage to every other part.'], [0.15, 0.3]),
+      c('sandbox', 'Sandbox', ['When an attack hits you, your oldest helper takes 15% of it and ends.', 'When an attack hits you, your oldest helper takes 30% of it and ends.'], [0.15, 0.3]),
+    ],
   },
   hijacker: {
     name: 'Hijacker', role: ['Control', 'Support'], idea: 'Their code, your commands.', solo: 'Turns the virus against itself.', crew: 'Shuts attacks down for everyone.', lean: 'crew',
@@ -77,6 +82,11 @@ export const subs = {
       [t('long-jam', 'Long Jam', 'Jam delays the attack 2 cycles, instead of 1.'), t('loopback', 'Loopback', 'Jam and Blackhole leave the helper running.')],
       [t('double-agent', 'Double Agent', 'Hijack takes the target’s next 2 attacks.'), t('crosstalk', 'Crosstalk', 'A hijacked hit lands on every other part.')],
       [t('full-duplex', 'Full Duplex', 'Jammed parts take 40% more damage from everyone, instead of 20%.'), t('kill-chain', 'Kill Chain', 'Breaking a Jammed part resets the cooldowns of Jam, Spoofed ACK and Hijack.')],
+    ],
+    // The capstone row (levels 45 and 50): pick one; its second rank comes at 50.
+    capstones: [
+      c('puppet-master', 'Puppet Master', ['Takeover lasts 1 cycle longer.', 'Takeover lasts 2 cycles longer.'], [1, 2]),
+      c('dead-air', 'Dead Air', ['Jammed parts deal 25% less damage to you.', 'Jammed parts deal 50% less damage to you.'], [0.25, 0.5]),
     ],
   },
 };

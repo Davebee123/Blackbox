@@ -48,9 +48,10 @@ import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKIL
 import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
-import { lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated } from './combat.mjs';
+import { lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
 import { cantripsOf } from './data.mjs';
 import { daemonText } from './daemons.mjs';
+import { ROOMS as ROOMS_FP } from './floorplan.mjs'; // a server card's respawn timers
 import { threadRows, threadReader, tempNodes, tempNodeSvg, tempCard, serverMarkSvg, transitNodes, transitSvg } from './threads-view.mjs';
 import { threadById, serverMarks } from './threads.mjs';
 
@@ -1637,7 +1638,7 @@ export function storeMarkup(s, now = Date.now()) {
 // ---------- loadout: archetypes and talent tree ----------
 // `view` is the archetype being browsed; the equipped one is s.loadout.archetype.
 const TIER_NOTE = { picked: '', open: 'Pick one', locked: 'Needs a free point' };
-const TREE_MAX = TREE.reduce((n, r) => n + (r.kind === 'choice' ? 1 : 6), 0);
+const TREE_MAX = TREE.reduce((n, r) => n + (r.kind === 'choice' ? 1 : r.kind === 'capstone' ? 0 : 6), 0); // the capstone row has its own points
 
 const TAG_INFO = { status: 'Makes this class’s shared status', payoff: 'Stronger against statuses, from any class', crew: 'Mainly helps the crew, but still useful solo', run: 'Used on runs, outside fights' };
 
@@ -1728,6 +1729,21 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
   const locked = busy || previewing; // talents change at home, on the subclass you play
   const needNote = (i) => `${spentAbove(s, id, i)}/${TREE[i].need}`;
   const tiers = TREE.map((row, i) => {
+    if (row.kind === 'capstone') {
+      // The capstone row: its own points (a pick at 45, its second rank at 50), never your talent points.
+      const caps = kit.capstones || [], cp = capstonePoints(s, id), pick = previewing ? s.loadout?.caps?.[shown] : capPickOf(s, id);
+      const has = pick === 0 || pick === 1;
+      const cs = previewing ? (has ? 'picked' : 'blocked') : busy && capState(s, id) !== 'picked' ? 'blocked' : capState(s, id);
+      const nodes = caps.map((c, j) => {
+        const on = has && pick === j, other = cs === 'picked' && !on, r = on ? Math.min(c.max, cp) : 0;
+        const can = !locked && (cs === 'open' || other);
+        const pips = Array.from({ length: c.max }, (_, k) => `<span class="rpip${k < r ? ' on' : ''}"></span>`).join('');
+        return `<button type="button" class="tnode tcap ${on ? 'picked' : other ? 'other' : cs}" ${can ? `data-command="talent ${id} capstone ${j ? 'b' : 'a'}"` : 'disabled'} aria-pressed="${on}">
+        <span class="tname">${on ? '<span class="tcheck" aria-hidden="true">✓</span>' : ''}${esc(c.name)}</span><span class="trule">${esc(c.rules[Math.max(0, r - 1)])}</span><span class="trule dim">Rank ${c.max} (level ${LOADOUT.capstoneAt[c.max - 1]}): ${esc(c.rules[c.max - 1])}</span><span class="rpips" aria-label="${r} of ${c.max}">${pips}</span>${other ? '<span class="tswap">swap</span>' : ''}</button>`;
+      }).join('<span class="tor" aria-hidden="true">or</span>');
+      const label = busy ? 'At home' : previewing ? '' : cs === 'locked' ? `Lv ${LOADOUT.capstoneAt[0]}` : cs === 'blocked' ? needNote(i) : cs === 'open' ? 'Pick one' : `${Math.min(2, cp)}/2`;
+      return `<li class="ttier tcaps ${cs}" title="${esc(`Capstone points: one at level ${LOADOUT.capstoneAt[0]} picks one, one at ${LOADOUT.capstoneAt[1]} gives it its second rank. Talent points never go here.`)}"><div class="tlabel"><b>Capstone</b><span>${label}</span></div><div class="tpair">${nodes}</div></li>`;
+    }
     if (row.kind === 'filler') {
       const rs = locked ? 'blocked' : rowState(s, id, i);
       const nodes = kit.fillers[row.row].map((n) => {
@@ -1752,12 +1768,12 @@ export function loadoutMarkup(s, view, tab = 'protocols') {
         <span class="tname">${picked ? '<span class="tcheck" aria-hidden="true">✓</span>' : ''}${esc(tal.name)}</span><span class="trule">${esc(tal.rule)}</span>${other ? '<span class="tswap">swap</span>' : ''}</button>`;
     }).join('<span class="tor" aria-hidden="true">or</span>');
     const label = busy ? 'At home' : previewing ? '' : ts === 'blocked' ? needNote(i) : TIER_NOTE[ts];
-    return `<li class="ttier ${ts}"><div class="tlabel"><b>${t === 2 ? 'Capstone' : 'Tier ' + (t + 1)}</b><span>${label}</span></div><div class="tpair">${nodes}</div></li>`;
+    return `<li class="ttier ${ts}"><div class="tlabel"><b>Tier ${t + 1}</b><span>${label}</span></div><div class="tpair">${nodes}</div></li>`;
   }).join('');
 
   return `<div class="loadout">
     <nav class="arch-tabs" aria-label="Classes">${tabs}</nav>
-    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['skills', `Skills and talents${Math.max(0, points - spent) ? ` · ${Math.max(0, points - spent)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
+    <nav class="ltabs" role="tablist" aria-label="Loadout">${[['protocols', 'Protocols'], ['daemons', `Daemons${newOn(s, 'daemons') ? ` · ${newOn(s, 'daemons')} new` : ''}`], ['skills', `Skills and talents${Math.max(0, points - spent) + (capState(s, id) === 'open' ? 1 : 0) ? ` · ${Math.max(0, points - spent) + (capState(s, id) === 'open' ? 1 : 0)} free` : ''}`]].map(([k, l]) => `<button type="button" role="tab" data-ltab="${k}" aria-selected="${tab === k}">${esc(l)}</button>`).join('')}</nav>
     ${tab === 'daemons' ? daemonsMarkup(s) : tab === 'skills' ? `
     <div class="loadout-grid">
       <section class="card skills-card">
@@ -2447,7 +2463,7 @@ function mapSide(s, sel, node) {
   return `<section class="card ${st === 'new' ? 'alert' : ''}"><h2>${l.member ? `${esc(l.member)}'s server` : `Floor ${l.depth || 1}`} · ${esc(FAMILIES[l.family].name)}</h2><h1>${esc(l.name)}</h1>
     <p class="tagline">${levelTag(s, l.level || 1)} · ${esc(layout)}${siteLabel(l) ? ` <span class="tag tag-site" title="${esc(siteLabel(l).rule)}">${esc(siteLabel(l).name)}</span>` : ''}${QUIRKS[l.quirk] ? ` <span class="tag tag-quirk" data-quirk="${l.quirk}" title="${esc(QUIRKS[l.quirk].rule)}">${esc(QUIRKS[l.quirk].name)}</span>` : ''}</p>
     <div class="stats">${roomsStat}${vaultStat}${stat('Runs', l.runs || 0)}</div>
-    ${R?.mapped ? '<p class="svc-line"><span class="tag you" title="Every room cleared at least once">Mapped</span></p>' : ''}
+    ${R?.mapped || (R && l.takenOver) ? `<p class="svc-line">${R.mapped ? '<span class="tag you" title="Every room cleared at least once">Mapped</span> ' : ''}<span class="tag" title="Mapped or held, a server's rooms come back fast">Fast respawns</span> <small>fight rooms ${ROOMS_FP.respawn.process} min, guard posts ${ROOMS_FP.respawn.guard}, elites ${ROOMS_FP.respawn.elite}</small></p>` : ''}
     ${openContracts(s).filter((c) => c.loc === l.id).map((c) => `<p class="svc-line"><span class="tag${c.offBooks ? ' hot' : ''}">Contract</span> ${esc(contractTitle(s, c))} <small class="svc-prog">· ${esc(contractProgress(s, c).text)}</small></p>`).join('')}
     ${parent ? `<p class="svc-line">via ${esc(parent.name)}</p>` : ''}
     ${l.passwordKnown ? `<p class="svc-line">key <code>${esc(l.password)}</code></p>` : ''}

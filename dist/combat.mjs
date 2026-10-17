@@ -59,6 +59,8 @@ const classCheck = (id) => { for (const h of classHooks()) if (h.validate?.[id])
 // Run a hook on every class module: 'each' calls them all; 'mult' multiplies their numbers; 'sum' adds them.
 export const classEach = (name, ...args) => { for (const h of classHooks()) h[name]?.(...args); };
 const classMult = (name, ...args) => classHooks().reduce((m, h) => m * (h[name] ? h[name](...args) ?? 1 : 1), 1);
+// What the class modules make of an attack from part p on you (the taken hooks' product; the capstone tests read it).
+export const takenMult = (s, p) => classMult('taken', s, p.attack, p);
 const classSum = (name, ...args) => classHooks().reduce((n, h) => n + (h[name] ? h[name](...args) || 0 : 0), 0);
 export const classPlan = (s, t) => { for (const h of classHooks()) { const c = h.plan?.(s, t); if (c) return c; } return null; };
 // A subclass's cheap core keys (its fill hook): what the planner presses on the next threat when its own big keys
@@ -1025,19 +1027,22 @@ function tickHot(s, now) {
 }
 // ---------- varied play (Fresh) ----------
 // XP comes in kinds. The first XP of a kind other than fighting that you haven't earned in 20 minutes
-// of active play pays half again (up to one kill's worth) and says so (a Fresh row). Nothing fades: doing one thing over and
+// of active play pays half again and says so (a Fresh row). Its cap is a kill's worth scaled like the deeds it rides on
+// (deedScale in data.mjs: DEED.share times the level's stretch, 4 to 8 kills on the long climb), so it stays half a
+// deed rather than a few percent of one (freshCap). Nothing fades: doing one thing over and
 // over just pays normally. Small events (under half a kill) never count, so a free action can't
 // farm it. Contracts are a wrapper: no bonus, tallied as the activity behind them.
 export const FRESH = { gapMs: 20 * 60000, bonus: 0.5, minKill: 0.5 };
 export const XP_KINDS = { fight: 'Fights', breakin: 'Break-ins', intel: 'Intel', build: 'Building', trade: 'Trading' };
 const playMs = (s) => s.pace?.ms || 0;
+export const freshCap = (level) => killXp(level) * deedScale(level); // the most one Fresh bonus pays at your level
 function freshBonus(s, amount, kind) {
   const L = hackerLevel(s), k = killXp(L);
   if (!XP_KINDS[kind] || kind === 'fight' || !(FRESH.bonus > 0) || amount < k * FRESH.minKill) return 0; // fighting is the default: the bonus is for stepping away from it
   const last = (s.freshAt ||= {})[kind], now = playMs(s);
   s.freshAt[kind] = now;
   if (last != null && now - last < FRESH.gapMs) return 0;
-  return Math.max(1, Math.round(Math.min(amount * FRESH.bonus, k)));
+  return Math.max(1, Math.round(Math.min(amount * FRESH.bonus, freshCap(L))));
 }
 // kind: what earned it (XP_KINDS), for the Fresh bonus. tally: what it counts as in the XP mix
 // (a contract's activity), when there's no bonus.
@@ -1080,7 +1085,7 @@ export function gainXp(s, amount, why, kind = null, tally = kind) {
     const shelf = shelved.map((g) => `${ABILITIES[g].name} ${got.includes(g) ? 'goes on' : 'moves to'} the shelf${wants(g).length ? `: your ${andList(wants(g))} preset${wants(g).length === 1 ? ' uses' : 's use'} it (loadout use ${wants(g)[0]})` : ''}.`).join(' ');
     const names = got.map((id) => (id === 'edge' ? `${SUBS[sub].edge.name} (${SUBS[sub].edge.rule.replace(/\.$/, '')})` : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || id));
     const pickSub = h.level === SUBCLASS.from && !subPicked(s, arch) ? ` Pick a subclass: ${Object.values(ARCHETYPES[arch].subs).map((x) => `${x.name} (subclass ${x.id})`).join(' or ')}. Until you do, you play ${SUBS[sub].name}.` : '';
-    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + pickSub;
+    const talent = (gainsTalent(h.level) ? ' +1 talent point.' : '') + (h.level === LOADOUT.capstoneAt[0] ? ' +1 capstone point: pick a capstone (talent capstone a|b).' : h.level === LOADOUT.capstoneAt[1] ? ' Your capstone reaches rank 2.' : '') + pickSub;
     // The banner lists what the level brings on every track, and the next level that brings something.
     const subAt = (l) => (l >= SUBCLASS.from ? sub || defaultSub(arch) : null);
     const skillsAt = (l) => newAtLevel(arch, l, subAt(l)).map((id) => (id === 'edge' ? SUBS[subAt(l)].edge.name : ARCHETYPES[arch].skills.find((x) => x.id === id)?.name || ABILITIES[id]?.name || CANTRIPS.find((c) => c.id === id)?.name || id));
@@ -1218,6 +1223,31 @@ export const talentPoints = (s, arch = classOf(s)) => { const l = hackerLevel(s,
 // Talent picks and ranks are kept per subclass (each subclass has its own tree).
 export const picksOf = (s, arch) => s.loadout?.picks?.[kitKey(s, arch)] || [];
 export const ranksOf = (s, arch) => s.loadout?.ranks?.[kitKey(s, arch)] || {};
+// ---------- capstones (the row under the tree: TREE's last row, each subclass's `capstones`) ----------
+// Their own points, one at each LOADOUT.capstoneAt level (45, 50): talent points never reach the row, and its
+// points go nowhere else. The first picks one of the two (s.loadout.caps[subclass]: 0 or 1; changing it is free, like
+// a tier's pick); the second, at 50, gives the picked one its second rank on its own (it has nowhere else to go).
+export const capstonePoints = (s, arch = classOf(s)) => LOADOUT.capstoneAt.filter((l) => hackerLevel(s, arch) >= l).length;
+export const capPickOf = (s, arch = classOf(s)) => s.loadout?.caps?.[kitKey(s, arch)];
+const CAPSTONES = () => (CAPS_BY_ID ||= Object.fromEntries(Object.values(SUBS).flatMap((x) => (x.capstones || []).map((c) => [c.id, c]))));
+let CAPS_BY_ID = null;
+export const capstoneNode = (id) => CAPSTONES()[id] || null;
+// Your current class's rank in a capstone (0, 1 or 2). s.loadout.devKit.caps: { id: rank } for tests of one rule.
+export function capRank(s, id) {
+  if (s.loadout?.devKit) return s.loadout.devKit.caps?.[id] || 0;
+  const pick = s.loadout?.caps?.[kitKey(s, classOf(s))];
+  if (pick !== 0 && pick !== 1) return 0;
+  const node = kitOf(s)?.capstones?.[pick];
+  return node && node.id === id ? Math.min(node.max, capstonePoints(s)) : 0;
+}
+// The number a capstone uses at your rank (its `ranks`), or 0 without it.
+export const capValue = (s, id) => { const r = capRank(s, id); return r ? capstoneNode(id).ranks[r - 1] : 0; };
+// The capstone row's state: 'picked', 'open' (a point to spend), 'blocked' (needs points above it), 'locked' (before 45).
+export function capState(s, arch) {
+  if (picked(capPickOf(s, arch))) return 'picked';
+  if (!capstonePoints(s, arch)) return 'locked';
+  return spentAbove(s, arch, TREE.findIndex((r) => r.kind === 'capstone')) < TREE.find((r) => r.kind === 'capstone').need ? 'blocked' : 'open';
+}
 // Skills a class knows at its level (its core, and its subclass's line), and the ones on its bar.
 // The bar a player who kept the defaults has at their level: every skill that unlocked while a slot was free
 // (the level-up puts each one on the bar while there's room; a slot opens at 22 and 30 with that level's skill).
@@ -1337,15 +1367,16 @@ const picked = (x) => x === 0 || x === 1;
 // Points spent in one row of the tree (see TREE in data.mjs).
 // kit: a subclass (SUBS), whose fillers and talents make the tree.
 function rowSpent(picks, ranks, kit, row) {
-  if (!kit) return 0;
+  if (!kit || row.kind === 'capstone') return 0; // the capstone row spends its own points (capstonePoints)
   if (row.kind === 'choice') return picked(picks[row.tier]) ? 1 : 0;
   return kit.fillers[row.row].reduce((n, node) => n + (ranks[node.id] || 0), 0);
 }
 const spentAboveWith = (picks, ranks, kit, i) => TREE.slice(0, i).reduce((n, row) => n + rowSpent(picks, ranks, kit, row), 0);
 export const pointsSpent = (s, arch) => TREE.reduce((n, row) => n + rowSpent(picksOf(s, arch), ranksOf(s, arch), kitOf(s, arch), row), 0);
 export const spentAbove = (s, arch, i) => spentAboveWith(picksOf(s, arch), ranksOf(s, arch), kitOf(s, arch), i);
-function treeValid(picks, ranks, kit) {
-  return TREE.every((row, i) => !rowSpent(picks, ranks, kit, row) || spentAboveWith(picks, ranks, kit, i) >= row.need);
+// cap: the capstone picked (0, 1, or nothing): it needs its row's points above it too.
+function treeValid(picks, ranks, kit, cap) {
+  return TREE.every((row, i) => !(row.kind === 'capstone' ? picked(cap) : rowSpent(picks, ranks, kit, row)) || spentAboveWith(picks, ranks, kit, i) >= row.need);
 }
 // Row state: 'open' (can spend here), 'locked' (open but no free points), 'blocked' (needs more points above).
 export function rowState(s, arch, i) {
@@ -1440,7 +1471,9 @@ function loadoutCommand(s, text) {
   if (rest[0] === 'reset') {
     s.loadout.picks[kitKey(s, arch)] = [];
     s.loadout.ranks[kitKey(s, arch)] = {};
-    return emit(s, 'loadout', `${ARCHETYPES[arch].name} talents cleared. ${talentPoints(s, arch)} point(s) free.`);
+    if (s.loadout.caps) delete s.loadout.caps[kitKey(s, arch)];
+    const cp = capstonePoints(s, arch);
+    return emit(s, 'loadout', `${ARCHETYPES[arch].name} talents cleared. ${talentPoints(s, arch)} point(s) free${cp ? `, and your capstone to pick again` : ''}.`);
   }
   const noPoints = hackerLevel(s, arch) < LOADOUT.talentFrom ? `Talents start at level ${LOADOUT.talentFrom}.` : `No free talent points. You get one every ${LOADOUT.talentEvery} levels.`;
   if (rest[0] === 'add' || rest[0] === 'remove') {
@@ -1459,13 +1492,25 @@ function loadoutCommand(s, text) {
     } else {
       if (!ranks[node.id]) return warn(s, `${node.name} has no ranks.`);
       ranks[node.id]--;
-      if (!treeValid(picksOf(s, arch), ranks, kit)) return warn(s, 'Deeper picks depend on that point. Take those back first.');
+      if (!treeValid(picksOf(s, arch), ranks, kit, capPickOf(s, arch))) return warn(s, 'Deeper picks depend on that point. Take those back first.');
     }
     s.loadout.ranks[kitKey(s, arch)] = ranks;
     return emit(s, 'loadout', `${node.name} ${ranks[node.id]}/${node.max}. ${node.rule}`);
   }
+  // talent capstone <a|b> (or talent 4 <a|b>): the row under the tree, from level 45, on its own points.
+  if (rest[0] === 'capstone' || rest[0] === '4') {
+    const kit = kitOf(s, arch), side = rest[1];
+    if (!kit) return warn(s, `Talents start at level ${LOADOUT.talentFrom}, with your subclass.`);
+    if (!['a', 'b'].includes(side)) return warn(s, `usage: talent capstone <a|b>. ${kit.name} capstones: ${kit.capstones.map((x, j) => `${j ? 'b' : 'a'} ${x.name}`).join(', ')}.`);
+    const st = capState(s, arch);
+    if (st === 'locked') return warn(s, `Capstones come at level ${LOADOUT.capstoneAt[0]}, on a point of their own (its second rank at ${LOADOUT.capstoneAt[1]}).`);
+    if (st === 'blocked') return warn(s, `The capstone needs ${TREE.find((r) => r.kind === 'capstone').need} points spent above it.`);
+    (s.loadout.caps ||= {})[kitKey(s, arch)] = side === 'a' ? 0 : 1;
+    const node = kit.capstones[side === 'a' ? 0 : 1], r = Math.min(node.max, capstonePoints(s, arch));
+    return emit(s, 'loadout', `${kit.name} capstone: ${node.name} (rank ${r}/${node.max}). ${node.rules[r - 1]}${r < node.max ? ` Rank ${node.max} at level ${LOADOUT.capstoneAt[node.max - 1]}: ${node.rules[node.max - 1]}` : ''}`);
+  }
   const tier = Number(rest[0]), side = rest[1];
-  if (!(tier >= 1 && tier <= 3) || !['a', 'b'].includes(side)) return warn(s, 'usage: talent <1-3> <a|b> · talent add|remove <node> · talent reset');
+  if (!(tier >= 1 && tier <= 3) || !['a', 'b'].includes(side)) return warn(s, 'usage: talent <1-3> <a|b> · talent capstone <a|b> · talent add|remove <node> · talent reset');
   const state = tierState(s, arch, tier - 1);
   if (state === 'blocked') return warn(s, `Tier ${tier} needs ${TREE.find((r) => r.kind === 'choice' && r.tier === tier - 1).need} points spent above it.`);
   if (state === 'locked') return warn(s, noPoints);

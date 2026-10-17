@@ -24,7 +24,7 @@
 import { CONFIG, ABILITIES } from '../data.mjs';
 import { soonest, doomed } from '../planner.mjs';
 import { tellOn, tellOpen } from '../tells.mjs';
-import { subOf, subEdge, hasTalent, rank, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn, addBurn, mergeBurns, injectTicks, injectTick } from '../combat.mjs';
+import { subOf, subEdge, hasTalent, rank, capValue, heal, emit, hit, part, alive, livingParts, attackers, soonestAttacker, burnsOn, classOf, alliesOf, openProc, scaled, toIntent, intents, defender, on, virusIntegrity, previewDamage, mirrorOn, usable, readyIn, addBurn, mergeBurns, injectTicks, injectTick } from '../combat.mjs';
 
 const A = (id) => ABILITIES[id];
 const isInf = (s) => classOf(s) === 'infiltrator';
@@ -193,8 +193,30 @@ export default {
     'irq-storm': (s) => (s.encounter.burns.length || mine(s).poly.length ? null : 'No burns running.'),
   },
   start(s) { if (isInf(s)) mine(s); },
+  // Siphon (Payload capstone): your burn ticks bank a share of what they deal, paid out as a heal at the end of your turn.
+  // Pandemic (Payload capstone): each tick also lands a share on every other part, past armor.
+  hit(s, p, res, opts) {
+    if (!opts.dot || !(res.dealt > 0) || !isInf(s) || opts.src === 'helper') return;
+    const v = capValue(s, 'siphon');
+    if (v) mine(s).siphon = (mine(s).siphon || 0) + res.dealt * v;
+    const pan = capValue(s, 'pandemic');
+    if (pan) { const n = Math.max(1, Math.round(res.dealt * pan)); for (const x of livingParts(s)) if (x !== p && alive(x)) hit(s, x, n, { by: 'Pandemic', pierce: true, noHook: true, server: true }); }
+  },
+  // Smoke and Mirrors (Phantom capstone): the first attack that would hurt you each fight lands on a copy of you (half of
+  // it at rank 1, all of it at rank 2).
+  absorb(s, amount, atk, p) {
+    const v = isInf(s) && amount > 0 ? capValue(s, 'smoke-and-mirrors') : 0;
+    if (!v) return amount;
+    const st = mine(s);
+    if (st.smoke) return amount;
+    st.smoke = true;
+    const cut = Math.round(amount * v);
+    emit(s, 'blocked', `Smoke and Mirrors: ${atk?.name || 'the attack'} hits a copy of you${cut >= amount ? ' and does nothing' : `, and ${cut} of it goes nowhere`}.`, { source: p?.id });
+    return amount - cut;
+  },
   cycle(s) {
     const e = s.encounter;
+    if (isInf(s) && e.infil?.who === (s.who || '') && e.infil.siphon >= 1) { const n = Math.floor(e.infil.siphon); e.infil.siphon -= n; heal(s, n, 'Siphon'); }
     // Thrash: every burn on a Thrashing part ticks again (anyone's; the extra tick costs nothing). A burn
     // whose last tick was this cycle is already gone from the list: last turn's (kept off the save, and
     // off crewmates' copies of the encounter) still has it.
@@ -271,6 +293,10 @@ export default {
   },
   broke(s, p) {
     for (const st of everyone(s)) bloom(st, p);
+    // Ghost Step (Phantom capstone): a break buys time: the attack that lands soonest comes later.
+    const step = isInf(s) ? capValue(s, 'ghost-step') : 0;
+    const next = step && virusIntegrity(s).current > 0 ? soonestAttacker(s, p.id) : null;
+    if (next?.attack && next !== p) { next.attack.due += step; emit(s, 'status', `Ghost Step: the ${next.name} loses you, and attacks ${step === 1 ? 'a cycle' : step + ' cycles'} later.`, { target: next.id }); }
     // Tracking Pixel (Phantom talent): a Tag on a part that breaks moves on to the part attacking soonest.
     const e = s.encounter;
     if (talent(s, 'tracking-pixel') && p.taggedUntil >= e.cycle && virusIntegrity(s).current > 0) {

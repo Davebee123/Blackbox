@@ -142,9 +142,20 @@ test('respawns: a fallen room comes back on its timer (never while you stand in 
   win(s);
   assert.equal(FP.isUp(s, room), false, 'down after its fall');
   const T = FP.respawnMs(s, room);
-  assert.equal(T, 15 * 60000, '15 minutes for a process');
+  assert.equal(T, 15 * 60000, '15 minutes for a process while you explore the server');
   assert.equal(FP.respawnMs(s, roomOfKind(s, 'elite')), 45 * 60000);
   assert.equal(FP.respawnMs(s, roomOfKind(s, 'guard')), 20 * 60000);
+  assert.equal(FP.respawnMs(s, roomOfKind(s, 'core')), 60 * 60000);
+  // Mapped, it's a farm: the fast timers (real play clears a medium server's fights in about 4 minutes).
+  R.mapped = clock;
+  assert.equal(FP.farmed(s), true);
+  assert.equal(FP.respawnMs(s, room), 2 * 60000);
+  assert.equal(FP.respawnMs(s, roomOfKind(s, 'elite')), 5 * 60000);
+  assert.equal(FP.respawnMs(s, roomOfKind(s, 'guard')), 3 * 60000);
+  assert.equal(FP.respawnMs(s, roomOfKind(s, 'core')), 10 * 60000);
+  assert.equal(FP.ROOMS.respawn.cache, 120, 'caches and puzzle boards: 2 hours either way');
+  assert.equal(FP.ROOMS.rare, 0.1, 'one respawn in ten is a rare spawn');
+  R.mapped = null;
   tick(T + 1000);
   assert.equal(FP.isUp(s, room), false, 'never while you stand in it');
   const out = FP.neighbours(R.graph, room.id)[0];

@@ -50,6 +50,7 @@ Choices (pick one of two in each tier):
 | 1 (3 points above) | **Tarpit**: Suspend also Throttles the part until its attack lands. | **Deep Packet Inspection**: Firewall absorbs 30. |
 | 2 (8 points above) | **Counterflow**: Retaliate also sends back everything Blowback has stored, as a second hit, and empties it. | **Write Protect**: Harden gives two chits, but it costs 10% of your max Signal. |
 | 3 (14 points above) | **Uptime**: once per fight, a hit that would drop you to 0 leaves you at 1. | **Kernel Panic**: while you are under a third of your Signal, your hits deal 30% more. |
+| Capstone (15 points above; 45, rank 2 at 50) | **Iron Curtain**: the part that last hit you deals 15% less damage to you (30%). | **Eye for an Eye**: each attack that hits you deals 40% of its damage back to the part that made it (80%). |
 
 ## Sysop
 
@@ -94,6 +95,7 @@ Choices (pick one of two in each tier):
 | 1 (3 points above) | **Service Pack**: Patch heals 10 up front. | **Ping Flood**: Multicast also hits every part for what it heals each player. |
 | 2 (8 points above) | **Critical Path**: your heals on anyone under a third of their Signal heal 50% more. | **Redistribute**: Reclaim also heals the lowest crewmate as much as it heals you. Alone, it heals you twice as much. |
 | 3 (14 points above) | **Overcommit**: Overprovision holds twice as much shield. | **Loopback**: every heal you cast also heals you for a third of it. |
+| Capstone (15 points above; 45, rank 2 at 50) | **Root Cause**: your heals also deal 15% of their size as damage to the part that last hit you (30%). | **Warm Standby**: you start each fight with a shield of 10% of your max Signal (20%). |
 
 ## Crewmates
 

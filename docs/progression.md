@@ -574,14 +574,14 @@ By kind (`s.xpMix`, what loop.test.mjs checks), fights are 18–27% now, against
 
 ### Things that run on time, at the new pace
 
-None of these were retuned. A real player at 150 kills an hour meets them about 20 times less often for each fight than the bot does, so the bot overstates whatever they gate.
+None of these were retuned with the curve. A real player at 150 kills an hour meets them about 20 times less often for each fight than the bot does, so the bot overstates whatever they gate. After review the respawns, Rested and Fresh were retuned (marked **Done**; "After review" below has the numbers).
 
 | Timer | Value | At the new pace |
 |---|---|---|
-| Room respawns | a fight room 15 min, a guard 20, an elite 45, the core 60 | **Out of proportion.** A medium server's 10 or so fights take a player about 4 minutes, and then nothing is up for 15. Farming one server, or climbing a held server's Root by its respawns, means waiting. A player has to rotate 3 or 4 servers at their level, which a floor can give, but servers 3 levels under you are grey-ish. The bot never sees this: on its clock a fight takes about 9 minutes. |
+| Room respawns | a fight room 15 min, a guard 20, an elite 45, the core 60 | **Done:** 2, 3, 5 and 10 once a server is Mapped or yours (below). Before: **out of proportion.** A medium server's 10 or so fights take a player about 4 minutes, and then nothing is up for 15. Farming one server, or climbing a held server's Root by its respawns, means waiting. A player has to rotate 3 or 4 servers at their level, which a floor can give, but servers 3 levels under you are grey-ish. The bot never sees this: on its clock a fight takes about 9 minutes. |
 | Cache and puzzle board refills | 2 hours | **Out of proportion, the other way.** A player sees each puzzle room's board once every 2 real hours. The bot played 117 boards a climb, about one every 50 minutes of real play, which a player can't do. Puzzles are a small share of the XP (under 2%), so the hours barely move. |
-| Rested | a kill's XP an hour away, up to 1.5 levels | **Out of proportion.** A night away (8 hours) is 8 kills, about 3 minutes of play. The cap (1.5 levels, about 1,350 kills at 30) takes some 1,300 hours away to fill. It used to fill in about 60. |
-| Fresh | +50% of a non-fight gain after 20 minutes without one, at most a kill | Shrunk: deeds are now 5 to 9 kills, so the one-kill cap makes Fresh a few percent of a deed. |
+| Rested | a kill's XP an hour away, up to 1.5 levels | **Done:** WoW's rule, 5% of a level every 8 hours (below). Before: **out of proportion.** A night away (8 hours) is 8 kills, about 3 minutes of play. The cap (1.5 levels, about 1,350 kills at 30) takes some 1,300 hours away to fill. It used to fill in about 60. |
+| Fresh | +50% of a non-fight gain after 20 minutes without one, at most a kill | **Done:** the cap is a kill times `deedScale` (below). Before: shrunk: deeds are now 5 to 9 kills, so the one-kill cap makes Fresh a few percent of a deed. |
 | The Resident's grudge | a level stronger for 6 hours after it beats you, up to three | Now about 2 levels of play late in the climb, where before 6 hours was dozens of levels. More proportionate than before. |
 | Hot strain | 4 hours | About 1 to 2 levels from 20 up. More proportionate than before. |
 | Lairs, the farm | a lair boss 1 hour, its packs 30 min; KESSLER-FARM's boss 6 hours, its packs 30 min | Unchanged per hour. A lair boss is still a visit an hour, while a level takes 1.5 to 3.5 hours from 20 up. |
@@ -612,7 +612,7 @@ Real hours at each gate, from `CLIMB.minutes`:
 
 Gates that land at an awkward hour:
 
-- **The back third is thin.** After the last skill at 38 (about 58 hours), 42 hours bring no new skill: a talent point every 6.6 to 7.3 hours, a base tier at 42 and a daemon slot at 45.
+- **The back third is thin.** After the last skill at 38 (about 58 hours), 42 hours bring no new skill: a talent point every 6.6 to 7.3 hours, a base tier at 42 and a daemon slot at 45. **Done:** a capstone row at 45 and its second rank at 50 (below).
 - **Talent points spread out.** One every 2 levels is 2 to 3 hours apart in the teens and about 7 hours apart from 38.
 - **Floors are uneven.** In hours from one floor's band to the next: the Sprawl 2.1, Backhaul 4.6, the Stacks 7.0, Coldline 10.2, Deep Core 13.8, Kernel Space 17.6, the Sink 20.0 and Bedrock 25 (43 to 50). The 10 to 15 hours a floor hoped for holds only for floors 4 and 5. The table is front-loaded, so the first three are short and the last three long.
 - **SPRAWL-00 is your home for 4 hours** (it pays to level 10). Before, that was 30 minutes of real play.
@@ -624,11 +624,82 @@ Gates that land at an awkward hour:
 
 ### Decisions for the designer
 
-1. **Respawn timers against 150 kills an hour.** A server's rooms are back in 15 minutes, and a player clears them in about 4. Shorter respawns (5 to 8 minutes), or more fight rooms on a server, would let one server carry a session.
-2. **Rested** is worthless at this pace (a night is 3 minutes). It could bank a share of a level an hour, for example 2% of the level's XP.
-3. **Fresh's one-kill cap.** Should it follow the deed scale?
+1. **Done (below).** **Respawn timers against 150 kills an hour.** A server's rooms are back in 15 minutes, and a player clears them in about 4. Shorter respawns (5 to 8 minutes), or more fight rooms on a server, would let one server carry a session.
+2. **Done (below).** **Rested** is worthless at this pace (a night is 3 minutes). It could bank a share of a level an hour, for example 2% of the level's XP.
+3. **Done (below).** **Fresh's one-kill cap.** Should it follow the deed scale?
 4. **The floor spread.** Bands could widen late (Bedrock 43 to 50 is 25 hours) or narrow early. The alternative is to accept the front-loaded table.
-5. **The back third.** 42 hours after the last skill. Move skills later (the subclass line ends at 38), or add rewards from 40.
+5. **Done (below), with capstones.** **The back third.** 42 hours after the last skill. Move skills later (the subclass line ends at 38), or add rewards from 40.
 6. **Deeds at 0.4.** At 1.0 they keep their old share of a level, and exploring pays four fifths of the climb. At 0.4 kills stay about 70%. Exploration XP is the lever if the sandbox should push wandering over farming.
 7. **Money and loot per level** are 15 to 20 times what they were. Per hour nothing changed, but a level-priced economy may want prices per hour instead.
 8. **The rooms sim's Bastion maps 5 servers in 12 at its own level** (8 before). Same-level elites may want a look now that nobody outlevels a server while mapping it.
+
+### After review: respawns, Rested, Fresh and the capstones (done)
+
+The designer took decisions 1, 2, 3 and 5. No save migration of its own (SAVE_VERSION is 43 from the Threads merge): a capstone pick is a new field (`s.loadout.caps`) an older save simply lacks.
+
+**Room respawns.** At real play's pace a fight room is back in 2 minutes, a guard post in 3, an elite in 5 and the Core in 10 (`ROOMS.respawn` in floorplan.mjs), so one server carries a session of farming. Caches and puzzle boards stay at 2 hours, a Cron Spawner or a Hostile server still halves a room's timer, and one respawn in ten is still a rare spawn. The fast timers apply **once a server is Mapped or yours** (`FP.farmed`: `R.mapped`, or netrooms.mjs's `held`). Until then a server keeps 15, 20, 45 and 60 (`ROOMS.respawnNew`). With the fast timers everywhere nobody can map a server. A rest at home takes 3 to 5 minutes (Signal comes back 20% a minute), so every room is back on every visit, and each visit has to fight its way down the spine again. The rooms sim's level-10 Bastion on a medium Relay mapped 0 servers in 12 (5, 8, 15 and 20 minutes mapped 1), against 9 in 12 on the old timers. Running its clock at real-play speed didn't change that. With the switch it maps 9 in 12 again (rooms.test.mjs). The player sees it in three places: the Mapped line says the rooms now respawn fast, a fallen room's card gives its timer (*Back 2:00 after it falls (fast: this server is Mapped or yours)*), and the server card has a *Fast respawns* tag. The pacing bot's held servers farm on the fast timers too, which is what moved the curve (below). Lairs (an hour for the boss, 30 minutes for its packs), KESSLER-FARM-00 (6 hours and 30 minutes), SPRAWL-00's strays (90 seconds) and rogue folders (3 to 5 minutes) run their own timers, which this change left alone.
+
+**Rested** follows World of Warcraft: time safely away banks 5% of a level every 8 hours, of the level you're on when it banks, up to 1.5 levels (`RESTED` in data.mjs). Ten days away fill it from empty. A night away is now 5% of a level: about 9 kills at level 10 and 41 at level 30 (16 minutes of play), where it was 8 kills at any level. Time past the day the network plays out (`AWAY.maxMs`) still banks, and a crash away still banks nothing while it lasts. It is spent as before: each kill pays double until it runs out.
+
+**Fresh's cap** is a kill times `deedScale` at your level (`freshCap` in combat.mjs), the scale deeds pay on (`DEED.share` × the level's stretch: 4.0 to 8.0 on the new curve). A deed is about 4 to 8 kills now, so Fresh is back to half a deed. Only a gain over twice the cap still meets it.
+
+**The curve came down.** On the fast timers the bot farms the respawns of a server it holds (or has Mapped), which pays about 1.25 kills a fight. Before, it spent that time exploring for first clears and Mapped deeds. On one seed (7) the climb ran long: 1.3, 4.7, 17, 39, 72 and 113 hours to 5, 10, 20, 30, 40 and 50 (+11% to +33%). Its deeds fell from 21-24% of the XP to 17-19%, even with the bigger Fresh. `CLIMB.kills` came down by each stretch's overrun, 10-23% (30 → 23 at level 1, 210 → 160 at 4, 215 → 172 at 10, 575 → 523 at 20, 900 → 818 at 30, 1,120 → 1,000 at 40, 1,330 → 1,137 at 49, about 31,000 kills to 50 on paper). `CLIMB.minutes` (Behind's targets, the table) did not change. A v42 save keeps its raw XP into the level, so one within about a tenth of its next level gets it on its next kill.
+
+`node pacing.mjs 50 1` (seed 7) on the new curve, with the fast timers, the WoW Rested (the bot is never away, so it plays no part) and the bigger Fresh cap. The bot's own hours are in brackets:
+
+| Class | Lv 5 | Lv 10 | Lv 20 | Lv 30 | Lv 40 | Lv 50 |
+|---|---:|---:|---:|---:|---:|---:|
+| Target | 1 | 4 | 15 | 35 | 65 | 100 |
+| Breaker | 1.1 (31) | 4.7 (101) | 14 (267) | 37 (816) | 73 (1,894) | 107 (3,030) |
+| Bastion | 0.9 (26) | 4.2 (87) | 12 (204) | 35 (628) | 65 (1,443) | 99 (2,541) |
+| Infiltrator | 1.0 (24) | 4.2 (55) | 16 (347) | 33 (813) | 68 (1,916) | 104 (3,172) |
+| Operator | 0.9 (17) | 4.1 (86) | 17 (352) | 38 (1,027) | 66 (1,965) | 105 (3,372) |
+| All four | 0.9 (−5%) | 4.2 (+5%) | 15 (+2%) | 36 (+3%) | 67 (+3%) | 105 (+5%) |
+
+It took 14,066 to 15,661 fights to 50 (60,520 over the four), 2% of them lost. By source the XP is 77-78% kills, 17-19% deeds and 4-6% contracts. By kind building is 50-68% (a held server's respawns), fights 16-32% and break-ins 15-17%. Before the cut, the same seed on the old points with the fast timers ran 1.3, 4.7, 17, 39, 72 and 113 hours, and the fast timers on every server, unmapped ones included, ran 1.4, 5.8, 19, 45, 81 and 127 (the bot stuck on servers it could not get through). loop.test.mjs's seed-7 check to 30 passes.
+
+**Capstones.** Each subclass's tree has a capstone row under its third tier. It holds two capstones and runs on points of its own: one at 45 picks one (talent capstone a|b), and one at 50 gives that pick its second rank, a bigger number, with no command (it has nowhere else to go). Talent points never reach the row: the regular tree is still 21 points at 50, and its points buy nothing else. The row needs 15 points above it (the third tier picked). Changing the pick is free at home, as with a tier, and `talent reset` clears it. The Loadout page draws the row with two rank pips and each capstone's rank-2 text, and the level-up banner names the capstone point at 45 and the second rank at 50. Each is one rule in the class module (`capValue` in combat.mjs reads a rank's number), and most pairs are a pace pick against a safety pick:
+
+| Subclass | Capstone | Rule (rank 1 · rank 2) |
+|---|---|---|
+| Demolitionist | Structural Failure | When you break a part, every other part loses 1 · 2 ◆. |
+| | Load-Bearing Wall | The last part standing deals 30% · 60% less damage to you. |
+| Overclocker | Arc Flash | Thermal Throttle also deals 25% · 50% of its damage to the part whose attack lands soonest. |
+| | Thermal Paste | Each Momentum stack you spend heals you for 1% · 2% of your max Signal. |
+| Warden | Iron Curtain | The part that last hit you deals 15% · 30% less damage to you. |
+| | Eye for an Eye | Each attack that hits you deals 40% · 80% of its damage back to the part that made it. |
+| Sysop | Root Cause | Your heals also deal 15% · 30% of their size as damage to the part that last hit you. |
+| | Warm Standby | You start each fight with a shield of 10% · 20% of your max Signal. |
+| Payload | Pandemic | Your burn ticks also deal 25% · 50% of their damage to every other part. |
+| | Siphon | Your burn ticks heal you for 5% · 10% of the damage they deal. |
+| Phantom | Ghost Step | When you break a part, the attack that lands soonest comes 1 · 2 cycles later. |
+| | Smoke and Mirrors | The first attack that hits you each fight deals 50% less · no damage. |
+| Herder | Thundering Herd | Your helper hits also deal 15% · 30% of their damage to every other part. |
+| | Sandbox | When an attack hits you, your oldest helper takes 15% · 30% of it and ends. |
+| Hijacker | Puppet Master | Takeover lasts 1 · 2 cycles longer. |
+| | Dead Air | Jammed parts deal 25% · 50% less damage to you. |
+
+At level 50 a fight is short (5 to 9 cycles), and the planner kills most parts in one or two hits, so a plain "+x% damage" capstone measured as nothing at all. The first drafts had four of them (Overdrive, Coup de Grâce, Necrosis, a stronger-helpers Thundering Herd), and each one gave 0.0 points and 0.0 cycles on every set. The pace picks shorten fights instead: a strip on every part, a second target, a longer Takeover. The safety picks were cut until neither side of a pair is a must. Balance at Lv 50, rank 2, in blues (Signal lost · cycles; the 24 class-balance fights, then 3 gear sets × 40 wilds and 8 guard fights, then the 13 solo bosses × 3 seeds):
+
+| Subclass | No capstone | Pace pick (a) | Safety pick (b) |
+|---|---|---|---|
+| Demolitionist | 17.9 · 6.8 / 24.3 · 7.4 / 24.3 · 6.7 | Structural Failure 13.4 · 4.9 / 17.1 · 5.1 / 20.8 · 5.3 | Load-Bearing Wall 16.5 · 6.8 / 22.1 · 7.4 / 18.1 · 7.0 |
+| Overclocker | 30.8 · 7.9 / 31.9 · 7.6 / 27.3 · 6.6 | Arc Flash 31.0 · 7.5 / 31.8 · 7.1 / 27.5 · 6.4 | Thermal Paste 28.2 · 7.9 / 28.6 · 7.6 / 23.7 · 6.6 |
+| Warden | 15.8 · 13.8 / 18.2 · 14.1 / 22.6 · 16.5 | Eye for an Eye 17.1 · 13.4 / 17.7 · 13.7 / 22.7 · 15.6 | Iron Curtain 15.0 · 13.8 / 16.9 · 14.1 / 18.9 · 16.4 |
+| Sysop | 4.2 · 15.6 / 1.1 · 15.2 / 15.2 · 20.1 | Root Cause 4.1 · 10.4 / 4.0 · 11.7 / 10.9 · 16.1 | Warm Standby 0.0 · 15.3 / 0.0 · 15.0 / 14.4 · 19.7 |
+| Payload | 15.2 · 6.1 / 13.5 · 5.8 / 22.3 · 6.6 | Pandemic 15.1 · 6.2 / 13.5 · 5.4 / 21.6 · 6.1 | Siphon 14.3 · 6.1 / 12.3 · 5.8 / 16.3 · 6.6 |
+| Phantom | 6.3 · 5.9 / 4.0 · 5.9 / 26.5 · 8.9 | Ghost Step 1.1 · 6.6 / 0.9 · 6.5 / 14.8 · 9.0 | Smoke and Mirrors 2.7 · 5.9 / 2.4 · 5.9 / 13.9 · 8.9 |
+| Herder | 10.7 · 5.2 / 11.6 · 5.0 / 30.7 · 6.3 | Thundering Herd 10.8 · 4.7 / 12.4 · 4.6 / 24.8 · 5.8 | Sandbox 8.0 · 5.3 / 8.7 · 5.1 / 22.1 · 7.3 |
+| Hijacker | 21.3 · 7.6 / 22.9 · 7.2 / 40.3 · 9.2 | Puppet Master 17.0 · 7.5 / 17.0 · 7.0 / 23.4 · 8.8 | Dead Air 19.6 · 7.6 / 19.6 · 7.2 / 29.4 · 9.2 |
+
+(For the Warden and the Phantom the "pace" and "safety" columns are loose: Ghost Step buys time but adds cycles, and Eye for an Eye is the faster of the Warden's two.) Wins: every subclass wins all 24 class-balance fights with either pick (the Overclocker 23, as with none) and 94-100% of the wide set. On the bosses the Demolitionist's Load-Bearing Wall wins 38 of 39 and its Structural Failure 37, the Hijacker 37 either way (35 with none), and the Sysop's Warm Standby 36 (37 with none).
+
+Every subclass wins 85% or more with either pick and stays under its solo ceiling (50%). No pick is more than 3 points worse than none, and the two picks of a pair are within 8 points of each other: balance.test.mjs checks all three on the 24 fights. The solo band's floor (15% lost) is held from 10 to 30. At 50 the Phantom (4-6%), the Herder (11%), the Sysop (1-4%) and the Warden (16-18%, under on some sets) were already under it with no capstone, and the safety picks take them further under. capstones.test.mjs checks the row: points, ranks, the commands, every rule firing in a fight, and the passive ones' numbers. capstones-view.test.mjs checks the Loadout page and the level-up banner.
+
+### Decisions for the designer, after review
+
+1. **The fast respawns wait for Mapped.** On every server they make exploring impossible, so they apply once a server is Mapped or held. The alternatives: fast everywhere, accepting that you map by resting in the rest room and not at home, or timers that only run while you're on the server.
+2. **Farming outpaced exploring.** With a held server's rooms back in 2 minutes, the bot farms them, and the climb needed 10-23% fewer kills to stay on the table. If exploring should stay the faster road, the respawn kill (1.25 kills) could pay less on a server you hold, or deeds more.
+3. **Damage capstones don't show at 50.** Fights are too short for "+x% damage" to matter, so every pace pick here adds a target, strips ◆ or buys time. Crew bosses (long fights) are where raw damage would count, and they aren't measured at 50.
+4. **The Lv 50 solo floor.** Several subclasses are under 15% lost at 50 with or without a capstone. The floor could be dropped for 40 and up, or the level-50 fights made harder.
+5. **Lairs, KESSLER-FARM-00, SPRAWL-00 and rogue servers keep their own timers.** A lair boss is still an hour, its packs 30 minutes.
