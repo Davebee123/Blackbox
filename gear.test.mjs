@@ -386,11 +386,13 @@ test('Clock Speed ticks cooldowns faster; Leech heals per hit; Stealth delays fi
   give(s, { clock: 100 });
   bare(quiet(fight(s)));
   Object.assign(part(s, 'pulse'), { integrity: 500, max: 500 });
+  assert.equal(gearStat(s, 'clock'), 25, 'Clock Speed caps at 25%');
+  s.encounter.clock = 75; // three cycles in: this one fills the meter
   command(s, 'overload pulse'); resolveCycle(s);
   const plain = fresh(); plain.hackers = { breaker: { level: 18, xp: 0 } };
   bare(quiet(fight(plain))); Object.assign(part(plain, 'pulse'), { integrity: 500, max: 500 });
   command(plain, 'overload pulse'); resolveCycle(plain);
-  assert.equal(s.encounter.readyAt.overload, plain.encounter.readyAt.overload - 1, 'a full meter every cycle: one extra tick');
+  assert.equal(s.encounter.readyAt.overload, plain.encounter.readyAt.overload - 1, 'the meter fills: one extra tick');
   const l = fresh();
   give(l, { leech: 10 });
   bare(quiet(fight(l)));

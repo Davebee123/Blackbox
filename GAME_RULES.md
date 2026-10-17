@@ -309,7 +309,7 @@ Everything you equip is software: code, tools and access, never hardware. The Lo
 | Sanitize (%) | Gives each Encrypt, Scramble or Replicate against you a chance to fail, up to 50%. | of Scrubbing (suffix) |
 | Restore (%) | Every heal you cast, on yourself or on a crewmate, heals this percentage more. | Shell primary; of Restoration (suffix) |
 | Leech | Heals you this much for every skill hit that does damage: your server at home, your Signal on runs. | of Leeching (suffix) |
-| Clock Speed (%) | Fills a meter every cycle. When it's full, all your cooldowns tick one extra cycle. | Multithreaded (prefix) |
+| Clock Speed (%, max 25%) | Fills a meter every cycle by its value. When it's full, all your cooldowns tick one extra cycle. The meter starts empty every fight, and shows as a small ring under your Signal that fills each cycle and glows when it pays out. | Multithreaded (prefix) |
 | Stealth (%) | Chance each enemy part's first attack comes a cycle later. | of Silence (suffix) |
 | Sync (%) | Added to the 25% chance that a cycle opens a Sync Window. | of the Beat (suffix) |
 | Scavenge (%) | Better drops (more often, better rarity) and more credits from caches you bank. | of the Scavenger (suffix) |

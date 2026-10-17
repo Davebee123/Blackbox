@@ -287,7 +287,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. It is much tougher, gives three times the XP, and drops better loot.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
-  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}</div></div></div>${statusPanel(s)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}</div>${clockMeter(s)}</div></div>${statusPanel(s)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}</p>${geneChips(s, v)}</div>`;
 }
 // A Resident in a server room (interrupt.mjs BOSS_RULES): the rule it fights under, and (c)'s budget as pips.
@@ -298,6 +298,15 @@ function roomBossTag(s) {
   return `<span class="tag hot boss-rule" title="${esc(`Boss rule (${e.bossRule}): ${R.name}. ${R.text}`)}">rule ${e.bossRule}${pips}</span>`;
 }
 
+// Clock Speed (gear.mjs STATS.clock, capped at 25%): a thin meter under your bar that fills each cycle by your Clock Speed
+// and flashes the cycle it pays out (every cooldown ticks one extra cycle). It starts empty every fight; hidden without the stat.
+function clockMeter(s) {
+  const e = s.encounter, rate = gearStat(s, 'clock');
+  if (!e || !rate) return '';
+  const fill = Math.max(0, Math.min(100, Math.floor(e.clock || 0))), paid = e.clockPaid === e.cycle;
+  const tip = `Clock Speed ${rate}%${rate >= STATS.clock.cap ? ' (max)' : ''}: the meter fills ${rate}% a cycle. At 100%, every cooldown ticks one extra cycle. It starts empty every fight.`;
+  return `<div class="clock-meter${paid ? ' paid' : ''}" style="--ck:${paid ? 100 : fill}" title="${esc(tip)}" role="img" aria-label="${esc(`Clock Speed meter ${fill}%`)}"><span class="ck-ring"><i></i></span><span class="ck-k">Clock ${rate}%</span></div>`;
+}
 // Everything on you right now, between your bar and the virus's: timed effects (with the cycles
 // they have left) and standing ones (encryption, shield, armor, Clock Speed, …). Was a row on the
 // board and tags in your row; here it sits by your health.
@@ -486,7 +495,6 @@ function youStanding(s) {
   const e = s.encounter, out = [];
   const add = (name, kind, tip) => out.push({ name, kind, tip });
   if (e.encrypt > 0) add('Encrypted', 'hot', `−${e.encrypt} every cycle until the Encryptor breaks. Purge, Scrub or Rollback wipes it, and a ◆ stops the next Encrypt.`);
-  if (gearStat(s, 'clock')) add('Clock Speed', 'you', `${Math.floor(e.clock || 0)}%. At 100%, every cooldown ticks one extra cycle.`);
   if (rootkitReady(s)) add('Rootkit', 'you', 'Your first hit this fight ignores armor.');
   if (slottedDaemons(s).includes('snapshot') && !e.once?.['dmn-snapshot']) add('Snapshot', 'you', daemonText('snapshot', daemonLevel(s, 'snapshot')));
   if (e.chits > 0) add('Armor', 'you', `${'◆'.repeat(e.chits)} The next attack on you does nothing, however big.`);

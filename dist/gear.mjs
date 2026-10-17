@@ -56,7 +56,7 @@ export const STATS = {
   shield: { side: 'server', group: 'survival', name: 'Shield', unit: '', base: 10, flat: true, about: 'Shields your server for this much at the start of every home fight.' },
   countermeasures: { side: 'server', group: 'survival', name: 'Countermeasures', unit: '', base: 6, flat: true, about: 'Deals this much damage to a part when its attack lands on your server. It counts as a hit, so against an armored part it breaks a ◆.' },
   // Utility
-  clock: { side: 'hacker', group: 'utility', name: 'Clock Speed', unit: '%', base: 8, about: 'Fills a meter every cycle. When the meter is full, all your cooldowns tick down 1 extra cycle.' },
+  clock: { side: 'hacker', group: 'utility', name: 'Clock Speed', unit: '%', base: 8, cap: 25, about: 'Fills a meter every cycle, up to 25%. When the meter is full, all your cooldowns tick down 1 extra cycle. The meter starts empty every fight.' },
   stealth: { side: 'hacker', group: 'utility', name: 'Stealth', unit: '%', base: 8, cap: 60, about: 'Gives each enemy part\'s first attack a chance to come 1 cycle later.' },
   sync: { side: 'hacker', group: 'utility', name: 'Sync', unit: '%', base: 4, cap: 50, about: 'Adds to the 25% chance that a cycle opens a Sync Window.' },
   scavenge: { side: 'hacker', group: 'utility', name: 'Scavenge', unit: '%', base: 8, about: 'Makes items drop more often and at better rarity, and increases the credits from caches you bank.' },

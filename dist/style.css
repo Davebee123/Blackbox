@@ -3643,3 +3643,13 @@ h1 .byline { font-size: 13px; vertical-align: middle; }
 .mquest.m-goal text { fill: var(--amber); }
 .th-temp .th-line-svc b { color: var(--amber); }
 .th-temp.dark h1 { color: var(--gray); }
+
+/* Clock Speed: a ring that fills each cycle (--ck, 0-100) and glows the cycle it pays out (view.mjs clockMeter). */
+@property --ck { syntax: '<number>'; inherits: true; initial-value: 0; }
+.clock-meter { display: inline-flex; align-items: center; gap: 7px; margin-top: 6px; font: 600 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); transition: --ck 0.25s ease; }
+.clock-meter .ck-ring { display: block; width: 18px; height: 18px; flex: none; }
+.clock-meter .ck-ring i { display: block; width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(var(--you) calc(var(--ck) * 1%), var(--line) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3.5px)); }
+.clock-meter.paid .ck-ring { filter: drop-shadow(0 0 4px var(--you)); animation: ck-paid 0.6s ease-out; }
+.clock-meter.paid .ck-k { color: var(--you); }
+@keyframes ck-paid { 0% { transform: scale(1.25); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .clock-meter { transition: none; } .clock-meter.paid .ck-ring { animation: none; } }

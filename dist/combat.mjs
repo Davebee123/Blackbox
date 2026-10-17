@@ -3544,6 +3544,7 @@ function cycleClose(s, landed) {
       e.clock -= 100;
       const cooling = Object.keys(e.readyAt).filter((k) => e.readyAt[k] > e.cycle + 1);
       for (const k of cooling) e.readyAt[k] -= 1;
+      e.clockPaid = e.cycle + 1; // the meter flashes for the cycle this one hands over to (view.mjs clockMeter)
       if (cooling.length) emit(s, 'status', 'Clock Speed: your cooldowns tick one extra cycle.');
     }
   }
