@@ -35,7 +35,7 @@ export const FILTER_STATS = {
   sanitize: { name: '% Sanitize at home', range: [10, 25], kind: 'prefix', label: 'Sandboxed', home: true },
   // scale: the range grows with the filter's item level (+4% a level, as the services' numbers did).
   reduction: { name: ' Block at home', range: [2, 6], kind: 'prefix', label: 'Hardened', home: true, scale: true },
-  regen: { name: ' Regen at home', range: [0.3, 1], kind: 'prefix', label: 'Self-healing', home: true, scale: true, dp: true },
+  regen: { name: ' Regen at home', range: [1.5, 5], kind: 'prefix', label: 'Self-healing', home: true, scale: true }, // Regen counts over 5 cycles (gear.mjs STATS.regen)
   shield: { name: '% of max Integrity as a shield in home fights', range: [4, 10], kind: 'suffix', label: 'of the Scrubber', home: true, pct: true },
   countermeasures: { name: ' damage back on every hit at home', range: [2, 6], kind: 'suffix', label: 'of Barbs', home: true, scale: true },
   tarpit: { name: '% slower invasions', range: [15, 30], kind: 'suffix', label: 'of Tar', rare: true },
@@ -49,7 +49,7 @@ const pick = (r, xs) => xs[Math.floor(r() * xs.length)];
 // One stat's number on a filter at item level L.
 const statRoll = (k, r, L) => {
   const x = FILTER_STATS[k], [a, b] = x.range, v = (a + (b - a) * r()) * (x.scale ? power(L) : 1) + (x.family ? Math.floor(L / 20) : 0);
-  return x.dp ? Math.max(0.1, Math.round(v * 10) / 10) : Math.max(1, Math.round(v));
+  return Math.max(1, Math.round(v)); // whole numbers
 };
 export const baseName = (L) => [...BASES].reverse().find((b) => Math.max(1, L) >= b.from).name;
 export function rollFilter(r, { level = 1, rarity = null, stat = null } = {}) {

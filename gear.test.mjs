@@ -2,7 +2,7 @@
 // compiling, scrapping, Zero-days, the install queue and save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
+import { fresh, command, selectEncounter, resolveCycle, part, restore, addItem, gearStat, scaled, healScaled, dotMult, dotHit, SAVE_VERSION, previewDamage, daemonSlots, maxSignal, critChance, loaded, slotCount, rigOf, tickServices, syncServer, compileCost, idleRegen, missChance, serverLevel } from './dist/combat.mjs';
 import { play, connect, sourceOf } from './dist/run.mjs';
 import * as FP from './dist/floorplan.mjs';
 // Since R1 a server is rooms (netrooms.mjs): into the first room next to the entry that something holds, and engage.
@@ -170,11 +170,11 @@ test('enemies crit too (from level 3), for ×1.5 damage', () => {
   CONFIG.enemyCrit = 0;
 });
 
-test('filters at home (the services that were): Hardened softens hits, of the Scrubber shields the start, Self-healing heals per cycle and very slowly between fights', () => {
-  const s = wall(fresh(), { reduction: 6, shield: 10 }, { regen: 0.6 });
+test('filters at home (the services that were): Hardened softens hits, of the Scrubber shields the start, Self-healing heals over 5 cycles and very slowly between fights', () => {
+  const s = wall(fresh(), { reduction: 6, shield: 10 }, { regen: 3 });
   assert.equal(gearStat(s, 'reduction', 'server'), 6);
   assert.equal(gearStat(s, 'shield', 'server'), 10, '10% of max Integrity');
-  assert.equal(gearStat(s, 'regen', 'server'), 0.6);
+  assert.equal(gearStat(s, 'regen', 'server'), 3);
   fight(s);
   assert.equal(s.encounter.shield, 10);
   part(s, 'encryptor').attack = null;
@@ -184,9 +184,9 @@ test('filters at home (the services that were): Hardened softens hits, of the Sc
   command(s, 'hold'); resolveCycle(s);
   assert.equal(s.server.integrity, 100 - (19 - 10), '25 → 19 after 6 Block, then the shield soaks 10');
   command(s, 'hold'); resolveCycle(s);
-  assert.equal(s.server.integrity, 92, 'Regen 0.6 a cycle: +1 on the second');
+  assert.equal(s.server.integrity, 92, 'Regen 3: 3 every 5 cycles, a fifth a cycle: +1 on the second');
   s.encounter = null;
-  assert.equal(idleRegen(s, 60000), false, 'between fights: 0.6 per minute');
+  assert.equal(idleRegen(s, 60000), false, 'between fights: 3 every 5 minutes');
   idleRegen(s, 60000);
   assert.equal(s.server.integrity, 93);
 });
@@ -275,11 +275,11 @@ test('Echo repeats a hit (breaking another chit); Crit Damage raises crits; Payl
   const b = fresh();
   b.loadout.archetype = 'infiltrator';
   b.hackers = { infiltrator: { level: 18, xp: 0 } };
-  give(b, { payload: 50 });
+  give(b, { payload: 10 });
   bare(quiet(fight(b)));
   Object.assign(part(b, 'pulse'), { integrity: 500, max: 500 });
   command(b, 'inject pulse'); resolveCycle(b);
-  assert.equal(500 - part(b, 'pulse').integrity, 30, 'Inject 20, +50% Payload');
+  assert.equal(500 - part(b, 'pulse').integrity, 30, 'Inject 20, +10 Payload on the tick');
 });
 
 test('Restore: every heal you cast heals that much more (Patch up front and as it ticks); Payload: every helper hit too', () => {
@@ -309,7 +309,7 @@ test('Restore: every heal you cast heals that much more (Patch up front and as i
     return 500 - part(s, 'pulse').integrity - first;
   };
   assert.equal(herder(0), 12, 'a helper hits for 12');
-  assert.equal(herder(50), 18, '+50% Payload');
+  assert.equal(herder(6), 18, '+6 Payload on the helper hit');
 });
 
 test('heals you cast and damage over time keep half the +4% a level (CONFIG.healLevel, CONFIG.dotLevel); Restore and Payload make up the rest', () => {
@@ -319,23 +319,65 @@ test('heals you cast and damage over time keep half the +4% a level (CONFIG.heal
   assert.equal(scaled(s, 10), 20, 'everything else: ×2 at level 26');
   assert.equal(healScaled(s, 10), 15, 'a heal you cast: half that growth');
   assert.equal(dotMult(s), 0.75, 'a burn tick or helper hit (built with scaled): 1.5 of the 2');
-  give(s, { restore: 20, payload: 20 });
+  give(s, { restore: 20, payload: 5 });
   assert.equal(healScaled(s, 10), 18, '+20% Restore');
-  assert.ok(Math.abs(dotMult(s) - 0.9) < 1e-9, '+20% Payload');
+  assert.equal(dotMult(s), 0.75, 'Payload is flat: the share stays');
+  assert.equal(dotHit(s, scaled(s, 10)), 20, 'a 10 tick at level 26: 15, +5 Payload');
   CONFIG.powerPerLevel = 0;
 });
 
-test('v32: Payload on old protocols was flat (+1–2 a tick); it comes back as a percentage, ×7', () => {
+test('v32 then v44: Payload on old protocols was flat (+1–2 a tick), came back ×7 as a percentage, and is flat again at its level', () => {
   const old = fresh();
   old.version = 31;
   const a = addItem(old, item({ payload: 2, damage: 3 }));
   const b = addItem(old, item({ payload: 1.5 }));
   const s = restore(JSON.parse(JSON.stringify(old)));
   assert.equal(s.version, SAVE_VERSION);
-  assert.deepEqual(s.stash.find((x) => x.id === a.id).stats, { payload: 14, damage: 3 });
-  assert.equal(s.stash.find((x) => x.id === b.id).stats.payload, 11);
+  assert.deepEqual(s.stash.find((x) => x.id === a.id).stats, { payload: 2, damage: 3 }, '14% of a level-5 tick of 13: 2');
+  assert.equal(s.stash.find((x) => x.id === b.id).stats.payload, 1);
   const again = restore(JSON.parse(JSON.stringify(s)));
-  assert.equal(again.stash.find((x) => x.id === a.id).stats.payload, 14, 'once only');
+  assert.equal(again.stash.find((x) => x.id === a.id).stats.payload, 2, 'once only');
+});
+
+test('v44: whole-number stats. Regen five times over (it counts over 5 cycles), Payload flat at the item\'s level, every item in the save, once', () => {
+  const old = fresh();
+  old.version = 43;
+  const shell = addItem(old, item({ signal: 30, regen: 0.8, restore: 12 }));
+  const script = addItem(old, item({ damage: 9, payload: 24 }, { level: 30 }));
+  const cursed = addItem(old, item({ signal: 90, regen: -2 }, { level: 32 }));
+  old.filters = { held: [{ kind: 'filter', rarity: 'tuned', level: 4, name: 'Self-healing Packet Filter', stats: { strength: 1, regen: 0.4 } }], on: [] };
+  old.market = { offers: [{ item: { kind: 'protocol', rarity: 'tuned', level: 18, stats: { payload: 30, regen: 1.3 }, name: 'Offered' } }] };
+  const s = restore(JSON.parse(JSON.stringify(old)));
+  assert.equal(s.version, SAVE_VERSION);
+  const got = (it) => s.stash.find((x) => x.id === it.id).stats;
+  assert.deepEqual(got(shell), { signal: 30, regen: 4, restore: 12 }, 'Regen 0.8 a cycle is 4 every 5');
+  assert.deepEqual(got(script), { damage: 9, payload: 5 }, '24% of a level-30 tick (12 × 1.58): 5 flat');
+  assert.equal(got(cursed).regen, -10, 'a downside too');
+  assert.equal(s.filters.held[0].stats.regen, 2, 'a filter\'s Regen at home');
+  assert.deepEqual(s.market.offers[0].item.stats, { payload: 5, regen: 7 }, 'an item anywhere in the save');
+  const again = restore(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(again.stash.find((x) => x.id === script.id).stats, { damage: 9, payload: 5 }, 'once only');
+  assert.equal(again.stash.find((x) => x.id === shell.id).stats.regen, 4);
+});
+
+test('every stat a player reads is a whole number: rolled items, uniques, filters and the character sheet totals', async () => {
+  const { UNIQUES } = await import('./dist/combat.mjs');
+  const { rollFilter } = await import('./dist/filters.mjs');
+  const { statLine } = await import('./dist/gear.mjs');
+  const r = seeded(11), off = [];
+  for (let L = 1; L <= 50; L += 1) for (const rarity of ['stock', 'tuned', 'custom']) for (let k = 0; k < 4; k++) {
+    const it = rollItem(r, { level: L, rarity });
+    for (const [st, v] of Object.entries(it.stats)) if (!Number.isInteger(v)) off.push(`${it.name} v${L} ${st} ${v}`);
+    if (/\d\.\d/.test(statLine(it.stats))) off.push(statLine(it.stats));
+    const f = rollFilter(r, { level: L, rarity });
+    for (const [st, v] of Object.entries(f.stats)) if (!Number.isInteger(v)) off.push(`${f.name} ${st} ${v}`);
+  }
+  for (const u of Object.values(UNIQUES)) for (const L of [u.level, u.level + 10]) for (const [st, v] of Object.entries(uniqueItem(u, L, r).stats)) if (!Number.isInteger(v)) off.push(`${u.name} v${L} ${st} ${v}`);
+  assert.deepEqual(off, []);
+  const s = fresh();
+  give(s, { regen: 3, payload: 2 });
+  assert.equal(gearStat(s, 'regen'), 3);
+  assert.equal(gearStat(s, 'payload'), 2);
 });
 
 test('Clock Speed ticks cooldowns faster; Leech heals per hit; Stealth delays first attacks', () => {

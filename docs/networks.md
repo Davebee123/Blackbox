@@ -52,7 +52,7 @@ Every native follows the current unique rules: its primaries are the best base o
 | Preempt | 32 | Script (Polymorphic Engine) | +40% crit chance on a part winding up a tell | tells |
 | Brute Force | 33 | Exploit (Wormable) | On a part behind a lock or a ward, a hit that meets ◆ breaks two of them | ransomware |
 | Takedown Notice | 34 | Implant (Bootkit) | When you break a fragment, every cooldown drops by 1 | worm |
-| Sandman | 36 | Shell (Ring 0 Shell) | A tell that lands leaves nothing behind: no key offline, no Corrupted, no Hung (−2 Regen) | tells |
+| Sandman | 36 | Shell (Ring 0 Shell) | A tell that lands leaves nothing behind: no key offline, no Corrupted, no Hung (−10 Regen) | tells |
 | Rubber Hose | 38 | Exploit (Sandbox Escape) | +6 damage for every tell you read this fight, up to +30 (−3% Crit) | tells |
 | Mirror Maze | 40 | Proxy (Domain Front) | The Decoy's mirror lets your commands through at 50%, and nothing bounces back | ghostroot |
 

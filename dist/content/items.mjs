@@ -47,7 +47,7 @@ export default {
       "level": 3,
       "primary": {
         "signal": 22,
-        "regen": 1
+        "regen": 5
       },
       "secondary": {
         "crit": 4
@@ -143,7 +143,7 @@ export default {
       "level": 5,
       "primary": {
         "signal": 30,
-        "regen": 2
+        "regen": 10
       },
       "effect": {
         "when": "always",
@@ -192,7 +192,7 @@ export default {
       "level": 6,
       "primary": {
         "signal": 30,
-        "regen": 1
+        "regen": 5
       },
       "secondary": {
         "evasion": 4
@@ -353,7 +353,7 @@ export default {
         "signal": 38
       },
       "secondary": {
-        "payload": 3
+        "payload": 2
       },
       "downside": {
         "signal": -10
@@ -425,7 +425,7 @@ export default {
       "level": 14,
       "primary": {
         "signal": 48,
-        "regen": 2
+        "regen": 10
       },
       "secondary": {
         "accuracy": 5
@@ -452,7 +452,7 @@ export default {
       "level": 16,
       "primary": {
         "signal": 52,
-        "regen": 2
+        "regen": 10
       },
       "secondary": {
         "sanitize": 8
@@ -560,7 +560,7 @@ export default {
       "level": 22,
       "primary": {
         "signal": 70,
-        "regen": 3
+        "regen": 15
       },
       "secondary": {
         "evasion": 5
@@ -731,13 +731,13 @@ export default {
       "level": 32,
       "primary": {
         "signal": 90,
-        "regen": 4
+        "regen": 20
       },
       "secondary": {
         "clock": 12
       },
       "downside": {
-        "regen": -2
+        "regen": -10
       },
       "effect": {
         "when": "always",
@@ -786,7 +786,7 @@ export default {
       "level": 3,
       "primary": {
         "signal": 16,
-        "regen": 0.7
+        "regen": 3.5
       },
       "effect": {
         "when": "struck",
@@ -879,7 +879,7 @@ export default {
       "level": 8,
       "primary": {
         "signal": 26,
-        "regen": 1.2
+        "regen": 6
       },
       "effect": {
         "when": "custom",
@@ -1119,7 +1119,7 @@ export default {
       "lean": "sysop",
       "primary": {
         "signal": 14,
-        "regen": 0.6
+        "regen": 3
       },
       "effect": {
         "when": "always",
@@ -1168,7 +1168,7 @@ export default {
       "lean": "hijacker",
       "primary": {
         "signal": 26,
-        "regen": 1
+        "regen": 5
       },
       "effect": {
         "when": "always",
@@ -1266,7 +1266,7 @@ export default {
       "level": 8,
       "primary": {
         "signal": 24,
-        "regen": 1.2
+        "regen": 6
       },
       "effect": {
         "when": "custom",
@@ -1309,7 +1309,7 @@ export default {
       "level": 9,
       "primary": {
         "signal": 26,
-        "regen": 1
+        "regen": 5
       },
       "secondary": {
         "evasion": 4
@@ -1377,7 +1377,7 @@ export default {
       "level": 6,
       "primary": {
         "signal": 18,
-        "regen": 0.8
+        "regen": 4
       },
       "secondary": {
         "evasion": 3
@@ -1402,7 +1402,7 @@ export default {
       "primary": {
         "damage": 6,
         "signal": 28,
-        "payload": 20
+        "payload": 3
       },
       "secondary": {
         "crit": 4
@@ -1485,7 +1485,7 @@ export default {
       "primary": {
         "damage": 9,
         "signal": 40,
-        "payload": 24
+        "payload": 4
       },
       "secondary": {
         "clock": 6
@@ -1516,7 +1516,7 @@ export default {
       "primary": {
         "damage": 9,
         "signal": 40,
-        "payload": 30
+        "payload": 5.2
       },
       "effect": {
         "when": "custom",
@@ -1573,14 +1573,14 @@ export default {
       "level": 26,
       "primary": {
         "signal": 50,
-        "regen": 2,
+        "regen": 10,
         "restore": 24
       },
       "secondary": {
         "evasion": 3
       },
       "downside": {
-        "regen": -1
+        "regen": -5
       },
       "effect": {
         "when": "always",
@@ -1667,7 +1667,7 @@ export default {
       "primary": {
         "damage": 13,
         "signal": 55,
-        "payload": 30
+        "payload": 5.9
       },
       "secondary": {
         "reduction": 2
@@ -1696,7 +1696,7 @@ export default {
       "level": 34,
       "primary": {
         "signal": 70,
-        "regen": 3,
+        "regen": 15,
         "restore": 30
       },
       "secondary": {
@@ -1785,7 +1785,7 @@ export default {
       "level": 6,
       "primary": {
         "signal": 24,
-        "regen": 1
+        "regen": 5
       },
       "secondary": {
         "sync": 3
@@ -1857,7 +1857,7 @@ export default {
       "level": 9,
       "primary": {
         "signal": 26,
-        "regen": 1
+        "regen": 5
       },
       "effect": {
         "when": "custom",
@@ -1954,7 +1954,7 @@ export default {
       "level": 13,
       "primary": {
         "signal": 35,
-        "regen": 1.5
+        "regen": 7.5
       },
       "effect": {
         "when": "custom",
@@ -2050,7 +2050,7 @@ export default {
       "primary": {
         "damage": 9,
         "signal": 40,
-        "payload": 24
+        "payload": 3.8
       },
       "downside": {
         "crit": -3
@@ -2147,7 +2147,7 @@ export default {
       "primary": {
         "damage": 9,
         "signal": 40,
-        "payload": 24
+        "payload": 4.2
       },
       "effect": {
         "when": "break",
@@ -2199,7 +2199,7 @@ export default {
       "level": 26,
       "primary": {
         "signal": 70,
-        "regen": 3
+        "regen": 15
       },
       "secondary": {
         "sync": 5
@@ -2274,7 +2274,7 @@ export default {
       "primary": {
         "damage": 13,
         "signal": 55,
-        "payload": 30
+        "payload": 5.9
       },
       "effect": {
         "when": "hit",
@@ -2349,10 +2349,10 @@ export default {
       "level": 36,
       "primary": {
         "signal": 114,
-        "regen": 4.9
+        "regen": 24.5
       },
       "downside": {
-        "regen": -2
+        "regen": -10
       },
       "effect": {
         "when": "custom",

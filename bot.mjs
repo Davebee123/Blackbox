@@ -139,7 +139,7 @@ export function simulate({ cls = 'breaker', target = 10, seed = 7, netSeed = nul
   // Gear like a player: the best item in each slot (rarity, then level); deconstruct the rest.
   const effectOf = (it) => !!(it.unique || it.zeroDay || it.rule);
   const hitNow = () => 25 * power(hackerLevel(s)) + loaded(s).reduce((n, x) => n + (x.stats.damage || 0), 0);
-  const W = { crit: 0.004, critDamage: 0.001, accuracy: 0.002, echo: 0.004, payload: 0.001, regen: 0.01, reduction: 0.01, evasion: 0.004, sanitize: 0.001, restore: 0.001, leech: 0.005, clock: 0.002, stealth: 0.001, sync: 0.001, scavenge: 0.0005 };
+  const W = { crit: 0.004, critDamage: 0.001, accuracy: 0.002, echo: 0.004, payload: 0.007, regen: 0.002, reduction: 0.01, evasion: 0.004, sanitize: 0.001, restore: 0.001, leech: 0.005, clock: 0.002, stealth: 0.001, sync: 0.001, scavenge: 0.0005 }; // Payload flat (about a seventh of the old percentage), Regen over 5 cycles (five times the number): the same worth
   const worth = (it, hit = hitNow(), sig = maxSignal(s)) => (it.stats.damage || 0) / hit + (it.stats.signal || 0) / sig + Object.entries(it.stats).reduce((n, [k, v]) => n + (W[k] || 0) * v, 0) + (effectOf(it) ? 0.03 : 0);
   const value = gearRule === 'stats' ? (it) => worth(it) : (it) => RARITY_ORDER.indexOf(it.rarity) * 100 + it.level;
   const judged = new Set(), wornSince = {};

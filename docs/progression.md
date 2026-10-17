@@ -426,7 +426,7 @@ They needed new effect blocks, which the editor now offers. The new trigger is *
 | RAID Array | Tiers +1, +3 and +5 each add 5% to the server's max Integrity (15% at +5, a v3 Array) |
 | Hardened Kernel | Filter stat *Hardened*, 2–6 Block at home |
 | Scrubber | Filter stat *of the Scrubber*, a 4–10% shield at the start of a home fight |
-| Hot-patcher | Filter stat *Self-healing*, 0.3–1 Regen at home |
+| Hot-patcher | Filter stat *Self-healing*, 2–5 Regen at home (over 5 cycles) |
 | Counter-intrusion | Filter stat *of Barbs*, 2–6 back on every hit at home |
 | Cron Job | A daemon, cooldown 3, that hits the part winding up a tell for 8, or the next to attack |
 | Snapshot | A daemon, once a fight, whose first hit below half restores 8% (12% at v2, 16% at v3) |

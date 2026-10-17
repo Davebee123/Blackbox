@@ -8,7 +8,7 @@ import { vaultCodebase, learnCodebase, familyComponents, gainComponents } from '
 import { HOT_RUN, CONFIG, FAMILIES, GUARDS, QUIRKS, MONTHS, SKILLS, SERVER, XP, BOSSES, layerOf } from './data.mjs';
 import { sweepFile, showSweep, sweepCommand } from './forensics.mjs';
 import { isWild, relocks, rogueLayout, rogueSpawns, rogueMotd, liveRogue, ROGUE, relockLeft, clock, farmFile } from './rogue.mjs';
-import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
+import { findLocation, closest, command, selectEncounter, encounterVirus, active, emit, warn, hackerLevel, addLead, addLocation, disconnect, hooks, maxSignal, classOf, equippedSkills, knownSkills, serverLevel, gainXp, addItem, gearStat, regenRate, xpFor, deedXpFor, gainCode, learnBlueprint, UNIQUES, effectLine, loadoutSuggestions } from './combat.mjs';
 import { ZERO_DAYS, RARITIES, LOOT, uniqueItem, rollItem, seeded, statLine, itemLabel, MATERIALS, codeOf, vaultCode } from './gear.mjs';
 import { jackIn, developerNetwork, invasionsCommand, sabotageBlock } from './invasion.mjs';
 import { developerWall } from './firewall.mjs';
@@ -513,11 +513,11 @@ function cd(s, arg, pulled = null) {
   // Infiltrator Light footprint: going back where you've been is free.
   const free = classOf(s) === 'infiltrator' && s.run.visited.includes(target);
   if (!free) { s.run.integrity = Math.max(0, s.run.integrity - CONFIG.cdCost); traceAdd(s, TRACE.cd); }
-  // Rig Regen: a little Signal back with every move.
-  const rg = gearStat(s, 'regen', 'hacker');
+  // Rig Regen: a little Signal back with every move (Regen R: R every 5 moves).
+  const rg = regenRate(gearStat(s, 'regen', 'hacker'));
   if (rg && s.run.integrity > 0) {
     s.run.regenAcc = (s.run.regenAcc || 0) + rg;
-    const n = Math.floor(s.run.regenAcc);
+    const n = Math.floor(s.run.regenAcc + 1e-9);
     if (n) { s.run.regenAcc -= n; s.run.integrity = Math.min(s.run.max, s.run.integrity + n); }
   }
   if (s.run.cloak && s.run.cloak !== 'armed' && s.run.cloak !== 'spent' && s.run.cloak !== target) s.run.cloak = 'spent';
