@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import { fresh, command, selectEncounter, resolveCycle, finish, addItem, loaded, hackerOf, roomKill, uniqueFrom, guardSetChance, guardSetTable, setDeliver, maxSignal, restore, gearFx, fxHolds, gearStat, damageMultiplier, takeDamage, momentumStacks, setDrop, setDropPool, setChance, bossUniques, hooks, UNIQUES, SAVE_VERSION } from './dist/combat.mjs';
 import { SETS, setOf, isPiece, piecesOf, activeSets, setFx, setCard, greenOf, SET_LOOT, CLASS_SET, SET_HOOKS, setPool, setCredits, BADGE_BEAT } from './dist/sets.mjs';
 import { uniqueItem, seeded, BASES, RARITIES, STATS, baseFor } from './dist/gear.mjs';
-import { itemTipMarkup, collectionSets, collectionMarkup, protocolSlotsCard, protocolStashCard, rareLine } from './dist/view.mjs';
+import { itemTipMarkup, collectionSets, collectionMarkup, protocolSlotsCard, protocolStashCard, protocolSheetCard, protocolStatsCard, stashUi, rareLine } from './dist/view.mjs';
 import { CARDS } from './dist/events.mjs';
 import { PUZZLE_KINDS } from './dist/puzzles.mjs';
 import { STORY_LENGTH, openContracts, tickMail, ready } from './dist/mail.mjs';
@@ -358,12 +358,16 @@ test('the tooltip and the stash and slot rows: the set, its pieces and each bonu
   assert.match(tip, /<span class="sb on"[^>]*>\(2\) Set:/);
   assert.doesNotMatch(tip, /<span class="sb on"[^>]*>\(3\) Set:/);
   assert.match(tip, /<span class="sg on"[^>]*>With 2 pieces: \+5% Clock Speed<\/span>/, 'lit with two loaded');
-  // On the board: the set and its count on the piece's footprint; the stash tile carries a compact copy.
+  // On the board: the set and its count on the piece's footprint. A stash tile keeps to name and numbers; picked, its
+  // datasheet has the set in full.
   assert.match(protocolSlotsCard(s), /<small class="silk-set">Kestrel Clearance \(2\/3\)<\/small>/);
-  give(s, 'kestrel-lanyard');
-  assert.match(protocolStashCard(s), /set-lines compact[^]*Kestrel Clearance \(2\/3\)/);
-  // The Loadout: the active bonuses.
-  const card = protocolSlotsCard(s);
+  const lanyard = give(s, 'kestrel-lanyard');
+  assert.doesNotMatch(protocolStashCard(s), /set-lines/);
+  stashUi.sel = lanyard.id;
+  assert.match(protocolSheetCard(s), /<b class="set-name">Kestrel Clearance \(2\/3\)<\/b>/);
+  stashUi.sel = null;
+  // The Loadout: the active bonuses, over the stat sheet.
+  const card = protocolStatsCard(s);
   assert.match(card, /<h3>Set bonuses<\/h3>/);
   assert.match(card, /<span class="sb on">\(2\) Set: \+8% max Signal/);
   // A plain unique: no set lines.
@@ -624,7 +628,7 @@ test('a class set: anyone wears its 2- and 3-piece and the 4-piece\'s base line;
   assert.doesNotMatch(protocolSlotsCard(demo), /set-tier/, 'a row keeps to one line of pieces');
   assert.match(tip, /<span class="sb sub on"[^>]*>Demolitionist: Overkill spills 20 more\.<\/span>/);
   assert.match(tip, /<span class="sb sub"[^>]*>Overclocker: You gain 1 Momentum\.<\/span>/);
-  assert.match(protocolSlotsCard(demo), /<span class="sb sub on">Demolitionist: Overkill spills 20 more\.<\/span>/);
+  assert.match(protocolStatsCard(demo), /<span class="sb sub on">Demolitionist: Overkill spills 20 more\.<\/span>/);
 });
 
 test('Kestrel pieces held from save v45 keep working, as the retuned set', () => {

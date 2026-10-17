@@ -442,12 +442,12 @@ test('talent tree: points come from levels, ranks open the tiers, swapping is fr
   assert.match(command(s, `talent add ${a.id}`).at(-1).message, /at home/);
 });
 
-test('the loadout page: Protocols (the board and its datasheet, then the stash), then Skills and talents, picks locked during a fight', async () => {
+test('the loadout page: Protocols (the board, the stash, the datasheet, the stats), then Skills and talents, picks locked during a fight', async () => {
   const { loadoutMarkup } = await import('./dist/view.mjs');
   const s = fresh();
   let html = loadoutMarkup(s, 'breaker');
   assert.match(html, /data-ltab="protocols" aria-selected="true">Protocols<.*data-ltab="skills"[^>]*>Skills and talents/s, 'Protocols first, then skills and talents together');
-  assert.match(html, /class="loadout-protocols silk"><section class="card silk-card"><h2>Protocols · Breaker.*class="silk-board".*<aside class="card silk-sheet[^"]*" aria-label="Datasheet"><h2>U1 · Exploit<\/h2>.*<section class="card stash-card silk-stash"><h2>Stash · /s, 'the board and the first slot\'s datasheet, then the stash');
+  assert.match(html, /class="loadout-protocols silk"><section class="card silk-card"><h2>Protocols · Breaker.*class="silk-board".*<section class="card stash-card silk-stash"><h2>Stash · .*<aside class="card silk-sheet[^"]*" aria-label="Datasheet"><h2>U1 · Exploit<\/h2>.*<section class="card silk-statcard"><h2>Stats<\/h2>/s, 'the board, the stash, the first slot\'s datasheet, the stats');
   assert.match(loadoutMarkup(s, 'operator'), /Protocols belong to the class in use/, 'another class: no protocol slots to change');
   html = loadoutMarkup(s, 'operator', 'skills');
   assert.match(html, /<h1>Operator<\/h1><div class="class-xp"><b>Lv 1<\/b>/, 'level and XP under the class name');

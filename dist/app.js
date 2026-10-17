@@ -2338,7 +2338,11 @@ document.addEventListener('click', (e) => {
   const stf = e.target.closest('[data-stash-filter]');
   if (stf) { V.stashUi.filter = stf.dataset.stashFilter; feel.key('click'); dirty = true; return; }
   const silk = e.target.closest('[data-silk-sel]'); // the protocol board's pick: a slot or a stash item, for its datasheet
-  if (silk) { V.stashUi.sel = silk.dataset.silkSel; silkShow = !!silk.closest('.silk-tile'); feel.key('click'); dirty = true; return; }
+  if (silk) {
+    V.stashUi.sel = silk.dataset.silkSel;
+    if (silk.dataset.silkKind) V.stashUi.filter = silk.dataset.silkKind; // a slot shows the stash what fits it
+    silkShow = !!silk.closest('.silk-tile'); feel.key('click'); dirty = true; return;
+  }
   const sf = e.target.closest('[data-sweep-filter]');
   if (sf) { V.sweepUi.filter = sf.dataset.sweepFilter; feel.key('click'); dirty = true; return; }
   const bx = e.target.closest('[data-breach]');

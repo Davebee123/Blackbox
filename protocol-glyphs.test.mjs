@@ -65,7 +65,7 @@ test('rarity: white dims, yellow and up get corner marks, a Zero-day scans, a un
   assert.equal(glyphFrame(text, 'flicker', 140 * 5), text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
 });
 
-test('the Loadout’s board: footprints with glyphs, a datasheet for the pick, the stash as tiles, stats one a line', async () => {
+test('the Loadout’s board: footprints with glyphs, the stash as glanceable tiles, a datasheet for the pick, stats one a line', async () => {
   const { fresh, addItem, command, rigOf } = await import('./dist/combat.mjs');
   const { protocolGearMarkup, itemTipMarkup, stashUi } = await import('./dist/view.mjs');
   const s = fresh();
@@ -74,23 +74,37 @@ test('the Loadout’s board: footprints with glyphs, a datasheet for the pick, t
   const r = seeded(4);
   const on = addItem(s, rollItem(r, { level: 15, rarity: 'tuned', slot: 'exploit' }));
   const spare = addItem(s, rollItem(r, { level: 16, rarity: 'custom', slot: 'exploit' }));
+  const proxies = [addItem(s, rollItem(r, { level: 16, rarity: 'stock', slot: 'proxy' })), addItem(s, rollItem(r, { level: 16, rarity: 'tuned', slot: 'proxy' }))];
   command(s, 'load ' + on.id);
-  stashUi.sel = null;
+  stashUi.sel = null; stashUi.filter = 'all';
   let html = protocolGearMarkup(s);
-  // The board: the rig, six footprints (the sixth opens at 30), the loaded one with its glyph and name.
+  // The board: the rig, six footprints (the sixth opens at 30), the loaded one with its glyph beside its name and label.
   assert.match(html, /<div class="silk-rig">.*<b>zer0<\/b><small>Breaker · 16<\/small>/s);
   assert.equal(html.match(/<div class="silk-fp /g).length, 6);
-  assert.match(html, /<div class="silk-fp at-l0 sel r-tuned" data-kind="exploit"[^>]*><button type="button" class="silk-pick" data-silk-sel="slot:0" aria-pressed="true"[^>]*><span class="pglyph pg-md r-tuned"/);
-  assert.match(html, /<div class="silk-fp at-r0 empty" data-kind="proxy"[^>]*>.*?<span class="silk-none">Empty<\/span><\/span><span class="silk-ref"><i class="silk-led" aria-hidden="true"><\/i><b>J1<\/b>Proxy<\/span>/s);
+  assert.match(html, /<div class="silk-fp at-l0 sel r-tuned" data-kind="exploit"[^>]*><button type="button" class="silk-pick" data-silk-sel="slot:0" data-silk-kind="exploit" aria-pressed="true"[^>]*><span class="pglyph pg-md r-tuned"[^]*?<\/span><span class="silk-text"><b class="iname r-tuned">/);
+  // An empty slot: how many in the stash fit it.
+  assert.match(html, /<div class="silk-fp at-r0 empty" data-kind="proxy"[^>]*>.*?<span class="silk-text"><span class="silk-none">Empty <b class="silk-count"[^>]*>2<\/b><\/span><span class="silk-ref"><i class="silk-led" aria-hidden="true"><\/i><b>J1<\/b>Proxy<\/span>/s);
   assert.match(html, /<div class="silk-fp at-r2 locked"[^>]*><div class="silk-pick">.*?Lv 30/s);
   assert.match(html, new RegExp(`data-command="unload ${on.id}"`), 'unload from the board');
   // The datasheet: the first slot by default, its item's stats one a line.
-  assert.match(html, /<aside class="card silk-sheet r-tuned" aria-label="Datasheet"><h2>U1 · Exploit<\/h2><div class="silk-plate"><span class="pglyph pg-lg r-tuned"/);
+  assert.match(html, /<aside class="card silk-sheet r-tuned" aria-label="Datasheet"><h2>U1 · Exploit<\/h2><div class="silk-head">/);
+  assert.match(html, /<div class="silk-plate"><span class="pglyph pg-lg r-tuned"/);
   assert.equal(html.match(/<dl class="silk-stats">(.*?)<\/dl>/s)[1].match(/<div[ >]/g).length, Object.keys(on.stats).length, 'a row a stat');
-  // The stash: a tile with a small glyph, Swap (the slot is full) and Deconstruct (a yellow asks first).
-  assert.match(html, new RegExp(`<li class="silk-tile r-custom" data-kind="exploit"><button type="button" class="silk-pick" data-silk-sel="${spare.id}" aria-pressed="false" data-ptip="${spare.id}"><span class="pglyph pg-sm r-custom pg-framed"`));
-  assert.match(html, new RegExp(`class="inv-btn load" data-command="load ${spare.id}"[^>]*>Swap<`));
-  assert.match(html, new RegExp(`data-command="deconstruct ${spare.id}" data-confirm="Sure\\? Deconstruct"`));
+  // A stash tile: a small glyph, the name, its first stats as numbers with ▲ ▼ against the slot, no effect text; Swap
+  // (the slot is full) and Deconstruct (a yellow asks first). Nothing lit until you pick a slot.
+  const tile = html.match(new RegExp(`<li class="silk-tile r-custom" data-kind="exploit">.*?</li>`, 's'))[0];
+  assert.match(tile, new RegExp(`<button type="button" class="silk-pick" data-silk-sel="${spare.id}" aria-pressed="false" data-ptip="${spare.id}"><span class="pglyph pg-sm r-custom pg-framed"`));
+  assert.ok((tile.match(/class="silk-st[ "]/g) || []).length >= 1 && (tile.match(/class="silk-st[ "]/g) || []).length <= 3, 'two or three numbers');
+  assert.match(tile, /<i class="(up|down)">[▲▼]<\/i>/, 'against what it would replace');
+  assert.doesNotMatch(tile, /inv-fx|set-lines|<em/);
+  assert.match(tile, new RegExp(`class="inv-btn load" data-command="load ${spare.id}"[^>]*>Swap<`));
+  assert.match(tile, new RegExp(`data-command="deconstruct ${spare.id}" data-confirm="Sure\\? Deconstruct"`));
+  assert.doesNotMatch(html, /silk-tile [^"]* fit/);
+  // Pick a slot (app.js also filters the stash to its kind): what fits it lights.
+  stashUi.sel = 'slot:1';
+  html = protocolGearMarkup(s);
+  assert.equal((html.match(/<li class="silk-tile [^"]* fit"/g) || []).length, 2, 'both proxies light');
+  assert.match(html, /<h2>J1 · Proxy<\/h2><h3 class="silk-title silk-none">Empty <b class="silk-count">2<\/b><\/h3>/);
   // Pick the stash item: the datasheet reads it against U1, and U1 takes it in one click.
   stashUi.sel = spare.id;
   html = protocolGearMarkup(s);
