@@ -167,7 +167,7 @@ export function tickMarket(s, at = now()) {
       if (t.good === 'tip') deal(s, 'courier'); // a broadcast schedule bought before LANTERN dropped it
       else if (t.good.startsWith('cb-')) learnCodebase(s, t.good.slice(3), 'Unsealed: ');
       else if (t.good === 'bootleg') addFilter(s, rollFilter(() => rand(s), { level: t.L, rarity: rand(s) < 0.7 ? 'stock' : 'tuned' }), 'Unsealed: ');
-      else deliverGoods(s, t.good, t.L);
+      else deliverGoods(s, t.good, t.L, t.f);
       continue;
     }
     if (t.side === 'sell') { s.server.credits += t.credits; emit(s, 'transfer-in', `Transfer complete to ${FACTIONS[t.f].short}: +${t.credits} credits for ${t.n} ${WARES[t.w].name}.`, { faction: t.f }); }

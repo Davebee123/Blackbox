@@ -13,6 +13,7 @@ import { WARES, WARE_IDS, CONDITIONS, HUB_CONDITION, eventOf, quote, priceOf, tr
 // The market's open order ticket (app.js): { f, w, side, n }.
 let order = null;
 export const setOrder = (o) => { order = o; };
+import { PIECES, PARTS, pieceState, isFactionPiece, pendingClaims, appraisedOf, cleanStacks } from './faction-gear.mjs';
 import { FACTIONS as FX, FACTION_IDS, rep, repTier, REP_TIERS, hubsOf, hubOf, shopOf, hostile, OWNED, captured, donationOf, hubFound, hubTraceOf } from './factions.mjs';
 import { GLYPHS } from './glyphs.mjs';
 import { SKILL_TEXT } from './lore.mjs';
@@ -47,11 +48,11 @@ import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, 
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { bodyTags } from './families.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine } from './invasion.mjs';
-import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf } from './gear.mjs';
+import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
 import { EMBLEMS } from './class-emblems.mjs';
 import { ARCHETYPES, CANTRIPS, EDGE, SYNC, STATUSES, LOADOUT, TREE, SERVER, SKILLS, xpToNext, unlockLevel, power, SUBS, SUBCLASS, defaultSub, skillOrder, barSlots, isRunSkill } from './data.mjs';
-import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, blocked, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
+import { XP_KINDS, xpFor, cooldownOf, subOf, subPicked, kitTalent, specRule, skillBase, knowsPart, codexKey, previewDamage, ignoresArmor, blocked, attackAmount, drawingFire, momentumStacks, momentumBonus, topUpCost, UNIQUES, bossChance, listenBoost, effectLine, implicitText, paceOf, keyMap, barKeys, classOf, CANTRIP_IDS, hackerOf, hackerLevel, nextUnlock, serverLevel, serverClass, daemonSlots, procOpen, slottedDaemons, daemonNext, talentPoints, loaded, loadedOn, slotCount, maxSignal, compileCost, materialsOf, gearStat, critChance, critMultiplier, missChance, enemyMissChance, defense, powerOf, levelGap, zeroDay, rootkitReady, picksOf, ranksOf, freeSlot, rigOf, stashItem, knows, knownRecipes, pointsSpent, tierState, rowState, spentAbove, knownSkills, equippedSkills, cycleLength, familyInfo, defender, healCap, active, alive, virusIntegrity, armorLeft, intents, patches, readyIn, timersHidden, part, daemonLevel } from './combat.mjs';
 import { behindOf } from './progression.mjs';
 import { sigOf, named, lairOf, intelOf, knowsStrain, knowsEvent, knowsRich, nameOf, NETWORK, nativeChance, homeName, isNative, whoLabel, homeOf, netSeedOf, knownNets, NATIVE_POOL, awayChance } from './network.mjs';
 import { guardSetChance, lairChance, bossOdds, presetsOf, presetKeys, followOf, spikeName, said, mutated, capstonePoints, capPickOf, capState } from './combat.mjs';
@@ -269,6 +270,8 @@ export function forecast(s, preview = null) {
   return out;
 }
 // The blinking slice on a bar: from what's left after the hit up to where the bar is now.
+// Halcyon's Claims (faction-gear.mjs): each claim pending as a pip past your Signal, its payout and when on hover.
+const claimMarks = (s, d) => { let at = d.integrity; return pendingClaims(s).map((c) => { const w = Math.min(c.amount, Math.max(0, d.max - at)), x = at; at += w; const n = c.at - s.encounter.cycle; return w > 0 ? `<i class="claim" style="left:${(x / d.max) * 100}%;width:${(w / d.max) * 100}%" title="${esc(`${c.name}: +${c.amount} ${n <= 0 ? 'this cycle' : n === 1 ? 'next cycle' : `in ${n} cycles`}`)}"></i>` : ''; }).join(''); };
 const lossMark = (now, max, loss) => (loss > 0 && max > 0 ? `<i class="loss" style="left:${((now - loss) / max) * 100}%;width:${(loss / max) * 100}%" title="−${loss} this cycle"></i>` : '');
 
 // In a breach, healing stops at the Signal you came into the fight with: the bar past it is fenced off.
@@ -292,7 +295,7 @@ export function hudMarkup(s, { party = true, preview = null } = {}) {
   const tags = `${v.champion ? '<span class="tag tag-crew" title="Champion: an elite-grade invader, sized for one. It is tougher, gives three times the XP, and leaves a capture when it falls: a sure daemon.">★ CHAMPION</span>' : v.elite ? '<span class="tag tag-crew" title="Elite: built for a crew. It is much tougher, gives three times the XP, and drops better loot.">◆ CREW</span>' : ''}${e.invader && s.invasion?.id === e.invader ? `<span class="tag hot">invasion · ${esc(s.invasion.fromName)}</span>` : ''}${m && !geneChips(s, v) ? `<span class="tag tag-mut" data-mut="${v.mutation}" title="${esc(m.rule)}">${esc(m.name)}</span>` : ''}${strainTags(s, v)}${weak ? `<span class="tag you">weak: ${esc(weak.name)}</span>` : ''}`;
   // Yours first (what you watch): your Signal with the crew under it; the virus's total at the right,
   // over its picture.
-  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}</div>${clockMeter(s)}</div></div>${statusPanel(s)}</div>
+  return `<div class="hud-left"><div class="hud-you"><div class="hud-bar mine ${level}"><div class="bar-top"><strong>${glyph(runMode ? 'signal' : 'integrity', 'bar-ico')}${mine}</strong><span>${d.integrity}<small>/${d.max}</small></span></div><div class="bigbar"><span style="width:${dp}%"></span>${capMark(s, d)}${lossMark(d.integrity, d.max, fc.you)}${claimMarks(s, d)}</div>${clockMeter(s)}</div></div>${statusPanel(s)}</div>
     <div class="hud-bar enemy"><div class="bar-top"><span class="vname"><strong>${esc(v.name)}</strong>${byline(v)}<span class="meta">${levelTag(s, v.level)}${v.strain || GUARDS[v.family]?.ice ? '' : ' ' + esc(familyInfo(v.family).name)}</span></span><span>${hp.current}<small>/${hp.max}</small></span></div><div class="bigbar"><span style="width:${vp}%"></span>${lossMark(hp.current, hp.max, fc.total)}</div><p class="clock-line">${armor.max ? `<span class="chits">${'◆'.repeat(armor.current)}<i>${'◇'.repeat(armor.max - armor.current)}</i></span>` : ''}${tags}${roomBossTag(s)}</p>${geneChips(s, v)}</div>`;
 }
 // A Resident in a server room (interrupt.mjs BOSS_RULES): the rule it fights under, and (c)'s budget as pips.
@@ -425,7 +428,7 @@ export function collectionMarkup(s) {
   const n = all.filter((u) => got[u.id]).length;
   if (!n) return '';
   const posts = postsOf(s), listenable = (u) => (u.sources || []).some((src) => !['story', 'contract', 'store'].includes(src.kind)) && (!isNative(u.id) || named(s, u.id));
-  const rows = all.filter((u) => !setOf(u.id)).sort((a, b) => a.level - b.level).map((u) => { // set pieces list under Sets
+  const rows = all.filter((u) => !setOf(u.id) && !isFactionPiece(u.id)).sort((a, b) => a.level - b.level).map((u) => { // set pieces list under Sets
     const src = (isNative(u.id) ? nativeSource(s, u.id) : collSource(s, (u.sources || [])[0])) + (u.lean ? ` · ${ARCHETYPES[u.lean]?.name || SUBS[u.lean]?.name || u.lean}` : '');
     const boss = (u.sources || []).find((x) => x.kind === 'boss')?.id;
     return got[u.id]
@@ -434,7 +437,18 @@ export function collectionMarkup(s) {
   }).join('');
   // A set: the crew dungeon's eight, once it's on your map.
   const farm = (s.locations || []).some((l) => l.farm) ? `<p class="coll-set">KESSLER-FARM-00 · ${FARM_UNIQUES.filter((id) => got[id]).length}/${FARM_UNIQUES.length}</p>` : '';
-  return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div>${farm}<ul class="coll">${rows}</ul>${collectionSets(s)}</section>`;
+  return `<section class="card coll-card"><h2>Collection · ${n}/${all.length}</h2><div class="sb-bar coll-bar"><i style="width:${Math.round((n / all.length) * 100)}%"></i></div>${farm}<ul class="coll">${rows}</ul>${collectionPieces(s)}${collectionSets(s)}</section>`;
+}
+// The parts toward a faction piece (faction-gear.mjs) as PARTS.need pips, filled for each held; the count on hover.
+// next: the pip the next part fills (a feud card's reward) marked too.
+export const partPips = (st, cls = '', next = false) => `<span class="part-pips${cls ? ' ' + cls : ''}" style="--fc:${FX[st.f].color}" title="${esc(`${Math.min(st.parts, st.need)} of ${st.need} parts${st.parts > st.need ? ` (${st.parts} held)` : ''}`)}" role="img" aria-label="${Math.min(st.parts, st.need)} of ${st.need} parts">${Array.from({ length: st.need }, (_, i) => `<i${i < st.parts ? ' class="on"' : next && i === st.parts ? ' class="next"' : ''}></i>`).join('')}</span>`;
+// The Collection's faction pieces: one row a faction, its mark, its piece (gold once assembled) and its parts as pips.
+export function collectionPieces(s) {
+  const rows = Object.keys(PIECES).filter((f) => FX[f]).map((f) => {
+    const st = pieceState(s, f), u = UNIQUES[st.id], tip = `${u.flavour || ''} ${FX[f].short}'s piece: a part a feud won for them, ${st.need} to assemble at ${FX[f].hub.name}.`.trim();
+    return `<li class="coll-piece${st.found ? ' on' : ''}" style="--fc:${FX[f].color}" title="${esc(tip)}"><b class="iname${st.found ? ' r-zeroday' : ''}">${fIcon(f)}${esc(u.name)}</b>${partPips(st)}<small>${esc(SLOTS[BASES[u.base]?.slot]?.name || '')}${st.held ? ` · Lv ${st.held.level}` : ''}</small></li>`;
+  }).join('');
+  return rows ? `<h3 class="coll-sets-h coll-pieces-h">Faction pieces</h3><ul class="coll coll-pieces">${rows}</ul>` : '';
 }
 // Where a set piece drops, once you've found it: its source, and a guard's floor and next-kill chance (its pity).
 const pieceSource = (s, u) => {
@@ -478,6 +492,8 @@ function partTags(s, p) {
   // A Keyring's re-arm, a Mutex's lock and its relock: the tether between the rows says them (boardMarkup tethers).
   if (p.attack?.grow && p.integrity > 0) tags.push(`<span class="tag hot" title="Its Trace-back deals more damage every cycle the fight lasts">+${p.attack.bonus || 0}</span>`);
   if (p.echo && p.integrity > 0) tags.push('<span class="tag hot" title="While this lives, every hit you take repeats next cycle at half damage">echoing</span>');
+  const ap = appraisedOf(s); // Kestrel's Appraisal (faction-gear.mjs): its next hit, and more damage to it until it breaks
+  if (ap?.part === p.id && p.integrity > 0) tags.push(`<span class="tag you appraised" title="${esc(`${ap.name}: you deal ${ap.value}% more to it until it breaks.${p.attack ? ` Its next hit: ${blocked(s, attackAmount(p))}.` : ''}`)}">${glyph('f-kestrel')}${p.attack ? `−${blocked(s, attackAmount(p))}` : `+${ap.value}%`}</span>`);
   // A breach's rolled mutation lives on a part (breach.mjs): break the part and the rule ends.
   for (const id of p.integrity > 0 ? p.carries || [] : []) tags.push(`<span class="tag hot carrier" title="${esc(`Carries ${GENES[id]?.name || id}. ${GENES[id]?.does || ''} Break this part and the rule ends.`)}">${esc((GENES[id]?.name || id).toLowerCase())}</span>`);
   // Mutations: an Adaptive part one more cycle of hits from hardening; damage a Rerouting virus moved here.
@@ -812,6 +828,8 @@ const itemTitle = (it) => [`${RARITIES[it.rarity]?.name || ''} ${SLOTS[groupOf(i
 const itemName = (it) => `<b class="iname ${rarityClass(it)}" title="${esc(itemTitle(it))}">${glyph(leadStat(it), 'badge')}${esc(itemLabel(it))}</b>`;
 // A unique's effect (or a found Zero-day's), under its stats.
 const itemEffect = (it) => (it.zeroDay ? `<small class="zd">${esc(ZERO_DAYS[it.zeroDay].effect)}</small>` : (it.unique || it.rule) && effectLine(it) ? `<small class="zd${it.rule ? ' rule' : ''}">${esc(effectLine(it))}</small>` : '');
+// A faction implicit (gear.mjs IMPLICITS): the faction's mark and its line, in its colour; the faction's name on hover.
+const implicitRow = (it, tag = 'small') => (it?.implicit && FX[it.implicit] ? `<${tag} class="impl" style="--fc:${FX[it.implicit].color}" title="${esc(FX[it.implicit].name)}">${glyph('f-' + it.implicit)}<span><b>${esc(IMPLICITS[it.implicit].name)}</b> — ${esc(implicitText(it))}</span></${tag}>` : '');
 const statsHtml = (it) => `<small>${Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span class="${v < 0 ? 'neg' : ''}">${esc(statLine({ [k]: v }))}</span>`).join('')}</small>`;
 
 // A native unique's home network, for its tooltip: a network you know that has it, else the one it came from.
@@ -831,7 +849,7 @@ export function itemTipMarkup(s, ref) {
   const flavour = !f && (it.unique ? UNIQUES[it.unique]?.flavour : BASES[it.base]?.flavour);
   const vs = f || loadedOn(s, it.id) === classOf(s) ? '' : swapCompare(s, it);
   const home = !f && it.unique && isNative(it.unique) ? nativeHome(s, it) : null;
-  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
+  return `<div class="ptip-card r-${r}">${f ? `<pre class="ptip-art" data-shape="${kind}" aria-hidden="true"></pre>` : `<span class="ptip-glyph">${glyphMarkup(it, 'tip')}</span>`}<div class="ptip-body"><b class="iname r-${r}">${esc(f ? f.name : itemLabel(it))}</b><small>${esc(RARITIES[r]?.name || '')} ${esc(f ? 'filter' : SLOTS[kind]?.name || '')} · Lv ${it.level}</small>${where}${home ? `<span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}<div class="ptip-stats">${stats}</div>${!f ? implicitRow(it) : ''}${!f && (it.zeroDay || it.unique || it.rule) ? itemEffect(it) : ''}${!f && it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em>${esc(flavour)}</em>` : ''}${vs}</div></div>`;
 }
 // The name of an item's effect (its Zero-day's, the unique's own, its rule's), or ''.
 const fxName = (x) => x && (x.zeroDay ? ZERO_DAYS[x.zeroDay].name : x.unique ? x.name : x.rule ? RULES[x.rule]?.name || '' : '');
@@ -844,6 +862,7 @@ function swapCompare(s, it) {
   const rows = keys.map((k) => [k, (it.stats[k] || 0) - (out?.stats?.[k] || 0)]).filter(([, d]) => Math.abs(d) > 1e-9).sort((a, b) => b[1] - a[1])
     .map(([k, d]) => `<span class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ −'}${fmtStat(k, Math.abs(d))} ${esc(STATS[k].name)}</span>`);
   if (fxName(out) && fxName(out) !== fxName(it)) rows.push(`<span class="down">▼ ${esc(fxName(out))}</span>`);
+  if (out?.implicit && out.implicit !== it.implicit) rows.push(`<span class="down">▼ ${esc(IMPLICITS[out.implicit]?.name || '')}</span>`); // its faction implicit
   return `<div class="ptip-vs"><small>${out ? `vs ${esc(itemLabel(out))}` : 'into an empty slot'}</small>${rows.length ? rows.join('') : '<span class="dim">no change</span>'}</div>`;
 }
 
@@ -1012,7 +1031,7 @@ function itemSheet(s, it, vs = null, acts = '') {
   const effect = fxHead ? `<h4 class="silk-kicker">Effect</h4><p class="silk-fx">${fxRest.length ? `<b>${esc(fxHead)}</b> — ${esc(fxRest.join(' — '))}` : esc(fxHead)}</p>` : '';
   return `<div class="silk-head"><div class="silk-headtext"><h3 class="silk-title iname ${rarityClass(it)}">${esc(itemLabel(it))}</h3>
     <p class="silk-sub">${esc(RARITIES[it.rarity]?.name || '')} · ${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}${where && where !== classOf(s) ? ` <span class="tag dim">on ${esc(ARCHETYPES[where].name)}</span>` : ''}${home ? ` <span class="tag native" title="About ten times as likely on its home network as anywhere else">Native · ${esc(home)}</span>` : ''}</p>${acts}</div><div class="silk-plate">${glyphMarkup(it, 'lg')}</div></div>
-    <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats · into an empty slot') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
+    <h4 class="silk-kicker">${vs ? (out ? `Stats · vs ${esc(itemLabel(out))}` : 'Stats · into an empty slot') : 'Stats'}</h4><dl class="silk-stats${vs ? ' vs' : ''}">${rows}</dl>${implicitRow(it, 'p')}${lost}${effect}${it.unique && setOf(it.unique) ? setLines(s, it.unique) : ''}${flavour ? `<em class="silk-flavour">${esc(flavour)}</em>` : ''}`;
 }
 
 // The datasheet: a slot (its item and Unload; empty, or the level it opens at) or a stash item against its slot (Load
@@ -3021,8 +3040,9 @@ export function hubOptions(s, f, now = Date.now()) {
   const theirs = s.locations.filter((l) => l.faction === f).length, offers = mailOffers(s).filter((o) => (o.faction || 'halcyon') === f).length;
   const servers = { key: 'servers', label: 'Their servers', meta: `${theirs}` };
   const pay = { key: 'payloads', label: 'Payloads', meta: `${glyph('firewall')}${defenceOf(s, f, now)}` };
-  if (captured(s, f)) return [{ key: 'hold', label: 'Your hub', meta: `${glyph('credits')}${bankOf(s, f)}` }, { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` }, { key: 'shop', label: 'Shop', meta: 'at cost' }];
-  if (hostile(s, f)) return [...(PAYLOAD.on ? [pay] : []), ...(f !== 'halcyon' ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []), servers];
+  const pst = pieceState(s, f), piece = pst && (pst.parts || pst.held || pst.found) ? [{ key: 'piece', label: 'Assemble', meta: partPips(pst, pst.ready ? 'ready' : '') }] : []; // its faction piece (faction-gear.mjs), once you hold a part or the piece: the parts are yours, whatever your rep
+  if (captured(s, f)) return [{ key: 'hold', label: 'Your hub', meta: `${glyph('credits')}${bankOf(s, f)}` }, { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` }, { key: 'shop', label: 'Shop', meta: 'at cost' }, ...piece];
+  if (hostile(s, f)) return [...(PAYLOAD.on ? [pay] : []), ...(f !== 'halcyon' ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []), ...piece, servers];
   if (offline(s, f, now)) return [...(PAYLOAD.on ? [pay] : []), servers];
   return [
     { key: 'market', label: 'Market', meta: `⇄ ${Math.round(travelMs(s, f) / 60000)}m` },
@@ -3030,9 +3050,21 @@ export function hubOptions(s, f, now = Date.now()) {
     { key: 'work', label: 'Work', meta: `${offers}` },
     ...(PAYLOAD.on ? [pay] : []),
     ...(f !== 'halcyon' && donationOf(s, f).open ? [{ key: 'donate', label: 'Donate', meta: donationOf(s, f).x > 1 ? `×${donationOf(s, f).x.toFixed(1)}` : '' }] : []),
+    ...piece,
     servers,
   ];
 }
+// The faction's piece (faction-gear.mjs) as a tile: its glyph (yours, or how it comes out at your level), its name, its
+// parts as pips, its stats, and the button: Assemble with the parts in, Re-tune once you hold it. Its rule on hover.
+function pieceMarkup(s, f) {
+  const st = pieceState(s, f), u = UNIQUES[st.id], it = st.held || uniqueItem(u, st.level, seeded(7));
+  const verb = st.held ? (st.current ? 'Re-tune' : `Re-tune to v${st.level}`) : 'Assemble';
+  const why = st.current ? `Already at your level (${st.held.level})` : st.parts < st.need ? `${st.need - st.parts} more ${st.need - st.parts === 1 ? 'part' : 'parts'}: win feuds for ${FX[f].short}` : busyOf(s);
+  const stats = Object.entries(it.stats).filter(([k]) => STATS[k]).map(([k, v]) => `<span><b>+${fmtStat(k, v)}</b> ${esc(STATS[k].name)}</span>`).join('');
+  return `<div class="piece-tile${st.found ? ' on' : ''}${st.ready ? ' ready' : ''}" style="--fc:${FX[f].color}">${glyphMarkup(it, 'lg')}<div class="piece-body"><b class="iname${st.found ? ' r-zeroday' : ''}" title="${esc(`${effectLine(it)} ${u.flavour || ''}`.trim())}">${esc(st.held ? itemLabel(st.held) : u.name)}</b><small>${esc(SLOTS[groupOf(it)]?.name || '')} · Lv ${it.level}</small>${partPips(st, 'lg')}<span class="piece-stats">${stats}${implicitRow(it)}</span></div>
+    <button type="button" class="btn small${st.ready && !why ? ' primary' : ''}" data-command="hub assemble ${f}" ${st.ready && !why ? '' : `disabled title="${esc(why)}"`}>${esc(verb)}</button></div>`;
+}
+const busyOf = (s) => (active(s) ? 'Finish the fight first' : '');
 // A faction's Shop: its own shelf as tiles, like Halcyon's store (Halcyon's Shop is its store).
 function shopMarkup(s, f, now) {
   const F = FX[f];
@@ -3061,6 +3093,7 @@ const WINDOWS = {
   payloads: { title: 'Payloads', body: (s, f, now) => payloadMarkup(s, f, now) },
   donate: { title: 'Donate', body: (s, f) => donateMarkup(s, f) },
   hold: { title: 'Your hub', body: (s, f, now) => holdMarkup(s, f, now) },
+  piece: { title: 'Assemble', body: (s, f) => pieceMarkup(s, f), tip: (f) => `${PARTS.need} parts from feuds won for ${FX[f].short}: the piece at your level, then a re-tune to your level` },
   servers: { title: 'Their servers', body: (s, f) => serversMarkup(s, f), tip: (f) => `Open a vault: ${FX[f].short} −${OWNED.takeoverHit}, its rivals +${Math.round(OWNED.takeoverHit * 0.5)}` },
 };
 // The session is a terminal, like jacking into any server: an ssh handshake, the hub's banner,

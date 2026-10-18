@@ -126,7 +126,8 @@ export function buy(s, what) {
   deliverGoods(s, slot.id, L);
 }
 
-export function deliverGoods(s, id, L) {
+// f: the faction that sold it (a hub's goods land through market.mjs): its sealed item carries its implicit (gear.mjs IMPLICITS).
+export function deliverGoods(s, id, L, f = 'halcyon') {
   const g = GOODS[id];
   if (['relay', 'cracker', 'injector', 'harden'].includes(id)) { items(s)[id] = (items(s)[id] || 0) + 1; return; }
   if (g.code) return gainCode(s, { [g.code]: codeAmount(L) }, 'Bought: ');
@@ -135,6 +136,6 @@ export function deliverGoods(s, id, L) {
   if (GOODS[id]?.codebase) return learnCodebase(s, GOODS[id].codebase, 'Unsealed: ');
   if (id === 'signal') { s.signal = maxSignal(s); if (s.run) s.run.integrity = s.run.max; return emit(s, 'heal', 'Signal patched to full.'); }
   if (id === 'repair') { s.server.integrity = s.server.max; return emit(s, 'heal', `Server back to ${s.server.max}/${s.server.max}.`); }
-  if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned' }), 'Unsealed: ');
+  if (id === 'crate') return addItem(s, rollItem(() => rand(s), { level: L, rarity: 'tuned', faction: f }), 'Unsealed: ');
   if (id === 'blueprint') return learnBlueprint(s, 'Unsealed: ');
 }

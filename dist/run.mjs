@@ -182,7 +182,7 @@ export function vaultItem(loc) {
     if (pool.length) return uniqueItem(pool[Math.floor(r() * pool.length)], level, r);
     rarity = 'custom';
   }
-  return { ...rollItem(r, { level, rarity }), from: loc.family };
+  return { ...rollItem(r, { level, rarity, faction: loc.faction }), from: loc.family }; // a faction's server: its implicit (gear.mjs IMPLICITS)
 }
 // Source in deeper vaults: a Zero-day protocol to compile, or a special service to install.
 const SOURCES = Object.keys(ZERO_DAYS).filter((z) => !ZERO_DAYS[z].chase);

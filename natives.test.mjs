@@ -41,3 +41,25 @@ test('native uniques keep the bands: sidegrades, not upgrades', () => {
   }
   assert.deepEqual(off, []);
 });
+
+// The faction pieces (faction-gear.mjs) are held to the same bounds: each one, its implicit and its signature in, in place
+// of the blue in its slot at 10, 18 and 30 (it is assembled, and re-tuned, at your level), on every subclass.
+test('faction pieces keep the bands too: sidegrades, not upgrades', async () => {
+  const { PIECES } = await import('./dist/faction-gear.mjs');
+  const SUBS = ['Breaker', 'Bastion', 'Infiltrator', 'Operator'].flatMap((c) => Object.keys(ARCHETYPES[c.toLowerCase()].subs).map((sub) => [c, sub]));
+  const off = [];
+  for (const b of BRACKETS.filter((x) => [10, 18, 30].includes(x.level))) {
+    const base = Object.fromEntries(SUBS.map(([c, sub]) => [sub, score(c, b, { sub })]));
+    for (const u of Object.values(PIECES)) {
+      let d = 0;
+      for (const [c, sub] of SUBS) {
+        const r = score(c, b, { sub, uniques: [u.id] });
+        d += r.lost - base[sub].lost;
+        if (r.lost < soloBand(sub)[0] - SLACK || r.lost > 52) off.push(`${u.id} ${sub} ${b.name} ${r.lost.toFixed(0)}%`);
+        if (r.wins < 0.8 * r.total) off.push(`${u.id} ${sub} ${b.name} ${r.wins}/${r.total}`);
+      }
+      if (Math.abs(d / SUBS.length) > 4.5) off.push(`${u.id} ${b.name} moves the average ${(d / SUBS.length).toFixed(1)}`);
+    }
+  }
+  assert.deepEqual(off, []);
+});

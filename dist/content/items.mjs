@@ -6424,6 +6424,124 @@ export default {
         }
       ],
       "flavour": "Everything above it is only as sound as this."
+    },
+    {
+      "id": "umbrella-policy",
+      "name": "Umbrella Policy",
+      "faction": "halcyon",
+      "base": "socks-tunnel",
+      "level": 8,
+      "primary": {
+        "signal": 45,
+        "reduction": 1
+      },
+      "effect": {
+        "when": "always",
+        "if": "below-half",
+        "do": "taken%",
+        "value": 6
+      },
+      "sources": [
+        {
+          "kind": "feud"
+        }
+      ],
+      "flavour": "Pays out once every other policy has."
+    },
+    {
+      "id": "mews",
+      "name": "Mews",
+      "faction": "kestrel",
+      "base": "tty-upgrade",
+      "level": 8,
+      "primary": {
+        "signal": 18,
+        "regen": 4,
+        "restore": 12
+      },
+      "effect": {
+        "when": "crit",
+        "do": "restore%",
+        "value": 2
+      },
+      "sources": [
+        {
+          "kind": "feud"
+        }
+      ],
+      "flavour": "Somewhere quiet to come back to between hunts."
+    },
+    {
+      "id": "blank-check",
+      "name": "Blank Check",
+      "faction": "glassjaw",
+      "base": "weaponized-exploit",
+      "level": 8,
+      "primary": {
+        "damage": [
+          11,
+          14
+        ]
+      },
+      "effect": {
+        "when": "hit",
+        "if": "target-healthiest",
+        "do": "damage%",
+        "value": 15
+      },
+      "sources": [
+        {
+          "kind": "feud"
+        }
+      ],
+      "flavour": "Nobody asks what it was spent on."
+    },
+    {
+      "id": "carrier-wave",
+      "name": "Carrier Wave",
+      "faction": "lantern",
+      "base": "weaponized-exploit",
+      "level": 8,
+      "primary": {
+        "damage": [
+          11,
+          14
+        ]
+      },
+      "effect": {
+        "when": "answer",
+        "do": "refund",
+        "value": 1
+      },
+      "sources": [
+        {
+          "kind": "feud"
+        }
+      ],
+      "flavour": "Under the static, the count never stops."
+    },
+    {
+      "id": "descant",
+      "name": "Descant",
+      "faction": "nullchoir",
+      "base": "cron-job",
+      "level": 8,
+      "primary": {
+        "damage": 4,
+        "signal": 16,
+        "payload": 2
+      },
+      "effect": {
+        "when": "custom",
+        "do": "dot%",
+        "value": 10
+      },
+      "sources": [
+        {
+          "kind": "feud"
+        }
+      ],
+      "flavour": "A second voice above the tune, never quite on it."
     }
   ]
 };

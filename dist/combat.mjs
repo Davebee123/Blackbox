@@ -15,6 +15,7 @@ import { buyFrom, claimServer, reclaimCheck, clearedFor, strikeServer } from './
 import { tickMarket, marketCommand } from './market.mjs';
 import { tickPayloads, payloadCommand } from './payload.mjs';
 import { tickHubs, hubCommand, hubWon } from './hubs.mjs';
+import { IMPLICIT_HOOKS } from './faction-gear.mjs';
 import { SALVAGE_COSTS, settle, spend, splitPay, canAfford } from './salvage.mjs';
 // Configs are gone (service side-grades; Triage was the last). A save that owned any is refunded.
 const RETIRED_CONFIGS = ['stateful', 'reflective', 'inspection', 'adaptive', 'sticky', 'toll', 'beacon', 'tar', 'sting', 'triage'];
@@ -37,7 +38,7 @@ export { daemonSlots, slottedDaemons, daemonLevel, daemonAmount, daemonNext, wat
 import { filterCommand, CRAFTABLE, knowsFilter, learnFilter, filterStat, FILTER_STATS, rollFilter, addFilter } from './filters.mjs';
 import { spawnHidden, huntKill, hiddenNode, hiddenLead, HIDDEN, installRelay, useItem, syncFlags, craftRelay, traceNear, leadOf } from './hidden.mjs';
 import { slotNode, pickSlot, hiddenAt, hiddenNear, floorOfSlot, lairAt, reached, floorCommand, floorsRestore, floorsLetter } from './floors.mjs';
-import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
+import { STATS, RARITIES, RARITY_ORDER, ZERO_DAYS, LOOT, lootOdds, magicFind, uniqueItem, DECONSTRUCT, SLOTS, OLD_SLOT, BASES, AFFIX_FOR, COMPILE, STASH_CAP, CRIT, ECHO, PROTOCOL_NAMES, protocolSlots, rollItem, statLine, itemLabel, MATERIALS, codeOf, codeDrop, EXPLOIT_CHANCE, RULES, IMPLICITS, implicitFx, BLUEPRINTS, BLUEPRINT_CHANCE, blueprintName, recipeId, recipeStat, PROTOCOL_STATS, SLOT_KINDS, GROUPS, groupOf, statValue, seeded, statsRestore } from './gear.mjs';
 
 import ITEMS from './content/items.mjs';
 import { SETS, setFx, activeSets, isPiece, setPool, SET_LOOT, CLASS_SET, setPityKey, SET_EVENT, sourcePool, sourceKey, setOf, setsRestore, SET_HOOKS, setStat, setSignal, setHealMult, sxOf, restFast } from './sets.mjs';
@@ -55,8 +56,9 @@ export const SAVE_VERSION = 45; // v45: sets, each loaded protocol stamped with 
 export const hooks = { flee: null, now: null };
 // Class modules' hooks (see the header of dist/classes/breaker.mjs for each one).
 const CLASS_HOOKS = [];
-// Set bonuses (sets.mjs SET_HOOKS) run last, on the same hooks: a class module's own effect is in place before them.
-const classHooks = () => (CLASS_HOOKS.length ? CLASS_HOOKS : CLASS_HOOKS.push(BREAKER_FX, BASTION_FX, INFILTRATOR_FX, OPERATOR_FX, SET_HOOKS) && CLASS_HOOKS);
+// Set bonuses (sets.mjs SET_HOOKS) run after them, on the same hooks: a class module's own effect is in place before them.
+// The faction implicits' own kinds (faction-gear.mjs IMPLICIT_HOOKS) last.
+const classHooks = () => (CLASS_HOOKS.length ? CLASS_HOOKS : CLASS_HOOKS.push(BREAKER_FX, BASTION_FX, INFILTRATOR_FX, OPERATOR_FX, SET_HOOKS, IMPLICIT_HOOKS) && CLASS_HOOKS);
 const classUse = (id) => { for (const h of classHooks()) if (h.use?.[id]) return h.use[id]; return null; };
 const classCheck = (id) => { for (const h of classHooks()) if (h.validate?.[id]) return h.validate[id]; return null; };
 // Run a hook on every class module: 'each' calls them all; 'mult' multiplies their numbers; 'sum' adds them.
@@ -564,8 +566,10 @@ export function floorUnique(s, kind, floor, level, pick = () => rand(s)) {
   const from = heard.length ? heard : fresh.length ? fresh : pool;
   return from[Math.floor(pick() * from.length)];
 }
+// Sources that give a unique as a reward, never a drop (a feud: the faction pieces, faction-gear.mjs).
+export const REWARD_SOURCES = ['story', 'contract', 'store', 'feud'];
 export function uniqueFrom(s, ctx, level) {
-  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && dropsHere(u, ctx) && !['story', 'contract', 'store'].includes(ctx.kind)); // a set piece drops off its own table (setDrop)
+  const pool = Object.values(UNIQUES).filter((u) => u.level <= level + 2 && !isPiece(u.id) && dropsHere(u, ctx) && !REWARD_SOURCES.includes(ctx.kind)); // a set piece drops off its own table (setDrop)
   return pickUnique(s, pool);
 }
 // One of a pool, a unique that leans toward your class (its lean) LEAN times as likely.
@@ -631,7 +635,7 @@ export function listenCommand(s, text) {
   if (!want) return emit(s, 'info', s.listen && UNIQUES[s.listen] ? `Listening for ${UNIQUES[s.listen].name}. Kills on a server running a Listening Post roll for it twice as often.` : 'Listening for nothing. Type listen <unique>, or pick one in the Collection.');
   const u = UNIQUES[want] || Object.values(UNIQUES).find((x) => x.name.toLowerCase() === want);
   if (!u || (isNative(u.id) && !named(s, u.id))) return warn(s, `No unique called ${want}.`); // a native you haven't heard named stays ???
-  if ((u.sources || []).every((src) => ['story', 'contract', 'store'].includes(src.kind))) return warn(s, `${u.name} is a reward, not a drop. Nothing to listen for.`);
+  if ((u.sources || []).every((src) => REWARD_SOURCES.includes(src.kind))) return warn(s, `${u.name} is a reward, not a drop. Nothing to listen for.`);
   s.listen = u.id;
   // A native unique (network.mjs): on its own network the usual boost; anywhere else the post lifts it off its network too.
   if (isNative(u.id)) return emit(s, 'info', `Listening for ${u.name}. Kills on a server running a Listening Post roll for it twice as often, and it drops ${1 + postsOf(s)} times as often off its network.`);
@@ -836,9 +840,10 @@ export function setDeliver(s) {
 // so each keeps its own once-a-fight.
 const fxIdOf = (uid, i) => (i ? `${uid}:${i}` : uid);
 const uniqueFx = (s) => {
-  const out = [], rules = {};
+  const out = [], rules = {}, imps = {};
   for (const it of loaded(s)) {
     if (it.unique) fxList(UNIQUES[it.unique]).forEach((fx, i) => out.push({ it, fx, id: fxIdOf(it.unique, i) }));
+    if (IMPLICITS[it.implicit] && !((imps[it.implicit]?.implicitValue || 0) >= (it.implicitValue || 0))) imps[it.implicit] = it; // a faction implicit: once, at its best
     const r = it.rule && RULES[it.rule];
     if (r && !((rules[it.rule]?.fx.value || 0) >= (it.ruleValue || 0) && rules[it.rule])) rules[it.rule] = { it, fx: { ...r.fx, value: it.ruleValue }, id: 'rule:' + it.rule, name: r.name };
   }
@@ -846,7 +851,9 @@ const uniqueFx = (s) => {
   out.push(...(hooks.extraFx?.(s) || [])); // more effect blocks from outside the engine (none today)
   const amp = out.find((x) => x.fx.do === 'rule-amp');
   if (amp) for (const x of Object.values(rules)) if (Number.isFinite(x.fx.value)) x.fx.value = Math.round(x.fx.value * (1 + amp.fx.value / 100)); // a whole number, as every rule's is
-  return out.concat(Object.values(rules));
+  // The faction implicits (gear.mjs IMPLICITS; faction-gear.mjs IMPLICIT_HOOKS runs their own kinds), one a faction.
+  const own = Object.entries(imps).flatMap(([f, it]) => implicitFx(it).map((fx, i) => ({ it, fx, id: `implicit:${f}${i ? ':' + i : ''}`, name: IMPLICITS[f].name, implicit: f })));
+  return out.concat(Object.values(rules), own);
 };
 // The fight HUD's gear row reads the same list and conditions (fightread.mjs gearLive), so it lights exactly when they hold.
 export const gearFx = (s) => uniqueFx(s);
@@ -981,6 +988,8 @@ export function fxFire(s, when, ctx = {}, spend = true) {
 const fxHas = (s, what) => (wears(s, what) && uniqueFx(s).find((x) => x.fx.do === what)) || null;
 export const fxOn = fxHas; // tells.mjs: Canary Token, Read Receipt, Reflector, Write Blocker, Hush Money, Sandman
 export const effectLine = (it) => (it?.unique && UNIQUES[it.unique]?.effect ? fxText(fxList(UNIQUES[it.unique]), (k) => STATS[k]?.name || ABILITIES[k]?.name || k) : it?.rule && RULES[it.rule] ? `${RULES[it.rule].name} — ${RULES[it.rule].text ? RULES[it.rule].text(it.ruleValue) : fxText({ ...RULES[it.rule].fx, value: it.ruleValue }, (k) => STATS[k]?.name || ABILITIES[k]?.name || k)}` : '');
+// An item's faction implicit as its tooltip line (gear.mjs IMPLICITS text), '' for none.
+export const implicitText = (it) => IMPLICITS[it?.implicit]?.text(it.implicitValue) || '';
 // What fires when you call off a tell (tells.mjs: a charge or cast hit off in time, a cast stopped by SIGINT).
 export function fxAnswer(s, p = null) {
   const e = s.encounter;
