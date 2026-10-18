@@ -852,12 +852,12 @@ What you do with an event can deal the next one, a **follow-up** (docs/director.
 | Cause | Follow-up | Delay | What it is | What you get |
 |---|---|---|---|---|
 | A **Feud** in which you won at least one fight | **Counter-raid** | 20–40 min | The side you fought sends a runner at a traced server you've been on (or your home): an elite of its family at your level, sized like a feud's runner, in its colour. 15 min. | 40 + 7.5×level credits and +2 rep with the side you backed. No ripple onto anyone |
-| A **Bounty hunt** that got away: you fought it and left, or it made all three hops while you were on a run on its floor | **Returning bounty** | 30–60 min | The same name, +2 levels (up to your level + 3) and one mutation, its escapes as pips. 20 min. If it gets away again, it comes back once more **marked**: its kill drops a unique you haven't found (from level 10; otherwise, or with none missing, a Custom protocol). Then the chain ends. | 80 + 15×level credits ×1.5 per escape (×1.5, ×2.25) and +2 rep with its hunter, on top of the kill |
+| A **Bounty hunt** that got away: you fought it and left, or it made all three hops while you were on a run on its floor | **Returning bounty** | 30–60 min | Back once: the same name, at the level it got away at, with a *last chance* tag. 20 min. If it gets away again, it's gone for good. | What the hunt would have paid when it got away (never more: letting a hunt go never pays) and +2 rep with its hunter, on top of the kill |
 | 3 **Couriers** you intercepted (counted; the count starts over when the offer is dealt) | **LANTERN's offer** | at once | LANTERN's own courier on one of your servers, in its colour: a fight like a courier's. 15 min. (It becomes an Escort later.) | A Custom protocol and +5 LANTERN rep (Halcyon standing until LANTERN's hub is located) |
 | 15 kills of an **Outbreak**'s family while it's on | **Patient zero** | at once | The outbreak's source, an elite of that family at your level, on one of your servers. 15 min. Gone if the outbreak ends first. Kill it and the outbreak ends early. | A code cache of that family (12 + level/2) and the elite's loot |
 | A **Spotter** you killed | (the next invasion) | its own clock | The next invasion comes 2 levels weaker, its kind known (see Spotter above). | — |
 
-`developer chain [counter|returning|marked|lantern|zero]` deals a follow-up now with a made-up cause.
+`developer chain [counter|returning|lantern|zero]` deals a follow-up now with a made-up cause.
 
 ## The Halcyon store
 

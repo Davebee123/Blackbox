@@ -3327,23 +3327,7 @@ button.evc-link:active { transform: translateY(1px); }
 .evc-target.runner .evc-face { color: var(--ec); border-color: color-mix(in srgb, var(--ec) 60%, transparent); }
 @keyframes cx-hit { 0% { transform: scale(0.6); opacity: 0.9; } 70%, 100% { transform: scale(1.25); opacity: 0; } }
 
-/* Returning bounty: the wanted tile, its escapes as pips. Marked: a gold frame and the unique it carries. */
-.rt-esc { display: inline-flex; gap: 3px; align-items: center; cursor: help; }
-.rt-esc i { width: 7px; height: 7px; box-sizing: border-box; border: 1px solid var(--hot); border-radius: 50%; }
-.rt-esc i.on { background: var(--hot); box-shadow: 0 0 5px rgba(255, 91, 61, 0.55); }
-.rt-mult { font: 600 12px var(--mono); color: var(--amber); cursor: help; }
-.evc-returning.marked { border-color: color-mix(in srgb, var(--r-zeroday) 55%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--r-zeroday) 16%, transparent); }
-.evc-target.returning.marked { border-color: color-mix(in srgb, var(--r-zeroday) 50%, transparent); }
-.evc-target.returning.marked .evc-face { color: var(--r-zeroday); border-color: var(--r-zeroday); outline-color: color-mix(in srgb, var(--r-zeroday) 45%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--r-zeroday) 30%, transparent); }
-.evc-target.returning.marked .evc-face::after { background: var(--r-zeroday); }
-.rt-drop { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--s4); padding: 5px 8px 5px 5px; border: 1px dashed color-mix(in srgb, var(--r-zeroday) 45%, transparent); border-radius: var(--r-btn); background: color-mix(in srgb, var(--r-zeroday) 6%, transparent); cursor: help; }
-.rt-drop.custom { border-color: color-mix(in srgb, var(--r-custom) 45%, transparent); background: color-mix(in srgb, var(--r-custom) 6%, transparent); }
-.rt-dg { display: grid; place-items: center; width: 34px; height: 34px; overflow: hidden; box-sizing: border-box; color: var(--r-custom); background: #0c0905; border: 1px solid var(--line-strong); border-radius: 2px; }
-.rt-dg .pglyph { --pg-size: 2.3px; padding: 0; }
-.rt-dg > .glyph { width: 16px; height: 16px; margin: 0; }
-.rt-drop b { overflow: hidden; font: 600 13px var(--mono); white-space: nowrap; text-overflow: ellipsis; }
-.rt-drop > .glyph { width: 13px; height: 13px; margin: 0; color: var(--r-zeroday); }
-.rt-drop.custom > .glyph { color: var(--r-custom); }
+/* Returning bounty: the wanted tile, back once (its last-chance tag is a hot tag). */
 
 /* LANTERN's offer: the courier's line in LANTERN's colour; its lamp is the packet. */
 .evc-target.lantern .evc-face { color: var(--r-custom); }

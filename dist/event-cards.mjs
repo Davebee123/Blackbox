@@ -8,7 +8,7 @@
 import { glyph } from './glyphs.mjs';
 import { glyphMarkup } from './protocol-glyphs.mjs';
 import { FACTIONS as FX } from './factions.mjs';
-import { FAMILIES, CONFIG, MUTATIONS } from './data.mjs';
+import { FAMILIES, CONFIG } from './data.mjs';
 import { UNIQUES, hackerLevel, active, materialsOf } from './combat.mjs';
 import { CARDS, HUNT, huntPay, hopLeft, feudShare, feudPay, feudGood, eventText, courierPay, bountyPay, FEUD, CHAIN, counterPay, returnPay, zeroCode, causeText } from './events.mjs';
 import { SCOUTED, KINDS as INV_KINDS } from './invasion.mjs';
@@ -150,17 +150,11 @@ function counter(s, ev) {
     body: `${blow}${target(s, ev, { cls: 'runner', face: glyph(FAM_GLYPH[ev.family] || 'claw'), tags: `<span class="tag">elite</span><small class="evc-at">${esc(to)}</small>`, pay: `${credits(counterPay(ev.level))}${repOf(ev.side, CHAIN.counter.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.counter.reward(ev)}.` })}`,
   });
 }
-// Returning bounty: the wanted tile again, its escapes as pips, its mutation as a tag. Marked: a gold frame and the
-// unique it carries (its glyph and gold name), or a Custom protocol when none is missing.
+// Returning bounty: the wanted tile again, with a last-chance mark: back once, at the level and pay it got away with.
 function returning(s, ev) {
-  const n = ev.escapes || 1, mut = MUTATIONS[ev.mutation];
-  const pips = `<span class="rt-esc" title="${esc(`Got away ${n === 1 ? 'once' : 'twice'}`)}" role="img" aria-label="${esc(`Got away ${n === 1 ? 'once' : 'twice'}`)}">${Array.from({ length: CHAIN.returning.marked }, (_, i) => `<i${i < n ? ' class="on"' : ''}></i>`).join('')}</span>`;
-  const drop = !ev.marked ? '' : ev.unique
-    ? `<div class="rt-drop" title="${esc(`${UNIQUES[ev.unique].name}: a unique you haven't found`)}"><span class="rt-dg">${uniqueGlyph(ev.unique)}</span><b class="iname r-zeroday">${esc(UNIQUES[ev.unique].name)}</b>${glyph('item')}</div>`
-    : `<div class="rt-drop custom" title="A Custom protocol"><span class="rt-dg">${glyph('protocol')}</span><b class="r-custom">Custom</b>${glyph('item')}</div>`;
   return shell(s, ev, {
-    sub: `<span class="rt-mult" title="${esc(`The bounty ×${CHAIN.returning.mult} for each escape`)}">×${+(CHAIN.returning.mult ** n).toFixed(2)}</span>${fmark(ev.hunter)}`, cls: ev.marked ? 'marked' : '', ec: ev.marked ? 'var(--r-zeroday)' : '',
-    body: `${target(s, ev, { cls: `poster returning${ev.marked ? ' marked' : ''}`, face: glyph(FAM_GLYPH[ev.family] || 'bounty'), tags: `${pips}${mut ? `<span class="tag" title="${esc(mut.rule)}">${esc(mut.name)}</span>` : ''}`, pay: `${credits(returnPay(ev))}${repOf(ev.hunter, CHAIN.returning.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.returning.reward(ev)}.` })}${drop}`,
+    sub: fmark(ev.hunter),
+    body: target(s, ev, { cls: 'poster returning', face: glyph(FAM_GLYPH[ev.family] || 'bounty'), tags: `<span class="tag hot" title="Back once: if it gets away again, it's gone for good">last chance</span>`, pay: `${credits(returnPay(ev))}${repOf(ev.hunter, CHAIN.returning.rep)}`, tip: `Fight ${ev.name}, level ${ev.level}. ${CARDS.returning.reward(ev)}.` }),
   });
 }
 // LANTERN's offer: the courier's packet line in LANTERN's colour, its lamp as the packet; a Custom protocol aboard.

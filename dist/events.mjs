@@ -16,7 +16,7 @@
 //
 // Chains (docs/director.md section 2): what you did with one card deals the next, a follow-up with a link to its cause.
 //   counter   after a feud you won a fight in: the side you fought sends a runner at a server you hold.
-//   returning a bounty hunt that got away comes back, the same name, tougher; after two escapes once more, marked.
+//   returning a bounty hunt that got away comes back once, the same name, level and pay: a second chance, never a bonus.
 //   lantern   after 3 couriers you intercepted: LANTERN's own courier (an Escort in D3).
 //   zero      15 kills of an outbreak's family during it: its source, an elite; kill it and the outbreak ends.
 //
@@ -25,8 +25,8 @@
 //
 // Pure: state in, events out.
 import { emit, warn, active, hackerLevel, selectEncounter, command, addItem, UNIQUES, giveUnique, setDrop, WORLD_SOURCES, hooks, gainCode } from './combat.mjs';
-import { FAMILIES, CONFIG, ROLLED_MUTATIONS, MUTATIONS } from './data.mjs';
-import { LOOT, rollItem, seeded, uniqueItem, codeOf, vaultCode, MATERIALS } from './gear.mjs';
+import { FAMILIES, CONFIG } from './data.mjs';
+import { LOOT, rollItem, seeded, codeOf, vaultCode, MATERIALS } from './gear.mjs';
 import { changeStanding } from './mail.mjs';
 import { openFarm } from './rogue.mjs';
 import { eventMult, noteEvent, leanPick, darknetPick, darknetBuy, nameNative, homeName, NETWORK } from './network.mjs';
@@ -59,13 +59,12 @@ export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
 // Chains: at most max follow-ups pending, one per kind, each dropped quietly if it isn't dealt within expireMs of logged-on
 // time. COUNTER: delay after the feud, a runner sized like a feud's, pay × a bounty's credits, +rep with your side. RETURNING:
-// delay after the escape, +lv levels a return (to your level + cap), the bounty × mult per escape; marked after marked escapes,
-// its drop a unique you're missing from DIRECTOR.namedFrom (else a Custom protocol). LANTERN: after `at` couriers, +rep. ZERO:
+// delay after the escape; it comes back once, at the level and pay it had when it got away (letting one go never pays). LANTERN: after `at` couriers, +rep. ZERO:
 // after `at` kills of the family in its outbreak; pays a vault's code cache of the family (gear.mjs vaultCode).
 export const CHAIN = {
   max: 3, expireMs: 3 * 3600000,
   counter: { delay: [20 * 60000, 40 * 60000], ms: 15 * 60000, pay: 0.5, rep: 2 },
-  returning: { delay: [30 * 60000, 60 * 60000], ms: 20 * 60000, lv: 2, cap: 3, mult: 1.5, marked: 2, rep: 2 },
+  returning: { delay: [30 * 60000, 60 * 60000], ms: 20 * 60000, rep: 2 },
   lantern: { at: 3, ms: 15 * 60000, rep: 5 },
   zero: { at: 15, ms: 15 * 60000 },
 };
@@ -264,29 +263,20 @@ export const CARDS = {
       return `You beat ${ev.name}: ${counterPay(ev.level)} credits. The feud is settled.`;
     },
   },
-  // Returning bounty: a hunt that got away, back with the same name, +2 levels and one mutation; its card counts the
-  // escapes. After CHAIN.returning.marked escapes it comes once more, marked, with a named drop; then the chain ends.
+  // Returning bounty: a hunt that got away, back once with the same name, level and pay: a second chance. Never more
+  // than the hunt would have paid, and it never comes back again, so letting a hunt go is never worth it.
   returning: {
     name: 'Returning bounty', chain: true, weight: 0, ms: CHAIN.returning.ms, fight: true, where: () => [],
     spots: (s) => places(s),
-    make: (s, loc, f) => {
-      const d = f.data, L = hackerLevel(s), marked = d.escapes >= CHAIN.returning.marked;
-      const pool = marked && L >= DIRECTOR.namedFrom ? missing(s) : [], near = pool.filter((id) => UNIQUES[id].level >= L - 5);
-      return { family: d.family, name: d.name, hunter: d.hunter, escapes: d.escapes, mutation: d.mutation, elite: true, level: Math.min(CONFIG.maxMobLevel, d.level + CHAIN.returning.lv, L + CHAIN.returning.cap), ...(marked ? { marked: true } : {}), ...(pool.length ? { unique: pick(s, near.length ? near : pool) } : {}) };
-    },
+    make: (s, loc, f) => { const d = f.data; return { family: d.family, name: d.name, hunter: d.hunter, elite: true, level: d.level, pay: d.pay }; },
     from: (ev) => FACTIONS[ev.hunter].short,
-    text: (ev, where) => `${ev.name} is back on ${where}, a level ${ev.level} ${MUTATIONS[ev.mutation] ? MUTATIONS[ev.mutation].name.toLowerCase() + ' ' : ''}${FAMILIES[ev.family].name.toLowerCase()} virus that got away ${ev.escapes === 1 ? 'once' : 'twice'}.${ev.marked ? ` It's marked: it carries ${ev.unique ? UNIQUES[ev.unique].name : 'a Custom protocol'}.` : ''}`,
-    reward: (ev) => `${returnPay(ev)} credits and ${FACTIONS[ev.hunter].short} +${CHAIN.returning.rep}${ev.marked ? `, and ${ev.unique ? UNIQUES[ev.unique].name : 'a Custom protocol'}` : ''}`,
-    gone: (ev) => `${ev.name} got away again.`,
+    text: (ev, where) => `${ev.name} is back on ${where}, the level ${ev.level} ${FAMILIES[ev.family].name.toLowerCase()} virus that got away. This is the last chance at it.`,
+    reward: (ev) => `${returnPay(ev)} credits and ${FACTIONS[ev.hunter].short} +${CHAIN.returning.rep}`,
+    gone: (ev) => `${ev.name} got away for good.`,
     won: (s, ev) => {
       s.server.credits += returnPay(ev);
       changeRep(s, ev.hunter, CHAIN.returning.rep, 'Bounty collected', { ripple: false });
-      if (ev.marked) {
-        const r = seeded(ev.seed); // fixed by the event
-        if (ev.unique && !s.collection?.[ev.unique]) addItem(s, uniqueItem(UNIQUES[ev.unique], hackerLevel(s), r), `${ev.name}: `);
-        else addItem(s, rollItem(r, { level: ev.level, rarity: 'custom' }), `${ev.name}: `);
-      }
-      return `Bounty collected on ${ev.name}: ${returnPay(ev)} credits${ev.marked ? `. It won't be back` : ''}.`;
+      return `Bounty collected on ${ev.name}: ${returnPay(ev)} credits.`;
     },
   },
   // LANTERN's offer: after CHAIN.lantern.at couriers you intercepted, LANTERN's own courier crosses one of your servers.
@@ -336,9 +326,9 @@ export const courierPay = credits;
 export const bountyPay = (level) => 80 + 15 * level;
 // A hunt's time to its next hop (or to leaving, after the last).
 export const hopLeft = (ev) => Math.max(0, ev.left - (HUNT.hops - ev.hop) * HUNT.hopMs);
-// A counter-raid's pay: part of a bounty's credits (a feud runner's). A returning bounty's pay: the bounty, ×CHAIN.returning.mult for each escape. Patient zero's cache: a vault's code.
+// A counter-raid's pay: part of a bounty's credits (a feud runner's). A returning bounty's pay: what the hunt paid when it got away. Patient zero's cache: a vault's code.
 export const counterPay = (level) => Math.round(bountyPay(level) * CHAIN.counter.pay);
-export const returnPay = (ev) => Math.round(bountyPay(ev.level) * CHAIN.returning.mult ** (ev.escapes || 1));
+export const returnPay = (ev) => ev.pay ?? bountyPay(ev.level);
 export const zeroCode = (ev) => vaultCode(ev.level);
 // The director rolls its own dice (mulberry32 on the save), so dealing an event never shifts the
 // rest of the game's rolls.
@@ -430,10 +420,7 @@ export function schedule(s, kind, cause, data, delay = CHAIN[kind].delay) {
 function chainAfter(s, ev, how) {
   const cause = { card: ev.card, id: ev.id, name: ev.name, loc: ev.loc || null };
   if (ev.card === 'feud' && ev.wins > 0 && ev.side) schedule(s, 'counter', { ...cause, side: ev.side }, { side: ev.side, foe: rival(ev, ev.side) });
-  if ((ev.card === 'hunt' || (ev.card === 'returning' && !ev.marked)) && how === 'gone' && gotAway(s, ev)) {
-    const n = (ev.escapes || 0) + 1;
-    schedule(s, 'returning', { ...cause, escapes: n }, { family: ev.family, name: ev.name, hunter: ev.hunter, level: ev.level, escapes: n, mutation: ev.mutation || pick(s, ROLLED_MUTATIONS) });
-  }
+  if (ev.card === 'hunt' && how === 'gone' && gotAway(s, ev)) schedule(s, 'returning', cause, { family: ev.family, name: ev.name, hunter: ev.hunter, level: ev.level, pay: huntPay(ev) });
   if (ev.card === 'courier' && how === 'won') {
     const d = s.director;
     d.couriers = (d.couriers || 0) + 1;
@@ -442,7 +429,7 @@ function chainAfter(s, ev, how) {
 }
 // A hunt got away if you fought it and it left, or it made all its hops while you were on a run on its floor.
 const floorOf = (s, id) => (s.locations || []).find((l) => l.id === id)?.depth || 1;
-const gotAway = (s, ev) => !!ev.fought || (ev.card === 'hunt' && ev.hop >= HUNT.hops && !!s.run && floorOf(s, s.run.loc) === floorOf(s, ev.loc)) || (ev.card === 'returning' && !!s.run && floorOf(s, s.run.loc) === floorOf(s, ev.loc));
+const gotAway = (s, ev) => !!ev.fought || (ev.hop >= HUNT.hops && !!s.run && floorOf(s, s.run.loc) === floorOf(s, ev.loc));
 // A kill of a family (combat.mjs, every kill): it counts toward an outbreak's source. Kills only, nothing else read.
 export function eventKill(s, family) {
   for (const ob of eventsOf(s).filter((e) => e.card === 'outbreak' && e.family === family && !e.zero)) {
@@ -474,19 +461,18 @@ export function dealChain(s, f) {
   emit(s, 'world-event', eventText(s, ev), { card: f.kind, event: ev.id, location: ev.loc, from: c.from(ev), chain: causeText(s, f.cause) });
   return ev;
 }
-// developer chain [counter|returning|marked|lantern|zero]: a follow-up now, with a made-up cause (for tests and screenshots).
+// developer chain [counter|returning|lantern|zero]: a follow-up now, with a made-up cause (for tests and screenshots).
 export function developerChain(s, kind) {
   const L = hackerLevel(s), at = places(s)[0]?.id || null, ob = eventsOf(s).find((e) => e.card === 'outbreak');
   const sides = feuds(s)[0] || ['halcyon', 'glassjaw'], family = ob?.family || fam(s);
   const fake = {
     counter: () => ({ cause: { card: 'feud', id: 0, name: sides.map((f) => FACTIONS[f].short).join(' vs '), loc: at, side: sides[0] }, data: { side: sides[0], foe: sides[1] } }),
-    returning: (n = 1) => ({ cause: { card: 'hunt', id: 0, name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, loc: at, escapes: n }, data: { family, hunter: hunters(s), level: L, escapes: n, mutation: pick(s, ROLLED_MUTATIONS) } }),
-    marked: () => fake.returning(CHAIN.returning.marked),
+    returning: () => ({ cause: { card: 'hunt', id: 0, name: `${pick(s, NAMES)}-${1000 + Math.floor(roll(s) * 9000)}`, loc: at }, data: { family, hunter: hunters(s), level: L, pay: bountyPay(L) } }),
     lantern: () => ({ cause: { card: 'courier', id: 0, name: `COURIER-${1000 + Math.floor(roll(s) * 9000)}`, loc: at, count: CHAIN.lantern.at }, data: {} }),
     zero: () => ({ cause: { card: 'outbreak', id: ob?.id || 0, name: FAMILIES[family].name, loc: null, kills: CHAIN.zero.at }, data: { family, outbreak: ob?.id || 0 } }),
   };
   if (!fake[kind]) return warn(s, `developer chain [${Object.keys(fake).join('|')}]`);
-  const f = fake[kind](), k = kind === 'marked' ? 'returning' : kind;
+  const f = fake[kind](), k = kind;
   if (f.data.name == null && k === 'returning') f.data.name = f.cause.name;
   if (eventsOf(s).some((e) => e.card === k)) return warn(s, `A ${CARDS[k].name.toLowerCase()} is up already.`);
   if (!dealChain(s, { kind: k, ...f })) warn(s, `No ${CARDS[k].name.toLowerCase()} fits now: it needs a traced server.`);
@@ -496,7 +482,7 @@ export function causeText(s, c) {
   if (!c) return '';
   const where = c.loc ? ` on ${placeName(s, c.loc)}` : '';
   if (c.card === 'feud') return `Follows the feud ${c.name}${where}, where you fought for ${FACTIONS[c.side]?.short || 'a side'}.`;
-  if (c.card === 'hunt' || c.card === 'returning') return `Follows ${c.name}'s ${c.escapes > 1 ? 'second ' : ''}escape${where}.`;
+  if (c.card === 'hunt') return `Follows ${c.name}'s escape${where}.`;
   if (c.card === 'courier') return `Follows the ${c.count || CHAIN.lantern.at} couriers you intercepted, the last ${c.name}${where}.`;
   if (c.card === 'outbreak') return `Follows the ${c.name.toLowerCase()} outbreak: you made ${c.kills || CHAIN.zero.at} kills of it.`;
   return `Follows ${c.name || 'an event'}${where}.`;
