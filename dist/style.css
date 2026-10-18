@@ -3028,7 +3028,8 @@ details.map-pick { pointer-events: auto; }
 
 /* First-class picker: four cards over the screen, right after you log in. */
 /* ---------- choosing your first class (view.mjs classPickMarkup, app.js pickClass) ---------- */
-.class-pick { position: fixed; inset: 0; z-index: 70; overflow-y: auto; background: radial-gradient(ellipse at 50% 0%, rgba(241, 185, 47, 0.1), transparent 60%), #040302; }
+.class-pick { position: fixed; inset: 0; z-index: 70; overflow-y: auto; scrollbar-width: none; background: radial-gradient(ellipse at 50% 0%, rgba(241, 185, 47, 0.1), transparent 60%), #040302; }
+.class-pick::-webkit-scrollbar { display: none; } /* it still scrolls on a short window, without the bar */
 .class-pick::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px); }
 .pk-scene { position: relative; z-index: 1; width: min(1180px, 100%); margin: 0 auto; padding: 5vh 16px 24px; display: grid; gap: 22px; }
 .pk-head { display: grid; justify-items: center; gap: 10px; text-align: center; animation: pk-in 0.6s ease-out both; }
