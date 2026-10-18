@@ -222,6 +222,32 @@ Thirty uniques named for the bottom of the machine: boot, firmware and bedrock. 
 
 Leans: 14 any class, 7 Bastion, 3 Breaker, 3 Infiltrator, 3 Operator. Breaker, Infiltrator and Operator are thin here; the next batch evens it out.
 
+## Faction gear
+
+Added October 17, 2026, to give Feuds a reward worth picking a side for (`faction-gear.mjs`; GAME_RULES.md Faction gear). Same principles: modest, general, a lean.
+
+**Implicits.** One fixed line on an item a faction gives, in its mark and colour: a feud runner's drop, the feud's sealed item, its contracts' items, its Shop's sealed item, its servers' vaults. Each is a small mechanic in the faction's voice, a minor rule's strength, growing with item level like the rules; the same one on several items counts once, at its best, so mixing factions is the build. Never on a unique, a set piece or a class set.
+
+| Faction | Implicit | Lv 10 / 30 / 50 |
+| --- | --- | --- |
+| Halcyon Mutual | Claims: a hit over 15% of your max health pays back a share two cycles later (a pending pip on your Signal bar) | 18% / 26% / 34% |
+| Kestrel Underwriting | Appraisal: a break appraises the next part to attack: its next hit shows, and it takes more from you until it breaks | 12% / 17% / 23% |
+| GLASSJAW | Glass Jaw: more damage above 75% health, half that more taken below 25% | 10% / 14% / 18% |
+| LANTERN | Clean Signal: each cycle no attack lands, your skills deal more, up to three stacks; a hit clears them | 4% / 5% / 7% a stack |
+| NULL CHOIR | Chorus: the same damaging skill twice in a row, and the second hits again for a share | 28% / 36% / 44% |
+
+**Faction pieces.** Five uniques, one a faction, each from three parts. A feud won for a side gives a part of its piece; three assemble it at that faction's hub at your level, and every three after re-tune it to your level. Each is a good blue plus one signature effect and its faction's implicit a quarter stronger, with its own glyph. Feuds are the only source: about one piece in 16 hours of play (Feud weight 1 in the deck), well under the one-an-hour budget.
+
+| Piece | Faction | Slot | Lean | Signature |
+| --- | --- | --- | --- | --- |
+| Umbrella Policy | Halcyon | Proxy | tank | 6% less damage taken while below half health |
+| Mews | Kestrel | Shell | sustain | a critical strike heals 2% of max health |
+| Blank Check | GLASSJAW | Exploit | burst | +15% damage against the part with the most Integrity left |
+| Carrier Wave | LANTERN | Exploit | utility | answering a tell takes 1 cycle off all cooldowns |
+| Descant | NULL CHOIR | Script | burns and helpers | burns and helpers deal 10% more |
+
+GLASSJAW and LANTERN, rivals, compete for the same slot. A feud also pays more rep now: +4 a runner and +6 for the win (about +14 a good feud).
+
 ## Decisions
 
 - **Sources before the bosses exist.** Until a floor 3–8 boss is built, its pieces and uniques drop from that floor's lair boss.

@@ -3208,7 +3208,7 @@ details.map-pick { pointer-events: auto; }
 .fd-edge.up::before, .fd-edge.down::before { content: ''; position: absolute; top: -6px; border: 3px solid transparent; }
 .fd-edge.up::before { left: 3px; border-left: 5px solid #fff3c4; border-right-width: 0; }
 .fd-edge.down::before { right: 3px; border-right: 5px solid #fff3c4; border-left-width: 0; }
-.fd-rw { display: grid; grid-template-columns: auto auto; justify-content: start; align-items: center; gap: 5px var(--s4); min-width: 0; }
+.fd-rw { display: grid; grid-template-columns: auto auto auto; justify-content: start; align-items: center; gap: 5px var(--s4); min-width: 0; }
 .fd-rw.fd-b { justify-content: end; }
 .fd-rw.off { opacity: 0.35; }
 .fd-won { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 5px; justify-self: start; padding-top: 5px; border-top: 1px dashed var(--line); cursor: help; }
@@ -4096,3 +4096,41 @@ body.no-motion .recap { animation: none; }
 .tw-pips small { font: 600 10px var(--mono); color: var(--you); }
 .tw-main em { font: 700 13px var(--mono); font-style: normal; color: var(--r-tuned); }
 .tw-main.dim { border-left-color: var(--line-strong); opacity: 0.55; }
+/* Faction gear (faction-gear.mjs): an implicit's mark on a glyph and its line in a tooltip, a piece's parts as pips. */
+.pglyph .pg-fm { position: absolute; top: 2px; right: 2px; display: block; width: max(9px, 2.6em); height: max(9px, 2.6em); color: var(--fc); filter: drop-shadow(0 0 2px color-mix(in srgb, var(--fc) 60%, transparent)); }
+.pglyph .pg-fm .glyph { display: block; width: 100%; height: 100%; margin: 0; stroke-width: 1.6; }
+.impl { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--fc); font-size: 12px; cursor: help; }
+.impl .glyph { width: 13px; height: 13px; margin: 0; flex: none; }
+.impl span { color: color-mix(in srgb, var(--fc) 70%, var(--text)); }
+.impl b { color: var(--fc); font-weight: 600; }
+p.impl { margin: 6px 0 0; padding: 4px 2px; border-bottom: 1px dotted color-mix(in srgb, var(--fc) 30%, transparent); font-size: 13px; }
+.part-pips { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; cursor: help; }
+.part-pips i { flex: none; width: 8px; height: 8px; border: 1px solid var(--fc); transform: rotate(45deg); opacity: 0.55; }
+.part-pips i.on { background: var(--fc); opacity: 1; box-shadow: 0 0 5px color-mix(in srgb, var(--fc) 70%, transparent); }
+.part-pips i.next { opacity: 1; background: color-mix(in srgb, var(--fc) 30%, transparent); animation: part-next 1.6s ease-in-out infinite; }
+.part-pips.sm { gap: 3px; margin-left: 2px; } .part-pips.sm i { width: 6px; height: 6px; }
+.part-pips.lg { gap: 6px; margin: 4px 0; } .part-pips.lg i { width: 11px; height: 11px; }
+.hub-row .hm .part-pips i { width: 7px; height: 7px; }
+.hub-row .hm .part-pips.ready i.on { animation: part-next 1.6s ease-in-out infinite; }
+@keyframes part-next { 50% { box-shadow: 0 0 7px var(--fc); } }
+@media (prefers-reduced-motion: reduce) { .part-pips i.next, .hub-row .hm .part-pips.ready i.on { animation: none; } }
+.fd-part { gap: 4px; } .fd-part > .glyph { color: var(--r-zeroday); }
+.fd-drop > .glyph { color: var(--fc); }
+.piece-tile { max-width: 520px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 10px; border: 1px solid color-mix(in srgb, var(--fc) 35%, var(--line)); border-radius: 4px; background: color-mix(in srgb, var(--fc) 5%, transparent); }
+.piece-tile.ready { border-color: var(--fc); }
+.piece-tile .pglyph { grid-row: span 2; --pg-size: 9px; }
+.piece-tile:not(.on) .pglyph { opacity: 0.7; }
+.piece-body { display: grid; gap: 2px; min-width: 0; }
+.piece-body .iname { font-size: 15px; } .piece-tile:not(.on) .piece-body .iname { color: var(--muted); }
+.piece-body > small { color: var(--muted); font: 11px var(--mono); }
+.piece-stats { display: grid; gap: 1px; font-size: 12px; color: var(--text); }
+.piece-tile > .btn { grid-column: 2; justify-self: start; }
+.coll-pieces .coll-piece .iname { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); }
+.coll-pieces .coll-piece.on .iname { color: var(--r-zeroday); }
+.coll-pieces .coll-piece .part-pips { justify-self: end; }
+.coll-sets-h.coll-pieces-h { color: var(--r-zeroday); }
+.coll .coll-piece:not(.on) .iname { color: var(--dim); font-weight: 500; } .coll .coll-piece:not(.on) .fmark-i { opacity: 0.6; }
+/* Halcyon's Claims: a payout pending, a striped pip past your Signal. Kestrel's Appraisal: the part's next hit on its row. */
+.bigbar .claim { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(90deg, color-mix(in srgb, #6fb6ff 70%, transparent) 0 3px, transparent 3px 5px); box-shadow: inset 0 0 0 1px #6fb6ff; cursor: help; }
+.tag.appraised { color: #8fd46b; border-color: #8fd46b; display: inline-flex; align-items: center; gap: 3px; }
+.tag.appraised .glyph { width: 11px; height: 11px; margin: 0; }

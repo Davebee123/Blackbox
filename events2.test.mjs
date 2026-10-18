@@ -132,11 +132,11 @@ test('taking the bar to 100% wins the feud: the bonus, once', () => {
   const was = reps(s), stash = s.stash.length, credits = s.server.credits, mine = 'glassjaw';
   command(s, `event fight ${ev.id} ${mine}`); win(s);
   assert.ok(eventsOf(s).includes(ev));
-  assert.equal(s.stash.length, stash, 'no bonus at 75%');
+  assert.equal(s.stash.length, stash + 1, 'no bonus at 75%: the runner\'s protocol only');
   const first = s.serial;
   command(s, `event fight ${ev.id}`); win(s);
   assert.ok(!eventsOf(s).includes(ev), 'won: over');
-  assert.equal(s.stash.length, stash + 1, 'GLASSJAW\'s sealed item, once');
+  assert.equal(s.stash.length, stash + 3, 'the second runner\'s protocol and GLASSJAW\'s sealed item, once');
   assert.equal(rep(s, mine), was[mine] + 2 * FEUD.rep + FEUD.bonusRep);
   for (const f of Object.keys(FACTIONS)) if (f !== mine) assert.ok(rep(s, f) >= was[f], `${f}: never a loss`);
   assert.ok(s.server.credits - credits >= 2 * feudPay(ev.level));

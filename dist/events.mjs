@@ -35,6 +35,7 @@ import { FACTIONS, hubsOf, hostile, changeRep, hubFound, RIPPLE } from './factio
 import { FACTION_FAMILY } from './hubs.mjs';
 import { addFilter, rollFilter } from './filters.mjs';
 import { invasionsLive, scoutNext, SCOUTED } from './invasion.mjs';
+import { gainPart, pieceOf } from './faction-gear.mjs';
 
 export const DIRECTOR = {
   from: 3, // class level the director starts dealing at
@@ -51,9 +52,10 @@ const FAMS = Object.keys(FAMILIES).filter((f) => ['ransomware', 'worm', 'ghostro
 // The newer cards' numbers. FEUD, from level 8: a bar (sides[0]'s share) that starts within ±start of even and drifts a step of
 // drift every driftMs on the director's dice, never past hold on its own; each runner you beat pushes your side by push and pays
 // pay × a bounty's credits and +rep; 100%, or the lead when time's up, wins the feud: your side's good and +bonusRep (its allies a
-// quarter of a win and the bonus). Never a loss with anyone. A runner is sized for one (hp: invasion.mjs CHAMPION's). HUNT: a hop every hopMs, hops of them,
+// quarter of a win and the bonus). Never a loss with anyone. Each runner also drops a protocol at your level with your side's
+// implicit, and the win gives a part of its piece (faction-gear.mjs) and its good with the implicit. A runner is sized for one (hp: invasion.mjs CHAMPION's). HUNT: a hop every hopMs, hops of them,
 // a level a hop (up to your level + cap), pay × mult[hop]. SHOCK: a hub's ware ×up, or ×down one time in crash.
-export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drift: [0.02, 0.05], hold: [0.2, 0.8], push: 0.25, pay: 0.5, rep: 2, bonusRep: 2, hp: 1.5 };
+export const FEUD = { from: 8, ms: 20 * 60000, start: 0.05, driftMs: 60000, drift: [0.02, 0.05], hold: [0.2, 0.8], push: 0.25, pay: 0.5, rep: 4, bonusRep: 6, hp: 1.5 };
 export const HUNT = { from: 6, hopMs: 5 * 60000, hops: 3, cap: 3, mult: [1, 1.3, 1.6, 2], rep: 2 };
 export const SHOCK = { from: 5, ms: 15 * 60000, up: 2.5, down: 0.4, crash: 1 / 3, wares: ['cipher', 'worm', 'kernel', 'salvage'] }; // not Exploits: the wall's and the programs' currency stays steady
 export const SCOUT_EVENT = { from: 6, ms: 10 * 60000 };
@@ -75,14 +77,21 @@ export const feudShare = (ev, f) => (f === ev.sides[0] ? ev.bar ?? 0.5 : 1 - (ev
 export const feudPay = (level) => Math.round(bountyPay(level) * FEUD.pay);
 const rival = (ev, f) => ev.sides.find((x) => x !== f);
 const runnerName = (s, f) => `${RUNNER[f]}-${1000 + Math.floor(roll(s) * 9000)}`;
-// The feud won for your side: its good (fixed by the event), +bonusRep, its allies a quarter of a win and the bonus. No ripple.
+// The feud won for your side: a part of its piece (faction-gear.mjs), its good (fixed by the event; a sealed item carries its
+// implicit), +bonusRep, its allies a quarter of a win and the bonus. No ripple.
 function feudBonus(s, ev) {
   const f = ev.side, r = seeded(ev.seed), good = feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter';
+  const part = gainPart(s, f);
   changeRep(s, f, FEUD.bonusRep, `You won the feud for ${FACTIONS[f].short}`, { ripple: false });
   for (const a of FACTIONS[f].allies) changeRep(s, a, Math.round((FEUD.rep + FEUD.bonusRep) * RIPPLE.ally), `${FACTIONS[f].short}'s ally noticed`, { ripple: false });
-  if (feudGood(f) === 'crate') addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned' }), `${FACTIONS[f].short}: `);
+  if (feudGood(f) === 'crate') addItem(s, rollItem(r, { level: ev.level, rarity: 'tuned', faction: f }), `${FACTIONS[f].short}: `);
   else addFilter(s, rollFilter(r, { level: ev.level, rarity: r() < 0.7 ? 'stock' : 'tuned' }), `${FACTIONS[f].short}: `);
-  return good;
+  return part ? `${part} and ${good}` : good;
+}
+// A runner beaten: a protocol at your level with your side's implicit, Stock or Tuned as a courier's (fixed by the event and the win).
+function runnerDrop(s, ev, f) {
+  const r = seeded((ev.seed + 7919 * (ev.wins || 0)) >>> 0);
+  return addItem(s, rollItem(r, { level: hackerLevel(s), rarity: r() < LOOT.minor ? 'tuned' : 'stock', faction: f }), `${ev.runners[rival(ev, f)]} dropped: `);
 }
 // Two located hubs that are rivals (factions.mjs), each pair once.
 export const feuds = (s) => { const fs = hubsOf(s).map((h) => h.faction); return fs.flatMap((a, i) => fs.slice(i + 1).filter((b) => FACTIONS[a].rivals.includes(b)).map((b) => [a, b])); };
@@ -166,7 +175,7 @@ export const CARDS = {
     make: (s) => { const sides = pick(s, feuds(s)); return { sides, level: hackerLevel(s), name: sides.map((f) => FACTIONS[f].short).join(' vs '), bar: Math.round((0.5 + (roll(s) * 2 - 1) * FEUD.start) * 100) / 100, steps: 0, wins: 0, runners: Object.fromEntries(sides.map((f) => [f, runnerName(s, f)])) }; },
     foe: (ev, f) => { const o = rival(ev, f); return { family: FACTION_FAMILY[o], name: ev.runners[o], elite: true, eliteHp: FEUD.hp }; },
     text: (ev, where) => `${FACTIONS[ev.sides[0]].short} and ${FACTIONS[ev.sides[1]].short} are fighting over ${where}. Pick a side and push its bar to 100%.`,
-    reward: (ev, f = ev.side) => `Each win pays ${feudPay(ev.level)} credits and ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
+    reward: (ev, f = ev.side) => `Each win pays ${feudPay(ev.level)} credits, a protocol with ${FACTIONS[f].short}'s mark and ${FACTIONS[f].short} +${FEUD.rep}. Winning the feud adds a part of ${pieceOf(f)?.name || 'its piece'}, ${feudGood(f) === 'crate' ? 'a sealed item' : 'a bootleg filter'} and ${FACTIONS[f].short} +${FEUD.bonusRep}`,
     gone: (ev, where) => `The feud over ${where} is over.`,
     // The world moves without you: a step every driftMs, on the director's dice. Outward only inside hold; inward always.
     tick: (s, ev) => {
@@ -185,12 +194,13 @@ export const CARDS = {
       s.server.credits += feudPay(ev.level);
       // Picking a side never costs you: no ripple onto its rivals (the other side's rep stays put).
       changeRep(s, f, FEUD.rep, `You beat ${beat} for ${FACTIONS[f].short}`, { ripple: false });
+      runnerDrop(s, ev, f);
       ev.wins = (ev.wins || 0) + 1;
       ev.trend = f === ev.sides[0] ? 1 : -1;
       ev.bar = Math.max(0, Math.min(1, Math.round(((ev.bar ?? 0.5) + ev.trend * FEUD.push) * 1000) / 1000));
       ev.runners[o] = runnerName(s, o); // a fresh runner
-      if (feudShare(ev, f) >= 1) { ev.over = true; return `You beat ${beat} and won the feud for ${FACTIONS[f].short}: ${feudPay(ev.level)} credits and ${feudBonus(s, ev)}.`; }
-      return `You beat ${beat}: ${feudPay(ev.level)} credits. ${FACTIONS[f].short} holds ${Math.round(feudShare(ev, f) * 100)}%.`;
+      if (feudShare(ev, f) >= 1) { ev.over = true; return `You beat ${beat} and won the feud for ${FACTIONS[f].short}: ${feudPay(ev.level)} credits, a protocol, ${feudBonus(s, ev)}.`; }
+      return `You beat ${beat}: ${feudPay(ev.level)} credits and a protocol. ${FACTIONS[f].short} holds ${Math.round(feudShare(ev, f) * 100)}%.`;
     },
   },
   // A named elite that moves: every HUNT.hopMs it hops to another of your servers (its path is set when it's dealt, so

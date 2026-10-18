@@ -13,6 +13,7 @@
 import { CONFIG, variantFor } from './data.mjs';
 import { emit, warn, rand, active, holding, selectEncounter, command, gainXp, xpFor, gainCode, hackerLevel, hooks } from './combat.mjs';
 import { FACTIONS, rep, REP_TIERS, captured, donate } from './factions.mjs';
+import { assemble } from './faction-gear.mjs';
 import { CONDITIONS, HUB_CONDITION, outsideMult } from './market.mjs';
 import { codeOf, codeDrop } from './gear.mjs';
 import { launch, fleetOf, fleetLeft, fleetCommand } from './fleet.mjs';
@@ -125,10 +126,11 @@ export function hubWon(s, e) {
 
 export function hubCommand(s, text) {
   const [, verb, f] = text.split(' ');
-  if (!FACTIONS[f]) return warn(s, 'hub collect|defend|retake|donate <faction>');
+  if (!FACTIONS[f]) return warn(s, 'hub collect|defend|retake|donate|assemble <faction>');
   if (verb === 'collect') return collect(s, f);
   if (verb === 'defend') return defend(s, f);
   if (verb === 'retake' || verb === 'clear') return clear(s, f);
   if (verb === 'donate') return donate(s, f);
-  return warn(s, 'hub collect|defend|retake|donate <faction>');
+  if (verb === 'assemble' || verb === 'retune') return assemble(s, f); // a faction piece (faction-gear.mjs)
+  return warn(s, 'hub collect|defend|retake|donate|assemble <faction>');
 }

@@ -5,6 +5,8 @@
 // protocol) flickers now and then (style.css .pglyph; app.js runs the motion). The same item always looks the same.
 // Every shape is 23 columns wide and mirrors itself about column 11 (protocol-glyphs.test.mjs checks).
 import { groupOf } from './gear.mjs';
+import { glyph } from './glyphs.mjs';
+import { FACTIONS } from './factions.mjs';
 
 // Three shapes a kind. '%' marks the fill spots, replaced by the character for the item's main stat.
 export const SHAPES = {
@@ -193,6 +195,14 @@ export const SHAPES = {
     ] },
   ],
 };
+// The faction pieces' own pictures (faction-gear.mjs), one a piece, by its unique id: the same box and mirror rule.
+export const PIECE_SHAPES = {
+  'umbrella-policy': { name: 'Umbrella', rows: ["           ^           ", "       .-'%%%'-.       ", "    .-'%%%%%%%%%'-.    ", "  .'%%%%%%%%%%%%%%%'.  ", "  '-.-'-.-'|'-.-'-.-'  ", "           |           ", "           |           ", "           |           ", "          (_)          "] },
+  mews: { name: 'Mews', rows: ["          .^.          ", "        .'   '.        ", "      .'  .-.  '.      ", "    .'   ( % )   '.    ", "   |===============|   ", "   ||    .-%-.    ||   ", "   ||   | %%% |   ||   ", "   ||   |%%%%%|   ||   ", "   |===============|   "] },
+  'blank-check': { name: 'Cheque', rows: ["  .=================.  ", "  ||               ||  ", "  ||  %%%%   %%%%  ||  ", "  ||               ||  ", "  ||  ___________  ||  ", "  ||               ||  ", "  '================='  "] },
+  'carrier-wave': { name: 'Mast', rows: ["           A           ", "   ((     /%\\     ))   ", "  ((     /%%%\\     ))  ", " ((     /%%%%%\\     )) ", "  ((   //\\\\%//\\\\   ))  ", "   ((  //     \\\\  ))   ", "      //  % %  \\\\      ", "     //  %% %%  \\\\     ", "    //===========\\\\    "] },
+  descant: { name: 'Fork', rows: ["      ||       ||      ", "      ||       ||      ", "      ||   %   ||      ", "       \\\\  %  //       ", "        \\\\%%%//        ", "         '=%='         ", "           %           ", "           %           ", "          (%)          "] },
+};
 // The fill for an item's main stat (its first listed stat): one per stat a protocol can roll, each its own mirror.
 export const FILL = {
   damage: '#', crit: '*', critDamage: 'x', accuracy: '!', echo: '"', payload: '+',
@@ -205,7 +215,7 @@ export const asymmetric = (rows) => rows.filter((r) => [...r].reverse().map((c) 
 export const GLYPH_W = 23, GLYPH_H = 12; // every glyph sits centred in the same box
 
 const hash = (text) => [...String(text)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-export const shapeOf = (it) => { const list = SHAPES[groupOf(it)] || SHAPES.exploit; return list[hash(it?.name || '') % list.length]; };
+export const shapeOf = (it) => { if (PIECE_SHAPES[it?.unique]) return PIECE_SHAPES[it.unique]; const list = SHAPES[groupOf(it)] || SHAPES.exploit; return list[hash(it?.name || '') % list.length]; };
 export const fillOf = (it) => FILL[Object.keys(it?.stats || {})[0]] || FILL.damage;
 // The item's glyph as text: its shape with its fill, centred in the GLYPH_H-row box.
 export function glyphText(it) {
@@ -220,9 +230,12 @@ const FRAMED = new Set(['custom', 'zeroday', 'indemnified']);
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // The glyph as markup (class pg-<size>). size: 'sm' (a stash tile), 'md' (a slot on the board), 'tip' (a hover card) or 'lg' (the datasheet).
 // A moving one carries its still text in data-base, for the motion to return to.
+// An item with a faction implicit (gear.mjs IMPLICITS) wears its faction's mark in the top corner, in its colour; a
+// moving glyph keeps it in data-mark, for the motion to put back.
+const markOf = (it) => (it?.implicit && FACTIONS[it.implicit] ? `<i class="pg-fm" style="--fc:${FACTIONS[it.implicit].color}">${glyph('f-' + it.implicit)}</i>` : '');
 export function glyphMarkup(it, size = 'md') {
-  const text = glyphText(it), fx = glyphFx(it), r = it?.rarity || 'stock';
-  return `<span class="pglyph pg-${size} r-${r}${FRAMED.has(r) ? ' pg-framed' : ''}" aria-hidden="true"${fx ? ` data-pg-fx="${fx}" data-base="${esc(text)}"` : ''}>${esc(text)}</span>`;
+  const text = glyphText(it), fx = glyphFx(it), r = it?.rarity || 'stock', mark = markOf(it);
+  return `<span class="pglyph pg-${size} r-${r}${FRAMED.has(r) ? ' pg-framed' : ''}${mark ? ' pg-fac' : ''}" aria-hidden="true"${fx ? ` data-pg-fx="${fx}" data-base="${esc(text)}"${mark ? ` data-mark="${esc(mark)}"` : ''}` : ''}>${mark}${esc(text)}</span>`;
 }
 
 // ---------- motion (app.js calls glyphMotion every frame while motion is on) ----------
@@ -244,7 +257,8 @@ export function glyphMotion(root, t, still = false) {
     const fx = el.dataset.pgFx, key = still ? 'still' : fx === 'scan' ? `s${scanRow(t)}` : flickering(t) ? `f${Math.floor(t / FLICKER_MS)}` : 'still';
     if (el.dataset.pgAt === key) continue;
     el.dataset.pgAt = key;
-    if (key === 'still') el.textContent = el.dataset.base;
-    else el.innerHTML = glyphFrame(el.dataset.base, fx, t);
+    const mark = el.dataset.mark || ''; // a faction mark rides along (markOf)
+    if (key === 'still') { if (mark) el.innerHTML = mark + esc(el.dataset.base); else el.textContent = el.dataset.base; }
+    else el.innerHTML = mark + glyphFrame(el.dataset.base, fx, t);
   }
 }

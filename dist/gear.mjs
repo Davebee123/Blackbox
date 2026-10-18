@@ -190,6 +190,31 @@ export const RULES = {
   snare: { tier: 'minor', cls: 'operator', skill: 'hook', name: 'Snare', of: 'of Snares', text: () => 'Hook also delays the target\'s next attack by 1 cycle.' },
   daemonize: { tier: 'major', cls: 'operator', skill: 'deploy', name: 'Daemonize', value: [8, 14], patch: (v) => ({ helper: v, ticks: 40 }), short: (v) => `Helper: ${v} until done`, text: (v) => `Deploy's helper deals ${v} damage each cycle and stays for the rest of the fight.` },
 };
+// Faction implicits: one fixed line an item from a faction carries (a feud runner's drop, its contracts' items, its
+// Shop's sealed item, its servers' vaults; docs/loot-plan.md Faction gear), in that faction's mark and colour, on top of
+// its primaries, affixes and rule. Never on a unique, a set piece or a Zero-day; a faction piece carries its own at
+// IMPLICIT.piece times the number. Each is a small mechanic in its faction's voice, a minor rule's strength, written in
+// effect blocks (faction-gear.mjs IMPLICIT_HOOKS runs the new kinds; a damage% block the engine's own). value: [at item
+// level 1, at 40], a quarter more past 40 like the rules, no roll. The same faction's twice counts once, at its best
+// (combat.mjs uniqueFx), so mixing factions is the build. half: a block at half the value. text(v): its tooltip line.
+export const IMPLICITS = {
+  // The insurer: a big hit is a claim, paid back two cycles later.
+  halcyon: { name: 'Claims', fx: [{ when: 'struck', if: 'big-hit', over: 15, do: 'claim' }], value: [15, 30], text: (v) => `A hit that takes more than 15% of your max health is a claim: ${v}% of it is paid back two cycles later.` },
+  // The assessors: a break appraises the next part to attack, its next hit shown, more damage to it until it breaks.
+  kestrel: { name: 'Appraisal', fx: [{ when: 'break', do: 'appraise' }], value: [10, 20], text: (v) => `When you break a part, the next part to attack is appraised: its next hit shows, and you deal ${v}% more to it until it breaks.` },
+  // The black budget: strong while untouched, fragile once hurt.
+  glassjaw: { name: 'Glass Jaw', fx: [{ when: 'hit', if: 'above-75', do: 'damage%' }, { when: 'always', if: 'below-25', do: 'glass-taken%', half: true }], value: [8, 16], text: (v) => `Above 75% health you deal ${v}% more damage; below 25% you take ${Math.max(1, Math.round(v / 2))}% more.` },
+  // The couriers: a clean line builds, and the first hit breaks it.
+  lantern: { name: 'Clean Signal', fx: [{ when: 'cycle', do: 'clean-signal', stacks: 3 }], value: [3, 6], text: (v) => `Each cycle no attack lands on you, your skills deal ${v}% more, up to ${3 * v}%. An attack that lands clears it.` },
+  // The choir: the same skill twice in a row, and the second carries a quieter copy.
+  nullchoir: { name: 'Chorus', fx: [{ when: 'custom', do: 'chorus' }], value: [25, 40], text: (v) => `Using the same damaging skill twice in a row, the second also hits again for ${v}% of its damage.` },
+};
+export const IMPLICIT = { piece: 1.25 };
+export const implicitValue = (f, level, mult = 1) => { const v = IMPLICITS[f]?.value; return v ? Math.max(1, Math.round((v[0] + (v[1] - v[0]) * Math.min(1.25, (Math.max(1, level) - 1) / 39)) * mult)) : 0; };
+// An item with its faction's implicit (a rolled one; uniques, set pieces and Zero-days stay as they are).
+export const withImplicit = (it, f) => (IMPLICITS[f] && it && !it.unique && !it.zeroDay ? { ...it, implicit: f, implicitValue: implicitValue(f, it.level) } : it);
+// The implicit's effect blocks, its value in (a half block at half), or [] for an item with none.
+export const implicitFx = (it, v = it?.implicitValue) => (IMPLICITS[it?.implicit]?.fx || []).map((fx) => ({ ...fx, value: fx.half ? Math.max(1, Math.round(v / 2)) : v }));
 // The rules a roll can carry: the general ones, and a class's skill rules when the roll names that class.
 export const rulePool = (tier, cls = null) => Object.keys(RULES).filter((k) => RULES[k].tier === tier && (!RULES[k].cls || RULES[k].cls === cls));
 // A rule's number at an item level (roll: 0–1, ±10%).
@@ -371,7 +396,8 @@ export function rollItem(rand, opts = {}) {
   const name = zeroDay ? ZERO_DAYS[zeroDay].name
     : rarity === 'custom' ? `${pick(rand, NAME_A)} ${pick(rand, NAME_B[slot] || NAME_B.script)}`
     : [pre?.name, BASES[base].name, suf?.name || (rule && RULES[rule].of)].filter(Boolean).join(' ');
-  return { kind: 'protocol', side: 'hacker', group: slot, base, rarity, level, stats, affixes, zeroDay, unique: null, name, ...(rule ? { rule, ...(ruleVal ? { ruleValue: ruleVal } : {}) } : {}) };
+  const it = { kind: 'protocol', side: 'hacker', group: slot, base, rarity, level, stats, affixes, zeroDay, unique: null, name, ...(rule ? { rule, ...(ruleVal ? { ruleValue: ruleVal } : {}) } : {}) };
+  return opts.faction ? withImplicit(it, opts.faction) : it; // faction: its implicit (IMPLICITS)
 }
 // Which affix carries a stat (for compiling a chosen stat).
 export const AFFIX_FOR = Object.fromEntries(Object.entries(AFFIXES).map(([id, a]) => [a.stat, id]));
@@ -396,7 +422,8 @@ export function uniqueItem(u, level, rand) {
   for (const [stat, v] of Object.entries(fromBase)) stats[stat] = Math.max(stats[stat] || 0, v);
   for (const [stat, v] of Object.entries(u.secondary || {})) addStats(stats, { [stat]: Math.max(1, round(stat, (Array.isArray(v) ? v[0] + (v[1] - v[0]) * rand() : v) * q)) });
   addStats(stats, u.downside);
-  return { kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name };
+  const own = u.faction && IMPLICITS[u.faction] ? { implicit: u.faction, implicitValue: implicitValue(u.faction, L, IMPLICIT.piece) } : {}; // a faction piece: its faction's implicit, stronger
+  return { kind: 'protocol', side: 'hacker', group: slot, base: best, rarity: 'zeroday', level: L, stats, affixes: [], zeroDay: null, unique: u.id, name: u.name, ...own };
 }
 
 // Save v44: whole-number stats. Regen counts over 5 cycles now (STATS.regen.every), so every Regen on a protocol or a

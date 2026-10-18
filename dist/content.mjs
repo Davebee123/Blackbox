@@ -2,7 +2,7 @@
 // editor.html). This module knows what each kind of text can say ({blanks}), fills them in, and
 // checks a draft for mistakes. mail.mjs uses it in the game; the editor and content.test.mjs use
 // the checker.
-import { STATS } from './gear.mjs';
+import { STATS, IMPLICITS } from './gear.mjs';
 
 // The blanks each kind of text can use. The game fills them; anything else shows up as typed.
 export const COMMON = { handle: 'your handle (the name you logged in with)', crewName: 'your crew: LOWLIGHT' };
@@ -268,6 +268,12 @@ export const FX_DO = {
   'low-heal': { when: ['custom'], label: 'heals you for X% of your max health once a fight, when you drop low', value: true },
   'credits%': { when: ['custom'], label: 'makes caches pay X% more credits', value: true },
   'see-rare': { when: ['custom'], label: "shows a server's rare spawn on its map card" },
+  // Faction implicits (gear.mjs IMPLICITS; faction-gear.mjs IMPLICIT_HOOKS runs them). Each implicit writes its own line.
+  claim: { when: ['struck'], label: 'pays back X% of a big hit on you two cycles later', value: true, own: true },
+  appraise: { when: ['break'], label: 'appraises the next part to attack: its next hit shows, and you deal X% more to it until it breaks', value: true, own: true },
+  'glass-taken%': { when: ['always'], label: 'increases the damage you take by X%', value: true },
+  'clean-signal': { when: ['cycle'], label: 'adds X% to your skills for each cycle no attack lands on you, up to 3 times; an attack that lands clears it', value: true, own: true },
+  chorus: { when: ['custom'], label: 'makes a damaging skill used twice in a row hit again for X% of its damage', value: true },
 };
 export const FX_SCALE = { '': 'flat', cycles: 'for each cycle the fight has lasted', contracts: 'for each contract you hold', broken: 'for each part broken this fight', reads: 'for each tell you answered this fight',
   chits: 'for each ◆ you hold', crew: 'for each crewmate in the fight', missing: 'for each 10% of your health you are missing', sets: 'for each set bonus you have active' };
@@ -279,7 +285,9 @@ export const CLASSES = { '': 'Any class', breaker: 'Breaker', bastion: 'Bastion'
 export const SOURCE_KINDS = { sprawl: 'SPRAWL-00 kills', strain: 'Kills of a strain (no strain named: any strain kill, as a trophy)', guard: 'A guard or ICE', vault: 'Vaults', rogue: 'A rogue server', story: 'A story beat (reward)', contract: 'A contract (reward)', store: "Halcyon's store", boss: 'A boss (RELAY-KING, a Resident, REPO MAN, the Hollow Choir, the KESSLER-FARM-00 three)', farm: 'KESSLER-FARM-00 packs (rogue.mjs)', invasion: 'Invasion captures (invasion.mjs: champions and streaks)', native: 'Native to a network (network.mjs: about ten times as likely on its home network, its lair boss, the Listening Post and darknet listings)',
   lair: "A floor's lair boss (floor: the floor; its network's native boss, on that floor's lair)", rare: '★ rare spawns on a floor (floor)', thread: 'A thread finished on a floor (floor: its reward offer)', puzzle: 'Puzzle boards won on a floor (floor)', raid: 'Crew bosses (KESSLER-FARM-00: their world unique roll)',
   // Set pieces only (sets.mjs SET_LOOT: each its own table, its pieces you lack first, with pity).
-  courier: "LANTERN's couriers", author: "A crew's bosses and elites", takeover: 'Resident takeovers', crew: 'Crew bosses (KESSLER-FARM-00)' };
+  courier: "LANTERN's couriers", author: "A crew's bosses and elites", takeover: 'Resident takeovers', crew: 'Crew bosses (KESSLER-FARM-00)',
+  // Faction pieces only (faction-gear.mjs): assembled at the faction's hub from three parts, a part a feud won for it.
+  feud: 'Feuds won for its faction (its parts, assembled at its hub)' };
 // A source can name the floor it drops on (floor: 7 is The Sink): a vault, a lair, a rare spawn, a thread or a puzzle
 // board there and nowhere else. planned: the source it moves to once that is built (docs/loot-plan.md Decisions).
 
@@ -354,6 +362,8 @@ export function checkItems(items, bases, stats) {
       if (fx.limit === 'run' && fx.when === 'start') say(where, u.id, '"Once per run" with "when a fight starts" fires on the first fight only.', false);
     }
     if (u.lean && !CLASSES[u.lean]) say(where, u.id, `Unknown class "${u.lean}" to lean toward.`);
+    if (u.faction && !IMPLICITS[u.faction]) say(where, u.id, `Unknown faction "${u.faction}".`);
+    if (u.faction && !(u.sources || []).every((src) => src.kind === 'feud')) say(where, u.id, 'A faction piece comes from feuds only.');
     if (!(u.sources || []).length) say(where, u.id, 'No sources: it can never drop.', false);
     for (const src of u.sources || []) if (!SOURCE_KINDS[src.kind]) say(where, u.id, `Unknown source "${src.kind}".`);
     for (const src of u.sources || []) if (!u.set && ['lair', 'rare', 'thread', 'puzzle'].includes(src.kind) && !(src.floor >= 1 && src.floor <= 8)) say(where, u.id, `A ${src.kind} source needs its floor (1 to 8).`);

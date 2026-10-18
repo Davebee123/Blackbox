@@ -101,6 +101,8 @@ const P = {
   injector: '<path d="m10.5 1.5 4 4M12.5 3.5 5 11l-2 .5.5-2L11 2M9.5 5l1.5 1.5M2.5 13.5l2-2"/>',
   repair: '<path d="M10.5 1.5a3.5 3.5 0 0 0-3.3 4.6L2 11.3a1.6 1.6 0 0 0 2.3 2.3l5.2-5.2a3.5 3.5 0 0 0 4.6-3.3l-2 2-1.8-.5-.5-1.8z"/>',
   crate: '<path d="M8 1.5 14 4.8v6.4L8 14.5 2 11.2V4.8z"/><path d="M2 4.8 8 8l6-3.2M8 8v6.5"/>',
+  // A part of a faction piece (faction-gear.mjs): a piece of a puzzle.
+  part: '<path d="M2.5 5.5h3.5a2 2 0 1 1 4 0h3.5v3a2 2 0 1 1 0 4v2H2.5z"/>',
   harvester: '<path d="M2 2.5h12L9.5 8v4l-3 2.5V8z"/>',
   architecture: '<path d="M1.5 14.5h13M3 14.5V7M13 14.5V7M1.5 7 8 2l6.5 5M6 14.5v-4h4v4"/>',
   module: '<rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 5h6v6H5z"/>',
