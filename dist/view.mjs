@@ -2738,13 +2738,14 @@ function memPips(j) {
   const free = Math.max(0, j.cap - j.used), left = j.cap - j.used - j.add;
   return `<span class="slots mem-join${j.fits ? '' : ' over'}" title="Free memory: ${free}/${j.cap} → ${Math.max(0, left)}/${j.cap}">${glyph('memory')}${Array.from({ length: j.cap }, (_, i) => `<i class="${i < Math.max(0, left) ? 'on' : i < free ? 'take' : ''}"></i>`).join('')}<small>${free}<span class="mj-to">→</span><b>${left}</b>/${j.cap} free</small></span>`;
 }
-// Volume sliders: music, ambience (radio, rain, the street, the room tone), effects.
-export const volumesOf = (s) => ({ music: 0.8, ambience: 0.8, sfx: 0.8, ...(s.settings?.volume || {}) });
+// Volume sliders: music, ambience (radio, rain, the street, the room tone), places (each floor's and hub's loop, a
+// virus family's idle in a fight: places.mjs), effects.
+export const volumesOf = (s) => ({ music: 0.8, ambience: 0.8, places: 0.8, sfx: 0.8, ...(s.settings?.volume || {}) });
 function volumeCard(s) {
   const v = volumesOf(s);
   const row = (id, label, title) => `<label class="vol-row" title="${esc(title)}"><span class="vol-name">${label}</span><input type="range" min="0" max="100" step="1" value="${Math.round(v[id] * 100)}" data-volume="${id}" aria-label="${label} volume"><b class="vol-val" data-volume-val="${id}">${Math.round(v[id] * 100)}</b></label>`;
   return `<section class="card vol-card"><h2>Sound</h2>${s.settings.sound ? '' : '<p class="svc-line">Sound is off.</p>'}
-    ${row('music', 'Music', 'The soundtrack')}${row('ambience', 'Ambience', 'Radio chatter, rain, thunder, the street and the room tone')}${row('sfx', 'Effects', 'Hits, keys, alerts and everything else the game plays')}</section>`;
+    ${row('music', 'Music', 'The soundtrack')}${row('ambience', 'Ambience', 'Radio chatter, rain, thunder, the street and the room tone')}${row('places', 'Places', 'Each floor\'s and hub\'s own sound, and a virus family\'s hum under a fight. 0 turns them off')}${row('sfx', 'Effects', 'Hits, keys, alerts and everything else the game plays')}</section>`;
 }
 
 function paceCard(s) {

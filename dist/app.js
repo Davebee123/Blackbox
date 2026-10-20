@@ -8,6 +8,7 @@ import { glyphMotion } from './protocol-glyphs.mjs';
 import { createArt } from './virus-art.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { createFeel } from './feel.mjs';
+import { placeOf, familyCues } from './places.mjs';
 import { createShell } from './shell.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
@@ -897,8 +898,11 @@ function react(events) {
     feel.beat(split.delay(e));
     if (p && fxLevel() !== 'minimal') feel.add('strike', row(e.source), p.attack?.name ? p.attack.name.toUpperCase() : null, { floatAt: `${row(e.source)} > .bcell:nth-child(2)` });
   }
+  const famCue = familyCues(campaign, events); // a virus family's attack and break one-shots, layered on the hurt and the break
   for (const e of events) {
     feel.beat(split.delay(e));
+    const fc = famCue.get(e);
+    if (fc) feel.add(() => feel.familyShot(fc.family, fc.kind));
     const f = split.of(e), src = f ? { kind: f.kind + (f.at === 'you' ? ' at-you' : '') + (f.hostile ? ' hostile' : ''), icon: f.icon, label: f.label } : null;
     if (e.who) {
       const mate = `.pmate[data-mate="${e.who}"]`; // their line under your Signal (HUD)
@@ -1623,6 +1627,8 @@ function renderMeters() {
   const vols = V.volumesOf(campaign);
   if (JSON.stringify(vols) !== lastVols) { lastVols = JSON.stringify(vols); feel.volumes(vols); }
   feel.soundtrack({ on: !!campaign.settings.sound, music: campaign.settings.music !== false, radio: campaign.settings.radio !== false, mood: active(campaign) ? 'fight' : campaign.run ? 'run' : 'home' });
+  // The place under the music (places.mjs): the hub whose session shows, the run's or fight's floor, the floor on the map.
+  feel.places({ on: !!campaign.settings.sound, ...placeOf(campaign, { hub: hubShown() ? hubSel : null, map: module === 'map' && mapView === 'mine' ? V.mapFloorOf(campaign, mapSel, mapFloor) : null }) });
   $('speed').textContent = `${cycleLength(campaign) / 1000}s cycle`;
   $('speed').title = `Speed: ${campaign.settings.speed || 'normal'}. Click for relaxed (12s) / normal (8s) / fast (5s). Rules count cycles, so balance never changes.`;
   $('motion').textContent = 'Motion';
@@ -2714,7 +2720,7 @@ if (campaign.encounter?.phase === 'alert' && campaign.encounter.mode === 'home' 
 if (!campaign.breach && !campaign.roomsPlay && !CAMP) { const done = [...tickNetwork(campaign, Date.now()), ...tickServices(campaign, Date.now())]; if (done.length) { react(done); save(); } } // installs that finished (or Degraded mode that ran out) while you were away
 if (!playtest) { if (!campaign.profile || (CAMP && !campaign.camp)) firstLogin(); else shell.boot(); }
 requestAnimationFrame(frame);
-window.blackbox = { get state() { return campaign; }, run };
+window.blackbox = { get state() { return campaign; }, run, places: () => feel.placesNow() }; // places: what the place layer plays (places.mjs)
 
 // Volume sliders: heard live while you drag, saved when you let go.
 document.addEventListener('input', (e) => {
