@@ -135,8 +135,8 @@ function pressure(s, family, id, level) {
   return n;
 }
 test('the basics with a plain attack are pressure-matched to their family\'s Pulse Node: within 5% over 20 cycles after Block, at 10 and 30', () => {
-  const was = PARTS.pressure;
-  PARTS.pressure = [1, 1]; // the basics as written, before a fight's share-out of pressure
+  const was = PARTS.pressure, wasHit = PARTS.hit;
+  PARTS.pressure = [1, 1]; PARTS.hit = [[1, 1]]; // the basics as written, before a fight's share-out of pressure
   try { for (const L of [10, 30]) {
     const s = player('bastion', 'warden', L);
     for (const [f, body] of Object.entries(FAMILIES)) {
@@ -146,7 +146,19 @@ test('the basics with a plain attack are pressure-matched to their family\'s Pul
         assert.ok(Math.abs(k - 1) <= 0.05, `${f} ${spec.id} at ${L}: ${(k * 100).toFixed(0)}%`);
       }
     }
-  } } finally { PARTS.pressure = was; }
+  } } finally { PARTS.pressure = was; PARTS.hit = wasHit; }
+});
+test('the spike cap: no hit of a rolled fight grows past PARTS.cap of its family\'s Pulse Node (a part that would hits more often instead)', () => {
+  for (const L of [5, 10, 12, 30]) {
+    const was = { p: PARTS.pressure, h: PARTS.hit };
+    PARTS.pressure = [1, 1]; PARTS.hit = [[1, 1]];
+    const pulse = Object.fromEntries(Object.keys(FAMILIES).map((f) => [f, createVirus('random', 1, { family: f, threat: SERVER.threat(L), run: true, mutation: null, basic: 'pulse' }).parts.find((p) => p.id === 'pulse').attack.amount]));
+    Object.assign(PARTS, { pressure: was.p, hit: was.h });
+    for (let seed = 1; seed <= 300; seed++) {
+      const v = createVirus('random', seed, { threat: SERVER.threat(L), run: true, mutation: null });
+      for (const p of v.parts) if (p.attack?.effect === 'damage') assert.ok(p.attack.amount <= Math.ceil(PARTS.cap * pulse[v.family]) + 1, `level ${L} ${v.name}: ${p.id} ${p.attack.amount} against a Pulse Node's ${pulse[v.family]}`);
+    }
+  }
 });
 test('every basic: a level it opens at, a loot component, a Codex card with its research tiers, and a read on the board', async () => {
   const { entryOf } = await import('./dist/codex.mjs');

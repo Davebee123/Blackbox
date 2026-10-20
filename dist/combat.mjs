@@ -2376,11 +2376,12 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
   } else if (/^developer parts( [a-z]+( [\d.]+){1,2})?$/.test(text)) { // the parts plan's numbers (parts.mjs PARTS): show them and the mix, or set one
     const [, , k, a, b] = text.split(' '), key = Object.keys(PARTS).find((x) => x.toLowerCase() === k);
     if (k && !key) warn(s, `No parts number ${k}. Try: ${Object.keys(PARTS).filter((x) => x !== 'native' && x !== 'count').join(', ')}.`);
+    else if (key === 'weight' || key === 'native') warn(s, `${key} is set by name in parts.mjs.`);
     else if (key === 'pressure') { if (b == null) warn(s, 'pressure is a range: developer parts pressure <low> <high>.'); else { PARTS.pressure = [Number(a), Number(b)]; emit(s, 'info', `Developer: parts pressure is ${a} to ${b}.`); } }
     else if (key && Array.isArray(PARTS[key])) { if (b == null) warn(s, `${key} is a table: developer parts ${k} <level> <value>.`); else { const L = Number(a), row = PARTS[key].find(([x]) => x === L); if (row) row[1] = Number(b); else PARTS[key] = [...PARTS[key], [L, Number(b)]].sort((x, y) => x[0] - y[0]); emit(s, 'info', `Developer: parts ${key} from level ${L} is ${b}.`); } }
     else if (key) { PARTS[key] = key === 'on' ? a !== '0' : Number(a); emit(s, 'info', `Developer: parts ${key} is ${PARTS[key]}.`); }
     const L = hackerLevel(s), m = partsMix(L);
-    const nums = Object.entries(PARTS).filter(([x]) => x !== 'native').map(([x, v]) => `${x} ${Array.isArray(v) && !Array.isArray(v[0]) ? v.join(' to ') : Array.isArray(v) ? v.map(([l, y]) => `${l}:${Array.isArray(y) ? y.map((z) => Math.round(z * 100)).join('/') : Math.round(y * 1000) / 1000}`).join(' ') : v}`).join(' · ');
+    const nums = Object.entries(PARTS).filter(([x]) => x !== 'native').map(([x, v]) => `${x} ${v && typeof v === 'object' && !Array.isArray(v) ? Object.entries(v).map(([g, w]) => `${g}:${w}`).join(' ') : Array.isArray(v) && !Array.isArray(v[0]) ? v.join(' to ') : Array.isArray(v) ? v.map(([l, y]) => `${l}:${Array.isArray(y) ? y.map((z) => Math.round(z * 100)).join('/') : Math.round(y * 1000) / 1000}`).join(' ') : v}`).join(' · ');
     emit(s, 'info', `Parts: ${nums}.`);
     emit(s, 'info', `Mix at level ${L} (${m.n} fights): ${m.kinds} kinds, signature in ${Math.round(m.sig * 100)}%, ${m.counts.map((n, i) => `${i + 2} parts ${Math.round((n / m.n) * 100)}%`).join(', ')}, a doubled basic in ${Math.round(m.dup * 100)}%. ${m.top}.`);
   } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)

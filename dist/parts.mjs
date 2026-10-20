@@ -25,8 +25,12 @@ export const PARTS = {
   duplicate: [[1, 0], [10, 0.1], [16, 1 / 8], [31, 1 / 6]], // a fight of 3 or more parts doubles its basic this often
   copy: 0.6, // each copy of a doubled basic: this share of one's Integrity and damage
   bulk: [[1, 1], [3, 1.06], [14, 1.5]], // a fight's total Integrity, as a share of its family's two core parts', whatever its part count
+  weight: {}, // a third part's weight in the roll, by gene (1 when it isn't named)
+  carve: 1, // the share of the thirds' Integrity that comes out of the basic's and the signature's (0: thirds come on top)
   thirdMax: 1.15, // a third part's Integrity never grows past this share of its own (the basic and the signature take the rest)
-  pressure: [0.85, 1.15], // a fight's pressure is its family's: its hits scale by that much at most, down and up
+  pressure: [0.85, 1.15], // a fight's pressure is its family's: its hits scale to it, within this range
+  cap: 1.3, // …but no single hit past this many of its family's Pulse Node's: past it, the part hits more often instead
+  hit: [[1, 1]], // every rolled fight's hits, by level, on top of the pressure share-out
   budgetFrom: 3, // the thirds' budget opens here (2 points, as level 4's)
   floor: 3, // P2: a native's weight on its own floor
   native: { elite: true, rare: true }, // P2: elites and ★ rare spawns always bring one of their floor's natives
@@ -39,6 +43,8 @@ const isBasic = (spec) => spec.id === 'pulse' || spec.pool === 'basic';
 export const basicsOf = (body, level = 99) => body.parts.filter((p) => isBasic(p) && (p.from || 1) <= level);
 export const thirdsOf = (body, level = 99) => body.parts.filter((p) => p.pool === 'third' && (p.from || 1) <= level);
 const pick = (rand, xs) => xs[Math.min(xs.length - 1, Math.floor(rand() * xs.length))];
+const weightOf = (gene) => PARTS.weight[gene] ?? 1;
+const pickBy = (rand, xs, w) => { let x = rand() * xs.reduce((n, y) => n + w(y), 0); for (const y of xs) if ((x -= w(y)) < 0) return y; return xs.at(-1); };
 const pickShare = (rand, shares) => { let x = rand() * shares.reduce((a, b) => a + b, 0); for (let i = 0; i < shares.length; i++) if ((x -= shares[i]) < 0) return i; return shares.length - 1; };
 
 // The roll: { basic (its spec), dup (two copies), signature (true: it comes), thirds: [specs], strangers }.
@@ -69,13 +75,13 @@ export function rollParts({ family, body, level, rand, elite = false, seen = nul
   // No signature: a third that doesn't refer to it takes its slot, free. None open: the signature comes after all.
   if (!signature) {
     const free = pool.filter((spec) => !spec.sig && fits(spec) && !compatible([...(body.core || []), ...extra, spec.gene]).length);
-    if (free.length) { const t = pick(rand, free); thirds.push(t); if (stranger(t)) strangers++; } else signature = true; // (its basic attacks either way)
+    if (free.length) { const t = pickBy(rand, free, (x) => weightOf(x.gene)); thirds.push(t); if (stranger(t)) strangers++; } else signature = true; // (its basic attacks either way)
   }
   // The thirds in their own slots, by the budget (genes.mjs rollGenome): none, one or two.
   const slots = Math.max(0, n - 2 - (dup ? 1 : 0));
   if (slots && pool.length) {
     const byGene = new Map(pool.map((spec) => [spec.gene, spec]));
-    const genes = rollGenome({ rand, level, family, core: [...(body.core || []), ...extra, ...thirds.map((t) => t.gene)], count: slots, slots, mutations: false, bonus: level < 4 && level >= PARTS.budgetFrom ? 2 : 0, elite,
+    const genes = rollGenome({ rand, level, family, core: [...(body.core || []), ...extra, ...thirds.map((t) => t.gene)], count: slots, slots, mutations: false, weigh: weightOf, bonus: level < 4 && level >= PARTS.budgetFrom ? 2 : 0, elite,
       allow: (id, picked) => { const spec = byGene.get(id); if (!spec || (spec.sig && !signature) || thirds.includes(spec)) return false; const sx = picked.filter((x) => stranger(byGene.get(x))).length; return !stranger(spec) || strangers + sx < 1; } });
     for (const id of genes) { const spec = byGene.get(id); thirds.push(spec); if (stranger(spec)) strangers++; }
   }

@@ -1039,7 +1039,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     const weight = (spec) => (r.dup && (spec === r.basic || spec === copy) ? PARTS.copy : 1);
     const total = alongParts(PARTS.bulk, level) * (family.parts.find((x) => x.id === 'pulse').integrity + sig.integrity), sum = specs.reduce((n, x) => n + x.integrity * weight(x), 0);
     const kt = Math.min(PARTS.thirdMax, total / sum), t3 = r.thirds.reduce((n, x) => n + x.integrity * kt, 0), core = specs.filter((x) => x.pool !== 'third').reduce((n, x) => n + x.integrity * weight(x), 0);
-    const kc = (total - t3) / core;
+    const kc = (total - t3 * PARTS.carve) / core; // PARTS.carve: how much of the thirds' Integrity comes out of the basic's and the signature's
     share = (spec) => (spec.pool === 'third' ? kt : weight(spec) * kc);
   }
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * share(spec), extra(spec) + (spec.special ? 0 : g.armor)));
@@ -1052,8 +1052,15 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   if (rolled2) {
     const sig = family.parts.find((x) => x.special), core = nominal(family.parts.find((x) => x.id === 'pulse')) + nominal(sig);
     const now = parts.reduce((n, p) => n + nominal(p), 0), [lo, hi] = PARTS.pressure;
-    const k = now > 0 ? Math.max(lo, Math.min(hi, core / now)) : 1;
-    if (k !== 1) for (const p of parts) if (p.attack && !(p.accum && k > 1)) { if (['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount *= k; if (p.attack.hit) p.attack.hit *= k; }
+    const k = (now > 0 ? Math.max(lo, Math.min(hi, core / now)) : 1) * alongParts(PARTS.hit, level); // PARTS.hit: a level's own step on top
+    // No single hit grows past PARTS.cap Pulse Nodes (the spike cap): past it, the part hits that size more often.
+    const top = PARTS.cap * family.parts.find((x) => x.id === 'pulse').attack.amount;
+    if (k !== 1) for (const p of parts) if (p.attack && !(p.accum && k > 1)) {
+      const a = p.attack;
+      if (a.effect === 'damage' && !p.taps && k > 1 && a.amount * k > top && a.interval > 2) { const want = a.amount * k, every = Math.max(2, Math.round((a.interval * top) / want)); a.amount = Math.min(top, (want * every) / a.interval); a.interval = every; a.first = a.due = Math.max(2, Math.min(a.due, every + 1)); }
+      else if (['damage', 'encrypt'].includes(a.effect)) a.amount = a.effect === 'damage' && k > 1 ? Math.min(Math.max(a.amount, top), a.amount * k) : a.amount * k;
+      if (a.hit) a.hit = Math.min(Math.max(a.hit, top), a.hit * k);
+    }
   }
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);

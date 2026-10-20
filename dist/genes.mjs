@@ -275,13 +275,13 @@ export const ROLL_WEIGHT = { signature: 3, toolkit: 1, other: 0.1 };
 //   signature, toolkit   the author's (authors.mjs)
 //   elite       +3 points, one more gene, two mutations; bonus: points on top (Testbed)
 //   known       a set of gene ids: roll only these (Sinkhole: genes you've decoded)
-//   count, slots, mutations, allow   a wild virus's parts roll (parts.mjs): that many genes, room for that many third
-//               parts, mutations or not, and a test each gene must pass ((id, picked) → true)
-export function rollGenome({ rand, level, family, core = [], signature = [], toolkit = [], elite = false, bonus = 0, known = null, count = null, slots = 1, mutations = true, allow = null } = {}) {
+//   count, slots, mutations, allow, weigh   a wild virus's parts roll (parts.mjs): that many genes, room for that many
+//               third parts, mutations or not, a test each gene must pass ((id, picked) → true), and each gene's weight
+export function rollGenome({ rand, level, family, core = [], signature = [], toolkit = [], elite = false, bonus = 0, known = null, count = null, slots = 1, mutations = true, allow = null, weigh = null } = {}) {
   let budget = budgetFor(level, { elite }) + bonus;
   count ??= GENE_COUNT.reduce((n, [L, k]) => (level >= L ? k : n), 0) + (elite && level >= 4 ? 1 : 0);
   const cap = elite ? MUTATION_CAP.elite : MUTATION_CAP.wild;
-  const weight = (id) => (signature.includes(id) ? ROLL_WEIGHT.signature : toolkit.includes(id) ? ROLL_WEIGHT.toolkit : ROLL_WEIGHT.other);
+  const weight = weigh || ((id) => (signature.includes(id) ? ROLL_WEIGHT.signature : toolkit.includes(id) ? ROLL_WEIGHT.toolkit : ROLL_WEIGHT.other));
   let pool = GENE_IDS.filter((id) => { const g = GENES[id]; if (g.opens > level || (known && !known.has(id))) return false; return (mutations && g.mutation) || (g.parts?.[family] && (g.parts[family].from || 1) <= level); });
   const picked = [];
   while (picked.length < count && budget > 0) {
