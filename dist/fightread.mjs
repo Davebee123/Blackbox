@@ -214,8 +214,12 @@ export function partRead(s, v, p, { tells: withTells = true } = {}) {
   const tl = !withTells ? [] : (T ?T.list.filter((t) => t.part === p.id).map((t) => ({ name: t.name, kind: t.kind })) : v ? partTells(v, p) : []).filter((x) => x.kind !== 'mimic');
   const VERB = { charge: 'Charges', cast: 'Casts', seal: 'Seals with', lock: 'Locks with' };
   const tells = tl.map((x) => `${VERB[x.kind] || 'Brings'} ${x.name}.`).join(' ');
-  const more = [p.veiled && !p.obfuscate ? 'Hides its timers while it wears ◆.' : '', p.enrage ? `Deals ${pct(CONFIG.enrage - 1)} more once it drops below half.` : '', tells].filter(Boolean).join(' ');
-  return { does: more ? `${does} ${more}` : does, answer, cue };
+  // A role it carries for a missing signature (parts.mjs PARTS.profile): a Ratchet, or the Scrambler's Scramble.
+  const esc = p.ratchet ? `Ratchets: from cycle ${p.ratchet.from + 1} it deals ${p.ratchet.amount} damage to you every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles it lives.` : '';
+  const scr = p.attack?.scrambles ? `Its hits Scramble you for ${cycles(p.attack.scrambles)}, at most once ${every(p.attack.scrambleEvery || 1)}.` : '';
+  const more = [esc, scr, p.veiled && !p.obfuscate ? 'Hides its timers while it wears ◆.' : '', p.enrage ? `Deals ${pct(CONFIG.enrage - 1)} more once it drops below half.` : '', tells].filter(Boolean).join(' ');
+  const ans = p.ratchet ? `${answer} Break it early: its Ratchet ends only when it breaks (Purge starts it over).` : answer;
+  return { does: more ? `${does} ${more}` : does, answer: ans, cue };
 }
 // The part row's tooltip, by its research (research.mjs). Until it's decoded: ??? and how to research it. At 1: its
 // attack and timing. From 5: what it does, its tells, and what answers it.

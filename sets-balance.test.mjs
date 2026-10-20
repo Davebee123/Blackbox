@@ -22,7 +22,7 @@ function check(L, ids, cap, off) {
   for (const [c, sub] of SUBS) {
     const r = score(c, AT[L], { sub, uniques: ids });
     d += r.lost - baseOf(L)[sub].lost;
-    if (r.lost < soloBand(sub)[0] - SLACK || r.lost > 52) off.push(`${ids.join('+')} ${sub} Lv ${L} ${r.lost.toFixed(0)}%`);
+    if (r.lost < soloBand(sub, L)[0] - SLACK || r.lost > 52) off.push(`${ids.join('+')} ${sub} Lv ${L} ${r.lost.toFixed(0)}%`);
     if (r.wins < 0.8 * r.total) off.push(`${ids.join('+')} ${sub} Lv ${L} ${r.wins}/${r.total}`);
   }
   if (Math.abs(d / SUBS.length) > cap) off.push(`${ids.join('+')} Lv ${L} moves the average ${(d / SUBS.length).toFixed(1)} (cap ${cap})`);

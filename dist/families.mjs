@@ -176,7 +176,8 @@ export function applySet(v, setId, jitter = null) {
   for (const p of v.parts) {
     const spec = body.parts.find((x) => x.id === p.id);
     const x = set.parts[p.id];
-    if (!spec || !p.attack) { if (x?.deliver) p.deliver = { ...x.deliver }; continue; }
+    if (!spec || !p.attack || !spec.attack) { // (a basic's carried Surge, parts.mjs PARTS.steadyCarry, keeps its share-out's size)
+      if (x?.deliver) p.deliver = { ...x.deliver }; continue; }
     const base = spec.attack, a = p.attack;
     const scale = (x?.mult || 1) * k;
     const levelOf = (field) => (base[field] ? a[field] / base[field] : 1); // what the level and the room's size did to it

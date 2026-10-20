@@ -4,11 +4,11 @@ One scripted planner for every class (it finishes bare or about-to-fire parts, a
 
 | Bracket | Spike, no gear | Spike only | Breaker | Bastion | Infiltrator | Operator |
 |---|---:|---:|---:|---:|---:|---:|
-| Lv 1 | 21/24 · 0 clean · 62% · 10.8c | 24/24 · 0 clean · 28% · 8.5c | 24/24 · 0 clean · 20% · 8.0c | 24/24 · 1 clean · 17% · 7.8c | 24/24 · 1 clean · 14% · 6.1c | 24/24 · 2 clean · 13% · 6.6c |
-| Lv 10 | 13/24 · 3 clean · 71% · 9.8c | 20/24 · 5 clean · 53% · 9.9c | 24/24 · 7 clean · 24% · 7.3c | 24/24 · 9 clean · 13% · 9.3c | 22/24 · 7 clean · 31% · 8.1c | 24/24 · 6 clean · 21% · 7.0c |
-| Lv 18 | 0/24 · 0 clean · 100% · 7.3c | 12/24 · 0 clean · 85% · 11.3c | 24/24 · 4 clean · 20% · 6.3c | 24/24 · 6 clean · 12% · 14.4c | 24/24 · 11 clean · 18% · 9.5c | 24/24 · 3 clean · 16% · 7.9c |
-| Lv 30 | 3/24 · 0 clean · 95% · 6.4c | 12/24 · 0 clean · 76% · 10.0c | 24/24 · 6 clean · 24% · 6.7c | 24/24 · 4 clean · 17% · 12.5c | 24/24 · 12 clean · 15% · 7.8c | 24/24 · 2 clean · 20% · 5.9c |
-| Lv 50 | 2/24 · 0 clean · 94% · 5.4c | 21/24 · 0 clean · 60% · 9.8c | 24/24 · 8 clean · 15% · 5.4c | 24/24 · 5 clean · 12% · 12.2c | 24/24 · 17 clean · 3% · 7.3c | 24/24 · 5 clean · 15% · 4.6c |
+| Lv 1 | 21/24 · 0 clean · 63% · 11.0c | 24/24 · 0 clean · 30% · 8.8c | 24/24 · 0 clean · 22% · 8.1c | 24/24 · 1 clean · 17% · 8.0c | 24/24 · 1 clean · 14% · 6.1c | 24/24 · 2 clean · 13% · 6.7c |
+| Lv 10 | 3/24 · 1 clean · 93% · 7.5c | 7/24 · 0 clean · 89% · 8.9c | 23/24 · 0 clean · 36% · 7.5c | 24/24 · 1 clean · 30% · 10.7c | 21/24 · 2 clean · 46% · 8.9c | 24/24 · 6 clean · 18% · 6.6c |
+| Lv 18 | 0/24 · 0 clean · 100% · 6.3c | 5/24 · 0 clean · 96% · 8.8c | 24/24 · 3 clean · 22% · 5.5c | 24/24 · 2 clean · 22% · 12.9c | 24/24 · 10 clean · 22% · 8.1c | 24/24 · 2 clean · 20% · 7.4c |
+| Lv 30 | 3/24 · 0 clean · 95% · 5.6c | 6/24 · 0 clean · 87% · 8.5c | 24/24 · 2 clean · 29% · 6.3c | 24/24 · 2 clean · 21% · 13.3c | 24/24 · 12 clean · 12% · 6.3c | 24/24 · 2 clean · 16% · 5.5c |
+| Lv 50 | 2/24 · 0 clean · 94% · 4.6c | 10/24 · 0 clean · 74% · 8.2c | 23/24 · 3 clean · 22% · 4.9c | 24/24 · 2 clean · 18% · 13.3c | 24/24 · 14 clean · 8% · 6.4c | 24/24 · 4 clean · 11% · 4.0c |
 
 Cells: wins · clean kills (nothing got through: no damage, encryption included) · average health lost · average cycles.
 
@@ -18,11 +18,11 @@ Every strain open at the level, six grade 2 wilds and six wilds two levels up.
 
 | Bracket | Breaker | Bastion | Infiltrator | Operator |
 |---|---:|---:|---:|---:|
-| Lv 1 | 12/12 · 52% · 10.2c | 11/12 · 41% · 9.7c | 12/12 · 24% · 7.2c | 12/12 · 44% · 9.2c |
-| Lv 10 | 21/22 · 22% · 7.0c | 20/22 · 26% · 9.4c | 21/22 · 39% · 7.5c | 22/22 · 23% · 7.3c |
-| Lv 18 | 22/23 · 25% · 6.2c | 23/23 · 32% · 14.2c | 23/23 · 31% · 9.3c | 23/23 · 29% · 7.7c |
-| Lv 30 | 22/23 · 33% · 5.7c | 22/23 · 28% · 12.8c | 22/23 · 34% · 7.4c | 22/23 · 34% · 6.7c |
-| Lv 50 | 23/23 · 19% · 4.4c | 23/23 · 25% · 12.0c | 23/23 · 29% · 7.7c | 23/23 · 20% · 4.4c |
+| Lv 1 | 11/12 · 60% · 10.8c | 11/12 · 50% · 10.4c | 12/12 · 27% · 7.4c | 12/12 · 46% · 9.8c |
+| Lv 10 | 20/22 · 38% · 7.0c | 20/22 · 40% · 10.5c | 20/22 · 48% · 8.6c | 22/22 · 24% · 7.1c |
+| Lv 18 | 23/23 · 21% · 5.5c | 22/23 · 37% · 13.3c | 23/23 · 24% · 8.4c | 23/23 · 20% · 6.9c |
+| Lv 30 | 22/23 · 33% · 5.3c | 22/23 · 34% · 13.1c | 22/23 · 28% · 6.3c | 22/23 · 25% · 5.8c |
+| Lv 50 | 23/23 · 23% · 4.2c | 22/23 · 27% · 12.0c | 23/23 · 16% · 6.7c | 23/23 · 18% · 4.3c |
 
 ## By subclass
 
@@ -30,10 +30,10 @@ The same fights for each of the eight subclasses (blues and the bracket's talent
 
 | Bracket | Demolitionist | Overclocker | Warden | Sysop | Payload | Phantom | Herder | Hijacker |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Lv 10 | 24% · 24/24 | 26% · 24/24 | 13% · 24/24 | 20% · 23/24 | 18% · 24/24 | 31% · 22/24 | 21% · 24/24 | 18% · 24/24 |
-| Lv 18 | 20% · 24/24 | 30% · 23/24 | 12% · 24/24 | 2% · 24/24 | 20% · 24/24 | 18% · 24/24 | 16% · 24/24 | 28% · 23/24 |
-| Lv 30 | 24% · 24/24 | 33% · 22/24 | 17% · 24/24 | 2% · 24/24 | 22% · 24/24 | 15% · 24/24 | 20% · 24/24 | 21% · 23/24 |
-| Lv 50 | 15% · 24/24 | 31% · 22/24 | 12% · 24/24 | 0% · 24/24 | 17% · 24/24 | 3% · 24/24 | 15% · 24/24 | 8% · 24/24 |
+| Lv 10 | 36% · 23/24 | 50% · 22/24 | 30% · 24/24 | 33% · 22/24 | 25% · 24/24 | 46% · 21/24 | 18% · 24/24 | 23% · 24/24 |
+| Lv 18 | 22% · 24/24 | 40% · 22/24 | 22% · 24/24 | 9% · 23/24 | 19% · 24/24 | 22% · 24/24 | 20% · 24/24 | 30% · 24/24 |
+| Lv 30 | 29% · 24/24 | 39% · 22/24 | 21% · 24/24 | 5% · 23/24 | 20% · 24/24 | 12% · 24/24 | 16% · 24/24 | 23% · 23/24 |
+| Lv 50 | 22% · 23/24 | 37% · 22/24 | 18% · 24/24 | 4% · 24/24 | 10% · 24/24 | 8% · 24/24 | 11% · 24/24 | 7% · 24/24 |
 
 ## Tells: reading them or not
 
@@ -41,18 +41,18 @@ The same fights for each subclass, by the planner that reads tells and by one th
 
 | Bracket | Demolitionist | Overclocker | Warden | Sysop | Payload | Phantom | Herder | Hijacker | Average gap |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Lv 10 | 24% · 30% (24 · 24) | 26% · 31% (24 · 24) | 13% · 18% (24 · 24) | 20% · 22% (23 · 23) | 18% · 17% (24 · 24) | 31% · 34% (22 · 22) | 21% · 20% (24 · 23) | 18% · 15% (24 · 24) | 1.9 |
-| Lv 18 | 20% · 18% (24 · 24) | 30% · 39% (23 · 22) | 12% · 15% (24 · 24) | 2% · 5% (24 · 24) | 20% · 23% (24 · 24) | 18% · 19% (24 · 24) | 16% · 17% (24 · 24) | 28% · 31% (23 · 24) | 2.7 |
-| Lv 30 | 24% · 22% (24 · 23) | 33% · 35% (22 · 24) | 17% · 18% (24 · 24) | 2% · 4% (24 · 23) | 22% · 20% (24 · 24) | 15% · 19% (24 · 24) | 20% · 22% (24 · 24) | 21% · 20% (23 · 23) | 0.7 |
+| Lv 10 | 36% · 38% (23 · 24) | 50% · 40% (22 · 24) | 30% · 33% (24 · 24) | 33% · 34% (22 · 22) | 25% · 26% (24 · 24) | 46% · 52% (21 · 21) | 18% · 21% (24 · 23) | 23% · 21% (24 · 24) | 0.6 |
+| Lv 18 | 22% · 24% (24 · 24) | 40% · 38% (22 · 24) | 22% · 25% (24 · 23) | 9% · 12% (23 · 23) | 19% · 20% (24 · 24) | 22% · 24% (24 · 22) | 20% · 20% (24 · 24) | 30% · 31% (24 · 23) | 1.1 |
+| Lv 30 | 29% · 31% (24 · 23) | 39% · 42% (22 · 22) | 21% · 35% (24 · 23) | 5% · 3% (23 · 24) | 20% · 20% (24 · 24) | 12% · 15% (24 · 23) | 16% · 19% (24 · 24) | 23% · 17% (23 · 24) | 2.1 |
 
 Target (friction.mjs; a `todo` test in balance.test.mjs): a blue-geared fight at your level costs every subclass 35–45% of its health at levels 10, 18 and 30, subclasses within about 10 points.
 
 ## Skill use at level 50
 
-- **Breaker:** overload 26% · flood 18% · crack 13% · shatter 12% · shaped-charge 9% · thermal-runaway 8% · sigint 5% · rm-rf 5% · spike 4% · backfire 1%
-- **Bastion:** rate-limit 22% · reject 21% · purge 19% · spike 9% · blowback 8% · quarantine 7% · harden 6% · circuit-breaker 4% · bulkhead 2% · suspend 1% · sigint 0%
-- **Infiltrator:** opening 21% · side-channel 16% · backdoor 14% · inject 13% · fingerprint 9% · unmask 7% · shadow-copy 7% · sigint 6% · backstab 3% · spike 2% · null-route 2%
-- **Operator:** nohup 26% · botnet 21% · hook 10% · fan-out 9% · deploy 8% · sigint 8% · mesh 7% · spike 5% · load-shed 4% · kill-switch 1% · spawn 1%
+- **Breaker:** shatter 25% · crack 19% · overload 16% · thermal-runaway 10% · flood 9% · shaped-charge 9% · sigint 4% · rm-rf 3% · spike 3% · backfire 1%
+- **Bastion:** reject 21% · rate-limit 20% · purge 20% · quarantine 8% · spike 8% · blowback 7% · harden 6% · circuit-breaker 4% · bulkhead 3% · suspend 3% · sigint 1%
+- **Infiltrator:** backdoor 24% · opening 21% · side-channel 18% · inject 9% · sigint 8% · unmask 6% · fingerprint 5% · spike 5% · shadow-copy 2% · null-route 1%
+- **Operator:** botnet 24% · nohup 24% · fan-out 12% · deploy 8% · hook 8% · spike 6% · load-shed 4% · mesh 4% · sigint 4% · kill-switch 2% · spawn 2%
 
 ## Unlockable skills (level 50, whole tree)
 
@@ -60,56 +60,56 @@ Each one swapped into the fifth slot. Change vs the first five.
 
 | Class | Skill | Wins | Health lost | Δ | Cycles | Δ |
 |---|---|---:|---:|---:|---:|---:|
-| Breaker | Shaped Charge | 23/24 | 17% | +1 | 6.0 | +0.7 |
-| Breaker | Fork Bomb | 24/24 | 10% | -6 | 4.8 | -0.5 |
-| Breaker | Debris Field | 24/24 | 21% | +6 | 7.0 | +1.7 |
-| Breaker | Thermal Runaway | 24/24 | 16% | +1 | 6.5 | +1.1 |
-| Breaker | Backfire | 24/24 | 16% | +1 | 6.5 | +1.1 |
-| Breaker | Logic Bomb | 24/24 | 15% | +0 | 6.5 | +1.1 |
-| Breaker | rm -rf | 24/24 | 16% | +1 | 6.5 | +1.2 |
-| Breaker | Chain Reaction | 24/24 | 14% | -1 | 5.6 | +0.2 |
-| Breaker | Bit Rot | 24/24 | 13% | -2 | 5.8 | +0.5 |
-| Breaker | Zero-day | 24/24 | 9% | -6 | 5.3 | -0.1 |
-| Bastion | Suspend | 24/24 | 23% | +11 | 11.9 | -0.3 |
-| Bastion | Bulkhead | 24/24 | 25% | +13 | 11.9 | -0.3 |
-| Bastion | Blowback | 24/24 | 22% | +10 | 11.1 | -1.0 |
-| Bastion | Harden | 24/24 | 18% | +6 | 11.8 | -0.4 |
-| Bastion | Quarantine | 24/24 | 21% | +8 | 11.0 | -1.1 |
-| Bastion | Throttle | 24/24 | 19% | +7 | 11.8 | -0.4 |
-| Bastion | Circuit Breaker | 24/24 | 22% | +10 | 11.9 | -0.3 |
-| Bastion | DMZ | 24/24 | 21% | +9 | 12.1 | -0.1 |
-| Bastion | Honeypot | 24/24 | 21% | +9 | 11.9 | -0.3 |
-| Bastion | Failover | 24/24 | 23% | +10 | 11.6 | -0.6 |
-| Infiltrator | Null Route | 24/24 | 10% | +7 | 8.0 | +0.7 |
-| Infiltrator | Opening | 23/24 | 16% | +13 | 7.8 | +0.5 |
-| Infiltrator | Backstab | 23/24 | 17% | +14 | 7.7 | +0.3 |
-| Infiltrator | Side Channel | 24/24 | 8% | +5 | 6.6 | -0.7 |
-| Infiltrator | Shadow Copy | 24/24 | 11% | +8 | 8.1 | +0.8 |
-| Infiltrator | Spoof | 24/24 | 14% | +11 | 7.9 | +0.6 |
-| Infiltrator | Rotate Keys | 24/24 | 14% | +11 | 8.1 | +0.8 |
-| Infiltrator | Log Wipe | 24/24 | 15% | +12 | 8.3 | +0.9 |
-| Infiltrator | Unmask | 24/24 | 11% | +8 | 7.0 | -0.3 |
-| Infiltrator | Vanish | 24/24 | 10% | +7 | 8.0 | +0.7 |
-| Infiltrator | Rootkit Implant | 24/24 | 17% | +14 | 8.5 | +1.2 |
-| Operator | nohup | 24/24 | 10% | -5 | 5.2 | +0.6 |
-| Operator | Kill Switch | 23/24 | 16% | +1 | 6.0 | +1.4 |
-| Operator | Load Shed | 24/24 | 12% | -2 | 6.0 | +1.4 |
-| Operator | Fork | 24/24 | 15% | -0 | 5.6 | +1.0 |
-| Operator | Mesh | 24/24 | 13% | -2 | 4.4 | -0.3 |
-| Operator | Garbage Collect | 24/24 | 12% | -3 | 5.9 | +1.3 |
-| Operator | Malloc | 24/24 | 16% | +1 | 6.1 | +1.5 |
-| Operator | Crontab | 24/24 | 18% | +3 | 5.9 | +1.3 |
-| Operator | OOM Kill | 24/24 | 12% | -2 | 5.8 | +1.2 |
-| Operator | Cron Storm | 24/24 | 12% | -2 | 5.8 | +1.2 |
+| Breaker | Shaped Charge | 24/24 | 24% | +2 | 6.0 | +1.1 |
+| Breaker | Fork Bomb | 24/24 | 21% | -2 | 5.2 | +0.3 |
+| Breaker | Debris Field | 23/24 | 32% | +10 | 7.3 | +2.4 |
+| Breaker | Thermal Runaway | 24/24 | 23% | +0 | 6.4 | +1.5 |
+| Breaker | Backfire | 24/24 | 28% | +6 | 6.6 | +1.7 |
+| Breaker | Logic Bomb | 24/24 | 28% | +6 | 6.6 | +1.7 |
+| Breaker | rm -rf | 24/24 | 29% | +6 | 6.7 | +1.8 |
+| Breaker | Chain Reaction | 23/24 | 23% | +0 | 5.5 | +0.6 |
+| Breaker | Bit Rot | 24/24 | 24% | +1 | 6.3 | +1.3 |
+| Breaker | Zero-day | 24/24 | 10% | -12 | 4.9 | -0.0 |
+| Bastion | Suspend | 24/24 | 25% | +6 | 11.8 | -1.5 |
+| Bastion | Bulkhead | 24/24 | 26% | +8 | 11.6 | -1.7 |
+| Bastion | Blowback | 24/24 | 28% | +10 | 11.3 | -2.0 |
+| Bastion | Harden | 24/24 | 25% | +6 | 12.2 | -1.1 |
+| Bastion | Quarantine | 24/24 | 22% | +4 | 11.7 | -1.6 |
+| Bastion | Throttle | 24/24 | 21% | +3 | 11.7 | -1.6 |
+| Bastion | Circuit Breaker | 24/24 | 25% | +6 | 11.7 | -1.6 |
+| Bastion | DMZ | 23/24 | 28% | +9 | 12.0 | -1.3 |
+| Bastion | Honeypot | 24/24 | 28% | +10 | 12.1 | -1.2 |
+| Bastion | Failover | 24/24 | 27% | +9 | 11.4 | -1.9 |
+| Infiltrator | Null Route | 24/24 | 8% | +1 | 7.8 | +1.4 |
+| Infiltrator | Opening | 24/24 | 14% | +7 | 8.0 | +1.6 |
+| Infiltrator | Backstab | 24/24 | 16% | +8 | 7.6 | +1.2 |
+| Infiltrator | Side Channel | 24/24 | 9% | +1 | 6.3 | -0.2 |
+| Infiltrator | Shadow Copy | 24/24 | 8% | +0 | 7.7 | +1.3 |
+| Infiltrator | Spoof | 24/24 | 14% | +6 | 7.8 | +1.3 |
+| Infiltrator | Rotate Keys | 24/24 | 12% | +5 | 7.6 | +1.2 |
+| Infiltrator | Log Wipe | 24/24 | 11% | +4 | 7.8 | +1.4 |
+| Infiltrator | Unmask | 24/24 | 12% | +4 | 6.7 | +0.3 |
+| Infiltrator | Vanish | 24/24 | 8% | +0 | 7.6 | +1.2 |
+| Infiltrator | Rootkit Implant | 24/24 | 16% | +9 | 7.7 | +1.3 |
+| Operator | nohup | 24/24 | 9% | -1 | 4.8 | +0.8 |
+| Operator | Kill Switch | 24/24 | 10% | -0 | 5.6 | +1.6 |
+| Operator | Load Shed | 24/24 | 11% | +0 | 5.9 | +2.0 |
+| Operator | Fork | 24/24 | 13% | +2 | 5.0 | +1.0 |
+| Operator | Mesh | 24/24 | 7% | -3 | 3.7 | -0.3 |
+| Operator | Garbage Collect | 24/24 | 9% | -2 | 5.4 | +1.5 |
+| Operator | Malloc | 24/24 | 21% | +10 | 5.8 | +1.8 |
+| Operator | Crontab | 24/24 | 19% | +8 | 5.2 | +1.2 |
+| Operator | OOM Kill | 24/24 | 10% | -0 | 5.6 | +1.6 |
+| Operator | Cron Storm | 24/24 | 10% | -0 | 5.6 | +1.6 |
 
 ## Every maxed build (level 50, all ranks)
 
 | Class | Best build | Health lost · cycles | Worst build | Health lost · cycles |
 |---|---|---:|---|---:|
-| Breaker | Cluster Charge / Meltdown / Scorched Earth | 10% · 4.6 | Cluster Charge / Cascade Failure / Total Overkill | 15% · 5.4 |
-| Bastion | Tarpit / Counterflow / Uptime | 12% · 12.2 | Deep Packet Inspection / Write Protect / Kernel Panic | 16% · 12.1 |
-| Infiltrator | Fast Hands / Ghost Route / Deep Cover | 2% · 6.2 | Blind Spot / Kill Chain / Tracking Pixel | 3% · 7.1 |
-| Operator | Big Process / Hydra / Supervisor | 12% · 4.3 | Big Process / Hive / Zombie Process | 15% · 4.6 |
+| Breaker | Cluster Charge / Meltdown / Scorched Earth | 17% · 4.5 | Exposed Wiring / Cascade Failure / Scorched Earth | 24% · 4.8 |
+| Bastion | Tarpit / Counterflow / Uptime | 18% · 13.3 | Deep Packet Inspection / Write Protect / Kernel Panic | 24% · 13.3 |
+| Infiltrator | Blind Spot / Kill Chain / Deep Cover | 6% · 6.5 | Blind Spot / Ghost Route / Tracking Pixel | 9% · 6.2 |
+| Operator | Big Process / Hydra / Zombie Process | 10% · 3.5 | Long-running / Hive / Supervisor | 11% · 4.5 |
 
 ## Crews in the farm (KESSLER-FARM-00)
 
@@ -117,21 +117,21 @@ You (a Demolitionist, played by the planner) and sim crewmates, everyone in blue
 
 | Level | Crew | Foreman | Heatsink | Coldwallet | Cleared | Lowest anyone | Fights someone dips under 40% | Sysop cycles healing | Cycles |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| 18 | Warden + Sysop (4) | 20/20 | 20/20 | 20/20 | 20/20 | 34% | 48% | 45% | 17.8 |
-| 18 | no tank (4) | 12/48 | 20/20 | 12/13 | 12/20 | 8% | 93% | 52% | 10.8 |
-| 18 | no healer (4) | 20/20 | 18/37 | 18/18 | 18/20 | 12% | 85% | – | 13.6 |
-| 18 | no SIGINT (4) | 1/77 | 18/36 | 1/1 | 1/20 | 1% | 100% | 58% | 11.8 |
-| 18 | one damage (4) | 6/64 | 2/76 | – | 0/20 | 0% | 100% | 51% | 25.3 |
-| 18 | Warden + Sysop (3) | 20/24 | 20/22 | 13/45 | 13/20 | 14% | 90% | 49% | 22.3 |
-| 18 | Sysop (3) | 15/43 | 20/24 | 9/34 | 9/20 | 6% | 94% | 54% | 14.7 |
-| 18 | Warden (3) | 20/20 | 16/45 | 16/16 | 16/20 | 19% | 83% | – | 14.9 |
-| 18 | Sysop (2) | 20/22 | 20/20 | 16/35 | 16/20 | 17% | 84% | 45% | 18.3 |
-| 30 | Warden + Sysop (4) | 20/20 | 20/20 | 20/20 | 20/20 | 39% | 58% | 64% | 15.8 |
-| 30 | no tank (4) | 0/80 | 20/20 | – | 0/20 | 8% | 88% | 78% | 11.8 |
-| 30 | no healer (4) | 20/20 | 19/30 | 19/19 | 19/20 | 16% | 80% | – | 12.4 |
-| 30 | no SIGINT (4) | 0/80 | 20/21 | – | 0/20 | 5% | 98% | 78% | 10.5 |
-| 30 | one damage (4) | 16/43 | 20/27 | 0/64 | 0/20 | 8% | 93% | 70% | 22.1 |
-| 30 | Warden + Sysop (3) | 20/28 | 20/22 | 8/58 | 8/20 | 13% | 87% | 68% | 23.7 |
-| 30 | Sysop (3) | 12/44 | 20/20 | 12/12 | 12/20 | 17% | 75% | 64% | 10.1 |
-| 30 | Warden (3) | 20/20 | 17/38 | 17/17 | 17/20 | 18% | 67% | – | 13.3 |
-| 30 | Sysop (2) | 20/20 | 19/19 | 19/47 | 19/20 | 22% | 80% | 68% | 19.2 |
+| 18 | Warden + Sysop (4) | 20/20 | 20/21 | 20/20 | 20/20 | 31% | 62% | 46% | 17.5 |
+| 18 | no tank (4) | 12/46 | 20/22 | 12/12 | 12/20 | 10% | 90% | 51% | 10.9 |
+| 18 | no healer (4) | 20/20 | 16/37 | 16/16 | 16/20 | 12% | 86% | – | 13.8 |
+| 18 | no SIGINT (4) | 0/80 | 19/33 | – | 0/20 | 1% | 100% | 57% | 11.6 |
+| 18 | one damage (4) | 7/72 | 6/71 | 1/13 | 1/20 | 1% | 100% | 51% | 24.8 |
+| 18 | Warden + Sysop (3) | 20/27 | 20/24 | 16/34 | 16/20 | 17% | 86% | 49% | 22.4 |
+| 18 | Sysop (3) | 15/46 | 20/27 | 9/34 | 9/20 | 7% | 97% | 53% | 14.8 |
+| 18 | Warden (3) | 20/20 | 19/27 | 19/19 | 19/20 | 23% | 76% | – | 14.8 |
+| 18 | Sysop (2) | 20/26 | 19/20 | 17/26 | 17/20 | 20% | 78% | 45% | 18.2 |
+| 30 | Warden + Sysop (4) | 20/20 | 20/20 | 20/20 | 20/20 | 44% | 52% | 65% | 16.1 |
+| 30 | no tank (4) | 0/80 | 20/21 | – | 0/20 | 7% | 91% | 78% | 11.7 |
+| 30 | no healer (4) | 20/20 | 20/32 | 20/20 | 20/20 | 17% | 75% | – | 12.7 |
+| 30 | no SIGINT (4) | 0/80 | 20/22 | – | 0/20 | 4% | 100% | 78% | 10.5 |
+| 30 | one damage (4) | 16/48 | 19/37 | 0/60 | 0/20 | 6% | 94% | 70% | 22.6 |
+| 30 | Warden + Sysop (3) | 20/28 | 20/22 | 10/63 | 10/20 | 14% | 86% | 68% | 23.6 |
+| 30 | Sysop (3) | 10/50 | 20/20 | 10/10 | 10/20 | 15% | 73% | 64% | 9.7 |
+| 30 | Warden (3) | 20/20 | 14/49 | 14/14 | 14/20 | 15% | 77% | – | 13.4 |
+| 30 | Sysop (2) | 20/20 | 19/19 | 19/38 | 19/20 | 24% | 79% | 67% | 19.3 |

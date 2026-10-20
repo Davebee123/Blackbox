@@ -154,7 +154,11 @@ export const MATCH_OF = { demolitionist: 'swarm', overclocker: 'rules', warden: 
 // A subclass leans solo or crew (SUBS[sub].lean). The Bastions lean crew and pay for it alone in pace, not Signal:
 // their kills are slow (about twice as many cycles a fight), and they heal or shield it back, so they may sit
 // under the band's floor. Every subclass stays under its ceiling.
-export const soloBand = (sub) => (sub && SUBS[sub].cls === 'bastion' ? [0, 50] : [15, 50]);
+// Held since the damage profiles (docs/parts-plan.md "Damage profiles"), on the 24 fights of a bracket only: the
+// Phantom loses 10–12% at Lv 30 (16% over 160 fights, 17% before P1: these seeds suit its burst) and the Overclocker
+// 50% at Lv 10 (39% over 160, as before P1). level: the bracket's, for the hold; without it, the band.
+const HELD_BAND = { 'phantom 30': [8, 50], 'overclocker 10': [15, 52] };
+export const soloBand = (sub, level) => HELD_BAND[`${sub} ${level}`] || (sub && SUBS[sub].cls === 'bastion' ? [0, 50] : [15, 50]);
 // Average Signal lost (capped at 100) playing a bar over a set, each fight on `seeds` seeds.
 export function setScore(sub, b, bar, set, seeds = [1, 2]) {
   const pol = policyOf(sub), rs = [];

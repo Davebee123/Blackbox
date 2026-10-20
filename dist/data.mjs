@@ -7,7 +7,7 @@ import * as OPERATOR_SUBS from './classes/operator.data.mjs';
 const CLASS_DATA = { breaker: BREAKER_SUBS, bastion: BASTION_SUBS, infiltrator: INFILTRATOR_SUBS, operator: OPERATOR_SUBS };
 // Viruses are built from genes (genes.mjs) and written by authors (authors.mjs): docs/genome.md.
 import { GENES, partGenes } from './genes.mjs';
-import { PARTS, rollParts, along as alongParts } from './parts.mjs';
+import { PARTS, rollParts, roleOf, ratchetSpan, along as alongParts } from './parts.mjs';
 import { crewOf, buildAuthor, bossAuthor } from './authors.mjs';
 
 export const CONFIG = {
@@ -988,6 +988,59 @@ export function authorOf({ family, strain = null, boss = null }, context) {
   return crewOf(family);
 }
 
+// The profile share-out of a rolled fight (createVirus), before the level's damage scale, in nominal's units. Each
+// role's parts scale to its share (within PARTS.pressure); a role nothing here carries moves onto the basic (the ramp
+// as a Ratchet, the burst as the Scrambler's hit and Scramble on the basic's hits); what's still left goes onto
+// the other attackers. No single hit grows past PARTS.cap Pulse Nodes: past it, the part hits that size more often.
+function shareProfile(familyId, family, specs, parts, r, level) {
+  const prof = PARTS.profile[familyId];
+  if (!prof) return;
+  const pulse = family.parts.find((x) => x.id === 'pulse'), sig = family.parts.find((x) => x.special);
+  const lift = alongParts(PARTS.hit, level), [lo, hi] = PARTS.pressure, top = PARTS.cap * pulse.attack.amount;
+  const scalable = (p) => ['damage', 'encrypt'].includes(p.attack?.effect);
+  // A basic is pressure-matched to the Pulse Node (parts.test.mjs), so it counts as one Pulse Node whatever nominal reads.
+  const eff = nominal(r.basic) > 0 ? nominal(pulse) / nominal(r.basic) : 1;
+  const host = parts.find((p) => p.id === r.basic.id);
+  const rows = parts.map((p, i) => ({ p, role: roleOf(specs[i], familyId), d: nominal(p) * (p.basic ? eff : 1), k: 1, carry: 0 }));
+  // Nothing steady at all (a Buffer or an Obfuscator beside the signature and thirds that don't attack): the basic
+  // takes its family's Surge, so the steady share isn't lost and the fight isn't one attacker that a cut answers whole.
+  if (prof.steady > 0 && PARTS.steadyCarry && !host.attack && !rows.some((x) => x.role === 'steady')) { host.attack = { ...pulse.attack, due: pulse.attack.first }; Object.assign(rows.find((x) => x.p === host), { role: 'steady', d: nominal(host) }); }
+  let left = 0;
+  for (const role of ['steady', 'ramp', 'burst']) {
+    const want = (prof[role] || 0) * lift;
+    if (!want) continue;
+    const mine = rows.filter((x) => x.role === role), fixed = mine.filter((x) => !scalable(x.p)).reduce((n, x) => n + x.d, 0), d = mine.filter((x) => scalable(x.p)).reduce((n, x) => n + x.d, 0);
+    if (mine.length) {
+      if (d > 0) { const k = Math.max(lo, Math.min(hi, (want - fixed) / d)); for (const x of mine) if (scalable(x.p)) x.k = k; left += Math.max(0, want - fixed - k * d); } else left += Math.max(0, want - fixed);
+      continue;
+    }
+    // Nothing carries it: it moves onto the basic.
+    if (role === 'ramp') { const a = sig.attack, from = PARTS.ratchet.from ?? a.first, every = PARTS.ratchet.every ?? a.interval; host.ratchet = { name: 'Ratchet', amount: want / ratchetSpan(from, every), every, from }; continue; } // by default the Encryptor's clock
+    if (role === 'burst' && host.attack && sig.attack?.effect === 'scramble') {
+      // The Scrambler's hit on the basic's hits, and its Scramble on the Scrambler's clock.
+      const a = sig.attack, hits = nominal({ attack: { ...a, effect: 'damage', amount: a.hit || 0 } });
+      if (PARTS.scrambleCarry) { host.attack.scrambles = a.amount; host.attack.scrambleEvery = a.interval; }
+      rows.find((x) => x.p === host).carry = hits * lift * PARTS.burstHit;
+      continue;
+    }
+    left += want;
+  }
+  // The basic's carried hits, then what's left over, onto the attackers that can take it.
+  for (const x of rows) if (x.carry && x.d > 0) x.k = Math.min(hi, (x.k * x.d + x.carry) / x.d);
+  const pool = rows.filter((x) => scalable(x.p)), now = pool.reduce((n, x) => n + x.k * x.d, 0);
+  if (left > 0 && now > 0) for (const x of pool) x.k = Math.min(hi, (x.k * (now + left)) / now);
+  // No hit to take it (an Obfuscator beside the Scrambler, a Buffer beside the Replicator): onto the hit a special carries.
+  else if (left > 0) { const hitters = rows.filter((x) => x.p.attack?.hit); for (const x of hitters) { const n = nominal({ attack: { ...x.p.attack, effect: 'damage', amount: 1 } }); if (n) x.p.attack.hit = Math.min(Math.max(x.p.attack.hit, top), x.p.attack.hit + left / hitters.length / n); } }
+  for (const row of rows) {
+    // A hit every cycle or two (a Strobe) grows only PARTS.fast of its lift: Block takes the same off each hit, so a bigger small hit gains more than its share.
+    const k = row.k > 1 && row.p.attack?.interval <= 2 ? 1 + (row.k - 1) * PARTS.fast : row.k, p = row.p;
+    if (k === 1 || !p.attack) continue;
+    const a = p.attack;
+    if (a.effect === 'damage' && !p.taps && k > 1 && a.amount * k > top && a.interval > 2) { const want = a.amount * k, every = Math.max(2, Math.round((a.interval * top) / want)); a.amount = Math.min(top, (want * every) / a.interval); a.interval = every; a.first = a.due = Math.max(2, Math.min(a.due, every + 1)); }
+    else if (scalable(p)) a.amount = a.effect === 'damage' && k > 1 ? Math.min(Math.max(a.amount, top), a.amount * k) : a.amount * k;
+  }
+}
+
 // Build a virus from a named fixture or a seeded random variant.
 // overrides: family, strain, grade, mutation, threat, run, elite (eliteHp), boss (bossHp), genes (the rolled genes,
 // forced), author (who the fight's place says wrote it, when the virus has no author of its own; null: nobody's).
@@ -1044,24 +1097,22 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   }
   const parts = specs.map((spec) => makePart(spec, 'system', scale * g.hp * share(spec), extra(spec) + (spec.special ? 0 : g.armor)));
   if (rolled2) parts.forEach((p, i) => { if (specs[i].id === 'pulse' || specs[i].pool === 'basic') p.basic = true; }); // the Pulse Node is a basic too, in a rolled fight
+  // Its ◆, like its Integrity and its damage, are its family's (PARTS.armor): the Pulse Node's, the signature's and a
+  // third's at this level (from PARTS.gentle: no third before). What its parts lack (no signature, a bare Zip Bomb or Strobe) goes onto its armored parts,
+  // the biggest first (onto the basic when none wears any).
+  if (rolled2 && alongParts(PARTS.armor, level)) {
+    const worn = (spec) => { const w = (spec.armor || 0) + extra(spec) + (spec.special ? 0 : g.armor); return w >= 2 ? Math.round(w * CONFIG.armorScale) : w; };
+    const want = [family.parts.find((x) => x.id === 'pulse'), family.parts.find((x) => x.special), ...(level >= PARTS.gentle ? [{ armor: 1 }] : [])].reduce((n, spec) => n + worn(spec), 0);
+    let lack = Math.round((want - parts.reduce((n, p) => n + p.armor, 0)) * alongParts(PARTS.armor, level));
+    const wearers = parts.filter((p) => p.armor > 0).sort((a, b) => b.max - a.max);
+    if (!wearers.length) wearers.push(parts[0]);
+    for (let i = 0; lack > 0; i++, lack--) { const p = PARTS.armorEven ? wearers.reduce((a, b) => (b.armor / b.max < a.armor / a.max ? b : a)) : wearers[i % wearers.length]; p.armor++; p.maxArmor = (p.maxArmor || 0) + 1; } // armorEven: each ◆ onto the part with the fewest for its size
+  }
   // A doubled basic: each copy hits for PARTS.copy of one, the second a cycle behind.
   if (rolled2?.dup) for (const p of parts.filter((x) => x.id === rolled2.basic.id + '2' || x.id === rolled2.basic.id)) { if (p.attack) p.attack.amount *= PARTS.copy; if (p.copy && p.attack) { p.attack.first += 1; p.attack.due += 1; } }
-  // Its pressure, like its Integrity, is its family's (docs/parts-plan.md "The total stays the same"): a fight whose
-  // parts land less than the Pulse Node and the signature would over 20 cycles (no signature, a basic with no attack)
-  // hits that much harder, up to PARTS.pressure; one that lands more, softer. An Accumulator's Discharge never grows.
-  if (rolled2) {
-    const sig = family.parts.find((x) => x.special), core = nominal(family.parts.find((x) => x.id === 'pulse')) + nominal(sig);
-    const now = parts.reduce((n, p) => n + nominal(p), 0), [lo, hi] = PARTS.pressure;
-    const k = (now > 0 ? Math.max(lo, Math.min(hi, core / now)) : 1) * alongParts(PARTS.hit, level); // PARTS.hit: a level's own step on top
-    // No single hit grows past PARTS.cap Pulse Nodes (the spike cap): past it, the part hits that size more often.
-    const top = PARTS.cap * family.parts.find((x) => x.id === 'pulse').attack.amount;
-    if (k !== 1) for (const p of parts) if (p.attack && !(p.accum && k > 1)) {
-      const a = p.attack;
-      if (a.effect === 'damage' && !p.taps && k > 1 && a.amount * k > top && a.interval > 2) { const want = a.amount * k, every = Math.max(2, Math.round((a.interval * top) / want)); a.amount = Math.min(top, (want * every) / a.interval); a.interval = every; a.first = a.due = Math.max(2, Math.min(a.due, every + 1)); }
-      else if (['damage', 'encrypt'].includes(a.effect)) a.amount = a.effect === 'damage' && k > 1 ? Math.min(Math.max(a.amount, top), a.amount * k) : a.amount * k;
-      if (a.hit) a.hit = Math.min(Math.max(a.hit, top), a.hit * k);
-    }
-  }
+  // Its damage, like its Integrity, is its family's: the family's profile (PARTS.profile, docs/parts-plan.md "Damage
+  // profiles"), shared out by role (shareProfile).
+  if (rolled2) shareProfile(familyId, family, specs, parts, rolled2, level);
   const step = overrides.run ? (CONFIG.runEarly[level - 1] ?? 1) * (overrides.boss || overrides.elite ? 1 : runLate(level)) : 1;
   const dmgScale = mobPower(level) * (1 + CONFIG.enemyRamp * (level - 1)) * g.dmg * (overrides.run ? CONFIG.runDamage * step : 1);
   // Encryption stacks, so it skips the early-game and late steps (they would compound).
@@ -1071,6 +1122,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
   for (const p of parts) if (p.attack?.grow) p.attack.grow = Math.max(1, Math.round(p.attack.grow * dmgScale));
   for (const p of parts) if (p.attack?.windup) p.attack.windup = Math.max(1, Math.round(p.attack.windup * scale * g.hp));
   if (strain?.enrage) for (const p of parts) p.enrage = true;
+  for (const p of parts) if (p.ratchet) p.ratchet.amount = Math.max(1, Math.round((p.ratchet.amount * dmgScale) / step)); // a Ratchet stacks like encryption: the same steps skipped
   for (const p of parts) if (p.attack?.ramp) { p.attack.rampBy = Math.max(1, Math.round(p.attack.ramp * dmgScale)); p.attack.step = 0; }
   const sooner = (mutation === 'hasty' ? 1 : 0) + (threat >= THREAT_STEPS.sooner ? 1 : 0);
   for (const p of parts) if (p.attack && p.attack.due < 900) p.attack.due = Math.max(2, p.attack.due - sooner); // never on cycle 1: you always get a move first
@@ -1085,6 +1137,7 @@ export function createVirus(key = 'cryptjack', seed = 1, overrides = {}) {
     if (p.attack && ['damage', 'encrypt'].includes(p.attack.effect)) p.attack.amount = Math.max(1, Math.round(p.attack.amount * ELITE.dmg));
     if (p.attack?.hit) p.attack.hit = Math.max(1, Math.round(p.attack.hit * ELITE.dmg));
     if (p.attack?.rampBy) p.attack.rampBy = Math.max(1, Math.round(p.attack.rampBy * ELITE.dmg));
+    if (p.ratchet) p.ratchet.amount = Math.max(1, Math.round(p.ratchet.amount * ELITE.dmg));
   }
   // A boss (BOSSES): bigger and a little harder; its phases and enrage timer ride on the virus.
   const boss = BOSSES[overrides.boss] || null;

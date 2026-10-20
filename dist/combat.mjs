@@ -47,7 +47,7 @@ import { deathRecap } from './recap.mjs';
 import { situationOf } from './situations.mjs';
 import { seeGenes, winGenes, genomeCommand, virusGenes, bylined, logFight, logWin, dexOf } from './genome.mjs';
 import { researchOf, gainResearch, knows as knowsAt, masteryDmg, masteryDrop, TIER, researchAt } from './research.mjs';
-import { PARTS } from './parts.mjs';
+import { PARTS, heatOf } from './parts.mjs';
 import { crewOf, factionAuthor, AUTHORS } from './authors.mjs';
 import { fightNet, noteKill, nativeRoll, biasCode, richMult, networkRestore, networkCommand, lairUniques, lairFell, lairBoss, mine, netOf, isNative, named, nameOf, nameNative, openLair } from './network.mjs';
 
@@ -2373,15 +2373,16 @@ export function command(s, input, now = hooks.now?.() ?? Date.now()) {
       s.degraded = null;
       emit(s, 'info', 'Developer reboot: Integrity and test credits restored.');
     }
-  } else if (/^developer parts( [a-z]+( [\d.]+){1,2})?$/.test(text)) { // the parts plan's numbers (parts.mjs PARTS): show them and the mix, or set one
-    const [, , k, a, b] = text.split(' '), key = Object.keys(PARTS).find((x) => x.toLowerCase() === k);
+  } else if (/^developer parts( [a-z]+( [\d.]+){1,2}| profile [a-z]+ (steady|ramp|burst) [\d.]+)?$/.test(text)) { // the parts plan's numbers (parts.mjs PARTS): show them and the mix, or set one
+    const [, , k, a, b, c] = text.split(' '), key = Object.keys(PARTS).find((x) => x.toLowerCase() === k);
     if (k && !key) warn(s, `No parts number ${k}. Try: ${Object.keys(PARTS).filter((x) => x !== 'native' && x !== 'count').join(', ')}.`);
-    else if (key === 'weight' || key === 'native') warn(s, `${key} is set by name in parts.mjs.`);
+    else if (key === 'profile') { if (!PARTS.profile[a]) warn(s, `No profile for ${a}. Try: ${Object.keys(PARTS.profile).join(', ')}.`); else { PARTS.profile[a][b] = Number(c); emit(s, 'info', `Developer: the ${a} profile's ${b} is ${c}.`); } } // developer parts profile <family> <steady|ramp|burst> <value>
+    else if (['weight', 'native', 'roles', 'ratchet'].includes(key)) warn(s, `${key} is set by name in parts.mjs.`);
     else if (key === 'pressure') { if (b == null) warn(s, 'pressure is a range: developer parts pressure <low> <high>.'); else { PARTS.pressure = [Number(a), Number(b)]; emit(s, 'info', `Developer: parts pressure is ${a} to ${b}.`); } }
     else if (key && Array.isArray(PARTS[key])) { if (b == null) warn(s, `${key} is a table: developer parts ${k} <level> <value>.`); else { const L = Number(a), row = PARTS[key].find(([x]) => x === L); if (row) row[1] = Number(b); else PARTS[key] = [...PARTS[key], [L, Number(b)]].sort((x, y) => x[0] - y[0]); emit(s, 'info', `Developer: parts ${key} from level ${L} is ${b}.`); } }
     else if (key) { PARTS[key] = key === 'on' ? a !== '0' : Number(a); emit(s, 'info', `Developer: parts ${key} is ${PARTS[key]}.`); }
     const L = hackerLevel(s), m = partsMix(L);
-    const nums = Object.entries(PARTS).filter(([x]) => x !== 'native').map(([x, v]) => `${x} ${v && typeof v === 'object' && !Array.isArray(v) ? Object.entries(v).map(([g, w]) => `${g}:${w}`).join(' ') : Array.isArray(v) && !Array.isArray(v[0]) ? v.join(' to ') : Array.isArray(v) ? v.map(([l, y]) => `${l}:${Array.isArray(y) ? y.map((z) => Math.round(z * 100)).join('/') : Math.round(y * 1000) / 1000}`).join(' ') : v}`).join(' · ');
+    const nums = Object.entries(PARTS).filter(([x]) => x !== 'native').map(([x, v]) => `${x} ${v && typeof v === 'object' && !Array.isArray(v) ? Object.entries(v).map(([g, w]) => `${g}:${w && typeof w === 'object' ? Object.values(w).join('/') : w}`).join(' ') : Array.isArray(v) && !Array.isArray(v[0]) ? v.join(' to ') : Array.isArray(v) ? v.map(([l, y]) => `${l}:${Array.isArray(y) ? y.map((z) => Math.round(z * 100)).join('/') : Math.round(y * 1000) / 1000}`).join(' ') : v}`).join(' · ');
     emit(s, 'info', `Parts: ${nums}.`);
     emit(s, 'info', `Mix at level ${L} (${m.n} fights): ${m.kinds} kinds, signature in ${Math.round(m.sig * 100)}%, ${m.counts.map((n, i) => `${i + 2} parts ${Math.round((n / m.n) * 100)}%`).join(', ')}, a doubled basic in ${Math.round(m.dup * 100)}%. ${m.top}.`);
   } else if (/^developer bossrule [abc]$/.test(text)) { // the boss rule for every boss fight (interrupt.mjs, docs/servers.md 3.4)
@@ -3185,6 +3186,7 @@ function useAbility(s, intent, auto = false) {
     emit(s, 'status', was ? `${a.name} refreshed on the ${target.name}: ${b.damage} every cycle for ${b.left} cycles.` : `${target.name} is burning for ${tick}${a.grow ? ', growing,' : ''} every cycle${ticks > 20 ? ' until it breaks' : ` for ${ticks} cycles`}.`, { target: target.id, mark: 'burn', ability: id });
     if (id === 'inject' && e.surprise) for (let k = 0; k < CONFIG.surprise.injectNow && alive(target); k++) hit(s, target, b.damage, { by: 'Inject (Surprise)', dot: true, synced: b.synced });
   }
+  if (id === 'purge') coolRatchet(s);
   if (id === 'purge' && (e.encrypt || e.burst || e.corrupt)) { const what = e.corrupt && !(e.encrypt || e.burst) ? 'corruption' : 'encryption'; e.encrypt = 0; e.burst = null; e.corrupt = null; emit(s, 'decrypted', `Purge clears your ${what}.`); }
   if (id === 'purge' && e.virus.raid) cleanse(s, ['dots', 'stress']); // a crew boss's damage over time and Thermal Stress
   if (id === 'sigint') { if (e.virus.raid) sigint(s); else tellSigint(s); } // a crew boss's cast, or a solo one (tells.mjs)
@@ -3348,6 +3350,7 @@ function rollback(s) {
   e.undo = null;
   if (u?.type === 'damage') heal(s, u.amount, 'Rolled back');
   if (u?.type === 'replicate') { const f = part(s, u.part); if (alive(f)) { f.integrity = 0; emit(s, 'heal', `Rolled back. ${f.name} is deleted.`, { target: f.id }); } }
+  coolRatchet(s);
   if (e.encrypt || e.burst || e.corrupt) { e.encrypt = 0; e.burst = null; e.corrupt = null; emit(s, 'decrypted', 'Rolled back. Your encryption is wiped.'); }
 }
 
@@ -3357,6 +3360,11 @@ export const blocked = (s, amount) => (blockOf(s) ? Math.max(Math.ceil(amount / 
 
 // Special attacks: the ones Lockdown shuts off.
 const SPECIALS = ['encrypt', 'scramble', 'replicate'];
+// Purge or Rollback: a Ratchet's stack starts over, its next step a full step away (as an Encryptor's next Encrypt).
+function coolRatchet(s) {
+  const e = s.encounter;
+  for (const p of livingParts(s)) if (heatOf(p, e.cycle + 1)) { p.ratchet.from = e.cycle + p.ratchet.every - 1; emit(s, 'decrypted', `${p.name}'s ${p.ratchet.name} starts over.`, { target: p.id }); }
+}
 
 // Damage from an attack or from encryption: your shield soaks it first.
 // dot: damage over time on you (encryption, a Full Disk burst, Corrupted, an Echo's repeat).
@@ -3611,6 +3619,12 @@ function landAttack(s, p) {
     p.encrypted = true;
     emit(s, 'encrypt', `${atk.name} lands, and your ${e.mode === 'run' ? 'Signal' : 'server'} is encrypted. You take ${e.encrypt} damage every cycle until you break the ${p.name}.`, { source: p.id, amount: add, total: e.encrypt });
   }
+  // A basic carrying its Ghostroot's burst (parts.mjs PARTS.profile): its hit Scrambles you too, on the Scrambler's clock.
+  if (atk.scrambles && atk.effect === 'damage' && !(e.scrambleUntil > e.cycle) && e.cycle - (atk.scrambledAt ?? -99) >= (atk.scrambleEvery || 1)) {
+    atk.scrambledAt = e.cycle;
+    if (e.buffs?.honeypot >= e.cycle) { delete e.buffs.honeypot; emit(s, 'blocked', `${atk.name} goes after your honeypot. You aren't Scrambled.`, { source: p.id, ability: 'honeypot' }); }
+    else { const n = Math.max(1, Math.round(atk.scrambles) - (fxHas(s, 'blind-short') ? 1 : 0)); e.scrambleUntil = e.cycle + n; emit(s, 'blind', `${atk.name} Scrambles you for ${n} ${n === 1 ? 'cycle' : 'cycles'}. Each of your attacks has a ${Math.round(CONFIG.scramble.chance * 100)}% chance to hit you instead.`, { source: p.id }); }
+  }
   if (atk.effect === 'scramble' && e.buffs?.honeypot >= e.cycle) {
     delete e.buffs.honeypot; // Honeypot (Warden): the scramble goes after the honeypot
     emit(s, 'blocked', `${atk.name} goes after your honeypot. You aren't Scrambled.`, { source: p.id, ability: 'honeypot' });
@@ -3854,6 +3868,17 @@ function cycleStart(s) {
       finish(s, 'crashed');
       return true;
     }
+  }
+
+  // A Ratchet (parts.mjs PARTS.profile: a rolled fight's ramp with no Encryptor to carry it): the basic's own stack,
+  // a step more every few cycles it lives, gone when it breaks.
+  for (const p of livingParts(s)) {
+    const heat = heatOf(p, e.cycle);
+    if (!heat) continue;
+    const dealt = takeDamage(s, heat, p.id, p.ratchet.name, { dot: true });
+    e.metrics.encrypted += dealt;
+    if (dealt) emit(s, 'encrypted', `${p.ratchet.name} (${p.name}): −${dealt}. ${e.mode === 'run' ? 'Signal' : 'Server'} ${defender(s).integrity}/${defender(s).max}.`, { source: p.id, amount: dealt, ratchet: true });
+    if (defender(s).integrity <= 0) { finish(s, 'crashed'); return true; }
   }
 
   // Full Disk (a tell, tells.mjs): a burst of encryption on top of the stack, for a few cycles.

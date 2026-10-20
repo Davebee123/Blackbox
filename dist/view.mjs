@@ -47,6 +47,7 @@ import { SETS, setOf, setCard, activeSets, piecesOf, greenOf, sourceText, seesRa
 import { tellTip, gearLive, cycleGear, gearOnParts, partTip, partCue, partRead, partLinks, lockOf, wardOf, GEAR_ICON } from './fightread.mjs';
 import { cutsNow, crossBy, BOSS_RULES, TICKS } from './interrupt.mjs';
 import { bodyTags } from './families.mjs';
+import { heatOf } from './parts.mjs';
 import { wallRating, wallBands, ratioOf, outcome, chipRate, grindRate, fighting, degradedLeft, fmtLeft, bountyOf, tellOf, labelOf, verdictOf, wallLevelOf, strength, streakOf, streakMult, STREAK, SCOUT, daemonChance, SCOUTED, KINDS as INV_KINDS, scoutedLine } from './invasion.mjs';
 import { RULES, LOOT, SLOTS, BASES, STATS, GROUPS, RARITIES, RARITY_ORDER, ZERO_DAYS, STASH_CAP, PROTOCOL_SLOTS, PROTOCOL_STATS, SERVICES, MATERIALS, statLine, itemLabel, fmtStat, sideStats, BLUEPRINTS, PROTOCOL_NAMES, recipeStat, SLOT_KINDS, groupOf, codeOf, uniqueItem, seeded, IMPLICITS } from './gear.mjs';
 import { raidIntents, raidMarks, raidOf, attackTarget } from './raid.mjs';
@@ -495,6 +496,7 @@ function partTags(s, p) {
   if (p.enrage && p.integrity > 0 && p.integrity < p.max / 2) tags.push('<span class="tag hot" title="Below half: its attacks deal 30% more damage">enraged</span>');
   // A Keyring's re-arm, a Mutex's lock and its relock: the tether between the rows says them (boardMarkup tethers).
   if (p.attack?.grow && p.integrity > 0) tags.push(`<span class="tag hot" title="Its Trace-back deals more damage every cycle the fight lasts">+${p.attack.bonus || 0}</span>`);
+  if (p.ratchet && p.integrity > 0) { const now = heatOf(p, e.cycle); tags.push(`<span class="tag hot esc" title="${esc(`${p.ratchet.name}: from cycle ${p.ratchet.from + 1} it deals damage to you every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles it lives. Break it to end it; Purge or Rollback starts it over.`)}">▲ ratchet${now ? ` ${now}` : ''}</span>`); }
   if (p.echo && p.integrity > 0) tags.push('<span class="tag hot" title="While this lives, every hit you take repeats next cycle at half damage">echoing</span>');
   const ap = appraisedOf(s); // Kestrel's Appraisal (faction-gear.mjs): its next hit, and more damage to it until it breaks
   if (ap?.part === p.id && p.integrity > 0) tags.push(`<span class="tag you appraised" title="${esc(`${ap.name}: you deal ${ap.value}% more to it until it breaks.${p.attack ? ` Its next hit: ${blocked(s, attackAmount(p))}.` : ''}`)}">${glyph('f-kestrel')}${p.attack ? `−${blocked(s, attackAmount(p))}` : `+${ap.value}%`}</span>`);
@@ -536,6 +538,7 @@ function youStanding(s) {
   const e = s.encounter, out = [];
   const add = (name, kind, tip) => out.push({ name, kind, tip });
   if (e.encrypt > 0) add('Encrypted', 'hot', `−${e.encrypt} every cycle until the Encryptor breaks. Purge, Scrub or Rollback wipes it, and a ◆ stops the next Encrypt.`);
+  for (const p of e.virus.parts) { const heat = alive(p) ? heatOf(p, e.cycle) : 0; if (heat) add('Ratcheted', 'hot', `−${heat} every cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles, until you break the ${p.name}. Purge or Rollback starts it over.`); }
   if (rootkitReady(s)) add('Rootkit', 'you', 'Your first hit this fight ignores armor.');
   if (slottedDaemons(s).includes('snapshot') && !e.once?.['dmn-snapshot']) add('Snapshot', 'you', daemonText('snapshot', daemonLevel(s, 'snapshot')));
   if (e.chits > 0) add('Armor', 'you', `${'◆'.repeat(e.chits)} The next attack on you does nothing, however big.`);
@@ -709,20 +712,23 @@ export function boardMarkup(s, selected, preview = null) {
       // later cycles (it keeps going; hover it and it opens up to say so), so the one-off events in those cells stay readable.
       const crypting = e.encrypt > 0 && p.attack?.effect === 'encrypt';
       const cryptChip = !crypting ? '' : c === 0 ? `<div class="intent crypt" title="Encrypted: you lose ${e.encrypt} this cycle. Break ${esc(p.name)} to stop it.">−${e.encrypt} <small>encrypted</small></div>` : `<div class="crypt-line" data-label="−${e.encrypt} encrypted"></div>`;
+      // A Ratchet (parts.mjs): the part's own stack, a step more every few cycles it lives; each column shows that cycle's.
+      const heat = alive(p) ? heatOf(p, e.cycle + c) : 0;
+      const escChip = !heat ? '' : c === 0 ? `<div class="intent crypt esc" title="${esc(`${p.ratchet.name}: you lose ${heat} this cycle, ${p.ratchet.amount} more every ${p.ratchet.every} cycles ${p.name} lives. Break it to end it.`)}">−${heat} <small>ratchet</small></div>` : `<div class="crypt-line esc" data-label="−${heat} ratchet"></div>`;
       const patchChip = patch?.col === c ? `<div class="intent patch" data-k="patch:${esc(p.id)}@${e.cycle + c}" title="${esc(p.name)} patches one ◆ back at the end of ${c === 0 ? 'this cycle' : `cycle ${e.cycle + c}`}, unless you break it first">◆ patch</div>` : '';
       // A tell shows whatever the part hides (tells.mjs): nothing big lands unannounced.
       const told = mine.filter((i) => i.tell && i.col === c).map((i) => tellChip(s, i, c, `tell:${p.id}:${i.id}@${e.cycle + c}`, crew.length && i.effect === 'damage' ? sink || 'all' : null)).join('')
         + mine.filter((i) => i.tell && i.winFrom != null && c >= i.winFrom && c < i.col).map((i) => tellSpan(s, i, c)).join(''); // a window longer than a cycle (tells.mjs)
-      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${told || '<div class="intent hidden">?</div>'}${c === 0 ? cutChip(s, p) : ''}${patchChip}</div>`;
+      if (timersHidden(s, p) && p.attack) return `<div class="bcell">${cryptChip}${escChip}${told || '<div class="intent hidden">?</div>'}${c === 0 ? cutChip(s, p) : ''}${patchChip}</div>`;
       const hit = mine.find((i) => i.col === c && !i.tell);
       // With a crew, a damage attack lands on everyone, or on whoever is drawing fire; a crew boss's part with a
       // target rule (raid.mjs) on the one player it's aiming at.
       const aimed = crew.length && hit?.effect === 'damage' && !sink && p.attack.target ? attackTarget(s, p) : null;
       const to = crew.length && hit?.effect === 'damage' ? sink || (aimed ? aimed.who || 'you' : 'all') : null;
-      return `<div class="bcell">${cryptChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${c === 0 ? cutChip(s, p) : ''}${patchChip}</div>`;
+      return `<div class="bcell">${cryptChip}${escChip}${told}${hit && !(p.attack ? false : hit.hidden) ? attackChip(hit, c, `${p.id}@${e.cycle + c}`, to) : ''}${c === 0 ? cutChip(s, p) : ''}${patchChip}</div>`;
     }).join('');
     // A part with no attack of its own (a Mutex, a Mimic) still shows its row's cells when a tell or a beat sits there.
-    const showCells = p.attack || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
+    const showCells = p.attack || p.ratchet || mine.some((i) => i.tell || !i.hidden || i.effect === 'fuse');
     const spike = p.armor > 0 ? 'spike breaks a ◆' : `spike deals ${previewDamage(s, 'spike', p)}`;
     const marks = partMarks(s, p);
     // A redraw mid-dissolve picks the fade up where it was (a negative delay), not from the start.

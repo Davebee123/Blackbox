@@ -4,8 +4,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fresh, selectEncounter, command, resolveCycle, active, part, livingParts, intents, timersHidden, partsMix, landingsOf, blocked, attackAmount } from './dist/combat.mjs';
-import { FAMILIES, CONFIG, createVirus, SERVER } from './dist/data.mjs';
-import { PARTS, signatureShare, rollParts, basicsOf } from './dist/parts.mjs';
+import { FAMILIES, CONFIG, createVirus, SERVER, nominal } from './dist/data.mjs';
+import { boardMarkup } from './dist/view.mjs';
+import { PARTS, signatureShare, rollParts, basicsOf, heatOf, along } from './dist/parts.mjs';
 import { GENES } from './dist/genes.mjs';
 import { findSource, tellsOf } from './dist/tells.mjs';
 import { player } from './genesim.mjs';
@@ -349,6 +350,70 @@ test('the new thirds: genes with a cost and a level inside their floor\'s band, 
   assert.ok(GENES.idletimer.sig && FAMILIES.ransomware.parts.find((p) => p.id === 'lockbox').sig);
 });
 
+// ---------- damage profiles ----------
+// A fight's damage is its family's profile, shared out by role (parts.mjs PARTS.profile): a role nothing rolled carries
+// moves onto the basic, so every fight keeps its family's shape whatever rolled.
+const unsigned = (family, level) => { for (let seed = 1; seed < 400; seed++) { const s = fresh(); s.metAll = true; selectEncounter(s, 'random', seed, { level, family, mutation: null, quiet: true }); if (s.encounter.virus.noSignature) { command(s, 'engage'); s.encounter.soft = 1; return s; } } throw new Error(`no ${family} fight without its signature at ${level}`); };
+test('damage profiles: every Ransomware fight carries its ramp (the Encryptor, or a Ratchet on the basic), every Ghostroot fight its burst (the Scrambler, or its Scramble on the basic)', () => {
+  for (const L of [5, 10, 30]) for (let seed = 1; seed <= 300; seed++) {
+    const v = createVirus('random', seed, { threat: SERVER.threat(L), run: true });
+    const sig = v.parts.some((p) => p.special), basic = v.parts.find((p) => p.basic);
+    if (v.family === 'ransomware') assert.equal(v.parts.filter((p) => p.ratchet).length, sig ? 0 : 1, `${v.name} at ${L}`);
+    if (v.family === 'ransomware' && !sig) assert.equal(basic.ratchet ? 1 : 0, 1, `${v.name}: the Ratchet is on the basic`);
+    if (v.family === 'ghostroot' && !sig) assert.ok(basic.attack?.scrambles, `${v.name} at ${L}: its basic Scrambles`);
+    if (v.family === 'worm' && !sig) assert.ok(!v.parts.some((p) => p.ratchet || p.attack?.scrambles), `${v.name}: a Worm is steady`);
+  }
+  for (const [f, prof] of Object.entries(PARTS.profile)) assert.ok(FAMILIES[f] && prof.steady > 0, f);
+});
+test('damage profiles: a fight without its signature deals what one with it does, within 15% over 20 cycles (nominal, the Ratchet counted), and wears its family\'s ◆', () => {
+  // nominal's count at the fight's level: a fragment's gnaw and a Scramble's cycles scale with the virus's damage too.
+  const at = (v, p) => {
+    const a = p.attack;
+    if (!a) return 0;
+    if (a.effect === 'replicate' || a.effect === 'scramble') return nominal({ attack: { ...a, effect: 'damage', amount: (a.hit || 0) + (a.effect === 'replicate' ? CONFIG.fragmentDamage * 4 : a.amount * 3) * v.power } });
+    return nominal(p) + (a.scrambles ? a.scrambles * 3 * v.power * Math.ceil((21 - (a.first ?? a.due)) / Math.max(a.interval, a.scrambleEvery)) : 0);
+  };
+  const total = (v) => v.parts.reduce((n, p) => { let r = 0; for (let c = 1; c <= 20; c++) r += heatOf(p, c); return n + at(v, p) + r; }, 0);
+  for (const L of [10, 30]) for (const f of Object.keys(FAMILIES)) {
+    const by = { sig: [], none: [] }, armor = { sig: [], none: [] };
+    for (let seed = 1; seed <= 300; seed++) {
+      const v = createVirus('random', seed, { family: f, threat: SERVER.threat(L), run: true, mutation: null });
+      const k = v.noSignature ? 'none' : 'sig';
+      by[k].push(total(v)); armor[k].push(v.parts.reduce((n, p) => n + p.armor, 0));
+    }
+    const avg = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    assert.ok(Math.abs(avg(by.none) / avg(by.sig) - 1) <= 0.15, `${f} at ${L}: ${avg(by.none).toFixed(0)} without, ${avg(by.sig).toFixed(0)} with`);
+    if (along(PARTS.armor, L) === 1) assert.ok(avg(armor.none) >= avg(armor.sig) - 1, `${f} at ${L}: ◆ ${avg(armor.none).toFixed(1)} without, ${avg(armor.sig).toFixed(1)} with`);
+  }
+});
+test('the Ratchet: the basic\'s own stack, a step on the Encryptor\'s clock while it lives; Purge starts it over, breaking it ends it; the board shows it', () => {
+  const s = unsigned('ransomware', 10), p = s.encounter.virus.parts.find((x) => x.ratchet);
+  assert.ok(p?.basic, 'on the basic');
+  for (const x of livingParts(s)) if (x.attack) x.attack.due = 99;
+  s.server.integrity = s.server.max = 9999;
+  const lost = [];
+  for (let c = 0; c < 11; c++) { const hp = s.server.integrity; step(s); lost.push(hp - s.server.integrity); }
+  const a = p.ratchet.amount;
+  assert.ok(lost[2] === 0 && lost[4] > 0, `it starts after cycle ${p.ratchet.from}: ${lost.join(' ')}`);
+  assert.ok(lost[10] > lost[5], `it grows: ${lost.join(' ')}`);
+  assert.equal(heatOf(p, s.encounter.cycle + p.ratchet.every) - heatOf(p, s.encounter.cycle), a, 'a step every interval');
+  const html = boardMarkup(s);
+  assert.ok(/intent crypt esc/.test(html) && /ratchet/.test(html), 'its chip and tag on the board');
+  p.ratchet.from = 0; // (Purge is someone's key: start it over by hand, as coolRatchet does)
+  assert.ok(heatOf(p, s.encounter.cycle) > 0);
+  p.integrity = 0;
+  const hp = s.server.integrity; step(s);
+  assert.equal(hp - s.server.integrity, 0, 'broken: the Ratchet is gone');
+});
+test('a Ghostroot basic carrying the burst: its hits Scramble you, at most once on the Scrambler\'s clock', () => {
+  const s = unsigned('ghostroot', 10), p = s.encounter.virus.parts.find((x) => x.basic);
+  assert.ok(p.attack.scrambles >= 1 && p.attack.scrambleEvery >= 1);
+  s.server.integrity = s.server.max = 9999;
+  let scrambled = 0;
+  for (let c = 0; c < 8; c++) { const ev = step(s); if (ev.some((e) => e.type === 'blind' && e.source === p.id)) scrambled++; }
+  assert.ok(scrambled >= 1 && scrambled <= Math.ceil(8 / p.attack.scrambleEvery), `${scrambled} Scrambles in 8 cycles`);
+});
+
 test('every parts number is one named constant, and developer parts shows and sets them', () => {
   for (const k of ['signature', 'count', 'duplicate', 'copy', 'floor', 'native', 'elite', 'bulk', 'pressure', 'thirdMax']) assert.ok(k in PARTS, k);
   const s = fresh(), was = structuredClone(PARTS.signature);
@@ -356,7 +421,9 @@ test('every parts number is one named constant, and developer parts shows and se
     const ev = command(s, 'developer parts signature 10 0.5');
     assert.ok(ev.some((e) => /Mix at level/.test(e.message)));
     assert.equal(signatureShare(10), 0.5);
-  } finally { PARTS.signature = was; }
+    command(s, 'developer parts profile ransomware ramp 160');
+    assert.equal(PARTS.profile.ransomware.ramp, 160, 'a profile is set by family and shape');
+  } finally { PARTS.signature = was; PARTS.profile.ransomware.ramp = 152; }
   const r = rollParts({ family: 'worm', body: FAMILIES.worm, level: 1, rand: () => 0.1 });
   assert.equal(r.basic.id, 'pulse');
 });

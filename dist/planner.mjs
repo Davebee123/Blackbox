@@ -7,6 +7,7 @@ import { raidMove, raidFocus, noTaunt } from './raid.mjs';
 import { tellMove, tellFocus, answers, QUIET, chargeNow, echoesNow } from './tells.mjs';
 // genesim.mjs: a gene the sim ignores (genes.mjs GENE_BOTS) is played as if it weren't there, one gene at a time.
 import { ignores } from './genes.mjs';
+import { heatOf } from './parts.mjs';
 import { interruptMove, saveTick } from './interrupt.mjs';
 
 // Against a crew boss only the tank taunts (a taunt pulls its busters onto you): raid.mjs noTaunt.
@@ -25,7 +26,7 @@ export const soonest = (s) => attackers(s).sort((a, b) => dueOf(s, a) - dueOf(s,
 // How a player who reads the codex picks a target: the most threat per point of Integrity left
 // (attack size over interval; encryption stacks, fragments multiply, a heal undoes work), armor
 // counted as Integrity. Hidden timers don't matter: the codex says what each part does.
-const threatOf = (p) => { const a = p.attack; if (!a) return 0; const amt = a.effect === 'damage' ? a.amount : a.effect === 'encrypt' ? a.amount * 3 + (a.hit || 0) : a.effect === 'replicate' ? 6 + (a.hit || 0) : a.effect === 'heal' ? 8 : a.hit || 0; return amt / Math.max(1, Math.min(a.interval || 4, 6)); };
+const threatOf = (p) => { const a = p.attack; if (!a) return 0; const amt = a.effect === 'damage' ? a.amount : a.effect === 'encrypt' ? a.amount * 3 + (a.hit || 0) : a.effect === 'replicate' ? 6 + (a.hit || 0) : a.effect === 'heal' ? 8 : a.hit || 0; return amt / Math.max(1, Math.min(a.interval || 4, 6)) + (p.ratchet ? (p.ratchet.amount * 3) / p.ratchet.every : 0); }; // a Ratchet stacks like an Encrypt
 // Burns and helpers already on a part count for it: switching away wastes them.
 const invested = (s, p) => 1 + 0.6 * s.encounter.burns.filter((b) => b.target === p.id).length + 0.3 * s.encounter.helpers.filter((h) => h.target === p.id).length;
 // Parts that change the fight (data.mjs FAMILIES): a Tripwire sets the others off when it breaks, so it goes last;
@@ -129,7 +130,7 @@ const killing = (s, plan, p) => { const id = plan.split(' ')[0]; return !p.armor
 function play(s) {
   const now = landingNow(s);
   // Encrypted: the Encryptor holds the key, so it's the next threat whatever its timer says.
-  const key = (s.encounter.encrypt > 0 && !ignores('encrypt') && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || keyringNow(s) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring on a re-arm cycle; a Replicator that keeps spawning
+  const key = (s.encounter.encrypt > 0 && !ignores('encrypt') && livingParts(s).find((p) => p.attack?.effect === 'encrypt')) || (!ignores('encrypt') && livingParts(s).find((p) => heatOf(p, s.encounter.cycle) > 0)) || keyringNow(s) || (livingParts(s).some((p) => p.kind === 'fragment') && livingParts(s).find((p) => p.attack?.effect === 'replicate')); // a Bouncer's Keyring on a re-arm cycle; a Replicator that keeps spawning
   // Burn classes (Infiltrator) get the most out of big parts that outlive their burns; the rest go for the biggest threat.
   // A crew boss (raid.mjs): its mechanics first (interrupt, cleanse, dodge), then its priority add or workers.
   const raid = raidMove(s);
@@ -213,7 +214,7 @@ function play(s) {
     if (answer) return answer;
   }
   // 2b. Heavy encryption: purge it. Low health: patch, or hit back with what you're missing.
-  if (s.encounter.encrypt >= 6 && ok(s, 'purge ' + t.id)) return 'purge ' + t.id;
+  if ((s.encounter.encrypt || 0) + livingParts(s).reduce((n, p) => n + heatOf(p, s.encounter.cycle), 0) >= 6 && ok(s, 'purge ' + t.id)) return 'purge ' + t.id;
   if (d.integrity < d.max * 0.5) { const h = first(s, [d.integrity < d.max * 0.3 && 'patch', 'failover', 'reclaim ' + t.id]); if (h) return h; } // a healer keeps Patch for under 30% (bastion.mjs HEAL.solo)
   // A healer in a crew: patch whoever else is lowest, under half.
   const hurt = (hooks.crewAllies?.(s) || []).map((x) => ({ who: x.who, d: defender(x.st) })).filter((x) => x.d.integrity < x.d.max * 0.5).sort((a, b) => a.d.integrity / a.d.max - b.d.integrity / b.d.max)[0];
