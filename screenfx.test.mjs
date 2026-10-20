@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { SFX, PALETTES, TOUCHES, createScreenFx, screenState, screenFxCommand, levelOf, effectOn, floorOf, lowOf, lampsOf } from './dist/screenfx.mjs';
+import { SFX, PALETTES, TOUCHES, createScreenFx, screenState, screenFxCommand, levelOf, effectOn, floorOf, lowOf, warnOf, lampsOf, varsOf, boardFxOf, migrateEffects } from './dist/screenfx.mjs';
 import { fresh, restore } from './dist/combat.mjs';
 import { FLOORS } from './dist/data.mjs';
 
@@ -34,7 +34,7 @@ test('every screen effect rule styles only the backdrop, the bezel, the lamps or
   const all = rules(css);
   assert.ok(all.length > 30, 'the file parses into rules');
   // The subject (the last compound of each selector) must be one of these; the rest of the selector only says when.
-  const ok = [/^#fx-back\b/, /^\.fx-(tex|static|vig|tear)$/, /^#crt-bezel\.low(::after)?$/, /^\.lamp\b/, /^#virus-canvas\.sfx-tear$/];
+  const ok = [/^#fx-back\b/, /^\.fx-(tex|static|vig|tear)$/, /^#crt-bezel\.(low|warn)(::after)?$/, /^\.lamp\b/, /^#virus-canvas\.sfx-tear$/];
   // The three exceptions, each limited to what it may set: :root's own variables, the map's empty field (its
   // background, so the floor shows through it), the screen's own background and glow, and the window's z-index.
   const limited = [
@@ -187,17 +187,71 @@ const lum = (h) => { const c = rgb(h).map((v) => (v <= 0.03928 ? v / 12.92 : ((v
 const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 const mix = (a, b, t) => '#' + rgb(a).map((v, i) => Math.round((v * (1 - t) + rgb(b)[i] * t) * 255).toString(16).padStart(2, '0')).join('');
 
-test('eight floors, eight palettes, every text tint readable on every surface', () => {
+test('eight floors, eight palettes, every text tint readable on every surface, at every strength', () => {
   assert.deepEqual(PALETTES.map((p) => p.name), FLOORS.map((f) => f.name));
   assert.equal(new Set(PALETTES.map((p) => p.texture)).size, 8, 'a texture each');
   const JOBS = { hot: '#ff5b3d', next: '#ffd85c', you: '#7fd1c7', daemon: '#c3a6ff', steel: '#86b6c6' };
-  for (const p of PALETTES) {
-    const v = p.vars;
+  for (const p of PALETTES) for (const level of SFX.levels.slice(1)) {
+    const v = varsOf(p, level);
+    if (level === 'subtle') assert.deepEqual(v, p.vars, 'subtle keeps the palette\'s own panels');
+    else assert.notEqual(v['--panel'], p.vars['--panel'], `${p.name}: the floor tints the panels at ${level}`);
     // The panels, the bg, and the bg with the floor's texture over it (its accent at 10%, more than any layer shows).
     const backs = [v['--bg'], v['--panel'], v['--panel-2'], mix(v['--bg'], v['--amber'], 0.1)];
-    for (const tint of ['--text', '--bright', '--muted', '--dim', '--amber']) for (const b of backs) assert.ok(contrast(v[tint], b) >= 4.5, `${p.name}: ${tint} on ${b} is ${contrast(v[tint], b).toFixed(2)}`);
+    for (const tint of ['--text', '--bright', '--muted', '--dim', '--amber']) for (const b of backs) assert.ok(contrast(v[tint], b) >= 4.5, `${p.name} (${level}): ${tint} on ${b} is ${contrast(v[tint], b).toFixed(2)}`);
     for (const b of backs) assert.ok(contrast(v['--text'], b) >= 7, `${p.name}: body text`);
     // The job colours stay the same colours and stay readable.
     for (const [job, c] of Object.entries(JOBS)) for (const b of backs) assert.ok(contrast(c, b) >= 4.5, `${p.name}: ${job} on ${b}`);
   }
+});
+
+test('one setting: the old Effects setting folds into Screen effects (saves migrate, the command is an alias)', () => {
+  const s = fresh();
+  assert.equal(boardFxOf(s), 'calm', 'medium: calm on the board');
+  for (const [old, level, board] of [['full', 'bold', 'full'], ['minimal', 'off', 'minimal'], ['calm', 'medium', 'calm']]) {
+    const t = fresh();
+    t.settings.effects = old;
+    assert.equal(levelOf(t), level, `an unmigrated ${old} reads as ${level}`);
+    assert.equal(migrateEffects(t), true);
+    assert.equal(t.settings.screenFx, level);
+    assert.equal('effects' in t.settings, false, 'the old setting is gone');
+    assert.equal(boardFxOf(t), board);
+    assert.equal(migrateEffects(t), false, 'once');
+  }
+  const kept = fresh();
+  Object.assign(kept.settings, { effects: 'full', screenFx: 'subtle' });
+  migrateEffects(kept);
+  assert.equal(kept.settings.screenFx, 'subtle', 'a Screen effects level already chosen wins');
+  assert.equal(screenFxCommand(s, 'effects full'), 'Screen effects: bold.');
+  assert.equal(screenFxCommand(s, 'effects minimal'), 'Screen effects: off.');
+  assert.equal(boardFxOf(s), 'minimal');
+  assert.equal(screenFxCommand(s, 'effects'), 'Screen effects: subtle.', 'effects alone steps on');
+  assert.equal(screenFxCommand(s, 'effects calm'), 'Screen effects: medium.');
+  const view = readFileSync(new URL('./dist/view.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(view, /data-run="effects/, 'no separate Effects button');
+});
+
+test('your health on the screen\'s edge: warm under a half, Low Signal under a quarter, one look', () => {
+  assert.deepEqual([warnOf(0.6), warnOf(0.49), warnOf(0.25), warnOf(0.2), warnOf(null)], [false, true, true, false, false]);
+  const s = fresh();
+  assert.deepEqual([screenState(s, { health: 0.4 }).warn, screenState(s, { health: 0.4 }).low], [true, false]);
+  assert.deepEqual([screenState(s, { health: 0.1 }).warn, screenState(s, { health: 0.1 }).low], [false, true]);
+  s.settings.screenFxOff = { signal: true };
+  assert.deepEqual([screenState(s, { health: 0.1 }).warn, screenState(s, { health: 0.1 }).low], [false, false]);
+  // The old red glow over the interface is gone; the edge lives only on the bezel.
+  const style = readFileSync(new URL('./dist/style.css', import.meta.url), 'utf8');
+  assert.doesNotMatch(style, /hp-crit|hp-warn/);
+});
+
+test('nothing on the interface moves: no screen shake, no nudge, no jolt that shifts a thing', () => {
+  const style = readFileSync(new URL('./dist/style.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const app = readFileSync(new URL('./dist/app.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(style, /fx-nudge|fx-quake|fx-split|crt-glitch/, 'the screen shakes are gone');
+  assert.doesNotMatch(app, /juice\.(nudge|quake)|nudge\(|quake\(/, 'and nothing calls them');
+  // The flashes on the interface keep their light and lose their movement.
+  for (const name of ['fx-hurt', 'fx-nope', 'fx-strike', 'fx-lashed', 'fx-jolt', 'fx-jolt-crit', 'fx-jolt-miss', 'pagerbuzz']) {
+    const kf = style.match(new RegExp(`@keyframes ${name} \\{.*\\}`))?.[0];
+    assert.ok(kf, name);
+    assert.doesNotMatch(kf, /transform|translate|rotate/, `${name} doesn't move anything`);
+  }
+  assert.match(style, /\.virus-stage\.fx-punch canvas \{/, 'a punch moves the picture only');
 });

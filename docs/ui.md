@@ -102,7 +102,7 @@ a Mutex's lock is an absorb segment (`.lockseg`: hatched steel over the end of t
 the bar's scale, a padlock at the edge hits drain it from; the preview slice blinks on it, white then bare, while a
 hit would only take lock); a Lockbox's ward is a cap line (`.wardcap`) at the most the part can still lose this
 cycle. The segment drains (a steel trail) and shatters (steel shards) with the hit (`app.js` `juice.lockDrain`).
-Effects minimal, Motion off or reduced motion: no glow pulse, no snap, no trail or shards; the static look stays.
+Screen effects off, Motion off or reduced motion: no glow pulse, no snap, no trail or shards; the static look stays.
 
 **Part research** (`codex-view.mjs` researchBar, `research.mjs`): a part card's research is a thin bar of 60 with a
 tick at 3, 15 and 60 (gray, amber once reached) and *n/60* in mono beside it; what a tier still hides reads **???** in
@@ -177,27 +177,35 @@ interface**. CSS, the DOM and text only (no canvas, WebGL or PixiJS).
   tube's edge (`#crt-bezel`), the casing's lamps, and the virus picture (`#virus-canvas`, a crit's tear through the
   `#sfx-tear-a/b` SVG filters in index.html). `screenfx.test.mjs` fails on any rule that styles anything else.
 - Text, numbers, bars, chips and the board never move, dim, blur or get covered, and no effect shifts layout or takes a
-  click. A big hit tears the backdrop, not `.app` (the old whole-screen glitch is gone while the shell has a tear).
+  click. A big hit tears the backdrop, not `.app`. The old screen shakes are gone (the whole-screen glitch, the nudge on
+  your hits, the jolt when you're hit, the lash's full-screen glitch); flashes on the interface (a hurt, a strike, a
+  part's name, a refused command, the pager) keep their light and never translate. `screenfx.test.mjs` checks it.
+- Your health shows only on the screen's edge, one look per strength: under a half a faint warm line (medium, bold),
+  under a quarter a thin red burning into a grey haze, breathing (subtle: still). It replaced a red glow 180px deep over
+  the interface.
 - Strength is one setting, off / subtle / medium (default) / bold, as `--sfx-k` on `<html data-sfx>`, with each effect
-  switchable on its own. Motion off (`.no-motion`) and `prefers-reduced-motion` stop every animation in the file.
+  switchable on its own. It also sets how much moves on the fight board (the old Effects setting: off minimal, subtle
+  and medium calm, bold full; `effects ...` is an alias and saves migrate). Motion off (`.no-motion`) and `prefers-reduced-motion` stop every animation in the file.
 - **Floor palettes** are the one exception to *No new colours*, approved by the designer. A floor swaps the surface
   tokens (`--bg`, `--panel`, `--panel-2`, `--inset`), the structure colour (`--amber` and its soft, deep, line and wash
   forms) and the text tints (`--text`, `--bright`, `--muted`, `--dim`) inline on `<html>`; the job colours (`--hot`,
-  `--next`, `--you`, `--daemon`, `--steel`, `--gray`) never change. Each tint keeps 4.5:1 on the floor's bg, both panels
-  and the textured backdrop (body text 7:1), checked in `screenfx.test.mjs`. Hues sit away from the job colours: Coldline's
+  `--next`, `--you`, `--daemon`, `--steel`, `--gray`) never change. At medium and bold the accent tints `--panel` and
+  `--panel-2` (3.5%, 6%) and `--inset` a little less, so the floor reads beyond the gaps; subtle keeps the palette's own
+  panels. Each tint keeps 4.5:1 on the floor's bg, both panels (tinted, at every strength) and the textured backdrop
+  (body text 7:1), checked in `screenfx.test.mjs`. Hues sit away from the job colours: Coldline's
   ice is paler than steel and bluer than teal, The Sink's rose is far paler than hot red, Deep Core's magenta pinker
   than the daemons' violet.
 
-| Floor | Structure | bg / panel | Texture | dim, worst surface |
+| Floor | Structure | bg / panel (subtle) | Texture | dim, worst surface (subtle to bold) |
 | --- | --- | --- | --- | --- |
-| The Sprawl | `#f4b437` warm amber | `#0a0603` / `#110b05` | rain | 4.6 |
-| Backhaul | `#f3a33a` sodium | `#0b0602` / `#130b04` | sodium lamp light | 4.8 |
-| The Stacks | `#a9c48a` dusty green | `#050804` / `#0a0f08` | dust | 5.2 |
-| Coldline | `#cfe9f7` ice | `#02060a` / `#060e14` | frost at the edges | 5.4 |
-| Deep Core | `#f07ac8` magenta | `#0a0308` / `#12060f` | heat shimmer | 4.7 |
-| Kernel Space | `#f4f4f4` white | `#000000` / `#0a0a0a` | dot matrix | 5.4 |
-| The Sink | `#e09a94` blood rose | `#0a0303` / `#130606` | drips | 4.9 |
-| Bedrock | `#cfc7b4` stone | `#080807` / `#0f0f0d` | heavy static | 4.8 |
+| The Sprawl | `#f4b437` warm amber | `#0a0603` / `#110b05` | rain | 4.8 to 4.6 |
+| Backhaul | `#f3a33a` sodium | `#0b0602` / `#130b04` | sodium lamp light | 4.8 to 4.7 |
+| The Stacks | `#a9c48a` dusty green | `#050804` / `#0a0f08` | dust | 5.2 to 5.0 |
+| Coldline | `#cfe9f7` ice | `#02060a` / `#060e14` | frost at the edges | 5.4 to 5.2 |
+| Deep Core | `#f07ac8` magenta | `#0a0308` / `#12060f` | heat shimmer | 4.7 to 4.6 |
+| Kernel Space | `#f4f4f4` white | `#000000` / `#0a0a0a` | dot matrix | 5.4 to 5.0 |
+| The Sink | `#e09a94` blood rose | `#0a0303` / `#130606` | drips | 4.9 to 4.8 |
+| Bedrock | `#cfc7b4` stone | `#080807` / `#0f0f0d` | heavy static | 4.9 to 4.6 |
 
 ## Rules for future UI work
 

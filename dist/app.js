@@ -9,7 +9,7 @@ import { createArt } from './virus-art.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { createFeel } from './feel.mjs';
 import { createShell } from './shell.mjs';
-import { createScreenFx, screenState, screenFxCommand, SFX } from './screenfx.mjs';
+import { createScreenFx, screenState, screenFxCommand, SFX, boardFxOf, migrateEffects } from './screenfx.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
@@ -58,6 +58,7 @@ const KEY = CAMP ? CP.CAMPAIGN_KEY : SAVE_KEY;
 
 // ---------- state ----------
 let campaign = load();
+migrateEffects(campaign); // the old Effects setting becomes its Screen effects level (screenfx.mjs)
 if (params.has('dev')) Object.defineProperty(window, '__bb', { get: () => campaign }); // dev only: the live state, for tests
 let module = playtest === 'story' ? 'mail' : playtest === 'breach' ? 'breach' : playtest === 'rooms' ? 'rooms' : CAMP ? 'campaign' : 'map';
 let selected = null;
@@ -185,14 +186,15 @@ const shown = () => campaign;
 // ---------- art ----------
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const canMove = () => campaign.settings.motion && !reducedMotion.matches;
-// How much moves on the fight board (System: Effects). One visual per event, on the thing it's about:
-//   calm (default): the number and the bar say how much, the shooter's avatar lunge says who, the
+// How much moves on the fight board (System: Screen effects, which sets it). One visual per event, on the thing it's
+// about, and nothing on the board ever shifts or shakes:
+//   calm (subtle, medium): the number and the bar say how much, the shooter's avatar lunge says who, the
 //     part's name flashes; crew hits are quieter than yours. Breaks, wins and big hurts stay big.
-//   full: also the impact burst in the Now cell, sparks, the whole row flashing, a punch on the virus.
-//   minimal: numbers and bars only.
-const fxLevel = () => (['full', 'minimal'].includes(campaign.settings.effects) ? campaign.settings.effects : 'calm');
+//   full (bold): also the impact burst in the Now cell, sparks, the whole row flashing, a punch on the virus.
+//   minimal (off): numbers and bars only.
+const fxLevel = () => boardFxOf(campaign); // one setting: Screen effects off is minimal, subtle and medium calm, bold full
 // Hit effects (hitfx.mjs): when a command lands, it lands on the part's own cell in the shooter's
-// colour (flash, slash, jolt); a crit slashes twice; a miss shakes it; a broken chit flashes it white.
+// colour (flash, slash, a bright jolt that never moves it); a crit slashes twice; a miss dims it; a broken chit flashes it white.
 const hitfx = createHitFx(document.getElementById('board'), { canMove: () => canMove() });
 const partRow = (id) => document.querySelector(`#board .bpart[data-target="${CSS.escape(id)}"]`);
 const initials = (h) => (h || '').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || 'YO'; // as on the board (view.mjs)
@@ -474,24 +476,6 @@ const juice = {
     ring.className = 'fx-crackring steel'; ring.style.left = r.left + r.width * a + 'px'; ring.style.top = y + 'px';
     document.body.appendChild(ring); setTimeout(() => ring.remove(), 500);
   },
-  // Your hit landed: a small, quick shake of the screen (px), bigger for bigger hits and crits.
-  nudge(px) {
-    const ws = $('workspace');
-    if (!ws || ws.classList.contains('fx-quake')) return; // a hurt's jolt wins
-    ws.style.setProperty('--nudge', px.toFixed(1) + 'px');
-    ws.classList.remove('fx-nudge'); void ws.offsetWidth; ws.classList.add('fx-nudge');
-    setTimeout(() => ws.classList.remove('fx-nudge'), 220);
-  },
-  // You got hit: the whole screen jolts, harder the bigger the bite, with a split-colour glitch.
-  quake(frac, crit) {
-    const ws = $('workspace');
-    if (!ws) return;
-    ws.style.setProperty('--quake', (2 + Math.min(1, frac * 4) * 8 + (crit ? 4 : 0)).toFixed(1) + 'px');
-    ws.classList.remove('fx-quake'); void ws.offsetWidth; ws.classList.add('fx-quake');
-    setTimeout(() => ws.classList.remove('fx-quake'), 500);
-    const mine = document.querySelector(MINE);
-    if (mine) { mine.classList.remove('fx-split'); void mine.offsetWidth; mine.classList.add('fx-split'); setTimeout(() => mine.classList.remove('fx-split'), 450); }
-  },
 };
 // A virus attack on you lashes at the screen (lash.mjs): from the part on the render (or its row on the
 // board) into your Signal bar. Effects minimal or Motion off: none, a soft edge instead.
@@ -503,8 +487,8 @@ function lashFrom(id) {
   return r?.width ? { x: r.left + r.width * 0.5, y: r.top + r.height / 2, chars: (part(campaign, id)?.name || '').replace(/\W/g, '') + '#%*+=' } : null;
 }
 function lashAt(e, mode, frac = 0, heavy = false) {
-  const full = fxLevel() === 'full', big = heavy || frac >= 0.15;
-  lash.lash({ from: mode === 'tick' ? null : lashFrom(e.source), bar: document.querySelector(MINE + ' .bigbar'), power: Math.min(1, frac * 5), heavy, mode, full, onImpact: mode === 'hit' && big ? () => juice.quake(frac, heavy) : null });
+  const full = fxLevel() === 'full'; // the lash never shakes the screen: a big hit tears the backdrop instead (screenfx.mjs)
+  lash.lash({ from: mode === 'tick' ? null : lashFrom(e.source), bar: document.querySelector(MINE + ' .bigbar'), power: Math.min(1, frac * 5), heavy, mode, full });
 }
 const LASH_TRAVEL = 140; // ms: a hit's number shows as the lash lands, not as it leaves the part
 let cueAt = 0; // when the last damage number queued lands (performance.now() ms)
@@ -937,8 +921,7 @@ function react(events) {
         }
         if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
-        if (fx && !mate && e.crit) feel.add(() => juice.nudge(4.5)); // only a crit nudges the screen
-        if (!mate && e.crit) feel.add(() => sfx.crit()); // and tears across the virus picture (screenfx.mjs)
+        if (!mate && e.crit) feel.add(() => sfx.crit()); // a crit tears across the virus picture (screenfx.mjs); nothing shakes
         if (!mate) { sideFx('.brow.byou', row(e.target), 'you'); holdYou(); }
         break;
       }
@@ -998,7 +981,7 @@ function react(events) {
       case 'decrypted': flash('DECRYPTED'); feel.add('unlock', MINE, 'KEY'); break;
       case 'blind': flash('SCRAMBLED'); feel.add('blind', '.board', null); break;
       case 'scrambled': { const frac = e.amount / (defender(campaign).max || 100); flash('SCRAMBLED'); if (lashing) { feel.add(() => lashAt(e, 'hit', frac)); feel.beat(split.delay(e) + LASH_TRAVEL); } feel.add('hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: 1.3, src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 }); break; }
-      case 'armor': { const lvl = fxLevel(); artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add('absorb', `${row(e.target)} .part-top`, 'LOCK BROKEN', { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); if (fx && !e.who) feel.add(() => juice.nudge(1.5)); break; }
+      case 'armor': { const lvl = fxLevel(); artHit(e.target, 'chit'); if (e.lock === 'broke') { feel.add('absorb', `${row(e.target)} .part-top`, 'LOCK BROKEN', { size: 1.1, floatAt: `${row(e.target)} > .bcell:first-child` }); break; } /* a Mutex's lock: its segment shatters (lockDrain, with the hit) */ feel.add('chit', `${row(e.target)} .part-top`, 'CRACKED', { size: 1.1, noFlash: lvl === 'minimal', floatAt: `${row(e.target)} > .bcell:first-child` }); if (fx && lvl !== 'minimal') feel.add(() => { juice.shatter(e.target); if (lvl === 'full') juice.punch(0.35); }); break; }
       case 'patch': feel.add('patch', row(e.target), e.adapt ? 'ADAPTS +◆' : '+◆'); break;
       case 'reroute': feel.add('patch', row(e.target), `+${e.amount} REROUTED`, { src }); if (e.from) artHit(e.target, 'attack'); break;
       case 'xp': if (!hush) feel.add('cycle', null, `+${e.amount} XP`); break;
@@ -1221,7 +1204,7 @@ function run(raw) {
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
   if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; return go(page); }
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
-  { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off
+  { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off (and the old effects calm|full|minimal)
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
     if (text === 'tips replay') { campaign.settings.seen = {}; campaign.settings.tips = true; }
@@ -1229,7 +1212,6 @@ function run(raw) {
     hideTip(false); save(); dirty = true;
     return notice(text === 'tips replay' ? 'Tips will show again as you meet things.' : `Tips ${campaign.settings.tips ? 'on' : 'off'}.`);
   }
-  if (/^effects( (full|calm|minimal|next))?$/.test(text)) { const order = ['calm', 'full', 'minimal'], w = text.split(' ')[1]; campaign.settings.effects = !w || w === 'next' ? order[(order.indexOf(fxLevel()) + 1) % 3] : w; save(); dirty = true; return notice(`Effects: ${fxLevel()}.`); }
   if (text === 'music on' || text === 'music off') { campaign.settings.music = text === 'music on'; save(); dirty = true; return notice(`Music ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio on' || text === 'radio off') { campaign.settings.radio = text === 'radio on'; save(); dirty = true; return notice(`Radio chatter ${text.slice(6)}.${campaign.settings.sound ? '' : ' (Sound is off.)'}`); }
   if (text === 'radio test') return feel.radioTest();
