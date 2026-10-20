@@ -22,7 +22,7 @@ This plan adds 8 basic parts, 23 third parts (21 of them floor natives), two fam
 | Slot | What it is | Today | After |
 |---|---|---|---|
 | Basic | The family's plain attacker or guard. One in every fight (two in a duplicate fight). | Always the Pulse Node | 3–4 per family, picked by the roll |
-| Signature | The family's own threat. One in every fight. | Encryptor, Replicator, Scrambler | + the Rig (Cryptominer) and the Degausser (Wiper) |
+| Signature | The family's own threat. In most fights, not all (Decisions 1). | Encryptor, Replicator, Scrambler | + the Rig (Cryptominer) and the Degausser (Wiper) |
 | Third | A rule part from the gene library. 0–2 a fight. | 7, opening at 3, 4, 8 and 20 | 30, opening every 2–3 levels |
 | Native | A third part first met on one floor, and weighted there. | none | 21 of the 30 thirds |
 
@@ -188,7 +188,7 @@ The longest gap is 3 levels. Every floor brings two or three new kinds.
 | 16–30 | 10% | 60% | 30% | 1 in 8 |
 | 31–50 | 10% | 50% | 40% | 1 in 6 |
 
-- A fight is always one basic (or two copies), the signature, and 0–2 thirds.
+- A fight is one basic (or two copies), usually the signature (Decisions 1; a second third takes its slot when it's missing), and 0–2 thirds.
 - **The total stays the same.** A fight's Integrity and pressure come from its level and grade, not its part count. Parts share it: a 2-part fight's parts are bigger, a 4-part fight's smaller (today's third-part trim, 0.85, becomes a share by count).
 - **Duplicates** are only ever a basic: two Strobes, or two Accumulators a cycle apart. Each copy has 60% of one's Integrity and damage. They're named for targeting (*Strobe*, *Strobe 2*). A rule part never doubles, so no rule stacks.
 - **The roll** moves wild viruses onto `rollGenome`: the basic is drawn from the family's open basics (free), then thirds are drawn by weight from the family's open pool within the budget, struck when they break a compatibility rule (one punishment per axis, one beat). The budget opens at level 3 (2 points) instead of 4, so the level-3 thirds fit.
@@ -231,10 +231,13 @@ The longest gap is 3 levels. Every floor brings two or three new kinds.
 
 Each phase ends with `node --test`, `node balance.mjs` into docs/BALANCE.md, and a playtest page per new part (`?playtest=part:<id>`).
 
-## Open questions
+## Decisions
 
-1. **The signature in every fight.** Keep it as the family's identity, or let 1 deep fight in 10 (from level 20) bring two thirds and no signature?
-2. **Crews.** The Cryptominer to GLASSJAW and the Wiper to TOLLGATE, or a new crew for the Wiper?
-3. **The Hashrat.** It's a miner on the Ransomware line. Move it to the Cryptominer, or leave it?
-4. **Native strength.** Is ×3 on their floor, plus a native on every elite and ★, the right lean, or should natives be stronger still?
-5. **Part counts.** Are 4-part fights at 30–40% from level 16, and duplicates at 1 in 6–10, the right amount? And should the Trojan's Package rule come to the Worm as a native, or stay in the rooms?
+October 20, 2026, from the designer.
+
+1. **The signature is not in every fight.** It is the family's identity, but a fixed part in every fight makes fights repeat. Levels 1–2 keep it, to teach the family. From level 3, a fight brings it about 70% of the time; from level 10, about 55%; from level 20, about 45%. When it's missing, a second third part takes its slot, and only thirds that don't refer to the signature can come (no Lockbox, Mutex, Mirror twin, Idle Timer or Spare without it). The family still shows in its basics, its thirds and its colour. Encounters should feel random and interesting from fight to fight.
+2. **Crews:** the Cryptominer is GLASSJAW's, the Wiper TOLLGATE's.
+3. **The Hashrat** moves to the Cryptominer.
+4. **Native strength** and 5. **part counts** stay as written, to be tuned by playing. Every number in both (the ×3 floor weight, the native on elites and rare spawns, the 4-part share by level, the duplicate rate, the signature rates above) is one named constant, so a playtest can change it in one place.
+
+Also noted: the game should work as a second-monitor game too, something you can keep going while doing something else. That's a separate design question, not part of this plan.

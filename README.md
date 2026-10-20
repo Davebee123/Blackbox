@@ -18,6 +18,8 @@ For isolated checks that never read or write the save, open `/?playtest=cryptjac
 
 **Planned: more part variety.** [`docs/parts-plan.md`](docs/parts-plan.md) is the design plan (not built): basic parts per family, a new third part every 2–3 levels, floor natives, the Cryptominer and the Wiper as families, and fights of 2 to 4 parts.
 
+**Planned: routines.** [`docs/routines.md`](docs/routines.md) is the design plan (not built): a routine you write plays your moves when you look away, the most complex and rewarding fights need you to watch, and safety rails stop a run before it goes wrong.
+
 To skip straight to a run in your real save, type `developer location ransomware`, then click the new node on the Map and Connect: since R1 every server plays as rooms (the **Run** tab), SPRAWL-00 from level 1. To try later skills and talents, `developer level 25` sets your class's level (your server's level is your highest class level; `developer server 10` sets a floor under it, for testing). To start over from level 1, type `reset game` (twice) or use Reset game on the System page; settings stay.
 
 ## Rooms playtest (R0)
