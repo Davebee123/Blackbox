@@ -1516,18 +1516,34 @@ The pager sits on the top bar, between the tabs and your meters (on narrower scr
 
 ## The monitor casing
 
-With the immersive shell on a desktop-sized window, the screen sits in a dark monitor (BLACKBOX · MODEL 7). The bottom bezel has two knobs (sound, speed) and labelled lamps that show real state, steady, never blinking:
+With the immersive shell on a desktop-sized window, the screen sits in a dark monitor (BLACKBOX · MODEL 7). The bottom bezel has two knobs (sound, speed) and labelled lamps that show real state with a soft glow. With Screen effects at medium or bold (and Status lights on) they blink as well; at subtle or off, or with Motion off, they glow steady. Hover a lamp for what it shows.
 
-| Lamp | Lit |
-|---|---|
-| PWR | amber; red while Degraded |
-| GATE | amber with an intrusion waiting, red while you fight one |
-| WALL | dim while an invasion travels, amber when contested, red on a breach |
-| NET | teal on a run |
-| INST | amber while an install runs (dim while Degraded) |
-| DMN | teal with a daemon slotted |
+| Lamp | Lit | Blinks |
+|---|---|---|
+| PWR | amber; red while Degraded | slowly while Degraded |
+| GATE | amber with an intrusion waiting, red while you fight one | quickly while an intrusion waits |
+| WALL | dim while an invasion travels, amber when contested, red on a breach | slowly while contested, quickly on a breach |
+| NET | teal on a run; amber while a world event is up | a few times when a world event comes up or a new line lands on #net |
+| INST | amber while an install runs (dim while Degraded) or a market transfer is on its way | a busy flicker while it works |
+| DMN | dim violet with a daemon slotted | bright violet a few times when a daemon fires |
 
 System → Casing turns it off; phones and small windows never show it.
+
+## Screen effects
+
+Light on the glass around the game, never on it. Every effect lives in the backdrop behind the panels, on the screen's edges, in the casing's lamps or across the virus picture: text, numbers, bars, chips and the board stay crisp and never move, and nothing covers a control.
+
+| Effect | Subtle | Medium (default) | Bold |
+|---|---|---|---|
+| Low Signal (your Signal, or your server in a fight at home, under a quarter) | the screen's edges grey | the edges grey, light static in the backdrop, a slow vignette breathing | heavier static and grey, a quicker breath |
+| A big hit on you (a fifth of your bar at subtle, an eighth at medium, a twelfth at bold; a crit always) | a short tear across the backdrop | a brief tear across the backdrop | a longer, doubled tear |
+| Your crit on a part | a short tear across the virus picture | the same, a little longer | longer |
+| Floor colour | the floor's palette and a still, faint texture | the palette and its texture, moving | a stronger texture |
+| Status lights | steady | blinking with a soft glow | brighter glow |
+
+- **Floors.** Each floor has its own palette (the backdrop, panels, structure colour and text tints; red, gold, teal, violet and steel keep their jobs) and a light texture behind the panels: **The Sprawl** warm amber and rain, **Backhaul** sodium orange and passing lamp light, **The Stacks** dusty green and drifting dust, **Coldline** ice and frost at the edges, **Deep Core** magenta and heat shimmer, **Kernel Space** stark white on black and a dot matrix, **The Sink** deep red and drips, **Bedrock** near-monochrome and heavy static. It shows on the map for that floor (the map's field lets the texture through) and on runs and fights on that floor's servers; home and fights at your gate keep the amber. Every text tint keeps a contrast of 4.5:1 or better on every surface.
+- `screen fx off|subtle|medium|bold` (`screen fx` steps through them), `screen fx <signal|hits|crits|floor|lamps> on|off` for one effect, or System → Screen effects and the toggles beside it. They're saved with your game.
+- Motion off or reduced motion: no tears, and everything else holds still (a floor keeps its colours and a still texture). The plain shell has no screen effects.
 
 ## Abilities
 

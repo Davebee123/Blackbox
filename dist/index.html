@@ -13,9 +13,12 @@
   <link rel="stylesheet" href="room.css">
   <link rel="stylesheet" href="floorplan.css">
   <link rel="stylesheet" href="codex.css">
+  <link rel="stylesheet" href="screenfx.css">
 </head>
 <body>
 <div class="app" id="app">
+  <!-- The backdrop behind the panels: a floor's texture, static, a tear (screenfx.mjs). Never over the UI. -->
+  <div id="fx-back" aria-hidden="true"><i class="fx-tex"></i><i class="fx-static"></i><i class="fx-vig"></i><i class="fx-tear"></i></div>
   <header class="topbar">
     <a href="./" class="brand" aria-label="BLACKBOX home"><span class="brand-mark" aria-hidden="true"></span><span class="brand-name">BLACKBOX</span></a>
     <nav class="modules" aria-label="Modules">
@@ -136,6 +139,23 @@
 <div id="fx-edge" aria-hidden="true"></div>
 <div id="levelup" class="levelup" role="status" aria-live="polite" hidden></div>
 <div id="tip" class="tip" role="dialog" aria-live="polite" hidden><p id="tip-text"></p><div class="tip-row"><button type="button" class="btn small primary" id="tip-ok">Got it</button><span class="tip-step" id="tip-step"></span><button type="button" class="tip-off" id="tip-off">Turn tips off</button></div></div>
+<!-- A crit's tear across the virus picture (screenfx.css #virus-canvas.sfx-tear): a band of it slips sideways. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="sfx-tear-a" x="-0.1" y="0" width="1.2" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#000" x="0" y="0.41" width="1" height="0.06" result="hole"/>
+    <feComposite in="SourceGraphic" in2="hole" operator="out" result="holed"/>
+    <feOffset in="SourceGraphic" dx="0.045" dy="0" x="0" y="0.41" width="1" height="0.06" result="band"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.7 0" result="red"/>
+    <feOffset in="red" dx="0.06" dy="0" x="0" y="0.41" width="1" height="0.06" result="fringe"/>
+    <feMerge><feMergeNode in="holed"/><feMergeNode in="fringe"/><feMergeNode in="band"/></feMerge>
+  </filter>
+  <filter id="sfx-tear-b" x="-0.1" y="0" width="1.2" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+    <feFlood flood-color="#000" x="0" y="0.56" width="1" height="0.035" result="hole"/>
+    <feComposite in="SourceGraphic" in2="hole" operator="out" result="holed"/>
+    <feOffset in="SourceGraphic" dx="-0.03" dy="0" x="0" y="0.56" width="1" height="0.035" result="band"/>
+    <feMerge><feMergeNode in="holed"/><feMergeNode in="band"/></feMerge>
+  </filter>
+</svg>
 <script type="module" src="app.js"></script>
 </body>
 </html>

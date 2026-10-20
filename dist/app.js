@@ -9,6 +9,7 @@ import { createArt } from './virus-art.mjs';
 import { codexPageMarkup, codexEntry } from './codex-view.mjs';
 import { createFeel } from './feel.mjs';
 import { createShell } from './shell.mjs';
+import { createScreenFx, screenState, screenFxCommand, SFX } from './screenfx.mjs';
 import { play, runSuggestions, nextActions, currentLocation, signalNow, crewWander } from './run.mjs';
 import { tickNetwork, degradedLeft, fmtLeft } from './invasion.mjs';
 import { consortiumOf, alertsOf } from './consortium.mjs';
@@ -365,7 +366,10 @@ function pickClass() {
     el.addEventListener('dblclick', (e) => { if (e.target.closest('[data-pick-class]')) start(); });
   });
 }
-const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: () => canMove(), tick: () => feel.key('char'), sound: (v) => { feel.add(v, null); feel.flush(); } });
+// Screen effects (screenfx.mjs): light on the glass around the game (the backdrop, the tube's edge, the lamps, the
+// virus picture), never on it. The plain shell has none.
+const sfx = createScreenFx(document, { canMove: () => canMove() && shellOn() });
+const shell = createShell({ getState: () => campaign, isOn: shellOn, canMove: () => canMove(), tick: () => feel.key('char'), sound: (v) => { feel.add(v, null); feel.flush(); }, tear: (big) => sfx.hit(big ? 1 : SFX.big.medium, true) });
 shell.mount();
 const row = (id) => `.board [data-target="${id}"]`;
 const MINE = '.hud-bar.mine';
@@ -934,6 +938,7 @@ function react(events) {
         if (fx && full) feel.add(() => { juice.punch(0.4 + big + (e.crit ? 0.6 : 0)); juice.sparks(e.target, e.crit ? 10 : 4 + Math.round(big * 6), e.crit ? 'crit' : ''); });
         else if (fx && lvl === 'calm' && e.crit && !mate) feel.add(() => juice.punch(0.6 + big));
         if (fx && !mate && e.crit) feel.add(() => juice.nudge(4.5)); // only a crit nudges the screen
+        if (!mate && e.crit) feel.add(() => sfx.crit()); // and tears across the virus picture (screenfx.mjs)
         if (!mate) { sideFx('.brow.byou', row(e.target), 'you'); holdYou(); }
         break;
       }
@@ -952,6 +957,7 @@ function react(events) {
         // Effects full or calm: the part lashes at your screen, and the number shows as it lands. Else a soft edge.
         if (lashing) { feel.add(() => lashAt(e, 'hit', frac, heavy)); feel.beat(split.delay(e) + LASH_TRAVEL); }
         if (e.crit) feel.add(() => flash('CRITICAL HIT'));
+        feel.add(() => sfx.hit(frac, !!e.crit)); // a big one tears the backdrop (screenfx.mjs)
         feel.add(e.crit ? 'hurtcrit' : 'hurt', MINE, f?.text || `−${e.amount}`, { amount: e.amount, frac, size: size + (e.crit ? 0.3 : 0), src, stack, noEdge: lashing, softEdge: !lashing, noFlash: lashing, floatAt: BAR, x: 0.5 });
         holdThem(); sideFx(row(e.source), MINE, 'them');
         break;
@@ -981,7 +987,7 @@ function react(events) {
         setTimeout(() => showGain(e.head, PUZZLES[e.kind]?.name || '', rows, false), canMove() ? 800 : 0);
         break;
       }
-      case 'world-event': if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
+      case 'world-event': lampBlink('net'); if (e.card === 'courier') feel.numbers(); break; // LANTERN on the radio (the pager carries the text)
       case 'wall-breach': feel.add('hurt', '#meter-integrity', 'BREACH'); notice(e.message, true); ledRing(); break;
       case 'invasion-cleared': if (!won && !e.quiet && !e.lost) { feel.add(e.blocked ? 'good' : 'win', MINE); notice(e.message); } break;
       case 'degraded': flash('REBOOTED · DEGRADED'); notice(e.message, true); if (module === 'combat') setTimeout(() => { if (!active(campaign)) go('map'); }, 1800); break;
@@ -1025,7 +1031,7 @@ function react(events) {
       case 'read-xp': feel.add('good', null, `READ +${e.amount} XP`); break;
       case 'locked': feel.add('nope', MINE, 'OFFLINE'); break;
       case 'hung': flash('HUNG'); feel.add('nope', MINE, 'HUNG'); break;
-      case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); break;
+      case 'resolved': feel.add(e.auto === 'daemon' ? 'daemon' : 'cycle', e.auto === 'daemon' ? '.byou' : '.bnow'); if (e.auto === 'daemon') lampBlink('dmn'); break;
       case 'hold': feel.add('cycle', '.bnow'); break;
       case 'loot': break; // the break already said it
       case 'net-good': feel.add(/unlocked|forced/.test(e.message) ? 'unlock' : /^pulled/.test(e.message) ? 'pickup' : 'good', null); if (e.gain) showGain('Pulled', '', [e.gain], true); break;
@@ -1215,6 +1221,7 @@ function run(raw) {
   if (page === 'daemons' && !(fighting && ABILITIES[text])) { loadoutTab = 'daemons'; return go('loadout'); }
   if (NAV.includes(page) && !(fighting && ABILITIES[text])) { if (page === 'loadout') loadoutTab = text === 'talents' || text === 'skills' ? 'skills' : 'protocols'; return go(page); }
   if (text === 'shell' || text.startsWith('shell ')) return shellCommand(text.slice(6).trim());
+  { const said = screenFxCommand(campaign, text); if (said) { save(); dirty = true; return notice(said); } } // screen fx [off|subtle|medium|bold|next] / screen fx <effect> on|off
   if (text === 'casing on' || text === 'casing off') { campaign.settings.casing = text === 'casing on'; save(); dirty = true; return; }
   if (text === 'tips on' || text === 'tips off' || text === 'tips replay') {
     if (text === 'tips replay') { campaign.settings.seen = {}; campaign.settings.tips = true; }
@@ -1917,19 +1924,24 @@ function casing() {
   if (moved && win) outside.remeasure();
   if (win !== outsideShown || moved) { outsideShown = win; feel.rain(win ? outsideRain : 0); }
   feel.street(win);
-  const s = campaign, e = s.encounter, gate = V.gateOf(s), inv = s.invasion;
-  const lamp = (id, state, title) => { const el = $('lamp-' + id); el.className = 'lamp ' + (state || ''); el.title = title; };
-  lamp('pwr', s.degraded ? 'hot' : 'on', s.degraded ? `Degraded · ${fmtLeft(degradedLeft(s))}` : 'Power');
-  lamp('gate', gate ? (gate.phase === 'active' ? 'hot' : 'on') : e?.phase === 'active' ? 'hot' : '', gate ? `${gate.virus.name} at the gate` : 'Gate clear');
-  lamp('wall', !inv ? '' : s.degraded ? 'low' : inv.state === 'breach' ? 'hot' : inv.state === 'siege' ? 'on' : 'low', inv ? `${inv.name}: ${inv.state === 'travel' ? 'on its way' : inv.state}` : 'Wall quiet');
-  lamp('net', s.run ? 'you' : '', s.run ? `On a run: ${s.run.loc}` : 'Not connected');
-  lamp('inst', s.install ? (s.degraded ? 'low' : 'on') : '', s.install ? 'Installing' : 'Install queue idle');
-  lamp('dmn', s.daemons?.length ? 'you' : '', `${(s.daemons || []).length} daemons slotted`);
+  screenFx();
+  const s = campaign;
   $('knob-sound').classList.toggle('on', !!s.settings.sound);
   $('knob-sound').style.transform = `rotate(${s.settings.sound ? 40 : -40}deg)`;
   $('knob-speed').style.transform = `rotate(${{ relaxed: -60, normal: 0, fast: 60 }[s.settings.speed || 'normal']}deg)`;
   $('knob-speed').title = `Speed: ${s.settings.speed || 'normal'}`;
 }
+// The screen's effects and the casing's lamps, from real state (screenfx.mjs). The floor whose palette is up: the map's
+// floor on the map, the server's on a run and in a fight there; home keeps the default amber.
+function screenFx() {
+  const s = campaign, frac = (n, m) => (m ? n / m : null);
+  const health = active(s) ? frac(defender(s).integrity, defender(s).max) : s.rooms ? frac(FP.signalNow(s), s.rooms.max) : s.breach ? frac(BR.signalOf(s), BR.maxOf(s)) : s.run ? frac(s.run.integrity, s.run.max) : null;
+  const st = screenState(s, { module, mapFloor: module === 'map' ? V.mapFloorOf(s, mapSel, mapFloor) : null, loc: s.run ? currentLocation(s) : null, health, gate: V.gateOf(s), until: sfx.until, fmtLeft: s.degraded ? fmtLeft(degradedLeft(s)) : null });
+  if (!shellOn()) Object.assign(st, { level: 'off', floor: null, low: false, on: {} });
+  sfx.apply(st);
+}
+// A lamp's one-off blink (#net news, a daemon firing), and the redraw that ends it.
+function lampBlink(id) { sfx.blink(id); dirty = true; setTimeout(() => { dirty = true; }, SFX.blinkMs + 60); }
 $('knob-sound').addEventListener('click', () => $('sound').click());
 // Buttons press like hardware (with Sound on).
 document.addEventListener('pointerdown', (e) => { if (e.button === 0 && e.target.closest('button, [data-command], [data-run], [data-target], .mnode, .knob')) feel.key('click'); });
@@ -2551,6 +2563,8 @@ function channelUi() {
   $('channel').hidden = off || !chanOpen;
   if (off) return;
   put('net-line', PV.tickerMarkup(campaign));
+  if (last > (channelUi.last ?? last)) lampBlink('net'); // a new line on #net blinks NET
+  channelUi.last = last;
   if (!chanOpen) return;
   put('channel-head', PV.channelHead(campaign));
   const box = $('channel-lines'), stick = box.scrollHeight - box.scrollTop - box.clientHeight < 40 || chanShown < 0;

@@ -10,7 +10,7 @@ const BOOTED_KEY = 'blackbox-booted';
 const SPARK = '▁▂▃▄▅▆▇█';
 const PATHS = { map: '~/map', server: '/srv', vault: '~/protocols', loadout: '/etc/loadout', daemons: '/etc/daemons', system: '/sys', net: '~/net', combat: '/proc/intrusion' };
 
-export function createShell({ getState, isOn, canMove, tick, sound }) {
+export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
   const $ = (id) => document.getElementById(id);
   let traffic = Array.from({ length: 16 }, () => 0.2 + Math.random() * 0.2);
   let energy = 0;
@@ -85,8 +85,10 @@ export function createShell({ getState, isOn, canMove, tick, sound }) {
   }
 
   // ---------- glitches ----------
+  // With screen effects (screenfx.mjs), the tear runs across the backdrop instead: the interface never moves.
   function glitch(big = false) {
     if (!isOn() || !canMove()) return;
+    if (tear) return void tear(big);
     const w = $('app');
     const cls = big ? 'glitch-big' : 'glitch';
     w.classList.remove('glitch', 'glitch-big'); void w.offsetWidth; w.classList.add(cls);
@@ -99,7 +101,7 @@ export function createShell({ getState, isOn, canMove, tick, sound }) {
   function react(events) {
     for (const e of events) {
       // A screen-wide glitch only for the big moments; an ordinary hit lands on your bar (app.js).
-      if ((e.type === 'server-hit' && e.crit) || ['trap', 'intrusion'].includes(e.type)) { glitch(false); energy += 0.6; }
+      if ((e.type === 'server-hit' && e.crit && !tear) || ['trap', 'intrusion'].includes(e.type)) { glitch(false); energy += 0.6; }
       else if (['server-hit', 'encrypt', 'blind'].includes(e.type)) energy += 0.4;
       else if (['crashed', 'disconnected'].includes(e.type)) { glitch(true); energy += 1.5; }
       else if (['damage', 'broken', 'resolved', 'net', 'net-good', 'loot'].includes(e.type)) energy += 0.15;
