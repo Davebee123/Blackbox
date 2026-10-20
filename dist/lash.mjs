@@ -1,13 +1,13 @@
 // A virus attack lashing at your screen, in place of a plain red flash (the designer: "1s and 0s and the
 // virus lashing out at the screen"). The attacking part throws a tendril of its own characters (the ones
 // the render panel draws it in, or its row on the board) across the screen into your Signal bar; where it
-// lands, 1s and 0s burst and fall, and the screen glitches for a moment (scanlines, a colour split, a few
-// torn rows). Bigger hits throw more and last longer; a crit or a charge (a tell landing) whips harder:
-// more strands, white-hot, a heavier glitch. Encryption is lighter and different: hex scrambles over your
+// lands, 1s and 0s burst and fall. Bigger hits throw more and last longer; a crit or a charge (a tell
+// landing) whips harder: more strands, white-hot. The full-screen glitch it used to throw is gone: a big hit
+// tears the backdrop instead (screenfx.mjs), so nothing crosses the interface but the whip itself. Encryption is lighter and different: hex scrambles over your
 // bar and locks shut, no tendril (the Encryptor's own attack throws a tendril of hex first).
 //
-// About half a second, on a layer of its own that takes no input. Effects full: the whole thing; calm: one
-// strand, fewer bits, no full-screen glitch; minimal or Motion off: none (app.js flashes a soft edge
+// About half a second, on a layer of its own that takes no input. Screen effects bold (full): the whole thing;
+// subtle and medium (calm): one strand, fewer bits; off (minimal) or Motion off: none (app.js flashes a soft edge
 // instead). Look only.
 
 import { glyph } from './glyphs.mjs';
@@ -21,7 +21,7 @@ export function sizeOf({ power = 0.3, heavy = false, mode = 'hit', full = false 
   const strands = (heavy ? 2 : 1) + (full ? 1 : 0);
   const bits = Math.round((10 + p * 26 + (heavy ? 18 : 0)) * (full ? 1 : 0.55));
   const rain = full ? Math.round(4 + p * 8 + (heavy ? 6 : 0)) : 0;
-  const glitch = full ? Math.round(240 + p * 120 + (heavy ? 140 : 0)) : 0;
+  const glitch = 0; // never over the interface (docs/ui.md, Screen effects)
   const travel = heavy ? 120 : 160 - Math.round(p * 30); // ms for the tip to reach you: bigger is faster
   const life = Math.round(320 + p * 120 + (heavy ? 120 : 0)); // ms each character of it stays
   return { strands, bits, rain, glitch, locks: 0, travel, life };

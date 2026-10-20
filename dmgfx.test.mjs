@@ -95,7 +95,8 @@ test('the stagger: 0.25–0.5 s apart, faster with more, and a batch never takes
 
 test('the lash scales with the hit: bigger hits throw more; a crit or a charge whips harder; calm is lighter; encryption is its own', () => {
   const small = sizeOf({ power: 0.1, full: true }), big = sizeOf({ power: 1, full: true }), heavy = sizeOf({ power: 0.5, heavy: true, full: true });
-  assert.ok(big.bits > small.bits && big.rain > small.rain && big.glitch > small.glitch && big.life > small.life);
+  assert.ok(big.bits > small.bits && big.rain > small.rain && big.life > small.life);
+  assert.ok(big.glitch === 0 && small.glitch === 0, 'no full-screen glitch: a big hit tears the backdrop instead (screenfx.mjs)');
   assert.ok(heavy.strands > sizeOf({ power: 0.5, full: true }).strands && heavy.bits > sizeOf({ power: 0.5, full: true }).bits);
   const calm = sizeOf({ power: 0.5 });
   assert.ok(calm.strands === 1 && calm.rain === 0 && calm.glitch === 0 && calm.bits < sizeOf({ power: 0.5, full: true }).bits, 'calm: one strand, no full-screen glitch');

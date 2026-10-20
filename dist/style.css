@@ -483,7 +483,7 @@ details summary { font-size: 13px; }
 .fx-break { animation: fx-break 0.6s ease-out; }
 @keyframes fx-break { 0% { background: rgba(255, 242, 200, 0.35); } 100% { background: transparent; } }
 .fx-hurt { animation: fx-hurt 0.45s ease-out; }
-@keyframes fx-hurt { 0% { transform: translateX(0); background: rgba(255, 91, 61, 0.3); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 100% { transform: translateX(0); background: transparent; } }
+@keyframes fx-hurt { 0% { background: rgba(255, 91, 61, 0.3); } 100% { background: transparent; } } /* a flash, never a shake (docs/ui.md, Screen effects) */
 .fx-still { animation: fx-still 0.45s ease-out; }
 @keyframes fx-still { 0% { background: rgba(255, 91, 61, 0.3); } 100% { background: transparent; } }
 .fx-tick .bigbar { animation: fx-tick 0.3s ease-out; }
@@ -493,12 +493,12 @@ details summary { font-size: 13px; }
 .fx-enrage { animation: fx-enrage 0.6s ease-out; }
 @keyframes fx-enrage { 0% { box-shadow: inset 4px 0 0 var(--hot), inset 0 0 24px rgba(255, 91, 61, 0.25); } 100% { box-shadow: none; } }
 .fx-nope { animation: fx-nope 0.3s ease-out; }
-@keyframes fx-nope { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); border-color: var(--hot); } 75% { transform: translateX(6px); border-color: var(--hot); } }
+@keyframes fx-nope { 25%, 75% { border-color: var(--hot); box-shadow: 0 0 0 1px var(--hot); } }
 .fx-urgent { animation: fx-urgent 0.5s ease-in-out 3; }
 @keyframes fx-urgent { 50% { background: rgba(255, 91, 61, 0.35); color: var(--bright); } }
 .fx-cycle .cyclebar { animation: fx-tick 0.25s ease-out; }
 .fx-strike { animation: fx-strike 0.5s ease-out; }
-@keyframes fx-strike { 0% { box-shadow: inset 3px 0 0 var(--hot), inset 0 0 26px rgba(255, 91, 61, 0.35); transform: translateX(0); } 22% { transform: translateX(-7px); } 55% { transform: translateX(1px); } 100% { box-shadow: inset 0 0 0 transparent, inset 0 0 0 transparent; transform: none; } }
+@keyframes fx-strike { 0% { box-shadow: inset 3px 0 0 var(--hot), inset 0 0 26px rgba(255, 91, 61, 0.35); } 100% { box-shadow: inset 0 0 0 transparent, inset 0 0 0 transparent; } }
 .fx-float.atk { color: var(--hot); font-size: calc(12px * var(--size)); letter-spacing: 2px; opacity: 0.9; }
 .fx-mark { animation: fx-mark 0.55s ease-out; }
 @keyframes fx-mark { 0% { background: rgba(127, 209, 199, 0.3); box-shadow: inset 0 0 0 1px rgba(127, 209, 199, 0.8); } 100% { background: transparent; box-shadow: inset 0 0 0 1px transparent; } }
@@ -548,7 +548,7 @@ details summary { font-size: 13px; }
 @keyframes lash-lock { 0% { opacity: 0; transform: translate(-50%, -110%); } 15% { opacity: 1; transform: translate(-50%, -50%); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -30%); } }
 /* Where it lands: your bar splits its colours and jitters; encryption hatches it for a moment. */
 .hud-bar.mine .bigbar.fx-lashed { animation: fx-lashed 0.42s steps(6) forwards; }
-@keyframes fx-lashed { 0% { box-shadow: -4px 0 0 rgba(255, 91, 61, 0.85), 4px 0 0 rgba(127, 209, 199, 0.6); filter: brightness(1.9); transform: translateX(-3px); } 35% { box-shadow: 3px 0 0 rgba(255, 91, 61, 0.7), -3px 0 0 rgba(127, 209, 199, 0.5); transform: translateX(2px); } 70% { filter: brightness(1.2); transform: translateX(-1px); } 100% { box-shadow: none; filter: none; transform: none; } }
+@keyframes fx-lashed { 0% { box-shadow: -4px 0 0 rgba(255, 91, 61, 0.85), 4px 0 0 rgba(127, 209, 199, 0.6); filter: brightness(1.9); } 35% { box-shadow: 3px 0 0 rgba(255, 91, 61, 0.7), -3px 0 0 rgba(127, 209, 199, 0.5); } 70% { filter: brightness(1.2); } 100% { box-shadow: none; filter: none; } }
 .hud-bar.mine .bigbar.fx-locked { animation: fx-locked 0.42s ease-out forwards; }
 @keyframes fx-locked { 0% { box-shadow: inset 0 0 0 1px var(--hot); background-image: repeating-linear-gradient(-45deg, rgba(255, 91, 61, 0.35) 0 2px, transparent 2px 5px); } 100% { box-shadow: none; background-image: none; } }
 /* Effects minimal or Motion off: no lash, a soft edge. */
@@ -1034,10 +1034,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 }
 @keyframes crt-roll { from { transform: translateY(-25vh); } to { transform: translateY(105vh); } }
 @keyframes crt-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
-.shell-on #crt.static::after { opacity: 0.28; }
-/* your health, felt: the edges warm at half and go red at a quarter. No flicker. */
-.shell-on.hp-warn #crt { box-shadow: inset 0 0 140px rgba(255, 91, 61, 0.1); }
-.shell-on.hp-crit #crt { box-shadow: inset 0 0 180px rgba(255, 91, 61, 0.24); }
+/* your health, felt: screenfx.css (#crt-bezel.warn, .low), at the screen's very edge only. */
 
 /* the tube: rounded corners and darker edges */
 #crt-bezel { position: absolute; inset: 0; border-radius: 18px; box-shadow: 0 0 0 80px #020100, inset 0 0 40px rgba(0, 0, 0, 0.55); }
@@ -1094,16 +1091,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .shell-on .app.power-on { animation: crt-on 0.42s cubic-bezier(0.2, 0.7, 0.2, 1); transform-origin: 50% 50%; }
 @keyframes crt-on { 0% { transform: scale(1, 0.004); filter: brightness(4); } 55% { transform: scale(1, 1.02); filter: brightness(1.6); } 100% { transform: none; filter: none; } }
 
-/* hits: a short tear with colour fringes */
-.shell-on .app.glitch { animation: crt-glitch 0.24s steps(2, jump-none) 1; }
-.shell-on .app.glitch-big { animation: crt-glitch 0.24s steps(2, jump-none) 3; }
-@keyframes crt-glitch {
-  0% { transform: translate(0, 0); clip-path: inset(0 0 0 0); filter: none; }
-  25% { transform: translate(-4px, 1px); clip-path: inset(8% 0 58% 0); filter: drop-shadow(3px 0 0 rgba(255, 60, 60, 0.6)) drop-shadow(-3px 0 0 rgba(90, 220, 255, 0.5)); }
-  50% { transform: translate(5px, -1px); clip-path: inset(46% 0 22% 0); filter: drop-shadow(-2px 0 0 rgba(255, 60, 60, 0.6)) drop-shadow(2px 0 0 rgba(90, 220, 255, 0.5)); }
-  75% { transform: translate(-2px, 0); clip-path: inset(0 0 0 0); filter: drop-shadow(1px 0 0 rgba(255, 60, 60, 0.4)); }
-  100% { transform: none; clip-path: none; filter: none; }
-}
+/* hits: a tear across the backdrop (screenfx.css), never the screen itself */
 
 /* phosphor: bright text glows a little in its own colour */
 .shell-on .brand-name, .shell-on .meter strong, .shell-on .prompt, .shell-on #command-input, .shell-on .card h1, .shell-on .hud-id h1,
@@ -1154,7 +1142,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 
 /* stillness: Motion off (or the OS asks for less motion) keeps the CRT but stops everything moving */
 .no-motion #crt::before, .no-motion #crt::after, .no-motion .statusline .sl-alert, .no-motion .caret i, .no-motion li.typed { animation: none !important; }
-@media (prefers-reduced-motion: reduce) { #crt::before, #crt::after, .statusline .sl-alert, .caret i, .app.glitch, .app.glitch-big, .workspace.refresh, li.typed { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { #crt::before, #crt::after, .statusline .sl-alert, .caret i, .workspace.refresh, li.typed { animation: none !important; } }
 @media (max-width: 900px) {
   .statusline { display: none !important; }
   .shell-on .panel[data-pane]::before { display: none; }
@@ -1290,7 +1278,7 @@ body.no-motion .pmark, body.no-motion .pmark.m-exposed { animation: none; }
 .pager.fx-pager { animation: pagerbuzz 0.4s linear; }
 @keyframes pagerblink { 50% { opacity: 0.25; } }
 @keyframes pagerscroll { to { transform: translateX(-100%); } }
-@keyframes pagerbuzz { 15%, 55% { transform: translateX(-2px) rotate(-0.6deg); } 35%, 75% { transform: translateX(2px) rotate(0.6deg); } }
+@keyframes pagerbuzz { 15%, 55% { box-shadow: 0 0 10px rgba(241, 185, 47, 0.55); } 35%, 75% { box-shadow: none; } }
 .no-motion .pager .lcd.long span { animation: none; padding-left: 6px; }
 .no-motion .pager.fx-pager { animation: none; }
 .comms { position: absolute; top: 52px; right: 20px; z-index: 60; width: 360px; max-width: calc(100% - 24px); max-height: min(70vh, 560px); display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 4px; box-shadow: 0 14px 34px rgba(0, 0, 0, 0.65); }
@@ -1391,7 +1379,7 @@ body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-
 .fx-trail.mine { background: #ffd0c4; box-shadow: 0 0 12px rgba(255, 91, 61, 0.9); }
 @keyframes fx-trail { 0%, 30% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0.6; transform: scaleX(0); } }
 /* A punch on the virus picture. */
-.virus-stage.fx-punch { animation: fx-punch 0.22s cubic-bezier(.3, 1.6, .5, 1); }
+.virus-stage.fx-punch canvas { animation: fx-punch 0.22s cubic-bezier(.3, 1.6, .5, 1); } /* the picture, not its frame or the words over it */
 .virus-stage.fx-punch::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(255, 242, 200, calc(0.22 * var(--punch, 1))), transparent 60%); animation: fx-fade 0.25s ease-out forwards; }
 @keyframes fx-punch { 0% { transform: scale(calc(1 - 0.018 * var(--punch, 1))) translateX(calc(3px * var(--punch, 1))); } 45% { transform: scale(calc(1 + 0.01 * var(--punch, 1))) translateX(calc(-2px * var(--punch, 1))); } 100% { transform: none; } }
 /* Sparks off the part you hit. */
@@ -1406,14 +1394,6 @@ body.no-motion .spoils, body.no-motion .sp-card, body.no-motion .sp-xp, body.no-
 .brow.fx-crack { position: relative; }
 .brow.fx-crack::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, transparent 30%, rgba(255, 242, 200, 0.55) 48%, rgba(255, 242, 200, 0.9) 50%, rgba(255, 242, 200, 0.55) 52%, transparent 70%); background-size: 250% 100%; animation: fx-crack 0.4s ease-out forwards; }
 @keyframes fx-crack { from { background-position: 120% 0; opacity: 1; } to { background-position: -40% 0; opacity: 0; } }
-/* You got hit: the screen jolts and the colours split for a moment. */
-#workspace.fx-quake { animation: fx-quake 0.42s cubic-bezier(.36, .07, .19, .97); }
-/* Your hit landing: a short, small shake (every Effects setting; Motion off: none). */
-#workspace.fx-nudge { animation: fx-nudge 0.2s ease-out; }
-@keyframes fx-nudge { 25% { transform: translate(var(--nudge), calc(var(--nudge) * -0.5)); } 55% { transform: translate(calc(var(--nudge) * -0.7), calc(var(--nudge) * 0.35)); } 80% { transform: translate(calc(var(--nudge) * 0.3), 0); } 100% { transform: none; } }
-@keyframes fx-quake { 10% { transform: translate(calc(var(--quake) * -1), calc(var(--quake) * 0.4)); } 25% { transform: translate(var(--quake), calc(var(--quake) * -0.5)); } 40% { transform: translate(calc(var(--quake) * -0.6), calc(var(--quake) * 0.3)); } 60% { transform: translate(calc(var(--quake) * 0.35), 0); } 80% { transform: translate(calc(var(--quake) * -0.15), 0); } 100% { transform: none; } }
-.hud-bar.mine.fx-split .bar-top span, .hud-bar.mine.fx-split .bigbar { animation: fx-split 0.4s steps(4) forwards; }
-@keyframes fx-split { 0% { text-shadow: -4px 0 rgba(255, 91, 61, 0.9), 4px 0 rgba(127, 209, 199, 0.9); filter: brightness(1.8); } 50% { text-shadow: 3px 0 rgba(255, 91, 61, 0.8), -3px 0 rgba(127, 209, 199, 0.8); } 100% { text-shadow: none; filter: none; } }
 .no-motion .fx-trail, .no-motion .fx-spark, .no-motion .fx-shard, .no-motion .fx-crackring { display: none; }
 
 /* ---------- salvage: stacks, and the payment picker ---------- */
@@ -2233,9 +2213,9 @@ body:has(.silk-stash .silk-tile[data-kind="implant"]:hover) .silk-fp[data-kind="
 .bname.fx-jolt { animation: fx-jolt 0.32s ease-out; }
 .bname.fx-jolt.crit { animation: fx-jolt-crit 0.45s ease-out; }
 .bname.fx-jolt.miss { animation: fx-jolt-miss 0.4s ease-out; }
-@keyframes fx-jolt { 0% { transform: none; } 20% { transform: translateX(-5px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } 100% { transform: none; } }
-@keyframes fx-jolt-crit { 0% { transform: none; } 15% { transform: translateX(-9px) scale(1.03); } 35% { transform: translateX(7px); } 55% { transform: translateX(-4px); } 75% { transform: translateX(2px); } 100% { transform: none; } }
-@keyframes fx-jolt-miss { 0%, 100% { transform: none; opacity: 1; } 25% { transform: translateX(3px); opacity: 0.6; } 50% { transform: translateX(-3px); } 75% { transform: translateX(2px); } }
+@keyframes fx-jolt { 0% { filter: brightness(1.9); text-shadow: 0 0 8px currentColor; } 100% { filter: none; text-shadow: none; } } /* light, never movement */
+@keyframes fx-jolt-crit { 0%, 30% { filter: brightness(2.3); text-shadow: 0 0 12px rgba(255, 216, 92, 0.9); } 100% { filter: none; text-shadow: none; } }
+@keyframes fx-jolt-miss { 0%, 100% { opacity: 1; } 40% { opacity: 0.6; } }
 
 /* A crewmate's number: smaller and dimmer than yours (Effects: calm). */
 .fx-float.quiet { opacity: 0.7; filter: saturate(0.6); }

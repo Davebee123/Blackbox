@@ -1,0 +1,171 @@
+/* ---------- Screen effects (screenfx.mjs; docs/ui.md, Screen effects) ----------
+   Light on the glass around the game, never on it. Everything here styles only the backdrop behind the panels
+   (#fx-back and its layers), the tube's edge (#crt-bezel), the casing's lamps and the virus picture
+   (#virus-canvas). Nothing here moves, covers or dims text, a number, a bar, a chip or the board
+   (screenfx.test.mjs checks every selector). A floor's palette reaches the UI only through its colour tokens.
+   <html data-sfx="off|subtle|medium|bold">: the strength. --sfx-k scales every layer's light. */
+:root { --sfx-k: 1; --sfx-glow: rgba(241, 185, 47, 0.5); }
+:root[data-sfx="subtle"] { --sfx-k: 0.5; }
+:root[data-sfx="bold"] { --sfx-k: 1.6; }
+
+/* The backdrop: the screen's own background, moved onto a layer behind everything in the page (z-index -1, out of
+   the grid), so its light shows between and behind the panels. With nothing on, it looks as the screen always did. */
+#fx-back { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg) url('ui/textures/grime-overlay-subtle.png'); transition: filter 0.8s; }
+#fx-back > i { position: absolute; inset: 0; display: block; opacity: 0; }
+@media (min-width: 1100px) and (min-height: 720px) {
+  body.cased #fx-back { position: absolute; border-radius: inherit; }
+  body.cased .app { background: transparent; box-shadow: 0 0 0 2px #000, 0 0 30px 6px color-mix(in srgb, var(--amber) 8%, transparent); }
+}
+/* The map's field is the floor's own backdrop: with a floor's texture up, it lets it through (its nodes and labels
+   stay on top, at full strength). */
+:root[data-sfx-tex] .map-canvas { background: radial-gradient(60% 70% at 50% 50%, color-mix(in srgb, var(--amber) 3.5%, transparent), transparent 70%), color-mix(in srgb, var(--inset) 50%, transparent); }
+/* The window behind the monitor stays behind the backdrop. */
+.window-out { z-index: -2; }
+
+/* ---------- floor textures (one a floor, in the floor's accent; light, behind the panels) ---------- */
+/* .fx-tex wears the accent through a mask: the pattern is the mask, so it takes the floor's colour. */
+#fx-back .fx-tex { background: var(--amber); -webkit-mask-repeat: repeat; mask-repeat: repeat; will-change: transform; }
+:root[data-sfx-tex] #fx-back .fx-tex { opacity: calc(0.07 * var(--sfx-k)); }
+/* The Sprawl: rain, falling. */
+:root[data-sfx-tex="rain"] #fx-back .fx-tex {
+  top: -200px; opacity: calc(0.11 * var(--sfx-k));
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='200'%3E%3Cg stroke='%23fff' stroke-linecap='round'%3E%3Cpath d='M12 8l-5 26' stroke-opacity='.9'/%3E%3Cpath d='M58 40l-4 20' stroke-opacity='.6'/%3E%3Cpath d='M104 4l-6 30'/%3E%3Cpath d='M140 70l-5 24' stroke-opacity='.7'/%3E%3Cpath d='M30 110l-5 26' stroke-opacity='.8'/%3E%3Cpath d='M84 128l-4 20' stroke-opacity='.5'/%3E%3Cpath d='M126 150l-6 30'/%3E%3Cpath d='M8 168l-4 22' stroke-opacity='.6'/%3E%3Cpath d='M70 84l-3 16' stroke-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='200'%3E%3Cg stroke='%23fff' stroke-linecap='round'%3E%3Cpath d='M12 8l-5 26' stroke-opacity='.9'/%3E%3Cpath d='M58 40l-4 20' stroke-opacity='.6'/%3E%3Cpath d='M104 4l-6 30'/%3E%3Cpath d='M140 70l-5 24' stroke-opacity='.7'/%3E%3Cpath d='M30 110l-5 26' stroke-opacity='.8'/%3E%3Cpath d='M84 128l-4 20' stroke-opacity='.5'/%3E%3Cpath d='M126 150l-6 30'/%3E%3Cpath d='M8 168l-4 22' stroke-opacity='.6'/%3E%3Cpath d='M70 84l-3 16' stroke-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+  animation: sfx-fall 0.9s linear infinite; --fall: 200px;
+}
+/* Backhaul: sodium lamps passing overhead, a slow band of orange light. */
+:root[data-sfx-tex="sodium"] #fx-back .fx-tex {
+  top: -60%; bottom: -60%; -webkit-mask-image: none; mask-image: none; opacity: calc(0.09 * var(--sfx-k));
+  background: linear-gradient(to bottom, transparent 0 30%, var(--amber) 42%, transparent 54% 100%), repeating-linear-gradient(to bottom, transparent 0 5px, color-mix(in srgb, var(--amber) 40%, transparent) 5px 6px);
+  animation: sfx-sweep 7s linear infinite;
+}
+/* The Stacks: dust in the air, drifting. */
+:root[data-sfx-tex="dust"] #fx-back .fx-tex {
+  top: -140px; left: -140px; opacity: calc(0.16 * var(--sfx-k));
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='12' cy='20' r='1.1'/%3E%3Ccircle cx='70' cy='8' r='.8' fill-opacity='.6'/%3E%3Ccircle cx='110' cy='44' r='1.3' fill-opacity='.8'/%3E%3Ccircle cx='40' cy='76' r='.9' fill-opacity='.5'/%3E%3Ccircle cx='96' cy='100' r='1' fill-opacity='.7'/%3E%3Ccircle cx='20' cy='122' r='1.2' fill-opacity='.6'/%3E%3Ccircle cx='128' cy='130' r='.8' fill-opacity='.5'/%3E%3Ccircle cx='62' cy='132' r='.7' fill-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='12' cy='20' r='1.1'/%3E%3Ccircle cx='70' cy='8' r='.8' fill-opacity='.6'/%3E%3Ccircle cx='110' cy='44' r='1.3' fill-opacity='.8'/%3E%3Ccircle cx='40' cy='76' r='.9' fill-opacity='.5'/%3E%3Ccircle cx='96' cy='100' r='1' fill-opacity='.7'/%3E%3Ccircle cx='20' cy='122' r='1.2' fill-opacity='.6'/%3E%3Ccircle cx='128' cy='130' r='.8' fill-opacity='.5'/%3E%3Ccircle cx='62' cy='132' r='.7' fill-opacity='.4'/%3E%3C/g%3E%3C/svg%3E");
+  animation: sfx-drift 40s linear infinite;
+}
+/* Coldline: frost creeping in from the edges, breathing. */
+:root[data-sfx-tex="frost"] #fx-back .fx-tex {
+  opacity: calc(0.2 * var(--sfx-k));
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cg stroke='%23fff' stroke-width='.8' fill='none'%3E%3Cpath d='M20 8v20M10 18h20M13 11l14 14M27 11L13 25'/%3E%3Cpath d='M64 50v14M57 57h14M59 52l10 10M69 52L59 62' stroke-opacity='.7'/%3E%3Cpath d='M38 70l8-8 6 4 8-10M4 52l10 6 4 10' stroke-opacity='.5'/%3E%3Cpath d='M70 14l6 6-4 8 10 4' stroke-opacity='.6'/%3E%3C/g%3E%3C/svg%3E"), radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, #000 100%);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cg stroke='%23fff' stroke-width='.8' fill='none'%3E%3Cpath d='M20 8v20M10 18h20M13 11l14 14M27 11L13 25'/%3E%3Cpath d='M64 50v14M57 57h14M59 52l10 10M69 52L59 62' stroke-opacity='.7'/%3E%3Cpath d='M38 70l8-8 6 4 8-10M4 52l10 6 4 10' stroke-opacity='.5'/%3E%3Cpath d='M70 14l6 6-4 8 10 4' stroke-opacity='.6'/%3E%3C/g%3E%3C/svg%3E"), radial-gradient(ellipse 75% 70% at 50% 50%, transparent 55%, #000 100%);
+  -webkit-mask-repeat: repeat, no-repeat; mask-repeat: repeat, no-repeat; -webkit-mask-size: auto, 100% 100%; mask-size: auto, 100% 100%;
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+  animation: sfx-breathe 9s ease-in-out infinite;
+}
+:root[data-sfx-tex="frost"] #fx-back .fx-vig { opacity: calc(0.5 * var(--sfx-k)); background: radial-gradient(ellipse 80% 75% at 50% 50%, transparent 60%, color-mix(in srgb, var(--amber) 9%, transparent) 100%); }
+/* Deep Core: heat shimmer rising off the bottom of the screen. */
+:root[data-sfx-tex="heat"] #fx-back .fx-tex {
+  top: 0; bottom: -40px; opacity: calc(0.14 * var(--sfx-k));
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='40'%3E%3Cpath d='M0 20q25-9 50 0t50 0 50 0 50 0' stroke='%23fff' stroke-width='1.2' fill='none'/%3E%3Cpath d='M0 34q25-6 50 0t50 0 50 0 50 0' stroke='%23fff' stroke-opacity='.5' fill='none'/%3E%3C/svg%3E"), linear-gradient(to top, #000 0, transparent 55%);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='40'%3E%3Cpath d='M0 20q25-9 50 0t50 0 50 0 50 0' stroke='%23fff' stroke-width='1.2' fill='none'/%3E%3Cpath d='M0 34q25-6 50 0t50 0 50 0 50 0' stroke='%23fff' stroke-opacity='.5' fill='none'/%3E%3C/svg%3E"), linear-gradient(to top, #000 0, transparent 55%);
+  -webkit-mask-repeat: repeat, no-repeat; mask-repeat: repeat, no-repeat; -webkit-mask-size: auto, 100% 100%; mask-size: auto, 100% 100%;
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+  animation: sfx-rise 2.6s linear infinite; --rise: -40px;
+}
+:root[data-sfx-tex="heat"] #fx-back .fx-vig { opacity: calc(0.6 * var(--sfx-k)); background: linear-gradient(to top, color-mix(in srgb, var(--amber) 10%, transparent), transparent 40%); animation: sfx-breathe 5s ease-in-out infinite; }
+/* Kernel Space: a stark dot matrix, still. */
+:root[data-sfx-tex="grid"] #fx-back .fx-tex {
+  opacity: calc(0.1 * var(--sfx-k));
+  -webkit-mask-image: radial-gradient(circle at 1px 1px, #000 0.8px, transparent 1.2px); mask-image: radial-gradient(circle at 1px 1px, #000 0.8px, transparent 1.2px);
+  -webkit-mask-size: 8px 8px; mask-size: 8px 8px;
+}
+/* The Sink: drips running down from the top. */
+:root[data-sfx-tex="drips"] #fx-back .fx-tex {
+  top: -240px; opacity: calc(0.14 * var(--sfx-k));
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='240'%3E%3Cg stroke='%23fff' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M14 0v70'/%3E%3Cpath d='M52 0v130' stroke-opacity='.6'/%3E%3Cpath d='M88 0v40' stroke-opacity='.8'/%3E%3Cpath d='M108 0v190' stroke-opacity='.4'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='14' cy='74' r='2'/%3E%3Ccircle cx='52' cy='134' r='2' fill-opacity='.6'/%3E%3Ccircle cx='88' cy='44' r='2' fill-opacity='.8'/%3E%3Ccircle cx='108' cy='194' r='2' fill-opacity='.4'/%3E%3C/g%3E%3C/svg%3E"), linear-gradient(to bottom, #000 0, transparent 70%);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='240'%3E%3Cg stroke='%23fff' stroke-width='1.4' stroke-linecap='round'%3E%3Cpath d='M14 0v70'/%3E%3Cpath d='M52 0v130' stroke-opacity='.6'/%3E%3Cpath d='M88 0v40' stroke-opacity='.8'/%3E%3Cpath d='M108 0v190' stroke-opacity='.4'/%3E%3C/g%3E%3Cg fill='%23fff'%3E%3Ccircle cx='14' cy='74' r='2'/%3E%3Ccircle cx='52' cy='134' r='2' fill-opacity='.6'/%3E%3Ccircle cx='88' cy='44' r='2' fill-opacity='.8'/%3E%3Ccircle cx='108' cy='194' r='2' fill-opacity='.4'/%3E%3C/g%3E%3C/svg%3E"), linear-gradient(to bottom, #000 0, transparent 70%);
+  -webkit-mask-repeat: repeat-x, no-repeat; mask-repeat: repeat-x, no-repeat; -webkit-mask-size: 120px 240px, 100% 100%; mask-size: 120px 240px, 100% 100%;
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+  animation: sfx-drip 6s ease-in infinite;
+}
+/* Bedrock: heavy static (the static layer, always up on this floor). */
+:root[data-sfx-tex="static"] #fx-back .fx-tex { opacity: 0; }
+:root[data-sfx-tex="static"] #fx-back .fx-static { opacity: calc(0.07 * var(--sfx-k)); }
+
+/* ---------- static (Bedrock, and Low Signal) ---------- */
+#fx-back .fx-static {
+  inset: -50%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: sfx-grain 0.45s steps(3) infinite;
+}
+
+/* ---------- Low Signal: the edges grey out, light static, a slow vignette breathing ---------- */
+#fx-back.low { filter: grayscale(0.85) brightness(0.9); }
+#fx-back.low .fx-static { opacity: calc(0.08 * var(--sfx-k)); }
+#fx-back.low .fx-vig { opacity: 1; background: radial-gradient(ellipse 80% 75% at 50% 50%, transparent 35%, rgba(150, 150, 150, calc(0.07 * var(--sfx-k))) 75%, rgba(0, 0, 0, calc(0.35 * var(--sfx-k))) 100%); animation: sfx-pulse 4.5s ease-in-out infinite; }
+:root[data-sfx="subtle"] #fx-back.low .fx-static { opacity: 0; }
+:root[data-sfx="subtle"] #fx-back.low .fx-vig { animation: none; }
+:root[data-sfx="bold"] #fx-back.low .fx-vig { animation-duration: 3s; }
+/* Your health on the screen's edge: one look per strength, all of it in the margin outside the panels (it never
+   reaches in as far as their text, and never takes a colour out of anything on screen). It replaces the old red
+   glow that spread 180px over the interface.
+   Under a half (medium, bold): a faint warm line at the very edge.
+   Under a quarter, Low Signal: the edge burns a thin red into a grey haze, breathing slowly (subtle: still). */
+#crt-bezel.warn::after, #crt-bezel.low::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+#crt-bezel.warn::after { box-shadow: inset 0 0 12px 2px rgba(255, 91, 61, calc(0.07 * var(--sfx-k))), inset 0 0 2px 1px rgba(255, 91, 61, calc(0.16 * var(--sfx-k))); }
+:root[data-sfx="subtle"] #crt-bezel.warn::after { box-shadow: none; }
+#crt-bezel.low::after {
+  box-shadow: inset 0 0 2px 1px rgba(255, 91, 61, calc(0.4 * var(--sfx-k))), inset 0 0 8px 3px rgba(255, 91, 61, calc(0.12 * var(--sfx-k))), inset 0 0 18px 6px rgba(160, 160, 160, calc(0.15 * var(--sfx-k)));
+  animation: sfx-pulse 4.5s ease-in-out infinite;
+}
+:root[data-sfx="subtle"] #crt-bezel.low::after { animation: none; }
+:root[data-sfx="bold"] #crt-bezel.low::after { animation-duration: 3s; }
+
+/* ---------- a big hit: a brief tear across the backdrop ---------- */
+/* Three torn bands (across the top bar, the middle and the prompt, where the backdrop shows) with colour fringes,
+   and the whole backdrop catching a little of the light. */
+#fx-back .fx-tear {
+  background:
+    linear-gradient(to bottom, transparent 0 4%, rgba(255, 70, 60, 0.22) 4% 4.3%, var(--sfx-glow) 4.3% 4.7%, color-mix(in srgb, var(--amber) 7%, transparent) 4.7% 8%, rgba(90, 220, 255, 0.2) 8% 8.3%, transparent 8.3% 100%),
+    linear-gradient(to bottom, transparent 0 46%, var(--sfx-glow) 46% 46.3%, color-mix(in srgb, var(--amber) 7%, transparent) 46.3% 49%, transparent 49% 100%),
+    linear-gradient(to bottom, transparent 0 84%, rgba(90, 220, 255, 0.2) 84% 84.3%, var(--sfx-glow) 84.3% 84.6%, color-mix(in srgb, var(--amber) 7%, transparent) 84.6% 88.5%, rgba(255, 70, 60, 0.2) 88.5% 88.8%, transparent 88.8% 100%),
+    color-mix(in srgb, var(--amber) 2.5%, transparent);
+}
+#fx-back.tear .fx-tear { animation: sfx-tear 0.28s steps(1) 1; }
+#fx-back.tear.tear-big .fx-tear { animation: sfx-tear 0.22s steps(1) 2; }
+#fx-back.tear .fx-tex, #fx-back.tear .fx-static { animation-name: sfx-tear-shift; animation-duration: 0.28s; animation-timing-function: steps(1); animation-iteration-count: 1; }
+#fx-back.tear .fx-static { opacity: calc(0.12 * var(--sfx-k)); }
+
+/* ---------- a crit on a part: a short horizontal tear across the virus picture (index.html's #sfx-tear filters) ---------- */
+#virus-canvas.sfx-tear { animation: sfx-crit 0.22s steps(1) 1; }
+:root[data-sfx="bold"] #virus-canvas.sfx-tear { animation-duration: 0.34s; }
+
+/* ---------- the casing's lamps: a soft glow, blinking with real state ---------- */
+.lamp.dmn i { background: radial-gradient(circle at 40% 35%, #f0e6ff, #c3a6ff 45%, #4e3a78); box-shadow: 0 0 8px 2px rgba(195, 166, 255, 0.45); }
+.lamp.low.dmn i { background: radial-gradient(circle at 40% 35%, #a592c8, #5e4c86 60%, #2a2140); box-shadow: 0 0 4px 1px rgba(195, 166, 255, 0.22); }
+.lamp.dmn { color: #8a8378; }
+.lamp[class*="blink-"] i { will-change: filter; }
+.lamp.blink-slow i { animation: lamp-breathe 2.6s ease-in-out infinite; }
+.lamp.blink-fast i { animation: lamp-blink 0.9s ease-in-out infinite; }
+.lamp.blink-busy i { animation: lamp-busy 1.7s steps(1) infinite; }
+.lamp.blink-once i { animation: lamp-blink 0.6s ease-in-out 4; }
+:root[data-sfx="bold"] .lamp.on i, :root[data-sfx="bold"] .lamp.hot i, :root[data-sfx="bold"] .lamp.you i, :root[data-sfx="bold"] .lamp.dmn i { filter: brightness(1.15) drop-shadow(0 0 3px currentColor); }
+
+@keyframes sfx-fall { from { transform: translateY(0); } to { transform: translateY(var(--fall, 200px)); } }
+@keyframes sfx-rise { from { transform: translateY(0); } to { transform: translateY(var(--rise, -40px)); } }
+@keyframes sfx-drift { from { transform: translate(0, 0); } to { transform: translate(140px, 140px); } }
+@keyframes sfx-drip { from { transform: translateY(0); } to { transform: translateY(240px); } }
+@keyframes sfx-sweep { from { transform: translateY(-30%); } to { transform: translateY(30%); } }
+@keyframes sfx-breathe { 0%, 100% { filter: brightness(0.75); } 50% { filter: brightness(1.25); } }
+@keyframes sfx-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@keyframes sfx-grain { 0% { transform: translate(0, 0); } 33% { transform: translate(-7%, 4%); } 66% { transform: translate(5%, -6%); } 100% { transform: translate(0, 0); } }
+@keyframes sfx-tear { 0% { opacity: 1; transform: translate(-14px, 0); } 30% { opacity: 1; transform: translate(10px, -9%); } 60% { opacity: 0.8; transform: translate(-6px, 14%); } 100% { opacity: 0; transform: none; } }
+@keyframes sfx-tear-shift { 0% { transform: translateX(-18px); clip-path: inset(18% 0 60% 0); } 35% { transform: translateX(14px); clip-path: inset(55% 0 30% 0); } 70% { transform: translateX(-6px); clip-path: inset(0 0 0 0); } 100% { transform: none; clip-path: none; } }
+@keyframes sfx-crit { 0% { filter: url(#sfx-tear-a); } 45% { filter: url(#sfx-tear-b); } 100% { filter: none; } }
+@keyframes lamp-blink { 0%, 100% { filter: none; } 50% { filter: brightness(0.4) saturate(0.6); box-shadow: none; } }
+@keyframes lamp-breathe { 0%, 100% { filter: none; } 50% { filter: brightness(0.6); } }
+@keyframes lamp-busy { 0%, 41%, 47%, 63%, 100% { filter: none; } 38%, 44%, 60% { filter: brightness(0.45); box-shadow: none; } }
+
+/* ---------- off, and still ---------- */
+:root[data-sfx="off"] #fx-back > i { display: none; }
+:root[data-sfx="subtle"] #fx-back .fx-tex, :root[data-sfx="subtle"] #fx-back .fx-vig { animation: none; }
+/* Motion off or reduced motion: everything here holds still (a floor keeps its colours and a still texture). */
+.no-motion #fx-back, .no-motion #fx-back > i, .no-motion #crt-bezel.low::after, .no-motion .lamp i, .no-motion #virus-canvas.sfx-tear { animation: none !important; transition: none; }
+.no-motion #fx-back .fx-tear { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  #fx-back, #fx-back > i, #crt-bezel.low::after, .lamp i, #virus-canvas.sfx-tear { animation: none !important; transition: none; }
+  #fx-back .fx-tear { display: none; }
+}

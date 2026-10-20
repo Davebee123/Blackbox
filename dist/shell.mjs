@@ -1,7 +1,7 @@
 // BLACKBOX immersive shell: the screen around the game.
 // A CRT (scanlines, glow, a rolling refresh band), a boot sequence that reads
 // your state back to you, a status line, a block cursor, key clicks, and
-// glitches when something hits you. Pure presentation: no rules live here.
+// a tear across the backdrop when something big hits you (screenfx.mjs). Pure presentation: no rules live here.
 // Everything that moves is skipped when Motion is off; `shell plain` turns it all off.
 
 import { powerOn } from './poweron.mjs';
@@ -10,7 +10,7 @@ const BOOTED_KEY = 'blackbox-booted';
 const SPARK = '▁▂▃▄▅▆▇█';
 const PATHS = { map: '~/map', server: '/srv', vault: '~/protocols', loadout: '/etc/loadout', daemons: '/etc/daemons', system: '/sys', net: '~/net', combat: '/proc/intrusion' };
 
-export function createShell({ getState, isOn, canMove, tick, sound }) {
+export function createShell({ getState, isOn, canMove, tick, sound, tear }) {
   const $ = (id) => document.getElementById(id);
   let traffic = Array.from({ length: 16 }, () => 0.2 + Math.random() * 0.2);
   let energy = 0;
@@ -85,21 +85,16 @@ export function createShell({ getState, isOn, canMove, tick, sound }) {
   }
 
   // ---------- glitches ----------
+  // A big moment tears the backdrop (screenfx.mjs): the interface itself never moves.
   function glitch(big = false) {
     if (!isOn() || !canMove()) return;
-    const w = $('app');
-    const cls = big ? 'glitch-big' : 'glitch';
-    w.classList.remove('glitch', 'glitch-big'); void w.offsetWidth; w.classList.add(cls);
-    const crt = $('crt');
-    crt.classList.remove('static'); void crt.offsetWidth; crt.classList.add('static');
-    clearTimeout(glitch.t);
-    glitch.t = setTimeout(() => { w.classList.remove(cls); crt.classList.remove('static'); }, big ? 650 : 260);
+    tear?.(big);
   }
 
   function react(events) {
     for (const e of events) {
-      // A screen-wide glitch only for the big moments; an ordinary hit lands on your bar (app.js).
-      if ((e.type === 'server-hit' && e.crit) || ['trap', 'intrusion'].includes(e.type)) { glitch(false); energy += 0.6; }
+      // A tear only for the big moments (a crit on you is app.js's, on its beat); an ordinary hit lands on your bar.
+      if ((e.type === 'server-hit' && e.crit && !tear) || ['trap', 'intrusion'].includes(e.type)) { glitch(false); energy += 0.6; }
       else if (['server-hit', 'encrypt', 'blind'].includes(e.type)) energy += 0.4;
       else if (['crashed', 'disconnected'].includes(e.type)) { glitch(true); energy += 1.5; }
       else if (['damage', 'broken', 'resolved', 'net', 'net-good', 'loot'].includes(e.type)) energy += 0.15;
@@ -137,9 +132,7 @@ export function createShell({ getState, isOn, canMove, tick, sound }) {
     const s = getState();
     const on = isOn();
     document.body.classList.toggle('shell-on', on);
-    const hp = s.run ? s.run.integrity / s.run.max : s.server.integrity / s.server.max;
-    document.body.classList.toggle('hp-warn', on && hp <= 0.5 && hp > 0.25);
-    document.body.classList.toggle('hp-crit', on && hp <= 0.25);
+    // How much danger you're in shows on the screen's edge (screenfx.mjs, Low Signal).
     document.body.classList.toggle('in-fight', on && s.encounter?.phase === 'active');
     $('statusline').hidden = !on;
     if (on) status(module);
