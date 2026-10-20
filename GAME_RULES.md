@@ -1926,7 +1926,17 @@ On floor 2 and deeper, about half the servers (fixed by the seed) swap their Wat
 
 ## Volume
 
-The System page has three sliders (0–100, default 80, the level the game was mixed at): **Music** (the soundtrack), **Ambience** (radio chatter, rain, thunder, the street ten floors down with its odd horn and passing siren, the room tone) and **Effects** (hits, keys, alerts and every other game sound). Dragging is heard live; letting go saves it. All of them sit under the Sound switch.
+The System page has four sliders (0–100, default 80, the level the game was mixed at): **Music** (the soundtrack), **Ambience** (radio chatter, rain, thunder, the street ten floors down with its odd horn and passing siren, the room tone), **Places** (each floor's and hub's own sound, and a virus family's hum under a fight; 0 turns them off) and **Effects** (hits, keys, alerts and every other game sound, a virus family's attack and break among them). Dragging is heard live; letting go saves it. All of them sit under the Sound switch.
+
+### Places
+
+Each place has its own quiet loop, under the music and under every game sound (it dips while one plays):
+
+- **Floors.** Every floor of the network has one: The Sprawl's back street at night, Backhaul's cable duct, The Stacks' tape library, Coldline's cold storage, Deep Core's furnace, Kernel Space's held test tone, The Sink's cistern, Bedrock's breathing machine. It plays while the map shows that floor, and on a run or in a fight on one of its servers (SPRAWL-00 is floor 1). Home (every other screen, and a fight at home) keeps the room tone and the home music. Going to another floor crossfades over 2 seconds.
+- **Hubs.** Each faction's hub has one while its session is open (Halcyon's office, GLASSJAW's cold ticks, Kestrel's radar room, LANTERN's radio room, NULL CHOIR's choir). It takes over from the floor's, and crossfades back out when you disconnect.
+- **Virus families.** A fight with a Ransomware (a hydraulic press), a Worm (an insect swarm) or a Ghostroot (a whisper) has the family's idle loop very quietly under it. A real attack from one of its parts adds the family's attack sound to the hurt; a hit under 5% of your bar, a fragment gnawing, an echo, a bounce and the encryption's tick every cycle are chip damage and only have the hurt. A part breaking adds the family's break sound to the break. At most one of each per cycle. Other families and bosses without a family keep the usual sounds.
+
+Nothing plays before the first click or key, and each file loads the first time it's wanted.
 
 ## Fair play
 

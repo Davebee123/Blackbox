@@ -1,5 +1,6 @@
 import { createSound } from './sound.mjs';
 import { createSoundtrack } from './soundtrack.mjs';
+import { createPlaces } from './places.mjs';
 import { glyph } from './glyphs.mjs';
 
 // BLACKBOX feedback language. Every kind of event has ONE signature, made of
@@ -95,6 +96,9 @@ const SIGNS = {
   pzfail: { voice: 'fizzle', buzz: [30, 40, 60] },
 };
 
+// Voices too faint to duck the place beds under (places.mjs) for.
+const QUIET_VOICES = new Set(['cycle', 'channel']);
+
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 export function createFeel({ settings, reducedMotion }) {
@@ -106,8 +110,11 @@ export function createFeel({ settings, reducedMotion }) {
 
   const sound = createSound();
   const track = createSoundtrack(() => sound.context());
+  const places = createPlaces(() => sound.context(), { clip: (buf, gain) => sound.clip(buf, gain) });
   function voice(name, detail) {
-    if (settings().sound && name) sound.play(name, detail);
+    if (!settings().sound || !name) return;
+    sound.play(name, detail);
+    if (!QUIET_VOICES.has(name)) places.duck(); // the place beds dip under every game sound but the faint ones
   }
 
   function buzz(pattern) {
@@ -195,8 +202,14 @@ export function createFeel({ settings, reducedMotion }) {
     rain(level) { track.rain(settings().sound ? level : 0); },
     thunder(delay) { if (settings().sound) track.thunder(delay); },
     street(on) { track.street(on); },
-    // Volume sliders: { music, ambience, sfx }, each 0–1.
-    volumes(v) { sound.volumes({ sfx: v.sfx, ambience: v.ambience }); track.volumes({ music: v.music, ambience: v.ambience }); },
+    // Where you are (places.mjs placeOf): { on, bed, family }. The floor's or hub's bed, and a fight's family idle.
+    places(opts) { places.set(opts); },
+    // A virus family's one-shot ('attack' or 'break'), layered with the hurt or the break (only with Sound on).
+    familyShot(family, kind) { if (settings().sound) places.shot(family, kind); },
+    // What the place layer is playing, and the files it has asked for (the debug hook).
+    placesNow() { return { ...places.playing(), loaded: places.loaded() }; },
+    // Volume sliders: { music, ambience, places, sfx }, each 0–1.
+    volumes(v) { sound.volumes({ sfx: v.sfx, ambience: v.ambience }); track.volumes({ music: v.music, ambience: v.ambience }); places.volumes({ places: v.places }); },
     flush() {
       const batch = queue;
       queue = [];

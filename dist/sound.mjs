@@ -774,6 +774,16 @@ export function createSound() {
       if (!ready()) return;
       try { voiceAt(ctx, ch, name, ctx.currentTime + 0.005, opts); } catch { /* no audio */ }
     },
+    // A decoded one-shot (a virus family's attack or break, places.mjs) through the same chain as every voice.
+    clip(buffer, gain = 1) {
+      if (!buffer || !ready()) return;
+      try {
+        const src = ctx.createBufferSource(), g = ctx.createGain();
+        src.buffer = buffer; g.gain.value = gain;
+        src.connect(g).connect(ch.master); src.start(ctx.currentTime + 0.005);
+        src.onended = () => { src.disconnect(); g.disconnect(); };
+      } catch { /* no audio */ }
+    },
     // A key on the prompt: 'char', 'enter', 'back', or a button 'click'.
     key(kind = 'char') {
       if (!ready()) return;
